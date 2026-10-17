@@ -3,189 +3,206 @@
     "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
     "start": {
       "air": {
-        "at": "2026-10-17T19:50:47.532364Z",
+        "at": "2026-10-17T20:05:05.18463Z",
         "cpu_count": 8,
         "load_average": [
-          6.76,
-          5.48,
-          5.18
+          4.48,
+          5.44,
+          5.78
         ],
-        "cpu_idle_percent": 72,
-        "free_memory_bytes": 473972736,
+        "cpu_idle_percent": 88,
+        "free_memory_bytes": 398327808,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 4,
+        "heavy_queue_length": 2,
         "quiet": false
       }
     },
     "end": {
       "air": {
-        "at": "2026-10-17T19:51:36.678601Z",
+        "at": "2026-10-17T20:05:58.893465Z",
         "cpu_count": 8,
         "load_average": [
-          4.43,
-          5.06,
-          5.04
+          4.53,
+          5.26,
+          5.69
         ],
-        "cpu_idle_percent": 68,
-        "free_memory_bytes": 223494144,
+        "cpu_idle_percent": 59,
+        "free_memory_bytes": 371179520,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 4,
+        "heavy_queue_length": 2,
         "quiet": false
       }
     },
     "periodic_samples": [
       {
         "air": {
-          "at": "2026-10-17T19:50:53.623347Z",
+          "at": "2026-10-17T20:05:11.250046Z",
           "cpu_count": 8,
           "load_average": [
-            6.46,
-            5.44,
-            5.17
-          ],
-          "cpu_idle_percent": 54,
-          "free_memory_bytes": 65634304,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 4,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T19:50:58.623448Z",
-          "cpu_count": 8,
-          "load_average": [
-            6.26,
-            5.41,
-            5.16
-          ],
-          "cpu_idle_percent": 61,
-          "free_memory_bytes": 190300160,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 4,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T19:51:03.623499Z",
-          "cpu_count": 8,
-          "load_average": [
-            6.24,
-            5.42,
-            5.16
-          ],
-          "cpu_idle_percent": 78,
-          "free_memory_bytes": 79659008,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 4,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T19:51:08.623604Z",
-          "cpu_count": 8,
-          "load_average": [
-            5.9,
-            5.36,
-            5.15
-          ],
-          "cpu_idle_percent": 77,
-          "free_memory_bytes": 248692736,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 4,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T19:51:13.623695Z",
-          "cpu_count": 8,
-          "load_average": [
-            5.59,
-            5.31,
-            5.13
-          ],
-          "cpu_idle_percent": 81,
-          "free_memory_bytes": 130646016,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 4,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T19:51:18.623828Z",
-          "cpu_count": 8,
-          "load_average": [
-            5.38,
-            5.27,
-            5.11
-          ],
-          "cpu_idle_percent": 81,
-          "free_memory_bytes": 152993792,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 4,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T19:51:23.622696Z",
-          "cpu_count": 8,
-          "load_average": [
-            5.11,
-            5.21,
-            5.1
+            4.61,
+            5.45,
+            5.78
           ],
           "cpu_idle_percent": 68,
-          "free_memory_bytes": 64471040,
+          "free_memory_bytes": 106381312,
           "active_heavy_slots": 2,
           "other_active_heavy_slots": 1,
-          "heavy_queue_length": 4,
+          "heavy_queue_length": 2,
           "quiet": false
         }
       },
       {
         "air": {
-          "at": "2026-10-17T19:51:28.622641Z",
-          "cpu_count": 8,
-          "load_average": [
-            4.78,
-            5.14,
-            5.07
-          ],
-          "cpu_idle_percent": 49,
-          "free_memory_bytes": 63913984,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 4,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T19:51:33.62408Z",
+          "at": "2026-10-17T20:05:16.250139Z",
           "cpu_count": 8,
           "load_average": [
             4.56,
-            5.09,
-            5.05
+            5.43,
+            5.77
           ],
-          "cpu_idle_percent": 49,
-          "free_memory_bytes": 95174656,
+          "cpu_idle_percent": 70,
+          "free_memory_bytes": 102662144,
           "active_heavy_slots": 2,
           "other_active_heavy_slots": 1,
-          "heavy_queue_length": 4,
+          "heavy_queue_length": 2,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T20:05:21.250246Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.51,
+            5.4,
+            5.76
+          ],
+          "cpu_idle_percent": 78,
+          "free_memory_bytes": 62521344,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T20:05:26.250328Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.31,
+            5.35,
+            5.73
+          ],
+          "cpu_idle_percent": 79,
+          "free_memory_bytes": 265764864,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T20:05:31.250426Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.29,
+            5.32,
+            5.72
+          ],
+          "cpu_idle_percent": 66,
+          "free_memory_bytes": 202833920,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T20:05:36.250546Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.18,
+            5.29,
+            5.71
+          ],
+          "cpu_idle_percent": 61,
+          "free_memory_bytes": 142229504,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T20:05:41.250625Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.01,
+            5.23,
+            5.69
+          ],
+          "cpu_idle_percent": 59,
+          "free_memory_bytes": 164052992,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T20:05:46.250736Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.01,
+            5.21,
+            5.68
+          ],
+          "cpu_idle_percent": 45,
+          "free_memory_bytes": 62324736,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T20:05:51.249124Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.25,
+            5.24,
+            5.68
+          ],
+          "cpu_idle_percent": 36,
+          "free_memory_bytes": 134365184,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T20:05:56.249068Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.23,
+            5.22,
+            5.67
+          ],
+          "cpu_idle_percent": 39,
+          "free_memory_bytes": 64782336,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
           "quiet": false
         }
       }
@@ -195,44 +212,13 @@
     "quiet_wait_ms": 0,
     "quiet_wait_expired": false
   },
-  "run_id": "cal_01M55PNF2J6YFS12HPJTRXRBX5",
+  "run_id": "cal_01M55QFMKWDDPWMN003YK281F8",
   "network_path": "loopback",
-  "metrics": {
-    "records_read_succeeded": true,
-    "source_readiness": [
-      {
-        "capabilities": [
-          "calendar.create_event",
-          "calendar.update_event",
-          "calendar.delete_event",
-          "calendar.create_calendar"
-        ],
-        "reason": "",
-        "source": "calendar",
-        "state": "ready"
-      },
-      {
-        "capabilities": [
-          "reminders.create",
-          "reminders.update",
-          "reminders.complete",
-          "reminders.uncomplete",
-          "reminders.delete",
-          "reminders.create_list"
-        ],
-        "reason": "",
-        "source": "reminders",
-        "state": "ready"
-      }
-    ],
-    "truth_fixture_count": 3,
-    "truth_read_succeeded": true
-  },
   "scenario": "CAL-RECUR-THIS",
   "level": "real",
-  "passed": false,
-  "git_sha": "5d1e7ce8eb5e86f82e82e1106ca8712a0cc8b353",
-  "at": "2026-10-17T19:50:48.658871Z",
+  "passed": true,
+  "git_sha": "d95e5e08f50cf649fc6694315cd3f3e0b9e528a3",
+  "at": "2026-10-17T20:05:06.300807Z",
   "assertions": [
     {
       "name": "private_signed_apps_per_world",
@@ -259,8 +245,84 @@
       "passed": true
     },
     {
-      "name": "three_occurrences_after_exception",
-      "passed": false
+      "name": "exception_capture_visible",
+      "passed": true
+    },
+    {
+      "name": "exception_has_scoped_native_recurrence",
+      "passed": true
+    },
+    {
+      "name": "original_occurrence_identity_preserved",
+      "passed": true
+    },
+    {
+      "name": "other_occurrences_unchanged",
+      "passed": true
+    },
+    {
+      "name": "independent_appletruth_equality",
+      "passed": true
+    },
+    {
+      "name": "replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "contiguous_feed_0",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "contiguous_feed_1",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "latency_effect_done→gateway_visible",
+      "passed": true
+    },
+    {
+      "name": "latency_effect_done→replica_visible:replica0",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_query",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_mcp_agenda",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_query",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_mcp_agenda",
+      "passed": true
+    },
+    {
+      "name": "private_helper_paused_for_integrity",
+      "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass",
+      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
     },
     {
       "name": "tagged_fixture_cleanup_audit",
@@ -274,16 +336,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 177.789333,
-      "p95_ms": 177.789333,
-      "max_ms": 177.789333,
+      "p50_ms": 205.799916,
+      "p95_ms": 205.799916,
+      "max_ms": 205.799916,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 180.987333,
-      "p95_ms": 180.987333,
-      "max_ms": 180.987333,
+      "p50_ms": 210.298083,
+      "p95_ms": 210.298083,
+      "max_ms": 210.298083,
       "timeouts": 0
     }
   },
@@ -293,7 +355,7 @@
   "conditions": {
     "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
     "heavy_slots_in_use": "2",
-    "load_average": "6.76 5.48 5.18",
+    "load_average": "4.48 5.44 5.78",
     "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"
   }
 }

@@ -3,35 +3,35 @@
     "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
     "start": {
       "air": {
-        "at": "2026-10-17T19:47:49.665057Z",
+        "at": "2026-10-17T20:01:09.786966Z",
         "cpu_count": 8,
         "load_average": [
-          4.35,
-          5.01,
-          5
+          10.69,
+          6.99,
+          6.31
         ],
-        "cpu_idle_percent": 89,
-        "free_memory_bytes": 129679360,
+        "cpu_idle_percent": 14,
+        "free_memory_bytes": 65093632,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 3,
+        "heavy_queue_length": 1,
         "quiet": false
       }
     },
     "end": {
       "air": {
-        "at": "2026-10-17T19:47:51.306895Z",
+        "at": "2026-10-17T20:01:11.706582Z",
         "cpu_count": 8,
         "load_average": [
-          4.16,
-          4.96,
-          4.99
+          10.69,
+          6.99,
+          6.31
         ],
-        "cpu_idle_percent": 85,
-        "free_memory_bytes": 121356288,
+        "cpu_idle_percent": 37,
+        "free_memory_bytes": 206831616,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 3,
+        "heavy_queue_length": 1,
         "quiet": false
       }
     },
@@ -40,13 +40,13 @@
     "quiet_wait_ms": 0,
     "quiet_wait_expired": false
   },
-  "run_id": "cal_01M55PG1CDYZ4ACAVMNWHV36JG",
+  "run_id": "cal_01M55Q8ERVG9WPKHCPSZY7A499",
   "network_path": "loopback",
   "scenario": "CAL-RECUR-FUTURE",
   "level": "sim",
   "passed": true,
-  "git_sha": "641a3be3f9f2c0d9f766be90528e4917a093aac6",
-  "at": "2026-10-17T19:47:50.79744Z",
+  "git_sha": "d95e5e08f50cf649fc6694315cd3f3e0b9e528a3",
+  "at": "2026-10-17T20:01:10.939826Z",
   "assertions": [
     {
       "name": "calendar_visible",
@@ -148,16 +148,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 4.554,
-      "p95_ms": 4.554,
-      "max_ms": 4.554,
+      "p50_ms": 10.185,
+      "p95_ms": 10.185,
+      "max_ms": 10.185,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 7.731,
-      "p95_ms": 7.731,
-      "max_ms": 7.731,
+      "p50_ms": 13.967,
+      "p95_ms": 13.967,
+      "max_ms": 13.967,
       "timeouts": 0
     }
   },
@@ -167,7 +167,7 @@
   "conditions": {
     "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
     "heavy_slots_in_use": "2",
-    "load_average": "4.16 4.96 4.99",
+    "load_average": "10.69 6.99 6.31",
     "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"
   }
 }
