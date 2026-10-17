@@ -1,17 +1,145 @@
 {
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[6.49 11.43 10.26] cpus=8 other_heavy=1; ubuntu: load=[0.72 0.39 0.36] cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M55W0NHQSH7VN69BWCBAF2GX",
   "scenario": "NOTE-CRUD",
   "level": "replica",
-  "git_sha": "72bd33c20acfde829e79b5732a4433e1ee56969e",
-  "at": "2026-10-17T20:04:26.089302+00:00",
-  "passed": false,
-  "status": "pending-unlock",
+  "passed": true,
+  "git_sha": "c4e252f3588bc4ae16c2110c5c587fe0f505ef72",
+  "at": "2026-10-17T21:24:18.615337Z",
   "assertions": [
     {
-      "name": "native_fixture_pending_unlock",
-      "passed": false,
-      "detail": "Helper Notes AppleScript -1712 while GUI locked, after Automation grant and target identity correction; no native scenario effects dispatched"
+      "name": "external_note_imported",
+      "passed": true
+    },
+    {
+      "name": "rest_create_folder_observed",
+      "passed": true
+    },
+    {
+      "name": "rest_create_observed",
+      "passed": true
+    },
+    {
+      "name": "rest_create_matches_truth",
+      "passed": true
+    },
+    {
+      "name": "rest_append_observed",
+      "passed": true
+    },
+    {
+      "name": "rest_append_visible",
+      "passed": true
+    },
+    {
+      "name": "rest_append_matches_truth",
+      "passed": true
+    },
+    {
+      "name": "rest_append_content",
+      "passed": true
+    },
+    {
+      "name": "rest_replace_observed",
+      "passed": true
+    },
+    {
+      "name": "rest_replace_visible",
+      "passed": true
+    },
+    {
+      "name": "rest_replace_matches_truth",
+      "passed": true
+    },
+    {
+      "name": "rest_replace_content",
+      "passed": true
+    },
+    {
+      "name": "rest_delete_observed",
+      "passed": true,
+      "detail": "observed: conflicts=0"
+    },
+    {
+      "name": "rest_delete_replicated",
+      "passed": true
+    },
+    {
+      "name": "mcp_create_folder_observed",
+      "passed": true
+    },
+    {
+      "name": "mcp_create_observed",
+      "passed": true
+    },
+    {
+      "name": "mcp_create_matches_truth",
+      "passed": true
+    },
+    {
+      "name": "mcp_append_observed",
+      "passed": true
+    },
+    {
+      "name": "mcp_append_visible",
+      "passed": true
+    },
+    {
+      "name": "mcp_append_matches_truth",
+      "passed": true
+    },
+    {
+      "name": "mcp_append_content",
+      "passed": true
+    },
+    {
+      "name": "mcp_replace_observed",
+      "passed": true
+    },
+    {
+      "name": "mcp_replace_visible",
+      "passed": true
+    },
+    {
+      "name": "mcp_replace_matches_truth",
+      "passed": true
+    },
+    {
+      "name": "mcp_replace_content",
+      "passed": true
+    },
+    {
+      "name": "mcp_delete_observed",
+      "passed": true,
+      "detail": "observed: conflicts=0"
+    },
+    {
+      "name": "mcp_delete_replicated",
+      "passed": true
+    },
+    {
+      "name": "run_created_folder_cleaned",
+      "passed": true
+    },
+    {
+      "name": "run_created_folder_cleaned",
+      "passed": true
+    },
+    {
+      "name": "tagged_notes_cleaned",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
     }
   ],
   "latency": {},
-  "probe_sha256": "37f562d027be2707d91c0fe25dfdd1479667ecaaf740589eeb23904b16858ce2"
+  "hosts": [
+    "air",
+    "ubuntu"
+  ]
 }

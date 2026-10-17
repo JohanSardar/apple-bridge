@@ -1,14 +1,14 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[7.78 6.17 5.39] cpus=8 other_heavy=1"
+    "summary": "air: load=[10.26 11.28 10.44] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M55S259EDX75W9S65DJHTA35",
+  "run_id": "run_01M55W7JNVZ5SB952R2PYABT26",
   "scenario": "NOTE-IMPORT",
   "level": "sim",
   "passed": true,
-  "git_sha": "163a7242791fd729a5f2f6042b1316f700fd31bf",
-  "at": "2026-10-17T20:32:41.774689Z",
+  "git_sha": "c4e252f3588bc4ae16c2110c5c587fe0f505ef72",
+  "at": "2026-10-17T21:28:05.05189Z",
   "assertions": [
     {
       "name": "external_note_imported",

@@ -1,17 +1,43 @@
 {
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[20.88 11.45 8.28] cpus=8 other_heavy=1; ubuntu: load=[0.52 0.47 0.39] cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M55VJJYFE2A0TKYYXGXMZCRV",
   "scenario": "NOTE-EXTERNAL",
   "level": "replica",
-  "git_sha": "72bd33c20acfde829e79b5732a4433e1ee56969e",
-  "at": "2026-10-17T20:04:26.089172+00:00",
-  "passed": false,
-  "status": "pending-unlock",
+  "passed": true,
+  "git_sha": "c4e252f3588bc4ae16c2110c5c587fe0f505ef72",
+  "at": "2026-10-17T21:16:37.199361Z",
   "assertions": [
     {
-      "name": "native_fixture_pending_unlock",
-      "passed": false,
-      "detail": "Helper Notes AppleScript -1712 while GUI locked, after Automation grant and target identity correction; no native scenario effects dispatched"
+      "name": "external_note_imported",
+      "passed": true
+    },
+    {
+      "name": "external_edits_converge",
+      "passed": true
+    },
+    {
+      "name": "tagged_notes_cleaned",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
     }
   ],
-  "latency": {},
-  "probe_sha256": "37f562d027be2707d91c0fe25dfdd1479667ecaaf740589eeb23904b16858ce2"
+  "latency": {
+    "native_save_to_copy_visible_ms": {
+      "samples": 5,
+      "p50_ms": 275.489209,
+      "p95_ms": 354.041792,
+      "max_ms": 354.041792,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air",
+    "ubuntu"
+  ]
 }

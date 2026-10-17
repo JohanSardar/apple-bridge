@@ -388,8 +388,21 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 				add(protocol+"_"+mode+"_content", strings.Contains(actual, strings.TrimSpace(replacement)))
 			}
 			args, _ = json.Marshal(map[string]any{"id": created.ID})
+			command = contracts.CommandRecord{}
 			err = client.Call(ctx, "notes.delete", contracts.Command{ID: contracts.NewCommandID(), Args: args, ExpectedVersion: created.Version, WaitMS: 15000}, &command)
-			add(protocol+"_delete_observed", err == nil && command.State == "observed")
+			deleteCode := ""
+			if err != nil {
+				var problem *contracts.Error
+				if errors.As(err, &problem) {
+					deleteCode = problem.Code
+				} else {
+					deleteCode = "transport"
+				}
+			}
+			if command.Error != nil {
+				deleteCode = command.Error.Code
+			}
+			e.Assertions = append(e.Assertions, Assertion{Name: protocol + "_delete_observed", Passed: err == nil && command.State == "observed", Detail: string(command.State) + ":" + deleteCode})
 			add(protocol+"_delete_replicated", w.Await(5*time.Second, func() bool { _, ok := find("notes.note", newTitle); return !ok }) == nil)
 		}
 	}

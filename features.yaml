@@ -334,7 +334,7 @@ features:
     milestone: M3
     modules: [native/NotesSource, native/Decoders]
     depends_on: [helper.session]
-    status: todo
+    status: done
     scenarios:
       - {id: NOTE-IMPORT, levels: [sim, real]}
       - {id: NOTE-EXTERNAL, levels: [sim, real, replica]}
@@ -345,7 +345,7 @@ features:
     milestone: M3
     modules: [native/NotesSource, operations]
     depends_on: [notes.read]
-    status: todo
+    status: done
     scenarios:
       - {id: NOTE-CRUD, levels: [sim, real, replica]}
       - {id: NOTE-RICH-REJECT, levels: [sim, real]}
