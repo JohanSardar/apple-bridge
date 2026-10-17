@@ -112,8 +112,8 @@ func (s *Store) TransitionCommand(ctx context.Context, t CommandTransition) (con
 	r.History = append(old.History, contracts.CommandEvent{State: r.State, At: time.Now().UTC(), Evidence: r.Evidence})
 	cursor.Sequence++
 	r.Cursor = cursor
-	if r.State == "observed" || r.State == "delivered" {
-		r.CommitSeq = cursor.Sequence
+	if (r.State == "observed" || r.State == "delivered") && (r.CommitSeq == 0 || r.CommitSeq >= cursor.Sequence) {
+		return r, contracts.ErrCorrupt
 	}
 	b, err = json.Marshal(r)
 	if err != nil {
@@ -146,4 +146,13 @@ func (s *Store) NativeKey(ctx context.Context, collection, id string) (string, e
 		return "", contracts.ErrNotFound
 	}
 	return key, err
+}
+
+func (s *Store) NativeCommit(ctx context.Context, collection, nativeKey string) (uint64, error) {
+	var sequence uint64
+	err := s.db.QueryRowContext(ctx, `SELECT r.seq FROM aliases a JOIN checkpoints c ON c.source=a.source AND c.generation=a.generation JOIN records r ON r.collection=a.collection AND r.id=a.record_id WHERE a.collection=? AND a.native_key=? ORDER BY a.rowid DESC LIMIT 1`, collection, nativeKey).Scan(&sequence)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, contracts.ErrNotFound
+	}
+	return sequence, err
 }

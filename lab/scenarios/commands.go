@@ -17,7 +17,7 @@ import (
 	"github.com/JohanSardar/apple-bridge/lab/world"
 )
 
-func runCommands(ctx context.Context, w *world.World, id string, e *Evidence) {
+func runCommands(ctx context.Context, w *world.World, id string, e *Evidence, observers []*watcher) {
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
 	client := scripted.Client{Endpoint: w.Gateway}
 	if id == "CORE-CMD-LOST-RESPONSE" || id == "CORE-CMD-READ-YOUR-WRITE" || id == "CORE-CMD-CONFLICT" {
@@ -273,6 +273,20 @@ func runCommands(ctx context.Context, w *world.World, id string, e *Evidence) {
 			found = found || d["title"] == "[ab-test] read-your-write"
 		}
 		add("local_read_at_commit_seq", err == nil && found && read.Cursor.Sequence >= r.CommitSeq)
+		var captureSequence uint64
+		observedCapture := w.Await(5*time.Second, func() bool {
+			observers[0].mu.Lock()
+			defer observers[0].mu.Unlock()
+			for _, seen := range observers[0].changes {
+				if seen.Change.Record.Collection == "reminders.reminder" && recordTitle(seen.Change.Record) == "[ab-test] read-your-write" {
+					captureSequence = seen.Change.Sequence
+					return true
+				}
+			}
+			return false
+		})
+		add("commit_seq_identifies_observing_capture", observedCapture == nil && captureSequence == r.CommitSeq)
+
 		add("one_truth_effect", count(c, 1))
 	case "CORE-REST-MCP-PARITY", "REM-CRUD":
 		results := []string{}

@@ -435,7 +435,7 @@ func Run(ctx context.Context, s Scenario, level string) Evidence {
 			for i, observer := range watchers {
 				probeSeen[i], _ = observer.observed("command-probe")
 			}
-			runCommands(ctx, w, s.ID, &evidence)
+			runCommands(ctx, w, s.ID, &evidence, watchers)
 			for i, observer := range watchers {
 				seen := probeSeen[i]
 				ok := !seen.At.IsZero()

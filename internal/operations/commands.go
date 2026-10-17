@@ -280,6 +280,29 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 		to = "rejected"
 		f.Disposition = "rejected_before_dispatch"
 	}
+	if to == "observed" || to == "delivered" {
+		var evidence struct {
+			NativeKey   string `json:"native_key"`
+			Fingerprint string `json:"fingerprint"`
+			Observed    bool   `json:"observed"`
+		}
+		collection := "reminders.reminder"
+		if r.Command.Op == "reminders.create_list" {
+			collection = "reminders.list"
+		}
+		if json.Unmarshal(f.Evidence, &evidence) != nil || evidence.NativeKey == "" || evidence.Fingerprint != r.RequestHash || !evidence.Observed {
+			to = "indeterminate"
+			f.Disposition = "indeterminate"
+		} else {
+			sequence, err := g.State.NativeCommit(ctx, collection, evidence.NativeKey)
+			if err != nil || sequence == 0 {
+				to = "indeterminate"
+				f.Disposition = "indeterminate"
+			} else {
+				r.CommitSeq = sequence
+			}
+		}
+	}
 	if r.State == "indeterminate" && to == "indeterminate" {
 		return r, nil
 	}
