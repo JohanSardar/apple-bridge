@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
+	"fmt"
 	"github.com/JohanSardar/apple-bridge/internal/blobs"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/lab/world"
@@ -11,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"time"
 )
@@ -297,4 +300,36 @@ func blobJourney(ctx context.Context, w *world.World, id string, evidence *Evide
 		}
 	}
 	return true
+}
+
+func convergenceFailure(w *world.World) string {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	var gateway contracts.ReadResult
+	if _, err := world.Request(ctx, w.Gateway, "/v1/op/records.query", contracts.ReadQuery{Limit: 10000}, &gateway); err != nil {
+		return "gateway_read_failed"
+	}
+	truth, err := w.Inspect()
+	if err != nil {
+		return "truth_read_failed"
+	}
+	expected, actual := normalize(truthRecords(truth), false), normalize(gateway.Records, false)
+	if !reflect.DeepEqual(expected, actual) {
+		a, _ := json.Marshal(expected)
+		b, _ := json.Marshal(actual)
+		return fmt.Sprintf("truth_mismatch counts=%d/%d hashes=%x/%x", len(expected), len(actual), sha256.Sum256(a), sha256.Sum256(b))
+	}
+	for i, e := range w.Replicas {
+		var replica contracts.ReadResult
+		if _, err := world.Request(ctx, e, "/v1/op/records.query", contracts.ReadQuery{Limit: 10000}, &replica); err != nil {
+			return fmt.Sprintf("replica_%d_read_failed", i)
+		}
+		if replica.Cursor != gateway.Cursor {
+			return fmt.Sprintf("replica_%d_cursor_mismatch sequences=%d/%d revisions=%d/%d epochs_equal=%t", i, replica.Cursor.Sequence, gateway.Cursor.Sequence, replica.Cursor.SubscriptionRevision, gateway.Cursor.SubscriptionRevision, replica.Cursor.Epoch == gateway.Cursor.Epoch)
+		}
+		if !reflect.DeepEqual(replica.Records, gateway.Records) {
+			return fmt.Sprintf("replica_%d_records_mismatch counts=%d/%d", i, len(replica.Records), len(gateway.Records))
+		}
+	}
+	return "matched_after_timeout"
 }

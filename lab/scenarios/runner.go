@@ -513,6 +513,7 @@ func Run(ctx context.Context, s Scenario, level string) Evidence {
 		}
 	}
 	if err = w.Await(15*time.Second, func() bool { return convergence(w) }); err != nil {
+		fmt.Fprintln(os.Stderr, "convergence diagnosis:", convergenceFailure(w))
 		return fail("convergence")
 	}
 	add("convergence_truth_gateway_replicas", true)
