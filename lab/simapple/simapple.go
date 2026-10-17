@@ -34,9 +34,9 @@ type captureRequest struct {
 	Close   bool
 }
 type fakeApple struct {
-	blobs map[string][]byte
-	blobState string
-	blobDelay time.Duration
+	blobs      map[string][]byte
+	blobState  string
+	blobDelay  time.Duration
 	generation string
 	recovered  []contracts.IPCFrame
 	home       string
@@ -399,8 +399,22 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 		}
 		return nil
 	}
-	if err = emit(fullScan(f.inspect())); err != nil {
-		return err
+	for _, source := range []contracts.Source{contracts.Reminders, contracts.Messages} {
+		records := []contracts.Observation{}
+		for _, o := range f.inspect() {
+			if contracts.CollectionSource(o.Collection) == source {
+				records = append(records, o)
+			}
+		}
+		capture := fullScan(records)
+		capture.Source = source
+		if source == contracts.Messages {
+			capture.Scope = []string{"messages.message", "messages.attachment"}
+			capture.BlobHandles = f.blobHandles()
+		}
+		if err = emit(capture); err != nil {
+			return err
+		}
 	}
 	for _, outcome := range f.recovered {
 		if _, err = wire.Send(outcome); err != nil {
@@ -427,7 +441,13 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 				}
 				continue
 			}
-			if reply.T == "Ping" {
+			if reply.T == "BlobRead" {
+				go func() {
+					if f.blobReply(ctx, wire, reply) != nil {
+						conn.Close()
+					}
+				}()
+			} else if reply.T == "Ping" {
 				if _, err = wire.Send(contracts.IPCFrame{T: "Pong"}); err != nil {
 					return err
 				}

@@ -42,12 +42,12 @@ type Checkpoint struct {
 }
 
 type IPCFrame struct {
-	Handle string `json:"handle,omitempty"`
-	Offset int64  `json:"offset,omitempty"`
-	Length int64  `json:"length,omitempty"`
-	Bytes  []byte `json:"bytes,omitempty"`
-	Digest string `json:"digest,omitempty"`
-	EOF    bool   `json:"eof,omitempty"`
+	Handle        string          `json:"handle,omitempty"`
+	Offset        int64           `json:"offset,omitempty"`
+	Length        int64           `json:"length,omitempty"`
+	Bytes         []byte          `json:"bytes,omitempty"`
+	Digest        string          `json:"digest,omitempty"`
+	EOF           bool            `json:"eof,omitempty"`
 	CommandID     string          `json:"command_id,omitempty"`
 	Principal     string          `json:"principal,omitempty"`
 	RequestHash   string          `json:"request_hash,omitempty"`
