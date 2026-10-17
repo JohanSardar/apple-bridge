@@ -32,7 +32,7 @@ func forwardingHash(f forwarded) (string, error) {
 	b, err := json.Marshal(f)
 	return trust.Fingerprint(b), err
 }
-func (g *RemoteGateway) call(ctx context.Context, p trust.Principal, f forwarded, out any) error {
+func (g *RemoteGateway) call(ctx context.Context, p trust.Principal, f forwarded, out any, lookupOnly ...*bool) error {
 	if !g.Connected() {
 		return contracts.ErrUnavailable
 	}
@@ -82,6 +82,9 @@ func (g *RemoteGateway) call(ctx context.Context, p trust.Principal, f forwarded
 		}
 		return envelope.Error
 	}
+	if len(lookupOnly) > 0 {
+		*lookupOnly[0] = resp.Header.Get("X-Apple-Bridge-Command-Lookup-Only") == "true"
+	}
 	if json.Unmarshal(raw, out) != nil {
 		return contracts.ErrCorrupt
 	}
@@ -95,15 +98,17 @@ func (g *RemoteGateway) Submit(ctx context.Context, p trust.Principal, c contrac
 	if !trust.Subset([]contracts.Grant{"reminders:write"}, p.Grants) {
 		return r, contracts.ErrUnauthorized
 	}
-	err := g.call(ctx, p, forwarded{Method: "submit", Command: c}, &r)
+	lookupOnly := false
+	err := g.call(ctx, p, forwarded{Method: "submit", Command: c}, &r, &lookupOnly)
 	if errors.Is(err, contracts.ErrUnavailable) {
-		status, lookupErr := g.Status(ctx, p, contracts.CommandQuery{ID: c.ID})
+		var status contracts.CommandRecord
+		lookupErr := g.call(ctx, p, forwarded{Method: "status", Query: contracts.CommandQuery{ID: c.ID}}, &status, &lookupOnly)
 		if lookupErr == nil {
 			r = status
 			err = nil
 		}
 	}
-	if err == nil && r.CommitSeq > 0 && g.Wait != nil {
+	if err == nil && !lookupOnly && r.CommitSeq > 0 && g.Wait != nil {
 		waitctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 		defer cancel()
 		if waitErr := g.Wait(waitctx, r.Cursor); waitErr != nil {
@@ -135,6 +140,16 @@ func (g *LocalGateway) Handler() http.Handler {
 				w.WriteHeader(400)
 				json.NewEncoder(w).Encode(map[string]any{"error": typed})
 				return
+			}
+			if command, ok := result.(contracts.CommandRecord); ok {
+				era, eraErr := g.State.AdmissionEra(r.Context())
+				if eraErr != nil {
+					w.WriteHeader(503)
+					return
+				}
+				if command.AdmissionEra != era {
+					w.Header().Set("X-Apple-Bridge-Command-Lookup-Only", "true")
+				}
 			}
 			json.NewEncoder(w).Encode(result)
 		}

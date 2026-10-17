@@ -21,7 +21,7 @@ import (
 func runCommands(ctx context.Context, w *world.World, id string, e *Evidence, observers []*watcher) {
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
 	client := scripted.Client{Endpoint: w.Gateway}
-	if id == "CORE-CMD-LOST-RESPONSE" || id == "CORE-CMD-READ-YOUR-WRITE" || id == "CORE-CMD-CONFLICT" {
+	if id == "CORE-CMD-LOST-RESPONSE" || id == "CORE-CMD-READ-YOUR-WRITE" || id == "CORE-CMD-CONFLICT" || id == "CORE-CMD-ERA" {
 		client.Endpoint = w.Replicas[0]
 	}
 	records, err := w.Records(w.Gateway)
@@ -122,6 +122,7 @@ func runCommands(ctx context.Context, w *world.World, id string, e *Evidence, ob
 		add("operator_accepts_ledger_loss", w.CommandRestore("", true) == nil)
 		add("restart_after_accepted_ledger_loss", w.RestartGateway() == nil)
 		add("helper_reconnected_after_ledger_loss", w.ControlAction("/flush", struct{}{}) == nil)
+		add("replica_reconnected_after_ledger_loss", w.Await(10*time.Second, func() bool { return convergence(w) }) == nil)
 		accepted := create("accepted-loss-era")
 		acceptedResult, acceptedErr := submit(accepted)
 		add("accepted_loss_starts_new_era", observed(acceptedResult, acceptedErr) && acceptedResult.AdmissionEra != current.AdmissionEra && count(accepted, 1))
