@@ -1,42 +1,42 @@
 {
   "host_telemetry": {
     "heavy_jobs": "2",
-    "load_average": "{ 3.84 4.37 5.30 }",
+    "load_average": "{ 3.11 3.75 4.56 }",
     "logical_cpus": "8"
   },
   "host_conditions": {
     "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
     "start": {
       "air": {
-        "at": "2026-10-17T18:45:08.023367Z",
+        "at": "2026-10-17T19:44:45.391142Z",
         "cpu_count": 8,
         "load_average": [
-          3.84,
-          4.37,
-          5.3
+          3.11,
+          3.75,
+          4.56
         ],
-        "cpu_idle_percent": 88,
-        "free_memory_bytes": 119390208,
+        "cpu_idle_percent": 79,
+        "free_memory_bytes": 117850112,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 2,
+        "heavy_queue_length": 4,
         "quiet": false
       }
     },
     "end": {
       "air": {
-        "at": "2026-10-17T18:45:10.565552Z",
+        "at": "2026-10-17T19:44:47.867473Z",
         "cpu_count": 8,
         "load_average": [
-          3.84,
-          4.37,
-          5.3
+          3.11,
+          3.75,
+          4.56
         ],
-        "cpu_idle_percent": 79,
-        "free_memory_bytes": 98205696,
+        "cpu_idle_percent": 81,
+        "free_memory_bytes": 116113408,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 2,
+        "heavy_queue_length": 4,
         "quiet": false
       }
     },
@@ -45,12 +45,12 @@
     "quiet_wait_ms": 0,
     "quiet_wait_expired": false
   },
-  "run_id": "run_01M55JX7WVK3RQK4J8MYXFQ11P",
+  "run_id": "run_01M55PADCQC4CXYDA39Y7R3B68",
   "scenario": "CON-RESOLVE-RESTART",
   "level": "sim",
   "passed": true,
-  "git_sha": "1eefb0727428c09cd3b18f1499f454cd792459f7",
-  "at": "2026-10-17T18:45:09.147424Z",
+  "git_sha": "4bc9adb775b46b559c84183d914a7d70d7d14e4e",
+  "at": "2026-10-17T19:44:46.487982Z",
   "assertions": [
     {
       "name": "unified_contacts_imported",

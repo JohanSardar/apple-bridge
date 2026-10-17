@@ -1,42 +1,42 @@
 {
   "host_telemetry": {
     "heavy_jobs": "2",
-    "load_average": "{ 4.38 4.50 5.36 }",
+    "load_average": "{ 3.04 3.77 4.58 }",
     "logical_cpus": "8"
   },
   "host_conditions": {
     "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
     "start": {
       "air": {
-        "at": "2026-10-17T18:44:51.672143Z",
+        "at": "2026-10-17T19:44:29.23039Z",
         "cpu_count": 8,
         "load_average": [
-          4.59,
-          4.54,
-          5.38
+          3.05,
+          3.78,
+          4.59
         ],
-        "cpu_idle_percent": 90,
-        "free_memory_bytes": 144146432,
+        "cpu_idle_percent": 67,
+        "free_memory_bytes": 89391104,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 1,
+        "heavy_queue_length": 4,
         "quiet": false
       }
     },
     "end": {
       "air": {
-        "at": "2026-10-17T18:44:54.130536Z",
+        "at": "2026-10-17T19:44:31.611222Z",
         "cpu_count": 8,
         "load_average": [
-          4.38,
-          4.5,
-          5.36
+          3.04,
+          3.77,
+          4.58
         ],
-        "cpu_idle_percent": 86,
-        "free_memory_bytes": 144080896,
+        "cpu_idle_percent": 71,
+        "free_memory_bytes": 94322688,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 1,
+        "heavy_queue_length": 4,
         "quiet": false
       }
     },
@@ -45,12 +45,12 @@
     "quiet_wait_ms": 0,
     "quiet_wait_expired": false
   },
-  "run_id": "run_01M55JWQXWJ9V46XG6ZG38N0VM",
+  "run_id": "run_01M55P9XKKETQ8S3H400DGYEJW",
   "scenario": "CON-EXTERNAL",
   "level": "sim",
   "passed": true,
-  "git_sha": "1eefb0727428c09cd3b18f1499f454cd792459f7",
-  "at": "2026-10-17T18:44:52.796722Z",
+  "git_sha": "4bc9adb775b46b559c84183d914a7d70d7d14e4e",
+  "at": "2026-10-17T19:44:30.323611Z",
   "assertions": [
     {
       "name": "unified_contacts_imported",
@@ -192,16 +192,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 20,
-      "p50_ms": 18.283583,
-      "p95_ms": 22.38875,
-      "max_ms": 23.104875,
+      "p50_ms": 14.862042,
+      "p95_ms": 19.100042,
+      "max_ms": 19.123875,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 20,
-      "p50_ms": 24.543375,
-      "p95_ms": 27.002167,
-      "max_ms": 28.586375,
+      "p50_ms": 18.964875,
+      "p95_ms": 25.145708,
+      "max_ms": 28.1565,
       "timeouts": 0
     }
   },

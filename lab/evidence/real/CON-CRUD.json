@@ -1,295 +1,57 @@
 {
   "host_telemetry": {
     "heavy_jobs": "2",
-    "load_average": "{ 3.63 3.51 4.23 }",
+    "load_average": "{ 2.86 3.67 4.52 }",
     "logical_cpus": "8"
   },
   "host_conditions": {
     "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
     "start": {
       "air": {
-        "at": "2026-10-17T18:55:37.483007Z",
+        "at": "2026-10-17T19:44:53.953024Z",
         "cpu_count": 8,
         "load_average": [
-          3.63,
-          3.51,
-          4.23
+          2.94,
+          3.7,
+          4.54
         ],
-        "cpu_idle_percent": 76,
-        "free_memory_bytes": 175620096,
-        "active_heavy_slots": 2,
-        "other_active_heavy_slots": 1,
-        "heavy_queue_length": 3,
-        "quiet": false
-      }
-    },
-    "end": {
-      "air": {
-        "at": "2026-10-17T18:57:08.204841Z",
-        "cpu_count": 8,
-        "load_average": [
-          20.88,
-          9.05,
-          6.26
-        ],
-        "cpu_idle_percent": 48,
-        "free_memory_bytes": 233897984,
+        "cpu_idle_percent": 91,
+        "free_memory_bytes": 210092032,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
         "heavy_queue_length": 4,
         "quiet": false
       }
     },
+    "end": {
+      "air": {
+        "at": "2026-10-17T19:45:47.686816Z",
+        "cpu_count": 8,
+        "load_average": [
+          11.98,
+          5.73,
+          5.22
+        ],
+        "cpu_idle_percent": 68,
+        "free_memory_bytes": 249872384,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 5,
+        "quiet": false
+      }
+    },
     "periodic_samples": [
       {
         "air": {
-          "at": "2026-10-17T18:55:43.55481Z",
+          "at": "2026-10-17T19:45:00.001971Z",
           "cpu_count": 8,
           "load_average": [
-            3.82,
-            3.55,
-            4.24
-          ],
-          "cpu_idle_percent": 61,
-          "free_memory_bytes": 115851264,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 3,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T18:55:48.55489Z",
-          "cpu_count": 8,
-          "load_average": [
-            4.08,
-            3.61,
-            4.26
-          ],
-          "cpu_idle_percent": 50,
-          "free_memory_bytes": 113655808,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 3,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T18:55:53.554904Z",
-          "cpu_count": 8,
-          "load_average": [
-            4.23,
+            2.79,
             3.65,
-            4.27
+            4.51
           ],
-          "cpu_idle_percent": 52,
-          "free_memory_bytes": 58785792,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 3,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T18:55:58.55315Z",
-          "cpu_count": 8,
-          "load_average": [
-            4.29,
-            3.67,
-            4.27
-          ],
-          "cpu_idle_percent": 51,
-          "free_memory_bytes": 88375296,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 3,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T18:56:03.555016Z",
-          "cpu_count": 8,
-          "load_average": [
-            4.27,
-            3.68,
-            4.27
-          ],
-          "cpu_idle_percent": 61,
-          "free_memory_bytes": 206012416,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 3,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T18:56:08.555238Z",
-          "cpu_count": 8,
-          "load_average": [
-            4.33,
-            3.7,
-            4.28
-          ],
-          "cpu_idle_percent": 64,
-          "free_memory_bytes": 117456896,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 3,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T18:56:13.555199Z",
-          "cpu_count": 8,
-          "load_average": [
-            4.22,
-            3.69,
-            4.27
-          ],
-          "cpu_idle_percent": 64,
-          "free_memory_bytes": 127991808,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 3,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T18:56:18.55341Z",
-          "cpu_count": 8,
-          "load_average": [
-            4.12,
-            3.67,
-            4.26
-          ],
-          "cpu_idle_percent": 25,
-          "free_memory_bytes": 66387968,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 3,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T18:56:23.565578Z",
-          "cpu_count": 8,
-          "load_average": [
-            4.19,
-            3.7,
-            4.26
-          ],
-          "cpu_idle_percent": 0,
-          "free_memory_bytes": 67846144,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 3,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T18:56:28.915177Z",
-          "cpu_count": 8,
-          "load_average": [
-            26.62,
-            8.47,
-            5.95
-          ],
-          "cpu_idle_percent": 0,
-          "free_memory_bytes": 58179584,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 3,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T18:56:33.555426Z",
-          "cpu_count": 8,
-          "load_average": [
-            26.62,
-            8.47,
-            5.95
-          ],
-          "cpu_idle_percent": 13,
-          "free_memory_bytes": 62767104,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 3,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T18:56:38.554637Z",
-          "cpu_count": 8,
-          "load_average": [
-            25.69,
-            8.58,
-            6
-          ],
-          "cpu_idle_percent": 22,
-          "free_memory_bytes": 63913984,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 3,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T18:56:43.555564Z",
-          "cpu_count": 8,
-          "load_average": [
-            24.67,
-            8.66,
-            6.04
-          ],
-          "cpu_idle_percent": 3,
-          "free_memory_bytes": 60571648,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 3,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T18:56:48.56315Z",
-          "cpu_count": 8,
-          "load_average": [
-            23.5,
-            8.68,
-            6.07
-          ],
-          "cpu_idle_percent": 10,
-          "free_memory_bytes": 59785216,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 3,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T18:56:53.554375Z",
-          "cpu_count": 8,
-          "load_average": [
-            22.98,
-            8.82,
-            6.13
-          ],
-          "cpu_idle_percent": 1,
-          "free_memory_bytes": 61472768,
+          "cpu_idle_percent": 77,
+          "free_memory_bytes": 121012224,
           "active_heavy_slots": 2,
           "other_active_heavy_slots": 1,
           "heavy_queue_length": 4,
@@ -298,15 +60,15 @@
       },
       {
         "air": {
-          "at": "2026-10-17T18:56:58.572661Z",
+          "at": "2026-10-17T19:45:05.002041Z",
           "cpu_count": 8,
           "load_average": [
-            22.18,
-            8.88,
-            6.17
+            2.65,
+            3.6,
+            4.49
           ],
-          "cpu_idle_percent": 2,
-          "free_memory_bytes": 57442304,
+          "cpu_idle_percent": 79,
+          "free_memory_bytes": 115605504,
           "active_heavy_slots": 2,
           "other_active_heavy_slots": 1,
           "heavy_queue_length": 4,
@@ -315,18 +77,137 @@
       },
       {
         "air": {
-          "at": "2026-10-17T18:57:03.558513Z",
+          "at": "2026-10-17T19:45:10.002105Z",
           "cpu_count": 8,
           "load_average": [
-            22,
-            9.07,
-            6.25
+            2.68,
+            3.59,
+            4.48
+          ],
+          "cpu_idle_percent": 67,
+          "free_memory_bytes": 101564416,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 5,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:45:15.002222Z",
+          "cpu_count": 8,
+          "load_average": [
+            2.62,
+            3.56,
+            4.46
+          ],
+          "cpu_idle_percent": 74,
+          "free_memory_bytes": 161955840,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 5,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:45:20.002334Z",
+          "cpu_count": 8,
+          "load_average": [
+            2.73,
+            3.57,
+            4.46
+          ],
+          "cpu_idle_percent": 79,
+          "free_memory_bytes": 190169088,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 5,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:45:25.002101Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.15,
+            3.64,
+            4.48
+          ],
+          "cpu_idle_percent": 34,
+          "free_memory_bytes": 60489728,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 5,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:45:30.011185Z",
+          "cpu_count": 8,
+          "load_average": [
+            5.7,
+            4.17,
+            4.66
+          ],
+          "cpu_idle_percent": 8,
+          "free_memory_bytes": 140312576,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 5,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:45:35.002656Z",
+          "cpu_count": 8,
+          "load_average": [
+            13.33,
+            5.77,
+            5.23
           ],
           "cpu_idle_percent": 19,
-          "free_memory_bytes": 65781760,
+          "free_memory_bytes": 57901056,
           "active_heavy_slots": 2,
           "other_active_heavy_slots": 1,
-          "heavy_queue_length": 4,
+          "heavy_queue_length": 5,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:45:40.002584Z",
+          "cpu_count": 8,
+          "load_average": [
+            12.51,
+            5.73,
+            5.21
+          ],
+          "cpu_idle_percent": 29,
+          "free_memory_bytes": 63651840,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 5,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:45:45.002841Z",
+          "cpu_count": 8,
+          "load_average": [
+            11.98,
+            5.73,
+            5.22
+          ],
+          "cpu_idle_percent": 31,
+          "free_memory_bytes": 102907904,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 5,
           "quiet": false
         }
       }
@@ -336,7 +217,7 @@
     "quiet_wait_ms": 0,
     "quiet_wait_expired": false
   },
-  "run_id": "run_01M55KGEJWJ38VZTFE1BCNQFNE",
+  "run_id": "run_01M55PANR7PRFCF5APGCBQZFPA",
   "metrics": {
     "cleanup_audit": {
       "containers_preserved": true,
@@ -348,13 +229,1215 @@
       "unowned_identifiers_after_sha256": "e18d53df58a026fc0514c0631a57d2da157f1d2f020f018fd228a1da0023e33a",
       "unowned_identifiers_before_sha256": "e18d53df58a026fc0514c0631a57d2da157f1d2f020f018fd228a1da0023e33a",
       "whole_container_operations": 0
-    }
+    },
+    "contacts_capture_phases": [
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081402500925750
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081402666003750
+      },
+      {
+        "stage": "contacts_fetched",
+        "uptime_ns": 1081403383044708
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081403502701250
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081403517067666
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081403517274208
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081404692424750
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081404763450500
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081404775074666
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081404775153083
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081404793566250
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081404830727916
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081404831194458
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081405077389166
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081405150283166
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081405159120000
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081405176444791
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081405196278458
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081405272013208
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081405372982000
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081405432158625
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081405436597291
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081405436681666
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081405455736791
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081405734549250
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081405796447416
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081405801568958
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081405801683125
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081405821345125
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081406111463666
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081407004353833
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081407008481250
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081407008571166
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081407008681916
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081407059715208
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081407069606875
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081407076194041
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081407101415166
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081407180503041
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081407268398125
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081407274174541
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081407274294833
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081407295011250
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081407482917416
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081407611068875
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081407618350000
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081407618460541
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081407638882666
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081407929667375
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081408130256666
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081408203309583
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081408204090958
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081408297490833
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081408297632125
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081408297691208
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081408297742958
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081408297788125
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081408297831166
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081408297872333
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081408297915416
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081408297954375
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081408297993541
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081408298036125
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081408298076500
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081408298116000
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081408298186291
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081408307236708
+      },
+      {
+        "stage": "contacts_fetched",
+        "uptime_ns": 1081409102756875
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081409214289125
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081409235412041
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081409235546000
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081409235608791
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081409235655625
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081409327570291
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081409334580708
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081409339229833
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081409340409666
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081409359765416
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081409385833958
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081409452946666
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081409461791416
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081409461853333
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081409480668416
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081409519629541
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081409594886458
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081409598012833
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081409599133625
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081409614829083
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081409614965166
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081409621911416
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081409637850416
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081409656694041
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081409658146583
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081409658227875
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081409658277750
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081409658320250
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081409658361458
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081409658400333
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081409658437875
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081409658475458
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081409658512666
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081409658548791
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081409658587166
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081409658623916
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081409751635750
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081409760668250
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081409764408916
+      },
+      {
+        "stage": "contacts_fetched",
+        "uptime_ns": 1081410434141375
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081410528318458
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081410550313208
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081410550480000
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081410550554875
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081410550609291
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081410629103250
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081410639445833
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081410644719375
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081410644788083
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081410663624416
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081410667911583
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081410730904666
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081410736179500
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081410738218375
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081410756991250
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081410758031208
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081411623045416
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081411629340041
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081411629508333
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081411648546416
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081411649996583
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081412265964458
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081412268643166
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081412269023125
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081412272612750
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081412272715958
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081412272765416
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081412272805083
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081412272843583
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081412272966166
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081412273024666
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081412273069583
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081412273109958
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081412273147791
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081412273184666
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081412273221958
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081412273259791
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081412273320000
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081412281152708
+      },
+      {
+        "stage": "contacts_fetched",
+        "uptime_ns": 1081412931492208
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081413022081166
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081413046604958
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081413047141333
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081413047227541
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081413047286291
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081413167898500
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081413176045500
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081413183004625
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081413185741000
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081413204988958
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081413246594541
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081413311770875
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081413317231083
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081413318268791
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081413339640333
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081413369915291
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081413622202333
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081413636192875
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081413636474416
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081413667870708
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081413718682791
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081415316949625
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081415317160333
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081415317831208
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081415342154291
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081415342376416
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081415350668708
+      },
+      {
+        "stage": "contacts_fetched",
+        "uptime_ns": 1081415992760125
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081416088016791
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081416111224166
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081416113639375
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081416113718083
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081416113770666
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081416113815958
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081416116096958
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081416116172291
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081416116220166
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081416116264041
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081416116529625
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081416116572250
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081416116614416
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081416116658375
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081416116699500
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081416116740625
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081416116782083
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081416217802208
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081416224944875
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081416230319791
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081416230672791
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081416250141750
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081416316720541
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081416384031875
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081416389808625
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081416393635625
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081416412631583
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081416444335958
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081416446621541
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081416447560791
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081416463695791
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081416464112750
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081416464168208
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081416464219375
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081416464265083
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081416464330291
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081416464391375
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081416464662958
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081416464709666
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081416464750500
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081416464789875
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081416464828833
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081416464869541
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081416464925791
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081416470783208
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081416478421208
+      },
+      {
+        "stage": "contacts_fetched",
+        "uptime_ns": 1081417116118958
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081417219767333
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081417244313416
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081417375250458
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081417383959208
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081417388762083
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081417388848541
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081417409099833
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081417409244708
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081417409779708
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081417409882708
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081417424162083
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081417484359875
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081417490471083
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081417490572875
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081417510586458
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081417516968500
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081418167536000
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081418181213833
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081418182628833
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081418210599000
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081418238694833
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081418961714000
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081418961914041
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081418962304750
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081418965670125
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081418965792416
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081418968092000
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081418968165166
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081418968219000
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081418968266125
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081418968307083
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081418968345541
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081418968386583
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081418968424166
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081418968460916
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081418968497083
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081418968533250
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081418997328916
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081419005913083
+      },
+      {
+        "stage": "contacts_fetched",
+        "uptime_ns": 1081419604521791
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081419695754583
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081419720426833
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081419720966916
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081419721065791
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081419721211666
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081419872337416
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081419881341500
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081419886745958
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081419886834541
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081419907067333
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081419928496208
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081419987361291
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081419992255625
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081419993103041
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081420014201666
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081420038193791
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081420173115166
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081420178473125
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081420178565958
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081420200058833
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081420225585583
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081422223287500
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081422235026083
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081422236398875
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081422257184291
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081422300154958
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081422754983416
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081422812079708
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081422824490041
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081422827124916
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081422860608666
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081422932660750
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081424226691791
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081424238376083
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081424238651833
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081424261857583
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081424327907166
+      }
+    ]
   },
   "scenario": "CON-CRUD",
   "level": "real",
   "passed": true,
-  "git_sha": "1eefb0727428c09cd3b18f1499f454cd792459f7",
-  "at": "2026-10-17T18:55:38.588566Z",
+  "git_sha": "4bc9adb775b46b559c84183d914a7d70d7d14e4e",
+  "at": "2026-10-17T19:44:55.047694Z",
   "assertions": [
     {
       "name": "unified_contacts_imported",
