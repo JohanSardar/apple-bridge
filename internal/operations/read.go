@@ -26,7 +26,12 @@ func (s *Service) Read(ctx context.Context, p trust.Principal, name string, q co
 			return result, nil
 		}
 		if s.LocalStatus != nil {
-			data, err := json.Marshal(s.LocalStatus())
+			status, err := s.LocalReplicaStatus(ctx, p)
+			if err != nil {
+				return result, err
+			}
+			result.Replica = &status
+			data, err := json.Marshal(status)
 			if err != nil {
 				return result, err
 			}

@@ -488,8 +488,6 @@ func (s *Store) Read(ctx context.Context, v trust.Visibility, q contracts.ReadQu
 }
 
 type FrozenSnapshot struct {
-	store *Store
-
 	ID        string
 	Cursor    contracts.Cursor
 	Count     int
