@@ -10,7 +10,7 @@ import (
 
 type Service struct {
 	State       *state.Store
-	LocalStatus func() any
+	LocalStatus func() contracts.ReplicaStatus
 }
 
 func (s *Service) Read(ctx context.Context, p trust.Principal, name string, q contracts.ReadQuery) (contracts.ReadResult, error) {
@@ -28,7 +28,12 @@ func (s *Service) Read(ctx context.Context, p trust.Principal, name string, q co
 	default:
 		return contracts.ReadResult{}, contracts.ErrUnsupported
 	}
-	return s.State.Read(ctx, p.Visibility(), q)
+	result, err := s.State.Read(ctx, p.Visibility(), q)
+	if err == nil && name == "sources.status" && s.LocalStatus != nil {
+		status := s.LocalStatus()
+		result.Replica = &status
+	}
+	return result, err
 }
 func (s *Service) Head() contracts.Cursor { return s.State.Head() }
 func (s *Service) Observe(ctx context.Context, p trust.Principal, after contracts.Cursor) (*state.ChangeIterator, error) {

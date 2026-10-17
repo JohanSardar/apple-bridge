@@ -8,7 +8,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -77,10 +76,6 @@ func Handler(deps Deps, descriptors []contracts.OperationDescriptor) http.Handle
 				return
 			}
 			result, err := deps.Operations.Read(r.Context(), p, name, q)
-			if name == "sources.status" && err == nil && deps.Operations.LocalStatus != nil {
-				respond(w, map[string]any{"records": result.Records, "cursor": result.Cursor, "replica": deps.Operations.LocalStatus()}, nil)
-				return
-			}
 			respond(w, result, err)
 		})
 	}
@@ -97,53 +92,57 @@ func Handler(deps Deps, descriptors []contracts.OperationDescriptor) http.Handle
 			after = r.Header.Get("Last-Event-ID")
 		}
 		if after != "" {
-			n, err := strconv.ParseUint(after, 10, 64)
+			parsed, err := contracts.ParseEventID(after)
 			if err != nil {
-				respond(w, nil, contracts.ErrInvalid)
+				respond(w, nil, contracts.ErrReset)
 				return
 			}
-			cursor.Sequence = n
-		}
-		if epoch := r.URL.Query().Get("epoch"); epoch != "" {
-			cursor.Epoch = epoch
+			cursor = parsed
 		}
 		iterator, err := deps.Operations.Observe(r.Context(), p, cursor)
 		if err != nil {
 			respond(w, nil, err)
 			return
 		}
-		flusher, ok := w.(http.Flusher)
-		if !ok {
-			respond(w, nil, contracts.ErrUnsupported)
-			return
+		controller := http.NewResponseController(w)
+		write := func(event string) error {
+			if err := controller.SetWriteDeadline(time.Now().Add(10 * time.Second)); err != nil {
+				return err
+			}
+			if _, err := io.WriteString(w, event); err != nil {
+				return err
+			}
+			return controller.Flush()
 		}
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.Header().Set("Cache-Control", "no-cache")
-		w.WriteHeader(200)
-		flusher.Flush()
+		if err := write(": connected\n\n"); err != nil {
+			return
+		}
 		for {
 			ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 			batch, err := iterator.Next(ctx)
 			cancel()
 			if errors.Is(err, context.DeadlineExceeded) {
-				if _, err = fmt.Fprint(w, ": heartbeat\n\n"); err != nil {
+				if err = write(": heartbeat\n\n"); err != nil {
 					return
 				}
-				flusher.Flush()
 				continue
 			}
 			if err != nil {
+				if errors.Is(err, contracts.ErrReset) {
+					write("event: reset\ndata: {\"error\":\"reset\"}\n\n")
+				}
 				return
 			}
 			b, err := json.Marshal(batch)
 			if err != nil {
 				return
 			}
-			http.NewResponseController(w).SetWriteDeadline(time.Now().Add(10 * time.Second))
-			if _, err = fmt.Fprintf(w, "id: %d\nevent: batch\ndata: %s\n\n", batch.Through, b); err != nil {
+			cursor := contracts.Cursor{Epoch: batch.Epoch, SubscriptionRevision: batch.SubscriptionRevision, Sequence: batch.Through}
+			if err = write(fmt.Sprintf("id: %s\nevent: batch\ndata: %s\n\n", cursor.EventID(), b)); err != nil {
 				return
 			}
-			flusher.Flush()
 		}
 	})
 	var mu sync.Mutex

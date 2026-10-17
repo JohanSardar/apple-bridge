@@ -405,6 +405,28 @@ func (s *Store) Read(ctx context.Context, v trust.Visibility, q contracts.ReadQu
 	if err = rows.Err(); err != nil {
 		return result, err
 	}
+	rows.Close()
+	if q.IncludeAliases {
+		for _, record := range result.Records {
+			aliases, err := tx.QueryContext(ctx, "SELECT a.source,a.generation,a.collection,a.native_key,a.record_id FROM aliases a JOIN checkpoints c ON a.source=c.source AND a.generation=c.generation WHERE a.collection=? AND a.record_id=? ORDER BY a.source,a.generation,a.native_key", record.Collection, record.ID)
+			if err != nil {
+				return result, err
+			}
+			for aliases.Next() {
+				var alias contracts.Alias
+				if err = aliases.Scan(&alias.Source, &alias.Generation, &alias.Collection, &alias.NativeKey, &alias.RecordID); err != nil {
+					aliases.Close()
+					return result, err
+				}
+				result.Aliases = append(result.Aliases, alias)
+			}
+			err = aliases.Err()
+			aliases.Close()
+			if err != nil {
+				return result, err
+			}
+		}
+	}
 	if q.ID != "" && len(result.Records) == 0 {
 		return result, contracts.ErrNotFound
 	}
@@ -642,7 +664,7 @@ func (s *Store) Changes(ctx context.Context, v trust.Visibility, after contracts
 	if err != nil {
 		return nil, err
 	}
-	if after.Epoch != head.Epoch || after.Sequence > head.Sequence || after.Sequence < s.RetentionFloor() {
+	if after.Epoch != head.Epoch || after.SubscriptionRevision != head.SubscriptionRevision || after.Sequence > head.Sequence || after.Sequence < s.RetentionFloor() {
 		return nil, contracts.ErrReset
 	}
 	return &ChangeIterator{store: s, visibility: v, cursor: after}, nil
@@ -659,7 +681,7 @@ func (i *ChangeIterator) Next(ctx context.Context) (contracts.Batch, error) {
 			tx.Rollback()
 			return contracts.Batch{}, err
 		}
-		if head.Epoch != i.cursor.Epoch || i.cursor.Sequence < i.store.RetentionFloor() {
+		if head.Epoch != i.cursor.Epoch || head.SubscriptionRevision != i.cursor.SubscriptionRevision || i.cursor.Sequence < i.store.RetentionFloor() {
 			tx.Rollback()
 			return contracts.Batch{}, contracts.ErrReset
 		}

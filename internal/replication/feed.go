@@ -212,14 +212,7 @@ func (s *Server) serve(ctx context.Context, conn *websocket.Conn, p trust.Princi
 	}
 }
 
-type FollowStatus struct {
-	State         string           `json:"state"`
-	Cursor        contracts.Cursor `json:"cursor"`
-	LastHeartbeat time.Time        `json:"last_heartbeat"`
-	Mode          string           `json:"mode"`
-	Snapshots     int              `json:"snapshots"`
-	Resumes       int              `json:"resumes"`
-}
+type FollowStatus = contracts.ReplicaStatus
 
 type Client struct {
 	Store     *state.Store

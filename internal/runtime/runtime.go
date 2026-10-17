@@ -128,7 +128,7 @@ func Start(ctx context.Context, cfg Config) error {
 		}()
 	} else {
 		client := &replication.Client{Store: store, Authority: authority}
-		service.LocalStatus = func() any { return client.Status() }
+		service.LocalStatus = client.Status
 		go func() { failures <- client.Follow(ctx) }()
 	}
 	server := &http.Server{Handler: frontdoor.Handler(frontdoor.Deps{Operations: service, Authority: authority, Address: cfg.APIAddress}, contracts.Operations), ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 30 * time.Second}

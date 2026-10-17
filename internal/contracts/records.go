@@ -1,8 +1,11 @@
 package contracts
 
 import (
+	"bytes"
 	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
+	"io"
 	"math/big"
 	"strings"
 	"time"
@@ -56,6 +59,7 @@ type Change struct {
 }
 
 type ReadQuery struct {
+	IncludeAliases bool   `json:"include_aliases,omitempty"`
 	Collection     string `json:"collection"`
 	ID             string `json:"id,omitempty"`
 	IncludeDeleted bool   `json:"include_deleted,omitempty"`
@@ -64,9 +68,11 @@ type ReadQuery struct {
 }
 
 type ReadResult struct {
-	Records []Record `json:"records"`
-	Cursor  Cursor   `json:"cursor"`
-	Next    string   `json:"next,omitempty"`
+	Aliases []Alias        `json:"aliases,omitempty"`
+	Replica *ReplicaStatus `json:"replica,omitempty"`
+	Records []Record       `json:"records"`
+	Cursor  Cursor         `json:"cursor"`
+	Next    string         `json:"next,omitempty"`
 }
 
 func NewID(prefix string) string {
@@ -105,4 +111,43 @@ func ValidateQuery(q ReadQuery) error {
 		return ErrInvalid
 	}
 	return nil
+}
+
+type Alias struct {
+	Source     Source `json:"source"`
+	Generation string `json:"generation"`
+	Collection string `json:"collection"`
+	NativeKey  string `json:"native_key"`
+	RecordID   string `json:"record_id"`
+}
+
+type ReplicaStatus struct {
+	State         string    `json:"state"`
+	Cursor        Cursor    `json:"cursor"`
+	LastHeartbeat time.Time `json:"last_heartbeat"`
+	Mode          string    `json:"mode"`
+	Snapshots     int       `json:"snapshots"`
+	Resumes       int       `json:"resumes"`
+}
+
+func (c Cursor) EventID() string {
+	raw, _ := json.Marshal(c)
+	return base64.RawURLEncoding.EncodeToString(raw)
+}
+func ParseEventID(id string) (Cursor, error) {
+	var encoded struct {
+		Epoch    string  `json:"epoch"`
+		Revision uint64  `json:"subscription_revision"`
+		Sequence *uint64 `json:"sequence"`
+	}
+	raw, err := base64.RawURLEncoding.DecodeString(id)
+	if err != nil {
+		return Cursor{}, ErrInvalid
+	}
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	decoder.DisallowUnknownFields()
+	if decoder.Decode(&encoded) != nil || decoder.Decode(&struct{}{}) != io.EOF || encoded.Epoch == "" || encoded.Revision == 0 || encoded.Sequence == nil {
+		return Cursor{}, ErrInvalid
+	}
+	return Cursor{Epoch: encoded.Epoch, SubscriptionRevision: encoded.Revision, Sequence: *encoded.Sequence}, nil
 }
