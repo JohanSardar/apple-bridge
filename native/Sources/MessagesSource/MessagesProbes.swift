@@ -109,7 +109,9 @@ public enum MessagesProbes {
             "apple_event_error": scriptError,
             "route": chatID == nil ? "imessage_buddy" : "existing_chat",
             "chat_guid_format_used": chatID == nil ? "none_buddy" : rawGUID?.hasPrefix("any;-;") == true ? "iMessage;-; normalized_from_any;-;" : "iMessage_service_specific",
-            "row_appeared": matched != nil,
+            "row_appeared": matched != nil || !ghosts.isEmpty,
+            "matching_self_chat_row_appeared": matched != nil,
+            "row_attribution": matched != nil ? "matching_self_chat" : ghosts.isEmpty ? "none" : "unattributed_ghost_candidate",
             "text_matched": matched != nil,
             "new_row_count": observed.count,
             "ghost_send_symptoms": !ghosts.isEmpty,
@@ -117,8 +119,13 @@ public enum MessagesProbes {
             "payload": PrivateReport.redact(text),
             "disposition": matched != nil ? "locally_observed" : "indeterminate"
         ]
-        for field in ["service", "error", "is_sent", "is_delivered", "is_finished"] {
-            report[field] = matched?[field] ?? NSNull() as Any
+        let fields = ["service", "error", "is_sent", "is_delivered", "is_finished"]
+        let candidate = matched ?? ghosts.first
+        for field in fields {
+            report[field] = candidate?[field] ?? NSNull() as Any
+        }
+        report["ghost_candidates"] = ghosts.map { row in
+            Dictionary(uniqueKeysWithValues: fields.map { ($0, row[$0] ?? "unknown") })
         }
         return report
     }
