@@ -12,8 +12,10 @@ import (
 
 func runRealMessages(ctx context.Context, s Scenario, level string, evidence Evidence) Evidence {
 	replicas := 0
-	if level == "replica" {
+	if level == "replica" || s.ID == "MSG-INCOMING" || s.ID == "MSG-RECEIPTS" {
 		replicas = 1
+	}
+	if level == "replica" {
 		evidence.Hosts = append(evidence.Hosts, "ubuntu")
 	}
 	w, err := world.NewReal(ctx, level, replicas, world.BlobOptions{})
@@ -22,6 +24,7 @@ func runRealMessages(ctx context.Context, s Scenario, level string, evidence Evi
 		return evidence
 	}
 	defer w.Close()
+	evidence.NetworkPath = w.NetworkPath
 	request := filepath.Join(w.Dir, "messages-check.json")
 	data, err := json.Marshal(map[string]any{"scenario": s.ID, "gateway": w.Gateway, "replicas": w.Replicas})
 	if err == nil {
@@ -38,6 +41,7 @@ func runRealMessages(ctx context.Context, s Scenario, level string, evidence Evi
 		Assertions []Assertion          `json:"assertions"`
 		Samples    map[string][]float64 `json:"samples"`
 		Status     string               `json:"status"`
+		Metrics    map[string]any       `json:"metrics"`
 	}
 	if err != nil || json.Unmarshal(output, &result) != nil {
 		evidence.Assertions = append(evidence.Assertions, Assertion{Name: "redacted_readonly_truth_check", Passed: false})
@@ -45,6 +49,7 @@ func runRealMessages(ctx context.Context, s Scenario, level string, evidence Evi
 	}
 	evidence.Assertions = append(evidence.Assertions, result.Assertions...)
 	evidence.Status = result.Status
+	evidence.Metrics = result.Metrics
 	for name, values := range result.Samples {
 		evidence.Latency[name] = stats(values, 0)
 	}
