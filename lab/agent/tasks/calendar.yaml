@@ -2,4 +2,4 @@ id: calendar-appointment
 source: calendar
 requires: [calendar.write]
 scope: calendar:write
-prompt: 'Schedule a 30-minute Test appointment tomorrow at 9 AM in an existing Bridge Test calendar. Prefix the event title with {{tag}}.'
+prompt: 'Schedule a 30-minute appointment titled "Test appointment" tomorrow at 9 AM in an existing Bridge Test calendar. Prefix the event title with {{tag}}.'

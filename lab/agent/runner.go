@@ -332,9 +332,15 @@ func (r AgentRunner) run(ctx context.Context, task Task, number int) (attempt At
 		return
 	}
 	now := time.Now()
+	zone := now.Location().String()
+	if path, err := os.Readlink("/etc/localtime"); err == nil {
+		if _, name, ok := strings.Cut(path, "zoneinfo/"); ok {
+			zone = name
+		}
+	}
 	tomorrow := now.AddDate(0, 0, 1)
 	due := time.Date(tomorrow.Year(), tomorrow.Month(), tomorrow.Day(), 9, 0, 0, 0, now.Location())
-	prompt := "Use only the apple_bridge MCP tools. Never use shell, file, browser, or other tools. Only modify data bearing this test tag: " + tag + ". Today is " + now.Format(time.RFC3339) + " in " + now.Location().String() + ".\n" + strings.ReplaceAll(task.Prompt, "{{tag}}", tag)
+	prompt := "Use only the apple_bridge MCP tools. Never use shell, file, browser, or other tools. Only modify data bearing this test tag: " + tag + ". Today is " + now.Format(time.RFC3339) + " in " + zone + ". Interpret all dates and times in " + zone + ".\n" + strings.ReplaceAll(task.Prompt, "{{tag}}", tag)
 	result, err := r.execute(ctx, w, task, number, prompt, nil)
 	if err != nil {
 		attempt.Failure = "codex_execution"
