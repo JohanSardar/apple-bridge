@@ -163,7 +163,8 @@ def main():
         started = time.monotonic()
         deadline = started + 1000
         equal = False
-        initial_position = native.execute("SELECT MAX(ROWID) FROM message").fetchone()[0]
+        initial_position = native.execute("SELECT COALESCE(MAX(ROWID),0) FROM message").fetchone()[0]
+        initial_observed = None
         while time.monotonic() < deadline:
             expected = dict(native.execute("SELECT COALESCE(c.guid,''),COUNT(DISTINCT m.guid) FROM message m LEFT JOIN chat_message_join j ON j.message_id=m.ROWID LEFT JOIN chat c ON c.ROWID=j.chat_id WHERE COALESCE(m.associated_message_type,0) NOT BETWEEN 2000 AND 2007 AND COALESCE(m.associated_message_type,0) NOT BETWEEN 3000 AND 3007 GROUP BY COALESCE(c.guid,'')"))
             aliases = dict(state.execute("SELECT record_id,native_key FROM aliases WHERE collection='messages.chat'"))
@@ -171,13 +172,18 @@ def main():
             for chat_id, count in state.execute("SELECT COALESCE(json_extract(payload,'$.data.chat_id'),''),COUNT(*) FROM records WHERE collection='messages.message' AND deleted=0 GROUP BY COALESCE(json_extract(payload,'$.data.chat_id'),'')"):
                 chat = aliases.get(chat_id, "" if chat_id == "" else None)
                 observed[chat] = count
+            if initial_observed is None:
+                initial_observed = sum(observed.values())
             if observed == expected:
                 equal = True
                 break
             time.sleep(5)
         check("gateway_per_chat_counts_equal_readonly_truth", equal)
-        result["samples"]["messages_ready_to_gateway_history_equal"] = [(time.monotonic() - started) * 1000]
-        changed = native.execute("SELECT MAX(ROWID) FROM message").fetchone()[0] > initial_position
+        elapsed = time.monotonic() - started
+        result["metrics"].update(history_complete=equal, history_observation_ms=elapsed * 1000, history_expected_message_records=sum(expected.values()), history_observed_message_records=sum(observed.values()), history_initial_observed_message_records=initial_observed, history_observed_rows_per_second=(sum(observed.values()) - initial_observed) / elapsed, history_mismatched_chat_count=sum(expected.get(key, 0) != observed.get(key, 0) for key in expected.keys() | observed.keys()))
+        if equal:
+            result["samples"]["messages_ready_to_gateway_history_equal"] = [elapsed * 1000]
+        changed = native.execute("SELECT COALESCE(MAX(ROWID),0) FROM message").fetchone()[0] > initial_position
         check("live_changes_during_import_revalidated", equal and changed, "No natural insert observed during import; simulator covers concurrent mutation" if not changed else "", not changed)
     elif scenario == "MSG-RECEIPTS":
         baseline = receipt_snapshot(native)
@@ -256,7 +262,7 @@ def main():
         else:
             check("natural_inode_rearm_observed", False, "No natural WAL inode replacement observed during the bounded read-only window", True)
     elif scenario == "MSG-INCOMING":
-        position = native.execute("SELECT MAX(ROWID) FROM message").fetchone()[0]
+        position = native.execute("SELECT COALESCE(MAX(ROWID),0) FROM message").fetchone()[0]
         deadline = time.monotonic() + 60
         samples = 0
         started = time.monotonic()
