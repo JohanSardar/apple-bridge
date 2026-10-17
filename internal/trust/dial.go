@@ -29,8 +29,8 @@ func (a *Authority) JoinListen(ctx context.Context, code, address string) error 
 	if err != nil {
 		return err
 	}
-	if existing != nil {
-		return contracts.ErrConflict
+	if existing != nil && existing.PairingID == c.ID {
+		return contracts.ErrUnauthorized
 	}
 	listener, err := a.PinnedListener(address, c.Fingerprint)
 	if err != nil {
@@ -64,7 +64,7 @@ func (a *Authority) JoinListen(ctx context.Context, code, address string) error 
 			return
 		}
 		if !enrolled {
-			if err := a.SaveEnrollment(Enrollment{Dial: c.Dial, ReplicaID: p.ID, Address: c.Address, Fingerprint: c.Fingerprint, Grants: p.Grants, Ceiling: p.Grants}); err != nil {
+			if err := a.SaveEnrollment(Enrollment{PairingID: c.ID, Dial: c.Dial, ReplicaID: p.ID, Address: c.Address, Fingerprint: c.Fingerprint, Grants: p.Grants, Ceiling: p.Grants}); err != nil {
 				http.Error(w, "unavailable", 503)
 				return
 			}

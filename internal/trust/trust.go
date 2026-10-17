@@ -147,6 +147,7 @@ type pairing struct {
 }
 
 type Enrollment struct {
+	PairingID   string            `json:"pairing_id,omitempty"`
 	Dial        string            `json:"dial,omitempty"`
 	Ceiling     []contracts.Grant `json:"ceiling,omitempty"`
 	ReplicaID   string            `json:"replica_id"`
@@ -502,7 +503,7 @@ func (a *Authority) Join(ctx context.Context, code string) error {
 	if err = json.NewDecoder(resp.Body).Decode(&p); err != nil {
 		return err
 	}
-	return a.SaveEnrollment(Enrollment{ReplicaID: p.ID, Address: c.Address, Fingerprint: c.Fingerprint, Grants: p.Grants, Ceiling: p.Grants})
+	return a.SaveEnrollment(Enrollment{PairingID: c.ID, ReplicaID: p.ID, Address: c.Address, Fingerprint: c.Fingerprint, Grants: p.Grants, Ceiling: p.Grants})
 }
 
 func (a *Authority) acceptPair(req JoinRequest, cert *x509.Certificate, resume bool) (Principal, error) {
