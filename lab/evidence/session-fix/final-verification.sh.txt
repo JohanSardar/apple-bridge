@@ -1,0 +1,13 @@
+set -eu
+export GOFLAGS=-p=2
+go vet ./...
+go vet -tags lab ./...
+make lint
+go run ./cmd/bridge-lab run lab/scenarios/core/CORE-CREDENTIAL-STORE.yaml --level sim
+go run ./cmd/bridge-lab run lab/scenarios/reminders/REM-CREATE-EXTERNAL.yaml lab/scenarios/core/CORE-LIVE-LATENCY.yaml --level real
+go run ./cmd/bridge-lab run lab/scenarios/reminders/REM-CREATE-EXTERNAL.yaml --level replica
+audit_dir=$(mktemp -d /tmp/session-fix-audit.XXXXXX)
+trap 'rm -rf "$audit_dir"' EXIT
+packaging/dev/build-truth.sh "$audit_dir/AppleTruth.app"
+python3 lab/evidence/private/session-fix-audit.py "$audit_dir/AppleTruth.app"
+make features
