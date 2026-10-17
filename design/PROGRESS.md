@@ -23,7 +23,7 @@ One line per unit. Rules: BUILD-GOAL.md (2026-10-17 update: no reviews, merge on
 - DONE agent suite (31891ec): Codex gpt-6-luna on Ubuntu, MCP only, 7 tasks across 6 sources, each 2/2, graded by independent Truth.
 
 ## Status (2026-10-17 final)
-- features.yaml: 20 done, 4 limited, 0 todo (175/183 scenario-levels passing; the 8 not passing are the listed limits). Lint ok. No worktrees left except none; branch `usage-wip` (unmerged leftover) kept.
+- features.yaml: 20 done, 4 limited, 0 todo (175/183 scenario-levels passing; the 8 not passing are the listed limits). Lint ok. No worktrees left; unmerged leftover branch `usage-wip` kept (superseded by the merged Usage source).
 - Open follow-ups (not blocking): command responses > 256 KiB over the gateway-dials feed; delete tagged self-test messages once the screen is unlocked; Notes Automation can stall (relaunch Notes) — consider auto-recovery.
 
 ## Limits
