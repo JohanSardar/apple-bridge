@@ -284,7 +284,7 @@
     "MSG-UNSEND"
   ],
   "limitations": [
-    "File inputs currently use base64 IPC data; each file is capped at 128 KiB and the IPC frame limit still applies.",
+    "The original 128 KiB inline-file limitation was removed; see messages-large-files.json for staged-blob verification.",
     "Latest file command latency exceeded 1 s under load; no quiet-machine waits or repeated benchmark sends were used.",
     "Native tagged messages and incoming echoes await safe UI cleanup after unlock; private owner-only manifests identify each run."
   ],

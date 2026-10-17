@@ -1,0 +1,106 @@
+{
+  "scenario": "MSG-SEND-FILES",
+  "file_bytes": 5242880,
+  "transport": "private staged blob path and digest; no file bytes in native IPC",
+  "upload_api": "POST /v1/blobs with messages:write; pass returned upload_id with file name",
+  "permissions": {
+    "directory": "0700",
+    "file": "0600",
+    "ownership": "same user; upload reference bound to principal"
+  },
+  "safety": {
+    "self_only": true,
+    "tagged": true,
+    "other_recipients_used": false
+  },
+  "new_scenarios": [],
+  "verification": {
+    "transport": "ssh -o ControlPath=none air",
+    "worktree": "~/apple-bridge/.worktrees/m1-messages-commands",
+    "wrapper": "packaging/dev/heavy.sh env GOFLAGS=-p=2",
+    "commands": [
+      "go run ./cmd/bridge-lab run --level sim lab/scenarios/messages/MSG-SEND-FILES.yaml",
+      "go run ./cmd/bridge-lab run --level real lab/scenarios/messages/MSG-SEND-FILES.yaml",
+      "make lint",
+      "make features"
+    ],
+    "native_build": "per-run immutable signed Helper built by real World"
+  },
+  "results": [
+    {
+      "scenario": "MSG-SEND-FILES",
+      "level": "sim",
+      "passed": true,
+      "git_sha": "6f1bdd6d1257945beb1c0576153f4ce43cdcb16b",
+      "latency": {
+        "mcp_command_to_replica": {
+          "samples": 1,
+          "p50_ms": 182.006792,
+          "p95_ms": 182.006792,
+          "max_ms": 182.006792,
+          "timeouts": 0
+        },
+        "rest_command_to_replica": {
+          "samples": 1,
+          "p50_ms": 229.646042,
+          "p95_ms": 229.646042,
+          "max_ms": 229.646042,
+          "timeouts": 0
+        }
+      },
+      "metrics": {
+        "ipc_file_transport": "private_path_and_digest",
+        "largest_file_bytes": 5242880
+      }
+    },
+    {
+      "scenario": "MSG-SEND-FILES",
+      "level": "real",
+      "passed": true,
+      "git_sha": "6f1bdd6d1257945beb1c0576153f4ce43cdcb16b",
+      "latency": {
+        "command_submit_to_visible_0": {
+          "samples": 1,
+          "p50_ms": 696.109459,
+          "p95_ms": 696.109459,
+          "max_ms": 696.109459,
+          "timeouts": 0
+        },
+        "echo_chat_db_appearance_to_visible_0": {
+          "samples": 1,
+          "p50_ms": 197.4145,
+          "p95_ms": 197.4145,
+          "max_ms": 197.4145,
+          "timeouts": 0
+        }
+      },
+      "metrics": {
+        "attachment_downloads": [
+          {
+            "endpoint_index": 0,
+            "http_status": 200,
+            "local_blob_reason": "",
+            "local_blob_state": "present",
+            "record_blob_state": "present"
+          },
+          {
+            "endpoint_index": 0,
+            "http_status": 200,
+            "local_blob_reason": "",
+            "local_blob_state": "present",
+            "record_blob_state": "present"
+          }
+        ],
+        "command_state": "observed",
+        "disposition": "locally_observed",
+        "initial_command_state": "observed",
+        "ipc_file_transport": "private_path_and_digest",
+        "largest_file_bytes": 5242880,
+        "parts_requested": 3,
+        "screen": "locked",
+        "send_commands": 1
+      }
+    }
+  ],
+  "cleanup": "Consumed gateway upload references are removed; tagged native messages await unlock for UI cleanup."
+}
