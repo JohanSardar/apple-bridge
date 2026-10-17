@@ -157,12 +157,17 @@ public actor AppleSession: ObservationSink {
         }
     }
 
+    private func captureResume(_ name: String) -> JSON {
+        let checkpoint = checkpoints[name] ?? .null
+        return checkpoint["refresh_blobs"].bool ? .null : checkpoint
+    }
+
     private func capture() async {
         while !Task.isCancelled && wire != nil {
             do {
                 try await publishReadiness()
                 let readiness = await source.open()
-                if readiness.state == "ready" { try await source.capture(checkpoints["reminders"]?["refresh_blobs"].bool == true ? .null : checkpoints["reminders"] ?? .null, into: self) }
+                if readiness.state == "ready" { try await source.capture(captureResume("reminders"), into: self) }
             } catch {
                 if wire == nil || Task.isCancelled { return }
                 if case SourceFailure.permissionMissing = error {
@@ -181,7 +186,7 @@ public actor AppleSession: ObservationSink {
             do {
                 let readiness = await source.open()
                 try await sourceState(source: source.name, state: readiness.state, coverage: readiness.coverage, capabilities: readiness.capabilities, reason: readiness.reason)
-                try await source.capture(checkpoints[source.name] ?? .null, into: self)
+                try await source.capture(captureResume(source.name), into: self)
             } catch {
                 if Task.isCancelled || wire == nil { return }
                 let permissionMissing: Bool
