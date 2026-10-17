@@ -1,10 +1,10 @@
 {
-  "run_id": "run_01M548TV4G7YQXNCZN3ERDGWCD",
+  "run_id": "run_01M549E75ES170VSPCJMMBZ8MW",
   "scenario": "MSG-DB-REPLACED",
   "level": "sim",
   "passed": true,
-  "git_sha": "19bdd60217041d3ed958742f4bcd93535800894d",
-  "at": "2026-10-17T06:29:50.352877Z",
+  "git_sha": "4e574f1875a975d9626ccc2269410e9ed414aa2e",
+  "at": "2026-10-17T06:40:25.262574Z",
   "assertions": [
     {
       "name": "seed",
@@ -52,6 +52,10 @@
     },
     {
       "name": "automatic_no_scope_leak_1",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
       "passed": true
     }
   ],

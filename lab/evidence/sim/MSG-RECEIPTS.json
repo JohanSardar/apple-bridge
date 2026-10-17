@@ -1,10 +1,10 @@
 {
-  "run_id": "run_01M548VXVAC9SGA1YNYRCGEF87",
+  "run_id": "run_01M549EV68BKC7TBTN4MSGD45Q",
   "scenario": "MSG-RECEIPTS",
   "level": "sim",
   "passed": true,
-  "git_sha": "19bdd60217041d3ed958742f4bcd93535800894d",
-  "at": "2026-10-17T06:30:25.898338Z",
+  "git_sha": "4e574f1875a975d9626ccc2269410e9ed414aa2e",
+  "at": "2026-10-17T06:40:45.768641Z",
   "assertions": [
     {
       "name": "seed",
@@ -48,6 +48,10 @@
     },
     {
       "name": "automatic_no_scope_leak_1",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
       "passed": true
     }
   ],

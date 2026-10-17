@@ -1,10 +1,10 @@
 {
-  "run_id": "run_01M548VSQE5P7WADG4HGSXA085",
+  "run_id": "run_01M549EXMVE1HXCH9KHJYBK172",
   "scenario": "MSG-INCOMING",
   "level": "sim",
   "passed": true,
-  "git_sha": "19bdd60217041d3ed958742f4bcd93535800894d",
-  "at": "2026-10-17T06:30:21.678963Z",
+  "git_sha": "4e574f1875a975d9626ccc2269410e9ed414aa2e",
+  "at": "2026-10-17T06:40:48.283706Z",
   "assertions": [
     {
       "name": "seed",
@@ -45,28 +45,32 @@
     {
       "name": "automatic_no_scope_leak_1",
       "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
     }
   ],
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 32,
-      "p50_ms": 22.724917,
-      "p95_ms": 32.252709,
-      "max_ms": 40.822292,
+      "p50_ms": 6.246334,
+      "p95_ms": 8.598291,
+      "max_ms": 9.110792,
       "timeouts": 0
     },
     "effect_done→replica_visible": {
       "samples": 32,
-      "p50_ms": 45.15375,
-      "p95_ms": 57.580625,
-      "max_ms": 72.23775,
+      "p50_ms": 9.779,
+      "p95_ms": 12.667291,
+      "max_ms": 12.705375,
       "timeouts": 0
     },
     "gateway_visible→replica_visible": {
       "samples": 32,
-      "p50_ms": 22.072708,
-      "p95_ms": 30.278708,
-      "max_ms": 31.415458,
+      "p50_ms": 3.526542,
+      "p95_ms": 4.853334,
+      "max_ms": 4.890791,
       "timeouts": 0
     }
   },

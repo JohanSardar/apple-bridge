@@ -1,11 +1,11 @@
 {
-  "run_id": "run_01M548YWQPMARSKZAWYX35PTFE",
+  "run_id": "run_01M549E3M740N32A2JMCNK523X",
   "network_path": "loopback",
   "scenario": "CORE-RESTORE-OLD-SCHEMA",
   "level": "sim",
   "passed": true,
-  "git_sha": "9e7554c9b2b0b9e515b842b1912e9887da783849",
-  "at": "2026-10-17T06:32:03.062172Z",
+  "git_sha": "4e574f1875a975d9626ccc2269410e9ed414aa2e",
+  "at": "2026-10-17T06:40:21.639669Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -75,16 +75,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 14.121,
-      "p95_ms": 14.121,
-      "max_ms": 14.121,
+      "p50_ms": 28.864083,
+      "p95_ms": 28.864083,
+      "max_ms": 28.864083,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 18.001,
-      "p95_ms": 18.001,
-      "max_ms": 18.001,
+      "p50_ms": 33.489458,
+      "p95_ms": 33.489458,
+      "max_ms": 33.489458,
       "timeouts": 0
     }
   },
