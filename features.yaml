@@ -36,7 +36,7 @@ features:
     milestone: M0
     modules: [lab]
     depends_on: []
-    status: todo
+    status: done
     scenarios:
       - {id: CORE-BOOT, levels: [sim, replica]}
       - {id: LAB-TRUTH-MULTIPLICITY, levels: [sim]}
@@ -48,7 +48,7 @@ features:
     milestone: M0
     modules: [state, replication, contracts]
     depends_on: [core.harness]
-    status: todo
+    status: done
     scenarios:
       - {id: CORE-LIVE-LATENCY, levels: [sim, real, replica]}
       - {id: CORE-SNAPSHOT-UNDER-LOAD, levels: [sim]}
@@ -68,7 +68,7 @@ features:
     milestone: M0
     modules: [runtime, state, applepeer]
     depends_on: [core.replication]
-    status: todo
+    status: done
     scenarios:
       - {id: CORE-HELPER-RESTART, levels: [sim]}
       - {id: CORE-DOCTOR, levels: [sim, replica]}
@@ -83,7 +83,11 @@ features:
     milestone: M0
     modules: [trust, frontdoor, replication]
     depends_on: [core.replication]
-    status: todo
+    status: limited
+    limits:
+      - scenario: CORE-CRED-LIFECYCLE
+        level: real
+        reason: "macOS login Keychain locked while Johan is away (security: User interaction is not allowed); unlocking needs his login password. Keychain adapter verified against a dedicated unlocked test keychain; Linux secret store verified at replica level."
     scenarios:
       - {id: CORE-SCOPE-LEAK, levels: [sim, replica]}
       - {id: CORE-SCOPE-CHANGE, levels: [sim]}
@@ -98,7 +102,7 @@ features:
     milestone: M0
     modules: [operations, state, applepeer]
     depends_on: [core.replication, core.trust]
-    status: todo
+    status: done
     scenarios:
       - {id: CORE-CMD-ERA, levels: [sim]}
       - {id: CORE-CMD-IDEMPOTENT, levels: [sim]}
@@ -115,7 +119,7 @@ features:
     milestone: M0
     modules: [frontdoor, contracts]
     depends_on: [core.commands]
-    status: todo
+    status: done
     scenarios:
       - {id: CORE-REST-MCP-PARITY, levels: [sim]}
   - id: core.blobs
@@ -124,7 +128,7 @@ features:
     milestone: M0
     modules: [blobs, replication]
     depends_on: [core.replication, core.trust]
-    status: todo
+    status: done
     scenarios:
       - {id: CORE-BLOB-INTERRUPT, levels: [sim, replica]}
       - {id: CORE-BLOB-CORRUPT, levels: [sim]}
@@ -141,7 +145,7 @@ features:
     milestone: M0
     modules: [state]
     depends_on: [core.replication]
-    status: todo
+    status: done
     scenarios:
       - {id: CORE-BENCH, levels: [sim, replica]}
 
@@ -151,7 +155,7 @@ features:
     milestone: M1
     modules: [native/AppleSession, applepeer]
     depends_on: [core.commands]
-    status: todo
+    status: done
     scenarios:
       - {id: HELPER-RESTART-REAL, levels: [real]}
       - {id: HELPER-TCC-READY, levels: [real]}
@@ -221,7 +225,7 @@ features:
     milestone: M1
     modules: [native/RemindersSource, native/AgendaGate]
     depends_on: [helper.session]
-    status: todo
+    status: done
     scenarios:
       - {id: REM-CREATE-EXTERNAL, levels: [sim, real, replica]}
       - {id: REM-RECURRING, levels: [sim, real]}

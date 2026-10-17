@@ -52,3 +52,9 @@ You are a worker on Apple Bridge, delegated by the build leader. Read this file,
 - UI-automation scenarios (Accessibility actions in Messages) may use captures as Truth evidence for visible effects; keep screenshots in private, gitignored paths (they contain personal data).
 
 - Real Worlds stage immutable, signed Helper and AppleTruth bundles under their own `/tmp/ablab/<world>/apps/` from the current worktree using `packaging/dev/build-helper.sh <destination.app>` and `packaging/dev/build-truth.sh <destination.app>`. Always pass a new destination; never rebuild a running World’s bundle or install into the shared dev apps during worker verification. Signing still uses `packaging/dev/sign.sh` and the existing certificate, bundle IDs and designated requirements. Launch with `open -n -W -a`.
+
+## Speed rules (2026-10-17, binding)
+- Reviews: only new units get one review, by one reviewer doing both axes (Standards + Spec) in a single pass. Never spawn review sub-agents. Fix rounds are not re-reviewed: the fixer proves each fix with its failing-then-passing scenario (or by reverting it locally to show the check fails).
+- Merge first: merge to main as soon as the unit's scenarios pass; don't sit on branches. List anything unproven precisely instead of polishing.
+- No gold-plating beyond DECISIONS.md and the 20 findings: no quiet-machine waits, no benchmarks beyond the <1 s latency checks, no doctor extras. Host telemetry stays one line in evidence, never a gate.
+- Commit at least every 2 hours of work; a worker with no commit for 3 hours is treated as stalled and gets re-scoped.
