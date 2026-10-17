@@ -1,5 +1,5 @@
 id: CAL-ALLDAY-FUTURE
-feature: calendar.read
+feature: calendar.write
 levels: [sim, real]
 given:
   - world: {replicas: 1}

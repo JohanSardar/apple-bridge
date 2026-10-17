@@ -21,7 +21,7 @@ struct CalendarTruth {
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: ownershipURL.path)
     }
     private static func remember(_ event: EKEvent, tag: String) throws {
-        guard event.calendar.title == "Bridge Test", (event.title ?? "").contains(tag), let identifier = event.eventIdentifier else { throw TruthFailure.invalid }
+        guard event.calendar.title == "Bridge Test", (event.title ?? "").hasPrefix(tag), let identifier = event.eventIdentifier else { throw TruthFailure.invalid }
         var value = try ownership()
         if !(value.events[tag] ?? []).contains(identifier) { value.events[tag, default: []].append(identifier) }
         try saveOwnership(value)
@@ -74,7 +74,7 @@ struct CalendarTruth {
             }
         }
         let selected = events.filter { event in
-            (event.title ?? "").contains(tag) && ((request["title"] as? String).map { event.title == $0 } ?? true) && ((request["occurrence_date"] as? String).map { stamp(event.occurrenceDate ?? event.startDate) == $0 } ?? true)
+            (event.title ?? "").hasPrefix(tag) && ((request["title"] as? String).map { event.title == $0 } ?? true) && ((request["occurrence_date"] as? String).map { stamp(event.occurrenceDate ?? event.startDate) == $0 } ?? true)
         }.sorted { $0.startDate < $1.startDate }
         if verb == "fixture" {
             switch action {
@@ -82,7 +82,7 @@ struct CalendarTruth {
                 guard let calendar = calendars.first else { throw TruthFailure.unavailable }
                 return ["status": "verified", "id": calendar.calendarIdentifier]
             case "create":
-                guard let calendar = calendars.first, calendar.allowsContentModifications, let title = request["title"] as? String, title.contains(tag) else { throw TruthFailure.invalid }
+                guard let calendar = calendars.first, calendar.allowsContentModifications, let title = request["title"] as? String, title.hasPrefix(tag) else { throw TruthFailure.invalid }
                 let event = EKEvent(eventStore: store)
                 event.calendar = calendar; event.title = title
                 event.isAllDay = request["all_day"] as? Bool ?? false
@@ -100,7 +100,7 @@ struct CalendarTruth {
                 guard let index = request["index"] as? Int, selected.indices.contains(index) else { throw TruthFailure.invalid }
                 let event = selected[index]
                 guard event.calendar.title == "Bridge Test", event.calendar.allowsContentModifications else { throw TruthFailure.invalid }
-                if let title = request["new_title"] as? String { guard title.contains(tag) else { throw TruthFailure.invalid }; event.title = title }
+                if let title = request["new_title"] as? String { guard title.hasPrefix(tag) else { throw TruthFailure.invalid }; event.title = title }
                 if let value = request["start"] as? String {
                     let duration = event.endDate.timeIntervalSince(event.startDate)
                     event.startDate = try date(value, allDay: event.isAllDay, zone: event.isAllDay ? .current : (event.timeZone ?? .current))
@@ -113,7 +113,7 @@ struct CalendarTruth {
                     guard let key = request["calendar_id"] as? String, calendars.contains(where: { $0.calendarIdentifier == key && $0.title == "Bridge Test" }) else { throw TruthFailure.invalid }
                 }
                 for event in selected {
-                    guard event.calendar.title == "Bridge Test", (event.title ?? "").contains(tag), event.calendar.allowsContentModifications else { throw TruthFailure.invalid }
+                    guard event.calendar.title == "Bridge Test", (event.title ?? "").hasPrefix(tag), event.calendar.allowsContentModifications else { throw TruthFailure.invalid }
                     try store.remove(event, span: .thisEvent, commit: true)
                 }
                 return ["status": "verified", "calendar_retained": true, "all_dates_ownership_proven": false, "removed_tagged_occurrences": selected.count]

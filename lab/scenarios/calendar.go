@@ -118,10 +118,12 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 			return fail("independent_truth_access", err)
 		}
 		defer func() {
-			if _, cleanupErr := w.Truth("fixture", map[string]any{"source": "calendar", "action": "cleanup", "tag": tag}); cleanupErr != nil {
-				result.Passed = false
-				result.Assertions = append(result.Assertions, Assertion{Name: "tagged_fixture_cleanup", Passed: false})
-			}
+			_, cleanupErr := w.Truth("fixture", map[string]any{"source": "calendar", "action": "cleanup", "tag": tag})
+			audit, auditErr := w.Truth("observe", map[string]any{"source": "calendar", "action": "audit", "tag": tag})
+			remaining, _ := audit["records"].([]any)
+			clean := cleanupErr == nil && auditErr == nil && len(remaining) == 0
+			result.Assertions = append(result.Assertions, Assertion{Name: "tagged_fixture_cleanup_audit", Passed: clean})
+			result.Passed = result.Passed && clean
 		}()
 	}
 	if level == "sim" {
@@ -315,6 +317,25 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 	add("agenda_returns_occurrences", agendaErr == nil && len(agenda.Records) == count)
 
 	switch s.ID {
+	case "CAL-CLEANUP-SAFETY":
+		sentinelTag := strings.TrimSuffix(tag, "]") + "-sentinel]"
+		sentinel := map[string]any{"source": "calendar", "action": "create", "tag": sentinelTag, "calendar_id": calendarNative, "title": sentinelTag + " outside window", "start": time.Now().AddDate(3, 0, 0).UTC().Format(time.RFC3339Nano), "end": time.Now().AddDate(3, 0, 0).Add(time.Hour).UTC().Format(time.RFC3339Nano)}
+		if _, err = w.Truth("fixture", sentinel); err != nil {
+			return fail("create_outside_window_sentinel", err)
+		}
+		defer func() {
+			_, cleanupErr := w.Truth("fixture", map[string]any{"source": "calendar", "action": "cleanup", "tag": sentinelTag, "calendar_id": calendarNative})
+			if cleanupErr != nil {
+				result.Passed = false
+				result.Assertions = append(result.Assertions, Assertion{Name: "sentinel_cleanup", Passed: false})
+			}
+		}()
+		response, cleanupErr := w.Truth("fixture", map[string]any{"source": "calendar", "action": "cleanup_calendar", "tag": tag, "calendar_id": calendarNative})
+		add("whole_calendar_removal_disabled", cleanupErr == nil && response["calendar_retained"] == true && response["all_dates_ownership_proven"] == false)
+		audit, auditErr := w.Truth("observe", map[string]any{"source": "calendar", "action": "audit", "tag": sentinelTag, "calendar_id": calendarNative})
+		rows, _ := audit["records"].([]any)
+		add("outside_window_other_tag_survives", auditErr == nil && len(rows) == 1)
+		add("owned_occurrence_removed_individually", awaitCount(0))
 	case "CAL-CREATE-EXTERNAL":
 		for i := 0; i < 9; i++ {
 			copy := map[string]any{}
@@ -431,16 +452,41 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 			add("moved_outside_window_never_deleted", w.Await(3*time.Second, func() bool {
 				for _, observer := range observers {
 					observer.mu.Lock()
+					evicted := false
+					deleted := false
 					for _, x := range observer.seen {
-						if x.Change.Record.ID == target.ID && x.Change.Op == "evict" {
-							observer.mu.Unlock()
-							return x.Change.Record.TombstoneReason == "window_evicted"
+						if x.Change.Record.ID == target.ID {
+							evicted = evicted || (x.Change.Op == "evict" && x.Change.Record.TombstoneReason == "window_evicted")
+							deleted = deleted || x.Change.Op == "delete"
 						}
 					}
 					observer.mu.Unlock()
+					if !evicted || deleted {
+						return false
+					}
 				}
-				return false
+				return true
 			}) == nil)
+			siblings := 0
+			for _, r := range records(w.Gateway) {
+				for _, before := range baseline {
+					if before.ID != target.ID && r.ID == before.ID && reflect.DeepEqual(r.Data, before.Data) {
+						siblings++
+					}
+				}
+			}
+			add("outside_window_move_preserves_siblings", siblings == 2)
+			if level != "sim" {
+				audit, auditErr := w.Truth("observe", map[string]any{"source": "calendar", "action": "audit", "tag": tag, "title": tag + " exception", "calendar_id": calendarNative})
+				rows, _ := audit["records"].([]any)
+				exists := auditErr == nil && len(rows) == 1
+				if exists {
+					row, _ := rows[0].(map[string]any)
+					start, _ := time.Parse(time.RFC3339Nano, fmt.Sprint(row["start"]))
+					exists = start.After(time.Now().AddDate(2, 0, 0))
+				}
+				add("native_occurrence_still_exists_outside_window", exists)
+			}
 			break
 		}
 		if !awaitCount(3) {
@@ -512,6 +558,18 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		}
 		add("future_split_preserves_exception", preserved)
 		add("future_rule_changes_dates", generated)
+		series := map[string]bool{}
+		for _, r := range after {
+			series[fmt.Sprint(raw(r)["series_id"])] = true
+		}
+		add("future_span_splits_series", len(series) == 2)
+		if len(after) >= 2 {
+			target = after[1]
+			if err = submit("calendar.delete_event", map[string]any{"id": target.ID, "span": "future"}, target.Version); err != nil {
+				return fail("delete_future", err)
+			}
+			add("delete_future_preserves_past", awaitCount(1) && recordTitle(records(w.Gateway)[0]) == title)
+		}
 	case "CAL-RECUR-ALL-REJECT":
 		target := baseline[0]
 		err = submit("calendar.update_event", map[string]any{"id": target.ID, "span": "all", "title": tag + " forbidden"}, target.Version)

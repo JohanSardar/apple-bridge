@@ -184,7 +184,10 @@ public final class CalendarSource: Source {
     private func lookup(_ native: String) -> EKEvent? {
         guard gate.authorized(.event), let identity = lookups[native] else { return nil }
         func matches(_ event: EKEvent) -> Bool {
-            event.calendar.calendarIdentifier == identity["calendar"].string && event.calendar.source.sourceIdentifier == identity["account"].string && key(event) == native
+            guard event.calendar.calendarIdentifier == identity["calendar"].string, event.calendar.source.sourceIdentifier == identity["account"].string else { return false }
+            if key(event) == native { return true }
+            guard !identity["external"].string.isEmpty, event.calendarItemExternalIdentifier == identity["external"].string else { return false }
+            return (event.occurrenceDate.map { JSON.string(timestamp($0)) } ?? .null) == identity["occurrence"]
         }
         if let event = gate.store.event(withIdentifier: identity["event_identifier"].string), matches(event) { return event }
         if !identity["external"].string.isEmpty {
