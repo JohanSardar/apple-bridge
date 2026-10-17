@@ -38,14 +38,19 @@ func (s *Store) ResumeCheckpoints(checkpoints map[contracts.Source]contracts.Che
 	return checkpoints
 }
 func (s *Store) Capture(ctx context.Context, c contracts.Capture, w *applepeer.Wire) {
+	if len(c.BlobHandles) == 0 {
+		return
+	}
 	s.appleMu.Lock()
 	defer s.appleMu.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	if s.applePending == nil {
 		s.applePending = map[string]*appleJob{}
 	}
 	for d, h := range c.BlobHandles {
 		if contracts.ValidDigest(d) {
-			e := s.Progress().Entries[d]
+			e := s.manifest.Entries[d]
 			if e.State == "present" || e.State == "failed" {
 				continue
 			}
@@ -88,7 +93,9 @@ func (s *Store) captureBlobs() {
 		err := s.Transfer(job.ctx, digest, job.source)
 		s.appleMu.Lock()
 		current := s.applePending[digest]
-		state := s.Progress().Entries[digest].State
+		s.mu.Lock()
+		state := s.manifest.Entries[digest].State
+		s.mu.Unlock()
 		if current != job && (err == nil || state != "pending") {
 			s.appleMu.Unlock()
 			continue

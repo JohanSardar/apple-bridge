@@ -235,6 +235,9 @@ func Serve(ctx context.Context, cfg Config) error {
 						return
 					}
 					degraded, err := cfg.CommitCapture(ctx, *f.Capture)
+					if err == nil && cfg.BlobCapture != nil {
+						cfg.BlobCapture(session, *f.Capture, wire)
+					}
 					mu.Unlock()
 					if err != nil {
 						if err == contracts.ErrReset {
@@ -243,9 +246,6 @@ func Serve(ctx context.Context, cfg Config) error {
 						}
 						cfg.SourceState(ctx, f.Capture.Source, "degraded", contracts.Coverage{Fields: "partial", Missing: []string{"capture_failed"}}, nil, "capture_failed")
 						return
-					}
-					if cfg.BlobCapture != nil {
-						cfg.BlobCapture(session, *f.Capture, wire)
 					}
 					if degraded {
 						cfg.SourceState(ctx, f.Capture.Source, "degraded", contracts.Coverage{Fields: "partial", Missing: []string{"incomplete_scan_absence_ignored"}}, nil, "incomplete_scan")
