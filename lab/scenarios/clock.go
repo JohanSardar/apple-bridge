@@ -45,5 +45,12 @@ func clockDelay(w *world.World, e *Evidence, add func(string, bool)) bool {
 	add("uncertainty_tracks_round_trip_delay", uncertaintyOK && rttOK && uncertainty > baseUncertainty+1500 && math.Abs(2*uncertainty-rtt) <= 2 && rtt > baseRTT+3000)
 	add("transit_not_misreported_as_clock_skew", delayed["clock_skew"] != "warning_clock_skew")
 	e.Metrics = map[string]any{"injected_delay_each_direction_ms": 2000, "baseline_offset_ms": baseOffset, "baseline_uncertainty_ms": baseUncertainty, "baseline_rtt_ms": baseRTT, "delayed_offset_ms": offset, "delayed_uncertainty_ms": uncertainty, "delayed_rtt_ms": rtt, "clock_method": delayed["clock_method"]}
-	return true
+	w.DelayBothDirections(0)
+	recovered := w.Await(15*time.Second, func() bool {
+		report, err := w.Doctor(w.Replicas[0])
+		rtt, ok := report["clock_rtt_ms"].(float64)
+		return err == nil && ok && rtt < 1000
+	}) == nil
+	add("clock_round_trip_recovers_after_delay_removed", recovered)
+	return recovered
 }
