@@ -81,8 +81,8 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 			return fail("independent_contacts_truth_access")
 		}
 		defer func() {
-			cleanup, err := w.Truth("fixture", map[string]any{"source": "contacts", "action": "cleanup", "tag": tag})
-			remaining, readErr := truth()
+			cleanup, err := w.RecoverTruth("fixture", map[string]any{"source": "contacts", "action": "cleanup", "tag": tag})
+			remaining, readErr := w.RecoverTruth("observe", map[string]any{"source": "contacts", "tag": tag})
 			ok := err == nil && readErr == nil && remaining["tagged_count"] == json.Number("0")
 			result.Assertions = append(result.Assertions, Assertion{Name: "owned_test_contacts_cleaned", Passed: ok})
 			result.Passed = result.Passed && ok

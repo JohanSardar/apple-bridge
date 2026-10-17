@@ -242,6 +242,7 @@ public actor AppleSession: ObservationSink {
     }
 
     public func emitCheckpoint(source: String, generation: String, checkpoint: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) async throws {
+        guard wire != nil else { throw SourceFailure.unavailable }
         let chunks = try split(observations, maximumBytes: live ? 240000 : 16000)
         for (index,chunk) in chunks.enumerated() {
             try await withCheckedThrowingContinuation { continuation in
