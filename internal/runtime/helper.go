@@ -28,12 +28,9 @@ func superviseHelper(ctx context.Context, cfg Config, secretFile string) error {
 		cmd := exec.CommandContext(ctx, "open", args...)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
-		err := cmd.Run()
+		cmd.Run()
 		if ctx.Err() != nil {
 			return nil
-		}
-		if err != nil {
-			return err
 		}
 		timer := time.NewTimer(250 * time.Millisecond)
 		select {

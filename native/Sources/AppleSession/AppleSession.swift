@@ -43,7 +43,10 @@ public actor AppleSession: ObservationSink {
     private var flights: [String: Flight] = [:]
     private var tickets: [String: Ticket] = [:]
     private var commandActive = false
+    private var additionalSources: [String: any Source] = [:]
+    private var blobReader: (@Sendable (String, Int64, Int) async throws -> JSON)?
     private var captureTasks: [Task<Void, Never>] = []
+    private var frameTasks: [UUID: Task<Void, Never>] = [:]
     private let agenda: AgendaGate
     private let source: RemindersSource
     private let guardLog: DispatchGuard
@@ -66,6 +69,12 @@ public actor AppleSession: ObservationSink {
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: pidFile.path)
     }
 
+    public func register(_ source: any Source, readBlob: (@Sendable (String, Int64, Int) async throws -> JSON)? = nil) throws {
+        guard wire == nil, source.name != "reminders", additionalSources[source.name] == nil else { throw SourceFailure.conflict }
+        additionalSources[source.name] = source
+        if let readBlob { blobReader = readBlob }
+    }
+
     public func run() async throws {
         var backoff = 100
         while !Task.isCancelled && kill(gatewayPID, 0) == 0 {
@@ -77,10 +86,18 @@ public actor AppleSession: ObservationSink {
                 guard opened["t"].string == "Open", opened["protocol"].string == "ipc/1", opened["owner_fence"].number > 0, opened["byte_credit"].number > 0, opened["byte_credit"].number <= 4194304 else { throw SourceFailure.invalid }
                 fence = opened["owner_fence"].unsigned; credit = Int(opened["byte_credit"].number); checkpoints = opened["checkpoints"].object
                 let readiness = await source.open()
-                try connected.send(.object(["t": .string("Ready"), "protocol": .string("ipc/1"), "coverage": .object(["reminders": readiness.coverage, "calendar": .object(["fields": .string("partial"), "missing": .array([.string("calendar source pending")])])]), "capabilities": .object(["reminders": .array(readiness.capabilities.map(JSON.string)), "calendar": .array([])]), "helper_build": .string("m1-session"), "os_build": .string(ProcessInfo.processInfo.operatingSystemVersionString)]))
+                var coverage: [String: JSON] = ["reminders": readiness.coverage, "calendar": .object(["fields": .string("partial"), "missing": .array([.string("calendar source pending")])])]
+                var capabilities: [String: JSON] = ["reminders": .array(readiness.capabilities.map(JSON.string)), "calendar": .array([])]
+                for (name, source) in additionalSources {
+                    let state = await source.open()
+                    coverage[name] = state.coverage
+                    capabilities[name] = .array(state.capabilities.map(JSON.string))
+                }
+                try connected.send(.object(["t": .string("Ready"), "protocol": .string("ipc/1"), "coverage": .object(coverage), "capabilities": .object(capabilities), "helper_build": .string("m1-session"), "os_build": .string(ProcessInfo.processInfo.operatingSystemVersionString)]))
                 try await publishReadiness()
                 for outcome in await guardLog.outcomes.values where outcome["disposition"].string == "indeterminate" { try connected.send(outcome) }
                 captureTasks.append(Task { await self.capture() })
+                for source in additionalSources.values { captureTasks.append(Task { await self.captureAdditional(source) }) }
                 let watchdog = Task {
                     while !Task.isCancelled {
                         do { try await Task.sleep(for: .seconds(1)) } catch { return }
@@ -113,6 +130,8 @@ public actor AppleSession: ObservationSink {
         observedCheckpoints = [:]
         for task in captureTasks { task.cancel() }
         captureTasks = []
+        for task in frameTasks.values { task.cancel() }
+        frameTasks = [:]
         for pending in live + bulk { pending.completion.resume(throwing: SourceFailure.unavailable) }
         for flight in flights.values { flight.pending.completion.resume(throwing: SourceFailure.unavailable) }
         live = []; bulk = []; flights = [:]; tickets = [:]
@@ -154,6 +173,49 @@ public actor AppleSession: ObservationSink {
                 if !(error is SourceFailure) { wire?.close(); return }
             }
             do { try await Task.sleep(for: .seconds(1)) } catch { return }
+        }
+    }
+
+    private func captureAdditional(_ source: any Source) async {
+        while !Task.isCancelled && wire != nil {
+            do {
+                let readiness = await source.open()
+                try await sourceState(source: source.name, state: readiness.state, coverage: readiness.coverage, capabilities: readiness.capabilities, reason: readiness.reason)
+                try await source.capture(checkpoints[source.name] ?? .null, into: self)
+            } catch {
+                if Task.isCancelled || wire == nil { return }
+                let permissionMissing: Bool
+                if case SourceFailure.permissionMissing = error { permissionMissing = true } else { permissionMissing = false }
+                let readiness = await source.open()
+                try? await sourceState(source: source.name, state: permissionMissing ? "permission_missing" : "degraded", coverage: readiness.coverage, capabilities: [], reason: permissionMissing ? "permission_required" : "capture_failed")
+            }
+            do { try await Task.sleep(for: .seconds(1)) } catch { return }
+        }
+    }
+
+    private func launchFrame(_ frame: JSON) {
+        let id = UUID()
+        frameTasks[id] = Task {
+            switch frame["t"].string {
+            case "Dispatch": await dispatch(frame)
+            case "Resolve": await resolve(frame)
+            case "BlobRead": await readBlob(frame)
+            default: break
+            }
+            frameTasks.removeValue(forKey: id)
+        }
+    }
+
+    private func readBlob(_ frame: JSON) async {
+        guard let connection = wire else { return }
+        do {
+            guard let blobReader, !frame["handle"].string.isEmpty, frame["offset"].number >= 0, frame["offset"].number < Double(Int64.max), frame["length"].number > 0, frame["length"].number <= 131072, frame["length"].number.rounded(.down) == frame["length"].number, frame["offset"].number.rounded(.down) == frame["offset"].number else { throw SourceFailure.invalid }
+            let response = try await blobReader(frame["handle"].string, Int64(frame["offset"].number), Int(frame["length"].number))
+            guard wire === connection, !Task.isCancelled else { return }
+            try connection.send(response)
+        } catch {
+            guard wire === connection, !Task.isCancelled else { return }
+            try? connection.send(.object(["t": .string("BlobUnavailable"), "handle": frame["handle"], "reason": .string("unavailable")]))
         }
     }
 
@@ -231,10 +293,10 @@ public actor AppleSession: ObservationSink {
             try drain()
         case "Reset": throw SourceFailure.conflict
         case "Prepare": await prepare(frame)
-        case "Dispatch": captureTasks.append(Task { await self.dispatch(frame) })
-        case "Resolve": captureTasks.append(Task { await self.resolve(frame) })
+        case "Dispatch": launchFrame(frame)
+        case "Resolve": launchFrame(frame)
         case "BlobRead":
-            try wire?.send(.object(["t": .string("BlobUnavailable"), "handle": frame["handle"], "reason": .string("unsupported")]))
+            launchFrame(frame)
         case "Close": throw SourceFailure.unavailable
         default: throw SourceFailure.invalid
         }
