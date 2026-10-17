@@ -1,10 +1,10 @@
 {
-  "run_id": "run_01M549EWDCWZP82TABHXK18HEN",
+  "run_id": "run_01M54ARFKVXPJZ8Y8ZJ66G8YFG",
   "scenario": "MSG-WATCHER-REARM",
   "level": "sim",
   "passed": true,
-  "git_sha": "4e574f1875a975d9626ccc2269410e9ed414aa2e",
-  "at": "2026-10-17T06:40:47.020273Z",
+  "git_sha": "5cf1dc304dd05eb1b00784a395ef995a70a3866c",
+  "at": "2026-10-17T07:03:30.17165Z",
   "assertions": [
     {
       "name": "seed",
@@ -19,7 +19,11 @@
       "passed": true
     },
     {
-      "name": "watcher_rearmed",
+      "name": "poll_fallback_catches_disarmed_events",
+      "passed": true
+    },
+    {
+      "name": "production_native_watcher_fault_checks",
       "passed": true
     },
     {

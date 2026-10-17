@@ -1,10 +1,10 @@
 {
-  "run_id": "run_01M549E75ES170VSPCJMMBZ8MW",
+  "run_id": "run_01M54AQZM1756WF3T7TMQTFXNQ",
   "scenario": "MSG-DB-REPLACED",
   "level": "sim",
   "passed": true,
-  "git_sha": "4e574f1875a975d9626ccc2269410e9ed414aa2e",
-  "at": "2026-10-17T06:40:25.262574Z",
+  "git_sha": "5cf1dc304dd05eb1b00784a395ef995a70a3866c",
+  "at": "2026-10-17T07:03:13.793931Z",
   "assertions": [
     {
       "name": "seed",

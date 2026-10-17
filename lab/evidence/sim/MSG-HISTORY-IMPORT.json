@@ -1,21 +1,21 @@
 {
-  "run_id": "run_01M549EHWVN4MEGDWP0KB1P70P",
+  "run_id": "run_01M54AR8PEP7W9WC73MNWQMF81",
   "metrics": {
     "history_import": {
-      "capture_ack_ms": 3232.394874000001,
-      "capture_bytes": 2774455,
+      "capture_ack_ms": 2232.0145799999996,
+      "capture_bytes": 2774461,
       "capture_count": 67,
       "clock": "same-host monotonic SSE receipt after gateway commit / replica apply",
       "credit_waits": 0,
-      "gateway_commit_visible_ms": 3898.548208,
-      "gateway_rows_per_second": 1051.1605298584523,
-      "gateway_to_replica_tail_ms": 53.509375,
+      "gateway_commit_visible_ms": 2768.2437919999998,
+      "gateway_rows_per_second": 1480.3609464754832,
+      "gateway_to_replica_tail_ms": 30.658666,
       "host_after": {
         "gomaxprocs": 8,
         "load_average": [
-          11.98,
-          11.56,
-          11.05
+          8.82,
+          11.27,
+          11.24
         ],
         "logical_cpus": 8,
         "occupied_heavy_slots": 2
@@ -23,24 +23,24 @@
       "host_before": {
         "gomaxprocs": 8,
         "load_average": [
-          12.24,
-          11.6,
-          11.06
+          8.72,
+          11.29,
+          11.25
         ],
         "logical_cpus": 8,
         "occupied_heavy_slots": 2
       },
-      "replica_apply_visible_ms": 3952.0575830000002,
-      "replica_rows_per_second": 1036.9282111748016,
+      "replica_apply_visible_ms": 2798.902458,
+      "replica_rows_per_second": 1464.1453432172448,
       "synthetic_rows": 4098,
-      "truth_verification_ms": 801.251375
+      "truth_verification_ms": 360.266625
     }
   },
   "scenario": "MSG-HISTORY-IMPORT",
   "level": "sim",
   "passed": true,
-  "git_sha": "4e574f1875a975d9626ccc2269410e9ed414aa2e",
-  "at": "2026-10-17T06:40:36.25154Z",
+  "git_sha": "5cf1dc304dd05eb1b00784a395ef995a70a3866c",
+  "at": "2026-10-17T07:03:23.086659Z",
   "assertions": [
     {
       "name": "seed",
@@ -51,7 +51,15 @@
       "passed": true
     },
     {
+      "name": "bulk_pause_installed",
+      "passed": true
+    },
+    {
       "name": "bulk_started",
+      "passed": true
+    },
+    {
+      "name": "bulk_paused_before_known_target",
       "passed": true
     },
     {
@@ -63,7 +71,23 @@
       "passed": true
     },
     {
+      "name": "live_visible_before_bulk_release",
+      "passed": true
+    },
+    {
+      "name": "release_stale_bulk",
+      "passed": true
+    },
+    {
       "name": "backfill_revalidated_against_truth",
+      "passed": true
+    },
+    {
+      "name": "older_backfill_never_regresses_live_value_0",
+      "passed": true
+    },
+    {
+      "name": "older_backfill_never_regresses_live_value_1",
       "passed": true
     },
     {

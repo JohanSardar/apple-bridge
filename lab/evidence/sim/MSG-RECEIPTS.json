@@ -1,10 +1,10 @@
 {
-  "run_id": "run_01M549EV68BKC7TBTN4MSGD45Q",
+  "run_id": "run_01M54ARF2E2K7PXD8P9X1836KB",
   "scenario": "MSG-RECEIPTS",
   "level": "sim",
   "passed": true,
-  "git_sha": "4e574f1875a975d9626ccc2269410e9ed414aa2e",
-  "at": "2026-10-17T06:40:45.768641Z",
+  "git_sha": "5cf1dc304dd05eb1b00784a395ef995a70a3866c",
+  "at": "2026-10-17T07:03:29.614801Z",
   "assertions": [
     {
       "name": "seed",
