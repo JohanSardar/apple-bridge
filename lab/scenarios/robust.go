@@ -21,6 +21,9 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 	}
 	fail := func(name string) Evidence { add(name, false); return evidence }
 	name, _ := options["case"].(string)
+	if name == "credential-store" {
+		return runCredentialStore(ctx, evidence)
+	}
 	if name == "cred-lifecycle" && level == "real" {
 		home := filepath.Join("/tmp/ablab", fmt.Sprintf("credentials-%d", time.Now().UnixNano()))
 		result, err := world.CredentialLifecycle(ctx, home)

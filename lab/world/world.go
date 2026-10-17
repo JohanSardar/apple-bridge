@@ -142,7 +142,7 @@ func (w *World) start(name string, remote bool, home string, binary string, args
 		}
 	}
 	if remote {
-		joined := quote(binary)
+		joined := "env APPLE_BRIDGE_SECRET_STORE=file " + quote(binary)
 		for _, arg := range args {
 			joined += " " + quote(arg)
 		}
@@ -189,7 +189,7 @@ func (p *Process) Stop() {
 }
 func (w *World) execute(remote bool, binary string, args ...string) (string, error) {
 	if remote {
-		cmd := quote(binary)
+		cmd := "env APPLE_BRIDGE_SECRET_STORE=file " + quote(binary)
 		for _, a := range args {
 			cmd += " " + quote(a)
 		}
@@ -271,11 +271,9 @@ func newEnvironment(ctx context.Context, level string, replicas, seed int, nativ
 			w.Close()
 		}
 	}()
-	if !native {
-		w.previousSecretStore, w.previousSecretStoreSet = os.LookupEnv("APPLE_BRIDGE_SECRET_STORE")
-		w.secretOverride = true
-		os.Setenv("APPLE_BRIDGE_SECRET_STORE", "file")
-	}
+	w.previousSecretStore, w.previousSecretStoreSet = os.LookupEnv("APPLE_BRIDGE_SECRET_STORE")
+	w.secretOverride = true
+	os.Setenv("APPLE_BRIDGE_SECRET_STORE", "file")
 	options, _ := ctx.Value(optionsKey{}).(Options)
 	peerHost := "127.0.0.1"
 	w.NetworkPath = "loopback"
@@ -306,7 +304,6 @@ func newEnvironment(ctx context.Context, level string, replicas, seed int, nativ
 	gatewayHome := filepath.Join(w.Dir, "gateway")
 	if gatewayBinary == "" {
 		gatewayBinary = w.bridge
-
 	}
 	if native {
 		w.HelperApp = filepath.Join(w.Dir, "apps", "AppleBridgeHelper.app")
@@ -460,9 +457,9 @@ func (w *World) Close() {
 	if w.Level == "replica" {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		for _, endpoint := range w.Replicas {
-			commandOutput(ctx, "ssh", "ubuntu", quote(w.remoteLab)+" credential-cleanup --home "+quote(endpoint.Home))
+			commandOutput(ctx, "ssh", "ubuntu", "env APPLE_BRIDGE_SECRET_STORE=file "+quote(w.remoteLab)+" credential-cleanup --home "+quote(endpoint.Home))
 		}
-		commandOutput(ctx, "ssh", "ubuntu", quote(w.remoteLab)+" credential-cleanup --home "+quote(filepath.Join(w.Dir, "pairing")))
+		commandOutput(ctx, "ssh", "ubuntu", "env APPLE_BRIDGE_SECRET_STORE=file "+quote(w.remoteLab)+" credential-cleanup --home "+quote(filepath.Join(w.Dir, "pairing")))
 		for _, home := range w.remoteExtraHomes {
 			commandOutput(ctx, "ssh", "ubuntu", "rm -rf "+quote(home))
 		}

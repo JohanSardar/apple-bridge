@@ -12,9 +12,16 @@ import (
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/internal/state"
+	"github.com/JohanSardar/apple-bridge/internal/trust"
 )
 
+type CredentialStoreReport struct {
+	Store     string                      `json:"store"`
+	LastError *trust.CredentialStoreError `json:"last_error,omitempty"`
+}
+
 type DoctorReport struct {
+	Credentials CredentialStoreReport `json:"credentials"`
 	state.Integrity
 	Warnings         []string          `json:"warnings,omitempty"`
 	ClockSkewMS      *int64            `json:"clock_skew_ms,omitempty"`
@@ -27,8 +34,18 @@ type DoctorReport struct {
 }
 
 func Doctor(ctx context.Context, home string) (DoctorReport, error) {
+	credentials := CredentialStoreReport{Store: trust.NewSecretStore(home).Backend()}
+	if data, err := os.ReadFile(filepath.Join(home, "credential-store-error.json")); err == nil {
+		var failure trust.CredentialStoreError
+		if json.Unmarshal(data, &failure) == nil && failure.Store == credentials.Store {
+			credentials.LastError = &failure
+		}
+	}
 	store, err := state.InspectHome(home)
 	if err != nil {
+		if credentials.LastError != nil {
+			return DoctorReport{Credentials: credentials}, nil
+		}
 		return DoctorReport{}, err
 	}
 	defer store.Close()
@@ -36,7 +53,7 @@ func Doctor(ctx context.Context, home string) (DoctorReport, error) {
 	if err != nil {
 		return DoctorReport{}, err
 	}
-	report := DoctorReport{Integrity: integrity, PrivateModes: true, Encryption: "unverified", ClockSkew: "unverified", Versions: map[string]string{"runtime": goruntime.Version(), "ipc": contracts.IPCProtocol, "feed": contracts.FeedProtocol}}
+	report := DoctorReport{Credentials: credentials, Integrity: integrity, PrivateModes: true, Encryption: "unverified", ClockSkew: "unverified", Versions: map[string]string{"runtime": goruntime.Version(), "ipc": contracts.IPCProtocol, "feed": contracts.FeedProtocol}}
 	err = filepath.WalkDir(home, func(path string, entry os.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -103,6 +120,6 @@ func Doctor(ctx context.Context, home string) (DoctorReport, error) {
 			report.Warnings = append(report.Warnings, "Gateway time unavailable; start or reconnect the replica to receive a feed Welcome or heartbeat, then rerun doctor.")
 		}
 	}
-	report.OK = report.OK && report.PrivateModes
+	report.OK = report.OK && report.PrivateModes && credentials.LastError == nil
 	return report, nil
 }

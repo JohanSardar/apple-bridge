@@ -89,6 +89,7 @@ features:
       - {id: CORE-FORGED-DELEGATION, levels: [sim]}
       - {id: CORE-LOCALHOST-DEFENSE, levels: [sim]}
       - {id: CORE-CRED-LIFECYCLE, levels: [real, replica]}
+      - {id: CORE-CREDENTIAL-STORE, levels: [sim]}
   - id: core.commands
     title: Command ledger, tickets, expiry, idempotency, conflicts, forwarding, read-your-write
     requirements: [R-RW, R-SAFE-CMD]

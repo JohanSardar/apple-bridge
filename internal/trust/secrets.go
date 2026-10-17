@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -14,6 +15,25 @@ import (
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 )
+
+type CredentialStoreError struct {
+	Code      string `json:"code"`
+	Store     string `json:"store"`
+	Remedy    string `json:"remedy"`
+	Retryable bool   `json:"retryable"`
+}
+
+func (e *CredentialStoreError) Error() string {
+	return fmt.Sprintf("%s: %s credential store unavailable; %s", e.Code, e.Store, e.Remedy)
+}
+func (e *CredentialStoreError) Unwrap() error { return contracts.ErrUnavailable }
+func keychainFailure(err error) error {
+	var status *exec.ExitError
+	if errors.As(err, &status) && status.ExitCode() == 36 {
+		return &CredentialStoreError{Code: "credential_store_locked", Store: "keychain", Remedy: "Unlock the login Keychain in an interactive macOS session, then retry bridge start.", Retryable: true}
+	}
+	return &CredentialStoreError{Code: "credential_store_unavailable", Store: "keychain", Remedy: "Check access to the login Keychain in an interactive macOS session, then retry bridge start.", Retryable: true}
+}
 
 type SecretStore interface {
 	Put(context.Context, string, []byte) error
@@ -32,7 +52,7 @@ type LinuxSecretStore struct {
 func NewSecretStore(home string) SecretStore {
 	absolute, _ := filepath.Abs(home)
 	service := "apple-bridge:" + Fingerprint([]byte(absolute))
-	if runtime.GOOS == "darwin" && os.Getenv("APPLE_BRIDGE_SECRET_STORE") == "file" {
+	if os.Getenv("APPLE_BRIDGE_SECRET_STORE") == "file" {
 		return &LinuxSecretStore{Dir: filepath.Join(home, "secrets"), Service: service}
 	}
 	if runtime.GOOS == "darwin" {
@@ -52,12 +72,18 @@ func secretCommand(ctx context.Context, input []byte, name string, args ...strin
 	command.Stdin = bytes.NewReader(input)
 	output, err := command.Output()
 	if ctx.Err() != nil {
+		if name == "security" {
+			return nil, keychainFailure(ctx.Err())
+		}
 		return nil, contracts.ErrUnavailable
 	}
 	if err != nil {
 		var status *exec.ExitError
 		if errors.As(err, &status) && ((name == "security" && status.ExitCode() == 44) || (name == "secret-tool" && status.ExitCode() == 1)) {
 			return nil, contracts.ErrNotFound
+		}
+		if name == "security" {
+			return nil, keychainFailure(err)
 		}
 		return nil, contracts.ErrUnavailable
 	}

@@ -219,6 +219,13 @@ func Open(home string) (*Authority, error) {
 		a.Fingerprint = Fingerprint(a.Certificate.Certificate[0])
 		return nil
 	})
+	var storeError *CredentialStoreError
+	if errors.As(err, &storeError) {
+		report, _ := json.Marshal(storeError)
+		os.WriteFile(filepath.Join(home, "credential-store-error.json"), report, 0600)
+	} else if err == nil {
+		os.Remove(filepath.Join(home, "credential-store-error.json"))
+	}
 	return a, err
 }
 
