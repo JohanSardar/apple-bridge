@@ -1,0 +1,5 @@
+id: AGENT-SUITE
+feature: agent.suite
+levels: [agent]
+given: [{world: {replicas: 1}}]
+cleanup: [{world: {}}]

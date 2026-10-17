@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/JohanSardar/apple-bridge/lab/agent"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 	"os"
 	"os/signal"
@@ -83,6 +84,9 @@ func run(ctx context.Context, args []string) error {
 		}
 		if len(paths) == 0 {
 			return fmt.Errorf("scenario paths required")
+		}
+		if level == "agent" {
+			return agent.Suite(ctx, paths, asJSON)
 		}
 		return scenarios.Suite(ctx, paths, level, asJSON)
 	}

@@ -159,7 +159,7 @@ struct AppleTruth {
         }
         let records: [[String: Any]] = selected.map { reminder in
             var result: [String: Any] = ["id": reminder.calendarItemIdentifier, "title": reminder.title ?? "", "completed": reminder.isCompleted, "recurring": reminder.hasRecurrenceRules, "list": list.title]
-            if let due = reminder.dueDateComponents { result["due"] = ["year": due.year ?? 0, "month": due.month ?? 0, "day": due.day ?? 0] }
+            if let due = reminder.dueDateComponents { result["due"] = ["year": due.year ?? 0, "month": due.month ?? 0, "day": due.day ?? 0, "hour": due.hour ?? -1, "minute": due.minute ?? -1] }
             return result
         }
         return ["status": "verified", "list_exists": true, "list_id": list.calendarIdentifier, "records": records]

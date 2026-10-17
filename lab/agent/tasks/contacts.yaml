@@ -1,0 +1,5 @@
+id: contacts-job-title
+source: contacts
+requires: [contacts.read]
+scope: contacts:read
+prompt: "What's the job title of the {{tag}} contact in organization Bridge Test? Return only the job title."

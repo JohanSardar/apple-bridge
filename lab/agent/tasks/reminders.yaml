@@ -1,0 +1,5 @@
+id: reminders-milk
+source: reminders
+requires: [reminders.write]
+scope: reminders:write
+prompt: 'Remind me to buy milk tomorrow at 9 in the Bridge Test list. Prefix the reminder title with {{tag}}.'
