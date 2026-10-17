@@ -184,7 +184,7 @@ features:
     depends_on: [messages.read]
     status: todo
     scenarios:
-      - {id: MSG-SEND-SELF-TEXT, levels: [sim, real, replica, agent]}
+      - {id: MSG-SEND-SELF-TEXT, levels: [sim, real, replica]}
       - {id: MSG-SEND-FILES, levels: [sim, real, replica]}
       - {id: MSG-SEND-GHOST, levels: [sim]}
       - {id: MSG-SEND-IDENTICAL-MANUAL, levels: [sim]}
@@ -232,7 +232,7 @@ features:
     milestone: M1
     modules: [native/RemindersSource, operations]
     depends_on: [reminders.read]
-    status: todo
+    status: done
     scenarios:
       - {id: REM-CRUD, levels: [sim, real, replica]}
       - {id: REM-LIST-CREATE, levels: [sim, real]}
@@ -277,7 +277,7 @@ features:
     milestone: M2
     modules: [native/ContactsSource]
     depends_on: [helper.session]
-    status: todo
+    status: done
     scenarios:
       - {id: CON-IMPORT, levels: [sim, real]}
       - {id: CON-EXTERNAL, levels: [sim, real, replica]}
@@ -292,7 +292,7 @@ features:
     milestone: M2
     modules: [native/ContactsSource, operations]
     depends_on: [contacts.read]
-    status: todo
+    status: done
     scenarios:
       - {id: CON-CRUD, levels: [sim, real, replica]}
       - {id: CON-READONLY-CONTAINER, levels: [sim]}
