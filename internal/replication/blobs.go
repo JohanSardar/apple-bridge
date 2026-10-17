@@ -27,8 +27,11 @@ func (s *Server) serveBlobs(ctx context.Context, conn *websocket.Conn, p trust.P
 			f, err := s.Blobs.OpenAuthorized(ctx, grant, want.Digest)
 			if err != nil {
 				reason := "missing"
-				if s.Blobs.Progress().Entries[want.Digest].State == "offloaded" {
+				switch s.Blobs.Progress().Entries[want.Digest].State {
+				case "offloaded":
 					reason = "offloaded"
+				case "pending", "failed", "disk_full", "over_cap":
+					reason = "pending"
 				}
 				send(ctx, conn, contracts.FeedFrame{T: "BlobUnavailable", Digest: want.Digest, Reason: reason})
 				continue
@@ -102,6 +105,9 @@ func (s *feedSource) Read(ctx context.Context, d string, offset, length int64) (
 		if e.done {
 			s.started = false
 			if e.reason != "" {
+				if e.reason == "pending" || e.reason == "unavailable" {
+					return nil, false, contracts.ErrUnavailable
+				}
 				if e.reason == "offloaded" {
 					return nil, false, contracts.ErrUnsupported
 				}
@@ -132,8 +138,25 @@ func (c *Client) followBlobs(ctx context.Context, conn *websocket.Conn, events <
 						continue
 					}
 					seen[ref.Digest] = true
-					c.Blobs.Transfer(ctx, ref.Digest, &feedSource{conn: conn, events: events})
+					source := &feedSource{conn: conn, events: events}
+					c.Blobs.Transfer(ctx, ref.Digest, source)
+					if source.started {
+						source.drain(ctx)
+					}
 				}
+			}
+		}
+	}
+}
+
+func (s *feedSource) drain(ctx context.Context) {
+	for s.started {
+		select {
+		case <-ctx.Done():
+			return
+		case e := <-s.events:
+			if e.done {
+				s.started = false
 			}
 		}
 	}

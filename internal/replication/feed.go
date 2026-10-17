@@ -315,7 +315,9 @@ func (c *Client) follow(ctx context.Context, e trust.Enrollment) error {
 	var welcome contracts.FeedFrame
 	var staging *state.SnapshotInstall
 	for {
-		kind, raw, err := conn.Read(ctx)
+		bounded, cancelRead := context.WithTimeout(ctx, 15*time.Second)
+		kind, raw, err := conn.Read(bounded)
+		cancelRead()
 		if err != nil {
 			return err
 		}

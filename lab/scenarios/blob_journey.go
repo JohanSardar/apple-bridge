@@ -67,7 +67,6 @@ func blobBytes(ctx context.Context, e world.Endpoint, d, id string) (int, []byte
 func blobJourney(ctx context.Context, w *world.World, id string, evidence *Evidence, add func(string, bool)) bool {
 	check := func(name string, ok bool) bool { add(name, ok); return ok }
 	size := 4 << 20
-	start := time.Now()
 	fixture := map[string]any{"size": size}
 	if id == "CORE-BLOB-OFFLOADED" {
 		fixture["state"] = "offloaded"
@@ -78,6 +77,7 @@ func blobJourney(ctx context.Context, w *world.World, id string, evidence *Evide
 	if !check("attachment_fixture", w.ControlAction("/blob-fixture", fixture) == nil) {
 		return false
 	}
+	start := time.Now()
 	var attachment contracts.Record
 	var digest string
 	if !check("attachment_metadata_visible", w.Await(10*time.Second, func() bool {

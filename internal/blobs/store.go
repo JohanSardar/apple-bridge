@@ -83,6 +83,33 @@ func Open(home string, cfg Config) (*Store, error) {
 	} else if !os.IsNotExist(err) {
 		return nil, err
 	}
+
+	for d, e := range s.manifest.Entries {
+		if !contracts.ValidDigest(d) {
+			return nil, contracts.ErrCorrupt
+		}
+		if e.State == "present" {
+			info, err := os.Stat(s.path(d))
+			if os.IsNotExist(err) {
+				e.State = "pending"
+				e.Received = 0
+			} else if err != nil {
+				return nil, err
+			} else if !info.Mode().IsRegular() {
+				return nil, contracts.ErrCorrupt
+			}
+		}
+		if e.State != "present" {
+			if info, err := os.Stat(filepath.Join(s.root, "staging", d+".part")); err == nil {
+				e.Received = info.Size()
+			} else if !os.IsNotExist(err) {
+				return nil, err
+			} else {
+				e.Received = 0
+			}
+		}
+		s.manifest.Entries[d] = e
+	}
 	return s, nil
 }
 func (s *Store) path(d string) string { return filepath.Join(s.root, "sha256", d[:2], d[2:]) }

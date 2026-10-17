@@ -34,13 +34,19 @@ func priorityWriter(ctx context.Context, conn *websocket.Conn) context.Context {
 				case job = <-q.bulk:
 				}
 			}
+
 			if job.kind == websocket.MessageBinary {
-				select {
-				case live := <-q.live:
-					live.done <- writeSocketFrame(live.ctx, conn, live.kind, live.bytes)
-				default:
+			flushLive:
+				for {
+					select {
+					case live := <-q.live:
+						live.done <- writeSocketFrame(live.ctx, conn, live.kind, live.bytes)
+					default:
+						break flushLive
+					}
 				}
 			}
+
 			job.done <- writeSocketFrame(job.ctx, conn, job.kind, job.bytes)
 		}
 	}()
