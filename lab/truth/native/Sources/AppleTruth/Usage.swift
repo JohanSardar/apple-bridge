@@ -8,7 +8,7 @@ enum UsageTruth {
     private static func digest(_ text: String) -> String { SHA256.hash(data: Data(text.utf8)).map { String(format: "%02x", $0) }.joined() }
     static func observe(root path: String? = nil) throws -> [String: Any] {
         let biome = path.map { URL(fileURLWithPath: $0) } ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Biome")
-        let root = biome.appendingPathComponent("streams/restricted/App.InFocus")
+        let root = biome.appendingPathComponent("streams/restricted/App.InFocus").resolvingSymlinksInPath()
         let matcher = try NSRegularExpression(pattern: "\\x10.\\x18[\\x00\\x01]\\x21.{8}\\x32.", options: [.dotMatchesLineSeparators])
         let bundles = try NSRegularExpression(pattern: "^[A-Za-z0-9._-]+$")
         guard let dirs = FileManager.default.enumerator(at: root, includingPropertiesForKeys: [.isRegularFileKey]) else { throw UsageTruthFailure.streamUnavailable }
