@@ -1,17 +1,17 @@
 {
   "host_conditions": {
-    "quiet_definition": "Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
     "start": {
       "air": {
-        "at": "2026-10-17T07:29:40.533377Z",
+        "at": "2026-10-17T17:49:28.160076Z",
         "cpu_count": 8,
         "load_average": [
-          22.38,
-          22.19,
-          17.69
+          4.48,
+          8.62,
+          19.3
         ],
-        "cpu_idle_percent": 0.1,
-        "free_memory_bytes": 71958528,
+        "cpu_idle_percent": 66,
+        "free_memory_bytes": 1195442176,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
         "heavy_queue_length": 2,
@@ -20,33 +20,52 @@
     },
     "end": {
       "air": {
-        "at": "2026-10-17T07:29:54.505998Z",
+        "at": "2026-10-17T17:49:36.688254Z",
         "cpu_count": 8,
         "load_average": [
-          19.57,
-          21.58,
-          17.55
+          4.52,
+          8.56,
+          19.21
         ],
-        "cpu_idle_percent": 0,
-        "free_memory_bytes": 194527232,
+        "cpu_idle_percent": 89,
+        "free_memory_bytes": 884637696,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
         "heavy_queue_length": 2,
         "quiet": false
       }
     },
+    "periodic_samples": [
+      {
+        "air": {
+          "at": "2026-10-17T17:49:34.25045Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.52,
+            8.56,
+            19.21
+          ],
+          "cpu_idle_percent": 81,
+          "free_memory_bytes": 899563520,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        }
+      }
+    ],
     "quiet": false,
     "require_quiet": false,
     "quiet_wait_ms": 0,
     "quiet_wait_expired": false
   },
-  "run_id": "run_01M54C8H4VW92HM309RDV9GD72",
+  "run_id": "run_01M55FQAADP4S0GJ1SMMM6MFW9",
   "network_path": "loopback",
   "scenario": "CORE-BLOB-INTERRUPT",
   "level": "sim",
-  "passed": false,
-  "git_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
-  "at": "2026-10-17T07:29:44.603399Z",
+  "passed": true,
+  "git_sha": "41c46d82102923f7c5e0848aa0e4a17009c228d7",
+  "at": "2026-10-17T17:49:29.293705Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -102,14 +121,103 @@
     },
     {
       "name": "live_metadata_during_bulk",
-      "passed": false
+      "passed": true
+    },
+    {
+      "name": "blob_complete",
+      "passed": true
+    },
+    {
+      "name": "authorized_bytes_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "authorized_bytes_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "transfer_resumed_from_nonzero_offset",
+      "passed": true
+    },
+    {
+      "name": "convergence_truth_gateway_replicas",
+      "passed": true
+    },
+    {
+      "name": "latency_observations_complete",
+      "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass",
+      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
+    },
+    {
+      "name": "sse_contiguous_watermarks_0",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_watermarks_1",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_0",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_1",
+      "passed": true
     },
     {
       "name": "credential_backend_override_restored",
       "passed": true
     }
   ],
-  "latency": {},
+  "latency": {
+    "effect_done→blob_complete": {
+      "samples": 1,
+      "p50_ms": 6748.054334,
+      "p95_ms": 6748.054334,
+      "max_ms": 6748.054334,
+      "timeouts": 0
+    },
+    "effect_done→gateway_visible": {
+      "samples": 1,
+      "p50_ms": 7.3685,
+      "p95_ms": 7.3685,
+      "max_ms": 7.3685,
+      "timeouts": 0
+    },
+    "effect_done→metadata_during_blob": {
+      "samples": 1,
+      "p50_ms": 59.90175,
+      "p95_ms": 59.90175,
+      "max_ms": 59.90175,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica0": {
+      "samples": 1,
+      "p50_ms": 9.960125,
+      "p95_ms": 9.960125,
+      "max_ms": 9.960125,
+      "timeouts": 0
+    }
+  },
   "hosts": [
     "air"
   ]

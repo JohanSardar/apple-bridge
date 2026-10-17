@@ -1,0 +1,1108 @@
+{
+  "implementation": {
+    "implementation_head_sha": "41c46d82102923f7c5e0848aa0e4a17009c228d7",
+    "main_base_sha": "e0b815a3dcb012988ec6ed79bca57e9b765fadf0",
+    "commits": [
+      {
+        "sha": "e614011c2a993f59372c960fd37866ac01b5fe46",
+        "subject": "Record host conditions, synchronize crash scenarios, and complete doctor diagnostics"
+      },
+      {
+        "sha": "6039778c222cfde7cfaef631bcc292ea1db3dfe1",
+        "subject": "Register doctor diagnostics and remote benchmark coverage"
+      },
+      {
+        "sha": "bf2acfd81dd8d9fdae322548dc8330f3bcc64865",
+        "subject": "Require a written batch at every apply crash boundary"
+      },
+      {
+        "sha": "a6de3bb9d93fc3861dea53b19e51a945a0aeae5e",
+        "subject": "Exercise Linux doctor on an isolated disk-backed replica home"
+      },
+      {
+        "sha": "0b76f7308fb6eca2a0a8f9420b8e42e1cced90dc",
+        "subject": "Verify capture replay convergence after every synchronized gateway crash"
+      },
+      {
+        "sha": "80efd8a1e4ab6b1055b8ddff2705d44705ade89d",
+        "subject": "Record full core run with host contention and retained failures"
+      },
+      {
+        "sha": "c6b70e724e871b5749355fa0fdcbda642501464f",
+        "subject": "Bound recovery drains and report non-quiet benchmark fallback explicitly"
+      },
+      {
+        "sha": "a2b60fada687f35a80deaf6cf50f52a778e750ec",
+        "subject": "Keep host telemetry available under process-list contention"
+      },
+      {
+        "sha": "97d876165f460dd427731f43a76a896fa2395738",
+        "subject": "Record Ubuntu acceptance and encrypted-disk doctor probes"
+      },
+      {
+        "sha": "baace979c2a2976f06ed34ade75dd3e0fd0b7506",
+        "subject": "Use portable remote signals and remove integrity polling from benchmark capture"
+      },
+      {
+        "sha": "41c46d82102923f7c5e0848aa0e4a17009c228d7",
+        "subject": "Verify complete Ubuntu doctor recovery with portable process signals"
+      }
+    ],
+    "historical_rebase_lineage": {
+      "7ceb4792e9011c9b0802b2eef6f8771a188dbbce": {
+        "equivalent_unit_commit_after_rebase": "0b76f7308fb6eca2a0a8f9420b8e42e1cced90dc",
+        "subject": "Verify capture replay convergence after every synchronized gateway crash"
+      },
+      "7e387b43e9c4a3b9aa40e5e52ae5b54f0c8160d5": {
+        "equivalent_unit_commit_after_rebase": "a6de3bb9d93fc3861dea53b19e51a945a0aeae5e",
+        "subject": "Exercise Linux doctor on an isolated disk-backed replica home"
+      },
+      "996ba7d7023fb7295dcd011d23dcfb1e8b1990d8": {
+        "equivalent_unit_commit_after_rebase": "a2b60fada687f35a80deaf6cf50f52a778e750ec",
+        "subject": "Keep host telemetry available under process-list contention"
+      },
+      "5a49e7496beba8ba1efc14ea117c2ac5df95f643": {
+        "equivalent_unit_commit_after_rebase": "0b76f7308fb6eca2a0a8f9420b8e42e1cced90dc",
+        "subject": "Verify capture replay convergence after every synchronized gateway crash"
+      },
+      "ae09ac3bd3439742d810a9aa33c53b84722a788f": {
+        "equivalent_unit_commit_after_rebase": "c6b70e724e871b5749355fa0fdcbda642501464f",
+        "subject": "Bound recovery drains and report non-quiet benchmark fallback explicitly"
+      },
+      "0306fb7cb2b427f921f7fabeafc6c63077c84584": {
+        "equivalent_unit_commit_after_rebase": "baace979c2a2976f06ed34ade75dd3e0fd0b7506",
+        "subject": "Use portable remote signals and remove integrity polling from benchmark capture"
+      }
+    },
+    "products": {
+      "darwin/arm64": {
+        "command": "go build -p 2 -o bin/bridge-product ./cmd/bridge",
+        "sha256": "e455a68cfa37cffa0ff133f551e4c73d1b4371edcc7ef33df65b74acfb39ca08",
+        "new_crash_hook_symbols_and_markers_absent": true
+      },
+      "linux/amd64": {
+        "command": "GOOS=linux GOARCH=amd64 go build -p 2 -o bin/bridge-linux-product ./cmd/bridge",
+        "sha256": "52b36a687554ef88c2e7f7094c5e7ce71061aa49ff1bf610e83c0d69d0447217",
+        "new_crash_hook_symbols_and_markers_absent": true
+      }
+    },
+    "changed_source_paths": [
+      "cmd/bridge-lab/main.go",
+      "features.yaml",
+      "internal/replication/feed.go",
+      "internal/runtime/boundary_lab.go",
+      "internal/runtime/boundary_product.go",
+      "internal/runtime/doctor.go",
+      "internal/runtime/doctor_storage.go",
+      "internal/runtime/runtime.go",
+      "internal/state/boundary_lab.go",
+      "internal/state/boundary_product.go",
+      "internal/state/state.go",
+      "lab/scenarios/core/CORE-BENCH.yaml",
+      "lab/scenarios/core/CORE-DOCTOR.yaml",
+      "lab/scenarios/robust.go",
+      "lab/scenarios/runner.go",
+      "lab/scenarios/telemetry.go",
+      "lab/world/benchmark.go",
+      "lab/world/boundary.go",
+      "lab/world/doctor_checks.go",
+      "lab/world/options.go",
+      "lab/world/process.go",
+      "lab/world/telemetry.go",
+      "lab/world/world.go"
+    ],
+    "existing_state_crash_test_unchanged": true
+  },
+  "verification_context": {
+    "transport": "ssh -o ControlPath=none air",
+    "workdir": "~/apple-bridge/.worktrees/robust-fix",
+    "heavy_command_wrapper": "packaging/dev/heavy.sh",
+    "static_commands_passed": [
+      "go test -p 2 ./...",
+      "make lint",
+      "go vet ./...",
+      "go vet -tags lab ./...",
+      "make features"
+    ]
+  },
+  "full_core_sim_attempt": {
+    "command": "go run ./cmd/bridge-lab run lab/scenarios/core --level sim --require-quiet",
+    "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+    "exit_code": 1,
+    "scenarios": 49,
+    "passed": 46,
+    "failures": {
+      "CORE-BLOB-INTERRUPT": [
+        "live_metadata_during_bulk"
+      ],
+      "CORE-BENCH": [
+        "capture_two_hundred_thousand_messages"
+      ],
+      "CORE-SNAPSHOT-INTERRUPT": [
+        "recovery_capture_drained_before_convergence"
+      ]
+    },
+    "all_scenarios_have_host_conditions": true
+  },
+  "affected_sim_rerun": {
+    "command": "go run ./cmd/bridge-lab run lab/scenarios/core/CORE-BENCH.yaml lab/scenarios/core/CORE-BLOB-INTERRUPT.yaml lab/scenarios/core/CORE-DOCTOR.yaml lab/scenarios/core/CORE-KILL-DURING-APPLY.yaml lab/scenarios/core/CORE-KILL-GATEWAY-CAPTURE.yaml lab/scenarios/core/CORE-LIVE-LATENCY.yaml lab/scenarios/core/CORE-SNAPSHOT-INTERRUPT.yaml --level sim --require-quiet",
+    "exit_code": 0,
+    "passed": 7,
+    "total": 7
+  },
+  "latest_core_sim_evidence": {
+    "passed": 49,
+    "total": 49,
+    "scenarios": [
+      {
+        "scenario": "CORE-BENCH",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "41c46d82102923f7c5e0848aa0e4a17009c228d7",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-BLOB-CAP",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-BLOB-CORRUPT",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-BLOB-GC",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-BLOB-INTERRUPT",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "41c46d82102923f7c5e0848aa0e4a17009c228d7",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-BLOB-NO-DIGEST-AUTH",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-BLOB-OFFLOADED",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-BLOB-SLOW-READ",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-BOOT",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-CMD-CLOCK-JUMP",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-CMD-CONFLICT",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-CMD-CRASH-AMBIGUOUS",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-CMD-ERA",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-CMD-EXPIRY",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-CMD-IDEMPOTENT",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-CMD-LOST-RESPONSE",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-CMD-OFFLINE",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-CMD-READ-YOUR-WRITE",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-DISCONNECT-DETECT",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-DISK-FULL",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-DOCTOR",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "41c46d82102923f7c5e0848aa0e4a17009c228d7",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-FORGED-DELEGATION",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-GAP-REJECT",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-HELPER-RESTART",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-KILL-DURING-APPLY",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "41c46d82102923f7c5e0848aa0e4a17009c228d7",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-KILL-GATEWAY-CAPTURE",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "41c46d82102923f7c5e0848aa0e4a17009c228d7",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-LIVE-LATENCY",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "41c46d82102923f7c5e0848aa0e4a17009c228d7",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-LOCALHOST-DEFENSE",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-PAIR",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-REST-MCP-PARITY",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-RESTORE-EPOCH",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-RESTORE-OLD-SCHEMA",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-RESUME",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-RETENTION-RACE",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-SCOPE-CHANGE",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-SCOPE-LEAK",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-SLOW-CONSUMER",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-SNAPSHOT-INTERRUPT",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "41c46d82102923f7c5e0848aa0e4a17009c228d7",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-SNAPSHOT-UNDER-LOAD",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-UPGRADE",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "LAB-MALFORMED-SCENARIO",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": null,
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "LAB-SSE",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "LAB-TRUTH-MULTIPLICITY",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "REM-CONFLICT",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "REM-CRUD",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "REM-EXTERNAL-RACE",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "REM-NATIVE-LIST-RACE",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "REM-OPERATION-SHAPES",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "REM-READONLY-LIST",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true
+      }
+    ]
+  },
+  "replica_requested_set": {
+    "command": "go run ./cmd/bridge-lab run lab/scenarios/core/CORE-RESUME.yaml lab/scenarios/core/CORE-DISCONNECT-DETECT.yaml lab/scenarios/core/CORE-SCOPE-LEAK.yaml lab/scenarios/core/CORE-PAIR.yaml lab/scenarios/core/CORE-CRED-LIFECYCLE.yaml lab/scenarios/core/CORE-LIVE-LATENCY.yaml lab/scenarios/core/CORE-DOCTOR.yaml --level replica --require-quiet",
+    "initial_exit_code": 1,
+    "initial_failure": "CORE-DOCTOR final convergence: remote Darwin signal numbers used on Linux; retained in attempts",
+    "complete_doctor_rerun": {
+      "command": "go run ./cmd/bridge-lab run lab/scenarios/core/CORE-DOCTOR.yaml --level replica",
+      "exit_code": 0
+    },
+    "requested_six_passed": 6,
+    "latest_total_passed": 8,
+    "latest_total": 8,
+    "scenarios": [
+      {
+        "scenario": "CORE-RESUME",
+        "level": "replica",
+        "passed": true,
+        "source_sha": "996ba7d7023fb7295dcd011d23dcfb1e8b1990d8",
+        "network_path": "ssh_tunnel",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-DISCONNECT-DETECT",
+        "level": "replica",
+        "passed": true,
+        "source_sha": "996ba7d7023fb7295dcd011d23dcfb1e8b1990d8",
+        "network_path": "ssh_tunnel",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-SCOPE-LEAK",
+        "level": "replica",
+        "passed": true,
+        "source_sha": "996ba7d7023fb7295dcd011d23dcfb1e8b1990d8",
+        "network_path": "ssh_tunnel",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-PAIR",
+        "level": "replica",
+        "passed": true,
+        "source_sha": "996ba7d7023fb7295dcd011d23dcfb1e8b1990d8",
+        "network_path": "ssh_tunnel",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-CRED-LIFECYCLE",
+        "level": "replica",
+        "passed": true,
+        "source_sha": "996ba7d7023fb7295dcd011d23dcfb1e8b1990d8",
+        "network_path": "ssh_tunnel",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-LIVE-LATENCY",
+        "level": "replica",
+        "passed": true,
+        "source_sha": "996ba7d7023fb7295dcd011d23dcfb1e8b1990d8",
+        "network_path": "ssh_tunnel",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-DOCTOR",
+        "level": "replica",
+        "passed": true,
+        "source_sha": "0306fb7cb2b427f921f7fabeafc6c63077c84584",
+        "network_path": "ssh_tunnel",
+        "host_telemetry_recorded": true
+      },
+      {
+        "scenario": "CORE-BENCH",
+        "level": "replica",
+        "passed": true,
+        "source_sha": "41c46d82102923f7c5e0848aa0e4a17009c228d7",
+        "network_path": "ssh_tunnel",
+        "host_telemetry_recorded": true
+      }
+    ]
+  },
+  "replica_benchmark_rerun": {
+    "command": "go run ./cmd/bridge-lab run lab/scenarios/core/CORE-BENCH.yaml --level replica --require-quiet",
+    "exit_code": 0
+  },
+  "crash_boundary_evidence": {
+    "CORE-KILL-DURING-APPLY": {
+      "iterations": 8,
+      "critical_boundaries_reached": 8,
+      "passed": true,
+      "source_sha": "41c46d82102923f7c5e0848aa0e4a17009c228d7"
+    },
+    "CORE-KILL-GATEWAY-CAPTURE": {
+      "iterations": 8,
+      "critical_boundaries_reached": 8,
+      "passed": true,
+      "source_sha": "41c46d82102923f7c5e0848aa0e4a17009c228d7"
+    }
+  },
+  "doctor_ubuntu": {
+    "passed": true,
+    "metrics": {
+      "clock_method": "local_receive_minus_gateway_send_including_feed_transit",
+      "clock_sample_age_ms": 798,
+      "recovery_final_drain_ms": 54.040792,
+      "replica_clock_skew_ms": 132,
+      "replica_disk_encryption": "enabled",
+      "replica_storage": "persistent_user_cache"
+    },
+    "gateway_clock_skew": "n/a",
+    "warnings_for_excessive_and_unavailable_clock_samples_verified": true,
+    "independent_storage_ancestry_types": [
+      "crypt",
+      "lvm",
+      "disk",
+      "part"
+    ],
+    "fixture_location_reason": "The normal Ubuntu lab temporary directory is tmpfs; doctor uses an isolated disk-backed user-cache directory and removes it after the run."
+  },
+  "network": {
+    "default": "ssh_tunnel",
+    "direct_tcp_probe_by_default": false,
+    "explicit_direct_probe_option": "--direct-tailscale",
+    "gateway_initiated_mode_implemented_by_this_unit": false,
+    "all_selected_replica_evidence_paths": "ssh_tunnel"
+  },
+  "baselines": {
+    "sim": {
+      "CORE-BENCH": {
+        "scenario": "CORE-BENCH",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "41c46d82102923f7c5e0848aa0e4a17009c228d7",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true,
+        "raw_evidence": "lab/evidence/robust-fix/baselines/sim/CORE-BENCH.json",
+        "quiet": false,
+        "quiet_wait_expired": true,
+        "quiet_wait_ms": 62258,
+        "hosts": {
+          "air": {
+            "cpu_count": 8,
+            "load_average_start": [
+              4.65,
+              10.32,
+              21.17
+            ],
+            "load_average_end": [
+              4.53,
+              8.7,
+              19.39
+            ],
+            "load_1m_range": [
+              4.14,
+              4.77
+            ],
+            "cpu_idle_percent_range": [
+              23,
+              80
+            ],
+            "active_heavy_slots_range": [
+              2,
+              2
+            ],
+            "other_active_heavy_slots_range": [
+              1,
+              1
+            ],
+            "heavy_queue_length_range": [
+              2,
+              2
+            ],
+            "free_memory_bytes_start": 1035878400,
+            "free_memory_bytes_end": 1227309056,
+            "samples_with_unavailable_fields": 0
+          }
+        },
+        "latency": {
+          "effect_done→gateway_visible": {
+            "samples": 1,
+            "p50_ms": 13.314583,
+            "p95_ms": 13.314583,
+            "max_ms": 13.314583,
+            "timeouts": 0
+          },
+          "effect_done→replica_visible:replica0": {
+            "samples": 1,
+            "p50_ms": 20.051458,
+            "p95_ms": 20.051458,
+            "max_ms": 20.051458,
+            "timeouts": 0
+          },
+          "fts5_query_gateway": {
+            "samples": 100,
+            "p50_ms": 2.419333,
+            "p95_ms": 2.819,
+            "max_ms": 3.424166,
+            "timeouts": 0
+          }
+        },
+        "metrics": {
+          "capture_readiness": "committed_capture_barrier",
+          "effect_done_to_gateway_capture_ms": 54804.446333,
+          "fixture_and_capture_ms": 55941.353333,
+          "fts5_query_cache": "repeated_query_after_integrity_verification",
+          "gateway_rss_end_sample_bytes": 81018880,
+          "gateway_wal_end_sample_bytes": 8656152,
+          "messages": 200000,
+          "messages_target": 200000,
+          "recovery_final_drain_ms": 15.363458,
+          "replica_readiness": "durable_cursor_then_integrity_count",
+          "replica_rss_end_sample_bytes": 35602432,
+          "replica_wal_end_sample_bytes": 6855712
+        },
+        "end_samples_mib": {
+          "gateway_rss_end_sample_mib": 77.265625,
+          "gateway_wal_end_sample_mib": 8.255149841308594,
+          "replica_rss_end_sample_mib": 33.953125,
+          "replica_wal_end_sample_mib": 6.538116455078125
+        }
+      },
+      "CORE-LIVE-LATENCY": {
+        "scenario": "CORE-LIVE-LATENCY",
+        "level": "sim",
+        "passed": true,
+        "source_sha": "41c46d82102923f7c5e0848aa0e4a17009c228d7",
+        "network_path": "loopback",
+        "host_telemetry_recorded": true,
+        "raw_evidence": "lab/evidence/robust-fix/baselines/sim/CORE-LIVE-LATENCY.json",
+        "quiet": false,
+        "quiet_wait_expired": true,
+        "quiet_wait_ms": 62319,
+        "hosts": {
+          "air": {
+            "cpu_count": 8,
+            "load_average_start": [
+              3.32,
+              7.1,
+              17.58
+            ],
+            "load_average_end": [
+              3.06,
+              6.53,
+              16.88
+            ],
+            "load_1m_range": [
+              2.52,
+              3.32
+            ],
+            "cpu_idle_percent_range": [
+              57,
+              91
+            ],
+            "active_heavy_slots_range": [
+              2,
+              2
+            ],
+            "other_active_heavy_slots_range": [
+              1,
+              1
+            ],
+            "heavy_queue_length_range": [
+              2,
+              2
+            ],
+            "free_memory_bytes_start": 122896384,
+            "free_memory_bytes_end": 119963648,
+            "samples_with_unavailable_fields": 0
+          }
+        },
+        "latency": {
+          "effect_done→gateway_visible": {
+            "samples": 200,
+            "p50_ms": 11.54375,
+            "p95_ms": 14.868292,
+            "max_ms": 20.303416,
+            "timeouts": 0
+          },
+          "effect_done→replica_visible:replica0": {
+            "samples": 200,
+            "p50_ms": 16.298208,
+            "p95_ms": 20.46325,
+            "max_ms": 25.503416,
+            "timeouts": 0
+          }
+        },
+        "metrics": {},
+        "end_samples_mib": {}
+      }
+    },
+    "replica": {
+      "CORE-BENCH": {
+        "scenario": "CORE-BENCH",
+        "level": "replica",
+        "passed": true,
+        "source_sha": "41c46d82102923f7c5e0848aa0e4a17009c228d7",
+        "network_path": "ssh_tunnel",
+        "host_telemetry_recorded": true,
+        "raw_evidence": "lab/evidence/robust-fix/baselines/replica/CORE-BENCH.json",
+        "quiet": false,
+        "quiet_wait_expired": true,
+        "quiet_wait_ms": 60521,
+        "hosts": {
+          "air": {
+            "cpu_count": 8,
+            "load_average_start": [
+              3.52,
+              5.78,
+              15.5
+            ],
+            "load_average_end": [
+              4.83,
+              5.44,
+              12.95
+            ],
+            "load_1m_range": [
+              3.35,
+              6.44
+            ],
+            "cpu_idle_percent_range": [
+              29,
+              74
+            ],
+            "active_heavy_slots_range": [
+              2,
+              2
+            ],
+            "other_active_heavy_slots_range": [
+              1,
+              1
+            ],
+            "heavy_queue_length_range": [
+              0,
+              2
+            ],
+            "free_memory_bytes_start": 59932672,
+            "free_memory_bytes_end": 701841408,
+            "samples_with_unavailable_fields": 0
+          },
+          "ubuntu": {
+            "cpu_count": 8,
+            "load_average_start": [
+              1.47,
+              0.68,
+              0.41
+            ],
+            "load_average_end": [
+              1.93,
+              1.35,
+              0.75
+            ],
+            "load_1m_range": [
+              1.14,
+              2.55
+            ],
+            "cpu_idle_percent_range": [
+              68.8525,
+              88.2278
+            ],
+            "active_heavy_slots_range": [
+              0,
+              0
+            ],
+            "other_active_heavy_slots_range": [
+              0,
+              0
+            ],
+            "heavy_queue_length_range": [
+              0,
+              0
+            ],
+            "free_memory_bytes_start": 22390124544,
+            "free_memory_bytes_end": 18363621376,
+            "samples_with_unavailable_fields": 0
+          }
+        },
+        "latency": {
+          "effect_done→gateway_visible": {
+            "samples": 1,
+            "p50_ms": 8.456667,
+            "p95_ms": 8.456667,
+            "max_ms": 8.456667,
+            "timeouts": 0
+          },
+          "effect_done→replica_visible:replica0": {
+            "samples": 1,
+            "p50_ms": 96.458458,
+            "p95_ms": 96.458458,
+            "max_ms": 96.458458,
+            "timeouts": 0
+          },
+          "fts5_query_gateway": {
+            "samples": 100,
+            "p50_ms": 1.933541,
+            "p95_ms": 4.182833,
+            "max_ms": 19.262,
+            "timeouts": 0
+          }
+        },
+        "metrics": {
+          "capture_readiness": "committed_capture_barrier",
+          "effect_done_to_gateway_capture_ms": 44103.452625,
+          "fixture_and_capture_ms": 45685.8935,
+          "fts5_query_cache": "repeated_query_after_integrity_verification",
+          "gateway_rss_end_sample_bytes": 81526784,
+          "gateway_wal_end_sample_bytes": 7086432,
+          "messages": 200000,
+          "messages_target": 200000,
+          "recovery_final_drain_ms": 23.621666,
+          "replica_readiness": "durable_cursor_then_integrity_count",
+          "replica_rss_end_sample_bytes": 28811264,
+          "replica_wal_end_sample_bytes": 6666192
+        },
+        "end_samples_mib": {
+          "gateway_rss_end_sample_mib": 77.75,
+          "gateway_wal_end_sample_mib": 6.758148193359375,
+          "replica_rss_end_sample_mib": 27.4765625,
+          "replica_wal_end_sample_mib": 6.3573760986328125
+        }
+      },
+      "CORE-LIVE-LATENCY": {
+        "scenario": "CORE-LIVE-LATENCY",
+        "level": "replica",
+        "passed": true,
+        "source_sha": "996ba7d7023fb7295dcd011d23dcfb1e8b1990d8",
+        "network_path": "ssh_tunnel",
+        "host_telemetry_recorded": true,
+        "raw_evidence": "lab/evidence/robust-fix/baselines/replica/CORE-LIVE-LATENCY.json",
+        "quiet": false,
+        "quiet_wait_expired": true,
+        "quiet_wait_ms": 61155,
+        "hosts": {
+          "air": {
+            "cpu_count": 8,
+            "load_average_start": [
+              37.63,
+              36.59,
+              34.12
+            ],
+            "load_average_end": [
+              36.46,
+              36.49,
+              34.22
+            ],
+            "load_1m_range": [
+              36.46,
+              37.98
+            ],
+            "cpu_idle_percent_range": [
+              0,
+              17
+            ],
+            "active_heavy_slots_range": [
+              2,
+              2
+            ],
+            "other_active_heavy_slots_range": [
+              1,
+              1
+            ],
+            "heavy_queue_length_range": [
+              1,
+              1
+            ],
+            "free_memory_bytes_start": 221724672,
+            "free_memory_bytes_end": 64192512,
+            "samples_with_unavailable_fields": 0
+          },
+          "ubuntu": {
+            "cpu_count": 8,
+            "load_average_start": [
+              0.5,
+              0.5,
+              0.24
+            ],
+            "load_average_end": [
+              0.26,
+              0.43,
+              0.23
+            ],
+            "load_1m_range": [
+              0.26,
+              0.5
+            ],
+            "cpu_idle_percent_range": [
+              79.646,
+              99
+            ],
+            "active_heavy_slots_range": [
+              0,
+              0
+            ],
+            "other_active_heavy_slots_range": [
+              0,
+              0
+            ],
+            "heavy_queue_length_range": [
+              0,
+              0
+            ],
+            "free_memory_bytes_start": 26781319168,
+            "free_memory_bytes_end": 26528002048,
+            "samples_with_unavailable_fields": 0
+          }
+        },
+        "latency": {
+          "effect_done→gateway_visible": {
+            "samples": 200,
+            "p50_ms": 8.826,
+            "p95_ms": 14.339917,
+            "max_ms": 53.458959,
+            "timeouts": 0
+          },
+          "effect_done→replica_visible:replica0": {
+            "samples": 200,
+            "p50_ms": 24.000958,
+            "p95_ms": 117.878458,
+            "max_ms": 204.057291,
+            "timeouts": 0
+          }
+        },
+        "metrics": {},
+        "end_samples_mib": {}
+      }
+    }
+  },
+  "measurement_notes": [
+    "No run qualified as quiet. A quiet run requires every observed host sample to have no other active heavy.sh slot and one-minute load below the logical CPU count. Unknown telemetry disqualifies quiet.",
+    "Samples record load averages in one/five/fifteen-minute order, one-second CPU idle, free memory excluding cache, live heavy slots and live queue tickets. Samples occur at start, periodically every five seconds, and end.",
+    "Darwin CPU idle uses the last interval from iostat; Linux uses the idle-counter delta from /proc/stat. The earlier top-based probe and its timeouts are preserved in historical attempts.",
+    "Benchmark readiness uses the capture commit barrier, replica durable cursor, and exact integrity/count verification once; it no longer runs repeated integrity checks during capture.",
+    "FTS timings are 100 repeated gateway HTTP queries after integrity verification, with 200 matches each in a 200000-message synthetic dataset.",
+    "RSS and WAL values are end samples after the benchmark queries, before final automatic integrity checks; they are not maxima.",
+    "The default Ubuntu benchmark data directory is tmpfs; the doctor encryption fixture is disk-backed.",
+    "Clock difference is local receive time minus authenticated gateway frame time and includes feed transit; it is not an NTP offset estimate.",
+    "Latency endpoints use the lab monotonic clock. Replica runs use the SSH tunnel; no direct-TCP timeout is attempted by default.",
+    "Original historical attempt SHAs are preserved across rebases; equivalent unit commit subjects are mapped in implementation.historical_rebase_lineage. Canonical final baselines retain their actual run SHAs."
+  ],
+  "spec_deviations": [
+    "No product SPEC deviation. The doctor lab fixture uses a private disk-backed Ubuntu cache directory instead of tmpfs so encryption can be tested; cleanup is automatic."
+  ],
+  "proposed_spec_updates": [
+    "Add CORE-DOCTOR at sim/replica levels to SPEC 18.1 and include the replica CORE-BENCH level.",
+    "Document host-condition sampling and the bounded require-quiet fallback in the evidence section."
+  ],
+  "new_scenarios": [
+    "CORE-DOCTOR (sim, replica)"
+  ],
+  "extended_scenarios": [
+    "CORE-BENCH (replica level added)"
+  ],
+  "open_items": [
+    "No quiet window was available during these runs; measurements are explicitly non-quiet.",
+    "The initial full suite had three failures. All three passed targeted reruns after harness repair or, for the unchanged bulk-metadata assertion, a rerun. Historical failed evidence is retained.",
+    "The new gateway-initiated connection mode and CORE-GATEWAY-DIALS remain a separate unit, per leader instruction."
+  ],
+  "redaction": {
+    "files_scanned": 71,
+    "ip_email_or_device_path_matches": 0
+  }
+}
