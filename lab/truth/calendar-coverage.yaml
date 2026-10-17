@@ -1,0 +1,10 @@
+source: calendar
+scope:
+  calendar_title: Bridge Test
+  events: tagged by a unique ab-test run identifier
+  window_days: [-730, 730]
+collections:
+  calendar.calendar: [title, account, color, writable, type]
+  calendar.event: [title, notes, location, url, start, end, all_day, time_zone, occurrence_date, series_id, is_exception, attendees, alarms, availability, status]
+comparison: native occurrence multiplicity and projected field equality; replica payloads, versions and cursors; recurrence splits and original occurrence identity checked by their journeys
+readonly_fixture: subscribed calendars are observed without names and used only for a rejected write attempt

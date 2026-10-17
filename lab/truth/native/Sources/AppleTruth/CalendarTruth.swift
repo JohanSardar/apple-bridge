@@ -13,7 +13,7 @@ struct CalendarTruth {
         guard tag.hasPrefix("[ab-test "), tag.hasSuffix("]"), tag.count > 11, !tag.contains("\n") else { throw TruthFailure.invalid }
         if action == "readonly" {
             guard verb == "observe" else { throw TruthFailure.invalid }
-            let calendars = store.calendars(for: .event).filter { !$0.allowsContentModifications || $0.isSubscribed }
+            let calendars = store.calendars(for: .event).filter { $0.isSubscribed }
             return ["status": "verified", "calendars": calendars.map { ["id": $0.calendarIdentifier, "writable": false] }]
         }
         var calendars = store.calendars(for: .event).filter { $0.title == "Bridge Test" }
@@ -93,9 +93,25 @@ struct CalendarTruth {
         }
         let records: [[String: Any]] = selected.map { event in
             let zone = event.isAllDay ? TimeZone.current : (event.timeZone ?? .current)
-            return ["id": event.calendarItemIdentifier, "external_id": event.calendarItemExternalIdentifier ?? "", "calendar_id": event.calendar.calendarIdentifier, "title": event.title ?? "", "start": event.isAllDay ? floating(event.startDate, zone: zone) : stamp(event.startDate), "end": event.isAllDay ? floating(event.endDate, zone: zone) : stamp(event.endDate), "all_day": event.isAllDay, "time_zone": event.timeZone?.identifier ?? "", "is_exception": event.isDetached, "occurrence_date": event.occurrenceDate.map { event.isAllDay ? floating($0,zone:.current) : stamp($0) } ?? "", "recurring": event.hasRecurrenceRules]
+            var row: [String: Any] = ["id": event.calendarItemIdentifier, "external_id": event.calendarItemExternalIdentifier ?? "", "calendar_id": event.calendar.calendarIdentifier, "title": event.title ?? "", "start": event.isAllDay ? floating(event.startDate, zone: zone) : stamp(event.startDate), "end": event.isAllDay ? floating(event.endDate, zone: zone) : stamp(event.endDate), "all_day": event.isAllDay, "time_zone": event.timeZone?.identifier ?? "", "is_exception": event.isDetached, "occurrence_date": event.occurrenceDate.map { event.isAllDay ? floating($0,zone:.current) : stamp($0) } ?? "", "recurring": event.hasRecurrenceRules]
+            row["notes"] = event.notes.map { $0 as Any } ?? NSNull()
+            row["location"] = event.location.map { $0 as Any } ?? NSNull()
+            row["url"] = event.url.map { $0.absoluteString as Any } ?? NSNull()
+            row["availability"] = event.availability.rawValue
+            row["status"] = event.status.rawValue
+            row["attendees"] = (event.attendees ?? []).map { person -> [String: Any] in
+                ["name": person.name.map { $0 as Any } ?? NSNull(), "url": person.url.absoluteString, "status": person.participantStatus.rawValue, "role": person.participantRole.rawValue, "type": person.participantType.rawValue]
+            }
+            row["alarms"] = (event.alarms ?? []).map { alarm -> [String: Any] in
+                ["absolute_date": alarm.absoluteDate.map { stamp($0) as Any } ?? NSNull(), "relative_offset": alarm.relativeOffset]
+            }
+            return row
         }
-        return ["status": "verified", "calendars": calendars.map { ["id": $0.calendarIdentifier, "title": "Bridge Test", "writable": $0.allowsContentModifications] }, "records": records]
+        return ["status": "verified", "calendars": calendars.map { calendar in
+            let names = ["local", "caldav", "exchange", "subscribed", "birthday"]
+            let index = Int(calendar.type.rawValue)
+            return ["id": calendar.calendarIdentifier, "title": "Bridge Test", "writable": calendar.allowsContentModifications && !calendar.isSubscribed, "account": calendar.source.sourceIdentifier, "color": calendar.cgColor.map { String(describing: $0.components ?? []) } ?? "", "type": calendar.isSubscribed ? "subscribed" : (names.indices.contains(index) ? names[index] : "unknown")] as [String: Any]
+        }, "records": records]
     }
 
     private static func stamp(_ date: Date) -> String {

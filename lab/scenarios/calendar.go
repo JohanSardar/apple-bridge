@@ -135,6 +135,25 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		return fail("calendar_visible", err)
 	}
 	add("calendar_visible", true)
+	if level != "sim" {
+		truth, truthErr := w.Truth("observe", map[string]any{"source": "calendar", "tag": tag, "calendar_id": calendarNative})
+		entries, _ := truth["calendars"].([]any)
+		matches := false
+		for _, entry := range entries {
+			expected, ok := entry.(map[string]any)
+			if !ok || expected["id"] != calendarNative {
+				continue
+			}
+			actual := raw(calendar())
+			matches = true
+			for _, field := range []string{"title", "writable", "account", "color", "type"} {
+				a, _ := json.Marshal(expected[field])
+				b, _ := json.Marshal(actual[field])
+				matches = matches && string(a) == string(b)
+			}
+		}
+		add("truth_calendar_fields", truthErr == nil && matches)
+	}
 	endpoints := append([]world.Endpoint{w.Gateway}, w.Replicas...)
 	observers := []*watcher{}
 	for _, endpoint := range endpoints {
@@ -213,6 +232,11 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		event["recurrence"] = []any{map[string]any{"frequency": "daily", "interval": 1, "count": 3}}
 	}
 	if s.ID == "CAL-CRUD" {
+		event["notes"] = tag + " notes"
+		event["location"] = tag + " location"
+		event["url"] = "https://example.com/calendar"
+		event["availability"] = 1
+		event["alarms"] = []any{map[string]any{"relative_offset": -600}}
 		event["calendar_id"] = calendar().ID
 		if err = submit("calendar.create_event", event, 0); err != nil {
 			return fail("create_event", err)
@@ -291,14 +315,33 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		}
 	case "CAL-CRUD":
 		current := records(w.Gateway)[0]
-		if err = submit("calendar.update_event", map[string]any{"id": current.ID, "span": "this", "title": tag + " updated"}, current.Version); err != nil {
+		if err = submit("calendar.update_event", map[string]any{"id": current.ID, "span": "this", "title": tag + " updated", "notes": tag + " changed notes", "location": tag + " changed location", "url": "https://example.com/updated", "availability": 2, "alarms": []any{map[string]any{"relative_offset": -300}}}, current.Version); err != nil {
 			return fail("update_event", err)
 		}
 		if !awaitCount(1) {
 			return fail("updated_visible", nil)
 		}
 		add("update_preserves_bridge_id", records(w.Gateway)[0].ID == current.ID)
+		fields := raw(records(w.Gateway)[0])
+		alarms, _ := fields["alarms"].([]any)
+		alarmMatches := false
+		if len(alarms) == 1 {
+			alarm, _ := alarms[0].(map[string]any)
+			alarmMatches = alarm["relative_offset"] == float64(-300)
+		}
+		add("event_fields_and_alarm_updated", fields["notes"] == tag+" changed notes" && fields["location"] == tag+" changed location" && fields["url"] == "https://example.com/updated" && fields["availability"] == float64(2) && alarmMatches)
 		current = records(w.Gateway)[0]
+		if level != "sim" {
+			truth, truthErr := w.Truth("observe", map[string]any{"source": "calendar", "tag": tag})
+			values, _ := truth["records"].([]any)
+			matches := false
+			if len(values) == 1 {
+				d, _ := values[0].(map[string]any)
+				actual := raw(current)
+				matches = calendarTruthEqual(d, actual)
+			}
+			add("truth_updated_event_fields", truthErr == nil && matches)
+		}
 		var stale contracts.CommandRecord
 		client := scripted.Client{Endpoint: w.Gateway, Protocol: protocol}
 		staleErr := client.Call(ctx, "calendar.update_event", contracts.Command{Args: mustJSON(map[string]any{"id": current.ID, "span": "this", "title": tag + " stale"}), ExpectedVersion: current.Version - 1, WaitMS: 15000}, &stale)
@@ -308,6 +351,23 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 			return fail("delete_event", err)
 		}
 		add("delete_absence_visible", awaitCount(0))
+		recurringArgs := map[string]any{"calendar_id": calendar().ID, "title": tag + " created series", "start": start, "end": end, "time_zone": "America/New_York", "recurrence": []any{map[string]any{"frequency": "daily", "interval": 1, "count": 3}}}
+		if err = submit("calendar.create_event", recurringArgs, 0); err != nil {
+			return fail("create_recurring_command", err)
+		}
+		if !awaitCount(3) {
+			return fail("created_series_occurrences", nil)
+		}
+		if level != "sim" {
+			truth, truthErr := w.Truth("observe", map[string]any{"source": "calendar", "tag": tag})
+			values, _ := truth["records"].([]any)
+			add("truth_created_series_occurrences", truthErr == nil && len(values) == 3)
+		}
+		created := records(w.Gateway)[0]
+		if err = submit("calendar.delete_event", map[string]any{"id": created.ID, "span": "future"}, created.Version); err != nil {
+			return fail("delete_created_series", err)
+		}
+		add("created_series_deleted_with_future_span", awaitCount(0))
 		if err = submit("calendar.create_calendar", map[string]any{"title": "Bridge Test"}, 0); err != nil {
 			return fail("create_calendar", err)
 		}
@@ -458,7 +518,7 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		if w.Await(5*time.Second, func() bool {
 			all, _ := w.Records(w.Gateway)
 			for _, r := range all {
-				if r.Collection == "calendar.calendar" && raw(r)["writable"] == false {
+				if r.Collection == "calendar.calendar" && raw(r)["writable"] == false && raw(r)["type"] == "subscribed" {
 					readonly = r
 					return true
 				}
@@ -510,7 +570,8 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 			truth, truthErr := w.Truth("observe", map[string]any{"source": "calendar", "tag": tag})
 			expected, _ := truth["records"].([]any)
 			actual := records(w.Gateway)
-			equal := truthErr == nil && len(expected) == len(actual)
+			aliases, aliasErr := gatewayAliases(w)
+			equal := aliasErr == nil && truthErr == nil && len(expected) == len(actual)
 			for _, item := range expected {
 				d, ok := item.(map[string]any)
 				if !ok {
@@ -520,7 +581,7 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 				found := false
 				for _, r := range actual {
 					v := raw(r)
-					if d["title"] == v["title"] && sameCalendarTime(d["start"], v["start"]) && sameCalendarTime(d["end"], v["end"]) && d["all_day"] == v["all_day"] {
+					if aliases[aliasKey(contracts.Calendar, "calendar.event", calendarTruthNativeKey(d))] == r.ID && calendarTruthEqual(d, v) {
 						found = true
 					}
 				}
@@ -597,4 +658,42 @@ func calendarHostConditions() map[string]any {
 		}
 	}
 	return map[string]any{"load_average": fields, "heavy_slots_in_use": slots, "clock": "native CLOCK_UPTIME_RAW for real fixtures; lab monotonic fixture return for sim", "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"}
+}
+
+func calendarTruthEqual(truth, actual map[string]any) bool {
+	if truth["title"] != actual["title"] || !sameCalendarTime(truth["start"], actual["start"]) || !sameCalendarTime(truth["end"], actual["end"]) || truth["all_day"] != actual["all_day"] {
+		return false
+	}
+	for _, field := range []string{"notes", "location", "url", "availability", "status", "alarms", "attendees", "is_exception"} {
+		left, _ := json.Marshal(truth[field])
+		right, _ := json.Marshal(actual[field])
+		if string(left) != string(right) {
+			return false
+		}
+	}
+	expectedZone, _ := truth["time_zone"].(string)
+	actualZone, _ := actual["time_zone"].(string)
+	if expectedZone != actualZone {
+		return false
+	}
+	if actual["occurrence_date"] != nil {
+		series := truth["external_id"]
+		if series == "" {
+			series = truth["id"]
+		}
+		return actual["series_id"] == series && sameCalendarTime(truth["occurrence_date"], actual["occurrence_date"])
+	}
+	return true
+}
+
+func calendarTruthNativeKey(value map[string]any) string {
+	id, _ := value["id"].(string)
+	if value["recurring"] == true || value["is_exception"] == true {
+		original, _ := value["occurrence_date"].(string)
+		if parsed, err := time.Parse(time.RFC3339Nano, original); err == nil {
+			original = parsed.UTC().Format("2006-01-02T15:04:05.000Z")
+		}
+		id += "|" + original
+	}
+	return id
 }
