@@ -387,6 +387,9 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 			}
 		}
 		add("eight_gateway_process_crashes", true)
+		if w.ControlAction("/flush", struct{}{}) != nil {
+			return fail("capture_replay_drained")
+		}
 		if w.Await(15*time.Second, func() bool { return convergence(w) }) != nil {
 			return fail("capture_replay_convergence")
 		}
@@ -493,6 +496,10 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 	default:
 		return fail("robustness_action_implemented_" + name)
 	}
+	if w.ControlAction("/flush", struct{}{}) != nil {
+		return fail("recovery_capture_drained_before_convergence")
+	}
+	add("recovery_capture_drained_before_convergence", true)
 	if w.Await(30*time.Second, func() bool { return convergence(w) }) != nil {
 		return fail("truth_gateway_replica_convergence")
 	}
