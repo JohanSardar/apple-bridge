@@ -13,7 +13,13 @@ import (
 
 func (p *Process) Signal(signal syscall.Signal) error {
 	if p.remote {
-		_, err := commandOutput(context.Background(), "ssh", "ubuntu", "kill -"+strconv.Itoa(int(signal))+" $(cat "+quote(filepath.Join(p.home, "pid"))+")")
+		name := map[syscall.Signal]string{syscall.SIGINT: "INT", syscall.SIGTERM: "TERM", syscall.SIGKILL: "KILL", syscall.SIGSTOP: "STOP", syscall.SIGCONT: "CONT"}[signal]
+		if name == "" {
+			return os.ErrInvalid
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_, err := commandOutput(ctx, "ssh", "ubuntu", "kill -"+name+" $(cat "+quote(filepath.Join(p.home, "pid"))+")")
 		return err
 	}
 	return p.command.Process.Signal(signal)

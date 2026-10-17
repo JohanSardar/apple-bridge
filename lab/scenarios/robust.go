@@ -204,7 +204,7 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 		add("newer_replica_compatible_schema_negotiates_older_gateway", err == nil && status.State == "connected" && status.Schema == 1)
 
 	case "bench":
-		completionTimeout := 3 * time.Minute
+		completionTimeout := 5 * time.Minute
 		contended := os.Getenv("APPLE_BRIDGE_LAB_CONTENDED_BENCH") == "1"
 		if contended {
 			completionTimeout = 15 * time.Minute
@@ -222,36 +222,33 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 			return fail("seed_two_hundred_thousand_messages")
 		}
 		effect := time.Now()
-		evidence.Metrics = map[string]any{"messages": 200000, "completion_timeout_ms": completionTimeout.Milliseconds(), "contended_run": contended}
-		lastProbe := time.Time{}
-		if w.Await(completionTimeout, func() bool {
-			if contended && time.Since(lastProbe) < time.Second {
-				return false
-			}
-			lastProbe = time.Now()
-			report, err := w.Doctor(w.Gateway)
-			records, _ := report["records"].(map[string]any)
-			evidence.Metrics["observed_gateway_messages"] = records["messages.message"]
-			evidence.Metrics["capture_wait_ms"] = time.Since(effect).Milliseconds()
-			evidence.Metrics["capture_context_expired"] = ctx.Err() != nil
-			return err == nil && records["messages.message"] == float64(200000)
-		}) != nil {
+		evidence.Metrics = map[string]any{"messages_target": 200000, "completion_timeout_ms": completionTimeout.Milliseconds(), "contended_run": contended, "capture_readiness": "committed_capture_barrier", "replica_readiness": "durable_cursor_then_integrity_count", "fts5_query_cache": "repeated_query_after_integrity_verification"}
+		captureErr := w.FlushCaptures(completionTimeout)
+		capturedAt := time.Now()
+		evidence.Metrics["fixture_and_capture_ms"] = float64(capturedAt.Sub(start)) / float64(time.Millisecond)
+		evidence.Metrics["effect_done_to_gateway_capture_ms"] = float64(capturedAt.Sub(effect)) / float64(time.Millisecond)
+		if captureErr != nil {
 			return fail("capture_two_hundred_thousand_messages")
 		}
-		evidence.Metrics["fixture_and_capture_ms"] = float64(time.Since(start)) / float64(time.Millisecond)
-		evidence.Metrics["effect_done_to_gateway_capture_ms"] = float64(time.Since(effect)) / float64(time.Millisecond)
-		lastProbe = time.Time{}
+		head, headErr := w.Cursor(w.Gateway)
+		if headErr != nil {
+			return fail("benchmark_gateway_cursor")
+		}
 		if w.Await(completionTimeout, func() bool {
-			if contended && time.Since(lastProbe) < time.Second {
-				return false
-			}
-			lastProbe = time.Now()
-			report, err := w.Doctor(w.Replicas[0])
-			records, _ := report["records"].(map[string]any)
-			return err == nil && records["messages.message"] == float64(200000)
+			cursor, err := w.Cursor(w.Replicas[0])
+			return err == nil && cursor.Epoch == head.Epoch && cursor.Sequence >= head.Sequence
 		}) != nil {
 			return fail("replicate_two_hundred_thousand_messages")
 		}
+		for _, endpoint := range append([]world.Endpoint{w.Gateway}, w.Replicas...) {
+			report, err := w.Doctor(endpoint)
+			records, _ := report["records"].(map[string]any)
+			if err != nil || records["messages.message"] != float64(200000) {
+				return fail("benchmark_exact_message_counts")
+			}
+		}
+		evidence.Metrics["messages"] = 200000
+
 		latencies := []float64{}
 		for i := 0; i < 100; i++ {
 			start := time.Now()

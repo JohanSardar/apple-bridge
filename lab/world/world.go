@@ -158,7 +158,7 @@ func (p *Process) Stop() {
 	p.stopped = true
 	if p.remote {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		commandOutput(ctx, "ssh", "ubuntu", "if test -f "+quote(filepath.Join(p.home, "pid"))+"; then kill -TERM $(cat "+quote(filepath.Join(p.home, "pid"))+"); fi")
+		commandOutput(ctx, "ssh", "ubuntu", "if test -f "+quote(filepath.Join(p.home, "pid"))+"; then kill -CONT $(cat "+quote(filepath.Join(p.home, "pid"))+"); kill -TERM $(cat "+quote(filepath.Join(p.home, "pid"))+"); fi")
 		cancel()
 	} else {
 		p.command.Process.Signal(syscall.SIGCONT)
@@ -170,6 +170,9 @@ func (p *Process) Stop() {
 	case <-p.done:
 		return
 	case <-timer.C:
+		if p.remote {
+			p.Signal(syscall.SIGKILL)
+		}
 		p.command.Process.Kill()
 		<-p.done
 	}
