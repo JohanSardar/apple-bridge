@@ -132,9 +132,11 @@ func blobJourney(ctx context.Context, w *world.World, id string, evidence *Evide
 		}) == nil) {
 			return false
 		}
-		progress, progressErr := blobProgress(ctx, e)
-		partial := progress.Entries[digest].Received
-		if !check("resumed_bulk_in_progress_before_metadata_probe", progressErr == nil && partial > 0 && partial < int64(size)) {
+		if !check("resumed_bulk_in_progress_before_metadata_probe", w.Await(10*time.Second, func() bool {
+			progress, err := blobProgress(ctx, e)
+			partial := progress.Entries[digest].Received
+			return err == nil && partial > contracts.BlobChunkSize && partial < int64(size)
+		}) == nil) {
 			return false
 		}
 		effect := time.Now()
