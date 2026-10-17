@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"reflect"
 	"slices"
 	"strings"
@@ -39,7 +40,11 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		e.Hosts = append(e.Hosts, "ubuntu")
 	}
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
+	var diagnose func()
 	fail := func(name string, err error) Evidence {
+		if diagnose != nil {
+			diagnose()
+		}
 		add(name, false)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "calendar:", name, err)
@@ -80,6 +85,41 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		return fail("world_start", err)
 	}
 	defer w.Close()
+	e.NetworkPath = w.NetworkPath
+	diagnose = func() {
+		e.Metrics = map[string]any{}
+		all, readErr := w.Records(w.Gateway)
+		states := []map[string]any{}
+		for _, r := range all {
+			if r.Collection == "system.source" {
+				var d map[string]any
+				json.Unmarshal(r.Data, &d)
+				states = append(states, map[string]any{"source": d["source"], "state": d["state"], "reason": d["reason"], "capabilities": d["capabilities"]})
+			}
+		}
+		e.Metrics["source_readiness"] = states
+		e.Metrics["records_read_succeeded"] = readErr == nil
+		if level == "sim" {
+			return
+		}
+		report := filepath.Join(w.Dir, "calendar-permissions.json")
+		statusErr := exec.CommandContext(ctx, "open", "-n", "-W", "-g", "-a", w.HelperApp, "--args", "status", "--report", report).Run()
+		if statusErr == nil {
+			bytes, _ := os.ReadFile(report)
+			var status map[string]any
+			json.Unmarshal(bytes, &status)
+			e.Metrics["helper_calendar_permission"] = status["calendar"]
+		}
+		private := filepath.Join(os.Getenv("HOME"), "Library/Application Support/AppleBridgeDev/lab-failures", filepath.Base(w.Dir), "calendar")
+		if os.MkdirAll(private, 0700) == nil {
+			for _, name := range []string{"gateway.log", "gateway/helper/capture-trace.jsonl", "gateway/helper/calendar-baseline.json", "gateway/helper/calendar-lookups.json"} {
+				if bytes, err := os.ReadFile(filepath.Join(w.Dir, name)); err == nil {
+					os.WriteFile(filepath.Join(private, strings.ReplaceAll(name, "/", "_")), bytes, 0600)
+				}
+			}
+		}
+	}
+
 	if level != "sim" {
 		add("private_signed_apps_per_world", strings.HasPrefix(w.HelperApp, w.Dir+"/apps/") && strings.HasPrefix(w.TruthApp, w.Dir+"/apps/"))
 	}
@@ -121,7 +161,7 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 			return response, err
 		}
 		request := map[string]any{"source": "calendar", "action": action, "tag": tag}
-		if action != "create_calendar" && calendarNative != "" {
+		if (action != "create_calendar" || s.ID == "CAL-EXCEPTION-INITIAL-CAPTURE") && calendarNative != "" {
 			request["calendar_id"] = calendarNative
 		}
 		for k, v := range data {
