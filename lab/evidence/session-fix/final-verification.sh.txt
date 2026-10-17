@@ -3,7 +3,7 @@ export GOFLAGS=-p=2
 go vet ./...
 go vet -tags lab ./...
 make lint
-go run ./cmd/bridge-lab run lab/scenarios/core/CORE-CREDENTIAL-STORE.yaml --level sim
+go run ./cmd/bridge-lab run lab/scenarios/core lab/scenarios/reminders --level sim
 go run ./cmd/bridge-lab run lab/scenarios/reminders/REM-CREATE-EXTERNAL.yaml lab/scenarios/core/CORE-LIVE-LATENCY.yaml --level real
 go run ./cmd/bridge-lab run lab/scenarios/reminders/REM-CREATE-EXTERNAL.yaml --level replica
 audit_dir=$(mktemp -d /tmp/session-fix-audit.XXXXXX)

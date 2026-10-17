@@ -1,0 +1,1208 @@
+{
+  "unit": "Helper session and Reminders native acceptance",
+  "passed": true,
+  "tested_code_revision": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b",
+  "integration_base": "e4a6d6f9dc382c4cabaa41579c62fcd596992412",
+  "final_documentation_rebase_code_diff_empty": true,
+  "implementation_and_evidence_commits": [
+    "fb16782 Verify combined session and robustness paths with explicit lab credentials",
+    "8285161 Record explicit-credential native and replica acceptance",
+    "7c0ded0 Report credential startup failures before a database exists",
+    "a3be3fe Use a valid world declaration for credential regression",
+    "9c941b9 Select private lab credentials and explain locked Keychain failures",
+    "2dbc4bd Record integrated sim acceptance and locked Keychain startup blocker",
+    "7fa0b3b Prove ten-minute Helper survival and global fixture cleanup",
+    "c439c0a Record redacted session acceptance and latency breakdown",
+    "6b152c5 Keep the Mac awake for the lifetime of a Helper session",
+    "c193483 Register session regressions and support read-only final fixture inventory",
+    "5580476 Timestamp durable capture commits and SSE visibility at their boundaries",
+    "f557f86 Retain integrated latency failures identifying full-record blob scans",
+    "478485a Bound bulk capture transactions so live sources retain latency priority",
+    "afa401d Retain private Truth failure reports beyond worktree removal",
+    "1b51679 Record redacted crash baseline and first real session acceptance",
+    "3fa5d3c Exercise real list cleanup after an effect loses its outcome",
+    "9fdd524 Fence late list effects before reconciling recovery cleanup",
+    "5bf2919 Preserve Truth failure causes and recover fixtures after cancellation",
+    "ec63784 Repair Helper session isolation, live capture and native lab ownership"
+  ],
+  "modules": {
+    "native/Sources/AppleSession": "Sendable deadline handlers, session lifetime assertion, live priority, acknowledged source cache updates, bulk revalidation and bounded bulk transactions",
+    "native/Sources/AgendaGate": "Safe timeout handler and notification/debounce/refetch timestamps",
+    "native/Sources/RemindersSource": "Concurrent live subscription and initial backfill; persisted EventKit store lineage generation; refetch before bulk emission",
+    "native/Sources/SourceSupport": "Private optional capture tracing and fractional timestamps without per-record formatter allocation",
+    "lab/world": "Immutable signed per-run Helper and Truth; stable records/cursor snapshots; retained private Truth failure reports; explicit private credentials locally and remotely",
+    "lab/scenarios": "Pre-submission fixture recovery, late-effect fencing, identity reconciliation, native latency phases, session soak, backfill priority and credential/doctor regressions",
+    "internal/runtime": "Durable commit boundary timestamps and credential error diagnosis in doctor",
+    "internal/trust": "Typed Keychain failure with store and remedy; explicit file backend under private home when selected",
+    "packaging/dev": "Optional new destination bundle paths; existing certificate, bundle IDs and designated requirements preserved",
+    "design/WORKER-RULES.md": "Document immutable per-World native bundles",
+    "lab/truth/native": "Independent native save timestamps, safe error reason evidence and read-only all-list inventory"
+  },
+  "dependency": {
+    "commit": "76cc2cb",
+    "description": "Changed-record blob reference index from the blob worker is now upstream; duplicate dependency dropped during rebase"
+  },
+  "execution": {
+    "ssh": "ssh -o ControlPath=none air",
+    "directory": "~/apple-bridge/.worktrees/session-fix",
+    "path": "/opt/homebrew/bin:$HOME/go/bin:$PATH",
+    "heavy_limiter": "packaging/dev/heavy.sh",
+    "go_parallelism": 2
+  },
+  "verification": {
+    "prior_unit_build_commands_passed": [
+      "make build",
+      "make native"
+    ],
+    "final_commands_passed": [
+      "go vet ./...",
+      "go vet -tags lab ./...",
+      "make lint",
+      "go run ./cmd/bridge-lab run lab/scenarios/core lab/scenarios/reminders --level sim",
+      "go run ./cmd/bridge-lab run lab/scenarios/reminders/REM-CREATE-EXTERNAL.yaml lab/scenarios/core/CORE-LIVE-LATENCY.yaml --level real",
+      "go run ./cmd/bridge-lab run lab/scenarios/reminders/REM-CREATE-EXTERNAL.yaml --level replica",
+      "packaging/dev/build-truth.sh <new-private-destination>/AppleTruth.app",
+      "python3 lab/evidence/private/session-fix-audit.py <new-private-destination>/AppleTruth.app",
+      "make features"
+    ],
+    "soak_command": "packaging/dev/heavy.sh env GOFLAGS=-p=2 go run ./cmd/bridge-lab run lab/scenarios/helper/HELPER-SESSION-SOAK.yaml --level real",
+    "native_launch": "open -n -W -g -a <immutable-signed-app> --args <verb> --request-file <private-request> --report <private-report>",
+    "sim": {
+      "kind": "core_reminders_sim_acceptance",
+      "total_scenario_files": 56,
+      "unique_scenario_ids": 56,
+      "passed": true,
+      "full_suite_exit_code": 0,
+      "cases": [
+        {
+          "file": "lab/scenarios/core/CORE-BENCH.yaml",
+          "id": "CORE-BENCH",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-BLOB-CAP.yaml",
+          "id": "CORE-BLOB-CAP",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-BLOB-CORRUPT.yaml",
+          "id": "CORE-BLOB-CORRUPT",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-BLOB-GATEWAY-RETRY.yaml",
+          "id": "CORE-BLOB-GATEWAY-RETRY",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-BLOB-GC.yaml",
+          "id": "CORE-BLOB-GC",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-BLOB-INTERRUPT.yaml",
+          "id": "CORE-BLOB-INTERRUPT",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-BLOB-NO-DIGEST-AUTH.yaml",
+          "id": "CORE-BLOB-NO-DIGEST-AUTH",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-BLOB-OFFLOADED.yaml",
+          "id": "CORE-BLOB-OFFLOADED",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-BLOB-REFERENCE-INDEX.yaml",
+          "id": "CORE-BLOB-REFERENCE-INDEX",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-BLOB-SLOW-READ.yaml",
+          "id": "CORE-BLOB-SLOW-READ",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-BOOT.yaml",
+          "id": "CORE-BOOT",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-CMD-CLOCK-JUMP.yaml",
+          "id": "CORE-CMD-CLOCK-JUMP",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-CMD-CONFLICT.yaml",
+          "id": "CORE-CMD-CONFLICT",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-CMD-CRASH-AMBIGUOUS.yaml",
+          "id": "CORE-CMD-CRASH-AMBIGUOUS",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-CMD-ERA.yaml",
+          "id": "CORE-CMD-ERA",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-CMD-EXPIRY.yaml",
+          "id": "CORE-CMD-EXPIRY",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-CMD-IDEMPOTENT.yaml",
+          "id": "CORE-CMD-IDEMPOTENT",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-CMD-LOST-RESPONSE.yaml",
+          "id": "CORE-CMD-LOST-RESPONSE",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-CMD-OFFLINE.yaml",
+          "id": "CORE-CMD-OFFLINE",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-CMD-READ-YOUR-WRITE.yaml",
+          "id": "CORE-CMD-READ-YOUR-WRITE",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-CREDENTIAL-STORE.yaml",
+          "id": "CORE-CREDENTIAL-STORE",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-DISCONNECT-DETECT.yaml",
+          "id": "CORE-DISCONNECT-DETECT",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-DISK-FULL.yaml",
+          "id": "CORE-DISK-FULL",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-DOCTOR.yaml",
+          "id": "CORE-DOCTOR",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-FORGED-DELEGATION.yaml",
+          "id": "CORE-FORGED-DELEGATION",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-GAP-REJECT.yaml",
+          "id": "CORE-GAP-REJECT",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-HELPER-RESTART.yaml",
+          "id": "CORE-HELPER-RESTART",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-KILL-DURING-APPLY.yaml",
+          "id": "CORE-KILL-DURING-APPLY",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-KILL-GATEWAY-CAPTURE.yaml",
+          "id": "CORE-KILL-GATEWAY-CAPTURE",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-LIVE-LATENCY.yaml",
+          "id": "CORE-LIVE-LATENCY",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-LOCALHOST-DEFENSE.yaml",
+          "id": "CORE-LOCALHOST-DEFENSE",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-PAIR.yaml",
+          "id": "CORE-PAIR",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-REST-MCP-PARITY.yaml",
+          "id": "CORE-REST-MCP-PARITY",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-RESTORE-EPOCH.yaml",
+          "id": "CORE-RESTORE-EPOCH",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-RESTORE-OLD-SCHEMA.yaml",
+          "id": "CORE-RESTORE-OLD-SCHEMA",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-RESUME.yaml",
+          "id": "CORE-RESUME",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-RETENTION-RACE.yaml",
+          "id": "CORE-RETENTION-RACE",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-SCOPE-CHANGE.yaml",
+          "id": "CORE-SCOPE-CHANGE",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-SCOPE-LEAK.yaml",
+          "id": "CORE-SCOPE-LEAK",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-SLOW-CONSUMER.yaml",
+          "id": "CORE-SLOW-CONSUMER",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-SNAPSHOT-INTERRUPT.yaml",
+          "id": "CORE-SNAPSHOT-INTERRUPT",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-SNAPSHOT-UNDER-LOAD.yaml",
+          "id": "CORE-SNAPSHOT-UNDER-LOAD",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/CORE-UPGRADE.yaml",
+          "id": "CORE-UPGRADE",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/LAB-MALFORMED-SCENARIO.yaml",
+          "id": "LAB-MALFORMED-SCENARIO",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/LAB-SSE.yaml",
+          "id": "LAB-SSE",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/LAB-TRUTH-MULTIPLICITY.yaml",
+          "id": "LAB-TRUTH-MULTIPLICITY",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/REM-CONFLICT.yaml",
+          "id": "REM-CONFLICT",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/REM-CRUD.yaml",
+          "id": "REM-CRUD",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/REM-EXTERNAL-RACE.yaml",
+          "id": "REM-EXTERNAL-RACE",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/REM-NATIVE-LIST-RACE.yaml",
+          "id": "REM-NATIVE-LIST-RACE",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/REM-OPERATION-SHAPES.yaml",
+          "id": "REM-OPERATION-SHAPES",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/core/REM-READONLY-LIST.yaml",
+          "id": "REM-READONLY-LIST",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/reminders/REM-CREATE-EXTERNAL.yaml",
+          "id": "REM-CREATE-EXTERNAL",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/reminders/REM-LIST-CREATE.yaml",
+          "id": "REM-LIST-CREATE",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/reminders/REM-PERMISSION-LOSS.yaml",
+          "id": "REM-PERMISSION-LOSS",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        },
+        {
+          "file": "lab/scenarios/reminders/REM-RECURRING.yaml",
+          "id": "REM-RECURRING",
+          "passed": true,
+          "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+        }
+      ]
+    },
+    "native_scenarios": [
+      {
+        "id": "HELPER-TCC-READY",
+        "level": "real",
+        "passed": true,
+        "git_sha": "26827bb9cf7bf21a9b427aedb8eaa85c9cdc916e",
+        "latency": {},
+        "rest_and_mcp": false
+      },
+      {
+        "id": "HELPER-RESTART-REAL",
+        "level": "real",
+        "passed": true,
+        "git_sha": "26827bb9cf7bf21a9b427aedb8eaa85c9cdc916e",
+        "latency": {
+          "effect_done\u2192replica_visible:replica0": {
+            "samples": 1,
+            "p50_ms": 665.743958,
+            "p95_ms": 665.743958,
+            "max_ms": 665.743958,
+            "timeouts": 0
+          }
+        },
+        "rest_and_mcp": false
+      },
+      {
+        "id": "REM-CREATE-EXTERNAL",
+        "level": "real",
+        "passed": true,
+        "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b",
+        "latency": {
+          "effect_done\u2192replica_visible:replica0": {
+            "samples": 1,
+            "p50_ms": 479.834,
+            "p95_ms": 479.834,
+            "max_ms": 479.834,
+            "timeouts": 0
+          }
+        },
+        "rest_and_mcp": false
+      },
+      {
+        "id": "REM-CRUD",
+        "level": "real",
+        "passed": true,
+        "git_sha": "26827bb9cf7bf21a9b427aedb8eaa85c9cdc916e",
+        "latency": {
+          "effect_done\u2192replica_visible:replica0": {
+            "samples": 1,
+            "p50_ms": 24.092542,
+            "p95_ms": 24.092542,
+            "max_ms": 24.092542,
+            "timeouts": 0
+          },
+          "mcp_effect_done\u2192replica_visible:replica0": {
+            "samples": 1,
+            "p50_ms": 18.55875,
+            "p95_ms": 18.55875,
+            "max_ms": 18.55875,
+            "timeouts": 0
+          }
+        },
+        "rest_and_mcp": true
+      },
+      {
+        "id": "REM-LIST-CREATE",
+        "level": "real",
+        "passed": true,
+        "git_sha": "26827bb9cf7bf21a9b427aedb8eaa85c9cdc916e",
+        "latency": {},
+        "rest_and_mcp": false
+      },
+      {
+        "id": "REM-RECURRING",
+        "level": "real",
+        "passed": true,
+        "git_sha": "26827bb9cf7bf21a9b427aedb8eaa85c9cdc916e",
+        "latency": {
+          "effect_done\u2192replica_visible:replica0": {
+            "samples": 1,
+            "p50_ms": 678.537583,
+            "p95_ms": 678.537583,
+            "max_ms": 678.537583,
+            "timeouts": 0
+          }
+        },
+        "rest_and_mcp": false
+      },
+      {
+        "id": "CORE-LIVE-LATENCY",
+        "level": "real",
+        "passed": true,
+        "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b",
+        "latency": {
+          "capture_sent\u2192commit_ack": {
+            "samples": 200,
+            "p50_ms": 56.83475,
+            "p95_ms": 103.945667,
+            "max_ms": 148.306875,
+            "timeouts": 0
+          },
+          "capture_sent\u2192gateway_commit": {
+            "samples": 200,
+            "p50_ms": 31.24096,
+            "p95_ms": 70.146816,
+            "max_ms": 95.164928,
+            "timeouts": 0
+          },
+          "capture_sent\u2192gateway_commit_start": {
+            "samples": 200,
+            "p50_ms": 0.94976,
+            "p95_ms": 47.61216,
+            "max_ms": 66.703104,
+            "timeouts": 0
+          },
+          "debounce\u2192refetch_start": {
+            "samples": 200,
+            "p50_ms": 1.416959,
+            "p95_ms": 163.556208,
+            "max_ms": 197.572667,
+            "timeouts": 0
+          },
+          "effect_done\u2192gateway_visible": {
+            "samples": 200,
+            "p50_ms": 191.604208,
+            "p95_ms": 315.02175,
+            "max_ms": 415.419583,
+            "timeouts": 0
+          },
+          "effect_done\u2192replica_visible:replica0": {
+            "samples": 200,
+            "p50_ms": 192.59825,
+            "p95_ms": 317.444042,
+            "max_ms": 420.619042,
+            "timeouts": 0
+          },
+          "gateway_commit_duration": {
+            "samples": 200,
+            "p50_ms": 21.755136,
+            "p95_ms": 39.175936,
+            "max_ms": 65.552896,
+            "timeouts": 0
+          },
+          "gateway_commit\u2192replica_visible": {
+            "samples": 200,
+            "p50_ms": 14.866912,
+            "p95_ms": 22.749992,
+            "max_ms": 37.56192,
+            "timeouts": 0
+          },
+          "native_save\u2192next_notification_delivery": {
+            "samples": 200,
+            "p50_ms": 193.5315,
+            "p95_ms": 211.83225,
+            "max_ms": 260.188833,
+            "timeouts": 0
+          },
+          "refetch_duration": {
+            "samples": 200,
+            "p50_ms": 69.330458,
+            "p95_ms": 96.907292,
+            "max_ms": 119.610042,
+            "timeouts": 0
+          },
+          "refetch_finished\u2192capture_sent": {
+            "samples": 200,
+            "p50_ms": 26.206375,
+            "p95_ms": 55.30575,
+            "max_ms": 90.303167,
+            "timeouts": 0
+          },
+          "trigger_notification\u2192debounce": {
+            "samples": 200,
+            "p50_ms": 52.982709,
+            "p95_ms": 55.884333,
+            "max_ms": 119.754792,
+            "timeouts": 0
+          },
+          "trigger_notification\u2192replica_visible": {
+            "samples": 200,
+            "p50_ms": 207.68175,
+            "p95_ms": 378.911417,
+            "max_ms": 434.6445,
+            "timeouts": 0
+          }
+        },
+        "rest_and_mcp": false
+      },
+      {
+        "id": "HELPER-LIVE-BACKFILL",
+        "level": "real",
+        "passed": true,
+        "git_sha": "26827bb9cf7bf21a9b427aedb8eaa85c9cdc916e",
+        "latency": {},
+        "rest_and_mcp": false
+      },
+      {
+        "id": "HELPER-SESSION-SOAK",
+        "level": "real",
+        "passed": true,
+        "git_sha": "d96c089c03ef2639ea7d9d1703c830cb7ca7fe97",
+        "latency": {
+          "continuous_helper_session_duration": {
+            "samples": 1,
+            "p50_ms": 600337.0425,
+            "p95_ms": 600337.0425,
+            "max_ms": 600337.0425,
+            "timeouts": 0
+          }
+        },
+        "rest_and_mcp": false
+      },
+      {
+        "id": "REM-LIST-LOST-ACK",
+        "level": "real",
+        "passed": true,
+        "git_sha": "26827bb9cf7bf21a9b427aedb8eaa85c9cdc916e",
+        "latency": {},
+        "rest_and_mcp": false
+      },
+      {
+        "id": "REM-CREATE-EXTERNAL",
+        "level": "replica",
+        "passed": true,
+        "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b",
+        "latency": {
+          "effect_done\u2192replica_visible:replica0": {
+            "samples": 1,
+            "p50_ms": 316.463417,
+            "p95_ms": 316.463417,
+            "max_ms": 316.463417,
+            "timeouts": 0
+          }
+        },
+        "rest_and_mcp": false
+      },
+      {
+        "id": "REM-CRUD",
+        "level": "replica",
+        "passed": true,
+        "git_sha": "6a1b57790f171ef5805e68da513af0de7d00b78f",
+        "latency": {
+          "effect_done\u2192replica_visible:replica0": {
+            "samples": 1,
+            "p50_ms": 72.887375,
+            "p95_ms": 72.887375,
+            "max_ms": 72.887375,
+            "timeouts": 0
+          },
+          "mcp_effect_done\u2192replica_visible:replica0": {
+            "samples": 1,
+            "p50_ms": 60.929083,
+            "p95_ms": 60.929083,
+            "max_ms": 60.929083,
+            "timeouts": 0
+          }
+        },
+        "rest_and_mcp": true
+      }
+    ],
+    "truth_failure_preservation": {
+      "directory_mode": "0700",
+      "errors_is_unverified": true,
+      "kind": "real_appletruth_failure_probe",
+      "passed": true,
+      "private_location": "~/Library/Application Support/AppleBridgeDev/lab-failures",
+      "report_mode": "0600",
+      "survives_world_cleanup": true,
+      "underlying_reason": "invalid"
+    },
+    "credential_regression": {
+      "host_conditions": {
+        "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+        "start": {
+          "air": {
+            "at": "2026-10-17T18:34:34.693898Z",
+            "cpu_count": 8,
+            "load_average": [
+              4.17,
+              5.67,
+              6.62
+            ],
+            "cpu_idle_percent": 53,
+            "free_memory_bytes": 179339264,
+            "active_heavy_slots": 2,
+            "other_active_heavy_slots": 1,
+            "heavy_queue_length": 2,
+            "quiet": false
+          }
+        },
+        "end": {
+          "air": {
+            "at": "2026-10-17T18:34:36.330131Z",
+            "cpu_count": 8,
+            "load_average": [
+              4.63,
+              5.74,
+              6.64
+            ],
+            "cpu_idle_percent": 54,
+            "free_memory_bytes": 123764736,
+            "active_heavy_slots": 2,
+            "other_active_heavy_slots": 1,
+            "heavy_queue_length": 3,
+            "quiet": false
+          }
+        },
+        "quiet": false,
+        "require_quiet": false,
+        "quiet_wait_ms": 0,
+        "quiet_wait_expired": false
+      },
+      "run_id": "run_01M55J9XCSHM5PGCP2MMQWCTKR",
+      "scenario": "CORE-CREDENTIAL-STORE",
+      "level": "sim",
+      "passed": true,
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b",
+      "at": "2026-10-17T18:34:35.801689Z",
+      "assertions": [
+        {
+          "name": "explicit_private_world_credentials",
+          "passed": true
+        },
+        {
+          "name": "locked_keychain_startup_typed_error_and_remedy",
+          "passed": true
+        },
+        {
+          "name": "doctor_reports_locked_keychain_and_remedy",
+          "passed": true
+        },
+        {
+          "name": "credential_backend_override_restored",
+          "passed": true
+        }
+      ],
+      "latency": {},
+      "hosts": [
+        "air"
+      ]
+    },
+    "full_final_batch_exit_code": 0,
+    "featuregraph_passing_scenario_levels": "89/198; feature statuses unchanged"
+  },
+  "latency": {
+    "unit": "milliseconds",
+    "before_provenance": "Independent review values supplied in task; old revision not rerun",
+    "before_gateway_p50_p95_max": [
+      1131.6,
+      1821.3,
+      1918.3
+    ],
+    "before_replica_p50_p95_max": [
+      1184.9,
+      1871.6,
+      1954.7
+    ],
+    "before_samples": 200,
+    "after": {
+      "capture_sent\u2192commit_ack": {
+        "samples": 200,
+        "p50_ms": 56.83475,
+        "p95_ms": 103.945667,
+        "max_ms": 148.306875,
+        "timeouts": 0
+      },
+      "capture_sent\u2192gateway_commit": {
+        "samples": 200,
+        "p50_ms": 31.24096,
+        "p95_ms": 70.146816,
+        "max_ms": 95.164928,
+        "timeouts": 0
+      },
+      "capture_sent\u2192gateway_commit_start": {
+        "samples": 200,
+        "p50_ms": 0.94976,
+        "p95_ms": 47.61216,
+        "max_ms": 66.703104,
+        "timeouts": 0
+      },
+      "debounce\u2192refetch_start": {
+        "samples": 200,
+        "p50_ms": 1.416959,
+        "p95_ms": 163.556208,
+        "max_ms": 197.572667,
+        "timeouts": 0
+      },
+      "effect_done\u2192gateway_visible": {
+        "samples": 200,
+        "p50_ms": 191.604208,
+        "p95_ms": 315.02175,
+        "max_ms": 415.419583,
+        "timeouts": 0
+      },
+      "effect_done\u2192replica_visible:replica0": {
+        "samples": 200,
+        "p50_ms": 192.59825,
+        "p95_ms": 317.444042,
+        "max_ms": 420.619042,
+        "timeouts": 0
+      },
+      "gateway_commit_duration": {
+        "samples": 200,
+        "p50_ms": 21.755136,
+        "p95_ms": 39.175936,
+        "max_ms": 65.552896,
+        "timeouts": 0
+      },
+      "gateway_commit\u2192replica_visible": {
+        "samples": 200,
+        "p50_ms": 14.866912,
+        "p95_ms": 22.749992,
+        "max_ms": 37.56192,
+        "timeouts": 0
+      },
+      "native_save\u2192next_notification_delivery": {
+        "samples": 200,
+        "p50_ms": 193.5315,
+        "p95_ms": 211.83225,
+        "max_ms": 260.188833,
+        "timeouts": 0
+      },
+      "refetch_duration": {
+        "samples": 200,
+        "p50_ms": 69.330458,
+        "p95_ms": 96.907292,
+        "max_ms": 119.610042,
+        "timeouts": 0
+      },
+      "refetch_finished\u2192capture_sent": {
+        "samples": 200,
+        "p50_ms": 26.206375,
+        "p95_ms": 55.30575,
+        "max_ms": 90.303167,
+        "timeouts": 0
+      },
+      "trigger_notification\u2192debounce": {
+        "samples": 200,
+        "p50_ms": 52.982709,
+        "p95_ms": 55.884333,
+        "max_ms": 119.754792,
+        "timeouts": 0
+      },
+      "trigger_notification\u2192replica_visible": {
+        "samples": 200,
+        "p50_ms": 207.68175,
+        "p95_ms": 378.911417,
+        "max_ms": 434.6445,
+        "timeouts": 0
+      }
+    },
+    "conditions": {
+      "cpu": "CPU usage: 26.4% user, 20.31% sys, 53.64% idle \n",
+      "heavy_slots": "3240\n90067\n",
+      "memory_pressure": "The system has 8589934592 (524288 pages with a page size of 16384).\nSystem-wide memory free percentage: 54%\n",
+      "uptime": "13:40  up 13 days,  2:22, 4 users, load averages: 3.44 4.15 5.56\n"
+    },
+    "host_conditions": {
+      "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+      "start": {
+        "air": {
+          "at": "2026-10-17T18:39:58.852398Z",
+          "cpu_count": 8,
+          "load_average": [
+            2.95,
+            4.15,
+            5.61
+          ],
+          "cpu_idle_percent": 82,
+          "free_memory_bytes": 206913536,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        }
+      },
+      "end": {
+        "air": {
+          "at": "2026-10-17T18:41:08.869408Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.03,
+            4.21,
+            5.52
+          ],
+          "cpu_idle_percent": 65,
+          "free_memory_bytes": 210960384,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        }
+      },
+      "periodic_samples": [
+        {
+          "air": {
+            "at": "2026-10-17T18:40:04.903297Z",
+            "cpu_count": 8,
+            "load_average": [
+              3.11,
+              4.16,
+              5.61
+            ],
+            "cpu_idle_percent": 72,
+            "free_memory_bytes": 67649536,
+            "active_heavy_slots": 2,
+            "other_active_heavy_slots": 1,
+            "heavy_queue_length": 3,
+            "quiet": false
+          }
+        },
+        {
+          "air": {
+            "at": "2026-10-17T18:40:09.904249Z",
+            "cpu_count": 8,
+            "load_average": [
+              3.26,
+              4.18,
+              5.61
+            ],
+            "cpu_idle_percent": 76,
+            "free_memory_bytes": 73367552,
+            "active_heavy_slots": 2,
+            "other_active_heavy_slots": 1,
+            "heavy_queue_length": 3,
+            "quiet": false
+          }
+        },
+        {
+          "air": {
+            "at": "2026-10-17T18:40:14.904359Z",
+            "cpu_count": 8,
+            "load_average": [
+              3.16,
+              4.14,
+              5.58
+            ],
+            "cpu_idle_percent": 80,
+            "free_memory_bytes": 268500992,
+            "active_heavy_slots": 2,
+            "other_active_heavy_slots": 1,
+            "heavy_queue_length": 3,
+            "quiet": false
+          }
+        },
+        {
+          "air": {
+            "at": "2026-10-17T18:40:19.902428Z",
+            "cpu_count": 8,
+            "load_average": [
+              2.99,
+              4.09,
+              5.56
+            ],
+            "cpu_idle_percent": 78,
+            "free_memory_bytes": 68960256,
+            "active_heavy_slots": 2,
+            "other_active_heavy_slots": 1,
+            "heavy_queue_length": 3,
+            "quiet": false
+          }
+        },
+        {
+          "air": {
+            "at": "2026-10-17T18:40:24.904291Z",
+            "cpu_count": 8,
+            "load_average": [
+              3.39,
+              4.15,
+              5.57
+            ],
+            "cpu_idle_percent": 67,
+            "free_memory_bytes": 187334656,
+            "active_heavy_slots": 2,
+            "other_active_heavy_slots": 1,
+            "heavy_queue_length": 3,
+            "quiet": false
+          }
+        },
+        {
+          "air": {
+            "at": "2026-10-17T18:40:29.904422Z",
+            "cpu_count": 8,
+            "load_average": [
+              3.44,
+              4.15,
+              5.56
+            ],
+            "cpu_idle_percent": 65,
+            "free_memory_bytes": 194871296,
+            "active_heavy_slots": 2,
+            "other_active_heavy_slots": 1,
+            "heavy_queue_length": 3,
+            "quiet": false
+          }
+        },
+        {
+          "air": {
+            "at": "2026-10-17T18:40:34.903517Z",
+            "cpu_count": 8,
+            "load_average": [
+              3.4,
+              4.13,
+              5.55
+            ],
+            "cpu_idle_percent": 49,
+            "free_memory_bytes": 59441152,
+            "active_heavy_slots": 2,
+            "other_active_heavy_slots": 1,
+            "heavy_queue_length": 3,
+            "quiet": false
+          }
+        },
+        {
+          "air": {
+            "at": "2026-10-17T18:40:39.904437Z",
+            "cpu_count": 8,
+            "load_average": [
+              3.69,
+              4.18,
+              5.56
+            ],
+            "cpu_idle_percent": 49,
+            "free_memory_bytes": 67289088,
+            "active_heavy_slots": 2,
+            "other_active_heavy_slots": 1,
+            "heavy_queue_length": 3,
+            "quiet": false
+          }
+        },
+        {
+          "air": {
+            "at": "2026-10-17T18:40:44.90346Z",
+            "cpu_count": 8,
+            "load_average": [
+              3.8,
+              4.19,
+              5.55
+            ],
+            "cpu_idle_percent": 56,
+            "free_memory_bytes": 95322112,
+            "active_heavy_slots": 2,
+            "other_active_heavy_slots": 1,
+            "heavy_queue_length": 3,
+            "quiet": false
+          }
+        },
+        {
+          "air": {
+            "at": "2026-10-17T18:40:49.902627Z",
+            "cpu_count": 8,
+            "load_average": [
+              3.81,
+              4.19,
+              5.54
+            ],
+            "cpu_idle_percent": 57,
+            "free_memory_bytes": 65323008,
+            "active_heavy_slots": 2,
+            "other_active_heavy_slots": 1,
+            "heavy_queue_length": 3,
+            "quiet": false
+          }
+        },
+        {
+          "air": {
+            "at": "2026-10-17T18:40:54.90449Z",
+            "cpu_count": 8,
+            "load_average": [
+              3.67,
+              4.15,
+              5.52
+            ],
+            "cpu_idle_percent": 54,
+            "free_memory_bytes": 66387968,
+            "active_heavy_slots": 2,
+            "other_active_heavy_slots": 1,
+            "heavy_queue_length": 3,
+            "quiet": false
+          }
+        },
+        {
+          "air": {
+            "at": "2026-10-17T18:40:59.902898Z",
+            "cpu_count": 8,
+            "load_average": [
+              3.85,
+              4.18,
+              5.52
+            ],
+            "cpu_idle_percent": 50,
+            "free_memory_bytes": 99663872,
+            "active_heavy_slots": 2,
+            "other_active_heavy_slots": 1,
+            "heavy_queue_length": 3,
+            "quiet": false
+          }
+        },
+        {
+          "air": {
+            "at": "2026-10-17T18:41:04.902589Z",
+            "cpu_count": 8,
+            "load_average": [
+              3.94,
+              4.19,
+              5.52
+            ],
+            "cpu_idle_percent": 51,
+            "free_memory_bytes": 64684032,
+            "active_heavy_slots": 2,
+            "other_active_heavy_slots": 1,
+            "heavy_queue_length": 3,
+            "quiet": false
+          }
+        }
+      ],
+      "quiet": false,
+      "require_quiet": false,
+      "quiet_wait_ms": 0,
+      "quiet_wait_expired": false
+    },
+    "quiet_host_claimed": false,
+    "endpoint_method": "Exact native-save monotonic timestamp to gateway/replica SSE visibility; all 200 samples retained, zero timeouts",
+    "notification_caveat": "EventKit notifications are unkeyed. Native-save to next callback is a separate diagnostic, not proof of a causal per-effect Apple arrival lag. An in-flight refetch can observe a save before its next callback. No Apple-arrival latency exemption is claimed.",
+    "phase_quantiles": "Independent phase percentiles must not be added together",
+    "removed_delays": [
+      "Actor isolation crash/restart cycle at approximately 1.08 seconds",
+      "Initial backfill blocking live notification handling",
+      "Repeated native JSON hashing and date formatter allocation",
+      "Large bulk transactions delaying live captures",
+      "Repeated full-record blob reference scans per capture; indexed changed-record references preserve durable protection"
+    ],
+    "retained_debounce_ms": 50
+  },
+  "soak": {
+    "continuous_session_ms": 600337.0425,
+    "all_assertions": [
+      {
+        "name": "reminders_ready",
+        "passed": true
+      },
+      {
+        "name": "same_helper_pid_ten_minutes",
+        "passed": true
+      },
+      {
+        "name": "no_new_world_helper_crash_reports",
+        "passed": true
+      },
+      {
+        "name": "six_hundred_lifetime_timer_deadlines",
+        "passed": true
+      },
+      {
+        "name": "multiple_fetch_timer_deadlines",
+        "passed": true
+      }
+    ],
+    "global_crash_report_audit": {
+      "kind": "global_helper_crash_report_soak_audit",
+      "passed": true,
+      "scenario_exit_code": 0,
+      "elapsed_seconds": 641.789,
+      "existing_reports": 27,
+      "new_reports": 0
+    },
+    "observed_power_assertion": "PreventUserIdleSystemSleep: Apple Bridge gateway session; process-lifetime assertion, no system setting changes",
+    "helper_crash_reports_total_after_final_acceptance": 27
+  },
+  "final_cleanup": {
+    "kind": "real_final_reminders_inventory",
+    "passed": true,
+    "all_lists_positive_control": true,
+    "tagged_reminders_total": 0,
+    "tagged_reminders_outside_bridge_test": 0,
+    "bridge_test_lists": 1,
+    "duplicate_empty_lists_removed": 0,
+    "writes_confined_to": "tagged reminders and empty duplicate lists named Bridge Test"
+  },
+  "new_scenarios": [
+    "HELPER-LIVE-BACKFILL real",
+    "HELPER-SESSION-SOAK real",
+    "REM-LIST-LOST-ACK real",
+    "CORE-CREDENTIAL-STORE sim"
+  ],
+  "spec_deviations": [],
+  "authorized_lab_policy": "Every lab World explicitly selects the file backend under its private home; secret files are 0600. Product default on macOS remains Keychain.",
+  "open_product_issue": "Keychain locked in a background/locked session is an M5 packaging issue. Leader decides the storage remedy, such as a dedicated Apple Bridge keychain or data-protection keychain. Startup and doctor now expose credential_store_locked, store=keychain and an unlock remedy.",
+  "limitations": [
+    "EventKit store replacement was not forced against personal accounts; generation derivation, persistence and rotation are implemented",
+    "No quiet-host latency claim; host contention is retained in evidence"
+  ],
+  "johan_action_required_to_complete_this_unit": false
+}

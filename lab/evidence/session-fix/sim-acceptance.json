@@ -1,283 +1,345 @@
 {
   "kind": "core_reminders_sim_acceptance",
+  "total_scenario_files": 56,
+  "unique_scenario_ids": 56,
+  "passed": true,
+  "full_suite_exit_code": 0,
   "cases": [
     {
+      "file": "lab/scenarios/core/CORE-BENCH.yaml",
       "id": "CORE-BENCH",
       "passed": true,
-      "git_sha": "935e5039e5c46b58da9dd5e84d8522d17a849386"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-BLOB-CAP.yaml",
       "id": "CORE-BLOB-CAP",
       "passed": true,
-      "git_sha": "935e5039e5c46b58da9dd5e84d8522d17a849386"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-BLOB-CORRUPT.yaml",
       "id": "CORE-BLOB-CORRUPT",
       "passed": true,
-      "git_sha": "935e5039e5c46b58da9dd5e84d8522d17a849386"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-BLOB-GATEWAY-RETRY.yaml",
       "id": "CORE-BLOB-GATEWAY-RETRY",
       "passed": true,
-      "git_sha": "935e5039e5c46b58da9dd5e84d8522d17a849386"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-BLOB-GC.yaml",
       "id": "CORE-BLOB-GC",
       "passed": true,
-      "git_sha": "935e5039e5c46b58da9dd5e84d8522d17a849386"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-BLOB-INTERRUPT.yaml",
       "id": "CORE-BLOB-INTERRUPT",
       "passed": true,
-      "git_sha": "935e5039e5c46b58da9dd5e84d8522d17a849386"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-BLOB-NO-DIGEST-AUTH.yaml",
       "id": "CORE-BLOB-NO-DIGEST-AUTH",
       "passed": true,
-      "git_sha": "935e5039e5c46b58da9dd5e84d8522d17a849386"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-BLOB-OFFLOADED.yaml",
       "id": "CORE-BLOB-OFFLOADED",
       "passed": true,
-      "git_sha": "935e5039e5c46b58da9dd5e84d8522d17a849386"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-BLOB-REFERENCE-INDEX.yaml",
       "id": "CORE-BLOB-REFERENCE-INDEX",
       "passed": true,
-      "git_sha": "935e5039e5c46b58da9dd5e84d8522d17a849386"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-BLOB-SLOW-READ.yaml",
       "id": "CORE-BLOB-SLOW-READ",
       "passed": true,
-      "git_sha": "935e5039e5c46b58da9dd5e84d8522d17a849386"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-BOOT.yaml",
       "id": "CORE-BOOT",
       "passed": true,
-      "git_sha": "935e5039e5c46b58da9dd5e84d8522d17a849386"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-CMD-CLOCK-JUMP.yaml",
       "id": "CORE-CMD-CLOCK-JUMP",
       "passed": true,
-      "git_sha": "935e5039e5c46b58da9dd5e84d8522d17a849386"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-CMD-CONFLICT.yaml",
       "id": "CORE-CMD-CONFLICT",
       "passed": true,
-      "git_sha": "935e5039e5c46b58da9dd5e84d8522d17a849386"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-CMD-CRASH-AMBIGUOUS.yaml",
       "id": "CORE-CMD-CRASH-AMBIGUOUS",
       "passed": true,
-      "git_sha": "935e5039e5c46b58da9dd5e84d8522d17a849386"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-CMD-ERA.yaml",
       "id": "CORE-CMD-ERA",
       "passed": true,
-      "git_sha": "935e5039e5c46b58da9dd5e84d8522d17a849386"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-CMD-EXPIRY.yaml",
       "id": "CORE-CMD-EXPIRY",
       "passed": true,
-      "git_sha": "935e5039e5c46b58da9dd5e84d8522d17a849386"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-CMD-IDEMPOTENT.yaml",
       "id": "CORE-CMD-IDEMPOTENT",
       "passed": true,
-      "git_sha": "935e5039e5c46b58da9dd5e84d8522d17a849386"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-CMD-LOST-RESPONSE.yaml",
       "id": "CORE-CMD-LOST-RESPONSE",
       "passed": true,
-      "git_sha": "935e5039e5c46b58da9dd5e84d8522d17a849386"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-CMD-OFFLINE.yaml",
       "id": "CORE-CMD-OFFLINE",
       "passed": true,
-      "git_sha": "935e5039e5c46b58da9dd5e84d8522d17a849386"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-CMD-READ-YOUR-WRITE.yaml",
       "id": "CORE-CMD-READ-YOUR-WRITE",
       "passed": true,
-      "git_sha": "935e5039e5c46b58da9dd5e84d8522d17a849386"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-CREDENTIAL-STORE.yaml",
       "id": "CORE-CREDENTIAL-STORE",
       "passed": true,
-      "git_sha": "a015684f12ce550969159dcd70fabcdc704200ac"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-DISCONNECT-DETECT.yaml",
       "id": "CORE-DISCONNECT-DETECT",
       "passed": true,
-      "git_sha": "935e5039e5c46b58da9dd5e84d8522d17a849386"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-DISK-FULL.yaml",
       "id": "CORE-DISK-FULL",
       "passed": true,
-      "git_sha": "935e5039e5c46b58da9dd5e84d8522d17a849386"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-DOCTOR.yaml",
+      "id": "CORE-DOCTOR",
+      "passed": true,
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
+    },
+    {
+      "file": "lab/scenarios/core/CORE-FORGED-DELEGATION.yaml",
       "id": "CORE-FORGED-DELEGATION",
       "passed": true,
-      "git_sha": "935e5039e5c46b58da9dd5e84d8522d17a849386"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-GAP-REJECT.yaml",
       "id": "CORE-GAP-REJECT",
       "passed": true,
-      "git_sha": "935e5039e5c46b58da9dd5e84d8522d17a849386"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-HELPER-RESTART.yaml",
       "id": "CORE-HELPER-RESTART",
       "passed": true,
-      "git_sha": "a015684f12ce550969159dcd70fabcdc704200ac"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-KILL-DURING-APPLY.yaml",
       "id": "CORE-KILL-DURING-APPLY",
       "passed": true,
-      "git_sha": "a015684f12ce550969159dcd70fabcdc704200ac"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-KILL-GATEWAY-CAPTURE.yaml",
       "id": "CORE-KILL-GATEWAY-CAPTURE",
       "passed": true,
-      "git_sha": "a015684f12ce550969159dcd70fabcdc704200ac"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-LIVE-LATENCY.yaml",
       "id": "CORE-LIVE-LATENCY",
       "passed": true,
-      "git_sha": "a015684f12ce550969159dcd70fabcdc704200ac"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-LOCALHOST-DEFENSE.yaml",
       "id": "CORE-LOCALHOST-DEFENSE",
       "passed": true,
-      "git_sha": "a015684f12ce550969159dcd70fabcdc704200ac"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-PAIR.yaml",
       "id": "CORE-PAIR",
       "passed": true,
-      "git_sha": "a015684f12ce550969159dcd70fabcdc704200ac"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-REST-MCP-PARITY.yaml",
       "id": "CORE-REST-MCP-PARITY",
       "passed": true,
-      "git_sha": "a015684f12ce550969159dcd70fabcdc704200ac"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-RESTORE-EPOCH.yaml",
       "id": "CORE-RESTORE-EPOCH",
       "passed": true,
-      "git_sha": "a015684f12ce550969159dcd70fabcdc704200ac"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-RESTORE-OLD-SCHEMA.yaml",
       "id": "CORE-RESTORE-OLD-SCHEMA",
       "passed": true,
-      "git_sha": "a015684f12ce550969159dcd70fabcdc704200ac"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-RESUME.yaml",
       "id": "CORE-RESUME",
       "passed": true,
-      "git_sha": "a015684f12ce550969159dcd70fabcdc704200ac"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-RETENTION-RACE.yaml",
       "id": "CORE-RETENTION-RACE",
       "passed": true,
-      "git_sha": "a015684f12ce550969159dcd70fabcdc704200ac"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-SCOPE-CHANGE.yaml",
       "id": "CORE-SCOPE-CHANGE",
       "passed": true,
-      "git_sha": "a015684f12ce550969159dcd70fabcdc704200ac"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-SCOPE-LEAK.yaml",
       "id": "CORE-SCOPE-LEAK",
       "passed": true,
-      "git_sha": "a015684f12ce550969159dcd70fabcdc704200ac"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-SLOW-CONSUMER.yaml",
       "id": "CORE-SLOW-CONSUMER",
       "passed": true,
-      "git_sha": "a015684f12ce550969159dcd70fabcdc704200ac"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-SNAPSHOT-INTERRUPT.yaml",
       "id": "CORE-SNAPSHOT-INTERRUPT",
       "passed": true,
-      "git_sha": "a015684f12ce550969159dcd70fabcdc704200ac"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-SNAPSHOT-UNDER-LOAD.yaml",
       "id": "CORE-SNAPSHOT-UNDER-LOAD",
       "passed": true,
-      "git_sha": "a015684f12ce550969159dcd70fabcdc704200ac"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/CORE-UPGRADE.yaml",
       "id": "CORE-UPGRADE",
       "passed": true,
-      "git_sha": "a015684f12ce550969159dcd70fabcdc704200ac"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/LAB-MALFORMED-SCENARIO.yaml",
       "id": "LAB-MALFORMED-SCENARIO",
       "passed": true,
-      "git_sha": "a015684f12ce550969159dcd70fabcdc704200ac"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/LAB-SSE.yaml",
       "id": "LAB-SSE",
       "passed": true,
-      "git_sha": "a015684f12ce550969159dcd70fabcdc704200ac"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/LAB-TRUTH-MULTIPLICITY.yaml",
       "id": "LAB-TRUTH-MULTIPLICITY",
       "passed": true,
-      "git_sha": "a015684f12ce550969159dcd70fabcdc704200ac"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/REM-CONFLICT.yaml",
       "id": "REM-CONFLICT",
       "passed": true,
-      "git_sha": "a015684f12ce550969159dcd70fabcdc704200ac"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/REM-CRUD.yaml",
       "id": "REM-CRUD",
       "passed": true,
-      "git_sha": "a015684f12ce550969159dcd70fabcdc704200ac"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/REM-EXTERNAL-RACE.yaml",
       "id": "REM-EXTERNAL-RACE",
       "passed": true,
-      "git_sha": "a015684f12ce550969159dcd70fabcdc704200ac"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/REM-NATIVE-LIST-RACE.yaml",
       "id": "REM-NATIVE-LIST-RACE",
       "passed": true,
-      "git_sha": "a015684f12ce550969159dcd70fabcdc704200ac"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/REM-OPERATION-SHAPES.yaml",
       "id": "REM-OPERATION-SHAPES",
       "passed": true,
-      "git_sha": "a015684f12ce550969159dcd70fabcdc704200ac"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/core/REM-READONLY-LIST.yaml",
       "id": "REM-READONLY-LIST",
       "passed": true,
-      "git_sha": "a015684f12ce550969159dcd70fabcdc704200ac"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/reminders/REM-CREATE-EXTERNAL.yaml",
       "id": "REM-CREATE-EXTERNAL",
       "passed": true,
-      "git_sha": "a015684f12ce550969159dcd70fabcdc704200ac"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/reminders/REM-LIST-CREATE.yaml",
       "id": "REM-LIST-CREATE",
       "passed": true,
-      "git_sha": "a015684f12ce550969159dcd70fabcdc704200ac"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/reminders/REM-PERMISSION-LOSS.yaml",
       "id": "REM-PERMISSION-LOSS",
       "passed": true,
-      "git_sha": "a015684f12ce550969159dcd70fabcdc704200ac"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     },
     {
+      "file": "lab/scenarios/reminders/REM-RECURRING.yaml",
       "id": "REM-RECURRING",
       "passed": true,
-      "git_sha": "a015684f12ce550969159dcd70fabcdc704200ac"
+      "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b"
     }
-  ],
-  "total": 55,
-  "passed": true,
-  "rerun": "CORE-CREDENTIAL-STORE rerun after doctor empty-database diagnosis fix; all other suite cases passed in full run"
+  ]
 }
