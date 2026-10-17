@@ -51,6 +51,8 @@ type BlobOptions struct {
 	Slow    bool
 }
 type World struct {
+	remoteExtraHomes []string
+
 	blobOptions            BlobOptions
 	secretOverride         bool
 	previousSecretStore    string
@@ -413,6 +415,9 @@ func (w *World) Close() {
 			commandOutput(ctx, "ssh", "ubuntu", quote(w.remoteLab)+" credential-cleanup --home "+quote(endpoint.Home))
 		}
 		commandOutput(ctx, "ssh", "ubuntu", quote(w.remoteLab)+" credential-cleanup --home "+quote(filepath.Join(w.Dir, "pairing")))
+		for _, home := range w.remoteExtraHomes {
+			commandOutput(ctx, "ssh", "ubuntu", "rm -rf "+quote(home))
+		}
 		commandOutput(ctx, "ssh", "ubuntu", "rm -rf "+quote(w.Dir))
 		cancel()
 	}
@@ -615,6 +620,15 @@ func (w *World) AddReplicaScope(scope string) error {
 	var err error
 	remote := w.Level == "replica"
 	home := filepath.Join(w.Dir, "replica"+strconv.Itoa(i))
+	options, _ := w.ctx.Value(optionsKey{}).(Options)
+	if w.Level == "replica" && options.PersistentReplicaStorage {
+		var err error
+		home, err = commandOutput(w.ctx, "ssh", "ubuntu", `mktemp -d "$HOME/.cache/apple-bridge-doctor.XXXXXX"`)
+		if err != nil {
+			return err
+		}
+		w.remoteExtraHomes = append(w.remoteExtraHomes, home)
+	}
 	binary := w.bridge
 	if remote {
 		binary = w.remoteBinary

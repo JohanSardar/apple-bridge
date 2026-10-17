@@ -38,6 +38,9 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 		replicas = 0
 		seed = 1000
 	}
+	if name == "doctor" && level == "replica" {
+		ctx = world.WithPersistentReplicaStorage(ctx)
+	}
 	var w *world.World
 	var err error
 	if name == "upgrade" || name == "restore-old-schema" {
@@ -317,6 +320,7 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 		add("replica_authenticated_feed_clock_sample", skewOK && ageOK && age >= 0 && age < 15000 && replica["clock_method"] == "local_receive_minus_gateway_send_including_feed_transit")
 		evidence.Metrics = map[string]any{"replica_clock_skew_ms": skew, "clock_sample_age_ms": age, "replica_disk_encryption": replica["disk_encryption"], "clock_method": replica["clock_method"]}
 		if level == "replica" {
+			evidence.Metrics["replica_storage"] = "persistent_user_cache"
 			encrypted := replica["disk_encryption"]
 			warnings, _ := replica["warnings"].([]any)
 			add("linux_data_directory_encryption_diagnosed", encrypted == "enabled" || (encrypted == "warning_not_enabled" && len(warnings) > 0))
