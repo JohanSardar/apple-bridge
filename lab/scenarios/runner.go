@@ -814,7 +814,11 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		}
 		ran++
 		fmt.Fprintln(os.Stderr, "running", s.ID, level)
-		bounded, cancel := context.WithTimeout(ctx, 3*time.Minute)
+		timeout := 3 * time.Minute
+		if s.Feature == "messages.read" && level != "sim" {
+			timeout = 20 * time.Minute
+		}
+		bounded, cancel := context.WithTimeout(ctx, timeout)
 		e := Run(bounded, s, level)
 		cancel()
 		if err = Save(e); err != nil {

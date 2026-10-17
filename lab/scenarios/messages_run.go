@@ -109,9 +109,7 @@ func runMessages(ctx context.Context, s Scenario, level string) Evidence {
 		return evidence
 	}
 	if level != "sim" {
-		evidence.Status = "unverified"
-		add("waiting_for_real_messages_environment", false)
-		return evidence
+		return runRealMessages(ctx, s, level, evidence)
 	}
 	w, err := world.New(ctx, level, replicas, 0, world.BlobOptions{})
 	if err != nil {

@@ -200,8 +200,8 @@ func (w *World) Await(timeout time.Duration, predicate func() bool) error {
 func New(ctx context.Context, level string, replicas int, seed int, blobOptions ...BlobOptions) (*World, error) {
 	return newEnvironment(ctx, level, replicas, seed, false, blobOptions...)
 }
-func NewReal(ctx context.Context, level string, replicas int) (*World, error) {
-	return newEnvironment(ctx, level, replicas, 0, true)
+func NewReal(ctx context.Context, level string, replicas int, blobOptions ...BlobOptions) (*World, error) {
+	return newEnvironment(ctx, level, replicas, 0, true, blobOptions...)
 }
 func newEnvironment(ctx context.Context, level string, replicas int, seed int, native bool, blobOptions ...BlobOptions) (*World, error) {
 	root, err := os.Getwd()

@@ -14,7 +14,13 @@ final class MessagesWatcher: @unchecked Sendable {
     private var changed = false
     private var needsReconciliation = false
     private let path: String
-    init(path: String) {
+    private let diagnostics: URL?
+    private var polls = 0
+    private var events = 0
+    private var rearms = 0
+    private var initialized = false
+    init(path: String, diagnostics: URL? = nil) {
+        self.diagnostics = diagnostics
         self.path = path
         let pair = AsyncStream<Bool>.makeStream(bufferingPolicy: .bufferingNewest(1))
         stream = pair.stream
@@ -22,7 +28,7 @@ final class MessagesWatcher: @unchecked Sendable {
         queue.sync { rearm() }
         let timer = DispatchSource.makeTimerSource(queue: queue)
         timer.schedule(deadline: .now() + 2, repeating: 2)
-        timer.setEventHandler { [weak self] in self?.rearm(); self?.signal(false) }
+        timer.setEventHandler { [weak self] in self?.polls += 1; self?.rearm(); self?.report(); self?.signal(false) }
         timer.resume()
         self.timer = timer
         continuation.yield(false)
@@ -56,6 +62,7 @@ final class MessagesWatcher: @unchecked Sendable {
         for file in paths {
             let identity = ((try? FileManager.default.attributesOfItem(atPath: file)[.systemFileNumber]) as? NSNumber)?.uint64Value
             if sources[file]?.0 == identity { continue }
+            if initialized { rearms += 1 }
             sources.removeValue(forKey: file)?.1.cancel()
             guard let identity else { continue }
             let descriptor = Darwin.open(file, O_EVTONLY | O_CLOEXEC)
@@ -64,6 +71,7 @@ final class MessagesWatcher: @unchecked Sendable {
             source.setCancelHandler { Darwin.close(descriptor) }
             source.setEventHandler { [weak self] in
                 guard let self else { return }
+                events += 1
                 rearm()
                 pending?.cancel()
                 let work = DispatchWorkItem { [weak self] in self?.signal(false) }
@@ -73,6 +81,13 @@ final class MessagesWatcher: @unchecked Sendable {
             sources[file] = (identity, source)
             source.resume()
         }
+        initialized = true
+        report()
+    }
+    private func report() {
+        guard let diagnostics, let data = try? JSONSerialization.data(withJSONObject: ["polls": polls, "events": events, "rearms": rearms, "watched_paths": sources.count]) else { return }
+        try? data.write(to: diagnostics, options: .atomic)
+        try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: diagnostics.path)
     }
     func close() {
         queue.sync {

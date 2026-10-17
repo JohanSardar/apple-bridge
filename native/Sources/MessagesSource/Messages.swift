@@ -5,6 +5,7 @@ import SourceSupport
 public actor Messages: Source {
     public nonisolated let name = "messages"
     private let path: String
+    private let diagnostics: URL?
     private var reader: MessagesReader?
     private var baseline: MessagesBaseline?
     private var candidates: Set<String> = []
@@ -28,11 +29,15 @@ public actor Messages: Source {
     private var blobDigests: [String: (Int64, Date, String)] = [:]
     private var pendingBlobs: [String: URL] = [:]
     private var failedBlobs: Set<String> = []
-    public init(path: String? = nil) {
+    public init(path: String? = nil, diagnostics: URL? = nil) {
+        self.diagnostics = diagnostics
         self.path = path ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Messages/chat.db").path
     }
     public func open() async -> SourceReadiness {
         do {
+            guard FileManager.default.isReadableFile(atPath: path) else {
+                return SourceReadiness(state: "permission_missing", coverage: .object(["fields": .string("partial"), "missing": .array([.string("chat_db_unavailable")])]), reason: "chat_db_unavailable")
+            }
             if captureActive {
                 guard let reader, try reader.isCurrent() else {
                     return SourceReadiness(state: "degraded", coverage: coverage(), reason: "reconciliation_pending")
@@ -42,9 +47,17 @@ public actor Messages: Source {
         } catch { return SourceReadiness(state: FileManager.default.isReadableFile(atPath: path) ? "degraded" : "permission_missing", coverage: .object(["fields": .string("partial"), "missing": .array([.string("chat_db_unavailable")])]), reason: "chat_db_unavailable") }
     }
     private func coverage() -> JSON {
-        let expected = ["guid", "date", "text", "attributedBody", "date_delivered", "date_read", "date_edited", "date_retracted", "message_summary_info", "associated_message_guid", "associated_message_type", "associated_message_emoji", "reply_to_guid", "thread_originator_guid"]
-        let missing = expected.filter { reader?.columns["message"]?.contains($0) != true }
-        return .object(["fields": .string(missing.isEmpty ? "complete" : "partial"), "missing": .array(missing.map { .string("message." + $0) })])
+        let expected = [
+            "message": ["guid", "date", "text", "attributedBody", "handle_id", "is_from_me", "date_delivered", "date_read", "is_delivered", "is_read", "error", "is_finished", "item_type", "date_edited", "date_retracted", "message_summary_info", "associated_message_guid", "associated_message_type", "associated_message_emoji", "reply_to_guid", "thread_originator_guid", "group_action_type", "group_title", "expressive_send_style_id"],
+            "chat": ["guid", "service_name", "display_name", "is_archived", "last_read_message_timestamp"],
+            "handle": ["id", "service"],
+            "chat_message_join": ["chat_id", "message_id"],
+            "chat_handle_join": ["chat_id", "handle_id"],
+            "attachment": ["guid", "filename", "mime_type", "uti", "total_bytes", "transfer_state"],
+            "message_attachment_join": ["message_id", "attachment_id"]
+        ]
+        let missing = expected.keys.sorted().flatMap { table in expected[table]!.filter { reader?.columns[table]?.contains($0) != true }.map { table + "." + $0 } }
+        return .object(["fields": .string(missing.isEmpty ? "complete" : "partial"), "missing": .array(missing.map(JSON.string))])
     }
     @discardableResult private func reopen() throws -> Bool {
         if baseline == nil {
@@ -374,7 +387,7 @@ public actor Messages: Source {
         firstSmallSnapshot = nil
         lastComplete = .distantPast
         lastLiveVersion = nil
-        let watcher = MessagesWatcher(path: path)
+        let watcher = MessagesWatcher(path: path, diagnostics: diagnostics)
         var blobs = Task { await self.drainBlobs(sink) }
         var failure: (any Error)?
         var first = true

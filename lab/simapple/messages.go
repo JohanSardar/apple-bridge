@@ -106,7 +106,7 @@ func (f *fakeApple) messageRoutes(mux *http.ServeMux) {
 			}
 			put("message", action.Key, data)
 			capture.Observations = []contracts.Observation{f.records[action.Key]}
-		case "db-replacement":
+		case "db-replacement", "schema-change":
 			f.messages.generation = contracts.NewID("messages")
 			capture.ScanID = contracts.NewID("scan")
 			capture.Scope = []string{"messages.chat", "messages.handle", "messages.message", "messages.reaction", "messages.attachment"}

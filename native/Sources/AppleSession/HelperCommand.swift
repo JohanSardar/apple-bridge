@@ -46,6 +46,10 @@ public enum HelperCommand {
             let peer = try AppleSession(socket: socket, secretFile: secretFile, home: home, gatewayPID: gatewayPID, commandsEnabled: arguments.contains("--lab-commands"))
             var finished = false
             Task { @MainActor in
+                let messages = Messages(diagnostics: arguments.contains("--lab-commands") ? home.appendingPathComponent("messages-watch.json") : nil)
+                try? await peer.register(messages, readBlob: { handle, offset, length in
+                    try await messages.readBlob(handle: handle, offset: offset, length: length)
+                })
                 try? await peer.run()
                 finished = true
             }
