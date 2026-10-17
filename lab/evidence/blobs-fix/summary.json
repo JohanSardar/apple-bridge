@@ -1,9 +1,9 @@
 {
-  "verified_git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f",
-  "at": "2026-10-17T05:56:39.646624+00:00",
+  "verified_git_sha": "109ce88188f40c112549388e146d626475b77436",
+  "at": "2026-10-17T06:12:47.234005+00:00",
   "implementation": [
     "durable pending manifest and staged bytes reconstruct queued work through refreshed Helper captures",
-    "retry delays 250/500/1000/2000/4000 ms, capped at 4 s; eight unsuccessful attempts become failed/ipc_retry_exhausted",
+    "retry delays 250/500/1000/2000/4000 ms, capped at 4 s; eight unsuccessful attempts become failed/ipc_retry_exhausted; repeated captures retain attempt count and backoff",
     "close timed-out IPC session to fence late replies; request fresh connection-bound handles with checkpoint refresh_blobs, preserving capture predecessor",
     "push BlobAvailable to authorized waiting replicas on completion; preserve heartbeat fallback",
     "independent snapshot-only and command-only GC checks beyond 500 ms grace",
@@ -56,162 +56,162 @@
     {
       "scenario": "CORE-BLOB-CAP",
       "passed": true,
-      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+      "git_sha": "109ce88188f40c112549388e146d626475b77436"
     },
     {
       "scenario": "CORE-BLOB-CORRUPT",
       "passed": true,
-      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+      "git_sha": "109ce88188f40c112549388e146d626475b77436"
     },
     {
       "scenario": "CORE-BLOB-GATEWAY-RETRY",
       "passed": true,
-      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+      "git_sha": "109ce88188f40c112549388e146d626475b77436"
     },
     {
       "scenario": "CORE-BLOB-GC",
       "passed": true,
-      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+      "git_sha": "109ce88188f40c112549388e146d626475b77436"
     },
     {
       "scenario": "CORE-BLOB-INTERRUPT",
       "passed": true,
-      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+      "git_sha": "109ce88188f40c112549388e146d626475b77436"
     },
     {
       "scenario": "CORE-BLOB-NO-DIGEST-AUTH",
       "passed": true,
-      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+      "git_sha": "109ce88188f40c112549388e146d626475b77436"
     },
     {
       "scenario": "CORE-BLOB-OFFLOADED",
       "passed": true,
-      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+      "git_sha": "109ce88188f40c112549388e146d626475b77436"
     },
     {
       "scenario": "CORE-BLOB-SLOW-READ",
       "passed": true,
-      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+      "git_sha": "109ce88188f40c112549388e146d626475b77436"
     },
     {
       "scenario": "CORE-BOOT",
       "passed": true,
-      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+      "git_sha": "109ce88188f40c112549388e146d626475b77436"
     },
     {
       "scenario": "CORE-CMD-CLOCK-JUMP",
       "passed": true,
-      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+      "git_sha": "109ce88188f40c112549388e146d626475b77436"
     },
     {
       "scenario": "CORE-CMD-CONFLICT",
       "passed": true,
-      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+      "git_sha": "109ce88188f40c112549388e146d626475b77436"
     },
     {
       "scenario": "CORE-CMD-CRASH-AMBIGUOUS",
       "passed": true,
-      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+      "git_sha": "109ce88188f40c112549388e146d626475b77436"
     },
     {
       "scenario": "CORE-CMD-ERA",
       "passed": true,
-      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+      "git_sha": "109ce88188f40c112549388e146d626475b77436"
     },
     {
       "scenario": "CORE-CMD-EXPIRY",
       "passed": true,
-      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+      "git_sha": "109ce88188f40c112549388e146d626475b77436"
     },
     {
       "scenario": "CORE-CMD-IDEMPOTENT",
       "passed": true,
-      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+      "git_sha": "109ce88188f40c112549388e146d626475b77436"
     },
     {
       "scenario": "CORE-CMD-LOST-RESPONSE",
       "passed": true,
-      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+      "git_sha": "109ce88188f40c112549388e146d626475b77436"
     },
     {
       "scenario": "CORE-CMD-OFFLINE",
       "passed": true,
-      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+      "git_sha": "109ce88188f40c112549388e146d626475b77436"
     },
     {
       "scenario": "CORE-CMD-READ-YOUR-WRITE",
       "passed": true,
-      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+      "git_sha": "109ce88188f40c112549388e146d626475b77436"
     },
     {
       "scenario": "CORE-FORGED-DELEGATION",
       "passed": true,
-      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+      "git_sha": "109ce88188f40c112549388e146d626475b77436"
     },
     {
       "scenario": "CORE-LIVE-LATENCY",
       "passed": true,
-      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+      "git_sha": "109ce88188f40c112549388e146d626475b77436"
     },
     {
       "scenario": "CORE-LOCALHOST-DEFENSE",
       "passed": true,
-      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+      "git_sha": "109ce88188f40c112549388e146d626475b77436"
     },
     {
       "scenario": "CORE-REST-MCP-PARITY",
       "passed": true,
-      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+      "git_sha": "109ce88188f40c112549388e146d626475b77436"
     },
     {
       "scenario": "CORE-RESUME",
       "passed": true,
-      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+      "git_sha": "109ce88188f40c112549388e146d626475b77436"
     },
     {
       "scenario": "LAB-MALFORMED-SCENARIO",
       "passed": true,
-      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+      "git_sha": "109ce88188f40c112549388e146d626475b77436"
     },
     {
       "scenario": "LAB-SSE",
       "passed": true,
-      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+      "git_sha": "109ce88188f40c112549388e146d626475b77436"
     },
     {
       "scenario": "LAB-TRUTH-MULTIPLICITY",
       "passed": true,
-      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+      "git_sha": "109ce88188f40c112549388e146d626475b77436"
     },
     {
       "scenario": "REM-CONFLICT",
       "passed": true,
-      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+      "git_sha": "109ce88188f40c112549388e146d626475b77436"
     },
     {
       "scenario": "REM-CRUD",
       "passed": true,
-      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+      "git_sha": "109ce88188f40c112549388e146d626475b77436"
     },
     {
       "scenario": "REM-EXTERNAL-RACE",
       "passed": true,
-      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+      "git_sha": "109ce88188f40c112549388e146d626475b77436"
     },
     {
       "scenario": "REM-NATIVE-LIST-RACE",
       "passed": true,
-      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+      "git_sha": "109ce88188f40c112549388e146d626475b77436"
     },
     {
       "scenario": "REM-OPERATION-SHAPES",
       "passed": true,
-      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+      "git_sha": "109ce88188f40c112549388e146d626475b77436"
     },
     {
       "scenario": "REM-READONLY-LIST",
       "passed": true,
-      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+      "git_sha": "109ce88188f40c112549388e146d626475b77436"
     }
   ],
   "comparisons": {
@@ -264,47 +264,47 @@
       "after": {
         "completion_ms": {
           "samples": 1,
-          "p50_ms": 1651.95075,
-          "p95_ms": 1651.95075,
-          "max_ms": 1651.95075,
+          "p50_ms": 1487.627917,
+          "p95_ms": 1487.627917,
+          "max_ms": 1487.627917,
           "timeouts": 0
         },
         "gateway_staging_ms": {
           "samples": 1,
-          "p50_ms": 753.739583,
-          "p95_ms": 753.739583,
-          "max_ms": 753.739583,
+          "p50_ms": 590.208417,
+          "p95_ms": 590.208417,
+          "max_ms": 590.208417,
           "timeouts": 0
         },
         "gateway_present_to_replica_partial_ms": {
           "samples": 1,
-          "p50_ms": 192.174541,
-          "p95_ms": 192.174541,
-          "max_ms": 192.174541,
+          "p50_ms": 182.80675,
+          "p95_ms": 182.80675,
+          "max_ms": 182.80675,
           "timeouts": 0
         },
         "reconnect_ms": {
           "samples": 1,
-          "p50_ms": 89.288125,
-          "p95_ms": 89.288125,
-          "max_ms": 89.288125,
+          "p50_ms": 74.921792,
+          "p95_ms": 74.921792,
+          "max_ms": 74.921792,
           "timeouts": 0
         },
         "resumed_transfer_ms": {
           "samples": 1,
-          "p50_ms": 477.202041,
-          "p95_ms": 477.202041,
-          "max_ms": 477.202041,
+          "p50_ms": 501.449458,
+          "p95_ms": 501.449458,
+          "max_ms": 501.449458,
           "timeouts": 0
         },
         "concurrent_metadata_ms": {
           "samples": 1,
-          "p50_ms": 69.199416,
-          "p95_ms": 69.199416,
-          "max_ms": 69.199416,
+          "p50_ms": 97.383875,
+          "p95_ms": 97.383875,
+          "max_ms": 97.383875,
           "timeouts": 0
         },
-        "cut_detection_and_polling_ms_derived": 139.54646000000002
+        "cut_detection_and_polling_ms_derived": 138.2415000000001
       },
       "original_uninstrumented_baseline": {
         "samples": 1,
@@ -363,47 +363,47 @@
       "after": {
         "completion_ms": {
           "samples": 1,
-          "p50_ms": 2292.349708,
-          "p95_ms": 2292.349708,
-          "max_ms": 2292.349708,
+          "p50_ms": 2118.780417,
+          "p95_ms": 2118.780417,
+          "max_ms": 2118.780417,
           "timeouts": 0
         },
         "gateway_staging_ms": {
           "samples": 1,
-          "p50_ms": 675.784542,
-          "p95_ms": 675.784542,
-          "max_ms": 675.784542,
+          "p50_ms": 464.609667,
+          "p95_ms": 464.609667,
+          "max_ms": 464.609667,
           "timeouts": 0
         },
         "gateway_present_to_replica_partial_ms": {
           "samples": 1,
-          "p50_ms": 357.318542,
-          "p95_ms": 357.318542,
-          "max_ms": 357.318542,
+          "p50_ms": 354.739167,
+          "p95_ms": 354.739167,
+          "max_ms": 354.739167,
           "timeouts": 0
         },
         "reconnect_ms": {
           "samples": 1,
-          "p50_ms": 718.248,
-          "p95_ms": 718.248,
-          "max_ms": 718.248,
+          "p50_ms": 797.888875,
+          "p95_ms": 797.888875,
+          "max_ms": 797.888875,
           "timeouts": 0
         },
         "resumed_transfer_ms": {
           "samples": 1,
-          "p50_ms": 522.311042,
-          "p95_ms": 522.311042,
-          "max_ms": 522.311042,
+          "p50_ms": 489.093625,
+          "p95_ms": 489.093625,
+          "max_ms": 489.093625,
           "timeouts": 0
         },
         "concurrent_metadata_ms": {
           "samples": 1,
-          "p50_ms": 179.237833,
-          "p95_ms": 179.237833,
-          "max_ms": 179.237833,
+          "p50_ms": 120.260708,
+          "p95_ms": 120.260708,
+          "max_ms": 120.260708,
           "timeouts": 0
         },
-        "cut_detection_and_polling_ms_derived": 18.68758200000002
+        "cut_detection_and_polling_ms_derived": 12.449082999999973
       },
       "original_uninstrumented_baseline": {
         "samples": 1,
@@ -420,20 +420,20 @@
     "passed": true,
     "recovery_latency": {
       "samples": 1,
-      "p50_ms": 14803.307125,
-      "p95_ms": 14803.307125,
-      "max_ms": 14803.307125,
+      "p50_ms": 14713.954833,
+      "p95_ms": 14713.954833,
+      "max_ms": 14713.954833,
       "timeouts": 0
     },
     "terminal_failure_latency": {
       "samples": 1,
-      "p50_ms": 15864.768625,
-      "p95_ms": 15864.768625,
-      "max_ms": 15864.768625,
+      "p50_ms": 16034.390209,
+      "p95_ms": 16034.390209,
+      "max_ms": 16034.390209,
       "timeouts": 0
     },
     "recovery_fault": "first BlobRead response dropped, 10 s timeout, then actual Helper process restart during a partial staged download",
-    "terminal_fault": "128 KiB second fixture, first eight BlobReads immediately unavailable",
+    "terminal_fault": "128 KiB second fixture, handles re-captured before each of the first eight BlobReads returns unavailable",
     "gateway_and_replica_digests_verified": true
   },
   "negative_probes": [
