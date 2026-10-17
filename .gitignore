@@ -10,3 +10,4 @@ lab/evidence/private/
 *.env
 __pycache__/
 design/features.html
+.worktrees/
