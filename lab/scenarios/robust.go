@@ -223,13 +223,12 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 		if w.AddReplicaScope("messages:read,reminders:read,system:read") != nil {
 			return fail("benchmark_replica")
 		}
-		hostBefore := blobHostTelemetry(ctx)
 		start := time.Now()
 		if w.SeedMessages(200000) != nil {
 			return fail("seed_two_hundred_thousand_messages")
 		}
 		effect := time.Now()
-		evidence.Metrics = map[string]any{"messages_target": 200000, "host_before": hostBefore, "completion_timeout_ms": completionTimeout.Milliseconds(), "contended_run": contended, "capture_readiness": "committed_capture_barrier", "replica_readiness": "durable_cursor_then_integrity_count", "fts5_query_cache": "repeated_query_after_integrity_verification"}
+		evidence.Metrics = map[string]any{"messages_target": 200000, "completion_timeout_ms": completionTimeout.Milliseconds(), "contended_run": contended, "capture_readiness": "committed_capture_barrier", "replica_readiness": "durable_cursor_then_integrity_count", "fts5_query_cache": "repeated_query_after_integrity_verification"}
 		captureErr := w.FlushCaptures(completionTimeout)
 		capturedAt := time.Now()
 		evidence.Metrics["fixture_and_capture_ms"] = float64(capturedAt.Sub(start)) / float64(time.Millisecond)
@@ -643,9 +642,6 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 	add("truth_gateway_replica_convergence", true)
 	if !automaticHealthyChecks(ctx, w, &evidence, add) {
 		return fail("automatic_sync_guarantees")
-	}
-	if name == "bench" {
-		evidence.Metrics["host_after"] = blobHostTelemetry(ctx)
 	}
 	for _, endpoint := range append([]world.Endpoint{w.Gateway}, w.Replicas...) {
 		report, err := w.Doctor(endpoint)
