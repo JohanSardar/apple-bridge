@@ -1,0 +1,153 @@
+package runtime
+
+import (
+	"context"
+	"crypto/rand"
+	"crypto/tls"
+	"encoding/json"
+	"errors"
+	"net"
+	"net/http"
+	"os"
+	"path/filepath"
+	"syscall"
+	"time"
+
+	"github.com/JohanSardar/apple-bridge/internal/applepeer"
+	"github.com/JohanSardar/apple-bridge/internal/contracts"
+	"github.com/JohanSardar/apple-bridge/internal/frontdoor"
+	"github.com/JohanSardar/apple-bridge/internal/operations"
+	"github.com/JohanSardar/apple-bridge/internal/replication"
+	"github.com/JohanSardar/apple-bridge/internal/state"
+	"github.com/JohanSardar/apple-bridge/internal/trust"
+)
+
+type Config struct {
+	Role        string `json:"role"`
+	Home        string `json:"home"`
+	PeerAddress string `json:"peer_address"`
+	APIAddress  string `json:"api_address"`
+	Socket      string `json:"socket"`
+}
+
+func LoadConfig(home string) (Config, error) {
+	var c Config
+	b, err := os.ReadFile(filepath.Join(home, "runtime.json"))
+	if err != nil {
+		return c, err
+	}
+	err = json.Unmarshal(b, &c)
+	return c, err
+}
+
+func Start(ctx context.Context, cfg Config) error {
+	if cfg.Role != "gateway" && cfg.Role != "replica" {
+		return contracts.ErrInvalid
+	}
+	syscall.Umask(0077)
+	if err := os.MkdirAll(cfg.Home, 0700); err != nil {
+		return err
+	}
+	if err := os.Chmod(cfg.Home, 0700); err != nil {
+		return err
+	}
+	lock, err := os.OpenFile(filepath.Join(cfg.Home, "lock"), os.O_CREATE|os.O_RDWR, 0600)
+	if err != nil {
+		return err
+	}
+	defer lock.Close()
+	if err = syscall.Flock(int(lock.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+		return contracts.ErrConflict
+	}
+	defer syscall.Flock(int(lock.Fd()), syscall.LOCK_UN)
+	authority, err := trust.Open(cfg.Home)
+	if err != nil {
+		return err
+	}
+	store, err := state.Open(cfg.Home)
+	if err != nil {
+		return err
+	}
+	defer store.Close()
+	if cfg.APIAddress == "" {
+		cfg.APIAddress = "127.0.0.1:7780"
+	}
+	host, _, err := net.SplitHostPort(cfg.APIAddress)
+	if err != nil || host != "127.0.0.1" {
+		return contracts.ErrInvalid
+	}
+	api, err := net.Listen("tcp", cfg.APIAddress)
+	if err != nil {
+		return err
+	}
+	defer api.Close()
+	cfg.APIAddress = api.Addr().String()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	failures := make(chan error, 4)
+	service := &operations.Service{State: store}
+	if cfg.Role == "gateway" {
+		if cfg.PeerAddress == "" {
+			cfg.PeerAddress = "127.0.0.1:7443"
+		}
+		if cfg.Socket == "" {
+			cfg.Socket = filepath.Join(cfg.Home, "run", "peer.sock")
+		}
+		secretPath := filepath.Join(cfg.Home, "apple-secret")
+		secret, err := os.ReadFile(secretPath)
+		if os.IsNotExist(err) {
+			secret = make([]byte, 32)
+			if _, err = rand.Read(secret); err == nil {
+				err = os.WriteFile(secretPath, secret, 0600)
+			}
+		}
+		if err != nil {
+			return err
+		}
+		if len(secret) != 32 {
+			return contracts.ErrCorrupt
+		}
+		peer, err := tls.Listen("tcp", cfg.PeerAddress, &tls.Config{MinVersion: tls.VersionTLS13, Certificates: []tls.Certificate{authority.Certificate}, ClientAuth: tls.RequestClientCert})
+		if err != nil {
+			return err
+		}
+		defer peer.Close()
+		cfg.PeerAddress = peer.Addr().String()
+		feed := &replication.Server{Store: store, Authority: authority}
+		mux := http.NewServeMux()
+		mux.Handle("/v1/pair", authority.PairHandler())
+		mux.Handle("/v1/feed", feed.Handler())
+		server := &http.Server{Handler: mux, ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 30 * time.Second}
+		go func() { failures <- server.Serve(peer) }()
+		defer server.Close()
+		go func() {
+			failures <- applepeer.Serve(ctx, applepeer.Config{Socket: cfg.Socket, Secret: secret, Checkpoints: store.Checkpoints, NextFence: store.NextFence, SourceState: store.SourceState, CommitCapture: func(ctx context.Context, c contracts.Capture) (bool, error) {
+				result, err := store.CommitCapture(ctx, c)
+				return result.Degraded, err
+			}})
+		}()
+	} else {
+		client := &replication.Client{Store: store, Authority: authority}
+		service.LocalStatus = func() any { return client.Status() }
+		go func() { failures <- client.Follow(ctx) }()
+	}
+	server := &http.Server{Handler: frontdoor.Handler(frontdoor.Deps{Operations: service, Authority: authority, Address: cfg.APIAddress}, contracts.Operations), ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 30 * time.Second}
+	go func() { failures <- server.Serve(api) }()
+	defer server.Close()
+	b, err := json.Marshal(cfg)
+	if err != nil {
+		return err
+	}
+	if err = os.WriteFile(filepath.Join(cfg.Home, "runtime.json"), b, 0600); err != nil {
+		return err
+	}
+	select {
+	case <-ctx.Done():
+		return nil
+	case err := <-failures:
+		if errors.Is(err, http.ErrServerClosed) {
+			return nil
+		}
+		return err
+	}
+}
