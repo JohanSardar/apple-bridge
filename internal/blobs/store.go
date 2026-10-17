@@ -53,6 +53,10 @@ type manifest struct {
 	References contracts.ReferenceSet `json:"references"`
 }
 type Store struct {
+	appleMu      sync.Mutex
+	applePending map[string]appleJob
+	appleRunning bool
+
 	mu       sync.Mutex
 	transfer sync.Mutex
 	root     string

@@ -235,7 +235,7 @@ func Serve(ctx context.Context, cfg Config) error {
 						return
 					}
 					if cfg.BlobCapture != nil {
-						go cfg.BlobCapture(session, *f.Capture, wire)
+						cfg.BlobCapture(session, *f.Capture, wire)
 					}
 					if degraded {
 						cfg.SourceState(ctx, f.Capture.Source, "degraded", contracts.Coverage{Fields: "partial", Missing: []string{"incomplete_scan_absence_ignored"}}, nil, "incomplete_scan")
