@@ -56,6 +56,7 @@ type BlobEntry struct {
 	ResumedBytes int64 `json:"resumed_bytes"`
 	Corruptions  int   `json:"corruptions"`
 
+	Reason         string    `json:"reason,omitempty"`
 	State          string    `json:"state"`
 	Size           int64     `json:"size"`
 	Received       int64     `json:"received"`

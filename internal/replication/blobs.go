@@ -10,10 +10,27 @@ import (
 )
 
 func (s *Server) serveBlobs(ctx context.Context, conn *websocket.Conn, p trust.Principal, wants <-chan contracts.FeedFrame) {
+	waiting := map[string]bool{}
+	var changed <-chan struct{}
+	if s.Blobs != nil {
+		changed = s.Blobs.Changed()
+	}
 	for {
 		select {
 		case <-ctx.Done():
 			return
+		case <-changed:
+			changed = s.Blobs.Changed()
+			for d := range waiting {
+				state := s.Blobs.Progress().Entries[d].State
+				if state != "present" && state != "failed" {
+					continue
+				}
+				if _, err := s.Store.BlobGrant(ctx, p.Visibility(), d); err == nil {
+					send(ctx, conn, contracts.FeedFrame{T: "BlobAvailable", Digest: d})
+				}
+				delete(waiting, d)
+			}
 		case want := <-wants:
 			if s.Blobs == nil || !contracts.ValidDigest(want.Digest) || want.Offset < 0 {
 				send(ctx, conn, contracts.FeedFrame{T: "BlobUnavailable", Digest: want.Digest, Reason: "unavailable"})
@@ -30,8 +47,11 @@ func (s *Server) serveBlobs(ctx context.Context, conn *websocket.Conn, p trust.P
 				switch s.Blobs.Progress().Entries[want.Digest].State {
 				case "offloaded":
 					reason = "offloaded"
-				case "pending", "failed", "disk_full", "over_cap":
+				case "failed":
+					reason = "failed"
+				case "present", "pending", "disk_full", "over_cap":
 					reason = "pending"
+					waiting[want.Digest] = true
 				}
 				send(ctx, conn, contracts.FeedFrame{T: "BlobUnavailable", Digest: want.Digest, Reason: reason})
 				continue
@@ -107,6 +127,9 @@ func (s *feedSource) Read(ctx context.Context, d string, offset, length int64) (
 			if e.reason != "" {
 				if e.reason == "pending" || e.reason == "unavailable" {
 					return nil, false, contracts.ErrUnavailable
+				}
+				if e.reason == "failed" {
+					return nil, false, contracts.ErrInvalid
 				}
 				if e.reason == "offloaded" {
 					return nil, false, contracts.ErrUnsupported

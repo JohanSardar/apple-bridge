@@ -37,8 +37,9 @@ type Capture struct {
 }
 
 type Checkpoint struct {
-	Generation string `json:"generation"`
-	Checkpoint string `json:"checkpoint"`
+	RefreshBlobs bool   `json:"refresh_blobs,omitempty"`
+	Generation   string `json:"generation"`
+	Checkpoint   string `json:"checkpoint"`
 }
 
 type IPCFrame struct {

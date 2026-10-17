@@ -162,7 +162,7 @@ public actor AppleSession: ObservationSink {
             do {
                 try await publishReadiness()
                 let readiness = await source.open()
-                if readiness.state == "ready" { try await source.capture(checkpoints["reminders"] ?? .null, into: self) }
+                if readiness.state == "ready" { try await source.capture(checkpoints["reminders"]?["refresh_blobs"].bool == true ? .null : checkpoints["reminders"] ?? .null, into: self) }
             } catch {
                 if wire == nil || Task.isCancelled { return }
                 if case SourceFailure.permissionMissing = error {

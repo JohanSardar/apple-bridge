@@ -40,9 +40,10 @@ type manifest struct {
 }
 type Store struct {
 	appleMu      sync.Mutex
-	applePending map[string]appleJob
+	applePending map[string]*appleJob
 	appleRunning bool
 
+	changed  chan struct{}
 	mu       sync.Mutex
 	transfer sync.Mutex
 	root     string
@@ -58,7 +59,7 @@ func Open(home string, cfg Config) (*Store, error) {
 	if cfg.Grace == 0 {
 		cfg.Grace = 24 * time.Hour
 	}
-	s := &Store{root: filepath.Join(home, "blobs"), cfg: cfg, manifest: manifest{Entries: map[string]Entry{}, Pins: map[string]string{}, References: contracts.ReferenceSet{}}}
+	s := &Store{changed: make(chan struct{}), root: filepath.Join(home, "blobs"), cfg: cfg, manifest: manifest{Entries: map[string]Entry{}, Pins: map[string]string{}, References: contracts.ReferenceSet{}}}
 	for _, d := range []string{s.root, filepath.Join(s.root, "sha256"), filepath.Join(s.root, "staging")} {
 		if err := os.MkdirAll(d, 0700); err != nil {
 			return nil, err
@@ -339,6 +340,7 @@ func (s *Store) Transfer(ctx context.Context, d Digest, source Source) error {
 	s.mu.Lock()
 	e := s.manifest.Entries[d]
 	e.State = "failed"
+	e.Reason = "digest_mismatch"
 	s.manifest.Entries[d] = e
 	s.save()
 	s.mu.Unlock()
@@ -395,6 +397,10 @@ func (s *Store) transferOnce(ctx context.Context, d Digest, source Source) (resu
 			e.State = "offloaded"
 		case errors.Is(result, contracts.ErrCorrupt):
 			e.State = "failed"
+			e.Reason = "digest_mismatch"
+		case errors.Is(result, contracts.ErrInvalid), errors.Is(result, contracts.ErrUnauthorized):
+			e.State = "failed"
+			e.Reason = "source_failed"
 		}
 		s.manifest.Entries[d] = e
 		s.save()
@@ -462,6 +468,9 @@ func (s *Store) transferOnce(ctx context.Context, d Digest, source Source) (resu
 	}
 	e = s.manifest.Entries[d]
 	e.State = "present"
+	e.Reason = ""
+	close(s.changed)
+	s.changed = make(chan struct{})
 	e.Size = offset
 	e.Received = offset
 	s.manifest.Entries[d] = e
@@ -476,4 +485,10 @@ func (s *Store) Release(ctx context.Context, pin Pin) error {
 	defer s.mu.Unlock()
 	delete(s.manifest.Pins, pin)
 	return s.save()
+}
+
+func (s *Store) Changed() <-chan struct{} {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.changed
 }

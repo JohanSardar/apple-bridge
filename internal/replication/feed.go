@@ -359,6 +359,13 @@ func (c *Client) follow(ctx context.Context, e trust.Enrollment) error {
 			return err
 		}
 		n := len(raw)
+		if f.T == "BlobAvailable" {
+			select {
+			case blobTrigger <- struct{}{}:
+			default:
+			}
+			continue
+		}
 		if f.T == "BlobDone" || f.T == "BlobUnavailable" {
 			select {
 			case blobEvents <- blobEvent{digest: f.Digest, done: true, reason: f.Reason}:

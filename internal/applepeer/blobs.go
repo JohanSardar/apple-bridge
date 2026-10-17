@@ -39,6 +39,7 @@ func (w *Wire) ReadBlob(ctx context.Context, handle string, offset, length int64
 	case <-ctx.Done():
 		return nil, false, ctx.Err()
 	case <-timer.C:
+		w.Conn.Close()
 		return nil, false, contracts.ErrUnavailable
 	case f := <-ch:
 		if f.T == "BlobUnavailable" {
