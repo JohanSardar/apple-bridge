@@ -1,0 +1,18 @@
+{
+  "scenario": "LAB-MALFORMED-SCENARIO",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "3cd12831e2364de2fb5388c3da368387d0d448b8",
+  "at": "2026-10-17T05:05:24.09056Z",
+  "assertions": [
+    {
+      "name": "malformed_scenario_rejected",
+      "passed": true,
+      "detail": "lab/fixtures/scenarios/impossible.yaml: then[0].latency.p95_ms: expected int"
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

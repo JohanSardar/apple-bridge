@@ -2,8 +2,8 @@
   "scenario": "CORE-RESUME",
   "level": "sim",
   "passed": true,
-  "git_sha": "dc1d33a633a16539e254cfc375cb53d2225d9403",
-  "at": "2026-10-17T04:47:11.563093Z",
+  "git_sha": "3cd12831e2364de2fb5388c3da368387d0d448b8",
+  "at": "2026-10-17T05:04:53.321298Z",
   "assertions": [
     {
       "name": "replica_host_is_air",
@@ -22,16 +22,24 @@
       "passed": true
     },
     {
-      "name": "replica_records_versions_and_cursor_consistent",
-      "passed": true
-    },
-    {
       "name": "latency_observations_complete",
       "passed": true
     },
     {
       "name": "resume_without_snapshot",
       "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass",
+      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
     },
     {
       "name": "sse_contiguous_watermarks_0",
@@ -65,23 +73,23 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 2,
-      "p50_ms": 1.48275,
-      "p95_ms": 2.384041,
-      "max_ms": 2.384041,
+      "p50_ms": 2.175458,
+      "p95_ms": 3.529583,
+      "max_ms": 3.529583,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 2,
-      "p50_ms": 2.511708,
-      "p95_ms": 36.539083,
-      "max_ms": 36.539083,
+      "p50_ms": 4.610625,
+      "p95_ms": 55.9575,
+      "max_ms": 55.9575,
       "timeouts": 0
     },
     "partition_effect_done→replica_visible:replica0": {
       "samples": 30,
-      "p50_ms": 15193.747583,
-      "p95_ms": 29228.528583,
-      "max_ms": 30231.209875,
+      "p50_ms": 15161.4305,
+      "p95_ms": 29174.794958,
+      "max_ms": 30175.596833,
       "timeouts": 0
     }
   },

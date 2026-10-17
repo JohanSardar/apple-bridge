@@ -2,8 +2,8 @@
   "scenario": "CORE-LIVE-LATENCY",
   "level": "sim",
   "passed": true,
-  "git_sha": "dc1d33a633a16539e254cfc375cb53d2225d9403",
-  "at": "2026-10-17T04:46:30.986656Z",
+  "git_sha": "3cd12831e2364de2fb5388c3da368387d0d448b8",
+  "at": "2026-10-17T05:04:12.611165Z",
   "assertions": [
     {
       "name": "replica_host_is_air",
@@ -22,10 +22,6 @@
       "passed": true
     },
     {
-      "name": "replica_records_versions_and_cursor_consistent",
-      "passed": true
-    },
-    {
       "name": "latency_observations_complete",
       "passed": true
     },
@@ -36,6 +32,18 @@
     {
       "name": "latency_effect_done→replica_visible:replica0",
       "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass",
+      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
     },
     {
       "name": "sse_contiguous_watermarks_0",
@@ -65,16 +73,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 200,
-      "p50_ms": 5.717333,
-      "p95_ms": 7.70025,
-      "max_ms": 10.097375,
+      "p50_ms": 3.65675,
+      "p95_ms": 11.15125,
+      "max_ms": 1596.519334,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 200,
-      "p50_ms": 8.620084,
-      "p95_ms": 10.935166,
-      "max_ms": 15.129542,
+      "p50_ms": 5.92725,
+      "p95_ms": 13.692584,
+      "max_ms": 1797.793,
       "timeouts": 0
     }
   },

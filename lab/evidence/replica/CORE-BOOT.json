@@ -2,8 +2,8 @@
   "scenario": "CORE-BOOT",
   "level": "replica",
   "passed": true,
-  "git_sha": "dc1d33a633a16539e254cfc375cb53d2225d9403",
-  "at": "2026-10-17T04:47:44.843945Z",
+  "git_sha": "3cd12831e2364de2fb5388c3da368387d0d448b8",
+  "at": "2026-10-17T05:06:00.14749Z",
   "assertions": [
     {
       "name": "replica_host_is_ubuntu",
@@ -22,10 +22,6 @@
       "passed": true
     },
     {
-      "name": "replica_records_versions_and_cursor_consistent",
-      "passed": true
-    },
-    {
       "name": "latency_observations_complete",
       "passed": true
     },
@@ -40,6 +36,18 @@
     {
       "name": "old_sse_cursor_reset",
       "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass",
+      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
     },
     {
       "name": "sse_contiguous_watermarks_0",
@@ -69,16 +77,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 5.467834,
-      "p95_ms": 5.467834,
-      "max_ms": 5.467834,
+      "p50_ms": 4.141333,
+      "p95_ms": 4.141333,
+      "max_ms": 4.141333,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 13.282584,
-      "p95_ms": 13.282584,
-      "max_ms": 13.282584,
+      "p50_ms": 14.533041,
+      "p95_ms": 14.533041,
+      "max_ms": 14.533041,
       "timeouts": 0
     }
   },

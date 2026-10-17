@@ -1,0 +1,33 @@
+{
+  "scenario": "LAB-TRUTH-MULTIPLICITY",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "3cd12831e2364de2fb5388c3da368387d0d448b8",
+  "at": "2026-10-17T05:05:54.868516Z",
+  "assertions": [
+    {
+      "name": "replica_host_is_air",
+      "passed": true
+    },
+    {
+      "name": "bootstrap_snapshot",
+      "passed": true
+    },
+    {
+      "name": "scope_query_and_get",
+      "passed": true
+    },
+    {
+      "name": "multiplicity_fault_two_truth_one_gateway",
+      "passed": true
+    },
+    {
+      "name": "truth_multiplicity_mismatch_detected",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
