@@ -1,25 +1,25 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[4.34 4.79 4.85] cpus=8 other_heavy=1"
+    "summary": "air: load=[5.14 5.7 6.15] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M55RHVMRGYGT893M55YBZBM4",
+  "run_id": "run_01M55STKZ3Y6EWS8AAWBTJJZW2",
   "metrics": {
     "history_import": {
-      "capture_ack_ms": 1385.3622060000005,
-      "capture_bytes": 2766192,
+      "capture_ack_ms": 2890.038708,
+      "capture_bytes": 2757937,
       "capture_count": 67,
       "clock": "same-host monotonic SSE receipt after gateway commit / replica apply",
       "credit_waits": 0,
-      "gateway_commit_visible_ms": 1910.0195420000002,
-      "gateway_rows_per_second": 2145.527786437695,
-      "gateway_to_replica_tail_ms": 11.891875,
+      "gateway_commit_visible_ms": 3653.298542,
+      "gateway_rows_per_second": 1121.7260108604614,
+      "gateway_to_replica_tail_ms": 13.289583,
       "host_after": {
         "gomaxprocs": 8,
         "load_average": [
-          4.34,
-          4.79,
-          4.85
+          5.77,
+          5.82,
+          6.19
         ],
         "logical_cpus": 8,
         "occupied_heavy_slots": 2
@@ -27,24 +27,24 @@
       "host_before": {
         "gomaxprocs": 8,
         "load_average": [
-          4.34,
-          4.79,
-          4.85
+          5.77,
+          5.82,
+          6.19
         ],
         "logical_cpus": 8,
         "occupied_heavy_slots": 2
       },
-      "replica_apply_visible_ms": 1921.911417,
-      "replica_rows_per_second": 2132.252279554464,
+      "replica_apply_visible_ms": 3666.588125,
+      "replica_rows_per_second": 1117.6603044281119,
       "synthetic_rows": 4098,
-      "truth_verification_ms": 310.459916
+      "truth_verification_ms": 285.358541
     }
   },
   "scenario": "MSG-HISTORY-IMPORT",
   "level": "sim",
   "passed": true,
-  "git_sha": "79748c5c1aa474839ea4c9279c4701fbaf731fbb",
-  "at": "2026-10-17T20:23:47.608841Z",
+  "git_sha": "713eb5504ad1b54668557e344d562378c3157eb3",
+  "at": "2026-10-17T20:46:03.235603Z",
   "assertions": [
     {
       "name": "seed",
