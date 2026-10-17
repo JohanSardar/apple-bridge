@@ -274,7 +274,7 @@ features:
     milestone: M1
     modules: [native/CalendarSource, native/AgendaGate]
     depends_on: [helper.session]
-    status: todo
+    status: done
     scenarios:
       - {id: CAL-CREATE-EXTERNAL, levels: [sim, real, replica]}
       - {id: CAL-MOVED-OCCURRENCE, levels: [sim]}
