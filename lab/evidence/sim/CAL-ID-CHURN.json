@@ -1,15 +1,15 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[15.5 15.35 10.89] cpus=8 other_heavy=1"
+    "summary": "air: load=[4.14 5.33 6.62] cpus=8 other_heavy=1"
   },
-  "run_id": "cal_01M55VT11N422Z03974GPNMDA9",
+  "run_id": "cal_01M55XBCKA2GJXCKPSHD1S0AWT",
   "network_path": "loopback",
   "scenario": "CAL-ID-CHURN",
   "level": "sim",
   "passed": true,
-  "git_sha": "faa6e49f2e584ed4e73b3d10dccb5478fe4bd735",
-  "at": "2026-10-17T21:20:41.013106Z",
+  "git_sha": "d43b808df24d5be49aa76a0a5279d5d31cda79a6",
+  "at": "2026-10-17T21:47:38.474287Z",
   "assertions": [
     {
       "name": "calendar_visible",
@@ -95,16 +95,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 7.351,
-      "p95_ms": 7.351,
-      "max_ms": 7.351,
+      "p50_ms": 3.088,
+      "p95_ms": 3.088,
+      "max_ms": 3.088,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 11.789,
-      "p95_ms": 11.789,
-      "max_ms": 11.789,
+      "p50_ms": 5.793,
+      "p95_ms": 5.793,
+      "max_ms": 5.793,
       "timeouts": 0
     }
   },
@@ -114,7 +114,7 @@
   "conditions": {
     "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
     "heavy_slots_in_use": "2",
-    "load_average": "15.50 15.35 10.89",
+    "load_average": "4.05 5.29 6.59",
     "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"
   }
 }

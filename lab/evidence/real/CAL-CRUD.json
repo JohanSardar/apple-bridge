@@ -1,15 +1,15 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[7.5 10 10.02] cpus=8 other_heavy=1"
+    "summary": "air: load=[4.29 5 6.35] cpus=8 other_heavy=1"
   },
-  "run_id": "cal_01M55WA6JPQZMSXXHTFNERASX1",
+  "run_id": "cal_01M55XE2E07YYCG4DEE8CX0QXK",
   "network_path": "loopback",
   "scenario": "CAL-CRUD",
   "level": "real",
   "passed": true,
-  "git_sha": "a7ce500d56b39cf761ae04b84bde5a0cb3058ef9",
-  "at": "2026-10-17T21:29:30.966071Z",
+  "git_sha": "d43b808df24d5be49aa76a0a5279d5d31cda79a6",
+  "at": "2026-10-17T21:49:06.368783Z",
   "assertions": [
     {
       "name": "private_signed_apps_per_world",
@@ -271,7 +271,7 @@
   "conditions": {
     "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
     "heavy_slots_in_use": "2",
-    "load_average": "7.50 10.00 10.02",
+    "load_average": "4.29 5.00 6.35",
     "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"
   }
 }
