@@ -41,7 +41,7 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 	report := filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "AppleBridgeDev", "messages-command-handles-"+e.RunID+".json")
 	defer os.Remove(report)
 	probeCtx, cancel := context.WithTimeout(ctx, 40*time.Second)
-	err = exec.CommandContext(probeCtx, "open", "-n", "-W", "-g", "-a", w.HelperApp, "--args", "probe", "self-handles", "--report", report).Run()
+	err := exec.CommandContext(probeCtx, "open", "-n", "-W", "-g", "-a", w.HelperApp, "--args", "probe", "self-handles", "--report", report).Run()
 	cancel()
 	var own struct {
 		Handles []string `json:"handles"`
