@@ -39,6 +39,11 @@ Resume point for any fresh session. Updated after every unit of work.
 - iMessage AppleScript send to self works with raw `any;-;` chat id (delivered); normalized `iMessage;-;` → -1728. Outgoing row text NULL (attributedBody only) + incoming echo row in self chat.
 - `ax-dump` works (308 nodes) but redacts identifiers too; the Messages-actions unit should dump non-personal AX attributes (roles, identifiers, actions) unredacted.
 
+- Calendar/Contacts root cause (fixed a0d917a): hardened runtime needs `com.apple.security.personal-information.calendars/.addressbook` entitlements; without them TCC refuses silently (no prompt, no TCC.db row). Verified prompt now appears (tccd AUTHREQ_PROMPTING). Johan will run onboard later; detect via `status`.
+- Possible interference: a foreign process `imsg` (pid 54735, likely Johan's old Toy/Hermes setup) was seen spamming TCCAccessRequest to tccd every ~4 ms; it was not running at 00:05. Do not kill such processes without asking.
+- heavy.sh is a FIFO queue (2 slots) since a0d917a.
+- Replica level: SSH tunnel acceptable until Johan's Tailscale ACL fix; direct Tailscale path behind a World option.
+
 ## Blockers
 - TCC grants for AppleBridgeHelper (asked 2026-10-17; Johan will do it when at the Air; don't ask again). Detect by running the `status` mode (see WORKER-RULES) between work units; start real-level work once granted.
 - Expected later: Developer ID for notarization (M5).
