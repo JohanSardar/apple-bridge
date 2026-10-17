@@ -1,171 +1,256 @@
 {
-  "command": "packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios/core --level sim",
+  "command": "APPLE_BRIDGE_LAB_CONTENDED_BENCH=1 packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios/core --level sim",
   "exit_code": 0,
   "scenarios": [
     {
+      "scenario": "CORE-BENCH",
+      "passed": true,
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
+    },
+    {
       "scenario": "CORE-BLOB-CAP",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "31f1f9f66ffc3434778f54ab5dd0d9befb227832"
     },
     {
       "scenario": "CORE-BLOB-CORRUPT",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "31f1f9f66ffc3434778f54ab5dd0d9befb227832"
     },
     {
       "scenario": "CORE-BLOB-GATEWAY-RETRY",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "31f1f9f66ffc3434778f54ab5dd0d9befb227832"
     },
     {
       "scenario": "CORE-BLOB-GC",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "31f1f9f66ffc3434778f54ab5dd0d9befb227832"
     },
     {
       "scenario": "CORE-BLOB-INTERRUPT",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "31f1f9f66ffc3434778f54ab5dd0d9befb227832"
     },
     {
       "scenario": "CORE-BLOB-NO-DIGEST-AUTH",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "31f1f9f66ffc3434778f54ab5dd0d9befb227832"
     },
     {
       "scenario": "CORE-BLOB-OFFLOADED",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "31f1f9f66ffc3434778f54ab5dd0d9befb227832"
     },
     {
       "scenario": "CORE-BLOB-REFERENCE-INDEX",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "31f1f9f66ffc3434778f54ab5dd0d9befb227832"
     },
     {
       "scenario": "CORE-BLOB-SLOW-READ",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "31f1f9f66ffc3434778f54ab5dd0d9befb227832"
     },
     {
       "scenario": "CORE-BOOT",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "CORE-CMD-CLOCK-JUMP",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "CORE-CMD-CONFLICT",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "CORE-CMD-CRASH-AMBIGUOUS",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "CORE-CMD-ERA",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "CORE-CMD-EXPIRY",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "CORE-CMD-IDEMPOTENT",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "CORE-CMD-LOST-RESPONSE",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "CORE-CMD-OFFLINE",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "CORE-CMD-READ-YOUR-WRITE",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
+    },
+    {
+      "scenario": "CORE-DISCONNECT-DETECT",
+      "passed": true,
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
+    },
+    {
+      "scenario": "CORE-DISK-FULL",
+      "passed": true,
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "CORE-FORGED-DELEGATION",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
+    },
+    {
+      "scenario": "CORE-GAP-REJECT",
+      "passed": true,
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
+    },
+    {
+      "scenario": "CORE-HELPER-RESTART",
+      "passed": true,
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
+    },
+    {
+      "scenario": "CORE-KILL-DURING-APPLY",
+      "passed": true,
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
+    },
+    {
+      "scenario": "CORE-KILL-GATEWAY-CAPTURE",
+      "passed": true,
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "CORE-LIVE-LATENCY",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "CORE-LOCALHOST-DEFENSE",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
+    },
+    {
+      "scenario": "CORE-PAIR",
+      "passed": true,
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "CORE-REST-MCP-PARITY",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
+    },
+    {
+      "scenario": "CORE-RESTORE-EPOCH",
+      "passed": true,
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
+    },
+    {
+      "scenario": "CORE-RESTORE-OLD-SCHEMA",
+      "passed": true,
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "CORE-RESUME",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
+    },
+    {
+      "scenario": "CORE-RETENTION-RACE",
+      "passed": true,
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
+    },
+    {
+      "scenario": "CORE-SCOPE-CHANGE",
+      "passed": true,
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
+    },
+    {
+      "scenario": "CORE-SCOPE-LEAK",
+      "passed": true,
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
+    },
+    {
+      "scenario": "CORE-SLOW-CONSUMER",
+      "passed": true,
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
+    },
+    {
+      "scenario": "CORE-SNAPSHOT-INTERRUPT",
+      "passed": true,
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
+    },
+    {
+      "scenario": "CORE-SNAPSHOT-UNDER-LOAD",
+      "passed": true,
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
+    },
+    {
+      "scenario": "CORE-UPGRADE",
+      "passed": true,
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "LAB-MALFORMED-SCENARIO",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "LAB-SSE",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "LAB-TRUTH-MULTIPLICITY",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "REM-CONFLICT",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "REM-CRUD",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "REM-EXTERNAL-RACE",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "REM-NATIVE-LIST-RACE",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "REM-OPERATION-SHAPES",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "REM-READONLY-LIST",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     }
   ]
 }

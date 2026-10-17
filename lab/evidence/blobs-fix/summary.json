@@ -1,24 +1,33 @@
 {
   "commits_before_final_evidence_commit": [
-    "b307ed8 Preserve the lab blob collection grace across gateway restart",
-    "51cd972 Verify bulk capture with paginated record and replica comparisons",
-    "ac77a1a Load SQLite for the lab legacy reference migration fault",
-    "354f802 Verify reference index backfill and count synthetic history records",
-    "560ae46 Index changed record blob references within durable state transactions",
-    "99a8320 Require ten thousand IPC capture rows above 2000 rows per second",
-    "87d263a Record final blob scenario verification",
-    "bfd7db3 Record session-fenced blob recovery and final verification",
-    "d44b5ee Fence blob handle handoffs with the active Helper session",
-    "bbfbe9b Record retry budgets across repeated Helper captures",
-    "9e4be07 Keep retry budgets when captures replace blob handles",
-    "1275171 Refresh blob captures for every registered native Source",
-    "cb31b84 Record process restart recovery and measured transfer phases",
-    "da27d83 Record blob fault probes and core verification evidence",
-    "4e938d1 Restart the Helper process during the blob recovery journey",
-    "1828c0c Prove retry exhaustion and isolated GC protection",
-    "d8d66b8 Resume Helper blob downloads and push availability to replicas",
-    "0022207 Expose blob retry and independent protection regressions"
+    "31f1f9f Bound large blob verification reads separately from metadata probes",
+    "83d0df3 Reserve an active bulk window for metadata priority verification",
+    "e5b491d Record loaded suite progress and bound contended benchmark probes",
+    "a5d3914 Allow explicit contended core benchmark completion window",
+    "b0f87da Record interleaved loaded capture A/B and size scaling",
+    "151094f Measure loaded capture throughput across fixture sizes",
+    "fce62e3 Integrate blob faults with durable simulator recovery frontiers",
+    "a967444 Record incremental protection throughput and complete verification",
+    "464b5da Preserve the lab blob collection grace across gateway restart",
+    "8daf7f9 Verify bulk capture with paginated record and replica comparisons",
+    "c2302f8 Load SQLite for the lab legacy reference migration fault",
+    "9497197 Verify reference index backfill and count synthetic history records",
+    "76cc2cb Index changed record blob references within durable state transactions",
+    "141ebcb Require ten thousand IPC capture rows above 2000 rows per second",
+    "158d4dd Record final blob scenario verification",
+    "5e8b563 Record session-fenced blob recovery and final verification",
+    "9188461 Fence blob handle handoffs with the active Helper session",
+    "482e05b Record retry budgets across repeated Helper captures",
+    "43e07c3 Keep retry budgets when captures replace blob handles",
+    "c5ca2b9 Refresh blob captures for every registered native Source",
+    "5115519 Record process restart recovery and measured transfer phases",
+    "796bf07 Record blob fault probes and core verification evidence",
+    "0fdcaf7 Restart the Helper process during the blob recovery journey",
+    "30de1ff Prove retry exhaustion and isolated GC protection",
+    "66c23ff Resume Helper blob downloads and push availability to replicas",
+    "9cc8919 Expose blob retry and independent protection regressions"
   ],
+  "full_core_verified_git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723",
   "code_files": [
     "features.yaml",
     "internal/applepeer/blobs.go",
@@ -27,93 +36,44 @@
     "internal/blobs/store.go",
     "internal/contracts/blobs.go",
     "internal/contracts/ipc.go",
-    "internal/contracts/operations.go",
-    "internal/contracts/records.go",
-    "internal/frontdoor/http.go",
-    "internal/operations/read.go",
     "internal/replication/blobs.go",
     "internal/replication/feed.go",
-    "internal/runtime/doctor.go",
     "internal/runtime/runtime.go",
     "internal/state/blobs.go",
-    "internal/state/capacity.go",
-    "internal/state/commands.go",
-    "internal/state/crash_test.go",
-    "internal/state/migration.go",
-    "internal/state/recovery.go",
-    "internal/state/retention.go",
-    "internal/state/search.go",
     "internal/state/state.go",
-    "internal/trust/lifecycle.go",
-    "internal/trust/secrets.go",
-    "internal/trust/trust.go",
-    "lab/scenarios/automatic.go",
     "lab/scenarios/blob_journey.go",
-    "lab/scenarios/commands.go",
-    "lab/scenarios/core/CORE-BENCH.yaml",
     "lab/scenarios/core/CORE-BLOB-GATEWAY-RETRY.yaml",
     "lab/scenarios/core/CORE-BLOB-REFERENCE-INDEX.yaml",
-    "lab/scenarios/core/CORE-CRED-LIFECYCLE.yaml",
-    "lab/scenarios/core/CORE-DISCONNECT-DETECT.yaml",
-    "lab/scenarios/core/CORE-DISK-FULL.yaml",
-    "lab/scenarios/core/CORE-GAP-REJECT.yaml",
-    "lab/scenarios/core/CORE-HELPER-RESTART.yaml",
-    "lab/scenarios/core/CORE-KILL-DURING-APPLY.yaml",
-    "lab/scenarios/core/CORE-KILL-GATEWAY-CAPTURE.yaml",
-    "lab/scenarios/core/CORE-PAIR.yaml",
-    "lab/scenarios/core/CORE-RESTORE-EPOCH.yaml",
-    "lab/scenarios/core/CORE-RESTORE-OLD-SCHEMA.yaml",
-    "lab/scenarios/core/CORE-RETENTION-RACE.yaml",
-    "lab/scenarios/core/CORE-SCOPE-CHANGE.yaml",
-    "lab/scenarios/core/CORE-SCOPE-LEAK.yaml",
-    "lab/scenarios/core/CORE-SLOW-CONSUMER.yaml",
-    "lab/scenarios/core/CORE-SNAPSHOT-INTERRUPT.yaml",
-    "lab/scenarios/core/CORE-SNAPSHOT-UNDER-LOAD.yaml",
-    "lab/scenarios/core/CORE-UPGRADE.yaml",
-    "lab/scenarios/native.go",
     "lab/scenarios/robust.go",
     "lab/scenarios/runner.go",
-    "lab/scenarios/scope.go",
     "lab/scenarios/validation.go",
     "lab/simapple/blobs.go",
-    "lab/simapple/commands.go",
-    "lab/simapple/messages.go",
-    "lab/simapple/persistence.go",
-    "lab/simapple/reminders.go",
     "lab/simapple/simapple.go",
-    "lab/world/benchmark.go",
-    "lab/world/commands.go",
-    "lab/world/credentials.go",
-    "lab/world/disk.go",
-    "lab/world/frameproxy.go",
-    "lab/world/legacy.go",
-    "lab/world/options.go",
-    "lab/world/pairing.go",
     "lab/world/process.go",
-    "lab/world/proxy.go",
-    "lab/world/world.go",
     "native/Sources/AppleSession/AppleSession.swift"
   ],
-  "integration_note": "Full core suite and all required gates reran after the incremental reference index change.",
-  "verified_git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943",
-  "at": "2026-10-17T06:54:28.468249+00:00",
+  "integration_note": "Full 50-case core suite ran on full_core_verified_git_sha. Owned blobs and required Go gates reran after any subsequent rebase; product and other harness source equivalence for the full suite is asserted across internal/native/cmd/lab; the blob journey verifier gained endpoint read diagnostics and a bounded large-body read timeout after that run, and all nine owned cases reran afterward. Loaded A/B product sources match the verified rebased internal/ and cmd/bridge sources.",
+  "verified_git_sha": "31f1f9f66ffc3434778f54ab5dd0d9befb227832",
+  "at": "2026-10-17T18:02:01.645438+00:00",
   "implementation": [
     "durable pending manifest and staged bytes reconstruct queued work through refreshed Helper captures",
     "retry delays 250/500/1000/2000/4000 ms, capped at 4 s; eight unsuccessful attempts become failed/ipc_retry_exhausted; repeated captures retain attempt count and backoff",
     "fence capture-to-blob handoff with the active Helper session; close timed-out IPC session to fence late replies; request fresh connection-bound handles with checkpoint refresh_blobs, preserving capture predecessor",
     "push BlobAvailable to authorized waiting replicas on completion; preserve heartbeat fallback",
     "independent snapshot-only and command-only GC checks beyond 500 ms grace",
-    "post-reconnect bulk progress barrier and metadata observation while bytes remain outstanding",
+    "post-reconnect bulk progress barrier requires at least 8 MiB outstanding in a 16 MiB transfer; metadata must arrive within one second while bytes remain outstanding",
     "actual SimApplePeer process restart with distinct PID and persisted fixture bytes",
     "transactional blob_refs index updated only from changed record data; full backfill once for old databases, verified by removing the index and restarting the fixture gateway",
     "pre-commit preparation preserves pins until the state transaction commits"
   ],
   "conditions": {
-    "fixture_bytes": 4194304,
+    "fixture_bytes": 16777216,
+    "gateway_retry_fixture_bytes": 4194304,
     "ipc_chunk_bytes": 131072,
     "feed_chunk_bytes": 1048576,
     "lab_delay_per_feed_chunk_ms": 150,
-    "interrupt": "second binary frame cut after half its bytes; first 1 MiB persisted before process partition",
+    "interrupt": "second binary frame cut after half its bytes; first 1 MiB persisted before TCP proxy partition; observe disconnected, heal, reconnect, then require new partial progress",
+    "availability_control": "same integrated code, fixture and TCP fault with BlobAvailable push temporarily disabled; mutation restored before full verification",
     "replica_transport": "mTLS WebSocket through World allocated SSH reverse tunnel to Ubuntu",
     "history_rows": 10000,
     "history_capture_rows_per_frame": 64,
@@ -124,10 +84,10 @@
   },
   "checks": [
     {
-      "command": "packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios/core --level sim",
+      "command": "APPLE_BRIDGE_LAB_CONTENDED_BENCH=1 packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios/core --level sim",
       "exit_code": 0,
-      "scenarios": 33,
-      "verified_git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "scenarios": 50,
+      "verified_git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "command": "packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios/core/CORE-BLOB-INTERRUPT.yaml --level replica",
@@ -156,169 +116,254 @@
   ],
   "core_scenarios": [
     {
+      "scenario": "CORE-BENCH",
+      "passed": true,
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
+    },
+    {
       "scenario": "CORE-BLOB-CAP",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "31f1f9f66ffc3434778f54ab5dd0d9befb227832"
     },
     {
       "scenario": "CORE-BLOB-CORRUPT",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "31f1f9f66ffc3434778f54ab5dd0d9befb227832"
     },
     {
       "scenario": "CORE-BLOB-GATEWAY-RETRY",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "31f1f9f66ffc3434778f54ab5dd0d9befb227832"
     },
     {
       "scenario": "CORE-BLOB-GC",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "31f1f9f66ffc3434778f54ab5dd0d9befb227832"
     },
     {
       "scenario": "CORE-BLOB-INTERRUPT",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "31f1f9f66ffc3434778f54ab5dd0d9befb227832"
     },
     {
       "scenario": "CORE-BLOB-NO-DIGEST-AUTH",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "31f1f9f66ffc3434778f54ab5dd0d9befb227832"
     },
     {
       "scenario": "CORE-BLOB-OFFLOADED",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "31f1f9f66ffc3434778f54ab5dd0d9befb227832"
     },
     {
       "scenario": "CORE-BLOB-REFERENCE-INDEX",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "31f1f9f66ffc3434778f54ab5dd0d9befb227832"
     },
     {
       "scenario": "CORE-BLOB-SLOW-READ",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "31f1f9f66ffc3434778f54ab5dd0d9befb227832"
     },
     {
       "scenario": "CORE-BOOT",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "CORE-CMD-CLOCK-JUMP",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "CORE-CMD-CONFLICT",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "CORE-CMD-CRASH-AMBIGUOUS",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "CORE-CMD-ERA",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "CORE-CMD-EXPIRY",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "CORE-CMD-IDEMPOTENT",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "CORE-CMD-LOST-RESPONSE",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "CORE-CMD-OFFLINE",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "CORE-CMD-READ-YOUR-WRITE",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
+    },
+    {
+      "scenario": "CORE-DISCONNECT-DETECT",
+      "passed": true,
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
+    },
+    {
+      "scenario": "CORE-DISK-FULL",
+      "passed": true,
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "CORE-FORGED-DELEGATION",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
+    },
+    {
+      "scenario": "CORE-GAP-REJECT",
+      "passed": true,
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
+    },
+    {
+      "scenario": "CORE-HELPER-RESTART",
+      "passed": true,
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
+    },
+    {
+      "scenario": "CORE-KILL-DURING-APPLY",
+      "passed": true,
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
+    },
+    {
+      "scenario": "CORE-KILL-GATEWAY-CAPTURE",
+      "passed": true,
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "CORE-LIVE-LATENCY",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "CORE-LOCALHOST-DEFENSE",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
+    },
+    {
+      "scenario": "CORE-PAIR",
+      "passed": true,
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "CORE-REST-MCP-PARITY",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
+    },
+    {
+      "scenario": "CORE-RESTORE-EPOCH",
+      "passed": true,
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
+    },
+    {
+      "scenario": "CORE-RESTORE-OLD-SCHEMA",
+      "passed": true,
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "CORE-RESUME",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
+    },
+    {
+      "scenario": "CORE-RETENTION-RACE",
+      "passed": true,
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
+    },
+    {
+      "scenario": "CORE-SCOPE-CHANGE",
+      "passed": true,
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
+    },
+    {
+      "scenario": "CORE-SCOPE-LEAK",
+      "passed": true,
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
+    },
+    {
+      "scenario": "CORE-SLOW-CONSUMER",
+      "passed": true,
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
+    },
+    {
+      "scenario": "CORE-SNAPSHOT-INTERRUPT",
+      "passed": true,
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
+    },
+    {
+      "scenario": "CORE-SNAPSHOT-UNDER-LOAD",
+      "passed": true,
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
+    },
+    {
+      "scenario": "CORE-UPGRADE",
+      "passed": true,
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "LAB-MALFORMED-SCENARIO",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "LAB-SSE",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "LAB-TRUTH-MULTIPLICITY",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "REM-CONFLICT",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "REM-CRUD",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "REM-EXTERNAL-RACE",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "REM-NATIVE-LIST-RACE",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "REM-OPERATION-SHAPES",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     },
     {
       "scenario": "REM-READONLY-LIST",
       "passed": true,
-      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+      "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723"
     }
   ],
   "comparisons": {
@@ -326,94 +371,94 @@
       "before_availability_push_disabled": {
         "completion_ms": {
           "samples": 1,
-          "p50_ms": 5655.883875,
-          "p95_ms": 5655.883875,
-          "max_ms": 5655.883875,
+          "p50_ms": 8433.703791,
+          "p95_ms": 8433.703791,
+          "max_ms": 8433.703791,
           "timeouts": 0
         },
         "gateway_staging_ms": {
           "samples": 1,
-          "p50_ms": 642.265333,
-          "p95_ms": 642.265333,
-          "max_ms": 642.265333,
+          "p50_ms": 2968.420333,
+          "p95_ms": 2968.420333,
+          "max_ms": 2968.420333,
           "timeouts": 0
         },
         "gateway_present_to_replica_partial_ms": {
           "samples": 1,
-          "p50_ms": 4284.73675,
-          "p95_ms": 4284.73675,
-          "max_ms": 4284.73675,
+          "p50_ms": 1905.096459,
+          "p95_ms": 1905.096459,
+          "max_ms": 1905.096459,
           "timeouts": 0
         },
         "reconnect_ms": {
           "samples": 1,
-          "p50_ms": 75.937208,
-          "p95_ms": 75.937208,
-          "max_ms": 75.937208,
+          "p50_ms": 1054.923459,
+          "p95_ms": 1054.923459,
+          "max_ms": 1054.923459,
           "timeouts": 0
         },
         "resumed_transfer_ms": {
           "samples": 1,
-          "p50_ms": 492.01025,
-          "p95_ms": 492.01025,
-          "max_ms": 492.01025,
+          "p50_ms": 2351.988333,
+          "p95_ms": 2351.988333,
+          "max_ms": 2351.988333,
           "timeouts": 0
         },
         "concurrent_metadata_ms": {
           "samples": 1,
-          "p50_ms": 57.815958,
-          "p95_ms": 57.815958,
-          "max_ms": 57.815958,
+          "p50_ms": 183.846416,
+          "p95_ms": 183.846416,
+          "max_ms": 183.846416,
           "timeouts": 0
         },
-        "cut_detection_and_polling_ms_derived": 160.93433399999958
+        "cut_detection_and_polling_ms_derived": 153.2752070000006
       },
       "after": {
         "completion_ms": {
           "samples": 1,
-          "p50_ms": 1304.780333,
-          "p95_ms": 1304.780333,
-          "max_ms": 1304.780333,
+          "p50_ms": 5611.7565,
+          "p95_ms": 5611.7565,
+          "max_ms": 5611.7565,
           "timeouts": 0
         },
         "gateway_staging_ms": {
           "samples": 1,
-          "p50_ms": 422.984583,
-          "p95_ms": 422.984583,
-          "max_ms": 422.984583,
+          "p50_ms": 1910.57525,
+          "p95_ms": 1910.57525,
+          "max_ms": 1910.57525,
           "timeouts": 0
         },
         "gateway_present_to_replica_partial_ms": {
           "samples": 1,
-          "p50_ms": 182.2455,
-          "p95_ms": 182.2455,
-          "max_ms": 182.2455,
+          "p50_ms": 177.158875,
+          "p95_ms": 177.158875,
+          "max_ms": 177.158875,
           "timeouts": 0
         },
         "reconnect_ms": {
           "samples": 1,
-          "p50_ms": 72.001542,
-          "p95_ms": 72.001542,
-          "max_ms": 72.001542,
+          "p50_ms": 1034.18825,
+          "p95_ms": 1034.18825,
+          "max_ms": 1034.18825,
           "timeouts": 0
         },
         "resumed_transfer_ms": {
           "samples": 1,
-          "p50_ms": 493.863208,
-          "p95_ms": 493.863208,
-          "max_ms": 493.863208,
+          "p50_ms": 2338.181458,
+          "p95_ms": 2338.181458,
+          "max_ms": 2338.181458,
           "timeouts": 0
         },
         "concurrent_metadata_ms": {
           "samples": 1,
-          "p50_ms": 76.066792,
-          "p95_ms": 76.066792,
-          "max_ms": 76.066792,
+          "p50_ms": 106.903708,
+          "p95_ms": 106.903708,
+          "max_ms": 106.903708,
           "timeouts": 0
         },
-        "cut_detection_and_polling_ms_derived": 133.68550000000005
+        "cut_detection_and_polling_ms_derived": 151.6526670000003
       },
-      "original_uninstrumented_baseline": {
+      "original_4mib_uninstrumented_baseline_not_matched": {
         "samples": 1,
         "p50_ms": 5656.388125,
         "p95_ms": 5656.388125,
@@ -425,94 +470,94 @@
       "before_availability_push_disabled": {
         "completion_ms": {
           "samples": 1,
-          "p50_ms": 6156.831125,
-          "p95_ms": 6156.831125,
-          "max_ms": 6156.831125,
+          "p50_ms": 12759.556041,
+          "p95_ms": 12759.556041,
+          "max_ms": 12759.556041,
           "timeouts": 0
         },
         "gateway_staging_ms": {
           "samples": 1,
-          "p50_ms": 536.287333,
-          "p95_ms": 536.287333,
-          "max_ms": 536.287333,
+          "p50_ms": 5236.782125,
+          "p95_ms": 5236.782125,
+          "max_ms": 5236.782125,
           "timeouts": 0
         },
         "gateway_present_to_replica_partial_ms": {
           "samples": 1,
-          "p50_ms": 4159.271417,
-          "p95_ms": 4159.271417,
-          "max_ms": 4159.271417,
+          "p50_ms": 3967.288708,
+          "p95_ms": 3967.288708,
+          "max_ms": 3967.288708,
           "timeouts": 0
         },
         "reconnect_ms": {
           "samples": 1,
-          "p50_ms": 971.205709,
-          "p95_ms": 971.205709,
-          "max_ms": 971.205709,
+          "p50_ms": 1169.529958,
+          "p95_ms": 1169.529958,
+          "max_ms": 1169.529958,
           "timeouts": 0
         },
         "resumed_transfer_ms": {
           "samples": 1,
-          "p50_ms": 480.019292,
-          "p95_ms": 480.019292,
-          "max_ms": 480.019292,
+          "p50_ms": 2300.257125,
+          "p95_ms": 2300.257125,
+          "max_ms": 2300.257125,
           "timeouts": 0
         },
         "concurrent_metadata_ms": {
           "samples": 1,
-          "p50_ms": 45.4835,
-          "p95_ms": 45.4835,
-          "max_ms": 45.4835,
+          "p50_ms": 299.391416,
+          "p95_ms": 299.391416,
+          "max_ms": 299.391416,
           "timeouts": 0
         },
-        "cut_detection_and_polling_ms_derived": 10.047373999999763
+        "cut_detection_and_polling_ms_derived": 85.69812499999898
       },
       "after": {
         "completion_ms": {
           "samples": 1,
-          "p50_ms": 2093.91075,
-          "p95_ms": 2093.91075,
-          "max_ms": 2093.91075,
+          "p50_ms": 6444.712709,
+          "p95_ms": 6444.712709,
+          "max_ms": 6444.712709,
           "timeouts": 0
         },
         "gateway_staging_ms": {
           "samples": 1,
-          "p50_ms": 486.58625,
-          "p95_ms": 486.58625,
-          "max_ms": 486.58625,
+          "p50_ms": 1780.450084,
+          "p95_ms": 1780.450084,
+          "max_ms": 1780.450084,
           "timeouts": 0
         },
         "gateway_present_to_replica_partial_ms": {
           "samples": 1,
-          "p50_ms": 402.193791,
-          "p95_ms": 402.193791,
-          "max_ms": 402.193791,
+          "p50_ms": 432.25125,
+          "p95_ms": 432.25125,
+          "max_ms": 432.25125,
           "timeouts": 0
         },
         "reconnect_ms": {
           "samples": 1,
-          "p50_ms": 660.959875,
-          "p95_ms": 660.959875,
-          "max_ms": 660.959875,
+          "p50_ms": 1338.598167,
+          "p95_ms": 1338.598167,
+          "max_ms": 1338.598167,
           "timeouts": 0
         },
         "resumed_transfer_ms": {
           "samples": 1,
-          "p50_ms": 532.907834,
-          "p95_ms": 532.907834,
-          "max_ms": 532.907834,
+          "p50_ms": 2853.05275,
+          "p95_ms": 2853.05275,
+          "max_ms": 2853.05275,
           "timeouts": 0
         },
         "concurrent_metadata_ms": {
           "samples": 1,
-          "p50_ms": 122.269417,
-          "p95_ms": 122.269417,
-          "max_ms": 122.269417,
+          "p50_ms": 547.1505,
+          "p95_ms": 547.1505,
+          "max_ms": 547.1505,
           "timeouts": 0
         },
-        "cut_detection_and_polling_ms_derived": 11.26299999999992
+        "cut_detection_and_polling_ms_derived": 40.36045800000011
       },
-      "original_uninstrumented_baseline": {
+      "original_4mib_uninstrumented_baseline_not_matched": {
         "samples": 1,
         "p50_ms": 5769.631166,
         "p95_ms": 5769.631166,
@@ -527,16 +572,16 @@
     "passed": true,
     "recovery_latency": {
       "samples": 1,
-      "p50_ms": 14690.7755,
-      "p95_ms": 14690.7755,
-      "max_ms": 14690.7755,
+      "p50_ms": 14503.781708,
+      "p95_ms": 14503.781708,
+      "max_ms": 14503.781708,
       "timeouts": 0
     },
     "terminal_failure_latency": {
       "samples": 1,
-      "p50_ms": 16030.44525,
-      "p95_ms": 16030.44525,
-      "max_ms": 16030.44525,
+      "p50_ms": 15993.377375,
+      "p95_ms": 15993.377375,
+      "max_ms": 15993.377375,
       "timeouts": 0
     },
     "recovery_fault": "first BlobRead response dropped, 10 s timeout, then actual Helper process restart during a partial staged download",
@@ -564,6 +609,7 @@
     "Document failed reason codes and retry exhaustion in §13.",
     "Clarify that pre-commit blob protection must preserve staging pins until the state transaction is durable."
   ],
+  "loaded_suite_deadline_deviation": "Default CORE-BENCH 3 minute capture deadline failed under load (saved red-loaded-core-bench.json). Explicit APPLE_BRIDGE_LAB_CONTENDED_BENCH=1 extends its capture/replication completion deadlines to 15 minutes and outer scenario deadline to 35 minutes, with doctor probes at most once per second; defaults and every count/FTS assertion are preserved. A second saved failure reached the prior 10 minute outer deadline.",
   "spec_edits": false,
   "feature_status_edits": false,
   "new_scenarios": [
@@ -575,8 +621,131 @@
     "Independent review is left to the build leader.",
     "The generic lab alias verification failed at the 10000-row scale; its cause was not diagnosed. The throughput scenario instead verifies paginated gateway/replica records and cursor equality."
   ],
+  "integrated_core_bench": {
+    "run_id": "run_01M55FGCVXT1C4GPH8WQCC478Z",
+    "network_path": "loopback",
+    "metrics": {
+      "capture_context_expired": false,
+      "capture_wait_ms": 92843,
+      "completion_timeout_ms": 900000,
+      "contended_run": true,
+      "effect_done_to_gateway_capture_ms": 92844.115833,
+      "fixture_and_capture_ms": 94355.596667,
+      "gateway_rss_bytes": 66863104,
+      "gateway_wal_bytes": 84872032,
+      "messages": 200000,
+      "observed_gateway_messages": 200000,
+      "replica_rss_bytes": 32325632,
+      "replica_wal_bytes": 6868072
+    },
+    "scenario": "CORE-BENCH",
+    "level": "sim",
+    "passed": true,
+    "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723",
+    "at": "2026-10-17T17:45:42.525608Z",
+    "assertions": [
+      {
+        "name": "feed_network_loopback",
+        "passed": true
+      },
+      {
+        "name": "two_hundred_thousand_message_capture_replication_fts5",
+        "passed": true
+      },
+      {
+        "name": "recovery_capture_drained_before_convergence",
+        "passed": true
+      },
+      {
+        "name": "truth_gateway_replica_convergence",
+        "passed": true
+      },
+      {
+        "name": "automatic_recovery_capture_drained",
+        "passed": true
+      },
+      {
+        "name": "automatic_scope_query_search_records_0",
+        "passed": true
+      },
+      {
+        "name": "automatic_scope_query_search_records_1",
+        "passed": true
+      },
+      {
+        "name": "automatic_metadata_latency_and_no_false_deletion_0",
+        "passed": true
+      },
+      {
+        "name": "automatic_metadata_latency_and_no_false_deletion_1",
+        "passed": true
+      },
+      {
+        "name": "automatic_scope_sse_watermark_0",
+        "passed": true
+      },
+      {
+        "name": "automatic_scope_sse_watermark_1",
+        "passed": true
+      },
+      {
+        "name": "sqlite_integrity_gateway",
+        "passed": true
+      },
+      {
+        "name": "sqlite_integrity_replica",
+        "passed": true
+      },
+      {
+        "name": "credential_backend_override_restored",
+        "passed": true
+      }
+    ],
+    "latency": {
+      "effect_done→gateway_visible": {
+        "samples": 1,
+        "p50_ms": 8.346584,
+        "p95_ms": 8.346584,
+        "max_ms": 8.346584,
+        "timeouts": 0
+      },
+      "effect_done→replica_visible:replica0": {
+        "samples": 1,
+        "p50_ms": 10.497792,
+        "p95_ms": 10.497792,
+        "max_ms": 10.497792,
+        "timeouts": 0
+      },
+      "fts5_query_gateway": {
+        "samples": 100,
+        "p50_ms": 2.553042,
+        "p95_ms": 2.93225,
+        "max_ms": 10.479333,
+        "timeouts": 0
+      }
+    },
+    "hosts": [
+      "air"
+    ]
+  },
+  "runtime_latency_200_changes": {
+    "effect_done→gateway_visible": {
+      "samples": 200,
+      "p50_ms": 12.2085,
+      "p95_ms": 17.541791,
+      "max_ms": 25.938083,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica0": {
+      "samples": 200,
+      "p50_ms": 17.28425,
+      "p95_ms": 23.914958,
+      "max_ms": 27.460458,
+      "timeouts": 0
+    }
+  },
   "reference_index_throughput": {
-    "before": {
+    "historical_unfiltered_before": {
       "history_10000_commit": {
         "samples": 1,
         "p50_ms": 37683.642708,
@@ -592,24 +761,573 @@
         "timeouts": 0
       }
     },
-    "after": {
-      "history_10000_commit": {
-        "samples": 1,
-        "p50_ms": 2197.072709,
-        "p95_ms": 2197.072709,
-        "max_ms": 2197.072709,
-        "timeouts": 0
-      },
-      "history_rows_per_second": {
-        "samples": 1,
-        "p50_ms": 4551.51072562888,
-        "p95_ms": 4551.51072562888,
-        "max_ms": 4551.51072562888,
-        "timeouts": 0
-      }
+    "current_core_scenario": {
+      "absolute_target_rows_per_second": 2000,
+      "absolute_target_status": "met-under-load",
+      "capture_rows_per_frame": 64,
+      "history_rows": 10000,
+      "history_rows_per_second": 3669.8041151739644
     },
-    "improvement": 17.151750396622855,
-    "units_note": "history_rows_per_second metric uses the generic latency stats structure; values are rows/s, not ms.",
-    "limitation": "Protection still materializes actual indexed blob references for the full ReferenceSet API, but no longer scans or decodes historical record payloads."
-  }
+    "absolute_target_status": "pending-quiet",
+    "latest_core_single_run_target_status": "met-under-load",
+    "loaded_interleaved_ab": {
+      "baseline": "Unmodified main product internal/ and cmd/bridge at the recorded baseline SHA; same new SimApplePeer and scenario harness for both binaries.",
+      "conditions": "One connected replica on Air; fresh World per run; 64 records per IPC capture; synthetic reminder metadata without blob payloads; elapsed interval covers enqueue through final durable ACK; fixture generation and truth persistence excluded; no builds between samples.",
+      "schedule": "old10k/new10k repeated three times back to back, then new2k/new20k repeated three times",
+      "absolute_target_status": "pending-quiet",
+      "target_rows_per_second": 2000,
+      "product_shas": {
+        "old": "bf3450acf3cd285a50c378597b9e5dfd7d45681c",
+        "new": "803a49095dc2122f0048bacf8b37a36e54571120"
+      },
+      "binary_sha256": {
+        "old": "053a886b8c0ea0c1801710302441e81379e64b994100535885d12fa004d71f33",
+        "new": "8af6c18baafaf6d8ea3ab57834350d69741f9a031e5a44247c54871bb981556f"
+      },
+      "groups_rows_per_second": {
+        "old-10000": {
+          "n": 3,
+          "mean": 327.31672954833226,
+          "median": 343.7373062915137,
+          "min": 274.8028851525124,
+          "max": 363.4099972009708,
+          "sample_variance": 2165.0315818260488,
+          "sample_standard_deviation": 46.52989986907396,
+          "coefficient_of_variation": 0.14215558102783518
+        },
+        "new-10000": {
+          "n": 3,
+          "mean": 427.1524844506223,
+          "median": 367.66556037631494,
+          "min": 311.1350198848442,
+          "max": 602.6568730907077,
+          "sample_variance": 23900.268326012058,
+          "sample_standard_deviation": 154.5971161633103,
+          "coefficient_of_variation": 0.361924890504017
+        },
+        "new-2000": {
+          "n": 3,
+          "mean": 273.3428847597183,
+          "median": 310.21567554214533,
+          "min": 198.82462915733694,
+          "max": 310.9883495796726,
+          "sample_variance": 4164.877069808447,
+          "sample_standard_deviation": 64.5358587903535,
+          "coefficient_of_variation": 0.23609855016743408
+        },
+        "new-20000": {
+          "n": 3,
+          "mean": 434.7104506980378,
+          "median": 345.6724807736825,
+          "min": 328.7501233053566,
+          "max": 629.7087480150743,
+          "sample_variance": 28589.84351297898,
+          "sample_standard_deviation": 169.08531430310256,
+          "coefficient_of_variation": 0.38896077614787783
+        }
+      },
+      "paired_new_over_old_ratios": [
+        1.0117100883523322,
+        1.1322116203844363,
+        1.7532483732784354
+      ],
+      "paired_ratio_statistics": {
+        "n": 3,
+        "mean": 1.299056694005068,
+        "median": 1.1322116203844363,
+        "min": 1.0117100883523322,
+        "max": 1.7532483732784354,
+        "sample_variance": 0.15834771594639213,
+        "sample_standard_deviation": 0.39792928510778414,
+        "coefficient_of_variation": 0.30632172325054174
+      },
+      "new_20k_over_2k_mean_throughput_ratio": 1.5903485143949128,
+      "runs": [
+        {
+          "order": 1,
+          "variant": "old",
+          "rows": 10000,
+          "repeat": 1,
+          "product_git_sha": "bf3450acf3cd285a50c378597b9e5dfd7d45681c",
+          "product_binary_sha256": "053a886b8c0ea0c1801710302441e81379e64b994100535885d12fa004d71f33",
+          "harness_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+          "before": {
+            "at": "2026-10-17T07:38:43.717211+00:00",
+            "load_average": "{ 20.08 18.16 17.20 }",
+            "cpu_user_percent": 10.26,
+            "cpu_system_percent": 89.73,
+            "cpu_idle_percent": 0.0,
+            "active_heavy_slots": 2,
+            "heavy_slots_capacity": 2,
+            "queued_heavy_commands": 3
+          },
+          "after": {
+            "at": "2026-10-17T07:39:22.436118+00:00",
+            "load_average": "{ 22.51 19.10 17.60 }",
+            "cpu_user_percent": 9.55,
+            "cpu_system_percent": 90.44,
+            "cpu_idle_percent": 0.0,
+            "active_heavy_slots": 2,
+            "heavy_slots_capacity": 2,
+            "queued_heavy_commands": 3
+          },
+          "exit_code": 0,
+          "rows_per_second": 363.4099972009708
+        },
+        {
+          "order": 2,
+          "variant": "new",
+          "rows": 10000,
+          "repeat": 1,
+          "product_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+          "product_binary_sha256": "8af6c18baafaf6d8ea3ab57834350d69741f9a031e5a44247c54871bb981556f",
+          "harness_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+          "before": {
+            "at": "2026-10-17T07:39:26.091265+00:00",
+            "load_average": "{ 22.39 19.13 17.61 }",
+            "cpu_user_percent": 10.54,
+            "cpu_system_percent": 89.45,
+            "cpu_idle_percent": 0.0,
+            "active_heavy_slots": 2,
+            "heavy_slots_capacity": 2,
+            "queued_heavy_commands": 3
+          },
+          "after": {
+            "at": "2026-10-17T07:40:06.726694+00:00",
+            "load_average": "{ 22.94 19.68 17.88 }",
+            "cpu_user_percent": 9.14,
+            "cpu_system_percent": 90.85,
+            "cpu_idle_percent": 0.0,
+            "active_heavy_slots": 2,
+            "heavy_slots_capacity": 2,
+            "queued_heavy_commands": 3
+          },
+          "exit_code": 0,
+          "rows_per_second": 367.66556037631494
+        },
+        {
+          "order": 3,
+          "variant": "old",
+          "rows": 10000,
+          "repeat": 2,
+          "product_git_sha": "bf3450acf3cd285a50c378597b9e5dfd7d45681c",
+          "product_binary_sha256": "053a886b8c0ea0c1801710302441e81379e64b994100535885d12fa004d71f33",
+          "harness_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+          "before": {
+            "at": "2026-10-17T07:40:14.504945+00:00",
+            "load_average": "{ 22.46 19.64 17.88 }",
+            "cpu_user_percent": 10.41,
+            "cpu_system_percent": 89.58,
+            "cpu_idle_percent": 0.0,
+            "active_heavy_slots": 2,
+            "heavy_slots_capacity": 2,
+            "queued_heavy_commands": 3
+          },
+          "after": {
+            "at": "2026-10-17T07:41:09.471980+00:00",
+            "load_average": "{ 22.19 20.08 18.15 }",
+            "cpu_user_percent": 14.25,
+            "cpu_system_percent": 85.74,
+            "cpu_idle_percent": 0.0,
+            "active_heavy_slots": 2,
+            "heavy_slots_capacity": 2,
+            "queued_heavy_commands": 3
+          },
+          "exit_code": 0,
+          "rows_per_second": 274.8028851525124
+        },
+        {
+          "order": 4,
+          "variant": "new",
+          "rows": 10000,
+          "repeat": 2,
+          "product_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+          "product_binary_sha256": "8af6c18baafaf6d8ea3ab57834350d69741f9a031e5a44247c54871bb981556f",
+          "harness_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+          "before": {
+            "at": "2026-10-17T07:41:14.954515+00:00",
+            "load_average": "{ 22.07 20.13 18.19 }",
+            "cpu_user_percent": 8.77,
+            "cpu_system_percent": 91.22,
+            "cpu_idle_percent": 0.0,
+            "active_heavy_slots": 2,
+            "heavy_slots_capacity": 2,
+            "queued_heavy_commands": 3
+          },
+          "after": {
+            "at": "2026-10-17T07:42:07.052619+00:00",
+            "load_average": "{ 22.30 20.54 18.46 }",
+            "cpu_user_percent": 8.69,
+            "cpu_system_percent": 91.3,
+            "cpu_idle_percent": 0.0,
+            "active_heavy_slots": 2,
+            "heavy_slots_capacity": 2,
+            "queued_heavy_commands": 3
+          },
+          "exit_code": 0,
+          "rows_per_second": 311.1350198848442
+        },
+        {
+          "order": 5,
+          "variant": "old",
+          "rows": 10000,
+          "repeat": 3,
+          "product_git_sha": "bf3450acf3cd285a50c378597b9e5dfd7d45681c",
+          "product_binary_sha256": "053a886b8c0ea0c1801710302441e81379e64b994100535885d12fa004d71f33",
+          "harness_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+          "before": {
+            "at": "2026-10-17T07:42:12.964109+00:00",
+            "load_average": "{ 22.20 20.55 18.47 }",
+            "cpu_user_percent": 10.11,
+            "cpu_system_percent": 89.88,
+            "cpu_idle_percent": 0.0,
+            "active_heavy_slots": 2,
+            "heavy_slots_capacity": 2,
+            "queued_heavy_commands": 3
+          },
+          "after": {
+            "at": "2026-10-17T07:43:00.049608+00:00",
+            "load_average": "{ 21.32 20.55 18.58 }",
+            "cpu_user_percent": 10.37,
+            "cpu_system_percent": 89.62,
+            "cpu_idle_percent": 0.0,
+            "active_heavy_slots": 2,
+            "heavy_slots_capacity": 2,
+            "queued_heavy_commands": 3
+          },
+          "exit_code": 0,
+          "rows_per_second": 343.7373062915137
+        },
+        {
+          "order": 6,
+          "variant": "new",
+          "rows": 10000,
+          "repeat": 3,
+          "product_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+          "product_binary_sha256": "8af6c18baafaf6d8ea3ab57834350d69741f9a031e5a44247c54871bb981556f",
+          "harness_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+          "before": {
+            "at": "2026-10-17T07:43:06.714570+00:00",
+            "load_average": "{ 21.57 20.63 18.63 }",
+            "cpu_user_percent": 8.83,
+            "cpu_system_percent": 91.16,
+            "cpu_idle_percent": 0.0,
+            "active_heavy_slots": 2,
+            "heavy_slots_capacity": 2,
+            "queued_heavy_commands": 3
+          },
+          "after": {
+            "at": "2026-10-17T07:43:35.478135+00:00",
+            "load_average": "{ 25.27 21.65 19.07 }",
+            "cpu_user_percent": 9.6,
+            "cpu_system_percent": 90.39,
+            "cpu_idle_percent": 0.0,
+            "active_heavy_slots": 2,
+            "heavy_slots_capacity": 2,
+            "queued_heavy_commands": 3
+          },
+          "exit_code": 0,
+          "rows_per_second": 602.6568730907077
+        },
+        {
+          "order": 7,
+          "variant": "new",
+          "rows": 2000,
+          "repeat": 1,
+          "product_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+          "product_binary_sha256": "8af6c18baafaf6d8ea3ab57834350d69741f9a031e5a44247c54871bb981556f",
+          "harness_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+          "before": {
+            "at": "2026-10-17T07:43:41.437574+00:00",
+            "load_average": "{ 24.92 21.64 19.08 }",
+            "cpu_user_percent": 11.7,
+            "cpu_system_percent": 88.92,
+            "cpu_idle_percent": 0.0,
+            "active_heavy_slots": 2,
+            "heavy_slots_capacity": 2,
+            "queued_heavy_commands": 3
+          },
+          "after": {
+            "at": "2026-10-17T07:44:09.844006+00:00",
+            "load_average": "{ 23.73 21.64 19.15 }",
+            "cpu_user_percent": 9.49,
+            "cpu_system_percent": 90.5,
+            "cpu_idle_percent": 0.0,
+            "active_heavy_slots": 2,
+            "heavy_slots_capacity": 2,
+            "queued_heavy_commands": 3
+          },
+          "exit_code": 0,
+          "rows_per_second": 198.82462915733694
+        },
+        {
+          "order": 8,
+          "variant": "new",
+          "rows": 20000,
+          "repeat": 1,
+          "product_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+          "product_binary_sha256": "8af6c18baafaf6d8ea3ab57834350d69741f9a031e5a44247c54871bb981556f",
+          "harness_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+          "before": {
+            "at": "2026-10-17T07:44:20.330816+00:00",
+            "load_average": "{ 23.84 21.73 19.22 }",
+            "cpu_user_percent": 10.8,
+            "cpu_system_percent": 89.91,
+            "cpu_idle_percent": 0.0,
+            "active_heavy_slots": 2,
+            "heavy_slots_capacity": 2,
+            "queued_heavy_commands": 3
+          },
+          "after": {
+            "at": "2026-10-17T07:45:05.215591+00:00",
+            "load_average": "{ 28.00 23.22 19.90 }",
+            "cpu_user_percent": 14.3,
+            "cpu_system_percent": 85.69,
+            "cpu_idle_percent": 0.0,
+            "active_heavy_slots": 2,
+            "heavy_slots_capacity": 2,
+            "queued_heavy_commands": 3
+          },
+          "exit_code": 0,
+          "rows_per_second": 629.7087480150743
+        },
+        {
+          "order": 9,
+          "variant": "new",
+          "rows": 2000,
+          "repeat": 2,
+          "product_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+          "product_binary_sha256": "8af6c18baafaf6d8ea3ab57834350d69741f9a031e5a44247c54871bb981556f",
+          "harness_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+          "before": {
+            "at": "2026-10-17T07:45:09.818993+00:00",
+            "load_average": "{ 27.76 23.25 19.93 }",
+            "cpu_user_percent": 11.69,
+            "cpu_system_percent": 88.3,
+            "cpu_idle_percent": 0.0,
+            "active_heavy_slots": 2,
+            "heavy_slots_capacity": 2,
+            "queued_heavy_commands": 3
+          },
+          "after": {
+            "at": "2026-10-17T07:45:24.551144+00:00",
+            "load_average": "{ 28.41 23.59 20.10 }",
+            "cpu_user_percent": 19.38,
+            "cpu_system_percent": 80.61,
+            "cpu_idle_percent": 0.0,
+            "active_heavy_slots": 2,
+            "heavy_slots_capacity": 2,
+            "queued_heavy_commands": 3
+          },
+          "exit_code": 0,
+          "rows_per_second": 310.21567554214533
+        },
+        {
+          "order": 10,
+          "variant": "new",
+          "rows": 20000,
+          "repeat": 2,
+          "product_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+          "product_binary_sha256": "8af6c18baafaf6d8ea3ab57834350d69741f9a031e5a44247c54871bb981556f",
+          "harness_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+          "before": {
+            "at": "2026-10-17T07:45:29.391203+00:00",
+            "load_average": "{ 28.54 23.69 20.16 }",
+            "cpu_user_percent": 20.21,
+            "cpu_system_percent": 79.78,
+            "cpu_idle_percent": 0.0,
+            "active_heavy_slots": 2,
+            "heavy_slots_capacity": 2,
+            "queued_heavy_commands": 3
+          },
+          "after": {
+            "at": "2026-10-17T07:46:43.458951+00:00",
+            "load_average": "{ 28.65 24.82 20.89 }",
+            "cpu_user_percent": 10.57,
+            "cpu_system_percent": 89.32,
+            "cpu_idle_percent": 0.9,
+            "active_heavy_slots": 2,
+            "heavy_slots_capacity": 2,
+            "queued_heavy_commands": 3
+          },
+          "exit_code": 0,
+          "rows_per_second": 328.7501233053566
+        },
+        {
+          "order": 11,
+          "variant": "new",
+          "rows": 2000,
+          "repeat": 3,
+          "product_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+          "product_binary_sha256": "8af6c18baafaf6d8ea3ab57834350d69741f9a031e5a44247c54871bb981556f",
+          "harness_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+          "before": {
+            "at": "2026-10-17T07:46:48.707384+00:00",
+            "load_average": "{ 28.36 24.82 20.91 }",
+            "cpu_user_percent": 11.14,
+            "cpu_system_percent": 88.85,
+            "cpu_idle_percent": 0.0,
+            "active_heavy_slots": 2,
+            "heavy_slots_capacity": 2,
+            "queued_heavy_commands": 3
+          },
+          "after": {
+            "at": "2026-10-17T07:47:04.507905+00:00",
+            "load_average": "{ 28.55 25.04 21.06 }",
+            "cpu_user_percent": 12.54,
+            "cpu_system_percent": 87.45,
+            "cpu_idle_percent": 0.0,
+            "active_heavy_slots": 2,
+            "heavy_slots_capacity": 2,
+            "queued_heavy_commands": 3
+          },
+          "exit_code": 0,
+          "rows_per_second": 310.9883495796726
+        },
+        {
+          "order": 12,
+          "variant": "new",
+          "rows": 20000,
+          "repeat": 3,
+          "product_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+          "product_binary_sha256": "8af6c18baafaf6d8ea3ab57834350d69741f9a031e5a44247c54871bb981556f",
+          "harness_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+          "before": {
+            "at": "2026-10-17T07:47:10.560308+00:00",
+            "load_average": "{ 27.94 24.97 21.06 }",
+            "cpu_user_percent": 9.73,
+            "cpu_system_percent": 90.26,
+            "cpu_idle_percent": 0.0,
+            "active_heavy_slots": 2,
+            "heavy_slots_capacity": 2,
+            "queued_heavy_commands": 3
+          },
+          "after": {
+            "at": "2026-10-17T07:48:30.456494+00:00",
+            "load_average": "{ 27.25 25.73 21.71 }",
+            "cpu_user_percent": 9.79,
+            "cpu_system_percent": 90.2,
+            "cpu_idle_percent": 0.0,
+            "active_heavy_slots": 2,
+            "heavy_slots_capacity": 2,
+            "queued_heavy_commands": 3
+          },
+          "exit_code": 0,
+          "rows_per_second": 345.6724807736825
+        }
+      ],
+      "ratio_of_mean_rows_per_second": 1.305012686152811,
+      "new_20k_over_10k_mean_throughput_ratio": 1.0176938365631563,
+      "new_capture_duration_ms": {
+        "2000": {
+          "n": 3,
+          "mean": 7645.784167,
+          "median": 6447.127459,
+          "p95_nearest_rank": 10059.115958,
+          "max": 10059.115958,
+          "sample_variance": 4368191.897172862,
+          "sample_standard_deviation": 2090.021984853954
+        },
+        "10000": {
+          "n": 3,
+          "mean": 25310.736138666667,
+          "median": 27198.63125,
+          "p95_nearest_rank": 32140.387166,
+          "max": 32140.387166,
+          "sample_variance": 63101945.89316685,
+          "sample_standard_deviation": 7943.673324927633
+        },
+        "20000": {
+          "n": 3,
+          "mean": 50151.81001366667,
+          "median": 57858.236083,
+          "p95_nearest_rank": 60836.479083,
+          "max": 60836.479083,
+          "sample_variance": 255891768.14137876,
+          "sample_standard_deviation": 15996.61739685546
+        }
+      },
+      "new_amortized_capture_ms": {
+        "2000": {
+          "n": 3,
+          "mean": 238.93075521875,
+          "median": 201.47273309375,
+          "p95_nearest_rank": 314.3473736875,
+          "max": 314.3473736875,
+          "sample_variance": 4265.812399582873,
+          "sample_standard_deviation": 65.31318702668607
+        },
+        "10000": {
+          "n": 3,
+          "mean": 161.2148798641189,
+          "median": 173.23968949044584,
+          "p95_nearest_rank": 204.71584182165606,
+          "max": 204.71584182165606,
+          "sample_variance": 2560.0205238819767,
+          "sample_standard_deviation": 50.59664538170467
+        },
+        "20000": {
+          "n": 3,
+          "mean": 160.22942496379127,
+          "median": 184.850594514377,
+          "p95_nearest_rank": 194.36574786900957,
+          "max": 194.36574786900957,
+          "sample_variance": 2611.966725610946,
+          "sample_standard_deviation": 51.10740382381936
+        }
+      },
+      "harness_binary_sha256": "6c7ef6c115f03e58d21eb868f1ab90bfe525c470e18a428db38b52ddb1f805a8",
+      "method": {
+        "product_build_command": "go build -tags lab -p 2 -buildvcs=false -o <variant-binary> ./cmd/bridge",
+        "old_product_source": "git archive <recorded-main-sha> internal cmd/bridge extracted in the owned worktree; source restored immediately after compilation",
+        "new_product_source": "Owned branch internal/ and cmd/bridge at recorded new SHA",
+        "go_mod_and_go_sum_unchanged": true,
+        "temporary_harness_change": "Build used prebuilt binaries for sim; same harness binary for every run; helper/source files restored afterward",
+        "go_version": "go version go1.27.2 darwin/arm64",
+        "record_protection_before": "SELECT historical record/staging payload candidates using digest/raw_body_digest/unicode predicates; main also has matching partial candidate indexes. JSON reference extraction repeats for candidates on each capture.",
+        "record_protection_after": "SELECT owner,payload FROM blob_refs; changed records update index in their state transaction"
+      },
+      "cpu_idle_percent_range": [
+        0.0,
+        0.9
+      ],
+      "heavy_slots_all_samples": [
+        2
+      ],
+      "interpretation": "Timing variance is high under sustained contention. Observed 10k-to-20k throughput is flat; amortized capture time does not grow with total records. This is not a quiet-machine absolute throughput certification.",
+      "baseline_caveat": "The requested main-before-change baseline already includes Messages candidate-filter indexes. This metadata-only A/B does not isolate the original unfiltered full-history scan or establish scaling for blob-bearing histories.",
+      "baseline_candidate_index_explain": [
+        [
+          3,
+          0,
+          215,
+          "SCAN records USING INDEX records_blob_candidates"
+        ]
+      ],
+      "baseline_candidate_index_probe_engine": "Python sqlite3 3.51.0; illustrative EXPLAIN of baseline DDL and predicate, not a timed runtime probe"
+    },
+    "limitation": "Protection materializes actual indexed blob references for the full ReferenceSet API, but no longer scans or decodes historical record payloads."
+  },
+  "ab_rebased_product_source_equal": true,
+  "owned_final_sim_check": {
+    "command": "packaging/dev/heavy.sh bash /tmp/blobs-fix-owned-final.sh",
+    "script": "for scenario in lab/scenarios/core/CORE-BLOB-*.yaml; do go run ./cmd/bridge-lab run \"$scenario\" --level sim; done",
+    "scenarios": 9,
+    "passed": true,
+    "verified_git_sha": "31f1f9f66ffc3434778f54ab5dd0d9befb227832"
+  },
+  "large_digest_verifier_followup": {
+    "red_evidence": "red-replica-digest-timeout-diagnostic.json",
+    "observed_replica_http_status": 200,
+    "observed_bytes_before_timeout": 5014016,
+    "observed_read_ms": 5001.626167,
+    "deadline_exceeded": true,
+    "change": "Copy the HTTP client for blob body reads and set a 30 second bound. Metadata/status clients and the one-second priority assertion are unchanged.",
+    "assertions_preserved": [
+      "HTTP 200",
+      "exact fixture length",
+      "SHA-256 equal to metadata digest"
+    ]
+  },
+  "acceptance_update": "Leader requires loaded interleaved A/B, three 10k samples per binary, and new-code scaling at 2k/10k/20k; an unmet absolute 2000 rows/s target is pending-quiet."
 }

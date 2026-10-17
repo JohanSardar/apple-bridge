@@ -512,7 +512,7 @@
     "go_mod_and_go_sum_unchanged": true,
     "temporary_harness_change": "Build used prebuilt binaries for sim; same harness binary for every run; helper/source files restored afterward",
     "go_version": "go version go1.27.2 darwin/arm64",
-    "record_protection_before": "SELECT payload FROM records/staging_records with digest/raw_body_digest/unicode candidate filters; still scans history",
+    "record_protection_before": "SELECT historical record/staging payload candidates using digest/raw_body_digest/unicode predicates; main also has matching partial candidate indexes. JSON reference extraction repeats for candidates on each capture.",
     "record_protection_after": "SELECT owner,payload FROM blob_refs; changed records update index in their state transaction"
   },
   "cpu_idle_percent_range": [
@@ -522,5 +522,15 @@
   "heavy_slots_all_samples": [
     2
   ],
-  "interpretation": "Timing variance is high under sustained contention. Observed 10k-to-20k throughput is flat; amortized capture time does not grow with total records. This is not a quiet-machine absolute throughput certification."
+  "interpretation": "Timing variance is high under sustained contention. Observed 10k-to-20k throughput is flat; amortized capture time does not grow with total records. This is not a quiet-machine absolute throughput certification.",
+  "baseline_caveat": "The requested main-before-change baseline already includes Messages candidate-filter indexes. This metadata-only A/B does not isolate the original unfiltered full-history scan or establish scaling for blob-bearing histories.",
+  "baseline_candidate_index_explain": [
+    [
+      3,
+      0,
+      215,
+      "SCAN records USING INDEX records_blob_candidates"
+    ]
+  ],
+  "baseline_candidate_index_probe_engine": "Python sqlite3 3.51.0; illustrative EXPLAIN of baseline DDL and predicate, not a timed runtime probe"
 }
