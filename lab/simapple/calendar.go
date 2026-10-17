@@ -100,7 +100,7 @@ func (f *fakeApple) calendarControl(mux *http.ServeMux) {
 			d["availability"] = 0
 			d["status"] = 1
 			base := calendarObservation(request.Key, "calendar.event", d)
-			expanded, err := expandCalendar(base)
+			expanded, err := expandCalendar(base, f.calendarScope("test-calendar"))
 			if err != nil {
 				f.mu.Unlock()
 				http.Error(w, "invalid", 400)
@@ -419,7 +419,7 @@ func (f *fakeApple) calendarCommand(wire *applepeer.Wire, frame contracts.IPCFra
 			next.Revalidated = true
 		}
 		if t.Action.Op == "calendar.create_event" && a.Recurrence != nil && len(*a.Recurrence) > 0 {
-			expanded, expandErr := expandCalendar(next)
+			expanded, expandErr := expandCalendar(next, f.calendarScope(t.Action.ListKey))
 			if expandErr != nil {
 				f.mu.Unlock()
 				return expandErr
@@ -465,11 +465,11 @@ func (f *fakeApple) calendarCommand(wire *applepeer.Wire, frame contracts.IPCFra
 	return err
 }
 
-func expandCalendar(base contracts.Observation) ([]contracts.Observation, error) {
+func expandCalendar(base contracts.Observation, scope string) ([]contracts.Observation, error) {
 	d := calendarData(base)
 	rules, ok := d["recurrence"].([]any)
 	if !ok || len(rules) == 0 {
-		base.ScopedAlias = "test/test-calendar/" + base.NativeKey
+		base.ScopedAlias = scope + base.NativeKey
 		return []contracts.Observation{base}, nil
 	}
 	ruleBytes, _ := json.Marshal(rules[0])
@@ -542,7 +542,7 @@ func expandCalendar(base contracts.Observation) ([]contracts.Observation, error)
 		value["occurrence_date"] = original
 		key := base.NativeKey + "|" + original
 		next := calendarObservation(key, "calendar.event", value)
-		next.ScopedAlias = "test/test-calendar/" + key
+		next.ScopedAlias = scope + key
 		result = append(result, next)
 	}
 	if len(result) == 0 {
@@ -580,4 +580,9 @@ func boundedCalendarRecurrence(value any, count int) any {
 
 func calendarPermissionFrame() contracts.IPCFrame {
 	return contracts.IPCFrame{T: "SourceState", Source: contracts.Calendar, State: "permission_missing", Reason: "calendar_full_access_required", Coverage: map[contracts.Source]contracts.Coverage{contracts.Calendar: {Fields: "partial", Missing: []string{"permission_missing"}}}, Capabilities: map[contracts.Source][]string{contracts.Calendar: {}}}
+}
+
+func (f *fakeApple) calendarScope(key string) string {
+	account, _ := calendarData(f.records[key])["account"].(string)
+	return account + "/" + key + "/"
 }

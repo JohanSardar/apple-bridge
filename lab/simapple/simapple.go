@@ -678,6 +678,14 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 		return nil
 	}
 	commandEmit := func(capture contracts.Capture, revision uint64) error {
+		if capture.Source == contracts.Calendar {
+			f.mu.Lock()
+			denied := f.calendarDenied
+			f.mu.Unlock()
+			if denied {
+				return contracts.ErrUnavailable
+			}
+		}
 		emitFull = false
 		emitRevision = revision
 		return emit(capture)

@@ -29,8 +29,8 @@ type CalendarRecurrence struct {
 	Until     string `json:"end,omitempty"`
 }
 type CalendarAlarm struct {
-	RelativeOffset float64 `json:"relative_offset"`
-	AbsoluteDate   string  `json:"absolute_date,omitempty"`
+	RelativeOffset *float64 `json:"relative_offset,omitempty"`
+	AbsoluteDate   string   `json:"absolute_date,omitempty"`
 }
 type AgendaQuery struct {
 	Start      string `json:"start"`
@@ -137,6 +137,9 @@ func ValidateCalendar(c Command) (CalendarArgs, error) {
 	}
 	if a.Alarms != nil {
 		for _, alarm := range *a.Alarms {
+			if (alarm.AbsoluteDate == "") == (alarm.RelativeOffset == nil) {
+				return a, ErrInvalid
+			}
 			if alarm.AbsoluteDate != "" {
 				if _, err := time.Parse(time.RFC3339Nano, alarm.AbsoluteDate); err != nil {
 					return a, ErrInvalid
