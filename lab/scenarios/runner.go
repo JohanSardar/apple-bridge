@@ -937,6 +937,9 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		restored := secretBefore == secretAfter && secretWasSet == secretIsSet
 		e.Assertions = append(e.Assertions, Assertion{Name: "credential_backend_override_restored", Passed: restored})
 		e.Passed = e.Passed && restored
+		if err = saveIncomingEchoEvidence(e); err != nil {
+			return err
+		}
 		if err = Save(e); err != nil {
 			return err
 		}

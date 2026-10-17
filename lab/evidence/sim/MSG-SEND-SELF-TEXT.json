@@ -3,35 +3,35 @@
     "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
     "start": {
       "air": {
-        "at": "2026-10-17T19:45:54.394847Z",
+        "at": "2026-10-17T19:58:17.114862Z",
         "cpu_count": 8,
         "load_average": [
-          11.67,
-          5.77,
-          5.23
+          3.74,
+          7.03,
+          6.3
         ],
-        "cpu_idle_percent": 75,
-        "free_memory_bytes": 191152128,
+        "cpu_idle_percent": 51,
+        "free_memory_bytes": 195641344,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 4,
+        "heavy_queue_length": 1,
         "quiet": false
       }
     },
     "end": {
       "air": {
-        "at": "2026-10-17T19:45:55.442821Z",
+        "at": "2026-10-17T19:58:18.692163Z",
         "cpu_count": 8,
         "load_average": [
-          11.05,
-          5.74,
-          5.23
+          3.74,
+          7.03,
+          6.3
         ],
-        "cpu_idle_percent": 85,
-        "free_memory_bytes": 177946624,
+        "cpu_idle_percent": 77,
+        "free_memory_bytes": 137510912,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 4,
+        "heavy_queue_length": 1,
         "quiet": false
       }
     },
@@ -40,15 +40,51 @@
     "quiet_wait_ms": 0,
     "quiet_wait_expired": false
   },
-  "run_id": "run_01M55PCGQJVB53KW71ZMQNH1WM",
+  "run_id": "run_01M55Q3643MC71CAJJ2W641BA3",
   "scenario": "MSG-SEND-SELF-TEXT",
   "level": "sim",
-  "passed": false,
-  "git_sha": "",
-  "at": "2026-10-17T19:45:55.442777Z",
+  "passed": true,
+  "git_sha": "97a52acc42d386fffeb9c2ffaab4d1be5141f22e",
+  "at": "2026-10-17T19:58:18.243168Z",
   "assertions": [
     {
-      "name": "messages_send_descriptor",
+      "name": "seed_self_chat",
+      "passed": true
+    },
+    {
+      "name": "fixture_captured",
+      "passed": true
+    },
+    {
+      "name": "rest_locally_observed_with_checkpoint",
+      "passed": true
+    },
+    {
+      "name": "rest_delivered_only_after_native_evidence",
+      "passed": true
+    },
+    {
+      "name": "rest_replica_converges",
+      "passed": true
+    },
+    {
+      "name": "mcp_locally_observed_with_checkpoint",
+      "passed": true
+    },
+    {
+      "name": "mcp_delivered_only_after_native_evidence",
+      "passed": true
+    },
+    {
+      "name": "mcp_replica_converges",
+      "passed": true
+    },
+    {
+      "name": "non_self_refused_before_effect",
+      "passed": true
+    },
+    {
+      "name": "truth_and_replica_convergence",
       "passed": true
     },
     {
@@ -56,7 +92,22 @@
       "passed": true
     }
   ],
-  "latency": {},
+  "latency": {
+    "mcp_command_to_replica": {
+      "samples": 1,
+      "p50_ms": 55.948083,
+      "p95_ms": 55.948083,
+      "max_ms": 55.948083,
+      "timeouts": 0
+    },
+    "rest_command_to_replica": {
+      "samples": 1,
+      "p50_ms": 52.763042,
+      "p95_ms": 52.763042,
+      "max_ms": 52.763042,
+      "timeouts": 0
+    }
+  },
   "hosts": [
     "air"
   ]

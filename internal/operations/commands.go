@@ -377,6 +377,13 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 	if r.State == "indeterminate" && to == "indeterminate" {
 		return r, nil
 	}
+	if r.State == contracts.CommandDispatched && to == contracts.CommandDelivered {
+		var err error
+		r, err = g.transition(ctx, r, contracts.CommandObserved, contracts.DispositionLocallyObserved, f.Evidence, nil)
+		if err != nil {
+			return r, err
+		}
+	}
 	result, err := g.transition(ctx, r, to, f.Disposition, f.Evidence, f.Error)
 	if err == nil && result.Error != nil {
 		return result, result.Error

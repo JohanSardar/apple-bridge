@@ -89,19 +89,73 @@ func runMessagesCommands(ctx context.Context, s Scenario, level string) Evidence
 		}
 		return command(op, args, version)
 	}
+	mutateTarget := func(r contracts.Record, patch map[string]any) contracts.Record {
+		aliases, _ := gatewayAliases(w)
+		observations, _ := w.Inspect()
+		for _, o := range observations {
+			if o.Collection == r.Collection && aliases[aliasKey(contracts.Messages, o.Collection, o.NativeKey)] == r.ID {
+				var data map[string]any
+				json.Unmarshal(o.Data, &data)
+				for k, v := range patch {
+					data[k] = v
+				}
+				add("external_native_mutation", w.ControlAction("/external-change", map[string]any{"key": o.NativeKey, "collection": o.Collection, "data": data}) == nil)
+				break
+			}
+		}
+		add("native_mutation_captured", w.Await(5*time.Second, func() bool { return convergence(w) }) == nil)
+		return record(r.Collection, r.ID)
+	}
+
 	switch s.ID {
 	case "MSG-CAPABILITY-MATRIX":
 		var status contracts.ReadResult
 		err := client.Call(ctx, "sources.status", struct{}{}, &status)
 		add("status_available", err == nil)
+		operations := map[string]contracts.OperationCapability{}
+		for _, record := range status.Records {
+			var data struct {
+				Source   string             `json:"source"`
+				Coverage contracts.Coverage `json:"coverage"`
+			}
+			json.Unmarshal(record.Data, &data)
+			if data.Source == "messages" {
+				for _, operation := range data.Coverage.Operations {
+					operations[operation.Operation] = operation
+				}
+			}
+		}
+		for _, op := range contracts.MessagesOperations {
+			cap, ok := operations[op]
+			add("capability_reason_"+op, ok && cap.Proven && cap.Reason != "")
+		}
 		for _, op := range contracts.MessagesOperations {
 			d, ok := contracts.Descriptor(op)
 			add("descriptor_"+op, ok && d.Scope == "messages:write" && len(contracts.OperationSchema(d)) > 0)
 		}
-		add("permission_loss", w.ControlAction("/messages", map[string]any{"action": "permission-loss"}) == nil)
+		add("capability_unproven", w.ControlAction("/messages", map[string]any{"action": "capability-unproven"}) == nil)
 		c := command("send", map[string]any{"chat_id": chat.ID, "text": text}, 0)
 		_, err = submit(c)
-		add("unproven_rejects_without_effect", err != nil && count(c, 0))
+		problem, ok := err.(*contracts.Error)
+		add("unproven_rejects_without_effect", ok && problem.Code == "capability_unproven" && count(c, 0))
+		var after contracts.ReadResult
+		client.Call(ctx, "sources.status", struct{}{}, &after)
+		rejectedCapabilities := 0
+		for _, source := range after.Records {
+			var data struct {
+				Source   string             `json:"source"`
+				Coverage contracts.Coverage `json:"coverage"`
+			}
+			json.Unmarshal(source.Data, &data)
+			if data.Source == "messages" {
+				for _, capability := range data.Coverage.Operations {
+					if !capability.Proven && capability.Reason == "capability_unproven" {
+						rejectedCapabilities++
+					}
+				}
+			}
+		}
+		add("unproven_matrix_has_per_operation_reasons", rejectedCapabilities == len(contracts.MessagesOperations))
 	case "MSG-SEND-GHOST", "MSG-SEND-IDENTICAL-MANUAL":
 		name := "ghost-send"
 		want := contracts.CommandDeliveryFailed
@@ -149,14 +203,28 @@ func runMessagesCommands(ctx context.Context, s Scenario, level string) Evidence
 				}
 				json.Unmarshal(r.Evidence, &evidence)
 				add(protocol+"_three_part_outcomes", len(evidence.Parts) == 3)
-				add(protocol+"_attachment_blobs", len(read("messages.attachment")) >= 2)
+				attachments := read("messages.attachment")
+				add(protocol+"_attachment_records", len(attachments) >= 2)
+				for _, attachment := range attachments {
+					var data struct {
+						Name string `json:"filename"`
+					}
+					json.Unmarshal(attachment.Data, &data)
+					expected := "one"
+					if data.Name == "two.txt" {
+						expected = "two"
+					}
+					for _, endpoint := range append([]world.Endpoint{w.Gateway}, w.Replicas...) {
+						add(protocol+"_authorized_attachment_bytes", messagesAttachmentBytes(ctx, w, endpoint, attachment.ID, []byte(expected)))
+					}
+				}
 			}
 		}
 		bad := command("send", map[string]any{"handles": []string{"other@example.com"}, "service": "iMessage", "text": text}, 0)
 		_, err := submit(bad)
 		add("non_self_refused_before_effect", err != nil && count(bad, 0))
 	case "MSG-GROUP-CREATE", "MSG-GROUP-MANAGE":
-		c := command("create_group", map[string]any{"handles": []string{"self@example.com", "second-self@example.com"}, "service": "iMessage", "text": text, "name": "Bridge Test"}, 0)
+		c := command("create_group", map[string]any{"handles": []string{"self@example.com", "member1@example.com", "member2@example.com"}, "service": "iMessage", "text": text, "name": "Bridge Test"}, 0)
 		r, err := submit(c)
 		add("group_created", observed(r, err))
 		var group contracts.Record
@@ -169,14 +237,18 @@ func runMessagesCommands(ctx context.Context, s Scenario, level string) Evidence
 			for _, op := range []string{"rename_group", "add_member"} {
 				extra := map[string]any{"name": "Bridge Test renamed"}
 				if op == "add_member" {
-					extra = map[string]any{"handle": "self@example.com"}
+					extra = map[string]any{"handle": "member3@example.com"}
 				}
 				r, err := submit(target(op, group, extra))
 				add(op, observed(r, err))
 				group = record("messages.chat", group.ID)
 			}
-			r, err := submit(target("remove_member", group, map[string]any{"handle": "self@example.com"}))
-			add("remove_rejects_below_four_participants", err != nil && r.State == contracts.CommandRejected)
+			r, err := submit(target("remove_member", group, map[string]any{"handle": "member3@example.com"}))
+			add("remove_member", observed(r, err))
+			group = record("messages.chat", group.ID)
+			rejected := target("remove_member", group, map[string]any{"handle": "member2@example.com"})
+			r, err = submit(rejected)
+			add("remove_rejects_below_four_participants", err != nil && count(rejected, 0))
 			r, err = submit(target("leave_group", group, nil))
 			add("leave_group", observed(r, err))
 		}
@@ -204,11 +276,29 @@ func runMessagesCommands(ctx context.Context, s Scenario, level string) Evidence
 		case "MSG-REPLY":
 			r, err = submit(target("reply", msg, map[string]any{"text": text + " reply"}))
 			add("threaded_reply", observed(r, err))
+			linked := false
+			for _, reply := range read("messages.message") {
+				var data map[string]any
+				json.Unmarshal(reply.Data, &data)
+				if data["thread_originator_id"] == msg.ID && data["text"] == text+" reply" {
+					linked = true
+				}
+			}
+			add("reply_points_to_exact_target", linked)
 		case "MSG-REACT":
 			for _, reaction := range []string{"love", "emoji"} {
 				for _, remove := range []bool{false, true} {
 					r, err = submit(target("react", msg, map[string]any{"reaction": reaction, "emoji": "🧪", "remove": remove}))
 					add("reaction_"+reaction+fmtBool(remove), observed(r, err))
+					matched := false
+					for _, reactionRecord := range read("messages.reaction") {
+						var data map[string]any
+						json.Unmarshal(reactionRecord.Data, &data)
+						if data["message_id"] == msg.ID && data["kind"] == reaction && data["removed"] == remove && (reaction != "emoji" || data["emoji"] == "🧪") {
+							matched = true
+						}
+					}
+					add("reaction_native_fields", matched)
 				}
 			}
 		case "MSG-EDIT":
@@ -218,6 +308,13 @@ func runMessagesCommands(ctx context.Context, s Scenario, level string) Evidence
 				r, err = submit(c)
 				if i < 5 {
 					add("edit_within_limits", observed(r, err))
+					current := record("messages.message", msg.ID)
+					var data struct {
+						Text    string `json:"text"`
+						History []any  `json:"edit_history"`
+					}
+					json.Unmarshal(current.Data, &data)
+					add("edit_history_and_new_text", data.Text == text+strings.Repeat("!", i+1) && len(data.History) == i+1)
 				} else {
 					add("sixth_edit_rejected", err != nil && count(c, 0))
 				}
@@ -225,29 +322,69 @@ func runMessagesCommands(ctx context.Context, s Scenario, level string) Evidence
 		case "MSG-UNSEND":
 			r, err = submit(target("unsend", msg, nil))
 			add("unsend_within_window", observed(r, err))
+			current := record("messages.message", msg.ID)
+			var data map[string]any
+			json.Unmarshal(current.Data, &data)
+			add("native_retracted_evidence", data["retracted_at"] != nil)
 		case "MSG-MARK-READ":
 			for _, op := range []string{"mark_unread", "mark_read"} {
 				r, err = submit(target(op, chat, nil))
 				add(op, observed(r, err))
+				current := record("messages.chat", chat.ID)
+				var data map[string]any
+				json.Unmarshal(current.Data, &data)
+				add("native_chat_read_state", data["is_unread"] == (op == "mark_unread"))
 			}
 		case "MSG-DELETE":
 			r, err = submit(target("delete_message", msg, nil))
-			add("delete_message_complete_scan", observed(r, err))
+			add("delete_message_complete_scan", observed(r, err) && record("messages.message", msg.ID).ID == "")
 			chat = record("messages.chat", chat.ID)
 			r, err = submit(target("delete_chat", chat, nil))
-			add("delete_chat_complete_scan", observed(r, err))
+			add("delete_chat_complete_scan", observed(r, err) && record("messages.chat", chat.ID).ID == "")
 		case "MSG-UI-INTERFERENCE":
 			for _, name := range []string{"ui-interference-before", "ui-interference"} {
 				fault(name)
 				c := target("reply", msg, map[string]any{"text": text})
 				r, err = submit(c)
 				if name == "ui-interference-before" {
-					add(name, err != nil && r.State == contracts.CommandRejected && count(c, 0))
+					var status contracts.CommandRecord
+					client.Call(ctx, "commands.status", contracts.CommandQuery{ID: c.ID}, &status)
+					add(name, err != nil && status.State == contracts.CommandRejected && count(c, 0))
 				} else {
 					add(name, err == nil && r.State == contracts.CommandIndeterminate && count(c, 0))
 				}
 			}
 		}
+	}
+
+	if s.ID == "MSG-EDIT" || s.ID == "MSG-UNSEND" {
+		r, err := send()
+		add("window_target_created", observed(r, err))
+		var proof struct {
+			NativeKey string `json:"native_key"`
+		}
+		json.Unmarshal(r.Evidence, &proof)
+		aliases, _ := gatewayAliases(w)
+		id := aliases[aliasKey(contracts.Messages, "messages.message", proof.NativeKey)]
+		fresh := record("messages.message", id)
+		op := "edit"
+		age := 16 * time.Minute
+		if s.ID == "MSG-UNSEND" {
+			op = "unsend"
+			age = 3 * time.Minute
+		}
+		old := mutateTarget(fresh, map[string]any{"sent_at": time.Now().Add(-age).UTC()})
+		extra := map[string]any{}
+		if op == "edit" {
+			extra["text"] = text + " outside window"
+		}
+		c := target(op, old, extra)
+		_, err = submit(c)
+		add("outside_apple_window_rejected_before_effect", err != nil && count(c, 0))
+		incoming := mutateTarget(fresh, map[string]any{"sent_at": time.Now().UTC(), "is_from_me": false})
+		c = target(op, incoming, extra)
+		_, err = submit(c)
+		add("incoming_edit_unsend_rejected_before_effect", err != nil && count(c, 0))
 	}
 	add("truth_and_replica_convergence", w.Await(10*time.Second, func() bool { return convergence(w) }) == nil)
 	e.Passed = len(e.Assertions) > 0

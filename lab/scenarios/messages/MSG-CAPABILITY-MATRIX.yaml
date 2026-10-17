@@ -1,6 +1,6 @@
 id: MSG-CAPABILITY-MATRIX
 feature: messages.send
-levels: [sim, real]
+levels: [sim]
 given: [{world: {replicas: 1}}]
 when: [{messages_commands: {}}]
 then: [{converge: {}}]

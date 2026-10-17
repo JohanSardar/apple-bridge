@@ -469,11 +469,17 @@ public actor Messages: Source {
             if let row=try reader.message(part["native_key"].string) {try await emitMessages([row],sink:sink,live:true)}
         }
         if let row=try reader.message(evidence["native_key"].string) {try await emitMessages([row],sink:sink,live:true)}
+        else if evidence["absent"].bool {
+            let at=observationTime()
+            let absent=try observation("messages.message",evidence["native_key"].string,[:],at,kind:"absent")
+            try await sink.emit(source:name,generation:generation,observations:[absent],scanID:UUID().uuidString,scanStartedAt:at,scope:["messages.message"],completionEvidence:"complete",blobHandles:[:],live:true)
+        }
         for part in evidence["parts"].array {
             let attachments = try reader.query("SELECT a.guid FROM attachment a JOIN message_attachment_join j ON j.attachment_id=a.ROWID JOIN message m ON m.ROWID=j.message_id WHERE m.guid=?",[part["native_key"].string])
             for attachment in attachments {try await emit(try reader.attachmentObservations(guid:attachment["guid"]),sink:sink,live:true)}
         }
     }
+    public func validate(_ prepared: Prepared) async throws {try await commands.validate(prepared)}
     public func readBlob(handle: String, offset: Int64, length: Int) throws -> JSON {
         do {
             let bytes = try readBlobBytes(handle: handle, offset: offset, length: length)

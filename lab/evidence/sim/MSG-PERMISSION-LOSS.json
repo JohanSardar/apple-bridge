@@ -3,35 +3,35 @@
     "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
     "start": {
       "air": {
-        "at": "2026-10-17T19:27:36.32633Z",
+        "at": "2026-10-17T19:57:53.740062Z",
         "cpu_count": 8,
         "load_average": [
-          3.83,
-          4.9,
-          6.28
+          4.43,
+          7.44,
+          6.42
         ],
-        "cpu_idle_percent": 78,
-        "free_memory_bytes": 122552320,
+        "cpu_idle_percent": 73,
+        "free_memory_bytes": 95027200,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 4,
+        "heavy_queue_length": 1,
         "quiet": false
       }
     },
     "end": {
       "air": {
-        "at": "2026-10-17T19:27:38.093413Z",
+        "at": "2026-10-17T19:57:55.386486Z",
         "cpu_count": 8,
         "load_average": [
-          4.48,
-          5.01,
-          6.32
+          4.43,
+          7.44,
+          6.42
         ],
-        "cpu_idle_percent": 72,
-        "free_memory_bytes": 133595136,
+        "cpu_idle_percent": 70,
+        "free_memory_bytes": 125435904,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 4,
+        "heavy_queue_length": 1,
         "quiet": false
       }
     },
@@ -40,12 +40,12 @@
     "quiet_wait_ms": 0,
     "quiet_wait_expired": false
   },
-  "run_id": "run_01M55NB0EG6M5SGA0VP5KM7ACG",
+  "run_id": "run_01M55Q2F8BF5QTWSC6E8V5N0JR",
   "scenario": "MSG-PERMISSION-LOSS",
   "level": "sim",
   "passed": true,
-  "git_sha": "cd84c01ae2198a3a0a59792c12b628801a31a634",
-  "at": "2026-10-17T19:27:37.424898Z",
+  "git_sha": "97a52acc42d386fffeb9c2ffaab4d1be5141f22e",
+  "at": "2026-10-17T19:57:54.827503Z",
   "assertions": [
     {
       "name": "seed",

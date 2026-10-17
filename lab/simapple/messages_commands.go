@@ -36,12 +36,24 @@ func (f *fakeApple) isMessageCommand(frame contracts.IPCFrame) bool {
 	return e.Source == "messages"
 }
 func messageProblem(code string) *contracts.Error { return &contracts.Error{Code: code, Message: code} }
+func simGroupHandle(handle string) bool {
+	return handle == "self@example.com" || handle == "second-self@example.com" || handle == "member1@example.com" || handle == "member2@example.com" || handle == "member3@example.com"
+}
+func simHandleKey(handle string) string {
+	if handle == "self@example.com" {
+		return "message-self"
+	}
+	if handle == "second-self@example.com" {
+		return "message-self-email"
+	}
+	return "synthetic-" + strings.Split(handle, "@")[0]
+}
 func (f *fakeApple) messageValidate(a contracts.NativeAction) *contracts.Error {
 	m := a.Messages
 	if m == nil {
 		return contracts.ErrInvalid
 	}
-	if !f.messages.permitted {
+	if !f.messages.permitted || f.messages.capabilityUnproven {
 		return messageProblem("capability_unproven")
 	}
 	if m.Text != "" && (!strings.Contains(m.Text, "[ab-test ") || !strings.Contains(m.Text, "]")) {
@@ -49,12 +61,12 @@ func (f *fakeApple) messageValidate(a contracts.NativeAction) *contracts.Error {
 	}
 	if a.Op == "messages.send" || a.Op == "messages.create_group" {
 		for _, h := range m.Handles {
-			if h != "self@example.com" && h != "second-self@example.com" {
+			if h != "self@example.com" && h != "second-self@example.com" && (a.Op != "messages.create_group" || !simGroupHandle(h)) {
 				return contracts.ErrUnauthorized
 			}
 		}
 	}
-	if m.Handle != "" && m.Handle != "self@example.com" && m.Handle != "second-self@example.com" {
+	if m.Handle != "" && !simGroupHandle(m.Handle) {
 		return contracts.ErrUnauthorized
 	}
 	var data map[string]any
@@ -89,6 +101,11 @@ func (f *fakeApple) messageValidate(a contracts.NativeAction) *contracts.Error {
 		var c map[string]any
 		json.Unmarshal(o.Data, &c)
 		service, _ = c["service"].(string)
+		if a.Op == "messages.add_member" || a.Op == "messages.remove_member" || a.Op == "messages.rename_group" || a.Op == "messages.leave_group" {
+			if c["style"] != "group" {
+				return contracts.ErrUnsupported
+			}
+		}
 		raw, _ := json.Marshal(c["participants"])
 		var peers []struct {
 			Ref struct {
@@ -97,7 +114,7 @@ func (f *fakeApple) messageValidate(a contracts.NativeAction) *contracts.Error {
 		}
 		json.Unmarshal(raw, &peers)
 		for _, p := range peers {
-			if p.Ref.NativeKey != "message-self" && p.Ref.NativeKey != "message-self-email" {
+			if p.Ref.NativeKey != "message-self" && p.Ref.NativeKey != "message-self-email" && (a.Op == "messages.send" || a.Op == "messages.reply") {
 				return contracts.ErrUnauthorized
 			}
 		}
@@ -162,6 +179,17 @@ func (f *fakeApple) messageCommand(wire *applepeer.Wire, frame contracts.IPCFram
 			return reject(contracts.ErrConflict)
 		}
 		before := f.records[a.NativeKey].Data
+		if a.NativeKey != "" && len(frame.ExpectedState) > 0 {
+			var expected, native map[string]any
+			json.Unmarshal(frame.ExpectedState, &expected)
+			json.Unmarshal(before, &native)
+			for _, field := range []string{"text", "sent_at", "is_from_me", "edit_history", "retracted_parts", "display_name", "service"} {
+				if value, ok := expected[field]; ok && !reflect.DeepEqual(value, native[field]) {
+					f.mu.Unlock()
+					return reject(contracts.ErrConflict)
+				}
+			}
+		}
 		for key, t := range f.tickets {
 			if time.Now().After(t.Expires) {
 				delete(f.tickets, key)
@@ -254,10 +282,7 @@ func (f *fakeApple) messageCommand(wire *applepeer.Wire, frame contracts.IPCFram
 				}
 				peers := []any{}
 				for _, h := range m.Handles {
-					handle := "message-self"
-					if h == "second-self@example.com" {
-						handle = "message-self-email"
-					}
+					handle := simHandleKey(h)
 					put("handle", handle, map[string]any{"address": h, "service": m.Service}, false)
 					peers = append(peers, messageReference("handle", handle))
 				}
@@ -335,9 +360,9 @@ func (f *fakeApple) messageCommand(wire *applepeer.Wire, frame contracts.IPCFram
 			put(collection, native, data, false)
 		case "messages.add_member", "messages.remove_member":
 			peers, _ := data["participants"].([]any)
-			handle := "message-self-email"
-			if m.Handle == "self@example.com" {
-				handle = "message-self"
+			handle := simHandleKey(m.Handle)
+			if a.Op == "messages.add_member" {
+				put("handle", handle, map[string]any{"address": m.Handle, "service": "iMessage"}, false)
 			}
 			if a.Op == "messages.add_member" {
 				peers = append(peers, messageReference("handle", handle))
@@ -375,7 +400,7 @@ func (f *fakeApple) messageCommand(wire *applepeer.Wire, frame contracts.IPCFram
 		if err != nil {
 			return err
 		}
-		capture := contracts.Capture{Source: contracts.Messages, Observations: observations}
+		capture := contracts.Capture{Source: contracts.Messages, Observations: observations, BlobHandles: f.blobHandles()}
 		if strings.HasPrefix(a.Op, "messages.delete_") {
 			capture = fullScanSource(observations, contracts.Messages)
 		}

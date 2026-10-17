@@ -1,0 +1,199 @@
+{
+  "host_conditions": {
+    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "start": {
+      "air": {
+        "at": "2026-10-17T19:57:17.696865Z",
+        "cpu_count": 8,
+        "load_average": [
+          5.55,
+          7.98,
+          6.56
+        ],
+        "cpu_idle_percent": 71,
+        "free_memory_bytes": 160874496,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 0,
+        "quiet": false
+      }
+    },
+    "end": {
+      "air": {
+        "at": "2026-10-17T19:57:19.343066Z",
+        "cpu_count": 8,
+        "load_average": [
+          5.55,
+          7.98,
+          6.56
+        ],
+        "cpu_idle_percent": 58,
+        "free_memory_bytes": 100990976,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 0,
+        "quiet": false
+      }
+    },
+    "quiet": false,
+    "require_quiet": false,
+    "quiet_wait_ms": 0,
+    "quiet_wait_expired": false
+  },
+  "run_id": "run_01M55Q1C1QJHYZ9Y3TFQX6E1NW",
+  "scenario": "MSG-CAPABILITY-MATRIX",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "97a52acc42d386fffeb9c2ffaab4d1be5141f22e",
+  "at": "2026-10-17T19:57:18.775423Z",
+  "assertions": [
+    {
+      "name": "seed_self_chat",
+      "passed": true
+    },
+    {
+      "name": "fixture_captured",
+      "passed": true
+    },
+    {
+      "name": "status_available",
+      "passed": true
+    },
+    {
+      "name": "capability_reason_messages.send",
+      "passed": true
+    },
+    {
+      "name": "capability_reason_messages.reply",
+      "passed": true
+    },
+    {
+      "name": "capability_reason_messages.react",
+      "passed": true
+    },
+    {
+      "name": "capability_reason_messages.edit",
+      "passed": true
+    },
+    {
+      "name": "capability_reason_messages.unsend",
+      "passed": true
+    },
+    {
+      "name": "capability_reason_messages.mark_read",
+      "passed": true
+    },
+    {
+      "name": "capability_reason_messages.mark_unread",
+      "passed": true
+    },
+    {
+      "name": "capability_reason_messages.delete_message",
+      "passed": true
+    },
+    {
+      "name": "capability_reason_messages.delete_chat",
+      "passed": true
+    },
+    {
+      "name": "capability_reason_messages.create_group",
+      "passed": true
+    },
+    {
+      "name": "capability_reason_messages.rename_group",
+      "passed": true
+    },
+    {
+      "name": "capability_reason_messages.add_member",
+      "passed": true
+    },
+    {
+      "name": "capability_reason_messages.remove_member",
+      "passed": true
+    },
+    {
+      "name": "capability_reason_messages.leave_group",
+      "passed": true
+    },
+    {
+      "name": "descriptor_messages.send",
+      "passed": true
+    },
+    {
+      "name": "descriptor_messages.reply",
+      "passed": true
+    },
+    {
+      "name": "descriptor_messages.react",
+      "passed": true
+    },
+    {
+      "name": "descriptor_messages.edit",
+      "passed": true
+    },
+    {
+      "name": "descriptor_messages.unsend",
+      "passed": true
+    },
+    {
+      "name": "descriptor_messages.mark_read",
+      "passed": true
+    },
+    {
+      "name": "descriptor_messages.mark_unread",
+      "passed": true
+    },
+    {
+      "name": "descriptor_messages.delete_message",
+      "passed": true
+    },
+    {
+      "name": "descriptor_messages.delete_chat",
+      "passed": true
+    },
+    {
+      "name": "descriptor_messages.create_group",
+      "passed": true
+    },
+    {
+      "name": "descriptor_messages.rename_group",
+      "passed": true
+    },
+    {
+      "name": "descriptor_messages.add_member",
+      "passed": true
+    },
+    {
+      "name": "descriptor_messages.remove_member",
+      "passed": true
+    },
+    {
+      "name": "descriptor_messages.leave_group",
+      "passed": true
+    },
+    {
+      "name": "capability_unproven",
+      "passed": true
+    },
+    {
+      "name": "unproven_rejects_without_effect",
+      "passed": true
+    },
+    {
+      "name": "unproven_matrix_has_per_operation_reasons",
+      "passed": true
+    },
+    {
+      "name": "truth_and_replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

@@ -1,0 +1,83 @@
+{
+  "host_conditions": {
+    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "start": {
+      "air": {
+        "at": "2026-10-17T19:58:01.715608Z",
+        "cpu_count": 8,
+        "load_average": [
+          4.14,
+          7.28,
+          6.38
+        ],
+        "cpu_idle_percent": 72,
+        "free_memory_bytes": 116178944,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 1,
+        "quiet": false
+      }
+    },
+    "end": {
+      "air": {
+        "at": "2026-10-17T19:58:03.203979Z",
+        "cpu_count": 8,
+        "load_average": [
+          4.14,
+          7.28,
+          6.38
+        ],
+        "cpu_idle_percent": 81,
+        "free_memory_bytes": 102858752,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 1,
+        "quiet": false
+      }
+    },
+    "quiet": false,
+    "require_quiet": false,
+    "quiet_wait_ms": 0,
+    "quiet_wait_expired": false
+  },
+  "run_id": "run_01M55Q2Q1M40PWYFDYD0QA0B8E",
+  "scenario": "MSG-REPLY",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "97a52acc42d386fffeb9c2ffaab4d1be5141f22e",
+  "at": "2026-10-17T19:58:02.805001Z",
+  "assertions": [
+    {
+      "name": "seed_self_chat",
+      "passed": true
+    },
+    {
+      "name": "fixture_captured",
+      "passed": true
+    },
+    {
+      "name": "target_created",
+      "passed": true
+    },
+    {
+      "name": "threaded_reply",
+      "passed": true
+    },
+    {
+      "name": "reply_points_to_exact_target",
+      "passed": true
+    },
+    {
+      "name": "truth_and_replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

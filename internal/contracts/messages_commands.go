@@ -2,7 +2,9 @@ package contracts
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
+	"path/filepath"
 	"strings"
 )
 
@@ -68,9 +70,15 @@ func ValidateMessagesCommand(c Command) (MessagesArgs, error) {
 	if a.PartIndex < 0 || len(a.Files) > 16 || len(a.Text) > 65536 {
 		return a, ErrInvalid
 	}
+	for _, file := range a.Files {
+		data, err := base64.StdEncoding.DecodeString(file.Data)
+		if err != nil || len(data) > 131072 || file.Name == "" || file.Name == "." || file.Name == ".." || filepath.Base(file.Name) != file.Name {
+			return a, ErrInvalid
+		}
+	}
 	switch c.Op {
 	case "messages.send":
-		if (a.ChatID == "") == (len(a.Handles) == 0) || a.Text == "" && len(a.Files) == 0 || c.ExpectedVersion != 0 {
+		if a.ChatID != "" && a.Service != "" || (a.ChatID == "") == (len(a.Handles) == 0) || a.Text == "" && len(a.Files) == 0 || c.ExpectedVersion != 0 {
 			return a, ErrInvalid
 		}
 		if len(a.Handles) > 0 && (len(a.Handles) != 1 || a.Service != "iMessage" && a.Service != "SMS" && a.Service != "RCS") {

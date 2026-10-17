@@ -93,11 +93,9 @@ public enum MessagesProbes {
         var routes: [(name: String, script: String)] = []
         if let rawGUID {
             routes.append(("chat_id_raw", sendToChat(rawGUID)))
-            if rawGUID.hasPrefix("any;-;") {
-                routes.append(("chat_id_imessage_normalized", sendToChat("iMessage;-;" + rawGUID.dropFirst(6))))
-            }
+        } else {
+            routes.append(("imessage_buddy", sendToBuddy))
         }
-        routes.append(("imessage_buddy", sendToBuddy))
         var attempts: [[String: Any]] = []
         var scriptError: Int = 0
         var routeUsed = "none"

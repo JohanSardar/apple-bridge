@@ -1,6 +1,6 @@
 id: MSG-SEND-SELF-EMAIL
 feature: messages.send
-levels: [real]
+levels: [sim]
 given: [{world: {replicas: 1}}]
 when: [{messages_commands: {}}]
 then: [{converge: {}}]

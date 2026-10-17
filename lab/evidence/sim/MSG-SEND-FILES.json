@@ -1,0 +1,130 @@
+{
+  "host_conditions": {
+    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "start": {
+      "air": {
+        "at": "2026-10-17T19:58:04.248907Z",
+        "cpu_count": 8,
+        "load_average": [
+          4.14,
+          7.28,
+          6.38
+        ],
+        "cpu_idle_percent": 80,
+        "free_memory_bytes": 86654976,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 1,
+        "quiet": false
+      }
+    },
+    "end": {
+      "air": {
+        "at": "2026-10-17T19:58:05.911766Z",
+        "cpu_count": 8,
+        "load_average": [
+          4.14,
+          7.28,
+          6.38
+        ],
+        "cpu_idle_percent": 84,
+        "free_memory_bytes": 238174208,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 1,
+        "quiet": false
+      }
+    },
+    "quiet": false,
+    "require_quiet": false,
+    "quiet_wait_ms": 0,
+    "quiet_wait_expired": false
+  },
+  "run_id": "run_01M55Q2SGWE3KAHBNDV8PAR1VJ",
+  "scenario": "MSG-SEND-FILES",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "97a52acc42d386fffeb9c2ffaab4d1be5141f22e",
+  "at": "2026-10-17T19:58:05.34006Z",
+  "assertions": [
+    {
+      "name": "seed_self_chat",
+      "passed": true
+    },
+    {
+      "name": "fixture_captured",
+      "passed": true
+    },
+    {
+      "name": "rest_locally_observed_with_checkpoint",
+      "passed": true
+    },
+    {
+      "name": "rest_delivered_only_after_native_evidence",
+      "passed": true
+    },
+    {
+      "name": "rest_replica_converges",
+      "passed": true
+    },
+    {
+      "name": "rest_three_part_outcomes",
+      "passed": true
+    },
+    {
+      "name": "rest_attachment_blobs",
+      "passed": true
+    },
+    {
+      "name": "mcp_locally_observed_with_checkpoint",
+      "passed": true
+    },
+    {
+      "name": "mcp_delivered_only_after_native_evidence",
+      "passed": true
+    },
+    {
+      "name": "mcp_replica_converges",
+      "passed": true
+    },
+    {
+      "name": "mcp_three_part_outcomes",
+      "passed": true
+    },
+    {
+      "name": "mcp_attachment_blobs",
+      "passed": true
+    },
+    {
+      "name": "non_self_refused_before_effect",
+      "passed": true
+    },
+    {
+      "name": "truth_and_replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "mcp_command_to_replica": {
+      "samples": 1,
+      "p50_ms": 137.162834,
+      "p95_ms": 137.162834,
+      "max_ms": 137.162834,
+      "timeouts": 0
+    },
+    "rest_command_to_replica": {
+      "samples": 1,
+      "p50_ms": 86.947333,
+      "p95_ms": 86.947333,
+      "max_ms": 86.947333,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

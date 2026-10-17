@@ -12,17 +12,18 @@ import (
 )
 
 type messageState struct {
-	generation   string
-	watcherArmed bool
-	pollPending  bool
-	bulkTarget   string
-	bulkPaused   bool
-	bulkBlocked  bool
-	permitted    bool
-	captureCount int
-	captureAckMS float64
-	captureBytes int
-	creditWaits  int
+	capabilityUnproven bool
+	generation         string
+	watcherArmed       bool
+	pollPending        bool
+	bulkTarget         string
+	bulkPaused         bool
+	bulkBlocked        bool
+	permitted          bool
+	captureCount       int
+	captureAckMS       float64
+	captureBytes       int
+	creditWaits        int
 }
 
 func messageReference(collection, key string) map[string]any {
@@ -141,6 +142,14 @@ func (f *fakeApple) messageRoutes(mux *http.ServeMux) {
 					}
 				}
 			}
+		case "capability-unproven":
+			f.messages.capabilityUnproven = true
+			coverage := messageCoverage()
+			for i := range coverage.Operations {
+				coverage.Operations[i].Proven = false
+				coverage.Operations[i].Reason = "capability_unproven"
+			}
+			sourceState = &contracts.IPCFrame{T: "SourceState", Source: contracts.Messages, State: "ready", Coverage: map[contracts.Source]contracts.Coverage{contracts.Messages: coverage}, Capabilities: map[contracts.Source][]string{contracts.Messages: {}}, Reason: "capability_unproven"}
 		case "permission-loss", "permission-restore":
 			f.messages.permitted = action.Action == "permission-restore"
 			state := "permission_missing"

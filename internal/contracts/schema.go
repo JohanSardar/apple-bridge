@@ -106,6 +106,32 @@ func OperationSchema(d OperationDescriptor) map[string]any {
 				required = []string{"id"}
 			}
 		}
+		if d.Source == Messages {
+			switch d.Name {
+			case "messages.reply", "messages.edit":
+				required = []string{"id", "text"}
+			case "messages.react":
+				required = []string{"id", "reaction"}
+			case "messages.create_group":
+				required = []string{"handles", "service", "text"}
+			}
+			if service, ok := fields["service"].(map[string]any); ok {
+				service["enum"] = []string{"iMessage", "SMS", "RCS"}
+			}
+			if reaction, ok := fields["reaction"].(map[string]any); ok {
+				reaction["enum"] = []string{"love", "like", "dislike", "laugh", "emphasize", "question", "emoji"}
+			}
+			if part, ok := fields["part_index"].(map[string]any); ok {
+				part["minimum"] = 0
+			}
+			if d.Name == "messages.send" {
+				args["oneOf"] = []any{map[string]any{"required": []string{"chat_id"}}, map[string]any{"required": []string{"handles", "service"}}}
+				args["anyOf"] = []any{map[string]any{"required": []string{"text"}}, map[string]any{"required": []string{"files"}}}
+			}
+			if d.Name == "messages.edit" || d.Name == "messages.unsend" || strings.HasPrefix(d.Name, "messages.delete_") {
+				s["required"] = []string{"args", "expected_version"}
+			}
+		}
 		args["required"] = required
 		properties["args"] = args
 		if d.Source != Messages && d.Name != "reminders.create" && d.Name != "reminders.create_list" && d.Name != "calendar.create_event" && d.Name != "calendar.create_calendar" {

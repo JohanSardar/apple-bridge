@@ -1,0 +1,147 @@
+{
+  "host_conditions": {
+    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "start": {
+      "air": {
+        "at": "2026-10-17T19:57:33.775683Z",
+        "cpu_count": 8,
+        "load_average": [
+          5.11,
+          7.77,
+          6.51
+        ],
+        "cpu_idle_percent": 82,
+        "free_memory_bytes": 331431936,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 1,
+        "quiet": false
+      }
+    },
+    "end": {
+      "air": {
+        "at": "2026-10-17T19:57:35.618934Z",
+        "cpu_count": 8,
+        "load_average": [
+          5.11,
+          7.77,
+          6.51
+        ],
+        "cpu_idle_percent": 65,
+        "free_memory_bytes": 255066112,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 1,
+        "quiet": false
+      }
+    },
+    "quiet": false,
+    "require_quiet": false,
+    "quiet_wait_ms": 0,
+    "quiet_wait_expired": false
+  },
+  "run_id": "run_01M55Q1VRKG1NGEM7EHMR53QJE",
+  "scenario": "MSG-EDIT",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "97a52acc42d386fffeb9c2ffaab4d1be5141f22e",
+  "at": "2026-10-17T19:57:34.867935Z",
+  "assertions": [
+    {
+      "name": "seed_self_chat",
+      "passed": true
+    },
+    {
+      "name": "fixture_captured",
+      "passed": true
+    },
+    {
+      "name": "target_created",
+      "passed": true
+    },
+    {
+      "name": "edit_within_limits",
+      "passed": true
+    },
+    {
+      "name": "edit_history_and_new_text",
+      "passed": true
+    },
+    {
+      "name": "edit_within_limits",
+      "passed": true
+    },
+    {
+      "name": "edit_history_and_new_text",
+      "passed": true
+    },
+    {
+      "name": "edit_within_limits",
+      "passed": true
+    },
+    {
+      "name": "edit_history_and_new_text",
+      "passed": true
+    },
+    {
+      "name": "edit_within_limits",
+      "passed": true
+    },
+    {
+      "name": "edit_history_and_new_text",
+      "passed": true
+    },
+    {
+      "name": "edit_within_limits",
+      "passed": true
+    },
+    {
+      "name": "edit_history_and_new_text",
+      "passed": true
+    },
+    {
+      "name": "sixth_edit_rejected",
+      "passed": true
+    },
+    {
+      "name": "window_target_created",
+      "passed": true
+    },
+    {
+      "name": "external_native_mutation",
+      "passed": true
+    },
+    {
+      "name": "native_mutation_captured",
+      "passed": true
+    },
+    {
+      "name": "outside_apple_window_rejected_before_effect",
+      "passed": true
+    },
+    {
+      "name": "external_native_mutation",
+      "passed": true
+    },
+    {
+      "name": "native_mutation_captured",
+      "passed": true
+    },
+    {
+      "name": "incoming_edit_unsend_rejected_before_effect",
+      "passed": true
+    },
+    {
+      "name": "truth_and_replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

@@ -405,7 +405,7 @@ let operation=outcome["evidence"]["prepared"]["action"]["op"].string
  let evidence = operation.hasPrefix("contacts.") ? await contacts.resolve(id,evidence:saved) : operation.hasPrefix("calendar.") ? await calendar.resolve(id,evidence:saved) : await selected.resolve(id, evidence: saved)
                 if evidence["observed"].bool {
                     let committed = try await observedEvidence(evidence, fingerprint: outcome["evidence"]["prepared"]["request_hash"], operation: operation)
-                    outcome = .object(["t": .string("Outcome"), "command_id": .string(id), "disposition": .string("locally_observed"), "evidence": committed])
+                    outcome = .object(["t": .string("Outcome"), "command_id": .string(id), "disposition": evidence["disposition"].string.isEmpty ? .string("locally_observed") : evidence["disposition"], "evidence": committed])
                     try await guardLog.append(outcome)
                 } else {
                     var unresolved = outcome.object
@@ -483,7 +483,7 @@ let operation=outcome["evidence"]["prepared"]["action"]["op"].string
         do {
             guard frame["command_id"] == id, frame["owner_fence"].unsigned == fence, ticket.fence == fence, ContinuousClock.now < ticket.expiry else { throw SourceFailure.expired }
             let selected=additionalSources[ticket.prepared.action["op"].string.components(separatedBy: ".").first ?? ""] ?? source
- if ticket.prepared.action["op"].string.hasPrefix("notes."), let notes=additionalSources["notes"] as? NotesSource { try await notes.validate(ticket.prepared) } else if ticket.prepared.action["op"].string.hasPrefix("contacts.") {try await contacts.validate(ticket.prepared)} else if ticket.prepared.action["op"].string.hasPrefix("calendar.") {try await calendar.validate(ticket.prepared)} else if selected.name == "reminders" { try await source.validate(ticket.prepared) }
+ if ticket.prepared.action["op"].string.hasPrefix("notes."), let notes=additionalSources["notes"] as? NotesSource { try await notes.validate(ticket.prepared) } else if ticket.prepared.action["op"].string.hasPrefix("contacts.") {try await contacts.validate(ticket.prepared)} else if ticket.prepared.action["op"].string.hasPrefix("calendar.") {try await calendar.validate(ticket.prepared)} else if selected.name == "reminders" { try await source.validate(ticket.prepared) } else if let messages=selected as? Messages {try await messages.validate(ticket.prepared)}
             try Task.checkCancellation()
             guard ticket.fence == fence, ContinuousClock.now < ticket.expiry, wire != nil else { throw SourceFailure.expired }
             try await guardLog.append(.object(["t": .string("DispatchStarted"), "command_id": id, "ticket": frame["ticket"], "started_at": .string(timestamp()), "prepared": .object(["action": ticket.prepared.action, "native_state": ticket.prepared.nativeState, "fingerprint": .string(ticket.prepared.fingerprint), "request_hash": ticket.command["request_hash"]])]))
@@ -498,6 +498,10 @@ let operation=outcome["evidence"]["prepared"]["action"]["op"].string
             let evidence = refetched["observed"].bool ? try await observedEvidence(.object(retained), fingerprint: ticket.command["request_hash"], operation:ticket.prepared.action["op"].string) : .object(retained)
             let outcome = JSON.object(["t": .string("Outcome"), "command_id": id, "disposition": refetched["disposition"].string.isEmpty ? .string("locally_observed") : refetched["disposition"], "evidence": evidence])
             try await guardLog.append(outcome)
+            if selected.name == "messages" {
+                let readiness=await selected.open()
+                try await sourceState(source:"messages",state:readiness.state,coverage:readiness.coverage,capabilities:readiness.capabilities,reason:readiness.reason)
+            }
             try wire?.send(outcome)
         } catch {
             if started {

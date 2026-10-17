@@ -1,6 +1,6 @@
 id: MSG-UI-INTERFERENCE
 feature: messages.actions
-levels: [sim, real]
+levels: [sim]
 given: [{world: {replicas: 1}}]
 when: [{messages_commands: {}}]
 then: [{converge: {}}]

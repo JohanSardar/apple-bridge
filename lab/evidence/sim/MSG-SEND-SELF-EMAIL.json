@@ -1,0 +1,114 @@
+{
+  "host_conditions": {
+    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "start": {
+      "air": {
+        "at": "2026-10-17T19:58:14.550023Z",
+        "cpu_count": 8,
+        "load_average": [
+          3.89,
+          7.12,
+          6.33
+        ],
+        "cpu_idle_percent": 80,
+        "free_memory_bytes": 58556416,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 1,
+        "quiet": false
+      }
+    },
+    "end": {
+      "air": {
+        "at": "2026-10-17T19:58:16.072213Z",
+        "cpu_count": 8,
+        "load_average": [
+          3.89,
+          7.12,
+          6.33
+        ],
+        "cpu_idle_percent": 78,
+        "free_memory_bytes": 111181824,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 1,
+        "quiet": false
+      }
+    },
+    "quiet": false,
+    "require_quiet": false,
+    "quiet_wait_ms": 0,
+    "quiet_wait_expired": false
+  },
+  "run_id": "run_01M55Q33JX4RDTHFD82S0J8K5E",
+  "scenario": "MSG-SEND-SELF-EMAIL",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "97a52acc42d386fffeb9c2ffaab4d1be5141f22e",
+  "at": "2026-10-17T19:58:15.645158Z",
+  "assertions": [
+    {
+      "name": "seed_self_chat",
+      "passed": true
+    },
+    {
+      "name": "fixture_captured",
+      "passed": true
+    },
+    {
+      "name": "rest_locally_observed_with_checkpoint",
+      "passed": true
+    },
+    {
+      "name": "rest_delivered_only_after_native_evidence",
+      "passed": true
+    },
+    {
+      "name": "rest_replica_converges",
+      "passed": true
+    },
+    {
+      "name": "mcp_locally_observed_with_checkpoint",
+      "passed": true
+    },
+    {
+      "name": "mcp_delivered_only_after_native_evidence",
+      "passed": true
+    },
+    {
+      "name": "mcp_replica_converges",
+      "passed": true
+    },
+    {
+      "name": "non_self_refused_before_effect",
+      "passed": true
+    },
+    {
+      "name": "truth_and_replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "mcp_command_to_replica": {
+      "samples": 1,
+      "p50_ms": 58.566917,
+      "p95_ms": 58.566917,
+      "max_ms": 58.566917,
+      "timeouts": 0
+    },
+    "rest_command_to_replica": {
+      "samples": 1,
+      "p50_ms": 46.584125,
+      "p95_ms": 46.584125,
+      "max_ms": 46.584125,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

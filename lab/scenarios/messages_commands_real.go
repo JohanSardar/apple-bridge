@@ -110,7 +110,7 @@ func runNativeMessagesCommands(ctx context.Context, s Scenario, level string, e 
 	go func() {
 		for watchCtx.Err() == nil {
 			var guid string
-			err := native.QueryRowContext(watchCtx, "SELECT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE m.ROWID>? AND m.is_from_me=0 AND c.guid=? ORDER BY m.ROWID LIMIT 1", maximum, rawChat).Scan(&guid)
+			err := native.QueryRowContext(watchCtx, "SELECT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE m.ROWID>? AND m.is_from_me=0 AND c.guid=? AND (m.text=? OR instr(m.attributedBody,CAST(? AS BLOB))>0) ORDER BY m.ROWID LIMIT 1", maximum, rawChat, text, text).Scan(&guid)
 			if err == nil {
 				echoes <- seen{time.Now(), guid}
 				return
@@ -122,6 +122,17 @@ func runNativeMessagesCommands(ctx context.Context, s Scenario, level string, e 
 			}
 		}
 	}()
+	endpoints := append([]world.Endpoint{w.Gateway}, w.Replicas...)
+	observers := []*watcher{}
+	for _, endpoint := range endpoints {
+		observer, err := watch(ctx, endpoint, false, func(contracts.Record) bool { return true })
+		if err != nil {
+			add("sse_observer_ready", false)
+			return e
+		}
+		observers = append(observers, observer)
+		defer observer.close()
+	}
 	started := time.Now()
 	var outcome contracts.CommandRecord
 	err = client.Call(ctx, c.Op, c, &outcome)
@@ -171,15 +182,20 @@ func runNativeMessagesCommands(ctx context.Context, s Scenario, level string, e 
 			add("truth_native_part", err == nil && count == 1)
 		}
 	}
-	endpoints := append([]world.Endpoint{w.Gateway}, w.Replicas...)
+	var messageID string
+	stateDB.QueryRowContext(ctx, "SELECT record_id FROM aliases WHERE collection='messages.message' AND native_key=? LIMIT 1", evidence.NativeKey).Scan(&messageID)
 	for i, endpoint := range endpoints {
 		visible := w.Await(5*time.Second, func() bool {
 			var result contracts.ReadResult
-			err := (scripted.Client{Endpoint: endpoint}).Call(ctx, "records.query", contracts.ReadQuery{Collection: "messages.message", Where: map[string]any{"text": text}, Limit: 100}, &result)
+			err := (scripted.Client{Endpoint: endpoint}).Call(ctx, "records.get", contracts.ReadQuery{Collection: "messages.message", ID: messageID, Limit: 1}, &result)
 			return err == nil && len(result.Records) > 0
 		}) == nil
 		add("command_visible_"+string(rune('0'+i)), visible)
-		e.Latency["command_submit_to_visible_"+string(rune('0'+i))] = stats([]float64{float64(time.Since(started)) / float64(time.Millisecond)}, 0)
+		at, ok := messagesObservedAt(observers[i], text, true)
+		add("command_sse_timestamp_"+string(rune('0'+i)), ok)
+		if ok {
+			e.Latency["command_submit_to_visible_"+string(rune('0'+i))] = stats([]float64{float64(at.Sub(started)) / float64(time.Millisecond)}, 0)
+		}
 	}
 	select {
 	case echo := <-echoes:
@@ -194,10 +210,35 @@ func runNativeMessagesCommands(ctx context.Context, s Scenario, level string, e 
 				return err == nil && len(result.Records) == 1
 			}) == nil
 			add("incoming_echo_visible_"+string(rune('0'+i)), visible)
-			e.Latency["echo_chat_db_appearance_to_visible_"+string(rune('0'+i))] = stats([]float64{float64(time.Since(echo.at)) / float64(time.Millisecond)}, 0)
+			at, ok := messagesObservedAt(observers[i], text, false)
+			add("incoming_echo_sse_timestamp_"+string(rune('0'+i)), ok)
+			if ok {
+				e.Latency["echo_chat_db_appearance_to_visible_"+string(rune('0'+i))] = stats([]float64{max(0, float64(at.Sub(echo.at))/float64(time.Millisecond))}, 0)
+			}
 		}
 	case <-time.After(5 * time.Second):
 		add("incoming_echo_truth", false)
+	}
+	if s.ID == "MSG-SEND-FILES" {
+		for _, part := range evidence.Parts {
+			var guid, name string
+			err := native.QueryRowContext(ctx, "SELECT a.guid,a.filename FROM attachment a JOIN message_attachment_join j ON j.attachment_id=a.ROWID JOIN message m ON m.ROWID=j.message_id WHERE m.guid=?", part.NativeKey).Scan(&guid, &name)
+			if err != nil {
+				continue
+			}
+			expected := text + " one"
+			if strings.Contains(filepath.Base(name), "two") {
+				expected = text + " two"
+			}
+			var id string
+			if stateDB.QueryRowContext(ctx, "SELECT record_id FROM aliases WHERE collection='messages.attachment' AND native_key=? LIMIT 1", guid).Scan(&id) != nil {
+				add("attachment_alias", false)
+				continue
+			}
+			for _, endpoint := range endpoints {
+				add("authorized_replica_attachment_bytes", messagesAttachmentBytes(ctx, w, endpoint, id, []byte(expected)))
+			}
+		}
 	}
 	e.Passed = true
 	for _, a := range e.Assertions {
@@ -208,4 +249,70 @@ func runNativeMessagesCommands(ctx context.Context, s Scenario, level string, e 
 func argsFiles(args map[string]any) []contracts.MessageFile {
 	files, _ := args["files"].([]contracts.MessageFile)
 	return files
+}
+
+func messagesObservedAt(observer *watcher, text string, fromMe bool) (time.Time, bool) {
+	observer.mu.Lock()
+	defer observer.mu.Unlock()
+	var earliest time.Time
+	for _, seen := range observer.changes {
+		if seen.Change.Record.Collection != "messages.message" {
+			continue
+		}
+		var data struct {
+			Text   string `json:"text"`
+			FromMe bool   `json:"is_from_me"`
+		}
+		json.Unmarshal(seen.Change.Record.Data, &data)
+		if data.Text == text && data.FromMe == fromMe && (earliest.IsZero() || seen.At.Before(earliest)) {
+			earliest = seen.At
+		}
+	}
+	return earliest, !earliest.IsZero()
+}
+func saveIncomingEchoEvidence(e Evidence) error {
+	if e.Scenario != "MSG-SEND-SELF-TEXT" || (e.Level != "real" && e.Level != "replica") {
+		return nil
+	}
+	incoming := e
+	incoming.Scenario = "MSG-INCOMING"
+	incoming.Assertions = []Assertion{}
+	incoming.Latency = map[string]Latency{}
+	incoming.Metrics = map[string]any{"driven_by": "self_send_incoming_echo", "source_scenario": "MSG-SEND-SELF-TEXT", "maximum_sends": 1, "chat_db_poll_interval_ms": 10}
+	for _, a := range e.Assertions {
+		if strings.HasPrefix(a.Name, "incoming_echo_") {
+			incoming.Assertions = append(incoming.Assertions, a)
+		}
+	}
+	for name, value := range e.Latency {
+		if strings.HasPrefix(name, "echo_chat_db_") {
+			incoming.Latency[name] = value
+		}
+	}
+	incoming.Passed = len(incoming.Assertions) > 0 && len(incoming.Latency) > 0 && incoming.Status == ""
+	for _, a := range incoming.Assertions {
+		incoming.Passed = incoming.Passed && a.Passed
+	}
+	return Save(incoming)
+}
+
+func messagesAttachmentBytes(ctx context.Context, w *world.World, endpoint world.Endpoint, id string, expected []byte) bool {
+	return w.Await(10*time.Second, func() bool {
+		var result contracts.ReadResult
+		err := (scripted.Client{Endpoint: endpoint}).Call(ctx, "records.get", contracts.ReadQuery{Collection: "messages.attachment", ID: id}, &result)
+		if err != nil || len(result.Records) != 1 {
+			return false
+		}
+		var data struct {
+			Blob struct {
+				Digest string `json:"digest"`
+				State  string `json:"state"`
+			} `json:"blob"`
+		}
+		if json.Unmarshal(result.Records[0].Data, &data) != nil || data.Blob.Digest == "" {
+			return false
+		}
+		status, bytes, err := blobBytes(ctx, endpoint, data.Blob.Digest, id)
+		return err == nil && status == 200 && string(bytes) == string(expected)
+	}) == nil
 }

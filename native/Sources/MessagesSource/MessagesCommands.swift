@@ -49,9 +49,9 @@ public actor MessagesCommands {
         guard handles.count == 1, handles.allSatisfy({ selfHandles.contains(MessagesProbes.normalize($0)) }), args["service"].string == "iMessage" else { throw SourceFailure.unsupported }
         return .object(["kind": .string("imessage_buddy"), "handle": .string(handles[0]), "service": .string("iMessage")])
     }
-    public func prepare(_ command: JSON) throws -> Prepared {
+    public func prepare(_ command: JSON) async throws -> Prepared {
         let action = command["action"]
-        guard action["op"].string == "messages.send" else { throw SourceFailure.capabilityUnproven }
+        if action["op"].string != "messages.send" {return try await prepareAccessibility(command)}
         let args = action["messages"]
         guard args["text"].string.isEmpty || tagged(args["text"].string), !args["text"].string.isEmpty || !args["files"].array.isEmpty else { throw SourceFailure.invalid }
         for file in args["files"].array {
@@ -69,12 +69,73 @@ public actor MessagesCommands {
         let state = JSON.object(["route": route["kind"], "destination": route, "max_row_id": .number(Double(maximum)), "payload_fingerprint": .string(BodyDigest.hash(payload)), "command_id": command["command_id"], "candidate_ids": .array([.string(String(maximum)), .string(route["chat"].string)])])
         return Prepared(nativeState: state, fingerprint: command["request_hash"].string, action: action)
     }
+    private func prepareAccessibility(_ command: JSON) async throws -> Prepared {
+        let action=command["action"]
+        let operation=try MessagesAction(operation:action["op"].string)
+        let args=action["messages"]
+        let reader=try MessagesReader(path:path)
+        guard let row=try reader.message(action["native_key"].string),let item=try reader.messageObservations(row).first else {throw SourceFailure.capabilityUnproven}
+        let target=try JSONDecoder().decode(JSON.self,from:JSONSerialization.data(withJSONObject:item.2,options:.sortedKeys))
+        guard tagged(target["text"].string) else {throw SourceFailure.invalid}
+        if !args["text"].string.isEmpty && !tagged(args["text"].string) {throw SourceFailure.invalid}
+        var destination=action.object
+        destination["list_key"] = .string(row["capture_chat_guid"])
+        let route=try verifyRoute(.object(destination),reader:reader)
+        if operation == .edit || operation == .unsend {
+            let chat=try reader.query("SELECT service_name FROM chat WHERE guid=?",[row["capture_chat_guid"]]).first
+            guard chat?["service_name"] == "iMessage", row.flag("is_from_me"),let sent=parseTimestamp(target["sent_at"].string) else {throw SourceFailure.unsupported}
+            let age=Date().timeIntervalSince(sent)
+            guard age >= 0, age < (operation == .edit ? 900 : 120), operation != .edit || target["edit_history"].array.count < 5 else {throw SourceFailure.unsupported}
+        }
+        for field in ["text","sent_at","edit_history","retracted_parts"] {
+            let expected=command["expected_state"][field]
+            if expected != .null && expected != target[field] {throw SourceFailure.conflict}
+        }
+        let prepared=Prepared(nativeState:.object(["route":.string("accessibility"),"destination":route,"target":target,"max_row_id":.number(Double(try reader.maximum())),"candidate_ids":.array([.string(row["guid"])])]),fingerprint:command["request_hash"].string,action:action)
+        guard labCommands, await MessagesAccessibility.available else {throw SourceFailure.capabilityUnproven}
+        try await MessagesAccessibility.validate(prepared)
+        return prepared
+    }
+    public func validate(_ prepared: Prepared) async throws {
+        if prepared.action["op"].string != "messages.send" {try await MessagesAccessibility.validate(prepared)}
+    }
+    private func dispatchAccessibility(_ prepared: Prepared) async throws -> JSON {
+        let reader=try MessagesReader(path:path)
+        let native=prepared.action["native_key"].string
+        guard let before=try reader.message(native),let item=try reader.messageObservations(before).first else {throw SourceFailure.conflict}
+        let current=try JSONDecoder().decode(JSON.self,from:JSONSerialization.data(withJSONObject:item.2,options:.sortedKeys))
+        guard current==prepared.nativeState["target"] else {throw SourceFailure.conflict}
+        let ui=try await MessagesAccessibility.perform(prepared)
+        let deadline=ContinuousClock.now.advanced(by:.seconds(10))
+        let operation=try MessagesAction(operation:prepared.action["op"].string)
+        repeat {
+            let row=try reader.message(native)
+            let items=try row.map {try reader.messageObservations($0)} ?? []
+            let data=try items.first.map {try JSONDecoder().decode(JSON.self,from:JSONSerialization.data(withJSONObject:$0.2,options:.sortedKeys))} ?? .null
+            var observed=false
+            switch operation {
+            case .edit: observed=data["text"]==prepared.action["messages"]["text"] && data["edit_history"].array.count > current["edit_history"].array.count
+            case .unsend: observed=data["retracted_at"] != .null || !data["retracted_parts"].array.isEmpty
+            case .deleteMessage: observed=row == nil
+            default: break
+            }
+            if observed {
+                var evidence=ui.object
+                evidence["source"] = .string("messages"); evidence["native_key"] = .string(native); evidence["collection"] = .string("messages.message"); evidence["observed"] = .bool(true); evidence["absent"] = .bool(row == nil); evidence["disposition"] = .string("locally_observed"); evidence["parts"] = .array([])
+                return .object(evidence)
+            }
+            try await Task.sleep(for:.milliseconds(50))
+        } while ContinuousClock.now < deadline
+        var evidence=ui.object
+        evidence["source"] = .string("messages"); evidence["observed"] = .bool(false); evidence["disposition"] = .string("indeterminate")
+        return .object(evidence)
+    }
     private func parts(_ prepared: Prepared) throws -> [JSON] {
         let args = prepared.action["messages"]
         var parts: [JSON] = []
         if !args["text"].string.isEmpty { parts.append(.object(["kind": .string("text"), "text": args["text"]])) }
         let root = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Messages/Attachments/AppleBridgeOutgoing", isDirectory: true)
-        let directory = root.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let directory = root.appendingPathComponent(BodyDigest.hash(Data(prepared.nativeState["command_id"].string.utf8)), isDirectory: true)
         if !args["files"].array.isEmpty {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         }
@@ -89,6 +150,7 @@ public actor MessagesCommands {
         return parts
     }
     public func dispatch(_ prepared: Prepared) async throws -> JSON {
+        if prepared.action["op"].string != "messages.send" {return try await dispatchAccessibility(prepared)}
         let reader = try MessagesReader(path: path)
         let route = try verifyRoute(prepared.action, reader: reader)
         guard route == prepared.nativeState["destination"] else { throw SourceFailure.conflict }
@@ -150,20 +212,30 @@ public actor MessagesCommands {
     private func aggregate(_ parts: [JSON], prepared: Prepared) -> JSON {
         let dispositions = parts.map { $0["disposition"].string }
         let disposition = dispositions.contains("indeterminate") || dispositions.contains("not_dispatched") ? "indeterminate" : dispositions.contains("delivery_failed") ? "delivery_failed" : dispositions.allSatisfy { $0 == "delivered" } ? "delivered" : "locally_observed"
-        return .object(["source": .string("messages"), "collection": .string("messages.message"), "native_key": parts.first?["native_key"] ?? .null, "observed": .bool(parts.contains { $0["observed"].bool }), "disposition": .string(disposition), "parts": .array(parts), "fingerprint": .string(prepared.fingerprint), "baseline": prepared.nativeState])
+        return .object(["source": .string("messages"), "collection": .string("messages.message"), "native_key": parts.first(where: { !$0["native_key"].string.isEmpty })?["native_key"] ?? .null, "observed": .bool(parts.contains { $0["observed"].bool }), "disposition": .string(disposition), "parts": .array(parts), "fingerprint": .string(prepared.fingerprint), "baseline": prepared.nativeState])
     }
     public func resolve(_ evidence: JSON) async -> JSON {
-        guard let reader = try? MessagesReader(path: path) else { return evidence }
-        var result = evidence.object
-        let parts = evidence["parts"].array.map { part -> JSON in
-            guard part["disposition"].string == "locally_observed", let row = try? reader.message(part["native_key"].string) else { return part }
-            var next = part.object
-            next["disposition"] = .string(row.integer("error") != 0 ? "delivery_failed" : row.flag("is_delivered") ? "delivered" : "locally_observed")
-            return .object(next)
+        let saved=evidence["prepared"]
+        guard saved["action"]["op"].string == "messages.send",let reader=try? MessagesReader(path:path) else {return evidence}
+        let prepared=Prepared(nativeState:saved["native_state"],fingerprint:saved["request_hash"].string,action:saved["action"])
+        let route=prepared.nativeState["destination"]
+        let args=prepared.action["messages"]
+        var requested:[JSON]=[]
+        if !args["text"].string.isEmpty {requested.append(.object(["kind":.string("text"),"text":args["text"]]))}
+        for (index,file) in args["files"].array.enumerated() {requested.append(.object(["kind":.string("attachment"),"name":.string("\(index)-"+file["name"].string)]))}
+        var parts:[JSON]=[]
+        for (index,part) in requested.enumerated() {
+            let existing=evidence["parts"].array.first {$0["index"].number==Double(index)}
+            if existing?["disposition"].string == "not_dispatched" {parts.append(existing!);continue}
+            let maximum=existing?["max_row_id"].number ?? prepared.nativeState["max_row_id"].number
+            guard let matched=try? correlate(part,route:route,maximum:Int64(maximum),reader:reader) else {return evidence}
+            var value=matched.object
+            value["index"] = .number(Double(index));value["kind"] = part["kind"];value["max_row_id"] = .number(maximum)
+            parts.append(.object(value))
         }
-        result["parts"] = .array(parts)
-        if !parts.isEmpty && parts.allSatisfy({ $0["disposition"].string == "delivered" }) { result["disposition"] = .string("delivered") }
-        return .object(result)
+        var resolved=aggregate(parts,prepared:prepared).object
+        resolved["prepared"] = saved
+        return .object(resolved)
     }
 }
 
