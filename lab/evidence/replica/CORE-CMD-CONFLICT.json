@@ -1,11 +1,16 @@
 {
-  "run_id": "run_01M5477ZJGW1Q39KAH9449CRM0",
+  "run_id": "run_01M548JYFYP8Z3CBMP3F7SM6MW",
+  "network_path": "ssh_fallback_direct_tcp_timeout",
   "scenario": "CORE-CMD-CONFLICT",
   "level": "replica",
   "passed": true,
-  "git_sha": "c9aa42147ac4f6337b58fd04e7b9db83f17128e6",
-  "at": "2026-10-17T06:02:03.729022Z",
+  "git_sha": "883859767d67e4f8613c16eb8366f8b7bd676d03",
+  "at": "2026-10-17T06:25:31.646251Z",
   "assertions": [
+    {
+      "name": "feed_network_ssh_fallback_direct_tcp_timeout",
+      "passed": true
+    },
     {
       "name": "replica_host_is_ubuntu",
       "passed": true
@@ -141,28 +146,32 @@
       "passed": false,
       "status": "unverified",
       "detail": "kill-during-apply check did not run"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
     }
   ],
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 26.870417,
-      "p95_ms": 26.870417,
-      "max_ms": 26.870417,
+      "p50_ms": 13.019625,
+      "p95_ms": 13.019625,
+      "max_ms": 13.019625,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 124.457708,
-      "p95_ms": 124.457708,
-      "max_ms": 124.457708,
+      "p50_ms": 23.807833,
+      "p95_ms": 23.807833,
+      "max_ms": 23.807833,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica1": {
       "samples": 1,
-      "p50_ms": 124.377167,
-      "p95_ms": 124.377167,
-      "max_ms": 124.377167,
+      "p50_ms": 27.110791,
+      "p95_ms": 27.110791,
+      "max_ms": 27.110791,
       "timeouts": 0
     }
   },

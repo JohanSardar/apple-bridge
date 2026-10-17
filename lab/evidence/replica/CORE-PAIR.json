@@ -1,11 +1,11 @@
 {
-  "run_id": "run_01M5474CS9F7A9D0Y02D79FRN9",
+  "run_id": "run_01M548QQ5NGS81DGXGWPD4Q377",
   "network_path": "ssh_fallback_direct_tcp_timeout",
   "scenario": "CORE-PAIR",
   "level": "replica",
   "passed": true,
-  "git_sha": "9775bba29d530b60937cb06dbc96a29f9d829707",
-  "at": "2026-10-17T06:00:06.185653Z",
+  "git_sha": "883859767d67e4f8613c16eb8366f8b7bd676d03",
+  "at": "2026-10-17T06:28:07.989531Z",
   "assertions": [
     {
       "name": "feed_network_ssh_fallback_direct_tcp_timeout",
@@ -59,16 +59,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 17.018084,
-      "p95_ms": 17.018084,
-      "max_ms": 17.018084,
+      "p50_ms": 8.378291,
+      "p95_ms": 8.378291,
+      "max_ms": 8.378291,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 27.633959,
-      "p95_ms": 27.633959,
-      "max_ms": 27.633959,
+      "p50_ms": 21.418041,
+      "p95_ms": 21.418041,
+      "max_ms": 21.418041,
       "timeouts": 0
     }
   },
