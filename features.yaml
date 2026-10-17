@@ -91,6 +91,7 @@ features:
     depends_on: [core.replication, core.trust]
     status: todo
     scenarios:
+      - {id: CORE-CMD-ERA, levels: [sim]}
       - {id: CORE-CMD-IDEMPOTENT, levels: [sim]}
       - {id: CORE-CMD-LOST-RESPONSE, levels: [sim, replica]}
       - {id: CORE-CMD-CRASH-AMBIGUOUS, levels: [sim]}
@@ -225,6 +226,8 @@ features:
       - {id: REM-CONFLICT, levels: [sim, real]}
       - {id: REM-EXTERNAL-RACE, levels: [sim]}
       - {id: REM-READONLY-LIST, levels: [sim]}
+      - {id: REM-OPERATION-SHAPES, levels: [sim]}
+      - {id: REM-NATIVE-LIST-RACE, levels: [sim]}
       - {id: REM-AGENT, levels: [agent]}
   - id: calendar.read
     title: Calendar window capture, identity, recurrence, time zones, window slide

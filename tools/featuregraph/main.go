@@ -190,6 +190,8 @@ func (c *checker) check() []featureView {
 
 func (c *checker) indexScenarioFiles() map[string]string {
 	files := map[string]string{}
+	features := map[string]string{}
+	levels := map[string]map[string]bool{}
 	dir := filepath.Join(c.root, "lab", "scenarios")
 	_ = filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".yaml") {
@@ -200,8 +202,9 @@ func (c *checker) indexScenarioFiles() map[string]string {
 			return nil
 		}
 		var head struct {
-			ID      string `yaml:"id"`
-			Feature string `yaml:"feature"`
+			ID      string   `yaml:"id"`
+			Feature string   `yaml:"feature"`
+			Levels  []string `yaml:"levels"`
 		}
 		if err := yaml.Unmarshal(raw, &head); err != nil || head.ID == "" {
 			c.fail("scenario file %s has no id", path)
@@ -209,9 +212,23 @@ func (c *checker) indexScenarioFiles() map[string]string {
 		}
 		rel, _ := filepath.Rel(c.root, path)
 		if prev, ok := files[head.ID]; ok {
-			c.fail("scenario %s defined in %s and %s", head.ID, prev, rel)
+			if features[head.ID] != head.Feature || len(head.Levels) == 0 {
+				c.fail("scenario %s has incompatible definitions in %s and %s", head.ID, prev, rel)
+			}
+			for _, level := range head.Levels {
+				if levels[head.ID][level] {
+					c.fail("scenario %s at %s defined in %s and %s", head.ID, level, prev, rel)
+				}
+			}
+			files[head.ID] = prev + ", " + rel
+		} else {
+			files[head.ID] = rel
+			features[head.ID] = head.Feature
+			levels[head.ID] = map[string]bool{}
 		}
-		files[head.ID] = rel
+		for _, level := range head.Levels {
+			levels[head.ID][level] = true
+		}
 		return nil
 	})
 	return files
