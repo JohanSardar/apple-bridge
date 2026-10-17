@@ -44,3 +44,8 @@ You are a worker on Apple Bridge, delegated by the build leader. Read this file,
 - Wrap every heavy command (go build/test of many packages, bridge-lab runs, swift builds) in `packaging/dev/heavy.sh <command...>` (from the repo root of your worktree). It allows at most 2 heavy commands at a time across all workers.
 - Integrate often: `git fetch` is not needed (same repo); `git rebase main` in your worktree, rerun your scenarios, then `cd ~/apple-bridge && git merge --ff-only <your-unit> && git push`. If the shared checkout has local changes, don't touch them; tell the leader. Remove your worktree when done (`git worktree remove`).
 - Use unique world names and ports in lab runs (the World must allocate free ports; never hard-code ports that another worker's run could also use).
+
+## GUI control of the Air
+- `~/tools/vncenv/bin/python ~/tools/airvnc.py capture /tmp/x.png | click X Y | type "text" | key enter | pause 1.5` (chainable) drives the Air's real screen (2940x1912 framebuffer; downscale screenshots with Pillow from `~/tools/vncenv/bin/python` before viewing; scale clicks back). VNC input is real input: it can click TCC Allow buttons and System Settings toggles.
+- Only use it when your brief assigns GUI work (the screen is shared; one GUI actor at a time). Always capture before acting and after to verify. Never type passwords. If the lock screen shows, wait and recheck; report if it persists.
+- UI-automation scenarios (Accessibility actions in Messages) may use captures as Truth evidence for visible effects; keep screenshots in private, gitignored paths (they contain personal data).

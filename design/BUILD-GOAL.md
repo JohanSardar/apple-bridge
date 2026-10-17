@@ -50,3 +50,6 @@ Try hard first: research (docs, source, web), try alternatives, re-plan from fir
 
 # Done means
 Every feature in features.yaml is `done` with its E2E scenarios passing at their assigned levels (sim, real, replica on Ubuntu, MCP agent), reviews done, code pushed, PROGRESS.md and SPEC.md truthful. Then report what was built, what's verified, and anything still limited (e.g. Apple's own sync delays) to your parent.
+
+# Update 2026-10-17: GUI control of the Air (from the parent)
+The leader and its workers can see and click the Air's screen from the Ubuntu laptop: `~/tools/vncenv/bin/python ~/tools/airvnc.py <commands>` with chainable commands `capture /tmp/x.png`, `click X Y`, `type "text"`, `key enter`, `pause 1.5`. Coordinates are in the full 2940x1912 framebuffer (Retina 2x); downscale screenshots with Pillow (`~/tools/vncenv/bin/python`) before viewing and scale click coordinates back up. VNC input is real input, so it can click Allow on TCC dialogs and toggle System Settings. Handle every permission dialog and GUI step this way: trigger via ssh, capture, click, recapture to verify, then confirm via TCC/`status`. Always capture first; if the lock screen shows, wait and recheck. Never type passwords. Don't ask Johan for GUI clicks unless the lock screen persists for over an hour. Display/system sleep are disabled on the Air.

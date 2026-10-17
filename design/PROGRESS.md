@@ -45,6 +45,9 @@ Resume point for any fresh session. Updated after every unit of work.
 - heavy.sh is a FIFO queue (2 slots) since a0d917a.
 - Replica level: SSH tunnel acceptable until Johan's Tailscale ACL fix; direct Tailscale path behind a World option.
 
+## GUI control (2026-10-17)
+- VNC GUI control of the Air via `~/tools/airvnc.py` (see BUILD-GOAL update and WORKER-RULES). Leader handles all TCC dialogs and Settings toggles; no more manual requests to Johan unless the lock screen persists > 1 h.
+
 ## Blockers
 - TCC grants for AppleBridgeHelper (asked 2026-10-17; Johan will do it when at the Air; don't ask again). Detect by running the `status` mode (see WORKER-RULES) between work units; start real-level work once granted.
 - Expected later: Developer ID for notarization (M5).
