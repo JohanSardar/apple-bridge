@@ -43,11 +43,11 @@ func (f *fakeApple) calendarInWindow(o contracts.Observation) bool {
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	left, right := today.AddDate(0, 0, -730), today.AddDate(0, 0, 730)
 	if len(start) == 10 {
-		return start <= right.Format(time.DateOnly) && end > left.Format(time.DateOnly)
+		return start < right.Format(time.DateOnly) && end > left.Format(time.DateOnly)
 	}
 	a, e := time.Parse(time.RFC3339Nano, start)
 	b, g := time.Parse(time.RFC3339Nano, end)
-	return e == nil && g == nil && !a.After(right) && b.After(left)
+	return e == nil && g == nil && a.Before(right) && b.After(left)
 }
 func (f *fakeApple) calendarScanLocked() contracts.Capture {
 	if f.calendarPublished == nil {

@@ -38,7 +38,7 @@ public final class CalendarSource: Source {
     }
 
     private func calendarData(_ calendar: EKCalendar) -> JSON {
-        .object(["title": .string(calendar.title), "account": .string(calendar.source.sourceIdentifier), "color": .string(calendar.cgColor.map { String(describing: $0.components ?? []) } ?? ""), "writable": .bool(calendar.allowsContentModifications && !calendar.isSubscribed), "type": .number(Double(calendar.type.rawValue))])
+        .object(["title": .string(calendar.title), "account": .string(calendar.source.sourceIdentifier), "color": .string(calendar.cgColor.map { String(describing: $0.components ?? []) } ?? ""), "writable": .bool(calendar.allowsContentModifications && !calendar.isSubscribed), "type": .string(["local", "caldav", "exchange", "subscribed", "birthday"].indices.contains(Int(calendar.type.rawValue)) ? ["local", "caldav", "exchange", "subscribed", "birthday"][Int(calendar.type.rawValue)] : "unknown")])
     }
 
     private func data(_ event: EKEvent) -> JSON {
@@ -133,6 +133,8 @@ public final class CalendarSource: Source {
         guard gate.authorized(.event) else { throw SourceFailure.permissionMissing }
         try await sink.emit(source: name, generation: "eventkit-calendar-v1", observations: pending, scanID: UUID().uuidString, scanStartedAt: started, scope: ["calendar.calendar", "calendar.event"], completionEvidence: "complete", blobHandles: [:], live: live)
         try save(current); committed = current; forceFull = false
+ let readiness=await open()
+ try await sink.sourceState(source:name,state:readiness.state,coverage:readiness.coverage,capabilities:readiness.capabilities,reason:readiness.reason)
     }
 
     public func reconcile(into sink: any ObservationSink) async throws {
@@ -278,9 +280,10 @@ public final class CalendarSource: Source {
     }
 
     public func resolve(_ command: String, evidence: JSON) async -> JSON {
-        guard gate.authorized(.event), !evidence["native_key"].string.isEmpty else { return .null }
-        let key = evidence["native_key"].string
-        let action = evidence["prepared"]["action"]
+        guard gate.authorized(.event) else {return .null}
+ let action=evidence["prepared"]["action"]
+ let key=action["native_key"].string.isEmpty ? evidence["native_key"].string : action["native_key"].string
+ guard !key.isEmpty else {return .null}
         if action["op"].string == "calendar.create_calendar" {
             guard gate.store.calendar(withIdentifier: key)?.title == args(action)["title"].string else { return .null }
         } else if action["op"].string == "calendar.delete_event" {
@@ -290,6 +293,8 @@ public final class CalendarSource: Source {
             let expected = args(action).object.filter { !["id", "calendar_id", "span"].contains($0.key) }
             guard expected.allSatisfy({ data(current)[$0.key] == $0.value }) else { return .null }
         }
-        return evidence
+var result=evidence.object
+ result["native_key"] = .string(key);result["observed"] = .bool(true);result["absent"] = .bool(action["op"].string=="calendar.delete_event")
+ return .object(result)
     }
 }

@@ -362,6 +362,9 @@ func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fenc
 			if record.Kind == "absent" {
 				capture = fullScan([]contracts.Observation{record})
 			}
+			if contracts.CollectionSource(record.Collection) == contracts.Calendar {
+				capture = calendarCapture([]contracts.Observation{record})
+			}
 			if err := emit(capture, 0); err != nil {
 				return err
 			}

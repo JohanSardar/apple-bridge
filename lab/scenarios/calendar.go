@@ -469,7 +469,11 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		}
 		args := map[string]any{"calendar_id": readonly.ID, "title": tag + " rejected", "start": start, "end": end}
 		err = submit("calendar.create_event", args, 0)
-		add("readonly_rejected_before_dispatch", errors.Is(err, contracts.ErrUnsupported) && last.Disposition == "rejected_before_dispatch")
+		dispatched := false
+		for _, transition := range last.History {
+			dispatched = dispatched || transition.State == "dispatched"
+		}
+		add("readonly_rejected_before_dispatch", errors.Is(err, contracts.ErrUnsupported) && last.Disposition == "rejected_before_dispatch" && !dispatched)
 		add("readonly_has_no_effect", len(records(w.Gateway)) == 1)
 	case "CAL-PERMISSION-LOSS":
 		if err = w.ControlAction("/source-state", map[string]any{"source": "calendar", "state": "permission_missing"}); err != nil {
