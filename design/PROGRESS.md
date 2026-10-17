@@ -18,7 +18,10 @@ One line per unit. Rules: BUILD-GOAL.md (2026-10-17 update: no reviews, merge on
 - Calendar merged (44dfd7d): 14 sim, real/replica CRUD, real RECUR-THIS pass → calendar.write DONE. calendar.read open: external-create latency 1.3 s (target <1 s) + 9 empty Bridge Test calendars left → fixing.
 - Contacts merged (18bb050): 11 sim + 5 real pass, real p95 254 ms; replica CON-EXTERNAL pass (p95 482 ms); replica CON-CRUD fixed (94a216b: forwarding used a hard-coded reminders:write scope). contacts.read/write + reminders.write DONE.
 - IN PROGRESS Messages commands (send, AX actions, groups) — `.worktrees/m1-messages-commands`; real AX = pending-unlock while screen locked.
-- NEXT: Notes (M3), Usage/Screen Time (M4), AgentRunner + AGENT-SUITE, packaging (M5; notarization limited without Developer ID; Keychain-in-background decision).
+- IN PROGRESS Notes (`ab-m3m4-notes-usage-r1`, Notes only): read path + sim; real writes pending-unlock (Notes AppleScript -1712 while locked).
+- IN PROGRESS Usage/Screen Time (`ab-m4-usage-r1`).
+- IN PROGRESS packaging.app (`ab-m5-packaging-r1`): signed app + SMAppService agent + dedicated keychain; notarization limited.
+- IN PROGRESS agent suite (`ab-agent-suite-r1`): Codex gpt-6-luna on Ubuntu via MCP, Reminders + Contacts first.
 
 ## Limits
 - core.trust CORE-CRED-LIFECYCLE/real: login Keychain locked (needs Johan's password).
