@@ -12,6 +12,7 @@ let package = Package(
         .target(name: "RemindersSource", dependencies: ["AgendaGate", "SourceSupport"]),
         .target(name: "MessagesSource", dependencies: ["SourceSupport", "Decoders"]),
         .executableTarget(name: "DecoderChecks", dependencies: ["Decoders"]),
+        .executableTarget(name: "MessagesBench", dependencies: ["MessagesSource", "SourceSupport"]),
         .target(name: "AppleSession", dependencies: ["MessagesSource", "RemindersSource", "AgendaGate", "SourceSupport"]),
         .executableTarget(name: "AppleBridgeHelper", dependencies: ["AppleSession"])
     ]

@@ -1,4 +1,5 @@
 import Foundation
+import Decoders
 import Contacts
 import AppKit
 import ApplicationServices
@@ -114,8 +115,8 @@ public enum MessagesProbes {
         var observed: [[String: String]] = []
         var matched: [String: String]?
         repeat {
-            observed = try database.rows("SELECT m.ROWID AS row_id, m.text, m.service, m.error, m.is_sent, m.is_delivered, m.is_finished, m.is_from_me, (SELECT COUNT(*) FROM chat_message_join j WHERE j.message_id=m.ROWID) AS chat_joins, (SELECT COUNT(*) FROM chat_message_join j JOIN chat_handle_join peers ON peers.chat_id=j.chat_id JOIN handle h ON h.ROWID=peers.handle_id WHERE j.message_id=m.ROWID AND h.id=?) AS self_joins FROM message m WHERE m.ROWID > ? ORDER BY m.ROWID", bindings: [handle, baseline])
-            matched = observed.first { $0["text"] == text && $0["is_from_me"] == "1" && ($0["self_joins"] ?? "0") != "0" }
+            observed = try database.rows("SELECT m.ROWID AS row_id, m.text, hex(m.attributedBody) AS body_hex, m.service, m.error, m.is_sent, m.is_delivered, m.is_finished, m.is_from_me, (SELECT COUNT(*) FROM chat_message_join j WHERE j.message_id=m.ROWID) AS chat_joins, (SELECT COUNT(*) FROM chat_message_join j JOIN chat_handle_join peers ON peers.chat_id=j.chat_id JOIN handle h ON h.ROWID=peers.handle_id WHERE j.message_id=m.ROWID AND h.id=?) AS self_joins FROM message m WHERE m.ROWID > ? ORDER BY m.ROWID", bindings: [handle, baseline])
+            matched = observed.first { decodedProbeText($0) == text && $0["is_from_me"] == "1" && ($0["self_joins"] ?? "0") != "0" }
             if matched != nil { break }
             RunLoop.current.run(until: Date().addingTimeInterval(0.2))
         } while Date() < deadline
@@ -143,6 +144,20 @@ public enum MessagesProbes {
             Dictionary(uniqueKeysWithValues: fields.map { ($0, row[$0] ?? "unknown") })
         }
         return report
+    }
+
+    private static func decodedProbeText(_ row: [String: String]) -> String? {
+        if let text = row["text"] { return text }
+        guard let hex = row["body_hex"], hex.count.isMultiple(of: 2) else { return nil }
+        var bytes = Data()
+        var index = hex.startIndex
+        while index < hex.endIndex {
+            let end = hex.index(index, offsetBy: 2)
+            guard let byte = UInt8(hex[index..<end], radix: 16) else { return nil }
+            bytes.append(byte)
+            index = end
+        }
+        return TypedStream.decode(bytes).text
     }
 
     @MainActor
