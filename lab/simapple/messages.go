@@ -134,7 +134,7 @@ func (f *fakeApple) messageRoutes(mux *http.ServeMux) {
 			http.Error(w, "invalid action", 400)
 			return
 		}
-		if err := f.saveLocked(); err != nil {
+		if err := f.changedLocked(contracts.Messages); err != nil {
 			f.mu.Unlock()
 			http.Error(w, "unavailable", 503)
 			return
@@ -158,6 +158,7 @@ func (f *fakeApple) messageRoutes(mux *http.ServeMux) {
 			}
 		}
 		capture.Generation = f.messages.generation
+		revision := f.durable.Revision[contracts.Messages]
 		f.mu.Unlock()
 		if sourceState != nil {
 			if err := f.messageStateFrame(r.Context(), *sourceState); err != nil {
@@ -169,7 +170,7 @@ func (f *fakeApple) messageRoutes(mux *http.ServeMux) {
 			json.NewEncoder(w).Encode(map[string]bool{"effect_done": true})
 			return
 		}
-		if err := f.enqueue(r.Context(), capture, false); err != nil {
+		if err := f.enqueue(r.Context(), capture, false, revision); err != nil {
 			http.Error(w, "unavailable", 503)
 			return
 		}

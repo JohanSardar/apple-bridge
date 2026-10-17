@@ -49,7 +49,7 @@ type Evidence struct {
 	Status      string             `json:"status,omitempty"`
 	RunID       string             `json:"run_id"`
 	NetworkPath string             `json:"network_path,omitempty"`
-	Metrics     map[string]any `json:"metrics,omitempty"`
+	Metrics     map[string]any     `json:"metrics,omitempty"`
 	Scenario    string             `json:"scenario"`
 	Level       string             `json:"level"`
 	Passed      bool               `json:"passed"`
@@ -878,7 +878,9 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		if s.ID == "CORE-BENCH" {
 			duration = 10 * time.Minute
 		}
-		if s.Feature == "messages.read" && level != "sim" { duration = 20*time.Minute }
+		if s.Feature == "messages.read" && level != "sim" {
+			duration = 20 * time.Minute
+		}
 		bounded, cancel := context.WithTimeout(ctx, duration)
 		secretBefore, secretWasSet := os.LookupEnv("APPLE_BRIDGE_SECRET_STORE")
 		e := Run(bounded, s, level)

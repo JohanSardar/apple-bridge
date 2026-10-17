@@ -151,11 +151,19 @@ func Run(ctx context.Context, cfg Config) error {
 		fake.durable.InProgress = map[contracts.Source]bool{}
 	}
 	fake.generation = fake.durable.Generation
-	if fake.durable.Effects != nil { fake.effects = fake.durable.Effects }
-	if fake.durable.Evidence != nil { fake.evidence = fake.durable.Evidence }
-	if err := fake.loadGuards(); err != nil { return err }
+	if fake.durable.Effects != nil {
+		fake.effects = fake.durable.Effects
+	}
+	if fake.durable.Evidence != nil {
+		fake.evidence = fake.durable.Evidence
+	}
+	if err := fake.loadGuards(); err != nil {
+		return err
+	}
 	fake.messages = messageState{generation: fake.durable.MessagesGeneration, permitted: true}
-	if fake.messages.generation == "" { fake.messages.generation = fake.durable.Generation }
+	if fake.messages.generation == "" {
+		fake.messages.generation = fake.durable.Generation
+	}
 	if err := fake.saveLocked(); err != nil {
 		return err
 	}
@@ -296,6 +304,9 @@ func Run(ctx context.Context, cfg Config) error {
 		json.NewEncoder(w).Encode(map[string]bool{"committed": true})
 	})
 	mux.HandleFunc("POST /flush", func(w http.ResponseWriter, r *http.Request) {
+		if fake.enqueue(r.Context(), contracts.Capture{Source: contracts.Messages}, true) != nil {
+			return
+		}
 		if fake.enqueue(r.Context(), contracts.Capture{Source: contracts.Reminders}, true) != nil {
 			return
 		}
@@ -408,6 +419,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 	pending := []contracts.IPCFrame{}
 	var emitRevision uint64
 	var emitFull bool
+	scanActive := map[contracts.Source]bool{}
 	transmit := func(capture contracts.Capture, final bool) error {
 		capture = messageAliases(capture)
 		if capture.Generation == "" {
@@ -475,7 +487,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 					f.mu.Lock()
 					if final {
 						f.committedLocked(capture.Source, emitRevision, emitFull)
-						f.durable.InProgress[capture.Source] = false
+						f.durable.InProgress[capture.Source] = scanActive[capture.Source]
 					}
 					f.durable.Checkpoints[capture.Source] = capture.Checkpoint
 					f.progressLocked()
@@ -493,6 +505,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 		}
 	}
 	emit := func(capture contracts.Capture) error {
+		scanActive[capture.Source] = capture.ScanID != ""
 		f.mu.Lock()
 		f.durable.InProgress[capture.Source] = true
 		err := f.progressLocked()
@@ -501,6 +514,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 			return err
 		}
 		if len(capture.Observations) == 0 {
+			scanActive[capture.Source] = false
 			return transmit(capture, true)
 		}
 		slices.SortStableFunc(capture.Observations, func(a, b contracts.Observation) int {
@@ -551,7 +565,11 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 							}
 							continue
 						}
-						if err := transmit(f.revalidateMessages(live.Capture), true); err != nil {
+						revision, full := emitRevision, emitFull
+						emitRevision, emitFull = live.Revision, false
+						err := transmit(f.revalidateMessages(live.Capture), true)
+						emitRevision, emitFull = revision, full
+						if err != nil {
 							return err
 						}
 						if live.Done != nil {
@@ -563,6 +581,9 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 				}
 			}
 		drainedLive:
+			if end == len(capture.Observations) {
+				scanActive[capture.Source] = false
+			}
 			if err := transmit(part, end == len(capture.Observations)); err != nil {
 				return err
 			}
@@ -571,6 +592,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 		return nil
 	}
 	commandEmit := func(capture contracts.Capture, revision uint64) error {
+		emitFull = false
 		emitRevision = revision
 		return emit(capture)
 	}
@@ -635,6 +657,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 				return contracts.ErrInvalid
 			}
 		case req := <-f.liveChanges:
+			emitRevision, emitFull = req.Revision, false
 			if req.SourceState != nil {
 				if _, err = wire.Send(*req.SourceState); err != nil {
 					return err
@@ -659,6 +682,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 				return errClosed
 			}
 			emitRevision = req.Revision
+			emitFull = req.Capture.Source == contracts.Messages && req.Capture.ScanID != "" && req.Capture.CompletionEvidence == "complete"
 			if err = emit(req.Capture); err != nil {
 				return err
 			}
