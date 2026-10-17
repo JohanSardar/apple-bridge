@@ -1,0 +1,42 @@
+{
+  "run_id": "run_01M55EYM8X5KMSE4B3D24ZQXR5",
+  "scenario": "HELPER-SESSION-SOAK",
+  "level": "real",
+  "passed": true,
+  "git_sha": "d96c089c03ef2639ea7d9d1703c830cb7ca7fe97",
+  "at": "2026-10-17T17:36:00.286018Z",
+  "assertions": [
+    {
+      "name": "reminders_ready",
+      "passed": true
+    },
+    {
+      "name": "same_helper_pid_ten_minutes",
+      "passed": true
+    },
+    {
+      "name": "no_new_world_helper_crash_reports",
+      "passed": true
+    },
+    {
+      "name": "six_hundred_lifetime_timer_deadlines",
+      "passed": true
+    },
+    {
+      "name": "multiple_fetch_timer_deadlines",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "continuous_helper_session_duration": {
+      "samples": 1,
+      "p50_ms": 600337.0425,
+      "p95_ms": 600337.0425,
+      "max_ms": 600337.0425,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

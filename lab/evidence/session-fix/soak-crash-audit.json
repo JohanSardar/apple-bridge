@@ -1,0 +1,8 @@
+{
+  "kind": "global_helper_crash_report_soak_audit",
+  "passed": true,
+  "scenario_exit_code": 0,
+  "elapsed_seconds": 641.789,
+  "existing_reports": 27,
+  "new_reports": 0
+}

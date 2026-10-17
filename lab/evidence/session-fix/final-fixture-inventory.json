@@ -1,0 +1,10 @@
+{
+  "kind": "real_final_reminders_inventory",
+  "passed": true,
+  "all_lists_positive_control": true,
+  "tagged_reminders_total": 0,
+  "tagged_reminders_outside_bridge_test": 0,
+  "bridge_test_lists": 1,
+  "duplicate_empty_lists_removed": 0,
+  "writes_confined_to": "tagged reminders and empty duplicate lists named Bridge Test"
+}
