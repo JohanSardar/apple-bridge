@@ -87,7 +87,7 @@ func runUsage(ctx context.Context, s Scenario, level string) Evidence {
 	}
 	defer w.Close()
 	if level == "real" {
-		truth, err := w.Truth("observe", map[string]any{"source": "usage"})
+		truth, err := w.Truth("observe", map[string]any{"source": "usage", "biome_root": w.UsageTruthRoot()})
 		if err != nil {
 			return fail("independent_usage_truth_access")
 		}

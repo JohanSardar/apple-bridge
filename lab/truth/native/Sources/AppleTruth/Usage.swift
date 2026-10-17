@@ -1,14 +1,17 @@
 import Foundation
 import CryptoKit
 
+enum UsageTruthFailure: Error { case streamUnavailable, unknownDevice, metadataOpen, metadataQuery, metadataRead }
+
 enum UsageTruth {
     private struct Event: Hashable { let at: Double; let start: Bool; let app: String }
     private static func digest(_ text: String) -> String { SHA256.hash(data: Data(text.utf8)).map { String(format: "%02x", $0) }.joined() }
-    static func observe() throws -> [String: Any] {
-        let root = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Biome/streams/restricted/App.InFocus")
+    static func observe(root path: String? = nil) throws -> [String: Any] {
+        let biome = path.map { URL(fileURLWithPath: $0) } ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Biome")
+        let root = biome.appendingPathComponent("streams/restricted/App.InFocus")
         let matcher = try NSRegularExpression(pattern: "\\x10.\\x18[\\x00\\x01]\\x21.{8}\\x32.", options: [.dotMatchesLineSeparators])
         let bundles = try NSRegularExpression(pattern: "^[A-Za-z0-9._-]+$")
-        guard let dirs = FileManager.default.enumerator(at: root, includingPropertiesForKeys: [.isRegularFileKey]) else { throw TruthFailure.unavailable }
+        guard let dirs = FileManager.default.enumerator(at: root, includingPropertiesForKeys: [.isRegularFileKey]) else { throw UsageTruthFailure.streamUnavailable }
         var grouped: [String: Set<Event>] = [:]
         for case let url as URL in dirs {
             if url.pathComponents.contains("tombstone") { dirs.skipDescendants(); continue }
@@ -32,9 +35,9 @@ enum UsageTruth {
         var calendar = Calendar(identifier: .gregorian); calendar.timeZone = .current
         var rows: [String: [String: Double]] = [:]
         let locks = Set(["loginwindow", "com.apple.loginwindow", "com.apple.ScreenSaver.Engine"])
-        let peers = try devicePeers()
+        let peers = try devicePeers(biome, immutable: path != nil)
         for (directory, set) in grouped {
-            guard let peer = peers[directory] else { throw TruthFailure.unavailable }
+            guard let peer = peers[directory] else { throw UsageTruthFailure.unknownDevice }
             let sorted = set.sorted { a, b in a.at == b.at ? (a.start == b.start ? a.app < b.app : !a.start) : a.at < b.at }
             var session: Event?, lock: Double?
             func finish(_ at: Double) {
@@ -65,22 +68,23 @@ enum UsageTruth {
 
 import SQLite3
 extension UsageTruth {
-    private static func devicePeers() throws -> [String: (String, Bool)] {
+    private static func devicePeers(_ root: URL, immutable: Bool) throws -> [String: (String, Bool)] {
         var db: OpaquePointer?, query: OpaquePointer?
-        let path = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Biome/sync/sync.db").path
-        guard sqlite3_open_v2(path, &db, SQLITE_OPEN_READONLY, nil) == SQLITE_OK else { if let db { sqlite3_close(db) }; throw TruthFailure.unavailable }
+        let path = root.appendingPathComponent("sync/sync.db").path
+        let input = immutable ? "file:" + path + "?immutable=1" : path
+        guard sqlite3_open_v2(input, &db, SQLITE_OPEN_READONLY | SQLITE_OPEN_URI, nil) == SQLITE_OK else { if let db { sqlite3_close(db) }; throw UsageTruthFailure.metadataOpen }
         defer { sqlite3_close(db) }
-        guard sqlite3_prepare_v2(db, "select device_identifier,me,platform from DevicePeer", -1, &query, nil) == SQLITE_OK else { throw TruthFailure.unavailable }
+        guard sqlite3_prepare_v2(db, "select device_identifier,me,platform from DevicePeer", -1, &query, nil) == SQLITE_OK else { throw UsageTruthFailure.metadataQuery }
         defer { sqlite3_finalize(query) }
         var result: [String: (String, Bool)] = [:]
         var step = sqlite3_step(query)
         while step == SQLITE_ROW {
-            guard let pointer = sqlite3_column_text(query, 0) else { throw TruthFailure.unavailable }
+            guard let pointer = sqlite3_column_text(query, 0) else { throw UsageTruthFailure.metadataRead }
             let id = String(cString: pointer)
             result[sqlite3_column_int(query, 1) == 1 ? "local" : id] = (id, sqlite3_column_int(query, 2) == 3)
             step = sqlite3_step(query)
         }
-        guard step == SQLITE_DONE else { throw TruthFailure.unavailable }
+        guard step == SQLITE_DONE else { throw UsageTruthFailure.metadataRead }
         return result
     }
 }
