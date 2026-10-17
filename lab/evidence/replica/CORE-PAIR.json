@@ -1,14 +1,119 @@
 {
-  "run_id": "run_01M54A257VRX206VDZ3R5EE3JB",
-  "network_path": "ssh_fallback_direct_tcp_timeout",
+  "host_conditions": {
+    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "start": {
+      "air": {
+        "at": "2026-10-17T17:34:56.508406Z",
+        "cpu_count": 8,
+        "load_average": [
+          36.46,
+          36.49,
+          34.22
+        ],
+        "cpu_idle_percent": 2,
+        "free_memory_bytes": 62996480,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 1,
+        "quiet": false
+      },
+      "ubuntu": {
+        "at": "2026-10-17T17:34:56.508403Z",
+        "cpu_count": 8,
+        "load_average": [
+          0.26,
+          0.43,
+          0.23
+        ],
+        "cpu_idle_percent": 87.5784,
+        "free_memory_bytes": 26532212736,
+        "active_heavy_slots": 0,
+        "other_active_heavy_slots": 0,
+        "heavy_queue_length": 0,
+        "quiet": true
+      }
+    },
+    "end": {
+      "air": {
+        "at": "2026-10-17T17:35:07.367024Z",
+        "cpu_count": 8,
+        "load_average": [
+          36.21,
+          36.43,
+          34.24
+        ],
+        "cpu_idle_percent": 4,
+        "free_memory_bytes": 59441152,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 1,
+        "quiet": false
+      },
+      "ubuntu": {
+        "at": "2026-10-17T17:35:07.367022Z",
+        "cpu_count": 8,
+        "load_average": [
+          1.01,
+          0.58,
+          0.28
+        ],
+        "cpu_idle_percent": 98.2478,
+        "free_memory_bytes": 26139598848,
+        "active_heavy_slots": 0,
+        "other_active_heavy_slots": 0,
+        "heavy_queue_length": 0,
+        "quiet": true
+      }
+    },
+    "periodic_samples": [
+      {
+        "air": {
+          "at": "2026-10-17T17:35:02.735738Z",
+          "cpu_count": 8,
+          "load_average": [
+            36.31,
+            36.45,
+            34.23
+          ],
+          "cpu_idle_percent": 4,
+          "free_memory_bytes": 97566720,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 1,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T17:35:02.735697Z",
+          "cpu_count": 8,
+          "load_average": [
+            1.01,
+            0.58,
+            0.28
+          ],
+          "cpu_idle_percent": 72.1106,
+          "free_memory_bytes": 26152980480,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      }
+    ],
+    "quiet": false,
+    "require_quiet": false,
+    "quiet_wait_ms": 0,
+    "quiet_wait_expired": false
+  },
+  "run_id": "run_01M55EWQ7ZXKRWYF2MF8HD29PS",
+  "network_path": "ssh_tunnel",
   "scenario": "CORE-PAIR",
   "level": "replica",
   "passed": true,
-  "git_sha": "1ae944108b1a229e70cace7bfd82c3cb9d1fb27f",
-  "at": "2026-10-17T06:51:18.65149Z",
+  "git_sha": "996ba7d7023fb7295dcd011d23dcfb1e8b1990d8",
+  "at": "2026-10-17T17:34:57.791995Z",
   "assertions": [
     {
-      "name": "feed_network_ssh_fallback_direct_tcp_timeout",
+      "name": "feed_network_ssh_tunnel",
       "passed": true
     },
     {
@@ -59,16 +164,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 9.259292,
-      "p95_ms": 9.259292,
-      "max_ms": 9.259292,
+      "p50_ms": 18.408333,
+      "p95_ms": 18.408333,
+      "max_ms": 18.408333,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 105.102042,
-      "p95_ms": 105.102042,
-      "max_ms": 105.102042,
+      "p50_ms": 27.494542,
+      "p95_ms": 27.494542,
+      "max_ms": 27.494542,
       "timeouts": 0
     }
   },
