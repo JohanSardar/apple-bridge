@@ -266,7 +266,7 @@ func Run(ctx context.Context, cfg Config) error {
 		permissionMissing := fake.permissionMissing
 		revision := fake.durable.Revision[contracts.CollectionSource(o.Collection)]
 		fake.mu.Unlock()
-		if permissionMissing {
+		if permissionMissing && contracts.CollectionSource(o.Collection) == contracts.Reminders {
 			json.NewEncoder(w).Encode(map[string]bool{"effect_done": true})
 			return
 		}

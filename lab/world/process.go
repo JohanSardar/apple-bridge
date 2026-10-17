@@ -49,6 +49,12 @@ func (w *World) RestartGateway(retentionRows ...int) error {
 	w.StopGateway()
 	os.Remove(filepath.Join(w.Gateway.Home, "runtime.json"))
 	args := []string{"start", "--role", "gateway", "--home", w.Gateway.Home, "--peer-addr", cfg.PeerAddress, "--api-addr", cfg.APIAddress, "--socket", cfg.Socket}
+	if cfg.HelperApp != "" {
+		args = append(args, "--helper-app", cfg.HelperApp)
+	}
+	if cfg.HelperLabCommands {
+		args = append(args, "--helper-lab-commands")
+	}
 	if rows > 0 {
 		args = append(args, "--retention-rows", strconv.Itoa(rows), "--retention-age", "1ms")
 	}

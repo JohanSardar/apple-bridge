@@ -21,11 +21,13 @@ import (
 )
 
 type Config struct {
-	Role        string `json:"role"`
-	Home        string `json:"home"`
-	PeerAddress string `json:"peer_address"`
-	APIAddress  string `json:"api_address"`
-	Socket      string `json:"socket"`
+	Role              string `json:"role"`
+	Home              string `json:"home"`
+	PeerAddress       string `json:"peer_address"`
+	APIAddress        string `json:"api_address"`
+	Socket            string `json:"socket"`
+	HelperApp         string `json:"helper_app"`
+	HelperLabCommands bool   `json:"helper_lab_commands"`
 }
 type Process struct {
 	command *exec.Cmd
@@ -49,7 +51,10 @@ type BlobOptions struct {
 	Slow    bool
 }
 type World struct {
-	blobOptions BlobOptions
+	blobOptions            BlobOptions
+	secretOverride         bool
+	previousSecretStore    string
+	previousSecretStoreSet bool
 
 	Dir              string
 	Native           bool
@@ -221,9 +226,6 @@ func newWorld(ctx context.Context, level string, replicas, seed int, gatewayBina
 	return newEnvironment(ctx, level, replicas, seed, false, gatewayBinary, blobOptions...)
 }
 func newEnvironment(ctx context.Context, level string, replicas, seed int, native bool, gatewayBinary string, blobOptions ...BlobOptions) (*World, error) {
-	if !native {
-		os.Setenv("APPLE_BRIDGE_SECRET_STORE", "file")
-	}
 	root, err := os.Getwd()
 	if err != nil {
 		return nil, err
@@ -251,6 +253,11 @@ func newEnvironment(ctx context.Context, level string, replicas, seed int, nativ
 			w.Close()
 		}
 	}()
+	if !native {
+		w.previousSecretStore, w.previousSecretStoreSet = os.LookupEnv("APPLE_BRIDGE_SECRET_STORE")
+		w.secretOverride = true
+		os.Setenv("APPLE_BRIDGE_SECRET_STORE", "file")
+	}
 	options, _ := ctx.Value(optionsKey{}).(Options)
 	peerHost := "127.0.0.1"
 	w.NetworkPath = "loopback"
@@ -421,6 +428,14 @@ func (w *World) Close() {
 		commandOutput(context.Background(), "hdiutil", "detach", w.diskMount)
 	}
 	os.RemoveAll(w.Dir)
+	if w.secretOverride {
+		if w.previousSecretStoreSet {
+			os.Setenv("APPLE_BRIDGE_SECRET_STORE", w.previousSecretStore)
+		} else {
+			os.Unsetenv("APPLE_BRIDGE_SECRET_STORE")
+		}
+		w.secretOverride = false
+	}
 }
 func (w *World) Partition(index int)  { w.proxy.Partition() }
 func (w *World) Heal(index int) error { w.proxy.Heal(); return nil }
