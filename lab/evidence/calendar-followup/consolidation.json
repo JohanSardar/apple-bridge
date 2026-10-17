@@ -1,1 +1,1 @@
-{"error_code":1,"error_domain":"AppleTruth.TruthFailure","reason":"unavailable","status":"unverified"}
+{"error_code":23,"error_domain":"calendar_empty_proof_open","reason":"Error Domain=calendar_empty_proof_open Code=23 \"(null)\"","status":"unverified"}

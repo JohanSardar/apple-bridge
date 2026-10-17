@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -29,6 +30,18 @@ func (w *World) RecoverTruth(verb string, request map[string]any) (map[string]an
 }
 
 func (w *World) truth(ctx context.Context, verb string, request map[string]any) (map[string]any, error) {
+	calendarFixture := verb == "fixture" && request["source"] == "calendar"
+	if calendarFixture && request["action"] == "consolidate_calendars" {
+		bytes, err := exec.CommandContext(ctx, "python3", filepath.Join(filepath.Dir(filepath.Dir(w.bridge)), "lab/truth/calendar-cleanup-audit.py"), "--empty-proof").Output()
+		if err != nil {
+			return nil, fmt.Errorf("Calendar all-date emptiness proof unavailable: %w", err)
+		}
+		var proof map[string]any
+		if json.Unmarshal(bytes, &proof) != nil {
+			return nil, fmt.Errorf("invalid Calendar emptiness proof")
+		}
+		request["empty_calendar_proof"] = proof
+	}
 	id := contracts.NewID("truth")
 	input := filepath.Join(w.Dir, id+"-request.json")
 	output := filepath.Join(w.Dir, id+"-report.json")
@@ -102,6 +115,13 @@ func (w *World) truth(ctx context.Context, verb string, request map[string]any) 
 		return failure(reason)
 	}
 	os.Remove(output)
+	if calendarFixture && (request["action"] == "cleanup" || request["action"] == "cleanup_calendar") {
+		consolidation, err := w.truth(ctx, "fixture", map[string]any{"source": "calendar", "action": "consolidate_calendars", "tag": request["tag"]})
+		if err != nil {
+			return nil, err
+		}
+		response["consolidation"] = consolidation
+	}
 	return response, nil
 }
 
