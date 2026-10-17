@@ -815,5 +815,45 @@
       "elapsed_seconds": 0.4420018340460956,
       "scenarios": []
     }
-  ]
+  ],
+  "final_checks_after_rebase": {
+    "source_sha": "50bc796eb449941ff4ff7cf35fe0a5204e8524a0",
+    "base_sha": "c54f00a567430a2dd61efd616500d2b2aa049771",
+    "commands": [
+      {
+        "argv": [
+          "python3",
+          "-m",
+          "py_compile",
+          "lab/bench/messages-real.py"
+        ],
+        "exit_code": 0
+      },
+      {
+        "argv": [
+          "make",
+          "lint"
+        ],
+        "exit_code": 0
+      },
+      {
+        "argv": [
+          "go",
+          "vet",
+          "./..."
+        ],
+        "exit_code": 0
+      },
+      {
+        "argv": [
+          "make",
+          "features"
+        ],
+        "exit_code": 0
+      }
+    ],
+    "additional_scenario_runs": 0,
+    "throughput_rerun": "dropped by leader",
+    "redundant_refresh": "cancelled at leader speed instruction; completed evidence retained"
+  }
 }
