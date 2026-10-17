@@ -1,11 +1,11 @@
 {
-  "run_id": "run_01M54FA2AVKBKRAC86M1TRR3P0",
+  "run_id": "run_01M55F8WRVARRBGXFW6W4HTX8J",
   "network_path": "loopback",
   "scenario": "LAB-TRUTH-MULTIPLICITY",
   "level": "sim",
   "passed": true,
-  "git_sha": "66acf6f733b103fb733516ad36f65b4201d9bdc9",
-  "at": "2026-10-17T08:23:00.699357Z",
+  "git_sha": "c5090cbc2e1798eeac8d7099120b836dbc108667",
+  "at": "2026-10-17T17:41:36.66765Z",
   "assertions": [
     {
       "name": "feed_network_loopback",

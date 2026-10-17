@@ -97,6 +97,9 @@ func blobJourney(ctx context.Context, w *world.World, id string, rows int, evide
 		}) == nil)
 	}
 	size := 4 << 20
+	if id == "CORE-BLOB-INTERRUPT" {
+		size = 16 << 20
+	}
 	fixture := map[string]any{"size": size}
 	if id == "CORE-BLOB-GATEWAY-RETRY" {
 		fixture["drop_reads"] = 1
@@ -215,10 +218,13 @@ func blobJourney(ctx context.Context, w *world.World, id string, rows int, evide
 		measure("interrupt→reconnected", reconnectStart)
 		p, err := blobProgress(ctx, e)
 		before := p.Entries[digest].Received
+		evidence.Metrics = map[string]any{"fixture_bytes": size, "feed_chunk_bytes": contracts.BlobChunkSize, "lab_delay_per_feed_chunk_ms": 150}
 		if !check("active_bulk_transfer_barrier", err == nil && w.Await(3*time.Second, func() bool {
 			p, err := blobProgress(ctx, e)
 			n := p.Entries[digest].Received
-			return err == nil && n > before && n < int64(size)
+			evidence.Metrics["bulk_barrier_received_bytes"] = n
+			evidence.Metrics["bulk_barrier_outstanding_bytes"] = int64(size) - n
+			return err == nil && n > before && int64(size)-n >= 8*contracts.BlobChunkSize
 		}) == nil) {
 			return false
 		}
@@ -229,6 +235,7 @@ func blobJourney(ctx context.Context, w *world.World, id string, rows int, evide
 			for _, r := range records {
 				if strings.Contains(string(r.Data), "during-blob") {
 					progress, err := blobProgress(ctx, e)
+					evidence.Metrics["metadata_observed_outstanding_bytes"] = int64(size) - progress.Entries[digest].Received
 					return err == nil && progress.Entries[digest].Received < int64(size) && progress.Entries[digest].State != "present"
 				}
 			}

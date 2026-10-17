@@ -1,18 +1,18 @@
 {
-  "run_id": "run_01M54ENFJMH923Y4Y4VMW5QSA3",
+  "run_id": "run_01M55EYRMW1Q2SPN4B1NDR9NXA",
   "network_path": "loopback",
   "metrics": {
     "absolute_target_rows_per_second": 2000,
-    "absolute_target_status": "pending-quiet",
+    "absolute_target_status": "met-under-load",
     "capture_rows_per_frame": 64,
     "history_rows": 10000,
-    "history_rows_per_second": 376.04916071093334
+    "history_rows_per_second": 2272.4999147920475
   },
   "scenario": "CORE-BLOB-REFERENCE-INDEX",
   "level": "sim",
   "passed": true,
-  "git_sha": "66acf6f733b103fb733516ad36f65b4201d9bdc9",
-  "at": "2026-10-17T08:11:46.1325Z",
+  "git_sha": "c5090cbc2e1798eeac8d7099120b836dbc108667",
+  "at": "2026-10-17T17:36:04.765012Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -62,9 +62,9 @@
   "latency": {
     "history_10000_commit": {
       "samples": 1,
-      "p50_ms": 26592.267833,
-      "p95_ms": 26592.267833,
-      "max_ms": 26592.267833,
+      "p50_ms": 4400.440209,
+      "p95_ms": 4400.440209,
+      "max_ms": 4400.440209,
       "timeouts": 0
     }
   },

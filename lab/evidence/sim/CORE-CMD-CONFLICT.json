@@ -1,11 +1,11 @@
 {
-  "run_id": "run_01M54EQQT41C1E4Y7MD5C5QXEN",
+  "run_id": "run_01M55EZ58FYX0EDJ77T3559PX1",
   "network_path": "loopback",
   "scenario": "CORE-CMD-CONFLICT",
   "level": "sim",
   "passed": true,
-  "git_sha": "66acf6f733b103fb733516ad36f65b4201d9bdc9",
-  "at": "2026-10-17T08:13:00.100909Z",
+  "git_sha": "c5090cbc2e1798eeac8d7099120b836dbc108667",
+  "at": "2026-10-17T17:36:17.679529Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -155,23 +155,23 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 12.0485,
-      "p95_ms": 12.0485,
-      "max_ms": 12.0485,
+      "p50_ms": 6.463875,
+      "p95_ms": 6.463875,
+      "max_ms": 6.463875,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 12.089542,
-      "p95_ms": 12.089542,
-      "max_ms": 12.089542,
+      "p50_ms": 9.1395,
+      "p95_ms": 9.1395,
+      "max_ms": 9.1395,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica1": {
       "samples": 1,
-      "p50_ms": 12.075834,
-      "p95_ms": 12.075834,
-      "max_ms": 12.075834,
+      "p50_ms": 9.172,
+      "p95_ms": 9.172,
+      "max_ms": 9.172,
       "timeouts": 0
     }
   },

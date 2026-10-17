@@ -1,11 +1,11 @@
 {
-  "run_id": "run_01M54FAQSRJ2DG5JGSEHK5XAM5",
+  "run_id": "run_01M55F92EG11NKPXK788QBC8XY",
   "network_path": "loopback",
   "scenario": "REM-NATIVE-LIST-RACE",
   "level": "sim",
   "passed": true,
-  "git_sha": "66acf6f733b103fb733516ad36f65b4201d9bdc9",
-  "at": "2026-10-17T08:23:22.680394Z",
+  "git_sha": "c5090cbc2e1798eeac8d7099120b836dbc108667",
+  "at": "2026-10-17T17:41:42.480605Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -127,16 +127,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 100.1675,
-      "p95_ms": 100.1675,
-      "max_ms": 100.1675,
+      "p50_ms": 5.318209,
+      "p95_ms": 5.318209,
+      "max_ms": 5.318209,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 103.092208,
-      "p95_ms": 103.092208,
-      "max_ms": 103.092208,
+      "p50_ms": 9.686709,
+      "p95_ms": 9.686709,
+      "max_ms": 9.686709,
       "timeouts": 0
     }
   },
