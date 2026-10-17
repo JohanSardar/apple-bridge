@@ -8,3 +8,5 @@ collections:
   calendar.event: [title, notes, location, url, start, end, all_day, time_zone, occurrence_date, series_id, is_exception, attendees, alarms, availability, status]
 comparison: native occurrence multiplicity and projected field equality; replica payloads, versions and cursors; recurrence splits and original occurrence identity checked by their journeys
 readonly_fixture: subscribed calendars are observed without names and used only for a rejected write attempt
+cleanup: individually tagged occurrences only; whole calendars are retained; private durable fixture identifiers include moved events outside the capture window
+audit: calendar-cleanup-audit.py opens Calendar.sqlitedb with mode=ro and query_only, counts every date, and emits counts only

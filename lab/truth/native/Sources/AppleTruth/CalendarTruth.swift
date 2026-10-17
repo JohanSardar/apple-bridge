@@ -94,8 +94,9 @@ struct CalendarTruth {
                     event.addRecurrenceRule(EKRecurrenceRule(recurrenceWith: frequency, interval: rule["interval"] as? Int ?? 1, end: EKRecurrenceEnd(occurrenceCount: rule["count"] as? Int ?? 3)))
                 }
                 try store.save(event, span: .thisEvent, commit: true)
+                let effect = clock_gettime_nsec_np(CLOCK_UPTIME_RAW)
                 try remember(event, tag: tag)
-                return ["status": "verified", "id": event.calendarItemIdentifier, "effect_uptime_ns": clock_gettime_nsec_np(CLOCK_UPTIME_RAW)]
+                return ["status": "verified", "id": event.calendarItemIdentifier, "effect_uptime_ns": effect]
             case "modify", "move":
                 guard let index = request["index"] as? Int, selected.indices.contains(index) else { throw TruthFailure.invalid }
                 let event = selected[index]
@@ -107,7 +108,9 @@ struct CalendarTruth {
                     event.endDate = event.startDate.addingTimeInterval(duration)
                 }
                 try store.save(event, span: request["span"] as? String == "future" ? .futureEvents : .thisEvent, commit: true)
+                let effect = clock_gettime_nsec_np(CLOCK_UPTIME_RAW)
                 try remember(event, tag: tag)
+                return ["status": "verified", "effect_uptime_ns": effect]
             case "cleanup", "delete", "cleanup_calendar":
                 if action == "cleanup_calendar" {
                     guard let key = request["calendar_id"] as? String, calendars.contains(where: { $0.calendarIdentifier == key && $0.title == "Bridge Test" }) else { throw TruthFailure.invalid }
@@ -119,7 +122,6 @@ struct CalendarTruth {
                 return ["status": "verified", "calendar_retained": true, "all_dates_ownership_proven": false, "removed_tagged_occurrences": selected.count]
             default: throw TruthFailure.invalid
             }
-            return ["status": "verified", "effect_uptime_ns": clock_gettime_nsec_np(CLOCK_UPTIME_RAW)]
         }
         for event in selected { try remember(event, tag: tag) }
         let records: [[String: Any]] = selected.map { event in
