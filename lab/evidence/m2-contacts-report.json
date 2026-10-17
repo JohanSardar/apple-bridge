@@ -1,0 +1,233 @@
+{
+  "unit": "M2 Contacts",
+  "merge_policy": "Leader merge-first instruction; no review; rerun CON sim set and one real CON-CRUD; Ubuntu levels remain unverified",
+  "verified_source_before_scope_metadata_rebase": "4bc9adb775b46b559c84183d914a7d70d7d14e4e",
+  "report_source": "c381b65de9207f76b11f76517622554d87240044",
+  "implementation_commits": [
+    "c381b65de9207f76b11f76517622554d87240044 Verify Contacts simulator set and real CRUD before merge",
+    "f5e7c79ab5df8c5c3c755af18e11327149ffa42c Record passing real Contacts journeys and preservation audits",
+    "3b87788675b7cafa981b34bd7743aa2ba7875b5f Refetch changed Contacts from history without rescanning the store",
+    "a0701fcc8147c750a3d0d0c6db61aa971416c911 Correct native Contacts blob handles and trace aggregate capture phases",
+    "b11860975ffbb2d55c98415cc456c712be2d91ff Integrate Contacts with private native worlds and recovery-safe cleanup",
+    "50712a1e5bfdd31ef6711f3f222641c9cd1da06b Verify Contacts against integrated core, network and blob fixes",
+    "2ea298d1a77c4ee1ea43c644e00dc8af2a9635b2 Refresh Contacts simulator acceptance after cleanup audit",
+    "061aff4d731c42d9a9009bdab8eb391432f06ea5 Require redacted unowned-data preservation audit after Contacts cleanup",
+    "fa2ac23572a6ebb0a85bae87849c1dc376189406 Audit Contacts cleanup against complete unowned contact and container sets",
+    "0c16402eadec91f9cf49445c40b90eef790d18a5 Record aggregate Contacts import coverage without personal values",
+    "f3925ab60a950f0bedaed512e473776489bc09f7 Record eleven passing Contacts simulator journeys after core integration",
+    "ab2f9db9bba714db2a8a6de979407787e27036d0 Link Contacts conflict, permission and resolution acceptance journeys",
+    "a5d925682f254c69f20691cf6cddd3d701bd60ab Adapt Contacts worlds to gateway overrides and verify image Truth digests",
+    "476c009a8372a5cd01971f6b5df517d164755307 Track Contacts mutations in durable simulator recovery frontiers",
+    "4e689e02ba01e1b2077354cb36b9d57cdd7c06bd Preserve Contacts history proofs through restart and native conflicts",
+    "a1999ff3b07644f1d42f6557e90e813731787a1e Journal scoped contact links and harden Contacts capture verification",
+    "b05e9b68fdf4504a0deb1a936bd7bb7778eb12cb Implement Contacts capture, commands, Truth and end-to-end journeys"
+  ],
+  "modules": [
+    "internal/contracts/contacts.go and operation descriptors",
+    "internal/operations/contacts.go and Contacts command routing",
+    "internal/state/contact_links.go: transactional normalized handle resolution and scoped projection",
+    "lab/simapple/contacts.go: history, resets, races, permissions, images and container semantics",
+    "native/Sources/ContactsSource and public Objective-C ContactsHistory shim",
+    "AppleSession native checkpoint, command and BlobRead routing",
+    "independent AppleTruth Contacts fixtures and unowned-data cleanup audit",
+    "lab/scenarios/contacts and redacted scenario evidence"
+  ],
+  "commands": {
+    "transport": "ssh -o ControlPath=none air; export PATH=/opt/homebrew/bin:$HOME/go/bin:$PATH; cd ~/apple-bridge/.worktrees/m2-contacts",
+    "final_reduced_check": "packaging/dev/heavy.sh env GOFLAGS=-p=2 bash -c \"go run ./cmd/bridge-lab run lab/scenarios/contacts --level sim && go run ./cmd/bridge-lab run lab/scenarios/contacts/CON-CRUD.yaml --level real && make lint && go vet ./... && make features\"",
+    "prior_real_suite": "packaging/dev/heavy.sh env GOFLAGS=-p=2 go run ./cmd/bridge-lab run lab/scenarios/contacts --level real",
+    "latency_and_image_fix_proof": "packaging/dev/heavy.sh env GOFLAGS=-p=2 go run ./cmd/bridge-lab run lab/scenarios/contacts/CON-EXTERNAL.yaml lab/scenarios/contacts/CON-IMAGE.yaml --level real",
+    "build": "make build: passed after native history and image fixes",
+    "native": "make native passed earlier; make build subsequently compiled the corrected native source; redundant final make native was canceled at leader merge-first instruction",
+    "gates": "make lint, go vet ./..., make features: passed; make features passed again after scope-cut rebase"
+  },
+  "scenario_results": [
+    {
+      "scenario": "CON-CONFLICT",
+      "level": "sim",
+      "status": "passed",
+      "source_commit": "4bc9adb775b46b559c84183d914a7d70d7d14e4e",
+      "evidence": "lab/evidence/sim/CON-CONFLICT.json"
+    },
+    {
+      "scenario": "CON-CRUD",
+      "level": "sim",
+      "status": "passed",
+      "source_commit": "4bc9adb775b46b559c84183d914a7d70d7d14e4e",
+      "evidence": "lab/evidence/sim/CON-CRUD.json"
+    },
+    {
+      "scenario": "CON-DROP-EVERYTHING",
+      "level": "sim",
+      "status": "passed",
+      "source_commit": "4bc9adb775b46b559c84183d914a7d70d7d14e4e",
+      "evidence": "lab/evidence/sim/CON-DROP-EVERYTHING.json"
+    },
+    {
+      "scenario": "CON-EXTERNAL",
+      "level": "sim",
+      "status": "passed",
+      "source_commit": "4bc9adb775b46b559c84183d914a7d70d7d14e4e",
+      "evidence": "lab/evidence/sim/CON-EXTERNAL.json"
+    },
+    {
+      "scenario": "CON-HANDLE-LINK",
+      "level": "sim",
+      "status": "passed",
+      "source_commit": "4bc9adb775b46b559c84183d914a7d70d7d14e4e",
+      "evidence": "lab/evidence/sim/CON-HANDLE-LINK.json"
+    },
+    {
+      "scenario": "CON-IMAGE",
+      "level": "sim",
+      "status": "passed",
+      "source_commit": "4bc9adb775b46b559c84183d914a7d70d7d14e4e",
+      "evidence": "lab/evidence/sim/CON-IMAGE.json"
+    },
+    {
+      "scenario": "CON-IMPORT",
+      "level": "sim",
+      "status": "passed",
+      "source_commit": "4bc9adb775b46b559c84183d914a7d70d7d14e4e",
+      "evidence": "lab/evidence/sim/CON-IMPORT.json"
+    },
+    {
+      "scenario": "CON-PERMISSION-LOSS",
+      "level": "sim",
+      "status": "passed",
+      "source_commit": "4bc9adb775b46b559c84183d914a7d70d7d14e4e",
+      "evidence": "lab/evidence/sim/CON-PERMISSION-LOSS.json"
+    },
+    {
+      "scenario": "CON-READONLY-CONTAINER",
+      "level": "sim",
+      "status": "passed",
+      "source_commit": "4bc9adb775b46b559c84183d914a7d70d7d14e4e",
+      "evidence": "lab/evidence/sim/CON-READONLY-CONTAINER.json"
+    },
+    {
+      "scenario": "CON-RESOLVE-RESTART",
+      "level": "sim",
+      "status": "passed",
+      "source_commit": "4bc9adb775b46b559c84183d914a7d70d7d14e4e",
+      "evidence": "lab/evidence/sim/CON-RESOLVE-RESTART.json"
+    },
+    {
+      "scenario": "CON-TOKEN-CRASH",
+      "level": "sim",
+      "status": "passed",
+      "source_commit": "4bc9adb775b46b559c84183d914a7d70d7d14e4e",
+      "evidence": "lab/evidence/sim/CON-TOKEN-CRASH.json"
+    },
+    {
+      "scenario": "CON-CRUD",
+      "level": "real",
+      "status": "passed",
+      "source_commit": "4bc9adb775b46b559c84183d914a7d70d7d14e4e",
+      "evidence": "lab/evidence/real/CON-CRUD.json"
+    },
+    {
+      "scenario": "CON-EXTERNAL",
+      "level": "real",
+      "status": "passed",
+      "source_commit": "8b97aa24c7391962d04cc8294f287674557e9797",
+      "evidence": "lab/evidence/real/CON-EXTERNAL.json"
+    },
+    {
+      "scenario": "CON-HANDLE-LINK",
+      "level": "real",
+      "status": "passed",
+      "source_commit": "1eefb0727428c09cd3b18f1499f454cd792459f7",
+      "evidence": "lab/evidence/real/CON-HANDLE-LINK.json"
+    },
+    {
+      "scenario": "CON-IMAGE",
+      "level": "real",
+      "status": "passed",
+      "source_commit": "8b97aa24c7391962d04cc8294f287674557e9797",
+      "evidence": "lab/evidence/real/CON-IMAGE.json"
+    },
+    {
+      "scenario": "CON-IMPORT",
+      "level": "real",
+      "status": "passed",
+      "source_commit": "1eefb0727428c09cd3b18f1499f454cd792459f7",
+      "evidence": "lab/evidence/real/CON-IMPORT.json"
+    },
+    {
+      "scenario": "CON-CRUD",
+      "level": "replica",
+      "status": "unverified",
+      "reason": "Ubuntu replica run omitted under explicit leader merge-first instruction"
+    },
+    {
+      "scenario": "CON-EXTERNAL",
+      "level": "replica",
+      "status": "unverified",
+      "reason": "Ubuntu replica run omitted under explicit leader merge-first instruction"
+    }
+  ],
+  "latency_ms": {
+    "real_native_save_to_gateway_and_local_replica": {
+      "effect_done\u2192gateway_visible": {
+        "samples": 20,
+        "p50_ms": 176.377208,
+        "p95_ms": 238.425875,
+        "max_ms": 278.554042,
+        "timeouts": 0
+      },
+      "effect_done\u2192replica_visible:replica0": {
+        "samples": 20,
+        "p50_ms": 202.824542,
+        "p95_ms": 254.243792,
+        "max_ms": 302.968167,
+        "timeouts": 0
+      }
+    },
+    "sim": {
+      "effect_done\u2192gateway_visible": {
+        "samples": 20,
+        "p50_ms": 14.862042,
+        "p95_ms": 19.100042,
+        "max_ms": 19.123875,
+        "timeouts": 0
+      },
+      "effect_done\u2192replica_visible:replica0": {
+        "samples": 20,
+        "p50_ms": 18.964875,
+        "p95_ms": 25.145708,
+        "max_ms": 28.1565,
+        "timeouts": 0
+      }
+    },
+    "condition": "Contended host; no quiet-machine gate; real replica numbers are local Air replica, not Ubuntu"
+  },
+  "cleanup": {
+    "bridge_test_contact_count": 0,
+    "run_tagged_contact_count": 0,
+    "audit": {
+      "containers_preserved": true,
+      "groups_preserved": true,
+      "selected_count": 0,
+      "unowned_after_count": 154,
+      "unowned_before_count": 154,
+      "unowned_fields_unchanged": true,
+      "unowned_identifiers_after_sha256": "e18d53df58a026fc0514c0631a57d2da157f1d2f020f018fd228a1da0023e33a",
+      "unowned_identifiers_before_sha256": "e18d53df58a026fc0514c0631a57d2da157f1d2f020f018fd228a1da0023e33a",
+      "whole_container_operations": 0
+    },
+    "selection": "Only organization Bridge Test AND this run exact [ab-test <run>] given-name prefix; unbounded enumeration; no group/container save operations"
+  },
+  "deviations_and_proposals": [
+    "Contact note is unavailable without restricted entitlement, as specified.",
+    "Public CNContainer provides no writability flag. Writes are conservatively allowed only in the default container; nondefault containers are rejected. Propose explicit unknown writability metadata.",
+    "Handle matching lives only in the gateway state module so derived links are journaled transactionally and omitted from scopes without Contacts access.",
+    "Ubuntu CON-CRUD and CON-EXTERNAL remain unverified and are not marked passed."
+  ],
+  "extra_scenarios": [
+    "CON-CONFLICT",
+    "CON-PERMISSION-LOSS",
+    "CON-RESOLVE-RESTART"
+  ],
+  "johan_action_required": null
+}
