@@ -1,0 +1,11 @@
+.DS_Store
+.build/
+bin/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.db
+lab/evidence/private/
+.env
+*.env
+__pycache__/
