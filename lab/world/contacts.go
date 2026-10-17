@@ -2,6 +2,10 @@ package world
 
 import "context"
 
-func NewContacts(ctx context.Context, level string, replicas int, native bool) (*World, error) {
-	return newEnvironment(ctx, level, replicas, 0, native, BlobOptions{Scope: "contacts:write,messages:read,system:read"})
+func NewContacts(ctx context.Context, level string, replicas int, native bool, includeMessages bool) (*World, error) {
+	scope := "contacts:write,system:read"
+	if includeMessages {
+		scope += ",messages:read"
+	}
+	return newEnvironment(ctx, level, replicas, 0, native, BlobOptions{Scope: scope})
 }

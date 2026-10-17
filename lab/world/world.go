@@ -403,7 +403,11 @@ func newEnvironment(ctx context.Context, level string, replicas, seed int, nativ
 		if err = w.ControlAction("/seed", map[string]int{"count": seed}); err != nil {
 			return nil, err
 		}
-		if err = w.Await(10*time.Second, func() bool { records, err := w.Records(w.Gateway); return err == nil && len(records) >= seed+2 }); err != nil {
+		minimum := seed + 2
+		if w.blobOptions.Scope != "" {
+			minimum = 1
+		}
+		if err = w.Await(10*time.Second, func() bool { records, err := w.Records(w.Gateway); return err == nil && len(records) >= minimum }); err != nil {
 			return nil, err
 		}
 	} else {

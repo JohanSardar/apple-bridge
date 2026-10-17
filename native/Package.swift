@@ -7,7 +7,8 @@ let package = Package(
     products: [.executable(name: "AppleBridgeHelper", targets: ["AppleBridgeHelper"])],
     targets: [
         .target(name: "SourceSupport"),
-        .target(name: "ContactsSource", dependencies: ["SourceSupport"]),
+        .target(name: "ContactsHistory", publicHeadersPath: "include"),
+        .target(name: "ContactsSource", dependencies: ["SourceSupport", "ContactsHistory"]),
         .target(name: "Decoders"),
         .target(name: "AgendaGate", dependencies: ["SourceSupport"]),
         .target(name: "RemindersSource", dependencies: ["AgendaGate", "SourceSupport"]),

@@ -282,6 +282,10 @@ func Run(ctx context.Context, cfg Config) error {
 			}
 			o = contracts.Observation{Kind: "upsert", Collection: action.Collection, NativeKey: action.Key, ObservedAt: time.Now().UTC(), Data: action.Data}
 		}
+		if contracts.CollectionSource(o.Collection) == contracts.Contacts {
+			o.ScopedAlias = "contacts/" + o.Collection + "/" + o.NativeKey
+			fake.contactSequence++
+		}
 		fake.records[action.Key] = o
 		if err := fake.changedLocked(contracts.CollectionSource(o.Collection)); err != nil {
 			fake.mu.Unlock()
@@ -301,6 +305,9 @@ func Run(ctx context.Context, cfg Config) error {
 		capture := contracts.Capture{Source: contracts.CollectionSource(o.Collection), Observations: []contracts.Observation{o}}
 		if action.Delete {
 			capture = fullScan([]contracts.Observation{o})
+		}
+		if contracts.CollectionSource(o.Collection) == contracts.Contacts {
+			capture = fake.contactSnapshot(false)
 		}
 		if !action.OmitCapture {
 			if err := fake.enqueue(r.Context(), capture, false, revision); err != nil {

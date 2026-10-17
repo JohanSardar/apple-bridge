@@ -102,8 +102,14 @@ func (c *Commands) RecordCapture(capture contracts.Capture, cursor contracts.Cur
 			observations[o.Collection+"/"+o.NativeKey] = true
 		}
 	}
+	if previous, ok := s.receipts[key]; ok {
+		for observation := range previous.observations {
+			observations[observation] = true
+		}
+	} else {
+		s.receiptOrder = append(s.receiptOrder, key)
+	}
 	s.receipts[key] = captureReceipt{cursor: cursor, observations: observations}
-	s.receiptOrder = append(s.receiptOrder, key)
 	if len(s.receiptOrder) > 4096 {
 		delete(s.receipts, s.receiptOrder[0])
 		s.receiptOrder = s.receiptOrder[1:]

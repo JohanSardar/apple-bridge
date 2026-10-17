@@ -427,7 +427,7 @@ public actor AppleSession: ObservationSink {
         guard code == "conflict", !key.isEmpty else { try? reject(frame, code: code); return }
         do {
             let isContact = frame["action"]["op"].string.hasPrefix("contacts.")
-            if isContact { try await contacts.reconcile(into: self) } else { try await source.reconcile(into: self) }
+            if isContact { try await contacts.reconcile(into: self, key: key) } else { try await source.reconcile(into: self) }
             guard let checkpoint = observedCheckpoints[(isContact ? "contacts.contact/" : "reminders.reminder/") + key] else { throw SourceFailure.unavailable }
             let evidence = JSON.object(["native_key": .string(key), "capture_checkpoint": .string(checkpoint)])
             try wire?.send(.object(["t": .string("Rejected"), "command_id": frame["command_id"], "disposition": .string("rejected_before_dispatch"), "error": .object(["code": .string(code), "message": .string(code)]), "evidence": evidence]))

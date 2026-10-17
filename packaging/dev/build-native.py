@@ -22,6 +22,7 @@ targets = {t["name"]: t for t in metadata["package"]["targets"]}
 built = set()
 visiting = set()
 objects = {}
+clang_modules = []
 
 def build(name):
     if name in built:
@@ -40,7 +41,29 @@ def build(name):
     sources = package / target.get("path", "Sources/" + name)
     excluded = set(target.get("exclude", []))
     files = sorted(str(p) for p in sources.rglob("*.swift") if str(p.relative_to(sources)) not in excluded)
+    objc = sorted(p for p in sources.rglob("*.m") if str(p.relative_to(sources)) not in excluded)
+    if objc:
+        if files or "regular" not in target["type"]:
+            raise SystemExit("Objective-C targets must be separate library targets")
+        headers = sources / target.get("publicHeadersPath", "include")
+        module_map = output / (name + ".modulemap")
+        declarations = "\n".join('header "' + str(p) + '"' for p in sorted(headers.rglob("*.h")))
+        module_map.write_text("module " + name + " {\n" + declarations + "\nexport *\n}\n")
+        clang_modules.append(str(module_map))
+        closure = set()
+        for dependency in dependencies:
+            closure.update(objects[dependency])
+        for source in objc:
+            obj = output / (name + "-" + source.stem + ".o")
+            subprocess.run(["xcrun", "clang", "-isysroot", sdk, "-target", platform.machine() + "-apple-macosx26.0", "-fobjc-arc", "-fmodules", "-O", "-Wall", "-Werror", "-I", str(headers), "-c", str(source), "-o", str(obj)], check=True)
+            closure.add(str(obj))
+        objects[name] = closure
+        visiting.remove(name)
+        built.add(name)
+        return
     flags = [compiler, "-sdk", sdk, "-target", platform.machine() + "-apple-macosx26.0", "-swift-version", "6", "-warnings-as-errors", "-O", "-parse-as-library", "-I", str(output), "-module-name", name]
+    for module_map in clang_modules:
+        flags += ["-Xcc", "-fmodule-map-file=" + module_map]
     closure = set()
     def collect(item):
         closure.update(objects[item])

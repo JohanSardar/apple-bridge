@@ -280,7 +280,7 @@ func (s *Store) CommitCapture(ctx context.Context, c contracts.Capture) (CommitR
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return result, err
 	}
-	if gen == c.Generation && cp == c.Checkpoint {
+	if gen == c.Generation && cp == c.Checkpoint && (c.Source != contracts.Contacts || len(c.Observations) == 0 || c.Predecessor != cp) {
 		result.Duplicate = true
 		return result, nil
 	}

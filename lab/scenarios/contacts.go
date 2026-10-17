@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -37,7 +38,7 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
 	fail := func(name string) Evidence { add(name, false); return e }
 	native := level == "real" || level == "replica"
-	w, err := world.NewContacts(ctx, level, 1, native)
+	w, err := world.NewContacts(ctx, level, 1, native, s.ID == "CON-HANDLE-LINK")
 	if err != nil {
 		return fail("world_start")
 	}
@@ -91,7 +92,7 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 		}()
 	}
 	find := func(endpoint world.Endpoint) (contracts.Record, bool) {
-		records, err := w.Records(endpoint)
+		records, err := contactRecords(ctx, w, endpoint)
 		if err != nil {
 			return contracts.Record{}, false
 		}
@@ -179,7 +180,7 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 			if err != nil {
 				return fail("independent_import_truth")
 			}
-			records, err := w.Records(w.Gateway)
+			records, err := contactRecords(ctx, w, w.Gateway)
 			if err != nil {
 				return fail("import_records")
 			}
@@ -249,7 +250,7 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 				add("field_coverage_"+key, nativeCoverage[key] == json.Number(fmt.Sprint(coverage[key])))
 			}
 		} else {
-			add("sim_truth_equal", w.Await(5*time.Second, func() bool { return contactTruthConvergence(w) }) == nil)
+			add("sim_truth_equal", w.Await(5*time.Second, func() bool { return contactTruthConvergence(ctx, w) }) == nil)
 		}
 	case "CON-EXTERNAL":
 		values := make([][]float64, len(endpoints))
@@ -348,6 +349,29 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 			}
 		}
 
+	case "CON-RESOLVE-RESTART":
+		before, _ := find(w.Gateway)
+		if w.ControlAction("/fault", map[string]any{"name": "ambiguous-outcome"}) != nil {
+			return fail("ambiguous_contact_fault")
+		}
+		command, err := submit("rest", "contacts.update", map[string]any{"id": before.ID, "job_title": "Resolved Testjob"}, before.Version)
+		if err != nil || command.Disposition != "indeterminate" {
+			return fail("contact_outcome_indeterminate")
+		}
+		if w.RestartGateway() != nil {
+			return fail("gateway_restart")
+		}
+		if w.Await(5*time.Second, func() bool {
+			var resolved contracts.CommandRecord
+			_, err := world.Request(ctx, w.Gateway, "/v1/op/commands.status", contracts.CommandQuery{ID: command.Command.ID, Resolve: true}, &resolved)
+			return err == nil && resolved.Disposition == "locally_observed" && resolved.CommitSeq > 0
+		}) != nil {
+			return fail("same_history_token_resolves_after_restart")
+		}
+		current, ok := find(w.Gateway)
+		add("reobserved_token_does_not_duplicate_version", ok && current.Version == before.Version+1)
+		effects, err := w.Effects()
+		add("resolve_never_redispatches", err == nil && effects[command.Command.ID] == 1)
 	case "CON-PERMISSION-LOSS":
 		before, _ := find(w.Gateway)
 		if w.ControlAction("/source-state", map[string]string{"source": "contacts", "state": "permission_missing"}) != nil {
@@ -382,6 +406,26 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 		add("stale_expected_version_conflicts", err != nil)
 		effects, err := w.Effects()
 		add("stale_version_zero_effects", err == nil && len(effects) == 0)
+		fresh, _ := find(w.Gateway)
+		var hidden map[string]any
+		json.Unmarshal(fresh.Data, &hidden)
+		hidden["job_title"] = "Hidden External Testjob"
+		if w.ControlAction("/external-change", map[string]any{"key": tag, "collection": "contacts.contact", "data": hidden, "omit_capture": true}) != nil {
+			return fail("unreported_native_edit")
+		}
+		_, err = submit("rest", "contacts.update", map[string]any{"id": fresh.ID, "job_title": "Forbidden Testjob"}, fresh.Version)
+		var conflict *contracts.Error
+		add("fresh_native_refetch_conflict_with_current", errors.As(err, &conflict) && conflict.Code == "conflict" && conflict.Current != nil && conflict.Current.ID == fresh.ID && conflict.Current.Version > fresh.Version)
+		fresh, _ = find(w.Gateway)
+		if w.ControlAction("/external-change", map[string]any{"key": tag, "collection": "contacts.contact", "delete": true, "omit_capture": true}) != nil {
+			return fail("unreported_native_delete")
+		}
+		_, err = submit("rest", "contacts.update", map[string]any{"id": fresh.ID, "job_title": "Forbidden Testjob"}, fresh.Version)
+		conflict = nil
+		add("fresh_native_absence_conflict_with_current", errors.As(err, &conflict) && conflict.Code == "conflict" && conflict.Current != nil && conflict.Current.Deleted)
+		effects, err = w.Effects()
+		add("native_races_zero_effects", err == nil && len(effects) == 0)
+
 	case "CON-DROP-EVERYTHING":
 		before, _ := find(w.Gateway)
 		var original contracts.ReadResult
@@ -481,7 +525,7 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 			}
 		}
 		add("message_handle_contact_link", w.Await(5*time.Second, func() bool {
-			records, err := w.Records(w.Gateway)
+			records, err := contactRecords(ctx, w, w.Gateway)
 			if err != nil {
 				return false
 			}
@@ -514,7 +558,7 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 				return false
 			}) == nil)
 			linked := func() bool {
-				records, err := w.Records(w.Gateway)
+				records, err := contactRecords(ctx, w, w.Gateway)
 				if err != nil {
 					return false
 				}
@@ -590,12 +634,12 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 
 	}
 	add("replica_convergence", w.Await(10*time.Second, func() bool {
-		gateway, err := w.Records(w.Gateway)
+		gateway, err := contactRecords(ctx, w, w.Gateway)
 		if err != nil {
 			return false
 		}
 		for _, endpoint := range w.Replicas {
-			replica, err := w.Records(endpoint)
+			replica, err := contactRecords(ctx, w, endpoint)
 			if err != nil || !reflect.DeepEqual(withoutCommands(gateway), withoutCommands(replica)) {
 				return false
 			}
@@ -603,7 +647,7 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 		return true
 	}) == nil)
 	if !native && s.ID != "CON-PERMISSION-LOSS" {
-		add("independent_sim_truth", w.Await(5*time.Second, func() bool { return contactTruthConvergence(w) }) == nil)
+		add("independent_sim_truth", w.Await(5*time.Second, func() bool { return contactTruthConvergence(ctx, w) }) == nil)
 	}
 	for i, observer := range observers {
 		observer.mu.Lock()
@@ -630,7 +674,7 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 	return e
 }
 
-func contactTruthConvergence(w *world.World) bool {
+func contactTruthConvergence(ctx context.Context, w *world.World) bool {
 	observations, err := w.Inspect()
 	if err != nil {
 		return false
@@ -650,7 +694,7 @@ func contactTruthConvergence(w *world.World) bool {
 	if err != nil {
 		return false
 	}
-	actual, err := w.Records(w.Gateway)
+	actual, err := contactRecords(ctx, w, w.Gateway)
 	if err != nil {
 		return false
 	}
@@ -679,4 +723,24 @@ func (w *watcher) observedContact(tag, job string) (Seen, bool) {
 		}
 	}
 	return Seen{}, false
+}
+
+func contactRecords(ctx context.Context, w *world.World, endpoint world.Endpoint) ([]contracts.Record, error) {
+	records := []contracts.Record{}
+	for _, collection := range []string{"contacts.contact", "contacts.group", "messages.handle"} {
+		after := ""
+		for {
+			var page contracts.ReadResult
+			_, err := world.Request(ctx, endpoint, "/v1/op/records.query", contracts.ReadQuery{Collection: collection, Limit: 1000, After: after}, &page)
+			if err != nil {
+				return nil, err
+			}
+			records = append(records, page.Records...)
+			if page.Next == "" {
+				break
+			}
+			after = page.Next
+		}
+	}
+	return records, nil
 }

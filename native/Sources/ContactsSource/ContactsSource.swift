@@ -1,6 +1,7 @@
 import Foundation
 @preconcurrency import Contacts
 import CryptoKit
+import ContactsHistory
 import SourceSupport
 
 @MainActor
@@ -101,16 +102,20 @@ public final class ContactsSource: Source {
         guard authorized else { throw SourceFailure.permissionMissing }
         let request = CNChangeHistoryFetchRequest()
         request.startingToken = starting; request.shouldUnifyResults = true; request.includeGroupChanges = true
-        request.additionalContactKeyDescriptors = Self.keys
-        let selector = NSSelectorFromString("enumeratorForChangeHistoryFetchRequest:error:")
-        guard let result = store.perform(selector, with: request, with: nil)?.takeUnretainedValue() as? CNFetchResult<NSEnumerator> else { throw SourceFailure.unavailable }
-        var drop = false
-        for event in result.value { if event is CNChangeHistoryDropEverythingEvent { drop = true } }
-        return (result.currentHistoryToken, drop)
+        request.additionalContactKeyDescriptors = [CNContactIdentifierKey as NSString]
+        guard let result = AppleBridgeContactsHistory.fetch(store: store, request: request) else { throw SourceFailure.unavailable }
+        return (result.token, result.droppedEverything)
     }
     private func fresh(_ key: String) throws -> CNContact {
         guard authorized else { throw SourceFailure.permissionMissing }
         return try store.unifiedContact(withIdentifier: key, keysToFetch: Self.keys)
+    }
+    private func commandContact(_ key: String) throws -> CNContact {
+        do { return try fresh(key) }
+        catch let error as NSError {
+            if error.domain == CNErrorDomain && error.code == CNError.Code.recordDoesNotExist.rawValue { throw SourceFailure.conflict }
+            throw error
+        }
     }
     private func isAbsent(_ key: String) throws -> Bool {
         do { _ = try fresh(key); return false }
@@ -120,7 +125,7 @@ public final class ContactsSource: Source {
             return true
         }
     }
-    private func scan(into sink: any ObservationSink, live: Bool) async throws {
+    private func scan(into sink: any ObservationSink, live: Bool, force: Bool = false) async throws {
         while scanning { try await Task.sleep(for: .milliseconds(5)) }
         scanning = true; defer { scanning = false }
         let started = timestamp()
@@ -154,7 +159,7 @@ public final class ContactsSource: Source {
         for key in current.keys.sorted() {
             guard let value = current[key] else { continue }
             let changed = try hash(value["data"]) != hash(committed[key]?["data"] ?? .null)
-            if drop || token == nil || changed { observations.append(value) }
+            if force || drop || token == nil || changed { observations.append(value) }
         }
         if !drop {
             let groups = Set(try store.groups(matching: nil).map(\.identifier))
@@ -189,7 +194,7 @@ public final class ContactsSource: Source {
             }
         }
         defer { polling.cancel(); NotificationCenter.default.removeObserver(observer); continuation.finish() }
-        try await scan(into: sink, live: false)
+        try await scan(into: sink, live: false, force: true)
         for await _ in changes {
             try Task.checkCancellation()
             try await Task.sleep(for: .milliseconds(50))
@@ -197,11 +202,14 @@ public final class ContactsSource: Source {
         }
     }
 
-    public func reconcile(into sink: any ObservationSink) async throws { try await scan(into: sink, live: true) }
+    public func reconcile(into sink: any ObservationSink, key: String = "") async throws {
+        try await scan(into: sink, live: true, force: true)
+        if !key.isEmpty, try isAbsent(key) { try await confirmAbsence(key, into: sink) }
+    }
     public func confirmAbsence(_ key: String, into sink: any ObservationSink) async throws {
         guard try isAbsent(key) else { throw SourceFailure.conflict }
         let (next, _) = try history(token)
-        let absent: JSON = .object(["kind": .string("absent"), "collection": .string("contacts.contact"), "native_key": .string(key), "revalidated": .bool(true), "observed_at": .string(timestamp())])
+        let absent: JSON = .object(["kind": .string("absent"), "collection": .string("contacts.contact"), "native_key": .string(key), "scoped_alias": .string("contacts/contacts.contact/" + key), "revalidated": .bool(true), "observed_at": .string(timestamp())])
         try await sink.emitCheckpoint(source: name, generation: generation, checkpoint: next.base64EncodedString(), observations: [absent], scanID: UUID().uuidString, scanStartedAt: timestamp(), scope: ["contacts.contact"], completionEvidence: "complete", blobHandles: [:], live: true)
         token = next
     }
@@ -219,7 +227,7 @@ public final class ContactsSource: Source {
             let key = store.defaultContainerIdentifier()
             guard !key.isEmpty, try store.containers(matching: CNContainer.predicateForContainers(withIdentifiers: [key])).count == 1 else { throw SourceFailure.unsupported }
         } else {
-            before = try data(fresh(action["native_key"].string))
+            before = try data(commandContact(action["native_key"].string))
             guard before == command["expected_state"] else { throw SourceFailure.conflict }
             guard before["writable"].bool else { throw SourceFailure.unsupported }
         }
@@ -230,7 +238,7 @@ public final class ContactsSource: Source {
     public func validate(_ prepared: Prepared) async throws {
         guard authorized else { throw SourceFailure.permissionMissing }
         if prepared.action["op"].string != "contacts.create" {
-            let current = try data(fresh(prepared.action["native_key"].string))
+            let current = try data(commandContact(prepared.action["native_key"].string))
             guard current == prepared.nativeState else { throw SourceFailure.conflict }
             guard current["writable"].bool else { throw SourceFailure.unsupported }
         }
@@ -288,7 +296,7 @@ public final class ContactsSource: Source {
         let contact: CNMutableContact
         if operation == "contacts.create" { contact = CNMutableContact(); try patch(contact, action["args"]); request.add(contact, toContainerWithIdentifier: store.defaultContainerIdentifier()) }
         else {
-            guard let current = try fresh(action["native_key"].string).mutableCopy() as? CNMutableContact else { throw SourceFailure.corrupt }
+            guard let current = try commandContact(action["native_key"].string).mutableCopy() as? CNMutableContact else { throw SourceFailure.corrupt }
             contact = current
             if operation == "contacts.delete" { request.delete(contact) }
             else { try patch(contact, action["args"]); request.update(contact) }

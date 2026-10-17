@@ -179,6 +179,14 @@ func (f *fakeApple) contactCommand(wire *applepeer.Wire, frame contracts.IPCFram
 		_, err := wire.Send(contracts.IPCFrame{T: "Rejected", CommandID: frame.CommandID, Error: e, Disposition: "rejected_before_dispatch"})
 		return err
 	}
+	rejectConflict := func(key string) error {
+		if err := emit(f.contactSnapshot(false)); err != nil {
+			return err
+		}
+		evidence, _ := json.Marshal(contracts.ConflictObservation{NativeKey: key, CaptureCheckpoint: checkpoint(contracts.Contacts)})
+		_, err := wire.Send(contracts.IPCFrame{T: "Rejected", CommandID: frame.CommandID, Disposition: contracts.DispositionRejectedBeforeDispatch, Error: contracts.ErrConflict, Evidence: evidence})
+		return err
+	}
 	switch frame.T {
 	case "Prepare":
 		f.mu.Lock()
@@ -190,9 +198,13 @@ func (f *fakeApple) contactCommand(wire *applepeer.Wire, frame contracts.IPCFram
 		}
 		if a.NativeKey != "" {
 			o, ok := f.records[a.NativeKey]
-			if !ok || o.Kind == "absent" {
+			if !ok {
 				f.mu.Unlock()
 				return reject(contracts.ErrNotFound)
+			}
+			if o.Kind == "absent" {
+				f.mu.Unlock()
+				return rejectConflict(a.NativeKey)
 			}
 			before = o.Data
 			var current, expected map[string]any
@@ -200,7 +212,7 @@ func (f *fakeApple) contactCommand(wire *applepeer.Wire, frame contracts.IPCFram
 			decodeNative(frame.ExpectedState, &expected)
 			if !reflect.DeepEqual(current, expected) {
 				f.mu.Unlock()
-				return reject(contracts.ErrConflict)
+				return rejectConflict(a.NativeKey)
 			}
 			if current["writable"] != true {
 				f.mu.Unlock()
@@ -228,9 +240,9 @@ func (f *fakeApple) contactCommand(wire *applepeer.Wire, frame contracts.IPCFram
 			f.mu.Unlock()
 			return reject(contracts.ErrUnavailable)
 		}
-		if t.Action.NativeKey != "" && string(f.records[t.Action.NativeKey].Data) != string(t.Before) {
+		if t.Action.NativeKey != "" && (f.records[t.Action.NativeKey].Kind == "absent" || string(f.records[t.Action.NativeKey].Data) != string(t.Before)) {
 			f.mu.Unlock()
-			return reject(contracts.ErrConflict)
+			return rejectConflict(t.Action.NativeKey)
 		}
 		if err := f.guard(guardEntry{CommandID: t.CommandID, Ticket: frame.Ticket, StartedAt: time.Now().UTC()}); err != nil {
 			f.mu.Unlock()
@@ -273,13 +285,18 @@ func (f *fakeApple) contactCommand(wire *applepeer.Wire, frame contracts.IPCFram
 		f.records[key] = o
 		f.contactSequence++
 		f.effects[t.CommandID]++
-		evidence, _ := json.Marshal(map[string]any{"source": "contacts", "native_key": key, "observed": true, "absent": o.Kind == "absent", "fingerprint": t.Hash})
+		evidence, _ := json.Marshal(map[string]any{"source": "contacts", "native_key": key, "observed": true, "absent": o.Kind == "absent", "fingerprint": t.Hash, "observed_digest": contactDigest(o.Data)})
 		outcome := contracts.IPCFrame{T: "Outcome", CommandID: t.CommandID, Disposition: "locally_observed", Evidence: evidence}
 		f.evidence[t.CommandID] = outcome
+		fault := f.fault
+		f.fault = ""
 		err := f.saveLocked()
 		f.mu.Unlock()
 		if err != nil {
 			return err
+		}
+		if fault == "crash-after-effect" {
+			os.Exit(78)
 		}
 		c := f.contactSnapshot(false)
 		if err = emit(c); err != nil {
@@ -296,6 +313,12 @@ func (f *fakeApple) contactCommand(wire *applepeer.Wire, frame contracts.IPCFram
 		if err != nil {
 			return err
 		}
+		if fault == "crash-before-outcome" {
+			os.Exit(78)
+		}
+		if fault == "ambiguous-outcome" {
+			outcome.Disposition = "indeterminate"
+		}
 		if err = f.guard(guardEntry{CommandID: t.CommandID, Outcome: &outcome}); err != nil {
 			return err
 		}
@@ -303,10 +326,38 @@ func (f *fakeApple) contactCommand(wire *applepeer.Wire, frame contracts.IPCFram
 		return err
 	case "Resolve":
 		f.mu.Lock()
-		outcome := f.evidence[frame.CommandID]
+		outcome, exists := f.evidence[frame.CommandID]
+		var evidence map[string]any
+		if json.Unmarshal(outcome.Evidence, &evidence) != nil {
+			exists = false
+		}
+		key, _ := evidence["native_key"].(string)
+		absent, _ := evidence["absent"].(bool)
+		record, found := f.records[key]
+		matches := exists && found && (record.Kind == "absent") == absent
+		if !absent {
+			matches = matches && evidence["observed_digest"] == contactDigest(record.Data)
+		}
 		f.mu.Unlock()
+		if matches {
+			if err := emit(f.contactSnapshot(false)); err != nil {
+				return err
+			}
+			evidence["capture_checkpoint"] = checkpoint(contracts.Contacts)
+			outcome.Evidence, _ = json.Marshal(evidence)
+			outcome.Disposition = "locally_observed"
+		} else {
+			outcome = contracts.IPCFrame{T: "Outcome", CommandID: frame.CommandID, Disposition: "indeterminate"}
+		}
+		if matches {
+			if err := f.guard(guardEntry{CommandID: frame.CommandID, Outcome: &outcome}); err != nil {
+				return err
+			}
+		}
 		_, err := wire.Send(outcome)
 		return err
 	}
 	return contracts.ErrInvalid
 }
+
+func contactDigest(data []byte) string { sum := sha256.Sum256(data); return hex.EncodeToString(sum[:]) }
