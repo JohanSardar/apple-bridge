@@ -335,6 +335,16 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 			}
 			after, err := w.Records(w.Gateway)
 			add("no_false_deletion", err == nil && reflect.DeepEqual(recordMultiset(before, false), recordMultiset(after, false)))
+			admin := w.Gateway
+			admin.Token, err = w.ScopedToken(admin, "admin")
+			if err != nil || !restrictedMessage(w, "permission-isolated-message") {
+				return failed("other_source_during_permission_loss")
+			}
+			add("reminders_permission_loss_does_not_suppress_messages", w.Await(3*time.Second, func() bool {
+				var result contracts.ReadResult
+				_, err := world.Request(ctx, admin, "/v1/op/records.query", contracts.ReadQuery{Collection: "messages.message"}, &result)
+				return err == nil && len(result.Records) == 1
+			}) == nil)
 		default:
 			if s.ID == "REM-CRUD" {
 				if fixture("create_list", map[string]any{}) != nil {

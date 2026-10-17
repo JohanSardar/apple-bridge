@@ -880,8 +880,13 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		}
 		if s.Feature == "messages.read" && level != "sim" { duration = 20*time.Minute }
 		bounded, cancel := context.WithTimeout(ctx, duration)
+		secretBefore, secretWasSet := os.LookupEnv("APPLE_BRIDGE_SECRET_STORE")
 		e := Run(bounded, s, level)
 		cancel()
+		secretAfter, secretIsSet := os.LookupEnv("APPLE_BRIDGE_SECRET_STORE")
+		restored := secretBefore == secretAfter && secretWasSet == secretIsSet
+		e.Assertions = append(e.Assertions, Assertion{Name: "credential_backend_override_restored", Passed: restored})
+		e.Passed = e.Passed && restored
 		if err = Save(e); err != nil {
 			return err
 		}
