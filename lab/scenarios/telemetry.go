@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -17,14 +19,12 @@ func RequireQuiet(ctx context.Context) context.Context {
 }
 
 type HostConditions struct {
-	QuietDefinition string                        `json:"quiet_definition"`
-	Start           map[string]world.HostSample   `json:"start"`
-	End             map[string]world.HostSample   `json:"end"`
-	Samples         []map[string]world.HostSample `json:"periodic_samples,omitempty"`
-	Quiet           bool                          `json:"quiet"`
-	RequireQuiet    bool                          `json:"require_quiet"`
-	WaitMS          int64                         `json:"quiet_wait_ms"`
-	WaitExpired     bool                          `json:"quiet_wait_expired"`
+	Start        map[string]world.HostSample `json:"-"`
+	Quiet        bool                        `json:"quiet"`
+	RequireQuiet bool                        `json:"-"`
+	WaitMS       int64                       `json:"-"`
+	WaitExpired  bool                        `json:"-"`
+	Summary      string                      `json:"summary"`
 }
 
 func hostSamples(ctx context.Context, level string) map[string]world.HostSample {
@@ -54,7 +54,7 @@ func samplesQuiet(samples map[string]world.HostSample) bool {
 }
 
 func Run(ctx context.Context, s Scenario, level string) (e Evidence) {
-	conditions := HostConditions{QuietDefinition: "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end."}
+	conditions := HostConditions{}
 	required, _ := ctx.Value(quietKey{}).(bool)
 	conditions.RequireQuiet = required && latencyCritical(s)
 	waitStart := time.Now()
@@ -77,35 +77,18 @@ func Run(ctx context.Context, s Scenario, level string) (e Evidence) {
 		}
 	}
 	conditions.Quiet = samplesQuiet(conditions.Start)
-	monitor, cancel := context.WithCancel(ctx)
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		ticker := time.NewTicker(5 * time.Second)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-monitor.Done():
-				return
-			case <-ticker.C:
-				sample := hostSamples(monitor, level)
-				if monitor.Err() != nil {
-					return
-				}
-				conditions.Samples = append(conditions.Samples, sample)
-			}
-		}
-	}()
-	e = runScenario(ctx, s, level)
-	cancel()
-	<-done
-	endCtx, endCancel := context.WithTimeout(context.Background(), 10*time.Second)
-	conditions.End = hostSamples(endCtx, level)
-	endCancel()
-	conditions.Quiet = conditions.Quiet && samplesQuiet(conditions.End)
-	for _, sample := range conditions.Samples {
-		conditions.Quiet = conditions.Quiet && samplesQuiet(sample)
+	hosts := make([]string, 0, len(conditions.Start))
+	for host := range conditions.Start {
+		hosts = append(hosts, host)
 	}
+	sort.Strings(hosts)
+	summaries := make([]string, 0, len(hosts))
+	for _, host := range hosts {
+		sample := conditions.Start[host]
+		summaries = append(summaries, fmt.Sprintf("%s: load=%v cpus=%d other_heavy=%d", host, sample.Load, sample.CPUCount, sample.OtherHeavySlots))
+	}
+	conditions.Summary = strings.Join(summaries, "; ")
+	e = runScenario(ctx, s, level)
 	e.HostConditions = &conditions
 	return e
 }

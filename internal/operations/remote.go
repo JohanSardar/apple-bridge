@@ -116,7 +116,11 @@ func (g *RemoteGateway) Submit(ctx context.Context, p trust.Principal, c contrac
 	if _, err := contracts.ValidateCommand(c); err != nil {
 		return r, err
 	}
-	if !trust.Subset([]contracts.Grant{"reminders:write"}, p.Grants) {
+	descriptor, ok := contracts.Descriptor(c.Op)
+	if !ok {
+		return r, contracts.ErrUnsupported
+	}
+	if !trust.Subset([]contracts.Grant{descriptor.Scope}, p.Grants) {
 		return r, contracts.ErrUnauthorized
 	}
 	lookupOnly := false

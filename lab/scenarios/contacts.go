@@ -28,13 +28,6 @@ const contactPNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8
 func runContacts(ctx context.Context, s Scenario, level string) (result Evidence) {
 	sha, _ := exec.Command("git", "rev-parse", "HEAD").Output()
 	e := Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, GitSHA: strings.TrimSpace(string(sha)), At: time.Now().UTC(), Assertions: []Assertion{}, Latency: map[string]Latency{}, Hosts: []string{"air"}}
-	e.HostTelemetry = map[string]string{}
-	for key, args := range map[string][]string{"load_average": {"sysctl", "-n", "vm.loadavg"}, "logical_cpus": {"sysctl", "-n", "hw.logicalcpu"}, "heavy_jobs": {"python3", "-c", `import glob; print(len(glob.glob("/tmp/apple-bridge-heavy-*.lock/pid")))`}} {
-		value, err := exec.CommandContext(ctx, args[0], args[1:]...).Output()
-		if err == nil {
-			e.HostTelemetry[key] = strings.TrimSpace(string(value))
-		}
-	}
 	if level == "replica" {
 		e.Hosts = append(e.Hosts, "ubuntu")
 	}
@@ -183,7 +176,7 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 			return contracts.CommandRecord{}, err
 		}
 		endpoint := w.Gateway
-		if level == "replica" {
+		if level == "replica" || !native && s.ID == "CON-CRUD" {
 			endpoint = w.Replicas[0]
 		}
 		client := scripted.Client{Endpoint: endpoint, Protocol: protocol}
