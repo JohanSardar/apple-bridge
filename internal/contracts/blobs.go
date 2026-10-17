@@ -3,6 +3,7 @@ package contracts
 import (
 	"encoding/hex"
 	"encoding/json"
+	"time"
 )
 
 type BlobReference struct {
@@ -49,4 +50,21 @@ func BlobReferences(data json.RawMessage) []BlobReference {
 	}
 	walk(value, 0)
 	return out
+}
+
+type BlobEntry struct {
+	ResumedBytes int64 `json:"resumed_bytes"`
+	Corruptions  int   `json:"corruptions"`
+
+	State          string    `json:"state"`
+	Size           int64     `json:"size"`
+	Received       int64     `json:"received"`
+	UnreferencedAt time.Time `json:"unreferenced_at,omitempty"`
+}
+type BlobProgress struct {
+	Entries      map[string]BlobEntry `json:"entries"`
+	Bytes        int64                `json:"bytes"`
+	Backlog      int                  `json:"backlog"`
+	ResumedBytes int64                `json:"resumed_bytes"`
+	Corruptions  int                  `json:"corruptions"`
 }

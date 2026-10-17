@@ -121,7 +121,9 @@ func Start(ctx context.Context, cfg Config) error {
 		return err
 	}
 	service := &operations.Service{State: store}
-	service.LocalStatus = func() any { return map[string]any{"blobs": blobStore.Progress()} }
+	service.LocalStatus = func() contracts.ReplicaStatus {
+		return contracts.ReplicaStatus{State: "gateway", Cursor: store.Head(), Blobs: blobStore.Progress()}
+	}
 	if cfg.Role == "gateway" {
 		if cfg.PeerAddress == "" {
 			cfg.PeerAddress = "127.0.0.1:7443"
@@ -163,8 +165,8 @@ func Start(ctx context.Context, cfg Config) error {
 			}})
 		}()
 	} else {
-		client := &replication.Client{Store:store,Authority:authority,Blobs:blobStore}
-		service.LocalStatus=client.Status
+		client := &replication.Client{Store: store, Authority: authority, Blobs: blobStore}
+		service.LocalStatus = client.Status
 		go func() { failures <- client.Follow(ctx) }()
 	}
 	server := &http.Server{Handler: frontdoor.Handler(frontdoor.Deps{Operations: service, Authority: authority, Address: cfg.APIAddress, Blobs: blobStore}, contracts.Operations), ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 30 * time.Second}

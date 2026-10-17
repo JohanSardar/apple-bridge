@@ -122,6 +122,8 @@ type Alias struct {
 }
 
 type ReplicaStatus struct {
+	Blobs BlobProgress `json:"blobs"`
+
 	State         string    `json:"state"`
 	Cursor        Cursor    `json:"cursor"`
 	LastHeartbeat time.Time `json:"last_heartbeat"`

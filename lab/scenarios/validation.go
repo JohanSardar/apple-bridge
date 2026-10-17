@@ -8,6 +8,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type blobOptions struct {
+	Case string `yaml:"case"`
+}
 type worldOptions struct {
 	Replicas int `yaml:"replicas"`
 }
@@ -56,6 +59,8 @@ func validateScenario(s Scenario) error {
 					target = &worldOptions{}
 				case "given/seed":
 					target = &seedOptions{}
+				case "when/blobs":
+					target = &blobOptions{}
 				case "when/changes":
 					target = &changesOptions{}
 				case "when/partition":

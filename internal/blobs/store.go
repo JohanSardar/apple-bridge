@@ -31,22 +31,8 @@ type Config struct {
 	Cap   int64
 	Grace time.Duration
 }
-type Entry struct {
-	ResumedBytes int64 `json:"resumed_bytes"`
-	Corruptions  int   `json:"corruptions"`
-
-	State          string    `json:"state"`
-	Size           int64     `json:"size"`
-	Received       int64     `json:"received"`
-	UnreferencedAt time.Time `json:"unreferenced_at,omitempty"`
-}
-type BlobProgress struct {
-	Entries      map[string]Entry `json:"entries"`
-	Bytes        int64            `json:"bytes"`
-	Backlog      int              `json:"backlog"`
-	ResumedBytes int64            `json:"resumed_bytes"`
-	Corruptions  int              `json:"corruptions"`
-}
+type Entry = contracts.BlobEntry
+type BlobProgress = contracts.BlobProgress
 type manifest struct {
 	Entries    map[string]Entry       `json:"entries"`
 	Pins       map[string]string      `json:"pins"`

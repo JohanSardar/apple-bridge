@@ -18,31 +18,6 @@ import (
 	"time"
 )
 
-func normalizeReferences(v any, ids map[string]string) any {
-	switch x := v.(type) {
-	case map[string]any:
-		if ref, ok := x["$ref"].(map[string]any); ok {
-			key, _ := ref["native_key"].(string)
-			return ids[key]
-		}
-		out := map[string]any{}
-		for k, c := range x {
-			out[k] = normalizeReferences(c, ids)
-		}
-		return out
-	case []any:
-		out := make([]any, len(x))
-		for i, c := range x {
-			out[i] = normalizeReferences(c, ids)
-		}
-		return out
-	case string:
-		if t := ids[x]; t != "" {
-			return t
-		}
-	}
-	return v
-}
 func blobProgress(ctx context.Context, e world.Endpoint) (blobs.BlobProgress, error) {
 	var response struct {
 		Replica struct {
@@ -313,7 +288,15 @@ func convergenceFailure(w *world.World) string {
 	if err != nil {
 		return "truth_read_failed"
 	}
-	expected, actual := normalize(truthRecords(truth), false), normalize(gateway.Records, false)
+	aliases, err := gatewayAliases(w)
+	if err != nil {
+		return "alias_read_failed"
+	}
+	records, err := truthRecords(truth, aliases)
+	if err != nil {
+		return "truth_alias_failed"
+	}
+	expected, actual := recordMultiset(records, false), recordMultiset(gateway.Records, false)
 	if !reflect.DeepEqual(expected, actual) {
 		a, _ := json.Marshal(expected)
 		b, _ := json.Marshal(actual)
