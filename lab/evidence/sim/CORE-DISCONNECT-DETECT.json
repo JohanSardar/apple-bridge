@@ -1,10 +1,11 @@
 {
+  "run_id": "run_01M546H5FJJXP4WSGXCAG2ZC3P",
   "network_path": "loopback",
   "scenario": "CORE-DISCONNECT-DETECT",
   "level": "sim",
   "passed": true,
-  "git_sha": "7b79470881e560fe0d6000ace2cecc45381c952b",
-  "at": "2026-10-17T05:37:23.206132Z",
+  "git_sha": "b3d5c06546d08d812f2d1c95f39505fafdda328d",
+  "at": "2026-10-17T05:49:36.114389Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -74,16 +75,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 2,
-      "p50_ms": 5.549417,
-      "p95_ms": 10.794084,
-      "max_ms": 10.794084,
+      "p50_ms": 6.394625,
+      "p95_ms": 14.810958,
+      "max_ms": 14.810958,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 2,
-      "p50_ms": 8.967417,
-      "p95_ms": 1002.523625,
-      "max_ms": 1002.523625,
+      "p50_ms": 9.366584,
+      "p95_ms": 998.551042,
+      "max_ms": 998.551042,
       "timeouts": 0
     }
   },

@@ -1,10 +1,11 @@
 {
+  "run_id": "run_01M546MYVPWZ9D0WEABN58EDHT",
   "network_path": "loopback",
   "scenario": "CORE-SCOPE-LEAK",
   "level": "sim",
   "passed": true,
-  "git_sha": "c70c12e7e03abf30b16e47c3ab5d1db75de1df6f",
-  "at": "2026-10-17T05:39:25.597982Z",
+  "git_sha": "b3d5c06546d08d812f2d1c95f39505fafdda328d",
+  "at": "2026-10-17T05:51:40.406642Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -102,16 +103,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 6.428583,
-      "p95_ms": 6.428583,
-      "max_ms": 6.428583,
+      "p50_ms": 3.981458,
+      "p95_ms": 3.981458,
+      "max_ms": 3.981458,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 9.827166,
-      "p95_ms": 9.827166,
-      "max_ms": 9.827166,
+      "p50_ms": 6.822166,
+      "p95_ms": 6.822166,
+      "max_ms": 6.822166,
       "timeouts": 0
     }
   },
