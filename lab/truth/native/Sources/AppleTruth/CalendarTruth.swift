@@ -4,6 +4,28 @@ import Darwin
 
 @MainActor
 struct CalendarTruth {
+    private struct Ownership: Codable {
+        var calendars: [String: String] = [:]
+        var events: [String: [String]] = [:]
+    }
+    private static var ownershipURL: URL {
+        FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/AppleBridgeDev/calendar-fixture-ownership.json")
+    }
+    private static func ownership() throws -> Ownership {
+        guard FileManager.default.fileExists(atPath: ownershipURL.path) else { return Ownership() }
+        return try JSONDecoder().decode(Ownership.self, from: Data(contentsOf: ownershipURL))
+    }
+    private static func saveOwnership(_ value: Ownership) throws {
+        try FileManager.default.createDirectory(at: ownershipURL.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        try JSONEncoder().encode(value).write(to: ownershipURL, options: .atomic)
+        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: ownershipURL.path)
+    }
+    private static func remember(_ event: EKEvent, tag: String) throws {
+        guard event.calendar.title == "Bridge Test", (event.title ?? "").contains(tag), let identifier = event.eventIdentifier else { throw TruthFailure.invalid }
+        var value = try ownership()
+        if !(value.events[tag] ?? []).contains(identifier) { value.events[tag, default: []].append(identifier) }
+        try saveOwnership(value)
+    }
     static func run(_ verb: String, _ request: [String: Any]) throws -> [String: Any] {
         guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else { throw TruthFailure.permissionMissing }
         guard verb == "fixture" || verb == "observe" else { throw TruthFailure.invalid }
@@ -23,6 +45,7 @@ struct CalendarTruth {
             let calendar = EKCalendar(for: .event, eventStore: store)
             calendar.title = "Bridge Test"; calendar.source = source
             try store.saveCalendar(calendar, commit: true)
+            var owned = try ownership(); owned.calendars[calendar.calendarIdentifier] = tag; try saveOwnership(owned)
             calendars = [calendar]
         }
         var bounds = Calendar(identifier: .gregorian)
@@ -43,6 +66,12 @@ struct CalendarTruth {
                 }
             }
             start = end
+        }
+        for identifier in (verb == "fixture" || action == "audit" ? try ownership().events[tag] ?? [] : []) {
+            if let event = store.event(withIdentifier: identifier), event.calendar.title == "Bridge Test", calendars.contains(where: { $0.calendarIdentifier == event.calendar.calendarIdentifier }) {
+                let key = event.calendarItemIdentifier + "|" + String(event.occurrenceDate?.timeIntervalSince1970 ?? 0)
+                if keys.insert(key).inserted { events.append(event) }
+            }
         }
         let selected = events.filter { event in
             (event.title ?? "").contains(tag) && ((request["title"] as? String).map { event.title == $0 } ?? true) && ((request["occurrence_date"] as? String).map { stamp(event.occurrenceDate ?? event.startDate) == $0 } ?? true)
@@ -65,6 +94,7 @@ struct CalendarTruth {
                     event.addRecurrenceRule(EKRecurrenceRule(recurrenceWith: frequency, interval: rule["interval"] as? Int ?? 1, end: EKRecurrenceEnd(occurrenceCount: rule["count"] as? Int ?? 3)))
                 }
                 try store.save(event, span: .thisEvent, commit: true)
+                try remember(event, tag: tag)
                 return ["status": "verified", "id": event.calendarItemIdentifier, "effect_uptime_ns": clock_gettime_nsec_np(CLOCK_UPTIME_RAW)]
             case "modify", "move":
                 guard let index = request["index"] as? Int, selected.indices.contains(index) else { throw TruthFailure.invalid }
@@ -77,20 +107,21 @@ struct CalendarTruth {
                     event.endDate = event.startDate.addingTimeInterval(duration)
                 }
                 try store.save(event, span: request["span"] as? String == "future" ? .futureEvents : .thisEvent, commit: true)
-            case "cleanup", "delete":
-                var seen = Set<String>()
+                try remember(event, tag: tag)
+            case "cleanup", "delete", "cleanup_calendar":
+                if action == "cleanup_calendar" {
+                    guard let key = request["calendar_id"] as? String, calendars.contains(where: { $0.calendarIdentifier == key && $0.title == "Bridge Test" }) else { throw TruthFailure.invalid }
+                }
                 for event in selected {
                     guard event.calendar.title == "Bridge Test", (event.title ?? "").contains(tag), event.calendar.allowsContentModifications else { throw TruthFailure.invalid }
-                    let identity = event.calendarItemIdentifier
-                    if seen.insert(identity).inserted { try store.remove(event, span: .futureEvents, commit: true) }
+                    try store.remove(event, span: .thisEvent, commit: true)
                 }
-            case "cleanup_calendar":
-                guard let key = request["calendar_id"] as? String, let calendar = calendars.first(where: { $0.calendarIdentifier == key }), events.allSatisfy({ ($0.title ?? "").contains(tag) }) else { throw TruthFailure.invalid }
-                try store.removeCalendar(calendar, commit: true)
+                return ["status": "verified", "calendar_retained": true, "all_dates_ownership_proven": false, "removed_tagged_occurrences": selected.count]
             default: throw TruthFailure.invalid
             }
             return ["status": "verified", "effect_uptime_ns": clock_gettime_nsec_np(CLOCK_UPTIME_RAW)]
         }
+        for event in selected { try remember(event, tag: tag) }
         let records: [[String: Any]] = selected.map { event in
             let zone = event.isAllDay ? TimeZone.current : (event.timeZone ?? .current)
             var row: [String: Any] = ["id": event.calendarItemIdentifier, "external_id": event.calendarItemExternalIdentifier ?? "", "calendar_id": event.calendar.calendarIdentifier, "title": event.title ?? "", "start": event.isAllDay ? floating(event.startDate, zone: zone) : stamp(event.startDate), "end": event.isAllDay ? floating(event.endDate, zone: zone) : stamp(event.endDate), "all_day": event.isAllDay, "time_zone": event.timeZone?.identifier ?? "", "is_exception": event.isDetached, "occurrence_date": event.occurrenceDate.map { event.isAllDay ? floating($0,zone:.current) : stamp($0) } ?? "", "recurring": event.hasRecurrenceRules]
