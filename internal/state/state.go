@@ -25,12 +25,15 @@ type Store struct {
 	BlobProtection func(context.Context, contracts.ReferenceSet) error
 	blobSnapshots  map[string][]contracts.BlobReference
 
-	home    string
-	ledger  *sql.DB
-	db      *sql.DB
-	write   sync.Mutex
-	mu      sync.Mutex
-	changed chan struct{}
+	home string
+	ledger *sql.DB
+	applyBoundary func()
+	db            *sql.DB
+	write         sync.Mutex
+	mu            sync.Mutex
+	changed       chan struct{}
+	leases        map[string]snapshotLease
+	capacity      map[contracts.Source]bool
 }
 type CommitResult struct {
 	Duplicate bool   `json:"duplicate,omitempty"`
@@ -54,14 +57,19 @@ func Open(home string) (*Store, error) {
 		return nil, err
 	}
 	db.SetMaxOpenConns(8)
-	s := &Store{home: home, db: db, changed: make(chan struct{})}
+	s := &Store{home: home, db: db, changed: make(chan struct{}), leases: map[string]snapshotLease{}, capacity: map[contracts.Source]bool{}}
+	if err = migrate(db, home); err != nil {
+		db.Close()
+		return nil, err
+	}
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY,value TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS records(collection TEXT NOT NULL,id TEXT NOT NULL,version INTEGER NOT NULL,source TEXT NOT NULL,deleted INTEGER NOT NULL,payload BLOB NOT NULL,seq INTEGER NOT NULL,observed_at TEXT NOT NULL,PRIMARY KEY(collection,id));
  CREATE TABLE IF NOT EXISTS aliases(source TEXT NOT NULL,generation TEXT NOT NULL,collection TEXT NOT NULL,native_key TEXT NOT NULL,scoped_alias TEXT NOT NULL,record_id TEXT NOT NULL,PRIMARY KEY(source,generation,collection,native_key));
  CREATE INDEX IF NOT EXISTS aliases_scoped ON aliases(source,collection,scoped_alias);
- CREATE TABLE IF NOT EXISTS journal(seq INTEGER PRIMARY KEY,epoch TEXT NOT NULL,source TEXT NOT NULL,payload BLOB NOT NULL);
+ CREATE TABLE IF NOT EXISTS journal(seq INTEGER PRIMARY KEY,epoch TEXT NOT NULL,source TEXT NOT NULL,payload BLOB NOT NULL,committed_at INTEGER NOT NULL DEFAULT (unixepoch()));
  CREATE TABLE IF NOT EXISTS checkpoints(source TEXT PRIMARY KEY,generation TEXT NOT NULL,checkpoint TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS blob_reference_sets(owner TEXT PRIMARY KEY,payload BLOB NOT NULL);
+ CREATE TABLE IF NOT EXISTS applied_batches(after_seq INTEGER PRIMARY KEY,through_seq INTEGER NOT NULL);
  CREATE TABLE IF NOT EXISTS staging_records(snapshot TEXT NOT NULL,collection TEXT NOT NULL,id TEXT NOT NULL,payload BLOB NOT NULL,PRIMARY KEY(snapshot,collection,id));
  DELETE FROM staging_records;`)
 	if err != nil {
@@ -70,8 +78,12 @@ func Open(home string) (*Store, error) {
 	}
 	c := contracts.Cursor{Epoch: contracts.NewID(""), SubscriptionRevision: 1}
 	raw, _ := json.Marshal(c)
-	_, err = db.Exec("INSERT OR IGNORE INTO meta(key,value) VALUES('cursor',? ),('owner_fence','0'),('schema_version','1'),('retention_floor','0'),('epoch',?)", string(raw), c.Epoch)
+	_, err = db.Exec("INSERT OR IGNORE INTO meta(key,value) VALUES('cursor',? ),('owner_fence','0'),('schema_version','2'),('retention_floor','0'),('admission_era',?),('epoch',?)", string(raw), contracts.NewID(""), c.Epoch)
 	if err != nil {
+		db.Close()
+		return nil, err
+	}
+	if err = s.initSearch(); err != nil {
 		db.Close()
 		return nil, err
 	}
@@ -166,7 +178,7 @@ func appendChange(ctx context.Context, tx *sql.Tx, c contracts.Cursor, r contrac
 	if err != nil {
 		return err
 	}
-	_, err = tx.ExecContext(ctx, "INSERT INTO journal(seq,epoch,source,payload) VALUES(?,?,?,?)", c.Sequence, c.Epoch, r.Source, b)
+	_, err = tx.ExecContext(ctx, "INSERT INTO journal(seq,epoch,source,payload,committed_at) VALUES(?,?,?,?,unixepoch())", c.Sequence, c.Epoch, r.Source, b)
 	return err
 }
 
@@ -391,7 +403,30 @@ func (s *Store) Read(ctx context.Context, v trust.Visibility, q contracts.ReadQu
 	if err != nil {
 		return result, err
 	}
-	rows, err := tx.QueryContext(ctx, "SELECT payload FROM records WHERE (?='' OR collection=?) AND (?='' OR id=?) AND (deleted=0 OR ?) ORDER BY collection,id", q.Collection, q.Collection, q.ID, q.ID, q.IncludeDeleted)
+	sources := []string{}
+	args := []any{q.Collection, q.Collection, q.ID, q.ID, q.IncludeDeleted, q.After}
+	for source, allowed := range v {
+		if allowed {
+			sources = append(sources, "?")
+			args = append(args, string(source))
+		}
+	}
+	if len(sources) == 0 {
+		sources = append(sources, "?")
+		args = append(args, "")
+	}
+	query := "SELECT payload FROM records WHERE (?='' OR collection=?) AND (?='' OR id=?) AND (deleted=0 OR ?) AND (collection||'/'||id)>? AND source IN (" + strings.Join(sources, ",") + ")"
+	if q.Text != "" {
+		query += " AND (collection,id) IN (SELECT collection,id FROM records_fts WHERE records_fts MATCH ?)"
+		args = append(args, searchTerms(q.Text))
+	}
+	limitSQL := q.Limit
+	if limitSQL == 0 {
+		limitSQL = 1000
+	}
+	query += " ORDER BY collection,id LIMIT ?"
+	args = append(args, limitSQL+1)
+	rows, err := tx.QueryContext(ctx, query, args...)
 	if err != nil {
 		return result, err
 	}
@@ -417,7 +452,7 @@ func (s *Store) Read(ctx context.Context, v trust.Visibility, q contracts.ReadQu
 			result.Next = result.Records[len(result.Records)-1].Collection + "/" + result.Records[len(result.Records)-1].ID
 			break
 		}
-		result.Records = append(result.Records, r)
+		result.Records = append(result.Records, s.sourceStatus(r))
 	}
 	if err = rows.Err(); err != nil {
 		return result, err
@@ -460,11 +495,13 @@ type FrozenSnapshot struct {
 	ExpiresAt time.Time
 	Records   []contracts.Record
 	tx        *sql.Tx
+	store     *Store
 }
 
 func (f *FrozenSnapshot) Close() error {
 	f.store.write.Lock()
 	defer f.store.write.Unlock()
+	delete(f.store.leases, f.ID)
 	err := f.tx.Rollback()
 	delete(f.store.blobSnapshots, f.ID)
 	f.store.refreshBlobProtection(context.Background())
@@ -532,6 +569,7 @@ func (s *Store) FreezeSnapshot(ctx context.Context, v trust.Visibility, revision
 		delete(s.blobSnapshots, f.ID)
 		return nil, err
 	}
+	s.leases[f.ID] = snapshotLease{Sequence: f.Cursor.Sequence, ExpiresAt: f.ExpiresAt}
 	return f, nil
 }
 
@@ -586,6 +624,7 @@ func (i *SnapshotInstall) Page(ctx context.Context, page contracts.FeedFrame) er
 		return err
 	}
 	i.ordinal++
+	i.ExpiresAt = time.Now().Add(10 * time.Minute)
 	return nil
 }
 func (i *SnapshotInstall) InstallSnapshot(ctx context.Context) (contracts.Cursor, error) {
@@ -623,13 +662,16 @@ func (i *SnapshotInstall) InstallSnapshot(ctx context.Context) (contracts.Cursor
 	if time.Now().After(i.ExpiresAt) || len(records) != i.Count || Digest(records) != i.Digest {
 		return contracts.Cursor{}, contracts.ErrCorrupt
 	}
-	if _, err = tx.ExecContext(ctx, "DELETE FROM records; DELETE FROM journal;"); err != nil {
+	if _, err = tx.ExecContext(ctx, "DELETE FROM records; DELETE FROM journal; DELETE FROM applied_batches;"); err != nil {
 		return contracts.Cursor{}, err
 	}
 	for _, r := range records {
 		if err = writeRecord(ctx, tx, r, i.Cursor.Sequence); err != nil {
 			return contracts.Cursor{}, err
 		}
+	}
+	if _, err = tx.ExecContext(ctx, "INSERT INTO meta(key,value) VALUES('replica_base',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", fmt.Sprint(i.Cursor.Sequence)); err != nil {
+		return contracts.Cursor{}, err
 	}
 	if err = setCursor(ctx, tx, i.Cursor); err != nil {
 		return contracts.Cursor{}, err
@@ -684,6 +726,12 @@ func (s *Store) ApplyBatch(ctx context.Context, b contracts.Batch) (contracts.Cu
 		if err = appendChange(ctx, tx, contracts.Cursor{Epoch: c.Epoch, Sequence: change.Sequence}, change.Record, change.Op); err != nil {
 			return c, err
 		}
+	}
+	if s.applyBoundary != nil {
+		s.applyBoundary()
+	}
+	if _, err = tx.ExecContext(ctx, "INSERT INTO applied_batches(after_seq,through_seq) VALUES(?,?)", b.After, b.Through); err != nil {
+		return c, err
 	}
 	c.Sequence = b.Through
 	if err = setCursor(ctx, tx, c); err != nil {

@@ -27,7 +27,7 @@ var Sources = []Source{Messages, Calendar, Reminders, Contacts, Notes, Usage, Sy
 var Collections = map[string]string{
 	"messages.chat": "cht", "messages.handle": "hdl", "messages.message": "msg", "messages.reaction": "rxn", "messages.attachment": "att",
 	"calendar.calendar": "cal", "calendar.event": "evt", "reminders.list": "lst", "reminders.reminder": "rmd",
-	"contacts.contact": "con", "contacts.group": "grp", "notes.folder": "fld", "notes.note": "nte", "usage.device": "dev", "usage.app_day": "usd", "system.source": "src", "system.command": "cmd",
+	"contacts.contact": "con", "contacts.group": "grp", "notes.folder": "fld", "notes.note": "nte", "usage.device": "dev", "usage.app_day": "usd", "system.source": "src", "system.command": "cmd", "system.replica": "rpl",
 }
 
 type Coverage struct {
@@ -60,6 +60,7 @@ type Change struct {
 
 type ReadQuery struct {
 	IncludeAliases bool   `json:"include_aliases,omitempty"`
+	Text           string `json:"text,omitempty"`
 	Collection     string `json:"collection"`
 	ID             string `json:"id,omitempty"`
 	IncludeDeleted bool   `json:"include_deleted,omitempty"`

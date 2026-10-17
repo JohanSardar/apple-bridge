@@ -116,6 +116,89 @@ func Restore(ctx context.Context, home, backup string, acceptLedgerLoss ...bool)
 	return dir.Sync()
 }
 
+type Integrity struct {
+	Records     map[string]uint64 `json:"records"`
+	OK          bool              `json:"ok"`
+	Cursor      contracts.Cursor  `json:"cursor"`
+	Applied     uint64            `json:"applied"`
+	ExactlyOnce bool              `json:"exactly_once"`
+	Floor       uint64            `json:"floor"`
+}
+
+func (s *Store) Integrity(ctx context.Context) (Integrity, error) {
+	result := Integrity{Records: map[string]uint64{}}
+	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return result, err
+	}
+	defer tx.Rollback()
+	var check string
+	if err = tx.QueryRowContext(ctx, "PRAGMA integrity_check").Scan(&check); err != nil || check != "ok" {
+		return result, contracts.ErrCorrupt
+	}
+	result.Cursor, err = cursorAt(ctx, tx)
+	if err != nil {
+		return result, err
+	}
+	if err = tx.QueryRowContext(ctx, "SELECT value FROM meta WHERE key='retention_floor'").Scan(&result.Floor); err != nil {
+		return result, err
+	}
+	if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM journal WHERE seq>? AND seq<=?", result.Floor, result.Cursor.Sequence).Scan(&result.Applied); err != nil {
+		return result, err
+	}
+	var inconsistent int
+	if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM records WHERE seq>?", result.Cursor.Sequence).Scan(&inconsistent); err != nil {
+		return result, err
+	}
+	var base uint64
+	baseErr := tx.QueryRowContext(ctx, "SELECT value FROM meta WHERE key='replica_base'").Scan(&base)
+	result.ExactlyOnce = true
+	if baseErr == nil {
+		rows, err := tx.QueryContext(ctx, "SELECT after_seq,through_seq FROM applied_batches ORDER BY after_seq")
+		if err != nil {
+			return result, err
+		}
+		next := base
+		for rows.Next() {
+			var after, through uint64
+			if err = rows.Scan(&after, &through); err != nil {
+				rows.Close()
+				return result, err
+			}
+			if after != next || through <= after {
+				result.ExactlyOnce = false
+			}
+			next = through
+		}
+		err = rows.Err()
+		rows.Close()
+		if err != nil {
+			return result, err
+		}
+		result.ExactlyOnce = result.ExactlyOnce && next == result.Cursor.Sequence
+	}
+	rows, err := tx.QueryContext(ctx, "SELECT collection,count(*) FROM records WHERE deleted=0 GROUP BY collection")
+	if err != nil {
+		return result, err
+	}
+	for rows.Next() {
+		var collection string
+		var count uint64
+		if err = rows.Scan(&collection, &count); err != nil {
+			rows.Close()
+			return result, err
+		}
+		result.Records[collection] = count
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return result, err
+	}
+	result.OK = inconsistent == 0 && result.ExactlyOnce
+	return result, nil
+}
+
 func InspectHome(home string) (*Store, error) {
 	path, err := filepath.Abs(filepath.Join(home, "state.db"))
 	if err != nil {
@@ -126,39 +209,4 @@ func InspectHome(home string) (*Store, error) {
 		return nil, err
 	}
 	return &Store{db: db}, nil
-}
-
-func atomicBackup(ctx context.Context, db *sql.DB, path string) error {
-	temp, err := os.CreateTemp(filepath.Dir(path), "backup-*.db")
-	if err != nil {
-		return err
-	}
-	staging := temp.Name()
-	temp.Close()
-	os.Remove(staging)
-	defer os.Remove(staging)
-	if _, err = db.ExecContext(ctx, "VACUUM INTO ?", staging); err != nil {
-		return err
-	}
-	file, err := os.OpenFile(staging, os.O_RDWR, 0600)
-	if err != nil {
-		return err
-	}
-	err = file.Chmod(0600)
-	if err == nil {
-		err = file.Sync()
-	}
-	file.Close()
-	if err != nil {
-		return err
-	}
-	if err = os.Rename(staging, path); err != nil {
-		return err
-	}
-	dir, err := os.Open(filepath.Dir(path))
-	if err != nil {
-		return err
-	}
-	defer dir.Close()
-	return dir.Sync()
 }
