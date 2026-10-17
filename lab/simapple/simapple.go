@@ -61,7 +61,6 @@ type fakeApple struct {
 	blobRefreshBeforeUnavailable bool
 	calendarDenied               bool
 	calendarClock                time.Time
-	calendarPublished            map[string]contracts.Observation
 
 	completed map[contracts.Source]map[uint64]bool
 	path      string
@@ -171,6 +170,8 @@ func Run(ctx context.Context, cfg Config) error {
 	if fake.durable.Evidence != nil {
 		fake.evidence = fake.durable.Evidence
 	}
+	fake.calendarClock = fake.durable.CalendarClock
+	fake.calendarDenied = fake.durable.CalendarDenied
 	if err := fake.loadGuards(); err != nil {
 		return err
 	}
@@ -421,6 +422,14 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 	if _, err = wire.Send(contracts.IPCFrame{T: "Ready", Protocol: contracts.IPCProtocol, Capabilities: map[contracts.Source][]string{contracts.Calendar: {"calendar.create_event", "calendar.update_event", "calendar.delete_event", "calendar.create_calendar"}, contracts.Contacts: {"contacts.create", "contacts.update", "contacts.delete"}, contracts.Messages: {}, contracts.Reminders: {"reminders.create", "reminders.update", "reminders.complete", "reminders.uncomplete", "reminders.delete", "reminders.create_list"}}, Coverage: map[contracts.Source]contracts.Coverage{contracts.Calendar: {Fields: "complete", Missing: []string{}}, contracts.Contacts: {Fields: "partial", Missing: []string{"note"}}, contracts.Reminders: coverage, contracts.Messages: {Fields: "complete", Missing: []string{}}}, HelperBuild: "sim/1", OSBuild: "sim"}); err != nil {
 		return err
 	}
+	f.mu.Lock()
+	denied := f.calendarDenied
+	f.mu.Unlock()
+	if denied {
+		if _, err = wire.Send(calendarPermissionFrame()); err != nil {
+			return err
+		}
+	}
 	checkpoints := map[contracts.Source]string{}
 	generations := map[contracts.Source]string{}
 	for source, cp := range open.Checkpoints {
@@ -553,6 +562,15 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 		}
 	}
 	emit := func(capture contracts.Capture) error {
+		if capture.Source == contracts.Calendar {
+			f.mu.Lock()
+			denied := f.calendarDenied
+			f.mu.Unlock()
+			if denied {
+				_, err := wire.Send(calendarPermissionFrame())
+				return err
+			}
+		}
 		scanActive[capture.Source] = capture.ScanID != ""
 		f.mu.Lock()
 		f.durable.InProgress[capture.Source] = true
@@ -686,6 +704,11 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 			capture := fullScanSource(f.inspect(), source)
 			if source == contracts.Contacts {
 				capture = f.contactSnapshot(false)
+			} else if source == contracts.Calendar {
+				f.mu.Lock()
+				capture = f.calendarScanLocked()
+				emitRevision = f.durable.Revision[source]
+				f.mu.Unlock()
 			}
 			if source == contracts.Messages {
 				capture.BlobHandles = f.blobHandles()

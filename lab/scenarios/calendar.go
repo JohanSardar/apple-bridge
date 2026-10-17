@@ -495,6 +495,13 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 			}
 		}
 		add("permission_missing_published", missing)
+		if err = w.RestartHelper(); err != nil {
+			return fail("restart_while_permission_missing", err)
+		}
+		if err = sleep(ctx, 200*time.Millisecond); err != nil {
+			return fail("permission_restart_settle", err)
+		}
+		add("permission_loss_survives_restart", reflect.DeepEqual(baseline, records(w.Gateway)))
 	}
 	if s.ID != "CAL-PERMISSION-LOSS" {
 		if level == "sim" {

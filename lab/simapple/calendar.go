@@ -50,36 +50,21 @@ func (f *fakeApple) calendarInWindow(o contracts.Observation) bool {
 	return e == nil && g == nil && a.Before(right) && b.After(left)
 }
 func (f *fakeApple) calendarScanLocked() contracts.Capture {
-	if f.calendarPublished == nil {
-		f.calendarPublished = map[string]contracts.Observation{}
-	}
 	observations := []contracts.Observation{}
-	current := map[string]contracts.Observation{}
-	for key, o := range f.records {
+	for _, o := range f.records {
 		if contracts.CollectionSource(o.Collection) != contracts.Calendar {
 			continue
 		}
-		if f.calendarInWindow(o) {
-			current[key] = o
-			observations = append(observations, o)
-		}
-	}
-	for key, o := range f.calendarPublished {
-		if _, ok := current[key]; !ok {
-			if old, exists := f.records[key]; exists && old.Kind != "absent" && !f.calendarInWindow(old) {
-				o.Kind = "evict"
-				o.Revalidated = true
-			} else {
-				o.Kind = "absent"
-				o.Revalidated = true
-			}
+		if !f.calendarInWindow(o) {
+			o.Kind = "evict"
+			o.Revalidated = true
 			o.ObservedAt = time.Now().UTC()
-			observations = append(observations, o)
 		}
+		observations = append(observations, o)
 	}
-	f.calendarPublished = current
 	return calendarCapture(observations)
 }
+
 func (f *fakeApple) calendarControl(mux *http.ServeMux) {
 	mux.HandleFunc("POST /calendar", func(w http.ResponseWriter, r *http.Request) {
 		var request struct {
@@ -154,14 +139,18 @@ func (f *fakeApple) calendarControl(mux *http.ServeMux) {
 			o.ObservedAt = time.Now().UTC()
 			f.records[request.Key] = o
 		case "churn":
+			changed := []contracts.Observation{}
 			for key, o := range f.records {
 				if o.Collection == "calendar.event" && o.Kind != "absent" {
 					delete(f.records, key)
 					o.NativeKey = "churn/" + key
-					f.records[o.NativeKey] = o
-					delete(f.calendarPublished, key)
+					changed = append(changed, o)
 				}
 			}
+			for _, o := range changed {
+				f.records[o.NativeKey] = o
+			}
+
 		case "clock":
 			now, err := time.Parse(time.RFC3339Nano, request.Now)
 			if err != nil {
@@ -188,14 +177,15 @@ func (f *fakeApple) calendarControl(mux *http.ServeMux) {
 		}
 		c := f.calendarScanLocked()
 		denied := f.calendarDenied
-		err := f.saveLocked()
+		err := f.changedLocked(contracts.Calendar)
+		revision := f.durable.Revision[contracts.Calendar]
 		f.mu.Unlock()
 		if err != nil {
 			http.Error(w, "persist", 500)
 			return
 		}
 		if !denied {
-			if f.enqueue(r.Context(), c, true) != nil {
+			if f.enqueue(r.Context(), c, true, revision) != nil {
 				return
 			}
 		}
@@ -213,7 +203,7 @@ func (f *fakeApple) isCalendarFrame(frame contracts.IPCFrame) bool {
 	}
 	return false
 }
-func (f *fakeApple) calendarCommand(wire *applepeer.Wire, frame contracts.IPCFrame, fence uint64, emit func(contracts.Capture) error, checkpoint func(contracts.Source) string) error {
+func (f *fakeApple) calendarCommand(wire *applepeer.Wire, frame contracts.IPCFrame, fence uint64, emit func(contracts.Capture, uint64) error, checkpoint func(contracts.Source) string) error {
 	conflictKey := ""
 	if frame.Action != nil {
 		conflictKey = frame.Action.NativeKey
@@ -223,10 +213,11 @@ func (f *fakeApple) calendarCommand(wire *applepeer.Wire, frame contracts.IPCFra
 		if problem.Code == "conflict" && conflictKey != "" {
 			f.mu.Lock()
 			o, ok := f.records[conflictKey]
+			revision := f.durable.Revision[contracts.Calendar]
 			f.mu.Unlock()
 			if ok {
 				o.ObservedAt = time.Now().UTC()
-				if err := emit(calendarCapture([]contracts.Observation{o})); err != nil {
+				if err := emit(calendarCapture([]contracts.Observation{o}), revision); err != nil {
 					return err
 				}
 				rejected.Evidence, _ = json.Marshal(contracts.ConflictObservation{NativeKey: conflictKey, CaptureCheckpoint: checkpoint(contracts.Calendar)})
@@ -444,16 +435,17 @@ func (f *fakeApple) calendarCommand(wire *applepeer.Wire, frame contracts.IPCFra
 	f.effects[t.CommandID]++
 	capture := f.calendarScanLocked()
 	primary := f.records[native]
-	err := f.saveLocked()
+	err := f.changedLocked(contracts.Calendar)
+	revision := f.durable.Revision[contracts.Calendar]
 	f.mu.Unlock()
 	if err != nil {
 		return err
 	}
-	if err = emit(capture); err != nil {
+	if err = emit(capture, revision); err != nil {
 		return err
 	}
 	if len(capture.Observations) > 64 {
-		if err = emit(calendarCapture([]contracts.Observation{primary})); err != nil {
+		if err = emit(calendarCapture([]contracts.Observation{primary}), revision); err != nil {
 			return err
 		}
 	}
@@ -584,4 +576,8 @@ func boundedCalendarRecurrence(value any, count int) any {
 		result = append(result, copy)
 	}
 	return result
+}
+
+func calendarPermissionFrame() contracts.IPCFrame {
+	return contracts.IPCFrame{T: "SourceState", Source: contracts.Calendar, State: "permission_missing", Reason: "calendar_full_access_required", Coverage: map[contracts.Source]contracts.Coverage{contracts.Calendar: {Fields: "partial", Missing: []string{"permission_missing"}}}, Capabilities: map[contracts.Source][]string{contracts.Calendar: {}}}
 }

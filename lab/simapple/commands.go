@@ -65,13 +65,7 @@ func (f *fakeApple) commandControl(mux *http.ServeMux) {
 }
 func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fence uint64, emit func(contracts.Capture, uint64) error, checkpoint func(contracts.Source) string) error {
 	if f.isCalendarFrame(frame) {
-		calendarEmit := func(c contracts.Capture) error {
-			f.mu.Lock()
-			revision := f.durable.Revision[c.Source]
-			f.mu.Unlock()
-			return emit(c, revision)
-		}
-		return f.calendarCommand(wire, frame, fence, calendarEmit, checkpoint)
+		return f.calendarCommand(wire, frame, fence, emit, checkpoint)
 	}
 	if f.isContactCommand(frame) {
 		return f.contactCommand(wire, frame, fence, func(capture contracts.Capture) error {

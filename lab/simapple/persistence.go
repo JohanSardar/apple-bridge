@@ -4,11 +4,14 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 )
 
 type durableApple struct {
+	CalendarClock time.Time `json:"calendar_clock,omitempty"`
+	CalendarDenied bool `json:"calendar_denied,omitempty"`
 	ContactPermissionMissing bool                             `json:"contact_permission_missing"`
 	ContactSequence          uint64                           `json:"contact_sequence"`
 	MessagesGeneration       string                           `json:"messages_generation,omitempty"`
@@ -27,6 +30,8 @@ type durableApple struct {
 }
 
 func (f *fakeApple) saveLocked() error {
+	f.durable.CalendarClock = f.calendarClock
+	f.durable.CalendarDenied = f.calendarDenied
 	f.durable.ContactPermissionMissing = f.contactPermissionMissing
 	f.durable.ContactSequence = f.contactSequence
 	f.durable.MessagesGeneration = f.messages.generation
