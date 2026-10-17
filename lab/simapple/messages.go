@@ -153,6 +153,11 @@ func (f *fakeApple) messageRoutes(mux *http.ServeMux) {
 			http.Error(w, "invalid action", 400)
 			return
 		}
+		if action.Action == "bulk-pause" || action.Action == "bulk-release" {
+			f.mu.Unlock()
+			json.NewEncoder(w).Encode(map[string]bool{"effect_done": true})
+			return
+		}
 		if err := f.changedLocked(contracts.Messages); err != nil {
 			f.mu.Unlock()
 			http.Error(w, "unavailable", 503)
