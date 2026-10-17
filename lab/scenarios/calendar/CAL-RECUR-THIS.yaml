@@ -1,0 +1,7 @@
+id: CAL-RECUR-THIS
+feature: calendar.write
+levels: [sim, real]
+given: [{world: {replicas: 1}}]
+when: [{calendar_journey: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

@@ -1,0 +1,30 @@
+{
+  "run_id": "run_01M547WXKVDNYDTSQ77SJJ08EX",
+  "scenario": "CAL-CRUD",
+  "level": "sim",
+  "passed": false,
+  "git_sha": "944b8c40e04b9b746812357918704280e2ee6eb8",
+  "at": "2026-10-17T06:13:29.851738Z",
+  "assertions": [
+    {
+      "name": "replica_host_is_air",
+      "passed": true
+    },
+    {
+      "name": "bootstrap_snapshot",
+      "passed": true
+    },
+    {
+      "name": "scope_query_and_get",
+      "passed": true
+    },
+    {
+      "name": "known_when_action",
+      "passed": false
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

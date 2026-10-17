@@ -1,0 +1,7 @@
+id: CAL-RECUR-ALL-REJECT
+feature: calendar.write
+levels: [sim]
+given: [{world: {replicas: 1}}]
+when: [{calendar_journey: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

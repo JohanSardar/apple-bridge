@@ -1,0 +1,7 @@
+id: CAL-CRUD
+feature: calendar.write
+levels: [sim, real, replica]
+given: [{world: {replicas: 1}}]
+when: [{calendar_journey: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]
