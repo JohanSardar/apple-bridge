@@ -2,8 +2,8 @@
 set -euo pipefail
 root=$(cd "$(dirname "$0")/../.." && pwd)
 "$root/packaging/dev/build-native.sh" "$root/native"
-output="$root/native/.build/clt-release"
-[[ -f "$output/AppleBridgeHelper" ]] || output="$root/native/.build/release"
+output=$(cat "$root/native/.build/native-output")
+[[ -f "$output/AppleBridgeHelper" ]]
 stage=$(mktemp -d "$HOME/Applications/AppleBridgeDev/.helper.XXXXXX")
 trap 'rm -rf "$stage"' EXIT
 app="$stage/AppleBridgeHelper.app"

@@ -29,6 +29,15 @@ func CheckIPCFixtures(path string) (int, error) {
 			return 0, ErrCorrupt
 		}
 		switch frame.T {
+		case "Capture":
+			if frame.Capture == nil || frame.Capture.Generation == "" || frame.Capture.Checkpoint == "" || frame.Capture.Source == "" {
+				return 0, ErrInvalid
+			}
+			for _, observation := range frame.Capture.Observations {
+				if observation.NativeKey == "" || observation.ObservedAt.IsZero() || observation.Collection == "" {
+					return 0, ErrInvalid
+				}
+			}
 		case "Prepare":
 			var value Prepare
 			err = json.Unmarshal(raw, &value)

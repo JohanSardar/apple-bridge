@@ -87,9 +87,10 @@ public actor AppleSession: ObservationSink {
                     }
                 }
                 defer { watchdog.cancel() }
-                backoff = 100
                 while !Task.isCancelled {
-                    try await handle(receive(connected))
+                    let frame = try await receive(connected)
+                    try await handle(frame)
+                    if frame["t"].string == "Committed" { backoff = 100 }
                 }
             } catch {
                 disconnect()
@@ -191,7 +192,8 @@ public actor AppleSession: ObservationSink {
                 capture["scan_id"] = .string(pending.scanID); capture["scope"] = .array(pending.scope.map(JSON.string)); capture["scan_started_at"] = .string(pending.started.isEmpty ? timestamp() : pending.started); capture["completion_evidence"] = .string(pending.completionEvidence)
             }
             capture["blob_handles"] = .object(pending.blobHandles.mapValues(JSON.string))
-            let frame = JSON.object(["t": .string("Capture"), "capture": .object(capture)])
+            capture["t"] = .string("Capture")
+            let frame = JSON.object(capture)
             let size = try PeerWire.encode(frame).count
             guard size <= credit else { return }
             try wire?.send(frame)

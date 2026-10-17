@@ -2,8 +2,9 @@
 set -euo pipefail
 root=$(cd "$(dirname "$0")/../.." && pwd)
 "$root/packaging/dev/build-native.sh" "$root/lab/truth/native"
-output="$root/lab/truth/native/.build/clt-release/AppleTruth"
-[[ -f "$output" ]] || output="$root/lab/truth/native/.build/release/apple-truth"
+directory=$(cat "$root/lab/truth/native/.build/native-output")
+output="$directory/apple-truth"
+[[ -f "$output" ]] || output="$directory/AppleTruth"
 stage=$(mktemp -d "$HOME/Applications/AppleBridgeDev/.truth.XXXXXX")
 trap 'rm -rf "$stage"' EXIT
 app="$stage/AppleTruth.app"

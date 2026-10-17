@@ -17,7 +17,7 @@ public enum HelperCommand {
                 switch frame["t"].string {
                 case "Open": guard frame["protocol"].string == "ipc/1", frame["owner_fence"].number > 0 else { throw ProbeFailure.invalidArguments }
                 case "Prepare": guard !frame["command_id"].string.isEmpty, parseTimestamp(frame["expires_at"].string) != nil else { throw ProbeFailure.invalidArguments }
-                case "Capture": guard !frame["capture"]["generation"].string.isEmpty, !frame["capture"]["checkpoint"].string.isEmpty else { throw ProbeFailure.invalidArguments }
+                case "Capture": guard !frame["generation"].string.isEmpty, !frame["checkpoint"].string.isEmpty else { throw ProbeFailure.invalidArguments }
                 default: break
                 }
             }
@@ -33,6 +33,11 @@ public enum HelperCommand {
             let secretFile = try option("--secret-file")
             let home = URL(fileURLWithPath: try option("--home"))
             guard let gatewayPID = Int32(try option("--gateway-pid")), gatewayPID > 1 else { throw ProbeFailure.invalidArguments }
+            let lifetime = DispatchSource.makeTimerSource(queue: .global())
+            lifetime.schedule(deadline: .now() + 1, repeating: 1)
+            lifetime.setEventHandler { if kill(gatewayPID, 0) != 0 { exit(0) } }
+            lifetime.resume()
+            defer { lifetime.cancel() }
             let peer = try AppleSession(socket: socket, secretFile: secretFile, home: home, gatewayPID: gatewayPID, commandsEnabled: arguments.contains("--lab-commands"))
             var finished = false
             Task { @MainActor in
