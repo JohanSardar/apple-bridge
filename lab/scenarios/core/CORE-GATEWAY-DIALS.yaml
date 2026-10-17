@@ -1,0 +1,15 @@
+id: CORE-GATEWAY-DIALS
+feature: core.replication
+levels: [sim, replica]
+given: [{world: {replicas: 1, gateway_dials: true}}, {seed: {count: 4}}]
+when:
+  - changes: {count: 200, per_second: 5}
+  - partition: {seconds: 2, changes: 10}
+  - heal: {}
+  - gateway_commands: {}
+then:
+  - converge: {}
+  - resumed: {without_snapshot: true}
+  - latency: {samples: 200, p95_ms: 1000}
+  - gateway_revoke: {}
+cleanup: [{world: {}}]
