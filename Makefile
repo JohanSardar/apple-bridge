@@ -3,11 +3,11 @@ export PATH := /opt/homebrew/bin:$(HOME)/go/bin:$(PATH)
 .PHONY: build lint features sim real replica agent dist native
 
 build:
-	go build ./...
-	cd native && swift build
+	packaging/dev/heavy.sh go build -p 2 ./...
+	packaging/dev/heavy.sh packaging/dev/build-native.sh
 
 native:
-	cd native && swift build
+	packaging/dev/heavy.sh packaging/dev/build-native.sh
 
 lint:
 	gofmt -l . | grep -v '^$$' && exit 1 || true
