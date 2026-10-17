@@ -172,7 +172,7 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 				nativeEffects[fmt.Sprint(data["title"])], _ = ns.Int64()
 				if action == "create" {
 					id, _ := response["id"].(string)
-					phaseEffects = append(phaseEffects, map[string]any{"title": data["title"], "key": fmt.Sprintf("%x", sha256.Sum256([]byte(id))), "effect_uptime_ns": ns})
+					phaseEffects = append(phaseEffects, map[string]any{"title": data["title"], "key": fmt.Sprintf("%x", sha256.Sum256([]byte(id))), "effect_uptime_ns": ns, "effect_wall_ns": response["effect_wall_ns"]})
 				}
 			}
 		}

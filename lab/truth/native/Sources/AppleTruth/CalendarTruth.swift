@@ -150,8 +150,9 @@ struct CalendarTruth {
                 }
                 try store.save(event, span: .thisEvent, commit: true)
                 let effect = clock_gettime_nsec_np(CLOCK_UPTIME_RAW)
+                let effectWall = Date().timeIntervalSince1970 * 1_000_000_000
                 try remember(event, tag: tag)
-                return ["status": "verified", "id": event.calendarItemIdentifier, "effect_uptime_ns": effect]
+                return ["status": "verified", "id": event.calendarItemIdentifier, "effect_uptime_ns": effect, "effect_wall_ns": effectWall]
             case "modify", "move":
                 guard let index = request["index"] as? Int, selected.indices.contains(index) else { throw TruthFailure.invalid }
                 let event = selected[index]
@@ -166,8 +167,9 @@ struct CalendarTruth {
                 guard event.endDate > event.startDate else { throw TruthFailure.invalid }
                 try store.save(event, span: request["span"] as? String == "future" ? .futureEvents : .thisEvent, commit: true)
                 let effect = clock_gettime_nsec_np(CLOCK_UPTIME_RAW)
+                let effectWall = Date().timeIntervalSince1970 * 1_000_000_000
                 try remember(event, tag: tag)
-                return ["status": "verified", "effect_uptime_ns": effect]
+                return ["status": "verified", "effect_uptime_ns": effect, "effect_wall_ns": effectWall]
             case "cleanup", "delete", "cleanup_calendar":
                 if action == "cleanup_calendar" {
                     guard let key = request["calendar_id"] as? String, calendars.contains(where: { $0.calendarIdentifier == key && $0.title == "Bridge Test" }) else { throw TruthFailure.invalid }
