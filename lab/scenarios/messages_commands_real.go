@@ -335,7 +335,11 @@ func saveIncomingEchoEvidence(e Evidence) error {
 	return Save(incoming)
 }
 
-func messagesAttachmentBytes(ctx context.Context, w *world.World, endpoint world.Endpoint, id string, expected []byte, diagnostic map[string]any) bool {
+func messagesAttachmentBytes(ctx context.Context, w *world.World, endpoint world.Endpoint, id string, expected []byte, diagnostics ...map[string]any) bool {
+	diagnostic := map[string]any{}
+	if len(diagnostics) > 0 {
+		diagnostic = diagnostics[0]
+	}
 	return w.Await(10*time.Second, func() bool {
 		var result contracts.ReadResult
 		err := (scripted.Client{Endpoint: endpoint}).Call(ctx, "records.get", contracts.ReadQuery{Collection: "messages.attachment", ID: id}, &result)
