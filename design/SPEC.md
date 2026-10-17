@@ -267,7 +267,7 @@ func Start(ctx, Config) error
 | `messages.handle` | `address` (phone/email), `service`, `contact_id?` |
 | `messages.message` | `chat_id`, `sender_handle_id?`, `is_from_me`, `sent_at`, `parts[]` (`{index, kind: text|attachment, text?, attachment_id?}`), `text` (joined plain text), `decode_status` (`decoded|partial|undecoded`), `raw_body_digest?`, `reply_to_id?`, `thread_originator_id?`, `edited_at?`, `edit_history[]`, `retracted_parts[]`, `retracted_at?`, `delivered_at?`, `read_at?`, `error_code`, `effect?`, `kind` (`message|group_event|system`), `group_event?` |
 | `messages.reaction` | `message_id`, `part_index`, `sender_handle_id?`, `is_from_me`, `kind` (love/like/dislike/laugh/emphasize/question/emoji/sticker), `emoji?`, `removed` |
-| `messages.attachment` | `message_id`, `filename`, `mime_type`, `uti`, `size`, `blob` (`{digest?, state: present|pending|offloaded|missing|over_cap|failed}`) |
+| `messages.attachment` | `message_id`, `filename`, `mime_type`, `uti`, `size`, `blob` (`{digest?, state: present|pending|offloaded|missing|over_cap|failed|disk_full}`) |
 | `calendar.calendar` | `title`, `account`, `color`, `writable`, `type` |
 | `calendar.event` | `calendar_id`, `series_id?`, `occurrence_date?` (original), `title`, `notes`, `location`, `url`, `start`, `end`, `all_day`, `time_zone`, `recurrence?` (rule on series), `is_exception`, `attendees[]` (read-only), `alarms[]`, `availability`, `status` |
 | `reminders.list` | `title`, `account`, `color`, `writable` |
@@ -358,6 +358,7 @@ both Ping/Pong; Close(reason)
 - An **observation** is `{kind: upsert|absent|alias, collection, native_key, scoped_alias?, data, observed_at}`. Native references stay behind IPC except opaque scoped aliases; State assigns bridge IDs.
 - `Capture` is atomic in Go: records + aliases + journal + checkpoint commit in one transaction; then `Committed`. The Helper does not advance its in-memory checkpoint until `Committed`.
 - `generation` identifies one consistent native identity space (e.g. chat.db file identity + schema hash; EventKit store; Contacts history token lineage). A new generation resets capture identity, not gateway history. `predecessor` must equal the last committed checkpoint for that source, or Go answers `Reset(source)` and the Helper rescans.
+- A Capture may carry a private `blob_handles` map (native blob handle → collection/record key). Handles are opaque Helper references used only for `BlobRead`; they are never journaled or replicated.
 - `absent` observations are only valid inside a scan with `scanID`, `scope` and `completionEvidence: complete`. Go ignores absence without completion evidence and records a `degraded` coverage note. Candidates for deletion are revalidated, and records updated after the scan started are protected (F2, F13).
 - Live observations outrank backfill: the Helper keeps two queues (live, bulk) and always drains live first. Backfill revalidates before emitting so older data never overwrites newer observations (F14).
 - `byteCredit` bounds in-flight capture bytes (4 MiB). The Helper stops emitting when credit is exhausted.
@@ -541,7 +542,7 @@ Submit(principal, {id, op, args, expected_version?, expires_at?})
 
 ## 12. Replication (feed protocol `feed/1`)
 
-WebSocket over mTLS at `wss://<gateway>:7443/v1/feed`. Messages are JSON text frames (metadata) and binary frames (blob chunks with a 64-byte header).
+WebSocket over mTLS at `wss://<gateway>:7443/v1/feed`. Messages are JSON text frames (metadata) and binary frames (blob chunks). The ApplePeer IPC uses 4-byte big-endian length-prefixed JSON frames instead (§6.4); the feed relies on WebSocket framing. Blob chunk binary frame: 64-byte header = bytes 0–31 SHA-256 digest of the whole blob, 32–39 big-endian uint64 offset, 40–43 big-endian uint32 payload length, 44–63 zero; then the payload (≤ 1 MiB).
 
 ```text
 R→G Hello(replicaID, cursor?{epoch, subscriptionRevision, sequence}, schemaOffer, credits)

@@ -23,7 +23,7 @@ Resume point for any fresh session. Updated after every unit of work.
 - SSH ControlMaster multiplexing to the Air broke (mux Broken pipe) and looked like host overload; use `ssh -o ControlPath=none air` if ssh stalls. Air load average spikes (~100) come largely from Johan's Chrome/headless Chrome, not only our workers.
 - `ab-m0-commands-r1` (worktree m0-commands): command lifecycle, ApplePeer command frames, SimApplePeer commands + faults, RemoteGateway + delegated identity, MCP, CORE-CMD-*, parity, forged delegation, localhost defense, REM-CRUD/CONFLICT/EXTERNAL-RACE/READONLY-LIST.
 - `ab-m0-robust-r1` (worktree m0-robust): fault proxy, direct Tailscale replica path, snapshot/retention/gap/kill/slow-consumer/disconnect/upgrade/helper-restart/restore/disk-full/scope/pair/cred-lifecycle/bench scenarios.
-- `ab-m0-blobs-r1` (worktree m0-blobs): internal/blobs + feed transfer + IPC blob reads + CORE-BLOB-*.
+- DONE `ab-m0-blobs-r1` (5f418b8..0b03412): blobs store, eager IPC reads, resumable prioritized feed transfer, record-authorized REST, caps, protection, GC. CORE-BLOB-INTERRUPT/CORRUPT/CAP/NO-DIGEST-AUTH/GC + new OFFLOADED/SLOW-READ pass at sim; INTERRUPT at replica (5.9 s, n=1). SPEC updated (blob_handles, chunk header, disk_full). Review `ab-m0-blobs-review-r1` running. Known: repo-wide `make sim` trips on a real-helper YAML action `cleanup.fixture` (M1-A's).
 - `ab-m1-session-r1` (worktree m1-session): native build fix, Swift AppleSession IPC, AgendaGate + RemindersSource, Helper supervision, AppleTruth app, RealAirEnvironment, REM-* real/replica, HELPER-*.
 - `ab-m1-messages-read-r1` (worktree m1-messages-read): Decoders (typedstream, summary info, reactions), MessagesSource capture, MSG-* read scenarios.
 
