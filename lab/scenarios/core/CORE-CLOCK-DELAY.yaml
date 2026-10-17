@@ -1,0 +1,7 @@
+id: CORE-CLOCK-DELAY
+feature: core.recovery
+levels: [sim, replica]
+given: [{world: {replicas: 1}}, {seed: {count: 4}}]
+when: [{robustness: {case: clock-delay}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

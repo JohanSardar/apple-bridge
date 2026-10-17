@@ -1,0 +1,7 @@
+id: CORE-CLOCK-DELAY-GATEWAY-DIALS
+feature: core.recovery
+levels: [sim, replica]
+given: [{world: {replicas: 1}}, {seed: {count: 4}}]
+when: [{robustness: {case: clock-delay-gateway-dials}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

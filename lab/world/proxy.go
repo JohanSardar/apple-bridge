@@ -15,6 +15,7 @@ type FaultProxy struct {
 	blackhole   bool
 	partitioned bool
 	delay       time.Duration
+	delayBoth   bool
 	cut         int
 	connections map[net.Conn]struct{}
 }
@@ -84,60 +85,100 @@ func (p *FaultProxy) forward(downstream net.Conn) {
 		return
 	}
 	defer upstream.Close()
-	done := make(chan struct{})
-	go func() { p.copyUpstream(upstream, downstream); upstream.Close(); close(done) }()
-	buffer := make([]byte, 32*1024)
-	for {
-		n, err := upstream.Read(buffer)
-		if n > 0 {
-			p.mu.Lock()
-			delay, cut, partitioned, blackhole := p.delay, p.cut, p.partitioned, p.blackhole
-			if cut > 0 {
-				p.cut = max(0, cut-n)
-			}
-			p.mu.Unlock()
-			if partitioned {
-				break
-			}
-			if blackhole {
-				continue
-			}
-			if delay > 0 {
-				time.Sleep(delay)
-			}
-			if cut > 0 && n >= cut {
-				downstream.Write(buffer[:cut])
-				break
-			}
-			if _, err := downstream.Write(buffer[:n]); err != nil {
-				break
-			}
-		}
-		if err != nil {
-			break
-		}
-	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan struct{}, 2)
+	go func() { p.copyDelayed(ctx, upstream, downstream, true); done <- struct{}{} }()
+	go func() { p.copyDelayed(ctx, downstream, upstream, false); done <- struct{}{} }()
+	<-done
+	cancel()
 	downstream.Close()
 	upstream.Close()
 	<-done
 }
 
-func (p *FaultProxy) copyUpstream(dst, src net.Conn) {
-	buffer := make([]byte, 32*1024)
-	for {
-		n, err := src.Read(buffer)
-		if n > 0 {
-			p.mu.Lock()
-			drop := p.blackhole
-			p.mu.Unlock()
-			if !drop {
-				if _, err := dst.Write(buffer[:n]); err != nil {
+type delayedChunk struct {
+	bytes []byte
+	at    time.Time
+	cut   bool
+}
+
+func (p *FaultProxy) copyDelayed(ctx context.Context, dst, src net.Conn, upstream bool) {
+	chunks := make(chan delayedChunk, 64)
+	go func() {
+		defer close(chunks)
+		for {
+			bytes := make([]byte, 32*1024)
+			n, err := src.Read(bytes)
+			if n > 0 {
+				received := time.Now()
+				p.mu.Lock()
+				delay := p.delay
+				if upstream && !p.delayBoth {
+					delay = 0
+				}
+				drop, partitioned := p.blackhole, p.partitioned
+				cut := false
+				if !upstream && p.cut > 0 {
+					if n >= p.cut {
+						n = p.cut
+						cut = true
+					}
+					p.cut = max(0, p.cut-n)
+				}
+				p.mu.Unlock()
+				if partitioned {
+					return
+				}
+				if !drop {
+					select {
+					case chunks <- delayedChunk{bytes: bytes[:n], at: received.Add(delay), cut: cut}:
+					case <-ctx.Done():
+						return
+					}
+				}
+				if cut {
 					return
 				}
 			}
+			if err != nil {
+				return
+			}
 		}
-		if err != nil {
+	}()
+	for {
+		select {
+		case <-ctx.Done():
 			return
+		case chunk, ok := <-chunks:
+			if !ok {
+				return
+			}
+			timer := time.NewTimer(max(0, time.Until(chunk.at)))
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+				return
+			case <-timer.C:
+			}
+			p.mu.Lock()
+			drop := p.blackhole || p.partitioned
+			p.mu.Unlock()
+			if !drop {
+				if _, err := dst.Write(chunk.bytes); err != nil {
+					return
+				}
+			}
+			if chunk.cut {
+				return
+			}
 		}
 	}
+}
+
+func (w *World) DelayBothDirections(delay time.Duration) {
+	w.proxy.mu.Lock()
+	w.proxy.delay = delay
+	w.proxy.delayBoth = delay > 0
+	w.proxy.mu.Unlock()
 }

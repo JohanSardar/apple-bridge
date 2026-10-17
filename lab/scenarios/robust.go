@@ -42,6 +42,9 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 		replicas = 0
 		seed = 1000
 	}
+	if name == "clock-delay-gateway-dials" {
+		ctx = world.WithGatewayDials(ctx)
+	}
 	if name == "doctor" && level == "replica" {
 		ctx = world.WithPersistentReplicaStorage(ctx)
 	}
@@ -309,6 +312,10 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 		}
 		w.DelayNetwork(0)
 		add("one_thousand_changes_during_bootstrap", true)
+	case "clock-delay", "clock-delay-gateway-dials":
+		if !clockDelay(w, &evidence, add) {
+			return evidence
+		}
 	case "doctor":
 		gateway, gatewayErr := w.Doctor(w.Gateway)
 		add("gateway_clock_not_applicable", gatewayErr == nil && gateway["clock_skew"] == "n/a")
