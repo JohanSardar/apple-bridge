@@ -18,7 +18,7 @@ import (
 
 func nativeScenario(id, level string) bool {
 	switch id {
-	case "HELPER-LIVE-BACKFILL", "HELPER-SESSION-SOAK", "HELPER-RESTART-REAL", "HELPER-TCC-READY", "REM-CREATE-EXTERNAL", "REM-LIST-CREATE", "REM-RECURRING", "REM-PERMISSION-LOSS":
+	case "HELPER-LIVE-BACKFILL", "HELPER-SESSION-SOAK", "HELPER-RESTART-REAL", "HELPER-TCC-READY", "REM-CREATE-EXTERNAL", "REM-LIST-CREATE", "REM-LIST-LOST-ACK", "REM-RECURRING", "REM-PERMISSION-LOSS":
 		return true
 	case "REM-CRUD":
 		return level == "real" || level == "replica"
@@ -309,13 +309,15 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 			}
 			nativeLatencyEvidence(w, &e, effects, observers)
 			add("native_path_timestamps", len(e.NativeTimings) == 200 && e.Latency["refetch_duration"].Samples == 200 && e.Latency["capture_sent→gateway_commit"].Samples == 200)
-		case "REM-LIST-CREATE":
+		case "REM-LIST-CREATE", "REM-LIST-LOST-ACK":
+			var beforeLists map[string]bool
 			if level != "sim" {
 				baseline, err := w.Truth("observe", map[string]any{"list": "Bridge Test", "tag": tag})
 				if err != nil {
 					return blocked(err.Error())
 				}
 				before := truthListIDs(baseline)
+				beforeLists = before
 				defer func() {
 					stopped := w.QuiesceNative()
 					current, err := w.RecoverTruth("observe", map[string]any{"list": "Bridge Test", "tag": tag})
@@ -329,16 +331,35 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 							}
 						}
 					}
+					if err == nil {
+						after, readErr := w.RecoverTruth("observe", map[string]any{"list": "Bridge Test", "tag": tag})
+						if readErr != nil {
+							err = readErr
+						} else if !reflect.DeepEqual(before, truthListIDs(after)) {
+							err = fmt.Errorf("created list inventory not restored")
+						}
+					}
 					result.Assertions = append(result.Assertions, Assertion{Name: "created_list_recovery_cleanup", Passed: err == nil && stopped == nil})
 					if err != nil || stopped != nil {
 						result.Passed = false
 					}
 				}()
 			}
-			if err := submit("reminders.create_list", map[string]any{"title": "Bridge Test"}, 0); err != nil {
+			if s.ID == "REM-LIST-LOST-ACK" {
+				if os.WriteFile(filepath.Join(w.Gateway.Home, "helper", "lab-pause-outcome"), []byte("armed"), 0600) != nil {
+					return failed("arm_lost_list_outcome")
+				}
+			}
+			submitErr := submit("reminders.create_list", map[string]any{"title": "Bridge Test"}, 0)
+			if s.ID == "REM-LIST-LOST-ACK" {
+				add("list_response_ambiguous", submitErr != nil)
+				_, pauseErr := os.Stat(filepath.Join(w.Gateway.Home, "helper", "lab-paused-outcome"))
+				truth, truthErr := w.Truth("observe", map[string]any{"list": "Bridge Test", "tag": tag})
+				add("native_list_effect_before_lost_outcome", pauseErr == nil && truthErr == nil && len(truthListIDs(truth)) == len(beforeLists)+1)
+			} else if submitErr != nil {
 				return failed("rest_create_list")
 			}
-			if level != "sim" {
+			if level != "sim" && s.ID != "REM-LIST-LOST-ACK" {
 				evidence, ok := lastCommand["evidence"].(map[string]any)
 				if !ok {
 					return failed("created_list_evidence")

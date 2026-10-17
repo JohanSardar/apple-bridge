@@ -434,6 +434,7 @@ public actor AppleSession: ObservationSink {
             try Task.checkCancellation()
             guard ticket.fence == fence, ContinuousClock.now < ticket.expiry, wire != nil else { throw SourceFailure.conflict }
             let refetched = try await source.dispatch(ticket.prepared)
+            try await pause("outcome")
             var retained = refetched.object
             retained["prepared"] = .object(["action": ticket.prepared.action, "native_state": ticket.prepared.nativeState, "request_hash": ticket.command["request_hash"]])
             let evidence = try await observedEvidence(.object(retained), fingerprint: ticket.command["request_hash"])
