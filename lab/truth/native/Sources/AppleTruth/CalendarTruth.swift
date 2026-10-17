@@ -1,6 +1,7 @@
 import Foundation
 @preconcurrency import EventKit
 import Darwin
+import SQLite3
 
 @MainActor
 struct CalendarTruth {
@@ -8,6 +9,7 @@ struct CalendarTruth {
         var calendars: [String: String] = [:]
         var events: [String: [String]] = [:]
         var calendarReceipts: [String: String]?
+        var canonicalCalendar: String?
     }
     private static var ownershipURL: URL {
         FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/AppleBridgeDev/calendar-fixture-ownership.json")
@@ -27,6 +29,43 @@ struct CalendarTruth {
         if !(value.events[tag] ?? []).contains(identifier) { value.events[tag, default: []].append(identifier) }
         try saveOwnership(value)
     }
+    private static func emptyAcrossAllDates(_ identifier: String) throws -> Bool {
+        let path = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Group Containers/group.com.apple.calendar/Calendar.sqlitedb").path
+        var database: OpaquePointer?
+        guard sqlite3_open_v2(path, &database, SQLITE_OPEN_READONLY, nil) == SQLITE_OK else { if let database { sqlite3_close(database) }; throw TruthFailure.unavailable }
+        defer { sqlite3_close(database) }
+        var statement: OpaquePointer?
+        let sql = "SELECT count(i.ROWID) FROM Calendar c LEFT JOIN CalendarItem i ON c.ROWID=i.calendar_id WHERE c.title='Bridge Test' AND c.UUID=? GROUP BY c.ROWID"
+        guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK else { throw TruthFailure.unavailable }
+        defer { sqlite3_finalize(statement) }
+        let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+        guard sqlite3_bind_text(statement, 1, identifier, -1, transient) == SQLITE_OK else { throw TruthFailure.unavailable }
+        guard sqlite3_step(statement) == SQLITE_ROW else { throw TruthFailure.unavailable }
+        let empty = sqlite3_column_int64(statement, 0) == 0
+        guard sqlite3_step(statement) == SQLITE_DONE else { throw TruthFailure.unavailable }
+        return empty
+    }
+    private static func consolidate(_ store: EKEventStore) throws -> [String: Any] {
+        var owned = try ownership()
+        let calendars = store.calendars(for: .event).filter { $0.title == "Bridge Test" }.sorted {
+            if ($0.calendarIdentifier == owned.canonicalCalendar) != ($1.calendarIdentifier == owned.canonicalCalendar) { return $0.calendarIdentifier == owned.canonicalCalendar }
+            return $0.calendarIdentifier < $1.calendarIdentifier
+        }
+        guard let retained = calendars.first else { return ["before": 0, "after": 0, "removed": 0, "all_dates": true, "empty_only": true] }
+        owned.canonicalCalendar = retained.calendarIdentifier
+        try saveOwnership(owned)
+        var removed = 0
+        for calendar in calendars.dropFirst() {
+            guard calendar.title == "Bridge Test", calendar.allowsContentModifications, owned.calendars[calendar.calendarIdentifier] != nil else { continue }
+            guard try emptyAcrossAllDates(calendar.calendarIdentifier) else { continue }
+            try store.removeCalendar(calendar, commit: true)
+            owned.calendars.removeValue(forKey: calendar.calendarIdentifier)
+            owned.calendarReceipts?.removeValue(forKey: calendar.calendarIdentifier)
+            try saveOwnership(owned)
+            removed += 1
+        }
+        return ["before": calendars.count, "after": calendars.count - removed, "removed": removed, "all_dates": true, "empty_only": true]
+    }
     static func run(_ verb: String, _ request: [String: Any]) throws -> [String: Any] {
         guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else { throw TruthFailure.permissionMissing }
         guard verb == "fixture" || verb == "observe" else { throw TruthFailure.invalid }
@@ -39,14 +78,23 @@ struct CalendarTruth {
             let calendars = store.calendars(for: .event).filter { $0.isSubscribed }
             return ["status": "verified", "calendars": calendars.map { ["id": $0.calendarIdentifier, "writable": false] }]
         }
-        var calendars = store.calendars(for: .event).filter { $0.title == "Bridge Test" }
+        if action == "consolidate_calendars" {
+            guard verb == "fixture" else { throw TruthFailure.invalid }
+            var result = try consolidate(store); result["status"] = "verified"
+            return result
+        }
+        let canonical = try ownership().canonicalCalendar
+        var calendars = store.calendars(for: .event).filter { $0.title == "Bridge Test" }.sorted {
+            if ($0.calendarIdentifier == canonical) != ($1.calendarIdentifier == canonical) { return $0.calendarIdentifier == canonical }
+            return $0.calendarIdentifier < $1.calendarIdentifier
+        }
         if let key = request["calendar_id"] as? String { calendars = calendars.filter { $0.calendarIdentifier == key } }
         if calendars.isEmpty && verb == "fixture" && ["create", "create_calendar"].contains(action) {
             guard let source = store.defaultCalendarForNewEvents?.source else { throw TruthFailure.unavailable }
             let calendar = EKCalendar(for: .event, eventStore: store)
             calendar.title = "Bridge Test"; calendar.source = source
             try store.saveCalendar(calendar, commit: true)
-            var owned = try ownership(); owned.calendars[calendar.calendarIdentifier] = tag; try saveOwnership(owned)
+            var owned = try ownership(); owned.calendars[calendar.calendarIdentifier] = tag; owned.canonicalCalendar = calendar.calendarIdentifier; try saveOwnership(owned)
             calendars = [calendar]
         }
         var bounds = Calendar(identifier: .gregorian)
@@ -128,7 +176,8 @@ struct CalendarTruth {
                     guard event.calendar.title == "Bridge Test", (event.title ?? "").hasPrefix(tag), event.calendar.allowsContentModifications else { throw TruthFailure.invalid }
                     try store.remove(event, span: .thisEvent, commit: true)
                 }
-                return ["status": "verified", "calendar_retained": true, "all_dates_ownership_proven": false, "removed_tagged_occurrences": selected.count]
+                let consolidation = try consolidate(store)
+                return ["status": "verified", "calendar_retained": store.calendars(for: .event).contains(where: { $0.calendarIdentifier == (request["calendar_id"] as? String ?? "") }), "all_dates_ownership_proven": true, "removed_tagged_occurrences": selected.count, "consolidation": consolidation]
             default: throw TruthFailure.invalid
             }
         }

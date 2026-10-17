@@ -2,6 +2,7 @@ package scenarios
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -148,6 +149,7 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		return contracts.Record{}
 	}
 	nativeEffects := map[string]int64{}
+	phaseEffects := []any{}
 	simEffects := map[string]time.Time{}
 	fixture := func(action, key string, data map[string]any) (map[string]any, error) {
 		if level == "sim" {
@@ -168,6 +170,10 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		if response != nil {
 			if ns, ok := response["effect_uptime_ns"].(json.Number); ok {
 				nativeEffects[fmt.Sprint(data["title"])], _ = ns.Int64()
+				if action == "create" {
+					id, _ := response["id"].(string)
+					phaseEffects = append(phaseEffects, map[string]any{"title": data["title"], "key": fmt.Sprintf("%x", sha256.Sum256([]byte(id))), "effect_uptime_ns": ns})
+				}
 			}
 		}
 		return response, err
@@ -180,7 +186,8 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 			_, cleanupErr := w.RecoverTruth("fixture", map[string]any{"source": "calendar", "action": "cleanup", "tag": tag})
 			audit, auditErr := w.RecoverTruth("observe", map[string]any{"source": "calendar", "action": "audit", "tag": tag})
 			remaining, _ := audit["records"].([]any)
-			clean := cleanupErr == nil && auditErr == nil && len(remaining) == 0
+			calendars, _ := audit["calendars"].([]any)
+			clean := cleanupErr == nil && auditErr == nil && len(remaining) == 0 && len(calendars) <= 1
 			result.Assertions = append(result.Assertions, Assertion{Name: "tagged_fixture_cleanup_audit", Passed: clean})
 			result.Passed = result.Passed && clean
 		}()
@@ -428,6 +435,10 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 			if !latency(name, time.Now()) {
 				return fail("latency_sample", nil)
 			}
+		}
+		if level != "sim" {
+			nativeLatencyEvidence(w, &e, phaseEffects, observers)
+			add("calendar_native_phase_timestamps", len(e.NativeTimings) == 10 && e.Latency["refetch_duration"].Samples == 10 && e.Latency["capture_sent→gateway_commit"].Samples == 10)
 		}
 	case "CAL-CRUD":
 		current := records(w.Gateway)[0]

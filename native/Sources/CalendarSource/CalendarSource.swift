@@ -123,6 +123,8 @@ public final class CalendarSource: Source {
             if forceFull || value["data"] != committed["calendar.calendar/" + calendar.calendarIdentifier]?["data"] { pending.append(value) }
         }
         for (index, chunk) in CalendarTime.chunks(now).enumerated() {
+            let refetchStarted = CaptureTrace.now()
+            let notificationAt = gate.notificationAt, debounceAt = gate.debounceAt
             for event in try events(chunk) {
                 let native = key(event)
                 remember(event)
@@ -135,6 +137,7 @@ public final class CalendarSource: Source {
                 let changed = try hash(value["data"]) != hash(committed[identity]?["data"] ?? .null)
                 if forceFull || changed || value["scoped_alias"] != committed[identity]?["scoped_alias"] { pending.append(value) }
             }
+            gate.trace.record("refetch", keys: pending.map { $0["native_key"].string }, fields: ["notification_ns": .integer(notificationAt), "debounce_ns": .integer(debounceAt), "started_ns": .integer(refetchStarted), "finished_ns": .integer(CaptureTrace.now()), "live": .bool(live || index == 0)])
             gate.trace.record("calendar_chunk", fields: ["index": .number(Double(index)), "records": .number(Double(current.count)), "changes": .number(Double(pending.count))])
             guard gate.authorized(.event) else { throw SourceFailure.permissionMissing }
             if !pending.isEmpty {

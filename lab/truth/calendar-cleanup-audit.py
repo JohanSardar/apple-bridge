@@ -13,7 +13,7 @@ items = connection.execute("SELECT count(*) FROM CalendarItem JOIN Calendar ON C
 bridge_tagged = connection.execute("SELECT count(*) FROM CalendarItem JOIN Calendar ON Calendar.ROWID = CalendarItem.calendar_id WHERE Calendar.title = 'Bridge Test' AND CalendarItem.summary LIKE '[ab-test%'").fetchone()[0]
 connection.rollback()
 connection.close()
-clean = tagged == 0 and items == 0
+clean = tagged == 0 and items == 0 and calendars <= 1
 print(json.dumps({"oracle": "independent_read_only_calendar_database", "all_dates": True, "tagged_items": tagged, "bridge_test_calendars": calendars, "bridge_test_items": items, "bridge_test_tagged_items": bridge_tagged, "passed": clean}, indent=2))
 if "--assert-clean" in sys.argv and not clean:
     raise SystemExit(1)
