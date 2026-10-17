@@ -1,0 +1,135 @@
+{
+  "scenario": "CORE-BLOB-INTERRUPT",
+  "level": "replica",
+  "passed": true,
+  "git_sha": "136c2f81d58c13c4148c9fce5b2d71ffc419a6b8",
+  "at": "2026-10-17T05:14:05.406453Z",
+  "assertions": [
+    {
+      "name": "replica_host_is_ubuntu",
+      "passed": true
+    },
+    {
+      "name": "bootstrap_snapshot",
+      "passed": true
+    },
+    {
+      "name": "scope_query_and_get",
+      "passed": true
+    },
+    {
+      "name": "attachment_fixture",
+      "passed": true
+    },
+    {
+      "name": "attachment_metadata_visible",
+      "passed": true
+    },
+    {
+      "name": "metadata_convergence_with_blob_backlog",
+      "passed": true
+    },
+    {
+      "name": "partial_blob_persisted_before_interrupt",
+      "passed": true
+    },
+    {
+      "name": "interrupted_halfway_through_binary_chunk",
+      "passed": true
+    },
+    {
+      "name": "replica_restart",
+      "passed": true
+    },
+    {
+      "name": "live_metadata_during_bulk",
+      "passed": true
+    },
+    {
+      "name": "blob_complete",
+      "passed": true
+    },
+    {
+      "name": "authorized_bytes_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "authorized_bytes_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "transfer_resumed_from_nonzero_offset",
+      "passed": true
+    },
+    {
+      "name": "convergence_truth_gateway_replicas",
+      "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true
+    },
+    {
+      "name": "latency_observations_complete",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_watermarks_0",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_watermarks_1",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_0",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_1",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "effect_done→blob_complete": {
+      "samples": 1,
+      "p50_ms": 5247.15175,
+      "p95_ms": 5247.15175,
+      "max_ms": 5247.15175,
+      "timeouts": 0
+    },
+    "effect_done→gateway_visible": {
+      "samples": 1,
+      "p50_ms": 87.016208,
+      "p95_ms": 87.016208,
+      "max_ms": 87.016208,
+      "timeouts": 0
+    },
+    "effect_done→metadata_during_blob": {
+      "samples": 1,
+      "p50_ms": 149.430166,
+      "p95_ms": 149.430166,
+      "max_ms": 149.430166,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica0": {
+      "samples": 1,
+      "p50_ms": 102.678083,
+      "p95_ms": 102.678083,
+      "max_ms": 102.678083,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air",
+    "ubuntu"
+  ]
+}
