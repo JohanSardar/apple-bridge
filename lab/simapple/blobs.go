@@ -52,11 +52,13 @@ func (f *fakeApple) blobRoutes(mux *http.ServeMux) {
 			http.Error(w, "persist", 500)
 			return
 		}
+		start := time.Now()
 		if err = f.enqueue(r.Context(), contracts.Capture{Source: contracts.Reminders, Observations: observations}, true, revision); err != nil {
 			http.Error(w, "capture", 503)
 			return
 		}
-		json.NewEncoder(w).Encode(map[string]bool{"committed": true})
+		elapsed := time.Since(start)
+		json.NewEncoder(w).Encode(map[string]float64{"commit_ms": float64(elapsed) / float64(time.Millisecond), "rows_per_second": float64(a.Rows) / elapsed.Seconds()})
 	})
 
 	mux.HandleFunc("GET /blob-faults", func(w http.ResponseWriter, r *http.Request) {
