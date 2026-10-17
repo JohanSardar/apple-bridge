@@ -38,6 +38,8 @@ public enum HelperCommand {
             let secretFile = try option("--secret-file")
             let home = URL(fileURLWithPath: try option("--home"))
             guard let gatewayPID = Int32(try option("--gateway-pid")), gatewayPID > 1 else { throw ProbeFailure.invalidArguments }
+            let activity = ProcessInfo.processInfo.beginActivity(options: .idleSystemSleepDisabled, reason: "Apple Bridge gateway session")
+            defer { ProcessInfo.processInfo.endActivity(activity) }
             let timers = CaptureTrace(url: arguments.contains("--lab-commands") ? home.appendingPathComponent("session-timers.jsonl") : nil)
             let lifetime = DispatchSource.makeTimerSource(queue: .global())
             lifetime.schedule(deadline: .now() + 1, repeating: 1)
