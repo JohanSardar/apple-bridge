@@ -3,6 +3,7 @@ package world
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -110,6 +111,13 @@ func (w *World) RestartHelper() error {
 	if w.Native {
 		return w.restartNativeHelper()
 	}
+	previousPID := 0
+	for _, p := range w.processes {
+		if p != nil && p.command.Path == w.lab && !p.stopped {
+			previousPID = p.command.Process.Pid
+		}
+	}
+	w.Control.CloseIdleConnections()
 	w.StopHelper()
 	var cfg Config
 	data, err := os.ReadFile(filepath.Join(w.Gateway.Home, "runtime.json"))
@@ -119,9 +127,12 @@ func (w *World) RestartHelper() error {
 	if err = json.Unmarshal(data, &cfg); err != nil {
 		return err
 	}
-	_, err = w.start("simapple", false, w.Dir, w.lab, "simapple", "--socket", cfg.Socket, "--secret-file", filepath.Join(w.Gateway.Home, "apple-secret"), "--control", filepath.Join(w.Dir, "sim.sock"))
+	restarted, err := w.start("simapple", false, w.Dir, w.lab, "simapple", "--socket", cfg.Socket, "--secret-file", filepath.Join(w.Gateway.Home, "apple-secret"), "--control", filepath.Join(w.Dir, "sim.sock"))
 	if err != nil {
 		return err
+	}
+	if restarted.command.Process.Pid == previousPID {
+		return fmt.Errorf("helper process did not restart")
 	}
 	return w.Await(10*time.Second, func() bool { _, err := w.Inspect(); return err == nil })
 }

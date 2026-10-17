@@ -87,11 +87,11 @@ func Open(home string) (*Store, error) {
 		db.Close()
 		return nil, err
 	}
- if err = s.initSearch(); err != nil {
- db.Close()
- return nil, err
- }
- if err = s.initBlobReferences(context.Background()); err != nil {
+	if err = s.initSearch(); err != nil {
+		db.Close()
+		return nil, err
+	}
+	if err = s.initBlobReferences(context.Background()); err != nil {
 		db.Close()
 		return nil, err
 	}

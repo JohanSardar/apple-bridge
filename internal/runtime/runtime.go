@@ -208,9 +208,9 @@ func Start(ctx context.Context, cfg Config) error {
 		defer server.Close()
 		go func() {
 			failures <- applepeer.Serve(ctx, applepeer.Config{BlobCapture: blobStore.Capture, Socket: cfg.Socket, Secret: secret, Commands: commands, Checkpoints: func(ctx context.Context) (map[contracts.Source]contracts.Checkpoint, error) {
- checkpoints, err := store.Checkpoints(ctx)
- return blobStore.ResumeCheckpoints(checkpoints), err
-}, NextFence: store.NextFence, SourceState: func(ctx context.Context, source contracts.Source, status string, coverage contracts.Coverage, capabilities []string, reason string) error {
+				checkpoints, err := store.Checkpoints(ctx)
+				return blobStore.ResumeCheckpoints(checkpoints), err
+			}, NextFence: store.NextFence, SourceState: func(ctx context.Context, source contracts.Source, status string, coverage contracts.Coverage, capabilities []string, reason string) error {
 				err := store.SourceState(ctx, source, status, coverage, capabilities, reason)
 				if state.IsCapacity(err) {
 					store.Capacity(source, err)

@@ -3,7 +3,6 @@ package world
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"

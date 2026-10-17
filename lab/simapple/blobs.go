@@ -33,14 +33,15 @@ func (f *fakeApple) blobRoutes(mux *http.ServeMux) {
 			observations[i] = contracts.Observation{Kind: "upsert", Collection: "reminders.reminder", NativeKey: key, ObservedAt: now, Data: data}
 			f.records[key] = observations[i]
 		}
-		err := f.saveLocked()
+		err := f.changedLocked(contracts.Reminders)
+		revision := f.durable.Revision[contracts.Reminders]
 		f.mu.Unlock()
 		if err != nil {
 			http.Error(w, "persist", 500)
 			return
 		}
 		start := time.Now()
-		if err = f.enqueue(r.Context(), contracts.Capture{Source: contracts.Reminders, Observations: observations}, true); err != nil {
+		if err = f.enqueue(r.Context(), contracts.Capture{Source: contracts.Reminders, Observations: observations}, true, revision); err != nil {
 			http.Error(w, "capture", 503)
 			return
 		}
