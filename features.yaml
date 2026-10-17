@@ -264,7 +264,7 @@ features:
     milestone: M1
     modules: [native/CalendarSource, operations]
     depends_on: [calendar.read]
-    status: todo
+    status: done
     scenarios:
       - {id: CAL-CRUD, levels: [sim, real, replica]}
       - {id: CAL-RECUR-THIS, levels: [sim, real]}
