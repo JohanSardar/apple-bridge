@@ -65,9 +65,9 @@ public actor AppleSession: ObservationSink {
     public init(socket: String, secretFile: String, home: URL, gatewayPID: Int32, commandsEnabled: Bool) throws {
         self.socket = socket; self.secretFile = secretFile; self.gatewayPID = gatewayPID
         self.home = home; self.labEnabled = commandsEnabled
-        contacts = try ContactsSource(home: home, commandsEnabled: true)
         let trace = CaptureTrace(url: commandsEnabled ? home.appendingPathComponent("capture-trace.jsonl") : nil)
         self.trace = trace
+        contacts = try ContactsSource(home: home, commandsEnabled: true, trace: trace)
         let agenda = AgendaGate(trace: trace)
         self.agenda = agenda
         source = try RemindersSource(gate: agenda, home: home, commandsEnabled: true)
@@ -246,7 +246,7 @@ public actor AppleSession: ObservationSink {
         let chunks = try split(observations, maximumBytes: live ? 240000 : 16000)
         for (index,chunk) in chunks.enumerated() {
             try await withCheckedThrowingContinuation { continuation in
-                let pending = Pending(source: source, checkpoint: index == chunks.count-1 ? checkpoint : "", generation: generation, scanID: scanID, completionEvidence: completionEvidence, blobHandles: blobHandles.filter { _, digest in Self.containsDigest(.array(chunk), digest: digest) }, observations: chunk, started: scanStartedAt, scope: scope, completion: continuation)
+                let pending = Pending(source: source, checkpoint: index == chunks.count-1 ? checkpoint : "", generation: generation, scanID: scanID, completionEvidence: completionEvidence, blobHandles: blobHandles.filter { digest, _ in Self.containsDigest(.array(chunk), digest: digest) }, observations: chunk, started: scanStartedAt, scope: scope, completion: continuation)
                 if live { self.live.append(pending) } else { bulk.append(pending) }
                 Task { do { try await drain() } catch { disconnect() } }
             }

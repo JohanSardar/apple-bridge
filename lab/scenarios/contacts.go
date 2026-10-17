@@ -10,7 +10,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"reflect"
 	"slices"
 	"strings"
@@ -44,6 +46,26 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 		return fail("world_start")
 	}
 	defer w.Close()
+	defer func() {
+		bytes, err := os.ReadFile(filepath.Join(w.Gateway.Home, "capture-trace.jsonl"))
+		if err != nil {
+			return
+		}
+		events := []map[string]any{}
+		for _, line := range strings.Split(string(bytes), "\n") {
+			var event map[string]any
+			if json.Unmarshal([]byte(line), &event) == nil {
+				stage, _ := event["stage"].(string)
+				if strings.HasPrefix(stage, "contacts_") {
+					events = append(events, map[string]any{"stage": stage, "uptime_ns": event["uptime_ns"]})
+				}
+			}
+		}
+		if result.Metrics == nil {
+			result.Metrics = map[string]any{}
+		}
+		result.Metrics["contacts_capture_phases"] = events
+	}()
 	tag := "[ab-test " + contracts.NewID("contacts") + "]"
 	synthetic := map[string]any{"given_name": tag + " Testperson", "family_name": "Testfamily", "organization": "Bridge Test", "job_title": "Testjob", "phones": []any{map[string]any{"label": "mobile", "value": "+15555550123"}}, "emails": []any{map[string]any{"label": "home", "value": "bridge-test@example.com"}}}
 	truth := func() (map[string]any, error) {

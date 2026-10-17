@@ -9,6 +9,7 @@ public final class ContactsSource: Source {
     public nonisolated let name = "contacts"
     private let store = CNContactStore()
     private let commandsEnabled: Bool
+    private let trace: CaptureTrace
     private var generation = UUID().uuidString
     private var token: Data?
     private var committed: [String: JSON] = [:]
@@ -22,7 +23,8 @@ public final class ContactsSource: Source {
         (Array(scalarKeys.values) + [CNContactIdentifierKey, CNContactTypeKey, CNContactPhoneNumbersKey, CNContactEmailAddressesKey, CNContactPostalAddressesKey, CNContactUrlAddressesKey, CNContactBirthdayKey, CNContactNonGregorianBirthdayKey, CNContactDatesKey, CNContactSocialProfilesKey, CNContactInstantMessageAddressesKey, CNContactRelationsKey, CNContactImageDataKey, CNContactThumbnailImageDataKey, CNContactImageDataAvailableKey]).map { $0 as NSString }
     }
 
-    public init(home: URL, commandsEnabled: Bool = false) throws {
+    public init(home: URL, commandsEnabled: Bool = false, trace: CaptureTrace = CaptureTrace()) throws {
+        self.trace = trace
         self.commandsEnabled = commandsEnabled
         baselineURL = home.appendingPathComponent("contacts-baseline.json")
     }
@@ -129,6 +131,7 @@ public final class ContactsSource: Source {
         while scanning { try await Task.sleep(for: .milliseconds(5)) }
         scanning = true; defer { scanning = false }
         let started = timestamp()
+        trace.record("contacts_scan_started")
         let next: Data
         let drop: Bool
         do { (next, drop) = try history(token) }
@@ -138,13 +141,16 @@ public final class ContactsSource: Source {
             token = nil
             (next, drop) = try history(nil)
         }
+        trace.record("contacts_history_fetched")
         if drop { generation = UUID().uuidString }
         var current: [String: JSON] = [:]
         var containers: [String: Set<String>] = [:]
         for container in try store.containers(matching: nil) {
             for member in try contacts(CNContact.predicateForContactsInContainer(withIdentifier: container.identifier), identifiersOnly: true) { containers[member.identifier, default: []].insert(container.identifier) }
         }
-        for contact in try contacts() {
+        let fetched = try contacts()
+        trace.record("contacts_fetched")
+        for contact in fetched {
             let memberships = containers[contact.identifier] ?? []
             let containerID = memberships.count == 1 ? memberships.first ?? "" : ""
             current["contacts.contact/" + contact.identifier] = observation("contacts.contact", contact.identifier, try data(contact, containerID: containerID))
@@ -154,6 +160,7 @@ public final class ContactsSource: Source {
             let value: JSON = .object(["name": .string(group.name), "member_ids": .array(members.map { .object(["$ref": .object(["collection": .string("contacts.contact"), "native_key": .string($0.identifier)])]) })])
             current["contacts.group/" + group.identifier] = observation("contacts.group", group.identifier, value)
         }
+        trace.record("contacts_encoded")
         guard authorized else { throw SourceFailure.permissionMissing }
         var observations: [JSON] = []
         for key in current.keys.sorted() {
@@ -171,8 +178,10 @@ public final class ContactsSource: Source {
                 observations.append(.object(absent))
             }
         }
-        let handles = blobs.mapValues { hash($0) }
+        let handles = Dictionary(uniqueKeysWithValues: blobs.keys.map { (String($0.dropFirst("contacts-image:".count)), $0) })
+        trace.record("contacts_capture_ready")
         try await sink.emitCheckpoint(source: name, generation: generation, checkpoint: next.base64EncodedString(), observations: observations, scanID: UUID().uuidString, scanStartedAt: started, scope: ["contacts.contact", "contacts.group"], completionEvidence: "complete", blobHandles: handles, live: live)
+        trace.record("contacts_capture_committed")
         token = next
         committed = drop ? committed.merging(current) { _, new in new } : current
         let baseline: JSON = .object(["checkpoint": .string(next.base64EncodedString()), "generation": .string(generation), "records": .object(committed)])
@@ -187,7 +196,7 @@ public final class ContactsSource: Source {
             if baseline["checkpoint"] != resume["checkpoint"] { token = nil }
         } else { committed = [:]; token = nil }
         let (changes, continuation) = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
-        let observer = NotificationCenter.default.addObserver(forName: .CNContactStoreDidChange, object: nil, queue: nil) { @Sendable _ in continuation.yield(()) }
+        let observer = NotificationCenter.default.addObserver(forName: .CNContactStoreDidChange, object: nil, queue: nil) { @Sendable [trace] _ in trace.record("contacts_notified"); continuation.yield(()) }
         let polling = Task { @MainActor in
             while !Task.isCancelled {
                 do { try await Task.sleep(for: .seconds(2)); continuation.yield(()) } catch { return }
