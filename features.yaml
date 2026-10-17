@@ -1,0 +1,338 @@
+version: 1
+levels:
+  sim: Gateway, SimApplePeer and replicas on the Air; all Go, storage and network real
+  real: Real Swift Helper and Apple apps on the Air
+  replica: Real gateway on the Air, replica on the Ubuntu laptop
+  agent: GPT-6-Luna via Codex on Ubuntu using only the replica MCP
+statuses: [todo, in_progress, done, blocked]
+
+requirements:
+  R-LIVE: Changes on the Mac appear on every connected replica in under 1 s p95 while the Mac is awake
+  R-FULL: Every replica converges to bridge state equal to Apple state within declared coverage
+  R-RW: Every source that Apple lets the Mac change is writable through commands with evidence
+  R-API: One REST API and one MCP server, identical on every machine
+  R-SAFE-CMD: No ambiguous Apple effect is ever redispatched automatically; indeterminate is reported truthfully
+  R-NO-FALSE-DELETE: Absence is published only after a complete scan; failures never look like empty data
+  R-SCOPE: Scoped principals see nothing outside their scope through any path
+  R-SECURE: Authenticated everywhere, paired devices, protected files and credentials
+  R-RESILIENT: Crashes, partitions, restores, disk-full and clock jumps never corrupt or lose data
+  R-ATTACH: Attachments download to every replica by default up to a per-machine cap
+  R-MSG-DEPTH: Messages at full depth (send, files, reply, react, edit, unsend, read state, delete, groups)
+  R-CAL: Calendar 2 years back to 2 years ahead, sliding daily, with recurrence and time zones
+  R-REM: Reminders with lists, completion and recurrence
+  R-CON: Contacts read and basic create/update/delete
+  R-NOTES: Notes read and demonstrated plain-text writes; unsupported rich edits reject
+  R-USAGE: Screen Time per app, per device, per day estimates, read-only
+  R-PKG: Signed, notarized app with onboarding and background service
+  R-AGENT: A remote agent can do real tasks through MCP only
+
+features:
+  - id: core.harness
+    title: bridge-lab World, SimApplePeer, SimTruth, scenario runner, evidence, feature graph
+    requirements: [R-FULL, R-LIVE]
+    milestone: M0
+    modules: [lab]
+    depends_on: []
+    status: todo
+    scenarios:
+      - {id: CORE-BOOT, levels: [sim, replica]}
+  - id: core.replication
+    title: Journal, snapshots, resumable push feed with exactly-once replica application
+    requirements: [R-FULL, R-LIVE, R-RESILIENT, R-NO-FALSE-DELETE]
+    milestone: M0
+    modules: [state, replication, contracts]
+    depends_on: [core.harness]
+    status: todo
+    scenarios:
+      - {id: CORE-LIVE-LATENCY, levels: [sim, real, replica]}
+      - {id: CORE-SNAPSHOT-UNDER-LOAD, levels: [sim]}
+      - {id: CORE-SNAPSHOT-INTERRUPT, levels: [sim]}
+      - {id: CORE-RESUME, levels: [sim, replica]}
+      - {id: CORE-RETENTION-RACE, levels: [sim]}
+      - {id: CORE-GAP-REJECT, levels: [sim]}
+      - {id: CORE-KILL-DURING-APPLY, levels: [sim]}
+      - {id: CORE-KILL-GATEWAY-CAPTURE, levels: [sim]}
+      - {id: CORE-SLOW-CONSUMER, levels: [sim]}
+      - {id: CORE-DISCONNECT-DETECT, levels: [sim, replica]}
+      - {id: CORE-UPGRADE, levels: [sim]}
+  - id: core.recovery
+    title: Helper restart, restore with epoch rotation, disk-full
+    requirements: [R-RESILIENT, R-NO-FALSE-DELETE]
+    milestone: M0
+    modules: [runtime, state, applepeer]
+    depends_on: [core.replication]
+    status: todo
+    scenarios:
+      - {id: CORE-HELPER-RESTART, levels: [sim]}
+      - {id: CORE-RESTORE-EPOCH, levels: [sim]}
+      - {id: CORE-DISK-FULL, levels: [sim]}
+  - id: core.trust
+    title: Pairing, tokens, one visibility policy, delegated identity, localhost defense, credential stores
+    requirements: [R-SCOPE, R-SECURE]
+    milestone: M0
+    modules: [trust, frontdoor, replication]
+    depends_on: [core.replication]
+    status: todo
+    scenarios:
+      - {id: CORE-SCOPE-LEAK, levels: [sim, replica]}
+      - {id: CORE-SCOPE-CHANGE, levels: [sim]}
+      - {id: CORE-PAIR, levels: [sim, replica]}
+      - {id: CORE-FORGED-DELEGATION, levels: [sim]}
+      - {id: CORE-LOCALHOST-DEFENSE, levels: [sim]}
+      - {id: CORE-CRED-LIFECYCLE, levels: [real, replica]}
+  - id: core.commands
+    title: Command ledger, tickets, expiry, idempotency, conflicts, forwarding, read-your-write
+    requirements: [R-RW, R-SAFE-CMD]
+    milestone: M0
+    modules: [operations, state, applepeer]
+    depends_on: [core.replication, core.trust]
+    status: todo
+    scenarios:
+      - {id: CORE-CMD-IDEMPOTENT, levels: [sim]}
+      - {id: CORE-CMD-LOST-RESPONSE, levels: [sim, replica]}
+      - {id: CORE-CMD-CRASH-AMBIGUOUS, levels: [sim]}
+      - {id: CORE-CMD-EXPIRY, levels: [sim]}
+      - {id: CORE-CMD-CLOCK-JUMP, levels: [sim]}
+      - {id: CORE-CMD-OFFLINE, levels: [sim, replica]}
+      - {id: CORE-CMD-CONFLICT, levels: [sim, replica]}
+      - {id: CORE-CMD-READ-YOUR-WRITE, levels: [sim, replica]}
+  - id: core.frontdoor
+    title: REST and MCP from handwritten operation descriptors, OpenAPI, SSE
+    requirements: [R-API]
+    milestone: M0
+    modules: [frontdoor, contracts]
+    depends_on: [core.commands]
+    status: todo
+    scenarios:
+      - {id: CORE-REST-MCP-PARITY, levels: [sim]}
+  - id: core.blobs
+    title: Content-addressed blobs, resumable transfer, caps, grants, GC
+    requirements: [R-ATTACH, R-SCOPE]
+    milestone: M0
+    modules: [blobs, replication]
+    depends_on: [core.replication, core.trust]
+    status: todo
+    scenarios:
+      - {id: CORE-BLOB-INTERRUPT, levels: [sim]}
+      - {id: CORE-BLOB-CORRUPT, levels: [sim]}
+      - {id: CORE-BLOB-CAP, levels: [sim]}
+      - {id: CORE-BLOB-NO-DIGEST-AUTH, levels: [sim]}
+      - {id: CORE-BLOB-GC, levels: [sim]}
+  - id: core.bench
+    title: SQLite, FTS5, WAL and RSS benchmark on the 8 GB Air
+    requirements: [R-LIVE]
+    milestone: M0
+    modules: [state]
+    depends_on: [core.replication]
+    status: todo
+    scenarios:
+      - {id: CORE-BENCH, levels: [sim]}
+
+  - id: helper.session
+    title: Swift Helper session, IPC auth, fencing, dispatch guard, UI actor, stable signing and TCC
+    requirements: [R-RW, R-SAFE-CMD, R-SECURE]
+    milestone: M1
+    modules: [native/AppleSession, applepeer]
+    depends_on: [core.commands]
+    status: todo
+    scenarios:
+      - {id: HELPER-RESTART-REAL, levels: [real]}
+      - {id: HELPER-TCC-READY, levels: [real]}
+  - id: messages.read
+    title: Messages history, live capture, decoding, receipts, attachments
+    requirements: [R-FULL, R-LIVE, R-MSG-DEPTH, R-ATTACH, R-NO-FALSE-DELETE]
+    milestone: M1
+    modules: [native/MessagesSource, native/Decoders]
+    depends_on: [helper.session, core.blobs]
+    status: todo
+    scenarios:
+      - {id: MSG-HISTORY-IMPORT, levels: [sim, real]}
+      - {id: MSG-INCOMING, levels: [sim, real, replica]}
+      - {id: MSG-RECEIPTS, levels: [sim, real]}
+      - {id: MSG-DECODE, levels: [sim]}
+      - {id: MSG-DB-REPLACED, levels: [sim]}
+      - {id: MSG-WATCHER-REARM, levels: [sim, real]}
+      - {id: MSG-PERMISSION-LOSS, levels: [sim]}
+      - {id: MSG-AGENT-SUMMARIZE, levels: [agent]}
+  - id: messages.send
+    title: Send text and files to self, new handles and existing groups with truthful dispositions
+    requirements: [R-RW, R-MSG-DEPTH, R-SAFE-CMD]
+    milestone: M1
+    modules: [native/MessagesSource, operations]
+    depends_on: [messages.read]
+    status: todo
+    scenarios:
+      - {id: MSG-SEND-SELF-TEXT, levels: [sim, real, replica, agent]}
+      - {id: MSG-SEND-SELF-EMAIL, levels: [real]}
+      - {id: MSG-SEND-FILES, levels: [sim, real, replica]}
+      - {id: MSG-SEND-GHOST, levels: [sim]}
+      - {id: MSG-SEND-IDENTICAL-MANUAL, levels: [sim]}
+      - {id: MSG-SEND-NEW-HANDLE, levels: [sim, real]}
+      - {id: MSG-SEND-RCS-GROUP, levels: [real]}
+      - {id: MSG-CAPABILITY-MATRIX, levels: [sim, real]}
+      - {id: MSG-AGENT-TEXT-ME, levels: [agent]}
+  - id: messages.actions
+    title: Reply, react, edit, unsend, read state, delete via Accessibility with SIP on
+    requirements: [R-MSG-DEPTH, R-SAFE-CMD]
+    milestone: M1
+    modules: [native/MessagesSource, native/AppleSession]
+    depends_on: [messages.send]
+    status: todo
+    scenarios:
+      - {id: MSG-REPLY, levels: [sim, real]}
+      - {id: MSG-REACT, levels: [sim, real]}
+      - {id: MSG-EDIT, levels: [sim, real]}
+      - {id: MSG-UNSEND, levels: [sim, real]}
+      - {id: MSG-MARK-READ, levels: [sim, real]}
+      - {id: MSG-DELETE, levels: [sim, real]}
+      - {id: MSG-UI-INTERFERENCE, levels: [sim, real]}
+  - id: messages.groups
+    title: Create groups and manage name and membership
+    requirements: [R-MSG-DEPTH]
+    milestone: M1
+    modules: [native/MessagesSource]
+    depends_on: [messages.actions]
+    status: todo
+    scenarios:
+      - {id: MSG-GROUP-CREATE, levels: [sim, real]}
+      - {id: MSG-GROUP-MANAGE, levels: [sim]}
+  - id: reminders.read
+    title: Reminders lists and items, live capture, recurrence coverage
+    requirements: [R-FULL, R-LIVE, R-REM, R-NO-FALSE-DELETE]
+    milestone: M1
+    modules: [native/RemindersSource, native/AgendaGate]
+    depends_on: [helper.session]
+    status: todo
+    scenarios:
+      - {id: REM-CREATE-EXTERNAL, levels: [sim, real, replica]}
+      - {id: REM-RECURRING, levels: [sim, real]}
+      - {id: REM-PERMISSION-LOSS, levels: [sim]}
+  - id: reminders.write
+    title: Reminders create, update, complete, delete, lists, conflicts
+    requirements: [R-RW, R-REM, R-SAFE-CMD]
+    milestone: M1
+    modules: [native/RemindersSource, operations]
+    depends_on: [reminders.read]
+    status: todo
+    scenarios:
+      - {id: REM-CRUD, levels: [sim, real, replica]}
+      - {id: REM-LIST-CREATE, levels: [sim, real]}
+      - {id: REM-CONFLICT, levels: [sim, real]}
+      - {id: REM-EXTERNAL-RACE, levels: [sim]}
+      - {id: REM-READONLY-LIST, levels: [sim]}
+      - {id: REM-AGENT, levels: [agent]}
+  - id: calendar.read
+    title: Calendar window capture, identity, recurrence, time zones, window slide
+    requirements: [R-FULL, R-LIVE, R-CAL, R-NO-FALSE-DELETE]
+    milestone: M1
+    modules: [native/CalendarSource, native/AgendaGate]
+    depends_on: [helper.session]
+    status: todo
+    scenarios:
+      - {id: CAL-CREATE-EXTERNAL, levels: [sim, real, replica]}
+      - {id: CAL-MOVED-OCCURRENCE, levels: [sim, real]}
+      - {id: CAL-DST, levels: [sim, real]}
+      - {id: CAL-ALLDAY, levels: [sim, real]}
+      - {id: CAL-WINDOW-SLIDE, levels: [sim]}
+      - {id: CAL-ID-CHURN, levels: [sim]}
+      - {id: CAL-PERMISSION-LOSS, levels: [sim]}
+  - id: calendar.write
+    title: Calendar create, update and delete with spans
+    requirements: [R-RW, R-CAL, R-SAFE-CMD]
+    milestone: M1
+    modules: [native/CalendarSource, operations]
+    depends_on: [calendar.read]
+    status: todo
+    scenarios:
+      - {id: CAL-CRUD, levels: [sim, real, replica]}
+      - {id: CAL-RECUR-THIS, levels: [sim, real]}
+      - {id: CAL-RECUR-FUTURE, levels: [sim, real]}
+      - {id: CAL-RECUR-ALL-REJECT, levels: [sim]}
+      - {id: CAL-READONLY, levels: [sim, real]}
+      - {id: CAL-AGENT, levels: [agent]}
+
+  - id: contacts.read
+    title: Contacts import, history tokens, resets, images, handle links
+    requirements: [R-FULL, R-LIVE, R-CON, R-NO-FALSE-DELETE]
+    milestone: M2
+    modules: [native/ContactsSource]
+    depends_on: [helper.session]
+    status: todo
+    scenarios:
+      - {id: CON-IMPORT, levels: [sim, real]}
+      - {id: CON-EXTERNAL, levels: [sim, real, replica]}
+      - {id: CON-DROP-EVERYTHING, levels: [sim]}
+      - {id: CON-TOKEN-CRASH, levels: [sim]}
+      - {id: CON-IMAGE, levels: [sim, real]}
+      - {id: CON-HANDLE-LINK, levels: [sim, real]}
+      - {id: CON-AGENT, levels: [agent]}
+  - id: contacts.write
+    title: Contacts create, update, delete
+    requirements: [R-RW, R-CON]
+    milestone: M2
+    modules: [native/ContactsSource, operations]
+    depends_on: [contacts.read]
+    status: todo
+    scenarios:
+      - {id: CON-CRUD, levels: [sim, real, replica]}
+      - {id: CON-READONLY-CONTAINER, levels: [sim]}
+
+  - id: notes.read
+    title: Notes folders and notes, protobuf decoding, locked notes
+    requirements: [R-FULL, R-LIVE, R-NOTES]
+    milestone: M3
+    modules: [native/NotesSource, native/Decoders]
+    depends_on: [helper.session]
+    status: todo
+    scenarios:
+      - {id: NOTE-IMPORT, levels: [sim, real]}
+      - {id: NOTE-EXTERNAL, levels: [sim, real, replica]}
+      - {id: NOTE-DECODE, levels: [sim]}
+  - id: notes.write
+    title: Notes plain-text create, update, delete, folders; rich edits reject
+    requirements: [R-RW, R-NOTES]
+    milestone: M3
+    modules: [native/NotesSource, operations]
+    depends_on: [notes.read]
+    status: todo
+    scenarios:
+      - {id: NOTE-CRUD, levels: [sim, real, replica]}
+      - {id: NOTE-RICH-REJECT, levels: [sim, real]}
+      - {id: NOTE-AGENT, levels: [agent]}
+
+  - id: usage.read
+    title: Screen Time estimates from Biome App.InFocus with lock/sleep clipping
+    requirements: [R-USAGE, R-FULL]
+    milestone: M4
+    modules: [native/UsageSource, native/Decoders]
+    depends_on: [helper.session]
+    status: todo
+    scenarios:
+      - {id: USE-IMPORT, levels: [sim, real]}
+      - {id: USE-LOCK-CLIP, levels: [sim, real]}
+      - {id: USE-REMOTE-LAG, levels: [sim, real]}
+      - {id: USE-SEGB-DECODE, levels: [sim]}
+      - {id: USE-READONLY, levels: [sim]}
+      - {id: USE-AGENT, levels: [agent]}
+
+  - id: packaging.app
+    title: Signed notarized app, onboarding, SMAppService, upgrade, sleep assertion
+    requirements: [R-PKG, R-SECURE]
+    milestone: M5
+    modules: [packaging, runtime, native/AppleSession]
+    depends_on: [messages.read, reminders.read, calendar.read, contacts.read, notes.read, usage.read]
+    status: todo
+    scenarios:
+      - {id: PKG-INSTALL, levels: [real]}
+      - {id: PKG-BACKGROUND, levels: [real]}
+      - {id: PKG-UPGRADE, levels: [real]}
+      - {id: PKG-SLEEP, levels: [real]}
+  - id: agent.suite
+    title: Full MCP agent suite graded by Truth
+    requirements: [R-AGENT, R-API]
+    milestone: M5
+    modules: [lab/agent, frontdoor]
+    depends_on: [packaging.app, messages.send, reminders.write, calendar.write, contacts.write, notes.write, usage.read]
+    status: todo
+    scenarios:
+      - {id: AGENT-SUITE, levels: [agent]}

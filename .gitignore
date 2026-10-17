@@ -9,3 +9,4 @@ lab/evidence/private/
 .env
 *.env
 __pycache__/
+design/features.html
