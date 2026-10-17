@@ -1,0 +1,7 @@
+id: USE-IMPORT
+feature: usage.read
+levels: [sim, real]
+given: [{world: {replicas: 1}}]
+when: [{usage: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

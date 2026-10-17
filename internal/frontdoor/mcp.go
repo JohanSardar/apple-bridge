@@ -1,10 +1,12 @@
 package frontdoor
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 
@@ -14,7 +16,7 @@ import (
 )
 
 func mcpHandler(deps Deps, descriptors []contracts.OperationDescriptor) http.Handler {
-	return mcp.NewStreamableHTTPHandler(func(r *http.Request) *mcp.Server {
+	handler := mcp.NewStreamableHTTPHandler(func(r *http.Request) *mcp.Server {
 		p := r.Context().Value(principalKey{}).(trust.Principal)
 		server := mcp.NewServer(&mcp.Implementation{Name: "apple-bridge", Version: "1"}, nil)
 		for _, d := range descriptors {
@@ -37,6 +39,29 @@ func mcpHandler(deps Deps, descriptors []contracts.OperationDescriptor) http.Han
 		}
 		return server
 	}, &mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true})
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 1024*1024))
+			if err != nil {
+				respond(w, nil, contracts.ErrInvalid)
+				return
+			}
+			r.Body = io.NopCloser(bytes.NewReader(body))
+			var call struct {
+				ID     json.RawMessage `json:"id"`
+				Method string          `json:"method"`
+				Params struct {
+					Name string `json:"name"`
+				} `json:"params"`
+			}
+			if json.Unmarshal(body, &call) == nil && call.Method == "tools/call" && strings.HasPrefix(call.Params.Name, "usage_") {
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(map[string]any{"jsonrpc": "2.0", "id": call.ID, "result": map[string]any{"isError": true, "structuredContent": map[string]any{"error": contracts.ErrUnsupported}, "content": []map[string]string{{"type": "text", "text": "operation unsupported"}}}})
+				return
+			}
+		}
+		handler.ServeHTTP(w, r)
+	})
 }
 func openAPI(descriptors []contracts.OperationDescriptor) any {
 	paths := map[string]any{}

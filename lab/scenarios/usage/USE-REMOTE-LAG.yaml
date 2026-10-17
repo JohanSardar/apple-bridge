@@ -1,0 +1,7 @@
+id: USE-REMOTE-LAG
+feature: usage.read
+levels: [sim]
+given: [{world: {replicas: 1}}]
+when: [{usage: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

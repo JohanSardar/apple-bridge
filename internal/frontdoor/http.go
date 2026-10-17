@@ -76,6 +76,13 @@ func Handler(deps Deps, descriptors []contracts.OperationDescriptor) http.Handle
 			respond(w, result, err)
 		})
 	}
+	mux.HandleFunc("POST /v1/op/{operation}", func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.PathValue("operation"), "usage.") {
+			respond(w, nil, contracts.ErrUnsupported)
+			return
+		}
+		http.NotFound(w, r)
+	})
 	mux.HandleFunc("GET /v1/records/{collection}/{id}", func(w http.ResponseWriter, r *http.Request) {
 		p := r.Context().Value(principalKey{}).(trust.Principal)
 		result, err := deps.Operations.Read(r.Context(), p, "records.get", contracts.ReadQuery{Collection: r.PathValue("collection"), ID: r.PathValue("id")})

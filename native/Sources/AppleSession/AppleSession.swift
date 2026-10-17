@@ -5,6 +5,7 @@ import AgendaGate
 import RemindersSource
 import NotesSource
 import ContactsSource
+import UsageSource
 import CalendarSource
 import MessagesSource
 
@@ -50,6 +51,7 @@ public actor AppleSession: ObservationSink {
     private var frameTasks: [UUID: Task<Void, Never>] = [:]
     private let trace: CaptureTrace
     private let agenda: AgendaGate
+    private let usage: UsageSource
     private let contacts: ContactsSource
     private let source: RemindersSource
  private let calendar: CalendarSource
@@ -66,6 +68,7 @@ public actor AppleSession: ObservationSink {
         self.home = home; self.labEnabled = commandsEnabled
         let trace = CaptureTrace(url: commandsEnabled ? home.appendingPathComponent("capture-trace.jsonl") : nil)
         self.trace = trace
+        usage = UsageSource()
         contacts = try ContactsSource(home: home, commandsEnabled: true, trace: trace)
         let agenda = AgendaGate(trace: trace)
         self.agenda = agenda
@@ -85,6 +88,7 @@ public actor AppleSession: ObservationSink {
 
     public func run() async throws {
         additionalSources["contacts"] = contacts
+        additionalSources["usage"] = usage
         var backoff = 100
         while !Task.isCancelled && kill(gatewayPID, 0) == 0 {
             do {

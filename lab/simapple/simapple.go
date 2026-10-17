@@ -199,6 +199,7 @@ func Run(ctx context.Context, cfg Config) error {
 	})
 	fake.calendarControl(mux)
 	fake.contactsControl(mux)
+	fake.usageControl(mux)
 	mux.HandleFunc("GET /inspect", func(w http.ResponseWriter, r *http.Request) { json.NewEncoder(w).Encode(fake.inspect()) })
 	mux.HandleFunc("POST /source-state", func(w http.ResponseWriter, r *http.Request) {
 		var frame contracts.IPCFrame
@@ -419,7 +420,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 	f.mu.Unlock()
 	credit := open.ByteCredit
 	coverage := contracts.Coverage{Fields: "complete", Missing: []string{"recurring reminders: next incomplete instance only"}}
-	if _, err = wire.Send(contracts.IPCFrame{T: "Ready", Protocol: contracts.IPCProtocol, Capabilities: map[contracts.Source][]string{contracts.Notes: {"notes.create", "notes.update", "notes.delete", "notes.create_folder"}, contracts.Calendar: {"calendar.create_event", "calendar.update_event", "calendar.delete_event", "calendar.create_calendar"}, contracts.Contacts: {"contacts.create", "contacts.update", "contacts.delete"}, contracts.Messages: messageCapabilities(), contracts.Reminders: {"reminders.create", "reminders.update", "reminders.complete", "reminders.uncomplete", "reminders.delete", "reminders.create_list"}}, Coverage: map[contracts.Source]contracts.Coverage{contracts.Notes: {Fields: "complete", Missing: []string{}}, contracts.Calendar: {Fields: "complete", Missing: []string{}}, contracts.Contacts: {Fields: "partial", Missing: []string{"note"}}, contracts.Reminders: coverage, contracts.Messages: messageCoverage()}, HelperBuild: "sim/1", OSBuild: "sim"}); err != nil {
+	if _, err = wire.Send(contracts.IPCFrame{T: "Ready", Protocol: contracts.IPCProtocol, Capabilities: map[contracts.Source][]string{contracts.Usage: {}, contracts.Notes: {"notes.create", "notes.update", "notes.delete", "notes.create_folder"}, contracts.Calendar: {"calendar.create_event", "calendar.update_event", "calendar.delete_event", "calendar.create_calendar"}, contracts.Contacts: {"contacts.create", "contacts.update", "contacts.delete"}, contracts.Messages: messageCapabilities(), contracts.Reminders: {"reminders.create", "reminders.update", "reminders.complete", "reminders.uncomplete", "reminders.delete", "reminders.create_list"}}, Coverage: map[contracts.Source]contracts.Coverage{contracts.Usage: {Fields: "estimated", Missing: []string{"settings_parity: unproven"}}, contracts.Notes: {Fields: "complete", Missing: []string{}}, contracts.Calendar: {Fields: "complete", Missing: []string{}}, contracts.Contacts: {Fields: "partial", Missing: []string{"note"}}, contracts.Reminders: coverage, contracts.Messages: messageCoverage()}, HelperBuild: "sim/1", OSBuild: "sim"}); err != nil {
 		return err
 	}
 	f.mu.Lock()
@@ -690,7 +691,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 		emitRevision = revision
 		return emit(capture)
 	}
-	for _, source := range []contracts.Source{contracts.Reminders, contracts.Messages, contracts.Contacts, contracts.Calendar, contracts.Notes} {
+	for _, source := range []contracts.Source{contracts.Reminders, contracts.Messages, contracts.Contacts, contracts.Calendar, contracts.Notes, contracts.Usage} {
 		f.mu.Lock()
 		missingContacts := f.contactPermissionMissing
 		f.mu.Unlock()
