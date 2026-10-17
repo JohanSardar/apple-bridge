@@ -29,5 +29,17 @@
     "at": "2026-10-17T06:12:47.235971+00:00",
     "load_average": "{ 9.46 7.82 7.37 }",
     "process_cpu_percent_sum": 516.0
+  },
+  {
+    "phase": "final-session-fence-verification-requested",
+    "at": "2026-10-17T06:13:35.855510+00:00",
+    "load_average": "{ 8.49 7.81 7.39 }",
+    "process_cpu_percent_sum": 372.5
+  },
+  {
+    "phase": "after-final-checks",
+    "at": "2026-10-17T06:26:02.349797+00:00",
+    "load_average": "{ 8.60 13.40 11.50 }",
+    "process_cpu_percent_sum": 569.0
   }
 ]

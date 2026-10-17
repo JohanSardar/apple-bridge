@@ -1,10 +1,43 @@
 {
-  "verified_git_sha": "109ce88188f40c112549388e146d626475b77436",
-  "at": "2026-10-17T06:12:47.234005+00:00",
+  "commits_before_final_evidence_commit": [
+    "255c436 Fence blob handle handoffs with the active Helper session",
+    "9e7baeb Record retry budgets across repeated Helper captures",
+    "7b5eb87 Keep retry budgets when captures replace blob handles",
+    "6b6cd4d Refresh blob captures for every registered native Source",
+    "d44455b Record process restart recovery and measured transfer phases",
+    "7881189 Record blob fault probes and core verification evidence",
+    "6eb273d Restart the Helper process during the blob recovery journey",
+    "b235ce1 Prove retry exhaustion and isolated GC protection",
+    "a6ca55d Resume Helper blob downloads and push availability to replicas",
+    "6776e65 Expose blob retry and independent protection regressions"
+  ],
+  "code_files": [
+    "features.yaml",
+    "internal/applepeer/blobs.go",
+    "internal/applepeer/peer.go",
+    "internal/blobs/apple.go",
+    "internal/blobs/store.go",
+    "internal/contracts/blobs.go",
+    "internal/contracts/commands.go",
+    "internal/contracts/ipc.go",
+    "internal/operations/invoke.go",
+    "internal/replication/blobs.go",
+    "internal/replication/feed.go",
+    "internal/runtime/runtime.go",
+    "lab/scenarios/blob_journey.go",
+    "lab/scenarios/core/CORE-BLOB-GATEWAY-RETRY.yaml",
+    "lab/simapple/blobs.go",
+    "lab/simapple/commands.go",
+    "lab/simapple/simapple.go",
+    "lab/world/commands.go",
+    "native/Sources/AppleSession/AppleSession.swift"
+  ],
+  "verified_git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe",
+  "at": "2026-10-17T06:26:02.346977+00:00",
   "implementation": [
     "durable pending manifest and staged bytes reconstruct queued work through refreshed Helper captures",
     "retry delays 250/500/1000/2000/4000 ms, capped at 4 s; eight unsuccessful attempts become failed/ipc_retry_exhausted; repeated captures retain attempt count and backoff",
-    "close timed-out IPC session to fence late replies; request fresh connection-bound handles with checkpoint refresh_blobs, preserving capture predecessor",
+    "fence capture-to-blob handoff with the active Helper session; close timed-out IPC session to fence late replies; request fresh connection-bound handles with checkpoint refresh_blobs, preserving capture predecessor",
     "push BlobAvailable to authorized waiting replicas on completion; preserve heartbeat fallback",
     "independent snapshot-only and command-only GC checks beyond 500 ms grace",
     "post-reconnect bulk progress barrier and metadata observation while bytes remain outstanding",
@@ -56,162 +89,162 @@
     {
       "scenario": "CORE-BLOB-CAP",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-BLOB-CORRUPT",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-BLOB-GATEWAY-RETRY",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-BLOB-GC",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-BLOB-INTERRUPT",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-BLOB-NO-DIGEST-AUTH",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-BLOB-OFFLOADED",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-BLOB-SLOW-READ",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-BOOT",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-CMD-CLOCK-JUMP",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-CMD-CONFLICT",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-CMD-CRASH-AMBIGUOUS",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-CMD-ERA",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-CMD-EXPIRY",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-CMD-IDEMPOTENT",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-CMD-LOST-RESPONSE",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-CMD-OFFLINE",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-CMD-READ-YOUR-WRITE",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-FORGED-DELEGATION",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-LIVE-LATENCY",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-LOCALHOST-DEFENSE",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-REST-MCP-PARITY",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-RESUME",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "LAB-MALFORMED-SCENARIO",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "LAB-SSE",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "LAB-TRUTH-MULTIPLICITY",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "REM-CONFLICT",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "REM-CRUD",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "REM-EXTERNAL-RACE",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "REM-NATIVE-LIST-RACE",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "REM-OPERATION-SHAPES",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "REM-READONLY-LIST",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     }
   ],
   "comparisons": {
@@ -264,47 +297,47 @@
       "after": {
         "completion_ms": {
           "samples": 1,
-          "p50_ms": 1487.627917,
-          "p95_ms": 1487.627917,
-          "max_ms": 1487.627917,
+          "p50_ms": 1406.57125,
+          "p95_ms": 1406.57125,
+          "max_ms": 1406.57125,
           "timeouts": 0
         },
         "gateway_staging_ms": {
           "samples": 1,
-          "p50_ms": 590.208417,
-          "p95_ms": 590.208417,
-          "max_ms": 590.208417,
+          "p50_ms": 506.550459,
+          "p95_ms": 506.550459,
+          "max_ms": 506.550459,
           "timeouts": 0
         },
         "gateway_present_to_replica_partial_ms": {
           "samples": 1,
-          "p50_ms": 182.80675,
-          "p95_ms": 182.80675,
-          "max_ms": 182.80675,
+          "p50_ms": 182.996041,
+          "p95_ms": 182.996041,
+          "max_ms": 182.996041,
           "timeouts": 0
         },
         "reconnect_ms": {
           "samples": 1,
-          "p50_ms": 74.921792,
-          "p95_ms": 74.921792,
-          "max_ms": 74.921792,
+          "p50_ms": 73.992833,
+          "p95_ms": 73.992833,
+          "max_ms": 73.992833,
           "timeouts": 0
         },
         "resumed_transfer_ms": {
           "samples": 1,
-          "p50_ms": 501.449458,
-          "p95_ms": 501.449458,
-          "max_ms": 501.449458,
+          "p50_ms": 480.729291,
+          "p95_ms": 480.729291,
+          "max_ms": 480.729291,
           "timeouts": 0
         },
         "concurrent_metadata_ms": {
           "samples": 1,
-          "p50_ms": 97.383875,
-          "p95_ms": 97.383875,
-          "max_ms": 97.383875,
+          "p50_ms": 73.76375,
+          "p95_ms": 73.76375,
+          "max_ms": 73.76375,
           "timeouts": 0
         },
-        "cut_detection_and_polling_ms_derived": 138.2415000000001
+        "cut_detection_and_polling_ms_derived": 162.30262600000015
       },
       "original_uninstrumented_baseline": {
         "samples": 1,
@@ -363,47 +396,47 @@
       "after": {
         "completion_ms": {
           "samples": 1,
-          "p50_ms": 2118.780417,
-          "p95_ms": 2118.780417,
-          "max_ms": 2118.780417,
+          "p50_ms": 2026.603958,
+          "p95_ms": 2026.603958,
+          "max_ms": 2026.603958,
           "timeouts": 0
         },
         "gateway_staging_ms": {
           "samples": 1,
-          "p50_ms": 464.609667,
-          "p95_ms": 464.609667,
-          "max_ms": 464.609667,
+          "p50_ms": 456.444333,
+          "p95_ms": 456.444333,
+          "max_ms": 456.444333,
           "timeouts": 0
         },
         "gateway_present_to_replica_partial_ms": {
           "samples": 1,
-          "p50_ms": 354.739167,
-          "p95_ms": 354.739167,
-          "max_ms": 354.739167,
+          "p50_ms": 365.173334,
+          "p95_ms": 365.173334,
+          "max_ms": 365.173334,
           "timeouts": 0
         },
         "reconnect_ms": {
           "samples": 1,
-          "p50_ms": 797.888875,
-          "p95_ms": 797.888875,
-          "max_ms": 797.888875,
+          "p50_ms": 640.606667,
+          "p95_ms": 640.606667,
+          "max_ms": 640.606667,
           "timeouts": 0
         },
         "resumed_transfer_ms": {
           "samples": 1,
-          "p50_ms": 489.093625,
-          "p95_ms": 489.093625,
-          "max_ms": 489.093625,
+          "p50_ms": 556.579583,
+          "p95_ms": 556.579583,
+          "max_ms": 556.579583,
           "timeouts": 0
         },
         "concurrent_metadata_ms": {
           "samples": 1,
-          "p50_ms": 120.260708,
-          "p95_ms": 120.260708,
-          "max_ms": 120.260708,
+          "p50_ms": 249.325333,
+          "p95_ms": 249.325333,
+          "max_ms": 249.325333,
           "timeouts": 0
         },
-        "cut_detection_and_polling_ms_derived": 12.449082999999973
+        "cut_detection_and_polling_ms_derived": 7.800040999999965
       },
       "original_uninstrumented_baseline": {
         "samples": 1,
@@ -420,16 +453,16 @@
     "passed": true,
     "recovery_latency": {
       "samples": 1,
-      "p50_ms": 14713.954833,
-      "p95_ms": 14713.954833,
-      "max_ms": 14713.954833,
+      "p50_ms": 14747.130125,
+      "p95_ms": 14747.130125,
+      "max_ms": 14747.130125,
       "timeouts": 0
     },
     "terminal_failure_latency": {
       "samples": 1,
-      "p50_ms": 16034.390209,
-      "p95_ms": 16034.390209,
-      "max_ms": 16034.390209,
+      "p50_ms": 16026.3525,
+      "p95_ms": 16026.3525,
+      "max_ms": 16026.3525,
       "timeouts": 0
     },
     "recovery_fault": "first BlobRead response dropped, 10 s timeout, then actual Helper process restart during a partial staged download",
@@ -451,6 +484,7 @@
     }
   ],
   "proposed_spec_changes": [
+    "Clarify blob_handles as digest to opaque Helper handle in §7.3.",
     "Document checkpoint refresh_blobs in §7.2/7.3 as a request to reacquire blob handles while retaining the committed predecessor.",
     "Document feed BlobAvailable(digest) in §12 as an authorization-checked availability hint to waiting replicas.",
     "Document failed reason codes and retry exhaustion in §13."

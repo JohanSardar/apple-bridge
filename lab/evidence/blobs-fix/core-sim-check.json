@@ -5,162 +5,162 @@
     {
       "scenario": "CORE-BLOB-CAP",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-BLOB-CORRUPT",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-BLOB-GATEWAY-RETRY",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-BLOB-GC",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-BLOB-INTERRUPT",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-BLOB-NO-DIGEST-AUTH",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-BLOB-OFFLOADED",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-BLOB-SLOW-READ",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-BOOT",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-CMD-CLOCK-JUMP",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-CMD-CONFLICT",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-CMD-CRASH-AMBIGUOUS",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-CMD-ERA",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-CMD-EXPIRY",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-CMD-IDEMPOTENT",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-CMD-LOST-RESPONSE",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-CMD-OFFLINE",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-CMD-READ-YOUR-WRITE",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-FORGED-DELEGATION",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-LIVE-LATENCY",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-LOCALHOST-DEFENSE",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-REST-MCP-PARITY",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "CORE-RESUME",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "LAB-MALFORMED-SCENARIO",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "LAB-SSE",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "LAB-TRUTH-MULTIPLICITY",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "REM-CONFLICT",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "REM-CRUD",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "REM-EXTERNAL-RACE",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "REM-NATIVE-LIST-RACE",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "REM-OPERATION-SHAPES",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     },
     {
       "scenario": "REM-READONLY-LIST",
       "passed": true,
-      "git_sha": "109ce88188f40c112549388e146d626475b77436"
+      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
     }
   ]
 }
