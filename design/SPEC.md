@@ -490,8 +490,7 @@ One deep module (C2) over one SQLite database per machine (`state.db`, WAL, `syn
 - `aliases(source, generation, native_key, scoped_alias, record_id)`.
 - `journal(seq INTEGER PRIMARY KEY, epoch, collection, id, version, source, op (upsert|delete|evict), data, committed_at)`.
 - `checkpoints(source, generation, checkpoint, updated_at)`.
-- `commands(id, principal, request_hash, op, args, state, admission_era, created_at, expires_at, evidence, disposition, commit_seq, history)` — **ledger**, retained independently of journal retention and mirror rebuilds (C1, F4).
-- `dedupe(command_id, request_hash, admission_era)` tombstones surviving their era.
+- **Command ledger in a separate database file `ledger.db`** (same directory, same protections): `commands(id, principal, request_hash, op, args, state, admission_era, created_at, expires_at, evidence, disposition, commit_seq, history)` and `dedupe(command_id, principal, request_hash, admission_era)`. It is retained independently of journal retention and mirror rebuilds, and **restore never replaces it** (C1, F4). Journal rows and records referencing commands carry the command ID only.
 - Replica-only: `cursor(epoch, subscription_revision, sequence)`, `staging_*` tables per snapshot generation.
 
 ### 10.2 Behaviour
@@ -502,7 +501,9 @@ One deep module (C2) over one SQLite database per machine (`state.db`, WAL, `syn
 - `InstallSnapshot` (replica): stage pages into a new staging generation; validate count+digest; one transaction swaps generation and sets cursor = (epoch, rev, S), removing records absent from the snapshot (F2).
 - `ApplyBatch` (replica): reject if epoch/revision differ; ignore if `through ≤ cursor`; require `after == cursor.sequence`; apply changes and cursor in one transaction; return new cursor. Partial overlap or gap → error, never advance (F3).
 - Journal retention: keep ≥ 7 days and ≥ 1,000,000 rows (configurable caps); never truncate past an active snapshot lease; tombstones retire only past the retention floor. Disk-full: stop capture (source `degraded`, reason `capacity`), never corrupt; resume when space returns.
-- Restore (Runtime): rotate `epoch` and `admission_era` before serving.
+- Restore (Runtime): replace `state.db` from the backup, keep the live `ledger.db`, rotate `epoch` and `admission_era` before serving.
+
+**Command IDs.** Command IDs are opaque caller-selected strings (1–128 chars, `[A-Za-z0-9._:-]`), independent of replication epochs and cursors; callers never need to know internal state to submit. The gateway binds each ID to its authenticated principal, canonical request hash and the server-assigned admission era at admission. An ID already in the ledger is never executed again: same principal+hash returns the stored status; a different hash is `conflict(id_reused)`; an ID admitted in an older era is lookup-only. Because the ledger survives restore, retries after a restore are recognized. If `ledger.db` itself is lost (machine loss), previously executed IDs cannot be recognized; this is a documented limit (§22), and Runtime refuses to start the gateway role when `ledger.db` is missing but `state.db` shows prior commands, until the operator runs `bridge restore --accept-ledger-loss`, which starts a new admission era.
 
 ---
 
@@ -883,4 +884,5 @@ Each milestone proves its riskiest unknown first, starts every feature as a fail
 - iMessage group features verified at sim level and self-chat where possible; Ben is RCS/SMS.
 - Sleep, logout, shutdown, FileVault pre-login are outages.
 - Local file access on a replica bypasses API scopes; revocation cannot erase copied data.
+- Losing `ledger.db` (not just `state.db`) loses the ability to recognize earlier command IDs; recovery requires an explicit operator acknowledgement.
 - Notarized distribution requires an Apple Developer ID (status tracked in PROGRESS.md).
