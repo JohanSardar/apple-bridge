@@ -3,6 +3,7 @@ package scenarios
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -483,6 +484,24 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 		if fixture("image", map[string]any{"base64": contactPNG}) != nil {
 			return fail("image_fixture")
 		}
+		imageBytes, _ := base64.StdEncoding.DecodeString(contactPNG)
+		imageSum := sha256.Sum256(imageBytes)
+		expectedDigest := hex.EncodeToString(imageSum[:])
+		if native {
+			observed, err := truth()
+			if err != nil {
+				return fail("independent_image_truth")
+			}
+			records, _ := observed["records"].([]any)
+			if len(records) != 1 {
+				return fail("independent_image_fixture_unique")
+			}
+			fields, _ := records[0].(map[string]any)
+			expectedDigest, _ = fields["image_digest"].(string)
+			if expectedDigest == "" {
+				return fail("independent_image_digest")
+			}
+		}
 		for _, endpoint := range endpoints {
 			verified := w.Await(10*time.Second, func() bool {
 				record, ok := find(endpoint)
@@ -495,7 +514,7 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 					} `json:"image"`
 				}
 				json.Unmarshal(record.Data, &data)
-				if data.Image.Digest == "" {
+				if data.Image.Digest != expectedDigest {
 					return false
 				}
 				req, err := http.NewRequestWithContext(ctx, "GET", endpoint.URL+"/v1/blobs/"+data.Image.Digest+"?record="+record.ID, nil)

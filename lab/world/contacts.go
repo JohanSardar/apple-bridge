@@ -7,5 +7,5 @@ func NewContacts(ctx context.Context, level string, replicas int, native bool, i
 	if includeMessages {
 		scope += ",messages:read"
 	}
-	return newEnvironment(ctx, level, replicas, 0, native, BlobOptions{Scope: scope})
+	return newEnvironment(ctx, level, replicas, 0, native, "", BlobOptions{Scope: scope})
 }
