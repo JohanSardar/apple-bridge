@@ -125,6 +125,7 @@ type Alias struct {
 type ReplicaStatus struct {
 	Blobs BlobProgress `json:"blobs"`
 
+	SnapshotPages    int       `json:"snapshot_pages"`
 	Schema           int       `json:"schema"`
 	SnapshotSequence uint64    `json:"snapshot_sequence"`
 	State            string    `json:"state"`

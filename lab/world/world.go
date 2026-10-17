@@ -525,6 +525,7 @@ func (w *World) Records(e Endpoint) ([]contracts.Record, error) {
 }
 
 type ReplicaStatus struct {
+	SnapshotPages    int    `json:"snapshot_pages"`
 	Schema           int    `json:"schema"`
 	SnapshotSequence uint64 `json:"snapshot_sequence"`
 	State            string `json:"state"`

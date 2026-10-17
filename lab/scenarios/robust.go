@@ -163,7 +163,7 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 		widened, _ := w.Cursor(w.Replicas[0])
 		add("scope_widened_backfill_new_revision", widened.SubscriptionRevision > narrowed.SubscriptionRevision)
 	case "upgrade":
-		add("older_gateway_built_from_3141538", true)
+		add("older_gateway_built_from_"+world.LegacyRevision, true)
 		if w.ControlAction("/external-change", map[string]any{"key": "future-optional", "collection": "reminders.reminder", "data": map[string]any{"title": "[ab-test] future-optional", "optional_future": map[string]any{"counter": json.Number("9007199254740993")}}}) != nil {
 			return fail("future_optional_capture")
 		}
@@ -239,7 +239,10 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 			return fail("snapshot_in_progress")
 		}
 		if name == "snapshot-interrupt" {
-			if w.Await(10*time.Second, func() bool { status, err := w.Status(w.Replicas[0]); return err == nil && status.State == "snapshot" }) != nil {
+			if w.Await(10*time.Second, func() bool {
+				status, err := w.Status(w.Replicas[0])
+				return err == nil && status.State == "snapshot" && status.SnapshotPages > 0
+			}) != nil {
 				return fail("snapshot_in_progress")
 			}
 			w.CrashReplica(0)

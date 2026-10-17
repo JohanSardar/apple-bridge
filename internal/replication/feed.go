@@ -388,7 +388,7 @@ func (c *Client) follow(ctx context.Context, e trust.Enrollment) error {
 				}
 			})
 		case "SnapshotBegin":
-			c.update(func(s *FollowStatus) { s.State = "snapshot"; s.SnapshotSequence = f.S })
+			c.update(func(s *FollowStatus) { s.State = "snapshot"; s.SnapshotSequence = f.S; s.SnapshotPages = 0 })
 			if welcome.Epoch == "" || staging != nil {
 				return contracts.ErrInvalid
 			}
@@ -408,6 +408,7 @@ func (c *Client) follow(ctx context.Context, e trust.Enrollment) error {
 			if err = staging.Page(ctx, f); err != nil {
 				return err
 			}
+			c.update(func(s *FollowStatus) { s.SnapshotPages++ })
 		case "SnapshotEnd":
 			if staging == nil || f.ID != staging.ID {
 				return contracts.ErrInvalid

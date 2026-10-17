@@ -8,13 +8,18 @@ import (
 	"path/filepath"
 )
 
+const LegacyRevision = "f0cea78"
+
 func BuildLegacy(ctx context.Context) error {
+	if err := os.MkdirAll("/tmp/ablab", 0700); err != nil {
+		return err
+	}
 	directory, err := os.MkdirTemp("/tmp/ablab", "legacy-build-*")
 	if err != nil {
 		return err
 	}
 	defer os.RemoveAll(directory)
-	archive := exec.CommandContext(ctx, "git", "archive", "3141538")
+	archive := exec.CommandContext(ctx, "git", "archive", LegacyRevision)
 	extract := exec.CommandContext(ctx, "tar", "-x", "-C", directory)
 	pipe, err := archive.StdoutPipe()
 	if err != nil {
