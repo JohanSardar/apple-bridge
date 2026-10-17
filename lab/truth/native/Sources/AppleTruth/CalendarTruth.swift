@@ -32,15 +32,17 @@ struct CalendarTruth {
     private static func emptyAcrossAllDates(_ identifier: String) throws -> Bool {
         let path = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Group Containers/group.com.apple.calendar/Calendar.sqlitedb").path
         var database: OpaquePointer?
-        guard sqlite3_open_v2(path, &database, SQLITE_OPEN_READONLY, nil) == SQLITE_OK else { if let database { sqlite3_close(database) }; throw TruthFailure.unavailable }
+        let opened = sqlite3_open_v2(path, &database, SQLITE_OPEN_READONLY, nil)
+        guard opened == SQLITE_OK else { if let database { sqlite3_close(database) }; throw NSError(domain: "calendar_empty_proof_open", code: Int(opened)) }
         defer { sqlite3_close(database) }
         var statement: OpaquePointer?
         let sql = "SELECT count(i.ROWID) FROM Calendar c LEFT JOIN CalendarItem i ON c.ROWID=i.calendar_id WHERE c.title='Bridge Test' AND c.UUID=? GROUP BY c.ROWID"
-        guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK else { throw TruthFailure.unavailable }
+        guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK else { throw NSError(domain: "calendar_empty_proof_query", code: Int(sqlite3_errcode(database))) }
         defer { sqlite3_finalize(statement) }
         let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
         guard sqlite3_bind_text(statement, 1, identifier, -1, transient) == SQLITE_OK else { throw TruthFailure.unavailable }
-        guard sqlite3_step(statement) == SQLITE_ROW else { throw TruthFailure.unavailable }
+        let stepped = sqlite3_step(statement)
+        guard stepped == SQLITE_ROW else { throw NSError(domain: "calendar_empty_proof_row", code: Int(stepped)) }
         let empty = sqlite3_column_int64(statement, 0) == 0
         guard sqlite3_step(statement) == SQLITE_DONE else { throw TruthFailure.unavailable }
         return empty
