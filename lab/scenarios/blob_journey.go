@@ -3,6 +3,7 @@ package scenarios
 import (
 	"context"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -67,7 +68,13 @@ func blobJourney(ctx context.Context, w *world.World, id string, evidence *Evide
 			return false
 		}
 		records, err := w.Records(w.Gateway)
-		return check("history_10000_durable_records", err == nil && len(records) == 10001)
+		count := 0
+		for _, r := range records {
+			if r.Collection == "reminders.reminder" && strings.HasPrefix(recordTitle(r), "[ab-test] blob-history-") {
+				count++
+			}
+		}
+		return check("history_10000_durable_records", err == nil && count == 10000)
 	}
 	size := 4 << 20
 	fixture := map[string]any{"size": size}
@@ -253,6 +260,34 @@ func blobJourney(ctx context.Context, w *world.World, id string, evidence *Evide
 		status, b, err := blobBytes(ctx, endpoint, digest, attachment.ID)
 		sum := sha256.Sum256(b)
 		if !check("authorized_bytes_digest_verified", err == nil && status == 200 && len(b) == size && hex.EncodeToString(sum[:]) == digest) {
+			return false
+		}
+	}
+	if id == "CORE-BLOB-GC" {
+		w.StopGateway()
+		db, err := sql.Open("sqlite", filepath.Join(w.Gateway.Home, "state.db"))
+		if !check("legacy_reference_index_open", err == nil) {
+			return false
+		}
+		_, err = db.ExecContext(ctx, "DROP TRIGGER IF EXISTS blob_refs_record_delete; DROP TRIGGER IF EXISTS blob_refs_staging_delete; DROP TABLE IF EXISTS blob_refs; DELETE FROM meta WHERE key='blob_refs_version'")
+		db.Close()
+		if !check("legacy_reference_index_removed", err == nil) {
+			return false
+		}
+		if !check("reference_index_migration_restart", w.RestartGateway() == nil) {
+			return false
+		}
+		if !check("reference_index_migration_converges", w.Await(10*time.Second, func() bool { return convergence(w) }) == nil) {
+			return false
+		}
+		db, err = sql.Open("sqlite", filepath.Join(w.Gateway.Home, "state.db"))
+		if !check("migrated_reference_index_open", err == nil) {
+			return false
+		}
+		var references int
+		err = db.QueryRowContext(ctx, "SELECT count(*) FROM blob_refs WHERE owner=? AND digest=?", "record:"+attachment.ID, digest).Scan(&references)
+		db.Close()
+		if !check("legacy_reference_index_backfilled", err == nil && references == 1) {
 			return false
 		}
 	}
