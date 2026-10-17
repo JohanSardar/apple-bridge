@@ -1,0 +1,7 @@
+id: MSG-INCOMING
+feature: messages.read
+levels: [sim, real, replica]
+given: [{world: {replicas: 1}}, {messages: {count: 256}}]
+when: [{messages_read: {scenario: incoming}}]
+then: [{messages_truth: {}}]
+cleanup: [{world: {}}]

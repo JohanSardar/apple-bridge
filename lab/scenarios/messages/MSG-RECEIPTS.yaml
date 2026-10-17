@@ -1,0 +1,7 @@
+id: MSG-RECEIPTS
+feature: messages.read
+levels: [sim, real]
+given: [{world: {replicas: 1}}, {messages: {count: 256}}]
+when: [{messages_read: {scenario: receipts}}]
+then: [{messages_truth: {}}]
+cleanup: [{world: {}}]

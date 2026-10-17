@@ -1,0 +1,7 @@
+id: MSG-DECODE
+feature: messages.read
+levels: [sim]
+given: [{world: {replicas: 1}}, {messages: {count: 256}}]
+when: [{messages_read: {scenario: decode}}]
+then: [{messages_truth: {}}]
+cleanup: [{world: {}}]

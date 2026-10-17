@@ -1,0 +1,7 @@
+id: MSG-DB-REPLACED
+feature: messages.read
+levels: [sim]
+given: [{world: {replicas: 1}}, {messages: {count: 256}}]
+when: [{messages_read: {scenario: db-replaced}}]
+then: [{messages_truth: {}}]
+cleanup: [{world: {}}]

@@ -1,0 +1,7 @@
+id: MSG-WATCHER-REARM
+feature: messages.read
+levels: [sim, real]
+given: [{world: {replicas: 1}}, {messages: {count: 256}}]
+when: [{messages_read: {scenario: watcher-rearm}}]
+then: [{messages_truth: {}}]
+cleanup: [{world: {}}]
