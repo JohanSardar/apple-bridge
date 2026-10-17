@@ -66,6 +66,7 @@ func Open(home string) (*Store, error) {
  CREATE TABLE IF NOT EXISTS records(collection TEXT NOT NULL,id TEXT NOT NULL,version INTEGER NOT NULL,source TEXT NOT NULL,deleted INTEGER NOT NULL,payload BLOB NOT NULL,seq INTEGER NOT NULL,observed_at TEXT NOT NULL,PRIMARY KEY(collection,id));
  CREATE TABLE IF NOT EXISTS aliases(source TEXT NOT NULL,generation TEXT NOT NULL,collection TEXT NOT NULL,native_key TEXT NOT NULL,scoped_alias TEXT NOT NULL,record_id TEXT NOT NULL,PRIMARY KEY(source,generation,collection,native_key));
  CREATE INDEX IF NOT EXISTS aliases_scoped ON aliases(source,collection,scoped_alias);
+ CREATE INDEX IF NOT EXISTS aliases_record ON aliases(collection,record_id,source,generation,native_key);
  CREATE TABLE IF NOT EXISTS journal(seq INTEGER PRIMARY KEY,epoch TEXT NOT NULL,source TEXT NOT NULL,payload BLOB NOT NULL,committed_at INTEGER NOT NULL DEFAULT (unixepoch()));
  CREATE TABLE IF NOT EXISTS checkpoints(source TEXT PRIMARY KEY,generation TEXT NOT NULL,checkpoint TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS blob_reference_sets(owner TEXT PRIMARY KEY,payload BLOB NOT NULL);
@@ -404,7 +405,8 @@ func (s *Store) Read(ctx context.Context, v trust.Visibility, q contracts.ReadQu
 		return result, err
 	}
 	sources := []string{}
-	args := []any{q.Collection, q.Collection, q.ID, q.ID, q.IncludeDeleted, q.After}
+	afterCollection, afterID, _ := strings.Cut(q.After, "/")
+	args := []any{q.Collection, q.Collection, q.ID, q.ID, q.IncludeDeleted, afterCollection, afterID}
 	for source, allowed := range v {
 		if allowed {
 			sources = append(sources, "?")
@@ -415,7 +417,7 @@ func (s *Store) Read(ctx context.Context, v trust.Visibility, q contracts.ReadQu
 		sources = append(sources, "?")
 		args = append(args, "")
 	}
-	query := "SELECT payload FROM records WHERE (?='' OR collection=?) AND (?='' OR id=?) AND (deleted=0 OR ?) AND (collection||'/'||id)>? AND source IN (" + strings.Join(sources, ",") + ")"
+	query := "SELECT payload FROM records WHERE (?='' OR collection=?) AND (?='' OR id=?) AND (deleted=0 OR ?) AND (collection,id)>(?,?) AND source IN (" + strings.Join(sources, ",") + ")"
 	if q.Text != "" {
 		query += " AND (collection,id) IN (SELECT collection,id FROM records_fts WHERE records_fts MATCH ?)"
 		args = append(args, searchTerms(q.Text))
