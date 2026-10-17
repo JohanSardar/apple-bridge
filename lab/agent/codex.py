@@ -25,7 +25,7 @@ shell_tool = false
 url = %s
 bearer_token_env_var = "APPLE_BRIDGE_AGENT_TOKEN"
 startup_timeout_sec = 30
-[ mcp_servers.apple_bridge.tools ]
+default_tools_approval_mode = "approve"
 ''' % json.dumps(request['url'])
     (home / 'config.toml').write_text(config)
     environment = dict(os.environ)
