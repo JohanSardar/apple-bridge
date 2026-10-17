@@ -50,6 +50,12 @@ type BlobOptions struct {
 	Corrupt bool
 	Slow    bool
 }
+type NativeSetup struct {
+	HoldBackfill bool
+	BeforeStart  func(*World) error
+	Cleanup      func(*World) error
+}
+
 type World struct {
 	remoteExtraHomes []string
 
@@ -57,8 +63,12 @@ type World struct {
 	secretOverride         bool
 	previousSecretStore    string
 	previousSecretStoreSet bool
+	nativeCleanup          func(*World) error
 
 	Dir              string
+	TruthFailures    []string
+	HelperApp        string
+	TruthApp         string
 	Native           bool
 	Level            string
 	Gateway          Endpoint
@@ -222,15 +232,18 @@ func (w *World) Await(timeout time.Duration, predicate func() bool) error {
 	}
 }
 func New(ctx context.Context, level string, replicas, seed int, blobOptions ...BlobOptions) (*World, error) {
-	return newEnvironment(ctx, level, replicas, seed, false, "", blobOptions...)
+	return newEnvironment(ctx, level, replicas, seed, false, "", NativeSetup{}, blobOptions...)
 }
 func NewReal(ctx context.Context, level string, replicas int, blobOptions ...BlobOptions) (*World, error) {
-	return newEnvironment(ctx, level, replicas, 0, true, "", blobOptions...)
+	return newEnvironment(ctx, level, replicas, 0, true, "", NativeSetup{}, blobOptions...)
+}
+func NewRealWithSetup(ctx context.Context, level string, replicas int, setup NativeSetup, blobOptions ...BlobOptions) (*World, error) {
+	return newEnvironment(ctx, level, replicas, 0, true, "", setup, blobOptions...)
 }
 func newWorld(ctx context.Context, level string, replicas, seed int, gatewayBinary string, blobOptions ...BlobOptions) (*World, error) {
-	return newEnvironment(ctx, level, replicas, seed, false, gatewayBinary, blobOptions...)
+	return newEnvironment(ctx, level, replicas, seed, false, gatewayBinary, NativeSetup{}, blobOptions...)
 }
-func newEnvironment(ctx context.Context, level string, replicas, seed int, native bool, gatewayBinary string, blobOptions ...BlobOptions) (*World, error) {
+func newEnvironment(ctx context.Context, level string, replicas, seed int, native bool, gatewayBinary string, setup NativeSetup, blobOptions ...BlobOptions) (*World, error) {
 	root, err := os.Getwd()
 	if err != nil {
 		return nil, err
@@ -293,13 +306,38 @@ func newEnvironment(ctx context.Context, level string, replicas, seed int, nativ
 	gatewayHome := filepath.Join(w.Dir, "gateway")
 	if gatewayBinary == "" {
 		gatewayBinary = w.bridge
+
+	}
+	if native {
+		w.HelperApp = filepath.Join(w.Dir, "apps", "AppleBridgeHelper.app")
+		w.TruthApp = filepath.Join(w.Dir, "apps", "AppleTruth.app")
+		for _, build := range []struct{ script, app string }{{"build-helper.sh", w.HelperApp}, {"build-truth.sh", w.TruthApp}} {
+			if _, err = commandOutput(ctx, filepath.Join(root, "packaging", "dev", build.script), build.app); err != nil {
+				return nil, err
+			}
+		}
+		w.nativeCleanup = setup.Cleanup
+		if setup.BeforeStart != nil {
+			if err = setup.BeforeStart(w); err != nil {
+				return nil, err
+			}
+		}
+		if setup.HoldBackfill {
+			home := filepath.Join(gatewayHome, "helper")
+			if err = os.MkdirAll(home, 0700); err != nil {
+				return nil, err
+			}
+			if err = os.WriteFile(filepath.Join(home, "lab-hold-backfill"), []byte("hold"), 0600); err != nil {
+				return nil, err
+			}
+		}
 	}
 	args := []string{"start", "--role", "gateway", "--home", gatewayHome, "--peer-addr", net.JoinHostPort(peerHost, "0"), "--api-addr", "127.0.0.1:0"}
 	if gatewayBinary == w.bridge {
 		args = append(args, "--blob-grace-ms", strconv.FormatInt(w.blobOptions.GraceMS, 10))
 	}
 	if native {
-		args = append(args, "--helper-app", filepath.Join(os.Getenv("HOME"), "Applications", "AppleBridgeDev", "AppleBridgeHelper.app"), "--helper-lab-commands")
+		args = append(args, "--helper-app", w.HelperApp, "--helper-lab-commands")
 	}
 	if _, err = w.start("gateway", false, gatewayHome, gatewayBinary, args...); err != nil {
 		return nil, err
@@ -399,6 +437,13 @@ func freeAddress() (string, error) {
 	return address, nil
 }
 func (w *World) Close() {
+	if w.nativeCleanup != nil {
+		cleanup := w.nativeCleanup
+		w.nativeCleanup = nil
+		if err := cleanup(w); err != nil {
+			w.TruthFailures = append(w.TruthFailures, "native_cleanup_failed")
+		}
+	}
 	if w.proxy != nil {
 		w.proxy.Close()
 	}
@@ -681,4 +726,26 @@ func (w *World) AddReplicaScope(scope string) error {
 	w.Replicas = append(w.Replicas, endpoint)
 	w.replicaProcesses = append(w.replicaProcesses, p)
 	return nil
+}
+
+func (w *World) RecordsAt(e Endpoint) ([]contracts.Record, contracts.Cursor, error) {
+	out := []contracts.Record{}
+	after := ""
+	var cursor contracts.Cursor
+	for {
+		var page contracts.ReadResult
+		if _, err := Request(w.ctx, e, "/v1/op/records.query", contracts.ReadQuery{Limit: 1000, After: after}, &page); err != nil {
+			return nil, cursor, err
+		}
+		if after == "" {
+			cursor = page.Cursor
+		} else if cursor != page.Cursor {
+			return nil, cursor, fmt.Errorf("snapshot changed during pagination")
+		}
+		out = append(out, page.Records...)
+		if page.Next == "" {
+			return out, cursor, nil
+		}
+		after = page.Next
+	}
 }

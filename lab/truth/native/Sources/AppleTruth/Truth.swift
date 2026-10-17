@@ -3,6 +3,7 @@ import Foundation
 import SQLite3
 import Contacts
 import Darwin
+import CryptoKit
 
 private struct Fetch: @unchecked Sendable { let reminders: [EKReminder]? }
 private enum TruthFailure: Error { case invalid, unavailable, permissionMissing }
@@ -19,7 +20,7 @@ struct AppleTruth {
         guard let reportPath = option("--report"), let verb = arguments.first else { exit(2) }
         let deadline = DispatchSource.makeTimerSource(queue: .global())
         deadline.schedule(deadline: .now() + (verb == "authorize" ? 300 : 90))
-        deadline.setEventHandler {
+        deadline.setEventHandler { @Sendable in
             let url = URL(fileURLWithPath: reportPath)
             try? Data("{\"status\":\"unverified\",\"reason\":\"deadline_exceeded\"}".utf8).write(to: url, options: .atomic)
             try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportPath)
@@ -108,7 +109,7 @@ struct AppleTruth {
                 reminder.calendar = list
                 reminder.title = tag + String(format: " live-%03d", index)
                 try store.save(reminder, commit: true)
-                effects.append(["title": reminder.title ?? "", "effect_uptime_ns": clock_gettime_nsec_np(CLOCK_UPTIME_RAW)])
+                effects.append(["title": reminder.title ?? "", "effect_uptime_ns": clock_gettime_nsec_np(CLOCK_UPTIME_RAW), "effect_wall_ns": Date().timeIntervalSince1970 * 1_000_000_000, "key": SHA256.hash(data: Data(reminder.calendarItemIdentifier.utf8)).map { String(format: "%02x", $0) }.joined()])
             }
             return ["status": "verified", "effects": effects]
         }
@@ -133,7 +134,7 @@ struct AppleTruth {
                     reminder.addRecurrenceRule(EKRecurrenceRule(recurrenceWith: .daily, interval: 1, end: nil))
                 }
                 try store.save(reminder, commit: true)
-                return ["status": "verified", "id": reminder.calendarItemIdentifier, "effect_done": ISO8601DateFormatter().string(from: Date())]
+                return ["status": "verified", "id": reminder.calendarItemIdentifier, "effect_done": ISO8601DateFormatter().string(from: Date()), "effect_uptime_ns": clock_gettime_nsec_np(CLOCK_UPTIME_RAW)]
             case "create_list": return ["status": "verified", "id": list.calendarIdentifier]
             case "cleanup_list":
                 guard request["list_id"] as? String == list.calendarIdentifier, all.allSatisfy({ ($0.title ?? "").contains(tag) }) else { throw TruthFailure.invalid }

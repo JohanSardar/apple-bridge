@@ -24,11 +24,15 @@ private final class ReminderCompletion: @unchecked Sendable {
 @MainActor
 public final class AgendaGate {
     public let store = EKEventStore()
+    public let trace: CaptureTrace
+    public private(set) var notificationAt: UInt64 = 0
+    public private(set) var debounceAt: UInt64 = 0
     private var observer: NSObjectProtocol?
     private var debounce: Task<Void, Never>?
     private var listeners: [UUID: AsyncStream<Void>.Continuation] = [:]
 
-    public init() {
+    public init(trace: CaptureTrace = CaptureTrace()) {
+        self.trace = trace
         Task { @MainActor [weak self] in
             var previous = [EKEventStore.authorizationStatus(for: .reminder), EKEventStore.authorizationStatus(for: .event)]
             while !Task.isCancelled {
@@ -38,8 +42,10 @@ public final class AgendaGate {
                 if current != previous { previous = current; self.reconcile() }
             }
         }
-        observer = NotificationCenter.default.addObserver(forName: .EKEventStoreChanged, object: store, queue: .main) { [weak self] _ in
-            Task { @MainActor in self?.changed() }
+        observer = NotificationCenter.default.addObserver(forName: .EKEventStoreChanged, object: store, queue: .main) { @Sendable [weak self, trace] _ in
+            let delivered = CaptureTrace.now()
+            trace.record("notification")
+            Task { @MainActor in self?.changed(delivered) }
         }
     }
 
@@ -51,10 +57,13 @@ public final class AgendaGate {
         for continuation in listeners.values { continuation.yield(()) }
     }
 
-    private func changed() {
+    private func changed(_ delivered: UInt64) {
         debounce?.cancel()
         debounce = Task { @MainActor in
             do { try await Task.sleep(for: .milliseconds(50)) } catch { return }
+            notificationAt = delivered
+            debounceAt = CaptureTrace.now()
+            trace.record("debounce", fields: ["notification_ns": .integer(notificationAt)])
             for continuation in listeners.values { continuation.yield(()) }
         }
     }
@@ -71,10 +80,12 @@ public final class AgendaGate {
 
     public func reminders() async throws -> [EKReminder] {
         guard authorized(.reminder) else { throw SourceFailure.permissionMissing }
+        let trace = self.trace
         let predicate = store.predicateForReminders(in: nil)
         let fetched: ReminderFetch = try await withCheckedThrowingContinuation { continuation in
             let completion = ReminderCompletion(continuation)
-            DispatchQueue.global().asyncAfter(deadline: .now() + 3) {
+            DispatchQueue.global().asyncAfter(deadline: .now() + 3) { @Sendable in
+                trace.record("fetch_timer_fired")
                 completion.finish(.failure(SourceFailure.unavailable))
             }
             store.fetchReminders(matching: predicate) { result in completion.finish(.success(ReminderFetch(values: result))) }

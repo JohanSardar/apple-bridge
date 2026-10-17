@@ -38,9 +38,10 @@ public enum HelperCommand {
             let secretFile = try option("--secret-file")
             let home = URL(fileURLWithPath: try option("--home"))
             guard let gatewayPID = Int32(try option("--gateway-pid")), gatewayPID > 1 else { throw ProbeFailure.invalidArguments }
+            let timers = CaptureTrace(url: arguments.contains("--lab-commands") ? home.appendingPathComponent("session-timers.jsonl") : nil)
             let lifetime = DispatchSource.makeTimerSource(queue: .global())
             lifetime.schedule(deadline: .now() + 1, repeating: 1)
-            lifetime.setEventHandler { if kill(gatewayPID, 0) != 0 { exit(0) } }
+            lifetime.setEventHandler { @Sendable in timers.record("lifetime_timer"); if kill(gatewayPID, 0) != 0 { exit(0) } }
             lifetime.resume()
             defer { lifetime.cancel() }
             let peer = try AppleSession(socket: socket, secretFile: secretFile, home: home, gatewayPID: gatewayPID, commandsEnabled: arguments.contains("--lab-commands"))
@@ -59,7 +60,7 @@ public enum HelperCommand {
         guard let reportIndex = arguments.firstIndex(of: "--report"), reportIndex + 1 < arguments.count else { throw ProbeFailure.invalidArguments }
         let reportURL = try PrivateReport.validate(arguments[reportIndex + 1])
         if arguments.first == "functional" {
-            DispatchQueue.global().asyncAfter(deadline: .now() + 30) {
+            DispatchQueue.global().asyncAfter(deadline: .now() + 30) { @Sendable in
                 try? PrivateReport.write(["state": "timed_out"], to: reportURL)
                 exit(1)
             }
@@ -69,7 +70,7 @@ public enum HelperCommand {
         let session = PermissionSession()
         let deadlineReport = session.report
         let limit: Double = arguments.first == "onboard" ? 300 : 35
-        DispatchQueue.global().asyncAfter(deadline: .now() + limit) {
+        DispatchQueue.global().asyncAfter(deadline: .now() + limit) { @Sendable in
             try? PrivateReport.write(deadlineReport.snapshot(), to: reportURL)
             exit(1)
         }
@@ -99,7 +100,7 @@ public enum HelperCommand {
         guard arguments.first == "probe", arguments.count > 1 else { throw ProbeFailure.invalidArguments }
         guard reportURL.lastPathComponent != "self-handles.json" || arguments[1] == "self-handles" else { throw ProbeFailure.invalidArguments }
         try PrivateReport.write(["state": "running"], to: reportURL)
-        DispatchQueue.global().asyncAfter(deadline: .now() + 35) {
+        DispatchQueue.global().asyncAfter(deadline: .now() + 35) { @Sendable in
             try? PrivateReport.write(["state": "timed_out", "disposition": "indeterminate"], to: reportURL)
             exit(1)
         }

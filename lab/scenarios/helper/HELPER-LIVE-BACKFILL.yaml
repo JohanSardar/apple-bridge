@@ -1,0 +1,7 @@
+id: HELPER-LIVE-BACKFILL
+feature: helper.session
+levels: [real]
+given: [{world: {replicas: 1}}]
+when: [{live_backfill: {}}]
+then: [{converge: {}}]
+cleanup: [{fixture: {cleanup: reminders}}]

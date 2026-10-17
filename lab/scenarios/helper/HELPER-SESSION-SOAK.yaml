@@ -1,0 +1,7 @@
+id: HELPER-SESSION-SOAK
+feature: helper.session
+levels: [real]
+given: [{world: {replicas: 1}}]
+when: [{session_soak: {}}]
+then: [{converge: {}}]
+cleanup: [{fixture: {cleanup: reminders}}]

@@ -32,6 +32,7 @@ public actor AppleSession: ObservationSink {
         let expiry: ContinuousClock.Instant
         let fence: UInt64
     }
+    private var draining = false
     private var wire: PeerWire?
     private var fence: UInt64 = 0
     private var permissionStates: [String: String] = [:]
@@ -47,6 +48,7 @@ public actor AppleSession: ObservationSink {
     private var blobReader: (@Sendable (String, Int64, Int) async throws -> JSON)?
     private var captureTasks: [Task<Void, Never>] = []
     private var frameTasks: [UUID: Task<Void, Never>] = [:]
+    private let trace: CaptureTrace
     private let agenda: AgendaGate
     private let source: RemindersSource
     private let guardLog: DispatchGuard
@@ -60,7 +62,9 @@ public actor AppleSession: ObservationSink {
     public init(socket: String, secretFile: String, home: URL, gatewayPID: Int32, commandsEnabled: Bool) throws {
         self.socket = socket; self.secretFile = secretFile; self.gatewayPID = gatewayPID
         self.home = home; self.labEnabled = commandsEnabled
-        let agenda = AgendaGate()
+        let trace = CaptureTrace(url: commandsEnabled ? home.appendingPathComponent("capture-trace.jsonl") : nil)
+        self.trace = trace
+        let agenda = AgendaGate(trace: trace)
         self.agenda = agenda
         source = try RemindersSource(gate: agenda, home: home, commandsEnabled: true)
         guardLog = try DispatchGuard(home: home)
@@ -231,7 +235,7 @@ public actor AppleSession: ObservationSink {
             try await withCheckedThrowingContinuation { continuation in
                 let pending = Pending(source: source, generation: generation, scanID: scanID, completionEvidence: completionEvidence, blobHandles: blobHandles, observations: chunk, started: scanStartedAt, scope: scope, completion: continuation)
                 if live { self.live.append(pending) } else { bulk.append(pending) }
-                do { try drain() } catch { disconnect() }
+                Task { do { try await drain() } catch { disconnect() } }
             }
         }
     }
@@ -250,16 +254,31 @@ public actor AppleSession: ObservationSink {
         return chunks
     }
 
-    private func drain() throws {
+    private func drain() async throws {
+        guard !draining else { return }
+        draining = true
+        defer { draining = false }
         while !live.isEmpty || !bulk.isEmpty {
             let liveIndex = live.firstIndex { flights[$0.source] == nil }
             let bulkIndex = bulk.firstIndex { flights[$0.source] == nil }
             guard let index = liveIndex ?? bulkIndex else { return }
             let prioritized = liveIndex != nil
             let pending = prioritized ? live[index] : bulk[index]
+            if !prioritized && labEnabled && FileManager.default.fileExists(atPath: home.appendingPathComponent("lab-hold-backfill").path) {
+                try Data("held".utf8).write(to: home.appendingPathComponent("lab-backfill-held"), options: .atomic)
+                return
+            }
+            let connection = wire
+            let observations: [JSON]
+            if !prioritized && pending.source == "reminders" {
+                observations = try await source.revalidate(pending.observations, generation: pending.generation)
+                guard wire === connection, !Task.isCancelled else { return }
+                if live.contains(where: { flights[$0.source] == nil }) { continue }
+            } else { observations = pending.observations }
+            let sending = Pending(source: pending.source, generation: pending.generation, scanID: pending.scanID, completionEvidence: pending.completionEvidence, blobHandles: pending.blobHandles, observations: observations, started: pending.started, scope: pending.scope, completion: pending.completion)
             let checkpoint = UUID().uuidString
             let resume = checkpoints[pending.source] ?? .null
-            var capture: [String: JSON] = ["source": .string(pending.source), "generation": .string(pending.generation), "predecessor": .string(resume["generation"].string == pending.generation ? resume["checkpoint"].string : ""), "checkpoint": .string(checkpoint), "observations": .array(pending.observations)]
+            var capture: [String: JSON] = ["source": .string(pending.source), "generation": .string(pending.generation), "predecessor": .string(resume["generation"].string == pending.generation ? resume["checkpoint"].string : ""), "checkpoint": .string(checkpoint), "observations": .array(observations)]
             if !pending.scanID.isEmpty {
                 capture["scan_id"] = .string(pending.scanID); capture["scope"] = .array(pending.scope.map(JSON.string)); capture["scan_started_at"] = .string(pending.started.isEmpty ? timestamp() : pending.started); capture["completion_evidence"] = .string(pending.completionEvidence)
             }
@@ -268,22 +287,25 @@ public actor AppleSession: ObservationSink {
             let frame = JSON.object(capture)
             let size = try PeerWire.encode(frame).count
             guard size <= credit else { return }
+            trace.record("capture_sent", keys: observations.map { $0["native_key"].string }, fields: ["checkpoint": .string(checkpoint), "live": .bool(prioritized), "credit": .number(Double(credit))])
             try wire?.send(frame)
             credit -= size
-            flights[pending.source] = Flight(pending: pending, checkpoint: checkpoint, bytes: size)
+            flights[pending.source] = Flight(pending: sending, checkpoint: checkpoint, bytes: size)
             if prioritized { live.remove(at: index) } else { bulk.remove(at: index) }
         }
     }
 
     private func handle(_ frame: JSON) async throws {
         switch frame["t"].string {
-        case "Ping": try wire?.send(.object(["t": .string("Pong")]))
+        case "Ping":
+            try wire?.send(.object(["t": .string("Pong")]))
+            try await drain()
         case "Pong": break
         case "Committed":
             let source = frame["source"].string
             guard let flight = flights[source], frame["checkpoint"].string == flight.checkpoint, frame["credit"].unsigned == UInt64(flight.bytes) else { throw SourceFailure.invalid }
+            trace.record("committed_ack", keys: flight.pending.observations.map { $0["native_key"].string }, fields: ["checkpoint": .string(flight.checkpoint)])
             try await pause("capture", observations: flight.pending.observations)
-            flights.removeValue(forKey: source)
             credit += flight.bytes
             checkpoints[source] = .object(["generation": .string(flight.pending.generation), "checkpoint": .string(flight.checkpoint)])
             if labEnabled {
@@ -294,8 +316,10 @@ public actor AppleSession: ObservationSink {
             for observation in flight.pending.observations {
                 observedCheckpoints[observation["collection"].string + "/" + observation["native_key"].string] = flight.checkpoint
             }
+            if source == "reminders" { try await self.source.didCommit(flight.pending.observations, generation: flight.pending.generation) }
+            flights.removeValue(forKey: source)
             flight.pending.completion.resume()
-            try drain()
+            try await drain()
         case "Reset": throw SourceFailure.conflict
         case "Prepare": await prepare(frame)
         case "Dispatch": launchFrame(frame)

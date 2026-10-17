@@ -55,9 +55,7 @@ public enum SourceFailure: Error {
 }
 
 public func timestamp(_ date: Date = Date()) -> String {
-    let format = ISO8601DateFormatter()
-    format.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-    return format.string(from: date)
+    date.ISO8601Format(.init(includingFractionalSeconds: true))
 }
 
 public func parseTimestamp(_ value: String) -> Date? {

@@ -60,7 +60,7 @@ public final class PermissionSession {
         for (name, bundle) in [("automation_messages", "com.apple.MobileSMS"), ("automation_system_events", "com.apple.systemevents")] {
             let report = self.report
             let done = DispatchSemaphore(value: 0)
-            DispatchQueue.global().async {
+            DispatchQueue.global().async { @Sendable in
                 let target = NSAppleEventDescriptor(bundleIdentifier: bundle)
                 let status = AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false)
                 report.set(name, status == noErr ? .granted : status == -1744 ? .notDetermined : status == -1743 ? .denied : status == -600 ? .targetNotRunning : .unknown)
@@ -128,7 +128,7 @@ public final class PermissionSession {
         configuration.activates = false
         NSWorkspace.shared.openApplication(at: url, configuration: configuration) { application, _ in
             guard application != nil else { return }
-            DispatchQueue.global().async {
+            DispatchQueue.global().async { @Sendable in
                 Self.readVersion(bundle)
             }
         }

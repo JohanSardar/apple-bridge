@@ -9,9 +9,12 @@ public final class RemindersSource: Source {
     public nonisolated let name = "reminders"
     private let gate: AgendaGate
     private var committed: [String: JSON] = [:]
+    private var tracked: [String: JSON] = [:]
     private let commandsEnabled: Bool
     private let baselineURL: URL
     private var forceFull = true
+    private var generation = ""
+    private let generationURL: URL
     private var scanning = false
     public static let operations = ["reminders.create", "reminders.update", "reminders.complete", "reminders.uncomplete", "reminders.delete", "reminders.create_list"]
     public static let coverage: JSON = .object(["fields": .string("partial"), "missing": .array([.string("recurrence: next incomplete instance only")])])
@@ -19,13 +22,59 @@ public final class RemindersSource: Source {
     public init(gate: AgendaGate, home: URL, commandsEnabled: Bool = false) throws {
         self.gate = gate; self.commandsEnabled = commandsEnabled
         baselineURL = home.appendingPathComponent("reminders-baseline.json")
+        generationURL = home.appendingPathComponent("reminders-generation.json")
         if FileManager.default.fileExists(atPath: baselineURL.path) {
             committed = try JSONDecoder().decode([String: JSON].self, from: Data(contentsOf: baselineURL))
+        }
+        tracked = committed
+    }
+
+    private func refreshGeneration() throws {
+        let identity = gate.store.eventStoreIdentifier
+        guard !identity.isEmpty else { throw SourceFailure.unavailable }
+        let lineage = SHA256.hash(data: Data(identity.utf8)).map { String(format: "%02x", $0) }.joined()
+        let current = "eventkit-" + lineage
+        let previous = try? String(contentsOf: generationURL, encoding: .utf8)
+        if generation != current {
+            if previous != current { committed = [:]; tracked = [:] }
+            generation = current
+            forceFull = true
+            try Data(current.utf8).write(to: generationURL, options: .atomic)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: generationURL.path)
+        }
+    }
+
+    public func didCommit(_ observations: [JSON], generation expected: String) throws {
+        try refreshGeneration()
+        guard generation == expected else { return }
+        for observation in observations {
+            let key = observation["collection"].string + "/" + observation["native_key"].string
+            if observation["kind"].string == "absent" { committed.removeValue(forKey: key); tracked.removeValue(forKey: key) }
+            else { committed[key] = observation; tracked[key] = observation }
+        }
+        try save(tracked)
+    }
+
+    public func revalidate(_ observations: [JSON], generation expected: String) throws -> [JSON] {
+        try refreshGeneration()
+        guard generation == expected, gate.authorized(.reminder) else { throw SourceFailure.unavailable }
+        return observations.compactMap { previous in
+            let key = previous["native_key"].string
+            if previous["collection"].string == "reminders.list" {
+                guard let calendar = gate.store.calendar(withIdentifier: key) else { return nil }
+                return observation("reminders.list", key, listData(calendar))
+            }
+            guard let reminder = gate.store.calendarItem(withIdentifier: key) as? EKReminder else { return nil }
+            let alias = reminder.calendarItemExternalIdentifier.map { reminder.calendar.calendarIdentifier + "/" + $0 } ?? ""
+            return observation("reminders.reminder", key, data(reminder), alias: alias)
         }
     }
 
     private func save(_ baseline: [String: JSON]) throws {
-        try JSONEncoder().encode(baseline).write(to: baselineURL, options: .atomic)
+        let identities = baseline.mapValues { value in
+            JSON.object(value.object.filter { ["collection", "native_key", "scoped_alias"].contains($0.key) })
+        }
+        try JSONEncoder().encode(identities).write(to: baselineURL, options: .atomic)
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: baselineURL.path)
     }
 
@@ -69,43 +118,45 @@ public final class RemindersSource: Source {
         .object(["title": .string(reminder.title ?? ""), "notes": reminder.notes.map(JSON.string) ?? .null, "url": reminder.url.map { .string($0.absoluteString) } ?? .null, "due": components(reminder.dueDateComponents), "due_all_day": .bool(reminder.dueDateComponents != nil && reminder.dueDateComponents?.hour == nil), "start": components(reminder.startDateComponents), "priority": .number(Double(reminder.priority)), "completed": .bool(reminder.isCompleted), "completed_at": reminder.completionDate.map { .string(timestamp($0)) } ?? .null, "recurrence": recurrence(reminder.recurrenceRules), "alarms": alarms(reminder.alarms), "list_id": .object(["$ref": .object(["collection": .string("reminders.list"), "native_key": .string(reminder.calendar.calendarIdentifier)])])])
     }
 
-    private func hash(_ value: JSON) throws -> String {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.sortedKeys]
-        return SHA256.hash(data: try encoder.encode(value)).map { String(format: "%02x", $0) }.joined()
-    }
-
-    private func observation(_ collection: String, _ key: String, _ value: JSON, alias: String = "") -> JSON {
-        var result: [String: JSON] = ["kind": .string("upsert"), "collection": .string(collection), "native_key": .string(key), "data": value, "observed_at": .string(timestamp())]
+    private func observation(_ collection: String, _ key: String, _ value: JSON, alias: String = "", at: String? = nil) -> JSON {
+        var result: [String: JSON] = ["kind": .string("upsert"), "collection": .string(collection), "native_key": .string(key), "data": value, "observed_at": .string(at ?? timestamp())]
         if !alias.isEmpty { result["scoped_alias"] = .string(alias) }
         return .object(result)
     }
 
     private func scan(into sink: any ObservationSink, live: Bool) async throws {
-        while scanning { try await Task.sleep(for: .milliseconds(10)) }
-        scanning = true
-        defer { scanning = false }
+        if live {
+            while scanning { try await Task.sleep(for: .milliseconds(5)) }
+            scanning = true
+        }
+        defer { if live { scanning = false } }
+        try refreshGeneration()
+        let scanGeneration = generation
         let started = timestamp()
+        let notificationAt = gate.notificationAt, debounceAt = gate.debounceAt
+        let refetchStarted = CaptureTrace.now()
         let reminders = try await gate.reminders()
+        let refetchFinished = CaptureTrace.now()
+        let observedAt = timestamp()
         let calendars = gate.store.calendars(for: .reminder)
         var current: [String: JSON] = [:]
         for calendar in calendars {
             let key = "reminders.list/" + calendar.calendarIdentifier
-            current[key] = observation("reminders.list", calendar.calendarIdentifier, listData(calendar))
+            current[key] = observation("reminders.list", calendar.calendarIdentifier, listData(calendar), at: observedAt)
         }
         for reminder in reminders {
             let key = "reminders.reminder/" + reminder.calendarItemIdentifier
             let alias = reminder.calendarItemExternalIdentifier.map { reminder.calendar.calendarIdentifier + "/" + $0 } ?? ""
-            current[key] = observation("reminders.reminder", reminder.calendarItemIdentifier, data(reminder), alias: alias)
+            current[key] = observation("reminders.reminder", reminder.calendarItemIdentifier, data(reminder), alias: alias, at: observedAt)
         }
         guard gate.authorized(.reminder) else { throw SourceFailure.permissionMissing }
         var observations: [JSON] = []
         for key in current.keys.sorted() {
             guard let observation = current[key] else { continue }
-            let changed = try hash(observation["data"]) != hash(committed[key]?["data"] ?? .null)
+            let changed = observation["data"] != (committed[key]?["data"] ?? .null)
             if forceFull || changed || committed[key]?["scoped_alias"] != observation["scoped_alias"] { observations.append(observation) }
         }
-        for (key, previous) in committed where current[key] == nil {
+        for (key, previous) in tracked where live && current[key] == nil {
             let alias = previous["scoped_alias"].string
             if !alias.isEmpty && current.values.contains(where: { $0["collection"] == previous["collection"] && $0["scoped_alias"].string == alias }) { continue }
             if previous["collection"].string == "reminders.reminder", gate.store.calendarItem(withIdentifier: previous["native_key"].string) != nil { continue }
@@ -113,10 +164,10 @@ public final class RemindersSource: Source {
             absent["kind"] = .string("absent"); absent["revalidated"] = .bool(true); absent["observed_at"] = .string(timestamp())
             observations.append(.object(absent))
         }
-        try save(committed.merging(current) { _, new in new })
-        try await sink.emit(source: name, generation: "eventkit-v1", observations: observations, scanID: UUID().uuidString, scanStartedAt: started, scope: ["reminders.list", "reminders.reminder"], completionEvidence: "complete", blobHandles: [:], live: live)
-        try save(current)
-        committed = current
+        tracked.merge(current) { _, new in new }
+        try save(tracked)
+        gate.trace.record("refetch", keys: observations.map { $0["native_key"].string }, fields: ["notification_ns": .integer(notificationAt), "debounce_ns": .integer(debounceAt), "started_ns": .integer(refetchStarted), "finished_ns": .integer(refetchFinished), "live": .bool(live)])
+        try await sink.emit(source: name, generation: scanGeneration, observations: observations, scanID: UUID().uuidString, scanStartedAt: started, scope: ["reminders.list", "reminders.reminder"], completionEvidence: "complete", blobHandles: [:], live: live)
         forceFull = false
         let readiness = await open()
         try await sink.sourceState(source: name, state: readiness.state, coverage: readiness.coverage, capabilities: readiness.capabilities, reason: readiness.reason)
@@ -128,25 +179,34 @@ public final class RemindersSource: Source {
     }
 
     public func confirmAbsence(_ key: String, into sink: any ObservationSink) async throws {
+        try refreshGeneration()
         let started = timestamp()
         guard !key.isEmpty, try await gate.reminders().allSatisfy({ $0.calendarItemIdentifier != key }), gate.store.calendarItem(withIdentifier: key) == nil, gate.authorized(.reminder) else { throw SourceFailure.conflict }
         let absent: JSON = .object(["kind": .string("absent"), "collection": .string("reminders.reminder"), "native_key": .string(key), "revalidated": .bool(true), "observed_at": .string(timestamp())])
-        try await sink.emit(source: name, generation: "eventkit-v1", observations: [absent], scanID: UUID().uuidString, scanStartedAt: started, scope: ["reminders.reminder"], completionEvidence: "complete", blobHandles: [:], live: true)
+        try await sink.emit(source: name, generation: generation, observations: [absent], scanID: UUID().uuidString, scanStartedAt: started, scope: ["reminders.reminder"], completionEvidence: "complete", blobHandles: [:], live: true)
     }
 
     public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {
         forceFull = true
         let changes = gate.changes()
-        try await scan(into: sink, live: false)
         let periodic = Task { @MainActor in
             while !Task.isCancelled {
                 do { try await Task.sleep(for: .seconds(900)); self.gate.reconcile() } catch { return }
             }
         }
         defer { periodic.cancel() }
-        for await _ in changes {
-            try Task.checkCancellation()
-            try await scan(into: sink, live: true)
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask {
+                try await self.scan(into: sink, live: false)
+                try await self.scan(into: sink, live: true)
+            }
+            group.addTask {
+                for await _ in changes {
+                    try Task.checkCancellation()
+                    try await self.scan(into: sink, live: true)
+                }
+            }
+            while try await group.next() != nil { }
         }
     }
 

@@ -18,7 +18,7 @@ import (
 
 func nativeScenario(id, level string) bool {
 	switch id {
-	case "HELPER-RESTART-REAL", "HELPER-TCC-READY", "REM-CREATE-EXTERNAL", "REM-LIST-CREATE", "REM-RECURRING", "REM-PERMISSION-LOSS":
+	case "HELPER-LIVE-BACKFILL", "HELPER-SESSION-SOAK", "HELPER-RESTART-REAL", "HELPER-TCC-READY", "REM-CREATE-EXTERNAL", "REM-LIST-CREATE", "REM-RECURRING", "REM-PERMISSION-LOSS":
 		return true
 	case "REM-CRUD":
 		return level == "real" || level == "replica"
@@ -69,6 +69,9 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 	if level == "sim" {
 		w, err = world.New(ctx, level, 1, 0)
 	} else {
+		if s.ID == "HELPER-LIVE-BACKFILL" {
+			return runBackfillPriority(ctx, s, level, e)
+		}
 		w, err = world.NewReal(ctx, level, 1)
 	}
 	if err != nil {
@@ -76,6 +79,12 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 		return failed("world_start")
 	}
 	defer w.Close()
+	defer func() {
+		for _, reason := range w.TruthFailures {
+			result.Assertions = append(result.Assertions, Assertion{Name: "appletruth_failure", Passed: false, Detail: reason})
+			result.Passed = false
+		}
+	}()
 	ready := func() bool {
 		records, err := w.Records(w.Gateway)
 		if err != nil {
@@ -108,8 +117,11 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 			return err == nil && string(current) != string(before) && ready()
 		})
 	}
+	if s.ID == "HELPER-SESSION-SOAK" {
+		return runHelperSoak(ctx, w, e)
+	}
 	if s.ID == "HELPER-TCC-READY" {
-		app := filepath.Join(os.Getenv("HOME"), "Applications/AppleBridgeDev/AppleBridgeHelper.app")
+		app := w.HelperApp
 		permissions := func() (map[string]string, error) {
 			path := filepath.Join(os.Getenv("HOME"), "Library/Application Support/AppleBridgeDev", filepath.Base(w.Dir)+"-permissions.json")
 			defer os.Remove(path)
@@ -131,22 +143,24 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 		if err != nil {
 			return failed("designated_requirement")
 		}
-		command := exec.CommandContext(ctx, "packaging/dev/build-helper.sh")
+		rebuilt := filepath.Join(w.Dir, "rebuilt", "AppleBridgeHelper.app")
+		command := exec.CommandContext(ctx, "packaging/dev/build-helper.sh", rebuilt)
 		if output, err := command.CombinedOutput(); err != nil {
 			fmt.Fprintln(os.Stderr, string(output))
 			return failed("signed_rebuild")
 		}
+		app = rebuilt
 		after, err := permissions()
 		if err != nil {
 			return failed("permission_report_after_rebuild")
 		}
 		requirementAfter, err := exec.CommandContext(ctx, "codesign", "-d", "-r-", app).CombinedOutput()
-		add("designated_requirement_preserved", err == nil && string(requirementBefore) == string(requirementAfter))
+		add("designated_requirement_preserved", err == nil && designatedRequirement(requirementBefore) != "" && designatedRequirement(requirementBefore) == designatedRequirement(requirementAfter))
 		add("permission_states_preserved", reflect.DeepEqual(before, after))
 		add("granted_access_preserved", after["full_disk_access"] == "granted" && after["reminders"] == "granted" && after["accessibility"] == "granted" && after["calendar"] == "granted" && after["contacts"] == "granted")
 		e.Assertions = append(e.Assertions, Assertion{Name: "automation_status_preserved", Passed: before["automation_messages"] == after["automation_messages"] && before["automation_system_events"] == after["automation_system_events"], Status: "unverified", Detail: "Automation permission checks are unknown while locked; UI automation access is unverified"})
 		add("calendar_contacts_states_preserved", before["calendar"] == after["calendar"] && before["contacts"] == after["contacts"])
-		add("real_capture_after_rebuild", restart() == nil)
+		add("real_capture_from_immutable_world", restart() == nil)
 	} else {
 		if s.ID == "HELPER-RESTART-REAL" {
 			before, err := w.Records(w.Gateway)
@@ -228,6 +242,7 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 		}
 		switch s.ID {
 		case "CORE-LIVE-LATENCY":
+			e.Conditions = nativeConditions()
 			endpoints := append([]world.Endpoint{w.Gateway}, w.Replicas...)
 			observers := []*watcher{}
 			for _, endpoint := range endpoints {
@@ -292,7 +307,33 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 				add("latency_"+name, latency.Samples == 200 && latency.Timeouts == 0 && latency.P95 < 1000)
 				add("contiguous_replica_application", observer.valid())
 			}
+			nativeLatencyEvidence(w, &e, effects, observers)
+			add("native_path_timestamps", len(e.NativeTimings) == 200 && e.Latency["refetch_duration"].Samples == 200 && e.Latency["capture_sent→gateway_commit"].Samples == 200)
 		case "REM-LIST-CREATE":
+			if level != "sim" {
+				baseline, err := w.Truth("observe", map[string]any{"list": "Bridge Test", "tag": tag})
+				if err != nil {
+					return blocked(err.Error())
+				}
+				before := truthListIDs(baseline)
+				defer func() {
+					current, err := w.Truth("observe", map[string]any{"list": "Bridge Test", "tag": tag})
+					if err == nil {
+						for id := range truthListIDs(current) {
+							if !before[id] {
+								_, cleanupErr := w.Truth("fixture", map[string]any{"action": "cleanup_list", "list": "Bridge Test", "list_id": id, "tag": tag})
+								if cleanupErr != nil {
+									err = cleanupErr
+								}
+							}
+						}
+					}
+					result.Assertions = append(result.Assertions, Assertion{Name: "created_list_recovery_cleanup", Passed: err == nil})
+					if err != nil {
+						result.Passed = false
+					}
+				}()
+			}
 			if err := submit("reminders.create_list", map[string]any{"title": "Bridge Test"}, 0); err != nil {
 				return failed("rest_create_list")
 			}
@@ -305,12 +346,7 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 				if nativeKey == "" {
 					return failed("created_list_identity")
 				}
-				defer func() {
-					if _, err := w.Truth("fixture", map[string]any{"action": "cleanup_list", "list": "Bridge Test", "list_id": nativeKey, "tag": tag}); err != nil {
-						result.Passed = false
-						result.Assertions = append(result.Assertions, Assertion{Name: "created_list_cleanup", Passed: false})
-					}
-				}()
+
 				truth, err := w.Truth("observe", map[string]any{"list": "Bridge Test", "list_id": nativeKey, "tag": tag})
 				add("truth_created_list", err == nil && truth["list_exists"] == true && truth["list_id"] == nativeKey)
 			}
@@ -565,22 +601,14 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 			add("independent_appletruth", err == nil && result["status"] == "verified")
 		}
 	}
-	gateway, err := w.Records(w.Gateway)
-	if err != nil {
-		return failed("gateway_records")
-	}
 	add("replica_convergence", w.Await(5*time.Second, func() bool {
-		head, err := w.Cursor(w.Gateway)
+		gateway, head, err := w.RecordsAt(w.Gateway)
 		if err != nil {
 			return false
 		}
 		for _, endpoint := range w.Replicas {
-			applied, err := w.Cursor(endpoint)
-			if err != nil || applied != head {
-				return false
-			}
-			records, err := w.Records(endpoint)
-			if err != nil || !reflect.DeepEqual(withoutCommands(gateway), withoutCommands(records)) {
+			records, applied, err := w.RecordsAt(endpoint)
+			if err != nil || applied != head || !reflect.DeepEqual(withoutCommands(gateway), withoutCommands(records)) {
 				return false
 			}
 		}
@@ -649,4 +677,30 @@ func nativeConvergence(w *world.World) bool {
 		}
 	}
 	return true
+}
+
+func truthListIDs(response map[string]any) map[string]bool {
+	ids := map[string]bool{}
+	if id, ok := response["list_id"].(string); ok && id != "" {
+		ids[id] = true
+	}
+	if lists, ok := response["lists"].([]any); ok {
+		for _, raw := range lists {
+			if list, ok := raw.(map[string]any); ok {
+				if id, ok := list["id"].(string); ok && id != "" {
+					ids[id] = true
+				}
+			}
+		}
+	}
+	return ids
+}
+
+func designatedRequirement(output []byte) string {
+	for _, line := range strings.Split(string(output), "\n") {
+		if strings.HasPrefix(line, "designated =>") {
+			return line
+		}
+	}
+	return ""
 }

@@ -3,9 +3,11 @@ package runtime
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -219,6 +221,18 @@ func Start(ctx context.Context, cfg Config) error {
 			}, CommitCapture: func(ctx context.Context, c contracts.Capture) (bool, error) {
 				result, err := store.CommitCapture(ctx, c)
 				store.Capacity(c.Source, err)
+				committedAt := time.Now().UnixNano()
+				if err == nil && cfg.HelperLabCommands {
+					keys := []string{}
+					for _, observation := range c.Observations {
+						keys = append(keys, fmt.Sprintf("%x", sha256.Sum256([]byte(observation.NativeKey))))
+					}
+					data, _ := json.Marshal(map[string]any{"stage": "gateway_commit", "wall_ns": committedAt, "checkpoint": c.Checkpoint, "keys": keys})
+					if file, openErr := os.OpenFile(filepath.Join(cfg.Home, "capture-trace.jsonl"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600); openErr == nil {
+						file.Write(append(data, '\n'))
+						file.Close()
+					}
+				}
 				if err == nil && !result.Degraded && !result.Duplicate {
 					cursor := store.Head()
 					cursor.Sequence = result.Through

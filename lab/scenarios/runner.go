@@ -59,6 +59,8 @@ type Evidence struct {
 	Assertions     []Assertion        `json:"assertions"`
 	Latency        map[string]Latency `json:"latency"`
 	Hosts          []string           `json:"hosts"`
+	NativeTimings  []NativeTiming     `json:"native_timings,omitempty"`
+	Conditions     map[string]string  `json:"conditions,omitempty"`
 }
 
 type Seen struct {
@@ -891,6 +893,9 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		}
 		if s.Feature == "messages.read" && level != "sim" {
 			duration = 20 * time.Minute
+		}
+		if s.ID == "HELPER-SESSION-SOAK" {
+			duration = 12 * time.Minute
 		}
 		bounded, cancel := context.WithTimeout(ctx, duration)
 		secretBefore, secretWasSet := os.LookupEnv("APPLE_BRIDGE_SECRET_STORE")

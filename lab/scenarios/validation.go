@@ -71,7 +71,7 @@ func validateScenario(s Scenario) error {
 			for action, options := range step {
 				var target any
 				switch phase + "/" + action {
-				case "when/restart_helper", "when/tcc_ready", "when/reminders_external", "when/reminders_crud", "when/reminders_list", "when/reminders_recurring", "when/reminders_permission_loss":
+				case "when/session_soak", "when/live_backfill", "when/restart_helper", "when/tcc_ready", "when/reminders_external", "when/reminders_crud", "when/reminders_list", "when/reminders_recurring", "when/reminders_permission_loss":
 					target = &struct{}{}
 				case "cleanup/fixture":
 					target = &fixtureCleanupOptions{}
