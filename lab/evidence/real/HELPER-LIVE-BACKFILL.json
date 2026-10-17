@@ -1,0 +1,46 @@
+{
+  "run_id": "run_01M5495TKZX24K5RZME4KMA4K4",
+  "scenario": "HELPER-LIVE-BACKFILL",
+  "level": "real",
+  "passed": true,
+  "git_sha": "8a4cb1b13da59dbb2a4220ad9a3ff4f27a9760ee",
+  "at": "2026-10-17T06:35:50.271799Z",
+  "assertions": [
+    {
+      "name": "initial_backfill_held",
+      "passed": true
+    },
+    {
+      "name": "external_edit_during_backfill",
+      "passed": true
+    },
+    {
+      "name": "live_visible_before_initial_backfill_commit",
+      "passed": true
+    },
+    {
+      "name": "backfill_committed_after_live",
+      "passed": true
+    },
+    {
+      "name": "no_bulk_capture_before_live",
+      "passed": true
+    },
+    {
+      "name": "backfill_does_not_overwrite_live",
+      "passed": true
+    },
+    {
+      "name": "independent_updated_truth",
+      "passed": true
+    },
+    {
+      "name": "stable_record_cursor_convergence",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

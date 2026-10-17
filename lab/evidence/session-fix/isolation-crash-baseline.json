@@ -1,0 +1,277 @@
+{
+  "kind": "review_baseline_crash_reports",
+  "matching_reports": 27,
+  "samples": [
+    {
+      "symbols": [
+        "_dispatch_assert_queue_fail",
+        "dispatch_assert_queue$V2.cold.1",
+        "dispatch_assert_queue",
+        "_swift_task_checkIsolatedSwift",
+        "partial apply for closure #1 in static HelperCommand.run(_:)"
+      ],
+      "launch_to_crash_ms": 1074.5
+    },
+    {
+      "symbols": [
+        "_dispatch_assert_queue_fail",
+        "dispatch_assert_queue$V2.cold.1",
+        "dispatch_assert_queue",
+        "_swift_task_checkIsolatedSwift",
+        "partial apply for closure #1 in static HelperCommand.run(_:)"
+      ],
+      "launch_to_crash_ms": 1070.8
+    },
+    {
+      "symbols": [
+        "_dispatch_assert_queue_fail",
+        "dispatch_assert_queue$V2.cold.1",
+        "dispatch_assert_queue",
+        "_swift_task_checkIsolatedSwift",
+        "partial apply for closure #1 in static HelperCommand.run(_:)"
+      ],
+      "launch_to_crash_ms": 1088.9
+    },
+    {
+      "symbols": [
+        "_dispatch_assert_queue_fail",
+        "dispatch_assert_queue$V2.cold.1",
+        "dispatch_assert_queue",
+        "_swift_task_checkIsolatedSwift",
+        "partial apply for closure #1 in static HelperCommand.run(_:)"
+      ],
+      "launch_to_crash_ms": 1068.8999999999999
+    },
+    {
+      "symbols": [
+        "_dispatch_assert_queue_fail",
+        "dispatch_assert_queue$V2.cold.1",
+        "dispatch_assert_queue",
+        "_swift_task_checkIsolatedSwift",
+        "partial apply for closure #1 in static HelperCommand.run(_:)"
+      ],
+      "launch_to_crash_ms": 1075.7
+    },
+    {
+      "symbols": [
+        "_dispatch_assert_queue_fail",
+        "dispatch_assert_queue$V2.cold.1",
+        "dispatch_assert_queue",
+        "_swift_task_checkIsolatedSwift",
+        "partial apply for closure #1 in static HelperCommand.run(_:)"
+      ],
+      "launch_to_crash_ms": 1065.3999999999999
+    },
+    {
+      "symbols": [
+        "_dispatch_assert_queue_fail",
+        "dispatch_assert_queue$V2.cold.1",
+        "dispatch_assert_queue",
+        "_swift_task_checkIsolatedSwift",
+        "partial apply for closure #1 in static HelperCommand.run(_:)"
+      ],
+      "launch_to_crash_ms": 1079.5
+    },
+    {
+      "symbols": [
+        "_dispatch_assert_queue_fail",
+        "dispatch_assert_queue$V2.cold.1",
+        "dispatch_assert_queue",
+        "_swift_task_checkIsolatedSwift",
+        "partial apply for closure #1 in static HelperCommand.run(_:)"
+      ],
+      "launch_to_crash_ms": 1078.6
+    },
+    {
+      "symbols": [
+        "_dispatch_assert_queue_fail",
+        "dispatch_assert_queue$V2.cold.1",
+        "dispatch_assert_queue",
+        "_swift_task_checkIsolatedSwift",
+        "partial apply for closure #1 in static HelperCommand.run(_:)"
+      ],
+      "launch_to_crash_ms": 1079.3999999999999
+    },
+    {
+      "symbols": [
+        "_dispatch_assert_queue_fail",
+        "dispatch_assert_queue$V2.cold.1",
+        "dispatch_assert_queue",
+        "_swift_task_checkIsolatedSwift",
+        "partial apply for closure #1 in static HelperCommand.run(_:)"
+      ],
+      "launch_to_crash_ms": 1111.6999999999998
+    },
+    {
+      "symbols": [
+        "_dispatch_assert_queue_fail",
+        "dispatch_assert_queue$V2.cold.1",
+        "dispatch_assert_queue",
+        "_swift_task_checkIsolatedSwift",
+        "partial apply for closure #1 in static HelperCommand.run(_:)"
+      ],
+      "launch_to_crash_ms": 1068.3
+    },
+    {
+      "symbols": [
+        "_dispatch_assert_queue_fail",
+        "dispatch_assert_queue$V2.cold.1",
+        "dispatch_assert_queue",
+        "_swift_task_checkIsolatedSwift",
+        "partial apply for closure #1 in static HelperCommand.run(_:)"
+      ],
+      "launch_to_crash_ms": 1081.1
+    },
+    {
+      "symbols": [
+        "_dispatch_assert_queue_fail",
+        "dispatch_assert_queue$V2.cold.1",
+        "dispatch_assert_queue",
+        "_swift_task_checkIsolatedSwift",
+        "partial apply for closure #1 in static HelperCommand.run(_:)"
+      ],
+      "launch_to_crash_ms": 1082.3
+    },
+    {
+      "symbols": [
+        "_dispatch_assert_queue_fail",
+        "dispatch_assert_queue$V2.cold.1",
+        "dispatch_assert_queue",
+        "_swift_task_checkIsolatedSwift",
+        "partial apply for closure #1 in static HelperCommand.run(_:)"
+      ],
+      "launch_to_crash_ms": 1078.1000000000001
+    },
+    {
+      "symbols": [
+        "_dispatch_assert_queue_fail",
+        "dispatch_assert_queue$V2.cold.1",
+        "dispatch_assert_queue",
+        "_swift_task_checkIsolatedSwift",
+        "partial apply for closure #1 in static HelperCommand.run(_:)"
+      ],
+      "launch_to_crash_ms": 1084.1000000000001
+    },
+    {
+      "symbols": [
+        "_dispatch_assert_queue_fail",
+        "dispatch_assert_queue$V2.cold.1",
+        "dispatch_assert_queue",
+        "_swift_task_checkIsolatedSwift",
+        "partial apply for closure #1 in static HelperCommand.run(_:)"
+      ],
+      "launch_to_crash_ms": 1077.6
+    },
+    {
+      "symbols": [
+        "_dispatch_assert_queue_fail",
+        "dispatch_assert_queue$V2.cold.1",
+        "dispatch_assert_queue",
+        "_swift_task_checkIsolatedSwift",
+        "partial apply for closure #1 in static HelperCommand.run(_:)"
+      ],
+      "launch_to_crash_ms": 1067.3999999999999
+    },
+    {
+      "symbols": [
+        "_dispatch_assert_queue_fail",
+        "dispatch_assert_queue$V2.cold.1",
+        "dispatch_assert_queue",
+        "_swift_task_checkIsolatedSwift",
+        "partial apply for closure #1 in static HelperCommand.run(_:)"
+      ],
+      "launch_to_crash_ms": 1076.1000000000001
+    },
+    {
+      "symbols": [
+        "_dispatch_assert_queue_fail",
+        "dispatch_assert_queue$V2.cold.1",
+        "dispatch_assert_queue",
+        "_swift_task_checkIsolatedSwift",
+        "partial apply for closure #1 in static HelperCommand.run(_:)"
+      ],
+      "launch_to_crash_ms": 1077.3999999999999
+    },
+    {
+      "symbols": [
+        "_dispatch_assert_queue_fail",
+        "dispatch_assert_queue$V2.cold.1",
+        "dispatch_assert_queue",
+        "_swift_task_checkIsolatedSwift",
+        "partial apply for closure #1 in static HelperCommand.run(_:)"
+      ],
+      "launch_to_crash_ms": 1081.0
+    },
+    {
+      "symbols": [
+        "_dispatch_assert_queue_fail",
+        "dispatch_assert_queue$V2.cold.1",
+        "dispatch_assert_queue",
+        "_swift_task_checkIsolatedSwift",
+        "partial apply for closure #1 in static HelperCommand.run(_:)"
+      ],
+      "launch_to_crash_ms": 1142.1
+    },
+    {
+      "symbols": [
+        "_dispatch_assert_queue_fail",
+        "dispatch_assert_queue$V2.cold.1",
+        "dispatch_assert_queue",
+        "_swift_task_checkIsolatedSwift",
+        "partial apply for closure #1 in static HelperCommand.run(_:)"
+      ],
+      "launch_to_crash_ms": 1072.4
+    },
+    {
+      "symbols": [
+        "_dispatch_assert_queue_fail",
+        "dispatch_assert_queue$V2.cold.1",
+        "dispatch_assert_queue",
+        "_swift_task_checkIsolatedSwift",
+        "partial apply for closure #1 in static HelperCommand.run(_:)"
+      ],
+      "launch_to_crash_ms": 1077.5
+    },
+    {
+      "symbols": [
+        "_dispatch_assert_queue_fail",
+        "dispatch_assert_queue$V2.cold.1",
+        "dispatch_assert_queue",
+        "_swift_task_checkIsolatedSwift",
+        "partial apply for closure #1 in static HelperCommand.run(_:)"
+      ],
+      "launch_to_crash_ms": 1072.1000000000001
+    },
+    {
+      "symbols": [
+        "_dispatch_assert_queue_fail",
+        "dispatch_assert_queue$V2.cold.1",
+        "dispatch_assert_queue",
+        "_swift_task_checkIsolatedSwift",
+        "partial apply for closure #1 in static HelperCommand.run(_:)"
+      ],
+      "launch_to_crash_ms": 1073.1
+    },
+    {
+      "symbols": [
+        "_dispatch_assert_queue_fail",
+        "dispatch_assert_queue$V2.cold.1",
+        "dispatch_assert_queue",
+        "_swift_task_checkIsolatedSwift",
+        "partial apply for closure #1 in static HelperCommand.run(_:)"
+      ],
+      "launch_to_crash_ms": 1087.8000000000002
+    },
+    {
+      "symbols": [
+        "_dispatch_assert_queue_fail",
+        "dispatch_assert_queue$V2.cold.1",
+        "dispatch_assert_queue",
+        "_swift_task_checkIsolatedSwift",
+        "partial apply for closure #1 in static HelperCommand.run(_:)"
+      ],
+      "launch_to_crash_ms": 1089.0
+    }
+  ],
+  "redaction": "Only relevant stack symbols and launch-to-crash durations retained"
+}

@@ -1,0 +1,16 @@
+{
+  "provenance": "Independent review measurements supplied in the implementation brief; not rerun by this worker",
+  "level": "real",
+  "samples": 200,
+  "endpoints": "AppleTruth native save to SSE observer visibility",
+  "gateway_ms": {
+    "p50": 1131.6,
+    "p95": 1821.3,
+    "max": 1918.3
+  },
+  "replica_ms": {
+    "p50": 1184.9,
+    "p95": 1871.6,
+    "max": 1954.7
+  }
+}

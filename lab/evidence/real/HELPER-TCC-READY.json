@@ -1,10 +1,10 @@
 {
-  "run_id": "run_01M5476R91J8GY8M780SFKFQDZ",
+  "run_id": "run_01M5497ZBCVMFZK1ER12HQFXH3",
   "scenario": "HELPER-TCC-READY",
   "level": "real",
   "passed": true,
-  "git_sha": "a69f037983b0a59cd7104a3b92671f10e3ca12da",
-  "at": "2026-10-17T06:01:23.489328Z",
+  "git_sha": "55459afed108b6e256483252441c659931a50056",
+  "at": "2026-10-17T06:37:00.652308Z",
   "assertions": [
     {
       "name": "reminders_ready",
@@ -33,7 +33,7 @@
       "passed": true
     },
     {
-      "name": "real_capture_after_rebuild",
+      "name": "real_capture_from_immutable_world",
       "passed": true
     },
     {

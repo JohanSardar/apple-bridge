@@ -1,23 +1,45 @@
 {
-  "run_id": "run_01M546REYZCTMAEZ3A6E851NEX",
-  "status": "unverified",
+  "run_id": "run_01M5499JFWKX9F9QZ9H45NF1Y9",
   "scenario": "REM-CREATE-EXTERNAL",
   "level": "real",
-  "passed": false,
-  "git_sha": "252ddfa13666204ef251de41657a49d9c580b9ff",
-  "at": "2026-10-17T05:53:35.199342Z",
+  "passed": true,
+  "git_sha": "55459afed108b6e256483252441c659931a50056",
+  "at": "2026-10-17T06:37:53.020076Z",
   "assertions": [
     {
       "name": "reminders_ready",
       "passed": true
     },
     {
-      "name": "independent_truth",
-      "passed": false,
-      "detail": "Grant AppleTruth.app Reminders full access; no fixture changes were made"
+      "name": "replica_visible_under_one_second",
+      "passed": true
+    },
+    {
+      "name": "independent_appletruth",
+      "passed": true
+    },
+    {
+      "name": "replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak",
+      "passed": true
     }
   ],
-  "latency": {},
+  "latency": {
+    "effect_done→replica_visible:replica0": {
+      "samples": 1,
+      "p50_ms": 344.354625,
+      "p95_ms": 344.354625,
+      "max_ms": 344.354625,
+      "timeouts": 0
+    }
+  },
   "hosts": [
     "air"
   ]
