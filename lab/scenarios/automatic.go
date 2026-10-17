@@ -10,6 +10,11 @@ import (
 )
 
 func automaticHealthyChecks(ctx context.Context, w *world.World, evidence *Evidence, add func(string, bool)) bool {
+	drained := w.ControlAction("/flush", struct{}{}) == nil
+	add("automatic_recovery_capture_drained", drained)
+	if !drained {
+		return false
+	}
 	endpoints := append([]world.Endpoint{w.Gateway}, w.Replicas...)
 	observers := []*watcher{}
 	scoped := []*watcher{}
