@@ -1,0 +1,7 @@
+id: CORE-KILL-GATEWAY-CAPTURE
+feature: core.replication
+levels: [sim]
+given: [{world: {replicas: 1}}, {seed: {count: 4}}]
+when: [{robustness: {case: kill-gateway-capture}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

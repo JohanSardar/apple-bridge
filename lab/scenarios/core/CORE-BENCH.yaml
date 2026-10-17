@@ -1,0 +1,7 @@
+id: CORE-BENCH
+feature: core.bench
+levels: [sim]
+given: [{world: {replicas: 1}}, {seed: {count: 4}}]
+when: [{robustness: {case: bench}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

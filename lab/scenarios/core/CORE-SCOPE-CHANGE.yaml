@@ -1,0 +1,7 @@
+id: CORE-SCOPE-CHANGE
+feature: core.trust
+levels: [sim]
+given: [{world: {replicas: 1}}, {seed: {count: 4}}]
+when: [{robustness: {case: scope-change}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

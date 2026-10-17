@@ -1,0 +1,7 @@
+id: CORE-SNAPSHOT-UNDER-LOAD
+feature: core.replication
+levels: [sim]
+given: [{world: {replicas: 1}}, {seed: {count: 4}}]
+when: [{robustness: {case: snapshot-under-load}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

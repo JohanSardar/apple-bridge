@@ -1,0 +1,7 @@
+id: CORE-GAP-REJECT
+feature: core.replication
+levels: [sim]
+given: [{world: {replicas: 1}}, {seed: {count: 4}}]
+when: [{robustness: {case: gap-reject}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

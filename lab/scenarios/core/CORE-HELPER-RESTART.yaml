@@ -1,0 +1,7 @@
+id: CORE-HELPER-RESTART
+feature: core.recovery
+levels: [sim]
+given: [{world: {replicas: 1}}, {seed: {count: 4}}]
+when: [{robustness: {case: helper-restart}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

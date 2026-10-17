@@ -1,0 +1,7 @@
+id: CORE-SLOW-CONSUMER
+feature: core.replication
+levels: [sim]
+given: [{world: {replicas: 1}}, {seed: {count: 4}}]
+when: [{robustness: {case: slow-consumer}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

@@ -1,0 +1,7 @@
+id: CORE-CRED-LIFECYCLE
+feature: core.trust
+levels: [real, replica]
+given: [{world: {replicas: 1}}, {seed: {count: 4}}]
+when: [{robustness: {case: cred-lifecycle}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

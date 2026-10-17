@@ -1,0 +1,7 @@
+id: CORE-RETENTION-RACE
+feature: core.replication
+levels: [sim]
+given: [{world: {replicas: 1}}, {seed: {count: 4}}]
+when: [{robustness: {case: retention-race}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

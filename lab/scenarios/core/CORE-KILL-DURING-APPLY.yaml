@@ -1,0 +1,7 @@
+id: CORE-KILL-DURING-APPLY
+feature: core.replication
+levels: [sim]
+given: [{world: {replicas: 1}}, {seed: {count: 4}}]
+when: [{robustness: {case: kill-during-apply}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]
