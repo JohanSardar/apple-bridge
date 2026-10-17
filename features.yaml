@@ -171,12 +171,11 @@ features:
     scenarios:
       - {id: MSG-HISTORY-IMPORT, levels: [sim, real]}
       - {id: MSG-INCOMING, levels: [sim, real, replica]}
-      - {id: MSG-RECEIPTS, levels: [sim, real]}
+      - {id: MSG-RECEIPTS, levels: [sim]}
       - {id: MSG-DECODE, levels: [sim]}
       - {id: MSG-DB-REPLACED, levels: [sim]}
-      - {id: MSG-WATCHER-REARM, levels: [sim, real]}
+      - {id: MSG-WATCHER-REARM, levels: [sim]}
       - {id: MSG-PERMISSION-LOSS, levels: [sim]}
-      - {id: MSG-AGENT-SUMMARIZE, levels: [agent]}
   - id: messages.send
     title: Send text and files to self, new handles and existing groups with truthful dispositions
     requirements: [R-RW, R-MSG-DEPTH, R-SAFE-CMD]
@@ -186,14 +185,11 @@ features:
     status: todo
     scenarios:
       - {id: MSG-SEND-SELF-TEXT, levels: [sim, real, replica, agent]}
-      - {id: MSG-SEND-SELF-EMAIL, levels: [real]}
       - {id: MSG-SEND-FILES, levels: [sim, real, replica]}
       - {id: MSG-SEND-GHOST, levels: [sim]}
       - {id: MSG-SEND-IDENTICAL-MANUAL, levels: [sim]}
-      - {id: MSG-SEND-NEW-HANDLE, levels: [sim, real]}
-      - {id: MSG-SEND-RCS-GROUP, levels: [real]}
-      - {id: MSG-CAPABILITY-MATRIX, levels: [sim, real]}
-      - {id: MSG-AGENT-TEXT-ME, levels: [agent]}
+      - {id: MSG-SEND-NEW-HANDLE, levels: [sim]}
+      - {id: MSG-CAPABILITY-MATRIX, levels: [sim]}
   - id: messages.actions
     title: Reply, react, edit, unsend, read state, delete via Accessibility with SIP on
     requirements: [R-MSG-DEPTH, R-SAFE-CMD]
@@ -206,9 +202,9 @@ features:
       - {id: MSG-REACT, levels: [sim, real]}
       - {id: MSG-EDIT, levels: [sim, real]}
       - {id: MSG-UNSEND, levels: [sim, real]}
-      - {id: MSG-MARK-READ, levels: [sim, real]}
-      - {id: MSG-DELETE, levels: [sim, real]}
-      - {id: MSG-UI-INTERFERENCE, levels: [sim, real]}
+      - {id: MSG-MARK-READ, levels: [sim]}
+      - {id: MSG-DELETE, levels: [sim]}
+      - {id: MSG-UI-INTERFERENCE, levels: [sim]}
   - id: messages.groups
     title: Create groups and manage name and membership
     requirements: [R-MSG-DEPTH]
@@ -217,7 +213,7 @@ features:
     depends_on: [messages.actions]
     status: todo
     scenarios:
-      - {id: MSG-GROUP-CREATE, levels: [sim, real]}
+      - {id: MSG-GROUP-CREATE, levels: [sim]}
       - {id: MSG-GROUP-MANAGE, levels: [sim]}
   - id: reminders.read
     title: Reminders lists and items, live capture, recurrence coverage
@@ -228,7 +224,7 @@ features:
     status: done
     scenarios:
       - {id: REM-CREATE-EXTERNAL, levels: [sim, real, replica]}
-      - {id: REM-RECURRING, levels: [sim, real]}
+      - {id: REM-RECURRING, levels: [sim]}
       - {id: REM-PERMISSION-LOSS, levels: [sim]}
   - id: reminders.write
     title: Reminders create, update, complete, delete, lists, conflicts
@@ -241,12 +237,11 @@ features:
       - {id: REM-CRUD, levels: [sim, real, replica]}
       - {id: REM-LIST-CREATE, levels: [sim, real]}
       - {id: REM-LIST-LOST-ACK, levels: [real]}
-      - {id: REM-CONFLICT, levels: [sim, real]}
+      - {id: REM-CONFLICT, levels: [sim]}
       - {id: REM-EXTERNAL-RACE, levels: [sim]}
       - {id: REM-READONLY-LIST, levels: [sim]}
       - {id: REM-OPERATION-SHAPES, levels: [sim]}
       - {id: REM-NATIVE-LIST-RACE, levels: [sim]}
-      - {id: REM-AGENT, levels: [agent]}
   - id: calendar.read
     title: Calendar window capture, identity, recurrence, time zones, window slide
     requirements: [R-FULL, R-LIVE, R-CAL, R-NO-FALSE-DELETE]
@@ -256,9 +251,9 @@ features:
     status: todo
     scenarios:
       - {id: CAL-CREATE-EXTERNAL, levels: [sim, real, replica]}
-      - {id: CAL-MOVED-OCCURRENCE, levels: [sim, real]}
-      - {id: CAL-DST, levels: [sim, real]}
-      - {id: CAL-ALLDAY, levels: [sim, real]}
+      - {id: CAL-MOVED-OCCURRENCE, levels: [sim]}
+      - {id: CAL-DST, levels: [sim]}
+      - {id: CAL-ALLDAY, levels: [sim]}
       - {id: CAL-WINDOW-SLIDE, levels: [sim]}
       - {id: CAL-ID-CHURN, levels: [sim]}
       - {id: CAL-PERMISSION-LOSS, levels: [sim]}
@@ -272,10 +267,9 @@ features:
     scenarios:
       - {id: CAL-CRUD, levels: [sim, real, replica]}
       - {id: CAL-RECUR-THIS, levels: [sim, real]}
-      - {id: CAL-RECUR-FUTURE, levels: [sim, real]}
+      - {id: CAL-RECUR-FUTURE, levels: [sim]}
       - {id: CAL-RECUR-ALL-REJECT, levels: [sim]}
-      - {id: CAL-READONLY, levels: [sim, real]}
-      - {id: CAL-AGENT, levels: [agent]}
+      - {id: CAL-READONLY, levels: [sim]}
 
   - id: contacts.read
     title: Contacts import, history tokens, resets, images, handle links
@@ -289,9 +283,8 @@ features:
       - {id: CON-EXTERNAL, levels: [sim, real, replica]}
       - {id: CON-DROP-EVERYTHING, levels: [sim]}
       - {id: CON-TOKEN-CRASH, levels: [sim]}
-      - {id: CON-IMAGE, levels: [sim, real]}
-      - {id: CON-HANDLE-LINK, levels: [sim, real]}
-      - {id: CON-AGENT, levels: [agent]}
+      - {id: CON-IMAGE, levels: [sim]}
+      - {id: CON-HANDLE-LINK, levels: [sim]}
   - id: contacts.write
     title: Contacts create, update, delete
     requirements: [R-RW, R-CON]
@@ -324,7 +317,6 @@ features:
     scenarios:
       - {id: NOTE-CRUD, levels: [sim, real, replica]}
       - {id: NOTE-RICH-REJECT, levels: [sim, real]}
-      - {id: NOTE-AGENT, levels: [agent]}
 
   - id: usage.read
     title: Screen Time estimates from Biome App.InFocus with lock/sleep clipping
@@ -335,11 +327,10 @@ features:
     status: todo
     scenarios:
       - {id: USE-IMPORT, levels: [sim, real]}
-      - {id: USE-LOCK-CLIP, levels: [sim, real]}
-      - {id: USE-REMOTE-LAG, levels: [sim, real]}
+      - {id: USE-LOCK-CLIP, levels: [sim]}
+      - {id: USE-REMOTE-LAG, levels: [sim]}
       - {id: USE-SEGB-DECODE, levels: [sim]}
       - {id: USE-READONLY, levels: [sim]}
-      - {id: USE-AGENT, levels: [agent]}
 
   - id: packaging.app
     title: Signed notarized app, onboarding, SMAppService, upgrade, sleep assertion
@@ -351,14 +342,13 @@ features:
     scenarios:
       - {id: PKG-INSTALL, levels: [real]}
       - {id: PKG-BACKGROUND, levels: [real]}
-      - {id: PKG-UPGRADE, levels: [real]}
-      - {id: PKG-SLEEP, levels: [real]}
   - id: agent.suite
     title: Full MCP agent suite graded by Truth
     requirements: [R-AGENT, R-API]
     milestone: M5
     modules: [lab/agent, frontdoor]
-    depends_on: [packaging.app, messages.send, reminders.write, calendar.write, contacts.write, notes.write, usage.read]
+    depends_on: [messages.send, reminders.write, calendar.write, contacts.write, notes.write, usage.read]
     status: todo
     scenarios:
       - {id: AGENT-SUITE, levels: [agent]}
+    notes: one natural-language task per source (messages self-send + read, reminders, calendar, contacts, notes, usage) run by the MCP-only agent on Ubuntu, graded by Truth

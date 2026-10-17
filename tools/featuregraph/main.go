@@ -25,6 +25,7 @@ type limit struct {
 }
 
 type feature struct {
+	Notes        string        `yaml:"notes"`
 	Limits       []limit       `yaml:"limits"`
 	ID           string        `yaml:"id"`
 	Title        string        `yaml:"title"`
