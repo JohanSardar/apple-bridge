@@ -56,11 +56,12 @@ public final class CalendarSource: Source {
         if nativeRules == nil && event.isDetached {
             let external = event.calendarItemExternalIdentifier ?? event.calendarItemIdentifier
             var candidates = gate.store.calendarItems(withExternalIdentifier: external).compactMap { $0 as? EKEvent }
+            if let master = gate.store.calendarItem(withIdentifier: event.calendarItemIdentifier) as? EKEvent { candidates.append(master) }
             let anchor = event.occurrenceDate ?? event.startDate!
             let interval = DateInterval(start: anchor.addingTimeInterval(-180 * 86400), end: anchor.addingTimeInterval(180 * 86400))
             candidates += (try? events(interval)) ?? []
             nativeRules = candidates.first(where: {
-                $0.calendar.calendarIdentifier == event.calendar.calendarIdentifier && $0.calendar.source.sourceIdentifier == event.calendar.source.sourceIdentifier && ($0.calendarItemExternalIdentifier ?? $0.calendarItemIdentifier) == external && $0.hasRecurrenceRules
+                $0.calendar.calendarIdentifier == event.calendar.calendarIdentifier && $0.calendar.source.sourceIdentifier == event.calendar.source.sourceIdentifier && (($0.calendarItemExternalIdentifier ?? $0.calendarItemIdentifier) == external || $0.calendarItemIdentifier == event.calendarItemIdentifier) && $0.hasRecurrenceRules
             })?.recurrenceRules
         }
         fields["recurrence"] = nativeRules.map { rules in .array(rules.map { rule in
