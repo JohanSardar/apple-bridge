@@ -1,11 +1,35 @@
 {
-  "run_id": "agent_01M55WJK4XYEEQ2BAMQ9FRF0S9",
+  "run_id": "agent_01M55Y7443HV2YJQNYS5YVJ341",
   "scenario": "AGENT-SUITE",
   "level": "agent",
-  "git_sha": "5b7b73ee9e3d51d0752bfd74ab5222910b87af43",
-  "at": "2026-10-17T21:34:05.981126Z",
+  "git_sha": "a17ad88d56bb34dd79aed2bb209a7039aecd0b93",
+  "at": "2026-10-17T22:02:47.299583Z",
   "passed": true,
   "tasks": [
+    {
+      "task_id": "notes-packing-list",
+      "passed": true,
+      "attempts": [
+        {
+          "attempt": 1,
+          "passed": true,
+          "truth_check": true,
+          "replica_check": true,
+          "mcp_only": true,
+          "cleanup": true,
+          "duration_ms": 68871
+        },
+        {
+          "attempt": 2,
+          "passed": true,
+          "truth_check": true,
+          "replica_check": true,
+          "mcp_only": true,
+          "cleanup": true,
+          "duration_ms": 62447
+        }
+      ]
+    },
     {
       "task_id": "calendar-appointment",
       "passed": true,
@@ -17,26 +41,16 @@
           "replica_check": true,
           "mcp_only": true,
           "cleanup": true,
-          "duration_ms": 68726
+          "duration_ms": 62321
         },
         {
           "attempt": 2,
-          "passed": false,
-          "truth_check": false,
-          "replica_check": false,
-          "mcp_only": false,
-          "cleanup": true,
-          "duration_ms": 63167,
-          "failure": "truth_unique_record"
-        },
-        {
-          "attempt": 3,
           "passed": true,
           "truth_check": true,
           "replica_check": true,
           "mcp_only": true,
           "cleanup": true,
-          "duration_ms": 74472
+          "duration_ms": 63989
         }
       ]
     },
@@ -51,7 +65,7 @@
           "replica_check": true,
           "mcp_only": true,
           "cleanup": true,
-          "duration_ms": 77203
+          "duration_ms": 65591
         },
         {
           "attempt": 2,
@@ -60,7 +74,7 @@
           "replica_check": true,
           "mcp_only": true,
           "cleanup": true,
-          "duration_ms": 75874
+          "duration_ms": 65312
         }
       ]
     },
@@ -70,14 +84,15 @@
       "attempts": [
         {
           "safety_check": true,
+          "self_sends": 1,
           "cleanup_deferred": true,
           "attempt": 1,
-          "passed": false,
-          "truth_check": false,
-          "replica_check": false,
+          "passed": true,
+          "truth_check": true,
+          "replica_check": true,
           "mcp_only": true,
           "cleanup": false,
-          "duration_ms": 134260
+          "duration_ms": 72280
         },
         {
           "safety_check": true,
@@ -89,19 +104,7 @@
           "replica_check": true,
           "mcp_only": true,
           "cleanup": false,
-          "duration_ms": 78098
-        },
-        {
-          "safety_check": true,
-          "self_sends": 1,
-          "cleanup_deferred": true,
-          "attempt": 3,
-          "passed": true,
-          "truth_check": true,
-          "replica_check": true,
-          "mcp_only": true,
-          "cleanup": false,
-          "duration_ms": 82526
+          "duration_ms": 67741
         }
       ]
     },
@@ -117,7 +120,7 @@
           "replica_check": true,
           "mcp_only": true,
           "cleanup": true,
-          "duration_ms": 70969
+          "duration_ms": 56337
         },
         {
           "safety_check": true,
@@ -127,7 +130,7 @@
           "replica_check": true,
           "mcp_only": true,
           "cleanup": true,
-          "duration_ms": 69947
+          "duration_ms": 57328
         }
       ]
     },
@@ -142,7 +145,7 @@
           "replica_check": true,
           "mcp_only": true,
           "cleanup": true,
-          "duration_ms": 60223
+          "duration_ms": 60404
         },
         {
           "attempt": 2,
@@ -151,7 +154,7 @@
           "replica_check": true,
           "mcp_only": true,
           "cleanup": true,
-          "duration_ms": 71808
+          "duration_ms": 61028
         }
       ]
     },
@@ -166,7 +169,7 @@
           "replica_check": true,
           "mcp_only": true,
           "cleanup": true,
-          "duration_ms": 84357
+          "duration_ms": 57357
         },
         {
           "attempt": 2,
@@ -175,7 +178,7 @@
           "replica_check": true,
           "mcp_only": true,
           "cleanup": true,
-          "duration_ms": 75436
+          "duration_ms": 58272
         }
       ]
     }

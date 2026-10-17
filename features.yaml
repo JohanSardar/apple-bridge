@@ -384,7 +384,7 @@ features:
     milestone: M5
     modules: [lab/agent, frontdoor]
     depends_on: [messages.send, reminders.write, calendar.write, contacts.write, notes.write, usage.read]
-    status: todo
+    status: done
     scenarios:
       - {id: AGENT-SUITE, levels: [agent]}
     notes: one natural-language task per source (messages self-send + read, reminders, calendar, contacts, notes, usage) run by the MCP-only agent on Ubuntu, graded by Truth
