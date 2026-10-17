@@ -39,22 +39,22 @@ type captureRequest struct {
 	Close       bool
 }
 type fakeApple struct {
-	messages          messageState
-	liveChanges       chan captureRequest
-	permissionMissing bool
-	blobs             map[string][]byte
-	blobState         string
-	blobDelay         time.Duration
-	generation        string
-	recovered         []contracts.IPCFrame
-	home              string
-	effects           map[string]int
-	evidence          map[string]contracts.IPCFrame
-	tickets           map[string]ticket
-	fault             string
-	pause             time.Duration
-	blobDrops         int
-	blobBusy          int
+	messages                     messageState
+	liveChanges                  chan captureRequest
+	permissionMissing            bool
+	blobs                        map[string][]byte
+	blobState                    string
+	blobDelay                    time.Duration
+	generation                   string
+	recovered                    []contracts.IPCFrame
+	home                         string
+	effects                      map[string]int
+	evidence                     map[string]contracts.IPCFrame
+	tickets                      map[string]ticket
+	fault                        string
+	pause                        time.Duration
+	blobDrops                    int
+	blobBusy                     int
 	blobRefreshBeforeUnavailable bool
 
 	completed map[contracts.Source]map[uint64]bool

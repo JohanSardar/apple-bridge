@@ -44,6 +44,31 @@ func blobBytes(ctx context.Context, e world.Endpoint, d, id string) (int, []byte
 }
 func blobJourney(ctx context.Context, w *world.World, id string, evidence *Evidence, add func(string, bool)) bool {
 	check := func(name string, ok bool) bool { add(name, ok); return ok }
+	if id == "CORE-BLOB-REFERENCE-INDEX" {
+		client := *w.Control
+		client.Timeout = 2 * time.Minute
+		req, err := http.NewRequestWithContext(ctx, "POST", "http://sim/blob-history", nil)
+		if !check("history_request", err == nil) {
+			return false
+		}
+		response, err := client.Do(req)
+		if !check("history_committed", err == nil) {
+			return false
+		}
+		defer response.Body.Close()
+		var result struct {
+			CommitMS      float64 `json:"commit_ms"`
+			RowsPerSecond float64 `json:"rows_per_second"`
+		}
+		err = json.NewDecoder(response.Body).Decode(&result)
+		evidence.Latency["history_10000_commit"] = stats([]float64{result.CommitMS}, 0)
+		evidence.Latency["history_rows_per_second"] = stats([]float64{result.RowsPerSecond}, 0)
+		if !check("history_throughput_at_least_2000_rows_per_second", err == nil && response.StatusCode == 200 && result.RowsPerSecond >= 2000) {
+			return false
+		}
+		records, err := w.Records(w.Gateway)
+		return check("history_10000_durable_records", err == nil && len(records) == 10001)
+	}
 	size := 4 << 20
 	fixture := map[string]any{"size": size}
 	if id == "CORE-BLOB-GATEWAY-RETRY" {

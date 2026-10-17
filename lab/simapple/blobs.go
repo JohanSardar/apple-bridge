@@ -23,6 +23,31 @@ func (f *fakeApple) blobHandles() map[string]string {
 	return out
 }
 func (f *fakeApple) blobRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("POST /blob-history", func(w http.ResponseWriter, r *http.Request) {
+		now := time.Now().UTC()
+		observations := make([]contracts.Observation, 10000)
+		f.mu.Lock()
+		for i := range observations {
+			key := fmt.Sprintf("blob-history-%05d", i)
+			data, _ := json.Marshal(map[string]any{"title": "[ab-test] " + key, "completed": false, "list_id": map[string]any{"$ref": map[string]string{"collection": "reminders.list", "native_key": "list"}}})
+			observations[i] = contracts.Observation{Kind: "upsert", Collection: "reminders.reminder", NativeKey: key, ObservedAt: now, Data: data}
+			f.records[key] = observations[i]
+		}
+		err := f.saveLocked()
+		f.mu.Unlock()
+		if err != nil {
+			http.Error(w, "persist", 500)
+			return
+		}
+		start := time.Now()
+		if err = f.enqueue(r.Context(), contracts.Capture{Source: contracts.Reminders, Observations: observations}, true); err != nil {
+			http.Error(w, "capture", 503)
+			return
+		}
+		elapsed := time.Since(start)
+		json.NewEncoder(w).Encode(map[string]float64{"commit_ms": float64(elapsed) / float64(time.Millisecond), "rows_per_second": 10000 / elapsed.Seconds()})
+	})
+
 	mux.HandleFunc("POST /blob-fixture", func(w http.ResponseWriter, r *http.Request) {
 		var a struct {
 			RefreshBeforeUnavailable bool   `json:"refresh_before_unavailable"`

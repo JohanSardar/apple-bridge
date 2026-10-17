@@ -1,0 +1,6 @@
+id: CORE-BLOB-REFERENCE-INDEX
+feature: core.blobs
+levels: [sim]
+given: [{world: {replicas: 1}}, {seed: {count: 0}}]
+when: [{blobs: {case: reference-index}}]
+then: [{converge: {}}]
