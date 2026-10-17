@@ -1,0 +1,6 @@
+id: messages-self-send
+source: messages
+kind: send
+requires: [messages.send]
+scope: messages:write
+prompt: 'Send exactly "{{text}}" once to my verified self-chat {{chat}}.'

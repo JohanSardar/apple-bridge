@@ -18,6 +18,7 @@ import (
 )
 
 type Task struct {
+	Kind     string   `yaml:"kind"`
 	ID       string   `yaml:"id"`
 	Source   string   `yaml:"source"`
 	Requires []string `yaml:"requires"`
@@ -25,14 +26,17 @@ type Task struct {
 	Prompt   string   `yaml:"prompt"`
 }
 type Attempt struct {
-	Number   int    `json:"attempt"`
-	Passed   bool   `json:"passed"`
-	Truth    bool   `json:"truth_check"`
-	Replica  bool   `json:"replica_check"`
-	MCPOnly  bool   `json:"mcp_only"`
-	Cleanup  bool   `json:"cleanup"`
-	Duration int64  `json:"duration_ms"`
-	Failure  string `json:"failure,omitempty"`
+	Safety          bool   `json:"safety_check,omitempty"`
+	Sends           int    `json:"self_sends,omitempty"`
+	CleanupDeferred bool   `json:"cleanup_deferred,omitempty"`
+	Number          int    `json:"attempt"`
+	Passed          bool   `json:"passed"`
+	Truth           bool   `json:"truth_check"`
+	Replica         bool   `json:"replica_check"`
+	MCPOnly         bool   `json:"mcp_only"`
+	Cleanup         bool   `json:"cleanup"`
+	Duration        int64  `json:"duration_ms"`
+	Failure         string `json:"failure,omitempty"`
 }
 type TaskResult struct {
 	ID       string    `json:"task_id"`
@@ -120,7 +124,7 @@ func Suite(ctx context.Context, paths []string, asJSON bool) error {
 			if attempt.Passed {
 				successes++
 			}
-			if ctx.Err() != nil {
+			if ctx.Err() != nil || successes >= 2 || len(result.Attempts)-successes >= 2 {
 				break
 			}
 		}
@@ -188,7 +192,7 @@ func loadTasks() ([]Task, error) {
 			return nil, fmt.Errorf("invalid agent task %s", file)
 		}
 		seen[task.ID] = true
-		if !slices.Contains([]string{"reminders", "contacts", "calendar"}, task.Source) || task.Scope != task.Source+":read" && task.Scope != task.Source+":write" {
+		if !slices.Contains([]string{"reminders", "contacts", "calendar", "messages"}, task.Source) || task.Scope != task.Source+":read" && task.Scope != task.Source+":write" {
 			return nil, fmt.Errorf("unsupported agent task %s", file)
 		}
 		ready := true
@@ -199,6 +203,44 @@ func loadTasks() ([]Task, error) {
 			tasks = append(tasks, task)
 		}
 	}
+	writers := 0
+	for _, task := range tasks {
+		if task.Source == "messages" {
+			if task.Kind != "send" && task.Kind != "read" || task.Kind == "send" && task.Scope != "messages:write" || task.Kind == "read" && task.Scope != "messages:read" {
+				return nil, fmt.Errorf("invalid Messages task")
+			}
+			if task.Kind == "send" {
+				writers++
+			}
+		}
+	}
+	if writers > 1 {
+		return nil, fmt.Errorf("at most one Messages send task is allowed per suite")
+	}
+	for source, requirement := range map[string]string{"reminders": "reminders.write", "contacts": "contacts.read", "calendar": "calendar.write", "messages": "messages.send", "notes": "notes.write", "usage": "usage.read"} {
+		if !done[source+".read"] && !done[source+".write"] && !done[requirement] {
+			continue
+		}
+		present := false
+		for _, task := range tasks {
+			present = present || task.Source == source
+		}
+		if !present {
+			return nil, fmt.Errorf("done feature %s has no agent task", requirement)
+		}
+	}
+	if done["messages.send"] && writers != 1 {
+		return nil, fmt.Errorf("done Messages send feature has no send task")
+	}
+	if done["messages.read"] {
+		present := false
+		for _, task := range tasks {
+			present = present || task.Source == "messages" && task.Kind == "read"
+		}
+		if !present {
+			return nil, fmt.Errorf("done Messages read feature has no read task")
+		}
+	}
 	if len(tasks) == 0 {
 		return nil, fmt.Errorf("no tasks for done sources")
 	}
@@ -206,6 +248,9 @@ func loadTasks() ([]Task, error) {
 }
 
 func (r AgentRunner) run(ctx context.Context, task Task, number int) (attempt Attempt) {
+	if task.Source == "messages" {
+		return r.runMessages(ctx, task, number)
+	}
 	start := time.Now()
 	attempt.Number = number
 	defer func() { attempt.Duration = time.Since(start).Milliseconds() }()
@@ -286,25 +331,12 @@ func (r AgentRunner) run(ctx context.Context, task Task, number int) (attempt At
 		attempt.Failure = "fixture_replication"
 		return
 	}
-	token, err := w.ScopedToken(endpoint, task.Scope)
-	if err != nil {
-		attempt.Failure = "scoped_token"
-		return
-	}
 	now := time.Now()
 	tomorrow := now.AddDate(0, 0, 1)
 	due := time.Date(tomorrow.Year(), tomorrow.Month(), tomorrow.Day(), 9, 0, 0, 0, now.Location())
 	prompt := "Use only the apple_bridge MCP tools. Never use shell, file, browser, or other tools. Only modify data bearing this test tag: " + tag + ". Today is " + now.Format(time.RFC3339) + " in " + now.Location().String() + ".\n" + strings.ReplaceAll(task.Prompt, "{{tag}}", tag)
-	directory := filepath.Join(w.Dir, "agent")
-	request, _ := json.Marshal(map[string]any{"directory": directory, "url": "http://" + endpoint.Host + "/mcp", "token": token, "prompt": prompt})
-	command := exec.CommandContext(ctx, "ssh", "ubuntu", "python3 -c "+shellQuote(string(r.Driver)))
-	command.Stdin = bytes.NewReader(request)
-	output, err := command.Output()
-	private := filepath.Join(r.Private, fmt.Sprintf("%s-%d", task.ID, number))
-	os.MkdirAll(private, 0700)
-	exec.Command("scp", "-q", "ubuntu:"+directory+"/transcript.jsonl", "ubuntu:"+directory+"/stderr.log", private+"/").Run()
-	var result outcome
-	if err != nil || json.Unmarshal(output, &result) != nil {
+	result, err := r.execute(ctx, w, task, number, prompt, nil)
+	if err != nil {
 		attempt.Failure = "codex_execution"
 		return
 	}
@@ -382,4 +414,25 @@ func sameTime(value any, expected time.Time) bool {
 	}
 	parsed, err := time.Parse(time.RFC3339Nano, text)
 	return err == nil && parsed.Equal(expected)
+}
+
+func (r AgentRunner) execute(ctx context.Context, w *world.World, task Task, number int, prompt string, enabled []string) (result outcome, err error) {
+	endpoint := w.Replicas[0]
+	token, err := w.ScopedToken(endpoint, task.Scope)
+	if err != nil {
+		return result, err
+	}
+	directory := filepath.Join(w.Dir, "agent")
+	request, _ := json.Marshal(map[string]any{"directory": directory, "url": "http://" + endpoint.Host + "/mcp", "token": token, "prompt": prompt, "tools": enabled})
+	command := exec.CommandContext(ctx, "ssh", "ubuntu", "python3 -c "+shellQuote(string(r.Driver)))
+	command.Stdin = bytes.NewReader(request)
+	output, err := command.Output()
+	private := filepath.Join(r.Private, fmt.Sprintf("%s-%d", task.ID, number))
+	os.MkdirAll(private, 0700)
+	exec.Command("scp", "-q", "ubuntu:"+directory+"/transcript.jsonl", "ubuntu:"+directory+"/stderr.log", private+"/").Run()
+	if err != nil {
+		return result, err
+	}
+	err = json.Unmarshal(output, &result)
+	return
 }

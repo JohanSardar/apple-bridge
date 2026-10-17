@@ -7,7 +7,9 @@ public actor MessagesCommands {
     public static let operations = ["send", "reply", "react", "edit", "unsend", "mark_read", "mark_unread", "delete_message", "delete_chat", "create_group", "rename_group", "add_member", "remove_member", "leave_group"].map { "messages." + $0 }
     private let path: String
     private let labCommands: Bool
-    public init(path: String?, labCommands: Bool) {
+    private let agentPolicy: URL?
+    public init(path: String?, labCommands: Bool, agentPolicy: URL? = nil) {
+        self.agentPolicy = agentPolicy
         self.path = path ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Messages/chat.db").path
         self.labCommands = labCommands
     }
@@ -59,8 +61,14 @@ public actor MessagesCommands {
         guard handles.count == 1, handles.allSatisfy({ selfHandles.contains(MessagesProbes.normalize($0)) }), args["service"].string == "iMessage" else { throw SourceFailure.unsupported }
         return .object(["kind": .string("imessage_buddy"), "handle": .string(handles[0]), "service": .string("iMessage")])
     }
+    private func validateAgentPolicy(_ action: JSON, route: JSON) throws {
+        guard let agentPolicy, FileManager.default.fileExists(atPath: agentPolicy.path) else { return }
+        let policy = try JSONDecoder().decode(JSON.self, from: Data(contentsOf: agentPolicy))
+        guard action["op"].string == "messages.send", route["kind"].string == "chat_id_raw", route["chat"].string == policy["chat_guid"].string, action["messages"]["text"].string == policy["text"].string, action["messages"]["files"].array.isEmpty, !FileManager.default.fileExists(atPath: agentPolicy.path + ".used") else { throw SourceFailure.invalid }
+    }
     public func prepare(_ command: JSON) async throws -> Prepared {
         let action = command["action"]
+        if let agentPolicy, FileManager.default.fileExists(atPath: agentPolicy.path), action["op"].string != "messages.send" { throw SourceFailure.invalid }
         if action["op"].string != "messages.send" {return try await prepareAccessibility(command)}
         let args = action["messages"]
         guard args["text"].string.isEmpty || tagged(args["text"].string), !args["text"].string.isEmpty || !args["files"].array.isEmpty else { throw SourceFailure.invalid }
@@ -70,6 +78,7 @@ public actor MessagesCommands {
         }
         let reader = try MessagesReader(path: path)
         let route = try verifyRoute(action, reader: reader)
+        try validateAgentPolicy(action, route: route)
         if !labCommands {
             let kinds = (args["text"].string.isEmpty ? [] : ["text"]) + (args["files"].array.isEmpty ? [] : ["attachment"])
             guard kinds.allSatisfy({proofs().contains(routeProof(route,kind:$0))}) else {throw SourceFailure.capabilityUnproven}
@@ -169,6 +178,10 @@ public actor MessagesCommands {
         let reader = try MessagesReader(path: path)
         let route = try verifyRoute(prepared.action, reader: reader)
         guard route == prepared.nativeState["destination"] else { throw SourceFailure.conflict }
+        try validateAgentPolicy(prepared.action, route: route)
+        if let agentPolicy, FileManager.default.fileExists(atPath: agentPolicy.path) {
+            try Data(prepared.nativeState["command_id"].string.utf8).write(to: URL(fileURLWithPath: agentPolicy.path + ".used"), options: .withoutOverwriting)
+        }
         let parts: [JSON]
         do {parts=try self.parts(prepared)}
         catch {

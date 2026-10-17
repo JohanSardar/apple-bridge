@@ -27,6 +27,8 @@ bearer_token_env_var = "APPLE_BRIDGE_AGENT_TOKEN"
 startup_timeout_sec = 30
 default_tools_approval_mode = "approve"
 ''' % json.dumps(request['url'])
+    if request.get('tools'):
+        config += 'enabled_tools = ' + json.dumps(request['tools']) + '\n'
     (home / 'config.toml').write_text(config)
     environment = dict(os.environ)
     environment['CODEX_HOME'] = str(home)

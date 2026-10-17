@@ -32,7 +32,7 @@ public actor Messages: Source {
     private var pendingBlobs: [String: URL] = [:]
     private var failedBlobs: Set<String> = []
     public init(path: String? = nil, diagnostics: URL? = nil, watcherEventsEnabled: Bool = true, labCommands: Bool = false) {
- commands = MessagesCommands(path:path, labCommands:labCommands)
+ commands = MessagesCommands(path:path, labCommands:labCommands, agentPolicy: diagnostics?.deletingLastPathComponent().appendingPathComponent("agent-message-policy.json"))
         self.watcherEventsEnabled = watcherEventsEnabled
         self.diagnostics = diagnostics
         self.path = path ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Messages/chat.db").path

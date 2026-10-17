@@ -1,0 +1,6 @@
+id: messages-self-read
+source: messages
+kind: read
+requires: [messages.read]
+scope: messages:read
+prompt: 'What is the text of the tagged test message with Bridge record ID {{record}} in my self-chat {{chat}}? Return only the text.'
