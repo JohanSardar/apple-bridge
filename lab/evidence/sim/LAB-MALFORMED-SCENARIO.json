@@ -1,15 +1,19 @@
 {
-  "run_id": "run_01M5472SMJ9HB8ZTSPB6JTJZ5V",
+  "run_id": "run_01M548C84PTCY94FHNMEK54FVK",
   "scenario": "LAB-MALFORMED-SCENARIO",
   "level": "sim",
   "passed": true,
-  "git_sha": "aa74a56cd506ee48d164ac61c28fc5ac6ff68ec9",
-  "at": "2026-10-17T05:59:13.810928Z",
+  "git_sha": "8facb0bd08afcd4f024cacbc09d39ddbf3855765",
+  "at": "2026-10-17T06:21:52.150303Z",
   "assertions": [
     {
       "name": "malformed_scenario_rejected",
       "passed": true,
       "detail": "lab/fixtures/scenarios/impossible.yaml: then[0].latency.p95_ms: expected int"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
     }
   ],
   "latency": {},

@@ -68,6 +68,7 @@ features:
     scenarios:
       - {id: CORE-HELPER-RESTART, levels: [sim]}
       - {id: CORE-RESTORE-EPOCH, levels: [sim]}
+      - {id: CORE-RESTORE-OLD-SCHEMA, levels: [sim]}
       - {id: CORE-DISK-FULL, levels: [sim]}
   - id: core.trust
     title: Pairing, tokens, one visibility policy, delegated identity, localhost defense, credential stores

@@ -1,11 +1,16 @@
 {
-  "run_id": "run_01M547CAMETGW9Z7W90WSS9WH6",
+  "run_id": "run_01M548DCQ6NB6N96A37Z78VF1A",
+  "network_path": "loopback",
   "scenario": "REM-NATIVE-LIST-RACE",
   "level": "sim",
   "passed": true,
-  "git_sha": "706c4c0c64285bd4fb18e9cc34c964cba32489f5",
-  "at": "2026-10-17T06:04:26.126214Z",
+  "git_sha": "8facb0bd08afcd4f024cacbc09d39ddbf3855765",
+  "at": "2026-10-17T06:22:29.606028Z",
   "assertions": [
+    {
+      "name": "feed_network_loopback",
+      "passed": true
+    },
     {
       "name": "replica_host_is_air",
       "passed": true
@@ -113,21 +118,25 @@
       "passed": false,
       "status": "unverified",
       "detail": "kill-during-apply check did not run"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
     }
   ],
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 26.859083,
-      "p95_ms": 26.859083,
-      "max_ms": 26.859083,
+      "p50_ms": 7.0325,
+      "p95_ms": 7.0325,
+      "max_ms": 7.0325,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 54.429667,
-      "p95_ms": 54.429667,
-      "max_ms": 54.429667,
+      "p50_ms": 10.40525,
+      "p95_ms": 10.40525,
+      "max_ms": 10.40525,
       "timeouts": 0
     }
   },

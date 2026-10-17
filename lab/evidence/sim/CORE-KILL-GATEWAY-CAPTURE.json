@@ -1,11 +1,11 @@
 {
-  "run_id": "run_01M546J4JBK63RP9031EC1RWTE",
+  "run_id": "run_01M5486WEDJKMJ7Z7H68FFEZ9A",
   "network_path": "loopback",
   "scenario": "CORE-KILL-GATEWAY-CAPTURE",
   "level": "sim",
   "passed": true,
-  "git_sha": "b3d5c06546d08d812f2d1c95f39505fafdda328d",
-  "at": "2026-10-17T05:50:07.947444Z",
+  "git_sha": "8facb0bd08afcd4f024cacbc09d39ddbf3855765",
+  "at": "2026-10-17T06:18:56.333922Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -70,21 +70,25 @@
     {
       "name": "no_false_deletion_in_observed_journal_changes",
       "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
     }
   ],
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 5.612375,
-      "p95_ms": 5.612375,
-      "max_ms": 5.612375,
+      "p50_ms": 16.665417,
+      "p95_ms": 16.665417,
+      "max_ms": 16.665417,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 9.644416,
-      "p95_ms": 9.644416,
-      "max_ms": 9.644416,
+      "p50_ms": 25.554459,
+      "p95_ms": 25.554459,
+      "max_ms": 25.554459,
       "timeouts": 0
     }
   },

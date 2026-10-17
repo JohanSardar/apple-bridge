@@ -1,11 +1,16 @@
 {
-  "run_id": "run_01M5476WYT10CPW3BAHYT4H16M",
+  "run_id": "run_01M54852SZRSPGK7AKCWVB6C5G",
+  "network_path": "loopback",
   "scenario": "CORE-CMD-CRASH-AMBIGUOUS",
   "level": "sim",
   "passed": true,
-  "git_sha": "c9aa42147ac4f6337b58fd04e7b9db83f17128e6",
-  "at": "2026-10-17T06:01:28.282295Z",
+  "git_sha": "8facb0bd08afcd4f024cacbc09d39ddbf3855765",
+  "at": "2026-10-17T06:17:57.311572Z",
   "assertions": [
+    {
+      "name": "feed_network_loopback",
+      "passed": true
+    },
     {
       "name": "replica_host_is_air",
       "passed": true
@@ -169,28 +174,32 @@
       "passed": false,
       "status": "unverified",
       "detail": "kill-during-apply check did not run"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
     }
   ],
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 19.624708,
-      "p95_ms": 19.624708,
-      "max_ms": 19.624708,
+      "p50_ms": 7.773042,
+      "p95_ms": 7.773042,
+      "max_ms": 7.773042,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 50.030541,
-      "p95_ms": 50.030541,
-      "max_ms": 50.030541,
+      "p50_ms": 12.236833,
+      "p95_ms": 12.236833,
+      "max_ms": 12.236833,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica1": {
       "samples": 1,
-      "p50_ms": 51.725708,
-      "p95_ms": 51.725708,
-      "max_ms": 51.725708,
+      "p50_ms": 11.890583,
+      "p95_ms": 11.890583,
+      "max_ms": 11.890583,
       "timeouts": 0
     }
   },

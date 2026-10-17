@@ -1,11 +1,16 @@
 {
-  "run_id": "run_01M5473QV7J5H7CDTWJ6MADHZD",
+  "run_id": "run_01M548D645MM6B81V73J5CFWZB",
+  "network_path": "loopback",
   "scenario": "LAB-TRUTH-MULTIPLICITY",
   "level": "sim",
   "passed": true,
-  "git_sha": "aa74a56cd506ee48d164ac61c28fc5ac6ff68ec9",
-  "at": "2026-10-17T05:59:44.743187Z",
+  "git_sha": "8facb0bd08afcd4f024cacbc09d39ddbf3855765",
+  "at": "2026-10-17T06:22:22.853431Z",
   "assertions": [
+    {
+      "name": "feed_network_loopback",
+      "passed": true
+    },
     {
       "name": "replica_host_is_air",
       "passed": true
@@ -24,6 +29,10 @@
     },
     {
       "name": "truth_multiplicity_mismatch_detected",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
       "passed": true
     }
   ],

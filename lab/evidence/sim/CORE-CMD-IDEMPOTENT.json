@@ -1,11 +1,16 @@
 {
-  "run_id": "run_01M54775XY5MSJ6EJ99XX0C4ZG",
+  "run_id": "run_01M5485AAA69TQK0KKAMTDYJ62",
+  "network_path": "loopback",
   "scenario": "CORE-CMD-IDEMPOTENT",
   "level": "sim",
   "passed": true,
-  "git_sha": "c9aa42147ac4f6337b58fd04e7b9db83f17128e6",
-  "at": "2026-10-17T06:01:37.470599Z",
+  "git_sha": "8facb0bd08afcd4f024cacbc09d39ddbf3855765",
+  "at": "2026-10-17T06:18:05.002589Z",
   "assertions": [
+    {
+      "name": "feed_network_loopback",
+      "passed": true
+    },
     {
       "name": "replica_host_is_air",
       "passed": true
@@ -87,6 +92,30 @@
       "passed": true
     },
     {
+      "name": "hidden_command_fixture_000-hidden-a",
+      "passed": true
+    },
+    {
+      "name": "hidden_command_fixture_000-hidden-b",
+      "passed": true
+    },
+    {
+      "name": "owned_command_fixture_zzz-owned-a",
+      "passed": true
+    },
+    {
+      "name": "owned_command_fixture_zzz-owned-b",
+      "passed": true
+    },
+    {
+      "name": "rest_visible_command_pagination_skips_foreign_rows",
+      "passed": true
+    },
+    {
+      "name": "mcp_visible_command_pagination_skips_foreign_rows",
+      "passed": true
+    },
+    {
       "name": "convergence_truth_gateway_replicas",
       "passed": true
     },
@@ -153,28 +182,32 @@
       "passed": false,
       "status": "unverified",
       "detail": "kill-during-apply check did not run"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
     }
   ],
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 9.495542,
-      "p95_ms": 9.495542,
-      "max_ms": 9.495542,
+      "p50_ms": 12.746042,
+      "p95_ms": 12.746042,
+      "max_ms": 12.746042,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 33.539875,
-      "p95_ms": 33.539875,
-      "max_ms": 33.539875,
+      "p50_ms": 15.978375,
+      "p95_ms": 15.978375,
+      "max_ms": 15.978375,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica1": {
       "samples": 1,
-      "p50_ms": 30.723833,
-      "p95_ms": 30.723833,
-      "max_ms": 30.723833,
+      "p50_ms": 15.960459,
+      "p95_ms": 15.960459,
+      "max_ms": 15.960459,
       "timeouts": 0
     }
   },

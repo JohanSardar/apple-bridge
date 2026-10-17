@@ -1,10 +1,10 @@
 {
-  "run_id": "run_01M546XSMFKH4B6XV1E0SJVK7W",
+  "run_id": "run_01M548DFWQN5QTM9873DREXCBC",
   "scenario": "REM-PERMISSION-LOSS",
   "level": "sim",
   "passed": true,
-  "git_sha": "9775bba29d530b60937cb06dbc96a29f9d829707",
-  "at": "2026-10-17T05:56:29.967214Z",
+  "git_sha": "8facb0bd08afcd4f024cacbc09d39ddbf3855765",
+  "at": "2026-10-17T06:22:32.855873Z",
   "assertions": [
     {
       "name": "reminders_ready",
