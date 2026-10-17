@@ -66,7 +66,11 @@ public final class UsageSource: Source {
             for (key, value) in UsageRollup.records(input, device: identifier, mac: platform == "mac") { current["usage.app_day/" + key] = value }
         }
         var observations: [JSON] = []
-        for key in current.keys.sorted() where current[key] != committed[key] || !live {
+        let ordered = current.keys.sorted { a, b in
+            let first = a.hasPrefix("usage.device/"), second = b.hasPrefix("usage.device/")
+            return first == second ? a < b : first
+        }
+        for key in ordered where current[key] != committed[key] || !live {
             guard let slash = key.firstIndex(of: "/"), let value = current[key] else { continue }
             let collection = String(key[..<slash]), native = String(key[key.index(after: slash)...])
             observations.append(.object(["kind": .string("upsert"), "collection": .string(collection), "native_key": .string(native), "scoped_alias": .string("usage/" + key), "data": value, "observed_at": .string(started)]))
