@@ -89,8 +89,9 @@ func Start(ctx context.Context, cfg Config) error {
 	if err != nil {
 		return err
 	}
+	defer blobStore.Close()
 	store.BlobProtection = blobStore.Protect
-	store.BlobPreparation = blobStore.Prepare
+	store.BlobDelta = blobStore.UpdateProtection
 	if err = store.ProtectBlobs(ctx); err != nil {
 		return err
 	}

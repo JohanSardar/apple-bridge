@@ -1,0 +1,8 @@
+{
+  "product_source_sha": "26cc94d7002e49eb214a9f52f2874d96ff6cc47e",
+  "harness_sha": "9cec61783e60f31118ac9fe9d9b865c01af06f7c",
+  "product_source_equal": true,
+  "contended_env": "APPLE_BRIDGE_LAB_CONTENDED_BENCH=1",
+  "binary_sha256": "ce8a887b6e326321ed967ad07dc71c6ab1900d574c8365290ed9a12f119ca677",
+  "note": "Three baseline cases compiled this unchanged product before implementation edits; diagnostic automatic assertions and host telemetry were added to the harness."
+}

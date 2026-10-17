@@ -22,9 +22,9 @@ import (
 )
 
 type Store struct {
-	BlobProtection  func(context.Context, contracts.ReferenceSet) error
-	BlobPreparation func(context.Context, contracts.ReferenceSet) error
-	blobSnapshots   map[string][]contracts.BlobReference
+	BlobProtection func(context.Context, contracts.ReferenceSet) error
+	BlobDelta      func(context.Context, contracts.ReferenceSet, bool) error
+	blobSnapshots  map[string][]contracts.BlobReference
 
 	home          string
 	ledger        *sql.DB
@@ -74,9 +74,7 @@ func Open(home string) (*Store, error) {
  CREATE TABLE IF NOT EXISTS blob_reference_sets(owner TEXT PRIMARY KEY,payload BLOB NOT NULL);
  CREATE TABLE IF NOT EXISTS applied_batches(after_seq INTEGER PRIMARY KEY,through_seq INTEGER NOT NULL);
  CREATE TABLE IF NOT EXISTS staging_records(snapshot TEXT NOT NULL,collection TEXT NOT NULL,id TEXT NOT NULL,payload BLOB NOT NULL,PRIMARY KEY(snapshot,collection,id));
- DELETE FROM staging_records;
- CREATE INDEX IF NOT EXISTS records_blob_candidates ON records(collection,id) WHERE deleted=0 AND (instr(payload,'"digest"')>0 OR instr(payload,'"raw_body_digest"')>0 OR instr(payload,'\u')>0);
- CREATE INDEX IF NOT EXISTS staging_blob_candidates ON staging_records(snapshot,collection,id) WHERE (instr(payload,'"digest"')>0 OR instr(payload,'"raw_body_digest"')>0 OR instr(payload,'\u')>0);`)
+ DELETE FROM staging_records;`)
 	if err != nil {
 		db.Close()
 		return nil, err
@@ -408,15 +406,11 @@ func (s *Store) CommitCapture(ctx context.Context, c contracts.Capture) (CommitR
 	if err = setCursor(ctx, tx, cursor); err != nil {
 		return result, err
 	}
-	if err = s.protectTransaction(ctx, tx); err != nil {
-		return result, err
-	}
-	if err = tx.Commit(); err != nil {
+	if err = s.commitProtected(ctx, tx); err != nil {
 		return result, err
 	}
 	result.CommittedAt = time.Now()
 	result.Through = cursor.Sequence
-	s.refreshBlobProtection(ctx)
 	s.signal()
 	return result, nil
 }
@@ -534,7 +528,12 @@ func (f *FrozenSnapshot) Close() error {
 	delete(f.store.leases, f.ID)
 	err := f.tx.Rollback()
 	delete(f.store.blobSnapshots, f.ID)
-	f.store.refreshBlobProtection(context.Background())
+	if f.store.BlobDelta != nil {
+		protectErr := f.store.BlobDelta(context.Background(), contracts.ReferenceSet{"snapshot:" + f.ID: nil}, false)
+		if err == nil {
+			err = protectErr
+		}
+	}
 	return err
 }
 func Digest(records []contracts.Record) string {
@@ -598,7 +597,10 @@ func (s *Store) FreezeSnapshot(ctx context.Context, v trust.Visibility, revision
 	for _, r := range f.Records {
 		s.blobSnapshots[f.ID] = append(s.blobSnapshots[f.ID], contracts.BlobReferences(r.Data)...)
 	}
-	if err = s.refreshBlobProtection(ctx); err != nil {
+	if s.BlobDelta != nil {
+		err = s.BlobDelta(ctx, contracts.ReferenceSet{"snapshot:" + f.ID: s.blobSnapshots[f.ID]}, false)
+	}
+	if err != nil {
 		tx.Rollback()
 		delete(s.blobSnapshots, f.ID)
 		return nil, err
@@ -657,13 +659,9 @@ func (i *SnapshotInstall) Page(ctx context.Context, page contracts.FeedFrame) er
 			return err
 		}
 	}
-	if err = i.store.protectTransaction(ctx, tx); err != nil {
+	if err = i.store.commitProtected(ctx, tx); err != nil {
 		return err
 	}
-	if err = tx.Commit(); err != nil {
-		return err
-	}
-	i.store.refreshBlobProtection(ctx)
 	i.ordinal++
 	i.ExpiresAt = time.Now().Add(10 * time.Minute)
 	return nil
@@ -723,13 +721,9 @@ func (i *SnapshotInstall) InstallSnapshot(ctx context.Context) (contracts.Cursor
 	if _, err = tx.ExecContext(ctx, "DELETE FROM staging_records WHERE snapshot=?", i.ID); err != nil {
 		return contracts.Cursor{}, err
 	}
-	if err = s.protectTransaction(ctx, tx); err != nil {
+	if err = s.commitProtected(ctx, tx); err != nil {
 		return contracts.Cursor{}, err
 	}
-	if err = tx.Commit(); err != nil {
-		return contracts.Cursor{}, err
-	}
-	s.refreshBlobProtection(ctx)
 	s.signal()
 	return i.Cursor, nil
 }
@@ -778,13 +772,9 @@ func (s *Store) ApplyBatch(ctx context.Context, b contracts.Batch) (contracts.Cu
 	if err = setCursor(ctx, tx, c); err != nil {
 		return c, err
 	}
-	if err = s.protectTransaction(ctx, tx); err != nil {
-		return contracts.Cursor{}, err
-	}
-	if err = tx.Commit(); err != nil {
+	if err = s.commitProtected(ctx, tx); err != nil {
 		return c, err
 	}
-	s.refreshBlobProtection(ctx)
 	s.signal()
 	return c, nil
 }

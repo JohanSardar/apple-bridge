@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -36,9 +37,13 @@ type BlobProgress = contracts.BlobProgress
 type manifest struct {
 	Entries    map[string]Entry       `json:"entries"`
 	Pins       map[string]string      `json:"pins"`
-	References contracts.ReferenceSet `json:"references"`
+	References contracts.ReferenceSet `json:"-"`
 }
 type Store struct {
+	protection      *sql.DB
+	referenceCounts map[string]int
+	digestPins      map[string]map[string]bool
+
 	appleMu      sync.Mutex
 	applePending map[string]*appleJob
 	appleRunning bool
@@ -68,6 +73,13 @@ func Open(home string, cfg Config) (*Store, error) {
 	b, err := os.ReadFile(filepath.Join(s.root, "manifest.json"))
 	if err == nil {
 		s.durable = append([]byte(nil), b...)
+		var legacy struct {
+			References contracts.ReferenceSet `json:"references"`
+		}
+		if err = json.Unmarshal(b, &legacy); err != nil {
+			return nil, err
+		}
+		s.manifest.References = legacy.References
 		if err = json.Unmarshal(b, &s.manifest); err != nil {
 			return nil, err
 		}
@@ -100,6 +112,12 @@ func Open(home string, cfg Config) (*Store, error) {
 			}
 		}
 		s.manifest.Entries[d] = e
+	}
+	if err = s.openProtection(context.Background()); err != nil {
+		if s.protection != nil {
+			s.protection.Close()
+		}
+		return nil, err
 	}
 	return s, nil
 }
@@ -214,7 +232,23 @@ func (s *Store) Stage(ctx context.Context, r io.Reader, expect Expect) (Digest, 
 	}
 	pin := contracts.NewID("pin")
 	s.manifest.Pins[pin] = d
-	s.manifest.Entries[d] = Entry{State: "present", Size: total, Received: total}
+	if s.digestPins[d] == nil {
+		s.digestPins[d] = map[string]bool{}
+	}
+	s.digestPins[d][pin] = true
+	e := Entry{State: "present", Size: total, Received: total}
+	if s.referenceCounts[d] == 0 {
+		e.UnreferencedAt = time.Now().UTC()
+	}
+	s.manifest.Entries[d] = e
+	if e.UnreferencedAt.IsZero() {
+		_, err = s.protection.ExecContext(ctx, "DELETE FROM protection_unreferenced WHERE digest=?", d)
+	} else {
+		_, err = s.protection.ExecContext(ctx, "INSERT INTO protection_unreferenced(digest,at) VALUES(?,?) ON CONFLICT(digest) DO UPDATE SET at=excluded.at", d, e.UnreferencedAt.Format(time.RFC3339Nano))
+	}
+	if err != nil {
+		return "", "", err
+	}
 	close(s.changed)
 	s.changed = make(chan struct{})
 	return d, pin, s.save()
@@ -249,41 +283,32 @@ func (s *Store) protect(ctx context.Context, refs contracts.ReferenceSet, releas
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.manifest.References = refs
-	active := map[string]bool{}
-	for _, list := range refs {
-		for _, r := range list {
-			if !contracts.ValidDigest(r.Digest) {
-				return contracts.ErrInvalid
-			}
-			active[r.Digest] = true
-			e, ok := s.manifest.Entries[r.Digest]
-			if !ok {
-				e = Entry{State: "pending", Size: r.Size}
-				if r.State == "offloaded" || r.State == "missing" {
-					e.State = r.State
-				}
-			}
-			e.UnreferencedAt = time.Time{}
-			s.manifest.Entries[r.Digest] = e
-		}
+	updates := contracts.ReferenceSet{}
+	for owner := range s.manifest.References {
+		updates[owner] = nil
+	}
+	for owner, list := range refs {
+		updates[owner] = list
+	}
+	if err := s.updateProtectionLocked(ctx, updates, releasePins); err != nil {
+		return err
 	}
 	for d, e := range s.manifest.Entries {
-		if !active[d] && e.UnreferencedAt.IsZero() {
-			e.UnreferencedAt = time.Now()
+		if s.referenceCounts[d] == 0 && e.UnreferencedAt.IsZero() {
+			e.UnreferencedAt = time.Now().UTC()
+			if _, err := s.protection.ExecContext(ctx, "INSERT INTO protection_unreferenced(digest,at) VALUES(?,?) ON CONFLICT(digest) DO UPDATE SET at=excluded.at", d, e.UnreferencedAt.Format(time.RFC3339Nano)); err != nil {
+				return err
+			}
 			s.manifest.Entries[d] = e
 		}
 	}
 	if err := s.save(); err != nil {
 		return err
 	}
-	for pin, d := range s.manifest.Pins {
-		if releasePins && active[d] {
-			delete(s.manifest.Pins, pin)
-		}
-	}
-	return s.save()
+	_, err := s.protection.ExecContext(ctx, "DELETE FROM protection_released_pins")
+	return err
 }
+
 func (s *Store) Collect(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -491,7 +516,12 @@ func (s *Store) Release(ctx context.Context, pin Pin) error {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	d := s.manifest.Pins[pin]
 	delete(s.manifest.Pins, pin)
+	delete(s.digestPins[d], pin)
+	if len(s.digestPins[d]) == 0 {
+		delete(s.digestPins, d)
+	}
 	return s.save()
 }
 

@@ -96,30 +96,100 @@ func blobReferences(ctx context.Context, q interface {
 	}
 	return refs, nil
 }
-func (s *Store) protectTransaction(ctx context.Context, tx *sql.Tx) error {
-	if s.BlobProtection == nil {
-		return nil
-	}
-	next, err := blobReferences(ctx, tx)
+func changedBlobReferences(ctx context.Context, tx *sql.Tx) (contracts.ReferenceSet, error) {
+	updates := contracts.ReferenceSet{}
+	rows, err := tx.QueryContext(ctx, "SELECT c.owner,r.payload FROM blob_ref_changes c LEFT JOIN blob_refs r ON r.owner=c.owner")
 	if err != nil {
-		return err
+		return nil, err
 	}
-	previous, err := blobReferences(ctx, s.db)
+	for rows.Next() {
+		var owner string
+		var b []byte
+		if err = rows.Scan(&owner, &b); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		if _, ok := updates[owner]; !ok {
+			updates[owner] = nil
+		}
+		if b != nil {
+			var ref contracts.BlobReference
+			if err = json.Unmarshal(b, &ref); err != nil {
+				rows.Close()
+				return nil, err
+			}
+			updates[owner] = append(updates[owner], ref)
+		}
+	}
+	err = rows.Err()
+	rows.Close()
 	if err != nil {
-		return err
+		return nil, err
 	}
-	for k, list := range previous {
-		next["previous:"+k] = list
+	rows, err = tx.QueryContext(ctx, "SELECT c.owner,r.payload FROM blob_ref_changes c LEFT JOIN blob_reference_sets r ON r.owner=c.owner")
+	if err != nil {
+		return nil, err
 	}
-	for k, list := range s.blobSnapshots {
-		next["snapshot:"+k] = list
+	for rows.Next() {
+		var owner string
+		var b []byte
+		if err = rows.Scan(&owner, &b); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		if b == nil {
+			continue
+		}
+		var refs []contracts.BlobReference
+		if err = json.Unmarshal(b, &refs); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		updates[owner] = refs
 	}
-	if s.BlobPreparation != nil {
-		return s.BlobPreparation(ctx, next)
-	}
-	return s.BlobProtection(ctx, next)
+	err = rows.Err()
+	rows.Close()
+	return updates, err
 }
-func (s *Store) refreshBlobProtection(ctx context.Context) error {
+func (s *Store) commitProtected(ctx context.Context, tx *sql.Tx) error {
+	if s.BlobDelta == nil {
+		if _, err := tx.ExecContext(ctx, "DELETE FROM blob_ref_changes"); err != nil {
+			return err
+		}
+		return tx.Commit()
+	}
+	updates, err := changedBlobReferences(ctx, tx)
+	if err != nil {
+		return err
+	}
+	if _, err = tx.ExecContext(ctx, "DELETE FROM blob_ref_changes"); err != nil {
+		return err
+	}
+	var refs []contracts.BlobReference
+	for _, list := range updates {
+		refs = append(refs, list...)
+	}
+	guard := ""
+	if len(refs) > 0 {
+		guard = "transaction:" + contracts.NewID("")
+		if err = s.BlobDelta(ctx, contracts.ReferenceSet{guard: refs}, false); err != nil {
+			return err
+		}
+	}
+	if err = tx.Commit(); err != nil {
+		if guard != "" {
+			s.BlobDelta(context.WithoutCancel(ctx), contracts.ReferenceSet{guard: nil}, false)
+		}
+		return err
+	}
+	if guard != "" {
+		updates[guard] = nil
+	}
+	return s.BlobDelta(ctx, updates, true)
+}
+func (s *Store) ProtectBlobs(ctx context.Context) error {
+	s.write.Lock()
+	defer s.write.Unlock()
 	if s.BlobProtection == nil {
 		return nil
 	}
@@ -130,12 +200,11 @@ func (s *Store) refreshBlobProtection(ctx context.Context) error {
 	for k, list := range s.blobSnapshots {
 		refs["snapshot:"+k] = list
 	}
-	return s.BlobProtection(ctx, refs)
-}
-func (s *Store) ProtectBlobs(ctx context.Context) error {
-	s.write.Lock()
-	defer s.write.Unlock()
-	return s.refreshBlobProtection(ctx)
+	if err = s.BlobProtection(ctx, refs); err != nil {
+		return err
+	}
+	_, err = s.db.ExecContext(ctx, "DELETE FROM blob_ref_changes")
+	return err
 }
 
 func (s *Store) BlobReferenceSet(ctx context.Context) (contracts.ReferenceSet, error) {
@@ -190,13 +259,7 @@ func (s *Store) SetBlobReferences(ctx context.Context, owner string, refs []cont
 	if err != nil {
 		return err
 	}
-	if err = s.protectTransaction(ctx, tx); err != nil {
-		return err
-	}
-	if err = tx.Commit(); err != nil {
-		return err
-	}
-	return s.refreshBlobProtection(ctx)
+	return s.commitProtected(ctx, tx)
 }
 
 func writeBlobReferences(ctx context.Context, tx *sql.Tx, owner string, r contracts.Record) error {
@@ -224,6 +287,15 @@ func (s *Store) initBlobReferences(ctx context.Context) error {
 	}
 	defer tx.Rollback()
 	if _, err = tx.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS blob_refs(owner TEXT NOT NULL,digest TEXT NOT NULL,payload BLOB NOT NULL,PRIMARY KEY(owner,digest));
+ DROP INDEX IF EXISTS records_blob_candidates;
+ DROP INDEX IF EXISTS staging_blob_candidates;
+ CREATE TABLE IF NOT EXISTS blob_ref_changes(owner TEXT PRIMARY KEY);
+ CREATE TRIGGER IF NOT EXISTS blob_refs_changed_insert AFTER INSERT ON blob_refs BEGIN INSERT OR IGNORE INTO blob_ref_changes(owner) VALUES(NEW.owner); END;
+ CREATE TRIGGER IF NOT EXISTS blob_refs_changed_update AFTER UPDATE ON blob_refs BEGIN INSERT OR IGNORE INTO blob_ref_changes(owner) VALUES(NEW.owner); END;
+ CREATE TRIGGER IF NOT EXISTS blob_refs_changed_delete AFTER DELETE ON blob_refs BEGIN INSERT OR IGNORE INTO blob_ref_changes(owner) VALUES(OLD.owner); END;
+ CREATE TRIGGER IF NOT EXISTS blob_sets_changed_insert AFTER INSERT ON blob_reference_sets BEGIN INSERT OR IGNORE INTO blob_ref_changes(owner) VALUES(NEW.owner); END;
+ CREATE TRIGGER IF NOT EXISTS blob_sets_changed_update AFTER UPDATE ON blob_reference_sets BEGIN INSERT OR IGNORE INTO blob_ref_changes(owner) VALUES(NEW.owner); END;
+ CREATE TRIGGER IF NOT EXISTS blob_sets_changed_delete AFTER DELETE ON blob_reference_sets BEGIN INSERT OR IGNORE INTO blob_ref_changes(owner) VALUES(OLD.owner); END;
  CREATE TRIGGER IF NOT EXISTS blob_refs_record_delete AFTER DELETE ON records BEGIN DELETE FROM blob_refs WHERE owner='record:'||OLD.id; END;
  CREATE TRIGGER IF NOT EXISTS blob_refs_staging_delete AFTER DELETE ON staging_records BEGIN DELETE FROM blob_refs WHERE owner='staging:'||OLD.snapshot||':'||OLD.id; END;`); err != nil {
 		return err
