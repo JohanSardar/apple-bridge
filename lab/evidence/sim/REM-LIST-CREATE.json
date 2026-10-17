@@ -1,0 +1,38 @@
+{
+  "run_id": "run_01M546JWTPEX1HJER6BA2Z73MH",
+  "scenario": "REM-LIST-CREATE",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "5a599fc1b5efc0c5cdb470c1d7f9aa0977dfe154",
+  "at": "2026-10-17T05:50:32.790533Z",
+  "assertions": [
+    {
+      "name": "reminders_ready",
+      "passed": true
+    },
+    {
+      "name": "list_visible",
+      "passed": true
+    },
+    {
+      "name": "independent_simtruth_convergence",
+      "passed": true
+    },
+    {
+      "name": "replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

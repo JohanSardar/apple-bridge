@@ -1,0 +1,38 @@
+{
+  "run_id": "run_01M546JXD828616AK8T1CPZWYM",
+  "scenario": "REM-PERMISSION-LOSS",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "5a599fc1b5efc0c5cdb470c1d7f9aa0977dfe154",
+  "at": "2026-10-17T05:50:33.384746Z",
+  "assertions": [
+    {
+      "name": "reminders_ready",
+      "passed": true
+    },
+    {
+      "name": "permission_missing_reported",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion",
+      "passed": true
+    },
+    {
+      "name": "replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "run_id": "run_01M546JYR0J8TZW0MQKCRJGV29",
+  "scenario": "HELPER-TCC-READY",
+  "level": "real",
+  "passed": true,
+  "git_sha": "5a599fc1b5efc0c5cdb470c1d7f9aa0977dfe154",
+  "at": "2026-10-17T05:50:34.752571Z",
+  "assertions": [
+    {
+      "name": "reminders_ready",
+      "passed": true
+    },
+    {
+      "name": "designated_requirement_preserved",
+      "passed": true
+    },
+    {
+      "name": "permission_states_preserved",
+      "passed": true
+    },
+    {
+      "name": "granted_access_preserved",
+      "passed": true
+    },
+    {
+      "name": "automation_status_preserved",
+      "passed": true,
+      "status": "unverified",
+      "detail": "Automation permission checks are unknown while locked; UI automation access is unverified"
+    },
+    {
+      "name": "calendar_contacts_states_preserved",
+      "passed": true
+    },
+    {
+      "name": "real_capture_after_rebuild",
+      "passed": true
+    },
+    {
+      "name": "replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "run_id": "run_01M546RKDPV2X7SX7H1MPRX1AN",
+  "status": "unverified",
+  "scenario": "REM-CREATE-EXTERNAL",
+  "level": "replica",
+  "passed": false,
+  "git_sha": "252ddfa13666204ef251de41657a49d9c580b9ff",
+  "at": "2026-10-17T05:53:39.766531Z",
+  "assertions": [
+    {
+      "name": "reminders_ready",
+      "passed": true
+    },
+    {
+      "name": "independent_truth",
+      "passed": false,
+      "detail": "Grant AppleTruth.app Reminders full access; no fixture changes were made"
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air",
+    "ubuntu"
+  ]
+}

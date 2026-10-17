@@ -1,0 +1,24 @@
+{
+  "run_id": "run_01M546RCG1XT0M4EVN13NDZRMP",
+  "status": "unverified",
+  "scenario": "CORE-LIVE-LATENCY",
+  "level": "real",
+  "passed": false,
+  "git_sha": "252ddfa13666204ef251de41657a49d9c580b9ff",
+  "at": "2026-10-17T05:53:32.674004Z",
+  "assertions": [
+    {
+      "name": "reminders_ready",
+      "passed": true
+    },
+    {
+      "name": "independent_truth",
+      "passed": false,
+      "detail": "Grant AppleTruth.app Reminders full access; no fixture changes were made"
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

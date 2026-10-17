@@ -1,0 +1,50 @@
+{
+  "run_id": "run_01M546JY0PCVC3ZDPJ5Q2DB5E4",
+  "scenario": "REM-RECURRING",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "5a599fc1b5efc0c5cdb470c1d7f9aa0977dfe154",
+  "at": "2026-10-17T05:50:34.006435Z",
+  "assertions": [
+    {
+      "name": "reminders_ready",
+      "passed": true
+    },
+    {
+      "name": "replica_visible_under_one_second",
+      "passed": true
+    },
+    {
+      "name": "next_incomplete_recurring_instance",
+      "passed": true
+    },
+    {
+      "name": "independent_simtruth_convergence",
+      "passed": true
+    },
+    {
+      "name": "replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "effect_done→replica_visible:replica0": {
+      "samples": 1,
+      "p50_ms": 36.587459,
+      "p95_ms": 36.587459,
+      "max_ms": 36.587459,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}
