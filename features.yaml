@@ -71,6 +71,7 @@ features:
     status: todo
     scenarios:
       - {id: CORE-HELPER-RESTART, levels: [sim]}
+      - {id: CORE-DOCTOR, levels: [sim, replica]}
       - {id: CORE-RESTORE-EPOCH, levels: [sim]}
       - {id: CORE-RESTORE-OLD-SCHEMA, levels: [sim]}
       - {id: CORE-DISK-FULL, levels: [sim]}
@@ -139,7 +140,7 @@ features:
     depends_on: [core.replication]
     status: todo
     scenarios:
-      - {id: CORE-BENCH, levels: [sim]}
+      - {id: CORE-BENCH, levels: [sim, replica]}
 
   - id: helper.session
     title: Swift Helper session, IPC auth, fencing, dispatch guard, UI actor, stable signing and TCC
