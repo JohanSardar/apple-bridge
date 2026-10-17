@@ -1,25 +1,25 @@
 {
-  "run_id": "run_01M55ERDV5NNK9ZDSD84J1TM1J",
+  "run_id": "run_01M55FGCVXT1C4GPH8WQCC478Z",
   "network_path": "loopback",
   "metrics": {
     "capture_context_expired": false,
-    "capture_wait_ms": 110825,
+    "capture_wait_ms": 92843,
     "completion_timeout_ms": 900000,
     "contended_run": true,
-    "effect_done_to_gateway_capture_ms": 110826.099334,
-    "fixture_and_capture_ms": 112811.619292,
-    "gateway_rss_bytes": 54886400,
-    "gateway_wal_bytes": 125046152,
+    "effect_done_to_gateway_capture_ms": 92844.115833,
+    "fixture_and_capture_ms": 94355.596667,
+    "gateway_rss_bytes": 66863104,
+    "gateway_wal_bytes": 84872032,
     "messages": 200000,
     "observed_gateway_messages": 200000,
-    "replica_rss_bytes": 25640960,
-    "replica_wal_bytes": 6901032
+    "replica_rss_bytes": 32325632,
+    "replica_wal_bytes": 6868072
   },
   "scenario": "CORE-BENCH",
   "level": "sim",
   "passed": true,
-  "git_sha": "c5090cbc2e1798eeac8d7099120b836dbc108667",
-  "at": "2026-10-17T17:32:37.093624Z",
+  "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723",
+  "at": "2026-10-17T17:45:42.525608Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -81,23 +81,23 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 13.301416,
-      "p95_ms": 13.301416,
-      "max_ms": 13.301416,
+      "p50_ms": 8.346584,
+      "p95_ms": 8.346584,
+      "max_ms": 8.346584,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 21.230583,
-      "p95_ms": 21.230583,
-      "max_ms": 21.230583,
+      "p50_ms": 10.497792,
+      "p95_ms": 10.497792,
+      "max_ms": 10.497792,
       "timeouts": 0
     },
     "fts5_query_gateway": {
       "samples": 100,
-      "p50_ms": 3.637,
-      "p95_ms": 5.194,
-      "max_ms": 19.055458,
+      "p50_ms": 2.553042,
+      "p95_ms": 2.93225,
+      "max_ms": 10.479333,
       "timeouts": 0
     }
   },

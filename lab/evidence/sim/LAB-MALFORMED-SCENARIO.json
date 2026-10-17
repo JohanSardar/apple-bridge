@@ -1,10 +1,10 @@
 {
-  "run_id": "run_01M55F7YMY79GMMBVWVS7AA7T3",
+  "run_id": "run_01M55FWH8QFPTRW90VXR1SQBBD",
   "scenario": "LAB-MALFORMED-SCENARIO",
   "level": "sim",
   "passed": true,
-  "git_sha": "c5090cbc2e1798eeac8d7099120b836dbc108667",
-  "at": "2026-10-17T17:41:05.82254Z",
+  "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723",
+  "at": "2026-10-17T17:52:20.247735Z",
   "assertions": [
     {
       "name": "malformed_scenario_rejected",

@@ -1,11 +1,11 @@
 {
-  "run_id": "run_01M55F7YND03QH9KHTY5ZPXXDB",
+  "run_id": "run_01M55FWH9FF4K55P3QBW34ND66",
   "network_path": "loopback",
   "scenario": "LAB-SSE",
   "level": "sim",
   "passed": true,
-  "git_sha": "c5090cbc2e1798eeac8d7099120b836dbc108667",
-  "at": "2026-10-17T17:41:05.838025Z",
+  "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723",
+  "at": "2026-10-17T17:52:20.271561Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -91,16 +91,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 6.735166,
-      "p95_ms": 6.735166,
-      "max_ms": 6.735166,
+      "p50_ms": 6.614166,
+      "p95_ms": 6.614166,
+      "max_ms": 6.614166,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 10.330125,
-      "p95_ms": 10.330125,
-      "max_ms": 10.330125,
+      "p50_ms": 8.826,
+      "p95_ms": 8.826,
+      "max_ms": 8.826,
       "timeouts": 0
     }
   },

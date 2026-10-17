@@ -1,11 +1,11 @@
 {
-  "run_id": "run_01M55F8YR6EDEXG41GP89KZFV1",
+  "run_id": "run_01M55FXG6J2J0T5E8JQ8BKW9K0",
   "network_path": "loopback",
   "scenario": "REM-CRUD",
   "level": "sim",
   "passed": true,
-  "git_sha": "c5090cbc2e1798eeac8d7099120b836dbc108667",
-  "at": "2026-10-17T17:41:38.694741Z",
+  "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723",
+  "at": "2026-10-17T17:52:51.922542Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -231,23 +231,23 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 12.126167,
-      "p95_ms": 12.126167,
-      "max_ms": 12.126167,
+      "p50_ms": 4.670708,
+      "p95_ms": 4.670708,
+      "max_ms": 4.670708,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 12.4065,
-      "p95_ms": 12.4065,
-      "max_ms": 12.4065,
+      "p50_ms": 7.907125,
+      "p95_ms": 7.907125,
+      "max_ms": 7.907125,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica1": {
       "samples": 1,
-      "p50_ms": 16.388833,
-      "p95_ms": 16.388833,
-      "max_ms": 16.388833,
+      "p50_ms": 8.0165,
+      "p95_ms": 8.0165,
+      "max_ms": 8.0165,
       "timeouts": 0
     }
   },

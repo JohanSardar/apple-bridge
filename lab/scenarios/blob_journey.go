@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/JohanSardar/apple-bridge/internal/blobs"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
@@ -36,7 +37,9 @@ func blobBytes(ctx context.Context, e world.Endpoint, d, id string) (int, []byte
 	}
 	req.Host = e.Host
 	req.Header.Set("Authorization", "Bearer "+e.Token)
-	resp, err := world.HTTP.Do(req)
+	client := *world.HTTP
+	client.Timeout = 30 * time.Second
+	resp, err := client.Do(req)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -283,8 +286,17 @@ func blobJourney(ctx context.Context, w *world.World, id string, rows int, evide
 		measure("bulk_barrier→blob_complete", bulkStarted)
 	}
 	evidence.Latency["effect_done→blob_complete"] = stats([]float64{float64(time.Since(start)) / float64(time.Millisecond)}, 0)
-	for _, endpoint := range append([]world.Endpoint{w.Gateway}, w.Replicas...) {
+	if evidence.Metrics == nil {
+		evidence.Metrics = map[string]any{}
+	}
+	for i, endpoint := range append([]world.Endpoint{w.Gateway}, w.Replicas...) {
+		readStart := time.Now()
 		status, b, err := blobBytes(ctx, endpoint, digest, attachment.ID)
+		evidence.Metrics[fmt.Sprintf("digest_check_%d_read_ms", i)] = float64(time.Since(readStart)) / float64(time.Millisecond)
+		evidence.Metrics[fmt.Sprintf("digest_check_%d_bytes", i)] = len(b)
+		evidence.Metrics[fmt.Sprintf("digest_check_%d_status", i)] = status
+		evidence.Metrics[fmt.Sprintf("digest_check_%d_deadline_exceeded", i)] = errors.Is(err, context.DeadlineExceeded)
+		evidence.Metrics[fmt.Sprintf("digest_check_%d_error_type", i)] = fmt.Sprintf("%T", err)
 		sum := sha256.Sum256(b)
 		if !check("authorized_bytes_digest_verified", err == nil && status == 200 && len(b) == size && hex.EncodeToString(sum[:]) == digest) {
 			return false

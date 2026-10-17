@@ -1,11 +1,11 @@
 {
-  "run_id": "run_01M55F7XB5CPFKMM1F2KT8TKYR",
+  "run_id": "run_01M55FWGEAESQZQ8GJ4CCX829W",
   "network_path": "loopback",
   "scenario": "CORE-UPGRADE",
   "level": "sim",
   "passed": true,
-  "git_sha": "c5090cbc2e1798eeac8d7099120b836dbc108667",
-  "at": "2026-10-17T17:41:04.485171Z",
+  "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723",
+  "at": "2026-10-17T17:52:19.402883Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -83,16 +83,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 10.8015,
-      "p95_ms": 10.8015,
-      "max_ms": 10.8015,
+      "p50_ms": 5.81225,
+      "p95_ms": 5.81225,
+      "max_ms": 5.81225,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 18.173334,
-      "p95_ms": 18.173334,
-      "max_ms": 18.173334,
+      "p50_ms": 10.059417,
+      "p95_ms": 10.059417,
+      "max_ms": 10.059417,
       "timeouts": 0
     }
   },
