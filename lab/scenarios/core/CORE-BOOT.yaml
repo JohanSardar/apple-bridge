@@ -1,7 +1,7 @@
 id: CORE-BOOT
 feature: core.harness
 levels: [sim, replica]
-given: [{world: {replicas: 1}}, {seed: {count: 4}}]
+given: [{world: {replicas: 1}}, {seed: {count: 1000}}]
 when: [{connect: {}}]
-then: [{converge: {}}, {source_ready: {}}]
+then: [{converge: {}}, {source_ready: {}}, {capture_safety: {}}, {old_sse_cursor: {}}]
 cleanup: [{world: {}}]

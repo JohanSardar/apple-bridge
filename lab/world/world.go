@@ -1,0 +1,466 @@
+package world
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net"
+	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"syscall"
+	"time"
+
+	"github.com/JohanSardar/apple-bridge/internal/contracts"
+)
+
+type Config struct {
+	Role        string `json:"role"`
+	Home        string `json:"home"`
+	PeerAddress string `json:"peer_address"`
+	APIAddress  string `json:"api_address"`
+	Socket      string `json:"socket"`
+}
+type Process struct {
+	command *exec.Cmd
+	done    chan error
+	log     *os.File
+	remote  bool
+	home    string
+	stopped bool
+}
+type Endpoint struct {
+	URL    string
+	Host   string
+	Token  string
+	Home   string
+	Remote bool
+}
+type World struct {
+	Dir              string
+	Level            string
+	Gateway          Endpoint
+	Replicas         []Endpoint
+	Control          *http.Client
+	processes        []*Process
+	replicaProcesses []*Process
+	bridge           string
+	lab              string
+	remoteBinary     string
+	ctx              context.Context
+}
+
+func commandOutput(ctx context.Context, name string, args ...string) (string, error) {
+	cmd := exec.CommandContext(ctx, name, args...)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+	if err != nil {
+		return "", fmt.Errorf("%s failed: %w: %s", name, err, strings.TrimSpace(stderr.String()))
+	}
+	return strings.TrimSpace(out.String()), nil
+}
+func Build(ctx context.Context, level string) error {
+	if err := os.MkdirAll("bin", 0700); err != nil {
+		return err
+	}
+	if _, err := commandOutput(ctx, "go", "build", "-p", "2", "-o", "bin/bridge", "./cmd/bridge"); err != nil {
+		return err
+	}
+	if level == "replica" {
+		cmd := exec.CommandContext(ctx, "go", "build", "-p", "2", "-o", "bin/bridge-linux-amd64", "./cmd/bridge")
+		cmd.Env = append(os.Environ(), "GOOS=linux", "GOARCH=amd64")
+		var log bytes.Buffer
+		cmd.Stdout = &log
+		cmd.Stderr = &log
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("cross compile: %w: %s", err, log.String())
+		}
+	}
+	return nil
+}
+func (w *World) start(name string, remote bool, home string, binary string, args ...string) (*Process, error) {
+	file, err := os.OpenFile(filepath.Join(w.Dir, name+".log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
+	if err != nil {
+		return nil, err
+	}
+	cmd := exec.Command(binary, args...)
+	if remote {
+		joined := quote(binary)
+		for _, arg := range args {
+			joined += " " + quote(arg)
+		}
+		script := "echo $$ > " + quote(filepath.Join(home, "pid")) + "; exec " + joined
+		cmd = exec.Command("ssh", "ubuntu", script)
+	}
+	cmd.Stdout = file
+	cmd.Stderr = file
+	if err = cmd.Start(); err != nil {
+		file.Close()
+		return nil, err
+	}
+	p := &Process{command: cmd, done: make(chan error, 1), log: file, remote: remote, home: home}
+	go func() { p.done <- cmd.Wait(); file.Close() }()
+	w.processes = append(w.processes, p)
+	return p, nil
+}
+func quote(s string) string { return "'" + strings.ReplaceAll(s, "'", "'\"'\"'") + "'" }
+func (p *Process) Stop() {
+	if p == nil || p.stopped {
+		return
+	}
+	p.stopped = true
+	if p.remote {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		commandOutput(ctx, "ssh", "ubuntu", "if test -f "+quote(filepath.Join(p.home, "pid"))+"; then kill -TERM $(cat "+quote(filepath.Join(p.home, "pid"))+"); fi")
+		cancel()
+	} else {
+		p.command.Process.Signal(syscall.SIGTERM)
+	}
+	timer := time.NewTimer(5 * time.Second)
+	defer timer.Stop()
+	select {
+	case <-p.done:
+		return
+	case <-timer.C:
+		p.command.Process.Kill()
+		<-p.done
+	}
+}
+func (w *World) execute(remote bool, binary string, args ...string) (string, error) {
+	if remote {
+		cmd := quote(binary)
+		for _, a := range args {
+			cmd += " " + quote(a)
+		}
+		return commandOutput(w.ctx, "ssh", "ubuntu", cmd)
+	}
+	return commandOutput(w.ctx, binary, args...)
+}
+func (w *World) config(home string, remote bool) (Config, error) {
+	var cfg Config
+	err := w.Await(20*time.Second, func() bool {
+		var b []byte
+		var err error
+		if remote {
+			var out string
+			out, err = commandOutput(w.ctx, "ssh", "ubuntu", "cat "+quote(filepath.Join(home, "runtime.json"))+" 2>/dev/null")
+			b = []byte(out)
+		} else {
+			b, err = os.ReadFile(filepath.Join(home, "runtime.json"))
+		}
+		return err == nil && json.Unmarshal(b, &cfg) == nil
+	})
+	return cfg, err
+}
+func (w *World) Await(timeout time.Duration, predicate func() bool) error {
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+	tick := time.NewTicker(25 * time.Millisecond)
+	defer tick.Stop()
+	for {
+		if predicate() {
+			return nil
+		}
+		select {
+		case <-w.ctx.Done():
+			return w.ctx.Err()
+		case <-timer.C:
+			return fmt.Errorf("world condition timed out")
+		case <-tick.C:
+		}
+	}
+}
+func New(ctx context.Context, level string, replicas int, seed int) (*World, error) {
+	root, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+	lab, err := os.Executable()
+	if err != nil {
+		return nil, err
+	}
+	id := strings.ToLower(contracts.NewID(""))
+	id = id[len(id)-10:]
+	w := &World{Dir: filepath.Join("/tmp/ablab", id), Level: level, bridge: filepath.Join(root, "bin", "bridge"), lab: lab, ctx: ctx}
+	if err = os.MkdirAll(w.Dir, 0700); err != nil {
+		return nil, err
+	}
+	success := false
+	defer func() {
+		if !success {
+			w.Close()
+		}
+	}()
+	peerHost := "127.0.0.1"
+	if level == "replica" {
+		peerHost, err = commandOutput(ctx, "tailscale", "ip", "-4")
+		if err != nil {
+			return nil, err
+		}
+		if net.ParseIP(peerHost) == nil {
+			return nil, fmt.Errorf("gateway Tailscale address unavailable")
+		}
+		if _, err = commandOutput(ctx, "ssh", "ubuntu", "mkdir -p "+quote(w.Dir)+" && chmod 700 "+quote(w.Dir)); err != nil {
+			return nil, err
+		}
+		w.remoteBinary = filepath.Join(w.Dir, "bridge")
+		if _, err = commandOutput(ctx, "scp", filepath.Join(root, "bin", "bridge-linux-amd64"), "ubuntu:"+w.remoteBinary); err != nil {
+			return nil, err
+		}
+	}
+	gatewayHome := filepath.Join(w.Dir, "gateway")
+	if _, err = w.start("gateway", false, gatewayHome, w.bridge, "start", "--role", "gateway", "--home", gatewayHome, "--peer-addr", net.JoinHostPort(peerHost, "0"), "--api-addr", "127.0.0.1:0"); err != nil {
+		return nil, err
+	}
+	cfg, err := w.config(gatewayHome, false)
+	if err != nil {
+		return nil, err
+	}
+	token, err := w.execute(false, w.bridge, "token", "create", "--home", gatewayHome, "--scope", "reminders:read,system:read")
+	if err != nil {
+		return nil, err
+	}
+	w.Gateway = Endpoint{URL: "http://" + cfg.APIAddress, Host: cfg.APIAddress, Token: token, Home: gatewayHome}
+	control := filepath.Join(w.Dir, "sim.sock")
+	if _, err = w.start("simapple", false, w.Dir, w.lab, "simapple", "--socket", cfg.Socket, "--secret-file", filepath.Join(gatewayHome, "apple-secret"), "--control", control); err != nil {
+		return nil, err
+	}
+	transport := &http.Transport{DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
+		return (&net.Dialer{}).DialContext(ctx, "unix", control)
+	}}
+	w.Control = &http.Client{Transport: transport, Timeout: 5 * time.Second}
+	if err = w.Await(10*time.Second, func() bool { _, err := w.Inspect(); return err == nil }); err != nil {
+		return nil, err
+	}
+	if err = w.ControlAction("/seed", map[string]int{"count": seed}); err != nil {
+		return nil, err
+	}
+	if err = w.Await(10*time.Second, func() bool { records, err := w.Records(w.Gateway); return err == nil && len(records) >= seed+2 }); err != nil {
+		return nil, err
+	}
+	for i := 0; i < replicas; i++ {
+		remote := level == "replica"
+		home := filepath.Join(w.Dir, "replica"+strconv.Itoa(i))
+		binary := w.bridge
+		if remote {
+			binary = w.remoteBinary
+			if _, err = commandOutput(ctx, "ssh", "ubuntu", "mkdir -p "+quote(home)); err != nil {
+				return nil, err
+			}
+		}
+		code, err := w.execute(false, w.bridge, "pair", "--home", gatewayHome, "--name", "replica"+strconv.Itoa(i), "--scope", "reminders:read,system:read")
+		if err != nil {
+			return nil, err
+		}
+		if _, err = w.execute(remote, binary, "join", code, "--home", home); err != nil {
+			return nil, err
+		}
+		token, err := w.execute(remote, binary, "token", "create", "--home", home, "--scope", "reminders:read,system:read")
+		if err != nil {
+			return nil, err
+		}
+		p, err := w.start("replica"+strconv.Itoa(i), remote, home, binary, "start", "--role", "replica", "--home", home, "--api-addr", "127.0.0.1:0")
+		if err != nil {
+			return nil, err
+		}
+		cfg, err := w.config(home, remote)
+		if err != nil {
+			return nil, err
+		}
+		endpoint := Endpoint{URL: "http://" + cfg.APIAddress, Host: cfg.APIAddress, Home: home, Token: token, Remote: remote}
+		if remote {
+			addr, err := freeAddress()
+			if err != nil {
+				return nil, err
+			}
+			_, port, _ := net.SplitHostPort(cfg.APIAddress)
+			if _, err = w.start("tunnel"+strconv.Itoa(i), false, w.Dir, "ssh", "-N", "-o", "ExitOnForwardFailure=yes", "-L", addr+":127.0.0.1:"+port, "ubuntu"); err != nil {
+				return nil, err
+			}
+			endpoint.URL = "http://" + addr
+		}
+		w.Replicas = append(w.Replicas, endpoint)
+		w.replicaProcesses = append(w.replicaProcesses, p)
+	}
+	if err = w.Await(15*time.Second, func() bool {
+		for _, e := range w.Replicas {
+			status, err := w.Status(e)
+			if err != nil || status.State != "connected" {
+				return false
+			}
+		}
+		return true
+	}); err != nil {
+		return nil, err
+	}
+	success = true
+	return w, nil
+}
+func freeAddress() (string, error) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		return "", err
+	}
+	address := listener.Addr().String()
+	listener.Close()
+	return address, nil
+}
+func (w *World) Close() {
+	for i := len(w.processes) - 1; i >= 0; i-- {
+		p := w.processes[i]
+		if p != nil {
+			p.Stop()
+			w.processes[i] = nil
+		}
+	}
+	if w.Control != nil {
+		w.Control.CloseIdleConnections()
+	}
+	if w.Level == "replica" {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		commandOutput(ctx, "ssh", "ubuntu", "rm -rf "+quote(w.Dir))
+		cancel()
+	}
+	os.RemoveAll(w.Dir)
+}
+func (w *World) Partition(index int) {
+	w.replicaProcesses[index].Stop()
+	for j, p := range w.processes {
+		if p == w.replicaProcesses[index] {
+			w.processes[j] = nil
+		}
+	}
+	w.replicaProcesses[index] = nil
+}
+func (w *World) Heal(index int) error {
+	e := w.Replicas[index]
+	binary := w.bridge
+	if e.Remote {
+		binary = w.remoteBinary
+	}
+	_, err := w.execute(e.Remote, "rm", "-f", filepath.Join(e.Home, "runtime.json"))
+	if err != nil {
+		return err
+	}
+	_, port, _ := net.SplitHostPort(e.Host)
+	p, err := w.start("replica"+strconv.Itoa(index), e.Remote, e.Home, binary, "start", "--role", "replica", "--home", e.Home, "--api-addr", "127.0.0.1:"+port)
+	if err != nil {
+		return err
+	}
+	w.replicaProcesses[index] = p
+	_, err = w.config(e.Home, e.Remote)
+	return err
+}
+func (w *World) ControlAction(path string, action any) error {
+	b, err := json.Marshal(action)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(w.ctx, "POST", "http://sim"+path, bytes.NewReader(b))
+	if err != nil {
+		return err
+	}
+	resp, err := w.Control.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	io.Copy(io.Discard, resp.Body)
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("sim control %s: status %d", path, resp.StatusCode)
+	}
+	return nil
+}
+func (w *World) Inspect() ([]contracts.Observation, error) {
+	resp, err := w.Control.Get("http://sim/inspect")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	var result []contracts.Observation
+	err = json.NewDecoder(resp.Body).Decode(&result)
+	return result, err
+}
+
+var HTTP = &http.Client{Timeout: 5 * time.Second}
+
+func Request(ctx context.Context, e Endpoint, path string, input any, output any) (int, error) {
+	method := "GET"
+	var reader io.Reader
+	if input != nil {
+		method = "POST"
+		b, err := json.Marshal(input)
+		if err != nil {
+			return 0, err
+		}
+		reader = bytes.NewReader(b)
+	}
+	req, err := http.NewRequestWithContext(ctx, method, e.URL+path, reader)
+	if err != nil {
+		return 0, err
+	}
+	req.Host = e.Host
+	req.Header.Set("Authorization", "Bearer "+e.Token)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := HTTP.Do(req)
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+	if output != nil {
+		err = json.NewDecoder(resp.Body).Decode(output)
+	} else {
+		_, err = io.Copy(io.Discard, resp.Body)
+	}
+	if resp.StatusCode != 200 {
+		return resp.StatusCode, fmt.Errorf("API status %d", resp.StatusCode)
+	}
+	return resp.StatusCode, err
+}
+func (w *World) Records(e Endpoint) ([]contracts.Record, error) {
+	out := []contracts.Record{}
+	after := ""
+	for {
+		var result contracts.ReadResult
+		_, err := Request(w.ctx, e, "/v1/op/records.query", contracts.ReadQuery{Limit: 1000, After: after}, &result)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, result.Records...)
+		if result.Next == "" {
+			return out, nil
+		}
+		after = result.Next
+	}
+}
+
+type ReplicaStatus struct {
+	State     string `json:"state"`
+	Mode      string `json:"mode"`
+	Snapshots int    `json:"snapshots"`
+	Resumes   int    `json:"resumes"`
+}
+
+func (w *World) Status(e Endpoint) (ReplicaStatus, error) {
+	var result struct {
+		Replica ReplicaStatus `json:"replica"`
+	}
+	_, err := Request(w.ctx, e, "/v1/op/sources.status", struct{}{}, &result)
+	return result.Replica, err
+}
+
+func (w *World) ScopedToken(e Endpoint, scope string) (string, error) {
+	binary := w.bridge
+	if e.Remote {
+		binary = w.remoteBinary
+	}
+	return w.execute(e.Remote, binary, "token", "create", "--home", e.Home, "--scope", scope)
+}
