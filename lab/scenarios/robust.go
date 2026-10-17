@@ -448,6 +448,11 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 			if w.RestartGateway(0) != nil {
 				return fail("gateway_restart")
 			}
+			drained := w.FlushCaptures(30*time.Second) == nil && w.Await(15*time.Second, func() bool { return convergence(w) }) == nil
+			add(fmt.Sprintf("capture_replay_converged_iteration_%d", i), drained)
+			if !drained {
+				return fail("capture_iteration_recovery")
+			}
 		}
 		add("eight_gateway_process_crashes", true)
 		if w.ControlAction("/flush", struct{}{}) != nil {

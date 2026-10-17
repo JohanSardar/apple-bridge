@@ -473,6 +473,14 @@ func (w *World) RestartReplica(index int) error {
 	return err
 }
 func (w *World) ControlAction(path string, action any) error {
+	return w.controlAction(w.Control, path, action)
+}
+func (w *World) FlushCaptures(timeout time.Duration) error {
+	client := *w.Control
+	client.Timeout = timeout
+	return w.controlAction(&client, "/flush", struct{}{})
+}
+func (w *World) controlAction(client *http.Client, path string, action any) error {
 	b, err := json.Marshal(action)
 	if err != nil {
 		return err
@@ -481,7 +489,7 @@ func (w *World) ControlAction(path string, action any) error {
 	if err != nil {
 		return err
 	}
-	resp, err := w.Control.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}

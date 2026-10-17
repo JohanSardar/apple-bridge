@@ -32,10 +32,10 @@ else
   echo "cpus $(getconf _NPROCESSORS_ONLN)"
   awk '{print "load " $1 " " $2 " " $3}' /proc/loadavg
   read label u n s idle wait irq soft steal rest < /proc/stat
-  first_idle=$((idle+wait)); first_total=$((u+n+s+idle+wait+irq+soft+steal))
+  first_idle=$idle; first_total=$((u+n+s+idle+wait+irq+soft+steal))
   sleep 1
   read label u n s idle wait irq soft steal rest < /proc/stat
-  awk -v a="$first_idle" -v b="$first_total" -v c="$((idle+wait))" -v d="$((u+n+s+idle+wait+irq+soft+steal))" 'BEGIN {if(d>b) print "idle " 100*(c-a)/(d-b)}'
+  awk -v a="$first_idle" -v b="$first_total" -v c="$idle" -v d="$((u+n+s+idle+wait+irq+soft+steal))" 'BEGIN {if(d>b) print "idle " 100*(c-a)/(d-b)}'
   awk '/^MemFree:/ {printf "memory %.0f\n",$2*1024}' /proc/meminfo
 fi
 ancestors=" "
