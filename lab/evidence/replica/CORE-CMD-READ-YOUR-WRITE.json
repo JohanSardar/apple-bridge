@@ -1,0 +1,185 @@
+{
+  "run_id": "run_01M545KH687NJHWY9PY4X45G11",
+  "scenario": "CORE-CMD-READ-YOUR-WRITE",
+  "level": "replica",
+  "passed": true,
+  "git_sha": "145521ea490fbfa4b6a07d8f15774633b2b1d981",
+  "at": "2026-10-17T05:33:25.064274Z",
+  "assertions": [
+    {
+      "name": "replica_host_is_ubuntu",
+      "passed": true
+    },
+    {
+      "name": "bootstrap_snapshot",
+      "passed": true
+    },
+    {
+      "name": "scope_query_and_get",
+      "passed": true
+    },
+    {
+      "name": "scope_rest_query_0",
+      "passed": true
+    },
+    {
+      "name": "scope_rest_command_0",
+      "passed": true
+    },
+    {
+      "name": "scope_mcp_query_0",
+      "passed": true
+    },
+    {
+      "name": "scope_mcp_command_0",
+      "passed": true
+    },
+    {
+      "name": "scope_rest_query_1",
+      "passed": true
+    },
+    {
+      "name": "scope_rest_command_1",
+      "passed": true
+    },
+    {
+      "name": "scope_mcp_query_1",
+      "passed": true
+    },
+    {
+      "name": "scope_mcp_command_1",
+      "passed": true
+    },
+    {
+      "name": "scope_rest_query_2",
+      "passed": true
+    },
+    {
+      "name": "scope_rest_command_2",
+      "passed": true
+    },
+    {
+      "name": "scope_mcp_query_2",
+      "passed": true
+    },
+    {
+      "name": "scope_mcp_command_2",
+      "passed": true
+    },
+    {
+      "name": "command_observed",
+      "passed": true
+    },
+    {
+      "name": "local_read_at_commit_seq",
+      "passed": true
+    },
+    {
+      "name": "commit_seq_identifies_observing_capture",
+      "passed": true
+    },
+    {
+      "name": "noop_commit_seq_identifies_fresh_observation",
+      "passed": true
+    },
+    {
+      "name": "one_truth_effect",
+      "passed": true
+    },
+    {
+      "name": "convergence_truth_gateway_replicas",
+      "passed": true
+    },
+    {
+      "name": "no_automatic_redispatch_truth_effect_counts",
+      "passed": true
+    },
+    {
+      "name": "metadata_latency_below_1s_0",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_watermarks_0",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "metadata_latency_below_1s_1",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_watermarks_1",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "metadata_latency_below_1s_2",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_watermarks_2",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_2",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_0",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_1",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_2",
+      "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass",
+      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
+    }
+  ],
+  "latency": {
+    "effect_done→gateway_visible": {
+      "samples": 1,
+      "p50_ms": 22.039125,
+      "p95_ms": 22.039125,
+      "max_ms": 22.039125,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica0": {
+      "samples": 1,
+      "p50_ms": 34.920333,
+      "p95_ms": 34.920333,
+      "max_ms": 34.920333,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica1": {
+      "samples": 1,
+      "p50_ms": 37.219917,
+      "p95_ms": 37.219917,
+      "max_ms": 37.219917,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air",
+    "ubuntu"
+  ]
+}
