@@ -272,8 +272,10 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 				add("attachment_alias", false)
 				continue
 			}
-			for _, endpoint := range endpoints {
-				add("authorized_replica_attachment_bytes", messagesAttachmentBytes(ctx, w, endpoint, id, []byte(expected)))
+			for i, endpoint := range endpoints {
+				diagnostic := map[string]any{"endpoint_index": i}
+				add("authorized_replica_attachment_bytes", messagesAttachmentBytes(ctx, w, endpoint, id, []byte(expected), diagnostic))
+				e.Metrics["attachment_downloads"] = appendDiagnostic(e.Metrics["attachment_downloads"], diagnostic)
 			}
 		}
 	}
@@ -333,7 +335,7 @@ func saveIncomingEchoEvidence(e Evidence) error {
 	return Save(incoming)
 }
 
-func messagesAttachmentBytes(ctx context.Context, w *world.World, endpoint world.Endpoint, id string, expected []byte) bool {
+func messagesAttachmentBytes(ctx context.Context, w *world.World, endpoint world.Endpoint, id string, expected []byte, diagnostic map[string]any) bool {
 	return w.Await(10*time.Second, func() bool {
 		var result contracts.ReadResult
 		err := (scripted.Client{Endpoint: endpoint}).Call(ctx, "records.get", contracts.ReadQuery{Collection: "messages.attachment", ID: id}, &result)
@@ -350,6 +352,18 @@ func messagesAttachmentBytes(ctx context.Context, w *world.World, endpoint world
 			return false
 		}
 		status, bytes, err := blobBytes(ctx, endpoint, data.Blob.Digest, id)
+		diagnostic["http_status"] = status
+		diagnostic["record_blob_state"] = data.Blob.State
+		if progress, problem := blobProgress(ctx, endpoint); problem == nil {
+			entry := progress.Entries[data.Blob.Digest]
+			diagnostic["local_blob_state"] = entry.State
+			diagnostic["local_blob_reason"] = entry.Reason
+		}
 		return err == nil && status == 200 && string(bytes) == string(expected)
 	}) == nil
+}
+
+func appendDiagnostic(previous any, next map[string]any) []map[string]any {
+	values, _ := previous.([]map[string]any)
+	return append(values, next)
 }

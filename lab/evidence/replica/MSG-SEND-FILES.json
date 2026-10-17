@@ -1,18 +1,13 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[5.62 5.12 4.97] cpus=8 other_heavy=1; ubuntu: load=[0.17 0.3 0.3] cpus=8 other_heavy=0"
+    "summary": "air: load=[5.6 4.96 4.9] cpus=8 other_heavy=1; ubuntu: load=[0.39 0.32 0.3] cpus=8 other_heavy=0"
   },
-  "status": "environment-limited",
-  "run_id": "run_01M55RN1PQSXRQ28KNB54HTVAZ",
+  "run_id": "run_01M55RWW2PJTYQBD2YF8NS8N3P",
   "metrics": {
-    "apple_event_errors": [
-      0,
-      0,
-      0
-    ],
-    "command_state": "indeterminate",
-    "disposition": "indeterminate",
+    "command_state": "observed",
+    "disposition": "locally_observed",
+    "initial_command_state": "observed",
     "parts_requested": 3,
     "screen": "locked",
     "send_commands": 1
@@ -20,8 +15,8 @@
   "scenario": "MSG-SEND-FILES",
   "level": "replica",
   "passed": false,
-  "git_sha": "79748c5c1aa474839ea4c9279c4701fbaf731fbb",
-  "at": "2026-10-17T20:25:32.119215Z",
+  "git_sha": "8d595c367d931fb231508c666980d6c7676d10a2",
+  "at": "2026-10-17T20:29:48.502586Z",
   "assertions": [
     {
       "name": "self_chat_captured",
@@ -33,14 +28,115 @@
     },
     {
       "name": "native_send_observed_with_fingerprint_checkpoint",
+      "passed": true
+    },
+    {
+      "name": "request_hash_bound",
+      "passed": true
+    },
+    {
+      "name": "truth_outgoing_not_echo",
+      "passed": true
+    },
+    {
+      "name": "three_native_part_outcomes",
+      "passed": true
+    },
+    {
+      "name": "truth_native_part",
+      "passed": true
+    },
+    {
+      "name": "truth_native_part",
+      "passed": true
+    },
+    {
+      "name": "truth_native_part",
+      "passed": true
+    },
+    {
+      "name": "command_visible_0",
+      "passed": true
+    },
+    {
+      "name": "command_sse_timestamp_0",
+      "passed": true
+    },
+    {
+      "name": "command_visible_1",
+      "passed": true
+    },
+    {
+      "name": "command_sse_timestamp_1",
+      "passed": true
+    },
+    {
+      "name": "incoming_echo_visible_0",
+      "passed": true
+    },
+    {
+      "name": "incoming_echo_sse_timestamp_0",
+      "passed": true
+    },
+    {
+      "name": "incoming_echo_visible_1",
+      "passed": true
+    },
+    {
+      "name": "incoming_echo_sse_timestamp_1",
+      "passed": true
+    },
+    {
+      "name": "authorized_replica_attachment_bytes",
       "passed": false
+    },
+    {
+      "name": "authorized_replica_attachment_bytes",
+      "passed": false
+    },
+    {
+      "name": "authorized_replica_attachment_bytes",
+      "passed": true
+    },
+    {
+      "name": "authorized_replica_attachment_bytes",
+      "passed": true
     },
     {
       "name": "credential_backend_override_restored",
       "passed": true
     }
   ],
-  "latency": {},
+  "latency": {
+    "command_submit_to_visible_0": {
+      "samples": 1,
+      "p50_ms": 811.096167,
+      "p95_ms": 811.096167,
+      "max_ms": 811.096167,
+      "timeouts": 0
+    },
+    "command_submit_to_visible_1": {
+      "samples": 1,
+      "p50_ms": 823.782709,
+      "p95_ms": 823.782709,
+      "max_ms": 823.782709,
+      "timeouts": 0
+    },
+    "echo_chat_db_appearance_to_visible_0": {
+      "samples": 1,
+      "p50_ms": 151.980542,
+      "p95_ms": 151.980542,
+      "max_ms": 151.980542,
+      "timeouts": 0
+    },
+    "echo_chat_db_appearance_to_visible_1": {
+      "samples": 1,
+      "p50_ms": 241.281375,
+      "p95_ms": 241.281375,
+      "max_ms": 241.281375,
+      "timeouts": 0
+    }
+  },
   "hosts": [
     "air",
     "ubuntu"
