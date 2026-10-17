@@ -1,21 +1,62 @@
 {
-  "run_id": "run_01M54BGT2F9PKAJY4V87216RFV",
+  "host_conditions": {
+    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "start": {
+      "air": {
+        "at": "2026-10-17T19:27:26.415597Z",
+        "cpu_count": 8,
+        "load_average": [
+          4.08,
+          4.98,
+          6.33
+        ],
+        "cpu_idle_percent": 70,
+        "free_memory_bytes": 145588224,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 4,
+        "quiet": false
+      }
+    },
+    "end": {
+      "air": {
+        "at": "2026-10-17T19:27:31.215607Z",
+        "cpu_count": 8,
+        "load_average": [
+          4.07,
+          4.96,
+          6.31
+        ],
+        "cpu_idle_percent": 75,
+        "free_memory_bytes": 224919552,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 4,
+        "quiet": false
+      }
+    },
+    "quiet": false,
+    "require_quiet": false,
+    "quiet_wait_ms": 0,
+    "quiet_wait_expired": false
+  },
+  "run_id": "run_01M55NAPRM0WX4EBYQE5KKWGT8",
   "metrics": {
     "history_import": {
-      "capture_ack_ms": 8792.422794999995,
-      "capture_bytes": 2774465,
+      "capture_ack_ms": 1747.67409,
+      "capture_bytes": 2774462,
       "capture_count": 67,
       "clock": "same-host monotonic SSE receipt after gateway commit / replica apply",
       "credit_waits": 0,
-      "gateway_commit_visible_ms": 11153.685540999999,
-      "gateway_rows_per_second": 367.41218720360195,
-      "gateway_to_replica_tail_ms": 23.055167,
+      "gateway_commit_visible_ms": 2321.740125,
+      "gateway_rows_per_second": 1765.0554236771009,
+      "gateway_to_replica_tail_ms": 16.4745,
       "host_after": {
         "gomaxprocs": 8,
         "load_average": [
-          16.48,
-          13.63,
-          12.56
+          4.07,
+          4.96,
+          6.31
         ],
         "logical_cpus": 8,
         "occupied_heavy_slots": 2
@@ -23,24 +64,24 @@
       "host_before": {
         "gomaxprocs": 8,
         "load_average": [
-          13.52,
-          12.96,
-          12.31
+          4.07,
+          4.96,
+          6.31
         ],
         "logical_cpus": 8,
         "occupied_heavy_slots": 2
       },
-      "replica_apply_visible_ms": 11176.740708000001,
-      "replica_rows_per_second": 366.65429636985004,
+      "replica_apply_visible_ms": 2338.214625,
+      "replica_rows_per_second": 1752.619266077852,
       "synthetic_rows": 4098,
-      "truth_verification_ms": 1968.290292
+      "truth_verification_ms": 326.231958
     }
   },
   "scenario": "MSG-HISTORY-IMPORT",
   "level": "sim",
   "passed": true,
-  "git_sha": "848918ef3d5560e95bb712ac0cd32e3bef168810",
-  "at": "2026-10-17T07:16:47.311663Z",
+  "git_sha": "cd84c01ae2198a3a0a59792c12b628801a31a634",
+  "at": "2026-10-17T19:27:27.508119Z",
   "assertions": [
     {
       "name": "seed",

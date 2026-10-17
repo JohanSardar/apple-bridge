@@ -1,0 +1,10 @@
+{
+  "synthetic_only": true,
+  "wal_rotation_row_count": 2,
+  "main_replacement_row_count": 3,
+  "plain_reader_after_wal_rotation": "OperationalError",
+  "plain_reader_after_main_replacement": 2,
+  "readonly_enforced": true,
+  "passed": true,
+  "sqlite_version": "3.54.0"
+}

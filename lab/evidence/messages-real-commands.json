@@ -1,0 +1,819 @@
+{
+  "source_sha": "cd84c01ae2198a3a0a59792c12b628801a31a634",
+  "wrapper": "packaging/dev/heavy.sh python3 lab/evidence/private/verify-messages-real.py",
+  "transport": "ssh -o ControlPath=none air",
+  "working_directory": "~/apple-bridge/.worktrees/messages-read-fix",
+  "commands": [
+    {
+      "argv": [
+        "python3",
+        "-m",
+        "py_compile",
+        "lab/bench/messages-real.py"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.050177082885056734,
+      "scenarios": []
+    },
+    {
+      "argv": [
+        "python3",
+        "lab/evidence/messages-real-oracle-reader-probe.py.txt"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.058667165925726295,
+      "scenarios": []
+    },
+    {
+      "argv": [
+        "go",
+        "run",
+        "-p",
+        "2",
+        "./cmd/bridge-lab",
+        "run",
+        "lab/scenarios/messages/MSG-RECEIPTS.yaml",
+        "lab/scenarios/messages/MSG-WATCHER-REARM.yaml",
+        "lab/scenarios/messages/MSG-INCOMING.yaml",
+        "--level",
+        "real",
+        "--json"
+      ],
+      "exit_code": 1,
+      "elapsed_seconds": 327.21765137510374,
+      "scenarios": [
+        {
+          "scenario": "MSG-INCOMING",
+          "level": "real",
+          "passed": false,
+          "status": "unverified",
+          "assertions": [
+            {
+              "name": "truth_readonly_chat_db",
+              "passed": true
+            },
+            {
+              "name": "messages_source_ready",
+              "passed": true
+            },
+            {
+              "name": "fresh_row_latency",
+              "passed": false,
+              "status": "unverified",
+              "detail": "No natural message row observed during this read-only run"
+            },
+            {
+              "name": "credential_backend_override_restored",
+              "passed": true
+            }
+          ],
+          "latency": {},
+          "metrics": {
+            "natural_events_only": true,
+            "natural_incoming_observation_ms": 60010.66504186019,
+            "natural_incoming_samples": 0,
+            "read_only": true,
+            "replica_count": 1,
+            "truth_poll_interval_ms": 25
+          },
+          "network_path": "loopback"
+        },
+        {
+          "scenario": "MSG-RECEIPTS",
+          "level": "real",
+          "passed": false,
+          "status": "unverified",
+          "assertions": [
+            {
+              "name": "truth_readonly_chat_db",
+              "passed": true
+            },
+            {
+              "name": "messages_source_ready",
+              "passed": true
+            },
+            {
+              "name": "existing_outgoing_receipts_equal_readonly_truth",
+              "passed": true
+            },
+            {
+              "name": "existing_receipts_equal_on_replica",
+              "passed": true
+            },
+            {
+              "name": "natural_receipt_transition_observed",
+              "passed": false,
+              "status": "unverified",
+              "detail": "No natural receipt transition observed during the bounded read-only window"
+            },
+            {
+              "name": "credential_backend_override_restored",
+              "passed": true
+            }
+          ],
+          "latency": {},
+          "metrics": {
+            "api_visibility_retries": {
+              "404": 2
+            },
+            "natural_events_only": true,
+            "natural_receipt_observation_ms": 60012.88800011389,
+            "read_only": true,
+            "receipt_transition_samples": 0,
+            "replica_count": 1,
+            "truth_poll_interval_ms": 25
+          },
+          "network_path": "loopback"
+        },
+        {
+          "scenario": "MSG-WATCHER-REARM",
+          "level": "real",
+          "passed": false,
+          "status": "unverified",
+          "assertions": [
+            {
+              "name": "truth_readonly_chat_db",
+              "passed": true
+            },
+            {
+              "name": "messages_source_ready",
+              "passed": true
+            },
+            {
+              "name": "natural_watchers_remain_armed",
+              "passed": true
+            },
+            {
+              "name": "poll_fallback_active_during_observation",
+              "passed": true
+            },
+            {
+              "name": "natural_wal_checkpoint_observed",
+              "passed": false,
+              "status": "unverified",
+              "detail": "No natural WAL checkpoint observed; chat.db and WAL were never modified by this run"
+            },
+            {
+              "name": "natural_post_checkpoint_change_observed",
+              "passed": false,
+              "status": "unverified",
+              "detail": "No natural new row after a checkpoint observed during this run"
+            },
+            {
+              "name": "natural_inode_rearm_observed",
+              "passed": false,
+              "status": "unverified",
+              "detail": "No natural WAL inode replacement observed during the bounded read-only window"
+            },
+            {
+              "name": "credential_backend_override_restored",
+              "passed": true
+            }
+          ],
+          "latency": {},
+          "metrics": {
+            "natural_events_only": true,
+            "natural_post_checkpoint_samples": 0,
+            "natural_wal_observation_ms": 90002.65970802866,
+            "read_only": true,
+            "replica_count": 0,
+            "truth_poll_interval_ms": 25,
+            "wal_header_resets": 0,
+            "wal_inode_changes": 0,
+            "wal_truncations": 0,
+            "watcher_event_delta": 2,
+            "watcher_poll_delta": 45,
+            "watcher_rearm_delta": 0
+          },
+          "network_path": "loopback"
+        }
+      ]
+    },
+    {
+      "argv": [
+        "go",
+        "run",
+        "-p",
+        "2",
+        "./cmd/bridge-lab",
+        "run",
+        "lab/scenarios/messages/MSG-INCOMING.yaml",
+        "--level",
+        "replica",
+        "--json"
+      ],
+      "exit_code": 1,
+      "elapsed_seconds": 104.74487424991094,
+      "scenarios": [
+        {
+          "scenario": "MSG-INCOMING",
+          "level": "replica",
+          "passed": false,
+          "status": "unverified",
+          "assertions": [
+            {
+              "name": "truth_readonly_chat_db",
+              "passed": true
+            },
+            {
+              "name": "messages_source_ready",
+              "passed": true
+            },
+            {
+              "name": "fresh_row_latency",
+              "passed": false,
+              "status": "unverified",
+              "detail": "No natural message row observed during this read-only run"
+            },
+            {
+              "name": "credential_backend_override_restored",
+              "passed": true
+            }
+          ],
+          "latency": {},
+          "metrics": {
+            "natural_events_only": true,
+            "natural_incoming_observation_ms": 60019.82366689481,
+            "natural_incoming_samples": 0,
+            "read_only": true,
+            "replica_count": 1,
+            "truth_poll_interval_ms": 25
+          },
+          "network_path": "ssh_tunnel"
+        }
+      ]
+    },
+    {
+      "argv": [
+        "go",
+        "run",
+        "-p",
+        "2",
+        "./cmd/bridge-lab",
+        "run",
+        "lab/scenarios/messages",
+        "--level",
+        "sim",
+        "--json"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 39.93487004097551,
+      "scenarios": [
+        {
+          "scenario": "MSG-DB-REPLACED",
+          "level": "sim",
+          "passed": true,
+          "status": null,
+          "assertions": [
+            {
+              "name": "seed",
+              "passed": true
+            },
+            {
+              "name": "history_equals_truth",
+              "passed": true
+            },
+            {
+              "name": "replacement",
+              "passed": true
+            },
+            {
+              "name": "generation_changed",
+              "passed": true
+            },
+            {
+              "name": "stable_identifiers_no_false_deletion",
+              "passed": true
+            },
+            {
+              "name": "automatic_convergence_with_truth",
+              "passed": true
+            },
+            {
+              "name": "automatic_no_false_deletion_0",
+              "passed": true
+            },
+            {
+              "name": "automatic_transactional_feed_0",
+              "passed": true
+            },
+            {
+              "name": "automatic_no_false_deletion_1",
+              "passed": true
+            },
+            {
+              "name": "automatic_transactional_feed_1",
+              "passed": true
+            },
+            {
+              "name": "automatic_no_scope_leak_0",
+              "passed": true
+            },
+            {
+              "name": "automatic_no_scope_leak_1",
+              "passed": true
+            },
+            {
+              "name": "credential_backend_override_restored",
+              "passed": true
+            }
+          ],
+          "latency": {},
+          "metrics": null,
+          "network_path": null
+        },
+        {
+          "scenario": "MSG-DECODE",
+          "level": "sim",
+          "passed": true,
+          "status": null,
+          "assertions": [
+            {
+              "name": "seed",
+              "passed": true
+            },
+            {
+              "name": "history_equals_truth",
+              "passed": true
+            },
+            {
+              "name": "decoder_fixture_checks",
+              "passed": true
+            },
+            {
+              "name": "malformed_observed",
+              "passed": true
+            },
+            {
+              "name": "undecoded_retains_digest_without_empty_text",
+              "passed": true
+            },
+            {
+              "name": "automatic_convergence_with_truth",
+              "passed": true
+            },
+            {
+              "name": "automatic_no_false_deletion_0",
+              "passed": true
+            },
+            {
+              "name": "automatic_transactional_feed_0",
+              "passed": true
+            },
+            {
+              "name": "automatic_no_false_deletion_1",
+              "passed": true
+            },
+            {
+              "name": "automatic_transactional_feed_1",
+              "passed": true
+            },
+            {
+              "name": "automatic_no_scope_leak_0",
+              "passed": true
+            },
+            {
+              "name": "automatic_no_scope_leak_1",
+              "passed": true
+            },
+            {
+              "name": "credential_backend_override_restored",
+              "passed": true
+            }
+          ],
+          "latency": {},
+          "metrics": null,
+          "network_path": null
+        },
+        {
+          "scenario": "MSG-HISTORY-IMPORT",
+          "level": "sim",
+          "passed": true,
+          "status": null,
+          "assertions": [
+            {
+              "name": "seed",
+              "passed": true
+            },
+            {
+              "name": "history_equals_truth",
+              "passed": true
+            },
+            {
+              "name": "bulk_pause_installed",
+              "passed": true
+            },
+            {
+              "name": "bulk_started",
+              "passed": true
+            },
+            {
+              "name": "bulk_paused_before_known_target",
+              "passed": true
+            },
+            {
+              "name": "live_mutation_during_import",
+              "passed": true
+            },
+            {
+              "name": "live_insert_during_import",
+              "passed": true
+            },
+            {
+              "name": "live_visible_before_bulk_release",
+              "passed": true
+            },
+            {
+              "name": "release_stale_bulk",
+              "passed": true
+            },
+            {
+              "name": "backfill_revalidated_against_truth",
+              "passed": true
+            },
+            {
+              "name": "older_backfill_never_regresses_live_value_0",
+              "passed": true
+            },
+            {
+              "name": "older_backfill_never_regresses_live_value_1",
+              "passed": true
+            },
+            {
+              "name": "automatic_convergence_with_truth",
+              "passed": true
+            },
+            {
+              "name": "automatic_no_false_deletion_0",
+              "passed": true
+            },
+            {
+              "name": "automatic_transactional_feed_0",
+              "passed": true
+            },
+            {
+              "name": "automatic_no_false_deletion_1",
+              "passed": true
+            },
+            {
+              "name": "automatic_transactional_feed_1",
+              "passed": true
+            },
+            {
+              "name": "automatic_no_scope_leak_0",
+              "passed": true
+            },
+            {
+              "name": "automatic_no_scope_leak_1",
+              "passed": true
+            },
+            {
+              "name": "credential_backend_override_restored",
+              "passed": true
+            }
+          ],
+          "latency": {},
+          "metrics": {
+            "history_import": {
+              "capture_ack_ms": 1747.67409,
+              "capture_bytes": 2774462,
+              "capture_count": 67,
+              "clock": "same-host monotonic SSE receipt after gateway commit / replica apply",
+              "credit_waits": 0,
+              "gateway_commit_visible_ms": 2321.740125,
+              "gateway_rows_per_second": 1765.0554236771009,
+              "gateway_to_replica_tail_ms": 16.4745,
+              "host_after": {
+                "gomaxprocs": 8,
+                "load_average": [
+                  4.07,
+                  4.96,
+                  6.31
+                ],
+                "logical_cpus": 8,
+                "occupied_heavy_slots": 2
+              },
+              "host_before": {
+                "gomaxprocs": 8,
+                "load_average": [
+                  4.07,
+                  4.96,
+                  6.31
+                ],
+                "logical_cpus": 8,
+                "occupied_heavy_slots": 2
+              },
+              "replica_apply_visible_ms": 2338.214625,
+              "replica_rows_per_second": 1752.619266077852,
+              "synthetic_rows": 4098,
+              "truth_verification_ms": 326.231958
+            }
+          },
+          "network_path": null
+        },
+        {
+          "scenario": "MSG-INCOMING",
+          "level": "sim",
+          "passed": true,
+          "status": null,
+          "assertions": [
+            {
+              "name": "seed",
+              "passed": true
+            },
+            {
+              "name": "history_equals_truth",
+              "passed": true
+            },
+            {
+              "name": "all_messages_under_one_second",
+              "passed": true
+            },
+            {
+              "name": "automatic_convergence_with_truth",
+              "passed": true
+            },
+            {
+              "name": "automatic_no_false_deletion_0",
+              "passed": true
+            },
+            {
+              "name": "automatic_transactional_feed_0",
+              "passed": true
+            },
+            {
+              "name": "automatic_no_false_deletion_1",
+              "passed": true
+            },
+            {
+              "name": "automatic_transactional_feed_1",
+              "passed": true
+            },
+            {
+              "name": "automatic_no_scope_leak_0",
+              "passed": true
+            },
+            {
+              "name": "automatic_no_scope_leak_1",
+              "passed": true
+            },
+            {
+              "name": "credential_backend_override_restored",
+              "passed": true
+            }
+          ],
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 32,
+              "p50_ms": 7.075209,
+              "p95_ms": 15.483125,
+              "max_ms": 16.457792,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible": {
+              "samples": 32,
+              "p50_ms": 11.029417,
+              "p95_ms": 20.806125,
+              "max_ms": 22.407792,
+              "timeouts": 0
+            },
+            "gateway_visible\u2192replica_visible": {
+              "samples": 32,
+              "p50_ms": 2.902375,
+              "p95_ms": 8.289834,
+              "max_ms": 11.047458,
+              "timeouts": 0
+            }
+          },
+          "metrics": null,
+          "network_path": null
+        },
+        {
+          "scenario": "MSG-PERMISSION-LOSS",
+          "level": "sim",
+          "passed": true,
+          "status": null,
+          "assertions": [
+            {
+              "name": "seed",
+              "passed": true
+            },
+            {
+              "name": "history_equals_truth",
+              "passed": true
+            },
+            {
+              "name": "permission_loss",
+              "passed": true
+            },
+            {
+              "name": "native_absence_while_denied",
+              "passed": true
+            },
+            {
+              "name": "native_insert_while_denied",
+              "passed": true
+            },
+            {
+              "name": "permission_state",
+              "passed": true
+            },
+            {
+              "name": "no_false_absence",
+              "passed": true
+            },
+            {
+              "name": "permission_restore",
+              "passed": true
+            },
+            {
+              "name": "automatic_convergence_with_truth",
+              "passed": true
+            },
+            {
+              "name": "automatic_no_false_deletion_0",
+              "passed": true
+            },
+            {
+              "name": "automatic_transactional_feed_0",
+              "passed": true
+            },
+            {
+              "name": "automatic_no_false_deletion_1",
+              "passed": true
+            },
+            {
+              "name": "automatic_transactional_feed_1",
+              "passed": true
+            },
+            {
+              "name": "automatic_no_scope_leak_0",
+              "passed": true
+            },
+            {
+              "name": "automatic_no_scope_leak_1",
+              "passed": true
+            },
+            {
+              "name": "credential_backend_override_restored",
+              "passed": true
+            }
+          ],
+          "latency": {},
+          "metrics": null,
+          "network_path": null
+        },
+        {
+          "scenario": "MSG-RECEIPTS",
+          "level": "sim",
+          "passed": true,
+          "status": null,
+          "assertions": [
+            {
+              "name": "seed",
+              "passed": true
+            },
+            {
+              "name": "history_equals_truth",
+              "passed": true
+            },
+            {
+              "name": "receipts_mutate_existing_record",
+              "passed": true
+            },
+            {
+              "name": "replica_contains_both_receipts",
+              "passed": true
+            },
+            {
+              "name": "automatic_convergence_with_truth",
+              "passed": true
+            },
+            {
+              "name": "automatic_no_false_deletion_0",
+              "passed": true
+            },
+            {
+              "name": "automatic_transactional_feed_0",
+              "passed": true
+            },
+            {
+              "name": "automatic_no_false_deletion_1",
+              "passed": true
+            },
+            {
+              "name": "automatic_transactional_feed_1",
+              "passed": true
+            },
+            {
+              "name": "automatic_no_scope_leak_0",
+              "passed": true
+            },
+            {
+              "name": "automatic_no_scope_leak_1",
+              "passed": true
+            },
+            {
+              "name": "credential_backend_override_restored",
+              "passed": true
+            }
+          ],
+          "latency": {},
+          "metrics": null,
+          "network_path": null
+        },
+        {
+          "scenario": "MSG-WATCHER-REARM",
+          "level": "sim",
+          "passed": true,
+          "status": null,
+          "assertions": [
+            {
+              "name": "seed",
+              "passed": true
+            },
+            {
+              "name": "history_equals_truth",
+              "passed": true
+            },
+            {
+              "name": "wal_rotation_followed_by_insert",
+              "passed": true
+            },
+            {
+              "name": "poll_fallback_catches_disarmed_events",
+              "passed": true
+            },
+            {
+              "name": "production_native_watcher_fault_checks",
+              "passed": true
+            },
+            {
+              "name": "automatic_convergence_with_truth",
+              "passed": true
+            },
+            {
+              "name": "automatic_no_false_deletion_0",
+              "passed": true
+            },
+            {
+              "name": "automatic_transactional_feed_0",
+              "passed": true
+            },
+            {
+              "name": "automatic_no_false_deletion_1",
+              "passed": true
+            },
+            {
+              "name": "automatic_transactional_feed_1",
+              "passed": true
+            },
+            {
+              "name": "automatic_no_scope_leak_0",
+              "passed": true
+            },
+            {
+              "name": "automatic_no_scope_leak_1",
+              "passed": true
+            },
+            {
+              "name": "credential_backend_override_restored",
+              "passed": true
+            }
+          ],
+          "latency": {},
+          "metrics": null,
+          "network_path": null
+        }
+      ]
+    },
+    {
+      "argv": [
+        "make",
+        "lint"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.6973529998213053,
+      "scenarios": []
+    },
+    {
+      "argv": [
+        "go",
+        "vet",
+        "./..."
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.22330129193142056,
+      "scenarios": []
+    },
+    {
+      "argv": [
+        "make",
+        "features"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.4420018340460956,
+      "scenarios": []
+    }
+  ]
+}

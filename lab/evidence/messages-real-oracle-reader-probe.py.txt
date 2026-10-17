@@ -1,0 +1,64 @@
+import ast
+import json
+import os
+from pathlib import Path
+import sqlite3
+import tempfile
+
+source = Path("lab/bench/messages-real.py").read_text()
+tree = ast.parse(source)
+nodes = [node for node in tree.body if isinstance(node, (ast.ClassDef, ast.FunctionDef)) and node.name in ["ReadOnlyDatabase", "readonly"]]
+namespace = {"os": os, "sqlite3": sqlite3}
+exec(compile(ast.Module(body=nodes, type_ignores=[]), "oracle-reader", "exec"), namespace)
+with tempfile.TemporaryDirectory(prefix="messages-oracle-probe-") as directory:
+    path = os.path.join(directory, "synthetic.db")
+    writer = sqlite3.connect(path)
+    writer.execute("PRAGMA journal_mode=WAL")
+    writer.execute("CREATE TABLE probe(value INTEGER)")
+    writer.execute("INSERT INTO probe VALUES(1)")
+    writer.commit()
+    reader = namespace["readonly"](path)
+    plain = sqlite3.connect("file:" + path + "?mode=ro", uri=True)
+    assert reader.execute("SELECT COUNT(*) FROM probe").fetchone()[0] == 1
+    assert plain.execute("SELECT COUNT(*) FROM probe").fetchone()[0] == 1
+    assert writer.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()[0] == 0
+    writer.close()
+    if os.path.exists(path + "-wal"):
+        os.rename(path + "-wal", path + "-wal-retired")
+    writer = sqlite3.connect(path)
+    writer.execute("INSERT INTO probe VALUES(2)")
+    writer.commit()
+    wal_count = reader.execute("SELECT COUNT(*) FROM probe").fetchone()[0]
+    assert wal_count == 2
+    try:
+        plain_wal_count = plain.execute("SELECT COUNT(*) FROM probe").fetchone()[0]
+    except sqlite3.Error as error:
+        plain_wal_count = type(error).__name__
+    writer.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchall()
+    writer.close()
+    replacement = path + "-replacement"
+    with sqlite3.connect(replacement) as fresh:
+        fresh.execute("CREATE TABLE probe(value INTEGER)")
+        fresh.executemany("INSERT INTO probe VALUES(?)", [(1,), (2,), (3,)])
+    for suffix in ["-wal", "-shm"]:
+        if os.path.exists(path + suffix):
+            os.rename(path + suffix, path + suffix + "-old-main")
+    os.replace(replacement, path)
+    replacement_count = reader.execute("SELECT COUNT(*) FROM probe").fetchone()[0]
+    assert replacement_count == 3
+    try:
+        plain_main_count = plain.execute("SELECT COUNT(*) FROM probe").fetchone()[0]
+    except sqlite3.Error as error:
+        plain_main_count = type(error).__name__
+    readonly_enforced = False
+    try:
+        reader.execute("INSERT INTO probe VALUES(4)")
+    except sqlite3.OperationalError:
+        readonly_enforced = True
+    assert readonly_enforced
+    assert plain_main_count != 3
+    plain.close()
+    reader.connection.close()
+    result = {"synthetic_only": True, "wal_rotation_row_count": wal_count, "main_replacement_row_count": replacement_count, "plain_reader_after_wal_rotation": plain_wal_count, "plain_reader_after_main_replacement": plain_main_count, "readonly_enforced": readonly_enforced, "passed": True, "sqlite_version": sqlite3.sqlite_version}
+Path("lab/evidence/messages-real-oracle-reader-probe.json").write_text(json.dumps(result, indent=2) + "\n")
+print(json.dumps(result))
