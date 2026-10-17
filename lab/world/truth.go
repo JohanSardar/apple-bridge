@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
@@ -101,4 +103,38 @@ func (w *World) restartNativeHelper() error {
 		current, err := os.ReadFile(filepath.Join(w.Gateway.Home, "helper", "helper.pid"))
 		return err == nil && string(current) != pid
 	})
+}
+
+func (w *World) QuiesceNative() error {
+	if !w.Native {
+		return nil
+	}
+	data, err := os.ReadFile(filepath.Join(w.Gateway.Home, "helper", "helper.pid"))
+	if err != nil {
+		return err
+	}
+	pid, err := strconv.Atoi(string(data))
+	if err != nil || pid <= 1 {
+		return fmt.Errorf("invalid world Helper pid")
+	}
+	for _, process := range w.processes {
+		if process != nil && process.home == w.Gateway.Home {
+			process.Stop()
+		}
+	}
+	if err = syscall.Kill(pid, syscall.SIGTERM); err != nil && err != syscall.ESRCH {
+		return err
+	}
+	deadline := time.NewTimer(5 * time.Second)
+	defer deadline.Stop()
+	tick := time.NewTicker(10 * time.Millisecond)
+	defer tick.Stop()
+	for syscall.Kill(pid, 0) == nil {
+		select {
+		case <-deadline.C:
+			return fmt.Errorf("world Helper did not stop")
+		case <-tick.C:
+		}
+	}
+	return nil
 }

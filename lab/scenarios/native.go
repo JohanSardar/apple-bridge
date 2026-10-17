@@ -317,6 +317,7 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 				}
 				before := truthListIDs(baseline)
 				defer func() {
+					stopped := w.QuiesceNative()
 					current, err := w.RecoverTruth("observe", map[string]any{"list": "Bridge Test", "tag": tag})
 					if err == nil {
 						for id := range truthListIDs(current) {
@@ -328,8 +329,8 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 							}
 						}
 					}
-					result.Assertions = append(result.Assertions, Assertion{Name: "created_list_recovery_cleanup", Passed: err == nil})
-					if err != nil {
+					result.Assertions = append(result.Assertions, Assertion{Name: "created_list_recovery_cleanup", Passed: err == nil && stopped == nil})
+					if err != nil || stopped != nil {
 						result.Passed = false
 					}
 				}()
