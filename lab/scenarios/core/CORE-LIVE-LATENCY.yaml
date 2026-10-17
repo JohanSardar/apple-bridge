@@ -1,0 +1,7 @@
+id: CORE-LIVE-LATENCY
+feature: core.replication
+levels: [sim, replica]
+given: [{world: {replicas: 1}}, {seed: {count: 4}}]
+when: [{changes: {count: 200, per_second: 5}}]
+then: [{converge: {}}, {latency: {p95_ms: 1000, samples: 200}}]
+cleanup: [{world: {}}]

@@ -1,0 +1,7 @@
+id: CORE-RESUME
+feature: core.replication
+levels: [sim, replica]
+given: [{world: {replicas: 1}}, {seed: {count: 4}}]
+when: [{partition: {seconds: 30, changes: 30}}, {heal: {}}]
+then: [{converge: {}}, {resumed: {without_snapshot: true}}]
+cleanup: [{world: {}}]
