@@ -1,9 +1,12 @@
 package operations
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"github.com/JohanSardar/apple-bridge/internal/blobs"
 	"strings"
 	"sync"
 	"time"
@@ -20,6 +23,7 @@ type CommandTarget interface {
 	List(context.Context, trust.Principal, contracts.CommandQuery) ([]contracts.CommandRecord, error)
 }
 type LocalGateway struct {
+	Uploads   *blobs.Store
 	State     *state.Store
 	Authority *trust.Authority
 	Peer      *applepeer.Commands
@@ -193,7 +197,29 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 	var current *contracts.Record
 	if strings.HasPrefix(c.Op, "messages.") {
 		m, _ := contracts.ValidateMessagesCommand(c)
-		action.Messages = &m
+		nativeArgs := contracts.NativeMessagesArgs{MessagesArgs: m}
+		nativeArgs.MessagesArgs.Files = nil
+		for i := range m.Files {
+			file := &m.Files[i]
+			if g.Uploads == nil {
+				return g.transition(g.Context, r, "rejected", "rejected_before_dispatch", nil, contracts.ErrUnavailable)
+			}
+			if file.Data != "" {
+				data, _ := base64.StdEncoding.DecodeString(file.Data)
+				file.UploadID, err = g.Uploads.StageMessageUpload(runctx, p.ID, bytes.NewReader(data))
+			}
+			if err == nil {
+				var path, digest string
+				path, digest, err = g.Uploads.ResolveMessageUpload(runctx, p.ID, file.UploadID)
+				nativeArgs.Files = append(nativeArgs.Files, contracts.NativeMessageFile{Name: file.Name, Path: path, Digest: digest})
+			}
+			if err != nil {
+				return g.transition(g.Context, r, "rejected", "rejected_before_dispatch", nil, contracts.ErrNotFound)
+			}
+			defer g.Uploads.ReleaseMessageUpload(g.Context, p.ID, file.UploadID)
+			file.Data = ""
+		}
+		action.Messages = &nativeArgs
 		if m.ID != "" {
 			collection = contracts.MessagesTargetCollection(c.Op)
 			result, readErr := g.State.Read(runctx, p.Visibility(), contracts.ReadQuery{Collection: collection, ID: m.ID})

@@ -184,7 +184,13 @@ func runMessagesCommands(ctx context.Context, s Scenario, level string) Evidence
 				args["service"] = "iMessage"
 			}
 			if s.ID == "MSG-SEND-FILES" {
-				args["files"] = []contracts.MessageFile{{Name: "one.txt", Data: base64.StdEncoding.EncodeToString([]byte("one"))}, {Name: "two.txt", Data: base64.StdEncoding.EncodeToString([]byte("two"))}}
+				e.Metrics = map[string]any{"largest_file_bytes": 5 * 1024 * 1024, "ipc_file_transport": "private_path_and_digest"}
+				large, problem := stageMessageFile(ctx, w.Gateway, "one.txt", messageSyntheticFile(text))
+				add(protocol+"_five_mib_upload_staged", problem == nil)
+				if problem != nil {
+					return e
+				}
+				args["files"] = []contracts.MessageFile{large, {Name: "two.txt", Data: base64.StdEncoding.EncodeToString([]byte("two"))}}
 			}
 			c := command("send", args, 0)
 			started := time.Now()
@@ -210,12 +216,12 @@ func runMessagesCommands(ctx context.Context, s Scenario, level string) Evidence
 						Name string `json:"filename"`
 					}
 					json.Unmarshal(attachment.Data, &data)
-					expected := "one"
+					expected := messageSyntheticFile(text)
 					if data.Name == "two.txt" {
-						expected = "two"
+						expected = []byte("two")
 					}
 					for _, endpoint := range append([]world.Endpoint{w.Gateway}, w.Replicas...) {
-						add(protocol+"_authorized_attachment_bytes", messagesAttachmentBytes(ctx, w, endpoint, attachment.ID, []byte(expected)))
+						add(protocol+"_authorized_attachment_bytes", messagesAttachmentBytes(ctx, w, endpoint, attachment.ID, expected))
 					}
 				}
 			}

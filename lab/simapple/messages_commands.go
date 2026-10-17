@@ -2,11 +2,11 @@ package simapple
 
 import (
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/JohanSardar/apple-bridge/internal/applepeer"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
+	"os"
 	"reflect"
 	"strings"
 	"time"
@@ -55,6 +55,11 @@ func (f *fakeApple) messageValidate(a contracts.NativeAction) *contracts.Error {
 	}
 	if !f.messages.permitted || f.messages.capabilityUnproven {
 		return messageProblem("capability_unproven")
+	}
+	for _, file := range m.Files {
+		if file.Path == "" || file.Digest == "" {
+			return contracts.ErrInvalid
+		}
 	}
 	if m.Text != "" && (!strings.Contains(m.Text, "[ab-test ") || !strings.Contains(m.Text, "]")) {
 		return contracts.ErrInvalid
@@ -311,13 +316,17 @@ func (f *fakeApple) messageCommand(wire *applepeer.Wire, frame contracts.IPCFram
 				newMessage(native+"-echo", m.Text, chat, false)
 				parts = append(parts, map[string]any{"index": 0, "kind": "text", "native_key": native, "disposition": "locally_observed"})
 				for i, file := range m.Files {
-					bytes, err := base64.StdEncoding.DecodeString(file.Data)
+					bytes, err := os.ReadFile(file.Path)
 					if err != nil {
 						f.mu.Unlock()
 						return reject(contracts.ErrInvalid)
 					}
 					sum := sha256.Sum256(bytes)
 					digest := fmt.Sprintf("%x", sum)
+					if digest != file.Digest {
+						f.mu.Unlock()
+						return reject(contracts.ErrInvalid)
+					}
 					f.blobs[digest] = bytes
 					key := contracts.NewID("attachment")
 					msg := contracts.NewID("message")

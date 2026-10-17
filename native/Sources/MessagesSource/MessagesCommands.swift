@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 import Decoders
 import SourceSupport
 
@@ -65,7 +66,7 @@ public actor MessagesCommands {
         guard args["text"].string.isEmpty || tagged(args["text"].string), !args["text"].string.isEmpty || !args["files"].array.isEmpty else { throw SourceFailure.invalid }
         for file in args["files"].array {
             let name=file["name"].string
-            guard !name.isEmpty,name==URL(fileURLWithPath:name).lastPathComponent,name != ".",name != "..",let bytes=Data(base64Encoded:file["data"].string),bytes.count<=131072 else {throw SourceFailure.invalid}
+            guard !name.isEmpty,name==URL(fileURLWithPath:name).lastPathComponent,name != ".",name != "..",file["data"].string.isEmpty else {throw SourceFailure.invalid}
         }
         let reader = try MessagesReader(path: path)
         let route = try verifyRoute(action, reader: reader)
@@ -150,11 +151,16 @@ public actor MessagesCommands {
         }
         for (index, file) in args["files"].array.enumerated() {
             let name = file["name"].string
-            guard !name.isEmpty, name == URL(fileURLWithPath: name).lastPathComponent, name != ".", name != "..", let bytes = Data(base64Encoded: file["data"].string), bytes.count <= 131072 else { throw SourceFailure.invalid }
+            guard !name.isEmpty, name == URL(fileURLWithPath: name).lastPathComponent, name != ".", name != "..", file["data"].string.isEmpty else { throw SourceFailure.invalid }
             let url = directory.appendingPathComponent("\(index)-" + name)
-            try bytes.write(to: url, options: [.withoutOverwriting])
+            let source=URL(fileURLWithPath:file["path"].string)
+            let parent=try FileManager.default.attributesOfItem(atPath:source.deletingLastPathComponent().path)
+            let attributes=try FileManager.default.attributesOfItem(atPath:source.path)
+            guard source.path==source.resolvingSymlinksInPath().path,source.deletingLastPathComponent().lastPathComponent=="message-uploads",(parent[.posixPermissions] as? NSNumber)?.intValue==0o700,(attributes[.ownerAccountID] as? NSNumber)?.uint32Value==getuid(),attributes[.type] as? FileAttributeType == .typeRegular else {throw SourceFailure.invalid}
+            try FileManager.default.copyItem(at:source,to:url)
+            guard try BlobDigest.file(url)==file["digest"].string else {throw SourceFailure.invalid}
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
-            parts.append(.object(["kind": .string("attachment"), "path": .string(url.path), "name": .string(url.lastPathComponent), "digest": .string(BodyDigest.hash(bytes))]))
+            parts.append(.object(["kind": .string("attachment"), "path": .string(url.path), "name": .string(url.lastPathComponent), "digest": file["digest"]]))
         }
         return parts
     }

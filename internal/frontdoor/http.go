@@ -81,6 +81,23 @@ func Handler(deps Deps, descriptors []contracts.OperationDescriptor) http.Handle
 		result, err := deps.Operations.Read(r.Context(), p, "records.get", contracts.ReadQuery{Collection: r.PathValue("collection"), ID: r.PathValue("id")})
 		respond(w, result, err)
 	})
+	mux.HandleFunc("POST /v1/blobs", func(w http.ResponseWriter, r *http.Request) {
+		principal := r.Context().Value(principalKey{}).(trust.Principal)
+		if !trust.Subset([]contracts.Grant{"messages:write"}, principal.Grants) || deps.Authority.Authorize(principal, "messages:write") != nil {
+			respond(w, nil, contracts.ErrUnauthorized)
+			return
+		}
+		if deps.Blobs == nil {
+			respond(w, nil, contracts.ErrUnavailable)
+			return
+		}
+		if _, local := deps.Operations.Target.(*operations.LocalGateway); !local {
+			respond(w, nil, contracts.ErrUnsupported)
+			return
+		}
+		id, err := deps.Blobs.StageMessageUpload(r.Context(), principal.ID, r.Body)
+		respond(w, map[string]string{"upload_id": id}, err)
+	})
 	mux.HandleFunc("GET /v1/blobs/{digest}", func(w http.ResponseWriter, r *http.Request) {
 		p := r.Context().Value(principalKey{}).(trust.Principal)
 		grant, err := deps.Operations.BlobGrant(r.Context(), p, r.URL.Query().Get("record"))
@@ -205,7 +222,9 @@ func Handler(deps Deps, descriptors []contracts.OperationDescriptor) http.Handle
 			http.Error(w, "rate limited", 429)
 			return
 		}
-		r.Body = http.MaxBytesReader(w, r.Body, 1024*1024)
+		if r.Method != "POST" || r.URL.Path != "/v1/blobs" {
+			r.Body = http.MaxBytesReader(w, r.Body, 1024*1024)
+		}
 		mux.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), principalKey{}, p)))
 	})
 }

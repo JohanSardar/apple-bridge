@@ -9,9 +9,20 @@ import (
 )
 
 type MessageFile struct {
-	Name string `json:"name"`
-	Data string `json:"data"`
+	Name     string `json:"name"`
+	UploadID string `json:"upload_id,omitempty"`
+	Data     string `json:"data,omitempty"`
 }
+type NativeMessageFile struct {
+	Name   string `json:"name"`
+	Path   string `json:"path"`
+	Digest string `json:"digest"`
+}
+type NativeMessagesArgs struct {
+	MessagesArgs
+	Files []NativeMessageFile `json:"files,omitempty"`
+}
+
 type MessagesArgs struct {
 	ID        string        `json:"id,omitempty"`
 	ChatID    string        `json:"chat_id,omitempty"`
@@ -71,8 +82,8 @@ func ValidateMessagesCommand(c Command) (MessagesArgs, error) {
 		return a, ErrInvalid
 	}
 	for _, file := range a.Files {
-		data, err := base64.StdEncoding.DecodeString(file.Data)
-		if err != nil || len(data) > 131072 || file.Name == "" || file.Name == "." || file.Name == ".." || filepath.Base(file.Name) != file.Name {
+		_, err := base64.StdEncoding.DecodeString(file.Data)
+		if err != nil || (file.Data == "") == (file.UploadID == "") || file.Name == "" || file.Name == "." || file.Name == ".." || filepath.Base(file.Name) != file.Name {
 			return a, ErrInvalid
 		}
 	}

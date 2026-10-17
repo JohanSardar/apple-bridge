@@ -1,6 +1,7 @@
 package scenarios
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/base64"
@@ -8,6 +9,8 @@ import (
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/lab/scripted"
 	"github.com/JohanSardar/apple-bridge/lab/world"
+	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -104,7 +107,12 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 	text := "[ab-test " + e.RunID + "] self command"
 	args := map[string]any{"chat_id": chatID, "text": text}
 	if s.ID == "MSG-SEND-FILES" {
-		args["files"] = []contracts.MessageFile{{Name: "ab-" + e.RunID + "-one.txt", Data: base64.StdEncoding.EncodeToString([]byte(text + " one"))}, {Name: "ab-" + e.RunID + "-two.txt", Data: base64.StdEncoding.EncodeToString([]byte(text + " two"))}}
+		large, problem := stageMessageFile(ctx, w.Gateway, "ab-"+e.RunID+"-one.txt", messageSyntheticFile(text))
+		add("five_mib_upload_staged", problem == nil)
+		if problem != nil {
+			return e
+		}
+		args["files"] = []contracts.MessageFile{large, {Name: "ab-" + e.RunID + "-two.txt", Data: base64.StdEncoding.EncodeToString([]byte(text + " two"))}}
 	}
 	var maximum int64
 	native.QueryRowContext(ctx, "SELECT COALESCE(MAX(ROWID),0) FROM message").Scan(&maximum)
@@ -176,6 +184,10 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 		err = client.Call(ctx, "commands.status", contracts.CommandQuery{ID: c.ID, Resolve: true}, &outcome)
 	}
 	e.Metrics = map[string]any{"initial_command_state": initialState, "command_state": outcome.State, "disposition": outcome.Disposition, "screen": "locked", "send_commands": 1, "parts_requested": 1 + len(argsFiles(args))}
+	if s.ID == "MSG-SEND-FILES" {
+		e.Metrics["largest_file_bytes"] = 5 * 1024 * 1024
+		e.Metrics["ipc_file_transport"] = "private_path_and_digest"
+	}
 	observed := err == nil && (outcome.State == contracts.CommandObserved || outcome.State == contracts.CommandDelivered) && outcome.CommitSeq > 0
 	add("native_send_observed_with_fingerprint_checkpoint", observed)
 	if !observed {
@@ -268,9 +280,9 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 			if err != nil {
 				continue
 			}
-			expected := text + " one"
+			expected := messageSyntheticFile(text)
 			if strings.Contains(filepath.Base(name), "two") {
-				expected = text + " two"
+				expected = []byte(text + " two")
 			}
 			var id string
 			if stateDB.QueryRowContext(ctx, "SELECT record_id FROM aliases WHERE collection='messages.attachment' AND native_key=? LIMIT 1", guid).Scan(&id) != nil {
@@ -279,7 +291,7 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 			}
 			for i, endpoint := range endpoints {
 				diagnostic := map[string]any{"endpoint_index": i}
-				add("authorized_replica_attachment_bytes", messagesAttachmentBytes(ctx, w, endpoint, id, []byte(expected), diagnostic))
+				add("authorized_replica_attachment_bytes", messagesAttachmentBytes(ctx, w, endpoint, id, expected, diagnostic))
 				e.Metrics["attachment_downloads"] = appendDiagnostic(e.Metrics["attachment_downloads"], diagnostic)
 			}
 		}
@@ -375,4 +387,35 @@ func messagesAttachmentBytes(ctx context.Context, w *world.World, endpoint world
 func appendDiagnostic(previous any, next map[string]any) []map[string]any {
 	values, _ := previous.([]map[string]any)
 	return append(values, next)
+}
+
+func messageSyntheticFile(tag string) []byte {
+	const size = 5 * 1024 * 1024
+	part := []byte(tag + " synthetic attachment\n")
+	return bytes.Repeat(part, size/len(part)+1)[:size]
+}
+func stageMessageFile(ctx context.Context, endpoint world.Endpoint, name string, data []byte) (contracts.MessageFile, error) {
+	req, err := http.NewRequestWithContext(ctx, "POST", endpoint.URL+"/v1/blobs", bytes.NewReader(data))
+	if err != nil {
+		return contracts.MessageFile{}, err
+	}
+	req.Host = endpoint.Host
+	req.Header.Set("Authorization", "Bearer "+endpoint.Token)
+	response, err := world.HTTP.Do(req)
+	if err != nil {
+		return contracts.MessageFile{}, err
+	}
+	defer response.Body.Close()
+	if response.StatusCode != 200 {
+		io.Copy(io.Discard, response.Body)
+		return contracts.MessageFile{}, contracts.ErrUnavailable
+	}
+	var upload struct {
+		UploadID string `json:"upload_id"`
+	}
+	err = json.NewDecoder(response.Body).Decode(&upload)
+	if upload.UploadID == "" {
+		return contracts.MessageFile{}, contracts.ErrInvalid
+	}
+	return contracts.MessageFile{Name: name, UploadID: upload.UploadID}, err
 }

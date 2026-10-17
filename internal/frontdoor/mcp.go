@@ -40,6 +40,11 @@ func mcpHandler(deps Deps, descriptors []contracts.OperationDescriptor) http.Han
 }
 func openAPI(descriptors []contracts.OperationDescriptor) any {
 	paths := map[string]any{}
+	uploadSchema := map[string]any{"type": "object", "properties": map[string]any{"upload_id": map[string]any{"type": "string"}}}
+	uploadResponse := map[string]any{"description": "Private upload reference", "content": map[string]any{"application/json": map[string]any{"schema": uploadSchema}}}
+	uploadBody := map[string]any{"required": true, "content": map[string]any{"application/octet-stream": map[string]any{"schema": map[string]any{"type": "string", "format": "binary"}}}}
+	paths["/v1/blobs"] = map[string]any{"post": map[string]any{"operationId": "stageMessageUpload", "description": "Stage bytes for messages.send and use upload_id in files.", "requestBody": uploadBody, "responses": map[string]any{"200": uploadResponse}}}
+
 	for _, d := range descriptors {
 		paths["/v1/op/"+d.Name] = map[string]any{"post": map[string]any{"operationId": d.Name, "description": d.Description, "requestBody": map[string]any{"required": true, "content": map[string]any{"application/json": map[string]any{"schema": contracts.OperationSchema(d)}}}, "responses": map[string]any{"200": map[string]any{"description": "Operation result", "content": map[string]any{"application/json": map[string]any{"schema": contracts.JSONSchema(d.Output)}}}}}}
 	}
