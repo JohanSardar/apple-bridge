@@ -1,0 +1,309 @@
+{
+  "transport": "ssh -o ControlPath=none air",
+  "worktree": "~/apple-bridge/.worktrees/m1-messages-commands",
+  "heavy_wrapper": "packaging/dev/heavy.sh env GOFLAGS=-p=2",
+  "read_send_required": [
+    {
+      "scenario": "MSG-SEND-SELF-TEXT",
+      "level": "real",
+      "passed": true,
+      "status": null,
+      "git_sha": "8954420de65a784f08644e9e6345b6d870980ebf",
+      "latency": {
+        "command_submit_to_visible_0": {
+          "samples": 1,
+          "p50_ms": 472.877791,
+          "p95_ms": 472.877791,
+          "max_ms": 472.877791,
+          "timeouts": 0
+        },
+        "echo_chat_db_appearance_to_visible_0": {
+          "samples": 1,
+          "p50_ms": 758.042417,
+          "p95_ms": 758.042417,
+          "max_ms": 758.042417,
+          "timeouts": 0
+        }
+      },
+      "metrics": {
+        "command_state": "observed",
+        "disposition": "locally_observed",
+        "parts_requested": 1,
+        "screen": "locked",
+        "send_commands": 1
+      }
+    },
+    {
+      "scenario": "MSG-SEND-FILES",
+      "level": "real",
+      "passed": true,
+      "status": null,
+      "git_sha": "79748c5c1aa474839ea4c9279c4701fbaf731fbb",
+      "latency": {
+        "command_submit_to_visible_0": {
+          "samples": 1,
+          "p50_ms": 771.03325,
+          "p95_ms": 771.03325,
+          "max_ms": 771.03325,
+          "timeouts": 0
+        },
+        "echo_chat_db_appearance_to_visible_0": {
+          "samples": 1,
+          "p50_ms": 255.336834,
+          "p95_ms": 255.336834,
+          "max_ms": 255.336834,
+          "timeouts": 0
+        }
+      },
+      "metrics": {
+        "command_state": "observed",
+        "disposition": "locally_observed",
+        "parts_requested": 3,
+        "screen": "locked",
+        "send_commands": 1
+      }
+    },
+    {
+      "scenario": "MSG-INCOMING",
+      "level": "real",
+      "passed": true,
+      "status": null,
+      "git_sha": "8954420de65a784f08644e9e6345b6d870980ebf",
+      "latency": {
+        "echo_chat_db_appearance_to_visible_0": {
+          "samples": 1,
+          "p50_ms": 758.042417,
+          "p95_ms": 758.042417,
+          "max_ms": 758.042417,
+          "timeouts": 0
+        }
+      },
+      "metrics": {
+        "chat_db_poll_interval_ms": 10,
+        "driven_by": "self_send_incoming_echo",
+        "maximum_sends": 1,
+        "source_scenario": "MSG-SEND-SELF-TEXT"
+      }
+    },
+    {
+      "scenario": "MSG-HISTORY-IMPORT",
+      "level": "real",
+      "passed": true,
+      "status": null,
+      "git_sha": "945c7395e52bcc2fdc19e7dfe1621a192e83ba5f",
+      "latency": {
+        "messages_ready_to_gateway_history_equal": {
+          "samples": 1,
+          "p50_ms": 381010.9245830681,
+          "p95_ms": 381010.9245830681,
+          "max_ms": 381010.9245830681,
+          "timeouts": 0
+        }
+      },
+      "metrics": {
+        "driven_by": "guarded_self_send_during_history_import",
+        "history_complete": true,
+        "history_expected_message_records": 161121,
+        "history_initial_observed_message_records": 0,
+        "history_mismatched_chat_count": 0,
+        "history_observation_ms": 381010.9245830681,
+        "history_observed_message_records": 161121,
+        "history_observed_rows_per_second": 422.87763842024,
+        "natural_events_only": false,
+        "read_only": true,
+        "replica_count": 0,
+        "truth_poll_interval_ms": 25
+      }
+    },
+    {
+      "scenario": "MSG-SEND-SELF-TEXT",
+      "level": "replica",
+      "passed": true,
+      "status": null,
+      "git_sha": "79748c5c1aa474839ea4c9279c4701fbaf731fbb",
+      "latency": {
+        "command_submit_to_visible_0": {
+          "samples": 1,
+          "p50_ms": 540.565166,
+          "p95_ms": 540.565166,
+          "max_ms": 540.565166,
+          "timeouts": 0
+        },
+        "command_submit_to_visible_1": {
+          "samples": 1,
+          "p50_ms": 553.558083,
+          "p95_ms": 553.558083,
+          "max_ms": 553.558083,
+          "timeouts": 0
+        },
+        "echo_chat_db_appearance_to_visible_0": {
+          "samples": 1,
+          "p50_ms": 309.164667,
+          "p95_ms": 309.164667,
+          "max_ms": 309.164667,
+          "timeouts": 0
+        },
+        "echo_chat_db_appearance_to_visible_1": {
+          "samples": 1,
+          "p50_ms": 370.717959,
+          "p95_ms": 370.717959,
+          "max_ms": 370.717959,
+          "timeouts": 0
+        }
+      },
+      "metrics": {
+        "command_state": "observed",
+        "disposition": "locally_observed",
+        "parts_requested": 1,
+        "screen": "locked",
+        "send_commands": 1
+      }
+    },
+    {
+      "scenario": "MSG-SEND-FILES",
+      "level": "replica",
+      "passed": true,
+      "status": null,
+      "git_sha": "945c7395e52bcc2fdc19e7dfe1621a192e83ba5f",
+      "latency": {
+        "command_submit_to_visible_0": {
+          "samples": 1,
+          "p50_ms": 2625.907083,
+          "p95_ms": 2625.907083,
+          "max_ms": 2625.907083,
+          "timeouts": 0
+        },
+        "command_submit_to_visible_1": {
+          "samples": 1,
+          "p50_ms": 2638.218083,
+          "p95_ms": 2638.218083,
+          "max_ms": 2638.218083,
+          "timeouts": 0
+        },
+        "echo_chat_db_appearance_to_visible_0": {
+          "samples": 1,
+          "p50_ms": 708.673125,
+          "p95_ms": 708.673125,
+          "max_ms": 708.673125,
+          "timeouts": 0
+        },
+        "echo_chat_db_appearance_to_visible_1": {
+          "samples": 1,
+          "p50_ms": 719.776875,
+          "p95_ms": 719.776875,
+          "max_ms": 719.776875,
+          "timeouts": 0
+        }
+      },
+      "metrics": {
+        "attachment_downloads": [
+          {
+            "endpoint_index": 0,
+            "http_status": 200,
+            "local_blob_reason": "",
+            "local_blob_state": "present",
+            "record_blob_state": "present"
+          },
+          {
+            "endpoint_index": 1,
+            "http_status": 200,
+            "local_blob_reason": "",
+            "local_blob_state": "present",
+            "record_blob_state": "present"
+          },
+          {
+            "endpoint_index": 0,
+            "http_status": 200,
+            "local_blob_reason": "",
+            "local_blob_state": "present",
+            "record_blob_state": "present"
+          },
+          {
+            "endpoint_index": 1,
+            "http_status": 200,
+            "local_blob_reason": "",
+            "local_blob_state": "present",
+            "record_blob_state": "present"
+          }
+        ],
+        "command_state": "observed",
+        "disposition": "locally_observed",
+        "initial_command_state": "observed",
+        "parts_requested": 3,
+        "screen": "locked",
+        "send_commands": 1
+      }
+    },
+    {
+      "scenario": "MSG-INCOMING",
+      "level": "replica",
+      "passed": true,
+      "status": null,
+      "git_sha": "79748c5c1aa474839ea4c9279c4701fbaf731fbb",
+      "latency": {
+        "echo_chat_db_appearance_to_visible_0": {
+          "samples": 1,
+          "p50_ms": 309.164667,
+          "p95_ms": 309.164667,
+          "max_ms": 309.164667,
+          "timeouts": 0
+        },
+        "echo_chat_db_appearance_to_visible_1": {
+          "samples": 1,
+          "p50_ms": 370.717959,
+          "p95_ms": 370.717959,
+          "max_ms": 370.717959,
+          "timeouts": 0
+        }
+      },
+      "metrics": {
+        "chat_db_poll_interval_ms": 10,
+        "driven_by": "self_send_incoming_echo",
+        "maximum_sends": 1,
+        "source_scenario": "MSG-SEND-SELF-TEXT"
+      }
+    }
+  ],
+  "new_scenarios": [
+    "CORE-BLOB-DUPLICATE-REFERENCE",
+    "MSG-CAPABILITY-MATRIX",
+    "MSG-DELETE",
+    "MSG-EDIT",
+    "MSG-GROUP-CREATE",
+    "MSG-GROUP-MANAGE",
+    "MSG-MARK-READ",
+    "MSG-REACT",
+    "MSG-REPLY",
+    "MSG-SEND-FILES",
+    "MSG-SEND-GHOST",
+    "MSG-SEND-IDENTICAL-MANUAL",
+    "MSG-SEND-NEW-HANDLE",
+    "MSG-SEND-SELF-EMAIL",
+    "MSG-SEND-SELF-TEXT",
+    "MSG-UI-INTERFERENCE",
+    "MSG-UNSEND"
+  ],
+  "limitations": [
+    "File inputs currently use base64 IPC data; each file is capped at 128 KiB and the IPC frame limit still applies.",
+    "Latest file command latency exceeded 1 s under load; no quiet-machine waits or repeated benchmark sends were used.",
+    "Native tagged messages and incoming echoes await safe UI cleanup after unlock; private owner-only manifests identify each run."
+  ],
+  "real_send_commands": 8,
+  "native_parts_dispatched": 16,
+  "other_recipients_used": false,
+  "checks": [
+    "make lint (includes gofmt and go vet ./...)",
+    "make features",
+    "packaging/dev/build-native.sh native",
+    "go run ./cmd/bridge-lab run --level sim lab/scenarios/messages lab/scenarios/core/CORE-BLOB-DUPLICATE-REFERENCE.yaml lab/scenarios/notes/NOTE-CRUD.yaml",
+    "go run ./cmd/bridge-lab run --level real lab/scenarios/messages/MSG-SEND-SELF-TEXT.yaml lab/scenarios/messages/MSG-SEND-FILES.yaml",
+    "go run ./cmd/bridge-lab run --level replica lab/scenarios/messages/MSG-SEND-SELF-TEXT.yaml lab/scenarios/messages/MSG-SEND-FILES.yaml",
+    "go run ./cmd/bridge-lab run --level real lab/scenarios/messages/MSG-HISTORY-IMPORT.yaml"
+  ],
+  "accepted_command_to_replica_ms": {
+    "samples": 2,
+    "p50_ms": 553.558083,
+    "p95_ms": 2638.218083,
+    "max_ms": 2638.218083
+  }
+}
