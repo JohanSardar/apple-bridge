@@ -11,3 +11,5 @@ lab/evidence/private/
 __pycache__/
 design/features.html
 .worktrees/
+
+/dist/

@@ -12,8 +12,14 @@ struct AppleBridgeHelper {
         app.setActivationPolicy(.accessory)
         app.finishLaunching()
         do {
-            try HelperCommand.run(Array(CommandLine.arguments.dropFirst()))
+            let arguments = Array(CommandLine.arguments.dropFirst())
+            if arguments.isEmpty || ["install", "uninstall", "service-status"].contains(arguments[0]) {
+                try PackagedApp.run(arguments)
+            } else {
+                try HelperCommand.run(arguments)
+            }
         } catch {
+            FileHandle.standardError.write(Data("\(error)\n".utf8))
             exit(1)
         }
     }

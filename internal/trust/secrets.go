@@ -3,6 +3,7 @@ package trust
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -42,7 +43,10 @@ type SecretStore interface {
 	Backend() string
 }
 
-type KeychainStore struct{ Service string }
+type KeychainStore struct {
+	Service string
+	Path    string
+}
 type LinuxSecretStore struct {
 	Dir        string
 	Service    string
@@ -56,6 +60,11 @@ func NewSecretStore(home string) SecretStore {
 		return &LinuxSecretStore{Dir: filepath.Join(home, "secrets"), Service: service}
 	}
 	if runtime.GOOS == "darwin" {
+		executable, _ := os.Executable()
+		bundle := filepath.Dir(filepath.Dir(executable))
+		if _, err := os.Stat(filepath.Join(bundle, "Library", "LaunchAgents", "dev.applebridge.gateway.plist")); err == nil {
+			return &KeychainStore{Service: service, Path: filepath.Join(home, "Apple Bridge.keychain-db")}
+		}
 		return &KeychainStore{Service: service}
 	}
 	root := os.Getenv("XDG_CONFIG_HOME")
@@ -91,11 +100,25 @@ func secretCommand(ctx context.Context, input []byte, name string, args ...strin
 }
 func (s *KeychainStore) Backend() string { return "keychain" }
 func (s *KeychainStore) Put(ctx context.Context, key string, value []byte) error {
-	_, err := secretCommand(ctx, nil, "security", "add-generic-password", "-U", "-s", s.Service, "-a", key, "-w", hex.EncodeToString(value))
+	if err := s.unlock(ctx); err != nil {
+		return err
+	}
+	args := []string{"add-generic-password", "-U", "-s", s.Service, "-a", key, "-w", hex.EncodeToString(value), "-T", "/usr/bin/security"}
+	if s.Path != "" {
+		args = append(args, s.Path)
+	}
+	_, err := secretCommand(ctx, nil, "security", args...)
 	return err
 }
 func (s *KeychainStore) Get(ctx context.Context, key string) ([]byte, error) {
-	output, err := secretCommand(ctx, nil, "security", "find-generic-password", "-s", s.Service, "-a", key, "-w")
+	if err := s.unlock(ctx); err != nil {
+		return nil, err
+	}
+	args := []string{"find-generic-password", "-s", s.Service, "-a", key, "-w"}
+	if s.Path != "" {
+		args = append(args, s.Path)
+	}
+	output, err := secretCommand(ctx, nil, "security", args...)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +129,14 @@ func (s *KeychainStore) Get(ctx context.Context, key string) ([]byte, error) {
 	return value, nil
 }
 func (s *KeychainStore) Delete(ctx context.Context, key string) error {
-	_, err := secretCommand(ctx, nil, "security", "delete-generic-password", "-s", s.Service, "-a", key)
+	if err := s.unlock(ctx); err != nil {
+		return err
+	}
+	args := []string{"delete-generic-password", "-s", s.Service, "-a", key}
+	if s.Path != "" {
+		args = append(args, s.Path)
+	}
+	_, err := secretCommand(ctx, nil, "security", args...)
 	if errors.Is(err, contracts.ErrNotFound) {
 		return nil
 	}
@@ -186,5 +216,64 @@ func (s *LinuxSecretStore) Delete(ctx context.Context, key string) error {
 	if os.IsNotExist(err) {
 		return nil
 	}
+	return err
+}
+
+func (s *KeychainStore) unlock(ctx context.Context) error {
+	if s.Path == "" {
+		return nil
+	}
+	passwordPath := filepath.Join(filepath.Dir(s.Path), "keychain-password")
+	password, err := os.ReadFile(passwordPath)
+	if os.IsNotExist(err) {
+		if _, statErr := os.Stat(s.Path); !os.IsNotExist(statErr) {
+			return contracts.ErrUnauthorized
+		}
+		random := make([]byte, 32)
+		if _, err = rand.Read(random); err != nil {
+			return err
+		}
+		password = []byte(hex.EncodeToString(random))
+		file, createErr := os.OpenFile(passwordPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+		if createErr != nil {
+			return createErr
+		}
+		_, err = file.Write(password)
+		if err == nil {
+			err = file.Sync()
+		}
+		closeErr := file.Close()
+		if err != nil {
+			return err
+		}
+		if closeErr != nil {
+			return closeErr
+		}
+	} else if err != nil {
+		return err
+	}
+	info, err := os.Lstat(passwordPath)
+	if err != nil || !info.Mode().IsRegular() || info.Mode().Perm() != 0600 || len(password) != 64 {
+		return contracts.ErrUnauthorized
+	}
+	if _, err = os.Stat(s.Path); os.IsNotExist(err) {
+		search, searchErr := secretCommand(ctx, nil, "security", "list-keychains", "-d", "user")
+		if searchErr != nil {
+			return searchErr
+		}
+		defer func() {
+			args := []string{"list-keychains", "-d", "user", "-s"}
+			for _, line := range strings.Split(string(search), "\n") {
+				if entry := strings.Trim(strings.TrimSpace(line), "\""); entry != "" {
+					args = append(args, entry)
+				}
+			}
+			secretCommand(context.Background(), nil, "security", args...)
+		}()
+		if _, err = secretCommand(ctx, nil, "security", "create-keychain", "-p", string(password), s.Path); err != nil {
+			return err
+		}
+	}
+	_, err = secretCommand(ctx, nil, "security", "unlock-keychain", "-p", string(password), s.Path)
 	return err
 }

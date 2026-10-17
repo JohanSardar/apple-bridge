@@ -1,0 +1,114 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[5.02 4.93 4.9] cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M55RH7K2NRJNCMAJSMJ8ENF9",
+  "scenario": "PKG-BACKGROUND",
+  "level": "real",
+  "passed": true,
+  "git_sha": "1897d50b3c9d3c8eaafb11dba3fe251c1705d383",
+  "at": "2026-10-17T20:23:27.074854Z",
+  "assertions": [
+    {
+      "name": "real_macos",
+      "passed": true
+    },
+    {
+      "name": "test_install_path_unoccupied",
+      "passed": true
+    },
+    {
+      "name": "test_agent_unregistered",
+      "passed": true
+    },
+    {
+      "name": "isolated_home",
+      "passed": true
+    },
+    {
+      "name": "build_signed_installable_app",
+      "passed": true
+    },
+    {
+      "name": "bundle_signature",
+      "passed": true
+    },
+    {
+      "name": "onboarding_status_uses_existing_permissions",
+      "passed": true
+    },
+    {
+      "name": "smappservice_registered",
+      "passed": true
+    },
+    {
+      "name": "launchctl_running_and_gateway_health",
+      "passed": true
+    },
+    {
+      "name": "dedicated_keychain_password_private",
+      "passed": true
+    },
+    {
+      "name": "dedicated_keychain_created",
+      "passed": true
+    },
+    {
+      "name": "foreground_app_launched",
+      "passed": true
+    },
+    {
+      "name": "foreground_app_identified",
+      "passed": true
+    },
+    {
+      "name": "quit_foreground_app",
+      "passed": true
+    },
+    {
+      "name": "gateway_survives_app_quit",
+      "passed": true
+    },
+    {
+      "name": "lock_dedicated_keychain_before_restart",
+      "passed": true
+    },
+    {
+      "name": "kill_gateway",
+      "passed": true
+    },
+    {
+      "name": "launchd_restarts_gateway_and_unlocks_credentials",
+      "passed": true
+    },
+    {
+      "name": "smappservice_unregister",
+      "passed": true
+    },
+    {
+      "name": "agent_removed_from_login_session",
+      "passed": true
+    },
+    {
+      "name": "test_keychain_removed",
+      "passed": true
+    },
+    {
+      "name": "test_app_removed",
+      "passed": true
+    },
+    {
+      "name": "test_state_removed",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

@@ -1,0 +1,7 @@
+id: PKG-INSTALL
+feature: packaging.app
+levels: [real]
+given: []
+when: [{robustness: {case: packaging}}]
+then: [{converge: {}}]
+cleanup: []

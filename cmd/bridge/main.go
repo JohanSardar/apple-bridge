@@ -57,7 +57,18 @@ func run(ctx context.Context, args []string) error {
 	if err := set.Parse(args); err != nil {
 		return err
 	}
+	if verb == "install-credentials" {
+		_, err := trust.Open(*home)
+		return err
+	}
 	if verb == "start" {
+		if *helperApp == "" {
+			executable, _ := os.Executable()
+			bundle := filepath.Dir(filepath.Dir(filepath.Dir(executable)))
+			if _, err := os.Stat(filepath.Join(bundle, "Contents", "Library", "LaunchAgents", "dev.applebridge.gateway.plist")); err == nil {
+				*helperApp = bundle
+			}
+		}
 		return bridgeruntime.Start(ctx, bridgeruntime.Config{Role: *role, Home: *home, PeerAddress: *peer, Listen: *listen, APIAddress: *api, Socket: *socket, HelperApp: *helperApp, HelperLabCommands: *helperLabCommands, BlobCap: *blobCap, BlobGraceMS: *blobGrace, RetentionRows: *retentionRows, RetentionAge: *retentionAge})
 	}
 	if verb == "doctor" {

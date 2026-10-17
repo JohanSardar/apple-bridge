@@ -842,8 +842,8 @@ Levels: **S** = sim, **R** = real (Air), **P** = replica on Ubuntu, **A** = MCP 
 
 | ID | Scenario | Levels |
 |---|---|---|
-| PKG-INSTALL | Signed app installs; onboarding requests each permission; SMAppService registers | R |
-| PKG-BACKGROUND | Logout-free background run after app quit; survives reboot login | R |
+| PKG-INSTALL | Signed app installs in ~/Applications; onboarding permission status is readable; SMAppService registers and launchctl plus /v1/health prove the gateway is running | R |
+| PKG-BACKGROUND | Gateway serves after foreground app quits; launchd restarts a killed gateway and it unlocks its dedicated Keychain; RunAtLoad registers startup at login (reboot not exercised) | R |
 | PKG-UPGRADE | App upgrade keeps state, permissions, pairing | R |
 | PKG-SLEEP | Sleep assertion held while serving; sleep/wake recovers with reconciliation | R |
 | AGENT-SUITE | All `*-AGENT` scenarios 3× each, graded by Truth | A |
@@ -892,5 +892,5 @@ Each milestone proves its riskiest unknown first, starts every feature as a fail
 - Replicas that can neither reach the gateway nor be reached by it need a relay (an SSH tunnel or similar); no hosted relay in v1.
 - Local file access on a replica bypasses API scopes; revocation cannot erase copied data.
 - Losing `ledger.db` (not just `state.db`) loses the ability to recognize earlier command IDs; recovery requires an explicit operator acknowledgement.
-- The login Keychain can be locked while the gateway runs in the background (seen 2026-10-17: screen locked, `security` → "User interaction is not allowed"). Open M5 decision: store gateway credentials where a background agent can always read them (a dedicated Apple Bridge keychain, or the data-protection keychain with the signed app's access group). Until then the gateway fails with a typed, named error and `bridge doctor` reports it; lab worlds select a file credential store explicitly.
+- Packaged gateways use a dedicated `Apple Bridge.keychain-db` in their 0700 application support directory. Installation creates a random 256-bit password in a 0600 `keychain-password` file; the gateway unlocks this Keychain before credential operations, including after login or a crash. Credentials remain Keychain items, with `/usr/bin/security` as their trusted accessor. This permits unattended operation while the login Keychain is locked; possession of the support directory permits unlocking credentials, so it does not protect against another process running as the same user. The user Keychain search list is preserved. Unpackaged CLI use retains the login Keychain default; isolated lab worlds explicitly select file credentials.
 - Notarized distribution requires an Apple Developer ID (status tracked in PROGRESS.md).

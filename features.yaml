@@ -338,12 +338,16 @@ features:
       - {id: USE-READONLY, levels: [sim]}
 
   - id: packaging.app
-    title: Signed notarized app, onboarding, SMAppService, upgrade, sleep assertion
+    title: Signed app, onboarding, SMAppService background gateway
     requirements: [R-PKG, R-SECURE]
     milestone: M5
     modules: [packaging, runtime, native/AppleSession]
     depends_on: [messages.read, reminders.read, calendar.read, contacts.read, notes.read, usage.read]
-    status: todo
+    status: limited
+    limits:
+      - scenario: PKG-INSTALL
+        level: real
+        reason: "Notarization requires Johan's Apple Developer ID"
     scenarios:
       - {id: PKG-INSTALL, levels: [real]}
       - {id: PKG-BACKGROUND, levels: [real]}

@@ -885,8 +885,14 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 	if len(scenarios) == 0 {
 		return fmt.Errorf("no scenarios")
 	}
-	if err = world.Build(ctx, level); err != nil {
-		return err
+	packagingOnly := true
+	for _, scenario := range scenarios {
+		packagingOnly = packagingOnly && scenario.Feature == "packaging.app"
+	}
+	if !packagingOnly {
+		if err = world.Build(ctx, level); err != nil {
+			return err
+		}
 	}
 	for _, scenario := range scenarios {
 		if scenario.ID == "CORE-UPGRADE" || scenario.ID == "CORE-RESTORE-OLD-SCHEMA" || strings.Contains(scenario.ID, "REVIEW-UPGRADE") {

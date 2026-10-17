@@ -81,5 +81,5 @@ def build(name):
     visiting.remove(name)
     built.add(name)
 
-for name in targets:
+for name in ([os.environ["APPLE_BRIDGE_NATIVE_TARGET"]] if os.environ.get("APPLE_BRIDGE_NATIVE_TARGET") else targets):
     build(name)
