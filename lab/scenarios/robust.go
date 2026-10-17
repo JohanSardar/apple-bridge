@@ -401,6 +401,9 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 		add("reset_resnapshot_after_retention", status.Snapshots >= 2)
 	case "kill-during-apply":
 		for i := 0; i < 8; i++ {
+			if w.ControlAction("/flush", struct{}{}) != nil || w.Await(10*time.Second, func() bool { return convergence(w) }) != nil {
+				return fail("pre_apply_crash_convergence")
+			}
 			if w.ArmBoundary(w.Replicas[0], "apply") != nil {
 				return fail("arm_apply_boundary")
 			}

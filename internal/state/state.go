@@ -740,7 +740,7 @@ func (s *Store) ApplyBatch(ctx context.Context, b contracts.Batch) (contracts.Cu
 			return c, err
 		}
 	}
-	if s.applyBoundary != nil {
+	if s.applyBoundary != nil && len(b.Changes) > 0 {
 		s.applyBoundary()
 	}
 	if _, err = tx.ExecContext(ctx, "INSERT INTO applied_batches(after_seq,through_seq) VALUES(?,?)", b.After, b.Through); err != nil {
