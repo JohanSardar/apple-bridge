@@ -42,10 +42,10 @@ public final class AgendaGate {
                 if current != previous { previous = current; self.reconcile() }
             }
         }
-        observer = NotificationCenter.default.addObserver(forName: .EKEventStoreChanged, object: store, queue: nil) { @Sendable [weak self, trace] _ in
+        observer = NotificationCenter.default.addObserver(forName: .EKEventStoreChanged, object: store, queue: .main) { @Sendable [weak self, trace] _ in
             let delivered = CaptureTrace.now()
             trace.record("notification", fields: ["delivered_ns": .integer(delivered)])
-            Task(priority: .high) { @MainActor in self?.changed(delivered) }
+            Task { @MainActor in self?.changed(delivered) }
         }
     }
 

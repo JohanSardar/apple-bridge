@@ -1,13 +1,24 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[4.61 6.84 6.66] cpus=8 other_heavy=1"
+    "summary": "air: load=[20.97 11.33 8.16] cpus=8 other_heavy=1"
   },
-  "run_id": "cal_01M55SH9KNZBJ2E246ZAW56B50",
+  "run_id": "cal_01M55T8BV7FJKHRB9YERC5R74F",
   "network_path": "loopback",
   "metrics": {
     "records_read_succeeded": true,
     "source_readiness": [
+      {
+        "capabilities": [
+          "calendar.create_event",
+          "calendar.update_event",
+          "calendar.delete_event",
+          "calendar.create_calendar"
+        ],
+        "reason": "",
+        "source": "calendar",
+        "state": "ready"
+      },
       {
         "capabilities": [
           "reminders.create",
@@ -17,30 +28,19 @@
           "reminders.delete",
           "reminders.create_list"
         ],
-        "reason": "helper_disconnected",
+        "reason": "",
         "source": "reminders",
-        "state": "degraded"
-      },
-      {
-        "capabilities": [
-          "calendar.create_event",
-          "calendar.update_event",
-          "calendar.delete_event",
-          "calendar.create_calendar"
-        ],
-        "reason": "helper_disconnected",
-        "source": "calendar",
-        "state": "degraded"
+        "state": "ready"
       }
     ],
-    "truth_fixture_count": 0,
+    "truth_fixture_count": 1,
     "truth_read_succeeded": true
   },
   "scenario": "CAL-CREATE-EXTERNAL",
   "level": "real",
   "passed": false,
-  "git_sha": "038b582761380a831e46210a3b75be52bbf5cb2d",
-  "at": "2026-10-17T20:40:57.717053Z",
+  "git_sha": "f063215c440ac71d40fd788d57169a8905b2fe59",
+  "at": "2026-10-17T20:53:33.671042Z",
   "assertions": [
     {
       "name": "private_signed_apps_per_world",
@@ -48,6 +48,18 @@
     },
     {
       "name": "initial_calendar_scan_complete",
+      "passed": true
+    },
+    {
+      "name": "calendar_visible",
+      "passed": true
+    },
+    {
+      "name": "truth_calendar_fields",
+      "passed": true
+    },
+    {
+      "name": "initial_occurrences_visible",
       "passed": false
     },
     {
@@ -66,7 +78,7 @@
   "conditions": {
     "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
     "heavy_slots_in_use": "2",
-    "load_average": "4.61 6.84 6.66",
+    "load_average": "20.97 11.33 8.16",
     "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"
   }
 }
