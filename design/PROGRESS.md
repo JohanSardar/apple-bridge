@@ -20,9 +20,9 @@ One line per unit. Rules: BUILD-GOAL.md (2026-10-17 update: no reviews, merge on
 - IN PROGRESS Messages commands (send, AX actions, groups) — `.worktrees/m1-messages-commands`; real AX = pending-unlock while screen locked.
 - IN PROGRESS Notes (`ab-m3m4-notes-usage-r1`, Notes only): read path + sim; real writes pending-unlock (Notes AppleScript -1712 while locked).
 - IN PROGRESS Usage/Screen Time (`ab-m4-usage-r1`).
-- IN PROGRESS packaging.app (`ab-m5-packaging-r1`): signed app + SMAppService agent + dedicated keychain; notarization limited.
+- LIMITED packaging.app (3658b73): signed Apple Bridge.app, SMAppService agent, dedicated keychain (works with login Keychain locked); PKG-INSTALL + PKG-BACKGROUND real pass; notarization needs Johan's Developer ID; GUI onboarding clicks and reboot untested.
 - IN PROGRESS agent suite (`ab-agent-suite-r1`): Codex gpt-6-luna on Ubuntu via MCP, Reminders + Contacts first.
 
 ## Limits
 - core.trust CORE-CRED-LIFECYCLE/real: login Keychain locked (needs Johan's password).
-- Notarization: needs Johan's Developer ID.
+- packaging.app notarization: needs Johan's Developer ID.
