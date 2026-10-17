@@ -237,7 +237,13 @@ func (s *Store) OpenAuthorized(ctx context.Context, grant trust.RecordGrant, dig
 	}
 	return f, err
 }
+func (s *Store) Prepare(ctx context.Context, refs contracts.ReferenceSet) error {
+	return s.protect(ctx, refs, false)
+}
 func (s *Store) Protect(ctx context.Context, refs contracts.ReferenceSet) error {
+	return s.protect(ctx, refs, true)
+}
+func (s *Store) protect(ctx context.Context, refs contracts.ReferenceSet, releasePins bool) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -272,7 +278,7 @@ func (s *Store) Protect(ctx context.Context, refs contracts.ReferenceSet) error 
 		return err
 	}
 	for pin, d := range s.manifest.Pins {
-		if active[d] {
+		if releasePins && active[d] {
 			delete(s.manifest.Pins, pin)
 		}
 	}

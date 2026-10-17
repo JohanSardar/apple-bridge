@@ -1,0 +1,53 @@
+{
+  "run_id": "run_01M5499BSX82H9G20MKDEAPH88",
+  "scenario": "CORE-BLOB-REFERENCE-INDEX",
+  "level": "sim",
+  "passed": false,
+  "git_sha": "99a832091b72fae17bc0811249f98fc2db526a0c",
+  "at": "2026-10-17T06:37:46.173439Z",
+  "assertions": [
+    {
+      "name": "replica_host_is_air",
+      "passed": true
+    },
+    {
+      "name": "bootstrap_snapshot",
+      "passed": true
+    },
+    {
+      "name": "scope_query_and_get",
+      "passed": true
+    },
+    {
+      "name": "history_request",
+      "passed": true
+    },
+    {
+      "name": "history_committed",
+      "passed": true
+    },
+    {
+      "name": "history_throughput_at_least_2000_rows_per_second",
+      "passed": false
+    }
+  ],
+  "latency": {
+    "history_10000_commit": {
+      "samples": 1,
+      "p50_ms": 37683.642708,
+      "p95_ms": 37683.642708,
+      "max_ms": 37683.642708,
+      "timeouts": 0
+    },
+    "history_rows_per_second": {
+      "samples": 1,
+      "p50_ms": 265.36712699160216,
+      "p95_ms": 265.36712699160216,
+      "max_ms": 265.36712699160216,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

@@ -23,26 +23,30 @@ func blobReferences(ctx context.Context, q interface {
 	QueryRowContext(context.Context, string, ...any) *sql.Row
 }) (contracts.ReferenceSet, error) {
 	refs := contracts.ReferenceSet{}
-	rows, err := q.QueryContext(ctx, `SELECT payload FROM records WHERE deleted=0 AND (instr(payload,'"digest"')>0 OR instr(payload,'"raw_body_digest"')>0 OR instr(payload,'\u')>0) UNION ALL SELECT payload FROM staging_records WHERE (instr(payload,'"digest"')>0 OR instr(payload,'"raw_body_digest"')>0 OR instr(payload,'\u')>0)`)
+	rows, err := q.QueryContext(ctx, "SELECT owner,payload FROM blob_refs")
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 	for rows.Next() {
+		var owner string
 		var b []byte
-		if err = rows.Scan(&b); err != nil {
+		if err = rows.Scan(&owner, &b); err != nil {
+			rows.Close()
 			return nil, err
 		}
-		var r contracts.Record
-		if err = json.Unmarshal(b, &r); err != nil {
+		var ref contracts.BlobReference
+		if err = json.Unmarshal(b, &ref); err != nil {
+			rows.Close()
 			return nil, err
 		}
-		refs["record:"+r.ID] = append(refs["record:"+r.ID], contracts.BlobReferences(r.Data)...)
+		refs[owner] = append(refs[owner], ref)
 	}
-	if err = rows.Err(); err != nil {
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
 		return nil, err
 	}
-	rows.Close()
+
 	extra, err := q.QueryContext(ctx, "SELECT owner,payload FROM blob_reference_sets")
 	if err != nil {
 		return nil, err
@@ -59,7 +63,9 @@ func blobReferences(ctx context.Context, q interface {
 			extra.Close()
 			return nil, err
 		}
-		refs[owner] = list
+		if len(list) > 0 {
+			refs[owner] = list
+		}
 	}
 	err = extra.Err()
 	extra.Close()
@@ -107,6 +113,9 @@ func (s *Store) protectTransaction(ctx context.Context, tx *sql.Tx) error {
 	}
 	for k, list := range s.blobSnapshots {
 		next["snapshot:"+k] = list
+	}
+	if s.BlobPreparation != nil {
+		return s.BlobPreparation(ctx, next)
 	}
 	return s.BlobProtection(ctx, next)
 }
@@ -188,4 +197,72 @@ func (s *Store) SetBlobReferences(ctx context.Context, owner string, refs []cont
 		return err
 	}
 	return s.refreshBlobProtection(ctx)
+}
+
+func writeBlobReferences(ctx context.Context, tx *sql.Tx, owner string, r contracts.Record) error {
+	if _, err := tx.ExecContext(ctx, "DELETE FROM blob_refs WHERE owner=?", owner); err != nil {
+		return err
+	}
+	if r.Deleted {
+		return nil
+	}
+	for _, ref := range contracts.BlobReferences(r.Data) {
+		b, err := json.Marshal(ref)
+		if err != nil {
+			return err
+		}
+		if _, err = tx.ExecContext(ctx, "INSERT INTO blob_refs(owner,digest,payload) VALUES(?,?,?) ON CONFLICT(owner,digest) DO UPDATE SET payload=excluded.payload", owner, ref.Digest, b); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (s *Store) initBlobReferences(ctx context.Context) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err = tx.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS blob_refs(owner TEXT NOT NULL,digest TEXT NOT NULL,payload BLOB NOT NULL,PRIMARY KEY(owner,digest));
+ CREATE TRIGGER IF NOT EXISTS blob_refs_record_delete AFTER DELETE ON records BEGIN DELETE FROM blob_refs WHERE owner='record:'||OLD.id; END;
+ CREATE TRIGGER IF NOT EXISTS blob_refs_staging_delete AFTER DELETE ON staging_records BEGIN DELETE FROM blob_refs WHERE owner='staging:'||OLD.snapshot||':'||OLD.id; END;`); err != nil {
+		return err
+	}
+	var ready int
+	if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM meta WHERE key='blob_refs_version'").Scan(&ready); err != nil {
+		return err
+	}
+	if ready == 0 {
+		rows, err := tx.QueryContext(ctx, "SELECT payload FROM records WHERE deleted=0")
+		if err != nil {
+			return err
+		}
+		var records []contracts.Record
+		for rows.Next() {
+			var b []byte
+			var r contracts.Record
+			if err = rows.Scan(&b); err == nil {
+				err = json.Unmarshal(b, &r)
+			}
+			if err != nil {
+				rows.Close()
+				return err
+			}
+			records = append(records, r)
+		}
+		err = rows.Err()
+		rows.Close()
+		if err != nil {
+			return err
+		}
+		for _, r := range records {
+			if err = writeBlobReferences(ctx, tx, "record:"+r.ID, r); err != nil {
+				return err
+			}
+		}
+		if _, err = tx.ExecContext(ctx, "INSERT INTO meta(key,value) VALUES('blob_refs_version','1')"); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }

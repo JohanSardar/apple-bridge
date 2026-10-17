@@ -22,8 +22,9 @@ import (
 )
 
 type Store struct {
-	BlobProtection func(context.Context, contracts.ReferenceSet) error
-	blobSnapshots  map[string][]contracts.BlobReference
+	BlobProtection  func(context.Context, contracts.ReferenceSet) error
+	BlobPreparation func(context.Context, contracts.ReferenceSet) error
+	blobSnapshots   map[string][]contracts.BlobReference
 
 	home          string
 	ledger        *sql.DB
@@ -86,7 +87,11 @@ func Open(home string) (*Store, error) {
 		db.Close()
 		return nil, err
 	}
-	if err = s.initSearch(); err != nil {
+ if err = s.initSearch(); err != nil {
+ db.Close()
+ return nil, err
+ }
+ if err = s.initBlobReferences(context.Background()); err != nil {
 		db.Close()
 		return nil, err
 	}
@@ -173,7 +178,10 @@ func writeRecord(ctx context.Context, tx *sql.Tx, r contracts.Record, seq uint64
 		return err
 	}
 	_, err = tx.ExecContext(ctx, `INSERT INTO records(collection,id,version,source,deleted,payload,seq,observed_at) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(collection,id) DO UPDATE SET version=excluded.version,source=excluded.source,deleted=excluded.deleted,payload=excluded.payload,seq=excluded.seq,observed_at=excluded.observed_at`, r.Collection, r.ID, r.Version, r.Source, r.Deleted, b, seq, r.ObservedAt.Format(time.RFC3339Nano))
-	return err
+	if err != nil {
+		return err
+	}
+	return writeBlobReferences(ctx, tx, "record:"+r.ID, r)
 }
 func appendChange(ctx context.Context, tx *sql.Tx, c contracts.Cursor, r contracts.Record, op string) error {
 	change := contracts.Change{Sequence: c.Sequence, Record: r, Op: op}
@@ -616,10 +624,17 @@ func (i *SnapshotInstall) Page(ctx context.Context, page contracts.FeedFrame) er
 		if _, err = tx.ExecContext(ctx, "INSERT INTO staging_records(snapshot,collection,id,payload) VALUES(?,?,?,?)", i.ID, r.Collection, r.ID, b); err != nil {
 			return err
 		}
+		if err = writeBlobReferences(ctx, tx, "staging:"+i.ID+":"+r.ID, r); err != nil {
+			return err
+		}
+	}
+	if err = i.store.protectTransaction(ctx, tx); err != nil {
+		return err
 	}
 	if err = tx.Commit(); err != nil {
 		return err
 	}
+	i.store.refreshBlobProtection(ctx)
 	i.ordinal++
 	i.ExpiresAt = time.Now().Add(10 * time.Minute)
 	return nil

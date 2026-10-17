@@ -87,6 +87,7 @@ func Start(ctx context.Context, cfg Config) error {
 		return err
 	}
 	store.BlobProtection = blobStore.Protect
+	store.BlobPreparation = blobStore.Prepare
 	if err = store.ProtectBlobs(ctx); err != nil {
 		return err
 	}
