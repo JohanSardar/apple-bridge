@@ -1,0 +1,237 @@
+{
+  "conditions": {
+    "clock": "native CLOCK_UPTIME_RAW for real fixtures; lab monotonic fixture return for sim",
+    "heavy_slots_in_use": 2,
+    "load_average": [
+      "8.34",
+      "9.84",
+      "10.42"
+    ],
+    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"
+  },
+  "run_id": "cal_01M549SW9CV64574A11Z32QRN6",
+  "scenario": "CAL-CRUD",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "bd649868a35e45265f8896c8287bd9b37a361e1e",
+  "at": "2026-10-17T06:46:47.340253Z",
+  "assertions": [
+    {
+      "name": "calendar_visible",
+      "passed": true
+    },
+    {
+      "name": "create_event_observed",
+      "passed": true
+    },
+    {
+      "name": "initial_occurrences_visible",
+      "passed": true
+    },
+    {
+      "name": "agenda_returns_occurrences",
+      "passed": true
+    },
+    {
+      "name": "update_preserves_bridge_id",
+      "passed": true
+    },
+    {
+      "name": "stale_version_rejected",
+      "passed": true
+    },
+    {
+      "name": "delete_absence_visible",
+      "passed": true
+    },
+    {
+      "name": "create_calendar_observed",
+      "passed": true
+    },
+    {
+      "name": "independent_simtruth_convergence",
+      "passed": true
+    },
+    {
+      "name": "replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "contiguous_feed_0",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "contiguous_feed_1",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "latency_effect_done→gateway_visible",
+      "passed": true
+    },
+    {
+      "name": "latency_effect_done→replica_visible:replica0",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_query",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_mcp_agenda",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_query",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_mcp_agenda",
+      "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass",
+      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
+    },
+    {
+      "name": "mcp_calendar_visible",
+      "passed": true
+    },
+    {
+      "name": "mcp_create_event_observed",
+      "passed": true
+    },
+    {
+      "name": "mcp_initial_occurrences_visible",
+      "passed": true
+    },
+    {
+      "name": "mcp_agenda_returns_occurrences",
+      "passed": true
+    },
+    {
+      "name": "mcp_update_preserves_bridge_id",
+      "passed": true
+    },
+    {
+      "name": "mcp_stale_version_rejected",
+      "passed": true
+    },
+    {
+      "name": "mcp_delete_absence_visible",
+      "passed": true
+    },
+    {
+      "name": "mcp_create_calendar_observed",
+      "passed": true
+    },
+    {
+      "name": "mcp_independent_simtruth_convergence",
+      "passed": true
+    },
+    {
+      "name": "mcp_replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "mcp_contiguous_feed_0",
+      "passed": true
+    },
+    {
+      "name": "mcp_no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "mcp_contiguous_feed_1",
+      "passed": true
+    },
+    {
+      "name": "mcp_no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "mcp_latency_effect_done→gateway_visible",
+      "passed": true
+    },
+    {
+      "name": "mcp_latency_effect_done→replica_visible:replica0",
+      "passed": true
+    },
+    {
+      "name": "mcp_no_scope_leak_query",
+      "passed": true
+    },
+    {
+      "name": "mcp_no_scope_leak_mcp_agenda",
+      "passed": true
+    },
+    {
+      "name": "mcp_no_scope_leak_query",
+      "passed": true
+    },
+    {
+      "name": "mcp_no_scope_leak_mcp_agenda",
+      "passed": true
+    },
+    {
+      "name": "mcp_replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass",
+      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+    },
+    {
+      "name": "mcp_replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
+    }
+  ],
+  "latency": {
+    "effect_done→gateway_visible": {
+      "samples": 1,
+      "p50_ms": 0,
+      "p95_ms": 0,
+      "max_ms": 0,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica0": {
+      "samples": 1,
+      "p50_ms": 2.169417,
+      "p95_ms": 2.169417,
+      "max_ms": 2.169417,
+      "timeouts": 0
+    },
+    "mcp_effect_done→gateway_visible": {
+      "samples": 1,
+      "p50_ms": 0,
+      "p95_ms": 0,
+      "max_ms": 0,
+      "timeouts": 0
+    },
+    "mcp_effect_done→replica_visible:replica0": {
+      "samples": 1,
+      "p50_ms": 0.941042,
+      "p95_ms": 0.941042,
+      "max_ms": 0.941042,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}
