@@ -1,0 +1,1242 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[3.8 5.9 5.94] cpus=8 other_heavy=1; ubuntu: load=[0.05 0.23 0.3] cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M55Q6NBVCV95BQ7GPX2P975Z",
+  "metrics": {
+    "cleanup_audit": {
+      "containers_preserved": true,
+      "groups_preserved": true,
+      "selected_count": 0,
+      "unowned_after_count": 154,
+      "unowned_before_count": 154,
+      "unowned_fields_unchanged": true,
+      "unowned_identifiers_after_sha256": "e18d53df58a026fc0514c0631a57d2da157f1d2f020f018fd228a1da0023e33a",
+      "unowned_identifiers_before_sha256": "e18d53df58a026fc0514c0631a57d2da157f1d2f020f018fd228a1da0023e33a",
+      "whole_container_operations": 0
+    },
+    "contacts_capture_phases": [
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1082330099525458
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1082330161005291
+      },
+      {
+        "stage": "contacts_fetched",
+        "uptime_ns": 1082330647632333
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1082330725979916
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1082330739801666
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082330740006708
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1082332123793250
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1082332193772875
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1082332200858250
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1082332200920625
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1082332218981666
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1082332350483750
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1082332870863625
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1082332875303958
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1082332875377125
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1082332894214666
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1082333026535625
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082333997968125
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1082334048845208
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1082334062292708
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1082334079966791
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1082334099103083
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1082334343606125
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1082334811507875
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1082334820355083
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1082334820428583
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1082334838757458
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1082334881755166
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082335532271166
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1082335589593083
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1082335601298375
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1082335604334000
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1082335625252166
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1082335659055041
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082336408098791
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082336470379958
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082336471010458
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1082336488683125
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1082336496898666
+      },
+      {
+        "stage": "contacts_fetched",
+        "uptime_ns": 1082337304440208
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1082337431487000
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1082337457718250
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082337457880833
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082337457956625
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082337458016500
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082337458063583
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082337458107541
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082337458148875
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082337458200166
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082337458260250
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082337458324833
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082337458392416
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082337458435916
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082337458483958
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082337458537375
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1082337576226541
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1082337599761833
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1082337604152791
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1082337604224375
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1082337622531625
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1082337648217458
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1082337708976083
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1082337713604625
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1082337714357041
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1082337734410375
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1082337753060291
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082337839355166
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082337839487791
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082337840538458
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082337855174583
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1082337855329083
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1082337862246958
+      },
+      {
+        "stage": "contacts_fetched",
+        "uptime_ns": 1082338401787458
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1082338493262291
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1082338513107958
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082338513208583
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082338513265333
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082338513308875
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082338513351291
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082338513391375
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082338513430541
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082338513468750
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082338513505541
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082338513543541
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082338513579833
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082338513616000
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082338513652916
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1082338599831250
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1082338606158083
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1082338610863250
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1082338611366250
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1082338629316708
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1082338638876916
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1082338696940416
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1082338702112375
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1082338702187958
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1082338720608416
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1082338745707541
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1082339525048958
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1082339532505291
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1082339532642291
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1082339550922708
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1082339574621166
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082340308459083
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082340310492375
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082340310897041
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082340314383375
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082340314486791
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082340314538291
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082340314583666
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082340314627666
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082340314669625
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082340314710958
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082340314751750
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082340314790458
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082340314828333
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082340314865916
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082340314903041
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082340314939541
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1082340315115541
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1082340322788166
+      },
+      {
+        "stage": "contacts_fetched",
+        "uptime_ns": 1082340900413041
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1082340985534458
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1082341009229333
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1082341108709041
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1082341114155875
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1082341119330833
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1082341119425750
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1082341137591416
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1082341145301750
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1082341202085416
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1082341206586666
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1082341206853458
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1082341225002791
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1082341232584541
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1082341526925750
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1082341531434791
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1082341531593500
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1082341549755416
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1082341569172291
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082343251543916
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082343251815208
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082343252269041
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082343275693583
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082343275974708
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082343276057625
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082343276112458
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082343276158125
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082343276201666
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082343276245416
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082343276288416
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082343276329958
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082343276371833
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082343276410958
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082343276448666
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082343276486541
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1082343326305750
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1082343334143333
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1082343354365541
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1082343372634375
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1082343447501291
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082343453615375
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1082343453721916
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1082343458060625
+      },
+      {
+        "stage": "contacts_fetched",
+        "uptime_ns": 1082344017570041
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1082344107582208
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1082344127850833
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082344128026916
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082344128099875
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1082344236068750
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1082344243391333
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1082344248397625
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1082344248477166
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1082344266665166
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1082344276157125
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1082344334792958
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1082344344364208
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1082344344440291
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1082344362734875
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1082344386222916
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082344576276166
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082344576493750
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082344577317583
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082344594956041
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082344595928458
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082344596008041
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082344596061791
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082344596107833
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082344596149083
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082344596189125
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082344596228583
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082344596267583
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082344596310166
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082344596348041
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082344596385083
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082344596423333
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1082344596484375
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1082344604211541
+      },
+      {
+        "stage": "contacts_fetched",
+        "uptime_ns": 1082345240515708
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1082345336274250
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1082345356276708
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082345356427166
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082345356494333
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082345356879125
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1082345459047375
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1082345466721958
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1082345472790958
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1082345472858125
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1082345491305583
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1082345506260500
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1082345564220666
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1082345568741750
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1082345568838208
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1082345587058041
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1082345612346166
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1082346180090708
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1082346192150375
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1082346192406791
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1082346217708125
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1082346241974000
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082347081359541
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082347081539625
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082347081881625
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082347086299791
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082347086423083
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082347086479083
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082347086521833
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082347086565208
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082347086603958
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082347086639458
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082347086674916
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082347086709958
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082347086744458
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082347086778458
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082347086813416
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082347086847375
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1082347136332958
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1082347143606458
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1082347146362166
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1082347167322791
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082347167497291
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082347167573875
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082347167625875
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1082347307671916
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1082347312955875
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1082347317790083
+      },
+      {
+        "stage": "contacts_fetched",
+        "uptime_ns": 1082348026335708
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1082348135467333
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1082348160407333
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1082348296474666
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1082348301921166
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1082348308629500
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1082348310688375
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1082348329121166
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1082348356592250
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1082348416282375
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1082348422066750
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1082348424560250
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1082348442898500
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1082348510806416
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1082350217222000
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1082350226235208
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1082350226442375
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1082350244784208
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1082350254547708
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1082352242605416
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1082352261418583
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1082352264483375
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1082352289110666
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1082352310025000
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1082352330419583
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1082352388988041
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1082352398991750
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1082352401446291
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1082352422994375
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1082352432430916
+      }
+    ]
+  },
+  "scenario": "CON-CRUD",
+  "level": "replica",
+  "passed": true,
+  "git_sha": "6efaa323e705e39f53dd909031a981f4ece624ce",
+  "at": "2026-10-17T20:00:12.155243Z",
+  "assertions": [
+    {
+      "name": "unified_contacts_imported",
+      "passed": true
+    },
+    {
+      "name": "rest_create_evidence",
+      "passed": true
+    },
+    {
+      "name": "rest_contacts.update",
+      "passed": true
+    },
+    {
+      "name": "rest_truth_contacts.update",
+      "passed": true
+    },
+    {
+      "name": "rest_truth_patch",
+      "passed": true
+    },
+    {
+      "name": "rest_contacts.delete",
+      "passed": true
+    },
+    {
+      "name": "rest_truth_contacts.delete",
+      "passed": true
+    },
+    {
+      "name": "mcp_create_evidence",
+      "passed": true
+    },
+    {
+      "name": "mcp_contacts.update",
+      "passed": true
+    },
+    {
+      "name": "mcp_truth_contacts.update",
+      "passed": true
+    },
+    {
+      "name": "mcp_truth_patch",
+      "passed": true
+    },
+    {
+      "name": "mcp_contacts.delete",
+      "passed": true
+    },
+    {
+      "name": "mcp_truth_contacts.delete",
+      "passed": true
+    },
+    {
+      "name": "replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_0",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_1",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "contacts_scope_enforced",
+      "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass",
+      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
+    },
+    {
+      "name": "owned_test_contacts_cleaned",
+      "passed": true
+    },
+    {
+      "name": "bridge_test_organization_empty",
+      "passed": true
+    },
+    {
+      "name": "cleanup_preserves_unowned_contacts_and_containers",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air",
+    "ubuntu"
+  ]
+}

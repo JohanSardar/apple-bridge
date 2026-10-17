@@ -1,6 +1,6 @@
 {
   "unit": "M2 Contacts",
-  "merge_policy": "Leader merge-first instruction; no review; rerun CON sim set and one real CON-CRUD; Ubuntu levels remain unverified",
+  "merge_policy": "Leader small-fix instruction: targeted CON-CRUD sim and Ubuntu replica verification, no review",
   "verified_source_before_scope_metadata_rebase": "4bc9adb775b46b559c84183d914a7d70d7d14e4e",
   "report_source": "c381b65de9207f76b11f76517622554d87240044",
   "implementation_commits": [
@@ -39,7 +39,8 @@
     "latency_and_image_fix_proof": "packaging/dev/heavy.sh env GOFLAGS=-p=2 go run ./cmd/bridge-lab run lab/scenarios/contacts/CON-EXTERNAL.yaml lab/scenarios/contacts/CON-IMAGE.yaml --level real",
     "build": "make build: passed after native history and image fixes",
     "native": "make native passed earlier; make build subsequently compiled the corrected native source; redundant final make native was canceled at leader merge-first instruction",
-    "gates": "make lint, go vet ./..., make features: passed; make features passed again after scope-cut rebase"
+    "gates": "make lint, go vet ./..., make features: passed; make features passed again after scope-cut rebase",
+    "replica_forwarding_fix": "packaging/dev/heavy.sh env GOFLAGS=-p=2 bash -c \"go run ./cmd/bridge-lab run lab/scenarios/contacts/CON-CRUD.yaml --level sim && go run ./cmd/bridge-lab run lab/scenarios/contacts/CON-CRUD.yaml --level replica && make lint && go vet ./... && make features\""
   },
   "scenario_results": [
     {
@@ -53,7 +54,7 @@
       "scenario": "CON-CRUD",
       "level": "sim",
       "status": "passed",
-      "source_commit": "4bc9adb775b46b559c84183d914a7d70d7d14e4e",
+      "source_commit": "6efaa323e705e39f53dd909031a981f4ece624ce",
       "evidence": "lab/evidence/sim/CON-CRUD.json"
     },
     {
@@ -157,14 +158,16 @@
     {
       "scenario": "CON-CRUD",
       "level": "replica",
-      "status": "unverified",
-      "reason": "Ubuntu replica run omitted under explicit leader merge-first instruction"
+      "status": "passed",
+      "source_commit": "6efaa323e705e39f53dd909031a981f4ece624ce",
+      "evidence": "lab/evidence/replica/CON-CRUD.json"
     },
     {
       "scenario": "CON-EXTERNAL",
       "level": "replica",
-      "status": "unverified",
-      "reason": "Ubuntu replica run omitted under explicit leader merge-first instruction"
+      "status": "passed",
+      "source_commit": "18bb050f22709a042073363f2f614f3bb4b2d366",
+      "evidence": "lab/evidence/replica/CON-EXTERNAL.json"
     }
   ],
   "latency_ms": {
@@ -200,7 +203,23 @@
         "timeouts": 0
       }
     },
-    "condition": "Contended host; no quiet-machine gate; real replica numbers are local Air replica, not Ubuntu"
+    "condition": "Contended host; no quiet-machine gate; real replica numbers are local Air replica, not Ubuntu",
+    "real_native_save_to_ubuntu_replica": {
+      "effect_done\u2192gateway_visible": {
+        "samples": 20,
+        "p50_ms": 281.019625,
+        "p95_ms": 419.7305,
+        "max_ms": 424.175792,
+        "timeouts": 0
+      },
+      "effect_done\u2192replica_visible:replica0": {
+        "samples": 20,
+        "p50_ms": 311.739,
+        "p95_ms": 481.696,
+        "max_ms": 501.135333,
+        "timeouts": 0
+      }
+    }
   },
   "cleanup": {
     "bridge_test_contact_count": 0,
@@ -221,13 +240,32 @@
   "deviations_and_proposals": [
     "Contact note is unavailable without restricted entitlement, as specified.",
     "Public CNContainer provides no writability flag. Writes are conservatively allowed only in the default container; nondefault containers are rejected. Propose explicit unknown writability metadata.",
-    "Handle matching lives only in the gateway state module so derived links are journaled transactionally and omitted from scopes without Contacts access.",
-    "Ubuntu CON-CRUD and CON-EXTERNAL remain unverified and are not marked passed."
+    "Handle matching lives only in the gateway state module so derived links are journaled transactionally and omitted from scopes without Contacts access."
   ],
   "extra_scenarios": [
     "CON-CONFLICT",
     "CON-PERMISSION-LOSS",
     "CON-RESOLVE-RESTART"
   ],
-  "johan_action_required": null
+  "johan_action_required": null,
+  "replica_forwarding_fix": {
+    "source_commit": "6efaa323e705e39f53dd909031a981f4ece624ce",
+    "cause": "RemoteGateway.Submit incorrectly required reminders:write instead of the operation descriptor scope; Contacts already requested wait_ms 15000. No polling or disposition/commit_seq transport change needed.",
+    "before": {
+      "source_commit": "18bb050f22709a042073363f2f614f3bb4b2d366",
+      "level": "replica",
+      "failed_assertion": "rest_create_evidence",
+      "evidence_sha256": "63e1551eb86d615f14519e5e9ea14b6d54027b3966feaeec9b37316e97820f43",
+      "sim_regression": "CON-CRUD sent through local replica reproduced rest_create_evidence before fix"
+    },
+    "after": {
+      "sim": "passed",
+      "replica": "passed",
+      "protocols": [
+        "rest",
+        "mcp"
+      ],
+      "host_telemetry": "one start summary; periodic samples and duplicate Contacts probes removed"
+    }
+  }
 }
