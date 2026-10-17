@@ -1,24 +1,30 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[5.56 5.06 4.95] cpus=8 other_heavy=1"
+    "summary": "air: load=[4.7 7.66 7.28] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M55RK1GYJZGT2J1DXG3DT8XC",
+  "status": "environment-limited",
+  "run_id": "run_01M55TF1R4KGKXV529Y18GJHB8",
   "metrics": {
-    "command_state": "observed",
-    "disposition": "locally_observed",
+    "command_state": "failed",
+    "disposition": "failed_no_effect",
+    "initial_command_state": "failed",
     "parts_requested": 3,
     "screen": "locked",
     "send_commands": 1
   },
   "scenario": "MSG-SEND-FILES",
   "level": "real",
-  "passed": true,
-  "git_sha": "79748c5c1aa474839ea4c9279c4701fbaf731fbb",
-  "at": "2026-10-17T20:24:26.398589Z",
+  "passed": false,
+  "git_sha": "feb0c8136f3784533d09e8cd5ad507a183b2747f",
+  "at": "2026-10-17T20:57:12.708192Z",
   "assertions": [
     {
       "name": "self_chat_captured",
+      "passed": true
+    },
+    {
+      "name": "five_mib_upload_staged",
       "passed": true
     },
     {
@@ -27,77 +33,14 @@
     },
     {
       "name": "native_send_observed_with_fingerprint_checkpoint",
-      "passed": true
-    },
-    {
-      "name": "request_hash_bound",
-      "passed": true
-    },
-    {
-      "name": "truth_outgoing_not_echo",
-      "passed": true
-    },
-    {
-      "name": "three_native_part_outcomes",
-      "passed": true
-    },
-    {
-      "name": "truth_native_part",
-      "passed": true
-    },
-    {
-      "name": "truth_native_part",
-      "passed": true
-    },
-    {
-      "name": "truth_native_part",
-      "passed": true
-    },
-    {
-      "name": "command_visible_0",
-      "passed": true
-    },
-    {
-      "name": "command_sse_timestamp_0",
-      "passed": true
-    },
-    {
-      "name": "incoming_echo_visible_0",
-      "passed": true
-    },
-    {
-      "name": "incoming_echo_sse_timestamp_0",
-      "passed": true
-    },
-    {
-      "name": "authorized_replica_attachment_bytes",
-      "passed": true
-    },
-    {
-      "name": "authorized_replica_attachment_bytes",
-      "passed": true
+      "passed": false
     },
     {
       "name": "credential_backend_override_restored",
       "passed": true
     }
   ],
-  "latency": {
-    "command_submit_to_visible_0": {
-      "samples": 1,
-      "p50_ms": 771.03325,
-      "p95_ms": 771.03325,
-      "max_ms": 771.03325,
-      "timeouts": 0
-    },
-    "echo_chat_db_appearance_to_visible_0": {
-      "samples": 1,
-      "p50_ms": 255.336834,
-      "p95_ms": 255.336834,
-      "max_ms": 255.336834,
-      "timeouts": 0
-    }
-  },
+  "latency": {},
   "hosts": [
     "air"
   ]

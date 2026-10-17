@@ -153,10 +153,10 @@ public actor MessagesCommands {
             let name = file["name"].string
             guard !name.isEmpty, name == URL(fileURLWithPath: name).lastPathComponent, name != ".", name != "..", file["data"].string.isEmpty else { throw SourceFailure.invalid }
             let url = directory.appendingPathComponent("\(index)-" + name)
-            let source=URL(fileURLWithPath:file["path"].string)
+            let source=URL(fileURLWithPath:file["path"].string).resolvingSymlinksInPath()
             let parent=try FileManager.default.attributesOfItem(atPath:source.deletingLastPathComponent().path)
             let attributes=try FileManager.default.attributesOfItem(atPath:source.path)
-            guard source.path==source.resolvingSymlinksInPath().path,source.deletingLastPathComponent().lastPathComponent=="message-uploads",(parent[.posixPermissions] as? NSNumber)?.intValue==0o700,(attributes[.ownerAccountID] as? NSNumber)?.uint32Value==getuid(),attributes[.type] as? FileAttributeType == .typeRegular else {throw SourceFailure.invalid}
+            guard source.deletingLastPathComponent().lastPathComponent=="message-uploads",(parent[.posixPermissions] as? NSNumber)?.intValue==0o700,(parent[.ownerAccountID] as? NSNumber)?.uint32Value==getuid(),(attributes[.ownerAccountID] as? NSNumber)?.uint32Value==getuid(),attributes[.type] as? FileAttributeType == .typeRegular else {throw SourceFailure.invalid}
             try FileManager.default.copyItem(at:source,to:url)
             guard try BlobDigest.file(url)==file["digest"].string else {throw SourceFailure.invalid}
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
