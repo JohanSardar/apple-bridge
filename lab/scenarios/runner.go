@@ -378,8 +378,8 @@ func Run(ctx context.Context, s Scenario, level string) Evidence {
 		}
 		e.Token = token
 		var result contracts.ReadResult
-		_, err = world.Request(ctx, e, "/v1/op/records.query", contracts.ReadQuery{Collection: "reminders.reminder"}, &result)
-		if err != nil || len(result.Records) != 0 {
+		_, err = world.Request(ctx, e, "/v1/op/records.query", contracts.ReadQuery{Collection: "reminders.reminder", IncludeAliases: true}, &result)
+		if err != nil || len(result.Records) != 0 || len(result.Aliases) != 0 {
 			return fail("scope_query")
 		}
 		all, err := w.Records(endpoints[0])
