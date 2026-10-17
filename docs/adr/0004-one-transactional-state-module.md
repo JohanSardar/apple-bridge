@@ -1,3 +1,3 @@
-# One deep State module
+# One deep State module, with the command ledger in its own file
 
-Records, aliases, journal, checkpoints and command transitions live in one SQLite-backed module so that a capture and its checkpoint, or a command transition and its journal row, commit atomically. Splitting these into repositories would spread atomicity and recovery logic across callers. The command ledger is retained independently of journal retention and mirror rebuilds.
+Records, aliases, journal and checkpoints live in one SQLite-backed module so that a capture and its checkpoint commit atomically; splitting them into repositories would spread atomicity and recovery logic across callers. The command ledger and deduplication history live in a separate `ledger.db` owned by the same module, because a restore must roll back mirrored state without forgetting which command IDs were already executed. Ledger transitions commit first and are then projected into the journal as `system.command` rows; on start, State repairs any interrupted projection from the ledger, so the ledger is the authority for commands and the journal never claims a transition the ledger lacks.
