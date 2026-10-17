@@ -316,10 +316,23 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 		for offset := 0; offset < len(capture.Observations); {
 			end := min(offset+64, len(capture.Observations))
 			part := capture
-			part.Observations = capture.Observations[offset:end]
-			if end < len(capture.Observations) && part.Observations[len(part.Observations)-1].Kind != "absent" {
-				part.CompletionEvidence = ""
+			for {
+				part = capture
+				part.Observations = capture.Observations[offset:end]
+				part.Generation = generation
+				part.Predecessor = checkpoints[part.Source]
+				part.Checkpoint = contracts.NewID("cp")
+				if end < len(capture.Observations) && part.Observations[len(part.Observations)-1].Kind != "absent" {
+					part.CompletionEvidence = ""
+				}
+				if _, err := contracts.EncodeFrame(contracts.IPCFrame{T: "Capture", Capture: &part}); err == nil {
+					break
+				} else if err != contracts.ErrCapacity || end == offset+1 {
+					return err
+				}
+				end--
 			}
+
 			if err := transmit(part); err != nil {
 				return err
 			}

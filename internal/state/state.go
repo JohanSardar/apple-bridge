@@ -323,6 +323,13 @@ func (s *Store) CommitCapture(ctx context.Context, c contracts.Capture) (CommitR
 			continue
 		}
 		record := contracts.Record{Collection: o.Collection, ID: id, Version: old.Version + 1, Source: c.Source, ObservedAt: o.ObservedAt, Deleted: deleted, Data: data, Coverage: contracts.Coverage{Fields: "complete", Missing: []string{}}}
+		encoded, err := json.Marshal(record)
+		if err != nil {
+			return result, err
+		}
+		if len(encoded) > contracts.MaxFrame-2048 {
+			return result, contracts.ErrCapacity
+		}
 		cursor.Sequence++
 		if err = writeRecord(ctx, tx, record, cursor.Sequence); err != nil {
 			return result, err
