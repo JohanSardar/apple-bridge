@@ -1,9 +1,10 @@
 {
+  "run_id": "run_01M549TQPFHFSHMMSP6VP431NN",
   "scenario": "CORE-BLOB-GC",
   "level": "sim",
   "passed": false,
-  "git_sha": "afd659b1b315c20dae2e35ac9d3c6a317944cfed",
-  "at": "2026-10-17T05:39:13.880439Z",
+  "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943",
+  "at": "2026-10-17T06:47:15.407628Z",
   "assertions": [
     {
       "name": "replica_host_is_air",
@@ -39,6 +40,30 @@
     },
     {
       "name": "authorized_bytes_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "legacy_reference_index_open",
+      "passed": true
+    },
+    {
+      "name": "legacy_reference_index_removed",
+      "passed": true
+    },
+    {
+      "name": "reference_index_migration_restart",
+      "passed": true
+    },
+    {
+      "name": "reference_index_migration_converges",
+      "passed": true
+    },
+    {
+      "name": "migrated_reference_index_open",
+      "passed": true
+    },
+    {
+      "name": "legacy_reference_index_backfilled",
       "passed": true
     },
     {
@@ -89,9 +114,9 @@
   "latency": {
     "effect_done→blob_complete": {
       "samples": 1,
-      "p50_ms": 604.212833,
-      "p95_ms": 604.212833,
-      "max_ms": 604.212833,
+      "p50_ms": 525.908709,
+      "p95_ms": 525.908709,
+      "max_ms": 525.908709,
       "timeouts": 0
     }
   },

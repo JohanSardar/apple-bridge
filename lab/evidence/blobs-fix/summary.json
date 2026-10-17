@@ -1,15 +1,23 @@
 {
   "commits_before_final_evidence_commit": [
-    "255c436 Fence blob handle handoffs with the active Helper session",
-    "9e7baeb Record retry budgets across repeated Helper captures",
-    "7b5eb87 Keep retry budgets when captures replace blob handles",
-    "6b6cd4d Refresh blob captures for every registered native Source",
-    "d44455b Record process restart recovery and measured transfer phases",
-    "7881189 Record blob fault probes and core verification evidence",
-    "6eb273d Restart the Helper process during the blob recovery journey",
-    "b235ce1 Prove retry exhaustion and isolated GC protection",
-    "a6ca55d Resume Helper blob downloads and push availability to replicas",
-    "6776e65 Expose blob retry and independent protection regressions"
+    "b307ed8 Preserve the lab blob collection grace across gateway restart",
+    "51cd972 Verify bulk capture with paginated record and replica comparisons",
+    "ac77a1a Load SQLite for the lab legacy reference migration fault",
+    "354f802 Verify reference index backfill and count synthetic history records",
+    "560ae46 Index changed record blob references within durable state transactions",
+    "99a8320 Require ten thousand IPC capture rows above 2000 rows per second",
+    "87d263a Record final blob scenario verification",
+    "bfd7db3 Record session-fenced blob recovery and final verification",
+    "d44b5ee Fence blob handle handoffs with the active Helper session",
+    "bbfbe9b Record retry budgets across repeated Helper captures",
+    "9e4be07 Keep retry budgets when captures replace blob handles",
+    "1275171 Refresh blob captures for every registered native Source",
+    "cb31b84 Record process restart recovery and measured transfer phases",
+    "da27d83 Record blob fault probes and core verification evidence",
+    "4e938d1 Restart the Helper process during the blob recovery journey",
+    "1828c0c Prove retry exhaustion and isolated GC protection",
+    "d8d66b8 Resume Helper blob downloads and push availability to replicas",
+    "0022207 Expose blob retry and independent protection regressions"
   ],
   "code_files": [
     "features.yaml",
@@ -18,22 +26,77 @@
     "internal/blobs/apple.go",
     "internal/blobs/store.go",
     "internal/contracts/blobs.go",
-    "internal/contracts/commands.go",
     "internal/contracts/ipc.go",
-    "internal/operations/invoke.go",
+    "internal/contracts/operations.go",
+    "internal/contracts/records.go",
+    "internal/frontdoor/http.go",
+    "internal/operations/read.go",
     "internal/replication/blobs.go",
     "internal/replication/feed.go",
+    "internal/runtime/doctor.go",
     "internal/runtime/runtime.go",
+    "internal/state/blobs.go",
+    "internal/state/capacity.go",
+    "internal/state/commands.go",
+    "internal/state/crash_test.go",
+    "internal/state/migration.go",
+    "internal/state/recovery.go",
+    "internal/state/retention.go",
+    "internal/state/search.go",
+    "internal/state/state.go",
+    "internal/trust/lifecycle.go",
+    "internal/trust/secrets.go",
+    "internal/trust/trust.go",
+    "lab/scenarios/automatic.go",
     "lab/scenarios/blob_journey.go",
+    "lab/scenarios/commands.go",
+    "lab/scenarios/core/CORE-BENCH.yaml",
     "lab/scenarios/core/CORE-BLOB-GATEWAY-RETRY.yaml",
+    "lab/scenarios/core/CORE-BLOB-REFERENCE-INDEX.yaml",
+    "lab/scenarios/core/CORE-CRED-LIFECYCLE.yaml",
+    "lab/scenarios/core/CORE-DISCONNECT-DETECT.yaml",
+    "lab/scenarios/core/CORE-DISK-FULL.yaml",
+    "lab/scenarios/core/CORE-GAP-REJECT.yaml",
+    "lab/scenarios/core/CORE-HELPER-RESTART.yaml",
+    "lab/scenarios/core/CORE-KILL-DURING-APPLY.yaml",
+    "lab/scenarios/core/CORE-KILL-GATEWAY-CAPTURE.yaml",
+    "lab/scenarios/core/CORE-PAIR.yaml",
+    "lab/scenarios/core/CORE-RESTORE-EPOCH.yaml",
+    "lab/scenarios/core/CORE-RESTORE-OLD-SCHEMA.yaml",
+    "lab/scenarios/core/CORE-RETENTION-RACE.yaml",
+    "lab/scenarios/core/CORE-SCOPE-CHANGE.yaml",
+    "lab/scenarios/core/CORE-SCOPE-LEAK.yaml",
+    "lab/scenarios/core/CORE-SLOW-CONSUMER.yaml",
+    "lab/scenarios/core/CORE-SNAPSHOT-INTERRUPT.yaml",
+    "lab/scenarios/core/CORE-SNAPSHOT-UNDER-LOAD.yaml",
+    "lab/scenarios/core/CORE-UPGRADE.yaml",
+    "lab/scenarios/native.go",
+    "lab/scenarios/robust.go",
+    "lab/scenarios/runner.go",
+    "lab/scenarios/scope.go",
+    "lab/scenarios/validation.go",
     "lab/simapple/blobs.go",
     "lab/simapple/commands.go",
+    "lab/simapple/messages.go",
+    "lab/simapple/persistence.go",
+    "lab/simapple/reminders.go",
     "lab/simapple/simapple.go",
+    "lab/world/benchmark.go",
     "lab/world/commands.go",
+    "lab/world/credentials.go",
+    "lab/world/disk.go",
+    "lab/world/frameproxy.go",
+    "lab/world/legacy.go",
+    "lab/world/options.go",
+    "lab/world/pairing.go",
+    "lab/world/process.go",
+    "lab/world/proxy.go",
+    "lab/world/world.go",
     "native/Sources/AppleSession/AppleSession.swift"
   ],
-  "verified_git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe",
-  "at": "2026-10-17T06:26:02.346977+00:00",
+  "integration_note": "Full core suite and all required gates reran after the incremental reference index change.",
+  "verified_git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943",
+  "at": "2026-10-17T06:54:28.468249+00:00",
   "implementation": [
     "durable pending manifest and staged bytes reconstruct queued work through refreshed Helper captures",
     "retry delays 250/500/1000/2000/4000 ms, capped at 4 s; eight unsuccessful attempts become failed/ipc_retry_exhausted; repeated captures retain attempt count and backoff",
@@ -41,7 +104,9 @@
     "push BlobAvailable to authorized waiting replicas on completion; preserve heartbeat fallback",
     "independent snapshot-only and command-only GC checks beyond 500 ms grace",
     "post-reconnect bulk progress barrier and metadata observation while bytes remain outstanding",
-    "actual SimApplePeer process restart with distinct PID and persisted fixture bytes"
+    "actual SimApplePeer process restart with distinct PID and persisted fixture bytes",
+    "transactional blob_refs index updated only from changed record data; full backfill once for old databases, verified by removing the index and restarting the fixture gateway",
+    "pre-commit preparation preserves pins until the state transaction commits"
   ],
   "conditions": {
     "fixture_bytes": 4194304,
@@ -50,6 +115,9 @@
     "lab_delay_per_feed_chunk_ms": 150,
     "interrupt": "second binary frame cut after half its bytes; first 1 MiB persisted before process partition",
     "replica_transport": "mTLS WebSocket through World allocated SSH reverse tunnel to Ubuntu",
+    "history_rows": 10000,
+    "history_capture_rows_per_frame": 64,
+    "history_condition": "SimApplePeer IPC through final durable ACK, one connected replica on Air; synthetic reminder history without attachment payloads; fixture construction and JSON truth persistence outside timed interval",
     "timing_samples_per_blob_case": 1,
     "p50_p95_max_note": "Each individual blob timing has n=1; p50, p95 and max are therefore equal. These are observed runs, not population percentile estimates.",
     "contention": "Shared Air, FIFO heavy-command queue; host telemetry recorded separately."
@@ -58,7 +126,8 @@
     {
       "command": "packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios/core --level sim",
       "exit_code": 0,
-      "scenarios": 32
+      "scenarios": 33,
+      "verified_git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
     },
     {
       "command": "packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios/core/CORE-BLOB-INTERRUPT.yaml --level replica",
@@ -89,162 +158,167 @@
     {
       "scenario": "CORE-BLOB-CAP",
       "passed": true,
-      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
+      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
     },
     {
       "scenario": "CORE-BLOB-CORRUPT",
       "passed": true,
-      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
+      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
     },
     {
       "scenario": "CORE-BLOB-GATEWAY-RETRY",
       "passed": true,
-      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
+      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
     },
     {
       "scenario": "CORE-BLOB-GC",
       "passed": true,
-      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
+      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
     },
     {
       "scenario": "CORE-BLOB-INTERRUPT",
       "passed": true,
-      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
+      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
     },
     {
       "scenario": "CORE-BLOB-NO-DIGEST-AUTH",
       "passed": true,
-      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
+      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
     },
     {
       "scenario": "CORE-BLOB-OFFLOADED",
       "passed": true,
-      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
+      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
+    },
+    {
+      "scenario": "CORE-BLOB-REFERENCE-INDEX",
+      "passed": true,
+      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
     },
     {
       "scenario": "CORE-BLOB-SLOW-READ",
       "passed": true,
-      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
+      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
     },
     {
       "scenario": "CORE-BOOT",
       "passed": true,
-      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
+      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
     },
     {
       "scenario": "CORE-CMD-CLOCK-JUMP",
       "passed": true,
-      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
+      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
     },
     {
       "scenario": "CORE-CMD-CONFLICT",
       "passed": true,
-      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
+      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
     },
     {
       "scenario": "CORE-CMD-CRASH-AMBIGUOUS",
       "passed": true,
-      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
+      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
     },
     {
       "scenario": "CORE-CMD-ERA",
       "passed": true,
-      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
+      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
     },
     {
       "scenario": "CORE-CMD-EXPIRY",
       "passed": true,
-      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
+      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
     },
     {
       "scenario": "CORE-CMD-IDEMPOTENT",
       "passed": true,
-      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
+      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
     },
     {
       "scenario": "CORE-CMD-LOST-RESPONSE",
       "passed": true,
-      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
+      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
     },
     {
       "scenario": "CORE-CMD-OFFLINE",
       "passed": true,
-      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
+      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
     },
     {
       "scenario": "CORE-CMD-READ-YOUR-WRITE",
       "passed": true,
-      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
+      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
     },
     {
       "scenario": "CORE-FORGED-DELEGATION",
       "passed": true,
-      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
+      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
     },
     {
       "scenario": "CORE-LIVE-LATENCY",
       "passed": true,
-      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
+      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
     },
     {
       "scenario": "CORE-LOCALHOST-DEFENSE",
       "passed": true,
-      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
+      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
     },
     {
       "scenario": "CORE-REST-MCP-PARITY",
       "passed": true,
-      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
+      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
     },
     {
       "scenario": "CORE-RESUME",
       "passed": true,
-      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
+      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
     },
     {
       "scenario": "LAB-MALFORMED-SCENARIO",
       "passed": true,
-      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
+      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
     },
     {
       "scenario": "LAB-SSE",
       "passed": true,
-      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
+      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
     },
     {
       "scenario": "LAB-TRUTH-MULTIPLICITY",
       "passed": true,
-      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
+      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
     },
     {
       "scenario": "REM-CONFLICT",
       "passed": true,
-      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
+      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
     },
     {
       "scenario": "REM-CRUD",
       "passed": true,
-      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
+      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
     },
     {
       "scenario": "REM-EXTERNAL-RACE",
       "passed": true,
-      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
+      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
     },
     {
       "scenario": "REM-NATIVE-LIST-RACE",
       "passed": true,
-      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
+      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
     },
     {
       "scenario": "REM-OPERATION-SHAPES",
       "passed": true,
-      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
+      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
     },
     {
       "scenario": "REM-READONLY-LIST",
       "passed": true,
-      "git_sha": "255c436c884a2dc7499b4d3b9be8d33492f77bbe"
+      "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943"
     }
   ],
   "comparisons": {
@@ -297,47 +371,47 @@
       "after": {
         "completion_ms": {
           "samples": 1,
-          "p50_ms": 1406.57125,
-          "p95_ms": 1406.57125,
-          "max_ms": 1406.57125,
+          "p50_ms": 1304.780333,
+          "p95_ms": 1304.780333,
+          "max_ms": 1304.780333,
           "timeouts": 0
         },
         "gateway_staging_ms": {
           "samples": 1,
-          "p50_ms": 506.550459,
-          "p95_ms": 506.550459,
-          "max_ms": 506.550459,
+          "p50_ms": 422.984583,
+          "p95_ms": 422.984583,
+          "max_ms": 422.984583,
           "timeouts": 0
         },
         "gateway_present_to_replica_partial_ms": {
           "samples": 1,
-          "p50_ms": 182.996041,
-          "p95_ms": 182.996041,
-          "max_ms": 182.996041,
+          "p50_ms": 182.2455,
+          "p95_ms": 182.2455,
+          "max_ms": 182.2455,
           "timeouts": 0
         },
         "reconnect_ms": {
           "samples": 1,
-          "p50_ms": 73.992833,
-          "p95_ms": 73.992833,
-          "max_ms": 73.992833,
+          "p50_ms": 72.001542,
+          "p95_ms": 72.001542,
+          "max_ms": 72.001542,
           "timeouts": 0
         },
         "resumed_transfer_ms": {
           "samples": 1,
-          "p50_ms": 480.729291,
-          "p95_ms": 480.729291,
-          "max_ms": 480.729291,
+          "p50_ms": 493.863208,
+          "p95_ms": 493.863208,
+          "max_ms": 493.863208,
           "timeouts": 0
         },
         "concurrent_metadata_ms": {
           "samples": 1,
-          "p50_ms": 73.76375,
-          "p95_ms": 73.76375,
-          "max_ms": 73.76375,
+          "p50_ms": 76.066792,
+          "p95_ms": 76.066792,
+          "max_ms": 76.066792,
           "timeouts": 0
         },
-        "cut_detection_and_polling_ms_derived": 162.30262600000015
+        "cut_detection_and_polling_ms_derived": 133.68550000000005
       },
       "original_uninstrumented_baseline": {
         "samples": 1,
@@ -396,47 +470,47 @@
       "after": {
         "completion_ms": {
           "samples": 1,
-          "p50_ms": 2026.603958,
-          "p95_ms": 2026.603958,
-          "max_ms": 2026.603958,
+          "p50_ms": 2093.91075,
+          "p95_ms": 2093.91075,
+          "max_ms": 2093.91075,
           "timeouts": 0
         },
         "gateway_staging_ms": {
           "samples": 1,
-          "p50_ms": 456.444333,
-          "p95_ms": 456.444333,
-          "max_ms": 456.444333,
+          "p50_ms": 486.58625,
+          "p95_ms": 486.58625,
+          "max_ms": 486.58625,
           "timeouts": 0
         },
         "gateway_present_to_replica_partial_ms": {
           "samples": 1,
-          "p50_ms": 365.173334,
-          "p95_ms": 365.173334,
-          "max_ms": 365.173334,
+          "p50_ms": 402.193791,
+          "p95_ms": 402.193791,
+          "max_ms": 402.193791,
           "timeouts": 0
         },
         "reconnect_ms": {
           "samples": 1,
-          "p50_ms": 640.606667,
-          "p95_ms": 640.606667,
-          "max_ms": 640.606667,
+          "p50_ms": 660.959875,
+          "p95_ms": 660.959875,
+          "max_ms": 660.959875,
           "timeouts": 0
         },
         "resumed_transfer_ms": {
           "samples": 1,
-          "p50_ms": 556.579583,
-          "p95_ms": 556.579583,
-          "max_ms": 556.579583,
+          "p50_ms": 532.907834,
+          "p95_ms": 532.907834,
+          "max_ms": 532.907834,
           "timeouts": 0
         },
         "concurrent_metadata_ms": {
           "samples": 1,
-          "p50_ms": 249.325333,
-          "p95_ms": 249.325333,
-          "max_ms": 249.325333,
+          "p50_ms": 122.269417,
+          "p95_ms": 122.269417,
+          "max_ms": 122.269417,
           "timeouts": 0
         },
-        "cut_detection_and_polling_ms_derived": 7.800040999999965
+        "cut_detection_and_polling_ms_derived": 11.26299999999992
       },
       "original_uninstrumented_baseline": {
         "samples": 1,
@@ -453,16 +527,16 @@
     "passed": true,
     "recovery_latency": {
       "samples": 1,
-      "p50_ms": 14747.130125,
-      "p95_ms": 14747.130125,
-      "max_ms": 14747.130125,
+      "p50_ms": 14690.7755,
+      "p95_ms": 14690.7755,
+      "max_ms": 14690.7755,
       "timeouts": 0
     },
     "terminal_failure_latency": {
       "samples": 1,
-      "p50_ms": 16026.3525,
-      "p95_ms": 16026.3525,
-      "max_ms": 16026.3525,
+      "p50_ms": 16030.44525,
+      "p95_ms": 16030.44525,
+      "max_ms": 16030.44525,
       "timeouts": 0
     },
     "recovery_fault": "first BlobRead response dropped, 10 s timeout, then actual Helper process restart during a partial staged download",
@@ -487,15 +561,55 @@
     "Clarify blob_handles as digest to opaque Helper handle in §7.3.",
     "Document checkpoint refresh_blobs in §7.2/7.3 as a request to reacquire blob handles while retaining the committed predecessor.",
     "Document feed BlobAvailable(digest) in §12 as an authorization-checked availability hint to waiting replicas.",
-    "Document failed reason codes and retry exhaustion in §13."
+    "Document failed reason codes and retry exhaustion in §13.",
+    "Clarify that pre-commit blob protection must preserve staging pins until the state transaction is durable."
   ],
   "spec_edits": false,
   "feature_status_edits": false,
   "new_scenarios": [
-    "CORE-BLOB-GATEWAY-RETRY (sim), linked to core.blobs"
+    "CORE-BLOB-GATEWAY-RETRY (sim), linked to core.blobs",
+    "CORE-BLOB-REFERENCE-INDEX (sim), linked to core.blobs"
   ],
   "unverified": [
     "Real Apple attachment download/restart was not run; the requested sim and replica levels passed.",
-    "Independent review is left to the build leader."
-  ]
+    "Independent review is left to the build leader.",
+    "The generic lab alias verification failed at the 10000-row scale; its cause was not diagnosed. The throughput scenario instead verifies paginated gateway/replica records and cursor equality."
+  ],
+  "reference_index_throughput": {
+    "before": {
+      "history_10000_commit": {
+        "samples": 1,
+        "p50_ms": 37683.642708,
+        "p95_ms": 37683.642708,
+        "max_ms": 37683.642708,
+        "timeouts": 0
+      },
+      "history_rows_per_second": {
+        "samples": 1,
+        "p50_ms": 265.36712699160216,
+        "p95_ms": 265.36712699160216,
+        "max_ms": 265.36712699160216,
+        "timeouts": 0
+      }
+    },
+    "after": {
+      "history_10000_commit": {
+        "samples": 1,
+        "p50_ms": 2197.072709,
+        "p95_ms": 2197.072709,
+        "max_ms": 2197.072709,
+        "timeouts": 0
+      },
+      "history_rows_per_second": {
+        "samples": 1,
+        "p50_ms": 4551.51072562888,
+        "p95_ms": 4551.51072562888,
+        "max_ms": 4551.51072562888,
+        "timeouts": 0
+      }
+    },
+    "improvement": 17.151750396622855,
+    "units_note": "history_rows_per_second metric uses the generic latency stats structure; values are rows/s, not ms.",
+    "limitation": "Protection still materializes actual indexed blob references for the full ReferenceSet API, but no longer scans or decodes historical record payloads."
+  }
 }

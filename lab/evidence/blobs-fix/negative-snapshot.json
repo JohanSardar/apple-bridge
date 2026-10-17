@@ -1,9 +1,10 @@
 {
+  "run_id": "run_01M549TJJGP6Y8GTE46QCXD13N",
   "scenario": "CORE-BLOB-GC",
   "level": "sim",
   "passed": false,
-  "git_sha": "afd659b1b315c20dae2e35ac9d3c6a317944cfed",
-  "at": "2026-10-17T05:39:08.197788Z",
+  "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943",
+  "at": "2026-10-17T06:47:10.160675Z",
   "assertions": [
     {
       "name": "replica_host_is_air",
@@ -42,6 +43,30 @@
       "passed": true
     },
     {
+      "name": "legacy_reference_index_open",
+      "passed": true
+    },
+    {
+      "name": "legacy_reference_index_removed",
+      "passed": true
+    },
+    {
+      "name": "reference_index_migration_restart",
+      "passed": true
+    },
+    {
+      "name": "reference_index_migration_converges",
+      "passed": true
+    },
+    {
+      "name": "migrated_reference_index_open",
+      "passed": true
+    },
+    {
+      "name": "legacy_reference_index_backfilled",
+      "passed": true
+    },
+    {
       "name": "private_immutable_blob",
       "passed": true
     },
@@ -77,9 +102,9 @@
   "latency": {
     "effect_done→blob_complete": {
       "samples": 1,
-      "p50_ms": 666.546666,
-      "p95_ms": 666.546666,
-      "max_ms": 666.546666,
+      "p50_ms": 587.164208,
+      "p95_ms": 587.164208,
+      "max_ms": 587.164208,
       "timeouts": 0
     }
   },
