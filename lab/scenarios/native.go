@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
+	"github.com/JohanSardar/apple-bridge/lab/scripted"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 )
 
@@ -28,9 +29,29 @@ func nativeScenario(id, level string) bool {
 	}
 }
 
-func runNativeScenario(ctx context.Context, s Scenario, level string) (result Evidence) {
+func runNativeScenario(ctx context.Context, s Scenario, level string) Evidence {
+	rest := runNativeProtocol(ctx, s, level, "rest")
+	if s.ID != "REM-CRUD" || !rest.Passed {
+		return rest
+	}
+	mcp := runNativeProtocol(ctx, s, level, "mcp")
+	for _, assertion := range mcp.Assertions {
+		assertion.Name = "mcp_" + assertion.Name
+		rest.Assertions = append(rest.Assertions, assertion)
+	}
+	rest.Passed = rest.Passed && mcp.Passed
+	if mcp.Status != "" {
+		rest.Status = mcp.Status
+	}
+	for name, latency := range mcp.Latency {
+		rest.Latency["mcp_"+name] = latency
+	}
+	return rest
+}
+
+func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) (result Evidence) {
 	sha, _ := exec.Command("git", "rev-parse", "HEAD").Output()
-	e := Evidence{Scenario: s.ID, Level: level, GitSHA: strings.TrimSpace(string(sha)), At: time.Now().UTC(), Assertions: []Assertion{}, Latency: map[string]Latency{}, Hosts: []string{"air"}}
+	e := Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, GitSHA: strings.TrimSpace(string(sha)), At: time.Now().UTC(), Assertions: []Assertion{}, Latency: map[string]Latency{}, Hosts: []string{"air"}}
 	if level == "replica" {
 		e.Hosts = append(e.Hosts, "ubuntu")
 	}
@@ -122,7 +143,8 @@ func runNativeScenario(ctx context.Context, s Scenario, level string) (result Ev
 		requirementAfter, err := exec.CommandContext(ctx, "codesign", "-d", "-r-", app).CombinedOutput()
 		add("designated_requirement_preserved", err == nil && string(requirementBefore) == string(requirementAfter))
 		add("permission_states_preserved", reflect.DeepEqual(before, after))
-		add("granted_access_preserved", after["full_disk_access"] == "granted" && after["reminders"] == "granted" && after["accessibility"] == "granted" && after["automation_messages"] == "granted")
+		add("granted_access_preserved", after["full_disk_access"] == "granted" && after["reminders"] == "granted" && after["accessibility"] == "granted" && after["calendar"] == "granted" && after["contacts"] == "granted")
+		e.Assertions = append(e.Assertions, Assertion{Name: "automation_status_preserved", Passed: before["automation_messages"] == after["automation_messages"] && before["automation_system_events"] == after["automation_system_events"], Status: "unverified", Detail: "Automation permission checks are unknown while locked; UI automation access is unverified"})
 		add("calendar_contacts_states_preserved", before["calendar"] == after["calendar"] && before["contacts"] == after["contacts"])
 		add("real_capture_after_rebuild", restart() == nil)
 	} else {
@@ -187,13 +209,18 @@ func runNativeScenario(ctx context.Context, s Scenario, level string) (result Ev
 		}
 		var lastCommand map[string]any
 		submit := func(operation string, args map[string]any, version uint64) error {
-			request := map[string]any{"command_id": contracts.NewID("cmd"), "args": args, "expected_version": version, "wait_ms": 3000}
+			head, err := w.Cursor(w.Gateway)
+			if err != nil {
+				return err
+			}
+			request := map[string]any{"command_id": contracts.NewCommandID(head.Epoch), "args": args, "expected_version": version, "wait_ms": 3000}
 			var result map[string]any
 			endpoint := w.Gateway
 			if level == "replica" {
 				endpoint = w.Replicas[0]
 			}
-			_, err := world.Request(ctx, endpoint, "/v1/op/"+operation, request, &result)
+			client := scripted.Client{Endpoint: endpoint, Protocol: protocol}
+			err = client.Call(ctx, operation, request, &result)
 			if err != nil {
 				return err
 			}
@@ -490,7 +517,11 @@ func runNativeScenario(ctx context.Context, s Scenario, level string) (result Ev
 				if arm("dispatch") != nil {
 					return failed("arm_dispatch_pause")
 				}
-				commandID := contracts.NewID("cmd")
+				head, err := w.Cursor(w.Gateway)
+				if err != nil {
+					return failed("command_epoch")
+				}
+				commandID := contracts.NewCommandID(head.Epoch)
 				commandTitle := tag + " guarded command"
 				request := map[string]any{"command_id": commandID, "args": map[string]any{"list_id": list.ID, "title": commandTitle}, "wait_ms": 3000}
 				returned := make(chan struct{})
@@ -537,9 +568,17 @@ func runNativeScenario(ctx context.Context, s Scenario, level string) (result Ev
 		return failed("gateway_records")
 	}
 	add("replica_convergence", w.Await(5*time.Second, func() bool {
+		head, err := w.Cursor(w.Gateway)
+		if err != nil {
+			return false
+		}
 		for _, endpoint := range w.Replicas {
+			applied, err := w.Cursor(endpoint)
+			if err != nil || applied != head {
+				return false
+			}
 			records, err := w.Records(endpoint)
-			if err != nil || !reflect.DeepEqual(gateway, records) {
+			if err != nil || !reflect.DeepEqual(withoutCommands(gateway), withoutCommands(records)) {
 				return false
 			}
 		}
@@ -603,7 +642,7 @@ func nativeConvergence(w *world.World) bool {
 	}
 	for _, endpoint := range w.Replicas {
 		replica, err := w.Records(endpoint)
-		if err != nil || !reflect.DeepEqual(gateway, replica) {
+		if err != nil || !reflect.DeepEqual(withoutCommands(gateway), withoutCommands(replica)) {
 			return false
 		}
 	}

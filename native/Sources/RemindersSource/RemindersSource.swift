@@ -12,8 +12,9 @@ public final class RemindersSource: Source {
     private let commandsEnabled: Bool
     private let baselineURL: URL
     private var forceFull = true
+    private var scanning = false
     public static let operations = ["reminders.create", "reminders.update", "reminders.complete", "reminders.uncomplete", "reminders.delete", "reminders.create_list"]
-    public static let coverage: JSON = .object(["fields": .string("partial"), "missing": .array([.string("recurrence: next incomplete instance only"), .string("recurrence rule projection"), .string("alarm projection")])])
+    public static let coverage: JSON = .object(["fields": .string("partial"), "missing": .array([.string("recurrence: next incomplete instance only")])])
 
     public init(gate: AgendaGate, home: URL, commandsEnabled: Bool = false) throws {
         self.gate = gate; self.commandsEnabled = commandsEnabled
@@ -44,8 +45,28 @@ public final class RemindersSource: Source {
         return calendar.date(from: value).map { .string(timestamp($0)) } ?? .null
     }
 
+    private func recurrence(_ rules: [EKRecurrenceRule]?) -> JSON {
+        guard let rules, !rules.isEmpty else { return .null }
+        func numbers(_ values: [NSNumber]?) -> JSON { .array((values ?? []).map { .number($0.doubleValue) }) }
+        return .array(rules.map { rule in
+            .object(["frequency": .string(["daily", "weekly", "monthly", "yearly"][Int(rule.frequency.rawValue)]), "interval": .number(Double(rule.interval)), "end": rule.recurrenceEnd?.endDate.map { .string(timestamp($0)) } ?? .null, "count": rule.recurrenceEnd.map { .number(Double($0.occurrenceCount)) } ?? .null, "first_day_of_week": .number(Double(rule.firstDayOfTheWeek)), "days_of_week": .array((rule.daysOfTheWeek ?? []).map { .object(["day": .number(Double($0.dayOfTheWeek.rawValue)), "week": .number(Double($0.weekNumber))]) }), "days_of_month": numbers(rule.daysOfTheMonth), "days_of_year": numbers(rule.daysOfTheYear), "weeks_of_year": numbers(rule.weeksOfTheYear), "months": numbers(rule.monthsOfTheYear), "positions": numbers(rule.setPositions)])
+        })
+    }
+
+    private func alarms(_ alarms: [EKAlarm]?) -> JSON {
+        .array((alarms ?? []).map { alarm in
+            var fields: [String: JSON] = ["absolute_date": alarm.absoluteDate.map { .string(timestamp($0)) } ?? .null, "relative_offset": .number(alarm.relativeOffset), "proximity": .number(Double(alarm.proximity.rawValue))]
+            if let location = alarm.structuredLocation {
+                var place: [String: JSON] = ["title": location.title.map(JSON.string) ?? .null, "radius": .number(location.radius)]
+                if let coordinate = location.geoLocation?.coordinate { place["latitude"] = .number(coordinate.latitude); place["longitude"] = .number(coordinate.longitude) }
+                fields["location"] = .object(place)
+            }
+            return .object(fields)
+        })
+    }
+
     private func data(_ reminder: EKReminder) -> JSON {
-        .object(["title": .string(reminder.title ?? ""), "notes": reminder.notes.map(JSON.string) ?? .null, "url": reminder.url.map { .string($0.absoluteString) } ?? .null, "due": components(reminder.dueDateComponents), "due_all_day": .bool(reminder.dueDateComponents != nil && reminder.dueDateComponents?.hour == nil), "start": components(reminder.startDateComponents), "priority": .number(Double(reminder.priority)), "completed": .bool(reminder.isCompleted), "completed_at": reminder.completionDate.map { .string(timestamp($0)) } ?? .null, "recurrence": .bool(reminder.hasRecurrenceRules), "alarms": .array([]), "list_id": .object(["$ref": .object(["collection": .string("reminders.list"), "native_key": .string(reminder.calendar.calendarIdentifier)])])])
+        .object(["title": .string(reminder.title ?? ""), "notes": reminder.notes.map(JSON.string) ?? .null, "url": reminder.url.map { .string($0.absoluteString) } ?? .null, "due": components(reminder.dueDateComponents), "due_all_day": .bool(reminder.dueDateComponents != nil && reminder.dueDateComponents?.hour == nil), "start": components(reminder.startDateComponents), "priority": .number(Double(reminder.priority)), "completed": .bool(reminder.isCompleted), "completed_at": reminder.completionDate.map { .string(timestamp($0)) } ?? .null, "recurrence": recurrence(reminder.recurrenceRules), "alarms": alarms(reminder.alarms), "list_id": .object(["$ref": .object(["collection": .string("reminders.list"), "native_key": .string(reminder.calendar.calendarIdentifier)])])])
     }
 
     private func hash(_ value: JSON) throws -> String {
@@ -61,6 +82,9 @@ public final class RemindersSource: Source {
     }
 
     private func scan(into sink: any ObservationSink, live: Bool) async throws {
+        while scanning { try await Task.sleep(for: .milliseconds(10)) }
+        scanning = true
+        defer { scanning = false }
         let started = timestamp()
         let reminders = try await gate.reminders()
         let calendars = gate.store.calendars(for: .reminder)
@@ -96,6 +120,11 @@ public final class RemindersSource: Source {
         forceFull = false
         let readiness = await open()
         try await sink.sourceState(source: name, state: readiness.state, coverage: readiness.coverage, capabilities: readiness.capabilities, reason: readiness.reason)
+    }
+
+    public func reconcile(into sink: any ObservationSink) async throws {
+        forceFull = true
+        try await scan(into: sink, live: true)
     }
 
     public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {
@@ -229,22 +258,26 @@ public final class RemindersSource: Source {
 
     public func resolve(_ command: String, evidence: JSON) async -> JSON {
         let action = evidence["prepared"]["action"]
-        let key = action["native_key"].string
-        guard !key.isEmpty, let reminders = try? await gate.reminders() else { return evidence }
+        let key = action["native_key"].string.isEmpty ? evidence["native_key"].string : action["native_key"].string
+        if action["op"].string == "reminders.create_list" {
+            guard gate.authorized(.reminder), !key.isEmpty, let list = gate.store.calendar(withIdentifier: key), list.title == action["args"]["title"].string else { return .null }
+            return .object(["native_key": .string(key), "observed": .bool(true), "prepared": evidence["prepared"]])
+        }
+        guard !key.isEmpty, let reminders = try? await gate.reminders() else { return .null }
         let current = reminders.first { $0.calendarItemIdentifier == key }
         let operation = action["op"].string
         if operation == "reminders.delete" {
-            guard current == nil else { return evidence }
+            guard current == nil else { return .null }
         } else {
-            guard let current else { return evidence }
+            guard let current else { return .null }
             let actual = data(current)
-            if operation == "reminders.complete" && !current.isCompleted { return evidence }
-            if operation == "reminders.uncomplete" && current.isCompleted { return evidence }
-            if operation == "reminders.update" {
+            if operation == "reminders.complete" && !current.isCompleted { return .null }
+            if operation == "reminders.uncomplete" && current.isCompleted { return .null }
+            if operation == "reminders.update" || operation == "reminders.create" {
                 let fields = action["args"].object.filter { !["id", "list_id", "due_all_day"].contains($0.key) }
-                guard !fields.isEmpty, fields.allSatisfy({ actual[$0.key] == $0.value }) else { return evidence }
+                guard !fields.isEmpty, fields.allSatisfy({ actual[$0.key] == $0.value }) else { return .null }
             }
         }
-        return .object(["native_key": .string(key), "observed": .bool(true), "absent": .bool(current == nil), "resolved": .bool(true)])
+        return .object(["native_key": .string(key), "observed": .bool(true), "absent": .bool(current == nil), "resolved": .bool(true), "prepared": evidence["prepared"]])
     }
 }

@@ -26,6 +26,9 @@ func (w *World) StopHelper() {
 	}
 }
 func (w *World) RestartHelper() error {
+	if w.Native {
+		return w.restartNativeHelper()
+	}
 	w.StopHelper()
 	cfg, err := w.config(w.Gateway.Home, false)
 	if err != nil {

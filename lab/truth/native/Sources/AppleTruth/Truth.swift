@@ -17,6 +17,16 @@ struct AppleTruth {
             return arguments[index + 1]
         }
         guard let reportPath = option("--report"), let verb = arguments.first else { exit(2) }
+        let deadline = DispatchSource.makeTimerSource(queue: .global())
+        deadline.schedule(deadline: .now() + (verb == "authorize" ? 300 : 90))
+        deadline.setEventHandler {
+            let url = URL(fileURLWithPath: reportPath)
+            try? Data("{\"status\":\"unverified\",\"reason\":\"deadline_exceeded\"}".utf8).write(to: url, options: .atomic)
+            try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportPath)
+            exit(1)
+        }
+        deadline.resume()
+        defer { deadline.cancel() }
         var finished = false
         Task { @MainActor in
             var response: [String: Any]

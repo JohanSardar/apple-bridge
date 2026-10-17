@@ -42,7 +42,7 @@ func (w *World) Truth(verb string, request map[string]any) (map[string]any, erro
 	return response, nil
 }
 
-func (w *World) RestartHelper() error {
+func (w *World) restartNativeHelper() error {
 	data, err := os.ReadFile(filepath.Join(w.Gateway.Home, "helper", "helper.pid"))
 	if err != nil {
 		return err

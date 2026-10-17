@@ -37,10 +37,12 @@ public actor AppleSession: ObservationSink {
     private var permissionStates: [String: String] = [:]
     private var credit = 0
     private var checkpoints: [String: JSON] = [:]
+    private var observedCheckpoints: [String: String] = [:]
     private var live: [Pending] = []
     private var bulk: [Pending] = []
     private var flights: [String: Flight] = [:]
     private var tickets: [String: Ticket] = [:]
+    private var commandActive = false
     private var captureTasks: [Task<Void, Never>] = []
     private let agenda: AgendaGate
     private let source: RemindersSource
@@ -57,7 +59,7 @@ public actor AppleSession: ObservationSink {
         self.home = home; self.labEnabled = commandsEnabled
         let agenda = AgendaGate()
         self.agenda = agenda
-        source = try RemindersSource(gate: agenda, home: home, commandsEnabled: commandsEnabled)
+        source = try RemindersSource(gate: agenda, home: home, commandsEnabled: true)
         guardLog = try DispatchGuard(home: home)
         let pidFile = home.appendingPathComponent("helper.pid")
         try Data(String(getpid()).utf8).write(to: pidFile, options: .atomic)
@@ -108,6 +110,7 @@ public actor AppleSession: ObservationSink {
     private func disconnect() {
         wire?.close(); wire = nil
         permissionStates = [:]
+        observedCheckpoints = [:]
         for task in captureTasks { task.cancel() }
         captureTasks = []
         for pending in live + bulk { pending.completion.resume(throwing: SourceFailure.unavailable) }
@@ -182,9 +185,11 @@ public actor AppleSession: ObservationSink {
 
     private func drain() throws {
         while !live.isEmpty || !bulk.isEmpty {
-            let prioritized = !live.isEmpty
-            let pending = prioritized ? live[0] : bulk[0]
-            if flights[pending.source] != nil { return }
+            let liveIndex = live.firstIndex { flights[$0.source] == nil }
+            let bulkIndex = bulk.firstIndex { flights[$0.source] == nil }
+            guard let index = liveIndex ?? bulkIndex else { return }
+            let prioritized = liveIndex != nil
+            let pending = prioritized ? live[index] : bulk[index]
             let checkpoint = UUID().uuidString
             let resume = checkpoints[pending.source] ?? .null
             var capture: [String: JSON] = ["source": .string(pending.source), "generation": .string(pending.generation), "predecessor": .string(resume["generation"].string == pending.generation ? resume["checkpoint"].string : ""), "checkpoint": .string(checkpoint), "observations": .array(pending.observations)]
@@ -199,7 +204,7 @@ public actor AppleSession: ObservationSink {
             try wire?.send(frame)
             credit -= size
             flights[pending.source] = Flight(pending: pending, checkpoint: checkpoint, bytes: size)
-            if prioritized { live.removeFirst() } else { bulk.removeFirst() }
+            if prioritized { live.remove(at: index) } else { bulk.remove(at: index) }
         }
     }
 
@@ -219,28 +224,52 @@ public actor AppleSession: ObservationSink {
                 try Data(flight.checkpoint.utf8).write(to: marker, options: .atomic)
                 try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: marker.path)
             }
+            for observation in flight.pending.observations {
+                observedCheckpoints[observation["collection"].string + "/" + observation["native_key"].string] = flight.checkpoint
+            }
             flight.pending.completion.resume()
             try drain()
         case "Reset": throw SourceFailure.conflict
         case "Prepare": await prepare(frame)
-        case "Dispatch": await dispatch(frame)
-        case "Resolve":
-            let id = frame["command_id"].string
-            if var outcome = await guardLog.outcomes[id] {
-                if outcome["disposition"].string == "indeterminate" {
-                    let evidence = await source.resolve(id, evidence: outcome["evidence"])
-                    if evidence["observed"].bool {
-                        outcome = .object(["t": .string("Outcome"), "command_id": .string(id), "disposition": .string("locally_observed"), "evidence": evidence])
-                        try await guardLog.append(outcome)
-                    }
-                }
-                try wire?.send(outcome)
-            } else { try reject(frame, code: "not_found") }
+        case "Dispatch": captureTasks.append(Task { await self.dispatch(frame) })
+        case "Resolve": captureTasks.append(Task { await self.resolve(frame) })
         case "BlobRead":
             try wire?.send(.object(["t": .string("BlobUnavailable"), "handle": frame["handle"], "reason": .string("unsupported")]))
         case "Close": throw SourceFailure.unavailable
         default: throw SourceFailure.invalid
         }
+    }
+
+    private func observedEvidence(_ evidence: JSON, fingerprint: JSON) async throws -> JSON {
+        try Task.checkCancellation()
+        try await source.reconcile(into: self)
+        try Task.checkCancellation()
+        let key = evidence["native_key"].string
+        guard let checkpoint = observedCheckpoints["reminders.reminder/" + key] ?? observedCheckpoints["reminders.list/" + key] else { throw SourceFailure.unavailable }
+        var result = evidence.object
+        result["fingerprint"] = fingerprint
+        result["capture_checkpoint"] = .string(checkpoint)
+        return .object(result)
+    }
+
+    private func resolve(_ frame: JSON) async {
+        let id = frame["command_id"].string
+        do {
+            guard var outcome = await guardLog.outcomes[id] else { try reject(frame, code: "not_found"); return }
+            if ["indeterminate", "locally_observed"].contains(outcome["disposition"].string) {
+                let evidence = await source.resolve(id, evidence: outcome["evidence"])
+                if evidence["observed"].bool {
+                    let committed = try await observedEvidence(evidence, fingerprint: outcome["evidence"]["prepared"]["request_hash"])
+                    outcome = .object(["t": .string("Outcome"), "command_id": .string(id), "disposition": .string("locally_observed"), "evidence": committed])
+                    try await guardLog.append(outcome)
+                } else {
+                    var unresolved = outcome.object
+                    unresolved["disposition"] = .string("indeterminate")
+                    outcome = .object(unresolved)
+                }
+            }
+            try wire?.send(outcome)
+        } catch { }
     }
 
     private func pause(_ point: String, observations: [JSON] = []) async throws {
@@ -275,31 +304,39 @@ public actor AppleSession: ObservationSink {
         do {
             guard !frame["command_id"].string.isEmpty, !frame["principal"].string.isEmpty, !frame["request_hash"].string.isEmpty, let expires = parseTimestamp(frame["expires_at"].string), expires > Date() else { throw SourceFailure.invalid }
             tickets = tickets.filter { ContinuousClock.now < $0.value.expiry }
-            guard tickets.isEmpty, !(await guardLog.contains(frame["command_id"].string)) else { throw SourceFailure.conflict }
+            guard !commandActive, tickets.isEmpty, !(await guardLog.contains(frame["command_id"].string)) else { throw SourceFailure.conflict }
             let prepared = try await source.prepare(frame)
             let ticket = UUID().uuidString
             tickets[ticket] = Ticket(command: frame, prepared: prepared, expiry: ContinuousClock.now.advanced(by: .milliseconds(Int64(min(30, expires.timeIntervalSinceNow) * 1000))), fence: fence)
-            try wire?.send(.object(["t": .string("Prepared"), "command_id": frame["command_id"], "ticket": .string(ticket), "native_state": prepared.nativeState, "route": .string("eventkit"), "fingerprint": .string(prepared.fingerprint), "candidate_ids": .array([])]))
+            try wire?.send(.object(["t": .string("Prepared"), "command_id": frame["command_id"], "ticket": .string(ticket), "native_state": prepared.nativeState, "route": .string("eventkit"), "fingerprint": frame["request_hash"], "candidate_ids": .array([])]))
         } catch { try? reject(frame, code: errorCode(error)) }
     }
 
     private func dispatch(_ frame: JSON) async {
         guard let ticket = tickets.removeValue(forKey: frame["ticket"].string) else { try? reject(frame, code: "conflict"); return }
         let id = ticket.command["command_id"]
+        guard !commandActive else { try? reject(ticket.command, code: "conflict"); return }
+        commandActive = true
+        defer { commandActive = false }
         var started = false
         do {
-            guard frame["owner_fence"].unsigned == fence, ticket.fence == fence, ContinuousClock.now < ticket.expiry else { throw SourceFailure.expired }
+            guard frame["command_id"] == id, frame["owner_fence"].unsigned == fence, ticket.fence == fence, ContinuousClock.now < ticket.expiry else { throw SourceFailure.expired }
             try await source.validate(ticket.prepared)
-            try await guardLog.append(.object(["t": .string("DispatchStarted"), "command_id": id, "ticket": frame["ticket"], "started_at": .string(timestamp()), "prepared": .object(["action": ticket.prepared.action, "native_state": ticket.prepared.nativeState, "fingerprint": .string(ticket.prepared.fingerprint)])]))
+            try await guardLog.append(.object(["t": .string("DispatchStarted"), "command_id": id, "ticket": frame["ticket"], "started_at": .string(timestamp()), "prepared": .object(["action": ticket.prepared.action, "native_state": ticket.prepared.nativeState, "fingerprint": .string(ticket.prepared.fingerprint), "request_hash": ticket.command["request_hash"]])]))
             started = true
             try await pause("dispatch")
-            let evidence = try await source.dispatch(ticket.prepared)
+            try Task.checkCancellation()
+            guard ticket.fence == fence, wire != nil else { throw SourceFailure.conflict }
+            let refetched = try await source.dispatch(ticket.prepared)
+            var retained = refetched.object
+            retained["prepared"] = .object(["action": ticket.prepared.action, "native_state": ticket.prepared.nativeState, "request_hash": ticket.command["request_hash"]])
+            let evidence = try await observedEvidence(.object(retained), fingerprint: ticket.command["request_hash"])
             let outcome = JSON.object(["t": .string("Outcome"), "command_id": id, "disposition": .string("locally_observed"), "evidence": evidence])
             try await guardLog.append(outcome)
             try wire?.send(outcome)
         } catch {
             if started {
-                let outcome = JSON.object(["t": .string("Outcome"), "command_id": id, "disposition": .string("indeterminate"), "evidence": .object(["reason": .string("dispatch_evidence_unavailable"), "prepared": .object(["action": ticket.prepared.action, "native_state": ticket.prepared.nativeState])])])
+                let outcome = JSON.object(["t": .string("Outcome"), "command_id": id, "disposition": .string("indeterminate"), "evidence": .object(["reason": .string("dispatch_evidence_unavailable"), "prepared": .object(["action": ticket.prepared.action, "native_state": ticket.prepared.nativeState, "request_hash": ticket.command["request_hash"]])])])
                 try? await guardLog.append(outcome); try? wire?.send(outcome)
             } else { try? reject(ticket.command, code: errorCode(error)) }
         }
