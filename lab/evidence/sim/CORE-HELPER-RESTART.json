@@ -3,35 +3,35 @@
     "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
     "start": {
       "air": {
-        "at": "2026-10-17T18:35:12.616566Z",
+        "at": "2026-10-17T19:47:14.303217Z",
         "cpu_count": 8,
         "load_average": [
-          4.67,
-          5.64,
-          6.56
+          6.12,
+          5.37,
+          5.13
         ],
-        "cpu_idle_percent": 79,
-        "free_memory_bytes": 63455232,
+        "cpu_idle_percent": 69,
+        "free_memory_bytes": 267714560,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 3,
+        "heavy_queue_length": 2,
         "quiet": false
       }
     },
     "end": {
       "air": {
-        "at": "2026-10-17T18:35:14.700737Z",
+        "at": "2026-10-17T19:47:16.201396Z",
         "cpu_count": 8,
         "load_average": [
-          4.67,
-          5.64,
-          6.56
+          5.87,
+          5.33,
+          5.11
         ],
-        "cpu_idle_percent": 79,
-        "free_memory_bytes": 117866496,
+        "cpu_idle_percent": 68,
+        "free_memory_bytes": 196476928,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 3,
+        "heavy_queue_length": 2,
         "quiet": false
       }
     },
@@ -40,16 +40,17 @@
     "quiet_wait_ms": 0,
     "quiet_wait_expired": false
   },
-  "run_id": "run_01M55JB2DNCEBSGHXND8ZKTVR4",
+  "run_id": "run_01M55PEYT46XG0DNRWP0SX2A73",
   "network_path": "loopback",
   "metrics": {
-    "recovery_final_drain_ms": 227.845708
+    "automatic_phase": "complete",
+    "recovery_final_drain_ms": 23.035459
   },
   "scenario": "CORE-HELPER-RESTART",
   "level": "sim",
   "passed": true,
-  "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b",
-  "at": "2026-10-17T18:35:13.717312Z",
+  "git_sha": "7e55120b19134246108d4ed10d35cd6d1539316f",
+  "at": "2026-10-17T19:47:15.39641Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -76,7 +77,55 @@
       "passed": true
     },
     {
+      "name": "automatic_fixture_available",
+      "passed": true
+    },
+    {
+      "name": "automatic_sse_connected_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_scoped_token_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_query_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_record_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_search_0",
+      "passed": true
+    },
+    {
       "name": "automatic_scope_query_search_records_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_sse_connected_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_sse_connected_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_scoped_token_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_query_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_record_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_search_1",
       "passed": true
     },
     {
@@ -84,7 +133,39 @@
       "passed": true
     },
     {
+      "name": "automatic_scope_sse_connected_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_probe_capture_requested",
+      "passed": true
+    },
+    {
+      "name": "automatic_probe_seen_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_cursor_continuity_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_no_false_deletion_0",
+      "passed": true
+    },
+    {
       "name": "automatic_metadata_latency_and_no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_probe_seen_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_cursor_continuity_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_no_false_deletion_1",
       "passed": true
     },
     {
@@ -123,16 +204,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 16.180584,
-      "p95_ms": 16.180584,
-      "max_ms": 16.180584,
+      "p50_ms": 3.33675,
+      "p95_ms": 3.33675,
+      "max_ms": 3.33675,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 19.078667,
-      "p95_ms": 19.078667,
-      "max_ms": 19.078667,
+      "p50_ms": 7.730875,
+      "p95_ms": 7.730875,
+      "max_ms": 7.730875,
       "timeouts": 0
     }
   },

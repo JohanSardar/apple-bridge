@@ -3,35 +3,35 @@
     "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
     "start": {
       "air": {
-        "at": "2026-10-17T18:38:48.51372Z",
+        "at": "2026-10-17T19:50:58.945814Z",
         "cpu_count": 8,
         "load_average": [
-          3.9,
-          4.6,
-          5.89
+          6.26,
+          5.41,
+          5.16
         ],
-        "cpu_idle_percent": 88,
-        "free_memory_bytes": 910393344,
+        "cpu_idle_percent": 58,
+        "free_memory_bytes": 175095808,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 2,
+        "heavy_queue_length": 4,
         "quiet": false
       }
     },
     "end": {
       "air": {
-        "at": "2026-10-17T18:38:49.645283Z",
+        "at": "2026-10-17T19:51:00.045732Z",
         "cpu_count": 8,
         "load_average": [
-          3.9,
-          4.6,
-          5.89
+          6.26,
+          5.41,
+          5.16
         ],
-        "cpu_idle_percent": 90,
-        "free_memory_bytes": 891682816,
+        "cpu_idle_percent": 52,
+        "free_memory_bytes": 139018240,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 2,
+        "heavy_queue_length": 4,
         "quiet": false
       }
     },
@@ -40,12 +40,12 @@
     "quiet_wait_ms": 0,
     "quiet_wait_expired": false
   },
-  "run_id": "run_01M55JHN9BQRWHSSY6JZN0ZNAT",
+  "run_id": "run_01M55PNT6B8Q6K8TQPB6DR4SR0",
   "scenario": "LAB-MALFORMED-SCENARIO",
   "level": "sim",
   "passed": true,
-  "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b",
-  "at": "2026-10-17T18:38:49.643158Z",
+  "git_sha": "7e55120b19134246108d4ed10d35cd6d1539316f",
+  "at": "2026-10-17T19:51:00.043096Z",
   "assertions": [
     {
       "name": "malformed_scenario_rejected",

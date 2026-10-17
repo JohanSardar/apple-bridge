@@ -3,35 +3,35 @@
     "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
     "start": {
       "air": {
-        "at": "2026-10-17T19:11:33.480099Z",
+        "at": "2026-10-17T19:45:50.253386Z",
         "cpu_count": 8,
         "load_average": [
-          14.9,
-          12.53,
-          9.74
+          11.67,
+          5.77,
+          5.23
         ],
-        "cpu_idle_percent": 74,
-        "free_memory_bytes": 137592832,
+        "cpu_idle_percent": 59,
+        "free_memory_bytes": 368721920,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 2,
+        "heavy_queue_length": 5,
         "quiet": false
       }
     },
     "end": {
       "air": {
-        "at": "2026-10-17T19:11:35.231922Z",
+        "at": "2026-10-17T19:45:52.176762Z",
         "cpu_count": 8,
         "load_average": [
-          14.9,
-          12.53,
-          9.74
+          11.67,
+          5.77,
+          5.23
         ],
-        "cpu_idle_percent": 80,
-        "free_memory_bytes": 130056192,
+        "cpu_idle_percent": 56,
+        "free_memory_bytes": 293650432,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 2,
+        "heavy_queue_length": 4,
         "quiet": false
       }
     },
@@ -40,20 +40,21 @@
     "quiet_wait_ms": 0,
     "quiet_wait_expired": false
   },
-  "run_id": "run_01M55MDM56PYHDPJ9S69HEGPQK",
+  "run_id": "run_01M55PCCQVB8N98CNEQAEN7EHX",
   "network_path": "loopback",
   "metrics": {
+    "automatic_phase": "complete",
     "clock_method": "authenticated_feed_ntp_four_timestamps",
-    "clock_sample_age_ms": 107,
-    "recovery_final_drain_ms": 14.1675,
+    "clock_sample_age_ms": 113,
+    "recovery_final_drain_ms": 17.55675,
     "replica_clock_skew_ms": -2,
     "replica_disk_encryption": "warning_not_enabled"
   },
   "scenario": "CORE-DOCTOR",
   "level": "sim",
   "passed": true,
-  "git_sha": "d7192c92d18042c300337105ece702609bbb68d8",
-  "at": "2026-10-17T19:11:34.566712Z",
+  "git_sha": "7e55120b19134246108d4ed10d35cd6d1539316f",
+  "at": "2026-10-17T19:45:51.355665Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -88,7 +89,55 @@
       "passed": true
     },
     {
+      "name": "automatic_fixture_available",
+      "passed": true
+    },
+    {
+      "name": "automatic_sse_connected_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_scoped_token_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_query_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_record_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_search_0",
+      "passed": true
+    },
+    {
       "name": "automatic_scope_query_search_records_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_sse_connected_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_sse_connected_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_scoped_token_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_query_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_record_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_search_1",
       "passed": true
     },
     {
@@ -96,7 +145,39 @@
       "passed": true
     },
     {
+      "name": "automatic_scope_sse_connected_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_probe_capture_requested",
+      "passed": true
+    },
+    {
+      "name": "automatic_probe_seen_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_cursor_continuity_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_no_false_deletion_0",
+      "passed": true
+    },
+    {
       "name": "automatic_metadata_latency_and_no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_probe_seen_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_cursor_continuity_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_no_false_deletion_1",
       "passed": true
     },
     {
@@ -135,16 +216,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 5.234333,
-      "p95_ms": 5.234333,
-      "max_ms": 5.234333,
+      "p50_ms": 5.571875,
+      "p95_ms": 5.571875,
+      "max_ms": 5.571875,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 8.142333,
-      "p95_ms": 8.142333,
-      "max_ms": 8.142333,
+      "p50_ms": 8.663875,
+      "p95_ms": 8.663875,
+      "max_ms": 8.663875,
       "timeouts": 0
     }
   },

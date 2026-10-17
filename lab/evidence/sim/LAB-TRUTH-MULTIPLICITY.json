@@ -3,35 +3,35 @@
     "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
     "start": {
       "air": {
-        "at": "2026-10-17T18:39:23.918696Z",
+        "at": "2026-10-17T19:51:34.348093Z",
         "cpu_count": 8,
         "load_average": [
-          3.33,
-          4.36,
-          5.75
+          4.56,
+          5.09,
+          5.05
         ],
-        "cpu_idle_percent": 73,
-        "free_memory_bytes": 426819584,
+        "cpu_idle_percent": 43,
+        "free_memory_bytes": 69058560,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 3,
+        "heavy_queue_length": 4,
         "quiet": false
       }
     },
     "end": {
       "air": {
-        "at": "2026-10-17T18:39:25.466561Z",
+        "at": "2026-10-17T19:51:36.021312Z",
         "cpu_count": 8,
         "load_average": [
-          3.33,
-          4.36,
-          5.75
+          4.43,
+          5.06,
+          5.04
         ],
-        "cpu_idle_percent": 87,
-        "free_memory_bytes": 433520640,
+        "cpu_idle_percent": 44,
+        "free_memory_bytes": 108036096,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 3,
+        "heavy_queue_length": 4,
         "quiet": false
       }
     },
@@ -40,13 +40,13 @@
     "quiet_wait_ms": 0,
     "quiet_wait_expired": false
   },
-  "run_id": "run_01M55JJQTZXZB76T2G2ZTTFVJN",
+  "run_id": "run_01M55PPWS573631A2D7ZNGWWRK",
   "network_path": "loopback",
   "scenario": "LAB-TRUTH-MULTIPLICITY",
   "level": "sim",
   "passed": true,
-  "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b",
-  "at": "2026-10-17T18:39:25.02354Z",
+  "git_sha": "7e55120b19134246108d4ed10d35cd6d1539316f",
+  "at": "2026-10-17T19:51:35.461811Z",
   "assertions": [
     {
       "name": "feed_network_loopback",

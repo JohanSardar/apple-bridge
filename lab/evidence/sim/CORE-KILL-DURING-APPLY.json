@@ -3,32 +3,32 @@
     "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
     "start": {
       "air": {
-        "at": "2026-10-17T18:35:15.745993Z",
+        "at": "2026-10-17T19:47:17.248838Z",
         "cpu_count": 8,
         "load_average": [
-          4.67,
-          5.64,
-          6.56
+          5.87,
+          5.33,
+          5.11
         ],
-        "cpu_idle_percent": 76,
-        "free_memory_bytes": 46776320,
+        "cpu_idle_percent": 69,
+        "free_memory_bytes": 65699840,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 3,
+        "heavy_queue_length": 2,
         "quiet": false
       }
     },
     "end": {
       "air": {
-        "at": "2026-10-17T18:35:23.504963Z",
+        "at": "2026-10-17T19:47:25.789581Z",
         "cpu_count": 8,
         "load_average": [
-          4.48,
-          5.57,
-          6.53
+          5.28,
+          5.22,
+          5.08
         ],
-        "cpu_idle_percent": 70,
-        "free_memory_bytes": 137592832,
+        "cpu_idle_percent": 87,
+        "free_memory_bytes": 140099584,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
         "heavy_queue_length": 3,
@@ -38,15 +38,15 @@
     "periodic_samples": [
       {
         "air": {
-          "at": "2026-10-17T18:35:21.81596Z",
+          "at": "2026-10-17T19:47:23.328035Z",
           "cpu_count": 8,
           "load_average": [
-            4.48,
-            5.57,
-            6.53
+            5.48,
+            5.26,
+            5.09
           ],
-          "cpu_idle_percent": 63,
-          "free_memory_bytes": 71434240,
+          "cpu_idle_percent": 78,
+          "free_memory_bytes": 112361472,
           "active_heavy_slots": 2,
           "other_active_heavy_slots": 1,
           "heavy_queue_length": 3,
@@ -59,16 +59,17 @@
     "quiet_wait_ms": 0,
     "quiet_wait_expired": false
   },
-  "run_id": "run_01M55JB5FF58R5QGWY747YWBJE",
+  "run_id": "run_01M55PF1Q428WHVS2J2JACTHRN",
   "network_path": "loopback",
   "metrics": {
-    "recovery_final_drain_ms": 12.316917
+    "automatic_phase": "complete",
+    "recovery_final_drain_ms": 16.113875
   },
   "scenario": "CORE-KILL-DURING-APPLY",
   "level": "sim",
   "passed": true,
-  "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b",
-  "at": "2026-10-17T18:35:16.84776Z",
+  "git_sha": "7e55120b19134246108d4ed10d35cd6d1539316f",
+  "at": "2026-10-17T19:47:18.372053Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -123,7 +124,55 @@
       "passed": true
     },
     {
+      "name": "automatic_fixture_available",
+      "passed": true
+    },
+    {
+      "name": "automatic_sse_connected_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_scoped_token_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_query_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_record_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_search_0",
+      "passed": true
+    },
+    {
       "name": "automatic_scope_query_search_records_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_sse_connected_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_sse_connected_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_scoped_token_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_query_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_record_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_search_1",
       "passed": true
     },
     {
@@ -131,7 +180,39 @@
       "passed": true
     },
     {
+      "name": "automatic_scope_sse_connected_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_probe_capture_requested",
+      "passed": true
+    },
+    {
+      "name": "automatic_probe_seen_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_cursor_continuity_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_no_false_deletion_0",
+      "passed": true
+    },
+    {
       "name": "automatic_metadata_latency_and_no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_probe_seen_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_cursor_continuity_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_no_false_deletion_1",
       "passed": true
     },
     {
@@ -170,16 +251,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 4.883666,
-      "p95_ms": 4.883666,
-      "max_ms": 4.883666,
+      "p50_ms": 3.288709,
+      "p95_ms": 3.288709,
+      "max_ms": 3.288709,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 8.069833,
-      "p95_ms": 8.069833,
-      "max_ms": 8.069833,
+      "p50_ms": 10.251417,
+      "p95_ms": 10.251417,
+      "max_ms": 10.251417,
       "timeouts": 0
     }
   },

@@ -3,35 +3,35 @@
     "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
     "start": {
       "air": {
-        "at": "2026-10-17T18:39:29.377018Z",
+        "at": "2026-10-17T19:51:40.044018Z",
         "cpu_count": 8,
         "load_average": [
-          3.22,
-          4.32,
-          5.73
+          4.43,
+          5.06,
+          5.04
         ],
-        "cpu_idle_percent": 71,
-        "free_memory_bytes": 615514112,
+        "cpu_idle_percent": 60,
+        "free_memory_bytes": 143278080,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 3,
+        "heavy_queue_length": 4,
         "quiet": false
       }
     },
     "end": {
       "air": {
-        "at": "2026-10-17T18:39:31.678729Z",
+        "at": "2026-10-17T19:51:42.521651Z",
         "cpu_count": 8,
         "load_average": [
-          3.22,
-          4.32,
-          5.73
+          4.24,
+          5.01,
+          5.02
         ],
-        "cpu_idle_percent": 92,
-        "free_memory_bytes": 569049088,
+        "cpu_idle_percent": 46,
+        "free_memory_bytes": 234995712,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 3,
+        "heavy_queue_length": 4,
         "quiet": false
       }
     },
@@ -40,13 +40,13 @@
     "quiet_wait_ms": 0,
     "quiet_wait_expired": false
   },
-  "run_id": "run_01M55JJX60Y6W114608XP4RT9C",
+  "run_id": "run_01M55PQ2B51E6FPB555MFBS5FE",
   "network_path": "loopback",
   "scenario": "REM-CRUD",
   "level": "sim",
   "passed": true,
-  "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b",
-  "at": "2026-10-17T18:39:30.49624Z",
+  "git_sha": "7e55120b19134246108d4ed10d35cd6d1539316f",
+  "at": "2026-10-17T19:51:41.157024Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -272,23 +272,23 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 4.990125,
-      "p95_ms": 4.990125,
-      "max_ms": 4.990125,
+      "p50_ms": 6.503083,
+      "p95_ms": 6.503083,
+      "max_ms": 6.503083,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 8.124167,
-      "p95_ms": 8.124167,
-      "max_ms": 8.124167,
+      "p50_ms": 8.907625,
+      "p95_ms": 8.907625,
+      "max_ms": 8.907625,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica1": {
       "samples": 1,
-      "p50_ms": 8.136042,
-      "p95_ms": 8.136042,
-      "max_ms": 8.136042,
+      "p50_ms": 8.975416,
+      "p95_ms": 8.975416,
+      "max_ms": 8.975416,
       "timeouts": 0
     }
   },

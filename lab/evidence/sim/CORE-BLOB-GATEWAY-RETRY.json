@@ -3,32 +3,32 @@
     "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
     "start": {
       "air": {
-        "at": "2026-10-17T18:32:52.284438Z",
+        "at": "2026-10-17T19:42:14.179911Z",
         "cpu_count": 8,
         "load_average": [
-          6.22,
-          6.45,
-          6.98
+          3.55,
+          4.05,
+          4.81
         ],
-        "cpu_idle_percent": 49,
-        "free_memory_bytes": 885293056,
+        "cpu_idle_percent": 80,
+        "free_memory_bytes": 420986880,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 2,
+        "heavy_queue_length": 3,
         "quiet": false
       }
     },
     "end": {
       "air": {
-        "at": "2026-10-17T18:33:24.445339Z",
+        "at": "2026-10-17T19:42:47.295133Z",
         "cpu_count": 8,
         "load_average": [
-          5.73,
-          6.31,
-          6.91
+          3.5,
+          3.98,
+          4.75
         ],
-        "cpu_idle_percent": 45,
-        "free_memory_bytes": 160251904,
+        "cpu_idle_percent": 83,
+        "free_memory_bytes": 213975040,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
         "heavy_queue_length": 2,
@@ -38,15 +38,66 @@
     "periodic_samples": [
       {
         "air": {
-          "at": "2026-10-17T18:32:58.364198Z",
+          "at": "2026-10-17T19:42:20.245963Z",
           "cpu_count": 8,
           "load_average": [
-            5.96,
-            6.39,
-            6.96
+            3.71,
+            4.06,
+            4.8
+          ],
+          "cpu_idle_percent": 76,
+          "free_memory_bytes": 197214208,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:42:25.245989Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.65,
+            4.04,
+            4.79
+          ],
+          "cpu_idle_percent": 74,
+          "free_memory_bytes": 124862464,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:42:30.245098Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.44,
+            3.99,
+            4.77
+          ],
+          "cpu_idle_percent": 70,
+          "free_memory_bytes": 66060288,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:42:35.245263Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.4,
+            3.98,
+            4.76
           ],
           "cpu_idle_percent": 56,
-          "free_memory_bytes": 667942912,
+          "free_memory_bytes": 266403840,
           "active_heavy_slots": 2,
           "other_active_heavy_slots": 1,
           "heavy_queue_length": 2,
@@ -55,15 +106,15 @@
       },
       {
         "air": {
-          "at": "2026-10-17T18:33:03.364315Z",
+          "at": "2026-10-17T19:42:40.245313Z",
           "cpu_count": 8,
           "load_average": [
-            5.96,
-            6.39,
-            6.95
+            3.45,
+            3.98,
+            4.75
           ],
-          "cpu_idle_percent": 51,
-          "free_memory_bytes": 397770752,
+          "cpu_idle_percent": 80,
+          "free_memory_bytes": 109395968,
           "active_heavy_slots": 2,
           "other_active_heavy_slots": 1,
           "heavy_queue_length": 2,
@@ -72,49 +123,15 @@
       },
       {
         "air": {
-          "at": "2026-10-17T18:33:08.363464Z",
+          "at": "2026-10-17T19:42:45.245458Z",
           "cpu_count": 8,
           "load_average": [
-            5.89,
-            6.36,
-            6.94
+            3.5,
+            3.98,
+            4.75
           ],
-          "cpu_idle_percent": 54,
-          "free_memory_bytes": 220151808,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 2,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T18:33:13.364377Z",
-          "cpu_count": 8,
-          "load_average": [
-            6.13,
-            6.41,
-            6.95
-          ],
-          "cpu_idle_percent": 55,
-          "free_memory_bytes": 165494784,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 2,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T18:33:18.364402Z",
-          "cpu_count": 8,
-          "load_average": [
-            5.96,
-            6.37,
-            6.94
-          ],
-          "cpu_idle_percent": 54,
-          "free_memory_bytes": 64110592,
+          "cpu_idle_percent": 70,
+          "free_memory_bytes": 123207680,
           "active_heavy_slots": 2,
           "other_active_heavy_slots": 1,
           "heavy_queue_length": 2,
@@ -127,25 +144,66 @@
     "quiet_wait_ms": 0,
     "quiet_wait_expired": false
   },
-  "run_id": "run_01M55J6SCN5C5KWDDQR7FRE15E",
+  "run_id": "run_01M55P5SQC6TCZ68C22KH8RYZR",
   "network_path": "loopback",
   "metrics": {
     "digest_check_0_bytes": 4194304,
     "digest_check_0_deadline_exceeded": false,
     "digest_check_0_error_type": "\u003cnil\u003e",
-    "digest_check_0_read_ms": 4.024042,
+    "digest_check_0_read_ms": 2.28425,
     "digest_check_0_status": 200,
     "digest_check_1_bytes": 4194304,
     "digest_check_1_deadline_exceeded": false,
     "digest_check_1_error_type": "\u003cnil\u003e",
-    "digest_check_1_read_ms": 3.016416,
-    "digest_check_1_status": 200
+    "digest_check_1_read_ms": 2.490875,
+    "digest_check_1_status": 200,
+    "retry_after_gateway_restart": {
+      "retry_attempts": 5,
+      "next_attempt_at": "2026-10-17T19:42:39.141118Z",
+      "resumed_bytes": 0,
+      "corruptions": 0,
+      "state": "pending",
+      "size": 131072,
+      "received": 0,
+      "unreferenced_at": "0001-01-01T00:00:00Z"
+    },
+    "retry_before_gateway_restart": {
+      "retry_attempts": 5,
+      "next_attempt_at": "2026-10-17T19:42:39.141118Z",
+      "resumed_bytes": 0,
+      "corruptions": 0,
+      "state": "pending",
+      "size": 131072,
+      "received": 0,
+      "unreferenced_at": "0001-01-01T00:00:00Z"
+    },
+    "retry_manifest_at_gateway_crash": {
+      "retry_attempts": 5,
+      "next_attempt_at": "2026-10-17T19:42:39.141118Z",
+      "resumed_bytes": 0,
+      "corruptions": 0,
+      "state": "pending",
+      "size": 131072,
+      "received": 0,
+      "unreferenced_at": "0001-01-01T00:00:00Z"
+    },
+    "retry_terminal_entry": {
+      "retry_attempts": 8,
+      "next_attempt_at": "0001-01-01T00:00:00Z",
+      "resumed_bytes": 0,
+      "corruptions": 0,
+      "reason": "ipc_retry_exhausted",
+      "state": "failed",
+      "size": 131072,
+      "received": 0,
+      "unreferenced_at": "0001-01-01T00:00:00Z"
+    }
   },
   "scenario": "CORE-BLOB-GATEWAY-RETRY",
   "level": "sim",
   "passed": true,
-  "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b",
-  "at": "2026-10-17T18:32:53.397645Z",
+  "git_sha": "2d2b30c0b9541787a81901202ec3c13014c9be89",
+  "at": "2026-10-17T19:42:15.276837Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -201,6 +259,30 @@
     },
     {
       "name": "retry_exhaustion_fixture",
+      "passed": true
+    },
+    {
+      "name": "five_blob_read_faults_before_gateway_restart",
+      "passed": true
+    },
+    {
+      "name": "retry_manifest_visible_before_restart",
+      "passed": true
+    },
+    {
+      "name": "gateway_killed_during_retry_backoff",
+      "passed": true
+    },
+    {
+      "name": "retry_manifest_read_after_crash",
+      "passed": true
+    },
+    {
+      "name": "gateway_restarts_during_retry_backoff",
+      "passed": true
+    },
+    {
+      "name": "retry_budget_and_deadline_survive_gateway_restart",
       "passed": true
     },
     {
@@ -267,30 +349,30 @@
   "latency": {
     "effect_done→blob_complete": {
       "samples": 1,
-      "p50_ms": 14532.509541,
-      "p95_ms": 14532.509541,
-      "max_ms": 14532.509541,
+      "p50_ms": 15155.075291,
+      "p95_ms": 15155.075291,
+      "max_ms": 15155.075291,
       "timeouts": 0
     },
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 7.074667,
-      "p95_ms": 7.074667,
-      "max_ms": 7.074667,
+      "p50_ms": 6.055916,
+      "p95_ms": 6.055916,
+      "max_ms": 6.055916,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 8.918834,
-      "p95_ms": 8.918834,
-      "max_ms": 8.918834,
+      "p50_ms": 7.433625,
+      "p95_ms": 7.433625,
+      "max_ms": 7.433625,
       "timeouts": 0
     },
     "retry_exhaustion→gateway_failed": {
       "samples": 1,
-      "p50_ms": 15995.033458,
-      "p95_ms": 15995.033458,
-      "max_ms": 15995.033458,
+      "p50_ms": 16110.930833,
+      "p95_ms": 16110.930833,
+      "max_ms": 16110.930833,
       "timeouts": 0
     }
   },

@@ -1,0 +1,116 @@
+{
+  "host_conditions": {
+    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "start": {
+      "air": {
+        "at": "2026-10-17T19:45:25.570739Z",
+        "cpu_count": 8,
+        "load_average": [
+          3.15,
+          3.64,
+          4.48
+        ],
+        "cpu_idle_percent": 41,
+        "free_memory_bytes": 63176704,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 5,
+        "quiet": false
+      }
+    },
+    "end": {
+      "air": {
+        "at": "2026-10-17T19:45:42.801701Z",
+        "cpu_count": 8,
+        "load_average": [
+          12.51,
+          5.73,
+          5.21
+        ],
+        "cpu_idle_percent": 28,
+        "free_memory_bytes": 61177856,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 5,
+        "quiet": false
+      }
+    },
+    "periodic_samples": [
+      {
+        "air": {
+          "at": "2026-10-17T19:45:31.642927Z",
+          "cpu_count": 8,
+          "load_average": [
+            5.7,
+            4.17,
+            4.66
+          ],
+          "cpu_idle_percent": 18,
+          "free_memory_bytes": 239403008,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 5,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:45:36.64291Z",
+          "cpu_count": 8,
+          "load_average": [
+            13.33,
+            5.77,
+            5.23
+          ],
+          "cpu_idle_percent": 36,
+          "free_memory_bytes": 60964864,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 5,
+          "quiet": false
+        }
+      }
+    ],
+    "quiet": false,
+    "require_quiet": false,
+    "quiet_wait_ms": 0,
+    "quiet_wait_expired": false
+  },
+  "run_id": "run_01M55PBMMHDX8AQ3JMM1CQS9FP",
+  "network_path": "loopback",
+  "scenario": "CORE-DISCONNECT-DETECT",
+  "level": "sim",
+  "passed": false,
+  "git_sha": "7e55120b19134246108d4ed10d35cd6d1539316f",
+  "at": "2026-10-17T19:45:26.67304Z",
+  "assertions": [
+    {
+      "name": "feed_network_loopback",
+      "passed": true
+    },
+    {
+      "name": "replica_host_is_air",
+      "passed": true
+    },
+    {
+      "name": "bootstrap_snapshot",
+      "passed": true
+    },
+    {
+      "name": "scope_query_and_get",
+      "passed": true
+    },
+    {
+      "name": "disconnected_within_15_seconds",
+      "passed": false
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

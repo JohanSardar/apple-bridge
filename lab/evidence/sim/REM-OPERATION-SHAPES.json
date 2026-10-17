@@ -3,35 +3,35 @@
     "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
     "start": {
       "air": {
-        "at": "2026-10-17T18:39:38.225039Z",
+        "at": "2026-10-17T19:51:49.095305Z",
         "cpu_count": 8,
         "load_average": [
-          3.2,
-          4.28,
-          5.69
+          4.22,
+          4.99,
+          5.02
         ],
-        "cpu_idle_percent": 94,
-        "free_memory_bytes": 559480832,
+        "cpu_idle_percent": 71,
+        "free_memory_bytes": 125485056,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 3,
+        "heavy_queue_length": 4,
         "quiet": false
       }
     },
     "end": {
       "air": {
-        "at": "2026-10-17T18:39:39.831619Z",
+        "at": "2026-10-17T19:51:50.6545Z",
         "cpu_count": 8,
         "load_average": [
-          3.2,
-          4.28,
-          5.69
+          4.22,
+          4.99,
+          5.02
         ],
-        "cpu_idle_percent": 78,
-        "free_memory_bytes": 560054272,
+        "cpu_idle_percent": 80,
+        "free_memory_bytes": 110149632,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 3,
+        "heavy_queue_length": 4,
         "quiet": false
       }
     },
@@ -40,13 +40,13 @@
     "quiet_wait_ms": 0,
     "quiet_wait_expired": false
   },
-  "run_id": "run_01M55JK5TWTPNAX8RQRBC2WV8S",
+  "run_id": "run_01M55PQB58RBKTC6VMWW1JD8T5",
   "network_path": "loopback",
   "scenario": "REM-OPERATION-SHAPES",
   "level": "sim",
   "passed": true,
-  "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b",
-  "at": "2026-10-17T18:39:39.356426Z",
+  "git_sha": "7e55120b19134246108d4ed10d35cd6d1539316f",
+  "at": "2026-10-17T19:51:50.184076Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -196,16 +196,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 5.351958,
-      "p95_ms": 5.351958,
-      "max_ms": 5.351958,
+      "p50_ms": 4.52675,
+      "p95_ms": 4.52675,
+      "max_ms": 4.52675,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 7.304958,
-      "p95_ms": 7.304958,
-      "max_ms": 7.304958,
+      "p50_ms": 8.251958,
+      "p95_ms": 8.251958,
+      "max_ms": 8.251958,
       "timeouts": 0
     }
   },
