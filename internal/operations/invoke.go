@@ -41,7 +41,7 @@ func (s *Service) Invoke(ctx context.Context, p trust.Principal, name string, in
 		if name == "commands.list" {
 			return s.Target.List(ctx, p, q)
 		}
-		if q.ID == "" {
+		if !contracts.ValidCommandID(q.ID) {
 			return nil, contracts.ErrInvalid
 		}
 		return s.Target.Status(ctx, p, q)

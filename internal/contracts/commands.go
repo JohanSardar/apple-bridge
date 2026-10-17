@@ -102,15 +102,22 @@ func DecodeInput(b []byte, out any) error {
 	}
 	return nil
 }
+func ValidCommandID(id string) bool {
+	if id == "" || len(id) > 128 {
+		return false
+	}
+	for _, ch := range id {
+		if !(ch >= 'a' && ch <= 'z' || ch >= 'A' && ch <= 'Z' || ch >= '0' && ch <= '9' || strings.ContainsRune("._:-", ch)) {
+			return false
+		}
+	}
+	return true
+}
+
 func ValidateCommand(c Command) (ReminderArgs, error) {
 	var a ReminderArgs
-	if c.ID == "" || c.WaitMS < 0 || c.WaitMS > 15000 || len(c.ID) > 128 || c.Args == nil {
+	if !ValidCommandID(c.ID) || c.WaitMS < 0 || c.WaitMS > 15000 || c.Args == nil {
 		return a, ErrInvalid
-	}
-	for _, ch := range c.ID {
-		if !(ch >= 'a' && ch <= 'z' || ch >= 'A' && ch <= 'Z' || ch >= '0' && ch <= '9' || strings.ContainsRune("._:-", ch)) {
-			return a, ErrInvalid
-		}
 	}
 	if DecodeInput(c.Args, &a) != nil {
 		return a, ErrInvalid
