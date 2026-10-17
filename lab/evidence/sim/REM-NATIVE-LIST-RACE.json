@@ -1,10 +1,10 @@
 {
-  "run_id": "run_01M547AZ7DYKV2AVY482HTD9FX",
+  "run_id": "run_01M547CAMETGW9Z7W90WSS9WH6",
   "scenario": "REM-NATIVE-LIST-RACE",
   "level": "sim",
   "passed": true,
-  "git_sha": "1d2ef8befa19f0e98c2d62a1bab03e7ff3b71405",
-  "at": "2026-10-17T06:03:41.677959Z",
+  "git_sha": "706c4c0c64285bd4fb18e9cc34c964cba32489f5",
+  "at": "2026-10-17T06:04:26.126214Z",
   "assertions": [
     {
       "name": "replica_host_is_air",
@@ -118,16 +118,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 16.222583,
-      "p95_ms": 16.222583,
-      "max_ms": 16.222583,
+      "p50_ms": 26.859083,
+      "p95_ms": 26.859083,
+      "max_ms": 26.859083,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 33.483417,
-      "p95_ms": 33.483417,
-      "max_ms": 33.483417,
+      "p50_ms": 54.429667,
+      "p95_ms": 54.429667,
+      "max_ms": 54.429667,
       "timeouts": 0
     }
   },
