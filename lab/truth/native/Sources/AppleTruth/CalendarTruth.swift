@@ -7,6 +7,7 @@ struct CalendarTruth {
     private struct Ownership: Codable {
         var calendars: [String: String] = [:]
         var events: [String: [String]] = [:]
+        var calendarReceipts: [String: String]?
     }
     private static var ownershipURL: URL {
         FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/AppleBridgeDev/calendar-fixture-ownership.json")
@@ -81,6 +82,12 @@ struct CalendarTruth {
             case "create_calendar":
                 guard let calendar = calendars.first else { throw TruthFailure.unavailable }
                 return ["status": "verified", "id": calendar.calendarIdentifier]
+            case "record_created_calendar":
+                guard let key = request["calendar_id"] as? String, let calendar = calendars.first(where: { $0.calendarIdentifier == key }), calendar.title == "Bridge Test", let fingerprint = request["creation_fingerprint"] as? String, !fingerprint.isEmpty else { throw TruthFailure.invalid }
+                var owned = try ownership(); owned.calendars[key] = tag
+                var receipts = owned.calendarReceipts ?? [:]; receipts[key] = fingerprint; owned.calendarReceipts = receipts
+                try saveOwnership(owned)
+                return ["status": "verified", "ownership_recorded": true]
             case "create":
                 guard let calendar = calendars.first, calendar.allowsContentModifications, let title = request["title"] as? String, title.hasPrefix(tag) else { throw TruthFailure.invalid }
                 let event = EKEvent(eventStore: store)
@@ -107,6 +114,8 @@ struct CalendarTruth {
                     event.startDate = try date(value, allDay: event.isAllDay, zone: event.isAllDay ? .current : (event.timeZone ?? .current))
                     event.endDate = event.startDate.addingTimeInterval(duration)
                 }
+                if let value = request["end"] as? String { event.endDate = try date(value, allDay: event.isAllDay, zone: event.isAllDay ? .current : (event.timeZone ?? .current)) }
+                guard event.endDate > event.startDate else { throw TruthFailure.invalid }
                 try store.save(event, span: request["span"] as? String == "future" ? .futureEvents : .thisEvent, commit: true)
                 let effect = clock_gettime_nsec_np(CLOCK_UPTIME_RAW)
                 try remember(event, tag: tag)

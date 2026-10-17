@@ -131,7 +131,17 @@ func (f *fakeApple) calendarControl(mux *http.ServeMux) {
 				return
 			}
 			value["start"] = a.UTC().Format(time.RFC3339Nano)
-			value["end"] = a.Add(end.Sub(b)).UTC().Format(time.RFC3339Nano)
+			finish := a.Add(end.Sub(b))
+			if requested, ok := request.Data["end"].(string); ok {
+				parsed, err := time.Parse(time.RFC3339Nano, requested)
+				if err != nil || !parsed.After(a) {
+					f.mu.Unlock()
+					http.Error(w, "invalid", 400)
+					return
+				}
+				finish = parsed
+			}
+			value["end"] = finish.UTC().Format(time.RFC3339Nano)
 			value["is_exception"] = true
 			if title, ok := request.Data["new_title"].(string); ok {
 				value["title"] = title

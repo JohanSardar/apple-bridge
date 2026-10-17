@@ -412,11 +412,17 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		add("create_calendar_observed", last.CommitSeq > 0)
 		if level != "sim" {
 			var evidence struct {
-				NativeKey string `json:"native_key"`
+				NativeKey   string `json:"native_key"`
+				Fingerprint string `json:"fingerprint"`
 			}
 			if json.Unmarshal(last.Evidence, &evidence) != nil || evidence.NativeKey == "" {
 				return fail("new_calendar_identity", nil)
 			}
+			registration, registrationErr := w.Truth("fixture", map[string]any{"source": "calendar", "action": "record_created_calendar", "calendar_id": evidence.NativeKey, "creation_fingerprint": evidence.Fingerprint, "tag": tag})
+			if registrationErr != nil || registration["ownership_recorded"] != true {
+				return fail("created_calendar_ownership_durable", registrationErr)
+			}
+			add("created_calendar_ownership_durable", true)
 			defer func() {
 				if _, err := w.Truth("fixture", map[string]any{"source": "calendar", "action": "cleanup_calendar", "calendar_id": evidence.NativeKey, "tag": tag}); err != nil {
 					result.Passed = false
@@ -440,7 +446,11 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 			if s.ID == "CAL-MOVED-OUTSIDE-WINDOW" {
 				movedStart = time.Now().AddDate(3, 0, 0).UTC().Format(time.RFC3339Nano)
 			}
-			_, err = fixture("move", native, map[string]any{"index": 1, "new_title": tag + " exception", "start": movedStart})
+			move := map[string]any{"index": 1, "new_title": tag + " exception", "start": movedStart}
+			if s.ID == "CAL-MOVED-OCCURRENCE" {
+				move["end"] = "2026-11-02T10:30:00Z"
+			}
+			_, err = fixture("move", native, move)
 		} else {
 			err = submit("calendar.update_event", args, target.Version)
 		}
@@ -507,7 +517,7 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 				add("exception_has_scoped_native_recurrence", raw(r)["recurrence"] != nil)
 				kept = raw(r)["occurrence_date"] == raw(target)["occurrence_date"] && raw(r)["is_exception"] == true && recordTitle(r) == tag+" exception"
 				if s.ID == "CAL-MOVED-OCCURRENCE" {
-					add("moved_start_and_end", sameCalendarTime(raw(r)["start"], "2026-11-02T08:30:00Z") && sameCalendarTime(raw(r)["end"], "2026-11-02T09:30:00Z"))
+					add("moved_start_and_end", sameCalendarTime(raw(r)["start"], "2026-11-02T08:30:00Z") && sameCalendarTime(raw(r)["end"], "2026-11-02T10:30:00Z"))
 				}
 			}
 			if r.ID != target.ID {
