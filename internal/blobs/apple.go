@@ -2,9 +2,10 @@ package blobs
 
 import (
 	"context"
+	"time"
+
 	"github.com/JohanSardar/apple-bridge/internal/applepeer"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
-	"time"
 )
 
 type appleSource struct {
@@ -17,10 +18,8 @@ func (s appleSource) Read(ctx context.Context, d string, offset, length int64) (
 }
 
 type appleJob struct {
-	ctx      context.Context
-	source   appleSource
-	attempts int
-	ready    time.Time
+	ctx    context.Context
+	source appleSource
 }
 
 func (s *Store) ResumeCheckpoints(checkpoints map[contracts.Source]contracts.Checkpoint) map[contracts.Source]contracts.Checkpoint {
@@ -37,6 +36,7 @@ func (s *Store) ResumeCheckpoints(checkpoints map[contracts.Source]contracts.Che
 	}
 	return checkpoints
 }
+
 func (s *Store) Capture(ctx context.Context, c contracts.Capture, w *applepeer.Wire) {
 	if len(c.BlobHandles) == 0 {
 		return
@@ -49,80 +49,128 @@ func (s *Store) Capture(ctx context.Context, c contracts.Capture, w *applepeer.W
 		s.applePending = map[string]*appleJob{}
 	}
 	for d, h := range c.BlobHandles {
-		if contracts.ValidDigest(d) {
-			e := s.manifest.Entries[d]
-			if e.State == "present" || e.State == "failed" {
-				continue
-			}
-			job := &appleJob{ctx: ctx, source: appleSource{w, h}}
-			if previous := s.applePending[d]; previous != nil {
-				job.attempts, job.ready = previous.attempts, previous.ready
-			}
-			s.applePending[d] = job
+		if !contracts.ValidDigest(d) {
+			continue
 		}
+		e := s.manifest.Entries[d]
+		if e.State == "present" || e.State == "failed" {
+			continue
+		}
+		s.applePending[d] = &appleJob{ctx: ctx, source: appleSource{w, h}}
 	}
 	if !s.appleRunning && len(s.applePending) > 0 {
 		s.appleRunning = true
 		go s.captureBlobs()
 	}
 }
+
+func retryDelay(attempts int) time.Duration {
+	return min(4*time.Second, 250*time.Millisecond<<min(max(0, attempts-1), 4))
+}
+
+func (s *Store) persistRetryLocked(d string) bool {
+	if err := s.save(); err != nil {
+		e := s.manifest.Entries[d]
+		e.State, e.Reason = "failed", "retry_state_persist_failed"
+		s.manifest.Entries[d] = e
+		close(s.changed)
+		s.changed = make(chan struct{})
+		return false
+	}
+	return true
+}
+
 func (s *Store) captureBlobs() {
 	for {
 		s.appleMu.Lock()
+		s.mu.Lock()
 		var digest string
 		var job *appleJob
+		var ready time.Time
 		for d, j := range s.applePending {
-			if j.ctx.Err() == nil {
-				digest, job = d, j
-				break
+			if j.ctx.Err() != nil {
+				continue
+			}
+			e := s.manifest.Entries[d]
+			if job == nil || e.NextAttemptAt.Before(ready) {
+				digest, job, ready = d, j, e.NextAttemptAt
 			}
 		}
+		s.mu.Unlock()
 		if job == nil {
 			s.appleRunning = false
 			s.appleMu.Unlock()
 			return
 		}
 		s.appleMu.Unlock()
-		timer := time.NewTimer(max(0, time.Until(job.ready)))
+		timer := time.NewTimer(max(0, time.Until(ready)))
 		select {
 		case <-job.ctx.Done():
 			timer.Stop()
 			continue
 		case <-timer.C:
 		}
-		err := s.Transfer(job.ctx, digest, job.source)
 		s.appleMu.Lock()
-		current := s.applePending[digest]
-		s.mu.Lock()
-		state := s.manifest.Entries[digest].State
-		s.mu.Unlock()
-		if current != job && (err == nil || state != "pending") {
+		if s.applePending[digest] != job || job.ctx.Err() != nil {
 			s.appleMu.Unlock()
 			continue
 		}
-		if err == nil {
+		s.mu.Lock()
+		e := s.manifest.Entries[digest]
+		if e.State == "present" || e.State == "failed" {
+			delete(s.applePending, digest)
+			s.mu.Unlock()
+			s.appleMu.Unlock()
+			continue
+		}
+		if e.RetryAttempts >= 8 {
+			e.State, e.Reason = "failed", "ipc_retry_exhausted"
+			s.manifest.Entries[digest] = e
+			close(s.changed)
+			s.changed = make(chan struct{})
+			s.persistRetryLocked(digest)
+			delete(s.applePending, digest)
+			s.mu.Unlock()
+			s.appleMu.Unlock()
+			continue
+		}
+		e.RetryAttempts++
+		e.NextAttemptAt = time.Now().UTC().Add(retryDelay(e.RetryAttempts))
+		s.manifest.Entries[digest] = e
+		durable := s.persistRetryLocked(digest)
+		if !durable {
+			delete(s.applePending, digest)
+		}
+		s.mu.Unlock()
+		s.appleMu.Unlock()
+		if !durable {
+			continue
+		}
+		err := s.Transfer(job.ctx, digest, job.source)
+		s.appleMu.Lock()
+		s.mu.Lock()
+		e = s.manifest.Entries[digest]
+		if err == nil || e.State != "pending" {
+			e.NextAttemptAt = time.Time{}
+			s.manifest.Entries[digest] = e
+			s.persistRetryLocked(digest)
+			delete(s.applePending, digest)
+		} else if e.RetryAttempts >= 8 {
+			e.State, e.Reason = "failed", "ipc_retry_exhausted"
+			e.NextAttemptAt = time.Time{}
+			s.manifest.Entries[digest] = e
+			close(s.changed)
+			s.changed = make(chan struct{})
+			s.persistRetryLocked(digest)
 			delete(s.applePending, digest)
 		} else {
-			current.attempts++
-			if state != "pending" || current.attempts >= 8 {
-				if state == "pending" {
-					s.fail(digest, "ipc_retry_exhausted")
-				}
+			e.NextAttemptAt = time.Now().UTC().Add(retryDelay(e.RetryAttempts))
+			s.manifest.Entries[digest] = e
+			if !s.persistRetryLocked(digest) {
 				delete(s.applePending, digest)
-			} else {
-				current.ready = time.Now().Add(min(4*time.Second, 250*time.Millisecond<<min(current.attempts-1, 4)))
 			}
 		}
+		s.mu.Unlock()
 		s.appleMu.Unlock()
 	}
-}
-func (s *Store) fail(d, reason string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	e := s.manifest.Entries[d]
-	e.State, e.Reason = "failed", reason
-	close(s.changed)
-	s.changed = make(chan struct{})
-	s.manifest.Entries[d] = e
-	s.save()
 }

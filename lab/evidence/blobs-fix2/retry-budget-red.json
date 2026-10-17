@@ -1,0 +1,159 @@
+{
+  "run_id": "run_01M55M39PY1VRCC349Q6B2J3CF",
+  "network_path": "loopback",
+  "metrics": {
+    "digest_check_0_bytes": 4194304,
+    "digest_check_0_deadline_exceeded": false,
+    "digest_check_0_error_type": "\u003cnil\u003e",
+    "digest_check_0_read_ms": 7.4775,
+    "digest_check_0_status": 200,
+    "digest_check_1_bytes": 4194304,
+    "digest_check_1_deadline_exceeded": false,
+    "digest_check_1_error_type": "\u003cnil\u003e",
+    "digest_check_1_read_ms": 3.817,
+    "digest_check_1_status": 200,
+    "retry_after_gateway_restart": {
+      "next_attempt_at": "0001-01-01T00:00:00Z",
+      "resumed_bytes": 0,
+      "corruptions": 0,
+      "state": "pending",
+      "size": 131072,
+      "received": 0,
+      "unreferenced_at": "0001-01-01T00:00:00Z"
+    },
+    "retry_before_gateway_restart": {
+      "next_attempt_at": "0001-01-01T00:00:00Z",
+      "resumed_bytes": 0,
+      "corruptions": 0,
+      "state": "pending",
+      "size": 131072,
+      "received": 0,
+      "unreferenced_at": "0001-01-01T00:00:00Z"
+    },
+    "retry_manifest_at_gateway_crash": {
+      "next_attempt_at": "0001-01-01T00:00:00Z",
+      "resumed_bytes": 0,
+      "corruptions": 0,
+      "state": "pending",
+      "size": 131072,
+      "received": 0,
+      "unreferenced_at": "0001-01-01T00:00:00Z"
+    },
+    "retry_terminal_entry": {
+      "next_attempt_at": "0001-01-01T00:00:00Z",
+      "resumed_bytes": 0,
+      "corruptions": 0,
+      "state": "present",
+      "size": 131072,
+      "received": 131072,
+      "unreferenced_at": "0001-01-01T00:00:00Z"
+    }
+  },
+  "scenario": "CORE-BLOB-GATEWAY-RETRY",
+  "level": "sim",
+  "passed": false,
+  "git_sha": "9b83d72f99c39f293840ec9e7b1fc90f44d7bbb7",
+  "at": "2026-10-17T19:05:56.190717Z",
+  "assertions": [
+    {
+      "name": "feed_network_loopback",
+      "passed": true
+    },
+    {
+      "name": "replica_host_is_air",
+      "passed": true
+    },
+    {
+      "name": "bootstrap_snapshot",
+      "passed": true
+    },
+    {
+      "name": "scope_query_and_get",
+      "passed": true
+    },
+    {
+      "name": "attachment_fixture",
+      "passed": true
+    },
+    {
+      "name": "attachment_metadata_visible",
+      "passed": true
+    },
+    {
+      "name": "metadata_convergence_with_blob_backlog",
+      "passed": true
+    },
+    {
+      "name": "gateway_retries_timed_out_read",
+      "passed": true
+    },
+    {
+      "name": "helper_restarts_during_staged_download",
+      "passed": true
+    },
+    {
+      "name": "gateway_resumes_with_fresh_handles",
+      "passed": true
+    },
+    {
+      "name": "blob_complete",
+      "passed": true
+    },
+    {
+      "name": "authorized_bytes_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "authorized_bytes_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "retry_exhaustion_fixture",
+      "passed": true
+    },
+    {
+      "name": "five_blob_read_faults_before_gateway_restart",
+      "passed": true
+    },
+    {
+      "name": "retry_manifest_visible_before_restart",
+      "passed": true
+    },
+    {
+      "name": "gateway_killed_during_retry_backoff",
+      "passed": true
+    },
+    {
+      "name": "retry_manifest_read_after_crash",
+      "passed": true
+    },
+    {
+      "name": "gateway_restarts_during_retry_backoff",
+      "passed": true
+    },
+    {
+      "name": "retry_budget_and_deadline_survive_gateway_restart",
+      "passed": false
+    },
+    {
+      "name": "bounded_retries_surface_terminal_reason",
+      "passed": false
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "effect_done→blob_complete": {
+      "samples": 1,
+      "p50_ms": 14717.222375,
+      "p95_ms": 14717.222375,
+      "max_ms": 14717.222375,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

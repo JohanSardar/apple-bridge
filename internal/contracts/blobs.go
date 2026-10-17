@@ -53,8 +53,10 @@ func BlobReferences(data json.RawMessage) []BlobReference {
 }
 
 type BlobEntry struct {
-	ResumedBytes int64 `json:"resumed_bytes"`
-	Corruptions  int   `json:"corruptions"`
+	RetryAttempts int       `json:"retry_attempts,omitempty"`
+	NextAttemptAt time.Time `json:"next_attempt_at,omitempty"`
+	ResumedBytes  int64     `json:"resumed_bytes"`
+	Corruptions   int       `json:"corruptions"`
 
 	Reason         string    `json:"reason,omitempty"`
 	State          string    `json:"state"`

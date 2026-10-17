@@ -61,6 +61,12 @@ func (f *fakeApple) blobRoutes(mux *http.ServeMux) {
 		json.NewEncoder(w).Encode(map[string]float64{"commit_ms": float64(elapsed) / float64(time.Millisecond), "rows_per_second": float64(a.Rows) / elapsed.Seconds()})
 	})
 
+	mux.HandleFunc("GET /blob-faults", func(w http.ResponseWriter, r *http.Request) {
+		f.mu.Lock()
+		defer f.mu.Unlock()
+		json.NewEncoder(w).Encode(map[string]int{"unavailable_remaining": f.blobBusy})
+	})
+
 	mux.HandleFunc("POST /blob-fixture", func(w http.ResponseWriter, r *http.Request) {
 		var a struct {
 			RefreshBeforeUnavailable bool   `json:"refresh_before_unavailable"`
@@ -98,6 +104,7 @@ func (f *fakeApple) blobRoutes(mux *http.ServeMux) {
 			sum := sha256.Sum256(b)
 			d := hex.EncodeToString(sum[:])
 			f.blobs[d] = b
+			f.blobFaultDigest = d
 			state := a.State
 			if state == "" {
 				state = "present"
@@ -145,11 +152,11 @@ func (f *fakeApple) blobReply(ctx context.Context, wire *applepeer.Wire, read co
 	digest := strings.TrimPrefix(read.Handle, fmt.Sprintf("%d:", fence))
 	b, ok := f.blobs[digest]
 	refreshBeforeUnavailable := f.blobRefreshBeforeUnavailable
-	busy := f.blobBusy > 0
+	busy := digest == f.blobFaultDigest && f.blobBusy > 0
 	if busy {
 		f.blobBusy--
 	}
-	drop := f.blobDrops > 0
+	drop := digest == f.blobFaultDigest && f.blobDrops > 0
 	if drop {
 		f.blobDrops--
 	}

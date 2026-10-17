@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -296,6 +297,60 @@ func blobJourney(ctx context.Context, w *world.World, id string, rows int, evide
 			return false
 		}
 		var failedDigest string
+		if !check("five_blob_read_faults_before_gateway_restart", w.Await(8*time.Second, func() bool {
+			response, err := w.Control.Get("http://sim/blob-faults")
+			if err != nil {
+				return false
+			}
+			defer response.Body.Close()
+			var status struct {
+				Remaining int `json:"unavailable_remaining"`
+			}
+			if json.NewDecoder(response.Body).Decode(&status) != nil || status.Remaining != 3 {
+				return false
+			}
+			records, err := w.Records(w.Gateway)
+			for _, r := range records {
+				if r.ID == attachment.ID {
+					refs := contracts.BlobReferences(r.Data)
+					if len(refs) == 1 && refs[0].Digest != digest {
+						failedDigest = refs[0].Digest
+					}
+				}
+			}
+			return err == nil && failedDigest != ""
+		}) == nil) {
+			return false
+		}
+		before, err := blobProgress(ctx, w.Gateway)
+		if !check("retry_manifest_visible_before_restart", err == nil) {
+			return false
+		}
+		retryBefore := before.Entries[failedDigest]
+		evidence.Metrics["retry_before_gateway_restart"] = retryBefore
+		if !check("gateway_killed_during_retry_backoff", w.SignalGateway(syscall.SIGKILL) == nil) {
+			return false
+		}
+		w.StopGateway()
+		var persisted struct {
+			Entries map[string]contracts.BlobEntry
+		}
+		manifestBytes, manifestErr := os.ReadFile(filepath.Join(w.Gateway.Home, "blobs", "manifest.json"))
+		if manifestErr == nil {
+			manifestErr = json.Unmarshal(manifestBytes, &persisted)
+		}
+		if !check("retry_manifest_read_after_crash", manifestErr == nil) {
+			return false
+		}
+		durableEntry := persisted.Entries[failedDigest]
+		evidence.Metrics["retry_manifest_at_gateway_crash"] = durableEntry
+		if !check("gateway_restarts_during_retry_backoff", w.RestartGateway() == nil) {
+			return false
+		}
+		after, err := blobProgress(ctx, w.Gateway)
+		retryAfter := after.Entries[failedDigest]
+		evidence.Metrics["retry_after_gateway_restart"] = retryAfter
+		durableBudget := check("retry_budget_and_deadline_survive_gateway_restart", err == nil && durableEntry.RetryAttempts == 5 && retryAfter.RetryAttempts == 5 && !durableEntry.NextAttemptAt.IsZero() && retryAfter.NextAttemptAt.Equal(durableEntry.NextAttemptAt))
 		if !check("bounded_retries_surface_terminal_reason", w.Await(22*time.Second, func() bool {
 			records, err := w.Records(w.Gateway)
 			for _, r := range records {
@@ -309,8 +364,12 @@ func blobJourney(ctx context.Context, w *world.World, id string, rows int, evide
 			}
 			p, perr := blobProgress(ctx, w.Gateway)
 			entry := p.Entries[failedDigest]
+			evidence.Metrics["retry_terminal_entry"] = entry
 			return err == nil && perr == nil && failedDigest != "" && entry.State == "failed" && entry.Reason == "ipc_retry_exhausted"
 		}) == nil) {
+			return false
+		}
+		if !durableBudget {
 			return false
 		}
 		if !check("retry_backoff_is_bounded", time.Since(failedStart) >= 15*time.Second && time.Since(failedStart) < 22*time.Second) {

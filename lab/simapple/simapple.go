@@ -57,6 +57,7 @@ type fakeApple struct {
 	pause                        time.Duration
 	blobDrops                    int
 	blobBusy                     int
+	blobFaultDigest              string
 	blobRefreshBeforeUnavailable bool
 
 	completed map[contracts.Source]map[uint64]bool
