@@ -6,6 +6,7 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -142,7 +143,13 @@ func lintSwift(rel, path string) []finding {
 		case c == '"':
 			i, line = skipSwiftString(src, i, line)
 		case c == '/' && i+1 < n && src[i+1] == '/':
-			out = append(out, finding{rel, line, "comment"})
+			end := i
+			for end < n && src[end] != '\n' {
+				end++
+			}
+			if !(i == 0 && line == 1 && filepath.Base(path) == "Package.swift" && regexp.MustCompile(`^// swift-tools-version:[0-9.]+$`).Match(src[i:end])) {
+				out = append(out, finding{rel, line, "comment"})
+			}
 			for i < n && src[i] != '\n' {
 				i++
 			}
