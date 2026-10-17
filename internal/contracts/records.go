@@ -122,8 +122,17 @@ type Alias struct {
 	RecordID   string `json:"record_id"`
 }
 
+type DialStatus struct {
+	ReplicaID     string    `json:"replica_id"`
+	State         string    `json:"state"`
+	Cursor        Cursor    `json:"cursor"`
+	LastHeartbeat time.Time `json:"last_heartbeat"`
+	Attempts      uint64    `json:"attempts"`
+}
+
 type ReplicaStatus struct {
-	Blobs BlobProgress `json:"blobs"`
+	DialReplicas []DialStatus `json:"dial_replicas,omitempty"`
+	Blobs        BlobProgress `json:"blobs"`
 
 	Role             string    `json:"role"`
 	GatewayHead      uint64    `json:"gateway_head"`

@@ -33,6 +33,8 @@ func run(ctx context.Context, args []string) error {
 	set := flag.NewFlagSet(verb, flag.ContinueOnError)
 	home := set.String("home", defaultHome(), "private state directory")
 	role := set.String("role", "gateway", "gateway or replica")
+	listen := set.String("listen", "", "replica listen address")
+	dialReplica := set.String("dial-replica", "", "gateway dials replica address")
 	peer := set.String("peer-addr", "", "gateway peer listen address")
 	api := set.String("api-addr", "", "loopback API address")
 	helperApp := set.String("helper-app", "", "signed Helper app for real mode")
@@ -56,7 +58,7 @@ func run(ctx context.Context, args []string) error {
 		return err
 	}
 	if verb == "start" {
-		return bridgeruntime.Start(ctx, bridgeruntime.Config{Role: *role, Home: *home, PeerAddress: *peer, APIAddress: *api, Socket: *socket, HelperApp: *helperApp, HelperLabCommands: *helperLabCommands, BlobCap: *blobCap, BlobGraceMS: *blobGrace, RetentionRows: *retentionRows, RetentionAge: *retentionAge})
+		return bridgeruntime.Start(ctx, bridgeruntime.Config{Role: *role, Home: *home, PeerAddress: *peer, Listen: *listen, APIAddress: *api, Socket: *socket, HelperApp: *helperApp, HelperLabCommands: *helperLabCommands, BlobCap: *blobCap, BlobGraceMS: *blobGrace, RetentionRows: *retentionRows, RetentionAge: *retentionAge})
 	}
 	if verb == "doctor" {
 		result, err := bridgeruntime.Doctor(ctx, *home)
@@ -111,7 +113,7 @@ func run(ctx context.Context, args []string) error {
 		if *peer != "" {
 			address = *peer
 		}
-		code, err := authority.PairTTL(address, grants, *pairTTL)
+		code, err := authority.PairDial(address, *dialReplica, grants, *pairTTL)
 		if err != nil {
 			return err
 		}
@@ -119,6 +121,9 @@ func run(ctx context.Context, args []string) error {
 	case "join":
 		if code == "" && set.NArg() > 0 {
 			code = set.Arg(0)
+		}
+		if *listen != "" {
+			return authority.JoinListen(ctx, code, *listen)
 		}
 		return authority.Join(ctx, code)
 	case "token":

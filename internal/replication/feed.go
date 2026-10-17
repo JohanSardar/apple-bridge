@@ -2,6 +2,7 @@ package replication
 
 import (
 	"context"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -17,7 +18,10 @@ import (
 )
 
 type Server struct {
-	Blobs *blobs.Store
+	mu       sync.Mutex
+	statuses map[string]contracts.DialStatus
+	Command  func(context.Context, *x509.Certificate, string, json.RawMessage) (contracts.CommandResponse, error)
+	Blobs    *blobs.Store
 
 	Store     *state.Store
 	Authority *trust.Authority
@@ -72,11 +76,12 @@ func (s *Server) Handler() http.Handler {
 		conn.SetReadLimit(contracts.MaxFrame)
 		ctx, cancel := s.Authority.WatchPrincipal(r.Context(), p)
 		defer cancel()
-		s.serve(ctx, conn, p)
+		s.serve(ctx, conn, p, r.TLS.PeerCertificates[0])
 	})
 }
 
-func (s *Server) serve(ctx context.Context, conn *websocket.Conn, p trust.Principal) error {
+func (s *Server) serve(ctx context.Context, conn *websocket.Conn, p trust.Principal, cert *x509.Certificate) error {
+	conn.SetReadLimit(contracts.MaxFrame)
 	hello, _, err := read(ctx, conn)
 	if err != nil {
 		return err
@@ -84,12 +89,44 @@ func (s *Server) serve(ctx context.Context, conn *websocket.Conn, p trust.Princi
 	if hello.T != "Hello" || hello.Protocol != contracts.FeedProtocol || hello.ReplicaID != p.ID || !slices.Contains(hello.SchemaOffer, 1) || hello.Credits <= 0 {
 		return contracts.ErrInvalid
 	}
+	if p.Dial != "" {
+		s.Authority.ConfirmDial(p.ID)
+	}
+	s.updateDial(p.ID, func(status *contracts.DialStatus) {
+		status.State = "connected"
+		status.LastHeartbeat = time.Now().UTC()
+	})
 	credits := min(hello.Credits, contracts.ByteCredit)
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	ctx = priorityWriter(ctx, conn)
 	wants := make(chan contracts.FeedFrame, 8)
 	go s.serveBlobs(ctx, conn, p, wants)
+	requests := make(chan contracts.FeedFrame, 16)
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case f := <-requests:
+				if s.Command == nil {
+					cancel()
+					return
+				}
+				bounded, stop := context.WithTimeout(ctx, 20*time.Second)
+				response, err := s.Command(bounded, cert, f.Delegation, f.Request)
+				stop()
+				if err != nil {
+					cancel()
+					return
+				}
+				if _, err = send(ctx, conn, contracts.FeedFrame{T: "CommandResponse", ID: f.ID, Response: &response}); err != nil {
+					cancel()
+					return
+				}
+			}
+		}
+	}()
 	acks := make(chan contracts.FeedFrame, 8)
 	go func() {
 		defer cancel()
@@ -98,7 +135,24 @@ func (s *Server) serve(ctx context.Context, conn *websocket.Conn, p trust.Princi
 			if err != nil {
 				return
 			}
+			if p.Dial != "" {
+				s.updateDial(p.ID, func(status *contracts.DialStatus) {
+					status.LastHeartbeat = time.Now().UTC()
+					if f.Cursor != nil {
+						status.Cursor = *f.Cursor
+					}
+				})
+			}
 			switch f.T {
+			case "CommandRequest":
+				if f.ID == "" || len(f.Request) == 0 {
+					return
+				}
+				select {
+				case requests <- f:
+				default:
+					return
+				}
 			case "Ack":
 				select {
 				case acks <- f:
@@ -241,6 +295,8 @@ func (s *Server) serve(ctx context.Context, conn *websocket.Conn, p trust.Princi
 type FollowStatus = contracts.ReplicaStatus
 
 type Client struct {
+	session      *commandSession
+	connectionMu sync.Mutex
 	GatewayClock func(time.Time, time.Time)
 
 	Blobs *blobs.Store
@@ -304,12 +360,27 @@ func (c *Client) follow(ctx context.Context, e trust.Enrollment) error {
 	if err != nil {
 		return err
 	}
+	return c.consume(ctx, conn, e)
+}
+func (c *Client) consume(ctx context.Context, conn *websocket.Conn, e trust.Enrollment) error {
 	defer conn.CloseNow()
 	conn.SetReadLimit(contracts.BlobChunkSize + 64)
 	ctx, stop := context.WithCancel(ctx)
 	defer stop()
+	session := &commandSession{conn: conn, ctx: ctx, pending: map[string]chan contracts.CommandResponse{}}
+	c.mu.Lock()
+	c.session = session
+	c.mu.Unlock()
+	defer func() {
+		c.mu.Lock()
+		if c.session == session {
+			c.session = nil
+		}
+		c.mu.Unlock()
+		c.update(func(s *FollowStatus) { s.State = "disconnected" })
+	}()
 	head := c.Store.Head()
-	if _, err = send(ctx, conn, contracts.FeedFrame{T: "Hello", Protocol: contracts.FeedProtocol, ReplicaID: e.ReplicaID, Cursor: &head, SchemaOffer: []int{1}, Credits: contracts.ByteCredit}); err != nil {
+	if _, err := send(ctx, conn, contracts.FeedFrame{T: "Hello", Protocol: contracts.FeedProtocol, ReplicaID: e.ReplicaID, Cursor: &head, SchemaOffer: []int{1}, Credits: contracts.ByteCredit}); err != nil {
 		return err
 	}
 	go func() {
@@ -360,6 +431,13 @@ func (c *Client) follow(ctx context.Context, e trust.Enrollment) error {
 		if err = json.Unmarshal(raw, &f); err != nil {
 			return err
 		}
+		if f.T == "CommandResponse" {
+			if f.Response == nil || f.ID == "" {
+				return contracts.ErrInvalid
+			}
+			session.deliver(f.ID, *f.Response)
+			continue
+		}
 		n := len(raw)
 		if f.T == "BlobAvailable" {
 			select {
@@ -392,10 +470,10 @@ func (c *Client) follow(ctx context.Context, e trust.Enrollment) error {
 			}
 			welcome = f
 			e.Grants = f.Scope
-			if err = c.Store.Restrict(ctx, (trust.Principal{Grants: f.Scope}).Visibility()); err != nil {
+			if err := c.Store.Restrict(ctx, (trust.Principal{Grants: f.Scope}).Visibility()); err != nil {
 				return err
 			}
-			if err = c.Authority.SaveEnrollment(e); err != nil {
+			if err := c.Authority.SaveEnrollment(e); err != nil {
 				return err
 			}
 			c.update(func(s *FollowStatus) {

@@ -27,8 +27,9 @@ import (
 )
 
 type Config struct {
-	BlobCap     int64 `json:"blob_cap,omitempty"`
-	BlobGraceMS int64 `json:"blob_grace_ms,omitempty"`
+	Listen      string `json:"listen,omitempty"`
+	BlobCap     int64  `json:"blob_cap,omitempty"`
+	BlobGraceMS int64  `json:"blob_grace_ms,omitempty"`
 
 	Role              string        `json:"role"`
 	Home              string        `json:"home"`
@@ -200,7 +201,12 @@ func Start(ctx context.Context, cfg Config) error {
 				}
 			}
 		}()
-		feed := &replication.Server{Store: store, Authority: authority, Blobs: blobStore}
+		feed := &replication.Server{Store: store, Authority: authority, Blobs: blobStore, Command: gateway.Forward}
+		service.LocalStatus = func() contracts.ReplicaStatus {
+			return contracts.ReplicaStatus{Role: "gateway", State: "ready", Cursor: store.Head(), GatewayHead: store.Head().Sequence, Blobs: blobStore.Progress(), DialReplicas: feed.DialStatus()}
+		}
+		go authority.DialPairings(ctx)
+		go feed.Dial(ctx)
 		mux := http.NewServeMux()
 		mux.Handle("/v1/pair", authority.PairHandler())
 		mux.Handle("/v1/feed", feed.Handler())
@@ -258,8 +264,33 @@ func Start(ctx context.Context, cfg Config) error {
 			}
 		}}
 		service.LocalStatus = client.Status
-		service.Target = &operations.RemoteGateway{Authority: authority, Connected: func() bool { return client.Status().State == "connected" }, Wait: client.Wait}
-		go func() { failures <- client.Follow(ctx) }()
+		service.Target = &operations.RemoteGateway{Authority: authority, Exchange: client.Exchange, Connected: func() bool { return client.Status().State == "connected" }, Wait: client.Wait}
+		enrollment, err := authority.Enrollment()
+		if err != nil || enrollment == nil {
+			return contracts.ErrUnauthorized
+		}
+		if enrollment.Dial != "" {
+			address := cfg.Listen
+			if address == "" {
+				address = enrollment.Dial
+			}
+			listener, err := authority.PinnedListener(address, enrollment.Fingerprint)
+			if err != nil {
+				return err
+			}
+			defer listener.Close()
+			cfg.Listen = listener.Addr().String()
+			mux := http.NewServeMux()
+			mux.Handle("/v1/feed", client.Handler())
+			peerServer := &http.Server{Handler: mux, ReadHeaderTimeout: 5 * time.Second}
+			defer peerServer.Close()
+			go func() { failures <- peerServer.Serve(listener) }()
+		} else {
+			if cfg.Listen != "" {
+				return contracts.ErrInvalid
+			}
+			go func() { failures <- client.Follow(ctx) }()
+		}
 	}
 	server := &http.Server{Handler: frontdoor.Handler(frontdoor.Deps{Operations: service, Authority: authority, Address: cfg.APIAddress, Blobs: blobStore}, contracts.Operations), ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 30 * time.Second}
 	go func() { failures <- server.Serve(api) }()
