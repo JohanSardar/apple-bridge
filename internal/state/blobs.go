@@ -297,12 +297,18 @@ func (s *Store) initBlobReferences(ctx context.Context) error {
  DROP INDEX IF EXISTS records_blob_candidates;
  DROP INDEX IF EXISTS staging_blob_candidates;
  CREATE TABLE IF NOT EXISTS blob_ref_changes(owner TEXT PRIMARY KEY);
- CREATE TRIGGER IF NOT EXISTS blob_refs_changed_insert AFTER INSERT ON blob_refs BEGIN INSERT OR IGNORE INTO blob_ref_changes(owner) VALUES(NEW.owner); END;
- CREATE TRIGGER IF NOT EXISTS blob_refs_changed_update AFTER UPDATE ON blob_refs BEGIN INSERT OR IGNORE INTO blob_ref_changes(owner) VALUES(NEW.owner); END;
- CREATE TRIGGER IF NOT EXISTS blob_refs_changed_delete AFTER DELETE ON blob_refs BEGIN INSERT OR IGNORE INTO blob_ref_changes(owner) VALUES(OLD.owner); END;
- CREATE TRIGGER IF NOT EXISTS blob_sets_changed_insert AFTER INSERT ON blob_reference_sets BEGIN INSERT OR IGNORE INTO blob_ref_changes(owner) VALUES(NEW.owner); END;
- CREATE TRIGGER IF NOT EXISTS blob_sets_changed_update AFTER UPDATE ON blob_reference_sets BEGIN INSERT OR IGNORE INTO blob_ref_changes(owner) VALUES(NEW.owner); END;
- CREATE TRIGGER IF NOT EXISTS blob_sets_changed_delete AFTER DELETE ON blob_reference_sets BEGIN INSERT OR IGNORE INTO blob_ref_changes(owner) VALUES(OLD.owner); END;
+ DROP TRIGGER IF EXISTS blob_refs_changed_insert;
+ DROP TRIGGER IF EXISTS blob_refs_changed_update;
+ DROP TRIGGER IF EXISTS blob_refs_changed_delete;
+ DROP TRIGGER IF EXISTS blob_sets_changed_insert;
+ DROP TRIGGER IF EXISTS blob_sets_changed_update;
+ DROP TRIGGER IF EXISTS blob_sets_changed_delete;
+ CREATE TRIGGER IF NOT EXISTS blob_refs_changed_insert AFTER INSERT ON blob_refs BEGIN INSERT INTO blob_ref_changes(owner) VALUES(NEW.owner) ON CONFLICT(owner) DO NOTHING; END;
+ CREATE TRIGGER IF NOT EXISTS blob_refs_changed_update AFTER UPDATE ON blob_refs BEGIN INSERT INTO blob_ref_changes(owner) VALUES(NEW.owner) ON CONFLICT(owner) DO NOTHING; END;
+ CREATE TRIGGER IF NOT EXISTS blob_refs_changed_delete AFTER DELETE ON blob_refs BEGIN INSERT INTO blob_ref_changes(owner) VALUES(OLD.owner) ON CONFLICT(owner) DO NOTHING; END;
+ CREATE TRIGGER IF NOT EXISTS blob_sets_changed_insert AFTER INSERT ON blob_reference_sets BEGIN INSERT INTO blob_ref_changes(owner) VALUES(NEW.owner) ON CONFLICT(owner) DO NOTHING; END;
+ CREATE TRIGGER IF NOT EXISTS blob_sets_changed_update AFTER UPDATE ON blob_reference_sets BEGIN INSERT INTO blob_ref_changes(owner) VALUES(NEW.owner) ON CONFLICT(owner) DO NOTHING; END;
+ CREATE TRIGGER IF NOT EXISTS blob_sets_changed_delete AFTER DELETE ON blob_reference_sets BEGIN INSERT INTO blob_ref_changes(owner) VALUES(OLD.owner) ON CONFLICT(owner) DO NOTHING; END;
  CREATE TRIGGER IF NOT EXISTS blob_refs_record_delete AFTER DELETE ON records BEGIN DELETE FROM blob_refs WHERE owner='record:'||OLD.id; END;
  CREATE TRIGGER IF NOT EXISTS blob_refs_staging_delete AFTER DELETE ON staging_records BEGIN DELETE FROM blob_refs WHERE owner='staging:'||OLD.snapshot||':'||OLD.id; END;`); err != nil {
 		return err
