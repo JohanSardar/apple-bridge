@@ -126,8 +126,10 @@ public final class CalendarSource: Source {
             }
             gate.trace.record("calendar_chunk", fields: ["index": .number(Double(index)), "records": .number(Double(current.count)), "changes": .number(Double(pending.count))])
             guard gate.authorized(.event) else { throw SourceFailure.permissionMissing }
-            try save(committed.merging(current) { _, new in new })
-            try await sink.emit(source: name, generation: "eventkit-calendar-v1", observations: pending, scanID: "", scanStartedAt: started, scope: [], completionEvidence: "", blobHandles: [:], live: live || index == 0)
+            if !pending.isEmpty {
+                try save(committed.merging(current) { _, new in new })
+                try await sink.emit(source: name, generation: "eventkit-calendar-v1", observations: pending, scanID: "", scanStartedAt: started, scope: [], completionEvidence: "", blobHandles: [:], live: live || index == 0)
+            }
             pending = []
         }
         for (identity, previous) in committed where current[identity] == nil {
