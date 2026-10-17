@@ -1,0 +1,119 @@
+{
+  "conditions": {
+    "clock": "native CLOCK_UPTIME_RAW for real fixtures; lab monotonic fixture return for sim",
+    "heavy_slots_in_use": 2,
+    "load_average": [
+      "4.98",
+      "20.38",
+      "28.29"
+    ],
+    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"
+  },
+  "run_id": "cal_01M55FB4WGNB00K6HZV9QDDK16",
+  "scenario": "CAL-ALLDAY-FUTURE",
+  "level": "sim",
+  "passed": false,
+  "git_sha": "85ac1fcec04158967edab67660ce399389bead7b",
+  "at": "2026-10-17T17:42:50.512245Z",
+  "assertions": [
+    {
+      "name": "calendar_visible",
+      "passed": true
+    },
+    {
+      "name": "initial_occurrences_visible",
+      "passed": true
+    },
+    {
+      "name": "agenda_returns_occurrences",
+      "passed": true
+    },
+    {
+      "name": "all_day_future_civil_offsets",
+      "passed": false
+    },
+    {
+      "name": "independent_simtruth_convergence",
+      "passed": true
+    },
+    {
+      "name": "replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "contiguous_feed_0",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "contiguous_feed_1",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "latency_effect_done→gateway_visible",
+      "passed": true
+    },
+    {
+      "name": "latency_effect_done→replica_visible:replica0",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_query",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_mcp_agenda",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_query",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_mcp_agenda",
+      "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass",
+      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "effect_done→gateway_visible": {
+      "samples": 1,
+      "p50_ms": 15.619,
+      "p95_ms": 15.619,
+      "max_ms": 15.619,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica0": {
+      "samples": 1,
+      "p50_ms": 21.743,
+      "p95_ms": 21.743,
+      "max_ms": 21.743,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

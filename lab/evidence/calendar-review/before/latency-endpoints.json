@@ -1,0 +1,40 @@
+{
+  "conditions": {
+    "clock": "native CLOCK_UPTIME_RAW for real fixtures; lab monotonic fixture return for sim",
+    "heavy_slots_in_use": 2,
+    "load_average": [
+      "5.10",
+      "22.03",
+      "29.13"
+    ],
+    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"
+  },
+  "run_id": "cal_01M55FA7KDX9S5VEEKX7B8WYD5",
+  "scenario": "CAL-CREATE-EXTERNAL",
+  "level": "sim",
+  "passed": false,
+  "git_sha": "85ac1fcec04158967edab67660ce399389bead7b",
+  "at": "2026-10-17T17:42:20.525623Z",
+  "assertions": [
+    {
+      "name": "calendar_visible",
+      "passed": true
+    },
+    {
+      "name": "initial_occurrences_visible",
+      "passed": true
+    },
+    {
+      "name": "external_capture_latency",
+      "passed": false
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

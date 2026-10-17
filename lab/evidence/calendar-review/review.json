@@ -1,0 +1,48 @@
+{
+  "reviewed_range": "ea2c5c4..85ac1fc",
+  "real_runs_before_fixes": 0,
+  "findings": [
+    {
+      "id": 1,
+      "before": "cleanup_calendar removed a whole calendar after a window-only ownership check",
+      "after": "No removeCalendar call exists in CalendarTruth; calendars retained; created calendar identity and fixture event identifiers persisted with private atomic writes",
+      "proof": "native Truth build passed; removal path inspection; real cleanup audit pending"
+    },
+    {
+      "id": 2,
+      "before": "missing recurring occurrences could be declared absent from a window query",
+      "after": "Durable native event identifiers plus original occurrence identity and calendar/account scope; out-of-window native dates produce eviction; unresolved lookup retains prior observation",
+      "proof": "CAL-MOVED-OUTSIDE-WINDOW sim passed; native Source build passed; real pending"
+    },
+    {
+      "id": 3,
+      "before": "detached recurrence read from committed data using unscoped series_id",
+      "after": "Native series rules resolved by external identifier and native query scoped to calendar/account, independent of committed records",
+      "proof": "CAL-RECUR-THIS asserts non-null exception recurrence; native build passed; real pending"
+    },
+    {
+      "id": 4,
+      "before": "all-day future-span date offsets collapsed; regression failed all_day_future_civil_offsets",
+      "after": "Civil-day offsets preserve distinct shifted dates",
+      "proof": "CAL-ALLDAY-FUTURE sim passed"
+    },
+    {
+      "id": 5,
+      "before": "new_rule_regenerates_occurrences, future_split_preserves_exception and future_rule_changes_dates failed",
+      "after": "New split rule materialized; detached exceptions carried forward with original identities and values",
+      "proof": "CAL-RECUR-FUTURE sim passed"
+    },
+    {
+      "id": 6,
+      "before": "fixture response waited for Committed; timing then started; negative values clamped",
+      "after": "Simulator effect timestamp captured under lock before enqueue; raw endpoint order checked; native timestamps required for real fixtures",
+      "proof": "external_capture_latency failed without timestamp; corrected CAL-CREATE-EXTERNAL sim passed; previous sim latency evidence invalid"
+    },
+    {
+      "id": 7,
+      "before": "moved occurrence checked identity and sibling titles only",
+      "after": "Requested title, start, end and full unchanged sibling data asserted independently",
+      "proof": "CAL-MOVED-OCCURRENCE sim passed"
+    }
+  ]
+}

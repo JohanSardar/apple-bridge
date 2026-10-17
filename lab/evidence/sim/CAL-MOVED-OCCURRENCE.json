@@ -1,20 +1,20 @@
 {
   "conditions": {
-    "clock": "native CLOCK_UPTIME_RAW for real fixtures; lab monotonic fixture return for sim",
+    "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
     "heavy_slots_in_use": 2,
     "load_average": [
-      "13.48",
-      "14.87",
-      "14.10"
+      "3.63",
+      "14.51",
+      "24.85"
     ],
     "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"
   },
-  "run_id": "cal_01M54C0TQ0N53H2RNDDTH60R05",
+  "run_id": "cal_01M55FF09E45GKAYK44TKEY6GH",
   "scenario": "CAL-MOVED-OCCURRENCE",
   "level": "sim",
   "passed": true,
-  "git_sha": "7f03ca92f7f5ec8858f7d86ad567ea450d084ccd",
-  "at": "2026-10-17T07:25:32.256462Z",
+  "git_sha": "85ac1fcec04158967edab67660ce399389bead7b",
+  "at": "2026-10-17T17:44:56.878621Z",
   "assertions": [
     {
       "name": "calendar_visible",
@@ -26,6 +26,18 @@
     },
     {
       "name": "agenda_returns_occurrences",
+      "passed": true
+    },
+    {
+      "name": "exception_capture_visible",
+      "passed": true
+    },
+    {
+      "name": "exception_has_scoped_native_recurrence",
+      "passed": true
+    },
+    {
+      "name": "moved_start_and_end",
       "passed": true
     },
     {
@@ -61,11 +73,11 @@
       "passed": true
     },
     {
-      "name": "latency_effect_done→gateway_visible",
+      "name": "latency_effect_done→replica_visible:replica0",
       "passed": true
     },
     {
-      "name": "latency_effect_done→replica_visible:replica0",
+      "name": "latency_effect_done→gateway_visible",
       "passed": true
     },
     {
@@ -104,16 +116,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 0,
-      "p95_ms": 0,
-      "max_ms": 0,
+      "p50_ms": 11.774,
+      "p95_ms": 11.774,
+      "max_ms": 11.774,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 1.343333,
-      "p95_ms": 1.343333,
-      "max_ms": 1.343333,
+      "p50_ms": 21.416,
+      "p95_ms": 21.416,
+      "max_ms": 21.416,
       "timeouts": 0
     }
   },

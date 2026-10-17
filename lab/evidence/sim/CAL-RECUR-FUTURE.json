@@ -1,20 +1,20 @@
 {
   "conditions": {
-    "clock": "native CLOCK_UPTIME_RAW for real fixtures; lab monotonic fixture return for sim",
+    "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
     "heavy_slots_in_use": 2,
     "load_average": [
-      "14.08",
-      "14.97",
-      "14.14"
+      "3.42",
+      "14.28",
+      "24.71"
     ],
     "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"
   },
-  "run_id": "cal_01M54C0ZKE2XQD8DM7JEN67HGZ",
+  "run_id": "cal_01M55FF41VX6RWA3TBYRQCY69B",
   "scenario": "CAL-RECUR-FUTURE",
   "level": "sim",
   "passed": true,
-  "git_sha": "7f03ca92f7f5ec8858f7d86ad567ea450d084ccd",
-  "at": "2026-10-17T07:25:37.262026Z",
+  "git_sha": "85ac1fcec04158967edab67660ce399389bead7b",
+  "at": "2026-10-17T17:45:00.731395Z",
   "assertions": [
     {
       "name": "calendar_visible",
@@ -29,11 +29,15 @@
       "passed": true
     },
     {
-      "name": "future_span_splits_series",
+      "name": "new_rule_regenerates_occurrences",
       "passed": true
     },
     {
-      "name": "delete_future_preserves_past",
+      "name": "future_split_preserves_exception",
+      "passed": true
+    },
+    {
+      "name": "future_rule_changes_dates",
       "passed": true
     },
     {
@@ -104,16 +108,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 0,
-      "p95_ms": 0,
-      "max_ms": 0,
+      "p50_ms": 15.949,
+      "p95_ms": 15.949,
+      "max_ms": 15.949,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 1.084625,
-      "p95_ms": 1.084625,
-      "max_ms": 1.084625,
+      "p50_ms": 21.144,
+      "p95_ms": 21.144,
+      "max_ms": 21.144,
       "timeouts": 0
     }
   },
