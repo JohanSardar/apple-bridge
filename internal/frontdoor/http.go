@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"strconv"
@@ -68,6 +69,10 @@ func Handler(deps Deps, descriptors []contracts.OperationDescriptor) http.Handle
 			decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1024*1024))
 			decoder.DisallowUnknownFields()
 			if err := decoder.Decode(&q); err != nil {
+				respond(w, nil, contracts.ErrInvalid)
+				return
+			}
+			if decoder.Decode(&struct{}{}) != io.EOF {
 				respond(w, nil, contracts.ErrInvalid)
 				return
 			}

@@ -299,6 +299,12 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 			return transmit(capture)
 		}
 		slices.SortStableFunc(capture.Observations, func(a, b contracts.Observation) int {
+			if a.Kind == "absent" && b.Kind != "absent" {
+				return 1
+			}
+			if b.Kind == "absent" && a.Kind != "absent" {
+				return -1
+			}
 			if a.Collection == "reminders.list" && b.Collection != "reminders.list" {
 				return -1
 			}
@@ -311,7 +317,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 			end := min(offset+64, len(capture.Observations))
 			part := capture
 			part.Observations = capture.Observations[offset:end]
-			if end < len(capture.Observations) {
+			if end < len(capture.Observations) && part.Observations[len(part.Observations)-1].Kind != "absent" {
 				part.CompletionEvidence = ""
 			}
 			if err := transmit(part); err != nil {

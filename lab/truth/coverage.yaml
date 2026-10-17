@@ -1,0 +1,6 @@
+level: sim
+source: reminders
+collections:
+  reminders.list: [title, writable]
+  reminders.reminder: [title, completed, list_id]
+comparison: all present fields, resolving bridge references to synthetic fixture titles

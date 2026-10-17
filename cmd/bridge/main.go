@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"syscall"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
@@ -27,7 +28,7 @@ func run(ctx context.Context, args []string) error {
 		args = args[1:]
 	}
 	set := flag.NewFlagSet(verb, flag.ContinueOnError)
-	home := set.String("home", filepath.Join(os.Getenv("HOME"), ".local", "share", "apple-bridge"), "private state directory")
+	home := set.String("home", defaultHome(), "private state directory")
 	role := set.String("role", "gateway", "gateway or replica")
 	peer := set.String("peer-addr", "", "gateway peer listen address")
 	api := set.String("api-addr", "", "loopback API address")
@@ -62,7 +63,11 @@ func run(ctx context.Context, args []string) error {
 		if err != nil {
 			return err
 		}
-		code, err := authority.Pair(cfg.PeerAddress, grants)
+		address := cfg.PeerAddress
+		if *peer != "" {
+			address = *peer
+		}
+		code, err := authority.Pair(address, grants)
 		if err != nil {
 			return err
 		}
@@ -94,4 +99,15 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+}
+
+func defaultHome() string {
+	if runtime.GOOS == "darwin" {
+		return filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "AppleBridge")
+	}
+	root := os.Getenv("XDG_DATA_HOME")
+	if root == "" {
+		root = filepath.Join(os.Getenv("HOME"), ".local", "share")
+	}
+	return filepath.Join(root, "apple-bridge")
 }

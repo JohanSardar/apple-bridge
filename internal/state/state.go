@@ -294,7 +294,7 @@ func (s *Store) CommitCapture(ctx context.Context, c contracts.Capture) (CommitR
 		}
 		var data json.RawMessage
 		if o.Kind == "absent" {
-			if !exists || old.Deleted {
+			if !exists {
 				continue
 			}
 			if latest.After(c.ScanStartedAt) {

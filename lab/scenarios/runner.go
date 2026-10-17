@@ -59,15 +59,17 @@ type Seen struct {
 	At     time.Time
 }
 type watcher struct {
-	mu        sync.Mutex
-	seen      map[string]Seen
-	changes   []Seen
-	last      contracts.Cursor
-	invalid   bool
-	filtered  bool
-	connected chan struct{}
-	cancel    context.CancelFunc
-	done      chan struct{}
+	mu              sync.Mutex
+	seen            map[string]Seen
+	changes         []Seen
+	last            contracts.Cursor
+	invalid         bool
+	filtered        bool
+	initialSequence uint64
+	falseDelete     bool
+	connected       chan struct{}
+	cancel          context.CancelFunc
+	done            chan struct{}
 }
 
 func key(r contracts.Record) string {
@@ -76,13 +78,13 @@ func key(r contracts.Record) string {
 	title, _ := data["title"].(string)
 	return r.Collection + "/" + title
 }
-func watch(ctx context.Context, e world.Endpoint, filtered bool) (*watcher, error) {
+func watch(ctx context.Context, e world.Endpoint, filtered bool, oracle func(contracts.Record) bool) (*watcher, error) {
 	var result contracts.ReadResult
 	if _, err := world.Request(ctx, e, "/v1/op/records.query", contracts.ReadQuery{Limit: 1}, &result); err != nil {
 		return nil, err
 	}
 	ctx, cancel := context.WithCancel(ctx)
-	w := &watcher{seen: map[string]Seen{}, last: result.Cursor, filtered: filtered, connected: make(chan struct{}), cancel: cancel, done: make(chan struct{})}
+	w := &watcher{seen: map[string]Seen{}, last: result.Cursor, initialSequence: result.Cursor.Sequence, filtered: filtered, connected: make(chan struct{}), cancel: cancel, done: make(chan struct{})}
 	go func() {
 		defer close(w.done)
 		ready := false
@@ -121,7 +123,15 @@ func watch(ctx context.Context, e world.Endpoint, filtered bool) (*watcher, erro
 					if b.Epoch != w.last.Epoch || b.After != w.last.Sequence || b.Through < b.After {
 						w.invalid = true
 					}
+					previous := b.After
 					for _, c := range b.Changes {
+						if c.Sequence <= previous || c.Sequence > b.Through {
+							w.invalid = true
+						}
+						previous = c.Sequence
+						if c.Op == "delete" && !oracle(c.Record) {
+							w.falseDelete = true
+						}
 						if filtered && c.Record.Source != contracts.System {
 							w.invalid = true
 						}
@@ -316,7 +326,15 @@ func convergence(w *world.World) bool {
 	if !reflect.DeepEqual(normalize(gateway, false), normalize(truthRecords(truth), false)) {
 		return false
 	}
+	gatewayCursor, err := w.Cursor(w.Gateway)
+	if err != nil {
+		return false
+	}
 	for _, endpoint := range w.Replicas {
+		replicaCursor, err := w.Cursor(endpoint)
+		if err != nil || replicaCursor != gatewayCursor {
+			return false
+		}
 		replica, err := w.Records(endpoint)
 		if err != nil || !reflect.DeepEqual(replica, gateway) {
 			return false
@@ -368,7 +386,7 @@ func Run(ctx context.Context, s Scenario, level string) Evidence {
 	endpoints := append([]world.Endpoint{w.Gateway}, w.Replicas...)
 	watchers := []*watcher{}
 	for _, e := range endpoints {
-		observer, err := watch(ctx, e, false)
+		observer, err := watch(ctx, e, false, func(r contracts.Record) bool { return truthAbsent(w, r) })
 		if err != nil {
 			return fail("sse_observe")
 		}
@@ -400,7 +418,7 @@ func Run(ctx context.Context, s Scenario, level string) Evidence {
 				break
 			}
 		}
-		observer, err := watch(ctx, e, true)
+		observer, err := watch(ctx, e, true, func(r contracts.Record) bool { return truthAbsent(w, r) })
 		if err != nil {
 			return fail("scope_sse")
 		}
@@ -479,6 +497,7 @@ func Run(ctx context.Context, s Scenario, level string) Evidence {
 		return fail("convergence")
 	}
 	add("convergence_truth_gateway_replicas", true)
+	add("replica_records_versions_and_cursor_consistent", true)
 	timeout := w.Await(10*time.Second, func() bool {
 		for title := range effects {
 			for _, observer := range watchers {
@@ -561,7 +580,7 @@ func Run(ctx context.Context, s Scenario, level string) Evidence {
 			}
 		}
 		observer.mu.Lock()
-		valid := err == nil
+		valid := err == nil && !observer.falseDelete
 		for _, seen := range observer.changes {
 			if seen.Change.Op == "delete" && !absent[key(seen.Change.Record)] {
 				valid = false
@@ -572,7 +591,7 @@ func Run(ctx context.Context, s Scenario, level string) Evidence {
 	}
 	for i, observer := range scoped {
 		observer.mu.Lock()
-		advanced := observer.last.Sequence > 0
+		advanced := observer.last.Sequence > observer.initialSequence
 		observer.mu.Unlock()
 		add(fmt.Sprintf("scope_sse_watermarks_%d", i), observer.valid() && advanced)
 	}
@@ -724,5 +743,50 @@ func captureSafety(ctx context.Context, w *world.World) bool {
 	}
 	var result contracts.ReadResult
 	_, err = world.Request(ctx, w.Gateway, "/v1/records/"+original.Collection+"/"+original.ID, nil, &result)
-	return err == nil && len(result.Records) == 1 && reflect.DeepEqual(result.Records[0], original)
+	if err != nil || len(result.Records) != 1 || !reflect.DeepEqual(result.Records[0], original) {
+		return false
+	}
+	if w.ControlAction("/external-change", map[string]string{"key": "tombstone-safety"}) != nil || w.ControlAction("/flush", struct{}{}) != nil {
+		return false
+	}
+	truth, err := w.Inspect()
+	if err != nil {
+		return false
+	}
+	var tombstone contracts.Observation
+	for _, o := range truth {
+		if o.NativeKey == "tombstone-safety" {
+			tombstone = o
+		}
+	}
+	if w.ControlAction("/external-change", map[string]any{"key": "tombstone-safety", "delete": true}) != nil || w.ControlAction("/flush", struct{}{}) != nil {
+		return false
+	}
+	repeated := tombstone
+	repeated.Kind = "absent"
+	repeated.Revalidated = true
+	repeated.ObservedAt = time.Now().UTC().Add(time.Millisecond)
+	capture := contracts.Capture{Source: contracts.Reminders, Observations: []contracts.Observation{repeated}, ScanID: "repeated-absence", Scope: []string{tombstone.Collection}, ScanStartedAt: repeated.ObservedAt, CompletionEvidence: "complete"}
+	if w.ControlAction("/capture", capture) != nil {
+		return false
+	}
+	tombstone.ObservedAt = repeated.ObservedAt.Add(-time.Microsecond)
+	if w.ControlAction("/capture", contracts.Capture{Source: contracts.Reminders, Observations: []contracts.Observation{tombstone}}) != nil {
+		return false
+	}
+	return convergence(w) || w.Await(5*time.Second, func() bool { return convergence(w) }) == nil
+}
+
+func truthAbsent(w *world.World, r contracts.Record) bool {
+	observations, err := w.Inspect()
+	if err != nil {
+		return false
+	}
+	for _, o := range observations {
+		candidate := contracts.Record{Collection: o.Collection, Data: o.Data}
+		if key(candidate) == key(r) {
+			return o.Kind == "absent"
+		}
+	}
+	return false
 }

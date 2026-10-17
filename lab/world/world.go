@@ -52,6 +52,7 @@ type World struct {
 	bridge           string
 	lab              string
 	remoteBinary     string
+	pairAddress      string
 	ctx              context.Context
 }
 
@@ -201,13 +202,6 @@ func New(ctx context.Context, level string, replicas int, seed int) (*World, err
 	}()
 	peerHost := "127.0.0.1"
 	if level == "replica" {
-		peerHost, err = commandOutput(ctx, "tailscale", "ip", "-4")
-		if err != nil {
-			return nil, err
-		}
-		if net.ParseIP(peerHost) == nil {
-			return nil, fmt.Errorf("gateway Tailscale address unavailable")
-		}
 		if _, err = commandOutput(ctx, "ssh", "ubuntu", "mkdir -p "+quote(w.Dir)+" && chmod 700 "+quote(w.Dir)); err != nil {
 			return nil, err
 		}
@@ -224,6 +218,25 @@ func New(ctx context.Context, level string, replicas int, seed int) (*World, err
 	if err != nil {
 		return nil, err
 	}
+	w.pairAddress = cfg.PeerAddress
+	if level == "replica" {
+		remotePort, err := commandOutput(ctx, "ssh", "ubuntu", "python3 -c "+quote("import socket; s=socket.socket(); s.bind(('127.0.0.1',0)); print(s.getsockname()[1]); s.close()"))
+		if err != nil {
+			return nil, err
+		}
+		_, gatewayPort, _ := net.SplitHostPort(cfg.PeerAddress)
+		if _, err = w.start("peer-tunnel", false, w.Dir, "ssh", "-N", "-o", "ExitOnForwardFailure=yes", "-R", "127.0.0.1:"+remotePort+":127.0.0.1:"+gatewayPort, "ubuntu"); err != nil {
+			return nil, err
+		}
+		w.pairAddress = net.JoinHostPort("127.0.0.1", remotePort)
+		if err = w.Await(10*time.Second, func() bool {
+			_, err := commandOutput(ctx, "ssh", "ubuntu", "python3 -c "+quote("import socket; s=socket.create_connection(('127.0.0.1',"+remotePort+"),2); s.close()"))
+			return err == nil
+		}); err != nil {
+			return nil, err
+		}
+	}
+
 	token, err := w.execute(false, w.bridge, "token", "create", "--home", gatewayHome, "--scope", "reminders:read,system:read")
 	if err != nil {
 		return nil, err
@@ -256,7 +269,7 @@ func New(ctx context.Context, level string, replicas int, seed int) (*World, err
 				return nil, err
 			}
 		}
-		code, err := w.execute(false, w.bridge, "pair", "--home", gatewayHome, "--name", "replica"+strconv.Itoa(i), "--scope", "reminders:read,system:read")
+		code, err := w.execute(false, w.bridge, "pair", "--home", gatewayHome, "--peer-addr", w.pairAddress, "--name", "replica"+strconv.Itoa(i), "--scope", "reminders:read,system:read")
 		if err != nil {
 			return nil, err
 		}
@@ -463,4 +476,10 @@ func (w *World) ScopedToken(e Endpoint, scope string) (string, error) {
 		binary = w.remoteBinary
 	}
 	return w.execute(e.Remote, binary, "token", "create", "--home", e.Home, "--scope", scope)
+}
+
+func (w *World) Cursor(e Endpoint) (contracts.Cursor, error) {
+	var result contracts.ReadResult
+	_, err := Request(w.ctx, e, "/v1/op/records.query", contracts.ReadQuery{Limit: 1}, &result)
+	return result.Cursor, err
 }
