@@ -7,9 +7,11 @@ let package = Package(
     products: [.executable(name: "AppleBridgeHelper", targets: ["AppleBridgeHelper"])],
     targets: [
         .target(name: "SourceSupport"),
+        .target(name: "Decoders"),
         .target(name: "AgendaGate", dependencies: ["SourceSupport"]),
         .target(name: "RemindersSource", dependencies: ["AgendaGate", "SourceSupport"]),
-        .target(name: "MessagesSource"),
+        .target(name: "MessagesSource", dependencies: ["SourceSupport", "Decoders"]),
+        .executableTarget(name: "DecoderChecks", dependencies: ["Decoders"]),
         .target(name: "AppleSession", dependencies: ["MessagesSource", "RemindersSource", "AgendaGate", "SourceSupport"]),
         .executableTarget(name: "AppleBridgeHelper", dependencies: ["AppleSession"])
     ]

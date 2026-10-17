@@ -34,3 +34,7 @@ dist:
 	GOOS=darwin GOARCH=arm64 go build -o bin/bridge-darwin-arm64 ./cmd/bridge
 	GOOS=linux GOARCH=amd64 go build -o bin/bridge-linux-amd64 ./cmd/bridge
 	GOOS=linux GOARCH=arm64 go build -o bin/bridge-linux-arm64 ./cmd/bridge
+
+.PHONY: decoder-checks
+decoder-checks:
+	packaging/dev/heavy.sh packaging/dev/check-decoders.sh
