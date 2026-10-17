@@ -1,11 +1,23 @@
 {
-  "run_id": "run_01M549YDCWSJG41HTK33F3H43T",
+  "run_id": "run_01M54ENFJMH923Y4Y4VMW5QSA3",
+  "network_path": "loopback",
+  "metrics": {
+    "absolute_target_rows_per_second": 2000,
+    "absolute_target_status": "pending-quiet",
+    "capture_rows_per_frame": 64,
+    "history_rows": 10000,
+    "history_rows_per_second": 376.04916071093334
+  },
   "scenario": "CORE-BLOB-REFERENCE-INDEX",
   "level": "sim",
   "passed": true,
-  "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943",
-  "at": "2026-10-17T06:49:15.932168Z",
+  "git_sha": "66acf6f733b103fb733516ad36f65b4201d9bdc9",
+  "at": "2026-10-17T08:11:46.1325Z",
   "assertions": [
+    {
+      "name": "feed_network_loopback",
+      "passed": true
+    },
     {
       "name": "replica_host_is_air",
       "passed": true
@@ -27,7 +39,7 @@
       "passed": true
     },
     {
-      "name": "history_throughput_at_least_2000_rows_per_second",
+      "name": "history_capture_measurement_recorded",
       "passed": true
     },
     {
@@ -41,21 +53,18 @@
     {
       "name": "history_replica_records_and_cursor_match",
       "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
     }
   ],
   "latency": {
     "history_10000_commit": {
       "samples": 1,
-      "p50_ms": 2197.072709,
-      "p95_ms": 2197.072709,
-      "max_ms": 2197.072709,
-      "timeouts": 0
-    },
-    "history_rows_per_second": {
-      "samples": 1,
-      "p50_ms": 4551.51072562888,
-      "p95_ms": 4551.51072562888,
-      "max_ms": 4551.51072562888,
+      "p50_ms": 26592.267833,
+      "p95_ms": 26592.267833,
+      "max_ms": 26592.267833,
       "timeouts": 0
     }
   },

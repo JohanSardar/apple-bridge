@@ -1,0 +1,27 @@
+{
+  "run_id": "run_01M54E09D8106TGQC5EHVY2VHE",
+  "network_path": "loopback",
+  "scenario": "CORE-BENCH",
+  "level": "sim",
+  "passed": false,
+  "git_sha": "66acf6f733b103fb733516ad36f65b4201d9bdc9",
+  "at": "2026-10-17T08:00:11.688172Z",
+  "assertions": [
+    {
+      "name": "feed_network_loopback",
+      "passed": true
+    },
+    {
+      "name": "capture_two_hundred_thousand_messages",
+      "passed": false
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

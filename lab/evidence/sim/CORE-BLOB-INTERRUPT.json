@@ -1,11 +1,11 @@
 {
-  "run_id": "run_01M54B6E4J62YHNZVHFCVG199C",
+  "run_id": "run_01M54EMSHZRB3P07WMX44S27D6",
   "network_path": "loopback",
   "scenario": "CORE-BLOB-INTERRUPT",
   "level": "sim",
   "passed": true,
-  "git_sha": "848918ef3d5560e95bb712ac0cd32e3bef168810",
-  "at": "2026-10-17T07:11:07.410589Z",
+  "git_sha": "66acf6f733b103fb733516ad36f65b4201d9bdc9",
+  "at": "2026-10-17T08:11:23.583378Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -36,6 +36,10 @@
       "passed": true
     },
     {
+      "name": "gateway_blob_present",
+      "passed": true
+    },
+    {
       "name": "partial_blob_persisted_before_interrupt",
       "passed": true
     },
@@ -56,7 +60,11 @@
       "passed": true
     },
     {
-      "name": "resumed_bulk_in_progress_before_metadata_probe",
+      "name": "reconnected_feed",
+      "passed": true
+    },
+    {
+      "name": "active_bulk_transfer_barrier",
       "passed": true
     },
     {
@@ -129,32 +137,67 @@
     }
   ],
   "latency": {
+    "bulk_barrier→blob_complete": {
+      "samples": 1,
+      "p50_ms": 319.038917,
+      "p95_ms": 319.038917,
+      "max_ms": 319.038917,
+      "timeouts": 0
+    },
     "effect_done→blob_complete": {
       "samples": 1,
-      "p50_ms": 6660.811833,
-      "p95_ms": 6660.811833,
-      "max_ms": 6660.811833,
+      "p50_ms": 4333.056208,
+      "p95_ms": 4333.056208,
+      "max_ms": 4333.056208,
+      "timeouts": 0
+    },
+    "effect_done→gateway_blob_present": {
+      "samples": 1,
+      "p50_ms": 2494.956042,
+      "p95_ms": 2494.956042,
+      "max_ms": 2494.956042,
       "timeouts": 0
     },
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 6.378625,
-      "p95_ms": 6.378625,
-      "max_ms": 6.378625,
+      "p50_ms": 95.307334,
+      "p95_ms": 95.307334,
+      "max_ms": 95.307334,
       "timeouts": 0
     },
     "effect_done→metadata_during_blob": {
       "samples": 1,
-      "p50_ms": 84.725833,
-      "p95_ms": 84.725833,
-      "max_ms": 84.725833,
+      "p50_ms": 66.045083,
+      "p95_ms": 66.045083,
+      "max_ms": 66.045083,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 7.832458,
-      "p95_ms": 7.832458,
-      "max_ms": 7.832458,
+      "p50_ms": 99.036875,
+      "p95_ms": 99.036875,
+      "max_ms": 99.036875,
+      "timeouts": 0
+    },
+    "gateway_present→replica_partial": {
+      "samples": 1,
+      "p50_ms": 178.128792,
+      "p95_ms": 178.128792,
+      "max_ms": 178.128792,
+      "timeouts": 0
+    },
+    "interrupt→reconnected": {
+      "samples": 1,
+      "p50_ms": 1029.609041,
+      "p95_ms": 1029.609041,
+      "max_ms": 1029.609041,
+      "timeouts": 0
+    },
+    "reconnected→blob_complete": {
+      "samples": 1,
+      "p50_ms": 476.755417,
+      "p95_ms": 476.755417,
+      "max_ms": 476.755417,
       "timeouts": 0
     }
   },

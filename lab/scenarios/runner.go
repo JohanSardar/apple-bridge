@@ -884,6 +884,9 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		duration := 3 * time.Minute
 		if s.ID == "CORE-BENCH" {
 			duration = 10 * time.Minute
+			if os.Getenv("APPLE_BRIDGE_LAB_CONTENDED_BENCH") == "1" {
+				duration = 35 * time.Minute
+			}
 		}
 		if s.Feature == "messages.read" && level != "sim" {
 			duration = 20 * time.Minute

@@ -1,11 +1,11 @@
 {
-  "run_id": "run_01M54B6VX8F9KN6Y6T9PRJ9YE6",
+  "run_id": "run_01M54EPKAXMH76F2NNFJVZB7GY",
   "network_path": "loopback",
   "scenario": "CORE-BLOB-SLOW-READ",
   "level": "sim",
   "passed": true,
-  "git_sha": "848918ef3d5560e95bb712ac0cd32e3bef168810",
-  "at": "2026-10-17T07:11:21.512638Z",
+  "git_sha": "66acf6f733b103fb733516ad36f65b4201d9bdc9",
+  "at": "2026-10-17T08:12:22.749653Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -103,30 +103,30 @@
   "latency": {
     "effect_done→blob_complete": {
       "samples": 1,
-      "p50_ms": 4841.069084,
-      "p95_ms": 4841.069084,
-      "max_ms": 4841.069084,
+      "p50_ms": 4744.10275,
+      "p95_ms": 4744.10275,
+      "max_ms": 4744.10275,
       "timeouts": 0
     },
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 14.485083,
-      "p95_ms": 14.485083,
-      "max_ms": 14.485083,
+      "p50_ms": 42.374083,
+      "p95_ms": 42.374083,
+      "max_ms": 42.374083,
       "timeouts": 0
     },
     "effect_done→metadata_during_slow_read": {
       "samples": 1,
-      "p50_ms": 91.913084,
-      "p95_ms": 91.913084,
-      "max_ms": 91.913084,
+      "p50_ms": 569.272125,
+      "p95_ms": 569.272125,
+      "max_ms": 569.272125,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 17.515667,
-      "p95_ms": 17.515667,
-      "max_ms": 17.515667,
+      "p50_ms": 221.169042,
+      "p95_ms": 221.169042,
+      "max_ms": 221.169042,
       "timeouts": 0
     }
   },

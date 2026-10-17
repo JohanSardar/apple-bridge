@@ -1,11 +1,11 @@
 {
-  "run_id": "run_01M54B65F3T36X7R5A7PZE8QDY",
+  "run_id": "run_01M54EMD9Z4S6RB0K7HAMP11NX",
   "network_path": "loopback",
   "scenario": "CORE-BLOB-GC",
   "level": "sim",
   "passed": true,
-  "git_sha": "848918ef3d5560e95bb712ac0cd32e3bef168810",
-  "at": "2026-10-17T07:10:58.5313Z",
+  "git_sha": "66acf6f733b103fb733516ad36f65b4201d9bdc9",
+  "at": "2026-10-17T08:11:11.039355Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -48,6 +48,30 @@
       "passed": true
     },
     {
+      "name": "legacy_reference_index_open",
+      "passed": true
+    },
+    {
+      "name": "legacy_reference_index_removed",
+      "passed": true
+    },
+    {
+      "name": "reference_index_migration_restart",
+      "passed": true
+    },
+    {
+      "name": "reference_index_migration_converges",
+      "passed": true
+    },
+    {
+      "name": "migrated_reference_index_open",
+      "passed": true
+    },
+    {
+      "name": "legacy_reference_index_backfilled",
+      "passed": true
+    },
+    {
       "name": "private_immutable_blob",
       "passed": true
     },
@@ -64,10 +88,6 @@
       "passed": true
     },
     {
-      "name": "command_reference_acquired",
-      "passed": true
-    },
-    {
       "name": "stage_returns_pin",
       "passed": true
     },
@@ -80,7 +100,11 @@
       "passed": true
     },
     {
-      "name": "snapshot_command_and_pin_survive_grace",
+      "name": "snapshot_only_and_pin_survive_grace",
+      "passed": true
+    },
+    {
+      "name": "command_reference_acquired",
       "passed": true
     },
     {
@@ -88,7 +112,7 @@
       "passed": true
     },
     {
-      "name": "command_still_protects_blob",
+      "name": "command_only_survives_grace",
       "passed": true
     },
     {
@@ -163,23 +187,23 @@
   "latency": {
     "effect_done→blob_complete": {
       "samples": 1,
-      "p50_ms": 4741.691125,
-      "p95_ms": 4741.691125,
-      "max_ms": 4741.691125,
+      "p50_ms": 3863.884666,
+      "p95_ms": 3863.884666,
+      "max_ms": 3863.884666,
       "timeouts": 0
     },
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 8.572166,
-      "p95_ms": 8.572166,
-      "max_ms": 8.572166,
+      "p50_ms": 307.591458,
+      "p95_ms": 307.591458,
+      "max_ms": 307.591458,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 10.440125,
-      "p95_ms": 10.440125,
-      "max_ms": 10.440125,
+      "p50_ms": 307.609917,
+      "p95_ms": 307.609917,
+      "max_ms": 307.609917,
       "timeouts": 0
     }
   },

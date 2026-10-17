@@ -1,14 +1,14 @@
 {
-  "run_id": "run_01M549W8BEFFW3XBJYCEKZFFJG",
-  "network_path": "ssh_fallback_direct_tcp_timeout",
+  "run_id": "run_01M55EMGV22DTYTF7AHFBGEXJ7",
+  "network_path": "ssh_tunnel",
   "scenario": "CORE-BLOB-INTERRUPT",
   "level": "replica",
   "passed": true,
-  "git_sha": "1ae944108b1a229e70cace7bfd82c3cb9d1fb27f",
-  "at": "2026-10-17T06:48:05.230851Z",
+  "git_sha": "66acf6f733b103fb733516ad36f65b4201d9bdc9",
+  "at": "2026-10-17T17:30:29.090329Z",
   "assertions": [
     {
-      "name": "feed_network_ssh_fallback_direct_tcp_timeout",
+      "name": "feed_network_ssh_tunnel",
       "passed": true
     },
     {
@@ -36,6 +36,10 @@
       "passed": true
     },
     {
+      "name": "gateway_blob_present",
+      "passed": true
+    },
+    {
       "name": "partial_blob_persisted_before_interrupt",
       "passed": true
     },
@@ -56,7 +60,11 @@
       "passed": true
     },
     {
-      "name": "resumed_bulk_in_progress_before_metadata_probe",
+      "name": "reconnected_feed",
+      "passed": true
+    },
+    {
+      "name": "active_bulk_transfer_barrier",
       "passed": true
     },
     {
@@ -129,32 +137,67 @@
     }
   ],
   "latency": {
+    "bulk_barrier→blob_complete": {
+      "samples": 1,
+      "p50_ms": 580.074084,
+      "p95_ms": 580.074084,
+      "max_ms": 580.074084,
+      "timeouts": 0
+    },
     "effect_done→blob_complete": {
       "samples": 1,
-      "p50_ms": 6153.655875,
-      "p95_ms": 6153.655875,
-      "max_ms": 6153.655875,
+      "p50_ms": 2772.943458,
+      "p95_ms": 2772.943458,
+      "max_ms": 2772.943458,
+      "timeouts": 0
+    },
+    "effect_done→gateway_blob_present": {
+      "samples": 1,
+      "p50_ms": 514.970667,
+      "p95_ms": 514.970667,
+      "max_ms": 514.970667,
       "timeouts": 0
     },
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 9.703042,
-      "p95_ms": 9.703042,
-      "max_ms": 9.703042,
+      "p50_ms": 13.330833,
+      "p95_ms": 13.330833,
+      "max_ms": 13.330833,
       "timeouts": 0
     },
     "effect_done→metadata_during_blob": {
       "samples": 1,
-      "p50_ms": 200.020583,
-      "p95_ms": 200.020583,
-      "max_ms": 200.020583,
+      "p50_ms": 71.421833,
+      "p95_ms": 71.421833,
+      "max_ms": 71.421833,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 21.941084,
-      "p95_ms": 21.941084,
-      "max_ms": 21.941084,
+      "p50_ms": 24.544333,
+      "p95_ms": 24.544333,
+      "max_ms": 24.544333,
+      "timeouts": 0
+    },
+    "gateway_present→replica_partial": {
+      "samples": 1,
+      "p50_ms": 378.118875,
+      "p95_ms": 378.118875,
+      "max_ms": 378.118875,
+      "timeouts": 0
+    },
+    "interrupt→reconnected": {
+      "samples": 1,
+      "p50_ms": 1083.936333,
+      "p95_ms": 1083.936333,
+      "max_ms": 1083.936333,
+      "timeouts": 0
+    },
+    "reconnected→blob_complete": {
+      "samples": 1,
+      "p50_ms": 768.088958,
+      "p95_ms": 768.088958,
+      "max_ms": 768.088958,
       "timeouts": 0
     }
   },

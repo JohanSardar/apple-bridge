@@ -218,15 +218,30 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 			return fail("seed_two_hundred_thousand_messages")
 		}
 		effect := time.Now()
+		evidence.Metrics = map[string]any{"messages": 200000, "completion_timeout_ms": completionTimeout.Milliseconds(), "contended_run": contended}
+		lastProbe := time.Time{}
 		if w.Await(completionTimeout, func() bool {
+			if contended && time.Since(lastProbe) < time.Second {
+				return false
+			}
+			lastProbe = time.Now()
 			report, err := w.Doctor(w.Gateway)
 			records, _ := report["records"].(map[string]any)
+			evidence.Metrics["observed_gateway_messages"] = records["messages.message"]
+			evidence.Metrics["capture_wait_ms"] = time.Since(effect).Milliseconds()
+			evidence.Metrics["capture_context_expired"] = ctx.Err() != nil
 			return err == nil && records["messages.message"] == float64(200000)
 		}) != nil {
 			return fail("capture_two_hundred_thousand_messages")
 		}
-		evidence.Metrics = map[string]any{"messages": 200000, "completion_timeout_ms": completionTimeout.Milliseconds(), "contended_run": contended, "fixture_and_capture_ms": float64(time.Since(start)) / float64(time.Millisecond), "effect_done_to_gateway_capture_ms": float64(time.Since(effect)) / float64(time.Millisecond)}
+		evidence.Metrics["fixture_and_capture_ms"] = float64(time.Since(start)) / float64(time.Millisecond)
+		evidence.Metrics["effect_done_to_gateway_capture_ms"] = float64(time.Since(effect)) / float64(time.Millisecond)
+		lastProbe = time.Time{}
 		if w.Await(completionTimeout, func() bool {
+			if contended && time.Since(lastProbe) < time.Second {
+				return false
+			}
+			lastProbe = time.Now()
 			report, err := w.Doctor(w.Replicas[0])
 			records, _ := report["records"].(map[string]any)
 			return err == nil && records["messages.message"] == float64(200000)

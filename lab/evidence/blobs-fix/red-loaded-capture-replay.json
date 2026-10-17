@@ -1,0 +1,31 @@
+{
+  "run_id": "run_01M54EXQ0W5S8MDASJAGHGMWEX",
+  "network_path": "loopback",
+  "scenario": "CORE-KILL-GATEWAY-CAPTURE",
+  "level": "sim",
+  "passed": false,
+  "git_sha": "66acf6f733b103fb733516ad36f65b4201d9bdc9",
+  "at": "2026-10-17T08:16:15.90059Z",
+  "assertions": [
+    {
+      "name": "feed_network_loopback",
+      "passed": true
+    },
+    {
+      "name": "eight_gateway_process_crashes",
+      "passed": true
+    },
+    {
+      "name": "capture_replay_drained",
+      "passed": false
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
