@@ -1,15 +1,56 @@
 {
   "host_telemetry": {
     "heavy_jobs": "2",
-    "load_average": "{ 4.93 6.88 9.92 }",
+    "load_average": "{ 4.19 4.45 5.34 }",
     "logical_cpus": "8"
   },
-  "run_id": "run_01M55H2XZ94ZS8PN679ANH3XCQ",
+  "host_conditions": {
+    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "start": {
+      "air": {
+        "at": "2026-10-17T18:45:00.486578Z",
+        "cpu_count": 8,
+        "load_average": [
+          4.19,
+          4.45,
+          5.34
+        ],
+        "cpu_idle_percent": 72,
+        "free_memory_bytes": 85180416,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 1,
+        "quiet": false
+      }
+    },
+    "end": {
+      "air": {
+        "at": "2026-10-17T18:45:01.93903Z",
+        "cpu_count": 8,
+        "load_average": [
+          4.19,
+          4.45,
+          5.34
+        ],
+        "cpu_idle_percent": 80,
+        "free_memory_bytes": 112836608,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 2,
+        "quiet": false
+      }
+    },
+    "quiet": false,
+    "require_quiet": false,
+    "quiet_wait_ms": 0,
+    "quiet_wait_expired": false
+  },
+  "run_id": "run_01M55JX0GDVHJ5VAS7Z48E695C",
   "scenario": "CON-IMPORT",
   "level": "sim",
   "passed": true,
-  "git_sha": "fe413ed780026cdcdac62941a1ba0a8a79cb6a6b",
-  "at": "2026-10-17T18:13:18.441191Z",
+  "git_sha": "1eefb0727428c09cd3b18f1499f454cd792459f7",
+  "at": "2026-10-17T18:45:01.581746Z",
   "assertions": [
     {
       "name": "unified_contacts_imported",

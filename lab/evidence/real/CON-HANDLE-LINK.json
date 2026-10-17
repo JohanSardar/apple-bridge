@@ -1,0 +1,309 @@
+{
+  "host_telemetry": {
+    "heavy_jobs": "2",
+    "load_average": "{ 21.55 12.55 7.99 }",
+    "logical_cpus": "8"
+  },
+  "host_conditions": {
+    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "start": {
+      "air": {
+        "at": "2026-10-17T18:59:13.871869Z",
+        "cpu_count": 8,
+        "load_average": [
+          23.34,
+          12.74,
+          8.03
+        ],
+        "cpu_idle_percent": 64,
+        "free_memory_bytes": 173244416,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 4,
+        "quiet": false
+      }
+    },
+    "end": {
+      "air": {
+        "at": "2026-10-17T19:00:11.061284Z",
+        "cpu_count": 8,
+        "load_average": [
+          18.63,
+          12.79,
+          8.34
+        ],
+        "cpu_idle_percent": 47,
+        "free_memory_bytes": 203980800,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 4,
+        "quiet": false
+      }
+    },
+    "periodic_samples": [
+      {
+        "air": {
+          "at": "2026-10-17T18:59:19.938558Z",
+          "cpu_count": 8,
+          "load_average": [
+            20.15,
+            12.41,
+            7.96
+          ],
+          "cpu_idle_percent": 24,
+          "free_memory_bytes": 63995904,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:59:24.938526Z",
+          "cpu_count": 8,
+          "load_average": [
+            19.01,
+            12.3,
+            7.95
+          ],
+          "cpu_idle_percent": 47,
+          "free_memory_bytes": 72925184,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:59:29.938762Z",
+          "cpu_count": 8,
+          "load_average": [
+            17.97,
+            12.19,
+            7.94
+          ],
+          "cpu_idle_percent": 40,
+          "free_memory_bytes": 66846720,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:59:34.938635Z",
+          "cpu_count": 8,
+          "load_average": [
+            16.69,
+            12.03,
+            7.91
+          ],
+          "cpu_idle_percent": 61,
+          "free_memory_bytes": 63209472,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:59:39.938694Z",
+          "cpu_count": 8,
+          "load_average": [
+            15.51,
+            11.86,
+            7.87
+          ],
+          "cpu_idle_percent": 59,
+          "free_memory_bytes": 58867712,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:59:44.938736Z",
+          "cpu_count": 8,
+          "load_average": [
+            14.51,
+            11.71,
+            7.84
+          ],
+          "cpu_idle_percent": 59,
+          "free_memory_bytes": 64651264,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:59:49.938812Z",
+          "cpu_count": 8,
+          "load_average": [
+            13.67,
+            11.58,
+            7.82
+          ],
+          "cpu_idle_percent": 65,
+          "free_memory_bytes": 65945600,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:59:54.938877Z",
+          "cpu_count": 8,
+          "load_average": [
+            12.9,
+            11.46,
+            7.8
+          ],
+          "cpu_idle_percent": 63,
+          "free_memory_bytes": 63815680,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:59:59.93857Z",
+          "cpu_count": 8,
+          "load_average": [
+            12.1,
+            11.32,
+            7.77
+          ],
+          "cpu_idle_percent": 13,
+          "free_memory_bytes": 63324160,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:00:04.937139Z",
+          "cpu_count": 8,
+          "load_average": [
+            19.38,
+            12.84,
+            8.33
+          ],
+          "cpu_idle_percent": 2,
+          "free_memory_bytes": 64012288,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        }
+      }
+    ],
+    "quiet": false,
+    "require_quiet": false,
+    "quiet_wait_ms": 0,
+    "quiet_wait_expired": false
+  },
+  "run_id": "run_01M55KQ1XDV8VQY5GGB31QYHDK",
+  "metrics": {
+    "cleanup_audit": {
+      "containers_preserved": true,
+      "groups_preserved": true,
+      "selected_count": 1,
+      "unowned_after_count": 154,
+      "unowned_before_count": 154,
+      "unowned_fields_unchanged": true,
+      "unowned_identifiers_after_sha256": "e18d53df58a026fc0514c0631a57d2da157f1d2f020f018fd228a1da0023e33a",
+      "unowned_identifiers_before_sha256": "e18d53df58a026fc0514c0631a57d2da157f1d2f020f018fd228a1da0023e33a",
+      "whole_container_operations": 0
+    }
+  },
+  "scenario": "CON-HANDLE-LINK",
+  "level": "real",
+  "passed": true,
+  "git_sha": "1eefb0727428c09cd3b18f1499f454cd792459f7",
+  "at": "2026-10-17T18:59:14.989166Z",
+  "assertions": [
+    {
+      "name": "unified_contacts_imported",
+      "passed": true
+    },
+    {
+      "name": "normalized_handle_lookup",
+      "passed": true
+    },
+    {
+      "name": "message_handle_contact_link",
+      "passed": true
+    },
+    {
+      "name": "replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_0",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_1",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "contacts_scope_enforced",
+      "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass",
+      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
+    },
+    {
+      "name": "owned_test_contacts_cleaned",
+      "passed": true
+    },
+    {
+      "name": "bridge_test_organization_empty",
+      "passed": true
+    },
+    {
+      "name": "cleanup_preserves_unowned_contacts_and_containers",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

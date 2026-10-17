@@ -1,0 +1,1099 @@
+{
+  "host_telemetry": {
+    "heavy_jobs": "2",
+    "load_average": "{ 9.18 11.13 8.09 }",
+    "logical_cpus": "8"
+  },
+  "host_conditions": {
+    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "start": {
+      "air": {
+        "at": "2026-10-17T19:01:30.389656Z",
+        "cpu_count": 8,
+        "load_average": [
+          9.18,
+          11.13,
+          8.09
+        ],
+        "cpu_idle_percent": 77,
+        "free_memory_bytes": 388251648,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 4,
+        "quiet": false
+      }
+    },
+    "end": {
+      "air": {
+        "at": "2026-10-17T19:02:27.560316Z",
+        "cpu_count": 8,
+        "load_average": [
+          16.79,
+          12.57,
+          8.8
+        ],
+        "cpu_idle_percent": 50,
+        "free_memory_bytes": 410877952,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 4,
+        "quiet": false
+      }
+    },
+    "periodic_samples": [
+      {
+        "air": {
+          "at": "2026-10-17T19:01:36.451008Z",
+          "cpu_count": 8,
+          "load_average": [
+            8.93,
+            11.04,
+            8.08
+          ],
+          "cpu_idle_percent": 46,
+          "free_memory_bytes": 60588032,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:01:41.451023Z",
+          "cpu_count": 8,
+          "load_average": [
+            8.69,
+            10.96,
+            8.07
+          ],
+          "cpu_idle_percent": 46,
+          "free_memory_bytes": 64094208,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:01:46.451059Z",
+          "cpu_count": 8,
+          "load_average": [
+            11.2,
+            11.44,
+            8.26
+          ],
+          "cpu_idle_percent": 59,
+          "free_memory_bytes": 121274368,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:01:51.451112Z",
+          "cpu_count": 8,
+          "load_average": [
+            10.54,
+            11.3,
+            8.23
+          ],
+          "cpu_idle_percent": 60,
+          "free_memory_bytes": 60637184,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:01:56.451167Z",
+          "cpu_count": 8,
+          "load_average": [
+            9.94,
+            11.16,
+            8.19
+          ],
+          "cpu_idle_percent": 56,
+          "free_memory_bytes": 101629952,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:02:01.451275Z",
+          "cpu_count": 8,
+          "load_average": [
+            9.22,
+            10.99,
+            8.15
+          ],
+          "cpu_idle_percent": 41,
+          "free_memory_bytes": 133677056,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:02:06.451281Z",
+          "cpu_count": 8,
+          "load_average": [
+            8.72,
+            10.86,
+            8.12
+          ],
+          "cpu_idle_percent": 50,
+          "free_memory_bytes": 64569344,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:02:11.451394Z",
+          "cpu_count": 8,
+          "load_average": [
+            8.35,
+            10.75,
+            8.1
+          ],
+          "cpu_idle_percent": 57,
+          "free_memory_bytes": 109395968,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:02:16.451808Z",
+          "cpu_count": 8,
+          "load_average": [
+            14.88,
+            12.06,
+            8.58
+          ],
+          "cpu_idle_percent": 9,
+          "free_memory_bytes": 62750720,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:02:21.450871Z",
+          "cpu_count": 8,
+          "load_average": [
+            16.33,
+            12.41,
+            8.72
+          ],
+          "cpu_idle_percent": 20,
+          "free_memory_bytes": 61177856,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        }
+      }
+    ],
+    "quiet": false,
+    "require_quiet": false,
+    "quiet_wait_ms": 0,
+    "quiet_wait_expired": false
+  },
+  "run_id": "run_01M55KV777YAW82VP24THFBV8S",
+  "metrics": {
+    "cleanup_audit": {
+      "containers_preserved": true,
+      "groups_preserved": true,
+      "selected_count": 1,
+      "unowned_after_count": 154,
+      "unowned_before_count": 154,
+      "unowned_fields_unchanged": true,
+      "unowned_identifiers_after_sha256": "e18d53df58a026fc0514c0631a57d2da157f1d2f020f018fd228a1da0023e33a",
+      "unowned_identifiers_before_sha256": "e18d53df58a026fc0514c0631a57d2da157f1d2f020f018fd228a1da0023e33a",
+      "whole_container_operations": 0
+    },
+    "field_presence_counts": {
+      "birthday": 3,
+      "contactRelations": 2,
+      "contactType": 155,
+      "dates": 1,
+      "departmentName": 1,
+      "emailAddresses": 17,
+      "familyName": 68,
+      "givenName": 152,
+      "imageData": 49,
+      "instantMessageAddresses": 1,
+      "jobTitle": 1,
+      "middleName": 1,
+      "namePrefix": 1,
+      "nameSuffix": 1,
+      "nickname": 1,
+      "organizationName": 1,
+      "phoneNumbers": 147,
+      "phoneticFamilyName": 1,
+      "phoneticGivenName": 1,
+      "phoneticMiddleName": 1,
+      "phoneticOrganizationName": 1,
+      "postalAddresses": 2,
+      "socialProfiles": 11,
+      "thumbnailImageData": 49,
+      "urlAddresses": 2
+    },
+    "group_count": 0,
+    "truth_field_presence_counts": {
+      "birthday": 3,
+      "contactRelations": 2,
+      "contactType": 155,
+      "dates": 1,
+      "departmentName": 1,
+      "emailAddresses": 17,
+      "familyName": 68,
+      "givenName": 152,
+      "identifier": 155,
+      "imageData": 49,
+      "imageDataAvailable": 155,
+      "instantMessageAddresses": 1,
+      "jobTitle": 1,
+      "middleName": 1,
+      "namePrefix": 1,
+      "nameSuffix": 1,
+      "nickname": 1,
+      "nonGregorianBirthday": 0,
+      "organizationName": 1,
+      "phoneNumbers": 147,
+      "phoneticFamilyName": 1,
+      "phoneticGivenName": 1,
+      "phoneticMiddleName": 1,
+      "phoneticOrganizationName": 1,
+      "postalAddresses": 2,
+      "previousFamilyName": 0,
+      "socialProfiles": 11,
+      "thumbnailImageData": 49,
+      "urlAddresses": 2
+    },
+    "truth_group_count": 0,
+    "truth_unified_count": 155,
+    "unified_count": 155
+  },
+  "scenario": "CON-IMPORT",
+  "level": "real",
+  "passed": true,
+  "git_sha": "1eefb0727428c09cd3b18f1499f454cd792459f7",
+  "at": "2026-10-17T19:01:31.495471Z",
+  "assertions": [
+    {
+      "name": "unified_contacts_imported",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "note_entitlement_gap_explicit",
+      "passed": true
+    },
+    {
+      "name": "group_count_equals_truth",
+      "passed": true
+    },
+    {
+      "name": "total_unified_count_equals_truth",
+      "passed": true
+    },
+    {
+      "name": "field_coverage_namePrefix",
+      "passed": true
+    },
+    {
+      "name": "field_coverage_nameSuffix",
+      "passed": true
+    },
+    {
+      "name": "field_coverage_nickname",
+      "passed": true
+    },
+    {
+      "name": "field_coverage_phoneticOrganizationName",
+      "passed": true
+    },
+    {
+      "name": "field_coverage_emailAddresses",
+      "passed": true
+    },
+    {
+      "name": "field_coverage_contactRelations",
+      "passed": true
+    },
+    {
+      "name": "field_coverage_givenName",
+      "passed": true
+    },
+    {
+      "name": "field_coverage_familyName",
+      "passed": true
+    },
+    {
+      "name": "field_coverage_previousFamilyName",
+      "passed": true
+    },
+    {
+      "name": "field_coverage_jobTitle",
+      "passed": true
+    },
+    {
+      "name": "field_coverage_urlAddresses",
+      "passed": true
+    },
+    {
+      "name": "field_coverage_thumbnailImageData",
+      "passed": true
+    },
+    {
+      "name": "field_coverage_organizationName",
+      "passed": true
+    },
+    {
+      "name": "field_coverage_phoneNumbers",
+      "passed": true
+    },
+    {
+      "name": "field_coverage_postalAddresses",
+      "passed": true
+    },
+    {
+      "name": "field_coverage_birthday",
+      "passed": true
+    },
+    {
+      "name": "field_coverage_dates",
+      "passed": true
+    },
+    {
+      "name": "field_coverage_instantMessageAddresses",
+      "passed": true
+    },
+    {
+      "name": "field_coverage_phoneticGivenName",
+      "passed": true
+    },
+    {
+      "name": "field_coverage_phoneticMiddleName",
+      "passed": true
+    },
+    {
+      "name": "field_coverage_phoneticFamilyName",
+      "passed": true
+    },
+    {
+      "name": "field_coverage_departmentName",
+      "passed": true
+    },
+    {
+      "name": "field_coverage_nonGregorianBirthday",
+      "passed": true
+    },
+    {
+      "name": "field_coverage_socialProfiles",
+      "passed": true
+    },
+    {
+      "name": "field_coverage_imageData",
+      "passed": true
+    },
+    {
+      "name": "field_coverage_contactType",
+      "passed": true
+    },
+    {
+      "name": "field_coverage_middleName",
+      "passed": true
+    },
+    {
+      "name": "replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_0",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_1",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "contacts_scope_enforced",
+      "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass",
+      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
+    },
+    {
+      "name": "owned_test_contacts_cleaned",
+      "passed": true
+    },
+    {
+      "name": "bridge_test_organization_empty",
+      "passed": true
+    },
+    {
+      "name": "cleanup_preserves_unowned_contacts_and_containers",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

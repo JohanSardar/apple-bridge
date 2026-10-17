@@ -47,7 +47,7 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 	}
 	defer w.Close()
 	defer func() {
-		bytes, err := os.ReadFile(filepath.Join(w.Gateway.Home, "capture-trace.jsonl"))
+		bytes, err := os.ReadFile(filepath.Join(w.Gateway.Home, "helper", "capture-trace.jsonl"))
 		if err != nil {
 			return
 		}
