@@ -283,6 +283,7 @@ features:
       - {id: CON-EXTERNAL, levels: [sim, real, replica]}
       - {id: CON-DROP-EVERYTHING, levels: [sim]}
       - {id: CON-TOKEN-CRASH, levels: [sim]}
+      - {id: CON-PERMISSION-LOSS, levels: [sim]}
       - {id: CON-IMAGE, levels: [sim]}
       - {id: CON-HANDLE-LINK, levels: [sim]}
   - id: contacts.write
@@ -295,6 +296,8 @@ features:
     scenarios:
       - {id: CON-CRUD, levels: [sim, real, replica]}
       - {id: CON-READONLY-CONTAINER, levels: [sim]}
+      - {id: CON-CONFLICT, levels: [sim]}
+      - {id: CON-RESOLVE-RESTART, levels: [sim]}
 
   - id: notes.read
     title: Notes folders and notes, protobuf decoding, locked notes
