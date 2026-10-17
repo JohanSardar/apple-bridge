@@ -69,7 +69,7 @@ func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fenc
 		return err
 	}
 	rejectConflict := func(o contracts.Observation) error {
-		if err := emit(contracts.Capture{Source: contracts.Reminders, Observations: []contracts.Observation{o}}); err != nil {
+		if err := emit(contracts.Capture{Source: contracts.Reminders, Observations: []contracts.Observation{o}}, 0); err != nil {
 			return err
 		}
 		evidence, _ := json.Marshal(contracts.ConflictObservation{NativeKey: o.NativeKey, CaptureCheckpoint: checkpoint()})

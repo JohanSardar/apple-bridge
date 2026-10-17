@@ -155,13 +155,13 @@ func runCommands(ctx context.Context, w *world.World, id string, e *Evidence, ob
 		add("other_issuer_status_hidden", errors.Is(err, contracts.ErrNotFound))
 		for _, suffix := range []string{"000-hidden-a", "000-hidden-b"} {
 			hidden := create("hidden-page")
-			hidden.ID = "cmd_" + head.Epoch + "_" + suffix
+			hidden.ID = suffix
 			_, err := submit(hidden)
 			add("hidden_command_fixture_"+suffix, err == nil)
 		}
 		for _, suffix := range []string{"zzz-owned-a", "zzz-owned-b"} {
 			owned := create("owned-page")
-			owned.ID = "cmd_" + head.Epoch + "_" + suffix
+			owned.ID = suffix
 			var result contracts.CommandRecord
 			err := other.Call(ctx, owned.Op, owned, &result)
 			add("owned_command_fixture_"+suffix, observed(result, err))
@@ -170,9 +170,9 @@ func runCommands(ctx context.Context, w *world.World, id string, e *Evidence, ob
 			other.Protocol = protocol
 			var first, second contracts.ReadResult
 			err := other.Call(ctx, "records.query", contracts.ReadQuery{Collection: "system.command", Limit: 1}, &first)
-			valid := err == nil && len(first.Records) == 1 && first.Records[0].ID == "cmd_"+head.Epoch+"_zzz-owned-a" && first.Next != ""
+			valid := err == nil && len(first.Records) == 1 && first.Records[0].ID == "zzz-owned-a" && first.Next != ""
 			err = other.Call(ctx, "records.query", contracts.ReadQuery{Collection: "system.command", Limit: 1, After: first.Next}, &second)
-			add(protocol+"_visible_command_pagination_skips_foreign_rows", valid && err == nil && len(second.Records) == 1 && second.Records[0].ID == "cmd_"+head.Epoch+"_zzz-owned-b" && second.Next == "")
+			add(protocol+"_visible_command_pagination_skips_foreign_rows", valid && err == nil && len(second.Records) == 1 && second.Records[0].ID == "zzz-owned-b" && second.Next == "")
 		}
 	case "CORE-CMD-LOST-RESPONSE":
 		c := create("peer-lost-response")

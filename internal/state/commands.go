@@ -51,7 +51,7 @@ func (s *Store) InitCommands(ctx context.Context) error {
 	}
 	return s.openLedger(ctx)
 }
-func (s *Store) openLedger(ctx context.Context) error {
+func (s *Store) openLedger(ctx context.Context, publishMirror ...bool) error {
 	path := filepath.Join(s.home, "ledger.db")
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0600)
 	if err != nil {
@@ -88,6 +88,9 @@ func (s *Store) openLedger(ctx context.Context) error {
 	}
 	if _, err = s.db.ExecContext(ctx, "INSERT INTO meta(key,value) VALUES('admission_era',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", era); err != nil {
 		return err
+	}
+	if len(publishMirror) > 0 && !publishMirror[0] {
+		return nil
 	}
 	records, err := s.Commands(ctx)
 	if err != nil {
@@ -314,11 +317,12 @@ func rotateAdmissionEra(ctx context.Context, home, stagedPath string, accept boo
 	}
 	store := &Store{home: home, db: staged, changed: make(chan struct{})}
 	defer store.Close()
-	if accept {
-		err = store.openLedger(ctx)
-	} else {
-		err = store.InitCommands(ctx)
+	if !accept {
+		if err = store.checkLedger(ctx); err != nil {
+			return err
+		}
 	}
+	err = store.openLedger(ctx, false)
 	if err != nil {
 		return err
 	}

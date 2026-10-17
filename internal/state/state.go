@@ -25,8 +25,8 @@ type Store struct {
 	BlobProtection func(context.Context, contracts.ReferenceSet) error
 	blobSnapshots  map[string][]contracts.BlobReference
 
-	home string
-	ledger *sql.DB
+	home          string
+	ledger        *sql.DB
 	applyBoundary func()
 	db            *sql.DB
 	write         sync.Mutex

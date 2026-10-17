@@ -59,10 +59,12 @@ func run(ctx context.Context, args []string) error {
 		return bridgeruntime.Start(ctx, bridgeruntime.Config{Role: *role, Home: *home, PeerAddress: *peer, APIAddress: *api, Socket: *socket, HelperApp: *helperApp, HelperLabCommands: *helperLabCommands, BlobCap: *blobCap, BlobGraceMS: *blobGrace, RetentionRows: *retentionRows, RetentionAge: *retentionAge})
 	}
 	if verb == "doctor" {
- result, err := bridgeruntime.Doctor(ctx, *home)
- if err != nil { return err }
- return json.NewEncoder(os.Stdout).Encode(result)
- }
+		result, err := bridgeruntime.Doctor(ctx, *home)
+		if err != nil {
+			return err
+		}
+		return json.NewEncoder(os.Stdout).Encode(result)
+	}
 	if verb == "restore" {
 		if *backup == "" {
 			*backup = code

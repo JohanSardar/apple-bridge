@@ -1,0 +1,7 @@
+id: CORE-RESTORE-OLD-SCHEMA
+feature: core.recovery
+levels: [sim]
+given: [{world: {replicas: 1}}, {seed: {count: 4}}]
+when: [{robustness: {case: restore-old-schema}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

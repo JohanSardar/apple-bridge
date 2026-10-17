@@ -859,7 +859,7 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		return err
 	}
 	for _, scenario := range scenarios {
-		if scenario.ID == "CORE-UPGRADE" || strings.Contains(scenario.ID, "REVIEW-UPGRADE") {
+		if scenario.ID == "CORE-UPGRADE" || scenario.ID == "CORE-RESTORE-OLD-SCHEMA" || strings.Contains(scenario.ID, "REVIEW-UPGRADE") {
 			if err = world.BuildLegacy(ctx); err != nil {
 				return err
 			}

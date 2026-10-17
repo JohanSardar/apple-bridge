@@ -39,7 +39,7 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 	}
 	var w *world.World
 	var err error
-	if name == "upgrade" {
+	if name == "upgrade" || name == "restore-old-schema" {
 		w, err = world.NewLegacy(ctx, level, replicas, seed)
 	} else {
 		w, err = world.New(ctx, level, replicas, seed)
@@ -476,6 +476,46 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 		if w.FreeDisk() != nil {
 			return fail("free_dedicated_disk")
 		}
+	case "restore-old-schema":
+		backup := filepath.Join(w.Dir, "schema1-backup.db")
+		if w.Backup(backup) != nil {
+			return fail("backup_from_older_gateway_binary")
+		}
+		w.StopGateway()
+		if w.RestartGateway(0) != nil {
+			return fail("upgrade_before_command_admission")
+		}
+		if w.ControlAction("/flush", struct{}{}) != nil {
+			return fail("upgraded_helper_capture_ready")
+		}
+		var lists contracts.ReadResult
+		_, err := world.Request(ctx, w.Gateway, "/v1/op/records.query", contracts.ReadQuery{Collection: "reminders.list"}, &lists)
+		if err != nil || len(lists.Records) == 0 {
+			return fail("upgraded_reminder_list")
+		}
+		args, _ := json.Marshal(map[string]string{"list_id": lists.Records[0].ID, "title": "[ab-test] command after schema1 backup"})
+		command := contracts.Command{ID: "old-schema-surviving-command", Op: "reminders.create", Args: args, WaitMS: 15000}
+		var first contracts.CommandRecord
+		_, err = world.Request(ctx, w.Gateway, "/v1/op/"+command.Op, command, &first)
+		if err != nil || first.Disposition != contracts.DispositionLocallyObserved {
+			return fail("command_after_old_schema_backup")
+		}
+		before, _ := w.Cursor(w.Gateway)
+		w.StopGateway()
+		if w.Restore(backup) != nil {
+			return fail("restore_old_schema_with_newer_live_ledger")
+		}
+		if w.RestartGateway(0) != nil {
+			return fail("migrate_restored_old_schema_before_publication")
+		}
+		if w.Await(15*time.Second, func() bool { return convergence(w) }) != nil {
+			return fail("old_schema_restore_convergence")
+		}
+		after, _ := w.Cursor(w.Gateway)
+		var retried contracts.CommandRecord
+		_, err = world.Request(ctx, w.Gateway, "/v1/op/"+command.Op, command, &retried)
+		effects, effectsErr := w.Effects()
+		add("old_schema_restore_rotates_epoch_keeps_live_ledger", before.Epoch != after.Epoch && err == nil && effectsErr == nil && effects[command.ID] == 1 && retried.Disposition == first.Disposition && retried.AdmissionEra == first.AdmissionEra)
 	case "restore-epoch":
 		backup := filepath.Join(w.Dir, "backup.db")
 		if w.Backup(backup) != nil {
