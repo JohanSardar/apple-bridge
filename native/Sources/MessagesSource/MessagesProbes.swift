@@ -87,14 +87,29 @@ public enum MessagesProbes {
         let baseline = try database.rows("SELECT COALESCE(MAX(ROWID), 0) AS maximum FROM message").first?["maximum"] ?? "0"
         let chats = try database.rows("SELECT DISTINCT c.guid FROM chat c JOIN chat_handle_join j ON c.ROWID=j.chat_id JOIN handle h ON h.ROWID=j.handle_id WHERE h.id=? AND c.service_name='iMessage' AND (SELECT COUNT(*) FROM chat_handle_join peers WHERE peers.chat_id=c.ROWID)=1 ORDER BY c.ROWID DESC", bindings: [handle])
         let rawGUID = chats.first?["guid"]
-        let chatID = rawGUID.map { $0.hasPrefix("any;-;") ? "iMessage;-;" + $0.dropFirst(6) : $0 }
-        let route: String
-        if let chatID {
-            route = "tell application id \"com.apple.MobileSMS\" to send \(MessagesAppleScript.literal(text)) to chat id \(MessagesAppleScript.literal(chatID))"
-        } else {
-            route = "tell application id \"com.apple.MobileSMS\"\nset targetService to first service whose service type = iMessage\nsend \(MessagesAppleScript.literal(text)) to buddy \(MessagesAppleScript.literal(handle)) of targetService\nend tell"
+        let sendToChat: (String) -> String = { chatID in
+            "tell application id \"com.apple.MobileSMS\" to send \(MessagesAppleScript.literal(text)) to chat id \(MessagesAppleScript.literal(chatID))"
         }
-        let scriptError = MessagesAppleScript.execute(route)
+        let sendToBuddy = "tell application id \"com.apple.MobileSMS\"\nset targetService to first service whose service type = iMessage\nsend \(MessagesAppleScript.literal(text)) to buddy \(MessagesAppleScript.literal(handle)) of targetService\nend tell"
+        var routes: [(name: String, script: String)] = []
+        if let rawGUID {
+            routes.append(("chat_id_raw", sendToChat(rawGUID)))
+            if rawGUID.hasPrefix("any;-;") {
+                routes.append(("chat_id_imessage_normalized", sendToChat("iMessage;-;" + rawGUID.dropFirst(6))))
+            }
+        }
+        routes.append(("imessage_buddy", sendToBuddy))
+        var attempts: [[String: Any]] = []
+        var scriptError: Int = 0
+        var routeUsed = "none"
+        for candidate in routes {
+            scriptError = MessagesAppleScript.execute(candidate.script)
+            attempts.append(["route": candidate.name, "apple_event_error": scriptError])
+            if scriptError == 0 {
+                routeUsed = candidate.name
+                break
+            }
+        }
         let deadline = Date().addingTimeInterval(10)
         var observed: [[String: String]] = []
         var matched: [String: String]?
@@ -107,8 +122,8 @@ public enum MessagesProbes {
         let ghosts = observed.filter { ($0["text"] ?? "").isEmpty && $0["service"] == "SMS" && $0["chat_joins"] == "0" && $0["is_from_me"] == "1" }
         var report: [String: Any] = [
             "apple_event_error": scriptError,
-            "route": chatID == nil ? "imessage_buddy" : "existing_chat",
-            "chat_guid_format_used": chatID == nil ? "none_buddy" : rawGUID?.hasPrefix("any;-;") == true ? "iMessage;-; normalized_from_any;-;" : "iMessage_service_specific",
+            "route": routeUsed,
+            "route_attempts": attempts,
             "row_appeared": matched != nil || !ghosts.isEmpty,
             "matching_self_chat_row_appeared": matched != nil,
             "row_attribution": matched != nil ? "matching_self_chat" : ghosts.isEmpty ? "none" : "unattributed_ghost_candidate",

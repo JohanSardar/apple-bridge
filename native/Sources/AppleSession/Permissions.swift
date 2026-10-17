@@ -58,14 +58,31 @@ public final class PermissionSession {
         }
     }
 
-    public func onboard() {
-        events.requestFullAccessToEvents { _, _ in }
-        events.requestFullAccessToReminders { _, _ in }
-        contacts.requestAccess(for: .contacts) { _, _ in }
-        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
-        _ = AXIsProcessTrustedWithOptions(options)
+    public func onboard() async {
+        NSApplication.shared.setActivationPolicy(.regular)
+        NSApplication.shared.activate()
+        refresh()
+        let states = report.snapshot()
+        if states["calendar"] == PermissionState.notDetermined.rawValue {
+            _ = try? await events.requestFullAccessToEvents()
+        }
+        if states["reminders"] == PermissionState.notDetermined.rawValue {
+            _ = try? await events.requestFullAccessToReminders()
+        }
+        if states["contacts"] == PermissionState.notDetermined.rawValue {
+            _ = try? await contacts.requestAccess(for: .contacts)
+        }
+        if states["accessibility"] != PermissionState.granted.rawValue {
+            let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+            _ = AXIsProcessTrustedWithOptions(options)
+        }
+        if states["full_disk_access"] != PermissionState.granted.rawValue, let pane = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles") {
+            NSWorkspace.shared.open(pane)
+        }
         requestAutomation("com.apple.MobileSMS")
         requestAutomation("com.apple.systemevents")
+        refresh()
+        NSApplication.shared.setActivationPolicy(.accessory)
     }
 
     private func requestAutomation(_ bundle: String) {

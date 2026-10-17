@@ -10,7 +10,8 @@ public enum HelperCommand {
         let reportURL = try PrivateReport.validate(arguments[reportIndex + 1])
         let session = PermissionSession()
         let deadlineReport = session.report
-        DispatchQueue.global().asyncAfter(deadline: .now() + 35) {
+        let limit: Double = arguments.first == "onboard" ? 300 : 35
+        DispatchQueue.global().asyncAfter(deadline: .now() + limit) {
             try? PrivateReport.write(deadlineReport.snapshot(), to: reportURL)
             exit(1)
         }
@@ -21,14 +22,16 @@ public enum HelperCommand {
         }
         if arguments.first == "onboard" {
             try PrivateReport.write(session.report.snapshot(), to: reportURL)
-            let report = session.report
-            DispatchQueue.global().asyncAfter(deadline: .now() + 30) {
-                try? PrivateReport.write(report.snapshot(), to: reportURL)
-                exit(0)
+            var finished = false
+            Task { @MainActor in
+                await session.onboard()
+                finished = true
             }
-            session.onboard()
-            let deadline = Date().addingTimeInterval(20)
-            while Date() < deadline {
+            while !finished {
+                RunLoop.current.run(until: Date().addingTimeInterval(0.25))
+            }
+            let settle = Date().addingTimeInterval(5)
+            while Date() < settle {
                 RunLoop.current.run(until: Date().addingTimeInterval(0.25))
             }
             session.refresh()
