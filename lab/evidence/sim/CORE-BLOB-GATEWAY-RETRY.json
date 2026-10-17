@@ -1,0 +1,151 @@
+{
+  "run_id": "run_01M546MJWSVV04Z0QFG5HHZG3C",
+  "scenario": "CORE-BLOB-GATEWAY-RETRY",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "6a0ca8656fc649d94f430a10ea4904a60bb93667",
+  "at": "2026-10-17T05:51:28.15308Z",
+  "assertions": [
+    {
+      "name": "replica_host_is_air",
+      "passed": true
+    },
+    {
+      "name": "bootstrap_snapshot",
+      "passed": true
+    },
+    {
+      "name": "scope_query_and_get",
+      "passed": true
+    },
+    {
+      "name": "attachment_fixture",
+      "passed": true
+    },
+    {
+      "name": "attachment_metadata_visible",
+      "passed": true
+    },
+    {
+      "name": "metadata_convergence_with_blob_backlog",
+      "passed": true
+    },
+    {
+      "name": "gateway_retries_timed_out_read",
+      "passed": true
+    },
+    {
+      "name": "helper_restarts_during_staged_download",
+      "passed": true
+    },
+    {
+      "name": "gateway_resumes_with_fresh_handles",
+      "passed": true
+    },
+    {
+      "name": "blob_complete",
+      "passed": true
+    },
+    {
+      "name": "authorized_bytes_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "authorized_bytes_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "retry_exhaustion_fixture",
+      "passed": true
+    },
+    {
+      "name": "bounded_retries_surface_terminal_reason",
+      "passed": true
+    },
+    {
+      "name": "retry_backoff_is_bounded",
+      "passed": true
+    },
+    {
+      "name": "replica_surfaces_terminal_failure",
+      "passed": true
+    },
+    {
+      "name": "convergence_truth_gateway_replicas",
+      "passed": true
+    },
+    {
+      "name": "latency_observations_complete",
+      "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass",
+      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
+    },
+    {
+      "name": "sse_contiguous_watermarks_0",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_watermarks_1",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_0",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_1",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "effect_done→blob_complete": {
+      "samples": 1,
+      "p50_ms": 14740.046125,
+      "p95_ms": 14740.046125,
+      "max_ms": 14740.046125,
+      "timeouts": 0
+    },
+    "effect_done→gateway_visible": {
+      "samples": 1,
+      "p50_ms": 10.794916,
+      "p95_ms": 10.794916,
+      "max_ms": 10.794916,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica0": {
+      "samples": 1,
+      "p50_ms": 34.0575,
+      "p95_ms": 34.0575,
+      "max_ms": 34.0575,
+      "timeouts": 0
+    },
+    "retry_exhaustion→gateway_failed": {
+      "samples": 1,
+      "p50_ms": 15833.599333,
+      "p95_ms": 15833.599333,
+      "max_ms": 15833.599333,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

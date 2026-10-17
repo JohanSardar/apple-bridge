@@ -5,5 +5,11 @@
     "load_average": "{ 4.50 7.25 8.16 }",
     "process_cpu_percent_sum": 423.69999999999993,
     "active_and_queued_heavy_wrappers": 0
+  },
+  {
+    "phase": "core-sim-in-progress",
+    "at": "2026-10-17T05:43:49.679294+00:00",
+    "load_average": "{ 7.28 7.07 7.94 }",
+    "process_cpu_percent_sum": 362.40000000000015
   }
 ]
