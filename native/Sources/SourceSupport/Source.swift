@@ -69,7 +69,7 @@ public struct Prepared: Sendable {
 }
 
 public protocol ObservationSink: Sendable {
-    func emit(source: String, observations: [JSON], scanStartedAt: String, scope: [String], live: Bool) async throws
+    func emit(source: String, generation: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) async throws
 }
 
 public protocol Source: Sendable {
