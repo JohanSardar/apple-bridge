@@ -19,7 +19,7 @@ Resume point for any fresh session. Updated after every unit of work.
 
 ## In flight (2026-10-17)
 - Worker `ab-m0-tracer-r1` (codex gpt-6.1-sol medium Fast): M0 tracer bullet — contracts, applepeer, state, replication, minimal trust/frontdoor/runtime, lab simapple/world/runner; scenarios CORE-BOOT, CORE-LIVE-LATENCY, CORE-RESUME at sim + replica.
-- DONE `ab-m1-spike-r1` (343ee36, 34508ab): stable dev signing identity, `native/` Helper app bundle, `onboard`/`status` TCC modes, probes (self-handles, send-self, ax-dump). SwiftPM crashes on this Air → build script compiles with swiftc directly against the macOS 26.5 SDK. Review `ab-m1-spike-review-r1` running.
+- DONE `ab-m1-spike-r1` (343ee36, 34508ab): stable dev signing identity, `native/` Helper app bundle, `onboard`/`status` TCC modes, probes (self-handles, send-self, ax-dump). SwiftPM crashes on this Air → build script compiles with swiftc directly against the macOS 26.5 SDK. Reviewed by `ab-m1-spike-review-r1`: safety OK (self-handle guard, no personal output, login keychain untouched), lint exception exact, designated requirement stable across rebuilds. Open findings, assigned to the M1 Helper-session unit: (1) `make build/native` still call crashing SwiftPM — fix by installing a user-local toolchain (swiftly, no sudo) or a dependency-aware swiftc build; SwiftPM error is a CLT framework symbol mismatch (`swift-package` vs `BuildServerProtocol.framework`), i.e. a broken CLT install; (2) HELPER-TCC-READY / probe-safety scenarios must exist as bridge-lab scenarios; (3) onboarding should open the FDA settings pane.
 
 ## Next
 - Review both units (separate reviewer workers, two-axis code review, rerun scenarios).
