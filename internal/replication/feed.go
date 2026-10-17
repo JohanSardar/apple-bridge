@@ -307,7 +307,7 @@ func (c *Client) follow(ctx context.Context, e trust.Enrollment) error {
 	ctx, stop := context.WithCancel(ctx)
 	defer stop()
 	head := c.Store.Head()
-	if _, err = send(ctx, conn, contracts.FeedFrame{T: "Hello", Protocol: contracts.FeedProtocol, ReplicaID: e.ReplicaID, Cursor: &head, SchemaOffer: []int{2, 1}, Credits: contracts.ByteCredit}); err != nil {
+	if _, err = send(ctx, conn, contracts.FeedFrame{T: "Hello", Protocol: contracts.FeedProtocol, ReplicaID: e.ReplicaID, Cursor: &head, SchemaOffer: []int{1}, Credits: contracts.ByteCredit}); err != nil {
 		return err
 	}
 	go func() {
@@ -375,7 +375,7 @@ func (c *Client) follow(ctx context.Context, e trust.Enrollment) error {
 			if ceiling == nil {
 				ceiling = e.Grants
 			}
-			if f.Protocol != contracts.FeedProtocol || (f.Schema != 1 && f.Schema != 2) || f.Epoch == "" || f.SubscriptionRevision == 0 || !trust.Subset(f.Scope, ceiling) {
+			if f.Protocol != contracts.FeedProtocol || f.Schema != 1 || f.Epoch == "" || f.SubscriptionRevision == 0 || !trust.Subset(f.Scope, ceiling) {
 				return contracts.ErrInvalid
 			}
 			welcome = f

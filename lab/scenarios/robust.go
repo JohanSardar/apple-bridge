@@ -95,6 +95,9 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 			return fail("all_registered_scope_paths")
 		}
 	case "pair":
+		if !automaticHealthyChecks(ctx, w, &evidence, add) {
+			return fail("automatic_sync_guarantees")
+		}
 		if w.PairingChecks() != nil {
 			return fail("wrong_expired_replayed_code_rejected")
 		}
@@ -193,7 +196,7 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 		}
 		add("unknown_optional_data_preserved_on_replica", err == nil && preserved)
 		status, err := w.Status(w.Replicas[0])
-		add("newer_replica_schema_offer_negotiates_older_gateway", err == nil && status.State == "connected" && status.Schema == 1)
+		add("newer_replica_compatible_schema_negotiates_older_gateway", err == nil && status.State == "connected" && status.Schema == 1)
 
 	case "bench":
 		token, err := w.ScopedToken(w.Gateway, "admin")
@@ -494,6 +497,9 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 		return fail("truth_gateway_replica_convergence")
 	}
 	add("truth_gateway_replica_convergence", true)
+	if !automaticHealthyChecks(ctx, w, &evidence, add) {
+		return fail("automatic_sync_guarantees")
+	}
 	for _, endpoint := range append([]world.Endpoint{w.Gateway}, w.Replicas...) {
 		report, err := w.Doctor(endpoint)
 		add("sqlite_integrity_"+map[bool]string{true: "replica", false: "gateway"}[endpoint.Home != w.Gateway.Home], err == nil && report["ok"] == true && report["exactly_once"] == true)
