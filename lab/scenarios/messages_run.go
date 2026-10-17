@@ -143,7 +143,11 @@ func runMessages(ctx context.Context, s Scenario, level string) Evidence {
 		add("bulk_started", action("seed", "", 4096))
 		add("live_mutation_during_import", action("receipts", "message-004095", 0))
 		add("live_insert_during_import", action("incoming", "during-import", 0))
-		add("backfill_revalidated_against_truth", await())
+		converged := w.Await(60*time.Second, func() bool { return messagesConverged(w) }) == nil
+		if !converged {
+			messageConvergenceDetails(w)
+		}
+		add("backfill_revalidated_against_truth", converged)
 	case "MSG-INCOMING":
 		samples := [][]float64{{}, {}, {}}
 		timeouts := 0
