@@ -1,10 +1,10 @@
 {
-  "run_id": "run_01M548WP6EFYX8RQTXJWGRVQG6",
+  "run_id": "run_01M548Z2SRN8GR9V43FRV4K8JM",
   "scenario": "MSG-HISTORY-IMPORT",
   "level": "sim",
   "passed": true,
-  "git_sha": "eaa734c5525f6ba75e0fbf5ed269161b4fafee3a",
-  "at": "2026-10-17T06:30:50.830896Z",
+  "git_sha": "c2bd1e7bd692d191e73f063b9e4d22e8d975fb9d",
+  "at": "2026-10-17T06:32:09.272235Z",
   "assertions": [
     {
       "name": "seed",
@@ -62,5 +62,41 @@
   "latency": {},
   "hosts": [
     "air"
-  ]
+  ],
+  "metrics": {
+    "history_import": {
+      "capture_ack_ms": 16740.288789,
+      "capture_bytes": 2766189,
+      "capture_count": 67,
+      "clock": "same-host monotonic SSE receipt after gateway commit / replica apply",
+      "credit_waits": 0,
+      "gateway_commit_visible_ms": 16998.965334,
+      "gateway_rows_per_second": 241.07349591468963,
+      "gateway_to_replica_tail_ms": 501.294333,
+      "host_after": {
+        "gomaxprocs": 8,
+        "load_average": [
+          11.14,
+          11.15,
+          10.92
+        ],
+        "logical_cpus": 8,
+        "occupied_heavy_slots": 2
+      },
+      "host_before": {
+        "gomaxprocs": 8,
+        "load_average": [
+          11.36,
+          11.19,
+          10.94
+        ],
+        "logical_cpus": 8,
+        "occupied_heavy_slots": 2
+      },
+      "replica_apply_visible_ms": 17500.259667000002,
+      "replica_rows_per_second": 234.16795396056563,
+      "synthetic_rows": 4098,
+      "truth_verification_ms": 1051.351041
+    }
+  }
 }
