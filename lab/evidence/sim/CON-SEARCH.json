@@ -1,14 +1,14 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[5.35 5.55 6.02] cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[6.38 7.69 7.31] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M55SYEPQTFES0N3H40ARJQT4",
+  "run_id": "run_01M55TG7XG40RXJYW7GJSPBQ97",
   "scenario": "CON-SEARCH",
   "level": "sim",
   "passed": true,
-  "git_sha": "707ad9d66c2e08e51ac4d2a032d71c33ec0f8aab",
-  "at": "2026-10-17T20:48:08.919362Z",
+  "git_sha": "d1296cabcf7a93994379a9b1ab8c637711e534fc",
+  "at": "2026-10-17T20:57:51.792667Z",
   "assertions": [
     {
       "name": "unified_contacts_imported",
