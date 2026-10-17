@@ -1,10 +1,10 @@
 {
-  "run_id": "run_01M545VGVED2DV4EBYYW875VTP",
+  "run_id": "run_01M546PTGNJAR410K88B62T8D4",
   "scenario": "REM-NATIVE-LIST-RACE",
   "level": "sim",
   "passed": true,
-  "git_sha": "70b2efcc849f1d6009373d8a32c265ef4f9cbf39",
-  "at": "2026-10-17T05:37:46.862928Z",
+  "git_sha": "a0c10d389f3dc9aef23e7291807c6e57f082bed6",
+  "at": "2026-10-17T05:52:41.493165Z",
   "assertions": [
     {
       "name": "replica_host_is_air",
@@ -56,6 +56,10 @@
     },
     {
       "name": "native_list_move_conflicts",
+      "passed": true
+    },
+    {
+      "name": "native_list_conflict_current_equals_truth",
       "passed": true
     },
     {
@@ -114,16 +118,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 23.436417,
-      "p95_ms": 23.436417,
-      "max_ms": 23.436417,
+      "p50_ms": 24.25825,
+      "p95_ms": 24.25825,
+      "max_ms": 24.25825,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 44.766292,
-      "p95_ms": 44.766292,
-      "max_ms": 44.766292,
+      "p50_ms": 47.639625,
+      "p95_ms": 47.639625,
+      "max_ms": 47.639625,
       "timeouts": 0
     }
   },

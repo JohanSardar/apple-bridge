@@ -1,10 +1,10 @@
 {
-  "run_id": "run_01M545RJN7NHBR0R93HE4QMQEK",
+  "run_id": "run_01M546W2F8H4B12Q2M5S0VQ8CN",
   "scenario": "CORE-CMD-ERA",
   "level": "sim",
   "passed": true,
-  "git_sha": "70b2efcc849f1d6009373d8a32c265ef4f9cbf39",
-  "at": "2026-10-17T05:36:10.407995Z",
+  "git_sha": "1f93f919b74920f3187c990d3ede52cb612bb6c4",
+  "at": "2026-10-17T05:55:33.480587Z",
   "assertions": [
     {
       "name": "replica_host_is_air",
@@ -51,11 +51,95 @@
       "passed": true
     },
     {
-      "name": "unknown_old_epoch_is_lookup_only",
+      "name": "backup_before_command",
       "passed": true
     },
     {
-      "name": "generated_id_binds_gateway_epoch",
+      "name": "opaque_caller_id_executes",
+      "passed": true
+    },
+    {
+      "name": "pre_restore_indeterminate",
+      "passed": true
+    },
+    {
+      "name": "restore_older_backup",
+      "passed": true
+    },
+    {
+      "name": "restart_after_restore",
+      "passed": true
+    },
+    {
+      "name": "restore_truth_reconverges",
+      "passed": true
+    },
+    {
+      "name": "restore_rotates_epoch",
+      "passed": true
+    },
+    {
+      "name": "post_backup_command_recognized_without_second_effect",
+      "passed": true
+    },
+    {
+      "name": "pre_restore_id_lookup_only",
+      "passed": true
+    },
+    {
+      "name": "old_era_resolve_is_lookup_only",
+      "passed": true
+    },
+    {
+      "name": "older_era_cannot_admit_new_id",
+      "passed": true
+    },
+    {
+      "name": "fresh_opaque_id_new_era_once",
+      "passed": true
+    },
+    {
+      "name": "fresh_opaque_retry_once",
+      "passed": true
+    },
+    {
+      "name": "remove_ledger",
+      "passed": true
+    },
+    {
+      "name": "missing_ledger_blocks_gateway",
+      "passed": true
+    },
+    {
+      "name": "restore_cannot_hide_ledger_loss",
+      "passed": true
+    },
+    {
+      "name": "ledger_loss_still_blocks_gateway",
+      "passed": true
+    },
+    {
+      "name": "operator_accepts_ledger_loss",
+      "passed": true
+    },
+    {
+      "name": "restart_after_accepted_ledger_loss",
+      "passed": true
+    },
+    {
+      "name": "helper_reconnected_after_ledger_loss",
+      "passed": true
+    },
+    {
+      "name": "accepted_loss_starts_new_era",
+      "passed": true
+    },
+    {
+      "name": "rest_generated_opaque_id",
+      "passed": true
+    },
+    {
+      "name": "mcp_generated_opaque_id",
       "passed": true
     },
     {
@@ -64,6 +148,22 @@
     },
     {
       "name": "no_automatic_redispatch_truth_effect_counts",
+      "passed": true
+    },
+    {
+      "name": "all_sse_observers_resume_new_epoch",
+      "passed": true
+    },
+    {
+      "name": "post_restore_probe",
+      "passed": true
+    },
+    {
+      "name": "post_restore_probe_committed",
+      "passed": true
+    },
+    {
+      "name": "all_sse_observers_advance_after_restore",
       "passed": true
     },
     {
@@ -114,16 +214,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 16.625,
-      "p95_ms": 16.625,
-      "max_ms": 16.625,
+      "p50_ms": 14.035292,
+      "p95_ms": 14.035292,
+      "max_ms": 14.035292,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 36.793083,
-      "p95_ms": 36.793083,
-      "max_ms": 36.793083,
+      "p50_ms": 28.370667,
+      "p95_ms": 28.370667,
+      "max_ms": 28.370667,
       "timeouts": 0
     }
   },
