@@ -3,15 +3,15 @@
     "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
     "start": {
       "air": {
-        "at": "2026-10-17T18:49:03.409605Z",
+        "at": "2026-10-17T19:15:17.180477Z",
         "cpu_count": 8,
         "load_average": [
-          3.05,
-          3.68,
-          4.76
+          3.85,
+          7.73,
+          8.26
         ],
-        "cpu_idle_percent": 78,
-        "free_memory_bytes": 77463552,
+        "cpu_idle_percent": 76,
+        "free_memory_bytes": 126943232,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
         "heavy_queue_length": 3,
@@ -20,33 +20,33 @@
     },
     "end": {
       "air": {
-        "at": "2026-10-17T18:49:36.419251Z",
+        "at": "2026-10-17T19:15:49.920872Z",
         "cpu_count": 8,
         "load_average": [
-          2.79,
-          3.55,
-          4.68
+          3.05,
+          7.17,
+          8.04
         ],
-        "cpu_idle_percent": 67,
-        "free_memory_bytes": 115638272,
+        "cpu_idle_percent": 84,
+        "free_memory_bytes": 240943104,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 3,
+        "heavy_queue_length": 4,
         "quiet": false
       }
     },
     "periodic_samples": [
       {
         "air": {
-          "at": "2026-10-17T18:49:09.47422Z",
+          "at": "2026-10-17T19:15:23.26155Z",
           "cpu_count": 8,
           "load_average": [
-            2.97,
-            3.65,
-            4.75
+            3.62,
+            7.62,
+            8.22
           ],
-          "cpu_idle_percent": 77,
-          "free_memory_bytes": 62685184,
+          "cpu_idle_percent": 82,
+          "free_memory_bytes": 71680000,
           "active_heavy_slots": 2,
           "other_active_heavy_slots": 1,
           "heavy_queue_length": 3,
@@ -55,49 +55,15 @@
       },
       {
         "air": {
-          "at": "2026-10-17T18:49:14.475674Z",
+          "at": "2026-10-17T19:15:28.25997Z",
           "cpu_count": 8,
           "load_average": [
-            2.97,
-            3.64,
-            4.74
-          ],
-          "cpu_idle_percent": 76,
-          "free_memory_bytes": 64241664,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 3,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T18:49:19.475711Z",
-          "cpu_count": 8,
-          "load_average": [
-            2.89,
-            3.61,
-            4.72
-          ],
-          "cpu_idle_percent": 76,
-          "free_memory_bytes": 63258624,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 3,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T18:49:24.474153Z",
-          "cpu_count": 8,
-          "load_average": [
-            2.74,
             3.57,
-            4.7
+            7.54,
+            8.19
           ],
-          "cpu_idle_percent": 52,
-          "free_memory_bytes": 60735488,
+          "cpu_idle_percent": 74,
+          "free_memory_bytes": 64339968,
           "active_heavy_slots": 2,
           "other_active_heavy_slots": 1,
           "heavy_queue_length": 3,
@@ -106,15 +72,15 @@
       },
       {
         "air": {
-          "at": "2026-10-17T18:49:29.474892Z",
+          "at": "2026-10-17T19:15:33.26167Z",
           "cpu_count": 8,
           "load_average": [
-            2.6,
-            3.53,
-            4.68
+            3.37,
+            7.43,
+            8.14
           ],
-          "cpu_idle_percent": 64,
-          "free_memory_bytes": 65306624,
+          "cpu_idle_percent": 76,
+          "free_memory_bytes": 66191360,
           "active_heavy_slots": 2,
           "other_active_heavy_slots": 1,
           "heavy_queue_length": 3,
@@ -123,18 +89,52 @@
       },
       {
         "air": {
-          "at": "2026-10-17T18:49:34.475942Z",
+          "at": "2026-10-17T19:15:38.261059Z",
           "cpu_count": 8,
           "load_average": [
-            2.79,
-            3.55,
-            4.68
+            3.34,
+            7.36,
+            8.11
           ],
-          "cpu_idle_percent": 67,
-          "free_memory_bytes": 60784640,
+          "cpu_idle_percent": 59,
+          "free_memory_bytes": 66600960,
           "active_heavy_slots": 2,
           "other_active_heavy_slots": 1,
           "heavy_queue_length": 3,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:15:43.261857Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.23,
+            7.27,
+            8.08
+          ],
+          "cpu_idle_percent": 70,
+          "free_memory_bytes": 72925184,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:15:48.261919Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.05,
+            7.17,
+            8.04
+          ],
+          "cpu_idle_percent": 72,
+          "free_memory_bytes": 116129792,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
           "quiet": false
         }
       }
@@ -144,13 +144,13 @@
     "quiet_wait_ms": 0,
     "quiet_wait_expired": false
   },
-  "run_id": "run_01M55K4DQTZRR7K5HCSSB11WBT",
+  "run_id": "run_01M55MMEN0PQVRRKGVJWMMER4B",
   "network_path": "loopback",
   "scenario": "CORE-RESUME",
   "level": "sim",
   "passed": true,
-  "git_sha": "26fa14e36826189f83c3a0a8091f05399fdca727",
-  "at": "2026-10-17T18:49:04.506911Z",
+  "git_sha": "d7192c92d18042c300337105ece702609bbb68d8",
+  "at": "2026-10-17T19:15:18.304397Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -228,23 +228,23 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 2,
-      "p50_ms": 16.353291,
-      "p95_ms": 17.831833,
-      "max_ms": 17.831833,
+      "p50_ms": 5.783417,
+      "p95_ms": 11.19,
+      "max_ms": 11.19,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 2,
-      "p50_ms": 20.783,
-      "p95_ms": 21.334,
-      "max_ms": 21.334,
+      "p50_ms": 8.873333,
+      "p95_ms": 14.884916,
+      "max_ms": 14.884916,
       "timeouts": 0
     },
     "partition_effect_done→replica_visible:replica0": {
       "samples": 30,
-      "p50_ms": 15829.740417,
-      "p95_ms": 30096.515709,
-      "max_ms": 31109.837584,
+      "p50_ms": 15959.119125,
+      "p95_ms": 30101.123542,
+      "max_ms": 31114.872375,
       "timeouts": 0
     }
   },

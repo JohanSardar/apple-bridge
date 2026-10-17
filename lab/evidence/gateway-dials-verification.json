@@ -1,0 +1,432 @@
+{
+  "task": "gateway-dials and authenticated feed clock offset",
+  "transport": "ssh -o ControlPath=none air",
+  "working_directory": "~/apple-bridge/.worktrees/gateway-dials",
+  "commits": [
+    {
+      "sha": "91c1568b145266cf6bee21ce89c0a0fe45367268",
+      "subject": "Add gateway-initiated replication acceptance journey"
+    },
+    {
+      "sha": "8a407cc5d5743df8a8b595fd1115d358903178dc",
+      "subject": "Pair listening replicas with pinned gateway certificates"
+    },
+    {
+      "sha": "81052a851855925ff306eda345afbd875e527bc7",
+      "subject": "Share delegated command validation across HTTPS and feed transports"
+    },
+    {
+      "sha": "e310b7735f3d361e788d061d79199c8b6484d739",
+      "subject": "Dial pinned listening replicas through the shared feed state machine"
+    },
+    {
+      "sha": "b6d4f09bcec3a0e17fdd67fa35e7a3c68209240b",
+      "subject": "Exercise direct gateway dials, forwarding, recovery, and revocation"
+    },
+    {
+      "sha": "b9a58e4550874e2fe413ec636823355ef2426bd3",
+      "subject": "Bound concurrent feed commands without delaying admission in a transport queue"
+    },
+    {
+      "sha": "1fdb564a77a594afb49b68e61d49c94b159c53f3",
+      "subject": "Preserve listening replica addresses across lab restarts"
+    },
+    {
+      "sha": "1f0a6576827a447876827ed2ef15ca38abed1118",
+      "subject": "Prove the live replica listener rejects an unpaired certificate"
+    },
+    {
+      "sha": "9b1beaa042cc2a83b66c4b2c3b31a00b13972330",
+      "subject": "Retain pairing IDs to reject replay while allowing explicit re-pairing"
+    },
+    {
+      "sha": "c1f2fd692c49dc05baabf5ffcf776ad83aaaaa18",
+      "subject": "Exercise reverse pairing replay rejection through the replica CLI"
+    },
+    {
+      "sha": "0bb52da5baf5b6716648dce9a3b1bc630c2b2529",
+      "subject": "Record passing gateway dials and replica-dials regression evidence"
+    },
+    {
+      "sha": "7d38cbafb67c60b020a25e1cf6ad5d08a39320f0",
+      "subject": "Add delayed-feed clock checks in both connection directions"
+    },
+    {
+      "sha": "522bf1551fcd6727d91bdc3c4b2dc75a36d170b0",
+      "subject": "Drain delayed clock exchanges before sync latency assertions"
+    },
+    {
+      "sha": "d7192c92d18042c300337105ece702609bbb68d8",
+      "subject": "Measure authenticated feed clock offset with four timestamps and RTT uncertainty"
+    },
+    {
+      "sha": "969b8dacdadf73b079a6f3581a65e5fe1f437acf",
+      "subject": "Link delayed-feed clock scenarios to the recovery feature"
+    }
+  ],
+  "tested_source_sha": "d7192c92d18042c300337105ece702609bbb68d8",
+  "feature_registry_sha": "969b8dacdadf73b079a6f3581a65e5fe1f437acf",
+  "command_environment": {
+    "GOFLAGS": "-p=2",
+    "heavy_wrapper": "packaging/dev/heavy.sh bash lab/evidence/private/gateway-dials/verify.sh",
+    "scope": "All builds, test suites, bridge-lab runs and the initial quality-gate batch used the heavy wrapper. The final make features rerun was a direct lightweight cached-tool invocation after adding manifest links."
+  },
+  "commands": [
+    {
+      "name": "clock-math",
+      "command": "go test -p 2 ./internal/contracts -run TestClockEstimateSeparatesOffsetAndDelay",
+      "exit_code": 0
+    },
+    {
+      "name": "clock-sim",
+      "command": "go run ./cmd/bridge-lab run lab/scenarios/core/CORE-CLOCK-DELAY.yaml lab/scenarios/core/CORE-CLOCK-DELAY-GATEWAY-DIALS.yaml lab/scenarios/core/CORE-DOCTOR.yaml lab/scenarios/core/CORE-UPGRADE.yaml --level sim",
+      "exit_code": 0
+    },
+    {
+      "name": "clock-replica",
+      "command": "go run ./cmd/bridge-lab run lab/scenarios/core/CORE-CLOCK-DELAY.yaml lab/scenarios/core/CORE-CLOCK-DELAY-GATEWAY-DIALS.yaml lab/scenarios/core/CORE-DOCTOR.yaml --level replica",
+      "exit_code": 0
+    },
+    {
+      "name": "sim",
+      "command": "go run ./cmd/bridge-lab run lab/scenarios/core/CORE-GATEWAY-DIALS.yaml lab/scenarios/core/CORE-RESUME.yaml lab/scenarios/core/CORE-PAIR.yaml lab/scenarios/core/CORE-SCOPE-LEAK.yaml lab/scenarios/core/CORE-CMD-OFFLINE.yaml lab/scenarios/core/CORE-BLOB-INTERRUPT.yaml --level sim --require-quiet",
+      "exit_code": 0
+    },
+    {
+      "name": "replica",
+      "command": "go run ./cmd/bridge-lab run lab/scenarios/core/CORE-GATEWAY-DIALS.yaml lab/scenarios/core/CORE-RESUME.yaml lab/scenarios/core/CORE-PAIR.yaml lab/scenarios/core/CORE-SCOPE-LEAK.yaml lab/scenarios/core/CORE-CMD-OFFLINE.yaml lab/scenarios/core/CORE-BLOB-INTERRUPT.yaml --level replica --require-quiet",
+      "exit_code": 0
+    },
+    {
+      "name": "test",
+      "command": "go test -p 2 ./...",
+      "exit_code": 0
+    },
+    {
+      "name": "lint",
+      "command": "make lint",
+      "exit_code": 0
+    },
+    {
+      "name": "vet",
+      "command": "go vet ./...",
+      "exit_code": 0
+    },
+    {
+      "name": "vet-lab",
+      "command": "go vet -tags lab ./...",
+      "exit_code": 0
+    },
+    {
+      "name": "features",
+      "command": "make features",
+      "exit_code": 0
+    }
+  ],
+  "scenario_level_passes": 19,
+  "scenario_results": [
+    {
+      "scenario": "CORE-GATEWAY-DIALS",
+      "level": "sim",
+      "passed": true,
+      "git_sha": "d7192c92d18042c300337105ece702609bbb68d8",
+      "evidence": "lab/evidence/sim/CORE-GATEWAY-DIALS.json",
+      "network_path": "gateway_dials_loopback_fault_proxy",
+      "unverified_assertions": [
+        "replica_application_exactly_once"
+      ]
+    },
+    {
+      "scenario": "CORE-RESUME",
+      "level": "sim",
+      "passed": true,
+      "git_sha": "d7192c92d18042c300337105ece702609bbb68d8",
+      "evidence": "lab/evidence/sim/CORE-RESUME.json",
+      "network_path": "loopback",
+      "unverified_assertions": [
+        "replica_application_exactly_once"
+      ]
+    },
+    {
+      "scenario": "CORE-PAIR",
+      "level": "sim",
+      "passed": true,
+      "git_sha": "d7192c92d18042c300337105ece702609bbb68d8",
+      "evidence": "lab/evidence/sim/CORE-PAIR.json",
+      "network_path": "loopback",
+      "unverified_assertions": []
+    },
+    {
+      "scenario": "CORE-SCOPE-LEAK",
+      "level": "sim",
+      "passed": true,
+      "git_sha": "d7192c92d18042c300337105ece702609bbb68d8",
+      "evidence": "lab/evidence/sim/CORE-SCOPE-LEAK.json",
+      "network_path": "loopback",
+      "unverified_assertions": []
+    },
+    {
+      "scenario": "CORE-CMD-OFFLINE",
+      "level": "sim",
+      "passed": true,
+      "git_sha": "d7192c92d18042c300337105ece702609bbb68d8",
+      "evidence": "lab/evidence/sim/CORE-CMD-OFFLINE.json",
+      "network_path": "loopback",
+      "unverified_assertions": [
+        "replica_application_exactly_once"
+      ]
+    },
+    {
+      "scenario": "CORE-BLOB-INTERRUPT",
+      "level": "sim",
+      "passed": true,
+      "git_sha": "d7192c92d18042c300337105ece702609bbb68d8",
+      "evidence": "lab/evidence/sim/CORE-BLOB-INTERRUPT.json",
+      "network_path": "loopback",
+      "unverified_assertions": [
+        "replica_application_exactly_once"
+      ]
+    },
+    {
+      "scenario": "CORE-CLOCK-DELAY",
+      "level": "sim",
+      "passed": true,
+      "git_sha": "d7192c92d18042c300337105ece702609bbb68d8",
+      "evidence": "lab/evidence/sim/CORE-CLOCK-DELAY.json",
+      "network_path": "loopback",
+      "unverified_assertions": []
+    },
+    {
+      "scenario": "CORE-CLOCK-DELAY-GATEWAY-DIALS",
+      "level": "sim",
+      "passed": true,
+      "git_sha": "d7192c92d18042c300337105ece702609bbb68d8",
+      "evidence": "lab/evidence/sim/CORE-CLOCK-DELAY-GATEWAY-DIALS.json",
+      "network_path": "gateway_dials_loopback_fault_proxy",
+      "unverified_assertions": []
+    },
+    {
+      "scenario": "CORE-DOCTOR",
+      "level": "sim",
+      "passed": true,
+      "git_sha": "d7192c92d18042c300337105ece702609bbb68d8",
+      "evidence": "lab/evidence/sim/CORE-DOCTOR.json",
+      "network_path": "loopback",
+      "unverified_assertions": []
+    },
+    {
+      "scenario": "CORE-UPGRADE",
+      "level": "sim",
+      "passed": true,
+      "git_sha": "d7192c92d18042c300337105ece702609bbb68d8",
+      "evidence": "lab/evidence/sim/CORE-UPGRADE.json",
+      "network_path": "loopback",
+      "unverified_assertions": []
+    },
+    {
+      "scenario": "CORE-GATEWAY-DIALS",
+      "level": "replica",
+      "passed": true,
+      "git_sha": "d7192c92d18042c300337105ece702609bbb68d8",
+      "evidence": "lab/evidence/replica/CORE-GATEWAY-DIALS.json",
+      "network_path": "gateway_air_to_replica_ubuntu_direct_tcp_fault_proxy",
+      "unverified_assertions": [
+        "replica_application_exactly_once"
+      ]
+    },
+    {
+      "scenario": "CORE-RESUME",
+      "level": "replica",
+      "passed": true,
+      "git_sha": "d7192c92d18042c300337105ece702609bbb68d8",
+      "evidence": "lab/evidence/replica/CORE-RESUME.json",
+      "network_path": "ssh_tunnel",
+      "unverified_assertions": [
+        "replica_application_exactly_once"
+      ]
+    },
+    {
+      "scenario": "CORE-PAIR",
+      "level": "replica",
+      "passed": true,
+      "git_sha": "d7192c92d18042c300337105ece702609bbb68d8",
+      "evidence": "lab/evidence/replica/CORE-PAIR.json",
+      "network_path": "ssh_tunnel",
+      "unverified_assertions": []
+    },
+    {
+      "scenario": "CORE-SCOPE-LEAK",
+      "level": "replica",
+      "passed": true,
+      "git_sha": "d7192c92d18042c300337105ece702609bbb68d8",
+      "evidence": "lab/evidence/replica/CORE-SCOPE-LEAK.json",
+      "network_path": "ssh_tunnel",
+      "unverified_assertions": []
+    },
+    {
+      "scenario": "CORE-CMD-OFFLINE",
+      "level": "replica",
+      "passed": true,
+      "git_sha": "d7192c92d18042c300337105ece702609bbb68d8",
+      "evidence": "lab/evidence/replica/CORE-CMD-OFFLINE.json",
+      "network_path": "ssh_tunnel",
+      "unverified_assertions": [
+        "replica_application_exactly_once"
+      ]
+    },
+    {
+      "scenario": "CORE-BLOB-INTERRUPT",
+      "level": "replica",
+      "passed": true,
+      "git_sha": "d7192c92d18042c300337105ece702609bbb68d8",
+      "evidence": "lab/evidence/replica/CORE-BLOB-INTERRUPT.json",
+      "network_path": "ssh_tunnel",
+      "unverified_assertions": [
+        "replica_application_exactly_once"
+      ]
+    },
+    {
+      "scenario": "CORE-CLOCK-DELAY",
+      "level": "replica",
+      "passed": true,
+      "git_sha": "d7192c92d18042c300337105ece702609bbb68d8",
+      "evidence": "lab/evidence/replica/CORE-CLOCK-DELAY.json",
+      "network_path": "ssh_tunnel",
+      "unverified_assertions": []
+    },
+    {
+      "scenario": "CORE-CLOCK-DELAY-GATEWAY-DIALS",
+      "level": "replica",
+      "passed": true,
+      "git_sha": "d7192c92d18042c300337105ece702609bbb68d8",
+      "evidence": "lab/evidence/replica/CORE-CLOCK-DELAY-GATEWAY-DIALS.json",
+      "network_path": "gateway_air_to_replica_ubuntu_direct_tcp_fault_proxy",
+      "unverified_assertions": []
+    },
+    {
+      "scenario": "CORE-DOCTOR",
+      "level": "replica",
+      "passed": true,
+      "git_sha": "d7192c92d18042c300337105ece702609bbb68d8",
+      "evidence": "lab/evidence/replica/CORE-DOCTOR.json",
+      "network_path": "ssh_tunnel",
+      "unverified_assertions": []
+    }
+  ],
+  "direct_gateway_dials_path": {
+    "hosts": [
+      "gateway (Air)",
+      "replica (Ubuntu)"
+    ],
+    "feed": "gateway -> local TCP fault proxy -> replica Tailscale listener",
+    "ssh_tunnelled_feed": false,
+    "observation": "REST, MCP and SSE observations use an SSH forward to the replica loopback API; the product feed and command frames use direct TCP."
+  },
+  "replica_dials_path": "Existing SSH feed fallback; replica-to-gateway direct reachability remains unavailable in this environment.",
+  "live_latency_ms": {
+    "sim": {
+      "measurement": "effect_done to replica SSE arrival, measured on gateway host",
+      "quiet": false,
+      "require_quiet": true,
+      "quiet_wait_expired": true,
+      "samples": 200,
+      "p50_ms": 14.915708,
+      "p95_ms": 19.352458,
+      "max_ms": 23.462333,
+      "timeouts": 0
+    },
+    "replica": {
+      "measurement": "effect_done to replica SSE arrival, measured on gateway host",
+      "quiet": false,
+      "require_quiet": true,
+      "quiet_wait_expired": true,
+      "samples": 200,
+      "p50_ms": 25.684791,
+      "p95_ms": 108.834875,
+      "max_ms": 124.953125,
+      "timeouts": 0
+    }
+  },
+  "clock_offset_sign": "gateway minus replica",
+  "clock_uncertainty": "half of the round trip after subtracting gateway processing time; offset plus or minus uncertainty bounds asymmetric transit",
+  "delayed_feed_clock_results": [
+    {
+      "scenario": "CORE-CLOCK-DELAY",
+      "level": "sim",
+      "baseline_offset_ms": -2,
+      "baseline_rtt_ms": 4,
+      "baseline_uncertainty_ms": 3,
+      "clock_method": "authenticated_feed_ntp_four_timestamps",
+      "delayed_offset_ms": 0,
+      "delayed_rtt_ms": 4004,
+      "delayed_uncertainty_ms": 2003,
+      "injected_delay_each_direction_ms": 2000,
+      "recovery_final_drain_ms": 19.048625
+    },
+    {
+      "scenario": "CORE-CLOCK-DELAY-GATEWAY-DIALS",
+      "level": "sim",
+      "baseline_offset_ms": -3,
+      "baseline_rtt_ms": 6,
+      "baseline_uncertainty_ms": 4,
+      "clock_method": "authenticated_feed_ntp_four_timestamps",
+      "delayed_offset_ms": 1,
+      "delayed_rtt_ms": 4002,
+      "delayed_uncertainty_ms": 2002,
+      "injected_delay_each_direction_ms": 2000,
+      "recovery_final_drain_ms": 14.347458
+    },
+    {
+      "scenario": "CORE-CLOCK-DELAY",
+      "level": "replica",
+      "baseline_offset_ms": -69,
+      "baseline_rtt_ms": 6,
+      "baseline_uncertainty_ms": 4,
+      "clock_method": "authenticated_feed_ntp_four_timestamps",
+      "delayed_offset_ms": -66,
+      "delayed_rtt_ms": 4009,
+      "delayed_uncertainty_ms": 2005,
+      "injected_delay_each_direction_ms": 2000,
+      "recovery_final_drain_ms": 24.547375
+    },
+    {
+      "scenario": "CORE-CLOCK-DELAY-GATEWAY-DIALS",
+      "level": "replica",
+      "baseline_offset_ms": -84,
+      "baseline_rtt_ms": 8,
+      "baseline_uncertainty_ms": 5,
+      "clock_method": "authenticated_feed_ntp_four_timestamps",
+      "delayed_offset_ms": -93,
+      "delayed_rtt_ms": 4033,
+      "delayed_uncertainty_ms": 2017,
+      "injected_delay_each_direction_ms": 2000,
+      "recovery_final_drain_ms": 34.601333
+    }
+  ],
+  "clock_red_evidence": "lab/evidence/gateway-dials-clock-red.json",
+  "new_scenarios": [
+    "CORE-GATEWAY-DIALS",
+    "CORE-CLOCK-DELAY",
+    "CORE-CLOCK-DELAY-GATEWAY-DIALS"
+  ],
+  "strengthened_scenarios": [
+    "CORE-DOCTOR"
+  ],
+  "spec_deviations": [],
+  "proposed_spec_changes": [
+    "Document optional ntp/1 negotiation in Hello/Welcome, ClockPing/ClockPong/ClockAck frames in section 12, and signed clock offset with RTT uncertainty in section 16.",
+    "List CommandRequest/CommandResponse wire fields in section 12; they carry the existing delegated identity and preserve Operations semantics."
+  ],
+  "limits": [
+    "Quiet-host waits expired while another heavy command was active; live latency evidence is explicitly non-quiet.",
+    "The existing replica_application_exactly_once kill-during-apply assertion is unverified in these runs; transactional records/versions/cursor consistency and contiguous replay are checked."
+  ],
+  "verification_repair": "The initial featuregraph check required links for the two new clock scenarios. Added only scenario references; no feature status changed.",
+  "privacy": {
+    "ip_addresses": false,
+    "tokens": false,
+    "personal_records": false,
+    "host_roles_only": true
+  },
+  "johan_action_required": null
+}

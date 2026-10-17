@@ -1,0 +1,327 @@
+{
+  "host_conditions": {
+    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "start": {
+      "air": {
+        "at": "2026-10-17T19:12:09.265886Z",
+        "cpu_count": 8,
+        "load_average": [
+          9.3,
+          11.39,
+          9.43
+        ],
+        "cpu_idle_percent": 74,
+        "free_memory_bytes": 207831040,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 3,
+        "quiet": false
+      },
+      "ubuntu": {
+        "at": "2026-10-17T19:12:09.265887Z",
+        "cpu_count": 8,
+        "load_average": [
+          0.33,
+          0.2,
+          0.32
+        ],
+        "cpu_idle_percent": 96.9925,
+        "free_memory_bytes": 1002291200,
+        "active_heavy_slots": 0,
+        "other_active_heavy_slots": 0,
+        "heavy_queue_length": 0,
+        "quiet": true
+      }
+    },
+    "end": {
+      "air": {
+        "at": "2026-10-17T19:12:32.388237Z",
+        "cpu_count": 8,
+        "load_average": [
+          7.78,
+          10.86,
+          9.29
+        ],
+        "cpu_idle_percent": 68,
+        "free_memory_bytes": 90177536,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 3,
+        "quiet": false
+      },
+      "ubuntu": {
+        "at": "2026-10-17T19:12:32.388245Z",
+        "cpu_count": 8,
+        "load_average": [
+          0.46,
+          0.24,
+          0.33
+        ],
+        "cpu_idle_percent": 86.5578,
+        "free_memory_bytes": 1085304832,
+        "active_heavy_slots": 0,
+        "other_active_heavy_slots": 0,
+        "heavy_queue_length": 0,
+        "quiet": true
+      }
+    },
+    "periodic_samples": [
+      {
+        "air": {
+          "at": "2026-10-17T19:12:15.535598Z",
+          "cpu_count": 8,
+          "load_average": [
+            8.72,
+            11.23,
+            9.38
+          ],
+          "cpu_idle_percent": 67,
+          "free_memory_bytes": 361185280,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T19:12:15.535588Z",
+          "cpu_count": 8,
+          "load_average": [
+            0.3,
+            0.2,
+            0.32
+          ],
+          "cpu_idle_percent": 83.4805,
+          "free_memory_bytes": 978825216,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:12:20.537355Z",
+          "cpu_count": 8,
+          "load_average": [
+            8.5,
+            11.14,
+            9.36
+          ],
+          "cpu_idle_percent": 66,
+          "free_memory_bytes": 231473152,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T19:12:20.537327Z",
+          "cpu_count": 8,
+          "load_average": [
+            0.28,
+            0.2,
+            0.32
+          ],
+          "cpu_idle_percent": 87.1859,
+          "free_memory_bytes": 1036001280,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:12:25.537722Z",
+          "cpu_count": 8,
+          "load_average": [
+            8.3,
+            11.06,
+            9.34
+          ],
+          "cpu_idle_percent": 35,
+          "free_memory_bytes": 229261312,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T19:12:25.537725Z",
+          "cpu_count": 8,
+          "load_average": [
+            0.42,
+            0.23,
+            0.33
+          ],
+          "cpu_idle_percent": 79.9238,
+          "free_memory_bytes": 1041707008,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:12:30.537778Z",
+          "cpu_count": 8,
+          "load_average": [
+            8.11,
+            10.97,
+            9.32
+          ],
+          "cpu_idle_percent": 54,
+          "free_memory_bytes": 59965440,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T19:12:30.537769Z",
+          "cpu_count": 8,
+          "load_average": [
+            0.46,
+            0.24,
+            0.33
+          ],
+          "cpu_idle_percent": 84.0102,
+          "free_memory_bytes": 1029869568,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      }
+    ],
+    "quiet": false,
+    "require_quiet": false,
+    "quiet_wait_ms": 0,
+    "quiet_wait_expired": false
+  },
+  "run_id": "run_01M55MEQA4JKTXKM573PBVNP21",
+  "network_path": "ssh_tunnel",
+  "metrics": {
+    "baseline_offset_ms": -69,
+    "baseline_rtt_ms": 6,
+    "baseline_uncertainty_ms": 4,
+    "clock_method": "authenticated_feed_ntp_four_timestamps",
+    "delayed_offset_ms": -66,
+    "delayed_rtt_ms": 4009,
+    "delayed_uncertainty_ms": 2005,
+    "injected_delay_each_direction_ms": 2000,
+    "recovery_final_drain_ms": 24.547375
+  },
+  "scenario": "CORE-CLOCK-DELAY",
+  "level": "replica",
+  "passed": true,
+  "git_sha": "d7192c92d18042c300337105ece702609bbb68d8",
+  "at": "2026-10-17T19:12:10.564844Z",
+  "assertions": [
+    {
+      "name": "feed_network_ssh_tunnel",
+      "passed": true
+    },
+    {
+      "name": "authenticated_four_timestamp_clock_sample",
+      "passed": true
+    },
+    {
+      "name": "authenticated_probe_crossed_delayed_feed",
+      "passed": true
+    },
+    {
+      "name": "offset_stays_near_zero_as_transit_grows",
+      "passed": true
+    },
+    {
+      "name": "uncertainty_tracks_round_trip_delay",
+      "passed": true
+    },
+    {
+      "name": "transit_not_misreported_as_clock_skew",
+      "passed": true
+    },
+    {
+      "name": "clock_round_trip_recovers_after_delay_removed",
+      "passed": true
+    },
+    {
+      "name": "recovery_capture_drained_before_convergence",
+      "passed": true
+    },
+    {
+      "name": "truth_gateway_replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "automatic_recovery_capture_drained",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_query_search_records_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_query_search_records_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_metadata_latency_and_no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_metadata_latency_and_no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_sse_watermark_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_sse_watermark_1",
+      "passed": true
+    },
+    {
+      "name": "sqlite_integrity_gateway",
+      "passed": true
+    },
+    {
+      "name": "sqlite_integrity_replica",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_in_observed_journal_changes",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_in_observed_journal_changes",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "effect_done→gateway_visible": {
+      "samples": 1,
+      "p50_ms": 15.807666,
+      "p95_ms": 15.807666,
+      "max_ms": 15.807666,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica0": {
+      "samples": 1,
+      "p50_ms": 31.083291,
+      "p95_ms": 31.083291,
+      "max_ms": 31.083291,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air",
+    "ubuntu"
+  ]
+}

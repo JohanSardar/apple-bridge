@@ -3,30 +3,30 @@
     "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
     "start": {
       "air": {
-        "at": "2026-10-17T18:52:20.764731Z",
+        "at": "2026-10-17T19:18:48.826683Z",
         "cpu_count": 8,
         "load_average": [
-          2.81,
-          3.27,
-          4.36
+          8.68,
+          7.09,
+          7.78
         ],
-        "cpu_idle_percent": 72,
-        "free_memory_bytes": 84983808,
+        "cpu_idle_percent": 63,
+        "free_memory_bytes": 543309824,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
         "heavy_queue_length": 4,
         "quiet": false
       },
       "ubuntu": {
-        "at": "2026-10-17T18:52:20.76471Z",
+        "at": "2026-10-17T19:18:48.82668Z",
         "cpu_count": 8,
         "load_average": [
-          0.43,
-          0.46,
-          0.6
+          1.11,
+          0.73,
+          0.52
         ],
-        "cpu_idle_percent": 96.2359,
-        "free_memory_bytes": 553181184,
+        "cpu_idle_percent": 97.7528,
+        "free_memory_bytes": 931315712,
         "active_heavy_slots": 0,
         "other_active_heavy_slots": 0,
         "heavy_queue_length": 0,
@@ -35,30 +35,30 @@
     },
     "end": {
       "air": {
-        "at": "2026-10-17T18:52:33.129181Z",
+        "at": "2026-10-17T19:19:01.258616Z",
         "cpu_count": 8,
         "load_average": [
-          3,
-          3.3,
-          4.36
+          9.16,
+          7.25,
+          7.83
         ],
-        "cpu_idle_percent": 54,
-        "free_memory_bytes": 82444288,
+        "cpu_idle_percent": 74,
+        "free_memory_bytes": 204095488,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 4,
+        "heavy_queue_length": 3,
         "quiet": false
       },
       "ubuntu": {
-        "at": "2026-10-17T18:52:33.12918Z",
+        "at": "2026-10-17T19:19:01.258615Z",
         "cpu_count": 8,
         "load_average": [
-          0.52,
-          0.48,
-          0.6
+          0.93,
+          0.7,
+          0.51
         ],
-        "cpu_idle_percent": 98.4944,
-        "free_memory_bytes": 496492544,
+        "cpu_idle_percent": 95.603,
+        "free_memory_bytes": 909672448,
         "active_heavy_slots": 0,
         "other_active_heavy_slots": 0,
         "heavy_queue_length": 0,
@@ -68,30 +68,30 @@
     "periodic_samples": [
       {
         "air": {
-          "at": "2026-10-17T18:52:27.056582Z",
+          "at": "2026-10-17T19:18:55.117803Z",
           "cpu_count": 8,
           "load_average": [
-            2.74,
-            3.25,
-            4.35
+            9.35,
+            7.25,
+            7.84
           ],
-          "cpu_idle_percent": 67,
-          "free_memory_bytes": 119783424,
+          "cpu_idle_percent": 36,
+          "free_memory_bytes": 242434048,
           "active_heavy_slots": 2,
           "other_active_heavy_slots": 1,
           "heavy_queue_length": 4,
           "quiet": false
         },
         "ubuntu": {
-          "at": "2026-10-17T18:52:27.056578Z",
+          "at": "2026-10-17T19:18:55.117786Z",
           "cpu_count": 8,
           "load_average": [
-            0.39,
-            0.46,
-            0.59
+            1.02,
+            0.72,
+            0.51
           ],
-          "cpu_idle_percent": 90.2778,
-          "free_memory_bytes": 484200448,
+          "cpu_idle_percent": 86.9511,
+          "free_memory_bytes": 887730176,
           "active_heavy_slots": 0,
           "other_active_heavy_slots": 0,
           "heavy_queue_length": 0,
@@ -104,13 +104,13 @@
     "quiet_wait_ms": 0,
     "quiet_wait_expired": false
   },
-  "run_id": "run_01M55KAEP7VQJGZ7DXGJZTG6K2",
+  "run_id": "run_01M55MTXH3K4XWS7DN4VY1HJ0S",
   "network_path": "ssh_tunnel",
   "scenario": "CORE-PAIR",
   "level": "replica",
   "passed": true,
-  "git_sha": "26fa14e36826189f83c3a0a8091f05399fdca727",
-  "at": "2026-10-17T18:52:22.087194Z",
+  "git_sha": "d7192c92d18042c300337105ece702609bbb68d8",
+  "at": "2026-10-17T19:18:50.147932Z",
   "assertions": [
     {
       "name": "feed_network_ssh_tunnel",
@@ -164,16 +164,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 13.354333,
-      "p95_ms": 13.354333,
-      "max_ms": 13.354333,
+      "p50_ms": 9.035667,
+      "p95_ms": 9.035667,
+      "max_ms": 9.035667,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 26.223916,
-      "p95_ms": 26.223916,
-      "max_ms": 26.223916,
+      "p50_ms": 21.526125,
+      "p95_ms": 21.526125,
+      "max_ms": 21.526125,
       "timeouts": 0
     }
   },
