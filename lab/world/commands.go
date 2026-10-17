@@ -1,10 +1,12 @@
 package world
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -43,7 +45,13 @@ func (w *World) RestartHelper() error {
 func (w *World) ClockOffset(ms int64) error {
 	return os.WriteFile(filepath.Join(w.Gateway.Home, "clock-offset"), []byte(strconv.FormatInt(ms, 10)), 0600)
 }
-func (w *World) StopGateway() { w.processes[0].Stop() }
+func (w *World) StopGateway() {
+	for _, p := range w.processes {
+		if p != nil && p.home == w.Gateway.Home {
+			p.Stop()
+		}
+	}
+}
 func (w *World) RestartGateway() error {
 	var cfg Config
 	b, err := os.ReadFile(filepath.Join(w.Gateway.Home, "runtime.json"))
@@ -78,4 +86,34 @@ func (w *World) DelayCommandApply(index int, duration time.Duration) error {
 		return err
 	}
 	return os.WriteFile(path, []byte(strconv.FormatInt(duration.Milliseconds(), 10)), 0600)
+}
+
+func (w *World) CommandBackup(path string) error {
+	_, err := w.execute(false, w.bridge, "backup", path, "--home", w.Gateway.Home)
+	return err
+}
+func (w *World) CommandRestore(path string, accept bool) error {
+	args := []string{"restore", "--home", w.Gateway.Home}
+	if path != "" {
+		args = append(args, "--backup", path)
+	}
+	if accept {
+		args = append(args, "--accept-ledger-loss")
+	}
+	_, err := w.execute(false, w.bridge, args...)
+	return err
+}
+func (w *World) RemoveCommandLedger() error {
+	for _, suffix := range []string{"", "-wal", "-shm"} {
+		if err := os.Remove(filepath.Join(w.Gateway.Home, "ledger.db") + suffix); err != nil && !os.IsNotExist(err) {
+			return err
+		}
+	}
+	return nil
+}
+func (w *World) CommandLedgerLossBlocked() bool {
+	ctx, cancel := context.WithTimeout(w.ctx, 3*time.Second)
+	defer cancel()
+	_, err := commandOutput(ctx, w.bridge, "start", "--home", w.Gateway.Home, "--api-addr", "127.0.0.1:0", "--peer-addr", "127.0.0.1:0")
+	return ctx.Err() == nil && err != nil && strings.Contains(err.Error(), "ledger_missing")
 }

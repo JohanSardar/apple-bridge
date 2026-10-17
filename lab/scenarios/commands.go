@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"time"
@@ -40,7 +41,7 @@ func runCommands(ctx context.Context, w *world.World, id string, e *Evidence, ob
 	head, _ := w.Cursor(w.Gateway)
 	command := func(op string, args map[string]any, version uint64) contracts.Command {
 		b, _ := json.Marshal(args)
-		return contracts.Command{ID: contracts.NewCommandID(head.Epoch), Op: op, Args: b, ExpectedVersion: version, WaitMS: 15000}
+		return contracts.Command{ID: contracts.NewCommandID(), Op: op, Args: b, ExpectedVersion: version, WaitMS: 15000}
 	}
 	create := func(title string) contracts.Command {
 		return command("reminders.create", map[string]any{"list_id": list.ID, "title": "[ab-test] " + title}, 0)
@@ -81,15 +82,46 @@ func runCommands(ctx context.Context, w *world.World, id string, e *Evidence, ob
 	}
 	switch id {
 	case "CORE-CMD-ERA":
-		c := create("old-era")
-		c.ID = "cmd_" + contracts.NewID("") + "_caller-chosen"
-		_, err := submit(c)
-		add("unknown_old_epoch_is_lookup_only", errors.Is(err, contracts.ErrExpired) && count(c, 0))
-		c = create("generated-era")
-		c.ID = ""
-		r, err := submit(c)
-		head, _ := w.Cursor(w.Gateway)
-		add("generated_id_binds_gateway_epoch", observed(r, err) && strings.HasPrefix(r.Command.ID, "cmd_"+head.Epoch+"_"))
+		backup := filepath.Join(w.Dir, "commands-before.db")
+		add("backup_before_command", w.CommandBackup(backup) == nil)
+		c := create("after-backup")
+		c.ID = "caller-uuid-review-17"
+		first, firstErr := submit(c)
+		add("opaque_caller_id_executes", observed(first, firstErr) && count(c, 1))
+		w.StopGateway()
+		add("restore_older_backup", w.CommandRestore(backup, false) == nil)
+		add("restart_after_restore", w.RestartGateway() == nil)
+		add("restore_truth_reconverges", w.Await(10*time.Second, func() bool { return convergence(w) }) == nil)
+		restoredHead, _ := w.Cursor(w.Gateway)
+		add("restore_rotates_epoch", restoredHead.Epoch != head.Epoch)
+		retry, retryErr := submit(c)
+		add("post_backup_command_recognized_without_second_effect", retryErr == nil && reflect.DeepEqual(first, retry) && count(c, 1))
+		old := create("old-era-new-id")
+		old.AdmissionEra = first.AdmissionEra
+		_, oldErr := submit(old)
+		add("older_era_cannot_admit_new_id", errors.Is(oldErr, contracts.ErrExpired) && count(old, 0))
+		fresh := create("fresh-era")
+		fresh.ID = "fresh.opaque:caller-17"
+		current, currentErr := submit(fresh)
+		add("fresh_opaque_id_new_era_once", observed(current, currentErr) && current.AdmissionEra != first.AdmissionEra && count(fresh, 1))
+		_, currentErr = submit(fresh)
+		add("fresh_opaque_retry_once", currentErr == nil && count(fresh, 1))
+		w.StopGateway()
+		add("remove_ledger", w.RemoveCommandLedger() == nil)
+		add("missing_ledger_blocks_gateway", w.CommandLedgerLossBlocked())
+		add("operator_accepts_ledger_loss", w.CommandRestore("", true) == nil)
+		add("restart_after_accepted_ledger_loss", w.RestartGateway() == nil)
+		accepted := create("accepted-loss-era")
+		acceptedResult, acceptedErr := submit(accepted)
+		add("accepted_loss_starts_new_era", observed(acceptedResult, acceptedErr) && acceptedResult.AdmissionEra != current.AdmissionEra && count(accepted, 1))
+		for _, protocol := range []string{"rest", "mcp"} {
+			client.Protocol = protocol
+			generated := create("generated-" + protocol)
+			generated.ID = ""
+			result, err := submit(generated)
+			add(protocol+"_generated_opaque_id", observed(result, err) && !strings.Contains(result.Command.ID, restoredHead.Epoch))
+		}
+
 	case "CORE-CMD-IDEMPOTENT":
 		c := create("idempotent")
 		first, err := submit(c)
@@ -255,7 +287,7 @@ func runCommands(ctx context.Context, w *world.World, id string, e *Evidence, ob
 		if id == "CORE-CMD-CONFLICT" {
 			client.Endpoint = w.Replicas[1]
 		}
-		c.ID = contracts.NewCommandID(head.Epoch)
+		c.ID = contracts.NewCommandID()
 		_, err = submit(c)
 		var problem *contracts.Error
 		add("stale_version_conflict_with_current", errors.As(err, &problem) && problem.Code == "conflict" && problem.Current != nil && problem.Current.Version > reminder.Version)
@@ -299,7 +331,7 @@ func runCommands(ctx context.Context, w *world.World, id string, e *Evidence, ob
 
 		add("one_truth_effect", count(c, 1))
 	case "CORE-REST-MCP-PARITY", "REM-CRUD":
-		results := []string{}
+		results := []contracts.Disposition{}
 		for _, protocol := range []string{"rest", "mcp"} {
 			client.Protocol = protocol
 			c := create("crud-" + protocol)
@@ -384,11 +416,13 @@ func runCommands(ctx context.Context, w *world.World, id string, e *Evidence, ob
 		fault("external-move-before-prepare", 0)
 		_, err := submit(c)
 		add("native_list_move_conflicts", errors.Is(err, contracts.ErrConflict) && count(c, 0))
+		add("native_list_conflict_current_equals_truth", conflictCurrentTruth(w, reminder, err))
 	case "REM-EXTERNAL-RACE":
 		c := command("reminders.update", map[string]any{"id": reminder.ID, "title": "[ab-test] should not overwrite"}, reminder.Version)
 		fault("external-edit-between-prepare-and-dispatch", 0)
 		_, err := submit(c)
 		add("external_race_rejects", errors.Is(err, contracts.ErrConflict) && count(c, 0))
+		add("external_race_current_equals_truth", conflictCurrentTruth(w, reminder, err))
 		all, _ := w.Records(w.Gateway)
 		found := false
 		for _, r := range all {
@@ -462,4 +496,18 @@ func runCommands(ctx context.Context, w *world.World, id string, e *Evidence, ob
 		single = single && n <= 1
 	}
 	add("no_automatic_redispatch_truth_effect_counts", single)
+}
+
+func conflictCurrentTruth(w *world.World, before contracts.Record, err error) bool {
+	var problem *contracts.Error
+	if !errors.As(err, &problem) || problem.Current == nil || problem.Current.ID != before.ID || problem.Current.Version <= before.Version {
+		return false
+	}
+	records, readErr := w.Records(w.Gateway)
+	for _, record := range records {
+		if record.ID == before.ID {
+			return readErr == nil && reflect.DeepEqual(record, *problem.Current) && convergence(w)
+		}
+	}
+	return false
 }
