@@ -45,6 +45,13 @@ Resume point for any fresh session. Updated after every unit of work.
 - heavy.sh is a FIFO queue (2 slots) since a0d917a.
 - Replica level: SSH tunnel acceptable until Johan's Tailscale ACL fix; direct Tailscale path behind a World option.
 
+## Overnight state (2026-10-17, Johan away, screen locked)
+- `status` (open -n): FDA, Accessibility, Reminders, Calendar, Contacts = granted (Calendar/Contacts appeared granted ~00:30; parent had restarted tccd). automation_* report `unknown` while Messages/System Events aren't running or the screen is locked; AppleScript sends to self worked earlier.
+- Accessibility-driven Messages UI does NOT work while the screen is locked: `probe ax-dump` hangs until its 35 s deadline. MSG-REPLY/REACT/EDIT/UNSEND/MARK-READ/DELETE/GROUP real-level runs wait for an unlocked screen; build and verify them at sim level meanwhile.
+- The Helper app is single-instance under `open -a`: a stuck `onboard` blocked every later launch. Always use `open -n -W -a`.
+- Screen check every 30 min via airvnc (background loop); if unlocked, run the pending GUI/AX work. Never type passwords; no GUI requests to Johan.
+- FDA-based read paths (Calendar.sqlitedb, AddressBook .abcddb) are allowed read-only as independent AppleTruth oracles; never write those databases.
+
 ## GUI control (2026-10-17)
 - VNC GUI control of the Air via `~/tools/airvnc.py` (see BUILD-GOAL update and WORKER-RULES). Leader handles all TCC dialogs and Settings toggles; no more manual requests to Johan unless the lock screen persists > 1 h.
 
