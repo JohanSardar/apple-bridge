@@ -2,8 +2,8 @@
   "scenario": "CORE-BLOB-NO-DIGEST-AUTH",
   "level": "sim",
   "passed": true,
-  "git_sha": "07551488839403d31546cd8255c6654b9cb4fbb4",
-  "at": "2026-10-17T05:01:41.940707Z",
+  "git_sha": "9e2dab3090430519dc5e0a71f1478b32e14489b9",
+  "at": "2026-10-17T05:20:40.508664Z",
   "assertions": [
     {
       "name": "replica_host_is_air",
@@ -54,6 +54,10 @@
       "passed": true
     },
     {
+      "name": "out_of_scope_blob_status_denied",
+      "passed": true
+    },
+    {
       "name": "out_of_scope_record_denied",
       "passed": true
     },
@@ -70,6 +74,10 @@
       "passed": true
     },
     {
+      "name": "out_of_scope_blob_status_denied",
+      "passed": true
+    },
+    {
       "name": "out_of_scope_record_denied",
       "passed": true
     },
@@ -78,12 +86,20 @@
       "passed": true
     },
     {
-      "name": "replica_records_versions_and_cursor_consistent",
+      "name": "latency_observations_complete",
       "passed": true
     },
     {
-      "name": "latency_observations_complete",
-      "passed": true
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass",
+      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
     },
     {
       "name": "sse_contiguous_watermarks_0",
@@ -113,23 +129,23 @@
   "latency": {
     "effect_done→blob_complete": {
       "samples": 1,
-      "p50_ms": 4830.910584,
-      "p95_ms": 4830.910584,
-      "max_ms": 4830.910584,
+      "p50_ms": 4773.721208,
+      "p95_ms": 4773.721208,
+      "max_ms": 4773.721208,
       "timeouts": 0
     },
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 23.825167,
-      "p95_ms": 23.825167,
-      "max_ms": 23.825167,
+      "p50_ms": 26.30975,
+      "p95_ms": 26.30975,
+      "max_ms": 26.30975,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 57.925167,
-      "p95_ms": 57.925167,
-      "max_ms": 57.925167,
+      "p50_ms": 68.357333,
+      "p95_ms": 68.357333,
+      "max_ms": 68.357333,
       "timeouts": 0
     }
   },

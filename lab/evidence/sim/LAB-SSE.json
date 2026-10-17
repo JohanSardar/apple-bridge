@@ -2,8 +2,8 @@
   "scenario": "LAB-SSE",
   "level": "sim",
   "passed": true,
-  "git_sha": "3cd12831e2364de2fb5388c3da368387d0d448b8",
-  "at": "2026-10-17T05:05:24.107316Z",
+  "git_sha": "9e2dab3090430519dc5e0a71f1478b32e14489b9",
+  "at": "2026-10-17T05:22:08.329463Z",
   "assertions": [
     {
       "name": "replica_host_is_air",
@@ -81,16 +81,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 2.398,
-      "p95_ms": 2.398,
-      "max_ms": 2.398,
+      "p50_ms": 23.372625,
+      "p95_ms": 23.372625,
+      "max_ms": 23.372625,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 4.448375,
-      "p95_ms": 4.448375,
-      "max_ms": 4.448375,
+      "p50_ms": 45.891791,
+      "p95_ms": 45.891791,
+      "max_ms": 45.891791,
       "timeouts": 0
     }
   },

@@ -116,11 +116,13 @@ features:
     depends_on: [core.replication, core.trust]
     status: todo
     scenarios:
-      - {id: CORE-BLOB-INTERRUPT, levels: [sim]}
+      - {id: CORE-BLOB-INTERRUPT, levels: [sim, replica]}
       - {id: CORE-BLOB-CORRUPT, levels: [sim]}
       - {id: CORE-BLOB-CAP, levels: [sim]}
       - {id: CORE-BLOB-NO-DIGEST-AUTH, levels: [sim]}
       - {id: CORE-BLOB-GC, levels: [sim]}
+      - {id: CORE-BLOB-OFFLOADED, levels: [sim]}
+      - {id: CORE-BLOB-SLOW-READ, levels: [sim]}
   - id: core.bench
     title: SQLite, FTS5, WAL and RSS benchmark on the 8 GB Air
     requirements: [R-LIVE]

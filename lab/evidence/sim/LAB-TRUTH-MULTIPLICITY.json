@@ -2,8 +2,8 @@
   "scenario": "LAB-TRUTH-MULTIPLICITY",
   "level": "sim",
   "passed": true,
-  "git_sha": "3cd12831e2364de2fb5388c3da368387d0d448b8",
-  "at": "2026-10-17T05:05:54.868516Z",
+  "git_sha": "9e2dab3090430519dc5e0a71f1478b32e14489b9",
+  "at": "2026-10-17T05:22:39.237282Z",
   "assertions": [
     {
       "name": "replica_host_is_air",

@@ -2,8 +2,8 @@
   "scenario": "CORE-BLOB-SLOW-READ",
   "level": "sim",
   "passed": true,
-  "git_sha": "07551488839403d31546cd8255c6654b9cb4fbb4",
-  "at": "2026-10-17T05:01:48.529107Z",
+  "git_sha": "9e2dab3090430519dc5e0a71f1478b32e14489b9",
+  "at": "2026-10-17T05:20:47.558156Z",
   "assertions": [
     {
       "name": "replica_host_is_air",
@@ -50,12 +50,20 @@
       "passed": true
     },
     {
-      "name": "replica_records_versions_and_cursor_consistent",
+      "name": "latency_observations_complete",
       "passed": true
     },
     {
-      "name": "latency_observations_complete",
-      "passed": true
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass",
+      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
     },
     {
       "name": "sse_contiguous_watermarks_0",
@@ -85,30 +93,30 @@
   "latency": {
     "effect_done→blob_complete": {
       "samples": 1,
-      "p50_ms": 4795.090417,
-      "p95_ms": 4795.090417,
-      "max_ms": 4795.090417,
+      "p50_ms": 4785.121667,
+      "p95_ms": 4785.121667,
+      "max_ms": 4785.121667,
       "timeouts": 0
     },
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 27.50875,
-      "p95_ms": 27.50875,
-      "max_ms": 27.50875,
+      "p50_ms": 17.817917,
+      "p95_ms": 17.817917,
+      "max_ms": 17.817917,
       "timeouts": 0
     },
     "effect_done→metadata_during_slow_read": {
       "samples": 1,
-      "p50_ms": 39.124666,
-      "p95_ms": 39.124666,
-      "max_ms": 39.124666,
+      "p50_ms": 37.201416,
+      "p95_ms": 37.201416,
+      "max_ms": 37.201416,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 63.513208,
-      "p95_ms": 63.513208,
-      "max_ms": 63.513208,
+      "p50_ms": 45.389667,
+      "p95_ms": 45.389667,
+      "max_ms": 45.389667,
       "timeouts": 0
     }
   },

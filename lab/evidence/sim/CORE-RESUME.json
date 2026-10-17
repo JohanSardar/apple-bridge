@@ -2,8 +2,8 @@
   "scenario": "CORE-RESUME",
   "level": "sim",
   "passed": true,
-  "git_sha": "3cd12831e2364de2fb5388c3da368387d0d448b8",
-  "at": "2026-10-17T05:04:53.321298Z",
+  "git_sha": "9e2dab3090430519dc5e0a71f1478b32e14489b9",
+  "at": "2026-10-17T05:21:37.40191Z",
   "assertions": [
     {
       "name": "replica_host_is_air",
@@ -73,23 +73,23 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 2,
-      "p50_ms": 2.175458,
-      "p95_ms": 3.529583,
-      "max_ms": 3.529583,
+      "p50_ms": 12.407958,
+      "p95_ms": 28.045291,
+      "max_ms": 28.045291,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 2,
-      "p50_ms": 4.610625,
-      "p95_ms": 55.9575,
-      "max_ms": 55.9575,
+      "p50_ms": 24.9505,
+      "p95_ms": 63.320583,
+      "max_ms": 63.320583,
       "timeouts": 0
     },
     "partition_effect_done→replica_visible:replica0": {
       "samples": 30,
-      "p50_ms": 15161.4305,
-      "p95_ms": 29174.794958,
-      "max_ms": 30175.596833,
+      "p50_ms": 15205.220167,
+      "p95_ms": 29236.243958,
+      "max_ms": 30237.979875,
       "timeouts": 0
     }
   },
