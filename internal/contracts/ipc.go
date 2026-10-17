@@ -110,6 +110,7 @@ type Prepared struct {
 	CandidateIDs []string        `json:"candidate_ids"`
 }
 type Dispatch struct {
+	CommandID  string `json:"command_id"`
 	T          string `json:"t"`
 	Ticket     string `json:"ticket"`
 	OwnerFence uint64 `json:"owner_fence"`

@@ -53,12 +53,23 @@ func CheckIPCFixtures(path string) (int, error) {
 		case "Dispatch":
 			var value Dispatch
 			err = json.Unmarshal(raw, &value)
-			if value.OwnerFence == 0 {
+			if value.OwnerFence == 0 || value.CommandID == "" || value.Ticket == "" {
 				return 0, ErrInvalid
 			}
 		case "Outcome":
 			var value Outcome
 			err = json.Unmarshal(raw, &value)
+			if value.Disposition == "locally_observed" {
+				var evidence struct {
+					Fingerprint string `json:"fingerprint"`
+					Checkpoint  string `json:"capture_checkpoint"`
+					Key         string `json:"native_key"`
+					Observed    bool   `json:"observed"`
+				}
+				if json.Unmarshal(value.Evidence, &evidence) != nil || evidence.Fingerprint == "" || evidence.Checkpoint == "" || evidence.Key == "" || !evidence.Observed {
+					return 0, ErrInvalid
+				}
+			}
 			if value.Disposition == "" {
 				return 0, ErrInvalid
 			}

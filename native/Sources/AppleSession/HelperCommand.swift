@@ -17,6 +17,11 @@ public enum HelperCommand {
                 switch frame["t"].string {
                 case "Open": guard frame["protocol"].string == "ipc/1", frame["owner_fence"].number > 0 else { throw ProbeFailure.invalidArguments }
                 case "Prepare": guard !frame["command_id"].string.isEmpty, parseTimestamp(frame["expires_at"].string) != nil else { throw ProbeFailure.invalidArguments }
+                case "Dispatch": guard !frame["command_id"].string.isEmpty, !frame["ticket"].string.isEmpty, frame["owner_fence"].unsigned > 0 else { throw ProbeFailure.invalidArguments }
+                case "Outcome": if frame["disposition"].string == "locally_observed" {
+                    let evidence = frame["evidence"]
+                    guard !evidence["fingerprint"].string.isEmpty, !evidence["capture_checkpoint"].string.isEmpty, !evidence["native_key"].string.isEmpty, evidence["observed"].bool else { throw ProbeFailure.invalidArguments }
+                }
                 case "Capture": guard !frame["generation"].string.isEmpty, !frame["checkpoint"].string.isEmpty else { throw ProbeFailure.invalidArguments }
                 default: break
                 }

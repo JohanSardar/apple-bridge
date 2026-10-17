@@ -43,7 +43,7 @@
         "observed_at": "2026-10-17T10:00:00.123Z",
         "data": {
           "title": "[ab-test fixture] synthetic",
-          "completed": false
+          "completed": true
         }
       }
     ],
@@ -107,7 +107,8 @@
   {
     "t": "Dispatch",
     "ticket": "fixture-ticket",
-    "owner_fence": 7
+    "owner_fence": 7,
+    "command_id": "fixture-command"
   },
   {
     "t": "Outcome",
@@ -115,6 +116,17 @@
     "disposition": "indeterminate",
     "evidence": {
       "reason": "dispatch_started_without_outcome"
+    }
+  },
+  {
+    "t": "Outcome",
+    "command_id": "fixture-command",
+    "disposition": "locally_observed",
+    "evidence": {
+      "native_key": "fixture-reminder",
+      "fingerprint": "fixture-hash",
+      "observed": true,
+      "capture_checkpoint": "cp-2"
     }
   },
   {
