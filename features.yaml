@@ -136,6 +136,7 @@ features:
       - {id: CORE-BLOB-NO-DIGEST-AUTH, levels: [sim]}
       - {id: CORE-BLOB-GATEWAY-RETRY, levels: [sim]}
       - {id: CORE-BLOB-REFERENCE-INDEX, levels: [sim]}
+      - {id: CORE-BLOB-DUPLICATE-REFERENCE, levels: [sim]}
       - {id: CORE-BLOB-GC, levels: [sim]}
       - {id: CORE-BLOB-OFFLOADED, levels: [sim]}
       - {id: CORE-BLOB-SLOW-READ, levels: [sim]}
@@ -189,6 +190,7 @@ features:
       - {id: MSG-SEND-GHOST, levels: [sim]}
       - {id: MSG-SEND-IDENTICAL-MANUAL, levels: [sim]}
       - {id: MSG-SEND-NEW-HANDLE, levels: [sim]}
+      - {id: MSG-SEND-SELF-EMAIL, levels: [sim]}
       - {id: MSG-CAPABILITY-MATRIX, levels: [sim]}
   - id: messages.actions
     title: Reply, react, edit, unsend, read state, delete via Accessibility with SIP on
