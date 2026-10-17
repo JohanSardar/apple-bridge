@@ -1,0 +1,7 @@
+id: CORE-DOCTOR
+feature: core.recovery
+levels: [sim, replica]
+given: [{world: {replicas: 1}}, {seed: {count: 4}}]
+when: [{robustness: {case: doctor}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

@@ -166,7 +166,7 @@ func (s *Server) serve(ctx context.Context, conn *websocket.Conn, p trust.Princi
 	if resume {
 		reason = "resume"
 	}
-	if err = transmit(contracts.FeedFrame{T: "Welcome", Protocol: contracts.FeedProtocol, GatewayID: s.Authority.Fingerprint, Epoch: head.Epoch, SubscriptionRevision: p.Revision, Scope: p.Grants, Head: head.Sequence, RetentionFloor: s.Store.RetentionFloor(), Schema: 1, Reason: reason}, nil); err != nil {
+	if err = transmit(contracts.FeedFrame{T: "Welcome", At: time.Now().UTC(), Protocol: contracts.FeedProtocol, GatewayID: s.Authority.Fingerprint, Epoch: head.Epoch, SubscriptionRevision: p.Revision, Scope: p.Grants, Head: head.Sequence, RetentionFloor: s.Store.RetentionFloor(), Schema: 1, Reason: reason}, nil); err != nil {
 		return err
 	}
 	cursor := head
@@ -241,6 +241,8 @@ func (s *Server) serve(ctx context.Context, conn *websocket.Conn, p trust.Princi
 type FollowStatus = contracts.ReplicaStatus
 
 type Client struct {
+	GatewayClock func(time.Time, time.Time)
+
 	Blobs *blobs.Store
 
 	Store     *state.Store
@@ -385,6 +387,9 @@ func (c *Client) follow(ctx context.Context, e trust.Enrollment) error {
 			if f.Protocol != contracts.FeedProtocol || f.Schema != 1 || f.Epoch == "" || f.SubscriptionRevision == 0 || !trust.Subset(f.Scope, ceiling) {
 				return contracts.ErrInvalid
 			}
+			if c.GatewayClock != nil && !f.At.IsZero() {
+				c.GatewayClock(f.At, time.Now().UTC())
+			}
 			welcome = f
 			e.Grants = f.Scope
 			if err = c.Store.Restrict(ctx, (trust.Principal{Grants: f.Scope}).Visibility()); err != nil {
@@ -453,6 +458,9 @@ func (c *Client) follow(ctx context.Context, e trust.Enrollment) error {
 			}
 			ack.Cursor = &cursor
 		case "Heartbeat":
+			if c.GatewayClock != nil && !f.At.IsZero() {
+				c.GatewayClock(f.At, time.Now().UTC())
+			}
 			select {
 			case blobTrigger <- struct{}{}:
 			default:

@@ -95,6 +95,7 @@ func Open(home string) (*Store, error) {
 		db.Close()
 		return nil, err
 	}
+	initializeApplyBoundary(s)
 	return s, nil
 }
 func (s *Store) Close() error {

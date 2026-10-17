@@ -46,18 +46,19 @@ type Latency struct {
 	Timeouts int     `json:"timeouts"`
 }
 type Evidence struct {
-	Status      string             `json:"status,omitempty"`
-	RunID       string             `json:"run_id"`
-	NetworkPath string             `json:"network_path,omitempty"`
-	Metrics     map[string]any     `json:"metrics,omitempty"`
-	Scenario    string             `json:"scenario"`
-	Level       string             `json:"level"`
-	Passed      bool               `json:"passed"`
-	GitSHA      string             `json:"git_sha"`
-	At          time.Time          `json:"at"`
-	Assertions  []Assertion        `json:"assertions"`
-	Latency     map[string]Latency `json:"latency"`
-	Hosts       []string           `json:"hosts"`
+	HostConditions *HostConditions    `json:"host_conditions"`
+	Status         string             `json:"status,omitempty"`
+	RunID          string             `json:"run_id"`
+	NetworkPath    string             `json:"network_path,omitempty"`
+	Metrics        map[string]any     `json:"metrics,omitempty"`
+	Scenario       string             `json:"scenario"`
+	Level          string             `json:"level"`
+	Passed         bool               `json:"passed"`
+	GitSHA         string             `json:"git_sha"`
+	At             time.Time          `json:"at"`
+	Assertions     []Assertion        `json:"assertions"`
+	Latency        map[string]Latency `json:"latency"`
+	Hosts          []string           `json:"hosts"`
 }
 
 type Seen struct {
@@ -362,7 +363,7 @@ func convergence(w *world.World) bool {
 	return true
 }
 
-func Run(ctx context.Context, s Scenario, level string) Evidence {
+func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if nativeScenario(s.ID, level) {
 		return runNativeScenario(ctx, s, level)
 	}

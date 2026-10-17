@@ -248,13 +248,6 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 		}) != nil {
 			return fail("replicate_two_hundred_thousand_messages")
 		}
-		resources, err := w.Resources()
-		if err != nil {
-			return fail("benchmark_resources")
-		}
-		for name, value := range resources {
-			evidence.Metrics[name] = value
-		}
 		latencies := []float64{}
 		for i := 0; i < 100; i++ {
 			start := time.Now()
@@ -266,6 +259,13 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 			latencies = append(latencies, float64(time.Since(start))/float64(time.Millisecond))
 		}
 		evidence.Latency["fts5_query_gateway"] = stats(latencies, 0)
+		resources, err := w.Resources()
+		if err != nil {
+			return fail("benchmark_resources")
+		}
+		for name, value := range resources {
+			evidence.Metrics[name] = value
+		}
 		add("two_hundred_thousand_message_capture_replication_fts5", true)
 
 	case "snapshot-under-load", "snapshot-interrupt":
@@ -305,6 +305,25 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 		}
 		w.DelayNetwork(0)
 		add("one_thousand_changes_during_bootstrap", true)
+	case "doctor":
+		gateway, gatewayErr := w.Doctor(w.Gateway)
+		add("gateway_clock_not_applicable", gatewayErr == nil && gateway["clock_skew"] == "n/a")
+		replica, replicaErr := w.Doctor(w.Replicas[0])
+		if replicaErr != nil {
+			return fail("replica_doctor")
+		}
+		skew, skewOK := replica["clock_skew_ms"].(float64)
+		age, ageOK := replica["clock_sample_age_ms"].(float64)
+		add("replica_authenticated_feed_clock_sample", skewOK && ageOK && age >= 0 && age < 15000 && replica["clock_method"] == "local_receive_minus_gateway_send_including_feed_transit")
+		evidence.Metrics = map[string]any{"replica_clock_skew_ms": skew, "clock_sample_age_ms": age, "replica_disk_encryption": replica["disk_encryption"], "clock_method": replica["clock_method"]}
+		if level == "replica" {
+			encrypted := replica["disk_encryption"]
+			warnings, _ := replica["warnings"].([]any)
+			add("linux_data_directory_encryption_diagnosed", encrypted == "enabled" || (encrypted == "warning_not_enabled" && len(warnings) > 0))
+		}
+		warned, unavailable, warningErr := w.DoctorClockWarnings(w.Replicas[0])
+		add("clock_skew_warning_actionable", warningErr == nil && warned)
+		add("clock_sample_unavailable_warning_actionable", warningErr == nil && unavailable)
 	case "cred-lifecycle":
 		result, err := w.Credentials()
 		if err != nil {
@@ -382,8 +401,16 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 		add("reset_resnapshot_after_retention", status.Snapshots >= 2)
 	case "kill-during-apply":
 		for i := 0; i < 8; i++ {
+			if w.ArmBoundary(w.Replicas[0], "apply") != nil {
+				return fail("arm_apply_boundary")
+			}
 			if !change(fmt.Sprintf("crash-%d", i), 50) {
 				return fail("changes_before_crash")
+			}
+			reached := w.AwaitBoundary(w.Replicas[0], "apply", "write_started_before_commit") == nil
+			add(fmt.Sprintf("apply_write_before_commit_boundary_iteration_%d", i), reached)
+			if !reached {
+				return fail("apply_boundary_not_reached")
 			}
 			w.CrashReplica(0)
 			if w.RestartReplica(0) != nil {
@@ -396,8 +423,16 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 		add("eight_replica_process_crashes", true)
 	case "kill-gateway-capture":
 		for i := 0; i < 8; i++ {
+			if w.ArmBoundary(w.Gateway, "capture") != nil {
+				return fail("arm_capture_boundary")
+			}
 			if !change(fmt.Sprintf("capture-crash-%d", i), 50) {
 				return fail("changes_before_crash")
+			}
+			reached := w.AwaitBoundary(w.Gateway, "capture", "capture_committed_before_acknowledgment") == nil
+			add(fmt.Sprintf("capture_before_committed_boundary_iteration_%d", i), reached)
+			if !reached {
+				return fail("capture_boundary_not_reached")
 			}
 			if w.SignalGateway(syscall.SIGKILL) != nil {
 				return fail("kill_gateway")

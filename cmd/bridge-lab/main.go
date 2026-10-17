@@ -73,6 +73,8 @@ func run(ctx context.Context, args []string) error {
 				level = args[i]
 			case "--direct-tailscale":
 				ctx = world.WithOptions(ctx, world.Options{DirectTailscale: true})
+			case "--require-quiet":
+				ctx = scenarios.RequireQuiet(ctx)
 			case "--json":
 				asJSON = true
 			default:

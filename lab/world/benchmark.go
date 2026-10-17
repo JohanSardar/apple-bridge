@@ -1,7 +1,6 @@
 package world
 
 import (
-	"os"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -20,11 +19,27 @@ func (w *World) Resources() (map[string]float64, error) {
 		if endpoint.Home != w.Gateway.Home {
 			role = "replica"
 		}
-		info, err := os.Stat(filepath.Join(endpoint.Home, "state.db-wal"))
+		output, err := w.execute(endpoint.Remote, "sh", "-c", "wc -c < "+quote(filepath.Join(endpoint.Home, "state.db-wal")))
 		if err != nil {
 			return nil, err
 		}
-		result[role+"_wal_bytes"] = float64(info.Size())
+		wal, err := strconv.ParseFloat(output, 64)
+		if err != nil {
+			return nil, err
+		}
+		result[role+"_wal_end_sample_bytes"] = wal
+		if endpoint.Remote {
+			output, err := w.execute(true, "sh", "-c", "ps -o rss= -p \"$(cat "+quote(filepath.Join(endpoint.Home, "pid"))+")\"")
+			if err != nil {
+				return nil, err
+			}
+			rss, err := strconv.ParseFloat(output, 64)
+			if err != nil {
+				return nil, err
+			}
+			result[role+"_rss_end_sample_bytes"] = rss * 1024
+			continue
+		}
 		for _, p := range w.processes {
 			if p != nil && !p.stopped && p.home == endpoint.Home {
 				output, err := commandOutput(w.ctx, "ps", "-o", "rss=", "-p", strconv.Itoa(p.command.Process.Pid))
@@ -35,7 +50,7 @@ func (w *World) Resources() (map[string]float64, error) {
 				if err != nil {
 					return nil, err
 				}
-				result[role+"_rss_bytes"] = rss * 1024
+				result[role+"_rss_end_sample_bytes"] = rss * 1024
 			}
 		}
 	}

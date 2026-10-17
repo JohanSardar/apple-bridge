@@ -224,6 +224,9 @@ func Start(ctx context.Context, cfg Config) error {
 					cursor.Sequence = result.Through
 					commands.RecordCapture(c, cursor)
 				}
+				if err == nil {
+					captureBoundary(cfg.Home)
+				}
 				return result.Degraded, err
 			}})
 		}()
@@ -231,7 +234,14 @@ func Start(ctx context.Context, cfg Config) error {
 			go func() { failures <- superviseHelper(ctx, cfg, secretPath) }()
 		}
 	} else {
-		client := &replication.Client{Store: store, Authority: authority, Blobs: blobStore}
+		os.Remove(filepath.Join(cfg.Home, "gateway-clock.json"))
+		client := &replication.Client{Store: store, Authority: authority, Blobs: blobStore, GatewayClock: func(gateway, received time.Time) {
+			sample, _ := json.Marshal(gatewayClockSample{Gateway: gateway, Received: received})
+			path := filepath.Join(cfg.Home, "gateway-clock.json")
+			if os.WriteFile(path+".tmp", sample, 0600) == nil {
+				os.Rename(path+".tmp", path)
+			}
+		}}
 		service.LocalStatus = client.Status
 		service.Target = &operations.RemoteGateway{Authority: authority, Connected: func() bool { return client.Status().State == "connected" }, Wait: client.Wait}
 		go func() { failures <- client.Follow(ctx) }()
