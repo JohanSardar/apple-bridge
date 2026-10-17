@@ -168,7 +168,7 @@ features:
     milestone: M1
     modules: [native/MessagesSource, native/Decoders]
     depends_on: [helper.session, core.blobs]
-    status: todo
+    status: done
     scenarios:
       - {id: MSG-HISTORY-IMPORT, levels: [sim, real]}
       - {id: MSG-INCOMING, levels: [sim, real, replica]}
@@ -183,7 +183,7 @@ features:
     milestone: M1
     modules: [native/MessagesSource, operations]
     depends_on: [messages.read]
-    status: todo
+    status: done
     scenarios:
       - {id: MSG-SEND-SELF-TEXT, levels: [sim, real, replica]}
       - {id: MSG-SEND-FILES, levels: [sim, real, replica]}
@@ -198,7 +198,20 @@ features:
     milestone: M1
     modules: [native/MessagesSource, native/AppleSession]
     depends_on: [messages.send]
-    status: todo
+    status: limited
+    limits:
+      - scenario: MSG-REPLY
+        level: real
+        reason: "Accessibility UI automation of Messages needs an unlocked GUI session; the Air is at the password lock screen and unlocking needs Johan's password. Verified at sim level; AppleScript sends work while locked."
+      - scenario: MSG-REACT
+        level: real
+        reason: "Accessibility UI automation of Messages needs an unlocked GUI session; the Air is at the password lock screen and unlocking needs Johan's password. Verified at sim level; AppleScript sends work while locked."
+      - scenario: MSG-EDIT
+        level: real
+        reason: "Accessibility UI automation of Messages needs an unlocked GUI session; the Air is at the password lock screen and unlocking needs Johan's password. Verified at sim level; AppleScript sends work while locked."
+      - scenario: MSG-UNSEND
+        level: real
+        reason: "Accessibility UI automation of Messages needs an unlocked GUI session; the Air is at the password lock screen and unlocking needs Johan's password. Verified at sim level; AppleScript sends work while locked."
     scenarios:
       - {id: MSG-REPLY, levels: [sim, real]}
       - {id: MSG-REACT, levels: [sim, real]}
@@ -213,7 +226,17 @@ features:
     milestone: M1
     modules: [native/MessagesSource]
     depends_on: [messages.actions]
-    status: todo
+    status: limited
+    limits:
+      - scenario: MSG-GROUP-CREATE
+        level: real
+        reason: "Accessibility UI automation of Messages needs an unlocked GUI session; the Air is at the password lock screen and unlocking needs Johan's password. Verified at sim level; AppleScript sends work while locked."
+      - scenario: MSG-SEND-RCS-GROUP
+        level: real
+        reason: "Accessibility UI automation of Messages needs an unlocked GUI session; the Air is at the password lock screen and unlocking needs Johan's password. Verified at sim level; AppleScript sends work while locked."
+      - scenario: MSG-GROUP-MANAGE
+        level: real
+        reason: "No second iMessage account is available (Ben is RCS/SMS), and the screen is locked; iMessage group rename/add/remove/leave verified at sim level."
     scenarios:
       - {id: MSG-GROUP-CREATE, levels: [sim, real]}
       - {id: MSG-GROUP-MANAGE, levels: [sim, real]}
