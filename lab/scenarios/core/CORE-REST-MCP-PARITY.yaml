@@ -1,0 +1,10 @@
+id: CORE-REST-MCP-PARITY
+feature: core.frontdoor
+levels: [sim]
+given:
+  - world: {replicas: 2}
+  - seed: {count: 2}
+when:
+  - command_journey: {}
+then:
+  - converge: {}

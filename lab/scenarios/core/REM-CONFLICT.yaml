@@ -1,0 +1,10 @@
+id: REM-CONFLICT
+feature: reminders.write
+levels: [sim]
+given:
+  - world: {replicas: 2}
+  - seed: {count: 2}
+when:
+  - command_journey: {}
+then:
+  - converge: {}

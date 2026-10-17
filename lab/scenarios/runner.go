@@ -363,6 +363,16 @@ func Run(ctx context.Context, s Scenario, level string) Evidence {
 	if err = w.Await(15*time.Second, func() bool { return convergence(w) }); err != nil {
 		return fail("initial_convergence")
 	}
+	for _, step := range s.When {
+		if _, ok := step["command_journey"]; ok {
+			runCommands(ctx, w, s.ID, &evidence)
+			evidence.Passed = len(evidence.Assertions) > 0
+			for _, a := range evidence.Assertions {
+				evidence.Passed = evidence.Passed && a.Passed
+			}
+			return evidence
+		}
+	}
 	for _, e := range w.Replicas {
 		status, err := w.Status(e)
 		if err != nil || status.Snapshots != 1 {

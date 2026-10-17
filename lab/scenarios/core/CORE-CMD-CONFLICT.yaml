@@ -1,0 +1,10 @@
+id: CORE-CMD-CONFLICT
+feature: core.commands
+levels: [sim, replica]
+given:
+  - world: {replicas: 2}
+  - seed: {count: 2}
+when:
+  - command_journey: {}
+then:
+  - converge: {}

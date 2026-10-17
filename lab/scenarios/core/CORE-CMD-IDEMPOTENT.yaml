@@ -1,0 +1,10 @@
+id: CORE-CMD-IDEMPOTENT
+feature: core.commands
+levels: [sim]
+given:
+  - world: {replicas: 2}
+  - seed: {count: 2}
+when:
+  - command_journey: {}
+then:
+  - converge: {}
