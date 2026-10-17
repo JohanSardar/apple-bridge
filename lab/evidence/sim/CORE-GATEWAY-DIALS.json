@@ -1,0 +1,498 @@
+{
+  "host_conditions": {
+    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "start": {
+      "air": {
+        "at": "2026-10-17T18:47:45.271075Z",
+        "cpu_count": 8,
+        "load_average": [
+          3.22,
+          3.83,
+          4.92
+        ],
+        "cpu_idle_percent": 63,
+        "free_memory_bytes": 64045056,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 3,
+        "quiet": false
+      }
+    },
+    "end": {
+      "air": {
+        "at": "2026-10-17T18:48:57.470803Z",
+        "cpu_count": 8,
+        "load_average": [
+          3.24,
+          3.74,
+          4.8
+        ],
+        "cpu_idle_percent": 79,
+        "free_memory_bytes": 128221184,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 3,
+        "quiet": false
+      }
+    },
+    "periodic_samples": [
+      {
+        "air": {
+          "at": "2026-10-17T18:47:51.340168Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.28,
+            3.83,
+            4.91
+          ],
+          "cpu_idle_percent": 72,
+          "free_memory_bytes": 60129280,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:47:56.338293Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.1,
+            3.79,
+            4.89
+          ],
+          "cpu_idle_percent": 68,
+          "free_memory_bytes": 62570496,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:48:01.338416Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.01,
+            3.76,
+            4.87
+          ],
+          "cpu_idle_percent": 65,
+          "free_memory_bytes": 61046784,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:48:06.34048Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.41,
+            3.83,
+            4.89
+          ],
+          "cpu_idle_percent": 49,
+          "free_memory_bytes": 679837696,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:48:11.339313Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.38,
+            3.81,
+            4.88
+          ],
+          "cpu_idle_percent": 39,
+          "free_memory_bytes": 65241088,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:48:16.338559Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.19,
+            3.77,
+            4.86
+          ],
+          "cpu_idle_percent": 62,
+          "free_memory_bytes": 1790902272,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:48:21.340371Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.73,
+            3.87,
+            4.89
+          ],
+          "cpu_idle_percent": 77,
+          "free_memory_bytes": 1592836096,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:48:26.338818Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.75,
+            3.87,
+            4.88
+          ],
+          "cpu_idle_percent": 75,
+          "free_memory_bytes": 1296777216,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:48:31.340394Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.77,
+            3.87,
+            4.88
+          ],
+          "cpu_idle_percent": 64,
+          "free_memory_bytes": 1063436288,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:48:36.339505Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.71,
+            3.86,
+            4.87
+          ],
+          "cpu_idle_percent": 64,
+          "free_memory_bytes": 321863680,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:48:41.340302Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.49,
+            3.81,
+            4.84
+          ],
+          "cpu_idle_percent": 74,
+          "free_memory_bytes": 61865984,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:48:46.339467Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.29,
+            3.76,
+            4.82
+          ],
+          "cpu_idle_percent": 59,
+          "free_memory_bytes": 67993600,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:48:51.339002Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.35,
+            3.77,
+            4.81
+          ],
+          "cpu_idle_percent": 69,
+          "free_memory_bytes": 65257472,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:48:56.340138Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.24,
+            3.74,
+            4.8
+          ],
+          "cpu_idle_percent": 78,
+          "free_memory_bytes": 67633152,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        }
+      }
+    ],
+    "quiet": false,
+    "require_quiet": true,
+    "quiet_wait_ms": 62114,
+    "quiet_wait_expired": true
+  },
+  "run_id": "run_01M55K21DYQ45EKA2K0A4N5ZC7",
+  "network_path": "gateway_dials_loopback_fault_proxy",
+  "scenario": "CORE-GATEWAY-DIALS",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "26fa14e36826189f83c3a0a8091f05399fdca727",
+  "at": "2026-10-17T18:47:46.366496Z",
+  "assertions": [
+    {
+      "name": "feed_network_gateway_dials_loopback_fault_proxy",
+      "passed": true
+    },
+    {
+      "name": "replica_host_is_air",
+      "passed": true
+    },
+    {
+      "name": "bootstrap_snapshot",
+      "passed": true
+    },
+    {
+      "name": "scope_query_and_get",
+      "passed": true
+    },
+    {
+      "name": "dial_pairing_code_replay_rejected",
+      "passed": true
+    },
+    {
+      "name": "feed_command_rest",
+      "passed": true
+    },
+    {
+      "name": "drop_feed_response_rest",
+      "passed": true
+    },
+    {
+      "name": "feed_response_lost_rest",
+      "passed": true
+    },
+    {
+      "name": "feed_reconnect_rest",
+      "passed": true
+    },
+    {
+      "name": "original_id_retry_one_effect_rest",
+      "passed": true
+    },
+    {
+      "name": "feed_status_rest",
+      "passed": true
+    },
+    {
+      "name": "feed_disconnect_rest",
+      "passed": true
+    },
+    {
+      "name": "feed_offline_fail_fast_rest",
+      "passed": true
+    },
+    {
+      "name": "feed_heal_rest",
+      "passed": true
+    },
+    {
+      "name": "feed_command_mcp",
+      "passed": true
+    },
+    {
+      "name": "drop_feed_response_mcp",
+      "passed": true
+    },
+    {
+      "name": "feed_response_lost_mcp",
+      "passed": true
+    },
+    {
+      "name": "feed_reconnect_mcp",
+      "passed": true
+    },
+    {
+      "name": "original_id_retry_one_effect_mcp",
+      "passed": true
+    },
+    {
+      "name": "feed_status_mcp",
+      "passed": true
+    },
+    {
+      "name": "feed_disconnect_mcp",
+      "passed": true
+    },
+    {
+      "name": "feed_offline_fail_fast_mcp",
+      "passed": true
+    },
+    {
+      "name": "feed_heal_mcp",
+      "passed": true
+    },
+    {
+      "name": "convergence_truth_gateway_replicas",
+      "passed": true
+    },
+    {
+      "name": "latency_observations_complete",
+      "passed": true
+    },
+    {
+      "name": "resume_without_snapshot",
+      "passed": true
+    },
+    {
+      "name": "latency_effect_done→replica_visible:replica0",
+      "passed": true
+    },
+    {
+      "name": "latency_effect_done→gateway_visible",
+      "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass",
+      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
+    },
+    {
+      "name": "sse_contiguous_watermarks_0",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_watermarks_1",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_0",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_1",
+      "passed": true
+    },
+    {
+      "name": "partition_observations_complete_1",
+      "passed": true
+    },
+    {
+      "name": "revoke_gateway_dial_replica",
+      "passed": true
+    },
+    {
+      "name": "revoke_closes_feed",
+      "passed": true
+    },
+    {
+      "name": "gateway_reports_revoked",
+      "passed": true
+    },
+    {
+      "name": "revoked_gateway_stops_redial",
+      "passed": true
+    },
+    {
+      "name": "revoked_no_reconnect",
+      "passed": true
+    },
+    {
+      "name": "unpaired_dial_certificate_rejected",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "effect_done→gateway_visible": {
+      "samples": 200,
+      "p50_ms": 18.2585,
+      "p95_ms": 27.693417,
+      "max_ms": 50.395916,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica0": {
+      "samples": 200,
+      "p50_ms": 24.609417,
+      "p95_ms": 36.765375,
+      "max_ms": 65.238583,
+      "timeouts": 0
+    },
+    "partition_effect_done→replica_visible:replica0": {
+      "samples": 10,
+      "p50_ms": 2748.46975,
+      "p95_ms": 3815.851375,
+      "max_ms": 3815.851375,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}
