@@ -334,7 +334,7 @@ public actor AppleSession: ObservationSink {
                 try Data(flight.checkpoint.utf8).write(to: marker, options: .atomic)
                 try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: marker.path)
             }
-            for observation in flight.pending.observations {
+            for observation in flight.pending.observations where ["upsert", "absent"].contains(observation["kind"].string) {
                 observedCheckpoints[observation["collection"].string + "/" + observation["native_key"].string] = flight.checkpoint
             }
             if source == "reminders" { try await self.source.didCommit(flight.pending.observations, generation: flight.pending.generation) }
