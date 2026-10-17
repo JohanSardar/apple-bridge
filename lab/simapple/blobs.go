@@ -23,13 +23,6 @@ func (f *fakeApple) blobHandles() map[string]string {
 	return out
 }
 func (f *fakeApple) blobRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("POST /blob-restart", func(w http.ResponseWriter, r *http.Request) {
-		select {
-		case f.changes <- captureRequest{Restart: true}:
-			json.NewEncoder(w).Encode(map[string]bool{"ok": true})
-		case <-r.Context().Done():
-		}
-	})
 	mux.HandleFunc("POST /blob-fixture", func(w http.ResponseWriter, r *http.Request) {
 		var a struct {
 			Busy   int    `json:"unavailable_reads"`

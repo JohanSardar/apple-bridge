@@ -36,7 +36,6 @@ type captureRequest struct {
 	Capture     contracts.Capture
 	Done        chan struct{}
 	Revision    uint64
-	Restart bool
 	Close       bool
 }
 type fakeApple struct {
@@ -700,9 +699,6 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 					return err
 				}
 				continue
-			}
-			if req.Restart {
-				return nil
 			}
 			if req.Close {
 				wire.Send(contracts.IPCFrame{T: "Close", Reason: "lab"})

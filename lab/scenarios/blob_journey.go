@@ -194,7 +194,7 @@ func blobJourney(ctx context.Context, w *world.World, id string, evidence *Evide
 		}) == nil) {
 			return false
 		}
-		if !check("helper_restarts_during_staged_download", w.ControlAction("/blob-restart", struct{}{}) == nil) {
+		if !check("helper_restarts_during_staged_download", w.RestartHelper() == nil) {
 			return false
 		}
 		if !check("gateway_resumes_with_fresh_handles", w.Await(15*time.Second, func() bool {
