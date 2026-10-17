@@ -46,7 +46,7 @@ func (w *World) truth(ctx context.Context, verb string, request map[string]any) 
 		if !regexp.MustCompile(`^[A-Za-z_][A-Za-z_0-9.:-]{0,159}$`).MatchString(safe) {
 			safe = "native_error_redacted"
 		}
-		private := filepath.Join("lab", "evidence", "private", "truth", filepath.Base(w.Dir))
+		private := filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "AppleBridgeDev", "lab-failures", filepath.Base(w.Dir))
 		if err := os.MkdirAll(private, 0700); err == nil {
 			os.Chmod(private, 0700)
 			for _, path := range []string{input, output} {
@@ -57,7 +57,7 @@ func (w *World) truth(ctx context.Context, verb string, request map[string]any) 
 		}
 		os.Remove(output)
 		w.TruthFailures = append(w.TruthFailures, safe)
-		return nil, fmt.Errorf("%w: %s; private report %s", ErrTruthUnverified, safe, filepath.Join(private, filepath.Base(output)))
+		return nil, fmt.Errorf("%w: %s; private report %s", ErrTruthUnverified, safe, filepath.Join("AppleBridgeDev", "lab-failures", filepath.Base(w.Dir), filepath.Base(output)))
 	}
 	app := w.TruthApp
 	_, launchErr := commandOutput(ctx, "open", "-n", "-W", "-g", "-a", app, "--args", verb, "--request-file", input, "--report", output)
