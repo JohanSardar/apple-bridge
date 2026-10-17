@@ -37,6 +37,12 @@ public final class CalendarSource: Source {
         CalendarTime.identity(event.calendarItemIdentifier, occurrence: event.hasRecurrenceRules || event.isDetached ? event.occurrenceDate : nil, floatingZone: event.isAllDay ? .current : nil)
     }
 
+    private func seriesIdentifier(_ event: EKEvent) -> String {
+        let identifier = event.calendarItemExternalIdentifier ?? event.calendarItemIdentifier
+        guard event.isDetached, let suffix = identifier.range(of: "/RID=") else { return identifier }
+        return String(identifier[..<suffix.lowerBound])
+    }
+
     private func ref(_ calendar: EKCalendar) -> JSON {
         .object(["$ref": .object(["collection": .string("calendar.calendar"), "native_key": .string(calendar.calendarIdentifier)])])
     }
@@ -49,19 +55,19 @@ public final class CalendarSource: Source {
         let zone = event.isAllDay ? TimeZone.current : (event.timeZone ?? .current)
         var fields: [String: JSON] = ["calendar_id": ref(event.calendar), "title": .string(event.title ?? ""), "notes": event.notes.map(JSON.string) ?? .null, "location": event.location.map(JSON.string) ?? .null, "url": event.url.map { .string($0.absoluteString) } ?? .null, "start": .string(event.isAllDay ? CalendarTime.floating(event.startDate, zone: zone) : timestamp(event.startDate)), "end": .string(event.isAllDay ? CalendarTime.floating(event.endDate, zone: zone) : timestamp(event.endDate)), "all_day": .bool(event.isAllDay), "time_zone": event.timeZone.map { .string($0.identifier) } ?? .null, "is_exception": .bool(event.isDetached), "availability": .number(Double(event.availability.rawValue)), "status": .number(Double(event.status.rawValue)), "attendees": .array((event.attendees ?? []).map { .object(["name": $0.name.map(JSON.string) ?? .null, "url": .string($0.url.absoluteString), "status": .number(Double($0.participantStatus.rawValue)), "role": .number(Double($0.participantRole.rawValue)), "type": .number(Double($0.participantType.rawValue))]) }), "alarms": .array((event.alarms ?? []).map { .object(["absolute_date": $0.absoluteDate.map { .string(timestamp($0)) } ?? .null, "relative_offset": .number($0.relativeOffset)]) })]
         if event.hasRecurrenceRules || event.isDetached {
-            fields["series_id"] = .string(event.calendarItemExternalIdentifier ?? event.calendarItemIdentifier)
+            fields["series_id"] = .string(seriesIdentifier(event))
             fields["occurrence_date"] = event.occurrenceDate.map { .string(event.isAllDay ? CalendarTime.floating($0, zone: .current) : timestamp($0)) } ?? .null
         }
         var nativeRules = event.recurrenceRules
-        if nativeRules == nil && event.isDetached {
-            let external = event.calendarItemExternalIdentifier ?? event.calendarItemIdentifier
+        if (nativeRules == nil || nativeRules?.isEmpty == true) && event.isDetached {
+            let external = seriesIdentifier(event)
             var candidates = gate.store.calendarItems(withExternalIdentifier: external).compactMap { $0 as? EKEvent }
             if let master = gate.store.calendarItem(withIdentifier: event.calendarItemIdentifier) as? EKEvent { candidates.append(master) }
             let anchor = event.occurrenceDate ?? event.startDate!
             let interval = DateInterval(start: anchor.addingTimeInterval(-180 * 86400), end: anchor.addingTimeInterval(180 * 86400))
             candidates += (try? events(interval)) ?? []
             nativeRules = candidates.first(where: {
-                $0.calendar.calendarIdentifier == event.calendar.calendarIdentifier && $0.calendar.source.sourceIdentifier == event.calendar.source.sourceIdentifier && (($0.calendarItemExternalIdentifier ?? $0.calendarItemIdentifier) == external || $0.calendarItemIdentifier == event.calendarItemIdentifier) && $0.hasRecurrenceRules
+                $0.calendar.calendarIdentifier == event.calendar.calendarIdentifier && $0.calendar.source.sourceIdentifier == event.calendar.source.sourceIdentifier && (seriesIdentifier($0) == external || $0.calendarItemIdentifier == event.calendarItemIdentifier) && $0.hasRecurrenceRules
             })?.recurrenceRules
         }
         fields["recurrence"] = nativeRules.map { rules in .array(rules.map { rule in
@@ -99,6 +105,11 @@ public final class CalendarSource: Source {
         while scanning { try await Task.sleep(for: .milliseconds(10)) }
         scanning = true
         defer { scanning = false }
+        while try await !scanPass(into: sink, live: live) {}
+    }
+
+    private func scanPass(into sink: any ObservationSink, live: Bool) async throws -> Bool {
+        let revision = gate.debounceAt
         let started = timestamp()
         gate.trace.record("calendar_scan_started", fields: ["live": .bool(live)])
         let now = Date()
@@ -118,7 +129,7 @@ public final class CalendarSource: Source {
                 let identity = "calendar.event/" + native
                 if current[identity] != nil { continue }
                 let occurrence = event.hasRecurrenceRules || event.isDetached ? event.occurrenceDate.map { "|" + (event.isAllDay ? CalendarTime.floating($0, zone: .current) : timestamp($0)) } ?? "" : ""
-                let alias = event.calendarItemExternalIdentifier.map { event.calendar.source.sourceIdentifier + "/" + event.calendar.calendarIdentifier + "/" + $0 + occurrence } ?? ""
+                let alias = event.calendarItemExternalIdentifier.map { _ in event.calendar.source.sourceIdentifier + "/" + event.calendar.calendarIdentifier + "/" + seriesIdentifier(event) + occurrence } ?? ""
                 let value = observation("calendar.event", native, data(event), alias: alias)
                 current[identity] = value
                 let changed = try hash(value["data"]) != hash(committed[identity]?["data"] ?? .null)
@@ -131,6 +142,12 @@ public final class CalendarSource: Source {
                 try await sink.emit(source: name, generation: "eventkit-calendar-v1", observations: pending, scanID: "", scanStartedAt: started, scope: [], completionEvidence: "", blobHandles: [:], live: live || index == 0)
             }
             pending = []
+            await Task.yield()
+            if !forceFull && gate.debounceAt != revision {
+                committed.merge(current) { _, new in new }
+                try save(committed)
+                return false
+            }
         }
         for (identity, previous) in committed where current[identity] == nil {
             if current.values.contains(where: { !$0["scoped_alias"].string.isEmpty && $0["scoped_alias"] == previous["scoped_alias"] }) { continue }
@@ -159,6 +176,7 @@ public final class CalendarSource: Source {
         gate.trace.record("calendar_scan_complete", fields: ["records": .number(Double(current.count))])
  let readiness=await open()
  try await sink.sourceState(source:name,state:readiness.state,coverage:readiness.coverage,capabilities:readiness.capabilities,reason:readiness.reason)
+        return true
     }
 
     public func reconcile(into sink: any ObservationSink) async throws {
@@ -184,7 +202,7 @@ public final class CalendarSource: Source {
     }
 
     private func remember(_ event: EKEvent) {
-        lookups[key(event)] = .object(["event_identifier": .string(event.eventIdentifier ?? ""), "calendar": .string(event.calendar.calendarIdentifier), "account": .string(event.calendar.source.sourceIdentifier), "external": .string(event.calendarItemExternalIdentifier ?? ""), "occurrence": event.occurrenceDate.map { .string(timestamp($0)) } ?? .null])
+        lookups[key(event)] = .object(["event_identifier": .string(event.eventIdentifier ?? ""), "calendar": .string(event.calendar.calendarIdentifier), "account": .string(event.calendar.source.sourceIdentifier), "external": .string(event.calendarItemExternalIdentifier == nil ? "" : seriesIdentifier(event)), "occurrence": event.occurrenceDate.map { .string(timestamp($0)) } ?? .null])
     }
 
     private func lookup(_ native: String) -> EKEvent? {
@@ -192,7 +210,7 @@ public final class CalendarSource: Source {
         func matches(_ event: EKEvent) -> Bool {
             guard event.calendar.calendarIdentifier == identity["calendar"].string, event.calendar.source.sourceIdentifier == identity["account"].string else { return false }
             if key(event) == native { return true }
-            guard !identity["external"].string.isEmpty, event.calendarItemExternalIdentifier == identity["external"].string else { return false }
+            guard !identity["external"].string.isEmpty, seriesIdentifier(event) == identity["external"].string else { return false }
             return (event.occurrenceDate.map { JSON.string(timestamp($0)) } ?? .null) == identity["occurrence"]
         }
         if let event = gate.store.event(withIdentifier: identity["event_identifier"].string), matches(event) { return event }

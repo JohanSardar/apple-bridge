@@ -136,6 +136,8 @@ struct CalendarTruth {
         let records: [[String: Any]] = selected.map { event in
             let zone = event.isAllDay ? TimeZone.current : (event.timeZone ?? .current)
             var row: [String: Any] = ["id": event.calendarItemIdentifier, "external_id": event.calendarItemExternalIdentifier ?? "", "calendar_id": event.calendar.calendarIdentifier, "title": event.title ?? "", "start": event.isAllDay ? floating(event.startDate, zone: zone) : stamp(event.startDate), "end": event.isAllDay ? floating(event.endDate, zone: zone) : stamp(event.endDate), "all_day": event.isAllDay, "time_zone": event.timeZone?.identifier ?? "", "is_exception": event.isDetached, "occurrence_date": event.occurrenceDate.map { event.isAllDay ? floating($0,zone:.current) : stamp($0) } ?? "", "recurring": event.hasRecurrenceRules]
+            let external = event.calendarItemExternalIdentifier ?? event.calendarItemIdentifier
+            row["series_id"] = event.isDetached ? external.components(separatedBy: "/RID=").first! : external
             row["notes"] = event.notes.map { $0 as Any } ?? NSNull()
             row["location"] = event.location.map { $0 as Any } ?? NSNull()
             row["url"] = event.url.map { $0.absoluteString as Any } ?? NSNull()

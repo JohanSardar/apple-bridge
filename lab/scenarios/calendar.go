@@ -899,7 +899,10 @@ func calendarTruthEqual(truth, actual map[string]any) bool {
 		return false
 	}
 	if actual["occurrence_date"] != nil {
-		series := truth["external_id"]
+		series := truth["series_id"]
+		if series == nil {
+			series = truth["external_id"]
+		}
 		if series == "" {
 			series = truth["id"]
 		}
