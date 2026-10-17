@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/internal/trust"
+	"time"
 )
 
 func (s *Store) RecordGrant(ctx context.Context, v trust.Visibility, id string) (trust.RecordGrant, error) {
@@ -152,18 +153,23 @@ func changedBlobReferences(ctx context.Context, tx *sql.Tx) (contracts.Reference
 	return updates, err
 }
 func (s *Store) commitProtected(ctx context.Context, tx *sql.Tx) error {
+	_, err := s.commitProtectedAt(ctx, tx)
+	return err
+}
+func (s *Store) commitProtectedAt(ctx context.Context, tx *sql.Tx) (time.Time, error) {
 	if s.BlobDelta == nil {
 		if _, err := tx.ExecContext(ctx, "DELETE FROM blob_ref_changes"); err != nil {
-			return err
+			return time.Time{}, err
 		}
-		return tx.Commit()
+		err := tx.Commit()
+		return time.Now(), err
 	}
 	updates, err := changedBlobReferences(ctx, tx)
 	if err != nil {
-		return err
+		return time.Time{}, err
 	}
 	if _, err = tx.ExecContext(ctx, "DELETE FROM blob_ref_changes"); err != nil {
-		return err
+		return time.Time{}, err
 	}
 	var refs []contracts.BlobReference
 	for _, list := range updates {
@@ -173,19 +179,20 @@ func (s *Store) commitProtected(ctx context.Context, tx *sql.Tx) error {
 	if len(refs) > 0 {
 		guard = "transaction:" + contracts.NewID("")
 		if err = s.BlobDelta(ctx, contracts.ReferenceSet{guard: refs}, false); err != nil {
-			return err
+			return time.Time{}, err
 		}
 	}
 	if err = tx.Commit(); err != nil {
 		if guard != "" {
 			s.BlobDelta(context.WithoutCancel(ctx), contracts.ReferenceSet{guard: nil}, false)
 		}
-		return err
+		return time.Time{}, err
 	}
+	committedAt := time.Now()
 	if guard != "" {
 		updates[guard] = nil
 	}
-	return s.BlobDelta(ctx, updates, true)
+	return committedAt, s.BlobDelta(ctx, updates, true)
 }
 func (s *Store) ProtectBlobs(ctx context.Context) error {
 	s.write.Lock()

@@ -406,10 +406,9 @@ func (s *Store) CommitCapture(ctx context.Context, c contracts.Capture) (CommitR
 	if err = setCursor(ctx, tx, cursor); err != nil {
 		return result, err
 	}
-	if err = s.commitProtected(ctx, tx); err != nil {
+	if result.CommittedAt, err = s.commitProtectedAt(ctx, tx); err != nil {
 		return result, err
 	}
-	result.CommittedAt = time.Now()
 	result.Through = cursor.Sequence
 	s.signal()
 	return result, nil
