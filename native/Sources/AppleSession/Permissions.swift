@@ -7,7 +7,7 @@ import Carbon
 import MessagesSource
 
 public enum PermissionState: String {
-    case granted, denied, notDetermined = "not_determined", unknown
+    case granted, denied, notDetermined = "not_determined", targetNotRunning = "target_not_running", unknown
 }
 
 public final class PermissionReport: @unchecked Sendable {
@@ -58,13 +58,25 @@ public final class PermissionSession {
             report.set(name, state == .fullAccess ? .granted : state == .notDetermined ? .notDetermined : state == .denied || state == .restricted || state == .writeOnly ? .denied : .unknown)
         }
         for (name, bundle) in [("automation_messages", "com.apple.MobileSMS"), ("automation_system_events", "com.apple.systemevents")] {
-            let target = NSAppleEventDescriptor(bundleIdentifier: bundle)
-            let status = AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false)
-            report.set(name, status == noErr ? .granted : status == -1744 ? .notDetermined : status == -1743 ? .denied : .unknown)
+            let report = self.report
+            let done = DispatchSemaphore(value: 0)
+            DispatchQueue.global().async {
+                let target = NSAppleEventDescriptor(bundleIdentifier: bundle)
+                let status = AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false)
+                report.set(name, status == noErr ? .granted : status == -1744 ? .notDetermined : status == -1743 ? .denied : status == -600 ? .targetNotRunning : .unknown)
+                done.signal()
+            }
+            if done.wait(timeout: .now() + 3) == .timedOut {
+                report.set(name, .unknown)
+            }
         }
     }
 
     public func onboard() async {
+        refresh()
+        if report.snapshot().values.allSatisfy({ $0 == PermissionState.granted.rawValue }) {
+            return
+        }
         NSApplication.shared.setActivationPolicy(.regular)
         NSApplication.shared.activate()
         refresh()
@@ -100,8 +112,12 @@ public final class PermissionSession {
         if states["full_disk_access"] != PermissionState.granted.rawValue, let pane = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles") {
             NSWorkspace.shared.open(pane)
         }
-        requestAutomation("com.apple.MobileSMS")
-        requestAutomation("com.apple.systemevents")
+        if states["automation_messages"] != PermissionState.granted.rawValue {
+            requestAutomation("com.apple.MobileSMS")
+        }
+        if states["automation_system_events"] != PermissionState.granted.rawValue {
+            requestAutomation("com.apple.systemevents")
+        }
         refresh()
         NSApplication.shared.setActivationPolicy(.accessory)
     }

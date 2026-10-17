@@ -44,6 +44,14 @@ public enum HelperCommand {
         }
         guard let reportIndex = arguments.firstIndex(of: "--report"), reportIndex + 1 < arguments.count else { throw ProbeFailure.invalidArguments }
         let reportURL = try PrivateReport.validate(arguments[reportIndex + 1])
+        if arguments.first == "functional" {
+            DispatchQueue.global().asyncAfter(deadline: .now() + 30) {
+                try? PrivateReport.write(["state": "timed_out"], to: reportURL)
+                exit(1)
+            }
+            try PrivateReport.write(FunctionalProbe.run(), to: reportURL)
+            return
+        }
         let session = PermissionSession()
         let deadlineReport = session.report
         let limit: Double = arguments.first == "onboard" ? 300 : 35
