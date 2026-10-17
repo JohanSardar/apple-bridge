@@ -1,0 +1,118 @@
+package simapple
+
+import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"github.com/JohanSardar/apple-bridge/internal/applepeer"
+	"github.com/JohanSardar/apple-bridge/internal/contracts"
+	"net/http"
+	"time"
+)
+
+func (f *fakeApple) blobHandles() map[string]string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	out := map[string]string{}
+	for d := range f.blobs {
+		out[d] = d
+	}
+	return out
+}
+func (f *fakeApple) blobRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("POST /blob-fixture", func(w http.ResponseWriter, r *http.Request) {
+		var a struct {
+			Size   int    `json:"size"`
+			State  string `json:"state"`
+			SlowMS int    `json:"slow_ms"`
+			Delete bool   `json:"delete"`
+		}
+		if json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&a) != nil || a.Size < 0 || a.Size > 32<<20 {
+			http.Error(w, "invalid", 400)
+			return
+		}
+		f.mu.Lock()
+		f.blobState = a.State
+		f.blobDelay = time.Duration(a.SlowMS) * time.Millisecond
+		if a.Delete {
+			for k, o := range f.records {
+				if contracts.CollectionSource(o.Collection) == contracts.Messages {
+					o.Kind = "absent"
+					o.Revalidated = true
+					o.ObservedAt = time.Now().UTC()
+					f.records[k] = o
+				}
+			}
+		} else {
+			b := make([]byte, a.Size)
+			for i := range b {
+				b[i] = byte((i*31 + i/251) % 256)
+			}
+			sum := sha256.Sum256(b)
+			d := hex.EncodeToString(sum[:])
+			f.blobs[d] = b
+			state := a.State
+			if state == "" {
+				state = "present"
+			}
+			ref := map[string]any{"$ref": map[string]string{"collection": "messages.message", "native_key": "blob-message"}}
+			for k, data := range map[string]any{
+				"blob-message":    map[string]any{"title": "[ab-test] blob-message", "text": "[ab-test] attachment", "kind": "message", "decode_status": "decoded", "parts": []any{map[string]any{"index": 0, "kind": "attachment", "attachment_id": map[string]any{"$ref": map[string]string{"collection": "messages.attachment", "native_key": "blob-attachment"}}}}},
+				"blob-attachment": map[string]any{"title": "[ab-test] blob-attachment", "message_id": ref, "filename": "fixture.bin", "mime_type": "application/octet-stream", "uti": "public.data", "size": len(b), "blob": map[string]any{"digest": d, "state": state}},
+			} {
+				collection := "messages.message"
+				if k == "blob-attachment" {
+					collection = "messages.attachment"
+				}
+				raw, _ := json.Marshal(data)
+				f.records[k] = contracts.Observation{Kind: "upsert", Collection: collection, NativeKey: k, ObservedAt: time.Now().UTC(), Data: raw}
+			}
+		}
+		observations := []contracts.Observation{}
+		for _, o := range f.records {
+			if contracts.CollectionSource(o.Collection) == contracts.Messages {
+				observations = append(observations, o)
+			}
+		}
+		handles := map[string]string{}
+		for d := range f.blobs {
+			handles[d] = d
+		}
+		f.mu.Unlock()
+		capture := contracts.Capture{Source: contracts.Messages, Observations: observations, BlobHandles: handles, ScanID: contracts.NewID("scan"), Scope: []string{"messages.message", "messages.attachment"}, ScanStartedAt: time.Now().UTC(), CompletionEvidence: "complete"}
+		if err := f.enqueue(r.Context(), capture, false); err != nil {
+			http.Error(w, "unavailable", 503)
+			return
+		}
+		json.NewEncoder(w).Encode(map[string]bool{"effect_done": true})
+	})
+}
+func (f *fakeApple) blobReply(ctx context.Context, wire *applepeer.Wire, read contracts.IPCFrame) error {
+	f.mu.Lock()
+	b, ok := f.blobs[read.Handle]
+	state, delay := f.blobState, f.blobDelay
+	f.mu.Unlock()
+	if !ok || state == "offloaded" || state == "missing" {
+		if state == "" {
+			state = "missing"
+		}
+		_, err := wire.Send(contracts.IPCFrame{T: "BlobUnavailable", Handle: read.Handle, Reason: state})
+		return err
+	}
+	if read.Offset < 0 || read.Offset > int64(len(b)) || read.Length <= 0 || read.Length > 128<<10 {
+		return contracts.ErrInvalid
+	}
+	if delay > 0 {
+		timer := time.NewTimer(delay)
+		defer timer.Stop()
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-timer.C:
+		}
+	}
+	end := min(read.Offset+read.Length, int64(len(b)))
+	_, err := wire.Send(contracts.IPCFrame{T: "BlobChunk", Handle: read.Handle, Offset: read.Offset, Bytes: b[read.Offset:end], Digest: read.Handle, EOF: end == int64(len(b))})
+	return err
+}

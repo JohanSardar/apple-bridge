@@ -41,7 +41,15 @@ type Endpoint struct {
 	Home   string
 	Remote bool
 }
+type BlobOptions struct {
+	Cap     int64
+	GraceMS int64
+	Corrupt bool
+	Slow    bool
+}
 type World struct {
+	blobOptions BlobOptions
+
 	Dir              string
 	Level            string
 	Gateway          Endpoint
@@ -72,11 +80,11 @@ func Build(ctx context.Context, level string) error {
 	if err := os.MkdirAll("bin", 0700); err != nil {
 		return err
 	}
-	if _, err := commandOutput(ctx, "go", "build", "-p", "2", "-o", "bin/bridge", "./cmd/bridge"); err != nil {
+	if _, err := commandOutput(ctx, "go", "build", "-tags", "lab", "-p", "2", "-o", "bin/bridge", "./cmd/bridge"); err != nil {
 		return err
 	}
 	if level == "replica" {
-		cmd := exec.CommandContext(ctx, "go", "build", "-p", "2", "-o", "bin/bridge-linux-amd64", "./cmd/bridge")
+		cmd := exec.CommandContext(ctx, "go", "build", "-tags", "lab", "-p", "2", "-o", "bin/bridge-linux-amd64", "./cmd/bridge")
 		cmd.Env = append(os.Environ(), "GOOS=linux", "GOARCH=amd64")
 		var log bytes.Buffer
 		cmd.Stdout = &log
@@ -93,6 +101,15 @@ func (w *World) start(name string, remote bool, home string, binary string, args
 		return nil, err
 	}
 	cmd := exec.Command(binary, args...)
+	if name == "gateway" {
+		cmd.Env = os.Environ()
+		if w.blobOptions.Corrupt {
+			cmd.Env = append(cmd.Env, "APPLE_BRIDGE_LAB_BLOB_CORRUPT="+filepath.Join(w.Dir, "corrupt-once"))
+		}
+		if w.blobOptions.Slow {
+			cmd.Env = append(cmd.Env, "APPLE_BRIDGE_LAB_BLOB_SLOW=1")
+		}
+	}
 	if remote {
 		joined := quote(binary)
 		for _, arg := range args {
@@ -179,7 +196,7 @@ func (w *World) Await(timeout time.Duration, predicate func() bool) error {
 		}
 	}
 }
-func New(ctx context.Context, level string, replicas int, seed int) (*World, error) {
+func New(ctx context.Context, level string, replicas int, seed int, blobOptions ...BlobOptions) (*World, error) {
 	root, err := os.Getwd()
 	if err != nil {
 		return nil, err
@@ -191,6 +208,13 @@ func New(ctx context.Context, level string, replicas int, seed int) (*World, err
 	id := strings.ToLower(contracts.NewID(""))
 	id = id[len(id)-10:]
 	w := &World{Dir: filepath.Join("/tmp/ablab", id), Level: level, bridge: filepath.Join(root, "bin", "bridge"), lab: lab, ctx: ctx}
+	if len(blobOptions) > 0 {
+		w.blobOptions = blobOptions[0]
+	}
+	scope := "reminders:read,system:read"
+	if len(blobOptions) > 0 {
+		scope = "messages:read,reminders:read,system:read"
+	}
 	if err = os.MkdirAll(w.Dir, 0700); err != nil {
 		return nil, err
 	}
@@ -211,7 +235,7 @@ func New(ctx context.Context, level string, replicas int, seed int) (*World, err
 		}
 	}
 	gatewayHome := filepath.Join(w.Dir, "gateway")
-	if _, err = w.start("gateway", false, gatewayHome, w.bridge, "start", "--role", "gateway", "--home", gatewayHome, "--peer-addr", net.JoinHostPort(peerHost, "0"), "--api-addr", "127.0.0.1:0"); err != nil {
+	if _, err = w.start("gateway", false, gatewayHome, w.bridge, "start", "--role", "gateway", "--home", gatewayHome, "--peer-addr", net.JoinHostPort(peerHost, "0"), "--api-addr", "127.0.0.1:0", "--blob-grace-ms", strconv.FormatInt(w.blobOptions.GraceMS, 10)); err != nil {
 		return nil, err
 	}
 	cfg, err := w.config(gatewayHome, false)
@@ -237,7 +261,7 @@ func New(ctx context.Context, level string, replicas int, seed int) (*World, err
 		}
 	}
 
-	token, err := w.execute(false, w.bridge, "token", "create", "--home", gatewayHome, "--scope", "reminders:read,system:read")
+	token, err := w.execute(false, w.bridge, "token", "create", "--home", gatewayHome, "--scope", scope)
 	if err != nil {
 		return nil, err
 	}
@@ -269,18 +293,18 @@ func New(ctx context.Context, level string, replicas int, seed int) (*World, err
 				return nil, err
 			}
 		}
-		code, err := w.execute(false, w.bridge, "pair", "--home", gatewayHome, "--peer-addr", w.pairAddress, "--name", "replica"+strconv.Itoa(i), "--scope", "reminders:read,system:read")
+		code, err := w.execute(false, w.bridge, "pair", "--home", gatewayHome, "--peer-addr", w.pairAddress, "--name", "replica"+strconv.Itoa(i), "--scope", scope)
 		if err != nil {
 			return nil, err
 		}
 		if _, err = w.execute(remote, binary, "join", code, "--home", home); err != nil {
 			return nil, err
 		}
-		token, err := w.execute(remote, binary, "token", "create", "--home", home, "--scope", "reminders:read,system:read")
+		token, err := w.execute(remote, binary, "token", "create", "--home", home, "--scope", scope)
 		if err != nil {
 			return nil, err
 		}
-		p, err := w.start("replica"+strconv.Itoa(i), remote, home, binary, "start", "--role", "replica", "--home", home, "--api-addr", "127.0.0.1:0")
+		p, err := w.start("replica"+strconv.Itoa(i), remote, home, binary, "start", "--role", "replica", "--home", home, "--api-addr", "127.0.0.1:0", "--blob-cap", strconv.FormatInt(w.blobOptions.Cap, 10), "--blob-grace-ms", strconv.FormatInt(w.blobOptions.GraceMS, 10))
 		if err != nil {
 			return nil, err
 		}
@@ -364,7 +388,7 @@ func (w *World) Heal(index int) error {
 		return err
 	}
 	_, port, _ := net.SplitHostPort(e.Host)
-	p, err := w.start("replica"+strconv.Itoa(index), e.Remote, e.Home, binary, "start", "--role", "replica", "--home", e.Home, "--api-addr", "127.0.0.1:"+port)
+	p, err := w.start("replica"+strconv.Itoa(index), e.Remote, e.Home, binary, "start", "--role", "replica", "--home", e.Home, "--api-addr", "127.0.0.1:"+port, "--blob-cap", strconv.FormatInt(w.blobOptions.Cap, 10), "--blob-grace-ms", strconv.FormatInt(w.blobOptions.GraceMS, 10))
 	if err != nil {
 		return err
 	}
@@ -482,4 +506,32 @@ func (w *World) Cursor(e Endpoint) (contracts.Cursor, error) {
 	var result contracts.ReadResult
 	_, err := Request(w.ctx, e, "/v1/op/records.query", contracts.ReadQuery{Limit: 1}, &result)
 	return result.Cursor, err
+}
+
+func (w *World) BlobControl(action any, result any) error {
+	transport := &http.Transport{DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
+		return (&net.Dialer{}).DialContext(ctx, "unix", filepath.Join(w.Gateway.Home, "run", "blobs-lab.sock"))
+	}}
+	defer transport.CloseIdleConnections()
+	b, err := json.Marshal(action)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(w.ctx, "POST", "http://lab/", bytes.NewReader(b))
+	if err != nil {
+		return err
+	}
+	client := &http.Client{Transport: transport, Timeout: 5 * time.Second}
+	response, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+	if response.StatusCode != 200 {
+		return fmt.Errorf("blob lab status %d", response.StatusCode)
+	}
+	if result != nil {
+		return json.NewDecoder(response.Body).Decode(result)
+	}
+	return nil
 }

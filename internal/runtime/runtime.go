@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/applepeer"
+	"github.com/JohanSardar/apple-bridge/internal/blobs"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/internal/frontdoor"
 	"github.com/JohanSardar/apple-bridge/internal/operations"
@@ -23,6 +24,9 @@ import (
 )
 
 type Config struct {
+	BlobCap     int64 `json:"blob_cap,omitempty"`
+	BlobGraceMS int64 `json:"blob_grace_ms,omitempty"`
+
 	Role        string `json:"role"`
 	Home        string `json:"home"`
 	PeerAddress string `json:"peer_address"`
@@ -69,6 +73,19 @@ func Start(ctx context.Context, cfg Config) error {
 		return err
 	}
 	defer store.Close()
+	blobCap := cfg.BlobCap
+	if cfg.Role == "gateway" && blobCap == 0 {
+		blobCap = -1
+	}
+	blobStore, err := blobs.Open(cfg.Home, blobs.Config{Cap: blobCap, Grace: time.Duration(cfg.BlobGraceMS) * time.Millisecond})
+	if err != nil {
+		return err
+	}
+	store.BlobProtection = blobStore.Protect
+	if err = store.ProtectBlobs(ctx); err != nil {
+		return err
+	}
+
 	if cfg.APIAddress == "" {
 		cfg.APIAddress = "127.0.0.1:7780"
 	}
@@ -85,7 +102,26 @@ func Start(ctx context.Context, cfg Config) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	failures := make(chan error, 4)
+	go func() {
+		tick := time.NewTicker(100 * time.Millisecond)
+		defer tick.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-tick.C:
+				if store.ProtectBlobs(ctx) == nil {
+					blobStore.Collect(ctx)
+				}
+			}
+		}
+	}()
+
+	if err = serveBlobLab(ctx, cfg.Home, store, blobStore); err != nil {
+		return err
+	}
 	service := &operations.Service{State: store}
+	service.LocalStatus = func() any { return map[string]any{"blobs": blobStore.Progress()} }
 	if cfg.Role == "gateway" {
 		if cfg.PeerAddress == "" {
 			cfg.PeerAddress = "127.0.0.1:7443"
@@ -113,7 +149,7 @@ func Start(ctx context.Context, cfg Config) error {
 		}
 		defer peer.Close()
 		cfg.PeerAddress = peer.Addr().String()
-		feed := &replication.Server{Store: store, Authority: authority}
+		feed := &replication.Server{Store: store, Authority: authority, Blobs: blobStore}
 		mux := http.NewServeMux()
 		mux.Handle("/v1/pair", authority.PairHandler())
 		mux.Handle("/v1/feed", feed.Handler())
@@ -121,17 +157,17 @@ func Start(ctx context.Context, cfg Config) error {
 		go func() { failures <- server.Serve(peer) }()
 		defer server.Close()
 		go func() {
-			failures <- applepeer.Serve(ctx, applepeer.Config{Socket: cfg.Socket, Secret: secret, Checkpoints: store.Checkpoints, NextFence: store.NextFence, SourceState: store.SourceState, CommitCapture: func(ctx context.Context, c contracts.Capture) (bool, error) {
+			failures <- applepeer.Serve(ctx, applepeer.Config{BlobCapture: blobStore.Capture, Socket: cfg.Socket, Secret: secret, Checkpoints: store.Checkpoints, NextFence: store.NextFence, SourceState: store.SourceState, CommitCapture: func(ctx context.Context, c contracts.Capture) (bool, error) {
 				result, err := store.CommitCapture(ctx, c)
 				return result.Degraded, err
 			}})
 		}()
 	} else {
-		client := &replication.Client{Store: store, Authority: authority}
-		service.LocalStatus = client.Status
+		client := &replication.Client{Store:store,Authority:authority,Blobs:blobStore}
+		service.LocalStatus=client.Status
 		go func() { failures <- client.Follow(ctx) }()
 	}
-	server := &http.Server{Handler: frontdoor.Handler(frontdoor.Deps{Operations: service, Authority: authority, Address: cfg.APIAddress}, contracts.Operations), ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 30 * time.Second}
+	server := &http.Server{Handler: frontdoor.Handler(frontdoor.Deps{Operations: service, Authority: authority, Address: cfg.APIAddress, Blobs: blobStore}, contracts.Operations), ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 30 * time.Second}
 	go func() { failures <- server.Serve(api) }()
 	defer server.Close()
 	b, err := json.Marshal(cfg)

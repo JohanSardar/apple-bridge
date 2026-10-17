@@ -23,7 +23,10 @@ func (s *Service) Read(ctx context.Context, p trust.Principal, name string, q co
 			return contracts.ReadResult{}, contracts.ErrInvalid
 		}
 	case "records.query":
-	case "sources.status":
+	case "sources.status", "replica.status":
+		if name == "replica.status" && !p.Visibility()[contracts.System] {
+			return contracts.ReadResult{}, contracts.ErrUnauthorized
+		}
 		q = contracts.ReadQuery{Collection: "system.source"}
 	default:
 		return contracts.ReadResult{}, contracts.ErrUnsupported
@@ -38,4 +41,8 @@ func (s *Service) Read(ctx context.Context, p trust.Principal, name string, q co
 func (s *Service) Head() contracts.Cursor { return s.State.Head() }
 func (s *Service) Observe(ctx context.Context, p trust.Principal, after contracts.Cursor) (*state.ChangeIterator, error) {
 	return s.State.Changes(ctx, p.Visibility(), after)
+}
+
+func (s *Service) BlobGrant(ctx context.Context, p trust.Principal, id string) (trust.RecordGrant, error) {
+	return s.State.RecordGrant(ctx, p.Visibility(), id)
 }

@@ -11,6 +11,8 @@ type Batch struct {
 }
 
 type FeedFrame struct {
+	Offset int64 `json:"offset,omitempty"`
+
 	T                    string    `json:"t"`
 	Protocol             string    `json:"protocol,omitempty"`
 	ReplicaID            string    `json:"replica_id,omitempty"`
@@ -44,3 +46,6 @@ type SnapshotEnd FeedFrame
 type Ack FeedFrame
 type Reset FeedFrame
 type Heartbeat FeedFrame
+
+type BlobWant FeedFrame
+type BlobDone FeedFrame

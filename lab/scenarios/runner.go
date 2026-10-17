@@ -343,7 +343,17 @@ func Run(ctx context.Context, s Scenario, level string) Evidence {
 			}
 		}
 	}
-	w, err := world.New(ctx, level, replicas, seed)
+	options := []world.BlobOptions{}
+	if strings.HasPrefix(s.ID, "CORE-BLOB-") {
+		opt := world.BlobOptions{GraceMS: 500}
+		if s.ID == "CORE-BLOB-CAP" {
+			opt.Cap = 1 << 20
+		}
+		opt.Corrupt = s.ID == "CORE-BLOB-CORRUPT"
+		opt.Slow = s.ID == "CORE-BLOB-INTERRUPT"
+		options = append(options, opt)
+	}
+	w, err := world.New(ctx, level, replicas, seed, options...)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "world startup:", err)
 		return fail("world_start")
@@ -451,8 +461,9 @@ func Run(ctx context.Context, s Scenario, level string) Evidence {
 				evidence.Passed = detected
 				return evidence
 			case "blobs":
-				status, _ := world.Request(ctx, w.Gateway, "/v1/blobs/"+strings.Repeat("0",64), nil, nil)
-				if status == 404 { return fail("blob_route_missing") }
+				if !blobJourney(ctx, w, s.ID, &evidence, add) {
+					return evidence
+				}
 			case "connect":
 			case "changes":
 				delete(effects, "probe")

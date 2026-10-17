@@ -16,6 +16,8 @@ import (
 )
 
 type Config struct {
+	BlobCapture func(context.Context, contracts.Capture, *Wire)
+
 	Socket        string
 	Secret        []byte
 	Checkpoints   func(context.Context) (map[contracts.Source]contracts.Checkpoint, error)
@@ -25,8 +27,10 @@ type Config struct {
 }
 
 type Wire struct {
-	Conn  *net.UnixConn
-	write sync.Mutex
+	Conn        *net.UnixConn
+	write       sync.Mutex
+	blobMu      sync.Mutex
+	blobPending map[string]chan contracts.IPCFrame
 }
 
 func (w *Wire) Send(frame contracts.IPCFrame) (int, error) {
@@ -230,12 +234,17 @@ func Serve(ctx context.Context, cfg Config) error {
 						cfg.SourceState(ctx, f.Capture.Source, "degraded", contracts.Coverage{Fields: "partial", Missing: []string{"capture_failed"}}, nil, "capture_failed")
 						return
 					}
+					if cfg.BlobCapture != nil {
+						go cfg.BlobCapture(session, *f.Capture, wire)
+					}
 					if degraded {
 						cfg.SourceState(ctx, f.Capture.Source, "degraded", contracts.Coverage{Fields: "partial", Missing: []string{"incomplete_scan_absence_ignored"}}, nil, "incomplete_scan")
 					}
 					if _, err = wire.Send(contracts.IPCFrame{T: "Committed", Source: f.Capture.Source, Checkpoint: f.Capture.Checkpoint, Credit: n}); err != nil {
 						return
 					}
+				case "BlobChunk", "BlobUnavailable":
+					wire.deliverBlob(f)
 				case "SourceState":
 					if err = cfg.SourceState(ctx, f.Source, f.State, f.Coverage[f.Source], f.Capabilities[f.Source], f.Reason); err != nil {
 						return

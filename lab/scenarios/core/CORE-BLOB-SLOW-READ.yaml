@@ -1,0 +1,6 @@
+id: CORE-BLOB-SLOW-READ
+feature: core.blobs
+levels: [sim]
+given: [{world: {replicas: 1}}]
+when: [{blobs: {case: slow-read}}]
+then: [{converge: {}}]

@@ -23,6 +23,8 @@ type Observation struct {
 }
 
 type Capture struct {
+	BlobHandles map[string]string `json:"blob_handles,omitempty"`
+
 	Source             Source        `json:"source"`
 	Generation         string        `json:"generation"`
 	Predecessor        string        `json:"predecessor"`
@@ -40,6 +42,13 @@ type Checkpoint struct {
 }
 
 type IPCFrame struct {
+	Handle string `json:"handle,omitempty"`
+	Offset int64  `json:"offset,omitempty"`
+	Length int64  `json:"length,omitempty"`
+	Bytes  []byte `json:"bytes,omitempty"`
+	Digest string `json:"digest,omitempty"`
+	EOF    bool   `json:"eof,omitempty"`
+
 	T            string                `json:"t"`
 	Protocol     string                `json:"protocol,omitempty"`
 	OwnerFence   uint64                `json:"owner_fence,omitempty"`
@@ -100,6 +109,12 @@ type Outcome struct {
 type Resolve struct {
 	T         string `json:"t"`
 	CommandID string `json:"command_id"`
+}
+type BlobUnavailable struct {
+	T      string `json:"t"`
+	Handle string `json:"handle,omitempty"`
+	Digest string `json:"digest,omitempty"`
+	Reason string `json:"reason"`
 }
 type BlobRead struct {
 	T      string `json:"t"`

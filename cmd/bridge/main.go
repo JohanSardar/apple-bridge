@@ -33,6 +33,8 @@ func run(ctx context.Context, args []string) error {
 	peer := set.String("peer-addr", "", "gateway peer listen address")
 	api := set.String("api-addr", "", "loopback API address")
 	socket := set.String("socket", "", "ApplePeer socket path")
+	blobCap := set.Int64("blob-cap", 0, "machine blob cap in bytes")
+	blobGrace := set.Int64("blob-grace-ms", 0, "unreferenced blob grace in milliseconds")
 	scope := set.String("scope", "reminders:read,system:read", "comma separated grants")
 	set.String("name", "", "replica display name")
 	code := ""
@@ -44,7 +46,7 @@ func run(ctx context.Context, args []string) error {
 		return err
 	}
 	if verb == "start" {
-		return bridgeruntime.Start(ctx, bridgeruntime.Config{Role: *role, Home: *home, PeerAddress: *peer, APIAddress: *api, Socket: *socket})
+		return bridgeruntime.Start(ctx, bridgeruntime.Config{Role: *role, Home: *home, PeerAddress: *peer, APIAddress: *api, Socket: *socket, BlobCap: *blobCap, BlobGraceMS: *blobGrace})
 	}
 	authority, err := trust.Open(*home)
 	if err != nil {

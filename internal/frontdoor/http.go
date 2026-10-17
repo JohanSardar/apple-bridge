@@ -12,12 +12,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/JohanSardar/apple-bridge/internal/blobs"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/internal/operations"
 	"github.com/JohanSardar/apple-bridge/internal/trust"
 )
 
 type Deps struct {
+	Blobs *blobs.Store
+
 	Operations *operations.Service
 	Authority  *trust.Authority
 	Address    string
@@ -83,6 +86,26 @@ func Handler(deps Deps, descriptors []contracts.OperationDescriptor) http.Handle
 		p := r.Context().Value(principalKey{}).(trust.Principal)
 		result, err := deps.Operations.Read(r.Context(), p, "records.get", contracts.ReadQuery{Collection: r.PathValue("collection"), ID: r.PathValue("id")})
 		respond(w, result, err)
+	})
+	mux.HandleFunc("GET /v1/blobs/{digest}", func(w http.ResponseWriter, r *http.Request) {
+		p := r.Context().Value(principalKey{}).(trust.Principal)
+		grant, err := deps.Operations.BlobGrant(r.Context(), p, r.URL.Query().Get("record"))
+		if err != nil {
+			respond(w, nil, err)
+			return
+		}
+		if deps.Blobs == nil {
+			respond(w, nil, contracts.ErrUnavailable)
+			return
+		}
+		f, err := deps.Blobs.OpenAuthorized(r.Context(), grant, r.PathValue("digest"))
+		if err != nil {
+			respond(w, nil, err)
+			return
+		}
+		defer f.Close()
+		w.Header().Set("Content-Type", "application/octet-stream")
+		http.ServeContent(w, r, "", time.Time{}, f)
 	})
 	mux.HandleFunc("GET /v1/changes", func(w http.ResponseWriter, r *http.Request) {
 		p := r.Context().Value(principalKey{}).(trust.Principal)

@@ -34,6 +34,10 @@ type captureRequest struct {
 	Close   bool
 }
 type fakeApple struct {
+	blobs     map[string][]byte
+	blobState string
+	blobDelay time.Duration
+
 	mu      sync.Mutex
 	records map[string]contracts.Observation
 	changes chan captureRequest
@@ -80,8 +84,9 @@ func fullScan(records []contracts.Observation) contracts.Capture {
 	return contracts.Capture{Source: contracts.Reminders, Observations: records, ScanID: contracts.NewID("scan"), Scope: []string{"reminders.list", "reminders.reminder"}, ScanStartedAt: time.Now().UTC(), CompletionEvidence: "complete"}
 }
 func Run(ctx context.Context, cfg Config) error {
-	fake := &fakeApple{records: map[string]contracts.Observation{}, changes: make(chan captureRequest, 4096)}
+	fake := &fakeApple{blobs: map[string][]byte{}, records: map[string]contracts.Observation{}, changes: make(chan captureRequest, 4096)}
 	mux := http.NewServeMux()
+	fake.blobRoutes(mux)
 	mux.HandleFunc("GET /inspect", func(w http.ResponseWriter, r *http.Request) { json.NewEncoder(w).Encode(fake.inspect()) })
 	mux.HandleFunc("POST /seed", func(w http.ResponseWriter, r *http.Request) {
 		var action Action
@@ -230,7 +235,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 	}
 	credit := open.ByteCredit
 	coverage := contracts.Coverage{Fields: "complete", Missing: []string{}}
-	if _, err = wire.Send(contracts.IPCFrame{T: "Ready", Protocol: contracts.IPCProtocol, Capabilities: map[contracts.Source][]string{contracts.Reminders: {}}, Coverage: map[contracts.Source]contracts.Coverage{contracts.Reminders: coverage}, HelperBuild: "sim/1", OSBuild: "sim"}); err != nil {
+	if _, err = wire.Send(contracts.IPCFrame{T: "Ready", Protocol: contracts.IPCProtocol, Capabilities: map[contracts.Source][]string{contracts.Reminders: {}}, Coverage: map[contracts.Source]contracts.Coverage{contracts.Reminders: coverage, contracts.Messages: coverage}, HelperBuild: "sim/1", OSBuild: "sim"}); err != nil {
 		return err
 	}
 	checkpoints := map[contracts.Source]string{}
@@ -279,6 +284,12 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 				return ctx.Err()
 			case reply := <-received:
 				switch reply.T {
+				case "BlobRead":
+					go func() {
+						if f.blobReply(ctx, wire, reply) != nil {
+							conn.Close()
+						}
+					}()
 				case "Committed":
 					if reply.Source != capture.Source || reply.Checkpoint != capture.Checkpoint || reply.Credit != n {
 						return contracts.ErrInvalid
@@ -343,15 +354,35 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 		}
 		return nil
 	}
-	if err = emit(fullScan(f.inspect())); err != nil {
-		return err
+	for _, source := range []contracts.Source{contracts.Reminders, contracts.Messages} {
+		records := []contracts.Observation{}
+		for _, o := range f.inspect() {
+			if contracts.CollectionSource(o.Collection) == source {
+				records = append(records, o)
+			}
+		}
+		capture := fullScan(records)
+		capture.Source = source
+		if source == contracts.Messages {
+			capture.Scope = []string{"messages.message", "messages.attachment"}
+			capture.BlobHandles = f.blobHandles()
+		}
+		if err = emit(capture); err != nil {
+			return err
+		}
 	}
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		case reply := <-received:
-			if reply.T == "Ping" {
+			if reply.T == "BlobRead" {
+				go func() {
+					if f.blobReply(ctx, wire, reply) != nil {
+						conn.Close()
+					}
+				}()
+			} else if reply.T == "Ping" {
 				if _, err = wire.Send(contracts.IPCFrame{T: "Pong"}); err != nil {
 					return err
 				}

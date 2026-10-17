@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/JohanSardar/apple-bridge/internal/blobs"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/internal/state"
 	"github.com/JohanSardar/apple-bridge/internal/trust"
@@ -16,6 +17,8 @@ import (
 )
 
 type Server struct {
+	Blobs *blobs.Store
+
 	Store     *state.Store
 	Authority *trust.Authority
 }
@@ -47,7 +50,7 @@ func send(ctx context.Context, conn *websocket.Conn, f contracts.FeedFrame) (int
 	}
 	bounded, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	return len(b), conn.Write(bounded, websocket.MessageText, b)
+	return len(b), writeFrame(bounded, conn, websocket.MessageText, b, false)
 }
 
 func (s *Server) Handler() http.Handler {
@@ -84,6 +87,9 @@ func (s *Server) serve(ctx context.Context, conn *websocket.Conn, p trust.Princi
 	credits := min(hello.Credits, contracts.ByteCredit)
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
+	ctx = priorityWriter(ctx, conn)
+	wants := make(chan contracts.FeedFrame, 8)
+	go s.serveBlobs(ctx, conn, p, wants)
 	acks := make(chan contracts.FeedFrame, 8)
 	go func() {
 		defer cancel()
@@ -96,6 +102,12 @@ func (s *Server) serve(ctx context.Context, conn *websocket.Conn, p trust.Princi
 			case "Ack":
 				select {
 				case acks <- f:
+				case <-ctx.Done():
+					return
+				}
+			case "BlobWant":
+				select {
+				case wants <- f:
 				case <-ctx.Done():
 					return
 				}
@@ -218,6 +230,8 @@ func (s *Server) serve(ctx context.Context, conn *websocket.Conn, p trust.Princi
 type FollowStatus = contracts.ReplicaStatus
 
 type Client struct {
+	Blobs *blobs.Store
+
 	Store     *state.Store
 	Authority *trust.Authority
 	mu        sync.Mutex
@@ -229,6 +243,9 @@ func (c *Client) Status() FollowStatus {
 	defer c.mu.Unlock()
 	s := c.status
 	s.Cursor = c.Store.Head()
+	if c.Blobs != nil {
+		s.Blobs = c.Blobs.Progress()
+	}
 	if !s.LastHeartbeat.IsZero() && time.Since(s.LastHeartbeat) > 15*time.Second {
 		s.State = "disconnected"
 	}
@@ -268,7 +285,7 @@ func (c *Client) follow(ctx context.Context, e trust.Enrollment) error {
 		return err
 	}
 	defer conn.CloseNow()
-	conn.SetReadLimit(contracts.MaxFrame)
+	conn.SetReadLimit(contracts.BlobChunkSize + 64)
 	ctx, stop := context.WithCancel(ctx)
 	defer stop()
 	head := c.Store.Head()
@@ -290,12 +307,45 @@ func (c *Client) follow(ctx context.Context, e trust.Enrollment) error {
 			}
 		}
 	}()
+	blobEvents := make(chan blobEvent, 2)
+	blobTrigger := make(chan struct{}, 1)
+	if c.Blobs != nil {
+		go c.followBlobs(ctx, conn, blobEvents, blobTrigger)
+	}
 	var welcome contracts.FeedFrame
 	var staging *state.SnapshotInstall
 	for {
-		f, n, err := read(ctx, conn)
+		kind, raw, err := conn.Read(ctx)
 		if err != nil {
 			return err
+		}
+		if kind == websocket.MessageBinary {
+			d, offset, b, err := contracts.DecodeBlobChunk(raw)
+			if err != nil {
+				return err
+			}
+			select {
+			case blobEvents <- blobEvent{digest: d, offset: offset, bytes: b}:
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+			continue
+		}
+		if kind != websocket.MessageText || len(raw) > contracts.MaxFrame {
+			return contracts.ErrInvalid
+		}
+		var f contracts.FeedFrame
+		if err = json.Unmarshal(raw, &f); err != nil {
+			return err
+		}
+		n := len(raw)
+		if f.T == "BlobDone" || f.T == "BlobUnavailable" {
+			select {
+			case blobEvents <- blobEvent{digest: f.Digest, done: true, reason: f.Reason}:
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+			continue
 		}
 		c.update(func(s *FollowStatus) { s.LastHeartbeat = time.Now().UTC() })
 		ack := contracts.FeedFrame{T: "Ack", Credits: n}
@@ -358,11 +408,19 @@ func (c *Client) follow(ctx context.Context, e trust.Enrollment) error {
 			}
 			ack.Cursor = &cursor
 		case "Heartbeat":
+			select {
+			case blobTrigger <- struct{}{}:
+			default:
+			}
 			continue
 		case "Reset":
 			return contracts.ErrReset
 		default:
 			return contracts.ErrInvalid
+		}
+		select {
+		case blobTrigger <- struct{}{}:
+		default:
 		}
 		if _, err = send(ctx, conn, ack); err != nil {
 			return err
