@@ -3,8 +3,8 @@
   "scenario": "CORE-HELPER-RESTART",
   "level": "sim",
   "passed": true,
-  "git_sha": "28e6e093ce8e9ad137f3df3a2c3f7f4b016a2c7e",
-  "at": "2026-10-17T05:18:01.733224Z",
+  "git_sha": "7b79470881e560fe0d6000ace2cecc45381c952b",
+  "at": "2026-10-17T05:37:47.094002Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -15,7 +15,43 @@
       "passed": true
     },
     {
+      "name": "helper_blob_truth_and_bytes_survive_restart",
+      "passed": true
+    },
+    {
+      "name": "recovery_capture_drained_before_convergence",
+      "passed": true
+    },
+    {
       "name": "truth_gateway_replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "automatic_recovery_capture_drained",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_query_search_records_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_query_search_records_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_metadata_latency_and_no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_metadata_latency_and_no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_sse_watermark_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_sse_watermark_1",
       "passed": true
     },
     {
@@ -35,7 +71,22 @@
       "passed": true
     }
   ],
-  "latency": {},
+  "latency": {
+    "effect_done→gateway_visible": {
+      "samples": 1,
+      "p50_ms": 31.285708,
+      "p95_ms": 31.285708,
+      "max_ms": 31.285708,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica0": {
+      "samples": 1,
+      "p50_ms": 38.048958,
+      "p95_ms": 38.048958,
+      "max_ms": 38.048958,
+      "timeouts": 0
+    }
+  },
   "hosts": [
     "air"
   ]

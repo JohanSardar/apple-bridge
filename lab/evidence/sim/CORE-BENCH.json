@@ -1,19 +1,19 @@
 {
   "network_path": "loopback",
   "metrics": {
-    "effect_done_to_gateway_capture_ms": 53711.526542,
-    "fixture_and_capture_ms": 54863.116667,
-    "gateway_rss_bytes": 28327936,
-    "gateway_wal_bytes": 49518312,
+    "effect_done_to_gateway_capture_ms": 60477.880708,
+    "fixture_and_capture_ms": 61765.2815,
+    "gateway_rss_bytes": 22478848,
+    "gateway_wal_bytes": 294757192,
     "messages": 200000,
-    "replica_rss_bytes": 25051136,
-    "replica_wal_bytes": 6847472
+    "replica_rss_bytes": 16138240,
+    "replica_wal_bytes": 6855712
   },
   "scenario": "CORE-BENCH",
   "level": "sim",
-  "passed": false,
-  "git_sha": "28e6e093ce8e9ad137f3df3a2c3f7f4b016a2c7e",
-  "at": "2026-10-17T05:15:49.626294Z",
+  "passed": true,
+  "git_sha": "7b79470881e560fe0d6000ace2cecc45381c952b",
+  "at": "2026-10-17T05:35:06.373016Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -24,16 +24,70 @@
       "passed": true
     },
     {
+      "name": "recovery_capture_drained_before_convergence",
+      "passed": true
+    },
+    {
       "name": "truth_gateway_replica_convergence",
-      "passed": false
+      "passed": true
+    },
+    {
+      "name": "automatic_recovery_capture_drained",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_query_search_records_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_query_search_records_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_metadata_latency_and_no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_metadata_latency_and_no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_sse_watermark_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_sse_watermark_1",
+      "passed": true
+    },
+    {
+      "name": "sqlite_integrity_gateway",
+      "passed": true
+    },
+    {
+      "name": "sqlite_integrity_replica",
+      "passed": true
     }
   ],
   "latency": {
+    "effect_done→gateway_visible": {
+      "samples": 1,
+      "p50_ms": 10.619834,
+      "p95_ms": 10.619834,
+      "max_ms": 10.619834,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica0": {
+      "samples": 1,
+      "p50_ms": 14.744209,
+      "p95_ms": 14.744209,
+      "max_ms": 14.744209,
+      "timeouts": 0
+    },
     "fts5_query_gateway": {
       "samples": 100,
-      "p50_ms": 3.313334,
-      "p95_ms": 6.822042,
-      "max_ms": 43.833042,
+      "p50_ms": 2.885458,
+      "p95_ms": 3.340666,
+      "max_ms": 127.617375,
       "timeouts": 0
     }
   },

@@ -3,8 +3,8 @@
   "scenario": "CORE-DISCONNECT-DETECT",
   "level": "sim",
   "passed": true,
-  "git_sha": "28e6e093ce8e9ad137f3df3a2c3f7f4b016a2c7e",
-  "at": "2026-10-17T05:17:28.814171Z",
+  "git_sha": "7b79470881e560fe0d6000ace2cecc45381c952b",
+  "at": "2026-10-17T05:37:23.206132Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -74,16 +74,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 2,
-      "p50_ms": 9.013625,
-      "p95_ms": 13.142084,
-      "max_ms": 13.142084,
+      "p50_ms": 5.549417,
+      "p95_ms": 10.794084,
+      "max_ms": 10.794084,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 2,
-      "p50_ms": 10.491584,
-      "p95_ms": 1002.257625,
-      "max_ms": 1002.257625,
+      "p50_ms": 8.967417,
+      "p95_ms": 1002.523625,
+      "max_ms": 1002.523625,
       "timeouts": 0
     }
   },

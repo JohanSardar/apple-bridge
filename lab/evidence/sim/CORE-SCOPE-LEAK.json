@@ -3,11 +3,15 @@
   "scenario": "CORE-SCOPE-LEAK",
   "level": "sim",
   "passed": true,
-  "git_sha": "28e6e093ce8e9ad137f3df3a2c3f7f4b016a2c7e",
-  "at": "2026-10-17T05:19:35.686045Z",
+  "git_sha": "c70c12e7e03abf30b16e47c3ab5d1db75de1df6f",
+  "at": "2026-10-17T05:39:25.597982Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
+      "passed": true
+    },
+    {
+      "name": "replica_physically_contains_messages_before_scoped_probes",
       "passed": true
     },
     {
@@ -47,7 +51,39 @@
       "passed": true
     },
     {
+      "name": "recovery_capture_drained_before_convergence",
+      "passed": true
+    },
+    {
       "name": "truth_gateway_replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "automatic_recovery_capture_drained",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_query_search_records_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_query_search_records_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_metadata_latency_and_no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_metadata_latency_and_no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_sse_watermark_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_sse_watermark_1",
       "passed": true
     },
     {
@@ -61,13 +97,24 @@
     {
       "name": "no_false_deletion_in_observed_journal_changes",
       "passed": true
-    },
-    {
-      "name": "no_false_deletion_in_observed_journal_changes",
-      "passed": true
     }
   ],
-  "latency": {},
+  "latency": {
+    "effect_done→gateway_visible": {
+      "samples": 1,
+      "p50_ms": 6.428583,
+      "p95_ms": 6.428583,
+      "max_ms": 6.428583,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica0": {
+      "samples": 1,
+      "p50_ms": 9.827166,
+      "p95_ms": 9.827166,
+      "max_ms": 9.827166,
+      "timeouts": 0
+    }
+  },
   "hosts": [
     "air"
   ]
