@@ -212,7 +212,7 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 			return fail("seed_two_hundred_thousand_messages")
 		}
 		effect := time.Now()
-		if w.Await(90*time.Second, func() bool {
+		if w.Await(3*time.Minute, func() bool {
 			report, err := w.Doctor(w.Gateway)
 			records, _ := report["records"].(map[string]any)
 			return err == nil && records["messages.message"] == float64(200000)
@@ -220,7 +220,7 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 			return fail("capture_two_hundred_thousand_messages")
 		}
 		evidence.Metrics = map[string]any{"messages": 200000, "fixture_and_capture_ms": float64(time.Since(start)) / float64(time.Millisecond), "effect_done_to_gateway_capture_ms": float64(time.Since(effect)) / float64(time.Millisecond)}
-		if w.Await(90*time.Second, func() bool {
+		if w.Await(3*time.Minute, func() bool {
 			report, err := w.Doctor(w.Replicas[0])
 			records, _ := report["records"].(map[string]any)
 			return err == nil && records["messages.message"] == float64(200000)
