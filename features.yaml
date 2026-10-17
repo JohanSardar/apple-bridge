@@ -72,6 +72,8 @@ features:
     scenarios:
       - {id: CORE-HELPER-RESTART, levels: [sim]}
       - {id: CORE-DOCTOR, levels: [sim, replica]}
+      - {id: CORE-CLOCK-DELAY, levels: [sim, replica]}
+      - {id: CORE-CLOCK-DELAY-GATEWAY-DIALS, levels: [sim, replica]}
       - {id: CORE-RESTORE-EPOCH, levels: [sim]}
       - {id: CORE-RESTORE-OLD-SCHEMA, levels: [sim]}
       - {id: CORE-DISK-FULL, levels: [sim]}
