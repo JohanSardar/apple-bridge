@@ -78,6 +78,7 @@ struct AppleTruth {
             guard listName == "Bridge Test", tag.hasPrefix("[ab-test "), tag.hasSuffix("]"), tag.count > 11, !tag.contains("\n") else { throw TruthFailure.invalid }
         } else if verb != "observe" { throw TruthFailure.invalid }
         let allLists = verb == "observe" && (request["all_lists"] as? Bool ?? false)
+        var createdList = false
         var lists = store.calendars(for: .reminder).filter { allLists || $0.title == listName }
         if let listID = request["list_id"] as? String { lists = lists.filter { $0.calendarIdentifier == listID } }
         if lists.count > 1 {
@@ -97,6 +98,7 @@ struct AppleTruth {
             list.title = "Bridge Test"; list.source = source
             try store.saveCalendar(list, commit: true)
             lists = [list]
+            createdList = true
         }
         guard let list = lists.first else { return ["status": "verified", "records": [], "list_exists": false] }
         if verb == "fixture" && action == "burst" {
@@ -138,7 +140,7 @@ struct AppleTruth {
                 }
                 try store.save(reminder, commit: true)
                 return ["status": "verified", "id": reminder.calendarItemIdentifier, "effect_done": ISO8601DateFormatter().string(from: Date()), "effect_uptime_ns": clock_gettime_nsec_np(CLOCK_UPTIME_RAW)]
-            case "create_list": return ["status": "verified", "id": list.calendarIdentifier]
+            case "create_list": return ["status": "verified", "id": list.calendarIdentifier, "created": createdList]
             case "cleanup_list":
                 guard request["list_id"] as? String == list.calendarIdentifier, all.allSatisfy({ ($0.title ?? "").contains(tag) }) else { throw TruthFailure.invalid }
                 try store.removeCalendar(list, commit: true)

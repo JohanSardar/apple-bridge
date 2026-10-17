@@ -250,12 +250,11 @@ func (r AgentRunner) run(ctx context.Context, task Task, number int) (attempt At
 			_, err = w.Truth("fixture", map[string]any{"source": "contacts", "action": "modify", "tag": tag, "job_title": "Bridge " + contracts.NewID("job")})
 		}
 	} else {
-		var before map[string]any
-		before, err = w.Truth("observe", map[string]any{"source": "reminders", "tag": tag})
+		_, err = w.Truth("observe", map[string]any{"source": "reminders", "tag": tag})
 		if err == nil {
 			var fixture map[string]any
 			fixture, err = w.Truth("fixture", map[string]any{"source": "reminders", "action": "create_list", "tag": tag})
-			if before["list_exists"] == false {
+			if fixture["created"] == true {
 				createdList, _ = fixture["id"].(string)
 			}
 		}

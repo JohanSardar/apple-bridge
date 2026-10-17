@@ -1,0 +1,76 @@
+{
+  "run_id": "agent_01M55SYJCB1SXB73EY382PVW14",
+  "scenario": "AGENT-SUITE",
+  "level": "agent",
+  "git_sha": "707ad9d66c2e08e51ac4d2a032d71c33ec0f8aab",
+  "at": "2026-10-17T20:48:12.683492Z",
+  "passed": true,
+  "tasks": [
+    {
+      "task_id": "contacts-job-title",
+      "passed": true,
+      "attempts": [
+        {
+          "attempt": 1,
+          "passed": true,
+          "truth_check": true,
+          "replica_check": true,
+          "mcp_only": true,
+          "cleanup": true,
+          "duration_ms": 74024
+        },
+        {
+          "attempt": 2,
+          "passed": true,
+          "truth_check": true,
+          "replica_check": true,
+          "mcp_only": true,
+          "cleanup": true,
+          "duration_ms": 73363
+        },
+        {
+          "attempt": 3,
+          "passed": true,
+          "truth_check": true,
+          "replica_check": true,
+          "mcp_only": true,
+          "cleanup": true,
+          "duration_ms": 71788
+        }
+      ]
+    },
+    {
+      "task_id": "reminders-milk",
+      "passed": true,
+      "attempts": [
+        {
+          "attempt": 1,
+          "passed": true,
+          "truth_check": true,
+          "replica_check": true,
+          "mcp_only": true,
+          "cleanup": true,
+          "duration_ms": 100388
+        },
+        {
+          "attempt": 2,
+          "passed": true,
+          "truth_check": true,
+          "replica_check": true,
+          "mcp_only": true,
+          "cleanup": true,
+          "duration_ms": 64885
+        },
+        {
+          "attempt": 3,
+          "passed": true,
+          "truth_check": true,
+          "replica_check": true,
+          "mcp_only": true,
+          "cleanup": true,
+          "duration_ms": 68088
+        }
+      ]
+    }
+  ]
+}

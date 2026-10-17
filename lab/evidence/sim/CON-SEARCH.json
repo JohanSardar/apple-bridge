@@ -1,0 +1,74 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[5.35 5.55 6.02] cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M55SYEPQTFES0N3H40ARJQT4",
+  "scenario": "CON-SEARCH",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "707ad9d66c2e08e51ac4d2a032d71c33ec0f8aab",
+  "at": "2026-10-17T20:48:08.919362Z",
+  "assertions": [
+    {
+      "name": "unified_contacts_imported",
+      "passed": true
+    },
+    {
+      "name": "contact_names_and_organization_searchable",
+      "passed": true
+    },
+    {
+      "name": "contact_names_and_organization_searchable",
+      "passed": true
+    },
+    {
+      "name": "replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "independent_sim_truth",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_0",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_1",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "contacts_scope_enforced",
+      "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass",
+      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
