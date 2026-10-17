@@ -69,7 +69,10 @@ public final class RemindersSource: Source {
             current[key] = observation("reminders.reminder", reminder.calendarItemIdentifier, data(reminder), alias: alias)
         }
         guard gate.authorized(.reminder) else { throw SourceFailure.permissionMissing }
-        var observations = current.filter { forceFull || committed[$0.key]?["data"] != $0.value["data"] || committed[$0.key]?["scoped_alias"] != $0.value["scoped_alias"] }.map(\.value)
+        var observations = current.filter { forceFull || committed[$0.key]?["data"] != $0.value["data"] || committed[$0.key]?["scoped_alias"] != $0.value["scoped_alias"] }.sorted {
+            if $0.value["collection"].string != $1.value["collection"].string { return $0.value["collection"].string < $1.value["collection"].string }
+            return $0.key < $1.key
+        }.map(\.value)
         for (key, previous) in committed where current[key] == nil {
             if previous["collection"].string == "reminders.reminder", gate.store.calendarItem(withIdentifier: previous["native_key"].string) != nil { continue }
             var absent = previous.object

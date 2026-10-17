@@ -14,6 +14,8 @@ final class PeerWire: @unchecked Sendable {
         guard lstat(secretFile, &info) == 0, info.st_uid == getuid(), info.st_mode & 0o777 == 0o600, info.st_mode & S_IFMT == S_IFREG else { throw SourceFailure.invalid }
         let secret = try Data(contentsOf: URL(fileURLWithPath: secretFile))
         guard secret.count == 32 else { throw SourceFailure.invalid }
+        let parent = URL(fileURLWithPath: path).deletingLastPathComponent().path
+        guard lstat(parent, &info) == 0, info.st_uid == getuid(), info.st_mode & 0o777 == 0o700, info.st_mode & S_IFMT == S_IFDIR else { throw SourceFailure.invalid }
         guard lstat(path, &info) == 0, info.st_uid == getuid(), info.st_mode & 0o777 == 0o600, info.st_mode & S_IFMT == S_IFSOCK else { throw SourceFailure.invalid }
         descriptor = Darwin.socket(AF_UNIX, SOCK_STREAM, 0)
         guard descriptor >= 0 else { throw SourceFailure.unavailable }
