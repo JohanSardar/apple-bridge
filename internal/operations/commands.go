@@ -99,6 +99,9 @@ func (g *LocalGateway) Submit(ctx context.Context, p trust.Principal, c contract
 	} else if !errors.Is(err, contracts.ErrNotFound) {
 		return empty, err
 	}
+	if contracts.CommandEpoch(c.ID) != g.State.Head().Epoch {
+		return empty, &contracts.Error{Code: "expired", Message: "command ID is lookup only; new IDs must use cmd_<cursor.epoch>_<unique>"}
+	}
 	era, err := g.State.AdmissionEra(ctx)
 	if err != nil {
 		return empty, err
@@ -183,11 +186,16 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 			return r, problem
 		}
 		action.NativeKey, err = g.State.NativeKey(runctx, "reminders.reminder", a.ID)
+		var data struct {
+			ListID string `json:"list_id"`
+		}
+		if json.Unmarshal(current.Data, &data) != nil {
+			return r, contracts.ErrCorrupt
+		}
+		if err == nil {
+			action.ExpectedListKey, err = g.State.NativeKey(runctx, "reminders.list", data.ListID)
+		}
 		if a.ListID == "" {
-			var data struct {
-				ListID string `json:"list_id"`
-			}
-			json.Unmarshal(current.Data, &data)
 			a.ListID = data.ListID
 		}
 	}

@@ -14,3 +14,7 @@ func gatewayNow() time.Time {
 	offset, _ := strconv.ParseInt(string(b), 10, 64)
 	return time.Now().UTC().Add(time.Duration(offset) * time.Millisecond)
 }
+
+func dropCommandResponse() bool {
+	return os.Remove(filepath.Join(os.Getenv("APPLE_BRIDGE_HOME"), "drop-command-response")) == nil
+}

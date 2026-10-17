@@ -1,0 +1,10 @@
+id: REM-NATIVE-LIST-RACE
+feature: reminders.write
+levels: [sim]
+given:
+  - world: {replicas: 1}
+  - seed: {count: 2}
+when:
+  - command_journey: {}
+then:
+  - converge: {}

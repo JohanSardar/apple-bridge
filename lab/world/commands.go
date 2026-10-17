@@ -61,3 +61,18 @@ func (w *World) RestartGateway() error {
 	_, err = w.config(w.Gateway.Home, false)
 	return err
 }
+
+func (w *World) DropCommandResponse() error {
+	return os.WriteFile(filepath.Join(w.Gateway.Home, "drop-command-response"), []byte("once"), 0600)
+}
+
+func (w *World) DelayCommandApply(index int, duration time.Duration) error {
+	endpoint := w.Replicas[index]
+	path := filepath.Join(endpoint.Home, "command-apply-delay")
+	if endpoint.Remote {
+		script := "import pathlib; pathlib.Path(" + strconv.Quote(path) + ").write_text(" + strconv.Quote(strconv.FormatInt(duration.Milliseconds(), 10)) + ")"
+		_, err := w.execute(true, "python3", "-c", script)
+		return err
+	}
+	return os.WriteFile(path, []byte(strconv.FormatInt(duration.Milliseconds(), 10)), 0600)
+}

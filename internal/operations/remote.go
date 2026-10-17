@@ -99,7 +99,8 @@ func (g *RemoteGateway) Submit(ctx context.Context, p trust.Principal, c contrac
 	if errors.Is(err, contracts.ErrUnavailable) {
 		status, lookupErr := g.Status(ctx, p, contracts.CommandQuery{ID: c.ID})
 		if lookupErr == nil {
-			return status, nil
+			r = status
+			err = nil
 		}
 	}
 	if err == nil && r.CommitSeq > 0 && g.Wait != nil {
@@ -175,6 +176,13 @@ func (g *LocalGateway) Handler() http.Handler {
 			result, err = g.List(r.Context(), p, f.Query)
 		default:
 			err = contracts.ErrInvalid
+		}
+		if f.Method == "submit" && dropCommandResponse() {
+			conn, _, hijackErr := http.NewResponseController(w).Hijack()
+			if hijackErr == nil {
+				conn.Close()
+				return
+			}
 		}
 		reply(result, err)
 	})

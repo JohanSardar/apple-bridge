@@ -404,6 +404,9 @@ func (c *Client) follow(ctx context.Context, e trust.Enrollment) error {
 					return contracts.ErrUnauthorized
 				}
 			}
+			if err = commandApplyDelay(ctx); err != nil {
+				return err
+			}
 			cursor, err := c.Store.ApplyBatch(ctx, *f.Batch)
 			if err != nil {
 				return err

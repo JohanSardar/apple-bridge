@@ -421,6 +421,16 @@ func Run(ctx context.Context, s Scenario, level string) Evidence {
 				return fail("command_probe")
 			}
 			effectStart := time.Now()
+			if w.Await(5*time.Second, func() bool {
+				for _, observer := range watchers {
+					if _, ok := observer.observed("command-probe"); !ok {
+						return false
+					}
+				}
+				return true
+			}) != nil {
+				return fail("healthy_command_probe_visible")
+			}
 			runCommands(ctx, w, s.ID, &evidence)
 			for i, observer := range watchers {
 				err := w.Await(5*time.Second, func() bool { _, ok := observer.observed("command-probe"); return ok })

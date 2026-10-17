@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
@@ -36,9 +37,10 @@ func runCommands(ctx context.Context, w *world.World, id string, e *Evidence) {
 			reminder = r
 		}
 	}
+	head, _ := w.Cursor(w.Gateway)
 	command := func(op string, args map[string]any, version uint64) contracts.Command {
 		b, _ := json.Marshal(args)
-		return contracts.Command{ID: contracts.NewID("cmd"), Op: op, Args: b, ExpectedVersion: version, WaitMS: 15000}
+		return contracts.Command{ID: contracts.NewCommandID(head.Epoch), Op: op, Args: b, ExpectedVersion: version, WaitMS: 15000}
 	}
 	create := func(title string) contracts.Command {
 		return command("reminders.create", map[string]any{"list_id": list.ID, "title": "[ab-test] " + title}, 0)
@@ -78,11 +80,23 @@ func runCommands(ctx context.Context, w *world.World, id string, e *Evidence) {
 		}
 	}
 	switch id {
+	case "CORE-CMD-ERA":
+		c := create("old-era")
+		c.ID = "cmd_" + contracts.NewID("") + "_caller-chosen"
+		_, err := submit(c)
+		add("unknown_old_epoch_is_lookup_only", errors.Is(err, contracts.ErrExpired) && count(c, 0))
+		c = create("generated-era")
+		c.ID = ""
+		r, err := submit(c)
+		head, _ := w.Cursor(w.Gateway)
+		add("generated_id_binds_gateway_epoch", observed(r, err) && strings.HasPrefix(r.Command.ID, "cmd_"+head.Epoch+"_"))
 	case "CORE-CMD-IDEMPOTENT":
 		c := create("idempotent")
 		first, err := submit(c)
 		add("command_admitted", observed(first, err))
-		second, err := submit(c)
+		canonical := c
+		canonical.Args = json.RawMessage(fmt.Sprintf(`{  "title": "[ab-test] idempotent", "list_id": %q }`, list.ID))
+		second, err := submit(canonical)
 
 		add("identical_retry_returns_existing_status", err == nil && reflect.DeepEqual(first, second))
 		c.Args, _ = json.Marshal(map[string]any{"list_id": list.ID, "title": "[ab-test] different"})
@@ -96,7 +110,22 @@ func runCommands(ctx context.Context, w *world.World, id string, e *Evidence) {
 		err = other.Call(ctx, "commands.status", contracts.CommandQuery{ID: c.ID}, &result)
 		add("other_issuer_status_hidden", errors.Is(err, contracts.ErrNotFound))
 	case "CORE-CMD-LOST-RESPONSE":
-		c := create("lost-response")
+		c := create("peer-lost-response")
+		add("replica_feed_lag_injected", w.DelayCommandApply(0, time.Second) == nil)
+		add("peer_response_drop_armed", w.DropCommandResponse() == nil)
+		recovered, recoverErr := submit(c)
+		add("replica_recovers_lost_peer_response_by_status", observed(recovered, recoverErr) && count(c, 1))
+		var local contracts.ReadResult
+		readErr := client.Call(ctx, "records.query", contracts.ReadQuery{Collection: "reminders.reminder"}, &local)
+		found := false
+		for _, record := range local.Records {
+			var data map[string]any
+			json.Unmarshal(record.Data, &data)
+			found = found || data["title"] == "[ab-test] peer-lost-response"
+		}
+		add("lost_peer_response_waits_for_local_write", readErr == nil && found && local.Cursor.Sequence >= recovered.CommitSeq)
+
+		c = create("lost-response")
 		drop := client
 		drop.DropResponse = true
 		err := drop.Call(ctx, c.Op, c, nil)
@@ -190,7 +219,7 @@ func runCommands(ctx context.Context, w *world.World, id string, e *Evidence) {
 		if id == "CORE-CMD-CONFLICT" {
 			client.Endpoint = w.Replicas[1]
 		}
-		c.ID = contracts.NewID("cmd")
+		c.ID = contracts.NewCommandID(head.Epoch)
 		_, err = submit(c)
 		var problem *contracts.Error
 		add("stale_version_conflict_with_current", errors.As(err, &problem) && problem.Code == "conflict" && problem.Current != nil && problem.Current.Version > reminder.Version)
@@ -278,6 +307,23 @@ func runCommands(ctx context.Context, w *world.World, id string, e *Evidence) {
 			add(protocol+"_create_list", observed(r, err) && count(c, 1))
 		}
 		add("rest_mcp_disposition_parity", len(results) == 8 && reflect.DeepEqual(results[:4], results[4:]))
+	case "REM-OPERATION-SHAPES":
+		for _, protocol := range []string{"rest", "mcp"} {
+			client.Protocol = protocol
+			for _, op := range []string{"create", "create_list", "complete", "uncomplete", "delete"} {
+				c := command("reminders."+op, map[string]any{"id": reminder.ID, "list_id": list.ID, "title": "[ab-test] forbidden overwrite"}, reminder.Version)
+				_, err := submit(c)
+				add(protocol+"_"+op+"_rejects_foreign_fields", errors.Is(err, contracts.ErrInvalid) && count(c, 0))
+			}
+		}
+	case "REM-NATIVE-LIST-RACE":
+		fixtureErr := w.ControlAction("/external-change", map[string]any{"key": "other-list", "collection": "reminders.list", "data": map[string]any{"title": "[ab-test] Other List", "writable": true}})
+		w.ControlAction("/flush", struct{}{})
+		add("other_list_fixture", fixtureErr == nil)
+		c := command("reminders.update", map[string]any{"id": reminder.ID, "title": "[ab-test] stale list edit"}, reminder.Version)
+		fault("external-move-before-prepare", 0)
+		_, err := submit(c)
+		add("native_list_move_conflicts", errors.Is(err, contracts.ErrConflict) && count(c, 0))
 	case "REM-EXTERNAL-RACE":
 		c := command("reminders.update", map[string]any{"id": reminder.ID, "title": "[ab-test] should not overwrite"}, reminder.Version)
 		fault("external-edit-between-prepare-and-dispatch", 0)
@@ -298,6 +344,21 @@ func runCommands(ctx context.Context, w *world.World, id string, e *Evidence) {
 		c := create("readonly")
 		_, err = submit(c)
 		add("readonly_rejected_before_effect", errors.Is(err, contracts.ErrUnsupported) && count(c, 0))
+		w.ControlAction("/external-change", map[string]any{"key": "other-list", "collection": "reminders.list", "data": map[string]any{"title": "[ab-test] Writable Destination", "writable": true}})
+		w.ControlAction("/flush", struct{}{})
+		all, _ := w.Records(w.Gateway)
+		var destination string
+		for _, record := range all {
+			var data map[string]any
+			json.Unmarshal(record.Data, &data)
+			if data["title"] == "[ab-test] Writable Destination" {
+				destination = record.ID
+			}
+		}
+		c = command("reminders.update", map[string]any{"id": reminder.ID, "list_id": destination}, reminder.Version)
+		_, err = submit(c)
+		add("readonly_source_cannot_be_bypassed_by_move", errors.Is(err, contracts.ErrUnsupported) && count(c, 0))
+
 	case "CORE-LOCALHOST-DEFENSE":
 		for _, protocol := range []string{"rest", "mcp"} {
 			for _, attack := range []string{"no-token", "bad-host", "foreign-origin"} {

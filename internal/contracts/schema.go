@@ -59,7 +59,33 @@ func OperationSchema(d OperationDescriptor) map[string]any {
 	s := JSONSchema(d.Input)
 	if d.Kind == CommandOp {
 		properties := s["properties"].(map[string]any)
-		properties["args"] = JSONSchema(ReminderArgs{})
+		args := JSONSchema(ReminderArgs{})
+		fields := args["properties"].(map[string]any)
+		required := []string{"id"}
+		allowed := map[string]bool{}
+		for _, field := range ReminderArgumentFields(d.Name) {
+			allowed[field] = true
+		}
+		switch d.Name {
+		case "reminders.create":
+			required = []string{"list_id", "title"}
+		case "reminders.create_list":
+			required = []string{"title"}
+		case "reminders.update":
+			args["minProperties"] = 2
+		}
+		for name := range fields {
+			if !allowed[name] {
+				delete(fields, name)
+			}
+		}
+		args["required"] = required
+		properties["args"] = args
+		if d.Name != "reminders.create" && d.Name != "reminders.create_list" {
+			s["required"] = []string{"args", "expected_version"}
+		}
+		properties["command_id"].(map[string]any)["description"] = "Optional cmd_<cursor.epoch>_<unique> ID. Omit to generate one; retry the original ID after a lost response. Old epochs are lookup only."
+
 		properties["wait_ms"].(map[string]any)["maximum"] = 15000
 		properties["wait_ms"].(map[string]any)["minimum"] = 0
 	}
