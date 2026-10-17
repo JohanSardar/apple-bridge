@@ -7,13 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
 )
-
-type gatewayClockSample struct {
-	Gateway  time.Time `json:"gateway"`
-	Received time.Time `json:"received"`
-}
 
 func linuxEncryption(ctx context.Context, home string) string {
 	output, err := exec.CommandContext(ctx, "findmnt", "-n", "-o", "MAJ:MIN", "-T", home).Output()

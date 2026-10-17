@@ -325,7 +325,7 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 		}
 		skew, skewOK := replica["clock_skew_ms"].(float64)
 		age, ageOK := replica["clock_sample_age_ms"].(float64)
-		add("replica_authenticated_feed_clock_sample", skewOK && ageOK && age >= 0 && age < 15000 && replica["clock_method"] == "local_receive_minus_gateway_send_including_feed_transit")
+		add("replica_authenticated_feed_clock_sample", skewOK && ageOK && age >= 0 && age < 15000 && replica["clock_method"] == "authenticated_feed_ntp_four_timestamps")
 		evidence.Metrics = map[string]any{"replica_clock_skew_ms": skew, "clock_sample_age_ms": age, "replica_disk_encryption": replica["disk_encryption"], "clock_method": replica["clock_method"]}
 		if level == "replica" {
 			evidence.Metrics["replica_storage"] = "persistent_user_cache"

@@ -1,0 +1,160 @@
+{
+  "purpose": "Baseline before the authenticated four-timestamp exchange replaces receive-minus-send transit estimates",
+  "scenarios": [
+    {
+      "host_conditions": {
+        "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+        "start": {
+          "air": {
+            "at": "2026-10-17T19:06:49.437678Z",
+            "cpu_count": 8,
+            "load_average": [
+              4.04,
+              7.92,
+              7.72
+            ],
+            "cpu_idle_percent": 71,
+            "free_memory_bytes": 90898432,
+            "active_heavy_slots": 2,
+            "other_active_heavy_slots": 1,
+            "heavy_queue_length": 2,
+            "quiet": false
+          }
+        },
+        "end": {
+          "air": {
+            "at": "2026-10-17T19:06:56.568302Z",
+            "cpu_count": 8,
+            "load_average": [
+              3.81,
+              7.74,
+              7.66
+            ],
+            "cpu_idle_percent": 71,
+            "free_memory_bytes": 184958976,
+            "active_heavy_slots": 2,
+            "other_active_heavy_slots": 1,
+            "heavy_queue_length": 3,
+            "quiet": false
+          }
+        },
+        "quiet": false,
+        "require_quiet": false,
+        "quiet_wait_ms": 0,
+        "quiet_wait_expired": false
+      },
+      "run_id": "run_01M55M4YS0M6W7GW2ZWKDD0VHZ",
+      "network_path": "loopback",
+      "scenario": "CORE-CLOCK-DELAY",
+      "level": "sim",
+      "passed": false,
+      "git_sha": "b1c81ff96ba969852cc498ba131a20ece295e405",
+      "at": "2026-10-17T19:06:50.528149Z",
+      "assertions": [
+        {
+          "name": "feed_network_loopback",
+          "passed": true
+        },
+        {
+          "name": "authenticated_four_timestamp_clock_sample",
+          "passed": false
+        },
+        {
+          "name": "credential_backend_override_restored",
+          "passed": true
+        }
+      ],
+      "latency": {},
+      "hosts": [
+        "air"
+      ]
+    },
+    {
+      "host_conditions": {
+        "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+        "start": {
+          "air": {
+            "at": "2026-10-17T19:06:41.219522Z",
+            "cpu_count": 8,
+            "load_average": [
+              4.22,
+              8.02,
+              7.75
+            ],
+            "cpu_idle_percent": 76,
+            "free_memory_bytes": 188760064,
+            "active_heavy_slots": 2,
+            "other_active_heavy_slots": 1,
+            "heavy_queue_length": 2,
+            "quiet": false
+          }
+        },
+        "end": {
+          "air": {
+            "at": "2026-10-17T19:06:48.387187Z",
+            "cpu_count": 8,
+            "load_average": [
+              4.04,
+              7.92,
+              7.72
+            ],
+            "cpu_idle_percent": 74,
+            "free_memory_bytes": 121962496,
+            "active_heavy_slots": 2,
+            "other_active_heavy_slots": 1,
+            "heavy_queue_length": 2,
+            "quiet": false
+          }
+        },
+        "periodic_samples": [
+          {
+            "air": {
+              "at": "2026-10-17T19:06:47.271969Z",
+              "cpu_count": 8,
+              "load_average": [
+                4.04,
+                7.92,
+                7.72
+              ],
+              "cpu_idle_percent": 69,
+              "free_memory_bytes": 116015104,
+              "active_heavy_slots": 2,
+              "other_active_heavy_slots": 1,
+              "heavy_queue_length": 2,
+              "quiet": false
+            }
+          }
+        ],
+        "quiet": false,
+        "require_quiet": false,
+        "quiet_wait_ms": 0,
+        "quiet_wait_expired": false
+      },
+      "run_id": "run_01M55M4PQW01ZFBMFV1BT1AFS1",
+      "network_path": "gateway_dials_loopback_fault_proxy",
+      "scenario": "CORE-CLOCK-DELAY-GATEWAY-DIALS",
+      "level": "sim",
+      "passed": false,
+      "git_sha": "b1c81ff96ba969852cc498ba131a20ece295e405",
+      "at": "2026-10-17T19:06:42.300383Z",
+      "assertions": [
+        {
+          "name": "feed_network_gateway_dials_loopback_fault_proxy",
+          "passed": true
+        },
+        {
+          "name": "authenticated_four_timestamp_clock_sample",
+          "passed": false
+        },
+        {
+          "name": "credential_backend_override_restored",
+          "passed": true
+        }
+      ],
+      "latency": {},
+      "hosts": [
+        "air"
+      ]
+    }
+  ]
+}

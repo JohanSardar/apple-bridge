@@ -23,14 +23,17 @@ type CredentialStoreReport struct {
 type DoctorReport struct {
 	Credentials CredentialStoreReport `json:"credentials"`
 	state.Integrity
-	Warnings         []string          `json:"warnings,omitempty"`
-	ClockSkewMS      *int64            `json:"clock_skew_ms,omitempty"`
-	ClockSampleAgeMS *int64            `json:"clock_sample_age_ms,omitempty"`
-	ClockMethod      string            `json:"clock_method,omitempty"`
-	PrivateModes     bool              `json:"private_modes"`
-	Encryption       string            `json:"disk_encryption"`
-	ClockSkew        string            `json:"clock_skew"`
-	Versions         map[string]string `json:"versions"`
+	Warnings           []string          `json:"warnings,omitempty"`
+	ClockOffsetMS      *int64            `json:"clock_offset_ms,omitempty"`
+	ClockUncertaintyMS *int64            `json:"clock_uncertainty_ms,omitempty"`
+	ClockRTTMS         *int64            `json:"clock_rtt_ms,omitempty"`
+	ClockSkewMS        *int64            `json:"clock_skew_ms,omitempty"`
+	ClockSampleAgeMS   *int64            `json:"clock_sample_age_ms,omitempty"`
+	ClockMethod        string            `json:"clock_method,omitempty"`
+	PrivateModes       bool              `json:"private_modes"`
+	Encryption         string            `json:"disk_encryption"`
+	ClockSkew          string            `json:"clock_skew"`
+	Versions           map[string]string `json:"versions"`
 }
 
 func Doctor(ctx context.Context, home string) (DoctorReport, error) {
@@ -105,22 +108,31 @@ func Doctor(ctx context.Context, home string) (DoctorReport, error) {
 		report.ClockSkew = "n/a"
 	} else {
 		raw, readErr := os.ReadFile(filepath.Join(home, "gateway-clock.json"))
-		var sample gatewayClockSample
-		if readErr == nil && json.Unmarshal(raw, &sample) == nil && !sample.Gateway.IsZero() && !sample.Received.IsZero() {
-			skew, age := sample.Received.Sub(sample.Gateway).Milliseconds(), time.Since(sample.Received).Milliseconds()
+		var sample contracts.ClockSample
+		decodeErr := json.Unmarshal(raw, &sample)
+		offset, uncertainty, estimateErr := sample.Estimate()
+		if readErr == nil && decodeErr == nil && estimateErr == nil {
+			skew, age := offset.Milliseconds(), time.Since(sample.T3).Milliseconds()
+			uncertaintyMS := int64((uncertainty + time.Millisecond - 1) / time.Millisecond)
+			rttMS := int64(2 * uncertainty / time.Millisecond)
+			report.ClockOffsetMS, report.ClockUncertaintyMS, report.ClockRTTMS = &skew, &uncertaintyMS, &rttMS
 			report.ClockSkewMS, report.ClockSampleAgeMS = &skew, &age
-			report.ClockMethod = "local_receive_minus_gateway_send_including_feed_transit"
+			report.ClockMethod = "authenticated_feed_ntp_four_timestamps"
 			report.ClockSkew = "ok"
 			if age < 0 || age > 15000 {
 				report.ClockSkew = "warning_stale_sample"
 				report.Warnings = append(report.Warnings, "Gateway time sample is stale; reconnect the replica and rerun doctor.")
 			}
-			if skew < -1000 || skew > 1000 {
+			if uncertaintyMS > 1000 && report.ClockSkew == "ok" {
+				report.ClockSkew = "warning_clock_uncertainty"
+				report.Warnings = append(report.Warnings, "Clock uncertainty exceeds one second; reduce round-trip network delay for a tighter offset estimate.")
+			}
+			if skew-uncertaintyMS > 1000 || skew+uncertaintyMS < -1000 {
 				report.ClockSkew = "warning_clock_skew"
-				report.Warnings = append(report.Warnings, "Clock difference including feed transit exceeds one second; enable network time synchronization on both hosts and check network delay.")
+				report.Warnings = append(report.Warnings, "Clock offset exceeds one second after accounting for round-trip uncertainty; enable network time synchronization on both hosts.")
 			}
 		} else {
-			report.Warnings = append(report.Warnings, "Gateway time unavailable; start or reconnect the replica to receive a feed Welcome or heartbeat, then rerun doctor.")
+			report.Warnings = append(report.Warnings, "Authenticated gateway clock exchange unavailable; reconnect peers with clock-exchange support, then rerun doctor.")
 		}
 	}
 	report.OK = report.OK && report.PrivateModes && credentials.LastError == nil

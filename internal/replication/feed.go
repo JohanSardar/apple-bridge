@@ -92,6 +92,10 @@ func (s *Server) serve(ctx context.Context, conn *websocket.Conn, p trust.Princi
 	if p.Dial != "" {
 		s.Authority.ConfirmDial(p.ID)
 	}
+	clockProtocol := ""
+	if hello.ClockProtocol == contracts.FeedClockProtocol {
+		clockProtocol = contracts.FeedClockProtocol
+	}
 	s.updateDial(p.ID, func(status *contracts.DialStatus) {
 		status.State = "connected"
 		status.LastHeartbeat = time.Now().UTC()
@@ -133,7 +137,20 @@ func (s *Server) serve(ctx context.Context, conn *websocket.Conn, p trust.Princi
 					}
 				})
 			}
+			received := time.Now()
 			switch f.T {
+			case "ClockPing":
+				if clockProtocol == "" || clockPong(ctx, conn, f, received) != nil {
+					return
+				}
+			case "ClockAck":
+				if clockProtocol == "" || f.Clock == nil {
+					return
+				}
+				if _, _, err := f.Clock.Estimate(); err != nil {
+					return
+				}
+
 			case "CommandRequest":
 				if f.ID == "" || len(f.Request) == 0 || s.Command == nil {
 					return
@@ -212,7 +229,7 @@ func (s *Server) serve(ctx context.Context, conn *websocket.Conn, p trust.Princi
 	if resume {
 		reason = "resume"
 	}
-	if err = transmit(contracts.FeedFrame{T: "Welcome", At: time.Now().UTC(), Protocol: contracts.FeedProtocol, GatewayID: s.Authority.Fingerprint, Epoch: head.Epoch, SubscriptionRevision: p.Revision, Scope: p.Grants, Head: head.Sequence, RetentionFloor: s.Store.RetentionFloor(), Schema: 1, Reason: reason}, nil); err != nil {
+	if err = transmit(contracts.FeedFrame{T: "Welcome", ClockProtocol: clockProtocol, At: time.Now().UTC(), Protocol: contracts.FeedProtocol, GatewayID: s.Authority.Fingerprint, Epoch: head.Epoch, SubscriptionRevision: p.Revision, Scope: p.Grants, Head: head.Sequence, RetentionFloor: s.Store.RetentionFloor(), Schema: 1, Reason: reason}, nil); err != nil {
 		return err
 	}
 	cursor := head
@@ -289,7 +306,7 @@ type FollowStatus = contracts.ReplicaStatus
 type Client struct {
 	session      *commandSession
 	connectionMu sync.Mutex
-	GatewayClock func(time.Time, time.Time)
+	GatewayClock func(contracts.ClockSample)
 
 	Blobs *blobs.Store
 
@@ -371,8 +388,9 @@ func (c *Client) consume(ctx context.Context, conn *websocket.Conn, e trust.Enro
 		c.mu.Unlock()
 		c.update(func(s *FollowStatus) { s.State = "disconnected" })
 	}()
+	clock := &clockProbe{}
 	head := c.Store.Head()
-	if _, err := send(ctx, conn, contracts.FeedFrame{T: "Hello", Protocol: contracts.FeedProtocol, ReplicaID: e.ReplicaID, Cursor: &head, SchemaOffer: []int{1}, Credits: contracts.ByteCredit}); err != nil {
+	if _, err := send(ctx, conn, contracts.FeedFrame{T: "Hello", ClockProtocol: contracts.FeedClockProtocol, Protocol: contracts.FeedProtocol, ReplicaID: e.ReplicaID, Cursor: &head, SchemaOffer: []int{1}, Credits: contracts.ByteCredit}); err != nil {
 		return err
 	}
 	go func() {
@@ -383,6 +401,10 @@ func (c *Client) consume(ctx context.Context, conn *websocket.Conn, e trust.Enro
 			case <-ctx.Done():
 				return
 			case <-tick.C:
+				if err := clock.ping(ctx, conn); err != nil {
+					stop()
+					return
+				}
 				if _, err := send(ctx, conn, contracts.FeedFrame{T: "Heartbeat", At: time.Now().UTC()}); err != nil {
 					stop()
 					return
@@ -400,6 +422,7 @@ func (c *Client) consume(ctx context.Context, conn *websocket.Conn, e trust.Enro
 	for {
 		bounded, cancelRead := context.WithTimeout(ctx, 15*time.Second)
 		kind, raw, err := conn.Read(bounded)
+		received := time.Now()
 		cancelRead()
 		if err != nil {
 			return err
@@ -422,6 +445,17 @@ func (c *Client) consume(ctx context.Context, conn *websocket.Conn, e trust.Enro
 		var f contracts.FeedFrame
 		if err = json.Unmarshal(raw, &f); err != nil {
 			return err
+		}
+		if f.T == "ClockPong" {
+			if sample, ok := clock.complete(f, received); ok {
+				if c.GatewayClock != nil {
+					c.GatewayClock(sample)
+				}
+				if _, err := send(ctx, conn, contracts.FeedFrame{T: "ClockAck", ID: f.ID, Clock: &sample}); err != nil {
+					return err
+				}
+			}
+			continue
 		}
 		if f.T == "CommandResponse" {
 			if f.Response == nil || f.ID == "" {
@@ -457,8 +491,12 @@ func (c *Client) consume(ctx context.Context, conn *websocket.Conn, e trust.Enro
 			if f.Protocol != contracts.FeedProtocol || f.Schema != 1 || f.Epoch == "" || f.SubscriptionRevision == 0 || !trust.Subset(f.Scope, ceiling) {
 				return contracts.ErrInvalid
 			}
-			if c.GatewayClock != nil && !f.At.IsZero() {
-				c.GatewayClock(f.At, time.Now().UTC())
+
+			if f.ClockProtocol == contracts.FeedClockProtocol {
+				clock.enable()
+				if err := clock.ping(ctx, conn); err != nil {
+					return err
+				}
 			}
 			welcome = f
 			e.Grants = f.Scope
@@ -528,9 +566,7 @@ func (c *Client) consume(ctx context.Context, conn *websocket.Conn, e trust.Enro
 			}
 			ack.Cursor = &cursor
 		case "Heartbeat":
-			if c.GatewayClock != nil && !f.At.IsZero() {
-				c.GatewayClock(f.At, time.Now().UTC())
-			}
+
 			select {
 			case blobTrigger <- struct{}{}:
 			default:

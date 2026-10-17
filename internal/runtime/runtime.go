@@ -256,8 +256,8 @@ func Start(ctx context.Context, cfg Config) error {
 		}
 	} else {
 		os.Remove(filepath.Join(cfg.Home, "gateway-clock.json"))
-		client := &replication.Client{Store: store, Authority: authority, Blobs: blobStore, GatewayClock: func(gateway, received time.Time) {
-			sample, _ := json.Marshal(gatewayClockSample{Gateway: gateway, Received: received})
+		client := &replication.Client{Store: store, Authority: authority, Blobs: blobStore, GatewayClock: func(clock contracts.ClockSample) {
+			sample, _ := json.Marshal(clock)
 			path := filepath.Join(cfg.Home, "gateway-clock.json")
 			if os.WriteFile(path+".tmp", sample, 0600) == nil {
 				os.Rename(path+".tmp", path)

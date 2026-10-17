@@ -22,7 +22,7 @@ func (w *World) DoctorClockWarnings(endpoint Endpoint) (bool, bool, error) {
 	}
 	defer write(saved)
 	now := time.Now().UTC()
-	raw, _ := json.Marshal(map[string]time.Time{"gateway": now.Add(-10 * time.Second), "received": now})
+	raw, _ := json.Marshal(map[string]time.Time{"t0": now.Add(-11 * time.Millisecond), "t1": now.Add(10*time.Second - 6*time.Millisecond), "t2": now.Add(10*time.Second - 5*time.Millisecond), "t3": now})
 	if err = write(string(raw)); err != nil {
 		return false, false, err
 	}
