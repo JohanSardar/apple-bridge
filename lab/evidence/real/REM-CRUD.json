@@ -1,10 +1,10 @@
 {
-  "run_id": "run_01M549AFV9RC91QD73KA815YMS",
+  "run_id": "run_01M54AFHD6TRBNA74A3DS1EH7P",
   "scenario": "REM-CRUD",
   "level": "real",
   "passed": true,
-  "git_sha": "a9273fb58b4090e6a4dd091857be47215829b73c",
-  "at": "2026-10-17T06:38:23.081634Z",
+  "git_sha": "26827bb9cf7bf21a9b427aedb8eaa85c9cdc916e",
+  "at": "2026-10-17T06:58:37.094372Z",
   "assertions": [
     {
       "name": "reminders_ready",
@@ -98,16 +98,16 @@
   "latency": {
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 21.749292,
-      "p95_ms": 21.749292,
-      "max_ms": 21.749292,
+      "p50_ms": 24.092542,
+      "p95_ms": 24.092542,
+      "max_ms": 24.092542,
       "timeouts": 0
     },
     "mcp_effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 24.686583,
-      "p95_ms": 24.686583,
-      "max_ms": 24.686583,
+      "p50_ms": 18.55875,
+      "p95_ms": 18.55875,
+      "max_ms": 18.55875,
       "timeouts": 0
     }
   },

@@ -1,10 +1,10 @@
 {
-  "run_id": "run_01M549CQA5Q6BTR37PA15YVVRQ",
+  "run_id": "run_01M54AJX34AVWJ1T7PBP9F0KF6",
   "scenario": "REM-LIST-CREATE",
   "level": "real",
   "passed": true,
-  "git_sha": "a9273fb58b4090e6a4dd091857be47215829b73c",
-  "at": "2026-10-17T06:39:36.261235Z",
+  "git_sha": "26827bb9cf7bf21a9b427aedb8eaa85c9cdc916e",
+  "at": "2026-10-17T07:00:27.36477Z",
   "assertions": [
     {
       "name": "reminders_ready",

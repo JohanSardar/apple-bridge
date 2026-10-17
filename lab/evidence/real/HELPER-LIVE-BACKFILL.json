@@ -1,10 +1,10 @@
 {
-  "run_id": "run_01M5495TKZX24K5RZME4KMA4K4",
+  "run_id": "run_01M54A6VVVSYM18830CDC9KTDP",
   "scenario": "HELPER-LIVE-BACKFILL",
   "level": "real",
   "passed": true,
-  "git_sha": "8a4cb1b13da59dbb2a4220ad9a3ff4f27a9760ee",
-  "at": "2026-10-17T06:35:50.271799Z",
+  "git_sha": "26827bb9cf7bf21a9b427aedb8eaa85c9cdc916e",
+  "at": "2026-10-17T06:53:52.891075Z",
   "assertions": [
     {
       "name": "initial_backfill_held",

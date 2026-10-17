@@ -1,0 +1,64 @@
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"github.com/JohanSardar/apple-bridge/lab/world"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+)
+
+func main() {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+	w, err := world.NewReal(ctx, "real", 0)
+	if err != nil {
+		panic(err)
+	}
+	closed := false
+	defer func() {
+		if !closed {
+			w.Close()
+		}
+	}()
+	_, failure := w.Truth("invalid-verb", map[string]any{"list": "Bridge Test"})
+	if !errors.Is(failure, world.ErrTruthUnverified) || !strings.Contains(failure.Error(), ": invalid;") {
+		panic("underlying reason lost")
+	}
+	dir := filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "AppleBridgeDev", "lab-failures", filepath.Base(w.Dir))
+	reports, err := filepath.Glob(filepath.Join(dir, "*-report.json"))
+	if err != nil || len(reports) != 1 {
+		panic("failure report missing")
+	}
+	report := reports[0]
+	before, err := os.Stat(report)
+	if err != nil || before.Mode().Perm() != 0600 {
+		panic("failure report is not private")
+	}
+	info, err := os.Stat(dir)
+	if err != nil || info.Mode().Perm() != 0700 {
+		panic("failure directory is not private")
+	}
+	bytes, err := os.ReadFile(report)
+	if err != nil {
+		panic(err)
+	}
+	var result map[string]any
+	if json.Unmarshal(bytes, &result) != nil || result["reason"] != "invalid" {
+		panic("original reason not retained")
+	}
+	w.Close()
+	closed = true
+	if _, err = os.Stat(report); err != nil {
+		panic("report removed with World")
+	}
+	data, _ := json.MarshalIndent(map[string]any{"kind": "real_appletruth_failure_probe", "passed": true, "underlying_reason": "invalid", "errors_is_unverified": true, "report_mode": "0600", "directory_mode": "0700", "survives_world_cleanup": true, "private_location": "~/Library/Application Support/AppleBridgeDev/lab-failures"}, "", "  ")
+	if err = os.WriteFile("lab/evidence/session-fix/truth-failure-preservation.json", append(data, '\n'), 0644); err != nil {
+		panic(err)
+	}
+	fmt.Println("Truth failure reason, private permissions and retention: passed")
+}

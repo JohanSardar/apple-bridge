@@ -1,10 +1,10 @@
 {
-  "run_id": "run_01M5477SKGE93QPGCT76KWMZD6",
+  "run_id": "run_01M54BFFNJAM1SPT1KCD8RRDBX",
   "scenario": "REM-CREATE-EXTERNAL",
   "level": "sim",
   "passed": true,
-  "git_sha": "c9aa42147ac4f6337b58fd04e7b9db83f17128e6",
-  "at": "2026-10-17T06:01:57.616563Z",
+  "git_sha": "6a1b57790f171ef5805e68da513af0de7d00b78f",
+  "at": "2026-10-17T07:16:03.890774Z",
   "assertions": [
     {
       "name": "reminders_ready",
@@ -34,9 +34,9 @@
   "latency": {
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 31.369875,
-      "p95_ms": 31.369875,
-      "max_ms": 31.369875,
+      "p50_ms": 34.292208,
+      "p95_ms": 34.292208,
+      "max_ms": 34.292208,
       "timeouts": 0
     }
   },

@@ -2822,7 +2822,7 @@
       "passed": true
     },
     {
-      "name": "latency_effect_done→gateway_visible",
+      "name": "latency_effect_done\u2192gateway_visible",
       "passed": false
     },
     {
@@ -2830,7 +2830,7 @@
       "passed": true
     },
     {
-      "name": "latency_effect_done→replica_visible:replica0",
+      "name": "latency_effect_done\u2192replica_visible:replica0",
       "passed": false
     },
     {
@@ -2859,67 +2859,46 @@
     }
   ],
   "latency": {
-    "capture_sent→commit_ack": {
+    "capture_sent\u2192commit_ack": {
       "samples": 200,
       "p50_ms": 44.773042,
       "p95_ms": 61.067709,
       "max_ms": 69.36575,
       "timeouts": 0
     },
-    "capture_sent→gateway_commit": {
+    "capture_sent\u2192gateway_commit": {
       "samples": 200,
       "p50_ms": 43.538176,
       "p95_ms": 58.096896,
       "max_ms": 65.974784,
       "timeouts": 0
     },
-    "debounce→refetch_start": {
+    "debounce\u2192refetch_start": {
       "samples": 200,
       "p50_ms": 1.96275,
       "p95_ms": 67.656542,
       "max_ms": 570.457958,
       "timeouts": 0
     },
-    "effect_done→gateway_visible": {
+    "effect_done\u2192gateway_visible": {
       "samples": 200,
       "p50_ms": 786.947917,
       "p95_ms": 1038.605167,
       "max_ms": 1172.713166,
       "timeouts": 0
     },
-    "effect_done→replica_visible:replica0": {
+    "effect_done\u2192replica_visible:replica0": {
       "samples": 200,
       "p50_ms": 840.187583,
       "p95_ms": 1096.221042,
       "max_ms": 1214.3475,
       "timeouts": 0
     },
-    "gateway_commit→replica_visible": {
+    "gateway_commit\u2192replica_visible": {
       "samples": 200,
       "p50_ms": 44.109035,
       "p95_ms": 64.476834,
       "max_ms": 96.050624,
-      "timeouts": 0
-    },
-    "native_save→notification_delivery": {
-      "samples": 167,
-      "p50_ms": 222.897334,
-      "p95_ms": 408.256542,
-      "max_ms": 457.746625,
-      "timeouts": 33
-    },
-    "notification_delivery→debounce": {
-      "samples": 153,
-      "p50_ms": 55.027833,
-      "p95_ms": 66.404833,
-      "max_ms": 67.7055,
-      "timeouts": 47
-    },
-    "notification_delivery→replica_visible": {
-      "samples": 200,
-      "p50_ms": 643.502917,
-      "p95_ms": 728.802291,
-      "max_ms": 764.794041,
       "timeouts": 0
     },
     "refetch_duration": {
@@ -2929,15 +2908,42 @@
       "max_ms": 188.49175,
       "timeouts": 0
     },
-    "refetch_finished→capture_sent": {
+    "refetch_finished\u2192capture_sent": {
       "samples": 200,
       "p50_ms": 352.476708,
       "p95_ms": 391.047042,
       "max_ms": 407.49125,
       "timeouts": 0
+    },
+    "native_save\u2192recorded_notification_nonnegative_only": {
+      "samples": 167,
+      "p50_ms": 222.897334,
+      "p95_ms": 408.256542,
+      "max_ms": 457.746625,
+      "timeouts": 0,
+      "unpaired": 33
+    },
+    "recorded_notification\u2192debounce_nonnegative_only": {
+      "samples": 153,
+      "p50_ms": 55.027833,
+      "p95_ms": 66.404833,
+      "max_ms": 67.7055,
+      "timeouts": 0,
+      "unpaired": 47
+    },
+    "recorded_notification\u2192replica_visible": {
+      "samples": 200,
+      "p50_ms": 643.502917,
+      "p95_ms": 728.802291,
+      "max_ms": 764.794041,
+      "timeouts": 0
     }
   },
   "hosts": [
     "air"
+  ],
+  "measurement_notes": [
+    "First instrumentation pass: notification timestamps were not paired to their debounce trigger. Notification metrics are diagnostic subsets, not evidence of Apple arrival lag. End-to-end, refetch duration and refetch-to-Capture metrics cover all 200 effects.",
+    "Unpaired diagnostic timestamp intervals were originally counted as timeouts; corrected here without changing recorded timestamps or end-to-end measurements."
   ]
 }

@@ -1,0 +1,115 @@
+{
+  "kind": "native_dispatch_timer_audit",
+  "code_revision": "67ca0b40daa49e104ce217db189c5f5aeed1f5c0",
+  "entries": [
+    {
+      "file": "native/Sources/AgendaGate/AgendaGate.swift",
+      "line": 87,
+      "code": "DispatchQueue.global().asyncAfter(deadline: .now() + 3) { @Sendable in",
+      "isolation": "actor-origin global handlers explicitly Sendable"
+    },
+    {
+      "file": "native/Sources/AppleSession/HelperCommand.swift",
+      "line": 44,
+      "code": "let lifetime = DispatchSource.makeTimerSource(queue: .global())",
+      "isolation": "actor-origin global handlers explicitly Sendable"
+    },
+    {
+      "file": "native/Sources/AppleSession/HelperCommand.swift",
+      "line": 46,
+      "code": "lifetime.setEventHandler { @Sendable in timers.record(\"lifetime_timer\"); if kill(gatewayPID, 0) != 0 { exit(0) } }",
+      "isolation": "actor-origin global handlers explicitly Sendable"
+    },
+    {
+      "file": "native/Sources/AppleSession/HelperCommand.swift",
+      "line": 65,
+      "code": "DispatchQueue.global().asyncAfter(deadline: .now() + 30) { @Sendable in",
+      "isolation": "actor-origin global handlers explicitly Sendable"
+    },
+    {
+      "file": "native/Sources/AppleSession/HelperCommand.swift",
+      "line": 75,
+      "code": "DispatchQueue.global().asyncAfter(deadline: .now() + limit) { @Sendable in",
+      "isolation": "actor-origin global handlers explicitly Sendable"
+    },
+    {
+      "file": "native/Sources/AppleSession/HelperCommand.swift",
+      "line": 105,
+      "code": "DispatchQueue.global().asyncAfter(deadline: .now() + 35) { @Sendable in",
+      "isolation": "actor-origin global handlers explicitly Sendable"
+    },
+    {
+      "file": "native/Sources/AppleSession/Permissions.swift",
+      "line": 63,
+      "code": "DispatchQueue.global().async { @Sendable in",
+      "isolation": "actor-origin global handlers explicitly Sendable"
+    },
+    {
+      "file": "native/Sources/AppleSession/Permissions.swift",
+      "line": 131,
+      "code": "DispatchQueue.global().async { @Sendable in",
+      "isolation": "actor-origin global handlers explicitly Sendable"
+    },
+    {
+      "file": "native/Sources/MessagesSource/MessagesWatcher.swift",
+      "line": 8,
+      "code": "private let queue = DispatchQueue(label: \"applebridge.messages.watch\")",
+      "isolation": "nonisolated queue-owned class"
+    },
+    {
+      "file": "native/Sources/MessagesSource/MessagesWatcher.swift",
+      "line": 9,
+      "code": "private var sources: [String: (UInt64, any DispatchSourceFileSystemObject)] = [:]",
+      "isolation": "nonisolated queue-owned class"
+    },
+    {
+      "file": "native/Sources/MessagesSource/MessagesWatcher.swift",
+      "line": 10,
+      "code": "private var pending: DispatchWorkItem?",
+      "isolation": "nonisolated queue-owned class"
+    },
+    {
+      "file": "native/Sources/MessagesSource/MessagesWatcher.swift",
+      "line": 11,
+      "code": "private var timer: (any DispatchSourceTimer)?",
+      "isolation": "nonisolated queue-owned class"
+    },
+    {
+      "file": "native/Sources/MessagesSource/MessagesWatcher.swift",
+      "line": 29,
+      "code": "let timer = DispatchSource.makeTimerSource(queue: queue)",
+      "isolation": "nonisolated queue-owned class"
+    },
+    {
+      "file": "native/Sources/MessagesSource/MessagesWatcher.swift",
+      "line": 31,
+      "code": "timer.setEventHandler { [weak self] in self?.polls += 1; self?.rearm(); self?.report(); self?.signal(false) }",
+      "isolation": "nonisolated queue-owned class"
+    },
+    {
+      "file": "native/Sources/MessagesSource/MessagesWatcher.swift",
+      "line": 70,
+      "code": "let source = DispatchSource.makeFileSystemObjectSource(fileDescriptor: descriptor, eventMask: [.write, .extend, .attrib, .delete, .rename, .revoke], queue: queue)",
+      "isolation": "nonisolated queue-owned class"
+    },
+    {
+      "file": "native/Sources/MessagesSource/MessagesWatcher.swift",
+      "line": 71,
+      "code": "source.setCancelHandler { Darwin.close(descriptor) }",
+      "isolation": "nonisolated queue-owned class"
+    },
+    {
+      "file": "native/Sources/MessagesSource/MessagesWatcher.swift",
+      "line": 72,
+      "code": "source.setEventHandler { [weak self] in",
+      "isolation": "nonisolated queue-owned class"
+    },
+    {
+      "file": "native/Sources/MessagesSource/MessagesWatcher.swift",
+      "line": 77,
+      "code": "let work = DispatchWorkItem { [weak self] in self?.signal(false) }",
+      "isolation": "nonisolated queue-owned class"
+    }
+  ],
+  "additional_audit": "AppleTruth deadline handler also explicitly Sendable; independent real fixture calls verified"
+}

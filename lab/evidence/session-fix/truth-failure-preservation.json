@@ -1,0 +1,10 @@
+{
+  "directory_mode": "0700",
+  "errors_is_unverified": true,
+  "kind": "real_appletruth_failure_probe",
+  "passed": true,
+  "private_location": "~/Library/Application Support/AppleBridgeDev/lab-failures",
+  "report_mode": "0600",
+  "survives_world_cleanup": true,
+  "underlying_reason": "invalid"
+}

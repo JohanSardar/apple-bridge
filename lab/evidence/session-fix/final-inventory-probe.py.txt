@@ -1,0 +1,83 @@
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import uuid
+
+app = sys.argv[1]
+private = Path(tempfile.mkdtemp(prefix="session-fix-inventory-"))
+os.chmod(private, 0o700)
+sequence = 0
+
+def truth(verb, request):
+    global sequence
+    sequence += 1
+    input_path = private / f"{sequence}-request.json"
+    output_path = private / f"{sequence}-report.json"
+    input_path.write_text(json.dumps(request))
+    os.chmod(input_path, 0o600)
+    subprocess.run(["open", "-n", "-W", "-g", "-a", app, "--args", verb, "--request-file", str(input_path), "--report", str(output_path)], check=False, timeout=95, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    response = json.loads(output_path.read_text())
+    if response.get("status") != "verified":
+        reason = str(response.get("reason", "missing_reason"))
+        if not re.fullmatch(r"[A-Za-z_][A-Za-z_0-9.:-]{0,159}", reason):
+            reason = "native_error_redacted"
+        raise RuntimeError("unverified:" + reason)
+    return response
+
+def observe(**fields):
+    return truth("observe", {"list": "Bridge Test", **fields})
+
+def fixture(action, **fields):
+    return truth("fixture", {"action": action, "list": "Bridge Test", **fields})
+
+def list_ids(response):
+    if "lists" in response:
+        return [row["id"] for row in response["lists"]]
+    return [response["list_id"]] if response.get("list_exists") else []
+
+control = "[ab-test audit-" + uuid.uuid4().hex + "]"
+try:
+    for identifier in list_ids(observe(tag="[ab-test")):
+        records = observe(list_id=identifier, tag="[ab-test")["records"]
+        tags = set()
+        for row in records:
+            match = re.match(r"^(\[ab-test [^]\n]+\])", row["title"])
+            if match:
+                tags.add(match.group(1))
+        for tag in tags:
+            fixture("cleanup", list_id=identifier, tag=tag)
+    identifiers = list_ids(observe(tag="[ab-test"))
+    populations = {identifier: len(observe(list_id=identifier, tag="")["records"]) for identifier in identifiers}
+    populated = [identifier for identifier in identifiers if populations[identifier] > 0]
+    keep = populated[0] if populated else (identifiers[0] if identifiers else None)
+    removed = 0
+    for identifier in identifiers:
+        if identifier != keep and populations[identifier] == 0:
+            fixture("cleanup_list", list_id=identifier, tag=control)
+            removed += 1
+    try:
+        created = fixture("create", tag=control, title=control + " inventory control")
+        inventory = observe(all_lists=True, tag=control)
+        assert any(row["id"] == created["id"] for row in inventory["records"]), "inventory positive control missing"
+    finally:
+        fixture("cleanup", tag=control)
+    records = [row for row in observe(all_lists=True, tag="[ab-test")["records"] if row["title"].startswith("[ab-test")]
+    bridge_count = len(list_ids(observe(tag="[ab-test")))
+    result = {"kind": "real_final_reminders_inventory", "passed": len(records) == 0 and bridge_count == 1, "all_lists_positive_control": True, "tagged_reminders_total": len(records), "tagged_reminders_outside_bridge_test": sum(row["list"] != "Bridge Test" for row in records), "bridge_test_lists": bridge_count, "duplicate_empty_lists_removed": removed, "writes_confined_to": "tagged reminders and empty duplicate lists named Bridge Test"}
+    Path("lab/evidence/session-fix/final-fixture-inventory.json").write_text(json.dumps(result, indent=2) + "\n")
+    assert result["passed"], "final test inventory not empty or duplicate lists remain"
+    print(json.dumps(result))
+except BaseException:
+    retained = Path.home() / "Library/Application Support/AppleBridgeDev/lab-failures" / private.name
+    shutil.copytree(private, retained, dirs_exist_ok=True)
+    os.chmod(retained, 0o700)
+    for path in retained.iterdir():
+        os.chmod(path, 0o600)
+    raise
+finally:
+    shutil.rmtree(private)

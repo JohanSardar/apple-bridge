@@ -1,0 +1,50 @@
+{
+  "run_id": "run_01M54AKYRM5YHZP6FZ0G2C50N3",
+  "scenario": "REM-LIST-LOST-ACK",
+  "level": "real",
+  "passed": true,
+  "git_sha": "26827bb9cf7bf21a9b427aedb8eaa85c9cdc916e",
+  "at": "2026-10-17T07:01:01.844386Z",
+  "assertions": [
+    {
+      "name": "reminders_ready",
+      "passed": true
+    },
+    {
+      "name": "list_response_ambiguous",
+      "passed": true
+    },
+    {
+      "name": "native_list_effect_before_lost_outcome",
+      "passed": true
+    },
+    {
+      "name": "list_visible",
+      "passed": true
+    },
+    {
+      "name": "independent_appletruth",
+      "passed": true
+    },
+    {
+      "name": "replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak",
+      "passed": true
+    },
+    {
+      "name": "created_list_recovery_cleanup",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

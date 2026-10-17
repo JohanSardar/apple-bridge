@@ -1,23 +1,116 @@
 {
-  "run_id": "run_01M546RQJRF11NZMKW65BJHTVK",
-  "status": "unverified",
+  "run_id": "run_01M54B1AHHQYPP3B5Y4WHHZB0Z",
   "scenario": "REM-CRUD",
   "level": "replica",
-  "passed": false,
-  "git_sha": "252ddfa13666204ef251de41657a49d9c580b9ff",
-  "at": "2026-10-17T05:53:44.024914Z",
+  "passed": true,
+  "git_sha": "6a1b57790f171ef5805e68da513af0de7d00b78f",
+  "at": "2026-10-17T07:08:19.889595Z",
   "assertions": [
     {
       "name": "reminders_ready",
       "passed": true
     },
     {
-      "name": "independent_truth",
-      "passed": false,
-      "detail": "Grant AppleTruth.app Reminders full access; no fixture changes were made"
+      "name": "rest_reminders.create",
+      "passed": true
+    },
+    {
+      "name": "replica_visible_under_one_second",
+      "passed": true
+    },
+    {
+      "name": "rest_reminders.update",
+      "passed": true
+    },
+    {
+      "name": "rest_reminders.complete",
+      "passed": true
+    },
+    {
+      "name": "rest_reminders.uncomplete",
+      "passed": true
+    },
+    {
+      "name": "rest_reminders.delete",
+      "passed": true
+    },
+    {
+      "name": "independent_appletruth",
+      "passed": true
+    },
+    {
+      "name": "replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak",
+      "passed": true
+    },
+    {
+      "name": "mcp_reminders_ready",
+      "passed": true
+    },
+    {
+      "name": "mcp_rest_reminders.create",
+      "passed": true
+    },
+    {
+      "name": "mcp_replica_visible_under_one_second",
+      "passed": true
+    },
+    {
+      "name": "mcp_rest_reminders.update",
+      "passed": true
+    },
+    {
+      "name": "mcp_rest_reminders.complete",
+      "passed": true
+    },
+    {
+      "name": "mcp_rest_reminders.uncomplete",
+      "passed": true
+    },
+    {
+      "name": "mcp_rest_reminders.delete",
+      "passed": true
+    },
+    {
+      "name": "mcp_independent_appletruth",
+      "passed": true
+    },
+    {
+      "name": "mcp_replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "mcp_no_scope_leak",
+      "passed": true
+    },
+    {
+      "name": "mcp_no_scope_leak",
+      "passed": true
     }
   ],
-  "latency": {},
+  "latency": {
+    "effect_done→replica_visible:replica0": {
+      "samples": 1,
+      "p50_ms": 72.887375,
+      "p95_ms": 72.887375,
+      "max_ms": 72.887375,
+      "timeouts": 0
+    },
+    "mcp_effect_done→replica_visible:replica0": {
+      "samples": 1,
+      "p50_ms": 60.929083,
+      "p95_ms": 60.929083,
+      "max_ms": 60.929083,
+      "timeouts": 0
+    }
+  },
   "hosts": [
     "air",
     "ubuntu"
