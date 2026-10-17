@@ -1,0 +1,5 @@
+id: usage-estimated-seconds
+source: usage
+requires: [usage.read]
+scope: usage:read
+prompt: 'How many estimated focus seconds does Usage report for app-day entry {{record}} (app {{bundle}}, day {{day}}, device {{device}})? Return only the numeric seconds_estimated value without rounding.'

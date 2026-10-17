@@ -9,11 +9,11 @@ import (
 )
 
 func NewUsage(ctx context.Context, level string) (*World, error) {
-	setup := NativeSetup{BeforeStart: func(w *World) error { return w.stageUsageTruth() }}
+	setup := NativeSetup{BeforeStart: func(w *World) error { return w.StageUsageTruth() }}
 	return newEnvironment(ctx, level, 1, 0, level == "real", "", setup, BlobOptions{Scope: "usage:read,system:read"})
 }
 func (w *World) UsageTruthRoot() string { return filepath.Join(w.Dir, "usage-truth-biome") }
-func (w *World) stageUsageTruth() error {
+func (w *World) StageUsageTruth() error {
 	source := filepath.Join(os.Getenv("HOME"), "Library", "Biome")
 	target := w.UsageTruthRoot()
 	stream := filepath.Join("streams", "restricted", "App.InFocus")

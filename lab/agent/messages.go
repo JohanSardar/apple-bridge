@@ -105,10 +105,14 @@ func selfFixture(ctx context.Context, w *world.World, task Task, tag, run string
 
 func (f selfMessageFixture) saveManifest(state string, messages []string, commandID string) error {
 	parts := []map[string]any{}
-	for _, guid := range messages {
-		parts = append(parts, map[string]any{"native_key": guid, "disposition": "locally_observed"})
+	if f.Message != "" {
+		parts = append(parts, map[string]any{"native_key": f.Message, "disposition": "locally_observed"})
 	}
-	raw, err := json.Marshal(map[string]any{"run_id": strings.TrimSuffix(filepath.Base(f.Manifest), ".json"), "command_id": commandID, "baseline_max_row_id": f.Baseline, "created_at": f.Created, "cleanup_state": state, "scenario": "AGENT-SUITE", "level": "agent", "native_key": f.Message, "native_parts": parts, "tagged_text": f.Text, "chat_guid": f.Chat, "recipient_role": "self", "maximum_sends": 1})
+	echo := ""
+	if len(messages) > 1 {
+		echo = messages[1]
+	}
+	raw, err := json.Marshal(map[string]any{"run_id": strings.TrimSuffix(filepath.Base(f.Manifest), ".json"), "command_id": commandID, "baseline_max_row_id": f.Baseline, "created_at": f.Created, "cleanup_state": state, "scenario": "AGENT-SUITE", "level": "agent", "native_key": f.Message, "native_parts": parts, "incoming_echo_native_key": echo, "observed_native_keys": messages, "tagged_text": f.Text, "chat_guid": f.Chat, "recipient_role": "self", "maximum_sends": 1})
 	if err != nil {
 		return err
 	}

@@ -192,7 +192,7 @@ func loadTasks() ([]Task, error) {
 			return nil, fmt.Errorf("invalid agent task %s", file)
 		}
 		seen[task.ID] = true
-		if !slices.Contains([]string{"reminders", "contacts", "calendar", "messages"}, task.Source) || task.Scope != task.Source+":read" && task.Scope != task.Source+":write" {
+		if !slices.Contains([]string{"reminders", "contacts", "calendar", "messages", "usage"}, task.Source) || task.Scope != task.Source+":read" && task.Scope != task.Source+":write" {
 			return nil, fmt.Errorf("unsupported agent task %s", file)
 		}
 		ready := true
@@ -248,6 +248,9 @@ func loadTasks() ([]Task, error) {
 }
 
 func (r AgentRunner) run(ctx context.Context, task Task, number int) (attempt Attempt) {
+	if task.Source == "usage" {
+		return r.runUsage(ctx, task, number)
+	}
 	if task.Source == "messages" {
 		return r.runMessages(ctx, task, number)
 	}
