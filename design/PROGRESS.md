@@ -19,7 +19,8 @@ Resume point for any fresh session. Updated after every unit of work.
 
 ## In flight (2026-10-17)
 - DONE `ab-m0-tracer-review-r1`: tracer scenarios reproduced (sim LIVE p95 12.6–15.3 ms over 3 runs; Ubuntu p95 100 ms). Findings: runner Truth keyed by title (hides duplicates), unconditional transactional assertion, malformed scenario options default silently, SSE deadline + cursor identity, status typing → `ab-m0-tracer-fix-r1`; partition = process kill and SSH-tunnelled replica path → already in M0-C brief; typed IDs (raw strings) → deferred refactor after M0.
-- `ab-m0-tracer-fix-r1` (worktree tracer-fix): fixes above + lab self-check scenarios.
+- DONE `ab-m0-tracer-fix-r1` (3581bc3..852eb09): all six review findings fixed; self-checks LAB-TRUTH-MULTIPLICITY, LAB-MALFORMED-SCENARIO, LAB-SSE (sim). Latency outliers under heavy Air contention: sim max 1.8 s; one replica run p95 3.0 s (rerun p95 98 ms). Must be explained before claiming the <1 s target (CORE-BENCH + quiet-machine runs). Review `ab-m0-tracer-fix-review-r1` running.
+- SSH ControlMaster multiplexing to the Air broke (mux Broken pipe) and looked like host overload; use `ssh -o ControlPath=none air` if ssh stalls. Air load average spikes (~100) come largely from Johan's Chrome/headless Chrome, not only our workers.
 - `ab-m0-commands-r1` (worktree m0-commands): command lifecycle, ApplePeer command frames, SimApplePeer commands + faults, RemoteGateway + delegated identity, MCP, CORE-CMD-*, parity, forged delegation, localhost defense, REM-CRUD/CONFLICT/EXTERNAL-RACE/READONLY-LIST.
 - `ab-m0-robust-r1` (worktree m0-robust): fault proxy, direct Tailscale replica path, snapshot/retention/gap/kill/slow-consumer/disconnect/upgrade/helper-restart/restore/disk-full/scope/pair/cred-lifecycle/bench scenarios.
 - `ab-m0-blobs-r1` (worktree m0-blobs): internal/blobs + feed transfer + IPC blob reads + CORE-BLOB-*.
