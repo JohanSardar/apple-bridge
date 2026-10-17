@@ -43,7 +43,7 @@ def main():
             break
         time.sleep(0.5)
     else:
-        check("messages_source_ready", False, "Helper Messages access unavailable; inspect permissions without prompting", True)
+        check("messages_source_ready", False, "Helper did not publish Messages ready; startup and permission status unverified", True)
         return
     check("messages_source_ready", True)
     state = readonly(os.path.join(endpoint["Home"], "state.db"))
