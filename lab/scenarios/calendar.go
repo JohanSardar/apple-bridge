@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"reflect"
 	"slices"
 	"strings"
@@ -47,21 +46,44 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		}
 		return e
 	}
+	tag := "[ab-test " + e.RunID + "]"
+	title := tag + " event"
+	calendarNative := "test-calendar"
 	var w *world.World
 	var err error
 	if level == "sim" {
 		w, err = world.New(ctx, level, 1, 0)
 	} else {
-		root, _ := os.Getwd()
-		apps := filepath.Join(root, "native/.build/calendar-apps")
-		w, err = world.NewRealApps(ctx, level, 1, world.NativeApps{Helper: filepath.Join(apps, "AppleBridgeHelper.app"), Truth: filepath.Join(apps, "AppleTruth.app")})
+		setup := world.NativeSetup{}
+		if s.ID == "CAL-EXCEPTION-INITIAL-CAPTURE" {
+			setup.BeforeStart = func(nativeWorld *world.World) error {
+				result, err := nativeWorld.Truth("fixture", map[string]any{"source": "calendar", "action": "create_calendar", "tag": tag})
+				if err != nil {
+					return err
+				}
+				calendarNative, _ = result["id"].(string)
+				_, err = nativeWorld.Truth("fixture", map[string]any{"source": "calendar", "action": "create", "tag": tag, "calendar_id": calendarNative, "title": title, "start": "2026-11-01T05:30:00Z", "end": "2026-11-01T07:30:00Z", "time_zone": "America/New_York", "recurrence": []any{map[string]any{"frequency": "daily", "interval": 1, "count": 3}}})
+				if err != nil {
+					return err
+				}
+				_, err = nativeWorld.Truth("fixture", map[string]any{"source": "calendar", "action": "modify", "tag": tag, "calendar_id": calendarNative, "index": 1, "new_title": tag + " initial exception"})
+				return err
+			}
+			setup.Cleanup = func(nativeWorld *world.World) error {
+				_, err := nativeWorld.RecoverTruth("fixture", map[string]any{"source": "calendar", "action": "cleanup", "tag": tag})
+				return err
+			}
+		}
+		w, err = world.NewRealWithSetup(ctx, level, 1, setup)
 	}
 	if err != nil {
 		return fail("world_start", err)
 	}
 	defer w.Close()
-	tag := "[ab-test " + e.RunID + "]"
-	title := tag + " event"
+	if level != "sim" {
+		add("private_signed_apps_per_world", strings.HasPrefix(w.HelperApp, w.Dir+"/apps/") && strings.HasPrefix(w.TruthApp, w.Dir+"/apps/"))
+	}
+
 	raw := func(r contracts.Record) map[string]any { var d map[string]any; json.Unmarshal(r.Data, &d); return d }
 	records := func(endpoint world.Endpoint) []contracts.Record {
 		all, _ := w.Records(endpoint)
@@ -76,7 +98,7 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		})
 		return out
 	}
-	calendarNative := "test-calendar"
+
 	calendar := func() contracts.Record {
 		aliases, _ := gatewayAliases(w)
 		wanted := aliases[aliasKey(contracts.Calendar, "calendar.calendar", calendarNative)]
@@ -118,8 +140,8 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 			return fail("independent_truth_access", err)
 		}
 		defer func() {
-			_, cleanupErr := w.Truth("fixture", map[string]any{"source": "calendar", "action": "cleanup", "tag": tag})
-			audit, auditErr := w.Truth("observe", map[string]any{"source": "calendar", "action": "audit", "tag": tag})
+			_, cleanupErr := w.RecoverTruth("fixture", map[string]any{"source": "calendar", "action": "cleanup", "tag": tag})
+			audit, auditErr := w.RecoverTruth("observe", map[string]any{"source": "calendar", "action": "audit", "tag": tag})
 			remaining, _ := audit["records"].([]any)
 			clean := cleanupErr == nil && auditErr == nil && len(remaining) == 0
 			result.Assertions = append(result.Assertions, Assertion{Name: "tagged_fixture_cleanup_audit", Passed: clean})
@@ -234,7 +256,7 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		start, end = "2026-11-01", "2026-11-03"
 	}
 	event := map[string]any{"title": title, "start": start, "end": end, "all_day": allDay, "time_zone": "America/New_York"}
-	recurring := s.ID == "CAL-RECUR-THIS" || s.ID == "CAL-RECUR-FUTURE" || s.ID == "CAL-MOVED-OCCURRENCE" || s.ID == "CAL-MOVED-OUTSIDE-WINDOW" || s.ID == "CAL-ALLDAY-FUTURE"
+	recurring := s.ID == "CAL-RECUR-THIS" || s.ID == "CAL-RECUR-FUTURE" || s.ID == "CAL-MOVED-OCCURRENCE" || s.ID == "CAL-MOVED-OUTSIDE-WINDOW" || s.ID == "CAL-ALLDAY-FUTURE" || s.ID == "CAL-EXCEPTION-INITIAL-CAPTURE"
 	if recurring {
 		event["recurrence"] = []any{map[string]any{"frequency": "daily", "interval": 1, "count": 3}}
 	}
@@ -249,7 +271,7 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 			return fail("create_event", err)
 		}
 		add("create_event_observed", last.CommitSeq > 0)
-	} else {
+	} else if s.ID != "CAL-EXCEPTION-INITIAL-CAPTURE" {
 		if _, err = fixture("create", "series", event); err != nil {
 			return fail("external_create", err)
 		}
@@ -307,7 +329,7 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		}
 		return true
 	}
-	if s.ID != "CAL-CRUD" && !latency(title, effectDone) {
+	if s.ID != "CAL-CRUD" && s.ID != "CAL-EXCEPTION-INITIAL-CAPTURE" && !latency(title, effectDone) {
 		return fail("external_capture_latency", nil)
 	}
 	baseline := records(w.Gateway)
@@ -317,6 +339,15 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 	add("agenda_returns_occurrences", agendaErr == nil && len(agenda.Records) == count)
 
 	switch s.ID {
+	case "CAL-EXCEPTION-INITIAL-CAPTURE":
+		found := false
+		for _, r := range baseline {
+			if recordTitle(r) == tag+" initial exception" {
+				d := raw(r)
+				found = d["is_exception"] == true && d["recurrence"] != nil && d["occurrence_date"] != nil && d["calendar_id"] == calendar().ID
+			}
+		}
+		add("initial_detached_exception_has_native_series_rules", found)
 	case "CAL-CLEANUP-SAFETY":
 		sentinelTag := strings.TrimSuffix(tag, "]") + "-sentinel]"
 		sentinel := map[string]any{"source": "calendar", "action": "create", "tag": sentinelTag, "calendar_id": calendarNative, "title": sentinelTag + " outside window", "start": time.Now().AddDate(3, 0, 0).UTC().Format(time.RFC3339Nano), "end": time.Now().AddDate(3, 0, 0).Add(time.Hour).UTC().Format(time.RFC3339Nano)}
@@ -324,13 +355,13 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 			return fail("create_outside_window_sentinel", err)
 		}
 		defer func() {
-			_, cleanupErr := w.Truth("fixture", map[string]any{"source": "calendar", "action": "cleanup", "tag": sentinelTag, "calendar_id": calendarNative})
+			_, cleanupErr := w.RecoverTruth("fixture", map[string]any{"source": "calendar", "action": "cleanup", "tag": sentinelTag, "calendar_id": calendarNative})
 			if cleanupErr != nil {
 				result.Passed = false
 				result.Assertions = append(result.Assertions, Assertion{Name: "sentinel_cleanup", Passed: false})
 			}
 		}()
-		response, cleanupErr := w.Truth("fixture", map[string]any{"source": "calendar", "action": "cleanup_calendar", "tag": tag, "calendar_id": calendarNative})
+		response, cleanupErr := w.RecoverTruth("fixture", map[string]any{"source": "calendar", "action": "cleanup_calendar", "tag": tag, "calendar_id": calendarNative})
 		add("whole_calendar_removal_disabled", cleanupErr == nil && response["calendar_retained"] == true && response["all_dates_ownership_proven"] == false)
 		audit, auditErr := w.Truth("observe", map[string]any{"source": "calendar", "action": "audit", "tag": sentinelTag, "calendar_id": calendarNative})
 		rows, _ := audit["records"].([]any)
@@ -424,7 +455,7 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 			}
 			add("created_calendar_ownership_durable", true)
 			defer func() {
-				if _, err := w.Truth("fixture", map[string]any{"source": "calendar", "action": "cleanup_calendar", "calendar_id": evidence.NativeKey, "tag": tag}); err != nil {
+				if _, err := w.RecoverTruth("fixture", map[string]any{"source": "calendar", "action": "cleanup_calendar", "calendar_id": evidence.NativeKey, "tag": tag}); err != nil {
 					result.Passed = false
 					result.Assertions = append(result.Assertions, Assertion{Name: "created_calendar_cleanup", Passed: false})
 				}
@@ -781,7 +812,7 @@ func sameCalendarTime(a, b any) bool {
 	return e == nil && f == nil && at.Equal(bt)
 }
 
-func calendarHostConditions() map[string]any {
+func calendarHostConditions() map[string]string {
 	load, _ := exec.Command("sysctl", "-n", "vm.loadavg").Output()
 	fields := strings.Fields(strings.Trim(string(load), "{} \n"))
 	slots := 0
@@ -791,7 +822,7 @@ func calendarHostConditions() map[string]any {
 			slots++
 		}
 	}
-	return map[string]any{"load_average": fields, "heavy_slots_in_use": slots, "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue", "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"}
+	return map[string]string{"load_average": strings.Join(fields, " "), "heavy_slots_in_use": fmt.Sprint(slots), "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue", "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"}
 }
 
 func calendarTruthEqual(truth, actual map[string]any) bool {

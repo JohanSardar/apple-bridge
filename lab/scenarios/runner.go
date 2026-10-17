@@ -63,7 +63,6 @@ type Evidence struct {
 	Hosts          []string           `json:"hosts"`
 	NativeTimings  []NativeTiming     `json:"native_timings,omitempty"`
 	Conditions     map[string]string  `json:"conditions,omitempty"`
-
 }
 
 type Seen struct {
