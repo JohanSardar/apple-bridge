@@ -47,10 +47,14 @@ func (g *LocalGateway) lock(ctx context.Context, key string) (func(), error) {
 	}
 }
 func (g *LocalGateway) authorize(p trust.Principal, op string) error {
-	if !trust.Subset([]contracts.Grant{"reminders:write"}, p.Grants) {
+	descriptor, ok := contracts.Descriptor(op)
+	if !ok {
+		return contracts.ErrUnsupported
+	}
+	if !trust.Subset([]contracts.Grant{descriptor.Scope}, p.Grants) {
 		return contracts.ErrUnauthorized
 	}
-	return g.Authority.Authorize(p, contracts.Grant("reminders:write"))
+	return g.Authority.Authorize(p, descriptor.Scope)
 }
 func (g *LocalGateway) transition(ctx context.Context, r contracts.CommandRecord, to contracts.CommandState, disposition contracts.Disposition, evidence json.RawMessage, problem *contracts.Error) (contracts.CommandRecord, error) {
 	from := r.State
@@ -119,7 +123,7 @@ func (g *LocalGateway) Submit(ctx context.Context, p trust.Principal, c contract
 	if !g.Peer.Available() {
 		return empty, contracts.ErrUnavailable
 	}
-	r := contracts.CommandRecord{Command: c, Principal: p.ID, Source: contracts.Reminders, RequestHash: hash, State: "admitted", AdmissionEra: era, CreatedAt: now, ExpiresAt: expiry}
+	r := contracts.CommandRecord{Command: c, Principal: p.ID, Source: contracts.CollectionSource(c.Op), RequestHash: hash, State: "admitted", AdmissionEra: era, CreatedAt: now, ExpiresAt: expiry}
 	r, err = g.State.TransitionCommand(ctx, state.CommandTransition{Record: r})
 	if err != nil {
 		return r, err
@@ -168,9 +172,14 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 	}
 	defer release()
 	action := contracts.NativeAction{Op: c.Op, Args: a}
+	collection := "reminders.reminder"
+	if a.Contact != nil {
+		collection = "contacts.contact"
+		action.Args = a.Contact
+	}
 	var current *contracts.Record
 	if a.ID != "" {
-		records, readErr := g.State.Read(runctx, p.Visibility(), contracts.ReadQuery{Collection: "reminders.reminder", ID: a.ID})
+		records, readErr := g.State.Read(runctx, p.Visibility(), contracts.ReadQuery{Collection: collection, ID: a.ID})
 		if readErr != nil {
 			problem := contracts.ErrNotFound
 			r, _ = g.transition(g.Context, r, "rejected", "rejected_before_dispatch", nil, problem)
@@ -182,14 +191,14 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 			r, _ = g.transition(g.Context, r, "rejected", "rejected_before_dispatch", nil, problem)
 			return r, problem
 		}
-		action.NativeKey, err = g.State.NativeKey(runctx, "reminders.reminder", a.ID)
+		action.NativeKey, err = g.State.NativeKey(runctx, collection, a.ID)
 		var data struct {
 			ListID string `json:"list_id"`
 		}
 		if json.Unmarshal(current.Data, &data) != nil {
 			return r, contracts.ErrCorrupt
 		}
-		if err == nil {
+		if err == nil && a.Contact == nil {
 			action.ExpectedListKey, err = g.State.NativeKey(runctx, "reminders.list", data.ListID)
 		}
 		if a.ListID == "" {
@@ -288,6 +297,9 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 			CaptureCheckpoint string `json:"capture_checkpoint"`
 		}
 		collection := "reminders.reminder"
+		if r.Source == contracts.Contacts {
+			collection = "contacts.contact"
+		}
 		if r.Command.Op == "reminders.create_list" {
 			collection = "reminders.list"
 		}

@@ -63,7 +63,15 @@ func (f *fakeApple) commandControl(mux *http.ServeMux) {
 		json.NewEncoder(w).Encode(map[string]bool{"armed": true})
 	})
 }
-func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fence uint64, emit func(contracts.Capture, uint64) error, checkpoint func() string) error {
+func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fence uint64, emit func(contracts.Capture, uint64) error, checkpoint func(contracts.Source) string) error {
+	if f.isContactCommand(frame) {
+		return f.contactCommand(wire, frame, fence, func(capture contracts.Capture) error {
+			f.mu.Lock()
+			revision := f.durable.Revision[contracts.Contacts]
+			f.mu.Unlock()
+			return emit(capture, revision)
+		}, checkpoint)
+	}
 	reject := func(problem *contracts.Error) error {
 		_, err := wire.Send(contracts.IPCFrame{T: "Rejected", CommandID: frame.CommandID, Disposition: "rejected_before_dispatch", Error: problem})
 		return err
@@ -72,7 +80,7 @@ func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fenc
 		if err := emit(contracts.Capture{Source: contracts.Reminders, Observations: []contracts.Observation{o}}, 0); err != nil {
 			return err
 		}
-		evidence, _ := json.Marshal(contracts.ConflictObservation{NativeKey: o.NativeKey, CaptureCheckpoint: checkpoint()})
+		evidence, _ := json.Marshal(contracts.ConflictObservation{NativeKey: o.NativeKey, CaptureCheckpoint: checkpoint(contracts.Reminders)})
 		_, err := wire.Send(contracts.IPCFrame{T: "Rejected", CommandID: frame.CommandID, Disposition: contracts.DispositionRejectedBeforeDispatch, Error: contracts.ErrConflict, Evidence: evidence})
 		return err
 	}
@@ -303,7 +311,7 @@ func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fenc
 		}
 		var committed map[string]any
 		json.Unmarshal(outcome.Evidence, &committed)
-		committed["capture_checkpoint"] = checkpoint()
+		committed["capture_checkpoint"] = checkpoint(contracts.Reminders)
 		outcome.Evidence, _ = json.Marshal(committed)
 		f.mu.Lock()
 		f.evidence[t.CommandID] = outcome
@@ -348,7 +356,7 @@ func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fenc
 			if err := emit(capture, 0); err != nil {
 				return err
 			}
-			evidence["capture_checkpoint"] = checkpoint()
+			evidence["capture_checkpoint"] = checkpoint(contracts.Reminders)
 			outcome.Evidence, _ = json.Marshal(evidence)
 			outcome.Disposition = "locally_observed"
 			f.mu.Lock()

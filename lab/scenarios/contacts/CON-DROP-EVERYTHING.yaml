@@ -1,0 +1,7 @@
+id: CON-DROP-EVERYTHING
+feature: contacts.read
+levels: [sim]
+given: [{world: {replicas: 1}}]
+when: [{contacts: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

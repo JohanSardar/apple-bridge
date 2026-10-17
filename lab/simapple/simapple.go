@@ -39,6 +39,7 @@ type captureRequest struct {
 	Close       bool
 }
 type fakeApple struct {
+	contactSequence              uint64
 	messages                     messageState
 	liveChanges                  chan captureRequest
 	permissionMissing            bool
@@ -154,6 +155,7 @@ func Run(ctx context.Context, cfg Config) error {
 		fake.durable.InProgress = map[contracts.Source]bool{}
 	}
 	fake.generation = fake.durable.Generation
+	fake.contactSequence = fake.durable.ContactSequence
 	if fake.durable.Effects != nil {
 		fake.effects = fake.durable.Effects
 	}
@@ -185,10 +187,11 @@ func Run(ctx context.Context, cfg Config) error {
 		}
 		json.NewEncoder(w).Encode(map[string]any{"blob_digests": digests, "scans": fake.durable.Scans, "revision": fake.durable.Revision, "committed": fake.durable.Committed})
 	})
+	fake.contactsControl(mux)
 	mux.HandleFunc("GET /inspect", func(w http.ResponseWriter, r *http.Request) { json.NewEncoder(w).Encode(fake.inspect()) })
 	mux.HandleFunc("POST /source-state", func(w http.ResponseWriter, r *http.Request) {
 		var frame contracts.IPCFrame
-		if json.NewDecoder(r.Body).Decode(&frame) != nil || frame.Source != contracts.Reminders || frame.State != "permission_missing" {
+		if json.NewDecoder(r.Body).Decode(&frame) != nil || (frame.Source != contracts.Reminders && frame.Source != contracts.Contacts) || frame.State != "permission_missing" {
 			http.Error(w, "invalid", 400)
 			return
 		}
@@ -196,7 +199,7 @@ func Run(ctx context.Context, cfg Config) error {
 		fake.permissionMissing = frame.State == "permission_missing"
 		fake.mu.Unlock()
 		frame.T = "SourceState"
-		frame.Coverage = map[contracts.Source]contracts.Coverage{contracts.Reminders: {Fields: "partial", Missing: []string{"permission_missing"}}}
+		frame.Coverage = map[contracts.Source]contracts.Coverage{frame.Source: {Fields: "partial", Missing: []string{"permission_missing"}}}
 		select {
 		case fake.changes <- captureRequest{SourceState: &frame}:
 			json.NewEncoder(w).Encode(map[string]bool{"armed": true})
@@ -384,7 +387,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 	f.mu.Unlock()
 	credit := open.ByteCredit
 	coverage := contracts.Coverage{Fields: "complete", Missing: []string{"recurring reminders: next incomplete instance only"}}
-	if _, err = wire.Send(contracts.IPCFrame{T: "Ready", Protocol: contracts.IPCProtocol, Capabilities: map[contracts.Source][]string{contracts.Messages: {}, contracts.Reminders: {"reminders.create", "reminders.update", "reminders.complete", "reminders.uncomplete", "reminders.delete", "reminders.create_list"}}, Coverage: map[contracts.Source]contracts.Coverage{contracts.Reminders: coverage, contracts.Messages: {Fields: "complete", Missing: []string{}}}, HelperBuild: "sim/1", OSBuild: "sim"}); err != nil {
+	if _, err = wire.Send(contracts.IPCFrame{T: "Ready", Protocol: contracts.IPCProtocol, Capabilities: map[contracts.Source][]string{contracts.Contacts: {"contacts.create", "contacts.update", "contacts.delete"}, contracts.Messages: {}, contracts.Reminders: {"reminders.create", "reminders.update", "reminders.complete", "reminders.uncomplete", "reminders.delete", "reminders.create_list"}}, Coverage: map[contracts.Source]contracts.Coverage{contracts.Contacts: {Fields: "partial", Missing: []string{"note"}}, contracts.Reminders: coverage, contracts.Messages: {Fields: "complete", Missing: []string{}}}, HelperBuild: "sim/1", OSBuild: "sim"}); err != nil {
 		return err
 	}
 	checkpoints := map[contracts.Source]string{}
@@ -397,7 +400,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 			expectedGeneration = f.messages.generation
 			f.mu.Unlock()
 		}
-		if cp.Generation == expectedGeneration {
+		if cp.Generation == expectedGeneration || source == contracts.Contacts {
 			checkpoints[source] = cp.Checkpoint
 		}
 	}
@@ -436,6 +439,9 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 				capture.Generation = expected
 			}
 		}
+		if capture.Source == contracts.Contacts {
+			capture.Generation = f.contactGeneration()
+		}
 		if generations[capture.Source] != capture.Generation {
 			checkpoints[capture.Source] = ""
 		}
@@ -443,7 +449,12 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 			capture.BlobHandles[d] = fmt.Sprintf("%d:%s", open.OwnerFence, d)
 		}
 		capture.Predecessor = checkpoints[capture.Source]
-		capture.Checkpoint = contracts.NewID("cp")
+		if generations[capture.Source] != capture.Generation {
+			capture.Predecessor = ""
+		}
+		if capture.Checkpoint == "" || capture.Source != contracts.Contacts {
+			capture.Checkpoint = contracts.NewID("cp")
+		}
 		encoded, err := contracts.EncodeFrame(contracts.IPCFrame{T: "Capture", Capture: &capture})
 		if err != nil {
 			return err
@@ -548,7 +559,9 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 					part.Generation = generation
 				}
 				part.Predecessor = checkpoints[part.Source]
-				part.Checkpoint = contracts.NewID("cp")
+				if part.Source != contracts.Contacts || end < len(capture.Observations) {
+					part.Checkpoint = contracts.NewID("cp")
+				}
 				if end < len(capture.Observations) && part.Observations[len(part.Observations)-1].Kind != "absent" {
 					part.CompletionEvidence = ""
 				}
@@ -620,7 +633,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 		emitRevision = revision
 		return emit(capture)
 	}
-	for _, source := range []contracts.Source{contracts.Reminders, contracts.Messages} {
+	for _, source := range []contracts.Source{contracts.Reminders, contracts.Messages, contracts.Contacts} {
 		f.mu.Lock()
 		emitRevision = f.durable.Revision[source]
 		scan := (source == contracts.Messages && open.Checkpoints[source].RefreshBlobs) || f.durable.InProgress[source] || checkpoints[source] == "" || checkpoints[source] != f.durable.Checkpoints[source] || emitRevision != f.durable.Committed[source]
@@ -631,6 +644,9 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 		f.mu.Unlock()
 		if scan {
 			capture := fullScanSource(f.inspect(), source)
+			if source == contracts.Contacts {
+				capture = f.contactSnapshot(false)
+			}
 			if source == contracts.Messages {
 				capture.BlobHandles = f.blobHandles()
 			}
@@ -652,7 +668,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 		if len(pending) > 0 {
 			reply := pending[0]
 			pending = pending[1:]
-			if err = f.command(wire, reply, open.OwnerFence, commandEmit, func() string { return checkpoints[contracts.Reminders] }); err != nil {
+			if err = f.command(wire, reply, open.OwnerFence, commandEmit, func(source contracts.Source) string { return checkpoints[source] }); err != nil {
 				return err
 			}
 			continue
@@ -662,7 +678,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 			return ctx.Err()
 		case reply := <-received:
 			if reply.T == "Prepare" || reply.T == "Dispatch" || reply.T == "Resolve" {
-				if err = f.command(wire, reply, open.OwnerFence, commandEmit, func() string { return checkpoints[contracts.Reminders] }); err != nil {
+				if err = f.command(wire, reply, open.OwnerFence, commandEmit, func(source contracts.Source) string { return checkpoints[source] }); err != nil {
 					return err
 				}
 				continue

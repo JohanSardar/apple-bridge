@@ -3,6 +3,7 @@ import Darwin
 import SourceSupport
 import AgendaGate
 import RemindersSource
+import ContactsSource
 
 @globalActor
 public actor UIActor {
@@ -12,6 +13,7 @@ public actor UIActor {
 public actor AppleSession: ObservationSink {
     private struct Pending {
         let source: String
+        let checkpoint: String
         let generation: String
         let scanID: String
         let completionEvidence: String
@@ -50,6 +52,7 @@ public actor AppleSession: ObservationSink {
     private var frameTasks: [UUID: Task<Void, Never>] = [:]
     private let trace: CaptureTrace
     private let agenda: AgendaGate
+    private let contacts: ContactsSource
     private let source: RemindersSource
     private let guardLog: DispatchGuard
     private let socket: String
@@ -62,6 +65,7 @@ public actor AppleSession: ObservationSink {
     public init(socket: String, secretFile: String, home: URL, gatewayPID: Int32, commandsEnabled: Bool) throws {
         self.socket = socket; self.secretFile = secretFile; self.gatewayPID = gatewayPID
         self.home = home; self.labEnabled = commandsEnabled
+        contacts = try ContactsSource(home: home, commandsEnabled: true)
         let trace = CaptureTrace(url: commandsEnabled ? home.appendingPathComponent("capture-trace.jsonl") : nil)
         self.trace = trace
         let agenda = AgendaGate(trace: trace)
@@ -80,6 +84,7 @@ public actor AppleSession: ObservationSink {
     }
 
     public func run() async throws {
+        additionalSources["contacts"] = contacts
         var backoff = 100
         while !Task.isCancelled && kill(gatewayPID, 0) == 0 {
             do {
@@ -218,8 +223,11 @@ public actor AppleSession: ObservationSink {
     private func readBlob(_ frame: JSON) async {
         guard let connection = wire else { return }
         do {
-            guard let blobReader, !frame["handle"].string.isEmpty, frame["offset"].number >= 0, frame["offset"].number < Double(Int64.max), frame["length"].number > 0, frame["length"].number <= 131072, frame["length"].number.rounded(.down) == frame["length"].number, frame["offset"].number.rounded(.down) == frame["offset"].number else { throw SourceFailure.invalid }
-            let response = try await blobReader(frame["handle"].string, Int64(frame["offset"].number), Int(frame["length"].number))
+            guard !frame["handle"].string.isEmpty, frame["offset"].number >= 0, frame["offset"].number < Double(Int64.max), frame["length"].number > 0, frame["length"].number <= 131072, frame["length"].number.rounded(.down) == frame["length"].number, frame["offset"].number.rounded(.down) == frame["offset"].number else { throw SourceFailure.invalid }
+            let response: JSON
+            if frame["handle"].string.hasPrefix("contacts-image:") { response = try await contacts.readBlob(frame["handle"].string, offset: Int(frame["offset"].number), length: Int(frame["length"].number)) }
+            else if let blobReader { response = try await blobReader(frame["handle"].string, Int64(frame["offset"].number), Int(frame["length"].number)) }
+            else { throw SourceFailure.unavailable }
             guard wire === connection, !Task.isCancelled else { return }
             try connection.send(response)
         } catch {
@@ -230,13 +238,25 @@ public actor AppleSession: ObservationSink {
 
     public func emit(source: String, generation: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) async throws {
         guard wire != nil else { throw SourceFailure.unavailable }
+        try await emitCheckpoint(source: source, generation: generation, checkpoint: "", observations: observations, scanID: scanID, scanStartedAt: scanStartedAt, scope: scope, completionEvidence: completionEvidence, blobHandles: blobHandles, live: live)
+    }
+
+    public func emitCheckpoint(source: String, generation: String, checkpoint: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) async throws {
         let chunks = try split(observations, maximumBytes: live ? 240000 : 16000)
-        for chunk in chunks {
+        for (index,chunk) in chunks.enumerated() {
             try await withCheckedThrowingContinuation { continuation in
-                let pending = Pending(source: source, generation: generation, scanID: scanID, completionEvidence: completionEvidence, blobHandles: blobHandles, observations: chunk, started: scanStartedAt, scope: scope, completion: continuation)
+                let pending = Pending(source: source, checkpoint: index == chunks.count-1 ? checkpoint : "", generation: generation, scanID: scanID, completionEvidence: completionEvidence, blobHandles: blobHandles.filter { _, digest in Self.containsDigest(.array(chunk), digest: digest) }, observations: chunk, started: scanStartedAt, scope: scope, completion: continuation)
                 if live { self.live.append(pending) } else { bulk.append(pending) }
                 Task { do { try await drain() } catch { disconnect() } }
             }
+        }
+    }
+
+    private static func containsDigest(_ value: JSON, digest: String) -> Bool {
+        switch value {
+        case .object(let fields): return fields["digest"]?.string == digest || fields.values.contains { containsDigest($0, digest: digest) }
+        case .array(let values): return values.contains { containsDigest($0, digest: digest) }
+        default: return false
         }
     }
 
@@ -275,8 +295,8 @@ public actor AppleSession: ObservationSink {
                 guard wire === connection, !Task.isCancelled else { return }
                 if live.contains(where: { flights[$0.source] == nil }) { continue }
             } else { observations = pending.observations }
-            let sending = Pending(source: pending.source, generation: pending.generation, scanID: pending.scanID, completionEvidence: pending.completionEvidence, blobHandles: pending.blobHandles, observations: observations, started: pending.started, scope: pending.scope, completion: pending.completion)
-            let checkpoint = UUID().uuidString
+            let sending = Pending(source: pending.source, checkpoint: pending.checkpoint, generation: pending.generation, scanID: pending.scanID, completionEvidence: pending.completionEvidence, blobHandles: pending.blobHandles, observations: observations, started: pending.started, scope: pending.scope, completion: pending.completion)
+            let checkpoint = pending.checkpoint.isEmpty ? UUID().uuidString : pending.checkpoint
             let resume = checkpoints[pending.source] ?? .null
             var capture: [String: JSON] = ["source": .string(pending.source), "generation": .string(pending.generation), "predecessor": .string(resume["generation"].string == pending.generation ? resume["checkpoint"].string : ""), "checkpoint": .string(checkpoint), "observations": .array(observations)]
             if !pending.scanID.isEmpty {
@@ -331,7 +351,15 @@ public actor AppleSession: ObservationSink {
         }
     }
 
-    private func observedEvidence(_ evidence: JSON, fingerprint: JSON) async throws -> JSON {
+    private func observedEvidence(_ evidence: JSON, fingerprint: JSON, operation: String) async throws -> JSON {
+        if operation.hasPrefix("contacts.") {
+            try await contacts.reconcile(into: self)
+            if evidence["absent"].bool { try await contacts.confirmAbsence(evidence["native_key"].string, into: self) }
+            guard let checkpoint = observedCheckpoints["contacts.contact/" + evidence["native_key"].string] else { throw SourceFailure.unavailable }
+            var result = evidence.object
+            result["fingerprint"] = fingerprint; result["capture_checkpoint"] = .string(checkpoint)
+            return .object(result)
+        }
         try Task.checkCancellation()
         try await source.reconcile(into: self)
         if evidence["absent"].bool { try await source.confirmAbsence(evidence["native_key"].string, into: self) }
@@ -349,9 +377,10 @@ public actor AppleSession: ObservationSink {
         do {
             guard var outcome = await guardLog.outcomes[id] else { try reject(frame, code: "not_found"); return }
             if ["indeterminate", "locally_observed"].contains(outcome["disposition"].string) {
-                let evidence = await source.resolve(id, evidence: outcome["evidence"])
+                let operation = outcome["evidence"]["prepared"]["action"]["op"].string
+                let evidence = operation.hasPrefix("contacts.") ? await contacts.resolve(id, evidence: outcome["evidence"]) : await source.resolve(id, evidence: outcome["evidence"])
                 if evidence["observed"].bool {
-                    let committed = try await observedEvidence(evidence, fingerprint: outcome["evidence"]["prepared"]["request_hash"])
+                    let committed = try await observedEvidence(evidence, fingerprint: outcome["evidence"]["prepared"]["request_hash"], operation: operation)
                     outcome = .object(["t": .string("Outcome"), "command_id": .string(id), "disposition": .string("locally_observed"), "evidence": committed])
                     try await guardLog.append(outcome)
                 } else {
@@ -409,7 +438,7 @@ public actor AppleSession: ObservationSink {
             guard !frame["command_id"].string.isEmpty, !frame["principal"].string.isEmpty, !frame["request_hash"].string.isEmpty, let expires = parseTimestamp(frame["expires_at"].string), expires > Date() else { throw SourceFailure.invalid }
             tickets = tickets.filter { ContinuousClock.now < $0.value.expiry }
             guard !commandActive, tickets.isEmpty, !(await guardLog.contains(frame["command_id"].string)) else { throw SourceFailure.conflict }
-            let prepared = try await source.prepare(frame)
+            let prepared = frame["action"]["op"].string.hasPrefix("contacts.") ? try await contacts.prepare(frame) : try await source.prepare(frame)
             let ticket = UUID().uuidString
             tickets[ticket] = Ticket(command: frame, prepared: prepared, expiry: ContinuousClock.now.advanced(by: .milliseconds(Int64(min(30, expires.timeIntervalSinceNow) * 1000))), fence: fence)
             try wire?.send(.object(["t": .string("Prepared"), "command_id": frame["command_id"], "ticket": .string(ticket), "native_state": prepared.nativeState, "route": .string("eventkit"), "fingerprint": frame["request_hash"], "candidate_ids": .array([])]))
@@ -425,7 +454,7 @@ public actor AppleSession: ObservationSink {
         var started = false
         do {
             guard frame["command_id"] == id, frame["owner_fence"].unsigned == fence, ticket.fence == fence, ContinuousClock.now < ticket.expiry else { throw SourceFailure.expired }
-            try await source.validate(ticket.prepared)
+            if ticket.prepared.action["op"].string.hasPrefix("contacts.") { try await contacts.validate(ticket.prepared) } else { try await source.validate(ticket.prepared) }
             try Task.checkCancellation()
             guard ticket.fence == fence, ContinuousClock.now < ticket.expiry, wire != nil else { throw SourceFailure.expired }
             try await guardLog.append(.object(["t": .string("DispatchStarted"), "command_id": id, "ticket": frame["ticket"], "started_at": .string(timestamp()), "prepared": .object(["action": ticket.prepared.action, "native_state": ticket.prepared.nativeState, "fingerprint": .string(ticket.prepared.fingerprint), "request_hash": ticket.command["request_hash"]])]))
@@ -433,11 +462,11 @@ public actor AppleSession: ObservationSink {
             try await pause("dispatch")
             try Task.checkCancellation()
             guard ticket.fence == fence, ContinuousClock.now < ticket.expiry, wire != nil else { throw SourceFailure.conflict }
-            let refetched = try await source.dispatch(ticket.prepared)
+            let refetched = ticket.prepared.action["op"].string.hasPrefix("contacts.") ? try await contacts.dispatch(ticket.prepared) : try await source.dispatch(ticket.prepared)
             try await pause("outcome")
             var retained = refetched.object
             retained["prepared"] = .object(["action": ticket.prepared.action, "native_state": ticket.prepared.nativeState, "request_hash": ticket.command["request_hash"]])
-            let evidence = try await observedEvidence(.object(retained), fingerprint: ticket.command["request_hash"])
+            let evidence = try await observedEvidence(.object(retained), fingerprint: ticket.command["request_hash"], operation: ticket.prepared.action["op"].string)
             let outcome = JSON.object(["t": .string("Outcome"), "command_id": id, "disposition": .string("locally_observed"), "evidence": evidence])
             try await guardLog.append(outcome)
             try wire?.send(outcome)

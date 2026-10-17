@@ -1,0 +1,7 @@
+id: CON-CRUD
+feature: contacts.write
+levels: [sim, real, replica]
+given: [{world: {replicas: 1}}]
+when: [{contacts: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

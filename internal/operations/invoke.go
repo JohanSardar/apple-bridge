@@ -46,6 +46,13 @@ func (s *Service) Invoke(ctx context.Context, p trust.Principal, name string, in
 		}
 		return s.Target.Status(ctx, p, q)
 	}
+	if name == "contacts.lookup" {
+		var q contracts.ContactLookup
+		if contracts.DecodeInput(input, &q) != nil {
+			return nil, contracts.ErrInvalid
+		}
+		return s.lookupContacts(ctx, p, q)
+	}
 	var q contracts.ReadQuery
 	if contracts.DecodeInput(input, &q) != nil {
 		return nil, contracts.ErrInvalid

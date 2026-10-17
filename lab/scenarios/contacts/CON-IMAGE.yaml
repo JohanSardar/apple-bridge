@@ -1,0 +1,7 @@
+id: CON-IMAGE
+feature: contacts.read
+levels: [sim, real]
+given: [{world: {replicas: 1}}]
+when: [{contacts: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

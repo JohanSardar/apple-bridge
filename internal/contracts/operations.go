@@ -37,4 +37,8 @@ var Operations = []OperationDescriptor{
 	{Name: "reminders.complete", Version: 1, Kind: CommandOp, Source: Reminders, Scope: "reminders:write", Capability: "reminders.complete", Input: Command{}, Output: CommandRecord{}, Description: "Complete a reminder with expected_version"},
 	{Name: "reminders.uncomplete", Version: 1, Kind: CommandOp, Source: Reminders, Scope: "reminders:write", Capability: "reminders.uncomplete", Input: Command{}, Output: CommandRecord{}, Description: "Reopen a reminder with expected_version"},
 	{Name: "reminders.delete", Version: 1, Kind: CommandOp, Source: Reminders, Scope: "reminders:write", Capability: "reminders.delete", Input: Command{}, Output: CommandRecord{}, Description: "Delete a reminder with expected_version"},
+	{Name: "contacts.lookup", Version: 1, Kind: ReadOp, Source: Contacts, Scope: "contacts:read", Input: ContactLookup{}, Output: ReadResult{}, Description: "Look up unified contacts by name or normalized phone/email"},
+	{Name: "contacts.create", Version: 1, Kind: CommandOp, Source: Contacts, Scope: "contacts:write", Capability: "contacts.create", Input: Command{}, Output: CommandRecord{}, Description: "Create a contact in the default writable container"},
+	{Name: "contacts.update", Version: 1, Kind: CommandOp, Source: Contacts, Scope: "contacts:write", Capability: "contacts.update", Input: Command{}, Output: CommandRecord{}, Description: "Patch contact fields with expected_version"},
+	{Name: "contacts.delete", Version: 1, Kind: CommandOp, Source: Contacts, Scope: "contacts:write", Capability: "contacts.delete", Input: Command{}, Output: CommandRecord{}, Description: "Delete a writable contact with expected_version"},
 }

@@ -9,6 +9,7 @@ import (
 )
 
 type durableApple struct {
+	ContactSequence    uint64                           `json:"contact_sequence"`
 	MessagesGeneration string                           `json:"messages_generation,omitempty"`
 	Effects            map[string]int                   `json:"effects"`
 	Evidence           map[string]contracts.IPCFrame    `json:"evidence"`
@@ -25,6 +26,7 @@ type durableApple struct {
 }
 
 func (f *fakeApple) saveLocked() error {
+	f.durable.ContactSequence = f.contactSequence
 	f.durable.MessagesGeneration = f.messages.generation
 	f.durable.Effects = f.effects
 	f.durable.Evidence = f.evidence

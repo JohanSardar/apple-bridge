@@ -367,6 +367,9 @@ func convergence(w *world.World) bool {
 }
 
 func runScenario(ctx context.Context, s Scenario, level string) Evidence {
+	if strings.HasPrefix(s.ID, "CON-") {
+		return runContacts(ctx, s, level)
+	}
 	if nativeScenario(s.ID, level) {
 		return runNativeScenario(ctx, s, level)
 	}

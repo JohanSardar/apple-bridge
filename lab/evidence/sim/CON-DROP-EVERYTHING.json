@@ -1,0 +1,62 @@
+{
+  "run_id": "run_01M547SPXAZM501EP51M5YHTPK",
+  "scenario": "CON-DROP-EVERYTHING",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "944b8c40e04b9b746812357918704280e2ee6eb8",
+  "at": "2026-10-17T06:11:44.682018Z",
+  "assertions": [
+    {
+      "name": "unified_contacts_imported",
+      "passed": true
+    },
+    {
+      "name": "generation_reset_preserves_identity_and_version",
+      "passed": true
+    },
+    {
+      "name": "replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "independent_sim_truth",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_0",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_1",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "contacts_scope_enforced",
+      "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass",
+      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

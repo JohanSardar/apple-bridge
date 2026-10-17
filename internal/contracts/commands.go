@@ -46,15 +46,16 @@ type Command struct {
 	WaitMS          int             `json:"wait_ms,omitempty"`
 }
 type ReminderArgs struct {
-	ID        string  `json:"id,omitempty"`
-	ListID    string  `json:"list_id,omitempty"`
-	Title     *string `json:"title,omitempty"`
-	Notes     *string `json:"notes,omitempty"`
-	URL       *string `json:"url,omitempty"`
-	Due       *string `json:"due,omitempty"`
-	DueAllDay *bool   `json:"due_all_day,omitempty"`
-	Start     *string `json:"start,omitempty"`
-	Priority  *int    `json:"priority,omitempty"`
+	Contact   json.RawMessage `json:"-"`
+	ID        string          `json:"id,omitempty"`
+	ListID    string          `json:"list_id,omitempty"`
+	Title     *string         `json:"title,omitempty"`
+	Notes     *string         `json:"notes,omitempty"`
+	URL       *string         `json:"url,omitempty"`
+	Due       *string         `json:"due,omitempty"`
+	DueAllDay *bool           `json:"due_all_day,omitempty"`
+	Start     *string         `json:"start,omitempty"`
+	Priority  *int            `json:"priority,omitempty"`
 }
 type CommandQuery struct {
 	ID      string `json:"command_id,omitempty"`
@@ -83,11 +84,11 @@ type CommandRecord struct {
 	Error        *Error          `json:"error,omitempty"`
 }
 type NativeAction struct {
-	ExpectedListKey string       `json:"expected_list_key,omitempty"`
-	Op              string       `json:"op"`
-	Args            ReminderArgs `json:"args"`
-	NativeKey       string       `json:"native_key,omitempty"`
-	ListKey         string       `json:"list_key,omitempty"`
+	ExpectedListKey string `json:"expected_list_key,omitempty"`
+	Op              string `json:"op"`
+	Args            any    `json:"args"`
+	NativeKey       string `json:"native_key,omitempty"`
+	ListKey         string `json:"list_key,omitempty"`
 }
 
 func DecodeInput(b []byte, out any) error {
@@ -118,6 +119,9 @@ func ValidateCommand(c Command) (ReminderArgs, error) {
 	var a ReminderArgs
 	if !ValidCommandID(c.ID) || c.WaitMS < 0 || c.WaitMS > 15000 || c.Args == nil {
 		return a, ErrInvalid
+	}
+	if strings.HasPrefix(c.Op, "contacts.") {
+		return validateContactCommand(c)
 	}
 	if DecodeInput(c.Args, &a) != nil {
 		return a, ErrInvalid
