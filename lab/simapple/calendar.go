@@ -242,6 +242,11 @@ func (f *fakeApple) calendarCommand(wire *applepeer.Wire, frame contracts.IPCFra
 	}
 	if frame.T == "Prepare" {
 		action := *frame.Action
+		descriptor, known := contracts.Descriptor(action.Op)
+		if !known || descriptor.Source != contracts.Calendar || descriptor.Kind != contracts.CommandOp {
+			f.mu.Unlock()
+			return reject(contracts.ErrUnsupported)
+		}
 		if action.CalendarArgs == nil || action.CalendarArgs.Span == "all" {
 			f.mu.Unlock()
 			return reject(contracts.ErrUnsupported)
