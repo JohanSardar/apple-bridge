@@ -75,7 +75,21 @@ func blobJourney(ctx context.Context, w *world.World, id string, evidence *Evide
 				count++
 			}
 		}
-		return check("history_10000_durable_records", err == nil && count == 10000)
+		if !check("history_10000_durable_records", err == nil && count == 10000) {
+			return false
+		}
+		cursor, err := w.Cursor(w.Gateway)
+		if !check("history_durable_cursor", err == nil) {
+			return false
+		}
+		return check("history_replica_records_and_cursor_match", w.Await(15*time.Second, func() bool {
+			replica, err := w.Records(w.Replicas[0])
+			if err != nil || !reflect.DeepEqual(replica, records) {
+				return false
+			}
+			after, err := w.Cursor(w.Replicas[0])
+			return err == nil && after == cursor
+		}) == nil)
 	}
 	size := 4 << 20
 	fixture := map[string]any{"size": size}

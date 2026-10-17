@@ -620,6 +620,13 @@ func Run(ctx context.Context, s Scenario, level string) Evidence {
 				if !blobJourney(ctx, w, s.ID, &evidence, add) {
 					return evidence
 				}
+				if s.ID == "CORE-BLOB-REFERENCE-INDEX" {
+					evidence.Passed = true
+					for _, assertion := range evidence.Assertions {
+						evidence.Passed = evidence.Passed && assertion.Passed
+					}
+					return evidence
+				}
 			case "connect":
 			case "changes":
 				delete(effects, "probe")
