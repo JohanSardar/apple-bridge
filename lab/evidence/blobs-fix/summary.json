@@ -1,0 +1,467 @@
+{
+  "verified_git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f",
+  "at": "2026-10-17T05:56:39.646624+00:00",
+  "implementation": [
+    "durable pending manifest and staged bytes reconstruct queued work through refreshed Helper captures",
+    "retry delays 250/500/1000/2000/4000 ms, capped at 4 s; eight unsuccessful attempts become failed/ipc_retry_exhausted",
+    "close timed-out IPC session to fence late replies; request fresh connection-bound handles with checkpoint refresh_blobs, preserving capture predecessor",
+    "push BlobAvailable to authorized waiting replicas on completion; preserve heartbeat fallback",
+    "independent snapshot-only and command-only GC checks beyond 500 ms grace",
+    "post-reconnect bulk progress barrier and metadata observation while bytes remain outstanding",
+    "actual SimApplePeer process restart with distinct PID and persisted fixture bytes"
+  ],
+  "conditions": {
+    "fixture_bytes": 4194304,
+    "ipc_chunk_bytes": 131072,
+    "feed_chunk_bytes": 1048576,
+    "lab_delay_per_feed_chunk_ms": 150,
+    "interrupt": "second binary frame cut after half its bytes; first 1 MiB persisted before process partition",
+    "replica_transport": "mTLS WebSocket through World allocated SSH reverse tunnel to Ubuntu",
+    "timing_samples_per_blob_case": 1,
+    "p50_p95_max_note": "Each individual blob timing has n=1; p50, p95 and max are therefore equal. These are observed runs, not population percentile estimates.",
+    "contention": "Shared Air, FIFO heavy-command queue; host telemetry recorded separately."
+  },
+  "checks": [
+    {
+      "command": "packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios/core --level sim",
+      "exit_code": 0,
+      "scenarios": 32
+    },
+    {
+      "command": "packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios/core/CORE-BLOB-INTERRUPT.yaml --level replica",
+      "exit_code": 0
+    },
+    {
+      "command": "packaging/dev/heavy.sh make lint",
+      "exit_code": 0
+    },
+    {
+      "command": "packaging/dev/heavy.sh go vet ./...",
+      "exit_code": 0
+    },
+    {
+      "command": "packaging/dev/heavy.sh go vet -tags lab ./...",
+      "exit_code": 0
+    },
+    {
+      "command": "packaging/dev/heavy.sh make features",
+      "exit_code": 0
+    },
+    {
+      "command": "packaging/dev/heavy.sh packaging/dev/build-native.sh",
+      "exit_code": 0
+    }
+  ],
+  "core_scenarios": [
+    {
+      "scenario": "CORE-BLOB-CAP",
+      "passed": true,
+      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+    },
+    {
+      "scenario": "CORE-BLOB-CORRUPT",
+      "passed": true,
+      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+    },
+    {
+      "scenario": "CORE-BLOB-GATEWAY-RETRY",
+      "passed": true,
+      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+    },
+    {
+      "scenario": "CORE-BLOB-GC",
+      "passed": true,
+      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+    },
+    {
+      "scenario": "CORE-BLOB-INTERRUPT",
+      "passed": true,
+      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+    },
+    {
+      "scenario": "CORE-BLOB-NO-DIGEST-AUTH",
+      "passed": true,
+      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+    },
+    {
+      "scenario": "CORE-BLOB-OFFLOADED",
+      "passed": true,
+      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+    },
+    {
+      "scenario": "CORE-BLOB-SLOW-READ",
+      "passed": true,
+      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+    },
+    {
+      "scenario": "CORE-BOOT",
+      "passed": true,
+      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+    },
+    {
+      "scenario": "CORE-CMD-CLOCK-JUMP",
+      "passed": true,
+      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+    },
+    {
+      "scenario": "CORE-CMD-CONFLICT",
+      "passed": true,
+      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+    },
+    {
+      "scenario": "CORE-CMD-CRASH-AMBIGUOUS",
+      "passed": true,
+      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+    },
+    {
+      "scenario": "CORE-CMD-ERA",
+      "passed": true,
+      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+    },
+    {
+      "scenario": "CORE-CMD-EXPIRY",
+      "passed": true,
+      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+    },
+    {
+      "scenario": "CORE-CMD-IDEMPOTENT",
+      "passed": true,
+      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+    },
+    {
+      "scenario": "CORE-CMD-LOST-RESPONSE",
+      "passed": true,
+      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+    },
+    {
+      "scenario": "CORE-CMD-OFFLINE",
+      "passed": true,
+      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+    },
+    {
+      "scenario": "CORE-CMD-READ-YOUR-WRITE",
+      "passed": true,
+      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+    },
+    {
+      "scenario": "CORE-FORGED-DELEGATION",
+      "passed": true,
+      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+    },
+    {
+      "scenario": "CORE-LIVE-LATENCY",
+      "passed": true,
+      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+    },
+    {
+      "scenario": "CORE-LOCALHOST-DEFENSE",
+      "passed": true,
+      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+    },
+    {
+      "scenario": "CORE-REST-MCP-PARITY",
+      "passed": true,
+      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+    },
+    {
+      "scenario": "CORE-RESUME",
+      "passed": true,
+      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+    },
+    {
+      "scenario": "LAB-MALFORMED-SCENARIO",
+      "passed": true,
+      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+    },
+    {
+      "scenario": "LAB-SSE",
+      "passed": true,
+      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+    },
+    {
+      "scenario": "LAB-TRUTH-MULTIPLICITY",
+      "passed": true,
+      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+    },
+    {
+      "scenario": "REM-CONFLICT",
+      "passed": true,
+      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+    },
+    {
+      "scenario": "REM-CRUD",
+      "passed": true,
+      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+    },
+    {
+      "scenario": "REM-EXTERNAL-RACE",
+      "passed": true,
+      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+    },
+    {
+      "scenario": "REM-NATIVE-LIST-RACE",
+      "passed": true,
+      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+    },
+    {
+      "scenario": "REM-OPERATION-SHAPES",
+      "passed": true,
+      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+    },
+    {
+      "scenario": "REM-READONLY-LIST",
+      "passed": true,
+      "git_sha": "4edcb8bae732b2aba5419c6df09312df96af695f"
+    }
+  ],
+  "comparisons": {
+    "sim": {
+      "before_availability_push_disabled": {
+        "completion_ms": {
+          "samples": 1,
+          "p50_ms": 5655.883875,
+          "p95_ms": 5655.883875,
+          "max_ms": 5655.883875,
+          "timeouts": 0
+        },
+        "gateway_staging_ms": {
+          "samples": 1,
+          "p50_ms": 642.265333,
+          "p95_ms": 642.265333,
+          "max_ms": 642.265333,
+          "timeouts": 0
+        },
+        "gateway_present_to_replica_partial_ms": {
+          "samples": 1,
+          "p50_ms": 4284.73675,
+          "p95_ms": 4284.73675,
+          "max_ms": 4284.73675,
+          "timeouts": 0
+        },
+        "reconnect_ms": {
+          "samples": 1,
+          "p50_ms": 75.937208,
+          "p95_ms": 75.937208,
+          "max_ms": 75.937208,
+          "timeouts": 0
+        },
+        "resumed_transfer_ms": {
+          "samples": 1,
+          "p50_ms": 492.01025,
+          "p95_ms": 492.01025,
+          "max_ms": 492.01025,
+          "timeouts": 0
+        },
+        "concurrent_metadata_ms": {
+          "samples": 1,
+          "p50_ms": 57.815958,
+          "p95_ms": 57.815958,
+          "max_ms": 57.815958,
+          "timeouts": 0
+        },
+        "cut_detection_and_polling_ms_derived": 160.93433399999958
+      },
+      "after": {
+        "completion_ms": {
+          "samples": 1,
+          "p50_ms": 1651.95075,
+          "p95_ms": 1651.95075,
+          "max_ms": 1651.95075,
+          "timeouts": 0
+        },
+        "gateway_staging_ms": {
+          "samples": 1,
+          "p50_ms": 753.739583,
+          "p95_ms": 753.739583,
+          "max_ms": 753.739583,
+          "timeouts": 0
+        },
+        "gateway_present_to_replica_partial_ms": {
+          "samples": 1,
+          "p50_ms": 192.174541,
+          "p95_ms": 192.174541,
+          "max_ms": 192.174541,
+          "timeouts": 0
+        },
+        "reconnect_ms": {
+          "samples": 1,
+          "p50_ms": 89.288125,
+          "p95_ms": 89.288125,
+          "max_ms": 89.288125,
+          "timeouts": 0
+        },
+        "resumed_transfer_ms": {
+          "samples": 1,
+          "p50_ms": 477.202041,
+          "p95_ms": 477.202041,
+          "max_ms": 477.202041,
+          "timeouts": 0
+        },
+        "concurrent_metadata_ms": {
+          "samples": 1,
+          "p50_ms": 69.199416,
+          "p95_ms": 69.199416,
+          "max_ms": 69.199416,
+          "timeouts": 0
+        },
+        "cut_detection_and_polling_ms_derived": 139.54646000000002
+      },
+      "original_uninstrumented_baseline": {
+        "samples": 1,
+        "p50_ms": 5656.388125,
+        "p95_ms": 5656.388125,
+        "max_ms": 5656.388125,
+        "timeouts": 0
+      }
+    },
+    "replica": {
+      "before_availability_push_disabled": {
+        "completion_ms": {
+          "samples": 1,
+          "p50_ms": 6156.831125,
+          "p95_ms": 6156.831125,
+          "max_ms": 6156.831125,
+          "timeouts": 0
+        },
+        "gateway_staging_ms": {
+          "samples": 1,
+          "p50_ms": 536.287333,
+          "p95_ms": 536.287333,
+          "max_ms": 536.287333,
+          "timeouts": 0
+        },
+        "gateway_present_to_replica_partial_ms": {
+          "samples": 1,
+          "p50_ms": 4159.271417,
+          "p95_ms": 4159.271417,
+          "max_ms": 4159.271417,
+          "timeouts": 0
+        },
+        "reconnect_ms": {
+          "samples": 1,
+          "p50_ms": 971.205709,
+          "p95_ms": 971.205709,
+          "max_ms": 971.205709,
+          "timeouts": 0
+        },
+        "resumed_transfer_ms": {
+          "samples": 1,
+          "p50_ms": 480.019292,
+          "p95_ms": 480.019292,
+          "max_ms": 480.019292,
+          "timeouts": 0
+        },
+        "concurrent_metadata_ms": {
+          "samples": 1,
+          "p50_ms": 45.4835,
+          "p95_ms": 45.4835,
+          "max_ms": 45.4835,
+          "timeouts": 0
+        },
+        "cut_detection_and_polling_ms_derived": 10.047373999999763
+      },
+      "after": {
+        "completion_ms": {
+          "samples": 1,
+          "p50_ms": 2292.349708,
+          "p95_ms": 2292.349708,
+          "max_ms": 2292.349708,
+          "timeouts": 0
+        },
+        "gateway_staging_ms": {
+          "samples": 1,
+          "p50_ms": 675.784542,
+          "p95_ms": 675.784542,
+          "max_ms": 675.784542,
+          "timeouts": 0
+        },
+        "gateway_present_to_replica_partial_ms": {
+          "samples": 1,
+          "p50_ms": 357.318542,
+          "p95_ms": 357.318542,
+          "max_ms": 357.318542,
+          "timeouts": 0
+        },
+        "reconnect_ms": {
+          "samples": 1,
+          "p50_ms": 718.248,
+          "p95_ms": 718.248,
+          "max_ms": 718.248,
+          "timeouts": 0
+        },
+        "resumed_transfer_ms": {
+          "samples": 1,
+          "p50_ms": 522.311042,
+          "p95_ms": 522.311042,
+          "max_ms": 522.311042,
+          "timeouts": 0
+        },
+        "concurrent_metadata_ms": {
+          "samples": 1,
+          "p50_ms": 179.237833,
+          "p95_ms": 179.237833,
+          "max_ms": 179.237833,
+          "timeouts": 0
+        },
+        "cut_detection_and_polling_ms_derived": 18.68758200000002
+      },
+      "original_uninstrumented_baseline": {
+        "samples": 1,
+        "p50_ms": 5769.631166,
+        "p95_ms": 5769.631166,
+        "max_ms": 5769.631166,
+        "timeouts": 0
+      }
+    }
+  },
+  "gateway_retry": {
+    "scenario": "CORE-BLOB-GATEWAY-RETRY",
+    "level": "sim",
+    "passed": true,
+    "recovery_latency": {
+      "samples": 1,
+      "p50_ms": 14803.307125,
+      "p95_ms": 14803.307125,
+      "max_ms": 14803.307125,
+      "timeouts": 0
+    },
+    "terminal_failure_latency": {
+      "samples": 1,
+      "p50_ms": 15864.768625,
+      "p95_ms": 15864.768625,
+      "max_ms": 15864.768625,
+      "timeouts": 0
+    },
+    "recovery_fault": "first BlobRead response dropped, 10 s timeout, then actual Helper process restart during a partial staged download",
+    "terminal_fault": "128 KiB second fixture, first eight BlobReads immediately unavailable",
+    "gateway_and_replica_digests_verified": true
+  },
+  "negative_probes": [
+    {
+      "protection_disabled": "snapshot",
+      "expected_failure": "snapshot_only_and_pin_survive_grace",
+      "observed": true,
+      "mutation_committed": false
+    },
+    {
+      "protection_disabled": "command",
+      "expected_failure": "command_only_survives_grace",
+      "observed": true,
+      "mutation_committed": false
+    }
+  ],
+  "proposed_spec_changes": [
+    "Document checkpoint refresh_blobs in §7.2/7.3 as a request to reacquire blob handles while retaining the committed predecessor.",
+    "Document feed BlobAvailable(digest) in §12 as an authorization-checked availability hint to waiting replicas.",
+    "Document failed reason codes and retry exhaustion in §13."
+  ],
+  "spec_edits": false,
+  "feature_status_edits": false,
+  "new_scenarios": [
+    "CORE-BLOB-GATEWAY-RETRY (sim), linked to core.blobs"
+  ],
+  "unverified": [
+    "Real Apple attachment download/restart was not run; the requested sim and replica levels passed.",
+    "Independent review is left to the build leader."
+  ]
+}

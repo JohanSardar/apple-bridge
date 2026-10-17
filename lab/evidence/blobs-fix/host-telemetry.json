@@ -11,5 +11,17 @@
     "at": "2026-10-17T05:43:49.679294+00:00",
     "load_average": "{ 7.28 7.07 7.94 }",
     "process_cpu_percent_sum": 362.40000000000015
+  },
+  {
+    "phase": "before-final-process-restart-verification",
+    "at": "2026-10-17T05:52:35.335161+00:00",
+    "load_average": "{ 6.16 8.07 8.41 }",
+    "process_cpu_percent_sum": 371.7
+  },
+  {
+    "phase": "after-final-checks",
+    "at": "2026-10-17T05:56:39.647667+00:00",
+    "load_average": "{ 4.91 6.41 7.59 }",
+    "process_cpu_percent_sum": 354.8
   }
 ]
