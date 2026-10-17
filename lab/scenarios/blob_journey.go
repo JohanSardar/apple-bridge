@@ -11,6 +11,7 @@ import (
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 	"io"
+	_ "modernc.org/sqlite"
 	"net/http"
 	"os"
 	"path/filepath"
