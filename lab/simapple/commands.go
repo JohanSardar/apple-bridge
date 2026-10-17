@@ -112,6 +112,22 @@ func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fenc
 		}
 		f.mu.Lock()
 		a := *frame.Action
+		if f.fault == "external-move-before-prepare" && a.NativeKey != "" {
+			o := f.records[a.NativeKey]
+			var data map[string]any
+			decodeNative(o.Data, &data)
+			data["list_id"] = map[string]any{"$ref": map[string]string{"collection": "reminders.list", "native_key": "other-list"}}
+			o.Data, _ = json.Marshal(data)
+			o.ObservedAt = time.Now().UTC()
+			f.records[a.NativeKey] = o
+			f.fault = ""
+			f.saveLocked()
+			f.mu.Unlock()
+			if err := emit(contracts.Capture{Source: contracts.Reminders, Observations: []contracts.Observation{o}}); err != nil {
+				return err
+			}
+			f.mu.Lock()
+		}
 		var before json.RawMessage
 		if a.NativeKey != "" {
 			o, ok := f.records[a.NativeKey]
@@ -124,6 +140,17 @@ func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fenc
 			if len(frame.ExpectedState) > 0 {
 				decodeNative(frame.ExpectedState, &expected)
 				decodeNative(before, &native)
+				var membership struct {
+					Ref struct {
+						NativeKey string `json:"native_key"`
+					} `json:"$ref"`
+				}
+				membershipJSON, _ := json.Marshal(native["list_id"])
+				json.Unmarshal(membershipJSON, &membership)
+				if membership.Ref.NativeKey != a.ExpectedListKey {
+					f.mu.Unlock()
+					return reject(contracts.ErrConflict)
+				}
 				delete(expected, "list_id")
 				delete(native, "list_id")
 				if !reflect.DeepEqual(expected, native) {
@@ -138,7 +165,15 @@ func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fenc
 				Writable bool `json:"writable"`
 			}
 			json.Unmarshal(list.Data, &data)
-			if !ok || !data.Writable {
+			sourceWritable := true
+			if a.ExpectedListKey != "" {
+				var source struct {
+					Writable bool `json:"writable"`
+				}
+				json.Unmarshal(f.records[a.ExpectedListKey].Data, &source)
+				sourceWritable = source.Writable
+			}
+			if !ok || !data.Writable || !sourceWritable {
 				f.mu.Unlock()
 				return reject(contracts.ErrUnsupported)
 			}
@@ -203,7 +238,15 @@ func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fenc
 				Writable bool `json:"writable"`
 			}
 			json.Unmarshal(f.records[t.Action.ListKey].Data, &list)
-			if !list.Writable {
+			sourceWritable := true
+			if t.Action.ExpectedListKey != "" {
+				var source struct {
+					Writable bool `json:"writable"`
+				}
+				json.Unmarshal(f.records[t.Action.ExpectedListKey].Data, &source)
+				sourceWritable = source.Writable
+			}
+			if !list.Writable || !sourceWritable {
 				f.mu.Unlock()
 				return reject(contracts.ErrUnsupported)
 			}

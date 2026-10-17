@@ -71,7 +71,7 @@ func validateScenario(s Scenario) error {
 					target = &resumedOptions{}
 				case "then/load_rejected":
 					target = &loadRejectedOptions{}
-				case "when/connect", "when/heal", "when/truth_multiplicity", "then/converge", "then/source_ready", "then/capture_safety", "then/old_sse_cursor", "then/sse_resume", "then/sse_idle", "cleanup/world":
+				case "when/command_journey", "when/connect", "when/heal", "when/truth_multiplicity", "then/converge", "then/source_ready", "then/capture_safety", "then/old_sse_cursor", "then/sse_resume", "then/sse_idle", "cleanup/world":
 					target = &struct{}{}
 				default:
 					return fmt.Errorf("%s[%d]: unknown action %q", phase, i, action)

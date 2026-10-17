@@ -51,8 +51,6 @@ func (s *Service) Invoke(ctx context.Context, p trust.Principal, name string, in
 		return nil, contracts.ErrInvalid
 	}
 	result, err := s.Read(ctx, p, name, q)
-	if name == "sources.status" && err == nil && s.LocalStatus != nil {
-		return map[string]any{"records": result.Records, "cursor": result.Cursor, "replica": s.LocalStatus()}, nil
-	}
+
 	return result, err
 }

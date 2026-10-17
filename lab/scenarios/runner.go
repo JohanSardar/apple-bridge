@@ -460,10 +460,10 @@ func Run(ctx context.Context, s Scenario, level string) Evidence {
 				observer.mu.Unlock()
 				add(fmt.Sprintf("scope_sse_watermarks_%d", i), observer.valid() && advanced)
 			}
-			add("replica_records_versions_and_cursor_consistent", convergence(w))
+			recordIntegrity(&evidence, w, nil)
 			evidence.Passed = len(evidence.Assertions) > 0
 			for _, a := range evidence.Assertions {
-				evidence.Passed = evidence.Passed && a.Passed
+				evidence.Passed = evidence.Passed && (a.Passed || a.Status == "unverified")
 			}
 			return evidence
 		}

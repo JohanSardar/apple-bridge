@@ -96,6 +96,9 @@ func truthRecords(observations []contracts.Observation, aliases map[string]strin
 func recordMultiset(records []contracts.Record, full bool) map[string]int {
 	result := map[string]int{}
 	for _, r := range records {
+		if r.Collection == "system.command" {
+			continue
+		}
 		if !full && r.Collection == "system.source" {
 			continue
 		}
