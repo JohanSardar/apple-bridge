@@ -48,7 +48,7 @@ func (w *World) RestartGateway(retentionRows ...int) error {
 	}
 	w.StopGateway()
 	os.Remove(filepath.Join(w.Gateway.Home, "runtime.json"))
-	args := []string{"start", "--role", "gateway", "--home", w.Gateway.Home, "--peer-addr", cfg.PeerAddress, "--api-addr", cfg.APIAddress, "--socket", cfg.Socket}
+	args := []string{"start", "--role", "gateway", "--home", w.Gateway.Home, "--peer-addr", cfg.PeerAddress, "--api-addr", cfg.APIAddress, "--socket", cfg.Socket, "--blob-grace-ms", strconv.FormatInt(w.blobOptions.GraceMS, 10)}
 	if cfg.HelperApp != "" {
 		args = append(args, "--helper-app", cfg.HelperApp)
 	}
