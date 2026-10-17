@@ -37,7 +37,8 @@ public struct MessageSummary: Codable, Sendable {
         do {
             guard let root = try PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any] else { throw DecodeFailure.malformed }
             var edits: [MessageEdit] = []
-            if let histories = root["ec"] as? [String: Any] {
+            if let field = root["ec"] {
+                guard let histories = field as? [String: Any] else { throw DecodeFailure.malformed }
                 for key in histories.keys.sorted() {
                     guard let part = Int(key), part >= 0, let history = histories[key] as? [[String: Any]] else { throw DecodeFailure.malformed }
                     for edit in history {

@@ -13,7 +13,11 @@ import (
 
 type messageState struct {
 	generation   string
-	rearmed      int
+	watcherArmed bool
+	pollPending  bool
+	bulkTarget   string
+	bulkPaused   bool
+	bulkBlocked  bool
 	permitted    bool
 	captureCount int
 	captureAckMS float64
@@ -27,12 +31,12 @@ func messageReference(collection, key string) map[string]any {
 
 func (f *fakeApple) messageRoutes(mux *http.ServeMux) {
 	if f.messages.generation == "" {
-		f.messages = messageState{generation: f.generation, permitted: true}
+		f.messages = messageState{generation: f.generation, permitted: true, watcherArmed: true}
 	}
 	mux.HandleFunc("GET /messages-status", func(w http.ResponseWriter, r *http.Request) {
 		f.mu.Lock()
 		defer f.mu.Unlock()
-		json.NewEncoder(w).Encode(map[string]any{"generation": f.messages.generation, "rearmed": f.messages.rearmed, "permitted": f.messages.permitted, "capture_count": f.messages.captureCount, "capture_ack_ms": f.messages.captureAckMS, "capture_bytes": f.messages.captureBytes, "credit_waits": f.messages.creditWaits})
+		json.NewEncoder(w).Encode(map[string]any{"generation": f.messages.generation, "watcher_armed": f.messages.watcherArmed, "poll_pending": f.messages.pollPending, "bulk_blocked": f.messages.bulkBlocked, "permitted": f.messages.permitted, "capture_count": f.messages.captureCount, "capture_ack_ms": f.messages.captureAckMS, "capture_bytes": f.messages.captureBytes, "credit_waits": f.messages.creditWaits})
 	})
 	mux.HandleFunc("POST /messages", func(w http.ResponseWriter, r *http.Request) {
 		var action struct {
@@ -116,11 +120,26 @@ func (f *fakeApple) messageRoutes(mux *http.ServeMux) {
 			capture.Scope = []string{"messages.chat", "messages.handle", "messages.message", "messages.reaction", "messages.attachment"}
 			capture.ScanStartedAt = now
 			capture.CompletionEvidence = "complete"
+		case "bulk-pause":
+			f.messages.bulkTarget = action.Key
+			f.messages.bulkPaused = true
+		case "bulk-release":
+			f.messages.bulkPaused = false
 		case "watcher-rearm":
-			f.messages.rearmed++
+			f.messages.watcherArmed = false
+			f.messages.pollPending = true
 			if action.Key != "" {
 				message(action.Key, false)
-				capture.Observations = []contracts.Observation{f.records[action.Key]}
+			}
+		case "watcher-poll":
+			if f.messages.pollPending {
+				f.messages.watcherArmed = true
+				f.messages.pollPending = false
+				for _, observation := range f.records {
+					if contracts.CollectionSource(observation.Collection) == contracts.Messages {
+						capture.Observations = append(capture.Observations, observation)
+					}
+				}
 			}
 		case "permission-loss", "permission-restore":
 			f.messages.permitted = action.Action == "permission-restore"

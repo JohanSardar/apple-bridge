@@ -15,6 +15,7 @@ final class MessagesReader {
     private let dateFormat: ISO8601DateFormatter = { let value = ISO8601DateFormatter(); value.formatOptions = [.withInternetDateTime, .withFractionalSeconds]; return value }()
     private var connection: OpaquePointer?
     private var identity = ""
+    private var walIdentity: UInt64?
     private var schemaVersion: Int64 = 0
     private(set) var generation = ""
     private(set) var columns: [String: Set<String>] = [:]
@@ -30,10 +31,11 @@ final class MessagesReader {
         for table in ["message", "chat", "handle", "chat_handle_join", "chat_message_join", "message_attachment_join", "attachment"] {
             schema[table] = Set(try query("PRAGMA table_info(\(table))").map { $0["name"] })
         }
-        guard schema["message"]?.contains("guid") == true, schema["chat"]?.contains("guid") == true else { throw ProbeFailure.unavailable }
+        guard schema["message"]?.contains("guid") == true else { throw ProbeFailure.unavailable }
         columns = schema
         let attributes = try FileManager.default.attributesOfItem(atPath: path)
         identity = "\(attributes[.systemNumber] ?? 0):\(attributes[.systemFileNumber] ?? 0)"
+        walIdentity = ((try? FileManager.default.attributesOfItem(atPath: path + "-wal")[.systemFileNumber]) as? NSNumber)?.uint64Value
         schemaVersion = try query("PRAGMA schema_version").first?.integer("schema_version") ?? 0
         let signature = schema.keys.sorted().map { $0 + ":" + schema[$0]!.sorted().joined(separator: ",") }.joined(separator: "\n")
         generation = BodyDigest.hash(Data((identity + signature).utf8))
@@ -76,12 +78,19 @@ final class MessagesReader {
         let attributes = try FileManager.default.attributesOfItem(atPath: path)
         let current = "\(attributes[.systemNumber] ?? 0):\(attributes[.systemFileNumber] ?? 0)"
         guard current == identity else { return false }
+        let currentWAL = ((try? FileManager.default.attributesOfItem(atPath: path + "-wal")[.systemFileNumber]) as? NSNumber)?.uint64Value
+        guard currentWAL == walIdentity else { return false }
         return (try query("PRAGMA schema_version").first?.integer("schema_version") ?? 0) == schemaVersion
     }
     func dataVersion() throws -> Int64 { try query("PRAGMA data_version").first?.integer("data_version") ?? 0 }
     func maximum() throws -> Int64 { try query("SELECT COALESCE(MAX(ROWID),0) AS maximum FROM message").first?.integer("maximum") ?? 0 }
+    private func has(_ table: String, _ fields: String...) -> Bool {
+        fields.allSatisfy { columns[table]?.contains($0) == true }
+    }
     private var messageProjection: String {
-        "m.ROWID AS row_position,m.*,(SELECT c.guid FROM chat_message_join j JOIN chat c ON c.ROWID=j.chat_id WHERE j.message_id=m.ROWID ORDER BY c.guid LIMIT 1) AS capture_chat_guid,(SELECT h.service || ':' || h.id FROM handle h WHERE h.ROWID=m.handle_id) AS capture_sender_key"
+        let chat = has("chat", "guid") && has("chat_message_join", "chat_id", "message_id") ? "(SELECT c.guid FROM chat_message_join j JOIN chat c ON c.ROWID=j.chat_id WHERE j.message_id=m.ROWID ORDER BY c.guid LIMIT 1)" : "NULL"
+        let sender = has("message", "handle_id") && has("handle", "service", "id") ? "(SELECT h.service || ':' || h.id FROM handle h WHERE h.ROWID=m.handle_id)" : "NULL"
+        return "m.ROWID AS row_position,m.*,\(chat) AS capture_chat_guid,\(sender) AS capture_sender_key"
     }
     func messageRows(after: Int64, through: Int64, limit: Int = 128) throws -> [SQLiteRow] {
         try query("SELECT \(messageProjection) FROM message m WHERE m.ROWID>? AND m.ROWID<=? ORDER BY m.ROWID LIMIT ?", [String(after), String(through), String(limit)])
@@ -160,11 +169,11 @@ final class MessagesReader {
     }
     func smallObservations() throws -> [(String, String, [String: Any])] {
         var result: [(String, String, [String: Any])] = []
-        for row in try query("SELECT ROWID AS row_position,* FROM handle") {
+        for row in try has("handle", "id", "service") ? query("SELECT ROWID AS row_position,* FROM handle") : [] {
             result.append(("messages.handle", row["service"] + ":" + row["id"], ["address": row["id"], "service": row["service"]]))
         }
-        for row in try query("SELECT ROWID AS row_position,* FROM chat") {
-            let participants = try query("SELECT h.id,h.service FROM chat_handle_join j JOIN handle h ON h.ROWID=j.handle_id WHERE j.chat_id=? ORDER BY h.service,h.id", [row["row_position"]]).map { reference("handle", $0["service"] + ":" + $0["id"]) }
+        for row in try has("chat", "guid") ? query("SELECT ROWID AS row_position,* FROM chat") : [] {
+            let participants = try has("handle", "id", "service") && has("chat_handle_join", "chat_id", "handle_id") ? query("SELECT h.id,h.service FROM chat_handle_join j JOIN handle h ON h.ROWID=j.handle_id WHERE j.chat_id=? ORDER BY h.service,h.id", [row["row_position"]]).map { reference("handle", $0["service"] + ":" + $0["id"]) } : []
             var data: [String: Any] = ["service": row["service_name"], "style": row["guid"].contains(";+;") ? "group" : "direct", "display_name": row["display_name"], "participants": participants, "is_archived": row.flag("is_archived"), "capabilities": []]
             data["last_read_at"] = timestamp(row, "last_read_message_timestamp")
             result.append(("messages.chat", row["guid"], data))
@@ -172,8 +181,10 @@ final class MessagesReader {
         return result + (try attachmentObservations())
     }
     func attachmentObservations(guid: String? = nil) throws -> [(String, String, [String: Any])] {
+        guard has("attachment", "guid") else { return [] }
         var result: [(String, String, [String: Any])] = []
-        for row in try query("SELECT a.ROWID AS row_position,a.*,(SELECT m.guid FROM message_attachment_join j JOIN message m ON m.ROWID=j.message_id WHERE j.attachment_id=a.ROWID ORDER BY m.ROWID LIMIT 1) AS message_guid FROM attachment a" + (guid == nil ? "" : " WHERE a.guid=?"), guid.map { [$0] } ?? []) {
+        let message = has("message_attachment_join", "message_id", "attachment_id") ? "(SELECT m.guid FROM message_attachment_join j JOIN message m ON m.ROWID=j.message_id WHERE j.attachment_id=a.ROWID ORDER BY m.ROWID LIMIT 1)" : "NULL"
+        for row in try query("SELECT a.ROWID AS row_position,a.*,\(message) AS message_guid FROM attachment a" + (guid == nil ? "" : " WHERE a.guid=?"), guid.map { [$0] } ?? []) {
             let location = attachmentURL(row["filename"])
             let exists = location.map { FileManager.default.fileExists(atPath: $0.path) } ?? false
             let resource = try? location?.resourceValues(forKeys: [.isUbiquitousItemKey, .ubiquitousItemDownloadingStatusKey])

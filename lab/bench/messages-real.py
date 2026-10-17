@@ -92,7 +92,7 @@ def main():
                         break
             time.sleep(0.25)
         check("existing_outgoing_receipts_equal_readonly_truth", matched)
-        check("fresh_self_receipt_transition", False, "Existing receipt mapping checked; fresh self-send pending unlocked screen", True)
+        check("fresh_self_receipt_transition", False, "Existing receipt mapping checked; no natural receipt transition observed", True)
     elif scenario == "MSG-WATCHER-REARM":
         diagnostic = os.path.join(endpoint["Home"], "helper", "messages-watch.json")
         deadline = time.monotonic() + 40
@@ -144,7 +144,7 @@ def main():
                 break
             time.sleep(0.01)
         if not samples:
-            check("fresh_row_latency", False, "No natural message row observed; self-send pending unlocked screen", True)
+            check("fresh_row_latency", False, "No natural message row observed during this read-only run", True)
 
 
 try:

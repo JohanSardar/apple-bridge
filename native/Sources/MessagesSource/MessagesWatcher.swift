@@ -15,11 +15,13 @@ final class MessagesWatcher: @unchecked Sendable {
     private var needsReconciliation = false
     private let path: String
     private let diagnostics: URL?
+    private let eventsEnabled: Bool
     private var polls = 0
     private var events = 0
     private var rearms = 0
     private var initialized = false
-    init(path: String, diagnostics: URL? = nil) {
+    init(path: String, diagnostics: URL? = nil, eventsEnabled: Bool = true) {
+        self.eventsEnabled = eventsEnabled
         self.diagnostics = diagnostics
         self.path = path
         let pair = AsyncStream<Bool>.makeStream(bufferingPolicy: .bufferingNewest(1))
@@ -58,6 +60,7 @@ final class MessagesWatcher: @unchecked Sendable {
         }
     }
     private func rearm() {
+        guard eventsEnabled else { return }
         let paths = [path, path + "-wal", path + "-shm", URL(fileURLWithPath: path).deletingLastPathComponent().path]
         for file in paths {
             let identity = ((try? FileManager.default.attributesOfItem(atPath: file)[.systemFileNumber]) as? NSNumber)?.uint64Value

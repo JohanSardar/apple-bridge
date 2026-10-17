@@ -146,9 +146,43 @@ func runMessages(ctx context.Context, s Scenario, level string) Evidence {
 		importStarted := time.Now()
 		loadStart := messagesHostLoad()
 		beforeStats := messagesCaptureStats(w)
+		add("bulk_pause_installed", action("bulk-pause", "message-004095", 0))
 		add("bulk_started", action("seed", "", 4096))
+		blocked := func() bool {
+			response, err := w.Control.Get("http://sim/messages-status")
+			if err != nil {
+				return false
+			}
+			defer response.Body.Close()
+			var status struct {
+				Blocked bool `json:"bulk_blocked"`
+			}
+			return json.NewDecoder(response.Body).Decode(&status) == nil && status.Blocked
+		}
+		add("bulk_paused_before_known_target", w.Await(30*time.Second, blocked) == nil)
 		add("live_mutation_during_import", action("receipts", "message-004095", 0))
 		add("live_insert_during_import", action("incoming", "during-import", 0))
+		add("live_visible_before_bulk_release", w.Await(5*time.Second, func() bool {
+			for _, endpoint := range append([]world.Endpoint{w.Gateway}, w.Replicas...) {
+				records, err := w.Records(endpoint)
+				if err != nil {
+					return false
+				}
+				found := false
+				for _, record := range records {
+					if recordTitle(record) == "[ab-test] message-004095" {
+						var data map[string]any
+						json.Unmarshal(record.Data, &data)
+						found = data["read_at"] != nil && data["delivered_at"] != nil
+					}
+				}
+				if !found {
+					return false
+				}
+			}
+			return blocked()
+		}) == nil)
+		add("release_stale_bulk", action("bulk-release", "", 0))
 		var gatewayComplete, replicaComplete time.Time
 		feedComplete := w.Await(60*time.Second, func() bool {
 			if at, ok := messagesHistorySeen(observers[0], 4098); ok {
@@ -180,6 +214,22 @@ func runMessages(ctx context.Context, s Scenario, level string) Evidence {
 			messageConvergenceDetails(w)
 		}
 		add("backfill_revalidated_against_truth", converged)
+		for i, observer := range observers {
+			observer.mu.Lock()
+			liveSeen, regressed := false, false
+			for _, seen := range observer.changes {
+				if recordTitle(seen.Change.Record) != "[ab-test] message-004095" {
+					continue
+				}
+				var data map[string]any
+				json.Unmarshal(seen.Change.Record.Data, &data)
+				newer := data["read_at"] != nil && data["delivered_at"] != nil
+				regressed = regressed || liveSeen && !newer
+				liveSeen = liveSeen || newer
+			}
+			observer.mu.Unlock()
+			add(fmt.Sprintf("older_backfill_never_regresses_live_value_%d", i), liveSeen && !regressed)
+		}
 	case "MSG-INCOMING":
 		samples := [][]float64{{}, {}, {}}
 		timeouts := 0
@@ -243,16 +293,10 @@ func runMessages(ctx context.Context, s Scenario, level string) Evidence {
 		add("generation_changed", old != "" && messageGeneration(w) != old)
 		add("stable_identifiers_no_false_deletion", reflect.DeepEqual(messageNormalize(before), messageNormalize(after)) && sameMessageIDs(before, after))
 	case "MSG-WATCHER-REARM":
-		add("wal_rotation_followed_by_insert", action("watcher-rearm", "after-rearm", 0) && await())
-		var status struct {
-			Rearmed int `json:"rearmed"`
-		}
-		response, err := w.Control.Get("http://sim/messages-status")
-		if err == nil {
-			json.NewDecoder(response.Body).Decode(&status)
-			response.Body.Close()
-		}
-		add("watcher_rearmed", err == nil && status.Rearmed > 0)
+		add("wal_rotation_followed_by_insert", action("watcher-rearm", "after-rearm", 0))
+		add("poll_fallback_catches_disarmed_events", action("watcher-poll", "", 0) && await())
+		output, nativeErr := exec.CommandContext(ctx, "bash", "packaging/dev/check-messages-capture.sh").CombinedOutput()
+		add("production_native_watcher_fault_checks", nativeErr == nil && strings.TrimSpace(string(output)) == "all Messages capture checks passed")
 	case "MSG-PERMISSION-LOSS":
 		before, _ := w.Records(w.Gateway)
 		add("permission_loss", action("permission-loss", "", 0))

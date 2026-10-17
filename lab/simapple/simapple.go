@@ -554,7 +554,6 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 				end--
 			}
 
-			part = f.revalidateMessages(part)
 			if capture.ScanID != "" {
 				for {
 					select {
@@ -576,6 +575,25 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 							close(live.Done)
 						}
 					default:
+						f.mu.Lock()
+						blocked := false
+						if part.Source == contracts.Messages && f.messages.bulkPaused {
+							for _, observation := range part.Observations {
+								if observation.NativeKey == f.messages.bulkTarget {
+									blocked = true
+								}
+							}
+						}
+						f.messages.bulkBlocked = blocked
+						f.mu.Unlock()
+						if blocked {
+							select {
+							case <-ctx.Done():
+								return ctx.Err()
+							case <-time.After(10 * time.Millisecond):
+							}
+							continue
+						}
 						goto drainedLive
 					}
 				}
@@ -584,7 +602,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 			if end == len(capture.Observations) {
 				scanActive[capture.Source] = false
 			}
-			if err := transmit(part, end == len(capture.Observations)); err != nil {
+			if err := transmit(f.revalidateMessages(part), end == len(capture.Observations)); err != nil {
 				return err
 			}
 			offset = end

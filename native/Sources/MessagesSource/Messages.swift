@@ -6,6 +6,7 @@ public actor Messages: Source {
     public nonisolated let name = "messages"
     private let path: String
     private let diagnostics: URL?
+    private let watcherEventsEnabled: Bool
     private var reader: MessagesReader?
     private var baseline: MessagesBaseline?
     private var candidates: Set<String> = []
@@ -29,7 +30,8 @@ public actor Messages: Source {
     private var blobDigests: [String: (Int64, Date, String)] = [:]
     private var pendingBlobs: [String: URL] = [:]
     private var failedBlobs: Set<String> = []
-    public init(path: String? = nil, diagnostics: URL? = nil) {
+    public init(path: String? = nil, diagnostics: URL? = nil, watcherEventsEnabled: Bool = true) {
+        self.watcherEventsEnabled = watcherEventsEnabled
         self.diagnostics = diagnostics
         self.path = path ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Messages/chat.db").path
     }
@@ -286,13 +288,18 @@ public actor Messages: Source {
             try await emitMessages(Array(recent[offset..<min(offset + 128, recent.count)]), sink: sink, live: true, observedAt: recentAt)
             referenced.formUnion(try await captureInserts(sink))
         }
-        for guid in referenced {
-            if let row = try reader.message(guid) { try await emitMessages([row], sink: sink, live: true) }
-        }
         let smallAt = observationTime()
         let changes = try smallChanges(reader.smallObservations(), at: smallAt)
         try await emit(changes, sink: sink, live: true, observedAt: smallAt)
-        _ = try await captureInserts(sink)
+        referenced.formUnion(try await captureInserts(sink))
+        while true {
+            for guid in referenced.sorted() {
+                if let row = try reader.message(guid) { try await emitMessages([row], sink: sink, live: true) }
+            }
+            let position = lastRowID
+            referenced = try await captureInserts(sink)
+            if referenced.isEmpty && position == lastRowID { break }
+        }
         lastLiveVersion = version
     }
     private func reconcile(_ sink: any ObservationSink) async throws {
@@ -340,7 +347,11 @@ public actor Messages: Source {
             let nativeKey = String(key[key.index(after: slash)...])
             if collection == "messages.message" || collection == "messages.reaction" {
                 if try active.message(nativeKey) != nil { continue }
-            } else if smallKeys.contains(key) { continue }
+            } else {
+                let table = collection == "messages.chat" ? "chat" : collection == "messages.handle" ? "handle" : "attachment"
+                let required = table == "handle" ? ["id", "service"] : ["guid"]
+                if !required.allSatisfy({ active.columns[table]?.contains($0) == true }) || smallKeys.contains(key) { continue }
+            }
             absent.append(try observation(collection, nativeKey, [:], observationTime(), kind: "absent"))
             absentKeys.append(key)
         }
@@ -387,7 +398,7 @@ public actor Messages: Source {
         firstSmallSnapshot = nil
         lastComplete = .distantPast
         lastLiveVersion = nil
-        let watcher = MessagesWatcher(path: path, diagnostics: diagnostics)
+        let watcher = MessagesWatcher(path: path, diagnostics: diagnostics, eventsEnabled: watcherEventsEnabled)
         var blobs = Task { await self.drainBlobs(sink) }
         var failure: (any Error)?
         var first = true

@@ -36,6 +36,8 @@ struct DecoderChecks {
         let summary = MessageSummary.decode(try Data(contentsOf: URL(fileURLWithPath: root + "/edited-unsent.plist")))
         guard summary.decodeStatus == "decoded", summary.editHistory.count == 1, summary.retractedParts == [1, 3], summary.editHistory.first?.body.text == body.text else { print("decoder checks failed: edit history"); exit(1) }
         guard MessageSummary.decode(Data([0, 1, 2])).decodeStatus == "undecoded" else { print("decoder checks failed: malformed summary"); exit(1) }
+        let malformedHistory = MessageSummary.decode(try Data(contentsOf: URL(fileURLWithPath: root + "/malformed-edit-history.plist")))
+        guard malformedHistory.decodeStatus == "undecoded", malformedHistory.rawBodyDigest != nil, malformedHistory.editHistory.isEmpty else { print("decoder checks failed: wrong typed edit history"); exit(1) }
         var mentions = 0
         var attachments = 0
         for file in try FileManager.default.contentsOfDirectory(atPath: root) where file.hasPrefix("air-") && file.hasSuffix(".typedstream") {
