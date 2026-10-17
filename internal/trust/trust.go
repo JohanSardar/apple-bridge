@@ -15,6 +15,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"math/big"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -56,6 +57,7 @@ func AllVisibility() Visibility {
 }
 
 type Principal struct {
+	Dial        string            `json:"dial,omitempty"`
 	ID          string            `json:"id"`
 	Kind        string            `json:"kind"`
 	Grants      []contracts.Grant `json:"grants"`
@@ -125,6 +127,7 @@ func Subset(grants, ceiling []contracts.Grant) bool {
 }
 
 type PairCode struct {
+	Dial        string    `json:"dial,omitempty"`
 	ID          string    `json:"id"`
 	Address     string    `json:"address"`
 	Fingerprint string    `json:"fingerprint"`
@@ -133,6 +136,9 @@ type PairCode struct {
 }
 
 type pairing struct {
+	Dial      string            `json:"dial,omitempty"`
+	Result    *Principal        `json:"result,omitempty"`
+	Complete  bool              `json:"complete,omitempty"`
 	Key       []byte            `json:"key"`
 	ExpiresAt time.Time         `json:"expires_at"`
 	Attempts  int               `json:"attempts"`
@@ -141,6 +147,7 @@ type pairing struct {
 }
 
 type Enrollment struct {
+	Dial        string            `json:"dial,omitempty"`
 	Ceiling     []contracts.Grant `json:"ceiling,omitempty"`
 	ReplicaID   string            `json:"replica_id"`
 	Address     string            `json:"address"`
@@ -366,6 +373,15 @@ func (a *Authority) Pair(address string, grants []contracts.Grant) (string, erro
 	return a.PairTTL(address, grants, 10*time.Minute)
 }
 func (a *Authority) PairTTL(address string, grants []contracts.Grant, ttl time.Duration) (string, error) {
+	return a.PairDial(address, "", grants, ttl)
+}
+func (a *Authority) PairDial(address, dial string, grants []contracts.Grant, ttl time.Duration) (string, error) {
+	if dial != "" {
+		host, port, err := net.SplitHostPort(dial)
+		if err != nil || host == "" || port == "" {
+			return "", contracts.ErrInvalid
+		}
+	}
 	if ttl <= 0 || ttl > 10*time.Minute {
 		return "", contracts.ErrInvalid
 	}
@@ -373,10 +389,10 @@ func (a *Authority) PairTTL(address string, grants []contracts.Grant, ttl time.D
 	if _, err := rand.Read(secret); err != nil {
 		return "", err
 	}
-	code := PairCode{ID: contracts.NewID(""), Address: address, Fingerprint: a.Fingerprint, Secret: secret, ExpiresAt: time.Now().Add(ttl)}
+	code := PairCode{Dial: dial, ID: contracts.NewID(""), Address: address, Fingerprint: a.Fingerprint, Secret: secret, ExpiresAt: time.Now().Add(ttl)}
 	key := sha256.Sum256(secret)
 	err := a.update(func(d *credentials) error {
-		d.Pairings[code.ID] = pairing{Key: key[:], ExpiresAt: code.ExpiresAt, Grants: grants}
+		d.Pairings[code.ID] = pairing{Dial: dial, Key: key[:], ExpiresAt: code.ExpiresAt, Grants: grants}
 		return nil
 	})
 	if err != nil {
@@ -414,30 +430,7 @@ func (a *Authority) PairHandler() http.Handler {
 			return
 		}
 		cert := r.TLS.PeerCertificates[0]
-		var p Principal
-		err := a.update(func(d *credentials) error {
-			pair, ok := d.Pairings[req.ID]
-			if !ok || pair.Used || pair.Attempts >= 5 || time.Now().After(pair.ExpiresAt) {
-				return contracts.ErrUnauthorized
-			}
-			pair.Attempts++
-			d.Pairings[req.ID] = pair
-			m := hmac.New(sha256.New, pair.Key)
-			m.Write([]byte("apple-bridge-pair/1\x00"))
-			m.Write(cert.Raw)
-			if !hmac.Equal(m.Sum(nil), req.Proof) {
-				return contracts.ErrUnauthorized
-			}
-			if time.Now().After(cert.NotAfter) || time.Now().Before(cert.NotBefore) {
-				return contracts.ErrExpired
-			}
-			p = Principal{ID: "replica:" + contracts.NewID(""), Kind: "replica", Grants: pair.Grants, Fingerprint: Fingerprint(cert.Raw), Revision: 1}
-			d.Principals = append(d.Principals, p)
-			pair.Used = true
-			pair.Key = nil
-			d.Pairings[req.ID] = pair
-			return nil
-		})
+		p, err := a.acceptPair(req, cert, false)
 		if err != nil {
 			http.Error(w, "unauthorized", 401)
 			return
@@ -483,6 +476,9 @@ func (a *Authority) Join(ctx context.Context, code string) error {
 	if err != nil {
 		return err
 	}
+	if c.Dial != "" {
+		return contracts.ErrInvalid
+	}
 	body, err := json.Marshal(JoinRequest{ID: c.ID, Proof: PairProof(c.Secret, a.Certificate.Certificate[0])})
 	if err != nil {
 		return err
@@ -507,4 +503,50 @@ func (a *Authority) Join(ctx context.Context, code string) error {
 		return err
 	}
 	return a.SaveEnrollment(Enrollment{ReplicaID: p.ID, Address: c.Address, Fingerprint: c.Fingerprint, Grants: p.Grants, Ceiling: p.Grants})
+}
+
+func (a *Authority) acceptPair(req JoinRequest, cert *x509.Certificate, resume bool) (Principal, error) {
+	var p Principal
+	err := a.update(func(d *credentials) error {
+		pair, ok := d.Pairings[req.ID]
+		if !ok || (pair.Used && !resume) || (!pair.Used && pair.Attempts >= 5) || time.Now().After(pair.ExpiresAt) {
+			return contracts.ErrUnauthorized
+		}
+		if !pair.Used {
+			pair.Attempts++
+		}
+		d.Pairings[req.ID] = pair
+		m := hmac.New(sha256.New, pair.Key)
+		m.Write([]byte("apple-bridge-pair/1\x00"))
+		m.Write(cert.Raw)
+		if !hmac.Equal(m.Sum(nil), req.Proof) {
+			return contracts.ErrUnauthorized
+		}
+		if time.Now().After(cert.NotAfter) || time.Now().Before(cert.NotBefore) {
+			return contracts.ErrExpired
+		}
+		if pair.Used {
+			if pair.Result == nil || pair.Result.Fingerprint != Fingerprint(cert.Raw) {
+				return contracts.ErrUnauthorized
+			}
+			for _, current := range d.Principals {
+				if current.ID == pair.Result.ID {
+					p = current
+					return nil
+				}
+			}
+			return contracts.ErrUnauthorized
+		}
+		p = Principal{Dial: pair.Dial, ID: "replica:" + contracts.NewID(""), Kind: "replica", Grants: pair.Grants, Fingerprint: Fingerprint(cert.Raw), Revision: 1}
+		d.Principals = append(d.Principals, p)
+		pair.Used = true
+		if pair.Dial == "" {
+			pair.Key = nil
+		} else {
+			pair.Result = &p
+		}
+		d.Pairings[req.ID] = pair
+		return nil
+	})
+	return p, err
 }
