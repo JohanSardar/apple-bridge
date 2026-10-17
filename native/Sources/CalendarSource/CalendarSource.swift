@@ -100,6 +100,7 @@ public final class CalendarSource: Source {
         scanning = true
         defer { scanning = false }
         let started = timestamp()
+        gate.trace.record("calendar_scan_started", fields: ["live": .bool(live)])
         let now = Date()
         let bounds = CalendarTime.window(now)
         var current: [String: JSON] = [:]
@@ -123,6 +124,7 @@ public final class CalendarSource: Source {
                 let changed = try hash(value["data"]) != hash(committed[identity]?["data"] ?? .null)
                 if forceFull || changed || value["scoped_alias"] != committed[identity]?["scoped_alias"] { pending.append(value) }
             }
+            gate.trace.record("calendar_chunk", fields: ["index": .number(Double(index)), "records": .number(Double(current.count)), "changes": .number(Double(pending.count))])
             guard gate.authorized(.event) else { throw SourceFailure.permissionMissing }
             try save(committed.merging(current) { _, new in new })
             try await sink.emit(source: name, generation: "eventkit-calendar-v1", observations: pending, scanID: "", scanStartedAt: started, scope: [], completionEvidence: "", blobHandles: [:], live: live || index == 0)
@@ -152,6 +154,7 @@ public final class CalendarSource: Source {
         guard gate.authorized(.event) else { throw SourceFailure.permissionMissing }
         try await sink.emit(source: name, generation: "eventkit-calendar-v1", observations: pending, scanID: UUID().uuidString, scanStartedAt: started, scope: ["calendar.calendar", "calendar.event"], completionEvidence: "complete", blobHandles: [:], live: live)
         try save(current); committed = current; forceFull = false
+        gate.trace.record("calendar_scan_complete", fields: ["records": .number(Double(current.count))])
  let readiness=await open()
  try await sink.sourceState(source:name,state:readiness.state,coverage:readiness.coverage,capabilities:readiness.capabilities,reason:readiness.reason)
     }
