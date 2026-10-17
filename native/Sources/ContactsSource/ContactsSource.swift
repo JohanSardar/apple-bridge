@@ -100,13 +100,13 @@ public final class ContactsSource: Source {
         try store.enumerateContacts(with: request) { contact, _ in result.append(contact) }
         return result
     }
-    private func history(_ starting: Data?) throws -> (Data, Bool) {
+    private func history(_ starting: Data?) throws -> AppleBridgeContactsHistoryBatch {
         guard authorized else { throw SourceFailure.permissionMissing }
         let request = CNChangeHistoryFetchRequest()
         request.startingToken = starting; request.shouldUnifyResults = true; request.includeGroupChanges = true
         request.additionalContactKeyDescriptors = [CNContactIdentifierKey as NSString]
         guard let result = AppleBridgeContactsHistory.fetch(store: store, request: request) else { throw SourceFailure.unavailable }
-        return (result.token, result.droppedEverything)
+        return result
     }
     private func fresh(_ key: String) throws -> CNContact {
         guard authorized else { throw SourceFailure.permissionMissing }
@@ -132,18 +132,21 @@ public final class ContactsSource: Source {
         scanning = true; defer { scanning = false }
         let started = timestamp()
         trace.record("contacts_scan_started")
-        let next: Data
-        let drop: Bool
-        do { (next, drop) = try history(token) }
+        let batch: AppleBridgeContactsHistoryBatch
+        do { batch = try history(token) }
         catch {
             guard authorized else { throw SourceFailure.permissionMissing }
             guard token != nil else { throw error }
             token = nil
-            (next, drop) = try history(nil)
+            batch = try history(nil)
         }
+        let next = batch.token
+        let drop = batch.droppedEverything
+        let fullScan = force || drop || token == nil || batch.requiresFullScan
         trace.record("contacts_history_fetched")
         if drop { generation = UUID().uuidString }
-        var current: [String: JSON] = [:]
+        var current: [String: JSON] = fullScan ? [:] : committed
+        if fullScan {
         var containers: [String: Set<String>] = [:]
         for container in try store.containers(matching: nil) {
             for member in try contacts(CNContact.predicateForContactsInContainer(withIdentifier: container.identifier), identifiersOnly: true) { containers[member.identifier, default: []].insert(container.identifier) }
@@ -160,6 +163,12 @@ public final class ContactsSource: Source {
             let value: JSON = .object(["name": .string(group.name), "member_ids": .array(members.map { .object(["$ref": .object(["collection": .string("contacts.contact"), "native_key": .string($0.identifier)])]) })])
             current["contacts.group/" + group.identifier] = observation("contacts.group", group.identifier, value)
         }
+        } else {
+            for key in batch.changedContactIdentifiers {
+                if try isAbsent(key) { current.removeValue(forKey: "contacts.contact/" + key) }
+                else { current["contacts.contact/" + key] = observation("contacts.contact", key, try data(fresh(key))) }
+            }
+        }
         trace.record("contacts_encoded")
         guard authorized else { throw SourceFailure.permissionMissing }
         var observations: [JSON] = []
@@ -169,7 +178,7 @@ public final class ContactsSource: Source {
             if force || drop || token == nil || changed { observations.append(value) }
         }
         if !drop {
-            let groups = Set(try store.groups(matching: nil).map(\.identifier))
+            let groups = fullScan ? Set(try store.groups(matching: nil).map(\.identifier)) : Set(current.values.filter { $0["collection"].string == "contacts.group" }.map { $0["native_key"].string })
             for (key, previous) in committed where current[key] == nil {
                 let collection = previous["collection"].string
                 if collection == "contacts.contact" { if try !isAbsent(previous["native_key"].string) { continue } }
@@ -217,7 +226,7 @@ public final class ContactsSource: Source {
     }
     public func confirmAbsence(_ key: String, into sink: any ObservationSink) async throws {
         guard try isAbsent(key) else { throw SourceFailure.conflict }
-        let (next, _) = try history(token)
+        let next = try history(token).token
         let absent: JSON = .object(["kind": .string("absent"), "collection": .string("contacts.contact"), "native_key": .string(key), "scoped_alias": .string("contacts/contacts.contact/" + key), "revalidated": .bool(true), "observed_at": .string(timestamp())])
         try await sink.emitCheckpoint(source: name, generation: generation, checkpoint: next.base64EncodedString(), observations: [absent], scanID: UUID().uuidString, scanStartedAt: timestamp(), scope: ["contacts.contact"], completionEvidence: "complete", blobHandles: [:], live: true)
         token = next

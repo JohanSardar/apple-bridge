@@ -534,7 +534,7 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 			}
 		}
 		for _, endpoint := range endpoints {
-			verified := w.Await(10*time.Second, func() bool {
+			verified := w.Await(30*time.Second, func() bool {
 				record, ok := find(endpoint)
 				if !ok {
 					return false

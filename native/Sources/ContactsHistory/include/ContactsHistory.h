@@ -6,6 +6,8 @@ NS_ASSUME_NONNULL_BEGIN
 @interface AppleBridgeContactsHistoryBatch : NSObject
 @property(nonatomic, readonly, copy) NSData *token;
 @property(nonatomic, readonly) BOOL droppedEverything;
+@property(nonatomic, readonly) BOOL requiresFullScan;
+@property(nonatomic, readonly, copy) NSArray<NSString *> *changedContactIdentifiers;
 @end
 
 @interface AppleBridgeContactsHistory : NSObject
