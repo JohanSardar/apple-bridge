@@ -139,19 +139,20 @@ func (f *fakeApple) contactsControl(mux *http.ServeMux) {
 			return
 		}
 		f.contactSequence++
-		if err := f.saveLocked(); err != nil {
+		if err := f.changedLocked(contracts.Contacts); err != nil {
 			f.mu.Unlock()
 			http.Error(w, "persist", 500)
 			return
 		}
 		missing := f.contactPermissionMissing
+		revision := f.durable.Revision[contracts.Contacts]
 		f.mu.Unlock()
 		if !missing {
 			capture := f.contactSnapshot(a.Action == "drop-everything")
 			if a.Action == "token-crash" {
 				os.Exit(78)
 			}
-			if err := f.enqueue(r.Context(), capture, true); err != nil {
+			if err := f.enqueue(r.Context(), capture, true, revision); err != nil {
 				return
 			}
 		}
@@ -290,7 +291,7 @@ func (f *fakeApple) contactCommand(wire *applepeer.Wire, frame contracts.IPCFram
 		f.evidence[t.CommandID] = outcome
 		fault := f.fault
 		f.fault = ""
-		err := f.saveLocked()
+		err := f.changedLocked(contracts.Contacts)
 		f.mu.Unlock()
 		if err != nil {
 			return err
