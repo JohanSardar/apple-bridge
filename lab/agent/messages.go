@@ -81,7 +81,12 @@ func selfFixture(ctx context.Context, w *world.World, task Task, tag, run string
 		return
 	}
 	if task.Kind == "read" {
-		err = db.QueryRowContext(ctx, "SELECT m.guid,m.text FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE c.guid=? AND m.is_from_me=1 AND m.error=0 AND substr(m.text,1,9)='[ab-test ' ORDER BY m.ROWID DESC LIMIT 1", fixture.Chat).Scan(&fixture.Message, &fixture.Text)
+		var plain sql.NullString
+		var body []byte
+		err = db.QueryRowContext(ctx, "SELECT m.guid,m.text,m.attributedBody FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE c.guid=? AND m.is_from_me=1 AND m.error=0 AND (substr(m.text,1,9)='[ab-test ' OR instr(m.attributedBody,?)>0) ORDER BY m.ROWID DESC LIMIT 1", fixture.Chat, []byte("[ab-test ")).Scan(&fixture.Message, &plain, &body)
+		if err == nil {
+			fixture.Text, err = nativeMessageText(ctx, plain, body)
+		}
 		return
 	}
 	fixture.Text = tag + " agent self message"
@@ -125,8 +130,8 @@ func (f selfMessageFixture) truth(ctx context.Context, send bool) (outgoing int,
 		return 0, nil, false, err
 	}
 	defer db.Close()
-	query := "SELECT m.guid,m.is_from_me,m.error,c.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE m.text=?"
-	args := []any{f.Text}
+	query := "SELECT m.guid,m.is_from_me,m.error,c.guid,m.text,m.attributedBody FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE (m.text=? OR instr(m.attributedBody,?)>0)"
+	args := []any{f.Text, []byte(f.Text)}
 	if send {
 		query += " AND m.ROWID>?"
 		args = append(args, f.Baseline)
@@ -142,10 +147,13 @@ func (f selfMessageFixture) truth(ctx context.Context, send bool) (outgoing int,
 	defer rows.Close()
 	safe = true
 	unique := map[string]bool{}
+	var decodeFailure error
 	for rows.Next() {
 		var guid, chat string
 		var fromMe, nativeError int
-		if err = rows.Scan(&guid, &fromMe, &nativeError, &chat); err != nil {
+		var plain sql.NullString
+		var body []byte
+		if err = rows.Scan(&guid, &fromMe, &nativeError, &chat, &plain, &body); err != nil {
 			return
 		}
 		safe = safe && chat == f.Chat && nativeError == 0
@@ -156,8 +164,18 @@ func (f selfMessageFixture) truth(ctx context.Context, send bool) (outgoing int,
 				outgoing++
 			}
 		}
+		text, decodeErr := nativeMessageText(ctx, plain, body)
+		if decodeErr != nil {
+			safe = false
+			decodeFailure = decodeErr
+		} else {
+			safe = safe && text == f.Text
+		}
 	}
 	err = rows.Err()
+	if err == nil {
+		err = decodeFailure
+	}
 	var participants int
 	var own int
 	peers, peerErr := db.QueryContext(ctx, "SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", f.Chat)
@@ -176,7 +194,7 @@ func (f selfMessageFixture) truth(ctx context.Context, send bool) (outgoing int,
 			own++
 		}
 	}
-	safe = safe && participants == 1 && own == 1
+	safe = safe && participants == 1 && own == 1 && peers.Err() == nil
 	return
 }
 
@@ -211,14 +229,10 @@ func (r AgentRunner) runMessages(ctx context.Context, task Task, number int) (at
 			fixture.Message = guids[0]
 		}
 		state := "pending_unlock"
-		if err == nil && len(guids) == 0 && len(commandID) == 0 {
-			state = "no_effect"
-		}
 		saved := fixture.saveManifest(state, guids, string(commandID)) == nil
 		attempt.Sends = outgoing
-		attempt.Safety = err == nil && safe && outgoing <= 1 && saved
-		attempt.Cleanup = state == "no_effect" && saved
-		attempt.CleanupDeferred = state == "pending_unlock" && saved && len(commandID) > 0
+		attempt.Safety = err == nil && safe && outgoing <= 1 && saved && (outgoing == 0 || len(commandID) > 0)
+		attempt.CleanupDeferred = saved
 		attempt.Passed = attempt.Passed && attempt.Safety && (attempt.Cleanup || attempt.CleanupDeferred)
 	}()
 	db, err := sql.Open("sqlite", "file:"+filepath.Join(w.Gateway.Home, "state.db")+"?mode=ro")
@@ -261,8 +275,17 @@ func (r AgentRunner) runMessages(ctx context.Context, task Task, number int) (at
 		return
 	}
 	attempt.MCPOnly = result.Exit == 0 && result.Calls > 0 && result.Forbidden == 0
-	outgoing, _, safe, err := fixture.truth(ctx, task.Kind == "send")
-	attempt.Truth = err == nil && safe && outgoing == 1
+	safe := false
+	verify := func() bool {
+		outgoing, _, verified, readErr := fixture.truth(ctx, task.Kind == "send")
+		safe = verified
+		return readErr == nil && safe && outgoing == 1
+	}
+	if task.Kind == "send" {
+		attempt.Truth = w.Await(20*time.Second, verify) == nil
+	} else {
+		attempt.Truth = verify()
+	}
 	if task.Kind == "read" {
 		attempt.Truth = attempt.Truth && strings.TrimSpace(result.Answer) == fixture.Text
 		attempt.Safety = safe
@@ -286,4 +309,33 @@ func (r AgentRunner) runMessages(ctx context.Context, task Task, number int) (at
 	}) == nil
 	attempt.Passed = attempt.Truth && attempt.Replica && attempt.MCPOnly
 	return
+}
+
+func nativeMessageText(ctx context.Context, plain sql.NullString, body []byte) (string, error) {
+	if len(body) == 0 {
+		if plain.Valid {
+			return plain.String, nil
+		}
+		return "", fmt.Errorf("native message body unavailable")
+	}
+	file, err := os.CreateTemp("", "apple-bridge-truth-body-")
+	if err != nil {
+		return "", err
+	}
+	defer os.Remove(file.Name())
+	if _, err = file.Write(body); err != nil {
+		file.Close()
+		return "", err
+	}
+	if err = file.Close(); err != nil {
+		return "", err
+	}
+	script := `ObjC.import("Foundation"); ObjC.import("AppKit"); function run(args) { var data=$.NSData.dataWithContentsOfFile(args[0]); var value=$.NSUnarchiver.unarchiveObjectWithData(data); return JSON.stringify(ObjC.unwrap(value.string)); }`
+	raw, err := exec.CommandContext(ctx, "osascript", "-l", "JavaScript", "-e", script, "--", file.Name()).Output()
+	if err != nil {
+		return "", err
+	}
+	var text string
+	err = json.Unmarshal(raw, &text)
+	return text, err
 }
