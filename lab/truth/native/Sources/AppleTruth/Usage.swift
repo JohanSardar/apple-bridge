@@ -16,7 +16,9 @@ enum UsageTruth {
         for case let url as URL in dirs {
             if url.pathComponents.contains("tombstone") { dirs.skipDescendants(); continue }
             guard url.lastPathComponent.allSatisfy(\.isNumber), try url.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile == true else { continue }
-            let relative = String(url.path.dropFirst(root.path.count + 1)).split(separator: "/")
+            let components = url.pathComponents
+            guard let streamIndex = components.lastIndex(of: "App.InFocus") else { throw UsageTruthFailure.streamUnavailable }
+            let relative = Array(components.dropFirst(streamIndex + 1))
             guard let first = relative.first else { continue }
             let device = first == "local" ? "local" : (relative.count > 2 ? String(relative[1]) : "")
             guard !device.isEmpty else { continue }
