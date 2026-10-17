@@ -835,6 +835,15 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		add("no_scope_leak_mcp_agenda", err == nil && len(output.Records) == 0)
 	}
 	if s.ID != "CAL-PERMISSION-LOSS" {
+		if level != "sim" {
+			pidBytes, pidErr := os.ReadFile(filepath.Join(w.Gateway.Home, "helper", "helper.pid"))
+			pid := strings.TrimSpace(string(pidBytes))
+			if pidErr != nil || exec.Command("kill", "-STOP", pid).Run() != nil {
+				return fail("private_helper_paused_for_integrity", pidErr)
+			}
+			defer exec.Command("kill", "-CONT", pid).Run()
+			add("private_helper_paused_for_integrity", true)
+		}
 		recordIntegrity(&e, w, nil)
 	}
 	e.Passed = len(e.Assertions) > 0

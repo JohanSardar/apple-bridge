@@ -3,15 +3,15 @@
     "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
     "start": {
       "air": {
-        "at": "2026-10-17T19:29:31.208065Z",
+        "at": "2026-10-17T19:37:07.074251Z",
         "cpu_count": 8,
         "load_average": [
-          4.2,
-          4.71,
-          6.03
+          4.98,
+          4.07,
+          5.07
         ],
-        "cpu_idle_percent": 80,
-        "free_memory_bytes": 412024832,
+        "cpu_idle_percent": 83,
+        "free_memory_bytes": 193019904,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
         "heavy_queue_length": 3,
@@ -20,33 +20,33 @@
     },
     "end": {
       "air": {
-        "at": "2026-10-17T19:30:08.77922Z",
+        "at": "2026-10-17T19:37:51.936709Z",
         "cpu_count": 8,
         "load_average": [
-          3.73,
-          4.51,
-          5.9
+          5.77,
+          4.38,
+          5.13
         ],
-        "cpu_idle_percent": 69,
-        "free_memory_bytes": 155680768,
+        "cpu_idle_percent": 67,
+        "free_memory_bytes": 195657728,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 3,
+        "heavy_queue_length": 4,
         "quiet": false
       }
     },
     "periodic_samples": [
       {
         "air": {
-          "at": "2026-10-17T19:29:37.258886Z",
+          "at": "2026-10-17T19:37:13.127953Z",
           "cpu_count": 8,
           "load_average": [
-            4.1,
-            4.68,
-            6.01
+            5.62,
+            4.22,
+            5.12
           ],
-          "cpu_idle_percent": 81,
-          "free_memory_bytes": 64634880,
+          "cpu_idle_percent": 66,
+          "free_memory_bytes": 163250176,
           "active_heavy_slots": 2,
           "other_active_heavy_slots": 1,
           "heavy_queue_length": 3,
@@ -55,15 +55,15 @@
       },
       {
         "air": {
-          "at": "2026-10-17T19:29:42.258964Z",
+          "at": "2026-10-17T19:37:18.128033Z",
           "cpu_count": 8,
           "load_average": [
-            4.02,
-            4.65,
-            6
+            5.33,
+            4.18,
+            5.1
           ],
-          "cpu_idle_percent": 80,
-          "free_memory_bytes": 76922880,
+          "cpu_idle_percent": 68,
+          "free_memory_bytes": 58638336,
           "active_heavy_slots": 2,
           "other_active_heavy_slots": 1,
           "heavy_queue_length": 3,
@@ -72,15 +72,15 @@
       },
       {
         "air": {
-          "at": "2026-10-17T19:29:47.259054Z",
+          "at": "2026-10-17T19:37:23.128118Z",
           "cpu_count": 8,
           "load_average": [
-            3.85,
-            4.61,
-            5.97
+            5.31,
+            4.2,
+            5.1
           ],
-          "cpu_idle_percent": 79,
-          "free_memory_bytes": 68501504,
+          "cpu_idle_percent": 67,
+          "free_memory_bytes": 267976704,
           "active_heavy_slots": 2,
           "other_active_heavy_slots": 1,
           "heavy_queue_length": 3,
@@ -89,15 +89,15 @@
       },
       {
         "air": {
-          "at": "2026-10-17T19:29:52.257145Z",
+          "at": "2026-10-17T19:37:28.128202Z",
           "cpu_count": 8,
           "load_average": [
-            3.71,
-            4.57,
-            5.95
+            5.04,
+            4.16,
+            5.08
           ],
-          "cpu_idle_percent": 69,
-          "free_memory_bytes": 213843968,
+          "cpu_idle_percent": 59,
+          "free_memory_bytes": 75415552,
           "active_heavy_slots": 2,
           "other_active_heavy_slots": 1,
           "heavy_queue_length": 3,
@@ -106,15 +106,15 @@
       },
       {
         "air": {
-          "at": "2026-10-17T19:29:57.259239Z",
+          "at": "2026-10-17T19:37:33.128316Z",
           "cpu_count": 8,
           "load_average": [
-            3.57,
-            4.52,
-            5.92
+            4.96,
+            4.16,
+            5.07
           ],
-          "cpu_idle_percent": 72,
-          "free_memory_bytes": 215646208,
+          "cpu_idle_percent": 71,
+          "free_memory_bytes": 64618496,
           "active_heavy_slots": 2,
           "other_active_heavy_slots": 1,
           "heavy_queue_length": 3,
@@ -123,15 +123,15 @@
       },
       {
         "air": {
-          "at": "2026-10-17T19:30:02.257686Z",
+          "at": "2026-10-17T19:37:38.126743Z",
           "cpu_count": 8,
           "load_average": [
-            3.44,
-            4.48,
-            5.9
+            5.04,
+            4.19,
+            5.08
           ],
-          "cpu_idle_percent": 19,
-          "free_memory_bytes": 66420736,
+          "cpu_idle_percent": 55,
+          "free_memory_bytes": 62488576,
           "active_heavy_slots": 2,
           "other_active_heavy_slots": 1,
           "heavy_queue_length": 3,
@@ -140,15 +140,32 @@
       },
       {
         "air": {
-          "at": "2026-10-17T19:30:07.257371Z",
+          "at": "2026-10-17T19:37:43.128218Z",
           "cpu_count": 8,
           "load_average": [
-            3.97,
-            4.57,
-            5.93
+            4.8,
+            4.15,
+            5.06
           ],
-          "cpu_idle_percent": 58,
-          "free_memory_bytes": 64241664,
+          "cpu_idle_percent": 35,
+          "free_memory_bytes": 59899904,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:37:48.126716Z",
+          "cpu_count": 8,
+          "load_average": [
+            5.05,
+            4.21,
+            5.08
+          ],
+          "cpu_idle_percent": 53,
+          "free_memory_bytes": 67911680,
           "active_heavy_slots": 2,
           "other_active_heavy_slots": 1,
           "heavy_queue_length": 3,
@@ -161,47 +178,20 @@
     "quiet_wait_ms": 0,
     "quiet_wait_expired": false
   },
-  "run_id": "cal_01M55NEGMGD4FTYCX04E5D5MZ9",
+  "run_id": "cal_01M55NWDTJHQ6PHQZV79N2K4FS",
   "network_path": "loopback",
-  "metrics": {
-    "records_read_succeeded": true,
-    "source_readiness": [
-      {
-        "capabilities": [
-          "calendar.create_event",
-          "calendar.update_event",
-          "calendar.delete_event",
-          "calendar.create_calendar"
-        ],
-        "reason": "",
-        "source": "calendar",
-        "state": "ready"
-      },
-      {
-        "capabilities": [
-          "reminders.create",
-          "reminders.update",
-          "reminders.complete",
-          "reminders.uncomplete",
-          "reminders.delete",
-          "reminders.create_list"
-        ],
-        "reason": "",
-        "source": "reminders",
-        "state": "ready"
-      }
-    ],
-    "truth_fixture_count": 1,
-    "truth_read_succeeded": true
-  },
   "scenario": "CAL-CLEANUP-SAFETY",
   "level": "real",
   "passed": false,
-  "git_sha": "f593e8212b8dabf71e00427df46a15b3b3adebc8",
-  "at": "2026-10-17T19:29:32.304825Z",
+  "git_sha": "a7dcd7acade3b41eb1c8b60a59e0caab4c5c2336",
+  "at": "2026-10-17T19:37:08.178419Z",
   "assertions": [
     {
       "name": "private_signed_apps_per_world",
+      "passed": true
+    },
+    {
+      "name": "initial_calendar_scan_complete",
       "passed": true
     },
     {
@@ -214,7 +204,83 @@
     },
     {
       "name": "initial_occurrences_visible",
-      "passed": false
+      "passed": true
+    },
+    {
+      "name": "agenda_returns_occurrences",
+      "passed": true
+    },
+    {
+      "name": "whole_calendar_removal_disabled",
+      "passed": true
+    },
+    {
+      "name": "outside_window_other_tag_survives",
+      "passed": true
+    },
+    {
+      "name": "owned_occurrence_removed_individually",
+      "passed": true
+    },
+    {
+      "name": "independent_appletruth_equality",
+      "passed": true
+    },
+    {
+      "name": "replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "contiguous_feed_0",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "contiguous_feed_1",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "latency_effect_done→replica_visible:replica0",
+      "passed": true
+    },
+    {
+      "name": "latency_effect_done→gateway_visible",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_query",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_mcp_agenda",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_query",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_mcp_agenda",
+      "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": false,
+      "status": "fail",
+      "detail": "cursor changed during pagination"
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
     },
     {
       "name": "tagged_fixture_cleanup_audit",
@@ -225,14 +291,29 @@
       "passed": true
     }
   ],
-  "latency": {},
+  "latency": {
+    "effect_done→gateway_visible": {
+      "samples": 1,
+      "p50_ms": 198.3645,
+      "p95_ms": 198.3645,
+      "max_ms": 198.3645,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica0": {
+      "samples": 1,
+      "p50_ms": 202.933916,
+      "p95_ms": 202.933916,
+      "max_ms": 202.933916,
+      "timeouts": 0
+    }
+  },
   "hosts": [
     "air"
   ],
   "conditions": {
     "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
     "heavy_slots_in_use": "2",
-    "load_average": "4.20 4.71 6.03",
+    "load_average": "4.98 4.07 5.07",
     "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"
   }
 }
