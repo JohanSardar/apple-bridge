@@ -54,11 +54,12 @@ type fakeApple struct {
 	fault             string
 	pause             time.Duration
 
-	path    string
-	durable durableApple
-	mu      sync.Mutex
-	records map[string]contracts.Observation
-	changes chan captureRequest
+	completed map[contracts.Source]map[uint64]bool
+	path      string
+	durable   durableApple
+	mu        sync.Mutex
+	records   map[string]contracts.Observation
+	changes   chan captureRequest
 }
 
 func (f *fakeApple) inspect() []contracts.Observation {
@@ -79,10 +80,11 @@ func (f *fakeApple) inspect() []contracts.Observation {
 	})
 	return records
 }
-func (f *fakeApple) enqueue(ctx context.Context, c contracts.Capture, wait bool) error {
-	f.mu.Lock()
-	revision := f.durable.Revision[c.Source]
-	f.mu.Unlock()
+func (f *fakeApple) enqueue(ctx context.Context, c contracts.Capture, wait bool, revisions ...uint64) error {
+	revision := uint64(0)
+	if len(revisions) > 0 {
+		revision = revisions[0]
+	}
 	req := captureRequest{Capture: c, Revision: revision}
 	if wait {
 		req.Done = make(chan struct{})
@@ -214,9 +216,10 @@ func Run(ctx context.Context, cfg Config) error {
 			source = contracts.Messages
 		}
 		fake.changedLocked(source)
+		revision := fake.durable.Revision[source]
 		fake.mu.Unlock()
 		capture := fullScanSource(fake.inspect(), source)
-		if err := fake.enqueue(r.Context(), capture, false); err != nil {
+		if err := fake.enqueue(r.Context(), capture, false, revision); err != nil {
 			return
 		}
 		json.NewEncoder(w).Encode(map[string]bool{"effect_done": true})
@@ -261,6 +264,7 @@ func Run(ctx context.Context, cfg Config) error {
 			return
 		}
 		permissionMissing := fake.permissionMissing
+		revision := fake.durable.Revision[contracts.CollectionSource(o.Collection)]
 		fake.mu.Unlock()
 		if permissionMissing {
 			json.NewEncoder(w).Encode(map[string]bool{"effect_done": true})
@@ -271,7 +275,7 @@ func Run(ctx context.Context, cfg Config) error {
 			capture = fullScan([]contracts.Observation{o})
 		}
 		if !action.OmitCapture {
-			if err := fake.enqueue(r.Context(), capture, false); err != nil {
+			if err := fake.enqueue(r.Context(), capture, false, revision); err != nil {
 				return
 			}
 		}
@@ -403,6 +407,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 	}()
 	pending := []contracts.IPCFrame{}
 	var emitRevision uint64
+	var emitFull bool
 	transmit := func(capture contracts.Capture, final bool) error {
 		capture = messageAliases(capture)
 		if capture.Generation == "" {
@@ -469,7 +474,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 					}
 					f.mu.Lock()
 					if final {
-						f.durable.Committed[capture.Source] = emitRevision
+						f.committedLocked(capture.Source, emitRevision, emitFull)
 						f.durable.InProgress[capture.Source] = false
 					}
 					f.durable.Checkpoints[capture.Source] = capture.Checkpoint
@@ -565,6 +570,10 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 		}
 		return nil
 	}
+	commandEmit := func(capture contracts.Capture, revision uint64) error {
+		emitRevision = revision
+		return emit(capture)
+	}
 	for _, source := range []contracts.Source{contracts.Reminders, contracts.Messages} {
 		f.mu.Lock()
 		emitRevision = f.durable.Revision[source]
@@ -579,7 +588,10 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 			if source == contracts.Messages {
 				capture.BlobHandles = f.blobHandles()
 			}
-			if err = emit(capture); err != nil {
+			emitFull = true
+			err = emit(capture)
+			emitFull = false
+			if err != nil {
 				return err
 			}
 		}
@@ -594,7 +606,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 		if len(pending) > 0 {
 			reply := pending[0]
 			pending = pending[1:]
-			if err = f.command(wire, reply, open.OwnerFence, emit, func() string { return checkpoints[contracts.Reminders] }); err != nil {
+			if err = f.command(wire, reply, open.OwnerFence, commandEmit, func() string { return checkpoints[contracts.Reminders] }); err != nil {
 				return err
 			}
 			continue
@@ -604,7 +616,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 			return ctx.Err()
 		case reply := <-received:
 			if reply.T == "Prepare" || reply.T == "Dispatch" || reply.T == "Resolve" {
-				if err = f.command(wire, reply, open.OwnerFence, emit, func() string { return checkpoints[contracts.Reminders] }); err != nil {
+				if err = f.command(wire, reply, open.OwnerFence, commandEmit, func() string { return checkpoints[contracts.Reminders] }); err != nil {
 					return err
 				}
 				continue

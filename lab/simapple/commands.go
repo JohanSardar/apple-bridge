@@ -29,6 +29,7 @@ type guardEntry struct {
 	StartedAt time.Time           `json:"started_at"`
 	Outcome   *contracts.IPCFrame `json:"outcome,omitempty"`
 }
+
 func (f *fakeApple) guard(entry guardEntry) error {
 	file, err := os.OpenFile(filepath.Join(f.home, "dispatch-guard.log"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
 	if err != nil {
@@ -62,7 +63,7 @@ func (f *fakeApple) commandControl(mux *http.ServeMux) {
 		json.NewEncoder(w).Encode(map[string]bool{"armed": true})
 	})
 }
-func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fence uint64, emit func(contracts.Capture) error, checkpoint func() string) error {
+func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fence uint64, emit func(contracts.Capture, uint64) error, checkpoint func() string) error {
 	reject := func(problem *contracts.Error) error {
 		_, err := wire.Send(contracts.IPCFrame{T: "Rejected", CommandID: frame.CommandID, Disposition: "rejected_before_dispatch", Error: problem})
 		return err
@@ -97,8 +98,9 @@ func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fenc
 			f.records[a.NativeKey] = o
 			f.fault = ""
 			f.changedLocked(contracts.Reminders)
+			revision := f.durable.Revision[contracts.Reminders]
 			f.mu.Unlock()
-			if err := emit(contracts.Capture{Source: contracts.Reminders, Observations: []contracts.Observation{o}}); err != nil {
+			if err := emit(contracts.Capture{Source: contracts.Reminders, Observations: []contracts.Observation{o}}, revision); err != nil {
 				return err
 			}
 			f.mu.Lock()
@@ -173,6 +175,7 @@ func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fenc
 		if fault == "pause" || fault == "external-edit-between-prepare-and-dispatch" {
 			f.fault = ""
 		}
+		var revision uint64
 		var changed *contracts.Observation
 		if fault == "external-edit-between-prepare-and-dispatch" && a.NativeKey != "" {
 			o := f.records[a.NativeKey]
@@ -183,11 +186,12 @@ func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fenc
 			o.ObservedAt = time.Now().UTC()
 			f.records[a.NativeKey] = o
 			f.changedLocked(contracts.Reminders)
+			revision = f.durable.Revision[contracts.Reminders]
 			changed = &o
 		}
 		f.mu.Unlock()
 		if changed != nil {
-			if err := emit(contracts.Capture{Source: contracts.Reminders, Observations: []contracts.Observation{*changed}}); err != nil {
+			if err := emit(contracts.Capture{Source: contracts.Reminders, Observations: []contracts.Observation{*changed}}, revision); err != nil {
 				return err
 			}
 		}
@@ -285,6 +289,7 @@ func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fenc
 			f.mu.Unlock()
 			return err
 		}
+		revision := f.durable.Revision[contracts.Reminders]
 		f.mu.Unlock()
 		if fault == "crash-after-effect" {
 			os.Exit(78)
@@ -293,7 +298,7 @@ func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fenc
 		if o.Kind == "absent" {
 			capture = fullScan([]contracts.Observation{o})
 		}
-		if err := emit(capture); err != nil {
+		if err := emit(capture, revision); err != nil {
 			return err
 		}
 		var committed map[string]any
@@ -340,7 +345,7 @@ func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fenc
 			if record.Kind == "absent" {
 				capture = fullScan([]contracts.Observation{record})
 			}
-			if err := emit(capture); err != nil {
+			if err := emit(capture, 0); err != nil {
 				return err
 			}
 			evidence["capture_checkpoint"] = checkpoint()

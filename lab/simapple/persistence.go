@@ -50,11 +50,15 @@ func (f *fakeApple) saveLocked() error {
 	if closeErr != nil {
 		return closeErr
 	}
-	if err = os.Rename(file.Name(), f.path); err != nil { return err }
- dir, err := os.Open(filepath.Dir(f.path))
- if err != nil { return err }
- defer dir.Close()
- return dir.Sync()
+	if err = os.Rename(file.Name(), f.path); err != nil {
+		return err
+	}
+	dir, err := os.Open(filepath.Dir(f.path))
+	if err != nil {
+		return err
+	}
+	defer dir.Close()
+	return dir.Sync()
 }
 func (f *fakeApple) changedLocked(source contracts.Source) error {
 	f.durable.Revision[source]++
@@ -83,4 +87,26 @@ func (f *fakeApple) progressLocked() error {
 		return closeErr
 	}
 	return os.Rename(file.Name(), filepath.Join(filepath.Dir(f.path), "sim-progress.json"))
+}
+
+func (f *fakeApple) committedLocked(source contracts.Source, revision uint64, full bool) {
+	if f.completed == nil {
+		f.completed = map[contracts.Source]map[uint64]bool{}
+	}
+	if f.completed[source] == nil {
+		f.completed[source] = map[uint64]bool{}
+	}
+	if full {
+		f.durable.Committed[source] = max(f.durable.Committed[source], revision)
+	} else if revision > f.durable.Committed[source] {
+		f.completed[source][revision] = true
+	}
+	for f.completed[source][f.durable.Committed[source]+1] {
+		f.durable.Committed[source]++
+	}
+	for sequence := range f.completed[source] {
+		if sequence <= f.durable.Committed[source] {
+			delete(f.completed[source], sequence)
+		}
+	}
 }

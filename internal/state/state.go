@@ -424,12 +424,7 @@ func (s *Store) Read(ctx context.Context, v trust.Visibility, q contracts.ReadQu
 		query += " AND (collection,id) IN (SELECT collection,id FROM records_fts WHERE records_fts MATCH ?)"
 		args = append(args, searchTerms(q.Text))
 	}
-	limitSQL := q.Limit
-	if limitSQL == 0 {
-		limitSQL = 1000
-	}
-	query += " ORDER BY collection,id LIMIT ?"
-	args = append(args, limitSQL+1)
+	query += " ORDER BY collection,id"
 	rows, err := tx.QueryContext(ctx, query, args...)
 	if err != nil {
 		return result, err

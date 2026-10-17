@@ -33,7 +33,11 @@ func (w *World) StopGateway() {
 		}
 	}
 }
-func (w *World) RestartGateway(rows int) error {
+func (w *World) RestartGateway(retentionRows ...int) error {
+	rows := 0
+	if len(retentionRows) > 0 {
+		rows = retentionRows[0]
+	}
 	var cfg Config
 	data, err := os.ReadFile(filepath.Join(w.Gateway.Home, "runtime.json"))
 	if err != nil {
@@ -42,6 +46,7 @@ func (w *World) RestartGateway(rows int) error {
 	if err = json.Unmarshal(data, &cfg); err != nil {
 		return err
 	}
+	w.StopGateway()
 	os.Remove(filepath.Join(w.Gateway.Home, "runtime.json"))
 	args := []string{"start", "--role", "gateway", "--home", w.Gateway.Home, "--peer-addr", cfg.PeerAddress, "--api-addr", cfg.APIAddress, "--socket", cfg.Socket}
 	if rows > 0 {
@@ -96,6 +101,8 @@ func (w *World) StopHelper() {
 	}
 }
 func (w *World) RestartHelper() error {
+	if w.Native { return w.restartNativeHelper() }
+	w.StopHelper()
 	var cfg Config
 	data, err := os.ReadFile(filepath.Join(w.Gateway.Home, "runtime.json"))
 	if err != nil {
@@ -105,7 +112,10 @@ func (w *World) RestartHelper() error {
 		return err
 	}
 	_, err = w.start("simapple", false, w.Dir, w.lab, "simapple", "--socket", cfg.Socket, "--secret-file", filepath.Join(w.Gateway.Home, "apple-secret"), "--control", filepath.Join(w.Dir, "sim.sock"))
-	return err
+	if err != nil {
+		return err
+	}
+	return w.Await(10*time.Second, func() bool { _, err := w.Inspect(); return err == nil })
 }
 func (w *World) HelperScans() (int, error) {
 	resp, err := w.Control.Get("http://sim/stats")
