@@ -286,6 +286,16 @@ func runCommands(ctx context.Context, w *world.World, id string, e *Evidence, ob
 			return false
 		})
 		add("commit_seq_identifies_observing_capture", observedCapture == nil && captureSequence == r.CommitSeq)
+		var written contracts.Record
+		for _, record := range read.Records {
+			if recordTitle(record) == "[ab-test] read-your-write" {
+				written = record
+			}
+		}
+		beforeNoop, _ := w.Cursor(w.Gateway)
+		noop := command("reminders.uncomplete", map[string]any{"id": written.ID}, written.Version)
+		noChange, noChangeErr := submit(noop)
+		add("noop_commit_seq_identifies_fresh_observation", observed(noChange, noChangeErr) && noChange.CommitSeq > beforeNoop.Sequence && noChange.Cursor.Sequence > noChange.CommitSeq && count(noop, 1))
 
 		add("one_truth_effect", count(c, 1))
 	case "CORE-REST-MCP-PARITY", "REM-CRUD":

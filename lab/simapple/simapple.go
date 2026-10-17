@@ -386,4 +386,65 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 				}
 				if _, err := contracts.EncodeFrame(contracts.IPCFrame{T: "Capture", Capture: &part}); err == nil {
 					break
-				} else if err != con
+				} else if err != contracts.ErrCapacity || end == offset+1 {
+					return err
+				}
+				end--
+			}
+
+			if err := transmit(part); err != nil {
+				return err
+			}
+			offset = end
+		}
+		return nil
+	}
+	if err = emit(fullScan(f.inspect())); err != nil {
+		return err
+	}
+	for _, outcome := range f.recovered {
+		if _, err = wire.Send(outcome); err != nil {
+			return err
+		}
+	}
+	f.recovered = nil
+	for {
+		if len(pending) > 0 {
+			reply := pending[0]
+			pending = pending[1:]
+			if err = f.command(wire, reply, open.OwnerFence, emit, func() string { return checkpoints[contracts.Reminders] }); err != nil {
+				return err
+			}
+			continue
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case reply := <-received:
+			if reply.T == "Prepare" || reply.T == "Dispatch" || reply.T == "Resolve" {
+				if err = f.command(wire, reply, open.OwnerFence, emit, func() string { return checkpoints[contracts.Reminders] }); err != nil {
+					return err
+				}
+				continue
+			}
+			if reply.T == "Ping" {
+				if _, err = wire.Send(contracts.IPCFrame{T: "Pong"}); err != nil {
+					return err
+				}
+			} else if reply.T != "Pong" {
+				return contracts.ErrInvalid
+			}
+		case req := <-f.changes:
+			if req.Close {
+				wire.Send(contracts.IPCFrame{T: "Close", Reason: "lab"})
+				return errClosed
+			}
+			if err = emit(req.Capture); err != nil {
+				return err
+			}
+			if req.Done != nil {
+				close(req.Done)
+			}
+		}
+	}
+}

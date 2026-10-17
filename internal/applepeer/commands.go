@@ -8,11 +8,18 @@ import (
 )
 
 type commandSession struct {
-	wire    *Wire
-	fence   uint64
-	done    chan struct{}
-	waiting map[string]chan contracts.IPCFrame
+	wire         *Wire
+	fence        uint64
+	done         chan struct{}
+	waiting      map[string]chan contracts.IPCFrame
+	receipts     map[string]captureReceipt
+	receiptOrder []string
 }
+type captureReceipt struct {
+	cursor       contracts.Cursor
+	observations map[string]bool
+}
+
 type Commands struct {
 	mu      sync.Mutex
 	session *commandSession
@@ -21,7 +28,7 @@ type Commands struct {
 func (c *Commands) attach(w *Wire, fence uint64) *commandSession {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	s := &commandSession{wire: w, fence: fence, done: make(chan struct{}), waiting: map[string]chan contracts.IPCFrame{}}
+	s := &commandSession{wire: w, fence: fence, done: make(chan struct{}), waiting: map[string]chan contracts.IPCFrame{}, receipts: map[string]captureReceipt{}}
 	if c.session != nil {
 		close(c.session.done)
 	}
@@ -79,4 +86,37 @@ func (c *Commands) Exchange(ctx context.Context, f contracts.IPCFrame) (contract
 	case <-ctx.Done():
 		return contracts.IPCFrame{}, ctx.Err()
 	}
+}
+
+func (c *Commands) RecordCapture(capture contracts.Capture, cursor contracts.Cursor) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	s := c.session
+	if s == nil {
+		return
+	}
+	key := string(capture.Source) + "/" + capture.Checkpoint
+	observations := map[string]bool{}
+	for _, o := range capture.Observations {
+		if o.Kind == "upsert" || o.Kind == "absent" {
+			observations[o.Collection+"/"+o.NativeKey] = true
+		}
+	}
+	s.receipts[key] = captureReceipt{cursor: cursor, observations: observations}
+	s.receiptOrder = append(s.receiptOrder, key)
+	if len(s.receiptOrder) > 4096 {
+		delete(s.receipts, s.receiptOrder[0])
+		s.receiptOrder = s.receiptOrder[1:]
+	}
+}
+func (c *Commands) CapturedSequence(source contracts.Source, checkpoint, collection, nativeKey string) (contracts.Cursor, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.session != nil {
+		receipt, ok := c.session.receipts[string(source)+"/"+checkpoint]
+		if ok && receipt.observations[collection+"/"+nativeKey] {
+			return receipt.cursor, nil
+		}
+	}
+	return contracts.Cursor{}, contracts.ErrNotFound
 }

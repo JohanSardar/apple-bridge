@@ -282,9 +282,10 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 	}
 	if to == "observed" || to == "delivered" {
 		var evidence struct {
-			NativeKey   string `json:"native_key"`
-			Fingerprint string `json:"fingerprint"`
-			Observed    bool   `json:"observed"`
+			NativeKey         string `json:"native_key"`
+			Fingerprint       string `json:"fingerprint"`
+			Observed          bool   `json:"observed"`
+			CaptureCheckpoint string `json:"capture_checkpoint"`
 		}
 		collection := "reminders.reminder"
 		if r.Command.Op == "reminders.create_list" {
@@ -294,12 +295,12 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 			to = "indeterminate"
 			f.Disposition = "indeterminate"
 		} else {
-			sequence, err := g.State.NativeCommit(ctx, collection, evidence.NativeKey)
-			if err != nil || sequence == 0 {
+			sequence, err := g.Peer.CapturedSequence(r.Source, evidence.CaptureCheckpoint, collection, evidence.NativeKey)
+			if err != nil || sequence.Sequence == 0 || sequence.Epoch != g.State.Head().Epoch {
 				to = "indeterminate"
 				f.Disposition = "indeterminate"
 			} else {
-				r.CommitSeq = sequence
+				r.CommitSeq = sequence.Sequence
 			}
 		}
 	}

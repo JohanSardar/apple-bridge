@@ -183,6 +183,11 @@ func Start(ctx context.Context, cfg Config) error {
 		go func() {
 			failures <- applepeer.Serve(ctx, applepeer.Config{BlobCapture: blobStore.Capture, Socket: cfg.Socket, Secret: secret, Commands: commands, Checkpoints: store.Checkpoints, NextFence: store.NextFence, SourceState: store.SourceState, CommitCapture: func(ctx context.Context, c contracts.Capture) (bool, error) {
 				result, err := store.CommitCapture(ctx, c)
+				if err == nil && !result.Degraded {
+					cursor := store.Head()
+					cursor.Sequence = result.Through
+					commands.RecordCapture(c, cursor)
+				}
 				return result.Degraded, err
 			}})
 		}()

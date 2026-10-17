@@ -96,7 +96,7 @@ func (f *fakeApple) commandControl(mux *http.ServeMux) {
 		json.NewEncoder(w).Encode(map[string]bool{"armed": true})
 	})
 }
-func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fence uint64, emit func(contracts.Capture) error) error {
+func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fence uint64, emit func(contracts.Capture) error, checkpoint func() string) error {
 	reject := func(problem *contracts.Error) error {
 		_, err := wire.Send(contracts.IPCFrame{T: "Rejected", CommandID: frame.CommandID, Disposition: "rejected_before_dispatch", Error: problem})
 		return err
@@ -321,6 +321,17 @@ func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fenc
 		if err := emit(capture); err != nil {
 			return err
 		}
+		var committed map[string]any
+		json.Unmarshal(outcome.Evidence, &committed)
+		committed["capture_checkpoint"] = checkpoint()
+		outcome.Evidence, _ = json.Marshal(committed)
+		f.mu.Lock()
+		f.evidence[t.CommandID] = outcome
+		saveErr := f.saveLocked()
+		f.mu.Unlock()
+		if saveErr != nil {
+			return saveErr
+		}
 		if fault == "crash-before-outcome" {
 			os.Exit(78)
 		}
@@ -335,20 +346,42 @@ func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fenc
 	case "Resolve":
 		f.mu.Lock()
 		outcome, ok := f.evidence[frame.CommandID]
+		var evidence map[string]any
+		var record contracts.Observation
 		if ok {
-			var evidence struct {
-				NativeKey string `json:"native_key"`
-				Absent    bool   `json:"absent"`
-			}
 			if json.Unmarshal(outcome.Evidence, &evidence) != nil {
 				ok = false
 			} else {
-				record, exists := f.records[evidence.NativeKey]
-				ok = exists && ((record.Kind == "absent") == evidence.Absent)
+				nativeKey, _ := evidence["native_key"].(string)
+				absent, _ := evidence["absent"].(bool)
+				var exists bool
+				record, exists = f.records[nativeKey]
+				ok = exists && ((record.Kind == "absent") == absent)
 			}
 		}
 		f.mu.Unlock()
-		if !ok {
+		if ok {
+			capture := contracts.Capture{Source: contracts.Reminders, Observations: []contracts.Observation{record}}
+			if record.Kind == "absent" {
+				capture = fullScan([]contracts.Observation{record})
+			}
+			if err := emit(capture); err != nil {
+				return err
+			}
+			evidence["capture_checkpoint"] = checkpoint()
+			outcome.Evidence, _ = json.Marshal(evidence)
+			outcome.Disposition = "locally_observed"
+			f.mu.Lock()
+			f.evidence[frame.CommandID] = outcome
+			err := f.saveLocked()
+			f.mu.Unlock()
+			if err != nil {
+				return err
+			}
+			if err := f.guard(guardEntry{CommandID: frame.CommandID, Outcome: &outcome}); err != nil {
+				return err
+			}
+		} else {
 			outcome = contracts.IPCFrame{T: "Outcome", CommandID: frame.CommandID, Disposition: "indeterminate"}
 		}
 		_, err := wire.Send(outcome)
