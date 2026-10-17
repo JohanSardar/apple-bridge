@@ -1,9 +1,10 @@
 {
+  "run_id": "run_01M546Z0Y5RN6WNQ1DVN9J0XFV",
   "scenario": "CORE-BLOB-GC",
   "level": "sim",
   "passed": true,
-  "git_sha": "301d03f482174bc922eca623ed4487ec7743acd9",
-  "at": "2026-10-17T05:24:35.321989Z",
+  "git_sha": "05b8714630bbfdef0243e7d77a257a8b121f258b",
+  "at": "2026-10-17T05:57:10.213742Z",
   "assertions": [
     {
       "name": "replica_host_is_air",
@@ -153,23 +154,23 @@
   "latency": {
     "effect_done→blob_complete": {
       "samples": 1,
-      "p50_ms": 4803.5535,
-      "p95_ms": 4803.5535,
-      "max_ms": 4803.5535,
+      "p50_ms": 4837.607709,
+      "p95_ms": 4837.607709,
+      "max_ms": 4837.607709,
       "timeouts": 0
     },
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 13.728125,
-      "p95_ms": 13.728125,
-      "max_ms": 13.728125,
+      "p50_ms": 14.72525,
+      "p95_ms": 14.72525,
+      "max_ms": 14.72525,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 37.358084,
-      "p95_ms": 37.358084,
-      "max_ms": 37.358084,
+      "p50_ms": 44.313958,
+      "p95_ms": 44.313958,
+      "max_ms": 44.313958,
       "timeouts": 0
     }
   },

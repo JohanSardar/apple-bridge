@@ -1,10 +1,10 @@
 {
-  "run_id": "run_01M545XDFYRTPP9N9RD5QN40DC",
+  "run_id": "run_01M5474RA2919SAT5XTE1HXW1Y",
   "scenario": "CORE-CMD-OFFLINE",
   "level": "replica",
   "passed": true,
-  "git_sha": "70b2efcc849f1d6009373d8a32c265ef4f9cbf39",
-  "at": "2026-10-17T05:38:48.958022Z",
+  "git_sha": "aa74a56cd506ee48d164ac61c28fc5ac6ff68ec9",
+  "at": "2026-10-17T06:00:17.986957Z",
   "assertions": [
     {
       "name": "replica_host_is_ubuntu",
@@ -158,23 +158,23 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 21.453875,
-      "p95_ms": 21.453875,
-      "max_ms": 21.453875,
+      "p50_ms": 12.731917,
+      "p95_ms": 12.731917,
+      "max_ms": 12.731917,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 37.194,
-      "p95_ms": 37.194,
-      "max_ms": 37.194,
+      "p50_ms": 94.776459,
+      "p95_ms": 94.776459,
+      "max_ms": 94.776459,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica1": {
       "samples": 1,
-      "p50_ms": 37.111,
-      "p95_ms": 37.111,
-      "max_ms": 37.111,
+      "p50_ms": 96.215667,
+      "p95_ms": 96.215667,
+      "max_ms": 96.215667,
       "timeouts": 0
     }
   },
