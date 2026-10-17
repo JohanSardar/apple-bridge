@@ -1,10 +1,10 @@
 {
-  "run_id": "run_01M54AREE3FPZMYK2211T7GGBH",
+  "run_id": "run_01M54BHJBRG10DC1NKDNJ0TQFA",
   "scenario": "MSG-PERMISSION-LOSS",
   "level": "sim",
   "passed": true,
-  "git_sha": "5cf1dc304dd05eb1b00784a395ef995a70a3866c",
-  "at": "2026-10-17T07:03:28.963727Z",
+  "git_sha": "848918ef3d5560e95bb712ac0cd32e3bef168810",
+  "at": "2026-10-17T07:17:12.184728Z",
   "assertions": [
     {
       "name": "seed",

@@ -1,0 +1,435 @@
+{
+  "task": "messages-read-fix",
+  "transport": "ssh -o ControlPath=none air",
+  "working_directory": "~/apple-bridge/.worktrees/messages-read-fix",
+  "commands": [
+    {
+      "command": "packaging/dev/heavy.sh bash -c \"packaging/dev/check-decoders.sh && packaging/dev/build-native.sh && packaging/dev/check-messages-capture.sh && make lint && go vet ./... && make features && go run -p 2 ./cmd/bridge-lab run lab/scenarios/messages --level sim --json\"",
+      "exit_code": 0
+    },
+    {
+      "command": "make native",
+      "exit_code": 0
+    },
+    {
+      "command": "packaging/dev/heavy.sh go run -p 2 ./cmd/bridge-lab run lab/scenarios/core/CORE-BOOT.yaml lab/scenarios/core/CORE-BLOB-INTERRUPT.yaml lab/scenarios/core/CORE-BLOB-CORRUPT.yaml lab/scenarios/core/CORE-BLOB-CAP.yaml lab/scenarios/core/CORE-BLOB-NO-DIGEST-AUTH.yaml lab/scenarios/core/CORE-BLOB-GC.yaml lab/scenarios/core/CORE-BLOB-OFFLOADED.yaml lab/scenarios/core/CORE-BLOB-SLOW-READ.yaml --level sim --json",
+      "exit_code": 0
+    },
+    {
+      "command": "packaging/dev/heavy.sh go run -p 2 ./cmd/bridge-lab run lab/scenarios/messages --level sim --json",
+      "exit_code": 0,
+      "context": "final refresh after rebase onto the robustness review record"
+    }
+  ],
+  "native_fault_checks": [
+    "missing tables and incomplete join columns retain partial coverage and complete capture",
+    "WAL inode rotation captures the next row and a later WAL write before the two-second polling fallback",
+    "database replacement changes generation and captures a later insert through rearmed events",
+    "disarmed native events retain capture through polling",
+    "references inserted during small-table emission and referenced-row emission update rows outside the 2000-row recent window before reconciliation"
+  ],
+  "negative_probe": {
+    "state": "native harness before adding WAL identity invalidation",
+    "failed_assertion": "WAL checkpoint capture",
+    "exit_code": 133,
+    "resolution": "reopen read-only SQLite when WAL inode identity changes without changing the main-file/schema generation"
+  },
+  "privacy": {
+    "fixtures": "synthetic and scrubbed",
+    "shared_app_install": false,
+    "real_chat_db_writes": false,
+    "message_text_or_contact_identifiers_in_evidence": false
+  },
+  "spec_deviations": [],
+  "new_scenario_ids": [],
+  "strengthened_scenarios": [
+    "MSG-HISTORY-IMPORT",
+    "MSG-WATCHER-REARM",
+    "MSG-DECODE"
+  ],
+  "scenario_results": [
+    {
+      "scenario": "MSG-DB-REPLACED",
+      "level": "sim",
+      "passed": true,
+      "git_sha": "848918ef3d5560e95bb712ac0cd32e3bef168810",
+      "latency": {},
+      "unverified_assertions": []
+    },
+    {
+      "scenario": "MSG-DECODE",
+      "level": "sim",
+      "passed": true,
+      "git_sha": "848918ef3d5560e95bb712ac0cd32e3bef168810",
+      "latency": {},
+      "unverified_assertions": []
+    },
+    {
+      "scenario": "MSG-HISTORY-IMPORT",
+      "level": "sim",
+      "passed": true,
+      "git_sha": "848918ef3d5560e95bb712ac0cd32e3bef168810",
+      "latency": {},
+      "unverified_assertions": []
+    },
+    {
+      "scenario": "MSG-INCOMING",
+      "level": "sim",
+      "passed": true,
+      "git_sha": "848918ef3d5560e95bb712ac0cd32e3bef168810",
+      "latency": {
+        "effect_done\u2192gateway_visible": {
+          "samples": 32,
+          "p50_ms": 7.8775,
+          "p95_ms": 101.754292,
+          "max_ms": 112.747625,
+          "timeouts": 0
+        },
+        "effect_done\u2192replica_visible": {
+          "samples": 32,
+          "p50_ms": 10.443583,
+          "p95_ms": 110.095291,
+          "max_ms": 118.454875,
+          "timeouts": 0
+        },
+        "gateway_visible\u2192replica_visible": {
+          "samples": 32,
+          "p50_ms": 3.137166,
+          "p95_ms": 7.463042,
+          "max_ms": 98.63375,
+          "timeouts": 0
+        }
+      },
+      "unverified_assertions": []
+    },
+    {
+      "scenario": "MSG-PERMISSION-LOSS",
+      "level": "sim",
+      "passed": true,
+      "git_sha": "848918ef3d5560e95bb712ac0cd32e3bef168810",
+      "latency": {},
+      "unverified_assertions": []
+    },
+    {
+      "scenario": "MSG-RECEIPTS",
+      "level": "sim",
+      "passed": true,
+      "git_sha": "848918ef3d5560e95bb712ac0cd32e3bef168810",
+      "latency": {},
+      "unverified_assertions": []
+    },
+    {
+      "scenario": "MSG-WATCHER-REARM",
+      "level": "sim",
+      "passed": true,
+      "git_sha": "848918ef3d5560e95bb712ac0cd32e3bef168810",
+      "latency": {},
+      "unverified_assertions": []
+    },
+    {
+      "scenario": "CORE-BOOT",
+      "level": "sim",
+      "passed": true,
+      "git_sha": "848918ef3d5560e95bb712ac0cd32e3bef168810",
+      "latency": {
+        "effect_done\u2192gateway_visible": {
+          "samples": 1,
+          "p50_ms": 4.483791,
+          "p95_ms": 4.483791,
+          "max_ms": 4.483791,
+          "timeouts": 0
+        },
+        "effect_done\u2192replica_visible:replica0": {
+          "samples": 1,
+          "p50_ms": 10.119458,
+          "p95_ms": 10.119458,
+          "max_ms": 10.119458,
+          "timeouts": 0
+        }
+      },
+      "unverified_assertions": [
+        "replica_application_exactly_once"
+      ]
+    },
+    {
+      "scenario": "CORE-BLOB-CAP",
+      "level": "sim",
+      "passed": true,
+      "git_sha": "848918ef3d5560e95bb712ac0cd32e3bef168810",
+      "latency": {
+        "effect_done\u2192gateway_visible": {
+          "samples": 1,
+          "p50_ms": 5.835334,
+          "p95_ms": 5.835334,
+          "max_ms": 5.835334,
+          "timeouts": 0
+        },
+        "effect_done\u2192replica_visible:replica0": {
+          "samples": 1,
+          "p50_ms": 7.826417,
+          "p95_ms": 7.826417,
+          "max_ms": 7.826417,
+          "timeouts": 0
+        }
+      },
+      "unverified_assertions": [
+        "replica_application_exactly_once"
+      ]
+    },
+    {
+      "scenario": "CORE-BLOB-CORRUPT",
+      "level": "sim",
+      "passed": true,
+      "git_sha": "848918ef3d5560e95bb712ac0cd32e3bef168810",
+      "latency": {
+        "effect_done\u2192blob_complete": {
+          "samples": 1,
+          "p50_ms": 4922.042417,
+          "p95_ms": 4922.042417,
+          "max_ms": 4922.042417,
+          "timeouts": 0
+        },
+        "effect_done\u2192gateway_visible": {
+          "samples": 1,
+          "p50_ms": 25.211292,
+          "p95_ms": 25.211292,
+          "max_ms": 25.211292,
+          "timeouts": 0
+        },
+        "effect_done\u2192replica_visible:replica0": {
+          "samples": 1,
+          "p50_ms": 28.645083,
+          "p95_ms": 28.645083,
+          "max_ms": 28.645083,
+          "timeouts": 0
+        }
+      },
+      "unverified_assertions": [
+        "replica_application_exactly_once"
+      ]
+    },
+    {
+      "scenario": "CORE-BLOB-GC",
+      "level": "sim",
+      "passed": true,
+      "git_sha": "848918ef3d5560e95bb712ac0cd32e3bef168810",
+      "latency": {
+        "effect_done\u2192blob_complete": {
+          "samples": 1,
+          "p50_ms": 4741.691125,
+          "p95_ms": 4741.691125,
+          "max_ms": 4741.691125,
+          "timeouts": 0
+        },
+        "effect_done\u2192gateway_visible": {
+          "samples": 1,
+          "p50_ms": 8.572166,
+          "p95_ms": 8.572166,
+          "max_ms": 8.572166,
+          "timeouts": 0
+        },
+        "effect_done\u2192replica_visible:replica0": {
+          "samples": 1,
+          "p50_ms": 10.440125,
+          "p95_ms": 10.440125,
+          "max_ms": 10.440125,
+          "timeouts": 0
+        }
+      },
+      "unverified_assertions": [
+        "replica_application_exactly_once"
+      ]
+    },
+    {
+      "scenario": "CORE-BLOB-INTERRUPT",
+      "level": "sim",
+      "passed": true,
+      "git_sha": "848918ef3d5560e95bb712ac0cd32e3bef168810",
+      "latency": {
+        "effect_done\u2192blob_complete": {
+          "samples": 1,
+          "p50_ms": 6660.811833,
+          "p95_ms": 6660.811833,
+          "max_ms": 6660.811833,
+          "timeouts": 0
+        },
+        "effect_done\u2192gateway_visible": {
+          "samples": 1,
+          "p50_ms": 6.378625,
+          "p95_ms": 6.378625,
+          "max_ms": 6.378625,
+          "timeouts": 0
+        },
+        "effect_done\u2192metadata_during_blob": {
+          "samples": 1,
+          "p50_ms": 84.725833,
+          "p95_ms": 84.725833,
+          "max_ms": 84.725833,
+          "timeouts": 0
+        },
+        "effect_done\u2192replica_visible:replica0": {
+          "samples": 1,
+          "p50_ms": 7.832458,
+          "p95_ms": 7.832458,
+          "max_ms": 7.832458,
+          "timeouts": 0
+        }
+      },
+      "unverified_assertions": [
+        "replica_application_exactly_once"
+      ]
+    },
+    {
+      "scenario": "CORE-BLOB-NO-DIGEST-AUTH",
+      "level": "sim",
+      "passed": true,
+      "git_sha": "848918ef3d5560e95bb712ac0cd32e3bef168810",
+      "latency": {
+        "effect_done\u2192blob_complete": {
+          "samples": 1,
+          "p50_ms": 4821.645167,
+          "p95_ms": 4821.645167,
+          "max_ms": 4821.645167,
+          "timeouts": 0
+        },
+        "effect_done\u2192gateway_visible": {
+          "samples": 1,
+          "p50_ms": 12.996875,
+          "p95_ms": 12.996875,
+          "max_ms": 12.996875,
+          "timeouts": 0
+        },
+        "effect_done\u2192replica_visible:replica0": {
+          "samples": 1,
+          "p50_ms": 16.462292,
+          "p95_ms": 16.462292,
+          "max_ms": 16.462292,
+          "timeouts": 0
+        }
+      },
+      "unverified_assertions": [
+        "replica_application_exactly_once"
+      ]
+    },
+    {
+      "scenario": "CORE-BLOB-OFFLOADED",
+      "level": "sim",
+      "passed": true,
+      "git_sha": "848918ef3d5560e95bb712ac0cd32e3bef168810",
+      "latency": {
+        "effect_done\u2192gateway_visible": {
+          "samples": 1,
+          "p50_ms": 7.2715,
+          "p95_ms": 7.2715,
+          "max_ms": 7.2715,
+          "timeouts": 0
+        },
+        "effect_done\u2192replica_visible:replica0": {
+          "samples": 1,
+          "p50_ms": 9.753584,
+          "p95_ms": 9.753584,
+          "max_ms": 9.753584,
+          "timeouts": 0
+        }
+      },
+      "unverified_assertions": [
+        "replica_application_exactly_once"
+      ]
+    },
+    {
+      "scenario": "CORE-BLOB-SLOW-READ",
+      "level": "sim",
+      "passed": true,
+      "git_sha": "848918ef3d5560e95bb712ac0cd32e3bef168810",
+      "latency": {
+        "effect_done\u2192blob_complete": {
+          "samples": 1,
+          "p50_ms": 4841.069084,
+          "p95_ms": 4841.069084,
+          "max_ms": 4841.069084,
+          "timeouts": 0
+        },
+        "effect_done\u2192gateway_visible": {
+          "samples": 1,
+          "p50_ms": 14.485083,
+          "p95_ms": 14.485083,
+          "max_ms": 14.485083,
+          "timeouts": 0
+        },
+        "effect_done\u2192metadata_during_slow_read": {
+          "samples": 1,
+          "p50_ms": 91.913084,
+          "p95_ms": 91.913084,
+          "max_ms": 91.913084,
+          "timeouts": 0
+        },
+        "effect_done\u2192replica_visible:replica0": {
+          "samples": 1,
+          "p50_ms": 17.515667,
+          "p95_ms": 17.515667,
+          "max_ms": 17.515667,
+          "timeouts": 0
+        }
+      },
+      "unverified_assertions": [
+        "replica_application_exactly_once"
+      ]
+    }
+  ],
+  "conditional_runs": [
+    {
+      "prerequisite": "session-fix merged to main",
+      "status": "pending",
+      "scenarios": [
+        "MSG-HISTORY-IMPORT real",
+        "MSG-RECEIPTS real",
+        "MSG-WATCHER-REARM real (natural WAL checkpoints only)",
+        "MSG-INCOMING real and replica (natural arrivals only; no arrivals means pending)"
+      ]
+    },
+    {
+      "prerequisite": "blobs-fix incremental protection merged to main",
+      "status": "pending",
+      "scenarios": [
+        "MSG-HISTORY-IMPORT throughput rerun"
+      ]
+    }
+  ],
+  "history_measurement": {
+    "capture_ack_ms": 8792.422794999995,
+    "capture_bytes": 2774465,
+    "capture_count": 67,
+    "clock": "same-host monotonic SSE receipt after gateway commit / replica apply",
+    "credit_waits": 0,
+    "gateway_commit_visible_ms": 11153.685540999999,
+    "gateway_rows_per_second": 367.41218720360195,
+    "gateway_to_replica_tail_ms": 23.055167,
+    "host_after": {
+      "gomaxprocs": 8,
+      "load_average": [
+        16.48,
+        13.63,
+        12.56
+      ],
+      "logical_cpus": 8,
+      "occupied_heavy_slots": 2
+    },
+    "host_before": {
+      "gomaxprocs": 8,
+      "load_average": [
+        13.52,
+        12.96,
+        12.31
+      ],
+      "logical_cpus": 8,
+      "occupied_heavy_slots": 2
+    },
+    "replica_apply_visible_ms": 11176.740708000001,
+    "replica_rows_per_second": 366.65429636985004,
+    "synthetic_rows": 4098,
+    "truth_verification_ms": 1968.290292
+  },
+  "history_measurement_note": "Includes the deterministic bulk pause and live visibility verification; incremental blob protection is not yet in main.",
+  "implementation_verification": "passed",
+  "real_verification": "pending prerequisite merge"
+}

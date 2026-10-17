@@ -1,10 +1,10 @@
 {
-  "run_id": "run_01M54ARCRBX5QM0BDTWTG0QFT8",
+  "run_id": "run_01M54BHBK2QRH0NW04BPB5M0V6",
   "scenario": "MSG-INCOMING",
   "level": "sim",
   "passed": true,
-  "git_sha": "5cf1dc304dd05eb1b00784a395ef995a70a3866c",
-  "at": "2026-10-17T07:03:27.243359Z",
+  "git_sha": "848918ef3d5560e95bb712ac0cd32e3bef168810",
+  "at": "2026-10-17T07:17:05.25067Z",
   "assertions": [
     {
       "name": "seed",
@@ -54,23 +54,23 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 32,
-      "p50_ms": 5.608834,
-      "p95_ms": 8.903208,
-      "max_ms": 9.21375,
+      "p50_ms": 7.8775,
+      "p95_ms": 101.754292,
+      "max_ms": 112.747625,
       "timeouts": 0
     },
     "effect_done→replica_visible": {
       "samples": 32,
-      "p50_ms": 8.861667,
-      "p95_ms": 14.330542,
-      "max_ms": 15.523667,
+      "p50_ms": 10.443583,
+      "p95_ms": 110.095291,
+      "max_ms": 118.454875,
       "timeouts": 0
     },
     "gateway_visible→replica_visible": {
       "samples": 32,
-      "p50_ms": 2.996875,
-      "p95_ms": 5.116792,
-      "max_ms": 6.620459,
+      "p50_ms": 3.137166,
+      "p95_ms": 7.463042,
+      "max_ms": 98.63375,
       "timeouts": 0
     }
   },

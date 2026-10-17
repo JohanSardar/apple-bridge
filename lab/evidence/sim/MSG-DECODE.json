@@ -1,10 +1,10 @@
 {
-  "run_id": "run_01M54AR0QYF6TK0KWKADES55X6",
+  "run_id": "run_01M54BG8FSKVM79A2YWP3A3YG0",
   "scenario": "MSG-DECODE",
   "level": "sim",
   "passed": true,
-  "git_sha": "5cf1dc304dd05eb1b00784a395ef995a70a3866c",
-  "at": "2026-10-17T07:03:14.942643Z",
+  "git_sha": "848918ef3d5560e95bb712ac0cd32e3bef168810",
+  "at": "2026-10-17T07:16:29.305079Z",
   "assertions": [
     {
       "name": "seed",
