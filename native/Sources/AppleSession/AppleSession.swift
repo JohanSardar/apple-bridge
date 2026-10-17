@@ -363,6 +363,18 @@ public actor AppleSession: ObservationSink {
         try wire?.send(.object(["t": .string("Rejected"), "command_id": frame["command_id"], "disposition": .string("rejected_before_dispatch"), "error": .object(["code": .string(code), "message": .string(code)])]))
     }
 
+    private func rejectCommand(_ frame: JSON, error: any Error) async {
+        let code = errorCode(error)
+        let key = frame["action"]["native_key"].string
+        guard code == "conflict", !key.isEmpty else { try? reject(frame, code: code); return }
+        do {
+            try await source.reconcile(into: self)
+            guard let checkpoint = observedCheckpoints["reminders.reminder/" + key] else { throw SourceFailure.unavailable }
+            let evidence = JSON.object(["native_key": .string(key), "capture_checkpoint": .string(checkpoint)])
+            try wire?.send(.object(["t": .string("Rejected"), "command_id": frame["command_id"], "disposition": .string("rejected_before_dispatch"), "error": .object(["code": .string(code), "message": .string(code)]), "evidence": evidence]))
+        } catch { try? reject(frame, code: "unavailable") }
+    }
+
     private func prepare(_ frame: JSON) async {
         do {
             guard !frame["command_id"].string.isEmpty, !frame["principal"].string.isEmpty, !frame["request_hash"].string.isEmpty, let expires = parseTimestamp(frame["expires_at"].string), expires > Date() else { throw SourceFailure.invalid }
@@ -372,7 +384,7 @@ public actor AppleSession: ObservationSink {
             let ticket = UUID().uuidString
             tickets[ticket] = Ticket(command: frame, prepared: prepared, expiry: ContinuousClock.now.advanced(by: .milliseconds(Int64(min(30, expires.timeIntervalSinceNow) * 1000))), fence: fence)
             try wire?.send(.object(["t": .string("Prepared"), "command_id": frame["command_id"], "ticket": .string(ticket), "native_state": prepared.nativeState, "route": .string("eventkit"), "fingerprint": frame["request_hash"], "candidate_ids": .array([])]))
-        } catch { try? reject(frame, code: errorCode(error)) }
+        } catch { await rejectCommand(frame, error: error) }
     }
 
     private func dispatch(_ frame: JSON) async {
@@ -403,7 +415,7 @@ public actor AppleSession: ObservationSink {
             if started {
                 let outcome = JSON.object(["t": .string("Outcome"), "command_id": id, "disposition": .string("indeterminate"), "evidence": .object(["reason": .string("dispatch_evidence_unavailable"), "prepared": .object(["action": ticket.prepared.action, "native_state": ticket.prepared.nativeState, "request_hash": ticket.command["request_hash"]])])])
                 try? await guardLog.append(outcome); try? wire?.send(outcome)
-            } else { try? reject(ticket.command, code: errorCode(error)) }
+            } else { await rejectCommand(ticket.command, error: error) }
         }
     }
 }
