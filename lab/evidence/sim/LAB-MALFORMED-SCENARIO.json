@@ -3,35 +3,35 @@
     "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
     "start": {
       "air": {
-        "at": "2026-10-17T18:16:18.184544Z",
+        "at": "2026-10-17T18:38:48.51372Z",
         "cpu_count": 8,
         "load_average": [
-          5.75,
-          6.44,
-          9.15
+          3.9,
+          4.6,
+          5.89
         ],
-        "cpu_idle_percent": 38,
-        "free_memory_bytes": 82886656,
+        "cpu_idle_percent": 88,
+        "free_memory_bytes": 910393344,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 1,
+        "heavy_queue_length": 2,
         "quiet": false
       }
     },
     "end": {
       "air": {
-        "at": "2026-10-17T18:16:19.327711Z",
+        "at": "2026-10-17T18:38:49.645283Z",
         "cpu_count": 8,
         "load_average": [
-          5.75,
-          6.44,
-          9.15
+          3.9,
+          4.6,
+          5.89
         ],
-        "cpu_idle_percent": 39,
-        "free_memory_bytes": 66895872,
+        "cpu_idle_percent": 90,
+        "free_memory_bytes": 891682816,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 1,
+        "heavy_queue_length": 2,
         "quiet": false
       }
     },
@@ -40,12 +40,12 @@
     "quiet_wait_ms": 0,
     "quiet_wait_expired": false
   },
-  "run_id": "run_01M55H8EKY62FX3RCKKXT4W88V",
+  "run_id": "run_01M55JHN9BQRWHSSY6JZN0ZNAT",
   "scenario": "LAB-MALFORMED-SCENARIO",
   "level": "sim",
   "passed": true,
-  "git_sha": "daad6abe774aa24c4f92e9396c94f746d0ca1b20",
-  "at": "2026-10-17T18:16:19.326197Z",
+  "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b",
+  "at": "2026-10-17T18:38:49.643158Z",
   "assertions": [
     {
       "name": "malformed_scenario_rejected",

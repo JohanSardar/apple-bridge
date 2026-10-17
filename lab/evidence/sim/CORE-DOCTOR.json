@@ -3,35 +3,35 @@
     "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
     "start": {
       "air": {
-        "at": "2026-10-17T18:11:27.682109Z",
+        "at": "2026-10-17T18:35:01.975208Z",
         "cpu_count": 8,
         "load_average": [
-          4.21,
-          7.63,
-          10.57
+          4.96,
+          5.73,
+          6.61
         ],
-        "cpu_idle_percent": 78,
-        "free_memory_bytes": 118226944,
+        "cpu_idle_percent": 49,
+        "free_memory_bytes": 96108544,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 2,
+        "heavy_queue_length": 3,
         "quiet": false
       }
     },
     "end": {
       "air": {
-        "at": "2026-10-17T18:11:29.428782Z",
+        "at": "2026-10-17T18:35:03.929318Z",
         "cpu_count": 8,
         "load_average": [
-          4.21,
-          7.63,
-          10.57
+          4.96,
+          5.73,
+          6.61
         ],
-        "cpu_idle_percent": 68,
-        "free_memory_bytes": 122224640,
+        "cpu_idle_percent": 56,
+        "free_memory_bytes": 111837184,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 2,
+        "heavy_queue_length": 3,
         "quiet": false
       }
     },
@@ -40,20 +40,20 @@
     "quiet_wait_ms": 0,
     "quiet_wait_expired": false
   },
-  "run_id": "run_01M55GZJWSYQND6RAXZSFVKSCT",
+  "run_id": "run_01M55JAR1B64XZG672G0VDHPR0",
   "network_path": "loopback",
   "metrics": {
     "clock_method": "local_receive_minus_gateway_send_including_feed_transit",
-    "clock_sample_age_ms": 105,
-    "recovery_final_drain_ms": 12.7815,
+    "clock_sample_age_ms": 144,
+    "recovery_final_drain_ms": 17.12725,
     "replica_clock_skew_ms": 0,
     "replica_disk_encryption": "warning_not_enabled"
   },
   "scenario": "CORE-DOCTOR",
   "level": "sim",
   "passed": true,
-  "git_sha": "daad6abe774aa24c4f92e9396c94f746d0ca1b20",
-  "at": "2026-10-17T18:11:28.793766Z",
+  "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b",
+  "at": "2026-10-17T18:35:03.083153Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -135,16 +135,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 2.882708,
-      "p95_ms": 2.882708,
-      "max_ms": 2.882708,
+      "p50_ms": 4.582667,
+      "p95_ms": 4.582667,
+      "max_ms": 4.582667,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 5.910875,
-      "p95_ms": 5.910875,
-      "max_ms": 5.910875,
+      "p50_ms": 8.473625,
+      "p95_ms": 8.473625,
+      "max_ms": 8.473625,
       "timeouts": 0
     }
   },

@@ -3,32 +3,32 @@
     "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
     "start": {
       "air": {
-        "at": "2026-10-17T18:14:49.717532Z",
+        "at": "2026-10-17T18:37:20.449415Z",
         "cpu_count": 8,
         "load_average": [
-          5.73,
-          6.69,
-          9.52
+          3.33,
+          4.77,
+          6.09
         ],
-        "cpu_idle_percent": 36,
-        "free_memory_bytes": 101957632,
+        "cpu_idle_percent": 66,
+        "free_memory_bytes": 100892672,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 2,
+        "heavy_queue_length": 1,
         "quiet": false
       }
     },
     "end": {
       "air": {
-        "at": "2026-10-17T18:14:54.311175Z",
+        "at": "2026-10-17T18:37:24.445383Z",
         "cpu_count": 8,
         "load_average": [
-          5.73,
-          6.69,
-          9.52
+          3.78,
+          4.84,
+          6.1
         ],
-        "cpu_idle_percent": 35,
-        "free_memory_bytes": 110297088,
+        "cpu_idle_percent": 57,
+        "free_memory_bytes": 118947840,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
         "heavy_queue_length": 2,
@@ -40,16 +40,16 @@
     "quiet_wait_ms": 0,
     "quiet_wait_expired": false
   },
-  "run_id": "run_01M55H5R8WW2NV90EAN9TKYSWA",
+  "run_id": "run_01M55JEZ85ZCE423WPEZNTB2MZ",
   "network_path": "loopback",
   "metrics": {
-    "recovery_final_drain_ms": 17.049083
+    "recovery_final_drain_ms": 23.966083
   },
   "scenario": "CORE-SCOPE-CHANGE",
   "level": "sim",
   "passed": true,
-  "git_sha": "daad6abe774aa24c4f92e9396c94f746d0ca1b20",
-  "at": "2026-10-17T18:14:50.908505Z",
+  "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b",
+  "at": "2026-10-17T18:37:21.541202Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -123,16 +123,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 8.423416,
-      "p95_ms": 8.423416,
-      "max_ms": 8.423416,
+      "p50_ms": 7.770916,
+      "p95_ms": 7.770916,
+      "max_ms": 7.770916,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 13.820833,
-      "p95_ms": 13.820833,
-      "max_ms": 13.820833,
+      "p50_ms": 10.37725,
+      "p95_ms": 10.37725,
+      "max_ms": 10.37725,
       "timeouts": 0
     }
   },

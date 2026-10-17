@@ -1,10 +1,51 @@
 {
-  "run_id": "run_01M55HNYM5V5BW3WVZMP103BR0",
+  "host_conditions": {
+    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "start": {
+      "air": {
+        "at": "2026-10-17T18:39:48.982587Z",
+        "cpu_count": 8,
+        "load_average": [
+          2.94,
+          4.19,
+          5.65
+        ],
+        "cpu_idle_percent": 91,
+        "free_memory_bytes": 531021824,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 3,
+        "quiet": false
+      }
+    },
+    "end": {
+      "air": {
+        "at": "2026-10-17T18:39:50.871809Z",
+        "cpu_count": 8,
+        "load_average": [
+          2.94,
+          4.19,
+          5.65
+        ],
+        "cpu_idle_percent": 76,
+        "free_memory_bytes": 453459968,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 3,
+        "quiet": false
+      }
+    },
+    "quiet": false,
+    "require_quiet": false,
+    "quiet_wait_ms": 0,
+    "quiet_wait_expired": false
+  },
+  "run_id": "run_01M55JKGB55V12ASYJV0GAZJDV",
   "scenario": "REM-PERMISSION-LOSS",
   "level": "sim",
   "passed": true,
-  "git_sha": "a015684f12ce550969159dcd70fabcdc704200ac",
-  "at": "2026-10-17T18:23:41.701759Z",
+  "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b",
+  "at": "2026-10-17T18:39:50.117114Z",
   "assertions": [
     {
       "name": "reminders_ready",

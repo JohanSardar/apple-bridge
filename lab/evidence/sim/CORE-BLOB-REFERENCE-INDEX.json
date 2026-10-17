@@ -3,15 +3,15 @@
     "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
     "start": {
       "air": {
-        "at": "2026-10-17T18:10:17.530827Z",
+        "at": "2026-10-17T18:33:45.890058Z",
         "cpu_count": 8,
         "load_average": [
-          5.41,
-          8.65,
-          11.15
+          4.79,
+          6.06,
+          6.81
         ],
-        "cpu_idle_percent": 65,
-        "free_memory_bytes": 87162880,
+        "cpu_idle_percent": 81,
+        "free_memory_bytes": 64569344,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
         "heavy_queue_length": 2,
@@ -20,15 +20,15 @@
     },
     "end": {
       "air": {
-        "at": "2026-10-17T18:10:21.506646Z",
+        "at": "2026-10-17T18:33:50.736411Z",
         "cpu_count": 8,
         "load_average": [
-          5.13,
-          8.54,
-          11.1
+          4.57,
+          5.99,
+          6.78
         ],
-        "cpu_idle_percent": 68,
-        "free_memory_bytes": 181501952,
+        "cpu_idle_percent": 89,
+        "free_memory_bytes": 187858944,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
         "heavy_queue_length": 2,
@@ -40,20 +40,20 @@
     "quiet_wait_ms": 0,
     "quiet_wait_expired": false
   },
-  "run_id": "run_01M55GXECBXGZAS6142G7EWB0N",
+  "run_id": "run_01M55J8DQ4QHMV9DVG128FHN0M",
   "network_path": "loopback",
   "metrics": {
     "absolute_target_rows_per_second": 2000,
     "absolute_target_status": "met-under-load",
     "capture_rows_per_frame": 64,
     "history_rows": 10000,
-    "history_rows_per_second": 4185.92241908167
+    "history_rows_per_second": 3140.9211575786403
   },
   "scenario": "CORE-BLOB-REFERENCE-INDEX",
   "level": "sim",
   "passed": true,
-  "git_sha": "daad6abe774aa24c4f92e9396c94f746d0ca1b20",
-  "at": "2026-10-17T18:10:18.635254Z",
+  "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b",
+  "at": "2026-10-17T18:33:46.98024Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -103,9 +103,9 @@
   "latency": {
     "history_10000_commit": {
       "samples": 1,
-      "p50_ms": 2388.959708,
-      "p95_ms": 2388.959708,
-      "max_ms": 2388.959708,
+      "p50_ms": 3183.779375,
+      "p95_ms": 3183.779375,
+      "max_ms": 3183.779375,
       "timeouts": 0
     }
   },

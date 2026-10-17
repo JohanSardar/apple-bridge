@@ -3,35 +3,35 @@
     "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
     "start": {
       "air": {
-        "at": "2026-10-17T18:13:50.537678Z",
+        "at": "2026-10-17T18:36:24.314893Z",
         "cpu_count": 8,
         "load_average": [
-          5.53,
-          6.8,
-          9.76
+          3.65,
+          5.16,
+          6.31
         ],
-        "cpu_idle_percent": 47,
-        "free_memory_bytes": 88064000,
+        "cpu_idle_percent": 87,
+        "free_memory_bytes": 332447744,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 2,
+        "heavy_queue_length": 3,
         "quiet": false
       }
     },
     "end": {
       "air": {
-        "at": "2026-10-17T18:13:54.138674Z",
+        "at": "2026-10-17T18:36:27.67966Z",
         "cpu_count": 8,
         "load_average": [
-          5.53,
-          6.8,
-          9.76
+          3.52,
+          5.1,
+          6.28
         ],
-        "cpu_idle_percent": 55,
-        "free_memory_bytes": 237125632,
+        "cpu_idle_percent": 80,
+        "free_memory_bytes": 195985408,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 2,
+        "heavy_queue_length": 3,
         "quiet": false
       }
     },
@@ -40,13 +40,13 @@
     "quiet_wait_ms": 0,
     "quiet_wait_expired": false
   },
-  "run_id": "run_01M55H3YCT7ADYND00C6C3RG07",
+  "run_id": "run_01M55JD8EQGYJ2A9D6GBJPM41J",
   "network_path": "loopback",
   "scenario": "CORE-PAIR",
   "level": "sim",
   "passed": true,
-  "git_sha": "daad6abe774aa24c4f92e9396c94f746d0ca1b20",
-  "at": "2026-10-17T18:13:51.642583Z",
+  "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b",
+  "at": "2026-10-17T18:36:25.431117Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -100,16 +100,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 6.619167,
-      "p95_ms": 6.619167,
-      "max_ms": 6.619167,
+      "p50_ms": 3.58525,
+      "p95_ms": 3.58525,
+      "max_ms": 3.58525,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 8.729167,
-      "p95_ms": 8.729167,
-      "max_ms": 8.729167,
+      "p50_ms": 6.810458,
+      "p95_ms": 6.810458,
+      "max_ms": 6.810458,
       "timeouts": 0
     }
   },
