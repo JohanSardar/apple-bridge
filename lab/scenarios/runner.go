@@ -450,6 +450,9 @@ func Run(ctx context.Context, s Scenario, level string) Evidence {
 				add("truth_multiplicity_mismatch_detected", detected)
 				evidence.Passed = detected
 				return evidence
+			case "blobs":
+				status, _ := world.Request(ctx, w.Gateway, "/v1/blobs/"+strings.Repeat("0",64), nil, nil)
+				if status == 404 { return fail("blob_route_missing") }
 			case "connect":
 			case "changes":
 				delete(effects, "probe")

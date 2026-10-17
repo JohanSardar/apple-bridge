@@ -1,0 +1,6 @@
+id: CORE-BLOB-CAP
+feature: core.blobs
+levels: [sim]
+given: [{world: {replicas: 1}}, {seed: {count: 4}}]
+when: [{blobs: {case: cap}}]
+then: [{converge: {}}]

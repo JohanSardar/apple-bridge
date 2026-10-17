@@ -1,0 +1,6 @@
+id: CORE-BLOB-GC
+feature: core.blobs
+levels: [sim]
+given: [{world: {replicas: 1}}, {seed: {count: 4}}]
+when: [{blobs: {case: gc}}]
+then: [{converge: {}}]

@@ -1,0 +1,6 @@
+id: CORE-BLOB-NO-DIGEST-AUTH
+feature: core.blobs
+levels: [sim]
+given: [{world: {replicas: 1}}, {seed: {count: 4}}]
+when: [{blobs: {case: no-digest-auth}}]
+then: [{converge: {}}]
