@@ -1,9 +1,9 @@
 {
   "scenario": "CORE-LIVE-LATENCY",
   "level": "replica",
-  "passed": false,
-  "git_sha": "3cd12831e2364de2fb5388c3da368387d0d448b8",
-  "at": "2026-10-17T05:06:10.835365Z",
+  "passed": true,
+  "git_sha": "46bcb8ba3e96417695670fb6727af71f0dd92615",
+  "at": "2026-10-17T05:07:47.935432Z",
   "assertions": [
     {
       "name": "replica_host_is_ubuntu",
@@ -26,12 +26,12 @@
       "passed": true
     },
     {
-      "name": "latency_effect_done→replica_visible:replica0",
-      "passed": false
+      "name": "latency_effect_done→gateway_visible",
+      "passed": true
     },
     {
-      "name": "latency_effect_done→gateway_visible",
-      "passed": false
+      "name": "latency_effect_done→replica_visible:replica0",
+      "passed": true
     },
     {
       "name": "replica_records_versions_and_cursor_consistent",
@@ -73,16 +73,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 200,
-      "p50_ms": 1.33125,
-      "p95_ms": 2944.021834,
-      "max_ms": 4717.325541,
+      "p50_ms": 1.882333,
+      "p95_ms": 6.336042,
+      "max_ms": 9.494458,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 200,
-      "p50_ms": 14.719916,
-      "p95_ms": 3047.764542,
-      "max_ms": 4729.434,
+      "p50_ms": 15.229,
+      "p95_ms": 97.909667,
+      "max_ms": 255.892417,
       "timeouts": 0
     }
   },

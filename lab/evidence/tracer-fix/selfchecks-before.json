@@ -1,0 +1,45 @@
+{
+  "command": "packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios/core/LAB-TRUTH-MULTIPLICITY.yaml lab/scenarios/core/LAB-MALFORMED-SCENARIO.yaml --level sim --json",
+  "condition": "Original title normalization and permissive option validation, with new lab self-check actions installed",
+  "exit_code": 1,
+  "results": [
+    {
+      "scenario": "LAB-MALFORMED-SCENARIO",
+      "level": "sim",
+      "passed": false,
+      "git_sha": "ae6ab6fbebd2952645a4f55030068451f9d3cc3a",
+      "at": "2026-10-17T04:58:08.673663Z",
+      "assertions": [
+        {
+          "name": "malformed_scenario_rejected",
+          "passed": false
+        }
+      ]
+    },
+    {
+      "scenario": "LAB-TRUTH-MULTIPLICITY",
+      "level": "sim",
+      "passed": false,
+      "git_sha": "ae6ab6fbebd2952645a4f55030068451f9d3cc3a",
+      "at": "2026-10-17T04:58:08.687765Z",
+      "assertions": [
+        {
+          "name": "replica_host_is_air",
+          "passed": true
+        },
+        {
+          "name": "bootstrap_snapshot",
+          "passed": true
+        },
+        {
+          "name": "scope_query_and_get",
+          "passed": true
+        },
+        {
+          "name": "truth_multiplicity_mismatch_detected",
+          "passed": false
+        }
+      ]
+    }
+  ]
+}
