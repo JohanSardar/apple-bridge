@@ -37,10 +37,11 @@ type Store struct {
 	capacity      map[contracts.Source]bool
 }
 type CommitResult struct {
-	Duplicate bool   `json:"duplicate,omitempty"`
-	After     uint64 `json:"after"`
-	Through   uint64 `json:"through"`
-	Degraded  bool   `json:"degraded"`
+	CommittedAt time.Time `json:"-"`
+	Duplicate   bool      `json:"duplicate,omitempty"`
+	After       uint64    `json:"after"`
+	Through     uint64    `json:"through"`
+	Degraded    bool      `json:"degraded"`
 }
 
 func Open(home string) (*Store, error) {
@@ -395,6 +396,7 @@ func (s *Store) CommitCapture(ctx context.Context, c contracts.Capture) (CommitR
 	if err = tx.Commit(); err != nil {
 		return result, err
 	}
+	result.CommittedAt = time.Now()
 	result.Through = cursor.Sequence
 	s.refreshBlobProtection(ctx)
 	s.signal()

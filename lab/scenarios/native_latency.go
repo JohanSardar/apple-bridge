@@ -26,6 +26,8 @@ type nativeTrace struct {
 }
 
 type NativeTiming struct {
+	GatewayVisibleWallNS  int64   `json:"gateway_visible_wall_ns"`
+	ReplicaVisibleWallNS  int64   `json:"replica_visible_wall_ns"`
 	CommitStartedWallNS   float64 `json:"commit_started_wall_ns"`
 	TriggerNotificationNS int64   `json:"trigger_notification_ns"`
 	SaveNS                int64   `json:"save_ns"`
@@ -122,9 +124,11 @@ func nativeLatencyEvidence(w *world.World, e *Evidence, effects []any, observers
 		}
 		if seen, ok := observers[0].observedExact(title); ok {
 			row.GatewayVisibleNS = seen.UptimeNS
+			row.GatewayVisibleWallNS = seen.At.UnixNano()
 		}
 		if seen, ok := observers[1].observedExact(title); ok {
 			row.ReplicaVisibleNS = seen.UptimeNS
+			row.ReplicaVisibleWallNS = seen.At.UnixNano()
 		}
 		sample("native_save→next_notification_delivery", row.SaveNS, row.NotificationNS)
 		sample("trigger_notification→debounce", row.TriggerNotificationNS, row.DebounceNS)
@@ -135,7 +139,7 @@ func nativeLatencyEvidence(w *world.World, e *Evidence, effects []any, observers
 		sample("capture_sent→gateway_commit_start", int64(row.CaptureWallNS), int64(row.CommitStartedWallNS))
 		sample("gateway_commit_duration", int64(row.CommitStartedWallNS), int64(row.GatewayCommitWallNS))
 		sample("capture_sent→gateway_commit", int64(row.CaptureWallNS), int64(row.GatewayCommitWallNS))
-		sample("gateway_commit→replica_visible", int64(row.GatewayCommitWallNS), int64(row.SaveWallNS)+row.ReplicaVisibleNS-row.SaveNS)
+		sample("gateway_commit→replica_visible", int64(row.GatewayCommitWallNS), row.ReplicaVisibleWallNS)
 		sample("trigger_notification→replica_visible", row.TriggerNotificationNS, row.ReplicaVisibleNS)
 		e.NativeTimings = append(e.NativeTimings, row)
 	}

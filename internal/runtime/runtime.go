@@ -222,8 +222,8 @@ func Start(ctx context.Context, cfg Config) error {
 				commitStartedAt := time.Now().UnixNano()
 				result, err := store.CommitCapture(ctx, c)
 				store.Capacity(c.Source, err)
-				committedAt := time.Now().UnixNano()
-				if err == nil && cfg.HelperLabCommands {
+				committedAt := result.CommittedAt.UnixNano()
+				if err == nil && cfg.HelperLabCommands && !result.CommittedAt.IsZero() {
 					keys := []string{}
 					for _, observation := range c.Observations {
 						keys = append(keys, fmt.Sprintf("%x", sha256.Sum256([]byte(observation.NativeKey))))
