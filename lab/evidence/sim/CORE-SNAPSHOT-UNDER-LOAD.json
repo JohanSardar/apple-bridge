@@ -1,0 +1,42 @@
+{
+  "network_path": "loopback",
+  "scenario": "CORE-SNAPSHOT-UNDER-LOAD",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "28e6e093ce8e9ad137f3df3a2c3f7f4b016a2c7e",
+  "at": "2026-10-17T05:20:30.579031Z",
+  "assertions": [
+    {
+      "name": "feed_network_loopback",
+      "passed": true
+    },
+    {
+      "name": "changes_committed_after_frozen_sequence_before_snapshot_end",
+      "passed": true
+    },
+    {
+      "name": "one_thousand_changes_during_bootstrap",
+      "passed": true
+    },
+    {
+      "name": "truth_gateway_replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "sqlite_integrity_gateway",
+      "passed": true
+    },
+    {
+      "name": "sqlite_integrity_replica",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_in_observed_journal_changes",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

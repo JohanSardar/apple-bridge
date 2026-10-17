@@ -1,0 +1,30 @@
+{
+  "network_path": "loopback",
+  "scenario": "CORE-PAIR",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "28e6e093ce8e9ad137f3df3a2c3f7f4b016a2c7e",
+  "at": "2026-10-17T05:18:53.825839Z",
+  "assertions": [
+    {
+      "name": "feed_network_loopback",
+      "passed": true
+    },
+    {
+      "name": "wrong_expired_replayed_code_rejected",
+      "passed": true
+    },
+    {
+      "name": "live_replica_revoked_within_one_second",
+      "passed": true
+    },
+    {
+      "name": "revoked_replica_no_further_data",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

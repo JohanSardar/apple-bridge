@@ -1,0 +1,93 @@
+{
+  "network_path": "loopback",
+  "scenario": "CORE-DISCONNECT-DETECT",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "28e6e093ce8e9ad137f3df3a2c3f7f4b016a2c7e",
+  "at": "2026-10-17T05:17:28.814171Z",
+  "assertions": [
+    {
+      "name": "feed_network_loopback",
+      "passed": true
+    },
+    {
+      "name": "replica_host_is_air",
+      "passed": true
+    },
+    {
+      "name": "bootstrap_snapshot",
+      "passed": true
+    },
+    {
+      "name": "scope_query_and_get",
+      "passed": true
+    },
+    {
+      "name": "silent_blackhole_detected_within_15_seconds_reads_continue",
+      "passed": true
+    },
+    {
+      "name": "convergence_truth_gateway_replicas",
+      "passed": true
+    },
+    {
+      "name": "latency_observations_complete",
+      "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass",
+      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
+    },
+    {
+      "name": "sse_contiguous_watermarks_0",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_watermarks_1",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_0",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_1",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "effect_done→gateway_visible": {
+      "samples": 2,
+      "p50_ms": 9.013625,
+      "p95_ms": 13.142084,
+      "max_ms": 13.142084,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica0": {
+      "samples": 2,
+      "p50_ms": 10.491584,
+      "p95_ms": 1002.257625,
+      "max_ms": 1002.257625,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

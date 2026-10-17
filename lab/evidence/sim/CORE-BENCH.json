@@ -1,0 +1,43 @@
+{
+  "network_path": "loopback",
+  "metrics": {
+    "effect_done_to_gateway_capture_ms": 53711.526542,
+    "fixture_and_capture_ms": 54863.116667,
+    "gateway_rss_bytes": 28327936,
+    "gateway_wal_bytes": 49518312,
+    "messages": 200000,
+    "replica_rss_bytes": 25051136,
+    "replica_wal_bytes": 6847472
+  },
+  "scenario": "CORE-BENCH",
+  "level": "sim",
+  "passed": false,
+  "git_sha": "28e6e093ce8e9ad137f3df3a2c3f7f4b016a2c7e",
+  "at": "2026-10-17T05:15:49.626294Z",
+  "assertions": [
+    {
+      "name": "feed_network_loopback",
+      "passed": true
+    },
+    {
+      "name": "two_hundred_thousand_message_capture_replication_fts5",
+      "passed": true
+    },
+    {
+      "name": "truth_gateway_replica_convergence",
+      "passed": false
+    }
+  ],
+  "latency": {
+    "fts5_query_gateway": {
+      "samples": 100,
+      "p50_ms": 3.313334,
+      "p95_ms": 6.822042,
+      "max_ms": 43.833042,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}
