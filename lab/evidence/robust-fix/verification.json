@@ -50,28 +50,72 @@
     ],
     "historical_rebase_lineage": {
       "7ceb4792e9011c9b0802b2eef6f8771a188dbbce": {
-        "equivalent_unit_commit_after_rebase": "0b76f7308fb6eca2a0a8f9420b8e42e1cced90dc",
+        "equivalent_unit_commit_after_rebase": "580c77d6dba94e2cc4325a21d927bbaa1a3a7252",
         "subject": "Verify capture replay convergence after every synchronized gateway crash"
       },
       "7e387b43e9c4a3b9aa40e5e52ae5b54f0c8160d5": {
-        "equivalent_unit_commit_after_rebase": "a6de3bb9d93fc3861dea53b19e51a945a0aeae5e",
+        "equivalent_unit_commit_after_rebase": "10c3b4333911ed7da77edd0d180098d5d57af135",
         "subject": "Exercise Linux doctor on an isolated disk-backed replica home"
       },
       "996ba7d7023fb7295dcd011d23dcfb1e8b1990d8": {
-        "equivalent_unit_commit_after_rebase": "a2b60fada687f35a80deaf6cf50f52a778e750ec",
+        "equivalent_unit_commit_after_rebase": "9018ce7e1c7a307a3090d1049e956d40ccecf0ed",
         "subject": "Keep host telemetry available under process-list contention"
       },
       "5a49e7496beba8ba1efc14ea117c2ac5df95f643": {
-        "equivalent_unit_commit_after_rebase": "0b76f7308fb6eca2a0a8f9420b8e42e1cced90dc",
+        "equivalent_unit_commit_after_rebase": "580c77d6dba94e2cc4325a21d927bbaa1a3a7252",
         "subject": "Verify capture replay convergence after every synchronized gateway crash"
       },
       "ae09ac3bd3439742d810a9aa33c53b84722a788f": {
-        "equivalent_unit_commit_after_rebase": "c6b70e724e871b5749355fa0fdcbda642501464f",
+        "equivalent_unit_commit_after_rebase": "cc89c7d29cf0d042f29602158f75d3c79526fa48",
         "subject": "Bound recovery drains and report non-quiet benchmark fallback explicitly"
       },
       "0306fb7cb2b427f921f7fabeafc6c63077c84584": {
-        "equivalent_unit_commit_after_rebase": "baace979c2a2976f06ed34ade75dd3e0fd0b7506",
+        "equivalent_unit_commit_after_rebase": "4f2a4886560a65af2d83050113df3b3aa4d5e084",
         "subject": "Use portable remote signals and remove integrity polling from benchmark capture"
+      },
+      "e614011c2a993f59372c960fd37866ac01b5fe46": {
+        "equivalent_unit_commit_after_rebase": "9547bfb0ba3efe5d15b1aa8d5b9235567fccda19",
+        "subject": "Record host conditions, synchronize crash scenarios, and complete doctor diagnostics"
+      },
+      "6039778c222cfde7cfaef631bcc292ea1db3dfe1": {
+        "equivalent_unit_commit_after_rebase": "236d9e37f70ac8e7e428eef520b69fc5e183a79e",
+        "subject": "Register doctor diagnostics and remote benchmark coverage"
+      },
+      "bf2acfd81dd8d9fdae322548dc8330f3bcc64865": {
+        "equivalent_unit_commit_after_rebase": "a4f695d19f32aabad8592f193ef75b3deffac514",
+        "subject": "Require a written batch at every apply crash boundary"
+      },
+      "a6de3bb9d93fc3861dea53b19e51a945a0aeae5e": {
+        "equivalent_unit_commit_after_rebase": "10c3b4333911ed7da77edd0d180098d5d57af135",
+        "subject": "Exercise Linux doctor on an isolated disk-backed replica home"
+      },
+      "0b76f7308fb6eca2a0a8f9420b8e42e1cced90dc": {
+        "equivalent_unit_commit_after_rebase": "580c77d6dba94e2cc4325a21d927bbaa1a3a7252",
+        "subject": "Verify capture replay convergence after every synchronized gateway crash"
+      },
+      "80efd8a1e4ab6b1055b8ddff2705d44705ade89d": {
+        "equivalent_unit_commit_after_rebase": "72654f74dc54e579bd2e6ec856cf925c985efa67",
+        "subject": "Record full core run with host contention and retained failures"
+      },
+      "c6b70e724e871b5749355fa0fdcbda642501464f": {
+        "equivalent_unit_commit_after_rebase": "cc89c7d29cf0d042f29602158f75d3c79526fa48",
+        "subject": "Bound recovery drains and report non-quiet benchmark fallback explicitly"
+      },
+      "a2b60fada687f35a80deaf6cf50f52a778e750ec": {
+        "equivalent_unit_commit_after_rebase": "9018ce7e1c7a307a3090d1049e956d40ccecf0ed",
+        "subject": "Keep host telemetry available under process-list contention"
+      },
+      "97d876165f460dd427731f43a76a896fa2395738": {
+        "equivalent_unit_commit_after_rebase": "ee758bfe5771718fa7a7197467442bbe48a7d1c2",
+        "subject": "Record Ubuntu acceptance and encrypted-disk doctor probes"
+      },
+      "baace979c2a2976f06ed34ade75dd3e0fd0b7506": {
+        "equivalent_unit_commit_after_rebase": "4f2a4886560a65af2d83050113df3b3aa4d5e084",
+        "subject": "Use portable remote signals and remove integrity polling from benchmark capture"
+      },
+      "41c46d82102923f7c5e0848aa0e4a17009c228d7": {
+        "equivalent_unit_commit_after_rebase": "5fba941e56974be9528b50eb4d547cacf0e77ac4",
+        "subject": "Verify complete Ubuntu doctor recovery with portable process signals"
       }
     },
     "products": {
@@ -4731,6 +4775,74 @@
           "passed": true
         }
       ]
+    },
+    "final_rebased_commits": [
+      {
+        "sha": "2b09a72ed828f0706b09e84b630a928737d3d357",
+        "subject": "Verify integrated robustness fixes across full sim and Ubuntu replica sets"
+      },
+      {
+        "sha": "e8592bac8af897bbe5b1ce2184687875064a56e0",
+        "subject": "Record verified robustness baselines and Ubuntu diagnostics"
+      },
+      {
+        "sha": "5fba941e56974be9528b50eb4d547cacf0e77ac4",
+        "subject": "Verify complete Ubuntu doctor recovery with portable process signals"
+      },
+      {
+        "sha": "4f2a4886560a65af2d83050113df3b3aa4d5e084",
+        "subject": "Use portable remote signals and remove integrity polling from benchmark capture"
+      },
+      {
+        "sha": "ee758bfe5771718fa7a7197467442bbe48a7d1c2",
+        "subject": "Record Ubuntu acceptance and encrypted-disk doctor probes"
+      },
+      {
+        "sha": "9018ce7e1c7a307a3090d1049e956d40ccecf0ed",
+        "subject": "Keep host telemetry available under process-list contention"
+      },
+      {
+        "sha": "cc89c7d29cf0d042f29602158f75d3c79526fa48",
+        "subject": "Bound recovery drains and report non-quiet benchmark fallback explicitly"
+      },
+      {
+        "sha": "72654f74dc54e579bd2e6ec856cf925c985efa67",
+        "subject": "Record full core run with host contention and retained failures"
+      },
+      {
+        "sha": "580c77d6dba94e2cc4325a21d927bbaa1a3a7252",
+        "subject": "Verify capture replay convergence after every synchronized gateway crash"
+      },
+      {
+        "sha": "10c3b4333911ed7da77edd0d180098d5d57af135",
+        "subject": "Exercise Linux doctor on an isolated disk-backed replica home"
+      },
+      {
+        "sha": "a4f695d19f32aabad8592f193ef75b3deffac514",
+        "subject": "Require a written batch at every apply crash boundary"
+      },
+      {
+        "sha": "236d9e37f70ac8e7e428eef520b69fc5e183a79e",
+        "subject": "Register doctor diagnostics and remote benchmark coverage"
+      },
+      {
+        "sha": "9547bfb0ba3efe5d15b1aa8d5b9235567fccda19",
+        "subject": "Record host conditions, synchronize crash scenarios, and complete doctor diagnostics"
+      }
+    ],
+    "verified_source_equivalent_commit_after_documentation_only_rebase": "e8592bac8af897bbe5b1ce2184687875064a56e0",
+    "final_rebase_code_diff_empty": true,
+    "product_builds": {
+      "darwin/arm64": {
+        "command": "go build -p 2 -o bin/bridge-product ./cmd/bridge",
+        "sha256": "29b6a3712b0c53cfdeef67a671c779dc9b4666951e28ec80be68c6a97d3aa4d1",
+        "new_crash_hook_symbols_and_markers_absent": true
+      },
+      "linux/amd64": {
+        "command": "GOOS=linux GOARCH=amd64 go build -p 2 -o bin/bridge-linux-product ./cmd/bridge",
+        "sha256": "e828da5af3137da969e7a6ed657ae1584f6ac58a43b65a8df5ffba2690276a0b",
+        "new_crash_hook_symbols_and_markers_absent": true
+      }
     }
   }
 }
