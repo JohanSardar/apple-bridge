@@ -431,7 +431,7 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 			observer.mu.Lock()
 			for _, change := range observer.changes {
 				if recordTitle(change.Change.Record) == tag+" boundary-0" {
-					eviction = eviction || change.Change.Op == "evict"
+					eviction = eviction || (change.Change.Op == "evict" && change.Change.Record.TombstoneReason == "window_evicted")
 					deleted = deleted || change.Change.Op == "delete"
 				}
 			}

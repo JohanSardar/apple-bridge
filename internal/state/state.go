@@ -378,6 +378,9 @@ func (s *Store) CommitCapture(ctx context.Context, c contracts.Capture) (CommitR
 			continue
 		}
 		record := contracts.Record{Collection: o.Collection, ID: id, Version: old.Version + 1, Source: c.Source, ObservedAt: o.ObservedAt, Deleted: deleted, Data: data, Coverage: contracts.Coverage{Fields: "complete", Missing: []string{}}}
+		if o.Kind == "evict" {
+			record.TombstoneReason = "window_evicted"
+		}
 		encoded, err := json.Marshal(record)
 		if err != nil {
 			return result, err
@@ -395,10 +398,6 @@ func (s *Store) CommitCapture(ctx context.Context, c contracts.Capture) (CommitR
 		}
 		if o.Kind == "evict" {
 			op = "evict"
-			record.Coverage.Missing = []string{"window_evicted"}
-			if err = writeRecord(ctx, tx, record, cursor.Sequence); err != nil {
-				return result, err
-			}
 		}
 		if err = appendChange(ctx, tx, cursor, record, op); err != nil {
 			return result, err

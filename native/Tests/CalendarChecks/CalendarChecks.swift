@@ -32,8 +32,12 @@ struct CalendarChecks {
         let tokyo = TimeZone(identifier: "Asia/Tokyo")!
         let tokyoDate = try CalendarTime.date("2026-03-08", allDay: true, zone: tokyo)
         precondition(CalendarTime.floating(tokyoDate, zone: tokyo) == "2026-03-08")
+        precondition(CalendarTime.identity("allday", occurrence: floating, floatingZone: calendar.timeZone) == "allday|2026-03-08")
+        precondition(CalendarTime.identity("allday", occurrence: tokyoDate, floatingZone: tokyo) == "allday|2026-03-08")
         let original = CalendarTime.identity("series", occurrence: before)
-        precondition(original == CalendarTime.identity("series", occurrence: before))
+        precondition(original == "series|2026-03-07T14:00:00.000Z")
+        let sameOriginal = try CalendarTime.date("2026-03-07T09:00:00-05:00", allDay: false, zone: calendar.timeZone)
+        precondition(CalendarTime.identity("series", occurrence: sameOriginal) == original)
         precondition(original != CalendarTime.identity("series", occurrence: after))
         precondition(CalendarTime.identity("single", occurrence: nil) == "single")
         print("Calendar time checks passed: chunk coverage, leap/DST days, wall time, floating dates, occurrence identity")

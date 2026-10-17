@@ -30,7 +30,7 @@ public final class CalendarSource: Source {
     }
 
     private func key(_ event: EKEvent) -> String {
-        CalendarTime.identity(event.calendarItemIdentifier, occurrence: event.hasRecurrenceRules || event.isDetached ? event.occurrenceDate : nil)
+        CalendarTime.identity(event.calendarItemIdentifier, occurrence: event.hasRecurrenceRules || event.isDetached ? event.occurrenceDate : nil, floatingZone: event.isAllDay ? .current : nil)
     }
 
     private func ref(_ calendar: EKCalendar) -> JSON {
@@ -42,11 +42,11 @@ public final class CalendarSource: Source {
     }
 
     private func data(_ event: EKEvent) -> JSON {
-        let zone = event.timeZone ?? .current
+        let zone = event.isAllDay ? TimeZone.current : (event.timeZone ?? .current)
         var fields: [String: JSON] = ["calendar_id": ref(event.calendar), "title": .string(event.title ?? ""), "notes": event.notes.map(JSON.string) ?? .null, "location": event.location.map(JSON.string) ?? .null, "url": event.url.map { .string($0.absoluteString) } ?? .null, "start": .string(event.isAllDay ? CalendarTime.floating(event.startDate, zone: zone) : timestamp(event.startDate)), "end": .string(event.isAllDay ? CalendarTime.floating(event.endDate, zone: zone) : timestamp(event.endDate)), "all_day": .bool(event.isAllDay), "time_zone": event.timeZone.map { .string($0.identifier) } ?? .null, "is_exception": .bool(event.isDetached), "availability": .number(Double(event.availability.rawValue)), "status": .number(Double(event.status.rawValue)), "attendees": .array((event.attendees ?? []).map { .object(["name": $0.name.map(JSON.string) ?? .null, "url": .string($0.url.absoluteString), "status": .number(Double($0.participantStatus.rawValue)), "role": .number(Double($0.participantRole.rawValue)), "type": .number(Double($0.participantType.rawValue))]) }), "alarms": .array((event.alarms ?? []).map { .object(["absolute_date": $0.absoluteDate.map { .string(timestamp($0)) } ?? .null, "relative_offset": .number($0.relativeOffset)]) })]
         if event.hasRecurrenceRules || event.isDetached {
             fields["series_id"] = .string(event.calendarItemExternalIdentifier ?? event.calendarItemIdentifier)
-            fields["occurrence_date"] = event.occurrenceDate.map { .string(timestamp($0)) } ?? .null
+            fields["occurrence_date"] = event.occurrenceDate.map { .string(event.isAllDay ? CalendarTime.floating($0, zone: .current) : timestamp($0)) } ?? .null
         }
         fields["recurrence"] = event.recurrenceRules.map { rules in .array(rules.map { rule in
             func numbers(_ values: [NSNumber]?) -> JSON { .array((values ?? []).map { .number($0.doubleValue) }) }
@@ -101,7 +101,7 @@ public final class CalendarSource: Source {
                 let native = key(event)
                 let identity = "calendar.event/" + native
                 if current[identity] != nil { continue }
-                let occurrence = event.hasRecurrenceRules || event.isDetached ? event.occurrenceDate.map { "|" + timestamp($0) } ?? "" : ""
+                let occurrence = event.hasRecurrenceRules || event.isDetached ? event.occurrenceDate.map { "|" + (event.isAllDay ? CalendarTime.floating($0, zone: .current) : timestamp($0)) } ?? "" : ""
                 let alias = event.calendarItemExternalIdentifier.map { event.calendar.source.sourceIdentifier + "/" + event.calendar.calendarIdentifier + "/" + $0 + occurrence } ?? ""
                 let value = observation("calendar.event", native, data(event), alias: alias)
                 current[identity] = value
@@ -122,7 +122,7 @@ public final class CalendarSource: Source {
                 if (try? fresh(previous["native_key"].string)) != nil { continue }
                 var value = previous["data"]
                 if value["occurrence_date"] == .null, let outside = gate.store.calendarItem(withIdentifier: previous["native_key"].string) as? EKEvent { value = data(outside) }
-                let zone = TimeZone(identifier: value["time_zone"].string) ?? .current
+                let zone = value["all_day"].bool ? TimeZone.current : (TimeZone(identifier: value["time_zone"].string) ?? .current)
                 if let start = try? CalendarTime.date(value["start"].string, allDay: value["all_day"].bool, zone: zone), let end = try? CalendarTime.date(value["end"].string, allDay: value["all_day"].bool, zone: zone) {
                     evicted = start >= bounds.end || end <= bounds.start
                 }
@@ -209,7 +209,7 @@ public final class CalendarSource: Source {
             guard let zone = TimeZone(identifier: value.string) else { throw SourceFailure.invalid }
             event.timeZone = zone
         }
-        let zone = event.timeZone ?? .current
+        let zone = event.isAllDay ? TimeZone.current : (event.timeZone ?? .current)
         if let value = args.object["start"] { event.startDate = try CalendarTime.date(value.string, allDay: event.isAllDay, zone: zone) }
         if let value = args.object["end"] { event.endDate = try CalendarTime.date(value.string, allDay: event.isAllDay, zone: zone) }
         guard let start = event.startDate, let end = event.endDate, end > start else { throw SourceFailure.invalid }

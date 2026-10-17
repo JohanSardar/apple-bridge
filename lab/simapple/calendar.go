@@ -256,6 +256,12 @@ func (f *fakeApple) calendarCommand(wire *applepeer.Wire, frame contracts.IPCFra
 			before = o.Data
 			expected, native := map[string]any{}, calendarData(o)
 			decodeNative(frame.ExpectedState, &expected)
+			membership, _ := native["calendar_id"].(map[string]any)
+			reference, _ := membership["$ref"].(map[string]any)
+			if reference["native_key"] != action.ExpectedListKey {
+				f.mu.Unlock()
+				return reject(contracts.ErrConflict)
+			}
 			delete(expected, "calendar_id")
 			delete(native, "calendar_id")
 			if !reflect.DeepEqual(expected, native) {
@@ -328,9 +334,27 @@ func (f *fakeApple) calendarCommand(wire *applepeer.Wire, frame contracts.IPCFra
 		for key, o := range f.records {
 			d := calendarData(o)
 			occ, _ := d["occurrence_date"].(string)
-			if d["series_id"] == series && occ >= original {
+			if o.Kind != "absent" && d["series_id"] == series && occ >= original {
 				targets = append(targets, key)
 			}
+		}
+	}
+	if a.Span == "future" && series != "" {
+		prior := []string{}
+		for key, o := range f.records {
+			d := calendarData(o)
+			occ, _ := d["occurrence_date"].(string)
+			if o.Kind != "absent" && d["series_id"] == series && occ < original {
+				prior = append(prior, key)
+			}
+		}
+		for _, key := range prior {
+			o := f.records[key]
+			value := calendarData(o)
+			value["recurrence"] = boundedCalendarRecurrence(value["recurrence"], len(prior))
+			o.Data, _ = json.Marshal(value)
+			o.ObservedAt = time.Now().UTC()
+			f.records[key] = o
 		}
 	}
 	newSeries := contracts.NewID("series")
@@ -367,6 +391,7 @@ func (f *fakeApple) calendarCommand(wire *applepeer.Wire, frame contracts.IPCFra
 					value["is_exception"] = true
 				} else {
 					value["series_id"] = newSeries
+					value["recurrence"] = boundedCalendarRecurrence(value["recurrence"], len(targets))
 				}
 			}
 			if value["all_day"] == nil {
@@ -507,6 +532,9 @@ func expandCalendar(base contracts.Observation) ([]contracts.Observation, error)
 			value[k] = v
 		}
 		original := occurrence.UTC().Format(time.RFC3339Nano)
+		if allDay {
+			original = occurrence.Format(time.DateOnly)
+		}
 		value["start"] = occurrence.UTC().Format(layout)
 		value["end"] = finish.UTC().Format(layout)
 		if allDay {
@@ -529,4 +557,26 @@ func expandCalendar(base contracts.Observation) ([]contracts.Observation, error)
 func calendarWritable(o contracts.Observation) bool {
 	data := calendarData(o)
 	return o.Collection == "calendar.calendar" && o.Kind != "absent" && data["writable"] == true && data["type"] != "subscribed"
+}
+
+func boundedCalendarRecurrence(value any, count int) any {
+	rules, ok := value.([]any)
+	if !ok {
+		return value
+	}
+	result := []any{}
+	for _, raw := range rules {
+		rule, ok := raw.(map[string]any)
+		if !ok {
+			return value
+		}
+		copy := map[string]any{}
+		for k, v := range rule {
+			copy[k] = v
+		}
+		copy["count"] = count
+		delete(copy, "end")
+		result = append(result, copy)
+	}
+	return result
 }

@@ -36,14 +36,15 @@ type Coverage struct {
 }
 
 type Record struct {
-	Collection string          `json:"collection"`
-	ID         string          `json:"id"`
-	Version    uint64          `json:"version"`
-	Source     Source          `json:"source"`
-	ObservedAt time.Time       `json:"observed_at"`
-	Deleted    bool            `json:"deleted"`
-	Coverage   Coverage        `json:"coverage"`
-	Data       json.RawMessage `json:"data"`
+	TombstoneReason string          `json:"tombstone_reason,omitempty"`
+	Collection      string          `json:"collection"`
+	ID              string          `json:"id"`
+	Version         uint64          `json:"version"`
+	Source          Source          `json:"source"`
+	ObservedAt      time.Time       `json:"observed_at"`
+	Deleted         bool            `json:"deleted"`
+	Coverage        Coverage        `json:"coverage"`
+	Data            json.RawMessage `json:"data"`
 }
 
 type Cursor struct {

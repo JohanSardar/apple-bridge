@@ -43,7 +43,7 @@ public enum CalendarTime {
         return date
     }
 
-    public static func identity(_ identifier: String, occurrence: Date?) -> String {
-        identifier + (occurrence.map { "|" + timestamp($0) } ?? "")
+    public static func identity(_ identifier: String, occurrence: Date?, floatingZone: TimeZone? = nil) -> String {
+        identifier + (occurrence.map { date in "|" + (floatingZone.map { zone in floating(date, zone: zone) } ?? timestamp(date)) } ?? "")
     }
 }

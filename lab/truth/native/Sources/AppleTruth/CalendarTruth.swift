@@ -58,8 +58,8 @@ struct CalendarTruth {
                 event.calendar = calendar; event.title = title
                 event.isAllDay = request["all_day"] as? Bool ?? false
                 event.timeZone = TimeZone(identifier: request["time_zone"] as? String ?? "America/New_York")
-                event.startDate = try date(request["start"] as? String ?? "", allDay: event.isAllDay, zone: event.timeZone ?? .current)
-                event.endDate = try date(request["end"] as? String ?? "", allDay: event.isAllDay, zone: event.timeZone ?? .current)
+                event.startDate = try date(request["start"] as? String ?? "", allDay: event.isAllDay, zone: event.isAllDay ? .current : (event.timeZone ?? .current))
+                event.endDate = try date(request["end"] as? String ?? "", allDay: event.isAllDay, zone: event.isAllDay ? .current : (event.timeZone ?? .current))
                 if let recurrence = request["recurrence"] as? [[String: Any]], let rule = recurrence.first {
                     let frequency: EKRecurrenceFrequency = rule["frequency"] as? String == "weekly" ? .weekly : .daily
                     event.addRecurrenceRule(EKRecurrenceRule(recurrenceWith: frequency, interval: rule["interval"] as? Int ?? 1, end: EKRecurrenceEnd(occurrenceCount: rule["count"] as? Int ?? 3)))
@@ -73,7 +73,7 @@ struct CalendarTruth {
                 if let title = request["new_title"] as? String { guard title.contains(tag) else { throw TruthFailure.invalid }; event.title = title }
                 if let value = request["start"] as? String {
                     let duration = event.endDate.timeIntervalSince(event.startDate)
-                    event.startDate = try date(value, allDay: event.isAllDay, zone: event.timeZone ?? .current)
+                    event.startDate = try date(value, allDay: event.isAllDay, zone: event.isAllDay ? .current : (event.timeZone ?? .current))
                     event.endDate = event.startDate.addingTimeInterval(duration)
                 }
                 try store.save(event, span: request["span"] as? String == "future" ? .futureEvents : .thisEvent, commit: true)
@@ -92,8 +92,8 @@ struct CalendarTruth {
             return ["status": "verified", "effect_uptime_ns": clock_gettime_nsec_np(CLOCK_UPTIME_RAW)]
         }
         let records: [[String: Any]] = selected.map { event in
-            let zone = event.timeZone ?? .current
-            return ["id": event.calendarItemIdentifier, "external_id": event.calendarItemExternalIdentifier ?? "", "calendar_id": event.calendar.calendarIdentifier, "title": event.title ?? "", "start": event.isAllDay ? floating(event.startDate, zone: zone) : stamp(event.startDate), "end": event.isAllDay ? floating(event.endDate, zone: zone) : stamp(event.endDate), "all_day": event.isAllDay, "time_zone": event.timeZone?.identifier ?? "", "is_exception": event.isDetached, "occurrence_date": event.occurrenceDate.map(stamp) ?? "", "recurring": event.hasRecurrenceRules]
+            let zone = event.isAllDay ? TimeZone.current : (event.timeZone ?? .current)
+            return ["id": event.calendarItemIdentifier, "external_id": event.calendarItemExternalIdentifier ?? "", "calendar_id": event.calendar.calendarIdentifier, "title": event.title ?? "", "start": event.isAllDay ? floating(event.startDate, zone: zone) : stamp(event.startDate), "end": event.isAllDay ? floating(event.endDate, zone: zone) : stamp(event.endDate), "all_day": event.isAllDay, "time_zone": event.timeZone?.identifier ?? "", "is_exception": event.isDetached, "occurrence_date": event.occurrenceDate.map { event.isAllDay ? floating($0,zone:.current) : stamp($0) } ?? "", "recurring": event.hasRecurrenceRules]
         }
         return ["status": "verified", "calendars": calendars.map { ["id": $0.calendarIdentifier, "title": "Bridge Test", "writable": $0.allowsContentModifications] }, "records": records]
     }
