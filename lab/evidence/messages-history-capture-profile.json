@@ -1,0 +1,11 @@
+{
+  "stage": "before_gateway_commit",
+  "first_failing_source": "contacts",
+  "capture_failures": 76,
+  "records": {
+    "system.source": 4
+  },
+  "helper_capture_sent": 76,
+  "helper_committed_ack": 0,
+  "reason": "Repeated Contacts capture rejection disconnects the Helper before any Messages capture can commit"
+}

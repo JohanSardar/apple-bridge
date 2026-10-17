@@ -94,12 +94,31 @@ func runNativeMessagesCommands(ctx context.Context, s Scenario, level string, e 
 	text := "[ab-test " + e.RunID + "] self command"
 	args := map[string]any{"chat_id": chatID, "text": text}
 	if s.ID == "MSG-SEND-FILES" {
-		args["files"] = []contracts.MessageFile{{Name: "ab-one.txt", Data: base64.StdEncoding.EncodeToString([]byte(text + " one"))}, {Name: "ab-two.txt", Data: base64.StdEncoding.EncodeToString([]byte(text + " two"))}}
+		args["files"] = []contracts.MessageFile{{Name: "ab-" + e.RunID + "-one.txt", Data: base64.StdEncoding.EncodeToString([]byte(text + " one"))}, {Name: "ab-" + e.RunID + "-two.txt", Data: base64.StdEncoding.EncodeToString([]byte(text + " two"))}}
 	}
 	var maximum int64
 	native.QueryRowContext(ctx, "SELECT COALESCE(MAX(ROWID),0) FROM message").Scan(&maximum)
 	raw, _ := json.Marshal(args)
 	c := contracts.Command{ID: contracts.NewCommandID(), Op: "messages.send", Args: raw, WaitMS: 15000}
+	cleanupDirectory := filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "AppleBridgeDev", "messages-command-cleanup")
+	if os.MkdirAll(cleanupDirectory, 0700) != nil {
+		add("cleanup_registered_before_submit", false)
+		return e
+	}
+	cleanupPath := filepath.Join(cleanupDirectory, e.RunID+".json")
+	cleanup := map[string]any{"run_id": e.RunID, "command_id": c.ID, "baseline_max_row_id": maximum, "created_at": time.Now().UTC(), "cleanup_state": "pending_unlock", "scenario": s.ID, "level": level}
+	saveCleanup := func() error {
+		data, err := json.Marshal(cleanup)
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(cleanupPath, data, 0600)
+	}
+	if saveCleanup() != nil {
+		add("cleanup_registered_before_submit", false)
+		return e
+	}
+	add("cleanup_registered_before_submit", true)
 	type seen struct {
 		at   time.Time
 		guid string
@@ -148,6 +167,9 @@ func runNativeMessagesCommands(ctx context.Context, s Scenario, level string, e 
 	if !observed {
 		var evidence map[string]any
 		json.Unmarshal(outcome.Evidence, &evidence)
+		cleanup["native_parts"] = evidence["parts"]
+		cleanup["native_key"] = evidence["native_key"]
+		saveCleanup()
 		if parts, ok := evidence["parts"].([]any); ok {
 			codes := []any{}
 			for _, part := range parts {
@@ -170,6 +192,9 @@ func runNativeMessagesCommands(ctx context.Context, s Scenario, level string, e 
 		CaptureCheckpoint string `json:"capture_checkpoint"`
 	}
 	json.Unmarshal(outcome.Evidence, &evidence)
+	cleanup["native_parts"] = evidence.Parts
+	cleanup["native_key"] = evidence.NativeKey
+	saveCleanup()
 	add("request_hash_bound", evidence.Fingerprint == outcome.RequestHash && evidence.CaptureCheckpoint != "")
 	var fromMe, joined int
 	err = native.QueryRowContext(ctx, "SELECT is_from_me,(SELECT COUNT(*) FROM chat_message_join j WHERE j.message_id=m.ROWID) FROM message m WHERE guid=?", evidence.NativeKey).Scan(&fromMe, &joined)
@@ -199,6 +224,8 @@ func runNativeMessagesCommands(ctx context.Context, s Scenario, level string, e 
 	}
 	select {
 	case echo := <-echoes:
+		cleanup["incoming_echo_native_key"] = echo.guid
+		saveCleanup()
 		for i, endpoint := range endpoints {
 			visible := w.Await(5*time.Second, func() bool {
 				var id string

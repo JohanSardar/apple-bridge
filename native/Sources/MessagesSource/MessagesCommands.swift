@@ -143,7 +143,7 @@ public actor MessagesCommands {
             let name = file["name"].string
             guard !name.isEmpty, name == URL(fileURLWithPath: name).lastPathComponent, name != ".", name != "..", let bytes = Data(base64Encoded: file["data"].string), bytes.count <= 131072 else { throw SourceFailure.invalid }
             let url = directory.appendingPathComponent("\(index)-" + name)
-            try bytes.write(to: url, options: [.atomic, .withoutOverwriting])
+            try bytes.write(to: url, options: [.withoutOverwriting])
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
             parts.append(.object(["kind": .string("attachment"), "path": .string(url.path), "name": .string(url.lastPathComponent), "digest": .string(BodyDigest.hash(bytes))]))
         }
@@ -154,7 +154,12 @@ public actor MessagesCommands {
         let reader = try MessagesReader(path: path)
         let route = try verifyRoute(prepared.action, reader: reader)
         guard route == prepared.nativeState["destination"] else { throw SourceFailure.conflict }
-        let parts = try parts(prepared)
+        let parts: [JSON]
+        do {parts=try self.parts(prepared)}
+        catch {
+            let native=error as NSError
+            return .object(["source":.string("messages"),"disposition":.string("failed_no_effect"),"observed":.bool(false),"reason":.string("staging_failed"),"error_domain":.string(native.domain),"error_code":.number(Double(native.code)),"fingerprint":.string(prepared.fingerprint)])
+        }
         var outcomes: [JSON] = []
         let deadline = ContinuousClock.now.advanced(by: .seconds(10))
         for (index, part) in parts.enumerated() {
@@ -177,7 +182,10 @@ public actor MessagesCommands {
             value["max_row_id"] = .number(Double(maximum))
             value["payload_fingerprint"] = .string(BodyDigest.hash(try JSONEncoder().encode(part)))
             outcomes.append(.object(value))
-            if evidence["disposition"].string == "indeterminate" { break }
+            if evidence["disposition"].string == "indeterminate" {
+                if index+1<parts.count {for remaining in (index+1)..<parts.count {outcomes.append(.object(["index":.number(Double(remaining)),"kind":parts[remaining]["kind"],"disposition":.string("not_dispatched"),"reason":.string("prior_part_indeterminate")]))}}
+                break
+            }
         }
         let result = aggregate(outcomes, prepared: prepared)
         if labCommands && ["locally_observed","delivered"].contains(result["disposition"].string) {try recordProof(route,parts:parts)}

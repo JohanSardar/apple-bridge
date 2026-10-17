@@ -227,6 +227,22 @@ func Start(ctx context.Context, cfg Config) error {
 				commitStartedAt := time.Now().UnixNano()
 				result, err := store.CommitCapture(ctx, c)
 				store.Capacity(c.Source, err)
+				if err != nil && cfg.HelperLabCommands {
+					code := "capture_error"
+					var problem *contracts.Error
+					if errors.As(err, &problem) {
+						code = problem.Code
+					}
+					var sqlite interface{ Code() int }
+					if errors.As(err, &sqlite) {
+						code = fmt.Sprintf("sqlite_%d", sqlite.Code())
+					}
+					data, _ := json.Marshal(map[string]any{"stage": "gateway_capture_rejected", "source": c.Source, "error_code": code, "error_type": fmt.Sprintf("%T", err), "observations": len(c.Observations)})
+					if file, openErr := os.OpenFile(filepath.Join(cfg.Home, "capture-trace.jsonl"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600); openErr == nil {
+						file.Write(append(data, '\n'))
+						file.Close()
+					}
+				}
 				committedAt := result.CommittedAt.UnixNano()
 				if err == nil && cfg.HelperLabCommands && !result.CommittedAt.IsZero() {
 					keys := []string{}

@@ -1,0 +1,30 @@
+{
+  "disposition": "locally_observed",
+  "apple_event_error": 0,
+  "route": "chat_id_raw",
+  "route_attempts": [
+    {
+      "route": "chat_id_raw",
+      "apple_event_error": 0
+    }
+  ],
+  "row_appeared": true,
+  "matching_self_chat_row_appeared": true,
+  "row_attribution": "matching_self_chat",
+  "text_matched": true,
+  "new_row_count": 1,
+  "ghost_send_symptoms": false,
+  "ghost_row_count": 0,
+  "service": "iMessage",
+  "error": "0",
+  "is_sent": "1",
+  "is_delivered": "0",
+  "is_finished": "1",
+  "probe_run_id": "886023f438d647058cce7a62d92e568e",
+  "screen": "locked",
+  "execution": "detached_probe_main_runloop_active",
+  "exit_code": 0,
+  "elapsed_ms": 1005.4731671698391,
+  "tagged_outgoing_rows": 1,
+  "tagged_incoming_rows": 0
+}
