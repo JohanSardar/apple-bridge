@@ -1,0 +1,92 @@
+{
+  "scenario": "CORE-BLOB-OFFLOADED",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "07551488839403d31546cd8255c6654b9cb4fbb4",
+  "at": "2026-10-17T05:01:47.721567Z",
+  "assertions": [
+    {
+      "name": "replica_host_is_air",
+      "passed": true
+    },
+    {
+      "name": "bootstrap_snapshot",
+      "passed": true
+    },
+    {
+      "name": "scope_query_and_get",
+      "passed": true
+    },
+    {
+      "name": "attachment_fixture",
+      "passed": true
+    },
+    {
+      "name": "attachment_metadata_visible",
+      "passed": true
+    },
+    {
+      "name": "metadata_convergence_with_blob_backlog",
+      "passed": true
+    },
+    {
+      "name": "offloaded_bytes_unavailable_metadata_complete",
+      "passed": true
+    },
+    {
+      "name": "convergence_truth_gateway_replicas",
+      "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true
+    },
+    {
+      "name": "latency_observations_complete",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_watermarks_0",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_watermarks_1",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_0",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_1",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "effect_done→gateway_visible": {
+      "samples": 1,
+      "p50_ms": 20.500875,
+      "p95_ms": 20.500875,
+      "max_ms": 20.500875,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica0": {
+      "samples": 1,
+      "p50_ms": 51.993583,
+      "p95_ms": 51.993583,
+      "max_ms": 51.993583,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}
