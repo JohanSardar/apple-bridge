@@ -371,6 +371,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if strings.HasPrefix(s.ID, "CAL-") {
 		return runCalendarScenario(ctx, s, level)
 	}
+	if strings.HasPrefix(s.ID, "NOTE-") {
+		return runNotes(ctx, s, level)
+	}
 	if strings.HasPrefix(s.ID, "CON-") {
 		return runContacts(ctx, s, level)
 	}

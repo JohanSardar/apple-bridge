@@ -3,6 +3,7 @@ package world
 import "context"
 
 type Options struct {
+	Scope                    string
 	GatewayDials             bool
 	DirectTailscale          bool
 	PersistentReplicaStorage bool

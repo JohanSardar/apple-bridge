@@ -41,4 +41,8 @@ var Operations = append(CalendarDescriptors(), []OperationDescriptor{
 	{Name: "contacts.create", Version: 1, Kind: CommandOp, Source: Contacts, Scope: "contacts:write", Capability: "contacts.create", Input: Command{}, Output: CommandRecord{}, Description: "Create a contact in the default writable container"},
 	{Name: "contacts.update", Version: 1, Kind: CommandOp, Source: Contacts, Scope: "contacts:write", Capability: "contacts.update", Input: Command{}, Output: CommandRecord{}, Description: "Patch contact fields with expected_version"},
 	{Name: "contacts.delete", Version: 1, Kind: CommandOp, Source: Contacts, Scope: "contacts:write", Capability: "contacts.delete", Input: Command{}, Output: CommandRecord{}, Description: "Delete a writable contact with expected_version"},
+	{Name: "notes.create", Version: 1, Kind: CommandOp, Source: Notes, Scope: "notes:write", Capability: "notes.create", Input: Command{}, Output: CommandRecord{}, Description: "Create a plain text note in a folder"},
+	{Name: "notes.update", Version: 1, Kind: CommandOp, Source: Notes, Scope: "notes:write", Capability: "notes.update", Input: Command{}, Output: CommandRecord{}, Description: "Replace or append plain text with expected_version; rich content rejects"},
+	{Name: "notes.delete", Version: 1, Kind: CommandOp, Source: Notes, Scope: "notes:write", Capability: "notes.delete", Input: Command{}, Output: CommandRecord{}, Description: "Delete a note with expected_version"},
+	{Name: "notes.create_folder", Version: 1, Kind: CommandOp, Source: Notes, Scope: "notes:write", Capability: "notes.create_folder", Input: Command{}, Output: CommandRecord{}, Description: "Create a Notes folder"},
 }...)

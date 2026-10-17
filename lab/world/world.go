@@ -263,6 +263,9 @@ func newEnvironment(ctx context.Context, level string, replicas, seed int, nativ
 		w.blobOptions = blobOptions[0]
 	}
 	scope := "calendar:read,calendar:write,reminders:read,reminders:write,system:read"
+	if opts, ok := ctx.Value(optionsKey{}).(Options); ok && opts.Scope != "" {
+		scope = opts.Scope
+	}
 	if len(blobOptions) > 0 {
 		scope = "messages:read,reminders:read,system:read"
 		if blobOptions[0].Scope != "" {

@@ -1,0 +1,7 @@
+id: NOTE-DECODE
+feature: notes.read
+levels: [sim]
+given: [{world: {replicas: 1}}]
+when: [{notes: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

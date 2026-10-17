@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"sync"
 	"time"
 
@@ -156,6 +157,9 @@ type commandResult struct {
 }
 
 func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c contracts.Command, a contracts.ReminderArgs, expiry, deadline time.Time, hash string) (contracts.CommandRecord, error) {
+	if strings.HasPrefix(c.Op, "notes.") {
+		return g.executeNote(r, p, c, expiry, deadline, hash)
+	}
 	var err error
 	runctx, cancel := context.WithDeadline(g.Context, deadline)
 	defer cancel()

@@ -13,11 +13,13 @@ let package = Package(
         .target(name: "AgendaGate", dependencies: ["SourceSupport"]),
         .target(name: "CalendarSource", dependencies: ["AgendaGate", "SourceSupport"]),
         .target(name: "RemindersSource", dependencies: ["AgendaGate", "SourceSupport"]),
+        .target(name: "NotesSource", dependencies: ["SourceSupport", "Decoders"]),
         .target(name: "MessagesSource", dependencies: ["SourceSupport", "Decoders"]),
+        .executableTarget(name: "NotesDecoderChecks", dependencies: ["Decoders"]),
         .executableTarget(name: "DecoderChecks", dependencies: ["Decoders"]),
         .executableTarget(name: "MessagesCaptureChecks", dependencies: ["MessagesSource", "SourceSupport"]),
         .executableTarget(name: "MessagesBench", dependencies: ["MessagesSource", "SourceSupport"]),
-        .target(name: "AppleSession", dependencies: ["CalendarSource", "ContactsSource", "MessagesSource", "RemindersSource", "AgendaGate", "SourceSupport"]),
+        .target(name: "AppleSession", dependencies: ["NotesSource", "CalendarSource", "ContactsSource", "MessagesSource", "RemindersSource", "AgendaGate", "SourceSupport"]),
         .executableTarget(name: "CalendarChecks", dependencies: ["CalendarSource"], path: "Tests/CalendarChecks"),
         .executableTarget(name: "AppleBridgeHelper", dependencies: ["AppleSession"])
     ]

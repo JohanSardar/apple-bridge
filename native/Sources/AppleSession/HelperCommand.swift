@@ -2,6 +2,7 @@ import Foundation
 import AppKit
 import Darwin
 import MessagesSource
+import NotesSource
 import SourceSupport
 
 public enum HelperCommand {
@@ -50,6 +51,7 @@ public enum HelperCommand {
             var finished = false
             Task { @MainActor in
                 let messages = Messages(diagnostics: arguments.contains("--lab-commands") ? home.appendingPathComponent("messages-watch.json") : nil)
+                try? await peer.register(try NotesSource(home: home))
                 try? await peer.register(messages, readBlob: { handle, offset, length in
                     try await messages.readBlob(handle: handle, offset: offset, length: length)
                 })
@@ -61,6 +63,12 @@ public enum HelperCommand {
         }
         guard let reportIndex = arguments.firstIndex(of: "--report"), reportIndex + 1 < arguments.count else { throw ProbeFailure.invalidArguments }
         let reportURL = try PrivateReport.validate(arguments[reportIndex + 1])
+        if arguments.first == "notes-probe" {
+            var error: NSDictionary?
+            let result = NSAppleScript(source: "with timeout of 5 seconds\ntell application \"Notes\" to count accounts\nend timeout")?.executeAndReturnError(&error)
+            try PrivateReport.write(["state": error == nil ? "ready" : "unavailable", "error_code": error?["NSAppleScriptErrorNumber"] as? Int ?? 0, "count": result?.int32Value ?? 0], to: reportURL)
+            return
+        }
         if arguments.first == "functional" {
             DispatchQueue.global().asyncAfter(deadline: .now() + 30) { @Sendable in
                 try? PrivateReport.write(["state": "timed_out"], to: reportURL)

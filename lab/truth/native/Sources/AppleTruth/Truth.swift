@@ -44,7 +44,9 @@ struct AppleTruth {
                     response = ["status": granted ? "verified" : "unverified", "granted": granted]
                 } else {
                 guard let requestPath = option("--request-file"), let request = try JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: requestPath))) as? [String: Any] else { throw TruthFailure.invalid }
-                if request["source"] as? String == "messages" {
+                if request["source"] as? String == "notes" {
+                    response = request["sqlite"] as? Bool == true ? try notesSQLite(path: request["snapshot_path"] as? String) : try notes(verb, request)
+                } else if request["source"] as? String == "messages" {
                     guard verb == "observe" else { throw TruthFailure.invalid }
                     response = try messages(request)
                 } else if request["source"] as? String == "calendar" { response = try CalendarTruth.run(verb, request) } else if request["source"] as? String == "contacts" { do { response = try contacts(verb, request) } catch { response = ["status": "unverified", "reason": "contacts_native_error"] } } else { response = try await reminders(verb, request) }

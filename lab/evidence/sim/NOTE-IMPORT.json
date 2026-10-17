@@ -1,0 +1,75 @@
+{
+  "host_conditions": {
+    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "start": {
+      "air": {
+        "at": "2026-10-17T19:57:42.34417Z",
+        "cpu_count": 8,
+        "load_average": [
+          4.87,
+          7.62,
+          6.48
+        ],
+        "cpu_idle_percent": 86,
+        "free_memory_bytes": 294699008,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 1,
+        "quiet": false
+      }
+    },
+    "end": {
+      "air": {
+        "at": "2026-10-17T19:57:44.003448Z",
+        "cpu_count": 8,
+        "load_average": [
+          4.87,
+          7.62,
+          6.48
+        ],
+        "cpu_idle_percent": 65,
+        "free_memory_bytes": 97288192,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 1,
+        "quiet": false
+      }
+    },
+    "quiet": false,
+    "require_quiet": false,
+    "quiet_wait_ms": 0,
+    "quiet_wait_expired": false
+  },
+  "run_id": "run_01M55Q2450WNKM9MK55P6ASRB2",
+  "scenario": "NOTE-IMPORT",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "c54f00a567430a2dd61efd616500d2b2aa049771",
+  "at": "2026-10-17T19:57:43.456971Z",
+  "assertions": [
+    {
+      "name": "external_note_imported",
+      "passed": true
+    },
+    {
+      "name": "locked_title_only",
+      "passed": true
+    },
+    {
+      "name": "folder_reference",
+      "passed": true
+    },
+    {
+      "name": "plain_body",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

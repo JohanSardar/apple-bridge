@@ -57,6 +57,9 @@ func schemaType(t reflect.Type) map[string]any {
 }
 func OperationSchema(d OperationDescriptor) map[string]any {
 	s := JSONSchema(d.Input)
+	if strings.HasPrefix(d.Name, "notes.") {
+		return noteSchema(d, s)
+	}
 	if d.Kind == CommandOp {
 		properties := s["properties"].(map[string]any)
 		args := JSONSchema(ReminderArgs{})
@@ -106,4 +109,40 @@ func OperationSchema(d OperationDescriptor) map[string]any {
 		properties["wait_ms"].(map[string]any)["minimum"] = 0
 	}
 	return s
+}
+
+func noteSchema(d OperationDescriptor, schema map[string]any) map[string]any {
+	properties := schema["properties"].(map[string]any)
+	args := JSONSchema(NoteArgs{})
+	fields := args["properties"].(map[string]any)
+	allowed := map[string]bool{}
+	required := []string{"id"}
+	switch d.Name {
+	case "notes.create":
+		required = []string{"folder_id", "title"}
+		allowed = map[string]bool{"folder_id": true, "title": true, "plain_text": true}
+	case "notes.create_folder":
+		required = []string{"title"}
+		allowed = map[string]bool{"title": true}
+	case "notes.update":
+		required = []string{"id", "plain_text"}
+		allowed = map[string]bool{"id": true, "plain_text": true, "mode": true}
+		fields["mode"].(map[string]any)["enum"] = []string{"replace", "append"}
+	case "notes.delete":
+		allowed = map[string]bool{"id": true}
+	}
+	for field := range fields {
+		if !allowed[field] {
+			delete(fields, field)
+		}
+	}
+	args["required"] = required
+	properties["args"] = args
+	schema["required"] = []string{"args"}
+	if d.Name == "notes.update" || d.Name == "notes.delete" {
+		schema["required"] = []string{"args", "expected_version"}
+	}
+	properties["wait_ms"].(map[string]any)["maximum"] = 15000
+	properties["wait_ms"].(map[string]any)["minimum"] = 0
+	return schema
 }

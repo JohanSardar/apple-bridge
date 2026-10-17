@@ -84,6 +84,8 @@ type CommandRecord struct {
 	Error        *Error          `json:"error,omitempty"`
 }
 type NativeAction struct {
+	NoteArgs        *NoteArgs     `json:"note_args,omitempty"`
+	FolderKey       string        `json:"folder_key,omitempty"`
 	CalendarArgs    *CalendarArgs `json:"calendar_args,omitempty"`
 	ExpectedListKey string        `json:"expected_list_key,omitempty"`
 	Op              string        `json:"op"`
@@ -117,6 +119,10 @@ func ValidCommandID(id string) bool {
 }
 
 func ValidateCommand(c Command) (ReminderArgs, error) {
+	if strings.HasPrefix(c.Op, "notes.") {
+		a, err := ValidateNoteCommand(c)
+		return ReminderArgs{ID: a.ID}, err
+	}
 	var a ReminderArgs
 	if !ValidCommandID(c.ID) || c.WaitMS < 0 || c.WaitMS > 15000 || c.Args == nil {
 		return a, ErrInvalid

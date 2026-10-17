@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/applepeer"
@@ -74,6 +75,17 @@ func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fenc
 			f.mu.Unlock()
 			return emit(capture, revision)
 		}, checkpoint)
+	}
+	if frame.Action != nil && strings.HasPrefix(frame.Action.Op, "notes.") {
+		return f.noteCommand(wire, frame, fence, emit, func() string { return checkpoint(contracts.Notes) })
+	}
+	if frame.T == "Dispatch" {
+		f.mu.Lock()
+		t, ok := f.tickets[frame.Ticket]
+		f.mu.Unlock()
+		if ok && strings.HasPrefix(t.Action.Op, "notes.") {
+			return f.noteCommand(wire, frame, fence, emit, func() string { return checkpoint(contracts.Notes) })
+		}
 	}
 	reject := func(problem *contracts.Error) error {
 		_, err := wire.Send(contracts.IPCFrame{T: "Rejected", CommandID: frame.CommandID, Disposition: "rejected_before_dispatch", Error: problem})

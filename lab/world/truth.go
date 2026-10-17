@@ -34,6 +34,21 @@ func (w *World) truth(ctx context.Context, verb string, request map[string]any) 
 	output := filepath.Join(w.Dir, id+"-report.json")
 	defer os.Remove(input)
 
+	if request["source"] == "notes" && request["sqlite"] == true {
+		snapshot := filepath.Join(w.Dir, id+"-notes.sqlite")
+		defer os.Remove(snapshot)
+		script := "import sqlite3,sys,os; a=sqlite3.connect('file:'+sys.argv[1]+'?mode=ro',uri=True); b=sqlite3.connect(sys.argv[2]); a.backup(b); b.execute('pragma journal_mode=delete'); b.close(); a.close(); os.chmod(sys.argv[2],0o600)"
+		original := filepath.Join(os.Getenv("HOME"), "Library", "Group Containers", "group.com.apple.notes", "NoteStore.sqlite")
+		if _, err := commandOutput(ctx, "python3", "-c", script, original, snapshot); err != nil {
+			return nil, err
+		}
+		cloned := map[string]any{}
+		for key, value := range request {
+			cloned[key] = value
+		}
+		cloned["snapshot_path"] = snapshot
+		request = cloned
+	}
 	data, err := json.Marshal(request)
 	if err != nil {
 		return nil, err
