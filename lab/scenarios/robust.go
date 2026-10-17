@@ -30,7 +30,7 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 		return fail("real_level_requires_native_world")
 	}
 	replicas, seed := 1, 4
-	if name == "scope-change" || name == "bench" {
+	if name == "scope-change" || name == "scope-leak" || name == "bench" {
 		replicas = 0
 	}
 	if strings.HasPrefix(name, "snapshot-") {
@@ -76,6 +76,14 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 	}
 	switch name {
 	case "scope-leak":
+		if w.AddReplicaScope("reminders:read,messages:read,system:read") != nil {
+			return fail("full_subscription_replica")
+		}
+		scoped, err := w.ScopedToken(w.Replicas[0], "reminders:read,system:read")
+		if err != nil {
+			return fail("reminders_only_replica_token")
+		}
+		w.Replicas[0].Token = scoped
 		paths := []string{}
 		raw, _ := options["paths"].([]any)
 		for _, path := range raw {
@@ -376,6 +384,17 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 			}
 		}
 		add("eight_gateway_process_crashes", true)
+		if w.Await(15*time.Second, func() bool { return convergence(w) }) != nil {
+			return fail("capture_replay_convergence")
+		}
+		records, readErr := w.Records(w.Gateway)
+		deduplicated := readErr == nil
+		for _, record := range records {
+			if record.Collection != "system.source" && record.Version != 1 {
+				deduplicated = false
+			}
+		}
+		add("capture_replays_do_not_duplicate_record_versions", deduplicated)
 	case "helper-restart":
 		if w.ControlAction("/flush", struct{}{}) != nil {
 			return fail("helper_initial_checkpoint")

@@ -59,6 +59,15 @@ func scopeLeak(ctx context.Context, w *world.World, paths []string, add func(str
 		return false
 	}
 	record := messages.Records[0]
+	if w.Await(10*time.Second, func() bool {
+		report, err := w.Doctor(w.Replicas[0])
+		records, _ := report["records"].(map[string]any)
+		count, _ := records["messages.message"].(float64)
+		return err == nil && count >= 1
+	}) != nil {
+		return false
+	}
+	add("replica_physically_contains_messages_before_scoped_probes", true)
 	endpoints := append([]world.Endpoint{w.Gateway}, w.Replicas...)
 	observers := []*watcher{}
 	for i, endpoint := range endpoints {
