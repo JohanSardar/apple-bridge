@@ -32,6 +32,9 @@ type Config struct {
 	Grace time.Duration
 }
 type Entry struct {
+	ResumedBytes int64 `json:"resumed_bytes"`
+	Corruptions  int   `json:"corruptions"`
+
 	State          string    `json:"state"`
 	Size           int64     `json:"size"`
 	Received       int64     `json:"received"`
@@ -50,14 +53,12 @@ type manifest struct {
 	References contracts.ReferenceSet `json:"references"`
 }
 type Store struct {
-	mu          sync.Mutex
-	transfer    sync.Mutex
-	root        string
-	cfg         Config
-	manifest    manifest
-	resumed     int64
-	corruptions int
-	durable     []byte
+	mu       sync.Mutex
+	transfer sync.Mutex
+	root     string
+	cfg      Config
+	manifest manifest
+	durable  []byte
 }
 
 func Open(home string, cfg Config) (*Store, error) {
@@ -286,9 +287,11 @@ func (s *Store) Collect(ctx context.Context) error {
 func (s *Store) Progress() BlobProgress {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	out := BlobProgress{Entries: map[string]Entry{}, Bytes: s.used(), ResumedBytes: s.resumed, Corruptions: s.corruptions}
+	out := BlobProgress{Entries: map[string]Entry{}, Bytes: s.used()}
 	for d, e := range s.manifest.Entries {
 		out.Entries[d] = e
+		out.ResumedBytes += e.ResumedBytes
+		out.Corruptions += e.Corruptions
 		if e.State != "present" {
 			out.Backlog++
 		}
@@ -307,9 +310,9 @@ func (s *Store) Transfer(ctx context.Context, d Digest, source Source) error {
 			return err
 		}
 		s.mu.Lock()
-		s.corruptions++
 		e := s.manifest.Entries[d]
 		e.State = "pending"
+		e.Corruptions++
 		e.Received = 0
 		s.manifest.Entries[d] = e
 		os.Remove(filepath.Join(s.root, "staging", d+".part"))
@@ -352,7 +355,7 @@ func (s *Store) transferOnce(ctx context.Context, d Digest, source Source) (resu
 		s.mu.Unlock()
 		return contracts.ErrCapacity
 	}
-	s.resumed += offset
+	e.ResumedBytes += offset
 	e.State = "pending"
 	s.manifest.Entries[d] = e
 	s.save()

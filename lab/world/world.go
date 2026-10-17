@@ -107,7 +107,7 @@ func (w *World) start(name string, remote bool, home string, binary string, args
 			cmd.Env = append(cmd.Env, "APPLE_BRIDGE_LAB_BLOB_CORRUPT="+filepath.Join(w.Dir, "corrupt-once"))
 		}
 		if w.blobOptions.Slow {
-			cmd.Env = append(cmd.Env, "APPLE_BRIDGE_LAB_BLOB_SLOW=1")
+			cmd.Env = append(cmd.Env, "APPLE_BRIDGE_LAB_BLOB_SLOW=1", "APPLE_BRIDGE_LAB_BLOB_CUT_WINDOW="+filepath.Join(w.Dir, "blob-cut-window"))
 		}
 	}
 	if remote {

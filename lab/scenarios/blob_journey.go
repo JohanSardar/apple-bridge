@@ -129,6 +129,19 @@ func blobJourney(ctx context.Context, w *world.World, id string, evidence *Evide
 		}) == nil) {
 			return false
 		}
+
+		if !check("interrupted_halfway_through_binary_chunk", w.Await(10*time.Second, func() bool {
+			_, err := os.Stat(filepath.Join(w.Dir, "blob-cut-window"))
+			p, perr := blobProgress(ctx, e)
+			return err == nil && perr == nil && p.Entries[digest].Received == contracts.BlobChunkSize
+		}) == nil) {
+			return false
+		}
+
+		w.Partition(0)
+		if !check("replica_restart", w.Heal(0) == nil) {
+			return false
+		}
 		effect := time.Now()
 		if !check("live_metadata_during_bulk", w.ControlAction("/external-change", map[string]string{"key": "during-blob"}) == nil && w.Await(time.Second, func() bool {
 			records, _ := w.Records(e)
@@ -142,10 +155,6 @@ func blobJourney(ctx context.Context, w *world.World, id string, evidence *Evide
 			return false
 		}
 		evidence.Latency["effect_done→metadata_during_blob"] = stats([]float64{float64(time.Since(effect)) / float64(time.Millisecond)}, 0)
-		w.Partition(0)
-		if !check("replica_restart", w.Heal(0) == nil) {
-			return false
-		}
 	}
 	if id == "CORE-BLOB-CAP" {
 		if !check("cap_reports_over_cap", w.Await(10*time.Second, func() bool {
@@ -205,6 +214,11 @@ func blobJourney(ctx context.Context, w *world.World, id string, evidence *Evide
 				return check("scope_token", false)
 			}
 			endpoint.Token = token
+			scopedProgress, scopeErr := blobProgress(ctx, endpoint)
+			_, leaked := scopedProgress.Entries[digest]
+			if !check("out_of_scope_blob_status_denied", scopeErr == nil && !leaked && scopedProgress.Bytes == 0) {
+				return false
+			}
 			status, _, _ = blobBytes(ctx, endpoint, digest, attachment.ID)
 			if !check("out_of_scope_record_denied", status == 401) {
 				return false
