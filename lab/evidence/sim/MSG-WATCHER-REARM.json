@@ -1,70 +1,14 @@
 {
   "host_conditions": {
-    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
-    "start": {
-      "air": {
-        "at": "2026-10-17T19:58:25.183711Z",
-        "cpu_count": 8,
-        "load_average": [
-          3.6,
-          6.95,
-          6.28
-        ],
-        "cpu_idle_percent": 94,
-        "free_memory_bytes": 251969536,
-        "active_heavy_slots": 1,
-        "other_active_heavy_slots": 0,
-        "heavy_queue_length": 0,
-        "quiet": true
-      }
-    },
-    "end": {
-      "air": {
-        "at": "2026-10-17T19:58:34.610557Z",
-        "cpu_count": 8,
-        "load_average": [
-          3.5,
-          6.82,
-          6.24
-        ],
-        "cpu_idle_percent": 77,
-        "free_memory_bytes": 177405952,
-        "active_heavy_slots": 1,
-        "other_active_heavy_slots": 0,
-        "heavy_queue_length": 0,
-        "quiet": true
-      }
-    },
-    "periodic_samples": [
-      {
-        "air": {
-          "at": "2026-10-17T19:58:31.261171Z",
-          "cpu_count": 8,
-          "load_average": [
-            3.63,
-            6.9,
-            6.27
-          ],
-          "cpu_idle_percent": 86,
-          "free_memory_bytes": 173916160,
-          "active_heavy_slots": 1,
-          "other_active_heavy_slots": 0,
-          "heavy_queue_length": 0,
-          "quiet": true
-        }
-      }
-    ],
-    "quiet": true,
-    "require_quiet": false,
-    "quiet_wait_ms": 0,
-    "quiet_wait_expired": false
+    "quiet": false,
+    "summary": "air: load=[6.3 5.18 4.99] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M55Q3E04V9GX5T9915QF9V2M",
+  "run_id": "run_01M55RJPSVK86GNVP34QCZ7DY9",
   "scenario": "MSG-WATCHER-REARM",
   "level": "sim",
   "passed": true,
-  "git_sha": "97a52acc42d386fffeb9c2ffaab4d1be5141f22e",
-  "at": "2026-10-17T19:58:26.308408Z",
+  "git_sha": "79748c5c1aa474839ea4c9279c4701fbaf731fbb",
+  "at": "2026-10-17T20:24:15.419574Z",
   "assertions": [
     {
       "name": "seed",

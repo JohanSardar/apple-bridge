@@ -1,51 +1,14 @@
 {
   "host_conditions": {
-    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
-    "start": {
-      "air": {
-        "at": "2026-10-17T19:58:56.0955Z",
-        "cpu_count": 8,
-        "load_average": [
-          3.14,
-          6.52,
-          6.15
-        ],
-        "cpu_idle_percent": 72,
-        "free_memory_bytes": 192757760,
-        "active_heavy_slots": 2,
-        "other_active_heavy_slots": 1,
-        "heavy_queue_length": 0,
-        "quiet": false
-      }
-    },
-    "end": {
-      "air": {
-        "at": "2026-10-17T19:58:58.255455Z",
-        "cpu_count": 8,
-        "load_average": [
-          3.05,
-          6.45,
-          6.12
-        ],
-        "cpu_idle_percent": 81,
-        "free_memory_bytes": 266010624,
-        "active_heavy_slots": 2,
-        "other_active_heavy_slots": 1,
-        "heavy_queue_length": 0,
-        "quiet": false
-      }
-    },
     "quiet": false,
-    "require_quiet": false,
-    "quiet_wait_ms": 0,
-    "quiet_wait_expired": false
+    "summary": "air: load=[5 4.91 4.89] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M55Q4C4ZX6HA1N7VYFG16XWK",
+  "run_id": "run_01M55RJAME597GPKNYHDXF1SPX",
   "scenario": "MSG-SEND-FILES",
   "level": "sim",
   "passed": true,
-  "git_sha": "7a2897cec980ff6522f1993ff8e01498780503a3",
-  "at": "2026-10-17T19:58:57.183773Z",
+  "git_sha": "79748c5c1aa474839ea4c9279c4701fbaf731fbb",
+  "at": "2026-10-17T20:24:02.95837Z",
   "assertions": [
     {
       "name": "seed_self_chat",
@@ -159,16 +122,16 @@
   "latency": {
     "mcp_command_to_replica": {
       "samples": 1,
-      "p50_ms": 140.019667,
-      "p95_ms": 140.019667,
-      "max_ms": 140.019667,
+      "p50_ms": 85.431834,
+      "p95_ms": 85.431834,
+      "max_ms": 85.431834,
       "timeouts": 0
     },
     "rest_command_to_replica": {
       "samples": 1,
-      "p50_ms": 103.626959,
-      "p95_ms": 103.626959,
-      "max_ms": 103.626959,
+      "p50_ms": 109.519542,
+      "p95_ms": 109.519542,
+      "max_ms": 109.519542,
       "timeouts": 0
     }
   },

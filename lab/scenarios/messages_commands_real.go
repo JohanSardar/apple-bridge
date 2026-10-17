@@ -166,7 +166,11 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 			return outcome.State != contracts.CommandAdmitted && outcome.State != contracts.CommandPrepared && outcome.State != contracts.CommandDispatched
 		})
 	}
-	e.Metrics = map[string]any{"command_state": outcome.State, "disposition": outcome.Disposition, "screen": "locked", "send_commands": 1, "parts_requested": 1 + len(argsFiles(args))}
+	initialState := outcome.State
+	if err == nil && outcome.State == contracts.CommandIndeterminate {
+		err = client.Call(ctx, "commands.status", contracts.CommandQuery{ID: c.ID, Resolve: true}, &outcome)
+	}
+	e.Metrics = map[string]any{"initial_command_state": initialState, "command_state": outcome.State, "disposition": outcome.Disposition, "screen": "locked", "send_commands": 1, "parts_requested": 1 + len(argsFiles(args))}
 	observed := err == nil && (outcome.State == contracts.CommandObserved || outcome.State == contracts.CommandDelivered) && outcome.CommitSeq > 0
 	add("native_send_observed_with_fingerprint_checkpoint", observed)
 	if !observed {
@@ -174,6 +178,7 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 		json.Unmarshal(outcome.Evidence, &evidence)
 		cleanup["native_parts"] = evidence["parts"]
 		cleanup["native_key"] = evidence["native_key"]
+		cleanup["outcome_evidence"] = evidence
 		saveCleanup()
 		if parts, ok := evidence["parts"].([]any); ok {
 			codes := []any{}

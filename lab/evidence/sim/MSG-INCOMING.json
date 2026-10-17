@@ -1,51 +1,14 @@
 {
   "host_conditions": {
-    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
-    "start": {
-      "air": {
-        "at": "2026-10-17T19:57:47.268533Z",
-        "cpu_count": 8,
-        "load_average": [
-          4.56,
-          7.51,
-          6.44
-        ],
-        "cpu_idle_percent": 83,
-        "free_memory_bytes": 270843904,
-        "active_heavy_slots": 2,
-        "other_active_heavy_slots": 1,
-        "heavy_queue_length": 1,
-        "quiet": false
-      }
-    },
-    "end": {
-      "air": {
-        "at": "2026-10-17T19:57:50.121753Z",
-        "cpu_count": 8,
-        "load_average": [
-          4.56,
-          7.51,
-          6.44
-        ],
-        "cpu_idle_percent": 86,
-        "free_memory_bytes": 185483264,
-        "active_heavy_slots": 2,
-        "other_active_heavy_slots": 1,
-        "heavy_queue_length": 1,
-        "quiet": false
-      }
-    },
     "quiet": false,
-    "require_quiet": false,
-    "quiet_wait_ms": 0,
-    "quiet_wait_expired": false
+    "summary": "air: load=[4.31 4.77 4.84] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M55Q28YV3VQ2AC1H6JF696QF",
+  "run_id": "run_01M55RHZPE27W23CABJMPXR0JS",
   "scenario": "MSG-INCOMING",
   "level": "sim",
   "passed": true,
-  "git_sha": "97a52acc42d386fffeb9c2ffaab4d1be5141f22e",
-  "at": "2026-10-17T19:57:48.379119Z",
+  "git_sha": "79748c5c1aa474839ea4c9279c4701fbaf731fbb",
+  "at": "2026-10-17T20:23:51.758103Z",
   "assertions": [
     {
       "name": "seed",
@@ -95,23 +58,23 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 32,
-      "p50_ms": 4.719834,
-      "p95_ms": 7.404334,
-      "max_ms": 9.107042,
+      "p50_ms": 5.496083,
+      "p95_ms": 7.317417,
+      "max_ms": 10.614125,
       "timeouts": 0
     },
     "effect_done→replica_visible": {
       "samples": 32,
-      "p50_ms": 7.914167,
-      "p95_ms": 10.607958,
-      "max_ms": 11.41275,
+      "p50_ms": 9.220042,
+      "p95_ms": 14.402792,
+      "max_ms": 14.769417,
       "timeouts": 0
     },
     "gateway_visible→replica_visible": {
       "samples": 32,
-      "p50_ms": 3.043625,
-      "p95_ms": 4.015042,
-      "max_ms": 4.107208,
+      "p50_ms": 3.747042,
+      "p95_ms": 6.231541,
+      "max_ms": 8.757292,
       "timeouts": 0
     }
   },

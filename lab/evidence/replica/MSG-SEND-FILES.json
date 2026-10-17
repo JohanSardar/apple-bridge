@@ -1,0 +1,48 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[5.62 5.12 4.97] cpus=8 other_heavy=1; ubuntu: load=[0.17 0.3 0.3] cpus=8 other_heavy=0"
+  },
+  "status": "environment-limited",
+  "run_id": "run_01M55RN1PQSXRQ28KNB54HTVAZ",
+  "metrics": {
+    "apple_event_errors": [
+      0,
+      0,
+      0
+    ],
+    "command_state": "indeterminate",
+    "disposition": "indeterminate",
+    "parts_requested": 3,
+    "screen": "locked",
+    "send_commands": 1
+  },
+  "scenario": "MSG-SEND-FILES",
+  "level": "replica",
+  "passed": false,
+  "git_sha": "79748c5c1aa474839ea4c9279c4701fbaf731fbb",
+  "at": "2026-10-17T20:25:32.119215Z",
+  "assertions": [
+    {
+      "name": "self_chat_captured",
+      "passed": true
+    },
+    {
+      "name": "cleanup_registered_before_submit",
+      "passed": true
+    },
+    {
+      "name": "native_send_observed_with_fingerprint_checkpoint",
+      "passed": false
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air",
+    "ubuntu"
+  ]
+}

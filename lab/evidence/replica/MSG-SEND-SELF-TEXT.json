@@ -1,0 +1,111 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[4.44 4.88 4.89] cpus=8 other_heavy=1; ubuntu: load=[0.46 0.35 0.31] cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M55RPPXJ5HEDHSQ64CW9D8PK",
+  "metrics": {
+    "command_state": "observed",
+    "disposition": "locally_observed",
+    "parts_requested": 1,
+    "screen": "locked",
+    "send_commands": 1
+  },
+  "scenario": "MSG-SEND-SELF-TEXT",
+  "level": "replica",
+  "passed": true,
+  "git_sha": "79748c5c1aa474839ea4c9279c4701fbaf731fbb",
+  "at": "2026-10-17T20:26:26.610684Z",
+  "assertions": [
+    {
+      "name": "self_chat_captured",
+      "passed": true
+    },
+    {
+      "name": "cleanup_registered_before_submit",
+      "passed": true
+    },
+    {
+      "name": "native_send_observed_with_fingerprint_checkpoint",
+      "passed": true
+    },
+    {
+      "name": "request_hash_bound",
+      "passed": true
+    },
+    {
+      "name": "truth_outgoing_not_echo",
+      "passed": true
+    },
+    {
+      "name": "command_visible_0",
+      "passed": true
+    },
+    {
+      "name": "command_sse_timestamp_0",
+      "passed": true
+    },
+    {
+      "name": "command_visible_1",
+      "passed": true
+    },
+    {
+      "name": "command_sse_timestamp_1",
+      "passed": true
+    },
+    {
+      "name": "incoming_echo_visible_0",
+      "passed": true
+    },
+    {
+      "name": "incoming_echo_sse_timestamp_0",
+      "passed": true
+    },
+    {
+      "name": "incoming_echo_visible_1",
+      "passed": true
+    },
+    {
+      "name": "incoming_echo_sse_timestamp_1",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "command_submit_to_visible_0": {
+      "samples": 1,
+      "p50_ms": 540.565166,
+      "p95_ms": 540.565166,
+      "max_ms": 540.565166,
+      "timeouts": 0
+    },
+    "command_submit_to_visible_1": {
+      "samples": 1,
+      "p50_ms": 553.558083,
+      "p95_ms": 553.558083,
+      "max_ms": 553.558083,
+      "timeouts": 0
+    },
+    "echo_chat_db_appearance_to_visible_0": {
+      "samples": 1,
+      "p50_ms": 309.164667,
+      "p95_ms": 309.164667,
+      "max_ms": 309.164667,
+      "timeouts": 0
+    },
+    "echo_chat_db_appearance_to_visible_1": {
+      "samples": 1,
+      "p50_ms": 370.717959,
+      "p95_ms": 370.717959,
+      "max_ms": 370.717959,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air",
+    "ubuntu"
+  ]
+}
