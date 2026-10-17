@@ -1,0 +1,7 @@
+id: REM-PERMISSION-LOSS
+feature: reminders.read
+levels: [sim]
+given: [{world: {replicas: 1}}]
+when: [{reminders_permission_loss: {}}]
+then: [{converge: {}}]
+cleanup: [{fixture: {cleanup: reminders}}]

@@ -2,10 +2,46 @@ import Foundation
 import AppKit
 import Darwin
 import MessagesSource
+import SourceSupport
 
 public enum HelperCommand {
     @MainActor
     public static func run(_ arguments: [String]) throws {
+        if arguments.first == "wire-checks" {
+            guard let index = arguments.firstIndex(of: "--fixtures"), index + 1 < arguments.count else { throw ProbeFailure.invalidArguments }
+            let frames = try JSONDecoder().decode([JSON].self, from: Data(contentsOf: URL(fileURLWithPath: arguments[index + 1])))
+            for frame in frames {
+                let bytes = try PeerWire.encode(frame)
+                let decoded = try JSONDecoder().decode(JSON.self, from: bytes.dropFirst(4))
+                guard decoded == frame else { throw ProbeFailure.invalidArguments }
+                switch frame["t"].string {
+                case "Open": guard frame["protocol"].string == "ipc/1", frame["owner_fence"].number > 0 else { throw ProbeFailure.invalidArguments }
+                case "Prepare": guard !frame["command_id"].string.isEmpty, parseTimestamp(frame["expires_at"].string) != nil else { throw ProbeFailure.invalidArguments }
+                case "Capture": guard !frame["capture"]["generation"].string.isEmpty, !frame["capture"]["checkpoint"].string.isEmpty else { throw ProbeFailure.invalidArguments }
+                default: break
+                }
+            }
+            print("wire fixtures: \(frames.count) decoded")
+            return
+        }
+        if arguments.first == "session" {
+            func option(_ key: String) throws -> String {
+                guard let index = arguments.firstIndex(of: key), index + 1 < arguments.count else { throw ProbeFailure.invalidArguments }
+                return arguments[index + 1]
+            }
+            let socket = try option("--socket")
+            let secretFile = try option("--secret-file")
+            let home = URL(fileURLWithPath: try option("--home"))
+            guard let gatewayPID = Int32(try option("--gateway-pid")), gatewayPID > 1 else { throw ProbeFailure.invalidArguments }
+            let peer = try AppleSession(socket: socket, secretFile: secretFile, home: home, gatewayPID: gatewayPID, commandsEnabled: arguments.contains("--lab-commands"))
+            var finished = false
+            Task { @MainActor in
+                try? await peer.run()
+                finished = true
+            }
+            while !finished { RunLoop.current.run(until: Date().addingTimeInterval(0.05)) }
+            return
+        }
         guard let reportIndex = arguments.firstIndex(of: "--report"), reportIndex + 1 < arguments.count else { throw ProbeFailure.invalidArguments }
         let reportURL = try PrivateReport.validate(arguments[reportIndex + 1])
         let session = PermissionSession()

@@ -1,0 +1,7 @@
+id: HELPER-TCC-READY
+feature: helper.session
+levels: [real]
+given: [{world: {replicas: 1}}]
+when: [{tcc_ready: {}}]
+then: [{converge: {}}]
+cleanup: [{fixture: {cleanup: reminders}}]

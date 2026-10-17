@@ -1,0 +1,7 @@
+id: HELPER-RESTART-REAL
+feature: helper.session
+levels: [real]
+given: [{world: {replicas: 1}}]
+when: [{restart_helper: {}}]
+then: [{converge: {}}]
+cleanup: [{fixture: {cleanup: reminders}}]

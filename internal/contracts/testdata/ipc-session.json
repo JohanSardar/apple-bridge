@@ -1,0 +1,16 @@
+[
+  {"t":"Open","protocol":"ipc/1","owner_fence":7,"checkpoints":{"reminders":{"generation":"fixture-eventkit","checkpoint":"cp-1"}},"byte_credit":4194304},
+  {"t":"Ready","protocol":"ipc/1","coverage":{"reminders":{"fields":"partial","missing":["next incomplete recurring instance only"]}},"capabilities":{"reminders":[]},"helper_build":"fixture","os_build":"synthetic"},
+  {"t":"Capture","capture":{"source":"reminders","generation":"fixture-eventkit","predecessor":"cp-1","checkpoint":"cp-2","observations":[{"kind":"upsert","collection":"reminders.reminder","native_key":"fixture-reminder","scoped_alias":"fixture-list/external-id","observed_at":"2026-10-17T10:00:00.123Z","data":{"title":"[ab-test fixture] synthetic","completed":false}}],"scan_id":"scan-fixture","scope":["reminders.reminder"],"scan_started_at":"2026-10-17T10:00:00.000Z","completion_evidence":"complete"}},
+  {"t":"Committed","source":"reminders","checkpoint":"cp-2","credit":512},
+  {"t":"SourceState","source":"calendar","state":"permission_missing","coverage":{"calendar":{"fields":"partial","missing":["calendar full access required"]}},"reason":"calendar_full_access_required"},
+  {"t":"Prepare","command_id":"fixture-command","principal":"fixture-principal","request_hash":"fixture-hash","action":{"op":"reminders.complete","native_key":"fixture-reminder","list_key":"fixture-list","args":{"id":"rmd_fixture"}},"expected_state":{"title":"[ab-test fixture] synthetic","completed":false},"expires_at":"2026-10-17T10:00:30.123Z"},
+  {"t":"Prepared","command_id":"fixture-command","ticket":"fixture-ticket","native_state":{"completed":false},"route":"eventkit","fingerprint":"fixture-hash","candidate_ids":[]},
+  {"t":"Dispatch","ticket":"fixture-ticket","owner_fence":7},
+  {"t":"Outcome","command_id":"fixture-command","disposition":"indeterminate","evidence":{"reason":"dispatch_started_without_outcome"}},
+  {"t":"Resolve","command_id":"fixture-command"},
+  {"t":"Rejected","command_id":"fixture-command","error":{"code":"conflict","message":"native_state_changed"}},
+  {"t":"Ping"},
+  {"t":"Pong"},
+  {"t":"Close","reason":"gateway_stopped"}
+]

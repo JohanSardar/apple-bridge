@@ -1,0 +1,7 @@
+id: REM-CREATE-EXTERNAL
+feature: reminders.read
+levels: [sim, real, replica]
+given: [{world: {replicas: 1}}]
+when: [{reminders_external: {}}]
+then: [{converge: {}}]
+cleanup: [{fixture: {cleanup: reminders}}]

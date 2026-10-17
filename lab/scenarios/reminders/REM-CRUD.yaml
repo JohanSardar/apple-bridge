@@ -1,0 +1,7 @@
+id: REM-CRUD
+feature: reminders.write
+levels: [real, replica]
+given: [{world: {replicas: 1}}]
+when: [{reminders_crud: {}}]
+then: [{converge: {}}]
+cleanup: [{fixture: {cleanup: reminders}}]

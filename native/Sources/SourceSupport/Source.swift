@@ -1,13 +1,28 @@
 import Foundation
 
 public enum JSON: Codable, Sendable, Equatable {
-    case object([String: JSON]), array([JSON]), string(String), number(Double), bool(Bool), null
+    case object([String: JSON]), array([JSON]), string(String), integer(UInt64), number(Double), bool(Bool), null
+
+    public static func == (left: JSON, right: JSON) -> Bool {
+        switch (left, right) {
+        case (.object(let a), .object(let b)): return a == b
+        case (.array(let a), .array(let b)): return a == b
+        case (.string(let a), .string(let b)): return a == b
+        case (.integer(let a), .integer(let b)): return a == b
+        case (.number(let a), .number(let b)): return a == b
+        case (.integer(let a), .number(let b)), (.number(let b), .integer(let a)): return UInt64(exactly: b) == a
+        case (.bool(let a), .bool(let b)): return a == b
+        case (.null, .null): return true
+        default: return false
+        }
+    }
 
     public init(from decoder: any Decoder) throws {
         let value = try decoder.singleValueContainer()
         if value.decodeNil() { self = .null }
         else if let result = try? value.decode(Bool.self) { self = .bool(result) }
         else if let result = try? value.decode(String.self) { self = .string(result) }
+        else if let result = try? value.decode(UInt64.self) { self = .integer(result) }
         else if let result = try? value.decode(Double.self) { self = .number(result) }
         else if let result = try? value.decode([String: JSON].self) { self = .object(result) }
         else { self = .array(try value.decode([JSON].self)) }
@@ -19,6 +34,7 @@ public enum JSON: Codable, Sendable, Equatable {
         case .object(let result): try value.encode(result)
         case .array(let result): try value.encode(result)
         case .string(let result): try value.encode(result)
+        case .integer(let result): try value.encode(result)
         case .number(let result): try value.encode(result)
         case .bool(let result): try value.encode(result)
         case .null: try value.encodeNil()
@@ -29,7 +45,8 @@ public enum JSON: Codable, Sendable, Equatable {
     public var string: String { if case .string(let value) = self { return value }; return "" }
     public var object: [String: JSON] { if case .object(let value) = self { return value }; return [:] }
     public var array: [JSON] { if case .array(let value) = self { return value }; return [] }
-    public var number: Double { if case .number(let value) = self { return value }; return 0 }
+    public var number: Double { if case .number(let value) = self { return value }; if case .integer(let value) = self { return Double(value) }; return 0 }
+    public var unsigned: UInt64 { if case .integer(let value) = self { return value }; if case .number(let value) = self, value >= 0, value < Double(UInt64.max), value.rounded() == value { return UInt64(value) }; return 0 }
     public var bool: Bool { if case .bool(let value) = self { return value }; return false }
 }
 
@@ -69,6 +86,7 @@ public struct Prepared: Sendable {
 }
 
 public protocol ObservationSink: Sendable {
+    func sourceState(source: String, state: String, coverage: JSON, capabilities: [String], reason: String) async throws
     func emit(source: String, generation: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) async throws
 }
 

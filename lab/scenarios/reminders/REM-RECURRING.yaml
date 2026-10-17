@@ -1,0 +1,7 @@
+id: REM-RECURRING
+feature: reminders.read
+levels: [sim, real]
+given: [{world: {replicas: 1}}]
+when: [{reminders_recurring: {}}]
+then: [{converge: {}}]
+cleanup: [{fixture: {cleanup: reminders}}]
