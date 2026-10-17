@@ -1,0 +1,88 @@
+File: bridge
+Type: cpu
+Time: 2026-10-17 14:28:00 CDT
+Duration: 219.12s, Total samples = 55.56s (25.36%)
+Showing nodes accounting for 41.75s, 75.14% of 55.56s total
+Dropped 987 nodes (cum <= 0.28s)
+Showing top 80 nodes out of 219
+      flat  flat%   sum%        cum   cum%
+     0.01s 0.018% 0.018%     24.53s 44.15%  runtime.systemstack
+     0.02s 0.036% 0.054%     21.91s 39.43%  runtime.wakep
+    21.84s 39.31% 39.36%     21.84s 39.31%  runtime.pthread_cond_signal
+         0     0% 39.36%     21.84s 39.31%  runtime.semawakeup
+         0     0% 39.36%     21.77s 39.18%  runtime.notewakeup
+         0     0% 39.36%     21.71s 39.07%  runtime.startm
+     0.01s 0.018% 39.38%     17.22s 30.99%  runtime.newproc.func1
+         0     0% 39.38%     15.49s 27.88%  runtime.schedule
+         0     0% 39.38%     15.39s 27.70%  runtime.mcall
+     0.03s 0.054% 39.43%     14.54s 26.17%  runtime.findRunnable
+         0     0% 39.43%     12.84s 23.11%  runtime.goexit0
+     0.04s 0.072% 39.51%     11.58s 20.84%  database/sql.withLock
+         0     0% 39.51%     11.43s 20.57%  github.com/JohanSardar/apple-bridge/internal/state.(*Store).ProtectBlobs
+         0     0% 39.51%     11.39s 20.50%  github.com/JohanSardar/apple-bridge/internal/runtime.Start.func1
+    10.47s 18.84% 58.35%     10.47s 18.84%  runtime.usleep
+     0.07s  0.13% 58.48%     10.33s 18.59%  runtime.stealWork
+     0.01s 0.018% 58.50%     10.19s 18.34%  runtime.runqsteal
+     0.07s  0.13% 58.62%     10.18s 18.32%  runtime.runqgrab
+         0     0% 58.62%      9.98s 17.96%  github.com/JohanSardar/apple-bridge/internal/blobs.(*Store).Protect
+         0     0% 58.62%      9.98s 17.96%  github.com/JohanSardar/apple-bridge/internal/blobs.(*Store).protect
+     0.01s 0.018% 58.64%      9.79s 17.62%  database/sql.(*DB).execDC
+     0.02s 0.036% 58.68%      9.65s 17.37%  database/sql.(*DB).execDC.func2
+     0.04s 0.072% 58.75%      9.59s 17.26%  github.com/JohanSardar/apple-bridge/internal/blobs.(*Store).updateProtectionLocked
+     0.01s 0.018% 58.77%      9.53s 17.15%  modernc.org/sqlite.(*conn).exec
+     0.01s 0.018% 58.78%      9.51s 17.12%  database/sql.ctxDriverExec
+         0     0% 58.78%      9.50s 17.10%  modernc.org/sqlite.(*conn).ExecContext
+         0     0% 58.78%      9.25s 16.65%  database/sql.(*Tx).ExecContext
+         0     0% 58.78%      6.07s 10.93%  modernc.org/sqlite/lib.Xsqlite3_step
+     0.01s 0.018% 58.80%      6.05s 10.89%  modernc.org/sqlite/lib._sqlite3Step
+     0.27s  0.49% 59.29%      5.83s 10.49%  modernc.org/sqlite/lib._sqlite3VdbeExec
+         0     0% 59.29%      5.36s  9.65%  modernc.org/sqlite.newStmt
+     0.01s 0.018% 59.31%      5.29s  9.52%  modernc.org/sqlite.(*conn).prepareV2
+         0     0% 59.31%      5.18s  9.32%  modernc.org/sqlite/lib.Xsqlite3_prepare_v2 (inline)
+     0.01s 0.018% 59.32%      5.18s  9.32%  modernc.org/sqlite/lib._sqlite3LockAndPrepare
+     0.06s  0.11% 59.43%      5.14s  9.25%  modernc.org/sqlite/lib._sqlite3Prepare
+         0     0% 59.43%      5.09s  9.16%  modernc.org/sqlite.(*conn).prepare (inline)
+     0.23s  0.41% 59.85%      4.98s  8.96%  modernc.org/sqlite/lib._sqlite3RunParser
+     0.01s 0.018% 59.86%      4.88s  8.78%  modernc.org/sqlite.(*conn).step
+         0     0% 59.86%      4.54s  8.17%  syscall.syscalln
+     4.53s  8.15% 68.02%      4.53s  8.15%  syscall.rawsyscalln
+     0.03s 0.054% 68.07%      4.43s  7.97%  modernc.org/sqlite/lib._sqlite3Parser
+     0.02s 0.036% 68.11%      4.27s  7.69%  modernc.org/sqlite.(*stmt).exec
+     0.15s  0.27% 68.38%      4.10s  7.38%  modernc.org/sqlite/lib._yy_reduce
+         0     0% 68.38%      3.74s  6.73%  _.goready.func1
+         0     0% 68.38%      3.74s  6.73%  runtime.ready
+     0.01s 0.018% 68.39%      3.68s  6.62%  runtime.semasleep
+         0     0% 68.39%      3.66s  6.59%  modernc.org/sqlite.(*stmt).exec.func2
+         0     0% 68.39%      3.65s  6.57%  runtime.stopm
+     0.01s 0.018% 68.41%      3.57s  6.43%  runtime.mPark (inline)
+     3.57s  6.43% 74.84%      3.57s  6.43%  runtime.pthread_cond_wait
+         0     0% 74.84%      3.56s  6.41%  runtime.notesleep
+         0     0% 74.84%      3.07s  5.53%  github.com/JohanSardar/apple-bridge/internal/applepeer.Serve.func2
+         0     0% 74.84%      2.98s  5.36%  github.com/JohanSardar/apple-bridge/internal/runtime.Start.func6.3
+         0     0% 74.84%      2.91s  5.24%  github.com/JohanSardar/apple-bridge/internal/state.(*Store).CommitCapture
+         0     0% 74.84%      2.69s  4.84%  syscall.syscall6
+         0     0% 74.84%      2.54s  4.57%  runtime.park_m
+         0     0% 74.84%      2.15s  3.87%  modernc.org/sqlite/lib._sqlite3VdbeHalt
+     0.05s  0.09% 74.93%      1.93s  3.47%  modernc.org/sqlite/lib._sqlite3Insert
+         0     0% 74.93%      1.87s  3.37%  modernc.org/sqlite/lib._vdbeCommit
+         0     0% 74.93%      1.85s  3.33%  syscall.syscall
+     0.02s 0.036% 74.96%      1.78s  3.20%  modernc.org/sqlite/lib._getAndInitPage
+     0.03s 0.054% 75.02%      1.75s  3.15%  modernc.org/sqlite/lib._getPageNormal
+         0     0% 75.02%      1.75s  3.15%  modernc.org/sqlite/lib._modernc_seh_try
+         0     0% 75.02%      1.75s  3.15%  modernc.org/sqlite/lib._sqlite3PagerGet (inline)
+         0     0% 75.02%      1.75s  3.15%  modernc.org/sqlite/lib._walSehTry (inline)
+         0     0% 75.02%      1.61s  2.90%  runtime.gcBgMarkWorker.func2
+         0     0% 75.02%      1.61s  2.90%  runtime.gcDrain
+         0     0% 75.02%      1.58s  2.84%  golang.org/x/sys/unix.Pread (inline)
+         0     0% 75.02%      1.58s  2.84%  golang.org/x/sys/unix.pread
+         0     0% 75.02%      1.58s  2.84%  modernc.org/libc.Xpread
+         0     0% 75.02%      1.58s  2.84%  modernc.org/sqlite/lib._seekAndRead
+         0     0% 75.02%      1.58s  2.84%  modernc.org/sqlite/lib._sqlite3OsRead (inline)
+         0     0% 75.02%      1.58s  2.84%  modernc.org/sqlite/lib._unixRead
+         0     0% 75.02%      1.55s  2.79%  modernc.org/sqlite/lib._readDbPage
+         0     0% 75.02%      1.54s  2.77%  database/sql.(*Rows).Next
+         0     0% 75.02%      1.53s  2.75%  database/sql.(*Rows).Next.func1
+         0     0% 75.02%      1.53s  2.75%  database/sql.(*Rows).nextLocked
+         0     0% 75.02%      1.53s  2.75%  modernc.org/sqlite.(*rows).Next
+         0     0% 75.02%      1.33s  2.39%  modernc.org/sqlite/lib._moveToChild
+     0.07s  0.13% 75.14%      1.31s  2.36%  modernc.org/sqlite/lib._sqlite3GenerateConstraintChecks

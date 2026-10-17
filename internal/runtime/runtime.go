@@ -126,9 +126,7 @@ func Start(ctx context.Context, cfg Config) error {
 			case <-ctx.Done():
 				return
 			case <-tick.C:
-				if store.ProtectBlobs(ctx) == nil {
-					blobStore.Collect(ctx)
-				}
+				blobStore.Collect(ctx)
 			}
 		}
 	}()

@@ -280,7 +280,7 @@ func (s *Store) publishCommand(ctx context.Context, r contracts.CommandRecord) e
 	if _, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO meta(key,value) VALUES('commands_seen','1')"); err != nil {
 		return err
 	}
-	if err = tx.Commit(); err != nil {
+	if err = s.commitProtected(ctx, tx); err != nil {
 		return err
 	}
 	s.signal()

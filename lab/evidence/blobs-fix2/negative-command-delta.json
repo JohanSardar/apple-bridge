@@ -1,0 +1,188 @@
+{
+  "host_conditions": {
+    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "start": {
+      "air": {
+        "at": "2026-10-17T19:31:01.694282Z",
+        "cpu_count": 8,
+        "load_average": [
+          3.67,
+          4.37,
+          5.76
+        ],
+        "cpu_idle_percent": 84,
+        "free_memory_bytes": 224296960,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 3,
+        "quiet": false
+      }
+    },
+    "end": {
+      "air": {
+        "at": "2026-10-17T19:31:06.797689Z",
+        "cpu_count": 8,
+        "load_average": [
+          3.46,
+          4.32,
+          5.73
+        ],
+        "cpu_idle_percent": 70,
+        "free_memory_bytes": 162938880,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 3,
+        "quiet": false
+      }
+    },
+    "quiet": false,
+    "require_quiet": false,
+    "quiet_wait_ms": 0,
+    "quiet_wait_expired": false
+  },
+  "run_id": "run_01M55NH9071376QWKNYW3XFEJA",
+  "network_path": "loopback",
+  "metrics": {
+    "digest_check_0_bytes": 4194304,
+    "digest_check_0_deadline_exceeded": false,
+    "digest_check_0_error_type": "\u003cnil\u003e",
+    "digest_check_0_read_ms": 6.120792,
+    "digest_check_0_status": 200,
+    "digest_check_1_bytes": 4194304,
+    "digest_check_1_deadline_exceeded": false,
+    "digest_check_1_error_type": "\u003cnil\u003e",
+    "digest_check_1_read_ms": 4.060875,
+    "digest_check_1_status": 200
+  },
+  "scenario": "CORE-BLOB-GC",
+  "level": "sim",
+  "passed": false,
+  "git_sha": "78464bbfc9f051638c31dfa820e673e5afaaf185",
+  "at": "2026-10-17T19:31:02.791766Z",
+  "assertions": [
+    {
+      "name": "feed_network_loopback",
+      "passed": true
+    },
+    {
+      "name": "replica_host_is_air",
+      "passed": true
+    },
+    {
+      "name": "bootstrap_snapshot",
+      "passed": true
+    },
+    {
+      "name": "scope_query_and_get",
+      "passed": true
+    },
+    {
+      "name": "attachment_fixture",
+      "passed": true
+    },
+    {
+      "name": "attachment_metadata_visible",
+      "passed": true
+    },
+    {
+      "name": "metadata_convergence_with_blob_backlog",
+      "passed": true
+    },
+    {
+      "name": "blob_complete",
+      "passed": true
+    },
+    {
+      "name": "authorized_bytes_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "authorized_bytes_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "legacy_reference_index_open",
+      "passed": true
+    },
+    {
+      "name": "legacy_reference_index_removed",
+      "passed": true
+    },
+    {
+      "name": "reference_index_migration_restart",
+      "passed": true
+    },
+    {
+      "name": "reference_index_migration_converges",
+      "passed": true
+    },
+    {
+      "name": "migrated_reference_index_open",
+      "passed": true
+    },
+    {
+      "name": "legacy_reference_index_backfilled",
+      "passed": true
+    },
+    {
+      "name": "private_immutable_blob",
+      "passed": true
+    },
+    {
+      "name": "referenced_blob_survives_grace",
+      "passed": true
+    },
+    {
+      "name": "record_protects_blob",
+      "passed": true
+    },
+    {
+      "name": "snapshot_reference_acquired",
+      "passed": true
+    },
+    {
+      "name": "stage_returns_pin",
+      "passed": true
+    },
+    {
+      "name": "delete_attachment_and_message",
+      "passed": true
+    },
+    {
+      "name": "deletion_metadata_converges",
+      "passed": true
+    },
+    {
+      "name": "snapshot_only_and_pin_survive_grace",
+      "passed": true
+    },
+    {
+      "name": "command_reference_acquired",
+      "passed": true
+    },
+    {
+      "name": "snapshot_release",
+      "passed": true
+    },
+    {
+      "name": "command_only_survives_grace",
+      "passed": false
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "effect_done→blob_complete": {
+      "samples": 1,
+      "p50_ms": 495.751208,
+      "p95_ms": 495.751208,
+      "max_ms": 495.751208,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}
