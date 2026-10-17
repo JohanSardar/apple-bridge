@@ -10,6 +10,32 @@ import (
 	"time"
 )
 
+type CommandState string
+type Disposition string
+
+const (
+	CommandAdmitted       CommandState = "admitted"
+	CommandPrepared       CommandState = "prepared"
+	CommandDispatched     CommandState = "dispatched"
+	CommandObserved       CommandState = "observed"
+	CommandDelivered      CommandState = "delivered"
+	CommandDeliveryFailed CommandState = "delivery_failed"
+	CommandFailed         CommandState = "failed"
+	CommandIndeterminate  CommandState = "indeterminate"
+	CommandRejected       CommandState = "rejected"
+	CommandExpired        CommandState = "expired"
+)
+const (
+	DispositionRejectedBeforeDispatch Disposition = "rejected_before_dispatch"
+	DispositionFailedNoEffect         Disposition = "failed_no_effect"
+	DispositionLocallyObserved        Disposition = "locally_observed"
+	DispositionDelivered              Disposition = "delivered"
+	DispositionDeliveryFailed         Disposition = "delivery_failed"
+	DispositionIndeterminate          Disposition = "indeterminate"
+	DispositionExpired                Disposition = "expired"
+	DispositionAbsentConfirmed        Disposition = "absent_confirmed"
+)
+
 type Command struct {
 	ID              string          `json:"command_id,omitempty"`
 	Op              string          `json:"op,omitempty"`
@@ -36,7 +62,7 @@ type CommandQuery struct {
 	Limit   int    `json:"limit,omitempty"`
 }
 type CommandEvent struct {
-	State    string          `json:"state"`
+	State    CommandState    `json:"state"`
 	At       time.Time       `json:"at"`
 	Evidence json.RawMessage `json:"evidence,omitempty"`
 }
@@ -45,12 +71,12 @@ type CommandRecord struct {
 	Principal    string          `json:"principal"`
 	Source       Source          `json:"source"`
 	RequestHash  string          `json:"request_hash"`
-	State        string          `json:"state"`
+	State        CommandState    `json:"state"`
 	AdmissionEra string          `json:"admission_era"`
 	CreatedAt    time.Time       `json:"created_at"`
 	ExpiresAt    time.Time       `json:"expires_at"`
 	Evidence     json.RawMessage `json:"evidence,omitempty"`
-	Disposition  string          `json:"disposition,omitempty"`
+	Disposition  Disposition     `json:"disposition,omitempty"`
 	CommitSeq    uint64          `json:"commit_seq"`
 	Cursor       Cursor          `json:"cursor"`
 	History      []CommandEvent  `json:"history"`
@@ -78,8 +104,13 @@ func DecodeInput(b []byte, out any) error {
 }
 func ValidateCommand(c Command) (ReminderArgs, error) {
 	var a ReminderArgs
-	if c.ID == "" || c.WaitMS < 0 || c.WaitMS > 15000 || len(c.ID) > 200 || c.Args == nil {
+	if c.ID == "" || c.WaitMS < 0 || c.WaitMS > 15000 || len(c.ID) > 128 || c.Args == nil {
 		return a, ErrInvalid
+	}
+	for _, ch := range c.ID {
+		if !(ch >= 'a' && ch <= 'z' || ch >= 'A' && ch <= 'Z' || ch >= '0' && ch <= '9' || strings.ContainsRune("._:-", ch)) {
+			return a, ErrInvalid
+		}
 	}
 	if DecodeInput(c.Args, &a) != nil {
 		return a, ErrInvalid
@@ -158,14 +189,7 @@ func CommandTTL(op string) (time.Duration, time.Duration) {
 	return 5 * time.Minute, time.Hour
 }
 
-func NewCommandID(epoch string) string { return "cmd_" + epoch + "_" + NewID("") }
-func CommandEpoch(id string) string {
-	parts := strings.SplitN(id, "_", 3)
-	if len(parts) != 3 || parts[0] != "cmd" || parts[2] == "" {
-		return ""
-	}
-	return parts[1]
-}
+func NewCommandID() string { return NewID("cmd") }
 
 func ReminderArgumentFields(op string) []string {
 	switch op {
@@ -179,4 +203,9 @@ func ReminderArgumentFields(op string) []string {
 		return []string{"id"}
 	}
 	return nil
+}
+
+type ConflictObservation struct {
+	NativeKey         string `json:"native_key"`
+	CaptureCheckpoint string `json:"capture_checkpoint"`
 }

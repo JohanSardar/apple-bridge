@@ -52,7 +52,7 @@ func (g *LocalGateway) authorize(p trust.Principal, op string) error {
 	}
 	return g.Authority.Authorize(p, contracts.Grant("reminders:write"))
 }
-func (g *LocalGateway) transition(ctx context.Context, r contracts.CommandRecord, to, disposition string, evidence json.RawMessage, problem *contracts.Error) (contracts.CommandRecord, error) {
+func (g *LocalGateway) transition(ctx context.Context, r contracts.CommandRecord, to contracts.CommandState, disposition contracts.Disposition, evidence json.RawMessage, problem *contracts.Error) (contracts.CommandRecord, error) {
 	from := r.State
 	r.State = to
 	r.Disposition = disposition
@@ -98,9 +98,6 @@ func (g *LocalGateway) Submit(ctx context.Context, p trust.Principal, c contract
 		return old, nil
 	} else if !errors.Is(err, contracts.ErrNotFound) {
 		return empty, err
-	}
-	if contracts.CommandEpoch(c.ID) != g.State.Head().Epoch {
-		return empty, &contracts.Error{Code: "expired", Message: "command ID is lookup only; new IDs must use cmd_<cursor.epoch>_<unique>"}
 	}
 	era, err := g.State.AdmissionEra(ctx)
 	if err != nil {
@@ -219,7 +216,7 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 		return r, contracts.ErrUnavailable
 	}
 	if prepared.T == "Rejected" {
-		problem := prepared.Error
+		problem := g.nativeConflict(runctx, p, a.ID, action.NativeKey, prepared)
 		if problem == nil {
 			problem = contracts.ErrInvalid
 		}
@@ -252,11 +249,14 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 	if err != nil {
 		return g.transition(g.Context, r, "indeterminate", "indeterminate", nil, nil)
 	}
+	if outcome.T == "Rejected" {
+		outcome.Error = g.nativeConflict(outcomeCtx, p, a.ID, action.NativeKey, outcome)
+	}
 	return g.outcome(g.Context, r, outcome)
 }
 
 func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f contracts.IPCFrame) (contracts.CommandRecord, error) {
-	to := "indeterminate"
+	to := contracts.CommandIndeterminate
 	disposition := f.Disposition
 	f.Disposition = "indeterminate"
 	switch disposition {
@@ -375,4 +375,23 @@ func (g *LocalGateway) Recover(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+func (g *LocalGateway) nativeConflict(ctx context.Context, p trust.Principal, id, nativeKey string, frame contracts.IPCFrame) *contracts.Error {
+	if frame.Error == nil || frame.Error.Code != "conflict" {
+		return frame.Error
+	}
+	var observation contracts.ConflictObservation
+	if json.Unmarshal(frame.Evidence, &observation) != nil || observation.NativeKey != nativeKey || nativeKey == "" {
+		return contracts.ErrCorrupt
+	}
+	cursor, err := g.Peer.CapturedSequence(contracts.Reminders, observation.CaptureCheckpoint, "reminders.reminder", nativeKey)
+	if err != nil || cursor.Epoch != g.State.Head().Epoch {
+		return contracts.ErrCorrupt
+	}
+	read, err := g.State.Read(ctx, p.Visibility(), contracts.ReadQuery{Collection: "reminders.reminder", ID: id, IncludeDeleted: true})
+	if err != nil || len(read.Records) != 1 || read.Cursor.Sequence < cursor.Sequence {
+		return contracts.ErrCorrupt
+	}
+	return &contracts.Error{Code: "conflict", Message: "native state changed before dispatch", Current: &read.Records[0]}
 }

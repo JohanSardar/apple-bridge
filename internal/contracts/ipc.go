@@ -59,7 +59,7 @@ type IPCFrame struct {
 	Route         string          `json:"route,omitempty"`
 	Fingerprint   string          `json:"fingerprint,omitempty"`
 	CandidateIDs  []string        `json:"candidate_ids,omitempty"`
-	Disposition   string          `json:"disposition,omitempty"`
+	Disposition   Disposition     `json:"disposition,omitempty"`
 	Evidence      json.RawMessage `json:"evidence,omitempty"`
 	Error         *Error          `json:"error,omitempty"`
 
@@ -118,7 +118,7 @@ type Dispatch struct {
 type Outcome struct {
 	T           string          `json:"t"`
 	CommandID   string          `json:"command_id"`
-	Disposition string          `json:"disposition"`
+	Disposition Disposition     `json:"disposition"`
 	Evidence    json.RawMessage `json:"evidence"`
 }
 type Resolve struct {

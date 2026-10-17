@@ -101,6 +101,14 @@ func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fenc
 		_, err := wire.Send(contracts.IPCFrame{T: "Rejected", CommandID: frame.CommandID, Disposition: "rejected_before_dispatch", Error: problem})
 		return err
 	}
+	rejectConflict := func(o contracts.Observation) error {
+		if err := emit(contracts.Capture{Source: contracts.Reminders, Observations: []contracts.Observation{o}}); err != nil {
+			return err
+		}
+		evidence, _ := json.Marshal(contracts.ConflictObservation{NativeKey: o.NativeKey, CaptureCheckpoint: checkpoint()})
+		_, err := wire.Send(contracts.IPCFrame{T: "Rejected", CommandID: frame.CommandID, Disposition: contracts.DispositionRejectedBeforeDispatch, Error: contracts.ErrConflict, Evidence: evidence})
+		return err
+	}
 	switch frame.T {
 	case "Prepare":
 		if frame.Action == nil || frame.Principal == "" || frame.RequestHash == "" {
@@ -150,13 +158,13 @@ func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fenc
 				json.Unmarshal(membershipJSON, &membership)
 				if membership.Ref.NativeKey != a.ExpectedListKey {
 					f.mu.Unlock()
-					return reject(contracts.ErrConflict)
+					return rejectConflict(o)
 				}
 				delete(expected, "list_id")
 				delete(native, "list_id")
 				if !reflect.DeepEqual(expected, native) {
 					f.mu.Unlock()
-					return reject(contracts.ErrConflict)
+					return rejectConflict(o)
 				}
 			}
 		}
@@ -231,8 +239,9 @@ func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fenc
 			return reject(contracts.ErrExpired)
 		}
 		if t.Action.NativeKey != "" && string(f.records[t.Action.NativeKey].Data) != string(t.Before) {
+			o := f.records[t.Action.NativeKey]
 			f.mu.Unlock()
-			return reject(contracts.ErrConflict)
+			return rejectConflict(o)
 		}
 		if t.Action.Op != "reminders.create_list" {
 			var list struct {

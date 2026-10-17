@@ -11,7 +11,7 @@ import (
 )
 
 type CommandTransition struct {
-	From   string
+	From   contracts.CommandState
 	Record contracts.CommandRecord
 }
 
@@ -57,7 +57,7 @@ func (s *Store) Commands(ctx context.Context) ([]contracts.CommandRecord, error)
 	}
 	return out, rows.Err()
 }
-func commandTransitionAllowed(from, to string) bool {
+func commandTransitionAllowed(from, to contracts.CommandState) bool {
 	switch from {
 	case "":
 		return to == "admitted"

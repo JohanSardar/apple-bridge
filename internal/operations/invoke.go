@@ -23,7 +23,7 @@ func (s *Service) Invoke(ctx context.Context, p trust.Principal, name string, in
 		}
 		c.Op = name
 		if c.ID == "" {
-			c.ID = contracts.NewCommandID(s.State.Head().Epoch)
+			c.ID = contracts.NewCommandID()
 		}
 		if s.Target == nil {
 			return nil, contracts.ErrUnavailable
