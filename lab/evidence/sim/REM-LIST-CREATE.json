@@ -1,10 +1,10 @@
 {
-  "run_id": "run_01M54BFGTERD976693K93JTH9J",
+  "run_id": "run_01M55GCRTE1WVTDJ7TSNHXCY3X",
   "scenario": "REM-LIST-CREATE",
   "level": "sim",
   "passed": true,
-  "git_sha": "6a1b57790f171ef5805e68da513af0de7d00b78f",
-  "at": "2026-10-17T07:16:05.070787Z",
+  "git_sha": "55716fa60ea624c8e71a5e730279bb586a892a2f",
+  "at": "2026-10-17T18:01:12.27021Z",
   "assertions": [
     {
       "name": "reminders_ready",
@@ -28,6 +28,10 @@
     },
     {
       "name": "no_scope_leak",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
       "passed": true
     }
   ],

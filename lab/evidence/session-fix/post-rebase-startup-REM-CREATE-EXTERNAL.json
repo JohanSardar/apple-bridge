@@ -1,0 +1,22 @@
+{
+  "run_id": "run_01M55GEZHRTN2EGEYJSQD50A99",
+  "scenario": "REM-CREATE-EXTERNAL",
+  "level": "real",
+  "passed": false,
+  "git_sha": "55716fa60ea624c8e71a5e730279bb586a892a2f",
+  "at": "2026-10-17T18:02:24.696772Z",
+  "assertions": [
+    {
+      "name": "world_start",
+      "passed": false
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

@@ -1,45 +1,21 @@
 {
-  "run_id": "run_01M54ADSXCKDC2QXXCD32GCHTW",
+  "run_id": "run_01M55GEZHRTN2EGEYJSQD50A99",
   "scenario": "REM-CREATE-EXTERNAL",
   "level": "real",
-  "passed": true,
-  "git_sha": "26827bb9cf7bf21a9b427aedb8eaa85c9cdc916e",
-  "at": "2026-10-17T06:57:40.268489Z",
+  "passed": false,
+  "git_sha": "55716fa60ea624c8e71a5e730279bb586a892a2f",
+  "at": "2026-10-17T18:02:24.696772Z",
   "assertions": [
     {
-      "name": "reminders_ready",
-      "passed": true
+      "name": "world_start",
+      "passed": false
     },
     {
-      "name": "replica_visible_under_one_second",
-      "passed": true
-    },
-    {
-      "name": "independent_appletruth",
-      "passed": true
-    },
-    {
-      "name": "replica_convergence",
-      "passed": true
-    },
-    {
-      "name": "no_scope_leak",
-      "passed": true
-    },
-    {
-      "name": "no_scope_leak",
+      "name": "credential_backend_override_restored",
       "passed": true
     }
   ],
-  "latency": {
-    "effect_done→replica_visible:replica0": {
-      "samples": 1,
-      "p50_ms": 885.087916,
-      "p95_ms": 885.087916,
-      "max_ms": 885.087916,
-      "timeouts": 0
-    }
-  },
+  "latency": {},
   "hosts": [
     "air"
   ]

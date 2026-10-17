@@ -1,0 +1,22 @@
+{
+  "run_id": "run_01M55GCW7DQCVNYNQZ4A86Y8FJ",
+  "scenario": "CORE-LIVE-LATENCY",
+  "level": "real",
+  "passed": false,
+  "git_sha": "55716fa60ea624c8e71a5e730279bb586a892a2f",
+  "at": "2026-10-17T18:01:15.757452Z",
+  "assertions": [
+    {
+      "name": "world_start",
+      "passed": false
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
