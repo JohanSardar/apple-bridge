@@ -511,7 +511,11 @@ func (w *World) RestartReplica(index int) error {
 		return err
 	}
 	_, port, _ := net.SplitHostPort(e.Host)
-	p, err := w.start("replica"+strconv.Itoa(index), e.Remote, e.Home, binary, "start", "--role", "replica", "--home", e.Home, "--api-addr", "127.0.0.1:"+port, "--blob-cap", strconv.FormatInt(w.blobOptions.Cap, 10), "--blob-grace-ms", strconv.FormatInt(w.blobOptions.GraceMS, 10))
+	args := []string{"start", "--role", "replica", "--home", e.Home, "--api-addr", "127.0.0.1:" + port, "--blob-cap", strconv.FormatInt(w.blobOptions.Cap, 10), "--blob-grace-ms", strconv.FormatInt(w.blobOptions.GraceMS, 10)}
+	if e.Listen != "" {
+		args = append(args, "--listen", e.Listen)
+	}
+	p, err := w.start("replica"+strconv.Itoa(index), e.Remote, e.Home, binary, args...)
 	if err != nil {
 		return err
 	}
