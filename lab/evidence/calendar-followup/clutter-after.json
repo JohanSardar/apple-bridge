@@ -2,8 +2,8 @@
   "oracle": "independent_read_only_calendar_database",
   "all_dates": true,
   "tagged_items": 0,
-  "bridge_test_calendars": 9,
+  "bridge_test_calendars": 1,
   "bridge_test_items": 0,
   "bridge_test_tagged_items": 0,
-  "passed": false
+  "passed": true
 }
