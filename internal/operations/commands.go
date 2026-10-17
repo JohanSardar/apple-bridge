@@ -319,6 +319,12 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 		if r.Command.Op == "calendar.create_calendar" {
 			collection = "calendar.calendar"
 		}
+		if r.Source == contracts.Notes {
+			collection = "notes.note"
+			if r.Command.Op == "notes.create_folder" {
+				collection = "notes.folder"
+			}
+		}
 		if r.Command.Op == "reminders.create_list" {
 			collection = "reminders.list"
 		}

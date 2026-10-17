@@ -1,0 +1,17 @@
+{
+  "scenario": "NOTE-EXTERNAL",
+  "level": "replica",
+  "git_sha": "72bd33c20acfde829e79b5732a4433e1ee56969e",
+  "at": "2026-10-17T20:04:26.089172+00:00",
+  "passed": false,
+  "status": "pending-unlock",
+  "assertions": [
+    {
+      "name": "native_fixture_pending_unlock",
+      "passed": false,
+      "detail": "Helper Notes AppleScript -1712 while GUI locked, after Automation grant and target identity correction; no native scenario effects dispatched"
+    }
+  ],
+  "latency": {},
+  "probe_sha256": "37f562d027be2707d91c0fe25dfdd1479667ecaaf740589eeb23904b16858ce2"
+}
