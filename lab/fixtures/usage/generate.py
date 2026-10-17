@@ -23,3 +23,8 @@ valid = [event(base, 1, "test.synthetic.alpha"), event(base + 60, 0, "test.synth
 (root / "synthetic.segb").write_bytes(container(valid))
 malformed = [event(float("nan"), 1, "test.synthetic.invalid"), event(base, 1, "invalid space"), event(base, 1, "test.synthetic.alpha")[:-4]]
 (root / "malformed.segb").write_bytes(container(malformed + valid) + event(base, 1, "test.synthetic.truncated")[:-7])
+
+bits = struct.unpack("<Q", struct.pack("<d", base - 978307200))[0]
+crlf_time = struct.unpack("<d", struct.pack("<Q", (bits & ~0xFFFF00) | 0x0A0D00))[0] + 978307200
+assert b"\r\n" in event(crlf_time, 1, "test.synthetic.crlf")[5:13]
+(root / "crlf.segb").write_bytes(container([event(crlf_time, 1, "test.synthetic.crlf"), event(crlf_time + 60, 0, "test.synthetic.crlf")]))

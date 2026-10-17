@@ -67,7 +67,7 @@ func usageRows(result contracts.ReadResult) map[string]map[string]float64 {
 }
 func runUsage(ctx context.Context, s Scenario, level string) Evidence {
 	sha, _ := exec.Command("git", "rev-parse", "HEAD").Output()
-	e := Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, GitSHA: strings.TrimSpace(string(sha)), At: time.Now().UTC(), Assertions: []Assertion{}, Latency: map[string]Latency{}, Hosts: []string{"air"}}
+	e := Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, GitSHA: strings.TrimSpace(string(sha)), At: time.Now().UTC(), Assertions: []Assertion{}, Metrics: map[string]any{}, Latency: map[string]Latency{}, Hosts: []string{"air"}}
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
 	fail := func(name string) Evidence { add(name, false); return e }
 	if s.ID == "USE-SEGB-DECODE" {
@@ -102,21 +102,25 @@ func runUsage(ctx context.Context, s Scenario, level string) Evidence {
 				return false
 			}
 			rows := usageRows(actual)
-			if len(rows) != len(expected) {
-				return false
-			}
+			missing := 0
+			different := map[string]int{}
 			for key, want := range expected {
 				got, ok := rows[key]
 				if !ok {
-					return false
+					missing++
+					continue
 				}
 				for field, value := range want {
 					if math.Abs(got[field]-value) > 0.001 {
-						return false
+						different[field]++
 					}
 				}
 			}
-			return true
+			e.Metrics["truth_rows"] = len(expected)
+			e.Metrics["gateway_rows"] = len(rows)
+			e.Metrics["unmatched_keys"] = missing
+			e.Metrics["different_fields"] = different
+			return len(rows) == len(expected) && missing == 0 && len(different) == 0
 		}
 		add("independent_day_totals_match", w.Await(45*time.Second, matches) == nil)
 	} else {
@@ -216,7 +220,8 @@ func runUsage(ctx context.Context, s Scenario, level string) Evidence {
 		}
 	}
 	add("provenance_and_device_freshness", metadata && devices > 0 && days > 0)
-	e.Metrics = map[string]any{"devices": devices, "app_days": days}
+	e.Metrics["devices"] = devices
+	e.Metrics["app_days"] = days
 	e.Passed = true
 	for _, assertion := range e.Assertions {
 		e.Passed = e.Passed && assertion.Passed

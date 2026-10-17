@@ -9,7 +9,7 @@ enum UsageTruth {
     static func observe(root path: String? = nil) throws -> [String: Any] {
         let biome = path.map { URL(fileURLWithPath: $0) } ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Biome")
         let root = biome.appendingPathComponent("streams/restricted/App.InFocus").resolvingSymlinksInPath()
-        let matcher = try NSRegularExpression(pattern: "\\x10.\\x18[\\x00\\x01]\\x21.{8}\\x32.", options: [.dotMatchesLineSeparators])
+        let matcher = try NSRegularExpression(pattern: "\\x10[\\x00-\\xff]\\x18[\\x00\\x01]\\x21[\\x00-\\xff]{8}\\x32[\\x00-\\xff]", options: [.dotMatchesLineSeparators])
         let bundles = try NSRegularExpression(pattern: "^[A-Za-z0-9._-]+$")
         guard let dirs = FileManager.default.enumerator(at: root, includingPropertiesForKeys: [.isRegularFileKey]) else { throw UsageTruthFailure.streamUnavailable }
         var grouped: [String: Set<Event>] = [:]
@@ -26,7 +26,7 @@ enum UsageTruth {
             let text = String(String.UnicodeScalarView(data.map { UnicodeScalar(Int($0))! })) as NSString
             for match in matcher.matches(in: text as String, range: NSRange(location: 0, length: text.length)) {
                 let index = match.range.location, count = Int(data[index + 14]), begin = index + 15
-                guard count > 0, begin + count <= data.count, let app = String(bytes: data[begin..<(begin + count)], encoding: .ascii), bundles.firstMatch(in: app, range: NSRange(location: 0, length: app.utf16.count)) != nil else { continue }
+                guard count > 0, begin + count <= data.count, let app = String(bytes: data[begin..<(begin + count)], encoding: .ascii), let valid = bundles.firstMatch(in: app, range: NSRange(location: 0, length: app.utf16.count)), valid.range.length == app.utf16.count else { continue }
                 let timeData = Data(data[(index + 5)..<(index + 13)])
                 let time = timeData.withUnsafeBytes { Double(bitPattern: UInt64(littleEndian: $0.loadUnaligned(as: UInt64.self))) } + 978307200
                 guard time > 1.6e9, time < 2.1e9 else { continue }

@@ -9,7 +9,8 @@ struct UsageChecks {
         let root = URL(fileURLWithPath: CommandLine.arguments[1])
         let a = InFocus.decode(try Data(contentsOf: root.appendingPathComponent("synthetic.segb")))
         let b = InFocus.decode(try Data(contentsOf: root.appendingPathComponent("malformed.segb")))
-        guard a.count == 2, Set(a) == Set(b) else { throw SourceFailure.corrupt }
+        let crlf = InFocus.decode(try Data(contentsOf: root.appendingPathComponent("crlf.segb")))
+        guard a.count == 2, Set(a) == Set(b), crlf.count == 2, crlf[1].time - crlf[0].time == 60 else { throw SourceFailure.corrupt }
         let zone = TimeZone(identifier: "America/New_York")!
         let start = 1800100800.0
         func e(_ offset: Double, _ starting: Bool, _ app: String = "test.synthetic.alpha") -> InFocusEvent { InFocusEvent(time: start + offset, starting: starting, bundle: app) }

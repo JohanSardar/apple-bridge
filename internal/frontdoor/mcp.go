@@ -41,12 +41,14 @@ func mcpHandler(deps Deps, descriptors []contracts.OperationDescriptor) http.Han
 	}, &mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true})
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
-			body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 1024*1024))
+			original := r.Body
+			defer original.Close()
+			body, err := io.ReadAll(io.LimitReader(original, 1024*1024))
 			if err != nil {
 				respond(w, nil, contracts.ErrInvalid)
 				return
 			}
-			r.Body = io.NopCloser(bytes.NewReader(body))
+			r.Body = io.NopCloser(io.MultiReader(bytes.NewReader(body), original))
 			var call struct {
 				ID     json.RawMessage `json:"id"`
 				Method string          `json:"method"`
