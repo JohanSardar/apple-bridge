@@ -18,7 +18,8 @@ Resume point for any fresh session. Updated after every unit of work.
 - `go run ./tools/lint` ok; `go run ./tools/featuregraph` ok (24 features, 0/177 scenario-levels passing).
 
 ## In flight (2026-10-17)
-- `ab-m0-tracer-review-r1`: two-axis review of the tracer (282d82b..d4e5ce4), reruns sim + replica.
+- DONE `ab-m0-tracer-review-r1`: tracer scenarios reproduced (sim LIVE p95 12.6–15.3 ms over 3 runs; Ubuntu p95 100 ms). Findings: runner Truth keyed by title (hides duplicates), unconditional transactional assertion, malformed scenario options default silently, SSE deadline + cursor identity, status typing → `ab-m0-tracer-fix-r1`; partition = process kill and SSH-tunnelled replica path → already in M0-C brief; typed IDs (raw strings) → deferred refactor after M0.
+- `ab-m0-tracer-fix-r1` (worktree tracer-fix): fixes above + lab self-check scenarios.
 - `ab-m0-commands-r1` (worktree m0-commands): command lifecycle, ApplePeer command frames, SimApplePeer commands + faults, RemoteGateway + delegated identity, MCP, CORE-CMD-*, parity, forged delegation, localhost defense, REM-CRUD/CONFLICT/EXTERNAL-RACE/READONLY-LIST.
 - `ab-m0-robust-r1` (worktree m0-robust): fault proxy, direct Tailscale replica path, snapshot/retention/gap/kill/slow-consumer/disconnect/upgrade/helper-restart/restore/disk-full/scope/pair/cred-lifecycle/bench scenarios.
 - `ab-m0-blobs-r1` (worktree m0-blobs): internal/blobs + feed transfer + IPC blob reads + CORE-BLOB-*.
