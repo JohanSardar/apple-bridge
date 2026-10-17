@@ -48,6 +48,12 @@ public final class RemindersSource: Source {
         .object(["title": .string(reminder.title ?? ""), "notes": reminder.notes.map(JSON.string) ?? .null, "url": reminder.url.map { .string($0.absoluteString) } ?? .null, "due": components(reminder.dueDateComponents), "due_all_day": .bool(reminder.dueDateComponents != nil && reminder.dueDateComponents?.hour == nil), "start": components(reminder.startDateComponents), "priority": .number(Double(reminder.priority)), "completed": .bool(reminder.isCompleted), "completed_at": reminder.completionDate.map { .string(timestamp($0)) } ?? .null, "recurrence": .bool(reminder.hasRecurrenceRules), "alarms": .array([]), "list_id": .object(["$ref": .object(["collection": .string("reminders.list"), "native_key": .string(reminder.calendar.calendarIdentifier)])])])
     }
 
+    private func hash(_ value: JSON) throws -> String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        return SHA256.hash(data: try encoder.encode(value)).map { String(format: "%02x", $0) }.joined()
+    }
+
     private func observation(_ collection: String, _ key: String, _ value: JSON, alias: String = "") -> JSON {
         var result: [String: JSON] = ["kind": .string("upsert"), "collection": .string(collection), "native_key": .string(key), "data": value, "observed_at": .string(timestamp())]
         if !alias.isEmpty { result["scoped_alias"] = .string(alias) }
@@ -69,11 +75,15 @@ public final class RemindersSource: Source {
             current[key] = observation("reminders.reminder", reminder.calendarItemIdentifier, data(reminder), alias: alias)
         }
         guard gate.authorized(.reminder) else { throw SourceFailure.permissionMissing }
-        var observations = current.filter { forceFull || committed[$0.key]?["data"] != $0.value["data"] || committed[$0.key]?["scoped_alias"] != $0.value["scoped_alias"] }.sorted {
-            if $0.value["collection"].string != $1.value["collection"].string { return $0.value["collection"].string < $1.value["collection"].string }
-            return $0.key < $1.key
-        }.map(\.value)
+        var observations: [JSON] = []
+        for key in current.keys.sorted() {
+            guard let observation = current[key] else { continue }
+            let changed = try hash(observation["data"]) != hash(committed[key]?["data"] ?? .null)
+            if forceFull || changed || committed[key]?["scoped_alias"] != observation["scoped_alias"] { observations.append(observation) }
+        }
         for (key, previous) in committed where current[key] == nil {
+            let alias = previous["scoped_alias"].string
+            if !alias.isEmpty && current.values.contains(where: { $0["collection"] == previous["collection"] && $0["scoped_alias"].string == alias }) { continue }
             if previous["collection"].string == "reminders.reminder", gate.store.calendarItem(withIdentifier: previous["native_key"].string) != nil { continue }
             var absent = previous.object
             absent["kind"] = .string("absent"); absent["revalidated"] = .bool(true); absent["observed_at"] = .string(timestamp())
@@ -84,6 +94,8 @@ public final class RemindersSource: Source {
         try save(current)
         committed = current
         forceFull = false
+        let readiness = await open()
+        try await sink.sourceState(source: name, state: readiness.state, coverage: readiness.coverage, capabilities: readiness.capabilities, reason: readiness.reason)
     }
 
     public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {
@@ -116,6 +128,7 @@ public final class RemindersSource: Source {
         if !action["native_key"].string.isEmpty {
             let reminder = try await fresh(action["native_key"].string)
             before = data(reminder)
+            if !action["expected_list_key"].string.isEmpty && reminder.calendar.calendarIdentifier != action["expected_list_key"].string { throw SourceFailure.conflict }
             var expected = command["expected_state"].object
             var native = before.object
             expected.removeValue(forKey: "list_id"); native.removeValue(forKey: "list_id")
@@ -125,7 +138,12 @@ public final class RemindersSource: Source {
         if action["op"].string != "reminders.create_list" {
             guard let calendar = gate.store.calendar(withIdentifier: action["list_key"].string), calendar.allowsContentModifications else { throw SourceFailure.unsupported }
         }
-        let encoded = try JSONEncoder().encode(action)
+        if action["op"].string == "reminders.create_list" {
+            guard gate.store.defaultCalendarForNewReminders()?.allowsContentModifications == true else { throw SourceFailure.unsupported }
+        }
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let encoded = try encoder.encode(action)
         return Prepared(nativeState: before, fingerprint: SHA256.hash(data: encoded).map { String(format: "%02x", $0) }.joined(), action: action)
     }
 
@@ -133,7 +151,10 @@ public final class RemindersSource: Source {
         if let title = args.object["title"] { reminder.title = title.string }
         if let notes = args.object["notes"] { reminder.notes = notes == .null ? nil : notes.string }
         if let url = args.object["url"] { reminder.url = url == .null ? nil : URL(string: url.string) }
-        if let priority = args.object["priority"] { reminder.priority = Int(priority.number) }
+        if let priority = args.object["priority"] {
+            guard let value = Int(exactly: priority.number), (0...9).contains(value) else { throw SourceFailure.invalid }
+            reminder.priority = value
+        }
         for field in ["due", "start"] {
             guard let value = args.object[field] else { continue }
             var result: DateComponents?
@@ -160,6 +181,7 @@ public final class RemindersSource: Source {
         if !action["native_key"].string.isEmpty {
             let current = try await fresh(action["native_key"].string)
             guard data(current) == prepared.nativeState else { throw SourceFailure.conflict }
+            guard current.calendar.allowsContentModifications else { throw SourceFailure.unsupported }
         }
     }
 
@@ -188,6 +210,7 @@ public final class RemindersSource: Source {
             }
             if operation == "reminders.delete" { try gate.store.remove(reminder, commit: true) }
             else {
+                if let destination = gate.store.calendar(withIdentifier: action["list_key"].string) { reminder.calendar = destination }
                 try patch(reminder, action["args"])
                 if operation == "reminders.complete" { reminder.isCompleted = true }
                 if operation == "reminders.uncomplete" { reminder.isCompleted = false }

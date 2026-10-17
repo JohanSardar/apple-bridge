@@ -34,6 +34,7 @@ public actor AppleSession: ObservationSink {
     }
     private var wire: PeerWire?
     private var fence: UInt64 = 0
+    private var permissionStates: [String: String] = [:]
     private var credit = 0
     private var checkpoints: [String: JSON] = [:]
     private var live: [Pending] = []
@@ -41,16 +42,22 @@ public actor AppleSession: ObservationSink {
     private var flights: [String: Flight] = [:]
     private var tickets: [String: Ticket] = [:]
     private var captureTasks: [Task<Void, Never>] = []
+    private let agenda: AgendaGate
     private let source: RemindersSource
     private let guardLog: DispatchGuard
     private let socket: String
     private let secretFile: String
     private let gatewayPID: Int32
+    private let home: URL
+    private let labEnabled: Bool
 
     @MainActor
     public init(socket: String, secretFile: String, home: URL, gatewayPID: Int32, commandsEnabled: Bool) throws {
         self.socket = socket; self.secretFile = secretFile; self.gatewayPID = gatewayPID
-        source = try RemindersSource(gate: AgendaGate(), home: home, commandsEnabled: commandsEnabled)
+        self.home = home; self.labEnabled = commandsEnabled
+        let agenda = AgendaGate()
+        self.agenda = agenda
+        source = try RemindersSource(gate: agenda, home: home, commandsEnabled: commandsEnabled)
         guardLog = try DispatchGuard(home: home)
         try Data(String(getpid()).utf8).write(to: home.appendingPathComponent("helper.pid"), options: .atomic)
     }
@@ -97,6 +104,7 @@ public actor AppleSession: ObservationSink {
 
     private func disconnect() {
         wire?.close(); wire = nil
+        permissionStates = [:]
         for task in captureTasks { task.cancel() }
         captureTasks = []
         for pending in live + bulk { pending.completion.resume(throwing: SourceFailure.unavailable) }
@@ -111,8 +119,17 @@ public actor AppleSession: ObservationSink {
 
     private func publishReadiness() async throws {
         let readiness = await source.open()
-        try wire?.send(.object(["t": .string("SourceState"), "source": .string("reminders"), "state": .string(readiness.state), "coverage": .object(["reminders": readiness.coverage]), "capabilities": .object(["reminders": .array(readiness.capabilities.map(JSON.string))]), "reason": .string(readiness.reason)]))
-        try wire?.send(.object(["t": .string("SourceState"), "source": .string("calendar"), "state": .string("permission_missing"), "coverage": .object(["calendar": .object(["fields": .string("partial"), "missing": .array([.string("calendar full access required")])])]), "reason": .string("calendar_full_access_required")]))
+        if readiness.state != permissionStates["reminders"] {
+            permissionStates["reminders"] = readiness.state
+            try await sourceState(source: "reminders", state: readiness.state, coverage: readiness.coverage, capabilities: readiness.capabilities, reason: readiness.reason)
+        }
+        let calendarAuthorized = await agenda.authorized(.event)
+        let calendarState = calendarAuthorized ? "unavailable" : "permission_missing"
+        if calendarState != permissionStates["calendar"] {
+            permissionStates["calendar"] = calendarState
+            let reason = calendarAuthorized ? "calendar_source_pending" : "calendar_full_access_required"
+            try await sourceState(source: "calendar", state: calendarState, coverage: .object(["fields": .string("partial"), "missing": .array([.string(reason)])]), capabilities: [], reason: reason)
+        }
     }
 
     private func capture() async {
@@ -123,7 +140,11 @@ public actor AppleSession: ObservationSink {
                 if readiness.state == "ready" { try await source.capture(checkpoints["reminders"] ?? .null, into: self) }
             } catch {
                 if wire == nil || Task.isCancelled { return }
-                try? await publishReadiness()
+                if case SourceFailure.permissionMissing = error {
+                    try? await publishReadiness()
+                } else {
+                    try? await sourceState(source: "reminders", state: "degraded", coverage: RemindersSource.coverage, capabilities: [], reason: "capture_failed")
+                }
                 if !(error is SourceFailure) { wire?.close(); return }
             }
             do { try await Task.sleep(for: .seconds(1)) } catch { return }
@@ -184,9 +205,16 @@ public actor AppleSession: ObservationSink {
         case "Pong": break
         case "Committed":
             let source = frame["source"].string
-            guard let flight = flights.removeValue(forKey: source), frame["checkpoint"].string == flight.checkpoint, Int(frame["credit"].number) == flight.bytes else { throw SourceFailure.invalid }
+            guard let flight = flights[source], frame["checkpoint"].string == flight.checkpoint, frame["credit"].unsigned == UInt64(flight.bytes) else { throw SourceFailure.invalid }
+            try await pause("capture", observations: flight.pending.observations)
+            flights.removeValue(forKey: source)
             credit += flight.bytes
             checkpoints[source] = .object(["generation": .string(flight.pending.generation), "checkpoint": .string(flight.checkpoint)])
+            if labEnabled {
+                let marker = home.appendingPathComponent("lab-committed-" + source)
+                try Data(flight.checkpoint.utf8).write(to: marker, options: .atomic)
+                try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: marker.path)
+            }
             flight.pending.completion.resume()
             try drain()
         case "Reset": throw SourceFailure.conflict
@@ -208,6 +236,20 @@ public actor AppleSession: ObservationSink {
             try wire?.send(.object(["t": .string("BlobUnavailable"), "handle": frame["handle"], "reason": .string("unsupported")]))
         case "Close": throw SourceFailure.unavailable
         default: throw SourceFailure.invalid
+        }
+    }
+
+    private func pause(_ point: String, observations: [JSON] = []) async throws {
+        guard labEnabled else { return }
+        let marker = home.appendingPathComponent("lab-pause-" + point)
+        guard FileManager.default.fileExists(atPath: marker.path) else { return }
+        if point == "capture", let title = try? String(contentsOf: marker, encoding: .utf8), title.hasPrefix("[ab-test "), !observations.contains(where: { $0["data"]["title"].string == title }) { return }
+        let signal = home.appendingPathComponent("lab-paused-" + point)
+        try Data("paused".utf8).write(to: signal, options: .atomic)
+        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: signal.path)
+        while FileManager.default.fileExists(atPath: marker.path) {
+            guard kill(gatewayPID, 0) == 0 else { throw SourceFailure.unavailable }
+            try await Task.sleep(for: .milliseconds(10))
         }
     }
 
@@ -246,6 +288,7 @@ public actor AppleSession: ObservationSink {
             try await source.validate(ticket.prepared)
             try await guardLog.append(.object(["t": .string("DispatchStarted"), "command_id": id, "ticket": frame["ticket"], "started_at": .string(timestamp()), "prepared": .object(["action": ticket.prepared.action, "native_state": ticket.prepared.nativeState, "fingerprint": .string(ticket.prepared.fingerprint)])]))
             started = true
+            try await pause("dispatch")
             let evidence = try await source.dispatch(ticket.prepared)
             let outcome = JSON.object(["t": .string("Outcome"), "command_id": id, "disposition": .string("locally_observed"), "evidence": evidence])
             try await guardLog.append(outcome)
