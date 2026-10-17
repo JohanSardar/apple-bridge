@@ -892,4 +892,5 @@ Each milestone proves its riskiest unknown first, starts every feature as a fail
 - Replicas that can neither reach the gateway nor be reached by it need a relay (an SSH tunnel or similar); no hosted relay in v1.
 - Local file access on a replica bypasses API scopes; revocation cannot erase copied data.
 - Losing `ledger.db` (not just `state.db`) loses the ability to recognize earlier command IDs; recovery requires an explicit operator acknowledgement.
+- The login Keychain can be locked while the gateway runs in the background (seen 2026-10-17: screen locked, `security` → "User interaction is not allowed"). Open M5 decision: store gateway credentials where a background agent can always read them (a dedicated Apple Bridge keychain, or the data-protection keychain with the signed app's access group). Until then the gateway fails with a typed, named error and `bridge doctor` reports it; lab worlds select a file credential store explicitly.
 - Notarized distribution requires an Apple Developer ID (status tracked in PROGRESS.md).
