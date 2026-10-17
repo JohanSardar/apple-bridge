@@ -1,0 +1,166 @@
+{
+  "host_conditions": {
+    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "start": {
+      "air": {
+        "at": "2026-10-17T19:11:25.782606Z",
+        "cpu_count": 8,
+        "load_average": [
+          16.11,
+          12.73,
+          9.79
+        ],
+        "cpu_idle_percent": 80,
+        "free_memory_bytes": 305184768,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 2,
+        "quiet": false
+      }
+    },
+    "end": {
+      "air": {
+        "at": "2026-10-17T19:11:53.46981Z",
+        "cpu_count": 8,
+        "load_average": [
+          11.17,
+          11.83,
+          9.55
+        ],
+        "cpu_idle_percent": 69,
+        "free_memory_bytes": 97402880,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 3,
+        "quiet": false
+      }
+    },
+    "periodic_samples": [
+      {
+        "air": {
+          "at": "2026-10-17T19:11:31.850479Z",
+          "cpu_count": 8,
+          "load_average": [
+            14.9,
+            12.53,
+            9.74
+          ],
+          "cpu_idle_percent": 77,
+          "free_memory_bytes": 203112448,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:11:36.850512Z",
+          "cpu_count": 8,
+          "load_average": [
+            13.79,
+            12.34,
+            9.68
+          ],
+          "cpu_idle_percent": 77,
+          "free_memory_bytes": 62062592,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:11:41.850568Z",
+          "cpu_count": 8,
+          "load_average": [
+            12.84,
+            12.17,
+            9.64
+          ],
+          "cpu_idle_percent": 67,
+          "free_memory_bytes": 103186432,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:11:46.850689Z",
+          "cpu_count": 8,
+          "load_average": [
+            11.97,
+            12,
+            9.59
+          ],
+          "cpu_idle_percent": 56,
+          "free_memory_bytes": 60342272,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:11:51.850739Z",
+          "cpu_count": 8,
+          "load_average": [
+            11.17,
+            11.83,
+            9.55
+          ],
+          "cpu_idle_percent": 57,
+          "free_memory_bytes": 104710144,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        }
+      }
+    ],
+    "quiet": false,
+    "require_quiet": false,
+    "quiet_wait_ms": 0,
+    "quiet_wait_expired": false
+  },
+  "status": "failed",
+  "run_id": "run_01M55MDCMXZE3SARNPM71P43JF",
+  "network_path": "loopback",
+  "metrics": {
+    "natural_events_only": true,
+    "read_only": true,
+    "truth_poll_interval_ms": 25
+  },
+  "scenario": "MSG-WATCHER-REARM",
+  "level": "real",
+  "passed": false,
+  "git_sha": "665b5e81251e86c80e45d8202a0e7ab5a692443e",
+  "at": "2026-10-17T19:11:26.877258Z",
+  "assertions": [
+    {
+      "name": "truth_readonly_chat_db",
+      "passed": true
+    },
+    {
+      "name": "messages_source_ready",
+      "passed": true
+    },
+    {
+      "name": "readonly_truth_execution",
+      "passed": false,
+      "detail": "Private diagnostic suppressed; error type TypeError"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

@@ -5,6 +5,8 @@ import sqlite3
 import sys
 import time
 import urllib.request
+import urllib.error
+import traceback
 
 result = {"assertions": [], "samples": {}, "status": "", "metrics": {"read_only": True, "natural_events_only": True, "truth_poll_interval_ms": 25}}
 
@@ -19,14 +21,47 @@ def check(name, passed, detail="", pending=False):
     result["assertions"].append(value)
 
 
+class ReadOnlyDatabase:
+    def __init__(self, path):
+        self.path = path
+        self.connection = None
+        self.identity = None
+
+    @staticmethod
+    def file_identity(path):
+        try:
+            value = os.stat(path)
+            return value.st_dev, value.st_ino
+        except FileNotFoundError:
+            return None
+
+    def execute(self, sql, bindings=()):
+        current = self.file_identity(self.path), self.file_identity(self.path + "-wal")
+        if self.connection is None or current[0] != self.identity[0] or current[1] is not None and current[1] != self.identity[1]:
+            if self.connection is not None:
+                self.connection.close()
+            self.connection = sqlite3.connect("file:" + self.path + "?mode=ro", uri=True, timeout=5)
+            self.connection.execute("PRAGMA query_only=ON")
+            self.identity = self.file_identity(self.path), self.file_identity(self.path + "-wal")
+        return self.connection.execute(sql, bindings)
+
+
 def readonly(path):
-    return sqlite3.connect("file:" + path + "?mode=ro", uri=True, timeout=5)
+    return ReadOnlyDatabase(path)
 
 
 def api(endpoint, query):
     request = urllib.request.Request(endpoint["URL"] + "/v1/op/records.query", json.dumps(query).encode(), {"Authorization": "Bearer " + endpoint["Token"], "Content-Type": "application/json", "Host": endpoint["Host"]})
-    with urllib.request.urlopen(request, timeout=5) as response:
-        return json.load(response)["records"]
+    try:
+        with urllib.request.urlopen(request, timeout=5) as response:
+            return json.load(response)["records"]
+    except urllib.error.HTTPError as error:
+        if error.code == 503 or error.code == 404 and query.get("id"):
+            counts = result["metrics"].setdefault("api_visibility_retries", {})
+            key = str(error.code)
+            counts[key] = counts.get(key, 0) + 1
+            return []
+        raise
 
 
 def receipt_values(native, guid):
@@ -122,8 +157,8 @@ def main():
     check("messages_source_ready", True)
     state = readonly(os.path.join(endpoint["Home"], "state.db"))
     scenario = config["scenario"]
-    endpoints = [endpoint] + config["replicas"]
-    result["metrics"]["replica_count"] = len(config["replicas"])
+    endpoints = [endpoint] + (config["replicas"] or [])
+    result["metrics"]["replica_count"] = len(config["replicas"] or [])
     if scenario == "MSG-HISTORY-IMPORT":
         started = time.monotonic()
         deadline = started + 1000
@@ -263,6 +298,11 @@ def main():
 try:
     main()
 except Exception as error:
+    result["metrics"]["error_type"] = type(error).__name__
+    frames = traceback.extract_tb(error.__traceback__)
+    result["metrics"]["error_frames"] = [{"file": os.path.basename(frame.filename), "line": frame.lineno, "function": frame.name} for frame in frames]
+    if isinstance(error, urllib.error.HTTPError):
+        result["metrics"]["http_status"] = error.code
     check("readonly_truth_execution", False, "Private diagnostic suppressed; error type " + type(error).__name__)
 if any(not item["passed"] and item.get("status") != "unverified" for item in result["assertions"]):
     result["status"] = "failed"

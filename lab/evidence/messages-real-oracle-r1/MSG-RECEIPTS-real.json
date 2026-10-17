@@ -1,0 +1,184 @@
+{
+  "host_conditions": {
+    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "start": {
+      "air": {
+        "at": "2026-10-17T19:10:50.87194Z",
+        "cpu_count": 8,
+        "load_average": [
+          25.69,
+          13.8,
+          10.03
+        ],
+        "cpu_idle_percent": 76,
+        "free_memory_bytes": 772407296,
+        "active_heavy_slots": 1,
+        "other_active_heavy_slots": 0,
+        "heavy_queue_length": 3,
+        "quiet": false
+      }
+    },
+    "end": {
+      "air": {
+        "at": "2026-10-17T19:11:24.711806Z",
+        "cpu_count": 8,
+        "load_average": [
+          17.34,
+          12.91,
+          9.83
+        ],
+        "cpu_idle_percent": 79,
+        "free_memory_bytes": 133758976,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 2,
+        "quiet": false
+      }
+    },
+    "periodic_samples": [
+      {
+        "air": {
+          "at": "2026-10-17T19:10:56.954875Z",
+          "cpu_count": 8,
+          "load_average": [
+            23.95,
+            13.64,
+            9.99
+          ],
+          "cpu_idle_percent": 58,
+          "free_memory_bytes": 134692864,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:11:01.954886Z",
+          "cpu_count": 8,
+          "load_average": [
+            22.27,
+            13.46,
+            9.95
+          ],
+          "cpu_idle_percent": 61,
+          "free_memory_bytes": 122028032,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:11:06.954967Z",
+          "cpu_count": 8,
+          "load_average": [
+            20.97,
+            13.34,
+            9.93
+          ],
+          "cpu_idle_percent": 56,
+          "free_memory_bytes": 62128128,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:11:11.954383Z",
+          "cpu_count": 8,
+          "load_average": [
+            19.69,
+            13.2,
+            9.9
+          ],
+          "cpu_idle_percent": 56,
+          "free_memory_bytes": 147390464,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:11:16.95325Z",
+          "cpu_count": 8,
+          "load_average": [
+            18.67,
+            13.09,
+            9.88
+          ],
+          "cpu_idle_percent": 62,
+          "free_memory_bytes": 76627968,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:11:21.954686Z",
+          "cpu_count": 8,
+          "load_average": [
+            17.34,
+            12.91,
+            9.83
+          ],
+          "cpu_idle_percent": 49,
+          "free_memory_bytes": 59572224,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        }
+      }
+    ],
+    "quiet": false,
+    "require_quiet": false,
+    "quiet_wait_ms": 0,
+    "quiet_wait_expired": false
+  },
+  "status": "failed",
+  "run_id": "run_01M55MCAJHFJ5V1J04J8YK980X",
+  "network_path": "loopback",
+  "metrics": {
+    "natural_events_only": true,
+    "read_only": true,
+    "replica_count": 1,
+    "truth_poll_interval_ms": 25
+  },
+  "scenario": "MSG-RECEIPTS",
+  "level": "real",
+  "passed": false,
+  "git_sha": "665b5e81251e86c80e45d8202a0e7ab5a692443e",
+  "at": "2026-10-17T19:10:51.986143Z",
+  "assertions": [
+    {
+      "name": "truth_readonly_chat_db",
+      "passed": true
+    },
+    {
+      "name": "messages_source_ready",
+      "passed": true
+    },
+    {
+      "name": "readonly_truth_execution",
+      "passed": false,
+      "detail": "Private diagnostic suppressed; error type HTTPError"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
