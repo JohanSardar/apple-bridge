@@ -134,7 +134,7 @@ func (w *World) start(name string, remote bool, home string, binary string, args
 		for _, arg := range args {
 			joined += " " + quote(arg)
 		}
-		script := "echo $$ > " + quote(filepath.Join(home, "pid")) + "; exec " + joined
+		script := "umask 077; echo $$ > " + quote(filepath.Join(home, "pid")) + "; exec " + joined
 		cmd = exec.Command("ssh", "ubuntu", script)
 	}
 	cmd.Stdout = file

@@ -520,7 +520,12 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 	}
 	for _, endpoint := range append([]world.Endpoint{w.Gateway}, w.Replicas...) {
 		report, err := w.Doctor(endpoint)
-		add("sqlite_integrity_"+map[bool]string{true: "replica", false: "gateway"}[endpoint.Home != w.Gateway.Home], err == nil && report["ok"] == true && report["exactly_once"] == true)
+		role := map[bool]string{true: "replica", false: "gateway"}[endpoint.Home != w.Gateway.Home]
+		valid := err == nil && report["ok"] == true && report["exactly_once"] == true
+		add("sqlite_integrity_"+role, valid)
+		if !valid {
+			evidence.Assertions[len(evidence.Assertions)-1].Detail = fmt.Sprintf("doctor_error=%t ok=%v exactly_once=%v private_modes=%v", err != nil, report["ok"], report["exactly_once"], report["private_modes"])
+		}
 	}
 	for _, observer := range observers {
 		observer.mu.Lock()
