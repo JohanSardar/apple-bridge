@@ -1,9 +1,9 @@
 {
-  "run_id": "agent_01M55THT29114EY8S9T6A59DKQ",
+  "run_id": "agent_01M55WJK4XYEEQ2BAMQ9FRF0S9",
   "scenario": "AGENT-SUITE",
   "level": "agent",
-  "git_sha": "874df39a81e071f87e7b6c7f3a6820bd8adf5eb2",
-  "at": "2026-10-17T20:58:43.145379Z",
+  "git_sha": "5b7b73ee9e3d51d0752bfd74ab5222910b87af43",
+  "at": "2026-10-17T21:34:05.981126Z",
   "passed": true,
   "tasks": [
     {
@@ -17,25 +17,26 @@
           "replica_check": true,
           "mcp_only": true,
           "cleanup": true,
-          "duration_ms": 72089
+          "duration_ms": 68726
         },
         {
           "attempt": 2,
+          "passed": false,
+          "truth_check": false,
+          "replica_check": false,
+          "mcp_only": false,
+          "cleanup": true,
+          "duration_ms": 63167,
+          "failure": "truth_unique_record"
+        },
+        {
+          "attempt": 3,
           "passed": true,
           "truth_check": true,
           "replica_check": true,
           "mcp_only": true,
           "cleanup": true,
-          "duration_ms": 65294
-        },
-        {
-          "attempt": 3,
-          "passed": false,
-          "truth_check": false,
-          "replica_check": true,
-          "mcp_only": true,
-          "cleanup": true,
-          "duration_ms": 74012
+          "duration_ms": 74472
         }
       ]
     },
@@ -50,7 +51,7 @@
           "replica_check": true,
           "mcp_only": true,
           "cleanup": true,
-          "duration_ms": 87653
+          "duration_ms": 77203
         },
         {
           "attempt": 2,
@@ -59,16 +60,74 @@
           "replica_check": true,
           "mcp_only": true,
           "cleanup": true,
-          "duration_ms": 74286
+          "duration_ms": 75874
+        }
+      ]
+    },
+    {
+      "task_id": "messages-self-send",
+      "passed": true,
+      "attempts": [
+        {
+          "safety_check": true,
+          "cleanup_deferred": true,
+          "attempt": 1,
+          "passed": false,
+          "truth_check": false,
+          "replica_check": false,
+          "mcp_only": true,
+          "cleanup": false,
+          "duration_ms": 134260
         },
         {
+          "safety_check": true,
+          "self_sends": 1,
+          "cleanup_deferred": true,
+          "attempt": 2,
+          "passed": true,
+          "truth_check": true,
+          "replica_check": true,
+          "mcp_only": true,
+          "cleanup": false,
+          "duration_ms": 78098
+        },
+        {
+          "safety_check": true,
+          "self_sends": 1,
+          "cleanup_deferred": true,
           "attempt": 3,
           "passed": true,
           "truth_check": true,
           "replica_check": true,
           "mcp_only": true,
+          "cleanup": false,
+          "duration_ms": 82526
+        }
+      ]
+    },
+    {
+      "task_id": "messages-self-read",
+      "passed": true,
+      "attempts": [
+        {
+          "safety_check": true,
+          "attempt": 1,
+          "passed": true,
+          "truth_check": true,
+          "replica_check": true,
+          "mcp_only": true,
           "cleanup": true,
-          "duration_ms": 83910
+          "duration_ms": 70969
+        },
+        {
+          "safety_check": true,
+          "attempt": 2,
+          "passed": true,
+          "truth_check": true,
+          "replica_check": true,
+          "mcp_only": true,
+          "cleanup": true,
+          "duration_ms": 69947
         }
       ]
     },
@@ -83,7 +142,7 @@
           "replica_check": true,
           "mcp_only": true,
           "cleanup": true,
-          "duration_ms": 71042
+          "duration_ms": 60223
         },
         {
           "attempt": 2,
@@ -92,16 +151,31 @@
           "replica_check": true,
           "mcp_only": true,
           "cleanup": true,
-          "duration_ms": 69035
-        },
+          "duration_ms": 71808
+        }
+      ]
+    },
+    {
+      "task_id": "usage-estimated-seconds",
+      "passed": true,
+      "attempts": [
         {
-          "attempt": 3,
+          "attempt": 1,
           "passed": true,
           "truth_check": true,
           "replica_check": true,
           "mcp_only": true,
           "cleanup": true,
-          "duration_ms": 66690
+          "duration_ms": 84357
+        },
+        {
+          "attempt": 2,
+          "passed": true,
+          "truth_check": true,
+          "replica_check": true,
+          "mcp_only": true,
+          "cleanup": true,
+          "duration_ms": 75436
         }
       ]
     }
