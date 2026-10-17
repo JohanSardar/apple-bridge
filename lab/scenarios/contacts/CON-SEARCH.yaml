@@ -1,0 +1,6 @@
+id: CON-SEARCH
+feature: contacts.read
+levels: [sim, real, replica]
+given: [{world: {replicas: 1}}]
+when: [{contacts: {}}]
+cleanup: [{fixture: {cleanup: contacts}}]

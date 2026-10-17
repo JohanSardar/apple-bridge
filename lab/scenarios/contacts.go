@@ -185,6 +185,14 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 		return command, err
 	}
 	switch s.ID {
+	case "CON-SEARCH":
+		for _, endpoint := range endpoints {
+			add("contact_names_and_organization_searchable", w.Await(5*time.Second, func() bool {
+				var found contracts.ReadResult
+				_, err := world.Request(ctx, endpoint, "/v1/op/search", contracts.ReadQuery{Collection: "contacts.contact", Text: tag + " Bridge Test"}, &found)
+				return err == nil && len(found.Records) == 1
+			}) == nil)
+		}
 	case "CON-IMPORT":
 		if !native {
 			if fixture("group", map[string]any{}) != nil {
