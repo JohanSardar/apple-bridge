@@ -1,24 +1,13 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[4.13 4.68 4.81] cpus=8 other_heavy=1"
+    "summary": "air: load=[4.61 6.84 6.66] cpus=8 other_heavy=1"
   },
-  "run_id": "cal_01M55RRM8Q55T3Q19TEVZ6A48A",
+  "run_id": "cal_01M55SH9KNZBJ2E246ZAW56B50",
   "network_path": "loopback",
   "metrics": {
     "records_read_succeeded": true,
     "source_readiness": [
-      {
-        "capabilities": [
-          "calendar.create_event",
-          "calendar.update_event",
-          "calendar.delete_event",
-          "calendar.create_calendar"
-        ],
-        "reason": "",
-        "source": "calendar",
-        "state": "ready"
-      },
       {
         "capabilities": [
           "reminders.create",
@@ -28,9 +17,20 @@
           "reminders.delete",
           "reminders.create_list"
         ],
-        "reason": "",
+        "reason": "helper_disconnected",
         "source": "reminders",
-        "state": "ready"
+        "state": "degraded"
+      },
+      {
+        "capabilities": [
+          "calendar.create_event",
+          "calendar.update_event",
+          "calendar.delete_event",
+          "calendar.create_calendar"
+        ],
+        "reason": "helper_disconnected",
+        "source": "calendar",
+        "state": "degraded"
       }
     ],
     "truth_fixture_count": 0,
@@ -39,8 +39,8 @@
   "scenario": "CAL-CREATE-EXTERNAL",
   "level": "real",
   "passed": false,
-  "git_sha": "75343dea5ea3ffe636ea8400f50d41c09d720a95",
-  "at": "2026-10-17T20:27:29.431537Z",
+  "git_sha": "038b582761380a831e46210a3b75be52bbf5cb2d",
+  "at": "2026-10-17T20:40:57.717053Z",
   "assertions": [
     {
       "name": "private_signed_apps_per_world",
@@ -66,7 +66,7 @@
   "conditions": {
     "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
     "heavy_slots_in_use": "2",
-    "load_average": "4.13 4.68 4.81",
+    "load_average": "4.61 6.84 6.66",
     "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"
   }
 }

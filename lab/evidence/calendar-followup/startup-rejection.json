@@ -1,0 +1,10 @@
+{
+  "rejected_capture": {
+    "error_code": "internal",
+    "error_number": 1555,
+    "error_type": "*sqlite.Error",
+    "source": "contacts",
+    "stage": "capture_rejected"
+  },
+  "repeated": 20
+}
