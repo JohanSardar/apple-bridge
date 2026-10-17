@@ -50,6 +50,19 @@ func blobBytes(ctx context.Context, e world.Endpoint, d, id string) (int, []byte
 }
 func blobJourney(ctx context.Context, w *world.World, id string, rows int, evidence *Evidence, add func(string, bool)) bool {
 	check := func(name string, ok bool) bool { add(name, ok); return ok }
+	if id == "CORE-BLOB-DUPLICATE-REFERENCE" {
+		digest := strings.Repeat("a", 64)
+		data := map[string]any{"title": "[ab-test] duplicate references", "image": map[string]any{"digest": digest, "state": "offloaded"}, "thumbnail_image": map[string]any{"digest": digest, "state": "offloaded"}}
+		check("duplicate_reference_fixture", w.ControlAction("/external-change", map[string]any{"key": "duplicate-reference", "collection": "messages.attachment", "data": data}) == nil)
+		if !check("duplicate_reference_capture_commits", w.Await(5*time.Second, func() bool { return convergence(w) }) == nil) {
+			return false
+		}
+		for _, endpoint := range append([]world.Endpoint{w.Gateway}, w.Replicas...) {
+			progress, err := blobProgress(ctx, endpoint)
+			check("one_protected_digest_for_duplicate_fields", err == nil && len(progress.Entries) == 1 && progress.Entries[digest].State == "offloaded")
+		}
+		return true
+	}
 	if id == "CORE-BLOB-REFERENCE-INDEX" {
 		rows = 320
 		client := *w.Control

@@ -1,0 +1,7 @@
+id: CORE-BLOB-DUPLICATE-REFERENCE
+feature: core.blobs
+levels: [sim]
+given: [{world: {replicas: 1}}]
+when: [{blobs: {case: duplicate-reference}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]
