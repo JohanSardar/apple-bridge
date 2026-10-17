@@ -26,16 +26,10 @@ const telemetryProbe = `
 if [ "$(uname)" = Darwin ]; then
   echo "cpus $(sysctl -n hw.logicalcpu)"
   echo "load $(sysctl -n vm.loadavg | tr -d '{}')"
-  top -l 2 -s 1 -n 0 | awk '/CPU usage/ {idle=$7} END {gsub(/%/, "", idle); print "idle " idle}'
   vm_stat | awk '/page size of/ {size=$8} /Pages free:/ {gsub(/\./,"",$3); free=$3} END {if(size>0) printf "memory %.0f\n",size*free}'
 else
   echo "cpus $(getconf _NPROCESSORS_ONLN)"
   awk '{print "load " $1 " " $2 " " $3}' /proc/loadavg
-  read label u n s idle wait irq soft steal rest < /proc/stat
-  first_idle=$idle; first_total=$((u+n+s+idle+wait+irq+soft+steal))
-  sleep 1
-  read label u n s idle wait irq soft steal rest < /proc/stat
-  awk -v a="$first_idle" -v b="$first_total" -v c="$idle" -v d="$((u+n+s+idle+wait+irq+soft+steal))" 'BEGIN {if(d>b) print "idle " 100*(c-a)/(d-b)}'
   awk '/^MemFree:/ {printf "memory %.0f\n",$2*1024}' /proc/meminfo
 fi
 ancestors=" "
@@ -58,6 +52,15 @@ for ticket in /tmp/apple-bridge-heavy-queue/*; do
  kill -0 "$pid" 2>/dev/null && queued=$((queued+1))
 done
 printf 'slots %s\nother %s\nqueue %s\n' "$active" "$other" "$queued"
+if [ "$(uname)" = Darwin ]; then
+  iostat -c 2 -w 1 -n 0 | awk '$1 ~ /^[0-9]/ {idle=$3} END {if(idle != "") print "idle " idle}'
+else
+  read label u n s idle wait irq soft steal rest < /proc/stat
+  first_idle=$idle; first_total=$((u+n+s+idle+wait+irq+soft+steal))
+  sleep 1
+  read label u n s idle wait irq soft steal rest < /proc/stat
+  awk -v a="$first_idle" -v b="$first_total" -v c="$idle" -v d="$((u+n+s+idle+wait+irq+soft+steal))" 'BEGIN {if(d>b) print "idle " 100*(c-a)/(d-b)}'
+fi
 `
 
 func SampleHost(ctx context.Context, remote bool) HostSample {
