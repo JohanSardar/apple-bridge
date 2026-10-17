@@ -13,6 +13,7 @@ import (
 
 func gatewayCommands(ctx context.Context, w *world.World, e *Evidence) {
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
+	add("dial_pairing_code_replay_rejected", w.DialPairingReplayRejected(0))
 	records, err := w.Records(w.Replicas[0])
 	var list string
 	for _, r := range records {

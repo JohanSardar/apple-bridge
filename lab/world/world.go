@@ -59,6 +59,7 @@ type NativeSetup struct {
 }
 
 type World struct {
+	dialCode         string
 	remoteExtraHomes []string
 
 	blobOptions            BlobOptions
@@ -727,6 +728,9 @@ func (w *World) AddReplicaScope(scope string) error {
 	code, err := w.execute(false, w.bridge, pairArgs...)
 	if err != nil {
 		return err
+	}
+	if listen != "" {
+		w.dialCode = code
 	}
 	joinArgs := []string{"join", code, "--home", home}
 	if listen != "" {

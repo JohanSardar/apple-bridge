@@ -6,6 +6,7 @@ import (
 	"encoding/pem"
 	"net/http"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
@@ -71,4 +72,14 @@ func (w *World) GatewayDialStatus() ([]contracts.DialStatus, error) {
 		return nil, errUnexpectedPairing
 	}
 	return result.Replica.DialReplicas, nil
+}
+
+func (w *World) DialPairingReplayRejected(index int) bool {
+	endpoint := w.Replicas[index]
+	binary := w.bridge
+	if endpoint.Remote {
+		binary = w.remoteBinary
+	}
+	_, err := w.execute(endpoint.Remote, binary, "join", w.dialCode, "--home", endpoint.Home, "--listen", endpoint.Listen)
+	return err != nil && strings.Contains(err.Error(), "unauthorized")
 }
