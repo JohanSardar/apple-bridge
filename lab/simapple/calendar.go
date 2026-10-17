@@ -2,6 +2,7 @@ package simapple
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"reflect"
 	"strings"
@@ -179,6 +180,7 @@ func (f *fakeApple) calendarControl(mux *http.ServeMux) {
 		denied := f.calendarDenied
 		err := f.changedLocked(contracts.Calendar)
 		revision := f.durable.Revision[contracts.Calendar]
+		effectAt := time.Now().UTC()
 		f.mu.Unlock()
 		if err != nil {
 			http.Error(w, "persist", 500)
@@ -189,7 +191,7 @@ func (f *fakeApple) calendarControl(mux *http.ServeMux) {
 				return
 			}
 		}
-		json.NewEncoder(w).Encode(map[string]any{"effect_done": true})
+		json.NewEncoder(w).Encode(map[string]any{"effect_done": true, "effect_at": effectAt.Format(time.RFC3339Nano)})
 	})
 }
 func (f *fakeApple) isCalendarFrame(frame contracts.IPCFrame) bool {
@@ -330,7 +332,7 @@ func (f *fakeApple) calendarCommand(wire *applepeer.Wire, frame contracts.IPCFra
 		for key, o := range f.records {
 			d := calendarData(o)
 			occ, _ := d["occurrence_date"].(string)
-			if o.Kind != "absent" && d["series_id"] == series && occ >= original {
+			if o.Kind != "absent" && d["series_id"] == series && reflect.DeepEqual(d["calendar_id"], data["calendar_id"]) && occ >= original {
 				targets = append(targets, key)
 			}
 		}
@@ -340,7 +342,7 @@ func (f *fakeApple) calendarCommand(wire *applepeer.Wire, frame contracts.IPCFra
 		for key, o := range f.records {
 			d := calendarData(o)
 			occ, _ := d["occurrence_date"].(string)
-			if o.Kind != "absent" && d["series_id"] == series && occ < original {
+			if o.Kind != "absent" && d["series_id"] == series && reflect.DeepEqual(d["calendar_id"], data["calendar_id"]) && occ < original {
 				prior = append(prior, key)
 			}
 		}
@@ -354,6 +356,58 @@ func (f *fakeApple) calendarCommand(wire *applepeer.Wire, frame contracts.IPCFra
 		}
 	}
 	newSeries := contracts.NewID("series")
+	if a.Span == "future" && series != "" && a.Recurrence != nil && t.Action.Op == "calendar.update_event" {
+		base := calendarData(target)
+		for k, v := range patch {
+			base[k] = v
+		}
+		base["is_exception"] = false
+		expanded, err := expandCalendar(calendarObservation(newSeries, collection, base), f.calendarScope(t.Action.ListKey))
+		if err != nil {
+			f.mu.Unlock()
+			return err
+		}
+		prior := map[string]contracts.Observation{}
+		for _, key := range targets {
+			o := f.records[key]
+			prior[fmt.Sprint(calendarData(o)["occurrence_date"])] = o
+			o.Kind = "absent"
+			o.Revalidated = true
+			o.ObservedAt = time.Now().UTC()
+			f.records[key] = o
+		}
+		used := map[string]bool{}
+		for i, next := range expanded {
+			value := calendarData(next)
+			occurrence := fmt.Sprint(value["occurrence_date"])
+			if old, ok := prior[occurrence]; ok {
+				if oldValue := calendarData(old); oldValue["is_exception"] == true {
+					oldValue["series_id"] = newSeries
+					oldValue["recurrence"] = base["recurrence"]
+					next.Data, _ = json.Marshal(oldValue)
+				}
+				next.NativeKey = old.NativeKey
+				next.ScopedAlias = old.ScopedAlias
+				used[occurrence] = true
+			}
+			f.records[next.NativeKey] = next
+			if i == 0 {
+				native = next.NativeKey
+			}
+		}
+		for occurrence, old := range prior {
+			value := calendarData(old)
+			if !used[occurrence] && value["is_exception"] == true {
+				value["series_id"] = newSeries
+				value["recurrence"] = base["recurrence"]
+				old.Data, _ = json.Marshal(value)
+				old.Kind = "upsert"
+				old.ObservedAt = time.Now().UTC()
+				f.records[old.NativeKey] = old
+			}
+		}
+		targets = nil
+	}
 	for _, key := range targets {
 		o := f.records[key]
 		value := calendarData(o)
@@ -361,10 +415,22 @@ func (f *fakeApple) calendarCommand(wire *applepeer.Wire, frame contracts.IPCFra
 			value = map[string]any{}
 		}
 		for k, v := range patch {
+			if a.Span == "future" && key != native && value["is_exception"] == true {
+				continue
+			}
 			if (k == "start" || k == "end") && key != native && a.Span == "future" {
 				old, _ := value[k].(string)
 				anchor, _ := data[k].(string)
 				replacement, _ := v.(string)
+				if value["all_day"] == true {
+					current, e := time.Parse(time.DateOnly, old)
+					before, b := time.Parse(time.DateOnly, anchor)
+					after, c := time.Parse(time.DateOnly, replacement)
+					if e == nil && b == nil && c == nil {
+						value[k] = current.AddDate(0, 0, int(after.Sub(before)/(24*time.Hour))).Format(time.DateOnly)
+						continue
+					}
+				}
 				current, e := time.Parse(time.RFC3339Nano, old)
 				before, b := time.Parse(time.RFC3339Nano, anchor)
 				after, c := time.Parse(time.RFC3339Nano, replacement)

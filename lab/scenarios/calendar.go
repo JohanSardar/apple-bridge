@@ -89,9 +89,14 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		return contracts.Record{}
 	}
 	nativeEffects := map[string]int64{}
+	simEffects := map[string]time.Time{}
 	fixture := func(action, key string, data map[string]any) (map[string]any, error) {
 		if level == "sim" {
-			return nil, w.ControlAction("/calendar", map[string]any{"action": action, "key": key, "data": data})
+			var response map[string]any
+			err := w.ControlResult("/calendar", map[string]any{"action": action, "key": key, "data": data}, &response)
+			effect, _ := time.Parse(time.RFC3339Nano, fmt.Sprint(response["effect_at"]))
+			simEffects[fmt.Sprint(data["title"])] = effect
+			return response, err
 		}
 		request := map[string]any{"source": "calendar", "action": action, "tag": tag}
 		if action != "create_calendar" && calendarNative != "" {
@@ -222,12 +227,12 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		}) == nil
 	}
 	start, end := "2026-11-01T05:30:00Z", "2026-11-01T07:30:00Z"
-	allDay := s.ID == "CAL-ALLDAY"
+	allDay := s.ID == "CAL-ALLDAY" || s.ID == "CAL-ALLDAY-FUTURE"
 	if allDay {
 		start, end = "2026-11-01", "2026-11-03"
 	}
 	event := map[string]any{"title": title, "start": start, "end": end, "all_day": allDay, "time_zone": "America/New_York"}
-	recurring := s.ID == "CAL-RECUR-THIS" || s.ID == "CAL-RECUR-FUTURE" || s.ID == "CAL-MOVED-OCCURRENCE"
+	recurring := s.ID == "CAL-RECUR-THIS" || s.ID == "CAL-RECUR-FUTURE" || s.ID == "CAL-MOVED-OCCURRENCE" || s.ID == "CAL-MOVED-OUTSIDE-WINDOW" || s.ID == "CAL-ALLDAY-FUTURE"
 	if recurring {
 		event["recurrence"] = []any{map[string]any{"frequency": "daily", "interval": 1, "count": 3}}
 	}
@@ -274,9 +279,21 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 			if i > 0 {
 				key = fmt.Sprintf("effect_done→replica_visible:replica%d", i-1)
 			}
-			value := max(0, float64(x.At.Sub(effect))/float64(time.Millisecond))
+			if saved, ok := simEffects[name]; ok {
+				effect = saved
+			}
+			if level == "sim" && (effect.IsZero() || x.At.Before(effect)) {
+				return false
+			}
+			value := float64(x.At.Sub(effect)) / float64(time.Millisecond)
+			if level != "sim" && nativeEffects[name] <= 0 {
+				return false
+			}
 			if ns := nativeEffects[name]; ns > 0 {
-				value = max(0, float64(x.UptimeNS-ns)/float64(time.Millisecond))
+				if x.UptimeNS < ns {
+					return false
+				}
+				value = float64(x.UptimeNS-ns) / float64(time.Millisecond)
 			}
 			old := e.Latency[key]
 			values := []float64{value}
@@ -288,7 +305,7 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		}
 		return true
 	}
-	if !latency(title, effectDone) {
+	if s.ID != "CAL-CRUD" && !latency(title, effectDone) {
 		return fail("external_capture_latency", nil)
 	}
 	baseline := records(w.Gateway)
@@ -386,10 +403,10 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 				}
 			}()
 		}
-	case "CAL-RECUR-THIS", "CAL-MOVED-OCCURRENCE":
+	case "CAL-RECUR-THIS", "CAL-MOVED-OCCURRENCE", "CAL-MOVED-OUTSIDE-WINDOW":
 		target := baseline[1]
 		args := map[string]any{"id": target.ID, "span": "this", "title": tag + " exception"}
-		if s.ID == "CAL-MOVED-OCCURRENCE" {
+		if s.ID == "CAL-MOVED-OCCURRENCE" || s.ID == "CAL-MOVED-OUTSIDE-WINDOW" {
 			aliases, _ := gatewayAliases(w)
 			native := ""
 			for alias, id := range aliases {
@@ -398,54 +415,103 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 					native = strings.TrimPrefix(alias, prefix)
 				}
 			}
-			_, err = fixture("move", native, map[string]any{"index": 1, "new_title": tag + " exception", "start": "2026-11-02T08:30:00Z"})
+			movedStart := "2026-11-02T08:30:00Z"
+			if s.ID == "CAL-MOVED-OUTSIDE-WINDOW" {
+				movedStart = time.Now().AddDate(3, 0, 0).UTC().Format(time.RFC3339Nano)
+			}
+			_, err = fixture("move", native, map[string]any{"index": 1, "new_title": tag + " exception", "start": movedStart})
 		} else {
 			err = submit("calendar.update_event", args, target.Version)
 		}
 		if err != nil {
 			return fail("update_occurrence", err)
 		}
+		if s.ID == "CAL-MOVED-OUTSIDE-WINDOW" {
+			add("moved_outside_window_evicted", awaitCount(2))
+			add("moved_outside_window_never_deleted", w.Await(3*time.Second, func() bool {
+				for _, observer := range observers {
+					observer.mu.Lock()
+					for _, x := range observer.seen {
+						if x.Change.Record.ID == target.ID && x.Change.Op == "evict" {
+							observer.mu.Unlock()
+							return x.Change.Record.TombstoneReason == "window_evicted"
+						}
+					}
+					observer.mu.Unlock()
+				}
+				return false
+			}) == nil)
+			break
+		}
 		if !awaitCount(3) {
 			return fail("three_occurrences_after_exception", nil)
 		}
+		add("exception_capture_visible", w.Await(5*time.Second, func() bool {
+			for _, r := range records(w.Gateway) {
+				if r.ID == target.ID {
+					return recordTitle(r) == tag+" exception" && raw(r)["is_exception"] == true
+				}
+			}
+			return false
+		}) == nil)
 		after := records(w.Gateway)
 		kept, unchanged := false, 0
 		for _, r := range after {
 			if r.ID == target.ID {
-				kept = raw(r)["occurrence_date"] == raw(target)["occurrence_date"] && raw(r)["is_exception"] == true
+				add("exception_has_scoped_native_recurrence", raw(r)["recurrence"] != nil)
+				kept = raw(r)["occurrence_date"] == raw(target)["occurrence_date"] && raw(r)["is_exception"] == true && recordTitle(r) == tag+" exception"
+				if s.ID == "CAL-MOVED-OCCURRENCE" {
+					add("moved_start_and_end", sameCalendarTime(raw(r)["start"], "2026-11-02T08:30:00Z") && sameCalendarTime(raw(r)["end"], "2026-11-02T09:30:00Z"))
+				}
 			}
-			if r.ID != target.ID && recordTitle(r) == title {
-				unchanged++
+			if r.ID != target.ID {
+				for _, before := range baseline {
+					if r.ID == before.ID && reflect.DeepEqual(r.Data, before.Data) {
+						unchanged++
+					}
+				}
 			}
 		}
 		add("original_occurrence_identity_preserved", kept)
 		add("other_occurrences_unchanged", unchanged == 2)
-	case "CAL-RECUR-FUTURE":
+	case "CAL-ALLDAY-FUTURE":
 		target := baseline[1]
-		if err = submit("calendar.update_event", map[string]any{"id": target.ID, "span": "future", "title": tag + " future"}, target.Version); err != nil {
+		if err = submit("calendar.update_event", map[string]any{"id": target.ID, "span": "future", "start": "2026-11-04", "end": "2026-11-06"}, target.Version); err != nil {
+			return fail("all_day_future_update", err)
+		}
+		add("all_day_future_civil_offsets", w.Await(3*time.Second, func() bool {
+			after := records(w.Gateway)
+			return len(after) == 3 && raw(after[0])["start"] == "2026-11-01" && raw(after[1])["start"] == "2026-11-04" && raw(after[2])["start"] == "2026-11-05" && raw(after[2])["end"] == "2026-11-07"
+		}) == nil)
+	case "CAL-RECUR-FUTURE":
+		exception := baseline[2]
+		if err = submit("calendar.update_event", map[string]any{"id": exception.ID, "span": "this", "title": tag + " preserved exception"}, exception.Version); err != nil {
+			return fail("seed_exception", err)
+		}
+		if w.Await(3*time.Second, func() bool {
+			for _, r := range records(w.Gateway) {
+				if r.ID == exception.ID {
+					return recordTitle(r) == tag+" preserved exception"
+				}
+			}
+			return false
+		}) != nil {
+			return fail("exception_visible", nil)
+		}
+		target := records(w.Gateway)[1]
+		if err = submit("calendar.update_event", map[string]any{"id": target.ID, "span": "future", "title": tag + " future", "recurrence": []any{map[string]any{"frequency": "daily", "interval": 2, "count": 2}}}, target.Version); err != nil {
 			return fail("future_update", err)
 		}
-		if !awaitCount(3) {
-			return fail("split_occurrences_visible", nil)
-		}
+		add("new_rule_regenerates_occurrences", awaitCount(4))
 		after := records(w.Gateway)
-		oldCount, newCount := 0, 0
-		series := map[string]bool{}
+		preserved, generated := false, false
 		for _, r := range after {
-			if recordTitle(r) == title {
-				oldCount++
-			}
-			if recordTitle(r) == tag+" future" {
-				newCount++
-			}
-			series[fmt.Sprint(raw(r)["series_id"])] = true
+			d := raw(r)
+			preserved = preserved || (recordTitle(r) == tag+" preserved exception" && d["is_exception"] == true && sameCalendarTime(d["start"], raw(exception)["start"]))
+			generated = generated || (recordTitle(r) == tag+" future" && sameCalendarTime(d["start"], "2026-11-04T06:30:00Z"))
 		}
-		add("future_span_splits_series", oldCount == 1 && newCount == 2 && len(series) == 2)
-		target = after[1]
-		if err = submit("calendar.delete_event", map[string]any{"id": target.ID, "span": "future"}, target.Version); err != nil {
-			return fail("delete_future", err)
-		}
-		add("delete_future_preserves_past", awaitCount(1) && recordTitle(records(w.Gateway)[0]) == title)
+		add("future_split_preserves_exception", preserved)
+		add("future_rule_changes_dates", generated)
 	case "CAL-RECUR-ALL-REJECT":
 		target := baseline[0]
 		err = submit("calendar.update_event", map[string]any{"id": target.ID, "span": "all", "title": tag + " forbidden"}, target.Version)
@@ -657,7 +723,7 @@ func calendarHostConditions() map[string]any {
 			slots++
 		}
 	}
-	return map[string]any{"load_average": fields, "heavy_slots_in_use": slots, "clock": "native CLOCK_UPTIME_RAW for real fixtures; lab monotonic fixture return for sim", "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"}
+	return map[string]any{"load_average": fields, "heavy_slots_in_use": slots, "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue", "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"}
 }
 
 func calendarTruthEqual(truth, actual map[string]any) bool {

@@ -1,0 +1,11 @@
+id: CAL-MOVED-OUTSIDE-WINDOW
+feature: calendar.read
+levels: [sim, real]
+given:
+  - world: {replicas: 1}
+when:
+  - calendar_journey: {}
+then:
+  - converge: {}
+cleanup:
+  - world: {}
