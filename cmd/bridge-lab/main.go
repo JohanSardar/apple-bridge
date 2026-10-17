@@ -29,6 +29,13 @@ func run(ctx context.Context, args []string) error {
 			fmt.Printf("wire fixtures: %d decoded\n", count)
 		}
 		return err
+	case "credential-cleanup":
+		set := flag.NewFlagSet("credential-cleanup", flag.ContinueOnError)
+		home := set.String("home", "", "isolated credential directory")
+		if err := set.Parse(args[1:]); err != nil {
+			return err
+		}
+		return world.CleanupCredentials(ctx, *home)
 	case "credential-lifecycle":
 		set := flag.NewFlagSet("credential-lifecycle", flag.ContinueOnError)
 		home := set.String("home", "", "isolated credential directory")

@@ -62,6 +62,7 @@ type World struct {
 	bridge           string
 	lab              string
 	remoteBinary     string
+	remoteLab        string
 	diskMount        string
 	secretHomes      []string
 	proxy            *FaultProxy
@@ -270,6 +271,10 @@ func newEnvironment(ctx context.Context, level string, replicas, seed int, nativ
 		if _, err = commandOutput(ctx, "scp", filepath.Join(root, "bin", "bridge-linux-amd64"), "ubuntu:"+w.remoteBinary); err != nil {
 			return nil, err
 		}
+		w.remoteLab = filepath.Join(w.Dir, "bridge-lab")
+		if _, err = commandOutput(ctx, "scp", filepath.Join(root, "bin", "bridge-lab-linux-amd64"), "ubuntu:"+w.remoteLab); err != nil {
+			return nil, err
+		}
 	}
 	gatewayHome := filepath.Join(w.Dir, "gateway")
 	if gatewayBinary == "" {
@@ -395,6 +400,10 @@ func (w *World) Close() {
 	}
 	if w.Level == "replica" {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		for _, endpoint := range w.Replicas {
+			commandOutput(ctx, "ssh", "ubuntu", quote(w.remoteLab)+" credential-cleanup --home "+quote(endpoint.Home))
+		}
+		commandOutput(ctx, "ssh", "ubuntu", quote(w.remoteLab)+" credential-cleanup --home "+quote(filepath.Join(w.Dir, "pairing")))
 		commandOutput(ctx, "ssh", "ubuntu", "rm -rf "+quote(w.Dir))
 		cancel()
 	}

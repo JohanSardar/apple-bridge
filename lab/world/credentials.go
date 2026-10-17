@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
+	"os"
 	"path/filepath"
 
 	"github.com/JohanSardar/apple-bridge/internal/trust"
@@ -74,4 +75,15 @@ func (w *World) Credentials() (CredentialResult, error) {
 	var result CredentialResult
 	err = json.Unmarshal([]byte(output), &result)
 	return result, err
+}
+
+func CleanupCredentials(ctx context.Context, home string) error {
+	store := trust.NewSecretStore(home)
+	if err := store.Delete(ctx, "identity-key"); err != nil {
+		return err
+	}
+	if file, ok := store.(*trust.LinuxSecretStore); ok && !file.SecretTool {
+		os.Remove(file.Dir)
+	}
+	return nil
 }
