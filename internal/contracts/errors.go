@@ -3,9 +3,10 @@ package contracts
 import "errors"
 
 type Error struct {
-	Code      string `json:"code"`
-	Message   string `json:"message"`
-	Retryable bool   `json:"retryable"`
+	Code      string  `json:"code"`
+	Message   string  `json:"message"`
+	Current   *Record `json:"current,omitempty"`
+	Retryable bool    `json:"retryable"`
 }
 
 func (e *Error) Error() string { return e.Code + ": " + e.Message }

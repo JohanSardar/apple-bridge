@@ -27,9 +27,27 @@ import (
 
 type Visibility map[contracts.Source]bool
 
-func (v Visibility) Allows(r contracts.Record) bool { return v[r.Source] }
+func (v Visibility) Allows(r contracts.Record) bool {
+	if !v[r.Source] {
+		return false
+	}
+	if r.Collection != "system.command" || v["commands:all"] {
+		return true
+	}
+	var command struct {
+		Principal string `json:"principal"`
+	}
+	if json.Unmarshal(r.Data, &command) != nil {
+		return false
+	}
+	if v[contracts.Source("principal:"+command.Principal)] {
+		return true
+	}
+	parts := strings.Split(command.Principal, "/")
+	return len(parts) == 2 && v[contracts.Source("principal:"+parts[1])]
+}
 func AllVisibility() Visibility {
-	v := Visibility{}
+	v := Visibility{"commands:all": true}
 	for _, s := range contracts.Sources {
 		v[s] = true
 	}
@@ -46,7 +64,10 @@ type Principal struct {
 }
 
 func (p Principal) Visibility() Visibility {
-	v := Visibility{}
+	v := Visibility{contracts.Source("principal:" + p.ID): true}
+	if p.Kind == "replica" {
+		v["commands:all"] = true
+	}
 	for _, g := range p.Grants {
 		parts := strings.Split(string(g), ":")
 		if g == "admin" {

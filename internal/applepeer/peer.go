@@ -18,6 +18,7 @@ import (
 type Config struct {
 	BlobCapture func(context.Context, contracts.Capture, *Wire)
 
+	Commands      *Commands
 	Socket        string
 	Secret        []byte
 	Checkpoints   func(context.Context) (map[contracts.Source]contracts.Checkpoint, error)
@@ -177,6 +178,11 @@ func Serve(ctx context.Context, cfg Config) error {
 			if err != nil || ready.T != "Ready" || ready.Protocol != contracts.IPCProtocol {
 				return
 			}
+			var commands *commandSession
+			if cfg.Commands != nil {
+				commands = cfg.Commands.attach(wire, fence)
+				defer cfg.Commands.detach(commands)
+			}
 			defer func() {
 				mu.Lock()
 				defer mu.Unlock()
@@ -215,6 +221,10 @@ func Serve(ctx context.Context, cfg Config) error {
 					break
 				}
 				switch f.T {
+				case "Prepared", "Rejected", "Outcome":
+					if cfg.Commands != nil {
+						cfg.Commands.receive(commands, f)
+					}
 				case "Capture":
 					if f.Capture == nil || n > contracts.ByteCredit {
 						return

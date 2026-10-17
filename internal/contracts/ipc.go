@@ -48,6 +48,20 @@ type IPCFrame struct {
 	Bytes  []byte `json:"bytes,omitempty"`
 	Digest string `json:"digest,omitempty"`
 	EOF    bool   `json:"eof,omitempty"`
+	CommandID     string          `json:"command_id,omitempty"`
+	Principal     string          `json:"principal,omitempty"`
+	RequestHash   string          `json:"request_hash,omitempty"`
+	Action        *NativeAction   `json:"action,omitempty"`
+	ExpectedState json.RawMessage `json:"expected_state,omitempty"`
+	ExpiresAt     time.Time       `json:"expires_at,omitempty"`
+	Ticket        string          `json:"ticket,omitempty"`
+	NativeState   json.RawMessage `json:"native_state,omitempty"`
+	Route         string          `json:"route,omitempty"`
+	Fingerprint   string          `json:"fingerprint,omitempty"`
+	CandidateIDs  []string        `json:"candidate_ids,omitempty"`
+	Disposition   string          `json:"disposition,omitempty"`
+	Evidence      json.RawMessage `json:"evidence,omitempty"`
+	Error         *Error          `json:"error,omitempty"`
 
 	T            string                `json:"t"`
 	Protocol     string                `json:"protocol,omitempty"`

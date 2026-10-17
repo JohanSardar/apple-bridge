@@ -37,6 +37,13 @@ type fakeApple struct {
 	blobs     map[string][]byte
 	blobState string
 	blobDelay time.Duration
+	recovered []contracts.IPCFrame
+	home      string
+	effects   map[string]int
+	evidence  map[string]contracts.IPCFrame
+	tickets   map[string]ticket
+	fault     string
+	pause     time.Duration
 
 	mu      sync.Mutex
 	records map[string]contracts.Observation
@@ -84,8 +91,21 @@ func fullScan(records []contracts.Observation) contracts.Capture {
 	return contracts.Capture{Source: contracts.Reminders, Observations: records, ScanID: contracts.NewID("scan"), Scope: []string{"reminders.list", "reminders.reminder"}, ScanStartedAt: time.Now().UTC(), CompletionEvidence: "complete"}
 }
 func Run(ctx context.Context, cfg Config) error {
-	fake := &fakeApple{blobs: map[string][]byte{}, records: map[string]contracts.Observation{}, changes: make(chan captureRequest, 4096)}
+	fake := &fakeApple{blobs: map[string][]byte{},home: filepath.Dir(cfg.Control), effects: map[string]int{}, evidence: map[string]contracts.IPCFrame{}, tickets: map[string]ticket{}, records: map[string]contracts.Observation{}, changes: make(chan captureRequest, 4096)}
+	var durable durableApple
+	if b, err := os.ReadFile(filepath.Join(fake.home, "truth.json")); err == nil {
+		if json.Unmarshal(b, &durable) != nil {
+			return contracts.ErrCorrupt
+		}
+		fake.records = durable.Records
+		fake.effects = durable.Effects
+		fake.evidence = durable.Evidence
+	}
+	if err := fake.loadGuards(); err != nil {
+		return err
+	}
 	mux := http.NewServeMux()
+	fake.commandControl(mux)
 	fake.blobRoutes(mux)
 	mux.HandleFunc("GET /inspect", func(w http.ResponseWriter, r *http.Request) { json.NewEncoder(w).Encode(fake.inspect()) })
 	mux.HandleFunc("POST /seed", func(w http.ResponseWriter, r *http.Request) {
@@ -101,6 +121,11 @@ func Run(ctx context.Context, cfg Config) error {
 			key := contracts.NewID("seed")
 			data, _ := json.Marshal(map[string]any{"title": "[ab-test] " + key, "completed": false, "opaque_number": json.Number("9007199254740993"), "list_id": map[string]any{"$ref": map[string]string{"collection": "reminders.list", "native_key": "list"}}})
 			fake.records[key] = contracts.Observation{Kind: "upsert", Collection: "reminders.reminder", NativeKey: key, ObservedAt: now, Data: data}
+		}
+		if err := fake.saveLocked(); err != nil {
+			fake.mu.Unlock()
+			http.Error(w, "persist", 500)
+			return
 		}
 		fake.mu.Unlock()
 		if err := fake.enqueue(r.Context(), fullScan(fake.inspect()), false); err != nil {
@@ -122,6 +147,11 @@ func Run(ctx context.Context, cfg Config) error {
 		if action.Delete {
 			old, ok := fake.records[action.Key]
 			if !ok {
+				if err := fake.saveLocked(); err != nil {
+					fake.mu.Unlock()
+					http.Error(w, "persist", 500)
+					return
+				}
 				fake.mu.Unlock()
 				http.Error(w, "not found", 404)
 				return
@@ -137,6 +167,11 @@ func Run(ctx context.Context, cfg Config) error {
 			o = contracts.Observation{Kind: "upsert", Collection: action.Collection, NativeKey: action.Key, ObservedAt: time.Now().UTC(), Data: action.Data}
 		}
 		fake.records[action.Key] = o
+		if err := fake.saveLocked(); err != nil {
+			fake.mu.Unlock()
+			http.Error(w, "persist", 500)
+			return
+		}
 		fake.mu.Unlock()
 		capture := contracts.Capture{Source: contracts.CollectionSource(o.Collection), Observations: []contracts.Observation{o}}
 		if action.Delete {
@@ -235,7 +270,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 	}
 	credit := open.ByteCredit
 	coverage := contracts.Coverage{Fields: "complete", Missing: []string{}}
-	if _, err = wire.Send(contracts.IPCFrame{T: "Ready", Protocol: contracts.IPCProtocol, Capabilities: map[contracts.Source][]string{contracts.Reminders: {}}, Coverage: map[contracts.Source]contracts.Coverage{contracts.Reminders: coverage, contracts.Messages: coverage}, HelperBuild: "sim/1", OSBuild: "sim"}); err != nil {
+	if _, err = wire.Send(contracts.IPCFrame{T: "Ready", Protocol: contracts.IPCProtocol, Capabilities: map[contracts.Source][]string{contracts.Reminders: {"reminders.create", "reminders.update", "reminders.complete", "reminders.uncomplete", "reminders.delete", "reminders.create_list"}}, Coverage: map[contracts.Source]contracts.Coverage{contracts.Reminders: coverage, contracts.Messages: coverage}, HelperBuild: "sim/1", OSBuild: "sim"}); err != nil {
 		return err
 	}
 	checkpoints := map[contracts.Source]string{}
@@ -262,6 +297,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 			}
 		}
 	}()
+	pending := []contracts.IPCFrame{}
 	transmit := func(capture contracts.Capture) error {
 		capture.Generation = generation
 		capture.Predecessor = checkpoints[capture.Source]
@@ -290,6 +326,8 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 							conn.Close()
 						}
 					}()
+				case "Prepare", "Dispatch", "Resolve":
+					pending = append(pending, reply)
 				case "Committed":
 					if reply.Source != capture.Source || reply.Checkpoint != capture.Checkpoint || reply.Credit != n {
 						return contracts.ErrInvalid
@@ -341,65 +379,4 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 				}
 				if _, err := contracts.EncodeFrame(contracts.IPCFrame{T: "Capture", Capture: &part}); err == nil {
 					break
-				} else if err != contracts.ErrCapacity || end == offset+1 {
-					return err
-				}
-				end--
-			}
-
-			if err := transmit(part); err != nil {
-				return err
-			}
-			offset = end
-		}
-		return nil
-	}
-	for _, source := range []contracts.Source{contracts.Reminders, contracts.Messages} {
-		records := []contracts.Observation{}
-		for _, o := range f.inspect() {
-			if contracts.CollectionSource(o.Collection) == source {
-				records = append(records, o)
-			}
-		}
-		capture := fullScan(records)
-		capture.Source = source
-		if source == contracts.Messages {
-			capture.Scope = []string{"messages.message", "messages.attachment"}
-			capture.BlobHandles = f.blobHandles()
-		}
-		if err = emit(capture); err != nil {
-			return err
-		}
-	}
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case reply := <-received:
-			if reply.T == "BlobRead" {
-				go func() {
-					if f.blobReply(ctx, wire, reply) != nil {
-						conn.Close()
-					}
-				}()
-			} else if reply.T == "Ping" {
-				if _, err = wire.Send(contracts.IPCFrame{T: "Pong"}); err != nil {
-					return err
-				}
-			} else if reply.T != "Pong" {
-				return contracts.ErrInvalid
-			}
-		case req := <-f.changes:
-			if req.Close {
-				wire.Send(contracts.IPCFrame{T: "Close", Reason: "lab"})
-				return errClosed
-			}
-			if err = emit(req.Capture); err != nil {
-				return err
-			}
-			if req.Done != nil {
-				close(req.Done)
-			}
-		}
-	}
-}
+				} else if err != con
