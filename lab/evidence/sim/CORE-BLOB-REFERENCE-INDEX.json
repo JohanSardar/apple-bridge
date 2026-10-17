@@ -3,35 +3,35 @@
     "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
     "start": {
       "air": {
-        "at": "2026-10-17T18:33:45.890058Z",
+        "at": "2026-10-17T19:56:17.593205Z",
         "cpu_count": 8,
         "load_average": [
-          4.79,
-          6.06,
+          9.83,
+          9.06,
           6.81
         ],
-        "cpu_idle_percent": 81,
-        "free_memory_bytes": 64569344,
+        "cpu_idle_percent": 91,
+        "free_memory_bytes": 189267968,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 2,
+        "heavy_queue_length": 1,
         "quiet": false
       }
     },
     "end": {
       "air": {
-        "at": "2026-10-17T18:33:50.736411Z",
+        "at": "2026-10-17T19:56:20.808765Z",
         "cpu_count": 8,
         "load_average": [
-          4.57,
-          5.99,
-          6.78
+          9.83,
+          9.06,
+          6.81
         ],
-        "cpu_idle_percent": 89,
-        "free_memory_bytes": 187858944,
+        "cpu_idle_percent": 76,
+        "free_memory_bytes": 158269440,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 2,
+        "heavy_queue_length": 1,
         "quiet": false
       }
     },
@@ -40,20 +40,17 @@
     "quiet_wait_ms": 0,
     "quiet_wait_expired": false
   },
-  "run_id": "run_01M55J8DQ4QHMV9DVG128FHN0M",
+  "run_id": "run_01M55PZHBZE6QT99WCYFPF44K2",
   "network_path": "loopback",
   "metrics": {
-    "absolute_target_rows_per_second": 2000,
-    "absolute_target_status": "met-under-load",
-    "capture_rows_per_frame": 64,
-    "history_rows": 10000,
-    "history_rows_per_second": 3140.9211575786403
+    "expected_references": 64,
+    "reference_rows": 320
   },
   "scenario": "CORE-BLOB-REFERENCE-INDEX",
   "level": "sim",
   "passed": true,
-  "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b",
-  "at": "2026-10-17T18:33:46.98024Z",
+  "git_sha": "0b38068897f04690a46e9c76ce174cd446547fac",
+  "at": "2026-10-17T19:56:18.687138Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -80,11 +77,11 @@
       "passed": true
     },
     {
-      "name": "history_capture_measurement_recorded",
+      "name": "reference_capture_durable",
       "passed": true
     },
     {
-      "name": "history_10000_durable_records",
+      "name": "history_320_durable_records",
       "passed": true
     },
     {
@@ -96,19 +93,15 @@
       "passed": true
     },
     {
+      "name": "capture_and_replica_reference_protection",
+      "passed": true
+    },
+    {
       "name": "credential_backend_override_restored",
       "passed": true
     }
   ],
-  "latency": {
-    "history_10000_commit": {
-      "samples": 1,
-      "p50_ms": 3183.779375,
-      "p95_ms": 3183.779375,
-      "max_ms": 3183.779375,
-      "timeouts": 0
-    }
-  },
+  "latency": {},
   "hosts": [
     "air"
   ]

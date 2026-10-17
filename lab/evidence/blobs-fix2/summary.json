@@ -1,0 +1,190 @@
+{
+  "scope": "Incremental blob protection and durable gateway retry budget; benchmark and CORE-BENCH investigation changes removed",
+  "source_commit_before_evidence": "0b38068897f04690a46e9c76ce174cd446547fac",
+  "implementation": [
+    "internal/state/blobs.go",
+    "internal/state/state.go",
+    "internal/state/commands.go",
+    "internal/state/retention.go",
+    "internal/blobs/protection.go",
+    "internal/blobs/store.go",
+    "internal/blobs/apple.go",
+    "internal/contracts/blobs.go",
+    "internal/runtime/runtime.go"
+  ],
+  "protection": "Changed-owner reference deltas, touched-digest refcounts, durable guards and pin release; full reconciliation at startup/repair only; GC timer collects without rebuilding protection",
+  "retry": "Attempts reserved durably before IPC; bounded backoff deadlines survive SIGKILL; terminal attempt 8 reports ipc_retry_exhausted",
+  "verification": {
+    "commands": [
+      "packaging/dev/heavy.sh bash /tmp/blobs-fix2-final.sh",
+      "APPLE_BRIDGE_LAB_CONTENDED_BENCH=1 go run ./cmd/bridge-lab run lab/scenarios/core --level sim",
+      "packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios/core/CORE-DISCONNECT-DETECT.yaml lab/scenarios/core/CORE-BLOB-REFERENCE-INDEX.yaml --level sim"
+    ],
+    "initial_suite_failures": [
+      "CORE-DISCONNECT-DETECT"
+    ],
+    "focused_rerun": [
+      "CORE-DISCONNECT-DETECT",
+      "CORE-BLOB-REFERENCE-INDEX"
+    ],
+    "core_sim_passed": 55,
+    "core_sim_cases": [
+      "CORE-BENCH",
+      "CORE-BLOB-CAP",
+      "CORE-BLOB-CORRUPT",
+      "CORE-BLOB-GATEWAY-RETRY",
+      "CORE-BLOB-GC",
+      "CORE-BLOB-INTERRUPT",
+      "CORE-BLOB-NO-DIGEST-AUTH",
+      "CORE-BLOB-OFFLOADED",
+      "CORE-BLOB-REFERENCE-INDEX",
+      "CORE-BLOB-SLOW-READ",
+      "CORE-BOOT",
+      "CORE-CLOCK-DELAY",
+      "CORE-CLOCK-DELAY-GATEWAY-DIALS",
+      "CORE-CMD-CLOCK-JUMP",
+      "CORE-CMD-CONFLICT",
+      "CORE-CMD-CRASH-AMBIGUOUS",
+      "CORE-CMD-ERA",
+      "CORE-CMD-EXPIRY",
+      "CORE-CMD-IDEMPOTENT",
+      "CORE-CMD-LOST-RESPONSE",
+      "CORE-CMD-OFFLINE",
+      "CORE-CMD-READ-YOUR-WRITE",
+      "CORE-CREDENTIAL-STORE",
+      "CORE-DISCONNECT-DETECT",
+      "CORE-DISK-FULL",
+      "CORE-DOCTOR",
+      "CORE-FORGED-DELEGATION",
+      "CORE-GAP-REJECT",
+      "CORE-GATEWAY-DIALS",
+      "CORE-HELPER-RESTART",
+      "CORE-KILL-DURING-APPLY",
+      "CORE-KILL-GATEWAY-CAPTURE",
+      "CORE-LIVE-LATENCY",
+      "CORE-LOCALHOST-DEFENSE",
+      "CORE-PAIR",
+      "CORE-REST-MCP-PARITY",
+      "CORE-RESTORE-EPOCH",
+      "CORE-RESTORE-OLD-SCHEMA",
+      "CORE-RESUME",
+      "CORE-RETENTION-RACE",
+      "CORE-SCOPE-CHANGE",
+      "CORE-SCOPE-LEAK",
+      "CORE-SLOW-CONSUMER",
+      "CORE-SNAPSHOT-INTERRUPT",
+      "CORE-SNAPSHOT-UNDER-LOAD",
+      "CORE-UPGRADE",
+      "LAB-MALFORMED-SCENARIO",
+      "LAB-SSE",
+      "LAB-TRUTH-MULTIPLICITY",
+      "REM-CONFLICT",
+      "REM-CRUD",
+      "REM-EXTERNAL-RACE",
+      "REM-NATIVE-LIST-RACE",
+      "REM-OPERATION-SHAPES",
+      "REM-READONLY-LIST"
+    ],
+    "reference_correctness": {
+      "rows": 320,
+      "references": 64,
+      "gateway_and_replica_protected": true
+    },
+    "failure_proofs": [
+      "retry-budget-red.json",
+      "negative-snapshot-delta.json",
+      "negative-command-delta.json"
+    ],
+    "mutants_restored": true,
+    "not_rerun_per_final_scope_cut": [
+      "CORE-BLOB-INTERRUPT at replica level",
+      "make lint",
+      "go vet ./...",
+      "go vet -tags lab ./...",
+      "make features"
+    ]
+  },
+  "latency": {
+    "bulk_barrier\u2192blob_complete": {
+      "samples": 1,
+      "p50_ms": 2181.216459,
+      "p95_ms": 2181.216459,
+      "max_ms": 2181.216459,
+      "timeouts": 0
+    },
+    "effect_done\u2192blob_complete": {
+      "samples": 1,
+      "p50_ms": 5362.863625,
+      "p95_ms": 5362.863625,
+      "max_ms": 5362.863625,
+      "timeouts": 0
+    },
+    "effect_done\u2192gateway_blob_present": {
+      "samples": 1,
+      "p50_ms": 1639.148583,
+      "p95_ms": 1639.148583,
+      "max_ms": 1639.148583,
+      "timeouts": 0
+    },
+    "effect_done\u2192gateway_visible": {
+      "samples": 1,
+      "p50_ms": 3.509625,
+      "p95_ms": 3.509625,
+      "max_ms": 3.509625,
+      "timeouts": 0
+    },
+    "effect_done\u2192metadata_during_blob": {
+      "samples": 1,
+      "p50_ms": 78.553708,
+      "p95_ms": 78.553708,
+      "max_ms": 78.553708,
+      "timeouts": 0
+    },
+    "effect_done\u2192replica_visible:replica0": {
+      "samples": 1,
+      "p50_ms": 4.636833,
+      "p95_ms": 4.636833,
+      "max_ms": 4.636833,
+      "timeouts": 0
+    },
+    "gateway_present\u2192replica_partial": {
+      "samples": 1,
+      "p50_ms": 178.347166,
+      "p95_ms": 178.347166,
+      "max_ms": 178.347166,
+      "timeouts": 0
+    },
+    "interrupt\u2192reconnected": {
+      "samples": 1,
+      "p50_ms": 1031.429417,
+      "p95_ms": 1031.429417,
+      "max_ms": 1031.429417,
+      "timeouts": 0
+    },
+    "reconnected\u2192blob_complete": {
+      "samples": 1,
+      "p50_ms": 2361.403834,
+      "p95_ms": 2361.403834,
+      "max_ms": 2361.403834,
+      "timeouts": 0
+    }
+  },
+  "commits_before_evidence_commit": [
+    "0b38068 Record core sim results and the disconnect timing retry",
+    "e3e2d29 Preserve the simulator history response contract",
+    "01d99a1 Limit round two to protection correctness and durable retries",
+    "b717714 Keep one interleaved reference scaling check and concise failure evidence",
+    "9cf877b Keep full blob reconciliation out of the runtime collection timer",
+    "d6eaa64 Preserve capture commit timestamps before protection publication",
+    "ae6f2d3 Require protected reference cardinality during capture scaling checks",
+    "def4699 Persist blob retry reservations and backoff across gateway crashes",
+    "9d962c8 Publish protection removals with staging and scope transactions",
+    "b97257b Apply durable protection deltas for changed reference owners",
+    "88b1e2b Reproduce reference-heavy scaling and diagnose automatic checks"
+  ],
+  "spec_deviations": [],
+  "spec_proposals": [],
+  "new_scenario_ids": [],
+  "open_blockers": [],
+  "johan_action_required": null
+}
