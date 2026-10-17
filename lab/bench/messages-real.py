@@ -165,6 +165,9 @@ def main():
         equal = False
         initial_position = native.execute("SELECT COALESCE(MAX(ROWID),0) FROM message").fetchone()[0]
         initial_observed = None
+        if config.get("history_started"):
+            with open(config["history_started"], "w") as marker:
+                marker.write("ready")
         while time.monotonic() < deadline:
             expected = dict(native.execute("SELECT COALESCE(c.guid,''),COUNT(DISTINCT m.guid) FROM message m LEFT JOIN chat_message_join j ON j.message_id=m.ROWID LEFT JOIN chat c ON c.ROWID=j.chat_id WHERE COALESCE(m.associated_message_type,0) NOT BETWEEN 2000 AND 2007 AND COALESCE(m.associated_message_type,0) NOT BETWEEN 3000 AND 3007 GROUP BY COALESCE(c.guid,'')"))
             aliases = dict(state.execute("SELECT record_id,native_key FROM aliases WHERE collection='messages.chat'"))

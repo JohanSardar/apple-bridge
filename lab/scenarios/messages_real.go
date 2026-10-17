@@ -1,11 +1,13 @@
 package scenarios
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"time"
 
 	"github.com/JohanSardar/apple-bridge/lab/world"
 )
@@ -18,7 +20,7 @@ func runRealMessages(ctx context.Context, s Scenario, level string, evidence Evi
 	if level == "replica" {
 		evidence.Hosts = append(evidence.Hosts, "ubuntu")
 	}
-	w, err := world.NewReal(ctx, level, replicas, world.BlobOptions{})
+	w, err := world.NewReal(ctx, level, replicas, world.BlobOptions{Scope: "messages:read,messages:write,system:read"})
 	if err != nil {
 		evidence.Assertions = append(evidence.Assertions, Assertion{Name: "real_world_start", Passed: false})
 		return evidence
@@ -26,7 +28,7 @@ func runRealMessages(ctx context.Context, s Scenario, level string, evidence Evi
 	defer w.Close()
 	evidence.NetworkPath = w.NetworkPath
 	request := filepath.Join(w.Dir, "messages-check.json")
-	data, err := json.Marshal(map[string]any{"scenario": s.ID, "gateway": w.Gateway, "replicas": w.Replicas})
+	data, err := json.Marshal(map[string]any{"scenario": s.ID, "gateway": w.Gateway, "replicas": w.Replicas, "history_started": filepath.Join(w.Dir, "history-started")})
 	if err == nil {
 		err = os.WriteFile(request, data, 0600)
 	}
@@ -36,7 +38,27 @@ func runRealMessages(ctx context.Context, s Scenario, level string, evidence Evi
 	}
 	defer os.Remove(request)
 	command := exec.CommandContext(ctx, "python3", "lab/bench/messages-real.py", request)
-	output, err := command.Output()
+	var output []byte
+	if s.ID == "MSG-HISTORY-IMPORT" {
+		var buffer bytes.Buffer
+		command.Stdout = &buffer
+		err = command.Start()
+		if err == nil {
+			marker := filepath.Join(w.Dir, "history-started")
+			ready := w.Await(45*time.Second, func() bool { _, err := os.Stat(marker); return err == nil }) == nil
+			if ready {
+				send := Evidence{RunID: evidence.RunID, Latency: map[string]Latency{}}
+				send = runNativeMessagesCommandsInWorld(ctx, Scenario{ID: "MSG-SEND-SELF-TEXT"}, level, send, w)
+				evidence.Assertions = append(evidence.Assertions, send.Assertions...)
+			} else {
+				evidence.Assertions = append(evidence.Assertions, Assertion{Name: "history_mutation_ready", Passed: false})
+			}
+			err = command.Wait()
+			output = buffer.Bytes()
+		}
+	} else {
+		output, err = command.Output()
+	}
 	var result struct {
 		Assertions []Assertion          `json:"assertions"`
 		Samples    map[string][]float64 `json:"samples"`

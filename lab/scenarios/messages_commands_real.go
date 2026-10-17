@@ -33,6 +33,11 @@ func runNativeMessagesCommands(ctx context.Context, s Scenario, level string, e 
 		return e
 	}
 	defer w.Close()
+	return runNativeMessagesCommandsInWorld(ctx, s, level, e, w)
+}
+
+func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level string, e Evidence, w *world.World) Evidence {
+	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
 	report := filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "AppleBridgeDev", "messages-command-handles-"+e.RunID+".json")
 	defer os.Remove(report)
 	probeCtx, cancel := context.WithTimeout(ctx, 40*time.Second)
