@@ -31,7 +31,7 @@ Resume point for any fresh session. Updated after every unit of work.
 - Rule (sent to all native workers): never install into the shared `~/Applications/AppleBridgeDev/*.app`; stage a private signed copy per run.
 - `ab-m1-calendar-r1` (worktree m1-calendar): Calendar sim + real + replica, AppleTruth Calendar, time-math tests.
 - `ab-m2-contacts-r1` (worktree m2-contacts): Contacts sim + real + replica, AppleTruth Contacts, handle→contact link.
-- `ab-m1-messages-read-r1` (worktree m1-messages-read): Decoders (typedstream, summary info, reactions), MessagesSource capture, MSG-* read scenarios.
+- DONE `ab-m1-messages-read-r1` (3a12e36..43e246e): fresh Swift decoders + scrubbed fixtures, WAL capture/watchers, attachments, sim semantics, Messages registration in AppleSession. All 7 MSG sim pass; sim incoming effect→replica p50/p95/max 45/58/72 ms (n=32). Native capture of ~10^5 real rows: 98.6 s, 297 MiB peak RSS, per-chat counts = read-only SQLite Truth. Sim history import only ~240 rows/s: cause = blob-protection full-table rescans per capture (quadratic) → assigned to blobs-fix (target ≥ 2,000 rows/s). Real MSG runs unverified (Helper never Messages-ready, main-branch crash) → retry after session-fix + blobs-fix. Review `ab-m1-messages-read-review-r1` running.
 
 ## Next
 - Review each M0 unit when it lands (fresh reviewer per unit); route confirmed findings to fix rounds.
