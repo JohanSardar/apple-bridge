@@ -257,6 +257,13 @@ func (c *Client) Status() FollowStatus {
 	if c.Blobs != nil {
 		s.Blobs = c.Blobs.Progress()
 	}
+	s.Role = "replica"
+	if s.GatewayHead >= s.Cursor.Sequence {
+		s.Lag = s.GatewayHead - s.Cursor.Sequence
+	}
+	if !s.LastHeartbeat.IsZero() {
+		s.StalenessMS = max(0, time.Since(s.LastHeartbeat).Milliseconds())
+	}
 	if !s.LastHeartbeat.IsZero() && time.Since(s.LastHeartbeat) > 15*time.Second {
 		s.State = "disconnected"
 	}
@@ -380,6 +387,7 @@ func (c *Client) follow(ctx context.Context, e trust.Enrollment) error {
 				return err
 			}
 			c.update(func(s *FollowStatus) {
+				s.GatewayHead = f.Head
 				s.Schema = f.Schema
 				s.Mode = f.Reason
 				if f.Reason == "resume" {
@@ -442,6 +450,7 @@ func (c *Client) follow(ctx context.Context, e trust.Enrollment) error {
 			case blobTrigger <- struct{}{}:
 			default:
 			}
+			c.update(func(s *FollowStatus) { s.GatewayHead = f.Head })
 			continue
 		case "Reset":
 			if staging != nil {

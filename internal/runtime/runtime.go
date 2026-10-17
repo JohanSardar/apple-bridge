@@ -133,7 +133,7 @@ func Start(ctx context.Context, cfg Config) error {
 	}
 	service := &operations.Service{State: store}
 	service.LocalStatus = func() contracts.ReplicaStatus {
-		return contracts.ReplicaStatus{State: "gateway", Cursor: store.Head(), Blobs: blobStore.Progress()}
+		return contracts.ReplicaStatus{Role: "gateway", State: "ready", Cursor: store.Head(), GatewayHead: store.Head().Sequence, Blobs: blobStore.Progress()}
 	}
 	if cfg.Role == "gateway" {
 		if cfg.PeerAddress == "" {
