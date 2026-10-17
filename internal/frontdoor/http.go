@@ -44,7 +44,7 @@ func respond(w http.ResponseWriter, result any, err error) {
 			status = 401
 		case "not_found":
 			status = 404
-		case "conflict", "reset":
+		case "conflict", "reset", "id_reused":
 			status = 409
 		case "unavailable":
 			status = 503
@@ -67,18 +67,12 @@ func Handler(deps Deps, descriptors []contracts.OperationDescriptor) http.Handle
 		name := descriptor.Name
 		mux.HandleFunc("POST /v1/op/"+name, func(w http.ResponseWriter, r *http.Request) {
 			p := r.Context().Value(principalKey{}).(trust.Principal)
-			var q contracts.ReadQuery
-			decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1024*1024))
-			decoder.DisallowUnknownFields()
-			if err := decoder.Decode(&q); err != nil {
+			input, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 1024*1024))
+			if err != nil {
 				respond(w, nil, contracts.ErrInvalid)
 				return
 			}
-			if decoder.Decode(&struct{}{}) != io.EOF {
-				respond(w, nil, contracts.ErrInvalid)
-				return
-			}
-			result, err := deps.Operations.Read(r.Context(), p, name, q)
+			result, err := deps.Operations.Invoke(r.Context(), p, name, input)
 			respond(w, result, err)
 		})
 	}
@@ -168,6 +162,8 @@ func Handler(deps Deps, descriptors []contracts.OperationDescriptor) http.Handle
 			}
 		}
 	})
+	mux.Handle("/mcp", mcpHandler(deps, descriptors))
+	mux.HandleFunc("GET /v1/openapi.json", func(w http.ResponseWriter, r *http.Request) { respond(w, openAPI(descriptors), nil) })
 	var mu sync.Mutex
 	rates := map[string]window{}
 	_, port, _ := net.SplitHostPort(deps.Address)
@@ -206,6 +202,7 @@ func Handler(deps Deps, descriptors []contracts.OperationDescriptor) http.Handle
 			http.Error(w, "rate limited", 429)
 			return
 		}
+		r.Body = http.MaxBytesReader(w, r.Body, 1024*1024)
 		mux.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), principalKey{}, p)))
 	})
 }

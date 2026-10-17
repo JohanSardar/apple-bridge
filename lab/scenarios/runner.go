@@ -46,6 +46,7 @@ type Latency struct {
 	Timeouts int     `json:"timeouts"`
 }
 type Evidence struct {
+	RunID      string             `json:"run_id"`
 	Scenario   string             `json:"scenario"`
 	Level      string             `json:"level"`
 	Passed     bool               `json:"passed"`
@@ -288,7 +289,7 @@ func convergence(w *world.World) bool {
 		return false
 	}
 	expected, err := truthRecords(truth, aliases)
-	if err != nil || !reflect.DeepEqual(recordMultiset(gateway, false), recordMultiset(expected, false)) {
+	if err != nil || !reflect.DeepEqual(recordMultiset(withoutCommands(gateway), false), recordMultiset(expected, false)) {
 		return false
 	}
 	gatewayCursor, err := w.Cursor(w.Gateway)
@@ -301,7 +302,7 @@ func convergence(w *world.World) bool {
 			return false
 		}
 		replica, err := w.Records(endpoint)
-		if err != nil || !reflect.DeepEqual(replica, gateway) {
+		if err != nil || !reflect.DeepEqual(withoutCommands(replica), withoutCommands(gateway)) {
 			return false
 		}
 	}
@@ -310,7 +311,7 @@ func convergence(w *world.World) bool {
 
 func Run(ctx context.Context, s Scenario, level string) Evidence {
 	sha, _ := exec.Command("git", "rev-parse", "HEAD").Output()
-	evidence := Evidence{Scenario: s.ID, Level: level, GitSHA: strings.TrimSpace(string(sha)), At: time.Now().UTC(), Assertions: []Assertion{}, Latency: map[string]Latency{}, Hosts: []string{"air"}}
+	evidence := Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, GitSHA: strings.TrimSpace(string(sha)), At: time.Now().UTC(), Assertions: []Assertion{}, Latency: map[string]Latency{}, Hosts: []string{"air"}}
 	if level == "replica" {
 		evidence.Hosts = append(evidence.Hosts, "ubuntu")
 	}
@@ -363,16 +364,7 @@ func Run(ctx context.Context, s Scenario, level string) Evidence {
 	if err = w.Await(15*time.Second, func() bool { return convergence(w) }); err != nil {
 		return fail("initial_convergence")
 	}
-	for _, step := range s.When {
-		if _, ok := step["command_journey"]; ok {
-			runCommands(ctx, w, s.ID, &evidence)
-			evidence.Passed = len(evidence.Assertions) > 0
-			for _, a := range evidence.Assertions {
-				evidence.Passed = evidence.Passed && a.Passed
-			}
-			return evidence
-		}
-	}
+
 	for _, e := range w.Replicas {
 		status, err := w.Status(e)
 		if err != nil || status.Snapshots != 1 {
@@ -423,6 +415,49 @@ func Run(ctx context.Context, s Scenario, level string) Evidence {
 		scoped = append(scoped, observer)
 	}
 	add("scope_query_and_get", true)
+	for _, step := range s.When {
+		if _, ok := step["command_journey"]; ok {
+			if w.ControlAction("/external-change", map[string]string{"key": "command-probe"}) != nil {
+				return fail("command_probe")
+			}
+			effectStart := time.Now()
+			runCommands(ctx, w, s.ID, &evidence)
+			for i, observer := range watchers {
+				err := w.Await(5*time.Second, func() bool { _, ok := observer.observed("command-probe"); return ok })
+				seen, ok := observer.observed("command-probe")
+				values := []float64{}
+				timeouts := 0
+				if ok {
+					values = append(values, max(0, float64(seen.At.Sub(effectStart))/float64(time.Millisecond)))
+				} else {
+					timeouts = 1
+				}
+				name := "effect_done→gateway_visible"
+				if i > 0 {
+					name = fmt.Sprintf("effect_done→replica_visible:replica%d", i-1)
+				}
+				evidence.Latency[name] = stats(values, timeouts)
+				add(fmt.Sprintf("metadata_latency_below_1s_%d", i), err == nil && ok && seen.At.Sub(effectStart) < time.Second)
+				add(fmt.Sprintf("sse_contiguous_watermarks_%d", i), observer.valid())
+				observer.mu.Lock()
+				noFalseDelete := !observer.falseDelete
+				observer.mu.Unlock()
+				add(fmt.Sprintf("no_false_deletion_%d", i), noFalseDelete)
+			}
+			for i, observer := range scoped {
+				observer.mu.Lock()
+				advanced := observer.last.Sequence > observer.initialSequence
+				observer.mu.Unlock()
+				add(fmt.Sprintf("scope_sse_watermarks_%d", i), observer.valid() && advanced)
+			}
+			add("replica_records_versions_and_cursor_consistent", convergence(w))
+			evidence.Passed = len(evidence.Assertions) > 0
+			for _, a := range evidence.Assertions {
+				evidence.Passed = evidence.Passed && a.Passed
+			}
+			return evidence
+		}
+	}
 	effects := map[string]time.Time{}
 	partitionEffects := map[string]time.Time{}
 	change := func(title string, measure bool) error {
@@ -840,4 +875,14 @@ func decodeData(raw json.RawMessage, value any) error {
 	decoder := json.NewDecoder(strings.NewReader(string(raw)))
 	decoder.UseNumber()
 	return decoder.Decode(value)
+}
+
+func withoutCommands(records []contracts.Record) []contracts.Record {
+	out := []contracts.Record{}
+	for _, r := range records {
+		if r.Collection != "system.command" {
+			out = append(out, r)
+		}
+	}
+	return out
 }

@@ -211,7 +211,7 @@ func New(ctx context.Context, level string, replicas int, seed int, blobOptions 
 	if len(blobOptions) > 0 {
 		w.blobOptions = blobOptions[0]
 	}
-	scope := "reminders:read,system:read"
+	scope := "reminders:write,system:read"
 	if len(blobOptions) > 0 {
 		scope = "messages:read,reminders:read,system:read"
 	}

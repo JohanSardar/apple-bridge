@@ -1,11 +1,344 @@
 package scenarios
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"reflect"
+	"time"
+
+	"github.com/JohanSardar/apple-bridge/internal/contracts"
+	"github.com/JohanSardar/apple-bridge/lab/scripted"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 )
 
 func runCommands(ctx context.Context, w *world.World, id string, e *Evidence) {
-	status, err := world.Request(ctx, w.Gateway, "/v1/op/reminders.create", map[string]any{"command_id": "cmd-test", "args": map[string]any{"title": "[ab-test] command"}}, nil)
-	e.Assertions = append(e.Assertions, Assertion{Name: "command_admitted", Passed: err == nil && status == 200})
+	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
+	client := scripted.Client{Endpoint: w.Gateway}
+	if id == "CORE-CMD-LOST-RESPONSE" || id == "CORE-CMD-READ-YOUR-WRITE" || id == "CORE-CMD-CONFLICT" {
+		client.Endpoint = w.Replicas[0]
+	}
+	records, err := w.Records(w.Gateway)
+	if err != nil {
+		add("fixture_read", false)
+		return
+	}
+	var list, reminder contracts.Record
+	for _, r := range records {
+		if r.Collection == "reminders.list" {
+			list = r
+		}
+		if r.Collection == "reminders.reminder" {
+			reminder = r
+		}
+	}
+	command := func(op string, args map[string]any, version uint64) contracts.Command {
+		b, _ := json.Marshal(args)
+		return contracts.Command{ID: contracts.NewID("cmd"), Op: op, Args: b, ExpectedVersion: version, WaitMS: 15000}
+	}
+	create := func(title string) contracts.Command {
+		return command("reminders.create", map[string]any{"list_id": list.ID, "title": "[ab-test] " + title}, 0)
+	}
+	submit := func(c contracts.Command) (contracts.CommandRecord, error) {
+		var r contracts.CommandRecord
+		err := client.Call(ctx, c.Op, c, &r)
+
+		return r, err
+	}
+	status := func(c contracts.Command, resolve bool) (contracts.CommandRecord, error) {
+		var r contracts.CommandRecord
+		err := client.Call(ctx, "commands.status", contracts.CommandQuery{ID: c.ID, Resolve: resolve}, &r)
+		return r, err
+	}
+	observed := func(r contracts.CommandRecord, err error) bool {
+		return err == nil && r.Disposition == "locally_observed" && r.CommitSeq > 0
+	}
+	fault := func(name string, ms int) bool {
+		return w.ControlAction("/fault", map[string]any{"name": name, "ms": ms}) == nil
+	}
+	count := func(c contracts.Command, n int) bool {
+		effects, err := w.Effects()
+		return err == nil && effects[c.ID] == n
+	}
+	for i, endpoint := range append([]world.Endpoint{w.Gateway}, w.Replicas...) {
+		token, tokenErr := w.ScopedToken(endpoint, "system:read")
+		endpoint.Token = token
+		for _, protocol := range []string{"rest", "mcp"} {
+			scoped := scripted.Client{Endpoint: endpoint, Protocol: protocol}
+			var read contracts.ReadResult
+			err := scoped.Call(ctx, "records.query", contracts.ReadQuery{Collection: "reminders.reminder"}, &read)
+			add(fmt.Sprintf("scope_%s_query_%d", protocol, i), tokenErr == nil && err == nil && len(read.Records) == 0)
+			c := create("scoped")
+			err = scoped.Call(ctx, c.Op, c, nil)
+			add(fmt.Sprintf("scope_%s_command_%d", protocol, i), errors.Is(err, contracts.ErrUnauthorized) && count(c, 0))
+		}
+	}
+	switch id {
+	case "CORE-CMD-IDEMPOTENT":
+		c := create("idempotent")
+		first, err := submit(c)
+		add("command_admitted", observed(first, err))
+		second, err := submit(c)
+
+		add("identical_retry_returns_existing_status", err == nil && reflect.DeepEqual(first, second))
+		c.Args, _ = json.Marshal(map[string]any{"list_id": list.ID, "title": "[ab-test] different"})
+		_, err = submit(c)
+		var problem *contracts.Error
+		add("changed_args_id_reused", errors.As(err, &problem) && problem.Code == "id_reused")
+		add("one_truth_effect", count(c, 1))
+		other := client
+		other.Endpoint.Token, _ = w.ScopedToken(w.Gateway, "reminders:write")
+		var result contracts.CommandRecord
+		err = other.Call(ctx, "commands.status", contracts.CommandQuery{ID: c.ID}, &result)
+		add("other_issuer_status_hidden", errors.Is(err, contracts.ErrNotFound))
+	case "CORE-CMD-LOST-RESPONSE":
+		c := create("lost-response")
+		drop := client
+		drop.DropResponse = true
+		err := drop.Call(ctx, c.Op, c, nil)
+		add("response_lost", errors.Is(err, io.ErrUnexpectedEOF))
+		r, err := status(c, false)
+		add("lookup_original_id_observed", observed(r, err))
+		r, err = submit(c)
+		add("retry_original_id_observed", observed(r, err))
+		add("one_truth_effect", count(c, 1))
+	case "CORE-CMD-CRASH-AMBIGUOUS":
+		c := create("crash")
+		add("crash_fault_armed", fault("crash-after-effect", 0))
+		r, err := submit(c)
+		add("crash_returns_indeterminate", err == nil && r.Disposition == "indeterminate")
+		add("helper_restarted", w.RestartHelper() == nil)
+		add("recovered_capture", w.Await(10*time.Second, func() bool { return convergence(w) }) == nil)
+		r, err = submit(c)
+		add("retry_stays_indeterminate", err == nil && r.Disposition == "indeterminate")
+		r, err = status(c, true)
+		add("resolve_strengthens", observed(r, err))
+		add("resolve_never_redispatches", count(c, 1))
+		c = create("ambiguous")
+		fault("ambiguous-outcome", 0)
+		r, err = submit(c)
+		add("ambiguous_truthful", err == nil && r.Disposition == "indeterminate")
+		r, err = status(c, true)
+		add("ambiguous_resolves", observed(r, err) && count(c, 1))
+	case "CORE-CMD-EXPIRY":
+		c := create("expiry")
+		c.ExpiresAt = time.Now().UTC().Add(150 * time.Millisecond)
+		fault("pause", 400)
+		r, err := submit(c)
+		add("paused_command_expires", err == nil && r.Disposition == "expired")
+		add("expired_no_effect", count(c, 0))
+		sleep(ctx, 450*time.Millisecond)
+		r, err = submit(c)
+		add("expired_retry_never_dispatches", err == nil && r.Disposition == "expired" && count(c, 0))
+		c = create("restart-expiry")
+		c.WaitMS = 0
+		c.ExpiresAt = time.Now().UTC().Add(200 * time.Millisecond)
+		fault("pause", 500)
+		admitted, admitErr := submit(c)
+		add("zero_wait_returns_admitted", admitErr == nil && (admitted.State == "admitted" || admitted.State == "prepared"))
+		w.StopGateway()
+		sleep(ctx, 300*time.Millisecond)
+		add("restart_gateway", w.RestartGateway() == nil)
+		r, err = status(c, false)
+		add("restart_rechecks_expiry", err == nil && r.Disposition == "expired" && count(c, 0))
+	case "CORE-CMD-CLOCK-JUMP":
+		for _, offset := range []int64{3600000, -3600000} {
+			w.ClockOffset(0)
+			c := create(fmt.Sprint("clock-", offset))
+			c.ExpiresAt = time.Now().UTC().Add(600 * time.Millisecond)
+			fault("pause", 200)
+			done := make(chan struct{})
+			var r contracts.CommandRecord
+			var submitErr error
+			go func() { r, submitErr = submit(c); close(done) }()
+			sleep(ctx, 100*time.Millisecond)
+			w.ClockOffset(offset)
+			<-done
+			add(fmt.Sprintf("wall_jump_%d_preserves_monotonic_deadline", offset), observed(r, submitErr) && count(c, 1))
+			w.ClockOffset(0)
+		}
+		for _, ttl := range []time.Duration{-time.Hour, 2 * time.Hour} {
+			c := create("skew")
+			c.ExpiresAt = time.Now().UTC().Add(ttl)
+			_, err := submit(c)
+			add("skewed_expiry_rejected", errors.Is(err, contracts.ErrExpired) && count(c, 0))
+		}
+	case "CORE-CMD-OFFLINE":
+		c := create("helper-offline")
+		w.StopHelper()
+		sleep(ctx, 100*time.Millisecond)
+		start := time.Now()
+		_, err := submit(c)
+		add("helper_unavailable_fast", errors.Is(err, contracts.ErrUnavailable) && time.Since(start) < time.Second)
+		add("helper_restarted", w.RestartHelper() == nil)
+		w.StopGateway()
+		sleep(ctx, 200*time.Millisecond)
+		remote := scripted.Client{Endpoint: w.Replicas[0]}
+		start = time.Now()
+		err = remote.Call(ctx, c.Op, c, nil)
+		add("replica_unavailable_fast", errors.Is(err, contracts.ErrUnavailable) && time.Since(start) < 2*time.Second)
+		add("gateway_restarted", w.RestartGateway() == nil)
+		add("no_offline_effect", w.Await(10*time.Second, func() bool { return convergence(w) }) == nil && count(c, 0))
+	case "CORE-CMD-CONFLICT", "REM-CONFLICT":
+		c := command("reminders.update", map[string]any{"id": reminder.ID, "title": "[ab-test] first edit"}, reminder.Version)
+		first, err := submit(c)
+		add("first_version_wins", observed(first, err))
+		if id == "CORE-CMD-CONFLICT" {
+			client.Endpoint = w.Replicas[1]
+		}
+		c.ID = contracts.NewID("cmd")
+		_, err = submit(c)
+		var problem *contracts.Error
+		add("stale_version_conflict_with_current", errors.As(err, &problem) && problem.Code == "conflict" && problem.Current != nil && problem.Current.Version > reminder.Version)
+		add("loser_has_no_effect", count(c, 0))
+	case "CORE-CMD-READ-YOUR-WRITE":
+		c := create("read-your-write")
+		r, err := submit(c)
+		add("command_observed", observed(r, err))
+		var read contracts.ReadResult
+		err = client.Call(ctx, "records.query", contracts.ReadQuery{Collection: "reminders.reminder"}, &read)
+		found := false
+		for _, record := range read.Records {
+			var d map[string]any
+			json.Unmarshal(record.Data, &d)
+			found = found || d["title"] == "[ab-test] read-your-write"
+		}
+		add("local_read_at_commit_seq", err == nil && found && read.Cursor.Sequence >= r.CommitSeq)
+		add("one_truth_effect", count(c, 1))
+	case "CORE-REST-MCP-PARITY", "REM-CRUD":
+		results := []string{}
+		for _, protocol := range []string{"rest", "mcp"} {
+			client.Protocol = protocol
+			c := create("crud-" + protocol)
+			r, err := submit(c)
+			add(protocol+"_create", observed(r, err))
+			if err != nil || r.Disposition != "locally_observed" {
+				continue
+			}
+			var created contracts.Record
+			if w.Await(5*time.Second, func() bool {
+				all, _ := w.Records(w.Gateway)
+				for _, record := range all {
+					var d map[string]any
+					json.Unmarshal(record.Data, &d)
+					if d["title"] == "[ab-test] crud-"+protocol {
+						created = record
+						return true
+					}
+				}
+				return false
+			}) != nil {
+				add("created_visible", false)
+				continue
+			}
+			for _, op := range []string{"update", "complete", "uncomplete", "delete"} {
+				args := map[string]any{"id": created.ID}
+				if op == "update" {
+					args["notes"] = "[ab-test] revised"
+				}
+				c = command("reminders."+op, args, created.Version)
+				r, err = submit(c)
+				add(protocol+"_"+op, observed(r, err) && count(c, 1))
+				results = append(results, r.Disposition)
+				var read contracts.ReadResult
+				err = client.Call(ctx, "records.get", contracts.ReadQuery{Collection: created.Collection, ID: created.ID, IncludeDeleted: true}, &read)
+				if err == nil && len(read.Records) == 1 {
+					created = read.Records[0]
+				} else {
+					add(protocol+"_read_updated_version", false)
+				}
+				observations, truthErr := w.Inspect()
+				truthOK := false
+				for _, o := range observations {
+					if o.NativeKey != "" && o.Collection == "reminders.reminder" {
+						var d map[string]any
+						json.Unmarshal(o.Data, &d)
+						if d["title"] == "[ab-test] crud-"+protocol {
+							switch op {
+							case "complete":
+								truthOK = d["completed"] == true
+							case "uncomplete":
+								truthOK = d["completed"] == false
+							case "update":
+								truthOK = d["notes"] == "[ab-test] revised"
+							case "delete":
+								truthOK = o.Kind == "absent"
+							}
+						}
+					}
+				}
+				add(protocol+"_truth_"+op, truthErr == nil && truthOK)
+			}
+			c = command("reminders.create_list", map[string]any{"title": "[ab-test] list " + protocol}, 0)
+			r, err = submit(c)
+			add(protocol+"_create_list", observed(r, err) && count(c, 1))
+		}
+		add("rest_mcp_disposition_parity", len(results) == 8 && reflect.DeepEqual(results[:4], results[4:]))
+	case "REM-EXTERNAL-RACE":
+		c := command("reminders.update", map[string]any{"id": reminder.ID, "title": "[ab-test] should not overwrite"}, reminder.Version)
+		fault("external-edit-between-prepare-and-dispatch", 0)
+		_, err := submit(c)
+		add("external_race_rejects", errors.Is(err, contracts.ErrConflict) && count(c, 0))
+		all, _ := w.Records(w.Gateway)
+		found := false
+		for _, r := range all {
+			var data map[string]any
+			json.Unmarshal(r.Data, &data)
+			found = found || data["title"] == "[ab-test] external race"
+		}
+		add("external_edit_preserved", found)
+	case "REM-READONLY-LIST":
+		err := w.ControlAction("/external-change", map[string]any{"key": "list", "collection": "reminders.list", "data": map[string]any{"title": "Bridge Test", "writable": false}})
+		w.ControlAction("/flush", struct{}{})
+		add("readonly_fixture", err == nil)
+		c := create("readonly")
+		_, err = submit(c)
+		add("readonly_rejected_before_effect", errors.Is(err, contracts.ErrUnsupported) && count(c, 0))
+	case "CORE-LOCALHOST-DEFENSE":
+		for _, protocol := range []string{"rest", "mcp"} {
+			for _, attack := range []string{"no-token", "bad-host", "foreign-origin"} {
+				c := create("localhost")
+				body, _ := json.Marshal(c)
+				path := "/v1/op/" + c.Op
+				if protocol == "mcp" {
+					path = "/mcp"
+				}
+				req, _ := http.NewRequestWithContext(ctx, "POST", w.Gateway.URL+path, bytes.NewReader(body))
+				req.Host = w.Gateway.Host
+				req.Header.Set("Authorization", "Bearer "+w.Gateway.Token)
+				switch attack {
+				case "no-token":
+					req.Header.Del("Authorization")
+				case "bad-host":
+					req.Host = "attacker.invalid"
+				case "foreign-origin":
+					req.Header.Set("Origin", "https://attacker.invalid")
+				}
+				resp, err := http.DefaultClient.Do(req)
+				ok := err == nil && (resp.StatusCode == 401 || resp.StatusCode == 403)
+				if resp != nil {
+					resp.Body.Close()
+				}
+				add(protocol+"_"+attack, ok && count(c, 0))
+			}
+		}
+	case "CORE-FORGED-DELEGATION":
+		add("forged_delegation_rejected", forgedDelegation(ctx, w, list.ID))
+	default:
+		add("known_command_scenario", false)
+	}
+	w.ClockOffset(0)
+	converged := w.Await(15*time.Second, func() bool { return convergence(w) }) == nil
+
+	add("convergence_truth_gateway_replicas", converged)
+	effects, err := w.Effects()
+	single := err == nil
+	for _, n := range effects {
+		single = single && n <= 1
+	}
+	add("no_automatic_redispatch_truth_effect_counts", single)
 }
