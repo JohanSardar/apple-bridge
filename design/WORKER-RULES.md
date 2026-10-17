@@ -21,6 +21,7 @@ You are a worker on Apple Bridge, delegated by the build leader. Read this file,
 - Never text anyone but Johan himself; group tests may include Ben (handle in `~/.config/apple-bridge/test-contacts.env` on the Air — read it at runtime, never print it, never commit it).
 - Never modify or delete Johan's real data outside things tests created. Tag test data ("Bridge Test" calendar/list/folder/organization, `[ab-test <id>]` in message text) and clean it up.
 - SIP stays on. No private-API injection. Don't change system security settings. Don't touch `~/toy`, Hermes or other projects on either machine.
+- Test cleanup may delete a whole container (calendar, list, folder, group) only if this run recorded creating it AND an unbounded enumeration (no date window, completed items included) proves every item in it is tagged by this run. Otherwise delete individually tagged items only. Never delete or modify any container or item the tests didn't create.
 - Never commit personal data (phone numbers, emails, message text, usage numbers, IPs, tokens). Evidence files are redacted.
 - A macOS permission dialog, password or physical action needed from Johan is a blocker: stop that line of work, report exactly what is needed, continue with everything else.
 
