@@ -110,7 +110,7 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		e.Metrics["truth_read_succeeded"] = truthErr == nil
 		private := filepath.Join(os.Getenv("HOME"), "Library/Application Support/AppleBridgeDev/lab-failures", filepath.Base(w.Dir), "calendar")
 		if os.MkdirAll(private, 0700) == nil {
-			for _, name := range []string{"gateway.log", "gateway/helper/capture-trace.jsonl", "gateway/helper/calendar-baseline.json", "gateway/helper/calendar-lookups.json"} {
+			for _, name := range []string{"gateway.log", "gateway/capture-trace.jsonl", "gateway/helper/capture-trace.jsonl", "gateway/helper/calendar-baseline.json", "gateway/helper/calendar-lookups.json"} {
 				if bytes, err := os.ReadFile(filepath.Join(w.Dir, name)); err == nil {
 					os.WriteFile(filepath.Join(private, strings.ReplaceAll(name, "/", "_")), bytes, 0600)
 				}
