@@ -152,6 +152,8 @@ features:
     scenarios:
       - {id: HELPER-RESTART-REAL, levels: [real]}
       - {id: HELPER-TCC-READY, levels: [real]}
+      - {id: HELPER-LIVE-BACKFILL, levels: [real]}
+      - {id: HELPER-SESSION-SOAK, levels: [real]}
   - id: messages.read
     title: Messages history, live capture, decoding, receipts, attachments
     requirements: [R-FULL, R-LIVE, R-MSG-DEPTH, R-ATTACH, R-NO-FALSE-DELETE]
@@ -231,6 +233,7 @@ features:
     scenarios:
       - {id: REM-CRUD, levels: [sim, real, replica]}
       - {id: REM-LIST-CREATE, levels: [sim, real]}
+      - {id: REM-LIST-LOST-ACK, levels: [real]}
       - {id: REM-CONFLICT, levels: [sim, real]}
       - {id: REM-EXTERNAL-RACE, levels: [sim]}
       - {id: REM-READONLY-LIST, levels: [sim]}

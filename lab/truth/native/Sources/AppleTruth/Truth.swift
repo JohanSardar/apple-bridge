@@ -75,7 +75,8 @@ struct AppleTruth {
         if verb == "fixture" {
             guard listName == "Bridge Test", tag.hasPrefix("[ab-test "), tag.hasSuffix("]"), tag.count > 11, !tag.contains("\n") else { throw TruthFailure.invalid }
         } else if verb != "observe" { throw TruthFailure.invalid }
-        var lists = store.calendars(for: .reminder).filter { $0.title == listName }
+        let allLists = verb == "observe" && (request["all_lists"] as? Bool ?? false)
+        var lists = store.calendars(for: .reminder).filter { allLists || $0.title == listName }
         if let listID = request["list_id"] as? String { lists = lists.filter { $0.calendarIdentifier == listID } }
         if lists.count > 1 {
             guard verb == "observe" || action == "cleanup" else { throw TruthFailure.invalid }
