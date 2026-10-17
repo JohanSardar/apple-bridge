@@ -312,7 +312,8 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 					knownFolders[r.ID] = true
 				}
 			}
-			folderArgs, _ := json.Marshal(map[string]any{"title": "Bridge Test"})
+			folderTitle := "Bridge Test " + tag + " " + protocol
+			folderArgs, _ := json.Marshal(map[string]any{"title": folderTitle})
 			var folderCommand contracts.CommandRecord
 			err = client.Call(ctx, "notes.create_folder", contracts.Command{ID: contracts.NewCommandID(), Args: folderArgs, WaitMS: 15000}, &folderCommand)
 			add(protocol+"_create_folder_observed", err == nil && folderCommand.State == "observed")
@@ -341,7 +342,7 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 				}
 				json.Unmarshal(folderCommand.Evidence, &folderEvidence)
 				defer func(key string) {
-					_, cleanupErr := w.RecoverTruth("fixture", map[string]any{"source": "notes", "tag": tag, "action": "cleanup_created_folder", "created_by_run": true, "native_key": key})
+					_, cleanupErr := w.RecoverTruth("fixture", map[string]any{"source": "notes", "tag": tag, "action": "cleanup_created_folder", "created_by_run": true, "native_key": key, "title": folderTitle})
 					add("run_created_folder_cleaned", cleanupErr == nil)
 				}(folderEvidence.NativeKey)
 			}

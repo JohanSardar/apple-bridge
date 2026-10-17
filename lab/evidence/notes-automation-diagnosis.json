@@ -12,7 +12,12 @@
     "Relaunching Notes again restored the signed Helper probe; a fresh Notes sample no longer contained blocked receiveFrom or designatedCodeRequirementsCacheQueue stacks.",
     "Messages and Notes both execute NSAppleScript inside the signed Helper; Messages addresses com.apple.MobileSMS by bundle ID, Notes addresses Notes by application name. Successful TCC logs establish that the latter resolved to com.apple.Notes.",
     "Per-run signed AppleTruth count notes probe returned verified after recovery; TCC attributed it to dev.applebridge.truth with the existing signing requirement.",
-    "No user or system TCC database was edited."
+    "A second per-run signed Helper build executed count notes and returned state ready, error_code 0, and an empty error_message. Both temporary count probes were removed before scenario verification.",
+    "No user or system TCC database was edited.",
+    "After Automation recovery, NOTE-CRUD/real imported its fixture but failed rest_create_folder_observed; an isolated signed probe confirmed -10000, Duplicate folder name, when creating a second Bridge Test folder.",
+    "NOTE-EXTERNAL/real created and imported its fixture but Truth observe failed with -10006: Cannot set locked to password protected of item 1 of every note.",
+    "Original Truth cleanup failed with -1728 after deleting during iteration over a live every note collection; the next indexed reference no longer existed.",
+    "An isolated uniquely named diagnostic folder was created, recorded by returned ID, proved empty, and deleted through Notes."
   ],
   "conclusion": "A pending Automation authorization request can stall the target Notes process Apple Event queue, including requests from already authorized senders. The lock prevents handling that prompt but does not itself prohibit authorized Notes Apple Events. The cause of the original pending request before sampling is not independently established.",
   "recovery": "Relaunch Notes after granting Automation, then use the signed Helper and AppleTruth bundles via open -n -W -a. Do not route Notes automation through sshd-owned osascript, and do not retry ambiguous writes or automatically restart Notes after a write timeout.",
@@ -28,5 +33,10 @@
     "killall Notes; open -g -j -a Notes (verify old PID exits and new PID starts before probing)",
     "sudo launchctl asuser 501 sudo -u <GUI user> /usr/bin/osascript -e 'with timeout of 5 seconds' -e 'tell application id \"com.apple.Notes\" to count notes' -e 'end timeout' (diagnosis only: this sender required a separate grant and stalled Notes)",
     "open -n -W -a /tmp/ablab/<run>/apps/AppleTruth.app --args probe --request-file <notes request> --report <private report> (temporary independent diagnostic probe: count notes)"
+  ],
+  "implementation": [
+    "Product NSAppleScript addresses com.apple.Notes by bundle ID, matching the Messages convention; this is deterministic targeting, not a claim that a bundle ID clears an already stalled target process.",
+    "AppleTruth uses OSAKit JavaScript automation independently of the product AppleScript implementation; cleanup snapshots note IDs before deleting, and folder deletion requires a recorded creation, exact run-tagged title, no child folders, and unbounded enumeration proving all notes have the run tag.",
+    "NOTE-CRUD creates a unique Bridge Test folder for each run and protocol, avoiding the native duplicate-name restriction."
   ]
 }

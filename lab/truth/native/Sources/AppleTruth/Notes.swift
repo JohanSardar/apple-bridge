@@ -1,82 +1,83 @@
 import Foundation
 import Darwin
-import SQLite3
+import OSAKit
 
 extension AppleTruth {
     @MainActor
     static func notes(_ verb: String, _ request: [String: Any]) throws -> [String: Any] {
-        func quoted(_ text: String) -> String { "\"" + text.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"") + "\"" }
-        func run(_ text: String) throws -> NSAppleEventDescriptor {
-            var error: NSDictionary?
-            guard let script = NSAppleScript(source: "with timeout of 5 seconds\ntell application \"Notes\"\n" + text + "\nend tell\nend timeout") else { throw NotesTruthFailure.invalid }
-            let value = script.executeAndReturnError(&error)
-            if let error { throw NSError(domain: "NotesAppleScript", code: error["NSAppleScriptErrorNumber"] as? Int ?? 0) }
-            return value
-        }
+        guard verb == "fixture" || verb == "observe", let language = OSALanguage(forName: "JavaScript") else { throw NotesTruthFailure.invalid }
         let tag = request["tag"] as? String ?? ""
-        let action = request["action"] as? String ?? ""
-        let title = request["title"] as? String ?? ""
         if verb == "fixture" {
             guard tag.hasPrefix("[ab-test "), tag.hasSuffix("]"), !tag.contains("\n"), tag.count > 11 else { throw NotesTruthFailure.invalid }
-            if action == "cleanup_created_folder" {
-                guard request["created_by_run"] as? Bool == true, let key = request["native_key"] as? String else { throw NotesTruthFailure.invalid }
-                let path = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Group Containers/group.com.apple.notes/NoteStore.sqlite").path
-                var database: OpaquePointer?
-                guard sqlite3_open_v2(path, &database, SQLITE_OPEN_READONLY, nil) == SQLITE_OK else { throw NotesTruthFailure.invalid }
-                defer { sqlite3_close(database) }
-                var statement: OpaquePointer?
-                guard sqlite3_prepare_v2(database, "SELECT Z_UUID,Z_PK FROM Z_METADATA,ZICCLOUDSYNCINGOBJECT WHERE ZIDENTIFIER=? AND Z_ENT=(SELECT Z_ENT FROM Z_PRIMARYKEY WHERE Z_NAME='ICFolder')", -1, &statement, nil) == SQLITE_OK else { throw NotesTruthFailure.invalid }
-                defer { sqlite3_finalize(statement) }
-                sqlite3_bind_text(statement, 1, key, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
-                if sqlite3_step(statement) == SQLITE_ROW {
-                    let uuid = String(cString: sqlite3_column_text(statement, 0))
-                    let id = "x-coredata://" + uuid + "/ICFolder/p" + String(sqlite3_column_int64(statement, 1))
-                    let target = "folder id " + quoted(id)
-                    _ = try run("if name of " + target + " is not \"Bridge Test\" then error number -2700\nrepeat with n in every note of " + target + "\nif name of n does not start with " + quoted(tag) + " then error number -2700\nend repeat\ndelete " + target)
-                }
-                return ["status":"verified"]
-            }
-            let folderResult = try run("return id of every folder whose name is \"Bridge Test\"")
-            var folderID = folderResult.atIndex(1)?.stringValue ?? ""
-            var created = false
-            if folderID.isEmpty && action == "create" {
-                folderID = try run("return id of (make new folder with properties {name:\"Bridge Test\"})").stringValue ?? ""
-                created = true
-            }
-            if folderID.isEmpty { return ["status":"verified", "records":[]] }
-            let target = "folder id " + quoted(folderID)
-            if action == "create" {
-                guard title.hasPrefix(tag) else { throw NotesTruthFailure.invalid }
-                let body = request["html"] as? String ?? ("<div>" + title + "</div><div>synthetic body</div>")
-                guard body.contains(tag) else { throw NotesTruthFailure.invalid }
-                let id = try run("return id of (make new note at " + target + " with properties {body:" + quoted(body) + "})").stringValue ?? ""
-                return ["status":"verified", "id":id, "folder_id":folderID, "folder_created":created, "effect_uptime_ns":clock_gettime_nsec_np(CLOCK_UPTIME_RAW)]
-            }
-            if action == "cleanup" || action == "delete" {
-                _ = try run("repeat with n in (every note of " + target + ")\nif name of n starts with " + quoted(tag) + " then delete n\nend repeat")
-            } else if action == "modify" {
-                guard let id = request["id"] as? String, let replacement = request["plain_text"] as? String, replacement.hasPrefix(tag) else { throw NotesTruthFailure.invalid }
-                let safe = try run("return name of note id " + quoted(id)).stringValue ?? ""
-                guard safe.hasPrefix(tag) else { throw NotesTruthFailure.invalid }
-                let html = replacement.replacingOccurrences(of:"&",with:"&amp;").replacingOccurrences(of:"<",with:"&lt;").components(separatedBy:"\n").map { "<div>" + $0 + "</div>" }.joined()
-                _ = try run("set body of note id " + quoted(id) + " to " + quoted(html))
-            } else { throw NotesTruthFailure.invalid }
-            return ["status":"verified", "effect_uptime_ns":clock_gettime_nsec_np(CLOCK_UPTIME_RAW)]
         }
-        guard verb == "observe" else { throw NotesTruthFailure.invalid }
-        let selected = "every note"
-        let value = try run("set output to {}\nrepeat with n in (" + selected + ")\nset locked to password protected of n\nset content to \"\"\nif not locked then set content to plaintext of n\nset end of output to {id of n, name of n, content, locked}\nend repeat\nreturn output")
-        var records: [[String:Any]] = []
-        if value.numberOfItems > 0 {
-            for index in 1...value.numberOfItems {
-                guard let item = value.atIndex(index) else { continue }
-                let name = item.atIndex(2)?.stringValue ?? ""
-                if !tag.isEmpty && !name.hasPrefix(tag) { continue }
-                records.append(["id":item.atIndex(1)?.stringValue ?? "", "title":name, "plain_text":item.atIndex(3)?.stringValue ?? "", "locked":item.atIndex(4)?.booleanValue ?? false])
-            }
+        var input = request
+        input["verb"] = verb
+        let encoded = try JSONSerialization.data(withJSONObject: input, options: [.sortedKeys])
+        guard let argument = String(data: encoded, encoding: .utf8) else { throw NotesTruthFailure.invalid }
+        let source = "JSON.stringify((function(request) {\n" + #"""
+        const app = Application('com.apple.Notes');
+        const tag = request.tag || '';
+        const action = request.action || '';
+        function require(value) { if (!value) throw new Error('invalid_fixture'); }
+        function taggedNotes() { return app.notes.whose({name:{_beginsWith:tag}})(); }
+        function html(text) {
+            return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').split('\n').map(line => '<div>' + line + '</div>').join('');
         }
-        return ["status":"verified", "records":records]
+        if (request.verb === 'observe') {
+            const selected = tag ? taggedNotes() : app.notes();
+            return {status:'verified', records:selected.map(n => {
+                const protectedNote = n.passwordProtected();
+                return {id:n.id(), title:n.name(), plain_text:protectedNote ? '' : n.plaintext(), locked:protectedNote};
+            })};
+        }
+        if (action === 'cleanup_created_folder') {
+            require(request.created_by_run === true && request.native_key && request.title.startsWith('Bridge Test ' + tag + ' '));
+            const folders = app.folders.whose({name:request.title})();
+            require(folders.length === 1);
+            const folder = folders[0];
+            require(folder.folders().length === 0 && folder.notes().every(n => n.name().startsWith(tag)));
+            app.delete(folder);
+            return {status:'verified'};
+        }
+        if (action === 'cleanup' || action === 'delete') {
+            const identifiers = taggedNotes().map(n => n.id());
+            identifiers.forEach(id => {
+                const note = app.notes.byId(id);
+                require(note.name().startsWith(tag));
+                app.delete(note);
+            });
+            return {status:'verified'};
+        }
+        if (action === 'modify') {
+            require(request.id && request.plain_text.startsWith(tag));
+            const note = app.notes.byId(request.id);
+            require(note.name().startsWith(tag));
+            note.body = html(request.plain_text);
+            return {status:'verified'};
+        }
+        require(action === 'create' && request.title.startsWith(tag));
+        let folders = app.folders.whose({name:'Bridge Test'})();
+        let created = false;
+        if (folders.length === 0) {
+            const folder = app.Folder({name:'Bridge Test'});
+            app.folders.push(folder);
+            folders = [folder];
+            created = true;
+        }
+        const folder = folders[0];
+        const body = request.html || '<div>' + request.title + '</div><div>synthetic body</div>';
+        require(body.includes(tag));
+        const note = app.Note({body:body});
+        folder.notes.push(note);
+        return {status:'verified', id:note.id(), folder_id:folder.id(), folder_created:created};
+        """# + "\n})(" + argument + "))"
+        var error: NSDictionary?
+        let result = OSAScript(source: source, language: language).executeAndReturnError(&error)
+        if let error { throw NSError(domain: "NotesJavaScript", code: error[OSAScriptErrorNumber] as? Int ?? 0, userInfo: [NSLocalizedDescriptionKey: error[OSAScriptErrorMessage] as? String ?? "automation_failed"]) }
+        guard let text = result?.stringValue, let bytes = text.data(using: .utf8), var response = try JSONSerialization.jsonObject(with: bytes) as? [String: Any] else { throw NotesTruthFailure.invalid }
+        if verb == "fixture" { response["effect_uptime_ns"] = clock_gettime_nsec_np(CLOCK_UPTIME_RAW) }
+        return response
     }
 }
 
-private enum NotesTruthFailure: Error { case invalid, automation }
+private enum NotesTruthFailure: Error { case invalid }

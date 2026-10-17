@@ -8,7 +8,7 @@ public enum NotesScript {
     }
     public static func run(_ body: String) throws -> String {
         var error: NSDictionary?
-        guard let script = NSAppleScript(source: "with timeout of 5 seconds\ntell application \"Notes\"\n" + body + "\nend tell\nend timeout") else { throw SourceFailure.invalid }
+        guard let script = NSAppleScript(source: "with timeout of 5 seconds\ntell application id \"com.apple.Notes\"\n" + body + "\nend tell\nend timeout") else { throw SourceFailure.invalid }
         let result = script.executeAndReturnError(&error)
         guard error == nil else { throw SourceFailure.unavailable }
         return result.stringValue ?? ""
