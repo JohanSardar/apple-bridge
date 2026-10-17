@@ -442,7 +442,7 @@ Every UI action records a before/after screenshot path in evidence (stored in th
 
 ### 9.2 Calendar
 
-- EventKit full access (`requestFullAccessToEvents`). Window: `[today-730d, today+730d]` in local time, queried in chunks of ≤ 1 year (EventKit truncates > 4 years; F12). Slides daily at local midnight: records leaving the window are published as `window_evicted` (State removes them from the collection with a non-deletion tombstone reason), not deletion.
+- EventKit full access (`requestFullAccessToEvents`). Window: `[today-730d, today+730d]` in local time, queried in chunks of ≤ 1 year (EventKit truncates > 4 years; F12). Slides daily at local midnight: records leaving the window are published as evictions, not deletion: the journal change carries `op: evict` and the wire field `tombstone_reason: "window_evicted"` (optional; absent means an ordinary deletion). Replicas remove evicted records from the collection but must not report them as deleted to callers.
 - Identity (F11): native key = `calendarItemIdentifier` + `occurrenceDate` (original) for occurrences; aliases also store `calendarItemExternalIdentifier` scoped by calendar/account. On local-identifier churn after full sync, the external identifier + occurrence date re-links to the same bridge ID.
 - Series: each occurrence in the window is a `calendar.event`; the series rule lives on every occurrence (`recurrence`) with `series_id`; detached occurrences have `is_exception=true`.
 - Change detection: `EKEventStoreChanged` → debounce → refetch window in chunks, nearest chunk (±30 days) first for latency, hash diff against the last committed set → observations. Complete scan of the window produces `absent` with completion evidence. Periodic full reconciliation every 15 min.
