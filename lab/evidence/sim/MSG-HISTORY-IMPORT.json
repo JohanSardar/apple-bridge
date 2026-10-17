@@ -1,0 +1,66 @@
+{
+  "run_id": "run_01M548WP6EFYX8RQTXJWGRVQG6",
+  "scenario": "MSG-HISTORY-IMPORT",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "eaa734c5525f6ba75e0fbf5ed269161b4fafee3a",
+  "at": "2026-10-17T06:30:50.830896Z",
+  "assertions": [
+    {
+      "name": "seed",
+      "passed": true
+    },
+    {
+      "name": "history_equals_truth",
+      "passed": true
+    },
+    {
+      "name": "bulk_started",
+      "passed": true
+    },
+    {
+      "name": "live_mutation_during_import",
+      "passed": true
+    },
+    {
+      "name": "live_insert_during_import",
+      "passed": true
+    },
+    {
+      "name": "backfill_revalidated_against_truth",
+      "passed": true
+    },
+    {
+      "name": "automatic_convergence_with_truth",
+      "passed": true
+    },
+    {
+      "name": "automatic_no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_transactional_feed_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_transactional_feed_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_no_scope_leak_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_no_scope_leak_1",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

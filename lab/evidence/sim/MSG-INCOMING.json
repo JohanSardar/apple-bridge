@@ -1,0 +1,76 @@
+{
+  "run_id": "run_01M548VSQE5P7WADG4HGSXA085",
+  "scenario": "MSG-INCOMING",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "19bdd60217041d3ed958742f4bcd93535800894d",
+  "at": "2026-10-17T06:30:21.678963Z",
+  "assertions": [
+    {
+      "name": "seed",
+      "passed": true
+    },
+    {
+      "name": "history_equals_truth",
+      "passed": true
+    },
+    {
+      "name": "all_messages_under_one_second",
+      "passed": true
+    },
+    {
+      "name": "automatic_convergence_with_truth",
+      "passed": true
+    },
+    {
+      "name": "automatic_no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_transactional_feed_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_transactional_feed_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_no_scope_leak_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_no_scope_leak_1",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "effect_done→gateway_visible": {
+      "samples": 32,
+      "p50_ms": 22.724917,
+      "p95_ms": 32.252709,
+      "max_ms": 40.822292,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible": {
+      "samples": 32,
+      "p50_ms": 45.15375,
+      "p95_ms": 57.580625,
+      "max_ms": 72.23775,
+      "timeouts": 0
+    },
+    "gateway_visible→replica_visible": {
+      "samples": 32,
+      "p50_ms": 22.072708,
+      "p95_ms": 30.278708,
+      "max_ms": 31.415458,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

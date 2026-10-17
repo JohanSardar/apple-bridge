@@ -1,0 +1,12 @@
+{
+  "elapsed_seconds": 98.633231291,
+  "message_order_of_magnitude": 5,
+  "observations_fit_ipc": true,
+  "peak_rss_bytes": 311590912,
+  "stage": "native_capture_to_acknowledging_sink",
+  "native_chat_counts_equal_readonly_sqlite": true,
+  "git_sha": "dfdf54c35828b70c6e37a8079a147c76576d0133",
+  "samples": 1,
+  "rebased_source_commit": "d6a111f",
+  "messages_source_tree": "0643067c64ba14f4bf7a663d7934a38a73c0b52b"
+}

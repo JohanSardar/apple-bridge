@@ -1,0 +1,74 @@
+{
+  "run_id": "run_01M548VWKNSVDTZV4TTGV1AJN8",
+  "scenario": "MSG-PERMISSION-LOSS",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "19bdd60217041d3ed958742f4bcd93535800894d",
+  "at": "2026-10-17T06:30:24.629865Z",
+  "assertions": [
+    {
+      "name": "seed",
+      "passed": true
+    },
+    {
+      "name": "history_equals_truth",
+      "passed": true
+    },
+    {
+      "name": "permission_loss",
+      "passed": true
+    },
+    {
+      "name": "native_absence_while_denied",
+      "passed": true
+    },
+    {
+      "name": "native_insert_while_denied",
+      "passed": true
+    },
+    {
+      "name": "permission_state",
+      "passed": true
+    },
+    {
+      "name": "no_false_absence",
+      "passed": true
+    },
+    {
+      "name": "permission_restore",
+      "passed": true
+    },
+    {
+      "name": "automatic_convergence_with_truth",
+      "passed": true
+    },
+    {
+      "name": "automatic_no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_transactional_feed_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_transactional_feed_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_no_scope_leak_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_no_scope_leak_1",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

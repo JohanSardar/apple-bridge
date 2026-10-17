@@ -1,0 +1,58 @@
+{
+  "run_id": "run_01M548VXVAC9SGA1YNYRCGEF87",
+  "scenario": "MSG-RECEIPTS",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "19bdd60217041d3ed958742f4bcd93535800894d",
+  "at": "2026-10-17T06:30:25.898338Z",
+  "assertions": [
+    {
+      "name": "seed",
+      "passed": true
+    },
+    {
+      "name": "history_equals_truth",
+      "passed": true
+    },
+    {
+      "name": "receipts_mutate_existing_record",
+      "passed": true
+    },
+    {
+      "name": "replica_contains_both_receipts",
+      "passed": true
+    },
+    {
+      "name": "automatic_convergence_with_truth",
+      "passed": true
+    },
+    {
+      "name": "automatic_no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_transactional_feed_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_transactional_feed_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_no_scope_leak_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_no_scope_leak_1",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

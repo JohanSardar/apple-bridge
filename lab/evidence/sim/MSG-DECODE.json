@@ -1,0 +1,62 @@
+{
+  "run_id": "run_01M548TWS786111VZCBGCGD8Y8",
+  "scenario": "MSG-DECODE",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "19bdd60217041d3ed958742f4bcd93535800894d",
+  "at": "2026-10-17T06:29:52.039396Z",
+  "assertions": [
+    {
+      "name": "seed",
+      "passed": true
+    },
+    {
+      "name": "history_equals_truth",
+      "passed": true
+    },
+    {
+      "name": "decoder_fixture_checks",
+      "passed": true
+    },
+    {
+      "name": "malformed_observed",
+      "passed": true
+    },
+    {
+      "name": "undecoded_retains_digest_without_empty_text",
+      "passed": true
+    },
+    {
+      "name": "automatic_convergence_with_truth",
+      "passed": true
+    },
+    {
+      "name": "automatic_no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_transactional_feed_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_transactional_feed_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_no_scope_leak_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_no_scope_leak_1",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

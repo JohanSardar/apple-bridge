@@ -1,0 +1,25 @@
+{
+  "run_id": "run_01M548M77F6QCQCXHK2KC5NRRP",
+  "status": "unverified",
+  "scenario": "MSG-INCOMING",
+  "level": "real",
+  "passed": false,
+  "git_sha": "63f0c49f626759794bd31aa6d7e18baf6e972285",
+  "at": "2026-10-17T06:26:13.359966Z",
+  "assertions": [
+    {
+      "name": "truth_readonly_chat_db",
+      "passed": true
+    },
+    {
+      "name": "messages_source_ready",
+      "passed": false,
+      "status": "unverified",
+      "detail": "Helper Messages access unavailable; inspect permissions without prompting"
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
