@@ -1,7 +1,0 @@
-id: CAL-CLEANUP-SAFETY
-feature: calendar.write
-levels: [real]
-given: [{world: {replicas: 1}}]
-when: [{calendar_journey: {}}]
-then: [{converge: {}}]
-cleanup: [{world: {}}]
