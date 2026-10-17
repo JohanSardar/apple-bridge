@@ -31,9 +31,10 @@ type Store struct {
 	changed chan struct{}
 }
 type CommitResult struct {
-	After    uint64 `json:"after"`
-	Through  uint64 `json:"through"`
-	Degraded bool   `json:"degraded"`
+	Duplicate bool   `json:"duplicate,omitempty"`
+	After     uint64 `json:"after"`
+	Through   uint64 `json:"through"`
+	Degraded  bool   `json:"degraded"`
 }
 
 func Open(home string) (*Store, error) {
@@ -248,6 +249,7 @@ func (s *Store) CommitCapture(ctx context.Context, c contracts.Capture) (CommitR
 		return result, err
 	}
 	if gen == c.Generation && cp == c.Checkpoint {
+		result.Duplicate = true
 		return result, nil
 	}
 	expected := ""
