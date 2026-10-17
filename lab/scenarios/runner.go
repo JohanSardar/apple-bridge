@@ -368,7 +368,9 @@ func convergence(w *world.World) bool {
 }
 
 func runScenario(ctx context.Context, s Scenario, level string) Evidence {
-	if strings.HasPrefix(s.ID, "CAL-") { return runCalendarScenario(ctx, s, level) }
+	if strings.HasPrefix(s.ID, "CAL-") {
+		return runCalendarScenario(ctx, s, level)
+	}
 	if strings.HasPrefix(s.ID, "CON-") {
 		return runContacts(ctx, s, level)
 	}

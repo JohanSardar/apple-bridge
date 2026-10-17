@@ -84,12 +84,12 @@ type CommandRecord struct {
 	Error        *Error          `json:"error,omitempty"`
 }
 type NativeAction struct {
-	CalendarArgs *CalendarArgs `json:"calendar_args,omitempty"`
-	ExpectedListKey string `json:"expected_list_key,omitempty"`
-	Op              string `json:"op"`
-	Args            any    `json:"args"`
-	NativeKey       string `json:"native_key,omitempty"`
-	ListKey         string `json:"list_key,omitempty"`
+	CalendarArgs    *CalendarArgs `json:"calendar_args,omitempty"`
+	ExpectedListKey string        `json:"expected_list_key,omitempty"`
+	Op              string        `json:"op"`
+	Args            any           `json:"args"`
+	NativeKey       string        `json:"native_key,omitempty"`
+	ListKey         string        `json:"list_key,omitempty"`
 }
 
 func DecodeInput(b []byte, out any) error {

@@ -73,7 +73,7 @@ public actor AppleSession: ObservationSink {
         let agenda = AgendaGate(trace: trace)
         self.agenda = agenda
         source = try RemindersSource(gate: agenda, home: home, commandsEnabled: true)
- calendar = try CalendarSource(gate:agenda,home:home,commandsEnabled:commandsEnabled)
+ calendar = try CalendarSource(gate:agenda,home:home,commandsEnabled:true)
         guardLog = try DispatchGuard(home: home)
         let pidFile = home.appendingPathComponent("helper.pid")
         try Data(String(getpid()).utf8).write(to: pidFile, options: .atomic)

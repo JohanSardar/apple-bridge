@@ -10,8 +10,8 @@ import (
 )
 
 type durableApple struct {
-	CalendarClock time.Time `json:"calendar_clock,omitempty"`
-	CalendarDenied bool `json:"calendar_denied,omitempty"`
+	CalendarClock            time.Time                        `json:"calendar_clock,omitempty"`
+	CalendarDenied           bool                             `json:"calendar_denied,omitempty"`
 	ContactPermissionMissing bool                             `json:"contact_permission_missing"`
 	ContactSequence          uint64                           `json:"contact_sequence"`
 	MessagesGeneration       string                           `json:"messages_generation,omitempty"`
