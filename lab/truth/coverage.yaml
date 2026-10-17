@@ -3,4 +3,4 @@ source: reminders
 collections:
   reminders.list: [title, writable]
   reminders.reminder: [title, completed, list_id]
-comparison: all present fields, resolving bridge references to synthetic fixture titles
+comparison: all present fields, resolving native identities and references through gateway aliases, preserving multiplicity

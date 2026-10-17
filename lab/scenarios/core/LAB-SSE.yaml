@@ -1,0 +1,7 @@
+id: LAB-SSE
+feature: core.harness
+levels: [sim]
+given: [{world: {replicas: 1}}, {seed: {count: 1}}]
+when: [{connect: {}}]
+then: [{sse_resume: {}}, {sse_idle: {}}]
+cleanup: [{world: {}}]

@@ -1,0 +1,4 @@
+id: LAB-MALFORMED-SCENARIO
+feature: core.harness
+levels: [sim]
+then: [{load_rejected: {path: lab/fixtures/scenarios/impossible.yaml}}]

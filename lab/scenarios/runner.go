@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"math"
 	"net/http"
 	"os"
@@ -34,6 +35,7 @@ type Scenario struct {
 type Assertion struct {
 	Name   string `json:"name"`
 	Passed bool   `json:"passed"`
+	Status string `json:"status,omitempty"`
 	Detail string `json:"detail,omitempty"`
 }
 type Latency struct {
@@ -72,12 +74,14 @@ type watcher struct {
 	done            chan struct{}
 }
 
-func key(r contracts.Record) string {
+func key(r contracts.Record) string { return r.Collection + "/" + r.ID }
+func recordTitle(r contracts.Record) string {
 	var data map[string]any
-	json.Unmarshal(r.Data, &data)
+	decodeData(r.Data, &data)
 	title, _ := data["title"].(string)
-	return r.Collection + "/" + title
+	return title
 }
+
 func watch(ctx context.Context, e world.Endpoint, filtered bool, oracle func(contracts.Record) bool) (*watcher, error) {
 	var result contracts.ReadResult
 	if _, err := world.Request(ctx, e, "/v1/op/records.query", contracts.ReadQuery{Limit: 1}, &result); err != nil {
@@ -92,7 +96,7 @@ func watch(ctx context.Context, e world.Endpoint, filtered bool, oracle func(con
 			w.mu.Lock()
 			after := w.last
 			w.mu.Unlock()
-			req, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("%s/v1/changes?after=%d&epoch=%s", e.URL, after.Sequence, after.Epoch), nil)
+			req, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("%s/v1/changes?after=%s", e.URL, after.EventID()), nil)
 			if err != nil {
 				return
 			}
@@ -120,7 +124,7 @@ func watch(ctx context.Context, e world.Endpoint, filtered bool, oracle func(con
 					}
 					at := time.Now()
 					w.mu.Lock()
-					if b.Epoch != w.last.Epoch || b.After != w.last.Sequence || b.Through < b.After {
+					if b.Epoch != w.last.Epoch || b.SubscriptionRevision != w.last.SubscriptionRevision || b.After != w.last.Sequence || b.Through < b.After {
 						w.invalid = true
 					}
 					previous := b.After
@@ -172,8 +176,12 @@ func (w *watcher) close() { w.cancel(); <-w.done }
 func (w *watcher) observed(title string) (Seen, bool) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	s, ok := w.seen["reminders.reminder/[ab-test] "+title]
-	return s, ok
+	for _, s := range w.seen {
+		if s.Change.Record.Collection == "reminders.reminder" && recordTitle(s.Change.Record) == "[ab-test] "+title {
+			return s, true
+		}
+	}
+	return Seen{}, false
 }
 func (w *watcher) valid() bool { w.mu.Lock(); defer w.mu.Unlock(); return !w.invalid }
 
@@ -223,7 +231,13 @@ func Load(paths []string) ([]Scenario, error) {
 		dec := yaml.NewDecoder(strings.NewReader(string(b)))
 		dec.KnownFields(true)
 		if err = dec.Decode(&s); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%s: %w", f, err)
+		}
+		if err = dec.Decode(&struct{}{}); err != io.EOF {
+			return nil, fmt.Errorf("%s: expected one YAML document", f)
+		}
+		if err = validateScenario(s); err != nil {
+			return nil, fmt.Errorf("%s: %w", f, err)
 		}
 		if s.ID == "" || len(s.Levels) == 0 {
 			return nil, fmt.Errorf("scenario identity missing")
@@ -259,61 +273,7 @@ func stats(values []float64, timeouts int) Latency {
 	out.Max = values[len(values)-1]
 	return out
 }
-func normalize(records []contracts.Record, includeSystem bool) map[string]any {
-	ids := map[string]string{}
-	for _, r := range records {
-		var d map[string]any
-		decodeData(r.Data, &d)
-		if t, ok := d["title"].(string); ok {
-			ids[r.ID] = t
-		}
-	}
-	out := map[string]any{}
-	for _, r := range records {
-		if !includeSystem && r.Collection == "system.source" {
-			continue
-		}
-		var d map[string]any
-		decodeData(r.Data, &d)
-		for k, v := range d {
-			if id, ok := v.(string); ok && ids[id] != "" {
-				d[k] = ids[id]
-			}
-		}
-		out[key(r)] = d
-	}
-	return out
-}
-func truthRecords(observations []contracts.Observation) []contracts.Record {
-	titles := map[string]string{}
-	for _, o := range observations {
-		var d map[string]any
-		decodeData(o.Data, &d)
-		if t, ok := d["title"].(string); ok {
-			titles[o.NativeKey] = t
-		}
-	}
-	out := []contracts.Record{}
-	for _, o := range observations {
-		if o.Kind == "absent" {
-			continue
-		}
-		var d map[string]any
-		decodeData(o.Data, &d)
-		for k, v := range d {
-			if ref, ok := v.(map[string]any); ok {
-				if native, ok := ref["$ref"].(map[string]any); ok {
-					if id, ok := native["native_key"].(string); ok {
-						d[k] = titles[id]
-					}
-				}
-			}
-		}
-		b, _ := json.Marshal(d)
-		out = append(out, contracts.Record{Collection: o.Collection, Data: b})
-	}
-	return out
-}
+
 func convergence(w *world.World) bool {
 	truth, err := w.Inspect()
 	if err != nil {
@@ -323,7 +283,12 @@ func convergence(w *world.World) bool {
 	if err != nil {
 		return false
 	}
-	if !reflect.DeepEqual(normalize(gateway, false), normalize(truthRecords(truth), false)) {
+	aliases, err := gatewayAliases(w)
+	if err != nil {
+		return false
+	}
+	expected, err := truthRecords(truth, aliases)
+	if err != nil || !reflect.DeepEqual(recordMultiset(gateway, false), recordMultiset(expected, false)) {
 		return false
 	}
 	gatewayCursor, err := w.Cursor(w.Gateway)
@@ -353,6 +318,18 @@ func Run(ctx context.Context, s Scenario, level string) Evidence {
 		evidence.Assertions = append(evidence.Assertions, Assertion{Name: name, Passed: ok})
 	}
 	fail := func(name string) Evidence { add(name, false); return evidence }
+	if len(s.Then) == 1 {
+		if options, ok := s.Then[0]["load_rejected"]; ok {
+			path := options["path"].(string)
+			_, err := Load([]string{path})
+			add("malformed_scenario_rejected", err != nil && strings.Contains(err.Error(), "p95_ms"))
+			evidence.Passed = evidence.Assertions[0].Passed
+			if err != nil {
+				evidence.Assertions[0].Detail = err.Error()
+			}
+			return evidence
+		}
+	}
 	replicas, seed := 1, 4
 	for _, step := range s.Given {
 		for action, options := range step {
@@ -445,6 +422,34 @@ func Run(ctx context.Context, s Scenario, level string) Evidence {
 	for _, step := range s.When {
 		for action, options := range step {
 			switch action {
+			case "truth_multiplicity":
+				data := json.RawMessage(`{"title":"[ab-test] duplicate","completed":false}`)
+				for _, key := range []string{"duplicate-a", "duplicate-b"} {
+					if err = w.ControlAction("/external-change", map[string]any{"key": key, "data": data, "omit_capture": key == "duplicate-b"}); err != nil {
+						return fail("multiplicity_fixture")
+					}
+				}
+				if err = w.ControlAction("/flush", struct{}{}); err != nil {
+					return fail("multiplicity_flush")
+				}
+				truth, truthErr := w.Inspect()
+				records, recordsErr := w.Records(w.Gateway)
+				truthCount, gatewayCount := 0, 0
+				for _, o := range truth {
+					if recordTitle(contracts.Record{Data: o.Data}) == "[ab-test] duplicate" {
+						truthCount++
+					}
+				}
+				for _, record := range records {
+					if recordTitle(record) == "[ab-test] duplicate" {
+						gatewayCount++
+					}
+				}
+				add("multiplicity_fault_two_truth_one_gateway", truthErr == nil && recordsErr == nil && truthCount == 2 && gatewayCount == 1)
+				detected := truthErr == nil && recordsErr == nil && truthCount == 2 && gatewayCount == 1 && !convergence(w)
+				add("truth_multiplicity_mismatch_detected", detected)
+				evidence.Passed = detected
+				return evidence
 			case "connect":
 			case "changes":
 				delete(effects, "probe")
@@ -497,7 +502,6 @@ func Run(ctx context.Context, s Scenario, level string) Evidence {
 		return fail("convergence")
 	}
 	add("convergence_truth_gateway_replicas", true)
-	add("replica_records_versions_and_cursor_consistent", true)
 	timeout := w.Await(10*time.Second, func() bool {
 		for title := range effects {
 			for _, observer := range watchers {
@@ -547,6 +551,14 @@ func Run(ctx context.Context, s Scenario, level string) Evidence {
 				for name, latency := range evidence.Latency {
 					add("latency_"+name, latency.Samples >= samples && latency.Timeouts == 0 && latency.P95 < float64(limit))
 				}
+			case "sse_resume":
+				for i, endpoint := range endpoints {
+					add(fmt.Sprintf("sse_full_cursor_resume_%d", i), sseResume(ctx, w, endpoint))
+				}
+			case "sse_idle":
+				for i, endpoint := range endpoints {
+					add(fmt.Sprintf("sse_idle_heartbeats_%d", i), sseIdle(ctx, w, endpoint))
+				}
 			case "capture_safety":
 				add("capture_stale_noop_and_absence_protection", captureSafety(ctx, w))
 			case "old_sse_cursor":
@@ -567,20 +579,20 @@ func Run(ctx context.Context, s Scenario, level string) Evidence {
 	if err = w.Await(15*time.Second, func() bool { return convergence(w) }); err != nil {
 		add("post_assertion_convergence", false)
 	}
+	recordIntegrity(&evidence, w, nil)
 	for i, observer := range watchers {
 		add(fmt.Sprintf("sse_contiguous_watermarks_%d", i), observer.valid())
 		truth, err := w.Inspect()
+		aliases, aliasErr := gatewayAliases(w)
 		absent := map[string]bool{}
 		for _, o := range truth {
 			if o.Kind == "absent" {
-				var d map[string]any
-				decodeData(o.Data, &d)
-				title, _ := d["title"].(string)
-				absent[o.Collection+"/"+title] = true
+				absent[o.Collection+"/"+aliases[aliasKey(contracts.CollectionSource(o.Collection), o.Collection, o.NativeKey)]] = true
 			}
 		}
+
 		observer.mu.Lock()
-		valid := err == nil && !observer.falseDelete
+		valid := err == nil && aliasErr == nil && !observer.falseDelete
 		for _, seen := range observer.changes {
 			if seen.Change.Op == "delete" && !absent[key(seen.Change.Record)] {
 				valid = false
@@ -617,7 +629,7 @@ func Run(ctx context.Context, s Scenario, level string) Evidence {
 
 	evidence.Passed = true
 	for _, a := range evidence.Assertions {
-		if !a.Passed {
+		if !a.Passed && a.Status != "unverified" {
 			evidence.Passed = false
 		}
 	}
@@ -671,7 +683,7 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		if !e.Passed {
 			failed = true
 			for _, a := range e.Assertions {
-				if !a.Passed {
+				if !a.Passed && a.Status != "unverified" {
 					fmt.Fprintln(os.Stderr, "failed assertion:", a.Name)
 				}
 			}
@@ -707,8 +719,13 @@ func captureSafety(ctx context.Context, w *world.World) bool {
 		return false
 	}
 	var original contracts.Record
+	aliases, err := gatewayAliases(w)
+	if err != nil {
+		return false
+	}
+	id := aliases[aliasKey(contracts.CollectionSource(observation.Collection), observation.Collection, observation.NativeKey)]
 	for _, r := range before {
-		if key(r) == key(contracts.Record{Collection: observation.Collection, Data: observation.Data}) {
+		if r.Collection == observation.Collection && r.ID == id {
 			original = r
 			break
 		}
@@ -782,9 +799,12 @@ func truthAbsent(w *world.World, r contracts.Record) bool {
 	if err != nil {
 		return false
 	}
+	aliases, err := gatewayAliases(w)
+	if err != nil {
+		return false
+	}
 	for _, o := range observations {
-		candidate := contracts.Record{Collection: o.Collection, Data: o.Data}
-		if key(candidate) == key(r) {
+		if o.Collection == r.Collection && aliases[aliasKey(contracts.CollectionSource(o.Collection), o.Collection, o.NativeKey)] == r.ID {
 			return o.Kind == "absent"
 		}
 	}

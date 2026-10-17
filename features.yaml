@@ -36,6 +36,9 @@ features:
     status: todo
     scenarios:
       - {id: CORE-BOOT, levels: [sim, replica]}
+      - {id: LAB-TRUTH-MULTIPLICITY, levels: [sim]}
+      - {id: LAB-MALFORMED-SCENARIO, levels: [sim]}
+      - {id: LAB-SSE, levels: [sim]}
   - id: core.replication
     title: Journal, snapshots, resumable push feed with exactly-once replica application
     requirements: [R-FULL, R-LIVE, R-RESILIENT, R-NO-FALSE-DELETE]

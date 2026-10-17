@@ -1,0 +1,7 @@
+id: LAB-TRUTH-MULTIPLICITY
+feature: core.harness
+levels: [sim]
+given: [{world: {replicas: 1}}, {seed: {count: 1}}]
+when: [{truth_multiplicity: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

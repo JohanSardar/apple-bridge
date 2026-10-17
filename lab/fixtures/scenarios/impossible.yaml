@@ -1,0 +1,4 @@
+id: LAB-INVALID
+feature: core.harness
+levels: [sim]
+then: [{latency: {p95_ms: impossible}}]

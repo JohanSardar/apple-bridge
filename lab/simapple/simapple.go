@@ -21,11 +21,12 @@ type Config struct {
 	Control    string
 }
 type Action struct {
-	Count      int             `json:"count"`
-	Key        string          `json:"key"`
-	Collection string          `json:"collection"`
-	Data       json.RawMessage `json:"data"`
-	Delete     bool            `json:"delete"`
+	OmitCapture bool            `json:"omit_capture"`
+	Count       int             `json:"count"`
+	Key         string          `json:"key"`
+	Collection  string          `json:"collection"`
+	Data        json.RawMessage `json:"data"`
+	Delete      bool            `json:"delete"`
 }
 type captureRequest struct {
 	Capture contracts.Capture
@@ -136,8 +137,10 @@ func Run(ctx context.Context, cfg Config) error {
 		if action.Delete {
 			capture = fullScan([]contracts.Observation{o})
 		}
-		if err := fake.enqueue(r.Context(), capture, false); err != nil {
-			return
+		if !action.OmitCapture {
+			if err := fake.enqueue(r.Context(), capture, false); err != nil {
+				return
+			}
 		}
 		json.NewEncoder(w).Encode(map[string]bool{"effect_done": true})
 	})
