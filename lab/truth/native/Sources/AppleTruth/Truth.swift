@@ -47,7 +47,7 @@ struct AppleTruth {
                 if request["source"] as? String == "messages" {
                     guard verb == "observe" else { throw TruthFailure.invalid }
                     response = try messages(request)
-                } else if request["source"] as? String == "contacts" { response = try contacts(verb, request) } else { response = try await reminders(verb, request) }
+                } else if request["source"] as? String == "contacts" { do { response = try contacts(verb, request) } catch { response = ["status": "unverified", "reason": "contacts_native_error"] } } else { response = try await reminders(verb, request) }
                 }
             } catch {
                 response = ["status": "unverified", "reason": String(describing: error), "error_domain": (error as NSError).domain, "error_code": (error as NSError).code]

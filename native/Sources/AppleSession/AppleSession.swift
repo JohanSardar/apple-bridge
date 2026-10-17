@@ -426,8 +426,9 @@ public actor AppleSession: ObservationSink {
         let key = frame["action"]["native_key"].string
         guard code == "conflict", !key.isEmpty else { try? reject(frame, code: code); return }
         do {
-            try await source.reconcile(into: self)
-            guard let checkpoint = observedCheckpoints["reminders.reminder/" + key] else { throw SourceFailure.unavailable }
+            let isContact = frame["action"]["op"].string.hasPrefix("contacts.")
+            if isContact { try await contacts.reconcile(into: self) } else { try await source.reconcile(into: self) }
+            guard let checkpoint = observedCheckpoints[(isContact ? "contacts.contact/" : "reminders.reminder/") + key] else { throw SourceFailure.unavailable }
             let evidence = JSON.object(["native_key": .string(key), "capture_checkpoint": .string(checkpoint)])
             try wire?.send(.object(["t": .string("Rejected"), "command_id": frame["command_id"], "disposition": .string("rejected_before_dispatch"), "error": .object(["code": .string(code), "message": .string(code)]), "evidence": evidence]))
         } catch { try? reject(frame, code: "unavailable") }
@@ -441,7 +442,7 @@ public actor AppleSession: ObservationSink {
             let prepared = frame["action"]["op"].string.hasPrefix("contacts.") ? try await contacts.prepare(frame) : try await source.prepare(frame)
             let ticket = UUID().uuidString
             tickets[ticket] = Ticket(command: frame, prepared: prepared, expiry: ContinuousClock.now.advanced(by: .milliseconds(Int64(min(30, expires.timeIntervalSinceNow) * 1000))), fence: fence)
-            try wire?.send(.object(["t": .string("Prepared"), "command_id": frame["command_id"], "ticket": .string(ticket), "native_state": prepared.nativeState, "route": .string("eventkit"), "fingerprint": frame["request_hash"], "candidate_ids": .array([])]))
+            try wire?.send(.object(["t": .string("Prepared"), "command_id": frame["command_id"], "ticket": .string(ticket), "native_state": prepared.nativeState, "route": .string(frame["action"]["op"].string.hasPrefix("contacts.") ? "contacts" : "eventkit"), "fingerprint": frame["request_hash"], "candidate_ids": .array([])]))
         } catch { await rejectCommand(frame, error: error) }
     }
 

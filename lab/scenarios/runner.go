@@ -47,6 +47,7 @@ type Latency struct {
 	Timeouts int     `json:"timeouts"`
 }
 type Evidence struct {
+	HostTelemetry  map[string]string  `json:"host_telemetry,omitempty"`
 	HostConditions *HostConditions    `json:"host_conditions"`
 	Status         string             `json:"status,omitempty"`
 	RunID          string             `json:"run_id"`

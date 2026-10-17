@@ -73,6 +73,12 @@ extension AppleTruth {
             if let bytes = contact.imageData { result["image_digest"] = SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined() }
             return result
         }
-        return ["status": "verified", "total_count": all.count, "bridge_test_count": all.filter { $0.organizationName == "Bridge Test" }.count, "tagged_count": tagged.count, "records": records, "coverage_counts": coverage, "effect_uptime_ns": effectAt]
+        func digest(_ value: String) -> String { SHA256.hash(data: Data(value.utf8)).map { String(format: "%02x", $0) }.joined() }
+        var groups: [String: Any] = [:]
+        for group in try store.groups(matching: nil) {
+            let members = try store.unifiedContacts(matching: CNContact.predicateForContactsInGroup(withIdentifier: group.identifier), keysToFetch: [CNContactIdentifierKey as NSString])
+            groups[digest(group.identifier)] = ["name_digest": digest(group.name), "member_digests": members.map { digest($0.identifier) }.sorted()]
+        }
+        return ["status": "verified", "identifier_exists": all.contains { digest($0.identifier) == (request["identifier_hash"] as? String ?? "") }, "total_count": all.count, "bridge_test_count": all.filter { $0.organizationName == "Bridge Test" }.count, "tagged_count": tagged.count, "records": records, "coverage_counts": coverage, "groups": groups, "effect_uptime_ns": effectAt]
     }
 }

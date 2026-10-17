@@ -47,6 +47,7 @@ type Endpoint struct {
 	Remote bool
 }
 type BlobOptions struct {
+	Scope   string
 	Cap     int64
 	GraceMS int64
 	Corrupt bool
@@ -261,9 +262,12 @@ func newEnvironment(ctx context.Context, level string, replicas, seed int, nativ
 	if len(blobOptions) > 0 {
 		w.blobOptions = blobOptions[0]
 	}
-	scope := "contacts:read,contacts:write,messages:read,reminders:read,reminders:write,system:read"
+	scope := "reminders:read,reminders:write,system:read"
 	if len(blobOptions) > 0 {
 		scope = "messages:read,reminders:read,system:read"
+		if blobOptions[0].Scope != "" {
+			scope = blobOptions[0].Scope
+		}
 	}
 	if err = os.MkdirAll(w.Dir, 0700); err != nil {
 		return nil, err

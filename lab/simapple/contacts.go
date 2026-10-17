@@ -2,6 +2,7 @@ package simapple
 
 import (
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"net/http"
@@ -54,16 +55,20 @@ func (f *fakeApple) contactGeneration() string {
 func (f *fakeApple) contactsControl(mux *http.ServeMux) {
 	mux.HandleFunc("POST /contacts", func(w http.ResponseWriter, r *http.Request) {
 		var a struct {
-			Action   string         `json:"action"`
-			Key      string         `json:"key"`
-			Data     map[string]any `json:"data"`
-			Readonly bool           `json:"readonly"`
+			Action     string         `json:"action"`
+			Key        string         `json:"key"`
+			UnifiedKey string         `json:"unified_key"`
+			Data       map[string]any `json:"data"`
+			Readonly   bool           `json:"readonly"`
 		}
 		if json.NewDecoder(r.Body).Decode(&a) != nil {
 			http.Error(w, "invalid", 400)
 			return
 		}
 		f.mu.Lock()
+		if a.UnifiedKey != "" {
+			a.Key = a.UnifiedKey
+		}
 		records := []contracts.Observation{}
 		switch a.Action {
 		case "drop-everything":
@@ -77,6 +82,11 @@ func (f *fakeApple) contactsControl(mux *http.ServeMux) {
 					records = append(records, o)
 				}
 			}
+
+		case "group":
+			raw, _ := json.Marshal(map[string]any{"name": "Bridge Test", "member_ids": []any{map[string]any{"$ref": map[string]string{"collection": "contacts.contact", "native_key": a.Key}}}})
+			key := "group-" + a.Key
+			f.records[key] = contracts.Observation{Kind: "upsert", Collection: "contacts.group", NativeKey: key, ScopedAlias: "contacts/contacts.group/" + key, Data: raw, ObservedAt: time.Now().UTC()}
 		case "create", "update", "image", "delete", "token-crash":
 			if a.Key == "" {
 				f.mu.Unlock()
@@ -88,7 +98,13 @@ func (f *fakeApple) contactsControl(mux *http.ServeMux) {
 				decodeNative(old.Data, &data)
 			}
 			for k, v := range a.Data {
-				data[k] = v
+				if a.UnifiedKey != "" && (k == "phones" || k == "emails") {
+					existing, _ := data[k].([]any)
+					added, _ := v.([]any)
+					data[k] = append(existing, added...)
+				} else {
+					data[k] = v
+				}
 			}
 			data["note"] = "unavailable"
 			data["writable"] = !a.Readonly
@@ -97,7 +113,13 @@ func (f *fakeApple) contactsControl(mux *http.ServeMux) {
 				data["container_id"] = "readonly"
 			}
 			if a.Action == "image" {
-				b := []byte("[ab-test] contact image bytes")
+				b, err := base64.StdEncoding.DecodeString(a.Data["base64"].(string))
+				if err != nil {
+					f.mu.Unlock()
+					http.Error(w, "invalid", 400)
+					return
+				}
+				delete(data, "base64")
 				sum := sha256.Sum256(b)
 				digest := hex.EncodeToString(sum[:])
 				f.blobs[digest] = b
@@ -122,7 +144,7 @@ func (f *fakeApple) contactsControl(mux *http.ServeMux) {
 			http.Error(w, "persist", 500)
 			return
 		}
-		missing := f.permissionMissing
+		missing := f.contactPermissionMissing
 		f.mu.Unlock()
 		if !missing {
 			capture := f.contactSnapshot(a.Action == "drop-everything")
@@ -162,7 +184,7 @@ func (f *fakeApple) contactCommand(wire *applepeer.Wire, frame contracts.IPCFram
 		f.mu.Lock()
 		a := *frame.Action
 		before := json.RawMessage(nil)
-		if f.permissionMissing {
+		if f.contactPermissionMissing {
 			f.mu.Unlock()
 			return reject(contracts.ErrUnavailable)
 		}
@@ -202,7 +224,7 @@ func (f *fakeApple) contactCommand(wire *applepeer.Wire, frame contracts.IPCFram
 			f.mu.Unlock()
 			return reject(contracts.ErrExpired)
 		}
-		if f.permissionMissing {
+		if f.contactPermissionMissing {
 			f.mu.Unlock()
 			return reject(contracts.ErrUnavailable)
 		}
@@ -229,6 +251,19 @@ func (f *fakeApple) contactCommand(wire *applepeer.Wire, frame contracts.IPCFram
 		for k, v := range patch {
 			data[k] = v
 		}
+		if image, ok := patch["image"].(map[string]any); ok {
+			encoded, _ := image["base64"].(string)
+			bytes, err := base64.StdEncoding.DecodeString(encoded)
+			if err != nil {
+				f.mu.Unlock()
+				return reject(contracts.ErrInvalid)
+			}
+			sum := sha256.Sum256(bytes)
+			digest := hex.EncodeToString(sum[:])
+			f.blobs[digest] = bytes
+			data["image"] = map[string]any{"digest": digest, "state": "present"}
+		}
+
 		raw, _ = json.Marshal(data)
 		o := contracts.Observation{Kind: "upsert", Collection: "contacts.contact", NativeKey: key, ScopedAlias: "contacts/contacts.contact/" + key, Data: raw, ObservedAt: time.Now().UTC()}
 		if t.Action.Op == "contacts.delete" {

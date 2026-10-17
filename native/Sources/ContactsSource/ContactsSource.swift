@@ -43,6 +43,7 @@ public final class ContactsSource: Source {
         if let year = value.year { fields["year"] = .number(Double(year)) }
         if let month = value.month { fields["month"] = .number(Double(month)) }
         if let day = value.day { fields["day"] = .number(Double(day)) }
+        if let leap = value.isLeapMonth { fields["is_leap_month"] = .bool(leap) }
         if let calendar = value.calendar { fields["calendar"] = .string(String(describing: calendar.identifier)) }
         return .object(fields)
     }
@@ -53,7 +54,8 @@ public final class ContactsSource: Source {
         let values = try store.containers(matching: CNContainer.predicateForContainerOfContact(withIdentifier: contact.identifier))
         return values.count == 1 ? values[0].identifier : ""
     }
-    private func data(_ contact: CNContact) throws -> JSON {
+    private func data(_ contact: CNContact, containerID: String? = nil) throws -> JSON {
+        guard contact.areKeysAvailable(Self.keys) else { throw SourceFailure.unavailable }
         var fields = Self.scalarKeys.mapValues { JSON.string(contact.value(forKey: $0) as? String ?? "") }
         fields["contact_type"] = .string(contact.contactType == .organization ? "organization" : "person")
         fields["note"] = .string("unavailable")
@@ -67,9 +69,10 @@ public final class ContactsSource: Source {
         fields["social_profiles"] = labeled(contact.socialProfiles) { .object(["url": .string($0.urlString), "username": .string($0.username), "user_identifier": .string($0.userIdentifier), "service": .string($0.service)]) }
         fields["instant_messages"] = labeled(contact.instantMessageAddresses) { .object(["username": .string($0.username), "service": .string($0.service)]) }
         fields["relations"] = labeled(contact.contactRelations) { .string($0.name) }
-        let containerID = try container(contact)
-        fields["container_id"] = .string(containerID)
-        fields["writable"] = .bool(!containerID.isEmpty && containerID == store.defaultContainerIdentifier())
+        let resolvedContainer: String
+        if let containerID { resolvedContainer = containerID } else { resolvedContainer = try container(contact) }
+        fields["container_id"] = .string(resolvedContainer)
+        fields["writable"] = .bool(!resolvedContainer.isEmpty && resolvedContainer == store.defaultContainerIdentifier())
         fields["image"] = .null
         if let image = contact.imageData {
             let digest = hash(image)
@@ -86,9 +89,9 @@ public final class ContactsSource: Source {
     private func observation(_ collection: String, _ key: String, _ value: JSON) -> JSON {
         .object(["kind": .string("upsert"), "collection": .string(collection), "native_key": .string(key), "scoped_alias": .string("contacts/" + collection + "/" + key), "data": value, "observed_at": .string(timestamp())])
     }
-    private func contacts(_ predicate: NSPredicate? = nil) throws -> [CNContact] {
+    private func contacts(_ predicate: NSPredicate? = nil, identifiersOnly: Bool = false) throws -> [CNContact] {
         guard authorized else { throw SourceFailure.permissionMissing }
-        let request = CNContactFetchRequest(keysToFetch: Self.keys)
+        let request = CNContactFetchRequest(keysToFetch: identifiersOnly ? [CNContactIdentifierKey as NSString] : Self.keys)
         request.unifyResults = true; request.predicate = predicate
         var result: [CNContact] = []
         try store.enumerateContacts(with: request) { contact, _ in result.append(contact) }
@@ -132,9 +135,17 @@ public final class ContactsSource: Source {
         }
         if drop { generation = UUID().uuidString }
         var current: [String: JSON] = [:]
-        for contact in try contacts() { current["contacts.contact/" + contact.identifier] = observation("contacts.contact", contact.identifier, try data(contact)) }
+        var containers: [String: Set<String>] = [:]
+        for container in try store.containers(matching: nil) {
+            for member in try contacts(CNContact.predicateForContactsInContainer(withIdentifier: container.identifier), identifiersOnly: true) { containers[member.identifier, default: []].insert(container.identifier) }
+        }
+        for contact in try contacts() {
+            let memberships = containers[contact.identifier] ?? []
+            let containerID = memberships.count == 1 ? memberships.first ?? "" : ""
+            current["contacts.contact/" + contact.identifier] = observation("contacts.contact", contact.identifier, try data(contact, containerID: containerID))
+        }
         for group in try store.groups(matching: nil) {
-            let members = try contacts(CNContact.predicateForContactsInGroup(withIdentifier: group.identifier))
+            let members = try contacts(CNContact.predicateForContactsInGroup(withIdentifier: group.identifier), identifiersOnly: true)
             let value: JSON = .object(["name": .string(group.name), "member_ids": .array(members.map { .object(["$ref": .object(["collection": .string("contacts.contact"), "native_key": .string($0.identifier)])]) })])
             current["contacts.group/" + group.identifier] = observation("contacts.group", group.identifier, value)
         }
@@ -157,34 +168,35 @@ public final class ContactsSource: Source {
         }
         let handles = blobs.mapValues { hash($0) }
         try await sink.emitCheckpoint(source: name, generation: generation, checkpoint: next.base64EncodedString(), observations: observations, scanID: UUID().uuidString, scanStartedAt: started, scope: ["contacts.contact", "contacts.group"], completionEvidence: "complete", blobHandles: handles, live: live)
-        token = next; committed = current
-        let baseline: JSON = .object(["checkpoint": .string(next.base64EncodedString()), "generation": .string(generation), "records": .object(current)])
+        token = next
+        committed = drop ? committed.merging(current) { _, new in new } : current
+        let baseline: JSON = .object(["checkpoint": .string(next.base64EncodedString()), "generation": .string(generation), "records": .object(committed)])
         try JSONEncoder().encode(baseline).write(to: baselineURL, options: .atomic)
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: baselineURL.path)
     }
     public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {
         token = Data(base64Encoded: resume["checkpoint"].string)
         generation = resume["generation"].string.isEmpty ? UUID().uuidString : resume["generation"].string
-        if let bytes = try? Data(contentsOf: baselineURL), let baseline = try? JSONDecoder().decode(JSON.self, from: bytes), baseline["checkpoint"] == resume["checkpoint"] { committed = baseline["records"].object }
-        else { committed = [:]; token = nil }
-        let notifications = NotificationCenter.default.notifications(named: .CNContactStoreDidChange).map { _ in true }
+        if let bytes = try? Data(contentsOf: baselineURL), let baseline = try? JSONDecoder().decode(JSON.self, from: bytes) {
+            committed = baseline["records"].object
+            if baseline["checkpoint"] != resume["checkpoint"] { token = nil }
+        } else { committed = [:]; token = nil }
+        let (changes, continuation) = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
+        let observer = NotificationCenter.default.addObserver(forName: .CNContactStoreDidChange, object: nil, queue: nil) { @Sendable _ in continuation.yield(()) }
         let polling = Task { @MainActor in
             while !Task.isCancelled {
-                do { try await Task.sleep(for: .seconds(2)); try await self.scan(into: sink, live: true) }
-                catch { if Task.isCancelled { return }; let state = await self.open(); try? await sink.sourceState(source: self.name, state: state.state == "ready" ? "degraded" : state.state, coverage: state.coverage, capabilities: [], reason: "capture_failed") }
+                do { try await Task.sleep(for: .seconds(2)); continuation.yield(()) } catch { return }
             }
         }
-        defer { polling.cancel() }
+        defer { polling.cancel(); NotificationCenter.default.removeObserver(observer); continuation.finish() }
         try await scan(into: sink, live: false)
-        var last = ContinuousClock.now
-        for await _ in notifications {
+        for await _ in changes {
             try Task.checkCancellation()
-            if ContinuousClock.now - last < .milliseconds(50) { continue }
             try await Task.sleep(for: .milliseconds(50))
             try await scan(into: sink, live: true)
-            last = .now
         }
     }
+
     public func reconcile(into sink: any ObservationSink) async throws { try await scan(into: sink, live: true) }
     public func confirmAbsence(_ key: String, into sink: any ObservationSink) async throws {
         guard try isAbsent(key) else { throw SourceFailure.conflict }
@@ -227,6 +239,12 @@ public final class ContactsSource: Source {
         if value == .null { return nil }
         guard !value.object.isEmpty, (1...12).contains(Int(value["month"].number)), (1...31).contains(Int(value["day"].number)) else { throw SourceFailure.invalid }
         var result = DateComponents()
+        if let calendar = value.object["calendar"] {
+            let calendars: [String: Calendar.Identifier] = ["gregorian": .gregorian, "buddhist": .buddhist, "chinese": .chinese, "coptic": .coptic, "ethiopicAmeteMihret": .ethiopicAmeteMihret, "ethiopicAmeteAlem": .ethiopicAmeteAlem, "hebrew": .hebrew, "iso8601": .iso8601, "indian": .indian, "islamic": .islamic, "islamicCivil": .islamicCivil, "japanese": .japanese, "persian": .persian, "republicOfChina": .republicOfChina, "islamicTabular": .islamicTabular, "islamicUmmAlQura": .islamicUmmAlQura]
+            guard let identifier = calendars[calendar.string] else { throw SourceFailure.invalid }
+            result.calendar = Calendar(identifier: identifier)
+        }
+        result.isLeapMonth = value.object["is_leap_month"].map { $0.bool }
         result.year = value.object["year"].map { Int($0.number) }; result.month = Int(value["month"].number); result.day = Int(value["day"].number)
         return result
     }

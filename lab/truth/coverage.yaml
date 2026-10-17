@@ -4,3 +4,12 @@ collections:
   reminders.list: [title, writable]
   reminders.reminder: [title, completed, list_id]
 comparison: all present fields, resolving native identities and references through gateway aliases, preserving multiplicity
+
+contacts:
+  levels: [sim, real, replica]
+  identity: unified CNContact identifier
+  collections:
+    contacts.contact: [given_name, middle_name, family_name, previous_family_name, nickname, name_prefix, name_suffix, phonetic_given_name, phonetic_middle_name, phonetic_family_name, phonetic_organization, organization, department, job_title, contact_type, phones, emails, postal_addresses, urls, birthday, non_gregorian_birthday, dates, social_profiles, instant_messages, relations, image, thumbnail_image, container_id, writable, note]
+    contacts.group: [name, member_ids]
+  comparison: total unified count and per-field presence counts over all contacts; tagged fixture values and image digests; groups and memberships via independent hashes
+  gaps: [note requires restricted entitlement, writability conservatively limited to default container]

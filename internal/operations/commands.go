@@ -225,7 +225,7 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 		return r, contracts.ErrUnavailable
 	}
 	if prepared.T == "Rejected" {
-		problem := g.nativeConflict(runctx, p, a.ID, action.NativeKey, prepared)
+		problem := g.nativeConflict(runctx, p, a.ID, action.NativeKey, collection, prepared)
 		if problem == nil {
 			problem = contracts.ErrInvalid
 		}
@@ -259,7 +259,7 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 		return g.transition(g.Context, r, "indeterminate", "indeterminate", nil, nil)
 	}
 	if outcome.T == "Rejected" {
-		outcome.Error = g.nativeConflict(outcomeCtx, p, a.ID, action.NativeKey, outcome)
+		outcome.Error = g.nativeConflict(outcomeCtx, p, a.ID, action.NativeKey, collection, outcome)
 	}
 	return g.outcome(g.Context, r, outcome)
 }
@@ -398,7 +398,7 @@ func (g *LocalGateway) Recover(ctx context.Context) error {
 	return nil
 }
 
-func (g *LocalGateway) nativeConflict(ctx context.Context, p trust.Principal, id, nativeKey string, frame contracts.IPCFrame) *contracts.Error {
+func (g *LocalGateway) nativeConflict(ctx context.Context, p trust.Principal, id, nativeKey, collection string, frame contracts.IPCFrame) *contracts.Error {
 	if frame.Error == nil || frame.Error.Code != "conflict" {
 		return frame.Error
 	}
@@ -406,11 +406,11 @@ func (g *LocalGateway) nativeConflict(ctx context.Context, p trust.Principal, id
 	if json.Unmarshal(frame.Evidence, &observation) != nil || observation.NativeKey != nativeKey || nativeKey == "" {
 		return contracts.ErrCorrupt
 	}
-	cursor, err := g.Peer.CapturedSequence(contracts.Reminders, observation.CaptureCheckpoint, "reminders.reminder", nativeKey)
+	cursor, err := g.Peer.CapturedSequence(contracts.CollectionSource(collection), observation.CaptureCheckpoint, collection, nativeKey)
 	if err != nil || cursor.Epoch != g.State.Head().Epoch {
 		return contracts.ErrCorrupt
 	}
-	read, err := g.State.Read(ctx, p.Visibility(), contracts.ReadQuery{Collection: "reminders.reminder", ID: id, IncludeDeleted: true})
+	read, err := g.State.Read(ctx, p.Visibility(), contracts.ReadQuery{Collection: collection, ID: id, IncludeDeleted: true})
 	if err != nil || len(read.Records) != 1 || read.Cursor.Sequence < cursor.Sequence {
 		return contracts.ErrCorrupt
 	}

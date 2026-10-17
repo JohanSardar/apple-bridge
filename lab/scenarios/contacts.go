@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os/exec"
 	"reflect"
+	"slices"
 	"strings"
 	"time"
 
@@ -23,19 +24,20 @@ const contactPNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8
 func runContacts(ctx context.Context, s Scenario, level string) (result Evidence) {
 	sha, _ := exec.Command("git", "rev-parse", "HEAD").Output()
 	e := Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, GitSHA: strings.TrimSpace(string(sha)), At: time.Now().UTC(), Assertions: []Assertion{}, Latency: map[string]Latency{}, Hosts: []string{"air"}}
+	e.HostTelemetry = map[string]string{}
+	for key, args := range map[string][]string{"load_average": {"sysctl", "-n", "vm.loadavg"}, "logical_cpus": {"sysctl", "-n", "hw.logicalcpu"}, "heavy_jobs": {"python3", "-c", `import glob; print(len(glob.glob("/tmp/apple-bridge-heavy-*.lock/pid")))`}} {
+		value, err := exec.CommandContext(ctx, args[0], args[1:]...).Output()
+		if err == nil {
+			e.HostTelemetry[key] = strings.TrimSpace(string(value))
+		}
+	}
 	if level == "replica" {
 		e.Hosts = append(e.Hosts, "ubuntu")
 	}
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
 	fail := func(name string) Evidence { add(name, false); return e }
 	native := level == "real" || level == "replica"
-	var w *world.World
-	var err error
-	if native {
-		w, err = world.NewReal(ctx, level, 1)
-	} else {
-		w, err = world.New(ctx, level, 1, 0)
-	}
+	w, err := world.NewContacts(ctx, level, 1, native)
 	if err != nil {
 		return fail("world_start")
 	}
@@ -45,12 +47,17 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 	truth := func() (map[string]any, error) {
 		return w.Truth("observe", map[string]any{"source": "contacts", "tag": tag})
 	}
+	lastEffect := int64(0)
 	fixture := func(action string, fields map[string]any) error {
+		lastEffect = world.UptimeNS()
 		if native {
 			fields["source"] = "contacts"
 			fields["tag"] = tag
 			fields["action"] = action
-			_, err := w.Truth("fixture", fields)
+			response, err := w.Truth("fixture", fields)
+			if value, ok := response["effect_uptime_ns"].(json.Number); ok {
+				lastEffect, _ = value.Int64()
+			}
 			return err
 		}
 		if action == "modify" {
@@ -77,6 +84,10 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 			ok := err == nil && readErr == nil && remaining["tagged_count"] == json.Number("0")
 			result.Assertions = append(result.Assertions, Assertion{Name: "owned_test_contacts_cleaned", Passed: ok})
 			result.Passed = result.Passed && ok
+			empty := readErr == nil && remaining["bridge_test_count"] == json.Number("0")
+			result.Assertions = append(result.Assertions, Assertion{Name: "bridge_test_organization_empty", Passed: empty})
+			result.Passed = result.Passed && empty
+
 		}()
 	}
 	find := func(endpoint world.Endpoint) (contracts.Record, bool) {
@@ -108,8 +119,23 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 				return false
 			}
 			if native {
-				state, err := truth()
-				return err == nil && state["tagged_count"] == json.Number("0")
+				aliases, err := gatewayAliases(w)
+				if err != nil {
+					return false
+				}
+				nativeKey := ""
+				for key, id := range aliases {
+					if id == record.ID && strings.HasPrefix(key, "contacts/contacts.contact/") {
+						nativeKey = strings.TrimPrefix(key, "contacts/contacts.contact/")
+						break
+					}
+				}
+				if nativeKey == "" {
+					return false
+				}
+				digest := sha256.Sum256([]byte(nativeKey))
+				state, err := w.Truth("observe", map[string]any{"source": "contacts", "tag": tag, "identifier_hash": hex.EncodeToString(digest[:])})
+				return err == nil && state["identifier_exists"] == false
 			}
 			return truthAbsent(w, record)
 		})
@@ -120,7 +146,7 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 		observers = append(observers, observer)
 	}
 	submit := func(protocol, operation string, args map[string]any, version uint64) (contracts.CommandRecord, error) {
-		head, err := w.Cursor(w.Gateway)
+		_, err := w.Cursor(w.Gateway)
 		if err != nil {
 			return contracts.CommandRecord{}, err
 		}
@@ -130,11 +156,24 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 		}
 		client := scripted.Client{Endpoint: endpoint, Protocol: protocol}
 		var command contracts.CommandRecord
-		err = client.Call(ctx, operation, map[string]any{"command_id": contracts.NewCommandID(head.Epoch), "args": args, "expected_version": version, "wait_ms": 15000}, &command)
+		err = client.Call(ctx, operation, map[string]any{"command_id": contracts.NewCommandID(), "args": args, "expected_version": version, "wait_ms": 15000}, &command)
 		return command, err
 	}
 	switch s.ID {
 	case "CON-IMPORT":
+		if !native {
+			if fixture("group", map[string]any{}) != nil {
+				return fail("group_fixture")
+			}
+			if w.ControlAction("/contacts", map[string]any{"action": "create", "key": "linked-test-native", "unified_key": tag, "data": map[string]any{"emails": []any{map[string]any{"label": "work", "value": "linked-test@example.com"}}}}) != nil {
+				return fail("linked_native_fixture")
+			}
+			record, ok := find(w.Gateway)
+			var fields map[string]any
+			json.Unmarshal(record.Data, &fields)
+			emails, _ := fields["emails"].([]any)
+			add("linked_contacts_are_unified", ok && len(emails) == 2)
+		}
 		if native {
 			state, err := truth()
 			if err != nil {
@@ -169,6 +208,41 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 					}
 				}
 			}
+			aliases, aliasErr := gatewayAliases(w)
+			nativeKeys := map[string]string{}
+			for key, id := range aliases {
+				if strings.HasPrefix(key, "contacts/") {
+					parts := strings.SplitN(key, "/", 3)
+					if len(parts) == 3 {
+						nativeKeys[id] = parts[2]
+					}
+				}
+			}
+			digest := func(value string) string { sum := sha256.Sum256([]byte(value)); return hex.EncodeToString(sum[:]) }
+			groupTruth, _ := state["groups"].(map[string]any)
+			groupCount := 0
+			for _, record := range records {
+				if record.Collection != "contacts.group" {
+					continue
+				}
+				groupCount++
+				var fields struct {
+					Name    string   `json:"name"`
+					Members []string `json:"member_ids"`
+				}
+				json.Unmarshal(record.Data, &fields)
+				nativeGroup := nativeKeys[record.ID]
+				expected, _ := groupTruth[digest(nativeGroup)].(map[string]any)
+				actual := []string{}
+				for _, id := range fields.Members {
+					actual = append(actual, digest(nativeKeys[id]))
+				}
+				slices.Sort(actual)
+				raw, _ := json.Marshal(actual)
+				other, _ := json.Marshal(expected["member_digests"])
+				add("group_name_and_membership_hashes", aliasErr == nil && nativeGroup != "" && expected["name_digest"] == digest(fields.Name) && string(raw) == string(other))
+			}
+			add("group_count_equals_truth", len(groupTruth) == groupCount)
 			add("total_unified_count_equals_truth", state["total_count"] == json.Number(fmt.Sprint(count)))
 			nativeCoverage, _ := state["coverage_counts"].(map[string]any)
 			for key := range mapping {
@@ -185,17 +259,16 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 			if fixture("modify", map[string]any{"job_title": value}) != nil {
 				return fail("external_modify")
 			}
-			effect := time.Now()
-			for i, endpoint := range endpoints {
-				if w.Await(3*time.Second, func() bool {
-					record, ok := find(endpoint)
-					var data map[string]any
-					json.Unmarshal(record.Data, &data)
-					return ok && data["job_title"] == value
-				}) != nil {
+			effect := lastEffect
+			for i, observer := range observers {
+				if w.Await(3*time.Second, func() bool { _, ok := observer.observedContact(tag, value); return ok }) != nil {
 					return fail("external_visible")
 				}
-				values[i] = append(values[i], float64(time.Since(effect))/float64(time.Millisecond))
+				seen, ok := observer.observedContact(tag, value)
+				if !ok || effect <= 0 || seen.UptimeNS < effect {
+					return fail("monotonic_clock_agreement")
+				}
+				values[i] = append(values[i], float64(seen.UptimeNS-effect)/float64(time.Millisecond))
 			}
 			add("bounded_fixture_execution", time.Since(started) < 10*time.Second)
 		}
@@ -274,13 +347,69 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 				}
 			}
 		}
+
+	case "CON-PERMISSION-LOSS":
+		before, _ := find(w.Gateway)
+		if w.ControlAction("/source-state", map[string]string{"source": "contacts", "state": "permission_missing"}) != nil {
+			return fail("permission_loss_fault")
+		}
+		if fixture("delete", map[string]any{}) != nil {
+			return fail("permission_denied_external_effect")
+		}
+		add("permission_missing_reported", w.Await(3*time.Second, func() bool {
+			var status contracts.ReadResult
+			_, err := world.Request(ctx, w.Gateway, "/v1/op/sources.status", struct{}{}, &status)
+			if err != nil {
+				return false
+			}
+			for _, record := range status.Records {
+				var fields map[string]any
+				json.Unmarshal(record.Data, &fields)
+				if fields["source"] == "contacts" && fields["state"] == "permission_missing" {
+					return true
+				}
+			}
+			return false
+		}) == nil)
+		after, ok := find(w.Gateway)
+		add("permission_loss_preserves_record", ok && reflect.DeepEqual(before, after))
+	case "CON-CONFLICT":
+		before, _ := find(w.Gateway)
+		if fixture("modify", map[string]any{"job_title": "External Testjob"}) != nil {
+			return fail("conflict_external_fixture")
+		}
+		_, err := submit("rest", "contacts.update", map[string]any{"id": before.ID, "job_title": "Forbidden Testjob"}, before.Version)
+		add("stale_expected_version_conflicts", err != nil)
+		effects, err := w.Effects()
+		add("stale_version_zero_effects", err == nil && len(effects) == 0)
 	case "CON-DROP-EVERYTHING":
 		before, _ := find(w.Gateway)
+		var original contracts.ReadResult
+		_, err = world.Request(ctx, w.Gateway, "/v1/op/records.query", contracts.ReadQuery{Collection: "contacts.contact", ID: before.ID, IncludeAliases: true}, &original)
+		oldGeneration := ""
+		for _, alias := range original.Aliases {
+			if alias.NativeKey == tag {
+				oldGeneration = alias.Generation
+			}
+		}
+		if err != nil || oldGeneration == "" {
+			return fail("history_generation_before_reset")
+		}
 		if fixture("drop-everything", map[string]any{}) != nil {
 			return fail("history_reset")
 		}
 		after, ok := find(w.Gateway)
 		add("generation_reset_preserves_identity_and_version", ok && before.ID == after.ID && before.Version == after.Version)
+		var reset contracts.ReadResult
+		_, err = world.Request(ctx, w.Gateway, "/v1/op/records.query", contracts.ReadQuery{Collection: "contacts.contact", ID: before.ID, IncludeAliases: true}, &reset)
+		generations := map[string]bool{}
+		for _, alias := range reset.Aliases {
+			if alias.NativeKey == tag {
+				generations[alias.Generation] = true
+			}
+		}
+		add("history_reset_changes_generation", err == nil && len(generations) == 1 && !generations[oldGeneration])
+
 	case "CON-TOKEN-CRASH":
 		before, _ := find(w.Gateway)
 		_ = fixture("token-crash", map[string]any{"job_title": "Crash Testjob"})
@@ -368,6 +497,97 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 			}
 			return false
 		}) == nil)
+		if !native {
+			add("handle_link_journaled", w.Await(3*time.Second, func() bool {
+				observers[0].mu.Lock()
+				defer observers[0].mu.Unlock()
+				for _, seen := range observers[0].seen {
+					if seen.Change.Record.Collection != "messages.handle" {
+						continue
+					}
+					var data map[string]any
+					json.Unmarshal(seen.Change.Record.Data, &data)
+					if data["contact_id"] != nil {
+						return true
+					}
+				}
+				return false
+			}) == nil)
+			linked := func() bool {
+				records, err := w.Records(w.Gateway)
+				if err != nil {
+					return false
+				}
+				for _, record := range records {
+					if record.Collection != "messages.handle" {
+						continue
+					}
+					var fields map[string]any
+					json.Unmarshal(record.Data, &fields)
+					if fields["contact_id"] != nil {
+						return true
+					}
+				}
+				return false
+			}
+			if fixture("modify", map[string]any{"phones": []any{}, "emails": []any{}}) != nil {
+				return fail("contact_handles_removed")
+			}
+			add("contact_edit_clears_link", w.Await(3*time.Second, func() bool { return !linked() }) == nil)
+			if fixture("modify", map[string]any{"phones": synthetic["phones"], "emails": synthetic["emails"]}) != nil {
+				return fail("contact_handles_restored")
+			}
+			add("contact_edit_restores_link", w.Await(3*time.Second, linked) == nil)
+			if w.ControlAction("/contacts", map[string]any{"action": "create", "key": tag + "-duplicate", "data": synthetic}) != nil {
+				return fail("ambiguous_contact_fixture")
+			}
+			add("ambiguous_handles_unlinked", w.Await(3*time.Second, func() bool { return !linked() }) == nil)
+			if w.ControlAction("/contacts", map[string]any{"action": "delete", "key": tag + "-duplicate"}) != nil {
+				return fail("ambiguous_contact_removed")
+			}
+			add("unambiguous_link_restored", w.Await(3*time.Second, linked) == nil)
+			for _, endpoint := range endpoints {
+				token, err := w.ScopedToken(endpoint, "messages:read")
+				if err != nil {
+					return fail("messages_scope_token")
+				}
+				endpoint.Token = token
+				var hidden contracts.ReadResult
+				_, err = world.Request(ctx, endpoint, "/v1/op/records.query", contracts.ReadQuery{Collection: "messages.handle"}, &hidden)
+				masked := err == nil && len(hidden.Records) > 0
+				for _, record := range hidden.Records {
+					var fields map[string]any
+					json.Unmarshal(record.Data, &fields)
+					if fields["contact_id"] != nil {
+						masked = false
+					}
+				}
+				add("contact_link_hidden_without_contacts_scope", masked)
+				scopedObserver, err := watch(ctx, endpoint, false, func(contracts.Record) bool { return false })
+				if err != nil {
+					return fail("messages_scope_observer")
+				}
+				defer scopedObserver.close()
+				if w.ControlAction("/external-change", map[string]any{"key": "test-handle", "collection": "messages.handle", "data": map[string]any{"address": "+1 (555) 555-0123", "service": contracts.NewID("test")}}) != nil {
+					return fail("scoped_handle_change")
+				}
+				add("contact_link_hidden_in_sse", w.Await(3*time.Second, func() bool {
+					scopedObserver.mu.Lock()
+					defer scopedObserver.mu.Unlock()
+					for _, seen := range scopedObserver.seen {
+						if seen.Change.Record.Collection != "messages.handle" {
+							continue
+						}
+						var fields map[string]any
+						json.Unmarshal(seen.Change.Record.Data, &fields)
+						return fields["contact_id"] == nil
+					}
+					return false
+				}) == nil)
+			}
+
+		}
+
 	}
 	add("replica_convergence", w.Await(10*time.Second, func() bool {
 		gateway, err := w.Records(w.Gateway)
@@ -382,7 +602,7 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 		}
 		return true
 	}) == nil)
-	if !native {
+	if !native && s.ID != "CON-PERMISSION-LOSS" {
 		add("independent_sim_truth", w.Await(5*time.Second, func() bool { return contactTruthConvergence(w) }) == nil)
 	}
 	for i, observer := range observers {
@@ -419,7 +639,14 @@ func contactTruthConvergence(w *world.World) bool {
 	if err != nil {
 		return false
 	}
-	expected, err := truthRecords(observations, aliases)
+	filtered := []contracts.Observation{}
+	for _, observation := range observations {
+		source := contracts.CollectionSource(observation.Collection)
+		if source == contracts.Contacts || source == contracts.Messages {
+			filtered = append(filtered, observation)
+		}
+	}
+	expected, err := truthRecords(filtered, aliases)
 	if err != nil {
 		return false
 	}
@@ -436,4 +663,20 @@ func contactTruthConvergence(w *world.World) bool {
 		}
 	}
 	return reflect.DeepEqual(recordMultiset(actual, false), recordMultiset(expected, false))
+}
+
+func (w *watcher) observedContact(tag, job string) (Seen, bool) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	for _, seen := range w.seen {
+		if seen.Change.Record.Collection != "contacts.contact" {
+			continue
+		}
+		var data map[string]any
+		json.Unmarshal(seen.Change.Record.Data, &data)
+		if data["given_name"] == tag+" Testperson" && data["job_title"] == job {
+			return seen, true
+		}
+	}
+	return Seen{}, false
 }

@@ -298,6 +298,13 @@ func (s *Store) CommitCapture(ctx context.Context, c contracts.Capture) (CommitR
 			}
 		}
 	}
+	var contactHandles map[string]string
+	if c.Source == contracts.Messages && slices.ContainsFunc(c.Observations, func(o contracts.Observation) bool { return o.Kind == "upsert" && o.Collection == "messages.handle" }) {
+		contactHandles, err = contactIndex(ctx, tx)
+		if err != nil {
+			return result, err
+		}
+	}
 	for _, o := range c.Observations {
 		if o.Kind == "alias" {
 			continue
@@ -356,6 +363,12 @@ func (s *Store) CommitCapture(ctx context.Context, c contracts.Capture) (CommitR
 				return result, err
 			}
 		}
+		if o.Kind == "upsert" && o.Collection == "messages.handle" {
+			data, err = linkedHandleData(data, contactHandles)
+			if err != nil {
+				return result, err
+			}
+		}
 		deleted := o.Kind == "absent"
 		if exists && old.Deleted == deleted && string(old.Data) == string(data) {
 			if _, err = tx.ExecContext(ctx, "UPDATE records SET observed_at=? WHERE collection=? AND id=?", o.ObservedAt.Format(time.RFC3339Nano), o.Collection, id); err != nil {
@@ -380,6 +393,11 @@ func (s *Store) CommitCapture(ctx context.Context, c contracts.Capture) (CommitR
 			op = "delete"
 		}
 		if err = appendChange(ctx, tx, cursor, record, op); err != nil {
+			return result, err
+		}
+	}
+	if c.Source == contracts.Contacts {
+		if err = refreshContactLinks(ctx, tx, &cursor); err != nil {
 			return result, err
 		}
 	}
@@ -461,6 +479,10 @@ func (s *Store) Read(ctx context.Context, v trust.Visibility, q contracts.ReadQu
 		if len(result.Records) == limit {
 			result.Next = result.Records[len(result.Records)-1].Collection + "/" + result.Records[len(result.Records)-1].ID
 			break
+		}
+		r, err = projectContactLink(r, v)
+		if err != nil {
+			return result, err
 		}
 		result.Records = append(result.Records, s.sourceStatus(r))
 	}
@@ -553,6 +575,10 @@ func (s *Store) FreezeSnapshot(ctx context.Context, v trust.Visibility, revision
 			break
 		}
 		if v.Allows(r) {
+			r, err = projectContactLink(r, v)
+			if err != nil {
+				break
+			}
 			f.Records = append(f.Records, r)
 		}
 	}
@@ -816,6 +842,10 @@ func (i *ChangeIterator) Next(ctx context.Context) (contracts.Batch, error) {
 				if i.visibility.Allows(c.Record) {
 					if size+len(raw) > contracts.MaxFrame-2048 && len(b.Changes) > 0 {
 						b.Through = c.Sequence - 1
+						break
+					}
+					c.Record, err = projectContactLink(c.Record, i.visibility)
+					if err != nil {
 						break
 					}
 					b.Changes = append(b.Changes, c)
