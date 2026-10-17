@@ -1,10 +1,10 @@
 {
-  "run_id": "run_01M545K1C0Z4TXVGS4ZWESGN7W",
+  "run_id": "run_01M545X4QYYQ87813X2D6ZJERW",
   "scenario": "CORE-CMD-LOST-RESPONSE",
   "level": "replica",
   "passed": true,
-  "git_sha": "145521ea490fbfa4b6a07d8f15774633b2b1d981",
-  "at": "2026-10-17T05:33:08.864691Z",
+  "git_sha": "70b2efcc849f1d6009373d8a32c265ef4f9cbf39",
+  "at": "2026-10-17T05:38:39.998566Z",
   "assertions": [
     {
       "name": "replica_host_is_ubuntu",
@@ -170,23 +170,23 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 14.691667,
-      "p95_ms": 14.691667,
-      "max_ms": 14.691667,
+      "p50_ms": 23.450708,
+      "p95_ms": 23.450708,
+      "max_ms": 23.450708,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 26.439583,
-      "p95_ms": 26.439583,
-      "max_ms": 26.439583,
+      "p50_ms": 35.080333,
+      "p95_ms": 35.080333,
+      "max_ms": 35.080333,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica1": {
       "samples": 1,
-      "p50_ms": 29.315625,
-      "p95_ms": 29.315625,
-      "max_ms": 29.315625,
+      "p50_ms": 38.417416,
+      "p95_ms": 38.417416,
+      "max_ms": 38.417416,
       "timeouts": 0
     }
   },

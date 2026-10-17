@@ -1,10 +1,10 @@
 {
-  "run_id": "run_01M545JHJ35K8R4YQSQR6B19GS",
+  "run_id": "run_01M545VHYNZBA0NFG2WEJ4RDAA",
   "scenario": "REM-OPERATION-SHAPES",
   "level": "sim",
   "passed": true,
-  "git_sha": "145521ea490fbfa4b6a07d8f15774633b2b1d981",
-  "at": "2026-10-17T05:32:52.675442Z",
+  "git_sha": "70b2efcc849f1d6009373d8a32c265ef4f9cbf39",
+  "at": "2026-10-17T05:37:47.989968Z",
   "assertions": [
     {
       "name": "replica_host_is_air",
@@ -146,16 +146,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 17.12375,
-      "p95_ms": 17.12375,
-      "max_ms": 17.12375,
+      "p50_ms": 29.070792,
+      "p95_ms": 29.070792,
+      "max_ms": 29.070792,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 37.967958,
-      "p95_ms": 37.967958,
-      "max_ms": 37.967958,
+      "p50_ms": 51.498167,
+      "p95_ms": 51.498167,
+      "max_ms": 51.498167,
       "timeouts": 0
     }
   },
