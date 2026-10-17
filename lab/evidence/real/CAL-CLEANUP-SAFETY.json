@@ -3,15 +3,15 @@
     "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
     "start": {
       "air": {
-        "at": "2026-10-17T19:18:20.466426Z",
+        "at": "2026-10-17T19:29:31.208065Z",
         "cpu_count": 8,
         "load_average": [
-          5.72,
-          6.59,
-          7.65
+          4.2,
+          4.71,
+          6.03
         ],
-        "cpu_idle_percent": 76,
-        "free_memory_bytes": 163479552,
+        "cpu_idle_percent": 80,
+        "free_memory_bytes": 412024832,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
         "heavy_queue_length": 3,
@@ -20,33 +20,84 @@
     },
     "end": {
       "air": {
-        "at": "2026-10-17T19:18:58.295865Z",
+        "at": "2026-10-17T19:30:08.77922Z",
         "cpu_count": 8,
         "load_average": [
-          9.16,
-          7.25,
-          7.83
+          3.73,
+          4.51,
+          5.9
         ],
-        "cpu_idle_percent": 70,
-        "free_memory_bytes": 177225728,
+        "cpu_idle_percent": 69,
+        "free_memory_bytes": 155680768,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 4,
+        "heavy_queue_length": 3,
         "quiet": false
       }
     },
     "periodic_samples": [
       {
         "air": {
-          "at": "2026-10-17T19:18:26.520131Z",
+          "at": "2026-10-17T19:29:37.258886Z",
           "cpu_count": 8,
           "load_average": [
-            5.58,
-            6.54,
-            7.62
+            4.1,
+            4.68,
+            6.01
+          ],
+          "cpu_idle_percent": 81,
+          "free_memory_bytes": 64634880,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:29:42.258964Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.02,
+            4.65,
+            6
+          ],
+          "cpu_idle_percent": 80,
+          "free_memory_bytes": 76922880,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:29:47.259054Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.85,
+            4.61,
+            5.97
+          ],
+          "cpu_idle_percent": 79,
+          "free_memory_bytes": 68501504,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:29:52.257145Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.71,
+            4.57,
+            5.95
           ],
           "cpu_idle_percent": 69,
-          "free_memory_bytes": 74317824,
+          "free_memory_bytes": 213843968,
           "active_heavy_slots": 2,
           "other_active_heavy_slots": 1,
           "heavy_queue_length": 3,
@@ -55,15 +106,15 @@
       },
       {
         "air": {
-          "at": "2026-10-17T19:18:31.51928Z",
+          "at": "2026-10-17T19:29:57.259239Z",
           "cpu_count": 8,
           "load_average": [
-            5.61,
-            6.53,
-            7.61
+            3.57,
+            4.52,
+            5.92
           ],
-          "cpu_idle_percent": 79,
-          "free_memory_bytes": 1432043520,
+          "cpu_idle_percent": 72,
+          "free_memory_bytes": 215646208,
           "active_heavy_slots": 2,
           "other_active_heavy_slots": 1,
           "heavy_queue_length": 3,
@@ -72,15 +123,15 @@
       },
       {
         "air": {
-          "at": "2026-10-17T19:18:36.519357Z",
+          "at": "2026-10-17T19:30:02.257686Z",
           "cpu_count": 8,
           "load_average": [
-            5.32,
-            6.46,
-            7.58
+            3.44,
+            4.48,
+            5.9
           ],
-          "cpu_idle_percent": 79,
-          "free_memory_bytes": 1194606592,
+          "cpu_idle_percent": 19,
+          "free_memory_bytes": 66420736,
           "active_heavy_slots": 2,
           "other_active_heavy_slots": 1,
           "heavy_queue_length": 3,
@@ -89,69 +140,18 @@
       },
       {
         "air": {
-          "at": "2026-10-17T19:18:41.519443Z",
+          "at": "2026-10-17T19:30:07.257371Z",
           "cpu_count": 8,
           "load_average": [
-            4.98,
-            6.37,
-            7.54
+            3.97,
+            4.57,
+            5.93
           ],
-          "cpu_idle_percent": 78,
-          "free_memory_bytes": 867811328,
+          "cpu_idle_percent": 58,
+          "free_memory_bytes": 64241664,
           "active_heavy_slots": 2,
           "other_active_heavy_slots": 1,
           "heavy_queue_length": 3,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T19:18:46.519549Z",
-          "cpu_count": 8,
-          "load_average": [
-            4.74,
-            6.29,
-            7.51
-          ],
-          "cpu_idle_percent": 74,
-          "free_memory_bytes": 641318912,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 4,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T19:18:51.519593Z",
-          "cpu_count": 8,
-          "load_average": [
-            8.68,
-            7.09,
-            7.78
-          ],
-          "cpu_idle_percent": 31,
-          "free_memory_bytes": 414842880,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 4,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T19:18:56.517876Z",
-          "cpu_count": 8,
-          "load_average": [
-            9.35,
-            7.25,
-            7.84
-          ],
-          "cpu_idle_percent": 34,
-          "free_memory_bytes": 175046656,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 4,
           "quiet": false
         }
       }
@@ -161,12 +161,22 @@
     "quiet_wait_ms": 0,
     "quiet_wait_expired": false
   },
-  "run_id": "cal_01M55MT1KEDGW071AECPV7NMZW",
+  "run_id": "cal_01M55NEGMGD4FTYCX04E5D5MZ9",
   "network_path": "loopback",
   "metrics": {
-    "helper_calendar_permission": null,
     "records_read_succeeded": true,
     "source_readiness": [
+      {
+        "capabilities": [
+          "calendar.create_event",
+          "calendar.update_event",
+          "calendar.delete_event",
+          "calendar.create_calendar"
+        ],
+        "reason": "",
+        "source": "calendar",
+        "state": "ready"
+      },
       {
         "capabilities": [
           "reminders.create",
@@ -179,25 +189,16 @@
         "reason": "",
         "source": "reminders",
         "state": "ready"
-      },
-      {
-        "capabilities": [
-          "calendar.create_event",
-          "calendar.update_event",
-          "calendar.delete_event",
-          "calendar.create_calendar"
-        ],
-        "reason": "",
-        "source": "calendar",
-        "state": "ready"
       }
-    ]
+    ],
+    "truth_fixture_count": 1,
+    "truth_read_succeeded": true
   },
   "scenario": "CAL-CLEANUP-SAFETY",
   "level": "real",
   "passed": false,
-  "git_sha": "58dc597d5a6838b1fdea0976c97f85537564520f",
-  "at": "2026-10-17T19:18:21.550608Z",
+  "git_sha": "f593e8212b8dabf71e00427df46a15b3b3adebc8",
+  "at": "2026-10-17T19:29:32.304825Z",
   "assertions": [
     {
       "name": "private_signed_apps_per_world",
@@ -231,7 +232,7 @@
   "conditions": {
     "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
     "heavy_slots_in_use": "2",
-    "load_average": "5.72 6.59 7.65",
+    "load_average": "4.20 4.71 6.03",
     "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"
   }
 }

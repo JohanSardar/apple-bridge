@@ -184,6 +184,16 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 			result.Passed = result.Passed && clean
 		}()
 	}
+	if level != "sim" {
+		initialComplete := func() bool {
+			bytes, _ := os.ReadFile(filepath.Join(w.Gateway.Home, "helper", "capture-trace.jsonl"))
+			return strings.Contains(string(bytes), "calendar_scan_complete")
+		}
+		if err = w.Await(30*time.Second, initialComplete); err != nil {
+			return fail("initial_calendar_scan_complete", err)
+		}
+		add("initial_calendar_scan_complete", true)
+	}
 	if level == "sim" {
 		_, err = fixture("calendar", "test-calendar", nil)
 	} else {
