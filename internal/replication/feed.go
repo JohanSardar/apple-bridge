@@ -102,31 +102,21 @@ func (s *Server) serve(ctx context.Context, conn *websocket.Conn, p trust.Princi
 	ctx = priorityWriter(ctx, conn)
 	wants := make(chan contracts.FeedFrame, 8)
 	go s.serveBlobs(ctx, conn, p, wants)
-	requests := make(chan contracts.FeedFrame, 16)
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case f := <-requests:
-				if s.Command == nil {
-					cancel()
-					return
-				}
-				bounded, stop := context.WithTimeout(ctx, 20*time.Second)
-				response, err := s.Command(bounded, cert, f.Delegation, f.Request)
-				stop()
-				if err != nil {
-					cancel()
-					return
-				}
-				if _, err = send(ctx, conn, contracts.FeedFrame{T: "CommandResponse", ID: f.ID, Response: &response}); err != nil {
-					cancel()
-					return
-				}
-			}
+	commandSlots := make(chan struct{}, 16)
+	forward := func(f contracts.FeedFrame) {
+		defer func() { <-commandSlots }()
+		bounded, stop := context.WithTimeout(ctx, 20*time.Second)
+		defer stop()
+		response, err := s.Command(bounded, cert, f.Delegation, f.Request)
+		if err != nil {
+			cancel()
+			return
 		}
-	}()
+		if _, err = send(ctx, conn, contracts.FeedFrame{T: "CommandResponse", ID: f.ID, Response: &response}); err != nil {
+			cancel()
+		}
+	}
+
 	acks := make(chan contracts.FeedFrame, 8)
 	go func() {
 		defer cancel()
@@ -145,14 +135,16 @@ func (s *Server) serve(ctx context.Context, conn *websocket.Conn, p trust.Princi
 			}
 			switch f.T {
 			case "CommandRequest":
-				if f.ID == "" || len(f.Request) == 0 {
+				if f.ID == "" || len(f.Request) == 0 || s.Command == nil {
 					return
 				}
 				select {
-				case requests <- f:
+				case commandSlots <- struct{}{}:
+					go forward(f)
 				default:
 					return
 				}
+
 			case "Ack":
 				select {
 				case acks <- f:
