@@ -1,0 +1,78 @@
+{
+  "run_id": "run_01M54783G47CW8HSXG52TVE4QP",
+  "scenario": "CORE-BLOB-GATEWAY-RETRY",
+  "level": "sim",
+  "passed": false,
+  "git_sha": "dd7bacae078c0bf195641226e4d7a7f5452c43bc",
+  "at": "2026-10-17T06:02:07.748885Z",
+  "assertions": [
+    {
+      "name": "replica_host_is_air",
+      "passed": true
+    },
+    {
+      "name": "bootstrap_snapshot",
+      "passed": true
+    },
+    {
+      "name": "scope_query_and_get",
+      "passed": true
+    },
+    {
+      "name": "attachment_fixture",
+      "passed": true
+    },
+    {
+      "name": "attachment_metadata_visible",
+      "passed": true
+    },
+    {
+      "name": "metadata_convergence_with_blob_backlog",
+      "passed": true
+    },
+    {
+      "name": "gateway_retries_timed_out_read",
+      "passed": true
+    },
+    {
+      "name": "helper_restarts_during_staged_download",
+      "passed": true
+    },
+    {
+      "name": "gateway_resumes_with_fresh_handles",
+      "passed": true
+    },
+    {
+      "name": "blob_complete",
+      "passed": true
+    },
+    {
+      "name": "authorized_bytes_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "authorized_bytes_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "retry_exhaustion_fixture",
+      "passed": true
+    },
+    {
+      "name": "bounded_retries_surface_terminal_reason",
+      "passed": false
+    }
+  ],
+  "latency": {
+    "effect_done→blob_complete": {
+      "samples": 1,
+      "p50_ms": 14769.191708,
+      "p95_ms": 14769.191708,
+      "max_ms": 14769.191708,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

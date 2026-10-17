@@ -25,18 +25,20 @@ func (f *fakeApple) blobHandles() map[string]string {
 func (f *fakeApple) blobRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /blob-fixture", func(w http.ResponseWriter, r *http.Request) {
 		var a struct {
-			Busy   int    `json:"unavailable_reads"`
-			Drops  int    `json:"drop_reads"`
-			Size   int    `json:"size"`
-			State  string `json:"state"`
-			SlowMS int    `json:"slow_ms"`
-			Delete bool   `json:"delete"`
+			RefreshBeforeUnavailable bool   `json:"refresh_before_unavailable"`
+			Busy                     int    `json:"unavailable_reads"`
+			Drops                    int    `json:"drop_reads"`
+			Size                     int    `json:"size"`
+			State                    string `json:"state"`
+			SlowMS                   int    `json:"slow_ms"`
+			Delete                   bool   `json:"delete"`
 		}
 		if json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&a) != nil || a.Size < 0 || a.Size > 32<<20 {
 			http.Error(w, "invalid", 400)
 			return
 		}
 		f.mu.Lock()
+		f.blobRefreshBeforeUnavailable = a.RefreshBeforeUnavailable
 		f.blobBusy = a.Busy
 		f.blobDrops = a.Drops
 		f.blobState = a.State
@@ -104,6 +106,7 @@ func (f *fakeApple) blobReply(ctx context.Context, wire *applepeer.Wire, read co
 	f.mu.Lock()
 	digest := strings.TrimPrefix(read.Handle, fmt.Sprintf("%d:", fence))
 	b, ok := f.blobs[digest]
+	refreshBeforeUnavailable := f.blobRefreshBeforeUnavailable
 	busy := f.blobBusy > 0
 	if busy {
 		f.blobBusy--
@@ -118,6 +121,11 @@ func (f *fakeApple) blobReply(ctx context.Context, wire *applepeer.Wire, read co
 		return nil
 	}
 	if busy {
+		if refreshBeforeUnavailable {
+			if err := f.enqueue(ctx, contracts.Capture{Source: contracts.Messages, BlobHandles: map[string]string{digest: digest}}, true); err != nil {
+				return err
+			}
+		}
 		_, err := wire.Send(contracts.IPCFrame{T: "BlobUnavailable", Handle: read.Handle, Reason: "unavailable"})
 		return err
 	}

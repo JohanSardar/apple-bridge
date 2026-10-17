@@ -239,7 +239,7 @@ func blobJourney(ctx context.Context, w *world.World, id string, evidence *Evide
 	}
 	if id == "CORE-BLOB-GATEWAY-RETRY" {
 		failedStart := time.Now()
-		if !check("retry_exhaustion_fixture", w.ControlAction("/blob-fixture", map[string]any{"size": 128 << 10, "unavailable_reads": 8}) == nil) {
+		if !check("retry_exhaustion_fixture", w.ControlAction("/blob-fixture", map[string]any{"size": 128 << 10, "unavailable_reads": 8, "refresh_before_unavailable": true}) == nil) {
 			return false
 		}
 		var failedDigest string

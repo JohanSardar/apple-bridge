@@ -88,22 +88,22 @@ func (s *Store) captureBlobs() {
 		err := s.Transfer(job.ctx, digest, job.source)
 		s.appleMu.Lock()
 		current := s.applePending[digest]
-		if current != job {
+		state := s.Progress().Entries[digest].State
+		if current != job && (err == nil || state != "pending") {
 			s.appleMu.Unlock()
 			continue
 		}
 		if err == nil {
 			delete(s.applePending, digest)
 		} else {
-			job.attempts++
-			state := s.Progress().Entries[digest].State
-			if state != "pending" || job.attempts >= 8 {
+			current.attempts++
+			if state != "pending" || current.attempts >= 8 {
 				if state == "pending" {
 					s.fail(digest, "ipc_retry_exhausted")
 				}
 				delete(s.applePending, digest)
 			} else {
-				job.ready = time.Now().Add(min(4*time.Second, 250*time.Millisecond<<min(job.attempts-1, 4)))
+				current.ready = time.Now().Add(min(4*time.Second, 250*time.Millisecond<<min(current.attempts-1, 4)))
 			}
 		}
 		s.appleMu.Unlock()
