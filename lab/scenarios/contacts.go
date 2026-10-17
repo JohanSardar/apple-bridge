@@ -187,7 +187,7 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 			}
 			count := 0
 			coverage := map[string]int{}
-			mapping := map[string]string{"givenName": "given_name", "middleName": "middle_name", "familyName": "family_name", "previousFamilyName": "previous_family_name", "namePrefix": "name_prefix", "nameSuffix": "name_suffix", "nickname": "nickname", "phoneticGivenName": "phonetic_given_name", "phoneticMiddleName": "phonetic_middle_name", "phoneticFamilyName": "phonetic_family_name", "phoneticOrganizationName": "phonetic_organization", "organizationName": "organization", "jobTitle": "job_title", "departmentName": "department", "phoneNumbers": "phones", "emailAddresses": "emails", "postalAddresses": "postal_addresses", "urlAddresses": "urls", "birthday": "birthday", "nonGregorianBirthday": "non_gregorian_birthday", "dates": "dates", "socialProfiles": "social_profiles", "instantMessageAddresses": "instant_messages", "contactRelations": "relations", "imageData": "image", "thumbnailImageData": "thumbnail_image"}
+			mapping := map[string]string{"contactType": "contact_type", "givenName": "given_name", "middleName": "middle_name", "familyName": "family_name", "previousFamilyName": "previous_family_name", "namePrefix": "name_prefix", "nameSuffix": "name_suffix", "nickname": "nickname", "phoneticGivenName": "phonetic_given_name", "phoneticMiddleName": "phonetic_middle_name", "phoneticFamilyName": "phonetic_family_name", "phoneticOrganizationName": "phonetic_organization", "organizationName": "organization", "jobTitle": "job_title", "departmentName": "department", "phoneNumbers": "phones", "emailAddresses": "emails", "postalAddresses": "postal_addresses", "urlAddresses": "urls", "birthday": "birthday", "nonGregorianBirthday": "non_gregorian_birthday", "dates": "dates", "socialProfiles": "social_profiles", "instantMessageAddresses": "instant_messages", "contactRelations": "relations", "imageData": "image", "thumbnailImageData": "thumbnail_image"}
 			for _, record := range records {
 				if record.Collection != "contacts.contact" {
 					continue
@@ -247,6 +247,7 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 			add("group_count_equals_truth", len(groupTruth) == groupCount)
 			add("total_unified_count_equals_truth", state["total_count"] == json.Number(fmt.Sprint(count)))
 			nativeCoverage, _ := state["coverage_counts"].(map[string]any)
+			e.Metrics = map[string]any{"unified_count": count, "truth_unified_count": state["total_count"], "field_presence_counts": coverage, "truth_field_presence_counts": nativeCoverage, "group_count": groupCount, "truth_group_count": len(groupTruth)}
 			for key := range mapping {
 				add("field_coverage_"+key, nativeCoverage[key] == json.Number(fmt.Sprint(coverage[key])))
 			}
