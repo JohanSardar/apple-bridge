@@ -3,18 +3,18 @@
     "clock": "native CLOCK_UPTIME_RAW for real fixtures; lab monotonic fixture return for sim",
     "heavy_slots_in_use": 2,
     "load_average": [
-      "8.31",
-      "9.81",
-      "10.40"
+      "8.37",
+      "10.74",
+      "11.05"
     ],
     "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"
   },
-  "run_id": "cal_01M549T0G9YP6RANH6QBT58VKJ",
+  "run_id": "cal_01M54ATJFKXAZFD8BEH8X70GPP",
   "scenario": "CAL-PERMISSION-LOSS",
   "level": "sim",
   "passed": true,
-  "git_sha": "bd649868a35e45265f8896c8287bd9b37a361e1e",
-  "at": "2026-10-17T06:46:51.657414Z",
+  "git_sha": "1006ac354b1c6492966de87dacbd828d09875bac",
+  "at": "2026-10-17T07:04:38.643732Z",
   "assertions": [
     {
       "name": "calendar_visible",
@@ -34,6 +34,10 @@
     },
     {
       "name": "permission_missing_published",
+      "passed": true
+    },
+    {
+      "name": "permission_loss_survives_restart",
       "passed": true
     },
     {
@@ -79,21 +83,25 @@
     {
       "name": "no_scope_leak_mcp_agenda",
       "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
     }
   ],
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 0.069958,
-      "p95_ms": 0.069958,
-      "max_ms": 0.069958,
+      "p50_ms": 0,
+      "p95_ms": 0,
+      "max_ms": 0,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 19.605041,
-      "p95_ms": 19.605041,
-      "max_ms": 19.605041,
+      "p50_ms": 0.520375,
+      "p95_ms": 0.520375,
+      "max_ms": 0.520375,
       "timeouts": 0
     }
   },

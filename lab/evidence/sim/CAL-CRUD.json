@@ -3,18 +3,18 @@
     "clock": "native CLOCK_UPTIME_RAW for real fixtures; lab monotonic fixture return for sim",
     "heavy_slots_in_use": 2,
     "load_average": [
-      "8.34",
-      "9.84",
-      "10.42"
+      "8.49",
+      "10.81",
+      "11.08"
     ],
     "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"
   },
-  "run_id": "cal_01M549SW9CV64574A11Z32QRN6",
+  "run_id": "cal_01M54ATG67P677RCM0D0ACQZXQ",
   "scenario": "CAL-CRUD",
   "level": "sim",
   "passed": true,
-  "git_sha": "bd649868a35e45265f8896c8287bd9b37a361e1e",
-  "at": "2026-10-17T06:46:47.340253Z",
+  "git_sha": "1006ac354b1c6492966de87dacbd828d09875bac",
+  "at": "2026-10-17T07:04:36.295613Z",
   "assertions": [
     {
       "name": "calendar_visible",
@@ -199,6 +199,10 @@
       "passed": false,
       "status": "unverified",
       "detail": "kill-during-apply check did not run"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
     }
   ],
   "latency": {
@@ -211,9 +215,9 @@
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 2.169417,
-      "p95_ms": 2.169417,
-      "max_ms": 2.169417,
+      "p50_ms": 0,
+      "p95_ms": 0,
+      "max_ms": 0,
       "timeouts": 0
     },
     "mcp_effect_done→gateway_visible": {
@@ -225,9 +229,9 @@
     },
     "mcp_effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 0.941042,
-      "p95_ms": 0.941042,
-      "max_ms": 0.941042,
+      "p50_ms": 0,
+      "p95_ms": 0,
+      "max_ms": 0,
       "timeouts": 0
     }
   },
