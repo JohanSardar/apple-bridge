@@ -30,14 +30,15 @@ type guardEntry struct {
 	Outcome   *contracts.IPCFrame `json:"outcome,omitempty"`
 }
 type durableApple struct {
-	Generation string                           `json:"generation"`
-	Records    map[string]contracts.Observation `json:"records"`
-	Effects    map[string]int                   `json:"effects"`
-	Evidence   map[string]contracts.IPCFrame    `json:"evidence"`
+	MessagesGeneration string                           `json:"messages_generation,omitempty"`
+	Generation         string                           `json:"generation"`
+	Records            map[string]contracts.Observation `json:"records"`
+	Effects            map[string]int                   `json:"effects"`
+	Evidence           map[string]contracts.IPCFrame    `json:"evidence"`
 }
 
 func (f *fakeApple) saveLocked() error {
-	b, err := json.Marshal(durableApple{Generation: f.generation, Records: f.records, Effects: f.effects, Evidence: f.evidence})
+	b, err := json.Marshal(durableApple{MessagesGeneration: f.messages.generation, Generation: f.generation, Records: f.records, Effects: f.effects, Evidence: f.evidence})
 	if err != nil {
 		return err
 	}

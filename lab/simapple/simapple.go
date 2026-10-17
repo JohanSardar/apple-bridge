@@ -35,6 +35,8 @@ type captureRequest struct {
 	Close       bool
 }
 type fakeApple struct {
+	messages          messageState
+	liveChanges       chan captureRequest
 	permissionMissing bool
 	blobs             map[string][]byte
 	blobState         string
@@ -76,8 +78,12 @@ func (f *fakeApple) enqueue(ctx context.Context, c contracts.Capture, wait bool)
 	if wait {
 		req.Done = make(chan struct{})
 	}
+	target := f.changes
+	if c.Source == contracts.Messages && c.ScanID == "" {
+		target = f.liveChanges
+	}
 	select {
-	case f.changes <- req:
+	case target <- req:
 	case <-ctx.Done():
 		return ctx.Err()
 	}
@@ -91,10 +97,17 @@ func (f *fakeApple) enqueue(ctx context.Context, c contracts.Capture, wait bool)
 	return nil
 }
 func fullScan(records []contracts.Observation) contracts.Capture {
+	filtered := []contracts.Observation{}
+	for _, o := range records {
+		if contracts.CollectionSource(o.Collection) == contracts.Reminders {
+			filtered = append(filtered, o)
+		}
+	}
+	records = filtered
 	return contracts.Capture{Source: contracts.Reminders, Observations: records, ScanID: contracts.NewID("scan"), Scope: []string{"reminders.list", "reminders.reminder"}, ScanStartedAt: time.Now().UTC(), CompletionEvidence: "complete"}
 }
 func Run(ctx context.Context, cfg Config) error {
-	fake := &fakeApple{blobs: map[string][]byte{}, generation: contracts.NewID("sim"), home: filepath.Dir(cfg.Control), effects: map[string]int{}, evidence: map[string]contracts.IPCFrame{}, tickets: map[string]ticket{}, records: map[string]contracts.Observation{}, changes: make(chan captureRequest, 4096)}
+	fake := &fakeApple{blobs: map[string][]byte{}, generation: contracts.NewID("sim"), home: filepath.Dir(cfg.Control), effects: map[string]int{}, evidence: map[string]contracts.IPCFrame{}, tickets: map[string]ticket{}, records: map[string]contracts.Observation{}, changes: make(chan captureRequest, 4096), liveChanges: make(chan captureRequest, 4096)}
 	var durable durableApple
 	if b, err := os.ReadFile(filepath.Join(fake.home, "truth.json")); err == nil {
 		if json.Unmarshal(b, &durable) != nil {
@@ -114,6 +127,11 @@ func Run(ctx context.Context, cfg Config) error {
 	fake.commandControl(mux)
 	fake.blobRoutes(mux)
 	fake.remindersControl(mux)
+	fake.messages = messageState{generation: fake.generation, permitted: true}
+	if durable.MessagesGeneration != "" {
+		fake.messages.generation = durable.MessagesGeneration
+	}
+	fake.messageRoutes(mux)
 	mux.HandleFunc("GET /inspect", func(w http.ResponseWriter, r *http.Request) { json.NewEncoder(w).Encode(fake.inspect()) })
 	mux.HandleFunc("POST /source-state", func(w http.ResponseWriter, r *http.Request) {
 		var frame contracts.IPCFrame
@@ -302,12 +320,20 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 	f.mu.Unlock()
 	credit := open.ByteCredit
 	coverage := contracts.Coverage{Fields: "complete", Missing: []string{"recurring reminders: next incomplete instance only"}}
-	if _, err = wire.Send(contracts.IPCFrame{T: "Ready", Protocol: contracts.IPCProtocol, Capabilities: map[contracts.Source][]string{contracts.Reminders: {"reminders.create", "reminders.update", "reminders.complete", "reminders.uncomplete", "reminders.delete", "reminders.create_list"}}, Coverage: map[contracts.Source]contracts.Coverage{contracts.Reminders: coverage, contracts.Messages: coverage}, HelperBuild: "sim/1", OSBuild: "sim"}); err != nil {
+	if _, err = wire.Send(contracts.IPCFrame{T: "Ready", Protocol: contracts.IPCProtocol, Capabilities: map[contracts.Source][]string{contracts.Messages: {}, contracts.Reminders: {"reminders.create", "reminders.update", "reminders.complete", "reminders.uncomplete", "reminders.delete", "reminders.create_list"}}, Coverage: map[contracts.Source]contracts.Coverage{contracts.Reminders: coverage, contracts.Messages: {Fields: "complete", Missing: []string{}}}, HelperBuild: "sim/1", OSBuild: "sim"}); err != nil {
 		return err
 	}
 	checkpoints := map[contracts.Source]string{}
+	generations := map[contracts.Source]string{}
 	for source, cp := range open.Checkpoints {
-		if cp.Generation == generation {
+		generations[source] = cp.Generation
+		expectedGeneration := generation
+		if source == contracts.Messages {
+			f.mu.Lock()
+			expectedGeneration = f.messages.generation
+			f.mu.Unlock()
+		}
+		if cp.Generation == expectedGeneration {
 			checkpoints[source] = cp.Checkpoint
 		}
 	}
@@ -331,7 +357,21 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 	}()
 	pending := []contracts.IPCFrame{}
 	transmit := func(capture contracts.Capture) error {
-		capture.Generation = generation
+		capture = messageAliases(capture)
+		if capture.Generation == "" {
+			capture.Generation = generation
+		}
+		if capture.Source == contracts.Messages {
+			f.mu.Lock()
+			expected := f.messages.generation
+			f.mu.Unlock()
+			if capture.Generation != expected {
+				capture.Generation = expected
+			}
+		}
+		if generations[capture.Source] != capture.Generation {
+			checkpoints[capture.Source] = ""
+		}
 		capture.Predecessor = checkpoints[capture.Source]
 		capture.Checkpoint = contracts.NewID("cp")
 		encoded, err := contracts.EncodeFrame(contracts.IPCFrame{T: "Capture", Capture: &capture})
@@ -365,6 +405,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 						return contracts.ErrInvalid
 					}
 					checkpoints[capture.Source] = capture.Checkpoint
+					generations[capture.Source] = capture.Generation
 					credit += reply.Credit
 					return nil
 				case "Ping":
@@ -403,7 +444,9 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 			for {
 				part = capture
 				part.Observations = capture.Observations[offset:end]
-				part.Generation = generation
+				if part.Generation == "" {
+					part.Generation = generation
+				}
 				part.Predecessor = checkpoints[part.Source]
 				part.Checkpoint = contracts.NewID("cp")
 				if end < len(capture.Observations) && part.Observations[len(part.Observations)-1].Kind != "absent" {
@@ -417,6 +460,29 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 				end--
 			}
 
+			part = f.revalidateMessages(part)
+			if capture.ScanID != "" {
+				for {
+					select {
+					case live := <-f.liveChanges:
+						if live.SourceState != nil {
+							if _, err := wire.Send(*live.SourceState); err != nil {
+								return err
+							}
+							continue
+						}
+						if err := transmit(f.revalidateMessages(live.Capture)); err != nil {
+							return err
+						}
+						if live.Done != nil {
+							close(live.Done)
+						}
+					default:
+						goto drainedLive
+					}
+				}
+			}
+		drainedLive:
 			if err := transmit(part); err != nil {
 				return err
 			}
@@ -433,8 +499,9 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 		}
 		capture := fullScan(records)
 		capture.Source = source
+		capture.Observations = records
 		if source == contracts.Messages {
-			capture.Scope = []string{"messages.message", "messages.attachment"}
+			capture.Scope = []string{"messages.chat", "messages.handle", "messages.message", "messages.reaction", "messages.attachment"}
 			capture.BlobHandles = f.blobHandles()
 		}
 		if err = emit(capture); err != nil {
@@ -478,6 +545,19 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 				}
 			} else if reply.T != "Pong" {
 				return contracts.ErrInvalid
+			}
+		case req := <-f.liveChanges:
+			if req.SourceState != nil {
+				if _, err = wire.Send(*req.SourceState); err != nil {
+					return err
+				}
+				continue
+			}
+			if err = emit(req.Capture); err != nil {
+				return err
+			}
+			if req.Done != nil {
+				close(req.Done)
 			}
 		case req := <-f.changes:
 			if req.SourceState != nil {

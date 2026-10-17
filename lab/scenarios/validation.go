@@ -51,6 +51,13 @@ func validateScenario(s Scenario) error {
 			return fmt.Errorf("unknown level %q", level)
 		}
 	}
+	if strings.HasPrefix(s.ID, "MSG-") {
+		_, _, valid := messageScenarioOptions(s)
+		if !valid || s.Feature != "messages.read" {
+			return fmt.Errorf("invalid Messages read scenario")
+		}
+		return nil
+	}
 	for phase, steps := range map[string][]map[string]map[string]any{"given": s.Given, "when": s.When, "then": s.Then, "cleanup": s.Cleanup} {
 		for i, step := range steps {
 			if len(step) != 1 {

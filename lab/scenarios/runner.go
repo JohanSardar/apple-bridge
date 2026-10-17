@@ -347,6 +347,9 @@ func Run(ctx context.Context, s Scenario, level string) Evidence {
 	if nativeScenario(s.ID, level) {
 		return runNativeScenario(ctx, s, level)
 	}
+	if s.Feature == "messages.read" && strings.HasPrefix(s.ID, "MSG-") {
+		return runMessages(ctx, s, level)
+	}
 	sha, _ := exec.Command("git", "rev-parse", "HEAD").Output()
 	evidence := Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, GitSHA: strings.TrimSpace(string(sha)), At: time.Now().UTC(), Assertions: []Assertion{}, Latency: map[string]Latency{}, Hosts: []string{"air"}}
 	if level == "replica" {
