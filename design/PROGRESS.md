@@ -16,7 +16,7 @@ One line per unit. Rules: BUILD-GOAL.md (2026-10-17 update: no reviews, merge on
 - Messages read: sim done; real runs merged (a78a5b8): HISTORY-IMPORT real FAILED (no convergence in 1,002 s, suspect blob protection), INCOMING pending (no natural arrivals) → both handed to the Messages commands worker.
 - IN PROGRESS blobs round 2 (incremental protection, durable retry budget) — `.worktrees/blobs-fix2`.
 - IN PROGRESS Calendar (branch m1-calendar): 7 fixes, real/replica runs, merge.
-- IN PROGRESS Contacts (branch m2-contacts): real journeys passed; merging.
+- Contacts merged (18bb050): 11 sim + 5 real pass, real p95 254 ms; replica CON-EXTERNAL pass (p95 482 ms); replica CON-CRUD failing (forwarded create disposition) → fix in progress.
 - IN PROGRESS Messages commands (send, AX actions, groups) — `.worktrees/m1-messages-commands`; real AX = pending-unlock while screen locked.
 - NEXT: Notes (M3), Usage/Screen Time (M4), AgentRunner + AGENT-SUITE, packaging (M5; notarization limited without Developer ID; Keychain-in-background decision).
 

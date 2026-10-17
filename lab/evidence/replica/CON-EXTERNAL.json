@@ -1,0 +1,2583 @@
+{
+  "host_telemetry": {
+    "heavy_jobs": "2",
+    "load_average": "{ 9.29 5.93 5.34 }",
+    "logical_cpus": "8"
+  },
+  "host_conditions": {
+    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "start": {
+      "air": {
+        "at": "2026-10-17T19:53:28.945197Z",
+        "cpu_count": 8,
+        "load_average": [
+          9.29,
+          5.93,
+          5.34
+        ],
+        "cpu_idle_percent": 60,
+        "free_memory_bytes": 280543232,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 4,
+        "quiet": false
+      },
+      "ubuntu": {
+        "at": "2026-10-17T19:53:28.945175Z",
+        "cpu_count": 8,
+        "load_average": [
+          0.46,
+          0.31,
+          0.33
+        ],
+        "cpu_idle_percent": 97.6161,
+        "free_memory_bytes": 635863040,
+        "active_heavy_slots": 0,
+        "other_active_heavy_slots": 0,
+        "heavy_queue_length": 0,
+        "quiet": true
+      }
+    },
+    "end": {
+      "air": {
+        "at": "2026-10-17T19:55:11.994221Z",
+        "cpu_count": 8,
+        "load_average": [
+          21.06,
+          10.2,
+          7.01
+        ],
+        "cpu_idle_percent": 67,
+        "free_memory_bytes": 378355712,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 4,
+        "quiet": false
+      },
+      "ubuntu": {
+        "at": "2026-10-17T19:55:11.994221Z",
+        "cpu_count": 8,
+        "load_average": [
+          0.45,
+          0.36,
+          0.35
+        ],
+        "cpu_idle_percent": 95.6085,
+        "free_memory_bytes": 670580736,
+        "active_heavy_slots": 0,
+        "other_active_heavy_slots": 0,
+        "heavy_queue_length": 0,
+        "quiet": true
+      }
+    },
+    "periodic_samples": [
+      {
+        "air": {
+          "at": "2026-10-17T19:53:35.150012Z",
+          "cpu_count": 8,
+          "load_average": [
+            9.42,
+            6.01,
+            5.37
+          ],
+          "cpu_idle_percent": 48,
+          "free_memory_bytes": 60260352,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T19:53:35.150013Z",
+          "cpu_count": 8,
+          "load_average": [
+            0.39,
+            0.3,
+            0.33
+          ],
+          "cpu_idle_percent": 93.8209,
+          "free_memory_bytes": 609521664,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:53:40.151698Z",
+          "cpu_count": 8,
+          "load_average": [
+            9.15,
+            6.01,
+            5.38
+          ],
+          "cpu_idle_percent": 29,
+          "free_memory_bytes": 135888896,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T19:53:40.15168Z",
+          "cpu_count": 8,
+          "load_average": [
+            0.36,
+            0.3,
+            0.33
+          ],
+          "cpu_idle_percent": 95.3283,
+          "free_memory_bytes": 588439552,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:53:45.151821Z",
+          "cpu_count": 8,
+          "load_average": [
+            8.66,
+            5.96,
+            5.36
+          ],
+          "cpu_idle_percent": 26,
+          "free_memory_bytes": 63373312,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T19:53:45.151804Z",
+          "cpu_count": 8,
+          "load_average": [
+            0.33,
+            0.29,
+            0.32
+          ],
+          "cpu_idle_percent": 92.4051,
+          "free_memory_bytes": 588603392,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:53:50.151895Z",
+          "cpu_count": 8,
+          "load_average": [
+            8.44,
+            5.96,
+            5.37
+          ],
+          "cpu_idle_percent": 43,
+          "free_memory_bytes": 94158848,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T19:53:50.151879Z",
+          "cpu_count": 8,
+          "load_average": [
+            0.3,
+            0.29,
+            0.32
+          ],
+          "cpu_idle_percent": 92.3077,
+          "free_memory_bytes": 585723904,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:53:55.150565Z",
+          "cpu_count": 8,
+          "load_average": [
+            8.49,
+            6.01,
+            5.39
+          ],
+          "cpu_idle_percent": 30,
+          "free_memory_bytes": 65781760,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T19:53:55.150459Z",
+          "cpu_count": 8,
+          "load_average": [
+            0.28,
+            0.28,
+            0.32
+          ],
+          "cpu_idle_percent": 95.3401,
+          "free_memory_bytes": 585347072,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:54:00.151038Z",
+          "cpu_count": 8,
+          "load_average": [
+            8.21,
+            5.99,
+            5.38
+          ],
+          "cpu_idle_percent": 47,
+          "free_memory_bytes": 127909888,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T19:54:00.150914Z",
+          "cpu_count": 8,
+          "load_average": [
+            0.26,
+            0.28,
+            0.32
+          ],
+          "cpu_idle_percent": 91.5511,
+          "free_memory_bytes": 581058560,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:54:05.150845Z",
+          "cpu_count": 8,
+          "load_average": [
+            7.95,
+            5.98,
+            5.38
+          ],
+          "cpu_idle_percent": 69,
+          "free_memory_bytes": 179830784,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T19:54:05.150833Z",
+          "cpu_count": 8,
+          "load_average": [
+            0.24,
+            0.27,
+            0.32
+          ],
+          "cpu_idle_percent": 98.4962,
+          "free_memory_bytes": 625532928,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:54:10.15236Z",
+          "cpu_count": 8,
+          "load_average": [
+            7.55,
+            5.93,
+            5.37
+          ],
+          "cpu_idle_percent": 66,
+          "free_memory_bytes": 167165952,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T19:54:10.152355Z",
+          "cpu_count": 8,
+          "load_average": [
+            0.3,
+            0.28,
+            0.32
+          ],
+          "cpu_idle_percent": 96.6038,
+          "free_memory_bytes": 613679104,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:54:15.151171Z",
+          "cpu_count": 8,
+          "load_average": [
+            7.35,
+            5.91,
+            5.37
+          ],
+          "cpu_idle_percent": 36,
+          "free_memory_bytes": 70549504,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T19:54:15.151185Z",
+          "cpu_count": 8,
+          "load_average": [
+            0.43,
+            0.31,
+            0.33
+          ],
+          "cpu_idle_percent": 89.7468,
+          "free_memory_bytes": 618729472,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:54:20.154317Z",
+          "cpu_count": 8,
+          "load_average": [
+            7.16,
+            5.9,
+            5.36
+          ],
+          "cpu_idle_percent": 12,
+          "free_memory_bytes": 58654720,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T19:54:20.154205Z",
+          "cpu_count": 8,
+          "load_average": [
+            0.4,
+            0.31,
+            0.33
+          ],
+          "cpu_idle_percent": 92.5599,
+          "free_memory_bytes": 600952832,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:54:25.152067Z",
+          "cpu_count": 8,
+          "load_average": [
+            7.79,
+            6.05,
+            5.42
+          ],
+          "cpu_idle_percent": 4,
+          "free_memory_bytes": 59899904,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T19:54:25.152017Z",
+          "cpu_count": 8,
+          "load_average": [
+            0.61,
+            0.35,
+            0.34
+          ],
+          "cpu_idle_percent": 93.426,
+          "free_memory_bytes": 615010304,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:54:30.178368Z",
+          "cpu_count": 8,
+          "load_average": [
+            9.65,
+            6.46,
+            5.57
+          ],
+          "cpu_idle_percent": 2,
+          "free_memory_bytes": 83083264,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T19:54:30.178106Z",
+          "cpu_count": 8,
+          "load_average": [
+            0.8,
+            0.4,
+            0.36
+          ],
+          "cpu_idle_percent": 93.4509,
+          "free_memory_bytes": 605003776,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:54:35.150925Z",
+          "cpu_count": 8,
+          "load_average": [
+            14.32,
+            7.48,
+            5.93
+          ],
+          "cpu_idle_percent": 6,
+          "free_memory_bytes": 66666496,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T19:54:35.150909Z",
+          "cpu_count": 8,
+          "load_average": [
+            0.82,
+            0.41,
+            0.36
+          ],
+          "cpu_idle_percent": 95.4774,
+          "free_memory_bytes": 604938240,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:54:40.152071Z",
+          "cpu_count": 8,
+          "load_average": [
+            14.21,
+            7.57,
+            5.98
+          ],
+          "cpu_idle_percent": 4,
+          "free_memory_bytes": 119341056,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T19:54:40.151907Z",
+          "cpu_count": 8,
+          "load_average": [
+            0.75,
+            0.4,
+            0.36
+          ],
+          "cpu_idle_percent": 96.3476,
+          "free_memory_bytes": 610304000,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:54:45.151068Z",
+          "cpu_count": 8,
+          "load_average": [
+            13.72,
+            7.58,
+            5.99
+          ],
+          "cpu_idle_percent": 11,
+          "free_memory_bytes": 61407232,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T19:54:45.151052Z",
+          "cpu_count": 8,
+          "load_average": [
+            0.69,
+            0.39,
+            0.36
+          ],
+          "cpu_idle_percent": 96.478,
+          "free_memory_bytes": 604450816,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:54:50.152268Z",
+          "cpu_count": 8,
+          "load_average": [
+            22.79,
+            9.56,
+            6.7
+          ],
+          "cpu_idle_percent": 4,
+          "free_memory_bytes": 182468608,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T19:54:50.152148Z",
+          "cpu_count": 8,
+          "load_average": [
+            0.63,
+            0.39,
+            0.35
+          ],
+          "cpu_idle_percent": 97.1106,
+          "free_memory_bytes": 598147072,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:54:55.165635Z",
+          "cpu_count": 8,
+          "load_average": [
+            21.68,
+            9.55,
+            6.71
+          ],
+          "cpu_idle_percent": 5,
+          "free_memory_bytes": 60833792,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T19:54:55.165542Z",
+          "cpu_count": 8,
+          "load_average": [
+            0.58,
+            0.38,
+            0.35
+          ],
+          "cpu_idle_percent": 95.4887,
+          "free_memory_bytes": 605724672,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:55:00.153524Z",
+          "cpu_count": 8,
+          "load_average": [
+            21.79,
+            9.78,
+            6.8
+          ],
+          "cpu_idle_percent": 6,
+          "free_memory_bytes": 58818560,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T19:55:00.153297Z",
+          "cpu_count": 8,
+          "load_average": [
+            0.54,
+            0.37,
+            0.35
+          ],
+          "cpu_idle_percent": 94.0731,
+          "free_memory_bytes": 585940992,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:55:05.15356Z",
+          "cpu_count": 8,
+          "load_average": [
+            20.68,
+            9.75,
+            6.81
+          ],
+          "cpu_idle_percent": 18,
+          "free_memory_bytes": 111640576,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T19:55:05.15343Z",
+          "cpu_count": 8,
+          "load_average": [
+            0.49,
+            0.37,
+            0.35
+          ],
+          "cpu_idle_percent": 94.7103,
+          "free_memory_bytes": 590729216,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:55:10.151876Z",
+          "cpu_count": 8,
+          "load_average": [
+            21.59,
+            10.12,
+            6.96
+          ],
+          "cpu_idle_percent": 42,
+          "free_memory_bytes": 85065728,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T19:55:10.151876Z",
+          "cpu_count": 8,
+          "load_average": [
+            0.45,
+            0.36,
+            0.35
+          ],
+          "cpu_idle_percent": 91.4358,
+          "free_memory_bytes": 596242432,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      }
+    ],
+    "quiet": false,
+    "require_quiet": false,
+    "quiet_wait_ms": 0,
+    "quiet_wait_expired": false
+  },
+  "run_id": "run_01M55PTCT51CWKRHR4MRZWH3HG",
+  "metrics": {
+    "cleanup_audit": {
+      "containers_preserved": true,
+      "groups_preserved": true,
+      "selected_count": 1,
+      "unowned_after_count": 154,
+      "unowned_before_count": 154,
+      "unowned_fields_unchanged": true,
+      "unowned_identifiers_after_sha256": "e18d53df58a026fc0514c0631a57d2da157f1d2f020f018fd228a1da0023e33a",
+      "unowned_identifiers_before_sha256": "e18d53df58a026fc0514c0631a57d2da157f1d2f020f018fd228a1da0023e33a",
+      "whole_container_operations": 0
+    },
+    "contacts_capture_phases": [
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081932056749458
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081932144526625
+      },
+      {
+        "stage": "contacts_fetched",
+        "uptime_ns": 1081932819087833
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081932939010791
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081932959850916
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081932960131541
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081934549017541
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081934666075666
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081934675457000
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081934675562958
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081934705876333
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081934920881416
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081935082091833
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081935089357916
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081935090865500
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081935120793500
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081935217433166
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081936170482208
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081936172906500
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081936224147500
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081936243114000
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081936267665166
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081936300602333
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081936337159666
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081936454423041
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081936582433625
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081936591069000
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081936591206916
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081936626298208
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081936779392166
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081937191731125
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081937198298625
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081937198447583
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081937233365041
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081937563165916
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081938638102708
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081938638264666
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081938638431458
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081938638798583
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081938690799291
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081938704640250
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081938731936791
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081938766886250
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081938801122708
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081938864447750
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081938872356416
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081938872516875
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081938907397916
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081939120855791
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081939192151375
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081939201105750
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081939201277875
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081939242925166
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081939366976666
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081940719475666
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081940721501291
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081940773105166
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081940787640625
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081940856535208
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081940891278458
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081940891484750
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081940891693375
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081941111534833
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081941175961583
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081941184854708
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081941185027833
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081941219775333
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081941224352083
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081941289273291
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081941297371708
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081941298852583
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081941333694458
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081941340778541
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081942994404541
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081942994862541
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081942995375833
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081943048072541
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081943062696375
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081943139485916
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081943173161166
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081943175782750
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081943229492875
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081943294346875
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081943302686541
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081943302855583
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081943335517208
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081943367902958
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081945190772166
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081945193105875
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081945194989333
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081945235774833
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081945249309791
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081945275415291
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081945310116083
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081945333616750
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081945411212208
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081945475579416
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081945483971875
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081945484411250
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081945519446916
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081945549582083
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081947250584041
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081947259824541
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081947259965708
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081947294671666
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081947343502208
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081947443680500
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081947445347791
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081947445513541
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081947497344333
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081947510982791
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081947586003500
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081947620970250
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081947621258916
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081947887714875
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081947949578041
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081947959900416
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081947961310541
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081947996244916
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081948050444458
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081949273808958
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081949283942875
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081949284094750
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081949318870791
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081949361862875
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081949694514125
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081949695142375
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081949695569250
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081949743736083
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081949748163291
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081949793806125
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081949823189791
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081949858034125
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081950018175958
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081950083452791
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081950092669416
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081950092816916
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081950127923416
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081950183799583
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081951303036625
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081951313702166
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081951313968833
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081951350643583
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081951367170583
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081951848696375
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081951848892791
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081951849099000
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081951902466791
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081951920983458
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081951947341750
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081951983833333
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081952012635000
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081952116584333
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081952180451541
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081952190782916
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081952190945333
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081952228409458
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081952318648083
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081953354665416
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081953364421125
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081953364825291
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081953399583291
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081953470542166
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081954121505958
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081954122098041
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081954122793583
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081954174034833
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081954224205375
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081954260019625
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081954294731541
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081954295672625
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081954471148625
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081954536126583
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081954546985916
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081954547261166
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081954583070000
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081954594066250
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081955369899375
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081955380348083
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081955383557791
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081955422468000
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081955457302916
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081956312678166
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081956325868291
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081956326894541
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081956354093833
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081956365125291
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081956404003416
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081956434777416
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081956474056833
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081956725332875
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081956788968833
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081956799947958
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081956800281083
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081956838752791
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081957035824000
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081957374660666
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081957385121000
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081957385400458
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081957426357666
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081957487629875
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081958672217541
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081958672466583
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081958672581916
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081958726152375
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081958742158541
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081958772024166
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081958811244000
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081958811535875
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081959020897208
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081959084806750
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081959097381125
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081959097686750
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081959135375625
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081959227515083
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081959385204916
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081959394243833
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081959394420291
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081959434002791
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081959596941083
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081961050205625
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081961050483833
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081961050603333
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081961102626875
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081961118487958
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081961198834208
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081961237541625
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081961237861750
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081961553725291
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081961618343833
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081961628418666
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081961628662791
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081961668889666
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081961727172333
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081963407099833
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081963420581333
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081963456640833
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081963491373291
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081963491552541
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081963491656916
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081963491734708
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081963513016791
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081963853864166
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081963916264166
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081963926949791
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081963927155916
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081963967561125
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081964036317291
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081965420553708
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081965431504750
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081965431736666
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081965467950333
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081965495695125
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081965664678166
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081965666491541
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081965673361083
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081965716975208
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081965732274250
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081965758939375
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081965794658333
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081965794944708
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081966063114250
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081966129542750
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081966138997375
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081966142017750
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081966179494916
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081966234723583
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081967440801083
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081967454467208
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081967454725708
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081967493596250
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081967584863541
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081967898366291
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081967898610916
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081967903799333
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081967952204750
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081968000563833
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081968036070708
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081968075193250
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081968075485458
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081968410785375
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081968476228333
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081968487249875
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081968489099333
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081968529974583
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081968654790708
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081969440410208
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081969449378625
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081969449514041
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081969488930125
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081969691001750
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081970105792666
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081970106677333
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081970106937333
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081970159526666
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081970175057125
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081970202133291
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081970236888333
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081970237130208
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081970412655916
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081970477430375
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081970487269791
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081970487587625
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081970528712041
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081970609041333
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081971443922250
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081971483645833
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081971483978708
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081971520710250
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081971618917333
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081972381355333
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081972381611250
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081972390898750
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081972435203750
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081972488744833
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081972525560958
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081972562702208
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081972563018666
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081972872856458
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081972936019666
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081972947190166
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081972947486250
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081972989225750
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081973165061583
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081973448943666
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081973460989833
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081973462771291
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081973504233291
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081973570276291
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081974607885541
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081974608274958
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081974608404333
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081974660854541
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081974677083125
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081974747347041
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081974782364500
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081974782633583
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081975045606041
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081975108619500
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081975117834041
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081975118132958
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081975158986375
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081975248097166
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081975462200458
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081975473220666
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081975473694708
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081975514368208
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081975680471416
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081976880968666
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081976881171291
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081976881294666
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081976933684000
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081976950332625
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081976976878166
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081977012470083
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081977012820041
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081977482874916
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081977544910583
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081977557277916
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081977557601416
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081977600509375
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081977892404416
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081979402338041
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081979409642666
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081979412098708
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081979467653375
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081979485564625
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081979522097708
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081979572236083
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081979572627666
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081980064493833
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081980129310791
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081980141359875
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081980141731791
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081980186008208
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081980418293958
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081981523181166
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081981531474375
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081981531633875
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081981572129958
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081981715801333
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081982049269708
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081982049838250
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081982053101083
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081982100667000
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081982117218541
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081982147786083
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081982188501833
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081982188792958
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081982626577750
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081982689687958
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081982700320666
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081982700647791
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081982747800541
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081982950504500
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081983526156750
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081983536594041
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081983536927583
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081983573738041
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081983668832333
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081985356242291
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081985359686000
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081985375162041
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081985409962500
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081985465597083
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081985472714375
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081985519495583
+      },
+      {
+        "stage": "contacts_notified",
+        "uptime_ns": 1081985519822500
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081985936894208
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081986001675833
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081986011017916
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081986011205041
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081986051214875
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081986180577416
+      },
+      {
+        "stage": "contacts_scan_started",
+        "uptime_ns": 1081987590584708
+      },
+      {
+        "stage": "contacts_history_fetched",
+        "uptime_ns": 1081987601028791
+      },
+      {
+        "stage": "contacts_encoded",
+        "uptime_ns": 1081987603927666
+      },
+      {
+        "stage": "contacts_capture_ready",
+        "uptime_ns": 1081987641624791
+      },
+      {
+        "stage": "contacts_capture_committed",
+        "uptime_ns": 1081987663380208
+      }
+    ]
+  },
+  "scenario": "CON-EXTERNAL",
+  "level": "replica",
+  "passed": true,
+  "git_sha": "18bb050f22709a042073363f2f614f3bb4b2d366",
+  "at": "2026-10-17T19:53:30.181832Z",
+  "assertions": [
+    {
+      "name": "unified_contacts_imported",
+      "passed": true
+    },
+    {
+      "name": "bounded_fixture_execution",
+      "passed": true
+    },
+    {
+      "name": "bounded_fixture_execution",
+      "passed": true
+    },
+    {
+      "name": "bounded_fixture_execution",
+      "passed": true
+    },
+    {
+      "name": "bounded_fixture_execution",
+      "passed": true
+    },
+    {
+      "name": "bounded_fixture_execution",
+      "passed": true
+    },
+    {
+      "name": "bounded_fixture_execution",
+      "passed": true
+    },
+    {
+      "name": "bounded_fixture_execution",
+      "passed": true
+    },
+    {
+      "name": "bounded_fixture_execution",
+      "passed": true
+    },
+    {
+      "name": "bounded_fixture_execution",
+      "passed": true
+    },
+    {
+      "name": "bounded_fixture_execution",
+      "passed": true
+    },
+    {
+      "name": "bounded_fixture_execution",
+      "passed": true
+    },
+    {
+      "name": "bounded_fixture_execution",
+      "passed": true
+    },
+    {
+      "name": "bounded_fixture_execution",
+      "passed": true
+    },
+    {
+      "name": "bounded_fixture_execution",
+      "passed": true
+    },
+    {
+      "name": "bounded_fixture_execution",
+      "passed": true
+    },
+    {
+      "name": "bounded_fixture_execution",
+      "passed": true
+    },
+    {
+      "name": "bounded_fixture_execution",
+      "passed": true
+    },
+    {
+      "name": "bounded_fixture_execution",
+      "passed": true
+    },
+    {
+      "name": "bounded_fixture_execution",
+      "passed": true
+    },
+    {
+      "name": "bounded_fixture_execution",
+      "passed": true
+    },
+    {
+      "name": "latency_effect_done→gateway_visible",
+      "passed": true
+    },
+    {
+      "name": "latency_effect_done→replica_visible:replica0",
+      "passed": true
+    },
+    {
+      "name": "replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_0",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_1",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "contacts_scope_enforced",
+      "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass",
+      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
+    },
+    {
+      "name": "owned_test_contacts_cleaned",
+      "passed": true
+    },
+    {
+      "name": "bridge_test_organization_empty",
+      "passed": true
+    },
+    {
+      "name": "cleanup_preserves_unowned_contacts_and_containers",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "effect_done→gateway_visible": {
+      "samples": 20,
+      "p50_ms": 281.019625,
+      "p95_ms": 419.7305,
+      "max_ms": 424.175792,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica0": {
+      "samples": 20,
+      "p50_ms": 311.739,
+      "p95_ms": 481.696,
+      "max_ms": 501.135333,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air",
+    "ubuntu"
+  ]
+}
