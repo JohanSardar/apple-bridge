@@ -1,6 +1,9 @@
 package contracts
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 type Batch struct {
 	Epoch                string   `json:"epoch"`
@@ -10,8 +13,17 @@ type Batch struct {
 	Changes              []Change `json:"changes"`
 }
 
+type CommandResponse struct {
+	Result     json.RawMessage `json:"result,omitempty"`
+	Error      *Error          `json:"error,omitempty"`
+	LookupOnly bool            `json:"lookup_only,omitempty"`
+}
+
 type FeedFrame struct {
-	Offset int64 `json:"offset,omitempty"`
+	Request    json.RawMessage  `json:"request,omitempty"`
+	Delegation string           `json:"delegation,omitempty"`
+	Response   *CommandResponse `json:"response,omitempty"`
+	Offset     int64            `json:"offset,omitempty"`
 
 	T                    string    `json:"t"`
 	Protocol             string    `json:"protocol,omitempty"`

@@ -3,6 +3,7 @@ package operations
 import (
 	"bytes"
 	"context"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"io"
@@ -15,6 +16,7 @@ import (
 )
 
 type RemoteGateway struct {
+	Exchange  func(context.Context, string, json.RawMessage) (contracts.CommandResponse, error)
 	Authority *trust.Authority
 	Connected func() bool
 	Wait      func(context.Context, contracts.Cursor) error
@@ -55,6 +57,25 @@ func (g *RemoteGateway) call(ctx context.Context, p trust.Principal, f forwarded
 	b, err := json.Marshal(f)
 	if err != nil {
 		return err
+	}
+	if e.Dial != "" {
+		if g.Exchange == nil {
+			return contracts.ErrUnavailable
+		}
+		response, err := g.Exchange(ctx, header, b)
+		if err != nil {
+			return err
+		}
+		if response.Error != nil {
+			return response.Error
+		}
+		if len(lookupOnly) > 0 {
+			*lookupOnly[0] = response.LookupOnly
+		}
+		if json.Unmarshal(response.Result, out) != nil {
+			return contracts.ErrCorrupt
+		}
+		return nil
 	}
 	req, err := http.NewRequestWithContext(ctx, "POST", "https://"+e.Address+"/v1/commands", bytes.NewReader(b))
 	if err != nil {
@@ -127,78 +148,87 @@ func (g *RemoteGateway) List(ctx context.Context, p trust.Principal, q contracts
 	err := g.call(ctx, p, forwarded{Method: "list", Query: q}, &r)
 	return r, err
 }
+func (g *LocalGateway) Forward(ctx context.Context, cert *x509.Certificate, header string, raw json.RawMessage) (contracts.CommandResponse, error) {
+	response := contracts.CommandResponse{}
+	var f forwarded
+	var result any
+	err := contracts.DecodeInput(raw, &f)
+	if err == nil {
+		var hash string
+		hash, err = forwardingHash(f)
+		if err == nil {
+			id := f.Query.ID
+			if f.Method == "submit" {
+				id = f.Command.ID
+			}
+			var p trust.Principal
+			p, err = g.Authority.VerifyDelegation(cert, header, id, hash)
+			if err == nil {
+				switch f.Method {
+				case "submit":
+					result, err = g.Submit(ctx, p, f.Command)
+				case "status":
+					result, err = g.Status(ctx, p, f.Query)
+				case "list":
+					result, err = g.List(ctx, p, f.Query)
+				default:
+					err = contracts.ErrInvalid
+				}
+			}
+		}
+	}
+	if f.Method == "submit" && dropCommandResponse() {
+		return response, contracts.ErrUnavailable
+	}
+	if err == nil {
+		if command, ok := result.(contracts.CommandRecord); ok {
+			era, eraErr := g.State.AdmissionEra(ctx)
+			err = eraErr
+			response.LookupOnly = command.AdmissionEra != era
+		}
+	}
+	if err != nil {
+		response.Error = contracts.ErrUnavailable
+		var typed *contracts.Error
+		if errors.As(err, &typed) {
+			response.Error = typed
+		}
+		return response, nil
+	}
+	response.Result, err = json.Marshal(result)
+	return response, err
+}
+
 func (g *LocalGateway) Handler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		reply := func(result any, err error) {
-			w.Header().Set("Content-Type", "application/json")
-			if err != nil {
-				typed := contracts.ErrUnavailable
-				var e *contracts.Error
-				if errors.As(err, &e) {
-					typed = e
-				}
-				w.WriteHeader(400)
-				json.NewEncoder(w).Encode(map[string]any{"error": typed})
-				return
-			}
-			if command, ok := result.(contracts.CommandRecord); ok {
-				era, eraErr := g.State.AdmissionEra(r.Context())
-				if eraErr != nil {
-					w.WriteHeader(503)
-					return
-				}
-				if command.AdmissionEra != era {
-					w.Header().Set("X-Apple-Bridge-Command-Lookup-Only", "true")
-				}
-			}
-			json.NewEncoder(w).Encode(result)
-		}
-		if r.Method != "POST" || r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
-			reply(nil, contracts.ErrUnauthorized)
+		if r.Method != "POST" || r.TLS == nil || len(r.TLS.PeerCertificates) != 1 {
+			http.Error(w, "unauthorized", 401)
 			return
 		}
-		b, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 1024*1024))
+		raw, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 1024*1024))
 		if err != nil {
-			reply(nil, contracts.ErrInvalid)
+			http.Error(w, "invalid", 400)
 			return
 		}
-		var f forwarded
-		if contracts.DecodeInput(b, &f) != nil {
-			reply(nil, contracts.ErrInvalid)
-			return
-		}
-		hash, err := forwardingHash(f)
+		response, err := g.Forward(r.Context(), r.TLS.PeerCertificates[0], r.Header.Get("X-Apple-Bridge-Delegation"), raw)
 		if err != nil {
-			reply(nil, err)
-			return
-		}
-		id := f.Query.ID
-		if f.Method == "submit" {
-			id = f.Command.ID
-		}
-		p, err := g.Authority.VerifyDelegation(r.TLS.PeerCertificates[0], r.Header.Get("X-Apple-Bridge-Delegation"), id, hash)
-		if err != nil {
-			reply(nil, err)
-			return
-		}
-		var result any
-		switch f.Method {
-		case "submit":
-			result, err = g.Submit(r.Context(), p, f.Command)
-		case "status":
-			result, err = g.Status(r.Context(), p, f.Query)
-		case "list":
-			result, err = g.List(r.Context(), p, f.Query)
-		default:
-			err = contracts.ErrInvalid
-		}
-		if f.Method == "submit" && dropCommandResponse() {
 			conn, _, hijackErr := http.NewResponseController(w).Hijack()
 			if hijackErr == nil {
 				conn.Close()
 				return
 			}
+			http.Error(w, "unavailable", 503)
+			return
 		}
-		reply(result, err)
+		w.Header().Set("Content-Type", "application/json")
+		if response.Error != nil {
+			w.WriteHeader(400)
+			json.NewEncoder(w).Encode(response)
+			return
+		}
+		if response.LookupOnly {
+			w.Header().Set("X-Apple-Bridge-Command-Lookup-Only", "true")
+		}
+		w.Write(response.Result)
 	})
 }
