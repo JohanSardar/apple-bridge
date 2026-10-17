@@ -14,7 +14,7 @@ One line per unit. Rules: BUILD-GOAL.md (2026-10-17 update: no reviews, merge on
 - DONE gateway-initiated replica connections (43d11f1): direct Air→Ubuntu LIVE p95 109 ms. Deferred: command responses > 256 KiB over the feed (P2 from a cancelled review).
 - DONE Helper session + Reminders read (27e49ad): real native-save → Ubuntu p95 317 ms; 10-min soak clean.
 - Messages read: sim done; real runs merged (a78a5b8): HISTORY-IMPORT real FAILED (no convergence in 1,002 s, suspect blob protection), INCOMING pending (no natural arrivals) → both handed to the Messages commands worker.
-- IN PROGRESS blobs round 2 (incremental protection, durable retry budget) — `.worktrees/blobs-fix2`.
+- DONE blobs round 2 (91af0cc): incremental protection, durable retry budget; 55 core sim pass.
 - IN PROGRESS Calendar (branch m1-calendar): 7 fixes, real/replica runs, merge.
 - Contacts merged (18bb050): 11 sim + 5 real pass, real p95 254 ms; replica CON-EXTERNAL pass (p95 482 ms); replica CON-CRUD failing (forwarded create disposition) → fix in progress.
 - IN PROGRESS Messages commands (send, AX actions, groups) — `.worktrees/m1-messages-commands`; real AX = pending-unlock while screen locked.
