@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -838,7 +839,8 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		if level != "sim" {
 			pidBytes, pidErr := os.ReadFile(filepath.Join(w.Gateway.Home, "helper", "helper.pid"))
 			pid := strings.TrimSpace(string(pidBytes))
-			if pidErr != nil || exec.Command("kill", "-STOP", pid).Run() != nil {
+			numericPID, parseErr := strconv.Atoi(pid)
+			if pidErr != nil || parseErr != nil || numericPID <= 1 || exec.Command("kill", "-STOP", pid).Run() != nil {
 				return fail("private_helper_paused_for_integrity", pidErr)
 			}
 			defer exec.Command("kill", "-CONT", pid).Run()
