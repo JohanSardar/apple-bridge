@@ -4,6 +4,7 @@ import SourceSupport
 import AgendaGate
 import RemindersSource
 import ContactsSource
+import CalendarSource
 
 @globalActor
 public actor UIActor {
@@ -54,6 +55,7 @@ public actor AppleSession: ObservationSink {
     private let agenda: AgendaGate
     private let contacts: ContactsSource
     private let source: RemindersSource
+ private let calendar: CalendarSource
     private let guardLog: DispatchGuard
     private let socket: String
     private let secretFile: String
@@ -71,6 +73,7 @@ public actor AppleSession: ObservationSink {
         let agenda = AgendaGate(trace: trace)
         self.agenda = agenda
         source = try RemindersSource(gate: agenda, home: home, commandsEnabled: true)
+ calendar = try CalendarSource(gate:agenda,home:home,commandsEnabled:commandsEnabled)
         guardLog = try DispatchGuard(home: home)
         let pidFile = home.appendingPathComponent("helper.pid")
         try Data(String(getpid()).utf8).write(to: pidFile, options: .atomic)
@@ -95,8 +98,9 @@ public actor AppleSession: ObservationSink {
                 guard opened["t"].string == "Open", opened["protocol"].string == "ipc/1", opened["owner_fence"].number > 0, opened["byte_credit"].number > 0, opened["byte_credit"].number <= 4194304 else { throw SourceFailure.invalid }
                 fence = opened["owner_fence"].unsigned; credit = Int(opened["byte_credit"].number); checkpoints = opened["checkpoints"].object
                 let readiness = await source.open()
-                var coverage: [String: JSON] = ["reminders": readiness.coverage, "calendar": .object(["fields": .string("partial"), "missing": .array([.string("calendar source pending")])])]
-                var capabilities: [String: JSON] = ["reminders": .array(readiness.capabilities.map(JSON.string)), "calendar": .array([])]
+                let calendarReadiness=await calendar.open()
+ var coverage: [String: JSON] = ["reminders": readiness.coverage, "calendar": calendarReadiness.coverage]
+                var capabilities: [String: JSON] = ["reminders": .array(readiness.capabilities.map(JSON.string)), "calendar": .array(calendarReadiness.capabilities.map(JSON.string))]
                 for (name, source) in additionalSources {
                     let state = await source.open()
                     coverage[name] = state.coverage
@@ -106,6 +110,7 @@ public actor AppleSession: ObservationSink {
                 try await publishReadiness()
                 for outcome in await guardLog.outcomes.values where outcome["disposition"].string == "indeterminate" { try connected.send(outcome) }
                 captureTasks.append(Task { await self.capture() })
+ captureTasks.append(Task {await self.captureAdditional(calendar)})
                 for source in additionalSources.values { captureTasks.append(Task { await self.captureAdditional(source) }) }
                 let watchdog = Task {
                     while !Task.isCancelled {
@@ -157,12 +162,10 @@ public actor AppleSession: ObservationSink {
             permissionStates["reminders"] = readiness.state
             try await sourceState(source: "reminders", state: readiness.state, coverage: readiness.coverage, capabilities: readiness.capabilities, reason: readiness.reason)
         }
-        let calendarAuthorized = await agenda.authorized(.event)
-        let calendarState = calendarAuthorized ? "unavailable" : "permission_missing"
-        if calendarState != permissionStates["calendar"] {
-            permissionStates["calendar"] = calendarState
-            let reason = calendarAuthorized ? "calendar_source_pending" : "calendar_full_access_required"
-            try await sourceState(source: "calendar", state: calendarState, coverage: .object(["fields": .string("partial"), "missing": .array([.string(reason)])]), capabilities: [], reason: reason)
+        let calendarReadiness = await calendar.open()
+        if calendarReadiness.state != permissionStates["calendar"] {
+            permissionStates["calendar"] = calendarReadiness.state
+            try await sourceState(source: "calendar", state: calendarReadiness.state, coverage: calendarReadiness.coverage, capabilities: calendarReadiness.capabilities, reason: calendarReadiness.reason)
         }
     }
 
@@ -353,6 +356,7 @@ public actor AppleSession: ObservationSink {
     }
 
     private func observedEvidence(_ evidence: JSON, fingerprint: JSON, operation: String) async throws -> JSON {
+        let calendarCommand = operation.hasPrefix("calendar.")
         if operation.hasPrefix("contacts.") {
             try await contacts.reconcile(into: self)
             if evidence["absent"].bool { try await contacts.confirmAbsence(evidence["native_key"].string, into: self) }
@@ -362,11 +366,16 @@ public actor AppleSession: ObservationSink {
             return .object(result)
         }
         try Task.checkCancellation()
-        try await source.reconcile(into: self)
-        if evidence["absent"].bool { try await source.confirmAbsence(evidence["native_key"].string, into: self) }
+        if calendarCommand {
+ try await calendar.reconcile(into:self)
+ if evidence["absent"].bool {try await calendar.confirmAbsence(evidence["native_key"].string,into:self)}
+ }else{
+ try await source.reconcile(into: self)
+ if evidence["absent"].bool { try await source.confirmAbsence(evidence["native_key"].string, into: self) }
+ }
         try Task.checkCancellation()
         let key = evidence["native_key"].string
-        guard let checkpoint = observedCheckpoints["reminders.reminder/" + key] ?? observedCheckpoints["reminders.list/" + key] else { throw SourceFailure.unavailable }
+        guard let checkpoint = observedCheckpoints[(calendarCommand ? "calendar.event/" : "reminders.reminder/") + key] ?? observedCheckpoints[(calendarCommand ? "calendar.calendar/" : "reminders.list/") + key] else { throw SourceFailure.unavailable }
         var result = evidence.object
         result["fingerprint"] = fingerprint
         result["capture_checkpoint"] = .string(checkpoint)
@@ -379,7 +388,7 @@ public actor AppleSession: ObservationSink {
             guard var outcome = await guardLog.outcomes[id] else { try reject(frame, code: "not_found"); return }
             if ["indeterminate", "locally_observed"].contains(outcome["disposition"].string) {
                 let operation = outcome["evidence"]["prepared"]["action"]["op"].string
-                let evidence = operation.hasPrefix("contacts.") ? await contacts.resolve(id, evidence: outcome["evidence"]) : await source.resolve(id, evidence: outcome["evidence"])
+                let evidence = operation.hasPrefix("contacts.") ? await contacts.resolve(id, evidence: outcome["evidence"]) : operation.hasPrefix("calendar.") ? await calendar.resolve(id, evidence: outcome["evidence"]) : await source.resolve(id, evidence: outcome["evidence"])
                 if evidence["observed"].bool {
                     let committed = try await observedEvidence(evidence, fingerprint: outcome["evidence"]["prepared"]["request_hash"], operation: operation)
                     outcome = .object(["t": .string("Outcome"), "command_id": .string(id), "disposition": .string("locally_observed"), "evidence": committed])
@@ -428,8 +437,8 @@ public actor AppleSession: ObservationSink {
         guard code == "conflict", !key.isEmpty else { try? reject(frame, code: code); return }
         do {
             let isContact = frame["action"]["op"].string.hasPrefix("contacts.")
-            if isContact { try await contacts.reconcile(into: self, key: key) } else { try await source.reconcile(into: self) }
-            guard let checkpoint = observedCheckpoints[(isContact ? "contacts.contact/" : "reminders.reminder/") + key] else { throw SourceFailure.unavailable }
+            if isContact { try await contacts.reconcile(into: self, key: key) } else if frame["action"]["op"].string.hasPrefix("calendar.") { try await calendar.reconcile(into: self) } else { try await source.reconcile(into: self) }
+            guard let checkpoint = observedCheckpoints[(isContact ? "contacts.contact/" : frame["action"]["op"].string.hasPrefix("calendar.") ? "calendar.event/" : "reminders.reminder/") + key] else { throw SourceFailure.unavailable }
             let evidence = JSON.object(["native_key": .string(key), "capture_checkpoint": .string(checkpoint)])
             try wire?.send(.object(["t": .string("Rejected"), "command_id": frame["command_id"], "disposition": .string("rejected_before_dispatch"), "error": .object(["code": .string(code), "message": .string(code)]), "evidence": evidence]))
         } catch { try? reject(frame, code: "unavailable") }
@@ -440,7 +449,7 @@ public actor AppleSession: ObservationSink {
             guard !frame["command_id"].string.isEmpty, !frame["principal"].string.isEmpty, !frame["request_hash"].string.isEmpty, let expires = parseTimestamp(frame["expires_at"].string), expires > Date() else { throw SourceFailure.invalid }
             tickets = tickets.filter { ContinuousClock.now < $0.value.expiry }
             guard !commandActive, tickets.isEmpty, !(await guardLog.contains(frame["command_id"].string)) else { throw SourceFailure.conflict }
-            let prepared = frame["action"]["op"].string.hasPrefix("contacts.") ? try await contacts.prepare(frame) : try await source.prepare(frame)
+            let prepared = frame["action"]["op"].string.hasPrefix("contacts.") ? try await contacts.prepare(frame) : frame["action"]["op"].string.hasPrefix("calendar.") ? try await calendar.prepare(frame) : try await source.prepare(frame)
             let ticket = UUID().uuidString
             tickets[ticket] = Ticket(command: frame, prepared: prepared, expiry: ContinuousClock.now.advanced(by: .milliseconds(Int64(min(30, expires.timeIntervalSinceNow) * 1000))), fence: fence)
             try wire?.send(.object(["t": .string("Prepared"), "command_id": frame["command_id"], "ticket": .string(ticket), "native_state": prepared.nativeState, "route": .string(frame["action"]["op"].string.hasPrefix("contacts.") ? "contacts" : "eventkit"), "fingerprint": frame["request_hash"], "candidate_ids": .array([])]))
@@ -456,7 +465,7 @@ public actor AppleSession: ObservationSink {
         var started = false
         do {
             guard frame["command_id"] == id, frame["owner_fence"].unsigned == fence, ticket.fence == fence, ContinuousClock.now < ticket.expiry else { throw SourceFailure.expired }
-            if ticket.prepared.action["op"].string.hasPrefix("contacts.") { try await contacts.validate(ticket.prepared) } else { try await source.validate(ticket.prepared) }
+            if ticket.prepared.action["op"].string.hasPrefix("contacts.") { try await contacts.validate(ticket.prepared) } else if ticket.prepared.action["op"].string.hasPrefix("calendar.") { try await calendar.validate(ticket.prepared) } else { try await source.validate(ticket.prepared) }
             try Task.checkCancellation()
             guard ticket.fence == fence, ContinuousClock.now < ticket.expiry, wire != nil else { throw SourceFailure.expired }
             try await guardLog.append(.object(["t": .string("DispatchStarted"), "command_id": id, "ticket": frame["ticket"], "started_at": .string(timestamp()), "prepared": .object(["action": ticket.prepared.action, "native_state": ticket.prepared.nativeState, "fingerprint": .string(ticket.prepared.fingerprint), "request_hash": ticket.command["request_hash"]])]))
@@ -464,7 +473,7 @@ public actor AppleSession: ObservationSink {
             try await pause("dispatch")
             try Task.checkCancellation()
             guard ticket.fence == fence, ContinuousClock.now < ticket.expiry, wire != nil else { throw SourceFailure.conflict }
-            let refetched = ticket.prepared.action["op"].string.hasPrefix("contacts.") ? try await contacts.dispatch(ticket.prepared) : try await source.dispatch(ticket.prepared)
+            let refetched = ticket.prepared.action["op"].string.hasPrefix("contacts.") ? try await contacts.dispatch(ticket.prepared) : ticket.prepared.action["op"].string.hasPrefix("calendar.") ? try await calendar.dispatch(ticket.prepared) : try await source.dispatch(ticket.prepared)
             try await pause("outcome")
             var retained = refetched.object
             retained["prepared"] = .object(["action": ticket.prepared.action, "native_state": ticket.prepared.nativeState, "request_hash": ticket.command["request_hash"]])

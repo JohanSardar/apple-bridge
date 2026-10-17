@@ -6,7 +6,7 @@ import Darwin
 import CryptoKit
 
 private struct Fetch: @unchecked Sendable { let reminders: [EKReminder]? }
-private enum TruthFailure: Error { case invalid, unavailable, permissionMissing }
+enum TruthFailure: Error { case invalid, unavailable, permissionMissing }
 
 @main
 struct AppleTruth {
@@ -47,7 +47,7 @@ struct AppleTruth {
                 if request["source"] as? String == "messages" {
                     guard verb == "observe" else { throw TruthFailure.invalid }
                     response = try messages(request)
-                } else if request["source"] as? String == "contacts" { do { response = try contacts(verb, request) } catch { response = ["status": "unverified", "reason": "contacts_native_error"] } } else { response = try await reminders(verb, request) }
+                } else if request["source"] as? String == "calendar" { response = try CalendarTruth.run(verb, request) } else if request["source"] as? String == "contacts" { do { response = try contacts(verb, request) } catch { response = ["status": "unverified", "reason": "contacts_native_error"] } } else { response = try await reminders(verb, request) }
                 }
             } catch {
                 response = ["status": "unverified", "reason": String(describing: error), "error_domain": (error as NSError).domain, "error_code": (error as NSError).code]
