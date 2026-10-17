@@ -4,7 +4,10 @@ levels:
   real: Real Swift Helper and Apple apps on the Air
   replica: Real gateway on the Air, replica on the Ubuntu laptop
   agent: GPT-6-Luna via Codex on Ubuntu using only the replica MCP
-statuses: [todo, in_progress, done, blocked]
+statuses: [todo, in_progress, done, limited, blocked]
+status_rules:
+  done: every scenario at every listed level has passing evidence
+  limited: like done, except each entry in `limits` (scenario, level, reason) that cannot run for a reason outside the project's control, such as needing Johan's identity or credentials
 
 requirements:
   R-LIVE: Changes on the Mac appear on every connected replica in under 1 s p95 while the Mac is awake

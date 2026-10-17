@@ -18,7 +18,14 @@ type scenarioRef struct {
 	Levels []string `yaml:"levels"`
 }
 
+type limit struct {
+	Scenario string `yaml:"scenario"`
+	Level    string `yaml:"level"`
+	Reason   string `yaml:"reason"`
+}
+
 type feature struct {
+	Limits       []limit       `yaml:"limits"`
 	ID           string        `yaml:"id"`
 	Title        string        `yaml:"title"`
 	Requirements []string      `yaml:"requirements"`
@@ -33,6 +40,7 @@ type graph struct {
 	Version      int               `yaml:"version"`
 	Levels       map[string]string `yaml:"levels"`
 	Statuses     []string          `yaml:"statuses"`
+	StatusRules  map[string]string `yaml:"status_rules"`
 	Requirements map[string]string `yaml:"requirements"`
 	Features     []feature         `yaml:"features"`
 }
@@ -168,11 +176,21 @@ func (c *checker) check() []featureView {
 			}
 			v.Views = append(v.Views, sv)
 		}
-		if f.Status == "done" {
+		limited := map[string]bool{}
+		for _, l := range f.Limits {
+			if l.Reason == "" {
+				c.fail("%s: limit on %s/%s has no reason", f.ID, l.Scenario, l.Level)
+			}
+			limited[l.Scenario+"/"+l.Level] = true
+		}
+		if f.Status == "limited" && len(f.Limits) == 0 {
+			c.fail("%s is limited but lists no limits", f.ID)
+		}
+		if f.Status == "done" || f.Status == "limited" {
 			for _, sv := range v.Views {
 				for _, r := range sv.Results {
-					if r.State != "passed" {
-						c.fail("%s is done but %s at %s is %s", f.ID, sv.ID, r.Level, r.State)
+					if r.State != "passed" && !(f.Status == "limited" && limited[sv.ID+"/"+r.Level]) {
+						c.fail("%s is %s but %s at %s is %s", f.ID, f.Status, sv.ID, r.Level, r.State)
 					}
 				}
 			}
@@ -299,8 +317,8 @@ func summarize(views []featureView) {
 			}
 		}
 	}
-	fmt.Printf("features: %d (done %d, in_progress %d, todo %d, blocked %d); scenario-levels passing %d/%d\n",
-		len(views), counts["done"], counts["in_progress"], counts["todo"], counts["blocked"], passed, total)
+	fmt.Printf("features: %d (done %d, limited %d, in_progress %d, todo %d, blocked %d); scenario-levels passing %d/%d\n",
+		len(views), counts["done"], counts["limited"], counts["in_progress"], counts["todo"], counts["blocked"], passed, total)
 }
 
 var page = template.Must(template.New("page").Parse(`<!doctype html>
@@ -311,7 +329,7 @@ h1{font-size:20px}h2{font-size:15px;margin:0 0 4px}
 .f{background:#fff;border:1px solid #e3e3e8;border-radius:10px;padding:12px 14px;margin:10px 0}
 .meta{color:#6e6e73;font-size:12px}
 .st{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;margin-left:6px}
-.st-done{background:#d9f5df}.st-in_progress{background:#fff1c7}.st-todo{background:#eee}.st-blocked{background:#ffd9d6}
+.st-done{background:#d9f5df}.st-in_progress{background:#fff1c7}.st-todo{background:#eee}.st-blocked{background:#ffd9d6}.st-limited{background:#e5dcff}
 table{border-collapse:collapse;margin-top:6px}td,th{padding:2px 10px 2px 0;font-size:12px;text-align:left}
 .passed{color:#137333}.failed,.corrupt{color:#b3261e}.missing{color:#8e8e93}
 </style></head><body>
