@@ -1,10 +1,16 @@
 {
+  "run_id": "run_01M546YKW1867D6FK815CWJR6E",
+  "network_path": "ssh_fallback_direct_tcp_timeout",
   "scenario": "CORE-BLOB-INTERRUPT",
   "level": "replica",
   "passed": true,
-  "git_sha": "301d03f482174bc922eca623ed4487ec7743acd9",
-  "at": "2026-10-17T05:26:53.821252Z",
+  "git_sha": "9775bba29d530b60937cb06dbc96a29f9d829707",
+  "at": "2026-10-17T05:56:56.83387Z",
   "assertions": [
+    {
+      "name": "feed_network_ssh_fallback_direct_tcp_timeout",
+      "passed": true
+    },
     {
       "name": "replica_host_is_ubuntu",
       "passed": true
@@ -38,7 +44,19 @@
       "passed": true
     },
     {
-      "name": "replica_restart",
+      "name": "partition_disconnect_observed",
+      "passed": true
+    },
+    {
+      "name": "partition_healed",
+      "passed": true
+    },
+    {
+      "name": "replica_reconnected_before_healthy_latency",
+      "passed": true
+    },
+    {
+      "name": "resumed_bulk_in_progress_before_metadata_probe",
       "passed": true
     },
     {
@@ -104,35 +122,39 @@
     {
       "name": "scope_sse_watermarks_1",
       "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
     }
   ],
   "latency": {
     "effect_done→blob_complete": {
       "samples": 1,
-      "p50_ms": 5926.463583,
-      "p95_ms": 5926.463583,
-      "max_ms": 5926.463583,
+      "p50_ms": 6223.366208,
+      "p95_ms": 6223.366208,
+      "max_ms": 6223.366208,
       "timeouts": 0
     },
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 17.6515,
-      "p95_ms": 17.6515,
-      "max_ms": 17.6515,
+      "p50_ms": 14.174417,
+      "p95_ms": 14.174417,
+      "max_ms": 14.174417,
       "timeouts": 0
     },
     "effect_done→metadata_during_blob": {
       "samples": 1,
-      "p50_ms": 64.5975,
-      "p95_ms": 64.5975,
-      "max_ms": 64.5975,
+      "p50_ms": 198.576541,
+      "p95_ms": 198.576541,
+      "max_ms": 198.576541,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 119.74875,
-      "p95_ms": 119.74875,
-      "max_ms": 119.74875,
+      "p50_ms": 27.698209,
+      "p95_ms": 27.698209,
+      "max_ms": 27.698209,
       "timeouts": 0
     }
   },

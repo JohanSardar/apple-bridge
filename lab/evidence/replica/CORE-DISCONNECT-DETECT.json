@@ -1,0 +1,99 @@
+{
+  "run_id": "run_01M5471YDQMV4DJDDRQKY4GC77",
+  "network_path": "ssh_fallback_direct_tcp_timeout",
+  "scenario": "CORE-DISCONNECT-DETECT",
+  "level": "replica",
+  "passed": true,
+  "git_sha": "9775bba29d530b60937cb06dbc96a29f9d829707",
+  "at": "2026-10-17T05:58:45.943504Z",
+  "assertions": [
+    {
+      "name": "feed_network_ssh_fallback_direct_tcp_timeout",
+      "passed": true
+    },
+    {
+      "name": "replica_host_is_ubuntu",
+      "passed": true
+    },
+    {
+      "name": "bootstrap_snapshot",
+      "passed": true
+    },
+    {
+      "name": "scope_query_and_get",
+      "passed": true
+    },
+    {
+      "name": "silent_blackhole_detected_within_15_seconds_reads_continue",
+      "passed": true
+    },
+    {
+      "name": "convergence_truth_gateway_replicas",
+      "passed": true
+    },
+    {
+      "name": "latency_observations_complete",
+      "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass",
+      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
+    },
+    {
+      "name": "sse_contiguous_watermarks_0",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_watermarks_1",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_0",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_1",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "effect_done→gateway_visible": {
+      "samples": 2,
+      "p50_ms": 12.38475,
+      "p95_ms": 16.139875,
+      "max_ms": 16.139875,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica0": {
+      "samples": 2,
+      "p50_ms": 29.110709,
+      "p95_ms": 1022.237333,
+      "max_ms": 1022.237333,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air",
+    "ubuntu"
+  ]
+}

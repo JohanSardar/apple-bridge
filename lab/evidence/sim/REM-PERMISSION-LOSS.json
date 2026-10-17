@@ -1,10 +1,10 @@
 {
-  "run_id": "run_01M5477TJKM6QSF0AZFN0VZ56M",
+  "run_id": "run_01M546XSMFKH4B6XV1E0SJVK7W",
   "scenario": "REM-PERMISSION-LOSS",
   "level": "sim",
   "passed": true,
-  "git_sha": "c9aa42147ac4f6337b58fd04e7b9db83f17128e6",
-  "at": "2026-10-17T06:01:58.611236Z",
+  "git_sha": "9775bba29d530b60937cb06dbc96a29f9d829707",
+  "at": "2026-10-17T05:56:29.967214Z",
   "assertions": [
     {
       "name": "reminders_ready",
@@ -19,6 +19,10 @@
       "passed": true
     },
     {
+      "name": "reminders_permission_loss_does_not_suppress_messages",
+      "passed": true
+    },
+    {
       "name": "replica_convergence",
       "passed": true
     },
@@ -28,6 +32,10 @@
     },
     {
       "name": "no_scope_leak",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
       "passed": true
     }
   ],

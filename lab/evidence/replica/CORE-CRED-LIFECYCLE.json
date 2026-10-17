@@ -1,0 +1,95 @@
+{
+  "run_id": "run_01M5479EN9E467WBWG4SZFBR99",
+  "network_path": "ssh_fallback_direct_tcp_timeout",
+  "scenario": "CORE-CRED-LIFECYCLE",
+  "level": "replica",
+  "passed": true,
+  "git_sha": "b2a742b1298255638b20ba1bd57d28639b4afcc0",
+  "at": "2026-10-17T06:02:51.945965Z",
+  "assertions": [
+    {
+      "name": "feed_network_ssh_fallback_direct_tcp_timeout",
+      "passed": true
+    },
+    {
+      "name": "credentials_file_0600_create_use_rotate_revoke",
+      "passed": true
+    },
+    {
+      "name": "recovery_capture_drained_before_convergence",
+      "passed": true
+    },
+    {
+      "name": "truth_gateway_replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "automatic_recovery_capture_drained",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_query_search_records_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_query_search_records_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_metadata_latency_and_no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_metadata_latency_and_no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_sse_watermark_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_sse_watermark_1",
+      "passed": true
+    },
+    {
+      "name": "sqlite_integrity_gateway",
+      "passed": true
+    },
+    {
+      "name": "sqlite_integrity_replica",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_in_observed_journal_changes",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_in_observed_journal_changes",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "effect_done→gateway_visible": {
+      "samples": 1,
+      "p50_ms": 8.054875,
+      "p95_ms": 8.054875,
+      "max_ms": 8.054875,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica0": {
+      "samples": 1,
+      "p50_ms": 17.232667,
+      "p95_ms": 17.232667,
+      "max_ms": 17.232667,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air",
+    "ubuntu"
+  ]
+}
