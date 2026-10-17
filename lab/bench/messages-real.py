@@ -65,7 +65,7 @@ def main():
                 break
             time.sleep(5)
         check("gateway_per_chat_counts_equal_readonly_truth", equal)
-        result["samples"]["helper_start_to_gateway_history_equal"] = [(time.monotonic() - started) * 1000]
+        result["samples"]["messages_ready_to_gateway_history_equal"] = [(time.monotonic() - started) * 1000]
         changed = native.execute("SELECT MAX(ROWID) FROM message").fetchone()[0] > initial_position
         check("live_changes_during_import_revalidated", equal and changed, "No natural insert observed during import; simulator covers concurrent mutation" if not changed else "", not changed)
     elif scenario == "MSG-RECEIPTS":
@@ -149,6 +149,6 @@ def main():
 
 try:
     main()
-except Exception:
-    check("readonly_truth_execution", False, "Private diagnostic suppressed")
+except Exception as error:
+    check("readonly_truth_execution", False, "Private diagnostic suppressed; error type " + type(error).__name__)
 print(json.dumps(result))
