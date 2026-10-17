@@ -160,6 +160,9 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 	runctx, cancel := context.WithDeadline(g.Context, deadline)
 	defer cancel()
 	object := a.ID
+	if r.Source == contracts.Calendar {
+		object = g.calendarSeriesKey(runctx, p, a.ID, a.ListID)
+	}
 	if object == "" {
 		object = a.ListID
 	}
@@ -173,6 +176,12 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 	defer release()
 	action := contracts.NativeAction{Op: c.Op, Args: a}
 	collection := "reminders.reminder"
+	containerCollection, containerField := "reminders.list", "list_id"
+	if r.Source == contracts.Calendar {
+		ca, _ := contracts.ValidateCalendar(c)
+		action.CalendarArgs = &ca
+		collection, containerCollection, containerField = "calendar.event", "calendar.calendar", "calendar_id"
+	}
 	if a.Contact != nil {
 		collection = "contacts.contact"
 		action.Args = a.Contact
@@ -192,21 +201,21 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 			return r, problem
 		}
 		action.NativeKey, err = g.State.NativeKey(runctx, collection, a.ID)
-		var data struct {
-			ListID string `json:"list_id"`
-		}
+		var data map[string]json.RawMessage
 		if json.Unmarshal(current.Data, &data) != nil {
 			return r, contracts.ErrCorrupt
 		}
+		var containerID string
+		json.Unmarshal(data[containerField], &containerID)
 		if err == nil && a.Contact == nil {
-			action.ExpectedListKey, err = g.State.NativeKey(runctx, "reminders.list", data.ListID)
+			action.ExpectedListKey, err = g.State.NativeKey(runctx, containerCollection, containerID)
 		}
 		if a.ListID == "" {
-			a.ListID = data.ListID
+			a.ListID = containerID
 		}
 	}
 	if err == nil && a.ListID != "" {
-		action.ListKey, err = g.State.NativeKey(runctx, "reminders.list", a.ListID)
+		action.ListKey, err = g.State.NativeKey(runctx, containerCollection, a.ListID)
 	}
 	if err != nil {
 		r, _ = g.transition(g.Context, r, "rejected", "rejected_before_dispatch", nil, contracts.ErrNotFound)
@@ -299,6 +308,12 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 		collection := "reminders.reminder"
 		if r.Source == contracts.Contacts {
 			collection = "contacts.contact"
+		}
+		if r.Source == contracts.Calendar {
+			collection = "calendar.event"
+		}
+		if r.Command.Op == "calendar.create_calendar" {
+			collection = "calendar.calendar"
 		}
 		if r.Command.Op == "reminders.create_list" {
 			collection = "reminders.list"

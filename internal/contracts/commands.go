@@ -84,6 +84,7 @@ type CommandRecord struct {
 	Error        *Error          `json:"error,omitempty"`
 }
 type NativeAction struct {
+	CalendarArgs *CalendarArgs `json:"calendar_args,omitempty"`
 	ExpectedListKey string `json:"expected_list_key,omitempty"`
 	Op              string `json:"op"`
 	Args            any    `json:"args"`
@@ -119,6 +120,10 @@ func ValidateCommand(c Command) (ReminderArgs, error) {
 	var a ReminderArgs
 	if !ValidCommandID(c.ID) || c.WaitMS < 0 || c.WaitMS > 15000 || c.Args == nil {
 		return a, ErrInvalid
+	}
+	if strings.HasPrefix(c.Op, "calendar.") {
+		ca, err := ValidateCalendar(c)
+		return ReminderArgs{ID: ca.ID, ListID: ca.CalendarID}, err
 	}
 	if strings.HasPrefix(c.Op, "contacts.") {
 		return validateContactCommand(c)

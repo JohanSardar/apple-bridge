@@ -60,16 +60,28 @@ func OperationSchema(d OperationDescriptor) map[string]any {
 	if d.Kind == CommandOp {
 		properties := s["properties"].(map[string]any)
 		args := JSONSchema(ReminderArgs{})
+		if d.Source == Calendar {
+			args = JSONSchema(CalendarArgs{})
+		}
 		fields := args["properties"].(map[string]any)
 		required := []string{"id"}
 		allowed := map[string]bool{}
-		for _, field := range ReminderArgumentFields(d.Name) {
+		argumentFields := ReminderArgumentFields(d.Name)
+		if d.Source == Calendar {
+			argumentFields = CalendarArgumentFields(d.Name)
+		}
+		for _, field := range argumentFields {
 			allowed[field] = true
 		}
 		switch d.Name {
+		case "calendar.create_event":
+			required = []string{"calendar_id", "title", "start", "end"}
+		case "calendar.update_event", "calendar.delete_event":
+			required = []string{"id", "span"}
+			fields["span"].(map[string]any)["enum"] = []string{"this", "future"}
 		case "reminders.create":
 			required = []string{"list_id", "title"}
-		case "reminders.create_list":
+		case "calendar.create_calendar", "reminders.create_list":
 			required = []string{"title"}
 		case "reminders.update":
 			args["minProperties"] = 2
@@ -81,7 +93,7 @@ func OperationSchema(d OperationDescriptor) map[string]any {
 		}
 		args["required"] = required
 		properties["args"] = args
-		if d.Name != "reminders.create" && d.Name != "reminders.create_list" {
+		if d.Name != "reminders.create" && d.Name != "reminders.create_list" && d.Name != "calendar.create_event" && d.Name != "calendar.create_calendar" {
 			s["required"] = []string{"args", "expected_version"}
 		}
 		commandID := properties["command_id"].(map[string]any)

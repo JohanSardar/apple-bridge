@@ -23,7 +23,7 @@ type OperationDescriptor struct {
 	Examples    []Example
 }
 
-var Operations = []OperationDescriptor{
+var Operations = append(CalendarDescriptors(), []OperationDescriptor{
 	{Name: "replica.status", Version: 1, Kind: ReadOp, Source: System, Scope: "system:read", Input: struct{}{}, Output: ReadResult{}, Description: "Read local replication and blob progress"},
 	{Name: "search", Version: 1, Kind: ReadOp, Input: ReadQuery{}, Output: ReadResult{}, Description: "Search visible local record text"},
 	{Name: "records.get", Version: 1, Kind: ReadOp, Input: ReadQuery{}, Output: ReadResult{}, Description: "Read one visible local bridge record"},
@@ -41,4 +41,4 @@ var Operations = []OperationDescriptor{
 	{Name: "contacts.create", Version: 1, Kind: CommandOp, Source: Contacts, Scope: "contacts:write", Capability: "contacts.create", Input: Command{}, Output: CommandRecord{}, Description: "Create a contact in the default writable container"},
 	{Name: "contacts.update", Version: 1, Kind: CommandOp, Source: Contacts, Scope: "contacts:write", Capability: "contacts.update", Input: Command{}, Output: CommandRecord{}, Description: "Patch contact fields with expected_version"},
 	{Name: "contacts.delete", Version: 1, Kind: CommandOp, Source: Contacts, Scope: "contacts:write", Capability: "contacts.delete", Input: Command{}, Output: CommandRecord{}, Description: "Delete a writable contact with expected_version"},
-}
+}...)

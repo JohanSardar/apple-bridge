@@ -13,6 +13,9 @@ func (s *Service) Invoke(ctx context.Context, p trust.Principal, name string, in
 	if !ok {
 		return nil, contracts.ErrUnsupported
 	}
+	if name == "calendar.agenda" {
+		return s.agenda(ctx, p, input)
+	}
 	if d.Kind == contracts.CommandOp {
 		var c contracts.Command
 		if contracts.DecodeInput(input, &c) != nil {

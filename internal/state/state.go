@@ -250,7 +250,10 @@ func (s *Store) CommitCapture(ctx context.Context, c contracts.Capture) (CommitR
 		return result, contracts.ErrInvalid
 	}
 	for _, o := range c.Observations {
-		if _, ok := contracts.Collections[o.Collection]; !ok || (contracts.CollectionSource(o.Collection) != c.Source && o.Collection != "system.source") || o.NativeKey == "" || o.ObservedAt.IsZero() || (o.Kind != "upsert" && o.Kind != "absent" && o.Kind != "alias") {
+		if o.Kind == "evict" && (c.Source != contracts.Calendar || o.Collection != "calendar.event") {
+			return result, contracts.ErrInvalid
+		}
+		if _, ok := contracts.Collections[o.Collection]; !ok || (contracts.CollectionSource(o.Collection) != c.Source && o.Collection != "system.source") || o.NativeKey == "" || o.ObservedAt.IsZero() || (o.Kind != "upsert" && o.Kind != "absent" && o.Kind != "alias" && o.Kind != "evict") {
 			return result, contracts.ErrInvalid
 		}
 		if o.Kind == "upsert" {
@@ -290,7 +293,7 @@ func (s *Store) CommitCapture(ctx context.Context, c contracts.Capture) (CommitR
 		return result, contracts.ErrReset
 	}
 	for _, o := range c.Observations {
-		if o.Kind != "absent" {
+		if o.Kind != "absent" && o.Kind != "evict" {
 			if _, err = resolveID(ctx, tx, c, o, true); err != nil {
 				return result, err
 			}
@@ -307,7 +310,7 @@ func (s *Store) CommitCapture(ctx context.Context, c contracts.Capture) (CommitR
 		if o.Kind == "alias" {
 			continue
 		}
-		if o.Kind == "absent" && (c.ScanID == "" || !slices.Contains(c.Scope, o.Collection) || c.CompletionEvidence != "complete" || c.ScanStartedAt.IsZero() || !o.Revalidated) {
+		if (o.Kind == "absent" || o.Kind == "evict") && (c.ScanID == "" || !slices.Contains(c.Scope, o.Collection) || c.CompletionEvidence != "complete" || c.ScanStartedAt.IsZero() || !o.Revalidated) {
 			result.Degraded = true
 			continue
 		}
@@ -337,7 +340,7 @@ func (s *Store) CommitCapture(ctx context.Context, c contracts.Capture) (CommitR
 			continue
 		}
 		var data json.RawMessage
-		if o.Kind == "absent" {
+		if o.Kind == "absent" || o.Kind == "evict" {
 			if !exists {
 				continue
 			}
@@ -367,7 +370,7 @@ func (s *Store) CommitCapture(ctx context.Context, c contracts.Capture) (CommitR
 				return result, err
 			}
 		}
-		deleted := o.Kind == "absent"
+		deleted := o.Kind == "absent" || o.Kind == "evict"
 		if exists && old.Deleted == deleted && string(old.Data) == string(data) {
 			if _, err = tx.ExecContext(ctx, "UPDATE records SET observed_at=? WHERE collection=? AND id=?", o.ObservedAt.Format(time.RFC3339Nano), o.Collection, id); err != nil {
 				return result, err
@@ -389,6 +392,13 @@ func (s *Store) CommitCapture(ctx context.Context, c contracts.Capture) (CommitR
 		op := "upsert"
 		if deleted {
 			op = "delete"
+		}
+		if o.Kind == "evict" {
+			op = "evict"
+			record.Coverage.Missing = []string{"window_evicted"}
+			if err = writeRecord(ctx, tx, record, cursor.Sequence); err != nil {
+				return result, err
+			}
 		}
 		if err = appendChange(ctx, tx, cursor, record, op); err != nil {
 			return result, err
