@@ -213,7 +213,7 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 			if err != nil {
 				return err
 			}
-			request := map[string]any{"command_id": contracts.NewCommandID(head.Epoch), "args": args, "expected_version": version, "wait_ms": 3000}
+			request := map[string]any{"command_id": contracts.NewCommandID(head.Epoch), "args": args, "expected_version": version, "wait_ms": 15000}
 			var result map[string]any
 			endpoint := w.Gateway
 			if level == "replica" {

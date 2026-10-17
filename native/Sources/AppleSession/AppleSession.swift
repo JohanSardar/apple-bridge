@@ -305,6 +305,7 @@ public actor AppleSession: ObservationSink {
     private func observedEvidence(_ evidence: JSON, fingerprint: JSON) async throws -> JSON {
         try Task.checkCancellation()
         try await source.reconcile(into: self)
+        if evidence["absent"].bool { try await source.confirmAbsence(evidence["native_key"].string, into: self) }
         try Task.checkCancellation()
         let key = evidence["native_key"].string
         guard let checkpoint = observedCheckpoints["reminders.reminder/" + key] ?? observedCheckpoints["reminders.list/" + key] else { throw SourceFailure.unavailable }
@@ -384,11 +385,13 @@ public actor AppleSession: ObservationSink {
         do {
             guard frame["command_id"] == id, frame["owner_fence"].unsigned == fence, ticket.fence == fence, ContinuousClock.now < ticket.expiry else { throw SourceFailure.expired }
             try await source.validate(ticket.prepared)
+            try Task.checkCancellation()
+            guard ticket.fence == fence, ContinuousClock.now < ticket.expiry, wire != nil else { throw SourceFailure.expired }
             try await guardLog.append(.object(["t": .string("DispatchStarted"), "command_id": id, "ticket": frame["ticket"], "started_at": .string(timestamp()), "prepared": .object(["action": ticket.prepared.action, "native_state": ticket.prepared.nativeState, "fingerprint": .string(ticket.prepared.fingerprint), "request_hash": ticket.command["request_hash"]])]))
             started = true
             try await pause("dispatch")
             try Task.checkCancellation()
-            guard ticket.fence == fence, wire != nil else { throw SourceFailure.conflict }
+            guard ticket.fence == fence, ContinuousClock.now < ticket.expiry, wire != nil else { throw SourceFailure.conflict }
             let refetched = try await source.dispatch(ticket.prepared)
             var retained = refetched.object
             retained["prepared"] = .object(["action": ticket.prepared.action, "native_state": ticket.prepared.nativeState, "request_hash": ticket.command["request_hash"]])

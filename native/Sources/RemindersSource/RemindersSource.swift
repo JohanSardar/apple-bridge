@@ -127,6 +127,13 @@ public final class RemindersSource: Source {
         try await scan(into: sink, live: true)
     }
 
+    public func confirmAbsence(_ key: String, into sink: any ObservationSink) async throws {
+        let started = timestamp()
+        guard !key.isEmpty, try await gate.reminders().allSatisfy({ $0.calendarItemIdentifier != key }), gate.store.calendarItem(withIdentifier: key) == nil, gate.authorized(.reminder) else { throw SourceFailure.conflict }
+        let absent: JSON = .object(["kind": .string("absent"), "collection": .string("reminders.reminder"), "native_key": .string(key), "revalidated": .bool(true), "observed_at": .string(timestamp())])
+        try await sink.emit(source: name, generation: "eventkit-v1", observations: [absent], scanID: UUID().uuidString, scanStartedAt: started, scope: ["reminders.reminder"], completionEvidence: "complete", blobHandles: [:], live: true)
+    }
+
     public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {
         forceFull = true
         let changes = gate.changes()
