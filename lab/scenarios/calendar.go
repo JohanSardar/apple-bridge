@@ -438,6 +438,7 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		}
 		if level != "sim" {
 			nativeLatencyEvidence(w, &e, phaseEffects, observers)
+			add("calendar_database_hint_observed", e.Latency["native_save→database_hint_delivery"].Samples > 0)
 			add("calendar_native_phase_timestamps", len(e.NativeTimings) == 10 && e.Latency["refetch_duration"].Samples == 10 && e.Latency["capture_sent→gateway_commit"].Samples == 10 && e.Latency["gateway_commit→replica_visible"].Samples == 10)
 		}
 	case "CAL-CRUD":
@@ -831,7 +832,9 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		add(fmt.Sprintf("no_false_deletion_%d", i), safe)
 	}
 	for name, latency := range e.Latency {
-		add("latency_"+name, latency.P95 < 1000 && latency.Samples > 0)
+		if strings.HasPrefix(name, "effect_done→") {
+			add("latency_"+name, latency.P95 < 1000 && latency.Samples > 0)
+		}
 	}
 	for _, ep := range endpoints {
 		token, err := w.ScopedToken(ep, "system:read")

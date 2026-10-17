@@ -27,9 +27,12 @@ public final class AgendaGate {
     public let trace: CaptureTrace
     public private(set) var notificationAt: UInt64 = 0
     public private(set) var debounceAt: UInt64 = 0
+    public private(set) var calendarNotificationAt: UInt64 = 0
+    public private(set) var calendarDebounceAt: UInt64 = 0
     private var observer: NSObjectProtocol?
     private var debounce: Task<Void, Never>?
-    private var listeners: [UUID: AsyncStream<Void>.Continuation] = [:]
+    private var calendarDebounce: Task<Void, Never>?
+    private var listeners: [UUID: (calendar: Bool, continuation: AsyncStream<Void>.Continuation)] = [:]
 
     public init(trace: CaptureTrace = CaptureTrace()) {
         self.trace = trace
@@ -54,24 +57,42 @@ public final class AgendaGate {
     }
 
     public func reconcile() {
-        for continuation in listeners.values { continuation.yield(()) }
+        for listener in listeners.values { listener.continuation.yield(()) }
     }
 
     private func changed(_ delivered: UInt64) {
+        calendarChanged(delivered)
         debounce?.cancel()
         debounce = Task { @MainActor in
-            do { try await Task.sleep(for: .milliseconds(10)) } catch { return }
+            do { try await Task.sleep(for: .milliseconds(50)) } catch { return }
             notificationAt = delivered
             debounceAt = CaptureTrace.now()
             trace.record("debounce", fields: ["notification_ns": .integer(notificationAt)])
-            for continuation in listeners.values { continuation.yield(()) }
+            for listener in listeners.values where !listener.calendar { listener.continuation.yield(()) }
         }
     }
 
-    public func changes() -> AsyncStream<Void> {
+    public func calendarHint(_ delivered: UInt64) {
+        trace.record("calendar_database_hint", fields: ["delivered_ns": .integer(delivered)])
+        calendarChanged(delivered)
+    }
+
+    private func calendarChanged(_ delivered: UInt64) {
+        guard calendarDebounce == nil else { return }
+        calendarDebounce = Task { @MainActor in
+            do { try await Task.sleep(for: .milliseconds(50)) } catch { return }
+            calendarNotificationAt = delivered
+            calendarDebounceAt = CaptureTrace.now()
+            calendarDebounce = nil
+            trace.record("calendar_debounce", fields: ["notification_ns": .integer(delivered)])
+            for listener in listeners.values where listener.calendar { listener.continuation.yield(()) }
+        }
+    }
+
+    public func changes(calendar: Bool = false) -> AsyncStream<Void> {
         let id = UUID()
         return AsyncStream(bufferingPolicy: .bufferingNewest(1)) { continuation in
-            listeners[id] = continuation
+            listeners[id] = (calendar, continuation)
             continuation.onTermination = { @Sendable [weak self] _ in
                 Task { @MainActor in self?.listeners.removeValue(forKey: id) }
             }

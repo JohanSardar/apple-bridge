@@ -1,15 +1,15 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[14.33 15.08 10.95] cpus=8 other_heavy=1"
+    "summary": "air: load=[7.5 10 10.02] cpus=8 other_heavy=1"
   },
-  "run_id": "cal_01M55VTXH0XW2DKMV18HEZJFHH",
+  "run_id": "cal_01M55WA6JPQZMSXXHTFNERASX1",
   "network_path": "loopback",
   "scenario": "CAL-CRUD",
   "level": "real",
-  "passed": false,
-  "git_sha": "faa6e49f2e584ed4e73b3d10dccb5478fe4bd735",
-  "at": "2026-10-17T21:21:10.176808Z",
+  "passed": true,
+  "git_sha": "a7ce500d56b39cf761ae04b84bde5a0cb3058ef9",
+  "at": "2026-10-17T21:29:30.966071Z",
   "assertions": [
     {
       "name": "private_signed_apps_per_world",
@@ -184,8 +184,76 @@
       "passed": true
     },
     {
-      "name": "mcp_create_recurring_command",
-      "passed": false
+      "name": "mcp_truth_created_series_occurrences",
+      "passed": true
+    },
+    {
+      "name": "mcp_created_series_deleted_with_future_span",
+      "passed": true
+    },
+    {
+      "name": "mcp_create_calendar_observed",
+      "passed": true
+    },
+    {
+      "name": "mcp_created_calendar_ownership_durable",
+      "passed": true
+    },
+    {
+      "name": "mcp_independent_appletruth_equality",
+      "passed": true
+    },
+    {
+      "name": "mcp_replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "mcp_contiguous_feed_0",
+      "passed": true
+    },
+    {
+      "name": "mcp_no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "mcp_contiguous_feed_1",
+      "passed": true
+    },
+    {
+      "name": "mcp_no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "mcp_no_scope_leak_query",
+      "passed": true
+    },
+    {
+      "name": "mcp_no_scope_leak_mcp_agenda",
+      "passed": true
+    },
+    {
+      "name": "mcp_no_scope_leak_query",
+      "passed": true
+    },
+    {
+      "name": "mcp_no_scope_leak_mcp_agenda",
+      "passed": true
+    },
+    {
+      "name": "mcp_private_helper_paused_for_integrity",
+      "passed": true
+    },
+    {
+      "name": "mcp_replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass",
+      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+    },
+    {
+      "name": "mcp_replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
     },
     {
       "name": "mcp_tagged_fixture_cleanup_audit",
@@ -203,7 +271,7 @@
   "conditions": {
     "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
     "heavy_slots_in_use": "2",
-    "load_average": "14.33 15.08 10.95",
+    "load_average": "7.50 10.00 10.02",
     "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"
   }
 }

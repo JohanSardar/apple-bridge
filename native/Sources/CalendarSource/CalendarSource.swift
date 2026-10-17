@@ -109,7 +109,7 @@ public final class CalendarSource: Source {
     }
 
     private func scanPass(into sink: any ObservationSink, live: Bool) async throws -> Bool {
-        let revision = gate.debounceAt
+        let revision = gate.calendarDebounceAt
         let started = timestamp()
         gate.trace.record("calendar_scan_started", fields: ["live": .bool(live)])
         let now = Date()
@@ -124,7 +124,7 @@ public final class CalendarSource: Source {
         }
         for (index, chunk) in CalendarTime.chunks(now).enumerated() {
             let refetchStarted = CaptureTrace.now()
-            let notificationAt = gate.notificationAt, debounceAt = gate.debounceAt
+            let notificationAt = gate.calendarNotificationAt, debounceAt = gate.calendarDebounceAt
             for event in try events(chunk) {
                 let native = key(event)
                 remember(event)
@@ -146,7 +146,7 @@ public final class CalendarSource: Source {
             }
             pending = []
             await Task.yield()
-            if !forceFull && gate.debounceAt != revision {
+            if !forceFull && gate.calendarDebounceAt != revision {
                 committed.merge(current) { _, new in new }
                 try save(committed)
                 return false
@@ -189,7 +189,14 @@ public final class CalendarSource: Source {
 
     public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {
         forceFull = true
-        let changes = gate.changes()
+        let changes = gate.changes(calendar: true)
+        let databaseHints = CalendarDatabaseHints()
+        let hints = Task { @MainActor [gate] in
+            for await delivered in databaseHints.changes {
+                gate.calendarHint(delivered)
+            }
+        }
+        defer { hints.cancel(); databaseHints.close() }
         try await scan(into: sink, live: false)
         let periodic = Task { @MainActor in
             var day = Calendar.current.startOfDay(for: Date())

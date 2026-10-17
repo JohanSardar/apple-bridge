@@ -33,6 +33,7 @@ type NativeTiming struct {
 	TriggerNotificationNS int64   `json:"trigger_notification_ns"`
 	SaveNS                int64   `json:"save_ns"`
 	NotificationNS        int64   `json:"notification_ns"`
+	DatabaseHintNS        int64   `json:"database_hint_ns,omitempty"`
 	DebounceNS            int64   `json:"debounce_ns"`
 	RefetchStartedNS      int64   `json:"refetch_started_ns"`
 	RefetchFinishedNS     int64   `json:"refetch_finished_ns"`
@@ -85,6 +86,9 @@ func nativeLatencyEvidence(w *world.World, e *Evidence, effects []any, observers
 		row := NativeTiming{SaveNS: save, SaveWallNS: wall}
 		checkpoint := ""
 		for _, event := range trace {
+			if event.Stage == "calendar_database_hint" && event.DeliveredNS >= save && row.DatabaseHintNS == 0 {
+				row.DatabaseHintNS = event.DeliveredNS
+			}
 			if event.Stage == "notification" && event.UptimeNS >= save && row.NotificationNS == 0 {
 				row.NotificationNS = event.UptimeNS
 				if event.DeliveredNS > 0 {
@@ -139,6 +143,7 @@ func nativeLatencyEvidence(w *world.World, e *Evidence, effects []any, observers
 			row.ReplicaVisibleWallNS = seen.At.UnixNano()
 		}
 		sample("native_save→next_notification_delivery", row.SaveNS, row.NotificationNS)
+		sample("native_save→database_hint_delivery", row.SaveNS, row.DatabaseHintNS)
 		sample("trigger_notification→debounce", row.TriggerNotificationNS, row.DebounceNS)
 		sample("debounce→refetch_start", row.DebounceNS, row.RefetchStartedNS)
 		sample("refetch_duration", row.RefetchStartedNS, row.RefetchFinishedNS)
