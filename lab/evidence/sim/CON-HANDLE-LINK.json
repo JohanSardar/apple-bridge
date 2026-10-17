@@ -1,10 +1,15 @@
 {
-  "run_id": "run_01M547SS57VZXA1CT60MXF5YSK",
+  "host_telemetry": {
+    "heavy_jobs": "2",
+    "load_average": "{ 11.58 10.88 11.03 }",
+    "logical_cpus": "8"
+  },
+  "run_id": "run_01M54AZ0H3HBY0T4GNYEQG0FKJ",
   "scenario": "CON-HANDLE-LINK",
   "level": "sim",
   "passed": true,
-  "git_sha": "944b8c40e04b9b746812357918704280e2ee6eb8",
-  "at": "2026-10-17T06:11:46.983138Z",
+  "git_sha": "c58d9b57c9251c4c0f0f112aab9fc387dea1bcd7",
+  "at": "2026-10-17T07:07:04.099696Z",
   "assertions": [
     {
       "name": "unified_contacts_imported",
@@ -16,6 +21,42 @@
     },
     {
       "name": "message_handle_contact_link",
+      "passed": true
+    },
+    {
+      "name": "handle_link_journaled",
+      "passed": true
+    },
+    {
+      "name": "contact_edit_clears_link",
+      "passed": true
+    },
+    {
+      "name": "contact_edit_restores_link",
+      "passed": true
+    },
+    {
+      "name": "ambiguous_handles_unlinked",
+      "passed": true
+    },
+    {
+      "name": "unambiguous_link_restored",
+      "passed": true
+    },
+    {
+      "name": "contact_link_hidden_without_contacts_scope",
+      "passed": true
+    },
+    {
+      "name": "contact_link_hidden_in_sse",
+      "passed": true
+    },
+    {
+      "name": "contact_link_hidden_without_contacts_scope",
+      "passed": true
+    },
+    {
+      "name": "contact_link_hidden_in_sse",
       "passed": true
     },
     {
@@ -57,6 +98,10 @@
       "passed": false,
       "status": "unverified",
       "detail": "kill-during-apply check did not run"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
     }
   ],
   "latency": {},

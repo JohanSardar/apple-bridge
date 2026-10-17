@@ -1,10 +1,15 @@
 {
-  "run_id": "run_01M547SPXAZM501EP51M5YHTPK",
+  "host_telemetry": {
+    "heavy_jobs": "2",
+    "load_average": "{ 11.58 10.88 11.03 }",
+    "logical_cpus": "8"
+  },
+  "run_id": "run_01M54AYYFCV9Y30S9Y2JDAEQEY",
   "scenario": "CON-DROP-EVERYTHING",
   "level": "sim",
   "passed": true,
-  "git_sha": "944b8c40e04b9b746812357918704280e2ee6eb8",
-  "at": "2026-10-17T06:11:44.682018Z",
+  "git_sha": "c58d9b57c9251c4c0f0f112aab9fc387dea1bcd7",
+  "at": "2026-10-17T07:07:01.996986Z",
   "assertions": [
     {
       "name": "unified_contacts_imported",
@@ -12,6 +17,10 @@
     },
     {
       "name": "generation_reset_preserves_identity_and_version",
+      "passed": true
+    },
+    {
+      "name": "history_reset_changes_generation",
       "passed": true
     },
     {
@@ -53,6 +62,10 @@
       "passed": false,
       "status": "unverified",
       "detail": "kill-during-apply check did not run"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
     }
   ],
   "latency": {},

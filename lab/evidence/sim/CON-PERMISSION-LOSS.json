@@ -1,0 +1,71 @@
+{
+  "host_telemetry": {
+    "heavy_jobs": "2",
+    "load_average": "{ 11.69 10.91 11.04 }",
+    "logical_cpus": "8"
+  },
+  "run_id": "run_01M54AZ77YA7V0SP48ATER9DSC",
+  "scenario": "CON-PERMISSION-LOSS",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "c58d9b57c9251c4c0f0f112aab9fc387dea1bcd7",
+  "at": "2026-10-17T07:07:10.974778Z",
+  "assertions": [
+    {
+      "name": "unified_contacts_imported",
+      "passed": true
+    },
+    {
+      "name": "permission_missing_reported",
+      "passed": true
+    },
+    {
+      "name": "permission_loss_preserves_record",
+      "passed": true
+    },
+    {
+      "name": "replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_0",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_1",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "contacts_scope_enforced",
+      "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass",
+      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
