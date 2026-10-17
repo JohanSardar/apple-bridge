@@ -63,6 +63,7 @@ type Evidence struct {
 	Hosts          []string           `json:"hosts"`
 	NativeTimings  []NativeTiming     `json:"native_timings,omitempty"`
 	Conditions     map[string]string  `json:"conditions,omitempty"`
+
 }
 
 type Seen struct {
@@ -368,6 +369,7 @@ func convergence(w *world.World) bool {
 }
 
 func runScenario(ctx context.Context, s Scenario, level string) Evidence {
+	if strings.HasPrefix(s.ID, "CAL-") { return runCalendarScenario(ctx, s, level) }
 	if strings.HasPrefix(s.ID, "CON-") {
 		return runContacts(ctx, s, level)
 	}

@@ -59,6 +59,9 @@ type fakeApple struct {
 	blobBusy                     int
 	blobFaultDigest              string
 	blobRefreshBeforeUnavailable bool
+	calendarDenied               bool
+	calendarClock                time.Time
+	calendarPublished            map[string]contracts.Observation
 
 	completed map[contracts.Source]map[uint64]bool
 	path      string
@@ -73,6 +76,9 @@ func (f *fakeApple) inspect() []contracts.Observation {
 	defer f.mu.Unlock()
 	records := []contracts.Observation{}
 	for _, o := range f.records {
+		if !f.calendarInWindow(o) {
+			continue
+		}
 		records = append(records, o)
 	}
 	slices.SortFunc(records, func(a, b contracts.Observation) int {
@@ -190,16 +196,19 @@ func Run(ctx context.Context, cfg Config) error {
 		}
 		json.NewEncoder(w).Encode(map[string]any{"blob_digests": digests, "scans": fake.durable.Scans, "revision": fake.durable.Revision, "committed": fake.durable.Committed})
 	})
+	fake.calendarControl(mux)
 	fake.contactsControl(mux)
 	mux.HandleFunc("GET /inspect", func(w http.ResponseWriter, r *http.Request) { json.NewEncoder(w).Encode(fake.inspect()) })
 	mux.HandleFunc("POST /source-state", func(w http.ResponseWriter, r *http.Request) {
 		var frame contracts.IPCFrame
-		if json.NewDecoder(r.Body).Decode(&frame) != nil || (frame.Source != contracts.Reminders && frame.Source != contracts.Contacts) || frame.State != "permission_missing" {
+		if json.NewDecoder(r.Body).Decode(&frame) != nil || (frame.Source != contracts.Reminders && frame.Source != contracts.Contacts && frame.Source != contracts.Calendar) || frame.State != "permission_missing" {
 			http.Error(w, "invalid", 400)
 			return
 		}
 		fake.mu.Lock()
-		if frame.Source == contracts.Contacts {
+		if frame.Source == contracts.Calendar {
+			fake.calendarDenied = true
+		} else if frame.Source == contracts.Contacts {
 			fake.contactPermissionMissing = true
 		} else {
 			fake.permissionMissing = true
@@ -409,7 +418,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 	f.mu.Unlock()
 	credit := open.ByteCredit
 	coverage := contracts.Coverage{Fields: "complete", Missing: []string{"recurring reminders: next incomplete instance only"}}
-	if _, err = wire.Send(contracts.IPCFrame{T: "Ready", Protocol: contracts.IPCProtocol, Capabilities: map[contracts.Source][]string{contracts.Contacts: {"contacts.create", "contacts.update", "contacts.delete"}, contracts.Messages: {}, contracts.Reminders: {"reminders.create", "reminders.update", "reminders.complete", "reminders.uncomplete", "reminders.delete", "reminders.create_list"}}, Coverage: map[contracts.Source]contracts.Coverage{contracts.Contacts: {Fields: "partial", Missing: []string{"note"}}, contracts.Reminders: coverage, contracts.Messages: {Fields: "complete", Missing: []string{}}}, HelperBuild: "sim/1", OSBuild: "sim"}); err != nil {
+	if _, err = wire.Send(contracts.IPCFrame{T: "Ready", Protocol: contracts.IPCProtocol, Capabilities: map[contracts.Source][]string{contracts.Calendar: {"calendar.create_event", "calendar.update_event", "calendar.delete_event", "calendar.create_calendar"}, contracts.Contacts: {"contacts.create", "contacts.update", "contacts.delete"}, contracts.Messages: {}, contracts.Reminders: {"reminders.create", "reminders.update", "reminders.complete", "reminders.uncomplete", "reminders.delete", "reminders.create_list"}}, Coverage: map[contracts.Source]contracts.Coverage{contracts.Calendar: {Fields: "complete", Missing: []string{}}, contracts.Contacts: {Fields: "partial", Missing: []string{"note"}}, contracts.Reminders: coverage, contracts.Messages: {Fields: "complete", Missing: []string{}}}, HelperBuild: "sim/1", OSBuild: "sim"}); err != nil {
 		return err
 	}
 	checkpoints := map[contracts.Source]string{}
@@ -655,7 +664,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 		emitRevision = revision
 		return emit(capture)
 	}
-	for _, source := range []contracts.Source{contracts.Reminders, contracts.Messages, contracts.Contacts} {
+	for _, source := range []contracts.Source{contracts.Reminders, contracts.Messages, contracts.Contacts, contracts.Calendar} {
 		f.mu.Lock()
 		missingContacts := f.contactPermissionMissing
 		f.mu.Unlock()

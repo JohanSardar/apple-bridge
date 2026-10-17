@@ -262,7 +262,7 @@ func newEnvironment(ctx context.Context, level string, replicas, seed int, nativ
 	if len(blobOptions) > 0 {
 		w.blobOptions = blobOptions[0]
 	}
-	scope := "reminders:read,reminders:write,system:read"
+	scope := "calendar:read,calendar:write,reminders:read,reminders:write,system:read"
 	if len(blobOptions) > 0 {
 		scope = "messages:read,reminders:read,system:read"
 		if blobOptions[0].Scope != "" {
