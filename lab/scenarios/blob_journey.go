@@ -123,7 +123,7 @@ func blobJourney(ctx context.Context, w *world.World, id string, evidence *Evide
 		}) == nil) {
 			return false
 		}
-		if !check("replica_restart", w.Heal(0) == nil) {
+		if !check("partition_healed", w.Heal(0) == nil) {
 			return false
 		}
 		if !check("replica_reconnected_before_healthy_latency", w.Await(10*time.Second, func() bool {
@@ -132,12 +132,18 @@ func blobJourney(ctx context.Context, w *world.World, id string, evidence *Evide
 		}) == nil) {
 			return false
 		}
+		progress, progressErr := blobProgress(ctx, e)
+		partial := progress.Entries[digest].Received
+		if !check("resumed_bulk_in_progress_before_metadata_probe", progressErr == nil && partial > 0 && partial < int64(size)) {
+			return false
+		}
 		effect := time.Now()
 		if !check("live_metadata_during_bulk", w.ControlAction("/external-change", map[string]string{"key": "during-blob"}) == nil && w.Await(time.Second, func() bool {
 			records, _ := w.Records(e)
 			for _, r := range records {
 				if strings.Contains(string(r.Data), "during-blob") {
-					return true
+					progress, err := blobProgress(ctx, e)
+					return err == nil && progress.Entries[digest].Received < int64(size) && progress.Entries[digest].State != "present"
 				}
 			}
 			return false
