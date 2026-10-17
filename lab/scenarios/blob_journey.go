@@ -51,9 +51,64 @@ func blobBytes(ctx context.Context, e world.Endpoint, d, id string) (int, []byte
 func blobJourney(ctx context.Context, w *world.World, id string, rows int, evidence *Evidence, add func(string, bool)) bool {
 	check := func(name string, ok bool) bool { add(name, ok); return ok }
 	if id == "CORE-BLOB-REFERENCE-INDEX" {
-		return blobReferenceScaling(ctx, w, evidence, add)
-	}
+		rows = 320
+		client := *w.Control
+		client.Timeout = 2 * time.Minute
+		req, err := http.NewRequestWithContext(ctx, "POST", "http://sim/blob-history", strings.NewReader(fmt.Sprintf(`{"rows":%d}`, rows)))
+		if !check("history_request", err == nil) {
+			return false
+		}
+		response, err := client.Do(req)
+		if !check("history_committed", err == nil) {
+			return false
+		}
+		defer response.Body.Close()
+		var result map[string]any
+		err = json.NewDecoder(response.Body).Decode(&result)
+		if !check("reference_capture_durable", err == nil && response.StatusCode == 200) {
+			return false
+		}
 
+		records, err := w.Records(w.Gateway)
+		count := 0
+		for _, r := range records {
+			if r.Collection == "reminders.reminder" && strings.HasPrefix(recordTitle(r), "[ab-test] blob-history-") {
+				count++
+			}
+		}
+		if !check(fmt.Sprintf("history_%d_durable_records", rows), err == nil && count == rows) {
+			return false
+		}
+		cursor, err := w.Cursor(w.Gateway)
+		if !check("history_durable_cursor", err == nil) {
+			return false
+		}
+		if !check("history_replica_records_and_cursor_match", w.Await(15*time.Second, func() bool {
+			replica, err := w.Records(w.Replicas[0])
+			if err != nil || !reflect.DeepEqual(replica, records) {
+				return false
+			}
+			after, err := w.Cursor(w.Replicas[0])
+			return err == nil && after == cursor
+		}) == nil) {
+			return false
+		}
+		evidence.Metrics = map[string]any{"reference_rows": rows, "expected_references": rows / 5}
+		return check("capture_and_replica_reference_protection", w.Await(5*time.Second, func() bool {
+			for _, endpoint := range append([]world.Endpoint{w.Gateway}, w.Replicas...) {
+				progress, err := blobProgress(ctx, endpoint)
+				if err != nil || len(progress.Entries) != rows/5 {
+					return false
+				}
+				for _, entry := range progress.Entries {
+					if entry.State != "offloaded" {
+						return false
+					}
+				}
+			}
+			return true
+		}) == nil)
+	}
 	size := 4 << 20
 	if id == "CORE-BLOB-INTERRUPT" {
 		size = 16 << 20
