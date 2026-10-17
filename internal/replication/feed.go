@@ -196,7 +196,9 @@ func (s *Server) serve(ctx context.Context, conn *websocket.Conn, p trust.Princi
 		}
 		snapshot.Close()
 	}
-	iterator, err := s.Store.Changes(ctx, p.Visibility(), cursor)
+	journalCursor := cursor
+	journalCursor.SubscriptionRevision = s.Store.Head().SubscriptionRevision
+	iterator, err := s.Store.Changes(ctx, p.Visibility(), journalCursor)
 	if err != nil {
 		return err
 	}
@@ -205,6 +207,7 @@ func (s *Server) serve(ctx context.Context, conn *websocket.Conn, p trust.Princi
 		if err != nil {
 			return err
 		}
+		batch.SubscriptionRevision = p.Revision
 		cursor.Sequence = batch.Through
 		if err = transmit(contracts.FeedFrame{T: "Batch", Batch: &batch}, &cursor); err != nil {
 			return err
