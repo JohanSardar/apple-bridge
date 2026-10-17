@@ -1,0 +1,91 @@
+{
+  "scenario": "CORE-RESUME",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "dc1d33a633a16539e254cfc375cb53d2225d9403",
+  "at": "2026-10-17T04:47:11.563093Z",
+  "assertions": [
+    {
+      "name": "replica_host_is_air",
+      "passed": true
+    },
+    {
+      "name": "bootstrap_snapshot",
+      "passed": true
+    },
+    {
+      "name": "scope_query_and_get",
+      "passed": true
+    },
+    {
+      "name": "convergence_truth_gateway_replicas",
+      "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true
+    },
+    {
+      "name": "latency_observations_complete",
+      "passed": true
+    },
+    {
+      "name": "resume_without_snapshot",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_watermarks_0",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_watermarks_1",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_0",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_1",
+      "passed": true
+    },
+    {
+      "name": "partition_observations_complete_1",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "effect_done→gateway_visible": {
+      "samples": 2,
+      "p50_ms": 1.48275,
+      "p95_ms": 2.384041,
+      "max_ms": 2.384041,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica0": {
+      "samples": 2,
+      "p50_ms": 2.511708,
+      "p95_ms": 36.539083,
+      "max_ms": 36.539083,
+      "timeouts": 0
+    },
+    "partition_effect_done→replica_visible:replica0": {
+      "samples": 30,
+      "p50_ms": 15193.747583,
+      "p95_ms": 29228.528583,
+      "max_ms": 30231.209875,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}
