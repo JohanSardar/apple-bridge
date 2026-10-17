@@ -12,9 +12,13 @@ import (
 )
 
 type messageState struct {
-	generation string
-	rearmed    int
-	permitted  bool
+	generation   string
+	rearmed      int
+	permitted    bool
+	captureCount int
+	captureAckMS float64
+	captureBytes int
+	creditWaits  int
 }
 
 func messageReference(collection, key string) map[string]any {
@@ -28,7 +32,7 @@ func (f *fakeApple) messageRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /messages-status", func(w http.ResponseWriter, r *http.Request) {
 		f.mu.Lock()
 		defer f.mu.Unlock()
-		json.NewEncoder(w).Encode(map[string]any{"generation": f.messages.generation, "rearmed": f.messages.rearmed, "permitted": f.messages.permitted})
+		json.NewEncoder(w).Encode(map[string]any{"generation": f.messages.generation, "rearmed": f.messages.rearmed, "permitted": f.messages.permitted, "capture_count": f.messages.captureCount, "capture_ack_ms": f.messages.captureAckMS, "capture_bytes": f.messages.captureBytes, "credit_waits": f.messages.creditWaits})
 	})
 	mux.HandleFunc("POST /messages", func(w http.ResponseWriter, r *http.Request) {
 		var action struct {

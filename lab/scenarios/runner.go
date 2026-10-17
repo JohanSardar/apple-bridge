@@ -56,6 +56,7 @@ type Evidence struct {
 	Assertions []Assertion        `json:"assertions"`
 	Latency    map[string]Latency `json:"latency"`
 	Hosts      []string           `json:"hosts"`
+	Metrics    map[string]any     `json:"metrics,omitempty"`
 }
 
 type Seen struct {

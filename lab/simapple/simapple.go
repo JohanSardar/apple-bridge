@@ -379,8 +379,14 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 			return err
 		}
 		if len(encoded) > credit {
+			if capture.Source == contracts.Messages {
+				f.mu.Lock()
+				f.messages.creditWaits++
+				f.mu.Unlock()
+			}
 			return contracts.ErrCapacity
 		}
+		captureStarted := time.Now()
 		n, err := wire.Send(contracts.IPCFrame{T: "Capture", Capture: &capture})
 		if err != nil {
 			return err
@@ -407,6 +413,13 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 					checkpoints[capture.Source] = capture.Checkpoint
 					generations[capture.Source] = capture.Generation
 					credit += reply.Credit
+					if capture.Source == contracts.Messages {
+						f.mu.Lock()
+						f.messages.captureCount++
+						f.messages.captureAckMS += float64(time.Since(captureStarted)) / float64(time.Millisecond)
+						f.messages.captureBytes += n
+						f.mu.Unlock()
+					}
 					return nil
 				case "Ping":
 					if _, err = wire.Send(contracts.IPCFrame{T: "Pong"}); err != nil {

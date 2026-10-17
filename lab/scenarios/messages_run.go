@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"reflect"
+	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -140,10 +143,39 @@ func runMessages(ctx context.Context, s Scenario, level string) Evidence {
 	add("history_equals_truth", true)
 	switch s.ID {
 	case "MSG-HISTORY-IMPORT":
+		importStarted := time.Now()
+		loadStart := messagesHostLoad()
+		beforeStats := messagesCaptureStats(w)
 		add("bulk_started", action("seed", "", 4096))
 		add("live_mutation_during_import", action("receipts", "message-004095", 0))
 		add("live_insert_during_import", action("incoming", "during-import", 0))
-		converged := w.Await(60*time.Second, func() bool { return messagesConverged(w) }) == nil
+		var gatewayComplete, replicaComplete time.Time
+		feedComplete := w.Await(60*time.Second, func() bool {
+			if at, ok := messagesHistorySeen(observers[0], 4098); ok {
+				gatewayComplete = at
+			}
+			if at, ok := messagesHistorySeen(observers[1], 4098); ok {
+				replicaComplete = at
+			}
+			return !gatewayComplete.IsZero() && !replicaComplete.IsZero()
+		}) == nil
+		truthStarted := time.Now()
+		converged := feedComplete && messagesConverged(w)
+		afterStats := messagesCaptureStats(w)
+		metrics := map[string]any{"synthetic_rows": 4098, "clock": "same-host monotonic SSE receipt after gateway commit / replica apply", "host_before": loadStart, "host_after": messagesHostLoad(), "truth_verification_ms": float64(time.Since(truthStarted)) / float64(time.Millisecond)}
+		if feedComplete {
+			gatewaySeconds := gatewayComplete.Sub(importStarted).Seconds()
+			replicaSeconds := replicaComplete.Sub(importStarted).Seconds()
+			metrics["gateway_commit_visible_ms"] = gatewaySeconds * 1000
+			metrics["replica_apply_visible_ms"] = replicaSeconds * 1000
+			metrics["gateway_to_replica_tail_ms"] = float64(replicaComplete.Sub(gatewayComplete)) / float64(time.Millisecond)
+			metrics["gateway_rows_per_second"] = 4098 / gatewaySeconds
+			metrics["replica_rows_per_second"] = 4098 / replicaSeconds
+		}
+		for _, key := range []string{"capture_count", "capture_ack_ms", "capture_bytes", "credit_waits"} {
+			metrics[key] = afterStats[key] - beforeStats[key]
+		}
+		evidence.Metrics = map[string]any{"history_import": metrics}
 		if !converged {
 			messageConvergenceDetails(w)
 		}
@@ -401,4 +433,51 @@ func messageConvergenceDetails(w *world.World) {
 	report := map[string]any{"expected": counts(expected), "gateway": counts(gateway), "read_error": err != nil, "missing": missing, "different_fields": fields, "states": states}
 	encoded, _ := json.Marshal(report)
 	fmt.Fprintln(os.Stderr, "message_projection_diagnostic", string(encoded))
+}
+
+func messagesHistorySeen(observer *watcher, expected int) (time.Time, bool) {
+	observer.mu.Lock()
+	defer observer.mu.Unlock()
+	count := 0
+	var last time.Time
+	for _, seen := range observer.seen {
+		if seen.Change.Record.Collection == "messages.message" && !seen.Change.Record.Deleted {
+			count++
+			if seen.At.After(last) {
+				last = seen.At
+			}
+		}
+	}
+	return last, count >= expected
+}
+
+func messagesCaptureStats(w *world.World) map[string]float64 {
+	out := map[string]float64{}
+	response, err := w.Control.Get("http://lab/messages-status")
+	if err != nil {
+		return out
+	}
+	defer response.Body.Close()
+	var data map[string]any
+	if json.NewDecoder(response.Body).Decode(&data) == nil {
+		for key, value := range data {
+			if number, ok := value.(float64); ok {
+				out[key] = number
+			}
+		}
+	}
+	return out
+}
+
+func messagesHostLoad() map[string]any {
+	load, _ := exec.Command("sysctl", "-n", "vm.loadavg").Output()
+	fields := strings.Fields(strings.Trim(string(load), "{} \n"))
+	values := []float64{}
+	for _, field := range fields {
+		if number, err := strconv.ParseFloat(field, 64); err == nil {
+			values = append(values, number)
+		}
+	}
+	slots, _ := filepath.Glob("/tmp/apple-bridge-heavy-*.lock/pid")
+	return map[string]any{"load_average": values, "logical_cpus": runtime.NumCPU(), "gomaxprocs": runtime.GOMAXPROCS(0), "occupied_heavy_slots": len(slots)}
 }
