@@ -51,6 +51,9 @@ func Doctor(ctx context.Context, home string) (DoctorReport, error) {
 	defer store.Close()
 	integrity, err := store.Integrity(ctx)
 	if err != nil {
+		if credentials.LastError != nil {
+			return DoctorReport{Credentials: credentials}, nil
+		}
 		return DoctorReport{}, err
 	}
 	report := DoctorReport{Credentials: credentials, Integrity: integrity, PrivateModes: true, Encryption: "unverified", ClockSkew: "unverified", Versions: map[string]string{"runtime": goruntime.Version(), "ipc": contracts.IPCProtocol, "feed": contracts.FeedProtocol}}
