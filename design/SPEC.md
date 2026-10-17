@@ -423,7 +423,7 @@ Every source publishes `system.source` with state, coverage, freshness and capab
 
 | Operation | Mechanism | Evidence | Notes |
 |---|---|---|---|
-| `send` to existing chat (text/files) | AppleScript `send … to chat id` (normalize Tahoe `any;-;` GUID prefix to the service-specific chat id) | new `is_from_me` row in that chat after `candidateIDs.maxRowID` with matching fingerprint (text hash / attachment names); `error`, `is_sent`, `is_delivered` | ghost-send detection: row with empty text and `service=SMS` unjoined → `delivery_failed` evidence (F10) |
+| `send` to existing chat (text/files) | AppleScript `send … to chat id "<raw chat.db guid>"` — proven on 26.7.1 with the raw `any;-;` GUID; the normalized `iMessage;-;` form fails with -1728 | new `is_from_me` row in that chat after `candidateIDs.maxRowID` with matching fingerprint (text hash / attachment names); `error`, `is_sent`, `is_delivered` | ghost-send detection: row with empty text and `service=SMS` unjoined → `delivery_failed` evidence (F10) |
 | `send` to new direct handle | AppleScript `send … to participant/buddy` on the explicit service | same | service routing explicit: iMessage, or SMS/RCS only when iPhone relay is available (capability probe) |
 | `send` files | file staged into `~/Library/Messages/Attachments/AppleBridgeOutgoing/<cmd>/` (Messages-readable), sent per file | each part tracked separately (text vs each file) | partial sends reported per sub-effect |
 | `reply` | Accessibility: open chat, locate bubble by GUID-matched text/time, context menu "Reply", type, send | row with `thread_originator_guid` = target | UI actor |
@@ -437,7 +437,7 @@ Every source publishes `system.source` with state, coverage, freshness and capab
 
 Every UI action records a before/after screenshot path in evidence (stored in the Helper support dir, excluded from git) where disk state alone cannot prove the visible effect.
 
-**Riskiest unknowns (prove first in M1):** AppleScript send on macOS 26.7.1 (BlueBubbles #777 ghost sends); Accessibility tree of Messages 26 for bubble targeting with SIP on.
+**Riskiest unknowns (prove first in M1):** AppleScript send on macOS 26.7.1 — **proven 2026-10-17**: send to self via raw `any;-;` chat id produced `is_sent=1, is_delivered=1`; the outgoing row has `text` NULL (content only in `attributedBody`), and a self-chat send also produces an incoming echo row, so correlation must decode `attributedBody` and distinguish the echo. Still open: Accessibility tree of Messages 26 for bubble targeting with SIP on.
 
 ### 9.2 Calendar
 

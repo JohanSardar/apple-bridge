@@ -22,6 +22,8 @@ Resume point for any fresh session. Updated after every unit of work.
 - `ab-m0-commands-r1` (worktree m0-commands): command lifecycle, ApplePeer command frames, SimApplePeer commands + faults, RemoteGateway + delegated identity, MCP, CORE-CMD-*, parity, forged delegation, localhost defense, REM-CRUD/CONFLICT/EXTERNAL-RACE/READONLY-LIST.
 - `ab-m0-robust-r1` (worktree m0-robust): fault proxy, direct Tailscale replica path, snapshot/retention/gap/kill/slow-consumer/disconnect/upgrade/helper-restart/restore/disk-full/scope/pair/cred-lifecycle/bench scenarios.
 - `ab-m0-blobs-r1` (worktree m0-blobs): internal/blobs + feed transfer + IPC blob reads + CORE-BLOB-*.
+- `ab-m1-session-r1` (worktree m1-session): native build fix, Swift AppleSession IPC, AgendaGate + RemindersSource, Helper supervision, AppleTruth app, RealAirEnvironment, REM-* real/replica, HELPER-*.
+- `ab-m1-messages-read-r1` (worktree m1-messages-read): Decoders (typedstream, summary info, reactions), MessagesSource capture, MSG-* read scenarios.
 
 ## Next
 - Review each M0 unit when it lands (fresh reviewer per unit); route confirmed findings to fix rounds.
@@ -30,6 +32,11 @@ Resume point for any fresh session. Updated after every unit of work.
 
 ## Done (M0 tracer)
 - Tracer `ab-m0-tracer-r1` (5b083db..d4e5ce4): CORE-BOOT, CORE-LIVE-LATENCY, CORE-RESUME pass at sim and replica (Ubuntu via SSH tunnel). Replica CORE-LIVE-LATENCY p50/p95/max = 19.8/109.6/169.0 ms (n=200); sim 8.6/10.9/15.1 ms. Dependency approved: golang.org/x/sys (peer UID).
+
+## M1 facts (2026-10-17)
+- TCC (verified by parent in TCC.db and by `status`): FDA, Accessibility, Automation Messages + System Events, Reminders granted to AppleBridgeHelper (DR: identifier dev.applebridge.helper + certificate leaf 889be0a2…). Calendar, Contacts pending: Johan will run the fixed onboard (28a90dd) later; detect via `status`, don't ask again.
+- iMessage AppleScript send to self works with raw `any;-;` chat id (delivered); normalized `iMessage;-;` → -1728. Outgoing row text NULL (attributedBody only) + incoming echo row in self chat.
+- `ax-dump` works (308 nodes) but redacts identifiers too; the Messages-actions unit should dump non-personal AX attributes (roles, identifiers, actions) unredacted.
 
 ## Blockers
 - TCC grants for AppleBridgeHelper (asked 2026-10-17; Johan will do it when at the Air; don't ask again). Detect by running the `status` mode (see WORKER-RULES) between work units; start real-level work once granted.
