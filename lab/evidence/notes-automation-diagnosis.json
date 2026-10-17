@@ -41,15 +41,79 @@
   ],
   "remaining_uncertainty": "One initial NOTE-CRUD/replica run failed only mcp_delete_observed and mcp_delete_replicated; its API response was not retained. Both folder cleanups and tagged-note cleanup passed. Two focused instrumented replica CRUD reruns passed without conflict retries. The original transient failure is unexplained; command state and error code are now retained in delete assertion detail. No retry was added to the final product or scenario.",
   "verification_commands": [
-    "packaging/dev/heavy.sh env GOFLAGS=-p=2 go run ./cmd/bridge-lab run lab/scenarios/notes/NOTE-CRUD.yaml --level real --json",
-    "packaging/dev/heavy.sh env GOFLAGS=-p=2 go run ./cmd/bridge-lab run lab/scenarios/notes/NOTE-EXTERNAL.yaml lab/scenarios/notes/NOTE-IMPORT.yaml lab/scenarios/notes/NOTE-RICH-REJECT.yaml --level real --json",
-    "packaging/dev/heavy.sh env GOFLAGS=-p=2 go run ./cmd/bridge-lab run lab/scenarios/notes --level replica --json",
-    "packaging/dev/heavy.sh env GOFLAGS=-p=2 go run ./cmd/bridge-lab run lab/scenarios/notes/NOTE-CRUD.yaml --level replica --json",
-    "packaging/dev/heavy.sh env GOFLAGS=-p=2 go run ./cmd/bridge-lab run lab/scenarios/notes --level sim --json",
-    "packaging/dev/heavy.sh env GOFLAGS=-p=2 make lint",
-    "packaging/dev/heavy.sh env GOFLAGS=-p=2 make features"
+    "packaging/dev/heavy.sh env GOFLAGS=-p=2 bash -c 'set -e; go run ./cmd/bridge-lab run lab/scenarios/notes --level sim --json; go run ./cmd/bridge-lab run lab/scenarios/notes --level real --json; go run ./cmd/bridge-lab run lab/scenarios/notes --level replica --json; make lint; make features'"
   ],
   "references": [
     "https://developer.apple.com/library/archive/releasenotes/InterapplicationCommunication/RN-JavaScriptForAutomation/Articles/OSX10-10.html"
-  ]
+  ],
+  "integrated_verification": {
+    "git_sha": "abf7a5e",
+    "scenarios": {
+      "sim": {
+        "passed": [
+          "NOTE-CRUD",
+          "NOTE-DECODE",
+          "NOTE-EXTERNAL",
+          "NOTE-IMPORT",
+          "NOTE-RICH-REJECT"
+        ],
+        "latency": {
+          "NOTE-EXTERNAL": {
+            "native_save_to_copy_visible_ms": {
+              "samples": 5,
+              "p50_ms": 27.416875,
+              "p95_ms": 28.058125,
+              "max_ms": 28.058125,
+              "timeouts": 0
+            }
+          }
+        }
+      },
+      "real": {
+        "passed": [
+          "NOTE-CRUD",
+          "NOTE-EXTERNAL",
+          "NOTE-IMPORT",
+          "NOTE-RICH-REJECT"
+        ],
+        "latency": {
+          "NOTE-EXTERNAL": {
+            "native_save_to_copy_visible_ms": {
+              "samples": 5,
+              "p50_ms": 182.372916,
+              "p95_ms": 590.267083,
+              "max_ms": 590.267083,
+              "timeouts": 0
+            }
+          }
+        }
+      },
+      "replica": {
+        "passed": [
+          "NOTE-CRUD",
+          "NOTE-EXTERNAL"
+        ],
+        "latency": {
+          "NOTE-EXTERNAL": {
+            "native_save_to_copy_visible_ms": {
+              "samples": 5,
+              "p50_ms": 419.800541,
+              "p95_ms": 555.256167,
+              "max_ms": 555.256167,
+              "timeouts": 0
+            }
+          }
+        }
+      }
+    },
+    "checks": [
+      "gofmt clean",
+      "go vet ./... passed",
+      "make lint passed",
+      "make features passed"
+    ],
+    "new_scenarios": [],
+    "notes_feature_status": "done",
+    "tcc_database_edits": false
+  }
 }

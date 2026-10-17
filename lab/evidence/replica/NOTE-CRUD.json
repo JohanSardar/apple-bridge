@@ -1,14 +1,14 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[6.49 11.43 10.26] cpus=8 other_heavy=1; ubuntu: load=[0.72 0.39 0.36] cpus=8 other_heavy=0"
+    "summary": "air: load=[4.22 6.22 8.16] cpus=8 other_heavy=1; ubuntu: load=[0.26 0.29 0.32] cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M55W0NHQSH7VN69BWCBAF2GX",
+  "run_id": "run_01M55WP29VKTE6TX3VXWDYZHZ3",
   "scenario": "NOTE-CRUD",
   "level": "replica",
   "passed": true,
-  "git_sha": "c4e252f3588bc4ae16c2110c5c587fe0f505ef72",
-  "at": "2026-10-17T21:24:18.615337Z",
+  "git_sha": "abf7a5e960ae5c0352bcbb8b6df75f934b210872",
+  "at": "2026-10-17T21:35:59.803551Z",
   "assertions": [
     {
       "name": "external_note_imported",
@@ -61,7 +61,7 @@
     {
       "name": "rest_delete_observed",
       "passed": true,
-      "detail": "observed: conflicts=0"
+      "detail": "observed:"
     },
     {
       "name": "rest_delete_replicated",
@@ -114,7 +114,7 @@
     {
       "name": "mcp_delete_observed",
       "passed": true,
-      "detail": "observed: conflicts=0"
+      "detail": "observed:"
     },
     {
       "name": "mcp_delete_replicated",

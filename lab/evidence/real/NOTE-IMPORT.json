@@ -1,14 +1,14 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[5.74 5.44 5.96] cpus=8 other_heavy=1"
+    "summary": "air: load=[5.4 7.22 8.76] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M55VA0ZM69TE37KMXT4T730W",
+  "run_id": "run_01M55WJHK9SG16GJY6RGQQ3A7M",
   "scenario": "NOTE-IMPORT",
   "level": "real",
   "passed": true,
-  "git_sha": "c4e252f3588bc4ae16c2110c5c587fe0f505ef72",
-  "at": "2026-10-17T21:11:56.660107Z",
+  "git_sha": "abf7a5e960ae5c0352bcbb8b6df75f934b210872",
+  "at": "2026-10-17T21:34:04.393433Z",
   "assertions": [
     {
       "name": "independent_sqlite_copy",

@@ -1,14 +1,14 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[5.25 5.4 5.98] cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[4.9 7.64 9.01] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M55V8CKH11YS25FCR794143Q",
+  "run_id": "run_01M55WGMSN0SKFQFF1P9ZR2KC1",
   "scenario": "NOTE-EXTERNAL",
   "level": "real",
   "passed": true,
-  "git_sha": "c4e252f3588bc4ae16c2110c5c587fe0f505ef72",
-  "at": "2026-10-17T21:11:03.025339Z",
+  "git_sha": "abf7a5e960ae5c0352bcbb8b6df75f934b210872",
+  "at": "2026-10-17T21:33:02.133886Z",
   "assertions": [
     {
       "name": "external_note_imported",
@@ -30,9 +30,9 @@
   "latency": {
     "native_save_to_copy_visible_ms": {
       "samples": 5,
-      "p50_ms": 187.930958,
-      "p95_ms": 559.6445,
-      "max_ms": 559.6445,
+      "p50_ms": 182.372916,
+      "p95_ms": 590.267083,
+      "max_ms": 590.267083,
       "timeouts": 0
     }
   },

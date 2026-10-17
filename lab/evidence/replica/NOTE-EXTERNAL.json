@@ -1,14 +1,14 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[20.88 11.45 8.28] cpus=8 other_heavy=1; ubuntu: load=[0.52 0.47 0.39] cpus=8 other_heavy=0"
+    "summary": "air: load=[4.57 5.77 7.8] cpus=8 other_heavy=1; ubuntu: load=[0.6 0.43 0.37] cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M55VJJYFE2A0TKYYXGXMZCRV",
+  "run_id": "run_01M55WRKGXPF73C2JFJS54P0YN",
   "scenario": "NOTE-EXTERNAL",
   "level": "replica",
   "passed": true,
-  "git_sha": "c4e252f3588bc4ae16c2110c5c587fe0f505ef72",
-  "at": "2026-10-17T21:16:37.199361Z",
+  "git_sha": "abf7a5e960ae5c0352bcbb8b6df75f934b210872",
+  "at": "2026-10-17T21:37:22.97373Z",
   "assertions": [
     {
       "name": "external_note_imported",
@@ -30,9 +30,9 @@
   "latency": {
     "native_save_to_copy_visible_ms": {
       "samples": 5,
-      "p50_ms": 275.489209,
-      "p95_ms": 354.041792,
-      "max_ms": 354.041792,
+      "p50_ms": 419.800541,
+      "p95_ms": 555.256167,
+      "max_ms": 555.256167,
       "timeouts": 0
     }
   },
