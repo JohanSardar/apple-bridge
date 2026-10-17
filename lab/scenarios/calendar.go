@@ -172,7 +172,7 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 				nativeEffects[fmt.Sprint(data["title"])], _ = ns.Int64()
 				if action == "create" {
 					id, _ := response["id"].(string)
-					phaseEffects = append(phaseEffects, map[string]any{"title": data["title"], "key": fmt.Sprintf("%x", sha256.Sum256([]byte(id))), "effect_uptime_ns": ns, "effect_wall_ns": response["effect_wall_ns"]})
+					phaseEffects = append(phaseEffects, map[string]any{"collection": "calendar.event", "title": data["title"], "key": fmt.Sprintf("%x", sha256.Sum256([]byte(id))), "effect_uptime_ns": ns, "effect_wall_ns": response["effect_wall_ns"]})
 				}
 			}
 		}
@@ -438,7 +438,7 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		}
 		if level != "sim" {
 			nativeLatencyEvidence(w, &e, phaseEffects, observers)
-			add("calendar_native_phase_timestamps", len(e.NativeTimings) == 10 && e.Latency["refetch_duration"].Samples == 10 && e.Latency["capture_sent→gateway_commit"].Samples == 10)
+			add("calendar_native_phase_timestamps", len(e.NativeTimings) == 10 && e.Latency["refetch_duration"].Samples == 10 && e.Latency["capture_sent→gateway_commit"].Samples == 10 && e.Latency["gateway_commit→replica_visible"].Samples == 10)
 		}
 	case "CAL-CRUD":
 		current := records(w.Gateway)[0]

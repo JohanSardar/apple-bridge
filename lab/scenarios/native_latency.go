@@ -12,6 +12,7 @@ import (
 )
 
 type nativeTrace struct {
+	DeliveredNS         int64    `json:"delivered_ns"`
 	CommitStartedWallNS float64  `json:"commit_started_wall_ns"`
 	Live                bool     `json:"live"`
 	Stage               string   `json:"stage"`
@@ -73,6 +74,10 @@ func nativeLatencyEvidence(w *world.World, e *Evidence, effects []any, observers
 	}
 	for _, raw := range effects {
 		effect := raw.(map[string]any)
+		collection, _ := effect["collection"].(string)
+		if collection == "" {
+			collection = "reminders.reminder"
+		}
 		key, _ := effect["key"].(string)
 		title, _ := effect["title"].(string)
 		save, _ := effect["effect_uptime_ns"].(json.Number).Int64()
@@ -82,6 +87,9 @@ func nativeLatencyEvidence(w *world.World, e *Evidence, effects []any, observers
 		for _, event := range trace {
 			if event.Stage == "notification" && event.UptimeNS >= save && row.NotificationNS == 0 {
 				row.NotificationNS = event.UptimeNS
+				if event.DeliveredNS > 0 {
+					row.NotificationNS = event.DeliveredNS
+				}
 			}
 			if event.UptimeNS < save {
 				continue
@@ -122,11 +130,11 @@ func nativeLatencyEvidence(w *world.World, e *Evidence, effects []any, observers
 				break
 			}
 		}
-		if seen, ok := observers[0].observedExact(title); ok {
+		if seen, ok := observers[0].observedExact(title, collection); ok {
 			row.GatewayVisibleNS = seen.UptimeNS
 			row.GatewayVisibleWallNS = seen.At.UnixNano()
 		}
-		if seen, ok := observers[1].observedExact(title); ok {
+		if seen, ok := observers[1].observedExact(title, collection); ok {
 			row.ReplicaVisibleNS = seen.UptimeNS
 			row.ReplicaVisibleWallNS = seen.At.UnixNano()
 		}

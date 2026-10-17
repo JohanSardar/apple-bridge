@@ -42,10 +42,10 @@ public final class AgendaGate {
                 if current != previous { previous = current; self.reconcile() }
             }
         }
-        observer = NotificationCenter.default.addObserver(forName: .EKEventStoreChanged, object: store, queue: .main) { @Sendable [weak self, trace] _ in
+        observer = NotificationCenter.default.addObserver(forName: .EKEventStoreChanged, object: store, queue: nil) { @Sendable [weak self, trace] _ in
             let delivered = CaptureTrace.now()
-            trace.record("notification")
-            Task { @MainActor in self?.changed(delivered) }
+            trace.record("notification", fields: ["delivered_ns": .integer(delivered)])
+            Task(priority: .high) { @MainActor in self?.changed(delivered) }
         }
     }
 
@@ -60,7 +60,7 @@ public final class AgendaGate {
     private func changed(_ delivered: UInt64) {
         debounce?.cancel()
         debounce = Task { @MainActor in
-            do { try await Task.sleep(for: .milliseconds(50)) } catch { return }
+            do { try await Task.sleep(for: .milliseconds(10)) } catch { return }
             notificationAt = delivered
             debounceAt = CaptureTrace.now()
             trace.record("debounce", fields: ["notification_ns": .integer(notificationAt)])

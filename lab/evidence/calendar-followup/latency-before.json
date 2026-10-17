@@ -1,0 +1,421 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[4.14 5.4 6.02] cpus=8 other_heavy=1"
+  },
+  "run_id": "cal_01M55SW06FXKMVY7NGRMCDN4B3",
+  "network_path": "loopback",
+  "scenario": "CAL-CREATE-EXTERNAL",
+  "level": "real",
+  "passed": false,
+  "git_sha": "7ca9182946caa5c4a9f91b08e3ec0549f0923704",
+  "at": "2026-10-17T20:46:48.527747Z",
+  "assertions": [
+    {
+      "name": "private_signed_apps_per_world",
+      "passed": true
+    },
+    {
+      "name": "initial_calendar_scan_complete",
+      "passed": true
+    },
+    {
+      "name": "calendar_visible",
+      "passed": true
+    },
+    {
+      "name": "truth_calendar_fields",
+      "passed": true
+    },
+    {
+      "name": "initial_occurrences_visible",
+      "passed": true
+    },
+    {
+      "name": "agenda_returns_occurrences",
+      "passed": true
+    },
+    {
+      "name": "calendar_native_phase_timestamps",
+      "passed": true
+    },
+    {
+      "name": "independent_appletruth_equality",
+      "passed": true
+    },
+    {
+      "name": "replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "contiguous_feed_0",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "contiguous_feed_1",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "latency_gateway_commit_duration",
+      "passed": true
+    },
+    {
+      "name": "latency_capture_sent→gateway_commit",
+      "passed": true
+    },
+    {
+      "name": "latency_effect_done→gateway_visible",
+      "passed": false
+    },
+    {
+      "name": "latency_refetch_finished→capture_sent",
+      "passed": true
+    },
+    {
+      "name": "latency_native_save→next_notification_delivery",
+      "passed": false
+    },
+    {
+      "name": "latency_capture_sent→commit_ack",
+      "passed": true
+    },
+    {
+      "name": "latency_effect_done→replica_visible:replica0",
+      "passed": false
+    },
+    {
+      "name": "latency_debounce→refetch_start",
+      "passed": true
+    },
+    {
+      "name": "latency_refetch_duration",
+      "passed": true
+    },
+    {
+      "name": "latency_trigger_notification→debounce",
+      "passed": true
+    },
+    {
+      "name": "latency_capture_sent→gateway_commit_start",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_query",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_mcp_agenda",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_query",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_mcp_agenda",
+      "passed": true
+    },
+    {
+      "name": "private_helper_paused_for_integrity",
+      "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass",
+      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
+    },
+    {
+      "name": "tagged_fixture_cleanup_audit",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "capture_sent→commit_ack": {
+      "samples": 10,
+      "p50_ms": 14.040583,
+      "p95_ms": 25.052417,
+      "max_ms": 25.052417,
+      "timeouts": 0
+    },
+    "capture_sent→gateway_commit": {
+      "samples": 10,
+      "p50_ms": 7.774208,
+      "p95_ms": 16.52096,
+      "max_ms": 16.52096,
+      "timeouts": 0
+    },
+    "capture_sent→gateway_commit_start": {
+      "samples": 10,
+      "p50_ms": 6.345984,
+      "p95_ms": 14.95296,
+      "max_ms": 14.95296,
+      "timeouts": 0
+    },
+    "debounce→refetch_start": {
+      "samples": 10,
+      "p50_ms": 1.627542,
+      "p95_ms": 3.334709,
+      "max_ms": 3.334709,
+      "timeouts": 0
+    },
+    "effect_done→gateway_visible": {
+      "samples": 10,
+      "p50_ms": 1276.24475,
+      "p95_ms": 1347.296667,
+      "max_ms": 1347.296667,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica0": {
+      "samples": 10,
+      "p50_ms": 1277.734125,
+      "p95_ms": 1349.613917,
+      "max_ms": 1349.613917,
+      "timeouts": 0
+    },
+    "gateway_commit_duration": {
+      "samples": 10,
+      "p50_ms": 1.391104,
+      "p95_ms": 3.453952,
+      "max_ms": 3.453952,
+      "timeouts": 0
+    },
+    "native_save→next_notification_delivery": {
+      "samples": 10,
+      "p50_ms": 1112.7345,
+      "p95_ms": 1166.331958,
+      "max_ms": 1166.331958,
+      "timeouts": 0
+    },
+    "refetch_duration": {
+      "samples": 10,
+      "p50_ms": 15.765125,
+      "p95_ms": 22.210666,
+      "max_ms": 22.210666,
+      "timeouts": 0
+    },
+    "refetch_finished→capture_sent": {
+      "samples": 10,
+      "p50_ms": 81.944,
+      "p95_ms": 94.745542,
+      "max_ms": 94.745542,
+      "timeouts": 0
+    },
+    "trigger_notification→debounce": {
+      "samples": 10,
+      "p50_ms": 52.222375,
+      "p95_ms": 57.622083,
+      "max_ms": 57.622083,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ],
+  "native_timings": [
+    {
+      "gateway_visible_wall_ns": 0,
+      "replica_visible_wall_ns": 0,
+      "commit_started_wall_ns": 1792270070010009000,
+      "trigger_notification_ns": 1085147233826666,
+      "save_ns": 1085147233402708,
+      "notification_ns": 1085147233828666,
+      "debounce_ns": 1085147284400916,
+      "refetch_started_ns": 1085147285818041,
+      "refetch_finished_ns": 1085147306762583,
+      "capture_sent_ns": 1085147388566791,
+      "commit_ack_ns": 1085147413619208,
+      "save_wall_ns": 1792270069839889200,
+      "capture_wall_ns": 1792270069995056000,
+      "gateway_commit_wall_ns": 1792270070011577000,
+      "gateway_visible_ns": 0,
+      "replica_visible_ns": 0
+    },
+    {
+      "gateway_visible_wall_ns": 0,
+      "replica_visible_wall_ns": 0,
+      "commit_started_wall_ns": 1792270071651611000,
+      "trigger_notification_ns": 1085148882510125,
+      "save_ns": 1085147881746041,
+      "notification_ns": 1085148886913083,
+      "debounce_ns": 1085148940132208,
+      "refetch_started_ns": 1085148941759750,
+      "refetch_finished_ns": 1085148955632333,
+      "capture_sent_ns": 1085149032668166,
+      "commit_ack_ns": 1085149050424750,
+      "save_wall_ns": 1792270070488243200,
+      "capture_wall_ns": 1792270071639185000,
+      "gateway_commit_wall_ns": 1792270071653002000,
+      "gateway_visible_ns": 0,
+      "replica_visible_ns": 0
+    },
+    {
+      "gateway_visible_wall_ns": 0,
+      "replica_visible_wall_ns": 0,
+      "commit_started_wall_ns": 1792270073047268000,
+      "trigger_notification_ns": 1085150283539291,
+      "save_ns": 1085149199570958,
+      "notification_ns": 1085150283590291,
+      "debounce_ns": 1085150336671833,
+      "refetch_started_ns": 1085150338448541,
+      "refetch_finished_ns": 1085150354213666,
+      "capture_sent_ns": 1085150426002583,
+      "commit_ack_ns": 1085150448158666,
+      "save_wall_ns": 1792270071806090800,
+      "capture_wall_ns": 1792270073032543000,
+      "gateway_commit_wall_ns": 1792270073048344000,
+      "gateway_visible_ns": 0,
+      "replica_visible_ns": 0
+    },
+    {
+      "gateway_visible_wall_ns": 0,
+      "replica_visible_wall_ns": 0,
+      "commit_started_wall_ns": 1792270074477207000,
+      "trigger_notification_ns": 1085151723370583,
+      "save_ns": 1085150598123875,
+      "notification_ns": 1085151723371750,
+      "debounce_ns": 1085151773623375,
+      "refetch_started_ns": 1085151776195291,
+      "refetch_finished_ns": 1085151791257500,
+      "capture_sent_ns": 1085151869672250,
+      "commit_ack_ns": 1085151875775958,
+      "save_wall_ns": 1792270073204667100,
+      "capture_wall_ns": 1792270074476237000,
+      "gateway_commit_wall_ns": 1792270074480236000,
+      "gateway_visible_ns": 0,
+      "replica_visible_ns": 0
+    },
+    {
+      "gateway_visible_wall_ns": 0,
+      "replica_visible_wall_ns": 0,
+      "commit_started_wall_ns": 1792270075916081000,
+      "trigger_notification_ns": 1085153148727000,
+      "save_ns": 1085152035666375,
+      "notification_ns": 1085153148729791,
+      "debounce_ns": 1085153200949375,
+      "refetch_started_ns": 1085153202526875,
+      "refetch_finished_ns": 1085153219516000,
+      "capture_sent_ns": 1085153303146375,
+      "commit_ack_ns": 1085153314162166,
+      "save_wall_ns": 1792270074642233900,
+      "capture_wall_ns": 1792270075909735000,
+      "gateway_commit_wall_ns": 1792270075917509000,
+      "gateway_visible_ns": 0,
+      "replica_visible_ns": 0
+    },
+    {
+      "gateway_visible_wall_ns": 0,
+      "replica_visible_wall_ns": 0,
+      "commit_started_wall_ns": 1792270077272723000,
+      "trigger_notification_ns": 1085154504106750,
+      "save_ns": 1085153446412791,
+      "notification_ns": 1085154504107791,
+      "debounce_ns": 1085154555870416,
+      "refetch_started_ns": 1085154557357541,
+      "refetch_finished_ns": 1085154572897791,
+      "capture_sent_ns": 1085154659971333,
+      "commit_ack_ns": 1085154674011916,
+      "save_wall_ns": 1792270076053004000,
+      "capture_wall_ns": 1792270077266583000,
+      "gateway_commit_wall_ns": 1792270077273557000,
+      "gateway_visible_ns": 0,
+      "replica_visible_ns": 0
+    },
+    {
+      "gateway_visible_wall_ns": 0,
+      "replica_visible_wall_ns": 0,
+      "commit_started_wall_ns": 1792270078744327000,
+      "trigger_notification_ns": 1085155979695250,
+      "save_ns": 1085154813394125,
+      "notification_ns": 1085155979726083,
+      "debounce_ns": 1085156033074791,
+      "refetch_started_ns": 1085156035419708,
+      "refetch_finished_ns": 1085156051098958,
+      "capture_sent_ns": 1085156137333583,
+      "commit_ack_ns": 1085156140083583,
+      "save_wall_ns": 1792270077420008000,
+      "capture_wall_ns": 1792270078743969800,
+      "gateway_commit_wall_ns": 1792270078745200000,
+      "gateway_visible_ns": 0,
+      "replica_visible_ns": 0
+    },
+    {
+      "gateway_visible_wall_ns": 0,
+      "replica_visible_wall_ns": 0,
+      "commit_started_wall_ns": 1792270080182956000,
+      "trigger_notification_ns": 1085157402929708,
+      "save_ns": 1085156290197708,
+      "notification_ns": 1085157402932208,
+      "debounce_ns": 1085157454362625,
+      "refetch_started_ns": 1085157455972208,
+      "refetch_finished_ns": 1085157475963833,
+      "capture_sent_ns": 1085157562433625,
+      "commit_ack_ns": 1085157587457208,
+      "save_wall_ns": 1792270078896837000,
+      "capture_wall_ns": 1792270080169094100,
+      "gateway_commit_wall_ns": 1792270080184559000,
+      "gateway_visible_ns": 0,
+      "replica_visible_ns": 0
+    },
+    {
+      "gateway_visible_wall_ns": 0,
+      "replica_visible_wall_ns": 0,
+      "commit_started_wall_ns": 1792270081705619000,
+      "trigger_notification_ns": 1085158910668583,
+      "save_ns": 1085157753958166,
+      "notification_ns": 1085158910669916,
+      "debounce_ns": 1085158965146541,
+      "refetch_started_ns": 1085158968481250,
+      "refetch_finished_ns": 1085158990691916,
+      "capture_sent_ns": 1085159085437458,
+      "commit_ack_ns": 1085159100471916,
+      "save_wall_ns": 1792270080360621800,
+      "capture_wall_ns": 1792270081692124000,
+      "gateway_commit_wall_ns": 1792270081707002000,
+      "gateway_visible_ns": 0,
+      "replica_visible_ns": 0
+    },
+    {
+      "gateway_visible_wall_ns": 0,
+      "replica_visible_wall_ns": 0,
+      "commit_started_wall_ns": 1792270083171982000,
+      "trigger_notification_ns": 1085160409748916,
+      "save_ns": 1085159255892208,
+      "notification_ns": 1085160409753375,
+      "debounce_ns": 1085160463433000,
+      "refetch_started_ns": 1085160465459750,
+      "refetch_finished_ns": 1085160482977166,
+      "capture_sent_ns": 1085160564921166,
+      "commit_ack_ns": 1085160570326208,
+      "save_wall_ns": 1792270081862582000,
+      "capture_wall_ns": 1792270083171633000,
+      "gateway_commit_wall_ns": 1792270083175436000,
+      "gateway_visible_ns": 0,
+      "replica_visible_ns": 0
+    }
+  ],
+  "conditions": {
+    "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
+    "heavy_slots_in_use": "2",
+    "load_average": "4.14 5.40 6.02",
+    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"
+  }
+}

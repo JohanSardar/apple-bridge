@@ -655,11 +655,15 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 	return e
 }
 
-func (w *watcher) observedExact(title string) (Seen, bool) {
+func (w *watcher) observedExact(title string, collections ...string) (Seen, bool) {
+	collection := "reminders.reminder"
+	if len(collections) > 0 {
+		collection = collections[0]
+	}
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	for _, seen := range w.seen {
-		if seen.Change.Record.Collection == "reminders.reminder" && recordTitle(seen.Change.Record) == title {
+		if seen.Change.Record.Collection == collection && recordTitle(seen.Change.Record) == title {
 			return seen, true
 		}
 	}
