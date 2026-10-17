@@ -1,20 +1,51 @@
 {
-  "conditions": {
-    "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
-    "heavy_slots_in_use": 2,
-    "load_average": [
-      "4.84",
-      "7.31",
-      "11.65"
-    ],
-    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"
+  "host_conditions": {
+    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "start": {
+      "air": {
+        "at": "2026-10-17T18:54:19.736821Z",
+        "cpu_count": 8,
+        "load_average": [
+          4.02,
+          3.51,
+          4.3
+        ],
+        "cpu_idle_percent": 64,
+        "free_memory_bytes": 120111104,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 1,
+        "quiet": false
+      }
+    },
+    "end": {
+      "air": {
+        "at": "2026-10-17T18:54:22.471336Z",
+        "cpu_count": 8,
+        "load_average": [
+          4.02,
+          3.51,
+          4.3
+        ],
+        "cpu_idle_percent": 74,
+        "free_memory_bytes": 130170880,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 1,
+        "quiet": false
+      }
+    },
+    "quiet": false,
+    "require_quiet": false,
+    "quiet_wait_ms": 0,
+    "quiet_wait_expired": false
   },
-  "run_id": "cal_01M55GJ73DYC6B43V5M21R420Z",
+  "run_id": "cal_01M55KE2N564DW49CXW8GX9B8Q",
   "scenario": "CAL-CRUD",
   "level": "sim",
   "passed": true,
-  "git_sha": "8339618fd34b7b30e3f96c00a2719895e01c8cef",
-  "at": "2026-10-17T18:04:10.733549Z",
+  "git_sha": "a6f7365c140995183fe7dddcbdecebd97bd1c9e5",
+  "at": "2026-10-17T18:54:20.837518Z",
   "assertions": [
     {
       "name": "calendar_visible",
@@ -208,5 +239,11 @@
   "latency": {},
   "hosts": [
     "air"
-  ]
+  ],
+  "conditions": {
+    "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
+    "heavy_slots_in_use": "2",
+    "load_average": "4.02 3.51 4.30",
+    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"
+  }
 }

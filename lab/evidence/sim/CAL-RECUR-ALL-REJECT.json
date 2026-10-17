@@ -1,20 +1,51 @@
 {
-  "conditions": {
-    "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
-    "heavy_slots_in_use": 2,
-    "load_average": [
-      "6.78",
-      "7.67",
-      "11.75"
-    ],
-    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"
+  "host_conditions": {
+    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "start": {
+      "air": {
+        "at": "2026-10-17T18:54:39.718789Z",
+        "cpu_count": 8,
+        "load_average": [
+          3.77,
+          3.49,
+          4.28
+        ],
+        "cpu_idle_percent": 76,
+        "free_memory_bytes": 117620736,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 2,
+        "quiet": false
+      }
+    },
+    "end": {
+      "air": {
+        "at": "2026-10-17T18:54:41.336098Z",
+        "cpu_count": 8,
+        "load_average": [
+          3.77,
+          3.49,
+          4.28
+        ],
+        "cpu_idle_percent": 64,
+        "free_memory_bytes": 112033792,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 2,
+        "quiet": false
+      }
+    },
+    "quiet": false,
+    "require_quiet": false,
+    "quiet_wait_ms": 0,
+    "quiet_wait_expired": false
   },
-  "run_id": "cal_01M55GJCJ158N3NRH3M077P9CT",
+  "run_id": "cal_01M55KEP5JFA1EYCCVBY615XT7",
   "scenario": "CAL-RECUR-ALL-REJECT",
   "level": "sim",
   "passed": true,
-  "git_sha": "8339618fd34b7b30e3f96c00a2719895e01c8cef",
-  "at": "2026-10-17T18:04:16.321728Z",
+  "git_sha": "a6f7365c140995183fe7dddcbdecebd97bd1c9e5",
+  "at": "2026-10-17T18:54:40.818553Z",
   "assertions": [
     {
       "name": "calendar_visible",
@@ -104,20 +135,26 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 5.78,
-      "p95_ms": 5.78,
-      "max_ms": 5.78,
+      "p50_ms": 17.372,
+      "p95_ms": 17.372,
+      "max_ms": 17.372,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 12.168,
-      "p95_ms": 12.168,
-      "max_ms": 12.168,
+      "p50_ms": 23.443,
+      "p95_ms": 23.443,
+      "max_ms": 23.443,
       "timeouts": 0
     }
   },
   "hosts": [
     "air"
-  ]
+  ],
+  "conditions": {
+    "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
+    "heavy_slots_in_use": "2",
+    "load_average": "3.77 3.49 4.28",
+    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"
+  }
 }
