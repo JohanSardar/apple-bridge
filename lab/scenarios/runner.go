@@ -906,7 +906,7 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		if asJSON {
 			json.NewEncoder(os.Stdout).Encode(e)
 		} else {
-			fmt.Printf("%s %s passed=%t latency=%s\n", s.ID, level, e.Passed, latencyJSON(e.Latency))
+			fmt.Printf("%s %s passed=%t quiet=%t latency=%s\n", s.ID, level, e.Passed, e.HostConditions.Quiet, latencyJSON(e.Latency))
 		}
 		if !e.Passed {
 			failed = true

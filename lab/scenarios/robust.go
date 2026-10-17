@@ -2,6 +2,7 @@ package scenarios
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -615,8 +616,17 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 	default:
 		return fail("robustness_action_implemented_" + name)
 	}
-	if w.ControlAction("/flush", struct{}{}) != nil {
-		return fail("recovery_capture_drained_before_convergence")
+	drainStart := time.Now()
+	drainErr := w.FlushCaptures(30 * time.Second)
+	if evidence.Metrics == nil {
+		evidence.Metrics = map[string]any{}
+	}
+	evidence.Metrics["recovery_final_drain_ms"] = float64(time.Since(drainStart)) / float64(time.Millisecond)
+	if drainErr != nil {
+		add("recovery_capture_drained_before_convergence", false)
+		var timeout interface{ Timeout() bool }
+		evidence.Assertions[len(evidence.Assertions)-1].Detail = fmt.Sprintf("timeout=%t context_cancelled=%t", errors.As(drainErr, &timeout) && timeout.Timeout(), ctx.Err() != nil)
+		return evidence
 	}
 	add("recovery_capture_drained_before_convergence", true)
 	if w.Await(30*time.Second, func() bool { return convergence(w) }) != nil {
