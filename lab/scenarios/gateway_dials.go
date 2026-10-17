@@ -77,5 +77,5 @@ func gatewayRevoke(ctx context.Context, w *world.World, e *Evidence) {
 	add("revoked_gateway_stops_redial", statusErr == nil && len(statuses) == 1 && statuses[0].Attempts == attempts && statuses[0].State == "revoked")
 	after, err := w.Status(w.Replicas[0])
 	add("revoked_no_reconnect", err == nil && after.State == "disconnected" && before.Resumes == after.Resumes)
-	add("unpaired_dial_certificate_rejected", w.RevokedDialRejected(0) == nil)
+	add("unpaired_dial_certificate_rejected", w.UnpairedDialRejected(0) == nil)
 }

@@ -2,7 +2,10 @@ package world
 
 import (
 	"context"
+	"crypto/x509"
+	"encoding/pem"
 	"net/http"
+	"path/filepath"
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
@@ -10,16 +13,44 @@ import (
 	"github.com/coder/websocket"
 )
 
-func (w *World) RevokedDialRejected(index int) error {
+func (w *World) UnpairedDialRejected(index int) error {
+	endpoint := w.Replicas[index]
+	certificate, err := w.execute(endpoint.Remote, "cat", filepath.Join(endpoint.Home, "identity.pem"))
+	if err != nil {
+		return err
+	}
+	block, _ := pem.Decode([]byte(certificate))
+	if block == nil {
+		return errUnexpectedPairing
+	}
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return err
+	}
+	gateway, err := trust.Open(w.Gateway.Home)
+	if err != nil {
+		return err
+	}
+	pinned := &http.Transport{TLSClientConfig: gateway.ClientTLS(trust.Fingerprint(cert.Raw))}
+	defer pinned.CloseIdleConnections()
+	live := &http.Client{Transport: pinned, Timeout: 2 * time.Second}
+	response, err := live.Get("https://" + w.proxy.Address() + "/v1/listener-probe")
+	if err != nil {
+		return err
+	}
+	response.Body.Close()
+	if response.StatusCode != 404 {
+		return errUnexpectedPairing
+	}
+
 	home := w.Dir + "/unpaired-dial"
 	defer w.CleanupCredential(home)
 	a, err := trust.Open(home)
 	if err != nil {
 		return err
 	}
-	transport := &http.Transport{TLSClientConfig: a.ClientTLS("")}
+	transport := &http.Transport{TLSClientConfig: a.ClientTLS(trust.Fingerprint(cert.Raw))}
 	defer transport.CloseIdleConnections()
-	transport.TLSClientConfig.VerifyConnection = nil
 	ctx, cancel := context.WithTimeout(w.ctx, 2*time.Second)
 	defer cancel()
 	conn, _, err := websocket.Dial(ctx, "wss://"+w.proxy.Address()+"/v1/feed", &websocket.DialOptions{HTTPClient: &http.Client{Transport: transport}})
