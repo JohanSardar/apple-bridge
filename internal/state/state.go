@@ -22,6 +22,9 @@ import (
 )
 
 type Store struct {
+	BlobProtection func(context.Context, contracts.ReferenceSet) error
+	blobSnapshots  map[string][]contracts.BlobReference
+
 	db      *sql.DB
 	write   sync.Mutex
 	mu      sync.Mutex
@@ -55,6 +58,7 @@ func Open(home string) (*Store, error) {
  CREATE INDEX IF NOT EXISTS aliases_scoped ON aliases(source,collection,scoped_alias);
  CREATE TABLE IF NOT EXISTS journal(seq INTEGER PRIMARY KEY,epoch TEXT NOT NULL,source TEXT NOT NULL,payload BLOB NOT NULL);
  CREATE TABLE IF NOT EXISTS checkpoints(source TEXT PRIMARY KEY,generation TEXT NOT NULL,checkpoint TEXT NOT NULL);
+ CREATE TABLE IF NOT EXISTS blob_reference_sets(owner TEXT PRIMARY KEY,payload BLOB NOT NULL);
  CREATE TABLE IF NOT EXISTS staging_records(snapshot TEXT NOT NULL,collection TEXT NOT NULL,id TEXT NOT NULL,payload BLOB NOT NULL,PRIMARY KEY(snapshot,collection,id));
  DELETE FROM staging_records;`)
 	if err != nil {
@@ -352,10 +356,14 @@ func (s *Store) CommitCapture(ctx context.Context, c contracts.Capture) (CommitR
 	if err = setCursor(ctx, tx, cursor); err != nil {
 		return result, err
 	}
+	if err = s.protectTransaction(ctx, tx); err != nil {
+		return result, err
+	}
 	if err = tx.Commit(); err != nil {
 		return result, err
 	}
 	result.Through = cursor.Sequence
+	s.refreshBlobProtection(ctx)
 	s.signal()
 	return result, nil
 }
@@ -434,6 +442,8 @@ func (s *Store) Read(ctx context.Context, v trust.Visibility, q contracts.ReadQu
 }
 
 type FrozenSnapshot struct {
+	store *Store
+
 	ID        string
 	Cursor    contracts.Cursor
 	Count     int
@@ -443,7 +453,14 @@ type FrozenSnapshot struct {
 	tx        *sql.Tx
 }
 
-func (f *FrozenSnapshot) Close() error { return f.tx.Rollback() }
+func (f *FrozenSnapshot) Close() error {
+	f.store.write.Lock()
+	defer f.store.write.Unlock()
+	err := f.tx.Rollback()
+	delete(f.store.blobSnapshots, f.ID)
+	f.store.refreshBlobProtection(context.Background())
+	return err
+}
 func Digest(records []contracts.Record) string {
 	ordered := slices.Clone(records)
 	slices.SortFunc(ordered, func(a, b contracts.Record) int { return strings.Compare(a.Collection+"/"+a.ID, b.Collection+"/"+b.ID) })
@@ -454,11 +471,13 @@ func Digest(records []contracts.Record) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 func (s *Store) FreezeSnapshot(ctx context.Context, v trust.Visibility, revision uint64) (*FrozenSnapshot, error) {
+	s.write.Lock()
+	defer s.write.Unlock()
 	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
 	if err != nil {
 		return nil, err
 	}
-	f := &FrozenSnapshot{ID: contracts.NewID("snap"), ExpiresAt: time.Now().Add(10 * time.Minute), Records: []contracts.Record{}, tx: tx}
+	f := &FrozenSnapshot{store: s, ID: contracts.NewID("snap"), ExpiresAt: time.Now().Add(10 * time.Minute), Records: []contracts.Record{}, tx: tx}
 	f.Cursor, err = cursorAt(ctx, tx)
 	if err != nil {
 		tx.Rollback()
@@ -493,6 +512,17 @@ func (s *Store) FreezeSnapshot(ctx context.Context, v trust.Visibility, revision
 	}
 	f.Count = len(f.Records)
 	f.Digest = Digest(f.Records)
+	if s.blobSnapshots == nil {
+		s.blobSnapshots = map[string][]contracts.BlobReference{}
+	}
+	for _, r := range f.Records {
+		s.blobSnapshots[f.ID] = append(s.blobSnapshots[f.ID], contracts.BlobReferences(r.Data)...)
+	}
+	if err = s.refreshBlobProtection(ctx); err != nil {
+		tx.Rollback()
+		delete(s.blobSnapshots, f.ID)
+		return nil, err
+	}
 	return f, nil
 }
 
@@ -601,9 +631,13 @@ func (i *SnapshotInstall) InstallSnapshot(ctx context.Context) (contracts.Cursor
 	if _, err = tx.ExecContext(ctx, "DELETE FROM staging_records WHERE snapshot=?", i.ID); err != nil {
 		return contracts.Cursor{}, err
 	}
+	if err = s.protectTransaction(ctx, tx); err != nil {
+		return contracts.Cursor{}, err
+	}
 	if err = tx.Commit(); err != nil {
 		return contracts.Cursor{}, err
 	}
+	s.refreshBlobProtection(ctx)
 	s.signal()
 	return i.Cursor, nil
 }
@@ -646,9 +680,13 @@ func (s *Store) ApplyBatch(ctx context.Context, b contracts.Batch) (contracts.Cu
 	if err = setCursor(ctx, tx, c); err != nil {
 		return c, err
 	}
+	if err = s.protectTransaction(ctx, tx); err != nil {
+		return contracts.Cursor{}, err
+	}
 	if err = tx.Commit(); err != nil {
 		return c, err
 	}
+	s.refreshBlobProtection(ctx)
 	s.signal()
 	return c, nil
 }
