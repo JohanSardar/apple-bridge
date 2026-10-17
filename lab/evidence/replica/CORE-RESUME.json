@@ -1,11 +1,11 @@
 {
-  "run_id": "run_01M548R5K751CD0VWQ0T86CBG4",
+  "run_id": "run_01M54A2KV75NAF4BW9KHTAET0J",
   "network_path": "ssh_fallback_direct_tcp_timeout",
   "scenario": "CORE-RESUME",
   "level": "replica",
   "passed": true,
-  "git_sha": "883859767d67e4f8613c16eb8366f8b7bd676d03",
-  "at": "2026-10-17T06:28:22.759378Z",
+  "git_sha": "1ae944108b1a229e70cace7bfd82c3cb9d1fb27f",
+  "at": "2026-10-17T06:51:33.607036Z",
   "assertions": [
     {
       "name": "feed_network_ssh_fallback_direct_tcp_timeout",
@@ -83,23 +83,23 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 2,
-      "p50_ms": 8.249708,
-      "p95_ms": 8.39075,
-      "max_ms": 8.39075,
+      "p50_ms": 6.0655,
+      "p95_ms": 16.631208,
+      "max_ms": 16.631208,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 2,
-      "p50_ms": 19.973708,
-      "p95_ms": 23.83925,
-      "max_ms": 23.83925,
+      "p50_ms": 20.275,
+      "p95_ms": 31.271875,
+      "max_ms": 31.271875,
       "timeouts": 0
     },
     "partition_effect_done→replica_visible:replica0": {
       "samples": 30,
-      "p50_ms": 16071.531917,
-      "p95_ms": 30282.427208,
-      "max_ms": 31293.9045,
+      "p50_ms": 15307.633667,
+      "p95_ms": 29417.97375,
+      "max_ms": 30431.132667,
       "timeouts": 0
     }
   },

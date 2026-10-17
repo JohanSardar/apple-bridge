@@ -1,11 +1,11 @@
 {
-  "run_id": "run_01M548SFRJ5EXEEEC3CE6M9KFG",
+  "run_id": "run_01M54A3XQ6WJA5J2ZGKKV1YRGF",
   "network_path": "ssh_fallback_direct_tcp_timeout",
   "scenario": "CORE-SCOPE-LEAK",
   "level": "replica",
   "passed": true,
-  "git_sha": "883859767d67e4f8613c16eb8366f8b7bd676d03",
-  "at": "2026-10-17T06:29:05.938859Z",
+  "git_sha": "1ae944108b1a229e70cace7bfd82c3cb9d1fb27f",
+  "at": "2026-10-17T06:52:16.486766Z",
   "assertions": [
     {
       "name": "feed_network_ssh_fallback_direct_tcp_timeout",
@@ -107,16 +107,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 13.387417,
-      "p95_ms": 13.387417,
-      "max_ms": 13.387417,
+      "p50_ms": 11.677916,
+      "p95_ms": 11.677916,
+      "max_ms": 11.677916,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 110.62775,
-      "p95_ms": 110.62775,
-      "max_ms": 110.62775,
+      "p50_ms": 24.265416,
+      "p95_ms": 24.265416,
+      "max_ms": 24.265416,
       "timeouts": 0
     }
   },

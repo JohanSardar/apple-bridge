@@ -1,11 +1,11 @@
 {
-  "run_id": "run_01M548MS9RGYTJYDZHZFJJK842",
+  "run_id": "run_01M549Z9S0DNSCQ0453ZKNP96E",
   "network_path": "ssh_fallback_direct_tcp_timeout",
   "scenario": "CORE-CRED-LIFECYCLE",
   "level": "replica",
   "passed": true,
-  "git_sha": "883859767d67e4f8613c16eb8366f8b7bd676d03",
-  "at": "2026-10-17T06:26:31.864061Z",
+  "git_sha": "1ae944108b1a229e70cace7bfd82c3cb9d1fb27f",
+  "at": "2026-10-17T06:49:44.992377Z",
   "assertions": [
     {
       "name": "feed_network_ssh_fallback_direct_tcp_timeout",
@@ -75,16 +75,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 11.258125,
-      "p95_ms": 11.258125,
-      "max_ms": 11.258125,
+      "p50_ms": 14.044542,
+      "p95_ms": 14.044542,
+      "max_ms": 14.044542,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 25.408083,
-      "p95_ms": 25.408083,
-      "max_ms": 25.408083,
+      "p50_ms": 28.459625,
+      "p95_ms": 28.459625,
+      "max_ms": 28.459625,
       "timeouts": 0
     }
   },
