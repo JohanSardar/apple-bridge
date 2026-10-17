@@ -89,8 +89,10 @@ func Start(ctx context.Context, cfg Config) error {
 		return err
 	}
 
-	if err = store.InitCommands(ctx); err != nil {
-		return err
+	if cfg.Role == "gateway" {
+		if err = store.InitCommands(ctx); err != nil {
+			return err
+		}
 	}
 	os.Setenv("APPLE_BRIDGE_HOME", cfg.Home)
 	if cfg.APIAddress == "" {

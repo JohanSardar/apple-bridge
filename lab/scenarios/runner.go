@@ -68,6 +68,7 @@ type watcher struct {
 	seen            map[string]Seen
 	changes         []Seen
 	last            contracts.Cursor
+	active          contracts.Cursor
 	invalid         bool
 	filtered        bool
 	initialSequence uint64
@@ -107,14 +108,35 @@ func watch(ctx context.Context, e world.Endpoint, filtered bool, oracle func(con
 			req.Header.Set("Authorization", "Bearer "+e.Token)
 			resp, err := http.DefaultClient.Do(req)
 			if err == nil && resp.StatusCode == 200 {
+				w.mu.Lock()
+				w.active = after
+				w.mu.Unlock()
 				if !ready {
 					close(w.connected)
 					ready = true
 				}
 				scanner := bufio.NewScanner(resp.Body)
 				scanner.Buffer(make([]byte, 4096), contracts.MaxFrame*2)
+				reset := false
 				for scanner.Scan() {
 					line := scanner.Text()
+					if line == "event: reset" {
+						reset = true
+						continue
+					}
+					if reset && strings.HasPrefix(line, "data: ") {
+						var current contracts.ReadResult
+						_, err := world.Request(ctx, e, "/v1/op/records.query", contracts.ReadQuery{Limit: 1}, &current)
+						w.mu.Lock()
+						if err != nil || current.Cursor.Epoch == w.last.Epoch && current.Cursor.SubscriptionRevision == w.last.SubscriptionRevision {
+							w.invalid = true
+						} else {
+							w.last = current.Cursor
+							w.initialSequence = current.Cursor.Sequence
+						}
+						w.mu.Unlock()
+						break
+					}
 					if !strings.HasPrefix(line, "data: ") {
 						continue
 					}
@@ -149,6 +171,16 @@ func watch(ctx context.Context, e world.Endpoint, filtered bool, oracle func(con
 					w.last.Sequence = b.Through
 					w.mu.Unlock()
 				}
+			}
+			if resp != nil && resp.StatusCode == http.StatusConflict {
+				var current contracts.ReadResult
+				_, err := world.Request(ctx, e, "/v1/op/records.query", contracts.ReadQuery{Limit: 1}, &current)
+				w.mu.Lock()
+				if err == nil && (current.Cursor.Epoch != w.last.Epoch || current.Cursor.SubscriptionRevision != w.last.SubscriptionRevision) {
+					w.last = current.Cursor
+					w.initialSequence = current.Cursor.Sequence
+				}
+				w.mu.Unlock()
 			}
 			if resp != nil {
 				resp.Body.Close()
@@ -441,6 +473,37 @@ func Run(ctx context.Context, s Scenario, level string) Evidence {
 				probeSeen[i], _ = observer.observed("command-probe")
 			}
 			runCommands(ctx, w, s.ID, &evidence, watchers)
+			if s.ID == "CORE-CMD-ERA" {
+				head, _ := w.Cursor(w.Gateway)
+				all := append(append([]*watcher{}, watchers...), scoped...)
+				reset := w.Await(5*time.Second, func() bool {
+					for _, observer := range all {
+						observer.mu.Lock()
+						epoch := observer.active.Epoch
+						observer.mu.Unlock()
+						if epoch != head.Epoch {
+							return false
+						}
+					}
+					return true
+				})
+				add("all_sse_observers_resume_new_epoch", reset == nil)
+				add("post_restore_probe", w.ControlAction("/external-change", map[string]string{"key": "post-restore-probe"}) == nil)
+				add("post_restore_probe_committed", w.ControlAction("/flush", struct{}{}) == nil)
+				head, _ = w.Cursor(w.Gateway)
+				advanced := w.Await(5*time.Second, func() bool {
+					for _, observer := range all {
+						observer.mu.Lock()
+						last := observer.last
+						observer.mu.Unlock()
+						if last.Epoch != head.Epoch || last.Sequence < head.Sequence {
+							return false
+						}
+					}
+					return true
+				})
+				add("all_sse_observers_advance_after_restore", advanced == nil)
+			}
 			for i, observer := range watchers {
 				seen := probeSeen[i]
 				ok := !seen.At.IsZero()

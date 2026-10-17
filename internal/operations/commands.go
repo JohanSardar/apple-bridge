@@ -321,6 +321,15 @@ func (g *LocalGateway) Status(ctx context.Context, p trust.Principal, q contract
 	if r.Principal != p.ID || !p.Visibility()[r.Source] {
 		return contracts.CommandRecord{}, contracts.ErrNotFound
 	}
+	if q.Resolve {
+		era, eraErr := g.State.AdmissionEra(ctx)
+		if eraErr != nil {
+			return r, eraErr
+		}
+		if r.AdmissionEra != era {
+			return r, nil
+		}
+	}
 	if q.Resolve && r.State == "indeterminate" {
 		release, err := g.lock(ctx, "command:"+q.ID)
 		if err != nil {

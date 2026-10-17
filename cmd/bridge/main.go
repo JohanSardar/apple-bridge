@@ -12,6 +12,7 @@ import (
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	bridgeruntime "github.com/JohanSardar/apple-bridge/internal/runtime"
+	"github.com/JohanSardar/apple-bridge/internal/state"
 	"github.com/JohanSardar/apple-bridge/internal/trust"
 )
 
@@ -39,8 +40,10 @@ func run(ctx context.Context, args []string) error {
 	blobGrace := set.Int64("blob-grace-ms", 0, "unreferenced blob grace in milliseconds")
 	scope := set.String("scope", "reminders:read,system:read", "comma separated grants")
 	set.String("name", "", "replica display name")
+	backup := set.String("backup", "", "state backup path")
+	acceptLedgerLoss := set.Bool("accept-ledger-loss", false, "acknowledge lost command history")
 	code := ""
-	if verb == "join" && len(args) > 0 && args[0][0] != '-' {
+	if (verb == "join" || verb == "backup" || verb == "restore") && len(args) > 0 && args[0][0] != '-' {
 		code = args[0]
 		args = args[1:]
 	}
@@ -49,6 +52,23 @@ func run(ctx context.Context, args []string) error {
 	}
 	if verb == "start" {
 		return bridgeruntime.Start(ctx, bridgeruntime.Config{Role: *role, Home: *home, PeerAddress: *peer, APIAddress: *api, Socket: *socket, HelperApp: *helperApp, HelperLabCommands: *helperLabCommands, BlobCap: *blobCap, BlobGraceMS: *blobGrace})
+	}
+	if verb == "restore" {
+		if *backup == "" {
+			*backup = code
+		}
+		return bridgeruntime.Restore(ctx, *home, *backup, *acceptLedgerLoss)
+	}
+	if verb == "backup" {
+		store, err := state.InspectHome(*home)
+		if err != nil {
+			return err
+		}
+		defer store.Close()
+		if code == "" {
+			return contracts.ErrInvalid
+		}
+		return store.Backup(ctx, code)
 	}
 	authority, err := trust.Open(*home)
 	if err != nil {

@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
@@ -15,20 +17,105 @@ type CommandTransition struct {
 	Record contracts.CommandRecord
 }
 
+func (s *Store) checkLedger(ctx context.Context) error {
+	path := filepath.Join(s.home, "ledger.db")
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		var prior int
+		if err = s.db.QueryRowContext(ctx, "SELECT count(*) FROM records WHERE collection='system.command'").Scan(&prior); err != nil {
+			return err
+		}
+		var marked int
+		if err = s.db.QueryRowContext(ctx, "SELECT count(*) FROM meta WHERE key='commands_seen'").Scan(&marked); err != nil {
+			return err
+		}
+		var legacy int
+		if err = s.db.QueryRowContext(ctx, "SELECT count(*) FROM sqlite_master WHERE name='commands'").Scan(&legacy); err != nil {
+			return err
+		}
+		if legacy > 0 {
+			if err = s.db.QueryRowContext(ctx, "SELECT count(*) FROM commands").Scan(&legacy); err != nil {
+				return err
+			}
+		}
+		if prior > 0 || marked > 0 || legacy > 0 {
+			return &contracts.Error{Code: "ledger_missing", Message: "command ledger missing; run bridge restore --accept-ledger-loss"}
+		}
+	} else if err != nil {
+		return err
+	}
+	return nil
+}
 func (s *Store) InitCommands(ctx context.Context) error {
-	_, err := s.db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS commands(id TEXT PRIMARY KEY,principal TEXT NOT NULL,request_hash TEXT NOT NULL,state TEXT NOT NULL,payload BLOB NOT NULL);
+	if err := s.checkLedger(ctx); err != nil {
+		return err
+	}
+	return s.openLedger(ctx)
+}
+func (s *Store) openLedger(ctx context.Context) error {
+	path := filepath.Join(s.home, "ledger.db")
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0600)
+	if err != nil {
+		return err
+	}
+	file.Close()
+	db, err := sql.Open("sqlite", "file:"+path+"?_pragma=journal_mode(WAL)&_pragma=synchronous(FULL)&_pragma=busy_timeout(5000)")
+	if err != nil {
+		return err
+	}
+	db.SetMaxOpenConns(1)
+	dir, err := os.Open(s.home)
+	if err != nil {
+		db.Close()
+		return err
+	}
+	err = dir.Sync()
+	dir.Close()
+	if err != nil {
+		db.Close()
+		return err
+	}
+	s.ledger = db
+	_, err = db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY,value TEXT NOT NULL);
+ CREATE TABLE IF NOT EXISTS commands(id TEXT PRIMARY KEY,principal TEXT NOT NULL,request_hash TEXT NOT NULL,state TEXT NOT NULL,payload BLOB NOT NULL);
+ CREATE TABLE IF NOT EXISTS dedupe(command_id TEXT PRIMARY KEY,principal TEXT NOT NULL,request_hash TEXT NOT NULL,admission_era TEXT NOT NULL);
  INSERT OR IGNORE INTO meta(key,value) VALUES('admission_era','`+contracts.NewID("")+`');`)
-	return err
+	if err != nil {
+		return err
+	}
+	era, err := s.AdmissionEra(ctx)
+	if err != nil {
+		return err
+	}
+	if _, err = s.db.ExecContext(ctx, "INSERT INTO meta(key,value) VALUES('admission_era',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", era); err != nil {
+		return err
+	}
+	records, err := s.Commands(ctx)
+	if err != nil {
+		return err
+	}
+	for _, r := range records {
+		var version uint64
+		err := s.db.QueryRowContext(ctx, "SELECT version FROM records WHERE collection='system.command' AND id=?", r.Command.ID).Scan(&version)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return err
+		}
+		if version != uint64(len(r.History)) {
+			if err = s.publishCommand(ctx, r); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 func (s *Store) AdmissionEra(ctx context.Context) (string, error) {
 	var era string
-	err := s.db.QueryRowContext(ctx, "SELECT value FROM meta WHERE key='admission_era'").Scan(&era)
+	err := s.ledger.QueryRowContext(ctx, "SELECT value FROM meta WHERE key='admission_era'").Scan(&era)
 	return era, err
 }
 func (s *Store) Command(ctx context.Context, id string) (contracts.CommandRecord, error) {
 	var r contracts.CommandRecord
 	var b []byte
-	err := s.db.QueryRowContext(ctx, "SELECT payload FROM commands WHERE id=?", id).Scan(&b)
+	err := s.ledger.QueryRowContext(ctx, "SELECT payload FROM commands WHERE id=?", id).Scan(&b)
 	if errors.Is(err, sql.ErrNoRows) {
 		return r, contracts.ErrNotFound
 	}
@@ -38,7 +125,7 @@ func (s *Store) Command(ctx context.Context, id string) (contracts.CommandRecord
 	return r, err
 }
 func (s *Store) Commands(ctx context.Context) ([]contracts.CommandRecord, error) {
-	rows, err := s.db.QueryContext(ctx, "SELECT payload FROM commands ORDER BY id")
+	rows, err := s.ledger.QueryContext(ctx, "SELECT payload FROM commands ORDER BY id")
 	if err != nil {
 		return nil, err
 	}
@@ -60,15 +147,15 @@ func (s *Store) Commands(ctx context.Context) ([]contracts.CommandRecord, error)
 func commandTransitionAllowed(from, to contracts.CommandState) bool {
 	switch from {
 	case "":
-		return to == "admitted"
-	case "admitted":
-		return to == "prepared" || to == "rejected" || to == "expired"
-	case "prepared":
-		return to == "dispatched" || to == "rejected" || to == "expired"
-	case "dispatched":
-		return to == "observed" || to == "indeterminate" || to == "failed" || to == "rejected" || to == "delivered" || to == "delivery_failed"
-	case "indeterminate":
-		return to == "observed" || to == "delivered" || to == "failed"
+		return to == contracts.CommandAdmitted
+	case contracts.CommandAdmitted:
+		return to == contracts.CommandPrepared || to == contracts.CommandRejected || to == contracts.CommandExpired
+	case contracts.CommandPrepared:
+		return to == contracts.CommandDispatched || to == contracts.CommandRejected || to == contracts.CommandExpired
+	case contracts.CommandDispatched:
+		return to == contracts.CommandObserved || to == contracts.CommandIndeterminate || to == contracts.CommandFailed || to == contracts.CommandRejected || to == contracts.CommandDelivered || to == contracts.CommandDeliveryFailed
+	case contracts.CommandIndeterminate:
+		return to == contracts.CommandObserved || to == contracts.CommandDelivered || to == contracts.CommandFailed
 	}
 	return false
 }
@@ -79,7 +166,7 @@ func (s *Store) TransitionCommand(ctx context.Context, t CommandTransition) (con
 	}
 	s.write.Lock()
 	defer s.write.Unlock()
-	tx, err := s.db.BeginTx(ctx, nil)
+	tx, err := s.ledger.BeginTx(ctx, nil)
 	if err != nil {
 		return r, err
 	}
@@ -105,14 +192,23 @@ func (s *Store) TransitionCommand(ctx context.Context, t CommandTransition) (con
 	if t.From == "" && err == nil {
 		return old, contracts.ErrConflict
 	}
-	cursor, err := cursorAt(ctx, tx)
+	if t.From == "" {
+		var era string
+		if err = tx.QueryRowContext(ctx, "SELECT value FROM meta WHERE key='admission_era'").Scan(&era); err != nil {
+			return r, err
+		}
+		if r.AdmissionEra != era {
+			return r, contracts.ErrExpired
+		}
+	}
+	cursor, err := cursorAt(ctx, s.db)
 	if err != nil {
 		return r, err
 	}
 	r.History = append(old.History, contracts.CommandEvent{State: r.State, At: time.Now().UTC(), Evidence: r.Evidence})
 	cursor.Sequence++
 	r.Cursor = cursor
-	if (r.State == "observed" || r.State == "delivered") && (r.CommitSeq == 0 || r.CommitSeq >= cursor.Sequence) {
+	if (r.State == contracts.CommandObserved || r.State == contracts.CommandDelivered) && (r.CommitSeq == 0 || r.CommitSeq >= cursor.Sequence) {
 		return r, contracts.ErrCorrupt
 	}
 	b, err = json.Marshal(r)
@@ -123,22 +219,71 @@ func (s *Store) TransitionCommand(ctx context.Context, t CommandTransition) (con
 	if err != nil {
 		return r, err
 	}
-	record := contracts.Record{Collection: "system.command", ID: r.Command.ID, Version: uint64(len(r.History)), Source: r.Source, ObservedAt: time.Now().UTC(), Coverage: contracts.Coverage{Fields: "complete", Missing: []string{}}, Data: b}
-	if err = writeRecord(ctx, tx, record, cursor.Sequence); err != nil {
-		return r, err
-	}
-	if err = appendChange(ctx, tx, cursor, record, "upsert"); err != nil {
-		return r, err
-	}
-	if err = setCursor(ctx, tx, cursor); err != nil {
-		return r, err
+	if t.From == "" {
+		if _, err = tx.ExecContext(ctx, "INSERT INTO dedupe(command_id,principal,request_hash,admission_era) VALUES(?,?,?,?)", r.Command.ID, r.Principal, r.RequestHash, r.AdmissionEra); err != nil {
+			return r, err
+		}
+		if _, err = s.db.ExecContext(ctx, "INSERT OR IGNORE INTO meta(key,value) VALUES('commands_seen','1')"); err != nil {
+			return r, err
+		}
 	}
 	if err = tx.Commit(); err != nil {
 		return r, err
 	}
-	s.signal()
+	if err = s.publishCommand(ctx, r); err != nil {
+		return r, err
+	}
 	return r, nil
 }
+func (s *Store) publishCommand(ctx context.Context, r contracts.CommandRecord) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	cursor, err := cursorAt(ctx, tx)
+	if err != nil {
+		return err
+	}
+	cursor.Sequence++
+	b, err := json.Marshal(struct {
+		CommandID string `json:"command_id"`
+		Principal string `json:"principal"`
+	}{r.Command.ID, r.Principal})
+	if err != nil {
+		return err
+	}
+	record := contracts.Record{Collection: "system.command", ID: r.Command.ID, Version: uint64(len(r.History)), Source: r.Source, ObservedAt: r.History[len(r.History)-1].At, Coverage: contracts.Coverage{Fields: "complete", Missing: []string{}}, Data: b}
+	raw, err := json.Marshal(r)
+	if err != nil {
+		return err
+	}
+	refs, err := json.Marshal(contracts.BlobReferences(raw))
+	if err != nil {
+		return err
+	}
+	if _, err = tx.ExecContext(ctx, "INSERT INTO blob_reference_sets(owner,payload) VALUES(?,?) ON CONFLICT(owner) DO UPDATE SET payload=excluded.payload", "command:"+r.Command.ID, refs); err != nil {
+		return err
+	}
+	if err = writeRecord(ctx, tx, record, cursor.Sequence); err != nil {
+		return err
+	}
+	if err = appendChange(ctx, tx, cursor, record, "upsert"); err != nil {
+		return err
+	}
+	if err = setCursor(ctx, tx, cursor); err != nil {
+		return err
+	}
+	if _, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO meta(key,value) VALUES('commands_seen','1')"); err != nil {
+		return err
+	}
+	if err = tx.Commit(); err != nil {
+		return err
+	}
+	s.signal()
+	return nil
+}
+
 func (s *Store) NativeKey(ctx context.Context, collection, id string) (string, error) {
 	var key string
 	err := s.db.QueryRowContext(ctx, "SELECT native_key FROM aliases WHERE collection=? AND record_id=? ORDER BY rowid DESC LIMIT 1", collection, id).Scan(&key)
@@ -146,4 +291,41 @@ func (s *Store) NativeKey(ctx context.Context, collection, id string) (string, e
 		return "", contracts.ErrNotFound
 	}
 	return key, err
+}
+
+func rotateAdmissionEra(ctx context.Context, home, stagedPath string, accept bool) error {
+	if !accept {
+		if _, err := os.Stat(filepath.Join(home, "state.db")); err == nil {
+			db, err := sql.Open("sqlite", "file:"+filepath.Join(home, "state.db")+"?_pragma=busy_timeout(5000)")
+			if err != nil {
+				return err
+			}
+			current := &Store{home: home, db: db, changed: make(chan struct{})}
+			err = current.checkLedger(ctx)
+			current.Close()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	staged, err := sql.Open("sqlite", "file:"+stagedPath)
+	if err != nil {
+		return err
+	}
+	store := &Store{home: home, db: staged, changed: make(chan struct{})}
+	defer store.Close()
+	if accept {
+		err = store.openLedger(ctx)
+	} else {
+		err = store.InitCommands(ctx)
+	}
+	if err != nil {
+		return err
+	}
+	era := contracts.NewID("")
+	if _, err = store.ledger.ExecContext(ctx, "UPDATE meta SET value=? WHERE key='admission_era'", era); err != nil {
+		return err
+	}
+	_, err = staged.ExecContext(ctx, "INSERT INTO meta(key,value) VALUES('admission_era',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", era)
+	return err
 }

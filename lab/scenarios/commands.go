@@ -88,6 +88,10 @@ func runCommands(ctx context.Context, w *world.World, id string, e *Evidence, ob
 		c.ID = "caller-uuid-review-17"
 		first, firstErr := submit(c)
 		add("opaque_caller_id_executes", observed(first, firstErr) && count(c, 1))
+		ambiguous := create("old-era-ambiguous")
+		fault("ambiguous-outcome", 0)
+		unresolved, unresolvedErr := submit(ambiguous)
+		add("pre_restore_indeterminate", unresolvedErr == nil && unresolved.Disposition == contracts.DispositionIndeterminate && count(ambiguous, 1))
 		w.StopGateway()
 		add("restore_older_backup", w.CommandRestore(backup, false) == nil)
 		add("restart_after_restore", w.RestartGateway() == nil)
@@ -96,6 +100,10 @@ func runCommands(ctx context.Context, w *world.World, id string, e *Evidence, ob
 		add("restore_rotates_epoch", restoredHead.Epoch != head.Epoch)
 		retry, retryErr := submit(c)
 		add("post_backup_command_recognized_without_second_effect", retryErr == nil && reflect.DeepEqual(first, retry) && count(c, 1))
+		lookup, lookupErr := status(c, true)
+		add("pre_restore_id_lookup_only", lookupErr == nil && reflect.DeepEqual(first, lookup) && count(c, 1))
+		oldUnresolved, oldUnresolvedErr := status(ambiguous, true)
+		add("old_era_resolve_is_lookup_only", oldUnresolvedErr == nil && reflect.DeepEqual(unresolved, oldUnresolved) && count(ambiguous, 1))
 		old := create("old-era-new-id")
 		old.AdmissionEra = first.AdmissionEra
 		_, oldErr := submit(old)
@@ -109,8 +117,11 @@ func runCommands(ctx context.Context, w *world.World, id string, e *Evidence, ob
 		w.StopGateway()
 		add("remove_ledger", w.RemoveCommandLedger() == nil)
 		add("missing_ledger_blocks_gateway", w.CommandLedgerLossBlocked())
+		add("restore_cannot_hide_ledger_loss", w.CommandRestore(backup, false) != nil)
+		add("ledger_loss_still_blocks_gateway", w.CommandLedgerLossBlocked())
 		add("operator_accepts_ledger_loss", w.CommandRestore("", true) == nil)
 		add("restart_after_accepted_ledger_loss", w.RestartGateway() == nil)
+		add("helper_reconnected_after_ledger_loss", w.ControlAction("/flush", struct{}{}) == nil)
 		accepted := create("accepted-loss-era")
 		acceptedResult, acceptedErr := submit(accepted)
 		add("accepted_loss_starts_new_era", observed(acceptedResult, acceptedErr) && acceptedResult.AdmissionEra != current.AdmissionEra && count(accepted, 1))
@@ -504,9 +515,20 @@ func conflictCurrentTruth(w *world.World, before contracts.Record, err error) bo
 		return false
 	}
 	records, readErr := w.Records(w.Gateway)
+	observations, truthErr := w.Inspect()
+	aliases, aliasErr := gatewayAliases(w)
+	truth, resolvedErr := truthRecords(observations, aliases)
+	if readErr != nil || truthErr != nil || aliasErr != nil || resolvedErr != nil {
+		return false
+	}
 	for _, record := range records {
-		if record.ID == before.ID {
-			return readErr == nil && reflect.DeepEqual(record, *problem.Current) && convergence(w)
+		if record.ID == before.ID && reflect.DeepEqual(record, *problem.Current) {
+			for _, native := range truth {
+				if native.ID == record.ID {
+					var expected, actual any
+					return decodeData(native.Data, &expected) == nil && decodeData(record.Data, &actual) == nil && reflect.DeepEqual(expected, actual)
+				}
+			}
 		}
 	}
 	return false

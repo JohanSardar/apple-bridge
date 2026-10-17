@@ -25,6 +25,8 @@ type Store struct {
 	BlobProtection func(context.Context, contracts.ReferenceSet) error
 	blobSnapshots  map[string][]contracts.BlobReference
 
+	home    string
+	ledger  *sql.DB
 	db      *sql.DB
 	write   sync.Mutex
 	mu      sync.Mutex
@@ -52,7 +54,7 @@ func Open(home string) (*Store, error) {
 		return nil, err
 	}
 	db.SetMaxOpenConns(8)
-	s := &Store{db: db, changed: make(chan struct{})}
+	s := &Store{home: home, db: db, changed: make(chan struct{})}
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY,value TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS records(collection TEXT NOT NULL,id TEXT NOT NULL,version INTEGER NOT NULL,source TEXT NOT NULL,deleted INTEGER NOT NULL,payload BLOB NOT NULL,seq INTEGER NOT NULL,observed_at TEXT NOT NULL,PRIMARY KEY(collection,id));
  CREATE TABLE IF NOT EXISTS aliases(source TEXT NOT NULL,generation TEXT NOT NULL,collection TEXT NOT NULL,native_key TEXT NOT NULL,scoped_alias TEXT NOT NULL,record_id TEXT NOT NULL,PRIMARY KEY(source,generation,collection,native_key));
@@ -75,7 +77,12 @@ func Open(home string) (*Store, error) {
 	}
 	return s, nil
 }
-func (s *Store) Close() error { return s.db.Close() }
+func (s *Store) Close() error {
+	if s.ledger != nil {
+		return errors.Join(s.ledger.Close(), s.db.Close())
+	}
+	return s.db.Close()
+}
 func (s *Store) signal() {
 	s.mu.Lock()
 	close(s.changed)
