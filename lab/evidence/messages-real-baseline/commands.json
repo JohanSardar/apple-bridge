@@ -1,0 +1,29 @@
+{
+  "source_sha": "27e49adbc0fd7ef03a120f17747312eb78b7d8aa",
+  "transport": "ssh -o ControlPath=none air",
+  "command": "packaging/dev/heavy.sh go run -p 2 ./cmd/bridge-lab run lab/scenarios/messages/MSG-HISTORY-IMPORT.yaml lab/scenarios/messages/MSG-RECEIPTS.yaml lab/scenarios/messages/MSG-WATCHER-REARM.yaml lab/scenarios/messages/MSG-INCOMING.yaml --level real --json",
+  "exit_code": 1,
+  "hard_failures": [
+    "MSG-HISTORY-IMPORT: gateway_per_chat_counts_equal_readonly_truth after 1002391.9247500598 ms"
+  ],
+  "unverified": [
+    "natural concurrent import insert",
+    "natural incoming row",
+    "fresh receipt transition (old oracle did not monitor a window)",
+    "natural WAL inode replacement"
+  ],
+  "redacted_progress": {
+    "native_message_rows": 166705,
+    "gateway_message_record_samples_in_order": [
+      18507,
+      34099
+    ]
+  },
+  "identity_aggregate_checks": {
+    "messages_without_guid": 0,
+    "messages_in_multiple_chats": 0,
+    "duplicate_message_guids": 0,
+    "reactions_without_target": 0
+  },
+  "next": "Strengthen receipt and watcher observations; test real and Ubuntu replica incoming without sending. Repeat history once delta blob protection lands."
+}
