@@ -15,6 +15,10 @@ type fixtureCleanupOptions struct {
 	Cleanup string `yaml:"cleanup"`
 }
 
+type robustnessOptions struct {
+	Case  string   `yaml:"case"`
+	Paths []string `yaml:"paths"`
+}
 type worldOptions struct {
 	Replicas int `yaml:"replicas"`
 }
@@ -76,6 +80,10 @@ func validateScenario(s Scenario) error {
 					target = &seedOptions{}
 				case "when/blobs":
 					target = &blobOptions{}
+				case "when/robustness":
+					target = &robustnessOptions{}
+				case "when/disconnect":
+					target = &struct{}{}
 				case "when/changes":
 					target = &changesOptions{}
 				case "when/partition":

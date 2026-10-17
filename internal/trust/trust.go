@@ -13,6 +13,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"math/big"
 	"net/http"
 	"os"
@@ -140,6 +141,7 @@ type pairing struct {
 }
 
 type Enrollment struct {
+	Ceiling     []contracts.Grant `json:"ceiling,omitempty"`
 	ReplicaID   string            `json:"replica_id"`
 	Address     string            `json:"address"`
 	Fingerprint string            `json:"fingerprint"`
@@ -184,7 +186,7 @@ func Open(home string) (*Authority, error) {
 			if err != nil {
 				return err
 			}
-			if err = os.WriteFile(keyPath, pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: rawKey}), 0600); err != nil {
+			if err = NewSecretStore(home).Put(context.Background(), "identity-key", pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: rawKey})); err != nil {
 				return err
 			}
 			if err = os.WriteFile(certPath, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}), 0600); err != nil {
@@ -192,7 +194,25 @@ func Open(home string) (*Authority, error) {
 			}
 		}
 		var err error
-		a.Certificate, err = tls.LoadX509KeyPair(certPath, keyPath)
+		store := NewSecretStore(home)
+		privateKey, err := store.Get(context.Background(), "identity-key")
+		if errors.Is(err, contracts.ErrNotFound) {
+			privateKey, err = os.ReadFile(keyPath)
+			if err == nil {
+				err = store.Put(context.Background(), "identity-key", privateKey)
+			}
+		}
+		if err != nil {
+			return err
+		}
+		certificate, err := os.ReadFile(certPath)
+		if err != nil {
+			return err
+		}
+		a.Certificate, err = tls.X509KeyPair(certificate, privateKey)
+		if err == nil {
+			os.Remove(keyPath)
+		}
 		if err != nil {
 			return err
 		}
@@ -262,13 +282,17 @@ func (a *Authority) update(fn func(*credentials) error) error {
 	return result
 }
 
-func (a *Authority) Enrollment() (*Enrollment, error) {
-	var e *Enrollment
-	err := a.update(func(d *credentials) error { e = d.Enrollment; return nil })
-	return e, err
-}
+func (a *Authority) Enrollment() (*Enrollment, error) { d, err := a.load(); return d.Enrollment, err }
 func (a *Authority) SaveEnrollment(e Enrollment) error {
-	return a.update(func(d *credentials) error { d.Enrollment = &e; return nil })
+	return a.update(func(d *credentials) error {
+		if d.Enrollment != nil && (!Subset(e.Grants, d.Enrollment.Grants) || !Subset(d.Enrollment.Grants, e.Grants)) {
+			for i := range d.Principals {
+				d.Principals[i].Revision++
+			}
+		}
+		d.Enrollment = &e
+		return nil
+	})
 }
 
 func (a *Authority) CreateToken(grants []contracts.Grant) (string, error) {
@@ -289,16 +313,23 @@ func (a *Authority) CreateToken(grants []contracts.Grant) (string, error) {
 
 func (a *Authority) AuthenticateToken(token string) (Principal, error) {
 	var p Principal
-	err := a.update(func(d *credentials) error {
+	d, err := a.load()
+	if err != nil {
+		return p, err
+	}
+	err = func() error {
 		hash := Fingerprint([]byte(token))
 		for _, candidate := range d.Principals {
 			if candidate.Kind == "token" && hmac.Equal([]byte(hash), []byte(candidate.TokenHash)) {
 				p = candidate
+				if d.Enrollment != nil {
+					p.Grants = EffectiveGrants(p.Grants, d.Enrollment.Grants)
+				}
 				return nil
 			}
 		}
 		return contracts.ErrUnauthorized
-	})
+	}()
 	return p, err
 }
 
@@ -307,7 +338,11 @@ func (a *Authority) AuthenticateCertificate(cert *x509.Certificate) (Principal, 
 	if time.Now().Before(cert.NotBefore) || time.Now().After(cert.NotAfter) {
 		return p, contracts.ErrExpired
 	}
-	err := a.update(func(d *credentials) error {
+	d, err := a.load()
+	if err != nil {
+		return p, err
+	}
+	err = func() error {
 		hash := Fingerprint(cert.Raw)
 		for _, candidate := range d.Principals {
 			if candidate.Kind == "replica" && candidate.Fingerprint == hash {
@@ -316,16 +351,22 @@ func (a *Authority) AuthenticateCertificate(cert *x509.Certificate) (Principal, 
 			}
 		}
 		return contracts.ErrUnauthorized
-	})
+	}()
 	return p, err
 }
 
 func (a *Authority) Pair(address string, grants []contracts.Grant) (string, error) {
+	return a.PairTTL(address, grants, 10*time.Minute)
+}
+func (a *Authority) PairTTL(address string, grants []contracts.Grant, ttl time.Duration) (string, error) {
+	if ttl <= 0 || ttl > 10*time.Minute {
+		return "", contracts.ErrInvalid
+	}
 	secret := make([]byte, 20)
 	if _, err := rand.Read(secret); err != nil {
 		return "", err
 	}
-	code := PairCode{ID: contracts.NewID(""), Address: address, Fingerprint: a.Fingerprint, Secret: secret, ExpiresAt: time.Now().Add(10 * time.Minute)}
+	code := PairCode{ID: contracts.NewID(""), Address: address, Fingerprint: a.Fingerprint, Secret: secret, ExpiresAt: time.Now().Add(ttl)}
 	key := sha256.Sum256(secret)
 	err := a.update(func(d *credentials) error {
 		d.Pairings[code.ID] = pairing{Key: key[:], ExpiresAt: code.ExpiresAt, Grants: grants}
@@ -458,5 +499,5 @@ func (a *Authority) Join(ctx context.Context, code string) error {
 	if err = json.NewDecoder(resp.Body).Decode(&p); err != nil {
 		return err
 	}
-	return a.SaveEnrollment(Enrollment{ReplicaID: p.ID, Address: c.Address, Fingerprint: c.Fingerprint, Grants: p.Grants})
+	return a.SaveEnrollment(Enrollment{ReplicaID: p.ID, Address: c.Address, Fingerprint: c.Fingerprint, Grants: p.Grants, Ceiling: p.Grants})
 }

@@ -35,6 +35,8 @@ type Config struct {
 	Socket            string `json:"socket"`
 	HelperApp         string `json:"helper_app,omitempty"`
 	HelperLabCommands bool   `json:"helper_lab_commands,omitempty"`
+	RetentionRows uint64        `json:"retention_rows"`
+	RetentionAge  time.Duration `json:"retention_age"`
 }
 
 func LoadConfig(home string) (Config, error) {
@@ -176,6 +178,25 @@ func Start(ctx context.Context, cfg Config) error {
 			return err
 		}
 		service.Target = gateway
+		policy := state.Retention{Rows: cfg.RetentionRows, Age: cfg.RetentionAge}
+		if policy.Rows == 0 {
+			policy.Rows = 1000000
+		}
+		if policy.Age == 0 {
+			policy.Age = 7 * 24 * time.Hour
+		}
+		go func() {
+			tick := time.NewTicker(time.Second)
+			defer tick.Stop()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-tick.C:
+					store.Prune(ctx, policy)
+				}
+			}
+		}()
 		feed := &replication.Server{Store: store, Authority: authority, Blobs: blobStore}
 		mux := http.NewServeMux()
 		mux.Handle("/v1/pair", authority.PairHandler())
@@ -185,8 +206,15 @@ func Start(ctx context.Context, cfg Config) error {
 		go func() { failures <- server.Serve(peer) }()
 		defer server.Close()
 		go func() {
-			failures <- applepeer.Serve(ctx, applepeer.Config{BlobCapture: blobStore.Capture, Socket: cfg.Socket, Secret: secret, Commands: commands, Checkpoints: store.Checkpoints, NextFence: store.NextFence, SourceState: store.SourceState, CommitCapture: func(ctx context.Context, c contracts.Capture) (bool, error) {
+			failures <- applepeer.Serve(ctx, applepeer.Config{BlobCapture: blobStore.Capture, Socket: cfg.Socket, Secret: secret, Commands: commands, Checkpoints: store.Checkpoints, NextFence: store.NextFence, SourceState: func(ctx context.Context, source contracts.Source, status string, coverage contracts.Coverage, capabilities []string, reason string) error {
+				err := store.SourceState(ctx, source, status, coverage, capabilities, reason)
+				if state.IsCapacity(err) {
+					store.Capacity(source, err)
+				}
+				return err
+			}, CommitCapture: func(ctx context.Context, c contracts.Capture) (bool, error) {
 				result, err := store.CommitCapture(ctx, c)
+				store.Capacity(c.Source, err)
 				if err == nil && !result.Degraded && !result.Duplicate {
 					cursor := store.Head()
 					cursor.Sequence = result.Through

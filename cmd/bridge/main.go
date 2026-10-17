@@ -9,7 +9,9 @@ import (
 	"path/filepath"
 	"runtime"
 	"syscall"
+	"time"
 
+	"encoding/json"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	bridgeruntime "github.com/JohanSardar/apple-bridge/internal/runtime"
 	"github.com/JohanSardar/apple-bridge/internal/state"
@@ -42,8 +44,11 @@ func run(ctx context.Context, args []string) error {
 	set.String("name", "", "replica display name")
 	backup := set.String("backup", "", "state backup path")
 	acceptLedgerLoss := set.Bool("accept-ledger-loss", false, "acknowledge lost command history")
+	pairTTL := set.Duration("expires-in", 10*time.Minute, "pairing code lifetime")
+	retentionRows := set.Uint64("retention-rows", 0, "minimum retained journal rows")
+	retentionAge := set.Duration("retention-age", 0, "minimum journal age")
 	code := ""
-	if (verb == "join" || verb == "backup" || verb == "restore") && len(args) > 0 && args[0][0] != '-' {
+	if (verb == "join" || verb == "restore" || verb == "backup" || verb == "revoke" || verb == "scope") && len(args) > 0 && len(args[0]) > 0 && args[0][0] != '-' {
 		code = args[0]
 		args = args[1:]
 	}
@@ -51,8 +56,13 @@ func run(ctx context.Context, args []string) error {
 		return err
 	}
 	if verb == "start" {
-		return bridgeruntime.Start(ctx, bridgeruntime.Config{Role: *role, Home: *home, PeerAddress: *peer, APIAddress: *api, Socket: *socket, HelperApp: *helperApp, HelperLabCommands: *helperLabCommands, BlobCap: *blobCap, BlobGraceMS: *blobGrace})
+		return bridgeruntime.Start(ctx, bridgeruntime.Config{Role: *role, Home: *home, PeerAddress: *peer, APIAddress: *api, Socket: *socket, HelperApp: *helperApp, HelperLabCommands: *helperLabCommands, BlobCap: *blobCap, BlobGraceMS: *blobGrace, RetentionRows: *retentionRows, RetentionAge: *retentionAge})
 	}
+	if verb == "doctor" {
+ result, err := bridgeruntime.Doctor(ctx, *home)
+ if err != nil { return err }
+ return json.NewEncoder(os.Stdout).Encode(result)
+ }
 	if verb == "restore" {
 		if *backup == "" {
 			*backup = code
@@ -75,6 +85,14 @@ func run(ctx context.Context, args []string) error {
 		return err
 	}
 	switch verb {
+	case "revoke":
+		return authority.Revoke(code)
+	case "scope":
+		grants, err := trust.ParseGrants(*scope)
+		if err != nil {
+			return err
+		}
+		return authority.ChangeScope(code, grants)
 	case "pair":
 		cfg, err := bridgeruntime.LoadConfig(*home)
 		if err != nil {
@@ -91,7 +109,7 @@ func run(ctx context.Context, args []string) error {
 		if *peer != "" {
 			address = *peer
 		}
-		code, err := authority.Pair(address, grants)
+		code, err := authority.PairTTL(address, grants, *pairTTL)
 		if err != nil {
 			return err
 		}

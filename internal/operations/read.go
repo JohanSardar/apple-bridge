@@ -2,6 +2,8 @@ package operations
 
 import (
 	"context"
+	"encoding/json"
+	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/internal/state"
@@ -18,16 +20,31 @@ func (s *Service) Read(ctx context.Context, p trust.Principal, name string, q co
 	if err := contracts.ValidateQuery(q); err != nil {
 		return contracts.ReadResult{}, err
 	}
+	if name == "replica.status" || q.Collection == "system.replica" {
+		result := contracts.ReadResult{Records: []contracts.Record{}, Cursor: s.State.Head()}
+		if !p.Visibility()[contracts.System] {
+			return result, nil
+		}
+		if s.LocalStatus != nil {
+			data, err := json.Marshal(s.LocalStatus())
+			if err != nil {
+				return result, err
+			}
+			result.Records = append(result.Records, contracts.Record{Collection: "system.replica", ID: "local", Version: 1, Source: contracts.System, ObservedAt: time.Now().UTC(), Data: data})
+		}
+		return result, nil
+	}
 	switch name {
 	case "records.get":
 		if q.Collection == "" || q.ID == "" {
 			return contracts.ReadResult{}, contracts.ErrInvalid
 		}
 	case "records.query":
-	case "sources.status", "replica.status":
-		if name == "replica.status" && !p.Visibility()[contracts.System] {
-			return contracts.ReadResult{}, contracts.ErrUnauthorized
+	case "search":
+		if q.Text == "" {
+			return contracts.ReadResult{}, contracts.ErrInvalid
 		}
+	case "sources.status":
 		q = contracts.ReadQuery{Collection: "system.source"}
 	default:
 		return contracts.ReadResult{}, contracts.ErrUnsupported

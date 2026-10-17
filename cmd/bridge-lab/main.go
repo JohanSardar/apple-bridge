@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/JohanSardar/apple-bridge/lab/world"
 	"os"
 	"os/signal"
 	"syscall"
@@ -27,6 +29,17 @@ func run(ctx context.Context, args []string) error {
 			fmt.Printf("wire fixtures: %d decoded\n", count)
 		}
 		return err
+	case "credential-lifecycle":
+		set := flag.NewFlagSet("credential-lifecycle", flag.ContinueOnError)
+		home := set.String("home", "", "isolated credential directory")
+		if err := set.Parse(args[1:]); err != nil {
+			return err
+		}
+		result, err := world.CredentialLifecycle(ctx, *home)
+		if err != nil {
+			return err
+		}
+		return json.NewEncoder(os.Stdout).Encode(result)
 	case "simapple":
 		set := flag.NewFlagSet("simapple", flag.ContinueOnError)
 		socket := set.String("socket", "", "ApplePeer socket")
@@ -51,6 +64,8 @@ func run(ctx context.Context, args []string) error {
 					return fmt.Errorf("level required")
 				}
 				level = args[i]
+			case "--direct-tailscale":
+				ctx = world.WithOptions(ctx, world.Options{DirectTailscale: true})
 			case "--json":
 				asJSON = true
 			default:

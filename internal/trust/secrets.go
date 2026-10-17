@@ -1,0 +1,164 @@
+package trust
+
+import (
+	"bytes"
+	"context"
+	"encoding/hex"
+	"errors"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"time"
+
+	"github.com/JohanSardar/apple-bridge/internal/contracts"
+)
+
+type SecretStore interface {
+	Put(context.Context, string, []byte) error
+	Get(context.Context, string) ([]byte, error)
+	Delete(context.Context, string) error
+	Backend() string
+}
+
+type KeychainStore struct{ Service string }
+type LinuxSecretStore struct {
+	Dir        string
+	Service    string
+	SecretTool bool
+}
+
+func NewSecretStore(home string) SecretStore {
+	absolute, _ := filepath.Abs(home)
+	service := "apple-bridge:" + Fingerprint([]byte(absolute))
+	if runtime.GOOS == "darwin" && os.Getenv("APPLE_BRIDGE_SECRET_STORE") == "file" {
+		return &LinuxSecretStore{Dir: filepath.Join(home, "secrets"), Service: service}
+	}
+	if runtime.GOOS == "darwin" {
+		return &KeychainStore{Service: service}
+	}
+	root := os.Getenv("XDG_CONFIG_HOME")
+	if root == "" {
+		root = filepath.Join(os.Getenv("HOME"), ".config")
+	}
+	_, err := exec.LookPath("secret-tool")
+	return &LinuxSecretStore{Dir: filepath.Join(root, "apple-bridge", "secrets", Fingerprint([]byte(absolute))), Service: service, SecretTool: err == nil}
+}
+func secretCommand(ctx context.Context, input []byte, name string, args ...string) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	command := exec.CommandContext(ctx, name, args...)
+	command.Stdin = bytes.NewReader(input)
+	output, err := command.Output()
+	if ctx.Err() != nil {
+		return nil, contracts.ErrUnavailable
+	}
+	if err != nil {
+		var status *exec.ExitError
+		if errors.As(err, &status) && ((name == "security" && status.ExitCode() == 44) || (name == "secret-tool" && status.ExitCode() == 1)) {
+			return nil, contracts.ErrNotFound
+		}
+		return nil, contracts.ErrUnavailable
+	}
+	return bytes.TrimSpace(output), nil
+}
+func (s *KeychainStore) Backend() string { return "keychain" }
+func (s *KeychainStore) Put(ctx context.Context, key string, value []byte) error {
+	_, err := secretCommand(ctx, nil, "security", "add-generic-password", "-U", "-s", s.Service, "-a", key, "-w", hex.EncodeToString(value))
+	return err
+}
+func (s *KeychainStore) Get(ctx context.Context, key string) ([]byte, error) {
+	output, err := secretCommand(ctx, nil, "security", "find-generic-password", "-s", s.Service, "-a", key, "-w")
+	if err != nil {
+		return nil, err
+	}
+	value, err := hex.DecodeString(string(output))
+	if err != nil {
+		return nil, contracts.ErrCorrupt
+	}
+	return value, nil
+}
+func (s *KeychainStore) Delete(ctx context.Context, key string) error {
+	_, err := secretCommand(ctx, nil, "security", "delete-generic-password", "-s", s.Service, "-a", key)
+	if errors.Is(err, contracts.ErrNotFound) {
+		return nil
+	}
+	return err
+}
+func (s *LinuxSecretStore) Backend() string {
+	if s.SecretTool {
+		return "libsecret"
+	}
+	return "file_0600"
+}
+func (s *LinuxSecretStore) path(key string) string {
+	return filepath.Join(s.Dir, Fingerprint([]byte(key)))
+}
+func (s *LinuxSecretStore) Put(ctx context.Context, key string, value []byte) error {
+	if s.SecretTool {
+		_, err := secretCommand(ctx, []byte(hex.EncodeToString(value)), "secret-tool", "store", "--label=Apple Bridge", "application", s.Service, "key", key)
+		return err
+	}
+	if err := os.MkdirAll(s.Dir, 0700); err != nil {
+		return err
+	}
+	if err := os.Chmod(s.Dir, 0700); err != nil {
+		return err
+	}
+	file, err := os.CreateTemp(s.Dir, "secret-*")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(file.Name())
+	if _, err = file.Write(value); err == nil {
+		err = file.Sync()
+	}
+	closeErr := file.Close()
+	if err != nil {
+		return err
+	}
+	if closeErr != nil {
+		return closeErr
+	}
+	if err = os.Rename(file.Name(), s.path(key)); err != nil {
+		return err
+	}
+	dir, err := os.Open(s.Dir)
+	if err != nil {
+		return err
+	}
+	defer dir.Close()
+	return dir.Sync()
+}
+func (s *LinuxSecretStore) Get(ctx context.Context, key string) ([]byte, error) {
+	if s.SecretTool {
+		output, err := secretCommand(ctx, nil, "secret-tool", "lookup", "application", s.Service, "key", key)
+		if err != nil {
+			return nil, err
+		}
+		return hex.DecodeString(strings.TrimSpace(string(output)))
+	}
+	info, err := os.Stat(s.path(key))
+	if os.IsNotExist(err) {
+		return nil, contracts.ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	if !info.Mode().IsRegular() || info.Mode().Perm() != 0600 {
+		return nil, contracts.ErrUnauthorized
+	}
+	return os.ReadFile(s.path(key))
+}
+func (s *LinuxSecretStore) Delete(ctx context.Context, key string) error {
+	if s.SecretTool {
+		_, err := secretCommand(ctx, nil, "secret-tool", "clear", "application", s.Service, "key", key)
+		return err
+	}
+	err := os.Remove(s.path(key))
+	if os.IsNotExist(err) {
+		return nil
+	}
+	return err
+}

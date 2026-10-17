@@ -70,7 +70,7 @@ func (s *Server) Handler() http.Handler {
 		}
 		defer conn.CloseNow()
 		conn.SetReadLimit(contracts.MaxFrame)
-		ctx, cancel := context.WithCancel(r.Context())
+		ctx, cancel := s.Authority.WatchPrincipal(r.Context(), p)
 		defer cancel()
 		s.serve(ctx, conn, p)
 	})
@@ -173,6 +173,11 @@ func (s *Server) serve(ctx context.Context, conn *websocket.Conn, p trust.Princi
 	if resume {
 		cursor = *hello.Cursor
 	} else {
+		if hello.Cursor != nil && hello.Cursor.Sequence > 0 {
+			if err = transmit(contracts.FeedFrame{T: "Reset", Reason: "history_or_scope_changed", RetentionFloor: s.Store.RetentionFloor()}, nil); err != nil {
+				return err
+			}
+		}
 		snapshot, err := s.Store.FreezeSnapshot(ctx, p.Visibility(), p.Revision)
 		if err != nil {
 			return err
@@ -197,6 +202,9 @@ func (s *Server) serve(ctx context.Context, conn *websocket.Conn, p trust.Princi
 				}
 				page.Records = snapshot.Records[offset:end]
 			}
+			if err = snapshot.Renew(ctx); err != nil {
+				return err
+			}
 			if err = transmit(page, nil); err != nil {
 				return err
 			}
@@ -217,6 +225,9 @@ func (s *Server) serve(ctx context.Context, conn *websocket.Conn, p trust.Princi
 	for {
 		batch, err := iterator.Next(ctx)
 		if err != nil {
+			if errors.Is(err, contracts.ErrReset) {
+				send(ctx, conn, contracts.FeedFrame{T: "Reset", Reason: "retention", RetentionFloor: s.Store.RetentionFloor()})
+			}
 			return err
 		}
 		batch.SubscriptionRevision = p.Revision
@@ -289,7 +300,7 @@ func (c *Client) follow(ctx context.Context, e trust.Enrollment) error {
 	ctx, stop := context.WithCancel(ctx)
 	defer stop()
 	head := c.Store.Head()
-	if _, err = send(ctx, conn, contracts.FeedFrame{T: "Hello", Protocol: contracts.FeedProtocol, ReplicaID: e.ReplicaID, Cursor: &head, SchemaOffer: []int{1}, Credits: contracts.ByteCredit}); err != nil {
+	if _, err = send(ctx, conn, contracts.FeedFrame{T: "Hello", Protocol: contracts.FeedProtocol, ReplicaID: e.ReplicaID, Cursor: &head, SchemaOffer: []int{2, 1}, Credits: contracts.ByteCredit}); err != nil {
 		return err
 	}
 	go func() {
@@ -353,11 +364,23 @@ func (c *Client) follow(ctx context.Context, e trust.Enrollment) error {
 		ack := contracts.FeedFrame{T: "Ack", Credits: n}
 		switch f.T {
 		case "Welcome":
-			if f.Protocol != contracts.FeedProtocol || f.Schema != 1 || f.Epoch == "" || f.SubscriptionRevision == 0 || !trust.Subset(f.Scope, e.Grants) {
+			ceiling := e.Ceiling
+			if ceiling == nil {
+				ceiling = e.Grants
+			}
+			if f.Protocol != contracts.FeedProtocol || (f.Schema != 1 && f.Schema != 2) || f.Epoch == "" || f.SubscriptionRevision == 0 || !trust.Subset(f.Scope, ceiling) {
 				return contracts.ErrInvalid
 			}
 			welcome = f
+			e.Grants = f.Scope
+			if err = c.Store.Restrict(ctx, (trust.Principal{Grants: f.Scope}).Visibility()); err != nil {
+				return err
+			}
+			if err = c.Authority.SaveEnrollment(e); err != nil {
+				return err
+			}
 			c.update(func(s *FollowStatus) {
+				s.Schema = f.Schema
 				s.Mode = f.Reason
 				if f.Reason == "resume" {
 					s.Resumes++
@@ -365,6 +388,7 @@ func (c *Client) follow(ctx context.Context, e trust.Enrollment) error {
 				}
 			})
 		case "SnapshotBegin":
+			c.update(func(s *FollowStatus) { s.State = "snapshot"; s.SnapshotSequence = f.S })
 			if welcome.Epoch == "" || staging != nil {
 				return contracts.ErrInvalid
 			}
@@ -419,7 +443,9 @@ func (c *Client) follow(ctx context.Context, e trust.Enrollment) error {
 			}
 			continue
 		case "Reset":
-			return contracts.ErrReset
+			if staging != nil {
+				return contracts.ErrInvalid
+			}
 		default:
 			return contracts.ErrInvalid
 		}

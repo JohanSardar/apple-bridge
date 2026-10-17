@@ -190,6 +190,9 @@ func Handler(deps Deps, descriptors []contracts.OperationDescriptor) http.Handle
 			respond(w, nil, err)
 			return
 		}
+		pctx, cancel := deps.Authority.WatchPrincipal(r.Context(), p)
+		defer cancel()
+		r = r.WithContext(pctx)
 		mu.Lock()
 		rate := rates[p.ID]
 		if time.Since(rate.At) > time.Second {

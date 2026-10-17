@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
+	"github.com/JohanSardar/apple-bridge/internal/trust"
 )
 
 type Config struct {
@@ -61,6 +62,10 @@ type World struct {
 	bridge           string
 	lab              string
 	remoteBinary     string
+	diskMount        string
+	secretHomes      []string
+	proxy            *FaultProxy
+	NetworkPath      string
 	pairAddress      string
 	ctx              context.Context
 }
@@ -92,6 +97,13 @@ func Build(ctx context.Context, level string) error {
 		cmd.Stderr = &log
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("cross compile: %w: %s", err, log.String())
+		}
+
+		lab := exec.CommandContext(ctx, "go", "build", "-p", "2", "-o", "bin/bridge-lab-linux-amd64", "./cmd/bridge-lab")
+		lab.Env = append(os.Environ(), "GOOS=linux", "GOARCH=amd64")
+		output, err := lab.CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("cross compile lab: %w: %s", err, output)
 		}
 	}
 	return nil
@@ -141,6 +153,7 @@ func (p *Process) Stop() {
 		commandOutput(ctx, "ssh", "ubuntu", "if test -f "+quote(filepath.Join(p.home, "pid"))+"; then kill -TERM $(cat "+quote(filepath.Join(p.home, "pid"))+"); fi")
 		cancel()
 	} else {
+		p.command.Process.Signal(syscall.SIGCONT)
 		p.command.Process.Signal(syscall.SIGTERM)
 	}
 	timer := time.NewTimer(5 * time.Second)
@@ -197,13 +210,17 @@ func (w *World) Await(timeout time.Duration, predicate func() bool) error {
 		}
 	}
 }
-func New(ctx context.Context, level string, replicas int, seed int, blobOptions ...BlobOptions) (*World, error) {
-	return newEnvironment(ctx, level, replicas, seed, false, blobOptions...)
+func New(ctx context.Context, level string, replicas, seed int, blobOptions ...BlobOptions) (*World, error) {
+ return newEnvironment(ctx, level, replicas, seed, false, "", blobOptions...)
 }
 func NewReal(ctx context.Context, level string, replicas int, blobOptions ...BlobOptions) (*World, error) {
-	return newEnvironment(ctx, level, replicas, 0, true, blobOptions...)
+	return newEnvironment(ctx, level, replicas, 0, true, "", blobOptions...)
 }
-func newEnvironment(ctx context.Context, level string, replicas int, seed int, native bool, blobOptions ...BlobOptions) (*World, error) {
+func newWorld(ctx context.Context, level string, replicas, seed int, gatewayBinary string, blobOptions ...BlobOptions) (*World, error) {
+ return newEnvironment(ctx, level, replicas, seed, false, gatewayBinary, blobOptions...)
+}
+func newEnvironment(ctx context.Context, level string, replicas, seed int, native bool, gatewayBinary string, blobOptions ...BlobOptions) (*World, error) {
+ if !native { os.Setenv("APPLE_BRIDGE_SECRET_STORE", "file") }
 	root, err := os.Getwd()
 	if err != nil {
 		return nil, err
@@ -231,7 +248,20 @@ func newEnvironment(ctx context.Context, level string, replicas int, seed int, n
 			w.Close()
 		}
 	}()
+	options, _ := ctx.Value(optionsKey{}).(Options)
 	peerHost := "127.0.0.1"
+	w.NetworkPath = "loopback"
+	if level == "replica" && options.DirectTailscale {
+		address, err := commandOutput(ctx, "/Applications/Tailscale.app/Contents/MacOS/Tailscale", "ip", "-4")
+		if err != nil {
+			address, err = commandOutput(ctx, "tailscale", "ip", "-4")
+		}
+		if err != nil || net.ParseIP(address) == nil {
+			return nil, fmt.Errorf("gateway Tailscale address unavailable")
+		}
+		peerHost = address
+		w.NetworkPath = "tailscale_direct"
+	}
 	if level == "replica" {
 		if _, err = commandOutput(ctx, "ssh", "ubuntu", "mkdir -p "+quote(w.Dir)+" && chmod 700 "+quote(w.Dir)); err != nil {
 			return nil, err
@@ -242,33 +272,53 @@ func newEnvironment(ctx context.Context, level string, replicas int, seed int, n
 		}
 	}
 	gatewayHome := filepath.Join(w.Dir, "gateway")
-	gatewayArgs := []string{"start", "--role", "gateway", "--home", gatewayHome, "--peer-addr", net.JoinHostPort(peerHost, "0"), "--api-addr", "127.0.0.1:0", "--blob-grace-ms", strconv.FormatInt(w.blobOptions.GraceMS, 10)}
-	if native {
-		gatewayArgs = append(gatewayArgs, "--helper-app", filepath.Join(os.Getenv("HOME"), "Applications", "AppleBridgeDev", "AppleBridgeHelper.app"), "--helper-lab-commands")
+	if gatewayBinary == "" {
+		gatewayBinary = w.bridge
 	}
-	if _, err = w.start("gateway", false, gatewayHome, w.bridge, gatewayArgs...); err != nil {
+	args := []string{"start", "--role", "gateway", "--home", gatewayHome, "--peer-addr", net.JoinHostPort(peerHost, "0"), "--api-addr", "127.0.0.1:0"}
+	if gatewayBinary == w.bridge {
+		args = append(args, "--blob-grace-ms", strconv.FormatInt(w.blobOptions.GraceMS, 10))
+	}
+	if native {
+		args = append(args, "--helper-app", filepath.Join(os.Getenv("HOME"), "Applications", "AppleBridgeDev", "AppleBridgeHelper.app"), "--helper-lab-commands")
+	}
+	if _, err = w.start("gateway", false, gatewayHome, gatewayBinary, args...); err != nil {
 		return nil, err
 	}
 	cfg, err := w.config(gatewayHome, false)
 	if err != nil {
 		return nil, err
 	}
-	w.pairAddress = cfg.PeerAddress
+	w.proxy, err = NewFaultProxy(net.JoinHostPort(peerHost, "0"), cfg.PeerAddress)
+	if err != nil {
+		return nil, err
+	}
+	w.pairAddress = w.proxy.Address()
 	if level == "replica" {
-		remotePort, err := commandOutput(ctx, "ssh", "ubuntu", "python3 -c "+quote("import socket; s=socket.socket(); s.bind(('127.0.0.1',0)); print(s.getsockname()[1]); s.close()"))
-		if err != nil {
-			return nil, err
+		direct := false
+		if options.DirectTailscale {
+			_, probeErr := commandOutput(ctx, "ssh", "ubuntu", "python3 -c "+quote("import socket; s=socket.create_connection("+fmt.Sprintf("(%q,%q)", peerHost, strings.Split(w.pairAddress, ":")[1])+",5); s.close()"))
+			direct = probeErr == nil
 		}
-		_, gatewayPort, _ := net.SplitHostPort(cfg.PeerAddress)
-		if _, err = w.start("peer-tunnel", false, w.Dir, "ssh", "-N", "-o", "ExitOnForwardFailure=yes", "-R", "127.0.0.1:"+remotePort+":127.0.0.1:"+gatewayPort, "ubuntu"); err != nil {
-			return nil, err
-		}
-		w.pairAddress = net.JoinHostPort("127.0.0.1", remotePort)
-		if err = w.Await(10*time.Second, func() bool {
-			_, err := commandOutput(ctx, "ssh", "ubuntu", "python3 -c "+quote("import socket; s=socket.create_connection(('127.0.0.1',"+remotePort+"),2); s.close()"))
-			return err == nil
-		}); err != nil {
-			return nil, err
+		if !direct {
+			w.NetworkPath = "ssh_tunnel"
+			if options.DirectTailscale {
+				w.NetworkPath = "ssh_fallback_direct_tcp_timeout"
+			}
+			remotePort, portErr := commandOutput(ctx, "ssh", "ubuntu", "python3 -c "+quote("import socket; s=socket.socket(); s.bind(('127.0.0.1',0)); print(s.getsockname()[1]); s.close()"))
+			if portErr != nil {
+				return nil, portErr
+			}
+			if _, err = w.start("peer-tunnel", false, w.Dir, "ssh", "-N", "-o", "ExitOnForwardFailure=yes", "-R", "127.0.0.1:"+remotePort+":"+w.pairAddress, "ubuntu"); err != nil {
+				return nil, err
+			}
+			w.pairAddress = net.JoinHostPort("127.0.0.1", remotePort)
+			if err = w.Await(10*time.Second, func() bool {
+				_, err := commandOutput(ctx, "ssh", "ubuntu", "python3 -c "+quote("import socket; s=socket.create_connection(('127.0.0.1',"+remotePort+"),2); s.close()"))
+				return err == nil
+			}); err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -301,49 +351,11 @@ func newEnvironment(ctx context.Context, level string, replicas int, seed int, n
 		}
 	}
 	for i := 0; i < replicas; i++ {
-		remote := level == "replica"
-		home := filepath.Join(w.Dir, "replica"+strconv.Itoa(i))
-		binary := w.bridge
-		if remote {
-			binary = w.remoteBinary
-			if _, err = commandOutput(ctx, "ssh", "ubuntu", "mkdir -p "+quote(home)); err != nil {
-				return nil, err
-			}
-		}
-		code, err := w.execute(false, w.bridge, "pair", "--home", gatewayHome, "--peer-addr", w.pairAddress, "--name", "replica"+strconv.Itoa(i), "--scope", scope)
-		if err != nil {
+		if err = w.AddReplicaScope(scope); err != nil {
 			return nil, err
 		}
-		if _, err = w.execute(remote, binary, "join", code, "--home", home); err != nil {
-			return nil, err
-		}
-		token, err := w.execute(remote, binary, "token", "create", "--home", home, "--scope", scope)
-		if err != nil {
-			return nil, err
-		}
-		p, err := w.start("replica"+strconv.Itoa(i), remote, home, binary, "start", "--role", "replica", "--home", home, "--api-addr", "127.0.0.1:0", "--blob-cap", strconv.FormatInt(w.blobOptions.Cap, 10), "--blob-grace-ms", strconv.FormatInt(w.blobOptions.GraceMS, 10))
-		if err != nil {
-			return nil, err
-		}
-		cfg, err := w.config(home, remote)
-		if err != nil {
-			return nil, err
-		}
-		endpoint := Endpoint{URL: "http://" + cfg.APIAddress, Host: cfg.APIAddress, Home: home, Token: token, Remote: remote}
-		if remote {
-			addr, err := freeAddress()
-			if err != nil {
-				return nil, err
-			}
-			_, port, _ := net.SplitHostPort(cfg.APIAddress)
-			if _, err = w.start("tunnel"+strconv.Itoa(i), false, w.Dir, "ssh", "-N", "-o", "ExitOnForwardFailure=yes", "-L", addr+":127.0.0.1:"+port, "ubuntu"); err != nil {
-				return nil, err
-			}
-			endpoint.URL = "http://" + addr
-		}
-		w.Replicas = append(w.Replicas, endpoint)
-		w.replicaProcesses = append(w.replicaProcesses, p)
 	}
+
 	if err = w.Await(15*time.Second, func() bool {
 		for _, e := range w.Replicas {
 			status, err := w.Status(e)
@@ -368,6 +380,9 @@ func freeAddress() (string, error) {
 	return address, nil
 }
 func (w *World) Close() {
+	if w.proxy != nil {
+		w.proxy.Close()
+	}
 	for i := len(w.processes) - 1; i >= 0; i-- {
 		p := w.processes[i]
 		if p != nil {
@@ -383,9 +398,22 @@ func (w *World) Close() {
 		commandOutput(ctx, "ssh", "ubuntu", "rm -rf "+quote(w.Dir))
 		cancel()
 	}
+	for _, home := range w.secretHomes {
+		trust.NewSecretStore(home).Delete(context.Background(), "identity-key")
+	}
+	for _, endpoint := range append([]Endpoint{w.Gateway}, w.Replicas...) {
+		if endpoint.Home != "" && !endpoint.Remote {
+			trust.NewSecretStore(endpoint.Home).Delete(context.Background(), "identity-key")
+		}
+	}
+	if w.diskMount != "" {
+		commandOutput(context.Background(), "hdiutil", "detach", w.diskMount)
+	}
 	os.RemoveAll(w.Dir)
 }
-func (w *World) Partition(index int) {
+func (w *World) Partition(index int)  { w.proxy.Partition() }
+func (w *World) Heal(index int) error { w.proxy.Heal(); return nil }
+func (w *World) StopReplica(index int) {
 	w.replicaProcesses[index].Stop()
 	for j, p := range w.processes {
 		if p == w.replicaProcesses[index] {
@@ -394,7 +422,7 @@ func (w *World) Partition(index int) {
 	}
 	w.replicaProcesses[index] = nil
 }
-func (w *World) Heal(index int) error {
+func (w *World) RestartReplica(index int) error {
 	e := w.Replicas[index]
 	binary := w.bridge
 	if e.Remote {
@@ -497,10 +525,12 @@ func (w *World) Records(e Endpoint) ([]contracts.Record, error) {
 }
 
 type ReplicaStatus struct {
-	State     string `json:"state"`
-	Mode      string `json:"mode"`
-	Snapshots int    `json:"snapshots"`
-	Resumes   int    `json:"resumes"`
+	Schema           int    `json:"schema"`
+	SnapshotSequence uint64 `json:"snapshot_sequence"`
+	State            string `json:"state"`
+	Mode             string `json:"mode"`
+	Snapshots        int    `json:"snapshots"`
+	Resumes          int    `json:"resumes"`
 }
 
 func (w *World) Status(e Endpoint) (ReplicaStatus, error) {
@@ -550,5 +580,53 @@ func (w *World) BlobControl(action any, result any) error {
 	if result != nil {
 		return json.NewDecoder(response.Body).Decode(result)
 	}
+	return nil
+}
+func (w *World) AddReplica() error { return w.AddReplicaScope("reminders:read,system:read") }
+func (w *World) AddReplicaScope(scope string) error {
+	i := len(w.Replicas)
+	var err error
+	remote := w.Level == "replica"
+	home := filepath.Join(w.Dir, "replica"+strconv.Itoa(i))
+	binary := w.bridge
+	if remote {
+		binary = w.remoteBinary
+		if _, err = commandOutput(w.ctx, "ssh", "ubuntu", "mkdir -p "+quote(home)); err != nil {
+			return err
+		}
+	}
+	code, err := w.execute(false, w.bridge, "pair", "--home", w.Gateway.Home, "--peer-addr", w.pairAddress, "--name", "replica"+strconv.Itoa(i), "--scope", scope)
+	if err != nil {
+		return err
+	}
+	if _, err = w.execute(remote, binary, "join", code, "--home", home); err != nil {
+		return err
+	}
+	token, err := w.execute(remote, binary, "token", "create", "--home", home, "--scope", scope)
+	if err != nil {
+		return err
+	}
+	p, err := w.start("replica"+strconv.Itoa(i), remote, home, binary, "start", "--role", "replica", "--home", home, "--api-addr", "127.0.0.1:0", "--blob-cap", strconv.FormatInt(w.blobOptions.Cap, 10), "--blob-grace-ms", strconv.FormatInt(w.blobOptions.GraceMS, 10))
+	if err != nil {
+		return err
+	}
+	cfg, err := w.config(home, remote)
+	if err != nil {
+		return err
+	}
+	endpoint := Endpoint{URL: "http://" + cfg.APIAddress, Host: cfg.APIAddress, Home: home, Token: token, Remote: remote}
+	if remote {
+		addr, err := freeAddress()
+		if err != nil {
+			return err
+		}
+		_, port, _ := net.SplitHostPort(cfg.APIAddress)
+		if _, err = w.start("tunnel"+strconv.Itoa(i), false, w.Dir, "ssh", "-N", "-o", "ExitOnForwardFailure=yes", "-L", addr+":127.0.0.1:"+port, "ubuntu"); err != nil {
+			return err
+		}
+		endpoint.URL = "http://" + addr
+	}
+	w.Replicas = append(w.Replicas, endpoint)
+	w.replicaProcesses = append(w.replicaProcesses, p)
 	return nil
 }

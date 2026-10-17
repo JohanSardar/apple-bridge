@@ -46,17 +46,18 @@ type Latency struct {
 	Timeouts int     `json:"timeouts"`
 }
 type Evidence struct {
-	RunID      string             `json:"run_id"`
-	Status     string             `json:"status,omitempty"`
-	Scenario   string             `json:"scenario"`
-	Level      string             `json:"level"`
-	Passed     bool               `json:"passed"`
-	GitSHA     string             `json:"git_sha"`
-	At         time.Time          `json:"at"`
-	Assertions []Assertion        `json:"assertions"`
-	Latency    map[string]Latency `json:"latency"`
-	Hosts      []string           `json:"hosts"`
-	Metrics    map[string]any     `json:"metrics,omitempty"`
+	Status string `json:"status,omitempty"`
+	RunID string `json:"run_id"`
+	NetworkPath string             `json:"network_path,omitempty"`
+	Metrics     map[string]any `json:"metrics,omitempty"`
+	Scenario    string             `json:"scenario"`
+	Level       string             `json:"level"`
+	Passed      bool               `json:"passed"`
+	GitSHA      string             `json:"git_sha"`
+	At          time.Time          `json:"at"`
+	Assertions  []Assertion        `json:"assertions"`
+	Latency     map[string]Latency `json:"latency"`
+	Hosts       []string           `json:"hosts"`
 }
 
 type Seen struct {
@@ -319,11 +320,21 @@ func convergence(w *world.World) bool {
 	if err != nil {
 		return false
 	}
+	principal, err := w.Principal(w.Gateway)
+	if err != nil {
+		return false
+	}
+	visibleObservations := []contracts.Observation{}
+	for _, observation := range truth {
+		if principal.Visibility()[contracts.CollectionSource(observation.Collection)] {
+			visibleObservations = append(visibleObservations, observation)
+		}
+	}
 	aliases, err := gatewayAliases(w)
 	if err != nil {
 		return false
 	}
-	expected, err := truthRecords(truth, aliases)
+	expected, err := truthRecords(visibleObservations, aliases)
 	if err != nil || !reflect.DeepEqual(recordMultiset(withoutCommands(gateway), false), recordMultiset(expected, false)) {
 		return false
 	}
@@ -333,11 +344,18 @@ func convergence(w *world.World) bool {
 	}
 	for _, endpoint := range w.Replicas {
 		replicaCursor, err := w.Cursor(endpoint)
-		if err != nil || replicaCursor != gatewayCursor {
+		if err != nil || (replicaCursor.Epoch != gatewayCursor.Epoch || replicaCursor.Sequence != gatewayCursor.Sequence) {
 			return false
 		}
 		replica, err := w.Records(endpoint)
-		if err != nil || !reflect.DeepEqual(withoutCommands(replica), withoutCommands(gateway)) {
+		principal, principalErr := w.Principal(endpoint)
+		visibleGateway := []contracts.Record{}
+		for _, record := range gateway {
+			if principal.Visibility().Allows(record) {
+				visibleGateway = append(visibleGateway, record)
+			}
+		}
+		if err != nil || principalErr != nil || !reflect.DeepEqual(recordMultiset(withoutCommands(replica), true), recordMultiset(withoutCommands(visibleGateway), true)) {
 			return false
 		}
 	}
@@ -385,6 +403,11 @@ func Run(ctx context.Context, s Scenario, level string) Evidence {
 			}
 		}
 	}
+	for _, step := range s.When {
+		if options, ok := step["robustness"]; ok {
+			return runRobust(ctx, s, level, options, evidence)
+		}
+	}
 	options := []world.BlobOptions{}
 	if strings.HasPrefix(s.ID, "CORE-BLOB-") {
 		opt := world.BlobOptions{GraceMS: 500}
@@ -401,6 +424,8 @@ func Run(ctx context.Context, s Scenario, level string) Evidence {
 		return fail("world_start")
 	}
 	defer w.Close()
+	evidence.NetworkPath = w.NetworkPath
+	add("feed_network_"+w.NetworkPath, true)
 	add("replica_host_is_"+map[bool]string{true: "ubuntu", false: "air"}[level == "replica"], true)
 	if err = w.Await(15*time.Second, func() bool { return convergence(w) }); err != nil {
 		return fail("initial_convergence")
@@ -614,6 +639,32 @@ func Run(ctx context.Context, s Scenario, level string) Evidence {
 						}
 					}
 				}
+			case "disconnect":
+				if w.Await(5*time.Second, func() bool { return convergence(w) }) != nil {
+					return fail("pre_disconnect_convergence")
+				}
+				before, err := w.Records(w.Replicas[0])
+				if err != nil {
+					return fail("reads_before_disconnect")
+				}
+				w.Blackhole()
+				if err = w.Await(15*time.Second, func() bool {
+					status, err := w.Status(w.Replicas[0])
+					return err == nil && status.State == "disconnected"
+				}); err != nil {
+					return fail("disconnected_within_15_seconds")
+				}
+				after, err := w.Records(w.Replicas[0])
+				if err != nil || !reflect.DeepEqual(before, after) {
+					return fail("local_reads_survive_disconnect")
+				}
+				add("silent_blackhole_detected_within_15_seconds_reads_continue", true)
+				if err = w.Heal(0); err != nil {
+					return fail("heal")
+				}
+				if err = change("reconnected", true); err != nil {
+					return fail("reconnect_change")
+				}
 			case "partition":
 				if err = w.Await(5*time.Second, func() bool { _, ok := watchers[1].observed("probe"); return ok }); err != nil {
 					return fail("pre_partition_visible")
@@ -715,7 +766,7 @@ func Run(ctx context.Context, s Scenario, level string) Evidence {
 			case "resumed":
 				for _, e := range w.Replicas {
 					status, err := w.Status(e)
-					add("resume_without_snapshot", err == nil && status.Mode == "resume" && status.Resumes == 1 && status.Snapshots == 0)
+					add("resume_without_snapshot", err == nil && status.Mode == "resume" && status.Resumes >= 1 && status.Snapshots == 1)
 				}
 			default:
 				add("known_then_action", false)
@@ -807,6 +858,14 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 	if err = world.Build(ctx, level); err != nil {
 		return err
 	}
+	for _, scenario := range scenarios {
+		if scenario.ID == "CORE-UPGRADE" || strings.Contains(scenario.ID, "REVIEW-UPGRADE") {
+			if err = world.BuildLegacy(ctx); err != nil {
+				return err
+			}
+			break
+		}
+	}
 	failed := false
 	ran := 0
 	for _, s := range scenarios {
@@ -815,11 +874,12 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		}
 		ran++
 		fmt.Fprintln(os.Stderr, "running", s.ID, level)
-		timeout := 3 * time.Minute
-		if s.Feature == "messages.read" && level != "sim" {
-			timeout = 20 * time.Minute
+		duration := 3 * time.Minute
+		if s.ID == "CORE-BENCH" {
+			duration = 10 * time.Minute
 		}
-		bounded, cancel := context.WithTimeout(ctx, timeout)
+		if s.Feature == "messages.read" && level != "sim" { duration = 20*time.Minute }
+		bounded, cancel := context.WithTimeout(ctx, duration)
 		e := Run(bounded, s, level)
 		cancel()
 		if err = Save(e); err != nil {

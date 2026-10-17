@@ -29,41 +29,6 @@ type guardEntry struct {
 	StartedAt time.Time           `json:"started_at"`
 	Outcome   *contracts.IPCFrame `json:"outcome,omitempty"`
 }
-type durableApple struct {
-	MessagesGeneration string                           `json:"messages_generation,omitempty"`
-	Generation         string                           `json:"generation"`
-	Records            map[string]contracts.Observation `json:"records"`
-	Effects            map[string]int                   `json:"effects"`
-	Evidence           map[string]contracts.IPCFrame    `json:"evidence"`
-}
-
-func (f *fakeApple) saveLocked() error {
-	b, err := json.Marshal(durableApple{MessagesGeneration: f.messages.generation, Generation: f.generation, Records: f.records, Effects: f.effects, Evidence: f.evidence})
-	if err != nil {
-		return err
-	}
-	file, err := os.OpenFile(filepath.Join(f.home, "truth.tmp"), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
-	if err != nil {
-		return err
-	}
-	_, err = file.Write(b)
-	if err == nil {
-		err = file.Sync()
-	}
-	file.Close()
-	if err != nil {
-		return err
-	}
-	if err = os.Rename(filepath.Join(f.home, "truth.tmp"), filepath.Join(f.home, "truth.json")); err != nil {
-		return err
-	}
-	dir, err := os.Open(f.home)
-	if err != nil {
-		return err
-	}
-	defer dir.Close()
-	return dir.Sync()
-}
 func (f *fakeApple) guard(entry guardEntry) error {
 	file, err := os.OpenFile(filepath.Join(f.home, "dispatch-guard.log"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
 	if err != nil {
@@ -131,7 +96,7 @@ func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fenc
 			o.ObservedAt = time.Now().UTC()
 			f.records[a.NativeKey] = o
 			f.fault = ""
-			f.saveLocked()
+			f.changedLocked(contracts.Reminders)
 			f.mu.Unlock()
 			if err := emit(contracts.Capture{Source: contracts.Reminders, Observations: []contracts.Observation{o}}); err != nil {
 				return err
@@ -217,7 +182,7 @@ func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fenc
 			o.Data, _ = json.Marshal(data)
 			o.ObservedAt = time.Now().UTC()
 			f.records[a.NativeKey] = o
-			f.saveLocked()
+			f.changedLocked(contracts.Reminders)
 			changed = &o
 		}
 		f.mu.Unlock()
@@ -316,7 +281,7 @@ func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fenc
 		f.evidence[t.CommandID] = outcome
 		fault := f.fault
 		f.fault = ""
-		if err := f.saveLocked(); err != nil {
+		if err := f.changedLocked(contracts.Reminders); err != nil {
 			f.mu.Unlock()
 			return err
 		}

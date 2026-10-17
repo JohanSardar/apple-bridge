@@ -3,6 +3,7 @@ package simapple
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -30,9 +31,10 @@ type Action struct {
 }
 type captureRequest struct {
 	SourceState *contracts.IPCFrame
-	Capture     contracts.Capture
-	Done        chan struct{}
-	Close       bool
+	Capture  contracts.Capture
+	Done     chan struct{}
+	Revision uint64
+	Close    bool
 }
 type fakeApple struct {
 	messages          messageState
@@ -50,6 +52,8 @@ type fakeApple struct {
 	fault             string
 	pause             time.Duration
 
+	path    string
+	durable durableApple
 	mu      sync.Mutex
 	records map[string]contracts.Observation
 	changes chan captureRequest
@@ -74,7 +78,10 @@ func (f *fakeApple) inspect() []contracts.Observation {
 	return records
 }
 func (f *fakeApple) enqueue(ctx context.Context, c contracts.Capture, wait bool) error {
-	req := captureRequest{Capture: c}
+	f.mu.Lock()
+	revision := f.durable.Revision[c.Source]
+	f.mu.Unlock()
+	req := captureRequest{Capture: c, Revision: revision}
 	if wait {
 		req.Done = make(chan struct{})
 	}
@@ -97,41 +104,62 @@ func (f *fakeApple) enqueue(ctx context.Context, c contracts.Capture, wait bool)
 	return nil
 }
 func fullScan(records []contracts.Observation) contracts.Capture {
-	filtered := []contracts.Observation{}
-	for _, o := range records {
-		if contracts.CollectionSource(o.Collection) == contracts.Reminders {
-			filtered = append(filtered, o)
+	return fullScanSource(records, contracts.Reminders)
+}
+func fullScanSource(records []contracts.Observation, source contracts.Source) contracts.Capture {
+	observations := []contracts.Observation{}
+	scope := []string{}
+	for _, record := range records {
+		if contracts.CollectionSource(record.Collection) == source {
+			observations = append(observations, record)
+			if !slices.Contains(scope, record.Collection) {
+				scope = append(scope, record.Collection)
+			}
 		}
 	}
-	records = filtered
-	return contracts.Capture{Source: contracts.Reminders, Observations: records, ScanID: contracts.NewID("scan"), Scope: []string{"reminders.list", "reminders.reminder"}, ScanStartedAt: time.Now().UTC(), CompletionEvidence: "complete"}
+	return contracts.Capture{Source: source, Observations: observations, ScanID: contracts.NewID("scan"), Scope: scope, ScanStartedAt: time.Now().UTC(), CompletionEvidence: "complete"}
 }
 func Run(ctx context.Context, cfg Config) error {
 	fake := &fakeApple{blobs: map[string][]byte{}, generation: contracts.NewID("sim"), home: filepath.Dir(cfg.Control), effects: map[string]int{}, evidence: map[string]contracts.IPCFrame{}, tickets: map[string]ticket{}, records: map[string]contracts.Observation{}, changes: make(chan captureRequest, 4096), liveChanges: make(chan captureRequest, 4096)}
-	var durable durableApple
-	if b, err := os.ReadFile(filepath.Join(fake.home, "truth.json")); err == nil {
-		if json.Unmarshal(b, &durable) != nil {
-			return contracts.ErrCorrupt
+	fake.path = filepath.Join(filepath.Dir(cfg.Control), "sim-state.json")
+	fake.durable = durableApple{Generation: contracts.NewID("sim"), Records: fake.records, Revision: map[contracts.Source]uint64{}, Committed: map[contracts.Source]uint64{}, Checkpoints: map[contracts.Source]string{}}
+	if data, err := os.ReadFile(fake.path); err == nil {
+		if err = json.Unmarshal(data, &fake.durable); err != nil {
+			return err
 		}
-		if durable.Generation != "" {
-			fake.generation = durable.Generation
-		}
-		fake.records = durable.Records
-		fake.effects = durable.Effects
-		fake.evidence = durable.Evidence
+		fake.records = fake.durable.Records
 	}
-	if err := fake.loadGuards(); err != nil {
+	if data, err := os.ReadFile(filepath.Join(filepath.Dir(fake.path), "sim-progress.json")); err == nil {
+		var progress durableApple
+		if json.Unmarshal(data, &progress) == nil && progress.Generation == fake.durable.Generation {
+			fake.durable.Committed = progress.Committed
+			fake.durable.Checkpoints = progress.Checkpoints
+			fake.durable.Scans = progress.Scans
+			fake.durable.InProgress = progress.InProgress
+		}
+	}
+	if fake.durable.InProgress == nil {
+		fake.durable.InProgress = map[contracts.Source]bool{}
+	}
+	fake.generation = fake.durable.Generation
+	if fake.durable.Effects != nil { fake.effects = fake.durable.Effects }
+	if fake.durable.Evidence != nil { fake.evidence = fake.durable.Evidence }
+	if err := fake.loadGuards(); err != nil { return err }
+	fake.messages = messageState{generation: fake.durable.MessagesGeneration, permitted: true}
+	if fake.messages.generation == "" { fake.messages.generation = fake.durable.Generation }
+	if err := fake.saveLocked(); err != nil {
 		return err
 	}
 	mux := http.NewServeMux()
 	fake.commandControl(mux)
 	fake.blobRoutes(mux)
 	fake.remindersControl(mux)
-	fake.messages = messageState{generation: fake.generation, permitted: true}
-	if durable.MessagesGeneration != "" {
-		fake.messages.generation = durable.MessagesGeneration
-	}
 	fake.messageRoutes(mux)
+	mux.HandleFunc("GET /stats", func(w http.ResponseWriter, r *http.Request) {
+		fake.mu.Lock()
+		defer fake.mu.Unlock()
+		json.NewEncoder(w).Encode(map[string]any{"scans": fake.durable.Scans, "revision": fake.durable.Revision, "committed": fake.durable.Committed})
+	})
 	mux.HandleFunc("GET /inspect", func(w http.ResponseWriter, r *http.Request) { json.NewEncoder(w).Encode(fake.inspect()) })
 	mux.HandleFunc("POST /source-state", func(w http.ResponseWriter, r *http.Request) {
 		var frame contracts.IPCFrame
@@ -162,15 +190,21 @@ func Run(ctx context.Context, cfg Config) error {
 		for i := 0; i < action.Count; i++ {
 			key := contracts.NewID("seed")
 			data, _ := json.Marshal(map[string]any{"title": "[ab-test] " + key, "completed": false, "opaque_number": json.Number("9007199254740993"), "list_id": map[string]any{"$ref": map[string]string{"collection": "reminders.list", "native_key": "list"}}})
-			fake.records[key] = contracts.Observation{Kind: "upsert", Collection: "reminders.reminder", NativeKey: key, ObservedAt: now, Data: data}
+			collection := "reminders.reminder"
+			if action.Collection == "messages.message" {
+				collection = action.Collection
+				data, _ = json.Marshal(map[string]any{"title": "[ab-test] " + key, "text": fmt.Sprintf("[ab-test] synthetic message %d benchmark%s", i, map[bool]string{true: " needle"}[i%1000 == 0]), "optional_future": map[string]any{"counter": json.Number("9007199254740993")}})
+			}
+			fake.records[key] = contracts.Observation{Kind: "upsert", Collection: collection, NativeKey: key, ObservedAt: now, Data: data}
 		}
-		if err := fake.saveLocked(); err != nil {
-			fake.mu.Unlock()
-			http.Error(w, "persist", 500)
-			return
+		source := contracts.Reminders
+		if action.Collection == "messages.message" {
+			source = contracts.Messages
 		}
+		fake.changedLocked(source)
 		fake.mu.Unlock()
-		if err := fake.enqueue(r.Context(), fullScan(fake.inspect()), false); err != nil {
+		capture := fullScanSource(fake.inspect(), source)
+		if err := fake.enqueue(r.Context(), capture, false); err != nil {
 			return
 		}
 		json.NewEncoder(w).Encode(map[string]bool{"effect_done": true})
@@ -209,7 +243,7 @@ func Run(ctx context.Context, cfg Config) error {
 			o = contracts.Observation{Kind: "upsert", Collection: action.Collection, NativeKey: action.Key, ObservedAt: time.Now().UTC(), Data: action.Data}
 		}
 		fake.records[action.Key] = o
-		if err := fake.saveLocked(); err != nil {
+		if err := fake.changedLocked(contracts.CollectionSource(o.Collection)); err != nil {
 			fake.mu.Unlock()
 			http.Error(w, "persist", 500)
 			return
@@ -279,7 +313,7 @@ func Run(ctx context.Context, cfg Config) error {
 	if err != nil {
 		return err
 	}
-	generation := fake.generation
+	generation := fake.durable.Generation
 	for ctx.Err() == nil {
 		conn, err := net.DialUnix("unix", nil, &net.UnixAddr{Name: cfg.Socket, Net: "unix"})
 		if err == nil {
@@ -356,7 +390,8 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 		}
 	}()
 	pending := []contracts.IPCFrame{}
-	transmit := func(capture contracts.Capture) error {
+	var emitRevision uint64
+	transmit := func(capture contracts.Capture, final bool) error {
 		capture = messageAliases(capture)
 		if capture.Generation == "" {
 			capture.Generation = generation
@@ -420,6 +455,14 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 						f.messages.captureBytes += n
 						f.mu.Unlock()
 					}
+					f.mu.Lock()
+					if final {
+						f.durable.Committed[capture.Source] = emitRevision
+						f.durable.InProgress[capture.Source] = false
+					}
+					f.durable.Checkpoints[capture.Source] = capture.Checkpoint
+					f.progressLocked()
+					f.mu.Unlock()
 					return nil
 				case "Ping":
 					if _, err = wire.Send(contracts.IPCFrame{T: "Pong"}); err != nil {
@@ -433,8 +476,15 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 		}
 	}
 	emit := func(capture contracts.Capture) error {
+		f.mu.Lock()
+		f.durable.InProgress[capture.Source] = true
+		err := f.progressLocked()
+		f.mu.Unlock()
+		if err != nil {
+			return err
+		}
 		if len(capture.Observations) == 0 {
-			return transmit(capture)
+			return transmit(capture, true)
 		}
 		slices.SortStableFunc(capture.Observations, func(a, b contracts.Observation) int {
 			if a.Kind == "absent" && b.Kind != "absent" {
@@ -484,7 +534,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 							}
 							continue
 						}
-						if err := transmit(f.revalidateMessages(live.Capture)); err != nil {
+						if err := transmit(f.revalidateMessages(live.Capture), true); err != nil {
 							return err
 						}
 						if live.Done != nil {
@@ -496,7 +546,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 				}
 			}
 		drainedLive:
-			if err := transmit(part); err != nil {
+			if err := transmit(part, end == len(capture.Observations)); err != nil {
 				return err
 			}
 			offset = end
@@ -504,21 +554,22 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 		return nil
 	}
 	for _, source := range []contracts.Source{contracts.Reminders, contracts.Messages} {
-		records := []contracts.Observation{}
-		for _, o := range f.inspect() {
-			if contracts.CollectionSource(o.Collection) == source {
-				records = append(records, o)
+		f.mu.Lock()
+		emitRevision = f.durable.Revision[source]
+		scan := f.durable.InProgress[source] || checkpoints[source] == "" || checkpoints[source] != f.durable.Checkpoints[source] || emitRevision != f.durable.Committed[source]
+		if scan {
+			f.durable.Scans++
+			f.progressLocked()
+		}
+		f.mu.Unlock()
+		if scan {
+			capture := fullScanSource(f.inspect(), source)
+			if source == contracts.Messages {
+				capture.BlobHandles = f.blobHandles()
 			}
-		}
-		capture := fullScan(records)
-		capture.Source = source
-		capture.Observations = records
-		if source == contracts.Messages {
-			capture.Scope = []string{"messages.chat", "messages.handle", "messages.message", "messages.reaction", "messages.attachment"}
-			capture.BlobHandles = f.blobHandles()
-		}
-		if err = emit(capture); err != nil {
-			return err
+			if err = emit(capture); err != nil {
+				return err
+			}
 		}
 	}
 	for _, outcome := range f.recovered {
@@ -583,6 +634,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 				wire.Send(contracts.IPCFrame{T: "Close", Reason: "lab"})
 				return errClosed
 			}
+			emitRevision = req.Revision
 			if err = emit(req.Capture); err != nil {
 				return err
 			}

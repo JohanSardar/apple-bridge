@@ -125,12 +125,14 @@ type Alias struct {
 type ReplicaStatus struct {
 	Blobs BlobProgress `json:"blobs"`
 
-	State         string    `json:"state"`
-	Cursor        Cursor    `json:"cursor"`
-	LastHeartbeat time.Time `json:"last_heartbeat"`
-	Mode          string    `json:"mode"`
-	Snapshots     int       `json:"snapshots"`
-	Resumes       int       `json:"resumes"`
+	Schema           int       `json:"schema"`
+	SnapshotSequence uint64    `json:"snapshot_sequence"`
+	State            string    `json:"state"`
+	Cursor           Cursor    `json:"cursor"`
+	LastHeartbeat    time.Time `json:"last_heartbeat"`
+	Mode             string    `json:"mode"`
+	Snapshots        int       `json:"snapshots"`
+	Resumes          int       `json:"resumes"`
 }
 
 func (c Cursor) EventID() string {
