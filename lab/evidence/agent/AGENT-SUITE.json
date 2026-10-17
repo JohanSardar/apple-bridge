@@ -1,11 +1,44 @@
 {
-  "run_id": "agent_01M55SYJCB1SXB73EY382PVW14",
+  "run_id": "agent_01M55THT29114EY8S9T6A59DKQ",
   "scenario": "AGENT-SUITE",
   "level": "agent",
-  "git_sha": "707ad9d66c2e08e51ac4d2a032d71c33ec0f8aab",
-  "at": "2026-10-17T20:48:12.683492Z",
+  "git_sha": "874df39a81e071f87e7b6c7f3a6820bd8adf5eb2",
+  "at": "2026-10-17T20:58:43.145379Z",
   "passed": true,
   "tasks": [
+    {
+      "task_id": "calendar-appointment",
+      "passed": true,
+      "attempts": [
+        {
+          "attempt": 1,
+          "passed": true,
+          "truth_check": true,
+          "replica_check": true,
+          "mcp_only": true,
+          "cleanup": true,
+          "duration_ms": 72089
+        },
+        {
+          "attempt": 2,
+          "passed": true,
+          "truth_check": true,
+          "replica_check": true,
+          "mcp_only": true,
+          "cleanup": true,
+          "duration_ms": 65294
+        },
+        {
+          "attempt": 3,
+          "passed": false,
+          "truth_check": false,
+          "replica_check": true,
+          "mcp_only": true,
+          "cleanup": true,
+          "duration_ms": 74012
+        }
+      ]
+    },
     {
       "task_id": "contacts-job-title",
       "passed": true,
@@ -17,7 +50,7 @@
           "replica_check": true,
           "mcp_only": true,
           "cleanup": true,
-          "duration_ms": 74024
+          "duration_ms": 87653
         },
         {
           "attempt": 2,
@@ -26,7 +59,7 @@
           "replica_check": true,
           "mcp_only": true,
           "cleanup": true,
-          "duration_ms": 73363
+          "duration_ms": 74286
         },
         {
           "attempt": 3,
@@ -35,7 +68,7 @@
           "replica_check": true,
           "mcp_only": true,
           "cleanup": true,
-          "duration_ms": 71788
+          "duration_ms": 83910
         }
       ]
     },
@@ -50,7 +83,7 @@
           "replica_check": true,
           "mcp_only": true,
           "cleanup": true,
-          "duration_ms": 100388
+          "duration_ms": 71042
         },
         {
           "attempt": 2,
@@ -59,7 +92,7 @@
           "replica_check": true,
           "mcp_only": true,
           "cleanup": true,
-          "duration_ms": 64885
+          "duration_ms": 69035
         },
         {
           "attempt": 3,
@@ -68,7 +101,7 @@
           "replica_check": true,
           "mcp_only": true,
           "cleanup": true,
-          "duration_ms": 68088
+          "duration_ms": 66690
         }
       ]
     }
