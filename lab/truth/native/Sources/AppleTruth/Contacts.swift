@@ -18,6 +18,8 @@ extension AppleTruth {
         let tag = request["tag"] as? String ?? ""
         let action = request["action"] as? String ?? ""
         let initial = try read()
+        let initialGroups = try store.groups(matching: nil).map(\.identifier).sorted()
+        let initialContainers = try store.containers(matching: nil).map(\.identifier).sorted()
         var effectAt = DispatchTime.now().uptimeNanoseconds
         func owned(_ contact: CNContact) -> Bool { contact.organizationName == "Bridge Test" && !tag.isEmpty && contact.givenName.hasPrefix(tag + " ") }
         if verb == "fixture" {
@@ -79,6 +81,19 @@ extension AppleTruth {
             let members = try store.unifiedContacts(matching: CNContact.predicateForContactsInGroup(withIdentifier: group.identifier), keysToFetch: [CNContactIdentifierKey as NSString])
             groups[digest(group.identifier)] = ["name_digest": digest(group.name), "member_digests": members.map { digest($0.identifier) }.sorted()]
         }
-        return ["status": "verified", "identifier_exists": all.contains { digest($0.identifier) == (request["identifier_hash"] as? String ?? "") }, "total_count": all.count, "bridge_test_count": all.filter { $0.organizationName == "Bridge Test" }.count, "tagged_count": tagged.count, "records": records, "coverage_counts": coverage, "groups": groups, "effect_uptime_ns": effectAt]
+        let unownedBefore = initial.filter { !owned($0) }
+        let unownedAfter = all.filter { !owned($0) }
+        let afterByID = Dictionary(uniqueKeysWithValues: unownedAfter.map { ($0.identifier, $0) })
+        let untouched = unownedBefore.count == unownedAfter.count && unownedBefore.allSatisfy { contact in
+            guard let after = afterByID[contact.identifier] else { return false }
+            return keys.allSatisfy { key in
+                let beforeValue = contact.value(forKey: key) as? NSObject
+                let afterValue = after.value(forKey: key) as? NSObject
+                if beforeValue == nil { return afterValue == nil }
+                return beforeValue?.isEqual(afterValue) == true
+            }
+        }
+        let cleanupAudit: [String: Any] = ["selected_count": initial.filter(owned).count, "unowned_before_count": unownedBefore.count, "unowned_after_count": unownedAfter.count, "unowned_identifiers_before_sha256": digest(unownedBefore.map(\.identifier).sorted().joined(separator: "\n")), "unowned_identifiers_after_sha256": digest(unownedAfter.map(\.identifier).sorted().joined(separator: "\n")), "unowned_fields_unchanged": untouched, "groups_preserved": initialGroups == (try store.groups(matching: nil).map(\.identifier).sorted()), "containers_preserved": initialContainers == (try store.containers(matching: nil).map(\.identifier).sorted()), "whole_container_operations": 0]
+        return ["cleanup_audit": verb == "fixture" && action == "cleanup" ? cleanupAudit : [:], "status": "verified", "identifier_exists": all.contains { digest($0.identifier) == (request["identifier_hash"] as? String ?? "") }, "total_count": all.count, "bridge_test_count": all.filter { $0.organizationName == "Bridge Test" }.count, "tagged_count": tagged.count, "records": records, "coverage_counts": coverage, "groups": groups, "effect_uptime_ns": effectAt]
     }
 }
