@@ -29,22 +29,24 @@ type Action struct {
 	Delete      bool            `json:"delete"`
 }
 type captureRequest struct {
-	Capture contracts.Capture
-	Done    chan struct{}
-	Close   bool
+	SourceState *contracts.IPCFrame
+	Capture     contracts.Capture
+	Done        chan struct{}
+	Close       bool
 }
 type fakeApple struct {
-	blobs      map[string][]byte
-	blobState  string
-	blobDelay  time.Duration
-	generation string
-	recovered  []contracts.IPCFrame
-	home       string
-	effects    map[string]int
-	evidence   map[string]contracts.IPCFrame
-	tickets    map[string]ticket
-	fault      string
-	pause      time.Duration
+	permissionMissing bool
+	blobs             map[string][]byte
+	blobState         string
+	blobDelay         time.Duration
+	generation        string
+	recovered         []contracts.IPCFrame
+	home              string
+	effects           map[string]int
+	evidence          map[string]contracts.IPCFrame
+	tickets           map[string]ticket
+	fault             string
+	pause             time.Duration
 
 	mu      sync.Mutex
 	records map[string]contracts.Observation
@@ -111,7 +113,25 @@ func Run(ctx context.Context, cfg Config) error {
 	mux := http.NewServeMux()
 	fake.commandControl(mux)
 	fake.blobRoutes(mux)
+	fake.remindersControl(mux)
 	mux.HandleFunc("GET /inspect", func(w http.ResponseWriter, r *http.Request) { json.NewEncoder(w).Encode(fake.inspect()) })
+	mux.HandleFunc("POST /source-state", func(w http.ResponseWriter, r *http.Request) {
+		var frame contracts.IPCFrame
+		if json.NewDecoder(r.Body).Decode(&frame) != nil || frame.Source != contracts.Reminders || frame.State != "permission_missing" {
+			http.Error(w, "invalid", 400)
+			return
+		}
+		fake.mu.Lock()
+		fake.permissionMissing = frame.State == "permission_missing"
+		fake.mu.Unlock()
+		frame.T = "SourceState"
+		frame.Coverage = map[contracts.Source]contracts.Coverage{contracts.Reminders: {Fields: "partial", Missing: []string{"permission_missing"}}}
+		select {
+		case fake.changes <- captureRequest{SourceState: &frame}:
+			json.NewEncoder(w).Encode(map[string]bool{"armed": true})
+		case <-r.Context().Done():
+		}
+	})
 	mux.HandleFunc("POST /seed", func(w http.ResponseWriter, r *http.Request) {
 		var action Action
 		if json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&action) != nil {
@@ -176,7 +196,12 @@ func Run(ctx context.Context, cfg Config) error {
 			http.Error(w, "persist", 500)
 			return
 		}
+		permissionMissing := fake.permissionMissing
 		fake.mu.Unlock()
+		if permissionMissing {
+			json.NewEncoder(w).Encode(map[string]bool{"effect_done": true})
+			return
+		}
 		capture := contracts.Capture{Source: contracts.CollectionSource(o.Collection), Observations: []contracts.Observation{o}}
 		if action.Delete {
 			capture = fullScan([]contracts.Observation{o})
@@ -276,7 +301,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 	f.tickets = map[string]ticket{}
 	f.mu.Unlock()
 	credit := open.ByteCredit
-	coverage := contracts.Coverage{Fields: "complete", Missing: []string{}}
+	coverage := contracts.Coverage{Fields: "complete", Missing: []string{"recurring reminders: next incomplete instance only"}}
 	if _, err = wire.Send(contracts.IPCFrame{T: "Ready", Protocol: contracts.IPCProtocol, Capabilities: map[contracts.Source][]string{contracts.Reminders: {"reminders.create", "reminders.update", "reminders.complete", "reminders.uncomplete", "reminders.delete", "reminders.create_list"}}, Coverage: map[contracts.Source]contracts.Coverage{contracts.Reminders: coverage, contracts.Messages: coverage}, HelperBuild: "sim/1", OSBuild: "sim"}); err != nil {
 		return err
 	}
@@ -455,6 +480,12 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 				return contracts.ErrInvalid
 			}
 		case req := <-f.changes:
+			if req.SourceState != nil {
+				if _, err := wire.Send(*req.SourceState); err != nil {
+					return err
+				}
+				continue
+			}
 			if req.Close {
 				wire.Send(contracts.IPCFrame{T: "Close", Reason: "lab"})
 				return errClosed

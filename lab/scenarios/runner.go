@@ -47,6 +47,7 @@ type Latency struct {
 }
 type Evidence struct {
 	RunID      string             `json:"run_id"`
+	Status     string             `json:"status,omitempty"`
 	Scenario   string             `json:"scenario"`
 	Level      string             `json:"level"`
 	Passed     bool               `json:"passed"`
@@ -58,8 +59,9 @@ type Evidence struct {
 }
 
 type Seen struct {
-	Change contracts.Change
-	At     time.Time
+	UptimeNS int64
+	Change   contracts.Change
+	At       time.Time
 }
 type watcher struct {
 	mu              sync.Mutex
@@ -140,7 +142,7 @@ func watch(ctx context.Context, e world.Endpoint, filtered bool, oracle func(con
 						if filtered && c.Record.Source != contracts.System {
 							w.invalid = true
 						}
-						seen := Seen{Change: c, At: at}
+						seen := Seen{Change: c, At: at, UptimeNS: world.UptimeNS()}
 						w.seen[key(c.Record)] = seen
 						w.changes = append(w.changes, seen)
 					}
@@ -310,6 +312,9 @@ func convergence(w *world.World) bool {
 }
 
 func Run(ctx context.Context, s Scenario, level string) Evidence {
+	if nativeScenario(s.ID, level) {
+		return runNativeScenario(ctx, s, level)
+	}
 	sha, _ := exec.Command("git", "rev-parse", "HEAD").Output()
 	evidence := Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, GitSHA: strings.TrimSpace(string(sha)), At: time.Now().UTC(), Assertions: []Assertion{}, Latency: map[string]Latency{}, Hosts: []string{"air"}}
 	if level == "replica" {
@@ -722,7 +727,7 @@ func Save(e Evidence) error {
 	return os.WriteFile(filepath.Join(dir, e.Scenario+".json"), append(b, '\n'), 0644)
 }
 func Suite(ctx context.Context, paths []string, level string, asJSON bool) error {
-	if level != "sim" && level != "replica" {
+	if level != "sim" && level != "replica" && level != "real" {
 		return fmt.Errorf("level unsupported by tracer")
 	}
 	scenarios, err := Load(paths)

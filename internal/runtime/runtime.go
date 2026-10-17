@@ -28,11 +28,13 @@ type Config struct {
 	BlobCap     int64 `json:"blob_cap,omitempty"`
 	BlobGraceMS int64 `json:"blob_grace_ms,omitempty"`
 
-	Role        string `json:"role"`
-	Home        string `json:"home"`
-	PeerAddress string `json:"peer_address"`
-	APIAddress  string `json:"api_address"`
-	Socket      string `json:"socket"`
+	Role              string `json:"role"`
+	Home              string `json:"home"`
+	PeerAddress       string `json:"peer_address"`
+	APIAddress        string `json:"api_address"`
+	Socket            string `json:"socket"`
+	HelperApp         string `json:"helper_app,omitempty"`
+	HelperLabCommands bool   `json:"helper_lab_commands,omitempty"`
 }
 
 func LoadConfig(home string) (Config, error) {
@@ -191,6 +193,9 @@ func Start(ctx context.Context, cfg Config) error {
 				return result.Degraded, err
 			}})
 		}()
+		if cfg.HelperApp != "" {
+			go func() { failures <- superviseHelper(ctx, cfg, secretPath) }()
+		}
 	} else {
 		client := &replication.Client{Store: store, Authority: authority, Blobs: blobStore}
 		service.LocalStatus = client.Status

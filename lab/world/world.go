@@ -51,6 +51,7 @@ type World struct {
 	blobOptions BlobOptions
 
 	Dir              string
+	Native           bool
 	Level            string
 	Gateway          Endpoint
 	Replicas         []Endpoint
@@ -197,6 +198,12 @@ func (w *World) Await(timeout time.Duration, predicate func() bool) error {
 	}
 }
 func New(ctx context.Context, level string, replicas int, seed int, blobOptions ...BlobOptions) (*World, error) {
+	return newEnvironment(ctx, level, replicas, seed, false, blobOptions...)
+}
+func NewReal(ctx context.Context, level string, replicas int) (*World, error) {
+	return newEnvironment(ctx, level, replicas, 0, true)
+}
+func newEnvironment(ctx context.Context, level string, replicas int, seed int, native bool, blobOptions ...BlobOptions) (*World, error) {
 	root, err := os.Getwd()
 	if err != nil {
 		return nil, err
@@ -207,11 +214,11 @@ func New(ctx context.Context, level string, replicas int, seed int, blobOptions 
 	}
 	id := strings.ToLower(contracts.NewID(""))
 	id = id[len(id)-10:]
-	w := &World{Dir: filepath.Join("/tmp/ablab", id), Level: level, bridge: filepath.Join(root, "bin", "bridge"), lab: lab, ctx: ctx}
+	w := &World{Dir: filepath.Join("/tmp/ablab", id), Level: level, Native: native, bridge: filepath.Join(root, "bin", "bridge"), lab: lab, ctx: ctx}
 	if len(blobOptions) > 0 {
 		w.blobOptions = blobOptions[0]
 	}
-	scope := "reminders:write,system:read"
+	scope := "reminders:read,reminders:write,system:read"
 	if len(blobOptions) > 0 {
 		scope = "messages:read,reminders:read,system:read"
 	}
@@ -235,7 +242,11 @@ func New(ctx context.Context, level string, replicas int, seed int, blobOptions 
 		}
 	}
 	gatewayHome := filepath.Join(w.Dir, "gateway")
-	if _, err = w.start("gateway", false, gatewayHome, w.bridge, "start", "--role", "gateway", "--home", gatewayHome, "--peer-addr", net.JoinHostPort(peerHost, "0"), "--api-addr", "127.0.0.1:0", "--blob-grace-ms", strconv.FormatInt(w.blobOptions.GraceMS, 10)); err != nil {
+	gatewayArgs := []string{"start", "--role", "gateway", "--home", gatewayHome, "--peer-addr", net.JoinHostPort(peerHost, "0"), "--api-addr", "127.0.0.1:0", "--blob-grace-ms", strconv.FormatInt(w.blobOptions.GraceMS, 10)}
+	if native {
+		gatewayArgs = append(gatewayArgs, "--helper-app", filepath.Join(os.Getenv("HOME"), "Applications", "AppleBridgeDev", "AppleBridgeHelper.app"), "--helper-lab-commands")
+	}
+	if _, err = w.start("gateway", false, gatewayHome, w.bridge, gatewayArgs...); err != nil {
 		return nil, err
 	}
 	cfg, err := w.config(gatewayHome, false)
@@ -266,22 +277,28 @@ func New(ctx context.Context, level string, replicas int, seed int, blobOptions 
 		return nil, err
 	}
 	w.Gateway = Endpoint{URL: "http://" + cfg.APIAddress, Host: cfg.APIAddress, Token: token, Home: gatewayHome}
-	control := filepath.Join(w.Dir, "sim.sock")
-	if _, err = w.start("simapple", false, w.Dir, w.lab, "simapple", "--socket", cfg.Socket, "--secret-file", filepath.Join(gatewayHome, "apple-secret"), "--control", control); err != nil {
-		return nil, err
-	}
-	transport := &http.Transport{DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
-		return (&net.Dialer{}).DialContext(ctx, "unix", control)
-	}}
-	w.Control = &http.Client{Transport: transport, Timeout: 5 * time.Second}
-	if err = w.Await(10*time.Second, func() bool { _, err := w.Inspect(); return err == nil }); err != nil {
-		return nil, err
-	}
-	if err = w.ControlAction("/seed", map[string]int{"count": seed}); err != nil {
-		return nil, err
-	}
-	if err = w.Await(10*time.Second, func() bool { records, err := w.Records(w.Gateway); return err == nil && len(records) >= seed+2 }); err != nil {
-		return nil, err
+	if !native {
+		control := filepath.Join(w.Dir, "sim.sock")
+		if _, err = w.start("simapple", false, w.Dir, w.lab, "simapple", "--socket", cfg.Socket, "--secret-file", filepath.Join(gatewayHome, "apple-secret"), "--control", control); err != nil {
+			return nil, err
+		}
+		transport := &http.Transport{DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
+			return (&net.Dialer{}).DialContext(ctx, "unix", control)
+		}}
+		w.Control = &http.Client{Transport: transport, Timeout: 5 * time.Second}
+		if err = w.Await(10*time.Second, func() bool { _, err := w.Inspect(); return err == nil }); err != nil {
+			return nil, err
+		}
+		if err = w.ControlAction("/seed", map[string]int{"count": seed}); err != nil {
+			return nil, err
+		}
+		if err = w.Await(10*time.Second, func() bool { records, err := w.Records(w.Gateway); return err == nil && len(records) >= seed+2 }); err != nil {
+			return nil, err
+		}
+	} else {
+		if err = w.Await(15*time.Second, func() bool { _, err := os.Stat(filepath.Join(gatewayHome, "helper", "helper.pid")); return err == nil }); err != nil {
+			return nil, err
+		}
 	}
 	for i := 0; i < replicas; i++ {
 		remote := level == "replica"

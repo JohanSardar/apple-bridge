@@ -32,6 +32,8 @@ func run(ctx context.Context, args []string) error {
 	role := set.String("role", "gateway", "gateway or replica")
 	peer := set.String("peer-addr", "", "gateway peer listen address")
 	api := set.String("api-addr", "", "loopback API address")
+	helperApp := set.String("helper-app", "", "signed Helper app for real mode")
+	helperLabCommands := set.Bool("helper-lab-commands", false, "enable unproven native commands in isolated lab worlds")
 	socket := set.String("socket", "", "ApplePeer socket path")
 	blobCap := set.Int64("blob-cap", 0, "machine blob cap in bytes")
 	blobGrace := set.Int64("blob-grace-ms", 0, "unreferenced blob grace in milliseconds")
@@ -46,7 +48,7 @@ func run(ctx context.Context, args []string) error {
 		return err
 	}
 	if verb == "start" {
-		return bridgeruntime.Start(ctx, bridgeruntime.Config{Role: *role, Home: *home, PeerAddress: *peer, APIAddress: *api, Socket: *socket, BlobCap: *blobCap, BlobGraceMS: *blobGrace})
+		return bridgeruntime.Start(ctx, bridgeruntime.Config{Role: *role, Home: *home, PeerAddress: *peer, APIAddress: *api, Socket: *socket, HelperApp: *helperApp, HelperLabCommands: *helperLabCommands, BlobCap: *blobCap, BlobGraceMS: *blobGrace})
 	}
 	authority, err := trust.Open(*home)
 	if err != nil {

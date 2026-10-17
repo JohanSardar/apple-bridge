@@ -11,6 +11,10 @@ import (
 type blobOptions struct {
 	Case string `yaml:"case"`
 }
+type fixtureCleanupOptions struct {
+	Cleanup string `yaml:"cleanup"`
+}
+
 type worldOptions struct {
 	Replicas int `yaml:"replicas"`
 }
@@ -55,6 +59,10 @@ func validateScenario(s Scenario) error {
 			for action, options := range step {
 				var target any
 				switch phase + "/" + action {
+				case "when/restart_helper", "when/tcc_ready", "when/reminders_external", "when/reminders_crud", "when/reminders_list", "when/reminders_recurring", "when/reminders_permission_loss":
+					target = &struct{}{}
+				case "cleanup/fixture":
+					target = &fixtureCleanupOptions{}
 				case "given/world":
 					target = &worldOptions{}
 				case "given/seed":
