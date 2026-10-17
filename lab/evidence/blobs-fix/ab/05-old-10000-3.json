@@ -1,0 +1,105 @@
+{
+  "order": 5,
+  "variant": "old",
+  "rows": 10000,
+  "repeat": 3,
+  "product_git_sha": "bf3450acf3cd285a50c378597b9e5dfd7d45681c",
+  "product_binary_sha256": "053a886b8c0ea0c1801710302441e81379e64b994100535885d12fa004d71f33",
+  "harness_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+  "before": {
+    "at": "2026-10-17T07:42:12.964109+00:00",
+    "load_average": "{ 22.20 20.55 18.47 }",
+    "cpu_user_percent": 10.11,
+    "cpu_system_percent": 89.88,
+    "cpu_idle_percent": 0.0,
+    "active_heavy_slots": 2,
+    "heavy_slots_capacity": 2,
+    "queued_heavy_commands": 3
+  },
+  "after": {
+    "at": "2026-10-17T07:43:00.049608+00:00",
+    "load_average": "{ 21.32 20.55 18.58 }",
+    "cpu_user_percent": 10.37,
+    "cpu_system_percent": 89.62,
+    "cpu_idle_percent": 0.0,
+    "active_heavy_slots": 2,
+    "heavy_slots_capacity": 2,
+    "queued_heavy_commands": 3
+  },
+  "exit_code": 0,
+  "rows_per_second": 343.7373062915137,
+  "evidence": {
+    "run_id": "run_01M54CZC2A1GEFSP3WA97XTJDG",
+    "network_path": "loopback",
+    "metrics": {
+      "absolute_target_rows_per_second": 2000,
+      "absolute_target_status": "pending-quiet",
+      "capture_rows_per_frame": 64,
+      "history_rows": 10000,
+      "history_rows_per_second": 343.7373062915137
+    },
+    "scenario": "CORE-BLOB-REFERENCE-INDEX",
+    "level": "sim",
+    "passed": true,
+    "git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+    "at": "2026-10-17T07:42:13.066438Z",
+    "assertions": [
+      {
+        "name": "feed_network_loopback",
+        "passed": true
+      },
+      {
+        "name": "replica_host_is_air",
+        "passed": true
+      },
+      {
+        "name": "bootstrap_snapshot",
+        "passed": true
+      },
+      {
+        "name": "scope_query_and_get",
+        "passed": true
+      },
+      {
+        "name": "history_request",
+        "passed": true
+      },
+      {
+        "name": "history_committed",
+        "passed": true
+      },
+      {
+        "name": "history_capture_measurement_recorded",
+        "passed": true
+      },
+      {
+        "name": "history_10000_durable_records",
+        "passed": true
+      },
+      {
+        "name": "history_durable_cursor",
+        "passed": true
+      },
+      {
+        "name": "history_replica_records_and_cursor_match",
+        "passed": true
+      },
+      {
+        "name": "credential_backend_override_restored",
+        "passed": true
+      }
+    ],
+    "latency": {
+      "history_10000_commit": {
+        "samples": 1,
+        "p50_ms": 29091.983375,
+        "p95_ms": 29091.983375,
+        "max_ms": 29091.983375,
+        "timeouts": 0
+      }
+    },
+    "hosts": [
+      "air"
+    ]
+  }
+}

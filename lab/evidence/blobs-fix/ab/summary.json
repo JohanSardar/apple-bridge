@@ -1,0 +1,526 @@
+{
+  "baseline": "Unmodified main product internal/ and cmd/bridge at the recorded baseline SHA; same new SimApplePeer and scenario harness for both binaries.",
+  "conditions": "One connected replica on Air; fresh World per run; 64 records per IPC capture; synthetic reminder metadata without blob payloads; elapsed interval covers enqueue through final durable ACK; fixture generation and truth persistence excluded; no builds between samples.",
+  "schedule": "old10k/new10k repeated three times back to back, then new2k/new20k repeated three times",
+  "absolute_target_status": "pending-quiet",
+  "target_rows_per_second": 2000,
+  "product_shas": {
+    "old": "bf3450acf3cd285a50c378597b9e5dfd7d45681c",
+    "new": "803a49095dc2122f0048bacf8b37a36e54571120"
+  },
+  "binary_sha256": {
+    "old": "053a886b8c0ea0c1801710302441e81379e64b994100535885d12fa004d71f33",
+    "new": "8af6c18baafaf6d8ea3ab57834350d69741f9a031e5a44247c54871bb981556f"
+  },
+  "groups_rows_per_second": {
+    "old-10000": {
+      "n": 3,
+      "mean": 327.31672954833226,
+      "median": 343.7373062915137,
+      "min": 274.8028851525124,
+      "max": 363.4099972009708,
+      "sample_variance": 2165.0315818260488,
+      "sample_standard_deviation": 46.52989986907396,
+      "coefficient_of_variation": 0.14215558102783518
+    },
+    "new-10000": {
+      "n": 3,
+      "mean": 427.1524844506223,
+      "median": 367.66556037631494,
+      "min": 311.1350198848442,
+      "max": 602.6568730907077,
+      "sample_variance": 23900.268326012058,
+      "sample_standard_deviation": 154.5971161633103,
+      "coefficient_of_variation": 0.361924890504017
+    },
+    "new-2000": {
+      "n": 3,
+      "mean": 273.3428847597183,
+      "median": 310.21567554214533,
+      "min": 198.82462915733694,
+      "max": 310.9883495796726,
+      "sample_variance": 4164.877069808447,
+      "sample_standard_deviation": 64.5358587903535,
+      "coefficient_of_variation": 0.23609855016743408
+    },
+    "new-20000": {
+      "n": 3,
+      "mean": 434.7104506980378,
+      "median": 345.6724807736825,
+      "min": 328.7501233053566,
+      "max": 629.7087480150743,
+      "sample_variance": 28589.84351297898,
+      "sample_standard_deviation": 169.08531430310256,
+      "coefficient_of_variation": 0.38896077614787783
+    }
+  },
+  "paired_new_over_old_ratios": [
+    1.0117100883523322,
+    1.1322116203844363,
+    1.7532483732784354
+  ],
+  "paired_ratio_statistics": {
+    "n": 3,
+    "mean": 1.299056694005068,
+    "median": 1.1322116203844363,
+    "min": 1.0117100883523322,
+    "max": 1.7532483732784354,
+    "sample_variance": 0.15834771594639213,
+    "sample_standard_deviation": 0.39792928510778414,
+    "coefficient_of_variation": 0.30632172325054174
+  },
+  "new_20k_over_2k_mean_throughput_ratio": 1.5903485143949128,
+  "runs": [
+    {
+      "order": 1,
+      "variant": "old",
+      "rows": 10000,
+      "repeat": 1,
+      "product_git_sha": "bf3450acf3cd285a50c378597b9e5dfd7d45681c",
+      "product_binary_sha256": "053a886b8c0ea0c1801710302441e81379e64b994100535885d12fa004d71f33",
+      "harness_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+      "before": {
+        "at": "2026-10-17T07:38:43.717211+00:00",
+        "load_average": "{ 20.08 18.16 17.20 }",
+        "cpu_user_percent": 10.26,
+        "cpu_system_percent": 89.73,
+        "cpu_idle_percent": 0.0,
+        "active_heavy_slots": 2,
+        "heavy_slots_capacity": 2,
+        "queued_heavy_commands": 3
+      },
+      "after": {
+        "at": "2026-10-17T07:39:22.436118+00:00",
+        "load_average": "{ 22.51 19.10 17.60 }",
+        "cpu_user_percent": 9.55,
+        "cpu_system_percent": 90.44,
+        "cpu_idle_percent": 0.0,
+        "active_heavy_slots": 2,
+        "heavy_slots_capacity": 2,
+        "queued_heavy_commands": 3
+      },
+      "exit_code": 0,
+      "rows_per_second": 363.4099972009708
+    },
+    {
+      "order": 2,
+      "variant": "new",
+      "rows": 10000,
+      "repeat": 1,
+      "product_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+      "product_binary_sha256": "8af6c18baafaf6d8ea3ab57834350d69741f9a031e5a44247c54871bb981556f",
+      "harness_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+      "before": {
+        "at": "2026-10-17T07:39:26.091265+00:00",
+        "load_average": "{ 22.39 19.13 17.61 }",
+        "cpu_user_percent": 10.54,
+        "cpu_system_percent": 89.45,
+        "cpu_idle_percent": 0.0,
+        "active_heavy_slots": 2,
+        "heavy_slots_capacity": 2,
+        "queued_heavy_commands": 3
+      },
+      "after": {
+        "at": "2026-10-17T07:40:06.726694+00:00",
+        "load_average": "{ 22.94 19.68 17.88 }",
+        "cpu_user_percent": 9.14,
+        "cpu_system_percent": 90.85,
+        "cpu_idle_percent": 0.0,
+        "active_heavy_slots": 2,
+        "heavy_slots_capacity": 2,
+        "queued_heavy_commands": 3
+      },
+      "exit_code": 0,
+      "rows_per_second": 367.66556037631494
+    },
+    {
+      "order": 3,
+      "variant": "old",
+      "rows": 10000,
+      "repeat": 2,
+      "product_git_sha": "bf3450acf3cd285a50c378597b9e5dfd7d45681c",
+      "product_binary_sha256": "053a886b8c0ea0c1801710302441e81379e64b994100535885d12fa004d71f33",
+      "harness_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+      "before": {
+        "at": "2026-10-17T07:40:14.504945+00:00",
+        "load_average": "{ 22.46 19.64 17.88 }",
+        "cpu_user_percent": 10.41,
+        "cpu_system_percent": 89.58,
+        "cpu_idle_percent": 0.0,
+        "active_heavy_slots": 2,
+        "heavy_slots_capacity": 2,
+        "queued_heavy_commands": 3
+      },
+      "after": {
+        "at": "2026-10-17T07:41:09.471980+00:00",
+        "load_average": "{ 22.19 20.08 18.15 }",
+        "cpu_user_percent": 14.25,
+        "cpu_system_percent": 85.74,
+        "cpu_idle_percent": 0.0,
+        "active_heavy_slots": 2,
+        "heavy_slots_capacity": 2,
+        "queued_heavy_commands": 3
+      },
+      "exit_code": 0,
+      "rows_per_second": 274.8028851525124
+    },
+    {
+      "order": 4,
+      "variant": "new",
+      "rows": 10000,
+      "repeat": 2,
+      "product_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+      "product_binary_sha256": "8af6c18baafaf6d8ea3ab57834350d69741f9a031e5a44247c54871bb981556f",
+      "harness_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+      "before": {
+        "at": "2026-10-17T07:41:14.954515+00:00",
+        "load_average": "{ 22.07 20.13 18.19 }",
+        "cpu_user_percent": 8.77,
+        "cpu_system_percent": 91.22,
+        "cpu_idle_percent": 0.0,
+        "active_heavy_slots": 2,
+        "heavy_slots_capacity": 2,
+        "queued_heavy_commands": 3
+      },
+      "after": {
+        "at": "2026-10-17T07:42:07.052619+00:00",
+        "load_average": "{ 22.30 20.54 18.46 }",
+        "cpu_user_percent": 8.69,
+        "cpu_system_percent": 91.3,
+        "cpu_idle_percent": 0.0,
+        "active_heavy_slots": 2,
+        "heavy_slots_capacity": 2,
+        "queued_heavy_commands": 3
+      },
+      "exit_code": 0,
+      "rows_per_second": 311.1350198848442
+    },
+    {
+      "order": 5,
+      "variant": "old",
+      "rows": 10000,
+      "repeat": 3,
+      "product_git_sha": "bf3450acf3cd285a50c378597b9e5dfd7d45681c",
+      "product_binary_sha256": "053a886b8c0ea0c1801710302441e81379e64b994100535885d12fa004d71f33",
+      "harness_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+      "before": {
+        "at": "2026-10-17T07:42:12.964109+00:00",
+        "load_average": "{ 22.20 20.55 18.47 }",
+        "cpu_user_percent": 10.11,
+        "cpu_system_percent": 89.88,
+        "cpu_idle_percent": 0.0,
+        "active_heavy_slots": 2,
+        "heavy_slots_capacity": 2,
+        "queued_heavy_commands": 3
+      },
+      "after": {
+        "at": "2026-10-17T07:43:00.049608+00:00",
+        "load_average": "{ 21.32 20.55 18.58 }",
+        "cpu_user_percent": 10.37,
+        "cpu_system_percent": 89.62,
+        "cpu_idle_percent": 0.0,
+        "active_heavy_slots": 2,
+        "heavy_slots_capacity": 2,
+        "queued_heavy_commands": 3
+      },
+      "exit_code": 0,
+      "rows_per_second": 343.7373062915137
+    },
+    {
+      "order": 6,
+      "variant": "new",
+      "rows": 10000,
+      "repeat": 3,
+      "product_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+      "product_binary_sha256": "8af6c18baafaf6d8ea3ab57834350d69741f9a031e5a44247c54871bb981556f",
+      "harness_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+      "before": {
+        "at": "2026-10-17T07:43:06.714570+00:00",
+        "load_average": "{ 21.57 20.63 18.63 }",
+        "cpu_user_percent": 8.83,
+        "cpu_system_percent": 91.16,
+        "cpu_idle_percent": 0.0,
+        "active_heavy_slots": 2,
+        "heavy_slots_capacity": 2,
+        "queued_heavy_commands": 3
+      },
+      "after": {
+        "at": "2026-10-17T07:43:35.478135+00:00",
+        "load_average": "{ 25.27 21.65 19.07 }",
+        "cpu_user_percent": 9.6,
+        "cpu_system_percent": 90.39,
+        "cpu_idle_percent": 0.0,
+        "active_heavy_slots": 2,
+        "heavy_slots_capacity": 2,
+        "queued_heavy_commands": 3
+      },
+      "exit_code": 0,
+      "rows_per_second": 602.6568730907077
+    },
+    {
+      "order": 7,
+      "variant": "new",
+      "rows": 2000,
+      "repeat": 1,
+      "product_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+      "product_binary_sha256": "8af6c18baafaf6d8ea3ab57834350d69741f9a031e5a44247c54871bb981556f",
+      "harness_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+      "before": {
+        "at": "2026-10-17T07:43:41.437574+00:00",
+        "load_average": "{ 24.92 21.64 19.08 }",
+        "cpu_user_percent": 11.7,
+        "cpu_system_percent": 88.92,
+        "cpu_idle_percent": 0.0,
+        "active_heavy_slots": 2,
+        "heavy_slots_capacity": 2,
+        "queued_heavy_commands": 3
+      },
+      "after": {
+        "at": "2026-10-17T07:44:09.844006+00:00",
+        "load_average": "{ 23.73 21.64 19.15 }",
+        "cpu_user_percent": 9.49,
+        "cpu_system_percent": 90.5,
+        "cpu_idle_percent": 0.0,
+        "active_heavy_slots": 2,
+        "heavy_slots_capacity": 2,
+        "queued_heavy_commands": 3
+      },
+      "exit_code": 0,
+      "rows_per_second": 198.82462915733694
+    },
+    {
+      "order": 8,
+      "variant": "new",
+      "rows": 20000,
+      "repeat": 1,
+      "product_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+      "product_binary_sha256": "8af6c18baafaf6d8ea3ab57834350d69741f9a031e5a44247c54871bb981556f",
+      "harness_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+      "before": {
+        "at": "2026-10-17T07:44:20.330816+00:00",
+        "load_average": "{ 23.84 21.73 19.22 }",
+        "cpu_user_percent": 10.8,
+        "cpu_system_percent": 89.91,
+        "cpu_idle_percent": 0.0,
+        "active_heavy_slots": 2,
+        "heavy_slots_capacity": 2,
+        "queued_heavy_commands": 3
+      },
+      "after": {
+        "at": "2026-10-17T07:45:05.215591+00:00",
+        "load_average": "{ 28.00 23.22 19.90 }",
+        "cpu_user_percent": 14.3,
+        "cpu_system_percent": 85.69,
+        "cpu_idle_percent": 0.0,
+        "active_heavy_slots": 2,
+        "heavy_slots_capacity": 2,
+        "queued_heavy_commands": 3
+      },
+      "exit_code": 0,
+      "rows_per_second": 629.7087480150743
+    },
+    {
+      "order": 9,
+      "variant": "new",
+      "rows": 2000,
+      "repeat": 2,
+      "product_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+      "product_binary_sha256": "8af6c18baafaf6d8ea3ab57834350d69741f9a031e5a44247c54871bb981556f",
+      "harness_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+      "before": {
+        "at": "2026-10-17T07:45:09.818993+00:00",
+        "load_average": "{ 27.76 23.25 19.93 }",
+        "cpu_user_percent": 11.69,
+        "cpu_system_percent": 88.3,
+        "cpu_idle_percent": 0.0,
+        "active_heavy_slots": 2,
+        "heavy_slots_capacity": 2,
+        "queued_heavy_commands": 3
+      },
+      "after": {
+        "at": "2026-10-17T07:45:24.551144+00:00",
+        "load_average": "{ 28.41 23.59 20.10 }",
+        "cpu_user_percent": 19.38,
+        "cpu_system_percent": 80.61,
+        "cpu_idle_percent": 0.0,
+        "active_heavy_slots": 2,
+        "heavy_slots_capacity": 2,
+        "queued_heavy_commands": 3
+      },
+      "exit_code": 0,
+      "rows_per_second": 310.21567554214533
+    },
+    {
+      "order": 10,
+      "variant": "new",
+      "rows": 20000,
+      "repeat": 2,
+      "product_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+      "product_binary_sha256": "8af6c18baafaf6d8ea3ab57834350d69741f9a031e5a44247c54871bb981556f",
+      "harness_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+      "before": {
+        "at": "2026-10-17T07:45:29.391203+00:00",
+        "load_average": "{ 28.54 23.69 20.16 }",
+        "cpu_user_percent": 20.21,
+        "cpu_system_percent": 79.78,
+        "cpu_idle_percent": 0.0,
+        "active_heavy_slots": 2,
+        "heavy_slots_capacity": 2,
+        "queued_heavy_commands": 3
+      },
+      "after": {
+        "at": "2026-10-17T07:46:43.458951+00:00",
+        "load_average": "{ 28.65 24.82 20.89 }",
+        "cpu_user_percent": 10.57,
+        "cpu_system_percent": 89.32,
+        "cpu_idle_percent": 0.9,
+        "active_heavy_slots": 2,
+        "heavy_slots_capacity": 2,
+        "queued_heavy_commands": 3
+      },
+      "exit_code": 0,
+      "rows_per_second": 328.7501233053566
+    },
+    {
+      "order": 11,
+      "variant": "new",
+      "rows": 2000,
+      "repeat": 3,
+      "product_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+      "product_binary_sha256": "8af6c18baafaf6d8ea3ab57834350d69741f9a031e5a44247c54871bb981556f",
+      "harness_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+      "before": {
+        "at": "2026-10-17T07:46:48.707384+00:00",
+        "load_average": "{ 28.36 24.82 20.91 }",
+        "cpu_user_percent": 11.14,
+        "cpu_system_percent": 88.85,
+        "cpu_idle_percent": 0.0,
+        "active_heavy_slots": 2,
+        "heavy_slots_capacity": 2,
+        "queued_heavy_commands": 3
+      },
+      "after": {
+        "at": "2026-10-17T07:47:04.507905+00:00",
+        "load_average": "{ 28.55 25.04 21.06 }",
+        "cpu_user_percent": 12.54,
+        "cpu_system_percent": 87.45,
+        "cpu_idle_percent": 0.0,
+        "active_heavy_slots": 2,
+        "heavy_slots_capacity": 2,
+        "queued_heavy_commands": 3
+      },
+      "exit_code": 0,
+      "rows_per_second": 310.9883495796726
+    },
+    {
+      "order": 12,
+      "variant": "new",
+      "rows": 20000,
+      "repeat": 3,
+      "product_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+      "product_binary_sha256": "8af6c18baafaf6d8ea3ab57834350d69741f9a031e5a44247c54871bb981556f",
+      "harness_git_sha": "803a49095dc2122f0048bacf8b37a36e54571120",
+      "before": {
+        "at": "2026-10-17T07:47:10.560308+00:00",
+        "load_average": "{ 27.94 24.97 21.06 }",
+        "cpu_user_percent": 9.73,
+        "cpu_system_percent": 90.26,
+        "cpu_idle_percent": 0.0,
+        "active_heavy_slots": 2,
+        "heavy_slots_capacity": 2,
+        "queued_heavy_commands": 3
+      },
+      "after": {
+        "at": "2026-10-17T07:48:30.456494+00:00",
+        "load_average": "{ 27.25 25.73 21.71 }",
+        "cpu_user_percent": 9.79,
+        "cpu_system_percent": 90.2,
+        "cpu_idle_percent": 0.0,
+        "active_heavy_slots": 2,
+        "heavy_slots_capacity": 2,
+        "queued_heavy_commands": 3
+      },
+      "exit_code": 0,
+      "rows_per_second": 345.6724807736825
+    }
+  ],
+  "ratio_of_mean_rows_per_second": 1.305012686152811,
+  "new_20k_over_10k_mean_throughput_ratio": 1.0176938365631563,
+  "new_capture_duration_ms": {
+    "2000": {
+      "n": 3,
+      "mean": 7645.784167,
+      "median": 6447.127459,
+      "p95_nearest_rank": 10059.115958,
+      "max": 10059.115958,
+      "sample_variance": 4368191.897172862,
+      "sample_standard_deviation": 2090.021984853954
+    },
+    "10000": {
+      "n": 3,
+      "mean": 25310.736138666667,
+      "median": 27198.63125,
+      "p95_nearest_rank": 32140.387166,
+      "max": 32140.387166,
+      "sample_variance": 63101945.89316685,
+      "sample_standard_deviation": 7943.673324927633
+    },
+    "20000": {
+      "n": 3,
+      "mean": 50151.81001366667,
+      "median": 57858.236083,
+      "p95_nearest_rank": 60836.479083,
+      "max": 60836.479083,
+      "sample_variance": 255891768.14137876,
+      "sample_standard_deviation": 15996.61739685546
+    }
+  },
+  "new_amortized_capture_ms": {
+    "2000": {
+      "n": 3,
+      "mean": 238.93075521875,
+      "median": 201.47273309375,
+      "p95_nearest_rank": 314.3473736875,
+      "max": 314.3473736875,
+      "sample_variance": 4265.812399582873,
+      "sample_standard_deviation": 65.31318702668607
+    },
+    "10000": {
+      "n": 3,
+      "mean": 161.2148798641189,
+      "median": 173.23968949044584,
+      "p95_nearest_rank": 204.71584182165606,
+      "max": 204.71584182165606,
+      "sample_variance": 2560.0205238819767,
+      "sample_standard_deviation": 50.59664538170467
+    },
+    "20000": {
+      "n": 3,
+      "mean": 160.22942496379127,
+      "median": 184.850594514377,
+      "p95_nearest_rank": 194.36574786900957,
+      "max": 194.36574786900957,
+      "sample_variance": 2611.966725610946,
+      "sample_standard_deviation": 51.10740382381936
+    }
+  },
+  "harness_binary_sha256": "6c7ef6c115f03e58d21eb868f1ab90bfe525c470e18a428db38b52ddb1f805a8",
+  "method": {
+    "product_build_command": "go build -tags lab -p 2 -buildvcs=false -o <variant-binary> ./cmd/bridge",
+    "old_product_source": "git archive <recorded-main-sha> internal cmd/bridge extracted in the owned worktree; source restored immediately after compilation",
+    "new_product_source": "Owned branch internal/ and cmd/bridge at recorded new SHA",
+    "go_mod_and_go_sum_unchanged": true,
+    "temporary_harness_change": "Build used prebuilt binaries for sim; same harness binary for every run; helper/source files restored afterward",
+    "go_version": "go version go1.27.2 darwin/arm64",
+    "record_protection_before": "SELECT payload FROM records/staging_records with digest/raw_body_digest/unicode candidate filters; still scans history",
+    "record_protection_after": "SELECT owner,payload FROM blob_refs; changed records update index in their state transaction"
+  },
+  "cpu_idle_percent_range": [
+    0.0,
+    0.9
+  ],
+  "heavy_slots_all_samples": [
+    2
+  ],
+  "interpretation": "Timing variance is high under sustained contention. Observed 10k-to-20k throughput is flat; amortized capture time does not grow with total records. This is not a quiet-machine absolute throughput certification."
+}

@@ -1,11 +1,16 @@
 {
-  "run_id": "run_01M549TQPFHFSHMMSP6VP431NN",
+  "run_id": "run_01M54AS9H4P36ECCQXQFZP4126",
+  "network_path": "loopback",
   "scenario": "CORE-BLOB-GC",
   "level": "sim",
   "passed": false,
-  "git_sha": "b307ed8ece04150c3b119c5e4acd359cae3cd943",
-  "at": "2026-10-17T06:47:15.407628Z",
+  "git_sha": "7a30967c00d6a10b6009b8d5012f6d6bb43241bf",
+  "at": "2026-10-17T07:03:56.70841Z",
   "assertions": [
+    {
+      "name": "feed_network_loopback",
+      "passed": true
+    },
     {
       "name": "replica_host_is_air",
       "passed": true
@@ -109,14 +114,18 @@
     {
       "name": "command_only_survives_grace",
       "passed": false
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
     }
   ],
   "latency": {
     "effect_done→blob_complete": {
       "samples": 1,
-      "p50_ms": 525.908709,
-      "p95_ms": 525.908709,
-      "max_ms": 525.908709,
+      "p50_ms": 599.875541,
+      "p95_ms": 599.875541,
+      "max_ms": 599.875541,
       "timeouts": 0
     }
   },
