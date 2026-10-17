@@ -12,19 +12,21 @@ import (
 )
 
 type nativeTrace struct {
-	Live           bool     `json:"live"`
-	Stage          string   `json:"stage"`
-	UptimeNS       int64    `json:"uptime_ns"`
-	WallNS         float64  `json:"wall_ns"`
-	Keys           []string `json:"keys"`
-	Checkpoint     string   `json:"checkpoint"`
-	NotificationNS int64    `json:"notification_ns"`
-	DebounceNS     int64    `json:"debounce_ns"`
-	StartedNS      int64    `json:"started_ns"`
-	FinishedNS     int64    `json:"finished_ns"`
+	CommitStartedWallNS float64  `json:"commit_started_wall_ns"`
+	Live                bool     `json:"live"`
+	Stage               string   `json:"stage"`
+	UptimeNS            int64    `json:"uptime_ns"`
+	WallNS              float64  `json:"wall_ns"`
+	Keys                []string `json:"keys"`
+	Checkpoint          string   `json:"checkpoint"`
+	NotificationNS      int64    `json:"notification_ns"`
+	DebounceNS          int64    `json:"debounce_ns"`
+	StartedNS           int64    `json:"started_ns"`
+	FinishedNS          int64    `json:"finished_ns"`
 }
 
 type NativeTiming struct {
+	CommitStartedWallNS   float64 `json:"commit_started_wall_ns"`
 	TriggerNotificationNS int64   `json:"trigger_notification_ns"`
 	SaveNS                int64   `json:"save_ns"`
 	NotificationNS        int64   `json:"notification_ns"`
@@ -114,6 +116,7 @@ func nativeLatencyEvidence(w *world.World, e *Evidence, effects []any, observers
 		for _, event := range commits {
 			if event.Checkpoint == checkpoint {
 				row.GatewayCommitWallNS = event.WallNS
+				row.CommitStartedWallNS = event.CommitStartedWallNS
 				break
 			}
 		}
@@ -129,6 +132,8 @@ func nativeLatencyEvidence(w *world.World, e *Evidence, effects []any, observers
 		sample("refetch_duration", row.RefetchStartedNS, row.RefetchFinishedNS)
 		sample("refetch_finished→capture_sent", row.RefetchFinishedNS, row.CaptureSentNS)
 		sample("capture_sent→commit_ack", row.CaptureSentNS, row.CommitAckNS)
+		sample("capture_sent→gateway_commit_start", int64(row.CaptureWallNS), int64(row.CommitStartedWallNS))
+		sample("gateway_commit_duration", int64(row.CommitStartedWallNS), int64(row.GatewayCommitWallNS))
 		sample("capture_sent→gateway_commit", int64(row.CaptureWallNS), int64(row.GatewayCommitWallNS))
 		sample("gateway_commit→replica_visible", int64(row.GatewayCommitWallNS), int64(row.SaveWallNS)+row.ReplicaVisibleNS-row.SaveNS)
 		sample("trigger_notification→replica_visible", row.TriggerNotificationNS, row.ReplicaVisibleNS)

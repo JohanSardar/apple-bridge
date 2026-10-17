@@ -219,6 +219,7 @@ func Start(ctx context.Context, cfg Config) error {
 				}
 				return err
 			}, CommitCapture: func(ctx context.Context, c contracts.Capture) (bool, error) {
+				commitStartedAt := time.Now().UnixNano()
 				result, err := store.CommitCapture(ctx, c)
 				store.Capacity(c.Source, err)
 				committedAt := time.Now().UnixNano()
@@ -227,7 +228,7 @@ func Start(ctx context.Context, cfg Config) error {
 					for _, observation := range c.Observations {
 						keys = append(keys, fmt.Sprintf("%x", sha256.Sum256([]byte(observation.NativeKey))))
 					}
-					data, _ := json.Marshal(map[string]any{"stage": "gateway_commit", "wall_ns": committedAt, "checkpoint": c.Checkpoint, "keys": keys})
+					data, _ := json.Marshal(map[string]any{"stage": "gateway_commit", "wall_ns": committedAt, "commit_started_wall_ns": commitStartedAt, "checkpoint": c.Checkpoint, "keys": keys})
 					if file, openErr := os.OpenFile(filepath.Join(cfg.Home, "capture-trace.jsonl"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600); openErr == nil {
 						file.Write(append(data, '\n'))
 						file.Close()

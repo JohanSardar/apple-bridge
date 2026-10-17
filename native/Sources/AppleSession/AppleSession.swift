@@ -230,7 +230,7 @@ public actor AppleSession: ObservationSink {
 
     public func emit(source: String, generation: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) async throws {
         guard wire != nil else { throw SourceFailure.unavailable }
-        let chunks = try split(observations)
+        let chunks = try split(observations, maximumBytes: live ? 240000 : 16000)
         for chunk in chunks {
             try await withCheckedThrowingContinuation { continuation in
                 let pending = Pending(source: source, generation: generation, scanID: scanID, completionEvidence: completionEvidence, blobHandles: blobHandles, observations: chunk, started: scanStartedAt, scope: scope, completion: continuation)
@@ -240,14 +240,14 @@ public actor AppleSession: ObservationSink {
         }
     }
 
-    private func split(_ observations: [JSON]) throws -> [[JSON]] {
+    private func split(_ observations: [JSON], maximumBytes: Int) throws -> [[JSON]] {
         var chunks: [[JSON]] = [], current: [JSON] = []
         var bytes = 0
         let ordered = observations.filter { $0["kind"].string != "absent" } + observations.filter { $0["kind"].string == "absent" }
         for observation in ordered {
             let count = try JSONEncoder().encode(observation).count + 1
             guard count < 240000 else { throw SourceFailure.invalid }
-            if bytes + count > 240000 { chunks.append(current); current = []; bytes = 0 }
+            if !current.isEmpty && bytes + count > maximumBytes { chunks.append(current); current = []; bytes = 0 }
             current.append(observation); bytes += count
         }
         if !current.isEmpty || chunks.isEmpty { chunks.append(current) }
