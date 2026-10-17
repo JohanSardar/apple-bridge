@@ -263,7 +263,7 @@ func normalize(records []contracts.Record, includeSystem bool) map[string]any {
 	ids := map[string]string{}
 	for _, r := range records {
 		var d map[string]any
-		json.Unmarshal(r.Data, &d)
+		decodeData(r.Data, &d)
 		if t, ok := d["title"].(string); ok {
 			ids[r.ID] = t
 		}
@@ -274,7 +274,7 @@ func normalize(records []contracts.Record, includeSystem bool) map[string]any {
 			continue
 		}
 		var d map[string]any
-		json.Unmarshal(r.Data, &d)
+		decodeData(r.Data, &d)
 		for k, v := range d {
 			if id, ok := v.(string); ok && ids[id] != "" {
 				d[k] = ids[id]
@@ -288,7 +288,7 @@ func truthRecords(observations []contracts.Observation) []contracts.Record {
 	titles := map[string]string{}
 	for _, o := range observations {
 		var d map[string]any
-		json.Unmarshal(o.Data, &d)
+		decodeData(o.Data, &d)
 		if t, ok := d["title"].(string); ok {
 			titles[o.NativeKey] = t
 		}
@@ -299,7 +299,7 @@ func truthRecords(observations []contracts.Observation) []contracts.Record {
 			continue
 		}
 		var d map[string]any
-		json.Unmarshal(o.Data, &d)
+		decodeData(o.Data, &d)
 		for k, v := range d {
 			if ref, ok := v.(map[string]any); ok {
 				if native, ok := ref["$ref"].(map[string]any); ok {
@@ -574,7 +574,7 @@ func Run(ctx context.Context, s Scenario, level string) Evidence {
 		for _, o := range truth {
 			if o.Kind == "absent" {
 				var d map[string]any
-				json.Unmarshal(o.Data, &d)
+				decodeData(o.Data, &d)
 				title, _ := d["title"].(string)
 				absent[o.Collection+"/"+title] = true
 			}
@@ -789,4 +789,10 @@ func truthAbsent(w *world.World, r contracts.Record) bool {
 		}
 	}
 	return false
+}
+
+func decodeData(raw json.RawMessage, value any) error {
+	decoder := json.NewDecoder(strings.NewReader(string(raw)))
+	decoder.UseNumber()
+	return decoder.Decode(value)
 }

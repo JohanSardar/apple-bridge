@@ -93,7 +93,7 @@ func Run(ctx context.Context, cfg Config) error {
 		fake.records["list"] = contracts.Observation{Kind: "upsert", Collection: "reminders.list", NativeKey: "list", ObservedAt: now, Data: json.RawMessage(`{"title":"Bridge Test","writable":true}`)}
 		for i := 0; i < action.Count; i++ {
 			key := contracts.NewID("seed")
-			data, _ := json.Marshal(map[string]any{"title": "[ab-test] " + key, "completed": false, "list_id": map[string]any{"$ref": map[string]string{"collection": "reminders.list", "native_key": "list"}}})
+			data, _ := json.Marshal(map[string]any{"title": "[ab-test] " + key, "completed": false, "opaque_number": json.Number("9007199254740993"), "list_id": map[string]any{"$ref": map[string]string{"collection": "reminders.list", "native_key": "list"}}})
 			fake.records[key] = contracts.Observation{Kind: "upsert", Collection: "reminders.reminder", NativeKey: key, ObservedAt: now, Data: data}
 		}
 		fake.mu.Unlock()
@@ -126,7 +126,7 @@ func Run(ctx context.Context, cfg Config) error {
 			o.Revalidated = true
 		} else {
 			if len(action.Data) == 0 {
-				action.Data, _ = json.Marshal(map[string]any{"title": "[ab-test] " + action.Key, "completed": false, "list_id": map[string]any{"$ref": map[string]string{"collection": "reminders.list", "native_key": "list"}}})
+				action.Data, _ = json.Marshal(map[string]any{"title": "[ab-test] " + action.Key, "completed": false, "opaque_number": json.Number("9007199254740993"), "list_id": map[string]any{"$ref": map[string]string{"collection": "reminders.list", "native_key": "list"}}})
 			}
 			o = contracts.Observation{Kind: "upsert", Collection: action.Collection, NativeKey: action.Key, ObservedAt: time.Now().UTC(), Data: action.Data}
 		}

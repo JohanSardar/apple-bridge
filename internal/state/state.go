@@ -1,6 +1,7 @@
 package state
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"database/sql"
@@ -303,7 +304,9 @@ func (s *Store) CommitCapture(ctx context.Context, c contracts.Capture) (CommitR
 			data = old.Data
 		} else {
 			var value any
-			if err = json.Unmarshal(o.Data, &value); err != nil {
+			decoder := json.NewDecoder(bytes.NewReader(o.Data))
+			decoder.UseNumber()
+			if err = decoder.Decode(&value); err != nil {
 				return result, err
 			}
 			value, err = resolveReferences(ctx, tx, c, value)
