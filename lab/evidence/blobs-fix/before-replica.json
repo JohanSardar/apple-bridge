@@ -1,0 +1,143 @@
+{
+  "scenario": "CORE-BLOB-INTERRUPT",
+  "level": "replica",
+  "passed": true,
+  "git_sha": "5397d2a74f0aceb3387ba4c916fafa4e06e48c68",
+  "at": "2026-10-17T05:34:50.672084Z",
+  "assertions": [
+    {
+      "name": "replica_host_is_ubuntu",
+      "passed": true
+    },
+    {
+      "name": "bootstrap_snapshot",
+      "passed": true
+    },
+    {
+      "name": "scope_query_and_get",
+      "passed": true
+    },
+    {
+      "name": "attachment_fixture",
+      "passed": true
+    },
+    {
+      "name": "attachment_metadata_visible",
+      "passed": true
+    },
+    {
+      "name": "metadata_convergence_with_blob_backlog",
+      "passed": true
+    },
+    {
+      "name": "partial_blob_persisted_before_interrupt",
+      "passed": true
+    },
+    {
+      "name": "interrupted_halfway_through_binary_chunk",
+      "passed": true
+    },
+    {
+      "name": "replica_restart",
+      "passed": true
+    },
+    {
+      "name": "live_metadata_during_bulk",
+      "passed": true
+    },
+    {
+      "name": "blob_complete",
+      "passed": true
+    },
+    {
+      "name": "authorized_bytes_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "authorized_bytes_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "transfer_resumed_from_nonzero_offset",
+      "passed": true
+    },
+    {
+      "name": "convergence_truth_gateway_replicas",
+      "passed": true
+    },
+    {
+      "name": "latency_observations_complete",
+      "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass",
+      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
+    },
+    {
+      "name": "sse_contiguous_watermarks_0",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_watermarks_1",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_0",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_1",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "effect_done→blob_complete": {
+      "samples": 1,
+      "p50_ms": 5769.631166,
+      "p95_ms": 5769.631166,
+      "max_ms": 5769.631166,
+      "timeouts": 0
+    },
+    "effect_done→gateway_visible": {
+      "samples": 1,
+      "p50_ms": 21.1145,
+      "p95_ms": 21.1145,
+      "max_ms": 21.1145,
+      "timeouts": 0
+    },
+    "effect_done→metadata_during_blob": {
+      "samples": 1,
+      "p50_ms": 40.579709,
+      "p95_ms": 40.579709,
+      "max_ms": 40.579709,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica0": {
+      "samples": 1,
+      "p50_ms": 31.17475,
+      "p95_ms": 31.17475,
+      "max_ms": 31.17475,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air",
+    "ubuntu"
+  ]
+}

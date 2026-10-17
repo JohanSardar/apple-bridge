@@ -1,0 +1,41 @@
+{
+  "scenario": "CORE-BLOB-GATEWAY-RETRY",
+  "level": "sim",
+  "passed": false,
+  "git_sha": "5397d2a74f0aceb3387ba4c916fafa4e06e48c68",
+  "at": "2026-10-17T05:35:18.04276Z",
+  "assertions": [
+    {
+      "name": "replica_host_is_air",
+      "passed": true
+    },
+    {
+      "name": "bootstrap_snapshot",
+      "passed": true
+    },
+    {
+      "name": "scope_query_and_get",
+      "passed": true
+    },
+    {
+      "name": "attachment_fixture",
+      "passed": true
+    },
+    {
+      "name": "attachment_metadata_visible",
+      "passed": true
+    },
+    {
+      "name": "metadata_convergence_with_blob_backlog",
+      "passed": true
+    },
+    {
+      "name": "gateway_retries_timed_out_read",
+      "passed": false
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

@@ -36,6 +36,7 @@ type captureRequest struct {
 	Capture     contracts.Capture
 	Done        chan struct{}
 	Revision    uint64
+	Restart bool
 	Close       bool
 }
 type fakeApple struct {
@@ -53,6 +54,7 @@ type fakeApple struct {
 	tickets           map[string]ticket
 	fault             string
 	pause             time.Duration
+	blobDrops         int
 
 	completed map[contracts.Source]map[uint64]bool
 	path      string
@@ -436,6 +438,9 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 		if generations[capture.Source] != capture.Generation {
 			checkpoints[capture.Source] = ""
 		}
+		for d := range capture.BlobHandles {
+			capture.BlobHandles[d] = fmt.Sprintf("%d:%s", open.OwnerFence, d)
+		}
 		capture.Predecessor = checkpoints[capture.Source]
 		capture.Checkpoint = contracts.NewID("cp")
 		encoded, err := contracts.EncodeFrame(contracts.IPCFrame{T: "Capture", Capture: &capture})
@@ -464,7 +469,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 				switch reply.T {
 				case "BlobRead":
 					go func() {
-						if f.blobReply(ctx, wire, reply) != nil {
+						if f.blobReply(ctx, wire, reply, open.OwnerFence) != nil {
 							conn.Close()
 						}
 					}()
@@ -617,7 +622,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 	for _, source := range []contracts.Source{contracts.Reminders, contracts.Messages} {
 		f.mu.Lock()
 		emitRevision = f.durable.Revision[source]
-		scan := f.durable.InProgress[source] || checkpoints[source] == "" || checkpoints[source] != f.durable.Checkpoints[source] || emitRevision != f.durable.Committed[source]
+		scan := (source == contracts.Messages && open.Checkpoints[source].RefreshBlobs) || f.durable.InProgress[source] || checkpoints[source] == "" || checkpoints[source] != f.durable.Checkpoints[source] || emitRevision != f.durable.Committed[source]
 		if scan {
 			f.durable.Scans++
 			f.progressLocked()
@@ -663,7 +668,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 			}
 			if reply.T == "BlobRead" {
 				go func() {
-					if f.blobReply(ctx, wire, reply) != nil {
+					if f.blobReply(ctx, wire, reply, open.OwnerFence) != nil {
 						conn.Close()
 					}
 				}()
@@ -694,6 +699,9 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 					return err
 				}
 				continue
+			}
+			if req.Restart {
+				return nil
 			}
 			if req.Close {
 				wire.Send(contracts.IPCFrame{T: "Close", Reason: "lab"})

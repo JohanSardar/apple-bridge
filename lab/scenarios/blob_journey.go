@@ -46,6 +46,10 @@ func blobJourney(ctx context.Context, w *world.World, id string, evidence *Evide
 	check := func(name string, ok bool) bool { add(name, ok); return ok }
 	size := 4 << 20
 	fixture := map[string]any{"size": size}
+	if id == "CORE-BLOB-GATEWAY-RETRY" {
+		fixture["drop_reads"] = 1
+		fixture["slow_ms"] = 100
+	}
 	if id == "CORE-BLOB-OFFLOADED" {
 		fixture["state"] = "offloaded"
 	}
@@ -56,6 +60,11 @@ func blobJourney(ctx context.Context, w *world.World, id string, evidence *Evide
 		return false
 	}
 	start := time.Now()
+	measure := func(name string, since time.Time) {
+		evidence.Latency[name] = stats([]float64{float64(time.Since(since)) / float64(time.Millisecond)}, 0)
+	}
+	var reconnectDone, bulkStarted time.Time
+
 	var attachment contracts.Record
 	var digest string
 	if !check("attachment_metadata_visible", w.Await(10*time.Second, func() bool {
@@ -100,6 +109,14 @@ func blobJourney(ctx context.Context, w *world.World, id string, evidence *Evide
 		evidence.Latency["effect_done→metadata_during_slow_read"] = stats([]float64{float64(time.Since(effect)) / float64(time.Millisecond)}, 0)
 	}
 	if id == "CORE-BLOB-INTERRUPT" {
+		if !check("gateway_blob_present", w.Await(10*time.Second, func() bool {
+			p, err := blobProgress(ctx, w.Gateway)
+			return err == nil && p.Entries[digest].State == "present"
+		}) == nil) {
+			return false
+		}
+		gatewayPresent := time.Now()
+		measure("effect_done→gateway_blob_present", start)
 		if !check("partial_blob_persisted_before_interrupt", w.Await(15*time.Second, func() bool {
 			p, err := blobProgress(ctx, e)
 			n := p.Entries[digest].Received
@@ -108,6 +125,7 @@ func blobJourney(ctx context.Context, w *world.World, id string, evidence *Evide
 			return false
 		}
 
+		measure("gateway_present→replica_partial", gatewayPresent)
 		if !check("interrupted_halfway_through_binary_chunk", w.Await(10*time.Second, func() bool {
 			_, err := os.Stat(filepath.Join(w.Dir, "blob-cut-window"))
 			p, perr := blobProgress(ctx, e)
@@ -116,6 +134,7 @@ func blobJourney(ctx context.Context, w *world.World, id string, evidence *Evide
 			return false
 		}
 
+		reconnectStart := time.Now()
 		w.Partition(0)
 		if !check("partition_disconnect_observed", w.Await(10*time.Second, func() bool {
 			status, err := w.Status(e)
@@ -132,13 +151,26 @@ func blobJourney(ctx context.Context, w *world.World, id string, evidence *Evide
 		}) == nil) {
 			return false
 		}
-		if !check("resumed_bulk_in_progress_before_metadata_probe", w.Await(10*time.Second, func() bool {
-			progress, err := blobProgress(ctx, e)
-			partial := progress.Entries[digest].Received
-			return err == nil && partial > contracts.BlobChunkSize && partial < int64(size)
+
+		if !check("reconnected_feed", w.Await(10*time.Second, func() bool {
+			var status contracts.ReadResult
+			_, err := world.Request(ctx, e, "/v1/op/replica.status", struct{}{}, &status)
+			return err == nil && status.Replica != nil && status.Replica.State == "connected"
 		}) == nil) {
 			return false
 		}
+		reconnectDone = time.Now()
+		measure("interrupt→reconnected", reconnectStart)
+		p, err := blobProgress(ctx, e)
+		before := p.Entries[digest].Received
+		if !check("active_bulk_transfer_barrier", err == nil && w.Await(3*time.Second, func() bool {
+			p, err := blobProgress(ctx, e)
+			n := p.Entries[digest].Received
+			return err == nil && n > before && n < int64(size)
+		}) == nil) {
+			return false
+		}
+		bulkStarted = time.Now()
 		effect := time.Now()
 		if !check("live_metadata_during_bulk", w.ControlAction("/external-change", map[string]string{"key": "during-blob"}) == nil && w.Await(time.Second, func() bool {
 			records, _ := w.Records(e)
@@ -154,6 +186,24 @@ func blobJourney(ctx context.Context, w *world.World, id string, evidence *Evide
 		}
 		evidence.Latency["effect_done→metadata_during_blob"] = stats([]float64{float64(time.Since(effect)) / float64(time.Millisecond)}, 0)
 	}
+	if id == "CORE-BLOB-GATEWAY-RETRY" {
+		if !check("gateway_retries_timed_out_read", w.Await(18*time.Second, func() bool {
+			p, err := blobProgress(ctx, w.Gateway)
+			n := p.Entries[digest].Received
+			return err == nil && n > 0 && n < int64(size)
+		}) == nil) {
+			return false
+		}
+		if !check("helper_restarts_during_staged_download", w.ControlAction("/blob-restart", struct{}{}) == nil) {
+			return false
+		}
+		if !check("gateway_resumes_with_fresh_handles", w.Await(15*time.Second, func() bool {
+			p, err := blobProgress(ctx, w.Gateway)
+			return err == nil && p.Entries[digest].State == "present" && p.ResumedBytes > 0
+		}) == nil) {
+			return false
+		}
+	}
 	if id == "CORE-BLOB-CAP" {
 		if !check("cap_reports_over_cap", w.Await(10*time.Second, func() bool {
 			p, err := blobProgress(ctx, e)
@@ -166,6 +216,12 @@ func blobJourney(ctx context.Context, w *world.World, id string, evidence *Evide
 	}
 	if !check("blob_complete", w.Await(20*time.Second, func() bool { p, err := blobProgress(ctx, e); return err == nil && p.Entries[digest].State == "present" }) == nil) {
 		return false
+	}
+	if !reconnectDone.IsZero() {
+		measure("reconnected→blob_complete", reconnectDone)
+	}
+	if !bulkStarted.IsZero() {
+		measure("bulk_barrier→blob_complete", bulkStarted)
 	}
 	evidence.Latency["effect_done→blob_complete"] = stats([]float64{float64(time.Since(start)) / float64(time.Millisecond)}, 0)
 	for _, endpoint := range append([]world.Endpoint{w.Gateway}, w.Replicas...) {
@@ -239,9 +295,6 @@ func blobJourney(ctx context.Context, w *world.World, id string, evidence *Evide
 		if !check("snapshot_reference_acquired", w.BlobControl(map[string]string{"action": "snapshot", "owner": "gc-snapshot"}, nil) == nil) {
 			return false
 		}
-		if !check("command_reference_acquired", w.BlobControl(map[string]string{"action": "command", "owner": "gc-command", "digest": digest}, nil) == nil) {
-			return false
-		}
 		var staged struct {
 			Digest string `json:"digest"`
 			Pin    string `json:"pin"`
@@ -260,7 +313,10 @@ func blobJourney(ctx context.Context, w *world.World, id string, evidence *Evide
 		sleep(ctx, 800*time.Millisecond)
 		_, snapshotErr := os.Stat(path)
 		_, pinErr := os.Stat(pinnedPath)
-		if !check("snapshot_command_and_pin_survive_grace", snapshotErr == nil && pinErr == nil) {
+		if !check("snapshot_only_and_pin_survive_grace", snapshotErr == nil && pinErr == nil) {
+			return false
+		}
+		if !check("command_reference_acquired", w.BlobControl(map[string]string{"action": "command", "owner": "gc-command", "digest": digest}, nil) == nil) {
 			return false
 		}
 		if !check("snapshot_release", w.BlobControl(map[string]string{"action": "snapshot-release", "owner": "gc-snapshot"}, nil) == nil) {
@@ -268,7 +324,7 @@ func blobJourney(ctx context.Context, w *world.World, id string, evidence *Evide
 		}
 		sleep(ctx, 700*time.Millisecond)
 		_, err = os.Stat(path)
-		if !check("command_still_protects_blob", err == nil) {
+		if !check("command_only_survives_grace", err == nil) {
 			return false
 		}
 		if !check("command_release", w.BlobControl(map[string]string{"action": "command-release", "owner": "gc-command"}, nil) == nil) {

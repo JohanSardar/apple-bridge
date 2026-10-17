@@ -5,9 +5,11 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"github.com/JohanSardar/apple-bridge/internal/applepeer"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -21,8 +23,16 @@ func (f *fakeApple) blobHandles() map[string]string {
 	return out
 }
 func (f *fakeApple) blobRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("POST /blob-restart", func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case f.changes <- captureRequest{Restart: true}:
+			json.NewEncoder(w).Encode(map[string]bool{"ok": true})
+		case <-r.Context().Done():
+		}
+	})
 	mux.HandleFunc("POST /blob-fixture", func(w http.ResponseWriter, r *http.Request) {
 		var a struct {
+			Drops  int    `json:"drop_reads"`
 			Size   int    `json:"size"`
 			State  string `json:"state"`
 			SlowMS int    `json:"slow_ms"`
@@ -33,6 +43,7 @@ func (f *fakeApple) blobRoutes(mux *http.ServeMux) {
 			return
 		}
 		f.mu.Lock()
+		f.blobDrops = a.Drops
 		f.blobState = a.State
 		f.blobDelay = time.Duration(a.SlowMS) * time.Millisecond
 		if a.Delete {
@@ -94,11 +105,19 @@ func (f *fakeApple) blobRoutes(mux *http.ServeMux) {
 		json.NewEncoder(w).Encode(map[string]bool{"effect_done": true})
 	})
 }
-func (f *fakeApple) blobReply(ctx context.Context, wire *applepeer.Wire, read contracts.IPCFrame) error {
+func (f *fakeApple) blobReply(ctx context.Context, wire *applepeer.Wire, read contracts.IPCFrame, fence uint64) error {
 	f.mu.Lock()
-	b, ok := f.blobs[read.Handle]
+	digest := strings.TrimPrefix(read.Handle, fmt.Sprintf("%d:", fence))
+	b, ok := f.blobs[digest]
+	drop := f.blobDrops > 0
+	if drop {
+		f.blobDrops--
+	}
 	state, delay := f.blobState, f.blobDelay
 	f.mu.Unlock()
+	if drop {
+		return nil
+	}
 	if !ok || state == "offloaded" || state == "missing" {
 		if state == "" {
 			state = "missing"
@@ -119,6 +138,6 @@ func (f *fakeApple) blobReply(ctx context.Context, wire *applepeer.Wire, read co
 		}
 	}
 	end := min(read.Offset+read.Length, int64(len(b)))
-	_, err := wire.Send(contracts.IPCFrame{T: "BlobChunk", Handle: read.Handle, Offset: read.Offset, Bytes: b[read.Offset:end], Digest: read.Handle, EOF: end == int64(len(b))})
+	_, err := wire.Send(contracts.IPCFrame{T: "BlobChunk", Handle: read.Handle, Offset: read.Offset, Bytes: b[read.Offset:end], Digest: digest, EOF: end == int64(len(b))})
 	return err
 }

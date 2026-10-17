@@ -1,0 +1,6 @@
+id: CORE-BLOB-GATEWAY-RETRY
+feature: core.blobs
+levels: [sim]
+given: [{world: {replicas: 1}}]
+when: [{blobs: {case: gateway-retry}}]
+then: [{converge: {}}]
