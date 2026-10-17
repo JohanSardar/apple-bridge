@@ -152,12 +152,18 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 		}) != nil {
 			return fail("new_revision_purged_messages")
 		}
+		report, doctorErr := w.Doctor(w.Replicas[0])
+		physical, _ := report["records"].(map[string]any)
+		add("narrowed_subscription_physically_purged_messages", doctorErr == nil && physical["messages.message"] == nil)
 		narrowed, _ := w.Cursor(w.Replicas[0])
 		add("scope_narrowed_purged_new_revision", true)
 		if w.ScopeReplica(0, "reminders:read,messages:read,system:read") != nil {
 			return fail("widen_scope")
 		}
-		if w.Await(15*time.Second, func() bool { return convergence(w) }) != nil {
+		if w.Await(15*time.Second, func() bool {
+			cursor, err := w.Cursor(w.Replicas[0])
+			return err == nil && cursor.SubscriptionRevision > narrowed.SubscriptionRevision && convergence(w)
+		}) != nil {
 			return fail("scope_backfill_convergence")
 		}
 		widened, _ := w.Cursor(w.Replicas[0])
