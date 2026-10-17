@@ -79,6 +79,11 @@ func (f *fakeApple) blobRoutes(mux *http.ServeMux) {
 		for d := range f.blobs {
 			handles[d] = d
 		}
+		if err := f.changedLocked(contracts.Messages); err != nil {
+			f.mu.Unlock()
+			http.Error(w, "unavailable", 503)
+			return
+		}
 		f.mu.Unlock()
 		capture := contracts.Capture{Source: contracts.Messages, Observations: observations, BlobHandles: handles, ScanID: contracts.NewID("scan"), Scope: []string{"messages.message", "messages.attachment"}, ScanStartedAt: time.Now().UTC(), CompletionEvidence: "complete"}
 		if err := f.enqueue(r.Context(), capture, false); err != nil {

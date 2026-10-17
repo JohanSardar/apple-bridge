@@ -23,7 +23,7 @@ func blobReferences(ctx context.Context, q interface {
 	QueryRowContext(context.Context, string, ...any) *sql.Row
 }) (contracts.ReferenceSet, error) {
 	refs := contracts.ReferenceSet{}
-	rows, err := q.QueryContext(ctx, "SELECT payload FROM records WHERE deleted=0 UNION ALL SELECT payload FROM staging_records")
+	rows, err := q.QueryContext(ctx, `SELECT payload FROM records WHERE deleted=0 AND (instr(payload,'"digest"')>0 OR instr(payload,'\u')>0) UNION ALL SELECT payload FROM staging_records WHERE (instr(payload,'"digest"')>0 OR instr(payload,'\u')>0)`)
 	if err != nil {
 		return nil, err
 	}

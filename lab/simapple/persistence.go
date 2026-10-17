@@ -12,6 +12,9 @@ type durableApple struct {
 	MessagesGeneration string `json:"messages_generation,omitempty"`
 	Effects map[string]int `json:"effects"`
 	Evidence map[string]contracts.IPCFrame `json:"evidence"`
+	Blobs       map[string][]byte                `json:"blobs,omitempty"`
+	BlobState   string                           `json:"blob_state,omitempty"`
+	BlobDelayNS int64                            `json:"blob_delay_ns,omitempty"`
 	InProgress  map[contracts.Source]bool        `json:"in_progress"`
 	Generation  string                           `json:"generation"`
 	Records     map[string]contracts.Observation `json:"records"`
@@ -25,6 +28,9 @@ func (f *fakeApple) saveLocked() error {
 	f.durable.MessagesGeneration = f.messages.generation
 	f.durable.Effects = f.effects
 	f.durable.Evidence = f.evidence
+	f.durable.Blobs = f.blobs
+	f.durable.BlobState = f.blobState
+	f.durable.BlobDelayNS = int64(f.blobDelay)
 	data, err := json.Marshal(f.durable)
 	if err != nil {
 		return err

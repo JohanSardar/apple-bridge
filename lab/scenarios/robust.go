@@ -402,6 +402,9 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 		}
 		add("capture_replays_do_not_duplicate_record_versions", deduplicated)
 	case "helper-restart":
+		if w.ControlAction("/blob-fixture", map[string]int{"size": 1024}) != nil {
+			return fail("durable_helper_blob_fixture")
+		}
 		if w.ControlAction("/flush", struct{}{}) != nil {
 			return fail("helper_initial_checkpoint")
 		}
@@ -432,6 +435,14 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 		}
 		after, err := w.HelperScans()
 		add("helper_checkpoint_resume_without_rescan", err == nil && after == scans)
+		truth, inspectErr := w.Inspect()
+		attachments := 0
+		for _, observation := range truth {
+			if observation.Collection == "messages.attachment" {
+				attachments++
+			}
+		}
+		add("helper_blob_truth_and_bytes_survive_restart", inspectErr == nil && attachments == 1 && w.HelperBlobsIntact())
 		if !change("after-helper-restart", 10) {
 			return fail("helper_live_capture_resumed")
 		}

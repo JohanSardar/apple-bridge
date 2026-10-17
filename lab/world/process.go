@@ -119,3 +119,23 @@ func (w *World) HelperScans() (int, error) {
 	err = json.NewDecoder(resp.Body).Decode(&stats)
 	return stats.Scans, err
 }
+
+func (w *World) HelperBlobsIntact() bool {
+	response, err := w.Control.Get("http://sim/stats")
+	if err != nil {
+		return false
+	}
+	defer response.Body.Close()
+	var stats struct {
+		Digests map[string]string `json:"blob_digests"`
+	}
+	if json.NewDecoder(response.Body).Decode(&stats) != nil || len(stats.Digests) == 0 {
+		return false
+	}
+	for digest, actual := range stats.Digests {
+		if digest != actual {
+			return false
+		}
+	}
+	return true
+}

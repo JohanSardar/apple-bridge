@@ -2,6 +2,8 @@ package simapple
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -128,6 +130,11 @@ func Run(ctx context.Context, cfg Config) error {
 			return err
 		}
 		fake.records = fake.durable.Records
+		if fake.durable.Blobs != nil {
+			fake.blobs = fake.durable.Blobs
+		}
+		fake.blobState = fake.durable.BlobState
+		fake.blobDelay = time.Duration(fake.durable.BlobDelayNS)
 	}
 	if data, err := os.ReadFile(filepath.Join(filepath.Dir(fake.path), "sim-progress.json")); err == nil {
 		var progress durableApple
@@ -158,7 +165,12 @@ func Run(ctx context.Context, cfg Config) error {
 	mux.HandleFunc("GET /stats", func(w http.ResponseWriter, r *http.Request) {
 		fake.mu.Lock()
 		defer fake.mu.Unlock()
-		json.NewEncoder(w).Encode(map[string]any{"scans": fake.durable.Scans, "revision": fake.durable.Revision, "committed": fake.durable.Committed})
+		digests := map[string]string{}
+		for digest, data := range fake.blobs {
+			sum := sha256.Sum256(data)
+			digests[digest] = hex.EncodeToString(sum[:])
+		}
+		json.NewEncoder(w).Encode(map[string]any{"blob_digests": digests, "scans": fake.durable.Scans, "revision": fake.durable.Revision, "committed": fake.durable.Committed})
 	})
 	mux.HandleFunc("GET /inspect", func(w http.ResponseWriter, r *http.Request) { json.NewEncoder(w).Encode(fake.inspect()) })
 	mux.HandleFunc("POST /source-state", func(w http.ResponseWriter, r *http.Request) {
