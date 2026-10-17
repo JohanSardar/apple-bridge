@@ -39,6 +39,7 @@ type Assertion struct {
 	Detail string `json:"detail,omitempty"`
 }
 type Latency struct {
+	Unpaired int     `json:"unpaired,omitempty"`
 	Samples  int     `json:"samples"`
 	P50      float64 `json:"p50_ms"`
 	P95      float64 `json:"p95_ms"`

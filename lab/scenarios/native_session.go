@@ -16,7 +16,7 @@ import (
 func runHelperSoak(ctx context.Context, w *world.World, e Evidence) (result Evidence) {
 	tag := "[ab-test " + contracts.NewID("soak") + "]"
 	defer func() {
-		_, err := w.Truth("fixture", map[string]any{"action": "cleanup", "list": "Bridge Test", "tag": tag})
+		_, err := w.RecoverTruth("fixture", map[string]any{"action": "cleanup", "list": "Bridge Test", "tag": tag})
 		if err != nil {
 			result.Passed = false
 			result.Assertions = append(result.Assertions, Assertion{Name: "soak_cleanup", Passed: false})
@@ -97,7 +97,7 @@ func runBackfillPriority(ctx context.Context, s Scenario, level string, e Eviden
 		_, err := w.Truth("fixture", map[string]any{"action": "create", "list": "Bridge Test", "tag": tag, "title": original})
 		return err
 	}, Cleanup: func(w *world.World) error {
-		_, err := w.Truth("fixture", map[string]any{"action": "cleanup", "list": "Bridge Test", "tag": tag})
+		_, err := w.RecoverTruth("fixture", map[string]any{"action": "cleanup", "list": "Bridge Test", "tag": tag})
 		return err
 	}}
 	w, err := world.NewRealWithSetup(ctx, level, 1, setup)

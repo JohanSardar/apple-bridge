@@ -2,12 +2,14 @@ package world
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
+	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 )
@@ -15,6 +17,16 @@ import (
 var ErrTruthUnverified = errors.New("AppleTruth access unverified")
 
 func (w *World) Truth(verb string, request map[string]any) (map[string]any, error) {
+	return w.truth(w.ctx, verb, request)
+}
+
+func (w *World) RecoverTruth(verb string, request map[string]any) (map[string]any, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 95*time.Second)
+	defer cancel()
+	return w.truth(ctx, verb, request)
+}
+
+func (w *World) truth(ctx context.Context, verb string, request map[string]any) (map[string]any, error) {
 	id := contracts.NewID("truth")
 	input := filepath.Join(w.Dir, id+"-request.json")
 	output := filepath.Join(w.Dir, id+"-report.json")
@@ -46,7 +58,7 @@ func (w *World) Truth(verb string, request map[string]any) (map[string]any, erro
 		return nil, fmt.Errorf("%w: %s; private report %s", ErrTruthUnverified, safe, filepath.Join(private, filepath.Base(output)))
 	}
 	app := w.TruthApp
-	_, launchErr := commandOutput(w.ctx, "open", "-n", "-W", "-g", "-a", app, "--args", verb, "--request-file", input, "--report", output)
+	_, launchErr := commandOutput(ctx, "open", "-n", "-W", "-g", "-a", app, "--args", verb, "--request-file", input, "--report", output)
 	data, err = os.ReadFile(output)
 	if err != nil {
 		if launchErr != nil {
@@ -62,6 +74,11 @@ func (w *World) Truth(verb string, request map[string]any) (map[string]any, erro
 	}
 	if response["status"] != "verified" {
 		reason, _ := response["reason"].(string)
+		domain, _ := response["error_domain"].(string)
+		code, _ := response["error_code"].(json.Number)
+		if domain != "" && code != "" && !regexp.MustCompile(`^[A-Za-z_][A-Za-z_0-9.:-]{0,159}$`).MatchString(reason) {
+			reason = domain + ":" + string(code)
+		}
 		if reason == "" {
 			reason = "reason_missing"
 		}

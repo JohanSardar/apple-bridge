@@ -50,7 +50,7 @@ struct AppleTruth {
                 } else { response = try await reminders(verb, request) }
                 }
             } catch {
-                response = ["status": "unverified", "reason": String(describing: error)]
+                response = ["status": "unverified", "reason": String(describing: error), "error_domain": (error as NSError).domain, "error_code": (error as NSError).code]
             }
             do {
                 let url = URL(fileURLWithPath: reportPath)

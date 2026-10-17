@@ -135,7 +135,9 @@ func nativeLatencyEvidence(w *world.World, e *Evidence, effects []any, observers
 		e.NativeTimings = append(e.NativeTimings, row)
 	}
 	for name, samples := range values {
-		e.Latency[name] = stats(samples, len(effects)-len(samples))
+		summary := stats(samples, 0)
+		summary.Unpaired = len(effects) - len(samples)
+		e.Latency[name] = summary
 	}
 }
 

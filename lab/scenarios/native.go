@@ -180,7 +180,7 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 				return blocked("Grant AppleTruth.app Reminders full access; no fixture changes were made")
 			}
 			defer func() {
-				if _, err := w.Truth("fixture", map[string]any{"action": "cleanup", "list": "Bridge Test", "tag": tag}); err != nil {
+				if _, err := w.RecoverTruth("fixture", map[string]any{"action": "cleanup", "list": "Bridge Test", "tag": tag}); err != nil {
 					result.Passed = false
 					result.Assertions = append(result.Assertions, Assertion{Name: "tagged_fixture_cleanup", Passed: false})
 				}
@@ -317,11 +317,11 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 				}
 				before := truthListIDs(baseline)
 				defer func() {
-					current, err := w.Truth("observe", map[string]any{"list": "Bridge Test", "tag": tag})
+					current, err := w.RecoverTruth("observe", map[string]any{"list": "Bridge Test", "tag": tag})
 					if err == nil {
 						for id := range truthListIDs(current) {
 							if !before[id] {
-								_, cleanupErr := w.Truth("fixture", map[string]any{"action": "cleanup_list", "list": "Bridge Test", "list_id": id, "tag": tag})
+								_, cleanupErr := w.RecoverTruth("fixture", map[string]any{"action": "cleanup_list", "list": "Bridge Test", "list_id": id, "tag": tag})
 								if cleanupErr != nil {
 									err = cleanupErr
 								}
