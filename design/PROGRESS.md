@@ -13,7 +13,7 @@ One line per unit. Rules: BUILD-GOAL.md (2026-10-17 update: no reviews, merge on
 - DONE M0 core: State, replication, commands (opaque IDs, ledger.db), REST+MCP, blobs, trust, restore, faults — 9 core features done; core.trust limited (real Keychain locked).
 - DONE gateway-initiated replica connections (43d11f1): direct Air→Ubuntu LIVE p95 109 ms. Deferred: command responses > 256 KiB over the feed (P2 from a cancelled review).
 - DONE Helper session + Reminders read (27e49ad): real native-save → Ubuntu p95 317 ms; 10-min soak clean.
-- DONE Messages read path sim (61e03e7); real runs in progress (`ab-messages-real-runs`).
+- Messages read: sim done; real runs merged (a78a5b8): HISTORY-IMPORT real FAILED (no convergence in 1,002 s, suspect blob protection), INCOMING pending (no natural arrivals) → both handed to the Messages commands worker.
 - IN PROGRESS blobs round 2 (incremental protection, durable retry budget) — `.worktrees/blobs-fix2`.
 - IN PROGRESS Calendar (branch m1-calendar): 7 fixes, real/replica runs, merge.
 - IN PROGRESS Contacts (branch m2-contacts): real journeys passed; merging.
