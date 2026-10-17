@@ -17,8 +17,14 @@ Resume point for any fresh session. Updated after every unit of work.
 ## Verified
 - `go run ./tools/lint` ok; `go run ./tools/featuregraph` ok (24 features, 0/177 scenario-levels passing).
 
+## In flight (2026-10-17)
+- Worker `ab-m0-tracer-r1` (codex gpt-6.1-sol medium Fast): M0 tracer bullet — contracts, applepeer, state, replication, minimal trust/frontdoor/runtime, lab simapple/world/runner; scenarios CORE-BOOT, CORE-LIVE-LATENCY, CORE-RESUME at sim + replica.
+- Worker `ab-m1-spike-r1`: stable dev signing identity, `native/` Helper app bundle, `onboard`/`status` TCC modes, probes (self-handles, send-self, ax-dump). Will end needing Johan's permission clicks.
+
 ## Next
-- M0: harness skeleton + SimApplePeer + State/Replication/Operations/Trust/Frontdoor at sim level.
+- Review both units (separate reviewer workers, two-axis code review, rerun scenarios).
+- Ask Johan (one batched request) to grant the Helper's permissions on the Air.
+- M0 breadth in parallel: (a) replication/state failure + recovery + bench, (b) commands + full trust + MCP parity, (c) blobs.
 
 ## Blockers
 - None yet. Expected: TCC permission batch for the Helper (M1), Developer ID for notarization (M5).
