@@ -166,6 +166,7 @@ def main():
         initial_position = native.execute("SELECT COALESCE(MAX(ROWID),0) FROM message").fetchone()[0]
         initial_observed = None
         if config.get("history_started"):
+            result["metrics"].update(natural_events_only=False, driven_by="guarded_self_send_during_history_import")
             with open(config["history_started"], "w") as marker:
                 marker.write("ready")
         while time.monotonic() < deadline:

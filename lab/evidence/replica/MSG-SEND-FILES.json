@@ -1,10 +1,40 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[5.6 4.96 4.9] cpus=8 other_heavy=1; ubuntu: load=[0.39 0.32 0.3] cpus=8 other_heavy=0"
+    "summary": "air: load=[13.78 7.78 6.02] cpus=8 other_heavy=1; ubuntu: load=[0.2 0.35 0.33] cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M55RWW2PJTYQBD2YF8NS8N3P",
+  "run_id": "run_01M55S44BX36PGJ02HRVJBMZB9",
   "metrics": {
+    "attachment_downloads": [
+      {
+        "endpoint_index": 0,
+        "http_status": 200,
+        "local_blob_reason": "",
+        "local_blob_state": "present",
+        "record_blob_state": "present"
+      },
+      {
+        "endpoint_index": 1,
+        "http_status": 200,
+        "local_blob_reason": "",
+        "local_blob_state": "present",
+        "record_blob_state": "present"
+      },
+      {
+        "endpoint_index": 0,
+        "http_status": 200,
+        "local_blob_reason": "",
+        "local_blob_state": "present",
+        "record_blob_state": "present"
+      },
+      {
+        "endpoint_index": 1,
+        "http_status": 200,
+        "local_blob_reason": "",
+        "local_blob_state": "present",
+        "record_blob_state": "present"
+      }
+    ],
     "command_state": "observed",
     "disposition": "locally_observed",
     "initial_command_state": "observed",
@@ -14,9 +44,9 @@
   },
   "scenario": "MSG-SEND-FILES",
   "level": "replica",
-  "passed": false,
-  "git_sha": "8d595c367d931fb231508c666980d6c7676d10a2",
-  "at": "2026-10-17T20:29:48.502586Z",
+  "passed": true,
+  "git_sha": "945c7395e52bcc2fdc19e7dfe1621a192e83ba5f",
+  "at": "2026-10-17T20:33:46.365641Z",
   "assertions": [
     {
       "name": "self_chat_captured",
@@ -88,11 +118,11 @@
     },
     {
       "name": "authorized_replica_attachment_bytes",
-      "passed": false
+      "passed": true
     },
     {
       "name": "authorized_replica_attachment_bytes",
-      "passed": false
+      "passed": true
     },
     {
       "name": "authorized_replica_attachment_bytes",
@@ -110,30 +140,30 @@
   "latency": {
     "command_submit_to_visible_0": {
       "samples": 1,
-      "p50_ms": 811.096167,
-      "p95_ms": 811.096167,
-      "max_ms": 811.096167,
+      "p50_ms": 2625.907083,
+      "p95_ms": 2625.907083,
+      "max_ms": 2625.907083,
       "timeouts": 0
     },
     "command_submit_to_visible_1": {
       "samples": 1,
-      "p50_ms": 823.782709,
-      "p95_ms": 823.782709,
-      "max_ms": 823.782709,
+      "p50_ms": 2638.218083,
+      "p95_ms": 2638.218083,
+      "max_ms": 2638.218083,
       "timeouts": 0
     },
     "echo_chat_db_appearance_to_visible_0": {
       "samples": 1,
-      "p50_ms": 151.980542,
-      "p95_ms": 151.980542,
-      "max_ms": 151.980542,
+      "p50_ms": 708.673125,
+      "p95_ms": 708.673125,
+      "max_ms": 708.673125,
       "timeouts": 0
     },
     "echo_chat_db_appearance_to_visible_1": {
       "samples": 1,
-      "p50_ms": 241.281375,
-      "p95_ms": 241.281375,
-      "max_ms": 241.281375,
+      "p50_ms": 719.776875,
+      "p95_ms": 719.776875,
+      "max_ms": 719.776875,
       "timeouts": 0
     }
   },
