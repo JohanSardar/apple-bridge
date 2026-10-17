@@ -3,18 +3,18 @@
     "clock": "native CLOCK_UPTIME_RAW for real fixtures; lab monotonic fixture return for sim",
     "heavy_slots_in_use": 2,
     "load_average": [
-      "8.37",
-      "10.74",
-      "11.05"
+      "13.48",
+      "14.87",
+      "14.10"
     ],
     "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"
   },
-  "run_id": "cal_01M54ATJ39BEEBXJHJHNCRNZX5",
+  "run_id": "cal_01M54C0TQ0N53H2RNDDTH60R05",
   "scenario": "CAL-MOVED-OCCURRENCE",
   "level": "sim",
   "passed": true,
-  "git_sha": "1006ac354b1c6492966de87dacbd828d09875bac",
-  "at": "2026-10-17T07:04:38.249191Z",
+  "git_sha": "7f03ca92f7f5ec8858f7d86ad567ea450d084ccd",
+  "at": "2026-10-17T07:25:32.256462Z",
   "assertions": [
     {
       "name": "calendar_visible",
@@ -111,9 +111,9 @@
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 0.909167,
-      "p95_ms": 0.909167,
-      "max_ms": 0.909167,
+      "p50_ms": 1.343333,
+      "p95_ms": 1.343333,
+      "max_ms": 1.343333,
       "timeouts": 0
     }
   },

@@ -3,18 +3,18 @@
     "clock": "native CLOCK_UPTIME_RAW for real fixtures; lab monotonic fixture return for sim",
     "heavy_slots_in_use": 2,
     "load_average": [
-      "8.49",
-      "10.81",
-      "11.08"
+      "13.52",
+      "14.90",
+      "14.10"
     ],
     "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"
   },
-  "run_id": "cal_01M54ATG67P677RCM0D0ACQZXQ",
+  "run_id": "cal_01M54C0MCEQH4RH7CTDKN6G2JD",
   "scenario": "CAL-CRUD",
   "level": "sim",
   "passed": true,
-  "git_sha": "1006ac354b1c6492966de87dacbd828d09875bac",
-  "at": "2026-10-17T07:04:36.295613Z",
+  "git_sha": "7f03ca92f7f5ec8858f7d86ad567ea450d084ccd",
+  "at": "2026-10-17T07:25:25.774547Z",
   "assertions": [
     {
       "name": "calendar_visible",
@@ -37,11 +37,19 @@
       "passed": true
     },
     {
+      "name": "event_fields_and_alarm_updated",
+      "passed": true
+    },
+    {
       "name": "stale_version_rejected",
       "passed": true
     },
     {
       "name": "delete_absence_visible",
+      "passed": true
+    },
+    {
+      "name": "created_series_deleted_with_future_span",
       "passed": true
     },
     {
@@ -129,11 +137,19 @@
       "passed": true
     },
     {
+      "name": "mcp_event_fields_and_alarm_updated",
+      "passed": true
+    },
+    {
       "name": "mcp_stale_version_rejected",
       "passed": true
     },
     {
       "name": "mcp_delete_absence_visible",
+      "passed": true
+    },
+    {
+      "name": "mcp_created_series_deleted_with_future_span",
       "passed": true
     },
     {
