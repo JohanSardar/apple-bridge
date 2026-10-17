@@ -1,10 +1,10 @@
 {
-  "run_id": "run_01M54742NTJCPQJQ6QR8SEZT2D",
+  "run_id": "run_01M5477V6172V53DYY3X2E549V",
   "scenario": "REM-RECURRING",
   "level": "sim",
   "passed": true,
-  "git_sha": "aa74a56cd506ee48d164ac61c28fc5ac6ff68ec9",
-  "at": "2026-10-17T05:59:55.834367Z",
+  "git_sha": "c9aa42147ac4f6337b58fd04e7b9db83f17128e6",
+  "at": "2026-10-17T06:01:59.233302Z",
   "assertions": [
     {
       "name": "reminders_ready",
@@ -38,9 +38,9 @@
   "latency": {
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 30.761125,
-      "p95_ms": 30.761125,
-      "max_ms": 30.761125,
+      "p50_ms": 36.387416,
+      "p95_ms": 36.387416,
+      "max_ms": 36.387416,
       "timeouts": 0
     }
   },

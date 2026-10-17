@@ -1,0 +1,1607 @@
+{
+  "code_commit": "c9aa42147ac4f6337b58fd04e7b9db83f17128e6",
+  "transport": "ssh -o ControlPath=none air",
+  "heavy_wrapper": "packaging/dev/heavy.sh",
+  "commands": [
+    "go run ./cmd/bridge-lab run lab/scenarios/core lab/scenarios/reminders --level sim",
+    "go run ./cmd/bridge-lab run lab/scenarios/core/CORE-CMD-*.yaml lab/scenarios/core/CORE-REST-MCP-PARITY.yaml lab/scenarios/core/CORE-FORGED-DELEGATION.yaml lab/scenarios/core/CORE-LOCALHOST-DEFENSE.yaml lab/scenarios/core/REM-*.yaml lab/scenarios/reminders --level sim",
+    "go run ./cmd/bridge-lab run lab/scenarios/core/CORE-CMD-LOST-RESPONSE.yaml lab/scenarios/core/CORE-CMD-OFFLINE.yaml lab/scenarios/core/CORE-CMD-CONFLICT.yaml lab/scenarios/core/CORE-CMD-READ-YOUR-WRITE.yaml --level replica",
+    "make lint",
+    "go vet ./...",
+    "go vet -tags lab ./...",
+    "make features",
+    "packaging/dev/build-native.sh"
+  ],
+  "checks_passed": true,
+  "runs": [
+    {
+      "scope": "full core and reminders",
+      "results": [
+        {
+          "scenario": "CORE-BLOB-CAP",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 16.781125,
+              "p95_ms": 16.781125,
+              "max_ms": 16.781125,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 37.414667,
+              "p95_ms": 37.414667,
+              "max_ms": 37.414667,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-BLOB-CORRUPT",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192blob_complete": {
+              "samples": 1,
+              "p50_ms": 4892.685458,
+              "p95_ms": 4892.685458,
+              "max_ms": 4892.685458,
+              "timeouts": 0
+            },
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 14.510625,
+              "p95_ms": 14.510625,
+              "max_ms": 14.510625,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 42.0495,
+              "p95_ms": 42.0495,
+              "max_ms": 42.0495,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-BLOB-GC",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192blob_complete": {
+              "samples": 1,
+              "p50_ms": 4837.607709,
+              "p95_ms": 4837.607709,
+              "max_ms": 4837.607709,
+              "timeouts": 0
+            },
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 14.72525,
+              "p95_ms": 14.72525,
+              "max_ms": 14.72525,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 44.313958,
+              "p95_ms": 44.313958,
+              "max_ms": 44.313958,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-BLOB-INTERRUPT",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192blob_complete": {
+              "samples": 1,
+              "p50_ms": 5682.244542,
+              "p95_ms": 5682.244542,
+              "max_ms": 5682.244542,
+              "timeouts": 0
+            },
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 16.044667,
+              "p95_ms": 16.044667,
+              "max_ms": 16.044667,
+              "timeouts": 0
+            },
+            "effect_done\u2192metadata_during_blob": {
+              "samples": 1,
+              "p50_ms": 46.346792,
+              "p95_ms": 46.346792,
+              "max_ms": 46.346792,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 43.527834,
+              "p95_ms": 43.527834,
+              "max_ms": 43.527834,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-BLOB-NO-DIGEST-AUTH",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192blob_complete": {
+              "samples": 1,
+              "p50_ms": 4812.432708,
+              "p95_ms": 4812.432708,
+              "max_ms": 4812.432708,
+              "timeouts": 0
+            },
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 17.878833,
+              "p95_ms": 17.878833,
+              "max_ms": 17.878833,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 42.808083,
+              "p95_ms": 42.808083,
+              "max_ms": 42.808083,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-BLOB-OFFLOADED",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 12.725625,
+              "p95_ms": 12.725625,
+              "max_ms": 12.725625,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 32.076542,
+              "p95_ms": 32.076542,
+              "max_ms": 32.076542,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-BLOB-SLOW-READ",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192blob_complete": {
+              "samples": 1,
+              "p50_ms": 4925.3395,
+              "p95_ms": 4925.3395,
+              "max_ms": 4925.3395,
+              "timeouts": 0
+            },
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 17.36025,
+              "p95_ms": 17.36025,
+              "max_ms": 17.36025,
+              "timeouts": 0
+            },
+            "effect_done\u2192metadata_during_slow_read": {
+              "samples": 1,
+              "p50_ms": 38.121208,
+              "p95_ms": 38.121208,
+              "max_ms": 38.121208,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 34.694042,
+              "p95_ms": 34.694042,
+              "max_ms": 34.694042,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-BOOT",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 29.471083,
+              "p95_ms": 29.471083,
+              "max_ms": 29.471083,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 52.62125,
+              "p95_ms": 52.62125,
+              "max_ms": 52.62125,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-CMD-CLOCK-JUMP",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 13.02175,
+              "p95_ms": 13.02175,
+              "max_ms": 13.02175,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 35.294333,
+              "p95_ms": 35.294333,
+              "max_ms": 35.294333,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica1": {
+              "samples": 1,
+              "p50_ms": 33.8675,
+              "p95_ms": 33.8675,
+              "max_ms": 33.8675,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-CMD-CONFLICT",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 11.368959,
+              "p95_ms": 11.368959,
+              "max_ms": 11.368959,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 34.3525,
+              "p95_ms": 34.3525,
+              "max_ms": 34.3525,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica1": {
+              "samples": 1,
+              "p50_ms": 33.239625,
+              "p95_ms": 33.239625,
+              "max_ms": 33.239625,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-CMD-CRASH-AMBIGUOUS",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 13.991833,
+              "p95_ms": 13.991833,
+              "max_ms": 13.991833,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 35.60275,
+              "p95_ms": 35.60275,
+              "max_ms": 35.60275,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica1": {
+              "samples": 1,
+              "p50_ms": 38.098375,
+              "p95_ms": 38.098375,
+              "max_ms": 38.098375,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-CMD-ERA",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 14.145792,
+              "p95_ms": 14.145792,
+              "max_ms": 14.145792,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 28.4625,
+              "p95_ms": 28.4625,
+              "max_ms": 28.4625,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-CMD-EXPIRY",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 12.491625,
+              "p95_ms": 12.491625,
+              "max_ms": 12.491625,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 36.933583,
+              "p95_ms": 36.933583,
+              "max_ms": 36.933583,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica1": {
+              "samples": 1,
+              "p50_ms": 34.044208,
+              "p95_ms": 34.044208,
+              "max_ms": 34.044208,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-CMD-IDEMPOTENT",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 12.664417,
+              "p95_ms": 12.664417,
+              "max_ms": 12.664417,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 31.961042,
+              "p95_ms": 31.961042,
+              "max_ms": 31.961042,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica1": {
+              "samples": 1,
+              "p50_ms": 34.946292,
+              "p95_ms": 34.946292,
+              "max_ms": 34.946292,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-CMD-LOST-RESPONSE",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 12.854125,
+              "p95_ms": 12.854125,
+              "max_ms": 12.854125,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 35.434792,
+              "p95_ms": 35.434792,
+              "max_ms": 35.434792,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica1": {
+              "samples": 1,
+              "p50_ms": 32.729083,
+              "p95_ms": 32.729083,
+              "max_ms": 32.729083,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-CMD-OFFLINE",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 11.9005,
+              "p95_ms": 11.9005,
+              "max_ms": 11.9005,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 34.386208,
+              "p95_ms": 34.386208,
+              "max_ms": 34.386208,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica1": {
+              "samples": 1,
+              "p50_ms": 31.444958,
+              "p95_ms": 31.444958,
+              "max_ms": 31.444958,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-CMD-READ-YOUR-WRITE",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 26.310541,
+              "p95_ms": 26.310541,
+              "max_ms": 26.310541,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 42.555125,
+              "p95_ms": 42.555125,
+              "max_ms": 42.555125,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica1": {
+              "samples": 1,
+              "p50_ms": 48.563,
+              "p95_ms": 48.563,
+              "max_ms": 48.563,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-FORGED-DELEGATION",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 12.337167,
+              "p95_ms": 12.337167,
+              "max_ms": 12.337167,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 36.453042,
+              "p95_ms": 36.453042,
+              "max_ms": 36.453042,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica1": {
+              "samples": 1,
+              "p50_ms": 33.234334,
+              "p95_ms": 33.234334,
+              "max_ms": 33.234334,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-LIVE-LATENCY",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 200,
+              "p50_ms": 23.635334,
+              "p95_ms": 30.520792,
+              "max_ms": 38.816,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 200,
+              "p50_ms": 44.275792,
+              "p95_ms": 56.059167,
+              "max_ms": 64.194334,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-LOCALHOST-DEFENSE",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 10.56525,
+              "p95_ms": 10.56525,
+              "max_ms": 10.56525,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 31.933583,
+              "p95_ms": 31.933583,
+              "max_ms": 31.933583,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica1": {
+              "samples": 1,
+              "p50_ms": 30.482167,
+              "p95_ms": 30.482167,
+              "max_ms": 30.482167,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-REST-MCP-PARITY",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 10.641334,
+              "p95_ms": 10.641334,
+              "max_ms": 10.641334,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 31.074459,
+              "p95_ms": 31.074459,
+              "max_ms": 31.074459,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica1": {
+              "samples": 1,
+              "p50_ms": 32.540792,
+              "p95_ms": 32.540792,
+              "max_ms": 32.540792,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-RESUME",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 2,
+              "p50_ms": 8.859209,
+              "p95_ms": 28.868,
+              "max_ms": 28.868,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 2,
+              "p50_ms": 15.683125,
+              "p95_ms": 55.561375,
+              "max_ms": 55.561375,
+              "timeouts": 0
+            },
+            "partition_effect_done\u2192replica_visible:replica0": {
+              "samples": 30,
+              "p50_ms": 15272.933416,
+              "p95_ms": 29417.211958,
+              "max_ms": 30427.940333,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "LAB-MALFORMED-SCENARIO",
+          "level": "sim",
+          "passed": true,
+          "latency": {}
+        },
+        {
+          "scenario": "LAB-SSE",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 24.981708,
+              "p95_ms": 24.981708,
+              "max_ms": 24.981708,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 56.711917,
+              "p95_ms": 56.711917,
+              "max_ms": 56.711917,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "LAB-TRUTH-MULTIPLICITY",
+          "level": "sim",
+          "passed": true,
+          "latency": {}
+        },
+        {
+          "scenario": "REM-CONFLICT",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 14.067417,
+              "p95_ms": 14.067417,
+              "max_ms": 14.067417,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 33.068334,
+              "p95_ms": 33.068334,
+              "max_ms": 33.068334,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica1": {
+              "samples": 1,
+              "p50_ms": 35.87725,
+              "p95_ms": 35.87725,
+              "max_ms": 35.87725,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "REM-CRUD",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 12.273209,
+              "p95_ms": 12.273209,
+              "max_ms": 12.273209,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 30.186459,
+              "p95_ms": 30.186459,
+              "max_ms": 30.186459,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica1": {
+              "samples": 1,
+              "p50_ms": 34.278417,
+              "p95_ms": 34.278417,
+              "max_ms": 34.278417,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "REM-EXTERNAL-RACE",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 14.123416,
+              "p95_ms": 14.123416,
+              "max_ms": 14.123416,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 44.508333,
+              "p95_ms": 44.508333,
+              "max_ms": 44.508333,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica1": {
+              "samples": 1,
+              "p50_ms": 42.963208,
+              "p95_ms": 42.963208,
+              "max_ms": 42.963208,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "REM-NATIVE-LIST-RACE",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 13.95575,
+              "p95_ms": 13.95575,
+              "max_ms": 13.95575,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 29.324542,
+              "p95_ms": 29.324542,
+              "max_ms": 29.324542,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "REM-OPERATION-SHAPES",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 14.594833,
+              "p95_ms": 14.594833,
+              "max_ms": 14.594833,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 31.601458,
+              "p95_ms": 31.601458,
+              "max_ms": 31.601458,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "REM-READONLY-LIST",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 12.280167,
+              "p95_ms": 12.280167,
+              "max_ms": 12.280167,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 39.455708,
+              "p95_ms": 39.455708,
+              "max_ms": 39.455708,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica1": {
+              "samples": 1,
+              "p50_ms": 36.440708,
+              "p95_ms": 36.440708,
+              "max_ms": 36.440708,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "REM-CREATE-EXTERNAL",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 37.938458,
+              "p95_ms": 37.938458,
+              "max_ms": 37.938458,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "REM-LIST-CREATE",
+          "level": "sim",
+          "passed": true,
+          "latency": {}
+        },
+        {
+          "scenario": "REM-PERMISSION-LOSS",
+          "level": "sim",
+          "passed": true,
+          "latency": {}
+        },
+        {
+          "scenario": "REM-RECURRING",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 30.761125,
+              "p95_ms": 30.761125,
+              "max_ms": 30.761125,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-CMD-CONFLICT",
+          "level": "replica",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 17.321625,
+              "p95_ms": 17.321625,
+              "max_ms": 17.321625,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 30.446416,
+              "p95_ms": 30.446416,
+              "max_ms": 30.446416,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica1": {
+              "samples": 1,
+              "p50_ms": 31.650541,
+              "p95_ms": 31.650541,
+              "max_ms": 31.650541,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-CMD-LOST-RESPONSE",
+          "level": "replica",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 19.232542,
+              "p95_ms": 19.232542,
+              "max_ms": 19.232542,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 30.907042,
+              "p95_ms": 30.907042,
+              "max_ms": 30.907042,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica1": {
+              "samples": 1,
+              "p50_ms": 30.889625,
+              "p95_ms": 30.889625,
+              "max_ms": 30.889625,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-CMD-OFFLINE",
+          "level": "replica",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 12.731917,
+              "p95_ms": 12.731917,
+              "max_ms": 12.731917,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 94.776459,
+              "p95_ms": 94.776459,
+              "max_ms": 94.776459,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica1": {
+              "samples": 1,
+              "p50_ms": 96.215667,
+              "p95_ms": 96.215667,
+              "max_ms": 96.215667,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-CMD-READ-YOUR-WRITE",
+          "level": "replica",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 23.320417,
+              "p95_ms": 23.320417,
+              "max_ms": 23.320417,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 38.405958,
+              "p95_ms": 38.405958,
+              "max_ms": 38.405958,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica1": {
+              "samples": 1,
+              "p50_ms": 38.483167,
+              "p95_ms": 38.483167,
+              "max_ms": 38.483167,
+              "timeouts": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "scope": "affected commands and reminders after rebase",
+      "results": [
+        {
+          "scenario": "CORE-CMD-CLOCK-JUMP",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 40.161167,
+              "p95_ms": 40.161167,
+              "max_ms": 40.161167,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 85.562333,
+              "p95_ms": 85.562333,
+              "max_ms": 85.562333,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica1": {
+              "samples": 1,
+              "p50_ms": 84.9675,
+              "p95_ms": 84.9675,
+              "max_ms": 84.9675,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-CMD-CONFLICT",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 13.719083,
+              "p95_ms": 13.719083,
+              "max_ms": 13.719083,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 30.338125,
+              "p95_ms": 30.338125,
+              "max_ms": 30.338125,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica1": {
+              "samples": 1,
+              "p50_ms": 29.125208,
+              "p95_ms": 29.125208,
+              "max_ms": 29.125208,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-CMD-CRASH-AMBIGUOUS",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 19.624708,
+              "p95_ms": 19.624708,
+              "max_ms": 19.624708,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 50.030541,
+              "p95_ms": 50.030541,
+              "max_ms": 50.030541,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica1": {
+              "samples": 1,
+              "p50_ms": 51.725708,
+              "p95_ms": 51.725708,
+              "max_ms": 51.725708,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-CMD-ERA",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 18.020458,
+              "p95_ms": 18.020458,
+              "max_ms": 18.020458,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 42.337625,
+              "p95_ms": 42.337625,
+              "max_ms": 42.337625,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-CMD-EXPIRY",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 13.600708,
+              "p95_ms": 13.600708,
+              "max_ms": 13.600708,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 31.418833,
+              "p95_ms": 31.418833,
+              "max_ms": 31.418833,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica1": {
+              "samples": 1,
+              "p50_ms": 32.615333,
+              "p95_ms": 32.615333,
+              "max_ms": 32.615333,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-CMD-IDEMPOTENT",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 9.495542,
+              "p95_ms": 9.495542,
+              "max_ms": 9.495542,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 33.539875,
+              "p95_ms": 33.539875,
+              "max_ms": 33.539875,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica1": {
+              "samples": 1,
+              "p50_ms": 30.723833,
+              "p95_ms": 30.723833,
+              "max_ms": 30.723833,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-CMD-LOST-RESPONSE",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 13.6055,
+              "p95_ms": 13.6055,
+              "max_ms": 13.6055,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 35.049542,
+              "p95_ms": 35.049542,
+              "max_ms": 35.049542,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica1": {
+              "samples": 1,
+              "p50_ms": 32.780667,
+              "p95_ms": 32.780667,
+              "max_ms": 32.780667,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-CMD-OFFLINE",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 12.997291,
+              "p95_ms": 12.997291,
+              "max_ms": 12.997291,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 33.846208,
+              "p95_ms": 33.846208,
+              "max_ms": 33.846208,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica1": {
+              "samples": 1,
+              "p50_ms": 31.015083,
+              "p95_ms": 31.015083,
+              "max_ms": 31.015083,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-CMD-READ-YOUR-WRITE",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 13.812334,
+              "p95_ms": 13.812334,
+              "max_ms": 13.812334,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 34.70625,
+              "p95_ms": 34.70625,
+              "max_ms": 34.70625,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica1": {
+              "samples": 1,
+              "p50_ms": 31.82,
+              "p95_ms": 31.82,
+              "max_ms": 31.82,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-FORGED-DELEGATION",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 14.295625,
+              "p95_ms": 14.295625,
+              "max_ms": 14.295625,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 34.240875,
+              "p95_ms": 34.240875,
+              "max_ms": 34.240875,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica1": {
+              "samples": 1,
+              "p50_ms": 33.20375,
+              "p95_ms": 33.20375,
+              "max_ms": 33.20375,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-LOCALHOST-DEFENSE",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 14.689625,
+              "p95_ms": 14.689625,
+              "max_ms": 14.689625,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 33.273917,
+              "p95_ms": 33.273917,
+              "max_ms": 33.273917,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica1": {
+              "samples": 1,
+              "p50_ms": 30.035,
+              "p95_ms": 30.035,
+              "max_ms": 30.035,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-REST-MCP-PARITY",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 12.175042,
+              "p95_ms": 12.175042,
+              "max_ms": 12.175042,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 136.232417,
+              "p95_ms": 136.232417,
+              "max_ms": 136.232417,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica1": {
+              "samples": 1,
+              "p50_ms": 133.805417,
+              "p95_ms": 133.805417,
+              "max_ms": 133.805417,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "REM-CONFLICT",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 10.535708,
+              "p95_ms": 10.535708,
+              "max_ms": 10.535708,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 28.233125,
+              "p95_ms": 28.233125,
+              "max_ms": 28.233125,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica1": {
+              "samples": 1,
+              "p50_ms": 30.97625,
+              "p95_ms": 30.97625,
+              "max_ms": 30.97625,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "REM-CRUD",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 13.146792,
+              "p95_ms": 13.146792,
+              "max_ms": 13.146792,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 38.073667,
+              "p95_ms": 38.073667,
+              "max_ms": 38.073667,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica1": {
+              "samples": 1,
+              "p50_ms": 35.228459,
+              "p95_ms": 35.228459,
+              "max_ms": 35.228459,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "REM-EXTERNAL-RACE",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 11.506958,
+              "p95_ms": 11.506958,
+              "max_ms": 11.506958,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 36.034,
+              "p95_ms": 36.034,
+              "max_ms": 36.034,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica1": {
+              "samples": 1,
+              "p50_ms": 33.873625,
+              "p95_ms": 33.873625,
+              "max_ms": 33.873625,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "REM-NATIVE-LIST-RACE",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 19.470208,
+              "p95_ms": 19.470208,
+              "max_ms": 19.470208,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 38.082541,
+              "p95_ms": 38.082541,
+              "max_ms": 38.082541,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "REM-OPERATION-SHAPES",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 11.203083,
+              "p95_ms": 11.203083,
+              "max_ms": 11.203083,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 21.342208,
+              "p95_ms": 21.342208,
+              "max_ms": 21.342208,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "REM-READONLY-LIST",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 10.617208,
+              "p95_ms": 10.617208,
+              "max_ms": 10.617208,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 34.292125,
+              "p95_ms": 34.292125,
+              "max_ms": 34.292125,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica1": {
+              "samples": 1,
+              "p50_ms": 35.664125,
+              "p95_ms": 35.664125,
+              "max_ms": 35.664125,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "REM-CREATE-EXTERNAL",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 31.369875,
+              "p95_ms": 31.369875,
+              "max_ms": 31.369875,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "REM-LIST-CREATE",
+          "level": "sim",
+          "passed": true,
+          "latency": {}
+        },
+        {
+          "scenario": "REM-PERMISSION-LOSS",
+          "level": "sim",
+          "passed": true,
+          "latency": {}
+        },
+        {
+          "scenario": "REM-RECURRING",
+          "level": "sim",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 36.387416,
+              "p95_ms": 36.387416,
+              "max_ms": 36.387416,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-CMD-CONFLICT",
+          "level": "replica",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 26.870417,
+              "p95_ms": 26.870417,
+              "max_ms": 26.870417,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 124.457708,
+              "p95_ms": 124.457708,
+              "max_ms": 124.457708,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica1": {
+              "samples": 1,
+              "p50_ms": 124.377167,
+              "p95_ms": 124.377167,
+              "max_ms": 124.377167,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-CMD-LOST-RESPONSE",
+          "level": "replica",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 21.22925,
+              "p95_ms": 21.22925,
+              "max_ms": 21.22925,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 36.979,
+              "p95_ms": 36.979,
+              "max_ms": 36.979,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica1": {
+              "samples": 1,
+              "p50_ms": 37.015834,
+              "p95_ms": 37.015834,
+              "max_ms": 37.015834,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-CMD-OFFLINE",
+          "level": "replica",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 25.747667,
+              "p95_ms": 25.747667,
+              "max_ms": 25.747667,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 97.159125,
+              "p95_ms": 97.159125,
+              "max_ms": 97.159125,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica1": {
+              "samples": 1,
+              "p50_ms": 95.847209,
+              "p95_ms": 95.847209,
+              "max_ms": 95.847209,
+              "timeouts": 0
+            }
+          }
+        },
+        {
+          "scenario": "CORE-CMD-READ-YOUR-WRITE",
+          "level": "replica",
+          "passed": true,
+          "latency": {
+            "effect_done\u2192gateway_visible": {
+              "samples": 1,
+              "p50_ms": 26.051959,
+              "p95_ms": 26.051959,
+              "max_ms": 26.051959,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica0": {
+              "samples": 1,
+              "p50_ms": 38.732959,
+              "p95_ms": 38.732959,
+              "max_ms": 38.732959,
+              "timeouts": 0
+            },
+            "effect_done\u2192replica_visible:replica1": {
+              "samples": 1,
+              "p50_ms": 38.734792,
+              "p95_ms": 38.734792,
+              "max_ms": 38.734792,
+              "timeouts": 0
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "system_swift_package": {
+    "passed": false,
+    "reason": "System swift-package has an unresolved BuildServerProtocol symbol; repository native build fallback passed."
+  },
+  "new_scenario_ids": [],
+  "strengthened_scenarios": [
+    "CORE-CMD-ERA",
+    "REM-EXTERNAL-RACE",
+    "REM-NATIVE-LIST-RACE"
+  ]
+}

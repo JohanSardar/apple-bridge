@@ -1,10 +1,10 @@
 {
-  "run_id": "run_01M546ZYBSMA1RYKH9PVWJ67E6",
+  "run_id": "run_01M5476QV78SXJTB78YVANMMGN",
   "scenario": "CORE-CMD-CLOCK-JUMP",
   "level": "sim",
   "passed": true,
-  "git_sha": "aa74a56cd506ee48d164ac61c28fc5ac6ff68ec9",
-  "at": "2026-10-17T05:57:40.345437Z",
+  "git_sha": "c9aa42147ac4f6337b58fd04e7b9db83f17128e6",
+  "at": "2026-10-17T06:01:23.047326Z",
   "assertions": [
     {
       "name": "replica_host_is_air",
@@ -154,23 +154,23 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 13.02175,
-      "p95_ms": 13.02175,
-      "max_ms": 13.02175,
+      "p50_ms": 40.161167,
+      "p95_ms": 40.161167,
+      "max_ms": 40.161167,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 35.294333,
-      "p95_ms": 35.294333,
-      "max_ms": 35.294333,
+      "p50_ms": 85.562333,
+      "p95_ms": 85.562333,
+      "max_ms": 85.562333,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica1": {
       "samples": 1,
-      "p50_ms": 33.8675,
-      "p95_ms": 33.8675,
-      "max_ms": 33.8675,
+      "p50_ms": 84.9675,
+      "p95_ms": 84.9675,
+      "max_ms": 84.9675,
       "timeouts": 0
     }
   },
