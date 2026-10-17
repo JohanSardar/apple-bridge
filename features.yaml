@@ -356,7 +356,7 @@ features:
     milestone: M4
     modules: [native/UsageSource, native/Decoders]
     depends_on: [helper.session]
-    status: todo
+    status: done
     scenarios:
       - {id: USE-IMPORT, levels: [sim, real]}
       - {id: USE-LOCK-CLIP, levels: [sim]}

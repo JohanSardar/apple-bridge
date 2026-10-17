@@ -1,0 +1,58 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[4.78 5.27 5.92] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M55V8VRW8GF1RC3SRE940GZM",
+  "metrics": {
+    "app_days": 2,
+    "devices": 2
+  },
+  "scenario": "USE-REMOTE-LAG",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "8f25157360827cfb675bf7e469121191512a3cb4",
+  "at": "2026-10-17T21:11:18.556944Z",
+  "assertions": [
+    {
+      "name": "mac_lock_clipped",
+      "passed": true
+    },
+    {
+      "name": "remote_older_freshness",
+      "passed": true
+    },
+    {
+      "name": "past_day_revised",
+      "passed": true
+    },
+    {
+      "name": "batch_live_under_one_second",
+      "passed": true
+    },
+    {
+      "name": "replica_converged",
+      "passed": true
+    },
+    {
+      "name": "provenance_and_device_freshness",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "batch_to_gateway_ms": {
+      "samples": 1,
+      "p50_ms": 13.2,
+      "p95_ms": 13.2,
+      "max_ms": 13.2,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

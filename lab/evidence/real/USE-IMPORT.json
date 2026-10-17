@@ -1,0 +1,42 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[5.33 5.79 6.21] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M55V4EK10C8F1WRDEHC01ZJK",
+  "metrics": {
+    "app_days": 1246,
+    "devices": 3,
+    "different_fields": {},
+    "gateway_rows": 1246,
+    "truth_rows": 1246,
+    "unmatched_keys": 0
+  },
+  "scenario": "USE-IMPORT",
+  "level": "real",
+  "passed": true,
+  "git_sha": "11069752f812fa9708f920de7c40017f66a6ff29",
+  "at": "2026-10-17T21:08:53.985619Z",
+  "assertions": [
+    {
+      "name": "independent_day_totals_match",
+      "passed": true
+    },
+    {
+      "name": "replica_converged",
+      "passed": true
+    },
+    {
+      "name": "provenance_and_device_freshness",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

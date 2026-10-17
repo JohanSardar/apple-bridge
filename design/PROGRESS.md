@@ -18,7 +18,7 @@ One line per unit. Rules: BUILD-GOAL.md (2026-10-17 update: no reviews, merge on
 - Contacts merged (18bb050): 11 sim + 5 real pass, real p95 254 ms; replica CON-EXTERNAL pass (p95 482 ms); replica CON-CRUD fixed (94a216b: forwarding used a hard-coded reminders:write scope). contacts.read/write + reminders.write DONE.
 - Messages commands merged (36be10a, c250164): self text/files pass sim/real/replica; incoming echo real+replica; history import 161,121 msgs in 381 s, 0 mismatches → messages.read + messages.send DONE. Actions/groups LIMITED at real level (screen lock; no 2nd iMessage account). File cap removed (cb41f84: staged blob paths; 5 MiB self-send verified, 696 ms). Test-message cleanup awaits unlock.
 - Notes merged (d2f5c83): all sims + NOTE-IMPORT real pass. Real/replica writes fail: Notes AppleScript -1712 (Helper + AppleTruth; AppleTruth Notes/MobileSMS AppleEvents rows added 2026-10-17) → `ab-notes-real-r1` diagnosing; else limited.
-- IN PROGRESS Usage/Screen Time (`ab-m4-usage-r1`).
+- DONE Usage/Screen Time: read-only Biome source, independent Truth, lock/day math + scrubbed CRLF fixtures; five sim scenarios and USE-IMPORT real pass (1,246 app/day records, zero mismatches); absent DevicePeer names are explicit, historical sleep/settings parity remain estimates.
 - LIMITED packaging.app (3658b73): signed Apple Bridge.app, SMAppService agent, dedicated keychain (works with login Keychain locked); PKG-INSTALL + PKG-BACKGROUND real pass; notarization needs Johan's Developer ID; GUI onboarding clicks and reboot untested.
 - IN PROGRESS agent suite (`ab-agent-suite-r1`): Codex gpt-6-luna on Ubuntu via MCP, Reminders + Contacts first.
 

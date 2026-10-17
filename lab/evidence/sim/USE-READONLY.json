@@ -1,0 +1,78 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[4.76 5.28 5.93] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M55V8TDCYH9MG9FW82E1VK9D",
+  "metrics": {
+    "app_days": 1,
+    "devices": 1
+  },
+  "scenario": "USE-READONLY",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "8f25157360827cfb675bf7e469121191512a3cb4",
+  "at": "2026-10-17T21:11:17.164752Z",
+  "assertions": [
+    {
+      "name": "mac_lock_clipped",
+      "passed": true
+    },
+    {
+      "name": "usage_create_rest_unsupported",
+      "passed": true
+    },
+    {
+      "name": "usage_create_mcp_unsupported",
+      "passed": true
+    },
+    {
+      "name": "usage_update_rest_unsupported",
+      "passed": true
+    },
+    {
+      "name": "usage_update_mcp_unsupported",
+      "passed": true
+    },
+    {
+      "name": "usage_delete_rest_unsupported",
+      "passed": true
+    },
+    {
+      "name": "usage_delete_mcp_unsupported",
+      "passed": true
+    },
+    {
+      "name": "usage_reset_rest_unsupported",
+      "passed": true
+    },
+    {
+      "name": "usage_reset_mcp_unsupported",
+      "passed": true
+    },
+    {
+      "name": "usage_complete_rest_unsupported",
+      "passed": true
+    },
+    {
+      "name": "usage_complete_mcp_unsupported",
+      "passed": true
+    },
+    {
+      "name": "replica_converged",
+      "passed": true
+    },
+    {
+      "name": "provenance_and_device_freshness",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[4.76 5.28 5.93] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M55V8QA818KSFXS51BFFACVA",
+  "metrics": {
+    "app_days": 2,
+    "devices": 2
+  },
+  "scenario": "USE-IMPORT",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "8f25157360827cfb675bf7e469121191512a3cb4",
+  "at": "2026-10-17T21:11:13.992525Z",
+  "assertions": [
+    {
+      "name": "mac_lock_clipped",
+      "passed": true
+    },
+    {
+      "name": "remote_import",
+      "passed": true
+    },
+    {
+      "name": "per_device_totals",
+      "passed": true
+    },
+    {
+      "name": "replica_converged",
+      "passed": true
+    },
+    {
+      "name": "provenance_and_device_freshness",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
