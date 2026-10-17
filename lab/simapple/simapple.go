@@ -33,10 +33,10 @@ type Action struct {
 }
 type captureRequest struct {
 	SourceState *contracts.IPCFrame
-	Capture  contracts.Capture
-	Done     chan struct{}
-	Revision uint64
-	Close    bool
+	Capture     contracts.Capture
+	Done        chan struct{}
+	Revision    uint64
+	Close       bool
 }
 type fakeApple struct {
 	messages          messageState

@@ -28,15 +28,15 @@ type Config struct {
 	BlobCap     int64 `json:"blob_cap,omitempty"`
 	BlobGraceMS int64 `json:"blob_grace_ms,omitempty"`
 
-	Role              string `json:"role"`
-	Home              string `json:"home"`
-	PeerAddress       string `json:"peer_address"`
-	APIAddress        string `json:"api_address"`
-	Socket            string `json:"socket"`
-	HelperApp         string `json:"helper_app,omitempty"`
-	HelperLabCommands bool   `json:"helper_lab_commands,omitempty"`
-	RetentionRows uint64        `json:"retention_rows"`
-	RetentionAge  time.Duration `json:"retention_age"`
+	Role              string        `json:"role"`
+	Home              string        `json:"home"`
+	PeerAddress       string        `json:"peer_address"`
+	APIAddress        string        `json:"api_address"`
+	Socket            string        `json:"socket"`
+	HelperApp         string        `json:"helper_app,omitempty"`
+	HelperLabCommands bool          `json:"helper_lab_commands,omitempty"`
+	RetentionRows     uint64        `json:"retention_rows"`
+	RetentionAge      time.Duration `json:"retention_age"`
 }
 
 func LoadConfig(home string) (Config, error) {

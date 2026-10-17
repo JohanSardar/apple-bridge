@@ -101,7 +101,9 @@ func (w *World) StopHelper() {
 	}
 }
 func (w *World) RestartHelper() error {
-	if w.Native { return w.restartNativeHelper() }
+	if w.Native {
+		return w.restartNativeHelper()
+	}
 	w.StopHelper()
 	var cfg Config
 	data, err := os.ReadFile(filepath.Join(w.Gateway.Home, "runtime.json"))

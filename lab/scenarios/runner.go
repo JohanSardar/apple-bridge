@@ -46,8 +46,8 @@ type Latency struct {
 	Timeouts int     `json:"timeouts"`
 }
 type Evidence struct {
-	Status string `json:"status,omitempty"`
-	RunID string `json:"run_id"`
+	Status      string             `json:"status,omitempty"`
+	RunID       string             `json:"run_id"`
 	NetworkPath string             `json:"network_path,omitempty"`
 	Metrics     map[string]any `json:"metrics,omitempty"`
 	Scenario    string             `json:"scenario"`

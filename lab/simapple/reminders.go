@@ -37,8 +37,14 @@ func (f *fakeApple) remindersControl(mux *http.ServeMux) {
 		data["completed"] = false
 		next.Data, _ = json.Marshal(data)
 		f.records[next.NativeKey] = next
+		if err := f.changedLocked(contracts.Reminders); err != nil {
+			f.mu.Unlock()
+			http.Error(w, "persist", 500)
+			return
+		}
+		revision := f.durable.Revision[contracts.Reminders]
 		f.mu.Unlock()
-		if f.enqueue(r.Context(), fullScan([]contracts.Observation{original, next}), true) != nil {
+		if f.enqueue(r.Context(), fullScan([]contracts.Observation{original, next}), true, revision) != nil {
 			return
 		}
 		json.NewEncoder(w).Encode(map[string]bool{"effect_done": true})

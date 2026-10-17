@@ -212,16 +212,18 @@ func (w *World) Await(timeout time.Duration, predicate func() bool) error {
 	}
 }
 func New(ctx context.Context, level string, replicas, seed int, blobOptions ...BlobOptions) (*World, error) {
- return newEnvironment(ctx, level, replicas, seed, false, "", blobOptions...)
+	return newEnvironment(ctx, level, replicas, seed, false, "", blobOptions...)
 }
 func NewReal(ctx context.Context, level string, replicas int, blobOptions ...BlobOptions) (*World, error) {
 	return newEnvironment(ctx, level, replicas, 0, true, "", blobOptions...)
 }
 func newWorld(ctx context.Context, level string, replicas, seed int, gatewayBinary string, blobOptions ...BlobOptions) (*World, error) {
- return newEnvironment(ctx, level, replicas, seed, false, gatewayBinary, blobOptions...)
+	return newEnvironment(ctx, level, replicas, seed, false, gatewayBinary, blobOptions...)
 }
 func newEnvironment(ctx context.Context, level string, replicas, seed int, native bool, gatewayBinary string, blobOptions ...BlobOptions) (*World, error) {
- if !native { os.Setenv("APPLE_BRIDGE_SECRET_STORE", "file") }
+	if !native {
+		os.Setenv("APPLE_BRIDGE_SECRET_STORE", "file")
+	}
 	root, err := os.Getwd()
 	if err != nil {
 		return nil, err
