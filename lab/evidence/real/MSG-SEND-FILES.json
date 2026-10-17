@@ -1,0 +1,167 @@
+{
+  "host_conditions": {
+    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "start": {
+      "air": {
+        "at": "2026-10-17T19:59:24.734775Z",
+        "cpu_count": 8,
+        "load_average": [
+          3.04,
+          6.17,
+          6.03
+        ],
+        "cpu_idle_percent": 94,
+        "free_memory_bytes": 210354176,
+        "active_heavy_slots": 1,
+        "other_active_heavy_slots": 0,
+        "heavy_queue_length": 0,
+        "quiet": true
+      }
+    },
+    "end": {
+      "air": {
+        "at": "2026-10-17T19:59:59.038515Z",
+        "cpu_count": 8,
+        "load_average": [
+          3.24,
+          5.87,
+          5.92
+        ],
+        "cpu_idle_percent": 53,
+        "free_memory_bytes": 61964288,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 2,
+        "quiet": false
+      }
+    },
+    "periodic_samples": [
+      {
+        "air": {
+          "at": "2026-10-17T19:59:30.778185Z",
+          "cpu_count": 8,
+          "load_average": [
+            2.96,
+            6.1,
+            6.01
+          ],
+          "cpu_idle_percent": 82,
+          "free_memory_bytes": 115523584,
+          "active_heavy_slots": 1,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:59:35.778204Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.12,
+            6.08,
+            6
+          ],
+          "cpu_idle_percent": 68,
+          "free_memory_bytes": 133152768,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 1,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:59:40.778291Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.03,
+            6.01,
+            5.98
+          ],
+          "cpu_idle_percent": 71,
+          "free_memory_bytes": 176275456,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:59:45.778391Z",
+          "cpu_count": 8,
+          "load_average": [
+            2.95,
+            5.95,
+            5.95
+          ],
+          "cpu_idle_percent": 67,
+          "free_memory_bytes": 265388032,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:59:50.778499Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.11,
+            5.93,
+            5.95
+          ],
+          "cpu_idle_percent": 55,
+          "free_memory_bytes": 171966464,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:59:55.778625Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.26,
+            5.91,
+            5.94
+          ],
+          "cpu_idle_percent": 68,
+          "free_memory_bytes": 110673920,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        }
+      }
+    ],
+    "quiet": false,
+    "require_quiet": false,
+    "quiet_wait_ms": 0,
+    "quiet_wait_expired": false
+  },
+  "run_id": "run_01M55Q583X2WCR8W7BDYEEYYSE",
+  "scenario": "MSG-SEND-FILES",
+  "level": "real",
+  "passed": false,
+  "git_sha": "7a2897cec980ff6522f1993ff8e01498780503a3",
+  "at": "2026-10-17T19:59:25.821335Z",
+  "assertions": [
+    {
+      "name": "existing_self_chat_truth",
+      "passed": false
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

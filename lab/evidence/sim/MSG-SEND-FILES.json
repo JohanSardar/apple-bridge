@@ -3,35 +3,35 @@
     "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
     "start": {
       "air": {
-        "at": "2026-10-17T19:58:04.248907Z",
+        "at": "2026-10-17T19:58:56.0955Z",
         "cpu_count": 8,
         "load_average": [
-          4.14,
-          7.28,
-          6.38
+          3.14,
+          6.52,
+          6.15
         ],
-        "cpu_idle_percent": 80,
-        "free_memory_bytes": 86654976,
+        "cpu_idle_percent": 72,
+        "free_memory_bytes": 192757760,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 1,
+        "heavy_queue_length": 0,
         "quiet": false
       }
     },
     "end": {
       "air": {
-        "at": "2026-10-17T19:58:05.911766Z",
+        "at": "2026-10-17T19:58:58.255455Z",
         "cpu_count": 8,
         "load_average": [
-          4.14,
-          7.28,
-          6.38
+          3.05,
+          6.45,
+          6.12
         ],
-        "cpu_idle_percent": 84,
-        "free_memory_bytes": 238174208,
+        "cpu_idle_percent": 81,
+        "free_memory_bytes": 266010624,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 1,
+        "heavy_queue_length": 0,
         "quiet": false
       }
     },
@@ -40,12 +40,12 @@
     "quiet_wait_ms": 0,
     "quiet_wait_expired": false
   },
-  "run_id": "run_01M55Q2SGWE3KAHBNDV8PAR1VJ",
+  "run_id": "run_01M55Q4C4ZX6HA1N7VYFG16XWK",
   "scenario": "MSG-SEND-FILES",
   "level": "sim",
   "passed": true,
-  "git_sha": "97a52acc42d386fffeb9c2ffaab4d1be5141f22e",
-  "at": "2026-10-17T19:58:05.34006Z",
+  "git_sha": "7a2897cec980ff6522f1993ff8e01498780503a3",
+  "at": "2026-10-17T19:58:57.183773Z",
   "assertions": [
     {
       "name": "seed_self_chat",
@@ -72,7 +72,23 @@
       "passed": true
     },
     {
-      "name": "rest_attachment_blobs",
+      "name": "rest_attachment_records",
+      "passed": true
+    },
+    {
+      "name": "rest_authorized_attachment_bytes",
+      "passed": true
+    },
+    {
+      "name": "rest_authorized_attachment_bytes",
+      "passed": true
+    },
+    {
+      "name": "rest_authorized_attachment_bytes",
+      "passed": true
+    },
+    {
+      "name": "rest_authorized_attachment_bytes",
       "passed": true
     },
     {
@@ -92,7 +108,39 @@
       "passed": true
     },
     {
-      "name": "mcp_attachment_blobs",
+      "name": "mcp_attachment_records",
+      "passed": true
+    },
+    {
+      "name": "mcp_authorized_attachment_bytes",
+      "passed": true
+    },
+    {
+      "name": "mcp_authorized_attachment_bytes",
+      "passed": true
+    },
+    {
+      "name": "mcp_authorized_attachment_bytes",
+      "passed": true
+    },
+    {
+      "name": "mcp_authorized_attachment_bytes",
+      "passed": true
+    },
+    {
+      "name": "mcp_authorized_attachment_bytes",
+      "passed": true
+    },
+    {
+      "name": "mcp_authorized_attachment_bytes",
+      "passed": true
+    },
+    {
+      "name": "mcp_authorized_attachment_bytes",
+      "passed": true
+    },
+    {
+      "name": "mcp_authorized_attachment_bytes",
       "passed": true
     },
     {
@@ -111,16 +159,16 @@
   "latency": {
     "mcp_command_to_replica": {
       "samples": 1,
-      "p50_ms": 137.162834,
-      "p95_ms": 137.162834,
-      "max_ms": 137.162834,
+      "p50_ms": 140.019667,
+      "p95_ms": 140.019667,
+      "max_ms": 140.019667,
       "timeouts": 0
     },
     "rest_command_to_replica": {
       "samples": 1,
-      "p50_ms": 86.947333,
-      "p95_ms": 86.947333,
-      "max_ms": 86.947333,
+      "p50_ms": 103.626959,
+      "p95_ms": 103.626959,
+      "max_ms": 103.626959,
       "timeouts": 0
     }
   },

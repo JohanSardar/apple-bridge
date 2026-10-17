@@ -6,19 +6,23 @@ import ApplicationServices
 
 public enum MessagesProbes {
     public static func discoverSelfHandles() throws -> (handles: [String], source: String) {
+        var discovered: Set<String> = []
         if CNContactStore.authorizationStatus(for: .contacts) == .authorized {
             let store = CNContactStore()
             if let contact = try? store.unifiedMeContactWithKeys(toFetch: [CNContactPhoneNumbersKey as CNKeyDescriptor, CNContactEmailAddressesKey as CNKeyDescriptor]) {
                 let handles = contact.phoneNumbers.map { $0.value.stringValue } + contact.emailAddresses.map { $0.value as String }
                 let normalized = Array(Set(handles.map(normalize).filter { !$0.isEmpty })).sorted()
-                if !normalized.isEmpty { return (normalized, "contacts_me") }
+                discovered.formUnion(normalized)
             }
         }
         let database = try MessagesDatabase()
         let columns = Set(try database.rows("PRAGMA table_info(message)").compactMap { $0["name"] })
         let available = ["destination_caller_id", "account_login"].filter { columns.contains($0) }
-        guard !available.isEmpty else { throw ProbeFailure.unavailable }
-        var handles: Set<String> = []
+        guard !available.isEmpty else {
+            guard !discovered.isEmpty else {throw ProbeFailure.noSelfHandle}
+            return (discovered.sorted(),"contacts_me")
+        }
+        var handles: Set<String> = discovered
         for column in available {
             for row in try database.rows("SELECT DISTINCT \(column) AS handle FROM message WHERE is_from_me = 1 AND \(column) IS NOT NULL") {
                 if let raw = row["handle"] {
@@ -28,7 +32,7 @@ public enum MessagesProbes {
             }
         }
         guard !handles.isEmpty else { throw ProbeFailure.noSelfHandle }
-        return (handles.sorted(), "messages_own_account")
+        return (handles.sorted(), discovered.isEmpty ? "messages_own_account" : "contacts_me_and_messages_own_account")
     }
 
     public static func normalize(_ raw: String) -> String {

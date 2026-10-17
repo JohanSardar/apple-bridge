@@ -348,7 +348,7 @@ func runMessagesCommands(ctx context.Context, s Scenario, level string) Evidence
 				r, err = submit(c)
 				if name == "ui-interference-before" {
 					var status contracts.CommandRecord
-					client.Call(ctx, "commands.status", contracts.CommandQuery{ID: c.ID}, &status)
+					world.Request(ctx, w.Gateway, "/v1/op/commands.status", contracts.CommandQuery{ID: c.ID}, &status)
 					add(name, err != nil && status.State == contracts.CommandRejected && count(c, 0))
 				} else {
 					add(name, err == nil && r.State == contracts.CommandIndeterminate && count(c, 0))
