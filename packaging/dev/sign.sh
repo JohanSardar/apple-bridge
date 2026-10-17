@@ -8,5 +8,10 @@ root=$(cd "$(dirname "$0")/../.." && pwd)
 security unlock-keychain -p "$(cat "$password_file")" "$keychain"
 identity=$(security find-certificate -c 'Apple Bridge Dev Signing' -Z "$keychain" | awk '/SHA-1 hash:/{print $3; exit}')
 [[ -n "$identity" ]] || exit 1
-codesign --force --keychain "$keychain" --sign "$identity" --options runtime --timestamp=none --entitlements "$root/packaging/dev/Helper.entitlements" --requirements "=designated => identifier \"dev.applebridge.helper\" and certificate leaf = H\"$identity\"" "$1"
+bundle_id=$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$1/Contents/Info.plist")
+case "$bundle_id" in
+    dev.applebridge.helper|dev.applebridge.truth) ;;
+    *) exit 1 ;;
+esac
+codesign --force --keychain "$keychain" --sign "$identity" --options runtime --timestamp=none --entitlements "$root/packaging/dev/Helper.entitlements" --requirements "=designated => identifier \"$bundle_id\" and certificate leaf = H\"$identity\"" "$1"
 codesign --verify --strict "$1"

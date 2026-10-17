@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>CFBundleIdentifier</key><string>dev.applebridge.truth</string>
+<key>CFBundleName</key><string>AppleTruth</string>
+<key>CFBundleExecutable</key><string>apple-truth</string>
+<key>CFBundlePackageType</key><string>APPL</string>
+<key>CFBundleVersion</key><string>1</string>
+<key>LSMinimumSystemVersion</key><string>26.0</string>
+<key>LSUIElement</key><true/>
+<key>NSAppleEventsUsageDescription</key><string>Apple Bridge reads Messages and coordinates its interface through System Events.</string>
+<key>NSContactsUsageDescription</key><string>Apple Bridge discovers your own contact handles for self-only development probes.</string>
+<key>NSCalendarsFullAccessUsageDescription</key><string>Apple Bridge synchronizes your calendars.</string>
+<key>NSRemindersFullAccessUsageDescription</key><string>Apple Bridge synchronizes your reminders.</string>
+</dict></plist>
