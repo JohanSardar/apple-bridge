@@ -1,15 +1,15 @@
 {
   "host_telemetry": {
     "heavy_jobs": "2",
-    "load_average": "{ 11.58 10.88 11.03 }",
+    "load_average": "{ 8.24 9.28 13.01 }",
     "logical_cpus": "8"
   },
-  "run_id": "run_01M54AZ0H3HBY0T4GNYEQG0FKJ",
+  "run_id": "run_01M55GE3RRCTQ9PACPT57B3SVH",
   "scenario": "CON-HANDLE-LINK",
   "level": "sim",
   "passed": true,
-  "git_sha": "c58d9b57c9251c4c0f0f112aab9fc387dea1bcd7",
-  "at": "2026-10-17T07:07:04.099696Z",
+  "git_sha": "3191b01c8e620f87cd66a5525b36b433b9212be9",
+  "at": "2026-10-17T18:01:56.248565Z",
   "assertions": [
     {
       "name": "unified_contacts_imported",

@@ -1,15 +1,15 @@
 {
   "host_telemetry": {
     "heavy_jobs": "2",
-    "load_average": "{ 12.68 11.13 11.12 }",
+    "load_average": "{ 7.74 9.16 12.95 }",
     "logical_cpus": "8"
   },
-  "run_id": "run_01M54AZ9VKD49270T061NTVM82",
+  "run_id": "run_01M55GE7953AMKEK3ZMZ1Y7E0H",
   "scenario": "CON-TOKEN-CRASH",
   "level": "sim",
   "passed": true,
-  "git_sha": "c58d9b57c9251c4c0f0f112aab9fc387dea1bcd7",
-  "at": "2026-10-17T07:07:13.651645Z",
+  "git_sha": "3191b01c8e620f87cd66a5525b36b433b9212be9",
+  "at": "2026-10-17T18:01:59.845445Z",
   "assertions": [
     {
       "name": "unified_contacts_imported",
