@@ -21,6 +21,7 @@ import (
 )
 
 type Config struct {
+	Listen            string `json:"listen"`
 	Role              string `json:"role"`
 	Home              string `json:"home"`
 	PeerAddress       string `json:"peer_address"`
@@ -38,6 +39,7 @@ type Process struct {
 	stopped bool
 }
 type Endpoint struct {
+	Listen string
 	URL    string
 	Host   string
 	Token  string
@@ -277,7 +279,7 @@ func newEnvironment(ctx context.Context, level string, replicas, seed int, nativ
 	options, _ := ctx.Value(optionsKey{}).(Options)
 	peerHost := "127.0.0.1"
 	w.NetworkPath = "loopback"
-	if level == "replica" && options.DirectTailscale {
+	if level == "replica" && options.DirectTailscale && !options.GatewayDials {
 		address, err := commandOutput(ctx, "/Applications/Tailscale.app/Contents/MacOS/Tailscale", "ip", "-4")
 		if err != nil {
 			address, err = commandOutput(ctx, "tailscale", "ip", "-4")
@@ -348,7 +350,7 @@ func newEnvironment(ctx context.Context, level string, replicas, seed int, nativ
 		return nil, err
 	}
 	w.pairAddress = w.proxy.Address()
-	if level == "replica" {
+	if level == "replica" && !options.GatewayDials {
 		direct := false
 		if options.DirectTailscale {
 			_, probeErr := commandOutput(ctx, "ssh", "ubuntu", "python3 -c "+quote("import socket; s=socket.create_connection("+fmt.Sprintf("(%q,%q)", peerHost, strings.Split(w.pairAddress, ":")[1])+",5); s.close()"))
@@ -689,18 +691,67 @@ func (w *World) AddReplicaScope(scope string) error {
 			return err
 		}
 	}
-	code, err := w.execute(false, w.bridge, "pair", "--home", w.Gateway.Home, "--peer-addr", w.pairAddress, "--name", "replica"+strconv.Itoa(i), "--scope", scope)
+	listen := ""
+	if options.GatewayDials {
+		listen, err = freeAddress()
+		if err != nil {
+			return err
+		}
+		w.NetworkPath = "gateway_dials_loopback_fault_proxy"
+		if remote {
+			host, hostErr := commandOutput(w.ctx, "ssh", "ubuntu", "tailscale ip -4")
+			if hostErr != nil || net.ParseIP(host) == nil {
+				return fmt.Errorf("replica Tailscale address unavailable")
+			}
+			port, portErr := commandOutput(w.ctx, "ssh", "ubuntu", "python3 -c "+quote("import socket; s=socket.socket(); s.bind(("+strconv.Quote(host)+",0)); print(s.getsockname()[1]); s.close()"))
+			if portErr != nil {
+				return portErr
+			}
+			listen = net.JoinHostPort(host, port)
+			w.NetworkPath = "gateway_air_to_replica_ubuntu_direct_tcp_fault_proxy"
+		}
+		w.proxy.Close()
+		w.proxy, err = NewFaultProxy("127.0.0.1:0", listen)
+		if err != nil {
+			return err
+		}
+	}
+	pairArgs := []string{"pair", "--home", w.Gateway.Home, "--peer-addr", w.pairAddress, "--name", "replica" + strconv.Itoa(i), "--scope", scope}
+	if listen != "" {
+		pairArgs = append(pairArgs, "--dial-replica", w.proxy.Address())
+	}
+	code, err := w.execute(false, w.bridge, pairArgs...)
 	if err != nil {
 		return err
 	}
-	if _, err = w.execute(remote, binary, "join", code, "--home", home); err != nil {
+	joinArgs := []string{"join", code, "--home", home}
+	if listen != "" {
+		joinArgs = append(joinArgs, "--listen", listen)
+		joining, joinErr := w.start("join"+strconv.Itoa(i), remote, home, binary, joinArgs...)
+		if joinErr != nil {
+			return joinErr
+		}
+		select {
+		case err = <-joining.done:
+			joining.stopped = true
+		case <-w.ctx.Done():
+			return w.ctx.Err()
+		}
+	} else {
+		_, err = w.execute(remote, binary, joinArgs...)
+	}
+	if err != nil {
 		return err
 	}
 	token, err := w.execute(remote, binary, "token", "create", "--home", home, "--scope", scope)
 	if err != nil {
 		return err
 	}
-	p, err := w.start("replica"+strconv.Itoa(i), remote, home, binary, "start", "--role", "replica", "--home", home, "--api-addr", "127.0.0.1:0", "--blob-cap", strconv.FormatInt(w.blobOptions.Cap, 10), "--blob-grace-ms", strconv.FormatInt(w.blobOptions.GraceMS, 10))
+	startArgs := []string{"start", "--role", "replica", "--home", home, "--api-addr", "127.0.0.1:0", "--blob-cap", strconv.FormatInt(w.blobOptions.Cap, 10), "--blob-grace-ms", strconv.FormatInt(w.blobOptions.GraceMS, 10)}
+	if listen != "" {
+		startArgs = append(startArgs, "--listen", listen)
+	}
+	p, err := w.start("replica"+strconv.Itoa(i), remote, home, binary, startArgs...)
 	if err != nil {
 		return err
 	}
@@ -708,7 +759,8 @@ func (w *World) AddReplicaScope(scope string) error {
 	if err != nil {
 		return err
 	}
-	endpoint := Endpoint{URL: "http://" + cfg.APIAddress, Host: cfg.APIAddress, Home: home, Token: token, Remote: remote}
+	endpoint := Endpoint{Listen: listen, URL: "http://" + cfg.APIAddress, Host: cfg.APIAddress, Home: home, Token: token, Remote: remote}
+
 	if remote {
 		addr, err := freeAddress()
 		if err != nil {

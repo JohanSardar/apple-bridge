@@ -400,6 +400,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 			switch action {
 			case "world":
 				replicas = number(options, "replicas", 1)
+				if options["gateway_dials"] == true {
+					ctx = world.WithGatewayDials(ctx)
+				}
 			case "seed":
 				seed = number(options, "count", 4)
 			default:
@@ -631,6 +634,8 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 					}
 					return evidence
 				}
+			case "gateway_commands":
+				gatewayCommands(ctx, w, &evidence)
 			case "connect":
 			case "changes":
 				delete(effects, "probe")
@@ -705,6 +710,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 			}
 		}
 	}
+	if s.ID == "CORE-GATEWAY-DIALS" {
+		delete(effects, "healed")
+	}
 	if err = w.Await(15*time.Second, func() bool { return convergence(w) }); err != nil {
 		fmt.Fprintln(os.Stderr, "convergence diagnosis:", convergenceFailure(w))
 		return fail("convergence")
@@ -741,6 +749,7 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	for _, step := range s.Then {
 		for action, options := range step {
 			switch action {
+			case "gateway_revoke":
 			case "converge":
 			case "source_ready":
 				var status contracts.ReadResult
@@ -835,6 +844,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 		}
 	}
 
+	if s.ID == "CORE-GATEWAY-DIALS" {
+		gatewayRevoke(ctx, w, &evidence)
+	}
 	evidence.Passed = true
 	for _, a := range evidence.Assertions {
 		if !a.Passed && a.Status != "unverified" {
