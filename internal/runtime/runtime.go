@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sync"
 	"syscall"
 	"time"
 
@@ -86,6 +87,10 @@ func Start(ctx context.Context, cfg Config) error {
 		return err
 	}
 
+	if err = store.InitCommands(ctx); err != nil {
+		return err
+	}
+	os.Setenv("APPLE_BRIDGE_HOME", cfg.Home)
 	if cfg.APIAddress == "" {
 		cfg.APIAddress = "127.0.0.1:7780"
 	}
@@ -151,15 +156,32 @@ func Start(ctx context.Context, cfg Config) error {
 		}
 		defer peer.Close()
 		cfg.PeerAddress = peer.Addr().String()
+		commands := &applepeer.Commands{}
+		audit, err := os.OpenFile(filepath.Join(cfg.Home, "commands-audit.jsonl"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
+		if err != nil {
+			return err
+		}
+		defer audit.Close()
+		var auditMu sync.Mutex
+		gateway := &operations.LocalGateway{State: store, Authority: authority, Peer: commands, Context: ctx, Audit: func(record contracts.CommandRecord) {
+			auditMu.Lock()
+			defer auditMu.Unlock()
+			json.NewEncoder(audit).Encode(map[string]any{"command_id": record.Command.ID, "operation": record.Command.Op, "request_hash": record.RequestHash, "argument_bytes": len(record.Command.Args), "state": record.State, "at": time.Now().UTC()})
+		}}
+		if err = gateway.Recover(ctx); err != nil {
+			return err
+		}
+		service.Target = gateway
 		feed := &replication.Server{Store: store, Authority: authority, Blobs: blobStore}
 		mux := http.NewServeMux()
 		mux.Handle("/v1/pair", authority.PairHandler())
 		mux.Handle("/v1/feed", feed.Handler())
+		mux.Handle("/v1/commands", gateway.Handler())
 		server := &http.Server{Handler: mux, ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 30 * time.Second}
 		go func() { failures <- server.Serve(peer) }()
 		defer server.Close()
 		go func() {
-			failures <- applepeer.Serve(ctx, applepeer.Config{BlobCapture: blobStore.Capture, Socket: cfg.Socket, Secret: secret, Checkpoints: store.Checkpoints, NextFence: store.NextFence, SourceState: store.SourceState, CommitCapture: func(ctx context.Context, c contracts.Capture) (bool, error) {
+			failures <- applepeer.Serve(ctx, applepeer.Config{BlobCapture: blobStore.Capture, Socket: cfg.Socket, Secret: secret, Commands: commands, Checkpoints: store.Checkpoints, NextFence: store.NextFence, SourceState: store.SourceState, CommitCapture: func(ctx context.Context, c contracts.Capture) (bool, error) {
 				result, err := store.CommitCapture(ctx, c)
 				return result.Degraded, err
 			}})
@@ -167,6 +189,7 @@ func Start(ctx context.Context, cfg Config) error {
 	} else {
 		client := &replication.Client{Store: store, Authority: authority, Blobs: blobStore}
 		service.LocalStatus = client.Status
+		service.Target = &operations.RemoteGateway{Authority: authority, Connected: func() bool { return client.Status().State == "connected" }, Wait: client.Wait}
 		go func() { failures <- client.Follow(ctx) }()
 	}
 	server := &http.Server{Handler: frontdoor.Handler(frontdoor.Deps{Operations: service, Authority: authority, Address: cfg.APIAddress, Blobs: blobStore}, contracts.Operations), ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 30 * time.Second}

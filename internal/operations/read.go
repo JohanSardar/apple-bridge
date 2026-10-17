@@ -9,6 +9,7 @@ import (
 )
 
 type Service struct {
+	Target      CommandTarget
 	State       *state.Store
 	LocalStatus func() contracts.ReplicaStatus
 }

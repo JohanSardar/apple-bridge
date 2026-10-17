@@ -377,7 +377,7 @@ func (c *Client) follow(ctx context.Context, e trust.Enrollment) error {
 				return contracts.ErrInvalid
 			}
 			for _, r := range f.Records {
-				if !((trust.Principal{Grants: e.Grants}).Visibility().Allows(r)) {
+				if !((trust.Principal{Grants: e.Grants, Kind: "replica"}).Visibility().Allows(r)) {
 					return contracts.ErrUnauthorized
 				}
 			}
@@ -400,7 +400,7 @@ func (c *Client) follow(ctx context.Context, e trust.Enrollment) error {
 				return contracts.ErrInvalid
 			}
 			for _, change := range f.Batch.Changes {
-				if !((trust.Principal{Grants: e.Grants}).Visibility().Allows(change.Record)) {
+				if !((trust.Principal{Grants: e.Grants, Kind: "replica"}).Visibility().Allows(change.Record)) {
 					return contracts.ErrUnauthorized
 				}
 			}
