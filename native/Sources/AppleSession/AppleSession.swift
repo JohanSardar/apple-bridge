@@ -59,7 +59,9 @@ public actor AppleSession: ObservationSink {
         self.agenda = agenda
         source = try RemindersSource(gate: agenda, home: home, commandsEnabled: commandsEnabled)
         guardLog = try DispatchGuard(home: home)
-        try Data(String(getpid()).utf8).write(to: home.appendingPathComponent("helper.pid"), options: .atomic)
+        let pidFile = home.appendingPathComponent("helper.pid")
+        try Data(String(getpid()).utf8).write(to: pidFile, options: .atomic)
+        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: pidFile.path)
     }
 
     public func run() async throws {

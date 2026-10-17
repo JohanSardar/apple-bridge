@@ -8,6 +8,7 @@ actor DispatchGuard {
 
     init(home: URL) throws {
         try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: home.path)
         let path = home.appendingPathComponent("dispatch-guard.log").path
         let descriptor = Darwin.open(path, O_RDWR | O_CREAT | O_APPEND | O_NOFOLLOW, 0o600)
         guard descriptor >= 0 else { throw SourceFailure.unavailable }
