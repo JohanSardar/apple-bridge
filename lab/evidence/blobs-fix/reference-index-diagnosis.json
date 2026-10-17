@@ -1,0 +1,50 @@
+{
+  "failure": {
+    "source_sha": "7a30967",
+    "scenario": "CORE-BLOB-REFERENCE-INDEX",
+    "fixture_rows": 10000,
+    "rows_per_second": 1628.0762510124318,
+    "commit_ms": 6142.218458,
+    "threshold_rows_per_second": 2000
+  },
+  "corroboration": {
+    "scenario": "CORE-BENCH",
+    "messages": 200000,
+    "gateway_capture_ms": 122489.821292,
+    "approximate_rows_per_second": 1632.7887320794248
+  },
+  "ruled_out": [
+    "Stale binary: World rebuilt bin/bridge from the rebased worktree before each scenario.",
+    "Repeated identical manifest fsyncs: the integrated Store.save already compares against durable bytes before writing.",
+    "Historical record decoding in protection: the active code queries blob_refs and only derives references from changed records."
+  ],
+  "profile": {
+    "temporary_instrumentation_restored": true,
+    "window": "gateway startup through final capture ACK, stopped before paginated verification reads",
+    "duration_seconds": 18.52,
+    "cpu_samples_seconds": 5.07,
+    "record_write_cumulative_cpu_seconds": 1.13,
+    "sqlite_prepare_cumulative_cpu_seconds": 0.83,
+    "indexed_reference_read_cumulative_cpu_seconds": 0.12,
+    "connection_open_cumulative_cpu_seconds": 0.15,
+    "timing_note": "Profiling perturbs timing; its 608 rows/s diagnostic run is not a performance comparison."
+  },
+  "diagnosis": "Repeated SQLite preparation and connection reopening remain in the new indexed write path; profile attributes 16.4% of sampled CPU to prepareV2 and 22.3% to record writes, while indexed reference reads consume 2.4%.",
+  "bounded_repair": [
+    "Reuse prepared record upsert, reference delete, and reference insert statements through each SQL transaction.",
+    "Retain eight idle connections to match the existing maximum of eight open connections."
+  ],
+  "expected_proof": "The unchanged 10000-row IPC capture scenario exceeds 2000 rows/s, followed by full core sim and the required gates.",
+  "residual_uncertainty": "Shared Air contention affects absolute timings; prepared-statement reuse must be verified before treating it as sufficient.",
+  "bounded_repair_outcome": "Prepared-statement/idle-pool experiment did not demonstrate a benefit under load and was reverted; no general State write cache is included.",
+  "acceptance_update": "Leader requires interleaved loaded A/B with three samples each, new-code scaling at 2000/10000/20000 rows, and pending-quiet for an unmet absolute target.",
+  "environment": {
+    "load_average": [
+      16.86,
+      16.73,
+      14.39
+    ],
+    "process_cpu_percent_sum": 778.3,
+    "cpu_pressure": "Unrelated browser processes saturate available cores; left untouched."
+  }
+}

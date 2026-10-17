@@ -44,12 +44,12 @@ func blobBytes(ctx context.Context, e world.Endpoint, d, id string) (int, []byte
 	b, err := io.ReadAll(resp.Body)
 	return resp.StatusCode, b, err
 }
-func blobJourney(ctx context.Context, w *world.World, id string, evidence *Evidence, add func(string, bool)) bool {
+func blobJourney(ctx context.Context, w *world.World, id string, rows int, evidence *Evidence, add func(string, bool)) bool {
 	check := func(name string, ok bool) bool { add(name, ok); return ok }
 	if id == "CORE-BLOB-REFERENCE-INDEX" {
 		client := *w.Control
 		client.Timeout = 2 * time.Minute
-		req, err := http.NewRequestWithContext(ctx, "POST", "http://sim/blob-history", nil)
+		req, err := http.NewRequestWithContext(ctx, "POST", "http://sim/blob-history", strings.NewReader(fmt.Sprintf(`{"rows":%d}`, rows)))
 		if !check("history_request", err == nil) {
 			return false
 		}
@@ -63,11 +63,16 @@ func blobJourney(ctx context.Context, w *world.World, id string, evidence *Evide
 			RowsPerSecond float64 `json:"rows_per_second"`
 		}
 		err = json.NewDecoder(response.Body).Decode(&result)
-		evidence.Latency["history_10000_commit"] = stats([]float64{result.CommitMS}, 0)
-		evidence.Latency["history_rows_per_second"] = stats([]float64{result.RowsPerSecond}, 0)
-		if !check("history_throughput_at_least_2000_rows_per_second", err == nil && response.StatusCode == 200 && result.RowsPerSecond >= 2000) {
+		evidence.Latency[fmt.Sprintf("history_%d_commit", rows)] = stats([]float64{result.CommitMS}, 0)
+		targetStatus := "pending-quiet"
+		if result.RowsPerSecond >= 2000 {
+			targetStatus = "met-under-load"
+		}
+		evidence.Metrics = map[string]any{"history_rows": rows, "capture_rows_per_frame": 64, "history_rows_per_second": result.RowsPerSecond, "absolute_target_rows_per_second": 2000, "absolute_target_status": targetStatus}
+		if !check("history_capture_measurement_recorded", err == nil && response.StatusCode == 200 && result.RowsPerSecond > 0) {
 			return false
 		}
+
 		records, err := w.Records(w.Gateway)
 		count := 0
 		for _, r := range records {
@@ -75,7 +80,7 @@ func blobJourney(ctx context.Context, w *world.World, id string, evidence *Evide
 				count++
 			}
 		}
-		if !check("history_10000_durable_records", err == nil && count == 10000) {
+		if !check(fmt.Sprintf("history_%d_durable_records", rows), err == nil && count == rows) {
 			return false
 		}
 		cursor, err := w.Cursor(w.Gateway)

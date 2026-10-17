@@ -9,6 +9,7 @@ import (
 )
 
 type blobOptions struct {
+	Rows int    `yaml:"rows,omitempty"`
 	Case string `yaml:"case"`
 }
 type fixtureCleanupOptions struct {

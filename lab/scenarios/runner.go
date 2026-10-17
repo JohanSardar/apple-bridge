@@ -617,7 +617,7 @@ func Run(ctx context.Context, s Scenario, level string) Evidence {
 				evidence.Passed = detected
 				return evidence
 			case "blobs":
-				if !blobJourney(ctx, w, s.ID, &evidence, add) {
+				if !blobJourney(ctx, w, s.ID, number(options, "rows", 10000), &evidence, add) {
 					return evidence
 				}
 				if s.ID == "CORE-BLOB-REFERENCE-INDEX" {

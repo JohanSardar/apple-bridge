@@ -24,8 +24,15 @@ func (f *fakeApple) blobHandles() map[string]string {
 }
 func (f *fakeApple) blobRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /blob-history", func(w http.ResponseWriter, r *http.Request) {
+		var a struct {
+			Rows int `json:"rows"`
+		}
+		if json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&a) != nil || a.Rows < 1 || a.Rows > 20000 {
+			http.Error(w, "invalid", 400)
+			return
+		}
 		now := time.Now().UTC()
-		observations := make([]contracts.Observation, 10000)
+		observations := make([]contracts.Observation, a.Rows)
 		f.mu.Lock()
 		for i := range observations {
 			key := fmt.Sprintf("blob-history-%05d", i)
@@ -46,7 +53,7 @@ func (f *fakeApple) blobRoutes(mux *http.ServeMux) {
 			return
 		}
 		elapsed := time.Since(start)
-		json.NewEncoder(w).Encode(map[string]float64{"commit_ms": float64(elapsed) / float64(time.Millisecond), "rows_per_second": 10000 / elapsed.Seconds()})
+		json.NewEncoder(w).Encode(map[string]float64{"commit_ms": float64(elapsed) / float64(time.Millisecond), "rows_per_second": float64(a.Rows) / elapsed.Seconds()})
 	})
 
 	mux.HandleFunc("POST /blob-fixture", func(w http.ResponseWriter, r *http.Request) {

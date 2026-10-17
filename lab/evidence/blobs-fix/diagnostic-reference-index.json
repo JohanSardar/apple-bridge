@@ -1,0 +1,62 @@
+{
+  "run_id": "run_01M54BJHNBP0N1ADYABMCTTHCB",
+  "network_path": "loopback",
+  "scenario": "CORE-BLOB-REFERENCE-INDEX",
+  "level": "sim",
+  "passed": false,
+  "git_sha": "7a30967c00d6a10b6009b8d5012f6d6bb43241bf",
+  "at": "2026-10-17T07:17:44.235638Z",
+  "assertions": [
+    {
+      "name": "feed_network_loopback",
+      "passed": true
+    },
+    {
+      "name": "replica_host_is_air",
+      "passed": true
+    },
+    {
+      "name": "bootstrap_snapshot",
+      "passed": true
+    },
+    {
+      "name": "scope_query_and_get",
+      "passed": true
+    },
+    {
+      "name": "history_request",
+      "passed": true
+    },
+    {
+      "name": "history_committed",
+      "passed": true
+    },
+    {
+      "name": "history_throughput_at_least_2000_rows_per_second",
+      "passed": false
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "history_10000_commit": {
+      "samples": 1,
+      "p50_ms": 16437.573917,
+      "p95_ms": 16437.573917,
+      "max_ms": 16437.573917,
+      "timeouts": 0
+    },
+    "history_rows_per_second": {
+      "samples": 1,
+      "p50_ms": 608.3622832964322,
+      "p95_ms": 608.3622832964322,
+      "max_ms": 608.3622832964322,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}
