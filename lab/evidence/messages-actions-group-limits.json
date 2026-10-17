@@ -1,0 +1,67 @@
+{
+  "screen_capture": {
+    "at": "2026-10-17T20:48:17.259518+00:00",
+    "locked": true,
+    "sha256": "75fd763abaafae4d7550b4f842a282e00634eb2b46f8aa15f67ce1f249bfae4b",
+    "image_private": true
+  },
+  "real_send_operations_proven": [
+    "messages.send: self text",
+    "messages.send: self files"
+  ],
+  "real_pending_unlock": {
+    "MSG-REPLY": {
+      "status": "pending-unlock",
+      "reason": "Password lock screen prevents verified Messages Accessibility targeting; no UI dispatch attempted"
+    },
+    "MSG-REACT": {
+      "status": "pending-unlock",
+      "reason": "Password lock screen prevents verified Messages Accessibility targeting; no UI dispatch attempted"
+    },
+    "MSG-EDIT": {
+      "status": "pending-unlock",
+      "reason": "Password lock screen prevents verified Messages Accessibility targeting; no UI dispatch attempted"
+    },
+    "MSG-UNSEND": {
+      "status": "pending-unlock",
+      "reason": "Password lock screen prevents verified Messages Accessibility targeting; no UI dispatch attempted"
+    },
+    "MSG-GROUP-CREATE": {
+      "status": "pending-unlock",
+      "reason": "Password lock screen prevents verified Messages Accessibility targeting; no UI dispatch attempted"
+    },
+    "MSG-SEND-RCS-GROUP": {
+      "status": "pending-unlock",
+      "reason": "Password lock screen prevents verified Messages Accessibility targeting; no UI dispatch attempted"
+    }
+  },
+  "real_limited": {
+    "messages.rename_group": "no second iMessage account available; verified at sim level",
+    "messages.add_member": "no second iMessage account available; verified at sim level",
+    "messages.remove_member": "no second iMessage account available; verified at sim level",
+    "messages.leave_group": "no second iMessage account available; verified at sim level"
+  },
+  "rcs_real": {
+    "proven_operations": [],
+    "create_group": "pending-unlock",
+    "send_existing_group": "pending-unlock",
+    "rename_group": "unproven; requires a separate RCS capability proof",
+    "add_member": "iMessage only; verified at sim level",
+    "remove_member": "iMessage only; verified at sim level",
+    "leave_group": "iMessage only; verified at sim level",
+    "ben_used": false
+  },
+  "sim_verified": [
+    "MSG-REPLY",
+    "MSG-REACT",
+    "MSG-EDIT",
+    "MSG-UNSEND",
+    "MSG-MARK-READ",
+    "MSG-DELETE",
+    "MSG-UI-INTERFERENCE",
+    "MSG-GROUP-CREATE",
+    "MSG-GROUP-MANAGE",
+    "MSG-SEND-RCS-GROUP"
+  ],
+  "native_policy": "Unproven native operations reject before dispatch; native UI routes remain unproven until unlocked verification."
+}

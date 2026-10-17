@@ -215,8 +215,9 @@ features:
     depends_on: [messages.actions]
     status: todo
     scenarios:
-      - {id: MSG-GROUP-CREATE, levels: [sim]}
-      - {id: MSG-GROUP-MANAGE, levels: [sim]}
+      - {id: MSG-GROUP-CREATE, levels: [sim, real]}
+      - {id: MSG-GROUP-MANAGE, levels: [sim, real]}
+      - {id: MSG-SEND-RCS-GROUP, levels: [sim, real]}
   - id: reminders.read
     title: Reminders lists and items, live capture, recurrence coverage
     requirements: [R-FULL, R-LIVE, R-REM, R-NO-FALSE-DELETE]

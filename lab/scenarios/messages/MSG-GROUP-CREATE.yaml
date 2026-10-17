@@ -1,6 +1,6 @@
 id: MSG-GROUP-CREATE
 feature: messages.groups
-levels: [sim]
+levels: [sim, real]
 given: [{world: {replicas: 1}}]
 when: [{messages_commands: {}}]
 then: [{converge: {}}]

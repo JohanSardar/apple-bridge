@@ -1,0 +1,7 @@
+id: MSG-SEND-RCS-GROUP
+feature: messages.groups
+levels: [sim, real]
+given: [{world: {replicas: 1}}]
+when: [{messages_commands: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

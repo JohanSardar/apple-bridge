@@ -1,0 +1,29 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[5.74 5.63 6.06] cpus=8 other_heavy=1"
+  },
+  "status": "pending-unlock",
+  "run_id": "run_01M55SXWMM55ZN531VW07P6FM5",
+  "scenario": "MSG-UNSEND",
+  "level": "real",
+  "passed": false,
+  "git_sha": "36be10aedea79eec6defd721ee21c9ba1421f6e9",
+  "at": "2026-10-17T20:47:50.420641Z",
+  "assertions": [
+    {
+      "name": "native_accessibility",
+      "passed": false,
+      "status": "unverified",
+      "detail": "Screen capture shows password lock screen; Messages AX target cannot be verified"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

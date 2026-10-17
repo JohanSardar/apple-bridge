@@ -17,6 +17,11 @@ import (
 
 func runNativeMessagesCommands(ctx context.Context, s Scenario, level string, e Evidence) Evidence {
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
+	if s.ID == "MSG-GROUP-MANAGE" {
+		e.Status = "limited"
+		e.Assertions = append(e.Assertions, Assertion{Name: "native_imessage_group_accounts", Status: "unverified", Detail: "no second iMessage account available; verified at sim level"})
+		return e
+	}
 	if s.ID != "MSG-SEND-SELF-TEXT" && s.ID != "MSG-SEND-FILES" {
 		e.Status = "pending-unlock"
 		e.Assertions = append(e.Assertions, Assertion{Name: "native_accessibility", Status: "unverified", Detail: "Screen capture shows password lock screen; Messages AX target cannot be verified"})

@@ -22,7 +22,16 @@ public actor MessagesCommands {
     public func capabilities() -> [String] { proofs().isEmpty ? [] : ["messages.send"] }
     public func operationCoverage() -> JSON {
         let proven = !proofs().isEmpty
-        return .array(Self.operations.map { .object(["operation":.string($0),"proven":.bool($0=="messages.send"&&proven),"reason":.string($0=="messages.send" ? proven ? "proven_self_routes_and_parts_only" : "route_proof_required" : "pending_unlock")]) })
+        return .array(Self.operations.map { operation in
+            let reason: String
+            switch operation {
+            case "messages.send": reason = proven ? "proven_self_routes_and_parts_only" : "route_proof_required"
+            case "messages.create_group": reason = "group_creation_route_unproven"
+            case "messages.rename_group", "messages.add_member", "messages.remove_member", "messages.leave_group": reason = "imessage_group_route_unproven"
+            default: reason = "accessibility_route_unproven"
+            }
+            return .object(["operation":.string(operation),"proven":.bool(operation=="messages.send"&&proven),"reason":.string(reason)])
+        })
     }
     private func recordProof(_ route: JSON, parts: [JSON]) throws {
         var routes=proofs()

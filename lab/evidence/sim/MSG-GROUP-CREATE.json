@@ -1,14 +1,14 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[5.41 5.76 6.17] cpus=8 other_heavy=1"
+    "summary": "air: load=[6.42 5.75 6.11] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M55STG585EZN2T8P9NECMTVM",
+  "run_id": "run_01M55SXFC0E51Q9EMPX672GBZH",
   "scenario": "MSG-GROUP-CREATE",
   "level": "sim",
   "passed": true,
-  "git_sha": "713eb5504ad1b54668557e344d562378c3157eb3",
-  "at": "2026-10-17T20:45:59.33647Z",
+  "git_sha": "36be10aedea79eec6defd721ee21c9ba1421f6e9",
+  "at": "2026-10-17T20:47:36.832722Z",
   "assertions": [
     {
       "name": "seed_self_chat",
@@ -23,11 +23,47 @@
       "passed": true
     },
     {
-      "name": "sms_group_creation_route_explicit",
+      "name": "SMS_group_creation_route_explicit",
       "passed": true
     },
     {
-      "name": "sms_membership_rejected_before_effect",
+      "name": "SMS_rename_group_rejected_before_effect",
+      "passed": true
+    },
+    {
+      "name": "SMS_add_member_rejected_before_effect",
+      "passed": true
+    },
+    {
+      "name": "SMS_remove_member_rejected_before_effect",
+      "passed": true
+    },
+    {
+      "name": "SMS_leave_group_rejected_before_effect",
+      "passed": true
+    },
+    {
+      "name": "RCS_group_creation_route_explicit",
+      "passed": true
+    },
+    {
+      "name": "rcs_existing_group_send",
+      "passed": true
+    },
+    {
+      "name": "RCS_rename_group_rejected_before_effect",
+      "passed": true
+    },
+    {
+      "name": "RCS_add_member_rejected_before_effect",
+      "passed": true
+    },
+    {
+      "name": "RCS_remove_member_rejected_before_effect",
+      "passed": true
+    },
+    {
+      "name": "RCS_leave_group_rejected_before_effect",
       "passed": true
     },
     {

@@ -223,7 +223,7 @@ func runMessagesCommands(ctx context.Context, s Scenario, level string) Evidence
 		bad := command("send", map[string]any{"handles": []string{"other@example.com"}, "service": "iMessage", "text": text}, 0)
 		_, err := submit(bad)
 		add("non_self_refused_before_effect", err != nil && count(bad, 0))
-	case "MSG-GROUP-CREATE", "MSG-GROUP-MANAGE":
+	case "MSG-GROUP-CREATE", "MSG-GROUP-MANAGE", "MSG-SEND-RCS-GROUP":
 		c := command("create_group", map[string]any{"handles": []string{"self@example.com", "member1@example.com", "member2@example.com"}, "service": "iMessage", "text": text, "name": "Bridge Test"}, 0)
 		r, err := submit(c)
 		add("group_created", observed(r, err))
@@ -252,18 +252,36 @@ func runMessagesCommands(ctx context.Context, s Scenario, level string) Evidence
 			r, err = submit(target("leave_group", group, nil))
 			add("leave_group", observed(r, err))
 		}
-		bad := command("create_group", map[string]any{"handles": []string{"self@example.com", "second-self@example.com"}, "service": "SMS", "text": text}, 0)
-		_, err = submit(bad)
-		add("sms_group_creation_route_explicit", err == nil)
-		for _, g := range read("messages.chat") {
-			var d map[string]any
-			json.Unmarshal(g.Data, &d)
-			if d["service"] == "SMS" {
-				c := target("add_member", g, map[string]any{"handle": "self@example.com"})
-				_, err = submit(c)
-				add("sms_membership_rejected_before_effect", err != nil && count(c, 0))
+		for _, service := range []string{"SMS", "RCS"} {
+			created := command("create_group", map[string]any{"handles": []string{"self@example.com", "second-self@example.com"}, "service": service, "text": text}, 0)
+			r, err := submit(created)
+			add(service+"_group_creation_route_explicit", observed(r, err))
+			for _, g := range read("messages.chat") {
+				var d map[string]any
+				json.Unmarshal(g.Data, &d)
+				if d["service"] != service {
+					continue
+				}
+				if service == "RCS" {
+					c := command("send", map[string]any{"chat_id": g.ID, "text": text + " RCS group"}, 0)
+					r, err := submit(c)
+					add("rcs_existing_group_send", observed(r, err))
+				}
+				for _, op := range []string{"rename_group", "add_member", "remove_member", "leave_group"} {
+					extra := map[string]any{}
+					if op == "rename_group" {
+						extra["name"] = "Bridge Test renamed"
+					}
+					if op == "add_member" || op == "remove_member" {
+						extra["handle"] = "self@example.com"
+					}
+					c := target(op, g, extra)
+					_, err := submit(c)
+					add(service+"_"+op+"_rejected_before_effect", err != nil && count(c, 0))
+				}
 			}
 		}
+
 	default:
 		r, err := send()
 		add("target_created", observed(r, err))

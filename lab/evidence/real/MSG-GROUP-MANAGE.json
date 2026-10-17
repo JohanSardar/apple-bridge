@@ -1,0 +1,29 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[5.97 5.68 6.08] cpus=8 other_heavy=1"
+  },
+  "status": "limited",
+  "run_id": "run_01M55SXRA63FNQGQ9DVD513C3X",
+  "scenario": "MSG-GROUP-MANAGE",
+  "level": "real",
+  "passed": false,
+  "git_sha": "36be10aedea79eec6defd721ee21c9ba1421f6e9",
+  "at": "2026-10-17T20:47:45.990553Z",
+  "assertions": [
+    {
+      "name": "native_imessage_group_accounts",
+      "passed": false,
+      "status": "unverified",
+      "detail": "no second iMessage account available; verified at sim level"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
