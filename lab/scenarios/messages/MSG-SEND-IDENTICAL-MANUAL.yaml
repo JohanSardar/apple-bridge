@@ -1,0 +1,7 @@
+id: MSG-SEND-IDENTICAL-MANUAL
+feature: messages.send
+levels: [sim]
+given: [{world: {replicas: 1}}]
+when: [{messages_commands: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

@@ -157,6 +157,8 @@ func commandTransitionAllowed(from, to contracts.CommandState) bool {
 		return to == contracts.CommandDispatched || to == contracts.CommandRejected || to == contracts.CommandExpired
 	case contracts.CommandDispatched:
 		return to == contracts.CommandObserved || to == contracts.CommandIndeterminate || to == contracts.CommandFailed || to == contracts.CommandRejected || to == contracts.CommandDelivered || to == contracts.CommandDeliveryFailed
+	case contracts.CommandObserved:
+		return to == contracts.CommandDelivered || to == contracts.CommandDeliveryFailed
 	case contracts.CommandIndeterminate:
 		return to == contracts.CommandObserved || to == contracts.CommandDelivered || to == contracts.CommandFailed
 	}

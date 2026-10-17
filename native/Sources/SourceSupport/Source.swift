@@ -51,7 +51,7 @@ public enum JSON: Codable, Sendable, Equatable {
 }
 
 public enum SourceFailure: Error {
-    case permissionMissing, unavailable, invalid, conflict, unsupported, expired, corrupt
+    case permissionMissing, unavailable, invalid, conflict, unsupported, expired, corrupt, capabilityUnproven
 }
 
 public func timestamp(_ date: Date = Date()) -> String {
@@ -100,4 +100,9 @@ public protocol Source: Sendable {
 
 public extension ObservationSink {
     func emitCheckpoint(source: String, generation: String, checkpoint: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) async throws { throw SourceFailure.unsupported }
+}
+
+@globalActor
+public actor UIActor {
+ public static let shared = UIActor()
 }

@@ -50,7 +50,7 @@ public enum HelperCommand {
             let peer = try AppleSession(socket: socket, secretFile: secretFile, home: home, gatewayPID: gatewayPID, commandsEnabled: arguments.contains("--lab-commands"))
             var finished = false
             Task { @MainActor in
-                let messages = Messages(diagnostics: arguments.contains("--lab-commands") ? home.appendingPathComponent("messages-watch.json") : nil)
+                let messages = Messages(diagnostics: arguments.contains("--lab-commands") ? home.appendingPathComponent("messages-watch.json") : nil, labCommands: arguments.contains("--lab-commands"))
                 try? await peer.register(try NotesSource(home: home))
                 try? await peer.register(messages, readBlob: { handle, offset, length in
                     try await messages.readBlob(handle: handle, offset: offset, length: length)
@@ -75,6 +75,24 @@ public enum HelperCommand {
                 exit(1)
             }
             try PrivateReport.write(FunctionalProbe.run(), to: reportURL)
+            return
+        }
+        if arguments.first == "probe" {
+            try PrivateReport.write(["state":"running"], to:reportURL)
+            DispatchQueue.global().asyncAfter(deadline:.now()+35) { @Sendable in
+                try? PrivateReport.write(["state":"timed_out","disposition":"indeterminate"],to:reportURL)
+                exit(1)
+            }
+            var finished=false
+            Task { @MainActor in
+                do {
+                    let data=try await Task.detached { try JSONSerialization.data(withJSONObject:MessagesProbes.run(arguments)) }.value
+                    try data.write(to:reportURL,options:.atomic)
+                    try FileManager.default.setAttributes([.posixPermissions:0o600],ofItemAtPath:reportURL.path)
+                } catch {try? PrivateReport.write(["state":"unavailable","reason":String(describing:error)],to:reportURL)}
+                finished=true
+            }
+            while !finished {RunLoop.current.run(until:Date().addingTimeInterval(0.05))}
             return
         }
         let session = PermissionSession()
@@ -107,19 +125,6 @@ public enum HelperCommand {
             try PrivateReport.write(session.report.snapshot(), to: reportURL)
             return
         }
-        guard arguments.first == "probe", arguments.count > 1 else { throw ProbeFailure.invalidArguments }
-        guard reportURL.lastPathComponent != "self-handles.json" || arguments[1] == "self-handles" else { throw ProbeFailure.invalidArguments }
-        try PrivateReport.write(["state": "running"], to: reportURL)
-        DispatchQueue.global().asyncAfter(deadline: .now() + 35) { @Sendable in
-            try? PrivateReport.write(["state": "timed_out", "disposition": "indeterminate"], to: reportURL)
-            exit(1)
-        }
-        do {
-            let result = try MessagesProbes.run(arguments)
-            try PrivateReport.write(result, to: reportURL)
-        } catch {
-            try PrivateReport.write(["state": "unavailable", "reason": String(describing: error)], to: reportURL)
-            throw error
-        }
+        throw ProbeFailure.invalidArguments
     }
 }

@@ -87,6 +87,9 @@ func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fenc
 			return f.noteCommand(wire, frame, fence, emit, func() string { return checkpoint(contracts.Notes) })
 		}
 	}
+	if f.isMessageCommand(frame) {
+		return f.messageCommand(wire, frame, fence, emit, func() string { return checkpoint(contracts.Messages) })
+	}
 	reject := func(problem *contracts.Error) error {
 		_, err := wire.Send(contracts.IPCFrame{T: "Rejected", CommandID: frame.CommandID, Disposition: "rejected_before_dispatch", Error: problem})
 		return err

@@ -30,9 +30,16 @@ var Collections = map[string]string{
 	"contacts.contact": "con", "contacts.group": "grp", "notes.folder": "fld", "notes.note": "nte", "usage.device": "dev", "usage.app_day": "usd", "system.source": "src", "system.command": "cmd", "system.replica": "rpl",
 }
 
+type OperationCapability struct {
+	Operation string `json:"operation"`
+	Proven    bool   `json:"proven"`
+	Reason    string `json:"reason"`
+}
+
 type Coverage struct {
-	Fields  string   `json:"fields"`
-	Missing []string `json:"missing"`
+	Operations []OperationCapability `json:"operations,omitempty"`
+	Fields     string                `json:"fields"`
+	Missing    []string              `json:"missing"`
 }
 
 type Record struct {

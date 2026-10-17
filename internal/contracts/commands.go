@@ -87,6 +87,7 @@ type NativeAction struct {
 	NoteArgs        *NoteArgs     `json:"note_args,omitempty"`
 	FolderKey       string        `json:"folder_key,omitempty"`
 	CalendarArgs    *CalendarArgs `json:"calendar_args,omitempty"`
+	Messages        *MessagesArgs `json:"messages,omitempty"`
 	ExpectedListKey string        `json:"expected_list_key,omitempty"`
 	Op              string        `json:"op"`
 	Args            any           `json:"args"`
@@ -124,6 +125,10 @@ func ValidateCommand(c Command) (ReminderArgs, error) {
 		return ReminderArgs{ID: a.ID}, err
 	}
 	var a ReminderArgs
+	if strings.HasPrefix(c.Op, "messages.") {
+		m, err := ValidateMessagesCommand(c)
+		return ReminderArgs{ID: m.ID}, err
+	}
 	if !ValidCommandID(c.ID) || c.WaitMS < 0 || c.WaitMS > 15000 || c.Args == nil {
 		return a, ErrInvalid
 	}

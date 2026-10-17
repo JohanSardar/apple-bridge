@@ -31,7 +31,7 @@ public enum MessagesProbes {
         return (handles.sorted(), "messages_own_account")
     }
 
-    private static func normalize(_ raw: String) -> String {
+    public static func normalize(_ raw: String) -> String {
         var text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         for prefix in ["iMessage:", "SMS:", "RCS:", "mailto:", "tel:", "P:", "E:"] {
             if text.hasPrefix(prefix) { text.removeFirst(prefix.count) }
@@ -61,7 +61,6 @@ public enum MessagesProbes {
         return handle
     }
 
-    @MainActor
     public static func run(_ arguments: [String]) throws -> [String: Any] {
         switch arguments[1] {
         case "self-handles":
@@ -78,7 +77,6 @@ public enum MessagesProbes {
         }
     }
 
-    @MainActor
     private static func sendSelf(_ arguments: [String]) throws -> [String: Any] {
         let handle = try selfHandle(arguments)
         guard let position = arguments.firstIndex(of: "--text"), position + 1 < arguments.count else { throw ProbeFailure.invalidArguments }
@@ -160,7 +158,6 @@ public enum MessagesProbes {
         return TypedStream.decode(bytes).text
     }
 
-    @MainActor
     private static func dumpAccessibility(_ arguments: [String]) throws -> [String: Any] {
         let handle = try selfHandle(arguments)
         guard AXIsProcessTrusted() else { throw ProbeFailure.unavailable }
@@ -183,7 +180,7 @@ public enum MessagesProbes {
         for attribute in [kAXRoleAttribute, kAXSubroleAttribute, kAXIdentifierAttribute, kAXDescriptionAttribute, kAXTitleAttribute, kAXValueAttribute, kAXHelpAttribute] {
             var value: CFTypeRef?
             if AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success, let text = value as? String {
-                node[attribute] = attribute == kAXRoleAttribute || attribute == kAXSubroleAttribute ? text as Any : PrivateReport.redact(text) as Any
+                node[attribute] = attribute == kAXRoleAttribute || attribute == kAXSubroleAttribute || attribute == kAXIdentifierAttribute ? text as Any : PrivateReport.redact(text) as Any
             }
         }
         var actions: CFArray?

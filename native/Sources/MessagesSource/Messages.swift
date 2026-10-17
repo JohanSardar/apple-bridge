@@ -8,6 +8,7 @@ public actor Messages: Source {
     private let diagnostics: URL?
     private let watcherEventsEnabled: Bool
     private var reader: MessagesReader?
+ private let commands: MessagesCommands
     private var baseline: MessagesBaseline?
     private var candidates: Set<String> = []
     private var generation = ""
@@ -30,7 +31,8 @@ public actor Messages: Source {
     private var blobDigests: [String: (Int64, Date, String)] = [:]
     private var pendingBlobs: [String: URL] = [:]
     private var failedBlobs: Set<String> = []
-    public init(path: String? = nil, diagnostics: URL? = nil, watcherEventsEnabled: Bool = true) {
+    public init(path: String? = nil, diagnostics: URL? = nil, watcherEventsEnabled: Bool = true, labCommands: Bool = false) {
+ commands = MessagesCommands(path:path, labCommands:labCommands)
         self.watcherEventsEnabled = watcherEventsEnabled
         self.diagnostics = diagnostics
         self.path = path ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Messages/chat.db").path
@@ -45,7 +47,7 @@ public actor Messages: Source {
                     return SourceReadiness(state: "degraded", coverage: coverage(), reason: "reconciliation_pending")
                 }
             } else { _ = try reopen() }
-            return SourceReadiness(state: "ready", coverage: coverage())
+            return SourceReadiness(state: "ready", coverage: await commandCoverage(), capabilities: await commands.capabilities())
         } catch { return SourceReadiness(state: FileManager.default.isReadableFile(atPath: path) ? "degraded" : "permission_missing", coverage: .object(["fields": .string("partial"), "missing": .array([.string("chat_db_unavailable")])]), reason: "chat_db_unavailable") }
     }
     private func coverage() -> JSON {
@@ -452,9 +454,26 @@ public actor Messages: Source {
         captureActive = false
         if let failure { throw failure }
     }
-    public func prepare(_ command: JSON) async throws -> Prepared { throw SourceFailure.unsupported }
-    public func dispatch(_ prepared: Prepared) async throws -> JSON { throw SourceFailure.unsupported }
-    public func resolve(_ command: String, evidence: JSON) async -> JSON { evidence }
+    public func prepare(_ command: JSON) async throws -> Prepared { try await commands.prepare(command) }
+    public func dispatch(_ prepared: Prepared) async throws -> JSON { try await commands.dispatch(prepared) }
+    public func resolve(_ command: String, evidence: JSON) async -> JSON { await commands.resolve(evidence) }
+    private func commandCoverage() async -> JSON {
+        var value = coverage().object
+        value["operations"] = await commands.operationCoverage()
+        return .object(value)
+    }
+    public func captureCommand(_ evidence: JSON, into sink: any ObservationSink) async throws {
+        _ = try reopen()
+        guard let reader else {throw SourceFailure.unavailable}
+        for part in evidence["parts"].array {
+            if let row=try reader.message(part["native_key"].string) {try await emitMessages([row],sink:sink,live:true)}
+        }
+        if let row=try reader.message(evidence["native_key"].string) {try await emitMessages([row],sink:sink,live:true)}
+        for part in evidence["parts"].array {
+            let attachments = try reader.query("SELECT a.guid FROM attachment a JOIN message_attachment_join j ON j.attachment_id=a.ROWID JOIN message m ON m.ROWID=j.message_id WHERE m.guid=?",[part["native_key"].string])
+            for attachment in attachments {try await emit(try reader.attachmentObservations(guid:attachment["guid"]),sink:sink,live:true)}
+        }
+    }
     public func readBlob(handle: String, offset: Int64, length: Int) throws -> JSON {
         do {
             let bytes = try readBlobBytes(handle: handle, offset: offset, length: length)

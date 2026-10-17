@@ -66,12 +66,18 @@ func OperationSchema(d OperationDescriptor) map[string]any {
 		if d.Source == Calendar {
 			args = JSONSchema(CalendarArgs{})
 		}
+		if d.Source == Messages {
+			args = JSONSchema(MessagesArgs{})
+		}
 		fields := args["properties"].(map[string]any)
 		required := []string{"id"}
 		allowed := map[string]bool{}
 		argumentFields := ReminderArgumentFields(d.Name)
 		if d.Source == Calendar {
 			argumentFields = CalendarArgumentFields(d.Name)
+		}
+		if d.Source == Messages {
+			argumentFields = MessagesArgumentFields(d.Name)
 		}
 		for _, field := range argumentFields {
 			allowed[field] = true
@@ -94,9 +100,15 @@ func OperationSchema(d OperationDescriptor) map[string]any {
 				delete(fields, name)
 			}
 		}
+		if d.Source == Messages {
+			required = []string{}
+			if d.Name != "messages.send" && d.Name != "messages.create_group" {
+				required = []string{"id"}
+			}
+		}
 		args["required"] = required
 		properties["args"] = args
-		if d.Name != "reminders.create" && d.Name != "reminders.create_list" && d.Name != "calendar.create_event" && d.Name != "calendar.create_calendar" {
+		if d.Source != Messages && d.Name != "reminders.create" && d.Name != "reminders.create_list" && d.Name != "calendar.create_event" && d.Name != "calendar.create_calendar" {
 			s["required"] = []string{"args", "expected_version"}
 		}
 		commandID := properties["command_id"].(map[string]any)

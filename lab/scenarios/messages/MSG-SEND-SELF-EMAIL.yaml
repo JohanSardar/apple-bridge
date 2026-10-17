@@ -1,0 +1,7 @@
+id: MSG-SEND-SELF-EMAIL
+feature: messages.send
+levels: [real]
+given: [{world: {replicas: 1}}]
+when: [{messages_commands: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

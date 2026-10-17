@@ -1,0 +1,63 @@
+{
+  "host_conditions": {
+    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "start": {
+      "air": {
+        "at": "2026-10-17T19:45:54.394847Z",
+        "cpu_count": 8,
+        "load_average": [
+          11.67,
+          5.77,
+          5.23
+        ],
+        "cpu_idle_percent": 75,
+        "free_memory_bytes": 191152128,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 4,
+        "quiet": false
+      }
+    },
+    "end": {
+      "air": {
+        "at": "2026-10-17T19:45:55.442821Z",
+        "cpu_count": 8,
+        "load_average": [
+          11.05,
+          5.74,
+          5.23
+        ],
+        "cpu_idle_percent": 85,
+        "free_memory_bytes": 177946624,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 4,
+        "quiet": false
+      }
+    },
+    "quiet": false,
+    "require_quiet": false,
+    "quiet_wait_ms": 0,
+    "quiet_wait_expired": false
+  },
+  "run_id": "run_01M55PCGQJVB53KW71ZMQNH1WM",
+  "scenario": "MSG-SEND-SELF-TEXT",
+  "level": "sim",
+  "passed": false,
+  "git_sha": "",
+  "at": "2026-10-17T19:45:55.442777Z",
+  "assertions": [
+    {
+      "name": "messages_send_descriptor",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

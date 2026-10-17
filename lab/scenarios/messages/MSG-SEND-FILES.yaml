@@ -1,0 +1,7 @@
+id: MSG-SEND-FILES
+feature: messages.send
+levels: [sim, real, replica]
+given: [{world: {replicas: 1}}]
+when: [{messages_commands: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

@@ -80,7 +80,6 @@ public enum MessagesAppleScript {
         "\"" + text.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"").replacingOccurrences(of: "\r", with: "\\r").replacingOccurrences(of: "\n", with: "\\n") + "\""
     }
 
-    @MainActor
     public static func execute(_ body: String) -> Int {
         var error: NSDictionary?
         guard let script = NSAppleScript(source: "with timeout of 3 seconds\n" + body + "\nend timeout") else { return -1 }

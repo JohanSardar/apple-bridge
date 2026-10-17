@@ -191,7 +191,26 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 		action.Args = a.Contact
 	}
 	var current *contracts.Record
-	if a.ID != "" {
+	if strings.HasPrefix(c.Op, "messages.") {
+		m, _ := contracts.ValidateMessagesCommand(c)
+		action.Messages = &m
+		if m.ID != "" {
+			collection = contracts.MessagesTargetCollection(c.Op)
+			result, readErr := g.State.Read(runctx, p.Visibility(), contracts.ReadQuery{Collection: collection, ID: m.ID})
+			if readErr != nil || len(result.Records) != 1 {
+				return g.transition(g.Context, r, "rejected", "rejected_before_dispatch", nil, contracts.ErrNotFound)
+			}
+			current = &result.Records[0]
+			if c.ExpectedVersion != 0 && c.ExpectedVersion != current.Version {
+				return g.transition(g.Context, r, "rejected", "rejected_before_dispatch", nil, &contracts.Error{Code: "conflict", Message: "expected_version differs from current", Current: current})
+			}
+			action.NativeKey, err = g.State.NativeKey(runctx, collection, m.ID)
+		}
+		if err == nil && m.ChatID != "" {
+			action.ListKey, err = g.State.NativeKey(runctx, "messages.chat", m.ChatID)
+		}
+	}
+	if !strings.HasPrefix(c.Op, "messages.") && a.ID != "" {
 		records, readErr := g.State.Read(runctx, p.Visibility(), contracts.ReadQuery{Collection: collection, ID: a.ID})
 		if readErr != nil {
 			problem := contracts.ErrNotFound
@@ -238,7 +257,10 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 		return r, contracts.ErrUnavailable
 	}
 	if prepared.T == "Rejected" {
-		problem := g.nativeConflict(runctx, p, a.ID, action.NativeKey, collection, prepared)
+		problem := prepared.Error
+		if r.Source != contracts.Messages {
+			problem = g.nativeConflict(runctx, p, a.ID, action.NativeKey, collection, prepared)
+		}
 		if problem == nil {
 			problem = contracts.ErrInvalid
 		}
@@ -272,7 +294,9 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 		return g.transition(g.Context, r, "indeterminate", "indeterminate", nil, nil)
 	}
 	if outcome.T == "Rejected" {
-		outcome.Error = g.nativeConflict(outcomeCtx, p, a.ID, action.NativeKey, collection, outcome)
+		if r.Source != contracts.Messages {
+			outcome.Error = g.nativeConflict(outcomeCtx, p, a.ID, action.NativeKey, collection, outcome)
+		}
 	}
 	return g.outcome(g.Context, r, outcome)
 }
@@ -325,6 +349,12 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 				collection = "notes.folder"
 			}
 		}
+		if r.Source == contracts.Messages {
+			collection = contracts.MessagesTargetCollection(r.Command.Op)
+			if r.Command.Op == "messages.react" {
+				collection = "messages.reaction"
+			}
+		}
 		if r.Command.Op == "reminders.create_list" {
 			collection = "reminders.list"
 		}
@@ -340,6 +370,9 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 				r.CommitSeq = sequence.Sequence
 			}
 		}
+	}
+	if r.State == "observed" && (to == "observed" || to == "indeterminate") {
+		return r, nil
 	}
 	if r.State == "indeterminate" && to == "indeterminate" {
 		return r, nil
@@ -367,7 +400,7 @@ func (g *LocalGateway) Status(ctx context.Context, p trust.Principal, q contract
 			return r, nil
 		}
 	}
-	if q.Resolve && r.State == "indeterminate" {
+	if q.Resolve && (r.State == "indeterminate" || r.Source == contracts.Messages && r.State == "observed") {
 		release, err := g.lock(ctx, "command:"+q.ID)
 		if err != nil {
 			return r, err
@@ -377,7 +410,7 @@ func (g *LocalGateway) Status(ctx context.Context, p trust.Principal, q contract
 		if err != nil {
 			return r, err
 		}
-		if r.State == "indeterminate" {
+		if r.State == "indeterminate" || r.Source == contracts.Messages && r.State == "observed" {
 			f, err := g.Peer.Exchange(ctx, contracts.IPCFrame{T: "Resolve", CommandID: q.ID})
 			if err != nil {
 				return r, err

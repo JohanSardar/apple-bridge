@@ -377,6 +377,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if strings.HasPrefix(s.ID, "CON-") {
 		return runContacts(ctx, s, level)
 	}
+	if strings.HasPrefix(s.Feature, "messages.") && s.Feature != "messages.read" {
+		return runMessagesCommands(ctx, s, level)
+	}
 	if nativeScenario(s.ID, level) {
 		return runNativeScenario(ctx, s, level)
 	}
