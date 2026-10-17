@@ -57,6 +57,7 @@ features:
       - {id: CORE-KILL-GATEWAY-CAPTURE, levels: [sim]}
       - {id: CORE-SLOW-CONSUMER, levels: [sim]}
       - {id: CORE-DISCONNECT-DETECT, levels: [sim, replica]}
+      - {id: CORE-GATEWAY-DIALS, levels: [sim, replica]}
       - {id: CORE-UPGRADE, levels: [sim]}
   - id: core.recovery
     title: Helper restart, restore with epoch rotation, disk-full

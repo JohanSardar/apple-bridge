@@ -558,6 +558,11 @@ G→R Heartbeat(head, at) every 5 s;  R→G Heartbeat
 R→G BlobWant(digest, offset)  G→R BlobChunk(binary)  G→R BlobDone(digest) | BlobUnavailable(digest, reason)
 ```
 
+**Connection direction.** Networks are often one-way (NAT, campus Wi-Fi, ACLs the user can't change). Two directions share one protocol:
+- *Replica dials* (default): the replica opens the WebSocket to the gateway's peer listener.
+- *Gateway dials*: for replicas the gateway can reach but which can't reach the gateway, pairing records `dial: <replica address>`; the replica runs `bridge start --role replica --listen <addr>` with an mTLS listener, and the gateway keeps an outbound connection to it (reconnect with backoff). After TLS (both certificates pinned exactly as in pairing) the replica still sends `Hello` first and everything above the transport is identical, including command forwarding, which travels back over the same connection as framed requests instead of a separate HTTPS call.
+Direction is a pairing property, chosen at `bridge pair --dial-replica <addr>`; it never changes trust, scope or feed semantics.
+
 Rules (F2, F3, D4):
 - `(after, through]` covers every sequence, including changes filtered out by scope; empty batches advance watermarks.
 - Resume requires same epoch and subscription revision and `retentionFloor ≤ cursor.sequence ≤ head`; otherwise snapshot.
@@ -730,6 +735,7 @@ Levels: **S** = sim, **R** = real (Air), **P** = replica on Ubuntu, **A** = MCP 
 | CORE-BLOB-CAP | Replica cap reached: over_cap state, metadata still complete | S |
 | CORE-BLOB-NO-DIGEST-AUTH | Requesting a blob by digest without a record grant → denied | S |
 | CORE-BLOB-GC | Blob deleted only after no record/snapshot/command references and pins | S |
+| CORE-GATEWAY-DIALS | Gateway-initiated connection to a listening replica: snapshot, live, resume after partition, command forwarding over the same connection, revoke | S P |
 | CORE-DISCONNECT-DETECT | Gateway host goes away; replica reports disconnected + staleness within 15 s; reads continue | S P |
 | CORE-BENCH | modernc SQLite+FTS5+WAL RSS/latency on the Air with 200k messages synthetic | S |
 
@@ -883,6 +889,7 @@ Each milestone proves its riskiest unknown first, starts every feature as a fail
 - Usage: estimates, not Screen Time Settings totals; parity unproven.
 - iMessage group features verified at sim level and self-chat where possible; Ben is RCS/SMS.
 - Sleep, logout, shutdown, FileVault pre-login are outages.
+- Replicas that can neither reach the gateway nor be reached by it need a relay (an SSH tunnel or similar); no hosted relay in v1.
 - Local file access on a replica bypasses API scopes; revocation cannot erase copied data.
 - Losing `ledger.db` (not just `state.db`) loses the ability to recognize earlier command IDs; recovery requires an explicit operator acknowledgement.
 - Notarized distribution requires an Apple Developer ID (status tracked in PROGRESS.md).

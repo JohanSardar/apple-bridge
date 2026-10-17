@@ -50,7 +50,8 @@ Resume point for any fresh session. Updated after every unit of work.
 - Calendar/Contacts root cause (fixed a0d917a): hardened runtime needs `com.apple.security.personal-information.calendars/.addressbook` entitlements; without them TCC refuses silently (no prompt, no TCC.db row). Verified prompt now appears (tccd AUTHREQ_PROMPTING). Johan will run onboard later; detect via `status`.
 - Possible interference: a foreign process `imsg` (pid 54735, likely Johan's old Toy/Hermes setup) was seen spamming TCCAccessRequest to tccd every ~4 ms; it was not running at 00:05. Do not kill such processes without asking.
 - heavy.sh is a FIFO queue (2 slots) since a0d917a.
-- Replica level: SSH tunnel acceptable until Johan's Tailscale ACL fix; direct Tailscale path behind a World option.
+- Network (2026-10-17, from parent): the Tailscale ACL fix is NOT coming. Ubuntu → Air direct is impossible; Air → Ubuntu works. A permanent reverse tunnel runs from the Air LaunchAgent `dev.applebridge.reverse-tunnel` (KeepAlive): `ssh -N -R 127.0.0.1:2222:localhost:22 -R 127.0.0.1:5901:localhost:5900 johan@100.80.96.36`. On Ubuntu `ssh air` uses 127.0.0.1:2222 (`air-lan` = LAN fallback); VNC uses 127.0.0.1::5901. More `-R` forwards can be added to that plist (launchctl bootout/bootstrap) if a feed port is needed.
+- Direct-Tailscale replica runs are **environment-limited**, not blocked. Replica-level evidence uses Air-initiated paths: the SSH-tunnel fallback now, and the product's gateway-initiated connection mode (SPEC §12 "Connection direction", scenario CORE-GATEWAY-DIALS) once built.
 
 ## Overnight state (2026-10-17, Johan away, screen locked)
 - `status` (open -n): FDA, Accessibility, Reminders, Calendar, Contacts = granted (Calendar/Contacts appeared granted ~00:30; parent had restarted tccd). automation_* report `unknown` while Messages/System Events aren't running or the screen is locked; AppleScript sends to self worked earlier.
