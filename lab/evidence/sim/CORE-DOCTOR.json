@@ -1,0 +1,153 @@
+{
+  "host_conditions": {
+    "quiet_definition": "Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "start": {
+      "air": {
+        "at": "2026-10-17T07:34:08.791666Z",
+        "cpu_count": 8,
+        "load_average": [
+          15.22,
+          17.89,
+          16.92
+        ],
+        "cpu_idle_percent": 0,
+        "free_memory_bytes": 81330176,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 2,
+        "quiet": false
+      }
+    },
+    "end": {
+      "air": {
+        "at": "2026-10-17T07:34:17.087269Z",
+        "cpu_count": 8,
+        "load_average": [
+          14.81,
+          17.71,
+          16.86
+        ],
+        "cpu_idle_percent": 0,
+        "free_memory_bytes": 68026368,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 2,
+        "quiet": false
+      }
+    },
+    "quiet": false,
+    "require_quiet": false,
+    "quiet_wait_ms": 0,
+    "quiet_wait_expired": false
+  },
+  "run_id": "run_01M54CGRMW7YPPESTCGQTRQMM6",
+  "network_path": "loopback",
+  "metrics": {
+    "clock_method": "local_receive_minus_gateway_send_including_feed_transit",
+    "clock_sample_age_ms": 929,
+    "replica_clock_skew_ms": 0,
+    "replica_disk_encryption": "warning_not_enabled"
+  },
+  "scenario": "CORE-DOCTOR",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+  "at": "2026-10-17T07:34:14.428118Z",
+  "assertions": [
+    {
+      "name": "feed_network_loopback",
+      "passed": true
+    },
+    {
+      "name": "gateway_clock_not_applicable",
+      "passed": true
+    },
+    {
+      "name": "replica_authenticated_feed_clock_sample",
+      "passed": true
+    },
+    {
+      "name": "clock_skew_warning_actionable",
+      "passed": true
+    },
+    {
+      "name": "clock_sample_unavailable_warning_actionable",
+      "passed": true
+    },
+    {
+      "name": "recovery_capture_drained_before_convergence",
+      "passed": true
+    },
+    {
+      "name": "truth_gateway_replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "automatic_recovery_capture_drained",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_query_search_records_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_query_search_records_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_metadata_latency_and_no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_metadata_latency_and_no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_sse_watermark_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_sse_watermark_1",
+      "passed": true
+    },
+    {
+      "name": "sqlite_integrity_gateway",
+      "passed": true
+    },
+    {
+      "name": "sqlite_integrity_replica",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_in_observed_journal_changes",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_in_observed_journal_changes",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "effect_done→gateway_visible": {
+      "samples": 1,
+      "p50_ms": 16.865,
+      "p95_ms": 16.865,
+      "max_ms": 16.865,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica0": {
+      "samples": 1,
+      "p50_ms": 30.494292,
+      "p95_ms": 30.494292,
+      "max_ms": 30.494292,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

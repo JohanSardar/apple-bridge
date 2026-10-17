@@ -1,0 +1,78 @@
+{
+  "run_id": "run_01M55FRP169VHHM7BHJX0XRPC7",
+  "network_path": "loopback",
+  "scenario": "CORE-PAIR",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723",
+  "at": "2026-10-17T17:50:14.054672Z",
+  "assertions": [
+    {
+      "name": "feed_network_loopback",
+      "passed": true
+    },
+    {
+      "name": "automatic_recovery_capture_drained",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_query_search_records_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_query_search_records_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_metadata_latency_and_no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_metadata_latency_and_no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_sse_watermark_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_sse_watermark_1",
+      "passed": true
+    },
+    {
+      "name": "wrong_expired_replayed_code_rejected",
+      "passed": true
+    },
+    {
+      "name": "live_replica_revoked_within_one_second",
+      "passed": true
+    },
+    {
+      "name": "revoked_replica_no_further_data",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "effect_done→gateway_visible": {
+      "samples": 1,
+      "p50_ms": 3.996166,
+      "p95_ms": 3.996166,
+      "max_ms": 3.996166,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica0": {
+      "samples": 1,
+      "p50_ms": 6.874583,
+      "p95_ms": 6.874583,
+      "max_ms": 6.874583,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

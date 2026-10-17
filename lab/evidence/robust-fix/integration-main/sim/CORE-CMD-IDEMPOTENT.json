@@ -1,0 +1,217 @@
+{
+  "run_id": "run_01M55FP2G6VJRVN5YKFN1669W7",
+  "network_path": "loopback",
+  "scenario": "CORE-CMD-IDEMPOTENT",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723",
+  "at": "2026-10-17T17:48:48.518372Z",
+  "assertions": [
+    {
+      "name": "feed_network_loopback",
+      "passed": true
+    },
+    {
+      "name": "replica_host_is_air",
+      "passed": true
+    },
+    {
+      "name": "bootstrap_snapshot",
+      "passed": true
+    },
+    {
+      "name": "scope_query_and_get",
+      "passed": true
+    },
+    {
+      "name": "scope_rest_query_0",
+      "passed": true
+    },
+    {
+      "name": "scope_rest_command_0",
+      "passed": true
+    },
+    {
+      "name": "scope_mcp_query_0",
+      "passed": true
+    },
+    {
+      "name": "scope_mcp_command_0",
+      "passed": true
+    },
+    {
+      "name": "scope_rest_query_1",
+      "passed": true
+    },
+    {
+      "name": "scope_rest_command_1",
+      "passed": true
+    },
+    {
+      "name": "scope_mcp_query_1",
+      "passed": true
+    },
+    {
+      "name": "scope_mcp_command_1",
+      "passed": true
+    },
+    {
+      "name": "scope_rest_query_2",
+      "passed": true
+    },
+    {
+      "name": "scope_rest_command_2",
+      "passed": true
+    },
+    {
+      "name": "scope_mcp_query_2",
+      "passed": true
+    },
+    {
+      "name": "scope_mcp_command_2",
+      "passed": true
+    },
+    {
+      "name": "command_admitted",
+      "passed": true
+    },
+    {
+      "name": "identical_retry_returns_existing_status",
+      "passed": true
+    },
+    {
+      "name": "changed_args_id_reused",
+      "passed": true
+    },
+    {
+      "name": "one_truth_effect",
+      "passed": true
+    },
+    {
+      "name": "other_issuer_status_hidden",
+      "passed": true
+    },
+    {
+      "name": "hidden_command_fixture_000-hidden-a",
+      "passed": true
+    },
+    {
+      "name": "hidden_command_fixture_000-hidden-b",
+      "passed": true
+    },
+    {
+      "name": "owned_command_fixture_zzz-owned-a",
+      "passed": true
+    },
+    {
+      "name": "owned_command_fixture_zzz-owned-b",
+      "passed": true
+    },
+    {
+      "name": "rest_visible_command_pagination_skips_foreign_rows",
+      "passed": true
+    },
+    {
+      "name": "mcp_visible_command_pagination_skips_foreign_rows",
+      "passed": true
+    },
+    {
+      "name": "convergence_truth_gateway_replicas",
+      "passed": true
+    },
+    {
+      "name": "no_automatic_redispatch_truth_effect_counts",
+      "passed": true
+    },
+    {
+      "name": "metadata_latency_below_1s_0",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_watermarks_0",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "metadata_latency_below_1s_1",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_watermarks_1",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "metadata_latency_below_1s_2",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_watermarks_2",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_2",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_0",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_1",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_2",
+      "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass",
+      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "effect_done→gateway_visible": {
+      "samples": 1,
+      "p50_ms": 5.390666,
+      "p95_ms": 5.390666,
+      "max_ms": 5.390666,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica0": {
+      "samples": 1,
+      "p50_ms": 8.478416,
+      "p95_ms": 8.478416,
+      "max_ms": 8.478416,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica1": {
+      "samples": 1,
+      "p50_ms": 8.361458,
+      "p95_ms": 8.361458,
+      "max_ms": 8.361458,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

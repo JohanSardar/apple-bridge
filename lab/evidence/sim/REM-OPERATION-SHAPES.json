@@ -1,11 +1,52 @@
 {
-  "run_id": "run_01M55FXJBKMWDA0EVZ8BVVXZJA",
+  "host_conditions": {
+    "quiet_definition": "Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "start": {
+      "air": {
+        "at": "2026-10-17T07:51:53.443725Z",
+        "cpu_count": 8,
+        "load_average": [
+          21.49,
+          25.62,
+          22.73
+        ],
+        "cpu_idle_percent": 0,
+        "free_memory_bytes": 73498624,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 2,
+        "quiet": false
+      }
+    },
+    "end": {
+      "air": {
+        "at": "2026-10-17T07:52:01.565353Z",
+        "cpu_count": 8,
+        "load_average": [
+          21.2,
+          25.42,
+          22.69
+        ],
+        "cpu_idle_percent": 0,
+        "free_memory_bytes": 66076672,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 2,
+        "quiet": false
+      }
+    },
+    "quiet": false,
+    "require_quiet": false,
+    "quiet_wait_ms": 0,
+    "quiet_wait_expired": false
+  },
+  "run_id": "run_01M54DH7SB73PEW4TG6RPGW6T6",
   "network_path": "loopback",
   "scenario": "REM-OPERATION-SHAPES",
   "level": "sim",
   "passed": true,
-  "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723",
-  "at": "2026-10-17T17:52:54.131848Z",
+  "git_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+  "at": "2026-10-17T07:51:58.507578Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -155,16 +196,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 5.172583,
-      "p95_ms": 5.172583,
-      "max_ms": 5.172583,
+      "p50_ms": 23.517375,
+      "p95_ms": 23.517375,
+      "max_ms": 23.517375,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 7.9025,
-      "p95_ms": 7.9025,
-      "max_ms": 7.9025,
+      "p50_ms": 25.830375,
+      "p95_ms": 25.830375,
+      "max_ms": 25.830375,
       "timeouts": 0
     }
   },

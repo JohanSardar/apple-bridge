@@ -1,23 +1,52 @@
 {
-  "run_id": "run_01M55GB31PGY1WGQQYMW30JEPQ",
-  "network_path": "loopback",
-  "metrics": {
-    "digest_check_0_bytes": 4194304,
-    "digest_check_0_deadline_exceeded": false,
-    "digest_check_0_error_type": "\u003cnil\u003e",
-    "digest_check_0_read_ms": 9.11875,
-    "digest_check_0_status": 200,
-    "digest_check_1_bytes": 4194304,
-    "digest_check_1_deadline_exceeded": false,
-    "digest_check_1_error_type": "\u003cnil\u003e",
-    "digest_check_1_read_ms": 4.907459,
-    "digest_check_1_status": 200
+  "host_conditions": {
+    "quiet_definition": "Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "start": {
+      "air": {
+        "at": "2026-10-17T07:30:27.747996Z",
+        "cpu_count": 8,
+        "load_average": [
+          18.08,
+          21.01,
+          17.48
+        ],
+        "cpu_idle_percent": 0,
+        "free_memory_bytes": 66371584,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 2,
+        "quiet": false
+      }
+    },
+    "end": {
+      "air": {
+        "at": "2026-10-17T07:30:42.235465Z",
+        "cpu_count": 8,
+        "load_average": [
+          17.69,
+          20.78,
+          17.46
+        ],
+        "cpu_idle_percent": 0,
+        "free_memory_bytes": 67354624,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 2,
+        "quiet": false
+      }
+    },
+    "quiet": false,
+    "require_quiet": false,
+    "quiet_wait_ms": 0,
+    "quiet_wait_expired": false
   },
+  "run_id": "run_01M54C9ZRD0MY2TQH30PAJRT5E",
+  "network_path": "loopback",
   "scenario": "CORE-BLOB-SLOW-READ",
   "level": "sim",
   "passed": true,
-  "git_sha": "31f1f9f66ffc3434778f54ab5dd0d9befb227832",
-  "at": "2026-10-17T18:00:17.206915Z",
+  "git_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+  "at": "2026-10-17T07:30:32.333457Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -115,30 +144,30 @@
   "latency": {
     "effect_done→blob_complete": {
       "samples": 1,
-      "p50_ms": 3838.094834,
-      "p95_ms": 3838.094834,
-      "max_ms": 3838.094834,
+      "p50_ms": 4598.752084,
+      "p95_ms": 4598.752084,
+      "max_ms": 4598.752084,
       "timeouts": 0
     },
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 8.200166,
-      "p95_ms": 8.200166,
-      "max_ms": 8.200166,
+      "p50_ms": 4.6025,
+      "p95_ms": 4.6025,
+      "max_ms": 4.6025,
       "timeouts": 0
     },
     "effect_done→metadata_during_slow_read": {
       "samples": 1,
-      "p50_ms": 85.767209,
-      "p95_ms": 85.767209,
-      "max_ms": 85.767209,
+      "p50_ms": 79.181583,
+      "p95_ms": 79.181583,
+      "max_ms": 79.181583,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 8.610833,
-      "p95_ms": 8.610833,
-      "max_ms": 8.610833,
+      "p50_ms": 7.821958,
+      "p95_ms": 7.821958,
+      "max_ms": 7.821958,
       "timeouts": 0
     }
   },

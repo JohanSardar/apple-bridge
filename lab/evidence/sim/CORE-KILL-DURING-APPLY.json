@@ -1,14 +1,123 @@
 {
-  "run_id": "run_01M55FPZ6KG6XJV3CT9SACY5P4",
+  "host_conditions": {
+    "quiet_definition": "Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "start": {
+      "air": {
+        "at": "2026-10-17T07:35:12.055708Z",
+        "cpu_count": 8,
+        "load_average": [
+          15.12,
+          17.28,
+          16.75
+        ],
+        "cpu_idle_percent": 0.2,
+        "free_memory_bytes": 68485120,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 2,
+        "quiet": false
+      }
+    },
+    "end": {
+      "air": {
+        "at": "2026-10-17T07:35:37.38812Z",
+        "cpu_count": 8,
+        "load_average": [
+          15.68,
+          17.21,
+          16.74
+        ],
+        "cpu_idle_percent": 0,
+        "free_memory_bytes": 72663040,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 2,
+        "quiet": false
+      }
+    },
+    "periodic_samples": [
+      {
+        "air": {
+          "at": "2026-10-17T07:35:23.367394Z",
+          "cpu_count": 8,
+          "load_average": [
+            14.88,
+            17.15,
+            16.71
+          ],
+          "cpu_idle_percent": 0.1,
+          "free_memory_bytes": 68485120,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T07:35:28.461926Z",
+          "cpu_count": 8,
+          "load_average": [
+            14.89,
+            17.12,
+            16.7
+          ],
+          "cpu_idle_percent": 0,
+          "free_memory_bytes": 79347712,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        }
+      }
+    ],
+    "quiet": false,
+    "require_quiet": false,
+    "quiet_wait_ms": 0,
+    "quiet_wait_expired": false
+  },
+  "run_id": "run_01M54CJQ740TEJC8J647FFKH2X",
   "network_path": "loopback",
   "scenario": "CORE-KILL-DURING-APPLY",
   "level": "sim",
   "passed": true,
-  "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723",
-  "at": "2026-10-17T17:49:17.907063Z",
+  "git_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+  "at": "2026-10-17T07:35:18.500275Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
+      "passed": true
+    },
+    {
+      "name": "apply_write_before_commit_boundary_iteration_0",
+      "passed": true
+    },
+    {
+      "name": "apply_write_before_commit_boundary_iteration_1",
+      "passed": true
+    },
+    {
+      "name": "apply_write_before_commit_boundary_iteration_2",
+      "passed": true
+    },
+    {
+      "name": "apply_write_before_commit_boundary_iteration_3",
+      "passed": true
+    },
+    {
+      "name": "apply_write_before_commit_boundary_iteration_4",
+      "passed": true
+    },
+    {
+      "name": "apply_write_before_commit_boundary_iteration_5",
+      "passed": true
+    },
+    {
+      "name": "apply_write_before_commit_boundary_iteration_6",
+      "passed": true
+    },
+    {
+      "name": "apply_write_before_commit_boundary_iteration_7",
       "passed": true
     },
     {
@@ -75,16 +184,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 4.915875,
-      "p95_ms": 4.915875,
-      "max_ms": 4.915875,
+      "p50_ms": 6.981292,
+      "p95_ms": 6.981292,
+      "max_ms": 6.981292,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 8.403916,
-      "p95_ms": 8.403916,
-      "max_ms": 8.403916,
+      "p50_ms": 10.332959,
+      "p95_ms": 10.332959,
+      "max_ms": 10.332959,
       "timeouts": 0
     }
   },

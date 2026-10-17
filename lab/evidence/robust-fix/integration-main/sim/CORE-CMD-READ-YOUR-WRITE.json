@@ -1,0 +1,193 @@
+{
+  "run_id": "run_01M55FP65WAXWNDWC8CZA66P6M",
+  "network_path": "loopback",
+  "scenario": "CORE-CMD-READ-YOUR-WRITE",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723",
+  "at": "2026-10-17T17:48:52.284609Z",
+  "assertions": [
+    {
+      "name": "feed_network_loopback",
+      "passed": true
+    },
+    {
+      "name": "replica_host_is_air",
+      "passed": true
+    },
+    {
+      "name": "bootstrap_snapshot",
+      "passed": true
+    },
+    {
+      "name": "scope_query_and_get",
+      "passed": true
+    },
+    {
+      "name": "scope_rest_query_0",
+      "passed": true
+    },
+    {
+      "name": "scope_rest_command_0",
+      "passed": true
+    },
+    {
+      "name": "scope_mcp_query_0",
+      "passed": true
+    },
+    {
+      "name": "scope_mcp_command_0",
+      "passed": true
+    },
+    {
+      "name": "scope_rest_query_1",
+      "passed": true
+    },
+    {
+      "name": "scope_rest_command_1",
+      "passed": true
+    },
+    {
+      "name": "scope_mcp_query_1",
+      "passed": true
+    },
+    {
+      "name": "scope_mcp_command_1",
+      "passed": true
+    },
+    {
+      "name": "scope_rest_query_2",
+      "passed": true
+    },
+    {
+      "name": "scope_rest_command_2",
+      "passed": true
+    },
+    {
+      "name": "scope_mcp_query_2",
+      "passed": true
+    },
+    {
+      "name": "scope_mcp_command_2",
+      "passed": true
+    },
+    {
+      "name": "command_observed",
+      "passed": true
+    },
+    {
+      "name": "local_read_at_commit_seq",
+      "passed": true
+    },
+    {
+      "name": "commit_seq_identifies_observing_capture",
+      "passed": true
+    },
+    {
+      "name": "noop_commit_seq_identifies_fresh_observation",
+      "passed": true
+    },
+    {
+      "name": "one_truth_effect",
+      "passed": true
+    },
+    {
+      "name": "convergence_truth_gateway_replicas",
+      "passed": true
+    },
+    {
+      "name": "no_automatic_redispatch_truth_effect_counts",
+      "passed": true
+    },
+    {
+      "name": "metadata_latency_below_1s_0",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_watermarks_0",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "metadata_latency_below_1s_1",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_watermarks_1",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "metadata_latency_below_1s_2",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_watermarks_2",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_2",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_0",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_1",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_2",
+      "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass",
+      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "effect_done→gateway_visible": {
+      "samples": 1,
+      "p50_ms": 4.6975,
+      "p95_ms": 4.6975,
+      "max_ms": 4.6975,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica0": {
+      "samples": 1,
+      "p50_ms": 8.574167,
+      "p95_ms": 8.574167,
+      "max_ms": 8.574167,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica1": {
+      "samples": 1,
+      "p50_ms": 8.542458,
+      "p95_ms": 8.542458,
+      "max_ms": 8.542458,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

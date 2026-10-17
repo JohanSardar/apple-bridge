@@ -1,11 +1,78 @@
 {
-  "run_id": "run_01M55FSWANC8PWHHF6WQN05K7F",
+  "host_conditions": {
+    "quiet_definition": "Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "start": {
+      "air": {
+        "at": "2026-10-17T07:41:48.906901Z",
+        "cpu_count": 8,
+        "load_average": [
+          23.07,
+          20.56,
+          18.42
+        ],
+        "cpu_idle_percent": 0,
+        "free_memory_bytes": null,
+        "active_heavy_slots": 0,
+        "other_active_heavy_slots": 0,
+        "heavy_queue_length": 0,
+        "quiet": false,
+        "unavailable": [
+          "host_probe_failed",
+          "slots",
+          "other",
+          "queue",
+          "free_memory"
+        ]
+      }
+    },
+    "end": {
+      "air": {
+        "at": "2026-10-17T07:42:17.082911Z",
+        "cpu_count": 8,
+        "load_average": [
+          21.7,
+          20.47,
+          18.46
+        ],
+        "cpu_idle_percent": 0,
+        "free_memory_bytes": 76316672,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 3,
+        "quiet": false
+      }
+    },
+    "periodic_samples": [
+      {
+        "air": {
+          "at": "2026-10-17T07:42:02.517451Z",
+          "cpu_count": 8,
+          "load_average": [
+            22.24,
+            20.5,
+            18.43
+          ],
+          "cpu_idle_percent": 0,
+          "free_memory_bytes": 87752704,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        }
+      }
+    ],
+    "quiet": false,
+    "require_quiet": false,
+    "quiet_wait_ms": 0,
+    "quiet_wait_expired": false
+  },
+  "run_id": "run_01M54CYXG4X70TPMM1G8GCZ1Q3",
   "network_path": "loopback",
   "scenario": "CORE-RETENTION-RACE",
   "level": "sim",
   "passed": true,
-  "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723",
-  "at": "2026-10-17T17:50:53.269193Z",
+  "git_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+  "at": "2026-10-17T07:41:58.148645Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -75,16 +142,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 4.755208,
-      "p95_ms": 4.755208,
-      "max_ms": 4.755208,
+      "p50_ms": 5.797,
+      "p95_ms": 5.797,
+      "max_ms": 5.797,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 7.910375,
-      "p95_ms": 7.910375,
-      "max_ms": 7.910375,
+      "p50_ms": 9.547416,
+      "p95_ms": 9.547416,
+      "max_ms": 9.547416,
       "timeouts": 0
     }
   },

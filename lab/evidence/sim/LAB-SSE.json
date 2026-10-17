@@ -1,11 +1,122 @@
 {
-  "run_id": "run_01M55FWH9FF4K55P3QBW34ND66",
+  "host_conditions": {
+    "quiet_definition": "Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "start": {
+      "air": {
+        "at": "2026-10-17T07:49:13.509649Z",
+        "cpu_count": 8,
+        "load_average": [
+          34.99,
+          27.96,
+          22.73
+        ],
+        "cpu_idle_percent": 0,
+        "free_memory_bytes": 70795264,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 2,
+        "quiet": false
+      }
+    },
+    "end": {
+      "air": {
+        "at": "2026-10-17T07:49:54.723835Z",
+        "cpu_count": 8,
+        "load_average": [
+          30.42,
+          27.94,
+          22.98
+        ],
+        "cpu_idle_percent": 0,
+        "free_memory_bytes": 64897024,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 2,
+        "quiet": false
+      }
+    },
+    "periodic_samples": [
+      {
+        "air": {
+          "at": "2026-10-17T07:49:26.026229Z",
+          "cpu_count": 8,
+          "load_average": [
+            36.77,
+            28.79,
+            23.12
+          ],
+          "cpu_idle_percent": 0,
+          "free_memory_bytes": 66764800,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T07:49:31.752608Z",
+          "cpu_count": 8,
+          "load_average": [
+            35.03,
+            28.56,
+            23.07
+          ],
+          "cpu_idle_percent": 0,
+          "free_memory_bytes": 63225856,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T07:49:39.485163Z",
+          "cpu_count": 8,
+          "load_average": [
+            34.23,
+            28.5,
+            23.08
+          ],
+          "cpu_idle_percent": 0,
+          "free_memory_bytes": 63455232,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T07:49:44.080613Z",
+          "cpu_count": 8,
+          "load_average": [
+            32.69,
+            28.27,
+            23.04
+          ],
+          "cpu_idle_percent": 0,
+          "free_memory_bytes": 65093632,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        }
+      }
+    ],
+    "quiet": false,
+    "require_quiet": false,
+    "quiet_wait_ms": 0,
+    "quiet_wait_expired": false
+  },
+  "run_id": "run_01M54DCE1EM6P1CCXQ7AEH244M",
   "network_path": "loopback",
   "scenario": "LAB-SSE",
   "level": "sim",
   "passed": true,
-  "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723",
-  "at": "2026-10-17T17:52:20.271561Z",
+  "git_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+  "at": "2026-10-17T07:49:21.070545Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -91,16 +202,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 6.614166,
-      "p95_ms": 6.614166,
-      "max_ms": 6.614166,
+      "p50_ms": 33.863416,
+      "p95_ms": 33.863416,
+      "max_ms": 33.863416,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 8.826,
-      "p95_ms": 8.826,
-      "max_ms": 8.826,
+      "p50_ms": 39.396875,
+      "p95_ms": 39.396875,
+      "max_ms": 39.396875,
       "timeouts": 0
     }
   },

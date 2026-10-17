@@ -1,0 +1,225 @@
+{
+  "run_id": "run_01M55GAGZS71MFD1CBD3EAS2FH",
+  "network_path": "loopback",
+  "metrics": {
+    "digest_check_0_bytes": 4194304,
+    "digest_check_0_deadline_exceeded": false,
+    "digest_check_0_error_type": "\u003cnil\u003e",
+    "digest_check_0_read_ms": 10.239167,
+    "digest_check_0_status": 200,
+    "digest_check_1_bytes": 4194304,
+    "digest_check_1_deadline_exceeded": false,
+    "digest_check_1_error_type": "\u003cnil\u003e",
+    "digest_check_1_read_ms": 1.881417,
+    "digest_check_1_status": 200
+  },
+  "scenario": "CORE-BLOB-GC",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "31f1f9f66ffc3434778f54ab5dd0d9befb227832",
+  "at": "2026-10-17T17:59:58.713916Z",
+  "assertions": [
+    {
+      "name": "feed_network_loopback",
+      "passed": true
+    },
+    {
+      "name": "replica_host_is_air",
+      "passed": true
+    },
+    {
+      "name": "bootstrap_snapshot",
+      "passed": true
+    },
+    {
+      "name": "scope_query_and_get",
+      "passed": true
+    },
+    {
+      "name": "attachment_fixture",
+      "passed": true
+    },
+    {
+      "name": "attachment_metadata_visible",
+      "passed": true
+    },
+    {
+      "name": "metadata_convergence_with_blob_backlog",
+      "passed": true
+    },
+    {
+      "name": "blob_complete",
+      "passed": true
+    },
+    {
+      "name": "authorized_bytes_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "authorized_bytes_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "legacy_reference_index_open",
+      "passed": true
+    },
+    {
+      "name": "legacy_reference_index_removed",
+      "passed": true
+    },
+    {
+      "name": "reference_index_migration_restart",
+      "passed": true
+    },
+    {
+      "name": "reference_index_migration_converges",
+      "passed": true
+    },
+    {
+      "name": "migrated_reference_index_open",
+      "passed": true
+    },
+    {
+      "name": "legacy_reference_index_backfilled",
+      "passed": true
+    },
+    {
+      "name": "private_immutable_blob",
+      "passed": true
+    },
+    {
+      "name": "referenced_blob_survives_grace",
+      "passed": true
+    },
+    {
+      "name": "record_protects_blob",
+      "passed": true
+    },
+    {
+      "name": "snapshot_reference_acquired",
+      "passed": true
+    },
+    {
+      "name": "stage_returns_pin",
+      "passed": true
+    },
+    {
+      "name": "delete_attachment_and_message",
+      "passed": true
+    },
+    {
+      "name": "deletion_metadata_converges",
+      "passed": true
+    },
+    {
+      "name": "snapshot_only_and_pin_survive_grace",
+      "passed": true
+    },
+    {
+      "name": "command_reference_acquired",
+      "passed": true
+    },
+    {
+      "name": "snapshot_release",
+      "passed": true
+    },
+    {
+      "name": "command_only_survives_grace",
+      "passed": true
+    },
+    {
+      "name": "command_release",
+      "passed": true
+    },
+    {
+      "name": "uncommitted_pin_still_protects_blob",
+      "passed": true
+    },
+    {
+      "name": "staging_pin_release",
+      "passed": true
+    },
+    {
+      "name": "released_pin_collected",
+      "passed": true
+    },
+    {
+      "name": "unreferenced_blob_collected",
+      "passed": true
+    },
+    {
+      "name": "convergence_truth_gateway_replicas",
+      "passed": true
+    },
+    {
+      "name": "latency_observations_complete",
+      "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass",
+      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
+    },
+    {
+      "name": "sse_contiguous_watermarks_0",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_watermarks_1",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_0",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_1",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "effect_done→blob_complete": {
+      "samples": 1,
+      "p50_ms": 667.378125,
+      "p95_ms": 667.378125,
+      "max_ms": 667.378125,
+      "timeouts": 0
+    },
+    "effect_done→gateway_visible": {
+      "samples": 1,
+      "p50_ms": 8.170541,
+      "p95_ms": 8.170541,
+      "max_ms": 8.170541,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica0": {
+      "samples": 1,
+      "p50_ms": 10.935625,
+      "p95_ms": 10.935625,
+      "max_ms": 10.935625,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

@@ -1,10 +1,51 @@
 {
-  "run_id": "run_01M55FWH8QFPTRW90VXR1SQBBD",
+  "host_conditions": {
+    "quiet_definition": "Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "start": {
+      "air": {
+        "at": "2026-10-17T07:49:00.699415Z",
+        "cpu_count": 8,
+        "load_average": [
+          39.25,
+          28.37,
+          22.78
+        ],
+        "cpu_idle_percent": 0,
+        "free_memory_bytes": 61374464,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 2,
+        "quiet": false
+      }
+    },
+    "end": {
+      "air": {
+        "at": "2026-10-17T07:49:08.149952Z",
+        "cpu_count": 8,
+        "load_average": [
+          36.3,
+          28.09,
+          22.75
+        ],
+        "cpu_idle_percent": 0,
+        "free_memory_bytes": 67502080,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 2,
+        "quiet": false
+      }
+    },
+    "quiet": false,
+    "require_quiet": false,
+    "quiet_wait_ms": 0,
+    "quiet_wait_expired": false
+  },
+  "run_id": "run_01M54DC1DHN4H4GB2JMFXJD9VP",
   "scenario": "LAB-MALFORMED-SCENARIO",
   "level": "sim",
   "passed": true,
-  "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723",
-  "at": "2026-10-17T17:52:20.247735Z",
+  "git_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+  "at": "2026-10-17T07:49:08.146597Z",
   "assertions": [
     {
       "name": "malformed_scenario_rejected",

@@ -1,0 +1,185 @@
+{
+  "run_id": "run_01M55FXJTZ7Y529N8PCCZKVVPV",
+  "network_path": "loopback",
+  "scenario": "REM-READONLY-LIST",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723",
+  "at": "2026-10-17T17:52:54.623077Z",
+  "assertions": [
+    {
+      "name": "feed_network_loopback",
+      "passed": true
+    },
+    {
+      "name": "replica_host_is_air",
+      "passed": true
+    },
+    {
+      "name": "bootstrap_snapshot",
+      "passed": true
+    },
+    {
+      "name": "scope_query_and_get",
+      "passed": true
+    },
+    {
+      "name": "scope_rest_query_0",
+      "passed": true
+    },
+    {
+      "name": "scope_rest_command_0",
+      "passed": true
+    },
+    {
+      "name": "scope_mcp_query_0",
+      "passed": true
+    },
+    {
+      "name": "scope_mcp_command_0",
+      "passed": true
+    },
+    {
+      "name": "scope_rest_query_1",
+      "passed": true
+    },
+    {
+      "name": "scope_rest_command_1",
+      "passed": true
+    },
+    {
+      "name": "scope_mcp_query_1",
+      "passed": true
+    },
+    {
+      "name": "scope_mcp_command_1",
+      "passed": true
+    },
+    {
+      "name": "scope_rest_query_2",
+      "passed": true
+    },
+    {
+      "name": "scope_rest_command_2",
+      "passed": true
+    },
+    {
+      "name": "scope_mcp_query_2",
+      "passed": true
+    },
+    {
+      "name": "scope_mcp_command_2",
+      "passed": true
+    },
+    {
+      "name": "readonly_fixture",
+      "passed": true
+    },
+    {
+      "name": "readonly_rejected_before_effect",
+      "passed": true
+    },
+    {
+      "name": "readonly_source_cannot_be_bypassed_by_move",
+      "passed": true
+    },
+    {
+      "name": "convergence_truth_gateway_replicas",
+      "passed": true
+    },
+    {
+      "name": "no_automatic_redispatch_truth_effect_counts",
+      "passed": true
+    },
+    {
+      "name": "metadata_latency_below_1s_0",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_watermarks_0",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "metadata_latency_below_1s_1",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_watermarks_1",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "metadata_latency_below_1s_2",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_watermarks_2",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_2",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_0",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_1",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_2",
+      "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass",
+      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "effect_done→gateway_visible": {
+      "samples": 1,
+      "p50_ms": 3.518583,
+      "p95_ms": 3.518583,
+      "max_ms": 3.518583,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica0": {
+      "samples": 1,
+      "p50_ms": 5.945625,
+      "p95_ms": 5.945625,
+      "max_ms": 5.945625,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica1": {
+      "samples": 1,
+      "p50_ms": 6.275167,
+      "p95_ms": 6.275167,
+      "max_ms": 6.275167,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

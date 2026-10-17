@@ -1,11 +1,52 @@
 {
-  "run_id": "run_01M55FXF61CNHN06Z4J4KBNMHM",
+  "host_conditions": {
+    "quiet_definition": "Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "start": {
+      "air": {
+        "at": "2026-10-17T07:49:58.786419Z",
+        "cpu_count": 8,
+        "load_average": [
+          29.74,
+          27.84,
+          22.97
+        ],
+        "cpu_idle_percent": 0,
+        "free_memory_bytes": 76840960,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 2,
+        "quiet": false
+      }
+    },
+    "end": {
+      "air": {
+        "at": "2026-10-17T07:50:07.804474Z",
+        "cpu_count": 8,
+        "load_average": [
+          31.52,
+          28.31,
+          23.2
+        ],
+        "cpu_idle_percent": 0,
+        "free_memory_bytes": 76775424,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 2,
+        "quiet": false
+      }
+    },
+    "quiet": false,
+    "require_quiet": false,
+    "quiet_wait_ms": 0,
+    "quiet_wait_expired": false
+  },
+  "run_id": "run_01M54DDR0FEH6G12KB1W553N8X",
   "network_path": "loopback",
   "scenario": "LAB-TRUTH-MULTIPLICITY",
   "level": "sim",
   "passed": true,
-  "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723",
-  "at": "2026-10-17T17:52:50.88181Z",
+  "git_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+  "at": "2026-10-17T07:50:04.047523Z",
   "assertions": [
     {
       "name": "feed_network_loopback",

@@ -1,0 +1,116 @@
+{
+  "host_conditions": {
+    "quiet_definition": "Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "start": {
+      "air": {
+        "at": "2026-10-17T07:29:40.533377Z",
+        "cpu_count": 8,
+        "load_average": [
+          22.38,
+          22.19,
+          17.69
+        ],
+        "cpu_idle_percent": 0.1,
+        "free_memory_bytes": 71958528,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 2,
+        "quiet": false
+      }
+    },
+    "end": {
+      "air": {
+        "at": "2026-10-17T07:29:54.505998Z",
+        "cpu_count": 8,
+        "load_average": [
+          19.57,
+          21.58,
+          17.55
+        ],
+        "cpu_idle_percent": 0,
+        "free_memory_bytes": 194527232,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 2,
+        "quiet": false
+      }
+    },
+    "quiet": false,
+    "require_quiet": false,
+    "quiet_wait_ms": 0,
+    "quiet_wait_expired": false
+  },
+  "run_id": "run_01M54C8H4VW92HM309RDV9GD72",
+  "network_path": "loopback",
+  "scenario": "CORE-BLOB-INTERRUPT",
+  "level": "sim",
+  "passed": false,
+  "git_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+  "at": "2026-10-17T07:29:44.603399Z",
+  "assertions": [
+    {
+      "name": "feed_network_loopback",
+      "passed": true
+    },
+    {
+      "name": "replica_host_is_air",
+      "passed": true
+    },
+    {
+      "name": "bootstrap_snapshot",
+      "passed": true
+    },
+    {
+      "name": "scope_query_and_get",
+      "passed": true
+    },
+    {
+      "name": "attachment_fixture",
+      "passed": true
+    },
+    {
+      "name": "attachment_metadata_visible",
+      "passed": true
+    },
+    {
+      "name": "metadata_convergence_with_blob_backlog",
+      "passed": true
+    },
+    {
+      "name": "partial_blob_persisted_before_interrupt",
+      "passed": true
+    },
+    {
+      "name": "interrupted_halfway_through_binary_chunk",
+      "passed": true
+    },
+    {
+      "name": "partition_disconnect_observed",
+      "passed": true
+    },
+    {
+      "name": "partition_healed",
+      "passed": true
+    },
+    {
+      "name": "replica_reconnected_before_healthy_latency",
+      "passed": true
+    },
+    {
+      "name": "resumed_bulk_in_progress_before_metadata_probe",
+      "passed": true
+    },
+    {
+      "name": "live_metadata_during_bulk",
+      "passed": false
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "command": "go run ./cmd/bridge-lab run lab/scenarios/core --level sim --require-quiet",
+  "source_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
+  "exit_code": 1,
+  "scenarios": 49,
+  "passed": 46,
+  "failures": {
+    "CORE-BLOB-INTERRUPT": [
+      "live_metadata_during_bulk"
+    ],
+    "CORE-BENCH": [
+      "capture_two_hundred_thousand_messages"
+    ],
+    "CORE-SNAPSHOT-INTERRUPT": [
+      "recovery_capture_drained_before_convergence"
+    ]
+  },
+  "all_scenarios_have_host_conditions": true
+}

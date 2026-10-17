@@ -1,0 +1,43 @@
+{
+  "run_id": "run_01M55FXF61CNHN06Z4J4KBNMHM",
+  "network_path": "loopback",
+  "scenario": "LAB-TRUTH-MULTIPLICITY",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723",
+  "at": "2026-10-17T17:52:50.88181Z",
+  "assertions": [
+    {
+      "name": "feed_network_loopback",
+      "passed": true
+    },
+    {
+      "name": "replica_host_is_air",
+      "passed": true
+    },
+    {
+      "name": "bootstrap_snapshot",
+      "passed": true
+    },
+    {
+      "name": "scope_query_and_get",
+      "passed": true
+    },
+    {
+      "name": "multiplicity_fault_two_truth_one_gateway",
+      "passed": true
+    },
+    {
+      "name": "truth_multiplicity_mismatch_detected",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

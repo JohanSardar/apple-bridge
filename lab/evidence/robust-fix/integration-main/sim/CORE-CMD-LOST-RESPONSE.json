@@ -1,0 +1,205 @@
+{
+  "run_id": "run_01M55FP3DF0ZEP9QXRM5A9N46G",
+  "network_path": "loopback",
+  "scenario": "CORE-CMD-LOST-RESPONSE",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723",
+  "at": "2026-10-17T17:48:49.455556Z",
+  "assertions": [
+    {
+      "name": "feed_network_loopback",
+      "passed": true
+    },
+    {
+      "name": "replica_host_is_air",
+      "passed": true
+    },
+    {
+      "name": "bootstrap_snapshot",
+      "passed": true
+    },
+    {
+      "name": "scope_query_and_get",
+      "passed": true
+    },
+    {
+      "name": "scope_rest_query_0",
+      "passed": true
+    },
+    {
+      "name": "scope_rest_command_0",
+      "passed": true
+    },
+    {
+      "name": "scope_mcp_query_0",
+      "passed": true
+    },
+    {
+      "name": "scope_mcp_command_0",
+      "passed": true
+    },
+    {
+      "name": "scope_rest_query_1",
+      "passed": true
+    },
+    {
+      "name": "scope_rest_command_1",
+      "passed": true
+    },
+    {
+      "name": "scope_mcp_query_1",
+      "passed": true
+    },
+    {
+      "name": "scope_mcp_command_1",
+      "passed": true
+    },
+    {
+      "name": "scope_rest_query_2",
+      "passed": true
+    },
+    {
+      "name": "scope_rest_command_2",
+      "passed": true
+    },
+    {
+      "name": "scope_mcp_query_2",
+      "passed": true
+    },
+    {
+      "name": "scope_mcp_command_2",
+      "passed": true
+    },
+    {
+      "name": "replica_feed_lag_injected",
+      "passed": true
+    },
+    {
+      "name": "peer_response_drop_armed",
+      "passed": true
+    },
+    {
+      "name": "replica_recovers_lost_peer_response_by_status",
+      "passed": true
+    },
+    {
+      "name": "lost_peer_response_waits_for_local_write",
+      "passed": true
+    },
+    {
+      "name": "response_lost",
+      "passed": true
+    },
+    {
+      "name": "lookup_original_id_observed",
+      "passed": true
+    },
+    {
+      "name": "retry_original_id_observed",
+      "passed": true
+    },
+    {
+      "name": "one_truth_effect",
+      "passed": true
+    },
+    {
+      "name": "convergence_truth_gateway_replicas",
+      "passed": true
+    },
+    {
+      "name": "no_automatic_redispatch_truth_effect_counts",
+      "passed": true
+    },
+    {
+      "name": "metadata_latency_below_1s_0",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_watermarks_0",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "metadata_latency_below_1s_1",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_watermarks_1",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "metadata_latency_below_1s_2",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_watermarks_2",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_2",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_0",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_1",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_2",
+      "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass",
+      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "effect_done→gateway_visible": {
+      "samples": 1,
+      "p50_ms": 4.32,
+      "p95_ms": 4.32,
+      "max_ms": 4.32,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica0": {
+      "samples": 1,
+      "p50_ms": 6.051708,
+      "p95_ms": 6.051708,
+      "max_ms": 6.051708,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica1": {
+      "samples": 1,
+      "p50_ms": 6.313958,
+      "p95_ms": 6.313958,
+      "max_ms": 6.313958,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

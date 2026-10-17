@@ -1,0 +1,220 @@
+{
+  "host_conditions": {
+    "quiet_definition": "Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "start": {
+      "air": {
+        "at": "2026-10-17T07:18:10.228684Z",
+        "cpu_count": 8,
+        "load_average": [
+          21.86,
+          15.57,
+          13.36
+        ],
+        "cpu_idle_percent": 0,
+        "free_memory_bytes": 371654656,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 2,
+        "quiet": false
+      }
+    },
+    "end": {
+      "air": {
+        "at": "2026-10-17T07:18:41.406898Z",
+        "cpu_count": 8,
+        "load_average": [
+          20.28,
+          15.77,
+          13.51
+        ],
+        "cpu_idle_percent": 0,
+        "free_memory_bytes": 76840960,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 2,
+        "quiet": false
+      }
+    },
+    "periodic_samples": [
+      {
+        "air": {
+          "at": "2026-10-17T07:18:20.588194Z",
+          "cpu_count": 8,
+          "load_average": [
+            21.03,
+            15.6,
+            13.4
+          ],
+          "cpu_idle_percent": 0,
+          "free_memory_bytes": 105037824,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T07:18:26.38317Z",
+          "cpu_count": 8,
+          "load_average": [
+            20.55,
+            15.59,
+            13.4
+          ],
+          "cpu_idle_percent": 0,
+          "free_memory_bytes": 63995904,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T07:18:32.386115Z",
+          "cpu_count": 8,
+          "load_average": [
+            20.5,
+            15.66,
+            13.44
+          ],
+          "cpu_idle_percent": 0,
+          "free_memory_bytes": 75808768,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        }
+      }
+    ],
+    "quiet": false,
+    "require_quiet": false,
+    "quiet_wait_ms": 0,
+    "quiet_wait_expired": false
+  },
+  "run_id": "run_01M54BKGA1N90XV3RV6J7NPCAP",
+  "network_path": "loopback",
+  "scenario": "CORE-KILL-DURING-APPLY",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "7e387b43e9c4a3b9aa40e5e52ae5b54f0c8160d5",
+  "at": "2026-10-17T07:18:15.617696Z",
+  "assertions": [
+    {
+      "name": "feed_network_loopback",
+      "passed": true
+    },
+    {
+      "name": "apply_write_before_commit_boundary_iteration_0",
+      "passed": true
+    },
+    {
+      "name": "apply_write_before_commit_boundary_iteration_1",
+      "passed": true
+    },
+    {
+      "name": "apply_write_before_commit_boundary_iteration_2",
+      "passed": true
+    },
+    {
+      "name": "apply_write_before_commit_boundary_iteration_3",
+      "passed": true
+    },
+    {
+      "name": "apply_write_before_commit_boundary_iteration_4",
+      "passed": true
+    },
+    {
+      "name": "apply_write_before_commit_boundary_iteration_5",
+      "passed": true
+    },
+    {
+      "name": "apply_write_before_commit_boundary_iteration_6",
+      "passed": true
+    },
+    {
+      "name": "apply_write_before_commit_boundary_iteration_7",
+      "passed": true
+    },
+    {
+      "name": "eight_replica_process_crashes",
+      "passed": true
+    },
+    {
+      "name": "recovery_capture_drained_before_convergence",
+      "passed": true
+    },
+    {
+      "name": "truth_gateway_replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "automatic_recovery_capture_drained",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_query_search_records_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_query_search_records_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_metadata_latency_and_no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_metadata_latency_and_no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_sse_watermark_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_sse_watermark_1",
+      "passed": true
+    },
+    {
+      "name": "sqlite_integrity_gateway",
+      "passed": true
+    },
+    {
+      "name": "sqlite_integrity_replica",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_in_observed_journal_changes",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_in_observed_journal_changes",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "effect_done→gateway_visible": {
+      "samples": 1,
+      "p50_ms": 15.204375,
+      "p95_ms": 15.204375,
+      "max_ms": 15.204375,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica0": {
+      "samples": 1,
+      "p50_ms": 25.581333,
+      "p95_ms": 25.581333,
+      "max_ms": 25.581333,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

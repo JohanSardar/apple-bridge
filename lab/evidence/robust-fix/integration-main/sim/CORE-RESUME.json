@@ -1,0 +1,109 @@
+{
+  "run_id": "run_01M55FRXFY3ECK71EXM5935PTH",
+  "network_path": "loopback",
+  "scenario": "CORE-RESUME",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "83d0df35956c0bd04062ebed3201bae8272cd723",
+  "at": "2026-10-17T17:50:21.69497Z",
+  "assertions": [
+    {
+      "name": "feed_network_loopback",
+      "passed": true
+    },
+    {
+      "name": "replica_host_is_air",
+      "passed": true
+    },
+    {
+      "name": "bootstrap_snapshot",
+      "passed": true
+    },
+    {
+      "name": "scope_query_and_get",
+      "passed": true
+    },
+    {
+      "name": "convergence_truth_gateway_replicas",
+      "passed": true
+    },
+    {
+      "name": "latency_observations_complete",
+      "passed": true
+    },
+    {
+      "name": "resume_without_snapshot",
+      "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass",
+      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
+    },
+    {
+      "name": "sse_contiguous_watermarks_0",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_watermarks_1",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_0",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_1",
+      "passed": true
+    },
+    {
+      "name": "partition_observations_complete_1",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "effect_done→gateway_visible": {
+      "samples": 2,
+      "p50_ms": 4.9975,
+      "p95_ms": 7.831834,
+      "max_ms": 7.831834,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica0": {
+      "samples": 2,
+      "p50_ms": 8.426292,
+      "p95_ms": 11.295334,
+      "max_ms": 11.295334,
+      "timeouts": 0
+    },
+    "partition_effect_done→replica_visible:replica0": {
+      "samples": 30,
+      "p50_ms": 15965.841833,
+      "p95_ms": 30113.8045,
+      "max_ms": 31121.760916,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}
