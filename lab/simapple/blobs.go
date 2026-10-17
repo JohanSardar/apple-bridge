@@ -36,7 +36,12 @@ func (f *fakeApple) blobRoutes(mux *http.ServeMux) {
 		f.mu.Lock()
 		for i := range observations {
 			key := fmt.Sprintf("blob-history-%05d", i)
-			data, _ := json.Marshal(map[string]any{"title": "[ab-test] " + key, "completed": false, "list_id": map[string]any{"$ref": map[string]string{"collection": "reminders.list", "native_key": "list"}}})
+			dataFields := map[string]any{"title": "[ab-test] " + key, "completed": false, "list_id": map[string]any{"$ref": map[string]string{"collection": "reminders.list", "native_key": "list"}}}
+			if i%5 == 0 {
+				sum := sha256.Sum256([]byte(key))
+				dataFields["blob"] = map[string]any{"digest": hex.EncodeToString(sum[:]), "size": 128, "state": "offloaded"}
+			}
+			data, _ := json.Marshal(dataFields)
 			observations[i] = contracts.Observation{Kind: "upsert", Collection: "reminders.reminder", NativeKey: key, ObservedAt: now, Data: data}
 			f.records[key] = observations[i]
 		}

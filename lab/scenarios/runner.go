@@ -902,6 +902,9 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		ran++
 		fmt.Fprintln(os.Stderr, "running", s.ID, level)
 		duration := 3 * time.Minute
+		if s.ID == "CORE-BLOB-REFERENCE-INDEX" {
+			duration = 10 * time.Minute
+		}
 		if s.ID == "CORE-BENCH" {
 			duration = 10 * time.Minute
 			if os.Getenv("APPLE_BRIDGE_LAB_CONTENDED_BENCH") == "1" {
