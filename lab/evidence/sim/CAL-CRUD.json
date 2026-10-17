@@ -3,35 +3,35 @@
     "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
     "start": {
       "air": {
-        "at": "2026-10-17T18:54:19.736821Z",
+        "at": "2026-10-17T19:47:27.177978Z",
         "cpu_count": 8,
         "load_average": [
-          4.02,
-          3.51,
-          4.3
+          5.28,
+          5.22,
+          5.08
         ],
-        "cpu_idle_percent": 64,
-        "free_memory_bytes": 120111104,
+        "cpu_idle_percent": 75,
+        "free_memory_bytes": 176930816,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 1,
+        "heavy_queue_length": 3,
         "quiet": false
       }
     },
     "end": {
       "air": {
-        "at": "2026-10-17T18:54:22.471336Z",
+        "at": "2026-10-17T19:47:30.236048Z",
         "cpu_count": 8,
         "load_average": [
-          4.02,
-          3.51,
-          4.3
+          5.1,
+          5.18,
+          5.06
         ],
-        "cpu_idle_percent": 74,
-        "free_memory_bytes": 130170880,
+        "cpu_idle_percent": 82,
+        "free_memory_bytes": 129826816,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 1,
+        "heavy_queue_length": 3,
         "quiet": false
       }
     },
@@ -40,12 +40,13 @@
     "quiet_wait_ms": 0,
     "quiet_wait_expired": false
   },
-  "run_id": "cal_01M55KE2N564DW49CXW8GX9B8Q",
+  "run_id": "cal_01M55PFBD245FHWZHY7SGVNNFR",
+  "network_path": "loopback",
   "scenario": "CAL-CRUD",
   "level": "sim",
   "passed": true,
-  "git_sha": "a6f7365c140995183fe7dddcbdecebd97bd1c9e5",
-  "at": "2026-10-17T18:54:20.837518Z",
+  "git_sha": "641a3be3f9f2c0d9f766be90528e4917a093aac6",
+  "at": "2026-10-17T19:47:28.290948Z",
   "assertions": [
     {
       "name": "calendar_visible",
@@ -243,7 +244,7 @@
   "conditions": {
     "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
     "heavy_slots_in_use": "2",
-    "load_average": "4.02 3.51 4.30",
+    "load_average": "5.28 5.22 5.08",
     "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"
   }
 }

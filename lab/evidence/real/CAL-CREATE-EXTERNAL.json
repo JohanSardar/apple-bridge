@@ -1,0 +1,345 @@
+{
+  "host_conditions": {
+    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "start": {
+      "air": {
+        "at": "2026-10-17T19:48:00.843915Z",
+        "cpu_count": 8,
+        "load_average": [
+          4.47,
+          5,
+          5
+        ],
+        "cpu_idle_percent": 60,
+        "free_memory_bytes": 176619520,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 3,
+        "quiet": false
+      }
+    },
+    "end": {
+      "air": {
+        "at": "2026-10-17T19:48:56.569626Z",
+        "cpu_count": 8,
+        "load_average": [
+          5.74,
+          5.29,
+          5.11
+        ],
+        "cpu_idle_percent": 67,
+        "free_memory_bytes": 435273728,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 4,
+        "quiet": false
+      }
+    },
+    "periodic_samples": [
+      {
+        "air": {
+          "at": "2026-10-17T19:48:06.895663Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.83,
+            5.06,
+            5.02
+          ],
+          "cpu_idle_percent": 52,
+          "free_memory_bytes": 58851328,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:48:11.895641Z",
+          "cpu_count": 8,
+          "load_average": [
+            5.57,
+            5.21,
+            5.07
+          ],
+          "cpu_idle_percent": 36,
+          "free_memory_bytes": 82526208,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:48:16.895717Z",
+          "cpu_count": 8,
+          "load_average": [
+            5.44,
+            5.19,
+            5.07
+          ],
+          "cpu_idle_percent": 53,
+          "free_memory_bytes": 66273280,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:48:21.895822Z",
+          "cpu_count": 8,
+          "load_average": [
+            5.49,
+            5.2,
+            5.07
+          ],
+          "cpu_idle_percent": 38,
+          "free_memory_bytes": 239353856,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:48:26.895985Z",
+          "cpu_count": 8,
+          "load_average": [
+            5.29,
+            5.17,
+            5.06
+          ],
+          "cpu_idle_percent": 53,
+          "free_memory_bytes": 205701120,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:48:31.899052Z",
+          "cpu_count": 8,
+          "load_average": [
+            5.18,
+            5.15,
+            5.05
+          ],
+          "cpu_idle_percent": 35,
+          "free_memory_bytes": 62373888,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:48:36.896136Z",
+          "cpu_count": 8,
+          "load_average": [
+            5.33,
+            5.18,
+            5.06
+          ],
+          "cpu_idle_percent": 27,
+          "free_memory_bytes": 134610944,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:48:41.89625Z",
+          "cpu_count": 8,
+          "load_average": [
+            5.3,
+            5.17,
+            5.06
+          ],
+          "cpu_idle_percent": 23,
+          "free_memory_bytes": 61374464,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:48:46.895938Z",
+          "cpu_count": 8,
+          "load_average": [
+            6.24,
+            5.37,
+            5.13
+          ],
+          "cpu_idle_percent": 35,
+          "free_memory_bytes": 809189376,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T19:48:51.896431Z",
+          "cpu_count": 8,
+          "load_average": [
+            5.98,
+            5.33,
+            5.12
+          ],
+          "cpu_idle_percent": 38,
+          "free_memory_bytes": 396689408,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 4,
+          "quiet": false
+        }
+      }
+    ],
+    "quiet": false,
+    "require_quiet": false,
+    "quiet_wait_ms": 0,
+    "quiet_wait_expired": false
+  },
+  "run_id": "cal_01M55PGC8N85J8R96XX7TAKWP9",
+  "network_path": "loopback",
+  "scenario": "CAL-CREATE-EXTERNAL",
+  "level": "real",
+  "passed": false,
+  "git_sha": "641a3be3f9f2c0d9f766be90528e4917a093aac6",
+  "at": "2026-10-17T19:48:01.941904Z",
+  "assertions": [
+    {
+      "name": "private_signed_apps_per_world",
+      "passed": true
+    },
+    {
+      "name": "initial_calendar_scan_complete",
+      "passed": true
+    },
+    {
+      "name": "calendar_visible",
+      "passed": true
+    },
+    {
+      "name": "truth_calendar_fields",
+      "passed": true
+    },
+    {
+      "name": "initial_occurrences_visible",
+      "passed": true
+    },
+    {
+      "name": "agenda_returns_occurrences",
+      "passed": true
+    },
+    {
+      "name": "independent_appletruth_equality",
+      "passed": true
+    },
+    {
+      "name": "replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "contiguous_feed_0",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "contiguous_feed_1",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "latency_effect_done→gateway_visible",
+      "passed": false
+    },
+    {
+      "name": "latency_effect_done→replica_visible:replica0",
+      "passed": false
+    },
+    {
+      "name": "no_scope_leak_query",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_mcp_agenda",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_query",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_mcp_agenda",
+      "passed": true
+    },
+    {
+      "name": "private_helper_paused_for_integrity",
+      "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass",
+      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
+    },
+    {
+      "name": "tagged_fixture_cleanup_audit",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "effect_done→gateway_visible": {
+      "samples": 10,
+      "p50_ms": 1221.245708,
+      "p95_ms": 1260.680458,
+      "max_ms": 1260.680458,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica0": {
+      "samples": 10,
+      "p50_ms": 1222.596708,
+      "p95_ms": 1270.46725,
+      "max_ms": 1270.46725,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ],
+  "conditions": {
+    "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
+    "heavy_slots_in_use": "2",
+    "load_average": "4.47 5.00 5.00",
+    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"
+  }
+}
