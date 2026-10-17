@@ -3,18 +3,18 @@
     "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
     "heavy_slots_in_use": 2,
     "load_average": [
-      "3.77",
-      "14.72",
-      "24.99"
+      "15.62",
+      "7.69",
+      "13.66"
     ],
     "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"
   },
-  "run_id": "cal_01M55FETWPZZHJ0K8HJ4GCJ5DH",
+  "run_id": "cal_01M55G6386CB62D33B6E6NFFRV",
   "scenario": "CAL-CREATE-EXTERNAL",
   "level": "sim",
   "passed": true,
-  "git_sha": "85ac1fcec04158967edab67660ce399389bead7b",
-  "at": "2026-10-17T17:44:51.350749Z",
+  "git_sha": "65e06eeda16c0247c327925c51d304a30205d74d",
+  "at": "2026-10-17T17:57:33.574216Z",
   "assertions": [
     {
       "name": "calendar_visible",
@@ -96,16 +96,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 10,
-      "p50_ms": 13.14,
-      "p95_ms": 21.604,
-      "max_ms": 21.604,
+      "p50_ms": 10.098,
+      "p95_ms": 14.8,
+      "max_ms": 14.8,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 10,
-      "p50_ms": 18.42,
-      "p95_ms": 26.641,
-      "max_ms": 26.641,
+      "p50_ms": 13.982,
+      "p95_ms": 20.89,
+      "max_ms": 20.89,
       "timeouts": 0
     }
   },
