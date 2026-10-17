@@ -625,7 +625,15 @@ func (s *Store) BeginInstall(ctx context.Context, begin contracts.FeedFrame, epo
 	}
 	s.write.Lock()
 	defer s.write.Unlock()
-	if _, err := s.db.ExecContext(ctx, "DELETE FROM staging_records"); err != nil {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	if _, err = tx.ExecContext(ctx, "DELETE FROM staging_records"); err != nil {
+		return nil, err
+	}
+	if err = s.commitProtected(ctx, tx); err != nil {
 		return nil, err
 	}
 	return &SnapshotInstall{store: s, ID: begin.ID, Cursor: contracts.Cursor{Epoch: epoch, SubscriptionRevision: revision, Sequence: begin.S}, Count: begin.Count, Digest: begin.Digest, ExpiresAt: begin.ExpiresAt}, nil

@@ -96,7 +96,15 @@ func (s *Store) Restrict(ctx context.Context, visibility trust.Visibility) error
 		placeholders = append(placeholders, "?")
 		args = append(args, "")
 	}
-	_, err := s.db.ExecContext(ctx, "DELETE FROM records WHERE source NOT IN ("+strings.Join(placeholders, ",")+")", args...)
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err = tx.ExecContext(ctx, "DELETE FROM records WHERE source NOT IN ("+strings.Join(placeholders, ",")+")", args...); err != nil {
+		return err
+	}
+	err = s.commitProtected(ctx, tx)
 	if err == nil {
 		s.signal()
 	}
