@@ -1,0 +1,32 @@
+{
+  "date": "2026-10-17",
+  "scope": "Notes Apple Event timeout diagnosis on macOS 26.7.1",
+  "observed": [
+    "VNC capture showed the password lock screen; no passwords entered.",
+    "Per-run signed Helper notes-probe (count accounts, five-second timeout) returned -1712 before Notes relaunch.",
+    "Notes main thread was idle in NSApplication.run, while designatedCodeRequirementsCacheQueue waited on a semaphore and receiveFrom queues waited for that queue.",
+    "User tccd sample included CFUserNotificationReceiveResponse; system tccd was responsive.",
+    "A SIGTERM sent to user tccd did not change its PID. Relaunching Notes cleared the blocked queue and the same signed Helper probe returned error_code 0 while locked.",
+    "TCCAccessRequestIndirect attributed the successful request to dev.applebridge.helper, matched both code requirements, and returned authValue 2 for com.apple.Notes.",
+    "launchctl asuser osascript count notes was attributed to /usr/libexec/sshd-keygen-wrapper, authValue 1, and timed out with -1712. Subsequent signed Helper probes then also timed out.",
+    "Relaunching Notes again restored the signed Helper probe; a fresh Notes sample no longer contained blocked receiveFrom or designatedCodeRequirementsCacheQueue stacks.",
+    "Messages and Notes both execute NSAppleScript inside the signed Helper; Messages addresses com.apple.MobileSMS by bundle ID, Notes addresses Notes by application name. Successful TCC logs establish that the latter resolved to com.apple.Notes.",
+    "Per-run signed AppleTruth count notes probe returned verified after recovery; TCC attributed it to dev.applebridge.truth with the existing signing requirement.",
+    "No user or system TCC database was edited."
+  ],
+  "conclusion": "A pending Automation authorization request can stall the target Notes process Apple Event queue, including requests from already authorized senders. The lock prevents handling that prompt but does not itself prohibit authorized Notes Apple Events. The cause of the original pending request before sampling is not independently established.",
+  "recovery": "Relaunch Notes after granting Automation, then use the signed Helper and AppleTruth bundles via open -n -W -a. Do not route Notes automation through sshd-owned osascript, and do not retry ambiguous writes or automatically restart Notes after a write timeout.",
+  "private_evidence": "Raw tccd logs, process samples and screen captures remain outside git.",
+  "commands": [
+    "ssh -o ControlPath=none air: sudo log show --last 5m --info --debug --style compact --predicate 'process == \"tccd\"'",
+    "sudo sample <Notes PID> 3 -file <private sample>",
+    "sudo sample <user tccd PID> 2 -file <private sample>",
+    "~/tools/vncenv/bin/python ~/tools/airvnc.py capture <private screenshot>",
+    "packaging/dev/heavy.sh packaging/dev/build-helper.sh /tmp/ablab/<run>/apps/AppleBridgeHelper.app",
+    "packaging/dev/heavy.sh packaging/dev/build-truth.sh /tmp/ablab/<run>/apps/AppleTruth.app",
+    "open -n -W -a /tmp/ablab/<run>/apps/AppleBridgeHelper.app --args notes-probe --report \"$HOME/Library/Application Support/AppleBridgeDev/<report>.json\"",
+    "killall Notes; open -g -j -a Notes (verify old PID exits and new PID starts before probing)",
+    "sudo launchctl asuser 501 sudo -u <GUI user> /usr/bin/osascript -e 'with timeout of 5 seconds' -e 'tell application id \"com.apple.Notes\" to count notes' -e 'end timeout' (diagnosis only: this sender required a separate grant and stalled Notes)",
+    "open -n -W -a /tmp/ablab/<run>/apps/AppleTruth.app --args probe --request-file <notes request> --report <private report> (temporary independent diagnostic probe: count notes)"
+  ]
+}
