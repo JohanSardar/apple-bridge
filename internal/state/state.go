@@ -73,8 +73,8 @@ func Open(home string) (*Store, error) {
  CREATE TABLE IF NOT EXISTS applied_batches(after_seq INTEGER PRIMARY KEY,through_seq INTEGER NOT NULL);
  CREATE TABLE IF NOT EXISTS staging_records(snapshot TEXT NOT NULL,collection TEXT NOT NULL,id TEXT NOT NULL,payload BLOB NOT NULL,PRIMARY KEY(snapshot,collection,id));
  DELETE FROM staging_records;
- CREATE INDEX IF NOT EXISTS records_blob_candidates ON records(collection,id) WHERE deleted=0 AND (instr(payload,'"digest"')>0 OR instr(payload,'\u')>0);
- CREATE INDEX IF NOT EXISTS staging_blob_candidates ON staging_records(snapshot,collection,id) WHERE (instr(payload,'"digest"')>0 OR instr(payload,'\u')>0);`)
+ CREATE INDEX IF NOT EXISTS records_blob_candidates ON records(collection,id) WHERE deleted=0 AND (instr(payload,'"digest"')>0 OR instr(payload,'"raw_body_digest"')>0 OR instr(payload,'\u')>0);
+ CREATE INDEX IF NOT EXISTS staging_blob_candidates ON staging_records(snapshot,collection,id) WHERE (instr(payload,'"digest"')>0 OR instr(payload,'"raw_body_digest"')>0 OR instr(payload,'\u')>0);`)
 	if err != nil {
 		db.Close()
 		return nil, err
