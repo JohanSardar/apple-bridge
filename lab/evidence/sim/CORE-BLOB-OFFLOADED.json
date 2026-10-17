@@ -2,8 +2,8 @@
   "scenario": "CORE-BLOB-OFFLOADED",
   "level": "sim",
   "passed": true,
-  "git_sha": "9e2dab3090430519dc5e0a71f1478b32e14489b9",
-  "at": "2026-10-17T05:20:46.439285Z",
+  "git_sha": "301d03f482174bc922eca623ed4487ec7743acd9",
+  "at": "2026-10-17T05:24:56.404081Z",
   "assertions": [
     {
       "name": "replica_host_is_air",
@@ -81,16 +81,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 25.927042,
-      "p95_ms": 25.927042,
-      "max_ms": 25.927042,
+      "p50_ms": 23.374292,
+      "p95_ms": 23.374292,
+      "max_ms": 23.374292,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 56.27975,
-      "p95_ms": 56.27975,
-      "max_ms": 56.27975,
+      "p50_ms": 56.25725,
+      "p95_ms": 56.25725,
+      "max_ms": 56.25725,
       "timeouts": 0
     }
   },

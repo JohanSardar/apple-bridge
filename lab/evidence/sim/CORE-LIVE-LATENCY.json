@@ -2,8 +2,8 @@
   "scenario": "CORE-LIVE-LATENCY",
   "level": "sim",
   "passed": true,
-  "git_sha": "9e2dab3090430519dc5e0a71f1478b32e14489b9",
-  "at": "2026-10-17T05:20:56.544255Z",
+  "git_sha": "301d03f482174bc922eca623ed4487ec7743acd9",
+  "at": "2026-10-17T05:25:06.426185Z",
   "assertions": [
     {
       "name": "replica_host_is_air",
@@ -73,16 +73,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 200,
-      "p50_ms": 27.216292,
-      "p95_ms": 37.631083,
-      "max_ms": 49.634625,
+      "p50_ms": 24.233958,
+      "p95_ms": 34.621209,
+      "max_ms": 44.822541,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 200,
-      "p50_ms": 49.709333,
-      "p95_ms": 72.081667,
-      "max_ms": 82.008792,
+      "p50_ms": 47.138583,
+      "p95_ms": 62.908167,
+      "max_ms": 78.752875,
       "timeouts": 0
     }
   },

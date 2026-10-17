@@ -2,8 +2,8 @@
   "scenario": "LAB-MALFORMED-SCENARIO",
   "level": "sim",
   "passed": true,
-  "git_sha": "9e2dab3090430519dc5e0a71f1478b32e14489b9",
-  "at": "2026-10-17T05:22:08.310338Z",
+  "git_sha": "301d03f482174bc922eca623ed4487ec7743acd9",
+  "at": "2026-10-17T05:26:18.427683Z",
   "assertions": [
     {
       "name": "malformed_scenario_rejected",

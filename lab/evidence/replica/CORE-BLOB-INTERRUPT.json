@@ -2,8 +2,8 @@
   "scenario": "CORE-BLOB-INTERRUPT",
   "level": "replica",
   "passed": true,
-  "git_sha": "9e2dab3090430519dc5e0a71f1478b32e14489b9",
-  "at": "2026-10-17T05:22:43.348183Z",
+  "git_sha": "301d03f482174bc922eca623ed4487ec7743acd9",
+  "at": "2026-10-17T05:26:53.821252Z",
   "assertions": [
     {
       "name": "replica_host_is_ubuntu",
@@ -109,30 +109,30 @@
   "latency": {
     "effect_done→blob_complete": {
       "samples": 1,
-      "p50_ms": 6183.432833,
-      "p95_ms": 6183.432833,
-      "max_ms": 6183.432833,
+      "p50_ms": 5926.463583,
+      "p95_ms": 5926.463583,
+      "max_ms": 5926.463583,
       "timeouts": 0
     },
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 23.194292,
-      "p95_ms": 23.194292,
-      "max_ms": 23.194292,
+      "p50_ms": 17.6515,
+      "p95_ms": 17.6515,
+      "max_ms": 17.6515,
       "timeouts": 0
     },
     "effect_done→metadata_during_blob": {
       "samples": 1,
-      "p50_ms": 36.777708,
-      "p95_ms": 36.777708,
-      "max_ms": 36.777708,
+      "p50_ms": 64.5975,
+      "p95_ms": 64.5975,
+      "max_ms": 64.5975,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 36.633125,
-      "p95_ms": 36.633125,
-      "max_ms": 36.633125,
+      "p50_ms": 119.74875,
+      "p95_ms": 119.74875,
+      "max_ms": 119.74875,
       "timeouts": 0
     }
   },
