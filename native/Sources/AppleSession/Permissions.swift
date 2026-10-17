@@ -14,6 +14,12 @@ public final class PermissionReport: @unchecked Sendable {
     private let lock = NSLock()
     private var values: [String: String] = Dictionary(uniqueKeysWithValues: ["full_disk_access", "automation_messages", "automation_system_events", "accessibility", "contacts", "calendar", "reminders"].map { ($0, "unknown") })
 
+    public func note(_ name: String, _ value: String) {
+        lock.lock()
+        defer { lock.unlock() }
+        values[name] = value
+    }
+
     public func set(_ name: String, _ state: PermissionState) {
         lock.lock()
         defer { lock.unlock() }
@@ -63,14 +69,29 @@ public final class PermissionSession {
         NSApplication.shared.activate()
         refresh()
         let states = report.snapshot()
-        if states["calendar"] == PermissionState.notDetermined.rawValue {
-            _ = try? await events.requestFullAccessToEvents()
+        if states["calendar"] != PermissionState.granted.rawValue {
+            do {
+                let granted = try await events.requestFullAccessToEvents()
+                report.note("calendar_request", granted ? "granted" : "refused")
+            } catch {
+                report.note("calendar_request", "error \((error as NSError).domain) \((error as NSError).code)")
+            }
         }
-        if states["reminders"] == PermissionState.notDetermined.rawValue {
-            _ = try? await events.requestFullAccessToReminders()
+        if states["reminders"] != PermissionState.granted.rawValue {
+            do {
+                let granted = try await events.requestFullAccessToReminders()
+                report.note("reminders_request", granted ? "granted" : "refused")
+            } catch {
+                report.note("reminders_request", "error \((error as NSError).domain) \((error as NSError).code)")
+            }
         }
-        if states["contacts"] == PermissionState.notDetermined.rawValue {
-            _ = try? await contacts.requestAccess(for: .contacts)
+        if states["contacts"] != PermissionState.granted.rawValue {
+            do {
+                let granted = try await contacts.requestAccess(for: .contacts)
+                report.note("contacts_request", granted ? "granted" : "refused")
+            } catch {
+                report.note("contacts_request", "error \((error as NSError).domain) \((error as NSError).code)")
+            }
         }
         if states["accessibility"] != PermissionState.granted.rawValue {
             let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
