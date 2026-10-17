@@ -215,6 +215,8 @@ func (s *Store) Stage(ctx context.Context, r io.Reader, expect Expect) (Digest, 
 	pin := contracts.NewID("pin")
 	s.manifest.Pins[pin] = d
 	s.manifest.Entries[d] = Entry{State: "present", Size: total, Received: total}
+	close(s.changed)
+	s.changed = make(chan struct{})
 	return d, pin, s.save()
 }
 func (s *Store) OpenAuthorized(ctx context.Context, grant trust.RecordGrant, digest Digest) (io.ReadSeekCloser, error) {

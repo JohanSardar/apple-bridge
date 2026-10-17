@@ -32,6 +32,7 @@ func (f *fakeApple) blobRoutes(mux *http.ServeMux) {
 	})
 	mux.HandleFunc("POST /blob-fixture", func(w http.ResponseWriter, r *http.Request) {
 		var a struct {
+			Busy   int    `json:"unavailable_reads"`
 			Drops  int    `json:"drop_reads"`
 			Size   int    `json:"size"`
 			State  string `json:"state"`
@@ -43,6 +44,7 @@ func (f *fakeApple) blobRoutes(mux *http.ServeMux) {
 			return
 		}
 		f.mu.Lock()
+		f.blobBusy = a.Busy
 		f.blobDrops = a.Drops
 		f.blobState = a.State
 		f.blobDelay = time.Duration(a.SlowMS) * time.Millisecond
@@ -109,6 +111,10 @@ func (f *fakeApple) blobReply(ctx context.Context, wire *applepeer.Wire, read co
 	f.mu.Lock()
 	digest := strings.TrimPrefix(read.Handle, fmt.Sprintf("%d:", fence))
 	b, ok := f.blobs[digest]
+	busy := f.blobBusy > 0
+	if busy {
+		f.blobBusy--
+	}
 	drop := f.blobDrops > 0
 	if drop {
 		f.blobDrops--
@@ -117,6 +123,10 @@ func (f *fakeApple) blobReply(ctx context.Context, wire *applepeer.Wire, read co
 	f.mu.Unlock()
 	if drop {
 		return nil
+	}
+	if busy {
+		_, err := wire.Send(contracts.IPCFrame{T: "BlobUnavailable", Handle: read.Handle, Reason: "unavailable"})
+		return err
 	}
 	if !ok || state == "offloaded" || state == "missing" {
 		if state == "" {

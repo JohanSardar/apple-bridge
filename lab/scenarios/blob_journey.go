@@ -237,6 +237,40 @@ func blobJourney(ctx context.Context, w *world.World, id string, evidence *Evide
 			return false
 		}
 	}
+	if id == "CORE-BLOB-GATEWAY-RETRY" {
+		failedStart := time.Now()
+		if !check("retry_exhaustion_fixture", w.ControlAction("/blob-fixture", map[string]any{"size": 128 << 10, "unavailable_reads": 8}) == nil) {
+			return false
+		}
+		var failedDigest string
+		if !check("bounded_retries_surface_terminal_reason", w.Await(22*time.Second, func() bool {
+			records, err := w.Records(w.Gateway)
+			for _, r := range records {
+				if r.ID != attachment.ID {
+					continue
+				}
+				refs := contracts.BlobReferences(r.Data)
+				if len(refs) == 1 && refs[0].Digest != digest {
+					failedDigest = refs[0].Digest
+				}
+			}
+			p, perr := blobProgress(ctx, w.Gateway)
+			entry := p.Entries[failedDigest]
+			return err == nil && perr == nil && failedDigest != "" && entry.State == "failed" && entry.Reason == "ipc_retry_exhausted"
+		}) == nil) {
+			return false
+		}
+		if !check("retry_backoff_is_bounded", time.Since(failedStart) >= 15*time.Second && time.Since(failedStart) < 22*time.Second) {
+			return false
+		}
+		measure("retry_exhaustion→gateway_failed", failedStart)
+		if !check("replica_surfaces_terminal_failure", w.Await(time.Second, func() bool {
+			p, err := blobProgress(ctx, e)
+			return err == nil && p.Entries[failedDigest].State == "failed" && p.Entries[failedDigest].Reason != ""
+		}) == nil) {
+			return false
+		}
+	}
 	if id == "CORE-BLOB-CORRUPT" {
 		p, _ := blobProgress(ctx, e)
 		if !check("corruption_detected_and_refetched", p.Corruptions == 1) {

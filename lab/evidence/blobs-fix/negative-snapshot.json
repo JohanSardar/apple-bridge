@@ -1,0 +1,89 @@
+{
+  "scenario": "CORE-BLOB-GC",
+  "level": "sim",
+  "passed": false,
+  "git_sha": "afd659b1b315c20dae2e35ac9d3c6a317944cfed",
+  "at": "2026-10-17T05:39:08.197788Z",
+  "assertions": [
+    {
+      "name": "replica_host_is_air",
+      "passed": true
+    },
+    {
+      "name": "bootstrap_snapshot",
+      "passed": true
+    },
+    {
+      "name": "scope_query_and_get",
+      "passed": true
+    },
+    {
+      "name": "attachment_fixture",
+      "passed": true
+    },
+    {
+      "name": "attachment_metadata_visible",
+      "passed": true
+    },
+    {
+      "name": "metadata_convergence_with_blob_backlog",
+      "passed": true
+    },
+    {
+      "name": "blob_complete",
+      "passed": true
+    },
+    {
+      "name": "authorized_bytes_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "authorized_bytes_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "private_immutable_blob",
+      "passed": true
+    },
+    {
+      "name": "referenced_blob_survives_grace",
+      "passed": true
+    },
+    {
+      "name": "record_protects_blob",
+      "passed": true
+    },
+    {
+      "name": "snapshot_reference_acquired",
+      "passed": true
+    },
+    {
+      "name": "stage_returns_pin",
+      "passed": true
+    },
+    {
+      "name": "delete_attachment_and_message",
+      "passed": true
+    },
+    {
+      "name": "deletion_metadata_converges",
+      "passed": true
+    },
+    {
+      "name": "snapshot_only_and_pin_survive_grace",
+      "passed": false
+    }
+  ],
+  "latency": {
+    "effect_done→blob_complete": {
+      "samples": 1,
+      "p50_ms": 666.546666,
+      "p95_ms": 666.546666,
+      "max_ms": 666.546666,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

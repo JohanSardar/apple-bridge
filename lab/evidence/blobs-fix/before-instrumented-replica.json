@@ -1,0 +1,190 @@
+{
+  "scenario": "CORE-BLOB-INTERRUPT",
+  "level": "replica",
+  "passed": true,
+  "git_sha": "afd659b1b315c20dae2e35ac9d3c6a317944cfed",
+  "at": "2026-10-17T05:39:27.397432Z",
+  "assertions": [
+    {
+      "name": "replica_host_is_ubuntu",
+      "passed": true
+    },
+    {
+      "name": "bootstrap_snapshot",
+      "passed": true
+    },
+    {
+      "name": "scope_query_and_get",
+      "passed": true
+    },
+    {
+      "name": "attachment_fixture",
+      "passed": true
+    },
+    {
+      "name": "attachment_metadata_visible",
+      "passed": true
+    },
+    {
+      "name": "metadata_convergence_with_blob_backlog",
+      "passed": true
+    },
+    {
+      "name": "gateway_blob_present",
+      "passed": true
+    },
+    {
+      "name": "partial_blob_persisted_before_interrupt",
+      "passed": true
+    },
+    {
+      "name": "interrupted_halfway_through_binary_chunk",
+      "passed": true
+    },
+    {
+      "name": "replica_restart",
+      "passed": true
+    },
+    {
+      "name": "reconnected_feed",
+      "passed": true
+    },
+    {
+      "name": "active_bulk_transfer_barrier",
+      "passed": true
+    },
+    {
+      "name": "live_metadata_during_bulk",
+      "passed": true
+    },
+    {
+      "name": "blob_complete",
+      "passed": true
+    },
+    {
+      "name": "authorized_bytes_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "authorized_bytes_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "transfer_resumed_from_nonzero_offset",
+      "passed": true
+    },
+    {
+      "name": "convergence_truth_gateway_replicas",
+      "passed": true
+    },
+    {
+      "name": "latency_observations_complete",
+      "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass",
+      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
+    },
+    {
+      "name": "sse_contiguous_watermarks_0",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_watermarks_1",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_0",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_1",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "bulk_barrier→blob_complete": {
+      "samples": 1,
+      "p50_ms": 299.911833,
+      "p95_ms": 299.911833,
+      "max_ms": 299.911833,
+      "timeouts": 0
+    },
+    "effect_done→blob_complete": {
+      "samples": 1,
+      "p50_ms": 6156.831125,
+      "p95_ms": 6156.831125,
+      "max_ms": 6156.831125,
+      "timeouts": 0
+    },
+    "effect_done→gateway_blob_present": {
+      "samples": 1,
+      "p50_ms": 536.287333,
+      "p95_ms": 536.287333,
+      "max_ms": 536.287333,
+      "timeouts": 0
+    },
+    "effect_done→gateway_visible": {
+      "samples": 1,
+      "p50_ms": 23.410958,
+      "p95_ms": 23.410958,
+      "max_ms": 23.410958,
+      "timeouts": 0
+    },
+    "effect_done→metadata_during_blob": {
+      "samples": 1,
+      "p50_ms": 45.4835,
+      "p95_ms": 45.4835,
+      "max_ms": 45.4835,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica0": {
+      "samples": 1,
+      "p50_ms": 37.575041,
+      "p95_ms": 37.575041,
+      "max_ms": 37.575041,
+      "timeouts": 0
+    },
+    "gateway_present→replica_partial": {
+      "samples": 1,
+      "p50_ms": 4159.271417,
+      "p95_ms": 4159.271417,
+      "max_ms": 4159.271417,
+      "timeouts": 0
+    },
+    "interrupt→reconnected": {
+      "samples": 1,
+      "p50_ms": 971.205709,
+      "p95_ms": 971.205709,
+      "max_ms": 971.205709,
+      "timeouts": 0
+    },
+    "reconnected→blob_complete": {
+      "samples": 1,
+      "p50_ms": 480.019292,
+      "p95_ms": 480.019292,
+      "max_ms": 480.019292,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air",
+    "ubuntu"
+  ]
+}

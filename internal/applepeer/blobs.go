@@ -43,6 +43,9 @@ func (w *Wire) ReadBlob(ctx context.Context, handle string, offset, length int64
 		return nil, false, contracts.ErrUnavailable
 	case f := <-ch:
 		if f.T == "BlobUnavailable" {
+			if f.Reason == "unavailable" {
+				return nil, false, contracts.ErrUnavailable
+			}
 			if f.Reason == "offloaded" {
 				return nil, false, contracts.ErrUnsupported
 			}

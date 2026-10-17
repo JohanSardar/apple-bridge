@@ -55,6 +55,7 @@ type fakeApple struct {
 	fault             string
 	pause             time.Duration
 	blobDrops         int
+	blobBusy          int
 
 	completed map[contracts.Source]map[uint64]bool
 	path      string
