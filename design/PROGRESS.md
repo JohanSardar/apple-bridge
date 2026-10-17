@@ -19,7 +19,7 @@ Resume point for any fresh session. Updated after every unit of work.
 
 ## In flight (2026-10-17)
 - Worker `ab-m0-tracer-r1` (codex gpt-6.1-sol medium Fast): M0 tracer bullet — contracts, applepeer, state, replication, minimal trust/frontdoor/runtime, lab simapple/world/runner; scenarios CORE-BOOT, CORE-LIVE-LATENCY, CORE-RESUME at sim + replica.
-- Worker `ab-m1-spike-r1`: stable dev signing identity, `native/` Helper app bundle, `onboard`/`status` TCC modes, probes (self-handles, send-self, ax-dump). Will end needing Johan's permission clicks.
+- DONE `ab-m1-spike-r1` (343ee36, 34508ab): stable dev signing identity, `native/` Helper app bundle, `onboard`/`status` TCC modes, probes (self-handles, send-self, ax-dump). SwiftPM crashes on this Air → build script compiles with swiftc directly against the macOS 26.5 SDK. Review `ab-m1-spike-review-r1` running.
 
 ## Next
 - Review both units (separate reviewer workers, two-axis code review, rerun scenarios).
@@ -27,4 +27,5 @@ Resume point for any fresh session. Updated after every unit of work.
 - M0 breadth in parallel: (a) replication/state failure + recovery + bench, (b) commands + full trust + MCP parity, (c) blobs.
 
 ## Blockers
-- None yet. Expected: TCC permission batch for the Helper (M1), Developer ID for notarization (M5).
+- TCC grants for AppleBridgeHelper (asked 2026-10-17; Johan will do it when at the Air; don't ask again). Detect by running the `status` mode (see WORKER-RULES) between work units; start real-level work once granted.
+- Expected later: Developer ID for notarization (M5).

@@ -33,3 +33,7 @@ You are a worker on Apple Bridge, delegated by the build leader. Read this file,
 3. Deviations from SPEC and why; proposed spec changes.
 4. New scenarios you added.
 5. Open problems, blockers, and what Johan must do (if anything).
+
+## Helper signing identity (do not break)
+- The dev Helper `~/Applications/AppleBridgeDev/AppleBridgeHelper.app` (bundle id `dev.applebridge.helper`) is signed by the dedicated self-signed certificate in `~/Library/Keychains/apple-bridge-dev.keychain-db` via `packaging/dev/sign.sh`. Johan grants TCC permissions to it once. Never regenerate or replace that certificate, never change the bundle id or the designated requirement, and always sign through `packaging/dev/sign.sh`; otherwise every grant is lost.
+- Check permissions without prompting: `open -W -a ~/Applications/AppleBridgeDev/AppleBridgeHelper.app --args status --report "$HOME/Library/Application Support/AppleBridgeDev/status.json"`. Never run `onboard` unless the leader says so.
