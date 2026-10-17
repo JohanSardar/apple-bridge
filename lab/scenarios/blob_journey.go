@@ -117,7 +117,19 @@ func blobJourney(ctx context.Context, w *world.World, id string, evidence *Evide
 		}
 
 		w.Partition(0)
+		if !check("partition_disconnect_observed", w.Await(10*time.Second, func() bool {
+			status, err := w.Status(e)
+			return err == nil && status.State == "disconnected"
+		}) == nil) {
+			return false
+		}
 		if !check("replica_restart", w.Heal(0) == nil) {
+			return false
+		}
+		if !check("replica_reconnected_before_healthy_latency", w.Await(10*time.Second, func() bool {
+			status, err := w.Status(e)
+			return err == nil && status.State == "connected"
+		}) == nil) {
 			return false
 		}
 		effect := time.Now()
