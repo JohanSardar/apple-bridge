@@ -81,7 +81,7 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 			return fail("independent_contacts_truth_access")
 		}
 		defer func() {
-			_, err := w.Truth("fixture", map[string]any{"source": "contacts", "action": "cleanup", "tag": tag})
+			cleanup, err := w.Truth("fixture", map[string]any{"source": "contacts", "action": "cleanup", "tag": tag})
 			remaining, readErr := truth()
 			ok := err == nil && readErr == nil && remaining["tagged_count"] == json.Number("0")
 			result.Assertions = append(result.Assertions, Assertion{Name: "owned_test_contacts_cleaned", Passed: ok})
@@ -89,6 +89,14 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 			empty := readErr == nil && remaining["bridge_test_count"] == json.Number("0")
 			result.Assertions = append(result.Assertions, Assertion{Name: "bridge_test_organization_empty", Passed: empty})
 			result.Passed = result.Passed && empty
+			audit, _ := cleanup["cleanup_audit"].(map[string]any)
+			preserved := err == nil && audit["unowned_fields_unchanged"] == true && audit["groups_preserved"] == true && audit["containers_preserved"] == true && audit["whole_container_operations"] == json.Number("0") && audit["unowned_identifiers_before_sha256"] == audit["unowned_identifiers_after_sha256"]
+			result.Assertions = append(result.Assertions, Assertion{Name: "cleanup_preserves_unowned_contacts_and_containers", Passed: preserved})
+			result.Passed = result.Passed && preserved
+			if result.Metrics == nil {
+				result.Metrics = map[string]any{}
+			}
+			result.Metrics["cleanup_audit"] = audit
 
 		}()
 	}
