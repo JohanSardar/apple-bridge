@@ -212,7 +212,43 @@ func runCommands(ctx context.Context, w *world.World, id string, e *Evidence) {
 		add("replica_unavailable_fast", errors.Is(err, contracts.ErrUnavailable) && time.Since(start) < 2*time.Second)
 		add("gateway_restarted", w.RestartGateway() == nil)
 		add("no_offline_effect", w.Await(10*time.Second, func() bool { return convergence(w) }) == nil && count(c, 0))
-	case "CORE-CMD-CONFLICT", "REM-CONFLICT":
+	case "CORE-CMD-CONFLICT":
+		type attempt struct {
+			Record  contracts.CommandRecord
+			Command contracts.Command
+			Error   error
+		}
+		start := make(chan struct{})
+		finished := make(chan attempt, 2)
+		for i := range 2 {
+			c := command("reminders.update", map[string]any{"id": reminder.ID, "title": fmt.Sprintf("[ab-test] concurrent edit %d", i)}, reminder.Version)
+			endpoint := scripted.Client{Endpoint: w.Replicas[i]}
+			go func() {
+				<-start
+				var result contracts.CommandRecord
+				err := endpoint.Call(ctx, c.Op, c, &result)
+				finished <- attempt{result, c, err}
+			}()
+		}
+		close(start)
+		wins, conflicts := 0, 0
+		truthCounts := true
+		for range 2 {
+			result := <-finished
+			if observed(result.Record, result.Error) {
+				wins++
+				truthCounts = truthCounts && count(result.Command, 1)
+			} else {
+				var problem *contracts.Error
+				if errors.As(result.Error, &problem) && problem.Code == "conflict" && problem.Current != nil && problem.Current.Version > reminder.Version {
+					conflicts++
+				}
+				truthCounts = truthCounts && count(result.Command, 0)
+			}
+		}
+		add("concurrent_same_version_exactly_one_winner", wins == 1 && conflicts == 1)
+		add("concurrent_loser_has_no_truth_effect", truthCounts)
+	case "REM-CONFLICT":
 		c := command("reminders.update", map[string]any{"id": reminder.ID, "title": "[ab-test] first edit"}, reminder.Version)
 		first, err := submit(c)
 		add("first_version_wins", observed(first, err))

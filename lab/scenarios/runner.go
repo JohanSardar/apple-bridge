@@ -431,10 +431,14 @@ func Run(ctx context.Context, s Scenario, level string) Evidence {
 			}) != nil {
 				return fail("healthy_command_probe_visible")
 			}
+			probeSeen := make([]Seen, len(watchers))
+			for i, observer := range watchers {
+				probeSeen[i], _ = observer.observed("command-probe")
+			}
 			runCommands(ctx, w, s.ID, &evidence)
 			for i, observer := range watchers {
-				err := w.Await(5*time.Second, func() bool { _, ok := observer.observed("command-probe"); return ok })
-				seen, ok := observer.observed("command-probe")
+				seen := probeSeen[i]
+				ok := !seen.At.IsZero()
 				values := []float64{}
 				timeouts := 0
 				if ok {
@@ -447,7 +451,7 @@ func Run(ctx context.Context, s Scenario, level string) Evidence {
 					name = fmt.Sprintf("effect_done→replica_visible:replica%d", i-1)
 				}
 				evidence.Latency[name] = stats(values, timeouts)
-				add(fmt.Sprintf("metadata_latency_below_1s_%d", i), err == nil && ok && seen.At.Sub(effectStart) < time.Second)
+				add(fmt.Sprintf("metadata_latency_below_1s_%d", i), ok && seen.At.Sub(effectStart) < time.Second)
 				add(fmt.Sprintf("sse_contiguous_watermarks_%d", i), observer.valid())
 				observer.mu.Lock()
 				noFalseDelete := !observer.falseDelete

@@ -34,16 +34,17 @@ type captureRequest struct {
 	Close   bool
 }
 type fakeApple struct {
-	blobs     map[string][]byte
+	blobs map[string][]byte
 	blobState string
 	blobDelay time.Duration
-	recovered []contracts.IPCFrame
-	home      string
-	effects   map[string]int
-	evidence  map[string]contracts.IPCFrame
-	tickets   map[string]ticket
-	fault     string
-	pause     time.Duration
+	generation string
+	recovered  []contracts.IPCFrame
+	home       string
+	effects    map[string]int
+	evidence   map[string]contracts.IPCFrame
+	tickets    map[string]ticket
+	fault      string
+	pause      time.Duration
 
 	mu      sync.Mutex
 	records map[string]contracts.Observation
@@ -91,11 +92,14 @@ func fullScan(records []contracts.Observation) contracts.Capture {
 	return contracts.Capture{Source: contracts.Reminders, Observations: records, ScanID: contracts.NewID("scan"), Scope: []string{"reminders.list", "reminders.reminder"}, ScanStartedAt: time.Now().UTC(), CompletionEvidence: "complete"}
 }
 func Run(ctx context.Context, cfg Config) error {
-	fake := &fakeApple{blobs: map[string][]byte{},home: filepath.Dir(cfg.Control), effects: map[string]int{}, evidence: map[string]contracts.IPCFrame{}, tickets: map[string]ticket{}, records: map[string]contracts.Observation{}, changes: make(chan captureRequest, 4096)}
+	fake := &fakeApple{blobs: map[string][]byte{}, generation: contracts.NewID("sim"), home: filepath.Dir(cfg.Control), effects: map[string]int{}, evidence: map[string]contracts.IPCFrame{}, tickets: map[string]ticket{}, records: map[string]contracts.Observation{}, changes: make(chan captureRequest, 4096)}
 	var durable durableApple
 	if b, err := os.ReadFile(filepath.Join(fake.home, "truth.json")); err == nil {
 		if json.Unmarshal(b, &durable) != nil {
 			return contracts.ErrCorrupt
+		}
+		if durable.Generation != "" {
+			fake.generation = durable.Generation
 		}
 		fake.records = durable.Records
 		fake.effects = durable.Effects
@@ -232,7 +236,7 @@ func Run(ctx context.Context, cfg Config) error {
 	if err != nil {
 		return err
 	}
-	generation := contracts.NewID("sim")
+	generation := fake.generation
 	for ctx.Err() == nil {
 		conn, err := net.DialUnix("unix", nil, &net.UnixAddr{Name: cfg.Socket, Net: "unix"})
 		if err == nil {
@@ -268,6 +272,9 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 	if open.T != "Open" || open.Protocol != contracts.IPCProtocol || open.OwnerFence == 0 || open.ByteCredit <= 0 {
 		return contracts.ErrInvalid
 	}
+	f.mu.Lock()
+	f.tickets = map[string]ticket{}
+	f.mu.Unlock()
 	credit := open.ByteCredit
 	coverage := contracts.Coverage{Fields: "complete", Missing: []string{}}
 	if _, err = wire.Send(contracts.IPCFrame{T: "Ready", Protocol: contracts.IPCProtocol, Capabilities: map[contracts.Source][]string{contracts.Reminders: {"reminders.create", "reminders.update", "reminders.complete", "reminders.uncomplete", "reminders.delete", "reminders.create_list"}}, Coverage: map[contracts.Source]contracts.Coverage{contracts.Reminders: coverage, contracts.Messages: coverage}, HelperBuild: "sim/1", OSBuild: "sim"}); err != nil {

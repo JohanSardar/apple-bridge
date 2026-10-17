@@ -30,13 +30,14 @@ type guardEntry struct {
 	Outcome   *contracts.IPCFrame `json:"outcome,omitempty"`
 }
 type durableApple struct {
-	Records  map[string]contracts.Observation `json:"records"`
-	Effects  map[string]int                   `json:"effects"`
-	Evidence map[string]contracts.IPCFrame    `json:"evidence"`
+	Generation string                           `json:"generation"`
+	Records    map[string]contracts.Observation `json:"records"`
+	Effects    map[string]int                   `json:"effects"`
+	Evidence   map[string]contracts.IPCFrame    `json:"evidence"`
 }
 
 func (f *fakeApple) saveLocked() error {
-	b, err := json.Marshal(durableApple{f.records, f.effects, f.evidence})
+	b, err := json.Marshal(durableApple{Generation: f.generation, Records: f.records, Effects: f.effects, Evidence: f.evidence})
 	if err != nil {
 		return err
 	}
@@ -310,7 +311,7 @@ func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fenc
 			return err
 		}
 		f.mu.Unlock()
-		if fault == "crash-after-effect" || fault == "crash-before-outcome" {
+		if fault == "crash-after-effect" {
 			os.Exit(78)
 		}
 		capture := contracts.Capture{Source: contracts.Reminders, Observations: []contracts.Observation{o}}
@@ -319,6 +320,9 @@ func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fenc
 		}
 		if err := emit(capture); err != nil {
 			return err
+		}
+		if fault == "crash-before-outcome" {
+			os.Exit(78)
 		}
 		if fault == "ambiguous-outcome" {
 			outcome.Disposition = "indeterminate"
