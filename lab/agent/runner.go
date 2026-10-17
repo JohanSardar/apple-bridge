@@ -192,7 +192,7 @@ func loadTasks() ([]Task, error) {
 			return nil, fmt.Errorf("invalid agent task %s", file)
 		}
 		seen[task.ID] = true
-		if !slices.Contains([]string{"reminders", "contacts", "calendar", "messages", "usage"}, task.Source) || task.Scope != task.Source+":read" && task.Scope != task.Source+":write" {
+		if !slices.Contains([]string{"reminders", "contacts", "calendar", "messages", "notes", "usage"}, task.Source) || task.Scope != task.Source+":read" && task.Scope != task.Source+":write" {
 			return nil, fmt.Errorf("unsupported agent task %s", file)
 		}
 		ready := true
@@ -284,8 +284,22 @@ func (r AgentRunner) run(ctx context.Context, task Task, number int) (attempt At
 	defer func() {
 		diagnostics()
 		_, err := w.RecoverTruth("fixture", map[string]any{"source": task.Source, "action": "cleanup", "tag": tag})
-		state, readErr := w.RecoverTruth("observe", map[string]any{"source": task.Source, "tag": tag})
-		attempt.Cleanup = err == nil && readErr == nil && len(truthRecords(state)) == 0
+		request := map[string]any{"source": task.Source, "tag": tag}
+		if task.Source == "notes" {
+			request["sqlite"] = true
+		}
+		cleaned := func() bool {
+			state, readErr := w.RecoverTruth("observe", request)
+			remaining := 0
+			for _, record := range truthRecords(state) {
+				title, _ := record["title"].(string)
+				if task.Source != "notes" || strings.HasPrefix(title, tag) {
+					remaining++
+				}
+			}
+			return readErr == nil && remaining == 0
+		}
+		attempt.Cleanup = err == nil && w.Await(15*time.Second, cleaned) == nil
 		if createdList != "" {
 			_, err = w.RecoverTruth("fixture", map[string]any{"source": "reminders", "action": "cleanup_list", "tag": tag, "list_id": createdList})
 			attempt.Cleanup = attempt.Cleanup && err == nil
@@ -303,6 +317,18 @@ func (r AgentRunner) run(ctx context.Context, task Task, number int) (attempt At
 		calendars, _ := state["calendars"].([]any)
 		if err == nil && len(calendars) == 0 {
 			err = fmt.Errorf("existing Bridge Test calendar required")
+		}
+	} else if task.Source == "notes" {
+		var state map[string]any
+		state, err = w.Truth("observe", map[string]any{"source": "notes", "sqlite": true})
+		found := false
+		folders, _ := state["folders"].([]any)
+		for _, value := range folders {
+			folder, _ := value.(map[string]any)
+			found = found || folder["title"] == "Bridge Test"
+		}
+		if err == nil && !found {
+			err = fmt.Errorf("existing Bridge Test folder required")
 		}
 	} else {
 		_, err = w.Truth("observe", map[string]any{"source": "reminders", "tag": tag})
@@ -325,7 +351,7 @@ func (r AgentRunner) run(ctx context.Context, task Task, number int) (attempt At
 			return false
 		}
 		for _, record := range records {
-			if task.Source == "contacts" && bytes.Contains(record.Data, []byte(tag)) || record.Collection == map[string]string{"reminders": "reminders.list", "calendar": "calendar.calendar"}[task.Source] && bytes.Contains(record.Data, []byte("Bridge Test")) {
+			if task.Source == "contacts" && bytes.Contains(record.Data, []byte(tag)) || record.Collection == map[string]string{"reminders": "reminders.list", "calendar": "calendar.calendar", "notes": "notes.folder"}[task.Source] && bytes.Contains(record.Data, []byte("Bridge Test")) {
 				return true
 			}
 		}
@@ -362,6 +388,10 @@ func (r AgentRunner) run(ctx context.Context, task Task, number int) (attempt At
 	} else if task.Source == "calendar" {
 		title, _ := records[0]["title"].(string)
 		attempt.Truth = strings.Contains(strings.ToLower(title), "test appointment") && sameTime(records[0]["start"], due) && sameTime(records[0]["end"], due.Add(30*time.Minute)) && records[0]["all_day"] == false
+	} else if task.Source == "notes" {
+		title, _ := records[0]["title"].(string)
+		body, _ := records[0]["plain_text"].(string)
+		attempt.Truth = title == tag+" Packing list" && strings.TrimSpace(body) == tag+" Packing list\nMilk\nBread" && records[0]["locked"] == false && notesFolderMatches(w, title, body)
 	} else {
 		title, _ := records[0]["title"].(string)
 		fields, _ := records[0]["due"].(map[string]any)
@@ -374,7 +404,7 @@ func (r AgentRunner) run(ctx context.Context, task Task, number int) (attempt At
 		}
 		count := 0
 		for _, record := range actual {
-			if record.Collection != task.Source+"."+map[string]string{"contacts": "contact", "reminders": "reminder", "calendar": "event"}[task.Source] {
+			if record.Collection != task.Source+"."+map[string]string{"contacts": "contact", "reminders": "reminder", "calendar": "event", "notes": "note"}[task.Source] {
 				continue
 			}
 			var fields map[string]any
@@ -387,6 +417,12 @@ func (r AgentRunner) run(ctx context.Context, task Task, number int) (attempt At
 				}
 			} else if task.Source == "calendar" {
 				if fields["title"] == records[0]["title"] && sameTime(fields["start"], due) && sameTime(fields["end"], due.Add(30*time.Minute)) && fields["all_day"] == false {
+					count++
+				}
+			} else if task.Source == "notes" {
+				body, _ := fields["plain_text"].(string)
+				expected, _ := records[0]["plain_text"].(string)
+				if fields["title"] == records[0]["title"] && strings.TrimSpace(body) == strings.TrimSpace(expected) && fields["locked"] == false {
 					count++
 				}
 			} else if fields["title"] == records[0]["title"] {

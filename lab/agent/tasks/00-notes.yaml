@@ -1,0 +1,5 @@
+id: notes-packing-list
+source: notes
+requires: [notes.write]
+scope: notes:write
+prompt: 'Create a plain-text note in the existing Bridge Test folder. Set its title to "{{tag}} Packing list" and its body to exactly two lines: "Milk" and "Bread". Do not repeat the title in the body. Do not create a folder.'
