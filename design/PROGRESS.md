@@ -18,13 +18,18 @@ Resume point for any fresh session. Updated after every unit of work.
 - `go run ./tools/lint` ok; `go run ./tools/featuregraph` ok (24 features, 0/177 scenario-levels passing).
 
 ## In flight (2026-10-17)
-- Worker `ab-m0-tracer-r1` (codex gpt-6.1-sol medium Fast): M0 tracer bullet — contracts, applepeer, state, replication, minimal trust/frontdoor/runtime, lab simapple/world/runner; scenarios CORE-BOOT, CORE-LIVE-LATENCY, CORE-RESUME at sim + replica.
-- DONE `ab-m1-spike-r1` (343ee36, 34508ab): stable dev signing identity, `native/` Helper app bundle, `onboard`/`status` TCC modes, probes (self-handles, send-self, ax-dump). SwiftPM crashes on this Air → build script compiles with swiftc directly against the macOS 26.5 SDK. Reviewed by `ab-m1-spike-review-r1`: safety OK (self-handle guard, no personal output, login keychain untouched), lint exception exact, designated requirement stable across rebuilds. Open findings, assigned to the M1 Helper-session unit: (1) `make build/native` still call crashing SwiftPM — fix by installing a user-local toolchain (swiftly, no sudo) or a dependency-aware swiftc build; SwiftPM error is a CLT framework symbol mismatch (`swift-package` vs `BuildServerProtocol.framework`), i.e. a broken CLT install; (2) HELPER-TCC-READY / probe-safety scenarios must exist as bridge-lab scenarios; (3) onboarding should open the FDA settings pane.
+- `ab-m0-tracer-review-r1`: two-axis review of the tracer (282d82b..d4e5ce4), reruns sim + replica.
+- `ab-m0-commands-r1` (worktree m0-commands): command lifecycle, ApplePeer command frames, SimApplePeer commands + faults, RemoteGateway + delegated identity, MCP, CORE-CMD-*, parity, forged delegation, localhost defense, REM-CRUD/CONFLICT/EXTERNAL-RACE/READONLY-LIST.
+- `ab-m0-robust-r1` (worktree m0-robust): fault proxy, direct Tailscale replica path, snapshot/retention/gap/kill/slow-consumer/disconnect/upgrade/helper-restart/restore/disk-full/scope/pair/cred-lifecycle/bench scenarios.
+- `ab-m0-blobs-r1` (worktree m0-blobs): internal/blobs + feed transfer + IPC blob reads + CORE-BLOB-*.
 
 ## Next
-- Review both units (separate reviewer workers, two-axis code review, rerun scenarios).
-- Ask Johan (one batched request) to grant the Helper's permissions on the Air.
-- M0 breadth in parallel: (a) replication/state failure + recovery + bench, (b) commands + full trust + MCP parity, (c) blobs.
+- Review each M0 unit when it lands (fresh reviewer per unit); route confirmed findings to fix rounds.
+- M1 Helper-session unit (Swift IPC client for ipc/1, AgendaGate, Reminders/Calendar sources, AppleTruth, build fix via swiftly) once M0-B has defined command frames.
+- Real-level work once TCC grants appear in the `status` report.
+
+## Done (M0 tracer)
+- Tracer `ab-m0-tracer-r1` (5b083db..d4e5ce4): CORE-BOOT, CORE-LIVE-LATENCY, CORE-RESUME pass at sim and replica (Ubuntu via SSH tunnel). Replica CORE-LIVE-LATENCY p50/p95/max = 19.8/109.6/169.0 ms (n=200); sim 8.6/10.9/15.1 ms. Dependency approved: golang.org/x/sys (peer UID).
 
 ## Blockers
 - TCC grants for AppleBridgeHelper (asked 2026-10-17; Johan will do it when at the Air; don't ask again). Detect by running the `status` mode (see WORKER-RULES) between work units; start real-level work once granted.
