@@ -3,6 +3,7 @@ package contracts
 import (
 	"encoding/json"
 	"reflect"
+	"slices"
 	"strings"
 	"time"
 )
@@ -57,6 +58,17 @@ func schemaType(t reflect.Type) map[string]any {
 }
 func OperationSchema(d OperationDescriptor) map[string]any {
 	s := JSONSchema(d.Input)
+	if _, ok := d.Input.(ReadQuery); ok {
+		collections := []string{""}
+		for collection := range Collections {
+			collections = append(collections, collection)
+		}
+		slices.Sort(collections)
+		fields := s["properties"].(map[string]any)
+		collection := fields["collection"].(map[string]any)
+		collection["enum"] = collections
+		collection["description"] = "Collection name; use an empty string to query all visible collections. Follow next with after to read further pages."
+	}
 	if strings.HasPrefix(d.Name, "notes.") {
 		return noteSchema(d, s)
 	}
