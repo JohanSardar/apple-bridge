@@ -3,6 +3,7 @@ package scenarios
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"syscall"
@@ -199,6 +200,11 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 		add("newer_replica_compatible_schema_negotiates_older_gateway", err == nil && status.State == "connected" && status.Schema == 1)
 
 	case "bench":
+		completionTimeout := 3 * time.Minute
+		contended := os.Getenv("APPLE_BRIDGE_LAB_CONTENDED_BENCH") == "1"
+		if contended {
+			completionTimeout = 15 * time.Minute
+		}
 		token, err := w.ScopedToken(w.Gateway, "admin")
 		if err != nil {
 			return fail("benchmark_token")
@@ -212,15 +218,15 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 			return fail("seed_two_hundred_thousand_messages")
 		}
 		effect := time.Now()
-		if w.Await(3*time.Minute, func() bool {
+		if w.Await(completionTimeout, func() bool {
 			report, err := w.Doctor(w.Gateway)
 			records, _ := report["records"].(map[string]any)
 			return err == nil && records["messages.message"] == float64(200000)
 		}) != nil {
 			return fail("capture_two_hundred_thousand_messages")
 		}
-		evidence.Metrics = map[string]any{"messages": 200000, "fixture_and_capture_ms": float64(time.Since(start)) / float64(time.Millisecond), "effect_done_to_gateway_capture_ms": float64(time.Since(effect)) / float64(time.Millisecond)}
-		if w.Await(3*time.Minute, func() bool {
+		evidence.Metrics = map[string]any{"messages": 200000, "completion_timeout_ms": completionTimeout.Milliseconds(), "contended_run": contended, "fixture_and_capture_ms": float64(time.Since(start)) / float64(time.Millisecond), "effect_done_to_gateway_capture_ms": float64(time.Since(effect)) / float64(time.Millisecond)}
+		if w.Await(completionTimeout, func() bool {
 			report, err := w.Doctor(w.Replicas[0])
 			records, _ := report["records"].(map[string]any)
 			return err == nil && records["messages.message"] == float64(200000)
