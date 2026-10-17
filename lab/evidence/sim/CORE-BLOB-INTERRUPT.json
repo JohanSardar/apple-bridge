@@ -3,15 +3,15 @@
     "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
     "start": {
       "air": {
-        "at": "2026-10-17T17:49:28.160076Z",
+        "at": "2026-10-17T18:10:03.743475Z",
         "cpu_count": 8,
         "load_average": [
-          4.48,
-          8.62,
-          19.3
+          5.71,
+          8.88,
+          11.28
         ],
-        "cpu_idle_percent": 66,
-        "free_memory_bytes": 1195442176,
+        "cpu_idle_percent": 67,
+        "free_memory_bytes": 129925120,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
         "heavy_queue_length": 2,
@@ -20,52 +20,51 @@
     },
     "end": {
       "air": {
-        "at": "2026-10-17T17:49:36.688254Z",
+        "at": "2026-10-17T18:10:10.889423Z",
         "cpu_count": 8,
         "load_average": [
-          4.52,
-          8.56,
-          19.21
+          5.62,
+          8.75,
+          11.2
         ],
-        "cpu_idle_percent": 89,
-        "free_memory_bytes": 884637696,
+        "cpu_idle_percent": 76,
+        "free_memory_bytes": 304349184,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
         "heavy_queue_length": 2,
         "quiet": false
       }
     },
-    "periodic_samples": [
-      {
-        "air": {
-          "at": "2026-10-17T17:49:34.25045Z",
-          "cpu_count": 8,
-          "load_average": [
-            4.52,
-            8.56,
-            19.21
-          ],
-          "cpu_idle_percent": 81,
-          "free_memory_bytes": 899563520,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 2,
-          "quiet": false
-        }
-      }
-    ],
     "quiet": false,
     "require_quiet": false,
     "quiet_wait_ms": 0,
     "quiet_wait_expired": false
   },
-  "run_id": "run_01M55FQAADP4S0GJ1SMMM6MFW9",
+  "run_id": "run_01M55GX0XTEQV6BD1V0W8C0PDJ",
   "network_path": "loopback",
+  "metrics": {
+    "bulk_barrier_outstanding_bytes": 14680064,
+    "bulk_barrier_received_bytes": 2097152,
+    "digest_check_0_bytes": 16777216,
+    "digest_check_0_deadline_exceeded": false,
+    "digest_check_0_error_type": "\u003cnil\u003e",
+    "digest_check_0_read_ms": 35.208584,
+    "digest_check_0_status": 200,
+    "digest_check_1_bytes": 16777216,
+    "digest_check_1_deadline_exceeded": false,
+    "digest_check_1_error_type": "\u003cnil\u003e",
+    "digest_check_1_read_ms": 8.025292,
+    "digest_check_1_status": 200,
+    "feed_chunk_bytes": 1048576,
+    "fixture_bytes": 16777216,
+    "lab_delay_per_feed_chunk_ms": 150,
+    "metadata_observed_outstanding_bytes": 14680064
+  },
   "scenario": "CORE-BLOB-INTERRUPT",
   "level": "sim",
   "passed": true,
-  "git_sha": "41c46d82102923f7c5e0848aa0e4a17009c228d7",
-  "at": "2026-10-17T17:49:29.293705Z",
+  "git_sha": "daad6abe774aa24c4f92e9396c94f746d0ca1b20",
+  "at": "2026-10-17T18:10:04.858059Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -96,6 +95,10 @@
       "passed": true
     },
     {
+      "name": "gateway_blob_present",
+      "passed": true
+    },
+    {
       "name": "partial_blob_persisted_before_interrupt",
       "passed": true
     },
@@ -116,7 +119,11 @@
       "passed": true
     },
     {
-      "name": "resumed_bulk_in_progress_before_metadata_probe",
+      "name": "reconnected_feed",
+      "passed": true
+    },
+    {
+      "name": "active_bulk_transfer_barrier",
       "passed": true
     },
     {
@@ -189,32 +196,67 @@
     }
   ],
   "latency": {
+    "bulk_barrier→blob_complete": {
+      "samples": 1,
+      "p50_ms": 2186.014791,
+      "p95_ms": 2186.014791,
+      "max_ms": 2186.014791,
+      "timeouts": 0
+    },
     "effect_done→blob_complete": {
       "samples": 1,
-      "p50_ms": 6748.054334,
-      "p95_ms": 6748.054334,
-      "max_ms": 6748.054334,
+      "p50_ms": 5120.079083,
+      "p95_ms": 5120.079083,
+      "max_ms": 5120.079083,
+      "timeouts": 0
+    },
+    "effect_done→gateway_blob_present": {
+      "samples": 1,
+      "p50_ms": 1413.934791,
+      "p95_ms": 1413.934791,
+      "max_ms": 1413.934791,
       "timeouts": 0
     },
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 7.3685,
-      "p95_ms": 7.3685,
-      "max_ms": 7.3685,
+      "p50_ms": 3.007917,
+      "p95_ms": 3.007917,
+      "max_ms": 3.007917,
       "timeouts": 0
     },
     "effect_done→metadata_during_blob": {
       "samples": 1,
-      "p50_ms": 59.90175,
-      "p95_ms": 59.90175,
-      "max_ms": 59.90175,
+      "p50_ms": 82.896083,
+      "p95_ms": 82.896083,
+      "max_ms": 82.896083,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 9.960125,
-      "p95_ms": 9.960125,
-      "max_ms": 9.960125,
+      "p50_ms": 4.058834,
+      "p95_ms": 4.058834,
+      "max_ms": 4.058834,
+      "timeouts": 0
+    },
+    "gateway_present→replica_partial": {
+      "samples": 1,
+      "p50_ms": 176.743625,
+      "p95_ms": 176.743625,
+      "max_ms": 176.743625,
+      "timeouts": 0
+    },
+    "interrupt→reconnected": {
+      "samples": 1,
+      "p50_ms": 1031.722916,
+      "p95_ms": 1031.722916,
+      "max_ms": 1031.722916,
+      "timeouts": 0
+    },
+    "reconnected→blob_complete": {
+      "samples": 1,
+      "p50_ms": 2343.506458,
+      "p95_ms": 2343.506458,
+      "max_ms": 2343.506458,
       "timeouts": 0
     }
   },

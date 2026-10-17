@@ -1,0 +1,1719 @@
+{
+  "host_conditions": {
+    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "start": {
+      "air": {
+        "at": "2026-10-17T18:18:32.863197Z",
+        "cpu_count": 8,
+        "load_average": [
+          8.69,
+          7.56,
+          9.21
+        ],
+        "cpu_idle_percent": 60,
+        "free_memory_bytes": 63406080,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 2,
+        "quiet": false
+      },
+      "ubuntu": {
+        "at": "2026-10-17T18:18:32.863189Z",
+        "cpu_count": 8,
+        "load_average": [
+          1.5,
+          1.58,
+          1.39
+        ],
+        "cpu_idle_percent": 80,
+        "free_memory_bytes": 682717184,
+        "active_heavy_slots": 0,
+        "other_active_heavy_slots": 0,
+        "heavy_queue_length": 0,
+        "quiet": true
+      }
+    },
+    "end": {
+      "air": {
+        "at": "2026-10-17T18:22:40.384736Z",
+        "cpu_count": 8,
+        "load_average": [
+          4.96,
+          5.73,
+          7.94
+        ],
+        "cpu_idle_percent": 70,
+        "free_memory_bytes": 995000320,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 3,
+        "quiet": false
+      },
+      "ubuntu": {
+        "at": "2026-10-17T18:22:40.384735Z",
+        "cpu_count": 8,
+        "load_average": [
+          2.79,
+          2.11,
+          1.63
+        ],
+        "cpu_idle_percent": 84.0909,
+        "free_memory_bytes": 650047488,
+        "active_heavy_slots": 0,
+        "other_active_heavy_slots": 0,
+        "heavy_queue_length": 0,
+        "quiet": true
+      }
+    },
+    "periodic_samples": [
+      {
+        "air": {
+          "at": "2026-10-17T18:18:39.282926Z",
+          "cpu_count": 8,
+          "load_average": [
+            8.24,
+            7.48,
+            9.17
+          ],
+          "cpu_idle_percent": 61,
+          "free_memory_bytes": 76791808,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:18:39.282933Z",
+          "cpu_count": 8,
+          "load_average": [
+            1.38,
+            1.56,
+            1.38
+          ],
+          "cpu_idle_percent": 85.7325,
+          "free_memory_bytes": 519680000,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:18:44.283308Z",
+          "cpu_count": 8,
+          "load_average": [
+            7.74,
+            7.39,
+            9.13
+          ],
+          "cpu_idle_percent": 39,
+          "free_memory_bytes": 65110016,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:18:44.282873Z",
+          "cpu_count": 8,
+          "load_average": [
+            1.35,
+            1.55,
+            1.38
+          ],
+          "cpu_idle_percent": 82.398,
+          "free_memory_bytes": 605999104,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:18:49.281207Z",
+          "cpu_count": 8,
+          "load_average": [
+            8.16,
+            7.48,
+            9.15
+          ],
+          "cpu_idle_percent": 65,
+          "free_memory_bytes": 1003175936,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:18:49.281219Z",
+          "cpu_count": 8,
+          "load_average": [
+            1.24,
+            1.52,
+            1.37
+          ],
+          "cpu_idle_percent": 87.3418,
+          "free_memory_bytes": 460341248,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:18:54.2811Z",
+          "cpu_count": 8,
+          "load_average": [
+            7.98,
+            7.46,
+            9.13
+          ],
+          "cpu_idle_percent": 65,
+          "free_memory_bytes": 838385664,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:18:54.281041Z",
+          "cpu_count": 8,
+          "load_average": [
+            1.14,
+            1.5,
+            1.36
+          ],
+          "cpu_idle_percent": 87.8173,
+          "free_memory_bytes": 532418560,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:18:59.282107Z",
+          "cpu_count": 8,
+          "load_average": [
+            7.58,
+            7.38,
+            9.1
+          ],
+          "cpu_idle_percent": 64,
+          "free_memory_bytes": 714293248,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:18:59.282094Z",
+          "cpu_count": 8,
+          "load_average": [
+            1.13,
+            1.49,
+            1.36
+          ],
+          "cpu_idle_percent": 83.9037,
+          "free_memory_bytes": 465096704,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:19:04.281799Z",
+          "cpu_count": 8,
+          "load_average": [
+            7.38,
+            7.34,
+            9.07
+          ],
+          "cpu_idle_percent": 50,
+          "free_memory_bytes": 387497984,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:19:04.281768Z",
+          "cpu_count": 8,
+          "load_average": [
+            1.04,
+            1.46,
+            1.35
+          ],
+          "cpu_idle_percent": 83.2274,
+          "free_memory_bytes": 539774976,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:19:09.284079Z",
+          "cpu_count": 8,
+          "load_average": [
+            7.03,
+            7.27,
+            9.04
+          ],
+          "cpu_idle_percent": 48,
+          "free_memory_bytes": 165412864,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:19:09.284063Z",
+          "cpu_count": 8,
+          "load_average": [
+            0.96,
+            1.44,
+            1.35
+          ],
+          "cpu_idle_percent": 81.2977,
+          "free_memory_bytes": 408190976,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:19:14.290516Z",
+          "cpu_count": 8,
+          "load_average": [
+            6.78,
+            7.22,
+            9.01
+          ],
+          "cpu_idle_percent": 59,
+          "free_memory_bytes": 60014592,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:19:14.290485Z",
+          "cpu_count": 8,
+          "load_average": [
+            0.96,
+            1.43,
+            1.35
+          ],
+          "cpu_idle_percent": 82.3155,
+          "free_memory_bytes": 458645504,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:19:19.294545Z",
+          "cpu_count": 8,
+          "load_average": [
+            7.12,
+            7.28,
+            9.02
+          ],
+          "cpu_idle_percent": 59,
+          "free_memory_bytes": 61079552,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:19:19.294544Z",
+          "cpu_count": 8,
+          "load_average": [
+            1.37,
+            1.51,
+            1.37
+          ],
+          "cpu_idle_percent": 81.8297,
+          "free_memory_bytes": 496140288,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:19:24.297055Z",
+          "cpu_count": 8,
+          "load_average": [
+            6.71,
+            7.19,
+            8.98
+          ],
+          "cpu_idle_percent": 56,
+          "free_memory_bytes": 63062016,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:19:24.297043Z",
+          "cpu_count": 8,
+          "load_average": [
+            1.26,
+            1.48,
+            1.36
+          ],
+          "cpu_idle_percent": 81.1224,
+          "free_memory_bytes": 376569856,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:19:29.299303Z",
+          "cpu_count": 8,
+          "load_average": [
+            6.41,
+            7.12,
+            8.94
+          ],
+          "cpu_idle_percent": 36,
+          "free_memory_bytes": 223756288,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:19:29.299294Z",
+          "cpu_count": 8,
+          "load_average": [
+            1.16,
+            1.46,
+            1.36
+          ],
+          "cpu_idle_percent": 82.9082,
+          "free_memory_bytes": 425742336,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:19:34.30113Z",
+          "cpu_count": 8,
+          "load_average": [
+            6.14,
+            7.05,
+            8.91
+          ],
+          "cpu_idle_percent": 49,
+          "free_memory_bytes": 178372608,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:19:34.301126Z",
+          "cpu_count": 8,
+          "load_average": [
+            1.06,
+            1.43,
+            1.35
+          ],
+          "cpu_idle_percent": 83.7357,
+          "free_memory_bytes": 478060544,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:19:39.302151Z",
+          "cpu_count": 8,
+          "load_average": [
+            5.89,
+            6.99,
+            8.87
+          ],
+          "cpu_idle_percent": 41,
+          "free_memory_bytes": 78757888,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:19:39.302143Z",
+          "cpu_count": 8,
+          "load_average": [
+            1.46,
+            1.51,
+            1.37
+          ],
+          "cpu_idle_percent": 80.1274,
+          "free_memory_bytes": 521158656,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:19:44.303691Z",
+          "cpu_count": 8,
+          "load_average": [
+            5.82,
+            6.95,
+            8.85
+          ],
+          "cpu_idle_percent": 64,
+          "free_memory_bytes": 69189632,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:19:44.303692Z",
+          "cpu_count": 8,
+          "load_average": [
+            1.34,
+            1.48,
+            1.37
+          ],
+          "cpu_idle_percent": 81.7834,
+          "free_memory_bytes": 543334400,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:19:49.304205Z",
+          "cpu_count": 8,
+          "load_average": [
+            5.35,
+            6.84,
+            8.8
+          ],
+          "cpu_idle_percent": 64,
+          "free_memory_bytes": 67387392,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:19:49.304194Z",
+          "cpu_count": 8,
+          "load_average": [
+            1.87,
+            1.59,
+            1.4
+          ],
+          "cpu_idle_percent": 82.0743,
+          "free_memory_bytes": 576806912,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:19:54.304792Z",
+          "cpu_count": 8,
+          "load_average": [
+            5,
+            6.74,
+            8.75
+          ],
+          "cpu_idle_percent": 74,
+          "free_memory_bytes": 76513280,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:19:54.304784Z",
+          "cpu_count": 8,
+          "load_average": [
+            1.88,
+            1.6,
+            1.4
+          ],
+          "cpu_idle_percent": 78.5714,
+          "free_memory_bytes": 466227200,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:19:59.305233Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.68,
+            6.64,
+            8.7
+          ],
+          "cpu_idle_percent": 74,
+          "free_memory_bytes": 64389120,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:19:59.305269Z",
+          "cpu_count": 8,
+          "load_average": [
+            1.73,
+            1.57,
+            1.4
+          ],
+          "cpu_idle_percent": 74.2638,
+          "free_memory_bytes": 711450624,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:20:04.305956Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.47,
+            6.57,
+            8.66
+          ],
+          "cpu_idle_percent": 72,
+          "free_memory_bytes": 66764800,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:20:04.305962Z",
+          "cpu_count": 8,
+          "load_average": [
+            2,
+            1.63,
+            1.42
+          ],
+          "cpu_idle_percent": 80.7152,
+          "free_memory_bytes": 412536832,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:20:09.306805Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.43,
+            6.52,
+            8.64
+          ],
+          "cpu_idle_percent": 67,
+          "free_memory_bytes": 63422464,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:20:09.30679Z",
+          "cpu_count": 8,
+          "load_average": [
+            2.16,
+            1.67,
+            1.43
+          ],
+          "cpu_idle_percent": 80.8429,
+          "free_memory_bytes": 495898624,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:20:14.30699Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.15,
+            6.43,
+            8.59
+          ],
+          "cpu_idle_percent": 76,
+          "free_memory_bytes": 71761920,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:20:14.306966Z",
+          "cpu_count": 8,
+          "load_average": [
+            2.38,
+            1.72,
+            1.45
+          ],
+          "cpu_idle_percent": 75.6036,
+          "free_memory_bytes": 508657664,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:20:19.307181Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.98,
+            6.36,
+            8.55
+          ],
+          "cpu_idle_percent": 69,
+          "free_memory_bytes": 63373312,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:20:19.307223Z",
+          "cpu_count": 8,
+          "load_average": [
+            2.35,
+            1.73,
+            1.45
+          ],
+          "cpu_idle_percent": 85.0575,
+          "free_memory_bytes": 1076318208,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:20:24.307167Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.74,
+            6.27,
+            8.51
+          ],
+          "cpu_idle_percent": 65,
+          "free_memory_bytes": 60358656,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:20:24.307195Z",
+          "cpu_count": 8,
+          "load_average": [
+            2.16,
+            1.7,
+            1.45
+          ],
+          "cpu_idle_percent": 80.1527,
+          "free_memory_bytes": 760958976,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:20:29.307242Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.6,
+            6.2,
+            8.47
+          ],
+          "cpu_idle_percent": 63,
+          "free_memory_bytes": 95469568,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:20:29.307218Z",
+          "cpu_count": 8,
+          "load_average": [
+            2.23,
+            1.72,
+            1.45
+          ],
+          "cpu_idle_percent": 78.3715,
+          "free_memory_bytes": 692318208,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:20:34.306457Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.55,
+            6.14,
+            8.44
+          ],
+          "cpu_idle_percent": 76,
+          "free_memory_bytes": 63700992,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:20:34.306441Z",
+          "cpu_count": 8,
+          "load_average": [
+            2.05,
+            1.69,
+            1.45
+          ],
+          "cpu_idle_percent": 82.5921,
+          "free_memory_bytes": 619225088,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:20:39.305774Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.51,
+            6.09,
+            8.41
+          ],
+          "cpu_idle_percent": 71,
+          "free_memory_bytes": 61243392,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:20:39.305761Z",
+          "cpu_count": 8,
+          "load_average": [
+            1.89,
+            1.66,
+            1.44
+          ],
+          "cpu_idle_percent": 79.798,
+          "free_memory_bytes": 524648448,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:20:44.306307Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.95,
+            6.14,
+            8.41
+          ],
+          "cpu_idle_percent": 66,
+          "free_memory_bytes": 63733760,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:20:44.306294Z",
+          "cpu_count": 8,
+          "load_average": [
+            1.82,
+            1.65,
+            1.44
+          ],
+          "cpu_idle_percent": 78.0612,
+          "free_memory_bytes": 445558784,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:20:49.306751Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.95,
+            6.1,
+            8.38
+          ],
+          "cpu_idle_percent": 65,
+          "free_memory_bytes": 61046784,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:20:49.306744Z",
+          "cpu_count": 8,
+          "load_average": [
+            1.83,
+            1.66,
+            1.44
+          ],
+          "cpu_idle_percent": 79.0076,
+          "free_memory_bytes": 899543040,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:20:54.307364Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.12,
+            6.1,
+            8.37
+          ],
+          "cpu_idle_percent": 50,
+          "free_memory_bytes": 67371008,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:20:54.307347Z",
+          "cpu_count": 8,
+          "load_average": [
+            1.68,
+            1.63,
+            1.43
+          ],
+          "cpu_idle_percent": 83.2274,
+          "free_memory_bytes": 796209152,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:20:59.307417Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.03,
+            6.05,
+            8.34
+          ],
+          "cpu_idle_percent": 60,
+          "free_memory_bytes": 60588032,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:20:59.307405Z",
+          "cpu_count": 8,
+          "load_average": [
+            2.35,
+            1.77,
+            1.48
+          ],
+          "cpu_idle_percent": 81.7834,
+          "free_memory_bytes": 698785792,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:21:04.305403Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.94,
+            6,
+            8.31
+          ],
+          "cpu_idle_percent": 44,
+          "free_memory_bytes": 62472192,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:21:04.305398Z",
+          "cpu_count": 8,
+          "load_average": [
+            2.16,
+            1.74,
+            1.47
+          ],
+          "cpu_idle_percent": 81.5857,
+          "free_memory_bytes": 594800640,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:21:09.307184Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.35,
+            6.05,
+            8.31
+          ],
+          "cpu_idle_percent": 46,
+          "free_memory_bytes": 70434816,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:21:09.307173Z",
+          "cpu_count": 8,
+          "load_average": [
+            1.99,
+            1.71,
+            1.46
+          ],
+          "cpu_idle_percent": 77.1863,
+          "free_memory_bytes": 527425536,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:21:14.306426Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.72,
+            6.1,
+            8.31
+          ],
+          "cpu_idle_percent": 71,
+          "free_memory_bytes": 67911680,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:21:14.306409Z",
+          "cpu_count": 8,
+          "load_average": [
+            1.99,
+            1.72,
+            1.46
+          ],
+          "cpu_idle_percent": 80.0253,
+          "free_memory_bytes": 422014976,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:21:19.306317Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.5,
+            6.03,
+            8.28
+          ],
+          "cpu_idle_percent": 76,
+          "free_memory_bytes": 65077248,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:21:19.30632Z",
+          "cpu_count": 8,
+          "load_average": [
+            1.83,
+            1.69,
+            1.46
+          ],
+          "cpu_idle_percent": 79.5426,
+          "free_memory_bytes": 607973376,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:21:24.307601Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.38,
+            5.98,
+            8.25
+          ],
+          "cpu_idle_percent": 76,
+          "free_memory_bytes": 74137600,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:21:24.307583Z",
+          "cpu_count": 8,
+          "load_average": [
+            1.92,
+            1.71,
+            1.46
+          ],
+          "cpu_idle_percent": 81.3688,
+          "free_memory_bytes": 513728512,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:21:29.307631Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.51,
+            5.98,
+            8.23
+          ],
+          "cpu_idle_percent": 65,
+          "free_memory_bytes": 59736064,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:21:29.307636Z",
+          "cpu_count": 8,
+          "load_average": [
+            1.77,
+            1.68,
+            1.46
+          ],
+          "cpu_idle_percent": 72.1019,
+          "free_memory_bytes": 408588288,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:21:34.305799Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.55,
+            5.96,
+            8.21
+          ],
+          "cpu_idle_percent": 74,
+          "free_memory_bytes": 60588032,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:21:34.305798Z",
+          "cpu_count": 8,
+          "load_average": [
+            2.59,
+            1.85,
+            1.51
+          ],
+          "cpu_idle_percent": 70.437,
+          "free_memory_bytes": 494473216,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:21:39.307116Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.19,
+            5.86,
+            8.16
+          ],
+          "cpu_idle_percent": 74,
+          "free_memory_bytes": 65519616,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:21:39.307109Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.58,
+            2.07,
+            1.59
+          ],
+          "cpu_idle_percent": 70.8122,
+          "free_memory_bytes": 376913920,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:21:44.307585Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.09,
+            5.82,
+            8.13
+          ],
+          "cpu_idle_percent": 63,
+          "free_memory_bytes": 63078400,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:21:44.307544Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.3,
+            2.04,
+            1.58
+          ],
+          "cpu_idle_percent": 68.6452,
+          "free_memory_bytes": 417144832,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:21:49.307607Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.16,
+            5.8,
+            8.12
+          ],
+          "cpu_idle_percent": 73,
+          "free_memory_bytes": 80379904,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:21:49.307593Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.11,
+            2.02,
+            1.57
+          ],
+          "cpu_idle_percent": 71.6837,
+          "free_memory_bytes": 442290176,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:21:54.30603Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.99,
+            5.74,
+            8.08
+          ],
+          "cpu_idle_percent": 71,
+          "free_memory_bytes": 69664768,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:21:54.306009Z",
+          "cpu_count": 8,
+          "load_average": [
+            2.94,
+            2,
+            1.57
+          ],
+          "cpu_idle_percent": 69.0537,
+          "free_memory_bytes": 332091392,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:21:59.307607Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.15,
+            5.74,
+            8.07
+          ],
+          "cpu_idle_percent": 72,
+          "free_memory_bytes": 64618496,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:21:59.307604Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.19,
+            2.07,
+            1.59
+          ],
+          "cpu_idle_percent": 72.0361,
+          "free_memory_bytes": 359149568,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:22:04.306934Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.62,
+            5.81,
+            8.08
+          ],
+          "cpu_idle_percent": 69,
+          "free_memory_bytes": 59850752,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:22:04.306931Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.09,
+            2.07,
+            1.6
+          ],
+          "cpu_idle_percent": 70.0384,
+          "free_memory_bytes": 401264640,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:22:09.307723Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.73,
+            5.82,
+            8.07
+          ],
+          "cpu_idle_percent": 65,
+          "free_memory_bytes": 58458112,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:22:09.307709Z",
+          "cpu_count": 8,
+          "load_average": [
+            2.84,
+            2.03,
+            1.59
+          ],
+          "cpu_idle_percent": 70.8067,
+          "free_memory_bytes": 451514368,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:22:14.30587Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.83,
+            5.82,
+            8.05
+          ],
+          "cpu_idle_percent": 69,
+          "free_memory_bytes": 59146240,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:22:14.305836Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.02,
+            2.08,
+            1.61
+          ],
+          "cpu_idle_percent": 79.4155,
+          "free_memory_bytes": 354398208,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:22:19.30771Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.76,
+            5.79,
+            8.03
+          ],
+          "cpu_idle_percent": 64,
+          "free_memory_bytes": 64372736,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:22:19.307685Z",
+          "cpu_count": 8,
+          "load_average": [
+            2.78,
+            2.05,
+            1.6
+          ],
+          "cpu_idle_percent": 79.4344,
+          "free_memory_bytes": 563937280,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:22:24.305785Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.54,
+            5.73,
+            7.99
+          ],
+          "cpu_idle_percent": 65,
+          "free_memory_bytes": 65912832,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:22:24.305684Z",
+          "cpu_count": 8,
+          "load_average": [
+            2.95,
+            2.1,
+            1.62
+          ],
+          "cpu_idle_percent": 81.6794,
+          "free_memory_bytes": 451043328,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:22:29.307676Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.34,
+            5.66,
+            7.96
+          ],
+          "cpu_idle_percent": 59,
+          "free_memory_bytes": 65912832,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:22:29.307667Z",
+          "cpu_count": 8,
+          "load_average": [
+            3.12,
+            2.14,
+            1.63
+          ],
+          "cpu_idle_percent": 93.8596,
+          "free_memory_bytes": 360603648,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:22:34.307747Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.23,
+            5.62,
+            7.93
+          ],
+          "cpu_idle_percent": 62,
+          "free_memory_bytes": 63062016,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 3,
+          "quiet": false
+        },
+        "ubuntu": {
+          "at": "2026-10-17T18:22:34.307743Z",
+          "cpu_count": 8,
+          "load_average": [
+            2.95,
+            2.13,
+            1.63
+          ],
+          "cpu_idle_percent": 91.206,
+          "free_memory_bytes": 302194688,
+          "active_heavy_slots": 0,
+          "other_active_heavy_slots": 0,
+          "heavy_queue_length": 0,
+          "quiet": true
+        }
+      }
+    ],
+    "quiet": false,
+    "require_quiet": true,
+    "quiet_wait_ms": 64255,
+    "quiet_wait_expired": true
+  },
+  "run_id": "run_01M55HCJE9S8YDHMJV730V499N",
+  "network_path": "ssh_tunnel",
+  "metrics": {
+    "capture_readiness": "committed_capture_barrier",
+    "completion_timeout_ms": 300000,
+    "contended_run": false,
+    "effect_done_to_gateway_capture_ms": 56912.249458,
+    "fixture_and_capture_ms": 58883.54475,
+    "fts5_query_cache": "repeated_query_after_integrity_verification",
+    "gateway_rss_end_sample_bytes": 92553216,
+    "gateway_wal_end_sample_bytes": 6192392,
+    "messages": 200000,
+    "messages_target": 200000,
+    "recovery_final_drain_ms": 18.238083,
+    "replica_readiness": "durable_cursor_then_integrity_count",
+    "replica_rss_end_sample_bytes": 28938240,
+    "replica_wal_end_sample_bytes": 7061712
+  },
+  "scenario": "CORE-BENCH",
+  "level": "replica",
+  "passed": true,
+  "git_sha": "daad6abe774aa24c4f92e9396c94f746d0ca1b20",
+  "at": "2026-10-17T18:18:34.313542Z",
+  "assertions": [
+    {
+      "name": "feed_network_ssh_tunnel",
+      "passed": true
+    },
+    {
+      "name": "two_hundred_thousand_message_capture_replication_fts5",
+      "passed": true
+    },
+    {
+      "name": "recovery_capture_drained_before_convergence",
+      "passed": true
+    },
+    {
+      "name": "truth_gateway_replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "automatic_recovery_capture_drained",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_query_search_records_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_query_search_records_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_metadata_latency_and_no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_metadata_latency_and_no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_sse_watermark_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_sse_watermark_1",
+      "passed": true
+    },
+    {
+      "name": "sqlite_integrity_gateway",
+      "passed": true
+    },
+    {
+      "name": "sqlite_integrity_replica",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "effect_done→gateway_visible": {
+      "samples": 1,
+      "p50_ms": 10.030083,
+      "p95_ms": 10.030083,
+      "max_ms": 10.030083,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica0": {
+      "samples": 1,
+      "p50_ms": 88.17325,
+      "p95_ms": 88.17325,
+      "max_ms": 88.17325,
+      "timeouts": 0
+    },
+    "fts5_query_gateway": {
+      "samples": 100,
+      "p50_ms": 2.540709,
+      "p95_ms": 3.3345,
+      "max_ms": 12.753208,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air",
+    "ubuntu"
+  ]
+}

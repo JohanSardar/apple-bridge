@@ -1,18 +1,59 @@
 {
-  "run_id": "run_01M55GAZ9A4AKRT9QMEDXZKFDQ",
+  "host_conditions": {
+    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "start": {
+      "air": {
+        "at": "2026-10-17T18:10:17.530827Z",
+        "cpu_count": 8,
+        "load_average": [
+          5.41,
+          8.65,
+          11.15
+        ],
+        "cpu_idle_percent": 65,
+        "free_memory_bytes": 87162880,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 2,
+        "quiet": false
+      }
+    },
+    "end": {
+      "air": {
+        "at": "2026-10-17T18:10:21.506646Z",
+        "cpu_count": 8,
+        "load_average": [
+          5.13,
+          8.54,
+          11.1
+        ],
+        "cpu_idle_percent": 68,
+        "free_memory_bytes": 181501952,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 2,
+        "quiet": false
+      }
+    },
+    "quiet": false,
+    "require_quiet": false,
+    "quiet_wait_ms": 0,
+    "quiet_wait_expired": false
+  },
+  "run_id": "run_01M55GXECBXGZAS6142G7EWB0N",
   "network_path": "loopback",
   "metrics": {
     "absolute_target_rows_per_second": 2000,
     "absolute_target_status": "met-under-load",
     "capture_rows_per_frame": 64,
     "history_rows": 10000,
-    "history_rows_per_second": 3669.8041151739644
+    "history_rows_per_second": 4185.92241908167
   },
   "scenario": "CORE-BLOB-REFERENCE-INDEX",
   "level": "sim",
   "passed": true,
-  "git_sha": "31f1f9f66ffc3434778f54ab5dd0d9befb227832",
-  "at": "2026-10-17T18:00:13.354637Z",
+  "git_sha": "daad6abe774aa24c4f92e9396c94f746d0ca1b20",
+  "at": "2026-10-17T18:10:18.635254Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -62,9 +103,9 @@
   "latency": {
     "history_10000_commit": {
       "samples": 1,
-      "p50_ms": 2724.941083,
-      "p95_ms": 2724.941083,
-      "max_ms": 2724.941083,
+      "p50_ms": 2388.959708,
+      "p95_ms": 2388.959708,
+      "max_ms": 2388.959708,
       "timeouts": 0
     }
   },

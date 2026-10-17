@@ -1,0 +1,264 @@
+{
+  "host_conditions": {
+    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "start": {
+      "air": {
+        "at": "2026-10-17T18:13:04.345709Z",
+        "cpu_count": 8,
+        "load_average": [
+          5.32,
+          7.06,
+          10.03
+        ],
+        "cpu_idle_percent": 67,
+        "free_memory_bytes": 103956480,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 2,
+        "quiet": false
+      }
+    },
+    "end": {
+      "air": {
+        "at": "2026-10-17T18:13:46.483418Z",
+        "cpu_count": 8,
+        "load_average": [
+          5.49,
+          6.82,
+          9.79
+        ],
+        "cpu_idle_percent": 47,
+        "free_memory_bytes": 103333888,
+        "active_heavy_slots": 2,
+        "other_active_heavy_slots": 1,
+        "heavy_queue_length": 2,
+        "quiet": false
+      }
+    },
+    "periodic_samples": [
+      {
+        "air": {
+          "at": "2026-10-17T18:13:10.407567Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.67,
+            6.86,
+            9.93
+          ],
+          "cpu_idle_percent": 63,
+          "free_memory_bytes": 67125248,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:13:15.406453Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.93,
+            6.88,
+            9.92
+          ],
+          "cpu_idle_percent": 61,
+          "free_memory_bytes": 127123456,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 1,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:13:20.405925Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.7,
+            6.8,
+            9.87
+          ],
+          "cpu_idle_percent": 63,
+          "free_memory_bytes": 67747840,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:13:25.406493Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.56,
+            6.74,
+            9.83
+          ],
+          "cpu_idle_percent": 55,
+          "free_memory_bytes": 103071744,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:13:30.407052Z",
+          "cpu_count": 8,
+          "load_average": [
+            4.76,
+            6.74,
+            9.81
+          ],
+          "cpu_idle_percent": 40,
+          "free_memory_bytes": 64552960,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:13:35.406568Z",
+          "cpu_count": 8,
+          "load_average": [
+            5.5,
+            6.86,
+            9.84
+          ],
+          "cpu_idle_percent": 64,
+          "free_memory_bytes": 289046528,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        }
+      },
+      {
+        "air": {
+          "at": "2026-10-17T18:13:40.407814Z",
+          "cpu_count": 8,
+          "load_average": [
+            5.54,
+            6.85,
+            9.81
+          ],
+          "cpu_idle_percent": 53,
+          "free_memory_bytes": 60440576,
+          "active_heavy_slots": 2,
+          "other_active_heavy_slots": 1,
+          "heavy_queue_length": 2,
+          "quiet": false
+        }
+      }
+    ],
+    "quiet": false,
+    "require_quiet": true,
+    "quiet_wait_ms": 62208,
+    "quiet_wait_expired": true
+  },
+  "run_id": "run_01M55H2H8TFJH20MM58VHFDMZ2",
+  "network_path": "loopback",
+  "scenario": "CORE-LIVE-LATENCY",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "daad6abe774aa24c4f92e9396c94f746d0ca1b20",
+  "at": "2026-10-17T18:13:05.434661Z",
+  "assertions": [
+    {
+      "name": "feed_network_loopback",
+      "passed": true
+    },
+    {
+      "name": "replica_host_is_air",
+      "passed": true
+    },
+    {
+      "name": "bootstrap_snapshot",
+      "passed": true
+    },
+    {
+      "name": "scope_query_and_get",
+      "passed": true
+    },
+    {
+      "name": "convergence_truth_gateway_replicas",
+      "passed": true
+    },
+    {
+      "name": "latency_observations_complete",
+      "passed": true
+    },
+    {
+      "name": "latency_effect_done→gateway_visible",
+      "passed": true
+    },
+    {
+      "name": "latency_effect_done→replica_visible:replica0",
+      "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass",
+      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
+    },
+    {
+      "name": "sse_contiguous_watermarks_0",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "sse_contiguous_watermarks_1",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_0",
+      "passed": true
+    },
+    {
+      "name": "scope_sse_watermarks_1",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "effect_done→gateway_visible": {
+      "samples": 200,
+      "p50_ms": 9.212,
+      "p95_ms": 19.334125,
+      "max_ms": 23.670333,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica0": {
+      "samples": 200,
+      "p50_ms": 13.319709,
+      "p95_ms": 23.822917,
+      "max_ms": 29.323,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

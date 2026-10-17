@@ -1,17 +1,17 @@
 {
   "host_conditions": {
-    "quiet_definition": "Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
     "start": {
       "air": {
-        "at": "2026-10-17T07:49:58.786419Z",
+        "at": "2026-10-17T18:16:53.751132Z",
         "cpu_count": 8,
         "load_average": [
-          29.74,
-          27.84,
-          22.97
+          7.29,
+          6.77,
+          9.16
         ],
-        "cpu_idle_percent": 0,
-        "free_memory_bytes": 76840960,
+        "cpu_idle_percent": 37,
+        "free_memory_bytes": 64716800,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
         "heavy_queue_length": 2,
@@ -20,15 +20,15 @@
     },
     "end": {
       "air": {
-        "at": "2026-10-17T07:50:07.804474Z",
+        "at": "2026-10-17T18:16:55.56418Z",
         "cpu_count": 8,
         "load_average": [
-          31.52,
-          28.31,
-          23.2
+          6.95,
+          6.7,
+          9.12
         ],
-        "cpu_idle_percent": 0,
-        "free_memory_bytes": 76775424,
+        "cpu_idle_percent": 38,
+        "free_memory_bytes": 108298240,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
         "heavy_queue_length": 2,
@@ -40,13 +40,13 @@
     "quiet_wait_ms": 0,
     "quiet_wait_expired": false
   },
-  "run_id": "run_01M54DDR0FEH6G12KB1W553N8X",
+  "run_id": "run_01M55H9HBSVG0W39BKH6PJ6J6T",
   "network_path": "loopback",
   "scenario": "LAB-TRUTH-MULTIPLICITY",
   "level": "sim",
   "passed": true,
-  "git_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
-  "at": "2026-10-17T07:50:04.047523Z",
+  "git_sha": "daad6abe774aa24c4f92e9396c94f746d0ca1b20",
+  "at": "2026-10-17T18:16:54.905834Z",
   "assertions": [
     {
       "name": "feed_network_loopback",

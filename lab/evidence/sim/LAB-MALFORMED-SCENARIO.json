@@ -1,37 +1,37 @@
 {
   "host_conditions": {
-    "quiet_definition": "Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
+    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
     "start": {
       "air": {
-        "at": "2026-10-17T07:49:00.699415Z",
+        "at": "2026-10-17T18:16:18.184544Z",
         "cpu_count": 8,
         "load_average": [
-          39.25,
-          28.37,
-          22.78
+          5.75,
+          6.44,
+          9.15
         ],
-        "cpu_idle_percent": 0,
-        "free_memory_bytes": 61374464,
+        "cpu_idle_percent": 38,
+        "free_memory_bytes": 82886656,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 2,
+        "heavy_queue_length": 1,
         "quiet": false
       }
     },
     "end": {
       "air": {
-        "at": "2026-10-17T07:49:08.149952Z",
+        "at": "2026-10-17T18:16:19.327711Z",
         "cpu_count": 8,
         "load_average": [
-          36.3,
-          28.09,
-          22.75
+          5.75,
+          6.44,
+          9.15
         ],
-        "cpu_idle_percent": 0,
-        "free_memory_bytes": 67502080,
+        "cpu_idle_percent": 39,
+        "free_memory_bytes": 66895872,
         "active_heavy_slots": 2,
         "other_active_heavy_slots": 1,
-        "heavy_queue_length": 2,
+        "heavy_queue_length": 1,
         "quiet": false
       }
     },
@@ -40,12 +40,12 @@
     "quiet_wait_ms": 0,
     "quiet_wait_expired": false
   },
-  "run_id": "run_01M54DC1DHN4H4GB2JMFXJD9VP",
+  "run_id": "run_01M55H8EKY62FX3RCKKXT4W88V",
   "scenario": "LAB-MALFORMED-SCENARIO",
   "level": "sim",
   "passed": true,
-  "git_sha": "5a49e7496beba8ba1efc14ea117c2ac5df95f643",
-  "at": "2026-10-17T07:49:08.146597Z",
+  "git_sha": "daad6abe774aa24c4f92e9396c94f746d0ca1b20",
+  "at": "2026-10-17T18:16:19.326197Z",
   "assertions": [
     {
       "name": "malformed_scenario_rejected",
