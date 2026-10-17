@@ -209,18 +209,14 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 		}
 		var lastCommand map[string]any
 		submit := func(operation string, args map[string]any, version uint64) error {
-			head, err := w.Cursor(w.Gateway)
-			if err != nil {
-				return err
-			}
-			request := map[string]any{"command_id": contracts.NewCommandID(head.Epoch), "args": args, "expected_version": version, "wait_ms": 15000}
+			request := map[string]any{"command_id": contracts.NewCommandID(), "args": args, "expected_version": version, "wait_ms": 15000}
 			var result map[string]any
 			endpoint := w.Gateway
 			if level == "replica" {
 				endpoint = w.Replicas[0]
 			}
 			client := scripted.Client{Endpoint: endpoint, Protocol: protocol}
-			err = client.Call(ctx, operation, request, &result)
+			err := client.Call(ctx, operation, request, &result)
 			if err != nil {
 				return err
 			}
@@ -517,11 +513,7 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 				if arm("dispatch") != nil {
 					return failed("arm_dispatch_pause")
 				}
-				head, err := w.Cursor(w.Gateway)
-				if err != nil {
-					return failed("command_epoch")
-				}
-				commandID := contracts.NewCommandID(head.Epoch)
+				commandID := contracts.NewCommandID()
 				commandTitle := tag + " guarded command"
 				request := map[string]any{"command_id": commandID, "args": map[string]any{"list_id": list.ID, "title": commandTitle}, "wait_ms": 3000}
 				returned := make(chan struct{})

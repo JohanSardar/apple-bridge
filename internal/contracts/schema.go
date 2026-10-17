@@ -84,7 +84,11 @@ func OperationSchema(d OperationDescriptor) map[string]any {
 		if d.Name != "reminders.create" && d.Name != "reminders.create_list" {
 			s["required"] = []string{"args", "expected_version"}
 		}
-		properties["command_id"].(map[string]any)["description"] = "Optional cmd_<cursor.epoch>_<unique> ID. Omit to generate one; retry the original ID after a lost response. Old epochs are lookup only."
+		commandID := properties["command_id"].(map[string]any)
+		commandID["description"] = "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only."
+		commandID["minLength"] = 1
+		commandID["maxLength"] = 128
+		commandID["pattern"] = "^[A-Za-z0-9._:-]+$"
 
 		properties["wait_ms"].(map[string]any)["maximum"] = 15000
 		properties["wait_ms"].(map[string]any)["minimum"] = 0
