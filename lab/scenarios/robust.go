@@ -29,7 +29,8 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 	}
 	if name == "cred-lifecycle" && level == "real" {
 		home := filepath.Join("/tmp/ablab", fmt.Sprintf("credentials-%d", time.Now().UnixNano()))
-		result, err := world.CredentialLifecycle(ctx, home)
+		result, err := world.CredentialLifecycleGUI(ctx, home)
+		evidence.Metrics = map[string]any{"gui_keychain_lifecycle": result}
 		add("keychain_create_use_rotate_revoke", err == nil && result.Backend == "keychain" && result.Created && result.Used && result.Rotated && result.Revoked)
 		evidence.Passed = err == nil && result.Created && result.Used && result.Rotated && result.Revoked
 		return evidence

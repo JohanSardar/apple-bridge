@@ -20,16 +20,6 @@ import (
 
 func runNativeMessagesCommands(ctx context.Context, s Scenario, level string, e Evidence) Evidence {
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
-	if s.ID == "MSG-GROUP-MANAGE" {
-		e.Status = "limited"
-		e.Assertions = append(e.Assertions, Assertion{Name: "native_imessage_group_accounts", Status: "unverified", Detail: "no second iMessage account available; verified at sim level"})
-		return e
-	}
-	if s.ID != "MSG-SEND-SELF-TEXT" && s.ID != "MSG-SEND-FILES" {
-		e.Status = "pending-unlock"
-		e.Assertions = append(e.Assertions, Assertion{Name: "native_accessibility", Status: "unverified", Detail: "Screen capture shows password lock screen; Messages AX target cannot be verified"})
-		return e
-	}
 	replicas := 0
 	if level == "replica" {
 		replicas = 1
@@ -37,6 +27,7 @@ func runNativeMessagesCommands(ctx context.Context, s Scenario, level string, e 
 	}
 	w, err := world.NewReal(ctx, level, replicas, world.BlobOptions{Scope: "messages:read,messages:write,system:read"})
 	if err != nil {
+		os.WriteFile("/tmp/ablab/messages-real-world-error.log", []byte(err.Error()), 0600)
 		add("real_world_start", false)
 		return e
 	}
@@ -61,6 +52,9 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 		e.Status = "environment-limited"
 		e.Assertions = append(e.Assertions, Assertion{Name: "self_handles_discovery", Status: "unverified", Detail: "Per-run signed Helper self-handles probe did not return handles; no send attempted"})
 		return e
+	}
+	if strings.HasPrefix(s.ID, "MSG-GROUP-") || s.ID == "MSG-SEND-RCS-GROUP" {
+		return runNativeMessagesGroup(ctx, s, e, w, own.Handles)
 	}
 	native, err := sql.Open("sqlite", "file:"+filepath.Join(os.Getenv("HOME"), "Library", "Messages", "chat.db")+"?mode=ro")
 	if err != nil {
@@ -106,6 +100,20 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 	client := scripted.Client{Endpoint: w.Gateway}
 	text := "[ab-test " + e.RunID + "] self command"
 	args := map[string]any{"chat_id": chatID, "text": text}
+	if s.ID == "MSG-REPLY" {
+		contacts, err := nativeTestContacts()
+		handle := contacts["REMY_IMESSAGE_TEST_HANDLE"]
+		if handle == "" {
+			handle = contacts["REMY_IMESSAGE_TEST_EMAIL"]
+		}
+		if err != nil || handle == "" {
+			add("approved_reply_contact", false)
+			return e
+		}
+		text = "[ab-test " + e.RunID + "] This is an automated test of Johan's Apple Bridge and can be ignored."
+		args = map[string]any{"handles": []string{handle}, "service": "iMessage", "text": text}
+	}
+
 	if s.ID == "MSG-SEND-FILES" {
 		large, problem := stageMessageFile(ctx, w.Gateway, "ab-"+e.RunID+"-one.txt", messageSyntheticFile(text))
 		add("five_mib_upload_staged", problem == nil)
@@ -124,7 +132,7 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 		return e
 	}
 	cleanupPath := filepath.Join(cleanupDirectory, e.RunID+".json")
-	cleanup := map[string]any{"run_id": e.RunID, "command_id": c.ID, "baseline_max_row_id": maximum, "created_at": time.Now().UTC(), "cleanup_state": "pending_unlock", "scenario": s.ID, "level": level}
+	cleanup := map[string]any{"run_id": e.RunID, "command_id": c.ID, "baseline_max_row_id": maximum, "created_at": time.Now().UTC(), "cleanup_state": "pending_native_cleanup", "scenario": s.ID, "level": level}
 	saveCleanup := func() error {
 		data, err := json.Marshal(cleanup)
 		if err != nil {
@@ -183,7 +191,7 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 	if err == nil && outcome.State == contracts.CommandIndeterminate {
 		err = client.Call(ctx, "commands.status", contracts.CommandQuery{ID: c.ID, Resolve: true}, &outcome)
 	}
-	e.Metrics = map[string]any{"initial_command_state": initialState, "command_state": outcome.State, "disposition": outcome.Disposition, "screen": "locked", "send_commands": 1, "parts_requested": 1 + len(argsFiles(args))}
+	e.Metrics = map[string]any{"initial_command_state": initialState, "command_state": outcome.State, "disposition": outcome.Disposition, "send_commands": 1, "parts_requested": 1 + len(argsFiles(args))}
 	if s.ID == "MSG-SEND-FILES" {
 		e.Metrics["largest_file_bytes"] = 5 * 1024 * 1024
 		e.Metrics["ipc_file_transport"] = "private_path_and_digest"
@@ -222,6 +230,10 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 	cleanup["native_parts"] = evidence.Parts
 	cleanup["native_key"] = evidence.NativeKey
 	saveCleanup()
+	if s.ID != "MSG-SEND-SELF-TEXT" && s.ID != "MSG-SEND-FILES" {
+		return runNativeMessageAction(ctx, s, e, w, evidence.NativeKey, text, stateDB)
+	}
+
 	add("request_hash_bound", evidence.Fingerprint == outcome.RequestHash && evidence.CaptureCheckpoint != "")
 	var fromMe, joined int
 	err = native.QueryRowContext(ctx, "SELECT is_from_me,(SELECT COUNT(*) FROM chat_message_join j WHERE j.message_id=m.ROWID) FROM message m WHERE guid=?", evidence.NativeKey).Scan(&fromMe, &joined)

@@ -22,18 +22,19 @@ public actor MessagesCommands {
     private func routeProof(_ route: JSON, kind: String) -> String {
         BodyDigest.hash(Data((route["kind"].string+"|"+route["chat"].string+"|"+route["handle"].string+"|"+route["service"].string).utf8))+":"+kind
     }
-    public func capabilities() -> [String] { proofs().isEmpty ? [] : ["messages.send"] }
+    private func proven(_ operation: String, routes: Set<String>) -> Bool {
+        if operation == "messages.send" { return routes.contains { $0.hasSuffix(":text") || $0.hasSuffix(":attachment") } }
+        return routes.contains { $0.hasSuffix(":" + operation) }
+    }
+    public func capabilities() -> [String] {
+        let routes = proofs()
+        return Self.operations.filter { proven($0, routes: routes) }
+    }
     public func operationCoverage() -> JSON {
-        let proven = !proofs().isEmpty
+        let routes = proofs()
         return .array(Self.operations.map { operation in
-            let reason: String
-            switch operation {
-            case "messages.send": reason = proven ? "proven_self_routes_and_parts_only" : "route_proof_required"
-            case "messages.create_group": reason = "group_creation_route_unproven"
-            case "messages.rename_group", "messages.add_member", "messages.remove_member", "messages.leave_group": reason = "imessage_group_route_unproven"
-            default: reason = "accessibility_route_unproven"
-            }
-            return .object(["operation":.string(operation),"proven":.bool(operation=="messages.send"&&proven),"reason":.string(reason)])
+            let supported = proven(operation, routes: routes)
+            return .object(["operation": .string(operation), "proven": .bool(supported), "reason": .string(supported ? "proven_routes_and_parts_only" : "route_proof_required")])
         })
     }
     private func recordProof(_ route: JSON, parts: [JSON]) throws {
@@ -47,18 +48,76 @@ public actor MessagesCommands {
     private func tagged(_ text: String) -> Bool {
         text.range(of: #"\[ab-test [A-Za-z0-9_-]+\]"#, options: .regularExpression) != nil
     }
+    private func approvedHandles() throws -> Set<String> {
+        var handles = Set(try MessagesProbes.discoverSelfHandles().handles)
+        if labCommands {
+            let url = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".config/apple-bridge/test-contacts.env")
+            if let text = try? String(contentsOf: url, encoding: .utf8) {
+                let keys: Set<String> = ["REMY_IMESSAGE_TEST_HANDLE", "REMY_IMESSAGE_TEST_EMAIL", "BEN_GROUP_TEST_HANDLE"]
+                for line in text.components(separatedBy: .newlines) {
+                    let parts = line.replacingOccurrences(of: "export ", with: "").split(separator: "=", maxSplits: 1).map(String.init)
+                    if parts.count == 2, keys.contains(parts[0].trimmingCharacters(in: .whitespaces)) {
+                        handles.insert(MessagesProbes.normalize(parts[1].trimmingCharacters(in: CharacterSet(charactersIn: " \"'"))))
+                    }
+                }
+            }
+        }
+        return handles
+    }
+    private func prepareGroup(_ command: JSON) throws -> Prepared {
+        let action = command["action"]
+        let args = action["messages"]
+        let handles = args["handles"].array.map { MessagesProbes.normalize($0.string) }
+        let allowed = try approvedHandles()
+        let route = JSON.object(["kind": .string("group_addresses"), "handle": .string(handles.sorted().joined(separator: ",")), "service": args["service"]])
+        guard handles.count >= 2, Set(handles).count == handles.count, tagged(args["text"].string), ["iMessage", "SMS", "RCS"].contains(args["service"].string) else { throw SourceFailure.invalid }
+        guard args["name"].string.isEmpty else { throw SourceFailure.unsupported }
+        guard labCommands ? handles.allSatisfy({ allowed.contains($0) }) : proofs().contains(routeProof(route, kind: "messages.create_group")) else { throw SourceFailure.capabilityUnproven }
+        let reader = try MessagesReader(path: path)
+        let maximumChat = try reader.query("SELECT COALESCE(MAX(ROWID),0) AS maximum FROM chat", []).first?["maximum"] ?? "0"
+        return Prepared(nativeState: .object(["max_chat_row_id": .number(Double(maximumChat) ?? 0), "max_row_id": .number(Double(try reader.maximum())), "handles": .array(handles.map(JSON.string)), "destination": route]), fingerprint: command["request_hash"].string, action: action)
+    }
+    private func dispatchGroup(_ prepared: Prepared) async throws -> JSON {
+        let reader = try MessagesReader(path: path)
+        let args = prepared.action["messages"]
+        let handles = prepared.nativeState["handles"].array.map(\.string)
+        try await MessagesAccessibility.createGroup(args)
+        let error = 0
+        let deadline = ContinuousClock.now.advanced(by: .seconds(10))
+        repeat {
+            let rows = try reader.query("SELECT m.guid,c.guid AS chat_key,c.style AS style,c.ROWID AS chat_row_id FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE m.ROWID>? AND m.is_from_me=1 AND (m.text=? OR instr(m.attributedBody,CAST(? AS BLOB))>0)", [String(Int64(prepared.nativeState["max_row_id"].number)), args["text"].string, args["text"].string])
+            if rows.count == 1, let row = rows.first {
+                let peers = try reader.query("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", [row["chat_key"]])
+                let actual = Set(peers.map { MessagesProbes.normalize($0["id"]) })
+                guard actual == Set(handles), row["style"] == "43" else {
+                    return .object(["source": .string("messages"), "collection": .string("messages.message"), "native_key": .string(row["guid"]), "chat_key": .string(row["chat_key"]), "participant_count": .number(Double(actual.count)), "group_style": .string(row["style"]), "observed": .bool(false), "disposition": .string("indeterminate"), "reason": .string("participants_not_distinct_group")])
+                }
+                if labCommands { try recordProof(prepared.nativeState["destination"], parts: [.object(["kind": .string("messages.create_group")])]) }
+                return .object(["source": .string("messages"), "collection": .string("messages.message"), "native_key": .string(row["guid"]), "chat_key": .string(row["chat_key"]), "created_by_run": .bool((Double(row["chat_row_id"]) ?? 0) > prepared.nativeState["max_chat_row_id"].number), "observed": .bool(true), "disposition": .string("locally_observed"), "apple_event_error": .number(Double(error)), "parts": .array([])])
+            }
+            try await Task.sleep(for: .milliseconds(50))
+        } while ContinuousClock.now < deadline
+        return .object(["source": .string("messages"), "observed": .bool(false), "disposition": .string("indeterminate"), "apple_event_error": .number(Double(error))])
+    }
     private func verifyRoute(_ action: JSON, reader: MessagesReader) throws -> JSON {
         let args = action["messages"]
-        let selfHandles = Set(try MessagesProbes.discoverSelfHandles().handles)
+        let selfHandles = try approvedHandles()
         guard !selfHandles.isEmpty else { throw SourceFailure.invalid }
         if !action["list_key"].string.isEmpty {
             let chat = action["list_key"].string
             let rows = try reader.query("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", [chat])
-            guard !rows.isEmpty, rows.allSatisfy({ selfHandles.contains(MessagesProbes.normalize($0["id"])) }) else { throw SourceFailure.invalid }
-            return .object(["kind": .string("chat_id_raw"), "chat": .string(chat)])
+            let route = JSON.object(["kind": .string("chat_id_raw"), "chat": .string(chat)])
+            let known = proofs()
+            let provenRoute = action["op"].string == "messages.send" ? ["text", "attachment"].contains { known.contains(routeProof(route, kind: $0)) } : known.contains(routeProof(route, kind: action["op"].string))
+            guard !rows.isEmpty, rows.allSatisfy({ selfHandles.contains(MessagesProbes.normalize($0["id"])) }) || provenRoute else { throw SourceFailure.invalid }
+            return route
         }
         let handles = args["handles"].array.map(\.string)
         guard handles.count == 1, handles.allSatisfy({ selfHandles.contains(MessagesProbes.normalize($0)) }), args["service"].string == "iMessage" else { throw SourceFailure.unsupported }
+        let chats = try reader.query("SELECT c.guid,h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.service_name='iMessage' AND (SELECT count(*) FROM chat_handle_join x WHERE x.chat_id=c.ROWID)=1 ORDER BY c.ROWID DESC", [])
+        if let chat = chats.first(where: { MessagesProbes.normalize($0["id"]) == MessagesProbes.normalize(handles[0]) }) {
+            return .object(["kind": .string("chat_id_raw"), "chat": .string(chat["guid"])])
+        }
         return .object(["kind": .string("imessage_buddy"), "handle": .string(handles[0]), "service": .string("iMessage")])
     }
     private func validateAgentPolicy(_ action: JSON, route: JSON) throws {
@@ -69,6 +128,7 @@ public actor MessagesCommands {
     public func prepare(_ command: JSON) async throws -> Prepared {
         let action = command["action"]
         if let agentPolicy, FileManager.default.fileExists(atPath: agentPolicy.path), action["op"].string != "messages.send" { throw SourceFailure.invalid }
+        if action["op"].string == "messages.create_group" { return try prepareGroup(command) }
         if action["op"].string != "messages.send" {return try await prepareAccessibility(command)}
         let args = action["messages"]
         guard args["text"].string.isEmpty || tagged(args["text"].string), !args["text"].string.isEmpty || !args["files"].array.isEmpty else { throw SourceFailure.invalid }
@@ -93,6 +153,13 @@ public actor MessagesCommands {
         let operation=try MessagesAction(operation:action["op"].string)
         let args=action["messages"]
         let reader=try MessagesReader(path:path)
+        if [.renameGroup, .addMember, .removeMember, .leaveGroup].contains(operation) {
+            guard let chat = try reader.query("SELECT guid,style,service_name FROM chat WHERE guid=?",[action["native_key"].string]).first else { throw SourceFailure.capabilityUnproven }
+            let peers = try reader.query("SELECT handle_id FROM chat_handle_join WHERE chat_id=(SELECT ROWID FROM chat WHERE guid=?)",[chat["guid"]])
+            guard chat["style"] == "43", chat["service_name"] == "iMessage", peers.count >= 2 else { throw SourceFailure.unsupported }
+            guard ![.removeMember, .leaveGroup].contains(operation) || peers.count >= 3 else { throw SourceFailure.unsupported }
+            throw SourceFailure.capabilityUnproven
+        }
         guard let row=try reader.message(action["native_key"].string),let item=try reader.messageObservations(row).first else {throw SourceFailure.capabilityUnproven}
         let target=try JSONDecoder().decode(JSON.self,from:JSONSerialization.data(withJSONObject:item.2,options:.sortedKeys))
         guard tagged(target["text"].string) else {throw SourceFailure.invalid}
@@ -101,29 +168,40 @@ public actor MessagesCommands {
         destination["list_key"] = .string(row["capture_chat_guid"])
         let route=try verifyRoute(.object(destination),reader:reader)
         if operation == .edit || operation == .unsend {
-            let chat=try reader.query("SELECT service_name FROM chat WHERE guid=?",[row["capture_chat_guid"]]).first
-            guard chat?["service_name"] == "iMessage", row.flag("is_from_me"),let sent=parseTimestamp(target["sent_at"].string) else {throw SourceFailure.unsupported}
+            guard row["service"] == "iMessage", row.flag("is_from_me"),let sent=parseTimestamp(target["sent_at"].string) else {throw SourceFailure.unsupported}
             let age=Date().timeIntervalSince(sent)
             guard age >= 0, age < (operation == .edit ? 900 : 120), operation != .edit || target["edit_history"].array.count < 5 else {throw SourceFailure.unsupported}
         }
-        for field in ["text","sent_at","edit_history","retracted_parts"] {
+        for field in ["text","edit_history","retracted_parts"] {
             let expected=command["expected_state"][field]
-            if expected != .null && expected != target[field] {throw SourceFailure.conflict}
+            if expected != .null && expected != target[field] {
+                let delta = field == "sent_at" ? parseTimestamp(expected.string).flatMap { first in parseTimestamp(target[field].string).map { first.timeIntervalSince($0) } } : nil
+                try? PrivateReport.write(["stage": "expected_state", "field": field, "delta_seconds": delta.map { $0 as Any } ?? NSNull(), "expected_length": expected.string.count, "actual_length": target[field].string.count], to: PrivateReport.validate(PrivateReport.directory.appendingPathComponent("messages-prepare-diagnostic.json").path))
+                throw SourceFailure.conflict
+            }
         }
-        let prepared=Prepared(nativeState:.object(["route":.string("accessibility"),"destination":route,"target":target,"max_row_id":.number(Double(try reader.maximum())),"candidate_ids":.array([.string(row["guid"])])]),fingerprint:command["request_hash"].string,action:action)
-        guard labCommands, await MessagesAccessibility.available else {throw SourceFailure.capabilityUnproven}
+        let own = Set(try MessagesProbes.discoverSelfHandles().handles)
+        let peers = try reader.query("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", [row["capture_chat_guid"]])
+        let selfChat = !peers.isEmpty && peers.allSatisfy { own.contains(MessagesProbes.normalize($0["id"])) }
+        let reactions = try reader.query("SELECT guid,associated_message_type,associated_message_emoji FROM message WHERE (is_from_me=1 OR ?='1') AND associated_message_guid LIKE ?", [selfChat ? "1" : "0", "%" + row["guid"]]).map { item in JSON.object(["guid": .string(item["guid"]), "type": .string(item["associated_message_type"]), "emoji": .string(item["associated_message_emoji"])]) }
+        let prepared=Prepared(nativeState:.object(["self_chat": .bool(selfChat), "reactions": .array(reactions), "route":.string("accessibility"),"destination":route,"target":target,"max_row_id":.number(Double(try reader.maximum())),"candidate_ids":.array([.string(row["guid"])])]),fingerprint:command["request_hash"].string,action:action)
+        guard labCommands || proofs().contains(routeProof(route, kind: action["op"].string)), await MessagesAccessibility.available else {throw SourceFailure.capabilityUnproven}
+        try await MessagesAccessibility.openMessage(row["guid"])
+        if try await MessagesAccessibility.acknowledgeDeletedInfo() { try await MessagesAccessibility.openMessage(row["guid"]) }
         try await MessagesAccessibility.validate(prepared)
         return prepared
     }
     public func validate(_ prepared: Prepared) async throws {
-        if prepared.action["op"].string != "messages.send" {try await MessagesAccessibility.validate(prepared)}
+        if !["messages.send", "messages.create_group"].contains(prepared.action["op"].string) {try await MessagesAccessibility.validate(prepared)}
     }
     private func dispatchAccessibility(_ prepared: Prepared) async throws -> JSON {
         let reader=try MessagesReader(path:path)
         let native=prepared.action["native_key"].string
         guard let before=try reader.message(native),let item=try reader.messageObservations(before).first else {throw SourceFailure.conflict}
         let current=try JSONDecoder().decode(JSON.self,from:JSONSerialization.data(withJSONObject:item.2,options:.sortedKeys))
-        guard current==prepared.nativeState["target"] else {throw SourceFailure.conflict}
+        for field in ["text", "is_from_me", "edit_history", "retracted_parts", "retracted_at"] {
+            guard current[field] == prepared.nativeState["target"][field] else { throw SourceFailure.conflict }
+        }
         let ui=try await MessagesAccessibility.perform(prepared)
         let deadline=ContinuousClock.now.advanced(by:.seconds(10))
         let operation=try MessagesAction(operation:prepared.action["op"].string)
@@ -135,6 +213,25 @@ public actor MessagesCommands {
             switch operation {
             case .edit: observed=data["text"]==prepared.action["messages"]["text"] && data["edit_history"].array.count > current["edit_history"].array.count
             case .unsend: observed=data["retracted_at"] != .null || !data["retracted_parts"].array.isEmpty
+            case .reply:
+                let replies = try reader.query("SELECT guid FROM message WHERE ROWID>? AND is_from_me=1 AND thread_originator_guid=? AND (text=? OR instr(attributedBody,CAST(? AS BLOB))>0)", [String(Int64(prepared.nativeState["max_row_id"].number)), native, prepared.action["messages"]["text"].string, prepared.action["messages"]["text"].string])
+                observed = replies.count == 1
+                if observed, let key = replies.first?["guid"] {
+                    return .object(["source": .string("messages"), "native_key": .string(key), "collection": .string("messages.message"), "observed": .bool(true), "disposition": .string("locally_observed"), "parts": .array([]), "ui": ui])
+                }
+            case .react:
+                let args = prepared.action["messages"]
+                let kinds = ["love", "like", "dislike", "laugh", "emphasize", "question", "emoji"]
+                guard let index = kinds.firstIndex(of: args["reaction"].string) else { throw SourceFailure.invalid }
+                let type = (args["remove"].bool ? 3000 : 2000) + index
+                let reactions = try reader.query("SELECT guid,associated_message_type,associated_message_emoji FROM message WHERE (is_from_me=1 OR ?='1') AND associated_message_guid LIKE ? AND associated_message_type=?", [prepared.nativeState["self_chat"].bool ? "1" : "0", "%" + native, String(type)]).filter { item in
+                    let signature = JSON.object(["guid": .string(item["guid"]), "type": .string(item["associated_message_type"]), "emoji": .string(item["associated_message_emoji"])])
+                    return !prepared.nativeState["reactions"].array.contains(signature) && (args["reaction"].string != "emoji" || args["remove"].bool || item["associated_message_emoji"] == args["emoji"].string)
+                }
+                observed = reactions.count == 1
+                if observed, let key = reactions.first?["guid"] {
+                    return .object(["source": .string("messages"), "native_key": .string(key), "collection": .string("messages.reaction"), "observed": .bool(true), "disposition": .string("locally_observed"), "parts": .array([]), "ui": ui])
+                }
             case .deleteMessage: observed=row == nil
             default: break
             }
@@ -174,7 +271,12 @@ public actor MessagesCommands {
         return parts
     }
     public func dispatch(_ prepared: Prepared) async throws -> JSON {
-        if prepared.action["op"].string != "messages.send" {return try await dispatchAccessibility(prepared)}
+        if prepared.action["op"].string == "messages.create_group" { return try await dispatchGroup(prepared) }
+        if prepared.action["op"].string != "messages.send" {
+            let result = try await dispatchAccessibility(prepared)
+            if labCommands && result["observed"].bool { try recordProof(prepared.nativeState["destination"], parts: [.object(["kind": prepared.action["op"]])]) }
+            return result
+        }
         let reader = try MessagesReader(path: path)
         let route = try verifyRoute(prepared.action, reader: reader)
         guard route == prepared.nativeState["destination"] else { throw SourceFailure.conflict }
@@ -277,6 +379,7 @@ public actor MessagesCommands {
 
 @UIActor
 public enum MessagesUI {
+    public static func execute(_ script: String) -> Int { MessagesAppleScript.execute(script) }
     public static func send(_ part: JSON, route: JSON) -> Int {
         let content = part["kind"].string == "text" ? MessagesAppleScript.literal(part["text"].string) : "POSIX file " + MessagesAppleScript.literal(part["path"].string)
         if route["kind"].string == "chat_id_raw" {

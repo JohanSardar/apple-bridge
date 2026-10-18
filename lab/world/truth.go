@@ -31,7 +31,7 @@ func (w *World) RecoverTruth(verb string, request map[string]any) (map[string]an
 
 func (w *World) truth(ctx context.Context, verb string, request map[string]any) (map[string]any, error) {
 	calendarFixture := verb == "fixture" && request["source"] == "calendar"
-	if calendarFixture && request["action"] == "consolidate_calendars" {
+	if calendarFixture && (request["action"] == "consolidate_calendars" || request["action"] == "cleanup_empty_build_calendar") {
 		bytes, err := exec.CommandContext(ctx, "python3", filepath.Join(filepath.Dir(filepath.Dir(w.bridge)), "lab/truth/calendar-cleanup-audit.py"), "--empty-proof").Output()
 		if err != nil {
 			return nil, fmt.Errorf("Calendar all-date emptiness proof unavailable: %w", err)
@@ -47,6 +47,21 @@ func (w *World) truth(ctx context.Context, verb string, request map[string]any) 
 	output := filepath.Join(w.Dir, id+"-report.json")
 	defer os.Remove(input)
 
+	if request["source"] == "messages" {
+		snapshot := filepath.Join(w.Dir, id+"-messages.sqlite")
+		defer os.Remove(snapshot)
+		original := filepath.Join(os.Getenv("HOME"), "Library", "Messages", "chat.db")
+		script := "import sqlite3,sys,os; a=sqlite3.connect('file:'+sys.argv[1]+'?mode=ro',uri=True); b=sqlite3.connect(sys.argv[2]); a.backup(b); b.execute('pragma journal_mode=delete'); b.close(); a.close(); os.chmod(sys.argv[2],0o600)"
+		if _, err := commandOutput(ctx, "python3", "-c", script, original, snapshot); err != nil {
+			return nil, err
+		}
+		cloned := map[string]any{}
+		for key, value := range request {
+			cloned[key] = value
+		}
+		cloned["snapshot_path"] = snapshot
+		request = cloned
+	}
 	if request["source"] == "notes" && request["sqlite"] == true {
 		snapshot := filepath.Join(w.Dir, id+"-notes.sqlite")
 		defer os.Remove(snapshot)

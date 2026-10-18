@@ -44,6 +44,7 @@ public actor AppleSession: ObservationSink {
     private var bulk: [Pending] = []
     private var flights: [String: Flight] = [:]
     private var tickets: [String: Ticket] = [:]
+    private var preparing: UUID?
     private var commandActive = false
     private var additionalSources: [String: any Source] = [:]
     private var blobReader: (@Sendable (String, Int64, Int) async throws -> JSON)?
@@ -149,7 +150,7 @@ public actor AppleSession: ObservationSink {
         frameTasks = [:]
         for pending in live + bulk { pending.completion.resume(throwing: SourceFailure.unavailable) }
         for flight in flights.values { flight.pending.completion.resume(throwing: SourceFailure.unavailable) }
-        live = []; bulk = []; flights = [:]; tickets = [:]
+        live = []; bulk = []; flights = [:]; tickets = [:]; preparing = nil
     }
 
     public func sourceState(source: String, state: String, coverage: JSON, capabilities: [String], reason: String) async throws {
@@ -215,6 +216,7 @@ public actor AppleSession: ObservationSink {
         let id = UUID()
         frameTasks[id] = Task {
             switch frame["t"].string {
+            case "Prepare": await prepare(frame)
             case "Dispatch": await dispatch(frame)
             case "Resolve": await resolve(frame)
             case "BlobRead": await readBlob(frame)
@@ -346,7 +348,7 @@ public actor AppleSession: ObservationSink {
             flight.pending.completion.resume()
             try await drain()
         case "Reset": throw SourceFailure.conflict
-        case "Prepare": await prepare(frame)
+        case "Prepare": launchFrame(frame)
         case "Dispatch": launchFrame(frame)
         case "Resolve": launchFrame(frame)
         case "BlobRead":
@@ -453,6 +455,11 @@ let operation=outcome["evidence"]["prepared"]["action"]["op"].string
     private func rejectCommand(_ frame: JSON, error: any Error) async {
         let code = errorCode(error)
         let key = frame["action"]["native_key"].string
+        if frame["action"]["op"].string.hasPrefix("messages.") {
+            let detail = (error as? MessagesUIFailure)?.rawValue ?? code
+            try? wire?.send(.object(["t": .string("Rejected"), "command_id": frame["command_id"], "disposition": .string("rejected_before_dispatch"), "error": .object(["code": .string(code), "message": .string(detail)])]))
+            return
+        }
         if frame["action"]["op"].string.hasPrefix("notes.") {try? reject(frame,code:code);return}
         guard code == "conflict", !key.isEmpty else { try? reject(frame, code: code); return }
         do {
@@ -465,16 +472,23 @@ let operation=outcome["evidence"]["prepared"]["action"]["op"].string
     }
 
     private func prepare(_ frame: JSON) async {
+        let nonce = UUID()
+        guard let connection = wire else { return }
+        let owner = fence
+        defer { if preparing == nonce { preparing = nil } }
         do {
             guard !frame["command_id"].string.isEmpty, !frame["principal"].string.isEmpty, !frame["request_hash"].string.isEmpty, let expires = parseTimestamp(frame["expires_at"].string), expires > Date() else { throw SourceFailure.invalid }
             tickets = tickets.filter { ContinuousClock.now < $0.value.expiry }
-            guard !commandActive, tickets.isEmpty, !(await guardLog.contains(frame["command_id"].string)) else { throw SourceFailure.conflict }
+            guard !commandActive, tickets.isEmpty, preparing == nil else { throw SourceFailure.conflict }
+            preparing = nonce
+            guard !(await guardLog.contains(frame["command_id"].string)) else { throw SourceFailure.conflict }
             let selected = additionalSources[frame["action"]["op"].string.components(separatedBy: ".").first ?? ""] ?? source
  let prepared = frame["action"]["op"].string.hasPrefix("contacts.") ? try await contacts.prepare(frame) : frame["action"]["op"].string.hasPrefix("calendar.") ? try await calendar.prepare(frame) : try await selected.prepare(frame)
+            guard !Task.isCancelled, wire === connection, fence == owner, preparing == nonce, expires > Date() else { throw SourceFailure.expired }
             let ticket = UUID().uuidString
-            tickets[ticket] = Ticket(command: frame, prepared: prepared, expiry: ContinuousClock.now.advanced(by: .milliseconds(Int64(min(30, expires.timeIntervalSinceNow) * 1000))), fence: fence)
+            tickets[ticket] = Ticket(command: frame, prepared: prepared, expiry: ContinuousClock.now.advanced(by: .milliseconds(Int64(min(30, expires.timeIntervalSinceNow) * 1000))), fence: owner)
             try wire?.send(.object(["t": .string("Prepared"), "command_id": frame["command_id"], "ticket": .string(ticket), "native_state": prepared.nativeState, "route": prepared.nativeState["route"].string.isEmpty ? .string("eventkit") : prepared.nativeState["route"], "fingerprint": frame["request_hash"], "candidate_ids": prepared.nativeState["candidate_ids"].array.isEmpty ? .array([]) : prepared.nativeState["candidate_ids"]]))
-        } catch { await rejectCommand(frame, error: error) }
+        } catch { if wire === connection && !Task.isCancelled { await rejectCommand(frame, error: error) } }
     }
 
     private func dispatch(_ frame: JSON) async {
@@ -509,7 +523,8 @@ let operation=outcome["evidence"]["prepared"]["action"]["op"].string
             try wire?.send(outcome)
         } catch {
             if started {
-                let outcome = JSON.object(["t": .string("Outcome"), "command_id": id, "disposition": .string("indeterminate"), "evidence": .object(["reason": .string("dispatch_evidence_unavailable"), "prepared": .object(["action": ticket.prepared.action, "native_state": ticket.prepared.nativeState, "request_hash": ticket.command["request_hash"]])])])
+                let nativeCode = (error as? SourceFailure).map { String(describing: $0) } ?? (error as? MessagesUIFailure)?.rawValue ?? "native_error"
+                let outcome = JSON.object(["t": .string("Outcome"), "command_id": id, "disposition": .string("indeterminate"), "evidence": .object(["reason": .string("dispatch_evidence_unavailable"), "native_error_code": .string(nativeCode), "prepared": .object(["action": ticket.prepared.action, "native_state": ticket.prepared.nativeState, "request_hash": ticket.command["request_hash"]])])])
                 try? await guardLog.append(outcome); try? wire?.send(outcome)
             } else { await rejectCommand(ticket.command, error: error) }
         }

@@ -920,6 +920,9 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		ran++
 		fmt.Fprintln(os.Stderr, "running", s.ID, level)
 		duration := 3 * time.Minute
+		if level == "real" && (s.Feature == "messages.actions" || s.Feature == "messages.groups") {
+			duration = 8 * time.Minute
+		}
 		if s.ID == "CAL-CRUD" && level != "sim" {
 			duration = 6 * time.Minute
 		}
