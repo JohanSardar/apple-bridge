@@ -35,7 +35,7 @@ func runCredentialStore(ctx context.Context, e Evidence) Evidence {
 		mock := filepath.Join(root, "bin")
 		err := os.MkdirAll(mock, 0700)
 		if err == nil {
-			err = os.WriteFile(filepath.Join(mock, "security"), []byte("#!/bin/sh\nexit 36\n"), 0700)
+			err = os.WriteFile(filepath.Join(mock, "python3"), []byte("#!/bin/sh\nprintf '%s\\n' '{\"status\":-25308}'\n"), 0700)
 		}
 		if err != nil {
 			add("locked_store_fixture", false)

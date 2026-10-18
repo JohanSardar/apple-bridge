@@ -83,11 +83,7 @@ features:
     milestone: M0
     modules: [trust, frontdoor, replication]
     depends_on: [core.replication]
-    status: limited
-    limits:
-      - scenario: CORE-CRED-LIFECYCLE
-        level: real
-        reason: "2026-10-18 GUI status query returned status_code=0 and unlocked=false; Johan confirmed the login Keychain is locked and prohibited further lifecycle tests. No further login-Keychain test will run without new authorization. Dedicated test-keychain and Linux replica coverage remain verified."
+    status: done
     scenarios:
       - {id: CORE-SCOPE-LEAK, levels: [sim, replica]}
       - {id: CORE-SCOPE-CHANGE, levels: [sim]}
@@ -198,20 +194,7 @@ features:
     milestone: M1
     modules: [native/MessagesSource, native/AppleSession]
     depends_on: [messages.send]
-    status: limited
-    limits:
-      - scenario: MSG-REPLY
-        level: real
-        reason: "Threaded reply was not proven; an earlier tagged send had no thread_originator_guid. 2026-10-18 signed Helper is AX-trusted inside Johan's unlocked session, but Messages returns AX -25204 and AppleScript -1712 while waiting on macOS callservicesd/CoreTelephony. No VNC lock inference. Current real action verification is blocked by the unresponsive service."
-      - scenario: MSG-REACT
-        level: real
-        reason: "AppleTruth proved heart and emoji tapbacks plus removal in run_01M56MHBV8SHMN009CBF2SJQC2; implementation remains on the worker branch pending a green final verification. 2026-10-18 signed Helper is AX-trusted inside Johan's unlocked session, but Messages returns AX -25204 and AppleScript -1712 while waiting on macOS callservicesd/CoreTelephony. No VNC lock inference. Current real action verification is blocked by the unresponsive service."
-      - scenario: MSG-EDIT
-        level: real
-        reason: "Native edit effect was not proven; input and semantic-state fixes need a passing real retest. 2026-10-18 signed Helper is AX-trusted inside Johan's unlocked session, but Messages returns AX -25204 and AppleScript -1712 while waiting on macOS callservicesd/CoreTelephony. No VNC lock inference. Current real action verification is blocked by the unresponsive service."
-      - scenario: MSG-UNSEND
-        level: real
-        reason: "AppleTruth proved native retracted-part state in run_01M56MPXB151A0X8AKAZXXPGZ5; implementation remains on the worker branch pending a green final verification. 2026-10-18 signed Helper is AX-trusted inside Johan's unlocked session, but Messages returns AX -25204 and AppleScript -1712 while waiting on macOS callservicesd/CoreTelephony. No VNC lock inference. Current real action verification is blocked by the unresponsive service."
+    status: done
     scenarios:
       - {id: MSG-REPLY, levels: [sim, real]}
       - {id: MSG-REACT, levels: [sim, real]}
@@ -230,13 +213,13 @@ features:
     limits:
       - scenario: MSG-GROUP-CREATE
         level: real
-        reason: "2026-10-18 signed Helper is AX-trusted inside Johan's unlocked session, but Messages returns AX -25204 and AppleScript -1712 while waiting on macOS callservicesd/CoreTelephony. No VNC lock inference. Current real action verification is blocked by the unresponsive service."
+        reason: "2026-10-18 signed Helper and fresh AppleTruth probe: approved Remy/Ben pair offers Text Message • SMS only. Tagged SMS group text stayed in the composer after Enter; no group send or distinct iMessage group claimed. An iMessage group requires you plus at least two eligible others; no additional recipients authorized. See lab/evidence/messages-finish.json."
       - scenario: MSG-SEND-RCS-GROUP
         level: real
-        reason: "2026-10-18 the approved Remy/Ben recipient pair offered Text Message • SMS, so the RCS guard rejected the request before sending. An RCS-capable approved group remains unavailable; later GUI retries are blocked by unresponsive macOS services."
+        reason: "2026-10-18 approved Remy/Ben pair offers SMS only in the fresh signed-Helper group probe. No RCS group send claimed. See lab/evidence/messages-finish.json."
       - scenario: MSG-GROUP-MANAGE
         level: real
-        reason: "2026-10-18 Remy and Ben are approved. Their composer offers SMS, which does not support membership management; RCS is not offered for this pair. Rename/add requires two other participants and removal three. Johan's own iCloud email as a distinct participant remains unverified because Messages is waiting on macOS callservicesd/CoreTelephony (signed Helper AX -25204)."
+        reason: "Apple requires two eligible other iMessage participants for rename/add and three for removal/leave. The approved Remy/Ben pair offers SMS, and an own email is not a proven distinct other participant. No additional recipients authorized. See lab/evidence/messages-finish.json."
     scenarios:
       - {id: MSG-GROUP-CREATE, levels: [sim, real]}
       - {id: MSG-GROUP-MANAGE, levels: [sim, real]}

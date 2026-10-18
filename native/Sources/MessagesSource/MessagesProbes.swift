@@ -67,6 +67,59 @@ public enum MessagesProbes {
 
     public static func run(_ arguments: [String]) throws -> [String: Any] {
         switch arguments[1] {
+        case "dismiss-test-delete":
+            guard AXIsProcessTrusted(), let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.MobileSMS").first else { throw ProbeFailure.unavailable }
+            func buttons(_ element: AXUIElement) -> [AXUIElement] {
+                var title: CFTypeRef?
+                var role: CFTypeRef?
+                AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &title)
+                AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &role)
+                if title as? String == "Cancel", role as? String == kAXButtonRole { return [element] }
+                var children: CFTypeRef?
+                AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &children)
+                return (children as? [AXUIElement] ?? []).flatMap(buttons)
+            }
+            let matches = buttons(AXUIElementCreateApplication(app.processIdentifier))
+            guard matches.count == 1 else { return ["cancel_count": matches.count] }
+            var position: CFTypeRef?
+            var size: CFTypeRef?
+            AXUIElementCopyAttributeValue(matches[0], kAXPositionAttribute as CFString, &position)
+            AXUIElementCopyAttributeValue(matches[0], kAXSizeAttribute as CFString, &size)
+            guard let position, let size else { throw ProbeFailure.unavailable }
+            var origin = CGPoint.zero
+            var dimensions = CGSize.zero
+            AXValueGetValue(unsafeDowncast(position, to: AXValue.self), .cgPoint, &origin)
+            AXValueGetValue(unsafeDowncast(size, to: AXValue.self), .cgSize, &dimensions)
+            let x = Int(origin.x + dimensions.width / 2)
+            let y = Int(origin.y + dimensions.height / 2)
+            let code = MessagesAppleScript.execute("tell application \"System Events\" to tell process \"Messages\" to click at {" + String(x) + "," + String(y) + "}")
+            return ["apple_event_error": code, "cancel_count": matches.count]
+        case "keychain-state":
+            return try keychainState()
+        case "session-state":
+            var report: [String: Any] = ["accessibility": AXIsProcessTrusted(), "messages_frontmost": NSWorkspace.shared.frontmostApplication?.bundleIdentifier == "com.apple.MobileSMS", "messages_running": !NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.MobileSMS").isEmpty]
+            let system = AXUIElementCreateSystemWide()
+            AXUIElementSetMessagingTimeout(system, 3)
+            var focused: CFTypeRef?
+            let focusError = AXUIElementCopyAttributeValue(system, kAXFocusedApplicationAttribute as CFString, &focused)
+            report["focused_application_error"] = focusError.rawValue
+            if let focused, CFGetTypeID(focused) == AXUIElementGetTypeID() {
+                let element = unsafeDowncast(focused, to: AXUIElement.self)
+                var pid: pid_t = 0
+                AXUIElementGetPid(element, &pid)
+                let bundle = NSRunningApplication(processIdentifier: pid)?.bundleIdentifier ?? "unknown"
+                report["focused_application"] = ["com.apple.MobileSMS", "com.apple.loginwindow", "com.apple.SecurityAgent"].contains(bundle) ? bundle : "other"
+            }
+            if let app = MessagesNavigation.application {
+                let root = AXUIElementCreateApplication(app.processIdentifier)
+                AXUIElementSetMessagingTimeout(root, 3)
+                var role: CFTypeRef?
+                report["messages_role_error"] = AXUIElementCopyAttributeValue(root,kAXRoleAttribute as CFString,&role).rawValue
+                var windows: CFTypeRef?
+                report["messages_windows_error"] = AXUIElementCopyAttributeValue(root,kAXWindowsAttribute as CFString,&windows).rawValue
+                report["messages_window_count"] = (windows as? [AXUIElement])?.count ?? 0
+            }
+            return report
         case "self-handles":
             let result = try discoverSelfHandles()
             let report: [String: Any] = ["handles": result.handles, "source": result.source, "index_base": 0]
@@ -79,6 +132,20 @@ public enum MessagesProbes {
         default:
             throw ProbeFailure.invalidArguments
         }
+    }
+
+    private static func keychainState() throws -> [String: Any] {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
+        process.arguments = ["-c", "import ctypes,json,subprocess,pathlib; p=subprocess.check_output(['/usr/bin/security','default-keychain','-d','user'],text=True).strip().strip(chr(34)); s=ctypes.CDLL('/System/Library/Frameworks/Security.framework/Security'); s.SecKeychainSetUserInteractionAllowed.argtypes=[ctypes.c_bool]; s.SecKeychainSetUserInteractionAllowed(False); s.SecKeychainGetStatus.argtypes=[ctypes.c_void_p,ctypes.POINTER(ctypes.c_uint32)]; v=ctypes.c_uint32(); code=s.SecKeychainGetStatus(None,ctypes.byref(v)); print(json.dumps({'default_is_login':pathlib.Path(p).name in ['login.keychain-db','login.keychain'],'status_code':code,'unlocked':bool(v.value & 1),'readable':bool(v.value & 2),'writable':bool(v.value & 4)}))"]
+        let output = Pipe()
+        process.standardOutput = output
+        process.standardError = FileHandle.nullDevice
+        try process.run()
+        let data = output.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+        guard process.terminationStatus == 0, let result = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { throw ProbeFailure.unavailable }
+        return result
     }
 
     private static func sendSelf(_ arguments: [String]) throws -> [String: Any] {
@@ -161,28 +228,127 @@ public enum MessagesProbes {
     }
 
     private static func dumpAccessibility(_ arguments: [String]) throws -> [String: Any] {
-        let handle = try selfHandle(arguments)
+        var handle = try selfHandle(arguments)
+        if let index = arguments.firstIndex(of: "--approved-contact"), index + 1 < arguments.count {
+            guard arguments[index + 1] == "remy" else { throw ProbeFailure.invalidArguments }
+            let file = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".config/apple-bridge/test-contacts.env")
+            let lines = try String(contentsOf: file, encoding: .utf8).components(separatedBy: .newlines)
+            var contacts: [String: String] = [:]
+            for line in lines {
+                let parts = line.replacingOccurrences(of: "export ", with: "").split(separator: "=", maxSplits: 1).map(String.init)
+                if parts.count == 2 { contacts[parts[0].trimmingCharacters(in: .whitespaces)] = parts[1].trimmingCharacters(in: CharacterSet(charactersIn: " \"'")) }
+            }
+            handle = contacts["REMY_IMESSAGE_TEST_HANDLE"] ?? contacts["REMY_IMESSAGE_TEST_EMAIL"] ?? ""
+            guard !handle.isEmpty else { throw ProbeFailure.invalidArguments }
+        }
         guard AXIsProcessTrusted() else { throw ProbeFailure.unavailable }
-        guard let url = URL(string: "imessage://" + handle.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed)!) else { throw ProbeFailure.invalidArguments }
-        guard NSWorkspace.shared.open(url) else { throw ProbeFailure.unavailable }
+        if arguments.contains("--compose") {
+            let code = MessagesAppleScript.execute("tell application \"Messages\" to activate\ntell application \"System Events\" to tell process \"Messages\" to key code 45 using {command down}")
+            guard code == 0 else { return ["state": "unavailable", "apple_event_error": code] }
+        }
+        var components = URLComponents()
+        components.scheme = "imessage"
+        components.path = "open"
+        components.queryItems = [URLQueryItem(name: "address", value: handle)]
+        if let index = arguments.firstIndex(of: "--message-guid"), index + 1 < arguments.count {
+            let guid = arguments[index + 1]
+            let database = try MessagesDatabase()
+            let rows = try database.rows("SELECT guid FROM message WHERE guid=? AND (instr(text,'[ab-test ')>0 OR instr(attributedBody,CAST('[ab-test ' AS BLOB))>0)", bindings: [guid])
+            guard rows.count == 1 else { throw ProbeFailure.invalidArguments }
+            components.queryItems = [URLQueryItem(name: "message-guid", value: guid)]
+        }
+        guard let url = components.url else { throw ProbeFailure.invalidArguments }
+        if !arguments.contains("--current") { try MessagesNavigation.open(url) }
         let deadline = Date().addingTimeInterval(3)
         while Date() < deadline { RunLoop.current.run(until: Date().addingTimeInterval(0.1)) }
-        guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.MobileSMS").first,
+        guard let app = MessagesNavigation.application,
               NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier else { throw ProbeFailure.unavailable }
         let root = AXUIElementCreateApplication(app.processIdentifier)
         AXUIElementSetMessagingTimeout(root, 0.5)
+        if let index = arguments.firstIndex(of: "--menu-tag") ?? arguments.firstIndex(of: "--reply-tag"), index + 1 < arguments.count {
+            let tag = arguments[index + 1]
+            guard tag.hasPrefix("[ab-test "), tag.hasSuffix("]") else { throw ProbeFailure.invalidArguments }
+            func find(_ element: AXUIElement) -> [AXUIElement] {
+                var identifier: CFTypeRef?
+                var description: CFTypeRef?
+                AXUIElementCopyAttributeValue(element, kAXIdentifierAttribute as CFString, &identifier)
+                AXUIElementCopyAttributeValue(element, kAXDescriptionAttribute as CFString, &description)
+                if identifier as? String == "Sticker", let text = description as? String, text.hasPrefix("Your iMessage,"), text.contains(tag) { return [element] }
+                var children: CFTypeRef?
+                AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &children)
+                return (children as? [AXUIElement] ?? []).flatMap(find)
+            }
+            let targets = find(root)
+            guard targets.count == 1 else { throw ProbeFailure.unavailable }
+            if arguments.contains("--reply-tag") {
+                var names: CFArray?
+                AXUIElementCopyActionNames(targets[0], &names)
+                let reply = (names as? [String] ?? []).filter { $0.hasPrefix("Name:Reply") }
+                guard reply.count == 1, AXUIElementPerformAction(targets[0], reply[0] as CFString) == .success else { throw ProbeFailure.unavailable }
+                RunLoop.current.run(until: Date().addingTimeInterval(1))
+            } else {
+            _ = AXUIElementPerformAction(targets[0], "AXScrollToVisible" as CFString)
+            RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+            var position: CFTypeRef?
+            var size: CFTypeRef?
+            AXUIElementCopyAttributeValue(targets[0], kAXPositionAttribute as CFString, &position)
+            AXUIElementCopyAttributeValue(targets[0], kAXSizeAttribute as CFString, &size)
+            guard let position, let size else { throw ProbeFailure.unavailable }
+            var origin = CGPoint.zero
+            var dimensions = CGSize.zero
+            AXValueGetValue(unsafeDowncast(position, to: AXValue.self), .cgPoint, &origin)
+            AXValueGetValue(unsafeDowncast(size, to: AXValue.self), .cgSize, &dimensions)
+            let point = CGPoint(x: origin.x + dimensions.width / 2, y: origin.y + dimensions.height / 2)
+            let script = "tell application \"System Events\"\ntell process \"Messages\"\nset frontmost to true\nkey down control\ntry\nclick at {" + String(Int(point.x)) + "," + String(Int(point.y)) + "}\non error\nkey up control\nerror number -1\nend try\nkey up control\nend tell\nend tell"
+            let code = MessagesAppleScript.execute(script)
+            guard code == 0 else { return ["state": "unavailable", "apple_event_error": code] }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.3))
+            }
+        }
+        if arguments.contains("--details") {
+            var budget = 2000
+            func findTitle(_ element: AXUIElement) -> [AXUIElement] {
+                guard budget > 0 else { return [] }
+                budget -= 1
+                var identifier: CFTypeRef?
+                AXUIElementCopyAttributeValue(element, kAXIdentifierAttribute as CFString, &identifier)
+                if identifier as? String == "ConversationTitle" { return [element] }
+                var children: CFTypeRef?
+                AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &children)
+                return (children as? [AXUIElement] ?? []).flatMap(findTitle)
+            }
+            let titles = findTitle(root)
+            guard titles.count == 1, AXUIElementPerformAction(titles[0], kAXPressAction as CFString) == .success else { throw ProbeFailure.unavailable }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.4))
+        }
         var count = 0
-        let tree = accessibilityNode(root, depth: 0, count: &count)
-        return ["tree": tree, "node_count": count, "scope": "messages_application_including_transcript", "selection": "self_handle_url_requested", "target_verified": false, "text_redaction": "length_sha256", "truncated": count >= 4000]
+        let tree = accessibilityNode(root, depth: 0, count: &count, raw: arguments.contains("--private-values"))
+        return ["tree": tree, "node_count": count, "scope": "messages_application_including_transcript", "selection": "self_handle_url_requested", "target_verified": false, "text_redaction": arguments.contains("--private-values") ? "private_unredacted" : "length_sha256", "truncated": count >= 4000]
     }
 
-    private static func accessibilityNode(_ element: AXUIElement, depth: Int, count: inout Int) -> [String: Any] {
+    private static func accessibilityNode(_ element: AXUIElement, depth: Int, count: inout Int, raw: Bool) -> [String: Any] {
         count += 1
         var node: [String: Any] = [:]
-        for attribute in [kAXRoleAttribute, kAXSubroleAttribute, kAXIdentifierAttribute, kAXDescriptionAttribute, kAXTitleAttribute, kAXValueAttribute, kAXHelpAttribute] {
+        for attribute in [kAXRoleAttribute, kAXSubroleAttribute, kAXIdentifierAttribute, kAXDescriptionAttribute, kAXTitleAttribute, kAXValueAttribute, kAXHelpAttribute, kAXPlaceholderValueAttribute] {
             var value: CFTypeRef?
-            if AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success, let text = value as? String {
-                node[attribute] = attribute == kAXRoleAttribute || attribute == kAXSubroleAttribute || attribute == kAXIdentifierAttribute ? text as Any : PrivateReport.redact(text) as Any
+            if AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success, let text = (value as? String) ?? (value as? NSAttributedString)?.string {
+                node[attribute] = raw || attribute == kAXRoleAttribute || attribute == kAXSubroleAttribute || attribute == kAXIdentifierAttribute ? text as Any : PrivateReport.redact(text) as Any
+            }
+        }
+        if raw {
+            for attribute in [kAXEnabledAttribute, kAXFocusedAttribute, "AXHidden"] {
+                var value: CFTypeRef?
+                if AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success, let value = value as? NSNumber { node[attribute] = value.boolValue }
+            }
+            for attribute in [kAXPositionAttribute, kAXSizeAttribute] {
+                var value: CFTypeRef?
+                if AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success, let value, CFGetTypeID(value) == AXValueGetTypeID() {
+                    let ax = unsafeDowncast(value, to: AXValue.self)
+                    var point = CGPoint.zero
+                    var size = CGSize.zero
+                    if AXValueGetValue(ax, .cgPoint, &point) { node[attribute] = [point.x, point.y] }
+                    else if AXValueGetValue(ax, .cgSize, &size) { node[attribute] = [size.width, size.height] }
+                }
             }
         }
         var actions: CFArray?
@@ -195,7 +361,7 @@ public enum MessagesProbes {
                 var result: [[String: Any]] = []
                 for child in elements {
                     if count >= 4000 { break }
-                    result.append(accessibilityNode(child, depth: depth + 1, count: &count))
+                    result.append(accessibilityNode(child, depth: depth + 1, count: &count, raw: raw))
                 }
                 node["children"] = result
             }

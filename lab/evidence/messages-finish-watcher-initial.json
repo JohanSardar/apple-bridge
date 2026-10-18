@@ -1,0 +1,70 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[4.58 4.64 4.66] cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M582ZVJ5HGWBENY0SM6Q8JVE",
+  "scenario": "MSG-WATCHER-REARM",
+  "level": "sim",
+  "passed": false,
+  "git_sha": "aaa7ec2eb8af5c94e2f4d8ed38f618e8140f9480",
+  "at": "2026-10-18T18:04:40.901041Z",
+  "assertions": [
+    {
+      "name": "seed",
+      "passed": true
+    },
+    {
+      "name": "history_equals_truth",
+      "passed": true
+    },
+    {
+      "name": "wal_rotation_followed_by_insert",
+      "passed": true
+    },
+    {
+      "name": "poll_fallback_catches_disarmed_events",
+      "passed": true
+    },
+    {
+      "name": "production_native_watcher_fault_checks",
+      "passed": false
+    },
+    {
+      "name": "automatic_convergence_with_truth",
+      "passed": true
+    },
+    {
+      "name": "automatic_no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_transactional_feed_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_transactional_feed_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_no_scope_leak_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_no_scope_leak_1",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

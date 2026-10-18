@@ -1,160 +1,18 @@
 {
   "host_conditions": {
-    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
-    "start": {
-      "air": {
-        "at": "2026-10-17T19:49:32.107401Z",
-        "cpu_count": 8,
-        "load_average": [
-          4.58,
-          5.03,
-          5.02
-        ],
-        "cpu_idle_percent": 67,
-        "free_memory_bytes": 63324160,
-        "active_heavy_slots": 2,
-        "other_active_heavy_slots": 1,
-        "heavy_queue_length": 3,
-        "quiet": false
-      }
-    },
-    "end": {
-      "air": {
-        "at": "2026-10-17T19:50:06.941316Z",
-        "cpu_count": 8,
-        "load_average": [
-          4.06,
-          4.87,
-          4.96
-        ],
-        "cpu_idle_percent": 67,
-        "free_memory_bytes": 259309568,
-        "active_heavy_slots": 2,
-        "other_active_heavy_slots": 1,
-        "heavy_queue_length": 4,
-        "quiet": false
-      }
-    },
-    "periodic_samples": [
-      {
-        "air": {
-          "at": "2026-10-17T19:49:38.197871Z",
-          "cpu_count": 8,
-          "load_average": [
-            4.61,
-            5.03,
-            5.02
-          ],
-          "cpu_idle_percent": 48,
-          "free_memory_bytes": 64274432,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 4,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T19:49:43.19875Z",
-          "cpu_count": 8,
-          "load_average": [
-            5.12,
-            5.12,
-            5.05
-          ],
-          "cpu_idle_percent": 67,
-          "free_memory_bytes": 77955072,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 4,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T19:49:48.198392Z",
-          "cpu_count": 8,
-          "load_average": [
-            4.87,
-            5.07,
-            5.03
-          ],
-          "cpu_idle_percent": 63,
-          "free_memory_bytes": 66043904,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 4,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T19:49:53.199107Z",
-          "cpu_count": 8,
-          "load_average": [
-            4.64,
-            5.02,
-            5.01
-          ],
-          "cpu_idle_percent": 79,
-          "free_memory_bytes": 266371072,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 4,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T19:49:58.198963Z",
-          "cpu_count": 8,
-          "load_average": [
-            4.43,
-            4.97,
-            5
-          ],
-          "cpu_idle_percent": 76,
-          "free_memory_bytes": 221298688,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 4,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T19:50:03.199498Z",
-          "cpu_count": 8,
-          "load_average": [
-            4.24,
-            4.92,
-            4.98
-          ],
-          "cpu_idle_percent": 78,
-          "free_memory_bytes": 64618496,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 4,
-          "quiet": false
-        }
-      }
-    ],
-    "quiet": false,
-    "require_quiet": false,
-    "quiet_wait_ms": 0,
-    "quiet_wait_expired": false
+    "quiet": true,
+    "summary": "air: load=[3.99 4.55 7.62] cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M55PK5DGFYC6YPSE6HQF7044",
+  "run_id": "run_01M58DGK7G8CY6EN3TCKJWVFZ7",
   "network_path": "loopback",
   "metrics": {
-    "automatic_phase": "complete",
-    "recovery_final_drain_ms": 18.052083
+    "recovery_final_drain_ms": 30.302166
   },
   "scenario": "CORE-SLOW-CONSUMER",
   "level": "sim",
   "passed": true,
-  "git_sha": "7e55120b19134246108d4ed10d35cd6d1539316f",
-  "at": "2026-10-17T19:49:33.233004Z",
+  "git_sha": "47549176312caf86b1d55e35f1e4c13562ed17f7",
+  "at": "2026-10-18T21:08:35.184659Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -177,55 +35,7 @@
       "passed": true
     },
     {
-      "name": "automatic_fixture_available",
-      "passed": true
-    },
-    {
-      "name": "automatic_sse_connected_0",
-      "passed": true
-    },
-    {
-      "name": "automatic_scoped_token_0",
-      "passed": true
-    },
-    {
-      "name": "automatic_scope_query_0",
-      "passed": true
-    },
-    {
-      "name": "automatic_scope_record_0",
-      "passed": true
-    },
-    {
-      "name": "automatic_scope_search_0",
-      "passed": true
-    },
-    {
       "name": "automatic_scope_query_search_records_0",
-      "passed": true
-    },
-    {
-      "name": "automatic_scope_sse_connected_0",
-      "passed": true
-    },
-    {
-      "name": "automatic_sse_connected_1",
-      "passed": true
-    },
-    {
-      "name": "automatic_scoped_token_1",
-      "passed": true
-    },
-    {
-      "name": "automatic_scope_query_1",
-      "passed": true
-    },
-    {
-      "name": "automatic_scope_record_1",
-      "passed": true
-    },
-    {
-      "name": "automatic_scope_search_1",
       "passed": true
     },
     {
@@ -233,39 +43,7 @@
       "passed": true
     },
     {
-      "name": "automatic_scope_sse_connected_1",
-      "passed": true
-    },
-    {
-      "name": "automatic_probe_capture_requested",
-      "passed": true
-    },
-    {
-      "name": "automatic_probe_seen_0",
-      "passed": true
-    },
-    {
-      "name": "automatic_cursor_continuity_0",
-      "passed": true
-    },
-    {
-      "name": "automatic_no_false_deletion_0",
-      "passed": true
-    },
-    {
       "name": "automatic_metadata_latency_and_no_false_deletion_0",
-      "passed": true
-    },
-    {
-      "name": "automatic_probe_seen_1",
-      "passed": true
-    },
-    {
-      "name": "automatic_cursor_continuity_1",
-      "passed": true
-    },
-    {
-      "name": "automatic_no_false_deletion_1",
       "passed": true
     },
     {
@@ -304,16 +82,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 4.784167,
-      "p95_ms": 4.784167,
-      "max_ms": 4.784167,
+      "p50_ms": 5.786917,
+      "p95_ms": 5.786917,
+      "max_ms": 5.786917,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 8.030167,
-      "p95_ms": 8.030167,
-      "max_ms": 8.030167,
+      "p50_ms": 8.372084,
+      "p95_ms": 8.372084,
+      "max_ms": 8.372084,
       "timeouts": 0
     }
   },

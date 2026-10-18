@@ -84,8 +84,8 @@ public final class UsageSource: Source {
         let descriptor = Darwin.open(root.appendingPathComponent("streams/restricted/App.InFocus").path, O_EVTONLY)
         guard descriptor >= 0 else { throw SourceFailure.permissionMissing }
         let watcher = DispatchSource.makeFileSystemObjectSource(fileDescriptor: descriptor, eventMask: [.write, .extend, .rename, .delete], queue: .global())
-        watcher.setEventHandler { continuation.yield(()) }
-        watcher.setCancelHandler { Darwin.close(descriptor) }; watcher.resume()
+        watcher.setEventHandler { @Sendable in continuation.yield(()) }
+        watcher.setCancelHandler { @Sendable in Darwin.close(descriptor) }; watcher.resume()
         let center = NSWorkspace.shared.notificationCenter
         let observers = [NSWorkspace.willSleepNotification, NSWorkspace.screensDidSleepNotification].map { notification in
             center.addObserver(forName: notification, object: nil, queue: .main) { _ in

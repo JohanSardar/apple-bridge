@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 root=$(cd "$(dirname "$0")/../.." && pwd)
-"$root/packaging/dev/build-native.sh" "$root/native"
+APPLE_BRIDGE_NATIVE_TARGET=AppleBridgeHelper "$root/packaging/dev/build-native.sh" "$root/native"
 output=$(cat "$root/native/.build/native-output")
 [[ -f "$output/AppleBridgeHelper" ]]
 destination=${1:-"$HOME/Applications/AppleBridgeDev/AppleBridgeHelper.app"}

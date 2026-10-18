@@ -1,56 +1,18 @@
 {
   "host_conditions": {
-    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
-    "start": {
-      "air": {
-        "at": "2026-10-17T19:49:24.058272Z",
-        "cpu_count": 8,
-        "load_average": [
-          4.49,
-          5.03,
-          5.02
-        ],
-        "cpu_idle_percent": 52,
-        "free_memory_bytes": 142721024,
-        "active_heavy_slots": 2,
-        "other_active_heavy_slots": 1,
-        "heavy_queue_length": 4,
-        "quiet": false
-      }
-    },
-    "end": {
-      "air": {
-        "at": "2026-10-17T19:49:28.0569Z",
-        "cpu_count": 8,
-        "load_average": [
-          4.37,
-          4.99,
-          5
-        ],
-        "cpu_idle_percent": 51,
-        "free_memory_bytes": 102776832,
-        "active_heavy_slots": 2,
-        "other_active_heavy_slots": 1,
-        "heavy_queue_length": 3,
-        "quiet": false
-      }
-    },
-    "quiet": false,
-    "require_quiet": false,
-    "quiet_wait_ms": 0,
-    "quiet_wait_expired": false
+    "quiet": true,
+    "summary": "air: load=[4.33 4.63 7.67] cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M55PJXH26253DQMH7FE19P0N",
+  "run_id": "run_01M58DGDE27YJ94YCJ1FVSBAEQ",
   "network_path": "loopback",
   "metrics": {
-    "automatic_phase": "complete",
-    "recovery_final_drain_ms": 30.1165
+    "recovery_final_drain_ms": 16.486333
   },
   "scenario": "CORE-SCOPE-CHANGE",
   "level": "sim",
   "passed": true,
-  "git_sha": "7e55120b19134246108d4ed10d35cd6d1539316f",
-  "at": "2026-10-17T19:49:25.15494Z",
+  "git_sha": "47549176312caf86b1d55e35f1e4c13562ed17f7",
+  "at": "2026-10-18T21:08:29.250927Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -81,55 +43,7 @@
       "passed": true
     },
     {
-      "name": "automatic_fixture_available",
-      "passed": true
-    },
-    {
-      "name": "automatic_sse_connected_0",
-      "passed": true
-    },
-    {
-      "name": "automatic_scoped_token_0",
-      "passed": true
-    },
-    {
-      "name": "automatic_scope_query_0",
-      "passed": true
-    },
-    {
-      "name": "automatic_scope_record_0",
-      "passed": true
-    },
-    {
-      "name": "automatic_scope_search_0",
-      "passed": true
-    },
-    {
       "name": "automatic_scope_query_search_records_0",
-      "passed": true
-    },
-    {
-      "name": "automatic_scope_sse_connected_0",
-      "passed": true
-    },
-    {
-      "name": "automatic_sse_connected_1",
-      "passed": true
-    },
-    {
-      "name": "automatic_scoped_token_1",
-      "passed": true
-    },
-    {
-      "name": "automatic_scope_query_1",
-      "passed": true
-    },
-    {
-      "name": "automatic_scope_record_1",
-      "passed": true
-    },
-    {
-      "name": "automatic_scope_search_1",
       "passed": true
     },
     {
@@ -137,39 +51,7 @@
       "passed": true
     },
     {
-      "name": "automatic_scope_sse_connected_1",
-      "passed": true
-    },
-    {
-      "name": "automatic_probe_capture_requested",
-      "passed": true
-    },
-    {
-      "name": "automatic_probe_seen_0",
-      "passed": true
-    },
-    {
-      "name": "automatic_cursor_continuity_0",
-      "passed": true
-    },
-    {
-      "name": "automatic_no_false_deletion_0",
-      "passed": true
-    },
-    {
       "name": "automatic_metadata_latency_and_no_false_deletion_0",
-      "passed": true
-    },
-    {
-      "name": "automatic_probe_seen_1",
-      "passed": true
-    },
-    {
-      "name": "automatic_cursor_continuity_1",
-      "passed": true
-    },
-    {
-      "name": "automatic_no_false_deletion_1",
       "passed": true
     },
     {
@@ -204,16 +86,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 5.547875,
-      "p95_ms": 5.547875,
-      "max_ms": 5.547875,
+      "p50_ms": 4.944375,
+      "p95_ms": 4.944375,
+      "max_ms": 4.944375,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 9.384209,
-      "p95_ms": 9.384209,
-      "max_ms": 9.384209,
+      "p50_ms": 8.743708,
+      "p95_ms": 8.743708,
+      "max_ms": 8.743708,
       "timeouts": 0
     }
   },

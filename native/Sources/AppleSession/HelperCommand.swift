@@ -79,14 +79,16 @@ public enum HelperCommand {
         }
         if arguments.first == "probe" {
             try PrivateReport.write(["state":"running"], to:reportURL)
-            DispatchQueue.global().asyncAfter(deadline:.now()+35) { @Sendable in
+            DispatchQueue.global().asyncAfter(deadline:.now()+(arguments.contains("cleanup-tagged-self") ? 600 : 35)) { @Sendable in
                 try? PrivateReport.write(["state":"timed_out","disposition":"indeterminate"],to:reportURL)
                 exit(1)
             }
             var finished=false
             Task { @MainActor in
                 do {
-                    let data=try await Task.detached { try JSONSerialization.data(withJSONObject:MessagesProbes.run(arguments)) }.value
+                    let data: Data
+                    if arguments.count > 1 && arguments[1] == "cleanup-tagged-self" { data = try await MessagesCleanup.run(arguments) }
+                    else { data=try JSONSerialization.data(withJSONObject:MessagesProbes.run(arguments)) }
                     try data.write(to:reportURL,options:.atomic)
                     try FileManager.default.setAttributes([.posixPermissions:0o600],ofItemAtPath:reportURL.path)
                 } catch {try? PrivateReport.write(["state":"unavailable","reason":String(describing:error)],to:reportURL)}

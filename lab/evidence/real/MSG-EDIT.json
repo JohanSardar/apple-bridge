@@ -1,25 +1,33 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[6.27 9.09 10.12] cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[10.06 8.05 6.64] cpus=8 other_heavy=1"
   },
-  "status": "environment-limited",
-  "run_id": "run_01M56PGC38R9KZ4CQ0PSXCT8F6",
+  "run_id": "run_01M58BNF1SN80XSQ05M1P19BAA",
   "metrics": {
-    "apple_event_errors": [
-      -1712
-    ],
-    "command_state": "indeterminate",
-    "disposition": "indeterminate",
-    "initial_command_state": "indeterminate",
-    "parts_requested": 1,
-    "send_commands": 1
+    "cleanup": {
+      "all_dates": true,
+      "appletruth_active_remaining": 0,
+      "appletruth_verified": true,
+      "approved_contacts_included": true,
+      "deleted": 2,
+      "failure": "",
+      "initial_tagged_self_messages": 2,
+      "only_tagged_self_messages": false,
+      "passed": true,
+      "remaining_tagged_self_messages": 0,
+      "tag_filtered": true
+    },
+    "command_state": "observed",
+    "disposition": "locally_observed",
+    "native_reason": null,
+    "native_stage_error": null
   },
   "scenario": "MSG-EDIT",
   "level": "real",
-  "passed": false,
-  "git_sha": "e08fd0fbe1808c1d9a299d45088086caa43aaf14",
-  "at": "2026-10-18T05:07:16.200851Z",
+  "passed": true,
+  "git_sha": "eb8a06c43367fccf1a3e6e0beae5c22d22d5252e",
+  "at": "2026-10-18T20:36:17.593218Z",
   "assertions": [
     {
       "name": "self_chat_captured",
@@ -31,14 +39,46 @@
     },
     {
       "name": "native_send_observed_with_fingerprint_checkpoint",
-      "passed": false
+      "passed": true
+    },
+    {
+      "name": "gui_session_probe",
+      "passed": true
+    },
+    {
+      "name": "target_captured",
+      "passed": true
+    },
+    {
+      "name": "native_action_observed",
+      "passed": true
+    },
+    {
+      "name": "appletruth_target_observed",
+      "passed": true
+    },
+    {
+      "name": "appletruth_action_effect",
+      "passed": true
+    },
+    {
+      "name": "tagged_messages_cleanup",
+      "passed": true
     },
     {
       "name": "credential_backend_override_restored",
       "passed": true
     }
   ],
-  "latency": {},
+  "latency": {
+    "command_submit_to_truth": {
+      "samples": 1,
+      "p50_ms": 11610.083417,
+      "p95_ms": 11610.083417,
+      "max_ms": 11610.083417,
+      "timeouts": 0
+    }
+  },
   "hosts": [
     "air"
   ]

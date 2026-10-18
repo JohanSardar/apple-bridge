@@ -1,50 +1,50 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[5.14 5.7 6.15] cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[3.72 4.18 7] cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M55STKZ3Y6EWS8AAWBTJJZW2",
+  "run_id": "run_01M58DMWYZXS66Q8H5YT1S0VQV",
   "metrics": {
     "history_import": {
-      "capture_ack_ms": 2890.038708,
-      "capture_bytes": 2757937,
+      "capture_ack_ms": 1331.3387089999997,
+      "capture_bytes": 2774466,
       "capture_count": 67,
       "clock": "same-host monotonic SSE receipt after gateway commit / replica apply",
       "credit_waits": 0,
-      "gateway_commit_visible_ms": 3653.298542,
-      "gateway_rows_per_second": 1121.7260108604614,
-      "gateway_to_replica_tail_ms": 13.289583,
+      "gateway_commit_visible_ms": 1755.581208,
+      "gateway_rows_per_second": 2334.2696887650895,
+      "gateway_to_replica_tail_ms": 11.420875,
       "host_after": {
         "gomaxprocs": 8,
         "load_average": [
-          5.77,
-          5.82,
-          6.19
+          3.5,
+          4.12,
+          6.96
         ],
         "logical_cpus": 8,
-        "occupied_heavy_slots": 2
+        "occupied_heavy_slots": 1
       },
       "host_before": {
         "gomaxprocs": 8,
         "load_average": [
-          5.77,
-          5.82,
-          6.19
+          3.5,
+          4.12,
+          6.96
         ],
         "logical_cpus": 8,
-        "occupied_heavy_slots": 2
+        "occupied_heavy_slots": 1
       },
-      "replica_apply_visible_ms": 3666.588125,
-      "replica_rows_per_second": 1117.6603044281119,
+      "replica_apply_visible_ms": 1767.0020829999999,
+      "replica_rows_per_second": 2319.18232549135,
       "synthetic_rows": 4098,
-      "truth_verification_ms": 285.358541
+      "truth_verification_ms": 255.4745
     }
   },
   "scenario": "MSG-HISTORY-IMPORT",
   "level": "sim",
   "passed": true,
-  "git_sha": "713eb5504ad1b54668557e344d562378c3157eb3",
-  "at": "2026-10-17T20:46:03.235603Z",
+  "git_sha": "47549176312caf86b1d55e35f1e4c13562ed17f7",
+  "at": "2026-10-18T21:10:56.224021Z",
   "assertions": [
     {
       "name": "seed",

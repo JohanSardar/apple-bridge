@@ -171,29 +171,47 @@ struct AppleTruth {
 
     private static func messages(_ request: [String: Any]) throws -> [String: Any] {
         let guid = request["guid"] as? String ?? ""
-        let tag = request["tag"] as? String ?? ""
-        guard !guid.isEmpty || (tag.hasPrefix("[ab-test ") && tag.hasSuffix("]")) else { throw TruthFailure.invalid }
-        let path = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Messages/chat.db").path
+        let allTestTags = request["all_test_tags"] as? Bool == true
+        let tag = allTestTags ? "[ab-test " : request["tag"] as? String ?? ""
+        let expected = request["expected_text"] as? String ?? tag
+        guard allTestTags || !guid.isEmpty || (tag.hasPrefix("[ab-test ") && tag.hasSuffix("]")) else { throw TruthFailure.invalid }
+        let path = request["snapshot_path"] as? String ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Messages/chat.db").path
         var database: OpaquePointer?
         guard sqlite3_open_v2(path, &database, SQLITE_OPEN_READONLY, nil) == SQLITE_OK else { if database != nil { sqlite3_close(database) }; throw TruthFailure.permissionMissing }
         defer { sqlite3_close(database) }
         var statement: OpaquePointer?
-        let query = "SELECT guid,text,is_from_me,is_delivered,error,date FROM message WHERE " + (guid.isEmpty ? "instr(text,?)>0" : "guid=?") + " ORDER BY ROWID LIMIT 1000"
+        let query = "SELECT guid,is_from_me,is_delivered,error,date,date_edited,date_retracted,thread_originator_guid,associated_message_guid,associated_message_type,CASE WHEN ?!='' AND (instr(text,?)>0 OR instr(attributedBody,CAST(? AS BLOB))>0) THEN 1 ELSE 0 END,length(message_summary_info),associated_message_emoji,message_summary_info,EXISTS(SELECT 1 FROM chat_message_join j WHERE j.message_id=message.ROWID AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=j.chat_id AND r.message_id=message.ROWID)),(COALESCE(associated_message_type,0) NOT BETWEEN 2000 AND 3999 OR EXISTS(SELECT 1 FROM message parent WHERE (message.associated_message_guid=parent.guid OR message.associated_message_guid LIKE '%/'||parent.guid) AND EXISTS(SELECT 1 FROM chat_message_join pj WHERE pj.message_id=parent.ROWID AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join pr WHERE pr.chat_id=pj.chat_id AND pr.message_id=parent.ROWID)))) FROM message WHERE " + (guid.isEmpty ? "instr(text,?)>0 OR instr(attributedBody,CAST(? AS BLOB))>0" : "guid=? OR thread_originator_guid=? OR associated_message_guid LIKE ?") + " ORDER BY ROWID"
         guard sqlite3_prepare_v2(database, query, -1, &statement, nil) == SQLITE_OK else { throw TruthFailure.unavailable }
         defer { sqlite3_finalize(statement) }
-        let binding = guid.isEmpty ? tag : guid
+        let bindings = [expected, expected, expected] + (guid.isEmpty ? [tag, tag] : [guid, guid, "%" + guid])
         let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
-        guard sqlite3_bind_text(statement, 1, binding, -1, transient) == SQLITE_OK else { throw TruthFailure.invalid }
+        for (index, binding) in bindings.enumerated() {
+            guard sqlite3_bind_text(statement, Int32(index + 1), binding, -1, transient) == SQLITE_OK else { throw TruthFailure.invalid }
+        }
+        func text(_ index: Int32) -> String { sqlite3_column_text(statement, index).map { String(cString: $0) } ?? "" }
         var rows: [[String: Any]] = []
         var status = sqlite3_step(statement)
         while status == SQLITE_ROW {
-            let text = sqlite3_column_text(statement, 1).map { String(cString: $0) } ?? ""
-            var row: [String: Any] = ["guid": sqlite3_column_text(statement, 0).map { String(cString: $0) } ?? "", "is_from_me": sqlite3_column_int(statement, 2) != 0, "is_delivered": sqlite3_column_int(statement, 3) != 0, "error": sqlite3_column_int(statement, 4), "date": sqlite3_column_int64(statement, 5)]
-            if text.contains("[ab-test ") { row["text"] = text }
-            rows.append(row)
+            var summary: [String: Any] = [:]
+            if let bytes = sqlite3_column_blob(statement, 13), sqlite3_column_bytes(statement, 13) > 0 {
+                let data = Data(bytes: bytes, count: Int(sqlite3_column_bytes(statement, 13)))
+                summary = (try? PropertyListSerialization.propertyList(from: data, format: nil)) as? [String: Any] ?? [:]
+            }
+            rows.append(["visible": sqlite3_column_int(statement, 14) != 0 && sqlite3_column_int(statement, 15) != 0, "active": sqlite3_column_int(statement, 14) != 0, "summary_unsent": summary["ust"] as? Bool ?? false, "retracted_part_count": (summary["rp"] as? [Any])?.count ?? 0, "guid": text(0), "is_from_me": sqlite3_column_int(statement, 1) != 0, "is_delivered": sqlite3_column_int(statement, 2) != 0, "error": sqlite3_column_int(statement, 3), "date": sqlite3_column_int64(statement, 4), "date_edited": sqlite3_column_int64(statement, 5), "date_retracted": sqlite3_column_int64(statement, 6), "thread_originator_guid": text(7), "associated_message_guid": text(8), "associated_message_type": sqlite3_column_int(statement, 9), "expected_text_present": sqlite3_column_int(statement, 10) != 0, "summary_bytes": sqlite3_column_int(statement, 11), "emoji": text(12)])
             status = sqlite3_step(statement)
         }
         guard status == SQLITE_DONE else { throw TruthFailure.unavailable }
-        return ["status": "verified", "records": rows]
+        var result: [String: Any] = ["status": "verified", "records": rows, "unbounded": true]
+        if let chat = request["chat_guid"] as? String, !chat.isEmpty {
+            var statement: OpaquePointer?
+            guard sqlite3_prepare_v2(database, "SELECT service_name,style,(SELECT count(*) FROM chat_handle_join j WHERE j.chat_id=c.ROWID) FROM chat c WHERE guid=?", -1, &statement, nil) == SQLITE_OK else { throw TruthFailure.unavailable }
+            defer { sqlite3_finalize(statement) }
+            sqlite3_bind_text(statement, 1, chat, -1, transient)
+            guard sqlite3_step(statement) == SQLITE_ROW else { throw TruthFailure.unavailable }
+            result["service"] = sqlite3_column_text(statement, 0).map { String(cString: $0) } ?? ""
+            result["group"] = sqlite3_column_int(statement, 1) == 43 && sqlite3_column_int(statement, 2) >= 2
+            result["participant_count"] = sqlite3_column_int(statement, 2)
+        }
+        return result
     }
 }

@@ -1,46 +1,9 @@
 {
   "host_conditions": {
-    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
-    "start": {
-      "air": {
-        "at": "2026-10-17T19:42:54.719983Z",
-        "cpu_count": 8,
-        "load_average": [
-          3.77,
-          4.03,
-          4.76
-        ],
-        "cpu_idle_percent": 69,
-        "free_memory_bytes": 133677056,
-        "active_heavy_slots": 2,
-        "other_active_heavy_slots": 1,
-        "heavy_queue_length": 3,
-        "quiet": false
-      }
-    },
-    "end": {
-      "air": {
-        "at": "2026-10-17T19:43:01.851124Z",
-        "cpu_count": 8,
-        "load_average": [
-          3.63,
-          3.99,
-          4.74
-        ],
-        "cpu_idle_percent": 79,
-        "free_memory_bytes": 331300864,
-        "active_heavy_slots": 2,
-        "other_active_heavy_slots": 1,
-        "heavy_queue_length": 4,
-        "quiet": false
-      }
-    },
-    "quiet": false,
-    "require_quiet": false,
-    "quiet_wait_ms": 0,
-    "quiet_wait_expired": false
+    "quiet": true,
+    "summary": "air: load=[4.56 5.18 9.1] cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M55P71A62P2GA9P2V461FD51",
+  "run_id": "run_01M58D78PT42NGDQBFY222J1WS",
   "network_path": "loopback",
   "metrics": {
     "bulk_barrier_outstanding_bytes": 14680064,
@@ -48,12 +11,12 @@
     "digest_check_0_bytes": 16777216,
     "digest_check_0_deadline_exceeded": false,
     "digest_check_0_error_type": "\u003cnil\u003e",
-    "digest_check_0_read_ms": 13.133,
+    "digest_check_0_read_ms": 15.635041,
     "digest_check_0_status": 200,
     "digest_check_1_bytes": 16777216,
     "digest_check_1_deadline_exceeded": false,
     "digest_check_1_error_type": "\u003cnil\u003e",
-    "digest_check_1_read_ms": 6.515875,
+    "digest_check_1_read_ms": 5.721291,
     "digest_check_1_status": 200,
     "feed_chunk_bytes": 1048576,
     "fixture_bytes": 16777216,
@@ -63,8 +26,8 @@
   "scenario": "CORE-BLOB-INTERRUPT",
   "level": "sim",
   "passed": true,
-  "git_sha": "5ad36e761d7f428fb1f0c9398bb66e95e0eff6c5",
-  "at": "2026-10-17T19:42:55.814106Z",
+  "git_sha": "4f263fdf17b0f98019c10581b7d742880bb9b6af",
+  "at": "2026-10-18T21:03:29.498539Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -198,65 +161,65 @@
   "latency": {
     "bulk_barrier→blob_complete": {
       "samples": 1,
-      "p50_ms": 2181.216459,
-      "p95_ms": 2181.216459,
-      "max_ms": 2181.216459,
+      "p50_ms": 2193.515292,
+      "p95_ms": 2193.515292,
+      "max_ms": 2193.515292,
       "timeouts": 0
     },
     "effect_done→blob_complete": {
       "samples": 1,
-      "p50_ms": 5362.863625,
-      "p95_ms": 5362.863625,
-      "max_ms": 5362.863625,
+      "p50_ms": 5363.316416,
+      "p95_ms": 5363.316416,
+      "max_ms": 5363.316416,
       "timeouts": 0
     },
     "effect_done→gateway_blob_present": {
       "samples": 1,
-      "p50_ms": 1639.148583,
-      "p95_ms": 1639.148583,
-      "max_ms": 1639.148583,
+      "p50_ms": 1621.123958,
+      "p95_ms": 1621.123958,
+      "max_ms": 1621.123958,
       "timeouts": 0
     },
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 3.509625,
-      "p95_ms": 3.509625,
-      "max_ms": 3.509625,
+      "p50_ms": 5.999,
+      "p95_ms": 5.999,
+      "max_ms": 5.999,
       "timeouts": 0
     },
     "effect_done→metadata_during_blob": {
       "samples": 1,
-      "p50_ms": 78.553708,
-      "p95_ms": 78.553708,
-      "max_ms": 78.553708,
+      "p50_ms": 116.969167,
+      "p95_ms": 116.969167,
+      "max_ms": 116.969167,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 4.636833,
-      "p95_ms": 4.636833,
-      "max_ms": 4.636833,
+      "p50_ms": 7.601833,
+      "p95_ms": 7.601833,
+      "max_ms": 7.601833,
       "timeouts": 0
     },
     "gateway_present→replica_partial": {
       "samples": 1,
-      "p50_ms": 178.347166,
-      "p95_ms": 178.347166,
-      "max_ms": 178.347166,
+      "p50_ms": 179.35175,
+      "p95_ms": 179.35175,
+      "max_ms": 179.35175,
       "timeouts": 0
     },
     "interrupt→reconnected": {
       "samples": 1,
-      "p50_ms": 1031.429417,
-      "p95_ms": 1031.429417,
-      "max_ms": 1031.429417,
+      "p50_ms": 1033.56375,
+      "p95_ms": 1033.56375,
+      "max_ms": 1033.56375,
       "timeouts": 0
     },
     "reconnected→blob_complete": {
       "samples": 1,
-      "p50_ms": 2361.403834,
-      "p95_ms": 2361.403834,
-      "max_ms": 2361.403834,
+      "p50_ms": 2374.477167,
+      "p95_ms": 2374.477167,
+      "max_ms": 2374.477167,
       "timeouts": 0
     }
   },

@@ -18,7 +18,7 @@ func (s *Store) Capacity(source contracts.Source, err error) {
 	if IsCapacity(err) {
 		s.capacity[source] = true
 	} else if err == nil {
-		delete(s.capacity, source)
+		clear(s.capacity)
 	}
 }
 func (s *Store) sourceStatus(record contracts.Record) contracts.Record {

@@ -1,51 +1,14 @@
 {
   "host_conditions": {
-    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
-    "start": {
-      "air": {
-        "at": "2026-10-17T18:39:46.386469Z",
-        "cpu_count": 8,
-        "load_average": [
-          3.02,
-          4.22,
-          5.67
-        ],
-        "cpu_idle_percent": 81,
-        "free_memory_bytes": 535986176,
-        "active_heavy_slots": 2,
-        "other_active_heavy_slots": 1,
-        "heavy_queue_length": 3,
-        "quiet": false
-      }
-    },
-    "end": {
-      "air": {
-        "at": "2026-10-17T18:39:47.93091Z",
-        "cpu_count": 8,
-        "load_average": [
-          2.94,
-          4.19,
-          5.65
-        ],
-        "cpu_idle_percent": 87,
-        "free_memory_bytes": 456392704,
-        "active_heavy_slots": 2,
-        "other_active_heavy_slots": 1,
-        "heavy_queue_length": 3,
-        "quiet": false
-      }
-    },
-    "quiet": false,
-    "require_quiet": false,
-    "quiet_wait_ms": 0,
-    "quiet_wait_expired": false
+    "quiet": true,
+    "summary": "air: load=[3.1 3.82 6.57] cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M55JKDS6ZT7YCCXA729BAQ3K",
+  "run_id": "run_01M58DQJS1314GB066GMTS98RN",
   "scenario": "REM-LIST-CREATE",
   "level": "sim",
   "passed": true,
-  "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b",
-  "at": "2026-10-17T18:39:47.494718Z",
+  "git_sha": "e3ed609ac06a6dced68c1fd688462eaaf6566d9a",
+  "at": "2026-10-18T21:12:24.097783Z",
   "assertions": [
     {
       "name": "reminders_ready",

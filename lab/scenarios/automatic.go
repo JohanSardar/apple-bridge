@@ -10,6 +10,9 @@ import (
 )
 
 func automaticHealthyChecks(ctx context.Context, w *world.World, evidence *Evidence, add func(string, bool)) bool {
+	if evidence.Metrics == nil {
+		evidence.Metrics = map[string]any{}
+	}
 	drained := w.ControlAction("/flush", struct{}{}) == nil
 	add("automatic_recovery_capture_drained", drained)
 	if !drained {
@@ -18,31 +21,37 @@ func automaticHealthyChecks(ctx context.Context, w *world.World, evidence *Evide
 	endpoints := append([]world.Endpoint{w.Gateway}, w.Replicas...)
 	observers := []*watcher{}
 	scoped := []*watcher{}
+	evidence.Metrics["automatic_probe_stage"] = "fixture"
 	var fixture contracts.ReadResult
 	if _, err := world.Request(ctx, w.Gateway, "/v1/op/records.query", contracts.ReadQuery{Collection: "reminders.reminder", Limit: 1}, &fixture); err != nil || len(fixture.Records) != 1 {
 		return false
 	}
 	for i, endpoint := range endpoints {
+		evidence.Metrics["automatic_probe_stage"] = fmt.Sprintf("watch_%d", i)
 		observer, err := watch(ctx, endpoint, false, func(record contracts.Record) bool { return truthAbsent(w, record) })
 		if err != nil {
 			return false
 		}
 		defer observer.close()
 		observers = append(observers, observer)
+		evidence.Metrics["automatic_probe_stage"] = fmt.Sprintf("token_%d", i)
 		token, err := w.ScopedToken(endpoint, "system:read")
 		if err != nil {
 			return false
 		}
 		endpoint.Token = token
+		evidence.Metrics["automatic_probe_stage"] = fmt.Sprintf("query_%d", i)
 		var result contracts.ReadResult
 		_, err = world.Request(ctx, endpoint, "/v1/op/records.query", contracts.ReadQuery{Collection: "reminders.reminder"}, &result)
 		if err != nil || len(result.Records) != 0 {
 			return false
 		}
+		evidence.Metrics["automatic_probe_stage"] = fmt.Sprintf("record_%d", i)
 		status, _ := world.Request(ctx, endpoint, "/v1/records/reminders.reminder/"+fixture.Records[0].ID, nil, nil)
 		if status != 404 {
 			return false
 		}
+		evidence.Metrics["automatic_probe_stage"] = fmt.Sprintf("search_%d", i)
 		result = contracts.ReadResult{}
 		status, err = world.Request(ctx, endpoint, "/v1/op/search", contracts.ReadQuery{Text: "ab"}, &result)
 		if (err != nil && status != 404 && status != 422) || (err == nil && len(result.Records) != 0) {
@@ -56,6 +65,7 @@ func automaticHealthyChecks(ctx context.Context, w *world.World, evidence *Evide
 		defer observer.close()
 		scoped = append(scoped, observer)
 	}
+	evidence.Metrics["automatic_probe_stage"] = "live_probe"
 	probe := contracts.NewID("automatic")
 	if w.ControlAction("/external-change", map[string]string{"key": probe}) != nil {
 		return false
@@ -104,5 +114,6 @@ func automaticHealthyChecks(ctx context.Context, w *world.World, evidence *Evide
 		add(fmt.Sprintf("automatic_scope_sse_watermark_%d", i), valid)
 		passed = passed && valid
 	}
+	delete(evidence.Metrics, "automatic_probe_stage")
 	return passed
 }

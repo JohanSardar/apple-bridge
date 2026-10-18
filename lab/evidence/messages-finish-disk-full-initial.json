@@ -1,0 +1,42 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[51.63 35.57 19.21] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M58BYP52E7WTAW4HK5YF2TCZ",
+  "network_path": "loopback",
+  "metrics": {
+    "recovery_final_drain_ms": 1262.360041
+  },
+  "scenario": "CORE-DISK-FULL",
+  "level": "sim",
+  "passed": false,
+  "git_sha": "eb8a06c43367fccf1a3e6e0beae5c22d22d5252e",
+  "at": "2026-10-18T20:41:19.778172Z",
+  "assertions": [
+    {
+      "name": "feed_network_loopback",
+      "passed": true
+    },
+    {
+      "name": "real_volume_full_capture_degraded",
+      "passed": true
+    },
+    {
+      "name": "recovery_capture_drained_before_convergence",
+      "passed": true
+    },
+    {
+      "name": "truth_gateway_replica_convergence",
+      "passed": false
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

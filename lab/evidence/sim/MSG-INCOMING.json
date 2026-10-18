@@ -1,14 +1,14 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[5.77 5.82 6.19] cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[3.5 4.12 6.96] cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M55STSVE7F4SS1B667XW4MW1",
+  "run_id": "run_01M58DN0WJE3DTVVWREM3FPC6D",
   "scenario": "MSG-INCOMING",
   "level": "sim",
   "passed": true,
-  "git_sha": "713eb5504ad1b54668557e344d562378c3157eb3",
-  "at": "2026-10-17T20:46:09.26297Z",
+  "git_sha": "47549176312caf86b1d55e35f1e4c13562ed17f7",
+  "at": "2026-10-18T21:11:00.242051Z",
   "assertions": [
     {
       "name": "seed",
@@ -58,23 +58,23 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 32,
-      "p50_ms": 5.472167,
-      "p95_ms": 7.704334,
-      "max_ms": 8.500292,
+      "p50_ms": 6.635792,
+      "p95_ms": 7.983583,
+      "max_ms": 8.889833,
       "timeouts": 0
     },
     "effect_done→replica_visible": {
       "samples": 32,
-      "p50_ms": 8.685209,
-      "p95_ms": 11.650292,
-      "max_ms": 14.094333,
+      "p50_ms": 9.989417,
+      "p95_ms": 12.17325,
+      "max_ms": 12.439958,
       "timeouts": 0
     },
     "gateway_visible→replica_visible": {
       "samples": 32,
-      "p50_ms": 3.12725,
-      "p95_ms": 4.321792,
-      "max_ms": 8.295916,
+      "p50_ms": 3.481875,
+      "p95_ms": 4.209125,
+      "max_ms": 4.658417,
       "timeouts": 0
     }
   },

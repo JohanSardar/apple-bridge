@@ -1,0 +1,269 @@
+{
+  "at": "2026-10-18T21:16:20.252334+00:00",
+  "code_commit": "76088c09c1b65094b98848fb77f7155b3d60a21c",
+  "branch": "messages-finish",
+  "previous_attempt": "lab/evidence/messages-finish-before-session-recovery.json",
+  "features": {
+    "MSG-REPLY": {
+      "status": "done",
+      "evidence_path": "lab/evidence/real/MSG-REPLY.json",
+      "fresh_appletruth_effect": true,
+      "run_id": "run_01M58C03GBNG7B12TPKC0YKETN",
+      "latency": {
+        "command_submit_to_truth": {
+          "samples": 1,
+          "p50_ms": 6848.372333,
+          "p95_ms": 6848.372333,
+          "max_ms": 6848.372333,
+          "timeouts": 0
+        }
+      }
+    },
+    "MSG-EDIT": {
+      "status": "done",
+      "evidence_path": "lab/evidence/real/MSG-EDIT.json",
+      "fresh_appletruth_effect": true,
+      "run_id": "run_01M58BNF1SN80XSQ05M1P19BAA",
+      "latency": {
+        "command_submit_to_truth": {
+          "samples": 1,
+          "p50_ms": 11610.083417,
+          "p95_ms": 11610.083417,
+          "max_ms": 11610.083417,
+          "timeouts": 0
+        }
+      }
+    },
+    "MSG-REACT": {
+      "status": "done",
+      "evidence_path": "lab/evidence/real/MSG-REACT.json",
+      "fresh_appletruth_effect": true,
+      "run_id": "run_01M58B5VH5P20W2HB4MYJGCG97",
+      "latency": {
+        "add_emoji_submit_to_truth": {
+          "samples": 1,
+          "p50_ms": 9258.193667,
+          "p95_ms": 9258.193667,
+          "max_ms": 9258.193667,
+          "timeouts": 0
+        },
+        "command_submit_to_truth": {
+          "samples": 1,
+          "p50_ms": 11999.382083,
+          "p95_ms": 11999.382083,
+          "max_ms": 11999.382083,
+          "timeouts": 0
+        },
+        "remove_emoji_submit_to_truth": {
+          "samples": 1,
+          "p50_ms": 9576.569167,
+          "p95_ms": 9576.569167,
+          "max_ms": 9576.569167,
+          "timeouts": 0
+        },
+        "remove_love_submit_to_truth": {
+          "samples": 1,
+          "p50_ms": 9516.115292,
+          "p95_ms": 9516.115292,
+          "max_ms": 9516.115292,
+          "timeouts": 0
+        }
+      }
+    },
+    "MSG-UNSEND": {
+      "status": "done",
+      "evidence_path": "lab/evidence/real/MSG-UNSEND.json",
+      "fresh_appletruth_effect": true,
+      "run_id": "run_01M58BCNN933YBMQD2DGHVDW3B",
+      "latency": {
+        "command_submit_to_truth": {
+          "samples": 1,
+          "p50_ms": 7389.216167,
+          "p95_ms": 7389.216167,
+          "max_ms": 7389.216167,
+          "timeouts": 0
+        }
+      }
+    },
+    "MSG-GROUP-CREATE": {
+      "status": "limited",
+      "evidence_path": "lab/evidence/real/MSG-GROUP-CREATE.json",
+      "fresh_appletruth_effect": false,
+      "run_id": "run_01M58DRE99D16P5D4RCGEK7DME",
+      "latency": {
+        "create_group_submit_to_truth": {
+          "samples": 1,
+          "p50_ms": 18084.515666,
+          "p95_ms": 18084.515666,
+          "max_ms": 18084.515666,
+          "timeouts": 0
+        }
+      },
+      "reason": "Approved Remy/Ben pair offered Text Message \u2022 SMS only. Enter left the tagged group text in the composer; no group message was observed. An iMessage group requires you plus at least two eligible other participants; no additional contacts were authorized. The abandoned tagged draft was cleared.",
+      "fresh_probe_status": "environment-limited",
+      "cleanup_passed": true
+    }
+  },
+  "session": {
+    "path": "Signed AppleBridgeHelper.app opened through Launch Services in the GUI session; NSAppleScript and AX from MessagesSource",
+    "initial_accessibility_trusted": true,
+    "initial_messages_role_error": 0,
+    "initial_messages_windows_error": 0,
+    "initial_messages_window_count": 1,
+    "initial_send_apple_event_error": -1712,
+    "recovery": "TERM/relaunch of the user-owned Messages app; no keychain or security daemon changes",
+    "after_relaunch_send_apple_event_error": 0,
+    "after_relaunch_matching_self_chat_row": true,
+    "initial_messages_sample": "Main thread idle in the AppKit event loop, rather than the previous TelephonyUtilities wait",
+    "passwords_entered_or_stored": false,
+    "system_tcc_modified": false,
+    "sip_changed": false,
+    "unrelated_work_touched": false,
+    "keychain_settings_changed": false,
+    "keychain_lock_or_unlock_requested": true,
+    "sip_status": "enabled",
+    "keychain_deviation": {
+      "cause": "The existing sign.sh implicitly read its existing development password file and invoked security unlock-keychain in the SSH security session during helper/truth builds. This was discovered later and violates the instruction not to touch keychains.",
+      "gui_keychain_settings_changed": false,
+      "password_created_printed_or_committed": false,
+      "repair": "Remove all implicit unlock/password-file logic. Run codesign in a bounded one-shot GUI-session job that uses the already-unlocked keychain.",
+      "verification": "Direct SSH signing without unlock returned errSecInternalComponent. The GUI-session signer then passed codesign --verify --strict without any unlock command."
+    }
+  },
+  "cleanup": {
+    "at": "2026-10-18T21:15:31.153893+00:00",
+    "appletruth_status": "verified",
+    "visible_tagged_remaining": 0,
+    "joined_tagged_control_rows_retained": 4,
+    "retained_control_types": {
+      "2000": 1,
+      "3006": 3
+    },
+    "tagged_rows_including_recently_deleted": 162,
+    "deleted_from_active_history": 138,
+    "drafts_cleared": 1,
+    "passes": [
+      {
+        "passed": false,
+        "tag_filtered": false,
+        "drafts_cleared": 1,
+        "deleted": 48,
+        "only_tagged_self_messages": false,
+        "remaining_tagged_self_messages": 90,
+        "initial_tagged_self_messages": 138,
+        "all_dates": true,
+        "failure": "validate:conflict",
+        "approved_contacts_included": true
+      },
+      {
+        "initial_tagged_self_messages": 90,
+        "all_dates": true,
+        "remaining_tagged_self_messages": 0,
+        "deleted": 90,
+        "tag_filtered": false,
+        "failure": "",
+        "approved_contacts_included": true,
+        "drafts_cleared": 0,
+        "passed": true,
+        "only_tagged_self_messages": false
+      }
+    ],
+    "untagged_baseline_rows": 159219,
+    "untagged_baseline_rows_missing": 0,
+    "only_approved_chats": true,
+    "permanent_erasure_claimed": false,
+    "retention_reason": "Four hidden Tapback control rows still have chat joins; each parent is already deleted. Messages does not expose these as standalone deletable messages. Recently Deleted content and hidden control metadata were not erased through SQL.",
+    "subsequent_group_drafts_cleared": 1,
+    "total_drafts_cleared": 2,
+    "verified_private_ledgers": 56,
+    "pending_late_effect_ledgers": 1,
+    "pending_ledger_reason": "The latest SMS group command remains indeterminate. Its tagged draft is cleared and the current audit is empty; keep its durable obligation for any later effect."
+  },
+  "cleanup_investigation": {
+    "brief_previous_count": 63,
+    "prior_helper_count": 119,
+    "initial_readonly_ledger_count": 51,
+    "initial_ledger_states": {
+      "pending_unlock": 48,
+      "pending_native_cleanup": 2,
+      "no_effect": 1
+    },
+    "initial_active_self_rows": 130,
+    "initial_active_self_rows_with_pending_ledgers": 124,
+    "cause": "All 56 additions were incoming self-chat rows with old logical send timestamps, inserted after the earlier ROWID high-water mark. The original outgoing count stayed 31. Delayed self copies/backfill accumulated because pending cleanup obligations were never executed and cleanup did not cover later incoming copies.",
+    "exact_56_row_delta": {
+      "baseline_evidence": "main@dea9faf:lab/evidence/messages-real-session-final.json",
+      "method": "Read-only reconstruction using cleanup-ledger message ROWID high-water marks, the union of active and recoverable chat joins, recoverable delete_date at each historical snapshot, ordinary tagged messages, and independently discovered self handles. No handles or message bodies are stored here.",
+      "snapshots": [
+        {
+          "at": "2026-10-18T05:15:39Z",
+          "max_row_id": 167022,
+          "tagged_self_messages": 63,
+          "outgoing": 31,
+          "incoming": 32
+        },
+        {
+          "at": "2026-10-18T18:06:06Z",
+          "max_row_id": 167142,
+          "tagged_self_messages": 119,
+          "outgoing": 31,
+          "incoming": 88
+        }
+      ],
+      "increase": 56,
+      "new_outgoing": 0,
+      "new_incoming": 56,
+      "incoming_logical_sent_hours": {
+        "2026-10-17T04": 2,
+        "2026-10-17T20": 16,
+        "2026-10-17T21": 8,
+        "2026-10-17T22": 4,
+        "2026-10-18T03": 9,
+        "2026-10-18T04": 17
+      },
+      "cause": "All 56 additions were incoming self-chat rows with old logical send timestamps, inserted after the earlier ROWID high-water mark. The original outgoing count stayed 31. Delayed self copies/backfill accumulated because pending cleanup obligations were never executed and cleanup did not cover later incoming copies.",
+      "repair": "Execute per-run cleanup for both directions by tag, preserve indeterminate obligations for reconciliation, and audit visible rows independently."
+    },
+    "repair": "Run tag-filtered cleanup on every exit, delete through Messages AX only in self/approved chats, clear tagged drafts, verify visible rows with independent AppleTruth, and retain indeterminate sends for later reconciliation.",
+    "reconciled_private_ledgers": 56,
+    "growth_evidence_path": "lab/evidence/messages-finish-cleanup-growth.json",
+    "pending_late_effect_ledgers": 1
+  },
+  "reply_repair": {
+    "failure": "The direct AX Reply action returned success but left the ordinary composer; fresh AppleTruth showed no thread relationship.",
+    "fix": "Choose Reply from the visible context menu.",
+    "proof": "MSG-REPLY passes native observation and independent thread_originator_guid plus exact reply text checks; both approved-contact messages were unsent afterward."
+  },
+  "required_checks": {
+    "go_test": "pass: go test ./... on final Go sources",
+    "lint": "pass: make lint on final sources",
+    "messages_sim": "24/24 passing",
+    "full_sim": "120/120 passing, exit 0; no skipped cases",
+    "features": "pass: 23 done, 1 limited, 0 blocked; 180/183 scenario-levels",
+    "signing": "pass: default signer, absolute and relative app paths, GUI session, no unlock, strict codesign verification"
+  },
+  "verification_repairs": {
+    "CORE-BENCH": "The final quiet full-suite run passes the 200,000-message benchmark and its automated scope/SSE checks. The earlier contended failure was not reproduced by isolated small/large probes; its specific cause remains unproven. Preserve admin visibility for benchmark records and record the failing probe stage for future diagnosis.",
+    "CORE-SCOPE-LEAK": "Use the valid contracts.Command envelope so the probe reaches scope authorization. Targeted gateway/replica checks pass.",
+    "CORE-DISK-FULL": "A successful capture recovered Reminders but left the idle Calendar capacity overlay stuck, while cursors and data matched. Capacity is store-wide; clear its overlays after successful capture. Diagnostic failure retained."
+  },
+  "initial_failures": [
+    "lab/evidence/messages-finish-initial-round.jsonl",
+    "lab/evidence/messages-finish-benchmark-initial.json",
+    "lab/evidence/messages-finish-scope-initial.json",
+    "lab/evidence/messages-finish-disk-full-initial.json",
+    "lab/evidence/messages-finish-disk-diagnosis.json",
+    "lab/evidence/messages-finish-benchmark-recovery-attempt.json"
+  ],
+  "proof_freshness": "Real action git_sha values name the earlier base because the implementation was verified from the working tree. The final simulation suite built 4f263fd; later changes affect signing transport and real-test cleanup ledger bookkeeping, verified separately by signing smoke, the final real group probe, and final Go tests/lint. Messages action Swift sources were unchanged after their successful fresh AppleTruth runs.",
+  "signing_policy": {
+    "source_commit": "47549176312caf86b1d55e35f1e4c13562ed17f7",
+    "password_file_read": false,
+    "implicit_unlock": false,
+    "execution": "Temporary launchd job in the existing GUI session; job removed after exit",
+    "strict_signing_smoke": "pass for absolute and relative app paths without unlock"
+  },
+  "merge_target": "main",
+  "new_scenario_ids": [],
+  "new_dependencies": []
+}

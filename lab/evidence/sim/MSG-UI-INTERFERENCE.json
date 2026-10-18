@@ -1,14 +1,14 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[6.46 6.03 6.14] cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[3.29 4.02 6.84] cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M55T2C1BMKC81R4D6Z6E8P6H",
+  "run_id": "run_01M58DNQ46EBN4JMPFDJF9R0QH",
   "scenario": "MSG-UI-INTERFERENCE",
   "level": "sim",
   "passed": true,
-  "git_sha": "28c4ed3697804c34c6ad544a3966e23ea9fffac3",
-  "at": "2026-10-17T20:50:17.25961Z",
+  "git_sha": "47549176312caf86b1d55e35f1e4c13562ed17f7",
+  "at": "2026-10-18T21:11:23.014047Z",
   "assertions": [
     {
       "name": "seed_self_chat",

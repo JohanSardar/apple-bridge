@@ -1,126 +1,18 @@
 {
   "host_conditions": {
-    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
-    "start": {
-      "air": {
-        "at": "2026-10-17T19:50:29.546417Z",
-        "cpu_count": 8,
-        "load_average": [
-          6.6,
-          5.39,
-          5.14
-        ],
-        "cpu_idle_percent": 62,
-        "free_memory_bytes": 120635392,
-        "active_heavy_slots": 2,
-        "other_active_heavy_slots": 1,
-        "heavy_queue_length": 4,
-        "quiet": false
-      }
-    },
-    "end": {
-      "air": {
-        "at": "2026-10-17T19:50:55.048068Z",
-        "cpu_count": 8,
-        "load_average": [
-          6.46,
-          5.44,
-          5.17
-        ],
-        "cpu_idle_percent": 59,
-        "free_memory_bytes": 289226752,
-        "active_heavy_slots": 2,
-        "other_active_heavy_slots": 1,
-        "heavy_queue_length": 4,
-        "quiet": false
-      }
-    },
-    "periodic_samples": [
-      {
-        "air": {
-          "at": "2026-10-17T19:50:35.61401Z",
-          "cpu_count": 8,
-          "load_average": [
-            6.05,
-            5.31,
-            5.12
-          ],
-          "cpu_idle_percent": 46,
-          "free_memory_bytes": 61751296,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 4,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T19:50:40.614462Z",
-          "cpu_count": 8,
-          "load_average": [
-            6.13,
-            5.33,
-            5.13
-          ],
-          "cpu_idle_percent": 56,
-          "free_memory_bytes": 62046208,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 4,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T19:50:45.614285Z",
-          "cpu_count": 8,
-          "load_average": [
-            6.76,
-            5.48,
-            5.18
-          ],
-          "cpu_idle_percent": 46,
-          "free_memory_bytes": 65126400,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 4,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T19:50:50.614295Z",
-          "cpu_count": 8,
-          "load_average": [
-            6.46,
-            5.44,
-            5.17
-          ],
-          "cpu_idle_percent": 66,
-          "free_memory_bytes": 67584000,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 4,
-          "quiet": false
-        }
-      }
-    ],
-    "quiet": false,
-    "require_quiet": false,
-    "quiet_wait_ms": 0,
-    "quiet_wait_expired": false
+    "quiet": true,
+    "summary": "air: load=[3.9 4.4 7.37] cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M55PMXFS90QY76ZSCY013MY9",
+  "run_id": "run_01M58DJ9689ST7Z96D4VHQ7NF8",
   "network_path": "loopback",
   "metrics": {
-    "automatic_phase": "complete",
-    "recovery_final_drain_ms": 50.303542
+    "recovery_final_drain_ms": 37.562625
   },
   "scenario": "CORE-SNAPSHOT-UNDER-LOAD",
   "level": "sim",
   "passed": true,
-  "git_sha": "7e55120b19134246108d4ed10d35cd6d1539316f",
-  "at": "2026-10-17T19:50:30.64989Z",
+  "git_sha": "47549176312caf86b1d55e35f1e4c13562ed17f7",
+  "at": "2026-10-18T21:09:30.440906Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -147,55 +39,7 @@
       "passed": true
     },
     {
-      "name": "automatic_fixture_available",
-      "passed": true
-    },
-    {
-      "name": "automatic_sse_connected_0",
-      "passed": true
-    },
-    {
-      "name": "automatic_scoped_token_0",
-      "passed": true
-    },
-    {
-      "name": "automatic_scope_query_0",
-      "passed": true
-    },
-    {
-      "name": "automatic_scope_record_0",
-      "passed": true
-    },
-    {
-      "name": "automatic_scope_search_0",
-      "passed": true
-    },
-    {
       "name": "automatic_scope_query_search_records_0",
-      "passed": true
-    },
-    {
-      "name": "automatic_scope_sse_connected_0",
-      "passed": true
-    },
-    {
-      "name": "automatic_sse_connected_1",
-      "passed": true
-    },
-    {
-      "name": "automatic_scoped_token_1",
-      "passed": true
-    },
-    {
-      "name": "automatic_scope_query_1",
-      "passed": true
-    },
-    {
-      "name": "automatic_scope_record_1",
-      "passed": true
-    },
-    {
-      "name": "automatic_scope_search_1",
       "passed": true
     },
     {
@@ -203,39 +47,7 @@
       "passed": true
     },
     {
-      "name": "automatic_scope_sse_connected_1",
-      "passed": true
-    },
-    {
-      "name": "automatic_probe_capture_requested",
-      "passed": true
-    },
-    {
-      "name": "automatic_probe_seen_0",
-      "passed": true
-    },
-    {
-      "name": "automatic_cursor_continuity_0",
-      "passed": true
-    },
-    {
-      "name": "automatic_no_false_deletion_0",
-      "passed": true
-    },
-    {
       "name": "automatic_metadata_latency_and_no_false_deletion_0",
-      "passed": true
-    },
-    {
-      "name": "automatic_probe_seen_1",
-      "passed": true
-    },
-    {
-      "name": "automatic_cursor_continuity_1",
-      "passed": true
-    },
-    {
-      "name": "automatic_no_false_deletion_1",
       "passed": true
     },
     {
@@ -270,16 +82,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 6.947875,
-      "p95_ms": 6.947875,
-      "max_ms": 6.947875,
+      "p50_ms": 6.659125,
+      "p95_ms": 6.659125,
+      "max_ms": 6.659125,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 10.552709,
-      "p95_ms": 10.552709,
-      "max_ms": 10.552709,
+      "p50_ms": 8.957084,
+      "p95_ms": 8.957084,
+      "max_ms": 8.957084,
       "timeouts": 0
     }
   },

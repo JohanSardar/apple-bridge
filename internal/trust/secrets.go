@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -99,44 +100,93 @@ func secretCommand(ctx context.Context, input []byte, name string, args ...strin
 	return bytes.TrimSpace(output), nil
 }
 func (s *KeychainStore) Backend() string { return "keychain" }
-func (s *KeychainStore) Put(ctx context.Context, key string, value []byte) error {
-	if err := s.unlock(ctx); err != nil {
-		return err
-	}
-	args := []string{"add-generic-password", "-U", "-s", s.Service, "-a", key, "-w", hex.EncodeToString(value), "-T", "/usr/bin/security"}
+
+const keychainScript = `import ctypes as c,json,sys
+r=json.load(sys.stdin)
+s=c.CDLL('/System/Library/Frameworks/Security.framework/Security')
+p=c.c_void_p
+u=c.c_uint32
+s.SecKeychainSetUserInteractionAllowed.argtypes=[c.c_bool]
+s.SecKeychainOpen.argtypes=[c.c_char_p,c.POINTER(p)]
+s.SecKeychainFindGenericPassword.argtypes=[p,u,c.c_char_p,u,c.c_char_p,c.POINTER(u),c.POINTER(p),c.POINTER(p)]
+s.SecKeychainAddGenericPassword.argtypes=[p,u,c.c_char_p,u,c.c_char_p,u,c.c_char_p,c.POINTER(p)]
+s.SecKeychainItemModifyAttributesAndData.argtypes=[p,p,u,c.c_char_p]
+s.SecKeychainItemDelete.argtypes=[p]
+s.SecKeychainItemFreeContent.argtypes=[p,p]
+code=s.SecKeychainSetUserInteractionAllowed(False)
+k=p()
+if code==0: code=s.SecKeychainOpen(r['path'].encode(),c.byref(k))
+service=r['service'].encode()
+account=r['key'].encode()
+item=p()
+length=u()
+data=p()
+opened=code==0
+if opened: code=s.SecKeychainFindGenericPassword(k,len(service),service,len(account),account,c.byref(length),c.byref(data),c.byref(item))
+value=''
+if code==0 and r['op']=='get': value=c.string_at(data,length.value).decode()
+if data: s.SecKeychainItemFreeContent(None,data)
+if opened and r['op']=='put' and code in (0,-25300):
+    value=r['value'].encode()
+    if code==0: code=s.SecKeychainItemModifyAttributesAndData(item,None,len(value),value)
+    else: code=s.SecKeychainAddGenericPassword(k,len(service),service,len(account),account,len(value),value,c.byref(item))
+    value=''
+if r['op']=='delete' and code==0: code=s.SecKeychainItemDelete(item)
+print(json.dumps({'status':code,'value':value}))
+`
+
+func (s *KeychainStore) noninteractive(ctx context.Context, op, key string, value []byte) ([]byte, error) {
 	if s.Path != "" {
-		args = append(args, s.Path)
+		if err := s.unlock(ctx); err != nil {
+			return nil, err
+		}
 	}
-	_, err := secretCommand(ctx, nil, "security", args...)
+	path := s.Path
+	if path == "" {
+		path = filepath.Join(os.Getenv("HOME"), "Library", "Keychains", "login.keychain-db")
+	}
+	input, err := json.Marshal(map[string]string{"op": op, "path": path, "service": s.Service, "key": key, "value": hex.EncodeToString(value)})
+	if err != nil {
+		return nil, err
+	}
+	output, err := secretCommand(ctx, input, "python3", "-c", keychainScript)
+	if err != nil {
+		return nil, err
+	}
+	var result struct {
+		Status *int   `json:"status"`
+		Value  string `json:"value"`
+	}
+	if json.Unmarshal(output, &result) != nil || result.Status == nil {
+		return nil, contracts.ErrCorrupt
+	}
+	switch *result.Status {
+	case 0:
+		if op == "get" {
+			data, err := hex.DecodeString(result.Value)
+			if err != nil {
+				return nil, contracts.ErrCorrupt
+			}
+			return data, nil
+		}
+		return nil, nil
+	case -25300:
+		return nil, contracts.ErrNotFound
+	case -25308:
+		return nil, &CredentialStoreError{Code: "credential_store_locked", Store: "keychain", Remedy: "Unlock the login Keychain in an interactive macOS session, then retry bridge start.", Retryable: true}
+	default:
+		return nil, keychainFailure(fmt.Errorf("Security status %d", *result.Status))
+	}
+}
+func (s *KeychainStore) Put(ctx context.Context, key string, value []byte) error {
+	_, err := s.noninteractive(ctx, "put", key, value)
 	return err
 }
 func (s *KeychainStore) Get(ctx context.Context, key string) ([]byte, error) {
-	if err := s.unlock(ctx); err != nil {
-		return nil, err
-	}
-	args := []string{"find-generic-password", "-s", s.Service, "-a", key, "-w"}
-	if s.Path != "" {
-		args = append(args, s.Path)
-	}
-	output, err := secretCommand(ctx, nil, "security", args...)
-	if err != nil {
-		return nil, err
-	}
-	value, err := hex.DecodeString(string(output))
-	if err != nil {
-		return nil, contracts.ErrCorrupt
-	}
-	return value, nil
+	return s.noninteractive(ctx, "get", key, nil)
 }
 func (s *KeychainStore) Delete(ctx context.Context, key string) error {
-	if err := s.unlock(ctx); err != nil {
-		return err
-	}
-	args := []string{"delete-generic-password", "-s", s.Service, "-a", key}
-	if s.Path != "" {
-		args = append(args, s.Path)
-	}
-	_, err := secretCommand(ctx, nil, "security", args...)
+	_, err := s.noninteractive(ctx, "delete", key, nil)
 	if errors.Is(err, contracts.ErrNotFound) {
 		return nil
 	}

@@ -1,0 +1,191 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[13.23 16.12 15.85] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M58CFGD571CYG7RD62E7809X",
+  "network_path": "loopback",
+  "metrics": {
+    "convergence_diagnostics": [
+      {
+        "cursor": {
+          "epoch": "01M58CFHSCKDR6FRAR535NH7P4",
+          "subscription_revision": 1,
+          "sequence": 113
+        },
+        "cursor_failed": false,
+        "endpoint": 0,
+        "read_failed": false,
+        "records": 107,
+        "sources": [
+          {
+            "collection": "system.source",
+            "id": "src_01M58CFHZVGKV5KQBV0V757NB9",
+            "version": 1,
+            "source": "calendar",
+            "observed_at": "2026-10-18T20:50:32.572302Z",
+            "deleted": false,
+            "coverage": {
+              "fields": "complete",
+              "missing": []
+            },
+            "data": {
+              "capabilities": [
+                "calendar.create_event",
+                "calendar.update_event",
+                "calendar.delete_event",
+                "calendar.create_calendar"
+              ],
+              "coverage": {
+                "fields": "complete",
+                "missing": []
+              },
+              "reason": "capacity",
+              "source": "calendar",
+              "state": "degraded"
+            }
+          },
+          {
+            "collection": "system.source",
+            "id": "src_01M58CFJ0C6K4PGG1P9KM3NAP2",
+            "version": 3,
+            "source": "reminders",
+            "observed_at": "2026-10-18T20:50:35.58482Z",
+            "deleted": false,
+            "coverage": {
+              "fields": "complete",
+              "missing": [
+                "recurring reminders: next incomplete instance only"
+              ]
+            },
+            "data": {
+              "capabilities": [
+                "reminders.create",
+                "reminders.update",
+                "reminders.complete",
+                "reminders.uncomplete",
+                "reminders.delete",
+                "reminders.create_list"
+              ],
+              "coverage": {
+                "fields": "complete",
+                "missing": [
+                  "recurring reminders: next incomplete instance only"
+                ]
+              },
+              "reason": "",
+              "source": "reminders",
+              "state": "ready"
+            }
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "epoch": "01M58CFHSCKDR6FRAR535NH7P4",
+          "subscription_revision": 1,
+          "sequence": 113
+        },
+        "cursor_failed": false,
+        "endpoint": 1,
+        "read_failed": false,
+        "records": 107,
+        "sources": [
+          {
+            "collection": "system.source",
+            "id": "src_01M58CFHZVGKV5KQBV0V757NB9",
+            "version": 1,
+            "source": "calendar",
+            "observed_at": "2026-10-18T20:50:32.572302Z",
+            "deleted": false,
+            "coverage": {
+              "fields": "complete",
+              "missing": []
+            },
+            "data": {
+              "capabilities": [
+                "calendar.create_event",
+                "calendar.update_event",
+                "calendar.delete_event",
+                "calendar.create_calendar"
+              ],
+              "coverage": {
+                "fields": "complete",
+                "missing": []
+              },
+              "reason": "",
+              "source": "calendar",
+              "state": "ready"
+            }
+          },
+          {
+            "collection": "system.source",
+            "id": "src_01M58CFJ0C6K4PGG1P9KM3NAP2",
+            "version": 3,
+            "source": "reminders",
+            "observed_at": "2026-10-18T20:50:35.58482Z",
+            "deleted": false,
+            "coverage": {
+              "fields": "complete",
+              "missing": [
+                "recurring reminders: next incomplete instance only"
+              ]
+            },
+            "data": {
+              "capabilities": [
+                "reminders.create",
+                "reminders.update",
+                "reminders.complete",
+                "reminders.uncomplete",
+                "reminders.delete",
+                "reminders.create_list"
+              ],
+              "coverage": {
+                "fields": "complete",
+                "missing": [
+                  "recurring reminders: next incomplete instance only"
+                ]
+              },
+              "reason": "",
+              "source": "reminders",
+              "state": "ready"
+            }
+          }
+        ]
+      }
+    ],
+    "convergence_failure": "replica_0_records_mismatch counts=107/107",
+    "recovery_final_drain_ms": 1199.445833
+  },
+  "scenario": "CORE-DISK-FULL",
+  "level": "sim",
+  "passed": false,
+  "git_sha": "2ad2e4eb2e2d35c172906af07a761359a0c99fb2",
+  "at": "2026-10-18T20:50:30.949264Z",
+  "assertions": [
+    {
+      "name": "feed_network_loopback",
+      "passed": true
+    },
+    {
+      "name": "real_volume_full_capture_degraded",
+      "passed": true
+    },
+    {
+      "name": "recovery_capture_drained_before_convergence",
+      "passed": true
+    },
+    {
+      "name": "truth_gateway_replica_convergence",
+      "passed": false
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

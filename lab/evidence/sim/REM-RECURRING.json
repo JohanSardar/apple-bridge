@@ -1,51 +1,14 @@
 {
   "host_conditions": {
-    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
-    "start": {
-      "air": {
-        "at": "2026-10-17T18:39:51.929511Z",
-        "cpu_count": 8,
-        "load_average": [
-          2.94,
-          4.17,
-          5.63
-        ],
-        "cpu_idle_percent": 91,
-        "free_memory_bytes": 507494400,
-        "active_heavy_slots": 2,
-        "other_active_heavy_slots": 1,
-        "heavy_queue_length": 3,
-        "quiet": false
-      }
-    },
-    "end": {
-      "air": {
-        "at": "2026-10-17T18:39:53.840317Z",
-        "cpu_count": 8,
-        "load_average": [
-          2.94,
-          4.17,
-          5.63
-        ],
-        "cpu_idle_percent": 73,
-        "free_memory_bytes": 262356992,
-        "active_heavy_slots": 2,
-        "other_active_heavy_slots": 1,
-        "heavy_queue_length": 3,
-        "quiet": false
-      }
-    },
-    "quiet": false,
-    "require_quiet": false,
-    "quiet_wait_ms": 0,
-    "quiet_wait_expired": false
+    "quiet": true,
+    "summary": "air: load=[3.17 3.82 6.56] cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M55JKK6HGTGXB7X43ES47XR1",
+  "run_id": "run_01M58DQP0WJ2DBF1SFJPYMM7CD",
   "scenario": "REM-RECURRING",
   "level": "sim",
   "passed": true,
-  "git_sha": "c2ce2c910d58faeaf236243741ee35d9fed6ef4b",
-  "at": "2026-10-17T18:39:53.041654Z",
+  "git_sha": "e3ed609ac06a6dced68c1fd688462eaaf6566d9a",
+  "at": "2026-10-18T21:12:27.420242Z",
   "assertions": [
     {
       "name": "reminders_ready",
@@ -83,9 +46,9 @@
   "latency": {
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 28.123125,
-      "p95_ms": 28.123125,
-      "max_ms": 28.123125,
+      "p50_ms": 27.517542,
+      "p95_ms": 27.517542,
+      "max_ms": 27.517542,
       "timeouts": 0
     }
   },

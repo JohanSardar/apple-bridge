@@ -1,14 +1,14 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[5.07 5.65 6.12] cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[3.16 4.02 6.88] cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M55SV92D38NG2K1X0ZQ2D47C",
+  "run_id": "run_01M58DNGNY8KK089M01GJ2PKKB",
   "scenario": "MSG-SEND-NEW-HANDLE",
   "level": "sim",
   "passed": true,
-  "git_sha": "713eb5504ad1b54668557e344d562378c3157eb3",
-  "at": "2026-10-17T20:46:24.845761Z",
+  "git_sha": "47549176312caf86b1d55e35f1e4c13562ed17f7",
+  "at": "2026-10-18T21:11:16.41466Z",
   "assertions": [
     {
       "name": "seed_self_chat",
@@ -58,16 +58,16 @@
   "latency": {
     "mcp_command_to_replica": {
       "samples": 1,
-      "p50_ms": 56.462,
-      "p95_ms": 56.462,
-      "max_ms": 56.462,
+      "p50_ms": 76.423042,
+      "p95_ms": 76.423042,
+      "max_ms": 76.423042,
       "timeouts": 0
     },
     "rest_command_to_replica": {
       "samples": 1,
-      "p50_ms": 51.740041,
-      "p95_ms": 51.740041,
-      "max_ms": 51.740041,
+      "p50_ms": 47.784084,
+      "p95_ms": 47.784084,
+      "max_ms": 47.784084,
       "timeouts": 0
     }
   },
