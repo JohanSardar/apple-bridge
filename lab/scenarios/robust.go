@@ -217,7 +217,6 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 		add("newer_replica_compatible_schema_negotiates_older_gateway", err == nil && status.State == "connected" && status.Schema == 1)
 
 	case "bench":
-		originalToken := w.Gateway.Token
 		completionTimeout := 5 * time.Minute
 		contended := os.Getenv("APPLE_BRIDGE_LAB_CONTENDED_BENCH") == "1"
 		if contended {
@@ -281,7 +280,6 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 		for name, value := range resources {
 			evidence.Metrics[name] = value
 		}
-		w.Gateway.Token = originalToken
 		add("two_hundred_thousand_message_capture_replication_fts5", true)
 
 	case "snapshot-under-load", "snapshot-interrupt":
