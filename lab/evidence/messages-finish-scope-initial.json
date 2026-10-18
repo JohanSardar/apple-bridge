@@ -1,0 +1,47 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[7.37 20.64 16.92] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M58C67ZQC7V49CB28S1E6G56",
+  "network_path": "loopback",
+  "scenario": "CORE-SCOPE-LEAK",
+  "level": "sim",
+  "passed": false,
+  "git_sha": "eb8a06c43367fccf1a3e6e0beae5c22d22d5252e",
+  "at": "2026-10-18T20:45:27.415647Z",
+  "assertions": [
+    {
+      "name": "feed_network_loopback",
+      "passed": true
+    },
+    {
+      "name": "replica_physically_contains_messages_before_scoped_probes",
+      "passed": true
+    },
+    {
+      "name": "scope_query_gateway",
+      "passed": true
+    },
+    {
+      "name": "scope_search_gateway",
+      "passed": true
+    },
+    {
+      "name": "scope_records_gateway",
+      "passed": true
+    },
+    {
+      "name": "all_registered_scope_paths",
+      "passed": false
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

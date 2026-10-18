@@ -1,52 +1,15 @@
 {
   "host_conditions": {
-    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
-    "start": {
-      "air": {
-        "at": "2026-10-17T19:51:34.348093Z",
-        "cpu_count": 8,
-        "load_average": [
-          4.56,
-          5.09,
-          5.05
-        ],
-        "cpu_idle_percent": 43,
-        "free_memory_bytes": 69058560,
-        "active_heavy_slots": 2,
-        "other_active_heavy_slots": 1,
-        "heavy_queue_length": 4,
-        "quiet": false
-      }
-    },
-    "end": {
-      "air": {
-        "at": "2026-10-17T19:51:36.021312Z",
-        "cpu_count": 8,
-        "load_average": [
-          4.43,
-          5.06,
-          5.04
-        ],
-        "cpu_idle_percent": 44,
-        "free_memory_bytes": 108036096,
-        "active_heavy_slots": 2,
-        "other_active_heavy_slots": 1,
-        "heavy_queue_length": 4,
-        "quiet": false
-      }
-    },
-    "quiet": false,
-    "require_quiet": false,
-    "quiet_wait_ms": 0,
-    "quiet_wait_expired": false
+    "quiet": true,
+    "summary": "air: load=[3.08 4.13 7.08] cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M55PPWS573631A2D7ZNGWWRK",
+  "run_id": "run_01M58DKYN1QGF711B5T5F6JZN0",
   "network_path": "loopback",
   "scenario": "LAB-TRUTH-MULTIPLICITY",
   "level": "sim",
   "passed": true,
-  "git_sha": "7e55120b19134246108d4ed10d35cd6d1539316f",
-  "at": "2026-10-17T19:51:35.461811Z",
+  "git_sha": "47549176312caf86b1d55e35f1e4c13562ed17f7",
+  "at": "2026-10-18T21:10:25.185071Z",
   "assertions": [
     {
       "name": "feed_network_loopback",

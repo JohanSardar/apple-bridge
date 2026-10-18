@@ -1,0 +1,33 @@
+{
+  "baseline_evidence": "main@dea9faf:lab/evidence/messages-real-session-final.json",
+  "method": "Read-only reconstruction using cleanup-ledger message ROWID high-water marks, the union of active and recoverable chat joins, recoverable delete_date at each historical snapshot, ordinary tagged messages, and independently discovered self handles. No handles or message bodies are stored here.",
+  "snapshots": [
+    {
+      "at": "2026-10-18T05:15:39Z",
+      "max_row_id": 167022,
+      "tagged_self_messages": 63,
+      "outgoing": 31,
+      "incoming": 32
+    },
+    {
+      "at": "2026-10-18T18:06:06Z",
+      "max_row_id": 167142,
+      "tagged_self_messages": 119,
+      "outgoing": 31,
+      "incoming": 88
+    }
+  ],
+  "increase": 56,
+  "new_outgoing": 0,
+  "new_incoming": 56,
+  "incoming_logical_sent_hours": {
+    "2026-10-17T04": 2,
+    "2026-10-17T20": 16,
+    "2026-10-17T21": 8,
+    "2026-10-17T22": 4,
+    "2026-10-18T03": 9,
+    "2026-10-18T04": 17
+  },
+  "cause": "All 56 additions were incoming self-chat rows with old logical send timestamps, inserted after the earlier ROWID high-water mark. The original outgoing count stayed 31. Delayed self copies/backfill accumulated because pending cleanup obligations were never executed and cleanup did not cover later incoming copies.",
+  "repair": "Execute per-run cleanup for both directions by tag, preserve indeterminate obligations for reconciliation, and audit visible rows independently."
+}

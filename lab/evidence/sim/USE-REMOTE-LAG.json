@@ -1,9 +1,9 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[4.78 5.27 5.92] cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[3.16 3.81 6.54] cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M55V8VRW8GF1RC3SRE940GZM",
+  "run_id": "run_01M58DQVRH1CXQGMQWSBYE63JV",
   "metrics": {
     "app_days": 2,
     "devices": 2
@@ -11,8 +11,8 @@
   "scenario": "USE-REMOTE-LAG",
   "level": "sim",
   "passed": true,
-  "git_sha": "8f25157360827cfb675bf7e469121191512a3cb4",
-  "at": "2026-10-17T21:11:18.556944Z",
+  "git_sha": "e3ed609ac06a6dced68c1fd688462eaaf6566d9a",
+  "at": "2026-10-18T21:12:33.297111Z",
   "assertions": [
     {
       "name": "mac_lock_clipped",
@@ -46,9 +46,9 @@
   "latency": {
     "batch_to_gateway_ms": {
       "samples": 1,
-      "p50_ms": 13.2,
-      "p95_ms": 13.2,
-      "max_ms": 13.2,
+      "p50_ms": 13.839,
+      "p95_ms": 13.839,
+      "max_ms": 13.839,
       "timeouts": 0
     }
   },

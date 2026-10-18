@@ -1,0 +1,38 @@
+{
+  "full_sim": {
+    "kind": "simulation_suite",
+    "command": "packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios --level sim --json",
+    "exit_code": 0,
+    "scenarios": 120,
+    "passed": 120,
+    "messages_scenarios": 24,
+    "messages_passed": 24,
+    "git_sha": "4f263fdf17b0f98019c10581b7d742880bb9b6af",
+    "failures": []
+  },
+  "go_test": {
+    "command": "go test ./...",
+    "exit_code": 0
+  },
+  "lint": {
+    "command": "make lint",
+    "exit_code": 0
+  },
+  "features": {
+    "command": "make features",
+    "exit_code": 0,
+    "done": 23,
+    "limited": 1,
+    "blocked": 0,
+    "passing_scenario_levels": 180,
+    "scenario_levels": 183
+  },
+  "signing_smoke": {
+    "source_commit": "47549176312caf86b1d55e35f1e4c13562ed17f7",
+    "password_file_read": false,
+    "implicit_unlock": false,
+    "execution": "Temporary launchd job in the existing GUI session; job removed after exit",
+    "strict_signing_smoke": "pass for absolute and relative app paths without unlock"
+  },
+  "privacy_scan": "No private self/approved handles in changed files; repeated before final commit."
+}

@@ -1,0 +1,64 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[9.64 14.43 15.24] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M58CHP0YE2XN3MWD3F0C256B",
+  "network_path": "loopback",
+  "metrics": {
+    "capture_readiness": "committed_capture_barrier",
+    "completion_timeout_ms": 300000,
+    "contended_run": false,
+    "convergence_failure": "truth_alias_failed",
+    "effect_done_to_gateway_capture_ms": 95889.989708,
+    "fixture_and_capture_ms": 97454.591208,
+    "fts5_query_cache": "repeated_query_after_integrity_verification",
+    "gateway_rss_end_sample_bytes": 78020608,
+    "gateway_wal_end_sample_bytes": 7098792,
+    "messages": 200000,
+    "messages_target": 200000,
+    "recovery_final_drain_ms": 34.952333,
+    "replica_readiness": "durable_cursor_then_integrity_count",
+    "replica_rss_end_sample_bytes": 14991360,
+    "replica_wal_end_sample_bytes": 6884552
+  },
+  "scenario": "CORE-BENCH",
+  "level": "sim",
+  "passed": false,
+  "git_sha": "2ad2e4eb2e2d35c172906af07a761359a0c99fb2",
+  "at": "2026-10-18T20:51:42.238569Z",
+  "assertions": [
+    {
+      "name": "feed_network_loopback",
+      "passed": true
+    },
+    {
+      "name": "two_hundred_thousand_message_capture_replication_fts5",
+      "passed": true
+    },
+    {
+      "name": "recovery_capture_drained_before_convergence",
+      "passed": true
+    },
+    {
+      "name": "truth_gateway_replica_convergence",
+      "passed": false
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "fts5_query_gateway": {
+      "samples": 100,
+      "p50_ms": 3.364041,
+      "p95_ms": 4.383417,
+      "max_ms": 109.726667,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

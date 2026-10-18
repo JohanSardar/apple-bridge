@@ -1,0 +1,49 @@
+{
+  "at": "2026-10-18T21:15:31.153893+00:00",
+  "appletruth_status": "verified",
+  "visible_tagged_remaining": 0,
+  "joined_tagged_control_rows_retained": 4,
+  "retained_control_types": {
+    "2000": 1,
+    "3006": 3
+  },
+  "tagged_rows_including_recently_deleted": 162,
+  "deleted_from_active_history": 138,
+  "drafts_cleared": 1,
+  "passes": [
+    {
+      "passed": false,
+      "tag_filtered": false,
+      "drafts_cleared": 1,
+      "deleted": 48,
+      "only_tagged_self_messages": false,
+      "remaining_tagged_self_messages": 90,
+      "initial_tagged_self_messages": 138,
+      "all_dates": true,
+      "failure": "validate:conflict",
+      "approved_contacts_included": true
+    },
+    {
+      "initial_tagged_self_messages": 90,
+      "all_dates": true,
+      "remaining_tagged_self_messages": 0,
+      "deleted": 90,
+      "tag_filtered": false,
+      "failure": "",
+      "approved_contacts_included": true,
+      "drafts_cleared": 0,
+      "passed": true,
+      "only_tagged_self_messages": false
+    }
+  ],
+  "untagged_baseline_rows": 159219,
+  "untagged_baseline_rows_missing": 0,
+  "only_approved_chats": true,
+  "permanent_erasure_claimed": false,
+  "retention_reason": "Four hidden Tapback control rows still have chat joins; each parent is already deleted. Messages does not expose these as standalone deletable messages. Recently Deleted content and hidden control metadata were not erased through SQL.",
+  "subsequent_group_drafts_cleared": 1,
+  "total_drafts_cleared": 2,
+  "verified_private_ledgers": 56,
+  "pending_late_effect_ledgers": 1,
+  "pending_ledger_reason": "The latest SMS group command remains indeterminate. Its tagged draft is cleared and the current audit is empty; keep its durable obligation for any later effect."
+}

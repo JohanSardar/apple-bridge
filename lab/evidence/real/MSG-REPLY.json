@@ -1,28 +1,92 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[6.69 3.33 2.52] cpus=8 other_heavy=1"
+    "summary": "air: load=[39.91 35.23 20.03] cpus=8 other_heavy=1"
   },
-  "status": "pending-unlock",
-  "run_id": "run_01M56F1809P3EADEAEQBWWW3W5",
+  "run_id": "run_01M58C03GBNG7B12TPKC0YKETN",
+  "metrics": {
+    "cleanup": {
+      "all_dates": true,
+      "appletruth_active_remaining": 0,
+      "appletruth_verified": true,
+      "approved_contacts_included": true,
+      "deleted": 0,
+      "failure": "",
+      "initial_tagged_self_messages": 0,
+      "only_tagged_self_messages": false,
+      "passed": true,
+      "remaining_tagged_self_messages": 0,
+      "tag_filtered": true
+    },
+    "command_state": "observed",
+    "disposition": "locally_observed",
+    "native_reason": null,
+    "native_stage_error": null
+  },
   "scenario": "MSG-REPLY",
   "level": "real",
-  "passed": false,
-  "git_sha": "4fd88121ae1895e7d1767e0f2aab85747777550f",
-  "at": "2026-10-18T02:56:40.45735Z",
+  "passed": true,
+  "git_sha": "eb8a06c43367fccf1a3e6e0beae5c22d22d5252e",
+  "at": "2026-10-18T20:42:06.219625Z",
   "assertions": [
     {
-      "name": "native_accessibility",
-      "passed": false,
-      "status": "unverified",
-      "detail": "Screen capture shows password lock screen; Messages AX target cannot be verified"
+      "name": "self_chat_captured",
+      "passed": true
+    },
+    {
+      "name": "cleanup_registered_before_submit",
+      "passed": true
+    },
+    {
+      "name": "native_send_observed_with_fingerprint_checkpoint",
+      "passed": true
+    },
+    {
+      "name": "gui_session_probe",
+      "passed": true
+    },
+    {
+      "name": "target_captured",
+      "passed": true
+    },
+    {
+      "name": "native_action_observed",
+      "passed": true
+    },
+    {
+      "name": "appletruth_target_observed",
+      "passed": true
+    },
+    {
+      "name": "appletruth_action_effect",
+      "passed": true
+    },
+    {
+      "name": "remy_test_0_unsent",
+      "passed": true
+    },
+    {
+      "name": "remy_test_1_unsent",
+      "passed": true
+    },
+    {
+      "name": "tagged_messages_cleanup",
+      "passed": true
     },
     {
       "name": "credential_backend_override_restored",
       "passed": true
     }
   ],
-  "latency": {},
+  "latency": {
+    "command_submit_to_truth": {
+      "samples": 1,
+      "p50_ms": 6848.372333,
+      "p95_ms": 6848.372333,
+      "max_ms": 6848.372333,
+      "timeouts": 0
+    }
+  },
   "hosts": [
     "air"
   ]

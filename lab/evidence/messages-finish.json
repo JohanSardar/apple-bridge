@@ -1,385 +1,269 @@
 {
-  "at": "2026-10-18T18:06:06.570509+00:00",
+  "at": "2026-10-18T21:16:20.252334+00:00",
+  "code_commit": "76088c09c1b65094b98848fb77f7155b3d60a21c",
   "branch": "messages-finish",
-  "base_commit": "aaa7ec2eb8af5c94e2f4d8ed38f618e8140f9480",
-  "implementation_merged": false,
-  "git_sha_note": "Scenario git_sha fields identify the base commit; noninteractive credential changes were verified from this worktree before commit.",
+  "previous_attempt": "lab/evidence/messages-finish-before-session-recovery.json",
   "features": {
     "MSG-REPLY": {
-      "status": "blocked",
-      "fresh_appletruth_effect": false,
-      "latency_ms": null,
-      "reason": "Fresh native preflight remains AX -25204 after authorized user-owned SecurityAgent dismissal; no action was dispatched."
-    },
-    "MSG-REACT": {
-      "status": "blocked",
-      "fresh_appletruth_effect": false,
-      "latency_ms": null,
-      "reason": "Fresh native preflight remains AX -25204 after authorized user-owned SecurityAgent dismissal; no action was dispatched."
+      "status": "done",
+      "evidence_path": "lab/evidence/real/MSG-REPLY.json",
+      "fresh_appletruth_effect": true,
+      "run_id": "run_01M58C03GBNG7B12TPKC0YKETN",
+      "latency": {
+        "command_submit_to_truth": {
+          "samples": 1,
+          "p50_ms": 6848.372333,
+          "p95_ms": 6848.372333,
+          "max_ms": 6848.372333,
+          "timeouts": 0
+        }
+      }
     },
     "MSG-EDIT": {
-      "status": "blocked",
-      "fresh_appletruth_effect": false,
-      "latency_ms": null,
-      "reason": "Tagged self-send prerequisite returned Apple event -1712 with indeterminate disposition; Edit was not reached."
+      "status": "done",
+      "evidence_path": "lab/evidence/real/MSG-EDIT.json",
+      "fresh_appletruth_effect": true,
+      "run_id": "run_01M58BNF1SN80XSQ05M1P19BAA",
+      "latency": {
+        "command_submit_to_truth": {
+          "samples": 1,
+          "p50_ms": 11610.083417,
+          "p95_ms": 11610.083417,
+          "max_ms": 11610.083417,
+          "timeouts": 0
+        }
+      }
+    },
+    "MSG-REACT": {
+      "status": "done",
+      "evidence_path": "lab/evidence/real/MSG-REACT.json",
+      "fresh_appletruth_effect": true,
+      "run_id": "run_01M58B5VH5P20W2HB4MYJGCG97",
+      "latency": {
+        "add_emoji_submit_to_truth": {
+          "samples": 1,
+          "p50_ms": 9258.193667,
+          "p95_ms": 9258.193667,
+          "max_ms": 9258.193667,
+          "timeouts": 0
+        },
+        "command_submit_to_truth": {
+          "samples": 1,
+          "p50_ms": 11999.382083,
+          "p95_ms": 11999.382083,
+          "max_ms": 11999.382083,
+          "timeouts": 0
+        },
+        "remove_emoji_submit_to_truth": {
+          "samples": 1,
+          "p50_ms": 9576.569167,
+          "p95_ms": 9576.569167,
+          "max_ms": 9576.569167,
+          "timeouts": 0
+        },
+        "remove_love_submit_to_truth": {
+          "samples": 1,
+          "p50_ms": 9516.115292,
+          "p95_ms": 9516.115292,
+          "max_ms": 9516.115292,
+          "timeouts": 0
+        }
+      }
     },
     "MSG-UNSEND": {
-      "status": "blocked",
-      "fresh_appletruth_effect": false,
-      "latency_ms": null,
-      "reason": "Fresh native preflight remains AX -25204 after authorized user-owned SecurityAgent dismissal; no action was dispatched."
+      "status": "done",
+      "evidence_path": "lab/evidence/real/MSG-UNSEND.json",
+      "fresh_appletruth_effect": true,
+      "run_id": "run_01M58BCNN933YBMQD2DGHVDW3B",
+      "latency": {
+        "command_submit_to_truth": {
+          "samples": 1,
+          "p50_ms": 7389.216167,
+          "p95_ms": 7389.216167,
+          "max_ms": 7389.216167,
+          "timeouts": 0
+        }
+      }
     },
     "MSG-GROUP-CREATE": {
-      "status": "blocked",
+      "status": "limited",
+      "evidence_path": "lab/evidence/real/MSG-GROUP-CREATE.json",
       "fresh_appletruth_effect": false,
-      "latency_ms": null,
-      "reason": "Fresh native preflight remains AX -25204 after authorized user-owned SecurityAgent dismissal; no action was dispatched."
+      "run_id": "run_01M58DRE99D16P5D4RCGEK7DME",
+      "latency": {
+        "create_group_submit_to_truth": {
+          "samples": 1,
+          "p50_ms": 18084.515666,
+          "p95_ms": 18084.515666,
+          "max_ms": 18084.515666,
+          "timeouts": 0
+        }
+      },
+      "reason": "Approved Remy/Ben pair offered Text Message \u2022 SMS only. Enter left the tagged group text in the composer; no group message was observed. An iMessage group requires you plus at least two eligible other participants; no additional contacts were authorized. The abandoned tagged draft was cleared.",
+      "fresh_probe_status": "environment-limited",
+      "cleanup_passed": true
     }
   },
-  "keychain": {
-    "host_conditions": {
-      "quiet": true,
-      "summary": "air: load=[4.3 4.57 4.64] cpus=8 other_heavy=0"
-    },
-    "run_id": "run_01M5830BJVNJ0Y67VVA4320FQR",
-    "metrics": {
-      "gui_keychain_lifecycle": {
-        "lifecycle_ms": 302.015208,
-        "keychain_default_is_login": true,
-        "keychain_unlocked": true,
-        "keychain_status_code": 0,
-        "backend": "keychain",
-        "created": true,
-        "used": true,
-        "rotated": true,
-        "revoked": true
-      }
-    },
-    "scenario": "CORE-CRED-LIFECYCLE",
-    "level": "real",
-    "passed": true,
-    "git_sha": "aaa7ec2eb8af5c94e2f4d8ed38f618e8140f9480",
-    "at": "2026-10-18T18:04:57.307432Z",
-    "assertions": [
-      {
-        "name": "keychain_create_use_rotate_revoke",
-        "passed": true
-      },
-      {
-        "name": "credential_backend_override_restored",
-        "passed": true
-      }
-    ],
-    "latency": {
-      "create_use_rotate_revoke": {
-        "samples": 1,
-        "p50_ms": 302.015208,
-        "p95_ms": 302.015208,
-        "max_ms": 302.015208,
-        "timeouts": 0
-      }
-    },
-    "hosts": [
-      "air"
-    ]
-  },
-  "failed_edit_prerequisite": {
-    "host_conditions": {
-      "quiet": true,
-      "summary": "air: load=[3.86 4.89 4.75] cpus=8 other_heavy=0"
-    },
-    "status": "environment-limited",
-    "run_id": "run_01M582R61C297KT4NJ8X46HA6X",
-    "metrics": {
-      "apple_event_errors": [
-        -1712
-      ],
-      "command_state": "indeterminate",
-      "disposition": "indeterminate",
-      "initial_command_state": "indeterminate",
-      "parts_requested": 1,
-      "send_commands": 1
-    },
-    "scenario": "MSG-EDIT",
-    "level": "real",
-    "passed": false,
-    "git_sha": "aaa7ec2eb8af5c94e2f4d8ed38f618e8140f9480",
-    "at": "2026-10-18T18:00:29.484119Z",
-    "assertions": [
-      {
-        "name": "self_chat_captured",
-        "passed": true
-      },
-      {
-        "name": "cleanup_registered_before_submit",
-        "passed": true
-      },
-      {
-        "name": "native_send_observed_with_fingerprint_checkpoint",
-        "passed": false
-      },
-      {
-        "name": "credential_backend_override_restored",
-        "passed": true
-      }
-    ],
-    "latency": {},
-    "hosts": [
-      "air"
-    ]
-  },
   "session": {
-    "before_dismissal": {
-      "accessibility": true,
-      "messages_running": true,
-      "messages_role_error": -25204,
-      "messages_windows_error": -25204,
-      "messages_window_count": 0,
-      "messages_frontmost": false,
-      "focused_application": "com.apple.SecurityAgent"
-    },
-    "after_dismissal": {
-      "accessibility": true,
-      "messages_running": true,
-      "messages_role_error": -25204,
-      "messages_windows_error": -25204,
-      "messages_window_count": 0,
-      "messages_frontmost": true,
-      "focused_application_error": -25204
-    },
-    "normal_messages_quit": "Apple event -1712 after 5 seconds",
-    "sample": "Messages main thread waits in IMCore -> TUCallProviderManager telephonyProvider -> TUCallProviderManagerXPCClient blockUntilInitialStateReceived -> synchronous dispatch wait",
-    "password_entered": false,
+    "path": "Signed AppleBridgeHelper.app opened through Launch Services in the GUI session; NSAppleScript and AX from MessagesSource",
+    "initial_accessibility_trusted": true,
+    "initial_messages_role_error": 0,
+    "initial_messages_windows_error": 0,
+    "initial_messages_window_count": 1,
+    "initial_send_apple_event_error": -1712,
+    "recovery": "TERM/relaunch of the user-owned Messages app; no keychain or security daemon changes",
+    "after_relaunch_send_apple_event_error": 0,
+    "after_relaunch_matching_self_chat_row": true,
+    "initial_messages_sample": "Main thread idle in the AppKit event loop, rather than the previous TelephonyUtilities wait",
+    "passwords_entered_or_stored": false,
+    "system_tcc_modified": false,
+    "sip_changed": false,
+    "unrelated_work_touched": false,
     "keychain_settings_changed": false,
-    "keychains_locked": false,
-    "foreign_processes_killed": false,
-    "user_owned_securityagent_dismissed": true,
-    "system_securityagent_touched": false,
-    "vnc_used": false
+    "keychain_lock_or_unlock_requested": true,
+    "sip_status": "enabled",
+    "keychain_deviation": {
+      "cause": "The existing sign.sh implicitly read its existing development password file and invoked security unlock-keychain in the SSH security session during helper/truth builds. This was discovered later and violates the instruction not to touch keychains.",
+      "gui_keychain_settings_changed": false,
+      "password_created_printed_or_committed": false,
+      "repair": "Remove all implicit unlock/password-file logic. Run codesign in a bounded one-shot GUI-session job that uses the already-unlocked keychain.",
+      "verification": "Direct SSH signing without unlock returned errSecInternalComponent. The GUI-session signer then passed codesign --verify --strict without any unlock command."
+    }
   },
   "cleanup": {
-    "initial_tagged_self_messages": 119,
-    "deleted": 0,
-    "remaining_tagged_self_messages": 119,
-    "all_dates": true,
-    "only_tagged_self_messages": true,
-    "failure": "validate:targetUnavailable",
-    "passed": false,
-    "brief_previous_count": 63,
-    "count_increase_cause": "unproven",
-    "nonself_cleanup": "No native deletion possible while Messages remains inaccessible; previous approved-contact test notices were not claimed removed."
-  },
-  "group_constraints": {
-    "true_imessage_group": "limited: approved Remy/Ben pair previously offered SMS; no additional contacts authorized",
-    "fresh_group_sent": false,
-    "rename_add_minimum_others": 2,
-    "remove_minimum_others": 3,
-    "self_email_distinct_participant": "unverified"
-  },
-  "historical_passes": {
-    "path": "lab/evidence/messages-real-session-green.json",
-    "fresh_reverification": false,
-    "runs": [
+    "at": "2026-10-18T21:15:31.153893+00:00",
+    "appletruth_status": "verified",
+    "visible_tagged_remaining": 0,
+    "joined_tagged_control_rows_retained": 4,
+    "retained_control_types": {
+      "2000": 1,
+      "3006": 3
+    },
+    "tagged_rows_including_recently_deleted": 162,
+    "deleted_from_active_history": 138,
+    "drafts_cleared": 1,
+    "passes": [
       {
-        "host_conditions": {
-          "quiet": true,
-          "summary": "air: load=[4.98 4.8 4.21] cpus=8 other_heavy=0"
-        },
-        "run_id": "run_01M56MHBV8SHMN009CBF2SJQC2",
-        "metrics": {
-          "command_state": "observed",
-          "disposition": "locally_observed",
-          "native_reason": null,
-          "native_stage_error": null
-        },
-        "scenario": "MSG-REACT",
-        "level": "real",
-        "passed": true,
-        "git_sha": "e08fd0fbe1808c1d9a299d45088086caa43aaf14",
-        "at": "2026-10-18T04:32:51.560681Z",
-        "assertions": [
-          {
-            "name": "self_chat_captured",
-            "passed": true
-          },
-          {
-            "name": "cleanup_registered_before_submit",
-            "passed": true
-          },
-          {
-            "name": "native_send_observed_with_fingerprint_checkpoint",
-            "passed": true
-          },
-          {
-            "name": "gui_session_probe",
-            "passed": true
-          },
-          {
-            "name": "target_captured",
-            "passed": true
-          },
-          {
-            "name": "native_action_observed",
-            "passed": true
-          },
-          {
-            "name": "appletruth_target_observed",
-            "passed": true
-          },
-          {
-            "name": "appletruth_action_effect",
-            "passed": true
-          },
-          {
-            "name": "remove_love_observed",
-            "passed": true
-          },
-          {
-            "name": "remove_love_appletruth",
-            "passed": true
-          },
-          {
-            "name": "add_emoji_observed",
-            "passed": true
-          },
-          {
-            "name": "add_emoji_appletruth",
-            "passed": true
-          },
-          {
-            "name": "remove_emoji_observed",
-            "passed": true
-          },
-          {
-            "name": "remove_emoji_appletruth",
-            "passed": true
-          },
-          {
-            "name": "credential_backend_override_restored",
-            "passed": true
-          }
-        ],
-        "latency": {
-          "add_emoji_submit_to_truth": {
-            "samples": 1,
-            "p50_ms": 7698.756875,
-            "p95_ms": 7698.756875,
-            "max_ms": 7698.756875,
-            "timeouts": 0
-          },
-          "command_submit_to_truth": {
-            "samples": 1,
-            "p50_ms": 11527.436666,
-            "p95_ms": 11527.436666,
-            "max_ms": 11527.436666,
-            "timeouts": 0
-          },
-          "remove_emoji_submit_to_truth": {
-            "samples": 1,
-            "p50_ms": 10152.610583,
-            "p95_ms": 10152.610583,
-            "max_ms": 10152.610583,
-            "timeouts": 0
-          },
-          "remove_love_submit_to_truth": {
-            "samples": 1,
-            "p50_ms": 5905.387792,
-            "p95_ms": 5905.387792,
-            "max_ms": 5905.387792,
-            "timeouts": 0
-          }
-        },
-        "hosts": [
-          "air"
-        ]
+        "passed": false,
+        "tag_filtered": false,
+        "drafts_cleared": 1,
+        "deleted": 48,
+        "only_tagged_self_messages": false,
+        "remaining_tagged_self_messages": 90,
+        "initial_tagged_self_messages": 138,
+        "all_dates": true,
+        "failure": "validate:conflict",
+        "approved_contacts_included": true
       },
       {
-        "host_conditions": {
-          "quiet": false,
-          "summary": "air: load=[8.57 7.76 5.64] cpus=8 other_heavy=0"
-        },
-        "run_id": "run_01M56MPXB151A0X8AKAZXXPGZ5",
-        "metrics": {
-          "command_state": "observed",
-          "disposition": "locally_observed",
-          "native_reason": null,
-          "native_stage_error": null
-        },
-        "scenario": "MSG-UNSEND",
-        "level": "real",
+        "initial_tagged_self_messages": 90,
+        "all_dates": true,
+        "remaining_tagged_self_messages": 0,
+        "deleted": 90,
+        "tag_filtered": false,
+        "failure": "",
+        "approved_contacts_included": true,
+        "drafts_cleared": 0,
         "passed": true,
-        "git_sha": "e08fd0fbe1808c1d9a299d45088086caa43aaf14",
-        "at": "2026-10-18T04:35:53.313719Z",
-        "assertions": [
-          {
-            "name": "self_chat_captured",
-            "passed": true
-          },
-          {
-            "name": "cleanup_registered_before_submit",
-            "passed": true
-          },
-          {
-            "name": "native_send_observed_with_fingerprint_checkpoint",
-            "passed": true
-          },
-          {
-            "name": "gui_session_probe",
-            "passed": true
-          },
-          {
-            "name": "target_captured",
-            "passed": true
-          },
-          {
-            "name": "native_action_observed",
-            "passed": true
-          },
-          {
-            "name": "appletruth_target_observed",
-            "passed": true
-          },
-          {
-            "name": "appletruth_action_effect",
-            "passed": true
-          },
-          {
-            "name": "credential_backend_override_restored",
-            "passed": true
-          }
-        ],
-        "latency": {
-          "command_submit_to_truth": {
-            "samples": 1,
-            "p50_ms": 7314.786292,
-            "p95_ms": 7314.786292,
-            "max_ms": 7314.786292,
-            "timeouts": 0
-          }
-        },
-        "hosts": [
-          "air"
-        ]
+        "only_tagged_self_messages": false
       }
-    ]
+    ],
+    "untagged_baseline_rows": 159219,
+    "untagged_baseline_rows_missing": 0,
+    "only_approved_chats": true,
+    "permanent_erasure_claimed": false,
+    "retention_reason": "Four hidden Tapback control rows still have chat joins; each parent is already deleted. Messages does not expose these as standalone deletable messages. Recently Deleted content and hidden control metadata were not erased through SQL.",
+    "subsequent_group_drafts_cleared": 1,
+    "total_drafts_cleared": 2,
+    "verified_private_ledgers": 56,
+    "pending_late_effect_ledgers": 1,
+    "pending_ledger_reason": "The latest SMS group command remains indeterminate. Its tagged draft is cleared and the current audit is empty; keep its durable obligation for any later effect."
+  },
+  "cleanup_investigation": {
+    "brief_previous_count": 63,
+    "prior_helper_count": 119,
+    "initial_readonly_ledger_count": 51,
+    "initial_ledger_states": {
+      "pending_unlock": 48,
+      "pending_native_cleanup": 2,
+      "no_effect": 1
+    },
+    "initial_active_self_rows": 130,
+    "initial_active_self_rows_with_pending_ledgers": 124,
+    "cause": "All 56 additions were incoming self-chat rows with old logical send timestamps, inserted after the earlier ROWID high-water mark. The original outgoing count stayed 31. Delayed self copies/backfill accumulated because pending cleanup obligations were never executed and cleanup did not cover later incoming copies.",
+    "exact_56_row_delta": {
+      "baseline_evidence": "main@dea9faf:lab/evidence/messages-real-session-final.json",
+      "method": "Read-only reconstruction using cleanup-ledger message ROWID high-water marks, the union of active and recoverable chat joins, recoverable delete_date at each historical snapshot, ordinary tagged messages, and independently discovered self handles. No handles or message bodies are stored here.",
+      "snapshots": [
+        {
+          "at": "2026-10-18T05:15:39Z",
+          "max_row_id": 167022,
+          "tagged_self_messages": 63,
+          "outgoing": 31,
+          "incoming": 32
+        },
+        {
+          "at": "2026-10-18T18:06:06Z",
+          "max_row_id": 167142,
+          "tagged_self_messages": 119,
+          "outgoing": 31,
+          "incoming": 88
+        }
+      ],
+      "increase": 56,
+      "new_outgoing": 0,
+      "new_incoming": 56,
+      "incoming_logical_sent_hours": {
+        "2026-10-17T04": 2,
+        "2026-10-17T20": 16,
+        "2026-10-17T21": 8,
+        "2026-10-17T22": 4,
+        "2026-10-18T03": 9,
+        "2026-10-18T04": 17
+      },
+      "cause": "All 56 additions were incoming self-chat rows with old logical send timestamps, inserted after the earlier ROWID high-water mark. The original outgoing count stayed 31. Delayed self copies/backfill accumulated because pending cleanup obligations were never executed and cleanup did not cover later incoming copies.",
+      "repair": "Execute per-run cleanup for both directions by tag, preserve indeterminate obligations for reconciliation, and audit visible rows independently."
+    },
+    "repair": "Run tag-filtered cleanup on every exit, delete through Messages AX only in self/approved chats, clear tagged drafts, verify visible rows with independent AppleTruth, and retain indeterminate sends for later reconciliation.",
+    "reconciled_private_ledgers": 56,
+    "growth_evidence_path": "lab/evidence/messages-finish-cleanup-growth.json",
+    "pending_late_effect_ledgers": 1
+  },
+  "reply_repair": {
+    "failure": "The direct AX Reply action returned success but left the ordinary composer; fresh AppleTruth showed no thread relationship.",
+    "fix": "Choose Reply from the visible context menu.",
+    "proof": "MSG-REPLY passes native observation and independent thread_originator_guid plus exact reply text checks; both approved-contact messages were unsent afterward."
   },
   "required_checks": {
-    "make lint": "pass: gofmt, go vet ./..., zero-comment/import checks",
-    "make features": "pass: 24 features, 22 done, 1 limited, 1 blocked; 176/183 scenario-levels passing",
-    "messages_sim": "24/24 passing after fixing missing MessagesCaptureChecks build prerequisite; initial failure retained in messages-finish-watcher-initial.json",
-    "CORE-CREDENTIAL-STORE/sim": "pass using final rebuilt bridge"
+    "go_test": "pass: go test ./... on final Go sources",
+    "lint": "pass: make lint on final sources",
+    "messages_sim": "24/24 passing",
+    "full_sim": "120/120 passing, exit 0; no skipped cases",
+    "features": "pass: 23 done, 1 limited, 0 blocked; 180/183 scenario-levels",
+    "signing": "pass: default signer, absolute and relative app paths, GUI session, no unlock, strict codesign verification"
   },
-  "commands": [
-    "packaging/dev/heavy.sh go build -p 2 -o bin/bridge ./cmd/bridge",
-    "packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios/messages/MSG-EDIT.yaml --level real",
-    "packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios/core/CORE-CRED-LIFECYCLE.yaml --level real",
-    "packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios/messages lab/scenarios/core/CORE-CREDENTIAL-STORE.yaml --level sim",
-    "packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios/messages/MSG-WATCHER-REARM.yaml lab/scenarios/core/CORE-CREDENTIAL-STORE.yaml --level sim",
-    "packaging/dev/heavy.sh make lint",
-    "packaging/dev/heavy.sh make features"
+  "verification_repairs": {
+    "CORE-BENCH": "The final quiet full-suite run passes the 200,000-message benchmark and its automated scope/SSE checks. The earlier contended failure was not reproduced by isolated small/large probes; its specific cause remains unproven. Preserve admin visibility for benchmark records and record the failing probe stage for future diagnosis.",
+    "CORE-SCOPE-LEAK": "Use the valid contracts.Command envelope so the probe reaches scope authorization. Targeted gateway/replica checks pass.",
+    "CORE-DISK-FULL": "A successful capture recovered Reminders but left the idle Calendar capacity overlay stuck, while cursors and data matched. Capacity is store-wide; clear its overlays after successful capture. Diagnostic failure retained."
+  },
+  "initial_failures": [
+    "lab/evidence/messages-finish-initial-round.jsonl",
+    "lab/evidence/messages-finish-benchmark-initial.json",
+    "lab/evidence/messages-finish-scope-initial.json",
+    "lab/evidence/messages-finish-disk-full-initial.json",
+    "lab/evidence/messages-finish-disk-diagnosis.json",
+    "lab/evidence/messages-finish-benchmark-recovery-attempt.json"
   ],
-  "new_scenarios": [],
-  "spec_changes": [],
-  "runtime_requirement": "Noninteractive Keychain adapter uses existing python3 ctypes with system Security.framework; no Python package dependency. Security calls explicitly disable user interaction and use the login keychain path or the dedicated store path.",
-  "verification_note": "Not all requested real Messages E2E scenarios are green. No merge or push to main is authorized by the merge-on-green condition. Native action implementation remains based on aaa7ec2."
+  "proof_freshness": "Real action git_sha values name the earlier base because the implementation was verified from the working tree. The final simulation suite built 4f263fd; later changes affect signing transport and real-test cleanup ledger bookkeeping, verified separately by signing smoke, the final real group probe, and final Go tests/lint. Messages action Swift sources were unchanged after their successful fresh AppleTruth runs.",
+  "signing_policy": {
+    "source_commit": "47549176312caf86b1d55e35f1e4c13562ed17f7",
+    "password_file_read": false,
+    "implicit_unlock": false,
+    "execution": "Temporary launchd job in the existing GUI session; job removed after exit",
+    "strict_signing_smoke": "pass for absolute and relative app paths without unlock"
+  },
+  "merge_target": "main",
+  "new_scenario_ids": [],
+  "new_dependencies": []
 }

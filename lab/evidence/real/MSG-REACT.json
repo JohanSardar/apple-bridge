@@ -1,28 +1,112 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[6.93 3.32 2.51] cpus=8 other_heavy=1"
+    "summary": "air: load=[9.31 7.04 5.26] cpus=8 other_heavy=0"
   },
-  "status": "pending-unlock",
-  "run_id": "run_01M56F16Z3G2TMFMEC6CDNG4H4",
+  "run_id": "run_01M58B5VH5P20W2HB4MYJGCG97",
+  "metrics": {
+    "command_state": "observed",
+    "disposition": "locally_observed",
+    "native_reason": null,
+    "native_stage_error": null
+  },
   "scenario": "MSG-REACT",
   "level": "real",
-  "passed": false,
-  "git_sha": "4fd88121ae1895e7d1767e0f2aab85747777550f",
-  "at": "2026-10-18T02:56:39.395034Z",
+  "passed": true,
+  "git_sha": "eb8a06c43367fccf1a3e6e0beae5c22d22d5252e",
+  "at": "2026-10-18T20:27:46.085582Z",
   "assertions": [
     {
-      "name": "native_accessibility",
-      "passed": false,
-      "status": "unverified",
-      "detail": "Screen capture shows password lock screen; Messages AX target cannot be verified"
+      "name": "self_chat_captured",
+      "passed": true
+    },
+    {
+      "name": "cleanup_registered_before_submit",
+      "passed": true
+    },
+    {
+      "name": "native_send_observed_with_fingerprint_checkpoint",
+      "passed": true
+    },
+    {
+      "name": "gui_session_probe",
+      "passed": true
+    },
+    {
+      "name": "target_captured",
+      "passed": true
+    },
+    {
+      "name": "native_action_observed",
+      "passed": true
+    },
+    {
+      "name": "appletruth_target_observed",
+      "passed": true
+    },
+    {
+      "name": "appletruth_action_effect",
+      "passed": true
+    },
+    {
+      "name": "remove_love_observed",
+      "passed": true
+    },
+    {
+      "name": "remove_love_appletruth",
+      "passed": true
+    },
+    {
+      "name": "add_emoji_observed",
+      "passed": true
+    },
+    {
+      "name": "add_emoji_appletruth",
+      "passed": true
+    },
+    {
+      "name": "remove_emoji_observed",
+      "passed": true
+    },
+    {
+      "name": "remove_emoji_appletruth",
+      "passed": true
     },
     {
       "name": "credential_backend_override_restored",
       "passed": true
     }
   ],
-  "latency": {},
+  "latency": {
+    "add_emoji_submit_to_truth": {
+      "samples": 1,
+      "p50_ms": 9258.193667,
+      "p95_ms": 9258.193667,
+      "max_ms": 9258.193667,
+      "timeouts": 0
+    },
+    "command_submit_to_truth": {
+      "samples": 1,
+      "p50_ms": 11999.382083,
+      "p95_ms": 11999.382083,
+      "max_ms": 11999.382083,
+      "timeouts": 0
+    },
+    "remove_emoji_submit_to_truth": {
+      "samples": 1,
+      "p50_ms": 9576.569167,
+      "p95_ms": 9576.569167,
+      "max_ms": 9576.569167,
+      "timeouts": 0
+    },
+    "remove_love_submit_to_truth": {
+      "samples": 1,
+      "p50_ms": 9516.115292,
+      "p95_ms": 9516.115292,
+      "max_ms": 9516.115292,
+      "timeouts": 0
+    }
+  },
   "hosts": [
     "air"
   ]

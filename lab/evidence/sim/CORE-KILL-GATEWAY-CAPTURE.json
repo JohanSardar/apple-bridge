@@ -1,92 +1,18 @@
 {
   "host_conditions": {
-    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
-    "start": {
-      "air": {
-        "at": "2026-10-17T19:47:26.835255Z",
-        "cpu_count": 8,
-        "load_average": [
-          5.28,
-          5.22,
-          5.08
-        ],
-        "cpu_idle_percent": 75,
-        "free_memory_bytes": 173801472,
-        "active_heavy_slots": 2,
-        "other_active_heavy_slots": 1,
-        "heavy_queue_length": 3,
-        "quiet": false
-      }
-    },
-    "end": {
-      "air": {
-        "at": "2026-10-17T19:47:40.047595Z",
-        "cpu_count": 8,
-        "load_average": [
-          4.77,
-          5.11,
-          5.04
-        ],
-        "cpu_idle_percent": 75,
-        "free_memory_bytes": 170737664,
-        "active_heavy_slots": 2,
-        "other_active_heavy_slots": 1,
-        "heavy_queue_length": 3,
-        "quiet": false
-      }
-    },
-    "periodic_samples": [
-      {
-        "air": {
-          "at": "2026-10-17T19:47:32.919965Z",
-          "cpu_count": 8,
-          "load_average": [
-            5.1,
-            5.18,
-            5.06
-          ],
-          "cpu_idle_percent": 65,
-          "free_memory_bytes": 102055936,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 3,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T19:47:37.920783Z",
-          "cpu_count": 8,
-          "load_average": [
-            4.77,
-            5.11,
-            5.04
-          ],
-          "cpu_idle_percent": 71,
-          "free_memory_bytes": 66387968,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 3,
-          "quiet": false
-        }
-      }
-    ],
-    "quiet": false,
-    "require_quiet": false,
-    "quiet_wait_ms": 0,
-    "quiet_wait_expired": false
+    "quiet": true,
+    "summary": "air: load=[4.48 4.78 8.12] cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M55PFB2SRT488715C63Z6PMD",
+  "run_id": "run_01M58DD5MWTXZ27KF2JFGFBCP0",
   "network_path": "loopback",
   "metrics": {
-    "automatic_phase": "complete",
-    "recovery_final_drain_ms": 14.177291
+    "recovery_final_drain_ms": 13.5645
   },
   "scenario": "CORE-KILL-GATEWAY-CAPTURE",
   "level": "sim",
   "passed": true,
-  "git_sha": "7e55120b19134246108d4ed10d35cd6d1539316f",
-  "at": "2026-10-17T19:47:27.961723Z",
+  "git_sha": "7536053c905348903461cffd75079e7393e64bcf",
+  "at": "2026-10-18T21:06:42.972955Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -177,55 +103,7 @@
       "passed": true
     },
     {
-      "name": "automatic_fixture_available",
-      "passed": true
-    },
-    {
-      "name": "automatic_sse_connected_0",
-      "passed": true
-    },
-    {
-      "name": "automatic_scoped_token_0",
-      "passed": true
-    },
-    {
-      "name": "automatic_scope_query_0",
-      "passed": true
-    },
-    {
-      "name": "automatic_scope_record_0",
-      "passed": true
-    },
-    {
-      "name": "automatic_scope_search_0",
-      "passed": true
-    },
-    {
       "name": "automatic_scope_query_search_records_0",
-      "passed": true
-    },
-    {
-      "name": "automatic_scope_sse_connected_0",
-      "passed": true
-    },
-    {
-      "name": "automatic_sse_connected_1",
-      "passed": true
-    },
-    {
-      "name": "automatic_scoped_token_1",
-      "passed": true
-    },
-    {
-      "name": "automatic_scope_query_1",
-      "passed": true
-    },
-    {
-      "name": "automatic_scope_record_1",
-      "passed": true
-    },
-    {
-      "name": "automatic_scope_search_1",
       "passed": true
     },
     {
@@ -233,39 +111,7 @@
       "passed": true
     },
     {
-      "name": "automatic_scope_sse_connected_1",
-      "passed": true
-    },
-    {
-      "name": "automatic_probe_capture_requested",
-      "passed": true
-    },
-    {
-      "name": "automatic_probe_seen_0",
-      "passed": true
-    },
-    {
-      "name": "automatic_cursor_continuity_0",
-      "passed": true
-    },
-    {
-      "name": "automatic_no_false_deletion_0",
-      "passed": true
-    },
-    {
       "name": "automatic_metadata_latency_and_no_false_deletion_0",
-      "passed": true
-    },
-    {
-      "name": "automatic_probe_seen_1",
-      "passed": true
-    },
-    {
-      "name": "automatic_cursor_continuity_1",
-      "passed": true
-    },
-    {
-      "name": "automatic_no_false_deletion_1",
       "passed": true
     },
     {
@@ -304,16 +150,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 2.703334,
-      "p95_ms": 2.703334,
-      "max_ms": 2.703334,
+      "p50_ms": 2.613167,
+      "p95_ms": 2.613167,
+      "max_ms": 2.613167,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 6.0845,
-      "p95_ms": 6.0845,
-      "max_ms": 6.0845,
+      "p50_ms": 6.051958,
+      "p95_ms": 6.051958,
+      "max_ms": 6.051958,
       "timeouts": 0
     }
   },
