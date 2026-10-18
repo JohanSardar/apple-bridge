@@ -137,7 +137,7 @@ public enum MessagesProbes {
     private static func keychainState() throws -> [String: Any] {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
-        process.arguments = ["-c", "import ctypes,json,subprocess,pathlib; p=subprocess.check_output(['/usr/bin/security','default-keychain','-d','user'],text=True).strip().strip(chr(34)); s=ctypes.CDLL('/System/Library/Frameworks/Security.framework/Security'); s.SecKeychainGetStatus.argtypes=[ctypes.c_void_p,ctypes.POINTER(ctypes.c_uint32)]; v=ctypes.c_uint32(); code=s.SecKeychainGetStatus(None,ctypes.byref(v)); print(json.dumps({'default_is_login':pathlib.Path(p).name in ['login.keychain-db','login.keychain'],'status_code':code,'unlocked':bool(v.value & 1),'readable':bool(v.value & 2),'writable':bool(v.value & 4)}))"]
+        process.arguments = ["-c", "import ctypes,json,subprocess,pathlib; p=subprocess.check_output(['/usr/bin/security','default-keychain','-d','user'],text=True).strip().strip(chr(34)); s=ctypes.CDLL('/System/Library/Frameworks/Security.framework/Security'); s.SecKeychainSetUserInteractionAllowed.argtypes=[ctypes.c_bool]; s.SecKeychainSetUserInteractionAllowed(False); s.SecKeychainGetStatus.argtypes=[ctypes.c_void_p,ctypes.POINTER(ctypes.c_uint32)]; v=ctypes.c_uint32(); code=s.SecKeychainGetStatus(None,ctypes.byref(v)); print(json.dumps({'default_is_login':pathlib.Path(p).name in ['login.keychain-db','login.keychain'],'status_code':code,'unlocked':bool(v.value & 1),'readable':bool(v.value & 2),'writable':bool(v.value & 4)}))"]
         let output = Pipe()
         process.standardOutput = output
         process.standardError = FileHandle.nullDevice

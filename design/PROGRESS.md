@@ -38,3 +38,11 @@ One line per unit. Rules: BUILD-GOAL.md (2026-10-17 update: no reviews, merge on
 
 ## Authorized follow-up (2026-10-17)
 - DONE earlier-build empty calendar cleanup: explicit Johan authorization, independent unbounded enumeration found one Bridge Test calendar with zero events; signed AppleTruth removed it and a fresh unbounded audit found zero calendars. Evidence: `lab/evidence/messages-real-session-cleanup.json`. `make lint` and `make features` pass.
+
+
+## Messages finish attempt (2026-10-18)
+- Login-Keychain lifecycle now PASS without UI: process-local Security interaction is disabled before credential calls; create/read/rotate/revoke takes 302 ms (one sample, p50/p95/max equal). No keychain locks/settings changes. core.trust DONE. Existing python3 loads the system Security framework; no Python package dependency.
+- Native Messages actions remain BLOCKED: unlocked desktop confirmed without VNC; signed Helper AX-trusted, Messages AX -25204 even immediately after authorized user-owned SecurityAgent dismissal. One real MSG-EDIT prerequisite self-send is indeterminate (-1712); Edit was not dispatched. Normal Quit also times out; sample waits in IMCore/TelephonyUtilities. No foreign service restart or additional recipients. Group eligibility remains LIMITED (approved Remy/Ben pair previously SMS; true iMessage/RCS group unproven).
+- Tagged self cleanup: unbounded authorized scan 119 candidates, 0 removed, 119 remain; earlier brief count was 63, increase cause unproven. Native target validation is unavailable. Earlier Remy notices not claimed removed.
+- 24/24 Messages sim scenarios and CORE-CREDENTIAL-STORE/sim PASS. Fixed check-messages-capture.sh to build MessagesCaptureChecks when only Helper had been built; failing then passing MSG-WATCHER-REARM retained. make lint and make features PASS (22 done, 1 limited, 1 blocked; 176/183 scenario-levels). No new scenario IDs or SPEC edits.
+- Native implementation aaa7ec2 and finish changes stay in messages-finish; no merge/push while requested real E2E is red. Exact commands, session probes, cleanup and historical versus fresh action latency evidence: lab/evidence/messages-finish.json.

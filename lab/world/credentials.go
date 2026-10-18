@@ -9,21 +9,23 @@ import (
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/trust"
 )
 
 type CredentialResult struct {
-	KeychainDefaultIsLogin *bool  `json:"keychain_default_is_login,omitempty"`
-	KeychainUnlocked       *bool  `json:"keychain_unlocked,omitempty"`
-	KeychainStatusCode     *int   `json:"keychain_status_code,omitempty"`
-	State                  string `json:"state,omitempty"`
-	Failure                string `json:"failure,omitempty"`
-	Backend                string `json:"backend"`
-	Created                bool   `json:"created"`
-	Used                   bool   `json:"used"`
-	Rotated                bool   `json:"rotated"`
-	Revoked                bool   `json:"revoked"`
+	LifecycleMS            float64 `json:"lifecycle_ms,omitempty"`
+	KeychainDefaultIsLogin *bool   `json:"keychain_default_is_login,omitempty"`
+	KeychainUnlocked       *bool   `json:"keychain_unlocked,omitempty"`
+	KeychainStatusCode     *int    `json:"keychain_status_code,omitempty"`
+	State                  string  `json:"state,omitempty"`
+	Failure                string  `json:"failure,omitempty"`
+	Backend                string  `json:"backend"`
+	Created                bool    `json:"created"`
+	Used                   bool    `json:"used"`
+	Rotated                bool    `json:"rotated"`
+	Revoked                bool    `json:"revoked"`
 }
 
 func CredentialLifecycle(ctx context.Context, home string) (CredentialResult, error) {
@@ -135,7 +137,9 @@ func CredentialLifecycleGUI(ctx context.Context, home string) (CredentialResult,
 	if err != nil {
 		return result, err
 	}
+	started := time.Now()
 	result, err = credentialLifecycle(ctx, &trust.KeychainStore{Service: "apple-bridge:" + trust.Fingerprint([]byte(absolute))})
+	result.LifecycleMS = float64(time.Since(started)) / float64(time.Millisecond)
 	result.KeychainUnlocked = &state.Unlocked
 	result.KeychainStatusCode = &state.StatusCode
 	result.KeychainDefaultIsLogin = &state.DefaultIsLogin

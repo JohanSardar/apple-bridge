@@ -83,11 +83,7 @@ features:
     milestone: M0
     modules: [trust, frontdoor, replication]
     depends_on: [core.replication]
-    status: limited
-    limits:
-      - scenario: CORE-CRED-LIFECYCLE
-        level: real
-        reason: "macOS login Keychain locked while Johan is away (security: User interaction is not allowed); unlocking needs his login password. Keychain adapter verified against a dedicated unlocked test keychain; Linux secret store verified at replica level."
+    status: done
     scenarios:
       - {id: CORE-SCOPE-LEAK, levels: [sim, replica]}
       - {id: CORE-SCOPE-CHANGE, levels: [sim]}
@@ -198,20 +194,20 @@ features:
     milestone: M1
     modules: [native/MessagesSource, native/AppleSession]
     depends_on: [messages.send]
-    status: limited
+    status: blocked
     limits:
       - scenario: MSG-REPLY
         level: real
-        reason: "2026-10-17 live captures still show a password field and /dev/console is root-owned despite IOConsoleLocked=No. Real Accessibility actions remain unverified; an active unlocked user session is required."
+        reason: "2026-10-18 unlocked session confirmed; signed Helper is AX-trusted, but Messages returns AX -25204 even immediately after user-owned SecurityAgent dismissal. Tagged-send prerequisite times out with Apple event -1712. Messages is waiting in TelephonyUtilities/IMCore; native action cannot be reverified. See lab/evidence/messages-finish.json."
       - scenario: MSG-REACT
         level: real
-        reason: "2026-10-17 live captures still show a password field and /dev/console is root-owned despite IOConsoleLocked=No. Real Accessibility actions remain unverified; an active unlocked user session is required."
+        reason: "2026-10-18 unlocked session confirmed; signed Helper is AX-trusted, but Messages returns AX -25204 even immediately after user-owned SecurityAgent dismissal. Tagged-send prerequisite times out with Apple event -1712. Messages is waiting in TelephonyUtilities/IMCore; native action cannot be reverified. See lab/evidence/messages-finish.json."
       - scenario: MSG-EDIT
         level: real
-        reason: "2026-10-17 live captures still show a password field and /dev/console is root-owned despite IOConsoleLocked=No. Real Accessibility actions remain unverified; an active unlocked user session is required."
+        reason: "2026-10-18 unlocked session confirmed; signed Helper is AX-trusted, but Messages returns AX -25204 even immediately after user-owned SecurityAgent dismissal. Tagged-send prerequisite times out with Apple event -1712. Messages is waiting in TelephonyUtilities/IMCore; native action cannot be reverified. See lab/evidence/messages-finish.json."
       - scenario: MSG-UNSEND
         level: real
-        reason: "2026-10-17 live captures still show a password field and /dev/console is root-owned despite IOConsoleLocked=No. Real Accessibility actions remain unverified; an active unlocked user session is required."
+        reason: "2026-10-18 unlocked session confirmed; signed Helper is AX-trusted, but Messages returns AX -25204 even immediately after user-owned SecurityAgent dismissal. Tagged-send prerequisite times out with Apple event -1712. Messages is waiting in TelephonyUtilities/IMCore; native action cannot be reverified. See lab/evidence/messages-finish.json."
     scenarios:
       - {id: MSG-REPLY, levels: [sim, real]}
       - {id: MSG-REACT, levels: [sim, real]}
@@ -230,13 +226,13 @@ features:
     limits:
       - scenario: MSG-GROUP-CREATE
         level: real
-        reason: "2026-10-17 live captures still show a password field and /dev/console is root-owned despite IOConsoleLocked=No. Real Accessibility actions remain unverified; an active unlocked user session is required."
+        reason: "2026-10-18 available approved Remy/Ben pair previously offered SMS; true iMessage/RCS group eligibility remains limited. Rename/add needs two other people and removal three. Current fresh verification is blocked by Messages AX -25204 after prompt dismissal; no new group message sent. See lab/evidence/messages-finish.json."
       - scenario: MSG-SEND-RCS-GROUP
         level: real
-        reason: "2026-10-17 live captures still show a password field and /dev/console is root-owned despite IOConsoleLocked=No. Real Accessibility actions remain unverified; an active unlocked user session is required."
+        reason: "2026-10-18 available approved Remy/Ben pair previously offered SMS; true iMessage/RCS group eligibility remains limited. Rename/add needs two other people and removal three. Current fresh verification is blocked by Messages AX -25204 after prompt dismissal; no new group message sent. See lab/evidence/messages-finish.json."
       - scenario: MSG-GROUP-MANAGE
         level: real
-        reason: "Remy is approved, but the 2026-10-17 live GUI still requires login; real group management was not exercised. Rename/add requires two other people, removal three; Ben is RCS and accepting Johan's own email as a distinct participant remains unverified."
+        reason: "2026-10-18 available approved Remy/Ben pair previously offered SMS; true iMessage/RCS group eligibility remains limited. Rename/add needs two other people and removal three. Current fresh verification is blocked by Messages AX -25204 after prompt dismissal; no new group message sent. See lab/evidence/messages-finish.json."
     scenarios:
       - {id: MSG-GROUP-CREATE, levels: [sim, real]}
       - {id: MSG-GROUP-MANAGE, levels: [sim, real]}

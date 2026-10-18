@@ -1,14 +1,14 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[4.83 5.59 6.1] cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[4.14 4.46 4.59] cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M55SVGHYB7CR151XGYBM672C",
+  "run_id": "run_01M5832091VJP5HFGAMS3DDGY0",
   "scenario": "MSG-WATCHER-REARM",
   "level": "sim",
   "passed": true,
-  "git_sha": "713eb5504ad1b54668557e344d562378c3157eb3",
-  "at": "2026-10-17T20:46:32.51081Z",
+  "git_sha": "aaa7ec2eb8af5c94e2f4d8ed38f618e8140f9480",
+  "at": "2026-10-18T18:05:51.265438Z",
   "assertions": [
     {
       "name": "seed",
