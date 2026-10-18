@@ -28,16 +28,21 @@ func cleanupNativeMessageRun(w *world.World, runID string, groupDraft bool) (boo
 	truth, truthErr := w.RecoverTruth("observe", map[string]any{"source": "messages", "tag": tag})
 	rows, _ := truth["records"].([]any)
 	remaining := 0
+	joined := 0
 	activeKnown := true
 	for _, raw := range rows {
 		row, _ := raw.(map[string]any)
-		active, exists := row["active"].(bool)
+		active, exists := row["visible"].(bool)
+		if row["active"] == true {
+			joined++
+		}
 		activeKnown = activeKnown && exists
 		if active {
 			remaining++
 		}
 	}
-	metrics["appletruth_active_remaining"] = remaining
+	metrics["appletruth_active_remaining"] = joined
+	metrics["appletruth_visible_remaining"] = remaining
 	metrics["appletruth_verified"] = truthErr == nil && truth["status"] == "verified" && activeKnown
 	return err == nil && readErr == nil && metrics["passed"] == true && metrics["appletruth_verified"] == true && remaining == 0, metrics
 }
