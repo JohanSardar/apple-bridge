@@ -646,6 +646,7 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 	}
 	add("recovery_capture_drained_before_convergence", true)
 	if w.Await(30*time.Second, func() bool { return convergence(w) }) != nil {
+		evidence.Metrics["convergence_failure"] = convergenceFailure(w)
 		return fail("truth_gateway_replica_convergence")
 	}
 	add("truth_gateway_replica_convergence", true)
