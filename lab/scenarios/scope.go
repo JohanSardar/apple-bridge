@@ -32,7 +32,10 @@ var scopePaths = map[string]ScopeProbe{
 				Code string `json:"code"`
 			} `json:"error"`
 		}
-		status, _ := world.Request(ctx, endpoint, "/v1/op/messages.send", map[string]any{"id": "scope-probe", "chat_id": record.ID, "text": "[ab-test] scope probe"}, &result)
+		id := contracts.NewCommandID()
+		args, _ := json.Marshal(map[string]any{"chat_id": contracts.NewID("cht"), "text": "[ab-test " + id + "] scope probe"})
+		command := contracts.Command{ID: id, Op: "messages.send", Args: args}
+		status, _ := world.Request(ctx, endpoint, "/v1/op/messages.send", command, &result)
 		return status == 401 || status == 403 || (status == 404) || (status == 422 && result.Error.Code == "unsupported")
 	},
 }
