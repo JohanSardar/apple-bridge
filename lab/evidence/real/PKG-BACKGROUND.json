@@ -1,14 +1,14 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[5.02 4.93 4.9] cpus=8 other_heavy=0"
+    "summary": "air: load=[3.36 3.1 2.53] cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M55RH7K2NRJNCMAJSMJ8ENF9",
+  "run_id": "run_01M56F4TQ4KH7KRF413GGQ370S",
   "scenario": "PKG-BACKGROUND",
   "level": "real",
   "passed": true,
-  "git_sha": "1897d50b3c9d3c8eaafb11dba3fe251c1705d383",
-  "at": "2026-10-17T20:23:27.074854Z",
+  "git_sha": "4fd88121ae1895e7d1767e0f2aab85747777550f",
+  "at": "2026-10-18T02:58:37.92428Z",
   "assertions": [
     {
       "name": "real_macos",

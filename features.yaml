@@ -26,7 +26,7 @@ requirements:
   R-CON: Contacts read and basic create/update/delete
   R-NOTES: Notes read and demonstrated plain-text writes; unsupported rich edits reject
   R-USAGE: Screen Time per app, per device, per day estimates, read-only
-  R-PKG: Signed, notarized app with onboarding and background service
+  R-PKG: Signed app with onboarding and background service; notarization optional, not required
   R-AGENT: A remote agent can do real tasks through MCP only
 
 features:
@@ -202,16 +202,16 @@ features:
     limits:
       - scenario: MSG-REPLY
         level: real
-        reason: "Accessibility UI automation of Messages needs an unlocked GUI session; the Air is at the password lock screen and unlocking needs Johan's password. Verified at sim level; AppleScript sends work while locked."
+        reason: "2026-10-17 live captures still show a password field and /dev/console is root-owned despite IOConsoleLocked=No. Real Accessibility actions remain unverified; an active unlocked user session is required."
       - scenario: MSG-REACT
         level: real
-        reason: "Accessibility UI automation of Messages needs an unlocked GUI session; the Air is at the password lock screen and unlocking needs Johan's password. Verified at sim level; AppleScript sends work while locked."
+        reason: "2026-10-17 live captures still show a password field and /dev/console is root-owned despite IOConsoleLocked=No. Real Accessibility actions remain unverified; an active unlocked user session is required."
       - scenario: MSG-EDIT
         level: real
-        reason: "Accessibility UI automation of Messages needs an unlocked GUI session; the Air is at the password lock screen and unlocking needs Johan's password. Verified at sim level; AppleScript sends work while locked."
+        reason: "2026-10-17 live captures still show a password field and /dev/console is root-owned despite IOConsoleLocked=No. Real Accessibility actions remain unverified; an active unlocked user session is required."
       - scenario: MSG-UNSEND
         level: real
-        reason: "Accessibility UI automation of Messages needs an unlocked GUI session; the Air is at the password lock screen and unlocking needs Johan's password. Verified at sim level; AppleScript sends work while locked."
+        reason: "2026-10-17 live captures still show a password field and /dev/console is root-owned despite IOConsoleLocked=No. Real Accessibility actions remain unverified; an active unlocked user session is required."
     scenarios:
       - {id: MSG-REPLY, levels: [sim, real]}
       - {id: MSG-REACT, levels: [sim, real]}
@@ -230,13 +230,13 @@ features:
     limits:
       - scenario: MSG-GROUP-CREATE
         level: real
-        reason: "Accessibility UI automation of Messages needs an unlocked GUI session; the Air is at the password lock screen and unlocking needs Johan's password. Verified at sim level; AppleScript sends work while locked."
+        reason: "2026-10-17 live captures still show a password field and /dev/console is root-owned despite IOConsoleLocked=No. Real Accessibility actions remain unverified; an active unlocked user session is required."
       - scenario: MSG-SEND-RCS-GROUP
         level: real
-        reason: "Accessibility UI automation of Messages needs an unlocked GUI session; the Air is at the password lock screen and unlocking needs Johan's password. Verified at sim level; AppleScript sends work while locked."
+        reason: "2026-10-17 live captures still show a password field and /dev/console is root-owned despite IOConsoleLocked=No. Real Accessibility actions remain unverified; an active unlocked user session is required."
       - scenario: MSG-GROUP-MANAGE
         level: real
-        reason: "No second iMessage account is available (Ben is RCS/SMS), and the screen is locked; iMessage group rename/add/remove/leave verified at sim level."
+        reason: "Remy is approved, but the 2026-10-17 live GUI still requires login; real group management was not exercised. Rename/add requires two other people, removal three; Ben is RCS and accepting Johan's own email as a distinct participant remains unverified."
     scenarios:
       - {id: MSG-GROUP-CREATE, levels: [sim, real]}
       - {id: MSG-GROUP-MANAGE, levels: [sim, real]}
@@ -370,11 +370,7 @@ features:
     milestone: M5
     modules: [packaging, runtime, native/AppleSession]
     depends_on: [messages.read, reminders.read, calendar.read, contacts.read, notes.read, usage.read]
-    status: limited
-    limits:
-      - scenario: PKG-INSTALL
-        level: real
-        reason: "Notarization requires Johan's Apple Developer ID"
+    status: done
     scenarios:
       - {id: PKG-INSTALL, levels: [real]}
       - {id: PKG-BACKGROUND, levels: [real]}

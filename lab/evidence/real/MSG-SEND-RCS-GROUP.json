@@ -1,15 +1,15 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[5.97 5.68 6.08] cpus=8 other_heavy=1"
+    "summary": "air: load=[6.69 3.33 2.52] cpus=8 other_heavy=1"
   },
   "status": "pending-unlock",
-  "run_id": "run_01M55SXVJD7P4ETK5WFHK6CTBN",
+  "run_id": "run_01M56F191GPCGD8X2ABB6X6J5W",
   "scenario": "MSG-SEND-RCS-GROUP",
   "level": "real",
   "passed": false,
-  "git_sha": "36be10aedea79eec6defd721ee21c9ba1421f6e9",
-  "at": "2026-10-17T20:47:49.325125Z",
+  "git_sha": "4fd88121ae1895e7d1767e0f2aab85747777550f",
+  "at": "2026-10-18T02:56:41.520145Z",
   "assertions": [
     {
       "name": "native_accessibility",

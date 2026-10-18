@@ -618,7 +618,7 @@ Budgets (provisional, benchmarked in M0/M5 on the Air): 256 KiB frames, 1 MiB bl
 - `doctor`: permissions, disk encryption (FileVault on macOS, LUKS check on Linux → warning), file modes, clock skew vs gateway, versions.
 - `restore <backup>`: install backup read-only; rotate epoch and admission era; then serve.
 - Sleep: gateway holds an `IOPMAssertion`-equivalent via the Helper (`ProcessInfo.beginActivity(.idleSystemSleepDisabled)`) while serving. Logout/sleep/shutdown/FileVault pre-login are outages; replicas detect them independently.
-- **Packaging (M5):** `Apple Bridge.app` contains the Helper (main executable, UI for onboarding), `bridge` in `Contents/MacOS`, LaunchAgent plist registered with `SMAppService.agent`. Signed with Developer ID + hardened runtime + notarized (needs Johan's Developer ID; see §22). Foreground onboarding requests FDA (opens System Settings pane), Automation (Messages, System Events), Accessibility, Contacts, full Calendar, Reminders. Dev builds use a stable self-signed code-signing identity created on the Air so TCC grants survive rebuilds.
+- **Packaging (M5):** `Apple Bridge.app` contains the Helper (main executable, UI for onboarding), `bridge` in `Contents/MacOS`, LaunchAgent plist registered with `SMAppService.agent`. Signed app with hardened runtime; notarization is optional, not required. Open-source users may build from source or use right-click → Open for an unnotarized build. Foreground onboarding requests FDA (opens System Settings pane), Automation (Messages, System Events), Accessibility, Contacts, full Calendar, Reminders. Dev builds use a stable self-signed code-signing identity created on the Air so TCC grants survive rebuilds.
 - Files: `~/Library/Application Support/AppleBridge/` (gateway) and `$XDG_DATA_HOME/apple-bridge/` (Linux replica); all 0600/0700 including WAL, indexes, blobs, ledger, logs.
 
 ---
@@ -876,7 +876,7 @@ Each milestone proves its riskiest unknown first, starts every feature as a fail
 - **M2 — Contacts.**
 - **M3 — Notes.** Riskiest first: protobuf decode on this Air's NoteStore schema; AppleScript write round-trip.
 - **M4 — Usage.** Riskiest first: lock/display evidence streams on 25G241.
-- **M5 — Packaging and full agent suite.** Riskiest first: Developer ID availability for signing/notarization.
+- **M5 — Packaging and full agent suite.** Riskiest first: signed app, onboarding and background service. Notarization is optional.
 
 ## 22. Known limits (truthful, kept current)
 
@@ -893,4 +893,4 @@ Each milestone proves its riskiest unknown first, starts every feature as a fail
 - Local file access on a replica bypasses API scopes; revocation cannot erase copied data.
 - Losing `ledger.db` (not just `state.db`) loses the ability to recognize earlier command IDs; recovery requires an explicit operator acknowledgement.
 - Packaged gateways use a dedicated `Apple Bridge.keychain-db` in their 0700 application support directory. Installation creates a random 256-bit password in a 0600 `keychain-password` file; the gateway unlocks this Keychain before credential operations, including after login or a crash. Credentials remain Keychain items, with `/usr/bin/security` as their trusted accessor. This permits unattended operation while the login Keychain is locked; possession of the support directory permits unlocking credentials, so it does not protect against another process running as the same user. The user Keychain search list is preserved. Unpackaged CLI use retains the login Keychain default; isolated lab worlds explicitly select file credentials.
-- Notarized distribution requires an Apple Developer ID (status tracked in PROGRESS.md).
+- Notarization is optional, not required. Users may build from source or use right-click → Open; optional notarization requires an Apple Developer ID.

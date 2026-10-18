@@ -1,14 +1,14 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[5.09 4.93 4.9] cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[4.06 3.18 2.51] cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M55RJ6VP7JPNKKKK2JSCPZ04",
+  "run_id": "run_01M56F30QJJ6ZFQ323EGDEHBP1",
   "scenario": "PKG-INSTALL",
   "level": "real",
   "passed": true,
-  "git_sha": "1897d50b3c9d3c8eaafb11dba3fe251c1705d383",
-  "at": "2026-10-17T20:23:59.094295Z",
+  "git_sha": "4fd88121ae1895e7d1767e0f2aab85747777550f",
+  "at": "2026-10-18T02:57:38.546406Z",
   "assertions": [
     {
       "name": "real_macos",

@@ -1,15 +1,15 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[5.97 5.68 6.08] cpus=8 other_heavy=1"
+    "summary": "air: load=[6.93 3.32 2.51] cpus=8 other_heavy=1"
   },
   "status": "limited",
-  "run_id": "run_01M55SXRA63FNQGQ9DVD513C3X",
+  "run_id": "run_01M56F15XRFCDNZ5KPZA79H5N8",
   "scenario": "MSG-GROUP-MANAGE",
   "level": "real",
   "passed": false,
-  "git_sha": "36be10aedea79eec6defd721ee21c9ba1421f6e9",
-  "at": "2026-10-17T20:47:45.990553Z",
+  "git_sha": "4fd88121ae1895e7d1767e0f2aab85747777550f",
+  "at": "2026-10-18T02:56:38.328369Z",
   "assertions": [
     {
       "name": "native_imessage_group_accounts",

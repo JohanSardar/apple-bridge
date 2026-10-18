@@ -30,3 +30,8 @@ One line per unit. Rules: BUILD-GOAL.md (2026-10-17 update: no reviews, merge on
 - messages.actions/groups real: Accessibility needs an unlocked screen (Johan's password); iMessage group management needs a second iMessage account.
 - core.trust CORE-CRED-LIFECYCLE/real: login Keychain locked (needs Johan's password).
 - packaging.app notarization: needs Johan's Developer ID.
+
+## Follow-up (2026-10-17, unlocked-session brief)
+- packaging.app DONE: R-PKG now makes notarization optional; fresh PKG-INSTALL/real and PKG-BACKGROUND/real pass. Initial background startup health failure retained; cause unproven. Current feature totals: 21 done, 3 limited (175/183 scenario-levels passing).
+- Messages actions/groups remain LIMITED: live captures still show a password field and root owns `/dev/console` despite `IOConsoleLocked=No`. Seven scenarios skip native actions; no UI fix or distinct-participant claim is proven. Remy configured; no messages sent. Login Keychain still reports `User interaction is not allowed`; lifecycle not run. An active unlocked GUI session and unlocked login Keychain are still needed, without supplying passwords to workers.
+- Cleanup retained 30 tagged message candidates (GUI unavailable) and one provably empty calendar (created by an earlier run, forbidden to delete under this-run ownership rule). Details and exact commands: `lab/evidence/messages-unlocked-recheck.json`; screenshots: shared checkout `lab/evidence/private/unlocked-recheck/` (gitignored). This entry supersedes earlier environment/limit notes; no new scenarios.

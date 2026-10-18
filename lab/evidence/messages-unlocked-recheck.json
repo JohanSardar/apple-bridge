@@ -1,0 +1,360 @@
+{
+  "date": "2026-10-17",
+  "level": "real",
+  "scope": "unlocked Messages and login-Keychain follow-up",
+  "gui": {
+    "registry_console_locked": false,
+    "console_owner": "root",
+    "screenshots": "private/unlocked-recheck/",
+    "password_field_visible_on_two_captures": true,
+    "helper_self_handles_probe": "noSelfHandle",
+    "messages_process_running": false,
+    "conclusion": "GUI requires login; registry alone does not prove an unlocked user session"
+  },
+  "keychain": {
+    "command": "security show-keychain-info ~/Library/Keychains/login.keychain-db",
+    "result": "User interaction is not allowed",
+    "lifecycle_run": false
+  },
+  "contacts": {
+    "remy_phone_configured": true,
+    "remy_email_configured": true,
+    "ben_configured": true,
+    "messages_sent": 0,
+    "values_recorded": false
+  },
+  "messages": {
+    "scenario_ids": [
+      "MSG-REPLY",
+      "MSG-REACT",
+      "MSG-EDIT",
+      "MSG-UNSEND",
+      "MSG-GROUP-CREATE",
+      "MSG-GROUP-MANAGE",
+      "MSG-SEND-RCS-GROUP"
+    ],
+    "suite_exit": 1,
+    "passing": 0,
+    "native_actions_attempted": false,
+    "runner_limit": "Existing real runner returns hard-coded pending-unlock / limited before creating a real World; these results do not prove any Accessibility action or account limitation.",
+    "group_identity_tested": false,
+    "apple_rules": {
+      "rename_add_minimum_other_people": 2,
+      "remove_minimum_other_people": 3
+    },
+    "distinct_self_email_participant": "unverified",
+    "ben_imessage_capable": "not assumed; approved contact is RCS"
+  },
+  "cleanup": {
+    "tagged_message_candidates": 30,
+    "candidates_deleted": 0,
+    "calendar_count": 1,
+    "calendar_items_unbounded": 0,
+    "calendar_test_creation_registry_present": true,
+    "calendar_created_by_this_run": false,
+    "calendar_deleted": false,
+    "reason": "No GUI for message deletion; container cleanup requires creation by this run."
+  },
+  "latency": {
+    "samples": 0,
+    "p50_ms": null,
+    "p95_ms": null,
+    "max_ms": null
+  },
+  "packaging_initial_background_run": {
+    "host_conditions": {
+      "quiet": true,
+      "summary": "air: load=[3.12 2.36 2.16] cpus=8 other_heavy=0"
+    },
+    "run_id": "run_01M56F0CVQ8NGKC6XQW7BBRA7F",
+    "scenario": "PKG-BACKGROUND",
+    "level": "real",
+    "passed": false,
+    "git_sha": "4fd88121ae1895e7d1767e0f2aab85747777550f",
+    "at": "2026-10-18T02:56:12.663722Z",
+    "assertions": [
+      {
+        "name": "real_macos",
+        "passed": true
+      },
+      {
+        "name": "test_install_path_unoccupied",
+        "passed": true
+      },
+      {
+        "name": "test_agent_unregistered",
+        "passed": true
+      },
+      {
+        "name": "isolated_home",
+        "passed": true
+      },
+      {
+        "name": "build_signed_installable_app",
+        "passed": true
+      },
+      {
+        "name": "bundle_signature",
+        "passed": true
+      },
+      {
+        "name": "onboarding_status_uses_existing_permissions",
+        "passed": true
+      },
+      {
+        "name": "smappservice_registered",
+        "passed": true
+      },
+      {
+        "name": "launchctl_running_and_gateway_health",
+        "passed": false
+      },
+      {
+        "name": "smappservice_unregister",
+        "passed": true
+      },
+      {
+        "name": "agent_removed_from_login_session",
+        "passed": true
+      },
+      {
+        "name": "test_keychain_removed",
+        "passed": true
+      },
+      {
+        "name": "test_app_removed",
+        "passed": true
+      },
+      {
+        "name": "test_state_removed",
+        "passed": true
+      },
+      {
+        "name": "credential_backend_override_restored",
+        "passed": true
+      }
+    ],
+    "latency": {},
+    "hosts": [
+      "air"
+    ]
+  },
+  "packaging_install_run": {
+    "host_conditions": {
+      "quiet": true,
+      "summary": "air: load=[4.06 3.18 2.51] cpus=8 other_heavy=0"
+    },
+    "run_id": "run_01M56F30QJJ6ZFQ323EGDEHBP1",
+    "scenario": "PKG-INSTALL",
+    "level": "real",
+    "passed": true,
+    "git_sha": "4fd88121ae1895e7d1767e0f2aab85747777550f",
+    "at": "2026-10-18T02:57:38.546406Z",
+    "assertions": [
+      {
+        "name": "real_macos",
+        "passed": true
+      },
+      {
+        "name": "test_install_path_unoccupied",
+        "passed": true
+      },
+      {
+        "name": "test_agent_unregistered",
+        "passed": true
+      },
+      {
+        "name": "isolated_home",
+        "passed": true
+      },
+      {
+        "name": "build_signed_installable_app",
+        "passed": true
+      },
+      {
+        "name": "bundle_signature",
+        "passed": true
+      },
+      {
+        "name": "onboarding_status_uses_existing_permissions",
+        "passed": true
+      },
+      {
+        "name": "smappservice_registered",
+        "passed": true
+      },
+      {
+        "name": "launchctl_running_and_gateway_health",
+        "passed": true
+      },
+      {
+        "name": "dedicated_keychain_password_private",
+        "passed": true
+      },
+      {
+        "name": "dedicated_keychain_created",
+        "passed": true
+      },
+      {
+        "name": "smappservice_unregister",
+        "passed": true
+      },
+      {
+        "name": "agent_removed_from_login_session",
+        "passed": true
+      },
+      {
+        "name": "test_keychain_removed",
+        "passed": true
+      },
+      {
+        "name": "test_app_removed",
+        "passed": true
+      },
+      {
+        "name": "test_state_removed",
+        "passed": true
+      },
+      {
+        "name": "credential_backend_override_restored",
+        "passed": true
+      }
+    ],
+    "latency": {},
+    "hosts": [
+      "air"
+    ]
+  },
+  "commands": [
+    "ioreg -n Root -d1 | grep ScreenIsLocked",
+    "security show-keychain-info ~/Library/Keychains/login.keychain-db",
+    "stat -f \"%Su\" /dev/console",
+    "open -n -W -g -a ~/Applications/AppleBridgeDev/AppleBridgeHelper.app --args probe ax-dump --report \"$HOME/Library/Application Support/AppleBridgeDev/ax-unlocked.json\"",
+    "packaging/dev/heavy.sh go build -p 2 -o bin/bridge ./cmd/bridge",
+    "packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios/messages/MSG-REPLY.yaml lab/scenarios/messages/MSG-REACT.yaml lab/scenarios/messages/MSG-EDIT.yaml lab/scenarios/messages/MSG-UNSEND.yaml lab/scenarios/messages/MSG-GROUP-CREATE.yaml lab/scenarios/messages/MSG-GROUP-MANAGE.yaml lab/scenarios/messages/MSG-SEND-RCS-GROUP.yaml --level real",
+    "python3 lab/truth/calendar-cleanup-audit.py --empty-proof",
+    "packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios/packaging --level real",
+    "packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios/packaging/PKG-BACKGROUND.yaml --level real",
+    "packaging/dev/heavy.sh make lint",
+    "make features"
+  ],
+  "packaging_final_background_run": {
+    "host_conditions": {
+      "quiet": true,
+      "summary": "air: load=[3.36 3.1 2.53] cpus=8 other_heavy=0"
+    },
+    "run_id": "run_01M56F4TQ4KH7KRF413GGQ370S",
+    "scenario": "PKG-BACKGROUND",
+    "level": "real",
+    "passed": true,
+    "git_sha": "4fd88121ae1895e7d1767e0f2aab85747777550f",
+    "at": "2026-10-18T02:58:37.92428Z",
+    "assertions": [
+      {
+        "name": "real_macos",
+        "passed": true
+      },
+      {
+        "name": "test_install_path_unoccupied",
+        "passed": true
+      },
+      {
+        "name": "test_agent_unregistered",
+        "passed": true
+      },
+      {
+        "name": "isolated_home",
+        "passed": true
+      },
+      {
+        "name": "build_signed_installable_app",
+        "passed": true
+      },
+      {
+        "name": "bundle_signature",
+        "passed": true
+      },
+      {
+        "name": "onboarding_status_uses_existing_permissions",
+        "passed": true
+      },
+      {
+        "name": "smappservice_registered",
+        "passed": true
+      },
+      {
+        "name": "launchctl_running_and_gateway_health",
+        "passed": true
+      },
+      {
+        "name": "dedicated_keychain_password_private",
+        "passed": true
+      },
+      {
+        "name": "dedicated_keychain_created",
+        "passed": true
+      },
+      {
+        "name": "foreground_app_launched",
+        "passed": true
+      },
+      {
+        "name": "foreground_app_identified",
+        "passed": true
+      },
+      {
+        "name": "quit_foreground_app",
+        "passed": true
+      },
+      {
+        "name": "gateway_survives_app_quit",
+        "passed": true
+      },
+      {
+        "name": "lock_dedicated_keychain_before_restart",
+        "passed": true
+      },
+      {
+        "name": "kill_gateway",
+        "passed": true
+      },
+      {
+        "name": "launchd_restarts_gateway_and_unlocks_credentials",
+        "passed": true
+      },
+      {
+        "name": "smappservice_unregister",
+        "passed": true
+      },
+      {
+        "name": "agent_removed_from_login_session",
+        "passed": true
+      },
+      {
+        "name": "test_keychain_removed",
+        "passed": true
+      },
+      {
+        "name": "test_app_removed",
+        "passed": true
+      },
+      {
+        "name": "test_state_removed",
+        "passed": true
+      },
+      {
+        "name": "credential_backend_override_restored",
+        "passed": true
+      }
+    ],
+    "latency": {},
+    "hosts": [
+      "air"
+    ]
+  },
+  "packaging_status": "done; fresh install and background pass; initial startup failure retained, cause unproven",
+  "required_checks": {
+    "make lint": "pass",
+    "make features": "pass: 24 features, 21 done, 3 limited; 175/183 scenario-levels passing"
+  }
+}
