@@ -46,6 +46,23 @@ func runNativeMessagesGroup(ctx context.Context, s Scenario, e Evidence, w *worl
 		remy = contacts["REMY_IMESSAGE_TEST_EMAIL"]
 	}
 	tag := "[ab-test " + e.RunID + "]"
+	cleanupDirectory := filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "AppleBridgeDev", "messages-command-cleanup")
+	cleanup := map[string]any{"run_id": e.RunID, "created_at": time.Now().UTC(), "scenario": s.ID, "cleanup_state": "pending_native_cleanup"}
+	saveCleanup := func() error {
+		if err := os.MkdirAll(cleanupDirectory, 0700); err != nil {
+			return err
+		}
+		data, err := json.Marshal(cleanup)
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(filepath.Join(cleanupDirectory, e.RunID+".json"), data, 0600)
+	}
+	if saveCleanup() != nil {
+		add("cleanup_registered_before_submit", false)
+		return e
+	}
+	add("cleanup_registered_before_submit", true)
 	defer func() {
 		ok, metrics := cleanupNativeMessageRun(w, e.RunID, true)
 		final.Assertions = append(final.Assertions, Assertion{Name: "tagged_messages_cleanup", Passed: ok})
@@ -53,6 +70,16 @@ func runNativeMessagesGroup(ctx context.Context, s Scenario, e Evidence, w *worl
 			final.Metrics = map[string]any{}
 		}
 		final.Metrics["cleanup"] = metrics
+		cleanup["cleanup_state"] = "cleanup_failed"
+		if ok {
+			cleanup["cleanup_state"] = "verified_clean"
+			if cleanup["intro_state"] == contracts.CommandIndeterminate || cleanup["group_state"] == contracts.CommandIndeterminate {
+				cleanup["cleanup_state"] = "pending_reconciliation"
+				cleanup["late_effect_possible"] = true
+			}
+		}
+		cleanup["cleanup"] = metrics
+		saveCleanup()
 		final.Passed = len(final.Assertions) > 0 && final.Status == ""
 		for _, assertion := range final.Assertions {
 			final.Passed = final.Passed && assertion.Passed
@@ -60,6 +87,9 @@ func runNativeMessagesGroup(ctx context.Context, s Scenario, e Evidence, w *worl
 	}()
 
 	intro, problem := submit("send", map[string]any{"handles": []string{remy}, "service": "iMessage", "text": tag + " This is an automated test of Johan's Apple Bridge and can be ignored."})
+	cleanup["intro_state"] = intro.State
+	cleanup["intro_command_id"] = intro.Command.ID
+	saveCleanup()
 	e.Metrics = map[string]any{"intro_state": intro.State, "intro_disposition": intro.Disposition}
 	if problem != nil {
 		e.Metrics["intro_error"] = problem.Error()
@@ -90,6 +120,9 @@ func runNativeMessagesGroup(ctx context.Context, s Scenario, e Evidence, w *worl
 	}
 	started := time.Now()
 	result, problem := submit("create_group", map[string]any{"handles": handles, "service": service, "text": tag + " automated group test"})
+	cleanup["group_state"] = result.State
+	cleanup["group_command_id"] = result.Command.ID
+	saveCleanup()
 	observed := problem == nil && (result.State == contracts.CommandObserved || result.State == contracts.CommandDelivered)
 	add("native_group_create_observed", observed)
 	e.Metrics = map[string]any{"command_state": result.State, "requested_service": service}
