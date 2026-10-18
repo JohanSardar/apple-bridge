@@ -159,6 +159,10 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 		cleanup["cleanup_state"] = "cleanup_failed"
 		if ok {
 			cleanup["cleanup_state"] = "verified_clean"
+			if result.Metrics["command_state"] == contracts.CommandIndeterminate || result.Metrics["disposition"] == contracts.DispositionIndeterminate {
+				cleanup["cleanup_state"] = "pending_reconciliation"
+				cleanup["late_effect_possible"] = true
+			}
 		}
 		cleanup["cleanup"] = metrics
 		saveCleanup()
