@@ -26,7 +26,7 @@ func nativeTestContacts() (map[string]string, error) {
 	return result, err
 }
 
-func runNativeMessagesGroup(ctx context.Context, s Scenario, e Evidence, w *world.World, own []string) Evidence {
+func runNativeMessagesGroup(ctx context.Context, s Scenario, e Evidence, w *world.World, own []string) (final Evidence) {
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
 	contacts, err := nativeTestContacts()
 	add("approved_contacts_configured", err == nil && contacts["REMY_IMESSAGE_TEST_HANDLE"] != "" && contacts["BEN_GROUP_TEST_HANDLE"] != "")
@@ -46,6 +46,19 @@ func runNativeMessagesGroup(ctx context.Context, s Scenario, e Evidence, w *worl
 		remy = contacts["REMY_IMESSAGE_TEST_EMAIL"]
 	}
 	tag := "[ab-test " + e.RunID + "]"
+	defer func() {
+		ok, metrics := cleanupNativeMessageRun(w, e.RunID, true)
+		final.Assertions = append(final.Assertions, Assertion{Name: "tagged_messages_cleanup", Passed: ok})
+		if final.Metrics == nil {
+			final.Metrics = map[string]any{}
+		}
+		final.Metrics["cleanup"] = metrics
+		final.Passed = len(final.Assertions) > 0 && final.Status == ""
+		for _, assertion := range final.Assertions {
+			final.Passed = final.Passed && assertion.Passed
+		}
+	}()
+
 	intro, problem := submit("send", map[string]any{"handles": []string{remy}, "service": "iMessage", "text": tag + " This is an automated test of Johan's Apple Bridge and can be ignored."})
 	e.Metrics = map[string]any{"intro_state": intro.State, "intro_disposition": intro.Disposition}
 	if problem != nil {
@@ -154,6 +167,16 @@ func runNativeMessagesGroup(ctx context.Context, s Scenario, e Evidence, w *worl
 		}
 		root, _ := capture["tree"].(map[string]any)
 		inspect(root)
+	}
+	if s.ID == "MSG-GROUP-CREATE" && !observed && e.Metrics["offered_service"] == "SMS" {
+		e.Status = "environment-limited"
+		e.Metrics["group_limit"] = "Approved participants offer SMS only; the tagged SMS group text remained in the composer and no group send was observed. An iMessage group requires two eligible other participants."
+		for i := range e.Assertions {
+			if e.Assertions[i].Name == "native_group_create_observed" {
+				e.Assertions[i].Status = "unverified"
+				e.Assertions[i].Detail = "Approved-contact SMS-only group capability is unavailable on this Mac; no group send claimed."
+			}
+		}
 	}
 	e.Latency["create_group_submit_to_truth"] = stats([]float64{float64(time.Since(started)) / float64(time.Millisecond)}, 0)
 	state, stateErr := sql.Open("sqlite", "file:"+filepath.Join(w.Gateway.Home, "state.db")+"?mode=ro")

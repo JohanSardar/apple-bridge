@@ -35,7 +35,7 @@ func runNativeMessagesCommands(ctx context.Context, s Scenario, level string, e 
 	return runNativeMessagesCommandsInWorld(ctx, s, level, e, w)
 }
 
-func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level string, e Evidence, w *world.World) Evidence {
+func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level string, e Evidence, w *world.World) (result Evidence) {
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
 	report := filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "AppleBridgeDev", "messages-command-handles-"+e.RunID+".json")
 	defer os.Remove(report)
@@ -145,6 +145,25 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 		return e
 	}
 	add("cleanup_registered_before_submit", true)
+	defer func() {
+		ok, metrics := cleanupNativeMessageRun(w, e.RunID, false)
+		result.Assertions = append(result.Assertions, Assertion{Name: "tagged_messages_cleanup", Passed: ok})
+		if result.Metrics == nil {
+			result.Metrics = map[string]any{}
+		}
+		result.Metrics["cleanup"] = metrics
+		result.Passed = len(result.Assertions) > 0 && result.Status == ""
+		for _, assertion := range result.Assertions {
+			result.Passed = result.Passed && assertion.Passed
+		}
+		cleanup["cleanup_state"] = "cleanup_failed"
+		if ok {
+			cleanup["cleanup_state"] = "verified_clean"
+		}
+		cleanup["cleanup"] = metrics
+		saveCleanup()
+	}()
+
 	type seen struct {
 		at   time.Time
 		guid string

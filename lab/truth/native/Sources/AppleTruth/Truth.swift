@@ -171,15 +171,16 @@ struct AppleTruth {
 
     private static func messages(_ request: [String: Any]) throws -> [String: Any] {
         let guid = request["guid"] as? String ?? ""
-        let tag = request["tag"] as? String ?? ""
+        let allTestTags = request["all_test_tags"] as? Bool == true
+        let tag = allTestTags ? "[ab-test " : request["tag"] as? String ?? ""
         let expected = request["expected_text"] as? String ?? tag
-        guard !guid.isEmpty || (tag.hasPrefix("[ab-test ") && tag.hasSuffix("]")) else { throw TruthFailure.invalid }
+        guard allTestTags || !guid.isEmpty || (tag.hasPrefix("[ab-test ") && tag.hasSuffix("]")) else { throw TruthFailure.invalid }
         let path = request["snapshot_path"] as? String ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Messages/chat.db").path
         var database: OpaquePointer?
         guard sqlite3_open_v2(path, &database, SQLITE_OPEN_READONLY, nil) == SQLITE_OK else { if database != nil { sqlite3_close(database) }; throw TruthFailure.permissionMissing }
         defer { sqlite3_close(database) }
         var statement: OpaquePointer?
-        let query = "SELECT guid,is_from_me,is_delivered,error,date,date_edited,date_retracted,thread_originator_guid,associated_message_guid,associated_message_type,CASE WHEN ?!='' AND (instr(text,?)>0 OR instr(attributedBody,CAST(? AS BLOB))>0) THEN 1 ELSE 0 END,length(message_summary_info),associated_message_emoji,message_summary_info FROM message WHERE " + (guid.isEmpty ? "instr(text,?)>0 OR instr(attributedBody,CAST(? AS BLOB))>0" : "guid=? OR thread_originator_guid=? OR associated_message_guid LIKE ?") + " ORDER BY ROWID"
+        let query = "SELECT guid,is_from_me,is_delivered,error,date,date_edited,date_retracted,thread_originator_guid,associated_message_guid,associated_message_type,CASE WHEN ?!='' AND (instr(text,?)>0 OR instr(attributedBody,CAST(? AS BLOB))>0) THEN 1 ELSE 0 END,length(message_summary_info),associated_message_emoji,message_summary_info,EXISTS(SELECT 1 FROM chat_message_join j WHERE j.message_id=message.ROWID AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=j.chat_id AND r.message_id=message.ROWID)) FROM message WHERE " + (guid.isEmpty ? "instr(text,?)>0 OR instr(attributedBody,CAST(? AS BLOB))>0" : "guid=? OR thread_originator_guid=? OR associated_message_guid LIKE ?") + " ORDER BY ROWID"
         guard sqlite3_prepare_v2(database, query, -1, &statement, nil) == SQLITE_OK else { throw TruthFailure.unavailable }
         defer { sqlite3_finalize(statement) }
         let bindings = [expected, expected, expected] + (guid.isEmpty ? [tag, tag] : [guid, guid, "%" + guid])
@@ -196,7 +197,7 @@ struct AppleTruth {
                 let data = Data(bytes: bytes, count: Int(sqlite3_column_bytes(statement, 13)))
                 summary = (try? PropertyListSerialization.propertyList(from: data, format: nil)) as? [String: Any] ?? [:]
             }
-            rows.append(["summary_unsent": summary["ust"] as? Bool ?? false, "retracted_part_count": (summary["rp"] as? [Any])?.count ?? 0, "guid": text(0), "is_from_me": sqlite3_column_int(statement, 1) != 0, "is_delivered": sqlite3_column_int(statement, 2) != 0, "error": sqlite3_column_int(statement, 3), "date": sqlite3_column_int64(statement, 4), "date_edited": sqlite3_column_int64(statement, 5), "date_retracted": sqlite3_column_int64(statement, 6), "thread_originator_guid": text(7), "associated_message_guid": text(8), "associated_message_type": sqlite3_column_int(statement, 9), "expected_text_present": sqlite3_column_int(statement, 10) != 0, "summary_bytes": sqlite3_column_int(statement, 11), "emoji": text(12)])
+            rows.append(["active": sqlite3_column_int(statement, 14) != 0, "summary_unsent": summary["ust"] as? Bool ?? false, "retracted_part_count": (summary["rp"] as? [Any])?.count ?? 0, "guid": text(0), "is_from_me": sqlite3_column_int(statement, 1) != 0, "is_delivered": sqlite3_column_int(statement, 2) != 0, "error": sqlite3_column_int(statement, 3), "date": sqlite3_column_int64(statement, 4), "date_edited": sqlite3_column_int64(statement, 5), "date_retracted": sqlite3_column_int64(statement, 6), "thread_originator_guid": text(7), "associated_message_guid": text(8), "associated_message_type": sqlite3_column_int(statement, 9), "expected_text_present": sqlite3_column_int(statement, 10) != 0, "summary_bytes": sqlite3_column_int(statement, 11), "emoji": text(12)])
             status = sqlite3_step(statement)
         }
         guard status == SQLITE_DONE else { throw TruthFailure.unavailable }

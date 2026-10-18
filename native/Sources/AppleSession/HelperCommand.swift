@@ -87,7 +87,7 @@ public enum HelperCommand {
             Task { @MainActor in
                 do {
                     let data: Data
-                    if arguments.count > 1 && arguments[1] == "cleanup-tagged-self" { data = try await MessagesCleanup.run() }
+                    if arguments.count > 1 && arguments[1] == "cleanup-tagged-self" { data = try await MessagesCleanup.run(arguments) }
                     else { data=try JSONSerialization.data(withJSONObject:MessagesProbes.run(arguments)) }
                     try data.write(to:reportURL,options:.atomic)
                     try FileManager.default.setAttributes([.posixPermissions:0o600],ofItemAtPath:reportURL.path)

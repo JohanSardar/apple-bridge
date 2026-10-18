@@ -230,7 +230,7 @@ enum MessagesAccessibility {
         RunLoop.current.run(until: Date().addingTimeInterval(0.35))
         return true
     }
-    static func openMessage(_ guid: String) throws {
+    static func openMessage(_ guid: String, settle: TimeInterval = 3) throws {
         var components = URLComponents()
         components.scheme = "imessage"
         components.path = "open"
@@ -240,12 +240,45 @@ enum MessagesAccessibility {
         RunLoop.current.run(until: Date().addingTimeInterval(0.2))
         _ = try resetTaggedEditor()
         try MessagesNavigation.open(url)
-        RunLoop.current.run(until: Date().addingTimeInterval(3))
+        RunLoop.current.run(until: Date().addingTimeInterval(settle))
     }
     private static func textValue(_ element: AXUIElement) -> String {
         var result: CFTypeRef?
         guard AXUIElementCopyAttributeValue(element, kAXValueAttribute as CFString, &result) == .success else { return "" }
         return (result as? NSAttributedString)?.string ?? result as? String ?? ""
+    }
+    static func clearTaggedDraft(_ tag: String, groupHandles: [String] = []) throws -> Bool {
+        _ = MessagesNavigation.application?.activate()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+        if !groupHandles.isEmpty {
+            var components = URLComponents()
+            components.scheme = "imessage"
+            components.path = "open"
+            components.queryItems = [URLQueryItem(name: "addresses", value: groupHandles.joined(separator: ","))]
+            guard let url = components.url else { throw MessagesUIFailure.navigationUnavailable }
+            try MessagesNavigation.open(url)
+            RunLoop.current.run(until: Date().addingTimeInterval(3))
+        }
+        let (root, pid) = try rootApplication()
+        var budget = 4000
+        let fields = matching(root, budget: &budget) { value($0, kAXIdentifierAttribute) == "messageBodyField" }
+        guard fields.count == 1 else { return false }
+        let field = fields[0]
+        let text = textValue(field)
+        guard text.range(of: #"^\[ab-test [A-Za-z0-9_-]+\]"#, options: .regularExpression) != nil,
+              tag.isEmpty || text.contains(tag) else { return false }
+        guard AXUIElementSetAttributeValue(field, kAXFocusedAttribute as CFString, kCFBooleanTrue) == .success else { throw MessagesUIFailure.composerUnavailable }
+        var focused: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(root, kAXFocusedUIElementAttribute as CFString, &focused) == .success,
+              let focused, CFEqual(focused, field), NSWorkspace.shared.frontmostApplication?.processIdentifier == pid else { throw SourceFailure.conflict }
+        let code = MessagesAppleScript.execute("tell application \"System Events\" to tell process \"Messages\"\nkey up control\nkey code 0 using {command down}\nkey code 51\nend tell")
+        guard code == 0 else { throw SourceFailure.conflict }
+        let deadline = Date().addingTimeInterval(3)
+        repeat {
+            if textValue(field).isEmpty { return true }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        } while Date() < deadline
+        throw MessagesUIFailure.messageValueRejected
     }
     static func createGroup(_ args: JSON) throws {
         let handles = args["handles"].array.map(\.string)
@@ -308,7 +341,7 @@ enum MessagesAccessibility {
             let title = String($0.split(separator: "\n").first ?? "").replacingOccurrences(of: "Name:", with: "").replacingOccurrences(of: "…", with: "")
             return title == normalized
         }
-        if copied == .success && direct.count == 1 {
+        if action != .reply && copied == .success && direct.count == 1 {
             guard AXUIElementPerformAction(bubble, direct[0] as CFString) == .success else { throw SourceFailure.conflict }
         } else {
             try contextMenu(bubble, pid: pid)

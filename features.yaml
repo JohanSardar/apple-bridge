@@ -194,20 +194,7 @@ features:
     milestone: M1
     modules: [native/MessagesSource, native/AppleSession]
     depends_on: [messages.send]
-    status: blocked
-    limits:
-      - scenario: MSG-REPLY
-        level: real
-        reason: "2026-10-18 unlocked session confirmed; signed Helper is AX-trusted, but Messages returns AX -25204 even immediately after user-owned SecurityAgent dismissal. Tagged-send prerequisite times out with Apple event -1712. Messages is waiting in TelephonyUtilities/IMCore; native action cannot be reverified. See lab/evidence/messages-finish.json."
-      - scenario: MSG-REACT
-        level: real
-        reason: "2026-10-18 unlocked session confirmed; signed Helper is AX-trusted, but Messages returns AX -25204 even immediately after user-owned SecurityAgent dismissal. Tagged-send prerequisite times out with Apple event -1712. Messages is waiting in TelephonyUtilities/IMCore; native action cannot be reverified. See lab/evidence/messages-finish.json."
-      - scenario: MSG-EDIT
-        level: real
-        reason: "2026-10-18 unlocked session confirmed; signed Helper is AX-trusted, but Messages returns AX -25204 even immediately after user-owned SecurityAgent dismissal. Tagged-send prerequisite times out with Apple event -1712. Messages is waiting in TelephonyUtilities/IMCore; native action cannot be reverified. See lab/evidence/messages-finish.json."
-      - scenario: MSG-UNSEND
-        level: real
-        reason: "2026-10-18 unlocked session confirmed; signed Helper is AX-trusted, but Messages returns AX -25204 even immediately after user-owned SecurityAgent dismissal. Tagged-send prerequisite times out with Apple event -1712. Messages is waiting in TelephonyUtilities/IMCore; native action cannot be reverified. See lab/evidence/messages-finish.json."
+    status: done
     scenarios:
       - {id: MSG-REPLY, levels: [sim, real]}
       - {id: MSG-REACT, levels: [sim, real]}
@@ -226,13 +213,13 @@ features:
     limits:
       - scenario: MSG-GROUP-CREATE
         level: real
-        reason: "2026-10-18 available approved Remy/Ben pair previously offered SMS; true iMessage/RCS group eligibility remains limited. Rename/add needs two other people and removal three. Current fresh verification is blocked by Messages AX -25204 after prompt dismissal; no new group message sent. See lab/evidence/messages-finish.json."
+        reason: "2026-10-18 signed Helper and fresh AppleTruth probe: approved Remy/Ben pair offers Text Message • SMS only. Tagged SMS group text stayed in the composer after Enter; no group send or distinct iMessage group claimed. An iMessage group requires you plus at least two eligible others; no additional recipients authorized. See lab/evidence/messages-finish.json."
       - scenario: MSG-SEND-RCS-GROUP
         level: real
-        reason: "2026-10-18 available approved Remy/Ben pair previously offered SMS; true iMessage/RCS group eligibility remains limited. Rename/add needs two other people and removal three. Current fresh verification is blocked by Messages AX -25204 after prompt dismissal; no new group message sent. See lab/evidence/messages-finish.json."
+        reason: "2026-10-18 approved Remy/Ben pair offers SMS only in the fresh signed-Helper group probe. No RCS group send claimed. See lab/evidence/messages-finish.json."
       - scenario: MSG-GROUP-MANAGE
         level: real
-        reason: "2026-10-18 available approved Remy/Ben pair previously offered SMS; true iMessage/RCS group eligibility remains limited. Rename/add needs two other people and removal three. Current fresh verification is blocked by Messages AX -25204 after prompt dismissal; no new group message sent. See lab/evidence/messages-finish.json."
+        reason: "Apple requires two eligible other iMessage participants for rename/add and three for removal/leave. The approved Remy/Ben pair offers SMS, and an own email is not a proven distinct other participant. No additional recipients authorized. See lab/evidence/messages-finish.json."
     scenarios:
       - {id: MSG-GROUP-CREATE, levels: [sim, real]}
       - {id: MSG-GROUP-MANAGE, levels: [sim, real]}
