@@ -73,7 +73,7 @@ func runNativeMessagesGroup(ctx context.Context, s Scenario, e Evidence, w *worl
 		cleanup["cleanup_state"] = "cleanup_failed"
 		if ok {
 			cleanup["cleanup_state"] = "verified_clean"
-			if cleanup["intro_state"] == contracts.CommandIndeterminate || cleanup["group_state"] == contracts.CommandIndeterminate {
+			if nativeMessageCleanupPending(cleanup["intro_state"]) || cleanup["group_state"] != nil && nativeMessageCleanupPending(cleanup["group_state"]) {
 				cleanup["cleanup_state"] = "pending_reconciliation"
 				cleanup["late_effect_possible"] = true
 			}

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 )
 
@@ -45,4 +46,13 @@ func cleanupNativeMessageRun(w *world.World, runID string, groupDraft bool) (boo
 	metrics["appletruth_visible_remaining"] = remaining
 	metrics["appletruth_verified"] = truthErr == nil && truth["status"] == "verified" && activeKnown
 	return err == nil && readErr == nil && metrics["passed"] == true && metrics["appletruth_verified"] == true && remaining == 0, metrics
+}
+
+func nativeMessageCleanupPending(state any) bool {
+	switch state {
+	case contracts.CommandObserved, contracts.CommandDelivered, contracts.CommandDeliveryFailed, contracts.CommandFailed, contracts.CommandRejected, contracts.CommandExpired:
+		return false
+	default:
+		return true
+	}
 }
