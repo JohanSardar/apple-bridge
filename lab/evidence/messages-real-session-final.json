@@ -1,0 +1,153 @@
+{
+  "at": "2026-10-18T05:15:39Z",
+  "implementation_branch": "messages-real-session",
+  "implementation_merged": false,
+  "calendar_cleanup": {
+    "passed": true,
+    "commit": "e08fd0fbe1808c1d9a299d45088086caa43aaf14",
+    "evidence": "messages-real-session-cleanup.json"
+  },
+  "historical_real_passes": "messages-real-session-green.json",
+  "final_real_retries": [
+    {
+      "host_conditions": {
+        "quiet": true,
+        "summary": "air: load=[7.22 7.96 9.08] cpus=8 other_heavy=0"
+      },
+      "status": "environment-limited",
+      "run_id": "run_01M56PVTKMQKSBRRWB1S11QG7H",
+      "metrics": {
+        "apple_event_errors": [
+          -1712
+        ],
+        "command_state": "indeterminate",
+        "disposition": "indeterminate",
+        "initial_command_state": "indeterminate",
+        "parts_requested": 1,
+        "send_commands": 1
+      },
+      "scenario": "MSG-REACT",
+      "level": "real",
+      "passed": false,
+      "git_sha": "e08fd0fbe1808c1d9a299d45088086caa43aaf14",
+      "at": "2026-10-18T05:13:31.508641Z",
+      "assertions": [
+        {
+          "name": "self_chat_captured",
+          "passed": true
+        },
+        {
+          "name": "cleanup_registered_before_submit",
+          "passed": true
+        },
+        {
+          "name": "native_send_observed_with_fingerprint_checkpoint",
+          "passed": false
+        },
+        {
+          "name": "credential_backend_override_restored",
+          "passed": true
+        }
+      ],
+      "latency": {},
+      "hosts": [
+        "air"
+      ]
+    },
+    {
+      "host_conditions": {
+        "quiet": true,
+        "summary": "air: load=[5.22 7.21 8.72] cpus=8 other_heavy=0"
+      },
+      "status": "environment-limited",
+      "run_id": "run_01M56PXR0GM8PTD5HSKNZSP6TC",
+      "metrics": {
+        "apple_event_errors": [
+          -1712
+        ],
+        "command_state": "indeterminate",
+        "disposition": "indeterminate",
+        "initial_command_state": "indeterminate",
+        "parts_requested": 1,
+        "send_commands": 1
+      },
+      "scenario": "MSG-UNSEND",
+      "level": "real",
+      "passed": false,
+      "git_sha": "e08fd0fbe1808c1d9a299d45088086caa43aaf14",
+      "at": "2026-10-18T05:14:34.384069Z",
+      "assertions": [
+        {
+          "name": "self_chat_captured",
+          "passed": true
+        },
+        {
+          "name": "cleanup_registered_before_submit",
+          "passed": true
+        },
+        {
+          "name": "native_send_observed_with_fingerprint_checkpoint",
+          "passed": false
+        },
+        {
+          "name": "credential_backend_override_restored",
+          "passed": true
+        }
+      ],
+      "latency": {},
+      "hosts": [
+        "air"
+      ]
+    }
+  ],
+  "session": {
+    "accessibility_granted": true,
+    "messages_running": true,
+    "messages_role_error": -25204,
+    "messages_windows_error": -25204,
+    "messages_window_count": 0,
+    "locked_session_claim": false,
+    "vnc_used": false,
+    "messages_main_thread_wait": "TUCallCapabilitiesXPCClient synchronous reply; later IMCore dispatch queue",
+    "callservicesd_wait": "CoreTelephonyClient getPhoneServicesDeviceInfo synchronous XPC reply",
+    "user_securityagent_only_terminated": true,
+    "system_securityagent_terminated": false,
+    "login_keychain_retested_after_user_prohibition": false,
+    "password_entered": false
+  },
+  "cleanup": {
+    "initial_tagged_self_messages": 63,
+    "deleted_in_final_attempt": 0,
+    "remaining_tagged_self_messages": 63,
+    "all_dates": true,
+    "only_tagged_self_messages": true,
+    "failure": "validate:targetUnavailable",
+    "earlier_individually_tagged_deletions_observed": 17,
+    "passed": false
+  },
+  "group_constraints": {
+    "approved_pair_offered_service": "SMS",
+    "rcs_requested_was_rejected_before_sending": true,
+    "own_icloud_email_distinct_participant": "unverified",
+    "rename_add_minimum_other_participants": 2,
+    "remove_minimum_other_participants": 3
+  },
+  "unresolved": [
+    "MSG-REPLY threaded effect not proven; earlier tagged reply had no thread_originator_guid",
+    "MSG-EDIT native edited text/history not proven after input and semantic-state fixes",
+    "MSG-GROUP-CREATE SMS group not proven",
+    "MSG-GROUP-MANAGE own iCloud email acceptance and eligible management remain unverified",
+    "63 tagged self-messages remain; earlier Remy notices that expired the unsend window remain"
+  ],
+  "verification_commands": [
+    "packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios/messages/MSG-EDIT.yaml lab/scenarios/messages/MSG-GROUP-CREATE.yaml lab/scenarios/messages/MSG-GROUP-MANAGE.yaml lab/scenarios/messages/MSG-REPLY.yaml --level real (MSG-EDIT failed send prerequisite; suite interrupted before subsequent worlds started successfully)",
+    "packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios/messages/MSG-REACT.yaml lab/scenarios/messages/MSG-UNSEND.yaml --level real (both failed send prerequisite)",
+    "open -n -W -g -a <immutable-signed-helper> --args probe cleanup-tagged-self --report <private-report> (failed; 63 remain)",
+    "packaging/dev/heavy.sh make lint",
+    "make features"
+  ],
+  "new_scenario_ids": [],
+  "spec_changes": [],
+  "verification_note": "Historical real passes came from an uncommitted implementation. Final implementation retries are red. Native implementation is checkpointed separately and must not be represented as merged or done.",
+  "implementation_commit": "aaa7ec2eb8af5c94e2f4d8ed38f618e8140f9480"
+}

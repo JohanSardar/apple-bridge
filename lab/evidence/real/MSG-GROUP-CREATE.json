@@ -1,21 +1,18 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[6.93 3.32 2.51] cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[6.58 8.43 9.77] cpus=8 other_heavy=0"
   },
-  "status": "pending-unlock",
-  "run_id": "run_01M56F14WAT5Z4RP4Q65GACPRM",
+  "run_id": "run_01M56PJSWMZ8R3B32P9FDXKANJ",
   "scenario": "MSG-GROUP-CREATE",
   "level": "real",
   "passed": false,
-  "git_sha": "4fd88121ae1895e7d1767e0f2aab85747777550f",
-  "at": "2026-10-18T02:56:37.258682Z",
+  "git_sha": "e08fd0fbe1808c1d9a299d45088086caa43aaf14",
+  "at": "2026-10-18T05:08:35.860113Z",
   "assertions": [
     {
-      "name": "native_accessibility",
-      "passed": false,
-      "status": "unverified",
-      "detail": "Screen capture shows password lock screen; Messages AX target cannot be verified"
+      "name": "real_world_start",
+      "passed": false
     },
     {
       "name": "credential_backend_override_restored",

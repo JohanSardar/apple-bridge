@@ -1,0 +1,185 @@
+{
+  "runs": [
+    {
+      "host_conditions": {
+        "quiet": true,
+        "summary": "air: load=[4.98 4.8 4.21] cpus=8 other_heavy=0"
+      },
+      "run_id": "run_01M56MHBV8SHMN009CBF2SJQC2",
+      "metrics": {
+        "command_state": "observed",
+        "disposition": "locally_observed",
+        "native_reason": null,
+        "native_stage_error": null
+      },
+      "scenario": "MSG-REACT",
+      "level": "real",
+      "passed": true,
+      "git_sha": "e08fd0fbe1808c1d9a299d45088086caa43aaf14",
+      "at": "2026-10-18T04:32:51.560681Z",
+      "assertions": [
+        {
+          "name": "self_chat_captured",
+          "passed": true
+        },
+        {
+          "name": "cleanup_registered_before_submit",
+          "passed": true
+        },
+        {
+          "name": "native_send_observed_with_fingerprint_checkpoint",
+          "passed": true
+        },
+        {
+          "name": "gui_session_probe",
+          "passed": true
+        },
+        {
+          "name": "target_captured",
+          "passed": true
+        },
+        {
+          "name": "native_action_observed",
+          "passed": true
+        },
+        {
+          "name": "appletruth_target_observed",
+          "passed": true
+        },
+        {
+          "name": "appletruth_action_effect",
+          "passed": true
+        },
+        {
+          "name": "remove_love_observed",
+          "passed": true
+        },
+        {
+          "name": "remove_love_appletruth",
+          "passed": true
+        },
+        {
+          "name": "add_emoji_observed",
+          "passed": true
+        },
+        {
+          "name": "add_emoji_appletruth",
+          "passed": true
+        },
+        {
+          "name": "remove_emoji_observed",
+          "passed": true
+        },
+        {
+          "name": "remove_emoji_appletruth",
+          "passed": true
+        },
+        {
+          "name": "credential_backend_override_restored",
+          "passed": true
+        }
+      ],
+      "latency": {
+        "add_emoji_submit_to_truth": {
+          "samples": 1,
+          "p50_ms": 7698.756875,
+          "p95_ms": 7698.756875,
+          "max_ms": 7698.756875,
+          "timeouts": 0
+        },
+        "command_submit_to_truth": {
+          "samples": 1,
+          "p50_ms": 11527.436666,
+          "p95_ms": 11527.436666,
+          "max_ms": 11527.436666,
+          "timeouts": 0
+        },
+        "remove_emoji_submit_to_truth": {
+          "samples": 1,
+          "p50_ms": 10152.610583,
+          "p95_ms": 10152.610583,
+          "max_ms": 10152.610583,
+          "timeouts": 0
+        },
+        "remove_love_submit_to_truth": {
+          "samples": 1,
+          "p50_ms": 5905.387792,
+          "p95_ms": 5905.387792,
+          "max_ms": 5905.387792,
+          "timeouts": 0
+        }
+      },
+      "hosts": [
+        "air"
+      ]
+    },
+    {
+      "host_conditions": {
+        "quiet": false,
+        "summary": "air: load=[8.57 7.76 5.64] cpus=8 other_heavy=0"
+      },
+      "run_id": "run_01M56MPXB151A0X8AKAZXXPGZ5",
+      "metrics": {
+        "command_state": "observed",
+        "disposition": "locally_observed",
+        "native_reason": null,
+        "native_stage_error": null
+      },
+      "scenario": "MSG-UNSEND",
+      "level": "real",
+      "passed": true,
+      "git_sha": "e08fd0fbe1808c1d9a299d45088086caa43aaf14",
+      "at": "2026-10-18T04:35:53.313719Z",
+      "assertions": [
+        {
+          "name": "self_chat_captured",
+          "passed": true
+        },
+        {
+          "name": "cleanup_registered_before_submit",
+          "passed": true
+        },
+        {
+          "name": "native_send_observed_with_fingerprint_checkpoint",
+          "passed": true
+        },
+        {
+          "name": "gui_session_probe",
+          "passed": true
+        },
+        {
+          "name": "target_captured",
+          "passed": true
+        },
+        {
+          "name": "native_action_observed",
+          "passed": true
+        },
+        {
+          "name": "appletruth_target_observed",
+          "passed": true
+        },
+        {
+          "name": "appletruth_action_effect",
+          "passed": true
+        },
+        {
+          "name": "credential_backend_override_restored",
+          "passed": true
+        }
+      ],
+      "latency": {
+        "command_submit_to_truth": {
+          "samples": 1,
+          "p50_ms": 7314.786292,
+          "p95_ms": 7314.786292,
+          "max_ms": 7314.786292,
+          "timeouts": 0
+        }
+      },
+      "hosts": [
+        "air"
+      ]
+    }
+  ]
+}

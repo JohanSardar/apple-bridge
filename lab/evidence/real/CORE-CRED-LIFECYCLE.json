@@ -1,0 +1,39 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[4.18 4.54 3.94] cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M56M6V3V93P63BKJ6JNPY1PE",
+  "metrics": {
+    "gui_keychain_lifecycle": {
+      "keychain_unlocked": false,
+      "keychain_status_code": 0,
+      "state": "unavailable",
+      "failure": "credential_store_locked",
+      "backend": "keychain",
+      "created": false,
+      "used": false,
+      "rotated": false,
+      "revoked": false
+    }
+  },
+  "scenario": "CORE-CRED-LIFECYCLE",
+  "level": "real",
+  "passed": false,
+  "git_sha": "e08fd0fbe1808c1d9a299d45088086caa43aaf14",
+  "at": "2026-10-18T04:27:06.747101Z",
+  "assertions": [
+    {
+      "name": "keychain_create_use_rotate_revoke",
+      "passed": false
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

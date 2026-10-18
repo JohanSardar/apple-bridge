@@ -1,21 +1,37 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[6.93 3.32 2.51] cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[6.27 9.09 10.12] cpus=8 other_heavy=0"
   },
-  "status": "pending-unlock",
-  "run_id": "run_01M56F13V2HEQDW9HYMNYNAJ09",
+  "status": "environment-limited",
+  "run_id": "run_01M56PGC38R9KZ4CQ0PSXCT8F6",
+  "metrics": {
+    "apple_event_errors": [
+      -1712
+    ],
+    "command_state": "indeterminate",
+    "disposition": "indeterminate",
+    "initial_command_state": "indeterminate",
+    "parts_requested": 1,
+    "send_commands": 1
+  },
   "scenario": "MSG-EDIT",
   "level": "real",
   "passed": false,
-  "git_sha": "4fd88121ae1895e7d1767e0f2aab85747777550f",
-  "at": "2026-10-18T02:56:36.194231Z",
+  "git_sha": "e08fd0fbe1808c1d9a299d45088086caa43aaf14",
+  "at": "2026-10-18T05:07:16.200851Z",
   "assertions": [
     {
-      "name": "native_accessibility",
-      "passed": false,
-      "status": "unverified",
-      "detail": "Screen capture shows password lock screen; Messages AX target cannot be verified"
+      "name": "self_chat_captured",
+      "passed": true
+    },
+    {
+      "name": "cleanup_registered_before_submit",
+      "passed": true
+    },
+    {
+      "name": "native_send_observed_with_fingerprint_checkpoint",
+      "passed": false
     },
     {
       "name": "credential_backend_override_restored",
