@@ -68,6 +68,23 @@ struct CalendarTruth {
             var result = try consolidate(store, proof: proof); result["status"] = "verified"
             return result
         }
+        if action == "cleanup_empty_build_calendar" {
+            guard verb == "fixture", request["earlier_build_cleanup_authorized"] as? Bool == true,
+                  let proof = request["empty_calendar_proof"] as? [String: Any], proof["all_dates"] as? Bool == true, proof["read_only"] as? Bool == true,
+                  let generated = proof["generated_at"] as? Double, (0...10).contains(Date().timeIntervalSince1970 - generated),
+                  let counts = proof["counts"] as? [String: NSNumber] else { throw TruthFailure.invalid }
+            var owned = try ownership()
+            let calendars = store.calendars(for: .event).filter { $0.title == "Bridge Test" }
+            guard calendars.allSatisfy({ owned.calendars[$0.calendarIdentifier] != nil && counts[$0.calendarIdentifier]?.intValue == 0 && $0.allowsContentModifications }) else { throw TruthFailure.invalid }
+            for calendar in calendars {
+                try store.removeCalendar(calendar, commit: true)
+                owned.calendars.removeValue(forKey: calendar.calendarIdentifier)
+                owned.calendarReceipts?.removeValue(forKey: calendar.calendarIdentifier)
+                if owned.canonicalCalendar == calendar.calendarIdentifier { owned.canonicalCalendar = nil }
+            }
+            try saveOwnership(owned)
+            return ["status": "verified", "removed_empty_build_calendars": calendars.count, "unbounded_item_count": 0]
+        }
         let canonical = try ownership().canonicalCalendar
         var calendars = store.calendars(for: .event).filter { $0.title == "Bridge Test" }.sorted {
             if ($0.calendarIdentifier == canonical) != ($1.calendarIdentifier == canonical) { return $0.calendarIdentifier == canonical }

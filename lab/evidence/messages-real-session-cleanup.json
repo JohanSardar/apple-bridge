@@ -1,0 +1,12 @@
+{
+  "date": "2026-10-17",
+  "calendar": {
+    "before_calendars": 1,
+    "unbounded_events": 0,
+    "after_calendars": 0,
+    "appletruth": "verified",
+    "passed": true,
+    "authorization": "User explicitly authorized deleting the empty calendar created by the earlier build",
+    "command": "python3 lab/truth/cleanup-empty-build-calendar.py --truth-app /tmp/ablab/authorized-calendar-cleanup/AppleTruth.app --authorized-earlier-build"
+  }
+}
