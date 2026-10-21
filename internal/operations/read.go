@@ -60,7 +60,13 @@ func (s *Service) Read(ctx context.Context, p trust.Principal, name string, q co
 	default:
 		return contracts.ReadResult{}, contracts.ErrUnsupported
 	}
-	result, err := s.State.Read(ctx, p.Visibility(), q)
+	var result contracts.ReadResult
+	var err error
+	if name == "sources.status" {
+		result, err = s.State.SourceStatuses(ctx, p.Visibility())
+	} else {
+		result, err = s.State.Read(ctx, p.Visibility(), q)
+	}
 	if err == nil && (name == "sources.status" || name == "replica.status") && s.LocalStatus != nil {
 		var status contracts.ReplicaStatus
 		status, err = s.LocalReplicaStatus(ctx, p)

@@ -1,14 +1,14 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[7.5 9.27 9.48] cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[7.85 10.31 11.89] cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5EDFBCXD1H07GXFJGP76WK1",
+  "run_id": "run_01M5FZS1RVJ0VTF2W6YVERQ8JH",
   "scenario": "WEB-AGENT-ACTIVITY",
   "level": "sim",
   "passed": true,
-  "git_sha": "a5c95df9bb1a5639e02a58c358c1be128769b019",
-  "at": "2026-10-21T05:03:20.989837Z",
+  "git_sha": "e6157630fffe4263b13fbaa0113baa4cd0e97e7c",
+  "at": "2026-10-21T19:42:27.611218Z",
   "assertions": [
     {
       "name": "activity_read",
@@ -96,6 +96,10 @@
     },
     {
       "name": "capture_rejection_count_retained_after_reconnect",
+      "passed": true
+    },
+    {
+      "name": "raw_source_records_exclude_local_capture_diagnostics",
       "passed": true
     },
     {
