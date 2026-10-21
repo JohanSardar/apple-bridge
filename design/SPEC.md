@@ -1032,13 +1032,11 @@ Operations (descriptors in `internal/contracts/operations.go`; available through
 ### 23.5 Remote
 
 **Commands:**
-- `bridge remote on [--name <host>]` starts an embedded tsnet node, with state in `<home>/remote/`, mode 0700.
-  - If the node isn't logged in, it prints the Tailscale login URL and waits.
-  - If HTTPS or Funnel isn't enabled for the tailnet, it prints the exact admin URL that enables it, then waits and rechecks.
-  - Then it listens with Funnel on :443 and prints `https://<host>.<tailnet>.ts.net` and a terminal QR code.
-  - The enabled state persists across restarts.
-- `bridge remote off` closes the listener within 1 s.
-- `bridge remote status` prints state, URL and the last error.
+- `bridge remote on [--name <host>] [--via system|embedded]` asks the running Runtime to enable Remote. Automatic selection uses a running, logged-in system Tailscale; absent that, an embedded tsnet node. A system node missing HTTPS/Funnel reports the enablement URL instead of changing unrelated configuration. `--via` overrides selection; embedded hostname defaults to `bridge`.
+- System mode uses the LocalAPI client and ETag/If-Match read-modify-write, preserving existing handlers and unknown config fields. It allocates the first unoccupied allowed port among 443, 8443, 10000, including foreground/service reservations. The mapping proxies only to a dedicated loopback listener, separate from the local API, with a private 256-bit capability path known to that mapping. Direct loopback requests without it are refused. An ownership record is persisted before installation; restart removes a stale owned mapping before reinstalling. Off removes only the unchanged owned mapping, preserving concurrent unrelated edits.
+- Embedded mode stores state in `<home>/remote/`, mode 0700, prints the Tailscale login URL and waits for authorization. Missing HTTPS or Funnel prints its enablement URL and rechecks until enabled. It then uses `ListenFunnel("tcp", ":443")`.
+- The enabled state and selected backend persist across Runtime restarts. The public URL is stable and includes a nondefault port in system mode. The CLI prints the URL only; terminal QR encoding is omitted to avoid a new dependency.
+- `bridge remote off` closes public serving within 1 s. `bridge remote status` prints state, backend, URL and the last error. Commands communicate with Runtime through private atomic state files under `<home>/remote/`; Runtime must be running for on/off to complete.
 - Allowed on replicas, off by default. Tailnet devices reach the same hostname without Funnel.
 
 **Public routing:**
@@ -1046,10 +1044,10 @@ Operations (descriptors in `internal/contracts/operations.go`; available through
 | Path | Handler | Auth |
 |---|---|---|
 | `/`, app routes, `/assets/*`, `/web/*`, `/oauth/*`, `/.well-known/oauth-*` | Web | device session / OAuth |
-| `/v1/*`, `/mcp` | Frontdoor (public-host mode) | `Authorization: Bearer` with **agent** tokens only (§23.6); any `Origin` header rejects; local machine tokens are refused remotely |
-| `/v1/feed` | Replication | replica device key (later unit; see §23.11) |
+| `/v1/*`, `/mcp` | Frontdoor (public-host mode) | `Authorization: Bearer` with remote-allowed principals: **agent** tokens (§23.6), or explicitly opted-in `bridge token create --remote` tokens during W1; any `Origin` header rejects; local machine tokens are refused remotely |
+| `/v1/feed` | Reserved (404 until W1-RELAY) | replica device key in the later unit (§23.11) |
 
-TLS ends inside `bridge`, using the ts.net certificate managed by tsnet. Funnel relays cannot read traffic. Bandwidth limits are Tailscale's (unpublished), so media variants (§23.7) keep transfers small.
+TLS ends on the Mac: inside `bridge` with tsnet in embedded mode, or in system tailscaled in system mode, using the ts.net certificate. Funnel relays cannot read traffic. Remote pins the public Host before dispatch. System mode recognizes HTTPS and forwarded source only through its dedicated capability-protected mapping; forwarded Host must exactly match the configured public host, forwarded Proto must be HTTPS, and forwarded source must be one valid IP. The shared Web handler sees the pinned public Host, HTTPS, and original client IP. Embedded mode extracts the original source from the TLS connection’s `ipn.FunnelConn.Src`. Local API requests never inherit proxy trust, and ignore forwarded headers. Bandwidth limits are Tailscale's (unpublished), so media variants (§23.7) keep transfers small.
 
 ### 23.6 Agent access
 

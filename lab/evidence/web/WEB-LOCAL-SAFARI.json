@@ -1,0 +1,39 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[6.11 7.69 9.47] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5EA5028BZTXKGSKCY0Q0E1K",
+  "metrics": {
+    "demo_messages": 5000,
+    "demo_startup_ms": 5782,
+    "matrix": [
+      "webkit-light-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-LOCAL-SAFARI-webkit-light-desktop-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-LOCAL-SAFARI-webkit-light-desktop-playwright.json"
+    ],
+    "server": "gateway"
+  },
+  "scenario": "WEB-LOCAL-SAFARI",
+  "level": "web",
+  "passed": true,
+  "git_sha": "00c09effe9c210f242a176aad1ae5ec5efe80811",
+  "at": "2026-10-21T04:05:15.976589Z",
+  "assertions": [
+    {
+      "name": "webkit-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/local-safari.spec.ts:5:1 › WEB-LOCAL-SAFARI records Secure cookie acceptance after real HTTP localhost enrollment (1.4s)\n\n  1 passed (3.7s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

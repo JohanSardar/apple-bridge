@@ -1,0 +1,8 @@
+id: WEB-LOCAL-SAFARI
+feature: web.remote
+levels: [web]
+web: {browsers: [webkit], themes: [light], layouts: [desktop], server: gateway}
+given: []
+when: [{web: {}}]
+then: []
+cleanup: []

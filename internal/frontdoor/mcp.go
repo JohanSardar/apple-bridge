@@ -39,7 +39,7 @@ func mcpHandler(deps Deps, descriptors []contracts.OperationDescriptor) http.Han
 			return &mcp.CallToolResult{IsError: err != nil, StructuredContent: output, Content: []mcp.Content{&mcp.TextContent{Text: string(b)}}}, nil
 		})
 	}
-	handler := mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server { return server }, &mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true})
+	handler := mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server { return server }, &mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: deps.PublicHost == nil, DisableLocalhostProtection: deps.PublicHost != nil})
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			original := r.Body

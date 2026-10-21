@@ -57,6 +57,7 @@ func AllVisibility() Visibility {
 }
 
 type Principal struct {
+	Remote      bool              `json:"remote,omitempty"`
 	Name        string            `json:"name,omitempty"`
 	Level       AgentLevel        `json:"level,omitempty"`
 	CreatedAt   time.Time         `json:"created_at,omitempty"`
@@ -321,6 +322,12 @@ func (a *Authority) SaveEnrollment(e Enrollment) error {
 }
 
 func (a *Authority) CreateToken(grants []contracts.Grant) (string, error) {
+	return a.CreateAPIToken(grants, false)
+}
+func (p Principal) RemoteAllowed() bool {
+	return p.Kind == "agent" && principalActive(p) || p.Kind == "token" && p.Remote
+}
+func (a *Authority) CreateAPIToken(grants []contracts.Grant, remote bool) (string, error) {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
 		return "", err
@@ -330,7 +337,7 @@ func (a *Authority) CreateToken(grants []contracts.Grant) (string, error) {
 		if d.Enrollment != nil && !Subset(grants, d.Enrollment.Grants) {
 			return contracts.ErrUnauthorized
 		}
-		d.Principals = append(d.Principals, Principal{ID: "token:" + contracts.NewID(""), Kind: "token", Grants: grants, TokenHash: Fingerprint([]byte(token)), Revision: 1})
+		d.Principals = append(d.Principals, Principal{ID: "token:" + contracts.NewID(""), Kind: "token", Remote: remote, Grants: grants, TokenHash: Fingerprint([]byte(token)), Revision: 1})
 		return nil
 	})
 	return token, err
