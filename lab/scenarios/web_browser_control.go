@@ -167,6 +167,8 @@ func webBrowserControl(ctx context.Context, w *world.World, origin string) (*htt
 			value, err = webAvatarFixture(w)
 		case "/demo-fixtures":
 			value, err = demo.Fixtures(ctx, w)
+		case "/handles-fixture":
+			value, err = webHandlesFixture(w)
 		case "/incoming":
 			started := time.Now().UnixMilli()
 			key := contracts.NewID("web-incoming")

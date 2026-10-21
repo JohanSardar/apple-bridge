@@ -938,6 +938,7 @@ Same origin for everything. Served by the gateway and by replicas (any instance)
 | `GET approvals`, `POST approvals/{command_id}` | Approve or reject agent commands |
 | `GET blob/{digest}?record=<id>&variant=<v>` | Bytes with Range, `ETag` = digest, `private, max-age=31536000, immutable`; `variant` ∈ `original|thumb|display|video|poster|audio|live` |
 | `POST upload` | Stage a blob for sending (streamed, ≤ 100 MiB) |
+| `POST handles` | Read-only `messages.handles{ids[]≤500}` for frame-batched names and contact avatars |
 | `GET live` | WebSocket, protocol `web/1` (§23.3) |
 
 **Upload locality.** Upload IDs are staged on the serving instance and owned by the device principal. Forwarding a staged upload from a replica to its gateway is pending; the existing Operations command forwarding does not transfer upload bytes. Gateway uploads are ready for sending.
