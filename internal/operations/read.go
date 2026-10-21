@@ -11,12 +11,18 @@ import (
 )
 
 type Service struct {
+	Authority   *trust.Authority
 	Target      CommandTarget
 	State       *state.Store
 	LocalStatus func() contracts.ReplicaStatus
 }
 
-func (s *Service) Read(ctx context.Context, p trust.Principal, name string, q contracts.ReadQuery) (contracts.ReadResult, error) {
+func (s *Service) Read(ctx context.Context, p trust.Principal, name string, q contracts.ReadQuery) (output contracts.ReadResult, resultErr error) {
+	defer func() {
+		if err := s.recordAgentRead(context.WithoutCancel(ctx), p, name); err != nil && resultErr == nil {
+			resultErr = err
+		}
+	}()
 	if err := contracts.ValidateQuery(q); err != nil {
 		return contracts.ReadResult{}, err
 	}
@@ -67,6 +73,19 @@ func (s *Service) Observe(ctx context.Context, p trust.Principal, after contract
 	return s.State.Changes(ctx, p.Visibility(), after)
 }
 
-func (s *Service) BlobGrant(ctx context.Context, p trust.Principal, id string) (trust.RecordGrant, error) {
+func (s *Service) BlobGrant(ctx context.Context, p trust.Principal, id string) (output trust.RecordGrant, resultErr error) {
+	defer func() {
+		if err := s.recordAgentRead(context.WithoutCancel(ctx), p, "blobs.get"); err != nil && resultErr == nil {
+			resultErr = err
+		}
+	}()
 	return s.State.RecordGrant(ctx, p.Visibility(), id)
+}
+
+func (s *Service) recordAgentRead(ctx context.Context, p trust.Principal, name string) error {
+	if p.Kind != "agent" {
+		return nil
+	}
+	at := time.Now().UTC().Truncate(time.Minute)
+	return s.State.RecordAgentActivity(ctx, state.AgentActivity{ID: p.ID + ":" + name + ":" + at.Format(time.RFC3339), Principal: p.ID, Operation: name, Kind: "read", State: "read", At: at})
 }

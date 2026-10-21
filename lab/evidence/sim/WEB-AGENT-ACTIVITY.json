@@ -1,0 +1,78 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[7.03 7.9 17.43] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5E8NKGHV4EN1HY6AR8TKKZG",
+  "scenario": "WEB-AGENT-ACTIVITY",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "30baf256a516e57f9d750cb993c5637db7f881ee",
+  "at": "2026-10-21T03:39:23.025659Z",
+  "assertions": [
+    {
+      "name": "activity_read",
+      "passed": true
+    },
+    {
+      "name": "activity_read",
+      "passed": true
+    },
+    {
+      "name": "activity_read",
+      "passed": true
+    },
+    {
+      "name": "activity_denied_without_effect",
+      "passed": true
+    },
+    {
+      "name": "activity_denied_without_effect",
+      "passed": true
+    },
+    {
+      "name": "activity_available",
+      "passed": true
+    },
+    {
+      "name": "activity_reads_aggregate_per_minute",
+      "passed": true
+    },
+    {
+      "name": "activity_each_command_individually",
+      "passed": true
+    },
+    {
+      "name": "activity_arguments_redacted",
+      "passed": true
+    },
+    {
+      "name": "activity_operation_filter",
+      "passed": true
+    },
+    {
+      "name": "activity_restart",
+      "passed": true
+    },
+    {
+      "name": "activity_survives_restart",
+      "passed": true
+    },
+    {
+      "name": "activity_retains_90_days",
+      "passed": true
+    },
+    {
+      "name": "activity_owner_only",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

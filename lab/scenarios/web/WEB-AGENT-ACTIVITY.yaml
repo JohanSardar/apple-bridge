@@ -1,0 +1,7 @@
+id: WEB-AGENT-ACTIVITY
+feature: web.agents
+levels: [sim]
+given: [{world: {replicas: 1}}]
+when: [{web: {}}]
+then: []
+cleanup: [{world: {}}]

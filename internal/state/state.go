@@ -70,6 +70,8 @@ func Open(home string) (*Store, error) {
  CREATE INDEX IF NOT EXISTS aliases_scoped ON aliases(source,collection,scoped_alias);
  CREATE INDEX IF NOT EXISTS aliases_record ON aliases(collection,record_id,source,generation,native_key);
  CREATE TABLE IF NOT EXISTS journal(seq INTEGER PRIMARY KEY,epoch TEXT NOT NULL,source TEXT NOT NULL,payload BLOB NOT NULL,committed_at INTEGER NOT NULL DEFAULT (unixepoch()));
+ CREATE TABLE IF NOT EXISTS agent_activity(id TEXT PRIMARY KEY,principal TEXT NOT NULL,operation TEXT NOT NULL,kind TEXT NOT NULL,state TEXT NOT NULL,at INTEGER NOT NULL,count INTEGER NOT NULL,argument_bytes INTEGER NOT NULL,argument_hash TEXT NOT NULL,sequence INTEGER NOT NULL);
+ CREATE INDEX IF NOT EXISTS agent_activity_at ON agent_activity(at);
  CREATE TABLE IF NOT EXISTS checkpoints(source TEXT PRIMARY KEY,generation TEXT NOT NULL,checkpoint TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS blob_reference_sets(owner TEXT PRIMARY KEY,payload BLOB NOT NULL);
  CREATE TABLE IF NOT EXISTS applied_batches(after_seq INTEGER PRIMARY KEY,through_seq INTEGER NOT NULL);

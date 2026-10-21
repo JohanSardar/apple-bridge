@@ -67,6 +67,8 @@ func runWebServer(ctx context.Context, s Scenario, level string) Evidence {
 		return e
 	}
 	switch s.ID {
+	case "WEB-AGENT-ACTIVITY":
+		runAgentActivity(ctx, w, add)
 	case "WEB-AGENT-CREDENTIALS":
 		runAgentCredentials(ctx, w, &e, add)
 	case "WEB-SERVE-EMBED":

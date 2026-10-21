@@ -8,10 +8,25 @@ import (
 	"github.com/JohanSardar/apple-bridge/internal/trust"
 )
 
-func (s *Service) Invoke(ctx context.Context, p trust.Principal, name string, input json.RawMessage) (any, error) {
+func (s *Service) Invoke(ctx context.Context, p trust.Principal, name string, input json.RawMessage) (output any, resultErr error) {
 	d, ok := contracts.Descriptor(name)
 	if !ok {
 		return nil, contracts.ErrUnsupported
+	}
+	if p.Kind == "agent" && s.Authority != nil {
+		current, err := s.Authority.Principal(p.ID)
+		if err != nil {
+			return nil, err
+		}
+		current.Grants = trust.EffectiveGrants(current.Grants, p.Grants)
+		p = current
+	}
+	if d.Kind != contracts.CommandOp && name != "records.get" && name != "records.query" && name != "search" && name != "sources.status" && name != "replica.status" {
+		defer func() {
+			if err := s.recordAgentRead(context.WithoutCancel(ctx), p, name); err != nil && resultErr == nil {
+				resultErr = err
+			}
+		}()
 	}
 	switch name {
 	case "messages.chats":
