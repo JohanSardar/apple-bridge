@@ -1,15 +1,29 @@
-import { createSignal, onCleanup, untrack } from 'solid-js';
+import { createRoot, createSignal, onCleanup, untrack } from 'solid-js';
 import { api, APIError } from '../../auth/api';
 import type { LiveClient } from '../../data/live';
 import type { ChatSummary } from '../../data/types';
 import { array, fields, text, type Handle } from './types';
 import { initials } from '../format';
-export function createHandlesCache(live: LiveClient, capacity = 4096) {
+const caches=new WeakMap<LiveClient,{cache:ReturnType<typeof buildCache>;dispose:()=>void;users:number}>();
+export function createHandlesCache(live:LiveClient,capacity=4096){
+    let entry=caches.get(live);
+    if(!entry){
+        let dispose=()=>{};
+        const cache=createRoot(release=>{dispose=release;return buildCache(live,capacity);});
+        entry={cache,dispose,users:0};
+        caches.set(live,entry);
+    }
+    const shared=entry;
+    shared.users++;
+    onCleanup(()=>{shared.users--;if(!shared.users){shared.dispose();caches.delete(live);}});
+    return shared.cache;
+}
+function buildCache(live:LiveClient,capacity:number) {
     const [handles, setHandles] = createSignal<ReadonlyMap<string,Handle>>(new Map());
     const [revision,setRevision]=createSignal(0);
     const subscriptions = new Map<string, ReturnType<LiveClient['subscribe']>>();
-    const resolved=new Set<string>(),inFlight=new Set<string>(),pending=new Set<string>();
-    let frame = 0, unavailable=false, stopped=false, resolving=false;
+    const resolved=new Set<string>(),inFlight=new Set<string>(),pending=new Set<string>(),fallbackPending=new Set<string>();
+    let frame = 0, fallbackFrame=0, unavailable=false, stopped=false, resolving=false;
     function evict(id:string){resolved.delete(id);subscriptions.get(id)?.dispose();subscriptions.delete(id);}
     function put(id: string, data: Record<string,unknown>) {
         const display = text(data.display_name ?? data.full_name ?? data.name ?? data.address);
@@ -28,13 +42,22 @@ export function createHandlesCache(live: LiveClient, capacity = 4096) {
     function seed(chats: readonly ChatSummary[]) {
         for (const chat of chats) for (const participant of array(chat.chat.data.participants)) { const data=fields(participant); put(text(data.handle_id ?? data.id),data); }
     }
+    function scheduleFallback(){
+        if(fallbackFrame||stopped||!fallbackPending.size||subscriptions.size>=48)return;
+        fallbackFrame=requestAnimationFrame(()=>{
+            fallbackFrame=0;
+            for(const id of fallbackPending){
+                if(subscriptions.size>=48)break;
+                fallbackPending.delete(id);
+                subscriptions.set(id,live.subscribe('record',{collection:'messages.handle',id}));
+            }
+            setRevision(value=>value+1);
+        });
+    }
     function fallback(ids:readonly string[]){
         if(stopped)return;
-        for(const id of ids)if(!subscriptions.has(id)){
-            while(subscriptions.size>=48){const key=subscriptions.keys().next().value!;evict(key);}
-            subscriptions.set(id,live.subscribe('record',{collection:'messages.handle',id}));
-        }
-        setRevision(value=>value+1);
+        for(const id of ids)if(!subscriptions.has(id)&&!resolved.has(id))fallbackPending.add(id);
+        scheduleFallback();
     }
     async function resolve(ids:string[]){
         try {
@@ -56,14 +79,15 @@ export function createHandlesCache(live: LiveClient, capacity = 4096) {
         frame=requestAnimationFrame(()=>{frame=0;const ids=[...pending].slice(0,500);for(const id of ids){pending.delete(id);inFlight.add(id);}resolving=true;void resolve(ids);});
     }
     function ensure(ids: readonly string[]) {
-        for (const id of ids) if(id&&!resolved.has(id)&&!inFlight.has(id)&&!subscriptions.has(id))pending.add(id);
+        for (const id of ids) if(id&&!resolved.has(id)&&!inFlight.has(id)&&!subscriptions.has(id)&&!fallbackPending.has(id))pending.add(id);
         schedule();
     }
     function read() {
         revision();
-        for(const [id,subscription] of subscriptions) { const record=subscription.data().records?.[0];if(record){put(id,record.data);if(untrack(handles).has(id))resolved.add(id);} }
+        for(const [id,subscription] of subscriptions){const data=subscription.data();if(data.records===undefined)continue;const record=data.records[0];if(record)put(id,record.data);resolved.add(id);subscription.dispose();subscriptions.delete(id);}
+        scheduleFallback();
         return handles();
     }
-    onCleanup(()=>{stopped=true;cancelAnimationFrame(frame);for(const subscription of subscriptions.values())subscription.dispose();});
+    onCleanup(()=>{stopped=true;cancelAnimationFrame(frame);cancelAnimationFrame(fallbackFrame);for(const subscription of subscriptions.values())subscription.dispose();});
     return {read,ensure,seed};
 }
