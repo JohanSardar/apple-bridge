@@ -13,6 +13,8 @@ public final class CalendarSource: Source {
     private let baselineURL: URL
     private let commandsEnabled: Bool
     private let lookupURL: URL
+    private let offeredURL: URL
+    private var offered: [String: JSON] = [:]
     private var lookups: [String: JSON] = [:]
     private var committed: [String: JSON] = [:]
     private var scanning = false
@@ -22,6 +24,8 @@ public final class CalendarSource: Source {
         self.gate = gate; self.commandsEnabled = commandsEnabled
         baselineURL = home.appendingPathComponent("calendar-baseline.json")
         lookupURL = home.appendingPathComponent("calendar-lookups.json")
+        offeredURL = home.appendingPathComponent("calendar-offered.json")
+        if FileManager.default.fileExists(atPath: offeredURL.path) { offered = try JSONDecoder().decode([String: JSON].self, from: Data(contentsOf: offeredURL)) }
         if FileManager.default.fileExists(atPath: lookupURL.path) { lookups = try JSONDecoder().decode([String: JSON].self, from: Data(contentsOf: lookupURL)) }
         if FileManager.default.fileExists(atPath: baselineURL.path) {
             committed = try JSONDecoder().decode([String: JSON].self, from: Data(contentsOf: baselineURL))
@@ -96,6 +100,26 @@ public final class CalendarSource: Source {
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: baselineURL.path)
     }
 
+    private func saveOffered(_ values: [String: JSON]) throws {
+        guard values != offered else { return }
+        try JSONEncoder().encode(values).write(to: offeredURL, options: .atomic)
+        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: offeredURL.path)
+        offered = values
+    }
+
+    private func offer(_ values: [JSON]) throws {
+        var pending = offered
+        for value in values where value["kind"].string == "upsert" {
+            let identity = value["collection"].string + "/" + value["native_key"].string
+            if committed[identity] == nil { pending[identity] = value }
+        }
+        if pending != offered {
+            try JSONEncoder().encode(lookups).write(to: lookupURL, options: .atomic)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: lookupURL.path)
+        }
+        try saveOffered(pending)
+    }
+
     private func hash(_ value: JSON) throws -> Data {
         let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
         return Data(SHA256.hash(data: try encoder.encode(value)))
@@ -116,6 +140,7 @@ public final class CalendarSource: Source {
         let bounds = CalendarTime.window(now)
         var current: [String: JSON] = [:]
         var pending: [JSON] = []
+        let streamInitial = committed.isEmpty
         guard gate.authorized(.event) else { throw SourceFailure.permissionMissing }
         for calendar in gate.store.calendars(for: .event) {
             let value = observation("calendar.calendar", calendar.calendarIdentifier, calendarData(calendar))
@@ -140,19 +165,20 @@ public final class CalendarSource: Source {
             gate.trace.record("refetch", keys: pending.map { $0["native_key"].string }, fields: ["notification_ns": .integer(notificationAt), "debounce_ns": .integer(debounceAt), "started_ns": .integer(refetchStarted), "finished_ns": .integer(CaptureTrace.now()), "live": .bool(live || index == 0)])
             gate.trace.record("calendar_chunk", fields: ["index": .number(Double(index)), "records": .number(Double(current.count)), "changes": .number(Double(pending.count))])
             guard gate.authorized(.event) else { throw SourceFailure.permissionMissing }
-            if !pending.isEmpty {
-                try save(committed.merging(current) { _, new in new })
+            if streamInitial && !pending.isEmpty {
+                try offer(pending)
                 try await sink.emit(source: name, generation: "eventkit-calendar-v1", observations: pending, scanID: "", scanStartedAt: started, scope: [], completionEvidence: "", blobHandles: [:], live: live || index == 0)
-            }
-            pending = []
-            await Task.yield()
-            if !forceFull && gate.calendarDebounceAt != revision {
                 committed.merge(current) { _, new in new }
                 try save(committed)
+                try saveOffered(offered.filter { committed[$0.key] == nil })
+            }
+            if streamInitial { pending = [] }
+            await Task.yield()
+            if !forceFull && gate.calendarDebounceAt != revision {
                 return false
             }
         }
-        for (identity, previous) in committed where current[identity] == nil {
+        for (identity, previous) in committed.merging(offered, uniquingKeysWith: { accepted, _ in accepted }) where current[identity] == nil {
             if current.values.contains(where: { !$0["scoped_alias"].string.isEmpty && $0["scoped_alias"] == previous["scoped_alias"] }) { continue }
             var absent = previous.object
             absent["observed_at"] = .string(timestamp()); absent["revalidated"] = .bool(true)
@@ -165,17 +191,36 @@ public final class CalendarSource: Source {
                     guard let start = try? CalendarTime.date(value["start"].string, allDay: value["all_day"].bool, zone: zone), let end = try? CalendarTime.date(value["end"].string, allDay: value["all_day"].bool, zone: zone) else { current[identity] = previous; continue }
                     evicted = start >= bounds.end || end <= bounds.start
                     if !evicted { current[identity] = previous; continue }
-                } else if !knownAbsent(native) {
-                    current[identity] = previous
-                    continue
+                } else {
+                    let value = previous["data"]
+                    let original = value["occurrence_date"].string.isEmpty ? value["start"].string : value["occurrence_date"].string
+                    guard let date = try? CalendarTime.date(original, allDay: value["all_day"].bool, zone: .current) else { current[identity] = previous; continue }
+                    evicted = date < bounds.start || date >= bounds.end
                 }
             }
             absent["kind"] = .string(evicted ? "evict" : "absent")
             pending.append(.object(absent))
         }
         guard gate.authorized(.event) else { throw SourceFailure.permissionMissing }
-        try await sink.emit(source: name, generation: "eventkit-calendar-v1", observations: pending, scanID: UUID().uuidString, scanStartedAt: started, scope: ["calendar.calendar", "calendar.event"], completionEvidence: "complete", blobHandles: [:], live: live)
+        let unchanged = pending.filter { value in
+            let identity = value["collection"].string + "/" + value["native_key"].string
+            return value["kind"].string == "upsert" && value["data"] == committed[identity]?["data"] && value["scoped_alias"] == committed[identity]?["scoped_alias"]
+        }
+        let unchangedKeys = Set(unchanged.map { $0["collection"].string + "/" + $0["native_key"].string })
+        pending.removeAll { unchangedKeys.contains($0["collection"].string + "/" + $0["native_key"].string) }
+        let captureBytes = try JSONEncoder().encode(JSON.array(pending)).count
+        if captureBytes > 240000 {
+            gate.trace.record("calendar_atomic_capture_too_large", fields: ["records": .number(Double(pending.count))])
+            throw SourceFailure.unavailable
+        }
+        if forceFull && !unchanged.isEmpty {
+            try await sink.emit(source: name, generation: "eventkit-calendar-v1", observations: unchanged, scanID: "", scanStartedAt: started, scope: [], completionEvidence: "", blobHandles: [:], live: false)
+            if gate.calendarDebounceAt != revision { return false }
+        }
+        try offer(pending)
+        try await sink.emit(source: name, generation: "eventkit-calendar-v1", observations: pending, scanID: UUID().uuidString, scanStartedAt: started, scope: ["calendar.calendar", "calendar.event"], completionEvidence: "complete", blobHandles: [:], live: true)
         try save(current); committed = current; forceFull = false
+        try saveOffered([:])
         gate.trace.record("calendar_scan_complete", fields: ["records": .number(Double(current.count))])
  let readiness=await open()
  try await sink.sourceState(source:name,state:readiness.state,coverage:readiness.coverage,capabilities:readiness.capabilities,reason:readiness.reason)
@@ -183,7 +228,6 @@ public final class CalendarSource: Source {
     }
 
     public func reconcile(into sink: any ObservationSink) async throws {
-        forceFull = true
         try await scan(into: sink, live: true)
     }
 
@@ -221,7 +265,24 @@ public final class CalendarSource: Source {
             guard event.calendar.calendarIdentifier == identity["calendar"].string, event.calendar.source.sourceIdentifier == identity["account"].string else { return false }
             if key(event) == native { return true }
             guard !identity["external"].string.isEmpty, seriesIdentifier(event) == identity["external"].string else { return false }
+            if event.isAllDay, let original = event.occurrenceDate, let civil = native.split(separator: "|").last, civil.count == 10 {
+                return CalendarTime.floating(original, zone: .current) == String(civil)
+            }
             return (event.occurrenceDate.map { JSON.string(timestamp($0)) } ?? .null) == identity["occurrence"]
+        }
+        if native.contains("|"), let original = parseTimestamp(identity["occurrence"].string) {
+            var originals = [original]
+            if let civil = native.split(separator: "|").last, civil.count == 10 {
+                originals += [TimeZone.current, TimeZone(secondsFromGMT: 0)!].compactMap { try? CalendarTime.date(String(civil), allDay: true, zone: $0) }
+            }
+            for anchor in Set(originals) {
+                let alias = identity["external"].string + "/RID=" + String(Int(anchor.timeIntervalSinceReferenceDate))
+                if let event = gate.store.calendarItems(withExternalIdentifier: alias).compactMap({ $0 as? EKEvent }).first(where: matches) { return event }
+            }
+            let anchor = originals.count > 1 ? originals[1] : original
+            if let event = (try? events(DateInterval(start: anchor.addingTimeInterval(-1), end: anchor.addingTimeInterval(1))))?.first(where: matches) { return event }
+            if let event = gate.store.event(withIdentifier: identity["event_identifier"].string), event.isDetached, matches(event) { return event }
+            return nil
         }
         if let event = gate.store.event(withIdentifier: identity["event_identifier"].string), matches(event) { return event }
         if !identity["external"].string.isEmpty {
