@@ -18,6 +18,10 @@ func runRemindersStorePerf(ctx context.Context, s Scenario, level string) Eviden
 	add := func(name string, passed bool) {
 		e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: passed})
 	}
+	if err := os.MkdirAll("/tmp/ablab", 0700); err != nil {
+		add("private_profile_directory", false)
+		return e
+	}
 	directory, err := os.MkdirTemp("/tmp/ablab", "reminders-store-perf-")
 	add("private_profile_directory", err == nil)
 	if err != nil {
@@ -79,7 +83,22 @@ func runRemindersStorePerf(ctx context.Context, s Scenario, level string) Eviden
 	}
 	add("full_and_incremental_measured", e.Latency["warm_full"].Samples == 200 && e.Latency["warm_incremental_unchanged"].Samples == 200)
 	if level == "sim" {
-		add("changed_history_measured", e.Latency["warm_incremental_changed_1"].Samples == 200 && e.Latency["warm_incremental_changed_1000"].Samples == 200)
+		complete := true
+		for _, mode := range []string{"warm_incremental_changed_1", "warm_incremental_changed_10", "warm_incremental_changed_100", "warm_incremental_changed_1000"} {
+			complete = complete && e.Latency[mode].Samples == 200
+		}
+		add("changed_history_measured", complete)
+	}
+	if level == "real" {
+		var responsiveness struct {
+			MainQueue struct {
+				Under16 bool     `json:"under_16_ms"`
+				Max     *float64 `json:"max_ms"`
+				Samples int      `json:"samples"`
+			} `json:"main_queue_delay"`
+		}
+		responsive := json.Unmarshal(profile["responsiveness"], &responsiveness) == nil && responsiveness.MainQueue.Samples > 0 && responsiveness.MainQueue.Under16 && responsiveness.MainQueue.Max != nil && *responsiveness.MainQueue.Max >= 0 && *responsiveness.MainQueue.Max < 16
+		add("cold_full_read_main_queue_blocking_under_16_ms", responsive)
 	}
 	e.Metrics = map[string]any{"profile": profile}
 	e.Passed = true
