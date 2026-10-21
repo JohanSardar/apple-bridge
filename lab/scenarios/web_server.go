@@ -121,6 +121,7 @@ func runWebServer(ctx context.Context, s Scenario, level string) Evidence {
 		resp, _ = request("GET", "/messages/test", "")
 		add("app_route_fallback", resp != nil && resp.StatusCode == 200)
 	case "WEB-AUTH-ORIGIN":
+		runWebPinnedHosts(ctx, w, add)
 		for _, origin := range []string{"", "https://foreign.example"} {
 			for _, path := range []string{"/web/v1/login/options", "/web/v1/enroll/options", "/web/v1/logout"} {
 				resp, _ := request("POST", path, origin)
