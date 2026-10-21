@@ -1,0 +1,171 @@
+{
+  "head": "b1d467bf9f89c2704760800b442dc7afacfba3ae",
+  "functional_groups": 19,
+  "functional_project_passes": 193,
+  "warm_offline_reload_ms": {
+    "samples": 12,
+    "min": 62,
+    "p50": 87,
+    "p95": 148,
+    "max": 148
+  },
+  "snapshot_bytes": {
+    "samples": 12,
+    "min": 492823,
+    "p50": 494000,
+    "p95": 494050,
+    "max": 494050
+  },
+  "projects": [
+    {
+      "project": "chromium-dark-desktop",
+      "count": 577,
+      "warm_reload_ms": 65,
+      "snapshot_bytes": 493900
+    },
+    {
+      "project": "chromium-dark-phone",
+      "count": 577,
+      "warm_reload_ms": 62,
+      "snapshot_bytes": 493950
+    },
+    {
+      "project": "chromium-light-desktop",
+      "count": 577,
+      "warm_reload_ms": 70,
+      "snapshot_bytes": 494050
+    },
+    {
+      "project": "chromium-light-phone",
+      "count": 577,
+      "warm_reload_ms": 80,
+      "snapshot_bytes": 494000
+    },
+    {
+      "project": "firefox-dark-desktop",
+      "count": 577,
+      "warm_reload_ms": 136,
+      "snapshot_bytes": 494050
+    },
+    {
+      "project": "firefox-dark-phone",
+      "count": 577,
+      "warm_reload_ms": 148,
+      "snapshot_bytes": 494049
+    },
+    {
+      "project": "firefox-light-desktop",
+      "count": 577,
+      "warm_reload_ms": 113,
+      "snapshot_bytes": 492923
+    },
+    {
+      "project": "firefox-light-phone",
+      "count": 577,
+      "warm_reload_ms": 103,
+      "snapshot_bytes": 493950
+    },
+    {
+      "project": "webkit-dark-desktop",
+      "count": 577,
+      "warm_reload_ms": 90,
+      "snapshot_bytes": 494050
+    },
+    {
+      "project": "webkit-dark-phone",
+      "count": 577,
+      "warm_reload_ms": 78,
+      "snapshot_bytes": 492823
+    },
+    {
+      "project": "webkit-light-desktop",
+      "count": 577,
+      "warm_reload_ms": 136,
+      "snapshot_bytes": 494000
+    },
+    {
+      "project": "webkit-light-phone",
+      "count": 577,
+      "warm_reload_ms": 87,
+      "snapshot_bytes": 494000
+    }
+  ],
+  "fixture_setup": {
+    "WEB-MSG-CHATS-STORE": {
+      "fixture_setup_ms": {
+        "samples": 24,
+        "min": 3057,
+        "p50": 5398,
+        "p95": 12121,
+        "max": 12239
+      },
+      "fixture_flush_ms": {
+        "samples": 24,
+        "min": 1441,
+        "p50": 2649,
+        "p95": 3538,
+        "max": 4337
+      },
+      "fixture_flush_budget_ms": 180000
+    },
+    "WEB-MSG-CHATS-CACHE": {
+      "fixture_setup_ms": {
+        "samples": 24,
+        "min": 3200,
+        "p50": 6055,
+        "p95": 9169,
+        "max": 9688
+      },
+      "fixture_flush_ms": {
+        "samples": 24,
+        "min": 1530,
+        "p50": 2421,
+        "p95": 3322,
+        "max": 3344
+      },
+      "fixture_flush_budget_ms": 180000
+    },
+    "WEB-CONTACT-AVATAR-THUMB": {
+      "fixture_flush_ms": {
+        "samples": 12,
+        "min": 1480,
+        "p50": 2316,
+        "p95": 4115,
+        "max": 4115
+      },
+      "fixture_flush_budget_ms": 180000
+    }
+  },
+  "endpoint": "offline reload of the live chats store fixture, not list input/frame performance",
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[6.69 8.89 11.71] cpus=8 other_heavy=1"
+  },
+  "post_rebase_refresh": {
+    "head": "1b1f1c4cf716b0ace34ecb8e008ca0fe923b588c",
+    "base": "f48cdc3",
+    "focused": [
+      {
+        "scenario": "WEB-MSG-CHATS-STORE",
+        "projects": [
+          "webkit-dark-phone"
+        ],
+        "passed": true
+      },
+      {
+        "scenario": "WEB-MSG-CHATS-CACHE",
+        "projects": [
+          "firefox-dark-phone"
+        ],
+        "passed": true
+      },
+      {
+        "scenario": "WEB-CONTACT-AVATAR-THUMB",
+        "projects": [
+          "chromium-light-desktop"
+        ],
+        "passed": true
+      }
+    ]
+  }
+}
