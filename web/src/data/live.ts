@@ -1,4 +1,4 @@
-import { createSignal } from 'solid-js';
+import { createSignal, untrack } from 'solid-js';
 import { viewCache } from './cache';
 import { requireInput } from './input';
 import { parseSession, type Cursor, type ViewData, type ViewChange, type ViewName, type DeviceSession, type CommandState } from './types';
@@ -209,9 +209,9 @@ export class LiveClient {
             sub.cursor = cached.cursor;
             update(cached.data);
         } }).catch(() => { });
-        if (this.status() === 'connected')
+        if (untrack(this.status) === 'connected')
             this.send({ t: 'sub', id, view, args });
-        return { data, cursor: () => { data(); return sub.cursor; }, dispose: () => { this.subscriptions.delete(id); if (this.status() === 'connected')
+        return { data, cursor: () => { data(); return sub.cursor; }, dispose: () => { this.subscriptions.delete(id); if (untrack(this.status) === 'connected')
                 this.send({ t: 'unsub', id }); } };
     }
     command(op: string, args: unknown, optimistic?: unknown, expectedVersion?: number) { requireInput(); if (this.status() !== 'connected')

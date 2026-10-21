@@ -19,5 +19,7 @@ test('WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals an
     await page.getByLabel('Chat filter',{exact:true}).selectOption('unread');await expect.poll(async()=>Number(await count.textContent())).toBeLessThan(total);await expect.poll(async()=>Number(await count.textContent())).toBeGreaterThan(0);await expect.poll(()=>frames.some(frame=>frame.t==='sub'&&frame.args?.filter==='unread')).toBe(true);
     await page.getByLabel('Chat filter',{exact:true}).selectOption('known');await expect.poll(async()=>Number(await count.textContent())).toBeGreaterThan(0);await expect.poll(()=>frames.some(frame=>frame.t==='sub'&&frame.args?.filter==='known')).toBe(true);
     await page.getByLabel('Chat filter',{exact:true}).selectOption('all');await expect(count).toHaveText(String(total));
+    const root=frames.find(frame=>frame.t==='sub'&&frame.view==='chats'&&!frame.args?.after&&frame.args?.filter==='all').id;frames.length=0;
+    await page.getByRole('button',{name:'Reconnect live view'}).click();await expect(page.getByRole('status',{name:'Connection'})).toHaveText('connected');await expect.poll(()=>frames.some(frame=>frame.t==='sub'&&frame.id===root&&frame.cursor)).toBe(true);await expect(count).toHaveText(String(total));
     await page.routeWebSocket('**/web/v1/live',()=>{});await page.reload();await expect(count).toHaveText(String(total));
 });
