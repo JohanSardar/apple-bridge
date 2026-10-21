@@ -17,6 +17,7 @@ export function VirtualList<T>(props: {
     fixedHeights?: boolean;
     selectedKey?: string;
     keepTop?: boolean;
+    windowKey?: string;
     onActive?: (item:T)=>void;
     onBottom?: (value:boolean)=>void;
     label: string;
@@ -28,6 +29,7 @@ export function VirtualList<T>(props: {
     let viewport!: HTMLDivElement;
     let positions = new Positions([]), items: readonly T[] = [];
     let keyIndex = new Map<string, number>();
+    let previousWindowKey=props.windowKey;
     const cache = new Map<string, number>();
     const [revision, setRevision] = createSignal(0), [scroll, setScroll] = createSignal(0), [height, setHeight] = createSignal(800), [active, setActive] = createSignal(0);
     let observer: ResizeObserver | undefined, frame = 0;
@@ -39,6 +41,7 @@ export function VirtualList<T>(props: {
     createEffect(() => {
         const next = props.items;
         const finish=beginWork('virtual-items');
+        const shifted=props.windowKey!==previousWindowKey;previousWindowKey=props.windowKey;
         const previous = viewport ? anchor() : undefined;
         const atTop=viewport ? viewport.scrollTop<=2 : true;
         const atBottom = viewport ? viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight <= 2 : false;
@@ -47,7 +50,7 @@ export function VirtualList<T>(props: {
         keyIndex = new Map(items.map((item, index) => [props.keyFor(item), index]));
         positions = new Positions(items.map(item => { const estimate=(props.fixedHeights ? props.estimate?.(item) : cache.get(props.keyFor(item)) ?? props.estimate?.(item)) ?? 60; return Number.isFinite(estimate)&&estimate>0?estimate:60; }));
         if (viewport) {
-            if (props.bottomAnchored && (atBottom || first)) {
+            if (props.bottomAnchored && (atBottom || first) && (!shifted || first)) {
                 viewport.scrollTop = Math.max(0, positions.total - viewport.clientHeight);
                 queueMicrotask(() => { viewport.scrollTop = viewport.scrollHeight; refresh(); });
             }
