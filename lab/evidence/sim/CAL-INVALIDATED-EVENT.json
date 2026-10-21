@@ -1,0 +1,40 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[5.7 8.08 10.92] cpus=8 other_heavy=0"
+  },
+  "run_id": "cal_01M5GDM9ZP0Y7MS2YG5J5WA0P9",
+  "scenario": "CAL-INVALIDATED-EVENT",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "fbd415142d07faa24aec046fb7547e48ce8dc4c8",
+  "at": "2026-10-21T23:44:32.246288Z",
+  "assertions": [
+    {
+      "name": "native_calendar_checks_build",
+      "passed": true
+    },
+    {
+      "name": "native_checks_output_available",
+      "passed": true
+    },
+    {
+      "name": "invalidated_calendar_object_rebuilds_without_trap",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ],
+  "conditions": {
+    "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
+    "heavy_slots_in_use": "1",
+    "load_average": "5.70 8.08 10.92",
+    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"
+  }
+}
