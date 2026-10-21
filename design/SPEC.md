@@ -545,7 +545,7 @@ Submit(principal, {id, op, args, expected_version?, expires_at?})
 
 ### 11.3 Replica
 
-`CommandTarget = RemoteGateway`: HTTPS POST to the gateway peer listener over mTLS with a **delegated identity** header: `{replica_id, local_principal, local_grants, command_id, request_hash, iat}` signed with the replica's device key. The gateway verifies the replica certificate, signature freshness (≤ 60 s), that `local_grants ⊆ replica's delegable grants`, and authorizes against them. Disconnected → `ErrUnavailable` immediately. Response lost → status lookup by the same ID.
+`CommandTarget = RemoteGateway`: direct replicas use HTTPS POST to the gateway peer listener over mTLS; gateway-dialed and Remote replicas use framed command requests over their authenticated feed connection. Both carry a **delegated identity**: `{replica_id, local_principal, local_grants, command_id, request_hash, iat}` signed with the replica's device key. The gateway verifies the replica certificate, signature freshness (≤ 60 s), that `local_grants ⊆ replica's delegable grants`, and authorizes against them. Disconnected → `ErrUnavailable` immediately. Response lost → status lookup by the same ID.
 
 ---
 

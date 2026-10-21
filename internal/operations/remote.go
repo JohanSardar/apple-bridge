@@ -58,7 +58,7 @@ func (g *RemoteGateway) call(ctx context.Context, p trust.Principal, f forwarded
 	if err != nil {
 		return err
 	}
-	if e.Dial != "" {
+	if e.Dial != "" || e.Remote {
 		if g.Exchange == nil {
 			return contracts.ErrUnavailable
 		}
