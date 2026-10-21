@@ -222,8 +222,8 @@
     {
       "path": "rich-link.plist",
       "origin": "synthetic",
-      "sha256": "db5e8734afa624335e08c7c38c422ca331fb040995fc3ef75d1e536b7f092242",
-      "bytes": 460
+      "sha256": "70216d1654060550398b383df9d2d5b04fad06919d083768ecdc48a2e35f93ca",
+      "bytes": 535
     },
     {
       "path": "rich-location.plist",
