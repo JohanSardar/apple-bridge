@@ -321,7 +321,7 @@ public final class CalendarSource: Source {
     public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {
         forceFull = true
         let changes = gate.changes(calendar: true)
-        let databaseHints = CalendarDatabaseHints()
+        let databaseHints = CalendarDatabaseHints(trace: gate.trace)
         let hints = Task { @AgendaActor [gate] in
             for await delivered in databaseHints.changes {
                 gate.calendarHint(delivered)

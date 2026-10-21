@@ -254,6 +254,19 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 		switch s.ID {
 		case "CORE-LIVE-LATENCY":
 			e.Conditions = nativeConditions()
+			for key, value := range calendarHostConditions() {
+				e.Conditions[key] = value
+			}
+			calendarAuditStarted := time.Now()
+			defer func() {
+				if sleep(ctx, 2*time.Second) != nil {
+					result.Passed = false
+					return
+				}
+				ok := calendarReminderHintAudit(w, &result, calendarAuditStarted, time.Now())
+				result.Assertions = append(result.Assertions, Assertion{Name: "calendar_full_scans_require_corroborated_hints", Passed: ok})
+				result.Passed = result.Passed && ok
+			}()
 			cleanupTag := "[ab-test " + contracts.NewID("post-cleanup") + "]"
 			burstCommandTitle := cleanupTag + " post-burst command target"
 			cleanupTitle := cleanupTag + " post-cleanup command target"
