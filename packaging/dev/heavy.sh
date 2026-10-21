@@ -1,6 +1,6 @@
 #!/bin/bash
 set -euo pipefail
-if [ -z "${SDKROOT:-}" ]; then SDKROOT=$("$(dirname "$0")/sdkroot.sh"); [ -n "$SDKROOT" ] && export SDKROOT || unset SDKROOT; fi
+if [ -z "${APPLE_BRIDGE_KEEP_SDKROOT:-}" ]; then matching=$("$(dirname "$0")/sdkroot.sh"); [ -n "$matching" ] && export SDKROOT="$matching"; fi
 if [ -n "${APPLE_BRIDGE_HEAVY_SLOT:-}" ]; then
   [ "${1:-}" = "--exclusive" ] && shift
   exec "$@"

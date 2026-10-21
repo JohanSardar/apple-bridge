@@ -1,6 +1,8 @@
-SDKROOT ?= $(shell packaging/dev/sdkroot.sh)
-ifneq ($(SDKROOT),)
-export SDKROOT
+ifeq ($(APPLE_BRIDGE_KEEP_SDKROOT),)
+MATCHING_SDKROOT := $(shell packaging/dev/sdkroot.sh)
+ifneq ($(MATCHING_SDKROOT),)
+export SDKROOT := $(MATCHING_SDKROOT)
+endif
 endif
 
 export PATH := /opt/homebrew/bin:$(HOME)/go/bin:$(PATH)
