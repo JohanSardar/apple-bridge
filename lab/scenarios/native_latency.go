@@ -12,6 +12,10 @@ import (
 )
 
 type nativeTrace struct {
+	Source     string         `json:"source"`
+	DurationMS float64        `json:"duration_ms"`
+	Histogram  map[string]any `json:"histogram"`
+
 	DeliveredNS         int64    `json:"delivered_ns"`
 	CommitStartedWallNS float64  `json:"commit_started_wall_ns"`
 	Live                bool     `json:"live"`
@@ -27,6 +31,10 @@ type nativeTrace struct {
 }
 
 type NativeTiming struct {
+	StoreRefreshStartedNS  int64   `json:"store_refresh_started_ns,omitempty"`
+	StoreRefreshFinishedNS int64   `json:"store_refresh_finished_ns,omitempty"`
+	StoreRefreshMS         float64 `json:"store_refresh_ms,omitempty"`
+
 	GatewayVisibleWallNS  int64   `json:"gateway_visible_wall_ns"`
 	ReplicaVisibleWallNS  int64   `json:"replica_visible_wall_ns"`
 	CommitStartedWallNS   float64 `json:"commit_started_wall_ns"`
@@ -67,6 +75,30 @@ func readNativeTrace(path string) []nativeTrace {
 func nativeLatencyEvidence(w *world.World, e *Evidence, effects []any, observers []*watcher) {
 	trace := readNativeTrace(filepath.Join(w.Gateway.Home, "helper", "capture-trace.jsonl"))
 	commits := readNativeTrace(filepath.Join(w.Gateway.Home, "capture-trace.jsonl"))
+	nativeStartupEvidence(w, e, trace)
+	refreshes := []nativeTrace{}
+	for _, event := range trace {
+		if event.Stage == "reminders_store_refresh" {
+			refreshes = append(refreshes, event)
+		}
+	}
+	if len(refreshes) > 0 {
+		if e.Metrics == nil {
+			e.Metrics = map[string]any{}
+		}
+		e.Metrics["reminders_store_refresh_histogram"] = refreshes[len(refreshes)-1].Histogram
+		samples := make([]map[string]any, 0, len(refreshes))
+		warm := []float64{}
+		for index, event := range refreshes {
+			samples = append(samples, map[string]any{"index": index, "started_ns": event.StartedNS, "finished_ns": event.FinishedNS, "duration_ms": event.DurationMS})
+			if index > 0 {
+				warm = append(warm, event.DurationMS)
+			}
+		}
+		e.Metrics["reminders_store_refresh_samples"] = samples
+		e.Latency["reminders_store_refresh_warm"] = stats(warm, 0)
+	}
+
 	values := map[string][]float64{}
 	sample := func(name string, from, through int64) {
 		if from > 0 && through >= from {
@@ -114,6 +146,12 @@ func nativeLatencyEvidence(w *world.World, e *Evidence, effects []any, observers
 					row.DebounceNS = event.DebounceNS
 					row.RefetchStartedNS = event.StartedNS
 					row.RefetchFinishedNS = event.FinishedNS
+				}
+			case "reminders_store_refresh":
+				if row.StoreRefreshFinishedNS == 0 {
+					row.StoreRefreshStartedNS = event.StartedNS
+					row.StoreRefreshFinishedNS = event.FinishedNS
+					row.StoreRefreshMS = event.DurationMS
 				}
 			case "capture_sent":
 				if row.CaptureSentNS == 0 {
@@ -165,7 +203,7 @@ func nativeLatencyEvidence(w *world.World, e *Evidence, effects []any, observers
 
 func nativeConditions() map[string]string {
 	out := map[string]string{}
-	for name, args := range map[string][]string{"cpu": {"sh", "-c", "top -l 1 -n 0 | sed -n '/CPU usage:/p'"}, "uptime": {"uptime"}, "memory_pressure": {"memory_pressure", "-Q"}, "heavy_slots": {"sh", "-c", "for slot in /tmp/apple-bridge-heavy-*.lock/pid; do cat \"$slot\"; done"}} {
+	for name, args := range map[string][]string{"cpu": {"sh", "-c", "top -l 1 -n 0 | sed -n '/CPU usage:/p'"}, "uptime": {"uptime"}, "swap": {"sysctl", "vm.swapusage"}, "memory_pressure": {"memory_pressure", "-Q"}, "heavy_slots": {"sh", "-c", "for slot in /tmp/apple-bridge-heavy-*.lock/pid; do cat \"$slot\"; done"}} {
 		bytes, err := exec.Command(args[0], args[1:]...).Output()
 		if err == nil {
 			out[name] = string(bytes)
