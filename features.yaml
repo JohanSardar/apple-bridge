@@ -480,6 +480,7 @@ features:
       - {id: WEB-RELAY-COMMAND, levels: [replica]}
       - {id: WEB-RELAY-PUBLIC-AGENTS, levels: [replica]}
       - {id: WEB-RELAY-REPLICA, levels: [replica]}
+      - {id: WEB-RELAY-NATIVE-AGENTS, levels: [replica]}
   - id: web.messages.read
     title: Messages web app reading at full fidelity (list, transcript, media, viewer, links, effects, details, search)
     requirements: [R-WEB-UI, R-WEB-FAST, R-MSG-DEPTH]

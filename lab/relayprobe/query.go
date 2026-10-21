@@ -42,7 +42,15 @@ func request(ctx context.Context, in input, path string, value, output any) erro
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("local API status %d", resp.StatusCode)
+		var problem struct {
+			Error *contracts.Error `json:"error"`
+		}
+		json.NewDecoder(io.LimitReader(resp.Body, 4096)).Decode(&problem)
+		code := "unknown"
+		if problem.Error != nil {
+			code = problem.Error.Code
+		}
+		return fmt.Errorf("local API %s status %d code %s", path, resp.StatusCode, code)
 	}
 	return json.NewDecoder(io.LimitReader(resp.Body, 4<<20)).Decode(output)
 }
