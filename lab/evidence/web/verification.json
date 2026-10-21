@@ -201,5 +201,36 @@
     "Gateway projects use independent sim worlds; browser auth enrollment and login use Chromium CDP virtual authenticators.",
     "Revocation cleanup failure and initial failures retained under red/.",
     "Warm-load browser navigation clock and automation round trips retained separately."
+  ],
+  "execution_context": "ssh -o ControlPath=none air; export PATH=/opt/homebrew/bin:$HOME/go/bin:$PATH; cd ~/apple-bridge/.worktrees/w1-ui",
+  "runs": [
+    {
+      "command": "make web",
+      "result": "pass"
+    },
+    {
+      "command": "packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios/web/WEB-AUTH-ENROLL.yaml lab/scenarios/web/WEB-AUTH-LOGIN.yaml lab/scenarios/web/WEB-SERVE-EMBED.yaml --level web --json > /tmp/w1-ui-gateway-auth.jsonl",
+      "result": "pass: 4 + 4 + 12 browser configurations"
+    },
+    {
+      "command": "packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios/web/WEB-INPUT-GUARD.yaml --level web --json > /tmp/w1-ui-cookie-scheme.jsonl",
+      "result": "pass: 12 browser configurations"
+    },
+    {
+      "command": "packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios/web/WEB-AUTH-REVOKE.yaml lab/scenarios/web/WEB-LIVE-DELTA.yaml lab/scenarios/web/WEB-LIVE-RESUME.yaml lab/scenarios/web/WEB-SHELL-JOURNEY.yaml lab/scenarios/web/WEB-VIRTUAL-ANCHOR.yaml lab/scenarios/web/WEB-MOTION.yaml lab/scenarios/web/WEB-PERF-SHELL.yaml --level web --json > /tmp/w1-ui-real-rest.jsonl",
+      "result": "live delta, live resume, shell, virtual anchor and motion each passed 12; revoke and performance failed, then were repaired/replaced by later runs"
+    },
+    {
+      "command": "packaging/dev/heavy.sh sh -c \"make lint && go build -p 2 ./... && go run ./cmd/bridge-lab run lab/scenarios/web/WEB-AUTH-REVOKE.yaml lab/scenarios/web/WEB-AUTH-LOGIN.yaml lab/scenarios/web/WEB-CACHE-POLICY.yaml lab/scenarios/web/WEB-PERF-SHELL.yaml --level web --json > /tmp/w1-ui-cache-final.jsonl\" > /tmp/w1-ui-cache-final-checks.log 2>&1",
+      "result": "lint/build pass; revoke12/login4/performance12 pass; mock cache report filename failed, fixed before final run"
+    },
+    {
+      "command": "packaging/dev/heavy.sh sh -c \"make lint && make features && go build -p 2 ./... && cd web && pnpm test:math && cd .. && go run ./cmd/bridge-lab run lab/scenarios/web/WEB-CACHE-POLICY.yaml lab/scenarios/web/WEB-LIVE-MOCK.yaml --level web --json > /tmp/w1-ui-final-mock.jsonl\" > /tmp/w1-ui-final-checks.log 2>&1",
+      "result": "pass: lint, features, Go build, 6 math tests, cache12 and mock live12"
+    },
+    {
+      "command": "packaging/dev/heavy.sh make features",
+      "result": "pass: 31 features; 203/213 scenario-levels; web.frontdoor in_progress because performance acceptance is incomplete"
+    }
   ]
 }
