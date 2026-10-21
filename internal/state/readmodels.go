@@ -131,14 +131,14 @@ func (s *Store) Chats(ctx context.Context, v trust.Visibility, q contracts.Chats
 		args = append(args, c.At, c.At, c.ID)
 	}
 	args = append(args, limit+1)
-	rows, err := tx.QueryContext(ctx, "SELECT r.payload,s.last_activity_at,s.unread_count FROM chat_summary s JOIN records r ON r.collection='messages.chat' AND r.id=s.id WHERE "+where+" ORDER BY s.last_activity_at DESC,s.id LIMIT ?", args...)
+	rows, err := tx.QueryContext(ctx, "SELECT r.payload,s.last_activity_at,s.unread_count,EXISTS(SELECT 1 FROM msg_by_chat m WHERE m.chat_id=s.id AND json_extract(m.payload,'$.data.has_unseen_mention')=1 AND json_extract(m.payload,'$.data.deleted_at') IS NULL) FROM chat_summary s JOIN records r ON r.collection='messages.chat' AND r.id=s.id WHERE "+where+" ORDER BY s.last_activity_at DESC,s.id LIMIT ?", args...)
 	if err != nil {
 		return out, err
 	}
 	for rows.Next() {
 		var raw []byte
 		var summary contracts.ChatSummary
-		if err = rows.Scan(&raw, &summary.LastActivityAt, &summary.UnreadCount); err != nil {
+		if err = rows.Scan(&raw, &summary.LastActivityAt, &summary.UnreadCount, &summary.HasUnseenMention); err != nil {
 			break
 		}
 		if err = json.Unmarshal(raw, &summary.Chat); err != nil {
@@ -158,18 +158,23 @@ func (s *Store) Chats(ctx context.Context, v trust.Visibility, q contracts.Chats
 		last := out.Chats[len(out.Chats)-1]
 		out.Next = encodeView("chats", q.Filter, last.LastActivityAt, last.Chat.ID)
 	}
+	people, err := summaryPeople(ctx, tx, v, out.Chats)
+	if err != nil {
+		return out, err
+	}
+	activities, err := summaryActivities(ctx, tx, out.Chats)
+	if err != nil {
+		return out, err
+	}
 	for i := range out.Chats {
-		if err = fillSummary(ctx, tx, v, &out.Chats[i]); err != nil {
+		if err = fillSummary(ctx, tx, v, &out.Chats[i], people, activities[out.Chats[i].Chat.ID]); err != nil {
 			return out, err
 		}
 	}
 	return out, nil
 }
-func fillSummary(ctx context.Context, tx *sql.Tx, v trust.Visibility, s *contracts.ChatSummary) error {
+func fillSummary(ctx context.Context, tx *sql.Tx, v trust.Visibility, s *contracts.ChatSummary, people map[string]contracts.Record, activity summaryActivity) error {
 	d := modelFields(s.Chat)
-	if err := tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM msg_by_chat WHERE chat_id=? AND json_extract(payload,'$.data.has_unseen_mention')=1 AND json_extract(payload,'$.data.deleted_at') IS NULL)", s.Chat.ID).Scan(&s.HasUnseenMention); err != nil {
-		return err
-	}
 	if n, ok := d["pinned_index"].(float64); ok {
 		value := int(n)
 		s.PinnedIndex = &value
@@ -184,20 +189,17 @@ func fillSummary(ctx context.Context, tx *sql.Tx, v trust.Visibility, s *contrac
 	if participants, ok := d["participants"].([]any); ok {
 		for _, p := range participants {
 			id, _ := p.(string)
-			h, err := modelRecord(ctx, tx, "messages.handle", id)
-			if err == contracts.ErrNotFound {
+			h, exists := people["messages.handle/"+id]
+			if !exists {
 				continue
-			}
-			if err != nil {
-				return err
 			}
 			hd := modelFields(h)
 			name := fieldString(hd, "address")
 			var contactID *string
 			if v[contracts.Contacts] {
 				if cid := fieldString(hd, "contact_id"); cid != "" {
-					contact, err := modelRecord(ctx, tx, "contacts.contact", cid)
-					if err == nil {
+					contact, exists := people["contacts.contact/"+cid]
+					if exists {
 						contactID = &cid
 						cd := modelFields(contact)
 						parts := []string{}
@@ -213,8 +215,6 @@ func fillSummary(ctx context.Context, tx *sql.Tx, v trust.Visibility, s *contrac
 						} else if n := fieldString(cd, "organization"); n != "" {
 							name = n
 						}
-					} else if err != contracts.ErrNotFound {
-						return err
 					}
 				}
 			}
@@ -239,32 +239,26 @@ func fillSummary(ctx context.Context, tx *sql.Tx, v trust.Visibility, s *contrac
 			s.Title = fmt.Sprintf("%s, %s & %d others", names[0], names[1], len(names)-2)
 		}
 	}
-	var messageID, activityID string
-	err := tx.QueryRowContext(ctx, "SELECT message_id,id FROM activity_by_chat WHERE chat_id=? ORDER BY at DESC,id DESC LIMIT 1", s.Chat.ID).Scan(&messageID, &activityID)
-	if err == sql.ErrNoRows {
+	message := activity.message
+	if message.ID == "" {
 		return nil
 	}
-	if err != nil {
-		return err
-	}
-	message, err := modelRecord(ctx, tx, "messages.message", messageID)
-	if err != nil {
-		return err
-	}
+	messageID, activityID := message.ID, activity.activityID
 	md := modelFields(message)
 	last := &contracts.LastMessage{ID: message.ID, SentAt: fieldString(md, "sent_at"), IsFromMe: fieldBool(md, "is_from_me"), Preview: contracts.MessagePreview{Kind: "text", Text: fieldString(md, "text")}}
+	if sender := fieldString(md, "sender_handle_id"); sender != "" {
+		last.SenderHandleID = &sender
+	}
 	switch {
 	case md["retracted_at"] != nil || hasItems(md["retracted_parts"]):
 		last.Preview.Kind = "unsent"
 	case fieldString(md, "kind") == "group_event":
 		last.Preview.Kind = "group_event"
+		last.Preview.GroupEvent, _ = md["group_event"].(map[string]any)
 	case md["edited_at"] != nil:
 		last.Preview.Kind = "edited"
 	default:
-		attachments, err := readModelRecords(ctx, tx, "SELECT payload FROM attachment_by_message WHERE message_id=? AND coalesce(json_extract(payload,'$.data.hidden'),0)=0 ORDER BY id", messageID)
-		if err != nil {
-			return err
-		}
+		attachments := activity.attachments
 		if len(attachments) > 0 {
 			last.Preview.Kind = "attachments"
 			last.Preview.Count = len(attachments)

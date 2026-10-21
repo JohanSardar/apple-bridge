@@ -86,6 +86,10 @@ func OperationSchema(d OperationDescriptor) map[string]any {
 		collection["enum"] = collections
 		collection["description"] = "Collection name; use an empty string to query all visible collections. Follow next with after to read further pages."
 	}
+	if d.Name == "messages.handles" {
+		s["properties"].(map[string]any)["ids"].(map[string]any)["maxItems"] = 500
+		return s
+	}
 	if d.Name == "messages.chats" || d.Name == "messages.thread" || d.Name == "messages.collection" {
 		fields := s["properties"].(map[string]any)
 		fields["limit"].(map[string]any)["minimum"] = 0

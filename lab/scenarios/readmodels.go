@@ -408,6 +408,7 @@ func rmNames(ctx context.Context, w *world.World, chatID string, add func(string
 	}
 	handles = append(handles, chat("", participants))
 	add("handle_contact_title_capture", rmPut(w, handles...) == nil)
+	rmHandles(ctx, w, add)
 	messageOnly := w.Gateway
 	token, err := w.ScopedToken(w.Gateway, "messages:read")
 	messageOnly.Token = token
@@ -453,7 +454,7 @@ func rmBoundaries(ctx context.Context, w *world.World, chatID string, add func(s
 func rmPreviews(ctx context.Context, w *world.World, chatID string, add func(string, bool)) {
 	at := time.Date(2026, 5, 2, 0, 0, 0, 0, time.UTC)
 	for i, kind := range []string{"text", "attachments", "group_event", "unsent"} {
-		extra := map[string]any{"is_from_me": true}
+		extra := map[string]any{"is_from_me": true, "sender_handle_id": "synthetic-sender"}
 		if kind == "group_event" {
 			extra["kind"] = "group_event"
 			extra["group_event"] = map[string]any{"kind": "rename", "name": "Bridge Test"}
@@ -472,6 +473,12 @@ func rmPreviews(ctx context.Context, w *world.World, chatID string, add func(str
 		for _, protocol := range []string{"rest", "mcp"} {
 			row, err := rmChat(ctx, scripted.Client{Endpoint: w.Gateway, Protocol: protocol}, chatID)
 			ok := err == nil && row.LastMessage != nil && row.LastMessage.Preview.Kind == kind
+			if (kind == "group_event" || kind == "unsent") && ok {
+				ok = row.LastMessage.SenderHandleID != nil && *row.LastMessage.SenderHandleID == "synthetic-sender"
+				if kind == "group_event" {
+					ok = ok && row.LastMessage.Preview.GroupEvent["kind"] == "rename"
+				}
+			}
 			if kind == "attachments" && ok {
 				ok = row.LastMessage.Preview.Count == 2 && len(row.LastMessage.Preview.AttachmentKinds) == 2
 			}

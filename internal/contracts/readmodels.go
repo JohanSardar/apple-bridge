@@ -23,6 +23,7 @@ type AvatarHandle struct {
 	ContactID *string `json:"contact_id"`
 }
 type MessagePreview struct {
+	GroupEvent      map[string]any   `json:"group_event,omitempty"`
 	Kind            string           `json:"kind" enum:"text,attachments,reaction,group_event,unsent,edited"`
 	Text            string           `json:"text,omitempty"`
 	AttachmentKinds []string         `json:"attachment_kinds,omitempty"`
@@ -34,10 +35,11 @@ type ReactionPreview struct {
 	TargetExcerpt string `json:"target_excerpt"`
 }
 type LastMessage struct {
-	ID       string         `json:"id"`
-	SentAt   string         `json:"sent_at"`
-	IsFromMe bool           `json:"is_from_me"`
-	Preview  MessagePreview `json:"preview"`
+	SenderHandleID *string        `json:"sender_handle_id,omitempty"`
+	ID             string         `json:"id"`
+	SentAt         string         `json:"sent_at"`
+	IsFromMe       bool           `json:"is_from_me"`
+	Preview        MessagePreview `json:"preview"`
 }
 type ChatSummary struct {
 	Chat             Record         `json:"chat"`
@@ -74,4 +76,25 @@ type CollectionResult struct {
 	Next          string   `json:"next,omitempty"`
 	Cursor        Cursor   `json:"cursor"`
 	CoverageNotes []string `json:"coverage_notes"`
+}
+
+type HandlesQuery struct {
+	IDs []string `json:"ids" description:"At most 500 handle IDs"`
+}
+type HandleAvatar struct {
+	Digest  string `json:"digest"`
+	Variant string `json:"variant"`
+}
+type HandleSummary struct {
+	HandleID    string        `json:"handle_id"`
+	Address     string        `json:"address"`
+	Service     string        `json:"service"`
+	ContactID   *string       `json:"contact_id,omitempty"`
+	DisplayName string        `json:"display_name"`
+	Initials    string        `json:"initials"`
+	Avatar      *HandleAvatar `json:"avatar,omitempty"`
+}
+type HandlesResult struct {
+	Handles []HandleSummary `json:"handles"`
+	Cursor  Cursor          `json:"cursor"`
 }

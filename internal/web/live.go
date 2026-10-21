@@ -321,7 +321,7 @@ func (l *liveSocket) view(ctx context.Context, f clientFrame) (any, error) {
 		}
 		return result, nil
 	}
-	if f.View == "chats" || f.View == "thread" || f.View == "collection" {
+	if f.View == "chats" || f.View == "thread" || f.View == "collection" || f.View == "handles" {
 		return l.server.deps.Operations.Invoke(ctx, l.identity.Principal, "messages."+f.View, f.Args)
 	}
 	return nil, contracts.ErrUnsupported
@@ -456,18 +456,24 @@ func decodeViewState(data any) viewState {
 	var rows []json.RawMessage
 	if object["chats"] != nil {
 		json.Unmarshal(object["chats"], &rows)
+	} else if object["handles"] != nil {
+		json.Unmarshal(object["handles"], &rows)
 	} else {
 		json.Unmarshal(object["items"], &rows)
 	}
 	for _, row := range rows {
 		var identity struct {
-			ID   string `json:"id"`
-			Chat struct {
+			ID       string `json:"id"`
+			HandleID string `json:"handle_id"`
+			Chat     struct {
 				ID string `json:"id"`
 			} `json:"chat"`
 		}
 		json.Unmarshal(row, &identity)
 		id := identity.ID
+		if id == "" {
+			id = identity.HandleID
+		}
 		if id == "" {
 			id = identity.Chat.ID
 		}
