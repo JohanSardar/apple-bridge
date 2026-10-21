@@ -78,7 +78,7 @@ Process: every change ships as a small PR (WORKER-RULES, Git and GitHub). Status
 - IN PROGRESS W1-AGENT: credentials (#18), activity (#26), SQLite capture fix (#47), owner approvals (#54) and OAuth Trust grants (#62) merged; OAuth HTTP endpoints pass the sim flow. Agent screens and browser consent follow.
 - IN PROGRESS W1-DEMO: generator (#20), demo sessions and CLI (#25), rich runner (#30) finishing exclusive performance reruns.
 - IN PROGRESS W1-MEDIA: Helper variants (#9). Real cleanup of six tagged self-chat file bubbles and the cold-arrival latency still need the GUI.
-- IN PROGRESS W1-RELAY: local Safari sessions (#40), device-key relay auth (#45), public pairing (#52), feed/runtime (#55) and public replay/revocation proof (#56) merged; Remote command forwarding implemented. Native latency/blob proof and replica agent delegation remain open.
+- IN PROGRESS W1-RELAY: Safari (#40), relay auth/pairing/feed (#45, #52, #55), replay/revocation (#56), Remote commands (#67) and fresh replica agent delegation (#73) merged; public Ubuntu agent consent/read-your-write proven. Native latency/blob proof remains blocked on LIVE-FIX.
 - IN PROGRESS W2: shared primitives (#17), reader decoders (#31 balloons), transcript, list.
 - Dev infrastructure:
   - heavy.sh: re-entrant (#11), SDK matching the OS (#35), exclusive lane for browser performance gates (#36, #37).
