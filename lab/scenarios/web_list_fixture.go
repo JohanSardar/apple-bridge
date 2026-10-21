@@ -7,19 +7,21 @@ import (
 	"time"
 )
 
-func webListFixture(w *world.World, update bool) error {
+func webListFixture(w *world.World, update bool) (webAvatar, error) {
+	avatar := webAvatar{}
 	if w.Level != "sim" || w.Native {
-		return fmt.Errorf("synthetic world required")
+		return avatar, fmt.Errorf("synthetic world required")
 	}
 	now := time.Now().UTC()
 	if update {
-		return rmPut(w, rmObservation("messages.message", "list-live", map[string]any{"chat_id": rmRef("messages.chat", "list-chat-001"), "sent_at": now.Add(time.Minute), "kind": "message", "text": "The plan is ready", "is_from_me": false, "parts": []any{}}))
+		return avatar, rmPut(w, rmObservation("messages.message", "list-live", map[string]any{"chat_id": rmRef("messages.chat", "list-chat-001"), "sent_at": now.Add(time.Minute), "kind": "message", "text": "The plan is ready", "is_from_me": false, "parts": []any{}}))
 	}
 	previousTimeout := w.Control.Timeout
-	w.Control.Timeout = 3 * time.Minute
+	w.Control.Timeout = webFixtureSetupTimeout
 	defer func() { w.Control.Timeout = previousTimeout }()
-	if _, err := webAvatarFixture(w); err != nil {
-		return err
+	avatar, err := webAvatarFixture(w)
+	if err != nil {
+		return avatar, err
 	}
 	records := []contracts.Observation{}
 	names := []string{"Maya Chen", "Weekend Crew", "Riley Parker", "Alex Morgan", "Sam Rivera"}
@@ -85,10 +87,10 @@ func webListFixture(w *world.World, update bool) error {
 			end = len(records)
 		}
 		if err := rmPut(w, records[start:end]...); err != nil {
-			return fmt.Errorf("list fixture batch %d: %w", start, err)
+			return avatar, fmt.Errorf("list fixture batch %d: %w", start, err)
 		}
 	}
-	return nil
+	return avatar, nil
 }
 
 func webListLateIncoming(w *world.World) error {

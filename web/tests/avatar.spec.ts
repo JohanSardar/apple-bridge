@@ -1,8 +1,12 @@
-import { test, expect } from '@playwright/test';
-import { bootstrap, control } from './session';
-test('WEB-CONTACT-AVATAR-THUMB contact images use authorized thumb route',async({page,context,request})=>{
-    await bootstrap(context,request);
-    const avatar=await control(request,'/contact-avatar');
+import { test as base, expect } from '@playwright/test';
+import { bootstrap } from './session';
+import { mkdir,writeFile } from 'node:fs/promises';
+const test=base.extend<{avatar:{record:string;digest:string}}>({avatar:[async({context,request},use,info)=>{
+    await bootstrap(context,request);const response=await request.post(process.env.AB_WEB_CONTROL!+'/contact-avatar',{headers:{'X-Bridge-Lab':process.env.AB_WEB_CONTROL_KEY!},timeout:180000});expect(response.ok()).toBe(true);const value=await response.json();
+    expect(value.fixture_flush_budget_ms).toBe(180000);expect(value.fixture_flush_ms).toBeGreaterThanOrEqual(0);
+    await mkdir('../lab/evidence/private/web/fixtures',{recursive:true});await writeFile('../lab/evidence/private/web/fixtures/avatar-'+info.project.name+'.json',JSON.stringify({fixture_flush_ms:value.fixture_flush_ms,fixture_flush_budget_ms:value.fixture_flush_budget_ms}));await use(value);
+},{timeout:180000}]});
+test('WEB-CONTACT-AVATAR-THUMB contact images use authorized thumb route',async({page,avatar})=>{
     const url=`/web/v1/blob/${avatar.digest}?record=${encodeURIComponent(avatar.record)}&variant=thumb`;
     const response=await page.request.get(url);
     expect(response.status()).toBe(200);

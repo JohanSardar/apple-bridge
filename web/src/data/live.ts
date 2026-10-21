@@ -62,6 +62,7 @@ type Subscription = {
     update: (data: ViewData) => void;
     cacheKey: string;
     generation: number;
+    cache?: boolean;
 };
 export class LiveClient {
     private socket?: WebSocket;
@@ -161,7 +162,7 @@ export class LiveClient {
             sub.generation++;
             sub.cursor = cursor;
             sub.update(frame.t === 'snap' ? frame.data as ViewData : { ...reduceView(sub.data(), frame.changes as ViewChange[]), ...(frame.page && typeof frame.page === 'object' ? { next: undefined, before: undefined, after: undefined, unread_anchor: undefined, ...frame.page } : {}) });
-            void viewCache.write(sub.cacheKey, sub.data(), cursor).catch(() => { });
+            if(sub.cache!==false)void viewCache.write(sub.cacheKey, sub.data(), cursor).catch(() => { });
         }
         else if (frame.t === 'ack' || frame.t === 'cmd_status') {
             if (typeof frame.id !== 'string' || typeof frame.status !== 'string')
@@ -200,17 +201,17 @@ export class LiveClient {
         } };
         this.send({ t: 'sub', id: subID, view: sub.view, args: sub.args });
     }
-    subscribe(view: ViewName, args: Record<string, unknown>) {
+    subscribe(view: ViewName, args: Record<string, unknown>, options: {cache?:boolean;cursor?:Cursor} = {}) {
         const id = ulid(), cacheKey = JSON.stringify([view, args]);
         const [data, update] = createSignal<ViewData>({});
-        const sub: Subscription = { id, view, args, data, update, cacheKey, generation: 0 };
+        const sub: Subscription = { id, view, args, data, update, cacheKey, generation: 0, cache:options.cache,cursor:options.cursor };
         this.subscriptions.set(id, sub);
-        void viewCache.read(cacheKey).then(cached => { if (cached && sub.generation === 0 && this.subscriptions.has(id)) {
+        if(options.cache!==false)void viewCache.read(cacheKey).then(cached => { if (cached && sub.generation === 0 && this.subscriptions.has(id)) {
             sub.cursor = cached.cursor;
             update(cached.data);
         } }).catch(() => { });
         if (untrack(this.status) === 'connected')
-            this.send({ t: 'sub', id, view, args });
+            this.send({ t: 'sub', id, view, args, ...(sub.cursor?{cursor:sub.cursor}:{}) });
         return { data, cursor: () => { data(); return sub.cursor; }, dispose: () => { this.subscriptions.delete(id); if (untrack(this.status) === 'connected')
                 this.send({ t: 'unsub', id }); } };
     }

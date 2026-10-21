@@ -13,7 +13,10 @@ function open() {
         return Promise.resolve(database);
     if (opening)
         return opening;
-    opening = new Promise<IDBDatabase>((resolve, reject) => { const request = indexedDB.open('ab.views', 1); request.onupgradeneeded = () => request.result.createObjectStore('views', { keyPath: 'key' }); request.onerror = () => reject(request.error); request.onsuccess = () => { database = request.result; database.onversionchange = () => { database?.close(); database = undefined; opening = undefined; }; resolve(database); }; });
+    opening = new Promise<IDBDatabase>((resolve, reject) => { const request = indexedDB.open('ab.views', 2); request.onupgradeneeded = () => {
+        const store=request.result.objectStoreNames.contains('views')?request.transaction!.objectStore('views'):request.result.createObjectStore('views',{keyPath:'key'});
+        const cursor=store.openCursor();cursor.onsuccess=()=>{const entry=cursor.result;if(!entry)return;try{if(JSON.parse(String(entry.key))[0]==='chats')entry.delete();}catch{}entry.continue();};
+    }; request.onerror = () => reject(request.error); request.onsuccess = () => { database = request.result; database.onversionchange = () => { database?.close(); database = undefined; opening = undefined; }; resolve(database); }; });
     return opening;
 }
 function request<T>(value: IDBRequest<T>) { return new Promise<T>((resolve, reject) => { value.onsuccess = () => resolve(value.result); value.onerror = () => reject(value.error); }); }

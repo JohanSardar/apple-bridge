@@ -83,6 +83,7 @@ Process: every change ships as a small PR (WORKER-RULES, Git and GitHub). Status
 - IN PROGRESS W1-MEDIA: Helper variants (#9). Real cleanup of six tagged self-chat file bubbles and the cold-arrival latency still need the GUI.
 - IN PROGRESS W1-RELAY: Safari (#40), relay auth/pairing/feed (#45, #52, #55), replay/revocation (#56), Remote commands (#67) and fresh replica agent delegation (#73) merged; public Ubuntu agent consent/read-your-write proven. Native latency/blob proof remains blocked on LIVE-FIX.
 - IN PROGRESS W2: shared primitives (#17), reader decoders (#31 balloons), transcript, list.
+- IN PROGRESS W2-LIST: chats store (#49), reconnect isolation (#71), atomic trusted cache (#84), contact thumbs/handles/icons (#16/#38/#66). Conversation list, filters/search, badges/sidebar and list performance proof remain.
 - Dev infrastructure:
   - heavy.sh: re-entrant (#11), SDK matching the OS (#35), exclusive lane for browser performance gates (#36, #37).
   - Per-project web budgets (#39); dist placeholder kept after build (#41); detached Air runs (#42).

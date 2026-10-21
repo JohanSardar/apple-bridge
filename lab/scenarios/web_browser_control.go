@@ -179,8 +179,9 @@ func webBrowserControl(ctx context.Context, w *world.World, origin string) (*htt
 			value, err = webHandlesFixture(w)
 		case "/list-fixture":
 			started := time.Now()
-			err = webListFixture(w, request.URL.Query().Get("update") == "1")
-			value = map[string]any{"ok": err == nil, "fixture_setup_ms": time.Since(started).Milliseconds()}
+			avatar, setupErr := webListFixture(w, request.URL.Query().Get("update") == "1")
+			err = setupErr
+			value = map[string]any{"ok": err == nil, "fixture_setup_ms": time.Since(started).Milliseconds(), "fixture_flush_ms": avatar.FixtureFlushMS, "fixture_flush_budget_ms": avatar.FixtureFlushBudgetMS}
 		case "/list-late-incoming":
 			err = webListLateIncoming(w)
 			value = map[string]any{"ok": err == nil}
