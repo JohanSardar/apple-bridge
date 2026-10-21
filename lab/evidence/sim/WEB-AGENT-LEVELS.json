@@ -1,0 +1,164 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[7.33 9 8.4] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5EGBJFB004WY989AJX2G131",
+  "scenario": "WEB-AGENT-LEVELS",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "a72fb9c6fb641474842744920c4abf548ed45d25",
+  "at": "2026-10-21T05:53:42.891326Z",
+  "assertions": [
+    {
+      "name": "agents_available",
+      "passed": true
+    },
+    {
+      "name": "message_fixture",
+      "passed": true
+    },
+    {
+      "name": "create_read",
+      "passed": true
+    },
+    {
+      "name": "read_command_rejected",
+      "passed": true
+    },
+    {
+      "name": "read_no_effect",
+      "passed": true
+    },
+    {
+      "name": "create_",
+      "passed": true
+    },
+    {
+      "name": "default_awaiting_approval",
+      "passed": true
+    },
+    {
+      "name": "approval_no_effect_before_consent",
+      "passed": true
+    },
+    {
+      "name": "pending_idempotent",
+      "passed": true
+    },
+    {
+      "name": "mcp_wait_reports_awaiting_approval",
+      "passed": true
+    },
+    {
+      "name": "mcp_status_reports_awaiting_approval",
+      "passed": true
+    },
+    {
+      "name": "pending_changed_id_conflicts",
+      "passed": true
+    },
+    {
+      "name": "approval_live_event",
+      "passed": true
+    },
+    {
+      "name": "owner_receives_full_text",
+      "passed": true
+    },
+    {
+      "name": "agent_cannot_approve",
+      "passed": true
+    },
+    {
+      "name": "owner_approves",
+      "passed": true
+    },
+    {
+      "name": "approved_sim_send_observed",
+      "passed": true,
+      "detail": "state=observed disposition=locally_observed"
+    },
+    {
+      "name": "approved_executes_once",
+      "passed": true
+    },
+    {
+      "name": "approval_retry_no_redispatch",
+      "passed": true
+    },
+    {
+      "name": "owner_reject_final_no_effect",
+      "passed": true
+    },
+    {
+      "name": "advance_approval_clock",
+      "passed": true
+    },
+    {
+      "name": "retry_expires_unanswered_approval",
+      "passed": true
+    },
+    {
+      "name": "approval_expires_24h",
+      "passed": true
+    },
+    {
+      "name": "pending_survives_gateway_restart",
+      "passed": true
+    },
+    {
+      "name": "execution_expiry_starts_at_approval",
+      "passed": true
+    },
+    {
+      "name": "expired_original_request_executes_after_approval",
+      "passed": true,
+      "detail": "state=observed disposition=locally_observed"
+    },
+    {
+      "name": "replica_agent_local_read",
+      "passed": true
+    },
+    {
+      "name": "replica_agent_write_refused_before_forwarding",
+      "passed": true
+    },
+    {
+      "name": "replica_refusal_logged",
+      "passed": true
+    },
+    {
+      "name": "create_full",
+      "passed": true
+    },
+    {
+      "name": "full_executes_directly",
+      "passed": true
+    },
+    {
+      "name": "each_level_command_logged_individually",
+      "passed": true
+    },
+    {
+      "name": "level_activity_text_redacted",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "approval_to_observed": {
+      "samples": 1,
+      "p50_ms": 112.026833,
+      "p95_ms": 112.026833,
+      "max_ms": 112.026833,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

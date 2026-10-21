@@ -400,6 +400,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 		}
 		return runWebServer(ctx, s, level)
 	}
+	if s.ID == "WEB-AGENT-LEVELS" {
+		return runAgentAccess(ctx, s, level, runAgentLevels)
+	}
 	if s.Feature == "web.frontdoor" || s.Feature == "web.agents" {
 		return runWebServer(ctx, s, level)
 	}

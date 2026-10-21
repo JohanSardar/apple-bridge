@@ -71,6 +71,7 @@ func runAgentLevels(ctx context.Context, w *world.World, c *webClient, e *Eviden
 	add("approval_no_effect_before_consent", effects[pending.ID] == 0)
 	_, retry := call(approveToken, pending)
 	add("pending_idempotent", len(retry.History) == 1 && retry.State == row.State)
+	checkAgentPendingMCP(ctx, w, approveToken, pending, add)
 	other := pending
 	other.Args = json.RawMessage(strings.Replace(string(pending.Args), "owner-approved", "changed", 1))
 	code, _ = call(approveToken, other)
@@ -134,8 +135,10 @@ func runAgentLevels(ctx context.Context, w *world.World, c *webClient, e *Eviden
 	err = w.Await(5*time.Second, func() bool { row = status(approveToken, durable.ID); return row.State == contracts.CommandObserved })
 	add("expired_original_request_executes_after_approval", err == nil && row.ExpiresAt.After(approvedAt) && row.ExpiresAt.After(durable.ExpiresAt))
 	e.Assertions[len(e.Assertions)-1].Detail = "state=" + string(row.State) + " disposition=" + string(row.Disposition)
+	runAgentReplicaBoundary(ctx, w, chats.Records[0].ID, command, add)
 	_, fullToken := create("full")
 	fullCommand := command()
 	code, row = call(fullToken, fullCommand)
 	add("full_executes_directly", code == 200 && row.State == contracts.CommandObserved)
+	checkAgentLevelActivity(c, map[string]contracts.CommandState{readCommand.ID: contracts.CommandRejected, pending.ID: contracts.CommandObserved, rejected.ID: contracts.CommandRejectedByOwner, expiring.ID: contracts.CommandExpired, durable.ID: contracts.CommandObserved, fullCommand.ID: contracts.CommandObserved}, add)
 }
