@@ -1,0 +1,7 @@
+id: CORE-REPLICA-CAPTURE-OBSERVERS
+feature: core.replication
+levels: [sim]
+given: []
+when: [{web: {}}]
+then: []
+cleanup: []

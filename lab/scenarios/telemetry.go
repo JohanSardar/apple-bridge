@@ -54,6 +54,7 @@ func samplesQuiet(samples map[string]world.HostSample) bool {
 }
 
 func Run(ctx context.Context, s Scenario, level string) (e Evidence) {
+	ctx, captureMetrics := world.WithCaptureMetrics(ctx)
 	conditions := HostConditions{}
 	required, _ := ctx.Value(quietKey{}).(bool)
 	conditions.RequireQuiet = required && latencyCritical(s)
@@ -99,6 +100,24 @@ func Run(ctx context.Context, s Scenario, level string) (e Evidence) {
 		e = failOnHelperCrashes(e, reports, before)
 	}
 	e.HostConditions = &conditions
+	if e.Metrics == nil {
+		e.Metrics = map[string]any{}
+	}
+	resets := captureMetrics.Resets()
+	switch previous := e.Metrics["capture_observer_resets"].(type) {
+	case int:
+		resets += previous
+	case float64:
+		resets += int(previous)
+	}
+	e.Metrics["capture_observer_resets"] = resets
+	if s.ID == "CORE-REPLICA-CAPTURE-OBSERVERS" || s.ID == "WEB-UPLOAD-REPLICA-STATUS-CAPTURE" {
+		e.Assertions = append(e.Assertions, Assertion{Name: "capture_observer_resets_counted", Passed: resets > 0})
+		e.Passed = e.Passed && resets > 0
+	} else if s.Feature == "core.replication" || s.ID == "WEB-LIVE-READMODELS" || strings.HasPrefix(s.ID, "WEB-RELAY-") {
+		e.Assertions = append(e.Assertions, Assertion{Name: "no_oversized_capture_observer_resets", Passed: resets == 0})
+		e.Passed = e.Passed && resets == 0
+	}
 	return e
 }
 

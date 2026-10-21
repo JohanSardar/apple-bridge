@@ -309,7 +309,7 @@ func (s *Server) serve(ctx context.Context, conn *websocket.Conn, p trust.Princi
 	}
 	journalCursor := cursor
 	journalCursor.SubscriptionRevision = s.Store.Head().SubscriptionRevision
-	changes := s.Store.Changes
+	changes := s.Store.FeedChanges
 	if len(features) == 0 {
 		changes = s.Store.LegacyChanges
 	}
@@ -671,6 +671,16 @@ func (c *Client) Wait(ctx context.Context, target contracts.Cursor) error {
 			return nil
 		}
 		if _, err = iterator.Next(ctx); err != nil {
+			if errors.Is(err, contracts.ErrReset) {
+				head := c.Store.Head()
+				if head.Epoch != target.Epoch {
+					return contracts.ErrReset
+				}
+				iterator, err = c.Store.Changes(ctx, trust.AllVisibility(), head)
+				if err == nil {
+					continue
+				}
+			}
 			return err
 		}
 	}

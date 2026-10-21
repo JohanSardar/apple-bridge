@@ -448,6 +448,7 @@ func freeAddress() (string, error) {
 	return address, nil
 }
 func (w *World) Close() {
+	w.recordCaptureMetrics()
 	if w.nativeCleanup != nil {
 		cleanup := w.nativeCleanup
 		w.nativeCleanup = nil

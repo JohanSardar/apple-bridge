@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
-	"github.com/JohanSardar/apple-bridge/internal/trust"
 	"github.com/coder/websocket"
 )
 
@@ -526,33 +525,4 @@ func (l *liveSocket) commandRecord(ctx context.Context, record contracts.Record)
 	}
 	record.Data, err = json.Marshal(status)
 	return record, err
-}
-
-func (l *liveSocket) approvalEvents(after contracts.Cursor) {
-	iterator, err := l.server.deps.Operations.Observe(l.ctx, l.identity.Principal, after)
-	if err != nil {
-		return
-	}
-	for {
-		batch, err := iterator.Next(l.ctx)
-		if err != nil {
-			return
-		}
-		for _, change := range batch.Changes {
-			if change.Record.Collection != "system.command" {
-				continue
-			}
-			var value struct {
-				Principal string `json:"principal"`
-			}
-			if json.Unmarshal(change.Record.Data, &value) != nil || !trust.IsAgentPrincipalID(value.Principal) {
-				continue
-			}
-			command, err := l.server.deps.Operations.State.Command(l.ctx, change.Record.ID)
-			if err != nil || len(command.History) == 0 || command.History[0].State != contracts.CommandAwaitingApproval {
-				continue
-			}
-			l.send(map[string]any{"t": "approval", "command": map[string]any{"command_id": change.Record.ID}}, false)
-		}
-	}
 }

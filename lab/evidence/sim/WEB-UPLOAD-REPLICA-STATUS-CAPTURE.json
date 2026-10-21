@@ -1,0 +1,259 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[170.29 234.56 275.75] cpu_idle=50% cpus=8 other_heavy=0"
+  },
+  "run_id": "upload-replica_01M5HBGBRDYVBWHAXN183Q1AYC",
+  "network_path": "paired feed in both connection directions",
+  "metrics": {
+    "capture_observer_resets": 4,
+    "gateway_dials_send_error_type": "\u003cnil\u003e",
+    "gateway_dials_send_state": "observed",
+    "replica_dials_send_error_type": "\u003cnil\u003e",
+    "replica_dials_send_state": "observed",
+    "uploaded_bytes_per_direction": 2500000
+  },
+  "scenario": "WEB-UPLOAD-REPLICA-STATUS-CAPTURE",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "1771e86c1bd61d6ed0d66b4e76963cd670ce9b55",
+  "at": "2026-10-22T08:26:40.26944Z",
+  "assertions": [
+    {
+      "name": "replica_dials/capture/scoped_paired_replica_world",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/capture/replica_session_hook_requires_control_secret",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/capture/replica_session_hook_returns_only_url_and_cookie",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/capture/replica_browser_session_authorized",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/capture/expected_connection_direction",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/capture/feed_connected",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/capture/effect_baseline_available",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/capture/replica_rejects_oversize_before_staging",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/capture/replica_verifies_browser_supplied_digest",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/capture/replica_upload_returns_gateway_verified_ready",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/capture/independent_gateway_bytes_and_digest_match",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/capture/upload_alone_has_no_native_command_effect",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/capture/replica_served_command_channel",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/capture/terminal_visibility_hold_armed",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/capture/status_lookup_counter_armed",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/capture/committed_status_held_before_visibility",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/capture/oversized_capture_committed",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/capture/oversized_capture_applied_atomically",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/capture/command_status_iterator_received_actual_oversized_reset",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/capture/terminal_status_arrives_without_reconciliation",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/capture/fresh_send_observed_on_gateway",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/capture/gateway_admission_retains_verified_blob_reference",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/capture/exactly_one_explicit_send_effect",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/capture/immediate_replica_read_your_write",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/capture/abandon_fixture_ready_at_both_endpoints",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/capture/replica_abandon_forwarded_to_gateway",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/capture/abandon_removes_both_owned_leases",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/capture/abandoned_replica_upload_unavailable",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/capture/scoped_paired_replica_world",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/capture/replica_session_hook_requires_control_secret",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/capture/replica_session_hook_returns_only_url_and_cookie",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/capture/replica_browser_session_authorized",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/capture/expected_connection_direction",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/capture/feed_connected",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/capture/effect_baseline_available",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/capture/replica_rejects_oversize_before_staging",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/capture/replica_verifies_browser_supplied_digest",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/capture/replica_upload_returns_gateway_verified_ready",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/capture/independent_gateway_bytes_and_digest_match",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/capture/upload_alone_has_no_native_command_effect",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/capture/replica_served_command_channel",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/capture/terminal_visibility_hold_armed",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/capture/status_lookup_counter_armed",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/capture/committed_status_held_before_visibility",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/capture/oversized_capture_committed",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/capture/oversized_capture_applied_atomically",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/capture/command_status_iterator_received_actual_oversized_reset",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/capture/terminal_status_arrives_without_reconciliation",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/capture/fresh_send_observed_on_gateway",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/capture/gateway_admission_retains_verified_blob_reference",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/capture/exactly_one_explicit_send_effect",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/capture/immediate_replica_read_your_write",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/capture/abandon_fixture_ready_at_both_endpoints",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/capture/replica_abandon_forwarded_to_gateway",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/capture/abandon_removes_both_owned_leases",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/capture/abandoned_replica_upload_unavailable",
+      "passed": true
+    },
+    {
+      "name": "capture_observer_resets_counted",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

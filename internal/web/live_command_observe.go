@@ -18,7 +18,11 @@ func (l *liveSocket) nextCommand(iterator *state.ChangeIterator) (contracts.Batc
 	if err := commandObserveFailure("iterator"); err != nil {
 		return contracts.Batch{}, err
 	}
-	return iterator.Next(l.ctx)
+	batch, err := iterator.Next(l.ctx)
+	if errors.Is(err, contracts.ErrReset) {
+		commandStatusReset()
+	}
+	return batch, err
 }
 
 func (l *liveSocket) sendCommandStatus(status contracts.CommandRecord) {

@@ -13,7 +13,7 @@ import (
 )
 
 func uploadStatusSubmit(ctx context.Context, w *world.World, socket *websocket.Conn, command contracts.Command, lose bool, fault string, reverse bool, e *Evidence, add func(string, bool)) (contracts.CommandRecord, error) {
-	if fault != "unrelated" && fault != "epoch" {
+	if fault != "unrelated" && fault != "epoch" && fault != "capture" {
 		return uploadSubmit(ctx, w, socket, command, lose)
 	}
 	home := w.Replicas[0].Home
@@ -35,12 +35,14 @@ func uploadStatusSubmit(ctx context.Context, w *world.World, socket *websocket.C
 	if err == nil {
 		if fault == "unrelated" {
 			uploadStatusUnrelated(ctx, w, command.ID, reverse, e, add)
+		} else if fault == "capture" {
+			uploadStatusCapture(w, command.ID, add)
 		} else {
 			uploadStatusEpoch(w, add)
 		}
 	}
 	os.Remove(hold)
-	if fault == "unrelated" {
+	if fault == "unrelated" || fault == "capture" {
 		uploadStatusChange(w, contracts.NewID("status-release"))
 	}
 	select {

@@ -70,6 +70,7 @@ func Open(home string) (*Store, error) {
 	}
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY,value TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS records(collection TEXT NOT NULL,id TEXT NOT NULL,version INTEGER NOT NULL,source TEXT NOT NULL,deleted INTEGER NOT NULL,payload BLOB NOT NULL,seq INTEGER NOT NULL,observed_at TEXT NOT NULL,PRIMARY KEY(collection,id));
+ CREATE INDEX IF NOT EXISTS command_approval_pending ON records(source,id) WHERE collection='system.command' AND deleted=0 AND json_extract(CAST(payload AS TEXT),'$.data.awaiting_approval')=1;
  CREATE TABLE IF NOT EXISTS aliases(source TEXT NOT NULL,generation TEXT NOT NULL,collection TEXT NOT NULL,native_key TEXT NOT NULL,scoped_alias TEXT NOT NULL,record_id TEXT NOT NULL,PRIMARY KEY(source,generation,collection,native_key));
  CREATE INDEX IF NOT EXISTS aliases_scoped ON aliases(source,collection,scoped_alias);
  CREATE INDEX IF NOT EXISTS aliases_record ON aliases(collection,record_id,source,generation,native_key);
@@ -792,6 +793,7 @@ func (i *SnapshotInstall) InstallSnapshot(ctx context.Context) (contracts.Cursor
 }
 
 type ChangeIterator struct {
+	parts      bool
 	legacy     bool
 	store      *Store
 	visibility trust.Visibility
@@ -823,6 +825,10 @@ func (i *ChangeIterator) Next(ctx context.Context) (contracts.Batch, error) {
 		tx.Rollback()
 		if err != nil {
 			return batch, err
+		}
+		if batch.Partial && !i.parts {
+			captureObserverReset(i.store.home)
+			return contracts.Batch{}, contracts.ErrReset
 		}
 		if batch.Through > i.cursor.Sequence {
 			i.cursor.Sequence = batch.Through

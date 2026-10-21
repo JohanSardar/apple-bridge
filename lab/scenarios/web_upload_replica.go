@@ -46,6 +46,9 @@ func runUploadReplica(ctx context.Context, s Scenario, level string) (e Evidence
 		if s.ID == "WEB-UPLOAD-REPLICA-STATUS-LOAD" {
 			faults = []string{"unrelated", "epoch"}
 		}
+		if s.ID == "WEB-UPLOAD-REPLICA-STATUS-CAPTURE" {
+			faults = []string{"capture"}
+		}
 		for _, fault := range faults {
 			check := add
 			if fault != "" {

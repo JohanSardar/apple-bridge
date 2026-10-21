@@ -1,0 +1,59 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[318.55 320.49 312.44] cpu_idle=50% cpus=8 other_heavy=1"
+  },
+  "run_id": "staging_01M5HB5QXD54WH8QC57WNP8YKX",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "legacy_partial_bytes": 0,
+    "legacy_partial_frames": 0
+  },
+  "scenario": "CORE-REPLICA-CAPTURE-LEGACY",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "1771e86c1bd61d6ed0d66b4e76963cd670ce9b55",
+  "at": "2026-10-22T08:20:52.269442Z",
+  "assertions": [
+    {
+      "name": "legacy/world",
+      "passed": true
+    },
+    {
+      "name": "legacy/old_protocol_replica_started",
+      "passed": true
+    },
+    {
+      "name": "legacy/visible_baseline",
+      "passed": true
+    },
+    {
+      "name": "legacy/upgrade_coalesces_retained_legacy_history",
+      "passed": true
+    },
+    {
+      "name": "legacy/backlog_converges",
+      "passed": true
+    },
+    {
+      "name": "legacy/feature_not_accepted_for_old_replica",
+      "passed": true
+    },
+    {
+      "name": "legacy/old_protocol_receives_no_partial_frames",
+      "passed": true
+    },
+    {
+      "name": "no_oversized_capture_observer_resets",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

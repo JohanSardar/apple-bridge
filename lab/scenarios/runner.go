@@ -73,6 +73,7 @@ type Seen struct {
 	At       time.Time
 }
 type watcher struct {
+	snapshotResets  int
 	mu              sync.Mutex
 	seen            map[string]Seen
 	changes         []Seen
@@ -134,16 +135,7 @@ func watch(ctx context.Context, e world.Endpoint, filtered bool, oracle func(con
 						continue
 					}
 					if reset && strings.HasPrefix(line, "data: ") {
-						var current contracts.ReadResult
-						_, err := world.Request(ctx, e, "/v1/op/records.query", contracts.ReadQuery{Limit: 1}, &current)
-						w.mu.Lock()
-						if err != nil || current.Cursor.Epoch == w.last.Epoch && current.Cursor.SubscriptionRevision == w.last.SubscriptionRevision {
-							w.invalid = true
-						} else {
-							w.last = current.Cursor
-							w.initialSequence = current.Cursor.Sequence
-						}
-						w.mu.Unlock()
+						w.resetSnapshot(ctx, e)
 						break
 					}
 					if !strings.HasPrefix(line, "data: ") {
@@ -158,7 +150,7 @@ func watch(ctx context.Context, e world.Endpoint, filtered bool, oracle func(con
 					}
 					at := time.Now()
 					w.mu.Lock()
-					if b.Epoch != w.last.Epoch || b.SubscriptionRevision != w.last.SubscriptionRevision || b.After != w.last.Sequence || b.Through < b.After {
+					if b.Partial || b.Epoch != w.last.Epoch || b.SubscriptionRevision != w.last.SubscriptionRevision || b.After != w.last.Sequence || b.Through < b.After {
 						w.invalid = true
 					}
 					previous := b.After
@@ -182,14 +174,7 @@ func watch(ctx context.Context, e world.Endpoint, filtered bool, oracle func(con
 				}
 			}
 			if resp != nil && resp.StatusCode == http.StatusConflict {
-				var current contracts.ReadResult
-				_, err := world.Request(ctx, e, "/v1/op/records.query", contracts.ReadQuery{Limit: 1}, &current)
-				w.mu.Lock()
-				if err == nil && (current.Cursor.Epoch != w.last.Epoch || current.Cursor.SubscriptionRevision != w.last.SubscriptionRevision) {
-					w.last = current.Cursor
-					w.initialSequence = current.Cursor.Sequence
-				}
-				w.mu.Unlock()
+				w.resetSnapshot(ctx, e)
 			}
 			if resp != nil {
 				resp.Body.Close()
@@ -400,11 +385,17 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "NATIVE-MEDIA-EXPORT-SAFETY" {
 		return runMediaExportSafety(ctx, s, level)
 	}
+	if s.ID == "CORE-REPLICA-CAPTURE-OBSERVERS" {
+		return runAgentAccess(ctx, s, level, runCaptureObservers)
+	}
 	if s.ID == "HELPER-SIGNED-APP-CACHE" {
 		return runNativeAppCache(ctx, s, level)
 	}
 	if s.ID == "REM-STORE-PERF" {
 		return runRemindersStorePerf(ctx, s, level)
+	}
+	if s.ID == "CORE-REPLICA-CAPTURE-STAGING" || s.ID == "CORE-REPLICA-CAPTURE-LEGACY" {
+		return runReplicaCaptureStaging(ctx, s, level)
 	}
 	if s.ID == "CORE-REPLICA-CAPTURE-ATOMIC" {
 		return runReplicaCaptureAtomic(ctx, s, level)

@@ -56,6 +56,9 @@ features:
     status: done
     scenarios:
       - {id: CORE-REPLICA-CAPTURE-ATOMIC, levels: [sim]}
+      - {id: CORE-REPLICA-CAPTURE-STAGING, levels: [sim]}
+      - {id: CORE-REPLICA-CAPTURE-LEGACY, levels: [sim]}
+      - {id: CORE-REPLICA-CAPTURE-OBSERVERS, levels: [sim]}
       - {id: CORE-ITERATOR-POOL, levels: [sim]}
       - {id: CORE-SNAPSHOT-POOL, levels: [sim]}
       - {id: CORE-LIVE-LATENCY, levels: [sim, real, replica]}
@@ -579,6 +582,7 @@ features:
       - {id: WEB-UPLOAD-REPLICA-RESUME, levels: [sim]}
       - {id: WEB-UPLOAD-REPLICA-STATUS, levels: [sim]}
       - {id: WEB-UPLOAD-REPLICA-STATUS-LOAD, levels: [sim]}
+      - {id: WEB-UPLOAD-REPLICA-STATUS-CAPTURE, levels: [sim]}
       - {id: WEB-UPLOAD-REPLICA-LOST-RESPONSE, levels: [sim]}
       - {id: WEB-UPLOAD-REPLICA-FORWARD-RESUME, levels: [sim]}
       - {id: WEB-UPLOAD-RESUME, levels: [sim]}
