@@ -1,0 +1,116 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[8.44 9.11 9.56] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5EJWMXT7CQYYCM6P6CGB7ND",
+  "metrics": {
+    "demo_messages": 5000,
+    "demo_startup_ms": 13684,
+    "matrix": [
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "webkit-dark-phone",
+      "webkit-dark-desktop",
+      "chromium-light-phone",
+      "chromium-light-desktop",
+      "chromium-dark-phone",
+      "chromium-dark-desktop",
+      "firefox-light-phone",
+      "firefox-light-desktop",
+      "firefox-dark-phone",
+      "firefox-dark-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-MSG-CHATS-STORE-webkit-light-phone-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-MSG-CHATS-STORE-webkit-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-CHATS-STORE-webkit-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-CHATS-STORE-webkit-dark-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-CHATS-STORE-webkit-dark-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-CHATS-STORE-chromium-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-CHATS-STORE-chromium-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-CHATS-STORE-chromium-dark-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-CHATS-STORE-chromium-dark-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-CHATS-STORE-firefox-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-CHATS-STORE-firefox-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-CHATS-STORE-firefox-dark-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-CHATS-STORE-firefox-dark-desktop-playwright.json"
+    ],
+    "server": "gateway"
+  },
+  "scenario": "WEB-MSG-CHATS-STORE",
+  "level": "web",
+  "passed": true,
+  "git_sha": "975e436d8bdf58a4b584640dba36ccdbe60563f3",
+  "at": "2026-10-21T06:37:59.610503Z",
+  "assertions": [
+    {
+      "name": "webkit-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/chats-store.spec.ts:3:1 › WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages (15.1s)\n\n  1 passed (19.4s)\n"
+    },
+    {
+      "name": "webkit-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/chats-store.spec.ts:3:1 › WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages (20.9s)\n\n  1 passed (33.3s)\n"
+    },
+    {
+      "name": "webkit-dark-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-dark-phone] › tests/chats-store.spec.ts:3:1 › WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages (11.8s)\n\n  1 passed (16.1s)\n"
+    },
+    {
+      "name": "webkit-dark-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-dark-desktop] › tests/chats-store.spec.ts:3:1 › WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages (8.1s)\n\n  1 passed (10.7s)\n"
+    },
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/chats-store.spec.ts:3:1 › WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages (5.2s)\n\n  1 passed (6.2s)\n"
+    },
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/chats-store.spec.ts:3:1 › WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages (5.3s)\n\n  1 passed (6.4s)\n"
+    },
+    {
+      "name": "chromium-dark-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-dark-phone] › tests/chats-store.spec.ts:3:1 › WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages (10.5s)\n\n  1 passed (11.5s)\n"
+    },
+    {
+      "name": "chromium-dark-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-dark-desktop] › tests/chats-store.spec.ts:3:1 › WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages (7.7s)\n\n  1 passed (9.6s)\n"
+    },
+    {
+      "name": "firefox-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-light-phone] › tests/chats-store.spec.ts:3:1 › WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages (7.2s)\n\n  1 passed (10.6s)\n"
+    },
+    {
+      "name": "firefox-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-light-desktop] › tests/chats-store.spec.ts:3:1 › WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages (6.7s)\n\n  1 passed (9.0s)\n"
+    },
+    {
+      "name": "firefox-dark-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-dark-phone] › tests/chats-store.spec.ts:3:1 › WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages (8.3s)\n\n  1 passed (11.2s)\n"
+    },
+    {
+      "name": "firefox-dark-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-dark-desktop] › tests/chats-store.spec.ts:3:1 › WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages (7.6s)\n\n  1 passed (10.2s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

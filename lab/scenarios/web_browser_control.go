@@ -177,6 +177,12 @@ func webBrowserControl(ctx context.Context, w *world.World, origin string) (*htt
 			value, err = demo.Fixtures(ctx, w)
 		case "/handles-fixture":
 			value, err = webHandlesFixture(w)
+		case "/list-fixture":
+			err = webListFixture(w, request.URL.Query().Get("update") == "1")
+			value = map[string]any{"ok": err == nil}
+		case "/list-late-incoming":
+			err = webListLateIncoming(w)
+			value = map[string]any{"ok": err == nil}
 		case "/incoming":
 			started := time.Now().UnixMilli()
 			key := contracts.NewID("web-incoming")
