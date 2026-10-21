@@ -23,6 +23,8 @@ func main() {
 			err = replay(ctx)
 		case "revocation":
 			err = revocation(ctx)
+		case "command":
+			err = command(ctx)
 		case "query":
 			err = query(ctx)
 		default:
