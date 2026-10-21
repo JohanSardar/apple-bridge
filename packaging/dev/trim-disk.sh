@@ -1,5 +1,6 @@
 #!/bin/bash
 set -uo pipefail
+python3 "$(dirname "$0")/signed-app-cache.py" --trim || true
 threshold_kb=${APPLE_BRIDGE_MIN_FREE_KB:-5242880}
 free_kb=$(df -k / | awk 'NR==2{print $4}')
 [ "$free_kb" -ge "$threshold_kb" ] && exit 0
