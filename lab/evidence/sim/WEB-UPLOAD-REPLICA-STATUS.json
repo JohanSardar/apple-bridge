@@ -1,9 +1,9 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[5.58 6.98 8.03] cpus=8 other_heavy=1"
+    "summary": "air: load=[9.17 9.6 9.08] cpus=8 other_heavy=1"
   },
-  "run_id": "upload-replica_01M5FE8MFXDJ2FGBK3WVWK1BT6",
+  "run_id": "upload-replica_01M5FF422A00J36CKK97XFDKNG",
   "network_path": "paired feed in both connection directions",
   "metrics": {
     "gateway_dials_send_error_type": "\u003cnil\u003e",
@@ -15,8 +15,8 @@
   "scenario": "WEB-UPLOAD-REPLICA-STATUS",
   "level": "sim",
   "passed": true,
-  "git_sha": "609ec44e5bff501eb678ee11946bffe87eb05b1c",
-  "at": "2026-10-21T14:36:23.933887Z",
+  "git_sha": "8f5ccc5046c27deef8dc7026669ab6ece5054bd6",
+  "at": "2026-10-21T14:51:22.570521Z",
   "assertions": [
     {
       "name": "replica_dials/cursor/scoped_paired_replica_world",

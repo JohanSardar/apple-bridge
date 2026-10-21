@@ -43,6 +43,9 @@ func runUploadReplica(ctx context.Context, s Scenario, level string) (e Evidence
 		if s.ID == "WEB-UPLOAD-REPLICA-STATUS" {
 			faults = []string{"cursor", "register", "iterator"}
 		}
+		if s.ID == "WEB-UPLOAD-REPLICA-STATUS-LOAD" {
+			faults = []string{"unrelated", "epoch"}
+		}
 		for _, fault := range faults {
 			check := add
 			if fault != "" {
@@ -131,10 +134,10 @@ func uploadReplicaDirection(ctx context.Context, reverse bool, fault string, e *
 	command := contracts.Command{ID: contracts.NewCommandID(), Op: "messages.send", Args: args}
 	if fault == "cursor" {
 		add("command_application_delay_armed", w.DelayCommandApply(0, time.Second) == nil)
-	} else if fault != "" {
+	} else if fault == "register" || fault == "iterator" {
 		add("observation_failure_armed", os.WriteFile(filepath.Join(w.Replicas[0].Home, "command-observe-failure"), []byte(fault), 0600) == nil)
 	}
-	record, err := uploadSubmit(ctx, w, socket, command, e.Scenario == "WEB-UPLOAD-REPLICA-LOST-RESPONSE")
+	record, err := uploadStatusSubmit(ctx, w, socket, command, e.Scenario == "WEB-UPLOAD-REPLICA-LOST-RESPONSE", fault, reverse, e, add)
 	direction := "replica_dials"
 	if reverse {
 		direction = "gateway_dials"
@@ -147,7 +150,7 @@ func uploadReplicaDirection(ctx context.Context, reverse bool, fault string, e *
 	if fault != "" {
 		add("terminal_status_arrives_without_reconciliation", err == nil && record.State == contracts.CommandObserved)
 		_, faultErr := os.Stat(filepath.Join(w.Replicas[0].Home, "command-observe-failure"))
-		if fault != "cursor" {
+		if fault == "register" || fault == "iterator" {
 			add("observation_failure_consumed", os.IsNotExist(faultErr))
 		}
 	}
@@ -174,7 +177,7 @@ func uploadReplicaDirection(ctx context.Context, reverse bool, fault string, e *
 	}
 	var result contracts.ReadResult
 	_, err = world.Request(ctx, w.Replicas[0], "/v1/op/records.query", contracts.ReadQuery{ID: record.ObservedRecordIDs[0]}, &result)
-	add("immediate_replica_read_your_write", err == nil && len(result.Records) == 1 && result.Cursor.Epoch == record.Cursor.Epoch && result.Cursor.Sequence >= record.CommitSeq)
+	add("immediate_replica_read_your_write", err == nil && len(result.Records) == 1 && (result.Cursor.Epoch == record.Cursor.Epoch && result.Cursor.Sequence >= record.CommitSeq || fault == "epoch" && result.Cursor.Epoch > record.Cursor.Epoch))
 	e.Metrics["uploaded_bytes_per_direction"] = len(gatewayBytes)
 	uploadReplicaAbandon(w, c, add)
 }
