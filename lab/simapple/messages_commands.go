@@ -66,7 +66,7 @@ func (f *fakeApple) messageValidate(a contracts.NativeAction) *contracts.Error {
 		return messageProblem("capability_unproven")
 	}
 	for _, file := range m.Files {
-		if file.Path == "" || file.Digest == "" {
+		if file.Path == "" || file.Digest == "" || !messageUploadBoundary(file.Path) {
 			return contracts.ErrInvalid
 		}
 	}
