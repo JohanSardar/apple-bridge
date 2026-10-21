@@ -20,7 +20,7 @@ func (a *Authority) RelayServer(ctx context.Context, conn *websocket.Conn) (Prin
 		return Principal{}, nil, err
 	}
 	cert, err := relayCertificate(hello)
-	if err != nil || hello.T != "AuthHello" || hello.PairingID != "" {
+	if err != nil || hello.T != "AuthHello" {
 		return Principal{}, nil, contracts.ErrUnauthorized
 	}
 	nonce, err := relayNonce()
@@ -42,7 +42,12 @@ func (a *Authority) RelayServer(ctx context.Context, conn *websocket.Conn) (Prin
 	if proof.T != "AuthProof" || relayVerify(cert, proof.Signature, "replica", hello, challenge, nil) != nil {
 		return Principal{}, nil, contracts.ErrUnauthorized
 	}
-	principal, err := a.AuthenticateCertificate(cert)
+	var principal Principal
+	if hello.PairingID == "" {
+		principal, err = a.AuthenticateCertificate(cert)
+	} else {
+		principal, err = a.acceptPair(JoinRequest{ID: hello.PairingID, Proof: proof.Proof}, cert, false)
+	}
 	if err != nil {
 		return Principal{}, nil, err
 	}

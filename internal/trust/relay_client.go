@@ -11,6 +11,9 @@ import (
 )
 
 func (a *Authority) RelayClient(ctx context.Context, conn *websocket.Conn, fingerprint string) (Principal, error) {
+	return a.relayClient(ctx, conn, fingerprint, nil)
+}
+func (a *Authority) relayClient(ctx context.Context, conn *websocket.Conn, fingerprint string, pairing *PairCode) (Principal, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	conn.SetReadLimit(8192)
@@ -19,6 +22,9 @@ func (a *Authority) RelayClient(ctx context.Context, conn *websocket.Conn, finge
 		return Principal{}, err
 	}
 	hello := RelayFrame{T: "AuthHello", Nonce: nonce, Certificate: a.Certificate.Certificate[0]}
+	if pairing != nil {
+		hello.PairingID = pairing.ID
+	}
 	if err = wsjson.Write(ctx, conn, hello); err != nil {
 		return Principal{}, err
 	}
@@ -34,6 +40,9 @@ func (a *Authority) RelayClient(ctx context.Context, conn *websocket.Conn, finge
 		return Principal{}, err
 	}
 	proof := RelayFrame{T: "AuthProof"}
+	if pairing != nil {
+		proof.Proof = PairProof(pairing.Secret, a.Certificate.Certificate[0])
+	}
 	proof.Signature, err = a.relaySign("replica", hello, challenge, nil)
 	if err != nil {
 		return Principal{}, err

@@ -1,0 +1,126 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[6.15 8.05 8.95] cpus=8 other_heavy=1"
+  },
+  "run_id": "relay-pair_01M5EDKMMG5NN95WF9SRCYP1MR",
+  "scenario": "WEB-RELAY-PAIRING",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "ffb891720b43f592c99b1d86401365b5fe37535e",
+  "at": "2026-10-21T05:05:41.520414Z",
+  "assertions": [
+    {
+      "name": "pairing_world",
+      "passed": true
+    },
+    {
+      "name": "gateway_identity",
+      "passed": true
+    },
+    {
+      "name": "remote_pair_code_created",
+      "passed": true
+    },
+    {
+      "name": "remote_pair_code_transport",
+      "passed": true
+    },
+    {
+      "name": "replica_key_created",
+      "passed": true
+    },
+    {
+      "name": "join_pins_gateway_before_using_code",
+      "passed": true
+    },
+    {
+      "name": "remote_signed_pairing",
+      "passed": true
+    },
+    {
+      "name": "remote_enrollment_persists_public_url_and_gateway_pin",
+      "passed": true
+    },
+    {
+      "name": "paired_replica_identity_and_delegable_scope",
+      "passed": true
+    },
+    {
+      "name": "remote_pair_code_single_use",
+      "passed": true
+    },
+    {
+      "name": "failed_replay_preserves_enrollment",
+      "passed": true
+    },
+    {
+      "name": "expired_remote_code_rejected",
+      "passed": true
+    },
+    {
+      "name": "remote_pair_url_rejected_http://bridge.example.com",
+      "passed": true
+    },
+    {
+      "name": "remote_pair_url_rejected_wss://bridge.example.com",
+      "passed": true
+    },
+    {
+      "name": "remote_pair_url_rejected_https://owner:password@bridge.example.com",
+      "passed": true
+    },
+    {
+      "name": "remote_pair_url_rejected_https://bridge.example.com/feed",
+      "passed": true
+    },
+    {
+      "name": "remote_pair_url_rejected_https://bridge.example.com?token=invalid",
+      "passed": true
+    },
+    {
+      "name": "remote_pair_url_rejected_https://bridge.example.com#fragment",
+      "passed": true
+    },
+    {
+      "name": "remote_pair_url_rejected_https://bridge.example.com:0",
+      "passed": true
+    },
+    {
+      "name": "remote_pair_url_rejected_https://bridge.example.com:65536",
+      "passed": true
+    },
+    {
+      "name": "bad_remote_pair_secret_rejected",
+      "passed": true
+    },
+    {
+      "name": "bad_remote_pair_secret_rejected",
+      "passed": true
+    },
+    {
+      "name": "bad_remote_pair_secret_rejected",
+      "passed": true
+    },
+    {
+      "name": "bad_remote_pair_secret_rejected",
+      "passed": true
+    },
+    {
+      "name": "bad_remote_pair_secret_rejected",
+      "passed": true
+    },
+    {
+      "name": "remote_pair_five_attempt_limit",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

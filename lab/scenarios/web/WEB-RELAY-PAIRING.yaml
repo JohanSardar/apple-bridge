@@ -1,0 +1,7 @@
+id: WEB-RELAY-PAIRING
+feature: web.relay
+levels: [sim]
+given: []
+when: [{web: {}}]
+then: []
+cleanup: []
