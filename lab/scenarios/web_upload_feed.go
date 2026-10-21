@@ -85,6 +85,7 @@ func uploadFeedProof(ctx context.Context, w *world.World, e *Evidence, add func(
 	e.Metrics["resumed_feed_upload_bytes"] = len(raw)
 	uploadFeedCrossSession(ctx, w, probe, add)
 	uploadFeedCorruption(ctx, w, probe, add)
+	uploadFeedForwardResume(ctx, w, probe, e, add)
 }
 
 func uploadFeedCorruption(ctx context.Context, w *world.World, probe *uploadProbe, add func(string, bool)) {

@@ -1,0 +1,7 @@
+id: WEB-UPLOAD-REPLICA-RESUME
+feature: web.messages.write
+levels: [sim]
+given: []
+when: [{web: {}}]
+then: []
+cleanup: []

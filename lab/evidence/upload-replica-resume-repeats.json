@@ -1,0 +1,183 @@
+{
+  "scenario": "WEB-UPLOAD-REPLICA-RESUME",
+  "level": "sim",
+  "repetitions": 10,
+  "scenario_failures": 0,
+  "response_delivery_failures": 2,
+  "reconciled_response_failures": 2,
+  "effect_violations": 0,
+  "read_your_write_failures": 0,
+  "source_frozen": true,
+  "lane": "normal shared",
+  "open_problem": "Replica web/1 command-status response delivery; watcher lost-wakeup hypothesis. Trace and fix in a separate PR.",
+  "runs": [
+    {
+      "index": 1,
+      "run_id": "upload-replica_01M5FA5EADNW1VNDJ9434QEP37",
+      "git_sha": "e222f4307b133e3c0e83a09d10a16eb5b76085d0",
+      "passed": true,
+      "response_state": "observed",
+      "response_error_type": "<nil>",
+      "effect_exactly_one": true,
+      "read_your_write": true,
+      "host_conditions": {
+        "quiet": false,
+        "summary": "air: load=[6.04 6 7.18] cpus=8 other_heavy=1"
+      }
+    },
+    {
+      "index": 2,
+      "run_id": "upload-replica_01M5FA7TJ04961GKAYEA8H0M0S",
+      "git_sha": "e222f4307b133e3c0e83a09d10a16eb5b76085d0",
+      "passed": true,
+      "response_state": "observed",
+      "response_error_type": "<nil>",
+      "effect_exactly_one": true,
+      "read_your_write": true,
+      "host_conditions": {
+        "quiet": false,
+        "summary": "air: load=[9.7 7.05 7.46] cpus=8 other_heavy=1"
+      }
+    },
+    {
+      "index": 3,
+      "run_id": "upload-replica_01M5FAA5CV1G6KEZ87A3RV1A8W",
+      "git_sha": "e222f4307b133e3c0e83a09d10a16eb5b76085d0",
+      "passed": true,
+      "response_state": "indeterminate",
+      "response_error_type": "*fmt.wrapError",
+      "effect_exactly_one": true,
+      "read_your_write": true,
+      "host_conditions": {
+        "quiet": false,
+        "summary": "air: load=[12.36 8.42 7.94] cpus=8 other_heavy=1"
+      },
+      "command_id": "cmd_01M5FAA6N18QZ0MWBWT92EGJX7",
+      "gateway_state": "observed",
+      "gateway_cursor": {
+        "epoch": "01M5FAA5YRKWXR3871SZK5WF3X",
+        "subscription_revision": 1,
+        "sequence": 18
+      },
+      "replica_cursor": {
+        "epoch": "01M5FAA5YRKWXR3871SZK5WF3X",
+        "subscription_revision": 1,
+        "sequence": 18
+      },
+      "replica_resumes": 0,
+      "reconciled": true
+    },
+    {
+      "index": 4,
+      "run_id": "upload-replica_01M5FACZQWDAY2C9J8KQKB12V6",
+      "git_sha": "e222f4307b133e3c0e83a09d10a16eb5b76085d0",
+      "passed": true,
+      "response_state": "observed",
+      "response_error_type": "<nil>",
+      "effect_exactly_one": true,
+      "read_your_write": true,
+      "host_conditions": {
+        "quiet": false,
+        "summary": "air: load=[7.66 7.87 7.77] cpus=8 other_heavy=1"
+      }
+    },
+    {
+      "index": 5,
+      "run_id": "upload-replica_01M5FAD8365806W821TXMP7TQP",
+      "git_sha": "e222f4307b133e3c0e83a09d10a16eb5b76085d0",
+      "passed": true,
+      "response_state": "observed",
+      "response_error_type": "<nil>",
+      "effect_exactly_one": true,
+      "read_your_write": true,
+      "host_conditions": {
+        "quiet": false,
+        "summary": "air: load=[7.03 7.72 7.72] cpus=8 other_heavy=1"
+      }
+    },
+    {
+      "index": 6,
+      "run_id": "upload-replica_01M5FAEECQ0293EJB3WERP3H07",
+      "git_sha": "e222f4307b133e3c0e83a09d10a16eb5b76085d0",
+      "passed": true,
+      "response_state": "indeterminate",
+      "response_error_type": "*fmt.wrapError",
+      "effect_exactly_one": true,
+      "read_your_write": true,
+      "host_conditions": {
+        "quiet": false,
+        "summary": "air: load=[6.41 7.46 7.63] cpus=8 other_heavy=1"
+      },
+      "command_id": "cmd_01M5FAEGRS03HERG9D5F8K5GXC",
+      "gateway_state": "observed",
+      "gateway_cursor": {
+        "epoch": "01M5FAEFHYK6CF1AQHQZFYRMMJ",
+        "subscription_revision": 1,
+        "sequence": 18
+      },
+      "replica_cursor": {
+        "epoch": "01M5FAEFHYK6CF1AQHQZFYRMMJ",
+        "subscription_revision": 1,
+        "sequence": 18
+      },
+      "replica_resumes": 0,
+      "reconciled": true
+    },
+    {
+      "index": 7,
+      "run_id": "upload-replica_01M5FAN4R3Z3D64SZ8CCW35EW8",
+      "git_sha": "e222f4307b133e3c0e83a09d10a16eb5b76085d0",
+      "passed": true,
+      "response_state": "observed",
+      "response_error_type": "<nil>",
+      "effect_exactly_one": true,
+      "read_your_write": true,
+      "host_conditions": {
+        "quiet": false,
+        "summary": "air: load=[12.18 9.42 8.35] cpus=8 other_heavy=1"
+      }
+    },
+    {
+      "index": 8,
+      "run_id": "upload-replica_01M5FAPZW8SK4G23NJWAF65YC3",
+      "git_sha": "e222f4307b133e3c0e83a09d10a16eb5b76085d0",
+      "passed": true,
+      "response_state": "observed",
+      "response_error_type": "<nil>",
+      "effect_exactly_one": true,
+      "read_your_write": true,
+      "host_conditions": {
+        "quiet": false,
+        "summary": "air: load=[9.61 9.11 8.3] cpus=8 other_heavy=1"
+      }
+    },
+    {
+      "index": 9,
+      "run_id": "upload-replica_01M5FAVA6FF9A5JJHDE29YXXBG",
+      "git_sha": "e222f4307b133e3c0e83a09d10a16eb5b76085d0",
+      "passed": true,
+      "response_state": "observed",
+      "response_error_type": "<nil>",
+      "effect_exactly_one": true,
+      "read_your_write": true,
+      "host_conditions": {
+        "quiet": false,
+        "summary": "air: load=[6.47 7.94 7.94] cpus=8 other_heavy=1"
+      }
+    },
+    {
+      "index": 10,
+      "run_id": "upload-replica_01M5FAXV0XFMNA1BV03CP6N3N5",
+      "git_sha": "e222f4307b133e3c0e83a09d10a16eb5b76085d0",
+      "passed": true,
+      "response_state": "observed",
+      "response_error_type": "<nil>",
+      "effect_exactly_one": true,
+      "read_your_write": true,
+      "host_conditions": {
+        "quiet": false,
+        "summary": "air: load=[7.63 7.94 7.94] cpus=8 other_heavy=1"
+      }
+    }
+  ]
+}

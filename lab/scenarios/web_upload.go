@@ -85,6 +85,7 @@ func runWebUpload(ctx context.Context, s Scenario, level string) (e Evidence) {
 		add("oversize_stream_rejected", status == 413)
 	case "WEB-UPLOAD-FEED":
 		uploadFeedProof(ctx, w, &e, add)
+		uploadFeedLatency(ctx, w, &e, add)
 	case "WEB-UPLOAD-MISSING-PART":
 		uploadMissingPart(w, c, add)
 	case "WEB-UPLOAD-LEASE":

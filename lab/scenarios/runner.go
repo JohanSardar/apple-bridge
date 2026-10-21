@@ -433,6 +433,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 		}
 		return runWebServer(ctx, s, level)
 	}
+	if strings.HasPrefix(s.ID, "WEB-UPLOAD-REPLICA") {
+		return runUploadReplica(ctx, s, level)
+	}
 	if strings.HasPrefix(s.ID, "WEB-UPLOAD-") {
 		return runWebUpload(ctx, s, level)
 	}

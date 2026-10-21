@@ -1,17 +1,31 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[20.16 13.38 11.88] cpus=8 other_heavy=1"
+    "summary": "air: load=[4.4 5.98 7.4] cpus=8 other_heavy=1"
   },
-  "run_id": "upload_01M5F7A29K51V647NEAFWSQ8FF",
+  "run_id": "upload_01M5FA10CH60JAB5BE8RA9NP8V",
   "metrics": {
-    "resumed_feed_upload_bytes": 2600000
+    "forward_resume_acknowledged_offset_bytes": 1048576,
+    "forward_resume_chunk_offsets": [
+      1048576,
+      2097152
+    ],
+    "replica_http_upload_100_MiB_per_second": 16.737041042613885,
+    "replica_http_upload_100_MiB_seconds": 5.97477175,
+    "resumed_feed_upload_bytes": 2600000,
+    "two_concurrent_10_MiB_completion_ms": [
+      621.98875,
+      1170.26875
+    ],
+    "two_concurrent_10_MiB_wall_ms": 1229.127667,
+    "upload_live_p95_regression_ms": 1.7726250000000006,
+    "upload_live_reader_worker_trigger_ms": 50
   },
   "scenario": "WEB-UPLOAD-FEED",
   "level": "sim",
   "passed": true,
-  "git_sha": "479bdae9df9756ac4666f8b96784c25e50262b22",
-  "at": "2026-10-21T12:34:50.804299Z",
+  "git_sha": "685d1f9ceb5c3f598c8c330ac5f0ae880d847011",
+  "at": "2026-10-21T13:22:19.665198Z",
   "assertions": [
     {
       "name": "gateway_upload_world",
@@ -74,6 +88,10 @@
       "passed": true
     },
     {
+      "name": "changed_commit_digest_preserves_uploading_lease",
+      "passed": true
+    },
+    {
       "name": "gateway_digest_verified_before_ready",
       "passed": true
     },
@@ -87,6 +105,22 @@
     },
     {
       "name": "ready_commit_retry_keeps_verified_lease",
+      "passed": true
+    },
+    {
+      "name": "old_session_chunk_prepared",
+      "passed": true
+    },
+    {
+      "name": "prepared_session_replaced",
+      "passed": true
+    },
+    {
+      "name": "old_session_prepare_cannot_authorize_new_session",
+      "passed": true
+    },
+    {
+      "name": "cross_session_offset_unchanged",
       "passed": true
     },
     {
@@ -114,11 +148,82 @@
       "passed": true
     },
     {
+      "name": "forward_resume_local_bytes_staged",
+      "passed": true
+    },
+    {
+      "name": "forward_context_cancelled_after_acknowledged_chunk",
+      "passed": true
+    },
+    {
+      "name": "forward_begin_idempotent_at_persisted_gateway_offset",
+      "passed": true
+    },
+    {
+      "name": "forward_retry_ready_without_resending_acknowledged_prefix",
+      "passed": true
+    },
+    {
+      "name": "forward_retry_gateway_bytes_exact",
+      "passed": true
+    },
+    {
+      "name": "live_upload_replica_connected",
+      "passed": true
+    },
+    {
+      "name": "live_upload_session",
+      "passed": true
+    },
+    {
+      "name": "upload_gateway_live_probe",
+      "passed": true
+    },
+    {
+      "name": "upload_replica_live_probe",
+      "passed": true
+    },
+    {
+      "name": "idle_live_samples_complete",
+      "passed": true
+    },
+    {
+      "name": "hundred_MiB_feed_upload_observed_in_progress",
+      "passed": true
+    },
+    {
+      "name": "upload_live_samples_complete",
+      "passed": true
+    },
+    {
+      "name": "hundred_MiB_upload_verified_ready",
+      "passed": true
+    },
+    {
+      "name": "two_concurrent_ten_MiB_uploads_verified_ready",
+      "passed": true
+    },
+    {
       "name": "credential_backend_override_restored",
       "passed": true
     }
   ],
-  "latency": {},
+  "latency": {
+    "idle_gateway_to_replica_live": {
+      "samples": 20,
+      "p50_ms": 2.883459,
+      "p95_ms": 6.516084,
+      "max_ms": 6.812583,
+      "timeouts": 0
+    },
+    "upload_gateway_to_replica_live": {
+      "samples": 20,
+      "p50_ms": 3.447708,
+      "p95_ms": 8.288709,
+      "max_ms": 10.230875,
+      "timeouts": 0
+    }
+  },
   "hosts": [
     "air"
   ]
