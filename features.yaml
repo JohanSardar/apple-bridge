@@ -502,6 +502,7 @@ features:
       - {id: WEB-CONTACT-AVATAR-THUMB, levels: [web]}
       - {id: WEB-HANDLES-ROUTE, levels: [web]}
       - {id: WEB-MSG-CHATS-STORE, levels: [web]}
+      - {id: WEB-MSG-CHATS-CACHE, levels: [web]}
       - {id: WEB-MSG-LIST, levels: [web]}
       - {id: WEB-MSG-FILTERS, levels: [web]}
       - {id: WEB-MSG-SEARCH, levels: [web]}

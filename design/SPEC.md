@@ -1248,6 +1248,7 @@ Recently Deleted becomes `deleted_at` + `recoverable_until` on messages and chat
 | `search/` | SearchResults (sections, filter tokens, highlighted matches, jump-to-message with pulse) |
 
 **Rules:**
+- **Chats cache:** trusted sessions atomically persist a versioned materialized view with its cursor, capped at 2,000 chats and 2 MiB serialized in display order. Hydration renders this snapshot before reconciling a fresh live view; transport pages do not independently hydrate or persist. IndexedDB upgrade removes legacy chat-page keys. Public sessions persist nothing, and session removal wipes the snapshot. WEB-MSG-CHATS-CACHE covers interrupted cross-page reorder, offline reload, upgrade and privacy.
 - **Layout engine:** the transcript layout is a pure function `(items, handles, prefs, width) → rows`, with code-level tests allowed as layout math. Rows have deterministic heights from measured text plus known media dimensions (`media.width/height`), so there's never layout shift.
 - **Text measurement:** done in one batched pass per frame (canvas `measureText` with the bubble font), with DOM reflow only for rows containing mixed inline content.
 - **Viewer source:** the media viewer pages the whole chat through `messages.collection{chat_id, kind: media}`, independently of the transcript window. Owning `message_id` supports Show in Chat; `sent_at` preserves interleaved photo/video order.
