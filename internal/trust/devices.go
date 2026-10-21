@@ -121,8 +121,17 @@ func (a *Authority) UpdatePasskey(rp string, key webauthn.Credential) error {
 
 func (a *Authority) DeletePasskey(rp, id string) error {
 	return a.update(func(d *credentials) error {
+		count := 0
+		for _, key := range d.Passkeys {
+			if key.RPID == rp {
+				count++
+			}
+		}
 		for i, k := range d.Passkeys {
 			if k.RPID == rp && k.ID == id {
+				if count <= 1 {
+					return contracts.ErrConflict
+				}
 				d.Passkeys = append(d.Passkeys[:i], d.Passkeys[i+1:]...)
 				return nil
 			}

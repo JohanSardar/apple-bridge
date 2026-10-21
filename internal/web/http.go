@@ -3,6 +3,7 @@ package web
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io/fs"
 	"net"
 	"net/http"
@@ -134,8 +135,12 @@ func Handler(deps Deps) http.Handler {
 		respond(w, 200, map[string]any{"passkeys": list})
 	})
 	mux.HandleFunc("DELETE /web/v1/passkeys/{id}", func(w http.ResponseWriter, r *http.Request) {
-		if s.deps.Authority.DeletePasskey(rpID(r), r.PathValue("id")) != nil {
-			reject(w, 404, "not_found")
+		if err := s.deps.Authority.DeletePasskey(rpID(r), r.PathValue("id")); err != nil {
+			if errors.Is(err, contracts.ErrConflict) {
+				reject(w, 409, "last_passkey")
+			} else {
+				reject(w, 404, "not_found")
+			}
 			return
 		}
 		respond(w, 200, map[string]bool{"ok": true})
