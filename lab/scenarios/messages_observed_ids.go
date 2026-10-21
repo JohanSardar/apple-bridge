@@ -86,4 +86,5 @@ func checkMessageCommandIDs(ctx context.Context, w *world.World, evidence *Evide
 	err = client.Call(ctx, command.Op, command, &ambiguous)
 	effects, effectErr := w.Effects()
 	add("ambiguous_retry_is_lookup_only", err == nil && ambiguous.State == "indeterminate" && len(ambiguous.IDs) == 0 && effectErr == nil && effects[command.ID] == 1)
+	checkWebCommandIDs(ctx, w, chat.ID, add)
 }
