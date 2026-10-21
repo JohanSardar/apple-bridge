@@ -446,7 +446,7 @@ features:
       - {id: WEB-AGENT-ACTIVITY, levels: [sim]}
       - {id: WEB-AGENT-LEVELS, levels: [sim]}
       - {id: WEB-AGENT-OAUTH, levels: [sim, web]}
-    notes: Scoped credentials, CLI, owner management, redacted activity and gateway owner approvals implemented; OAuth and settings screens follow. The feature remains todo while its planned OAuth scenario is absent.
+    notes: Scoped credentials, CLI, activity, gateway owner approvals and OAuth HTTP endpoints implemented. The feature remains todo until settings, browser consent and OAuth web coverage ship.
   - id: web.demo
     title: Synthetic demo world serving the web app (bridge-lab demo)
     requirements: [R-WEB-UI]

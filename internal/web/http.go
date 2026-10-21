@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/netip"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -193,6 +194,7 @@ func Handler(deps Deps) http.Handler {
 	mux.HandleFunc("GET /web/v1/blob/{digest}", s.blob)
 	mux.HandleFunc("POST /web/v1/upload", s.upload)
 	s.agentRoutes(mux)
+	s.oauthRoutes(mux)
 	mux.HandleFunc("/web/v1/", func(w http.ResponseWriter, r *http.Request) { reject(w, 404, "not_found") })
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" && r.Method != "HEAD" {
@@ -216,14 +218,29 @@ func Handler(deps Deps) http.Handler {
 		}
 		r = r.WithContext(context.WithValue(r.Context(), servingKey{}, servingValue))
 
-		if r.Method != "GET" && r.Method != "HEAD" || r.URL.Path == "/web/v1/live" {
+		oauthPublic := r.URL.Path == "/oauth/register" || r.URL.Path == "/oauth/token"
+		if oauthPublic {
+			w.Header().Set("Cache-Control", "no-store")
+			origins := r.Header.Values("Origin")
+			if len(origins) > 1 || len(origins) == 1 && origins[0] != servingOrigin(r) {
+				reject(w, 403, "origin")
+				return
+			}
+			if !s.allow("oauth:"+clientIP(r), false) {
+				w.Header().Set("Retry-After", "1")
+				reject(w, 429, "rate_limited")
+				return
+			}
+			r.Body = http.MaxBytesReader(w, r.Body, 64*1024)
+		}
+		if !oauthPublic && (r.Method != "GET" && r.Method != "HEAD" || r.URL.Path == "/web/v1/live") {
 			origins := r.Header.Values("Origin")
 			if len(origins) != 1 || origins[0] != servingOrigin(r) {
 				reject(w, 403, "origin")
 				return
 			}
 		}
-		if strings.HasPrefix(r.URL.Path, "/web/v1/") {
+		if strings.HasPrefix(r.URL.Path, "/web/v1/") || r.URL.Path == "/oauth/authorize" {
 			w.Header().Set("Cache-Control", "no-store")
 			public := strings.HasPrefix(r.URL.Path, "/web/v1/login/") || strings.HasPrefix(r.URL.Path, "/web/v1/enroll/")
 			if public {
@@ -236,11 +253,19 @@ func Handler(deps Deps) http.Handler {
 			} else {
 				cookie, err := r.Cookie(sessionCookie(r))
 				if err != nil {
+					if r.Method == "GET" && r.URL.Path == "/oauth/authorize" {
+						http.Redirect(w, r, "/signin?return_to="+url.QueryEscape(r.URL.RequestURI()), http.StatusSeeOther)
+						return
+					}
 					reject(w, 401, "unauthorized")
 					return
 				}
 				p, session, err := deps.Authority.AuthenticateDevice(cookie.Value)
 				if err != nil {
+					if r.Method == "GET" && r.URL.Path == "/oauth/authorize" {
+						http.Redirect(w, r, "/signin?return_to="+url.QueryEscape(r.URL.RequestURI()), http.StatusSeeOther)
+						return
+					}
 					reject(w, 401, "unauthorized")
 					return
 				}
