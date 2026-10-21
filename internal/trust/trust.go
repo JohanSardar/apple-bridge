@@ -57,6 +57,13 @@ func AllVisibility() Visibility {
 }
 
 type Principal struct {
+	Name        string            `json:"name,omitempty"`
+	Level       AgentLevel        `json:"level,omitempty"`
+	CreatedAt   time.Time         `json:"created_at,omitempty"`
+	RevokedAt   *time.Time        `json:"revoked_at,omitempty"`
+	LastUsed    *time.Time        `json:"last_used,omitempty"`
+	ExpiresAt   time.Time         `json:"expires_at,omitempty"`
+	Resource    string            `json:"resource,omitempty"`
 	Dial        string            `json:"dial,omitempty"`
 	ID          string            `json:"id"`
 	Kind        string            `json:"kind"`
