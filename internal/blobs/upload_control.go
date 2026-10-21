@@ -51,15 +51,14 @@ func (s *Store) Upload(ctx context.Context, owner string, r contracts.UploadRequ
 		}
 	case "status":
 	case "commit":
+		if r.Digest != "" && u.ExpectedDigest != "" && r.Digest != u.ExpectedDigest {
+			return empty, contracts.ErrCorrupt
+		}
 		if u.State == "ready" {
 			return u.UploadStatus, nil
 		}
 		if u.Size >= 0 && u.Offset != u.Size {
 			return empty, contracts.ErrConflict
-		}
-		if r.Digest != "" && u.ExpectedDigest != "" && r.Digest != u.ExpectedDigest {
-			s.discardUpload(ctx, u)
-			return empty, contracts.ErrCorrupt
 		}
 		if r.Digest != "" {
 			u.ExpectedDigest = r.Digest
