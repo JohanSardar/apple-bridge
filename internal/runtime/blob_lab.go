@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/JohanSardar/apple-bridge/internal/blobs"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/internal/state"
@@ -51,6 +52,25 @@ func serveBlobLab(ctx context.Context, home string, s *state.Store, b *blobs.Sto
 		var result any = map[string]bool{"ok": true}
 		var err error
 		switch a.Action {
+		case "relay-fixture":
+			payload := bytes.Repeat([]byte("[ab-test] relay blob\n"), 8192)
+			var digest, pin string
+			digest, pin, err = b.Stage(r.Context(), bytes.NewReader(payload), blobs.Expect{})
+			if err != nil {
+				err = fmt.Errorf("stage fixture: %w", err)
+			}
+			if err == nil {
+				defer b.Release(context.WithoutCancel(r.Context()), pin)
+				data, _ := json.Marshal(map[string]any{"title": "[ab-test] relay blob", "blob": contracts.BlobReference{Digest: digest, Size: int64(len(payload)), State: "available"}})
+				_, err = s.CommitCapture(r.Context(), contracts.Capture{Source: contracts.System, Generation: contracts.NewID("relay"), Checkpoint: "1", Observations: []contracts.Observation{{Kind: "upsert", Collection: "system.source", NativeKey: "relay-blob", Data: data, ObservedAt: time.Now().UTC()}}})
+				if err != nil {
+					err = fmt.Errorf("commit fixture: %w", err)
+				}
+				result = map[string]any{"digest": digest, "size": len(payload), "title": "[ab-test] relay blob"}
+			}
+			if err != nil {
+				os.WriteFile(filepath.Join(dir, "relay-blob-error.log"), []byte(err.Error()), 0600)
+			}
 		case "stage":
 			d, p, e := b.Stage(r.Context(), bytes.NewReader([]byte("[ab-test] pinned blob")), blobs.Expect{})
 			err = e

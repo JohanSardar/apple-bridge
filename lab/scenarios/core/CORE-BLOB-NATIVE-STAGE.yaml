@@ -1,0 +1,7 @@
+id: CORE-BLOB-NATIVE-STAGE
+feature: core.blobs
+levels: [sim, real]
+given: []
+when: []
+then: []
+cleanup: []
