@@ -27,8 +27,10 @@ public final class CalendarSource: Source {
     private var lastFullScanStarted: UInt64 = 0
     private var persistence: Task<Void, Never>?
     private var splitCaptures: UInt64 = 0
+    private var materializations: [String: CalendarEventStamp] = [:]
 
     private func touch(_ event: EKEvent, future: Bool) {
+        materializations = materializations.filter { $0.value.identifier != event.calendarItemIdentifier }
         let bounds = CalendarTime.window(Date())
         let original = event.occurrenceDate ?? event.startDate!
         let interval = future ? bounds : DateInterval(start: min(event.startDate, original).addingTimeInterval(-1), end: max(event.endDate, original.addingTimeInterval(1)))
@@ -121,6 +123,12 @@ public final class CalendarSource: Source {
         .object(["kind": .string("upsert"), "collection": .string(collection), "native_key": .string(key), "scoped_alias": .string(alias), "data": data, "observed_at": .string(timestamp())])
     }
 
+    private func eventObservation(_ event: EKEvent, native: String) -> JSON {
+        let occurrence = event.hasRecurrenceRules || event.isDetached ? event.occurrenceDate.map { "|" + (event.isAllDay ? CalendarTime.floating($0, zone: .current) : timestamp($0)) } ?? "" : ""
+        let alias = event.calendarItemExternalIdentifier.map { _ in event.calendar.source.sourceIdentifier + "/" + event.calendar.calendarIdentifier + "/" + seriesIdentifier(event) + occurrence } ?? ""
+        return observation("calendar.event", native, data(event), alias: alias)
+    }
+
     private func events(_ interval: DateInterval, calendars: Set<String>? = nil) throws -> [EKEvent] {
         guard gate.authorized(.event) else { throw SourceFailure.permissionMissing }
         let queryStarted = CaptureTrace.now()
@@ -200,13 +208,19 @@ public final class CalendarSource: Source {
         let scan = UUID().uuidString
         let scanNS = CaptureTrace.now()
         var fetchNS: UInt64 = 0, materializeNS: UInt64 = 0, hashNS: UInt64 = 0, coordinationNS: UInt64 = 0
-        defer { gate.trace.record("calendar_scan_timing", fields: ["scan": .string(scan), "started_ns": .integer(scanNS), "fetch_ns": .integer(fetchNS), "materialize_ns": .integer(materializeNS), "hash_ns": .integer(hashNS), "coordination_ns": .integer(coordinationNS), "force_full": .bool(forceFull), "scoped": .bool(scope != nil)]) }
+        var reused: UInt64 = 0, rebuilt: UInt64 = 0
+        defer { gate.trace.record("calendar_scan_timing", fields: ["scan": .string(scan), "started_ns": .integer(scanNS), "fetch_ns": .integer(fetchNS), "materialize_ns": .integer(materializeNS), "hash_ns": .integer(hashNS), "coordination_ns": .integer(coordinationNS), "reused": .integer(reused), "rebuilt": .integer(rebuilt), "force_full": .bool(forceFull), "scoped": .bool(scope != nil)]) }
         gate.trace.record("calendar_scan_started", fields: ["scan": .string(scan), "live": .bool(live), "force_full": .bool(forceFull), "notification_ns": .integer(gate.calendarNotificationAt), "debounce_ns": .integer(revision), "scoped": .bool(scope != nil)])
         let now = Date()
         let bounds = CalendarTime.window(now)
         var current: [String: JSON] = scope.map { range in committed.filter { !range.covers($0.value) } } ?? [:]
         var seen: Set<String> = []
         var pending: [JSON] = []
+        var nextMaterializations = materializations
+        var checkedMasters: Set<String> = []
+        var masters: [String: Date] = [:]
+        var uncertainSeries: Set<String> = []
+        var reusedEvents: [String: EKEvent] = [:]
         let streamInitial = committed.isEmpty
         guard gate.authorized(.event) else { throw SourceFailure.permissionMissing }
         for calendar in gate.store.calendars(for: .event) {
@@ -229,12 +243,25 @@ public final class CalendarSource: Source {
                 try Task.checkCancellation()
                 let materializeStarted = CaptureTrace.now()
                 let native = key(event)
-                remember(event)
                 let identity = "calendar.event/" + native
                 if !seen.insert(identity).inserted { continue }
-                let occurrence = event.hasRecurrenceRules || event.isDetached ? event.occurrenceDate.map { "|" + (event.isAllDay ? CalendarTime.floating($0, zone: .current) : timestamp($0)) } ?? "" : ""
-                let alias = event.calendarItemExternalIdentifier.map { _ in event.calendar.source.sourceIdentifier + "/" + event.calendar.calendarIdentifier + "/" + seriesIdentifier(event) + occurrence } ?? ""
-                let value = observation("calendar.event", native, data(event), alias: alias)
+                let identifier = event.calendarItemIdentifier
+                if event.hasRecurrenceRules && checkedMasters.insert(identifier).inserted {
+                    masters[identifier] = (gate.store.calendarItem(withIdentifier: identifier) as? EKEvent)?.lastModifiedDate
+                }
+                let stamp = CalendarEventStamp(event, masterModified: event.hasRecurrenceRules ? masters[identifier] : event.lastModifiedDate, now: now)
+                if stamp == nil { uncertainSeries.insert(identifier) }
+                nextMaterializations[identity] = stamp
+                if !forceFull, !uncertainSeries.contains(identifier), let stamp, materializations[identity] == stamp, let previous = committed[identity] {
+                    current[identity] = previous
+                    reusedEvents[identity] = event
+                    reused += 1
+                    materializeNS += CaptureTrace.now() - materializeStarted
+                    continue
+                }
+                rebuilt += 1
+                remember(event)
+                let value = eventObservation(event, native: native)
                 current[identity] = value
                 materializeNS += CaptureTrace.now() - materializeStarted
                 let hashStarted = CaptureTrace.now()
@@ -256,6 +283,17 @@ public final class CalendarSource: Source {
             if streamInitial { pending = [] }
             await Task.yield()
         }
+        for (identity, event) in reusedEvents where uncertainSeries.contains(event.calendarItemIdentifier) {
+            await gate.waitForReminderRefetch()
+            let rebuildStarted = CaptureTrace.now()
+            remember(event)
+            let value = eventObservation(event, native: key(event))
+            current[identity] = value
+            if value["data"] != committed[identity]?["data"] || value["scoped_alias"] != committed[identity]?["scoped_alias"] { pending.append(value) }
+            materializeNS += CaptureTrace.now() - rebuildStarted
+            rebuilt += 1; reused -= 1
+        }
+        nextMaterializations = nextMaterializations.filter { !uncertainSeries.contains($0.value.identifier) }
         let revalidateStarted = CaptureTrace.now()
         for (identity, previous) in committed.merging(offered, uniquingKeysWith: { accepted, _ in accepted }) where current[identity] == nil {
             if let scope, !scope.covers(previous) { continue }
@@ -305,6 +343,7 @@ public final class CalendarSource: Source {
         gate.trace.record("calendar_publish_accepted", fields: ["scan": .string(scan)])
         let persist = forceFull || !pending.isEmpty
         committed = current; forceFull = false
+        materializations = nextMaterializations.filter { current[$0.key] != nil }
         if scope == nil { lastFullScanStarted = scanNS }
         if persist { persistAccepted(current) }
         gate.trace.record("calendar_scan_complete", fields: ["records": .number(Double(current.count)), "capture_splits": .integer(splitCaptures)])
