@@ -155,18 +155,7 @@ public actor Messages: Source {
                             if result == nil && mediaRetry[key] != nil { data["derivatives"] = [:] as [String: Any] }
                             if let result {
                                 mediaResults[cached.2] = result
-                                data["media"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode(result.media))
-                                var derivatives: [String: Any] = [:]
-                                for (name, variant) in result.derivatives {
-                                    var value = try JSONSerialization.jsonObject(with: JSONEncoder().encode(variant)) as? [String: Any] ?? [:]
-                                    value.removeValue(forKey: "file")
-                                    value["state"] = "present"
-                                    derivatives[name] = value
-                                    blobHandles[variant.digest] = variant.handle
-                                    variantURLs[variant.handle] = MediaDerivatives.url(variant)
-                                    blobDigests[variant.handle] = (variant.size, .distantPast, variant.digest)
-                                }
-                                data["derivatives"] = derivatives
+                                try attachMedia(result, to: &data, handles: &blobHandles)
                             }
                             if (result == nil || result?.awaitingLive == true), activeMedia?.0.key != key, (mediaRetry[key] ?? .distantPast) < Date() {
                                 let companions = MediaDerivatives.liveIdentifier(url) == nil ? [] : try reader.query("SELECT filename FROM attachment WHERE lower(filename) LIKE '%.mov' ORDER BY abs(ROWID-?)", [String(row.integer("derivative_position"))]).compactMap { reader.attachmentURL($0["filename"]) }.filter { FileManager.default.fileExists(atPath: $0.path) && !BlobDigest.isDataless($0) }
@@ -186,6 +175,11 @@ public actor Messages: Source {
                     blob.removeValue(forKey: "handle")
                 } catch { blob = ["state": "missing"] }
                 data["blob"] = blob
+            } else if collection == "messages.attachment", var blob = data["blob"] as? [String: Any], ["offloaded", "missing"].contains(blob["state"] as? String ?? ""), let cached = blobDigests[key], let result = mediaResults[cached.2] ?? MediaDerivatives.cached(cached.2) {
+                blob["digest"] = cached.2
+                blob.removeValue(forKey: "handle")
+                data["blob"] = blob
+                try attachMedia(result, to: &data, handles: &blobHandles)
             }
             let encoded = try JSONSerialization.data(withJSONObject: data, options: [.sortedKeys])
             let digest = BodyDigest.hash(encoded)
@@ -229,6 +223,20 @@ public actor Messages: Source {
         guard outputGeneration == generation else { throw SourceFailure.corrupt }
         for (key, hash) in updates where (hashTimes[key] ?? "") <= at { hashes[key] = hash; hashTimes[key] = at }
         try Task.checkCancellation()
+    }
+    private func attachMedia(_ result: MediaResult, to data: inout [String: Any], handles: inout [String: String]) throws {
+        data["media"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode(result.media))
+        var derivatives: [String: Any] = [:]
+        for (name, variant) in result.derivatives {
+            var value = try JSONSerialization.jsonObject(with: JSONEncoder().encode(variant)) as? [String: Any] ?? [:]
+            value.removeValue(forKey: "file")
+            value["state"] = "present"
+            derivatives[name] = value
+            handles[variant.digest] = variant.handle
+            variantURLs[variant.handle] = MediaDerivatives.url(variant)
+            blobDigests[variant.handle] = (variant.size, .distantPast, variant.digest)
+        }
+        data["derivatives"] = derivatives
     }
     private func publishMedia(_ result: MediaResult, job: MediaJob, token: String, sink: any ObservationSink) async throws {
         guard token == generation, blobDigests[job.key]?.2 == job.digest, let reader else { return }

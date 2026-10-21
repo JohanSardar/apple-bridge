@@ -418,6 +418,13 @@ features:
     modules: [native/MediaDerivatives, blobs, web]
     depends_on: [messages.read]
     status: limited
+    limits:
+      - scenario: WEB-MEDIA-VARIANTS
+        level: real
+        reason: "2026-10-20: tagged synthetic HEIC/MOV/CAF and paired Live Photo variants were captured, but the harness initially missed staged filename prefixes and Accessibility could not verify cleanup targets for six file bubbles. Further real sends stopped; the cold arrival latency budget and complete cleanup remain unverified."
+      - scenario: WEB-MEDIA-VARIANTS
+        level: replica
+        reason: "The full tagged send cycle to Ubuntu is withheld until the existing six self-chat test file bubbles can be safely cleaned up. A separate read-only verifier checks existing variants without sending additional messages."
     scenarios:
       - {id: WEB-MEDIA-VARIANTS, levels: [sim, real, replica]}
       - {id: WEB-MEDIA-CAP, levels: [sim]}

@@ -20,6 +20,7 @@ import (
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/lab/scripted"
+	"github.com/JohanSardar/apple-bridge/lab/simapple"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 )
 
@@ -95,7 +96,7 @@ func runMediaVariants(ctx context.Context, s Scenario, level string) Evidence {
 	for _, fixture := range []struct {
 		name  string
 		bytes []byte
-	}{{prefix + ".png", buffer.Bytes()}, {prefix + ".mov", []byte("synthetic video source")}, {prefix + ".caf", []byte("synthetic audio source")}} {
+	}{{prefix + ".png", buffer.Bytes()}, {prefix + ".mov", simapple.MediaFixture("video")}, {prefix + ".caf", simapple.MediaFixture("audio")}} {
 		file, err := stageMessageFile(ctx, w.Gateway, fixture.name, fixture.bytes)
 		if err != nil {
 			add("synthetic_upload", false)

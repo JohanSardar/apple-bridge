@@ -23,6 +23,7 @@ type Observation struct {
 }
 
 type Capture struct {
+	Live        bool              `json:"live,omitempty"`
 	BlobHandles map[string]string `json:"blob_handles,omitempty"`
 
 	Source             Source        `json:"source"`

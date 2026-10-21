@@ -310,11 +310,12 @@ public actor AppleSession: ObservationSink {
                 capture["scan_id"] = .string(pending.scanID); capture["scope"] = .array(pending.scope.map(JSON.string)); capture["scan_started_at"] = .string(pending.started.isEmpty ? timestamp() : pending.started); capture["completion_evidence"] = .string(pending.completionEvidence)
             }
             capture["blob_handles"] = .object(pending.blobHandles.mapValues(JSON.string))
+            capture["live"] = .bool(prioritized)
             capture["t"] = .string("Capture")
             let frame = JSON.object(capture)
             let size = try PeerWire.encode(frame).count
             guard size <= credit else { return }
-            trace.record("capture_sent", keys: observations.map { $0["native_key"].string }, fields: ["checkpoint": .string(checkpoint), "live": .bool(prioritized), "credit": .number(Double(credit))])
+            trace.record("capture_sent", keys: observations.map { $0["native_key"].string }, fields: ["checkpoint": .string(checkpoint), "live": .bool(prioritized), "credit": .number(Double(credit)), "blob_count": .number(Double(pending.blobHandles.count))])
             try wire?.send(frame)
             credit -= size
             flights[pending.source] = Flight(pending: sending, checkpoint: checkpoint, bytes: size)

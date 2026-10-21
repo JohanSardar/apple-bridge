@@ -172,10 +172,11 @@ func run() error {
 					checked = len(codecs) > 0 && codecs[0] == "aac "
 				}
 				if v.MIME == "video/mp4" || v.MIME == "audio/mp4" {
-					duration, ok := truth["duration_ms"].(float64)
-					checked = checked && ok && duration >= 950 && duration <= 1100
+					duration := numeric(truth["duration_ms"])
+					checked = checked && duration >= 950 && duration <= 1100
 				}
 				if !checked {
+					json.NewEncoder(os.Stdout).Encode(map[string]any{"status": "failed_readonly", "variant": name, "remote": endpoint.Remote, "truth": truth, "width": v.Width, "height": v.Height, "new_messages_sent": 0, "verified_variants": output})
 					return fmt.Errorf("%s codec or dimensions mismatch", name)
 				}
 				output = append(output, map[string]any{"variant": name, "remote": endpoint.Remote, "mime": v.MIME, "bytes": len(content), "digest_verified": true, "truth": truth})

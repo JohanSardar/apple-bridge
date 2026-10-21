@@ -97,6 +97,9 @@ func (f *fakeApple) enqueue(ctx context.Context, c contracts.Capture, wait bool,
 	if len(revisions) > 0 {
 		revision = revisions[0]
 	}
+	if c.Source == contracts.Messages && c.ScanID == "" {
+		c.Live = true
+	}
 	req := captureRequest{Capture: c, Revision: revision}
 	if wait {
 		req.Done = make(chan struct{})

@@ -99,7 +99,7 @@ public enum MediaDerivatives {
         return MediaVariant(digest: digest, size: size, mime: mime, width: width, height: height, file: immutable.deletingLastPathComponent().lastPathComponent + "/" + immutable.lastPathComponent)
     }
     public static func liveIdentifier(_ url: URL) -> String? {
-        guard let source = CGImageSourceCreateWithURL(url as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary) else { return nil }
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary), let identifier = CGImageSourceGetType(source), let type = UTType(identifier as String), type.conforms(to: .image) else { return nil }
         return contentIdentifier(source)
     }
     static func contentIdentifier(_ source: CGImageSource) -> String? {

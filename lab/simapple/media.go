@@ -214,3 +214,12 @@ func simMediaMIME(name string, data []byte) string {
 	}
 	return "application/octet-stream"
 }
+
+func MediaFixture(kind string) []byte {
+	encoded := map[string]string{"video": simVideo, "audio": simAudio}[kind]
+	if encoded == "" {
+		return nil
+	}
+	data, _ := base64.StdEncoding.DecodeString(encoded)
+	return append(data, 0, 0, 0, 8, 'f', 'r', 'e', 'e')
+}

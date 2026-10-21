@@ -18,6 +18,8 @@ func (s appleSource) Read(ctx context.Context, d string, offset, length int64) (
 }
 
 type appleJob struct {
+	live    bool
+	order   uint64
 	variant bool
 	ctx     context.Context
 	source  appleSource
@@ -65,7 +67,14 @@ func (s *Store) Capture(ctx context.Context, c contracts.Capture, w *applepeer.W
 		if e.State == "present" || e.State == "failed" {
 			continue
 		}
-		s.applePending[d] = &appleJob{ctx: ctx, source: appleSource{w, h}, variant: variants[d]}
+		s.appleSequence++
+		job := &appleJob{ctx: ctx, source: appleSource{w, h}, variant: variants[d], live: c.Live, order: s.appleSequence}
+		if previous := s.applePending[d]; previous != nil && previous.ctx.Err() == nil {
+			job.order = previous.order
+			job.live = job.live || previous.live
+			job.variant = job.variant || previous.variant
+		}
+		s.applePending[d] = job
 	}
 	if !s.appleRunning && len(s.applePending) > 0 {
 		s.appleRunning = true
@@ -96,12 +105,17 @@ func (s *Store) captureBlobs() {
 		var digest string
 		var job *appleJob
 		var ready time.Time
+		now := time.Now()
 		for d, j := range s.applePending {
 			if j.ctx.Err() != nil {
 				continue
 			}
 			e := s.manifest.Entries[d]
-			if job == nil || (j.variant && !job.variant && !e.NextAttemptAt.After(time.Now())) || (j.variant == job.variant && e.NextAttemptAt.Before(ready)) {
+			available := !e.NextAttemptAt.After(now)
+			readyFirst := available && ready.After(now)
+			prioritized := job != nil && available && !ready.After(now) && (j.variant && !job.variant || j.variant == job.variant && (j.live && !job.live || j.live == job.live && j.order < job.order))
+			earlier := !available && ready.After(now) && e.NextAttemptAt.Before(ready)
+			if job == nil || readyFirst || prioritized || earlier {
 				digest, job, ready = d, j, e.NextAttemptAt
 			}
 		}

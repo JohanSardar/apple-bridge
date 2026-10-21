@@ -27,3 +27,11 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+## Synthetic simulation clips
+
+`lab/simapple/media_clips.go` contains a one-second H.264 blue frame and a
+one-second AAC silence fixture, authored with Apple's system encoders by
+`MediaChecks`. Go uses only its standard library to produce synthetic source
+containers, image variants, placeholders and the canonical video/audio variants.
+Sim video/audio use these fixed codec fixtures rather than transcoding inputs.

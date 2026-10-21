@@ -44,9 +44,10 @@ type Store struct {
 	referenceCounts map[string]int
 	digestPins      map[string]map[string]bool
 
-	appleMu      sync.Mutex
-	applePending map[string]*appleJob
-	appleRunning bool
+	appleMu       sync.Mutex
+	applePending  map[string]*appleJob
+	appleRunning  bool
+	appleSequence uint64
 
 	changed  chan struct{}
 	mu       sync.Mutex
