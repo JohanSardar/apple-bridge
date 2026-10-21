@@ -1,0 +1,102 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[12.85 10.09 9.17] cpus=8 other_heavy=1"
+  },
+  "run_id": "upload_01M5F2CWSJG704XH4HGDZF1QQE",
+  "scenario": "WEB-UPLOAD-MISSING-PART",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "e2cf6d70f7bdd3e4108aa7121e6a569a633fd1a4",
+  "at": "2026-10-21T11:09:00.594983Z",
+  "assertions": [
+    {
+      "name": "gateway_upload_world",
+      "passed": true
+    },
+    {
+      "name": "serving_device_session",
+      "passed": true
+    },
+    {
+      "name": "missing_append_begun_without_optional_digest",
+      "passed": true
+    },
+    {
+      "name": "missing_append_prefix_accepted",
+      "passed": true
+    },
+    {
+      "name": "missing_append_fault_injected",
+      "passed": true
+    },
+    {
+      "name": "missing_append_cas_inventory",
+      "passed": true
+    },
+    {
+      "name": "missing_append_refused_with_conflict",
+      "passed": true
+    },
+    {
+      "name": "missing_append_no_blob_staged",
+      "passed": true
+    },
+    {
+      "name": "short_append_begun_without_optional_digest",
+      "passed": true
+    },
+    {
+      "name": "short_append_prefix_accepted",
+      "passed": true
+    },
+    {
+      "name": "short_append_fault_injected",
+      "passed": true
+    },
+    {
+      "name": "short_append_cas_inventory",
+      "passed": true
+    },
+    {
+      "name": "short_append_refused_with_conflict",
+      "passed": true
+    },
+    {
+      "name": "short_append_no_blob_staged",
+      "passed": true
+    },
+    {
+      "name": "missing_commit_begun_without_optional_digest",
+      "passed": true
+    },
+    {
+      "name": "missing_commit_prefix_accepted",
+      "passed": true
+    },
+    {
+      "name": "missing_commit_fault_injected",
+      "passed": true
+    },
+    {
+      "name": "missing_commit_cas_inventory",
+      "passed": true
+    },
+    {
+      "name": "missing_commit_refused_with_conflict",
+      "passed": true
+    },
+    {
+      "name": "missing_commit_no_blob_staged",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
