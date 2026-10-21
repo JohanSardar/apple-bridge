@@ -31,6 +31,7 @@ func messageReference(collection, key string) map[string]any {
 }
 
 func (f *fakeApple) messageRoutes(mux *http.ServeMux) {
+	f.readModelRoutes(mux)
 	if f.messages.generation == "" {
 		f.messages = messageState{generation: f.generation, permitted: true, watcherArmed: true}
 	}

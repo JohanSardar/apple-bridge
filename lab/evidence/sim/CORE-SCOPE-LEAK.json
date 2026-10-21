@@ -1,18 +1,18 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[3.99 4.55 7.62] cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[16.85 16.7 10.41] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M58DGHDZB3DF1ZTJ9ES4HNSF",
+  "run_id": "run_01M5E18D8WNVA53FM2WMF2Y06S",
   "network_path": "loopback",
   "metrics": {
-    "recovery_final_drain_ms": 15.273708
+    "recovery_final_drain_ms": 11.972125
   },
   "scenario": "CORE-SCOPE-LEAK",
   "level": "sim",
   "passed": true,
-  "git_sha": "47549176312caf86b1d55e35f1e4c13562ed17f7",
-  "at": "2026-10-18T21:08:33.343786Z",
+  "git_sha": "ee3cc74aca69aa26cbb097c2a7cdb46751941d88",
+  "at": "2026-10-21T01:29:50.620964Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -114,16 +114,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 3.890292,
-      "p95_ms": 3.890292,
-      "max_ms": 3.890292,
+      "p50_ms": 3.866292,
+      "p95_ms": 3.866292,
+      "max_ms": 3.866292,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 6.96075,
-      "p95_ms": 6.96075,
-      "max_ms": 6.96075,
+      "p50_ms": 5.961208,
+      "p95_ms": 5.961208,
+      "max_ms": 5.961208,
       "timeouts": 0
     }
   },

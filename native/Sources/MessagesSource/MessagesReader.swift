@@ -114,6 +114,7 @@ final class MessagesReader {
         let senderKey = row.values["capture_sender_key"]
         if let reaction = MessageReaction.decode(type: Int(row.integer("associated_message_type")), target: row["associated_message_guid"], emoji: row.values["associated_message_emoji"]) {
             var data: [String: Any] = ["message_id": reference("message", reaction.messageGUID), "part_index": reaction.partIndex, "kind": reaction.kind, "removed": reaction.removed, "is_from_me": row.flag("is_from_me")]
+            data["sent_at"] = timestamp(row, "date")
             data["emoji"] = reaction.emoji
             data["sender_handle_id"] = senderKey.map { reference("handle", $0) }
             return [("messages.reaction", guid, data)]

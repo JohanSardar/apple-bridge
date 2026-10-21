@@ -1,18 +1,18 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[4.23 4.87 8.51] cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[48.78 20.26 10.98] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M58DAH2PPV94NTRMH4EN3E2T",
+  "run_id": "run_01M5E161NC7R14MSYPCXV305EJ",
   "network_path": "loopback",
   "metrics": {
-    "recovery_final_drain_ms": 15.137125
+    "recovery_final_drain_ms": 17.759333
   },
   "scenario": "CORE-GAP-REJECT",
   "level": "sim",
   "passed": true,
-  "git_sha": "4f263fdf17b0f98019c10581b7d742880bb9b6af",
-  "at": "2026-10-18T21:05:16.374854Z",
+  "git_sha": "ee3cc74aca69aa26cbb097c2a7cdb46751941d88",
+  "at": "2026-10-21T01:28:33.196991Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -82,16 +82,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 6.787375,
-      "p95_ms": 6.787375,
-      "max_ms": 6.787375,
+      "p50_ms": 5.875875,
+      "p95_ms": 5.875875,
+      "max_ms": 5.875875,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 13.126666,
-      "p95_ms": 13.126666,
-      "max_ms": 13.126666,
+      "p50_ms": 9.475333,
+      "p95_ms": 9.475333,
+      "max_ms": 9.475333,
       "timeouts": 0
     }
   },

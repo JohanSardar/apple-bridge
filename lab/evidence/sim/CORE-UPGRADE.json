@@ -1,18 +1,18 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[4.08 4.41 7.31] cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[11.37 15.17 10.2] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M58DJWSZ6N7E9FC9P9ATHD2S",
+  "run_id": "run_01M5E19WV6WJ873FXTFGFRQEJP",
   "network_path": "loopback",
   "metrics": {
-    "recovery_final_drain_ms": 11.41025
+    "recovery_final_drain_ms": 15.370208
   },
   "scenario": "CORE-UPGRADE",
   "level": "sim",
   "passed": true,
-  "git_sha": "47549176312caf86b1d55e35f1e4c13562ed17f7",
-  "at": "2026-10-18T21:09:50.527372Z",
+  "git_sha": "ee3cc74aca69aa26cbb097c2a7cdb46751941d88",
+  "at": "2026-10-21T01:30:39.334916Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -90,16 +90,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 3.527416,
-      "p95_ms": 3.527416,
-      "max_ms": 3.527416,
+      "p50_ms": 4.715333,
+      "p95_ms": 4.715333,
+      "max_ms": 4.715333,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 6.5295,
-      "p95_ms": 6.5295,
-      "max_ms": 6.5295,
+      "p50_ms": 9.533583,
+      "p95_ms": 9.533583,
+      "max_ms": 9.533583,
       "timeouts": 0
     }
   },

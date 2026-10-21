@@ -368,6 +368,9 @@ func convergence(w *world.World) bool {
 }
 
 func runScenario(ctx context.Context, s Scenario, level string) Evidence {
+	if s.Feature == "web.readmodels" {
+		return runReadModels(ctx, s, level)
+	}
 	if strings.HasPrefix(s.ID, "USE-") {
 		return runUsage(ctx, s, level)
 	}
@@ -920,6 +923,9 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		ran++
 		fmt.Fprintln(os.Stderr, "running", s.ID, level)
 		duration := 3 * time.Minute
+		if s.Feature == "web.readmodels" {
+			duration = 15 * time.Minute
+		}
 		if level == "real" && (s.Feature == "messages.actions" || s.Feature == "messages.groups") {
 			duration = 8 * time.Minute
 		}

@@ -1,14 +1,14 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[3.28 4.12 7.03] cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[10.78 14.98 10.16] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M58DMEEF0XQNH0MCH9FQEADH",
+  "run_id": "run_01M5E1A26PBP5GQM2Y3VXBH7Q8",
   "scenario": "MSG-DECODE",
   "level": "sim",
   "passed": true,
-  "git_sha": "47549176312caf86b1d55e35f1e4c13562ed17f7",
-  "at": "2026-10-18T21:10:41.359603Z",
+  "git_sha": "ee3cc74aca69aa26cbb097c2a7cdb46751941d88",
+  "at": "2026-10-21T01:30:44.822576Z",
   "assertions": [
     {
       "name": "seed",
