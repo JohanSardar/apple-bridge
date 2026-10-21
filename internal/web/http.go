@@ -194,6 +194,7 @@ func Handler(deps Deps) http.Handler {
 	mux.HandleFunc("GET /web/v1/blob/{digest}", s.blob)
 	mux.HandleFunc("POST /web/v1/upload", s.upload)
 	s.agentRoutes(mux)
+	s.oauthRoutes(mux)
 	mux.HandleFunc("/web/v1/", func(w http.ResponseWriter, r *http.Request) { reject(w, 404, "not_found") })
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" && r.Method != "HEAD" {

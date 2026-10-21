@@ -210,6 +210,11 @@ func Handler(deps Deps, descriptors []contracts.OperationDescriptor) http.Handle
 			mux.ServeHTTP(w, r)
 			return
 		}
+		scheme := "http"
+		if r.TLS != nil {
+			scheme = "https"
+		}
+		w.Header().Set("WWW-Authenticate", fmt.Sprintf(`Bearer resource_metadata="%s://%s/.well-known/oauth-protected-resource"`, scheme, r.Host))
 		header := r.Header.Get("Authorization")
 		if !strings.HasPrefix(header, "Bearer ") {
 			respond(w, nil, contracts.ErrUnauthorized)
@@ -232,6 +237,7 @@ func Handler(deps Deps, descriptors []contracts.OperationDescriptor) http.Handle
 			respond(w, nil, err)
 			return
 		}
+		w.Header().Del("WWW-Authenticate")
 		pctx, cancel := deps.Authority.WatchPrincipal(r.Context(), p)
 		defer cancel()
 		r = r.WithContext(pctx)
