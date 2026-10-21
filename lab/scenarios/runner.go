@@ -400,6 +400,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.Feature == "web.messages.read" && strings.HasPrefix(s.ID, "MSG-") {
 		return runRichMessages(ctx, s, level)
 	}
+	if s.ID == "WEB-RM-MEDIA-COLLECTION" {
+		return runMediaCollection(ctx, s, level)
+	}
 	if s.Feature == "web.readmodels" {
 		return runReadModels(ctx, s, level)
 	}

@@ -385,6 +385,7 @@ features:
     scenarios:
       - {id: WEB-RM-CHATS, levels: [sim]}
       - {id: WEB-RM-THREAD, levels: [sim]}
+      - {id: WEB-RM-MEDIA-COLLECTION, levels: [sim]}
   - id: web.frontdoor
     title: Web front door, passkey device sessions, live views (web/1), embedded app shell
     requirements: [R-WEB-SECURE, R-WEB-FAST, R-WEB-UI]
