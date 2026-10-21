@@ -10,6 +10,7 @@ test('WEB-VIRTUAL-ANCHOR preserves measured anchors through prepend, append and 
     const list = page.getByRole('listbox');
     await page.getByRole('button', { name: 'Middle', exact: true }).click();
     await expect.poll(() => list.locator('[data-key="50000"]').count()).toBe(1);
+    await expect(list).not.toHaveAttribute('aria-activedescendant', /.+/);
     await page.waitForTimeout(150);
     const before = await list.evaluate(element => { const r = element.getBoundingClientRect(); const rows = [...element.querySelectorAll<HTMLElement>('[data-key]')]; const row = rows.find(row => row.getBoundingClientRect().bottom > r.top)!; return { key: row.dataset.key, y: row.getBoundingClientRect().top - r.top }; });
     await page.getByRole('button', { name: 'Prepend 20' }).click();
@@ -21,6 +22,7 @@ test('WEB-VIRTUAL-ANCHOR preserves measured anchors through prepend, append and 
     await list.focus();
     await page.keyboard.press('End');
     await expect(list.locator('[aria-selected="true"]')).toHaveAttribute('data-key', 'appended-100020');
+    await expect.poll(()=>list.evaluate(element=>Boolean(document.getElementById(element.getAttribute('aria-activedescendant')??'')))).toBe(true);
     await page.getByRole('button', { name: 'Bottom mode' }).click();
     await page.getByRole('button', { name: 'Append', exact: true }).click();
     await expect.poll(() => list.evaluate(element => element.scrollHeight - element.scrollTop - element.clientHeight)).toBeLessThan(2);

@@ -106,7 +106,8 @@ export function VirtualList<T>(props: {
     onCleanup(() => { observer?.disconnect(); cancelAnimationFrame(frame); });
     createEffect(() => { const value = range(); props.onVisible?.(value.start, value.end); props.onBottom?.(positions.total-scroll()-height()<=2); });
     const keys = createMemo(() => { revision(); return items.slice(range().start,range().end).map(props.keyFor); });
-    return <div ref={viewport} class="virtual-viewport" data-scroll={props.label} tabindex="0" role="listbox" aria-label={props.label} aria-activedescendant={(revision(),items[selected()] ? 'virtual-row-' + props.keyFor(items[selected()]) : undefined)} onScroll={() => { if (!frame)
+    const activeDescendant=createMemo(()=>{revision();const item=items[selected()];if(!item)return;const key=props.keyFor(item);return keys().includes(key)?'virtual-row-'+key:undefined;});
+    return <div ref={viewport} class="virtual-viewport" data-scroll={props.label} tabindex="0" role="listbox" aria-label={props.label} aria-activedescendant={activeDescendant()} onScroll={() => { if (!frame)
         frame = requestAnimationFrame(() => { frame = 0; const finish=beginWork('virtual-scroll'); setScroll(viewport.scrollTop); finish(); }); }} onKeyDown={event => {
             let next = selected();
             if (event.key === 'ArrowDown')
