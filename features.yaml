@@ -406,6 +406,9 @@ features:
       - {id: WEB-RM-MEDIA-COLLECTION, levels: [sim]}
       - {id: WEB-RM-THREAD-OLDEST, levels: [web]}
       - {id: WEB-RM-OLDEST-BROWSER, levels: [web]}
+      - {id: WEB-RM-THREAD-ORIGINATOR, levels: [sim]}
+      - {id: WEB-RM-THREAD-ORIGINATOR-BROWSER, levels: [web]}
+      - {id: WEB-RM-THREAD-ORIGINATOR-PERF, levels: [sim]}
     notes: Functional read-model contracts, including exact participant sets, are verified. WEB-RM-CHATS rest_chats_p95_budget and mcp_chats_p95_budget are deferred to the Messages milestone gate; both retain the 15 ms threshold. One isolated main/PR attribution pair reproduced the miss on main; PR183 p95 was lower in both protocols.
   - id: web.frontdoor
     title: Web front door, passkey device sessions, live views (web/1), embedded app shell

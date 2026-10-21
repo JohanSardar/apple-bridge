@@ -1,0 +1,85 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[15.83 19.33 33.88] cpu_idle=22% cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5HQGNABC97H3ZGSZ17PHA7A",
+  "metrics": {
+    "browser_budget_ms": 180000,
+    "capture_observer_resets": 0,
+    "demo_messages": 5000,
+    "demo_startup_ms": 35300,
+    "fixture_setup_ms": 35300,
+    "matrix": [
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "chromium-light-phone",
+      "chromium-light-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-RM-THREAD-ORIGINATOR-BROWSER-webkit-light-phone-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-RM-THREAD-ORIGINATOR-BROWSER-webkit-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-RM-THREAD-ORIGINATOR-BROWSER-webkit-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-RM-THREAD-ORIGINATOR-BROWSER-chromium-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-RM-THREAD-ORIGINATOR-BROWSER-chromium-light-desktop-playwright.json"
+    ],
+    "server": "gateway",
+    "setups": [
+      {
+        "fixture_setup_ms": 35300,
+        "fixture_snapshot": null,
+        "project": "webkit-light-phone"
+      },
+      {
+        "fixture_setup_ms": 21845,
+        "fixture_snapshot": null,
+        "project": "webkit-light-desktop"
+      },
+      {
+        "fixture_setup_ms": 21744,
+        "fixture_snapshot": null,
+        "project": "chromium-light-phone"
+      },
+      {
+        "fixture_setup_ms": 15813,
+        "fixture_snapshot": null,
+        "project": "chromium-light-desktop"
+      }
+    ]
+  },
+  "scenario": "WEB-RM-THREAD-ORIGINATOR-BROWSER",
+  "level": "web",
+  "passed": true,
+  "git_sha": "329dc98f0214f60661ab55643ec1c8532f133837",
+  "at": "2026-10-22T11:56:32.972259Z",
+  "assertions": [
+    {
+      "name": "webkit-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/thread-originator.spec.ts:4:1 › WEB-RM-THREAD-ORIGINATOR-BROWSER filters the root and exact replies on web.1 (4.1s)\n\n  1 passed (12.1s)\n"
+    },
+    {
+      "name": "webkit-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/thread-originator.spec.ts:4:1 › WEB-RM-THREAD-ORIGINATOR-BROWSER filters the root and exact replies on web.1 (5.7s)\n\n  1 passed (13.5s)\n"
+    },
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/thread-originator.spec.ts:4:1 › WEB-RM-THREAD-ORIGINATOR-BROWSER filters the root and exact replies on web.1 (1.7s)\n\n  1 passed (5.1s)\n"
+    },
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/thread-originator.spec.ts:4:1 › WEB-RM-THREAD-ORIGINATOR-BROWSER filters the root and exact replies on web.1 (1.7s)\n\n  1 passed (4.6s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

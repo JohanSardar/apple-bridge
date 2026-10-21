@@ -316,13 +316,15 @@ func (s *Store) Thread(ctx context.Context, v trust.Visibility, q contracts.Thre
 	if err != nil || q.ChatID == "" || q.Before != "" && q.After != "" || q.Anchor != "" && (q.Before != "" || q.After != "") {
 		return out, contracts.ErrInvalid
 	}
+	scope := threadCursorScope(q.ChatID, q.ThreadOriginatorID)
+	selection, selectionArgs := threadSelection(q.ChatID, q.ThreadOriginatorID)
 	var edge viewCursor
 	token := q.Before
 	if token == "" {
 		token = q.After
 	}
 	if token != "" {
-		edge, err = decodeView(token, "thread", q.ChatID)
+		edge, err = decodeView(token, "thread", scope)
 		if err != nil {
 			return out, err
 		}
@@ -339,11 +341,20 @@ func (s *Store) Thread(ctx context.Context, v trust.Visibility, q contracts.Thre
 	if _, err = modelRecord(ctx, tx, "messages.chat", q.ChatID); err != nil {
 		return out, err
 	}
+	if q.ThreadOriginatorID != "" {
+		var exists bool
+		if err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM msg_by_chat WHERE chat_id=? AND id=?)", q.ChatID, q.ThreadOriginatorID).Scan(&exists); err != nil {
+			return out, err
+		}
+		if !exists {
+			return out, contracts.ErrNotFound
+		}
+	}
+	argsFor := func(args ...any) []any { return append(append([]any{}, selectionArgs...), args...) }
 	query := func(condition, order string, n int, args ...any) ([]contracts.Record, error) {
-		a := []any{q.ChatID}
-		a = append(a, args...)
+		a := argsFor(args...)
 		a = append(a, n)
-		return readModelRecords(ctx, tx, "SELECT payload FROM msg_by_chat WHERE chat_id=? "+condition+" ORDER BY sent_at "+order+",id "+order+" LIMIT ?", a...)
+		return readModelRecords(ctx, tx, "SELECT payload FROM "+selection+" "+condition+" ORDER BY sent_at "+order+",id "+order+" LIMIT ?", a...)
 	}
 	var messages []contracts.Record
 	switch {
@@ -357,12 +368,12 @@ func (s *Store) Thread(ctx context.Context, v trust.Visibility, q contracts.Thre
 	case q.Anchor != "" && q.Anchor != "latest":
 		var at, id string
 		if q.Anchor == "unread" {
-			err = tx.QueryRowContext(ctx, "SELECT sent_at,id FROM msg_by_chat WHERE chat_id=? AND unread=1 ORDER BY sent_at,id LIMIT 1", q.ChatID).Scan(&at, &id)
+			err = tx.QueryRowContext(ctx, "SELECT sent_at,id FROM "+selection+" AND unread=1 ORDER BY sent_at,id LIMIT 1", selectionArgs...).Scan(&at, &id)
 			if err == nil {
 				out.UnreadAnchor = id
 			}
 		} else {
-			err = tx.QueryRowContext(ctx, "SELECT sent_at,id FROM msg_by_chat WHERE chat_id=? AND id=?", q.ChatID, q.Anchor).Scan(&at, &id)
+			err = tx.QueryRowContext(ctx, "SELECT sent_at,id FROM "+selection+" AND id=?", argsFor(q.Anchor)...).Scan(&at, &id)
 		}
 		if err == sql.ErrNoRows && q.Anchor == "unread" {
 			messages, err = query("", "DESC", limit)
@@ -446,18 +457,18 @@ func (s *Store) Thread(ctx context.Context, v trust.Visibility, q contracts.Thre
 		first, last := messages[0], messages[len(messages)-1]
 		var exists bool
 		at := modelTime(fieldString(modelFields(first), "sent_at"))
-		if err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM msg_by_chat WHERE chat_id=? AND (sent_at,id)<(?,?))", q.ChatID, at, first.ID).Scan(&exists); err != nil {
+		if err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM "+selection+" AND (sent_at,id)<(?,?))", argsFor(at, first.ID)...).Scan(&exists); err != nil {
 			return out, err
 		}
 		if exists {
-			out.Before = encodeView("thread", q.ChatID, at, first.ID)
+			out.Before = encodeView("thread", scope, at, first.ID)
 		}
 		at = modelTime(fieldString(modelFields(last), "sent_at"))
-		if err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM msg_by_chat WHERE chat_id=? AND (sent_at,id)>(?,?))", q.ChatID, at, last.ID).Scan(&exists); err != nil {
+		if err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM "+selection+" AND (sent_at,id)>(?,?))", argsFor(at, last.ID)...).Scan(&exists); err != nil {
 			return out, err
 		}
 		if exists {
-			out.After = encodeView("thread", q.ChatID, at, last.ID)
+			out.After = encodeView("thread", scope, at, last.ID)
 		}
 	}
 	return out, nil

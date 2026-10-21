@@ -1,9 +1,10 @@
 package contracts
 
 type ThreadWindow struct {
-	ChatID string
-	First  Record
-	Last   Record
+	ThreadOriginatorID string
+	ChatID             string
+	First              Record
+	Last               Record
 }
 type WindowCounts struct {
 	Older uint64 `json:"older"`

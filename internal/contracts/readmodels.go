@@ -7,11 +7,12 @@ type ChatsQuery struct {
 	After        string   `json:"after,omitempty" description:"Opaque cursor from the previous page"`
 }
 type ThreadQuery struct {
-	ChatID string `json:"chat_id"`
-	Anchor string `json:"anchor,omitempty" description:"latest (default), oldest, unread, or a message ID"`
-	Before string `json:"before,omitempty"`
-	After  string `json:"after,omitempty"`
-	Limit  int    `json:"limit,omitempty" description:"Page size, default 50, maximum 200"`
+	ThreadOriginatorID string `json:"thread_originator_id,omitempty" description:"Restrict to this root message and its replies in the chat"`
+	ChatID             string `json:"chat_id"`
+	Anchor             string `json:"anchor,omitempty" description:"latest (default), oldest, unread, or a message ID"`
+	Before             string `json:"before,omitempty"`
+	After              string `json:"after,omitempty"`
+	Limit              int    `json:"limit,omitempty" description:"Page size, default 50, maximum 200"`
 }
 type CollectionQuery struct {
 	ChatID string `json:"chat_id"`

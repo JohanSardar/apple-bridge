@@ -27,6 +27,7 @@ func (s *Store) initReadModels(ctx context.Context) error {
  CREATE INDEX IF NOT EXISTS msg_spam ON msg_by_chat(chat_id) WHERE json_extract(payload,'$.data.is_spam')=1;
  CREATE INDEX IF NOT EXISTS msg_balloon ON msg_by_chat(chat_id,json_extract(payload,'$.data.balloon.kind'),sent_at DESC,id);
  CREATE INDEX IF NOT EXISTS msg_originator ON msg_by_chat(originator);
+ CREATE INDEX IF NOT EXISTS msg_thread_time ON msg_by_chat(chat_id,originator,sent_at,id);
  CREATE TABLE IF NOT EXISTS reaction_by_message(id TEXT PRIMARY KEY,message_id TEXT NOT NULL,at TEXT NOT NULL,seq INTEGER NOT NULL,payload BLOB NOT NULL);
  CREATE INDEX IF NOT EXISTS reaction_message ON reaction_by_message(message_id,at,seq,id);
  CREATE TABLE IF NOT EXISTS attachment_by_message(id TEXT PRIMARY KEY,message_id TEXT NOT NULL,kind TEXT NOT NULL,payload BLOB NOT NULL);
