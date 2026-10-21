@@ -21,6 +21,7 @@ const SessionCookie = "__Host-ab_session"
 const CSP = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
 
 type Deps struct {
+	RateClock    func() time.Time
 	FrameWritten func(contracts.Cursor, time.Time)
 	Operations   *operations.Service
 	Authority    *trust.Authority
@@ -220,7 +221,7 @@ func Handler(deps Deps) http.Handler {
 func (s *server) allow(key string, auth bool) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	now := time.Now()
+	now := s.rateTime()
 	r := s.rates[key]
 	if now.Sub(r.Minute) >= time.Minute {
 		r.Minute = now
@@ -279,4 +280,11 @@ func (s *server) static(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.ServeContent(w, r, path, time.Time{}, strings.NewReader(string(data)))
+}
+
+func (s *server) rateTime() time.Time {
+	if s.deps.RateClock != nil {
+		return s.deps.RateClock()
+	}
+	return time.Now()
 }

@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/JohanSardar/apple-bridge/internal/trust"
 	bridgeweb "github.com/JohanSardar/apple-bridge/internal/web"
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
@@ -19,6 +20,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing/fstest"
 	"time"
 
@@ -131,6 +133,7 @@ func runWebServer(ctx context.Context, s Scenario, level string) Evidence {
 			}
 		}
 		add("signin_minute_limit", len(statuses) == 11 && statuses[10] == 429)
+		runWebRateWindows(ctx, w, add)
 	}
 	e.Passed = len(e.Assertions) > 0
 	for _, a := range e.Assertions {
@@ -781,3 +784,72 @@ func runWebReadModels(ctx context.Context, w *world.World, c *webClient, conn *w
 type webZeroReader struct{}
 
 func (webZeroReader) Read(p []byte) (int, error) { clear(p); return len(p), nil }
+
+func runWebRateWindows(ctx context.Context, w *world.World, add func(string, bool)) {
+	authority, err := trust.Open(w.Gateway.Home)
+	if err != nil {
+		add("rate_authority", false)
+		return
+	}
+	var clock atomic.Int64
+	clock.Store(time.Now().UnixNano())
+	now := func() time.Time { return time.Unix(0, clock.Load()) }
+	fixture := httptest.NewServer(bridgeweb.Handler(bridgeweb.Deps{Authority: authority, RateClock: now}))
+	defer fixture.Close()
+	c := &webClient{ctx: ctx, origin: fixture.URL}
+	daily := true
+	for minute := 0; minute < 10; minute++ {
+		for count := 0; count < 10; count++ {
+			resp, _, err := c.request("POST", "login/options", map[string]any{})
+			daily = daily && err == nil && resp.StatusCode == 200
+		}
+		clock.Add(int64(time.Minute))
+	}
+	resp, _, err := c.request("POST", "login/options", map[string]any{})
+	add("signin_daily_100_limit", daily && err == nil && resp.StatusCode == 429)
+	clock.Add(int64(24 * time.Hour))
+	resp, _, err = c.request("POST", "login/options", map[string]any{})
+	add("signin_next_day_reset", err == nil && resp.StatusCode == 200)
+	token, _, err := authority.CreateDeviceSession("trusted")
+	if err != nil {
+		add("api_session_fixture", false)
+		return
+	}
+	c.cookie = &http.Cookie{Name: bridgeweb.SessionCookie, Value: token}
+	api := true
+	for count := 0; count < 50; count++ {
+		resp, _, err = c.request("GET", "session", nil)
+		api = api && err == nil && resp.StatusCode == 200
+	}
+	resp, _, err = c.request("GET", "session", nil)
+	add("api_50_per_second", api && err == nil && resp.StatusCode == 429)
+	clock.Add(int64(time.Second))
+	resp, _, err = c.request("GET", "session", nil)
+	add("api_second_reset", err == nil && resp.StatusCode == 200)
+	handler := bridgeweb.Handler(bridgeweb.Deps{Authority: authority, RateClock: now})
+	distributed := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.RemoteAddr = r.Header.Get("X-Lab-IP") + ":1234"
+		handler.ServeHTTP(w, r)
+	}))
+	defer distributed.Close()
+	failed := true
+	request := func(ip, path string, input any) int {
+		raw, _ := json.Marshal(input)
+		req, _ := http.NewRequestWithContext(ctx, "POST", distributed.URL+"/web/v1/"+path, bytes.NewReader(raw))
+		req.Header.Set("Origin", distributed.URL)
+		req.Header.Set("X-Lab-IP", ip)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return 0
+		}
+		io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+		return resp.StatusCode
+	}
+	for i := 0; i < 10; i++ {
+		failed = failed && request(fmt.Sprintf("192.0.2.%d", i+1), "enroll/options", map[string]any{"token": "invalid"}) == 401
+	}
+	add("global_failure_backoff_across_clients", failed && request("192.0.2.99", "login/options", map[string]any{}) == 429)
+	clock.Add(int64(2 * time.Second))
+	add("global_backoff_expires", request("192.0.2.99", "login/options", map[string]any{}) == 200)
+}
