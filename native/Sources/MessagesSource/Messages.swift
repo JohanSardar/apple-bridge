@@ -586,6 +586,18 @@ public actor Messages: Source {
     public func captureCommand(_ evidence: JSON, into sink: any ObservationSink) async throws {
         _ = try reopen()
         guard let reader else {throw SourceFailure.unavailable}
+        if evidence["collection"].string == "messages.chat" {
+            let key = evidence["native_key"].string
+            let rows = try reader.smallObservations().filter { $0.0 == "messages.chat" && $0.1 == key }
+            if !rows.isEmpty { try await emit(rows, sink: sink, live: true) }
+            else {
+                guard evidence["absent"].bool, try reader.query("SELECT guid FROM chat WHERE guid=?", [key]).isEmpty else { throw SourceFailure.conflict }
+                let at = observationTime()
+                let absent = try observation("messages.chat", key, [:], at, kind: "absent")
+                try await sink.emit(source: name, generation: generation, observations: [absent], scanID: UUID().uuidString, scanStartedAt: at, scope: ["messages.chat"], completionEvidence: "complete", blobHandles: [:], live: true)
+            }
+            return
+        }
         for part in evidence["parts"].array {
             if let row=try reader.message(part["native_key"].string) {try await emitMessages([row],sink:sink,live:true)}
         }

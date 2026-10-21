@@ -24,6 +24,12 @@ func runMessagesCommands(ctx context.Context, s Scenario, level string) Evidence
 		e.Assertions = append(e.Assertions, Assertion{Name: "safe_failed_self_fixture", Status: "unverified", Detail: "Set APPLE_BRIDGE_RESEND_RUN to a registered run containing exactly one failed tagged self message; no native failure was induced"})
 		return e
 	}
+	if level == "real" && (s.ID == "MSG-READSTATE-REAL" || s.ID == "MSG-DELETE-REAL") && os.Getenv("APPLE_BRIDGE_MESSAGES_UI_DEFERRED") == "1" {
+		e.Status = "environment-limited"
+		e.Metrics = map[string]any{"writes_submitted": 0, "ui_deferred": true}
+		e.Assertions = append(e.Assertions, Assertion{Name: "unlocked_messages_window", Status: "unverified", Detail: "UI proof deferred until the Air is unlocked; no world or command was created"})
+		return e
+	}
 	if level != "sim" {
 		return runNativeMessagesCommands(ctx, s, level, e)
 	}

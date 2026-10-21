@@ -438,6 +438,8 @@ Every source publishes `system.source` with state, coverage, freshness and capab
 | `create_group` | Accessibility (new message, multiple recipients, send first message) | new chat with style group and participants | capability proven separately (F10) |
 | `rename_group`, `add_member`, `remove_member`, `leave_group` | Accessibility (conversation details) | `group_action_type` / `group_title` rows, `chat_handle_join` changes | iMessage groups only; RCS rename if proven |
 
+Conversation commands locate a unique sidebar row from the verified native target and snapshot all active members. Preparation requires Messages already in the foreground and does not open or activate a conversation. Dispatch rechecks the native read timestamp and member snapshot before the UI action. Lab conversation changes require entirely tagged fixtures; chat deletion additionally requires a private manifest proving this run created the chat after its recorded baseline. Real chat proofs and the UI self-test choose an unused discovered own handle and remain unverified for conversation-wide changes when no safe isolated chat can be created.
+
 Every UI action records a before/after screenshot path in evidence (stored in the Helper support dir, excluded from git) where disk state alone cannot prove the visible effect.
 
 **Riskiest unknowns (prove first in M1):** AppleScript send on macOS 26.7.1 — **proven 2026-10-17**: send to self via raw `any;-;` chat id produced `is_sent=1, is_delivered=1`; the outgoing row has `text` NULL (content only in `attributedBody`), and a self-chat send also produces an incoming echo row, so correlation must decode `attributedBody` and distinguish the echo. Still open: Accessibility tree of Messages 26 for bubble targeting with SIP on.
@@ -1312,7 +1314,8 @@ Recently Deleted becomes `deleted_at` + `recoverable_until` on messages and chat
 | MSG-INTERACTIVE-GATE | sim, real | interactive skips the tag and own-handle rules; lab and agent principals don't; expiry and no-redispatch unchanged. At real level, an untagged interactive send to own handle, then cleanup |
 | MSG-DELETE-VISIBILITY | sim, real | sim checks retained recoverable message/chat records and restoration; read-only real proof compares a previously cleaned test message with independent native Truth |
 | MSG-SELFTEST | real | the self-test proves each operation and cleans up completely |
-| MSG-READSTATE-REAL, MSG-DELETE-REAL, MSG-RESEND | real | the proofs listed above |
+| MSG-READSTATE-REAL, MSG-DELETE-REAL | real | the conversation proofs listed above, using an isolated tagged self chat |
+| MSG-RESEND | sim, real | explicit fresh-command resend of a failed message; real proof requires a registered failed self fixture |
 | WEB-MSG-SEND | web, real | text send: tap to local bubble ≤ 1 frame; ack; delivered; no duplicate |
 | WEB-MSG-ATTACH-SEND | web, real | photo, video, PDF and audio-file upload and send, including via a replica-served UI |
 | WEB-MSG-REACT, WEB-MSG-REPLY, WEB-MSG-EDIT, WEB-MSG-UNSEND | web, real | each action end to end, with the UI's time limits |
