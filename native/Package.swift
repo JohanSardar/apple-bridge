@@ -15,6 +15,7 @@ let package = Package(
         .target(name: "UsageSource", dependencies: ["SourceSupport", "Decoders"]),
         .target(name: "AgendaGate", dependencies: ["SourceSupport"]),
         .target(name: "CalendarSource", dependencies: ["AgendaGate", "SourceSupport"]),
+        .target(name: "RemindersStore", dependencies: ["SourceSupport"]),
         .target(name: "RemindersSource", dependencies: ["AgendaGate", "SourceSupport"]),
         .target(name: "NotesSource", dependencies: ["SourceSupport", "Decoders"]),
         .target(name: "MessagesSource", dependencies: ["SourceSupport", "Decoders", "MediaDerivatives"]),
