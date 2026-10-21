@@ -18,6 +18,10 @@ import (
 )
 
 type Server struct {
+	UploadControl func(context.Context, *x509.Certificate, string, string, json.RawMessage) (contracts.CommandResponse, error)
+	UploadChunk   func(context.Context, *x509.Certificate, string, []byte) (string, contracts.CommandResponse, error)
+	UploadClosed  func(string)
+
 	delegations map[string]*delegationSession
 	mu          sync.Mutex
 	statuses    map[string]contracts.DialStatus
@@ -108,6 +112,14 @@ func (s *Server) serve(ctx context.Context, conn *websocket.Conn, p trust.Princi
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	ctx = priorityWriter(ctx, conn)
+	sessionID := contracts.NewID("feed")
+	defer func() {
+		cancel()
+		if s.UploadClosed != nil {
+			s.UploadClosed(sessionID)
+		}
+	}()
+	conn.SetReadLimit(contracts.BlobChunkSize + 64)
 	wants := make(chan contracts.FeedFrame, 8)
 	go s.serveBlobs(ctx, conn, p, wants)
 	commandSlots := make(chan struct{}, 16)
@@ -115,7 +127,13 @@ func (s *Server) serve(ctx context.Context, conn *websocket.Conn, p trust.Princi
 		defer func() { <-commandSlots }()
 		bounded, stop := context.WithTimeout(ctx, 20*time.Second)
 		defer stop()
-		response, err := s.Command(bounded, cert, f.Delegation, f.Request)
+		var response contracts.CommandResponse
+		var err error
+		if f.T == "UploadControl" {
+			response, err = s.UploadControl(bounded, cert, sessionID, f.Delegation, f.Request)
+		} else {
+			response, err = s.Command(bounded, cert, f.Delegation, f.Request)
+		}
 		if err != nil {
 			cancel()
 			return
@@ -130,7 +148,7 @@ func (s *Server) serve(ctx context.Context, conn *websocket.Conn, p trust.Princi
 	go func() {
 		defer cancel()
 		for {
-			f, _, err := read(ctx, conn)
+			f, err := s.readUpstream(ctx, conn, cert, sessionID)
 			if err != nil {
 				return
 			}
@@ -160,8 +178,8 @@ func (s *Server) serve(ctx context.Context, conn *websocket.Conn, p trust.Princi
 				if negotiatedDelegation == "" || !s.deliverDelegation(p.ID, conn, f) {
 					return
 				}
-			case "CommandRequest":
-				if f.ID == "" || len(f.Request) == 0 || s.Command == nil {
+			case "CommandRequest", "UploadControl":
+				if f.ID == "" || len(f.Request) == 0 || f.T == "CommandRequest" && s.Command == nil || f.T == "UploadControl" && s.UploadControl == nil {
 					return
 				}
 				select {
@@ -389,6 +407,7 @@ func (c *Client) consume(ctx context.Context, conn *websocket.Conn, e trust.Enro
 	conn.SetReadLimit(contracts.BlobChunkSize + 64)
 	ctx, stop := context.WithCancel(ctx)
 	defer stop()
+	ctx = priorityWriter(ctx, conn)
 	session := &commandSession{conn: conn, ctx: ctx, pending: map[string]chan contracts.CommandResponse{}}
 	c.mu.Lock()
 	c.session = session

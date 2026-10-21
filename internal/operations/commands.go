@@ -23,6 +23,9 @@ type CommandTarget interface {
 	List(context.Context, trust.Principal, contracts.CommandQuery) ([]contracts.CommandRecord, error)
 }
 type LocalGateway struct {
+	uploadMu      sync.Mutex
+	uploadPending map[string]uploadBinding
+
 	Reauthorize func(context.Context, string, string, string) (trust.Principal, error)
 	Uploads     *blobs.Store
 	State       *state.Store
