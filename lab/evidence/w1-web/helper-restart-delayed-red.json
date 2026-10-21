@@ -1,0 +1,108 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[9.61 7.68 7.82] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5E2T39X9EV1KANB5MRNWNEC",
+  "network_path": "loopback",
+  "metrics": {
+    "helper_restart_blob_backlog_before_stop": 0,
+    "helper_restart_scans_after": 7,
+    "helper_restart_scans_before": 6,
+    "recovery_final_drain_ms": 101.820291
+  },
+  "scenario": "CORE-HELPER-RESTART",
+  "level": "sim",
+  "passed": false,
+  "git_sha": "4142c29bd4613a3195abc5738a25048c825acca2",
+  "at": "2026-10-21T01:56:58.813589Z",
+  "assertions": [
+    {
+      "name": "feed_network_loopback",
+      "passed": true
+    },
+    {
+      "name": "helper_checkpoint_resume_without_rescan",
+      "passed": false
+    },
+    {
+      "name": "helper_blob_truth_and_bytes_survive_restart",
+      "passed": true
+    },
+    {
+      "name": "recovery_capture_drained_before_convergence",
+      "passed": true
+    },
+    {
+      "name": "truth_gateway_replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "automatic_recovery_capture_drained",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_query_search_records_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_query_search_records_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_metadata_latency_and_no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_metadata_latency_and_no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_sse_watermark_0",
+      "passed": true
+    },
+    {
+      "name": "automatic_scope_sse_watermark_1",
+      "passed": true
+    },
+    {
+      "name": "sqlite_integrity_gateway",
+      "passed": true
+    },
+    {
+      "name": "sqlite_integrity_replica",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_in_observed_journal_changes",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_in_observed_journal_changes",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "effect_done→gateway_visible": {
+      "samples": 1,
+      "p50_ms": 37.159375,
+      "p95_ms": 37.159375,
+      "max_ms": 37.159375,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica0": {
+      "samples": 1,
+      "p50_ms": 51.465208,
+      "p95_ms": 51.465208,
+      "max_ms": 51.465208,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

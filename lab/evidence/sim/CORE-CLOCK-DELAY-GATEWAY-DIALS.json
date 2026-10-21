@@ -1,26 +1,26 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[5.3 5.29 9.03] cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[4.93 6.14 7.56] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M58D7XXEVPEE0DXYJMJZZCCW",
+  "run_id": "run_01M5E2BCASV0XV0R1YQTGZ3YCX",
   "network_path": "gateway_dials_loopback_fault_proxy",
   "metrics": {
-    "baseline_offset_ms": -3,
-    "baseline_rtt_ms": 7,
-    "baseline_uncertainty_ms": 4,
+    "baseline_offset_ms": -5,
+    "baseline_rtt_ms": 10,
+    "baseline_uncertainty_ms": 6,
     "clock_method": "authenticated_feed_ntp_four_timestamps",
     "delayed_offset_ms": 0,
-    "delayed_rtt_ms": 4001,
-    "delayed_uncertainty_ms": 2001,
+    "delayed_rtt_ms": 4004,
+    "delayed_uncertainty_ms": 2003,
     "injected_delay_each_direction_ms": 2000,
-    "recovery_final_drain_ms": 19.348291
+    "recovery_final_drain_ms": 15.004792
   },
   "scenario": "CORE-CLOCK-DELAY-GATEWAY-DIALS",
   "level": "sim",
   "passed": true,
-  "git_sha": "4f263fdf17b0f98019c10581b7d742880bb9b6af",
-  "at": "2026-10-18T21:03:51.214654Z",
+  "git_sha": "efaa5a6e35704ea1419baf1306fc8efa10db78e2",
+  "at": "2026-10-21T01:48:56.537678Z",
   "assertions": [
     {
       "name": "feed_network_gateway_dials_loopback_fault_proxy",
@@ -110,16 +110,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 6.106542,
-      "p95_ms": 6.106542,
-      "max_ms": 6.106542,
+      "p50_ms": 5.001125,
+      "p95_ms": 5.001125,
+      "max_ms": 5.001125,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 9.62425,
-      "p95_ms": 9.62425,
-      "max_ms": 9.62425,
+      "p50_ms": 7.329625,
+      "p95_ms": 7.329625,
+      "max_ms": 7.329625,
       "timeouts": 0
     }
   },

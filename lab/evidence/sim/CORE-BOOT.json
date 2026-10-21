@@ -1,15 +1,15 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[52.68 20.53 11.02] cpus=8 other_heavy=1"
+    "summary": "air: load=[4.93 6.14 7.56] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M5E15Z0BXXYXFAFXX5VTETA0",
+  "run_id": "run_01M5E2B9WZ6X4AZF890XG00S73",
   "network_path": "loopback",
   "scenario": "CORE-BOOT",
   "level": "sim",
   "passed": true,
-  "git_sha": "ee3cc74aca69aa26cbb097c2a7cdb46751941d88",
-  "at": "2026-10-21T01:28:30.475255Z",
+  "git_sha": "efaa5a6e35704ea1419baf1306fc8efa10db78e2",
+  "at": "2026-10-21T01:48:54.047341Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -91,16 +91,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 4.734458,
-      "p95_ms": 4.734458,
-      "max_ms": 4.734458,
+      "p50_ms": 6.0175,
+      "p95_ms": 6.0175,
+      "max_ms": 6.0175,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 8.533083,
-      "p95_ms": 8.533083,
-      "max_ms": 8.533083,
+      "p50_ms": 9.560791,
+      "p95_ms": 9.560791,
+      "max_ms": 9.560791,
       "timeouts": 0
     }
   },

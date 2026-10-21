@@ -1,18 +1,18 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[19.46 17.18 10.5] cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[5.46 7.62 7.95] cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5E184D2QK6BXY5PS6NAM102",
+  "run_id": "run_01M5E2KVRZZ1Y56H1MC7KXPRNC",
   "network_path": "loopback",
   "metrics": {
-    "recovery_final_drain_ms": 15.379417
+    "recovery_final_drain_ms": 15.97575
   },
   "scenario": "CORE-RETENTION-RACE",
   "level": "sim",
   "passed": true,
-  "git_sha": "ee3cc74aca69aa26cbb097c2a7cdb46751941d88",
-  "at": "2026-10-21T01:29:41.538571Z",
+  "git_sha": "4142c29bd4613a3195abc5738a25048c825acca2",
+  "at": "2026-10-21T01:53:34.495416Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -82,16 +82,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 4.114792,
-      "p95_ms": 4.114792,
-      "max_ms": 4.114792,
+      "p50_ms": 4.341,
+      "p95_ms": 4.341,
+      "max_ms": 4.341,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 8.556542,
-      "p95_ms": 8.556542,
-      "max_ms": 8.556542,
+      "p50_ms": 8.589042,
+      "p95_ms": 8.589042,
+      "max_ms": 8.589042,
       "timeouts": 0
     }
   },

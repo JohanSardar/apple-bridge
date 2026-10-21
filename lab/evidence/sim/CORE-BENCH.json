@@ -1,31 +1,31 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[3.45 5.64 9.98] cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[7.81 8.18 8.62] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M58D2TSMHT14CS9CK2J4BA4Z",
+  "run_id": "run_01M5E219426C7HXRJNS45VK40E",
   "network_path": "loopback",
   "metrics": {
     "capture_readiness": "committed_capture_barrier",
     "completion_timeout_ms": 300000,
     "contended_run": false,
-    "effect_done_to_gateway_capture_ms": 54512.265792,
-    "fixture_and_capture_ms": 55872.028708,
+    "effect_done_to_gateway_capture_ms": 132798.918042,
+    "fixture_and_capture_ms": 134675.678792,
     "fts5_query_cache": "repeated_query_after_integrity_verification",
-    "gateway_rss_end_sample_bytes": 81084416,
-    "gateway_wal_end_sample_bytes": 7074072,
+    "gateway_rss_end_sample_bytes": 78069760,
+    "gateway_wal_end_sample_bytes": 7836272,
     "messages": 200000,
     "messages_target": 200000,
-    "recovery_final_drain_ms": 13.169917,
+    "recovery_final_drain_ms": 19.676084,
     "replica_readiness": "durable_cursor_then_integrity_count",
-    "replica_rss_end_sample_bytes": 28377088,
-    "replica_wal_end_sample_bytes": 6863952
+    "replica_rss_end_sample_bytes": 13991936,
+    "replica_wal_end_sample_bytes": 7247112
   },
   "scenario": "CORE-BENCH",
   "level": "sim",
   "passed": true,
-  "git_sha": "4f263fdf17b0f98019c10581b7d742880bb9b6af",
-  "at": "2026-10-18T21:01:04.180707Z",
+  "git_sha": "4279336e8be3e8d0f57f96e9e356800a778b639e",
+  "at": "2026-10-21T01:43:25.570636Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -87,23 +87,23 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 10.455333,
-      "p95_ms": 10.455333,
-      "max_ms": 10.455333,
+      "p50_ms": 34.856375,
+      "p95_ms": 34.856375,
+      "max_ms": 34.856375,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 21.3765,
-      "p95_ms": 21.3765,
-      "max_ms": 21.3765,
+      "p50_ms": 42.59275,
+      "p95_ms": 42.59275,
+      "max_ms": 42.59275,
       "timeouts": 0
     },
     "fts5_query_gateway": {
       "samples": 100,
-      "p50_ms": 2.796625,
-      "p95_ms": 3.495041,
-      "max_ms": 4.812125,
+      "p50_ms": 2.905625,
+      "p95_ms": 3.956791,
+      "max_ms": 108.21275,
       "timeouts": 0
     }
   },

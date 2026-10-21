@@ -1,14 +1,14 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[4.15 4.42 7.29] cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[4.34 6.64 7.53] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M58DJYJTY18P9JVMM57YN6T5",
+  "run_id": "run_01M5E2PS8BBT4WEN81H4JZ7KFA",
   "scenario": "LAB-MALFORMED-SCENARIO",
   "level": "sim",
   "passed": true,
-  "git_sha": "47549176312caf86b1d55e35f1e4c13562ed17f7",
-  "at": "2026-10-18T21:09:52.346305Z",
+  "git_sha": "4142c29bd4613a3195abc5738a25048c825acca2",
+  "at": "2026-10-21T01:55:10.219894Z",
   "assertions": [
     {
       "name": "malformed_scenario_rejected",

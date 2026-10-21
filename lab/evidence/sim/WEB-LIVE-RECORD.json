@@ -1,0 +1,78 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[4.74 7.1 8.19] cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5E3Q85SGWRKCZXY33NYY96T",
+  "scenario": "WEB-LIVE-RECORD",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "a530cad13274d0630b04a4229d7518a7ecb46b1f",
+  "at": "2026-10-21T02:12:54.073175Z",
+  "assertions": [
+    {
+      "name": "software_passkey_enrollment",
+      "passed": true
+    },
+    {
+      "name": "host_cookie_flags",
+      "passed": true
+    },
+    {
+      "name": "trusted_thirty_days",
+      "passed": true
+    },
+    {
+      "name": "session_256_bits",
+      "passed": true
+    },
+    {
+      "name": "tokens_stored_hashed",
+      "passed": true
+    },
+    {
+      "name": "web1_hello_welcome",
+      "passed": true
+    },
+    {
+      "name": "upgrade_requires_web_dot_one",
+      "passed": true
+    },
+    {
+      "name": "record_snap",
+      "passed": true
+    },
+    {
+      "name": "inbound_and_updates_from_journal",
+      "passed": true
+    },
+    {
+      "name": "commit_to_frame_p95_20ms",
+      "passed": true
+    },
+    {
+      "name": "reconnect",
+      "passed": true
+    },
+    {
+      "name": "resume_replays_without_snapshot",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "journal_commit_to_frame_written": {
+      "samples": 32,
+      "p50_ms": 0.371,
+      "p95_ms": 1.172,
+      "max_ms": 5.633,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

@@ -1,15 +1,15 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[3.08 4.13 7.08] cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[5.43 6.67 7.51] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M58DKYN1QGF711B5T5F6JZN0",
+  "run_id": "run_01M5E2QSDKJSAMJD9MS1B8RMZT",
   "network_path": "loopback",
   "scenario": "LAB-TRUTH-MULTIPLICITY",
   "level": "sim",
   "passed": true,
-  "git_sha": "47549176312caf86b1d55e35f1e4c13562ed17f7",
-  "at": "2026-10-18T21:10:25.185071Z",
+  "git_sha": "4142c29bd4613a3195abc5738a25048c825acca2",
+  "at": "2026-10-21T01:55:43.155839Z",
   "assertions": [
     {
       "name": "feed_network_loopback",

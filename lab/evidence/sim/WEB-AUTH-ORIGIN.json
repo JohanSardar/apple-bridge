@@ -1,0 +1,58 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[4.7 7.17 8.23] cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5E3PY976GQNHWEAAMNHACXC",
+  "scenario": "WEB-AUTH-ORIGIN",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "a530cad13274d0630b04a4229d7518a7ecb46b1f",
+  "at": "2026-10-21T02:12:43.943241Z",
+  "assertions": [
+    {
+      "name": "reject_origin_/web/v1/login/options",
+      "passed": true
+    },
+    {
+      "name": "reject_origin_/web/v1/enroll/options",
+      "passed": true
+    },
+    {
+      "name": "reject_origin_/web/v1/logout",
+      "passed": true
+    },
+    {
+      "name": "reject_ws_origin",
+      "passed": true
+    },
+    {
+      "name": "reject_origin_/web/v1/login/options",
+      "passed": true
+    },
+    {
+      "name": "reject_origin_/web/v1/enroll/options",
+      "passed": true
+    },
+    {
+      "name": "reject_origin_/web/v1/logout",
+      "passed": true
+    },
+    {
+      "name": "reject_ws_origin",
+      "passed": true
+    },
+    {
+      "name": "security_headers",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

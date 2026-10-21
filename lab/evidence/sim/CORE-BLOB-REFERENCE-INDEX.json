@@ -1,9 +1,9 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[52.68 20.53 11.02] cpus=8 other_heavy=1"
+    "summary": "air: load=[4.29 6.06 7.55] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M5E15WNR5FGAPM8DQ9ZPRT71",
+  "run_id": "run_01M5E2B1YA4205XH3QZVJDN9F0",
   "network_path": "loopback",
   "metrics": {
     "expected_references": 64,
@@ -12,8 +12,8 @@
   "scenario": "CORE-BLOB-REFERENCE-INDEX",
   "level": "sim",
   "passed": true,
-  "git_sha": "ee3cc74aca69aa26cbb097c2a7cdb46751941d88",
-  "at": "2026-10-21T01:28:28.088473Z",
+  "git_sha": "efaa5a6e35704ea1419baf1306fc8efa10db78e2",
+  "at": "2026-10-21T01:48:45.898567Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
