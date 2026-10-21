@@ -81,7 +81,7 @@ Process: every change ships as a small PR (WORKER-RULES, Git and GitHub). Status
 - IN PROGRESS LIVE-FIX (#75): native Reminders capture fixed. Relay-added p95 is 35 ms pipelined vs 124 ms serial. The real Calendar regression sweep is running. `CAL-ALLDAY-FUTURE` fails on baseline too (civil offset, Truth, cleanup audit) and is tracked separately. Earlier fixes: #72, #91, #96.
 - DONE W2-READER: decoders, filters, collections, handles, native capture and the rich demo (#14, #22, #31, #33, #46, #50, #53). Real parity is limited because AppleTruth lacks Full Disk Access. Pin/mute, audio Keep and recovery deadlines remain explicit gaps.
 - IN PROGRESS W2-LIST: chats store (#49), reconnect isolation (#71), atomic cache (#84) and the conversation list (#104, design fixes in progress). Filters/search are next.
-- IN PROGRESS W2-TRANSCRIPT: bubbles (#79), oldest anchor (#70), originator threads (#61) and reactions (approved), merging in that order.
+- IN PROGRESS W2-TRANSCRIPT: bounded transcript window and approved bubbles (#79); oldest anchor (#70), originator threads (#61), reactions and viewer integration follow. Transcript frame/input budgets and WebKit attribution remain unproven.
 - IN PROGRESS W2-MEDIA: image bubbles (#77), transparent media (#80), collections and viewer (#82, #87, #93), photo stacks and desktop grids (#102), precache fix (#97). Video and Live bubbles are next.
 - IN PROGRESS W3-COMPOSE: exact observed record IDs (#86), safe resend identity (#88), State pool fix (#94), live source capability proofs (#101). The command layer and composer are next.
 - DONE (code) W3-HELPER: interactive origin gate, self-test, guarded resend, recoverable delete and chat actions (#51, #57, #59, #60, #63, #65). UI proofs wait for the unlock.

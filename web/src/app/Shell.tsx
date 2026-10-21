@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show } from 'solid-js';
+import { createEffect, createMemo, createSignal, For, lazy, onCleanup, onMount, Show, Suspense } from 'solid-js';
 import { Icon, type IconName } from '../design/Icon';
 import { strings as s } from './strings';
 import { router } from './router';
@@ -7,6 +7,7 @@ import { appearance } from './preferences';
 import { auth } from '../auth/session';
 import { enterPane, reducedMotion, crossfade, springAnimation } from '../motion/animate';
 import { drag, swipeBack } from '../motion/gestures';
+const Transcript=lazy(()=>import('../messages/transcript/Transcript'));
 const apps: [
     string,
     IconName
@@ -21,6 +22,15 @@ export default function Shell() {
     let transcript!: HTMLElement, sidebar!: HTMLElement, resizer!: HTMLDivElement, inspector: HTMLElement | undefined;
     let cancelEnter: (() => void) | undefined, inspectorAnimation: ReturnType<typeof springAnimation> | undefined;
     const chat = createMemo(() => router.route().chat);
+    const [threadTitle,setThreadTitle]=createSignal('');
+    const threadRoute=createMemo(()=>{
+        const path=new URL(router.route().path,location.origin).pathname.split('/').filter(Boolean);
+        const decode=(value?:string)=>{try{return decodeURIComponent(value??'');}catch{return value??'';}};
+        const id=decode(path[1]);
+        return path[0]==='messages'&&id&&!['new','search'].includes(id)?{chatID:id,messageID:path[2]&&path[2]!=='details'?decode(path[2]):undefined}:undefined;
+    });
+    let previousChat:string|undefined;
+    createEffect(()=>{const id=threadRoute()?.chatID;if(id!==previousChat){previousChat=id;setThreadTitle('');}});
     const phoneDetails=()=>phone()&&router.route().panel==='details';
     let inspectorFrame=0,inspectorFade:Animation|undefined;
     function openInspector(open: boolean) {
@@ -77,5 +87,5 @@ export default function Shell() {
         event.preventDefault();
         const width = sidebar.getBoundingClientRect().width + (event.key === 'ArrowRight' ? 10 : -10);
         document.documentElement.style.setProperty('--sidebar-width', Math.max(280, Math.min(420, width)) + 'px');
-    } }}/><main ref={transcript} inert={phoneDetails()} class="transcript" data-scroll="transcript"><header class="toolbar glass"><button class="icon-button back-button" aria-label={s.back} onClick={() => router.back()}><Icon name="chevron"/></button><span class="toolbar-title">{chat() === 'new' ? s.compose : chat() ? s.previewTitle : ''}</span><button class="icon-button" aria-label={s.details} aria-expanded={details()||router.route().panel==='details'} onClick={() => openInspector(!details())}><Icon name="info"/></button></header><div class="transcript-body"><div class="empty quiet-empty"><p>{s.noSelection}</p></div></div></main><Show when={inspectorVisible() && !compact()}><aside ref={inspector} class="inspector" aria-label={s.details}><header class="toolbar glass"><span class="toolbar-title">{s.details}</span><button class="icon-button" aria-label={s.closeDetails} onClick={() => openInspector(false)}><Icon name="close"/></button></header><DetailContent /></aside></Show><Show when={!phone()&&compact()&&(details()||router.route().panel==='details')}><dialog ref={element => queueMicrotask(() => element.showModal())} class="details-sheet glass" aria-label={s.details} onClose={() => openInspector(false)}><button autofocus class="icon-button sheet-close" aria-label={s.closeDetails} onClick={() => setDetails(false)}><Icon name="close"/></button><DetailContent /></dialog></Show><Show when={phoneDetails()}><PhoneDetails/></Show></div>;
+    } }}/><main ref={transcript} inert={phoneDetails()} class="transcript" data-scroll="transcript"><header class="toolbar glass"><button class="icon-button back-button" aria-label={s.back} onClick={() => router.back()}><Icon name="chevron"/></button><span class="toolbar-title"><Show when={threadRoute()} fallback={chat()==='new'?s.compose:''}><span class="chat-avatar" aria-hidden="true">{threadTitle().split(/\s+/u).slice(0,2).map(value=>Array.from(value)[0]??'').join('')}</span><span>{threadTitle()}</span></Show></span><button class="icon-button" aria-label={s.details} aria-expanded={details()||router.route().panel==='details'} onClick={() => openInspector(!details())}><Icon name="info"/></button></header><div class="transcript-body"><Show when={threadRoute()?.chatID} keyed fallback={<div class="empty quiet-empty"><p>{s.noSelection}</p></div>}>{id=><Suspense><Transcript chatID={id} messageID={threadRoute()?.messageID} title={setThreadTitle}/></Suspense>}</Show></div></main><Show when={inspectorVisible() && !compact()}><aside ref={inspector} class="inspector" aria-label={s.details}><header class="toolbar glass"><span class="toolbar-title">{s.details}</span><button class="icon-button" aria-label={s.closeDetails} onClick={() => openInspector(false)}><Icon name="close"/></button></header><DetailContent /></aside></Show><Show when={!phone()&&compact()&&(details()||router.route().panel==='details')}><dialog ref={element => queueMicrotask(() => element.showModal())} class="details-sheet glass" aria-label={s.details} onClose={() => openInspector(false)}><button autofocus class="icon-button sheet-close" aria-label={s.closeDetails} onClick={() => setDetails(false)}><Icon name="close"/></button><DetailContent /></dialog></Show><Show when={phoneDetails()}><PhoneDetails/></Show></div>;
 }
