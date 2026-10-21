@@ -1,0 +1,175 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[20.55 12.61 13.87] cpus=8 other_heavy=0"
+  },
+  "run_id": "cal_01M5FYQCZTZCVXEDAP827ST8ES",
+  "network_path": "loopback",
+  "metrics": {
+    "calendar_capture_splits": 0
+  },
+  "scenario": "CAL-RECUR-THIS",
+  "level": "real",
+  "passed": false,
+  "git_sha": "0d96adc5d1541baa58570b41c5dffb22d44b0312",
+  "at": "2026-10-21T19:24:04.987146Z",
+  "assertions": [
+    {
+      "name": "private_signed_apps_per_world",
+      "passed": true
+    },
+    {
+      "name": "initial_calendar_scan_complete",
+      "passed": true
+    },
+    {
+      "name": "calendar_visible",
+      "passed": true
+    },
+    {
+      "name": "truth_calendar_fields",
+      "passed": true
+    },
+    {
+      "name": "initial_occurrences_visible",
+      "passed": true
+    },
+    {
+      "name": "agenda_returns_occurrences",
+      "passed": true
+    },
+    {
+      "name": "exception_capture_visible",
+      "passed": true
+    },
+    {
+      "name": "exception_has_scoped_native_recurrence",
+      "passed": true
+    },
+    {
+      "name": "original_occurrence_identity_preserved",
+      "passed": true
+    },
+    {
+      "name": "other_occurrences_unchanged",
+      "passed": true
+    },
+    {
+      "name": "delete_one_occurrence_is_observed",
+      "passed": false
+    },
+    {
+      "name": "delete_one_occurrence_keeps_surviving_series",
+      "passed": true
+    },
+    {
+      "name": "delete_one_occurrence_preserves_other_identities",
+      "passed": true
+    },
+    {
+      "name": "independent_appletruth_equality",
+      "passed": true
+    },
+    {
+      "name": "replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "contiguous_feed_0",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "contiguous_feed_1",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "latency_effect_done→gateway_visible",
+      "passed": false
+    },
+    {
+      "name": "latency_effect_done→replica_visible:replica0",
+      "passed": false
+    },
+    {
+      "name": "no_scope_leak_query",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_mcp_agenda",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_query",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_mcp_agenda",
+      "passed": true
+    },
+    {
+      "name": "private_helper_paused_for_integrity",
+      "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass",
+      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
+    },
+    {
+      "name": "tagged_fixture_cleanup_audit",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "command_submit→calendar.update_event_observed": {
+      "samples": 1,
+      "p50_ms": 545.275958,
+      "p95_ms": 545.275958,
+      "max_ms": 545.275958,
+      "timeouts": 0
+    },
+    "effect_done→gateway_visible": {
+      "samples": 1,
+      "p50_ms": 1456.33725,
+      "p95_ms": 1456.33725,
+      "max_ms": 1456.33725,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica0": {
+      "samples": 1,
+      "p50_ms": 1459.654167,
+      "p95_ms": 1459.654167,
+      "max_ms": 1459.654167,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ],
+  "conditions": {
+    "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
+    "heavy_slots_in_use": "1",
+    "load_average": "20.55 12.61 13.87",
+    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica",
+    "swap_usage": "total = 3072.00M  used = 1756.25M  free = 1315.75M  (encrypted)"
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[15.49 15.07 16.54] cpus=8 other_heavy=0"
+  },
+  "run_id": "cal_01M5FV9TMMAG0QVX10BDJK8RRT",
+  "scenario": "CAL-LARGE-CAPTURE",
+  "level": "sim",
+  "passed": false,
+  "git_sha": "aced7f40ebe41e431710c401ee804fd21f5791da",
+  "at": "2026-10-21T18:24:14.484956Z",
+  "assertions": [
+    {
+      "name": "world_start",
+      "passed": true
+    },
+    {
+      "name": "calendar_created",
+      "passed": true
+    },
+    {
+      "name": "single_change_imports_3000_events",
+      "passed": true
+    },
+    {
+      "name": "large_capture_converges",
+      "passed": true
+    },
+    {
+      "name": "source_captures_after_large_change",
+      "passed": false
+    },
+    {
+      "name": "following_change_reaches_replica",
+      "passed": false
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ],
+  "conditions": {
+    "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
+    "heavy_slots_in_use": "1",
+    "load_average": "15.49 15.07 16.54",
+    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica",
+    "swap_usage": "total = 2048.00M  used = 1134.50M  free = 913.50M  (encrypted)"
+  }
+}
