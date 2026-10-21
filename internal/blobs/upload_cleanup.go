@@ -18,6 +18,7 @@ func (s *Store) collectUploads(ctx context.Context) {
 		return
 	}
 	s.uploadSweep = time.Now()
+	s.cleanupCommandUploads(s.uploadSweep)
 	entries, _ := os.ReadDir(filepath.Join(s.root, "upload-leases"))
 	for _, entry := range entries {
 		if !strings.HasSuffix(entry.Name(), ".json") {

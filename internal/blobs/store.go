@@ -74,6 +74,9 @@ func Open(home string, cfg Config) (*Store, error) {
 			return nil, err
 		}
 	}
+	if err := s.cleanupCommandUploads(time.Now()); err != nil {
+		return nil, err
+	}
 	b, err := os.ReadFile(filepath.Join(s.root, "manifest.json"))
 	if err == nil {
 		s.durable = append([]byte(nil), b...)

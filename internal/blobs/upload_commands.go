@@ -32,17 +32,3 @@ func (s *Store) BorrowMessageUploads(ctx context.Context, owner string, files []
 	}
 	return refs, s.uploadMu.Unlock, nil
 }
-func (s *Store) CommandUpload(ctx context.Context, ref contracts.BlobReference) (string, error) {
-	if !contracts.ValidDigest(ref.Digest) {
-		return "", contracts.ErrInvalid
-	}
-	if err := ctx.Err(); err != nil {
-		return "", err
-	}
-	path := s.path(ref.Digest)
-	info, err := os.Stat(path)
-	if err != nil || !info.Mode().IsRegular() || info.Size() != ref.Size {
-		return "", contracts.ErrNotFound
-	}
-	return path, nil
-}

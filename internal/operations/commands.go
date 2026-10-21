@@ -282,7 +282,11 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 			if err == nil {
 				var path, digest string
 				if ref, ok := r.UploadReferences[file.UploadID]; ok {
-					path, err = g.Uploads.CommandUpload(runctx, ref)
+					var cleanup func()
+					path, cleanup, err = g.Uploads.CommandUpload(runctx, c.ID, file.Name, ref)
+					if cleanup != nil {
+						defer cleanup()
+					}
 					digest = ref.Digest
 				} else {
 					path, digest, err = g.Uploads.ResolveMessageUpload(runctx, p.ID, file.UploadID)
