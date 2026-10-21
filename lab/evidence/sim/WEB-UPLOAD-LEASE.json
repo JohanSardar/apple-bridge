@@ -1,0 +1,66 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[7.65 8.37 9.29] cpus=8 other_heavy=1"
+  },
+  "run_id": "upload_01M5F12BZKK3M53BHYH8KWXM73",
+  "scenario": "WEB-UPLOAD-LEASE",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "4e8bd9ef2157d5b144202acbdb87e2318124734d",
+  "at": "2026-10-21T10:45:47.123688Z",
+  "assertions": [
+    {
+      "name": "gateway_upload_world",
+      "passed": true
+    },
+    {
+      "name": "serving_device_session",
+      "passed": true
+    },
+    {
+      "name": "agent_upload_staged",
+      "passed": true
+    },
+    {
+      "name": "uploaded_command_awaiting_owner",
+      "passed": true
+    },
+    {
+      "name": "durable_command_blob_references_before_approval",
+      "passed": true
+    },
+    {
+      "name": "expired_lease_fixture",
+      "passed": true
+    },
+    {
+      "name": "abandoned_lease_collected",
+      "passed": true
+    },
+    {
+      "name": "expired_upload_alias_removed",
+      "passed": true
+    },
+    {
+      "name": "owner_approval_after_upload_lease_expiry",
+      "passed": true
+    },
+    {
+      "name": "protected_upload_observed_after_lease_expiry",
+      "passed": true
+    },
+    {
+      "name": "protected_upload_exactly_one_effect",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
