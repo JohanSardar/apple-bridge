@@ -1,9 +1,9 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[4.7 5.98 7] cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[3.75 4.18 6.01] cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5E4C6S9202ZX2SQ36TY3ETN",
+  "run_id": "run_01M5E5J55KCNY7BF763WKFXJJC",
   "metrics": {
     "browser_playback": "Cross-engine playback is owned by the later UI unit",
     "cap_entries": {
@@ -131,8 +131,8 @@
   "scenario": "WEB-MEDIA-CAP",
   "level": "sim",
   "passed": true,
-  "git_sha": "a8069903724459d7739c694800e63767619eb865",
-  "at": "2026-10-21T02:24:20.777353Z",
+  "git_sha": "e2722bd1f479fabbacf7e5a913c7fc9037f2d2dc",
+  "at": "2026-10-21T02:45:04.307986Z",
   "assertions": [
     {
       "name": "seed_self",
@@ -418,44 +418,44 @@
   "latency": {
     "audio_appearance_to_variants_0": {
       "samples": 1,
-      "p50_ms": 211.242417,
-      "p95_ms": 211.242417,
-      "max_ms": 211.242417,
+      "p50_ms": 173.623834,
+      "p95_ms": 173.623834,
+      "max_ms": 173.623834,
       "timeouts": 0
     },
     "audio_appearance_to_variants_1": {
       "samples": 1,
-      "p50_ms": 237.570209,
-      "p95_ms": 237.570209,
-      "max_ms": 237.570209,
+      "p50_ms": 185.971584,
+      "p95_ms": 185.971584,
+      "max_ms": 185.971584,
       "timeouts": 0
     },
     "image_appearance_to_variants_0": {
       "samples": 1,
-      "p50_ms": 211.242417,
-      "p95_ms": 211.242417,
-      "max_ms": 211.242417,
+      "p50_ms": 173.623834,
+      "p95_ms": 173.623834,
+      "max_ms": 173.623834,
       "timeouts": 0
     },
     "image_appearance_to_variants_1": {
       "samples": 1,
-      "p50_ms": 237.570209,
-      "p95_ms": 237.570209,
-      "max_ms": 237.570209,
+      "p50_ms": 185.971584,
+      "p95_ms": 185.971584,
+      "max_ms": 185.971584,
       "timeouts": 0
     },
     "video_appearance_to_variants_0": {
       "samples": 1,
-      "p50_ms": 211.242417,
-      "p95_ms": 211.242417,
-      "max_ms": 211.242417,
+      "p50_ms": 173.623834,
+      "p95_ms": 173.623834,
+      "max_ms": 173.623834,
       "timeouts": 0
     },
     "video_appearance_to_variants_1": {
       "samples": 1,
-      "p50_ms": 237.570209,
-      "p95_ms": 237.570209,
-      "max_ms": 237.570209,
+      "p50_ms": 185.971584,
+      "p95_ms": 185.971584,
+      "max_ms": 185.971584,
       "timeouts": 0
     }
   },

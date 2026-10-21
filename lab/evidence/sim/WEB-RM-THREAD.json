@@ -1,9 +1,9 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[7.43 8.78 8.89] cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[3.61 4.15 5.98] cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5E1Y318W4X3K9ERB10EBKKX",
+  "run_id": "run_01M5E5J9HY9BQNH769YVCBFF4Q",
   "metrics": {
     "chats": 500,
     "seed_messages": 170000
@@ -11,8 +11,8 @@
   "scenario": "WEB-RM-THREAD",
   "level": "sim",
   "passed": true,
-  "git_sha": "e924783ef70d7afa5175a4217a0ab970cb412873",
-  "at": "2026-10-21T01:41:41.032377Z",
+  "git_sha": "e2722bd1f479fabbacf7e5a913c7fc9037f2d2dc",
+  "at": "2026-10-21T02:45:08.798685Z",
   "assertions": [
     {
       "name": "synthetic_sim_seed_committed",
@@ -258,16 +258,16 @@
   "latency": {
     "mcp_thread": {
       "samples": 100,
-      "p50_ms": 7.011459,
-      "p95_ms": 8.87775,
-      "max_ms": 11.428958,
+      "p50_ms": 4.684208,
+      "p95_ms": 5.428708,
+      "max_ms": 8.689,
       "timeouts": 0
     },
     "rest_thread": {
       "samples": 100,
-      "p50_ms": 1.767917,
-      "p95_ms": 2.943167,
-      "max_ms": 12.500375,
+      "p50_ms": 1.28625,
+      "p95_ms": 1.645958,
+      "max_ms": 15.938291,
       "timeouts": 0
     }
   },

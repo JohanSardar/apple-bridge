@@ -1,14 +1,14 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[4.74 7.1 8.19] cpus=8 other_heavy=0"
+    "summary": "air: load=[3.56 4.15 6.01] cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5E3Q67EFDPN8SVR0AR567K9",
+  "run_id": "run_01M5E5J2Q4YZ1Y9GNGCQQND812",
   "scenario": "WEB-LIVE-READMODELS",
   "level": "sim",
   "passed": true,
-  "git_sha": "a530cad13274d0630b04a4229d7518a7ecb46b1f",
-  "at": "2026-10-21T02:12:52.078976Z",
+  "git_sha": "e2722bd1f479fabbacf7e5a913c7fc9037f2d2dc",
+  "at": "2026-10-21T02:45:01.796173Z",
   "assertions": [
     {
       "name": "software_passkey_enrollment",
@@ -98,9 +98,9 @@
   "latency": {
     "journal_commit_to_last_readmodel_frame_written": {
       "samples": 32,
-      "p50_ms": 5.524,
-      "p95_ms": 6.734,
-      "max_ms": 7.888,
+      "p50_ms": 5.246,
+      "p95_ms": 8.505,
+      "max_ms": 9.526,
       "timeouts": 0
     }
   },
