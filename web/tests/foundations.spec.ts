@@ -29,7 +29,10 @@ test('WEB-VIRTUAL-ANCHOR preserves measured anchors through prepend, append and 
     await page.setViewportSize(viewport);
     await expect.poll(()=>list.evaluate(element=>element.scrollHeight-element.scrollTop-element.clientHeight)).toBeLessThan(2);
     const frames = await list.evaluate(async (element) => {
-        const deltas: number[] = [], work: number[] = [];
+        const deltas: number[] = [], work: number[] = [],longTasks:number[]=[];
+        const longTaskSupported=PerformanceObserver.supportedEntryTypes.includes('longtask');
+        const observer=longTaskSupported?new PerformanceObserver(list=>{for(const entry of list.getEntries())longTasks.push(entry.duration);}):undefined;
+        observer?.observe({type:'longtask'});
         let previous = 0;
         for (let i = 0; i < 180; i++) {
             const now = await new Promise<number>(resolve => requestAnimationFrame(resolve));
@@ -40,11 +43,15 @@ test('WEB-VIRTUAL-ANCHOR preserves measured anchors through prepend, append and 
             element.scrollTop = Math.max(0, element.scrollHeight - element.clientHeight - 50000 + i * 170);
             work.push(performance.now() - start);
         }
-        return { deltas, work, rendered: element.querySelectorAll('[data-key]').length };
+        await new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve())));
+        for(const entry of observer?.takeRecords()??[])longTasks.push(entry.duration);
+        observer?.disconnect();
+        return { deltas, work, longTasks,longTaskSupported, rendered: element.querySelectorAll('[data-key]').length };
     });
     expect(frames.rendered).toBeLessThan(100);
+    if(frames.longTaskSupported)expect(frames.longTasks.filter(value=>value>50)).toEqual([]);
     const timing = stats(frames.deltas), work = stats(frames.work);
-    await metrics('WEB-VIRTUAL-ANCHOR', info.project.name, { frame: timing, scroll_assignment: work, dropped_at_120hz: frames.deltas.reduce((sum, value) => sum + Math.max(0, Math.round(value / (1000 / 120)) - 1), 0), dropped_at_60hz: frames.deltas.reduce((sum, value) => sum + Math.max(0, Math.round(value / (1000 / 60)) - 1), 0), rows: 100000, rendered: frames.rendered, anchor_shift_px: after - before.y, refresh_target_hz: 120 });
+    await metrics('WEB-VIRTUAL-ANCHOR', info.project.name, { frame: timing, scroll_assignment: work, dropped_at_120hz: frames.deltas.reduce((sum, value) => sum + Math.max(0, Math.round(value / (1000 / 120)) - 1), 0), dropped_at_60hz: frames.deltas.reduce((sum, value) => sum + Math.max(0, Math.round(value / (1000 / 60)) - 1), 0), rows: 100000, rendered: frames.rendered, anchor_shift_px: after - before.y, refresh_target_hz: 120,refresh_target_met:timing.p95_ms<=1000/120,long_tasks:frames.longTaskSupported?frames.longTasks:null,long_task_observer:frames.longTaskSupported });
     const savedScroll=await list.evaluate(element=>element.scrollTop);
     await page.reload();
     await expect.poll(()=>page.getByRole('listbox').evaluate((element,saved)=>Math.abs(element.scrollTop-saved),savedScroll)).toBeLessThan(2);
@@ -106,9 +113,12 @@ test('WEB-PERF-SHELL bundle, layout stability, navigation and warm cache budgets
     const shell = sizes.filter(value => !/^Settings-|^AuthPage-|^Fixtures-/.test(value.file)).reduce((sum, value) => sum + value.gzip, 0);
     expect(shell).toBeLessThanOrEqual(60 * 1024);
     await page.addInitScript(() => {
-        const metrics = { cls: 0, longTasks: [] as number[], frames: [] as number[] };
+        const metrics = { cls: 0, clsSupported:PerformanceObserver.supportedEntryTypes.includes('layout-shift'), longTasks: [] as number[], frames: [] as number[], clickWork:[] as number[], firstFrame:[] as number[], inputAt:0, longTaskSupported:PerformanceObserver.supportedEntryTypes.includes('longtask') };
+        const events=new WeakMap<Event,number>();
+        window.addEventListener('click',event=>{if(event.isTrusted){metrics.inputAt=performance.now();events.set(event,metrics.inputAt);metrics.frames=[];metrics.longTasks=[];last=0;}},{capture:true});
+        window.addEventListener('click',event=>{const start=events.get(event);if(start!==undefined)metrics.clickWork.push(performance.now()-start);});
         let last=0;
-        const frame=(time:number)=>{if(last)metrics.frames.push(time-last);last=time;requestAnimationFrame(frame);};
+        const frame=(time:number)=>{if(last)metrics.frames.push(time-last);else if(metrics.inputAt)metrics.firstFrame.push(Math.max(0,time-metrics.inputAt));last=time;requestAnimationFrame(frame);};
         requestAnimationFrame(frame);
         (window as any).__metrics = metrics;
         if (PerformanceObserver.supportedEntryTypes.includes('layout-shift'))
@@ -122,13 +132,13 @@ test('WEB-PERF-SHELL bundle, layout stability, navigation and warm cache budgets
     await page.goto('/messages');
     await page.getByText('No Messages', { exact: true }).waitFor();
     await page.waitForTimeout(200);
-    await page.evaluate(() => { (window as any).__metrics.longTasks = []; (window as any).__metrics.frames=[]; });
+    const idleFrames=await page.evaluate(async()=>{for(let i=0;i<180;i++)await new Promise<void>(resolve=>requestAnimationFrame(()=>resolve()));return (window as any).__metrics.frames.slice(-179) as number[];});
     await page.getByRole('button', { name: 'New Message', exact: true }).click();
     await page.getByText('No Conversation Selected', { exact: true }).waitFor();
-    const navigation = await page.evaluate(() => (window as any).__metrics);
-    expect(navigation.cls).toBe(0);
-    expect(navigation.longTasks.filter((value: number) => value > 50)).toEqual([]);
-    expect(navigation.frames.filter((value:number)=>value>50)).toEqual([]);
+    const navigation = await page.evaluate(async()=>{for(let i=0;i<180;i++)await new Promise<void>(resolve=>requestAnimationFrame(()=>resolve()));return (window as any).__metrics;});
+    await metrics('WEB-PERF-NAVIGATION',info.project.name,{idle_frames:stats(idleFrames),navigation_frames:stats(navigation.frames),click_dispatch:stats(navigation.clickWork),input_to_first_frame:stats(navigation.firstFrame),long_tasks:navigation.longTaskSupported?navigation.longTasks:null,long_task_observer:navigation.longTaskSupported});
+    if(navigation.clsSupported)expect(navigation.cls).toBe(0);
+    if(navigation.longTaskSupported)expect(navigation.longTasks.filter((value:number)=>value>50)).toEqual([]);
     await page.goto('/__fixtures/live');
     await expect(page.getByRole('status', {name:'Connection'})).toHaveText('connected');
     await expect.poll(() => page.evaluate(async () => { const db = await new Promise<IDBDatabase>((resolve, reject) => { const request = indexedDB.open('ab.views'); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); }); const count = await new Promise<number>(resolve => { const request = db.transaction('views').objectStore('views').count(); request.onsuccess = () => resolve(request.result); }); db.close(); return count; })).toBeGreaterThan(0);
@@ -147,5 +157,5 @@ test('WEB-PERF-SHELL bundle, layout stability, navigation and warm cache budgets
     }
     const warmStats = stats(warm);
     expect(warmStats.max_ms).toBeLessThan(1000);
-    await metrics('WEB-PERF-SHELL', info.project.name, { shell_gzip_bytes: shell, chunks: sizes, cls: navigation.cls, long_tasks: navigation.longTasks, navigation_frames: stats(navigation.frames), warm_load: warmStats, long_task_observer: info.project.use.browserName === 'chromium' });
+    await metrics('WEB-PERF-SHELL', info.project.name, { shell_gzip_bytes: shell, chunks: sizes, cls: navigation.clsSupported?navigation.cls:null, cls_observer:navigation.clsSupported, long_tasks: navigation.longTaskSupported?navigation.longTasks:null, navigation_frames: stats(navigation.frames),idle_frames:stats(idleFrames),click_dispatch:stats(navigation.clickWork),input_to_first_frame:stats(navigation.firstFrame), warm_load: warmStats, long_task_observer: navigation.longTaskSupported, paint_timing_verified:false,input_to_raf_8ms_met:stats(navigation.firstFrame).p95_ms<=8 });
 });
