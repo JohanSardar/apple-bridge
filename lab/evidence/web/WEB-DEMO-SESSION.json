@@ -1,31 +1,108 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[6.41 7.74 17.26] cpus=8 other_heavy=1"
+    "summary": "air: load=[6.67 9.52 9.71] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M5E8NTJZ5JCVDJYQRS8VZ12T",
+  "run_id": "run_01M5EH2KKQA3H2GJKXGE16W7Z2",
   "metrics": {
     "demo_messages": 5000,
-    "demo_startup_ms": 5762,
+    "demo_startup_ms": 5668,
     "matrix": [
-      "chromium-light-desktop"
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "webkit-dark-phone",
+      "webkit-dark-desktop",
+      "chromium-light-phone",
+      "chromium-light-desktop",
+      "chromium-dark-phone",
+      "chromium-dark-desktop",
+      "firefox-light-phone",
+      "firefox-light-desktop",
+      "firefox-dark-phone",
+      "firefox-dark-desktop"
     ],
-    "report": "lab/evidence/private/web/reports/WEB-DEMO-SESSION-chromium-light-desktop-playwright.json",
+    "report": "lab/evidence/private/web/reports/WEB-DEMO-SESSION-webkit-light-phone-playwright.json",
     "reports": [
-      "lab/evidence/private/web/reports/WEB-DEMO-SESSION-chromium-light-desktop-playwright.json"
+      "lab/evidence/private/web/reports/WEB-DEMO-SESSION-webkit-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-DEMO-SESSION-webkit-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-DEMO-SESSION-webkit-dark-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-DEMO-SESSION-webkit-dark-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-DEMO-SESSION-chromium-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-DEMO-SESSION-chromium-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-DEMO-SESSION-chromium-dark-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-DEMO-SESSION-chromium-dark-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-DEMO-SESSION-firefox-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-DEMO-SESSION-firefox-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-DEMO-SESSION-firefox-dark-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-DEMO-SESSION-firefox-dark-desktop-playwright.json"
     ],
     "server": "gateway"
   },
   "scenario": "WEB-DEMO-SESSION",
   "level": "web",
   "passed": true,
-  "git_sha": "c7fc09ec1a7e245f284a3017b6ab1731e7c66bee",
-  "at": "2026-10-21T03:39:30.271501Z",
+  "git_sha": "6bb968a76e5df617aa4ddad21104c313f002a32e",
+  "at": "2026-10-21T06:06:17.719621Z",
   "assertions": [
+    {
+      "name": "webkit-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/demo.spec.ts:5:1 › WEB-DEMO-SESSION demo URL signs in, serves synthetic read models, and receives live capture (2.6s)\n\n  1 passed (4.7s)\n"
+    },
+    {
+      "name": "webkit-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/demo.spec.ts:5:1 › WEB-DEMO-SESSION demo URL signs in, serves synthetic read models, and receives live capture (1.6s)\n\n  1 passed (3.0s)\n"
+    },
+    {
+      "name": "webkit-dark-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-dark-phone] › tests/demo.spec.ts:5:1 › WEB-DEMO-SESSION demo URL signs in, serves synthetic read models, and receives live capture (1.8s)\n\n  1 passed (5.1s)\n"
+    },
+    {
+      "name": "webkit-dark-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-dark-desktop] › tests/demo.spec.ts:5:1 › WEB-DEMO-SESSION demo URL signs in, serves synthetic read models, and receives live capture (2.1s)\n\n  1 passed (4.4s)\n"
+    },
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/demo.spec.ts:5:1 › WEB-DEMO-SESSION demo URL signs in, serves synthetic read models, and receives live capture (949ms)\n\n  1 passed (4.4s)\n"
+    },
     {
       "name": "chromium-light-desktop:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/demo.spec.ts:4:1 › WEB-DEMO-SESSION demo URL signs in, serves synthetic read models, and receives live capture (858ms)\n\n  1 passed (2.3s)\n"
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/demo.spec.ts:5:1 › WEB-DEMO-SESSION demo URL signs in, serves synthetic read models, and receives live capture (1.8s)\n\n  1 passed (5.0s)\n"
+    },
+    {
+      "name": "chromium-dark-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-dark-phone] › tests/demo.spec.ts:5:1 › WEB-DEMO-SESSION demo URL signs in, serves synthetic read models, and receives live capture (799ms)\n\n  1 passed (1.9s)\n"
+    },
+    {
+      "name": "chromium-dark-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-dark-desktop] › tests/demo.spec.ts:5:1 › WEB-DEMO-SESSION demo URL signs in, serves synthetic read models, and receives live capture (762ms)\n\n  1 passed (1.5s)\n"
+    },
+    {
+      "name": "firefox-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-light-phone] › tests/demo.spec.ts:5:1 › WEB-DEMO-SESSION demo URL signs in, serves synthetic read models, and receives live capture (1.9s)\n\n  1 passed (4.7s)\n"
+    },
+    {
+      "name": "firefox-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-light-desktop] › tests/demo.spec.ts:5:1 › WEB-DEMO-SESSION demo URL signs in, serves synthetic read models, and receives live capture (2.0s)\n\n  1 passed (4.7s)\n"
+    },
+    {
+      "name": "firefox-dark-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-dark-phone] › tests/demo.spec.ts:5:1 › WEB-DEMO-SESSION demo URL signs in, serves synthetic read models, and receives live capture (2.0s)\n\n  1 passed (4.9s)\n"
+    },
+    {
+      "name": "firefox-dark-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-dark-desktop] › tests/demo.spec.ts:5:1 › WEB-DEMO-SESSION demo URL signs in, serves synthetic read models, and receives live capture (2.0s)\n\n  1 passed (4.2s)\n"
     },
     {
       "name": "credential_backend_override_restored",
