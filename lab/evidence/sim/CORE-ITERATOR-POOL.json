@@ -1,0 +1,82 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[5.39 7.61 10.37] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5F4JM641YHH6S1630CQV622",
+  "scenario": "CORE-ITERATOR-POOL",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "5d9b1dbfdd6790d19680b72101032de4f41febbd",
+  "at": "2026-10-21T11:47:05.541675Z",
+  "assertions": [
+    {
+      "name": "software_passkey_enrollment",
+      "passed": true
+    },
+    {
+      "name": "local_cookie_flags",
+      "passed": true
+    },
+    {
+      "name": "trusted_thirty_days",
+      "passed": true
+    },
+    {
+      "name": "session_256_bits",
+      "passed": true
+    },
+    {
+      "name": "tokens_stored_hashed",
+      "passed": true
+    },
+    {
+      "name": "source_identity",
+      "passed": true
+    },
+    {
+      "name": "independent_public_session",
+      "passed": true
+    },
+    {
+      "name": "live_session",
+      "passed": true
+    },
+    {
+      "name": "live_session",
+      "passed": true
+    },
+    {
+      "name": "all_32_snapshots_progress_with_pool_8",
+      "passed": true
+    },
+    {
+      "name": "source_change_queued",
+      "passed": true
+    },
+    {
+      "name": "all_32_iterators_observe_next_commit",
+      "passed": true
+    },
+    {
+      "name": "reads_progress_while_iterators_wait",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "32_live_subscriptions_commit": {
+      "samples": 1,
+      "p50_ms": 24.233417,
+      "p95_ms": 24.233417,
+      "max_ms": 24.233417,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}
