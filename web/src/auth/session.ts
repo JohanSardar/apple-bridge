@@ -6,6 +6,7 @@ import { setPreferencePersistence } from '../app/preferences';
 import { clearRouterPersistence, setRouterPersistence } from '../app/router';
 import { LiveClient } from '../data/live';
 import { strings as s } from '../app/strings';
+import { clearDrafts } from '../messages/compose/drafts';
 const [session, setSession] = createSignal<DeviceSession | null>(), [error, setError] = createSignal(false), [live, setLive] = createSignal<LiveClient>();
 const [notice,setNotice]=createSignal('');
 const [approvalRevision, setApprovalRevision] = createSignal(0);
@@ -13,6 +14,7 @@ const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('
 let signingOut: Promise<void> | undefined;
 let pwaSetup:Promise<void>=Promise.resolve();
 async function clearPrivateData() {
+    clearDrafts();
     viewCache.disable();
     setPreferencePersistence(false);
     setRouterPersistence(false);
