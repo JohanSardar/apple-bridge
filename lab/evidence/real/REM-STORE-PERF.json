@@ -1,93 +1,93 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[9.9 9.05 9.11] cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[6.11 4.27 4.06] cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5FDH0DT1DG0WRASTJM2ST30",
+  "run_id": "run_01M5FRD4Z2R5773NY05SY553NZ",
   "metrics": {
     "profile": {
       "cold": {
-        "connection_open_ms": 1.005916390568018,
-        "close_ms": 0,
         "backup_ms": 0,
-        "total_ms": 178.8772081490606,
-        "decode_ms": 20.240216748788953,
-        "query_ms": 157.63107500970364
+        "query_ms": 14.055175706744194,
+        "connection_open_ms": 0.2834165934473276,
+        "close_ms": 0,
+        "total_ms": 20.90616663917899,
+        "decode_ms": 6.56757433898747
       },
       "iterations": 200,
       "mode": "persistent_typed",
-      "profile_total_ms": 10064.49916656129,
+      "profile_total_ms": 4026.914916699752,
       "responsiveness": {
+        "cold_full_elapsed_ms": 151.98262501507998,
         "main_queue_delay": {
-          "samples": 633,
-          "under_16_ms": true,
-          "max_ms": 1.8421248532831669,
-          "p95_ms": 0.10604155249893665
-        },
-        "cold_full_elapsed_ms": 1246.3152499403805
+          "max_ms": 0.05150004290044308,
+          "p95_ms": 0.029166461899876595,
+          "samples": 90,
+          "under_16_ms": true
+        }
       },
       "warm_full": {
         "connection_open": {
-          "samples": 200,
           "max_ms": 0,
           "p95_ms": 0,
-          "p50_ms": 0
-        },
-        "backup": {
-          "samples": 200,
-          "max_ms": 0,
-          "p95_ms": 0,
-          "p50_ms": 0
-        },
-        "query": {
-          "samples": 200,
-          "max_ms": 498.0165839660913,
-          "p95_ms": 59.06743253581226,
-          "p50_ms": 30.174540588632226
+          "p50_ms": 0,
+          "samples": 200
         },
         "total": {
-          "samples": 200,
-          "max_ms": 530.4970412980765,
-          "p95_ms": 72.523083537817,
-          "p50_ms": 39.28129165433347
+          "max_ms": 34.30191660299897,
+          "p95_ms": 21.816375199705362,
+          "p50_ms": 19.35979165136814,
+          "samples": 200
+        },
+        "query": {
+          "max_ms": 29.81220232322812,
+          "p95_ms": 17.216163454577327,
+          "p50_ms": 15.162967843934894,
+          "samples": 200
         },
         "decode": {
-          "samples": 200,
-          "max_ms": 32.480457331985235,
-          "p95_ms": 14.032805571332574,
-          "p50_ms": 8.330717450007796
+          "max_ms": 5.198887083679438,
+          "p95_ms": 4.685580730438232,
+          "p50_ms": 4.2157459538429976,
+          "samples": 200
+        },
+        "backup": {
+          "max_ms": 0,
+          "p95_ms": 0,
+          "p50_ms": 0,
+          "samples": 200
         }
       },
       "warm_incremental_unchanged": {
-        "backup": {
-          "samples": 200,
-          "max_ms": 0,
-          "p95_ms": 0,
-          "p50_ms": 0
-        },
         "connection_open": {
-          "samples": 200,
           "max_ms": 0,
           "p95_ms": 0,
-          "p50_ms": 0
-        },
-        "query": {
-          "samples": 200,
-          "max_ms": 3.0198325403034687,
-          "p95_ms": 0.5854172632098198,
-          "p50_ms": 0.07420871406793594
+          "p50_ms": 0,
+          "samples": 200
         },
         "total": {
-          "samples": 200,
-          "max_ms": 10.146541520953178,
-          "p95_ms": 2.2280002012848854,
-          "p50_ms": 0.5985416937619448
+          "max_ms": 0.22312509827315807,
+          "p95_ms": 0.20395894534885883,
+          "p50_ms": 0.19304174929857254,
+          "samples": 200
+        },
+        "query": {
+          "max_ms": 0.037125544622540474,
+          "p95_ms": 0.02791709266602993,
+          "p50_ms": 0.026291701942682266,
+          "samples": 200
+        },
+        "backup": {
+          "max_ms": 0,
+          "p95_ms": 0,
+          "p50_ms": 0,
+          "samples": 200
         },
         "decode": {
-          "samples": 200,
-          "max_ms": 9.74200014024973,
-          "p95_ms": 1.6452076379209757,
-          "p50_ms": 0.5024995189160109
+          "max_ms": 0.1859995536506176,
+          "p95_ms": 0.17583300359547138,
+          "p50_ms": 0.16662455163896084,
+          "samples": 200
         }
       }
     }
@@ -95,8 +95,8 @@
   "scenario": "REM-STORE-PERF",
   "level": "real",
   "passed": true,
-  "git_sha": "5ac346f264da1ccc01aab03589243b97b1839277",
-  "at": "2026-10-21T14:23:29.722961Z",
+  "git_sha": "9d0c3a22d7004d5b5c447b735e65587b5ece2b4a",
+  "at": "2026-10-21T17:33:37.634375Z",
   "assertions": [
     {
       "name": "private_profile_directory",
@@ -138,16 +138,16 @@
   "latency": {
     "warm_full": {
       "samples": 200,
-      "p50_ms": 39.28129165433347,
-      "p95_ms": 72.523083537817,
-      "max_ms": 530.4970412980765,
+      "p50_ms": 19.35979165136814,
+      "p95_ms": 21.816375199705362,
+      "max_ms": 34.30191660299897,
       "timeouts": 0
     },
     "warm_incremental_unchanged": {
       "samples": 200,
-      "p50_ms": 0.5985416937619448,
-      "p95_ms": 2.2280002012848854,
-      "max_ms": 10.146541520953178,
+      "p50_ms": 0.19304174929857254,
+      "p95_ms": 0.20395894534885883,
+      "max_ms": 0.22312509827315807,
       "timeouts": 0
     }
   },
