@@ -42,8 +42,7 @@ public enum MediaDerivatives {
         return false
     }
     public static func supports(_ url: URL, uti: String = "", mime: String = "") -> Bool {
-        guard let type = UTType(filenameExtension: url.pathExtension) ?? (uti.isEmpty ? nil : UTType(uti)) ?? (mime.isEmpty ? nil : UTType(mimeType: mime)) else { return false }
-        return type.conforms(to: .image) || type.conforms(to: .audiovisualContent)
+        [UTType(filenameExtension: url.pathExtension), uti.isEmpty ? nil : UTType(uti), mime.isEmpty ? nil : UTType(mimeType: mime)].compactMap { $0 }.contains { $0.conforms(to: .image) || $0.conforms(to: .audiovisualContent) }
     }
     public static func cached(_ digest: String) -> MediaResult? {
         guard validDigest(digest), let bytes = try? Data(contentsOf: root.appendingPathComponent(digest + "/manifest.json")), let result = try? JSONDecoder().decode(MediaResult.self, from: bytes),

@@ -45,6 +45,7 @@ actor CaptureSink: ObservationSink {
         }
     }
     func recoverable(_ key: String) -> Bool { !failed && records[key]?["deleted_at"] != nil && records[key]?["deleted_at"] != .null }
+    func record(_ key: String) -> JSON { records[key] ?? .null }
     func contains(_ key: String) -> Bool { records[key] != nil && !failed }
     func completed() -> Bool { complete && !failed }
     func referencesFresh() -> Bool { records["synthetic-000000"]?["text"].string == "newer" && records["synthetic-000001"]?["text"].string == "newest" && !failed }
@@ -68,6 +69,7 @@ struct MessagesCaptureChecks {
         return false
     }
     static func main() async throws {
+        if CommandLine.arguments.contains("--rich") { try await RichCaptureChecks.run(); return }
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("messages-capture-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         defer {
