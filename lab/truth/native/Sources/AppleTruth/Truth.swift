@@ -207,10 +207,19 @@ struct AppleTruth {
         var result: [String: Any] = ["status": "verified", "records": rows, "unbounded": true]
         if let chat = request["chat_guid"] as? String, !chat.isEmpty {
             var statement: OpaquePointer?
-            guard sqlite3_prepare_v2(database, "SELECT service_name,style,(SELECT count(*) FROM chat_handle_join j WHERE j.chat_id=c.ROWID) FROM chat c WHERE guid=?", -1, &statement, nil) == SQLITE_OK else { throw TruthFailure.unavailable }
+            guard sqlite3_prepare_v2(database, "SELECT service_name,style,(SELECT count(*) FROM chat_handle_join j WHERE j.chat_id=c.ROWID),last_read_message_timestamp,(SELECT MAX(m.date) FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID WHERE j.chat_id=c.ROWID AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=c.ROWID AND r.message_id=m.ROWID)),(SELECT COUNT(*) FROM chat_message_join j WHERE j.chat_id=c.ROWID AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=c.ROWID AND r.message_id=j.message_id)) FROM chat c WHERE guid=?", -1, &statement, nil) == SQLITE_OK else { throw TruthFailure.unavailable }
             defer { sqlite3_finalize(statement) }
             sqlite3_bind_text(statement, 1, chat, -1, transient)
-            guard sqlite3_step(statement) == SQLITE_ROW else { throw TruthFailure.unavailable }
+            let status = sqlite3_step(statement)
+            guard status == SQLITE_ROW || status == SQLITE_DONE else { throw TruthFailure.unavailable }
+            result["chat_present"] = status == SQLITE_ROW
+            guard status == SQLITE_ROW else { return result }
+            let rawRead = sqlite3_column_double(statement, 3)
+            let rawLatest = sqlite3_column_double(statement, 4)
+            let read = rawRead > 1e12 ? rawRead / 1e9 : rawRead
+            let latest = rawLatest > 1e12 ? rawLatest / 1e9 : rawLatest
+            result["chat_active"] = sqlite3_column_int64(statement, 5) > 0
+            result["chat_read_state"] = latest > 0 ? (read >= latest ? "read" : "unread") : "unverified"
             result["service"] = sqlite3_column_text(statement, 0).map { String(cString: $0) } ?? ""
             result["group"] = sqlite3_column_int(statement, 1) == 43 && sqlite3_column_int(statement, 2) >= 2
             result["participant_count"] = sqlite3_column_int(statement, 2)

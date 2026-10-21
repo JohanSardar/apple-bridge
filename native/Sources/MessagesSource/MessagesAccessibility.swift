@@ -49,6 +49,15 @@ enum MessagesAccessibility {
         let mediaNames = prepared.nativeState["cleanup_authorized"].bool ? prepared.nativeState["target"]["cleanup_media_names"].array.map(\.string) : []
         guard !expected.isEmpty || !mediaNames.isEmpty else { throw SourceFailure.conflict }
         let outgoing = prepared.nativeState["target"]["is_from_me"].bool
+        if prepared.nativeState["conversation_target"].bool {
+            let rows = matching(root, budget: &budget) { element in
+                guard value(element, kAXRoleAttribute) == kAXRowRole else { return false }
+                var textBudget = 100
+                return matching(element, budget: &textBudget) { node in [kAXValueAttribute, kAXTitleAttribute, kAXDescriptionAttribute].contains { [expected, "You: " + expected].contains(value(node, $0)) } }.count > 0 && textBudget > 0
+            }
+            guard budget > 0, rows.count == 1 else { throw MessagesUIFailure.targetUnavailable }
+            return rows[0]
+        }
         let targets = matching(root, budget: &budget) { element in
             let identifier = value(element, kAXIdentifierAttribute)
             let description = value(element, kAXDescriptionAttribute)

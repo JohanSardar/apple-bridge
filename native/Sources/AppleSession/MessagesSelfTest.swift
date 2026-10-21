@@ -41,7 +41,10 @@ actor MessagesSelfTest {
         let handles = try MessagesProbes.discoverSelfHandles().handles
         let database = try MessagesDatabase()
         let chats = try database.rows("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.service_name='iMessage' AND (SELECT COUNT(*) FROM chat_handle_join x WHERE x.chat_id=c.ROWID)=1 ORDER BY c.ROWID DESC")
-        guard let handle = chats.compactMap({ $0["id"] }).first(where: { handles.contains(MessagesProbes.normalize($0)) }) ?? handles.first else { throw SourceFailure.invalid }
+        let known = Set(try database.rows("SELECT DISTINCT h.id FROM chat_handle_join j JOIN handle h ON h.ROWID=j.handle_id").compactMap { $0["id"] }.map(MessagesProbes.normalize))
+        let unused: String? = uiAllowed ? handles.first(where: { !known.contains($0) }) : nil
+        guard let handle = unused ?? chats.compactMap({ $0["id"] }).first(where: { handles.contains(MessagesProbes.normalize($0)) }) ?? handles.first else { throw SourceFailure.invalid }
+        let baselineChat = Int64(try database.rows("SELECT COALESCE(MAX(ROWID),0) AS maximum FROM chat").first?["maximum"] ?? "0") ?? 0
         let baseline = try database.rows("SELECT COALESCE(MAX(ROWID),0) AS maximum FROM message").first?["maximum"] ?? "0"
         let cleanup = PrivateReport.directory.appendingPathComponent("messages-command-cleanup", isDirectory: true)
         try FileManager.default.createDirectory(at: cleanup, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
@@ -103,9 +106,18 @@ actor MessagesSelfTest {
         let initial = await execute("send_text", "send", args: send)
         let target = initial["native_key"].string
         if uiAllowed, initial["observed"].bool {
-            if let chat = try? database.rows("SELECT c.guid FROM chat c JOIN chat_message_join j ON j.chat_id=c.ROWID JOIN message m ON m.ROWID=j.message_id WHERE m.guid=?", bindings: [target]).first?["guid"] {
+            if unused != nil, let conversation = try? database.rows("SELECT c.guid,c.ROWID AS row_position FROM chat c JOIN chat_message_join j ON j.chat_id=c.ROWID JOIN message m ON m.ROWID=j.message_id WHERE m.guid=?", bindings: [target]).first,
+               let chat = conversation["guid"], let position = Int64(conversation["row_position"] ?? ""), position > baselineChat {
+                registration["baseline_max_chat_row_id"] = baselineChat
+                registration["created_chat_key"] = chat
+                registration["created_by_run"] = true
+                try PrivateReport.write(registration, to: ledger)
                 _ = await execute("mark_unread", "mark_unread", args: [:], native: chat)
                 _ = await execute("mark_read", "mark_read", args: [:], native: chat)
+            } else {
+                for operation in ["mark_read", "mark_unread"] {
+                    steps.append(.object(["name": .string(operation), "operation": .string("messages." + operation), "proven": .bool(false), "reason": .string("isolated_test_chat_unavailable")]))
+                }
             }
         }
         do {

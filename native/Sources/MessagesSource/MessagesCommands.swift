@@ -177,6 +177,7 @@ public actor MessagesCommands {
         let operation=try MessagesAction(operation:action["op"].string)
         let args=action["messages"]
         let reader=try MessagesReader(path:path)
+        if [.markRead, .markUnread, .deleteChat].contains(operation) { return try await prepareConversation(command, reader: reader, interactive: interactive) }
         if [.renameGroup, .addMember, .removeMember, .leaveGroup].contains(operation) {
             guard let chat = try reader.query("SELECT guid,style,service_name FROM chat WHERE guid=?",[action["native_key"].string]).first else { throw SourceFailure.capabilityUnproven }
             let peers = try reader.query("SELECT handle_id FROM chat_handle_join WHERE chat_id=(SELECT ROWID FROM chat WHERE guid=?)",[chat["guid"]])
@@ -186,6 +187,7 @@ public actor MessagesCommands {
         }
         guard let row=try reader.message(action["native_key"].string),let item=try reader.messageObservations(row).first else {throw SourceFailure.capabilityUnproven}
         let target=try JSONDecoder().decode(JSON.self,from:JSONSerialization.data(withJSONObject:item.2,options:.sortedKeys))
+        guard target["deleted_at"] == .null else { throw SourceFailure.unsupported }
         guard interactive || tagged(target["text"].string) else {throw SourceFailure.invalid}
         if !interactive && !args["text"].string.isEmpty && !tagged(args["text"].string) {throw SourceFailure.invalid}
         var destination=action.object
@@ -215,15 +217,86 @@ public actor MessagesCommands {
         try await MessagesAccessibility.validate(prepared)
         return prepared
     }
+    private func latestConversationDate(_ rows: [SQLiteRow]) -> Double {
+        rows.compactMap { Double($0["date"]) }.map { $0 > 1e12 ? $0 / 1e9 : $0 }.max() ?? 0
+    }
+    private func prepareConversation(_ command: JSON, reader: MessagesReader, interactive: Bool) async throws -> Prepared {
+        let action = command["action"]
+        let chat = action["native_key"].string
+        guard let conversation = try reader.query("SELECT ROWID AS row_position,* FROM chat WHERE guid=?", [chat]).first else { throw SourceFailure.capabilityUnproven }
+        let rows = try reader.query("SELECT m.guid,m.date FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE c.guid=? AND NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=c.ROWID) ORDER BY m.ROWID DESC", [chat])
+        guard let last = rows.first, let row = try reader.message(last["guid"]), let item = try reader.messageObservations(row).first else { throw SourceFailure.capabilityUnproven }
+        let target = try JSONDecoder().decode(JSON.self, from: JSONSerialization.data(withJSONObject: item.2))
+        if !interactive {
+            guard tagged(target["text"].string) else { throw SourceFailure.invalid }
+            for item in rows {
+                guard let message = try reader.message(item["guid"]), let data = try reader.messageObservations(message).first, let text = data.2["text"] as? String, tagged(text) else { throw SourceFailure.unsupported }
+            }
+        }
+        var destination = action.object
+        destination["list_key"] = .string(chat)
+        let route = try verifyRoute(.object(destination), reader: reader, interactive: interactive)
+        if action["op"].string == "messages.delete_chat", !interactive {
+            guard let run = target["text"].string.range(of: #"\[ab-test ([A-Za-z0-9_-]+)\]"#, options: .regularExpression) else { throw SourceFailure.invalid }
+            let tag = String(target["text"].string[run])
+            let id = String(tag.dropFirst(9).dropLast())
+            let ledger = PrivateReport.directory.appendingPathComponent("messages-command-cleanup/" + id + ".json")
+            let registration = try JSONDecoder().decode(JSON.self, from: Data(contentsOf: ledger))
+            guard registration["run_id"].string == id, registration["created_chat_key"].string == chat, registration["created_by_run"].bool, conversation.integer("row_position") > Int64(registration["baseline_max_chat_row_id"].number) else { throw SourceFailure.unsupported }
+            for item in rows {
+                guard let message = try reader.message(item["guid"]), let data = try reader.messageObservations(message).first, (data.2["text"] as? String)?.contains(tag) == true else { throw SourceFailure.invalid }
+            }
+        }
+        guard labCommands || proofs().contains(routeProof(route, kind: action["op"].string)), await MessagesAccessibility.available else { throw SourceFailure.capabilityUnproven }
+        let prepared = Prepared(nativeState: .object(["interactive": .bool(interactive), "conversation_members": .array(rows.map { .string($0["guid"]) }), "conversation_target": .bool(true), "target": target, "destination": route, "route": .string("accessibility"), "last_read_timestamp": .string(conversation["last_read_message_timestamp"]), "latest_message_date": .string(String(latestConversationDate(rows))), "candidate_ids": .array([.string(chat)])]), fingerprint: command["request_hash"].string, action: action)
+        try await MessagesAccessibility.validate(prepared)
+        return prepared
+    }
+    private func dispatchConversation(_ prepared: Prepared) async throws -> JSON {
+        let reader = try MessagesReader(path: path)
+        let chat = prepared.action["native_key"].string
+        var destination = prepared.action.object
+        destination["list_key"] = .string(chat)
+        guard try verifyRoute(.object(destination), reader: reader, interactive: prepared.nativeState["interactive"].bool) == prepared.nativeState["destination"] else { throw SourceFailure.conflict }
+        guard let current = try reader.query("SELECT last_read_message_timestamp FROM chat WHERE guid=?", [chat]).first, current["last_read_message_timestamp"] == prepared.nativeState["last_read_timestamp"].string else { throw SourceFailure.conflict }
+        let rows = try reader.query("SELECT m.guid,m.date FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE c.guid=? AND NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=c.ROWID) ORDER BY m.ROWID DESC", [chat])
+        guard JSON.array(rows.map { .string($0["guid"]) }) == prepared.nativeState["conversation_members"], String(latestConversationDate(rows)) == prepared.nativeState["latest_message_date"].string else { throw SourceFailure.conflict }
+        let ui = try await MessagesAccessibility.perform(prepared)
+        let deadline = ContinuousClock.now.advanced(by: .seconds(10))
+        repeat {
+            let current = try reader.query("SELECT last_read_message_timestamp FROM chat WHERE guid=?", [chat]).first
+            let operation = prepared.action["op"].string
+            let rawLatest = Double(prepared.nativeState["latest_message_date"].string) ?? 0
+            let rawTimestamp = Double(current?["last_read_message_timestamp"] ?? "0") ?? 0
+            let latest = rawLatest > 1e12 ? rawLatest / 1e9 : rawLatest
+            let timestamp = rawTimestamp > 1e12 ? rawTimestamp / 1e9 : rawTimestamp
+            let recoverable = try reader.recoverableChat(chat)
+            let deleted = current == nil || recoverable
+            let observed = operation == "messages.delete_chat" ? deleted : current != nil && latest > 0 && (operation == "messages.mark_read" ? timestamp >= latest : timestamp < latest) && current?["last_read_message_timestamp"] != prepared.nativeState["last_read_timestamp"].string
+            if observed {
+                var evidence = ui.object
+                evidence["source"] = .string("messages")
+                evidence["collection"] = .string("messages.chat")
+                evidence["native_key"] = .string(chat)
+                evidence["observed"] = .bool(true)
+                evidence["absent"] = .bool(current == nil)
+                evidence["disposition"] = .string("locally_observed")
+                return .object(evidence)
+            }
+            try await Task.sleep(for: .milliseconds(50))
+        } while ContinuousClock.now < deadline
+        return .object(["source": .string("messages"), "observed": .bool(false), "disposition": .string("indeterminate"), "reason": .string("conversation_effect_unproven"), "ui": ui])
+    }
     public func validate(_ prepared: Prepared) async throws {
         if !["messages.send", "messages.create_group"].contains(prepared.action["op"].string) {try await MessagesAccessibility.validate(prepared)}
     }
     private func dispatchAccessibility(_ prepared: Prepared) async throws -> JSON {
+        if prepared.nativeState["conversation_target"].bool { return try await dispatchConversation(prepared) }
         let reader=try MessagesReader(path:path)
         let native=prepared.action["native_key"].string
         guard let before=try reader.message(native),let item=try reader.messageObservations(before).first else {throw SourceFailure.conflict}
         let current=try JSONDecoder().decode(JSON.self,from:JSONSerialization.data(withJSONObject:item.2,options:.sortedKeys))
-        for field in ["text", "is_from_me", "edit_history", "retracted_parts", "retracted_at"] {
+        for field in ["text", "is_from_me", "edit_history", "retracted_parts", "retracted_at", "deleted_at"] {
             guard current[field] == prepared.nativeState["target"][field] else { throw SourceFailure.conflict }
         }
         let ui=try await MessagesAccessibility.perform(prepared)
@@ -256,7 +329,7 @@ public actor MessagesCommands {
                 if observed, let key = reactions.first?["guid"] {
                     return .object(["source": .string("messages"), "native_key": .string(key), "collection": .string("messages.reaction"), "observed": .bool(true), "disposition": .string("locally_observed"), "parts": .array([]), "ui": ui])
                 }
-            case .deleteMessage: observed=row == nil
+            case .deleteMessage: observed=row == nil || data["deleted_at"] != .null
             default: break
             }
             if observed {
