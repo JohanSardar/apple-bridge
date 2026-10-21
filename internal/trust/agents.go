@@ -93,3 +93,16 @@ func (a *Authority) Agents() ([]Agent, error) {
 	}
 	return out, nil
 }
+
+func IsAgentPrincipalID(id string) bool {
+	if parent, local, delegated := strings.Cut(id, "/"); delegated {
+		if !strings.HasPrefix(parent, "replica:") {
+			return false
+		}
+		id = local
+	}
+	return strings.HasPrefix(id, "agent:") && len(id) > len("agent:") && !strings.ContainsAny(id, "/\r\n")
+}
+func (p Principal) IsAgent() bool {
+	return (p.Kind == "agent" || p.Kind == "delegated") && IsAgentPrincipalID(p.ID)
+}

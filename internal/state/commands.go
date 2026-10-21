@@ -8,7 +8,6 @@ import (
 	"github.com/JohanSardar/apple-bridge/internal/trust"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
@@ -253,7 +252,7 @@ func (s *Store) publishCommandLocked(ctx context.Context, r contracts.CommandRec
 		return err
 	}
 	defer tx.Rollback()
-	if strings.HasPrefix(r.Principal, "agent:") {
+	if trust.IsAgentPrincipalID(r.Principal) {
 		if err = writeAgentActivity(ctx, tx, AgentActivity{Sequence: r.Cursor.Sequence, ID: r.Principal + ":" + r.Command.ID, Principal: r.Principal, Operation: r.Command.Op, Kind: "command", State: string(r.State), At: r.CreatedAt, ArgumentBytes: len(r.Command.Args), ArgumentHash: trust.Fingerprint(r.Command.Args)}); err != nil {
 			return err
 		}

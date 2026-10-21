@@ -26,13 +26,25 @@ func runAgentReplicaBoundary(ctx context.Context, w *world.World, chatID string,
 		})
 		add("replica_agent_local_read", createErr == nil && replicaRead == nil)
 		replicaCommand := command()
-		replicaStatus, _, _ := agentRequest(ctx, replica.URL, replicaToken, "POST", "/v1/op/messages.send", replicaCommand)
+		replicaStatus, raw, _ := agentRequest(ctx, replica.URL, replicaToken, "POST", "/v1/op/messages.send", replicaCommand)
+		var pending contracts.CommandRecord
+		json.Unmarshal(raw, &pending)
 		effects, _ := w.Effects()
-		add("replica_agent_write_refused_before_forwarding", replicaStatus == 422 && effects[replicaCommand.ID] == 0)
-		ownerToken, _, ownerErr := replicaAuthority.CreateDeviceSession("trusted")
-		replicaOwner := &webClient{ctx: ctx, origin: strings.Replace(replica.URL, "127.0.0.1", "localhost", 1), cookie: &http.Cookie{Name: bridgeweb.LocalSessionCookie, Value: ownerToken}}
-		response, activity, activityErr := replicaOwner.request("GET", "activity?principal="+url.QueryEscape(replicaAgent.ID), nil)
-		add("replica_refusal_logged", ownerErr == nil && activityErr == nil && response.StatusCode == 200 && bytes.Contains(activity, []byte(replicaCommand.ID)))
+		add("replica_agent_queues_gateway_approval_without_effect", replicaStatus == 200 && pending.State == contracts.CommandAwaitingApproval && effects[replicaCommand.ID] == 0)
+		gateway, ownerErr := trust.Open(w.Gateway.Home)
+		if ownerErr != nil {
+			add("gateway_activity_authority", false)
+			return
+		}
+		ownerToken, _, ownerErr := gateway.CreateDeviceSession("trusted")
+		owner := &webClient{ctx: ctx, origin: strings.Replace(w.Gateway.URL, "127.0.0.1", "localhost", 1), cookie: &http.Cookie{Name: bridgeweb.LocalSessionCookie, Value: ownerToken}}
+		enrollment, _ := replicaAuthority.Enrollment()
+		if enrollment == nil {
+			add("gateway_activity_enrollment", false)
+			return
+		}
+		response, activity, activityErr := owner.request("GET", "activity?principal="+url.QueryEscape(enrollment.ReplicaID+"/"+replicaAgent.ID), nil)
+		add("replica_delegation_logged_on_gateway", ownerErr == nil && activityErr == nil && response.StatusCode == 200 && bytes.Contains(activity, []byte(replicaCommand.ID)))
 	} else {
 		add("replica_agent_authority", false)
 	}

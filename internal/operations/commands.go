@@ -23,14 +23,15 @@ type CommandTarget interface {
 	List(context.Context, trust.Principal, contracts.CommandQuery) ([]contracts.CommandRecord, error)
 }
 type LocalGateway struct {
-	Uploads   *blobs.Store
-	State     *state.Store
-	Authority *trust.Authority
-	Peer      *applepeer.Commands
-	Context   context.Context
-	Audit     func(contracts.CommandRecord)
-	mu        sync.Mutex
-	slots     map[string]chan struct{}
+	Reauthorize func(context.Context, string, string, string) (trust.Principal, error)
+	Uploads     *blobs.Store
+	State       *state.Store
+	Authority   *trust.Authority
+	Peer        *applepeer.Commands
+	Context     context.Context
+	Audit       func(contracts.CommandRecord)
+	mu          sync.Mutex
+	slots       map[string]chan struct{}
 }
 
 func (g *LocalGateway) lock(ctx context.Context, key string) (func(), error) {
@@ -77,7 +78,7 @@ func (g *LocalGateway) transition(ctx context.Context, r contracts.CommandRecord
 }
 func (g *LocalGateway) Submit(ctx context.Context, p trust.Principal, c contracts.Command) (result contracts.CommandRecord, resultErr error) {
 	defer func() {
-		if p.Kind == "agent" {
+		if p.IsAgent() {
 			r := result
 			if r.Command.ID == "" {
 				r = contracts.CommandRecord{Command: c, Principal: p.ID, State: "rejected"}
@@ -97,12 +98,12 @@ func (g *LocalGateway) Submit(ctx context.Context, p trust.Principal, c contract
 		}
 		current.Grants = trust.EffectiveGrants(current.Grants, p.Grants)
 		p = current
-		if p.Level == trust.AgentRead {
-			return empty, contracts.ErrUnauthorized
-		}
+	}
+	if p.IsAgent() && p.Level == trust.AgentRead {
+		return empty, contracts.ErrUnauthorized
 	}
 	c.Origin = ""
-	if p.Kind == "device" || p.Kind == "agent" && (p.Level == trust.AgentFull || p.Level == trust.AgentApprove) || p.Kind == "delegated" && strings.Contains(p.ID, "/device:") {
+	if p.Kind == "device" || p.IsAgent() && (p.Level == trust.AgentFull || p.Level == trust.AgentApprove) || p.Kind == "delegated" && strings.Contains(p.ID, "/device:") {
 		c.Origin = "interactive"
 	}
 	a, err := contracts.ValidateCommand(c)
@@ -159,7 +160,7 @@ func (g *LocalGateway) Submit(ctx context.Context, p trust.Principal, c contract
 		return empty, contracts.ErrExpired
 	}
 	deadline := time.Now().Add(expiry.Sub(now))
-	if p.Kind == "agent" && p.Level == trust.AgentApprove {
+	if p.IsAgent() && p.Level == trust.AgentApprove {
 		r := contracts.CommandRecord{Command: c, Principal: p.ID, Source: contracts.CollectionSource(c.Op), RequestHash: hash, State: contracts.CommandAwaitingApproval, Disposition: contracts.DispositionAwaitingApproval, AdmissionEra: era, CreatedAt: now, ExpiresAt: now.Add(24 * time.Hour)}
 		return g.State.TransitionCommand(ctx, state.CommandTransition{Record: r})
 	}
