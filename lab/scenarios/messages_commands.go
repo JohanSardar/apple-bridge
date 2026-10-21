@@ -123,6 +123,8 @@ func runMessagesCommands(ctx context.Context, s Scenario, level string) Evidence
 	}
 
 	switch s.ID {
+	case "MSG-COMMAND-PARTS":
+		checkMessageParts(ctx, w, &e, chat.ID, add)
 	case "MSG-FAILED-OBSERVED-IDS":
 		checkFailedMessageIDs(ctx, w, &e, chat.ID, add)
 	case "MSG-COMMAND-OBSERVED-IDS":

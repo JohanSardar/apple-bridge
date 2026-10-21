@@ -1,0 +1,1109 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[5.49 7.69 7.56] cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5G46QJZJBHBJRSQS0JSDHDE",
+  "scenario": "MSG-COMMAND-PARTS",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "3728fc71e4cf92d36e6dc81581232d6e07f029c8",
+  "at": "2026-10-21T20:59:50.239371Z",
+  "assertions": [
+    {
+      "name": "seed_self_chat",
+      "passed": true
+    },
+    {
+      "name": "fixture_captured",
+      "passed": true
+    },
+    {
+      "name": "gateway_complete_upload_0_prepared",
+      "passed": true
+    },
+    {
+      "name": "gateway_complete_upload_1_prepared",
+      "passed": true
+    },
+    {
+      "name": "gateway_cardinality_window_complete",
+      "passed": true
+    },
+    {
+      "name": "gateway_complete_truthful_aggregate",
+      "passed": true
+    },
+    {
+      "name": "gateway_cardinality_window_complete",
+      "passed": true
+    },
+    {
+      "name": "gateway_complete_captured_message_cardinality",
+      "passed": true
+    },
+    {
+      "name": "gateway_complete_three_helper_parts",
+      "passed": true
+    },
+    {
+      "name": "gateway_complete_three_public_parts",
+      "passed": true
+    },
+    {
+      "name": "gateway_complete_aliases_readable",
+      "passed": true
+    },
+    {
+      "name": "gateway_complete_unique_part_identity",
+      "passed": true
+    },
+    {
+      "name": "gateway_complete_part_readable_at_commit",
+      "passed": true
+    },
+    {
+      "name": "gateway_complete_unique_part_identity",
+      "passed": true
+    },
+    {
+      "name": "gateway_complete_part_readable_at_commit",
+      "passed": true
+    },
+    {
+      "name": "gateway_complete_unique_part_identity",
+      "passed": true
+    },
+    {
+      "name": "gateway_complete_part_readable_at_commit",
+      "passed": true
+    },
+    {
+      "name": "gateway_complete_exact_parts_and_original_upload_order",
+      "passed": true
+    },
+    {
+      "name": "gateway_complete_legacy_primary_id_unchanged",
+      "passed": true
+    },
+    {
+      "name": "gateway_complete_rest_parts_parity",
+      "passed": true
+    },
+    {
+      "name": "gateway_complete_mcp_parts_parity",
+      "passed": true
+    },
+    {
+      "name": "gateway_complete_replicas_reach_commit",
+      "passed": true
+    },
+    {
+      "name": "gateway_complete_replicated_part_at_compatible_cursor",
+      "passed": true
+    },
+    {
+      "name": "gateway_complete_replicated_part_at_compatible_cursor",
+      "passed": true
+    },
+    {
+      "name": "gateway_complete_replicated_part_at_compatible_cursor",
+      "passed": true
+    },
+    {
+      "name": "gateway_complete_replicated_part_at_compatible_cursor",
+      "passed": true
+    },
+    {
+      "name": "gateway_complete_replicated_part_at_compatible_cursor",
+      "passed": true
+    },
+    {
+      "name": "gateway_complete_replicated_part_at_compatible_cursor",
+      "passed": true
+    },
+    {
+      "name": "gateway_complete_replay_preserves_parts_without_effect",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-delivery-failed_fault_armed",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-delivery-failed_upload_0_prepared",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-delivery-failed_upload_1_prepared",
+      "passed": true
+    },
+    {
+      "name": "gateway_cardinality_window_complete",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-delivery-failed_truthful_aggregate",
+      "passed": true
+    },
+    {
+      "name": "gateway_cardinality_window_complete",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-delivery-failed_captured_message_cardinality",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-delivery-failed_three_helper_parts",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-delivery-failed_three_public_parts",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-delivery-failed_aliases_readable",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-delivery-failed_unique_part_identity",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-delivery-failed_part_readable_at_commit",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-delivery-failed_unique_part_identity",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-delivery-failed_part_readable_at_commit",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-delivery-failed_unique_part_identity",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-delivery-failed_part_readable_at_commit",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-delivery-failed_exact_parts_and_original_upload_order",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-delivery-failed_legacy_primary_id_unchanged",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-delivery-failed_only_last_part_failed",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-delivery-failed_selected_retry_file_restaged",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-delivery-failed_fresh_resend_contains_only_failed_attachment",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-delivery-failed_resend_does_not_repeat_original_dispatch",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-delivery-failed_rest_parts_parity",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-delivery-failed_mcp_parts_parity",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-delivery-failed_replicas_reach_commit",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-delivery-failed_replicated_part_at_compatible_cursor",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-delivery-failed_replicated_part_at_compatible_cursor",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-delivery-failed_replicated_part_at_compatible_cursor",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-delivery-failed_replicated_part_at_compatible_cursor",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-delivery-failed_replicated_part_at_compatible_cursor",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-delivery-failed_replicated_part_at_compatible_cursor",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-delivery-failed_replay_preserves_parts_without_effect",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-no-effect_fault_armed",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-no-effect_upload_0_prepared",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-no-effect_upload_1_prepared",
+      "passed": true
+    },
+    {
+      "name": "gateway_cardinality_window_complete",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-no-effect_truthful_aggregate",
+      "passed": true
+    },
+    {
+      "name": "gateway_cardinality_window_complete",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-no-effect_captured_message_cardinality",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-no-effect_three_helper_parts",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-no-effect_three_public_parts",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-no-effect_aliases_readable",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-no-effect_unique_part_identity",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-no-effect_part_readable_at_commit",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-no-effect_unique_part_identity",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-no-effect_part_readable_at_commit",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-no-effect_unique_part_identity",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-no-effect_exact_parts_and_original_upload_order",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-no-effect_legacy_primary_id_unchanged",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-no-effect_only_last_part_failed",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-no-effect_selected_retry_file_restaged",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-no-effect_fresh_resend_contains_only_failed_attachment",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-no-effect_resend_does_not_repeat_original_dispatch",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-no-effect_rest_parts_parity",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-no-effect_mcp_parts_parity",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-no-effect_replicas_reach_commit",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-no-effect_replicated_part_at_compatible_cursor",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-no-effect_replicated_part_at_compatible_cursor",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-no-effect_replicated_part_at_compatible_cursor",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-no-effect_replicated_part_at_compatible_cursor",
+      "passed": true
+    },
+    {
+      "name": "gateway_part-no-effect_replay_preserves_parts_without_effect",
+      "passed": true
+    },
+    {
+      "name": "replica_complete_upload_0_prepared",
+      "passed": true
+    },
+    {
+      "name": "replica_complete_upload_1_prepared",
+      "passed": true
+    },
+    {
+      "name": "replica_cardinality_window_complete",
+      "passed": true
+    },
+    {
+      "name": "replica_complete_truthful_aggregate",
+      "passed": true
+    },
+    {
+      "name": "replica_cardinality_window_complete",
+      "passed": true
+    },
+    {
+      "name": "replica_complete_captured_message_cardinality",
+      "passed": true
+    },
+    {
+      "name": "replica_complete_three_helper_parts",
+      "passed": true
+    },
+    {
+      "name": "replica_complete_three_public_parts",
+      "passed": true
+    },
+    {
+      "name": "replica_complete_aliases_readable",
+      "passed": true
+    },
+    {
+      "name": "replica_complete_unique_part_identity",
+      "passed": true
+    },
+    {
+      "name": "replica_complete_part_readable_at_commit",
+      "passed": true
+    },
+    {
+      "name": "replica_complete_unique_part_identity",
+      "passed": true
+    },
+    {
+      "name": "replica_complete_part_readable_at_commit",
+      "passed": true
+    },
+    {
+      "name": "replica_complete_unique_part_identity",
+      "passed": true
+    },
+    {
+      "name": "replica_complete_part_readable_at_commit",
+      "passed": true
+    },
+    {
+      "name": "replica_complete_exact_parts_and_original_upload_order",
+      "passed": true
+    },
+    {
+      "name": "replica_complete_legacy_primary_id_unchanged",
+      "passed": true
+    },
+    {
+      "name": "replica_complete_rest_parts_parity",
+      "passed": true
+    },
+    {
+      "name": "replica_complete_mcp_parts_parity",
+      "passed": true
+    },
+    {
+      "name": "replica_complete_replicas_reach_commit",
+      "passed": true
+    },
+    {
+      "name": "replica_complete_replicated_part_at_compatible_cursor",
+      "passed": true
+    },
+    {
+      "name": "replica_complete_replicated_part_at_compatible_cursor",
+      "passed": true
+    },
+    {
+      "name": "replica_complete_replicated_part_at_compatible_cursor",
+      "passed": true
+    },
+    {
+      "name": "replica_complete_replicated_part_at_compatible_cursor",
+      "passed": true
+    },
+    {
+      "name": "replica_complete_replicated_part_at_compatible_cursor",
+      "passed": true
+    },
+    {
+      "name": "replica_complete_replicated_part_at_compatible_cursor",
+      "passed": true
+    },
+    {
+      "name": "replica_complete_replay_preserves_parts_without_effect",
+      "passed": true
+    },
+    {
+      "name": "replica_part-delivery-failed_fault_armed",
+      "passed": true
+    },
+    {
+      "name": "replica_part-delivery-failed_upload_0_prepared",
+      "passed": true
+    },
+    {
+      "name": "replica_part-delivery-failed_upload_1_prepared",
+      "passed": true
+    },
+    {
+      "name": "replica_cardinality_window_complete",
+      "passed": true
+    },
+    {
+      "name": "replica_part-delivery-failed_truthful_aggregate",
+      "passed": true
+    },
+    {
+      "name": "replica_cardinality_window_complete",
+      "passed": true
+    },
+    {
+      "name": "replica_part-delivery-failed_captured_message_cardinality",
+      "passed": true
+    },
+    {
+      "name": "replica_part-delivery-failed_three_helper_parts",
+      "passed": true
+    },
+    {
+      "name": "replica_part-delivery-failed_three_public_parts",
+      "passed": true
+    },
+    {
+      "name": "replica_part-delivery-failed_aliases_readable",
+      "passed": true
+    },
+    {
+      "name": "replica_part-delivery-failed_unique_part_identity",
+      "passed": true
+    },
+    {
+      "name": "replica_part-delivery-failed_part_readable_at_commit",
+      "passed": true
+    },
+    {
+      "name": "replica_part-delivery-failed_unique_part_identity",
+      "passed": true
+    },
+    {
+      "name": "replica_part-delivery-failed_part_readable_at_commit",
+      "passed": true
+    },
+    {
+      "name": "replica_part-delivery-failed_unique_part_identity",
+      "passed": true
+    },
+    {
+      "name": "replica_part-delivery-failed_part_readable_at_commit",
+      "passed": true
+    },
+    {
+      "name": "replica_part-delivery-failed_exact_parts_and_original_upload_order",
+      "passed": true
+    },
+    {
+      "name": "replica_part-delivery-failed_legacy_primary_id_unchanged",
+      "passed": true
+    },
+    {
+      "name": "replica_part-delivery-failed_only_last_part_failed",
+      "passed": true
+    },
+    {
+      "name": "replica_part-delivery-failed_fresh_resend_contains_only_failed_attachment",
+      "passed": true
+    },
+    {
+      "name": "replica_part-delivery-failed_resend_does_not_repeat_original_dispatch",
+      "passed": true
+    },
+    {
+      "name": "replica_part-delivery-failed_rest_parts_parity",
+      "passed": true
+    },
+    {
+      "name": "replica_part-delivery-failed_mcp_parts_parity",
+      "passed": true
+    },
+    {
+      "name": "replica_part-delivery-failed_replicas_reach_commit",
+      "passed": true
+    },
+    {
+      "name": "replica_part-delivery-failed_replicated_part_at_compatible_cursor",
+      "passed": true
+    },
+    {
+      "name": "replica_part-delivery-failed_replicated_part_at_compatible_cursor",
+      "passed": true
+    },
+    {
+      "name": "replica_part-delivery-failed_replicated_part_at_compatible_cursor",
+      "passed": true
+    },
+    {
+      "name": "replica_part-delivery-failed_replicated_part_at_compatible_cursor",
+      "passed": true
+    },
+    {
+      "name": "replica_part-delivery-failed_replicated_part_at_compatible_cursor",
+      "passed": true
+    },
+    {
+      "name": "replica_part-delivery-failed_replicated_part_at_compatible_cursor",
+      "passed": true
+    },
+    {
+      "name": "replica_part-delivery-failed_replay_preserves_parts_without_effect",
+      "passed": true
+    },
+    {
+      "name": "replica_part-no-effect_fault_armed",
+      "passed": true
+    },
+    {
+      "name": "replica_part-no-effect_upload_0_prepared",
+      "passed": true
+    },
+    {
+      "name": "replica_part-no-effect_upload_1_prepared",
+      "passed": true
+    },
+    {
+      "name": "replica_cardinality_window_complete",
+      "passed": true
+    },
+    {
+      "name": "replica_part-no-effect_truthful_aggregate",
+      "passed": true
+    },
+    {
+      "name": "replica_cardinality_window_complete",
+      "passed": true
+    },
+    {
+      "name": "replica_part-no-effect_captured_message_cardinality",
+      "passed": true
+    },
+    {
+      "name": "replica_part-no-effect_three_helper_parts",
+      "passed": true
+    },
+    {
+      "name": "replica_part-no-effect_three_public_parts",
+      "passed": true
+    },
+    {
+      "name": "replica_part-no-effect_aliases_readable",
+      "passed": true
+    },
+    {
+      "name": "replica_part-no-effect_unique_part_identity",
+      "passed": true
+    },
+    {
+      "name": "replica_part-no-effect_part_readable_at_commit",
+      "passed": true
+    },
+    {
+      "name": "replica_part-no-effect_unique_part_identity",
+      "passed": true
+    },
+    {
+      "name": "replica_part-no-effect_part_readable_at_commit",
+      "passed": true
+    },
+    {
+      "name": "replica_part-no-effect_unique_part_identity",
+      "passed": true
+    },
+    {
+      "name": "replica_part-no-effect_exact_parts_and_original_upload_order",
+      "passed": true
+    },
+    {
+      "name": "replica_part-no-effect_legacy_primary_id_unchanged",
+      "passed": true
+    },
+    {
+      "name": "replica_part-no-effect_only_last_part_failed",
+      "passed": true
+    },
+    {
+      "name": "replica_part-no-effect_fresh_resend_contains_only_failed_attachment",
+      "passed": true
+    },
+    {
+      "name": "replica_part-no-effect_resend_does_not_repeat_original_dispatch",
+      "passed": true
+    },
+    {
+      "name": "replica_part-no-effect_rest_parts_parity",
+      "passed": true
+    },
+    {
+      "name": "replica_part-no-effect_mcp_parts_parity",
+      "passed": true
+    },
+    {
+      "name": "replica_part-no-effect_replicas_reach_commit",
+      "passed": true
+    },
+    {
+      "name": "replica_part-no-effect_replicated_part_at_compatible_cursor",
+      "passed": true
+    },
+    {
+      "name": "replica_part-no-effect_replicated_part_at_compatible_cursor",
+      "passed": true
+    },
+    {
+      "name": "replica_part-no-effect_replicated_part_at_compatible_cursor",
+      "passed": true
+    },
+    {
+      "name": "replica_part-no-effect_replicated_part_at_compatible_cursor",
+      "passed": true
+    },
+    {
+      "name": "replica_part-no-effect_replay_preserves_parts_without_effect",
+      "passed": true
+    },
+    {
+      "name": "delayed_capture_fault_armed",
+      "passed": true
+    },
+    {
+      "name": "delayed_capture_initial_only_claims_bound_identity",
+      "passed": true
+    },
+    {
+      "name": "delayed_capture_exact_alias_arrives",
+      "passed": true
+    },
+    {
+      "name": "delayed_capture_resolve_is_sent_with_exact_identity",
+      "passed": true
+    },
+    {
+      "name": "delayed_capture_no_prolonged_unknown",
+      "passed": true
+    },
+    {
+      "name": "delayed_capture_read_your_write",
+      "passed": true
+    },
+    {
+      "name": "delayed_capture_resolve_effect_remains_one",
+      "passed": true
+    },
+    {
+      "name": "no_action_delayed_capture_fault_armed",
+      "passed": true
+    },
+    {
+      "name": "no_action_delayed_capture_initial_only_claims_bound_identity",
+      "passed": true
+    },
+    {
+      "name": "no_action_delayed_capture_exact_alias_arrives",
+      "passed": true
+    },
+    {
+      "name": "no_action_delayed_capture_resolve_is_sent_with_exact_identity",
+      "passed": true
+    },
+    {
+      "name": "no_action_delayed_capture_no_prolonged_unknown",
+      "passed": true
+    },
+    {
+      "name": "no_action_delayed_capture_read_your_write",
+      "passed": true
+    },
+    {
+      "name": "no_action_delayed_capture_resolve_effect_remains_one",
+      "passed": true
+    },
+    {
+      "name": "ghost_part_fault_armed",
+      "passed": true
+    },
+    {
+      "name": "ghost_part_failure_never_invents_identity",
+      "passed": true
+    },
+    {
+      "name": "ghost_part_check_preserves_failure_without_redispatch",
+      "passed": true
+    },
+    {
+      "name": "ambiguous_part_fault_armed",
+      "passed": true
+    },
+    {
+      "name": "ambiguous_part_never_overrides_multiple_candidate_evidence",
+      "passed": true
+    },
+    {
+      "name": "ambiguous_part_effect_remains_one",
+      "passed": true
+    },
+    {
+      "name": "receipt_part_file_ready",
+      "passed": true
+    },
+    {
+      "name": "receipt_parts_initially_observed",
+      "passed": true
+    },
+    {
+      "name": "receipt_unbound_failure_armed",
+      "passed": true
+    },
+    {
+      "name": "receipt_unbound_failure_never_borrows_observed_identity",
+      "passed": true
+    },
+    {
+      "name": "receipt_part_failure_armed",
+      "passed": true
+    },
+    {
+      "name": "receipt_part_strengthens_to_failed_with_same_identity",
+      "passed": true
+    },
+    {
+      "name": "receipt_part_captured_error_is_readable",
+      "passed": true
+    },
+    {
+      "name": "receipt_remaining_part_failure_armed",
+      "passed": true
+    },
+    {
+      "name": "receipt_failed_aggregate_accepts_remaining_part_evidence",
+      "passed": true
+    },
+    {
+      "name": "receipt_part_resolve_does_not_redispatch",
+      "passed": true
+    },
+    {
+      "name": "part-progress_progress_file_ready",
+      "passed": true
+    },
+    {
+      "name": "part-progress_progress_fault_armed",
+      "passed": true
+    },
+    {
+      "name": "part-progress_progress_initial_expected_unresolved_parts",
+      "passed": true
+    },
+    {
+      "name": "part-progress_progress_earlier_part_observed_later_unchanged",
+      "passed": true
+    },
+    {
+      "name": "part-progress_progress_same_aggregate_explicit_history_and_commit",
+      "passed": true
+    },
+    {
+      "name": "part-progress_progress_rest_read_only_evidence_visible",
+      "passed": true
+    },
+    {
+      "name": "part-progress_progress_mcp_read_only_evidence_visible",
+      "passed": true
+    },
+    {
+      "name": "part-progress_progress_identical_proof_does_not_append_history",
+      "passed": true
+    },
+    {
+      "name": "part-progress_progress_stale_proof_armed",
+      "passed": true
+    },
+    {
+      "name": "part-progress_progress_stale_unknown_never_erases_observation",
+      "passed": true
+    },
+    {
+      "name": "part-progress_progress_reconcile_never_redispatches",
+      "passed": true
+    },
+    {
+      "name": "part-progress-failure_progress_file_ready",
+      "passed": true
+    },
+    {
+      "name": "part-progress-failure_progress_fault_armed",
+      "passed": true
+    },
+    {
+      "name": "part-progress-failure_progress_initial_expected_unresolved_parts",
+      "passed": true
+    },
+    {
+      "name": "part-progress-failure_progress_earlier_part_observed_later_unchanged",
+      "passed": true
+    },
+    {
+      "name": "part-progress-failure_progress_same_aggregate_explicit_history_and_commit",
+      "passed": true
+    },
+    {
+      "name": "part-progress-failure_progress_rest_read_only_evidence_visible",
+      "passed": true
+    },
+    {
+      "name": "part-progress-failure_progress_mcp_read_only_evidence_visible",
+      "passed": true
+    },
+    {
+      "name": "part-progress-failure_progress_identical_proof_does_not_append_history",
+      "passed": true
+    },
+    {
+      "name": "part-progress-failure_progress_stale_proof_armed",
+      "passed": true
+    },
+    {
+      "name": "part-progress-failure_progress_stale_unknown_never_erases_observation",
+      "passed": true
+    },
+    {
+      "name": "part-progress-failure_progress_reconcile_never_redispatches",
+      "passed": true
+    },
+    {
+      "name": "web_gateway_session",
+      "passed": true
+    },
+    {
+      "name": "web_gateway_ready_upload_0",
+      "passed": true
+    },
+    {
+      "name": "web_gateway_ready_upload_1",
+      "passed": true
+    },
+    {
+      "name": "web_gateway_socket",
+      "passed": true
+    },
+    {
+      "name": "web_gateway_observed",
+      "passed": true
+    },
+    {
+      "name": "web_gateway_exact_unique_part",
+      "passed": true
+    },
+    {
+      "name": "web_gateway_exact_unique_part",
+      "passed": true
+    },
+    {
+      "name": "web_gateway_exact_unique_part",
+      "passed": true
+    },
+    {
+      "name": "web_gateway_cmd_status_parts",
+      "passed": true
+    },
+    {
+      "name": "web_gateway_owned_command_record_parts",
+      "passed": true
+    },
+    {
+      "name": "web_gateway_read_only_reconciliation_effect_one",
+      "passed": true
+    },
+    {
+      "name": "web_gateway_delayed_capture_fault_armed",
+      "passed": true
+    },
+    {
+      "name": "web_gateway_delayed_capture_socket",
+      "passed": true
+    },
+    {
+      "name": "web_gateway_delayed_capture_first_terminal_is_sent_without_client_resolve",
+      "passed": true
+    },
+    {
+      "name": "web_gateway_delayed_capture_exact_primary_and_part_identity",
+      "passed": true
+    },
+    {
+      "name": "web_gateway_delayed_capture_effect_remains_one",
+      "passed": true
+    },
+    {
+      "name": "web_replica_session",
+      "passed": true
+    },
+    {
+      "name": "web_replica_ready_upload_0",
+      "passed": true
+    },
+    {
+      "name": "web_replica_ready_upload_1",
+      "passed": true
+    },
+    {
+      "name": "web_replica_socket",
+      "passed": true
+    },
+    {
+      "name": "web_replica_observed",
+      "passed": true
+    },
+    {
+      "name": "web_replica_exact_unique_part",
+      "passed": true
+    },
+    {
+      "name": "web_replica_exact_unique_part",
+      "passed": true
+    },
+    {
+      "name": "web_replica_exact_unique_part",
+      "passed": true
+    },
+    {
+      "name": "web_replica_cmd_status_parts",
+      "passed": true
+    },
+    {
+      "name": "web_replica_owned_command_record_parts",
+      "passed": true
+    },
+    {
+      "name": "web_replica_read_only_reconciliation_effect_one",
+      "passed": true
+    },
+    {
+      "name": "web_replica_delayed_capture_fault_armed",
+      "passed": true
+    },
+    {
+      "name": "web_replica_delayed_capture_socket",
+      "passed": true
+    },
+    {
+      "name": "web_replica_delayed_capture_first_terminal_is_sent_without_client_resolve",
+      "passed": true
+    },
+    {
+      "name": "web_replica_delayed_capture_exact_primary_and_part_identity",
+      "passed": true
+    },
+    {
+      "name": "web_replica_delayed_capture_effect_remains_one",
+      "passed": true
+    },
+    {
+      "name": "capture_bound_fault_armed",
+      "passed": true
+    },
+    {
+      "name": "capture_bound_stops_with_honest_unknown",
+      "passed": true
+    },
+    {
+      "name": "capture_bound_later_capture_available",
+      "passed": true
+    },
+    {
+      "name": "capture_bound_later_capture_committed",
+      "passed": true
+    },
+    {
+      "name": "capture_bound_does_not_follow_after_deadline",
+      "passed": true
+    },
+    {
+      "name": "capture_bound_manual_check_remains_available",
+      "passed": true
+    },
+    {
+      "name": "capture_bound_read_only_checks_effect_one",
+      "passed": true
+    },
+    {
+      "name": "truth_and_replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "single_text_delayed_capture_no_action_ms": {
+      "samples": 1,
+      "p50_ms": 385.624416,
+      "p95_ms": 385.624416,
+      "max_ms": 385.624416,
+      "timeouts": 0
+    },
+    "single_text_delayed_capture_resolve_ms": {
+      "samples": 1,
+      "p50_ms": 371.413958,
+      "p95_ms": 371.413958,
+      "max_ms": 371.413958,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}
