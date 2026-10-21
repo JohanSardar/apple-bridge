@@ -1,5 +1,6 @@
 #!/bin/bash
 set -euo pipefail
+if [ -n "${APPLE_BRIDGE_HEAVY_SLOT:-}" ]; then exec "$@"; fi
 slots=2
 queue=/tmp/apple-bridge-heavy-queue
 mkdir -p "$queue"
@@ -25,7 +26,7 @@ while true; do
         held="$lock"
         rm -f "$ticket"
         set +e
-        "$@"
+        APPLE_BRIDGE_HEAVY_SLOT="$i" "$@"
         status=$?
         exit $status
       fi
