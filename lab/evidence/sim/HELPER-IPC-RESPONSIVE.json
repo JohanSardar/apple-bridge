@@ -1,0 +1,121 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[4.58 6.37 6.17] cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5G8KNJ67YCKPHDDK8W1M9GP",
+  "metrics": {
+    "ipc_conflict_response": {
+      "code": "conflict",
+      "has_current": true
+    },
+    "ipc_observed_response": {
+      "commit_seq": 18,
+      "disposition": "locally_observed",
+      "record_id_count": 1,
+      "state": "observed"
+    }
+  },
+  "scenario": "HELPER-IPC-RESPONSIVE",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "075efc46dca12cb9c8c1e545d013b86fcb0312d5",
+  "at": "2026-10-21T22:16:48.454923Z",
+  "assertions": [
+    {
+      "name": "isolated_gateway_started",
+      "passed": true
+    },
+    {
+      "name": "command_fixture_seed_ready",
+      "passed": true
+    },
+    {
+      "name": "helper_authenticated_with_bounded_credit",
+      "passed": true
+    },
+    {
+      "name": "helper_ready_before_capture_hold",
+      "passed": true
+    },
+    {
+      "name": "causal_command_list_available",
+      "passed": true
+    },
+    {
+      "name": "causal_create_dispatched",
+      "passed": true
+    },
+    {
+      "name": "observed_capture_held_before_receipt",
+      "passed": true
+    },
+    {
+      "name": "causal_control_progresses_before_receipt",
+      "passed": true
+    },
+    {
+      "name": "observed_reply_waits_for_capture_receipt",
+      "passed": true
+    },
+    {
+      "name": "cited_capture_produces_observed_commit_and_record_id",
+      "passed": true
+    },
+    {
+      "name": "causal_update_prepared",
+      "passed": true
+    },
+    {
+      "name": "conflict_capture_held_before_receipt",
+      "passed": true
+    },
+    {
+      "name": "conflict_reply_waits_for_capture_receipt",
+      "passed": true
+    },
+    {
+      "name": "cited_capture_returns_conflict_with_current",
+      "passed": true
+    },
+    {
+      "name": "capture_commit_held_before_acknowledgment",
+      "passed": true
+    },
+    {
+      "name": "blob_reply_progresses_while_capture_commit_is_held",
+      "passed": true
+    },
+    {
+      "name": "control_progresses_without_early_capture_ack",
+      "passed": true
+    },
+    {
+      "name": "capture_credit_exhaustion_closes_session",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "ipc_blob_reply_write": {
+      "samples": 1,
+      "p50_ms": 2.677833,
+      "p95_ms": 2.677833,
+      "max_ms": 2.677833,
+      "timeouts": 0
+    },
+    "ipc_control_round_trip": {
+      "samples": 1,
+      "p50_ms": 1.47175,
+      "p95_ms": 1.47175,
+      "max_ms": 1.47175,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

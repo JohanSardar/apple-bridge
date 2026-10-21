@@ -168,6 +168,7 @@ features:
       - {id: HELPER-RESTART-REAL, levels: [real]}
       - {id: HELPER-TCC-READY, levels: [real]}
       - {id: HELPER-LIVE-BACKFILL, levels: [real]}
+      - {id: HELPER-IPC-RESPONSIVE, levels: [sim]}
       - {id: HELPER-SESSION-SOAK, levels: [real]}
       - {id: HELPER-SIGNED-APP-CACHE, levels: [real]}
   - id: messages.read
