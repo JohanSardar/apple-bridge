@@ -31,7 +31,7 @@ export function createHandlesCache(live: LiveClient, capacity = 4096) {
     function fallback(ids:readonly string[]){
         if(stopped)return;
         for(const id of ids)if(!subscriptions.has(id)){
-            while(subscriptions.size>=500){const key=subscriptions.keys().next().value!;evict(key);}
+            while(subscriptions.size>=48){const key=subscriptions.keys().next().value!;evict(key);}
             subscriptions.set(id,live.subscribe('record',{collection:'messages.handle',id}));
         }
         setRevision(value=>value+1);
