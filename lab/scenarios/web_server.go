@@ -134,6 +134,8 @@ func runWebServer(ctx context.Context, s Scenario, level string) Evidence {
 		}
 		resp, _ := request("GET", "/", "")
 		add("security_headers", resp != nil && resp.Header.Get("Content-Security-Policy") != "" && resp.Header.Get("Referrer-Policy") == "no-referrer" && resp.Header.Get("X-Content-Type-Options") == "nosniff")
+	case "WEB-AUTH-ISOLATION":
+		runWebAuthIsolation(ctx, w, add)
 	case "WEB-AUTH-RATELIMIT":
 		statuses := []int{}
 		rateClient := &webClient{ctx: ctx, origin: strings.Replace(w.Gateway.URL, "127.0.0.1", "localhost", 1)}
@@ -161,9 +163,10 @@ func runWebServer(ctx context.Context, s Scenario, level string) Evidence {
 }
 
 type webClient struct {
-	ctx    context.Context
-	origin string
-	cookie *http.Cookie
+	ctx     context.Context
+	origin  string
+	cookie  *http.Cookie
+	headers http.Header
 }
 
 func (c *webClient) request(method, path string, input any) (*http.Response, []byte, error) {
@@ -177,6 +180,11 @@ func (c *webClient) request(method, path string, input any) (*http.Response, []b
 	}
 	req.Header.Set("Origin", c.origin)
 	req.Header.Set("Content-Type", "application/json")
+	for name, values := range c.headers {
+		for _, value := range values {
+			req.Header.Add(name, value)
+		}
+	}
 	if c.cookie != nil {
 		req.AddCookie(c.cookie)
 	}
