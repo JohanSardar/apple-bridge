@@ -53,6 +53,7 @@ struct DecoderChecks {
         }
 
         guard mentions > 0, attachments > 0 else { print("decoder checks failed: missing captured coverage"); exit(1) }
+        try RichDecoderChecks.run(root)
         print("all decoder checks passed")
     }
 }

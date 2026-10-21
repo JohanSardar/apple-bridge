@@ -152,6 +152,90 @@
       "origin": "air_synthetic_nsarchiver",
       "sha256": "6831ed12f111e803adbe55d72e33bf624ae1e809f943007dac0d63754a2791db",
       "bytes": 430
+    },
+    {
+      "path": "rich-air-app.plist",
+      "origin": "air_readonly_scrubbed",
+      "sha256": "18977fb31252a25c8981bd468d92899c82204a819bb6137cf4835f6f4c96fac1",
+      "bytes": 3283
+    },
+    {
+      "path": "rich-air-effect.typedstream",
+      "origin": "air_readonly_scrubbed",
+      "sha256": "6b4cb2593491c152a448d96609999faa934f41160be01cf1eb90c49a2e53e558",
+      "bytes": 283
+    },
+    {
+      "path": "rich-air-formatting.typedstream",
+      "origin": "air_readonly_scrubbed",
+      "sha256": "00a0a3be81b3ed9142455a2cdffe07c4adb90aa42e5c076ef92abcfb4dac363f",
+      "bytes": 5810
+    },
+    {
+      "path": "rich-air-genmoji.typedstream",
+      "origin": "air_readonly_scrubbed",
+      "sha256": "ca71c994e16b2e47ba7e2c65def731678a656e4a795798973d1f29bada69f837",
+      "bytes": 400
+    },
+    {
+      "path": "rich-air-link.plist",
+      "origin": "air_readonly_scrubbed",
+      "sha256": "cac7cce30b0d9c4576c011abc5bf6d365b836ab94fe04536112e7e6277b8f070",
+      "bytes": 1275
+    },
+    {
+      "path": "rich-app.plist",
+      "origin": "synthetic",
+      "sha256": "e6370e88d3f90e95da9ede6fbbf0c7b82c66424a2896ef68977f018db9081329",
+      "bytes": 209
+    },
+    {
+      "path": "rich-bad-reference.plist",
+      "origin": "synthetic",
+      "sha256": "9f79eef4a380496a4a40b99841410569895f6e269c0145aea2a66b79c384c6d8",
+      "bytes": 100
+    },
+    {
+      "path": "rich-chat.plist",
+      "origin": "synthetic",
+      "sha256": "4df222a96e5910d63b2bda77f30ad7f8bd3e464acd076d8ee5c50fb403735e8d",
+      "bytes": 111
+    },
+    {
+      "path": "rich-cycle.plist",
+      "origin": "synthetic",
+      "sha256": "6f0bcbef09e49044b38002e50f31957eb2aba90ab543b043e171be3034f89517",
+      "bytes": 99
+    },
+    {
+      "path": "rich-formatting.typedstream",
+      "origin": "synthetic",
+      "sha256": "91905ddcfc407c5c56d0bafa8850b0b985eb8e91d58cd0ecb41ea1b329f0ec51",
+      "bytes": 615
+    },
+    {
+      "path": "rich-genmoji.typedstream",
+      "origin": "synthetic",
+      "sha256": "a4c99df225844bac54eead7ff35ebada7483161fb7122ec8c49047edeea8811b",
+      "bytes": 309
+    },
+    {
+      "path": "rich-link.plist",
+      "origin": "synthetic",
+      "sha256": "db5e8734afa624335e08c7c38c422ca331fb040995fc3ef75d1e536b7f092242",
+      "bytes": 460
+    },
+    {
+      "path": "rich-location.plist",
+      "origin": "synthetic",
+      "sha256": "0314d7164e9045a5c1356603810f9af74ba0a77a42a78d27cf73fa43bdcefa5d",
+      "bytes": 514
+    },
+    {
+      "path": "rich-sticker.plist",
+      "origin": "synthetic",
+      "sha256": "cb945e34793c9c3dd995ffaecc7c3b1e5ba26c80d5bb90fb67460d59da939cc9",
+      "bytes": 104
     }
   ]
 }

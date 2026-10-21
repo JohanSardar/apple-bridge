@@ -10,5 +10,9 @@ if [[ ${1:-} == --capture-fixtures ]]; then
     swiftc -sdk "$sdk" -target arm64-apple-macosx26.0 -I "$output" lab/fixtures/messages/capture.swift "$output/Decoders.o" -o "$output/FixtureCapture"
     "$output/FixtureCapture" "$root/lab/fixtures/messages"
 fi
+if [[ ${1:-} == --capture-rich-fixtures ]]; then
+    swiftc -sdk "$sdk" -target arm64-apple-macosx26.0 -I "$output" lab/fixtures/messages/capture-rich.swift "$output/Decoders.o" -o "$output/RichFixtureCapture"
+    "$output/RichFixtureCapture" "$root/lab/fixtures/messages"
+fi
 swiftc -sdk "$sdk" -target arm64-apple-macosx26.0 -swift-version 6 -warnings-as-errors -O -parse-as-library -I "$output" native/Sources/DecoderChecks/*.swift "$output/Decoders.o" -o "$output/DecoderChecks"
 "$output/DecoderChecks" "$root/lab/fixtures/messages"
