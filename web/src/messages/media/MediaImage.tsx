@@ -1,4 +1,4 @@
-import { createEffect, createSignal, onCleanup, Show } from 'solid-js';
+import { createEffect, createMemo, createSignal, onCleanup, Show } from 'solid-js';
 import type { BridgeRecord } from '../../data/types';
 import { fields, text } from '../store/types';
 import { decodeThumbHash, type ThumbPixels } from './thumbhash';
@@ -10,10 +10,11 @@ export function MediaImage(props: { attachment: BridgeRecord; variant?: MediaVar
     const [attempt, setAttempt] = createSignal(0);
     let canvas!: HTMLCanvasElement, disposed = false;
     onCleanup(() => { disposed = true; });
-    const source = () => { attempt(); return mediaSource(props.attachment, props.variant ?? 'thumb'); };
+    const source = createMemo(() => mediaSource(props.attachment, props.variant ?? 'thumb'));
+    const placeholder = createMemo(() => text(fields(props.attachment.data.media).thumbhash));
+    createEffect(() => { source(); attempt(); setState('loading'); });
     createEffect(() => {
-        source(); setState('loading');
-        const hash=text(fields(props.attachment.data.media).thumbhash);
+        const hash=placeholder();
         const pixels = placeholders.get(hash) ?? decodeThumbHash(hash);
         if(pixels&&!placeholders.has(hash)){if(placeholders.size>=64)placeholders.delete(placeholders.keys().next().value!);placeholders.set(hash,pixels);}
         canvas.width=32;canvas.height=32;
