@@ -76,8 +76,12 @@ func query(ctx context.Context) error {
 		if err := request(ctx, in, "records.query", contracts.ReadQuery{Collection: in.Collection, After: after, Limit: 200}, &page); err != nil {
 			return err
 		}
+		if after == "" {
+			cursor = page.Cursor
+		} else if cursor != page.Cursor {
+			return fmt.Errorf("snapshot changed during pagination")
+		}
 		records = append(records, page.Records...)
-		cursor = page.Cursor
 		if page.Next == "" {
 			break
 		}
