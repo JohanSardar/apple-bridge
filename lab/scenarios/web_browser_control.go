@@ -24,6 +24,7 @@ import (
 func webBrowserControl(ctx context.Context, w *world.World, origin string) (*httptest.Server, string) {
 	secret := contracts.NewID("browser")
 	var mu sync.Mutex
+	var browserReplica *world.Endpoint
 	enroll := func(expired bool) (string, error) {
 		output, err := exec.CommandContext(ctx, "bin/bridge", "web", "enroll", "--home", w.Gateway.Home, "--host", origin).Output()
 		if err != nil {
@@ -126,6 +127,11 @@ func webBrowserControl(ctx context.Context, w *world.World, origin string) (*htt
 			err = json.NewDecoder(request.Body).Decode(&input)
 			if err == nil {
 				value, err = webCookieBoundaries(ctx, w, input.Token)
+			}
+		case "/replica-session":
+			value, err = webReplicaSession(ctx, w, &browserReplica)
+			if err != nil {
+				err = fmt.Errorf("replica session unavailable")
 			}
 		case "/session":
 			var link string
