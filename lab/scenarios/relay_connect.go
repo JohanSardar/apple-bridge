@@ -54,7 +54,7 @@ func runRelayWorld(ctx context.Context, s Scenario, level string, native bool) (
 	defer func() {
 		dir := filepath.Join("lab/evidence/private/relay", e.RunID)
 		os.MkdirAll(dir, 0700)
-		for _, name := range []string{"gateway.log", "relay-route.log", "relay-replica.log", "relay-probe.log", "relay-start-error.log", "relay-probe-build.log", "relay-snapshot-status.json", "relay-blob-call-error.log"} {
+		for _, name := range []string{"gateway.log", "relay-route.log", "relay-replica.log", "relay-probe.log", "relay-start-error.log", "relay-probe-build.log", "relay-snapshot-status.json", "relay-blob-call-error.log", "post-burst-blob-error.log"} {
 			if data, err := os.ReadFile(filepath.Join(w.Dir, name)); err == nil {
 				os.WriteFile(filepath.Join(dir, name), data, 0600)
 			}

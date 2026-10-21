@@ -30,7 +30,7 @@ func relayNativeChecks(ctx context.Context, w *world.World, e *Evidence, add fun
 	if err != nil {
 		return
 	}
-	defer relayNativeFunctionalChecks(w, e, add, tag)
+	relayNativeFunctionalChecks(w, e, add, tag)
 	gatewayEndpoint := w.Gateway
 	gatewayEndpoint.Token, err = w.ScopedToken(w.Gateway, "reminders:read,system:read")
 	add("gateway_observer_scope", err == nil)

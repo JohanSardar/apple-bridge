@@ -2,7 +2,12 @@ package scenarios
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net"
+	"os"
+	"path/filepath"
+	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/lab/world"
@@ -69,4 +74,33 @@ func relayPostBurstChecks(ctx context.Context, w *world.World, e *Evidence, add 
 		records, _ := truth["records"].([]any)
 		add("post_burst_forwarded_delete_independent_native_absence", err == nil && len(records) == 0)
 	}
+	relayPostBurstBlobCheck(w, e)
+}
+
+func relayPostBurstBlobCheck(w *world.World, e *Evidence) {
+	started := time.Now()
+	err := w.BlobControl(map[string]string{"action": "relay-fixture"}, nil)
+	elapsed := float64(time.Since(started)) / float64(time.Millisecond)
+	status, code := 200, ""
+	if err != nil {
+		status, code = 0, "other_error"
+		var timeout net.Error
+		if errors.As(err, &timeout) && timeout.Timeout() {
+			code = "timeout"
+		}
+		if count, _ := fmt.Sscanf(err.Error(), "blob lab status %d", &status); count == 1 {
+			code = fmt.Sprintf("http_%d", status)
+		}
+		os.WriteFile(filepath.Join(w.Dir, "post-burst-blob-error.log"), []byte(err.Error()), 0600)
+	}
+	e.Metrics["post_burst_blob_stage_elapsed_ms"] = elapsed
+	e.Metrics["post_burst_blob_stage_http_status"] = status
+	e.Metrics["post_burst_blob_stage_error_code"] = code
+	assertion := Assertion{Name: "post_burst_blob_stage_available", Passed: err == nil}
+	if code == "timeout" || status == 500 {
+		assertion.Status = "blocked"
+		assertion.Detail = fmt.Sprintf("LIVE-FIX: native blob fixture %s after %.3f ms; default control timeout unchanged", code, elapsed)
+		e.Status = "blocked"
+	}
+	e.Assertions = append(e.Assertions, assertion)
 }
