@@ -151,6 +151,9 @@ func runRelayConnect(ctx context.Context, s Scenario, level string) (e Evidence)
 	if err == nil && s.ID == "WEB-RELAY-COMMAND" {
 		relayCommandChecks(w, &e, add)
 	}
+	if err == nil && s.ID == "WEB-RELAY-PUBLIC-AGENTS" && result.Enrollment != nil {
+		relayPublicAgentChecks(ctx, w, &e, add, *result.Enrollment)
+	}
 	if err == nil && result.Enrollment != nil {
 		relaySecurityChecks(w, &e, add, result.Enrollment)
 	}
