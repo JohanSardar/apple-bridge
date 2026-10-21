@@ -8,6 +8,7 @@ export type CapabilityProof = { proven: boolean; reason: string };
 export function createCapabilities(live: LiveClient, source = 'messages') {
     const [subscriptions, setSubscriptions] = createSignal<ReturnType<LiveClient['subscribe']>[]>([]);
     const [error, setError] = createSignal(false);
+    const [failureRevision, setFailureRevision] = createSignal(0);
     let disposed = false, discovered = false, inFlight = false, failures = 0, retryAt = 0;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const discover = () => {
@@ -18,16 +19,19 @@ export function createCapabilities(live: LiveClient, source = 'messages') {
             setSubscriptions([...new Set(result.records.filter(record => record.collection === 'system.source' && record.source === source).map(record => record.id))].map(id => live.subscribe('record', { collection: 'system.source', id }, { cache: false, resetOnReconnect: true })));
             discovered = true;
             failures = 0;
+            retryAt = 0;
             setError(false);
         }).catch(() => {
             if (disposed) return;
             failures = Math.min(failures + 1, 8);
-            retryAt = Date.now() + Math.min(30000, 250 * 2 ** (failures - 1));
+            retryAt = Date.now() + Math.min(30000, 1000 * 2 ** (failures - 1));
             setError(true);
+            setFailureRevision(value => value + 1);
         }).finally(() => { inFlight = false; });
     };
     discover();
     createEffect(() => {
+        failureRevision();
         const connected = live.status() === 'connected';
         clearTimeout(timer);
         if (connected && failures > 0 && !discovered)
