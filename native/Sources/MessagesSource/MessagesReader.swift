@@ -249,6 +249,7 @@ final class MessagesReader {
             data["deleted_at"] = timestamp(row, "capture_deleted_date")
             if data["deleted_at"] != nil { data["recoverable_until"] = NSNull() }
             data["filter"] = row.flag("is_filtered") ? "unknown" : "known"
+            data["is_spam"] = row.integer("is_filtered") == 2
             for (key, value) in MessageRich.chatProperties(row.blobs["properties"]) { data[key] = value }
             if let photo = data["group_photo_attachment_id"] as? String { data["group_photo_attachment_id"] = reference("attachment", photo) }
             result.append(("messages.chat", row["guid"], data))
