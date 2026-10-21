@@ -1,0 +1,7 @@
+id: REM-STORE-READ
+feature: web.reminders
+levels: [sim, real]
+given: [{world: {replicas: 1}}]
+when: [{reminders_store: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]
