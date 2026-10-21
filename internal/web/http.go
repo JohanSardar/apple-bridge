@@ -380,7 +380,7 @@ func (s *server) static(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/")
 	if strings.HasPrefix(path, "assets/") {
 		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
-	} else if path == "sw.js" || path == "manifest.webmanifest" {
+	} else if path == "sw.js" || path == "manifest.webmanifest" || path == "icons.svg" || path == "icon.svg" {
 		w.Header().Set("Cache-Control", "no-cache")
 	} else {
 		path = "index.html"

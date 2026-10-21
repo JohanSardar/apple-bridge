@@ -3,11 +3,14 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { control, bootstrap } from './session';
 async function virtualKey(page:Page){const cdp=await page.context().newCDPSession(page);await cdp.send('WebAuthn.enable');const {authenticatorId}=await cdp.send('WebAuthn.addVirtualAuthenticator',{options:{protocol:'ctap2',transport:'internal',hasResidentKey:true,hasUserVerification:true,isUserVerified:true,automaticPresenceSimulation:true}});return {cdp,authenticatorId};}
 async function enroll(page:Page,request:APIRequestContext){const key=await virtualKey(page);const {url}=await control(request,'/enroll');await page.goto(url);await page.getByRole('button',{name:'Continue',exact:true}).click();await expect(page.getByText('No Messages',{exact:true})).toBeVisible();return {key,url};}
-test('WEB-SERVE-EMBED binary serves the app, routes, hashed assets and security headers',async({page,request})=>{
+test('WEB-SERVE-EMBED binary serves the app, routes, hashed assets and security headers',async({page,request},info)=>{
   const response=await request.get('/messages/deep-link');expect(response.status()).toBe(200);expect(response.headers()['cache-control']).toBe('no-store');expect(response.headers()['content-security-policy']).toContain("script-src 'self'");
   const html=await response.text();const asset=/src="(\/assets\/[^"]+\.js)"/.exec(html)![1];const script=await request.get(asset);expect(script.status()).toBe(200);expect(script.headers()['cache-control']).toBe('public, max-age=31536000, immutable');
   for(const path of ['/sw.js','/manifest.webmanifest'])expect((await request.get(path)).headers()['cache-control']).toBe('no-cache');
+  for(const path of ['/icons.svg','/icon.svg']){const response=await request.get(path);expect(response.headers()['content-type']).toContain('image/svg+xml');expect(response.headers()['cache-control']).toBe('no-cache');expect(await response.text()).toContain('<svg');}
   await page.goto('/messages/deep-link');await expect(page.getByRole('heading',{name:'Sign in with a passkey'})).toBeVisible();
+  await expect.poll(()=>page.locator('.auth-mark .icon use').evaluate(element=>{try{return (element as SVGGraphicsElement).getBBox().width;}catch{return 0;}})).toBeGreaterThan(10);
+  await mkdir('../lab/evidence/private/web',{recursive:true});await page.screenshot({path:`../lab/evidence/private/web/icons-${info.project.name}.png`});
 });
 test('WEB-AUTH-ENROLL browser passkey enrollment, token single use and expiry',async({page,request})=>{
   const {url}=await enroll(page,request);expect(page.url()).not.toContain('#');
