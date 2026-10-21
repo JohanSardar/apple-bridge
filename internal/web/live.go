@@ -269,13 +269,15 @@ func (l *liveSocket) command(f clientFrame) {
 		return
 	}
 	l.send(map[string]any{"t": "ack", "id": f.ID, "status": status.State}, false)
+	var last contracts.Cursor
 	if status.Disposition == "" || status.CommitSeq == 0 {
 		l.sendCommandStatus(status)
+		last = status.Cursor
 		if status.Disposition != "" {
 			return
 		}
 	}
-	l.watchCommand(f.ID, iterator)
+	l.watchCommand(f.ID, iterator, status, last)
 }
 func safeError(err error) *contracts.Error {
 	var typed *contracts.Error
