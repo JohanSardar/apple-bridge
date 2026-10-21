@@ -8,6 +8,7 @@ import { LiveClient } from '../data/live';
 import { strings as s } from '../app/strings';
 const [session, setSession] = createSignal<DeviceSession | null>(), [error, setError] = createSignal(false), [live, setLive] = createSignal<LiveClient>();
 const [notice,setNotice]=createSignal('');
+const [approvalRevision, setApprovalRevision] = createSignal(0);
 const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('ab.session') : undefined;
 let signingOut: Promise<void> | undefined;
 let pwaSetup:Promise<void>=Promise.resolve();
@@ -55,7 +56,7 @@ export async function establishSession(value: unknown) {
     else
         await clearPrivateData();
     live()?.close();
-    setLive(new LiveClient(() => { void endSession(false, true); },frame=>{if(frame.t==='signin')setNotice(s.newSignIn);}));
+    setLive(new LiveClient(() => { void endSession(false, true); },frame=>{if(frame.t==='signin')setNotice(s.newSignIn);if(frame.t==='approval')setApprovalRevision(value=>value+1);}));
     setSession(current);
     setError(false);
     pwaSetup=configurePWA(current).catch(() => { });
@@ -104,4 +105,4 @@ for (const event of ['pointerdown', 'keydown', 'input'])
 setInterval(() => { if (session()?.cache === 'memory' && Date.now() - lastInput >= 30 * 60 * 1000)
     void endSession(); }, 15000);
 window.addEventListener('pageshow',event=>{if(event.persisted){if(session()?.cache==='memory'&&Date.now()-lastInput>=30*60*1000)void endSession();else void loadSession();}});
-export const auth = { session, error, live, notice, dismissNotice:()=>setNotice(''), retry: loadSession };
+export const auth = { approvalRevision, session, error, live, notice, dismissNotice:()=>setNotice(''), retry: loadSession };
