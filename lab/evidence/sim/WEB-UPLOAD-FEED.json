@@ -1,0 +1,125 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[20.16 13.38 11.88] cpus=8 other_heavy=1"
+  },
+  "run_id": "upload_01M5F7A29K51V647NEAFWSQ8FF",
+  "metrics": {
+    "resumed_feed_upload_bytes": 2600000
+  },
+  "scenario": "WEB-UPLOAD-FEED",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "479bdae9df9756ac4666f8b96784c25e50262b22",
+  "at": "2026-10-21T12:34:50.804299Z",
+  "assertions": [
+    {
+      "name": "gateway_upload_world",
+      "passed": true
+    },
+    {
+      "name": "serving_device_session",
+      "passed": true
+    },
+    {
+      "name": "independent_scoped_feed_client",
+      "passed": true
+    },
+    {
+      "name": "gateway_requires_forwarded_begin_digest",
+      "passed": true
+    },
+    {
+      "name": "gateway_independently_rejects_oversize",
+      "passed": true
+    },
+    {
+      "name": "signed_upload_begin_accepted",
+      "passed": true
+    },
+    {
+      "name": "incomplete_upload_command_not_admitted",
+      "passed": true
+    },
+    {
+      "name": "incomplete_upload_has_no_effect",
+      "passed": true
+    },
+    {
+      "name": "one_MiB_binary_frame_acknowledged",
+      "passed": true
+    },
+    {
+      "name": "captured_binary_chunk_replay_rejected",
+      "passed": true
+    },
+    {
+      "name": "same_paired_identity_reconnected",
+      "passed": true
+    },
+    {
+      "name": "resume_offset_survives_connection_loss",
+      "passed": true
+    },
+    {
+      "name": "status_does_not_extend_gateway_lease",
+      "passed": true
+    },
+    {
+      "name": "remaining_binary_chunks_acknowledged",
+      "passed": true
+    },
+    {
+      "name": "gateway_requires_forwarded_commit_digest",
+      "passed": true
+    },
+    {
+      "name": "gateway_digest_verified_before_ready",
+      "passed": true
+    },
+    {
+      "name": "resumed_gateway_bytes_exact",
+      "passed": true
+    },
+    {
+      "name": "ready_commit_rejects_changed_digest",
+      "passed": true
+    },
+    {
+      "name": "ready_commit_retry_keeps_verified_lease",
+      "passed": true
+    },
+    {
+      "name": "gateway_corruption_inventory",
+      "passed": true
+    },
+    {
+      "name": "declared_digest_begin_accepted",
+      "passed": true
+    },
+    {
+      "name": "untrusted_bytes_received_before_verification",
+      "passed": true
+    },
+    {
+      "name": "gateway_rejects_corrupted_forwarded_bytes",
+      "passed": true
+    },
+    {
+      "name": "corrupt_forwarding_never_staged",
+      "passed": true
+    },
+    {
+      "name": "corrupt_upload_lease_discarded",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

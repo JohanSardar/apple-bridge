@@ -568,7 +568,11 @@ R→G Ack(cursor)                          credits replenish on Ack
 G→R Reset(reason, retentionFloor)        replica must resnapshot
 G→R Heartbeat(head, at) every 5 s;  R→G Heartbeat
 R→G BlobWant(digest, offset)  G→R BlobChunk(binary)  G→R BlobDone(digest) | BlobUnavailable(digest, reason)
+R→G UploadControl(signed begin|status|prepare|commit|abandon)  G→R CommandResponse
+R→G BlobChunk(binary, after prepare)  G→R CommandResponse(chunkID, upload status)
 ```
+
+**Upload direction.** Replica uploads reuse the same 64-byte blob header and at most 1 MiB binary payload in the replica→gateway direction, in either connection direction. Binary chunks use the bulk writer lane; live metadata and acknowledgments preempt queued bulk chunks. JSON metadata retains the 256 KiB limit. Small `UploadControl` requests use the existing paired-key delegated identity proof (≤ 60 s), current `messages:write` scope and the same response channel as commands. Begin supplies the full size and mandatory SHA-256 digest. Prepare binds the chunk ID, upload ID, digest and expected offset to the authenticated feed session, paired certificate and delegated owner for at most 30 s. Each prepared slot admits one binary chunk; an unprepared/replayed chunk closes the connection. Accepted offsets persist across reconnects under the same paired identity. Commit requires the digest and hashes all received bytes before readiness; status and abandon cannot extend the lease. No referencing command is admitted before readiness (§23.13).
 
 **Remote authentication (`relay/1`).** Before `feed/1` Hello, a Remote connection proves both application identities independently of its public TLS certificate. The replica sends `AuthHello{nonce, certificate}`; the gateway sends `AuthChallenge{nonce, certificate, signature}`; the replica sends `AuthProof{signature}`; the gateway sends `Authenticated{principal, signature}`. Both nonces are independently random 256-bit values. Each handshake has a five-second deadline and an 8 KiB frame limit. The replica pins the gateway identity certificate fingerprint from pairing; the gateway authenticates the replica certificate against the current paired principal. No feed data or commands precede authentication.
 
@@ -1302,10 +1306,10 @@ Recently Deleted becomes `deleted_at` + `recoverable_until` on messages and chat
 
 **Upload path:**
 - `POST /web/v1/upload` streams to a staged blob on the serving instance.
-- **On a replica,** upload bytes are forwarded to the gateway over the feed's command channel in 1 MiB chunks, with the digest verified, before the command is admitted.
+- **On a replica,** the serving instance verifies its staged bytes and supplies their mandatory digest to signed feed upload controls. Bytes use the binary bulk lane in 1 MiB chunks (§12), with the digest verified by the gateway before readiness and by the replica against the ready response, before the referencing command is admitted.
 - **Limits:** 100 MiB per file, 10 files per message.
 - Gateway-local raw uploads retain their local staging path. A completed response carries `upload_id`, `offset`, `size`, `state: ready` and `expires_at`.
-- Optional resumable staging starts with an empty POST and `Upload-Length`; `Upload-Digest` is an optional lowercase SHA-256 digest. Append raw bytes with `Upload-ID` and `Upload-Offset`. `GET /web/v1/upload/{id}` returns progress; `DELETE` abandons it. IDs are principal-owned. Accepted writes extend the lease to ten minutes; status reads and commit do not extend it. Interrupted writes retain acknowledged offsets. Completion verifies the declared size and digest before readiness.
+- Optional resumable staging starts with an empty POST and `Upload-Length`; `Upload-Digest` optionally checks the browser bytes against a supplied lowercase SHA-256 digest; replica forwarding always supplies and verifies a mandatory digest on both transfer endpoints. Append raw bytes with `Upload-ID` and `Upload-Offset`. `GET /web/v1/upload/{id}` returns progress; `DELETE` abandons it. IDs are principal-owned. Accepted writes extend the lease to ten minutes; status reads and commit do not extend it. Interrupted writes retain acknowledged offsets. Completion verifies the declared size and digest before readiness.
 - Expired or abandoned leases release temporary files, upload aliases and pins. Before admission (including awaiting owner approval), the gateway verifies ready upload IDs and persists their blob references with the command. Durable command protection survives upload lease expiry and owner approval; an upload ID alone never grants another principal access.
 
 **Client (`web/src/messages/compose/`, `actions/`):**

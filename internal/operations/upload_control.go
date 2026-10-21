@@ -55,6 +55,9 @@ func (g *LocalGateway) UploadControl(ctx context.Context, cert *x509.Certificate
 		return uploadReply(result, err)
 	}
 	result, err := g.Uploads.Upload(ctx, principal.ID, request)
+	if err == nil && request.Action == "commit" && result.Digest != request.Digest {
+		err = contracts.ErrCorrupt
+	}
 	return uploadReply(result, err)
 }
 func (g *LocalGateway) UploadChunk(ctx context.Context, cert *x509.Certificate, session string, raw []byte) (string, contracts.CommandResponse, error) {
