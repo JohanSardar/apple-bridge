@@ -193,6 +193,8 @@ func Handler(deps Deps) http.Handler {
 	mux.HandleFunc("GET /web/v1/live", s.live)
 	mux.HandleFunc("GET /web/v1/blob/{digest}", s.blob)
 	mux.HandleFunc("POST /web/v1/upload", s.upload)
+	mux.HandleFunc("GET /web/v1/upload/{id}", s.uploadLease)
+	mux.HandleFunc("DELETE /web/v1/upload/{id}", s.uploadLease)
 	s.agentRoutes(mux)
 	s.oauthRoutes(mux)
 	mux.HandleFunc("/web/v1/", func(w http.ResponseWriter, r *http.Request) { reject(w, 404, "not_found") })
