@@ -14,6 +14,7 @@ type OperationDescriptor struct {
 	Name        string
 	Version     int
 	Kind        OpKind
+	ReadModel   bool
 	Source      Source
 	Scope       Grant
 	Capability  string
@@ -24,12 +25,12 @@ type OperationDescriptor struct {
 }
 
 var Operations = append(CalendarDescriptors(), []OperationDescriptor{
-	{Name: "reminders.items", Version: 1, Kind: ReadOp, Source: Reminders, Scope: "reminders:read", Input: ReminderItemsQuery{}, Output: ReminderItemsResult{}, Description: "Read visible reminders with sections, subtasks and attachments in the viewer time zone"},
-	{Name: "reminders.lists", Version: 1, Kind: ReadOp, Source: Reminders, Scope: "reminders:read", Input: ReminderListsQuery{}, Output: ReminderListsResult{}, Description: "Read native list and group order, tags and smart counts in the viewer time zone; unsupported counts are omitted"},
-	{Name: "messages.chats", Version: 1, Kind: ReadOp, Source: Messages, Scope: "messages:read", Input: ChatsQuery{}, Output: ChatsResult{}, Description: "Page visible local chat summaries by newest activity with sender filters, unread and unseen mentions; mute and pinned state remain nullable", Examples: []Example{{Input: ChatsQuery{Limit: 50}, Output: ChatsResult{Chats: []ChatSummary{}, CoverageNotes: []string{}}}}},
-	{Name: "messages.thread", Version: 1, Kind: ReadOp, Source: Messages, Scope: "messages:read", Input: ThreadQuery{}, Output: ThreadResult{}, Description: "Read a local chat in sent_at and ID order with current reactions, complete attachments and reply counts; opaque before/after cursors and latest, unread or message anchors", Examples: []Example{{Input: ThreadQuery{ChatID: "cht_example", Anchor: "unread", Limit: 100}, Output: ThreadResult{Items: []ThreadItem{}}}}},
-	{Name: "messages.handles", Version: 1, Kind: ReadOp, Source: Messages, Scope: "messages:read", Input: HandlesQuery{}, Output: HandlesResult{}, Description: "Resolve up to 500 visible handles with contact names, initials and avatars"},
-	{Name: "messages.collection", Version: 1, Kind: ReadOp, Source: Messages, Scope: "messages:read", Input: CollectionQuery{}, Output: CollectionResult{}, Description: "Page visible chat attachments or balloon messages by media kind", Examples: []Example{{Input: CollectionQuery{ChatID: "cht_example", Kind: "photos", Limit: 50}, Output: CollectionResult{Items: []Record{}, CoverageNotes: []string{}}}}},
+	{Name: "reminders.items", Version: 1, Kind: ReadOp, ReadModel: true, Source: Reminders, Scope: "reminders:read", Input: ReminderItemsQuery{}, Output: ReminderItemsResult{}, Description: "Read visible reminders with sections, subtasks and attachments in the viewer time zone"},
+	{Name: "reminders.lists", Version: 1, Kind: ReadOp, ReadModel: true, Source: Reminders, Scope: "reminders:read", Input: ReminderListsQuery{}, Output: ReminderListsResult{}, Description: "Read native list and group order, tags and smart counts in the viewer time zone; unsupported counts are omitted"},
+	{Name: "messages.chats", Version: 1, Kind: ReadOp, ReadModel: true, Source: Messages, Scope: "messages:read", Input: ChatsQuery{}, Output: ChatsResult{}, Description: "Page visible local chat summaries by newest activity with sender filters, unread and unseen mentions; mute and pinned state remain nullable", Examples: []Example{{Input: ChatsQuery{Limit: 50}, Output: ChatsResult{Chats: []ChatSummary{}, CoverageNotes: []string{}}}}},
+	{Name: "messages.thread", Version: 1, Kind: ReadOp, ReadModel: true, Source: Messages, Scope: "messages:read", Input: ThreadQuery{}, Output: ThreadResult{}, Description: "Read a local chat in sent_at and ID order with current reactions, complete attachments and reply counts; opaque before/after cursors and latest, unread or message anchors", Examples: []Example{{Input: ThreadQuery{ChatID: "cht_example", Anchor: "unread", Limit: 100}, Output: ThreadResult{Items: []ThreadItem{}}}}},
+	{Name: "messages.handles", Version: 1, Kind: ReadOp, ReadModel: true, Source: Messages, Scope: "messages:read", Input: HandlesQuery{}, Output: HandlesResult{}, Description: "Resolve up to 500 visible handles with contact names, initials and avatars"},
+	{Name: "messages.collection", Version: 1, Kind: ReadOp, ReadModel: true, Source: Messages, Scope: "messages:read", Input: CollectionQuery{}, Output: CollectionResult{}, Description: "Page visible chat attachments or balloon messages by media kind", Examples: []Example{{Input: CollectionQuery{ChatID: "cht_example", Kind: "photos", Limit: 50}, Output: CollectionResult{Items: []Record{}, CoverageNotes: []string{}}}}},
 
 	{Name: "replica.status", Version: 1, Kind: ReadOp, Source: System, Scope: "system:read", Input: struct{}{}, Output: ReadResult{}, Description: "Read local replication and blob progress"},
 	{Name: "search", Version: 1, Kind: ReadOp, Input: ReadQuery{}, Output: ReadResult{}, Description: "Search visible local record text"},

@@ -1,0 +1,154 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[4.2 5.47 6.03] cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5GC8VEEMXG1B31S8R25PP1A",
+  "scenario": "WEB-RM-REMINDERS-HARDENING",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "f2dd8219f0f423fe8d923da1d0b9fd66abb3b73f",
+  "at": "2026-10-21T23:20:48.334712Z",
+  "assertions": [
+    {
+      "name": "natural_title_world",
+      "passed": true
+    },
+    {
+      "name": "natural_title_list",
+      "passed": true
+    },
+    {
+      "name": "natural_title_fixture",
+      "passed": true
+    },
+    {
+      "name": "natural_title_fixture",
+      "passed": true
+    },
+    {
+      "name": "natural_title_fixture",
+      "passed": true
+    },
+    {
+      "name": "natural_title_fixture",
+      "passed": true
+    },
+    {
+      "name": "natural_title_convergence",
+      "passed": true
+    },
+    {
+      "name": "natural_title_list_resolved",
+      "passed": true
+    },
+    {
+      "name": "rest_numeric_case_insensitive_title_order",
+      "passed": true
+    },
+    {
+      "name": "rest_descriptor_timing_messages.chats",
+      "passed": true
+    },
+    {
+      "name": "rest_descriptor_timing_sources.status",
+      "passed": true
+    },
+    {
+      "name": "mcp_numeric_case_insensitive_title_order",
+      "passed": true
+    },
+    {
+      "name": "mcp_descriptor_timing_messages.chats",
+      "passed": true
+    },
+    {
+      "name": "mcp_descriptor_timing_sources.status",
+      "passed": true
+    },
+    {
+      "name": "timed_messages_fixture",
+      "passed": true
+    },
+    {
+      "name": "timed_calendar_fixture",
+      "passed": true
+    },
+    {
+      "name": "timed_event_fixture",
+      "passed": true
+    },
+    {
+      "name": "timed_projection_convergence",
+      "passed": true
+    },
+    {
+      "name": "messages.chats_nonempty_timed_projection",
+      "passed": true
+    },
+    {
+      "name": "messages.chats_mcp_text_matches_structured_json",
+      "passed": true
+    },
+    {
+      "name": "messages.chats_rest_mcp_structured_result_exact",
+      "passed": true
+    },
+    {
+      "name": "calendar.agenda_nonempty_timed_projection",
+      "passed": true
+    },
+    {
+      "name": "calendar.agenda_mcp_text_matches_structured_json",
+      "passed": true
+    },
+    {
+      "name": "calendar.agenda_rest_mcp_structured_result_exact",
+      "passed": true
+    },
+    {
+      "name": "large_selection_world",
+      "passed": true
+    },
+    {
+      "name": "large_selection_convergence",
+      "passed": true
+    },
+    {
+      "name": "large_selection_read_token",
+      "passed": true
+    },
+    {
+      "name": "large_selection_above_sqlite_variable_limit",
+      "passed": true
+    },
+    {
+      "name": "large_selection_attachment",
+      "passed": true
+    },
+    {
+      "name": "large_selection_attachment",
+      "passed": true
+    },
+    {
+      "name": "large_selection_attachment_convergence",
+      "passed": true
+    },
+    {
+      "name": "large_selection_query_token",
+      "passed": true
+    },
+    {
+      "name": "rest_large_selection_and_attachment_owners_exact",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

@@ -3,10 +3,11 @@ package state
 import (
 	"cmp"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
+	"golang.org/x/text/collate"
+	"golang.org/x/text/language"
 )
 
 func reminderTree(nodes map[string]reminderNode, ids []string, attachments map[string][]contracts.Record, sort string, zone *time.Location) []contracts.ReminderItem {
@@ -37,9 +38,14 @@ func reminderTree(nodes map[string]reminderNode, ids []string, attachments map[s
 	for _, id := range ids {
 		children[parents[id]] = append(children[parents[id]], id)
 	}
+	orderItems := func(a, b reminderFields) int { return reminderItemOrder(a, b, sort, zone) }
+	if sort == "title" {
+		comparer := collate.New(language.Und, collate.IgnoreCase, collate.Numeric)
+		orderItems = func(a, b reminderFields) int { return comparer.CompareString(a.Title, b.Title) }
+	}
 	for _, siblings := range children {
 		slices.SortFunc(siblings, func(a, b string) int {
-			if order := reminderItemOrder(nodes[a].fields, nodes[b].fields, sort, zone); order != 0 {
+			if order := orderItems(nodes[a].fields, nodes[b].fields); order != 0 {
 				return order
 			}
 			return cmp.Compare(a, b)
@@ -62,8 +68,6 @@ func reminderTree(nodes map[string]reminderNode, ids []string, attachments map[s
 
 func reminderItemOrder(a, b reminderFields, sort string, zone *time.Location) int {
 	switch sort {
-	case "title":
-		return cmp.Compare(strings.ToLower(a.Title), strings.ToLower(b.Title))
 	case "priority":
 		rank := func(priority int) int {
 			if priority == 0 {

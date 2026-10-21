@@ -5,7 +5,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"strings"
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
@@ -59,12 +58,15 @@ func reminderItemAttachments(ctx context.Context, tx *sql.Tx, nodes map[string]r
 	if len(nodes) == 0 {
 		return result, nil
 	}
-	ids := make([]any, 0, len(nodes))
+	ids := make([]string, 0, len(nodes))
 	for id := range nodes {
 		ids = append(ids, id)
 	}
-	placeholders := strings.TrimSuffix(strings.Repeat("?,", len(ids)), ",")
-	records, err := readModelRecords(ctx, tx, "SELECT payload FROM records WHERE collection='reminders.attachment' AND deleted=0 AND json_extract(payload,'$.data.reminder_id') IN ("+placeholders+") ORDER BY id", ids...)
+	encoded, err := json.Marshal(ids)
+	if err != nil {
+		return nil, err
+	}
+	records, err := readModelRecords(ctx, tx, "SELECT payload FROM records WHERE collection='reminders.attachment' AND deleted=0 AND json_extract(payload,'$.data.reminder_id') IN (SELECT value FROM json_each(?)) ORDER BY id", string(encoded))
 	if err != nil {
 		return nil, err
 	}

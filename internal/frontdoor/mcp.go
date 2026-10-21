@@ -23,7 +23,7 @@ func mcpHandler(deps Deps, descriptors []contracts.OperationDescriptor) http.Han
 			if !ok {
 				return nil, contracts.ErrUnauthorized
 			}
-			output, err, milliseconds := invokeTimed(ctx, deps, p, d.Name, req.Params.Arguments)
+			output, milliseconds, err := invokeTimed(ctx, deps, p, d, req.Params.Arguments)
 			if err != nil {
 				typed := contracts.ErrUnavailable
 				var problem *contracts.Error
@@ -37,7 +37,7 @@ func mcpHandler(deps Deps, descriptors []contracts.OperationDescriptor) http.Han
 				return nil, marshalErr
 			}
 			var meta mcp.Meta
-			if reminderReadModel(d.Name) {
+			if d.ReadModel {
 				meta = mcp.Meta{"bridge/read_model_ms": milliseconds}
 			}
 			return &mcp.CallToolResult{Meta: meta, IsError: err != nil, StructuredContent: json.RawMessage(encoded), Content: []mcp.Content{&mcp.TextContent{Text: string(encoded)}}}, nil
