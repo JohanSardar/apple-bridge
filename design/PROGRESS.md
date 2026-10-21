@@ -81,7 +81,7 @@ Process: every change ships as a small PR (WORKER-RULES, Git and GitHub). Status
 - DONE W1-AGENT polish: neutral Bridge consent, human approval previews and relative times, custom access controls/disclosures, and colored Settings navigation.
 - IN PROGRESS W1-DEMO: generator (#20), demo sessions and CLI (#25), rich runner (#30) finishing exclusive performance reruns.
 - IN PROGRESS W1-MEDIA: Helper variants (#9). Real cleanup of six tagged self-chat file bubbles and the cold-arrival latency still need the GUI.
-- IN PROGRESS W1-RELAY: Safari (#40), relay auth/pairing/feed (#45, #52, #55), replay/revocation (#56), Remote commands (#67) and fresh replica agent delegation (#73) merged; public Ubuntu agent consent/read-your-write proven. Native latency/blob proof remains blocked on LIVE-FIX.
+- IN PROGRESS W1-RELAY: Safari (#40), relay auth/pairing/feed (#45, #52, #55), replay/revocation (#56), Remote commands (#67), replica agent delegation (#73) and public agent read-your-write (#78) merged. Native snapshot/commands/revoke/replay and replica-agent consent proven; native blob staging and R-LIVE remain blocked on LIVE-FIX; post-burst availability is measured explicitly.
 - IN PROGRESS W2: shared primitives (#17), reader decoders (#31 balloons), transcript, list.
 - IN PROGRESS W2-LIST: chats store (#49), reconnect isolation (#71), atomic trusted cache (#84), contact thumbs/handles/icons (#16/#38/#66). Conversation list, filters/search, badges/sidebar and list performance proof remain.
 - Dev infrastructure:

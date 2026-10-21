@@ -1,21 +1,22 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[10.32 12.63 10.5] cpus=8 other_heavy=1; ubuntu: load=[0.86 0.9 1.45] cpus=8 other_heavy=0"
+    "summary": "air: load=[28.43 18.6 15.31] cpus=8 other_heavy=1; ubuntu: load=[0.41 0.51 0.43] cpus=8 other_heavy=0"
   },
-  "run_id": "relay-connect_01M5EGSMZ2HCVG8RFFT0F8P7KR",
+  "run_id": "relay_01M5EYAA7TGXK3M5KGVXXA7YMK",
   "network_path": "public Funnel; pinned public DNS through CONNECT egress; no peer or SSH tunnel",
   "metrics": {
     "public_connections": 2,
-    "revocation_clock_uncertainty_ms": 68.428308,
+    "public_ingress_ready_ms": 457.710708,
+    "revocation_clock_uncertainty_ms": 26.947952,
     "snapshot_pages": 1,
     "snapshot_records": 3
   },
   "scenario": "WEB-RELAY-CONNECT",
   "level": "replica",
   "passed": true,
-  "git_sha": "6bb968a76e5df617aa4ddad21104c313f002a32e",
-  "at": "2026-10-21T06:01:24.194411Z",
+  "git_sha": "f274c9619ffcde43e406294deac6a99a3ecbe7f5",
+  "at": "2026-10-21T09:57:41.754571Z",
   "assertions": [
     {
       "name": "serve_config_before",
@@ -62,6 +63,10 @@
       "passed": true
     },
     {
+      "name": "public_ingress_ready_within_120_seconds",
+      "passed": true
+    },
+    {
       "name": "ubuntu_curl_public_tls/",
       "passed": true
     },
@@ -75,6 +80,10 @@
     },
     {
       "name": "ubuntu_joins_and_starts_through_remote",
+      "passed": true
+    },
+    {
+      "name": "gateway_snapshot_reference",
       "passed": true
     },
     {
@@ -121,9 +130,9 @@
   "latency": {
     "revoke→public_feed_closed": {
       "samples": 1,
-      "p50_ms": 147.773691,
-      "p95_ms": 147.773691,
-      "max_ms": 147.773691,
+      "p50_ms": 110.92724,
+      "p95_ms": 110.92724,
+      "max_ms": 110.92724,
       "timeouts": 0
     }
   },
