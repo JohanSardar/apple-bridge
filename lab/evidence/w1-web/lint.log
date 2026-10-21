@@ -1,0 +1,4 @@
+gofmt -l . | grep -v '^$' && exit 1 || true
+go vet ./...
+go run ./tools/lint .
+lint: ok

@@ -1,0 +1,110 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[4.8 7.15 8.22] cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5E3Q1GH0HJ42WAKHT9B2J34",
+  "scenario": "WEB-AUTH-SOFTWARE",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "a530cad13274d0630b04a4229d7518a7ecb46b1f",
+  "at": "2026-10-21T02:12:47.250005Z",
+  "assertions": [
+    {
+      "name": "software_passkey_enrollment",
+      "passed": true
+    },
+    {
+      "name": "host_cookie_flags",
+      "passed": true
+    },
+    {
+      "name": "trusted_thirty_days",
+      "passed": true
+    },
+    {
+      "name": "session_256_bits",
+      "passed": true
+    },
+    {
+      "name": "tokens_stored_hashed",
+      "passed": true
+    },
+    {
+      "name": "web1_hello_welcome",
+      "passed": true
+    },
+    {
+      "name": "upgrade_requires_web_dot_one",
+      "passed": true
+    },
+    {
+      "name": "enroll_single_use",
+      "passed": true
+    },
+    {
+      "name": "discoverable_public_signin",
+      "passed": true
+    },
+    {
+      "name": "public_thirty_minute_idle",
+      "passed": true
+    },
+    {
+      "name": "public_session_cookie",
+      "passed": true
+    },
+    {
+      "name": "signin_to_existing_session",
+      "passed": true
+    },
+    {
+      "name": "public_socket",
+      "passed": true
+    },
+    {
+      "name": "revoke_notifies_within_second",
+      "passed": true
+    },
+    {
+      "name": "revoke_closes_socket",
+      "passed": true
+    },
+    {
+      "name": "revoked_cookie_rejected",
+      "passed": true
+    },
+    {
+      "name": "expired_enroll_token_denied",
+      "passed": true
+    },
+    {
+      "name": "user_verification_required",
+      "passed": true
+    },
+    {
+      "name": "lock_cli",
+      "passed": true
+    },
+    {
+      "name": "lock_revokes_live_session",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "session_revoke": {
+      "samples": 1,
+      "p50_ms": 102.393375,
+      "p95_ms": 102.393375,
+      "max_ms": 102.393375,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

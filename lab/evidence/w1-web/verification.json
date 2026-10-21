@@ -1,0 +1,234 @@
+{
+  "unit": "W1-WEB",
+  "source_commit": "a530cad13274d0630b04a4229d7518a7ecb46b1f",
+  "base_main": "8ef1ed9",
+  "transport": "ssh -o ControlPath=none air",
+  "working_directory": "~/apple-bridge/.worktrees/w1-web",
+  "path_export": "export PATH=/opt/homebrew/bin:$HOME/go/bin:$PATH",
+  "commands": [
+    {
+      "command": "packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios/web --level sim --json",
+      "result": "initial red: origin, rate and static assertions failed against original server; integrated run: Web server scenarios passed, WEB-RM-THREAD MCP p95 failed at 10.2565 ms"
+    },
+    {
+      "command": "packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios/core --level sim --json",
+      "result": "pre-readmodels 56/56 pass; post-readmodels 55/56 pass, checkpoint-only Helper restart assertion raced with pending blob refresh"
+    },
+    {
+      "command": "packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios/core/CORE-HELPER-RESTART.yaml --level sim --json",
+      "result": "delayed-read red: one pending blob, scans 6 to 7; fixture fix green: zero pending blobs, scans 6 to 6"
+    },
+    {
+      "command": "packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios/web/WEB-RM-THREAD.yaml --level sim --json",
+      "result": "focused recheck passed: MCP p95 8.87775 ms, REST p95 2.943167 ms"
+    },
+    {
+      "command": "packaging/dev/heavy.sh bash -c 'export GOFLAGS=-p=2; go run ./cmd/bridge-lab run lab/scenarios/web/WEB-AUTH-ORIGIN.yaml lab/scenarios/web/WEB-AUTH-RATELIMIT.yaml lab/scenarios/web/WEB-AUTH-SOFTWARE.yaml lab/scenarios/web/WEB-BLOB-ACCESS.yaml lab/scenarios/web/WEB-COMMAND-INTERACTIVE.yaml lab/scenarios/web/WEB-LIVE-READMODELS.yaml lab/scenarios/web/WEB-LIVE-RECORD.yaml lab/scenarios/web/WEB-SERVE-EMBED.yaml --level sim --json > /tmp/w1-web-final-verified.jsonl && make lint > /tmp/w1-web-final-lint.log 2>&1 && go vet -p 2 ./... && make features > /tmp/w1-web-final-features.log 2>&1'",
+      "result": "exit 0; 8/8 final Web sim scenarios; lint, standalone vet and features pass"
+    }
+  ],
+  "scenarios": [
+    {
+      "scenario": "WEB-AUTH-ORIGIN",
+      "level": "sim",
+      "passed": true,
+      "git_sha": "a530cad13274d0630b04a4229d7518a7ecb46b1f",
+      "latency": {}
+    },
+    {
+      "scenario": "WEB-AUTH-RATELIMIT",
+      "level": "sim",
+      "passed": true,
+      "git_sha": "a530cad13274d0630b04a4229d7518a7ecb46b1f",
+      "latency": {}
+    },
+    {
+      "scenario": "WEB-AUTH-SOFTWARE",
+      "level": "sim",
+      "passed": true,
+      "git_sha": "a530cad13274d0630b04a4229d7518a7ecb46b1f",
+      "latency": {
+        "session_revoke": {
+          "samples": 1,
+          "p50_ms": 102.393375,
+          "p95_ms": 102.393375,
+          "max_ms": 102.393375,
+          "timeouts": 0
+        }
+      }
+    },
+    {
+      "scenario": "WEB-BLOB-ACCESS",
+      "level": "sim",
+      "passed": true,
+      "git_sha": "a530cad13274d0630b04a4229d7518a7ecb46b1f",
+      "latency": {}
+    },
+    {
+      "scenario": "WEB-COMMAND-INTERACTIVE",
+      "level": "sim",
+      "passed": true,
+      "git_sha": "a530cad13274d0630b04a4229d7518a7ecb46b1f",
+      "latency": {}
+    },
+    {
+      "scenario": "WEB-LIVE-READMODELS",
+      "level": "sim",
+      "passed": true,
+      "git_sha": "a530cad13274d0630b04a4229d7518a7ecb46b1f",
+      "latency": {
+        "journal_commit_to_last_readmodel_frame_written": {
+          "samples": 32,
+          "p50_ms": 5.524,
+          "p95_ms": 6.734,
+          "max_ms": 7.888,
+          "timeouts": 0
+        }
+      }
+    },
+    {
+      "scenario": "WEB-LIVE-RECORD",
+      "level": "sim",
+      "passed": true,
+      "git_sha": "a530cad13274d0630b04a4229d7518a7ecb46b1f",
+      "latency": {
+        "journal_commit_to_frame_written": {
+          "samples": 32,
+          "p50_ms": 0.371,
+          "p95_ms": 1.172,
+          "max_ms": 5.633,
+          "timeouts": 0
+        }
+      }
+    },
+    {
+      "scenario": "WEB-SERVE-EMBED",
+      "level": "sim",
+      "passed": true,
+      "git_sha": "a530cad13274d0630b04a4229d7518a7ecb46b1f",
+      "latency": {}
+    }
+  ],
+  "core_latest_matrix": {
+    "passing": 56,
+    "total": 56,
+    "method": "post-readmodels full run plus the causally fixed Helper restart scenario rerun",
+    "first_full_run_passing": 56,
+    "post_readmodels_full_run_passing": 55
+  },
+  "feature_graph": {
+    "features": 31,
+    "done": 24,
+    "limited": 1,
+    "in_progress": 1,
+    "todo": 5,
+    "scenario_levels_passing": 190,
+    "scenario_levels_total": 207,
+    "web.frontdoor": "in_progress"
+  },
+  "spec_clarifications": [
+    "wire token web.1 for logical web/1",
+    "WebAuthn ceremony_id/publicKey/credential JSON",
+    "derived reconnect takes a fresh snapshot; record reconnect replays journal",
+    "row upsert/remove and window count metadata; latest anchor follows tail",
+    "owned system.command view enriches journal hints from command ledger",
+    "URL-only enrollment without another dependency",
+    "replica uploads stage locally; forwarding staged bytes to gateway remains pending"
+  ],
+  "dependencies": {
+    "approved_direct": {
+      "github.com/go-webauthn/webauthn": "v0.18.2"
+    },
+    "new_indirect_requirements": {
+      "github.com/fxamacker/cbor/v2": "v2.9.4",
+      "github.com/go-viper/mapstructure/v2": "v2.5.0",
+      "github.com/go-webauthn/x": "v0.3.1",
+      "github.com/golang-jwt/jwt/v5": "v5.3.1",
+      "github.com/google/go-tpm": "v0.9.8",
+      "github.com/philhofer/fwd": "v1.2.0",
+      "github.com/tinylib/msgp": "v1.6.4",
+      "github.com/x448/float16": "v0.8.4",
+      "golang.org/x/crypto": "v0.57.0"
+    },
+    "reason": "required transitively by the approved WebAuthn implementation for protocol encodings, credential decoding and attestation/crypto support",
+    "module_graph_test_sums": [
+      "github.com/google/go-tpm-tools",
+      "github.com/stretchr/testify",
+      "go.uber.org/mock",
+      "go.yaml.in/yaml/v3"
+    ],
+    "other_direct_dependencies_added": []
+  },
+  "ui_contract": {
+    "origin": "exact serving scheme://host:port on state changes and upgrade; no separate CSRF token",
+    "cookie": "__Host-ab_session; Secure; HttpOnly; SameSite=Strict; Path=/; no Domain; trusted Max-Age/Expires, public session cookie",
+    "webauthn": "localhost locally; options {kind,token?} -> {ceremony_id,publicKey}; finish {ceremony_id,credential}",
+    "websocket": "Sec-WebSocket-Protocol web.1; hello v1 first; close 1008 overloaded/session_revoked; session_revoked sent before closing when writable",
+    "row_changes": "{op:upsert,id,row,order}, {op:remove,id}; thread {op:window,newer,older}; delta also contains order/page",
+    "session_activity": "HTTP requests and non-ping client frames renew idle lifetime; server beats and client pings do not",
+    "limits": "sign-in/enroll requests include both options and finish in 10/minute and 100/day per-IP budget; API/live frames 50/second/session",
+    "runner_merge": "server scenarios live in web_server.go / runWebServer; keep the UI Playwright runner web.go / runWeb distinct, use its typed Scenario.Web and route web level before server sim dispatch"
+  },
+  "open_problems": [
+    "Browser-level passkey/cache/live UI proofs belong to W1-UI; YAML placeholders remain pending",
+    "Merged read models currently accept chats filters all/unread/archived; known/unknown/deleted/spam need Operations/read-model support",
+    "Staged upload bytes are not forwarded from replicas by the existing Operations command forwarder",
+    "Slow-consumer 4 MiB cap implemented; no separate adversarial slow-network stress scenario added"
+  ],
+  "no_push": true,
+  "reviewer": "none per brief",
+  "commits": [
+    {
+      "sha": "a530cad13274d0630b04a4229d7518a7ecb46b1f",
+      "subject": "Prove malformed live frames consume the session request budget"
+    },
+    {
+      "sha": "2082a1b0d2af284cb2bb9f33afd458a58e0e69c5",
+      "subject": "Enforce principal revisions and rate limits on every live frame"
+    },
+    {
+      "sha": "3966ce1986acdadf508f2b20fd8e0e5929fdf306",
+      "subject": "Use the localhost relying party in rate-window HTTP fixtures"
+    },
+    {
+      "sha": "013735ffdfec1de95c1adcc4081cbb992139fbab",
+      "subject": "Count sparse thread records using the same timestamp ordering as the index"
+    },
+    {
+      "sha": "c511ca77886b3f23a57ec1c250a88f053de4bb1a",
+      "subject": "Stabilize checkpoint-only Helper restart proof with durable blob preconditions"
+    },
+    {
+      "sha": "4142c29bd4613a3195abc5738a25048c825acca2",
+      "subject": "Persist sliding session expiry on every authenticated activity"
+    },
+    {
+      "sha": "f0817a242f71fc4f44ed1ca53a77aee54fafc8c2",
+      "subject": "Bound rate-limit memory and amortize expired client cleanup"
+    },
+    {
+      "sha": "efaa5a6e35704ea1419baf1306fc8efa10db78e2",
+      "subject": "Follow latest thread anchors while preserving explicit anchored windows"
+    },
+    {
+      "sha": "54cf68daad79d46571e62405e426e04f0f99b594",
+      "subject": "Exercise daily, session and distributed authentication rate limits over HTTP"
+    },
+    {
+      "sha": "4279336e8be3e8d0f57f96e9e356800a778b639e",
+      "subject": "Keep anchored thread subscriptions bounded by their requested window"
+    },
+    {
+      "sha": "e924783ef70d7afa5175a4217a0ab970cb412873",
+      "subject": "Track complete thread window counts and refresh affected edge items"
+    },
+    {
+      "sha": "00d6f2181134ddc1ea8bf43cac67ffabf2243cb2",
+      "subject": "Verify device sessions, live commands, variants and Web protocol compatibility"
+    },
+    {
+      "sha": "044e73f7353551974e0de30c863e5f59bd8dff71",
+      "subject": "Implement browser front door, passkey sessions and journal live views"
+    }
+  ]
+}

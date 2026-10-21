@@ -1,0 +1,110 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[4.74 7.1 8.19] cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5E3Q67EFDPN8SVR0AR567K9",
+  "scenario": "WEB-LIVE-READMODELS",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "a530cad13274d0630b04a4229d7518a7ecb46b1f",
+  "at": "2026-10-21T02:12:52.078976Z",
+  "assertions": [
+    {
+      "name": "software_passkey_enrollment",
+      "passed": true
+    },
+    {
+      "name": "host_cookie_flags",
+      "passed": true
+    },
+    {
+      "name": "trusted_thirty_days",
+      "passed": true
+    },
+    {
+      "name": "session_256_bits",
+      "passed": true
+    },
+    {
+      "name": "tokens_stored_hashed",
+      "passed": true
+    },
+    {
+      "name": "web1_hello_welcome",
+      "passed": true
+    },
+    {
+      "name": "upgrade_requires_web_dot_one",
+      "passed": true
+    },
+    {
+      "name": "readmodel_chats_snapshot_rows",
+      "passed": true
+    },
+    {
+      "name": "readmodel_chats_snapshot",
+      "passed": true
+    },
+    {
+      "name": "readmodel_thread_snapshot_rows",
+      "passed": true
+    },
+    {
+      "name": "readmodel_thread_snapshot",
+      "passed": true
+    },
+    {
+      "name": "readmodel_collection_snapshot_rows",
+      "passed": true
+    },
+    {
+      "name": "readmodel_collection_snapshot",
+      "passed": true
+    },
+    {
+      "name": "initial_thread_outside_counts",
+      "passed": true
+    },
+    {
+      "name": "chat_row_upsert",
+      "passed": true
+    },
+    {
+      "name": "thread_reports_newer_outside_window",
+      "passed": true
+    },
+    {
+      "name": "readmodel_latency_32_samples",
+      "passed": true
+    },
+    {
+      "name": "readmodel_commit_to_frame_p95_20ms",
+      "passed": true
+    },
+    {
+      "name": "latest_thread_at_tail",
+      "passed": true
+    },
+    {
+      "name": "latest_thread_follows_new_inbound",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "journal_commit_to_last_readmodel_frame_written": {
+      "samples": 32,
+      "p50_ms": 5.524,
+      "p95_ms": 6.734,
+      "max_ms": 7.888,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

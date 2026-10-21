@@ -126,12 +126,20 @@ func runWebServer(ctx context.Context, s Scenario, level string) Evidence {
 		add("security_headers", resp != nil && resp.Header.Get("Content-Security-Policy") != "" && resp.Header.Get("Referrer-Policy") == "no-referrer" && resp.Header.Get("X-Content-Type-Options") == "nosniff")
 	case "WEB-AUTH-RATELIMIT":
 		statuses := []int{}
+		rateClient := &webClient{ctx: ctx, origin: strings.Replace(w.Gateway.URL, "127.0.0.1", "localhost", 1)}
 		for i := 0; i < 11; i++ {
-			resp, _ := request("POST", "/web/v1/login/options", "http://"+w.Gateway.Host)
+			resp, _, _ := rateClient.request("POST", "login/options", map[string]any{})
 			if resp != nil {
 				statuses = append(statuses, resp.StatusCode)
 			}
 		}
+		available := len(statuses) == 11
+		if available {
+			for _, status := range statuses[:10] {
+				available = available && status == 200
+			}
+		}
+		add("signin_options_available", available)
 		add("signin_minute_limit", len(statuses) == 11 && statuses[10] == 429)
 		runWebRateWindows(ctx, w, add)
 	}
@@ -840,7 +848,7 @@ func runWebRateWindows(ctx context.Context, w *world.World, add func(string, boo
 	now := func() time.Time { return time.Unix(0, clock.Load()) }
 	fixture := httptest.NewServer(bridgeweb.Handler(bridgeweb.Deps{Authority: authority, RateClock: now}))
 	defer fixture.Close()
-	c := &webClient{ctx: ctx, origin: fixture.URL}
+	c := &webClient{ctx: ctx, origin: strings.Replace(fixture.URL, "127.0.0.1", "localhost", 1)}
 	daily := true
 	for minute := 0; minute < 10; minute++ {
 		for count := 0; count < 10; count++ {
@@ -879,8 +887,9 @@ func runWebRateWindows(ctx context.Context, w *world.World, add func(string, boo
 	failed := true
 	request := func(ip, path string, input any) int {
 		raw, _ := json.Marshal(input)
-		req, _ := http.NewRequestWithContext(ctx, "POST", distributed.URL+"/web/v1/"+path, bytes.NewReader(raw))
-		req.Header.Set("Origin", distributed.URL)
+		origin := strings.Replace(distributed.URL, "127.0.0.1", "localhost", 1)
+		req, _ := http.NewRequestWithContext(ctx, "POST", origin+"/web/v1/"+path, bytes.NewReader(raw))
+		req.Header.Set("Origin", origin)
 		req.Header.Set("X-Lab-IP", ip)
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
@@ -895,5 +904,33 @@ func runWebRateWindows(ctx context.Context, w *world.World, add func(string, boo
 	}
 	add("global_failure_backoff_across_clients", failed && request("192.0.2.99", "login/options", map[string]any{}) == 429)
 	clock.Add(int64(2 * time.Second))
+
 	add("global_backoff_expires", request("192.0.2.99", "login/options", map[string]any{}) == 200)
+	live := &webClient{ctx: ctx, origin: strings.Replace(w.Gateway.URL, "127.0.0.1", "localhost", 1), cookie: c.cookie}
+	socket, err := live.socket()
+	if err != nil {
+		add("websocket_rate_fixture", false)
+		return
+	}
+	defer socket.CloseNow()
+	for i := 0; i < 51; i++ {
+		if socket.Write(ctx, websocket.MessageText, []byte("[")) != nil {
+			add("websocket_rate_send", false)
+			return
+		}
+	}
+	limited := false
+	bounded, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	for i := 0; i < 60; i++ {
+		var frame map[string]any
+		if wsjson.Read(bounded, socket, &frame) != nil {
+			break
+		}
+		if frame["code"] == "rate_limited" {
+			limited = true
+			break
+		}
+	}
+	add("malformed_live_frames_count_toward_rate_limit", limited)
 }

@@ -1,0 +1,82 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[4.74 7.1 8.19] cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5E3Q4T7K86BA453034A9TGY",
+  "scenario": "WEB-COMMAND-INTERACTIVE",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "a530cad13274d0630b04a4229d7518a7ecb46b1f",
+  "at": "2026-10-21T02:12:50.631956Z",
+  "assertions": [
+    {
+      "name": "software_passkey_enrollment",
+      "passed": true
+    },
+    {
+      "name": "host_cookie_flags",
+      "passed": true
+    },
+    {
+      "name": "trusted_thirty_days",
+      "passed": true
+    },
+    {
+      "name": "session_256_bits",
+      "passed": true
+    },
+    {
+      "name": "tokens_stored_hashed",
+      "passed": true
+    },
+    {
+      "name": "web1_hello_welcome",
+      "passed": true
+    },
+    {
+      "name": "upgrade_requires_web_dot_one",
+      "passed": true
+    },
+    {
+      "name": "command_ack",
+      "passed": true
+    },
+    {
+      "name": "command_status",
+      "passed": true
+    },
+    {
+      "name": "interactive_in_command_ledger",
+      "passed": true
+    },
+    {
+      "name": "command_reaches_final_status",
+      "passed": true
+    },
+    {
+      "name": "command_resend_idempotent",
+      "passed": true
+    },
+    {
+      "name": "interactive_crosses_ipc_as_data",
+      "passed": true
+    },
+    {
+      "name": "one_native_effect",
+      "passed": true
+    },
+    {
+      "name": "command_record_reconnect_reconciles_ledger",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

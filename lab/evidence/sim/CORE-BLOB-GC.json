@@ -1,27 +1,27 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[4.7 5.21 9.14] cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[3.69 6.07 7.59] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M58D739GDVFWZ97V3TF1WW9T",
+  "run_id": "run_01M5E2ADHTD3GMZ5YFVBKKVS1D",
   "network_path": "loopback",
   "metrics": {
     "digest_check_0_bytes": 4194304,
     "digest_check_0_deadline_exceeded": false,
     "digest_check_0_error_type": "\u003cnil\u003e",
-    "digest_check_0_read_ms": 5.151666,
+    "digest_check_0_read_ms": 3.354875,
     "digest_check_0_status": 200,
     "digest_check_1_bytes": 4194304,
     "digest_check_1_deadline_exceeded": false,
     "digest_check_1_error_type": "\u003cnil\u003e",
-    "digest_check_1_read_ms": 2.795375,
+    "digest_check_1_read_ms": 7.629792,
     "digest_check_1_status": 200
   },
   "scenario": "CORE-BLOB-GC",
   "level": "sim",
   "passed": true,
-  "git_sha": "4f263fdf17b0f98019c10581b7d742880bb9b6af",
-  "at": "2026-10-18T21:03:23.952396Z",
+  "git_sha": "efaa5a6e35704ea1419baf1306fc8efa10db78e2",
+  "at": "2026-10-21T01:48:25.018168Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -203,23 +203,23 @@
   "latency": {
     "effect_done→blob_complete": {
       "samples": 1,
-      "p50_ms": 446.048167,
-      "p95_ms": 446.048167,
-      "max_ms": 446.048167,
+      "p50_ms": 398.030125,
+      "p95_ms": 398.030125,
+      "max_ms": 398.030125,
       "timeouts": 0
     },
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 4.616958,
-      "p95_ms": 4.616958,
-      "max_ms": 4.616958,
+      "p50_ms": 4.826958,
+      "p95_ms": 4.826958,
+      "max_ms": 4.826958,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 6.453,
-      "p95_ms": 6.453,
-      "max_ms": 6.453,
+      "p50_ms": 7.603291,
+      "p95_ms": 7.603291,
+      "max_ms": 7.603291,
       "timeouts": 0
     }
   },

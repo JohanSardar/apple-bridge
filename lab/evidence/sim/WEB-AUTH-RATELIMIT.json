@@ -1,0 +1,58 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[4.8 7.15 8.22] cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5E3PZXNQ3TT5ZXBBY3647S6",
+  "scenario": "WEB-AUTH-RATELIMIT",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "a530cad13274d0630b04a4229d7518a7ecb46b1f",
+  "at": "2026-10-21T02:12:45.62117Z",
+  "assertions": [
+    {
+      "name": "signin_options_available",
+      "passed": true
+    },
+    {
+      "name": "signin_minute_limit",
+      "passed": true
+    },
+    {
+      "name": "signin_daily_100_limit",
+      "passed": true
+    },
+    {
+      "name": "signin_next_day_reset",
+      "passed": true
+    },
+    {
+      "name": "api_50_per_second",
+      "passed": true
+    },
+    {
+      "name": "api_second_reset",
+      "passed": true
+    },
+    {
+      "name": "global_failure_backoff_across_clients",
+      "passed": true
+    },
+    {
+      "name": "global_backoff_expires",
+      "passed": true
+    },
+    {
+      "name": "malformed_live_frames_count_toward_rate_limit",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

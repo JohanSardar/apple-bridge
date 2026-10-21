@@ -1,0 +1,74 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[4.68 7.05 8.17] cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5E3QAAP1YJB2MQ857Z2HX19",
+  "scenario": "WEB-SERVE-EMBED",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "a530cad13274d0630b04a4229d7518a7ecb46b1f",
+  "at": "2026-10-21T02:12:56.278717Z",
+  "assertions": [
+    {
+      "name": "static_cache_/",
+      "passed": true
+    },
+    {
+      "name": "empty_dist_not_built",
+      "passed": true
+    },
+    {
+      "name": "static_cache_/messages/test",
+      "passed": true
+    },
+    {
+      "name": "empty_dist_not_built",
+      "passed": true
+    },
+    {
+      "name": "static_cache_/",
+      "passed": true
+    },
+    {
+      "name": "static_cache_/messages/test",
+      "passed": true
+    },
+    {
+      "name": "static_cache_/assets/test-hash.js",
+      "passed": true
+    },
+    {
+      "name": "static_cache_/sw.js",
+      "passed": true
+    },
+    {
+      "name": "static_cache_/manifest.webmanifest",
+      "passed": true
+    },
+    {
+      "name": "hsts_on_https",
+      "passed": true
+    },
+    {
+      "name": "app_or_not_built",
+      "passed": true
+    },
+    {
+      "name": "index_no_store",
+      "passed": true
+    },
+    {
+      "name": "app_route_fallback",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
