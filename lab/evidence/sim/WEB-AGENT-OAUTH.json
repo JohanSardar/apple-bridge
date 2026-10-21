@@ -1,0 +1,134 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[14.82 12.31 10.61] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5EMPXBN0N0D9R8E62BXVRZA",
+  "scenario": "WEB-AGENT-OAUTH",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "799c6645ab38b88f478b18b3e83bbef11eb32c39",
+  "at": "2026-10-21T07:09:48.789193Z",
+  "assertions": [
+    {
+      "name": "agents_available",
+      "passed": true
+    },
+    {
+      "name": "oauth_discovery_challenge_/mcp",
+      "passed": true
+    },
+    {
+      "name": "oauth_discovery_challenge_/v1/op/messages.chats",
+      "passed": true
+    },
+    {
+      "name": "resource_metadata",
+      "passed": true
+    },
+    {
+      "name": "authorization_metadata_pkce",
+      "passed": true
+    },
+    {
+      "name": "dynamic_registration",
+      "passed": true
+    },
+    {
+      "name": "authorize_requires_device_session",
+      "passed": true
+    },
+    {
+      "name": "reject_non_s256_plain",
+      "passed": true
+    },
+    {
+      "name": "reject_non_s256_",
+      "passed": true
+    },
+    {
+      "name": "redirect_exact_match",
+      "passed": true
+    },
+    {
+      "name": "consent_cannot_exceed_requested_scopes",
+      "passed": true
+    },
+    {
+      "name": "owner_consent_binds_state_issuer",
+      "passed": true
+    },
+    {
+      "name": "pkce_wrong_verifier_rejected",
+      "passed": true
+    },
+    {
+      "name": "resource_binding",
+      "passed": true
+    },
+    {
+      "name": "code_exchange_one_hour_access",
+      "passed": true
+    },
+    {
+      "name": "oauth_mcp_tools_list",
+      "passed": true
+    },
+    {
+      "name": "oauth_mcp_read",
+      "passed": true
+    },
+    {
+      "name": "oauth_secrets_stored_hashed",
+      "passed": true
+    },
+    {
+      "name": "oauth_one_hour_and_90_day_expiry",
+      "passed": true
+    },
+    {
+      "name": "expired_access_rejected",
+      "passed": true
+    },
+    {
+      "name": "refresh_rotates",
+      "passed": true
+    },
+    {
+      "name": "refresh_reuse_detected",
+      "passed": true
+    },
+    {
+      "name": "reuse_revokes_access_family",
+      "passed": true
+    },
+    {
+      "name": "reuse_revokes_refresh_family",
+      "passed": true
+    },
+    {
+      "name": "expired_refresh_rejected",
+      "passed": true
+    },
+    {
+      "name": "authorization_code_single_use",
+      "passed": true
+    },
+    {
+      "name": "code_reuse_revokes_family",
+      "passed": true
+    },
+    {
+      "name": "owner_revoke_oauth",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

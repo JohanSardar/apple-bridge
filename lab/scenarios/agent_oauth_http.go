@@ -12,7 +12,10 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
+	"time"
 )
 
 func runAgentOAuth(ctx context.Context, w *world.World, c *webClient, e *Evidence, add func(string, bool)) {
@@ -81,6 +84,99 @@ func runAgentOAuth(ctx context.Context, w *world.World, c *webClient, e *Evidenc
 	}
 	result, response := issue()
 	add("owner_consent_binds_state_issuer", result == "200" && response.Get("state") == "bridge-test" && response.Get("iss") == c.origin && response.Get("code") != "")
+	form := url.Values{"grant_type": {"authorization_code"}, "client_id": {client.ID}, "code": {response.Get("code")}, "redirect_uri": {redirect}, "code_verifier": {verifier}, "resource": {c.origin + "/mcp"}}
+	bad = cloneValues(form)
+	bad.Set("code_verifier", strings.Repeat("b", 43))
+	code, _, _ = agentRequest(ctx, c.origin, "", "POST", "/oauth/token", bad)
+	add("pkce_wrong_verifier_rejected", code == 400)
+	bad = cloneValues(form)
+	bad.Set("resource", "https://attacker.example/mcp")
+	code, _, _ = agentRequest(ctx, c.origin, "", "POST", "/oauth/token", bad)
+	add("resource_binding", code == 400)
+	code, raw, _ = agentRequest(ctx, c.origin, "", "POST", "/oauth/token", form)
+	var tokens trust.OAuthTokens
+	json.Unmarshal(raw, &tokens)
+	add("code_exchange_one_hour_access", code == 200 && tokens.AccessToken != "" && tokens.ExpiresIn == 3600 && tokens.RefreshToken != "")
+	mcp := func(token, method string, params any) bool {
+		code, raw, _ := agentRequest(ctx, c.origin, token, "POST", "/mcp", map[string]any{"jsonrpc": "2.0", "id": 1, "method": method, "params": params})
+		return code == 200 && bytes.Contains(raw, []byte(`"result"`)) && !bytes.Contains(raw, []byte(`"isError":true`))
+	}
+	add("oauth_mcp_tools_list", mcp(tokens.AccessToken, "tools/list", map[string]any{}))
+	add("oauth_mcp_read", mcp(tokens.AccessToken, "tools/call", map[string]any{"name": "messages_chats", "arguments": map[string]any{}}))
+	stored, err := os.ReadFile(filepath.Join(w.Gateway.Home, "credentials.json"))
+	add("oauth_secrets_stored_hashed", err == nil && !bytes.Contains(stored, []byte(tokens.AccessToken)) && !bytes.Contains(stored, []byte(tokens.RefreshToken)) && !bytes.Contains(stored, []byte(response.Get("code"))))
+	var credentials struct {
+		Access  []trust.OAuthAccess  `json:"oauth_access"`
+		Refresh []trust.OAuthRefresh `json:"oauth_refresh"`
+	}
+	json.Unmarshal(stored, &credentials)
+	lifetimes := len(credentials.Access) > 0 && len(credentials.Refresh) > 0
+	if lifetimes {
+		lifetimes = time.Until(credentials.Access[0].ExpiresAt) > 59*time.Minute && time.Until(credentials.Access[0].ExpiresAt) <= time.Hour && time.Until(credentials.Refresh[0].ExpiresAt) > 89*24*time.Hour && time.Until(credentials.Refresh[0].ExpiresAt) <= 90*24*time.Hour
+	}
+	add("oauth_one_hour_and_90_day_expiry", lifetimes)
+	expired := editAgentCredentials(w.Gateway.Home, func(data map[string]any) {
+		for _, v := range data["oauth_access"].([]any) {
+			v.(map[string]any)["expires_at"] = time.Now().Add(-time.Second).Format(time.RFC3339Nano)
+		}
+	})
+	code, _, _ = agentRequest(ctx, c.origin, tokens.AccessToken, "POST", "/v1/op/messages.chats", map[string]any{})
+	add("expired_access_rejected", expired == nil && code == 401)
+	refresh := url.Values{"grant_type": {"refresh_token"}, "client_id": {client.ID}, "refresh_token": {tokens.RefreshToken}, "resource": {c.origin + "/mcp"}}
+	code, raw, _ = agentRequest(ctx, c.origin, "", "POST", "/oauth/token", refresh)
+	var rotated trust.OAuthTokens
+	json.Unmarshal(raw, &rotated)
+	add("refresh_rotates", code == 200 && rotated.RefreshToken != "" && rotated.RefreshToken != tokens.RefreshToken && rotated.AccessToken != tokens.AccessToken)
+	code, _, _ = agentRequest(ctx, c.origin, "", "POST", "/oauth/token", refresh)
+	add("refresh_reuse_detected", code == 400)
+	code, _, _ = agentRequest(ctx, c.origin, rotated.AccessToken, "POST", "/v1/op/messages.chats", map[string]any{})
+	add("reuse_revokes_access_family", code == 401)
+	refresh.Set("refresh_token", rotated.RefreshToken)
+	code, _, _ = agentRequest(ctx, c.origin, "", "POST", "/oauth/token", refresh)
+	add("reuse_revokes_refresh_family", code == 400)
+	_, response = issue()
+	form.Set("code", response.Get("code"))
+	code, raw, _ = agentRequest(ctx, c.origin, "", "POST", "/oauth/token", form)
+	json.Unmarshal(raw, &tokens)
+	replayedCode := cloneValues(form)
+	_, extraResponse := issue()
+	extraForm := cloneValues(form)
+	extraForm.Set("code", extraResponse.Get("code"))
+	extraStatus, extraRaw, _ := agentRequest(ctx, c.origin, "", "POST", "/oauth/token", extraForm)
+	var extraTokens trust.OAuthTokens
+	json.Unmarshal(extraRaw, &extraTokens)
+	err = editAgentCredentials(w.Gateway.Home, func(data map[string]any) {
+		for _, v := range data["oauth_refresh"].([]any) {
+			f := v.(map[string]any)
+			if f["hash"] == trust.Fingerprint([]byte(extraTokens.RefreshToken)) {
+				f["expires_at"] = time.Now().Add(-time.Second).Format(time.RFC3339Nano)
+			}
+		}
+	})
+	expiredRefresh := url.Values{"grant_type": {"refresh_token"}, "client_id": {client.ID}, "refresh_token": {extraTokens.RefreshToken}, "resource": {c.origin + "/mcp"}}
+	code, _, _ = agentRequest(ctx, c.origin, "", "POST", "/oauth/token", expiredRefresh)
+	add("expired_refresh_rejected", extraStatus == 200 && err == nil && code == 400)
+	code, _, _ = agentRequest(ctx, c.origin, "", "POST", "/oauth/token", replayedCode)
+	add("authorization_code_single_use", code == 400)
+	code, _, _ = agentRequest(ctx, c.origin, tokens.AccessToken, "POST", "/v1/op/messages.chats", map[string]any{})
+	add("code_reuse_revokes_family", code == 401)
+	_, response = issue()
+	form.Set("code", response.Get("code"))
+	code, raw, _ = agentRequest(ctx, c.origin, "", "POST", "/oauth/token", form)
+	json.Unmarshal(raw, &tokens)
+	a, err := trust.Open(w.Gateway.Home)
+	if err != nil {
+		add("owner_revoke_authority", false)
+		return
+	}
+	p, err := a.AuthenticateToken(tokens.AccessToken)
+	if err != nil {
+		add("owner_revoke_token", false)
+		return
+	}
+	resp, _, err := c.request("DELETE", "agents/"+p.ID, nil)
+	code, _, _ = agentRequest(ctx, c.origin, tokens.AccessToken, "POST", "/v1/op/messages.chats", map[string]any{})
+	add("owner_revoke_oauth", err == nil && resp.StatusCode == 200 && code == 401)
 }
 
 func cloneValues(v url.Values) url.Values {
