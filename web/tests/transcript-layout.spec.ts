@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { header } from '../src/messages/format';
-import { emojiOnly, layout, textWidthWithSlack, wrapText, type LayoutPrefs } from '../src/messages/transcript/layout';
+import { emojiOnly, layout, transcriptSpacing, textWidthWithSlack, wrapText, type LayoutPrefs } from '../src/messages/transcript/layout';
 import type { ThreadItem } from '../src/data/types';
 import type { Handles } from '../src/messages/store/types';
 const now=new Date(2026,9,20,9,41);
@@ -114,4 +114,11 @@ test('WEB-MSG-THREAD-CORE layout math gives exactly the final bubble a tail for 
         }
         for(const run of runs)expect(run.tails,mode+':'+mask+':'+ids.join(',')).toEqual(run.tails.map((_,index)=>index===run.tails.length-1));
     }
+});
+
+test('WEB-MSG-REACTIONS layout math reserves sixteen points above reaction-bearing bubbles',()=>{
+    const item=message('reacted',0),plain=layout([item],handles,prefs,900)[0];
+    item.reactions=[{id:'love',source:'messages',collection:'messages.reaction',version:1,data:{kind:'love',part_index:0}}];
+    const reacted=layout([item],handles,prefs,900)[0];
+    expect(transcriptSpacing.reactionTop).toBe(16);expect(reacted.height-plain.height).toBe(transcriptSpacing.reactionTop);
 });

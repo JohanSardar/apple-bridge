@@ -190,6 +190,8 @@ func webBrowserControl(ctx context.Context, w *world.World, origin string) (*htt
 			value, err = webMediaPlaybackScene(ctx, w, request.URL.Query().Get("direction") == "received")
 		case "/handles-fixture":
 			value, err = webHandlesFixture(w)
+		case "/reaction-fixture":
+			value, err = webReactionFixture(w)
 		case "/list-fixture":
 			started := time.Now()
 			avatar, setupErr := webListFixture(w, request.URL.Query().Get("update") == "1")
