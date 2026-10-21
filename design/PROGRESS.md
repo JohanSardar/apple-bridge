@@ -67,29 +67,28 @@ One line per unit. Rules: BUILD-GOAL.md (2026-10-17 update: no reviews, merge on
 - Verification: all 120 simulations pass, including 24/24 Messages; Go tests, lint, features and strict signing smoke pass. Fixed the scope probe command envelope and stale store-wide disk-capacity overlays; the quiet 200,000-message benchmark also passes. Features: 23 done, 1 limited, 0 blocked; 180/183 scenario-levels. Initial failures and diagnostics retained. No new scenario IDs or dependencies.
 
 ## Web app (DECISIONS 2026-10-20, SPEC §23)
-- IN PROGRESS W2-READER: filters, collections, handles, pure rich decoders, native capture and synthetic rich demo merged; independent Truth checks and rich sim checks pass. Real parity is limited because signed AppleTruth lacks Full Disk Access to Messages; Helper counts are supporting evidence. Pin/mute, audio Keep/transcription and recovery deadlines remain explicit coverage gaps.
-- DONE W1-DEMO: deterministic 60-contact/40-chat/5,000-message capture world, generated avatars/media, one-use lab demo sign-in, live updates and opt-in 100k chat; WEB-DEMO-DATASET covers all representable items and pre-download geometry with 52 blob hashes, WEB-DEMO-SESSION passes 12/12. Reader gaps and stable native fixture keys are documented in lab/demo/FIXTURES.md.
-Process: every change ships as a small PR (WORKER-RULES, Git and GitHub). Status lives in features.yaml; one line per unit here.
-- DONE W0: decisions, Messages spec draft (`design/web/messages.md`), SPEC §23 including W2–W8, ADRs 0015–0020, and the drafts for Reminders, Calendar, Contacts and Notes. Johan's skim of the Messages spec is still open. W2 proceeds on the draft and applies his changes when they come.
-- DONE W1-RM: chat, thread and collection read models (#2); rich filters and collections, plus `messages.handles` (#14, #22).
-- DONE W1-WEB: front door, passkey device sessions and web/1 live views (#3–#5). Hardening: last passkey kept (#15), host pinning (#19), per-IP auth backoff (#23, #24), contact thumbnails (#16), handles route (#38). Pending: local Safari session (#40), and replica upload forwarding (W3).
-- DONE W1-AGENT: credentials, activity, owner approvals, OAuth and agent screens (#18, #26, #32, #47, #54, #62, #64, #68, #81). The activity write-serialization bug was fixed with a structural guard (#47).
-- DONE web.frontdoor: every front-door scenario passes at its levels; the reconnect cancellation fix landed in #71.
-- DONE W1-UI: Solid shell, design system, springs, virtual list and web-level runner (#6–#8). The 120 Hz and 8 ms targets are unproven on this 60 Hz, headless host.
-- IN PROGRESS W1-REMOTE: system Funnel backend real on the Air; public REST/MCP/SSE; REST p95 60 ms through Funnel (#27–#29, #34). Embedded tsnet backend: the real login needs a GUI approval on the Air.
-- DONE W1-AGENT: credentials (#18), activity (#26), SQLite capture fix (#47), owner approvals (#54), OAuth grants (#62) and endpoints (#64); grouped Agents/Approvals/Activity screens and browser consent pass the scripted flow. Replica delegation shipped separately in W1-RELAY (#73).
-- DONE W1-AGENT polish: neutral Bridge consent, human approval previews and relative times, custom access controls/disclosures, and colored Settings navigation.
-- IN PROGRESS W1-DEMO: generator (#20), demo sessions and CLI (#25), rich runner (#30) finishing exclusive performance reruns.
-- IN PROGRESS W1-MEDIA: Helper variants (#9). Real cleanup of six tagged self-chat file bubbles and the cold-arrival latency still need the GUI.
-- IN PROGRESS W1-RELAY: Safari (#40), relay auth/pairing/feed (#45, #52, #55), replay/revocation (#56), Remote commands (#67), replica agent delegation (#73) and public agent read-your-write (#78) merged. Native snapshot/commands/revoke/replay and replica-agent consent proven; native blob staging and R-LIVE remain blocked on LIVE-FIX; post-burst availability is measured explicitly.
-- IN PROGRESS W2: shared primitives (#17), reader decoders (#31 balloons), transcript, list.
-- IN PROGRESS W2-LIST: chats store (#49), reconnect isolation (#71), atomic trusted cache (#84), contact thumbs/handles/icons (#16/#38/#66). Conversation list, filters/search, badges/sidebar and list performance proof remain.
-- Dev infrastructure:
-  - heavy.sh: re-entrant (#11), SDK matching the OS (#35), exclusive lane for browser performance gates (#36, #37).
-  - Per-project web budgets (#39); dist placeholder kept after build (#41); detached Air runs (#42).
-- **Waiting on the Air being unlocked** (lock screen; never type passwords):
-  - Messages capture pass for `messages.md` §17 and the "to verify" rows.
-  - Cleanup of the six W1-MEDIA test bubbles.
-  - Embedded tsnet login approval (`remote-on.log` in `/tmp/ablab/w1-remote-embedded-check`).
+Process: every change ships as a small PR (WORKER-RULES, Git and GitHub). Status lives in features.yaml; one line per unit here. Updated 2026-10-21.
 
-- IN PROGRESS W3-HELPER: interactive origin gate and untagged self-send/cleanup proven; cached per-build self-test proves AppleScript text/file sends; guarded resend, retained-deletion evidence, isolated chat-action proofs and manifest-bound media cleanup implemented. Full UI self-test/read-state/delete proofs, six W1 file bubbles and pending self-test bubble cleanup wait for unlock; real resend requires a safe registered failed self fixture.
+- DONE W0: decisions, the Messages spec (`design/web/messages.md`), SPEC §23 with W2–W8 unit tables (#98–#100), ADRs 0015–0020 and the Reminders/Calendar/Contacts/Notes drafts. Johan's skim is still open; work proceeds on the drafts. The input gate was redefined as our own main-thread cost (#103), and the list rules were pinned (#105).
+- DONE W1-RM: chat, thread and collection read models (#2), plus rich filters, collections and `messages.handles` (#14, #22).
+- DONE W1-WEB / web.frontdoor: front door, passkey sessions and `web/1` live views (#3–#5); hardening (#15, #19, #23, #24); contact thumbnails and the handles route (#16, #38); canceled-view errors (#71).
+- DONE W1-AGENT: credentials, activity, approvals, OAuth, screens and polish (#18, #26, #32, #47, #54, #62, #64, #68, #81). Replica delegation (#73) and approved replica writes (#78) shipped with W1-RELAY.
+- DONE W1-UI: Solid shell, design system, springs, virtual list and web-level runner (#6–#8). 120 Hz is unproven on this 60 Hz headless host (`input_8ms_proven:false`).
+- DONE W1-DEMO: deterministic 60-contact / 40-chat / 5,000-message world, demo sessions and CLI, rich runner (#20, #25, #30).
+- IN PROGRESS W1-REMOTE: the system Funnel backend is real on the Air, with public REST/MCP/SSE at REST p95 60 ms (#27–#29, #34). The embedded tsnet login needs a GUI approval on the Air.
+- IN PROGRESS W1-MEDIA: Helper variants (#9). Cleanup of six tagged self-chat bubbles and cold-arrival latency wait for the unlock.
+- IN PROGRESS W1-RELAY: Safari local session (#40), relay auth/pairing/feed (#45, #52, #55), replay/revocation (#56), remote commands (#67), native agent commands over the public route (#83), feed pipelining (#76), upload resume (#92) and blob staging (#90). R-LIVE waits on LIVE-FIX.
+- IN PROGRESS LIVE-FIX (#75): native Reminders capture fixed. Relay-added p95 is 35 ms pipelined vs 124 ms serial. The real Calendar regression sweep is running. `CAL-ALLDAY-FUTURE` fails on baseline too (civil offset, Truth, cleanup audit) and is tracked separately. Earlier fixes: #72, #91, #96.
+- DONE W2-READER: decoders, filters, collections, handles, native capture and the rich demo (#14, #22, #31, #33, #46, #50, #53). Real parity is limited because AppleTruth lacks Full Disk Access. Pin/mute, audio Keep and recovery deadlines remain explicit gaps.
+- IN PROGRESS W2-LIST: chats store (#49), reconnect isolation (#71), atomic cache (#84) and the conversation list (#104, design fixes in progress). Filters/search are next.
+- IN PROGRESS W2-TRANSCRIPT: bubbles (#79), oldest anchor (#70), originator threads (#61) and reactions (approved), merging in that order.
+- IN PROGRESS W2-MEDIA: image bubbles (#77), transparent media (#80), collections and viewer (#82, #87, #93), photo stacks and desktop grids (#102), precache fix (#97). Video and Live bubbles are next.
+- IN PROGRESS W3-COMPOSE: exact observed record IDs (#86), safe resend identity (#88), State pool fix (#94), live source capability proofs (#101). The command layer and composer are next.
+- DONE (code) W3-HELPER: interactive origin gate, self-test, guarded resend, recoverable delete and chat actions (#51, #57, #59, #60, #63, #65). UI proofs wait for the unlock.
+- IN PROGRESS W5-STORE: Reminders Core Data store reader, decoders and the `reminders.*` read models (started 2026-10-21).
+- TODO: W2-DETAILS (after #104), W4 parity, W5-UI/WRITE/PARITY, W6–W8.
+- Dev infrastructure: re-entrant heavy.sh with an OS-matching SDK and an exclusive lane (#11, #35, #36, #37, #44), per-step gating (#74), per-project web budgets (#39), detached Air runs (#42), explicit ff updates (#89), disk trim (#95).
+- **Waiting on the Air being unlocked** (lock screen; passwords are never typed):
+  - Messages capture pass for `messages.md` §17 and the "to verify" rows.
+  - The W3 unlock script (cleanup of W1-MEDIA bubbles and self-test bubbles, then the UI proofs).
+  - Embedded tsnet login approval (`/tmp/ablab/w1-remote-embedded-check/remote-on.log`).
