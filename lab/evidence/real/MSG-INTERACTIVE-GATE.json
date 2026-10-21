@@ -1,0 +1,103 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[6.3 8.44 9.13] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5EDJ04FVTWC8RFWH1Q5BQ1Y",
+  "metrics": {
+    "cleanup": {
+      "all_dates": true,
+      "appletruth_active_remaining": 0,
+      "appletruth_verified": true,
+      "appletruth_visible_remaining": 0,
+      "approved_contacts_included": true,
+      "deleted": 2,
+      "drafts_cleared": 0,
+      "failure": "",
+      "initial_tagged_self_messages": 2,
+      "only_tagged_self_messages": false,
+      "passed": true,
+      "remaining_tagged_self_messages": 0,
+      "tag_filtered": true
+    },
+    "command_state": "observed",
+    "disposition": "locally_observed",
+    "initial_command_state": "observed",
+    "parts_requested": 1,
+    "send_commands": 1
+  },
+  "scenario": "MSG-INTERACTIVE-GATE",
+  "level": "real",
+  "passed": true,
+  "git_sha": "a8bf8c5a809d46638cccb0e886ae1ede0d52fc0a",
+  "at": "2026-10-21T05:04:47.759166Z",
+  "assertions": [
+    {
+      "name": "self_chat_captured",
+      "passed": true
+    },
+    {
+      "name": "cleanup_registered_before_submit",
+      "passed": true
+    },
+    {
+      "name": "lab_untagged_rejected_before_dispatch",
+      "passed": true
+    },
+    {
+      "name": "native_send_observed_with_fingerprint_checkpoint",
+      "passed": true
+    },
+    {
+      "name": "request_hash_bound",
+      "passed": true
+    },
+    {
+      "name": "truth_outgoing_not_echo",
+      "passed": true
+    },
+    {
+      "name": "command_visible_0",
+      "passed": true
+    },
+    {
+      "name": "command_sse_timestamp_0",
+      "passed": true
+    },
+    {
+      "name": "incoming_echo_visible_0",
+      "passed": true
+    },
+    {
+      "name": "incoming_echo_sse_timestamp_0",
+      "passed": true
+    },
+    {
+      "name": "tagged_messages_cleanup",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "command_submit_to_visible_0": {
+      "samples": 1,
+      "p50_ms": 1037.954125,
+      "p95_ms": 1037.954125,
+      "max_ms": 1037.954125,
+      "timeouts": 0
+    },
+    "echo_chat_db_appearance_to_visible_0": {
+      "samples": 1,
+      "p50_ms": 775.414541,
+      "p95_ms": 775.414541,
+      "max_ms": 775.414541,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

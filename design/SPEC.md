@@ -1268,7 +1268,7 @@ Recently Deleted becomes `deleted_at` + `recoverable_until` on messages and chat
 ### 23.13 W3: Messages, writing
 
 **Interactive gate (Helper).**
-- **Where interactive comes from:** a command arriving over ApplePeer with `origin: interactive`. Only the gateway sets this, only for `device:` principals (§23.2), and the IPC socket is owner-only.
+- **Where interactive comes from:** a command arriving over ApplePeer with `origin: interactive`. Only the gateway sets this for `device:` principals (§23.2) and policy-authorized `agent:` principals at level `full` (§23.6); the IPC socket is owner-only. The Helper rejects unknown origins, inconsistent action origins, and interactive origins from other principal kinds at the IPC boundary. Dispatch must retain the prepared origin.
 - **What it relaxes:** interactive commands skip the lab text tag (`[ab-test <id>]`) and the own-handle route restriction.
 - **What still applies:** the operation's capability proof for this OS build, expiry, the dispatch guard, conservative correlation, and the no-redispatch rules (§11.2).
 - **Other principals:** lab, test and `agent:` principals keep today's gates. `agent:` with level `full` gets interactive-equivalent routing only after owner approval or at level `full`, per §23.6.

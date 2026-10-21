@@ -1,0 +1,7 @@
+id: MSG-INTERACTIVE-GATE
+feature: web.messages.write
+levels: [sim, real]
+given: [{world: {replicas: 1}}]
+when: [{messages_commands: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

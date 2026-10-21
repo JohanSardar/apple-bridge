@@ -394,6 +394,12 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.Feature == "web.readmodels" {
 		return runReadModels(ctx, s, level)
 	}
+	if s.ID == "MSG-INTERACTIVE-GATE" {
+		if level == "real" {
+			return runMessagesCommands(ctx, s, level)
+		}
+		return runWebServer(ctx, s, level)
+	}
 	if s.Feature == "web.frontdoor" || s.Feature == "web.agents" {
 		return runWebServer(ctx, s, level)
 	}

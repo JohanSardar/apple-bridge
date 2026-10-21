@@ -91,7 +91,7 @@ func (g *LocalGateway) Submit(ctx context.Context, p trust.Principal, c contract
 	}()
 	var empty contracts.CommandRecord
 	c.Origin = ""
-	if p.Kind == "device" || p.Kind == "delegated" && strings.Contains(p.ID, "/device:") {
+	if p.Kind == "device" || p.Kind == "agent" && p.Level == trust.AgentFull || p.Kind == "delegated" && strings.Contains(p.ID, "/device:") {
 		c.Origin = "interactive"
 	}
 	a, err := contracts.ValidateCommand(c)
