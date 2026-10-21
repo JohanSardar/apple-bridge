@@ -432,6 +432,7 @@ features:
     status: todo
     scenarios:
       - {id: WEB-REMOTE-FUNNEL, levels: [real]}
+      - {id: WEB-LOCAL-SAFARI, levels: [web]}
   - id: web.agents
     title: Agent tokens with read, approve-first and full levels; MCP OAuth for connectors
     requirements: [R-WEB-SECURE, R-AGENT]

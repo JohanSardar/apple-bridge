@@ -78,6 +78,47 @@ func webBrowserControl(ctx context.Context, w *world.World, origin string) (*htt
 			var link string
 			link, err = enroll(request.URL.Query().Get("expired") == "1")
 			value = map[string]any{"url": link}
+		case "/local-credential":
+			var link string
+			link, err = enroll(false)
+			if err != nil {
+				break
+			}
+			var parsed *url.URL
+			parsed, err = url.Parse(link)
+			if err != nil {
+				break
+			}
+			client := webClient{ctx: ctx, origin: origin}
+			var response *http.Response
+			var data []byte
+			response, data, err = client.request("POST", "enroll/options", map[string]string{"token": parsed.Fragment, "kind": "trusted"})
+			if err != nil {
+				break
+			}
+			if response.StatusCode != 200 {
+				err = fmt.Errorf("enrollment options status %d", response.StatusCode)
+				break
+			}
+			var options struct {
+				ID        string `json:"ceremony_id"`
+				PublicKey struct {
+					Challenge string `json:"challenge"`
+				} `json:"publicKey"`
+			}
+			err = json.Unmarshal(data, &options)
+			if err != nil {
+				break
+			}
+			var authenticator *webAuthenticator
+			authenticator, err = newWebAuthenticator()
+			if err != nil {
+				break
+			}
+			var credential map[string]any
+			credential, err = authenticator.credential(true, options.PublicKey.Challenge, origin, parsed.Hostname())
+			value = map[string]any{"ceremony_id": options.ID, "credential": credential}
+
 		case "/session":
 			var link string
 			link, err = enroll(false)
