@@ -293,7 +293,7 @@ func Start(ctx context.Context, cfg Config) error {
 			}
 		}}
 		service.LocalStatus = client.Status
-		service.Target = &operations.RemoteGateway{Authority: authority, Exchange: client.Exchange, Connected: func() bool { return client.Status().State == "connected" }, Wait: client.Wait}
+		service.Target = &operations.RemoteGateway{Uploads: blobStore, UploadExchange: client.UploadControl, UploadBytes: client.UploadChunk, Authority: authority, Exchange: client.Exchange, Connected: func() bool { return client.Status().State == "connected" }, Wait: client.Wait}
 		enrollment, err := authority.Enrollment()
 		if err != nil || enrollment == nil {
 			return contracts.ErrUnauthorized

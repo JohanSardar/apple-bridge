@@ -9,13 +9,22 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"sync"
 	"time"
+
+	"github.com/JohanSardar/apple-bridge/internal/blobs"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/internal/trust"
 )
 
 type RemoteGateway struct {
+	Uploads        *blobs.Store
+	UploadExchange func(context.Context, string, json.RawMessage) (contracts.CommandResponse, error)
+	UploadBytes    func(context.Context, string, string, int64, []byte) (contracts.CommandResponse, error)
+	uploadMu       sync.Mutex
+	uploadSlot     chan struct{}
+
 	Exchange  func(context.Context, string, json.RawMessage) (contracts.CommandResponse, error)
 	Authority *trust.Authority
 	Connected func() bool

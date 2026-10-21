@@ -21,11 +21,7 @@ func (s *server) upload(w http.ResponseWriter, r *http.Request) {
 		reject(w, 503, "unavailable")
 		return
 	}
-	if r.Header.Get("Upload-ID") != "" || r.Header.Get("Upload-Length") != "" || r.Header.Get("Upload-Digest") != "" {
-		if s.replicaUpload() {
-			reject(w, 503, "unavailable")
-			return
-		}
+	if r.Header.Get("Upload-ID") != "" || r.Header.Get("Upload-Length") != "" || r.Header.Get("Upload-Digest") != "" || s.deps.Operations != nil && s.deps.Operations.UploadForwarding() {
 		s.streamUpload(w, r)
 		return
 	}
@@ -41,11 +37,14 @@ func (s *server) upload(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	if s.replicaUpload() {
-		respond(w, 200, map[string]string{"upload_id": id})
+	out, err := s.deps.Blobs.Upload(r.Context(), p.ID, contracts.UploadRequest{Action: "status", ID: id})
+	if err != nil {
+		uploadError(w, err)
 		return
 	}
-	out, err := s.deps.Blobs.Upload(r.Context(), p.ID, contracts.UploadRequest{Action: "status", ID: id})
+	if s.deps.Operations != nil {
+		out, err = s.deps.Operations.ForwardUpload(r.Context(), p, out)
+	}
 	if err != nil {
 		uploadError(w, err)
 		return

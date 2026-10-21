@@ -71,6 +71,9 @@ func uploadFeedProof(ctx context.Context, w *world.World, e *Evidence, add func(
 	}
 	_, err = probe.control(ctx, contracts.UploadRequest{Action: "commit", ID: id})
 	add("gateway_requires_forwarded_commit_digest", errors.Is(err, contracts.ErrInvalid))
+	_, wrongErr := probe.control(ctx, contracts.UploadRequest{Action: "commit", ID: id, Digest: strings.Repeat("0", 64)})
+	pending, pendingErr := probe.control(ctx, contracts.UploadRequest{Action: "status", ID: id})
+	add("changed_commit_digest_preserves_uploading_lease", errors.Is(wrongErr, contracts.ErrCorrupt) && pendingErr == nil && pending.State == "uploading" && pending.Offset == int64(len(data)))
 	status, err = probe.control(ctx, contracts.UploadRequest{Action: "commit", ID: id, Digest: digest})
 	add("gateway_digest_verified_before_ready", err == nil && status.State == "ready" && status.Digest == digest && status.Size == int64(len(data)))
 	raw, readErr := os.ReadFile(filepath.Join(w.Gateway.Home, "blobs/sha256", digest[:2], digest[2:]))
@@ -80,6 +83,7 @@ func uploadFeedProof(ctx context.Context, w *world.World, e *Evidence, add func(
 	retried, err := probe.control(ctx, contracts.UploadRequest{Action: "commit", ID: id, Digest: digest})
 	add("ready_commit_retry_keeps_verified_lease", err == nil && retried.Digest == digest && retried.State == "ready" && retried.ExpiresAt.Equal(status.ExpiresAt))
 	e.Metrics["resumed_feed_upload_bytes"] = len(raw)
+	uploadFeedCrossSession(ctx, w, probe, add)
 	uploadFeedCorruption(ctx, w, probe, add)
 }
 
