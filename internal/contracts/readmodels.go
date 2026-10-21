@@ -23,6 +23,7 @@ type AvatarHandle struct {
 	ContactID *string `json:"contact_id"`
 }
 type MessagePreview struct {
+	GroupEvent      map[string]any   `json:"group_event,omitempty"`
 	Kind            string           `json:"kind" enum:"text,attachments,reaction,group_event,unsent,edited"`
 	Text            string           `json:"text,omitempty"`
 	AttachmentKinds []string         `json:"attachment_kinds,omitempty"`
@@ -34,10 +35,11 @@ type ReactionPreview struct {
 	TargetExcerpt string `json:"target_excerpt"`
 }
 type LastMessage struct {
-	ID       string         `json:"id"`
-	SentAt   string         `json:"sent_at"`
-	IsFromMe bool           `json:"is_from_me"`
-	Preview  MessagePreview `json:"preview"`
+	SenderHandleID *string        `json:"sender_handle_id,omitempty"`
+	ID             string         `json:"id"`
+	SentAt         string         `json:"sent_at"`
+	IsFromMe       bool           `json:"is_from_me"`
+	Preview        MessagePreview `json:"preview"`
 }
 type ChatSummary struct {
 	Chat             Record         `json:"chat"`

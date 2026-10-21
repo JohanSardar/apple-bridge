@@ -246,11 +246,15 @@ func fillSummary(ctx context.Context, tx *sql.Tx, v trust.Visibility, s *contrac
 	messageID, activityID := message.ID, activity.activityID
 	md := modelFields(message)
 	last := &contracts.LastMessage{ID: message.ID, SentAt: fieldString(md, "sent_at"), IsFromMe: fieldBool(md, "is_from_me"), Preview: contracts.MessagePreview{Kind: "text", Text: fieldString(md, "text")}}
+	if sender := fieldString(md, "sender_handle_id"); sender != "" {
+		last.SenderHandleID = &sender
+	}
 	switch {
 	case md["retracted_at"] != nil || hasItems(md["retracted_parts"]):
 		last.Preview.Kind = "unsent"
 	case fieldString(md, "kind") == "group_event":
 		last.Preview.Kind = "group_event"
+		last.Preview.GroupEvent, _ = md["group_event"].(map[string]any)
 	case md["edited_at"] != nil:
 		last.Preview.Kind = "edited"
 	default:

@@ -1006,7 +1006,7 @@ Operations (descriptors in `internal/contracts/operations.go`; available through
   - `chat`: the record
   - `title`: display name, or the participants' contact names joined
   - `avatar_handles`: up to 3 handle ids with `contact_id`
-  - `last_message`: `{id, sent_at, is_from_me, preview{kind: text|attachments|reaction|group_event|unsent|edited, text?, attachment_kinds?, count?, reaction?}}`
+  - `last_message`: `{id, sent_at, is_from_me, sender_handle_id?, preview{group_event?, kind: text|attachments|reaction|group_event|unsent|edited, text?, attachment_kinds?, count?, reaction?}}`
   - `last_activity_at`, `unread_count`, `has_unseen_mention` (from captured message flags)
   - `muted` and `pinned_index`, nullable where native state is unavailable
 - `messages.thread{chat_id, anchor?, before?, after?, limit≤200}` → `{items: ThreadItem[], before?, after?, unread_anchor?}`. ThreadItem is the message record plus:
