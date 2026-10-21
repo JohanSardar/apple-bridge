@@ -139,6 +139,22 @@ public enum HelperCommand {
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportURL.path)
             return
         }
+        if arguments.first == "reminders-store-blob-fixture" {
+            var result: Result<JSON, any Error>?
+            Task { @MainActor in
+                do {
+                    let proof: JSON
+                    if arguments.contains("--cleanup") { proof = try await RemindersBlobFixture.recover(journal: reportURL) }
+                    else { proof = try await RemindersBlobFixture.run(journal: reportURL) }
+                    result = .success(proof)
+                }
+                catch { result = .failure(error) }
+            }
+            while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.005)) }
+            try JSONEncoder().encode(try result!.get()).write(to: reportURL, options: .atomic)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportURL.path)
+            return
+        }
         if arguments.first == "reminders-store-proof" {
             func option(_ key: String) throws -> String {
                 guard let index = arguments.firstIndex(of: key), index + 1 < arguments.count else { throw ProbeFailure.invalidArguments }

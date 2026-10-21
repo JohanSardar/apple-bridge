@@ -17,7 +17,7 @@ let package = Package(
         .target(name: "AgendaGate", dependencies: ["SourceSupport"]),
         .target(name: "CalendarSource", dependencies: ["AgendaGate", "SourceSupport"]),
         .target(name: "RemindersStore", dependencies: ["SourceSupport"]),
-        .executableTarget(name: "RemindersStoreChecks", dependencies: ["RemindersStore", "SourceSupport"], path: "Tests/RemindersStoreChecks"),
+        .executableTarget(name: "RemindersStoreChecks", dependencies: ["RemindersStore", "SourceSupport"], path: "Tests/RemindersStoreChecks", exclude: ["Fixtures"]),
         .target(name: "RemindersSource", dependencies: ["AgendaGate", "SourceSupport"]),
         .target(name: "NotesSource", dependencies: ["SourceSupport", "Decoders"]),
         .target(name: "MessagesSource", dependencies: ["SourceSupport", "Decoders", "MediaDerivatives"]),
