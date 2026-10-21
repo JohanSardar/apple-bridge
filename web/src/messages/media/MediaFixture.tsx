@@ -1,6 +1,6 @@
 import {For,Show,createSignal,onCleanup} from 'solid-js';
 import {auth} from '../../auth/session';
-import type {BridgeRecord} from '../../data/types';
+import type {BridgeRecord,ThreadItem} from '../../data/types';
 import {fields,text} from '../store/types';
 import {MessageMedia} from './MessageMedia';
 import {ChatMediaViewer} from './ChatMediaViewer';
@@ -13,6 +13,10 @@ export function MediaFixture(){
  onCleanup(()=>view?.dispose());
  const items=()=>(view?.data().items??[]).filter(item=>!item.data.balloon).flatMap(message=>message.attachments.filter(attachment=>text(attachment.data.mime_type).startsWith('image/')&&!attachment.data.hidden&&!attachment.data.genmoji&&!attachment.data.is_sticker).map(attachment=>({message,attachment})));
  const stackIds=params.getAll('stack'),stack=()=>stackIds.flatMap(id=>items().filter(value=>value.message.id===id).map(value=>value.attachment)),phone=matchMedia('(max-width:699px)').matches;
+ if(params.has('cards')){
+  const messages=():ThreadItem[]=>{const items=view?.data().items??[];if(params.get('cards')==='video'){const message=items.find(value=>value.attachments.some(attachment=>text(attachment.data.mime_type).startsWith('video/')));return message?[{...message,data:{...message.data,balloon:{kind:'link',link:{url:'https://example.com/local-video',title:'Local video preview',image_attachment_id:message.attachments.find(value=>text(value.data.mime_type).startsWith('video/'))?.id,video_url:'https://example.com/remote-video.mp4'}}}}]:[];}return items.filter(message=>['link','app'].includes(text(fields(message.data.balloon).kind))).map(message=>{if(!['plain','invalid'].includes(params.get('cards')??''))return message;const balloon=fields(message.data.balloon),kind=text(balloon.kind),payload=fields(balloon[kind]);return {...message,data:{...message.data,balloon:{...balloon,[kind]:{...payload,image_attachment_id:undefined,icon_attachment_id:undefined,...(params.get('cards')==='invalid'?{url:'javascript:alert(1)'}:{})}}}};});};
+  return <section class="media-fixture" aria-label="Message cards"><For each={messages()}>{message=>{const balloon=fields(message.data.balloon),payload=fields(balloon[text(balloon.kind)]),height=text(payload.image_attachment_id)||message.attachments.some(value=>text(value.data.mime_type).startsWith('video/'))?180:88;return <div class="media-fixture-slot" data-message={message.id} style={{width:'280px',height:height+'px'}}><MessageMedia message={message} part={{index:0,kind:'balloon'}} width={280} height={height}/></div>;}}</For></section>;
+ }
  return <><section class="media-fixture" aria-label="Media bubbles" data-shown-message={shown()}><Show when={stackIds.length>0} fallback={<For each={items()}>{value=>{
   const dimensions=fields(value.attachment.data.media),width=Number(dimensions.width)||260,height=Number(dimensions.height)||120,scale=Math.min(1,(matchMedia('(max-width:699px)').matches?240:320)/width,360/height);
   return <div class="media-fixture-slot" data-media-origin={value.attachment.id} data-media-alpha={attachmentHasAlpha(value.attachment)} data-message={value.message.id} style={{width:`${width*scale}px`,height:`${height*scale}px`}}><MessageMedia message={value.message} part={{index:0,kind:'attachment',attachment_id:value.attachment.id}} width={width*scale} height={height*scale} onOpen={(attachment,origin)=>setSelected({attachment,origin})}/></div>;
