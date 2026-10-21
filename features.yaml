@@ -530,5 +530,5 @@ features:
       - {id: MSG-MENTION-SEND, levels: [sim]}
       - {id: MSG-AUDIO-MESSAGE, levels: [sim, real]}
       - {id: MSG-RECENTLY-DELETED, levels: [sim, real]}
-      - {id: MSG-GROUP-MANAGE, levels: [sim, real]}
       - {id: WEB-MSG-PARITY-UI, levels: [web]}
+    notes: Group management (W4-GROUPS) completes the existing messages.groups feature and its scenarios instead of duplicating them.
