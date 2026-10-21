@@ -35,7 +35,7 @@ public enum MessagesCleanup {
         if !tag.isEmpty {
             let run = String(tag.dropFirst(9).dropLast())
             let ledger = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/AppleBridgeDev/messages-command-cleanup/" + run + ".json")
-            if let bytes = try? Data(contentsOf: ledger), let registration = try? JSONDecoder().decode(JSON.self, from: bytes), registration["scenario"].string == "WEB-MEDIA-VARIANTS", registration["run_id"].string == run {
+            if let bytes = try? Data(contentsOf: ledger), let registration = try? JSONDecoder().decode(JSON.self, from: bytes), ["WEB-MEDIA-VARIANTS", "MSG-SELFTEST"].contains(registration["scenario"].string), registration["run_id"].string == run {
                 mediaBaseline = Int64(registration["baseline_max_row_id"].number)
                 let registered = registration["media_attachment_names"].array.map(\.string)
                 for (index, name) in registered.enumerated() where name.hasPrefix("ab-" + run + ".") && name == URL(fileURLWithPath: name).lastPathComponent {

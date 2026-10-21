@@ -52,6 +52,7 @@ public enum HelperCommand {
             let peer = try AppleSession(socket: socket, secretFile: secretFile, home: home, gatewayPID: gatewayPID, commandsEnabled: arguments.contains("--lab-commands"))
             var finished = false
             Task { @MainActor in
+                if !arguments.contains("--lab-commands") { _ = try? await MessagesSelfTest.shared.run() }
                 let messages = Messages(diagnostics: arguments.contains("--lab-commands") ? home.appendingPathComponent("messages-watch.json") : nil, labCommands: arguments.contains("--lab-commands"))
                 try? await peer.register(try NotesSource(home: home))
                 try? await peer.register(messages, readBlob: { handle, offset, length in
@@ -65,6 +66,23 @@ public enum HelperCommand {
         }
         guard let reportIndex = arguments.firstIndex(of: "--report"), reportIndex + 1 < arguments.count else { throw ProbeFailure.invalidArguments }
         let reportURL = try PrivateReport.validate(arguments[reportIndex + 1])
+        if arguments.first == "selftest", arguments.dropFirst().first == "messages" {
+            var finished = false
+            DispatchQueue.global().asyncAfter(deadline: .now() + 600) { @Sendable in
+                try? PrivateReport.write(["state": "interrupted", "reason": "selftest_deadline", "disposition": "indeterminate"], to: reportURL)
+                exit(1)
+            }
+            Task { @MainActor in
+                do {
+                    let result = try await MessagesSelfTest.shared.run(force: arguments.contains("--force"), includeUI: !arguments.contains("--no-ui"))
+                    try JSONEncoder().encode(result).write(to: reportURL, options: .atomic)
+                    try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportURL.path)
+                } catch { try? PrivateReport.write(["state": "unavailable", "reason": String(describing: error)], to: reportURL) }
+                finished = true
+            }
+            while !finished { RunLoop.current.run(until: Date().addingTimeInterval(0.05)) }
+            return
+        }
         if arguments.first == "notes-probe" {
             var error: NSDictionary?
             let result = NSAppleScript(source: "with timeout of 5 seconds\ntell application \"Notes\" to count accounts\nend timeout")?.executeAndReturnError(&error)
