@@ -185,8 +185,8 @@ func (s *server) live(w http.ResponseWriter, r *http.Request) {
 			case <-beat.C:
 				l.send(map[string]any{"t": "beat", "head": s.deps.Operations.Head()}, false)
 			case <-tick.C:
-				_, _, err := s.deps.Authority.InspectDevice(l.identity.Token)
-				if err != nil {
+				principal, _, err := s.deps.Authority.InspectDevice(l.identity.Token)
+				if err != nil || principal.Revision != l.identity.Principal.Revision {
 					l.send(map[string]any{"t": "session_revoked"}, true)
 					return
 				}
@@ -198,6 +198,10 @@ func (s *server) live(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return
 		}
+		if !s.allow(l.identity.Principal.ID, false) {
+			l.fail("rate_limited", "rate limited")
+			continue
+		}
 		var f clientFrame
 		if typ != websocket.MessageText || json.Unmarshal(data, &f) != nil {
 			l.fail("invalid", "invalid frame")
@@ -207,12 +211,8 @@ func (s *server) live(w http.ResponseWriter, r *http.Request) {
 		if f.T == "ping" {
 			authenticate = s.deps.Authority.InspectDevice
 		}
-		if _, _, err := authenticate(l.identity.Token); err != nil {
+		if principal, _, err := authenticate(l.identity.Token); err != nil || principal.Revision != l.identity.Principal.Revision {
 			l.send(map[string]any{"t": "session_revoked"}, true)
-			continue
-		}
-		if !s.allow(l.identity.Principal.ID, false) {
-			l.fail("rate_limited", "rate limited")
 			continue
 		}
 		switch f.T {
