@@ -110,7 +110,7 @@ func (f *fakeApple) blobRoutes(mux *http.ServeMux) {
 				b = []byte(strings.Repeat("[ab-test] relay blob\n", 8192))
 			}
 			if a.MIME == "image/png" {
-				b, _ = base64.StdEncoding.DecodeString("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aX1sAAAAASUVORK5CYII=")
+				b, _ = base64.StdEncoding.DecodeString("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGP4DwQACfsD/fteaysAAAAASUVORK5CYII=")
 			}
 			sum := sha256.Sum256(b)
 			d := hex.EncodeToString(sum[:])
@@ -135,7 +135,7 @@ func (f *fakeApple) blobRoutes(mux *http.ServeMux) {
 						attachment["mime_type"] = a.MIME
 					}
 					if a.Variant {
-						variant, _ := base64.StdEncoding.DecodeString("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aX1sAAAAASUVORK5CYII=")
+						variant, _ := base64.StdEncoding.DecodeString("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGP4DwQACfsD/fteaysAAAAASUVORK5CYII=")
 						if a.MissingVariant {
 							variant = []byte("Bridge Test pending variant")
 						}

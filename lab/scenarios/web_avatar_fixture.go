@@ -1,6 +1,7 @@
 package scenarios
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
@@ -27,7 +28,7 @@ func webAvatarFixture(w *world.World) (webAvatar, error) {
 	if err := w.ControlAction("/blob-fixture", map[string]any{"size": 1, "mime_type": "image/png"}); err != nil {
 		return out, err
 	}
-	image, _ := base64.StdEncoding.DecodeString("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aX1sAAAAASUVORK5CYII=")
+	image, _ := base64.StdEncoding.DecodeString("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGP4DwQACfsD/fteaysAAAAASUVORK5CYII=")
 	digest := sha256.Sum256(image)
 	out.Digest = hex.EncodeToString(digest[:])
 	if err := w.ControlAction("/external-change", map[string]any{"key": "list-contact-photo", "collection": "contacts.contact", "data": map[string]any{"given_name": "Sam", "family_name": "Rivera", "emails": []any{map[string]any{"value": "photo@example.com"}}, "thumbnail_image": map[string]any{"digest": out.Digest, "size": len(image), "state": "present"}}}); err != nil {
@@ -41,11 +42,16 @@ func webAvatarFixture(w *world.World) (webAvatar, error) {
 		return out, flushErr
 	}
 	err := w.Await(10*time.Second, func() bool {
-		aliases, err := gatewayAliases(w)
+		var contacts contracts.ReadResult
+		_, err := world.Request(context.Background(), w.Gateway, "/v1/op/records.query", contracts.ReadQuery{Collection: "contacts.contact", IncludeAliases: true, Limit: 1000}, &contacts)
 		if err != nil {
 			return false
 		}
-		out.Record = aliases[aliasKey(contracts.Contacts, "contacts.contact", "list-contact-photo")]
+		for _, alias := range contacts.Aliases {
+			if alias.NativeKey == "list-contact-photo" {
+				out.Record = alias.RecordID
+			}
+		}
 		return out.Record != ""
 	})
 	if err != nil {
