@@ -1,0 +1,88 @@
+{
+  "scenario": "REM-STORE-PERF",
+  "level": "real",
+  "phase": "typed_persistent_before_dropping_version_scan",
+  "profile_sources_uncommitted": true,
+  "source_base_git_sha": "a39e2f6c750fb986b433efa079a827422daf0d44",
+  "report_sha256": "8ad0acf442b788ffe50209c6a1ce9e672e39074234f7df120224bb979a75c3d5",
+  "completed_at": "2026-10-21T13:42:53.671019+00:00",
+  "profile": {
+    "profile_total_ms": 9673.012666637078,
+    "warm_full": {
+      "backup": {
+        "max_ms": 0,
+        "samples": 200,
+        "p95_ms": 0,
+        "p50_ms": 0
+      },
+      "total": {
+        "samples": 200,
+        "max_ms": 120.84733322262764,
+        "p95_ms": 55.85416662506759,
+        "p50_ms": 42.49170795083046
+      },
+      "connection_open": {
+        "max_ms": 0,
+        "p95_ms": 0,
+        "samples": 200,
+        "p50_ms": 0
+      },
+      "decode": {
+        "samples": 200,
+        "p95_ms": 9.940329939126968,
+        "max_ms": 10.744352359324694,
+        "p50_ms": 8.412068709731102
+      },
+      "query": {
+        "samples": 200,
+        "p95_ms": 45.39598850533366,
+        "max_ms": 111.49943107739091,
+        "p50_ms": 34.139430383220315
+      }
+    },
+    "cold": {
+      "total_ms": 693.4644998982549,
+      "backup_ms": 0,
+      "close_ms": 0,
+      "connection_open_ms": 2.698708325624466,
+      "decode_ms": 18.182139145210385,
+      "query_ms": 672.58365242742
+    },
+    "mode": "persistent_typed",
+    "warm_incremental_unchanged": {
+      "backup": {
+        "p95_ms": 0,
+        "samples": 200,
+        "max_ms": 0,
+        "p50_ms": 0
+      },
+      "connection_open": {
+        "max_ms": 0,
+        "samples": 200,
+        "p95_ms": 0,
+        "p50_ms": 0
+      },
+      "decode": {
+        "max_ms": 0.45095966197550297,
+        "samples": 200,
+        "p95_ms": 0.335583696141839,
+        "p50_ms": 0.29833242297172546
+      },
+      "total": {
+        "max_ms": 0.4902915097773075,
+        "samples": 200,
+        "p95_ms": 0.36737509071826935,
+        "p50_ms": 0.32966630533337593
+      },
+      "query": {
+        "samples": 200,
+        "max_ms": 0.043833162635564804,
+        "p95_ms": 0.03266730345785618,
+        "p50_ms": 0.03137555904686451
+      }
+    },
+    "iterations": 200,
+    "launch_and_report_elapsed_ms": 10363.991959020495,
+    "launch_report_overhead_ms": 690.9792923834175
+  }
+}

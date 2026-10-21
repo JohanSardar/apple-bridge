@@ -1,0 +1,244 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[6.62 6.52 6.95] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5FC5QBEFC4BN09X0Q89H7W0",
+  "metrics": {
+    "profile": {
+      "change_sized_history_proven": true,
+      "cold": {
+        "decode_ms": 1.2390818446874619,
+        "close_ms": 0,
+        "backup_ms": 0,
+        "total_ms": 1.8001252319663763,
+        "connection_open_ms": 0.06479187868535519,
+        "query_ms": 0.49625150859355927
+      },
+      "iterations": 200,
+      "mode": "synthetic_1000_typed",
+      "warm_full": {
+        "query": {
+          "max_ms": 0.4117090720683336,
+          "p50_ms": 0.3516091965138912,
+          "samples": 200,
+          "p95_ms": 0.3657531924545765
+        },
+        "total": {
+          "samples": 200,
+          "p50_ms": 1.241458347067237,
+          "max_ms": 1.5619583427906036,
+          "p95_ms": 1.310958294197917
+        },
+        "decode": {
+          "max_ms": 1.1706328950822353,
+          "p50_ms": 0.8907911833375692,
+          "samples": 200,
+          "p95_ms": 0.9559965692460537
+        }
+      },
+      "warm_incremental_changed_1": {
+        "query": {
+          "max_ms": 0.24495855905115604,
+          "samples": 200,
+          "p50_ms": 0.019208062440156937,
+          "p95_ms": 0.024541979655623436
+        },
+        "total": {
+          "max_ms": 0.44041662476956844,
+          "samples": 200,
+          "p50_ms": 0.20862487144768238,
+          "p95_ms": 0.23537501692771912
+        },
+        "decode": {
+          "max_ms": 0.2998746931552887,
+          "samples": 200,
+          "p50_ms": 0.1894584856927395,
+          "p95_ms": 0.21174969151616096
+        }
+      },
+      "warm_incremental_changed_10": {
+        "query": {
+          "max_ms": 0.0825000461190939,
+          "p50_ms": 0.031084055081009865,
+          "samples": 200,
+          "p95_ms": 0.03470783121883869
+        },
+        "total": {
+          "max_ms": 0.33579161390662193,
+          "p50_ms": 0.26108347810804844,
+          "samples": 200,
+          "p95_ms": 0.2875416539609432
+        },
+        "decode": {
+          "samples": 200,
+          "p50_ms": 0.22949976846575737,
+          "max_ms": 0.2943328581750393,
+          "p95_ms": 0.2521667629480362
+        }
+      },
+      "warm_incremental_changed_100": {
+        "query": {
+          "max_ms": 1.623624237254262,
+          "p50_ms": 0.12137438170611858,
+          "samples": 200,
+          "p95_ms": 0.13833330012857914
+        },
+        "total": {
+          "max_ms": 2.2909166291356087,
+          "p50_ms": 0.6942916661500931,
+          "samples": 200,
+          "p95_ms": 0.7931666914373636
+        },
+        "decode": {
+          "samples": 200,
+          "p50_ms": 0.5772493313997984,
+          "max_ms": 0.7101248484104872,
+          "p95_ms": 0.6559579633176327
+        }
+      },
+      "warm_incremental_changed_1000": {
+        "query": {
+          "samples": 200,
+          "p50_ms": 1.1417546775192022,
+          "max_ms": 2.6190034113824368,
+          "p95_ms": 1.440574647858739
+        },
+        "total": {
+          "samples": 200,
+          "p50_ms": 5.5860416032373905,
+          "max_ms": 8.786916499957442,
+          "p95_ms": 6.850416772067547
+        },
+        "decode": {
+          "max_ms": 6.940998136997223,
+          "p50_ms": 4.402004182338715,
+          "samples": 200,
+          "p95_ms": 5.378954345360398
+        }
+      },
+      "warm_incremental_unchanged": {
+        "query": {
+          "p95_ms": 0.005708076059818268,
+          "p50_ms": 0.004833098500967026,
+          "max_ms": 0.009583309292793274,
+          "samples": 200
+        },
+        "total": {
+          "max_ms": 0.21095830015838146,
+          "p50_ms": 0.11483323760330677,
+          "samples": 200,
+          "p95_ms": 0.12695835903286934
+        },
+        "decode": {
+          "max_ms": 0.2013749908655882,
+          "p50_ms": 0.10999990627169609,
+          "samples": 200,
+          "p95_ms": 0.12154225260019302
+        }
+      }
+    }
+  },
+  "scenario": "REM-STORE-PERF",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "5ac346f264da1ccc01aab03589243b97b1839277",
+  "at": "2026-10-21T13:59:51.406174Z",
+  "assertions": [
+    {
+      "name": "private_profile_directory",
+      "passed": true
+    },
+    {
+      "name": "store_profile_completed",
+      "passed": true
+    },
+    {
+      "name": "timing_only_profile_decoded",
+      "passed": true
+    },
+    {
+      "name": "warm_full_200_samples_within_budget",
+      "passed": true
+    },
+    {
+      "name": "warm_incremental_unchanged_200_samples_within_budget",
+      "passed": true
+    },
+    {
+      "name": "warm_incremental_changed_1_200_samples_within_budget",
+      "passed": true
+    },
+    {
+      "name": "warm_incremental_changed_10_200_samples_within_budget",
+      "passed": true
+    },
+    {
+      "name": "warm_incremental_changed_100_200_samples_within_budget",
+      "passed": true
+    },
+    {
+      "name": "warm_incremental_changed_1000_200_samples_within_budget",
+      "passed": true
+    },
+    {
+      "name": "full_and_incremental_measured",
+      "passed": true
+    },
+    {
+      "name": "changed_history_measured",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "warm_full": {
+      "samples": 200,
+      "p50_ms": 1.241458347067237,
+      "p95_ms": 1.310958294197917,
+      "max_ms": 1.5619583427906036,
+      "timeouts": 0
+    },
+    "warm_incremental_changed_1": {
+      "samples": 200,
+      "p50_ms": 0.20862487144768238,
+      "p95_ms": 0.23537501692771912,
+      "max_ms": 0.44041662476956844,
+      "timeouts": 0
+    },
+    "warm_incremental_changed_10": {
+      "samples": 200,
+      "p50_ms": 0.26108347810804844,
+      "p95_ms": 0.2875416539609432,
+      "max_ms": 0.33579161390662193,
+      "timeouts": 0
+    },
+    "warm_incremental_changed_100": {
+      "samples": 200,
+      "p50_ms": 0.6942916661500931,
+      "p95_ms": 0.7931666914373636,
+      "max_ms": 2.2909166291356087,
+      "timeouts": 0
+    },
+    "warm_incremental_changed_1000": {
+      "samples": 200,
+      "p50_ms": 5.5860416032373905,
+      "p95_ms": 6.850416772067547,
+      "max_ms": 8.786916499957442,
+      "timeouts": 0
+    },
+    "warm_incremental_unchanged": {
+      "samples": 200,
+      "p50_ms": 0.11483323760330677,
+      "p95_ms": 0.12695835903286934,
+      "max_ms": 0.21095830015838146,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

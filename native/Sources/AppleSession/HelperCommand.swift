@@ -96,6 +96,32 @@ public enum HelperCommand {
             while !finished { RunLoop.current.run(until: Date().addingTimeInterval(0.05)) }
             return
         }
+        if arguments.first == "reminders-store-profile" {
+            var result: Result<JSON, any Error>?
+            var stage = "cold_responsiveness"
+            Task { @MainActor in
+                do {
+                    let responsiveness = try await RemindersStoreResponsiveness.run()
+                    stage = "warm_profile"
+                    var profile = try await RemindersStoreProfile.typed().object
+                    profile["responsiveness"] = responsiveness
+                    result = .success(.object(profile))
+                }
+                catch { result = .failure(error) }
+            }
+            while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.005)) }
+            let profile: JSON
+            do { profile = try result!.get() }
+            catch {
+                let failure = error as NSError
+                let reason = error is SourceFailure ? String(describing: error) : failure.domain + ":" + String(failure.code)
+                try PrivateReport.write(["status": "unavailable", "stage": stage, "reason": reason], to: reportURL)
+                throw error
+            }
+            try JSONEncoder().encode(profile).write(to: reportURL, options: .atomic)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportURL.path)
+            return
+        }
         if arguments.first == "reminders-store-proof" {
             func option(_ key: String) throws -> String {
                 guard let index = arguments.firstIndex(of: key), index + 1 < arguments.count else { throw ProbeFailure.invalidArguments }
