@@ -56,11 +56,12 @@ features:
     status: done
     scenarios:
       - {id: CORE-LIVE-LATENCY, levels: [sim, real, replica]}
-      - {id: CORE-SNAPSHOT-UNDER-LOAD, levels: [sim]}
+      - {id: CORE-SNAPSHOT-UNDER-LOAD, levels: [sim, replica]}
       - {id: CORE-SNAPSHOT-INTERRUPT, levels: [sim]}
       - {id: CORE-RESUME, levels: [sim, replica]}
-      - {id: CORE-RETENTION-RACE, levels: [sim]}
-      - {id: CORE-GAP-REJECT, levels: [sim]}
+      - {id: CORE-RETENTION-RACE, levels: [sim, replica]}
+      - {id: CORE-GAP-REJECT, levels: [sim, replica]}
+      - {id: CORE-FEED-PIPELINED-ACKS, levels: [sim, replica]}
       - {id: CORE-KILL-DURING-APPLY, levels: [sim]}
       - {id: CORE-KILL-GATEWAY-CAPTURE, levels: [sim]}
       - {id: CORE-SLOW-CONSUMER, levels: [sim]}

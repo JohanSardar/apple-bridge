@@ -1,0 +1,7 @@
+id: CORE-FEED-PIPELINED-ACKS
+feature: core.replication
+levels: [sim, replica]
+given: [{world: {replicas: 1}}]
+when: [{robustness: {case: pipelined-acks}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

@@ -370,6 +370,44 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 			return fail("gap_recovery")
 		}
 		add("gap_rejected_connection_reopened", w.FeedConnections() >= 2)
+	case "pipelined-acks":
+		if w.SuppressAcks(false) != nil || w.Await(10*time.Second, func() bool { return w.FeedConnections() >= 1 && connected() }) != nil {
+			return fail("frame_proxy_connect")
+		}
+		initial := w.FeedConnections()
+		if w.SuppressAcks(true) != nil || !change("unacknowledged-first", 1) {
+			return fail("first_unacknowledged_change")
+		}
+		if w.Await(5*time.Second, func() bool { return convergence(w) }) != nil {
+			return fail("first_batch_applied")
+		}
+		if !change("unacknowledged-next", 20) {
+			return fail("following_changes")
+		}
+		if w.Await(5*time.Second, func() bool { return convergence(w) }) != nil {
+			return fail("later_batches_applied_before_any_ack")
+		}
+		add("later_batches_applied_before_any_ack", true)
+		for index := 0; index < 80; index++ {
+			data := map[string]any{"title": fmt.Sprintf("[ab-test] credit-window-%d", index), "payload": strings.Repeat("x", 64<<10)}
+			if w.ControlAction("/external-change", map[string]any{"key": fmt.Sprintf("credit-window-%d", index), "data": data}) != nil {
+				return fail("fill_credit_window")
+			}
+		}
+		filled := w.Await(10*time.Second, func() bool { return w.FeedCreditHighWater() > contracts.ByteCredit-contracts.MaxFrame }) == nil
+		highWater := w.FeedCreditHighWater()
+		add("outstanding_metadata_within_four_mib", filled && highWater <= contracts.ByteCredit)
+		gatewayCursor, gatewayErr := w.Cursor(w.Gateway)
+		replicaCursor, replicaErr := w.Cursor(w.Replicas[0])
+		add("exhausted_credit_blocks_later_batches", gatewayErr == nil && replicaErr == nil && gatewayCursor.Sequence > replicaCursor.Sequence)
+		if evidence.Metrics == nil {
+			evidence.Metrics = map[string]any{}
+		}
+		evidence.Metrics["maximum_outstanding_metadata_bytes"] = highWater
+		add("same_feed_connection", w.FeedConnections() == initial)
+		w.SuppressAcks(false)
+		w.Partition(0)
+		w.Heal(0)
 	case "slow-consumer":
 		if w.SuppressAcks(false) != nil {
 			return fail("frame_proxy_start")
