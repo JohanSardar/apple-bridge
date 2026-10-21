@@ -200,6 +200,16 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 		}
 		args["files"] = []contracts.MessageFile{large, {Name: "ab-" + e.RunID + "-two.txt", Data: base64.StdEncoding.EncodeToString([]byte(text + " two"))}}
 	}
+	var nativeUploadClient *webClient
+	if s.ID == "WEB-UPLOAD-NATIVE-STAGING" {
+		file, owner, problem := stageNativeWebUpload(ctx, w, e.RunID, messageSyntheticFile(text))
+		add("web_upload_verified_ready", problem == nil)
+		if problem != nil {
+			return e
+		}
+		args["files"] = []contracts.MessageFile{file}
+		nativeUploadClient = owner
+	}
 	var maximum int64
 	native.QueryRowContext(ctx, "SELECT COALESCE(MAX(ROWID),0) FROM message").Scan(&maximum)
 	raw, _ := json.Marshal(args)
@@ -217,7 +227,7 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 	if s.ID == "MSG-INTERACTIVE-GATE" {
 		cleanup["interactive_text"] = text
 	}
-	if s.ID == "WEB-MEDIA-VARIANTS" {
+	if s.ID == "WEB-MEDIA-VARIANTS" || s.ID == "WEB-UPLOAD-NATIVE-STAGING" {
 		names := []string{}
 		for _, file := range argsFiles(args) {
 			names = append(names, file.Name)
@@ -242,7 +252,7 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 			result.Status = "environment-limited"
 		}
 		result.Assertions = append(result.Assertions, Assertion{Name: "tagged_messages_cleanup", Passed: ok})
-		if s.ID == "WEB-MEDIA-VARIANTS" {
+		if s.ID == "WEB-MEDIA-VARIANTS" || s.ID == "WEB-UPLOAD-NATIVE-STAGING" {
 			var remaining int
 			problem := native.QueryRowContext(context.Background(), "SELECT COUNT(DISTINCT m.ROWID) FROM message m JOIN message_attachment_join j ON j.message_id=m.ROWID JOIN attachment a ON a.ROWID=j.attachment_id JOIN chat_message_join c ON c.message_id=m.ROWID WHERE m.ROWID>? AND a.filename LIKE ? AND NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=c.chat_id)", maximum, "%ab-"+e.RunID+".%").Scan(&remaining)
 			result.Assertions = append(result.Assertions, Assertion{Name: "tagged_media_cleanup_readonly_truth", Passed: problem == nil && remaining == 0})
@@ -308,7 +318,15 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 	}
 	started := time.Now()
 	var outcome contracts.CommandRecord
-	if s.ID == "MSG-INTERACTIVE-GATE" {
+	if nativeUploadClient != nil {
+		socket, problem := nativeUploadClient.socket()
+		add("web_command_channel", problem == nil)
+		if problem != nil {
+			return e
+		}
+		defer socket.CloseNow()
+		outcome, err = uploadCommandReply(ctx, socket, c)
+	} else if s.ID == "MSG-INTERACTIVE-GATE" {
 		var rejected contracts.CommandRecord
 		problem := client.Call(ctx, c.Op, c, &rejected)
 		_, lookupErr := world.Request(ctx, w.Gateway, "/v1/op/commands.status", contracts.CommandQuery{ID: c.ID}, &rejected)
@@ -403,6 +421,24 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 	saveCleanup()
 	if s.ID == "WEB-MEDIA-VARIANTS" {
 		return verifyMediaVariants(ctx, e, w, "ab-"+e.RunID, mediaAppeared, observers)
+	}
+	if s.ID == "WEB-UPLOAD-NATIVE-STAGING" {
+		add("two_native_part_outcomes", len(evidence.Parts) == 2)
+		keys := []string{}
+		for _, part := range evidence.Parts {
+			var count int
+			problem := native.QueryRowContext(ctx, "SELECT COUNT(*) FROM message WHERE guid=? AND is_from_me=1 AND ROWID>?", part.NativeKey, maximum).Scan(&count)
+			add("truth_native_part_once", problem == nil && count == 1)
+			keys = append(keys, part.NativeKey)
+		}
+		verifyNativeUploadTransfer(ctx, w, native, keys, messageSyntheticFile(text), e.Metrics, add)
+		var sentFiles, sentTexts int
+		fileErr := native.QueryRowContext(ctx, "SELECT COUNT(DISTINCT m.ROWID) FROM message m JOIN message_attachment_join j ON j.message_id=m.ROWID JOIN attachment a ON a.ROWID=j.attachment_id WHERE m.ROWID>? AND m.is_from_me=1 AND instr(a.filename,?)>0", maximum, "ab-"+e.RunID+".txt").Scan(&sentFiles)
+		textErr := native.QueryRowContext(ctx, "SELECT COUNT(*) FROM message m WHERE m.ROWID>? AND m.is_from_me=1 AND (m.text=? OR instr(m.attributedBody,CAST(? AS BLOB))>0)", maximum, text, text).Scan(&sentTexts)
+		add("native_attachment_effect_exactly_one", fileErr == nil && sentFiles == 1)
+		add("native_tagged_text_effect_exactly_one", textErr == nil && sentTexts == 1)
+		add("verified_upload_reference_persisted", len(outcome.UploadReferences) == 1)
+		return e
 	}
 	if s.ID != "MSG-SEND-SELF-TEXT" && s.ID != "MSG-SEND-FILES" && s.ID != "MSG-INTERACTIVE-GATE" && s.ID != "MSG-RESEND" {
 		return runNativeMessageAction(ctx, s, e, w, evidence.NativeKey, text, stateDB, func(id string) error {

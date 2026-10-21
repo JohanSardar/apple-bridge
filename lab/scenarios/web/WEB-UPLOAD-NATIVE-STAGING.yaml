@@ -1,0 +1,7 @@
+id: WEB-UPLOAD-NATIVE-STAGING
+feature: web.messages.write
+levels: [sim, real]
+given: []
+when: [{web: {}}]
+then: []
+cleanup: []
