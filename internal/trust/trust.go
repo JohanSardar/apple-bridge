@@ -57,6 +57,13 @@ func AllVisibility() Visibility {
 }
 
 type Principal struct {
+	Name        string            `json:"name,omitempty"`
+	Level       AgentLevel        `json:"level,omitempty"`
+	CreatedAt   time.Time         `json:"created_at,omitempty"`
+	RevokedAt   *time.Time        `json:"revoked_at,omitempty"`
+	LastUsed    *time.Time        `json:"last_used,omitempty"`
+	ExpiresAt   time.Time         `json:"expires_at,omitempty"`
+	Resource    string            `json:"resource,omitempty"`
 	Dial        string            `json:"dial,omitempty"`
 	ID          string            `json:"id"`
 	Kind        string            `json:"kind"`
@@ -338,8 +345,14 @@ func (a *Authority) AuthenticateToken(token string) (Principal, error) {
 	err = func() error {
 		hash := Fingerprint([]byte(token))
 		for _, candidate := range d.Principals {
-			if candidate.Kind == "token" && hmac.Equal([]byte(hash), []byte(candidate.TokenHash)) {
+			if (candidate.Kind == "token" || candidate.Kind == "agent") && principalActive(candidate) && hmac.Equal([]byte(hash), []byte(candidate.TokenHash)) {
 				p = candidate
+				if p.Kind == "agent" {
+					p, err = a.useAgent(p.ID, hash)
+					if err != nil {
+						return err
+					}
+				}
 				if d.Enrollment != nil {
 					p.Grants = EffectiveGrants(p.Grants, d.Enrollment.Grants)
 				}

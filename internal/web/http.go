@@ -172,7 +172,8 @@ func Handler(deps Deps) http.Handler {
 	mux.HandleFunc("GET /web/v1/live", s.live)
 	mux.HandleFunc("GET /web/v1/blob/{digest}", s.blob)
 	mux.HandleFunc("POST /web/v1/upload", s.upload)
-	for _, route := range []string{"GET agents", "POST agents", "DELETE agents/{id}", "GET activity", "GET approvals", "POST approvals/{command_id}"} {
+	s.agentRoutes(mux)
+	for _, route := range []string{"GET activity", "GET approvals", "POST approvals/{command_id}"} {
 		method, path, _ := strings.Cut(route, " ")
 		mux.HandleFunc(method+" /web/v1/"+path, func(w http.ResponseWriter, r *http.Request) { reject(w, 501, "not_implemented") })
 	}

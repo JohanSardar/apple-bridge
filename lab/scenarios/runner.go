@@ -382,7 +382,7 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.Feature == "web.readmodels" {
 		return runReadModels(ctx, s, level)
 	}
-	if s.Feature == "web.frontdoor" {
+	if s.Feature == "web.frontdoor" || s.Feature == "web.agents" {
 		return runWebServer(ctx, s, level)
 	}
 	if strings.HasPrefix(s.ID, "USE-") {

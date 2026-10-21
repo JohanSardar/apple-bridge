@@ -66,6 +66,8 @@ func runWebServer(ctx context.Context, s Scenario, level string) Evidence {
 		return e
 	}
 	switch s.ID {
+	case "WEB-AGENT-CREDENTIALS":
+		runAgentCredentials(ctx, w, &e, add)
 	case "WEB-SERVE-EMBED":
 		for _, built := range []bool{false, true} {
 			assets := fstest.MapFS{}
