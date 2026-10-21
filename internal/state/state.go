@@ -26,15 +26,16 @@ type Store struct {
 	BlobDelta      func(context.Context, contracts.ReferenceSet, bool) error
 	blobSnapshots  map[string][]contracts.BlobReference
 
-	home          string
-	ledger        *sql.DB
-	applyBoundary func()
-	db            *sql.DB
-	write         sync.Mutex
-	mu            sync.Mutex
-	changed       chan struct{}
-	leases        map[string]snapshotLease
-	capacity      map[contracts.Source]bool
+	home            string
+	ledger          *sql.DB
+	applyBoundary   func()
+	db              *sql.DB
+	write           sync.Mutex
+	mu              sync.Mutex
+	changed         chan struct{}
+	leases          map[string]snapshotLease
+	captureFailures map[contracts.Source]captureFailure
+	capacity        map[contracts.Source]bool
 }
 type CommitResult struct {
 	CommittedAt time.Time `json:"-"`
