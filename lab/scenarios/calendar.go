@@ -703,6 +703,18 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		}
 		add("original_occurrence_identity_preserved", kept)
 		add("other_occurrences_unchanged", unchanged == 2)
+		if s.ID == "CAL-RECUR-THIS" {
+			deleted := baseline[2]
+			err = submit("calendar.delete_event", map[string]any{"id": deleted.ID, "span": "this"}, deleted.Version)
+			add("delete_one_occurrence_is_observed", err == nil && last.Disposition == "locally_observed" && last.CommitSeq > 0)
+			add("delete_one_occurrence_keeps_surviving_series", awaitCount(2))
+			remaining := records(w.Gateway)
+			preserved := len(remaining) == 2
+			for _, record := range remaining {
+				preserved = preserved && record.ID != deleted.ID && (record.ID == baseline[0].ID || record.ID == baseline[1].ID)
+			}
+			add("delete_one_occurrence_preserves_other_identities", preserved)
+		}
 	case "CAL-SPLIT-FRAME-CAP":
 		target := baseline[1]
 		err = submit("calendar.update_event", map[string]any{"id": target.ID, "span": "future", "title": tag + " oversized future"}, target.Version)

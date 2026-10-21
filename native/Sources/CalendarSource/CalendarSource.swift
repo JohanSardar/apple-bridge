@@ -199,8 +199,8 @@ public final class CalendarSource: Source {
         let started = timestamp()
         let scan = UUID().uuidString
         let scanNS = CaptureTrace.now()
-        var fetchNS: UInt64 = 0, materializeNS: UInt64 = 0, hashNS: UInt64 = 0
-        defer { gate.trace.record("calendar_scan_timing", fields: ["scan": .string(scan), "started_ns": .integer(scanNS), "fetch_ns": .integer(fetchNS), "materialize_ns": .integer(materializeNS), "hash_ns": .integer(hashNS), "force_full": .bool(forceFull), "scoped": .bool(scope != nil)]) }
+        var fetchNS: UInt64 = 0, materializeNS: UInt64 = 0, hashNS: UInt64 = 0, coordinationNS: UInt64 = 0
+        defer { gate.trace.record("calendar_scan_timing", fields: ["scan": .string(scan), "started_ns": .integer(scanNS), "fetch_ns": .integer(fetchNS), "materialize_ns": .integer(materializeNS), "hash_ns": .integer(hashNS), "coordination_ns": .integer(coordinationNS), "force_full": .bool(forceFull), "scoped": .bool(scope != nil)]) }
         gate.trace.record("calendar_scan_started", fields: ["scan": .string(scan), "live": .bool(live), "force_full": .bool(forceFull), "notification_ns": .integer(gate.calendarNotificationAt), "debounce_ns": .integer(revision), "scoped": .bool(scope != nil)])
         let now = Date()
         let bounds = CalendarTime.window(now)
@@ -222,8 +222,10 @@ public final class CalendarSource: Source {
             let fetched = try events(chunk, calendars: scope?.calendars)
             fetchNS += CaptureTrace.now() - refetchStarted
             for event in fetched {
+                let coordinationStarted = CaptureTrace.now()
                 await Task.yield()
                 await gate.waitForReminderRefetch()
+                coordinationNS += CaptureTrace.now() - coordinationStarted
                 try Task.checkCancellation()
                 let materializeStarted = CaptureTrace.now()
                 let native = key(event)
@@ -388,6 +390,17 @@ public final class CalendarSource: Source {
 
     private func knownAbsent(_ native: String) -> Bool {
         guard gate.authorized(.event), let identity = lookups[native], !identity["event_identifier"].string.isEmpty else { return false }
+        if native.contains("|") {
+            let calendar = identity["calendar"].string, account = identity["account"].string
+            guard gate.store.calendar(withIdentifier: calendar)?.source.sourceIdentifier == account else { return false }
+            let original: Date?
+            if let civil = native.split(separator: "|").last, civil.count == 10 {
+                original = try? CalendarTime.date(String(civil), allDay: true, zone: .current)
+            } else { original = parseTimestamp(identity["occurrence"].string) }
+            guard let original, let captured = try? events(DateInterval(start: original.addingTimeInterval(-1), end: original.addingTimeInterval(1)), calendars: [calendar]) else { return false }
+            let missing = lookup(native) == nil
+            return gate.authorized(.event) && gate.store.calendar(withIdentifier: calendar)?.source.sourceIdentifier == account && missing && !captured.contains { key($0) == native }
+        }
         return gate.store.event(withIdentifier: identity["event_identifier"].string) == nil
     }
 
