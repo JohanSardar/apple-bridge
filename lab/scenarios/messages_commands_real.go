@@ -67,9 +67,18 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 	}
 	defer native.Close()
 	rawChat := ""
+	failedNative := ""
+	if s.ID == "MSG-RESEND" {
+		failedNative, rawChat, err = failedSelfFixture(ctx, native, own.Handles)
+		if err != nil {
+			e.Status = "environment-limited"
+			e.Assertions = append(e.Assertions, Assertion{Name: "unique_failed_test_self_message", Status: "unverified", Detail: "Supplied run has no uniquely verified active failed self message"})
+			return e
+		}
+	}
 	rows, err := native.QueryContext(ctx, "SELECT c.guid,h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.service_name='iMessage' AND (SELECT COUNT(*) FROM chat_handle_join x WHERE x.chat_id=c.ROWID)=1 ORDER BY c.ROWID DESC")
 	if err == nil {
-		for rows.Next() {
+		for rawChat == "" && rows.Next() {
 			var guid, handle string
 			rows.Scan(&guid, &handle)
 			for _, self := range own.Handles {
@@ -107,6 +116,16 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 		text = "Apple Bridge interactive self-check " + e.RunID
 	}
 	args := map[string]any{"chat_id": chatID, "text": text}
+	if failedNative != "" {
+		var failedID string
+		if w.Await(30*time.Second, func() bool {
+			return stateDB.QueryRowContext(ctx, "SELECT record_id FROM aliases WHERE collection='messages.message' AND native_key=? LIMIT 1", failedNative).Scan(&failedID) == nil
+		}) != nil {
+			add("failed_fixture_captured", false)
+			return e
+		}
+		args["resend_of"] = failedID
+	}
 	if s.ID == "MSG-REPLY" {
 		contacts, err := nativeTestContacts()
 		handle := contacts["REMY_IMESSAGE_TEST_HANDLE"]
@@ -327,7 +346,7 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 	if s.ID == "WEB-MEDIA-VARIANTS" {
 		return verifyMediaVariants(ctx, e, w, "ab-"+e.RunID, mediaAppeared, observers)
 	}
-	if s.ID != "MSG-SEND-SELF-TEXT" && s.ID != "MSG-SEND-FILES" && s.ID != "MSG-INTERACTIVE-GATE" {
+	if s.ID != "MSG-SEND-SELF-TEXT" && s.ID != "MSG-SEND-FILES" && s.ID != "MSG-INTERACTIVE-GATE" && s.ID != "MSG-RESEND" {
 		return runNativeMessageAction(ctx, s, e, w, evidence.NativeKey, text, stateDB)
 	}
 
