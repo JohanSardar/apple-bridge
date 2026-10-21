@@ -599,6 +599,7 @@ features:
     status: todo
     scenarios:
       - {id: REM-STORE-READ, levels: [sim, real]}
+      - {id: REM-STORE-PERF, levels: [sim, real]}
       - {id: WEB-REM-READ, levels: [web]}
       - {id: WEB-REM-WRITE, levels: [web, real]}
       - {id: WEB-REM-PARITY, levels: [web, real]}

@@ -1,0 +1,27 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[8.29 6.87 7.39] cpus=8 other_heavy=1"
+  },
+  "run_id": "",
+  "scenario": "REM-STORE-PERF",
+  "level": "sim",
+  "passed": false,
+  "git_sha": "",
+  "at": "2026-10-21T13:26:18.865981Z",
+  "assertions": [
+    {
+      "name": "profile_then_warm_incremental_read_under_50_ms",
+      "passed": false,
+      "detail": "cold and 200 warm iterations not profiled"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

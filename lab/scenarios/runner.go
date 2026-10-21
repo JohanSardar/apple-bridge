@@ -376,6 +376,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "HELPER-SIGNED-APP-CACHE" {
 		return runNativeAppCache(ctx, s, level)
 	}
+	if s.ID == "REM-STORE-PERF" {
+		return runRemindersStorePerf(ctx, s, level)
+	}
 	if s.ID == "REM-STORE-READ" {
 		return runRemindersStore(ctx, s, level)
 	}
