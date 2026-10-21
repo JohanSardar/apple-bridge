@@ -1,0 +1,116 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[41.51 29.78 20.81] cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5FTQCXR1AD1JRC99NJRC53D",
+  "metrics": {
+    "demo_messages": 5000,
+    "demo_startup_ms": 5871,
+    "matrix": [
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "webkit-dark-phone",
+      "webkit-dark-desktop",
+      "chromium-light-phone",
+      "chromium-light-desktop",
+      "chromium-dark-phone",
+      "chromium-dark-desktop",
+      "firefox-light-phone",
+      "firefox-light-desktop",
+      "firefox-dark-phone",
+      "firefox-dark-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-MSG-LINKS-webkit-light-phone-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-MSG-LINKS-webkit-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-LINKS-webkit-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-LINKS-webkit-dark-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-LINKS-webkit-dark-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-LINKS-chromium-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-LINKS-chromium-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-LINKS-chromium-dark-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-LINKS-chromium-dark-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-LINKS-firefox-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-LINKS-firefox-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-LINKS-firefox-dark-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-LINKS-firefox-dark-desktop-playwright.json"
+    ],
+    "server": "gateway"
+  },
+  "scenario": "WEB-MSG-LINKS",
+  "level": "web",
+  "passed": true,
+  "git_sha": "d8757a7d2b86c694826aeca6e41bfd3a43278325",
+  "at": "2026-10-21T18:14:10.616923Z",
+  "assertions": [
+    {
+      "name": "webkit-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 6 tests using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/cards-contrast.spec.ts:3:1 › WEB-MSG-LINKS-SOLID compact previews keep a legible icon on low-power material fallback (1.3s)\n  ✓  2 [webkit-light-phone] › tests/cards.spec.ts:8:1 › WEB-MSG-LINKS decoded link and app cards reserve geometry and use only attachment thumbnails (1.1s)\n  ✓  3 [webkit-light-phone] › tests/cards.spec.ts:24:1 › WEB-MSG-LINKS cards without images keep readable metadata in compact reserved bounds (466ms)\n  ✓  4 [webkit-light-phone] › tests/cards.spec.ts:29:1 › WEB-MSG-LINKS attached video previews play inline without fetching the remote video URL (1.3s)\n  ✓  5 [webkit-light-phone] › tests/cards.spec.ts:33:1 › WEB-MSG-LINKS unsupported target URLs stay honest readable cards (461ms)\n  ✓  6 [webkit-light-phone] › tests/cards.spec.ts:37:1 › WEB-MSG-LINKS compact captured site icon is centered in the trailing slot with its video overlay (738ms)\n\n  6 passed (7.2s)\n"
+    },
+    {
+      "name": "webkit-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 6 tests using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/cards-contrast.spec.ts:3:1 › WEB-MSG-LINKS-SOLID compact previews keep a legible icon on low-power material fallback (690ms)\n  ✓  2 [webkit-light-desktop] › tests/cards.spec.ts:8:1 › WEB-MSG-LINKS decoded link and app cards reserve geometry and use only attachment thumbnails (1.0s)\n  ✓  3 [webkit-light-desktop] › tests/cards.spec.ts:24:1 › WEB-MSG-LINKS cards without images keep readable metadata in compact reserved bounds (438ms)\n  ✓  4 [webkit-light-desktop] › tests/cards.spec.ts:29:1 › WEB-MSG-LINKS attached video previews play inline without fetching the remote video URL (1.1s)\n  ✓  5 [webkit-light-desktop] › tests/cards.spec.ts:33:1 › WEB-MSG-LINKS unsupported target URLs stay honest readable cards (404ms)\n  ✓  6 [webkit-light-desktop] › tests/cards.spec.ts:37:1 › WEB-MSG-LINKS compact captured site icon is centered in the trailing slot with its video overlay (735ms)\n\n  6 passed (5.0s)\n"
+    },
+    {
+      "name": "webkit-dark-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 6 tests using 1 worker\n\n  ✓  1 [webkit-dark-phone] › tests/cards-contrast.spec.ts:3:1 › WEB-MSG-LINKS-SOLID compact previews keep a legible icon on low-power material fallback (779ms)\n  ✓  2 [webkit-dark-phone] › tests/cards.spec.ts:8:1 › WEB-MSG-LINKS decoded link and app cards reserve geometry and use only attachment thumbnails (1.0s)\n  ✓  3 [webkit-dark-phone] › tests/cards.spec.ts:24:1 › WEB-MSG-LINKS cards without images keep readable metadata in compact reserved bounds (543ms)\n  ✓  4 [webkit-dark-phone] › tests/cards.spec.ts:29:1 › WEB-MSG-LINKS attached video previews play inline without fetching the remote video URL (1.2s)\n  ✓  5 [webkit-dark-phone] › tests/cards.spec.ts:33:1 › WEB-MSG-LINKS unsupported target URLs stay honest readable cards (549ms)\n  ✓  6 [webkit-dark-phone] › tests/cards.spec.ts:37:1 › WEB-MSG-LINKS compact captured site icon is centered in the trailing slot with its video overlay (999ms)\n\n  6 passed (5.9s)\n"
+    },
+    {
+      "name": "webkit-dark-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 6 tests using 1 worker\n\n  ✓  1 [webkit-dark-desktop] › tests/cards-contrast.spec.ts:3:1 › WEB-MSG-LINKS-SOLID compact previews keep a legible icon on low-power material fallback (862ms)\n  ✓  2 [webkit-dark-desktop] › tests/cards.spec.ts:8:1 › WEB-MSG-LINKS decoded link and app cards reserve geometry and use only attachment thumbnails (1.2s)\n  ✓  3 [webkit-dark-desktop] › tests/cards.spec.ts:24:1 › WEB-MSG-LINKS cards without images keep readable metadata in compact reserved bounds (574ms)\n  ✓  4 [webkit-dark-desktop] › tests/cards.spec.ts:29:1 › WEB-MSG-LINKS attached video previews play inline without fetching the remote video URL (1.4s)\n  ✓  5 [webkit-dark-desktop] › tests/cards.spec.ts:33:1 › WEB-MSG-LINKS unsupported target URLs stay honest readable cards (810ms)\n  ✓  6 [webkit-dark-desktop] › tests/cards.spec.ts:37:1 › WEB-MSG-LINKS compact captured site icon is centered in the trailing slot with its video overlay (1.2s)\n\n  6 passed (6.9s)\n"
+    },
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 6 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/cards-contrast.spec.ts:3:1 › WEB-MSG-LINKS-SOLID compact previews keep a legible icon on low-power material fallback (579ms)\n  ✓  2 [chromium-light-phone] › tests/cards.spec.ts:8:1 › WEB-MSG-LINKS decoded link and app cards reserve geometry and use only attachment thumbnails (677ms)\n  ✓  3 [chromium-light-phone] › tests/cards.spec.ts:24:1 › WEB-MSG-LINKS cards without images keep readable metadata in compact reserved bounds (253ms)\n  ✓  4 [chromium-light-phone] › tests/cards.spec.ts:29:1 › WEB-MSG-LINKS attached video previews play inline without fetching the remote video URL (813ms)\n  ✓  5 [chromium-light-phone] › tests/cards.spec.ts:33:1 › WEB-MSG-LINKS unsupported target URLs stay honest readable cards (177ms)\n  ✓  6 [chromium-light-phone] › tests/cards.spec.ts:37:1 › WEB-MSG-LINKS compact captured site icon is centered in the trailing slot with its video overlay (492ms)\n\n  6 passed (3.8s)\n"
+    },
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 6 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/cards-contrast.spec.ts:3:1 › WEB-MSG-LINKS-SOLID compact previews keep a legible icon on low-power material fallback (362ms)\n  ✓  2 [chromium-light-desktop] › tests/cards.spec.ts:8:1 › WEB-MSG-LINKS decoded link and app cards reserve geometry and use only attachment thumbnails (681ms)\n  ✓  3 [chromium-light-desktop] › tests/cards.spec.ts:24:1 › WEB-MSG-LINKS cards without images keep readable metadata in compact reserved bounds (295ms)\n  ✓  4 [chromium-light-desktop] › tests/cards.spec.ts:29:1 › WEB-MSG-LINKS attached video previews play inline without fetching the remote video URL (875ms)\n  ✓  5 [chromium-light-desktop] › tests/cards.spec.ts:33:1 › WEB-MSG-LINKS unsupported target URLs stay honest readable cards (181ms)\n  ✓  6 [chromium-light-desktop] › tests/cards.spec.ts:37:1 › WEB-MSG-LINKS compact captured site icon is centered in the trailing slot with its video overlay (484ms)\n\n  6 passed (3.4s)\n"
+    },
+    {
+      "name": "chromium-dark-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 6 tests using 1 worker\n\n  ✓  1 [chromium-dark-phone] › tests/cards-contrast.spec.ts:3:1 › WEB-MSG-LINKS-SOLID compact previews keep a legible icon on low-power material fallback (344ms)\n  ✓  2 [chromium-dark-phone] › tests/cards.spec.ts:8:1 › WEB-MSG-LINKS decoded link and app cards reserve geometry and use only attachment thumbnails (619ms)\n  ✓  3 [chromium-dark-phone] › tests/cards.spec.ts:24:1 › WEB-MSG-LINKS cards without images keep readable metadata in compact reserved bounds (229ms)\n  ✓  4 [chromium-dark-phone] › tests/cards.spec.ts:29:1 › WEB-MSG-LINKS attached video previews play inline without fetching the remote video URL (778ms)\n  ✓  5 [chromium-dark-phone] › tests/cards.spec.ts:33:1 › WEB-MSG-LINKS unsupported target URLs stay honest readable cards (175ms)\n  ✓  6 [chromium-dark-phone] › tests/cards.spec.ts:37:1 › WEB-MSG-LINKS compact captured site icon is centered in the trailing slot with its video overlay (472ms)\n\n  6 passed (3.1s)\n"
+    },
+    {
+      "name": "chromium-dark-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 6 tests using 1 worker\n\n  ✓  1 [chromium-dark-desktop] › tests/cards-contrast.spec.ts:3:1 › WEB-MSG-LINKS-SOLID compact previews keep a legible icon on low-power material fallback (354ms)\n  ✓  2 [chromium-dark-desktop] › tests/cards.spec.ts:8:1 › WEB-MSG-LINKS decoded link and app cards reserve geometry and use only attachment thumbnails (676ms)\n  ✓  3 [chromium-dark-desktop] › tests/cards.spec.ts:24:1 › WEB-MSG-LINKS cards without images keep readable metadata in compact reserved bounds (287ms)\n  ✓  4 [chromium-dark-desktop] › tests/cards.spec.ts:29:1 › WEB-MSG-LINKS attached video previews play inline without fetching the remote video URL (880ms)\n  ✓  5 [chromium-dark-desktop] › tests/cards.spec.ts:33:1 › WEB-MSG-LINKS unsupported target URLs stay honest readable cards (207ms)\n  ✓  6 [chromium-dark-desktop] › tests/cards.spec.ts:37:1 › WEB-MSG-LINKS compact captured site icon is centered in the trailing slot with its video overlay (525ms)\n\n  6 passed (3.4s)\n"
+    },
+    {
+      "name": "firefox-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 6 tests using 1 worker\n\n  ✓  1 [firefox-light-phone] › tests/cards-contrast.spec.ts:3:1 › WEB-MSG-LINKS-SOLID compact previews keep a legible icon on low-power material fallback (1.6s)\n  ✓  2 [firefox-light-phone] › tests/cards.spec.ts:8:1 › WEB-MSG-LINKS decoded link and app cards reserve geometry and use only attachment thumbnails (983ms)\n  ✓  3 [firefox-light-phone] › tests/cards.spec.ts:24:1 › WEB-MSG-LINKS cards without images keep readable metadata in compact reserved bounds (441ms)\n  ✓  4 [firefox-light-phone] › tests/cards.spec.ts:29:1 › WEB-MSG-LINKS attached video previews play inline without fetching the remote video URL (1.1s)\n  ✓  5 [firefox-light-phone] › tests/cards.spec.ts:33:1 › WEB-MSG-LINKS unsupported target URLs stay honest readable cards (389ms)\n  ✓  6 [firefox-light-phone] › tests/cards.spec.ts:37:1 › WEB-MSG-LINKS compact captured site icon is centered in the trailing slot with its video overlay (650ms)\n\n  6 passed (7.4s)\n"
+    },
+    {
+      "name": "firefox-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 6 tests using 1 worker\n\n  ✓  1 [firefox-light-desktop] › tests/cards-contrast.spec.ts:3:1 › WEB-MSG-LINKS-SOLID compact previews keep a legible icon on low-power material fallback (1.3s)\n  ✓  2 [firefox-light-desktop] › tests/cards.spec.ts:8:1 › WEB-MSG-LINKS decoded link and app cards reserve geometry and use only attachment thumbnails (953ms)\n  ✓  3 [firefox-light-desktop] › tests/cards.spec.ts:24:1 › WEB-MSG-LINKS cards without images keep readable metadata in compact reserved bounds (398ms)\n  ✓  4 [firefox-light-desktop] › tests/cards.spec.ts:29:1 › WEB-MSG-LINKS attached video previews play inline without fetching the remote video URL (1.0s)\n  ✓  5 [firefox-light-desktop] › tests/cards.spec.ts:33:1 › WEB-MSG-LINKS unsupported target URLs stay honest readable cards (376ms)\n  ✓  6 [firefox-light-desktop] › tests/cards.spec.ts:37:1 › WEB-MSG-LINKS compact captured site icon is centered in the trailing slot with its video overlay (591ms)\n\n  6 passed (6.0s)\n"
+    },
+    {
+      "name": "firefox-dark-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 6 tests using 1 worker\n\n  ✓  1 [firefox-dark-phone] › tests/cards-contrast.spec.ts:3:1 › WEB-MSG-LINKS-SOLID compact previews keep a legible icon on low-power material fallback (1.2s)\n  ✓  2 [firefox-dark-phone] › tests/cards.spec.ts:8:1 › WEB-MSG-LINKS decoded link and app cards reserve geometry and use only attachment thumbnails (1.0s)\n  ✓  3 [firefox-dark-phone] › tests/cards.spec.ts:24:1 › WEB-MSG-LINKS cards without images keep readable metadata in compact reserved bounds (363ms)\n  ✓  4 [firefox-dark-phone] › tests/cards.spec.ts:29:1 › WEB-MSG-LINKS attached video previews play inline without fetching the remote video URL (1.0s)\n  ✓  5 [firefox-dark-phone] › tests/cards.spec.ts:33:1 › WEB-MSG-LINKS unsupported target URLs stay honest readable cards (310ms)\n  ✓  6 [firefox-dark-phone] › tests/cards.spec.ts:37:1 › WEB-MSG-LINKS compact captured site icon is centered in the trailing slot with its video overlay (596ms)\n\n  6 passed (5.8s)\n"
+    },
+    {
+      "name": "firefox-dark-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 6 tests using 1 worker\n\n  ✓  1 [firefox-dark-desktop] › tests/cards-contrast.spec.ts:3:1 › WEB-MSG-LINKS-SOLID compact previews keep a legible icon on low-power material fallback (1.3s)\n  ✓  2 [firefox-dark-desktop] › tests/cards.spec.ts:8:1 › WEB-MSG-LINKS decoded link and app cards reserve geometry and use only attachment thumbnails (924ms)\n  ✓  3 [firefox-dark-desktop] › tests/cards.spec.ts:24:1 › WEB-MSG-LINKS cards without images keep readable metadata in compact reserved bounds (377ms)\n  ✓  4 [firefox-dark-desktop] › tests/cards.spec.ts:29:1 › WEB-MSG-LINKS attached video previews play inline without fetching the remote video URL (1.0s)\n  ✓  5 [firefox-dark-desktop] › tests/cards.spec.ts:33:1 › WEB-MSG-LINKS unsupported target URLs stay honest readable cards (367ms)\n  ✓  6 [firefox-dark-desktop] › tests/cards.spec.ts:37:1 › WEB-MSG-LINKS compact captured site icon is centered in the trailing slot with its video overlay (617ms)\n\n  6 passed (5.9s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

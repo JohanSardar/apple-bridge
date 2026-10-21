@@ -1,0 +1,35 @@
+{
+  "cls": null,
+  "layout_shift_observer": false,
+  "bounds_delta_csspx": 0,
+  "reserved_bounds": [
+    {
+      "x": 20,
+      "y": 137,
+      "width": 280,
+      "height": 180,
+      "top": 137,
+      "right": 300,
+      "bottom": 317,
+      "left": 20
+    },
+    {
+      "x": 20,
+      "y": 337,
+      "width": 280,
+      "height": 180,
+      "top": 337,
+      "right": 300,
+      "bottom": 517,
+      "left": 20
+    }
+  ],
+  "variants": [
+    "thumb",
+    "thumb"
+  ],
+  "external_requests": [],
+  "entry_chunk": "/assets/index-DGWkQSv2.js",
+  "entry_bytes": 60749,
+  "entry_gzip9_bytes": 22368
+}
