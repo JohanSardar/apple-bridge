@@ -4,7 +4,7 @@ import CryptoKit
 import AgendaGate
 import SourceSupport
 
-@MainActor
+@AgendaActor
 public final class CalendarSource: Source {
     public nonisolated let name = "calendar"
     public static let operations = ["calendar.create_event", "calendar.update_event", "calendar.delete_event", "calendar.create_calendar"]
@@ -18,7 +18,7 @@ public final class CalendarSource: Source {
     private var scanning = false
     private var forceFull = true
 
-    public init(gate: AgendaGate, home: URL, commandsEnabled: Bool) throws {
+    public nonisolated init(gate: AgendaGate, home: URL, commandsEnabled: Bool) throws {
         self.gate = gate; self.commandsEnabled = commandsEnabled
         baselineURL = home.appendingPathComponent("calendar-baseline.json")
         lookupURL = home.appendingPathComponent("calendar-lookups.json")
@@ -191,14 +191,14 @@ public final class CalendarSource: Source {
         forceFull = true
         let changes = gate.changes(calendar: true)
         let databaseHints = CalendarDatabaseHints()
-        let hints = Task { @MainActor [gate] in
+        let hints = Task { @AgendaActor [gate] in
             for await delivered in databaseHints.changes {
                 gate.calendarHint(delivered)
             }
         }
         defer { hints.cancel(); databaseHints.close() }
         try await scan(into: sink, live: false)
-        let periodic = Task { @MainActor in
+        let periodic = Task { @AgendaActor in
             var day = Calendar.current.startOfDay(for: Date())
             var last = Date()
             while !Task.isCancelled {

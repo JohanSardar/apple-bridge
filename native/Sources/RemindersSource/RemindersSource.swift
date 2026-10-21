@@ -4,7 +4,7 @@ import CryptoKit
 import AgendaGate
 import SourceSupport
 
-@MainActor
+@AgendaActor
 public final class RemindersSource: Source {
     public nonisolated let name = "reminders"
     private let gate: AgendaGate
@@ -16,10 +16,10 @@ public final class RemindersSource: Source {
     private var generation = ""
     private let generationURL: URL
     private var scanning = false
-    public static let operations = ["reminders.create", "reminders.update", "reminders.complete", "reminders.uncomplete", "reminders.delete", "reminders.create_list"]
-    public static let coverage: JSON = .object(["fields": .string("partial"), "missing": .array([.string("recurrence: next incomplete instance only")])])
+    public nonisolated static let operations = ["reminders.create", "reminders.update", "reminders.complete", "reminders.uncomplete", "reminders.delete", "reminders.create_list"]
+    public nonisolated static let coverage: JSON = .object(["fields": .string("partial"), "missing": .array([.string("recurrence: next incomplete instance only")])])
 
-    public init(gate: AgendaGate, home: URL, commandsEnabled: Bool = false) throws {
+    public nonisolated init(gate: AgendaGate, home: URL, commandsEnabled: Bool = false) throws {
         self.gate = gate; self.commandsEnabled = commandsEnabled
         baselineURL = home.appendingPathComponent("reminders-baseline.json")
         generationURL = home.appendingPathComponent("reminders-generation.json")
@@ -189,7 +189,7 @@ public final class RemindersSource: Source {
     public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {
         forceFull = true
         let changes = gate.changes()
-        let periodic = Task { @MainActor in
+        let periodic = Task { @AgendaActor in
             while !Task.isCancelled {
                 do { try await Task.sleep(for: .seconds(900)); self.gate.reconcile() } catch { return }
             }
