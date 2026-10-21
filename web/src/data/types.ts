@@ -77,6 +77,10 @@ export type CommandState = {
     args: unknown;
     expected_version?: number;
     status: string;
+    commit_seq?: number;
+    observed_record_ids?: string[];
+    cursor?: Cursor;
+    transport_lost?: boolean;
     optimistic?: unknown;
     error?: unknown;
     disposition?: string;
