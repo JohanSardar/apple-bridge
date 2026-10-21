@@ -1055,6 +1055,28 @@ Operations (descriptors in `internal/contracts/operations.go`; available through
 - `messages.chats` first page ≤ 15 ms p95 at 500 chats.
 - `messages.thread` page of 100 ≤ 10 ms p95 on a 170k-message store.
 
+**Reminders read models (W5-STORE; scope `reminders:read`):**
+
+- `reminders.lists{time_zone}` → `{smart: SmartTile[], lists: ReminderList[], tags: TagCount[], cursor}`.
+  - `SmartTile`: `{id: today|scheduled|all|flagged|completed|assigned, count}`; incomplete counts except Completed. Today includes overdue incomplete reminders and reminders due during the viewer's day. Scheduled has a due date and is incomplete. Flagged requires the native store flag. Assigned means assigned to the current user, never merely assigned to someone. Each predicate has a synthetic-store scenario assertion.
+  - `ReminderList`: `{list: Record, count?, sections: ReminderSection[], group_id: id|null, order, pinned}`. This is a flat sidebar projection; groups are list records with `is_group=true`, and each child names its group in `group_id`. Return pinned entries first in native pin order, then native display order, with record id only as a tie breaker. The UI preserves the returned order and uses `group_id` for disclosure folders without sorting. Custom smart lists get a count from a supported decoded filter, or `status=unsupported` with the count omitted.
+  - `TagCount`: `{name, count}` counts incomplete visible reminders once per tag.
+- `reminders.items{time_zone, list?: id, smart?: today|scheduled|all|flagged|completed|assigned, tag?: name, show_completed?: false, sort?: manual|due|created|priority|title}` → `{sections: ReminderSectionItems[], count, cursor}`. Exactly one selector is required. Unknown selectors/sorts reject as invalid.
+  - `ReminderSectionItems`: `{section: ReminderSection, items: ReminderItem[]}`. Empty native sections remain visible for a list selector. Scheduled groups by due day (`kind=date`); All and Completed group by list (`kind=list`, with `list_id`). Today uses one `kind=none` section until the current OS daypart grouping is verified; verified grouping may use Overdue / Morning / Afternoon / Tonight (`kind=daypart`).
+  - `ReminderItem`: `{reminder: Record, subtasks: ReminderItem[], attachments: Record[]}`. Subtasks nest only under a selected, visible parent; unmatched children remain roots. Cycles are broken deterministically. Each reminder contributes once to `count`.
+  - `ReminderSection`: `{kind: store|list|date|daypart|none, id, title, order, list_id?}`; `kind=none` is the unsectioned bucket. Section membership and ordering require a supported store decoder; unavailable membership places reminders in `kind=none`. Both operations require an IANA `time_zone` from the viewer and reject invalid zones. Today predicates and date grouping use that zone, including daylight-saving boundaries, and never the server zone.
+  - Completion filtering applies before nesting. Manual ordering uses supported native ordering hints, with record id as a stable tie breaker. Missing due/creation/order values sort last; priority uses Apple's high (1), medium (5), low (9), none (0) semantics. Title uses a deterministic case-folded comparison.
+
+**Reminders record additions:** Existing EventKit fields stay authoritative. Nullable store fields are unavailable rather than false/empty guesses; `store_status` is `complete|partial|unavailable|unsupported`, and `store_coverage` maps field names to `{status, reason?}`.
+
+- `reminders.reminder`: `store_identifier`, `flagged`, `parent_id` (reminder record reference), `section_id`, `tags[]`, `manual_order`, `created_at`, `early_reminders[]` (signed seconds relative to due date), `assignment{assignee, originator, assigned_at}`, `store_alarms[]`, `store_recurrence[]`, `attachment_ids[]` (attachment record references). Store identity is linked by exact equality to EventKit `calendarItemIdentifier`, proven on a tagged fixture; external identifiers are aliases scoped by list, never an unverified fallback.
+- `reminders.list`: `store_identifier`, `badge_emblem`, `is_group`, `parent_id` (list record reference), `display_order`, `pinned`, `pinned_at`, `sorting_style`, `categorize_groceries`, `grocery_locale`, `sharing_status`, `shared_owner_name`, `smart_list_type`, `smart_filter`, `sections[]`. Store color retains native representation separately as `store_color`; EventKit `title`, `color`, `account`, and `writable` remain available.
+- `reminders.attachment`: owning `reminder_id`, `filename`, `uti`, `size`, `width`, `height`, `digest`, `derivatives`, and `media` through the existing blob/variant pipeline. Native paths never leave the Helper.
+
+Derived indexes update transactionally with apply and rebuild on replica snapshot installation. Reads apply visibility before counts, nesting, tags and smart predicates. No store-only field requires a second EventKit fetch. After an EventKit capture completes, read a SQLite backup made from a read-only live connection (including committed WAL). No additional watcher in this unit.
+
+Budgets: 1,000-item `reminders.items` <10 ms p95 in the gateway; store enrichment <50 ms p95 per capture on the Air. REM-STORE-READ runs at sim and real with tagged fixtures and cleanup. AppleTruth store checks are `limited` with reason `AppleTruth lacks Full Disk Access to the Reminders Core Data store`; EventKit truth remains available. UI-dependent fixtures wait for an unlocked session and carry exact deferred commands.
+
 ### 23.5 Remote
 
 **Commands:**

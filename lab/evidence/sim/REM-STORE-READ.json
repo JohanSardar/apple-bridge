@@ -1,0 +1,27 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[10.9 11.03 11.3] cpus=8 other_heavy=1"
+  },
+  "run_id": "",
+  "scenario": "REM-STORE-READ",
+  "level": "sim",
+  "passed": false,
+  "git_sha": "",
+  "at": "2026-10-21T12:42:00.204104Z",
+  "assertions": [
+    {
+      "name": "store_fields_match_tagged_fixture",
+      "passed": false,
+      "detail": "W5-STORE contract skeleton: reader not implemented"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

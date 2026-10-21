@@ -373,6 +373,9 @@ func convergence(w *world.World) bool {
 }
 
 func runScenario(ctx context.Context, s Scenario, level string) Evidence {
+	if s.ID == "REM-STORE-READ" {
+		return runRemindersStore(ctx, s, level)
+	}
 	if level == "web" {
 		return runWeb(ctx, s)
 	}

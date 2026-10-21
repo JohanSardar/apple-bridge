@@ -585,7 +585,7 @@ features:
     title: Reminders web app (read, write, parity)
     requirements: [R-WEB-UI, R-WEB-FAST, R-RW]
     milestone: W5
-    modules: [webui, native/RemindersSource, operations]
+    modules: [webui, native/RemindersSource, native/RemindersStore, state, operations]
     depends_on: [web.frontdoor, reminders.write]
     status: todo
     scenarios:
