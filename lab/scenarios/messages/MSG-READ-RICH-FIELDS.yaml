@@ -1,0 +1,7 @@
+id: MSG-READ-RICH-FIELDS
+feature: web.messages.read
+levels: [sim, real]
+given: [{world: {}}]
+when: [{readmodels: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

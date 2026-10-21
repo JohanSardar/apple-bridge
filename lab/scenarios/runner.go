@@ -394,6 +394,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.Feature == "web.remote" {
 		return runRemote(ctx, s, level)
 	}
+	if s.Feature == "web.messages.read" && strings.HasPrefix(s.ID, "MSG-") {
+		return runRichMessages(ctx, s, level)
+	}
 	if s.Feature == "web.readmodels" {
 		return runReadModels(ctx, s, level)
 	}
@@ -973,7 +976,7 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		ran++
 		fmt.Fprintln(os.Stderr, "running", s.ID, level)
 		duration := 3 * time.Minute
-		if s.Feature == "web.readmodels" {
+		if s.Feature == "web.readmodels" || s.Feature == "web.messages.read" {
 			duration = 15 * time.Minute
 		}
 		if level == "real" && (s.Feature == "messages.actions" || s.Feature == "messages.groups" || s.Feature == "web.media") {
