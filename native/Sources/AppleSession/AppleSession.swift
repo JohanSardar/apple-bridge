@@ -56,6 +56,7 @@ public actor AppleSession: ObservationSink {
     private let usage: UsageSource
     private let contacts: ContactsSource
     private let source: RemindersSource
+    private var remindersRefreshHistogram = StoreRefreshHistogram()
     private let remindersStore: RemindersStoreEnrichment
  private let calendar: CalendarSource
     private let guardLog: DispatchGuard
@@ -253,8 +254,14 @@ public actor AppleSession: ObservationSink {
     public func emitCheckpoint(source: String, generation: String, checkpoint: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) async throws {
         guard wire != nil else { throw SourceFailure.unavailable }
         let connection = wire
+        let refreshStarted = source == "reminders" && labEnabled ? CaptureTrace.now() : 0
         let observations = source == "reminders" ? await remindersStore.refresh(observations, generation: generation) : observations
+        let refreshFinished = source == "reminders" && labEnabled ? CaptureTrace.now() : 0
         guard wire === connection, !Task.isCancelled else { throw SourceFailure.unavailable }
+        if source == "reminders", labEnabled {
+            let milliseconds = Double(refreshFinished - refreshStarted) / 1_000_000
+            trace.record("reminders_store_refresh", keys: observations.map { $0["native_key"].string }, fields: ["duration_ms": .number(milliseconds), "started_ns": .integer(refreshStarted), "finished_ns": .integer(refreshFinished), "histogram": remindersRefreshHistogram.record(milliseconds)])
+        }
         let chunks = try split(observations, maximumBytes: live ? 240000 : 16000)
         for (index,chunk) in chunks.enumerated() {
             try await withCheckedThrowingContinuation { continuation in
@@ -322,7 +329,7 @@ public actor AppleSession: ObservationSink {
             let frame = JSON.object(capture)
             let size = try PeerWire.encode(frame).count
             guard size <= credit else { return }
-            trace.record("capture_sent", keys: observations.map { $0["native_key"].string }, fields: ["checkpoint": .string(checkpoint), "live": .bool(prioritized), "credit": .number(Double(credit)), "blob_count": .number(Double(pending.blobHandles.count))])
+            trace.record("capture_sent", keys: observations.map { $0["native_key"].string }, fields: ["source": .string(pending.source), "checkpoint": .string(checkpoint), "live": .bool(prioritized), "credit": .number(Double(credit)), "blob_count": .number(Double(pending.blobHandles.count))])
             try wire?.send(frame)
             credit -= size
             flights[pending.source] = Flight(pending: sending, checkpoint: checkpoint, bytes: size)

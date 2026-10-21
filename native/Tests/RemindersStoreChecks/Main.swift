@@ -10,6 +10,14 @@ struct RemindersStoreChecks {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("bridge-reminders-store-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
+        var refreshHistogram = StoreRefreshHistogram()
+        let firstTiming = refreshHistogram.record(1000)
+        precondition(firstTiming["first_ms"].number == 1000 && firstTiming["warm"]["samples"].number == 0 && firstTiming["warm"]["p95_ms"] == .null)
+        var finalTiming = firstTiming
+        for value in 1...200 { finalTiming = refreshHistogram.record(Double(value)) }
+        precondition(finalTiming["first_ms"].number == 1000 && finalTiming["total_samples"].number == 201)
+        precondition(finalTiming["warm"]["samples"].number == 200 && finalTiming["warm"]["p50_ms"].number == 100 && finalTiming["warm"]["p95_ms"].number == 190 && finalTiming["warm"]["max_ms"].number == 200)
+        print("refresh histogram excludes first full read and retains exact warm percentiles: PASS")
         let path = directory.appendingPathComponent("fixture.sqlite").path
         let fixture = SyntheticReminderDatabase(path: path)
         fixture.execute("PRAGMA journal_mode=WAL; PRAGMA wal_autocheckpoint=0")
