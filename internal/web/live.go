@@ -167,10 +167,13 @@ func (s *server) live(w http.ResponseWriter, r *http.Request) {
 		conn.Close(websocket.StatusProtocolError, "hello required")
 		return
 	}
-	l.send(map[string]any{"t": "welcome", "session": l.identity.Session, "head": s.deps.Operations.Head()}, false)
+	head := s.deps.Operations.Head()
+	l.send(map[string]any{"t": "welcome", "session": l.identity.Session, "head": head}, false)
 	s.mu.Lock()
 	s.sockets[l] = true
 	s.mu.Unlock()
+	l.workers.Add(1)
+	go func() { defer l.workers.Done(); l.approvalEvents(head) }()
 	l.workers.Add(1)
 	go func() {
 		defer l.workers.Done()
@@ -534,4 +537,33 @@ func (l *liveSocket) commandRecord(ctx context.Context, record contracts.Record)
 	}
 	record.Data, err = json.Marshal(status)
 	return record, err
+}
+
+func (l *liveSocket) approvalEvents(after contracts.Cursor) {
+	iterator, err := l.server.deps.Operations.Observe(l.ctx, l.identity.Principal, after)
+	if err != nil {
+		return
+	}
+	for {
+		batch, err := iterator.Next(l.ctx)
+		if err != nil {
+			return
+		}
+		for _, change := range batch.Changes {
+			if change.Record.Collection != "system.command" {
+				continue
+			}
+			var value struct {
+				Principal string `json:"principal"`
+			}
+			if json.Unmarshal(change.Record.Data, &value) != nil || !strings.HasPrefix(value.Principal, "agent:") {
+				continue
+			}
+			command, err := l.server.deps.Operations.State.Command(l.ctx, change.Record.ID)
+			if err != nil || len(command.History) == 0 || command.History[0].State != contracts.CommandAwaitingApproval {
+				continue
+			}
+			l.send(map[string]any{"t": "approval", "command": map[string]any{"command_id": change.Record.ID}}, false)
+		}
+	}
 }

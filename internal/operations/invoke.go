@@ -3,6 +3,8 @@ package operations
 import (
 	"context"
 	"encoding/json"
+	"github.com/JohanSardar/apple-bridge/internal/state"
+	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/internal/trust"
@@ -71,6 +73,15 @@ func (s *Service) Invoke(ctx context.Context, p trust.Principal, name string, in
 		}
 		if s.Target == nil {
 			return nil, contracts.ErrUnavailable
+		}
+		if _, remote := s.Target.(*RemoteGateway); remote && p.Kind == "agent" {
+			if err := s.State.RecordAgentActivity(context.WithoutCancel(ctx), state.AgentActivity{ID: p.ID + ":" + c.ID, Principal: p.ID, Operation: c.Op, Kind: "command", State: "rejected", At: time.Now().UTC(), ArgumentBytes: len(c.Args), ArgumentHash: trust.Fingerprint(c.Args)}); err != nil {
+				return nil, err
+			}
+			if p.Level == trust.AgentRead {
+				return nil, contracts.ErrUnauthorized
+			}
+			return nil, contracts.ErrUnsupported
 		}
 		return s.Target.Submit(ctx, p, c)
 	}
