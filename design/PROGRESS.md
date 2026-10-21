@@ -67,6 +67,7 @@ One line per unit. Rules: BUILD-GOAL.md (2026-10-17 update: no reviews, merge on
 - Verification: all 120 simulations pass, including 24/24 Messages; Go tests, lint, features and strict signing smoke pass. Fixed the scope probe command envelope and stale store-wide disk-capacity overlays; the quiet 200,000-message benchmark also passes. Features: 23 done, 1 limited, 0 blocked; 180/183 scenario-levels. Initial failures and diagnostics retained. No new scenario IDs or dependencies.
 
 ## Web app (DECISIONS 2026-10-20, SPEC §23)
+- DONE W1-DEMO: deterministic 60-contact/40-chat/5,000-message capture world, generated avatars/media, one-use lab demo sign-in, live updates and opt-in 100k chat; WEB-DEMO-DATASET covers all representable items and pre-download geometry with 52 blob hashes, WEB-DEMO-SESSION passes 12/12. Reader gaps and stable native fixture keys are documented in lab/demo/FIXTURES.md.
 Process: every change ships as a small PR (WORKER-RULES, Git and GitHub). Status lives in features.yaml; one line per unit here.
 - DONE W0: decisions, Messages spec draft (`design/web/messages.md`), SPEC §23 including W2–W8, ADRs 0015–0020, and the drafts for Reminders, Calendar, Contacts and Notes. Johan's skim of the Messages spec is still open. W2 proceeds on the draft and applies his changes when they come.
 - DONE W1-RM: chat, thread and collection read models (#2); rich filters and collections, plus `messages.handles` (#14, #22).

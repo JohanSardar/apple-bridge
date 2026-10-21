@@ -453,10 +453,11 @@ features:
     milestone: W1
     modules: [lab/demo, lab/world]
     depends_on: [web.readmodels, web.frontdoor]
-    status: in_progress
+    status: done
     scenarios:
       - {id: WEB-DEMO-DATASET, levels: [sim]}
       - {id: WEB-DEMO-SESSION, levels: [web]}
+    notes: Seeded 60-contact 40-chat 5000-message SimApple demo with generated media, one-use lab sign-in, live updates and optional 100000-message chat. Reader-only payload gaps are documented in lab/demo/FIXTURES.md.
   - id: web.relay
     title: Replicas connect through the Remote relay with device-key auth
     requirements: [R-WEB-REACH, R-FULL]
