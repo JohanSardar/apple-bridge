@@ -265,6 +265,10 @@ func runWebSession(ctx context.Context, w *world.World, id string, e *Evidence, 
 	add("session_256_bits", decodeErr == nil && len(decodedToken) == 32)
 	stored, _ := os.ReadFile(filepath.Join(w.Gateway.Home, "credentials.json"))
 	add("tokens_stored_hashed", !bytes.Contains(stored, []byte(c.cookie.Value)) && !bytes.Contains(stored, []byte(enrollURL.Fragment)))
+	if id == "WEB-AUTH-SOFTWARE" {
+		response, _, deleteErr := c.request("DELETE", "passkeys/"+base64.RawURLEncoding.EncodeToString(auth.ID), nil)
+		add("last_passkey_refused_409", deleteErr == nil && response.StatusCode == 409)
+	}
 	if id == "WEB-BLOB-ACCESS" {
 		runWebBlobs(ctx, w, c, e, add)
 		return
@@ -407,6 +411,17 @@ func runWebSession(ctx context.Context, w *world.World, id string, e *Evidence, 
 		} else {
 			add("expired_enroll_fixture", false)
 		}
+		extraKey, keyErr := newWebAuthenticator()
+		if keyErr != nil {
+			add("extra_passkey_fixture", false)
+			return
+		}
+		extraStatus, _, keyErr := c.signIn(extraKey, "passkeys", "", "trusted")
+		add("additional_passkey_registered", keyErr == nil && extraStatus == 200)
+		response, _, deleteErr := c.request("DELETE", "passkeys/"+base64.RawURLEncoding.EncodeToString(extraKey.ID), nil)
+		add("nonlast_passkey_deleted", deleteErr == nil && response.StatusCode == 200)
+		response, _, deleteErr = c.request("DELETE", "passkeys/"+base64.RawURLEncoding.EncodeToString(auth.ID), nil)
+		add("last_passkey_still_refused_after_deletion", deleteErr == nil && response.StatusCode == 409)
 		_, err = exec.CommandContext(ctx, "bin/bridge", "web", "lock", "--home", w.Gateway.Home).Output()
 		add("lock_cli", err == nil)
 		frame, err = read(conn)

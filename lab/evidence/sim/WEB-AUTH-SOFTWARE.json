@@ -1,14 +1,14 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[4.8 7.15 8.22] cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[19.31 28.03 39.61] cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5E3Q1GH0HJ42WAKHT9B2J34",
+  "run_id": "run_01M5E7R1QGW5Z0SAD84CEEGBNP",
   "scenario": "WEB-AUTH-SOFTWARE",
   "level": "sim",
   "passed": true,
-  "git_sha": "a530cad13274d0630b04a4229d7518a7ecb46b1f",
-  "at": "2026-10-21T02:12:47.250005Z",
+  "git_sha": "0b1b83e607cf73490b823e618c4e2461532c1657",
+  "at": "2026-10-21T03:23:14.544014Z",
   "assertions": [
     {
       "name": "software_passkey_enrollment",
@@ -28,6 +28,10 @@
     },
     {
       "name": "tokens_stored_hashed",
+      "passed": true
+    },
+    {
+      "name": "last_passkey_refused_409",
       "passed": true
     },
     {
@@ -83,6 +87,18 @@
       "passed": true
     },
     {
+      "name": "additional_passkey_registered",
+      "passed": true
+    },
+    {
+      "name": "nonlast_passkey_deleted",
+      "passed": true
+    },
+    {
+      "name": "last_passkey_still_refused_after_deletion",
+      "passed": true
+    },
+    {
       "name": "lock_cli",
       "passed": true
     },
@@ -98,9 +114,9 @@
   "latency": {
     "session_revoke": {
       "samples": 1,
-      "p50_ms": 102.393375,
-      "p95_ms": 102.393375,
-      "max_ms": 102.393375,
+      "p50_ms": 102.139292,
+      "p95_ms": 102.139292,
+      "max_ms": 102.139292,
       "timeouts": 0
     }
   },

@@ -951,6 +951,7 @@ Same origin for everything. Served by the gateway and by replicas (any instance)
 - **Public:** session cookie with no Max-Age, 30 minutes idle and 12 hours absolute, with `cache: memory`, meaning nothing goes to IndexedDB, Cache Storage or the service worker.
 
 **Passkeys.**
+- **Last credential:** deleting the final passkey for a relying-party ID returns 409; deleting a nonfinal key remains allowed.
 - **Relying-party ID:** the serving hostname: the Funnel name publicly, `localhost` locally. Each relying-party ID has its own credentials.
 - **First passkey:** registered only through an enroll token from `bridge web enroll`, which `bridge setup` calls. The token is 160-bit, valid 10 minutes, single use, and printed as a URL plus QR (`https://<host>/enroll#<token>`).
 - **Later passkeys:** added from signed-in sessions.
