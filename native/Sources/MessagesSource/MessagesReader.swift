@@ -101,7 +101,9 @@ final class MessagesReader {
         return (Double(row?["deleted_date"] ?? "") ?? 0) > 0
     }
     private var messageProjection: String {
-        let chat = has("chat", "guid") && has("chat_message_join", "chat_id", "message_id") ? "(SELECT c.guid FROM chat_message_join j JOIN chat c ON c.ROWID=j.chat_id WHERE j.message_id=m.ROWID ORDER BY c.guid LIMIT 1)" : "NULL"
+        let activeChat = has("chat", "guid") && has("chat_message_join", "chat_id", "message_id") ? "(SELECT c.guid FROM chat_message_join j JOIN chat c ON c.ROWID=j.chat_id WHERE j.message_id=m.ROWID ORDER BY c.guid LIMIT 1)" : "NULL"
+        let recoverableChat = has("chat", "guid") && has("chat_recoverable_message_join", "chat_id", "message_id") ? "(SELECT c.guid FROM chat_recoverable_message_join j JOIN chat c ON c.ROWID=j.chat_id WHERE j.message_id=m.ROWID ORDER BY c.guid LIMIT 1)" : "NULL"
+        let chat = "COALESCE(\(activeChat),\(recoverableChat))"
         let sender = has("message", "handle_id") && has("handle", "service", "id") ? "(SELECT h.service || ':' || h.id FROM handle h WHERE h.ROWID=m.handle_id)" : "NULL"
         let member = has("message", "other_handle") && has("handle", "service", "id") ? "(SELECT h.service || ':' || h.id FROM handle h WHERE h.ROWID=m.other_handle)" : "NULL"
         let attachmentFields = ["guid", "filename", "mime_type", "uti", "emoji_image_content_identifier", "emoji_image_short_description"].filter { columns["attachment"]?.contains($0) == true }
