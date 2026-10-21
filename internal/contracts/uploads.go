@@ -7,11 +7,12 @@ const MessageFileCount = 10
 const UploadLease = 10 * time.Minute
 
 type UploadRequest struct {
-	Action string `json:"action"`
-	ID     string `json:"upload_id"`
-	Offset int64  `json:"offset,omitempty"`
-	Size   int64  `json:"size"`
-	Digest string `json:"digest,omitempty"`
+	ChunkID string `json:"chunk_id,omitempty"`
+	Action  string `json:"action"`
+	ID      string `json:"upload_id"`
+	Offset  int64  `json:"offset,omitempty"`
+	Size    int64  `json:"size"`
+	Digest  string `json:"digest,omitempty"`
 }
 
 type UploadStatus struct {

@@ -31,6 +31,19 @@ func (s *commandSession) deliver(id string, response contracts.CommandResponse) 
 	}
 }
 func (c *Client) Exchange(ctx context.Context, delegation string, raw json.RawMessage) (contracts.CommandResponse, error) {
+	return c.exchangeJSON(ctx, contracts.FeedFrame{T: "CommandRequest", Delegation: delegation, Request: raw})
+}
+func (c *Client) UploadControl(ctx context.Context, delegation string, raw json.RawMessage) (contracts.CommandResponse, error) {
+	return c.exchangeJSON(ctx, contracts.FeedFrame{T: "UploadControl", Delegation: delegation, Request: raw})
+}
+func (c *Client) exchangeJSON(ctx context.Context, f contracts.FeedFrame) (contracts.CommandResponse, error) {
+	f.ID = contracts.NewID("request")
+	return c.exchange(ctx, f.ID, func(bounded context.Context, session *commandSession) error {
+		_, err := send(bounded, session.conn, f)
+		return err
+	})
+}
+func (c *Client) exchange(ctx context.Context, id string, write func(context.Context, *commandSession) error) (contracts.CommandResponse, error) {
 	var empty contracts.CommandResponse
 	c.mu.Lock()
 	session := c.session
@@ -39,18 +52,20 @@ func (c *Client) Exchange(ctx context.Context, delegation string, raw json.RawMe
 		return empty, contracts.ErrUnavailable
 	}
 	session.mu.Lock()
-	if len(session.pending) >= 16 {
+	if len(session.pending) >= 16 || session.pending[id] != nil {
 		session.mu.Unlock()
 		return empty, contracts.ErrUnavailable
 	}
-	id := contracts.NewID("request")
 	response := make(chan contracts.CommandResponse, 1)
 	session.pending[id] = response
 	session.mu.Unlock()
 	defer func() { session.mu.Lock(); delete(session.pending, id); session.mu.Unlock() }()
 	bounded, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
-	if _, err := send(bounded, session.conn, contracts.FeedFrame{T: "CommandRequest", ID: id, Delegation: delegation, Request: raw}); err != nil {
+	if writer := session.ctx.Value(writerKey{}); writer != nil {
+		bounded = context.WithValue(bounded, writerKey{}, writer)
+	}
+	if err := write(bounded, session); err != nil {
 		return empty, contracts.ErrUnavailable
 	}
 	select {
