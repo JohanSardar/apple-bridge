@@ -460,12 +460,13 @@ features:
     notes: Seeded 60-contact 40-chat 5000-message SimApple demo with generated media, one-use lab sign-in, live updates and optional 100000-message chat. Reader-only payload gaps are documented in lab/demo/FIXTURES.md.
   - id: web.relay
     title: Replicas connect through the Remote relay with device-key auth
-    requirements: [R-WEB-REACH, R-FULL]
+    requirements: [R-WEB-REACH, R-FULL, R-LIVE, R-SECURE]
     milestone: W1
-    modules: [replication, remote, trust]
-    depends_on: [web.remote]
+    modules: [replication, remote, trust, runtime]
+    depends_on: [web.remote, core.replication, core.trust]
     status: todo
     scenarios:
+      - {id: WEB-RELAY-AUTH, levels: [sim]}
       - {id: WEB-RELAY-REPLICA, levels: [replica]}
   - id: web.messages.read
     title: Messages web app reading at full fidelity (list, transcript, media, viewer, links, effects, details, search)
