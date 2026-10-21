@@ -58,7 +58,7 @@ func runWebServer(ctx context.Context, s Scenario, level string) Evidence {
 		body, _ := io.ReadAll(resp.Body)
 		return resp, string(body)
 	}
-	if s.ID == "MSG-INTERACTIVE-GATE" || s.ID == "WEB-AUTH-SOFTWARE" || s.ID == "WEB-LIVE-RECORD" || s.ID == "WEB-BLOB-ACCESS" || s.ID == "WEB-COMMAND-INTERACTIVE" || s.ID == "WEB-LIVE-READMODELS" {
+	if s.ID == "CORE-ITERATOR-POOL" || s.ID == "MSG-INTERACTIVE-GATE" || s.ID == "WEB-AUTH-SOFTWARE" || s.ID == "WEB-LIVE-RECORD" || s.ID == "WEB-BLOB-ACCESS" || s.ID == "WEB-COMMAND-INTERACTIVE" || s.ID == "WEB-LIVE-READMODELS" {
 		runWebSession(ctx, w, s.ID, &e, add)
 		e.Passed = len(e.Assertions) > 0
 		for _, a := range e.Assertions {
@@ -67,6 +67,8 @@ func runWebServer(ctx context.Context, s Scenario, level string) Evidence {
 		return e
 	}
 	switch s.ID {
+	case "CORE-SNAPSHOT-POOL":
+		runSnapshotPool(ctx, w, &e, add)
 	case "WEB-AGENT-ACTIVITY":
 		runAgentActivity(ctx, w, add)
 	case "WEB-AGENT-CREDENTIALS":
@@ -292,6 +294,10 @@ func runWebSession(ctx context.Context, w *world.World, id string, e *Evidence, 
 	}
 	if id == "WEB-BLOB-ACCESS" {
 		runWebBlobs(ctx, w, c, e, add)
+		return
+	}
+	if id == "CORE-ITERATOR-POOL" {
+		runIteratorPool(ctx, w, c, auth, e, add)
 		return
 	}
 	conn, err := c.socket()

@@ -1,0 +1,102 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[5.39 7.61 10.37] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5F4JPRT3Y5609XV97D9AFRA",
+  "scenario": "CORE-SNAPSHOT-POOL",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "5d9b1dbfdd6790d19680b72101032de4f41febbd",
+  "at": "2026-10-21T11:47:08.186904Z",
+  "assertions": [
+    {
+      "name": "paired_replica",
+      "passed": true
+    },
+    {
+      "name": "twelve_paused_snapshots_with_pool_8",
+      "passed": true
+    },
+    {
+      "name": "reads_progress_with_paused_snapshots",
+      "passed": true
+    },
+    {
+      "name": "paused_source_change_queued",
+      "passed": true
+    },
+    {
+      "name": "writes_progress_with_paused_snapshots",
+      "passed": true
+    },
+    {
+      "name": "materialized_snapshot_stays_frozen",
+      "passed": true
+    },
+    {
+      "name": "materialized_snapshot_stays_frozen",
+      "passed": true
+    },
+    {
+      "name": "materialized_snapshot_stays_frozen",
+      "passed": true
+    },
+    {
+      "name": "materialized_snapshot_stays_frozen",
+      "passed": true
+    },
+    {
+      "name": "materialized_snapshot_stays_frozen",
+      "passed": true
+    },
+    {
+      "name": "materialized_snapshot_stays_frozen",
+      "passed": true
+    },
+    {
+      "name": "materialized_snapshot_stays_frozen",
+      "passed": true
+    },
+    {
+      "name": "materialized_snapshot_stays_frozen",
+      "passed": true
+    },
+    {
+      "name": "materialized_snapshot_stays_frozen",
+      "passed": true
+    },
+    {
+      "name": "materialized_snapshot_stays_frozen",
+      "passed": true
+    },
+    {
+      "name": "materialized_snapshot_stays_frozen",
+      "passed": true
+    },
+    {
+      "name": "materialized_snapshot_stays_frozen",
+      "passed": true
+    },
+    {
+      "name": "paused_snapshot_resumes",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "twelve_snapshot_begins": {
+      "samples": 1,
+      "p50_ms": 28.919375,
+      "p95_ms": 28.919375,
+      "max_ms": 28.919375,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}
