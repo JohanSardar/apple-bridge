@@ -345,8 +345,14 @@ func (a *Authority) AuthenticateToken(token string) (Principal, error) {
 	err = func() error {
 		hash := Fingerprint([]byte(token))
 		for _, candidate := range d.Principals {
-			if candidate.Kind == "token" && hmac.Equal([]byte(hash), []byte(candidate.TokenHash)) {
+			if (candidate.Kind == "token" || candidate.Kind == "agent") && principalActive(candidate) && hmac.Equal([]byte(hash), []byte(candidate.TokenHash)) {
 				p = candidate
+				if p.Kind == "agent" {
+					p, err = a.useAgent(p.ID, hash)
+					if err != nil {
+						return err
+					}
+				}
 				if d.Enrollment != nil {
 					p.Grants = EffectiveGrants(p.Grants, d.Enrollment.Grants)
 				}

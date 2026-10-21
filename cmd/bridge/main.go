@@ -32,6 +32,14 @@ func run(ctx context.Context, args []string) error {
 		}
 		args = args[1:]
 	}
+	agentAction := ""
+	if verb == "agent" {
+		if len(args) == 0 {
+			return contracts.ErrInvalid
+		}
+		agentAction = args[0]
+		args = args[1:]
+	}
 	webAction := ""
 	if verb == "web" {
 		if len(args) == 0 {
@@ -54,13 +62,18 @@ func run(ctx context.Context, args []string) error {
 	blobCap := set.Int64("blob-cap", 0, "machine blob cap in bytes")
 	blobGrace := set.Int64("blob-grace-ms", 0, "unreferenced blob grace in milliseconds")
 	scope := set.String("scope", "reminders:read,system:read", "comma separated grants")
-	set.String("name", "", "replica display name")
+	name := set.String("name", "", "display name")
+	level := set.String("level", "approve", "agent access level: read, approve, full")
 	backup := set.String("backup", "", "state backup path")
 	acceptLedgerLoss := set.Bool("accept-ledger-loss", false, "acknowledge lost command history")
 	pairTTL := set.Duration("expires-in", 10*time.Minute, "pairing code lifetime")
 	retentionRows := set.Uint64("retention-rows", 0, "minimum retained journal rows")
 	retentionAge := set.Duration("retention-age", 0, "minimum journal age")
 	code := ""
+	if verb == "agent" && agentAction == "revoke" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		code = args[0]
+		args = args[1:]
+	}
 	if (verb == "join" || verb == "restore" || verb == "backup" || verb == "revoke" || verb == "scope") && len(args) > 0 && len(args[0]) > 0 && args[0][0] != '-' {
 		code = args[0]
 		args = args[1:]
@@ -132,6 +145,36 @@ func run(ctx context.Context, args []string) error {
 				return err
 			}
 			return json.NewEncoder(os.Stdout).Encode(devices)
+		default:
+			return contracts.ErrInvalid
+		}
+	case "agent":
+		switch agentAction {
+		case "create":
+			grants, err := trust.ParseGrants(*scope)
+			if err != nil {
+				return err
+			}
+			agent, token, err := authority.CreateAgent(*name, trust.AgentLevel(*level), grants)
+			if err != nil {
+				return err
+			}
+			return json.NewEncoder(os.Stdout).Encode(map[string]any{"agent": agent, "token": token})
+		case "list":
+			agents, err := authority.Agents()
+			if err != nil {
+				return err
+			}
+			return json.NewEncoder(os.Stdout).Encode(agents)
+		case "revoke":
+			id := code
+			if id == "" && set.NArg() > 0 {
+				id = set.Arg(0)
+			}
+			if !strings.HasPrefix(id, "agent:") {
+				return contracts.ErrInvalid
+			}
+			return authority.Revoke(id)
 		default:
 			return contracts.ErrInvalid
 		}

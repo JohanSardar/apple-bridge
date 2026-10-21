@@ -26,7 +26,7 @@ func (a *Authority) Principal(id string) (Principal, error) {
 		return Principal{}, err
 	}
 	for _, p := range d.Principals {
-		if p.ID == id {
+		if p.ID == id && principalActive(p) {
 			return p, nil
 		}
 	}
@@ -36,6 +36,13 @@ func (a *Authority) Revoke(id string) error {
 	return a.update(func(d *credentials) error {
 		for i, p := range d.Principals {
 			if p.ID == id {
+				if p.Kind == "agent" {
+					now := time.Now().UTC()
+					d.Principals[i].RevokedAt = &now
+					d.Principals[i].TokenHash = ""
+					d.Principals[i].Revision++
+					return nil
+				}
 				d.Principals = append(d.Principals[:i], d.Principals[i+1:]...)
 				return nil
 			}

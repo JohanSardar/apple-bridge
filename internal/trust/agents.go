@@ -50,3 +50,63 @@ func AgentGrants(level AgentLevel, scopes []contracts.Grant) ([]contracts.Grant,
 	}
 	return out, nil
 }
+func (a *Authority) CreateAgent(name string, level AgentLevel, scopes []contracts.Grant) (Agent, string, error) {
+	if level == "" {
+		level = AgentApprove
+	}
+	name = strings.TrimSpace(name)
+	if name == "" || len(name) > 120 {
+		return Agent{}, "", contracts.ErrInvalid
+	}
+	grants, err := AgentGrants(level, scopes)
+	if err != nil {
+		return Agent{}, "", err
+	}
+	token, err := randomWebToken(32)
+	if err != nil {
+		return Agent{}, "", err
+	}
+	token = "aba-" + token
+	p := Principal{ID: "agent:" + contracts.NewID(""), Kind: "agent", Name: name, Level: level, Grants: grants, CreatedAt: time.Now().UTC(), TokenHash: Fingerprint([]byte(token)), Revision: 1}
+	err = a.update(func(d *credentials) error {
+		if d.Enrollment != nil && !Subset(grants, d.Enrollment.Grants) {
+			return contracts.ErrUnauthorized
+		}
+		d.Principals = append(d.Principals, p)
+		return nil
+	})
+	if err != nil {
+		return Agent{}, "", err
+	}
+	return agentSummary(p), token, nil
+}
+func (a *Authority) Agents() ([]Agent, error) {
+	d, err := a.load()
+	if err != nil {
+		return nil, err
+	}
+	out := []Agent{}
+	for _, p := range d.Principals {
+		if p.Kind == "agent" {
+			out = append(out, agentSummary(p))
+		}
+	}
+	return out, nil
+}
+
+func (a *Authority) useAgent(id, hash string) (Principal, error) {
+	var p Principal
+	err := a.update(func(d *credentials) error {
+		for i, current := range d.Principals {
+			if current.ID == id && current.Kind == "agent" && principalActive(current) && current.TokenHash == hash {
+				now := time.Now().UTC()
+				current.LastUsed = &now
+				d.Principals[i] = current
+				p = current
+				return nil
+			}
+		}
+		return contracts.ErrUnauthorized
+	})
+	return p, err
+}
