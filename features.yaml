@@ -452,6 +452,7 @@ features:
     status: in_progress
     scenarios:
       - {id: WEB-DEMO-DATASET, levels: [sim]}
+      - {id: WEB-DEMO-SESSION, levels: [web]}
   - id: web.relay
     title: Replicas connect through the Remote relay with device-key auth
     requirements: [R-WEB-REACH, R-FULL]
