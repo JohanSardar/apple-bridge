@@ -1434,7 +1434,13 @@ Each app follows its spec (`design/web/reminders.md`, `calendar.md`, `contacts.m
 | W5-WRITE | Inline create with client-side natural-language dates, edit, complete (signature motion), delete, move, create list; optimistic via `observed_record_ids`. WEB-REM-WRITE (web, real on "Bridge Test"). |
 | W5-PARITY | Flag, subtasks, sections, tags, list icon/emoji/group, manual reorder, images, custom smart lists, through AppleScript or Accessibility, proven per OS build or hidden. WEB-REM-PARITY. |
 
-W5-STORE budgets on the Air: incremental enrichment after each EventKit capture <50 ms p95; 1- and 10-reminder changes <5 ms p95. Report 200-sample p50/p95 for 1, 10, 100 and 1,000 changed reminders. Full reads run at Helper startup or fallback (invalid history token, history truncation, schema change) and stay <100 ms p95 warm. Report cold reads separately without a gate, since they include page-cache warmup. A fresh forced full read must keep main-queue blocking below 16 ms. Store refresh piggybacks on capture completion; it adds no EventKit fetch or watcher.
+W5-STORE budgets on the Air: incremental enrichment after each EventKit capture <50 ms p95; 1- and 10-reminder changes <5 ms p95. Report 200-sample p50/p95 for 1, 10, 100 and 1,000 changed reminders. Full reads run at Helper startup or fallback (invalid history token, history truncation, schema change) and stay <100 ms p95 warm. Report cold reads separately without a gate, since they include page-cache warmup. A fresh forced full read must keep main-queue blocking below 16 ms.
+
+Real live runs time the full `RemindersStoreEnrichment.refresh` await inside the Helper, report the first call separately and retain warm p50/p95/max plus per-capture timings. Compare real main/candidate runs as interleaved A/B/A/B with per-effect timestamps and load/swap; repeat a pair if either run starts above 7 GB of swap. Both candidates must pass the existing ≤1 s live budget; candidate p95 stays within the baseline-run spread plus 10 ms, and direct warm enrichment p95 stays below 50 ms.
+
+Store refresh piggybacks on capture completion; it adds no EventKit fetch or watcher. Known gap: a store-only flag, section or tag change reaches Bridge only if EventKit also posts a change notification. Once the Helper has Reminders Apple Events authorization, the tagged real flag proof must measure flag-only gateway propagation without another edit. If no notification arrives, follow up with a WAL FSEvents hint through the existing bounded coalescer (§7), never one refetch per hint.
+
+Measure the first Reminders checkpoint after Helper start before and after enrichment; if enrichment adds more than about one second, emit the EventKit checkpoint first and store fields in the next checkpoint.
 
 **W6 units (Calendar):**
 

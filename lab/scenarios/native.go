@@ -87,6 +87,9 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "native world startup:", err)
+		if ctx.Err() != nil {
+			fmt.Fprintln(os.Stderr, "native world setup context:", ctx.Err())
+		}
 		return failed("world_start")
 	}
 	defer w.Close()
@@ -348,6 +351,19 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 			}
 			nativeLatencyEvidence(w, &e, effects, observers)
 			nativeMediaEvidence(w, &e, effects)
+			add("first_reminders_checkpoint_after_start_measured", e.Metrics["first_reminders_checkpoint_after_start_ms"] != nil)
+			if os.Getenv("APPLE_BRIDGE_LAB_EXPECT_STORE_ENRICHMENT") == "1" {
+				latency := e.Latency["reminders_store_refresh_warm"]
+				add("enrichment_direct_cost_measured_within_budget", latency.Samples > 0 && latency.P95 < 50)
+				reads, measured := e.Metrics["reminders_store_reads"].([]map[string]any)
+				add("enrichment_read_mode_and_rows_measured", measured && len(reads) > 0)
+				histogram, ok := e.Metrics["reminders_store_refresh_histogram"].(map[string]any)
+				bytes, err := json.Marshal(histogram["warm"])
+				var native Latency
+				exact := ok && err == nil && json.Unmarshal(bytes, &native) == nil && native.Samples == latency.Samples && native.P50 == latency.P50 && native.P95 == latency.P95 && native.Max == latency.Max
+				add("helper_refresh_histogram_matches_per_capture_timings", exact)
+			}
+
 			add("native_path_timestamps", len(e.NativeTimings) == 200 && e.Latency["refetch_duration"].Samples == 200 && e.Latency["capture_sent→gateway_commit"].Samples == 200)
 			_, cleanupErr := w.Truth("fixture", map[string]any{"action": "cleanup", "list": "Bridge Test", "tag": tag})
 			add("post_burst_bulk_truth_cleanup", cleanupErr == nil)

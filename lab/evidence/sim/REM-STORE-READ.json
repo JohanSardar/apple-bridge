@@ -1,14 +1,14 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[12.51 9.36 8.97] cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[6.29 8.51 10.38] cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5F9DTTN3CGW6A54YRWYA8YG",
+  "run_id": "run_01M5G05W4KPYF6GWFDT5S6534H",
   "scenario": "REM-STORE-READ",
   "level": "sim",
   "passed": true,
-  "git_sha": "02b3cad44a46aefb407a74497b7b2da377d31506",
-  "at": "2026-10-21T13:11:51.381721Z",
+  "git_sha": "e1d36f710a94267e77e670be40845fb127b1f3f9",
+  "at": "2026-10-21T19:49:27.82735Z",
   "assertions": [
     {
       "name": "world_start",

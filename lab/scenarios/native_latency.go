@@ -12,13 +12,20 @@ import (
 )
 
 type nativeTrace struct {
-	LabPaused           bool     `json:"lab_paused"`
-	SystemPaused        bool     `json:"system_paused"`
-	Thermal             int      `json:"thermal"`
-	PendingMedia        int      `json:"pending_media"`
-	PendingBlobs        int      `json:"pending_blobs"`
-	QueuedNS            int64    `json:"queued_ns"`
-	Source              string   `json:"source"`
+	StartedWallNS  float64        `json:"started_wall_ns"`
+	FinishedWallNS float64        `json:"finished_wall_ns"`
+	Mode           string         `json:"mode"`
+	DecodedRows    int            `json:"decoded_rows"`
+	LabPaused      bool           `json:"lab_paused"`
+	SystemPaused   bool           `json:"system_paused"`
+	Thermal        int            `json:"thermal"`
+	PendingMedia   int            `json:"pending_media"`
+	PendingBlobs   int            `json:"pending_blobs"`
+	QueuedNS       int64          `json:"queued_ns"`
+	Source         string         `json:"source"`
+	DurationMS     float64        `json:"duration_ms"`
+	Histogram      map[string]any `json:"histogram"`
+
 	DeliveredNS         int64    `json:"delivered_ns"`
 	CommitStartedWallNS float64  `json:"commit_started_wall_ns"`
 	Live                bool     `json:"live"`
@@ -34,6 +41,10 @@ type nativeTrace struct {
 }
 
 type NativeTiming struct {
+	StoreRefreshStartedNS  int64   `json:"store_refresh_started_ns,omitempty"`
+	StoreRefreshFinishedNS int64   `json:"store_refresh_finished_ns,omitempty"`
+	StoreRefreshMS         float64 `json:"store_refresh_ms,omitempty"`
+
 	GatewayVisibleWallNS  int64   `json:"gateway_visible_wall_ns"`
 	ReplicaVisibleWallNS  int64   `json:"replica_visible_wall_ns"`
 	CommitStartedWallNS   float64 `json:"commit_started_wall_ns"`
@@ -86,7 +97,50 @@ func nativeLatencyEvidence(w *world.World, e *Evidence, effects []any, observers
 		e.Metrics = map[string]any{}
 	}
 	e.Metrics["capture_trace_stage_counts"] = counts
+	reads := []map[string]any{}
+	queues := []map[string]any{}
+	refetches := []map[string]any{}
+	for _, event := range trace {
+		if event.Stage == "refetch" {
+			refetches = append(refetches, map[string]any{"started_ns": event.StartedNS, "finished_ns": event.FinishedNS, "recorded_ns": event.UptimeNS, "recorded_wall_ns": event.WallNS, "source": event.Source})
+		}
+		if event.Stage == "reminders_store_read" {
+			reads = append(reads, map[string]any{"started_ns": event.StartedNS, "finished_ns": event.FinishedNS, "started_wall_ns": event.StartedWallNS, "finished_wall_ns": event.FinishedWallNS, "mode": event.Mode, "decoded_rows": event.DecodedRows, "duration_ms": event.DurationMS})
+		}
+		if event.Stage == "reminders_store_queue" {
+			queues = append(queues, map[string]any{"started_ns": event.StartedNS, "finished_ns": event.FinishedNS})
+		}
+	}
+	if len(reads) > 0 {
+		e.Metrics["reminders_store_reads"] = reads
+		e.Metrics["eventkit_refetch_windows"] = refetches
+		e.Metrics["reminders_store_queues"] = queues
+	}
 	e.Latency["calendar_chunk_refetch"] = stats(calendarRefetch, 0)
+	nativeStartupEvidence(w, e, trace)
+	refreshes := []nativeTrace{}
+	for _, event := range trace {
+		if event.Stage == "reminders_store_refresh" {
+			refreshes = append(refreshes, event)
+		}
+	}
+	if len(refreshes) > 0 {
+		if e.Metrics == nil {
+			e.Metrics = map[string]any{}
+		}
+		e.Metrics["reminders_store_refresh_histogram"] = refreshes[len(refreshes)-1].Histogram
+		samples := make([]map[string]any, 0, len(refreshes))
+		warm := []float64{}
+		for index, event := range refreshes {
+			samples = append(samples, map[string]any{"index": index, "started_ns": event.StartedNS, "finished_ns": event.FinishedNS, "duration_ms": event.DurationMS})
+			if index > 0 {
+				warm = append(warm, event.DurationMS)
+			}
+		}
+		e.Metrics["reminders_store_refresh_samples"] = samples
+		e.Latency["reminders_store_refresh_warm"] = stats(warm, 0)
+	}
+
 	values := map[string][]float64{}
 	sample := func(name string, from, through int64) {
 		if from > 0 && through >= from {
@@ -134,6 +188,12 @@ func nativeLatencyEvidence(w *world.World, e *Evidence, effects []any, observers
 					row.DebounceNS = event.DebounceNS
 					row.RefetchStartedNS = event.StartedNS
 					row.RefetchFinishedNS = event.FinishedNS
+				}
+			case "reminders_store_refresh":
+				if row.StoreRefreshFinishedNS == 0 {
+					row.StoreRefreshStartedNS = event.StartedNS
+					row.StoreRefreshFinishedNS = event.FinishedNS
+					row.StoreRefreshMS = event.DurationMS
 				}
 			case "capture_sent":
 				if row.CaptureSentNS == 0 {
@@ -185,7 +245,7 @@ func nativeLatencyEvidence(w *world.World, e *Evidence, effects []any, observers
 
 func nativeConditions() map[string]string {
 	out := map[string]string{}
-	for name, args := range map[string][]string{"cpu": {"sh", "-c", "top -l 1 -n 0 | sed -n '/CPU usage:/p'"}, "uptime": {"uptime"}, "memory_pressure": {"memory_pressure", "-Q"}, "heavy_slots": {"sh", "-c", "for slot in /tmp/apple-bridge-heavy-*.lock/pid; do cat \"$slot\"; done"}} {
+	for name, args := range map[string][]string{"cpu": {"sh", "-c", "top -l 1 -n 0 | sed -n '/CPU usage:/p'"}, "uptime": {"uptime"}, "swap": {"sysctl", "vm.swapusage"}, "memory_pressure": {"memory_pressure", "-Q"}, "heavy_slots": {"sh", "-c", "for slot in /tmp/apple-bridge-heavy-*.lock/pid; do cat \"$slot\"; done"}} {
 		bytes, err := exec.Command(args[0], args[1:]...).Output()
 		if err == nil {
 			out[name] = string(bytes)
