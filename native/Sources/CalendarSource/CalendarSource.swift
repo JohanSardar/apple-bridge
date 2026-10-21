@@ -19,6 +19,38 @@ public final class CalendarSource: Source {
     private var committed: [String: JSON] = [:]
     private var scanning = false
     private var forceFull = true
+    private var pendingScope: CalendarScanScope?
+    private var commandRevision: UInt64 = 0
+    private var acceptedCommandRevision: UInt64 = 0
+    private var commandNeedsCapture = false
+    private var lastFullScanStarted: UInt64 = 0
+    private var persistence: Task<Void, Never>?
+
+    private func touch(_ event: EKEvent, future: Bool) {
+        let bounds = CalendarTime.window(Date())
+        let original = event.occurrenceDate ?? event.startDate!
+        let interval = future ? bounds : DateInterval(start: min(event.startDate, original).addingTimeInterval(-1), end: max(event.endDate, original.addingTimeInterval(1)))
+        let scope = CalendarScanScope(interval: interval, calendars: [event.calendar.calendarIdentifier])
+        if pendingScope == nil { pendingScope = scope } else { pendingScope?.include(scope) }
+    }
+
+    private func persistAccepted(_ values: [String: JSON]) {
+        let previous = persistence
+        let baselineURL = self.baselineURL
+        persistence = Task { @MainActor [weak self] in
+            await previous?.value
+            do {
+                try await Task.detached {
+                    try JSONEncoder().encode(values).write(to: baselineURL, options: .atomic)
+                    try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: baselineURL.path)
+                }.value
+                guard let self else { return }
+                try self.saveOffered(self.offered.filter { values[$0.key] == nil })
+            } catch {
+                self?.gate.trace.record("calendar_baseline_persistence_failed")
+            }
+        }
+    }
 
     public init(gate: AgendaGate, home: URL, commandsEnabled: Bool) throws {
         self.gate = gate; self.commandsEnabled = commandsEnabled
@@ -85,10 +117,14 @@ public final class CalendarSource: Source {
         .object(["kind": .string("upsert"), "collection": .string(collection), "native_key": .string(key), "scoped_alias": .string(alias), "data": data, "observed_at": .string(timestamp())])
     }
 
-    private func events(_ interval: DateInterval) throws -> [EKEvent] {
+    private func events(_ interval: DateInterval, calendars: Set<String>? = nil) throws -> [EKEvent] {
         guard gate.authorized(.event) else { throw SourceFailure.permissionMissing }
-        let predicate = gate.store.predicateForEvents(withStart: interval.start, end: interval.end, calendars: nil)
+        let queryStarted = CaptureTrace.now()
+        let selected = calendars.map { identifiers in gate.store.calendars(for: .event).filter { identifiers.contains($0.calendarIdentifier) } }
+        if let selected, selected.isEmpty { return [] }
+        let predicate = gate.store.predicateForEvents(withStart: interval.start, end: interval.end, calendars: selected)
         let events = gate.store.events(matching: predicate)
+        gate.trace.record("calendar_eventkit_fetch", fields: ["duration_ns": .integer(CaptureTrace.now() - queryStarted), "records": .number(Double(events.count)), "range_days": .number(interval.duration / 86400)])
         guard gate.authorized(.event) else { throw SourceFailure.permissionMissing }
         return events
     }
@@ -113,7 +149,7 @@ public final class CalendarSource: Source {
             let identity = value["collection"].string + "/" + value["native_key"].string
             if committed[identity] == nil { pending[identity] = value }
         }
-        if pending != offered {
+        if !values.isEmpty {
             try JSONEncoder().encode(lookups).write(to: lookupURL, options: .atomic)
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: lookupURL.path)
         }
@@ -125,20 +161,37 @@ public final class CalendarSource: Source {
         return Data(SHA256.hash(data: try encoder.encode(value)))
     }
 
-    private func scan(into sink: any ObservationSink, live: Bool) async throws {
+    private func scan(into sink: any ObservationSink, live: Bool, command: UInt64 = 0) async throws {
         while scanning { try await Task.sleep(for: .milliseconds(10)) }
+        if command > 0 && acceptedCommandRevision >= command { return }
+        let scope = forceFull ? nil : pendingScope
+        let revision = commandRevision
+        pendingScope = nil
         scanning = true
         defer { scanning = false }
-        while try await !scanPass(into: sink, live: live) {}
+        do {
+            try await scanPass(into: sink, live: live, scope: scope)
+            acceptedCommandRevision = max(acceptedCommandRevision, revision)
+        } catch {
+            if let scope {
+                if pendingScope == nil { pendingScope = scope } else { pendingScope?.include(scope) }
+            }
+            throw error
+        }
     }
 
-    private func scanPass(into sink: any ObservationSink, live: Bool) async throws -> Bool {
+    private func scanPass(into sink: any ObservationSink, live: Bool, scope: CalendarScanScope?) async throws {
         let revision = gate.calendarDebounceAt
         let started = timestamp()
-        gate.trace.record("calendar_scan_started", fields: ["live": .bool(live)])
+        let scan = UUID().uuidString
+        let scanNS = CaptureTrace.now()
+        var fetchNS: UInt64 = 0, materializeNS: UInt64 = 0, hashNS: UInt64 = 0
+        defer { gate.trace.record("calendar_scan_timing", fields: ["scan": .string(scan), "started_ns": .integer(scanNS), "fetch_ns": .integer(fetchNS), "materialize_ns": .integer(materializeNS), "hash_ns": .integer(hashNS), "force_full": .bool(forceFull), "scoped": .bool(scope != nil)]) }
+        gate.trace.record("calendar_scan_started", fields: ["scan": .string(scan), "live": .bool(live), "force_full": .bool(forceFull), "notification_ns": .integer(gate.calendarNotificationAt), "debounce_ns": .integer(revision), "scoped": .bool(scope != nil)])
         let now = Date()
         let bounds = CalendarTime.window(now)
-        var current: [String: JSON] = [:]
+        var current: [String: JSON] = scope.map { range in committed.filter { !range.covers($0.value) } } ?? [:]
+        var seen: Set<String> = []
         var pending: [JSON] = []
         let streamInitial = committed.isEmpty
         guard gate.authorized(.event) else { throw SourceFailure.permissionMissing }
@@ -147,19 +200,26 @@ public final class CalendarSource: Source {
             current["calendar.calendar/" + calendar.calendarIdentifier] = value
             if forceFull || value["data"] != committed["calendar.calendar/" + calendar.calendarIdentifier]?["data"] { pending.append(value) }
         }
-        for (index, chunk) in CalendarTime.chunks(now).enumerated() {
+        let chunks = scope.map { range in range.calendars.isEmpty ? [] : bounds.intersection(with: range.interval).map { [$0] } ?? [] } ?? CalendarTime.chunks(now)
+        for (index, chunk) in chunks.enumerated() {
             let refetchStarted = CaptureTrace.now()
             let notificationAt = gate.calendarNotificationAt, debounceAt = gate.calendarDebounceAt
-            for event in try events(chunk) {
+            let fetched = try events(chunk, calendars: scope?.calendars)
+            fetchNS += CaptureTrace.now() - refetchStarted
+            for event in fetched {
+                let materializeStarted = CaptureTrace.now()
                 let native = key(event)
                 remember(event)
                 let identity = "calendar.event/" + native
-                if current[identity] != nil { continue }
+                if !seen.insert(identity).inserted { continue }
                 let occurrence = event.hasRecurrenceRules || event.isDetached ? event.occurrenceDate.map { "|" + (event.isAllDay ? CalendarTime.floating($0, zone: .current) : timestamp($0)) } ?? "" : ""
                 let alias = event.calendarItemExternalIdentifier.map { _ in event.calendar.source.sourceIdentifier + "/" + event.calendar.calendarIdentifier + "/" + seriesIdentifier(event) + occurrence } ?? ""
                 let value = observation("calendar.event", native, data(event), alias: alias)
                 current[identity] = value
+                materializeNS += CaptureTrace.now() - materializeStarted
+                let hashStarted = CaptureTrace.now()
                 let changed = try hash(value["data"]) != hash(committed[identity]?["data"] ?? .null)
+                hashNS += CaptureTrace.now() - hashStarted
                 if forceFull || changed || value["scoped_alias"] != committed[identity]?["scoped_alias"] { pending.append(value) }
             }
             gate.trace.record("refetch", keys: pending.map { $0["native_key"].string }, fields: ["notification_ns": .integer(notificationAt), "debounce_ns": .integer(debounceAt), "started_ns": .integer(refetchStarted), "finished_ns": .integer(CaptureTrace.now()), "live": .bool(live || index == 0)])
@@ -174,11 +234,10 @@ public final class CalendarSource: Source {
             }
             if streamInitial { pending = [] }
             await Task.yield()
-            if !forceFull && gate.calendarDebounceAt != revision {
-                return false
-            }
         }
+        let revalidateStarted = CaptureTrace.now()
         for (identity, previous) in committed.merging(offered, uniquingKeysWith: { accepted, _ in accepted }) where current[identity] == nil {
+            if let scope, !scope.covers(previous) { continue }
             if current.values.contains(where: { !$0["scoped_alias"].string.isEmpty && $0["scoped_alias"] == previous["scoped_alias"] }) { continue }
             var absent = previous.object
             absent["observed_at"] = .string(timestamp()); absent["revalidated"] = .bool(true)
@@ -202,6 +261,7 @@ public final class CalendarSource: Source {
             pending.append(.object(absent))
         }
         guard gate.authorized(.event) else { throw SourceFailure.permissionMissing }
+        gate.trace.record("calendar_revalidation", fields: ["scan": .string(scan), "duration_ns": .integer(CaptureTrace.now() - revalidateStarted)])
         let unchanged = pending.filter { value in
             let identity = value["collection"].string + "/" + value["native_key"].string
             return value["kind"].string == "upsert" && value["data"] == committed[identity]?["data"] && value["scoped_alias"] == committed[identity]?["scoped_alias"]
@@ -214,21 +274,27 @@ public final class CalendarSource: Source {
             throw SourceFailure.unavailable
         }
         if forceFull && !unchanged.isEmpty {
+            gate.trace.record("calendar_replay_started", fields: ["scan": .string(scan), "records": .number(Double(unchanged.count))])
             try await sink.emit(source: name, generation: "eventkit-calendar-v1", observations: unchanged, scanID: "", scanStartedAt: started, scope: [], completionEvidence: "", blobHandles: [:], live: false)
-            if gate.calendarDebounceAt != revision { return false }
+            gate.trace.record("calendar_replay_finished", fields: ["scan": .string(scan)])
         }
+        gate.trace.record("calendar_publish_started", keys: pending.map { $0["native_key"].string }, fields: ["scan": .string(scan), "records": .number(Double(pending.count)), "bytes": .number(Double(captureBytes))])
         try offer(pending)
-        try await sink.emit(source: name, generation: "eventkit-calendar-v1", observations: pending, scanID: UUID().uuidString, scanStartedAt: started, scope: ["calendar.calendar", "calendar.event"], completionEvidence: "complete", blobHandles: [:], live: true)
-        try save(current); committed = current; forceFull = false
-        try saveOffered([:])
+        try await sink.emit(source: name, generation: "eventkit-calendar-v1", observations: pending, scanID: scan, scanStartedAt: started, scope: ["calendar.calendar", "calendar.event"], completionEvidence: "complete", blobHandles: [:], live: true)
+        gate.trace.record("calendar_publish_accepted", fields: ["scan": .string(scan)])
+        let persist = forceFull || !pending.isEmpty
+        committed = current; forceFull = false
+        if scope == nil { lastFullScanStarted = scanNS }
+        if persist { persistAccepted(current) }
         gate.trace.record("calendar_scan_complete", fields: ["records": .number(Double(current.count))])
  let readiness=await open()
  try await sink.sourceState(source:name,state:readiness.state,coverage:readiness.coverage,capabilities:readiness.capabilities,reason:readiness.reason)
-        return true
     }
 
     public func reconcile(into sink: any ObservationSink) async throws {
-        try await scan(into: sink, live: true)
+        let revision = commandNeedsCapture ? commandRevision : 0
+        commandNeedsCapture = false
+        try await scan(into: sink, live: true, command: revision)
     }
 
     public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {
@@ -252,7 +318,17 @@ public final class CalendarSource: Source {
             }
         }
         defer { periodic.cancel() }
-        for await _ in changes { try Task.checkCancellation(); try await scan(into: sink, live: true) }
+        var handledHint: UInt64 = 0
+        for await _ in changes {
+            try Task.checkCancellation()
+            let hint = gate.calendarDebounceAt
+            if hint != handledHint && gate.calendarNotificationAt <= lastFullScanStarted {
+                handledHint = hint
+                continue
+            }
+            handledHint = hint
+            try await scan(into: sink, live: true)
+        }
     }
 
     private func remember(_ event: EKEvent) {
@@ -395,13 +471,18 @@ public final class CalendarSource: Source {
             calendar.source = source; calendar.title = args(action)["title"].string
             try gate.store.saveCalendar(calendar, commit: true)
             native = calendar.calendarIdentifier
+            pendingScope = pendingScope ?? CalendarScanScope(interval: CalendarTime.window(Date()), calendars: [])
+            gate.trace.record("calendar_native_effect", keys: [native], fields: ["operation": .string(operation)])
             guard gate.store.calendar(withIdentifier: native)?.title == calendar.title else { throw SourceFailure.unavailable }
         } else {
             let event = operation == "calendar.create_event" ? EKEvent(eventStore: gate.store) : try fresh(native)
+            if operation != "calendar.create_event" { touch(event, future: args(action)["span"].string == "future") }
             event.calendar = try writable(action["list_key"].string)
             let span: EKSpan = args(action)["span"].string == "future" ? .futureEvents : .thisEvent
             if operation == "calendar.delete_event" { try gate.store.remove(event, span: span, commit: true) }
             else { try patch(event, args(action)); try gate.store.save(event, span: span, commit: true); native = key(event) }
+            if operation != "calendar.delete_event" { touch(event, future: span == .futureEvents || event.hasRecurrenceRules) }
+            gate.trace.record("calendar_native_effect", keys: [native], fields: ["operation": .string(operation)])
             if operation == "calendar.delete_event" {
                 guard (try? fresh(native)) == nil else { throw SourceFailure.unavailable }
             } else {
@@ -409,6 +490,8 @@ public final class CalendarSource: Source {
                 guard data(observed) == data(event) else { throw SourceFailure.unavailable }
             }
         }
+        commandRevision += 1
+        commandNeedsCapture = true
         return .object(["native_key": .string(native), "fingerprint": .string(prepared.fingerprint), "observed": .bool(true), "absent": .bool(operation == "calendar.delete_event")])
     }
 
