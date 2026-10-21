@@ -4,7 +4,8 @@ You are a worker on Apple Bridge, delegated by the build leader. Read this file,
 
 ## Where things run
 - You run on the Ubuntu laptop. The repo lives on the MacBook Air at `~/apple-bridge` and is mounted at `/home/johan/air/apple-bridge` (sshfs). Edit files through the mount.
-- If ssh to the Air hangs, the shared ControlMaster socket is broken: use `ssh -o ControlPath=none air` (always safe). The Tailscale IP may be blocked by an ACL; prefer the `air` alias.
+- If ssh to the Air hangs, the shared ControlMaster socket is broken: use `ssh -o ControlPath=none air` (always safe). The `air` alias tries the Air's direct LAN address first and falls back to the reverse tunnel (127.0.0.1:2222), whose launchd job on the Air can restart. The Tailscale IP may be blocked by an ACL; prefer the `air` alias.
+- **Run long jobs detached on the Air** so a dropped ssh session can't kill them: `ssh air 'cd <worktree> && nohup packaging/dev/heavy.sh <cmd> > /tmp/<name>.log 2>&1 & echo $!'`, then poll the log or PID. Kill your own leftover processes and remove their `/tmp/ablab/<world>` when you abandon a run.
 - Run **every** build, test, git and service command on the Air: `ssh air 'export PATH=/opt/homebrew/bin:$HOME/go/bin:$PATH; cd ~/apple-bridge && <command>'`. Never run git over the mount. Never build on Ubuntu (there is no Go there).
 - If the mount drops: `sshfs -o reconnect,ServerAliveInterval=15 air:/Users/johansardar/apple-bridge /home/johan/air/apple-bridge`. If `air` doesn't resolve, use `100.78.200.121`.
 - The Air has 8 GB RAM and ~15 GB free disk. Another worker may be building at the same time: never run more than one heavy build/test at once yourself, use `-p 2` for `go test`/`go build` when heavy, and clean temp dirs you create (`/tmp/ablab/...`).
