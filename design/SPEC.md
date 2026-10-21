@@ -455,6 +455,7 @@ Every UI action records a before/after screenshot path in evidence (stored in th
 - Series: each occurrence in the window is a `calendar.event`; the series rule lives on every occurrence (`recurrence`) with `series_id`; detached occurrences have `is_exception=true`.
 - Change detection: `EKEventStoreChanged` → debounce → refetch window in chunks, nearest chunk (±30 days) first for latency, hash diff against the last committed set → observations. Complete scan of the window produces `absent` with completion evidence. Periodic full reconciliation every 15 min.
 - Commands: create (calendar must be writable), update with span `this|future` (`EKSpan`), delete with span. `all` rejects. Expected version checked against a fresh native refetch (F7). Per-series serialization.
+- A recurrence edited with This and Future Events starts counting at the split occurrence. A count-ended recurrence edited with This and Future Events is stored as the equivalent end date, because EventKit recounts from the original series. The inclusive bound is the start of the Nth requested occurrence in the event’s time zone, or its floating civil date for all-day events; Calendar.app displays “End Repeat: On Date”. Verification compares the occurrence set.
 - All-day events keep floating dates; time zones preserved; DST tested.
 
 ### 9.3 Reminders
