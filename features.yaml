@@ -478,6 +478,16 @@ features:
     modules: [webui, web, operations, native/MessagesSource, lab/demo]
     depends_on: [web.frontdoor, web.demo, web.media]
     status: todo
+    limits:
+      - scenario: MSG-DECODE-BALLOON
+        level: real
+        reason: "Signed dev.applebridge.truth lacks Full Disk Access to the Messages database. Granting access requires Johan's admin authentication in System Settings, which the automation never performs or requests. Identity-bound real parity is limited; signed Helper counts are supporting evidence only."
+      - scenario: MSG-DECODE-FORMATTING
+        level: real
+        reason: "Signed dev.applebridge.truth lacks Full Disk Access to the Messages database. Granting access requires Johan's admin authentication in System Settings, which the automation never performs or requests. Identity-bound real parity is limited; signed Helper counts are supporting evidence only."
+      - scenario: MSG-READ-RICH-FIELDS
+        level: real
+        reason: "Signed dev.applebridge.truth lacks Full Disk Access to the Messages database. Granting access requires Johan's admin authentication in System Settings, which the automation never performs or requests. Identity-bound real parity is limited; signed Helper counts are supporting evidence only."
     scenarios:
       - {id: MSG-DECODE-BALLOON, levels: [sim, real]}
       - {id: MSG-DECODE-FORMATTING, levels: [sim, real]}

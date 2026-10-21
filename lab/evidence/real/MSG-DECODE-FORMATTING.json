@@ -1,0 +1,103 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[9.9 10.4 10.8] cpus=8 other_heavy=1"
+  },
+  "status": "limited",
+  "run_id": "run_01M5ER02EEYNRJB0Z3PM39V1XR",
+  "metrics": {
+    "helper_counts": {
+      "attachment.genmoji": 0,
+      "attachment.hidden": 1138,
+      "attachment.is_sticker": 21,
+      "attachment.sticker": 2,
+      "audio": 12,
+      "audio.expirable": 12,
+      "audio.played": 2,
+      "balloon.app": 57,
+      "balloon.app.subcaption": 0,
+      "balloon.app.trailing_caption": 0,
+      "balloon.app.url": 74,
+      "balloon.app_caption": 74,
+      "balloon.apple_cash": 1,
+      "balloon.chatbot": 28,
+      "balloon.check_in": 0,
+      "balloon.digital_touch": 1,
+      "balloon.find_my": 16,
+      "balloon.handwriting": 0,
+      "balloon.image_reference": 25,
+      "balloon.link": 1150,
+      "balloon.link.icon_attachment_id": 61,
+      "balloon.link.site_name": 753,
+      "balloon.link.summary": 910,
+      "balloon.link.title": 1077,
+      "balloon.link.video_url": 0,
+      "balloon.link_card": 1103,
+      "balloon.payload_decoded": 1203,
+      "balloon.poll": 0,
+      "balloon.unknown": 0,
+      "chat.deleted_at": 2,
+      "chat.group_photo": 29,
+      "chat.is_spam": 3,
+      "chat.read_receipts": 2,
+      "chat.unknown": 387,
+      "delivery.notified_anyway": 2574,
+      "delivery.quietly": 26663,
+      "formatting": 53,
+      "genmoji": 15,
+      "has_unseen_mention": 198,
+      "is_sos": 0,
+      "is_spam": 0,
+      "message.deleted_at": 227,
+      "schedule": 1,
+      "subject": 20,
+      "via_satellite": 0
+    },
+    "limits": [
+      {
+        "level": "real",
+        "reason": "Signed dev.applebridge.truth lacks Full Disk Access to the Messages database. Granting access requires Johan's admin authentication in System Settings; identity-bound real parity is limited. No authorization is requested.",
+        "scenario": "MSG-DECODE-FORMATTING"
+      }
+    ]
+  },
+  "scenario": "MSG-DECODE-FORMATTING",
+  "level": "real",
+  "passed": false,
+  "git_sha": "64dcd17305e94582cc0b2ffd54fb7f8e52520e3f",
+  "at": "2026-10-21T08:07:14.64071Z",
+  "assertions": [
+    {
+      "name": "build-helper.sh",
+      "passed": true
+    },
+    {
+      "name": "build-truth.sh",
+      "passed": true
+    },
+    {
+      "name": "signed_helper_readonly_counts",
+      "passed": true
+    },
+    {
+      "name": "independent_apple_truth_readonly_counts",
+      "passed": false,
+      "status": "unverified",
+      "detail": "Signed dev.applebridge.truth lacks Full Disk Access to the Messages database. Granting access requires Johan's admin authentication in System Settings; identity-bound real parity is limited. No authorization is requested."
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "readonly_helper_decoding": {
+      "samples": 1,
+      "p50_ms": 9884.674583,
+      "p95_ms": 9884.674583,
+      "max_ms": 9884.674583,
+      "timeouts": 0
+    }
+  },
+  "hosts": null
+}
