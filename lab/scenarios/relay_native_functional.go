@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/JohanSardar/apple-bridge/lab/world"
 )
@@ -36,16 +37,22 @@ func relayNativeFunctionalChecks(w *world.World, e *Evidence, add func(string, b
 	truth, err := w.Truth("observe", map[string]any{"list": "Bridge Test", "tag": tag, "title": title})
 	records, _ := truth["records"].([]any)
 	add("forwarded_delete_independent_native_absence", err == nil && len(records) == 0)
+	relayNativeBlobCheck(w, e, add)
+}
+
+func relayNativeBlobCheck(w *world.World, e *Evidence, add func(string, bool)) bool {
 	var fixture struct {
 		Digest string `json:"digest"`
 		Size   int64  `json:"size"`
 		Title  string `json:"title"`
 	}
-	err = w.BlobControl(map[string]string{"action": "relay-fixture"}, &fixture)
+	started := time.Now()
+	err := w.BlobControl(map[string]string{"action": "relay-fixture"}, &fixture)
+	e.Metrics["nominal_blob_stage_elapsed_ms"] = float64(time.Since(started)) / float64(time.Millisecond)
 	add("synthetic_blob_staged_in_isolated_native_gateway", err == nil)
 	if err != nil {
 		os.WriteFile(filepath.Join(w.Dir, "relay-blob-call-error.log"), []byte(err.Error()), 0600)
-		return
+		return false
 	}
 	blobInput := relayProbeInput(w)
 	blobInput["Title"] = fixture.Title
@@ -58,8 +65,5 @@ func relayNativeFunctionalChecks(w *world.World, e *Evidence, add func(string, b
 	err = w.RelayProbe("blob", blobInput, &blob)
 	add("blob_bytes_through_public_relay_match_gateway_digest", err == nil && blob.Matches && blob.Bytes == fixture.Size)
 	e.Metrics["relay_blob_bytes"] = blob.Bytes
-	if err != nil {
-		return
-	}
-
+	return err == nil
 }
