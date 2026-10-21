@@ -8,6 +8,18 @@ import SourceSupport
 public enum HelperCommand {
     @MainActor
     public static func run(_ arguments: [String]) throws {
+        if arguments.first == "media-cleanup-checks" {
+            guard let index = arguments.firstIndex(of: "--fixtures"), index + 1 < arguments.count else { throw ProbeFailure.invalidArguments }
+            let fixture = try JSONDecoder().decode(JSON.self, from: Data(contentsOf: URL(fileURLWithPath: arguments[index + 1])))
+            let proof = try MessagesMediaCleanupProof(registration: fixture["registration"], tag: fixture["tag"].string)
+            let row = fixture["row"]
+            guard let rowID = Int64(exactly: row["row_id"].number) else { throw ProbeFailure.invalidArguments }
+            let authorized = proof.authorizes(rowID: rowID, attachments: row["attachments"].array.map(\.string), peers: row["peers"].array.map(\.string), own: Set(fixture["own"].array.map { MessagesProbes.normalize($0.string) }))
+            let target = MessagesMediaCleanupProof.targetIndex(fixture["candidates"].array, names: Set(proof.targetNames(row["attachments"].array.map(\.string))), outgoing: row["is_from_me"].bool)
+            let result = JSON.object(["authorized": .bool(authorized), "target_verified": .bool(authorized && target != nil)])
+            print(String(decoding: try JSONEncoder().encode(result), as: UTF8.self))
+            return
+        }
         if arguments.first == "wire-checks" {
             guard let index = arguments.firstIndex(of: "--fixtures"), index + 1 < arguments.count else { throw ProbeFailure.invalidArguments }
             let frames = try JSONDecoder().decode([JSON].self, from: Data(contentsOf: URL(fileURLWithPath: arguments[index + 1])))
