@@ -483,7 +483,15 @@ features:
       - {id: WEB-RELAY-REPLICA, levels: [replica]}
       - {id: WEB-RELAY-REPLICA-BLOBS, levels: [replica]}
       - {id: WEB-RELAY-NATIVE-AGENTS, levels: [replica]}
-    notes: Native public relay functional proof is complete. R-LIVE certification remains blocked on LIVE-FIX native Reminders capture and feed pipelining; measured latency is retained for a follow-up rerun.
+    notes: >-
+      Native public relay functional proof is complete. The Reminders R-LIVE dependency
+      is certified by merged PR75 (bcb5708b): 200 effects at 5/s, direct replica p95
+      463.385 ms and public Ubuntu p95 720.340 ms plus 28.045 ms clock uncertainty.
+      The unchanged public scenario passed 59 assertions, including post-burst commands
+      and blob staging. Feed pipelining PR76 and native staging PR90 are merged.
+      Wider R-LIVE certification remains in progress: Contacts external-change p95
+      fails on clean main (1525.031 ms) and the candidate (1755.575 ms), 20 samples
+      each. Calendar baseline failures remain with CAL-FIX; no thresholds were changed.
   - id: web.messages.read
     title: Messages web app reading at full fidelity (list, transcript, media, viewer, links, effects, details, search)
     requirements: [R-WEB-UI, R-WEB-FAST, R-MSG-DEPTH]
