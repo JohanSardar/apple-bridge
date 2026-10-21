@@ -1,0 +1,152 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[6.71 8.52 9.84] cpus=8 other_heavy=1; ubuntu: load=[0.31 0.27 0.27] cpus=8 other_heavy=0"
+  },
+  "run_id": "relay_01M5F54M63TCASEN692S9JPN75",
+  "network_path": "public Funnel; pinned public DNS through CONNECT egress; no peer or SSH tunnel",
+  "metrics": {
+    "blob_context_burst_effects": 200,
+    "latency_verification": "retained full proof; blocked on LIVE-FIX",
+    "nominal_blob_stage_elapsed_ms": 105.7165,
+    "post_burst_blob_stage_elapsed_ms": 62.775042,
+    "post_burst_blob_stage_error_code": "",
+    "post_burst_blob_stage_http_status": 200,
+    "public_connections": 2,
+    "public_ingress_ready_ms": 403.714041,
+    "relay_blob_bytes": 172032,
+    "snapshot_converged": true
+  },
+  "scenario": "WEB-RELAY-REPLICA-BLOBS",
+  "level": "replica",
+  "passed": true,
+  "git_sha": "a41ac18d53f47919bbbdb5a9552b3df0b79a664f",
+  "at": "2026-10-21T11:56:55.363882Z",
+  "assertions": [
+    {
+      "name": "serve_config_before",
+      "passed": true
+    },
+    {
+      "name": "isolated_gateway",
+      "passed": true
+    },
+    {
+      "name": "signed_native_helper_reminders_capture_ready",
+      "passed": true
+    },
+    {
+      "name": "remote_on_system",
+      "passed": true
+    },
+    {
+      "name": "system_backend_port_10000",
+      "passed": true
+    },
+    {
+      "name": "existing_handlers_preserved_exactly_while_on",
+      "passed": true
+    },
+    {
+      "name": "pair_via_remote_cli",
+      "passed": true
+    },
+    {
+      "name": "remote_pair_rejects_peer-addr",
+      "passed": true
+    },
+    {
+      "name": "remote_pair_rejects_dial-replica",
+      "passed": true
+    },
+    {
+      "name": "remote_code_public_url_and_gateway_pin",
+      "passed": true
+    },
+    {
+      "name": "gateway_peer_loopback_only",
+      "passed": true
+    },
+    {
+      "name": "ubuntu_public_dns",
+      "passed": true
+    },
+    {
+      "name": "public_ingress_ready_within_120_seconds",
+      "passed": true
+    },
+    {
+      "name": "ubuntu_curl_public_tls/",
+      "passed": true
+    },
+    {
+      "name": "ubuntu_curl_public_tls/v1/health",
+      "passed": true
+    },
+    {
+      "name": "relay_probe_cross_compiled_on_air",
+      "passed": true
+    },
+    {
+      "name": "ubuntu_joins_and_starts_through_remote",
+      "passed": true
+    },
+    {
+      "name": "gateway_snapshot_reference",
+      "passed": true
+    },
+    {
+      "name": "public_relay_snapshot_converges",
+      "passed": true
+    },
+    {
+      "name": "public_tls_plus_pinned_gateway_identity",
+      "passed": true
+    },
+    {
+      "name": "join_and_feed_forced_through_public_relay",
+      "passed": true
+    },
+    {
+      "name": "synthetic_blob_staged_in_isolated_native_gateway",
+      "passed": true
+    },
+    {
+      "name": "blob_bytes_through_public_relay_match_gateway_digest",
+      "passed": true
+    },
+    {
+      "name": "blob_burst_fixture_list",
+      "passed": true
+    },
+    {
+      "name": "native_burst_before_timed_blob_stage",
+      "passed": true
+    },
+    {
+      "name": "post_burst_blob_stage_available",
+      "passed": true
+    },
+    {
+      "name": "blob_burst_tagged_fixture_cleanup",
+      "passed": true
+    },
+    {
+      "name": "remote_off",
+      "passed": true
+    },
+    {
+      "name": "serve_config_byte_identical_after_off",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air",
+    "ubuntu"
+  ]
+}
