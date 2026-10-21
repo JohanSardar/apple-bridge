@@ -7,6 +7,7 @@ import (
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/lab/scripted"
 	"github.com/JohanSardar/apple-bridge/lab/world"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -17,6 +18,11 @@ func runMessagesCommands(ctx context.Context, s Scenario, level string) Evidence
 	e := Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, GitSHA: strings.TrimSpace(string(sha)), At: time.Now().UTC(), Assertions: []Assertion{}, Latency: map[string]Latency{}, Hosts: []string{"air"}}
 	if s.ID == "MSG-SELFTEST" {
 		return runNativeMessagesSelfTest(ctx, e)
+	}
+	if level == "real" && s.ID == "MSG-RESEND" && os.Getenv("APPLE_BRIDGE_RESEND_RUN") == "" {
+		e.Status = "environment-limited"
+		e.Assertions = append(e.Assertions, Assertion{Name: "safe_failed_self_fixture", Status: "unverified", Detail: "Set APPLE_BRIDGE_RESEND_RUN to a registered run containing exactly one failed tagged self message; no native failure was induced"})
+		return e
 	}
 	if level != "sim" {
 		return runNativeMessagesCommands(ctx, s, level, e)
@@ -111,6 +117,36 @@ func runMessagesCommands(ctx context.Context, s Scenario, level string) Evidence
 	}
 
 	switch s.ID {
+	case "MSG-RESEND":
+		fault("delivery-failed")
+		original := command("send", map[string]any{"chat_id": chat.ID, "text": text}, 0)
+		failed, problem := submit(original)
+		add("deterministic_delivery_failure", problem == nil && failed.State == contracts.CommandDeliveryFailed && count(original, 1))
+		if failed.State != contracts.CommandDeliveryFailed {
+			return e
+		}
+		message := findMessage()
+		resend := command("send", map[string]any{"chat_id": chat.ID, "text": text, "resend_of": message.ID}, 0)
+		result, problem := submit(resend)
+		add("explicit_resend_is_new_observed_effect", observed(result, problem) && count(resend, 1) && count(original, 1))
+		retry, problem := submit(resend)
+		add("resend_command_replay_is_idempotent", problem == nil && retry.CreatedAt.Equal(result.CreatedAt) && count(resend, 1))
+		wrong := command("send", map[string]any{"chat_id": chat.ID, "text": text, "resend_of": "missing"}, 0)
+		_, problem = submit(wrong)
+		add("resend_missing_target_rejected", problem != nil && count(wrong, 0))
+		var successful contracts.Record
+		for _, item := range read("messages.message") {
+			var data map[string]any
+			json.Unmarshal(item.Data, &data)
+			if data["is_from_me"] == true && data["error_code"] == float64(0) {
+				successful = item
+				break
+			}
+		}
+		wrong = command("send", map[string]any{"chat_id": chat.ID, "text": text, "resend_of": successful.ID}, 0)
+		_, problem = submit(wrong)
+		add("resend_successful_target_rejected", successful.ID != "" && problem != nil && count(wrong, 0))
+
 	case "MSG-CAPABILITY-MATRIX":
 		var status contracts.ReadResult
 		err := client.Call(ctx, "sources.status", struct{}{}, &status)

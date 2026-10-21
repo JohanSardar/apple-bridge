@@ -1,0 +1,58 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[6.7 7.81 8.86] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5EHDZQ279E32068BWM24WSM",
+  "scenario": "MSG-RESEND",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "11bb6ee04e56519de77bc657a3ed6e2c2cabd4a6",
+  "at": "2026-10-21T06:12:30.562651Z",
+  "assertions": [
+    {
+      "name": "seed_self_chat",
+      "passed": true
+    },
+    {
+      "name": "fixture_captured",
+      "passed": true
+    },
+    {
+      "name": "fault_armed",
+      "passed": true
+    },
+    {
+      "name": "deterministic_delivery_failure",
+      "passed": true
+    },
+    {
+      "name": "explicit_resend_is_new_observed_effect",
+      "passed": true
+    },
+    {
+      "name": "resend_command_replay_is_idempotent",
+      "passed": true
+    },
+    {
+      "name": "resend_missing_target_rejected",
+      "passed": true
+    },
+    {
+      "name": "resend_successful_target_rejected",
+      "passed": true
+    },
+    {
+      "name": "truth_and_replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
