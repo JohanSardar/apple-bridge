@@ -27,6 +27,7 @@ type Deps struct {
 	Operations   *operations.Service
 	Authority    *trust.Authority
 	Blobs        *blobs.Store
+	PublicHost   func() string
 	Address      string
 	Assets       fs.FS
 }
@@ -64,19 +65,42 @@ func respond(w http.ResponseWriter, status int, value any) {
 func reject(w http.ResponseWriter, status int, code string) {
 	respond(w, status, map[string]any{"error": map[string]string{"code": code, "message": code}})
 }
+
+type servingKey struct{}
+type serving struct {
+	Host   string
+	Scheme string
+}
+
 func servingOrigin(r *http.Request) string {
+	value, _ := r.Context().Value(servingKey{}).(serving)
+	return value.Scheme + "://" + value.Host
+}
+func rpID(r *http.Request) string {
+	value, _ := r.Context().Value(servingKey{}).(serving)
+	if host, _, err := net.SplitHostPort(value.Host); err == nil {
+		return host
+	}
+	return value.Host
+}
+func (s *server) serving(r *http.Request) (serving, bool) {
+	address := s.deps.Address
+	if address == "" {
+		if local, ok := r.Context().Value(http.LocalAddrContextKey).(net.Addr); ok {
+			address = local.String()
+		}
+	}
+	_, port, err := net.SplitHostPort(address)
+	local := err == nil && port != "" && (r.Host == "localhost:"+port || r.Host == "127.0.0.1:"+port)
+	public := s.deps.PublicHost != nil && s.deps.PublicHost() != "" && r.Host == s.deps.PublicHost() && r.TLS != nil
+	if !local && !public {
+		return serving{}, false
+	}
 	scheme := "http"
 	if r.TLS != nil {
 		scheme = "https"
 	}
-	return scheme + "://" + r.Host
-}
-func rpID(r *http.Request) string {
-	host := r.Host
-	if h, _, err := net.SplitHostPort(host); err == nil {
-		host = h
-	}
-	return host
+	return serving{Host: r.Host, Scheme: scheme}, true
 }
 func current(r *http.Request) identity {
 	value, _ := r.Context().Value(identityKey{}).(identity)
@@ -168,13 +192,13 @@ func Handler(deps Deps) http.Handler {
 		if r.TLS != nil {
 			w.Header().Set("Strict-Transport-Security", "max-age=31536000")
 		}
-		if deps.Address != "" && r.TLS == nil {
-			_, port, _ := net.SplitHostPort(deps.Address)
-			if r.Host != "localhost:"+port && r.Host != "127.0.0.1:"+port {
-				reject(w, 403, "host")
-				return
-			}
+		servingValue, allowed := s.serving(r)
+		if !allowed {
+			reject(w, 403, "host")
+			return
 		}
+		r = r.WithContext(context.WithValue(r.Context(), servingKey{}, servingValue))
+
 		if r.Method != "GET" && r.Method != "HEAD" || r.URL.Path == "/web/v1/live" {
 			origins := r.Header.Values("Origin")
 			if len(origins) != 1 || origins[0] != servingOrigin(r) {

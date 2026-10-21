@@ -107,6 +107,13 @@ func runWebServer(ctx context.Context, s Scenario, level string) Evidence {
 		if tlsErr == nil {
 			tlsResponse.Body.Close()
 		}
+		rogue, _ := http.NewRequestWithContext(ctx, "GET", secure.URL+"/", nil)
+		rogue.Host = "attacker.invalid"
+		rogueResponse, rogueErr := secure.Client().Do(rogue)
+		add("tls_arbitrary_host_rejected", rogueErr == nil && rogueResponse.StatusCode == 403)
+		if rogueErr == nil {
+			rogueResponse.Body.Close()
+		}
 		secure.Close()
 		resp, body := request("GET", "/", "")
 		add("app_or_not_built", resp != nil && resp.StatusCode == 200 && (strings.Contains(body, "make web") || strings.Contains(body, "<html")))
@@ -114,6 +121,7 @@ func runWebServer(ctx context.Context, s Scenario, level string) Evidence {
 		resp, _ = request("GET", "/messages/test", "")
 		add("app_route_fallback", resp != nil && resp.StatusCode == 200)
 	case "WEB-AUTH-ORIGIN":
+		runWebPinnedHosts(ctx, w, add)
 		for _, origin := range []string{"", "https://foreign.example"} {
 			for _, path := range []string{"/web/v1/login/options", "/web/v1/enroll/options", "/web/v1/logout"} {
 				resp, _ := request("POST", path, origin)

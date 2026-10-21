@@ -1,14 +1,14 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[4.68 7.05 8.17] cpus=8 other_heavy=0"
+    "summary": "air: load=[6.71 21.04 35.6] cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5E3QAAP1YJB2MQ857Z2HX19",
+  "run_id": "run_01M5E7V610GKZT1QNYM42M2Z6X",
   "scenario": "WEB-SERVE-EMBED",
   "level": "sim",
   "passed": true,
-  "git_sha": "a530cad13274d0630b04a4229d7518a7ecb46b1f",
-  "at": "2026-10-21T02:12:56.278717Z",
+  "git_sha": "5dc346254ff1527b4f272ecd6742dc58a2ff879b",
+  "at": "2026-10-21T03:24:57.24827Z",
   "assertions": [
     {
       "name": "static_cache_/",
@@ -48,6 +48,10 @@
     },
     {
       "name": "hsts_on_https",
+      "passed": true
+    },
+    {
+      "name": "tls_arbitrary_host_rejected",
       "passed": true
     },
     {

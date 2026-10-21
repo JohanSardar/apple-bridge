@@ -920,7 +920,7 @@ New dependencies (approved): `tailscale.com` (tsnet, BSD-3), `github.com/go-weba
 
 ### 23.2 Web front door
 
-Same origin for everything. Served by the gateway and by replicas (any instance), locally on the Frontdoor listener's host under `/` and publicly through Remote.
+Same origin for everything. Served by the gateway and by replicas (any instance), locally on the Frontdoor listener's host under `/` and publicly through Remote. Every request, including TLS, must match an explicit host allow-list: `localhost:<local-port>`, `127.0.0.1:<local-port>`, or the configured public HTTPS host including its selected port. Origin and relying-party ID derive only from that accepted value.
 
 **Static.** `GET /` and app routes return `index.html` (`Cache-Control: no-store`). `/assets/*` are content-hashed (`public, max-age=31536000, immutable`). `/sw.js` and `/manifest.webmanifest` are `no-cache`. If `web/dist/index.html` is absent (assets not built), `/` returns a plain page saying `make web` is needed.
 
