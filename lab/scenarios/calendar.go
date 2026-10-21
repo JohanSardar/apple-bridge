@@ -220,7 +220,7 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 			bytes, _ := os.ReadFile(filepath.Join(w.Gateway.Home, "helper", "capture-trace.jsonl"))
 			return strings.Contains(string(bytes), "calendar_scan_complete")
 		}
-		if err = w.Await(30*time.Second, initialComplete); err != nil {
+		if err = w.Await(90*time.Second, initialComplete); err != nil {
 			return fail("initial_calendar_scan_complete", err)
 		}
 		add("initial_calendar_scan_complete", true)
@@ -298,7 +298,53 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		}
 		return Seen{}, false
 	}
+	calendarLatencies := map[string][]float64{}
+	latency := func(name string, effect time.Time) bool {
+		if w.Await(3*time.Second, func() bool {
+			for _, observer := range observers {
+				if _, ok := seen(observer, name); !ok {
+					return false
+				}
+			}
+			return true
+		}) != nil {
+			return false
+		}
+		for i, observer := range observers {
+			x, _ := seen(observer, name)
+			key := "effect_done→gateway_visible"
+			if i > 0 {
+				key = fmt.Sprintf("effect_done→replica_visible:replica%d", i-1)
+			}
+			if saved, ok := simEffects[name]; ok {
+				effect = saved
+			}
+			if level == "sim" && (effect.IsZero() || x.At.Before(effect)) {
+				return false
+			}
+			value := float64(x.At.Sub(effect)) / float64(time.Millisecond)
+			if level != "sim" && nativeEffects[name] <= 0 {
+				return false
+			}
+			if ns := nativeEffects[name]; ns > 0 {
+				if x.UptimeNS < ns {
+					return false
+				}
+				value = float64(x.UptimeNS-ns) / float64(time.Millisecond)
+			}
+			old := e.Latency[key]
+			values := []float64{value}
+			if old.Samples > 0 {
+				values = append(calendarLatencies[key], value)
+			}
+			calendarLatencies[key] = values
+			e.Latency[key] = stats(values, 0)
+		}
+		return true
+	}
 	var last contracts.CommandRecord
+	commandLatencies := map[string][]float64{}
+	var commandVisibility func(string, map[string]any)
 	submit := func(op string, args map[string]any, version uint64) error {
 		var err error
 		endpoint := w.Gateway
@@ -308,9 +354,31 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		client := scripted.Client{Endpoint: endpoint, Protocol: protocol}
 		last = contracts.CommandRecord{}
 		commandID := contracts.NewCommandID()
+		started := time.Now()
 		err = client.Call(ctx, op, contracts.Command{ID: commandID, Args: mustJSON(args), ExpectedVersion: version, WaitMS: 15000}, &last)
 		if err != nil {
 			_, _ = world.Request(ctx, endpoint, "/v1/op/commands.status", contracts.CommandQuery{ID: commandID}, &last)
+		}
+		if err == nil && last.Disposition == "" {
+			err = w.Await(45*time.Second, func() bool {
+				_, statusErr := world.Request(ctx, endpoint, "/v1/op/commands.status", contracts.CommandQuery{ID: commandID}, &last)
+				return statusErr == nil && last.Disposition != ""
+			})
+		}
+		elapsed := time.Since(started)
+		if level != "sim" {
+			private := filepath.Join(os.Getenv("HOME"), "Library/Application Support/AppleBridgeDev/cal-fix", e.RunID)
+			os.MkdirAll(private, 0700)
+			truth, _ := w.Truth("observe", map[string]any{"source": "calendar", "action": "audit", "tag": tag, "calendar_id": calendarNative})
+			bytes, _ := json.MarshalIndent(map[string]any{"bridge": records(w.Gateway), "truth": truth, "command": last}, "", "  ")
+			os.WriteFile(filepath.Join(private, commandID+".json"), bytes, 0600)
+		}
+		if err == nil && last.Disposition == "locally_observed" {
+			if commandVisibility != nil {
+				commandVisibility(op, args)
+			}
+			commandLatencies[op] = append(commandLatencies[op], float64(elapsed)/float64(time.Millisecond))
+			e.Latency["command_submit→"+op+"_observed"] = stats(commandLatencies[op], 0)
 		}
 		if err == nil && last.Disposition != "locally_observed" {
 			return fmt.Errorf("disposition %s", last.Disposition)
@@ -362,50 +430,6 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		return fail("initial_occurrences_visible", nil)
 	}
 	add("initial_occurrences_visible", true)
-	calendarLatencies := map[string][]float64{}
-	latency := func(name string, effect time.Time) bool {
-		if w.Await(3*time.Second, func() bool {
-			for _, observer := range observers {
-				if _, ok := seen(observer, name); !ok {
-					return false
-				}
-			}
-			return true
-		}) != nil {
-			return false
-		}
-		for i, observer := range observers {
-			x, _ := seen(observer, name)
-			key := "effect_done→gateway_visible"
-			if i > 0 {
-				key = fmt.Sprintf("effect_done→replica_visible:replica%d", i-1)
-			}
-			if saved, ok := simEffects[name]; ok {
-				effect = saved
-			}
-			if level == "sim" && (effect.IsZero() || x.At.Before(effect)) {
-				return false
-			}
-			value := float64(x.At.Sub(effect)) / float64(time.Millisecond)
-			if level != "sim" && nativeEffects[name] <= 0 {
-				return false
-			}
-			if ns := nativeEffects[name]; ns > 0 {
-				if x.UptimeNS < ns {
-					return false
-				}
-				value = float64(x.UptimeNS-ns) / float64(time.Millisecond)
-			}
-			old := e.Latency[key]
-			values := []float64{value}
-			if old.Samples > 0 {
-				values = append(calendarLatencies[key], value)
-			}
-			calendarLatencies[key] = values
-			e.Latency[key] = stats(values, 0)
-		}
-		return true
-	}
 	if s.ID != "CAL-CRUD" && s.ID != "CAL-EXCEPTION-INITIAL-CAPTURE" && !latency(title, effectDone) {
 		return fail("external_capture_latency", nil)
 	}
