@@ -28,7 +28,7 @@ final class MessagesReader {
         }
         sqlite3_busy_timeout(connection, 250)
         var schema: [String: Set<String>] = [:]
-        for table in ["message", "chat", "handle", "chat_handle_join", "chat_message_join", "message_attachment_join", "attachment", "chat_recoverable_message_join"] {
+        for table in ["message", "chat", "handle", "chat_handle_join", "chat_message_join", "message_attachment_join", "attachment", "chat_recoverable_message_join", "recoverable_message_part"] {
             schema[table] = Set(try query("PRAGMA table_info(\(table))").map { $0["name"] })
         }
         guard schema["message"]?.contains("guid") == true else { throw ProbeFailure.unavailable }
@@ -103,10 +103,18 @@ final class MessagesReader {
     private var messageProjection: String {
         let chat = has("chat", "guid") && has("chat_message_join", "chat_id", "message_id") ? "(SELECT c.guid FROM chat_message_join j JOIN chat c ON c.ROWID=j.chat_id WHERE j.message_id=m.ROWID ORDER BY c.guid LIMIT 1)" : "NULL"
         let sender = has("message", "handle_id") && has("handle", "service", "id") ? "(SELECT h.service || ':' || h.id FROM handle h WHERE h.ROWID=m.handle_id)" : "NULL"
-        return "m.ROWID AS row_position,m.*,\(chat) AS capture_chat_guid,\(sender) AS capture_sender_key,\(messageDeletionDate) AS capture_deleted_date"
+        let member = has("message", "other_handle") && has("handle", "service", "id") ? "(SELECT h.service || ':' || h.id FROM handle h WHERE h.ROWID=m.other_handle)" : "NULL"
+        let attachmentFields = ["guid", "filename", "mime_type", "uti", "emoji_image_content_identifier", "emoji_image_short_description"].filter { columns["attachment"]?.contains($0) == true }
+        let attachmentValues = attachmentFields.map { "quote(a.\($0))" }.joined(separator: "||':'||")
+        let attachments = has("message_attachment_join", "message_id", "attachment_id") && has("attachment", "guid") ? "(SELECT group_concat(signature,'|') FROM (SELECT \(attachmentValues) AS signature FROM attachment a JOIN message_attachment_join j ON j.attachment_id=a.ROWID WHERE j.message_id=m.ROWID ORDER BY a.ROWID))" : "NULL"
+        return "m.ROWID AS row_position,m.*,\(chat) AS capture_chat_guid,\(sender) AS capture_sender_key,\(messageDeletionDate) AS capture_deleted_date,\(attachments) AS capture_attachment_signature,\(member) AS capture_member_key"
     }
     func messageRows(after: Int64, through: Int64, limit: Int = 128) throws -> [SQLiteRow] {
         try query("SELECT \(messageProjection) FROM message m WHERE m.ROWID>? AND m.ROWID<=? ORDER BY m.ROWID LIMIT ?", [String(after), String(through), String(limit)])
+    }
+    func recoverableGUIDs() throws -> Set<String> {
+        guard has("chat_recoverable_message_join", "message_id") else { return [] }
+        return Set(try query("SELECT DISTINCT m.guid FROM message m JOIN chat_recoverable_message_join r ON r.message_id=m.ROWID").map { $0["guid"] })
     }
     func recent() throws -> [SQLiteRow] { try query("SELECT \(messageProjection) FROM message m ORDER BY m.ROWID DESC LIMIT 2000") }
     func message(_ guid: String) throws -> SQLiteRow? { try query("SELECT \(messageProjection) FROM message m WHERE m.guid=?", [guid]).first }
@@ -132,7 +140,7 @@ final class MessagesReader {
             data["sender_handle_id"] = senderKey.map { reference("handle", $0) }
             return [("messages.reaction", guid, data)]
         }
-        var data: [String: Any] = ["is_from_me": row.flag("is_from_me"), "kind": row.integer("item_type") == 0 ? "message" : "group_event", "error_code": row.integer("error"), "edit_history": [], "retracted_parts": []]
+        var data: [String: Any] = ["is_from_me": row.flag("is_from_me"), "kind": row.integer("item_type") == 0 ? "message" : "group_event", "error_code": row.integer("error"), "edit_history": [], "retracted_parts": [], "formatting": []]
         data["chat_id"] = chat.isEmpty ? nil : reference("chat", chat)
         data["deleted_at"] = timestamp(row, "capture_deleted_date")
         data["sender_handle_id"] = senderKey.map { reference("handle", $0) }
@@ -146,6 +154,11 @@ final class MessagesReader {
             data["decode_status"] = body.decodeStatus
             data["raw_body_digest"] = body.rawBodyDigest
             data["text"] = body.text
+            data["formatting"] = body.formatting.map { range -> [String: Any] in
+                var value: [String: Any] = ["utf16_location": range.utf16Location, "utf16_length": range.utf16Length, "styles": range.styles]
+                value["effect"] = range.effect
+                return value
+            }
             for part in body.parts {
                 var value: [String: Any] = ["index": part.index, "kind": part.kind, "utf16_location": part.utf16Location, "utf16_length": part.utf16Length]
                 value["text"] = part.text
@@ -162,6 +175,41 @@ final class MessagesReader {
             data["raw_body_digest"] = BodyDigest.hash(row.blobs["text"] ?? Data())
         }
         data["parts"] = parts
+        data["subject"] = row.values["subject"]
+        data["delivery"] = ["quietly": row.flag("was_delivered_quietly"), "notified_anyway": row.flag("did_notify_recipient")]
+        for (native, field) in [("is_spam", "is_spam"), ("has_unseen_mention", "has_unseen_mention"), ("is_sos", "is_sos")] { data[field] = row.flag(native) }
+        data["via_satellite"] = row.flag("is_stewie") || row.flag("sent_or_received_off_grid")
+        var audio: [String: Any] = ["is_audio_message": row.flag("is_audio_message"), "expirable": row.flag("is_expirable"), "kept": NSNull()]
+        audio["played_at"] = timestamp(row, "date_played")
+        data["audio"] = audio
+        if row.integer("schedule_type") != 0 {
+            var schedule: [String: Any] = ["state": "native_" + row["schedule_state"]]
+            schedule["scheduled_for"] = timestamp(row, "date")
+            data["schedule"] = schedule
+        }
+        if data["deleted_at"] != nil { data["recoverable_until"] = NSNull() }
+        if !row["balloon_bundle_id"].isEmpty || parts.contains(where: { $0["kind"] as? String == "genmoji" }) {
+            let attachments = try has("message_attachment_join", "attachment_id", "message_id") ? query("SELECT a.* FROM attachment a JOIN message_attachment_join j ON j.attachment_id=a.ROWID WHERE j.message_id=? ORDER BY a.ROWID", [row["row_position"]]) : []
+            let images = attachments.filter { imageMIME($0).hasPrefix("image/") || $0["uti"].hasPrefix("dyn.age81") }.map { $0["guid"] }
+            if var balloon = MessageRich.balloon(bundle: row["balloon_bundle_id"], payload: row.blobs["payload_data"], attachmentGUIDs: images) {
+                for key in ["link", "app"] {
+                    if var card = balloon[key] as? [String: Any] {
+                        for field in ["image_attachment_id", "icon_attachment_id"] { if let guid = card[field] as? String { card[field] = reference("attachment", guid) } }
+                        balloon[key] = card
+                    }
+                }
+                data["balloon"] = balloon
+            }
+            for i in parts.indices where parts[i]["kind"] as? String == "genmoji" {
+                let target = ((parts[i]["attachment_id"] as? [String: Any])?["$ref"] as? [String: String])?["native_key"]
+                let glyphs = attachments.filter { !$0["emoji_image_content_identifier"].isEmpty }
+                if let attachment = glyphs.first(where: { $0["guid"] == target }) ?? (glyphs.count == 1 ? glyphs.first : nil) {
+                    parts[i]["attachment_id"] = reference("attachment", attachment["guid"])
+                    parts[i]["description"] = attachment["emoji_image_short_description"]
+                }
+            }
+            data["parts"] = parts
+        }
         if !row["expressive_send_style_id"].isEmpty { data["effect"] = row["expressive_send_style_id"] }
         if let bytes = row.blobs["message_summary_info"] {
             let summary = MessageSummary.decode(bytes)
@@ -179,7 +227,12 @@ final class MessagesReader {
                 if data["decode_status"] as? String == "decoded" { data["decode_status"] = "partial" }
             }
         }
-        if row.integer("item_type") != 0 { data["group_event"] = ["item_type": row.integer("item_type"), "action_type": row.integer("group_action_type"), "title": row["group_title"]] }
+        if row.integer("item_type") != 0 {
+            var event: [String: Any] = ["item_type": row.integer("item_type"), "action_type": row.integer("group_action_type"), "title": row["group_title"], "kind": MessageRich.groupEventKind(item: Int(row.integer("item_type")), action: Int(row.integer("group_action_type")), hasMember: row.integer("other_handle") > 0, senderIsMember: row.integer("handle_id") == row.integer("other_handle"), title: row["group_title"])]
+            if row.integer("item_type") == 1, !row["capture_member_key"].isEmpty { event["target_handle_id"] = reference("handle", row["capture_member_key"]) }
+            event["actor_handle_id"] = senderKey.map { reference("handle", $0) }
+            data["group_event"] = event
+        }
         return [("messages.message", guid, data)]
     }
     func smallObservations() throws -> [(String, String, [String: Any])] {
@@ -192,6 +245,10 @@ final class MessagesReader {
             var data: [String: Any] = ["service": row["service_name"], "style": row["guid"].contains(";+;") ? "group" : "direct", "display_name": row["display_name"], "participants": participants, "is_archived": row.flag("is_archived"), "capabilities": []]
             data["last_read_at"] = timestamp(row, "last_read_message_timestamp")
             data["deleted_at"] = timestamp(row, "capture_deleted_date")
+            if data["deleted_at"] != nil { data["recoverable_until"] = NSNull() }
+            data["filter"] = row.flag("is_filtered") ? "unknown" : "known"
+            for (key, value) in MessageRich.chatProperties(row.blobs["properties"]) { data[key] = value }
+            if let photo = data["group_photo_attachment_id"] as? String { data["group_photo_attachment_id"] = reference("attachment", photo) }
             result.append(("messages.chat", row["guid"], data))
         }
         return result + (try attachmentObservations())
@@ -208,11 +265,31 @@ final class MessagesReader {
             let state = offloaded ? "offloaded" : exists ? "present" : row.integer("transfer_state") == 0 ? "pending" : row["filename"].isEmpty ? "missing" : "offloaded"
             var blob: [String: Any] = ["state": state]
             if exists { blob["handle"] = row["guid"] }
-            var data: [String: Any] = ["filename": URL(fileURLWithPath: row["filename"]).lastPathComponent, "mime_type": row["mime_type"], "uti": row["uti"], "size": row.integer("total_bytes"), "blob": blob]
+            var data: [String: Any] = ["filename": URL(fileURLWithPath: row["filename"]).lastPathComponent, "mime_type": imageMIME(row), "uti": row["uti"], "size": row.integer("total_bytes"), "blob": blob]
             if !row["message_guid"].isEmpty { data["message_id"] = reference("message", row["message_guid"]) }
+            data["is_sticker"] = row.flag("is_sticker")
+            data["hidden"] = row.flag("hide_attachment")
+            data["genmoji"] = !row["emoji_image_content_identifier"].isEmpty
+            if !row["emoji_image_short_description"].isEmpty { data["description"] = row["emoji_image_short_description"] }
+            if let bytes = row.blobs["sticker_user_info"], has("message", "associated_message_guid"),
+               let parent = try query("SELECT associated_message_guid FROM message WHERE guid=?", [row["message_guid"]]).first,
+               var sticker = MessageRich.sticker(bytes, target: parent["associated_message_guid"]) {
+                if let target = sticker["target_message_id"] as? String { sticker["target_message_id"] = reference("message", target) }
+                data["sticker"] = sticker
+            }
             result.append(("messages.attachment", row["guid"], data))
         }
         return result
+    }
+    private func imageMIME(_ row: SQLiteRow) -> String {
+        if !row["uti"].hasPrefix("dyn.age81") { return row["mime_type"] }
+        guard row["uti"].hasPrefix("dyn.age81"), let url = attachmentURL(row["filename"]), !BlobDigest.isDataless(url), let file = try? FileHandle(forReadingFrom: url) else { return row["mime_type"] }
+        defer { try? file.close() }
+        guard let bytes = try? file.read(upToCount: 12) else { return row["mime_type"] }
+        if bytes.starts(with: [137,80,78,71,13,10,26,10]) { return "image/png" }
+        if bytes.starts(with: [255,216,255]) { return "image/jpeg" }
+        if bytes.starts(with: Data("GIF8".utf8)) { return "image/gif" }
+        return row["mime_type"]
     }
     func attachmentURL(_ path: String) -> URL? {
         guard !path.isEmpty else { return nil }

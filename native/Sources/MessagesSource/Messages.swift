@@ -13,6 +13,7 @@ public actor Messages: Source {
  private let commands: MessagesCommands
     private var baseline: MessagesBaseline?
     private var candidates: Set<String> = []
+    private var recoverableGUIDs: Set<String> = []
     private var generation = ""
     private var hashes: [String: String] = [:]
     private var nativeHashes: [String: String] = [:]
@@ -70,15 +71,16 @@ public actor Messages: Source {
     }
     private func coverage() -> JSON {
         let expected = [
-            "message": ["guid", "date", "text", "attributedBody", "handle_id", "is_from_me", "date_delivered", "date_read", "is_delivered", "is_read", "error", "is_finished", "item_type", "date_edited", "date_retracted", "message_summary_info", "associated_message_guid", "associated_message_type", "associated_message_emoji", "reply_to_guid", "thread_originator_guid", "group_action_type", "group_title", "expressive_send_style_id"],
-            "chat": ["guid", "service_name", "display_name", "is_archived", "last_read_message_timestamp"],
+            "message": ["guid", "date", "text", "attributedBody", "handle_id", "is_from_me", "date_delivered", "date_read", "is_delivered", "is_read", "error", "is_finished", "item_type", "date_edited", "date_retracted", "message_summary_info", "associated_message_guid", "associated_message_type", "associated_message_emoji", "reply_to_guid", "thread_originator_guid", "group_action_type", "group_title", "expressive_send_style_id", "balloon_bundle_id", "payload_data", "is_audio_message", "date_played", "is_expirable", "expire_state", "schedule_type", "schedule_state", "subject", "was_delivered_quietly", "did_notify_recipient", "is_spam", "has_unseen_mention", "is_stewie", "is_sos", "sent_or_received_off_grid"],
+            "chat": ["guid", "service_name", "display_name", "is_archived", "last_read_message_timestamp", "is_filtered", "properties"],
             "handle": ["id", "service"],
             "chat_message_join": ["chat_id", "message_id"],
             "chat_handle_join": ["chat_id", "handle_id"],
-            "attachment": ["guid", "filename", "mime_type", "uti", "total_bytes", "transfer_state"],
-            "message_attachment_join": ["message_id", "attachment_id"]
+            "attachment": ["guid", "filename", "mime_type", "uti", "total_bytes", "transfer_state", "is_sticker", "sticker_user_info", "hide_attachment", "emoji_image_content_identifier", "emoji_image_short_description"],
+            "message_attachment_join": ["message_id", "attachment_id"],
+            "chat_recoverable_message_join": ["chat_id", "message_id", "delete_date"]
         ]
-        let missing = expected.keys.sorted().flatMap { table in expected[table]!.filter { reader?.columns[table]?.contains($0) != true }.map { table + "." + $0 } }
+        let missing = ["messages.chat.muted_until", "messages.chat.pinned_index", "messages.message.audio.transcription", "messages.message.audio.kept", "messages.message.recoverable_until", "messages.chat.recoverable_until"] + expected.keys.sorted().flatMap { table in expected[table]!.filter { reader?.columns[table]?.contains($0) != true }.map { table + "." + $0 } }
         return .object(["fields": .string(missing.isEmpty ? "complete" : "partial"), "missing": .array(missing.map(JSON.string))])
     }
     @discardableResult private func reopen() throws -> Bool {
@@ -149,7 +151,7 @@ public actor Messages: Source {
                     if let cached = blobDigests[key], cached.0 == size, cached.1 == modified {
                         blob["digest"] = cached.2
                         blobHandles[cached.2] = key
-                        if MediaDerivatives.supports(url, uti: row["uti"], mime: row["mime_type"]) {
+                        if MediaDerivatives.supports(url, uti: row["uti"], mime: data["mime_type"] as? String ?? row["mime_type"]) {
                             let result = mediaResults[cached.2] ?? MediaDerivatives.cached(cached.2)
                             data["media"] = [:] as [String: Any]
                             if result == nil && mediaRetry[key] != nil { data["derivatives"] = [:] as [String: Any] }
@@ -401,6 +403,9 @@ public actor Messages: Source {
         let version = try reader.dataVersion()
         if !force && lastLiveVersion == version { return }
         var referenced = try await captureInserts(sink)
+        let recoverable = try reader.recoverableGUIDs()
+        referenced.formUnion(recoverable.union(recoverableGUIDs))
+        recoverableGUIDs = recoverable
         let recentAt = observationTime()
         let recent = try reader.recent()
         for offset in stride(from: 0, to: recent.count, by: 128) {
@@ -409,6 +414,9 @@ public actor Messages: Source {
         }
         let smallAt = observationTime()
         let changes = try smallChanges(reader.smallObservations(), at: smallAt)
+        for (collection, _, data) in changes where collection == "messages.attachment" {
+            if let reference = (data["message_id"] as? [String: Any])?["$ref"] as? [String: String], let key = reference["native_key"] { referenced.insert(key) }
+        }
         try await emit(changes, sink: sink, live: true, observedAt: smallAt)
         referenced.formUnion(try await captureInserts(sink))
         while true {
