@@ -14,11 +14,14 @@ struct RichDecoderChecks {
         let balloon = MessageRich.balloon(bundle: "com.apple.messages.URLBalloonProvider", payload: bytes, attachmentGUIDs: ["synthetic-image", "synthetic-icon"])
         let link = balloon?["link"] as? [String: Any]
         require(link?["url"] as? String == "https://example.invalid/preview" && link?["title"] as? String == "Synthetic link" && link?["image_attachment_id"] as? String == "synthetic-image" && link?["icon_attachment_id"] as? String == "synthetic-icon", "link UID graph and payload images")
+        require(link?["summary"] as? String == "Synthetic summary" && link?["site_name"] as? String == "Example" && link?["video_url"] as? String == "https://example.invalid/video", "link summary site and video")
         for length in 0..<bytes.count { require(MessageArchive.decode(bytes.prefix(length)) == nil, "truncated keyed archive") }
         let location = MessageRich.balloon(bundle: "com.apple.messages.URLBalloonProvider", payload: try load("rich-location.plist"))
         require(location?["kind"] as? String == "find_my" && location?["link"] != nil, "map specialization")
         let app = MessageRich.balloon(bundle: "com.apple.messages.MSMessageExtensionBalloonPlugin:synthetic:example.app", payload: try load("rich-app.plist"), attachmentGUIDs: ["synthetic-image"])
         require((app?["app"] as? [String: Any])?["caption"] as? String == "Synthetic app", "template captions")
+        let appFields = app?["app"] as? [String: Any]
+        require(appFields?["subcaption"] as? String == "Synthetic detail" && appFields?["trailing_caption"] as? String == "Synthetic trailing" && appFields?["url"] as? String == "https://example.invalid/app" && appFields?["image_attachment_id"] as? String == "synthetic-image", "app template optional fields")
         let sticker = MessageRich.sticker(try load("rich-sticker.plist"), target: "p:2/synthetic-parent")
         require(sticker?["target_message_id"] as? String == "synthetic-parent" && sticker?["x"] as? Double == 0.25 && sticker?["part_index"] as? Int == 2, "sticker transform")
         require(MessageRich.sticker(Data([0,1]), target: "synthetic") == nil, "malformed sticker")

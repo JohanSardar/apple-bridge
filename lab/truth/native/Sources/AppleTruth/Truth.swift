@@ -53,7 +53,7 @@ struct AppleTruth {
                     response = request["sqlite"] as? Bool == true ? try notesSQLite(path: request["snapshot_path"] as? String) : try notes(verb, request)
                 } else if request["source"] as? String == "messages" {
                     guard verb == "observe" else { throw TruthFailure.invalid }
-                    response = try messages(request)
+                    response = request["rich_counts"] as? Bool == true ? try MessagesRichTruth.observe(request) : try messages(request)
                 } else if request["source"] as? String == "calendar" { response = try CalendarTruth.run(verb, request) } else if request["source"] as? String == "contacts" { do { response = try contacts(verb, request) } catch { response = ["status": "unverified", "reason": "contacts_native_error"] } } else { response = try await reminders(verb, request) }
                 }
             } catch {

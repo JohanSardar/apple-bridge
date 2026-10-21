@@ -1,0 +1,198 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[10.7 11.74 11.33] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5EQTHFC6XM5Q3SSC8WQ96BD",
+  "metrics": {
+    "mcp_filter_deleted": 1,
+    "mcp_filter_known": 1,
+    "mcp_filter_spam": 1,
+    "mcp_filter_unknown": 2,
+    "mcp_filter_unread": 2,
+    "mcp_rich_attachment_count": 2,
+    "rest_filter_deleted": 1,
+    "rest_filter_known": 1,
+    "rest_filter_spam": 1,
+    "rest_filter_unknown": 2,
+    "rest_filter_unread": 2,
+    "rest_rich_attachment_count": 2
+  },
+  "scenario": "MSG-DECODE-BALLOON",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "64dcd17305e94582cc0b2ffd54fb7f8e52520e3f",
+  "at": "2026-10-21T08:04:13.421015Z",
+  "assertions": [
+    {
+      "name": "scrubbed_native_decoder_fixtures",
+      "passed": true
+    },
+    {
+      "name": "contact_capture",
+      "passed": true
+    },
+    {
+      "name": "contact_committed",
+      "passed": true
+    },
+    {
+      "name": "rich_capture",
+      "passed": true
+    },
+    {
+      "name": "rest_filter_known",
+      "passed": true
+    },
+    {
+      "name": "rest_filter_unknown",
+      "passed": true
+    },
+    {
+      "name": "rest_filter_unread",
+      "passed": true
+    },
+    {
+      "name": "rest_filter_deleted",
+      "passed": true
+    },
+    {
+      "name": "rest_filter_spam",
+      "passed": true
+    },
+    {
+      "name": "rest_unseen_mention",
+      "passed": true
+    },
+    {
+      "name": "rest_collection_links",
+      "passed": true
+    },
+    {
+      "name": "rest_collection_locations",
+      "passed": true
+    },
+    {
+      "name": "rest_every_balloon_kind_passes_through",
+      "passed": true
+    },
+    {
+      "name": "rest_rich_fields_and_attachment_refs",
+      "passed": true
+    },
+    {
+      "name": "rest_handles_names_initials_avatar_dedup",
+      "passed": true
+    },
+    {
+      "name": "rest_handles_respect_contact_visibility",
+      "passed": true
+    },
+    {
+      "name": "rest_handles_reject_over_budget",
+      "passed": true
+    },
+    {
+      "name": "mcp_filter_known",
+      "passed": true
+    },
+    {
+      "name": "mcp_filter_unknown",
+      "passed": true
+    },
+    {
+      "name": "mcp_filter_unread",
+      "passed": true
+    },
+    {
+      "name": "mcp_filter_deleted",
+      "passed": true
+    },
+    {
+      "name": "mcp_filter_spam",
+      "passed": true
+    },
+    {
+      "name": "mcp_unseen_mention",
+      "passed": true
+    },
+    {
+      "name": "mcp_collection_links",
+      "passed": true
+    },
+    {
+      "name": "mcp_collection_locations",
+      "passed": true
+    },
+    {
+      "name": "mcp_every_balloon_kind_passes_through",
+      "passed": true
+    },
+    {
+      "name": "mcp_rich_fields_and_attachment_refs",
+      "passed": true
+    },
+    {
+      "name": "mcp_handles_names_initials_avatar_dedup",
+      "passed": true
+    },
+    {
+      "name": "mcp_handles_respect_contact_visibility",
+      "passed": true
+    },
+    {
+      "name": "mcp_handles_reject_over_budget",
+      "passed": true
+    },
+    {
+      "name": "link_reaction_capture",
+      "passed": true
+    },
+    {
+      "name": "reaction_updates_link_thread_live",
+      "passed": true
+    },
+    {
+      "name": "live_rich_mutation_capture",
+      "passed": true
+    },
+    {
+      "name": "live_rich_mutation_increments_record_version",
+      "passed": true
+    },
+    {
+      "name": "mixed_deleted_capture",
+      "passed": true
+    },
+    {
+      "name": "rest_deleted_filter_contains_mixed_chat",
+      "passed": true
+    },
+    {
+      "name": "rest_mixed_chat_retains_active_unread",
+      "passed": true
+    },
+    {
+      "name": "rest_recoverable_media_excluded",
+      "passed": true
+    },
+    {
+      "name": "mcp_deleted_filter_contains_mixed_chat",
+      "passed": true
+    },
+    {
+      "name": "mcp_mixed_chat_retains_active_unread",
+      "passed": true
+    },
+    {
+      "name": "mcp_recoverable_media_excluded",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": null
+}

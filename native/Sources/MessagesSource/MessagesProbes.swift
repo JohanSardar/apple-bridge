@@ -67,6 +67,8 @@ public enum MessagesProbes {
 
     public static func run(_ arguments: [String]) throws -> [String: Any] {
         switch arguments[1] {
+        case "rich-counts":
+            return try richCounts()
         case "dismiss-test-delete":
             guard AXIsProcessTrusted(), let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.MobileSMS").first else { throw ProbeFailure.unavailable }
             func buttons(_ element: AXUIElement) -> [AXUIElement] {
