@@ -1,0 +1,39 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[6.45 7.52 7.65] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5FADYK5995NWMHP1WJ66R17",
+  "metrics": {
+    "demo_messages": 5000,
+    "demo_startup_ms": 6779,
+    "matrix": [
+      "chromium-light-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-MSG-OPTIMISTIC-chromium-light-desktop-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-MSG-OPTIMISTIC-chromium-light-desktop-playwright.json"
+    ],
+    "server": "gateway"
+  },
+  "scenario": "WEB-MSG-OPTIMISTIC",
+  "level": "web",
+  "passed": true,
+  "git_sha": "0ebb77e03720e39dd69f7aa4c6b1b5cfb8a94d29",
+  "at": "2026-10-21T13:29:23.814681Z",
+  "assertions": [
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/commands.spec.ts:3:1 › WEB-MSG-OPTIMISTIC first-frame echo swaps only on exact captured identity and never redispatches (1.7s)\n  ✓  2 [chromium-light-desktop] › tests/commands.spec.ts:75:1 › WEB-MSG-OPTIMISTIC lost response preserves the command ID and reconciles through reads only (1.3s)\n\n  2 passed (4.2s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
