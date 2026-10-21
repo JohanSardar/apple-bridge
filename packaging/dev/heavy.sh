@@ -2,33 +2,57 @@
 set -euo pipefail
 if [ -z "${APPLE_BRIDGE_KEEP_SDKROOT:-}" ]; then matching=$("$(dirname "$0")/sdkroot.sh"); [ -n "$matching" ] && export SDKROOT="$matching"; fi
 if [ -n "${APPLE_BRIDGE_HEAVY_SLOT:-}" ]; then
-  case "${1:-}" in --exclusive|--light) shift ;; esac
+  case "${1:-}" in --exclusive|--light|--sim) shift ;; esac
   exec "$@"
 fi
 exclusive=""
 if [ "${1:-}" = "--exclusive" ]; then exclusive=1; shift; fi
 light=""
 if [ "${1:-}" = "--light" ]; then light=1; shift; fi
+sim=""
+if [ "${1:-}" = "--sim" ]; then sim=1; shift; fi
+# Commands that may measure time, touch real Apple data or compile Swift. Sim-lane jobs never overlap them.
+sensitive() {
+  case " $* " in
+    *--exclusive*|*real*|*agent*|*quiet*|*atency*|*ATENCY*|*perf*|*Perf*|*PERF*) return 0 ;;
+    *swift*|*build-helper*|*build-truth*|*build-native*|*xcodebuild*) return 0 ;;
+  esac
+  return 1
+}
+# A plain functional sim-level bridge-lab run (sim is the default level) is eligible for the sim lane.
+auto_sim() {
+  case " $* " in *bridge-lab*) ;; *) return 1 ;; esac
+  sensitive "$@" && return 1
+  levels=$(printf ' %s ' "$*" | grep -o -- '--level[ =][A-Za-z]*' | sed 's/--level[ =]//' | sort -u)
+  [ -z "$levels" ] || [ "$levels" = sim ]
+}
+if [ -z "$exclusive$light$sim" ] && [ -z "${APPLE_BRIDGE_HEAVY_NO_SIM_LANE:-}" ] && auto_sim "$@"; then sim=1; fi
 "$(dirname "$0")/trim-disk.sh" || true
 slots=2
 base=${APPLE_BRIDGE_HEAVY_BASE:-/tmp/apple-bridge-heavy}
+normal="$base"
+simlock="$base-sim-1.lock"
+simqueue="$base-sim-queue"
 if [ -n "$light" ]; then base="$base-light"; slots=1; fi
 queue="$base-queue"
 mkdir -p "$queue"
-ticket="$queue/$(date +%s%N)-$$"
-[ -n "${APPLE_BRIDGE_HEAVY_PRIORITY:-}" ] && ticket="$queue/0-$(date +%s%N)-$$"
+stamp() { if [ -n "${APPLE_BRIDGE_HEAVY_PRIORITY:-}" ]; then echo "0-$(date +%s%N)-$$"; else echo "$(date +%s%N)-$$"; fi; }
+ticket="$queue/$(stamp)"
 touch "$ticket"
+simticket=""
+if [ -n "$sim" ]; then mkdir -p "$simqueue"; simticket="$simqueue/$(stamp)"; touch "$simticket"; fi
 held=""
-cleanup() { rm -f "$ticket"; for lock in $held; do rm -rf "$lock"; done; return 0; }
+cleanup() { rm -f "$ticket" ${simticket:+"$simticket"}; for lock in $held; do rm -rf "$lock"; done; return 0; }
 trap cleanup EXIT
 oldest_live() {
-  for t in $(ls "$queue" | sort); do
+  for t in $(ls "$1" | sort); do
     pid=${t##*-}
-    if kill -0 "$pid" 2>/dev/null; then echo "$queue/$t"; return; fi
-    rm -f "$queue/$t"
+    if kill -0 "$pid" 2>/dev/null; then echo "$1/$t"; return; fi
+    rm -f "$1/$t"
   done
 }
 count() { set -- $held; echo $#; }
+stale() { [ -f "$1/pid" ] && ! kill -0 "$(cat "$1/pid")" 2>/dev/null; }
 usable() {
   if [ -n "$exclusive" ] || [ -n "$light" ]; then echo "$slots"; return; fi
   memory=$(sysctl -n hw.memsize 2>/dev/null || echo 0)
@@ -43,25 +67,70 @@ usable() {
   after=$(vm_stat 2>/dev/null | awk '/Swapouts/ {gsub(/\./,"",$2); print $2}')
   if [ -n "$before" ] && [ -n "$after" ] && [ $((after - before)) -gt "${APPLE_BRIDGE_HEAVY_MAX_SWAPOUTS:-256}" ]; then echo 1; else echo "$slots"; fi
 }
+# True while a normal-lane holder is sensitive. A holder that has not yet recorded its command counts as sensitive.
+sensitive_holder() {
+  for lock in "$normal"-[0-9]*.lock; do
+    [ -d "$lock" ] || continue
+    stale "$lock" && continue
+    [ -f "$lock/cmd" ] || return 0
+    sensitive "$(cat "$lock/cmd")" && return 0
+  done
+  return 1
+}
+# The sim lane runs beside one normal job only while the Air has clear headroom.
+sim_ok() {
+  sensitive_holder && return 1
+  level=$(sysctl -n kern.memorystatus_level 2>/dev/null || echo 0)
+  [ "$level" -ge "${APPLE_BRIDGE_SIM_MIN_FREE_PCT:-45}" ] || return 1
+  load=$(sysctl -n vm.loadavg 2>/dev/null | awk '{printf "%d", $2}')
+  cpus=$(sysctl -n hw.ncpu 2>/dev/null || echo 8)
+  [ "${load:-99}" -lt "$cpus" ] || return 1
+  before=$(vm_stat 2>/dev/null | awk '/Swapouts/ {gsub(/\./,"",$2); print $2}')
+  sleep 2
+  after=$(vm_stat 2>/dev/null | awk '/Swapouts/ {gsub(/\./,"",$2); print $2}')
+  [ -n "$before" ] && [ -n "$after" ] && [ $((after - before)) -le "${APPLE_BRIDGE_SIM_MAX_SWAPOUTS:-64}" ]
+}
+wait_sim_idle() {
+  while [ -d "$simlock" ]; do
+    if stale "$simlock"; then rm -rf "$simlock"; break; fi
+    sleep 2
+  done
+}
+run() {
+  label=$1
+  shift
+  rm -f "$ticket" ${simticket:+"$simticket"}
+  set +e
+  APPLE_BRIDGE_HEAVY_SLOT="$label" "$@"
+  exit $?
+}
 while true; do
-  if [ "$(oldest_live)" = "$ticket" ]; then
+  if [ "$(oldest_live "$queue")" = "$ticket" ]; then
     for i in $(seq 1 "$(usable)"); do
       lock="$base-$i.lock"
       case " $held " in *" $lock "*) continue ;; esac
-      if [ -f "$lock/pid" ] && ! kill -0 "$(cat "$lock/pid")" 2>/dev/null; then rm -rf "$lock"; fi
+      if stale "$lock"; then rm -rf "$lock"; fi
       if mkdir "$lock" 2>/dev/null; then
         echo $$ > "$lock/pid"
+        printf '%s\n' "${exclusive:+--exclusive }$*" > "$lock/cmd"
         held="$held $lock"
         if [ -z "$exclusive" ] || [ "$(count)" -eq "$slots" ]; then
-          rm -f "$ticket"
-          set +e
+          if [ -z "$light" ] && { [ -n "$exclusive" ] || sensitive "$*"; }; then wait_sim_idle; fi
           label=$i
           [ -n "$exclusive" ] && label=all
-          APPLE_BRIDGE_HEAVY_SLOT="$label" "$@"
-          exit $?
+          run "$label" "$@"
         fi
       fi
     done
+  fi
+  if [ -n "$sim" ] && [ "$(oldest_live "$simqueue")" = "$simticket" ]; then
+    if stale "$simlock"; then rm -rf "$simlock"; fi
+    if mkdir "$simlock" 2>/dev/null; then
+      echo $$ > "$simlock/pid"
+      printf '%s\n' "$*" > "$simlock/cmd"
+      if sim_ok; then held="$held $simlock"; run sim "$@"; fi
+      rm -rf "$simlock"
+    fi
   fi
   sleep 1
 done
