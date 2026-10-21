@@ -137,19 +137,21 @@ func (g *RemoteGateway) Submit(ctx context.Context, p trust.Principal, c contrac
 			err = nil
 		}
 	}
+	return r, g.waitResult(ctx, r, lookupOnly, err)
+}
+func (g *RemoteGateway) waitResult(ctx context.Context, r contracts.CommandRecord, lookupOnly bool, err error) error {
 	if err == nil && !lookupOnly && r.CommitSeq > 0 && g.Wait != nil {
 		waitctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 		defer cancel()
-		if waitErr := g.Wait(waitctx, r.Cursor); waitErr != nil {
-			return r, waitErr
-		}
+		return g.Wait(waitctx, r.Cursor)
 	}
-	return r, err
+	return err
 }
 func (g *RemoteGateway) Status(ctx context.Context, p trust.Principal, q contracts.CommandQuery) (contracts.CommandRecord, error) {
 	var r contracts.CommandRecord
-	err := g.call(ctx, p, forwarded{Method: "status", Query: q}, &r)
-	return r, err
+	lookupOnly := false
+	err := g.call(ctx, p, forwarded{Method: "status", Query: q}, &r, &lookupOnly)
+	return r, g.waitResult(ctx, r, lookupOnly, err)
 }
 func (g *RemoteGateway) List(ctx context.Context, p trust.Principal, q contracts.CommandQuery) ([]contracts.CommandRecord, error) {
 	r := []contracts.CommandRecord{}

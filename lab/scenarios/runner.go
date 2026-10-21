@@ -386,7 +386,7 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 		if s.ID == "WEB-RELAY-AGENTS" {
 			return runRelayAgents(ctx, s, level)
 		}
-		if s.ID == "WEB-RELAY-CONNECT" || s.ID == "WEB-RELAY-COMMAND" {
+		if s.ID == "WEB-RELAY-CONNECT" || s.ID == "WEB-RELAY-COMMAND" || s.ID == "WEB-RELAY-PUBLIC-AGENTS" {
 			return runRelayConnect(ctx, s, level)
 		}
 		if s.ID == "WEB-RELAY-PAIRING" {

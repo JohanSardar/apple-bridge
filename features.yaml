@@ -471,6 +471,7 @@ features:
       - {id: WEB-RELAY-PAIRING, levels: [sim]}
       - {id: WEB-RELAY-CONNECT, levels: [replica]}
       - {id: WEB-RELAY-COMMAND, levels: [replica]}
+      - {id: WEB-RELAY-PUBLIC-AGENTS, levels: [replica]}
       - {id: WEB-RELAY-REPLICA, levels: [replica]}
   - id: web.messages.read
     title: Messages web app reading at full fidelity (list, transcript, media, viewer, links, effects, details, search)

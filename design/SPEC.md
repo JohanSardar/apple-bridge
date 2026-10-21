@@ -543,7 +543,7 @@ Submit(principal, {id, op, args, expected_version?, expires_at?})
 - Lost response: the caller retries **with the original ID**, getting the stored status. Never automatic redispatch of `dispatched`/`indeterminate`.
 - Correlation is conservative: evidence must match fingerprint **and** be after candidate IDs **and** be unique; two identical candidate rows (e.g. a manual identical send) → `indeterminate` with both candidates listed.
 - Stronger later evidence (from `Resolve` or capture) may move `indeterminate → locally_observed/delivered/failed_no_effect`, appending to `history`.
-- Status returns `commit_seq`; `Wait(cursor)` on a replica blocks until local cursor ≥ that sequence, so callers can read their own write locally.
+- Status returns `commit_seq`; command submission and `commands.status` on a replica wait until its local cursor reaches the command cursor, so an observed result is immediately readable locally. A command from an older admission era remains lookup-only and skips the current-feed wait.
 
 ### 11.3 Replica
 
