@@ -4,6 +4,7 @@ levels:
   real: Real Swift Helper and Apple apps on the Air
   replica: Real gateway on the Air, replica on the Ubuntu laptop
   agent: GPT-6-Luna via Codex on Ubuntu using only the replica MCP
+  web: Playwright (WebKit, Chromium, Firefox) on the Air against a bridge-lab demo world, or the real gateway for real-level web runs
 statuses: [todo, in_progress, done, limited, blocked]
 status_rules:
   done: every scenario at every listed level has passing evidence
@@ -28,6 +29,10 @@ requirements:
   R-USAGE: Screen Time per app, per device, per day estimates, read-only
   R-PKG: Signed app with onboarding and background service; notarization optional, not required
   R-AGENT: A remote agent can do real tasks through MCP only
+  R-WEB-UI: A web app mirrors Apple's apps per design/web specs, light and dark, phone and desktop, latest two Safari, Chrome/Edge and Firefox
+  R-WEB-FAST: Interaction under 8 ms, 120 fps scrolling of 100k-message threads, Mac-to-browser p95 under 500 ms, warm load under 1 s
+  R-WEB-REACH: Any browser or agent anywhere reaches the bridge through the embedded Funnel with nothing installed and nothing paid
+  R-WEB-SECURE: Passkey device sessions, public-computer mode, revocation, origin and CSP protection, rate limits, agent levels with owner approval
 
 features:
   - id: core.harness
@@ -367,3 +372,77 @@ features:
     scenarios:
       - {id: AGENT-SUITE, levels: [agent]}
     notes: one natural-language task per source (messages self-send + read, reminders, calendar, contacts, notes, usage) run by the MCP-only agent on Ubuntu, graded by Truth
+
+  - id: web.readmodels
+    title: Read models for chats, threads and collections (messages.chats, messages.thread, messages.collection)
+    requirements: [R-WEB-FAST, R-API]
+    milestone: W1
+    modules: [state, operations, contracts]
+    depends_on: [messages.read]
+    status: todo
+    scenarios:
+      - {id: WEB-RM-CHATS, levels: [sim]}
+      - {id: WEB-RM-THREAD, levels: [sim]}
+  - id: web.frontdoor
+    title: Web front door, passkey device sessions, live views (web/1), embedded app shell
+    requirements: [R-WEB-SECURE, R-WEB-FAST, R-WEB-UI]
+    milestone: W1
+    modules: [web, webui, trust, replication]
+    depends_on: [web.readmodels]
+    status: todo
+    scenarios:
+      - {id: WEB-SERVE-EMBED, levels: [sim, web]}
+      - {id: WEB-AUTH-ENROLL, levels: [web]}
+      - {id: WEB-AUTH-LOGIN, levels: [web]}
+      - {id: WEB-AUTH-REVOKE, levels: [web]}
+      - {id: WEB-AUTH-ORIGIN, levels: [sim]}
+      - {id: WEB-AUTH-RATELIMIT, levels: [sim]}
+      - {id: WEB-LIVE-DELTA, levels: [web]}
+      - {id: WEB-LIVE-RESUME, levels: [web]}
+      - {id: WEB-PERF-SHELL, levels: [web]}
+  - id: web.media
+    title: Browser-safe media variants made by the Helper
+    requirements: [R-WEB-UI, R-ATTACH]
+    milestone: W1
+    modules: [native/MediaDerivatives, blobs, web]
+    depends_on: [messages.read]
+    status: todo
+    scenarios:
+      - {id: WEB-MEDIA-VARIANTS, levels: [real]}
+  - id: web.remote
+    title: Reach from anywhere through the embedded Tailscale Funnel
+    requirements: [R-WEB-REACH, R-SECURE]
+    milestone: W1
+    modules: [remote, web, frontdoor, runtime]
+    depends_on: [web.frontdoor]
+    status: todo
+    scenarios:
+      - {id: WEB-REMOTE-FUNNEL, levels: [real]}
+  - id: web.agents
+    title: Agent tokens with read, approve-first and full levels; MCP OAuth for connectors
+    requirements: [R-WEB-SECURE, R-AGENT]
+    milestone: W1
+    modules: [trust, operations, web, frontdoor]
+    depends_on: [web.frontdoor, web.remote]
+    status: todo
+    scenarios:
+      - {id: WEB-AGENT-LEVELS, levels: [sim]}
+      - {id: WEB-AGENT-OAUTH, levels: [sim, web]}
+  - id: web.demo
+    title: Synthetic demo world serving the web app (bridge-lab demo)
+    requirements: [R-WEB-UI]
+    milestone: W1
+    modules: [lab/demo, lab/world]
+    depends_on: [web.readmodels, web.frontdoor]
+    status: todo
+    scenarios:
+      - {id: WEB-DEMO-DATASET, levels: [sim]}
+  - id: web.relay
+    title: Replicas connect through the Remote relay with device-key auth
+    requirements: [R-WEB-REACH, R-FULL]
+    milestone: W1
+    modules: [replication, remote, trust]
+    depends_on: [web.remote]
+    status: todo
+    scenarios:
+      - {id: WEB-RELAY-REPLICA, levels: [replica]}
