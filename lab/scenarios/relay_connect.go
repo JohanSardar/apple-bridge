@@ -195,11 +195,11 @@ func runRelayWorld(ctx context.Context, s Scenario, level string, native bool) (
 	if err == nil && s.ID == "WEB-RELAY-COMMAND" {
 		relayCommandChecks(w, &e, add)
 	}
-	if err == nil && native && s.ID == "WEB-RELAY-REPLICA" {
-		relayNativeChecks(ctx, w, &e, add)
-	}
 	if err == nil && (native || s.ID == "WEB-RELAY-PUBLIC-AGENTS") && result.Enrollment != nil {
 		relayPublicAgentChecks(ctx, w, &e, add, *result.Enrollment)
+	}
+	if err == nil && native && s.ID == "WEB-RELAY-REPLICA" {
+		relayPostBurstChecks(ctx, w, &e, add)
 	}
 	if err == nil && result.Enrollment != nil {
 		relaySecurityChecks(w, &e, add, result.Enrollment)
