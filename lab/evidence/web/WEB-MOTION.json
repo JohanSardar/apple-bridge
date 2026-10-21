@@ -1,10 +1,12 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[5.26 6.27 7.14] cpus=8 other_heavy=1"
+    "summary": "air: load=[11.1 10.83 14.46] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M5E4B4GCW7GT49T417SA5HPV",
+  "run_id": "run_01M5FK19VQ7XHJ699ZRK1XKH5X",
   "metrics": {
+    "demo_messages": 5000,
+    "demo_startup_ms": 9819,
     "matrix": [
       "webkit-light-phone",
       "webkit-light-desktop",
@@ -39,68 +41,68 @@
   "scenario": "WEB-MOTION",
   "level": "web",
   "passed": true,
-  "git_sha": "2c3c75939f9c05b3c72b197745d4c52b6bf48279",
-  "at": "2026-10-21T02:23:45.67688Z",
+  "git_sha": "734f67cccc3f085a6f80d4c466e13ac90b7a1c48",
+  "at": "2026-10-21T15:59:46.553603Z",
   "assertions": [
     {
       "name": "webkit-light-phone:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/foundations.spec.ts:96:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (3.5s)\n\n  1 passed (4.5s)\n"
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/foundations.spec.ts:98:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (5.9s)\n\n  1 passed (11.1s)\n"
     },
     {
       "name": "webkit-light-desktop:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/foundations.spec.ts:96:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (3.0s)\n\n  1 passed (3.5s)\n"
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/foundations.spec.ts:98:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (5.1s)\n\n  1 passed (8.2s)\n"
     },
     {
       "name": "webkit-dark-phone:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-dark-phone] › tests/foundations.spec.ts:96:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (2.9s)\n\n  1 passed (3.4s)\n"
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-dark-phone] › tests/foundations.spec.ts:98:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (4.0s)\n\n  1 passed (6.0s)\n"
     },
     {
       "name": "webkit-dark-desktop:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-dark-desktop] › tests/foundations.spec.ts:96:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (3.1s)\n\n  1 passed (3.6s)\n"
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-dark-desktop] › tests/foundations.spec.ts:98:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (3.8s)\n\n  1 passed (5.0s)\n"
     },
     {
       "name": "chromium-light-phone:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/foundations.spec.ts:96:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (3.0s)\n\n  1 passed (3.7s)\n"
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/foundations.spec.ts:98:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (3.6s)\n\n  1 passed (5.0s)\n"
     },
     {
       "name": "chromium-light-desktop:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/foundations.spec.ts:96:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (2.7s)\n\n  1 passed (3.1s)\n"
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/foundations.spec.ts:98:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (3.6s)\n\n  1 passed (5.2s)\n"
     },
     {
       "name": "chromium-dark-phone:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-dark-phone] › tests/foundations.spec.ts:96:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (2.7s)\n\n  1 passed (3.1s)\n"
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-dark-phone] › tests/foundations.spec.ts:98:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (3.1s)\n\n  1 passed (4.3s)\n"
     },
     {
       "name": "chromium-dark-desktop:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-dark-desktop] › tests/foundations.spec.ts:96:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (2.6s)\n\n  1 passed (3.1s)\n"
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-dark-desktop] › tests/foundations.spec.ts:98:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (3.2s)\n\n  1 passed (4.4s)\n"
     },
     {
       "name": "firefox-light-phone:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-light-phone] › tests/foundations.spec.ts:96:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (3.8s)\n\n  1 passed (6.5s)\n"
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-light-phone] › tests/foundations.spec.ts:98:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (5.5s)\n\n  1 passed (10.1s)\n"
     },
     {
       "name": "firefox-light-desktop:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-light-desktop] › tests/foundations.spec.ts:96:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (4.1s)\n\n  1 passed (6.4s)\n"
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-light-desktop] › tests/foundations.spec.ts:98:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (5.6s)\n\n  1 passed (9.8s)\n"
     },
     {
       "name": "firefox-dark-phone:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-dark-phone] › tests/foundations.spec.ts:96:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (3.7s)\n\n  1 passed (6.1s)\n"
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-dark-phone] › tests/foundations.spec.ts:98:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (4.9s)\n\n  1 passed (8.0s)\n"
     },
     {
       "name": "firefox-dark-desktop:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-dark-desktop] › tests/foundations.spec.ts:96:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (3.6s)\n\n  1 passed (5.0s)\n"
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-dark-desktop] › tests/foundations.spec.ts:98:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (5.7s)\n\n  1 passed (10.4s)\n"
     },
     {
       "name": "credential_backend_override_restored",
