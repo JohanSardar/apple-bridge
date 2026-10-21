@@ -262,40 +262,20 @@ func (l *liveSocket) command(f clientFrame) {
 		l.fail("unavailable", "commands unavailable")
 		return
 	}
+	iterator, _ := l.observeCommand(l.server.deps.Operations.Head())
 	status, err := l.server.deps.Operations.Target.Submit(l.ctx, l.identity.Principal, c)
 	if err != nil && status.Command.ID == "" {
 		l.send(map[string]any{"t": "ack", "id": f.ID, "status": "rejected", "error": safeError(err)}, false)
 		return
 	}
 	l.send(map[string]any{"t": "ack", "id": f.ID, "status": status.State}, false)
-	l.send(map[string]any{"t": "cmd_status", "id": f.ID, "status": status.State, "command": status, "error": status.Error}, false)
-	if status.Disposition != "" {
-		return
-	}
-	iterator, err := l.server.deps.Operations.Observe(l.ctx, l.identity.Principal, status.Cursor)
-	if err != nil {
-		l.fail("reset", "command observation reset")
-		return
-	}
-	for {
-		batch, err := iterator.Next(l.ctx)
-		if err != nil {
+	if status.Disposition == "" || status.CommitSeq == 0 {
+		l.sendCommandStatus(status)
+		if status.Disposition != "" {
 			return
 		}
-		for _, change := range batch.Changes {
-			if change.Record.Collection == "system.command" && change.Record.ID == f.ID {
-				next, err := l.server.deps.Operations.Target.Status(l.ctx, l.identity.Principal, contracts.CommandQuery{ID: f.ID})
-				if err != nil && next.Command.ID == "" {
-					l.fail(safeError(err).Code, "command status unavailable")
-					return
-				}
-				l.send(map[string]any{"t": "cmd_status", "id": f.ID, "status": next.State, "command": next, "error": next.Error}, false)
-				if next.Disposition != "" {
-					return
-				}
-			}
-		}
 	}
+	l.watchCommand(f.ID, iterator)
 }
 func safeError(err error) *contracts.Error {
 	var typed *contracts.Error
