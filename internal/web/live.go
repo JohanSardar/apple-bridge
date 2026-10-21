@@ -329,10 +329,15 @@ func (l *liveSocket) view(ctx context.Context, f clientFrame) (any, error) {
 	}
 	return nil, contracts.ErrUnsupported
 }
+func (l *liveSocket) failView(ctx context.Context, code, message string) {
+	if ctx.Err() == nil {
+		l.fail(code, message)
+	}
+}
 func (l *liveSocket) subscribe(ctx context.Context, f clientFrame) {
 	var recordArgs contracts.ReadQuery
 	if f.View == "record" && contracts.DecodeInput(f.Args, &recordArgs) != nil {
-		l.fail("invalid", "invalid record arguments")
+		l.failView(ctx, "invalid", "invalid record arguments")
 		return
 	}
 	cursor := l.server.deps.Operations.Head()
@@ -346,14 +351,14 @@ func (l *liveSocket) subscribe(ctx context.Context, f clientFrame) {
 	if !resume {
 		data, err := l.view(ctx, f)
 		if err != nil {
-			l.fail(safeError(err).Code, "view unavailable")
+			l.failView(ctx, safeError(err).Code, "view unavailable")
 			return
 		}
 		previous = decodeViewState(data)
 		if f.View == "thread" {
 			previous.Counts, err = l.windowCounts(ctx, f, previous)
 			if err != nil {
-				l.fail(safeError(err).Code, "window unavailable")
+				l.failView(ctx, safeError(err).Code, "window unavailable")
 				return
 			}
 			raw, _ := json.Marshal(data)
@@ -372,15 +377,13 @@ func (l *liveSocket) subscribe(ctx context.Context, f clientFrame) {
 	}
 	iterator, err := l.server.deps.Operations.Observe(ctx, l.identity.Principal, cursor)
 	if err != nil {
-		l.fail("reset", "resubscribe required")
+		l.failView(ctx, "reset", "resubscribe required")
 		return
 	}
 	for {
 		batch, err := iterator.Next(ctx)
 		if err != nil {
-			if ctx.Err() == nil {
-				l.fail("reset", "resubscribe required")
-			}
+			l.failView(ctx, "reset", "resubscribe required")
 			return
 		}
 		cursor = contracts.Cursor{Epoch: batch.Epoch, SubscriptionRevision: batch.SubscriptionRevision, Sequence: batch.Through}
@@ -392,7 +395,7 @@ func (l *liveSocket) subscribe(ctx context.Context, f clientFrame) {
 					if change.Record.Collection == "system.command" {
 						change.Record, err = l.commandRecord(ctx, change.Record)
 						if err != nil {
-							l.fail(safeError(err).Code, "command unavailable")
+							l.failView(ctx, safeError(err).Code, "command unavailable")
 							return
 						}
 					}
@@ -406,14 +409,14 @@ func (l *liveSocket) subscribe(ctx context.Context, f clientFrame) {
 		if affected {
 			data, err := l.view(ctx, f)
 			if err != nil {
-				l.fail("reset", "resubscribe required")
+				l.failView(ctx, "reset", "resubscribe required")
 				return
 			}
 			next := decodeViewState(data)
 			if f.View == "thread" {
 				next.Counts, err = l.windowCounts(ctx, f, next)
 				if err != nil {
-					l.fail("reset", "window unavailable")
+					l.failView(ctx, "reset", "window unavailable")
 					return
 				}
 			}
