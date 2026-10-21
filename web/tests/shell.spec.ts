@@ -26,6 +26,11 @@ test('WEB-SHELL-JOURNEY layouts, deep links, appearance, keyboard and history', 
     if (info.project.use.viewport?.width === 1440) {
         await page.getByRole('button', { name: 'Details', exact: true }).click();
         await expect(page.getByRole('complementary', { name: 'Details' })).toBeVisible();
+        const modifier=await page.evaluate(()=>/Mac|iPhone|iPad/.test(navigator.platform)?'Meta':'Control');
+        await page.keyboard.press(modifier+'+i');
+        await expect(page.getByRole('complementary',{name:'Details'})).toHaveCount(0);
+        await page.keyboard.press(modifier+'+i');
+        await expect(page.getByRole('complementary',{name:'Details'})).toBeVisible();
         await page.getByRole('button', { name: 'Close details', exact: true }).click();
         await expect(page.getByRole('complementary', { name: 'Details' })).toHaveCount(0);
     }
@@ -33,6 +38,17 @@ test('WEB-SHELL-JOURNEY layouts, deep links, appearance, keyboard and history', 
     await expect(page).toHaveURL(/messages$/);
     await page.goForward();
     await expect(page).toHaveURL(/messages\/new/);
+    if(info.project.use.viewport?.width===390){
+        await expect.poll(()=>page.locator('.transcript').evaluate(element=>getComputedStyle(element).transform)).toBe('none');
+        await page.mouse.move(5,400);await page.mouse.down();await page.mouse.move(55,400,{steps:5});
+        const tracked=await page.locator('.transcript').evaluate(element=>new DOMMatrix(getComputedStyle(element).transform).m41);
+        expect(tracked).toBeCloseTo(50,0);
+        await page.mouse.move(5,400,{steps:5});await page.mouse.up();
+        await expect(page).toHaveURL(/messages\/new/);
+        await expect.poll(()=>page.locator('.transcript').evaluate(element=>getComputedStyle(element).transform)).toBe('none');
+        await page.mouse.move(5,400);await page.mouse.down();await page.mouse.move(260,400,{steps:8});await page.mouse.up();
+        await expect(page).toHaveURL(/messages$/);
+    }
     await page.goto('/settings/appearance');
     await page.getByLabel('Theme').selectOption(info.project.use.colorScheme === 'dark' ? 'light' : 'dark');
     await page.reload();

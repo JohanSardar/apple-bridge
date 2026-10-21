@@ -33,19 +33,22 @@ test('WEB-AUTH-LOGIN discoverable browser passkey sign-in chooses trusted or pub
 });
 test('WEB-AUTH-REVOKE another session closes within one second, wipes cache, and web lock revokes all',async({page,request,context,browser},info)=>{
   const first=await bootstrap(context,request);
-  await page.goto('/__fixtures/live');await expect(page.getByRole('status')).toHaveText('connected');
+  await page.goto('/__fixtures/live');await expect(page.getByRole('status', {name:'Connection'})).toHaveText('connected');
   await expect.poll(()=>page.evaluate(async()=> (await indexedDB.databases()).length)).toBeGreaterThan(0);
   const other=await browser.newContext({baseURL:process.env.AB_WEB_URL});await bootstrap(other,request);const controller=await other.newPage();await controller.goto('/settings/devices');
-  const sockets:Promise<number>[]=[];page.on('websocket',socket=>{sockets.push(new Promise(resolve=>socket.on('close',()=>resolve(Date.now()))));});
-  await page.getByRole('button',{name:'Reconnect live view'}).click();await expect(page.getByRole('status')).toHaveText('connected');
+  const opened=page.waitForEvent('websocket');
+  await page.getByRole('button',{name:'Reconnect live view'}).click();
+  const socket=await opened;
+  const closed=new Promise<number>(resolve=>socket.on('close',()=>resolve(Date.now())));
+  await expect(page.getByRole('status', {name:'Connection'})).toHaveText('connected');
   const start=Date.now();const response=await controller.request.delete('/web/v1/devices/'+encodeURIComponent(first.device_id),{headers:{Origin:process.env.AB_WEB_URL!}});expect(response.ok()).toBe(true);
-  await expect(page.getByRole('heading',{name:'Sign in with a passkey'})).toBeVisible();const close=await Promise.race([Promise.all(sockets).then(times=>Math.max(...times)),new Promise<number>((_,reject)=>setTimeout(()=>reject(new Error('Socket did not close')),1000))]);expect(close-start).toBeLessThanOrEqual(1000);
+  await expect(page.getByRole('heading',{name:'Sign in with a passkey'})).toBeVisible();const close=await Promise.race([closed,new Promise<number>((_,reject)=>setTimeout(()=>reject(new Error('Socket did not close')),1000))]);expect(close-start).toBeGreaterThanOrEqual(0);expect(close-start).toBeLessThanOrEqual(1000);
   await expect.poll(()=>page.evaluate(async()=>({db:await indexedDB.databases(),cache:await caches.keys()}))).toEqual({db:[],cache:[]});
   await control(request,'/lock');await expect(controller.getByRole('heading',{name:'Sign in with a passkey'})).toBeVisible();await other.close();
   await mkdir('../lab/evidence/web/metrics',{recursive:true});await writeFile(`../lab/evidence/web/metrics/WEB-AUTH-REVOKE-${info.project.name}.json`,JSON.stringify({samples:1,p50_ms:close-start,p95_ms:close-start,max_ms:close-start})+'\n');
 });
 test('WEB-LIVE-DELTA sim capture is visible in the browser within 500 ms p95',async({page,context,request},info)=>{
-  await bootstrap(context,request);await page.goto('/__fixtures/live');await expect(page.getByRole('status')).toHaveText('connected');await expect(page.getByLabel('Latest message',{exact:true})).not.toHaveText('');
+  await bootstrap(context,request);await page.goto('/__fixtures/live');await expect(page.getByRole('status', {name:'Connection'})).toHaveText('connected');await expect(page.getByLabel('Latest message',{exact:true})).not.toHaveText('');
   const samples:number[]=[];
   for(let i=0;i<20;i++){const before=Number(await page.getByLabel('Unread count',{exact:true}).textContent());const result=await control(request,'/incoming');await expect(page.getByLabel('Unread count',{exact:true})).toHaveText(String(before+1));const observed=Number(await page.getByLabel('View observed at',{exact:true}).textContent());samples.push(observed-result.started_at_ms);}
   const sorted=[...samples].sort((a,b)=>a-b);const metrics={samples:samples.length,p50_ms:sorted[9],p95_ms:sorted[18],max_ms:sorted[19],endpoint:'sim capture start to browser live-view render'};
@@ -54,7 +57,7 @@ test('WEB-LIVE-DELTA sim capture is visible in the browser within 500 ms p95',as
 });
 test('WEB-LIVE-RESUME resubscribes with its cursor and converges after an actual socket close',async({page,context,request})=>{
   await bootstrap(context,request);const frames:any[]=[];page.on('websocket',socket=>socket.on('framesent',event=>{try{frames.push(JSON.parse(String(event.payload)));}catch{}}));
-  await page.goto('/__fixtures/live');await expect(page.getByRole('status')).toHaveText('connected');await expect(page.getByLabel('Latest message',{exact:true})).not.toHaveText('');const before=Number(await page.getByLabel('Unread count',{exact:true}).textContent());
-  await page.getByRole('button',{name:'Reconnect live view'}).click();await control(request,'/incoming');await expect(page.getByRole('status')).toHaveText('connected');await expect(page.getByLabel('Unread count',{exact:true})).toHaveText(String(before+1));expect(frames.some(frame=>frame.t==='sub'&&frame.cursor)).toBe(true);
+  await page.goto('/__fixtures/live');await expect(page.getByRole('status', {name:'Connection'})).toHaveText('connected');await expect(page.getByLabel('Latest message',{exact:true})).not.toHaveText('');const before=Number(await page.getByLabel('Unread count',{exact:true}).textContent());
+  await page.getByRole('button',{name:'Reconnect live view'}).click();await control(request,'/incoming');await expect(page.getByRole('status', {name:'Connection'})).toHaveText('connected');await expect(page.getByLabel('Unread count',{exact:true})).toHaveText(String(before+1));expect(frames.some(frame=>frame.t==='sub'&&frame.cursor)).toBe(true);
   const previous=await page.getByLabel('Latest message',{exact:true}).textContent();await control(request,'/incoming');await expect(page.getByLabel('Unread count',{exact:true})).toHaveText(String(before+2));await expect(page.getByLabel('Latest message',{exact:true})).not.toHaveText(previous!);
 });

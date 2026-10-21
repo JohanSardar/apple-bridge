@@ -50,7 +50,7 @@ test('WEB-CACHE-POLICY public sessions persist nothing and revocation wipes trus
     await expect.poll(() => page.evaluate(async () => (await caches.keys()).filter(key => key.startsWith('ab.')).length)).toBe(0);
     await page.request.get('/__mock/session?kind=public');
     await page.goto('/__fixtures/live');
-    await expect(page.getByRole('status')).toHaveText('connected');
+    await expect(page.getByRole('status', {name:'Connection'})).toHaveText('connected');
     await page.goto('/settings/appearance');
     await page.getByLabel('Theme').selectOption('dark');
     const storage = await page.evaluate(async () => ({ databases: await indexedDB.databases(), caches: await caches.keys(), local: Object.keys(localStorage), session: Object.keys(sessionStorage), workers: await navigator.serviceWorker.getRegistrations().then(rows => rows.length) }));
@@ -58,7 +58,7 @@ test('WEB-CACHE-POLICY public sessions persist nothing and revocation wipes trus
 });
 test('WEB-LIVE-MOCK receives deltas and resumes after a dropped socket with cached views', async ({ page }, info) => {
     await page.goto('/__fixtures/live');
-    await expect(page.getByRole('status')).toHaveText('connected');
+    await expect(page.getByRole('status', {name:'Connection'})).toHaveText('connected');
     const values: number[] = [];
     for (let i = 0; i < 10; i++) {
         const before = Number(await page.getByLabel('Live count').textContent());
@@ -69,7 +69,7 @@ test('WEB-LIVE-MOCK receives deltas and resumes after a dropped socket with cach
     }
     const before = await page.getByLabel('Live count').textContent();
     await page.request.get('/__mock/drop');
-    await expect(page.getByRole('status')).toHaveText('connected');
+    await expect(page.getByRole('status', {name:'Connection'})).toHaveText('connected');
     await expect(page.getByLabel('Live count')).toHaveText(before!);
     await metrics('WEB-LIVE-MOCK', info.project.name, { fixture_round_trip: stats(values), server: 'mock', not_real_journal_latency: true });
 });
@@ -94,7 +94,10 @@ test('WEB-PERF-SHELL bundle, layout stability, navigation and warm cache budgets
     const shell = sizes.filter(value => !/^Settings-|^AuthPage-|^Fixtures-/.test(value.file)).reduce((sum, value) => sum + value.gzip, 0);
     expect(shell).toBeLessThanOrEqual(60 * 1024);
     await page.addInitScript(() => {
-        const metrics = { cls: 0, longTasks: [] as number[] };
+        const metrics = { cls: 0, longTasks: [] as number[], frames: [] as number[] };
+        let last=0;
+        const frame=(time:number)=>{if(last)metrics.frames.push(time-last);last=time;requestAnimationFrame(frame);};
+        requestAnimationFrame(frame);
         (window as any).__metrics = metrics;
         if (PerformanceObserver.supportedEntryTypes.includes('layout-shift'))
             new PerformanceObserver(list => { for (const entry of list.getEntries())
@@ -107,23 +110,30 @@ test('WEB-PERF-SHELL bundle, layout stability, navigation and warm cache budgets
     await page.goto('/messages');
     await page.getByText('No Messages', { exact: true }).waitFor();
     await page.waitForTimeout(200);
-    await page.evaluate(() => { (window as any).__metrics.longTasks = []; });
+    await page.evaluate(() => { (window as any).__metrics.longTasks = []; (window as any).__metrics.frames=[]; });
     await page.getByRole('button', { name: 'New Message', exact: true }).click();
     await page.getByText('No Conversation Selected', { exact: true }).waitFor();
     const navigation = await page.evaluate(() => (window as any).__metrics);
     expect(navigation.cls).toBe(0);
     expect(navigation.longTasks.filter((value: number) => value > 50)).toEqual([]);
+    expect(navigation.frames.filter((value:number)=>value>50)).toEqual([]);
     await page.goto('/__fixtures/live');
-    await expect(page.getByRole('status')).toHaveText('connected');
+    await expect(page.getByRole('status', {name:'Connection'})).toHaveText('connected');
     await expect.poll(() => page.evaluate(async () => { const db = await new Promise<IDBDatabase>((resolve, reject) => { const request = indexedDB.open('ab.views'); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); }); const count = await new Promise<number>(resolve => { const request = db.transaction('views').objectStore('views').count(); request.onsuccess = () => resolve(request.result); }); db.close(); return count; })).toBeGreaterThan(0);
+    const initial = Number(await page.getByLabel('Live count',{exact:true}).textContent());
+    await page.request.get('/__mock/delta');
+    await expect(page.getByLabel('Live count',{exact:true})).toHaveText(String(initial+1));
+    await expect.poll(()=>page.evaluate(async()=>{const db=await new Promise<IDBDatabase>(resolve=>{const request=indexedDB.open('ab.views');request.onsuccess=()=>resolve(request.result);});const values=await new Promise<any[]>(resolve=>{const request=db.transaction('views').objectStore('views').getAll();request.onsuccess=()=>resolve(request.result);});db.close();return values.some(value=>value.data.chats?.length>0);})).toBe(true);
+    await page.routeWebSocket('**/web/v1/live',()=>{});
     const warm: number[] = [];
-    for (let i = 0; i < 3; i++) {
-        const start = performance.now();
+    for(let i=0;i<3;i++){
+        const start=performance.now();
         await page.reload();
-        await expect(page.getByRole('status')).toHaveText('connected');
-        warm.push(performance.now() - start);
+        await expect(page.getByLabel('Live count',{exact:true})).toHaveText(String(initial+1));
+        warm.push(performance.now()-start);
+        await expect(page.getByRole('status',{name:'Connection'})).not.toHaveText('connected');
     }
     const warmStats = stats(warm);
     expect(warmStats.max_ms).toBeLessThan(1000);
-    await metrics('WEB-PERF-SHELL', info.project.name, { shell_gzip_bytes: shell, chunks: sizes, cls: navigation.cls, long_tasks: navigation.longTasks, warm_load: warmStats, long_task_observer: info.project.use.browserName === 'chromium' });
+    await metrics('WEB-PERF-SHELL', info.project.name, { shell_gzip_bytes: shell, chunks: sizes, cls: navigation.cls, long_tasks: navigation.longTasks, navigation_frames: stats(navigation.frames), warm_load: warmStats, long_task_observer: info.project.use.browserName === 'chromium' });
 });

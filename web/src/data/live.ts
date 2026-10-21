@@ -91,6 +91,7 @@ export class LiveClient {
         } if (socket.readyState === WebSocket.OPEN)
             this.send({ t: 'ping' }); }, 15000); };
         socket.onmessage = event => {
+            if(this.stopped)return;
             this.lastFrame = Date.now();
             try {
                 this.receive(JSON.parse(event.data));
@@ -134,7 +135,7 @@ export class LiveClient {
             for (const sub of this.subscriptions.values())
                 this.send({ t: 'sub', id: sub.id, view: sub.view, args: sub.args, cursor: sub.cursor });
             for (const command of this.commands.values()) {
-                if (!['rejected', 'failed', 'locally_observed', 'delivered', 'delivery_failed', 'indeterminate', 'expired'].includes(command.status))
+                if (!command.disposition&&!['rejected', 'failed', 'observed', 'delivered', 'delivery_failed', 'indeterminate', 'expired'].includes(command.status))
                     this.reconcile(command.id);
             }
         }

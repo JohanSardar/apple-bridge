@@ -1,3 +1,4 @@
+import { rubberBand } from './spring';
 import { reducedMotion, springAnimation, crossfade } from './animate';
 export function drag(element: HTMLElement, handlers: {
     start?: (event: PointerEvent) => boolean;
@@ -19,20 +20,20 @@ export function drag(element: HTMLElement, handlers: {
     element.addEventListener('lostpointercapture', end);
     return () => { element.removeEventListener('pointerdown', down); element.removeEventListener('pointermove', move); element.removeEventListener('pointerup', end); element.removeEventListener('pointercancel', end); element.removeEventListener('lostpointercapture', end); };
 }
-export function swipeBack(element: HTMLElement, background: HTMLElement, enabled: () => boolean, back: () => void) {
+export function swipeBack(element: HTMLElement, background: HTMLElement, enabled: () => boolean, back: () => void, interrupt?: () => void) {
     let animation: ReturnType<typeof springAnimation> | undefined;
-    let direction = 1;
+    let direction = 1, origin=0;
     const update = (x: number) => { const width = element.clientWidth; const progress = Math.min(1, Math.max(0, x / width)); element.style.transform = `translateX(${x * direction}px)`; background.style.transform = `translateX(${(progress - 1) * width * .3 * direction}px)`; background.style.opacity = String(.7 + progress * .3); };
     const clear = () => { element.style.transform = ''; background.style.transform = ''; background.style.opacity = ''; };
     const dispose = drag(element, { start: event => { direction = getComputedStyle(element).direction === 'rtl' ? -1 : 1; const rect = element.getBoundingClientRect(); if ((event.target instanceof HTMLElement && event.target.closest('button,a,input,select,textarea')) || !enabled() || (direction === 1 ? event.clientX - rect.left : rect.right - event.clientX) > 28)
-            return false; animation?.cancel(); return true; }, move: x => { if (reducedMotion())
-            return; update(Math.max(0, x * direction)); }, end: (x, _y, vx, _vy, cancelled) => { const commit = !cancelled && (x * direction > element.clientWidth * .35 || vx * direction > 600); if (reducedMotion()) {
+            return false; animation?.cancel(); interrupt?.(); origin=new DOMMatrix(getComputedStyle(element).transform).m41*direction; return true; }, move: x => { if (reducedMotion())
+            return; const position=origin+x*direction;update(position<0?rubberBand(position,element.clientWidth):position>element.clientWidth?element.clientWidth+rubberBand(position-element.clientWidth,element.clientWidth):position); }, end: (x, _y, vx, _vy, cancelled) => { const position=Math.max(0,origin+x*direction); const commit = !cancelled && x*direction>5 && (position > element.clientWidth * .35 || vx * direction > 600); if (reducedMotion()) {
             if (commit)
                 back();
             crossfade(background);
             clear();
             return;
-        } animation = springAnimation(update, Math.max(0, x * direction), commit ? element.clientWidth : 0, { response: .35, damping: 1 }, vx * direction, () => { if (commit)
+        } animation = springAnimation(update, position, commit ? element.clientWidth : 0, { response: .35, damping: 1 }, vx * direction, () => { if (commit)
             back(); clear(); }); } });
     return () => { dispose(); animation?.cancel(); clear(); };
 }

@@ -14,16 +14,16 @@ async function clearPrivateData() {
     setRouterPersistence(false);
     clearRouterPersistence();
     await viewCache.wipe();
+    if ('serviceWorker' in navigator) {
+        for (const registration of await navigator.serviceWorker.getRegistrations()) {
+            if(registration.active)await new Promise<void>(resolve=>{const channel=new MessageChannel();const timeout=setTimeout(resolve,5000);channel.port1.onmessage=()=>{clearTimeout(timeout);resolve();};registration.active!.postMessage({t:'wipe'},[channel.port2]);});
+            await registration.unregister();
+        }
+    }
     if ('caches' in window)
         for (const key of await caches.keys())
             if (key.startsWith('ab.'))
                 await caches.delete(key);
-    if ('serviceWorker' in navigator) {
-        for (const registration of await navigator.serviceWorker.getRegistrations()) {
-            registration.active?.postMessage({ t: 'wipe' });
-            await registration.unregister();
-        }
-    }
 }
 async function configurePWA(current: DeviceSession) {
     if (current.cache === 'memory') return;

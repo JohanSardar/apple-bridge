@@ -20,44 +20,37 @@ export default function Shell() {
     let cancelEnter: (() => void) | undefined, inspectorAnimation: ReturnType<typeof springAnimation> | undefined;
     const chat = () => router.route().chat;
     const phone = () => matchMedia('(max-width:699px)').matches;
+    let inspectorFrame=0,inspectorFade:Animation|undefined;
     function openInspector(open: boolean) {
+        const visible=inspectorVisible();
         setDetails(open);
-        inspectorAnimation?.cancel();
-        if (compact()) {
-            setInspectorVisible(false);
+        cancelAnimationFrame(inspectorFrame);
+        inspectorFade?.cancel();
+        if(compact()){inspectorAnimation?.cancel();setInspectorVisible(false);return;}
+        if(open)setInspectorVisible(true);
+        if(!inspector)return;
+        if(reducedMotion()){
+            inspectorFade=crossfade(inspector,open);
+            if(!open)inspectorFade.finished.then(()=>{if(!details())setInspectorVisible(false);}).catch(()=>{});
             return;
         }
-        if (open) {
-            setInspectorVisible(true);
-            requestAnimationFrame(() => {
-                if (!inspector)
-                    return;
-                if (reducedMotion()) {
-                    crossfade(inspector);
-                    return;
-                }
-                inspectorAnimation = springAnimation(value => { if (inspector)
-                    inspector.style.transform = `translateX(${value * (getComputedStyle(inspector).direction === 'rtl' ? -1 : 1)}px)`; }, 320, 0, { response: .35, damping: 1 });
-            });
-        }
-        else if (inspector) {
-            if (reducedMotion()) {
-                const animation = crossfade(inspector, false);
-                animation.finished.then(() => setInspectorVisible(false)).catch(() => { });
-                return;
-            }
-            inspectorAnimation = springAnimation(value => { if (inspector)
-                inspector.style.transform = `translateX(${value * (getComputedStyle(inspector).direction === 'rtl' ? -1 : 1)}px)`; }, 0, 320, { response: .35, damping: 1 }, 0, () => setInspectorVisible(false));
-        }
+        if(visible&&inspectorAnimation){inspectorAnimation.retarget(open?0:320);return;}
+        inspectorAnimation?.cancel();
+        const direction=getComputedStyle(inspector).direction==='rtl'?-1:1;
+        const from=open?320:new DOMMatrix(getComputedStyle(inspector).transform).m41*direction;
+        inspector.style.transform=`translateX(${from*direction}px)`;
+        inspectorFrame=requestAnimationFrame(()=>{
+            inspectorAnimation=springAnimation(value=>{if(inspector)inspector.style.transform=`translateX(${value*direction}px)`;},from,open?0:320,{response:.35,damping:1},0,()=>{if(!details())setInspectorVisible(false);else if(inspector)inspector.style.transform='';});
+        });
     }
     onMount(() => {
         const mediaChanged = () => { setCompact(compactMedia.matches); setInspectorVisible(details() && !compactMedia.matches); };
         compactMedia.addEventListener('change', mediaChanged);
-        const dispose = swipeBack(transcript, sidebar, () => phone() && Boolean(chat()), () => router.back());
+        const dispose = swipeBack(transcript, sidebar, () => phone() && Boolean(chat()), () => router.back(),()=>cancelEnter?.());
         let width = 320;
         const resize = drag(resizer, { start: () => { width = sidebar.getBoundingClientRect().width; return true; }, move: x => document.documentElement.style.setProperty('--sidebar-width', Math.max(280, Math.min(420, width + x * (getComputedStyle(sidebar).direction === 'rtl' ? -1 : 1))) + 'px'), end: () => { } });
         const shortcuts = [registerShortcut({ key: ',', action: () => router.navigate('/settings/appearance') }), registerShortcut({ key: '[', action: () => router.back() }), registerShortcut({ key: 'i', action: () => openInspector(!details()) }), registerShortcut({ key: 'n', action: () => router.navigate('/messages/new') }), registerShortcut({ key: '=', action: () => appearance.setTextSize(Math.min(1.5, appearance.textSize() + .05)) }), registerShortcut({ key: '+', shift: true, action: () => appearance.setTextSize(Math.min(1.5, appearance.textSize() + .05)) }), registerShortcut({ key: '-', action: () => appearance.setTextSize(Math.max(.85, appearance.textSize() - .05)) }), registerShortcut({ key: '0', action: () => appearance.setTextSize(1) })];
-        onCleanup(() => { dispose(); resize(); shortcuts.forEach(dispose => dispose()); cancelEnter?.(); inspectorAnimation?.cancel(); compactMedia.removeEventListener('change', mediaChanged); });
+        onCleanup(() => { dispose(); resize(); shortcuts.forEach(dispose => dispose()); cancelEnter?.(); inspectorAnimation?.cancel(); inspectorFade?.cancel(); cancelAnimationFrame(inspectorFrame); compactMedia.removeEventListener('change', mediaChanged); });
     });
     createEffect(() => { const selected = chat(); if (selected && transcript) {
         cancelEnter?.();

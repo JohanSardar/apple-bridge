@@ -21,9 +21,9 @@ export type ChatSummary = {
     title: string;
     avatar_handles: {
         id: string;
-        contact_id?: string;
+        contact_id: string | null;
     }[];
-    last_message?: {
+    last_message: {
         id: string;
         sent_at: string;
         is_from_me: boolean;
@@ -32,9 +32,9 @@ export type ChatSummary = {
             text?: string;
             attachment_kinds?: string[];
             count?: number;
-            reaction?: string;
+            reaction?: { verb: string; target_excerpt: string };
         };
-    };
+    } | null;
     last_activity_at: string;
     unread_count: number;
     has_unseen_mention: boolean;
@@ -46,10 +46,7 @@ export type ThreadItem = BridgeRecord<{
     [key: string]: unknown;
 }> & {
     reactions: BridgeRecord[];
-    attachments: (BridgeRecord & {
-        derivatives?: Record<string, unknown>;
-        media?: Record<string, unknown>;
-    })[];
+    attachments: BridgeRecord[];
     reply_count: number;
 };
 export type ViewName = 'chats' | 'thread' | 'record' | 'collection';
@@ -60,6 +57,7 @@ export type ViewData = {
     before?: string;
     after?: string;
     next?: string;
+    unread_anchor?: string;
     newer?: number;
     older?: number;
     [key: string]: unknown;
