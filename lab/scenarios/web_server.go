@@ -58,7 +58,7 @@ func runWebServer(ctx context.Context, s Scenario, level string) Evidence {
 		body, _ := io.ReadAll(resp.Body)
 		return resp, string(body)
 	}
-	if s.ID == "CORE-ITERATOR-POOL" || s.ID == "MSG-INTERACTIVE-GATE" || s.ID == "WEB-AUTH-SOFTWARE" || s.ID == "WEB-LIVE-RECORD" || s.ID == "WEB-BLOB-ACCESS" || s.ID == "WEB-COMMAND-INTERACTIVE" || s.ID == "WEB-LIVE-READMODELS" || s.ID == "WEB-SOURCES-STATUS" {
+	if s.ID == "CORE-ITERATOR-POOL" || s.ID == "MSG-INTERACTIVE-GATE" || s.ID == "WEB-AUTH-SOFTWARE" || s.ID == "WEB-LIVE-RECORD" || s.ID == "WEB-BLOB-ACCESS" || s.ID == "WEB-COMMAND-INTERACTIVE" || s.ID == "WEB-LIVE-READMODELS" || s.ID == "WEB-SOURCES-STATUS" || s.ID == "WEB-COMMAND-RESOLVE" {
 		runWebSession(ctx, w, s.ID, &e, add)
 		e.Passed = len(e.Assertions) > 0
 		for _, a := range e.Assertions {
@@ -298,6 +298,10 @@ func runWebSession(ctx context.Context, w *world.World, id string, e *Evidence, 
 	}
 	if id == "CORE-ITERATOR-POOL" {
 		runIteratorPool(ctx, w, c, auth, e, add)
+		return
+	}
+	if id == "WEB-COMMAND-RESOLVE" {
+		runWebCommandResolve(ctx, w, c, e, add)
 		return
 	}
 	if id == "WEB-SOURCES-STATUS" {

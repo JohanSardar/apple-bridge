@@ -264,3 +264,80 @@ test('WEB-MSG-OPTIMISTIC-NO-CANDIDATE server indeterminate without a released ca
         await page.getByRole('button',{name:'Copy fixture message',exact:true}).click();expect(await page.evaluate(()=>(window as any).__copied)).toBe('[ab-test compose] server indeterminate');expect(commands).toHaveLength(1);
     }finally{await control(request,'/message-fault?name=');}
 });
+test('WEB-MSG-OPTIMISTIC Check strengthens server ambiguity through read-only original-ID Resolve',async({page,context,request})=>{
+    await context.addCookies(sessionCookies);
+    const ids=await control(request,'/demo-fixtures');
+    const sent:any[]=[],statuses:any[]=[];
+    page.on('websocket',socket=>{
+        socket.on('framesent',event=>{try{sent.push(JSON.parse(String(event.payload)));}catch{}});
+        socket.on('framereceived',event=>{try{const frame=JSON.parse(String(event.payload));if(frame.t==='cmd_status')statuses.push(frame);}catch{}});
+    });
+    await page.goto('/__fixtures/commands?chat='+encodeURIComponent(ids['message-chat']));
+    const send=page.getByRole('button',{name:'Send fixture message',exact:true});
+    await expect(send).toBeEnabled();
+    await control(request,'/message-fault?name=part-progress');
+    await page.getByRole('textbox',{name:'Fixture message',exact:true}).fill('[ab-test compose] explicit read-only Check');
+    await send.click();
+    await expect.poll(()=>statuses.some(frame=>frame.command?.disposition==='indeterminate')).toBe(true);
+    const commandID=sent.find(frame=>frame.t==='cmd').id;
+    await expect(page.getByLabel('Fixture ambiguity origin')).toHaveText('indeterminate');
+    await page.getByRole('button',{name:'Check fixture command',exact:true}).click();
+    await expect.poll(()=>statuses.some(frame=>frame.id===commandID&&frame.command?.state==='observed')).toBe(true);
+    await expect(page.getByLabel('Fixture command status')).toHaveText('Sent');
+    expect(sent.filter(frame=>frame.t==='cmd').map(frame=>frame.id)).toEqual([commandID]);
+    expect(sent.filter(frame=>frame.t==='resolve').map(frame=>frame.id)).toEqual([commandID]);
+    await page.getByRole('button',{name:'Check fixture command',exact:true}).click();
+    await expect.poll(()=>statuses.some(frame=>frame.id===commandID&&frame.throttled===true)).toBe(true);
+    await expect(page.getByLabel('Fixture command status')).toHaveText('Sent');
+    expect(sent.filter(frame=>frame.t==='resolve').map(frame=>frame.id)).toEqual([commandID,commandID]);
+    const final=statuses.find(frame=>frame.id===commandID&&frame.command?.state==='observed');
+    expect(final.command.parts).toHaveLength(1);
+    expect(final.command.parts[0].record_id).toMatch(/^msg_/);
+    await expect(page.locator('[data-record-id="'+final.command.parts[0].record_id+'"]')).toHaveCount(1);
+    await expect(page.locator('[data-local-echo]')).toHaveCount(0);
+    const effect=await request.post(process.env.AB_WEB_CONTROL!+'/command-effect',{headers:{'X-Bridge-Lab':process.env.AB_WEB_CONTROL_KEY!},data:{command_id:commandID}});
+    expect(effect.ok()).toBe(true);
+    expect((await effect.json()).count).toBe(1);
+    expect(sent.filter(frame=>frame.t==='cmd').map(frame=>frame.id)).toEqual([commandID]);
+});
+test('WEB-MSG-OPTIMISTIC Check failures stay on their command notice and clear after recovery',async({page,context,request})=>{
+    await context.addCookies(sessionCookies);
+    const ids=await control(request,'/demo-fixtures');
+    const commands:string[]=[],statuses:any[]=[];
+    let failFirst=true;
+    await page.routeWebSocket('**/web/v1/live',socket=>{
+        const server=socket.connectToServer();
+        socket.onMessage(data=>{
+            const frame=JSON.parse(String(data));
+            if(frame.t==='cmd')commands.push(frame.id);
+            if(frame.t==='resolve'&&frame.id===commands[0]&&failFirst){socket.send(JSON.stringify({t:'error',id:frame.id,code:'unavailable',message:'RAW_CHECK_INTERNAL_SENTINEL'}));return;}
+            server.send(data);
+        });
+        server.onMessage(data=>{const frame=JSON.parse(String(data));if(frame.t==='cmd_status')statuses.push(frame);socket.send(data);});
+    });
+    await page.goto('/__fixtures/commands?chat='+encodeURIComponent(ids['message-chat']));
+    const send=page.getByRole('button',{name:'Send fixture message',exact:true});
+    await expect(send).toBeEnabled();
+    for(let i=0;i<2;i++){
+        await control(request,'/message-fault?name=part-progress');
+        await page.getByRole('textbox',{name:'Fixture message',exact:true}).fill('[ab-test compose] scoped Check '+i);
+        await send.click();
+        await expect.poll(()=>statuses.some(frame=>frame.id===commands[i]&&frame.command?.state==='indeterminate')).toBe(true);
+    }
+    const notice=page.getByLabel('Uncertain delivery');
+    await expect(notice).toContainText('2 messages may not have been delivered');
+    await notice.getByRole('button',{name:'Check',exact:true}).click();
+    await expect(page.getByLabel('Fixture command status')).toHaveText('Sent');
+    await expect(notice).toContainText("Couldn't check this message. Try again.");
+    await expect(notice).toContainText('1 message may not have been delivered');
+    await expect(page.getByText('RAW_CHECK_INTERNAL_SENTINEL',{exact:false})).toHaveCount(0);
+    expect(commands).toHaveLength(2);
+    failFirst=false;
+    await notice.getByRole('button',{name:'Check',exact:true}).click();
+    await expect(notice).toHaveCount(0);
+    expect(commands).toHaveLength(2);
+    for(const id of commands){
+        const effect=await request.post(process.env.AB_WEB_CONTROL!+'/command-effect',{headers:{'X-Bridge-Lab':process.env.AB_WEB_CONTROL_KEY!},data:{command_id:id}});
+        expect(effect.ok()).toBe(true);expect((await effect.json()).count).toBe(1);
+    }
+});

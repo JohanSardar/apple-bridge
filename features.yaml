@@ -416,6 +416,7 @@ features:
       - {id: WEB-AUTH-SOFTWARE, levels: [sim]}
       - {id: WEB-BLOB-ACCESS, levels: [sim]}
       - {id: WEB-COMMAND-INTERACTIVE, levels: [sim]}
+      - {id: WEB-COMMAND-RESOLVE, levels: [sim]}
       - {id: WEB-LIVE-RECORD, levels: [sim]}
       - {id: WEB-LIVE-READMODELS, levels: [sim]}
       - {id: WEB-SHELL-JOURNEY, levels: [web]}

@@ -239,6 +239,9 @@ func (s *server) live(w http.ResponseWriter, r *http.Request) {
 			l.subscriptions[f.ID] = stop
 			l.workers.Add(1)
 			go func() { defer l.workers.Done(); l.subscribe(subctx, f) }()
+		case "resolve":
+			l.workers.Add(1)
+			go func() { defer l.workers.Done(); l.resolveCommand(f.ID) }()
 		case "cmd":
 			l.workers.Add(1)
 			go func() { defer l.workers.Done(); l.command(f) }()
