@@ -167,6 +167,11 @@ type Enrollment struct {
 }
 
 type credentials struct {
+	OAuthAccess  []OAuthAccess  `json:"oauth_access,omitempty"`
+	OAuthClients []OAuthClient  `json:"oauth_clients,omitempty"`
+	OAuthCodes   []OAuthCode    `json:"oauth_codes,omitempty"`
+	OAuthRefresh []OAuthRefresh `json:"oauth_refresh,omitempty"`
+
 	Devices    []DeviceSession      `json:"devices,omitempty"`
 	Passkeys   []Passkey            `json:"passkeys,omitempty"`
 	WebEnroll  map[string]time.Time `json:"web_enroll,omitempty"`
