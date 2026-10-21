@@ -18,10 +18,11 @@ import (
 )
 
 type Server struct {
-	mu       sync.Mutex
-	statuses map[string]contracts.DialStatus
-	Command  func(context.Context, *x509.Certificate, string, json.RawMessage) (contracts.CommandResponse, error)
-	Blobs    *blobs.Store
+	delegations map[string]*delegationSession
+	mu          sync.Mutex
+	statuses    map[string]contracts.DialStatus
+	Command     func(context.Context, *x509.Certificate, string, json.RawMessage) (contracts.CommandResponse, error)
+	Blobs       *blobs.Store
 
 	Store     *state.Store
 	Authority *trust.Authority
