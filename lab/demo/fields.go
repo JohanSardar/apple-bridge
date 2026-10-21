@@ -24,7 +24,17 @@ func messageFields(c, i, count int, rng *rand.Rand) map[string]any {
 	if fromMe {
 		sender = 0
 	}
+	if !fromMe && (c == 35 || c == 36) {
+		sender = 58 + c - 35
+	}
 	fields["sender_handle_id"] = reference("messages.handle", handleKey(sender))
+	if c == 34 {
+		fields["deleted_at"] = Epoch.Add(-24 * time.Hour)
+		fields["recoverable_until"] = Epoch.Add(29 * 24 * time.Hour)
+	}
+	if c == 36 {
+		fields["is_spam"] = true
+	}
 	if fromMe {
 		fields["delivered_at"] = sent.Add(time.Second)
 		if i%2 == 0 {

@@ -43,6 +43,11 @@ func runDemoDataset(ctx context.Context, s Scenario, level string) Evidence {
 	elapsed := time.Since(started)
 	e.Latency["default_startup"] = stats([]float64{float64(elapsed) / float64(time.Millisecond)}, 0)
 	add("default_startup_under_10_seconds", elapsed < 10*time.Second)
+	rawPairing, _ := json.Marshal(first.Dataset)
+	var invalidPairing map[string]any
+	json.Unmarshal(rawPairing, &invalidPairing)
+	invalidPairing["live_photos"] = map[string]string{"missing-still": "missing-movie"}
+	add("demo_rejects_missing_live_photo_companion", w.ControlAction("/dataset", invalidPairing) != nil)
 	records, err := w.Records(w.Gateway)
 	counts := map[string]int{}
 	avatars := 0
@@ -58,7 +63,7 @@ func runDemoDataset(ctx context.Context, s Scenario, level string) Evidence {
 	var active, archived contracts.ChatsResult
 	err = client.Call(ctx, "messages.chats", contracts.ChatsQuery{Limit: 200}, &active)
 	archiveErr := client.Call(ctx, "messages.chats", contracts.ChatsQuery{Filter: "archived", Limit: 200}, &archived)
-	add("readmodel_38_active_2_archived", err == nil && archiveErr == nil && len(active.Chats) == 38 && len(archived.Chats) == 2)
+	add("readmodel_37_active_2_archived", err == nil && archiveErr == nil && len(active.Chats) == 37 && len(archived.Chats) == 2)
 	if len(active.Chats) > 0 {
 		var thread contracts.ThreadResult
 		err = client.Call(ctx, "messages.thread", contracts.ThreadQuery{ChatID: active.Chats[0].Chat.ID, Limit: 200}, &thread)
