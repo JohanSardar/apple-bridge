@@ -67,44 +67,44 @@
       "latency": {
         "audio_appearance_to_variants_0": {
           "samples": 1,
-          "p50_ms": 193.33025,
-          "p95_ms": 193.33025,
-          "max_ms": 193.33025,
+          "p50_ms": 211.242417,
+          "p95_ms": 211.242417,
+          "max_ms": 211.242417,
           "timeouts": 0
         },
         "audio_appearance_to_variants_1": {
           "samples": 1,
-          "p50_ms": 197.390583,
-          "p95_ms": 197.390583,
-          "max_ms": 197.390583,
+          "p50_ms": 237.570209,
+          "p95_ms": 237.570209,
+          "max_ms": 237.570209,
           "timeouts": 0
         },
         "image_appearance_to_variants_0": {
           "samples": 1,
-          "p50_ms": 193.33025,
-          "p95_ms": 193.33025,
-          "max_ms": 193.33025,
+          "p50_ms": 211.242417,
+          "p95_ms": 211.242417,
+          "max_ms": 211.242417,
           "timeouts": 0
         },
         "image_appearance_to_variants_1": {
           "samples": 1,
-          "p50_ms": 197.390583,
-          "p95_ms": 197.390583,
-          "max_ms": 197.390583,
+          "p50_ms": 237.570209,
+          "p95_ms": 237.570209,
+          "max_ms": 237.570209,
           "timeouts": 0
         },
         "video_appearance_to_variants_0": {
           "samples": 1,
-          "p50_ms": 193.33025,
-          "p95_ms": 193.33025,
-          "max_ms": 193.33025,
+          "p50_ms": 211.242417,
+          "p95_ms": 211.242417,
+          "max_ms": 211.242417,
           "timeouts": 0
         },
         "video_appearance_to_variants_1": {
           "samples": 1,
-          "p50_ms": 197.390583,
-          "p95_ms": 197.390583,
-          "max_ms": 197.390583,
+          "p50_ms": 237.570209,
+          "p95_ms": 237.570209,
+          "max_ms": 237.570209,
           "timeouts": 0
         }
       }
@@ -115,44 +115,44 @@
       "latency": {
         "audio_appearance_to_variants_0": {
           "samples": 1,
-          "p50_ms": 124.808458,
-          "p95_ms": 124.808458,
-          "max_ms": 124.808458,
+          "p50_ms": 119.817083,
+          "p95_ms": 119.817083,
+          "max_ms": 119.817083,
           "timeouts": 0
         },
         "audio_appearance_to_variants_1": {
           "samples": 1,
-          "p50_ms": 131.454792,
-          "p95_ms": 131.454792,
-          "max_ms": 131.454792,
+          "p50_ms": 131.327958,
+          "p95_ms": 131.327958,
+          "max_ms": 131.327958,
           "timeouts": 0
         },
         "image_appearance_to_variants_0": {
           "samples": 1,
-          "p50_ms": 124.808458,
-          "p95_ms": 124.808458,
-          "max_ms": 124.808458,
+          "p50_ms": 119.817083,
+          "p95_ms": 119.817083,
+          "max_ms": 119.817083,
           "timeouts": 0
         },
         "image_appearance_to_variants_1": {
           "samples": 1,
-          "p50_ms": 131.454792,
-          "p95_ms": 131.454792,
-          "max_ms": 131.454792,
+          "p50_ms": 131.327958,
+          "p95_ms": 131.327958,
+          "max_ms": 131.327958,
           "timeouts": 0
         },
         "video_appearance_to_variants_0": {
           "samples": 1,
-          "p50_ms": 124.808458,
-          "p95_ms": 124.808458,
-          "max_ms": 124.808458,
+          "p50_ms": 119.817083,
+          "p95_ms": 119.817083,
+          "max_ms": 119.817083,
           "timeouts": 0
         },
         "video_appearance_to_variants_1": {
           "samples": 1,
-          "p50_ms": 131.454792,
-          "p95_ms": 131.454792,
-          "max_ms": 131.454792,
+          "p50_ms": 131.327958,
+          "p95_ms": 131.327958,
+          "max_ms": 131.327958,
           "timeouts": 0
         }
       }
@@ -160,7 +160,7 @@
   ],
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[3.82 5.48 7.25] cpus=8 other_heavy=1"
+    "summary": "air: load=[4.7 5.98 7] cpus=8 other_heavy=1"
   },
   "new_scenarios": [
     "WEB-MEDIA-VARIANTS: sim, real, replica",
@@ -197,5 +197,21 @@
     "contacts": "granted",
     "reminders": "granted",
     "onboard_run": false
-  }
+  },
+  "tested_code_commit": "a8069903724459d7739c694800e63767619eb865",
+  "implementation_commits": [
+    "a8069903724459d7739c694800e63767619eb865",
+    "b880d215c57e1f2a045677c24dea177ffa6d715e",
+    "59fc234e49965d1752a6bb249c040a811de9ee35"
+  ],
+  "rebased_onto": "d1106650e01ffd3a84351a9bc8992b7b75a5332f",
+  "post_rebase_results": {
+    "sim_scenarios": 14,
+    "all_passed": true,
+    "ubuntu_blob_resume": true,
+    "native_readonly_verified_variants": 12,
+    "new_messages_sent": 0
+  },
+  "exact_verification_script": "set -e; export GOFLAGS=-p=2; make lint; make features; go test -p 2 ./internal/contracts ./internal/state ./lab/scenarios; packaging/dev/build-native.sh; native/.build/clt-release/MediaChecks thumbhash lab/fixtures/media/thumbhash.json; go run ./cmd/bridge-lab wire-checks internal/contracts/testdata/ipc-session.json; native/.build/clt-release/AppleBridgeHelper wire-checks --fixtures internal/contracts/testdata/ipc-session.json; go run ./cmd/bridge-lab run lab/scenarios/web/WEB-MEDIA-*.yaml lab/scenarios/messages/MSG-SEND-FILES.yaml lab/scenarios/messages/MSG-DECODE.yaml lab/scenarios/core/CORE-BLOB-*.yaml --level sim --json > /tmp/w1-media-final-sim.jsonl; go run ./cmd/bridge-lab run lab/scenarios/core/CORE-BLOB-INTERRUPT.yaml --level replica --json > /tmp/w1-media-ubuntu-blob.jsonl; go run ./lab/verify-media run_01M5E0Z216CY3PB1AZEM62XQA5 > /tmp/w1-media-readonly-ubuntu.json",
+  "exact_verification_launcher": "ssh -o ControlPath=none air; export PATH=/opt/homebrew/bin:$HOME/go/bin:$PATH; cd ~/apple-bridge/.worktrees/w1-media; packaging/dev/heavy.sh bash -c <exact_verification_script>"
 }

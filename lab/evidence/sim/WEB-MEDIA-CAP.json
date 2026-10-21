@@ -1,12 +1,21 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[3.82 5.48 7.25] cpus=8 other_heavy=1"
+    "summary": "air: load=[4.7 5.98 7] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M5E3XE7X4ZZBPHQP917DYGHJ",
+  "run_id": "run_01M5E4C6S9202ZX2SQ36TY3ETN",
   "metrics": {
     "browser_playback": "Cross-engine playback is owned by the later UI unit",
     "cap_entries": {
+      "08f7d7b0e3d082fb436690f8cc617fc2b8df78f314803ade42fdb66bcec49d50": {
+        "next_attempt_at": "0001-01-01T00:00:00Z",
+        "resumed_bytes": 0,
+        "corruptions": 0,
+        "state": "present",
+        "size": 1030,
+        "received": 1030,
+        "unreferenced_at": "0001-01-01T00:00:00Z"
+      },
       "21c8a041403f9b7f55b60a3d07182e83ac039f559f8d6944234bbb68bcf4ba3b": {
         "next_attempt_at": "0001-01-01T00:00:00Z",
         "resumed_bytes": 0,
@@ -23,15 +32,6 @@
         "state": "present",
         "size": 55130,
         "received": 55130,
-        "unreferenced_at": "0001-01-01T00:00:00Z"
-      },
-      "49f9555686fba4b954ce5819ec1873681c1cf700ccb4195cd8b757fb50b6ace6": {
-        "next_attempt_at": "0001-01-01T00:00:00Z",
-        "resumed_bytes": 0,
-        "corruptions": 0,
-        "state": "present",
-        "size": 22,
-        "received": 22,
         "unreferenced_at": "0001-01-01T00:00:00Z"
       },
       "4e231ed74abc73852ee4b7608de1ed00748e869f1dbf167affa9461e9d17871e": {
@@ -52,13 +52,13 @@
         "received": 599,
         "unreferenced_at": "0001-01-01T00:00:00Z"
       },
-      "c9b478ddb9debfd4de92e449dc803cc1bffe09c16fa50de3fad8bf23cd6e4d08": {
+      "93b76d2131dc6ed1e4d72d99218b21dffe1841443017b132c08d296b6b9c72dd": {
         "next_attempt_at": "0001-01-01T00:00:00Z",
         "resumed_bytes": 0,
         "corruptions": 0,
         "state": "present",
-        "size": 22,
-        "received": 22,
+        "size": 1315,
+        "received": 1315,
         "unreferenced_at": "0001-01-01T00:00:00Z"
       },
       "d50e62bc26c9d1bb926026e017b8ebae606b16848968cfa0c67a664b59cf177c": {
@@ -111,8 +111,8 @@
         "state": "present"
       },
       {
-        "digest": "c9b478ddb9debfd4de92e449dc803cc1bffe09c16fa50de3fad8bf23cd6e4d08",
-        "size": 22,
+        "digest": "93b76d2131dc6ed1e4d72d99218b21dffe1841443017b132c08d296b6b9c72dd",
+        "size": 1315,
         "state": "present"
       },
       {
@@ -122,8 +122,8 @@
         "state": "present"
       },
       {
-        "digest": "49f9555686fba4b954ce5819ec1873681c1cf700ccb4195cd8b757fb50b6ace6",
-        "size": 22,
+        "digest": "08f7d7b0e3d082fb436690f8cc617fc2b8df78f314803ade42fdb66bcec49d50",
+        "size": 1030,
         "state": "present"
       }
     ]
@@ -131,8 +131,8 @@
   "scenario": "WEB-MEDIA-CAP",
   "level": "sim",
   "passed": true,
-  "git_sha": "ea03497a21db275368ffcae11b95ebd8531066a1",
-  "at": "2026-10-21T02:16:16.894001Z",
+  "git_sha": "a8069903724459d7739c694800e63767619eb865",
+  "at": "2026-10-21T02:24:20.777353Z",
   "assertions": [
     {
       "name": "seed_self",
@@ -148,50 +148,6 @@
     },
     {
       "name": "variants_captured_0",
-      "passed": true
-    },
-    {
-      "name": "video_native_appearance_measured",
-      "passed": true
-    },
-    {
-      "name": "video_original_preserved",
-      "passed": true
-    },
-    {
-      "name": "video_dimensions_and_thumbhash",
-      "passed": true
-    },
-    {
-      "name": "private_handles_removed",
-      "passed": true
-    },
-    {
-      "name": "video_authorized_blob_0",
-      "passed": true
-    },
-    {
-      "name": "variant_digest_verified",
-      "passed": true
-    },
-    {
-      "name": "private_handles_removed",
-      "passed": true
-    },
-    {
-      "name": "poster_authorized_blob_0",
-      "passed": true
-    },
-    {
-      "name": "variant_digest_verified",
-      "passed": true
-    },
-    {
-      "name": "poster_browser_image",
-      "passed": true
-    },
-    {
-      "name": "poster_dimensions_bounded",
       "passed": true
     },
     {
@@ -239,26 +195,6 @@
       "passed": true
     },
     {
-      "name": "thumb_authorized_blob_0",
-      "passed": true
-    },
-    {
-      "name": "variant_digest_verified",
-      "passed": true
-    },
-    {
-      "name": "thumb_browser_image",
-      "passed": true
-    },
-    {
-      "name": "thumb_dimensions_bounded",
-      "passed": true
-    },
-    {
-      "name": "private_handles_removed",
-      "passed": true
-    },
-    {
       "name": "display_authorized_blob_0",
       "passed": true
     },
@@ -275,7 +211,23 @@
       "passed": true
     },
     {
-      "name": "variants_captured_1",
+      "name": "private_handles_removed",
+      "passed": true
+    },
+    {
+      "name": "thumb_authorized_blob_0",
+      "passed": true
+    },
+    {
+      "name": "variant_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "thumb_browser_image",
+      "passed": true
+    },
+    {
+      "name": "thumb_dimensions_bounded",
       "passed": true
     },
     {
@@ -295,7 +247,7 @@
       "passed": true
     },
     {
-      "name": "poster_authorized_blob_1",
+      "name": "poster_authorized_blob_0",
       "passed": true
     },
     {
@@ -315,11 +267,15 @@
       "passed": true
     },
     {
-      "name": "video_authorized_blob_1",
+      "name": "video_authorized_blob_0",
       "passed": true
     },
     {
       "name": "variant_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "variants_captured_1",
       "passed": true
     },
     {
@@ -399,6 +355,50 @@
       "passed": true
     },
     {
+      "name": "video_native_appearance_measured",
+      "passed": true
+    },
+    {
+      "name": "video_original_preserved",
+      "passed": true
+    },
+    {
+      "name": "video_dimensions_and_thumbhash",
+      "passed": true
+    },
+    {
+      "name": "private_handles_removed",
+      "passed": true
+    },
+    {
+      "name": "poster_authorized_blob_1",
+      "passed": true
+    },
+    {
+      "name": "variant_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "poster_browser_image",
+      "passed": true
+    },
+    {
+      "name": "poster_dimensions_bounded",
+      "passed": true
+    },
+    {
+      "name": "private_handles_removed",
+      "passed": true
+    },
+    {
+      "name": "video_authorized_blob_1",
+      "passed": true
+    },
+    {
+      "name": "variant_digest_verified",
+      "passed": true
+    },
+    {
       "name": "variants_fit_cap_original_deferred",
       "passed": true
     },
@@ -418,44 +418,44 @@
   "latency": {
     "audio_appearance_to_variants_0": {
       "samples": 1,
-      "p50_ms": 193.33025,
-      "p95_ms": 193.33025,
-      "max_ms": 193.33025,
+      "p50_ms": 211.242417,
+      "p95_ms": 211.242417,
+      "max_ms": 211.242417,
       "timeouts": 0
     },
     "audio_appearance_to_variants_1": {
       "samples": 1,
-      "p50_ms": 197.390583,
-      "p95_ms": 197.390583,
-      "max_ms": 197.390583,
+      "p50_ms": 237.570209,
+      "p95_ms": 237.570209,
+      "max_ms": 237.570209,
       "timeouts": 0
     },
     "image_appearance_to_variants_0": {
       "samples": 1,
-      "p50_ms": 193.33025,
-      "p95_ms": 193.33025,
-      "max_ms": 193.33025,
+      "p50_ms": 211.242417,
+      "p95_ms": 211.242417,
+      "max_ms": 211.242417,
       "timeouts": 0
     },
     "image_appearance_to_variants_1": {
       "samples": 1,
-      "p50_ms": 197.390583,
-      "p95_ms": 197.390583,
-      "max_ms": 197.390583,
+      "p50_ms": 237.570209,
+      "p95_ms": 237.570209,
+      "max_ms": 237.570209,
       "timeouts": 0
     },
     "video_appearance_to_variants_0": {
       "samples": 1,
-      "p50_ms": 193.33025,
-      "p95_ms": 193.33025,
-      "max_ms": 193.33025,
+      "p50_ms": 211.242417,
+      "p95_ms": 211.242417,
+      "max_ms": 211.242417,
       "timeouts": 0
     },
     "video_appearance_to_variants_1": {
       "samples": 1,
-      "p50_ms": 197.390583,
-      "p95_ms": 197.390583,
-      "max_ms": 197.390583,
+      "p50_ms": 237.570209,
+      "p95_ms": 237.570209,
+      "max_ms": 237.570209,
       "timeouts": 0
     }
   },

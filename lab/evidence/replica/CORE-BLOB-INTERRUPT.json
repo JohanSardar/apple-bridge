@@ -1,9 +1,9 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[6.19 5.92 7.39] cpus=8 other_heavy=1; ubuntu: load=[0.22 0.18 0.45] cpus=8 other_heavy=0"
+    "summary": "air: load=[4.4 5.85 6.93] cpus=8 other_heavy=1; ubuntu: load=[0.02 0.13 0.33] cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5E3XRBJD0G6B2DRP8ZY8H5E",
+  "run_id": "run_01M5E4CPT88WP0D6Y73PSXWZ61",
   "network_path": "ssh_tunnel",
   "metrics": {
     "bulk_barrier_outstanding_bytes": 14680064,
@@ -11,12 +11,12 @@
     "digest_check_0_bytes": 16777216,
     "digest_check_0_deadline_exceeded": false,
     "digest_check_0_error_type": "\u003cnil\u003e",
-    "digest_check_0_read_ms": 35.997,
+    "digest_check_0_read_ms": 46.158,
     "digest_check_0_status": 200,
     "digest_check_1_bytes": 16777216,
     "digest_check_1_deadline_exceeded": false,
     "digest_check_1_error_type": "\u003cnil\u003e",
-    "digest_check_1_read_ms": 2746.126875,
+    "digest_check_1_read_ms": 2916.28,
     "digest_check_1_status": 200,
     "feed_chunk_bytes": 1048576,
     "fixture_bytes": 16777216,
@@ -26,8 +26,8 @@
   "scenario": "CORE-BLOB-INTERRUPT",
   "level": "replica",
   "passed": true,
-  "git_sha": "ea03497a21db275368ffcae11b95ebd8531066a1",
-  "at": "2026-10-21T02:16:27.250656Z",
+  "git_sha": "a8069903724459d7739c694800e63767619eb865",
+  "at": "2026-10-21T02:24:37.196522Z",
   "assertions": [
     {
       "name": "feed_network_ssh_tunnel",
@@ -161,65 +161,65 @@
   "latency": {
     "bulk_barrier→blob_complete": {
       "samples": 1,
-      "p50_ms": 2183.4565,
-      "p95_ms": 2183.4565,
-      "max_ms": 2183.4565,
+      "p50_ms": 2251.491917,
+      "p95_ms": 2251.491917,
+      "max_ms": 2251.491917,
       "timeouts": 0
     },
     "effect_done→blob_complete": {
       "samples": 1,
-      "p50_ms": 5647.079584,
-      "p95_ms": 5647.079584,
-      "max_ms": 5647.079584,
+      "p50_ms": 6318.759541,
+      "p95_ms": 6318.759541,
+      "max_ms": 6318.759541,
       "timeouts": 0
     },
     "effect_done→gateway_blob_present": {
       "samples": 1,
-      "p50_ms": 1795.552417,
-      "p95_ms": 1795.552417,
-      "max_ms": 1795.552417,
+      "p50_ms": 2388.518916,
+      "p95_ms": 2388.518916,
+      "max_ms": 2388.518916,
       "timeouts": 0
     },
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 13.620417,
-      "p95_ms": 13.620417,
-      "max_ms": 13.620417,
+      "p50_ms": 32.628834,
+      "p95_ms": 32.628834,
+      "max_ms": 32.628834,
       "timeouts": 0
     },
     "effect_done→metadata_during_blob": {
       "samples": 1,
-      "p50_ms": 224.449833,
-      "p95_ms": 224.449833,
-      "max_ms": 224.449833,
+      "p50_ms": 216.050083,
+      "p95_ms": 216.050083,
+      "max_ms": 216.050083,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 29.099,
-      "p95_ms": 29.099,
-      "max_ms": 29.099,
+      "p50_ms": 49.252917,
+      "p95_ms": 49.252917,
+      "max_ms": 49.252917,
       "timeouts": 0
     },
     "gateway_present→replica_partial": {
       "samples": 1,
-      "p50_ms": 288.351833,
-      "p95_ms": 288.351833,
-      "max_ms": 288.351833,
+      "p50_ms": 285.711166,
+      "p95_ms": 285.711166,
+      "max_ms": 285.711166,
       "timeouts": 0
     },
     "interrupt→reconnected": {
       "samples": 1,
-      "p50_ms": 1082.818958,
-      "p95_ms": 1082.818958,
-      "max_ms": 1082.818958,
+      "p50_ms": 1094.089375,
+      "p95_ms": 1094.089375,
+      "max_ms": 1094.089375,
       "timeouts": 0
     },
     "reconnected→blob_complete": {
       "samples": 1,
-      "p50_ms": 2402.939042,
-      "p95_ms": 2402.939042,
-      "max_ms": 2402.939042,
+      "p50_ms": 2469.365834,
+      "p95_ms": 2469.365834,
+      "max_ms": 2469.365834,
       "timeouts": 0
     }
   },

@@ -1,24 +1,24 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[5 6.1 7.61] cpus=8 other_heavy=1"
+    "summary": "air: load=[5.32 6.38 7.22] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M5E3V8J7D5Z58M5SEZ4NN4TQ",
+  "run_id": "run_01M5E4A4JAZYQN19H7TKHKRM0W",
   "network_path": "loopback",
   "metrics": {
     "digest_check_0_bytes": 4194304,
     "digest_check_0_deadline_exceeded": false,
     "digest_check_0_error_type": "\u003cnil\u003e",
-    "digest_check_0_read_ms": 8.154917,
+    "digest_check_0_read_ms": 4.796667,
     "digest_check_0_status": 200,
     "digest_check_1_bytes": 4194304,
     "digest_check_1_deadline_exceeded": false,
     "digest_check_1_error_type": "\u003cnil\u003e",
-    "digest_check_1_read_ms": 7.2005,
+    "digest_check_1_read_ms": 3.520125,
     "digest_check_1_status": 200,
     "retry_after_gateway_restart": {
       "retry_attempts": 5,
-      "next_attempt_at": "2026-10-21T02:15:28.641082Z",
+      "next_attempt_at": "2026-10-21T02:23:36.15233Z",
       "resumed_bytes": 0,
       "corruptions": 0,
       "state": "pending",
@@ -28,7 +28,7 @@
     },
     "retry_before_gateway_restart": {
       "retry_attempts": 5,
-      "next_attempt_at": "2026-10-21T02:15:28.641082Z",
+      "next_attempt_at": "2026-10-21T02:23:36.15233Z",
       "resumed_bytes": 0,
       "corruptions": 0,
       "state": "pending",
@@ -38,7 +38,7 @@
     },
     "retry_manifest_at_gateway_crash": {
       "retry_attempts": 5,
-      "next_attempt_at": "2026-10-21T02:15:28.641082Z",
+      "next_attempt_at": "2026-10-21T02:23:36.15233Z",
       "resumed_bytes": 0,
       "corruptions": 0,
       "state": "pending",
@@ -61,8 +61,8 @@
   "scenario": "CORE-BLOB-GATEWAY-RETRY",
   "level": "sim",
   "passed": true,
-  "git_sha": "ea03497a21db275368ffcae11b95ebd8531066a1",
-  "at": "2026-10-21T02:15:05.543707Z",
+  "git_sha": "a8069903724459d7739c694800e63767619eb865",
+  "at": "2026-10-21T02:23:12.970138Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -208,30 +208,30 @@
   "latency": {
     "effect_done→blob_complete": {
       "samples": 1,
-      "p50_ms": 14708.109833,
-      "p95_ms": 14708.109833,
-      "max_ms": 14708.109833,
+      "p50_ms": 14744.414583,
+      "p95_ms": 14744.414583,
+      "max_ms": 14744.414583,
       "timeouts": 0
     },
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 4.956291,
-      "p95_ms": 4.956291,
-      "max_ms": 4.956291,
+      "p50_ms": 6.12575,
+      "p95_ms": 6.12575,
+      "max_ms": 6.12575,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 5.112833,
-      "p95_ms": 5.112833,
-      "max_ms": 5.112833,
+      "p50_ms": 7.957709,
+      "p95_ms": 7.957709,
+      "max_ms": 7.957709,
       "timeouts": 0
     },
     "retry_exhaustion→gateway_failed": {
       "samples": 1,
-      "p50_ms": 16055.028625,
-      "p95_ms": 16055.028625,
-      "max_ms": 16055.028625,
+      "p50_ms": 16004.67225,
+      "p95_ms": 16004.67225,
+      "max_ms": 16004.67225,
       "timeouts": 0
     }
   },
