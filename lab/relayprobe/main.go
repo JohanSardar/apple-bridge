@@ -17,6 +17,12 @@ func main() {
 		err = fmt.Errorf("probe action required")
 	} else {
 		switch os.Args[1] {
+		case "postburst":
+			err = postburst(ctx)
+		case "blob":
+			err = blob(ctx)
+		case "live":
+			err = live(ctx)
 		case "proxy":
 			err = proxy(ctx, os.Args[2:])
 		case "replay":

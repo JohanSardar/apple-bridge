@@ -79,6 +79,13 @@ func remoteMappingChecks(ctx context.Context, before []byte, u *url.URL, add fun
 	add("existing_handlers_preserved_exactly_while_on", ownOnly && reflect.DeepEqual(original, changed))
 }
 func remotePublicChecks(ctx context.Context, status remote.Status, u *url.URL, add func(string, bool)) string {
+	ip := remotePublicIP(ctx, u, add)
+	if ip != "" {
+		remotePublicHTTPChecks(ctx, status, u, ip, add)
+	}
+	return ip
+}
+func remotePublicIP(ctx context.Context, u *url.URL, add func(string, bool)) string {
 	dns, err := exec.CommandContext(ctx, "ssh", "ubuntu", "dig", "@1.1.1.1", "+short", "A", u.Hostname()).Output()
 	ip := ""
 	for _, line := range strings.Fields(string(dns)) {
@@ -88,9 +95,9 @@ func remotePublicChecks(ctx context.Context, status remote.Status, u *url.URL, a
 		}
 	}
 	add("ubuntu_public_dns", err == nil && ip != "")
-	if ip == "" {
-		return ""
-	}
+	return ip
+}
+func remotePublicHTTPChecks(ctx context.Context, status remote.Status, u *url.URL, ip string, add func(string, bool)) {
 	port := u.Port()
 	if port == "" {
 		port = "443"
@@ -101,5 +108,4 @@ func remotePublicChecks(ctx context.Context, status remote.Status, u *url.URL, a
 		output, err := cmd.Output()
 		add("ubuntu_curl_public_tls"+path, err == nil && len(output) > 0)
 	}
-	return ip
 }

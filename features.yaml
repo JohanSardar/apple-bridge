@@ -471,7 +471,7 @@ features:
     milestone: W1
     modules: [replication, remote, trust, runtime]
     depends_on: [web.remote, core.replication, core.trust]
-    status: todo
+    status: in_progress
     scenarios:
       - {id: WEB-RELAY-AUTH, levels: [sim]}
       - {id: WEB-RELAY-AGENTS, levels: [sim]}
@@ -480,6 +480,9 @@ features:
       - {id: WEB-RELAY-COMMAND, levels: [replica]}
       - {id: WEB-RELAY-PUBLIC-AGENTS, levels: [replica]}
       - {id: WEB-RELAY-REPLICA, levels: [replica]}
+      - {id: WEB-RELAY-REPLICA-BLOBS, levels: [replica]}
+      - {id: WEB-RELAY-NATIVE-AGENTS, levels: [replica]}
+    notes: Native public relay functional proof is complete. R-LIVE certification remains blocked on LIVE-FIX native Reminders capture and feed pipelining; measured latency is retained for a follow-up rerun.
   - id: web.messages.read
     title: Messages web app reading at full fidelity (list, transcript, media, viewer, links, effects, details, search)
     requirements: [R-WEB-UI, R-WEB-FAST, R-MSG-DEPTH]

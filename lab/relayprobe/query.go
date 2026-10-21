@@ -24,6 +24,15 @@ type input struct {
 	ProxyReady string
 }
 
+type localAPIError struct {
+	Operation string
+	Status    int
+	Code      string
+}
+
+func (e *localAPIError) Error() string {
+	return fmt.Sprintf("local API %s status %d code %s", e.Operation, e.Status, e.Code)
+}
 func request(ctx context.Context, in input, path string, value, output any) error {
 	raw, err := json.Marshal(value)
 	if err != nil {
@@ -42,7 +51,15 @@ func request(ctx context.Context, in input, path string, value, output any) erro
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("local API status %d", resp.StatusCode)
+		var problem struct {
+			Error *contracts.Error `json:"error"`
+		}
+		json.NewDecoder(io.LimitReader(resp.Body, 4096)).Decode(&problem)
+		code := "unknown"
+		if problem.Error != nil {
+			code = problem.Error.Code
+		}
+		return &localAPIError{Operation: path, Status: resp.StatusCode, Code: code}
 	}
 	return json.NewDecoder(io.LimitReader(resp.Body, 4<<20)).Decode(output)
 }

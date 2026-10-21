@@ -25,6 +25,7 @@ let package = Package(
         .executableTarget(name: "MessagesBench", dependencies: ["MessagesSource", "SourceSupport"]),
         .target(name: "AppleSession", dependencies: ["UsageSource", "NotesSource", "CalendarSource", "ContactsSource", "MessagesSource", "RemindersSource", "AgendaGate", "SourceSupport"]),
         .executableTarget(name: "CalendarChecks", dependencies: ["CalendarSource"], path: "Tests/CalendarChecks"),
+        .executableTarget(name: "CommandOriginChecks", dependencies: ["SourceSupport"], path: "Tests/CommandOriginChecks"),
         .executableTarget(name: "AppleBridgeHelper", dependencies: ["AppleSession"])
     ]
 )
