@@ -1,0 +1,116 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[20.41 12.91 12.44] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5EZTX3J8J9497JV2MQCVRAD",
+  "metrics": {
+    "demo_messages": 5000,
+    "demo_startup_ms": 7410,
+    "matrix": [
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "webkit-dark-phone",
+      "webkit-dark-desktop",
+      "chromium-light-phone",
+      "chromium-light-desktop",
+      "chromium-dark-phone",
+      "chromium-dark-desktop",
+      "firefox-light-phone",
+      "firefox-light-desktop",
+      "firefox-dark-phone",
+      "firefox-dark-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-MSG-VIEWER-webkit-light-phone-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-MSG-VIEWER-webkit-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-VIEWER-webkit-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-VIEWER-webkit-dark-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-VIEWER-webkit-dark-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-VIEWER-chromium-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-VIEWER-chromium-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-VIEWER-chromium-dark-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-VIEWER-chromium-dark-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-VIEWER-firefox-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-VIEWER-firefox-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-VIEWER-firefox-dark-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-VIEWER-firefox-dark-desktop-playwright.json"
+    ],
+    "server": "gateway"
+  },
+  "scenario": "WEB-MSG-VIEWER",
+  "level": "web",
+  "passed": true,
+  "git_sha": "f93193e3820deaebf3cd2b652b14889098bd6a26",
+  "at": "2026-10-21T10:24:13.938905Z",
+  "assertions": [
+    {
+      "name": "webkit-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 4 tests using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/viewer.spec.ts:5:1 › WEB-MSG-VIEWER collection source pages beyond the transcript window with interleaved photos and playable video (5.5s)\n  ✓  2 [webkit-light-phone] › tests/viewer.spec.ts:34:1 › WEB-MSG-VIEWER zoom and swipe gestures track input then dismiss into the reserved source (5.8s)\n  ✓  3 [webkit-light-phone] › tests/viewer.spec.ts:54:1 › WEB-MSG-VIEWER Reduce Motion uses a short fade with stable geometry and Escape dismissal (4.2s)\n  ✓  4 [webkit-light-phone] › tests/viewer.spec.ts:61:1 › WEB-MSG-VIEWER themed backdrop and interactive dismissal preserve the source silhouette (3.3s)\n\n  4 passed (21.6s)\n"
+    },
+    {
+      "name": "webkit-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 4 tests using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/viewer.spec.ts:5:1 › WEB-MSG-VIEWER collection source pages beyond the transcript window with interleaved photos and playable video (5.5s)\n  ✓  2 [webkit-light-desktop] › tests/viewer.spec.ts:34:1 › WEB-MSG-VIEWER zoom and swipe gestures track input then dismiss into the reserved source (5.2s)\n  ✓  3 [webkit-light-desktop] › tests/viewer.spec.ts:54:1 › WEB-MSG-VIEWER Reduce Motion uses a short fade with stable geometry and Escape dismissal (997ms)\n  ✓  4 [webkit-light-desktop] › tests/viewer.spec.ts:61:1 › WEB-MSG-VIEWER themed backdrop and interactive dismissal preserve the source silhouette (1.9s)\n\n  4 passed (16.8s)\n"
+    },
+    {
+      "name": "webkit-dark-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 4 tests using 1 worker\n\n  ✓  1 [webkit-dark-phone] › tests/viewer.spec.ts:5:1 › WEB-MSG-VIEWER collection source pages beyond the transcript window with interleaved photos and playable video (4.4s)\n  ✓  2 [webkit-dark-phone] › tests/viewer.spec.ts:34:1 › WEB-MSG-VIEWER zoom and swipe gestures track input then dismiss into the reserved source (6.8s)\n  ✓  3 [webkit-dark-phone] › tests/viewer.spec.ts:54:1 › WEB-MSG-VIEWER Reduce Motion uses a short fade with stable geometry and Escape dismissal (999ms)\n  ✓  4 [webkit-dark-phone] › tests/viewer.spec.ts:61:1 › WEB-MSG-VIEWER themed backdrop and interactive dismissal preserve the source silhouette (1.9s)\n\n  4 passed (15.6s)\n"
+    },
+    {
+      "name": "webkit-dark-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 4 tests using 1 worker\n\n  ✓  1 [webkit-dark-desktop] › tests/viewer.spec.ts:5:1 › WEB-MSG-VIEWER collection source pages beyond the transcript window with interleaved photos and playable video (6.4s)\n  ✓  2 [webkit-dark-desktop] › tests/viewer.spec.ts:34:1 › WEB-MSG-VIEWER zoom and swipe gestures track input then dismiss into the reserved source (5.4s)\n  ✓  3 [webkit-dark-desktop] › tests/viewer.spec.ts:54:1 › WEB-MSG-VIEWER Reduce Motion uses a short fade with stable geometry and Escape dismissal (1.3s)\n  ✓  4 [webkit-dark-desktop] › tests/viewer.spec.ts:61:1 › WEB-MSG-VIEWER themed backdrop and interactive dismissal preserve the source silhouette (2.1s)\n\n  4 passed (16.8s)\n"
+    },
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 4 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/viewer.spec.ts:5:1 › WEB-MSG-VIEWER collection source pages beyond the transcript window with interleaved photos and playable video (3.7s)\n  ✓  2 [chromium-light-phone] › tests/viewer.spec.ts:34:1 › WEB-MSG-VIEWER zoom and swipe gestures track input then dismiss into the reserved source (5.3s)\n  ✓  3 [chromium-light-phone] › tests/viewer.spec.ts:54:1 › WEB-MSG-VIEWER Reduce Motion uses a short fade with stable geometry and Escape dismissal (566ms)\n  ✓  4 [chromium-light-phone] › tests/viewer.spec.ts:61:1 › WEB-MSG-VIEWER themed backdrop and interactive dismissal preserve the source silhouette (1.9s)\n\n  4 passed (12.8s)\n"
+    },
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 4 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/viewer.spec.ts:5:1 › WEB-MSG-VIEWER collection source pages beyond the transcript window with interleaved photos and playable video (3.7s)\n  ✓  2 [chromium-light-desktop] › tests/viewer.spec.ts:34:1 › WEB-MSG-VIEWER zoom and swipe gestures track input then dismiss into the reserved source (4.5s)\n  ✓  3 [chromium-light-desktop] › tests/viewer.spec.ts:54:1 › WEB-MSG-VIEWER Reduce Motion uses a short fade with stable geometry and Escape dismissal (637ms)\n  ✓  4 [chromium-light-desktop] › tests/viewer.spec.ts:61:1 › WEB-MSG-VIEWER themed backdrop and interactive dismissal preserve the source silhouette (2.0s)\n\n  4 passed (12.1s)\n"
+    },
+    {
+      "name": "chromium-dark-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 4 tests using 1 worker\n\n  ✓  1 [chromium-dark-phone] › tests/viewer.spec.ts:5:1 › WEB-MSG-VIEWER collection source pages beyond the transcript window with interleaved photos and playable video (2.8s)\n  ✓  2 [chromium-dark-phone] › tests/viewer.spec.ts:34:1 › WEB-MSG-VIEWER zoom and swipe gestures track input then dismiss into the reserved source (4.5s)\n  ✓  3 [chromium-dark-phone] › tests/viewer.spec.ts:54:1 › WEB-MSG-VIEWER Reduce Motion uses a short fade with stable geometry and Escape dismissal (676ms)\n  ✓  4 [chromium-dark-phone] › tests/viewer.spec.ts:61:1 › WEB-MSG-VIEWER themed backdrop and interactive dismissal preserve the source silhouette (1.9s)\n\n  4 passed (10.5s)\n"
+    },
+    {
+      "name": "chromium-dark-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 4 tests using 1 worker\n\n  ✓  1 [chromium-dark-desktop] › tests/viewer.spec.ts:5:1 › WEB-MSG-VIEWER collection source pages beyond the transcript window with interleaved photos and playable video (4.1s)\n  ✓  2 [chromium-dark-desktop] › tests/viewer.spec.ts:34:1 › WEB-MSG-VIEWER zoom and swipe gestures track input then dismiss into the reserved source (4.5s)\n  ✓  3 [chromium-dark-desktop] › tests/viewer.spec.ts:54:1 › WEB-MSG-VIEWER Reduce Motion uses a short fade with stable geometry and Escape dismissal (1.7s)\n  ✓  4 [chromium-dark-desktop] › tests/viewer.spec.ts:61:1 › WEB-MSG-VIEWER themed backdrop and interactive dismissal preserve the source silhouette (2.6s)\n\n  4 passed (13.8s)\n"
+    },
+    {
+      "name": "firefox-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 4 tests using 1 worker\n\n  ✓  1 [firefox-light-phone] › tests/viewer.spec.ts:5:1 › WEB-MSG-VIEWER collection source pages beyond the transcript window with interleaved photos and playable video (4.5s)\n  ✓  2 [firefox-light-phone] › tests/viewer.spec.ts:34:1 › WEB-MSG-VIEWER zoom and swipe gestures track input then dismiss into the reserved source (5.7s)\n  ✓  3 [firefox-light-phone] › tests/viewer.spec.ts:54:1 › WEB-MSG-VIEWER Reduce Motion uses a short fade with stable geometry and Escape dismissal (3.0s)\n  ✓  4 [firefox-light-phone] › tests/viewer.spec.ts:61:1 › WEB-MSG-VIEWER themed backdrop and interactive dismissal preserve the source silhouette (3.0s)\n\n  4 passed (20.2s)\n"
+    },
+    {
+      "name": "firefox-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 4 tests using 1 worker\n\n  ✓  1 [firefox-light-desktop] › tests/viewer.spec.ts:5:1 › WEB-MSG-VIEWER collection source pages beyond the transcript window with interleaved photos and playable video (7.1s)\n  ✓  2 [firefox-light-desktop] › tests/viewer.spec.ts:34:1 › WEB-MSG-VIEWER zoom and swipe gestures track input then dismiss into the reserved source (9.0s)\n  ✓  3 [firefox-light-desktop] › tests/viewer.spec.ts:54:1 › WEB-MSG-VIEWER Reduce Motion uses a short fade with stable geometry and Escape dismissal (1.5s)\n  ✓  4 [firefox-light-desktop] › tests/viewer.spec.ts:61:1 › WEB-MSG-VIEWER themed backdrop and interactive dismissal preserve the source silhouette (2.1s)\n\n  4 passed (23.0s)\n"
+    },
+    {
+      "name": "firefox-dark-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 4 tests using 1 worker\n\n  ✓  1 [firefox-dark-phone] › tests/viewer.spec.ts:5:1 › WEB-MSG-VIEWER collection source pages beyond the transcript window with interleaved photos and playable video (5.2s)\n  ✓  2 [firefox-dark-phone] › tests/viewer.spec.ts:34:1 › WEB-MSG-VIEWER zoom and swipe gestures track input then dismiss into the reserved source (6.3s)\n  ✓  3 [firefox-dark-phone] › tests/viewer.spec.ts:54:1 › WEB-MSG-VIEWER Reduce Motion uses a short fade with stable geometry and Escape dismissal (1.7s)\n  ✓  4 [firefox-dark-phone] › tests/viewer.spec.ts:61:1 › WEB-MSG-VIEWER themed backdrop and interactive dismissal preserve the source silhouette (2.3s)\n\n  4 passed (20.7s)\n"
+    },
+    {
+      "name": "firefox-dark-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 4 tests using 1 worker\n\n  ✓  1 [firefox-dark-desktop] › tests/viewer.spec.ts:5:1 › WEB-MSG-VIEWER collection source pages beyond the transcript window with interleaved photos and playable video (5.7s)\n  ✓  2 [firefox-dark-desktop] › tests/viewer.spec.ts:34:1 › WEB-MSG-VIEWER zoom and swipe gestures track input then dismiss into the reserved source (6.1s)\n  ✓  3 [firefox-dark-desktop] › tests/viewer.spec.ts:54:1 › WEB-MSG-VIEWER Reduce Motion uses a short fade with stable geometry and Escape dismissal (1.8s)\n  ✓  4 [firefox-dark-desktop] › tests/viewer.spec.ts:61:1 › WEB-MSG-VIEWER themed backdrop and interactive dismissal preserve the source silhouette (2.3s)\n\n  4 passed (22.2s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

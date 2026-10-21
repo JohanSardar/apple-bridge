@@ -1,0 +1,71 @@
+import {test,expect,type APIRequestContext,type BrowserContext} from '@playwright/test';
+import {control} from './session';
+let session:Promise<{cookie:Parameters<BrowserContext['addCookies']>[0][number]}>|undefined;
+async function setup(context:BrowserContext,request:APIRequestContext){const value=await(session??=control(request,'/session?kind=public'));await context.addCookies([value.cookie]);return control(request,'/demo-fixtures');}
+test('WEB-MSG-VIEWER collection source pages beyond the transcript window with interleaved photos and playable video',async({page,context,request},info)=>{
+ const ids=await setup(context,request),subscriptions:Record<string,unknown>[]=[];
+ await page.addInitScript(()=>Object.defineProperty(navigator,'share',{value:async(payload:ShareData)=>{Object.defineProperty(window,'viewerShared',{value:payload,configurable:true});}}));
+ page.on('websocket',socket=>socket.on('framesent',({payload})=>{try{const frame=JSON.parse(String(payload));if(frame.t==='sub')subscriptions.push(frame);}catch{}}));
+ const variants:string[]=[];page.on('request',request=>{const url=new URL(request.url());if(url.pathname.startsWith('/web/v1/blob/'))variants.push(url.searchParams.get('variant')??'');});
+ await page.goto('/__fixtures/media?chat='+encodeURIComponent(ids['message-chat'])+'&window=1&anchor='+encodeURIComponent(ids['demo-message-00-000032'])+'&pageSize=2');
+ const source=page.locator(`[data-message="${ids['demo-message-00-000032']}"]`);await source.scrollIntoViewIfNeeded();const before=await source.boundingBox();
+ await source.locator('.media-open').click();const viewer=page.getByRole('dialog',{name:'Media viewer'});await expect(viewer).toBeVisible();
+ const decoded=await viewer.locator('.media-viewer-stage .media-image>img').elementHandle();
+ await expect(viewer).toHaveAttribute('data-media-loading','false');await expect(viewer).toHaveAttribute('data-media-count','12');expect(await decoded!.evaluate(element=>element.isConnected)).toBe(true);
+ expect(subscriptions.some(value=>value.view==='collection'&&(value.args as Record<string,unknown>).kind==='media')).toBe(true);
+ expect(subscriptions.filter(value=>value.view==='collection').length).toBeGreaterThan(1);
+ await expect(page.locator('.media-fixture-slot')).toHaveCount(1);
+ await expect(viewer.locator('.media-viewer-stage .media-image')).toHaveAttribute('data-media-state','ready');expect(variants).toContain('display');
+ await viewer.getByRole('button',{name:'Share media'}).click();expect(await page.evaluate(()=>Boolean((window as unknown as {viewerShared?:ShareData}).viewerShared?.url))).toBe(true);
+ await page.screenshot({path:`../lab/evidence/private/web/media-viewer-${info.project.name}.png`});
+ await viewer.locator('.media-viewer-stage').focus();for(let index=0;index<6;index++)await page.keyboard.press('ArrowRight');
+ await expect(viewer).toHaveAttribute('data-media-message',ids['demo-message-00-000038']);
+ const video=viewer.locator('video');await expect(video).toBeVisible();
+ await expect.poll(()=>video.evaluate((value:HTMLVideoElement)=>value.currentTime)).toBeGreaterThan(.05);
+ expect(variants).toContain('video');
+ await video.evaluate((value:HTMLVideoElement)=>value.pause());await viewer.getByRole('button',{name:'Play video',exact:true}).click();await viewer.locator('.media-viewer-stage').focus();await page.keyboard.press(' ');await expect(video).toHaveJSProperty('paused',true);
+ const scrub=viewer.getByRole('slider',{name:'Video position'});await scrub.focus();await page.keyboard.press('Home');await page.keyboard.press('ArrowRight');await expect.poll(()=>video.evaluate((value:HTMLVideoElement)=>value.currentTime)).toBeGreaterThan(0);
+ await expect(viewer.getByRole('link',{name:'Download original'})).toHaveAttribute('href',/variant=original/u);
+ const download=page.waitForEvent('download');await viewer.getByRole('link',{name:'Download original'}).click();await download;expect(variants).toContain('original');
+ await viewer.getByRole('button',{name:'Show in Chat'}).click();await expect(viewer).toBeHidden();
+ await expect(page.locator('.media-fixture')).toHaveAttribute('data-shown-message',ids['demo-message-00-000038']);
+ expect(await source.boundingBox()).toEqual(before);
+});
+test('WEB-MSG-VIEWER zoom and swipe gestures track input then dismiss into the reserved source',async({page,context,request})=>{
+ const ids=await setup(context,request);await page.goto('/__fixtures/media?chat='+encodeURIComponent(ids['message-chat']));
+ const source=page.locator(`[data-message="${ids['demo-message-00-000033']}"]`);await source.scrollIntoViewIfNeeded();const before=await source.boundingBox();await source.locator('.media-open').click();
+ const viewer=page.getByRole('dialog',{name:'Media viewer'});await expect(viewer).toHaveAttribute('data-media-loading','false');
+ await expect.poll(()=>viewer.locator('.media-viewer-stage').evaluate(element=>new DOMMatrixReadOnly(getComputedStyle(element).transform).a)).toBeCloseTo(1,3);
+ const bounds=await viewer.locator('.media-viewer-stage').boundingBox(),x=bounds!.x+bounds!.width/2,y=bounds!.y+bounds!.height/2;
+ await page.mouse.dblclick(x,y);await expect(viewer).toHaveAttribute('data-media-zoom','2.5');
+ await page.mouse.wheel(0,-100);await expect.poll(async()=>Number(await viewer.getAttribute('data-media-zoom'))).toBeGreaterThan(2.5);
+ await page.mouse.dblclick(x,y);await expect(viewer).toHaveAttribute('data-media-zoom','1');
+ await viewer.evaluate((element,{x,y})=>{
+  const send=(type:string,id:number,clientX:number)=>element.dispatchEvent(new PointerEvent(type,{bubbles:true,pointerId:id,pointerType:'touch',clientX,clientY:y}));
+  send('pointerdown',91,x-50);send('pointerdown',92,x+50);send('pointermove',92,x+150);send('pointerup',91,x-50);send('pointerup',92,x+150);
+ },{x,y});
+ await expect.poll(async()=>Number(await viewer.getAttribute('data-media-zoom'))).toBeGreaterThan(1);
+ await page.mouse.dblclick(x,y);await expect(viewer).toHaveAttribute('data-media-zoom','1');
+ await page.mouse.move(x,y);await page.mouse.down();await page.mouse.move(x-Math.max(120,page.viewportSize()!.width*.25),y,{steps:12});await page.mouse.up();
+ await expect(viewer).toHaveAttribute('data-media-message',ids['demo-message-00-000034']);
+ await page.mouse.move(x,y);await page.mouse.down();await page.mouse.move(x,y+180,{steps:12});await page.mouse.up();await expect(viewer).toBeHidden();
+ expect(await source.boundingBox()).toEqual(before);
+});
+test('WEB-MSG-VIEWER Reduce Motion uses a short fade with stable geometry and Escape dismissal',async({page,context,request})=>{
+ const ids=await setup(context,request);await page.emulateMedia({reducedMotion:'reduce'});await page.goto('/__fixtures/media?chat='+encodeURIComponent(ids['message-chat']));
+ const source=page.locator(`[data-message="${ids['demo-message-00-000036']}"]`);await source.scrollIntoViewIfNeeded();const before=await source.boundingBox();await source.locator('.media-open').click();
+ const viewer=page.getByRole('dialog',{name:'Media viewer'});await expect(viewer).toBeVisible();
+ expect(await viewer.evaluate(element=>element.getAnimations({subtree:true}).every(animation=>Number(animation.effect?.getTiming().duration)<=150))).toBe(true);
+ await page.keyboard.press('Escape');await expect(viewer).toBeHidden();expect(await source.boundingBox()).toEqual(before);
+});
+test('WEB-MSG-VIEWER themed backdrop and interactive dismissal preserve the source silhouette',async({page,context,request},info)=>{
+ const ids=await setup(context,request);await page.goto('/__fixtures/media?chat='+encodeURIComponent(ids['message-chat']));
+ const source=page.locator(`[data-message="${ids['demo-message-00-000033']}"]`);await source.locator('.media-open').click();
+ const viewer=page.getByRole('dialog',{name:'Media viewer'}),stage=viewer.locator('.media-viewer-stage');
+ await expect.poll(()=>stage.evaluate(element=>new DOMMatrixReadOnly(getComputedStyle(element).transform).a)).toBeCloseTo(1,3);
+ await expect.soft(viewer.locator('.media-viewer-backdrop')).toHaveCSS('background-color',info.project.name.includes('-dark-')?'rgb(0, 0, 0)':'rgb(255, 255, 255)');
+ const bounds=await stage.boundingBox(),x=bounds!.x+bounds!.width/2,y=bounds!.y+bounds!.height/2;
+ await page.mouse.move(x,y);await page.mouse.down();await page.mouse.move(x,y+70,{steps:12});
+ expect.soft(await stage.evaluate(element=>new DOMMatrixReadOnly(getComputedStyle(element).transform).a)).toBeLessThan(.99);
+ await page.mouse.move(x,y,{steps:12});await page.mouse.up();await expect(viewer).toBeVisible();await page.keyboard.press('Escape');await expect(viewer).toBeHidden();
+});

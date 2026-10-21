@@ -1,0 +1,37 @@
+.media-viewer{position:fixed;inset:0;margin:0;padding:0;width:100vw;height:100dvh;max-width:none;max-height:none;border:0;background:transparent;color:var(--label);overflow:hidden;touch-action:none;user-select:none;outline:none;overscroll-behavior:contain}
+.media-viewer::backdrop{background:transparent}
+.media-viewer-backdrop{position:absolute;inset:0;background:var(--background);opacity:0;pointer-events:none}
+.media-viewer-preview{position:absolute;inset:0;opacity:0;pointer-events:none;will-change:transform}
+.media-viewer-preview>figure{position:absolute;margin:0;overflow:hidden}
+.media-viewer-stage{position:absolute;margin:0;overflow:hidden;transform-origin:center;will-change:transform,clip-path;isolation:isolate}
+.media-viewer-stage>.media-image{background:transparent}
+.media-viewer-stage .media-image>img{object-fit:contain}
+.media-viewer-toolbar{position:absolute;inset:0 0 auto;z-index:3;min-height:64px;padding:calc(8px + env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) 8px max(12px,env(safe-area-inset-left));display:flex;align-items:center;gap:8px;background:linear-gradient(var(--background),transparent);color:var(--label);box-shadow:none}
+.media-viewer-toolbar>span{flex:1;text-align:center;font-size:13px;font-variant-numeric:tabular-nums}
+.media-viewer button,.media-viewer a{display:inline-flex;justify-content:center;align-items:center;min-width:44px;min-height:44px;padding:6px 10px;border:0;border-radius:22px;background:var(--fill);color:inherit;text-decoration:none;font:inherit;font-size:14px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.media-viewer :is(button,a,input):focus-visible{outline:3px solid #7ec8ff;outline-offset:3px}
+.media-viewer button:disabled{opacity:.3;cursor:default}
+.media-viewer .media-viewer-previous,.media-viewer .media-viewer-next{position:absolute;z-index:2;top:calc(50% - 22px);font-size:32px;line-height:1;background:var(--fill)}
+.media-viewer-previous{left:12px}
+.media-viewer-next{right:12px}
+.media-viewer-status{position:absolute;z-index:4;bottom:90px;inset-inline:20px;text-align:center;font-size:14px;pointer-events:none}
+.media-viewer-status button{pointer-events:auto}
+.media-viewer .media-viewer-live{position:absolute;z-index:2;top:12px;left:12px;min-height:30px;min-width:68px;font-size:12px;font-weight:600;letter-spacing:.03em;background:#242424aa;color:white}
+.media-player{position:absolute;inset:0}
+.media-player>video{position:absolute;inset:0;z-index:1;opacity:0;transition:opacity 180ms ease;display:block;width:100%;height:100%;object-fit:contain;background:transparent}
+.media-player-controls{position:absolute;z-index:2;bottom:16px;inset-inline:12px;display:flex;gap:6px;align-items:center;padding:5px;border-radius:28px;background:#242424cc;backdrop-filter:blur(20px);color:white}
+.media-player-controls>span{font-size:12px;font-variant-numeric:tabular-nums;width:38px;flex:none}
+.media-player-controls>input{flex:1;min-width:32px;height:36px;accent-color:white;cursor:pointer;touch-action:none}
+.media-player>p{position:absolute;inset-inline:10px;top:50%;text-align:center;font-size:14px}
+@media(max-width:699px){.media-viewer-toolbar{gap:2px}.media-viewer-toolbar :is(button,a){font-size:12px;padding-inline:8px}.media-viewer .media-viewer-previous,.media-viewer .media-viewer-next{top:auto;bottom:calc(18px + env(safe-area-inset-bottom));background:var(--fill)}.media-player-controls{bottom:76px;inset-inline:4px;gap:2px;padding:2px}.media-player-controls button{min-width:36px;padding-inline:5px}}
+@media(prefers-reduced-motion:reduce){.media-viewer-stage{will-change:auto}}
+
+.media-player>.media-image{transition:opacity 180ms ease}
+.media-player[data-video-ready=true]>video{opacity:1}
+.media-player[data-video-ready=true]>.media-image{opacity:0}
+.media-player-controls>input{appearance:none;background:linear-gradient(#fff5,#fff5) center/100% 3px no-repeat}
+.media-player-controls>input::-webkit-slider-runnable-track{height:3px;background:transparent}
+.media-player-controls>input::-webkit-slider-thumb{appearance:none;width:10px;height:10px;margin-top:-3.5px;border:0;border-radius:50%;background:white;box-shadow:0 1px 3px #0004}
+.media-player-controls>input::-moz-range-track{height:3px;background:transparent}
+.media-player-controls>input::-moz-range-thumb{width:10px;height:10px;border:0;border-radius:50%;background:white;box-shadow:0 1px 3px #0004}
+@media(prefers-reduced-motion:reduce){.media-player>video,.media-player>.media-image{transition-duration:150ms}}
