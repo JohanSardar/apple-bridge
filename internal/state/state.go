@@ -536,7 +536,6 @@ type FrozenSnapshot struct {
 	Digest    string
 	ExpiresAt time.Time
 	Records   []contracts.Record
-	tx        *sql.Tx
 	store     *Store
 }
 
@@ -544,15 +543,11 @@ func (f *FrozenSnapshot) Close() error {
 	f.store.write.Lock()
 	defer f.store.write.Unlock()
 	delete(f.store.leases, f.ID)
-	err := f.tx.Rollback()
 	delete(f.store.blobSnapshots, f.ID)
 	if f.store.BlobDelta != nil {
-		protectErr := f.store.BlobDelta(context.Background(), contracts.ReferenceSet{"snapshot:" + f.ID: nil}, false)
-		if err == nil {
-			err = protectErr
-		}
+		return f.store.BlobDelta(context.Background(), contracts.ReferenceSet{"snapshot:" + f.ID: nil}, false)
 	}
-	return err
+	return nil
 }
 func Digest(records []contracts.Record) string {
 	ordered := slices.Clone(records)
@@ -570,7 +565,7 @@ func (s *Store) FreezeSnapshot(ctx context.Context, v trust.Visibility, revision
 	if err != nil {
 		return nil, err
 	}
-	f := &FrozenSnapshot{store: s, ID: contracts.NewID("snap"), ExpiresAt: time.Now().Add(10 * time.Minute), Records: []contracts.Record{}, tx: tx}
+	f := &FrozenSnapshot{store: s, ID: contracts.NewID("snap"), ExpiresAt: time.Now().Add(10 * time.Minute), Records: []contracts.Record{}}
 	f.Cursor, err = cursorAt(ctx, tx)
 	if err != nil {
 		tx.Rollback()
@@ -607,6 +602,9 @@ func (s *Store) FreezeSnapshot(ctx context.Context, v trust.Visibility, revision
 		tx.Rollback()
 		return nil, err
 	}
+	if err = tx.Rollback(); err != nil {
+		return nil, err
+	}
 	f.Count = len(f.Records)
 	f.Digest = Digest(f.Records)
 	if s.blobSnapshots == nil {
@@ -619,7 +617,6 @@ func (s *Store) FreezeSnapshot(ctx context.Context, v trust.Visibility, revision
 		err = s.BlobDelta(ctx, contracts.ReferenceSet{"snapshot:" + f.ID: s.blobSnapshots[f.ID]}, false)
 	}
 	if err != nil {
-		tx.Rollback()
 		delete(s.blobSnapshots, f.ID)
 		return nil, err
 	}
@@ -828,64 +825,68 @@ func (i *ChangeIterator) Next(ctx context.Context) (contracts.Batch, error) {
 		if err != nil {
 			return contracts.Batch{}, err
 		}
-		head, err := cursorAt(ctx, tx)
-		if err != nil {
-			tx.Rollback()
-			return contracts.Batch{}, err
-		}
-		if head.Epoch != i.cursor.Epoch || head.SubscriptionRevision != i.cursor.SubscriptionRevision || i.cursor.Sequence < i.store.RetentionFloor() {
-			tx.Rollback()
-			return contracts.Batch{}, contracts.ErrReset
-		}
-		if head.Sequence > i.cursor.Sequence {
-			through := min(head.Sequence, i.cursor.Sequence+128)
-			b := contracts.Batch{Epoch: i.cursor.Epoch, SubscriptionRevision: i.cursor.SubscriptionRevision, After: i.cursor.Sequence, Through: through, Changes: []contracts.Change{}}
-			rows, err := tx.QueryContext(ctx, "SELECT payload FROM journal WHERE seq>? AND seq<=? ORDER BY seq", b.After, b.Through)
-			if err != nil {
-				tx.Rollback()
-				return b, err
-			}
-			size := 0
-			for rows.Next() {
-				var raw []byte
-				if err = rows.Scan(&raw); err != nil {
-					break
-				}
-				var c contracts.Change
-				if err = json.Unmarshal(raw, &c); err != nil {
-					break
-				}
-				if i.visibility.Allows(c.Record) {
-					if size+len(raw) > contracts.MaxFrame-2048 && len(b.Changes) > 0 {
-						b.Through = c.Sequence - 1
-						break
-					}
-					c.Record, err = projectContactLink(c.Record, i.visibility)
-					if err != nil {
-						break
-					}
-					b.Changes = append(b.Changes, c)
-					size += len(raw)
-				}
-			}
-			if err == nil {
-				err = rows.Err()
-			}
-			rows.Close()
-			tx.Rollback()
-			if err != nil {
-				return b, err
-			}
-			i.cursor.Sequence = b.Through
-			return b, nil
-		}
+		batch, err := readChangeBatchTx(ctx, tx, i.visibility, i.cursor)
 		tx.Rollback()
+		if err != nil {
+			return batch, err
+		}
+		if batch.Through > i.cursor.Sequence {
+			i.cursor.Sequence = batch.Through
+			return batch, nil
+		}
 		select {
 		case <-ctx.Done():
 			return contracts.Batch{}, ctx.Err()
 		case <-wake:
 		}
 	}
+}
+
+func readChangeBatchTx(ctx context.Context, tx *sql.Tx, visibility trust.Visibility, after contracts.Cursor) (contracts.Batch, error) {
+	head, err := cursorAt(ctx, tx)
+	if err != nil {
+		return contracts.Batch{}, err
+	}
+	var floor uint64
+	if err = tx.QueryRowContext(ctx, "SELECT value FROM meta WHERE key='retention_floor'").Scan(&floor); err != nil {
+		return contracts.Batch{}, err
+	}
+	if head.Epoch != after.Epoch || head.SubscriptionRevision != after.SubscriptionRevision || after.Sequence < floor {
+		return contracts.Batch{}, contracts.ErrReset
+	}
+	batch := contracts.Batch{Epoch: after.Epoch, SubscriptionRevision: after.SubscriptionRevision, After: after.Sequence, Through: min(head.Sequence, after.Sequence+128), Changes: []contracts.Change{}}
+	if head.Sequence <= after.Sequence {
+		return batch, nil
+	}
+	rows, err := tx.QueryContext(ctx, "SELECT payload FROM journal WHERE seq>? AND seq<=? ORDER BY seq", batch.After, batch.Through)
+	if err != nil {
+		return batch, err
+	}
+	defer rows.Close()
+	size := 0
+	for rows.Next() {
+		var raw []byte
+		if err = rows.Scan(&raw); err != nil {
+			return batch, err
+		}
+		var change contracts.Change
+		if err = json.Unmarshal(raw, &change); err != nil {
+			return batch, err
+		}
+		if visibility.Allows(change.Record) {
+			if size+len(raw) > contracts.MaxFrame-2048 && len(batch.Changes) > 0 {
+				batch.Through = change.Sequence - 1
+				break
+			}
+			change.Record, err = projectContactLink(change.Record, visibility)
+			if err != nil {
+				return batch, err
+			}
+			batch.Changes = append(batch.Changes, change)
+			size += len(raw)
+		}
+	}
+	return batch, rows.Err()
 }
 
 func (s *Store) RetentionFloor() uint64 {
