@@ -8,6 +8,8 @@ public actor Messages: Source {
     public nonisolated let name = "messages"
     private let path: String
     private let diagnostics: URL?
+    private let workTrace: CaptureTrace
+    private let mediaPauseURL: URL?
     private let watcherEventsEnabled: Bool
     private var reader: MessagesReader?
  private let commands: MessagesCommands
@@ -45,6 +47,7 @@ public actor Messages: Source {
         let sticker: Bool
         let live: Bool
         let position: Int64
+        let queuedNS = CaptureTrace.now()
     }
     private var pendingMedia: [String: MediaJob] = [:]
     private var mediaResults: [String: MediaResult] = [:]
@@ -54,6 +57,8 @@ public actor Messages: Source {
  commands = MessagesCommands(path:path, labCommands:labCommands, agentPolicy: diagnostics?.deletingLastPathComponent().appendingPathComponent("agent-message-policy.json"))
         self.watcherEventsEnabled = watcherEventsEnabled
         self.diagnostics = diagnostics
+        workTrace = CaptureTrace(url: labCommands ? diagnostics?.deletingLastPathComponent().appendingPathComponent("media-work-trace.jsonl") : nil)
+        mediaPauseURL = labCommands ? diagnostics?.deletingLastPathComponent().appendingPathComponent("lab-pause-media") : nil
         self.path = path ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Messages/chat.db").path
     }
     public func open() async -> SourceReadiness {
@@ -140,6 +145,7 @@ public actor Messages: Source {
         var blobHandles: [String: String] = [:]
         let at = observedAt ?? observationTime()
         let outputGeneration = generation
+        workTrace.record("attachment_prepare_compute_started")
         for (collection, key, original) in items where !key.isEmpty {
             var data = original
             if collection == "messages.attachment", var blob = data["blob"] as? [String: Any], blob["state"] as? String == "present", let reader,
@@ -159,10 +165,13 @@ public actor Messages: Source {
                                 mediaResults[cached.2] = result
                                 try attachMedia(result, to: &data, handles: &blobHandles)
                             }
-                            if (result == nil || result?.awaitingLive == true), activeMedia?.0.key != key, (mediaRetry[key] ?? .distantPast) < Date() {
+                            if !mediaLabPaused, (result == nil || result?.awaitingLive == true), activeMedia?.0.key != key, (mediaRetry[key] ?? .distantPast) < Date() {
                                 let companions = MediaDerivatives.liveIdentifier(url) == nil ? [] : try reader.query("SELECT filename FROM attachment WHERE lower(filename) LIKE '%.mov' ORDER BY abs(ROWID-?)", [String(row.integer("derivative_position"))]).compactMap { reader.attachmentURL($0["filename"]) }.filter { FileManager.default.fileExists(atPath: $0.path) && !BlobDigest.isDataless($0) }
                                 let job = MediaJob(key: key, url: url, digest: cached.2, companions: companions, sticker: row.flag("is_sticker"), live: live, position: row.integer("derivative_position"))
-                                if pendingMedia[key]?.live != true { pendingMedia[key] = job }
+                                if pendingMedia[key]?.live != true {
+                                    pendingMedia[key] = job
+                                    workTrace.record("media_queued", fields: ["pending_media": .number(Double(pendingMedia.count))])
+                                }
                                 if live, let activeMedia, !activeMedia.0.live || (UTType(filenameExtension: url.pathExtension) ?? UTType(row["uti"]))?.conforms(to: .image) == true { activeMedia.1.cancel() }
                             }
                         }
@@ -195,6 +204,7 @@ public actor Messages: Source {
             observations.append(try observation(collection, key, data, at))
             updates[identity] = digest
         }
+        workTrace.record("attachment_prepare_compute_finished")
         if observations.isEmpty && completion.isEmpty { return }
         var aliases: [String: JSON] = [:]
         func collect(_ value: JSON) {
@@ -245,24 +255,48 @@ public actor Messages: Source {
         mediaResults[job.digest] = result
         try await emit(try reader.attachmentObservations(guid: job.key), sink: sink, live: job.live)
     }
+    private var mediaLabPaused: Bool {
+        guard let mediaPauseURL else { return false }
+        return FileManager.default.fileExists(atPath: mediaPauseURL.path)
+    }
     private func drainMedia(_ sink: any ObservationSink) async {
+        var lastPaused: Bool?
         while !Task.isCancelled {
-            guard !MediaDerivatives.paused, let job = pendingMedia.values.filter({ (mediaRetry[$0.key] ?? .distantPast) < Date() }).sorted(by: { a, b in a.live == b.live ? a.position > b.position : a.live }).first else {
+            await ForegroundActivity.shared.waitUntilIdle()
+            if Task.isCancelled { return }
+            let labPaused = mediaLabPaused
+            let systemPaused = MediaDerivatives.paused
+            let paused = labPaused || systemPaused
+            if paused != lastPaused {
+                workTrace.record(paused ? "media_paused" : "media_resumed", fields: ["lab_paused": .bool(labPaused), "system_paused": .bool(systemPaused), "thermal": .number(Double(ProcessInfo.processInfo.thermalState.rawValue))])
+                lastPaused = paused
+            }
+            guard !paused, let job = pendingMedia.values.filter({ (mediaRetry[$0.key] ?? .distantPast) < Date() }).sorted(by: { a, b in a.live == b.live ? a.position > b.position : a.live }).first else {
                 do { try await Task.sleep(for: .milliseconds(50)) } catch { return }
                 continue
             }
             pendingMedia.removeValue(forKey: job.key)
             let token = generation
-            let work = Task.detached(priority: .utility) {
-                try await MediaDerivatives.make(job.url, digest: job.digest, companions: job.companions, sticker: job.sticker) { result in
+            workTrace.record("media_started", fields: ["queued_ns": .integer(job.queuedNS), "pending_media": .number(Double(pendingMedia.count)), "live": .bool(job.live)])
+            let workTrace = self.workTrace
+            let work = Task.detached(executorPreference: MediaExecutor.shared, priority: .utility) {
+                try Task.checkCancellation()
+                workTrace.record("media_compute_started")
+                defer { workTrace.record("media_compute_finished") }
+                return try await MediaDerivatives.make(job.url, digest: job.digest, companions: job.companions, sticker: job.sticker) { result in
                     try await self.publishMedia(result, job: job, token: token, sink: sink)
                 }
             }
             activeMedia = (job, work)
+            let interruption = ForegroundActivity.shared.interrupt {
+                work.cancel()
+                workTrace.record("media_yielded_to_foreground")
+            }
+            defer { ForegroundActivity.shared.removeInterruption(interruption) }
             let pressure = Task {
                 while !Task.isCancelled {
                     do { try await Task.sleep(for: .seconds(1)) } catch { return }
-                    if MediaDerivatives.paused { work.cancel(); return }
+                    if MediaDerivatives.paused || self.mediaLabPaused { work.cancel(); return }
                 }
             }
             defer { pressure.cancel(); activeMedia = nil }
@@ -301,7 +335,11 @@ public actor Messages: Source {
             let order = pendingBlobOrder.removeValue(forKey: key) ?? (false, 0)
             let live = order.0
             let token = generation
+            workTrace.record("hash_started", fields: ["pending_blobs": .number(Double(pendingBlobs.count)), "live": .bool(live)])
+            let workTrace = self.workTrace
             let work = Task.detached(priority: .utility) { () throws -> (Int64, Date, String) in
+                workTrace.record("hash_compute_started")
+                defer { workTrace.record("hash_compute_finished") }
                 let before = try FileManager.default.attributesOfItem(atPath: url.path)
                 let digest = try BlobDigest.file(url)
                 let after = try FileManager.default.attributesOfItem(atPath: url.path)

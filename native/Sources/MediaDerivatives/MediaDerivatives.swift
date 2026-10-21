@@ -51,6 +51,7 @@ public enum MediaDerivatives {
     }
     public static func url(_ variant: MediaVariant) -> URL { root.appendingPathComponent(variant.file) }
     public static func make(_ input: URL, digest: String, companions: [URL] = [], sticker: Bool = false, progress: (@Sendable (MediaResult) async throws -> Void)? = nil) async throws -> MediaResult {
+        try Task.checkCancellation()
         guard validDigest(digest) else { throw MediaFailure.invalid }
         let directory = root.appendingPathComponent(digest, isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])

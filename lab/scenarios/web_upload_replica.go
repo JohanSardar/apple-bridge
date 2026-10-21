@@ -39,11 +39,24 @@ func runUploadReplica(ctx context.Context, s Scenario, level string) (e Evidence
 		add := func(name string, ok bool) {
 			e.Assertions = append(e.Assertions, Assertion{Name: direction + "/" + name, Passed: ok})
 		}
-		uploadReplicaDirection(ctx, reverse, &e, add)
+		faults := []string{""}
+		if s.ID == "WEB-UPLOAD-REPLICA-STATUS" {
+			faults = []string{"cursor", "register", "iterator"}
+		}
+		if s.ID == "WEB-UPLOAD-REPLICA-STATUS-LOAD" {
+			faults = []string{"unrelated", "epoch"}
+		}
+		for _, fault := range faults {
+			check := add
+			if fault != "" {
+				check = func(name string, ok bool) { add(fault+"/"+name, ok) }
+			}
+			uploadReplicaDirection(ctx, reverse, fault, &e, check)
+		}
 	}
 	return
 }
-func uploadReplicaDirection(ctx context.Context, reverse bool, e *Evidence, add func(string, bool)) {
+func uploadReplicaDirection(ctx context.Context, reverse bool, fault string, e *Evidence, add func(string, bool)) {
 	if reverse {
 		ctx = world.WithGatewayDials(ctx)
 	}
@@ -119,7 +132,12 @@ func uploadReplicaDirection(ctx context.Context, reverse bool, e *Evidence, add 
 	defer socket.CloseNow()
 	args, _ := json.Marshal(map[string]any{"handles": []string{"self@example.com"}, "service": "iMessage", "text": "[ab-test " + e.RunID + "] upload", "files": []contracts.MessageFile{{Name: "Bridge Test.txt", UploadID: uploaded.ID}}})
 	command := contracts.Command{ID: contracts.NewCommandID(), Op: "messages.send", Args: args}
-	record, err := uploadSubmit(ctx, w, socket, command, e.Scenario == "WEB-UPLOAD-REPLICA-LOST-RESPONSE")
+	if fault == "cursor" {
+		add("command_application_delay_armed", w.DelayCommandApply(0, time.Second) == nil)
+	} else if fault == "register" || fault == "iterator" {
+		add("observation_failure_armed", os.WriteFile(filepath.Join(w.Replicas[0].Home, "command-observe-failure"), []byte(fault), 0600) == nil)
+	}
+	record, err := uploadStatusSubmit(ctx, w, socket, command, e.Scenario == "WEB-UPLOAD-REPLICA-LOST-RESPONSE", fault, reverse, e, add)
 	direction := "replica_dials"
 	if reverse {
 		direction = "gateway_dials"
@@ -128,6 +146,13 @@ func uploadReplicaDirection(ctx context.Context, reverse bool, e *Evidence, add 
 	e.Metrics[direction+"_send_error_type"] = fmt.Sprintf("%T", err)
 	if err != nil {
 		uploadSendDiagnostic(ctx, w, e, direction, command, err)
+	}
+	if fault != "" {
+		add("terminal_status_arrives_without_reconciliation", err == nil && record.State == contracts.CommandObserved)
+		_, faultErr := os.Stat(filepath.Join(w.Replicas[0].Home, "command-observe-failure"))
+		if fault == "register" || fault == "iterator" {
+			add("observation_failure_consumed", os.IsNotExist(faultErr))
+		}
 	}
 	if record.State == contracts.CommandIndeterminate {
 		err = contracts.ErrIndeterminate
@@ -152,7 +177,7 @@ func uploadReplicaDirection(ctx context.Context, reverse bool, e *Evidence, add 
 	}
 	var result contracts.ReadResult
 	_, err = world.Request(ctx, w.Replicas[0], "/v1/op/records.query", contracts.ReadQuery{ID: record.ObservedRecordIDs[0]}, &result)
-	add("immediate_replica_read_your_write", err == nil && len(result.Records) == 1 && result.Cursor.Epoch == record.Cursor.Epoch && result.Cursor.Sequence >= record.CommitSeq)
+	add("immediate_replica_read_your_write", err == nil && len(result.Records) == 1 && (result.Cursor.Epoch == record.Cursor.Epoch && result.Cursor.Sequence >= record.CommitSeq || fault == "epoch" && result.Cursor.Epoch > record.Cursor.Epoch))
 	e.Metrics["uploaded_bytes_per_direction"] = len(gatewayBytes)
 	uploadReplicaAbandon(w, c, add)
 }

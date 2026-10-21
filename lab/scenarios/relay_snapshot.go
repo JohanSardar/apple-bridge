@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/lab/world"
@@ -19,8 +20,12 @@ func relayGatewaySnapshot(ctx context.Context, endpoint world.Endpoint) (relayQu
 		if _, err := world.Request(ctx, endpoint, "/v1/op/records.query", contracts.ReadQuery{Collection: "reminders.reminder", Limit: 200, After: after}, &page); err != nil {
 			return relayQuery{}, err
 		}
+		if after == "" {
+			cursor = page.Cursor
+		} else if cursor != page.Cursor {
+			return relayQuery{}, fmt.Errorf("snapshot changed during pagination")
+		}
 		records = append(records, page.Records...)
-		cursor = page.Cursor
 		if page.Next == "" {
 			break
 		}

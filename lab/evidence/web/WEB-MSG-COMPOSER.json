@@ -1,0 +1,116 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[11.65 38.87 36.1] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5FMD7BMWZCX5EA47W91XH8S",
+  "metrics": {
+    "demo_messages": 5000,
+    "demo_startup_ms": 7890,
+    "matrix": [
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "webkit-dark-phone",
+      "webkit-dark-desktop",
+      "chromium-light-phone",
+      "chromium-light-desktop",
+      "chromium-dark-phone",
+      "chromium-dark-desktop",
+      "firefox-light-phone",
+      "firefox-light-desktop",
+      "firefox-dark-phone",
+      "firefox-dark-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-MSG-COMPOSER-webkit-light-phone-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-MSG-COMPOSER-webkit-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-COMPOSER-webkit-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-COMPOSER-webkit-dark-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-COMPOSER-webkit-dark-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-COMPOSER-chromium-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-COMPOSER-chromium-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-COMPOSER-chromium-dark-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-COMPOSER-chromium-dark-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-COMPOSER-firefox-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-COMPOSER-firefox-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-COMPOSER-firefox-dark-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-COMPOSER-firefox-dark-desktop-playwright.json"
+    ],
+    "server": "gateway"
+  },
+  "scenario": "WEB-MSG-COMPOSER",
+  "level": "web",
+  "passed": true,
+  "git_sha": "cfe29722fb5cb596cd77140bba690eb96cb8f887",
+  "at": "2026-10-21T16:23:45.780257Z",
+  "assertions": [
+    {
+      "name": "webkit-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 6 tests using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/composer.spec.ts:10:1 › WEB-MSG-COMPOSER trusted Enter sends once, Shift+Enter preserves a newline and the draft clears (2.0s)\n  ✓  2 [webkit-light-phone] › tests/composer.spec.ts:38:1 › WEB-MSG-COMPOSER trusted drafts stay per chat, restore after reload and the field stops at six lines (1.1s)\n  ✓  3 [webkit-light-phone] › tests/composer.spec.ts:49:1 › WEB-MSG-COMPOSER public drafts survive chat switches only in memory (900ms)\n  ✓  4 [webkit-light-phone] › tests/composer.spec.ts:57:1 › WEB-MSG-COMPOSER waits for a coherent capture before Send and rejects oversized text locally (1.2s)\n  ✓  5 [webkit-light-phone] › tests/composer.spec.ts:76:1 › WEB-MSG-COMPOSER-REVIEW defers storage, flushes lifecycle transitions, caches metrics and shows only user-facing failure status (3.2s)\n  ✓  6 [webkit-light-phone] › tests/composer.spec.ts:103:1 › WEB-MSG-COMPOSER signing out removes trusted drafts (957ms)\n\n  6 passed (11.3s)\n"
+    },
+    {
+      "name": "webkit-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 6 tests using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/composer.spec.ts:10:1 › WEB-MSG-COMPOSER trusted Enter sends once, Shift+Enter preserves a newline and the draft clears (1.8s)\n  ✓  2 [webkit-light-desktop] › tests/composer.spec.ts:38:1 › WEB-MSG-COMPOSER trusted drafts stay per chat, restore after reload and the field stops at six lines (859ms)\n  ✓  3 [webkit-light-desktop] › tests/composer.spec.ts:49:1 › WEB-MSG-COMPOSER public drafts survive chat switches only in memory (849ms)\n  ✓  4 [webkit-light-desktop] › tests/composer.spec.ts:57:1 › WEB-MSG-COMPOSER waits for a coherent capture before Send and rejects oversized text locally (857ms)\n  ✓  5 [webkit-light-desktop] › tests/composer.spec.ts:76:1 › WEB-MSG-COMPOSER-REVIEW defers storage, flushes lifecycle transitions, caches metrics and shows only user-facing failure status (2.6s)\n  ✓  6 [webkit-light-desktop] › tests/composer.spec.ts:103:1 › WEB-MSG-COMPOSER signing out removes trusted drafts (1.0s)\n\n  6 passed (9.5s)\n"
+    },
+    {
+      "name": "webkit-dark-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 6 tests using 1 worker\n\n  ✓  1 [webkit-dark-phone] › tests/composer.spec.ts:10:1 › WEB-MSG-COMPOSER trusted Enter sends once, Shift+Enter preserves a newline and the draft clears (1.7s)\n  ✓  2 [webkit-dark-phone] › tests/composer.spec.ts:38:1 › WEB-MSG-COMPOSER trusted drafts stay per chat, restore after reload and the field stops at six lines (819ms)\n  ✓  3 [webkit-dark-phone] › tests/composer.spec.ts:49:1 › WEB-MSG-COMPOSER public drafts survive chat switches only in memory (721ms)\n  ✓  4 [webkit-dark-phone] › tests/composer.spec.ts:57:1 › WEB-MSG-COMPOSER waits for a coherent capture before Send and rejects oversized text locally (804ms)\n  ✓  5 [webkit-dark-phone] › tests/composer.spec.ts:76:1 › WEB-MSG-COMPOSER-REVIEW defers storage, flushes lifecycle transitions, caches metrics and shows only user-facing failure status (3.1s)\n  ✓  6 [webkit-dark-phone] › tests/composer.spec.ts:103:1 › WEB-MSG-COMPOSER signing out removes trusted drafts (823ms)\n\n  6 passed (9.9s)\n"
+    },
+    {
+      "name": "webkit-dark-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 6 tests using 1 worker\n\n  ✓  1 [webkit-dark-desktop] › tests/composer.spec.ts:10:1 › WEB-MSG-COMPOSER trusted Enter sends once, Shift+Enter preserves a newline and the draft clears (1.8s)\n  ✓  2 [webkit-dark-desktop] › tests/composer.spec.ts:38:1 › WEB-MSG-COMPOSER trusted drafts stay per chat, restore after reload and the field stops at six lines (1.0s)\n  ✓  3 [webkit-dark-desktop] › tests/composer.spec.ts:49:1 › WEB-MSG-COMPOSER public drafts survive chat switches only in memory (875ms)\n  ✓  4 [webkit-dark-desktop] › tests/composer.spec.ts:57:1 › WEB-MSG-COMPOSER waits for a coherent capture before Send and rejects oversized text locally (987ms)\n  ✓  5 [webkit-dark-desktop] › tests/composer.spec.ts:76:1 › WEB-MSG-COMPOSER-REVIEW defers storage, flushes lifecycle transitions, caches metrics and shows only user-facing failure status (2.9s)\n  ✓  6 [webkit-dark-desktop] › tests/composer.spec.ts:103:1 › WEB-MSG-COMPOSER signing out removes trusted drafts (1.0s)\n\n  6 passed (10.5s)\n"
+    },
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 6 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/composer.spec.ts:10:1 › WEB-MSG-COMPOSER trusted Enter sends once, Shift+Enter preserves a newline and the draft clears (963ms)\n  ✓  2 [chromium-light-phone] › tests/composer.spec.ts:38:1 › WEB-MSG-COMPOSER trusted drafts stay per chat, restore after reload and the field stops at six lines (495ms)\n  ✓  3 [chromium-light-phone] › tests/composer.spec.ts:49:1 › WEB-MSG-COMPOSER public drafts survive chat switches only in memory (393ms)\n  ✓  4 [chromium-light-phone] › tests/composer.spec.ts:57:1 › WEB-MSG-COMPOSER waits for a coherent capture before Send and rejects oversized text locally (644ms)\n  ✓  5 [chromium-light-phone] › tests/composer.spec.ts:76:1 › WEB-MSG-COMPOSER-REVIEW defers storage, flushes lifecycle transitions, caches metrics and shows only user-facing failure status (2.6s)\n  ✓  6 [chromium-light-phone] › tests/composer.spec.ts:103:1 › WEB-MSG-COMPOSER signing out removes trusted drafts (673ms)\n\n  6 passed (7.2s)\n"
+    },
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 6 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/composer.spec.ts:10:1 › WEB-MSG-COMPOSER trusted Enter sends once, Shift+Enter preserves a newline and the draft clears (681ms)\n  ✓  2 [chromium-light-desktop] › tests/composer.spec.ts:38:1 › WEB-MSG-COMPOSER trusted drafts stay per chat, restore after reload and the field stops at six lines (367ms)\n  ✓  3 [chromium-light-desktop] › tests/composer.spec.ts:49:1 › WEB-MSG-COMPOSER public drafts survive chat switches only in memory (305ms)\n  ✓  4 [chromium-light-desktop] › tests/composer.spec.ts:57:1 › WEB-MSG-COMPOSER waits for a coherent capture before Send and rejects oversized text locally (349ms)\n  ✓  5 [chromium-light-desktop] › tests/composer.spec.ts:76:1 › WEB-MSG-COMPOSER-REVIEW defers storage, flushes lifecycle transitions, caches metrics and shows only user-facing failure status (2.2s)\n  ✓  6 [chromium-light-desktop] › tests/composer.spec.ts:103:1 › WEB-MSG-COMPOSER signing out removes trusted drafts (544ms)\n\n  6 passed (5.2s)\n"
+    },
+    {
+      "name": "chromium-dark-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 6 tests using 1 worker\n\n  ✓  1 [chromium-dark-phone] › tests/composer.spec.ts:10:1 › WEB-MSG-COMPOSER trusted Enter sends once, Shift+Enter preserves a newline and the draft clears (412ms)\n  ✓  2 [chromium-dark-phone] › tests/composer.spec.ts:38:1 › WEB-MSG-COMPOSER trusted drafts stay per chat, restore after reload and the field stops at six lines (401ms)\n  ✓  3 [chromium-dark-phone] › tests/composer.spec.ts:49:1 › WEB-MSG-COMPOSER public drafts survive chat switches only in memory (248ms)\n  ✓  4 [chromium-dark-phone] › tests/composer.spec.ts:57:1 › WEB-MSG-COMPOSER waits for a coherent capture before Send and rejects oversized text locally (314ms)\n  ✓  5 [chromium-dark-phone] › tests/composer.spec.ts:76:1 › WEB-MSG-COMPOSER-REVIEW defers storage, flushes lifecycle transitions, caches metrics and shows only user-facing failure status (2.1s)\n  ✓  6 [chromium-dark-phone] › tests/composer.spec.ts:103:1 › WEB-MSG-COMPOSER signing out removes trusted drafts (570ms)\n\n  6 passed (4.8s)\n"
+    },
+    {
+      "name": "chromium-dark-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 6 tests using 1 worker\n\n  ✓  1 [chromium-dark-desktop] › tests/composer.spec.ts:10:1 › WEB-MSG-COMPOSER trusted Enter sends once, Shift+Enter preserves a newline and the draft clears (448ms)\n  ✓  2 [chromium-dark-desktop] › tests/composer.spec.ts:38:1 › WEB-MSG-COMPOSER trusted drafts stay per chat, restore after reload and the field stops at six lines (324ms)\n  ✓  3 [chromium-dark-desktop] › tests/composer.spec.ts:49:1 › WEB-MSG-COMPOSER public drafts survive chat switches only in memory (309ms)\n  ✓  4 [chromium-dark-desktop] › tests/composer.spec.ts:57:1 › WEB-MSG-COMPOSER waits for a coherent capture before Send and rejects oversized text locally (381ms)\n  ✓  5 [chromium-dark-desktop] › tests/composer.spec.ts:76:1 › WEB-MSG-COMPOSER-REVIEW defers storage, flushes lifecycle transitions, caches metrics and shows only user-facing failure status (2.2s)\n  ✓  6 [chromium-dark-desktop] › tests/composer.spec.ts:103:1 › WEB-MSG-COMPOSER signing out removes trusted drafts (543ms)\n\n  6 passed (4.9s)\n"
+    },
+    {
+      "name": "firefox-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 6 tests using 1 worker\n\n  ✓  1 [firefox-light-phone] › tests/composer.spec.ts:10:1 › WEB-MSG-COMPOSER trusted Enter sends once, Shift+Enter preserves a newline and the draft clears (1.7s)\n  ✓  2 [firefox-light-phone] › tests/composer.spec.ts:38:1 › WEB-MSG-COMPOSER trusted drafts stay per chat, restore after reload and the field stops at six lines (748ms)\n  ✓  3 [firefox-light-phone] › tests/composer.spec.ts:49:1 › WEB-MSG-COMPOSER public drafts survive chat switches only in memory (583ms)\n  ✓  4 [firefox-light-phone] › tests/composer.spec.ts:57:1 › WEB-MSG-COMPOSER waits for a coherent capture before Send and rejects oversized text locally (693ms)\n  ✓  5 [firefox-light-phone] › tests/composer.spec.ts:76:1 › WEB-MSG-COMPOSER-REVIEW defers storage, flushes lifecycle transitions, caches metrics and shows only user-facing failure status (2.4s)\n  ✓  6 [firefox-light-phone] › tests/composer.spec.ts:103:1 › WEB-MSG-COMPOSER signing out removes trusted drafts (760ms)\n\n  6 passed (8.7s)\n"
+    },
+    {
+      "name": "firefox-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 6 tests using 1 worker\n\n  ✓  1 [firefox-light-desktop] › tests/composer.spec.ts:10:1 › WEB-MSG-COMPOSER trusted Enter sends once, Shift+Enter preserves a newline and the draft clears (1.5s)\n  ✓  2 [firefox-light-desktop] › tests/composer.spec.ts:38:1 › WEB-MSG-COMPOSER trusted drafts stay per chat, restore after reload and the field stops at six lines (604ms)\n  ✓  3 [firefox-light-desktop] › tests/composer.spec.ts:49:1 › WEB-MSG-COMPOSER public drafts survive chat switches only in memory (494ms)\n  ✓  4 [firefox-light-desktop] › tests/composer.spec.ts:57:1 › WEB-MSG-COMPOSER waits for a coherent capture before Send and rejects oversized text locally (571ms)\n  ✓  5 [firefox-light-desktop] › tests/composer.spec.ts:76:1 › WEB-MSG-COMPOSER-REVIEW defers storage, flushes lifecycle transitions, caches metrics and shows only user-facing failure status (2.3s)\n  ✓  6 [firefox-light-desktop] › tests/composer.spec.ts:103:1 › WEB-MSG-COMPOSER signing out removes trusted drafts (665ms)\n\n  6 passed (7.6s)\n"
+    },
+    {
+      "name": "firefox-dark-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 6 tests using 1 worker\n\n  ✓  1 [firefox-dark-phone] › tests/composer.spec.ts:10:1 › WEB-MSG-COMPOSER trusted Enter sends once, Shift+Enter preserves a newline and the draft clears (1.5s)\n  ✓  2 [firefox-dark-phone] › tests/composer.spec.ts:38:1 › WEB-MSG-COMPOSER trusted drafts stay per chat, restore after reload and the field stops at six lines (623ms)\n  ✓  3 [firefox-dark-phone] › tests/composer.spec.ts:49:1 › WEB-MSG-COMPOSER public drafts survive chat switches only in memory (516ms)\n  ✓  4 [firefox-dark-phone] › tests/composer.spec.ts:57:1 › WEB-MSG-COMPOSER waits for a coherent capture before Send and rejects oversized text locally (583ms)\n  ✓  5 [firefox-dark-phone] › tests/composer.spec.ts:76:1 › WEB-MSG-COMPOSER-REVIEW defers storage, flushes lifecycle transitions, caches metrics and shows only user-facing failure status (2.2s)\n  ✓  6 [firefox-dark-phone] › tests/composer.spec.ts:103:1 › WEB-MSG-COMPOSER signing out removes trusted drafts (632ms)\n\n  6 passed (7.6s)\n"
+    },
+    {
+      "name": "firefox-dark-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 6 tests using 1 worker\n\n  ✓  1 [firefox-dark-desktop] › tests/composer.spec.ts:10:1 › WEB-MSG-COMPOSER trusted Enter sends once, Shift+Enter preserves a newline and the draft clears (1.6s)\n  ✓  2 [firefox-dark-desktop] › tests/composer.spec.ts:38:1 › WEB-MSG-COMPOSER trusted drafts stay per chat, restore after reload and the field stops at six lines (663ms)\n  ✓  3 [firefox-dark-desktop] › tests/composer.spec.ts:49:1 › WEB-MSG-COMPOSER public drafts survive chat switches only in memory (614ms)\n  ✓  4 [firefox-dark-desktop] › tests/composer.spec.ts:57:1 › WEB-MSG-COMPOSER waits for a coherent capture before Send and rejects oversized text locally (673ms)\n  ✓  5 [firefox-dark-desktop] › tests/composer.spec.ts:76:1 › WEB-MSG-COMPOSER-REVIEW defers storage, flushes lifecycle transitions, caches metrics and shows only user-facing failure status (2.6s)\n  ✓  6 [firefox-dark-desktop] › tests/composer.spec.ts:103:1 › WEB-MSG-COMPOSER signing out removes trusted drafts (785ms)\n\n  6 passed (8.5s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

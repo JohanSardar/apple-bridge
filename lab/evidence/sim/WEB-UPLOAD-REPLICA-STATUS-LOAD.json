@@ -1,0 +1,484 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[8.5 9.02 8.77] cpus=8 other_heavy=1"
+  },
+  "run_id": "upload-replica_01M5FEZP390P1MZ8FR6EP6QZVB",
+  "network_path": "paired feed in both connection directions",
+  "metrics": {
+    "gateway_dials_command_status_transitions": 4,
+    "gateway_dials_send_error_type": "\u003cnil\u003e",
+    "gateway_dials_send_state": "observed",
+    "gateway_dials_unrelated_changes": 100,
+    "gateway_dials_unrelated_status_calls": 4,
+    "replica_dials_command_status_transitions": 4,
+    "replica_dials_send_error_type": "\u003cnil\u003e",
+    "replica_dials_send_state": "observed",
+    "replica_dials_unrelated_changes": 100,
+    "replica_dials_unrelated_status_calls": 5,
+    "uploaded_bytes_per_direction": 2500000
+  },
+  "scenario": "WEB-UPLOAD-REPLICA-STATUS-LOAD",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "8f5ccc5046c27deef8dc7026669ab6ece5054bd6",
+  "at": "2026-10-21T14:48:59.241726Z",
+  "assertions": [
+    {
+      "name": "replica_dials/unrelated/scoped_paired_replica_world",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/unrelated/replica_session_hook_requires_control_secret",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/unrelated/replica_session_hook_returns_only_url_and_cookie",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/unrelated/replica_browser_session_authorized",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/unrelated/expected_connection_direction",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/unrelated/feed_connected",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/unrelated/effect_baseline_available",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/unrelated/replica_rejects_oversize_before_staging",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/unrelated/replica_verifies_browser_supplied_digest",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/unrelated/replica_upload_returns_gateway_verified_ready",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/unrelated/independent_gateway_bytes_and_digest_match",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/unrelated/upload_alone_has_no_native_command_effect",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/unrelated/replica_served_command_channel",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/unrelated/terminal_visibility_hold_armed",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/unrelated/status_lookup_counter_armed",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/unrelated/committed_status_held_before_visibility",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/unrelated/hundred_unrelated_changes_replicated",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/unrelated/remote_status_calls_bounded_by_transitions_plus_one",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/unrelated/terminal_status_arrives_without_reconciliation",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/unrelated/fresh_send_observed_on_gateway",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/unrelated/gateway_admission_retains_verified_blob_reference",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/unrelated/exactly_one_explicit_send_effect",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/unrelated/immediate_replica_read_your_write",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/unrelated/abandon_fixture_ready_at_both_endpoints",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/unrelated/replica_abandon_forwarded_to_gateway",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/unrelated/abandon_removes_both_owned_leases",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/unrelated/abandoned_replica_upload_unavailable",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/epoch/scoped_paired_replica_world",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/epoch/replica_session_hook_requires_control_secret",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/epoch/replica_session_hook_returns_only_url_and_cookie",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/epoch/replica_browser_session_authorized",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/epoch/expected_connection_direction",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/epoch/feed_connected",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/epoch/effect_baseline_available",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/epoch/replica_rejects_oversize_before_staging",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/epoch/replica_verifies_browser_supplied_digest",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/epoch/replica_upload_returns_gateway_verified_ready",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/epoch/independent_gateway_bytes_and_digest_match",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/epoch/upload_alone_has_no_native_command_effect",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/epoch/replica_served_command_channel",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/epoch/terminal_visibility_hold_armed",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/epoch/status_lookup_counter_armed",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/epoch/committed_status_held_before_visibility",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/epoch/committed_snapshot_backup",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/epoch/gateway_epoch_reset",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/epoch/gateway_restart_after_epoch_reset",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/epoch/newer_epoch_snapshot_installed_before_status_visibility",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/epoch/terminal_status_arrives_without_reconciliation",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/epoch/fresh_send_observed_on_gateway",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/epoch/gateway_admission_retains_verified_blob_reference",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/epoch/exactly_one_explicit_send_effect",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/epoch/immediate_replica_read_your_write",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/epoch/abandon_fixture_ready_at_both_endpoints",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/epoch/replica_abandon_forwarded_to_gateway",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/epoch/abandon_removes_both_owned_leases",
+      "passed": true
+    },
+    {
+      "name": "replica_dials/epoch/abandoned_replica_upload_unavailable",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/unrelated/scoped_paired_replica_world",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/unrelated/replica_session_hook_requires_control_secret",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/unrelated/replica_session_hook_returns_only_url_and_cookie",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/unrelated/replica_browser_session_authorized",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/unrelated/expected_connection_direction",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/unrelated/feed_connected",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/unrelated/effect_baseline_available",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/unrelated/replica_rejects_oversize_before_staging",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/unrelated/replica_verifies_browser_supplied_digest",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/unrelated/replica_upload_returns_gateway_verified_ready",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/unrelated/independent_gateway_bytes_and_digest_match",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/unrelated/upload_alone_has_no_native_command_effect",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/unrelated/replica_served_command_channel",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/unrelated/terminal_visibility_hold_armed",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/unrelated/status_lookup_counter_armed",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/unrelated/committed_status_held_before_visibility",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/unrelated/hundred_unrelated_changes_replicated",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/unrelated/remote_status_calls_bounded_by_transitions_plus_one",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/unrelated/terminal_status_arrives_without_reconciliation",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/unrelated/fresh_send_observed_on_gateway",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/unrelated/gateway_admission_retains_verified_blob_reference",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/unrelated/exactly_one_explicit_send_effect",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/unrelated/immediate_replica_read_your_write",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/unrelated/abandon_fixture_ready_at_both_endpoints",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/unrelated/replica_abandon_forwarded_to_gateway",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/unrelated/abandon_removes_both_owned_leases",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/unrelated/abandoned_replica_upload_unavailable",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/epoch/scoped_paired_replica_world",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/epoch/replica_session_hook_requires_control_secret",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/epoch/replica_session_hook_returns_only_url_and_cookie",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/epoch/replica_browser_session_authorized",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/epoch/expected_connection_direction",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/epoch/feed_connected",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/epoch/effect_baseline_available",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/epoch/replica_rejects_oversize_before_staging",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/epoch/replica_verifies_browser_supplied_digest",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/epoch/replica_upload_returns_gateway_verified_ready",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/epoch/independent_gateway_bytes_and_digest_match",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/epoch/upload_alone_has_no_native_command_effect",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/epoch/replica_served_command_channel",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/epoch/terminal_visibility_hold_armed",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/epoch/status_lookup_counter_armed",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/epoch/committed_status_held_before_visibility",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/epoch/committed_snapshot_backup",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/epoch/gateway_epoch_reset",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/epoch/gateway_restart_after_epoch_reset",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/epoch/newer_epoch_snapshot_installed_before_status_visibility",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/epoch/terminal_status_arrives_without_reconciliation",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/epoch/fresh_send_observed_on_gateway",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/epoch/gateway_admission_retains_verified_blob_reference",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/epoch/exactly_one_explicit_send_effect",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/epoch/immediate_replica_read_your_write",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/epoch/abandon_fixture_ready_at_both_endpoints",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/epoch/replica_abandon_forwarded_to_gateway",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/epoch/abandon_removes_both_owned_leases",
+      "passed": true
+    },
+    {
+      "name": "gateway_dials/epoch/abandoned_replica_upload_unavailable",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

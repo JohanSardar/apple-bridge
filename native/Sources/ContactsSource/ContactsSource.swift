@@ -4,7 +4,12 @@ import CryptoKit
 import ContactsHistory
 import SourceSupport
 
-@MainActor
+@globalActor
+public actor ContactsActor {
+    public static let shared = ContactsActor()
+}
+
+@ContactsActor
 public final class ContactsSource: Source {
     public nonisolated let name = "contacts"
     private let store = CNContactStore()
@@ -17,13 +22,13 @@ public final class ContactsSource: Source {
     private var scanning = false
     private let baselineURL: URL
     private static let operations = ["contacts.create", "contacts.update", "contacts.delete"]
-    public static let coverage: JSON = .object(["fields": .string("partial"), "missing": .array([.string("note: unavailable without restricted entitlement"), .string("writability: conservatively limited to default container")])])
+    public nonisolated static let coverage: JSON = .object(["fields": .string("partial"), "missing": .array([.string("note: unavailable without restricted entitlement"), .string("writability: conservatively limited to default container")])])
     private static let scalarKeys = ["given_name": CNContactGivenNameKey, "middle_name": CNContactMiddleNameKey, "family_name": CNContactFamilyNameKey, "previous_family_name": CNContactPreviousFamilyNameKey, "nickname": CNContactNicknameKey, "name_prefix": CNContactNamePrefixKey, "name_suffix": CNContactNameSuffixKey, "phonetic_given_name": CNContactPhoneticGivenNameKey, "phonetic_middle_name": CNContactPhoneticMiddleNameKey, "phonetic_family_name": CNContactPhoneticFamilyNameKey, "phonetic_organization": CNContactPhoneticOrganizationNameKey, "organization": CNContactOrganizationNameKey, "job_title": CNContactJobTitleKey, "department": CNContactDepartmentNameKey]
     private static var keys: [any CNKeyDescriptor] {
         (Array(scalarKeys.values) + [CNContactIdentifierKey, CNContactTypeKey, CNContactPhoneNumbersKey, CNContactEmailAddressesKey, CNContactPostalAddressesKey, CNContactUrlAddressesKey, CNContactBirthdayKey, CNContactNonGregorianBirthdayKey, CNContactDatesKey, CNContactSocialProfilesKey, CNContactInstantMessageAddressesKey, CNContactRelationsKey, CNContactImageDataKey, CNContactThumbnailImageDataKey, CNContactImageDataAvailableKey]).map { $0 as NSString }
     }
 
-    public init(home: URL, commandsEnabled: Bool = false, trace: CaptureTrace = CaptureTrace()) throws {
+    public nonisolated init(home: URL, commandsEnabled: Bool = false, trace: CaptureTrace = CaptureTrace()) throws {
         self.trace = trace
         self.commandsEnabled = commandsEnabled
         baselineURL = home.appendingPathComponent("contacts-baseline.json")
@@ -206,7 +211,7 @@ public final class ContactsSource: Source {
         } else { committed = [:]; token = nil }
         let (changes, continuation) = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
         let observer = NotificationCenter.default.addObserver(forName: .CNContactStoreDidChange, object: nil, queue: nil) { @Sendable [trace] _ in trace.record("contacts_notified"); continuation.yield(()) }
-        let polling = Task { @MainActor in
+        let polling = Task { @ContactsActor in
             while !Task.isCancelled {
                 do { try await Task.sleep(for: .seconds(2)); continuation.yield(()) } catch { return }
             }

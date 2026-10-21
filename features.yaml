@@ -169,6 +169,7 @@ features:
       - {id: HELPER-TCC-READY, levels: [real]}
       - {id: HELPER-LIVE-BACKFILL, levels: [real]}
       - {id: HELPER-SESSION-SOAK, levels: [real]}
+      - {id: HELPER-SIGNED-APP-CACHE, levels: [real]}
   - id: messages.read
     title: Messages history, live capture, decoding, receipts, attachments
     requirements: [R-FULL, R-LIVE, R-MSG-DEPTH, R-ATTACH, R-NO-FALSE-DELETE]
@@ -299,7 +300,7 @@ features:
     milestone: M2
     modules: [native/ContactsSource]
     depends_on: [helper.session]
-    status: done
+    status: in_progress
     scenarios:
       - {id: CON-IMPORT, levels: [sim, real]}
       - {id: CON-SEARCH, levels: [sim]}
@@ -309,18 +310,22 @@ features:
       - {id: CON-PERMISSION-LOSS, levels: [sim]}
       - {id: CON-IMAGE, levels: [sim]}
       - {id: CON-HANDLE-LINK, levels: [sim]}
+    notes: External-change R-LIVE is under repair. Clean main 8b7d001a measured direct replica p95 1525.031 ms for 20 effects; the unchanged budget is 1000 ms. Stage instrumentation and direct/public certification are owned by CONTACTS-LIVE.
+
   - id: contacts.write
     title: Contacts create, update, delete
-    requirements: [R-RW, R-CON]
+    requirements: [R-RW, R-CON, R-LIVE]
     milestone: M2
     modules: [native/ContactsSource, operations]
     depends_on: [contacts.read]
-    status: done
+    status: in_progress
     scenarios:
       - {id: CON-CRUD, levels: [sim, real, replica]}
       - {id: CON-READONLY-CONTAINER, levels: [sim]}
       - {id: CON-CONFLICT, levels: [sim]}
       - {id: CON-RESOLVE-RESTART, levels: [sim]}
+
+    notes: CRUD correctness has real coverage. Native-save-to-replica latency and public forwarding still need the CONTACTS-LIVE 1000 ms p95 proof; functional success alone does not certify R-LIVE.
 
   - id: notes.read
     title: Notes folders and notes, protobuf decoding, locked notes
@@ -482,7 +487,15 @@ features:
       - {id: WEB-RELAY-REPLICA, levels: [replica]}
       - {id: WEB-RELAY-REPLICA-BLOBS, levels: [replica]}
       - {id: WEB-RELAY-NATIVE-AGENTS, levels: [replica]}
-    notes: Native public relay functional proof is complete. R-LIVE certification remains blocked on LIVE-FIX native Reminders capture and feed pipelining; measured latency is retained for a follow-up rerun.
+    notes: >-
+      Native public relay functional proof is complete. The Reminders R-LIVE dependency
+      is certified by merged PR75 (bcb5708b): 200 effects at 5/s, direct replica p95
+      463.385 ms and public Ubuntu p95 720.340 ms plus 28.045 ms clock uncertainty.
+      The unchanged public scenario passed 59 assertions, including post-burst commands
+      and blob staging. Feed pipelining PR76 and native staging PR90 are merged.
+      Wider R-LIVE certification remains in progress: Contacts external-change p95
+      fails on clean main (1525.031 ms) and the candidate (1755.575 ms), 20 samples
+      each. Calendar baseline failures remain with CAL-FIX; no thresholds were changed.
   - id: web.messages.read
     title: Messages web app reading at full fidelity (list, transcript, media, viewer, links, effects, details, search)
     requirements: [R-WEB-UI, R-WEB-FAST, R-MSG-DEPTH]
@@ -546,10 +559,13 @@ features:
       - {id: MSG-READSTATE-REAL, levels: [real]}
       - {id: MSG-DELETE-REAL, levels: [real]}
       - {id: MSG-RESEND, levels: [sim, real]}
+      - {id: WEB-MSG-COMPOSER, levels: [web]}
       - {id: WEB-MSG-SEND, levels: [web, real]}
       - {id: WEB-MSG-ATTACH-SEND, levels: [web, real]}
       - {id: WEB-UPLOAD-REPLICA, levels: [sim]}
       - {id: WEB-UPLOAD-REPLICA-RESUME, levels: [sim]}
+      - {id: WEB-UPLOAD-REPLICA-STATUS, levels: [sim]}
+      - {id: WEB-UPLOAD-REPLICA-STATUS-LOAD, levels: [sim]}
       - {id: WEB-UPLOAD-REPLICA-LOST-RESPONSE, levels: [sim]}
       - {id: WEB-UPLOAD-REPLICA-FORWARD-RESUME, levels: [sim]}
       - {id: WEB-UPLOAD-RESUME, levels: [sim]}

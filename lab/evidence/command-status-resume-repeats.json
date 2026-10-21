@@ -1,0 +1,228 @@
+{
+  "scenario": "WEB-UPLOAD-REPLICA-RESUME",
+  "level": "sim",
+  "repetitions": 10,
+  "scenario_failures": 0,
+  "response_delivery_failures": 0,
+  "effect_violations": 0,
+  "read_your_write_failures": 0,
+  "source_frozen": true,
+  "lane": "normal shared",
+  "diagnosis": "The command watcher registered at a gateway cursor ahead of the replica local head; register from local head before submit and recover failed observation by original-ID local lookup.",
+  "runs": [
+    {
+      "index": 1,
+      "run_id": "upload-replica_01M5FFENJ828P932K22MSQ43T6",
+      "git_sha": "643da069576393489a0abd60f5f1d29806e54c3d",
+      "passed": true,
+      "response_state": "observed",
+      "response_error_type": "<nil>",
+      "effect_exactly_one": true,
+      "read_your_write": true,
+      "host_conditions": {
+        "quiet": false,
+        "summary": "air: load=[13.43 10.73 9.64] cpus=8 other_heavy=1"
+      },
+      "host_memory": {
+        "swap_used_mib": null,
+        "capture": "not sampled before memory-gate instruction; load recorded in host_conditions"
+      },
+      "gate": "worktree normal gate, already completed/running at infrastructure change"
+    },
+    {
+      "index": 2,
+      "run_id": "upload-replica_01M5FFR3398T59NFQ3K9Z3SVT0",
+      "git_sha": "643da069576393489a0abd60f5f1d29806e54c3d",
+      "passed": true,
+      "response_state": "observed",
+      "response_error_type": "<nil>",
+      "effect_exactly_one": true,
+      "read_your_write": true,
+      "host_conditions": {
+        "quiet": false,
+        "summary": "air: load=[47.5 33.12 19.63] cpus=8 other_heavy=1"
+      },
+      "host_memory": {
+        "swap_used_mib": null,
+        "capture": "not sampled before memory-gate instruction; load recorded in host_conditions"
+      },
+      "gate": "worktree normal gate, already completed/running at infrastructure change"
+    },
+    {
+      "index": 3,
+      "run_id": "upload-replica_01M5FFWWCVWMTPPMHSV7GT4KXZ",
+      "git_sha": "643da069576393489a0abd60f5f1d29806e54c3d",
+      "passed": true,
+      "response_state": "observed",
+      "response_error_type": "<nil>",
+      "effect_exactly_one": true,
+      "read_your_write": true,
+      "host_conditions": {
+        "quiet": false,
+        "summary": "air: load=[18.03 27.39 19.61] cpus=8 other_heavy=1"
+      },
+      "host_memory": {
+        "at": "2026-10-21T15:05:20.778833+00:00",
+        "load": "{ 16.42 26.08 19.40 }",
+        "swap_used_mib": 5900.25,
+        "swap_total_mib": 7168.0,
+        "capture": "infrastructure-change notification; repeat already running"
+      },
+      "gate": "worktree normal gate, already completed/running at infrastructure change"
+    },
+    {
+      "index": 4,
+      "run_id": "upload-replica_01M5FG3P165E6Q2Q4G87CW7FM7",
+      "git_sha": "643da069576393489a0abd60f5f1d29806e54c3d",
+      "passed": true,
+      "response_state": "observed",
+      "response_error_type": "<nil>",
+      "effect_exactly_one": true,
+      "read_your_write": true,
+      "host_conditions": {
+        "quiet": false,
+        "summary": "air: load=[14.99 20.72 18.43] cpus=8 other_heavy=1"
+      },
+      "host_memory": {
+        "at": "2026-10-21T15:08:35.120305+00:00",
+        "load": "{ 16.12 21.03 18.53 }",
+        "swap_used_mib": 5755.31,
+        "swap_total_mib": 7168.0,
+        "capture": "after shared heavy gate, before scenario"
+      },
+      "gate": "shared checkout memory-aware normal gate"
+    },
+    {
+      "index": 5,
+      "run_id": "upload-replica_01M5FG8BNYXVCDX44XCR7S8WV6",
+      "git_sha": "643da069576393489a0abd60f5f1d29806e54c3d",
+      "passed": true,
+      "response_state": "observed",
+      "response_error_type": "<nil>",
+      "effect_exactly_one": true,
+      "read_your_write": true,
+      "host_conditions": {
+        "quiet": false,
+        "summary": "air: load=[7.26 15.56 16.72] cpus=8 other_heavy=1"
+      },
+      "host_memory": {
+        "at": "2026-10-21T15:11:09.054981+00:00",
+        "load": "{ 7.46 15.74 16.79 }",
+        "swap_used_mib": 6031.5,
+        "swap_total_mib": 7168.0,
+        "capture": "after shared heavy gate, before scenario"
+      },
+      "gate": "shared checkout memory-aware normal gate"
+    },
+    {
+      "index": 6,
+      "run_id": "upload-replica_01M5FGH1S3X6MSQXEMKNCP8FK7",
+      "git_sha": "643da069576393489a0abd60f5f1d29806e54c3d",
+      "passed": true,
+      "response_state": "observed",
+      "response_error_type": "<nil>",
+      "effect_exactly_one": true,
+      "read_your_write": true,
+      "host_conditions": {
+        "quiet": false,
+        "summary": "air: load=[15.12 14.65 15.83] cpus=8 other_heavy=1"
+      },
+      "host_memory": {
+        "at": "2026-10-21T15:15:52.553586+00:00",
+        "load": "{ 15.12 14.65 15.83 }",
+        "swap_used_mib": 6026.19,
+        "swap_total_mib": 7168.0,
+        "capture": "after shared heavy gate, before scenario"
+      },
+      "gate": "shared checkout memory-aware normal gate"
+    },
+    {
+      "index": 7,
+      "run_id": "upload-replica_01M5FGZ7ACHS455Z8A74FVZNS5",
+      "git_sha": "643da069576393489a0abd60f5f1d29806e54c3d",
+      "passed": true,
+      "response_state": "observed",
+      "response_error_type": "<nil>",
+      "effect_exactly_one": true,
+      "read_your_write": true,
+      "host_conditions": {
+        "quiet": false,
+        "summary": "air: load=[45.89 49.91 34.29] cpus=8 other_heavy=1"
+      },
+      "host_memory": {
+        "at": "2026-10-21T15:23:37.850132+00:00",
+        "load": "{ 45.89 49.91 34.29 }",
+        "swap_used_mib": 6785.5,
+        "swap_total_mib": 8192.0,
+        "capture": "after shared heavy gate, before scenario"
+      },
+      "gate": "shared checkout memory-aware normal gate"
+    },
+    {
+      "index": 8,
+      "run_id": "upload-replica_01M5FHGXV13XJESGWFP8JXJ63W",
+      "git_sha": "643da069576393489a0abd60f5f1d29806e54c3d",
+      "passed": true,
+      "response_state": "observed",
+      "response_error_type": "<nil>",
+      "effect_exactly_one": true,
+      "read_your_write": true,
+      "host_conditions": {
+        "quiet": false,
+        "summary": "air: load=[10.63 26.67 30.6] cpus=8 other_heavy=0"
+      },
+      "host_memory": {
+        "at": "2026-10-21T15:33:17.138636+00:00",
+        "load": "{ 10.63 26.67 30.60 }",
+        "swap_used_mib": 6454.38,
+        "swap_total_mib": 7168.0,
+        "capture": "after shared heavy gate, before scenario"
+      },
+      "gate": "shared checkout memory-aware normal gate"
+    },
+    {
+      "index": 9,
+      "run_id": "upload-replica_01M5FHVTEQ1V246M3M9930VPQD",
+      "git_sha": "643da069576393489a0abd60f5f1d29806e54c3d",
+      "passed": true,
+      "response_state": "observed",
+      "response_error_type": "<nil>",
+      "effect_exactly_one": true,
+      "read_your_write": true,
+      "host_conditions": {
+        "quiet": false,
+        "summary": "air: load=[12.12 23.95 28.66] cpus=8 other_heavy=0"
+      },
+      "host_memory": {
+        "at": "2026-10-21T15:39:14.484620+00:00",
+        "load": "{ 12.66 24.26 28.79 }",
+        "swap_used_mib": 6118.81,
+        "swap_total_mib": 7168.0,
+        "capture": "after shared heavy gate, before scenario"
+      },
+      "gate": "shared checkout memory-aware normal gate"
+    },
+    {
+      "index": 10,
+      "run_id": "upload-replica_01M5FJ6QBKF16DHG3V348PPNM1",
+      "git_sha": "643da069576393489a0abd60f5f1d29806e54c3d",
+      "passed": true,
+      "response_state": "observed",
+      "response_error_type": "<nil>",
+      "effect_exactly_one": true,
+      "read_your_write": true,
+      "host_conditions": {
+        "quiet": true,
+        "summary": "air: load=[4.78 11.18 20.87] cpus=8 other_heavy=0"
+      },
+      "host_memory": {
+        "at": "2026-10-21T15:45:12.766464+00:00",
+        "load": "{ 4.78 11.18 20.87 }",
+        "swap_used_mib": 6324.31,
+        "swap_total_mib": 7168.0,
+        "capture": "after shared heavy gate, before scenario"
+      },
+      "gate": "shared checkout memory-aware normal gate"
+    }
+  ]
+}

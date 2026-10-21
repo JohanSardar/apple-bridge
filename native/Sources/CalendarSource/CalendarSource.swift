@@ -1,10 +1,9 @@
 import Foundation
-import CryptoKit
 @preconcurrency import EventKit
 import AgendaGate
 import SourceSupport
 
-@MainActor
+@AgendaActor
 public final class CalendarSource: Source {
     public nonisolated let name = "calendar"
     public static let operations = ["calendar.create_event", "calendar.update_event", "calendar.delete_event", "calendar.create_calendar"]
@@ -16,6 +15,8 @@ public final class CalendarSource: Source {
     private let offeredURL: URL
     private var offered: [String: JSON] = [:]
     private var lookups: [String: JSON] = [:]
+    private var savedLookups: [String: JSON] = [:]
+    private var savedBaseline: [String: JSON] = [:]
     private var committed: [String: JSON] = [:]
     private var scanning = false
     private var forceFull = true
@@ -37,7 +38,7 @@ public final class CalendarSource: Source {
     private func persistAccepted(_ values: [String: JSON]) {
         let previous = persistence
         let baselineURL = self.baselineURL
-        persistence = Task { @MainActor [weak self] in
+        persistence = Task { @AgendaActor [weak self] in
             await previous?.value
             do {
                 try await Task.detached {
@@ -52,7 +53,7 @@ public final class CalendarSource: Source {
         }
     }
 
-    public init(gate: AgendaGate, home: URL, commandsEnabled: Bool) throws {
+    public nonisolated init(gate: AgendaGate, home: URL, commandsEnabled: Bool) throws {
         self.gate = gate; self.commandsEnabled = commandsEnabled
         baselineURL = home.appendingPathComponent("calendar-baseline.json")
         lookupURL = home.appendingPathComponent("calendar-lookups.json")
@@ -62,6 +63,8 @@ public final class CalendarSource: Source {
         if FileManager.default.fileExists(atPath: baselineURL.path) {
             committed = try JSONDecoder().decode([String: JSON].self, from: Data(contentsOf: baselineURL))
         }
+        savedLookups = lookups
+        savedBaseline = Self.baselineData(committed)
     }
 
     public func open() async -> SourceReadiness {
@@ -129,11 +132,8 @@ public final class CalendarSource: Source {
         return events
     }
 
-    private func save(_ values: [String: JSON]) throws {
-        try JSONEncoder().encode(lookups).write(to: lookupURL, options: .atomic)
-        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: lookupURL.path)
-        try JSONEncoder().encode(values).write(to: baselineURL, options: .atomic)
-        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: baselineURL.path)
+    private nonisolated static func baselineData(_ values: [String: JSON]) -> [String: JSON] {
+        values.mapValues { value in .object(value.object.filter { $0.key != "observed_at" }) }
     }
 
     private func saveOffered(_ values: [String: JSON]) throws {
@@ -156,12 +156,25 @@ public final class CalendarSource: Source {
         try saveOffered(pending)
     }
 
-    private func hash(_ value: JSON) throws -> Data {
-        let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
-        return Data(SHA256.hash(data: try encoder.encode(value)))
+    private func save(_ values: [String: JSON]) throws {
+        let started = CaptureTrace.now()
+        if lookups != savedLookups {
+            try JSONEncoder().encode(lookups).write(to: lookupURL, options: .atomic)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: lookupURL.path)
+            savedLookups = lookups
+            gate.trace.record("calendar_lookups_saved")
+        }
+        let baseline = Self.baselineData(values)
+        guard baseline != savedBaseline else { return }
+        try JSONEncoder().encode(values).write(to: baselineURL, options: .atomic)
+        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: baselineURL.path)
+        savedBaseline = baseline
+        gate.trace.record("calendar_baseline_saved", fields: ["started_ns": .integer(started), "finished_ns": .integer(CaptureTrace.now())])
     }
 
     private func scan(into sink: any ObservationSink, live: Bool, command: UInt64 = 0) async throws {
+        let activity = ForegroundActivity.shared.begin()
+        defer { ForegroundActivity.shared.end(activity) }
         while scanning { try await Task.sleep(for: .milliseconds(10)) }
         if command > 0 && acceptedCommandRevision >= command { return }
         let scope = forceFull ? nil : pendingScope
@@ -202,11 +215,15 @@ public final class CalendarSource: Source {
         }
         let chunks = scope.map { range in range.calendars.isEmpty ? [] : bounds.intersection(with: range.interval).map { [$0] } ?? [] } ?? CalendarTime.chunks(now)
         for (index, chunk) in chunks.enumerated() {
+            await gate.waitForReminderRefetch()
             let refetchStarted = CaptureTrace.now()
             let notificationAt = gate.calendarNotificationAt, debounceAt = gate.calendarDebounceAt
             let fetched = try events(chunk, calendars: scope?.calendars)
             fetchNS += CaptureTrace.now() - refetchStarted
             for event in fetched {
+                await Task.yield()
+                await gate.waitForReminderRefetch()
+                try Task.checkCancellation()
                 let materializeStarted = CaptureTrace.now()
                 let native = key(event)
                 remember(event)
@@ -218,14 +235,15 @@ public final class CalendarSource: Source {
                 current[identity] = value
                 materializeNS += CaptureTrace.now() - materializeStarted
                 let hashStarted = CaptureTrace.now()
-                let changed = try hash(value["data"]) != hash(committed[identity]?["data"] ?? .null)
+                let changed = value["data"] != (committed[identity]?["data"] ?? .null)
                 hashNS += CaptureTrace.now() - hashStarted
                 if forceFull || changed || value["scoped_alias"] != committed[identity]?["scoped_alias"] { pending.append(value) }
             }
-            gate.trace.record("refetch", keys: pending.map { $0["native_key"].string }, fields: ["notification_ns": .integer(notificationAt), "debounce_ns": .integer(debounceAt), "started_ns": .integer(refetchStarted), "finished_ns": .integer(CaptureTrace.now()), "live": .bool(live || index == 0)])
+            gate.trace.record("refetch", keys: pending.map { $0["native_key"].string }, fields: ["source": .string(name), "notification_ns": .integer(notificationAt), "debounce_ns": .integer(debounceAt), "started_ns": .integer(refetchStarted), "finished_ns": .integer(CaptureTrace.now()), "live": .bool(live || index == 0)])
             gate.trace.record("calendar_chunk", fields: ["index": .number(Double(index)), "records": .number(Double(current.count)), "changes": .number(Double(pending.count))])
             guard gate.authorized(.event) else { throw SourceFailure.permissionMissing }
             if streamInitial && !pending.isEmpty {
+                await gate.waitForReminderRefetch()
                 try offer(pending)
                 try await sink.emit(source: name, generation: "eventkit-calendar-v1", observations: pending, scanID: "", scanStartedAt: started, scope: [], completionEvidence: "", blobHandles: [:], live: live || index == 0)
                 committed.merge(current) { _, new in new }
@@ -301,14 +319,14 @@ public final class CalendarSource: Source {
         forceFull = true
         let changes = gate.changes(calendar: true)
         let databaseHints = CalendarDatabaseHints()
-        let hints = Task { @MainActor [gate] in
+        let hints = Task { @AgendaActor [gate] in
             for await delivered in databaseHints.changes {
                 gate.calendarHint(delivered)
             }
         }
         defer { hints.cancel(); databaseHints.close() }
         try await scan(into: sink, live: false)
-        let periodic = Task { @MainActor in
+        let periodic = Task { @AgendaActor in
             var day = Calendar.current.startOfDay(for: Date())
             var last = Date()
             while !Task.isCancelled {
