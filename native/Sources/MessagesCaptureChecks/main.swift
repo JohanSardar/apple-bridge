@@ -29,6 +29,7 @@ actor CaptureSink: ObservationSink {
     }
     func emit(source: String, generation: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) async throws {
         generations.insert(generation)
+        if observations.contains(where: { $0["kind"].string == "absent" && ["retained-message", "retained-chat"].contains($0["native_key"].string) }) { failed = true }
         for item in observations where item["kind"].string == "upsert" { records[item["native_key"].string] = item["data"] }
         if completionEvidence == "complete" { complete = true }
         if live, let hookPath {
@@ -43,6 +44,7 @@ actor CaptureSink: ObservationSink {
             }
         }
     }
+    func recoverable(_ key: String) -> Bool { !failed && records[key]?["deleted_at"] != nil && records[key]?["deleted_at"] != .null }
     func contains(_ key: String) -> Bool { records[key] != nil && !failed }
     func completed() -> Bool { complete && !failed }
     func referencesFresh() -> Bool { records["synthetic-000000"]?["text"].string == "newer" && records["synthetic-000001"]?["text"].string == "newest" && !failed }
@@ -69,7 +71,7 @@ struct MessagesCaptureChecks {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("messages-capture-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         defer {
-            for name in ["events/chat.db", "poll/chat.db", "replace.db", "references.db"] {
+            for name in ["events/chat.db", "poll/chat.db", "replace.db", "references.db", "visibility.db"] {
                 let path = root.appendingPathComponent(name).path
                 let digest = SHA256.hash(data: Data(path.utf8)).map { String(format: "%02x", $0) }.joined()
                 let baseline = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/AppleBridge/messages/" + digest + ".sqlite").path
@@ -149,6 +151,27 @@ struct MessagesCaptureChecks {
         try require(await wait(5) { await referenceSink.referencesFresh() }, "every insert drain processes references until quiescent")
         referenceTask.cancel()
         _ = try? await referenceTask.value
+        let visibilityPath = root.appendingPathComponent("visibility.db").path
+        let visibilityDatabase = try SyntheticDatabase(visibilityPath)
+        try visibilityDatabase.execute("CREATE TABLE message(guid TEXT,text TEXT); CREATE TABLE chat(guid TEXT); CREATE TABLE chat_message_join(chat_id INTEGER,message_id INTEGER); CREATE TABLE chat_recoverable_message_join(chat_id INTEGER,message_id INTEGER,delete_date REAL); INSERT INTO message VALUES('retained-message','[ab-test synthetic] retained'); INSERT INTO chat VALUES('retained-chat'); INSERT INTO chat_message_join VALUES(1,1);")
+        let visibility = Messages(path: visibilityPath)
+        let visibilitySink = CaptureSink()
+        let visibilityTask = Task { try await visibility.capture(.null, into: visibilitySink) }
+        try require(await wait { await visibilitySink.completed() }, "visibility initial capture")
+        try visibilityDatabase.execute("INSERT INTO chat_recoverable_message_join VALUES(1,1,800000000000000000);")
+        try require(await wait(4) {
+            let message = await visibilitySink.recoverable("retained-message")
+            let chat = await visibilitySink.recoverable("retained-chat")
+            return message && chat
+        }, "recoverable delete retains message and chat")
+        try visibilityDatabase.execute("DELETE FROM chat_recoverable_message_join;")
+        try require(await wait(4) {
+            let present = await visibilitySink.contains("retained-message")
+            let deleted = await visibilitySink.recoverable("retained-message")
+            return present && !deleted
+        }, "restoring membership clears deleted state")
+        visibilityTask.cancel()
+        _ = try? await visibilityTask.value
         print("all Messages capture checks passed")
     }
 }

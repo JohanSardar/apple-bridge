@@ -513,6 +513,7 @@ features:
     scenarios:
       - {id: MSG-INTERACTIVE-GATE, levels: [sim, real]}
       - {id: MSG-SELFTEST, levels: [real]}
+      - {id: MSG-DELETE-VISIBILITY, levels: [sim, real]}
       - {id: MSG-READSTATE-REAL, levels: [real]}
       - {id: MSG-DELETE-REAL, levels: [real]}
       - {id: MSG-RESEND, levels: [sim, real]}

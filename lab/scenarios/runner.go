@@ -397,6 +397,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.Feature == "web.readmodels" {
 		return runReadModels(ctx, s, level)
 	}
+	if s.ID == "MSG-DELETE-VISIBILITY" {
+		return runNativeDeleteVisibility(ctx, s, level)
+	}
 	if s.ID == "MSG-SELFTEST" || s.ID == "MSG-RESEND" {
 		return runMessagesCommands(ctx, s, level)
 	}

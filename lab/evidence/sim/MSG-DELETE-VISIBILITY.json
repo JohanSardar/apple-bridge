@@ -1,0 +1,26 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[11.29 10.23 9.98] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5EJN3SR24MTYDV60DV8NKXZ",
+  "scenario": "MSG-DELETE-VISIBILITY",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "fa4868a214cce48a022414250a2070075d264783",
+  "at": "2026-10-21T06:33:52.696582Z",
+  "assertions": [
+    {
+      "name": "native_capture_visibility_and_restore",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
