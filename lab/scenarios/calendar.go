@@ -21,7 +21,13 @@ import (
 )
 
 func runCalendarScenario(ctx context.Context, s Scenario, level string) Evidence {
+	scenarioID := s.ID
+	switch s.ID {
+	case "CAL-SPLIT-ATOMIC-ALLDAY":
+		s.ID = "CAL-ALLDAY-FUTURE"
+	}
 	e := runCalendarProtocol(ctx, s, level, "rest")
+	e.Scenario = scenarioID
 	if s.ID == "CAL-CRUD" && e.Passed {
 		m := runCalendarProtocol(ctx, s, level, "mcp")
 		for _, a := range m.Assertions {
@@ -30,6 +36,9 @@ func runCalendarScenario(ctx context.Context, s Scenario, level string) Evidence
 		}
 		for k, v := range m.Latency {
 			e.Latency["mcp_"+k] = v
+		}
+		for k, v := range m.Conditions {
+			e.Conditions["mcp_"+k] = v
 		}
 		e.Passed = e.Passed && m.Passed
 	}
@@ -395,15 +404,31 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 			return true
 		}) == nil
 	}
+	commandVisibility = func(operation string, args map[string]any) {
+		if level == "sim" || s.ID != "CAL-CRUD" || (operation != "calendar.create_event" && operation != "calendar.update_event") {
+			return
+		}
+		name, _ := args["title"].(string)
+		ns := calendarCommandEffect(w, last, operation)
+		add("command_native_effect_clock", ns > 0 && name != "")
+		if ns <= 0 || name == "" {
+			return
+		}
+		nativeEffects[name] = ns
+		add("command_capture_visible", latency(name, time.Time{}))
+	}
 	start, end := "2026-11-01T05:30:00Z", "2026-11-01T07:30:00Z"
 	allDay := s.ID == "CAL-ALLDAY" || s.ID == "CAL-ALLDAY-FUTURE"
 	if allDay {
 		start, end = "2026-11-01", "2026-11-03"
 	}
 	event := map[string]any{"title": title, "start": start, "end": end, "all_day": allDay, "time_zone": "America/New_York"}
-	recurring := s.ID == "CAL-RECUR-THIS" || s.ID == "CAL-RECUR-FUTURE" || s.ID == "CAL-MOVED-OCCURRENCE" || s.ID == "CAL-MOVED-OUTSIDE-WINDOW" || s.ID == "CAL-ALLDAY-FUTURE" || s.ID == "CAL-EXCEPTION-INITIAL-CAPTURE"
+	recurring := s.ID == "CAL-RECUR-THIS" || s.ID == "CAL-RECUR-FUTURE" || s.ID == "CAL-MOVED-OCCURRENCE" || s.ID == "CAL-MOVED-OUTSIDE-WINDOW" || s.ID == "CAL-ALLDAY-FUTURE" || s.ID == "CAL-EXCEPTION-INITIAL-CAPTURE" || s.ID == "CAL-SPLIT-FRAME-CAP"
 	if recurring {
 		event["recurrence"] = []any{map[string]any{"frequency": "daily", "interval": 1, "count": 3}}
+		if s.ID == "CAL-SPLIT-FRAME-CAP" {
+			event["recurrence"] = []any{map[string]any{"frequency": "daily", "interval": 1, "count": 400}}
+		}
 	}
 	if s.ID == "CAL-CRUD" {
 		event["notes"] = tag + " notes"
@@ -426,6 +451,9 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 	if recurring {
 		count = 3
 	}
+	if s.ID == "CAL-SPLIT-FRAME-CAP" {
+		count = 400
+	}
 	if !awaitCount(count) {
 		return fail("initial_occurrences_visible", nil)
 	}
@@ -437,7 +465,11 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 	var agenda contracts.ReadResult
 	agendaClient := scripted.Client{Endpoint: w.Gateway, Protocol: protocol}
 	agendaErr := agendaClient.Call(ctx, "calendar.agenda", contracts.AgendaQuery{Start: "2026-11-01T00:00:00Z", End: "2026-11-04T12:00:00Z", CalendarID: calendar().ID}, &agenda)
-	add("agenda_returns_occurrences", agendaErr == nil && len(agenda.Records) == count)
+	agendaCount := count
+	if s.ID == "CAL-SPLIT-FRAME-CAP" {
+		agendaCount = 4
+	}
+	add("agenda_returns_occurrences", agendaErr == nil && len(agenda.Records) == agendaCount)
 
 	switch s.ID {
 	case "CAL-EXCEPTION-INITIAL-CAPTURE":
@@ -667,7 +699,21 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		}
 		add("original_occurrence_identity_preserved", kept)
 		add("other_occurrences_unchanged", unchanged == 2)
+	case "CAL-SPLIT-FRAME-CAP":
+		target := baseline[1]
+		finishSplit := watchCalendarSplit(ctx, w, tag)
+		err = submit("calendar.update_event", map[string]any{"id": target.ID, "span": "future", "title": tag + " oversized future", "recurrence": []any{map[string]any{"frequency": "daily", "interval": 1, "count": 400}}}, target.Version)
+		add("oversized_split_fails_loudly", err != nil && last.Disposition == "indeterminate" && strings.Contains(string(last.Evidence), "calendar_atomic_capture_too_large"))
+		add("oversized_split_never_claimed_observed", last.CommitSeq == 0 && len(last.ObservedRecordIDs) == 0)
+		atomic := finishSplit()
+		add("oversized_split_never_half_applied", reflect.DeepEqual(records(w.Gateway), baseline) && atomic)
 	case "CAL-ALLDAY-FUTURE":
+		finishSplit := watchCalendarSplit(ctx, w, tag)
+		defer func() {
+			if finishSplit != nil {
+				finishSplit()
+			}
+		}()
 		target := baseline[1]
 		if err = submit("calendar.update_event", map[string]any{"id": target.ID, "span": "future", "start": "2026-11-04", "end": "2026-11-06"}, target.Version); err != nil {
 			return fail("all_day_future_update", err)
@@ -676,6 +722,17 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 			after := records(w.Gateway)
 			return len(after) == 3 && raw(after[0])["start"] == "2026-11-01" && raw(after[1])["start"] == "2026-11-04" && raw(after[2])["start"] == "2026-11-05" && raw(after[2])["end"] == "2026-11-07"
 		}) == nil)
+		after := records(w.Gateway)
+		identities := len(after) == 3
+		if identities {
+			identities = after[0].ID == baseline[0].ID && raw(after[1])["series_id"] != raw(baseline[1])["series_id"] && after[1].ID != baseline[1].ID && after[2].ID != baseline[2].ID
+			for _, record := range after[1:] {
+				identities = identities && raw(record)["occurrence_date"] == raw(record)["start"]
+			}
+		}
+		add("future_split_replaces_occurrence_identities", identities)
+		add("future_split_atomic_on_gateway_and_replica", finishSplit())
+		finishSplit = nil
 	case "CAL-RECUR-FUTURE":
 		exception := baseline[2]
 		if err = submit("calendar.update_event", map[string]any{"id": exception.ID, "span": "this", "title": tag + " preserved exception"}, exception.Version); err != nil {
@@ -691,6 +748,12 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		}) != nil {
 			return fail("exception_visible", nil)
 		}
+		finishSplit := watchCalendarSplit(ctx, w, tag)
+		defer func() {
+			if finishSplit != nil {
+				finishSplit()
+			}
+		}()
 		target := records(w.Gateway)[1]
 		if err = submit("calendar.update_event", map[string]any{"id": target.ID, "span": "future", "title": tag + " future", "recurrence": []any{map[string]any{"frequency": "daily", "interval": 2, "count": 2}}}, target.Version); err != nil {
 			return fail("future_update", err)
@@ -710,6 +773,8 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 			series[fmt.Sprint(raw(r)["series_id"])] = true
 		}
 		add("future_span_splits_series", len(series) == 2)
+		add("future_split_atomic_on_gateway_and_replica", finishSplit())
+		finishSplit = nil
 		if len(after) >= 2 {
 			target = after[1]
 			if err = submit("calendar.delete_event", map[string]any{"id": target.ID, "span": "future"}, target.Version); err != nil {
