@@ -451,6 +451,9 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 				f.Disposition = "indeterminate"
 			} else {
 				r.CommitSeq = sequence.Sequence
+				if id, err := g.State.ObservedRecordID(ctx, collection, evidence.NativeKey, sequence); err == nil {
+					r.ObservedRecordIDs = []string{id}
+				}
 			}
 		}
 	}
