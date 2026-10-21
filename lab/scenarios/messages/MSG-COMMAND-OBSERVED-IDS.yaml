@@ -1,0 +1,7 @@
+id: MSG-COMMAND-OBSERVED-IDS
+feature: web.messages.write
+levels: [sim]
+given: [{world: {replicas: 1}}]
+when: [{messages_commands: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

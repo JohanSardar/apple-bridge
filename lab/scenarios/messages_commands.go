@@ -123,6 +123,8 @@ func runMessagesCommands(ctx context.Context, s Scenario, level string) Evidence
 	}
 
 	switch s.ID {
+	case "MSG-COMMAND-OBSERVED-IDS":
+		checkMessageCommandIDs(ctx, w, &e, chat, add)
 	case "MSG-RESEND":
 		fault("delivery-failed")
 		original := command("send", map[string]any{"chat_id": chat.ID, "text": text}, 0)
