@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -68,6 +69,7 @@ func runRemindersStoreReal(ctx context.Context, s Scenario, level string) (resul
 	w, err := world.NewRealWithSetup(ctx, level, 0, setup)
 	add("tagged_eventkit_fixture_and_private_signed_apps", err == nil)
 	if err != nil {
+		e.Assertions[len(e.Assertions)-1].Detail = strings.ReplaceAll(err.Error(), os.Getenv("HOME"), "$AIR_HOME")
 		return e
 	}
 	defer func() {
@@ -106,7 +108,24 @@ func runRemindersStoreReal(ctx context.Context, s Scenario, level string) (resul
 	add("eventkit_calendar_item_identifier_equals_store_uuid", proof.UUIDEqual)
 	add("external_identifier_is_not_identity_fallback", !proof.ExternalEqual)
 	add("list_uuid_bytes_link_to_eventkit", proof.ListEqual)
-	add("native_flag_and_subtask_absence_exact", proof.ReminderFields["flagged"] == false && proof.ReminderFields["parent_id"] == nil)
+	add("native_subtask_absence_exact", proof.ReminderFields["parent_id"] == nil)
+	os.Remove(report)
+	output, err = exec.CommandContext(probeCtx, "open", "-n", "-W", "-g", "-a", w.HelperApp, "--args", "reminders-store-flag-proof", "--tag", tag, "--item-id", itemID, "--list-id", listID, "--report", report).CombinedOutput()
+	bytes, readErr := os.ReadFile(report)
+	var flags struct {
+		Status         string `json:"status"`
+		PermissionCode int    `json:"permission_code"`
+		Reason         string `json:"reason"`
+		Present        bool   `json:"store_flag_true"`
+		Cleared        bool   `json:"store_flag_cleared"`
+	}
+	flagDecoded := err == nil && readErr == nil && json.Unmarshal(bytes, &flags) == nil
+	add("tagged_flag_proof_report_decoded", flagDecoded)
+	if flagDecoded && flags.Status == "limited" {
+		e.Assertions = append(e.Assertions, Assertion{Name: "native_flag_true_then_cleared_exact", Status: "limited", Detail: fmt.Sprintf("%s (OSStatus %d)", flags.Reason, flags.PermissionCode)})
+	} else {
+		add("native_flag_true_then_cleared_exact", flagDecoded && flags.Present && flags.Cleared)
+	}
 	e.Metrics = map[string]any{"identity_da_equal": proof.DAEqual, "identity_uuid_equal": proof.UUIDEqual, "identity_external_equal": proof.ExternalEqual, "store_read_single_ms": proof.ReadMS}
 	e.Assertions = append(e.Assertions, Assertion{Name: "appletruth_store_counts", Status: "limited", Detail: "AppleTruth lacks Full Disk Access to the Reminders Core Data store"})
 	e.Passed = true
