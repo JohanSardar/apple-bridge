@@ -1,7 +1,7 @@
-import { test, expect } from '@playwright/test';
-import { bootstrap, control } from './session';
-test('WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages',async({page,context,request})=>{
-    await bootstrap(context,request);await control(request,'/list-fixture');
+import { expect } from '@playwright/test';
+import { test } from './list-session';
+import { control } from './session';
+test('WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages',async({page,request})=>{
     let holdRoot=false;const roots=new Set<string>();
     await page.routeWebSocket('**/web/v1/live',route=>{const server=route.connectToServer();route.onMessage(message=>{const frame=JSON.parse(String(message));if(frame.t==='sub'&&frame.view==='chats'&&!frame.args?.after)roots.add(frame.id);server.send(message);});server.onMessage(message=>{const frame=JSON.parse(String(message));if(holdRoot&&frame.t==='delta'&&roots.has(frame.sub))setTimeout(()=>route.send(message),120);else route.send(message);});});
     const frames:any[]=[];page.on('websocket',socket=>socket.on('framesent',event=>{try{frames.push(JSON.parse(String(event.payload)));}catch{}}));

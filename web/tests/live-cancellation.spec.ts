@@ -1,8 +1,9 @@
-import { test, expect } from '@playwright/test';
-import { bootstrap, control } from './session';
+import { expect } from '@playwright/test';
+import { test } from './list-session';
+import { control } from './session';
 import { mkdir, writeFile } from 'node:fs/promises';
-test('WEB-MSG-CHATS-STORE canceled subscriptions leave other live views intact',async({page,context,request},info)=>{
-    await bootstrap(context,request);await control(request,'/list-fixture');await page.goto('/__fixtures/live');
+test('WEB-MSG-CHATS-STORE canceled subscriptions leave other live views intact',async({page,request},info)=>{
+    await page.goto('/__fixtures/live');
     await expect.poll(async()=>Number(await page.getByLabel('Live count',{exact:true}).textContent())).toBeGreaterThanOrEqual(540);
     const frames=await page.evaluate(()=>new Promise<any[]>((resolve,reject)=>{
         const seen:any[]=[],socket=new WebSocket(new URL('/web/v1/live',location.href).href.replace(/^http/,'ws'),'web.1');
