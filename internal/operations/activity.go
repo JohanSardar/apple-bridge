@@ -5,12 +5,11 @@ import (
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/internal/state"
 	"github.com/JohanSardar/apple-bridge/internal/trust"
-	"strings"
 	"time"
 )
 
 func (g *LocalGateway) recordAgentCommand(r contracts.CommandRecord) error {
-	if !strings.HasPrefix(r.Principal, "agent:") {
+	if !trust.IsAgentPrincipalID(r.Principal) {
 		return nil
 	}
 	id := r.Command.ID

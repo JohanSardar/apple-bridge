@@ -2,8 +2,10 @@ package operations
 
 import (
 	"context"
+	"errors"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/internal/trust"
+	"strings"
 	"time"
 )
 
@@ -56,7 +58,18 @@ func (g *LocalGateway) DecideApproval(ctx context.Context, owner trust.Principal
 	if !approve {
 		return g.transition(ctx, r, contracts.CommandRejectedByOwner, contracts.DispositionRejectedByOwner, nil, nil)
 	}
-	p, err := g.Authority.Principal(r.Principal)
+	var p trust.Principal
+	if trust.IsAgentPrincipalID(r.Principal) && strings.Contains(r.Principal, "/") {
+		if g.Reauthorize == nil {
+			return r, contracts.ErrUnavailable
+		}
+		p, err = g.Reauthorize(ctx, r.Principal, r.Command.ID, r.RequestHash)
+		if errors.Is(err, contracts.ErrUnavailable) {
+			return r, err
+		}
+	} else {
+		p, err = g.Authority.Principal(r.Principal)
+	}
 	if err != nil {
 		return g.transition(ctx, r, contracts.CommandRejected, contracts.DispositionRejectedBeforeDispatch, nil, contracts.ErrUnauthorized)
 	}

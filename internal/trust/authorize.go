@@ -1,8 +1,14 @@
 package trust
 
-import "github.com/JohanSardar/apple-bridge/internal/contracts"
+import (
+	"github.com/JohanSardar/apple-bridge/internal/contracts"
+	"strings"
+)
 
 func (a *Authority) Authorize(p Principal, grant contracts.Grant) error {
+	if p.IsAgent() && p.Level == AgentRead && strings.HasSuffix(string(grant), ":write") {
+		return contracts.ErrUnauthorized
+	}
 	return a.update(func(d *credentials) error {
 		for _, current := range d.Principals {
 			grants := current.Grants

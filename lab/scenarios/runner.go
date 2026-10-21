@@ -383,6 +383,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 		return runDemoDataset(ctx, s, level)
 	}
 	if s.Feature == "web.relay" {
+		if s.ID == "WEB-RELAY-AGENTS" {
+			return runRelayAgents(ctx, s, level)
+		}
 		if s.ID == "WEB-RELAY-CONNECT" || s.ID == "WEB-RELAY-COMMAND" {
 			return runRelayConnect(ctx, s, level)
 		}

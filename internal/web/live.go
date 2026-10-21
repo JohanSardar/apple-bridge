@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
+	"github.com/JohanSardar/apple-bridge/internal/trust"
 	"github.com/coder/websocket"
 )
 
@@ -556,7 +557,7 @@ func (l *liveSocket) approvalEvents(after contracts.Cursor) {
 			var value struct {
 				Principal string `json:"principal"`
 			}
-			if json.Unmarshal(change.Record.Data, &value) != nil || !strings.HasPrefix(value.Principal, "agent:") {
+			if json.Unmarshal(change.Record.Data, &value) != nil || !trust.IsAgentPrincipalID(value.Principal) {
 				continue
 			}
 			command, err := l.server.deps.Operations.State.Command(l.ctx, change.Record.ID)

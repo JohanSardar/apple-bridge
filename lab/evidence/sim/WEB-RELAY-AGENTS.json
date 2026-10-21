@@ -1,0 +1,166 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[8.21 9.04 10.13] cpus=8 other_heavy=1"
+  },
+  "run_id": "relay-agents_01M5ER5HZ4ZEKM8AWS3DPSARD6",
+  "scenario": "WEB-RELAY-AGENTS",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "f0002e5bb9fad47fa4caf4b7b3d383fd8623f6ff",
+  "at": "2026-10-21T08:10:14.372195Z",
+  "assertions": [
+    {
+      "name": "paired_replica_world",
+      "passed": true
+    },
+    {
+      "name": "create_replica_read",
+      "passed": true
+    },
+    {
+      "name": "replica_read_agent_denied",
+      "passed": true
+    },
+    {
+      "name": "create_replica_full",
+      "passed": true
+    },
+    {
+      "name": "delegated_agent_tampered_level_rejected",
+      "passed": true
+    },
+    {
+      "name": "delegated_agent_stale_signature_rejected",
+      "passed": true
+    },
+    {
+      "name": "delegated_agent_future_signature_rejected",
+      "passed": true
+    },
+    {
+      "name": "delegated_agent_invalid_level_rejected",
+      "passed": true
+    },
+    {
+      "name": "delegated_agent_read_level_write_scope_rejected",
+      "passed": true
+    },
+    {
+      "name": "delegated_agent_scope_escalation_rejected",
+      "passed": true
+    },
+    {
+      "name": "replica_full_agent_forwarded",
+      "passed": true
+    },
+    {
+      "name": "create_replica_approve",
+      "passed": true
+    },
+    {
+      "name": "gateway_owner_live_connection",
+      "passed": true
+    },
+    {
+      "name": "replica_approve_agent_queued_on_gateway",
+      "passed": true
+    },
+    {
+      "name": "delegated_agent_pending_approval_live_event",
+      "passed": true
+    },
+    {
+      "name": "no_effect_before_gateway_owner_consent",
+      "passed": true
+    },
+    {
+      "name": "gateway_owner_approves_replica_agent",
+      "passed": true
+    },
+    {
+      "name": "gateway_approval_executes_once",
+      "passed": true
+    },
+    {
+      "name": "create_replica_approve",
+      "passed": true
+    },
+    {
+      "name": "revocation_fixture_pending",
+      "passed": true
+    },
+    {
+      "name": "replica_agent_revoked_locally",
+      "passed": true
+    },
+    {
+      "name": "fresh_replica_revocation_rejects_pending_approval",
+      "passed": true
+    },
+    {
+      "name": "create_replica_approve",
+      "passed": true
+    },
+    {
+      "name": "offline_fixture_pending",
+      "passed": true
+    },
+    {
+      "name": "offline_replica_keeps_approval_pending_without_effect",
+      "passed": true
+    },
+    {
+      "name": "replica_reconnects_for_fresh_approval",
+      "passed": true
+    },
+    {
+      "name": "replica_feed_reconnected",
+      "passed": true
+    },
+    {
+      "name": "owner_approves_after_replica_reconnect",
+      "passed": true
+    },
+    {
+      "name": "reconnected_approval_executes_once",
+      "passed": true
+    },
+    {
+      "name": "scope_fixture_pending",
+      "passed": true
+    },
+    {
+      "name": "parent_revocation_fixture_pending",
+      "passed": true
+    },
+    {
+      "name": "parent_scope_narrowed",
+      "passed": true
+    },
+    {
+      "name": "narrowed_subscription_connected",
+      "passed": true
+    },
+    {
+      "name": "fresh_parent_scope_rejects_pending_write",
+      "passed": true
+    },
+    {
+      "name": "parent_replica_revoked",
+      "passed": true
+    },
+    {
+      "name": "revoked_parent_rejects_pending_agent_approval",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
