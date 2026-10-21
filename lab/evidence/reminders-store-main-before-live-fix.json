@@ -4003,5 +4003,6 @@
       "phase": "end"
     },
     "swap_eligible": true
-  }
+  },
+  "diagnostic_patch": "capture_sent source label for startup timing, identical label in B; shared lab-v2 collects timing evidence"
 }

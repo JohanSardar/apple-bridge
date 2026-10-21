@@ -358,5 +358,11 @@
     "swap": "vm.swapusage: total = 3072.00M  used = 1895.75M  free = 1176.25M  (encrypted)\n",
     "uptime": "11:50  up 17 days, 32 mins, 4 users, load averages: 2.83 3.17 8.48\n"
   },
-  "limitation": "Known R-LIVE main regression fails end-to-end live budgets. Direct refresh cost and histogram equality passed. Repeat paired live gates after #75."
+  "limitation": "Known R-LIVE main regression fails end-to-end live budgets. Direct refresh cost and histogram equality passed. Repeat paired live gates after #75.",
+  "instrumentation_commits": [
+    "f824d19c",
+    "3b62f9e9",
+    "4d0705ef"
+  ],
+  "recorded_git_sha_excludes_uncommitted_diagnostics": true
 }
