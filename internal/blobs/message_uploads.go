@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 func (s *Store) messageUploadPath(owner, id string) string {
@@ -23,12 +24,33 @@ func (s *Store) StageMessageUpload(ctx context.Context, owner string, input io.R
 		err = os.Link(s.path(digest), path)
 	}
 	if err != nil {
-		s.Release(ctx, pin)
+		s.Release(context.WithoutCancel(ctx), pin)
+		return "", err
+	}
+	s.uploadMu.Lock()
+	info, statErr := os.Stat(path)
+	if statErr == nil {
+		err = s.saveUpload(uploadLease{UploadStatus: contracts.UploadStatus{ID: pin, Offset: info.Size(), Size: info.Size(), State: "ready", ExpiresAt: time.Now().UTC().Add(contracts.UploadLease), Digest: digest}, Owner: owner, Pin: pin, ExpectedDigest: digest})
+	} else {
+		err = statErr
+	}
+	s.uploadMu.Unlock()
+	if err != nil {
+		os.Remove(path)
+		s.Release(context.WithoutCancel(ctx), pin)
 		return "", err
 	}
 	return pin, nil
 }
 func (s *Store) ResolveMessageUpload(ctx context.Context, owner, id string) (string, string, error) {
+	s.uploadMu.Lock()
+	defer s.uploadMu.Unlock()
+	return s.resolveMessageUpload(ctx, owner, id)
+}
+func (s *Store) resolveMessageUpload(ctx context.Context, owner, id string) (string, string, error) {
+	if err := s.checkUploadLease(owner, id); err != nil {
+		return "", "", err
+	}
 	if err := ctx.Err(); err != nil {
 		return "", "", err
 	}
@@ -50,6 +72,13 @@ func (s *Store) ResolveMessageUpload(ctx context.Context, owner, id string) (str
 	return path, fmt.Sprintf("%x", hash.Sum(nil)), err
 }
 func (s *Store) ReleaseMessageUpload(ctx context.Context, owner, id string) {
-	os.Remove(s.messageUploadPath(owner, id))
-	s.Release(ctx, id)
+	if s.releaseUploadLease(ctx, owner, id) {
+		return
+	}
+	path := s.messageUploadPath(owner, id)
+	if info, err := os.Lstat(path); err != nil || !info.Mode().IsRegular() {
+		return
+	}
+	os.Remove(path)
+	s.Release(context.WithoutCancel(ctx), id)
 }
