@@ -3,7 +3,7 @@ export const wording = {
     delivered: 'Delivered', deliveredQuietly: 'Delivered Quietly', notDelivered: 'Not Delivered', edited: 'Edited', you: 'You', unsent: (name: string) => `${name} unsent a message`, replies: (count: number) => `${count} ${count === 1 ? 'Reply' : 'Replies'}`, newMessages: (count: number) => `↓ ${count} new`,
     reactions: {love:'❤️',like:'👍',dislike:'👎',laugh:'😂',emphasize:'‼️',question:'❓'} as Record<string,string>
 };
-export function time(value: string, locale?: string) { return new Intl.DateTimeFormat(locale, {hour:'numeric',minute:'2-digit',hour12:false}).format(new Date(value)); }
+export function time(value: string, locale?: string) { return new Intl.DateTimeFormat(locale, {hour:'numeric',minute:'2-digit',hour12:false}).format(new Date(value)).replace(/^0(?=\d)/u,''); }
 export function dateLabel(value: string, now = new Date(), locale?: string) {
     const date = new Date(value), today = new Date(now.getFullYear(), now.getMonth(), now.getDate()), day = new Date(date.getFullYear(), date.getMonth(), date.getDate());
     const days = Math.round((today.getTime()-day.getTime())/86400000);
@@ -14,7 +14,7 @@ export function dateLabel(value: string, now = new Date(), locale?: string) {
 export function header(value: string, now?: Date, locale?: string) { return `${dateLabel(value,now,locale)} ${time(value,locale)}`; }
 export function name(id: string, handles: Handles) { return handles.get(id)?.display_name || 'Unknown sender'; }
 export function initials(value: string) { return value.trim().split(/\s+/u).slice(0,2).map(word=>Array.from(word)[0]??'').join('').toLocaleUpperCase(); }
-export function names(values: string[]) { return values.length <= 2 ? values.join(' & ') : `${values[0]}, ${values[1]} & ${values.length-2} others`; }
+export function names(values: string[]) { return values.length <= 2 ? values.join(' & ') : `${values[0]}, ${values[1]} & ${values.length-2} ${values.length===3?'other':'others'}`; }
 export function bytes(size: number) { return size < 1024 ? `${size} B` : size < 1048576 ? `${Math.round(size/1024)} KB` : `${(size/1048576).toFixed(1)} MB`; }
 export function duration(seconds: number) { return `${Math.floor(seconds/60)}:${String(Math.floor(seconds%60)).padStart(2,'0')}`; }
 export function groupEvent(value: unknown, actor: string, handles: Handles) {
