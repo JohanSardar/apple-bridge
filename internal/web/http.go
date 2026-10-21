@@ -31,13 +31,14 @@ type Deps struct {
 }
 
 type server struct {
-	deps       Deps
-	mu         sync.Mutex
-	rates      map[string]rate
-	ceremonies map[string]ceremony
-	failures   int
-	retryAt    time.Time
-	sockets    map[*liveSocket]bool
+	deps        Deps
+	mu          sync.Mutex
+	rates       map[string]rate
+	ceremonies  map[string]ceremony
+	failures    int
+	retryAt     time.Time
+	rateCleanup time.Time
+	sockets     map[*liveSocket]bool
 }
 type rate struct {
 	Minute  time.Time
@@ -221,7 +222,21 @@ func Handler(deps Deps) http.Handler {
 func (s *server) allow(key string, auth bool) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
 	now := s.rateTime()
+	if _, exists := s.rates[key]; !exists && (len(s.rates) >= 8192 || auth && len(s.rates) >= 4096) {
+		if now.Sub(s.rateCleanup) >= time.Minute {
+			s.rateCleanup = now
+			for id, entry := range s.rates {
+				if now.Sub(entry.Day) >= 24*time.Hour {
+					delete(s.rates, id)
+				}
+			}
+		}
+		if len(s.rates) >= 8192 || auth && len(s.rates) >= 4096 {
+			return false
+		}
+	}
 	r := s.rates[key]
 	if now.Sub(r.Minute) >= time.Minute {
 		r.Minute = now
@@ -239,13 +254,6 @@ func (s *server) allow(key string, auth bool) bool {
 	r.Days++
 	r.Seconds++
 	s.rates[key] = r
-	if len(s.rates) > 4096 {
-		for k, v := range s.rates {
-			if now.Sub(v.Day) > 24*time.Hour {
-				delete(s.rates, k)
-			}
-		}
-	}
 	if auth {
 		return r.Minutes <= 10 && r.Days <= 100 && !now.Before(s.retryAt)
 	}
