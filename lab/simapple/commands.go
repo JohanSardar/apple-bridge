@@ -43,6 +43,11 @@ func (f *fakeApple) guard(entry guardEntry) error {
 	return file.Sync()
 }
 func (f *fakeApple) commandControl(mux *http.ServeMux) {
+	mux.HandleFunc("GET /command-origins", func(w http.ResponseWriter, r *http.Request) {
+		f.mu.Lock()
+		defer f.mu.Unlock()
+		json.NewEncoder(w).Encode(f.commandOrigins)
+	})
 	mux.HandleFunc("GET /effects", func(w http.ResponseWriter, r *http.Request) {
 		f.mu.Lock()
 		defer f.mu.Unlock()
@@ -65,6 +70,21 @@ func (f *fakeApple) commandControl(mux *http.ServeMux) {
 	})
 }
 func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fence uint64, emit func(contracts.Capture, uint64) error, checkpoint func(contracts.Source) string) error {
+	if frame.T == "Prepare" || frame.T == "Dispatch" {
+		f.mu.Lock()
+		if f.commandOrigins == nil {
+			f.commandOrigins = map[string]map[string]string{}
+		}
+		if f.commandOrigins[frame.CommandID] == nil {
+			f.commandOrigins[frame.CommandID] = map[string]string{}
+		}
+		f.commandOrigins[frame.CommandID][frame.T] = frame.Origin
+		if frame.Action != nil {
+			f.commandOrigins[frame.CommandID]["action"] = frame.Action.Origin
+		}
+		f.mu.Unlock()
+	}
+
 	if f.isCalendarFrame(frame) {
 		return f.calendarCommand(wire, frame, fence, emit, checkpoint)
 	}

@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-var skipDirs = map[string]bool{".git": true, ".build": true, "bin": true, "node_modules": true, "evidence": true, "fixtures": true, "testdata": true}
+var skipDirs = map[string]bool{".git": true, ".worktrees": true, ".build": true, "bin": true, "node_modules": true, "evidence": true, "fixtures": true, "testdata": true}
 
 var importRules = map[string][]string{
 	"internal/contracts":   {"internal/"},
@@ -82,7 +82,7 @@ func lintGo(rel, path string) []finding {
 		}
 		line := fset.Position(pos).Line
 		switch {
-		case tok == token.COMMENT && strings.HasPrefix(lit, "//go:build "):
+		case tok == token.COMMENT && (strings.HasPrefix(lit, "//go:build ") || rel == "web/embed.go" && lit == "//go:embed all:dist"):
 		case tok == token.COMMENT:
 			out = append(out, finding{rel, line, "comment"})
 		case tok == token.IMPORT:
@@ -105,6 +105,9 @@ func checkImport(rel, imp string) string {
 	}
 	target := strings.TrimPrefix(imp, module)
 	dir := filepath.ToSlash(filepath.Dir(rel))
+	if target == "web" && dir != "internal/web" {
+		return "only internal/web may import webui"
+	}
 	if strings.HasPrefix(dir, "internal/contracts") && !strings.HasPrefix(target, "internal/contracts") {
 		return "contracts must not import " + target
 	}

@@ -389,7 +389,7 @@ features:
     milestone: W1
     modules: [web, webui, trust, replication]
     depends_on: [web.readmodels]
-    status: todo
+    status: in_progress
     scenarios:
       - {id: WEB-SERVE-EMBED, levels: [sim, web]}
       - {id: WEB-AUTH-ENROLL, levels: [web]}
@@ -400,6 +400,11 @@ features:
       - {id: WEB-LIVE-DELTA, levels: [web]}
       - {id: WEB-LIVE-RESUME, levels: [web]}
       - {id: WEB-PERF-SHELL, levels: [web]}
+      - {id: WEB-AUTH-SOFTWARE, levels: [sim]}
+      - {id: WEB-BLOB-ACCESS, levels: [sim]}
+      - {id: WEB-COMMAND-INTERACTIVE, levels: [sim]}
+      - {id: WEB-LIVE-RECORD, levels: [sim]}
+      - {id: WEB-LIVE-READMODELS, levels: [sim]}
   - id: web.media
     title: Browser-safe media variants made by the Helper
     requirements: [R-WEB-UI, R-ATTACH]

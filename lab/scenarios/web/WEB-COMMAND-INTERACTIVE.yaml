@@ -1,0 +1,7 @@
+id: WEB-COMMAND-INTERACTIVE
+feature: web.frontdoor
+levels: [sim]
+given: [{world: {replicas: 1}}]
+when: [{web: {}}]
+then: []
+cleanup: [{world: {}}]

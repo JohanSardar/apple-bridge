@@ -24,6 +24,7 @@ import (
 )
 
 type Scenario struct {
+	Web     map[string]any              `yaml:"web,omitempty"`
 	ID      string                      `yaml:"id"`
 	Feature string                      `yaml:"feature"`
 	Levels  []string                    `yaml:"levels"`
@@ -370,6 +371,9 @@ func convergence(w *world.World) bool {
 func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.Feature == "web.readmodels" {
 		return runReadModels(ctx, s, level)
+	}
+	if s.Feature == "web.frontdoor" {
+		return runWebServer(ctx, s, level)
 	}
 	if strings.HasPrefix(s.ID, "USE-") {
 		return runUsage(ctx, s, level)

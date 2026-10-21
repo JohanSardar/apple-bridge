@@ -39,6 +39,7 @@ type captureRequest struct {
 	Close       bool
 }
 type fakeApple struct {
+	commandOrigins               map[string]map[string]string
 	contactPermissionMissing     bool
 	contactSequence              uint64
 	messages                     messageState

@@ -4,10 +4,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"syscall"
 	"time"
 
@@ -30,8 +32,17 @@ func run(ctx context.Context, args []string) error {
 		}
 		args = args[1:]
 	}
+	webAction := ""
+	if verb == "web" {
+		if len(args) == 0 {
+			return contracts.ErrInvalid
+		}
+		webAction = args[0]
+		args = args[1:]
+	}
 	set := flag.NewFlagSet(verb, flag.ContinueOnError)
 	home := set.String("home", defaultHome(), "private state directory")
+	webHost := set.String("host", "http://localhost:7780", "web serving origin")
 	role := set.String("role", "gateway", "gateway or replica")
 	listen := set.String("listen", "", "replica listen address")
 	dialReplica := set.String("dial-replica", "", "gateway dials replica address")
@@ -100,6 +111,30 @@ func run(ctx context.Context, args []string) error {
 		return err
 	}
 	switch verb {
+	case "web":
+		switch webAction {
+		case "enroll":
+			origin, err := url.Parse(*webHost)
+			if err != nil || origin.Host == "" || origin.Path != "" || origin.RawQuery != "" || origin.Fragment != "" || origin.User != nil || origin.Scheme != "https" && !(origin.Scheme == "http" && origin.Hostname() == "localhost") {
+				return contracts.ErrInvalid
+			}
+			token, err := authority.CreateWebEnroll()
+			if err != nil {
+				return err
+			}
+			fmt.Println(strings.TrimSuffix(*webHost, "/") + "/enroll#" + token)
+			return nil
+		case "lock":
+			return authority.LockWeb()
+		case "devices":
+			devices, err := authority.DeviceSessions()
+			if err != nil {
+				return err
+			}
+			return json.NewEncoder(os.Stdout).Encode(devices)
+		default:
+			return contracts.ErrInvalid
+		}
 	case "revoke":
 		return authority.Revoke(code)
 	case "scope":

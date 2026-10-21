@@ -77,6 +77,10 @@ func (g *LocalGateway) transition(ctx context.Context, r contracts.CommandRecord
 }
 func (g *LocalGateway) Submit(ctx context.Context, p trust.Principal, c contracts.Command) (contracts.CommandRecord, error) {
 	var empty contracts.CommandRecord
+	c.Origin = ""
+	if p.Kind == "device" || p.Kind == "delegated" && strings.Contains(p.ID, "/device:") {
+		c.Origin = "interactive"
+	}
 	a, err := contracts.ValidateCommand(c)
 	if err != nil {
 		return empty, err
@@ -182,7 +186,7 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 		return g.transition(g.Context, r, "expired", "expired", nil, nil)
 	}
 	defer release()
-	action := contracts.NativeAction{Op: c.Op, Args: a}
+	action := contracts.NativeAction{Op: c.Op, Args: a, Origin: c.Origin}
 	collection := "reminders.reminder"
 	containerCollection, containerField := "reminders.list", "list_id"
 	if r.Source == contracts.Calendar {
@@ -274,7 +278,7 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 	if current != nil {
 		expected = current.Data
 	}
-	prepared, err := g.Peer.Exchange(runctx, contracts.IPCFrame{T: "Prepare", CommandID: c.ID, Principal: p.ID, RequestHash: hash, Action: &action, ExpectedState: expected, ExpiresAt: expiry})
+	prepared, err := g.Peer.Exchange(runctx, contracts.IPCFrame{T: "Prepare", Origin: c.Origin, CommandID: c.ID, Principal: p.ID, RequestHash: hash, Action: &action, ExpectedState: expected, ExpiresAt: expiry})
 	if err != nil {
 		if !time.Now().Before(deadline) {
 			return g.transition(g.Context, r, "expired", "expired", nil, nil)
@@ -315,7 +319,7 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 	}
 	outcomeCtx, stop := context.WithTimeout(g.Context, 15*time.Second)
 	defer stop()
-	outcome, err := g.Peer.Exchange(outcomeCtx, contracts.IPCFrame{T: "Dispatch", CommandID: c.ID, Ticket: prepared.Ticket})
+	outcome, err := g.Peer.Exchange(outcomeCtx, contracts.IPCFrame{T: "Dispatch", Origin: c.Origin, CommandID: c.ID, Ticket: prepared.Ticket})
 	if err != nil {
 		return g.transition(g.Context, r, "indeterminate", "indeterminate", nil, nil)
 	}

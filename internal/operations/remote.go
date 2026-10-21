@@ -113,6 +113,10 @@ func (g *RemoteGateway) call(ctx context.Context, p trust.Principal, f forwarded
 }
 func (g *RemoteGateway) Submit(ctx context.Context, p trust.Principal, c contracts.Command) (contracts.CommandRecord, error) {
 	var r contracts.CommandRecord
+	c.Origin = ""
+	if p.Kind == "device" {
+		c.Origin = "interactive"
+	}
 	if _, err := contracts.ValidateCommand(c); err != nil {
 		return r, err
 	}

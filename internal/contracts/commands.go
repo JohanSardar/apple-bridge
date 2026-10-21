@@ -37,6 +37,7 @@ const (
 )
 
 type Command struct {
+	Origin          string          `json:"origin,omitempty"`
 	ID              string          `json:"command_id,omitempty"`
 	Op              string          `json:"op,omitempty"`
 	Args            json.RawMessage `json:"args"`
@@ -84,6 +85,7 @@ type CommandRecord struct {
 	Error        *Error          `json:"error,omitempty"`
 }
 type NativeAction struct {
+	Origin          string              `json:"origin,omitempty"`
 	NoteArgs        *NoteArgs           `json:"note_args,omitempty"`
 	FolderKey       string              `json:"folder_key,omitempty"`
 	CalendarArgs    *CalendarArgs       `json:"calendar_args,omitempty"`

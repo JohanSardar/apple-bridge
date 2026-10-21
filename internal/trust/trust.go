@@ -157,9 +157,12 @@ type Enrollment struct {
 }
 
 type credentials struct {
-	Principals []Principal        `json:"principals"`
-	Pairings   map[string]pairing `json:"pairings"`
-	Enrollment *Enrollment        `json:"enrollment,omitempty"`
+	Devices    []DeviceSession      `json:"devices,omitempty"`
+	Passkeys   []Passkey            `json:"passkeys,omitempty"`
+	WebEnroll  map[string]time.Time `json:"web_enroll,omitempty"`
+	Principals []Principal          `json:"principals"`
+	Pairings   map[string]pairing   `json:"pairings"`
+	Enrollment *Enrollment          `json:"enrollment,omitempty"`
 }
 
 type Authority struct {

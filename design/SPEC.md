@@ -913,7 +913,7 @@ Decisions: `DECISIONS.md` (2026-10-20). Product spec per app: `design/web/<app>.
 | MediaDerivatives | `native/Sources/MediaDerivatives/` | Browser-safe variants of attachment blobs (Swift, system frameworks only) | AppleSession blob path |
 | Demo | `lab/demo/` + `bridge-lab demo` | Deterministic synthetic dataset on a sim world, serving the web UI | lab World, SimApplePeer |
 
-Frontdoor (§15) keeps REST/MCP semantics; Remote reuses its handler with a public-host policy (§23.5). `bridge web --demo` from DECISIONS is realized as `bridge-lab demo`, because the product binary never imports `lab/` (§5).
+Frontdoor (§15) keeps REST/MCP semantics; Remote reuses its handler with a public-host policy (§23.5). Runtime reuses one Web handler across local and Remote listeners so sign-in notifications reach both sets of live sockets; Remote owns the public HTTPS Host policy. `bridge web --demo` from DECISIONS is realized as `bridge-lab demo`, because the product binary never imports `lab/` (§5).
 
 New dependencies (approved): `tailscale.com` (tsnet, BSD-3), `github.com/go-webauthn/webauthn` (BSD-3). Frontend runtime: `solid-js` only. Frontend dev: `vite`, `vite-plugin-solid`, `typescript`, `@playwright/test`. Node and pnpm are build-time only (Homebrew on the Air); release binaries embed the built assets.
 
@@ -938,6 +938,10 @@ Same origin for everything. Served by the gateway and by replicas (any instance)
 | `GET blob/{digest}?record=<id>&variant=<v>` | Bytes with Range, `ETag` = digest, `private, max-age=31536000, immutable`; `variant` ∈ `original|thumb|display|video|poster|audio|live` |
 | `POST upload` | Stage a blob for sending (streamed, ≤ 100 MiB) |
 | `GET live` | WebSocket, protocol `web/1` (§23.3) |
+
+**Upload locality.** Upload IDs are staged on the serving instance and owned by the device principal. Forwarding a staged upload from a replica to its gateway is pending; the existing Operations command forwarding does not transfer upload bytes. Gateway uploads are ready for sending.
+
+**Ceremony JSON.** Options requests accept `{token?, kind?: trusted|public}` (`token` is required for enrollment, `kind` defaults to trusted). Options responses contain the standard WebAuthn `publicKey` object and `ceremony_id`. Finish requests contain `{ceremony_id, credential}`, where `credential` is the WebAuthn credential JSON (base64url binary fields). The server binds the single-use ceremony to its flow, serving origin, chosen session kind and, for additional passkeys, the signed-in device. Ceremonies expire after five minutes. Passkey/device list responses are `{passkeys: [...]}` / `{devices: [...]}`. Passkey list rows expose only `id`, `rp_id`, `created_at`. Device IDs include the `device:` prefix. `bridge web enroll --host <origin>` defaults to `http://localhost:7780`; this implementation prints the enrollment URL only, avoiding another QR dependency.
 
 **Sessions.**
 - **Principal:** `device:<id>` in Trust, with the owner's full grants.
@@ -982,6 +986,8 @@ S→C signin{device, at} · approval{command} · session_revoked · error{code, 
 - `thread{chat_id, anchor: latest|unread|<message_id>, before?, after?}`: a window of ThreadItems. Deltas update items inside the window and report `newer`/`older` counts outside it.
 - `record{collection, id}`.
 - `collection{chat_id, kind}`.
+
+**View payloads.** The WebSocket upgrade offers subprotocol `web.1` for logical protocol `web/1`. `record` snapshots contain the `records.get` result (`records`, `cursor`); record deltas contain the same Change rows as SSE. For an owned `system.command` record, Web enriches the record data from `commands.status` so reconnecting clients can reconcile their command without resubmitting it. Read-model snapshots contain the corresponding operation result. Read-model delta changes are `{op: upsert, id, row, order}` or `{op: remove, id}`; `order` is the zero-based position. A read-model delta also carries the ordered ID array `order` and pagination fields in `page`. Thread snapshots include `data.newer` and `data.older`; thread deltas carry total `newer` and `older` counts outside the subscribed window, also emitted as a `{op: window, newer, older}` metadata change so row reducers update those counts even when no window item changed. A subscription may provide its resume `cursor` next to `args`; record subscriptions replay journal rows. Derived subscriptions take a fresh snapshot on reconnect because their previous window membership is client state. Unsupported views produce `error{code: unsupported}` until their Operations descriptors are available. `ack.status` and `cmd_status.status` are command-state strings; `cmd_status.command` contains the command ledger record, and rejected acknowledgments carry `error`. Socket overload and revocation close with code 1008 and reason `overloaded` / `session_revoked`.
 
 **Rules:**
 - **Deltas:** come from the State journal through the same iterator as local SSE (§12), filtered by Visibility and mapped to affected subscriptions.

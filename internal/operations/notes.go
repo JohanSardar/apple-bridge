@@ -23,7 +23,7 @@ func (g *LocalGateway) executeNote(r contracts.CommandRecord, p trust.Principal,
 	reject := func(problem *contracts.Error) (contracts.CommandRecord, error) {
 		return g.transition(g.Context, r, "rejected", "rejected_before_dispatch", nil, problem)
 	}
-	action := contracts.NativeAction{Op: c.Op, NoteArgs: &a}
+	action := contracts.NativeAction{Op: c.Op, NoteArgs: &a, Origin: c.Origin}
 	var expected json.RawMessage
 	if a.ID != "" {
 		result, err := g.State.Read(ctx, p.Visibility(), contracts.ReadQuery{Collection: "notes.note", ID: a.ID})
@@ -59,7 +59,7 @@ func (g *LocalGateway) executeNote(r contracts.CommandRecord, p trust.Principal,
 			return reject(contracts.ErrNotFound)
 		}
 	}
-	prepared, err := g.Peer.Exchange(ctx, contracts.IPCFrame{T: "Prepare", CommandID: c.ID, Principal: p.ID, RequestHash: hash, Action: &action, ExpectedState: expected, ExpiresAt: expiry})
+	prepared, err := g.Peer.Exchange(ctx, contracts.IPCFrame{T: "Prepare", Origin: c.Origin, CommandID: c.ID, Principal: p.ID, RequestHash: hash, Action: &action, ExpectedState: expected, ExpiresAt: expiry})
 	if err != nil {
 		return reject(contracts.ErrUnavailable)
 	}
@@ -86,7 +86,7 @@ func (g *LocalGateway) executeNote(r contracts.CommandRecord, p trust.Principal,
 	}
 	outcomeCtx, stop := context.WithTimeout(g.Context, 15*time.Second)
 	defer stop()
-	outcome, err := g.Peer.Exchange(outcomeCtx, contracts.IPCFrame{T: "Dispatch", CommandID: c.ID, Ticket: prepared.Ticket})
+	outcome, err := g.Peer.Exchange(outcomeCtx, contracts.IPCFrame{T: "Dispatch", Origin: c.Origin, CommandID: c.ID, Ticket: prepared.Ticket})
 	if err != nil {
 		return g.transition(g.Context, r, "indeterminate", "indeterminate", nil, nil)
 	}

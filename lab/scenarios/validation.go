@@ -52,7 +52,7 @@ func validateScenario(s Scenario) error {
 	}
 	for _, level := range s.Levels {
 		switch level {
-		case "sim", "real", "replica", "agent":
+		case "sim", "real", "replica", "agent", "web":
 		default:
 			return fmt.Errorf("unknown level %q", level)
 		}
@@ -72,7 +72,7 @@ func validateScenario(s Scenario) error {
 			for action, options := range step {
 				var target any
 				switch phase + "/" + action {
-				case "when/readmodels", "when/usage", "when/notes", "when/messages_commands", "when/calendar_journey", "when/contacts", "when/session_soak", "when/live_backfill", "when/restart_helper", "when/tcc_ready", "when/reminders_external", "when/reminders_crud", "when/reminders_list", "when/reminders_recurring", "when/reminders_permission_loss":
+				case "when/readmodels", "when/web", "when/usage", "when/notes", "when/messages_commands", "when/calendar_journey", "when/contacts", "when/session_soak", "when/live_backfill", "when/restart_helper", "when/tcc_ready", "when/reminders_external", "when/reminders_crud", "when/reminders_list", "when/reminders_recurring", "when/reminders_permission_loss":
 					target = &struct{}{}
 				case "cleanup/fixture":
 					target = &fixtureCleanupOptions{}
