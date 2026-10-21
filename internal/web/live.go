@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -418,11 +417,6 @@ func (l *liveSocket) subscribe(ctx context.Context, f clientFrame) {
 			}
 			next := decodeViewState(data)
 			if f.View == "thread" {
-				if err := l.refreshThreadEdges(ctx, f, previous, &next, batch.Changes); err != nil {
-					l.fail("reset", "resubscribe required")
-					return
-				}
-				next = threadWindow(previous, next, batch.Changes)
 				next.Counts, err = l.windowCounts(ctx, f, next)
 				if err != nil {
 					l.fail("reset", "window unavailable")
@@ -508,54 +502,6 @@ func viewChanges(previous, next viewState) []any {
 	}
 	return changes
 }
-func rowSentAt(row json.RawMessage) string {
-	var record struct {
-		Data struct {
-			SentAt string `json:"sent_at"`
-		} `json:"data"`
-	}
-	json.Unmarshal(row, &record)
-	at, err := time.Parse(time.RFC3339Nano, record.Data.SentAt)
-	if err != nil {
-		return ""
-	}
-	return at.UTC().Format("2006-01-02T15:04:05.000000000Z")
-}
-func threadWindow(previous, next viewState, changes []contracts.Change) viewState {
-	if len(previous.Order) == 0 {
-		return next
-	}
-	first, last := rowSentAt(previous.Rows[previous.Order[0]]), rowSentAt(previous.Rows[previous.Order[len(previous.Order)-1]])
-	for _, change := range changes {
-		if change.Record.Collection == "messages.message" && (change.Op == "delete" || change.Op == "evict" || change.Record.Deleted) {
-			delete(previous.Rows, change.Record.ID)
-		}
-	}
-	for id, row := range previous.Rows {
-		if _, ok := next.Rows[id]; !ok {
-			next.Rows[id] = row
-		}
-	}
-	for id, row := range next.Rows {
-		if at := rowSentAt(row); at < first || at > last {
-			if _, existed := previous.Rows[id]; !existed {
-				delete(next.Rows, id)
-			}
-		}
-	}
-	next.Page = previous.Page
-	next.Order = next.Order[:0]
-	for id := range next.Rows {
-		next.Order = append(next.Order, id)
-	}
-	slices.SortFunc(next.Order, func(a, b string) int {
-		if at, bt := rowSentAt(next.Rows[a]), rowSentAt(next.Rows[b]); at != bt {
-			return strings.Compare(at, bt)
-		}
-		return strings.Compare(a, b)
-	})
-	return next
-}
 func (l *liveSocket) windowCounts(ctx context.Context, f clientFrame, state viewState) (contracts.WindowCounts, error) {
 	if len(state.Order) == 0 {
 		return contracts.WindowCounts{}, nil
@@ -569,62 +515,6 @@ func (l *liveSocket) windowCounts(ctx context.Context, f clientFrame, state view
 	json.Unmarshal(state.Rows[state.Order[len(state.Order)-1]], &window.Last)
 	return l.server.deps.Operations.ThreadWindowCounts(ctx, l.identity.Principal, window)
 }
-func (l *liveSocket) refreshThreadEdges(ctx context.Context, f clientFrame, previous viewState, next *viewState, changes []contracts.Change) error {
-	if len(previous.Order) == 0 {
-		return nil
-	}
-	first, last := rowSentAt(previous.Rows[previous.Order[0]]), rowSentAt(previous.Rows[previous.Order[len(previous.Order)-1]])
-	affected := map[string]bool{}
-	for _, change := range changes {
-		if change.Op == "delete" || change.Op == "evict" || change.Record.Deleted {
-			continue
-		}
-		var data struct {
-			MessageID  string `json:"message_id"`
-			Originator string `json:"thread_originator_id"`
-		}
-		json.Unmarshal(change.Record.Data, &data)
-		if change.Record.Collection == "messages.message" {
-			raw, _ := json.Marshal(change.Record)
-			at := rowSentAt(raw)
-			if _, present := previous.Rows[change.Record.ID]; present || at >= first && at <= last {
-				affected[change.Record.ID] = true
-			}
-			if data.Originator != "" {
-				affected[data.Originator] = true
-			}
-		}
-		if data.MessageID != "" {
-			affected[data.MessageID] = true
-		}
-	}
-	for id := range affected {
-		if next.Rows[id] != nil {
-			continue
-		}
-		args := map[string]any{}
-		json.Unmarshal(f.Args, &args)
-		args["anchor"] = id
-		args["limit"] = 1
-		delete(args, "before")
-		delete(args, "after")
-		query := f
-		query.Args, _ = json.Marshal(args)
-		data, err := l.view(ctx, query)
-		if errors.Is(err, contracts.ErrNotFound) {
-			continue
-		}
-		if err != nil {
-			return err
-		}
-		current := decodeViewState(data)
-		if row := current.Rows[id]; row != nil {
-			next.Rows[id] = row
-		}
-	}
-	return nil
-}
-
 func frameCursor(value any) *contracts.Cursor {
 	m, ok := value.(map[string]any)
 	if !ok {
