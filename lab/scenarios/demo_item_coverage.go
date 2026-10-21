@@ -93,6 +93,14 @@ func demoItemCoverage(item contracts.ThreadItem, c map[string]int) {
 	for _, attachment := range item.Attachments {
 		fields := rmData(attachment)
 		filename := fmt.Sprint(fields["filename"])
+		dimensions := map[string][2]int{"demo-portrait.png": {240, 400}, "demo-landscape.png": {640, 400}, "demo-square.png": {360, 360}, "demo-panorama.png": {1024, 256}, "demo-transparent.png": {256, 256}, "demo-video.mp4": {16, 16}}
+		if want, exists := dimensions[filename]; exists {
+			metadata, _ := fields["media"].(map[string]any)
+			if metadata["width"] == float64(want[0]) && metadata["height"] == float64(want[1]) {
+				c["geometry_"+filename]++
+			}
+		}
+
 		for _, kind := range []string{"portrait", "landscape", "square", "panorama", "transparent"} {
 			if strings.Contains(filename, kind) {
 				c[kind]++

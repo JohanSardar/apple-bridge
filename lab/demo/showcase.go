@@ -40,6 +40,22 @@ func (d *Dataset) showcase(i int, key string, sent time.Time, fields map[string]
 		delete(fields, "delivered_at")
 		delete(fields, "read_at")
 	}
+	if i >= 58 && i <= 65 {
+		fromMe := i >= 62
+		sender := 1
+		if fromMe {
+			sender = 0
+		}
+		fields["is_from_me"] = fromMe
+		fields["sender_handle_id"] = reference("messages.handle", handleKey(sender))
+		at := time.Date(2025, 1, 1, 1, 0, 0, 0, time.UTC).Add(time.Duration(i-58) * 10 * time.Second)
+		fields["sent_at"] = at
+		fields["read_at"] = at.Add(time.Minute)
+		delete(fields, "delivered_at")
+		if fromMe {
+			fields["delivered_at"] = at.Add(time.Second)
+		}
+	}
 	if i >= 14 && i < 14+len(Effects) {
 		fields["effect"] = Effects[i-14]
 	}

@@ -46,6 +46,9 @@ func demoReadmodelCoverage(ctx context.Context, w *world.World, e *Evidence, add
 		stackSender := ""
 		stackAt := time.Time{}
 		stackSize := 0
+		textSender := ""
+		textAt := time.Time{}
+		textRun := 0
 		for {
 			var thread contracts.ThreadResult
 			if err = client.Call(ctx, "messages.thread", query, &thread); err != nil {
@@ -62,6 +65,21 @@ func demoReadmodelCoverage(ctx context.Context, w *world.World, e *Evidence, add
 				fields := rmData(item.Record)
 				at, _ := time.Parse(time.RFC3339, fmt.Sprint(fields["sent_at"]))
 				sender := fmt.Sprint(fields["sender_handle_id"], fields["is_from_me"])
+				if fields["text"] != "" && len(item.Attachments) == 0 {
+					if sender == textSender && at.Sub(textAt) >= 0 && at.Sub(textAt) <= time.Minute {
+						textRun++
+					} else {
+						textRun = 1
+					}
+					textSender, textAt = sender, at
+					if textRun >= 3 {
+						coverage[fmt.Sprint("text_run_", fields["is_from_me"])]++
+					}
+				} else {
+					textRun = 0
+					textSender = ""
+				}
+
 				imageOnly := len(item.Attachments) > 0
 				for _, attachment := range item.Attachments {
 					imageOnly = imageOnly && strings.HasPrefix(fmt.Sprint(rmData(attachment)["mime_type"]), "image/")
@@ -90,7 +108,10 @@ func demoReadmodelCoverage(ctx context.Context, w *world.World, e *Evidence, add
 	}
 	add("all_5000_messages_visible_without_duplicates", allRead && messages == 5000)
 	add("unread_backlogs_in_several_chats", unread >= 3)
-	required := []string{"service_iMessage", "service_SMS", "service_RCS", "style_direct", "style_group", "named_group", "unnamed_group", "text", "long_text", "emoji_1", "emoji_2", "emoji_3", "url", "mention", "reply", "nested_reply", "reply_count", "edited", "unsent", "failed", "delivered", "read", "multipart", "group_rename", "group_add", "group_remove", "group_leave", "group_photo", "portrait", "landscape", "square", "panorama", "transparent", "gif", "video", "audio", "pdf", "vcard", "image_stack", "image_stack_run", "reaction_love", "reaction_like", "reaction_dislike", "reaction_laugh", "reaction_emphasize", "reaction_question", "reaction_emoji", "multiple_reactors", "today", "yesterday", "this_week", "older", "year_change", "preview_text", "preview_attachments", "preview_edited", "preview_unsent", "preview_group_event", "preview_reaction", "image_variants", "video_variants", "audio_variants", "transparent_display_png", "audio_waveform", "gif_thumb"}
+	required := []string{"service_iMessage", "service_SMS", "service_RCS", "style_direct", "style_group", "named_group", "unnamed_group", "text", "long_text", "emoji_1", "emoji_2", "emoji_3", "url", "mention", "reply", "nested_reply", "reply_count", "edited", "unsent", "failed", "delivered", "read", "multipart", "group_rename", "group_add", "group_remove", "group_leave", "group_photo", "portrait", "landscape", "square", "panorama", "transparent", "gif", "video", "audio", "pdf", "vcard", "image_stack", "image_stack_run", "text_run_true", "text_run_false", "reaction_love", "reaction_like", "reaction_dislike", "reaction_laugh", "reaction_emphasize", "reaction_question", "reaction_emoji", "multiple_reactors", "today", "yesterday", "this_week", "older", "year_change", "preview_text", "preview_attachments", "preview_edited", "preview_unsent", "preview_group_event", "preview_reaction", "image_variants", "video_variants", "audio_variants", "transparent_display_png", "audio_waveform", "gif_thumb"}
+	for _, name := range []string{"demo-portrait.png", "demo-landscape.png", "demo-square.png", "demo-panorama.png", "demo-transparent.png", "demo-video.mp4"} {
+		required = append(required, "geometry_"+name)
+	}
 	for _, effect := range demo.Effects {
 		required = append(required, "effect_"+effect)
 	}

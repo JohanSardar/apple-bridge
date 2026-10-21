@@ -1,9 +1,9 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[5.29 6.81 15.34] cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[5.13 5.81 7.37] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M5E8TG6V5BQHCS9BRX8W4V3H",
+  "run_id": "run_01M5EB0EA0KE7HPQPVB1TDB42E",
   "metrics": {
     "counts": {
       "contacts.contact": 60,
@@ -17,7 +17,7 @@
       "audio": 1,
       "audio_variants": 1,
       "audio_waveform": 1,
-      "delivered": 1691,
+      "delivered": 1693,
       "edited": 2,
       "effect_com.apple.MobileSMS.expressivesend.gentle": 1,
       "effect_com.apple.MobileSMS.expressivesend.impact": 1,
@@ -35,6 +35,12 @@
       "emoji_2": 1,
       "emoji_3": 1,
       "failed": 1,
+      "geometry_demo-landscape.png": 2,
+      "geometry_demo-panorama.png": 1,
+      "geometry_demo-portrait.png": 3,
+      "geometry_demo-square.png": 3,
+      "geometry_demo-transparent.png": 1,
+      "geometry_demo-video.mp4": 1,
       "gif": 1,
       "gif_thumb": 1,
       "group_add": 1,
@@ -69,7 +75,7 @@
       "reaction_like": 3,
       "reaction_love": 3,
       "reaction_question": 3,
-      "read": 4054,
+      "read": 4055,
       "reply": 4,
       "reply_count": 1,
       "service_RCS": 13,
@@ -79,6 +85,8 @@
       "style_direct": 25,
       "style_group": 15,
       "text": 4983,
+      "text_run_false": 2,
+      "text_run_true": 2,
       "this_week": 27,
       "today": 60,
       "transparent": 1,
@@ -92,14 +100,14 @@
       "year_change": 162,
       "yesterday": 2
     },
-    "digest": "2c4cf9506171522e8d183670f831f668038b2b78a304427dbef189cac2afdc53",
+    "digest": "e7ffa00a204989854e33c3d68b085c8d2cf3acfcde94a3648ca1fdc61722807a",
     "verified_blob_count": 52
   },
   "scenario": "WEB-DEMO-DATASET",
   "level": "sim",
   "passed": true,
-  "git_sha": "9b0410bf7b1565f846a24388f60de0b160150bf1",
-  "at": "2026-10-21T03:42:03.483054Z",
+  "git_sha": "b99c57f558a7de5e9576664e917e1d0739903558",
+  "at": "2026-10-21T04:20:15.296938Z",
   "assertions": [
     {
       "name": "same_seed_byte_identical_records_and_blobs",
@@ -314,6 +322,14 @@
       "passed": true
     },
     {
+      "name": "readmodel_coverage_text_run_true",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_text_run_false",
+      "passed": true
+    },
+    {
       "name": "readmodel_coverage_reaction_love",
       "passed": true
     },
@@ -411,6 +427,30 @@
     },
     {
       "name": "readmodel_coverage_gif_thumb",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_geometry_demo-portrait.png",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_geometry_demo-landscape.png",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_geometry_demo-square.png",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_geometry_demo-panorama.png",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_geometry_demo-transparent.png",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_geometry_demo-video.mp4",
       "passed": true
     },
     {
@@ -545,9 +585,9 @@
   "latency": {
     "default_startup": {
       "samples": 1,
-      "p50_ms": 6236.544958,
-      "p95_ms": 6236.544958,
-      "max_ms": 6236.544958,
+      "p50_ms": 4486.021208,
+      "p95_ms": 4486.021208,
+      "max_ms": 4486.021208,
       "timeouts": 0
     }
   },
