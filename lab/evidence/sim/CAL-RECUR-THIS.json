@@ -1,15 +1,15 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[3.57 5.81 10.15] cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[19.46 24.29 17.01] cpus=8 other_heavy=0"
   },
-  "run_id": "cal_01M58D243H4NNRYBFEH9K5J0D7",
+  "run_id": "cal_01M5G0WCXQV7959J3EPNNZAPHM",
   "network_path": "loopback",
   "scenario": "CAL-RECUR-THIS",
   "level": "sim",
   "passed": true,
-  "git_sha": "4f263fdf17b0f98019c10581b7d742880bb9b6af",
-  "at": "2026-10-18T21:00:40.945717Z",
+  "git_sha": "949f3a6e5054ccd6d1ea425b65220a0288295a8e",
+  "at": "2026-10-21T20:01:45.911502Z",
   "assertions": [
     {
       "name": "calendar_visible",
@@ -37,6 +37,18 @@
     },
     {
       "name": "other_occurrences_unchanged",
+      "passed": true
+    },
+    {
+      "name": "delete_one_occurrence_is_observed",
+      "passed": true
+    },
+    {
+      "name": "delete_one_occurrence_keeps_surviving_series",
+      "passed": true
+    },
+    {
+      "name": "delete_one_occurrence_preserves_other_identities",
       "passed": true
     },
     {
@@ -105,18 +117,32 @@
     }
   ],
   "latency": {
+    "command_submit→calendar.delete_event_observed": {
+      "samples": 1,
+      "p50_ms": 39.932542,
+      "p95_ms": 39.932542,
+      "max_ms": 39.932542,
+      "timeouts": 0
+    },
+    "command_submit→calendar.update_event_observed": {
+      "samples": 1,
+      "p50_ms": 39.525209,
+      "p95_ms": 39.525209,
+      "max_ms": 39.525209,
+      "timeouts": 0
+    },
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 5.976,
-      "p95_ms": 5.976,
-      "max_ms": 5.976,
+      "p50_ms": 5.932,
+      "p95_ms": 5.932,
+      "max_ms": 5.932,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 9.88,
-      "p95_ms": 9.88,
-      "max_ms": 9.88,
+      "p50_ms": 9.533,
+      "p95_ms": 9.533,
+      "max_ms": 9.533,
       "timeouts": 0
     }
   },
@@ -126,7 +152,8 @@
   "conditions": {
     "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
     "heavy_slots_in_use": "1",
-    "load_average": "3.57 5.81 10.15",
-    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"
+    "load_average": "19.46 24.29 17.01",
+    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica",
+    "swap_usage": "total = 3072.00M  used = 2139.19M  free = 932.81M  (encrypted)"
   }
 }

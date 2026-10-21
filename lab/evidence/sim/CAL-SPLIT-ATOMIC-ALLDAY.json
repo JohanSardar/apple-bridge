@@ -1,0 +1,136 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[19.46 24.29 17.01] cpus=8 other_heavy=0"
+  },
+  "run_id": "cal_01M5G0WEFKCSMTWGNRGJA70BPT",
+  "network_path": "loopback",
+  "scenario": "CAL-SPLIT-ATOMIC-ALLDAY",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "949f3a6e5054ccd6d1ea425b65220a0288295a8e",
+  "at": "2026-10-21T20:01:47.507989Z",
+  "assertions": [
+    {
+      "name": "calendar_visible",
+      "passed": true
+    },
+    {
+      "name": "initial_occurrences_visible",
+      "passed": true
+    },
+    {
+      "name": "agenda_returns_occurrences",
+      "passed": true
+    },
+    {
+      "name": "all_day_future_civil_offsets",
+      "passed": true
+    },
+    {
+      "name": "future_split_replaces_occurrence_identities",
+      "passed": true
+    },
+    {
+      "name": "future_split_atomic_on_gateway_and_replica",
+      "passed": true
+    },
+    {
+      "name": "independent_simtruth_convergence",
+      "passed": true
+    },
+    {
+      "name": "replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "contiguous_feed_0",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "contiguous_feed_1",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "latency_effect_done→gateway_visible",
+      "passed": true
+    },
+    {
+      "name": "latency_effect_done→replica_visible:replica0",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_query",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_mcp_agenda",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_query",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_mcp_agenda",
+      "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass",
+      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "command_submit→calendar.update_event_observed": {
+      "samples": 1,
+      "p50_ms": 44.117875,
+      "p95_ms": 44.117875,
+      "max_ms": 44.117875,
+      "timeouts": 0
+    },
+    "effect_done→gateway_visible": {
+      "samples": 1,
+      "p50_ms": 4.643,
+      "p95_ms": 4.643,
+      "max_ms": 4.643,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica0": {
+      "samples": 1,
+      "p50_ms": 6.732,
+      "p95_ms": 6.732,
+      "max_ms": 6.732,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ],
+  "conditions": {
+    "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
+    "heavy_slots_in_use": "1",
+    "load_average": "19.46 24.29 17.01",
+    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica",
+    "swap_usage": "total = 3072.00M  used = 2139.19M  free = 932.81M  (encrypted)"
+  }
+}
