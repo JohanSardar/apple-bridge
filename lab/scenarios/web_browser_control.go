@@ -177,6 +177,8 @@ func webBrowserControl(ctx context.Context, w *world.World, origin string) (*htt
 			value, err = demo.Fixtures(ctx, w)
 		case "/handles-fixture":
 			value, err = webHandlesFixture(w)
+		case "/reaction-fixture":
+			value, err = webReactionFixture(w)
 		case "/list-fixture":
 			started := time.Now()
 			err = webListFixture(w, request.URL.Query().Get("update") == "1")
