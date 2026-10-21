@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
+import { prepareSession } from './session';
 import { mkdir } from 'node:fs/promises';
-test.beforeEach(async ({ page }) => { await page.request.get('/__mock/session'); });
+test.beforeEach(async ({ page }) => { await prepareSession(page); });
 test('WEB-SHELL-JOURNEY layouts, deep links, appearance, keyboard and history', async ({ page }, info) => {
     const fontRequests: string[] = [];
     page.on('request',request=>{if(request.url().includes('.woff2'))fontRequests.push(request.url());});

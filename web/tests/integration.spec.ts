@@ -1,8 +1,6 @@
-import { test, expect, type Page, type BrowserContext, type APIRequestContext } from '@playwright/test';
+import { test, expect, type Page, type APIRequestContext } from '@playwright/test';
 import { mkdir, writeFile } from 'node:fs/promises';
-const controlURL=process.env.AB_WEB_CONTROL!;
-async function control(request:APIRequestContext,path:string){const response=await request.post(controlURL+path,{headers:{'X-Bridge-Lab':process.env.AB_WEB_CONTROL_KEY!}});expect(response.ok()).toBe(true);return response.json();}
-async function bootstrap(context:BrowserContext,request:APIRequestContext,kind='trusted'){const value=await control(request,'/session?kind='+kind);await context.addCookies([value.cookie]);return value.session;}
+import { control, bootstrap } from './session';
 async function virtualKey(page:Page){const cdp=await page.context().newCDPSession(page);await cdp.send('WebAuthn.enable');const {authenticatorId}=await cdp.send('WebAuthn.addVirtualAuthenticator',{options:{protocol:'ctap2',transport:'internal',hasResidentKey:true,hasUserVerification:true,isUserVerified:true,automaticPresenceSimulation:true}});return {cdp,authenticatorId};}
 async function enroll(page:Page,request:APIRequestContext){const key=await virtualKey(page);const {url}=await control(request,'/enroll');await page.goto(url);await page.getByRole('button',{name:'Continue',exact:true}).click();await expect(page.getByText('No Messages',{exact:true})).toBeVisible();return {key,url};}
 test('WEB-SERVE-EMBED binary serves the app, routes, hashed assets and security headers',async({page,request})=>{

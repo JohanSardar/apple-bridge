@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test';
+import { prepareSession } from './session';
 import { readdir, readFile, mkdir, writeFile } from 'node:fs/promises';
 import { gzipSync } from 'node:zlib';
 async function metrics(name: string, project: string, value: unknown) { await mkdir('../lab/evidence/web/metrics', { recursive: true }); await writeFile(`../lab/evidence/web/metrics/${name}-${project}.json`, JSON.stringify(value, null, 2) + '\n'); }
 function stats(values: number[]) { const sorted = [...values].sort((a, b) => a - b); return { samples: sorted.length, p50_ms: sorted[Math.ceil(sorted.length * .5) - 1] ?? 0, p95_ms: sorted[Math.ceil(sorted.length * .95) - 1] ?? 0, max_ms: sorted.at(-1) ?? 0 }; }
-test.beforeEach(async ({ page }) => { await page.request.get('/__mock/session'); });
+test.beforeEach(async ({ page }) => { await prepareSession(page); });
 test('WEB-VIRTUAL-ANCHOR preserves measured anchors through prepend, append and keyboard navigation', async ({ page }, info) => {
     await page.goto('/__fixtures/virtual');
     const list = page.getByRole('listbox');
