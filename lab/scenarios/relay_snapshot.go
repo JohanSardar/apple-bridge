@@ -11,13 +11,17 @@ import (
 	"github.com/JohanSardar/apple-bridge/lab/world"
 )
 
-func relayGatewaySnapshot(ctx context.Context, endpoint world.Endpoint) (relayQuery, error) {
+func relayGatewaySnapshot(ctx context.Context, endpoint world.Endpoint, collections ...string) (relayQuery, error) {
+	collection := "reminders.reminder"
+	if len(collections) > 0 {
+		collection = collections[0]
+	}
 	records := []contracts.Record{}
 	after := ""
 	var cursor contracts.Cursor
 	for {
 		var page contracts.ReadResult
-		if _, err := world.Request(ctx, endpoint, "/v1/op/records.query", contracts.ReadQuery{Collection: "reminders.reminder", Limit: 200, After: after}, &page); err != nil {
+		if _, err := world.Request(ctx, endpoint, "/v1/op/records.query", contracts.ReadQuery{Collection: collection, Limit: 200, After: after}, &page); err != nil {
 			return relayQuery{}, err
 		}
 		if after == "" {

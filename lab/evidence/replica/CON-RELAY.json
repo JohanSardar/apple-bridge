@@ -1,0 +1,498 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[13.67 11.09 10.41] cpus=8 other_heavy=0; ubuntu: load=[0.47 0.88 1.27] cpus=8 other_heavy=0"
+  },
+  "run_id": "relay_01M5G0JZY93HTMENAC0A0T9WVE",
+  "network_path": "public Funnel; pinned public DNS through CONNECT egress; no peer or SSH tunnel",
+  "metrics": {
+    "contacts_cleanup_audit": {
+      "containers_preserved": true,
+      "groups_preserved": true,
+      "selected_count": 1,
+      "unowned_after_count": 154,
+      "unowned_before_count": 154,
+      "unowned_fields_unchanged": true,
+      "unowned_identifiers_after_sha256": "e18d53df58a026fc0514c0631a57d2da157f1d2f020f018fd228a1da0023e33a",
+      "unowned_identifiers_before_sha256": "e18d53df58a026fc0514c0631a57d2da157f1d2f020f018fd228a1da0023e33a",
+      "whole_container_operations": 0
+    },
+    "contacts_clock_uncertainty_ms": 26.642829,
+    "contacts_command_clock_uncertainty_ms": 58.060014,
+    "contacts_command_visibility_measure": "native save through Ubuntu SSE receive; local REST and MCP reads independently verified",
+    "contacts_effect_uptimes_ns": [],
+    "contacts_scan_counts": {
+      "contacts_capture_committed": 30,
+      "contacts_capture_ready": 30,
+      "contacts_compared": 30,
+      "contacts_contact_fetched": 25,
+      "contacts_effect_done": 6,
+      "contacts_encoded": 30,
+      "contacts_fetched": 3,
+      "contacts_history_fetched": 122,
+      "contacts_notified": 205,
+      "contacts_scan_abandoned": 0,
+      "contacts_scan_finished": 122,
+      "contacts_scan_requested": 122,
+      "contacts_scan_started": 122,
+      "empty_scans": 1,
+      "full_scans": 3,
+      "unchanged_history_publications": 0,
+      "unchanged_history_scans": 92
+    },
+    "contacts_stage_scope": "all scans recorded before World teardown",
+    "public_connections": 2,
+    "public_ingress_ready_ms": 688.630917,
+    "snapshot_converged": true
+  },
+  "scenario": "CON-RELAY",
+  "level": "replica",
+  "passed": true,
+  "git_sha": "832ae2c5a7ce7bc39cde6e1017d735ade26c8db7",
+  "at": "2026-10-21T19:56:37.705828Z",
+  "assertions": [
+    {
+      "name": "serve_config_before",
+      "passed": true
+    },
+    {
+      "name": "isolated_gateway",
+      "passed": true
+    },
+    {
+      "name": "signed_native_helper_contacts_capture_ready",
+      "passed": true
+    },
+    {
+      "name": "remote_on_system",
+      "passed": true
+    },
+    {
+      "name": "system_backend_port_10000",
+      "passed": true
+    },
+    {
+      "name": "existing_handlers_preserved_exactly_while_on",
+      "passed": true
+    },
+    {
+      "name": "pair_via_remote_cli",
+      "passed": true
+    },
+    {
+      "name": "remote_pair_rejects_peer-addr",
+      "passed": true
+    },
+    {
+      "name": "remote_pair_rejects_dial-replica",
+      "passed": true
+    },
+    {
+      "name": "remote_code_public_url_and_gateway_pin",
+      "passed": true
+    },
+    {
+      "name": "gateway_peer_loopback_only",
+      "passed": true
+    },
+    {
+      "name": "ubuntu_public_dns",
+      "passed": true
+    },
+    {
+      "name": "public_ingress_ready_within_120_seconds",
+      "passed": true
+    },
+    {
+      "name": "ubuntu_curl_public_tls/",
+      "passed": true
+    },
+    {
+      "name": "ubuntu_curl_public_tls/v1/health",
+      "passed": true
+    },
+    {
+      "name": "relay_probe_cross_compiled_on_air",
+      "passed": true
+    },
+    {
+      "name": "ubuntu_joins_and_starts_through_remote",
+      "passed": true
+    },
+    {
+      "name": "gateway_snapshot_reference",
+      "passed": true
+    },
+    {
+      "name": "public_relay_snapshot_converges",
+      "passed": true
+    },
+    {
+      "name": "public_tls_plus_pinned_gateway_identity",
+      "passed": true
+    },
+    {
+      "name": "join_and_feed_forced_through_public_relay",
+      "passed": true
+    },
+    {
+      "name": "contacts_gateway_observer_scope",
+      "passed": true
+    },
+    {
+      "name": "contacts_gateway_observer_ready",
+      "passed": true
+    },
+    {
+      "name": "twenty_contacts_reach_public_replica",
+      "passed": true
+    },
+    {
+      "name": "contacts_direct_p95_under_one_second",
+      "passed": true
+    },
+    {
+      "name": "contacts_public_p95_under_one_second",
+      "passed": true
+    },
+    {
+      "name": "public_contacts_rest_and_mcp_crud",
+      "passed": true
+    },
+    {
+      "name": "public_contacts_command_p95_under_one_second",
+      "passed": true
+    },
+    {
+      "name": "independent_public_command_cleanup",
+      "passed": true
+    },
+    {
+      "name": "tagged_contacts_cleaned",
+      "passed": true
+    },
+    {
+      "name": "contacts_cleanup_preserves_unowned_data",
+      "passed": true
+    },
+    {
+      "name": "remote_off",
+      "passed": true
+    },
+    {
+      "name": "serve_config_byte_identical_after_off",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "contacts_actor_queue": {
+      "samples": 30,
+      "p50_ms": 60.362042,
+      "p95_ms": 219.4,
+      "max_ms": 261.254959,
+      "timeouts": 0
+    },
+    "contacts_command_effect_to_public_read": {
+      "samples": 6,
+      "p50_ms": 614.140117,
+      "p95_ms": 905.654863,
+      "max_ms": 905.654863,
+      "timeouts": 0
+    },
+    "contacts_command_effect_to_public_replica": {
+      "samples": 6,
+      "p50_ms": 341.393948,
+      "p95_ms": 741.310199,
+      "max_ms": 741.310199,
+      "timeouts": 0
+    },
+    "contacts_compare": {
+      "samples": 30,
+      "p50_ms": 0.541209,
+      "p95_ms": 2.520625,
+      "max_ms": 2.64125,
+      "timeouts": 0
+    },
+    "contacts_effect_to_gateway": {
+      "samples": 20,
+      "p50_ms": 389.817208,
+      "p95_ms": 671.45625,
+      "max_ms": 749.299042,
+      "timeouts": 0
+    },
+    "contacts_effect_to_public_replica": {
+      "samples": 20,
+      "p50_ms": 440.470221,
+      "p95_ms": 710.334901,
+      "max_ms": 779.846288,
+      "timeouts": 0
+    },
+    "contacts_fetch": {
+      "samples": 28,
+      "p50_ms": 27.588709,
+      "p95_ms": 1625.995,
+      "max_ms": 1761.081584,
+      "timeouts": 0
+    },
+    "contacts_gateway_commit": {
+      "samples": 41,
+      "p50_ms": 57.871104,
+      "p95_ms": 161.833984,
+      "max_ms": 298.01216,
+      "timeouts": 0
+    },
+    "contacts_history_fetch": {
+      "samples": 122,
+      "p50_ms": 14.864666,
+      "p95_ms": 54.848,
+      "max_ms": 220.698375,
+      "timeouts": 0
+    },
+    "contacts_materialize": {
+      "samples": 28,
+      "p50_ms": 17.750209,
+      "p95_ms": 335.071208,
+      "max_ms": 448.54,
+      "timeouts": 0
+    },
+    "contacts_notification_to_scan": {
+      "samples": 57,
+      "p50_ms": 106.991375,
+      "p95_ms": 563.262917,
+      "max_ms": 2792.022625,
+      "timeouts": 0
+    },
+    "contacts_publish_queue": {
+      "samples": 41,
+      "p50_ms": 2.26525,
+      "p95_ms": 16.266709,
+      "max_ms": 22.355292,
+      "timeouts": 0
+    },
+    "contacts_publish_to_ack": {
+      "samples": 41,
+      "p50_ms": 133.755042,
+      "p95_ms": 361.934,
+      "max_ms": 652.195167,
+      "timeouts": 0
+    },
+    "contacts_publish_to_commit_start": {
+      "samples": 41,
+      "p50_ms": 12.003072,
+      "p95_ms": 261.690112,
+      "max_ms": 451.688192,
+      "timeouts": 0
+    },
+    "contacts_ready_to_commit": {
+      "samples": 30,
+      "p50_ms": 276.47675,
+      "p95_ms": 655.724292,
+      "max_ms": 1572.941542,
+      "timeouts": 0
+    },
+    "contacts_ready_to_enqueue": {
+      "samples": 30,
+      "p50_ms": 63.678375,
+      "p95_ms": 262.090709,
+      "max_ms": 1452.745959,
+      "timeouts": 0
+    },
+    "contacts_scan_queue": {
+      "samples": 122,
+      "p50_ms": 0.319125,
+      "p95_ms": 58.657917,
+      "max_ms": 422.97775,
+      "timeouts": 0
+    },
+    "helper_blob_write:contacts": {
+      "samples": 82,
+      "p50_ms": 5.569291,
+      "p95_ms": 28.515541,
+      "max_ms": 33.687625,
+      "timeouts": 0
+    },
+    "helper_blob_write:messages": {
+      "samples": 1329,
+      "p50_ms": 19.979958,
+      "p95_ms": 135.5075,
+      "max_ms": 1012.979166,
+      "timeouts": 0
+    },
+    "helper_capture_write:calendar": {
+      "samples": 39,
+      "p50_ms": 0.861083,
+      "p95_ms": 3.009792,
+      "max_ms": 8.731333,
+      "timeouts": 0
+    },
+    "helper_capture_write:contacts": {
+      "samples": 41,
+      "p50_ms": 0.618417,
+      "p95_ms": 24.861584,
+      "max_ms": 88.40025,
+      "timeouts": 0
+    },
+    "helper_capture_write:messages": {
+      "samples": 1160,
+      "p50_ms": 4.3445,
+      "p95_ms": 21.286333,
+      "max_ms": 525.087667,
+      "timeouts": 0
+    },
+    "helper_capture_write:notes": {
+      "samples": 3,
+      "p50_ms": 4.143375,
+      "p95_ms": 45.062709,
+      "max_ms": 45.062709,
+      "timeouts": 0
+    },
+    "helper_capture_write:reminders": {
+      "samples": 39,
+      "p50_ms": 0.562084,
+      "p95_ms": 2.629667,
+      "max_ms": 14.726625,
+      "timeouts": 0
+    },
+    "helper_capture_write:usage": {
+      "samples": 293,
+      "p50_ms": 0.2305,
+      "p95_ms": 18.934917,
+      "max_ms": 33.076291,
+      "timeouts": 0
+    },
+    "helper_chunk_prepare:calendar": {
+      "samples": 39,
+      "p50_ms": 0.126416,
+      "p95_ms": 0.363,
+      "max_ms": 0.684167,
+      "timeouts": 0
+    },
+    "helper_chunk_prepare:contacts": {
+      "samples": 41,
+      "p50_ms": 0.481458,
+      "p95_ms": 1.397667,
+      "max_ms": 1.450584,
+      "timeouts": 0
+    },
+    "helper_chunk_prepare:messages": {
+      "samples": 1161,
+      "p50_ms": 0.13675,
+      "p95_ms": 1.073916,
+      "max_ms": 14.752417,
+      "timeouts": 0
+    },
+    "helper_chunk_prepare:notes": {
+      "samples": 3,
+      "p50_ms": 0.060666,
+      "p95_ms": 0.067042,
+      "max_ms": 0.067042,
+      "timeouts": 0
+    },
+    "helper_chunk_prepare:reminders": {
+      "samples": 39,
+      "p50_ms": 0.107125,
+      "p95_ms": 0.26325,
+      "max_ms": 0.404417,
+      "timeouts": 0
+    },
+    "helper_chunk_prepare:usage": {
+      "samples": 293,
+      "p50_ms": 0.109875,
+      "p95_ms": 0.398958,
+      "max_ms": 2.642875,
+      "timeouts": 0
+    },
+    "helper_marker_write:calendar": {
+      "samples": 229,
+      "p50_ms": 0.767917,
+      "p95_ms": 4.421916,
+      "max_ms": 12.297875,
+      "timeouts": 0
+    },
+    "helper_marker_write:contacts": {
+      "samples": 41,
+      "p50_ms": 0.789417,
+      "p95_ms": 3.872584,
+      "max_ms": 6.970291,
+      "timeouts": 0
+    },
+    "helper_marker_write:messages": {
+      "samples": 1426,
+      "p50_ms": 0.816083,
+      "p95_ms": 4.269,
+      "max_ms": 31.089625,
+      "timeouts": 0
+    },
+    "helper_marker_write:notes": {
+      "samples": 3,
+      "p50_ms": 0.33575,
+      "p95_ms": 0.396458,
+      "max_ms": 0.396458,
+      "timeouts": 0
+    },
+    "helper_marker_write:reminders": {
+      "samples": 39,
+      "p50_ms": 0.882208,
+      "p95_ms": 3.798041,
+      "max_ms": 11.455125,
+      "timeouts": 0
+    },
+    "helper_marker_write:usage": {
+      "samples": 293,
+      "p50_ms": 0.815667,
+      "p95_ms": 4.69025,
+      "max_ms": 19.459625,
+      "timeouts": 0
+    },
+    "helper_split:calendar": {
+      "samples": 39,
+      "p50_ms": 0.559208,
+      "p95_ms": 3.618875,
+      "max_ms": 4.982208,
+      "timeouts": 0
+    },
+    "helper_split:contacts": {
+      "samples": 32,
+      "p50_ms": 0.30975,
+      "p95_ms": 0.522959,
+      "max_ms": 8.0145,
+      "timeouts": 0
+    },
+    "helper_split:messages": {
+      "samples": 275,
+      "p50_ms": 5.610083,
+      "p95_ms": 8.83525,
+      "max_ms": 35.206875,
+      "timeouts": 0
+    },
+    "helper_split:notes": {
+      "samples": 1,
+      "p50_ms": 2.436,
+      "p95_ms": 2.436,
+      "max_ms": 2.436,
+      "timeouts": 0
+    },
+    "helper_split:reminders": {
+      "samples": 24,
+      "p50_ms": 0.212792,
+      "p95_ms": 3.616625,
+      "max_ms": 9.710708,
+      "timeouts": 0
+    },
+    "helper_split:usage": {
+      "samples": 222,
+      "p50_ms": 0.202709,
+      "p95_ms": 1.530167,
+      "max_ms": 29.550666,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air",
+    "ubuntu"
+  ]
+}

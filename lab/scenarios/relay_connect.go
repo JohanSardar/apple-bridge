@@ -27,6 +27,11 @@ func runRelayReplica(ctx context.Context, s Scenario, level string) Evidence {
 func runRelayWorld(ctx context.Context, s Scenario, level string, native bool) (e Evidence) {
 	sha, _ := exec.Command("git", "rev-parse", "HEAD").Output()
 	e = Evidence{GitSHA: strings.TrimSpace(string(sha)), RunID: contracts.NewID("relay"), Scenario: s.ID, Level: level, At: time.Now().UTC(), Latency: map[string]Latency{}, Hosts: []string{"air", "ubuntu"}, NetworkPath: "public Funnel; pinned public DNS through CONNECT egress; no peer or SSH tunnel"}
+	contacts := s.ID == "CON-RELAY"
+	scope, collection, source := "reminders:write,system:read", "reminders.reminder", "reminders"
+	if contacts {
+		scope, collection, source = "contacts:write,system:read", "contacts.contact", "contacts"
+	}
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
 	before, err := exec.CommandContext(ctx, "/opt/homebrew/bin/tailscale", "serve", "status", "--json").Output()
 	add("serve_config_before", err == nil)
@@ -83,8 +88,8 @@ func runRelayWorld(ctx context.Context, s Scenario, level string, native bool) (
 		}
 	}()
 	if native {
-		err = relayNativeReady(ctx, w)
-		add("signed_native_helper_reminders_capture_ready", err == nil)
+		err = relayNativeReady(ctx, w, source)
+		add("signed_native_helper_"+source+"_capture_ready", err == nil)
 		if err != nil {
 			return
 		}
@@ -109,7 +114,7 @@ func runRelayWorld(ctx context.Context, s Scenario, level string, native bool) (
 		return
 	}
 	remoteMappingChecks(ctx, before, u, add)
-	encoded, err := exec.CommandContext(ctx, "bin/bridge", "pair", "--via-remote", "--scope", "reminders:write,system:read", "--home", w.Gateway.Home).Output()
+	encoded, err := exec.CommandContext(ctx, "bin/bridge", "pair", "--via-remote", "--scope", scope, "--home", w.Gateway.Home).Output()
 	add("pair_via_remote_cli", err == nil)
 	if err != nil {
 		return
@@ -144,7 +149,7 @@ func runRelayWorld(ctx context.Context, s Scenario, level string, native bool) (
 		os.WriteFile(filepath.Join(w.Dir, "relay-probe-build.log"), output, 0600)
 		return
 	}
-	err = w.AddRelayReplica("reminders:write,system:read", ip, probe)
+	err = w.AddRelayReplica(scope, ip, probe)
 	add("ubuntu_joins_and_starts_through_remote", err == nil)
 	if err != nil {
 		os.WriteFile(filepath.Join(w.Dir, "relay-start-error.log"), []byte(err.Error()), 0600)
@@ -155,12 +160,12 @@ func runRelayWorld(ctx context.Context, s Scenario, level string, native bool) (
 	var result, gateway relayQuery
 	snapshotChecks := map[string]bool{"gateway_read": false}
 	err = w.Await(20*time.Second, func() bool {
-		gateway, err = relayGatewaySnapshot(ctx, w.Gateway)
+		gateway, err = relayGatewaySnapshot(ctx, w.Gateway, collection)
 		snapshotChecks["gateway_read"] = err == nil
 		if err != nil {
 			return false
 		}
-		err = w.RelayProbe("query", map[string]any{"URL": replica.URL, "Host": replica.Host, "Token": replica.Token, "Home": replica.Home, "Collection": "reminders.reminder", "ProxyReady": filepath.Join(w.Dir, "relay-route", "ready.json")}, &result)
+		err = w.RelayProbe("query", map[string]any{"URL": replica.URL, "Host": replica.Host, "Token": replica.Token, "Home": replica.Home, "Collection": collection, "ProxyReady": filepath.Join(w.Dir, "relay-route", "ready.json")}, &result)
 		snapshotChecks["replica_read"] = err == nil
 		if err != nil {
 			return false
@@ -192,6 +197,10 @@ func runRelayWorld(ctx context.Context, s Scenario, level string, native bool) (
 		delete(e.Metrics, "snapshot_records")
 		delete(e.Metrics, "snapshot_pages")
 		e.Metrics["snapshot_converged"] = err == nil
+	}
+	if err == nil && contacts {
+		relayContactsChecks(ctx, w, &e, add)
+		return
 	}
 	if err == nil && s.ID == "WEB-RELAY-COMMAND" {
 		relayCommandChecks(w, &e, add)

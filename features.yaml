@@ -306,12 +306,13 @@ features:
       - {id: CON-IMPORT, levels: [sim, real]}
       - {id: CON-SEARCH, levels: [sim]}
       - {id: CON-EXTERNAL, levels: [sim, real, replica]}
+      - {id: CON-RELAY, levels: [replica]}
       - {id: CON-DROP-EVERYTHING, levels: [sim]}
       - {id: CON-TOKEN-CRASH, levels: [sim]}
       - {id: CON-PERMISSION-LOSS, levels: [sim]}
       - {id: CON-IMAGE, levels: [sim]}
       - {id: CON-HANDLE-LINK, levels: [sim]}
-    notes: External-change R-LIVE is under repair. Clean main 8b7d001a measured direct replica p95 1525.031 ms for 20 effects; the unchanged budget is 1000 ms. Stage instrumentation and direct/public certification are owned by CONTACTS-LIVE.
+    notes: Contacts R-LIVE remains under repair. CON-RELAY public proof passed 34 assertions; external p95 710.335 ms plus 26.643 ms clock uncertainty (20 effects). Cold direct CRUD still fails p95 1279.372 ms while synchronous Helper IPC writes are being repaired; the budget remains 1000 ms.
 
   - id: contacts.write
     title: Contacts create, update, delete
@@ -326,7 +327,7 @@ features:
       - {id: CON-CONFLICT, levels: [sim]}
       - {id: CON-RESOLVE-RESTART, levels: [sim]}
 
-    notes: CRUD correctness has real coverage. Native-save-to-replica latency and public forwarding still need the CONTACTS-LIVE 1000 ms p95 proof; functional success alone does not certify R-LIVE.
+    notes: Public CON-RELAY forwarded REST/MCP CRUD passes; native-save-to-Ubuntu-SSE p95 741.310 ms plus 58.060 ms clock uncertainty for six saves. Cold direct CRUD still fails p95 1279.372 ms; Contacts R-LIVE remains open pending the IPC drain fix and complete direct/public certification.
 
   - id: notes.read
     title: Notes folders and notes, protobuf decoding, locked notes
