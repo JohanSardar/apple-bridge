@@ -1,0 +1,8 @@
+id: WEB-VIRTUAL-ANCHOR
+feature: web.frontdoor
+levels: [web]
+web:
+  browsers: [webkit, chromium, firefox]
+  themes: [light, dark]
+  layouts: [phone, desktop]
+  server: mock

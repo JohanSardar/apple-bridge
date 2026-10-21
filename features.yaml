@@ -405,6 +405,12 @@ features:
       - {id: WEB-COMMAND-INTERACTIVE, levels: [sim]}
       - {id: WEB-LIVE-RECORD, levels: [sim]}
       - {id: WEB-LIVE-READMODELS, levels: [sim]}
+      - {id: WEB-SHELL-JOURNEY, levels: [web]}
+      - {id: WEB-INPUT-GUARD, levels: [web]}
+      - {id: WEB-VIRTUAL-ANCHOR, levels: [web]}
+      - {id: WEB-CACHE-POLICY, levels: [web]}
+      - {id: WEB-LIVE-MOCK, levels: [web]}
+      - {id: WEB-MOTION, levels: [web]}
   - id: web.media
     title: Browser-safe media variants made by the Helper
     requirements: [R-WEB-UI, R-ATTACH]

@@ -1,0 +1,6 @@
+import { defineConfig } from '@playwright/test';
+const browsers = ['webkit', 'chromium', 'firefox'] as const;
+const colors = ['light', 'dark'] as const;
+const layouts = { phone: { width: 390, height: 844 }, desktop: { width: 1440, height: 900 } };
+const requested = process.env.AB_WEB_PROJECTS?.split(',');
+export default defineConfig({ testDir: './tests', workers: 1, maxFailures: 1, timeout: 45000, expect: { timeout: 6000 }, retries: 0, reporter: [['list'], ['json', { outputFile: process.env.AB_WEB_REPORT || 'test-results/report.json' }]], use: { baseURL: process.env.AB_WEB_URL, trace: 'retain-on-failure', screenshot: 'only-on-failure' }, projects: browsers.flatMap(browserName => colors.flatMap(colorScheme => Object.entries(layouts).map(([layout, viewport]) => ({ name: `${browserName}-${colorScheme}-${layout}`, use: { browserName, colorScheme, viewport, hasTouch: layout === 'phone' && browserName !== 'firefox' } })))).filter(p => !requested || requested.includes(p.name)) });

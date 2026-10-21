@@ -24,7 +24,8 @@ import (
 )
 
 type Scenario struct {
-	Web     map[string]any              `yaml:"web,omitempty"`
+	Level   string                      `yaml:"level,omitempty"`
+	Web     *WebOptions                 `yaml:"web,omitempty"`
 	ID      string                      `yaml:"id"`
 	Feature string                      `yaml:"feature"`
 	Levels  []string                    `yaml:"levels"`
@@ -279,6 +280,9 @@ func Load(paths []string) ([]Scenario, error) {
 		if err = dec.Decode(&struct{}{}); err != io.EOF {
 			return nil, fmt.Errorf("%s: expected one YAML document", f)
 		}
+		if s.Level != "" && len(s.Levels) == 0 {
+			s.Levels = []string{s.Level}
+		}
 		if err = validateScenario(s); err != nil {
 			return nil, fmt.Errorf("%s: %w", f, err)
 		}
@@ -369,6 +373,9 @@ func convergence(w *world.World) bool {
 }
 
 func runScenario(ctx context.Context, s Scenario, level string) Evidence {
+	if level == "web" {
+		return runWeb(ctx, s)
+	}
 	if s.Feature == "web.readmodels" {
 		return runReadModels(ctx, s, level)
 	}
@@ -891,7 +898,7 @@ func Save(e Evidence) error {
 	return os.WriteFile(filepath.Join(dir, e.Scenario+".json"), append(b, '\n'), 0644)
 }
 func Suite(ctx context.Context, paths []string, level string, asJSON bool) error {
-	if level != "sim" && level != "replica" && level != "real" {
+	if level != "sim" && level != "replica" && level != "real" && level != "web" {
 		return fmt.Errorf("level unsupported by tracer")
 	}
 	scenarios, err := Load(paths)

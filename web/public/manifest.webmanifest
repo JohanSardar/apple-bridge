@@ -1,0 +1,1 @@
+{"name":"Bridge","short_name":"Bridge","description":"Messages, Reminders, Calendar, Contacts and Notes","start_url":"/messages","scope":"/","display":"standalone","background_color":"#f2f2f7","theme_color":"#0088ff","icons":[{"src":"/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]}
