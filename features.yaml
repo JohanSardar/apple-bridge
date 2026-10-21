@@ -467,6 +467,7 @@ features:
     status: todo
     scenarios:
       - {id: WEB-RELAY-AUTH, levels: [sim]}
+      - {id: WEB-RELAY-AGENTS, levels: [sim]}
       - {id: WEB-RELAY-PAIRING, levels: [sim]}
       - {id: WEB-RELAY-CONNECT, levels: [replica]}
       - {id: WEB-RELAY-COMMAND, levels: [replica]}

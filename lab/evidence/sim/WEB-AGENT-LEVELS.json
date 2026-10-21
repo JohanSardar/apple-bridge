@@ -1,14 +1,14 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[7.33 9 8.4] cpus=8 other_heavy=1"
+    "summary": "air: load=[8.66 9.14 10.18] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M5EGBJFB004WY989AJX2G131",
+  "run_id": "run_01M5ER5C4VBV9JXZWJRNZY44BA",
   "scenario": "WEB-AGENT-LEVELS",
   "level": "sim",
   "passed": true,
-  "git_sha": "a72fb9c6fb641474842744920c4abf548ed45d25",
-  "at": "2026-10-21T05:53:42.891326Z",
+  "git_sha": "f0002e5bb9fad47fa4caf4b7b3d383fd8623f6ff",
+  "at": "2026-10-21T08:10:08.412079Z",
   "assertions": [
     {
       "name": "agents_available",
@@ -121,11 +121,11 @@
       "passed": true
     },
     {
-      "name": "replica_agent_write_refused_before_forwarding",
+      "name": "replica_agent_queues_gateway_approval_without_effect",
       "passed": true
     },
     {
-      "name": "replica_refusal_logged",
+      "name": "replica_delegation_logged_on_gateway",
       "passed": true
     },
     {
@@ -152,9 +152,9 @@
   "latency": {
     "approval_to_observed": {
       "samples": 1,
-      "p50_ms": 112.026833,
-      "p95_ms": 112.026833,
-      "max_ms": 112.026833,
+      "p50_ms": 77.27625,
+      "p95_ms": 77.27625,
+      "max_ms": 77.27625,
       "timeouts": 0
     }
   },
