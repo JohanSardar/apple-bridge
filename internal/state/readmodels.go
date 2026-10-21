@@ -76,12 +76,12 @@ func modelRecord(ctx context.Context, tx *sql.Tx, collection, id string) (contra
 	return r, err
 }
 func (s *Store) Chats(ctx context.Context, v trust.Visibility, q contracts.ChatsQuery) (contracts.ChatsResult, error) {
-	out := contracts.ChatsResult{Chats: []contracts.ChatSummary{}, CoverageNotes: []string{"unseen mentions unavailable; has_unseen_mention is false", "reactions without sent_at use observed_at"}}
+	out := contracts.ChatsResult{Chats: []contracts.ChatSummary{}, CoverageNotes: []string{"reactions without sent_at use observed_at"}}
 	limit, err := viewLimit(q.Limit)
 	if err != nil {
 		return out, err
 	}
-	if q.Filter != "" && q.Filter != "all" && q.Filter != "unread" && q.Filter != "archived" {
+	if !slices.Contains([]string{"", "all", "known", "unknown", "unread", "deleted", "spam", "archived"}, q.Filter) {
 		return out, contracts.ErrInvalid
 	}
 	var c viewCursor
@@ -107,8 +107,24 @@ func (s *Store) Chats(ctx context.Context, v trust.Visibility, q contracts.Chats
 	} else {
 		where += " AND coalesce(json_extract(r.payload,'$.data.is_archived'),0)=0"
 	}
+	if q.Filter == "deleted" {
+		where += " AND json_extract(r.payload,'$.data.deleted_at') IS NOT NULL"
+	} else {
+		where += " AND json_extract(r.payload,'$.data.deleted_at') IS NULL"
+	}
 	if q.Filter == "unread" {
 		where += " AND s.unread_count>0"
+	}
+	if q.Filter == "spam" {
+		where += " AND EXISTS(SELECT 1 FROM msg_by_chat m WHERE m.chat_id=s.id AND json_extract(m.payload,'$.data.is_spam')=1)"
+	}
+	if q.Filter == "known" || q.Filter == "unknown" {
+		known := "(coalesce(json_extract(r.payload,'$.data.filter'),'known')='known' OR EXISTS(SELECT 1 FROM json_each(r.payload,'$.data.participants') p JOIN records h ON h.collection='messages.handle' AND h.id=p.value AND h.deleted=0 WHERE json_extract(h.payload,'$.data.contact_id') IS NOT NULL))"
+		if q.Filter == "unknown" {
+			where += " AND NOT " + known
+		} else {
+			where += " AND " + known
+		}
 	}
 	if q.After != "" {
 		where += " AND (s.last_activity_at<? OR (s.last_activity_at=? AND s.id>?))"
@@ -151,6 +167,17 @@ func (s *Store) Chats(ctx context.Context, v trust.Visibility, q contracts.Chats
 }
 func fillSummary(ctx context.Context, tx *sql.Tx, v trust.Visibility, s *contracts.ChatSummary) error {
 	d := modelFields(s.Chat)
+	if err := tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM msg_by_chat WHERE chat_id=? AND json_extract(payload,'$.data.has_unseen_mention')=1 AND json_extract(payload,'$.data.deleted_at') IS NULL)", s.Chat.ID).Scan(&s.HasUnseenMention); err != nil {
+		return err
+	}
+	if n, ok := d["pinned_index"].(float64); ok {
+		value := int(n)
+		s.PinnedIndex = &value
+	}
+	if until := fieldString(d, "muted_until"); until != "" {
+		value := until > time.Now().UTC().Format(time.RFC3339Nano)
+		s.Muted = &value
+	}
 	s.Title = fieldString(d, "display_name")
 	s.AvatarHandles = []contracts.AvatarHandle{}
 	names := []string{}
@@ -234,7 +261,7 @@ func fillSummary(ctx context.Context, tx *sql.Tx, v trust.Visibility, s *contrac
 	case md["edited_at"] != nil:
 		last.Preview.Kind = "edited"
 	default:
-		attachments, err := readModelRecords(ctx, tx, "SELECT payload FROM attachment_by_message WHERE message_id=? ORDER BY id", messageID)
+		attachments, err := readModelRecords(ctx, tx, "SELECT payload FROM attachment_by_message WHERE message_id=? AND coalesce(json_extract(payload,'$.data.hidden'),0)=0 ORDER BY id", messageID)
 		if err != nil {
 			return err
 		}
@@ -475,7 +502,27 @@ func (s *Store) Collection(ctx context.Context, v trust.Visibility, q contracts.
 		return out, err
 	}
 	if q.Kind == "links" || q.Kind == "locations" {
-		out.CoverageNotes = append(out.CoverageNotes, q.Kind+" unavailable until balloon decoding")
+		where := "m.chat_id=? AND json_extract(m.payload,'$.data.deleted_at') IS NULL AND json_extract(m.payload,'$.data.balloon.kind')=?"
+		kind := "link"
+		if q.Kind == "locations" {
+			kind = "find_my"
+		}
+		args := []any{q.ChatID, kind}
+		if q.After != "" {
+			where += " AND (m.sent_at<? OR (m.sent_at=? AND m.id>?))"
+			args = append(args, edge.At, edge.At, edge.ID)
+		}
+		args = append(args, limit+1)
+		records, err := readModelRecords(ctx, tx, "SELECT m.payload FROM msg_by_chat m WHERE "+where+" ORDER BY m.sent_at DESC,m.id LIMIT ?", args...)
+		if err != nil {
+			return out, err
+		}
+		if len(records) > limit {
+			records = records[:limit]
+			last := records[len(records)-1]
+			out.Next = encodeView("collection", q.ChatID+":"+q.Kind, modelTime(fieldString(modelFields(last), "sent_at")), last.ID)
+		}
+		out.Items = records
 		return out, nil
 	}
 	where := ""
@@ -485,7 +532,7 @@ func (s *Store) Collection(ctx context.Context, v trust.Visibility, q contracts.
 		args = append(args, edge.At, edge.At, edge.ID)
 	}
 	args = append(args, limit+1)
-	records, err := readModelRecords(ctx, tx, "SELECT a.payload FROM msg_by_chat m JOIN attachment_by_message a ON a.message_id=m.id WHERE m.chat_id=? AND a.kind=?"+where+" ORDER BY m.sent_at DESC,a.id LIMIT ?", args...)
+	records, err := readModelRecords(ctx, tx, "SELECT a.payload FROM msg_by_chat m JOIN attachment_by_message a ON a.message_id=m.id WHERE m.chat_id=? AND a.kind=? AND coalesce(json_extract(a.payload,'$.data.hidden'),0)=0 AND json_extract(m.payload,'$.data.deleted_at') IS NULL"+where+" ORDER BY m.sent_at DESC,a.id LIMIT ?", args...)
 	if err != nil {
 		return out, err
 	}

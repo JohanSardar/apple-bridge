@@ -347,9 +347,6 @@ func rmLive(ctx context.Context, w *world.World, chatID string, add func(string,
 				want = 0
 			}
 			valid := err == nil && len(result.Items) == want
-			if want == 0 {
-				valid = valid && len(result.CoverageNotes) > 0
-			}
 			add(protocol+"_collection_"+kind, valid)
 		}
 	}
