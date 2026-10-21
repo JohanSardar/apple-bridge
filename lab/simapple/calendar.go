@@ -121,6 +121,9 @@ func (f *fakeApple) calendarControl(mux *http.ServeMux) {
 			for index := 0; index < request.Count; index++ {
 				key := fmt.Sprintf("%s/%d", request.Key, index)
 				data := map[string]any{"calendar_id": nativeReference("calendar.calendar", "test-calendar"), "title": fmt.Sprintf("%s %d", request.Data["title"], index), "start": request.Data["start"], "end": request.Data["end"], "all_day": false, "time_zone": "UTC", "is_exception": false}
+				if notes, ok := request.Data["notes"]; ok {
+					data["notes"] = notes
+				}
 				next := calendarObservation(key, "calendar.event", data)
 				next.ScopedAlias = f.calendarScope("test-calendar") + key
 				f.records[key] = next
@@ -201,6 +204,7 @@ func (f *fakeApple) calendarControl(mux *http.ServeMux) {
 			return
 		}
 		c := f.calendarScanLocked()
+		c.Live = true
 		denied := f.calendarDenied
 		err := f.changedLocked(contracts.Calendar)
 		revision := f.durable.Revision[contracts.Calendar]
@@ -215,7 +219,8 @@ func (f *fakeApple) calendarControl(mux *http.ServeMux) {
 				return
 			}
 		}
-		json.NewEncoder(w).Encode(map[string]any{"effect_done": true, "effect_at": effectAt.Format(time.RFC3339Nano)})
+		encoded, _ := json.Marshal(c.Observations)
+		json.NewEncoder(w).Encode(map[string]any{"effect_done": true, "effect_at": effectAt.Format(time.RFC3339Nano), "capture_bytes": len(encoded)})
 	})
 }
 func (f *fakeApple) isCalendarFrame(frame contracts.IPCFrame) bool {

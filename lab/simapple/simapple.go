@@ -604,8 +604,19 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 			}
 			return 0
 		})
+		calendarSingleFrame := false
+		if capture.Source == contracts.Calendar && capture.Live {
+			encoded, err := json.Marshal(capture.Observations)
+			if err != nil {
+				return err
+			}
+			calendarSingleFrame = len(encoded) <= 240000
+		}
 		for offset := 0; offset < len(capture.Observations); {
 			end := min(offset+64, len(capture.Observations))
+			if calendarSingleFrame {
+				end = len(capture.Observations)
+			}
 			part := capture
 			for {
 				part = capture
@@ -678,6 +689,21 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 			}
 			if err := transmit(f.revalidateMessages(part), end == len(capture.Observations)); err != nil {
 				return err
+			}
+			if capture.Source == contracts.Calendar && end < len(capture.Observations) {
+				f.mu.Lock()
+				delay := f.fault == "calendar-part-delay"
+				if delay {
+					f.fault = ""
+				}
+				f.mu.Unlock()
+				if delay {
+					select {
+					case <-ctx.Done():
+						return ctx.Err()
+					case <-time.After(250 * time.Millisecond):
+					}
+				}
 			}
 			offset = end
 		}

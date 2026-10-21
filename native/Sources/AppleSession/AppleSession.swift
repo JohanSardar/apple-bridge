@@ -255,7 +255,8 @@ public actor AppleSession: ObservationSink {
 
     public func emitCheckpoint(source: String, generation: String, checkpoint: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) async throws {
         guard wire != nil else { throw SourceFailure.unavailable }
-        let chunks = try split(observations, maximumBytes: live ? 64000 : 16000)
+        let maximumBytes = live ? (source == "calendar" ? 240000 : 64000) : 16000
+        let chunks = try split(observations, maximumBytes: maximumBytes)
         for (index,chunk) in chunks.enumerated() {
             try await withCheckedThrowingContinuation { continuation in
                 let pending = Pending(source: source, checkpoint: index == chunks.count-1 ? checkpoint : "", generation: generation, scanID: scanID, completionEvidence: completionEvidence, blobHandles: blobHandles.filter { digest, _ in Self.containsDigest(.array(chunk), digest: digest) }, observations: chunk, started: scanStartedAt, scope: scope, completion: continuation)

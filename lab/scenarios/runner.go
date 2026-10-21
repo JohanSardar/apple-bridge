@@ -746,7 +746,11 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 					return fail("change_parameters")
 				}
 				next := time.Now()
+				var finishCalendar func() bool
 				for i := 0; i < count; i++ {
+					if s.ID == "CORE-LIVE-LATENCY" && i == count/2 {
+						finishCalendar = startCalendarLiveDelta(ctx, w, &evidence, watchers)
+					}
 					if err = change(fmt.Sprintf("live-%03d", i), true); err != nil {
 						return fail("external_change")
 					}
@@ -756,6 +760,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 							return fail("canceled")
 						}
 					}
+				}
+				if finishCalendar != nil {
+					add("calendar_200kb_delta_atomic_during_reminders_live", finishCalendar())
 				}
 			case "disconnect":
 				if w.Await(5*time.Second, func() bool { return convergence(w) }) != nil {
