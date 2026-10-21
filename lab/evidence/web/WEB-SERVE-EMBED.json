@@ -1,10 +1,12 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[7.72 7.03 7.6] cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[5.81 6.68 7.75] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M5E42NB4AREJBBVKSG3Z3BF1",
+  "run_id": "run_01M5ENXSKC9R91NRT7G7J9JR7V",
   "metrics": {
+    "demo_messages": 5000,
+    "demo_startup_ms": 6080,
     "matrix": [
       "webkit-light-phone",
       "webkit-light-desktop",
@@ -39,68 +41,68 @@
   "scenario": "WEB-SERVE-EMBED",
   "level": "web",
   "passed": true,
-  "git_sha": "c937f950e3117b351b5f2d67dfd4fc70bfffdc12",
-  "at": "2026-10-21T02:19:08.004363Z",
+  "git_sha": "d8e6413b48adce3dcb60b8f12ae2fb6495510292",
+  "at": "2026-10-21T07:31:02.892622Z",
   "assertions": [
     {
       "name": "webkit-light-phone:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/integration.spec.ts:6:1 › WEB-SERVE-EMBED binary serves the app, routes, hashed assets and security headers (917ms)\n\n  1 passed (2.0s)\n"
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/integration.spec.ts:6:1 › WEB-SERVE-EMBED binary serves the app, routes, hashed assets and security headers (1.7s)\n\n  1 passed (4.0s)\n"
     },
     {
       "name": "webkit-light-desktop:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/integration.spec.ts:6:1 › WEB-SERVE-EMBED binary serves the app, routes, hashed assets and security headers (427ms)\n\n  1 passed (874ms)\n"
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/integration.spec.ts:6:1 › WEB-SERVE-EMBED binary serves the app, routes, hashed assets and security headers (3.2s)\n\n  1 passed (8.0s)\n"
     },
     {
       "name": "webkit-dark-phone:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-dark-phone] › tests/integration.spec.ts:6:1 › WEB-SERVE-EMBED binary serves the app, routes, hashed assets and security headers (423ms)\n\n  1 passed (881ms)\n"
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-dark-phone] › tests/integration.spec.ts:6:1 › WEB-SERVE-EMBED binary serves the app, routes, hashed assets and security headers (1.9s)\n\n  1 passed (5.7s)\n"
     },
     {
       "name": "webkit-dark-desktop:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-dark-desktop] › tests/integration.spec.ts:6:1 › WEB-SERVE-EMBED binary serves the app, routes, hashed assets and security headers (449ms)\n\n  1 passed (949ms)\n"
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-dark-desktop] › tests/integration.spec.ts:6:1 › WEB-SERVE-EMBED binary serves the app, routes, hashed assets and security headers (2.9s)\n\n  1 passed (6.6s)\n"
     },
     {
       "name": "chromium-light-phone:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/integration.spec.ts:6:1 › WEB-SERVE-EMBED binary serves the app, routes, hashed assets and security headers (421ms)\n\n  1 passed (962ms)\n"
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/integration.spec.ts:6:1 › WEB-SERVE-EMBED binary serves the app, routes, hashed assets and security headers (1.3s)\n\n  1 passed (4.1s)\n"
     },
     {
       "name": "chromium-light-desktop:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/integration.spec.ts:6:1 › WEB-SERVE-EMBED binary serves the app, routes, hashed assets and security headers (185ms)\n\n  1 passed (573ms)\n"
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/integration.spec.ts:6:1 › WEB-SERVE-EMBED binary serves the app, routes, hashed assets and security headers (902ms)\n\n  1 passed (2.3s)\n"
     },
     {
       "name": "chromium-dark-phone:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-dark-phone] › tests/integration.spec.ts:6:1 › WEB-SERVE-EMBED binary serves the app, routes, hashed assets and security headers (142ms)\n\n  1 passed (531ms)\n"
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-dark-phone] › tests/integration.spec.ts:6:1 › WEB-SERVE-EMBED binary serves the app, routes, hashed assets and security headers (573ms)\n\n  1 passed (1.1s)\n"
     },
     {
       "name": "chromium-dark-desktop:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-dark-desktop] › tests/integration.spec.ts:6:1 › WEB-SERVE-EMBED binary serves the app, routes, hashed assets and security headers (162ms)\n\n  1 passed (580ms)\n"
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-dark-desktop] › tests/integration.spec.ts:6:1 › WEB-SERVE-EMBED binary serves the app, routes, hashed assets and security headers (529ms)\n\n  1 passed (1.3s)\n"
     },
     {
       "name": "firefox-light-phone:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-light-phone] › tests/integration.spec.ts:6:1 › WEB-SERVE-EMBED binary serves the app, routes, hashed assets and security headers (1.1s)\n\n  1 passed (2.9s)\n"
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-light-phone] › tests/integration.spec.ts:6:1 › WEB-SERVE-EMBED binary serves the app, routes, hashed assets and security headers (1.5s)\n\n  1 passed (4.6s)\n"
     },
     {
       "name": "firefox-light-desktop:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-light-desktop] › tests/integration.spec.ts:6:1 › WEB-SERVE-EMBED binary serves the app, routes, hashed assets and security headers (798ms)\n\n  1 passed (1.9s)\n"
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-light-desktop] › tests/integration.spec.ts:6:1 › WEB-SERVE-EMBED binary serves the app, routes, hashed assets and security headers (2.1s)\n\n  1 passed (4.4s)\n"
     },
     {
       "name": "firefox-dark-phone:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-dark-phone] › tests/integration.spec.ts:6:1 › WEB-SERVE-EMBED binary serves the app, routes, hashed assets and security headers (783ms)\n\n  1 passed (1.9s)\n"
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-dark-phone] › tests/integration.spec.ts:6:1 › WEB-SERVE-EMBED binary serves the app, routes, hashed assets and security headers (2.3s)\n\n  1 passed (5.2s)\n"
     },
     {
       "name": "firefox-dark-desktop:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-dark-desktop] › tests/integration.spec.ts:6:1 › WEB-SERVE-EMBED binary serves the app, routes, hashed assets and security headers (850ms)\n\n  1 passed (1.9s)\n"
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-dark-desktop] › tests/integration.spec.ts:6:1 › WEB-SERVE-EMBED binary serves the app, routes, hashed assets and security headers (1.5s)\n\n  1 passed (3.5s)\n"
     },
     {
       "name": "credential_backend_override_restored",
