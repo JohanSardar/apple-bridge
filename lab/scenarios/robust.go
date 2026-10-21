@@ -394,6 +394,9 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 				return fail("fill_credit_window")
 			}
 		}
+		if w.FlushCaptures(10*time.Second) != nil {
+			return fail("credit_window_captures_committed")
+		}
 		filled := w.Await(10*time.Second, func() bool { return w.FeedCreditHighWater() > contracts.ByteCredit-contracts.MaxFrame }) == nil
 		highWater := w.FeedCreditHighWater()
 		add("outstanding_metadata_within_four_mib", filled && highWater <= contracts.ByteCredit)
