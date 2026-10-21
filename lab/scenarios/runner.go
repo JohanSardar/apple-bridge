@@ -433,6 +433,12 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 		}
 		return runWebServer(ctx, s, level)
 	}
+	if s.ID == "WEB-UPLOAD-CONTROL-PRODUCTION" {
+		return runUploadControlProduction(ctx, s, level)
+	}
+	if s.ID == "WEB-UPLOAD-REPLICA-CHECKPOINT" && !uploadControlLabEnabled() {
+		return runUploadTagged(ctx, s, level, true)
+	}
 	if strings.HasPrefix(s.ID, "WEB-UPLOAD-REPLICA") {
 		return runUploadReplica(ctx, s, level)
 	}
