@@ -1,14 +1,14 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[19.31 28.03 39.61] cpus=8 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[6.71 21.04 35.6] cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5E7R1QGW5Z0SAD84CEEGBNP",
+  "run_id": "run_01M5E7V4E2PQ3DMHY54VVZ4Z6A",
   "scenario": "WEB-AUTH-SOFTWARE",
   "level": "sim",
   "passed": true,
-  "git_sha": "0b1b83e607cf73490b823e618c4e2461532c1657",
-  "at": "2026-10-21T03:23:14.544014Z",
+  "git_sha": "5dc346254ff1527b4f272ecd6742dc58a2ff879b",
+  "at": "2026-10-21T03:24:55.61883Z",
   "assertions": [
     {
       "name": "software_passkey_enrollment",
@@ -114,9 +114,9 @@
   "latency": {
     "session_revoke": {
       "samples": 1,
-      "p50_ms": 102.139292,
-      "p95_ms": 102.139292,
-      "max_ms": 102.139292,
+      "p50_ms": 101.730166,
+      "p95_ms": 101.730166,
+      "max_ms": 101.730166,
       "timeouts": 0
     }
   },
