@@ -51,7 +51,7 @@ func (s *Store) initReadModels(ctx context.Context) error {
 	if err != nil && err != sql.ErrNoRows {
 		return err
 	}
-	if version == "2" {
+	if version == "3" {
 		return tx.Commit()
 	}
 	rows, err := tx.QueryContext(ctx, "SELECT payload,seq FROM records WHERE collection LIKE 'messages.%' ORDER BY CASE collection WHEN 'messages.message' THEN 0 ELSE 1 END,id")
@@ -86,7 +86,7 @@ func (s *Store) initReadModels(ctx context.Context) error {
 			return err
 		}
 	}
-	if _, err = tx.ExecContext(ctx, "INSERT INTO meta(key,value) VALUES('readmodels_version','2') ON CONFLICT(key) DO UPDATE SET value='2'"); err != nil {
+	if _, err = tx.ExecContext(ctx, "INSERT INTO meta(key,value) VALUES('readmodels_version','3') ON CONFLICT(key) DO UPDATE SET value='3'"); err != nil {
 		return err
 	}
 	return tx.Commit()
@@ -175,8 +175,16 @@ func writeReadModel(ctx context.Context, tx *sql.Tx, r contracts.Record, seq uin
 			return err
 		}
 		if !r.Deleted {
-			_, err = tx.ExecContext(ctx, "INSERT INTO attachment_by_message VALUES(?,?,?,?)", r.ID, fieldString(d, "message_id"), attachmentKind(d), payload)
+			messageID := attachmentMessage(d)
+			_, err = tx.ExecContext(ctx, "INSERT INTO attachment_by_message VALUES(?,?,?,?)", r.ID, messageID, attachmentKind(d), payload)
 		}
 	}
 	return err
+}
+
+func attachmentMessage(d map[string]any) string {
+	if sticker, ok := d["sticker"].(map[string]any); ok && fieldString(sticker, "target_message_id") != "" {
+		return fieldString(sticker, "target_message_id")
+	}
+	return fieldString(d, "message_id")
 }

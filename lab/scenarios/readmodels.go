@@ -157,6 +157,7 @@ func runReadModels(ctx context.Context, s Scenario, level string) Evidence {
 	}
 	if s.ID == "WEB-RM-THREAD" {
 		rmPaging(ctx, w, chatID, expected, add)
+		rmPlacedStickers(ctx, w, add)
 	}
 	if s.ID == "WEB-RM-CHATS" {
 		rmNames(ctx, w, chatID, add)

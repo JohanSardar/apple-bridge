@@ -385,7 +385,7 @@ func (s *Store) Thread(ctx context.Context, v trust.Visibility, q contracts.Thre
 		}
 		byAttachment := map[string][]contracts.Record{}
 		for _, r := range attachments {
-			id := fieldString(modelFields(r), "message_id")
+			id := attachmentMessage(modelFields(r))
 			byAttachment[id] = append(byAttachment[id], r)
 		}
 		counts := map[string]int{}
