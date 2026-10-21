@@ -40,6 +40,8 @@ func validateWeb(s Scenario) error {
 	return nil
 }
 
+const webProjectBudget = 3 * time.Minute
+
 func runWeb(ctx context.Context, s Scenario) Evidence {
 	if err := validateWeb(s); err != nil {
 		return runWebProjects(ctx, s, nil)
@@ -59,7 +61,9 @@ func runWeb(ctx context.Context, s Scenario) Evidence {
 	var result Evidence
 	reports := []any{}
 	for _, project := range projects {
-		part := runWebProjects(ctx, s, []string{project})
+		bounded, cancel := context.WithTimeout(ctx, webProjectBudget)
+		part := runWebProjects(bounded, s, []string{project})
+		cancel()
 		if result.RunID == "" {
 			result = part
 			result.Assertions = nil

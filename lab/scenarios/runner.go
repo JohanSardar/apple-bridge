@@ -961,6 +961,9 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		if s.ID == "HELPER-SESSION-SOAK" {
 			duration = 12 * time.Minute
 		}
+		if level == "web" && s.Web != nil {
+			duration = time.Duration(max(1, len(s.Web.Browsers)*len(s.Web.Themes)*len(s.Web.Layouts))) * webProjectBudget
+		}
 		bounded, cancel := context.WithTimeout(ctx, duration)
 		secretBefore, secretWasSet := os.LookupEnv("APPLE_BRIDGE_SECRET_STORE")
 		e := Run(bounded, s, level)
