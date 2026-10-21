@@ -55,3 +55,35 @@ public enum RemindersStoreProfile {
         ])
     }
 }
+
+
+extension RemindersStoreProfile {
+    @MainActor
+    public static func typed(iterations: Int = 200) throws -> JSON {
+        guard iterations == 200 else { throw SourceFailure.invalid }
+        let start = ProcessInfo.processInfo.systemUptime
+        let paths = try RemindersStore.paths()
+        guard !paths.isEmpty else { throw SourceFailure.unavailable }
+        let sessions = try paths.map { try RemindersStoreSession(path: $0) }
+        func sample(full: Bool) throws -> StoreTimings {
+            try autoreleasepool {
+                var total = StoreTimings()
+                for session in sessions { total.add(try session.read(full: full).timings) }
+                return total
+            }
+        }
+        let cold = try sample(full: true)
+        var full: [StoreTimings] = []
+        var incremental: [StoreTimings] = []
+        for _ in 0..<iterations { full.append(try sample(full: true)) }
+        for _ in 0..<iterations { incremental.append(try sample(full: false)) }
+        func summarize(_ values: [Double]) -> JSON {
+            let sorted = values.sorted()
+            return .object(["samples": .number(Double(sorted.count)), "p50_ms": .number(sorted[99]), "p95_ms": .number(sorted[189]), "max_ms": .number(sorted.last ?? 0)])
+        }
+        func timings(_ values: [StoreTimings]) -> JSON {
+            .object(["connection_open": summarize(values.map(\.openMS)), "backup": summarize(values.map(\.backupMS)), "query": summarize(values.map(\.queryMS)), "decode": summarize(values.map(\.decodeMS)), "total": summarize(values.map(\.totalMS))])
+        }
+        return .object(["mode": .string("persistent_typed"), "cold": cold.json, "warm_full": timings(full), "warm_incremental_unchanged": timings(incremental), "iterations": .number(Double(iterations)), "profile_total_ms": .number((ProcessInfo.processInfo.systemUptime - start) * 1000)])
+    }
+}

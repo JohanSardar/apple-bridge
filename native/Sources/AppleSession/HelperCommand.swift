@@ -97,7 +97,7 @@ public enum HelperCommand {
             return
         }
         if arguments.first == "reminders-store-profile" {
-            let profile = try RemindersStoreProfile.run()
+            let profile = try RemindersStoreProfile.typed()
             try JSONEncoder().encode(profile).write(to: reportURL, options: .atomic)
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportURL.path)
             return

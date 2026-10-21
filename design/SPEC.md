@@ -1078,9 +1078,9 @@ Operations (descriptors in `internal/contracts/operations.go`; available through
 - `reminders.list`: `store_identifier`, `badge_emblem`, `is_group`, `parent_id` (list record reference), `display_order`, `pinned`, `pinned_at`, `sorting_style`, `categorize_groceries`, `grocery_locale`, `sharing_status`, `shared_owner_name`, `smart_list_type`, `smart_filter`, `sections[]`. Store color retains native representation separately as `store_color`; EventKit `title`, `color`, `account`, and `writable` remain available.
 - `reminders.attachment`: owning `reminder_id`, `filename`, `uti`, `size`, `width`, `height`, `digest`, `derivatives`, and `media` through the existing blob/variant pipeline. Native paths never leave the Helper.
 
-Derived indexes update transactionally with apply and rebuild on replica snapshot installation. Reads apply visibility before counts, nesting, tags and smart predicates. No store-only field requires a second EventKit fetch. After an EventKit capture completes, read a SQLite backup made from a read-only live connection (including committed WAL). No additional watcher in this unit.
+Derived indexes update transactionally with apply and rebuild on replica snapshot installation. Reads apply visibility before counts, nesting, tags and smart predicates. No store-only field requires a second EventKit fetch. After an EventKit capture completes, enrich through a long-lived `SQLITE_OPEN_READONLY` connection and a short read transaction, including committed WAL. Cache prepared statements and typed rows; retain blobs as `Data` until their decoder is needed. Read Core Data persistent history (`ATRANSACTION`/`ACHANGE`) after the last valid token and reload only changed entities. Invalid or truncated history and schema changes require a full read; `Z_OPT` deltas are the fallback when history is unavailable. The independent consistent-copy reader remains a proof oracle, outside the capture path. No additional watcher in this unit.
 
-Budgets: 1,000-item `reminders.items` <10 ms p95 in the gateway; store enrichment <50 ms p95 per capture on the Air. REM-STORE-READ runs at sim and real with tagged fixtures and cleanup. AppleTruth store checks are `limited` with reason `AppleTruth lacks Full Disk Access to the Reminders Core Data store`; EventKit truth remains available. UI-dependent fixtures wait for an unlocked session and carry exact deferred commands.
+Budgets: 1,000-item `reminders.items` <10 ms p95 in the gateway. Store enrichment budgets are in §23.15. REM-STORE-READ runs at sim and real with tagged fixtures and cleanup. AppleTruth store checks are `limited` with reason `AppleTruth lacks Full Disk Access to the Reminders Core Data store`; EventKit truth remains available. UI-dependent fixtures wait for an unlocked session and carry exact deferred commands.
 
 ### 23.5 Remote
 
@@ -1420,7 +1420,7 @@ Each app follows its spec (`design/web/reminders.md`, `calendar.md`, `contacts.m
 
 | Milestone | App | Store reader (R) | Read models |
 |---|---|---|---|
-| W5 | Reminders | Reminders Core Data store (consistent copy, FDA) linked to EventKit identifiers | `reminders.lists`, `reminders.items` |
+| W5 | Reminders | Reminders Core Data store (read-only WAL snapshot, FDA) linked to EventKit identifiers | `reminders.lists`, `reminders.items` |
 | W6 | Calendar | Calendar store for travel time, attachments, geo and invitation status | `calendar.range` with overlap groups |
 | W7 | Contacts | — (Contacts framework is complete except notes) | `contacts.list` |
 | W8 | Notes | Extended NoteStore protobuf decoder (full blocks) | `notes.list` |
@@ -1433,6 +1433,8 @@ Each app follows its spec (`design/web/reminders.md`, `calendar.md`, `contacts.m
 | W5-UI | Sidebar and home (smart tiles, lists with groups, tags), list content (rows, sections, subtasks, completed toggle, sort), details inspector (read), search, keyboard, motion. WEB-REM-READ. |
 | W5-WRITE | Inline create with client-side natural-language dates, edit, complete (signature motion), delete, move, create list; optimistic via `observed_record_ids`. WEB-REM-WRITE (web, real on "Bridge Test"). |
 | W5-PARITY | Flag, subtasks, sections, tags, list icon/emoji/group, manual reorder, images, custom smart lists, through AppleScript or Accessibility, proven per OS build or hidden. WEB-REM-PARITY. |
+
+W5-STORE budgets on the Air: incremental enrichment after each EventKit capture <50 ms p95; 1- and 10-reminder changes <5 ms p95. Report 200-sample p50/p95 for 1, 10, 100 and 1,000 changed reminders. Full reads run at Helper startup or fallback (invalid history token, history truncation, schema change) and stay <100 ms p95 warm. Report cold reads separately without a gate, since they include page-cache warmup. Store refresh piggybacks on capture completion; it adds no EventKit fetch or watcher.
 
 **W6 units (Calendar):**
 
