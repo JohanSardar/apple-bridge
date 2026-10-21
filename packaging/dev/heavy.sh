@@ -28,7 +28,10 @@ count() { set -- $held; echo $#; }
 usable() {
   if [ -n "$exclusive" ]; then echo "$slots"; return; fi
   level=$(sysctl -n kern.memorystatus_level 2>/dev/null || echo 100)
-  if [ "$level" -lt "${APPLE_BRIDGE_HEAVY_MIN_FREE_PCT:-30}" ]; then echo 1; else echo "$slots"; fi
+  swapfree=$(sysctl -n vm.swapusage 2>/dev/null | sed -nE 's/.*free = ([0-9]+)(\.[0-9]+)?M.*/\1/p')
+  load=$(sysctl -n vm.loadavg 2>/dev/null | awk '{printf "%d", $2}')
+  cpus=$(sysctl -n hw.ncpu 2>/dev/null || echo 8)
+  if [ "$level" -lt "${APPLE_BRIDGE_HEAVY_MIN_FREE_PCT:-40}" ] || [ "${swapfree:-999999}" -lt "${APPLE_BRIDGE_HEAVY_MIN_SWAP_FREE_MB:-1536}" ] || [ "${load:-0}" -gt $((cpus * 2)) ]; then echo 1; else echo "$slots"; fi
 }
 while true; do
   if [ "$(oldest_live)" = "$ticket" ]; then
