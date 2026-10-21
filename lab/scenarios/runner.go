@@ -406,6 +406,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "REM-STORE-PERF" {
 		return runRemindersStorePerf(ctx, s, level)
 	}
+	if s.ID == "CORE-REPLICA-CAPTURE-ATOMIC" {
+		return runReplicaCaptureAtomic(ctx, s, level)
+	}
 	if s.ID == "REM-STORE-READ" || s.ID == "REM-STORE-DECODE" {
 		return runRemindersStore(ctx, s, level)
 	}

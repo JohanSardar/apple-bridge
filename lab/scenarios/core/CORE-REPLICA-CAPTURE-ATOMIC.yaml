@@ -1,0 +1,7 @@
+id: CORE-REPLICA-CAPTURE-ATOMIC
+feature: core.replication
+levels: [sim]
+given: [{world: {replicas: 1}}]
+when: [{capture_atomic: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

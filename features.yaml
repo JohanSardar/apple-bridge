@@ -55,6 +55,7 @@ features:
     depends_on: [core.harness]
     status: done
     scenarios:
+      - {id: CORE-REPLICA-CAPTURE-ATOMIC, levels: [sim]}
       - {id: CORE-ITERATOR-POOL, levels: [sim]}
       - {id: CORE-SNAPSHOT-POOL, levels: [sim]}
       - {id: CORE-LIVE-LATENCY, levels: [sim, real, replica]}

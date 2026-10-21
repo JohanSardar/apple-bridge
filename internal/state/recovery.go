@@ -62,6 +62,10 @@ func Restore(ctx context.Context, home, backup string, acceptLedgerLoss ...bool)
 	if err != nil {
 		return err
 	}
+	if _, err = staged.ExecContext(ctx, "CREATE TABLE IF NOT EXISTS journal_commits(epoch TEXT NOT NULL,through_seq INTEGER NOT NULL,PRIMARY KEY(epoch,through_seq))"); err != nil {
+		staged.Close()
+		return err
+	}
 	tx, err := staged.BeginTx(ctx, nil)
 	if err != nil {
 		staged.Close()
@@ -69,7 +73,7 @@ func Restore(ctx context.Context, home, backup string, acceptLedgerLoss ...bool)
 	}
 	cursor := contracts.Cursor{Epoch: contracts.NewID(""), SubscriptionRevision: 1}
 	if err = setCursor(ctx, tx, cursor); err == nil {
-		_, err = tx.ExecContext(ctx, "CREATE TABLE IF NOT EXISTS applied_batches(after_seq INTEGER PRIMARY KEY,through_seq INTEGER NOT NULL); DELETE FROM journal; DELETE FROM staging_records; DELETE FROM applied_batches; UPDATE records SET seq=0; DELETE FROM meta WHERE key='replica_base'; UPDATE meta SET value='0' WHERE key='retention_floor'")
+		_, err = tx.ExecContext(ctx, "CREATE TABLE IF NOT EXISTS applied_batches(after_seq INTEGER PRIMARY KEY,through_seq INTEGER NOT NULL); DELETE FROM journal; DELETE FROM journal_commits; DELETE FROM staging_records; DELETE FROM applied_batches; UPDATE records SET seq=0; DELETE FROM meta WHERE key='replica_base'; UPDATE meta SET value='0' WHERE key='retention_floor'")
 	}
 
 	if err == nil {

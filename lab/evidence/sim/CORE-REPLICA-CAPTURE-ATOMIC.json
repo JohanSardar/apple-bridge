@@ -1,0 +1,84 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[334.87 315.95 309.19] cpu_idle=50% cpus=8 other_heavy=2"
+  },
+  "run_id": "atomic_01M5HB078JPR6R4FEJXRVWRN0F",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "CORE-REPLICA-CAPTURE-ATOMIC",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "1771e86c1bd61d6ed0d66b4e76963cd670ce9b55",
+  "at": "2026-10-22T08:17:51.378434Z",
+  "assertions": [
+    {
+      "name": "generic_capture_crosses_batch_boundary",
+      "passed": true
+    },
+    {
+      "name": "generic_capture_never_partial_in_replica_live_delta",
+      "passed": true,
+      "detail": "capture_batches=1 after=138 through=141 replica_before=11"
+    },
+    {
+      "name": "generic_replica_reads_never_partial",
+      "passed": true
+    },
+    {
+      "name": "generic_replica_converges",
+      "passed": true
+    },
+    {
+      "name": "generic-byte_capture_crosses_batch_boundary",
+      "passed": true
+    },
+    {
+      "name": "generic-byte_capture_never_partial_in_replica_live_delta",
+      "passed": true,
+      "detail": "capture_batches=1 after=142 through=145 replica_before=141"
+    },
+    {
+      "name": "generic-byte_replica_reads_never_partial",
+      "passed": true
+    },
+    {
+      "name": "generic-byte_replica_converges",
+      "passed": true
+    },
+    {
+      "name": "calendar_capture_crosses_batch_boundary",
+      "passed": true
+    },
+    {
+      "name": "calendar_split_observed",
+      "passed": true
+    },
+    {
+      "name": "calendar_capture_never_partial_in_replica_live_delta",
+      "passed": true,
+      "detail": "capture_batches=1 after=269 through=276 replica_before=145"
+    },
+    {
+      "name": "calendar_replica_reads_never_partial",
+      "passed": true
+    },
+    {
+      "name": "calendar_replica_converges",
+      "passed": true
+    },
+    {
+      "name": "no_oversized_capture_observer_resets",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

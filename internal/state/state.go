@@ -22,6 +22,7 @@ import (
 )
 
 type Store struct {
+	pendingCapture *contracts.Batch
 	BlobProtection func(context.Context, contracts.ReferenceSet) error
 	BlobDelta      func(context.Context, contracts.ReferenceSet, bool) error
 	blobSnapshots  map[string][]contracts.BlobReference
@@ -72,6 +73,9 @@ func Open(home string) (*Store, error) {
  CREATE TABLE IF NOT EXISTS aliases(source TEXT NOT NULL,generation TEXT NOT NULL,collection TEXT NOT NULL,native_key TEXT NOT NULL,scoped_alias TEXT NOT NULL,record_id TEXT NOT NULL,PRIMARY KEY(source,generation,collection,native_key));
  CREATE INDEX IF NOT EXISTS aliases_scoped ON aliases(source,collection,scoped_alias);
  CREATE INDEX IF NOT EXISTS aliases_record ON aliases(collection,record_id,source,generation,native_key);
+ CREATE TABLE IF NOT EXISTS journal_commits(epoch TEXT NOT NULL,through_seq INTEGER NOT NULL,PRIMARY KEY(epoch,through_seq));
+ CREATE TABLE IF NOT EXISTS pending_changes(seq INTEGER PRIMARY KEY,payload BLOB NOT NULL);
+ DELETE FROM pending_changes;
  CREATE TABLE IF NOT EXISTS journal(seq INTEGER PRIMARY KEY,epoch TEXT NOT NULL,source TEXT NOT NULL,payload BLOB NOT NULL,committed_at INTEGER NOT NULL DEFAULT (unixepoch()));
  CREATE TABLE IF NOT EXISTS agent_activity(id TEXT PRIMARY KEY,principal TEXT NOT NULL,operation TEXT NOT NULL,kind TEXT NOT NULL,state TEXT NOT NULL,at INTEGER NOT NULL,count INTEGER NOT NULL,argument_bytes INTEGER NOT NULL,argument_hash TEXT NOT NULL,sequence INTEGER NOT NULL);
  CREATE INDEX IF NOT EXISTS agent_activity_at ON agent_activity(at);
@@ -91,6 +95,19 @@ func Open(home string) (*Store, error) {
 		db.Close()
 		return nil, err
 	}
+	head, err := cursorAt(context.Background(), db)
+	if err != nil {
+		db.Close()
+		return nil, err
+	}
+	if _, err = db.Exec("DELETE FROM journal_commits WHERE epoch<>? OR through_seq>? OR through_seq<=CAST((SELECT value FROM meta WHERE key='retention_floor') AS INTEGER)", head.Epoch, head.Sequence); err != nil {
+		db.Close()
+		return nil, err
+	}
+	if _, err = db.Exec("INSERT OR IGNORE INTO journal_commits(epoch,through_seq) SELECT ?,? WHERE ?>CAST((SELECT value FROM meta WHERE key='retention_floor') AS INTEGER) AND EXISTS(SELECT 1 FROM journal)", head.Epoch, head.Sequence, head.Sequence); err != nil {
+		db.Close()
+		return nil, err
+	}
 	if err = s.initReadModels(context.Background()); err != nil {
 		db.Close()
 		return nil, err
@@ -101,6 +118,10 @@ func Open(home string) (*Store, error) {
 		return nil, err
 	}
 	if err = s.initBlobReferences(context.Background()); err != nil {
+		db.Close()
+		return nil, err
+	}
+	if err = s.DiscardCapture(context.Background()); err != nil {
 		db.Close()
 		return nil, err
 	}
@@ -151,6 +172,9 @@ func setCursor(ctx context.Context, tx *sql.Tx, c contracts.Cursor) error {
 		return err
 	}
 	_, err = tx.ExecContext(ctx, "UPDATE meta SET value=? WHERE key='epoch'", c.Epoch)
+	if err == nil && c.Sequence > 0 {
+		_, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO journal_commits(epoch,through_seq) VALUES(?,?)", c.Epoch, c.Sequence)
+	}
 	return err
 }
 func (s *Store) Head() contracts.Cursor { c, _ := cursorAt(context.Background(), s.db); return c }
@@ -648,6 +672,9 @@ type SnapshotInstall struct {
 }
 
 func (s *Store) BeginInstall(ctx context.Context, begin contracts.FeedFrame, epoch string, revision uint64) (*SnapshotInstall, error) {
+	if err := s.DiscardCapture(ctx); err != nil {
+		return nil, err
+	}
 	if begin.ID == "" || begin.Count < 0 || begin.Digest == "" || time.Now().After(begin.ExpiresAt) {
 		return nil, contracts.ErrInvalid
 	}
@@ -737,7 +764,7 @@ func (i *SnapshotInstall) InstallSnapshot(ctx context.Context) (contracts.Cursor
 	if time.Now().After(i.ExpiresAt) || len(records) != i.Count || Digest(records) != i.Digest {
 		return contracts.Cursor{}, contracts.ErrCorrupt
 	}
-	if _, err = tx.ExecContext(ctx, "DELETE FROM msg_by_chat; DELETE FROM reaction_by_message; DELETE FROM attachment_by_message; DELETE FROM activity_by_chat; DELETE FROM chat_summary; DELETE FROM records; DELETE FROM journal; DELETE FROM applied_batches;"); err != nil {
+	if _, err = tx.ExecContext(ctx, "DELETE FROM msg_by_chat; DELETE FROM reaction_by_message; DELETE FROM attachment_by_message; DELETE FROM activity_by_chat; DELETE FROM chat_summary; DELETE FROM records; DELETE FROM journal; DELETE FROM journal_commits; DELETE FROM applied_batches;"); err != nil {
 		return contracts.Cursor{}, err
 	}
 	for _, r := range records {
@@ -764,58 +791,8 @@ func (i *SnapshotInstall) InstallSnapshot(ctx context.Context) (contracts.Cursor
 	return i.Cursor, nil
 }
 
-func (s *Store) ApplyBatch(ctx context.Context, b contracts.Batch) (contracts.Cursor, error) {
-	s.write.Lock()
-	defer s.write.Unlock()
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return contracts.Cursor{}, err
-	}
-	defer tx.Rollback()
-	c, err := cursorAt(ctx, tx)
-	if err != nil {
-		return c, err
-	}
-	if b.Epoch != c.Epoch || b.SubscriptionRevision != c.SubscriptionRevision {
-		return c, contracts.ErrReset
-	}
-	if b.Through <= c.Sequence {
-		return c, nil
-	}
-	if b.After != c.Sequence || b.Through < b.After {
-		return c, contracts.ErrConflict
-	}
-	previous := b.After
-	for _, change := range b.Changes {
-		if change.Sequence <= previous || change.Sequence > b.Through || change.Record.Version == 0 || change.Record.ID == "" || (change.Op != "upsert" && change.Op != "delete" && change.Op != "evict") {
-			return c, contracts.ErrCorrupt
-		}
-		previous = change.Sequence
-		if err = writeRecord(ctx, tx, change.Record, change.Sequence); err != nil {
-			return c, err
-		}
-		if err = appendChange(ctx, tx, contracts.Cursor{Epoch: c.Epoch, Sequence: change.Sequence}, change.Record, change.Op); err != nil {
-			return c, err
-		}
-	}
-	if s.applyBoundary != nil && len(b.Changes) > 0 {
-		s.applyBoundary()
-	}
-	if _, err = tx.ExecContext(ctx, "INSERT INTO applied_batches(after_seq,through_seq) VALUES(?,?)", b.After, b.Through); err != nil {
-		return c, err
-	}
-	c.Sequence = b.Through
-	if err = setCursor(ctx, tx, c); err != nil {
-		return c, err
-	}
-	if err = s.commitProtected(ctx, tx); err != nil {
-		return c, err
-	}
-	s.signal()
-	return c, nil
-}
-
 type ChangeIterator struct {
+	legacy     bool
 	store      *Store
 	visibility trust.Visibility
 	cursor     contracts.Cursor
@@ -838,7 +815,11 @@ func (i *ChangeIterator) Next(ctx context.Context) (contracts.Batch, error) {
 		if err != nil {
 			return contracts.Batch{}, err
 		}
-		batch, err := readChangeBatchTx(ctx, tx, i.visibility, i.cursor)
+		read := readChangeBatchTx
+		if i.legacy {
+			read = readLegacyChangeBatchTx
+		}
+		batch, err := read(ctx, tx, i.visibility, i.cursor)
 		tx.Rollback()
 		if err != nil {
 			return batch, err
@@ -853,53 +834,6 @@ func (i *ChangeIterator) Next(ctx context.Context) (contracts.Batch, error) {
 		case <-wake:
 		}
 	}
-}
-
-func readChangeBatchTx(ctx context.Context, tx *sql.Tx, visibility trust.Visibility, after contracts.Cursor) (contracts.Batch, error) {
-	head, err := cursorAt(ctx, tx)
-	if err != nil {
-		return contracts.Batch{}, err
-	}
-	var floor uint64
-	if err = tx.QueryRowContext(ctx, "SELECT value FROM meta WHERE key='retention_floor'").Scan(&floor); err != nil {
-		return contracts.Batch{}, err
-	}
-	if head.Epoch != after.Epoch || head.SubscriptionRevision != after.SubscriptionRevision || after.Sequence < floor {
-		return contracts.Batch{}, contracts.ErrReset
-	}
-	batch := contracts.Batch{Epoch: after.Epoch, SubscriptionRevision: after.SubscriptionRevision, After: after.Sequence, Through: min(head.Sequence, after.Sequence+128), Changes: []contracts.Change{}}
-	if head.Sequence <= after.Sequence {
-		return batch, nil
-	}
-	rows, err := tx.QueryContext(ctx, "SELECT payload FROM journal WHERE seq>? AND seq<=? ORDER BY seq", batch.After, batch.Through)
-	if err != nil {
-		return batch, err
-	}
-	defer rows.Close()
-	size := 0
-	for rows.Next() {
-		var raw []byte
-		if err = rows.Scan(&raw); err != nil {
-			return batch, err
-		}
-		var change contracts.Change
-		if err = json.Unmarshal(raw, &change); err != nil {
-			return batch, err
-		}
-		if visibility.Allows(change.Record) {
-			if size+len(raw) > contracts.MaxFrame-2048 && len(batch.Changes) > 0 {
-				batch.Through = change.Sequence - 1
-				break
-			}
-			change.Record, err = projectContactLink(change.Record, visibility)
-			if err != nil {
-				return batch, err
-			}
-			batch.Changes = append(batch.Changes, change)
-			size += len(raw)
-		}
-	}
-	return batch, rows.Err()
 }
 
 func (s *Store) RetentionFloor() uint64 {

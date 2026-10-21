@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"path/filepath"
+	"slices"
 	"sync"
 	"time"
 
@@ -17,13 +18,26 @@ import (
 )
 
 type frameFaults struct {
-	server          tls.Certificate
-	client          tls.Certificate
-	dropBatch       bool
-	dropAcks        bool
-	dropped         int
-	connections     int
-	creditHighWater int
+	atomicOffers            int
+	legacyOffers            int
+	atomicWelcomes          int
+	captureReset            bool
+	forceSnapshot           bool
+	partialFields           int
+	partialFrames           int
+	partialAckWithoutCursor int
+	partialAckWithCursor    int
+	partialBytes            int
+	resetFrames             int
+	legacyWelcomes          int
+	helloSequences          []uint64
+	server                  tls.Certificate
+	client                  tls.Certificate
+	dropBatch               bool
+	dropAcks                bool
+	dropped                 int
+	connections             int
+	creditHighWater         int
 }
 
 func (w *World) configureFrameFaults() error {
@@ -142,6 +156,7 @@ func (p *FaultProxy) relayFrames(conn net.Conn, config frameFaults) {
 		p.frames.connections++
 		p.mu.Unlock()
 		outstanding := 0
+		partialReceipts := []bool{}
 		go func() {
 			defer cancel()
 			for {
@@ -152,8 +167,33 @@ func (p *FaultProxy) relayFrames(conn net.Conn, config frameFaults) {
 				var frame contracts.FeedFrame
 				json.Unmarshal(data, &frame)
 				p.mu.Lock()
+				if frame.T == "Hello" {
+					if slices.Contains(frame.Features, "capture_atomic") {
+						p.frames.atomicOffers++
+					} else {
+						p.frames.legacyOffers++
+					}
+					if frame.Cursor != nil {
+						p.frames.helloSequences = append(p.frames.helloSequences, frame.Cursor.Sequence)
+					}
+					if p.frames.forceSnapshot {
+						frame.Cursor = nil
+						p.frames.forceSnapshot = false
+						data, _ = json.Marshal(frame)
+					}
+				}
 				drop := p.frames.dropAcks && frame.T == "Ack"
 				if frame.T == "Ack" && !drop {
+					if len(partialReceipts) > 0 {
+						if partialReceipts[0] {
+							if frame.Cursor == nil {
+								p.frames.partialAckWithoutCursor++
+							} else {
+								p.frames.partialAckWithCursor++
+							}
+						}
+						partialReceipts = partialReceipts[1:]
+					}
 					outstanding -= frame.Credits
 				}
 				p.mu.Unlock()
@@ -176,7 +216,33 @@ func (p *FaultProxy) relayFrames(conn net.Conn, config frameFaults) {
 			switch frame.T {
 			case "Welcome", "Reset", "SnapshotBegin", "SnapshotPage", "SnapshotEnd", "Batch":
 				outstanding += len(data)
+				partialReceipts = append(partialReceipts, frame.T == "Batch" && frame.Batch != nil && frame.Batch.Partial)
 				p.frames.creditHighWater = max(p.frames.creditHighWater, outstanding)
+			}
+			if frame.T == "Batch" {
+				var object map[string]json.RawMessage
+				if json.Unmarshal(data, &object) == nil {
+					if _, exists := object["partial"]; exists {
+						p.frames.partialFields++
+					}
+				}
+			}
+			resetCapture := false
+			if frame.T == "Welcome" && slices.Contains(frame.Features, "capture_atomic") {
+				p.frames.atomicWelcomes++
+			}
+			if frame.T == "Welcome" && len(frame.Features) == 0 {
+				p.frames.legacyWelcomes++
+			}
+			if frame.T == "Batch" && frame.Batch != nil && frame.Batch.Partial {
+				p.frames.partialFrames++
+				p.frames.partialBytes += len(data)
+				if p.frames.captureReset {
+					p.frames.captureReset = false
+					p.frames.forceSnapshot = true
+					p.frames.resetFrames++
+					resetCapture = true
+				}
 			}
 			drop := p.frames.dropBatch && frame.T == "Batch"
 			if drop {
@@ -194,6 +260,11 @@ func (p *FaultProxy) relayFrames(conn net.Conn, config frameFaults) {
 				continue
 			}
 			if downstream.Write(ctx, kind, data) != nil {
+				return
+			}
+			if resetCapture {
+				reset, _ := json.Marshal(contracts.FeedFrame{T: "Reset", Reason: "capture_fixture"})
+				downstream.Write(ctx, websocket.MessageText, reset)
 				return
 			}
 		}

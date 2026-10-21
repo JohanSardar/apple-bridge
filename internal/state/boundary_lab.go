@@ -22,3 +22,9 @@ func initializeApplyBoundary(s *Store) {
 		}
 	}
 }
+
+func captureDiscarded(home string, pending bool) {
+	if pending {
+		os.WriteFile(filepath.Join(home, "lab-capture-discarded"), []byte("discarded"), 0600)
+	}
+}
