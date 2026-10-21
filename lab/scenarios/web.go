@@ -140,7 +140,11 @@ func runWebProjects(ctx context.Context, s Scenario, projects []string) Evidence
 	if err := os.MkdirAll("lab/evidence/private/web/reports", 0700); err != nil {
 		return fail("web_evidence", err)
 	}
-	report, _ := filepath.Abs(filepath.Join("lab/evidence/private/web/reports", s.ID+"-"+strings.Join(projects, "_")+"-playwright.json"))
+	suffix := "matrix"
+	if len(projects) == 1 {
+		suffix = projects[0]
+	}
+	report, _ := filepath.Abs(filepath.Join("lab/evidence/private/web/reports", s.ID+"-"+suffix+"-playwright.json"))
 	test := exec.CommandContext(ctx, "pnpm", "exec", "playwright", "test", "-g", "\\b"+regexp.QuoteMeta(s.ID)+"\\b")
 	test.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	test.Cancel = func() error { return syscall.Kill(-test.Process.Pid, syscall.SIGKILL) }
