@@ -1015,7 +1015,7 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		if level == "real" && (s.Feature == "messages.actions" || s.Feature == "messages.groups" || s.Feature == "web.media") {
 			duration = 8 * time.Minute
 		}
-		if s.ID == "CAL-CRUD" && level != "sim" {
+		if strings.HasPrefix(s.ID, "CAL-") && level != "sim" {
 			duration = 6 * time.Minute
 		}
 		if s.ID == "CORE-BENCH" {

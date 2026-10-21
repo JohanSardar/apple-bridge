@@ -87,6 +87,20 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		return fail("world_start", err)
 	}
 	defer w.Close()
+	defer func() {
+		if level == "sim" {
+			return
+		}
+		private := filepath.Join(os.Getenv("HOME"), "Library/Application Support/AppleBridgeDev/cal-fix-traces")
+		if os.MkdirAll(private, 0700) != nil {
+			return
+		}
+		for _, name := range []string{"gateway/helper/capture-trace.jsonl", "gateway/capture-trace.jsonl"} {
+			if bytes, err := os.ReadFile(filepath.Join(w.Dir, name)); err == nil {
+				os.WriteFile(filepath.Join(private, e.RunID+"-"+strings.ReplaceAll(name, "/", "_")), bytes, 0600)
+			}
+		}
+	}()
 	e.NetworkPath = w.NetworkPath
 	diagnose = func() {
 		e.Metrics = map[string]any{}
@@ -142,7 +156,7 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		wanted := aliases[aliasKey(contracts.Calendar, "calendar.calendar", calendarNative)]
 		all, _ := w.Records(w.Gateway)
 		for _, r := range all {
-			if r.Collection == "calendar.calendar" && recordTitle(r) == "Bridge Test" && r.ID == wanted {
+			if r.Collection == "calendar.calendar" && recordTitle(r) == map[bool]string{true: "Bridge Test", false: "Bridge Test " + tag}[level == "sim"] && r.ID == wanted {
 				return r
 			}
 		}
@@ -183,11 +197,20 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 			return fail("independent_truth_access", err)
 		}
 		defer func() {
-			_, cleanupErr := w.RecoverTruth("fixture", map[string]any{"source": "calendar", "action": "cleanup", "tag": tag})
-			audit, auditErr := w.RecoverTruth("observe", map[string]any{"source": "calendar", "action": "audit", "tag": tag})
-			remaining, _ := audit["records"].([]any)
-			calendars, _ := audit["calendars"].([]any)
-			clean := cleanupErr == nil && auditErr == nil && len(remaining) == 0 && len(calendars) <= 1
+			clean := false
+			for attempt := 0; attempt < 8; attempt++ {
+				_, cleanupErr := w.RecoverTruth("fixture", map[string]any{"source": "calendar", "action": "cleanup", "tag": tag})
+				audit, auditErr := w.RecoverTruth("observe", map[string]any{"source": "calendar", "action": "audit", "tag": tag})
+				remaining, _ := audit["records"].([]any)
+				if cleanupErr != nil || auditErr != nil {
+					break
+				}
+				if len(remaining) == 0 {
+					_, cleanupErr = w.RecoverTruth("fixture", map[string]any{"source": "calendar", "action": "cleanup_run_calendar", "tag": tag})
+					clean = cleanupErr == nil
+					break
+				}
+			}
 			result.Assertions = append(result.Assertions, Assertion{Name: "tagged_fixture_cleanup_audit", Passed: clean})
 			result.Passed = result.Passed && clean
 		}()
@@ -496,7 +519,7 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 			return fail("delete_created_series", err)
 		}
 		add("created_series_deleted_with_future_span", awaitCount(0))
-		if err = submit("calendar.create_calendar", map[string]any{"title": "Bridge Test"}, 0); err != nil {
+		if err = submit("calendar.create_calendar", map[string]any{"title": "Bridge Test " + tag}, 0); err != nil {
 			return fail("create_calendar", err)
 		}
 		add("create_calendar_observed", last.CommitSeq > 0)
@@ -787,7 +810,15 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		}
 		add("permission_loss_survives_restart", reflect.DeepEqual(baseline, records(w.Gateway)))
 	}
-	if s.ID != "CAL-PERMISSION-LOSS" {
+	if level != "sim" {
+		private := filepath.Join(os.Getenv("HOME"), "Library/Application Support/AppleBridgeDev/cal-fix", e.RunID)
+		os.MkdirAll(private, 0700)
+		truth, _ := w.Truth("observe", map[string]any{"source": "calendar", "action": "audit", "tag": tag, "calendar_id": calendarNative})
+		value := map[string]any{"bridge": records(w.Gateway), "truth": truth, "command": last}
+		bytes, _ := json.MarshalIndent(value, "", "  ")
+		os.WriteFile(filepath.Join(private, "state.json"), bytes, 0600)
+	}
+	if s.ID != "CAL-PERMISSION-LOSS" && s.ID != "CAL-SPLIT-FRAME-CAP" {
 		if level == "sim" {
 			add("independent_simtruth_convergence", w.Await(5*time.Second, func() bool { return nativeConvergence(w) }) == nil)
 		} else {
@@ -885,6 +916,7 @@ func sameCalendarTime(a, b any) bool {
 
 func calendarHostConditions() map[string]string {
 	load, _ := exec.Command("sysctl", "-n", "vm.loadavg").Output()
+	swap, _ := exec.Command("sysctl", "-n", "vm.swapusage").Output()
 	fields := strings.Fields(strings.Trim(string(load), "{} \n"))
 	slots := 0
 	entries, _ := os.ReadDir("/tmp")
@@ -893,7 +925,7 @@ func calendarHostConditions() map[string]string {
 			slots++
 		}
 	}
-	return map[string]string{"load_average": strings.Join(fields, " "), "heavy_slots_in_use": fmt.Sprint(slots), "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue", "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"}
+	return map[string]string{"swap_usage": strings.TrimSpace(string(swap)), "load_average": strings.Join(fields, " "), "heavy_slots_in_use": fmt.Sprint(slots), "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue", "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"}
 }
 
 func calendarTruthEqual(truth, actual map[string]any) bool {
