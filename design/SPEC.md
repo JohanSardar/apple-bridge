@@ -1033,7 +1033,7 @@ Operations (descriptors in `internal/contracts/operations.go`; available through
   - `attachments[]`: records including `derivatives` and `media`
   - `reply_count` for thread originators
   - Ordered by `sent_at`, then id. Cursors are stable under concurrent inserts.
-- `messages.collection{chat_id, kind: photos|videos|links|documents|locations|audio, after?, limit≤200}`. Links and locations return message records with `balloon.kind=link|find_my`; media kinds return attachment records. Hidden attachments and recoverable messages are excluded.
+- `messages.collection{chat_id, kind: photos|videos|media|links|documents|locations|audio, after?, limit≤200}`. Links and locations return message records with `balloon.kind=link|find_my`; media kinds return attachment records. Hidden attachments and recoverable messages are excluded. `kind: media` combines photos and videos in the existing owning-message join, ordered by owning message `sent_at` descending, then attachment id ascending. Each attachment projects its owning `data.message_id` and `data.sent_at` without mutating the stored record. It shares collection visibility, limits, budgets and kind-scoped cursors; inserts newer than the cursor do not change older pages.
 
 - `messages.handles{ids[]≤500}` → `{handles: [{handle_id, address, service, contact_id?, display_name, initials, avatar{digest, variant}?}], cursor}`. Duplicate IDs are folded and unknown IDs omitted. Contact names and avatars require contact visibility. Contact images use `variant=original` with the chosen thumbnail or original digest. Available as the `handles` live view as well as ordinary REST/MCP reads.
 
@@ -1247,6 +1247,7 @@ Recently Deleted becomes `deleted_at` + `recoverable_until` on messages and chat
 **Rules:**
 - **Layout engine:** the transcript layout is a pure function `(items, handles, prefs, width) → rows`, with code-level tests allowed as layout math. Rows have deterministic heights from measured text plus known media dimensions (`media.width/height`), so there's never layout shift.
 - **Text measurement:** done in one batched pass per frame (canvas `measureText` with the bubble font), with DOM reflow only for rows containing mixed inline content.
+- **Viewer source:** the media viewer pages the whole chat through `messages.collection{chat_id, kind: media}`, independently of the transcript window. Owning `message_id` supports Show in Chat; `sent_at` preserves interleaved photo/video order.
 - **Media sizes:** media bubbles size from `media` before any byte loads. A ThumbHash placeholder fades to the image on decode, which happens off the main thread with `decode()`.
 
 **Performance acceptance (replaces rAF-interval proxies on 60 Hz/headless hosts):**

@@ -14,7 +14,7 @@ type ThreadQuery struct {
 }
 type CollectionQuery struct {
 	ChatID string `json:"chat_id"`
-	Kind   string `json:"kind" enum:"photos,videos,links,documents,locations,audio"`
+	Kind   string `json:"kind" enum:"photos,videos,media,links,documents,locations,audio"`
 	After  string `json:"after,omitempty"`
 	Limit  int    `json:"limit,omitempty"`
 }

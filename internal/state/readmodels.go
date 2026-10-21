@@ -473,7 +473,7 @@ func foldReactions(records []contracts.Record) []contracts.Record {
 func (s *Store) Collection(ctx context.Context, v trust.Visibility, q contracts.CollectionQuery) (contracts.CollectionResult, error) {
 	out := contracts.CollectionResult{Items: []contracts.Record{}, CoverageNotes: []string{}}
 	limit, err := viewLimit(q.Limit)
-	if err != nil || q.ChatID == "" || !slices.Contains([]string{"photos", "videos", "audio", "documents", "links", "locations"}, q.Kind) {
+	if err != nil || q.ChatID == "" || !slices.Contains([]string{"photos", "videos", "media", "audio", "documents", "links", "locations"}, q.Kind) {
 		return out, contracts.ErrInvalid
 	}
 	var edge viewCursor
@@ -520,13 +520,19 @@ func (s *Store) Collection(ctx context.Context, v trust.Visibility, q contracts.
 		return out, nil
 	}
 	where := ""
+	selection, kind := "a.payload", "a.kind=?"
 	args := []any{q.ChatID, q.Kind}
+	if q.Kind == "media" {
+		selection = "json_set(a.payload,'$.data.message_id',m.id,'$.data.sent_at',m.sent_at)"
+		kind = "a.kind IN ('photos','videos')"
+		args = []any{q.ChatID}
+	}
 	if q.After != "" {
 		where = " AND (m.sent_at<? OR (m.sent_at=? AND a.id>?))"
 		args = append(args, edge.At, edge.At, edge.ID)
 	}
 	args = append(args, limit+1)
-	records, err := readModelRecords(ctx, tx, "SELECT a.payload FROM msg_by_chat m JOIN attachment_by_message a ON a.message_id=m.id WHERE m.chat_id=? AND a.kind=? AND coalesce(json_extract(a.payload,'$.data.hidden'),0)=0 AND json_extract(m.payload,'$.data.deleted_at') IS NULL"+where+" ORDER BY m.sent_at DESC,a.id LIMIT ?", args...)
+	records, err := readModelRecords(ctx, tx, "SELECT "+selection+" FROM msg_by_chat m JOIN attachment_by_message a ON a.message_id=m.id WHERE m.chat_id=? AND "+kind+" AND coalesce(json_extract(a.payload,'$.data.hidden'),0)=0 AND json_extract(m.payload,'$.data.deleted_at') IS NULL"+where+" ORDER BY m.sent_at DESC,a.id LIMIT ?", args...)
 	if err != nil {
 		return out, err
 	}

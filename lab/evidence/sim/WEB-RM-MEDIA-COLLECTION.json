@@ -1,0 +1,129 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[10.86 12.57 12.16] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5EV78ASR9QG4S6AQ56FVHQZ",
+  "scenario": "WEB-RM-MEDIA-COLLECTION",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "92394ec1e8e967e4ea6be3beec5356163fc97939",
+  "at": "2026-10-21T09:03:35.769029Z",
+  "assertions": [
+    {
+      "name": "world_start",
+      "passed": true
+    },
+    {
+      "name": "interleaved_synthetic_sequence_committed",
+      "passed": true
+    },
+    {
+      "name": "aliases_resolved",
+      "passed": true
+    },
+    {
+      "name": "rest_media_kind_accepted",
+      "passed": true
+    },
+    {
+      "name": "rest_cursor_paging_no_gaps_or_duplicates_during_live_insert",
+      "passed": true
+    },
+    {
+      "name": "rest_owning_message_and_sent_at_projected",
+      "passed": true
+    },
+    {
+      "name": "rest_live_insert_visible_at_head",
+      "passed": true
+    },
+    {
+      "name": "rest_cursor_bound_to_kind",
+      "passed": true
+    },
+    {
+      "name": "rest_page_limit_enforced",
+      "passed": true
+    },
+    {
+      "name": "rest_visibility_preserved",
+      "passed": true
+    },
+    {
+      "name": "rest_journey_under_one_second",
+      "passed": true
+    },
+    {
+      "name": "rest_live_fixture_hidden_before_parity_repeat",
+      "passed": true
+    },
+    {
+      "name": "mcp_media_kind_accepted",
+      "passed": true
+    },
+    {
+      "name": "mcp_cursor_paging_no_gaps_or_duplicates_during_live_insert",
+      "passed": true
+    },
+    {
+      "name": "mcp_owning_message_and_sent_at_projected",
+      "passed": true
+    },
+    {
+      "name": "rest_mcp_items_and_projection_identical",
+      "passed": true
+    },
+    {
+      "name": "mcp_live_insert_visible_at_head",
+      "passed": true
+    },
+    {
+      "name": "mcp_cursor_bound_to_kind",
+      "passed": true
+    },
+    {
+      "name": "mcp_page_limit_enforced",
+      "passed": true
+    },
+    {
+      "name": "mcp_visibility_preserved",
+      "passed": true
+    },
+    {
+      "name": "mcp_journey_under_one_second",
+      "passed": true
+    },
+    {
+      "name": "mcp_live_fixture_hidden_before_parity_repeat",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "mcp": {
+      "samples": 1,
+      "p50_ms": 92.440458,
+      "p95_ms": 92.440458,
+      "max_ms": 92.440458,
+      "timeouts": 0
+    },
+    "rest": {
+      "samples": 1,
+      "p50_ms": 102.0825,
+      "p95_ms": 102.0825,
+      "max_ms": 102.0825,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ],
+  "conditions": {
+    "dataset": "synthetic SimApplePeer only",
+    "transport": "REST and MCP"
+  }
+}
