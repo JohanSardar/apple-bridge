@@ -167,6 +167,11 @@ type Enrollment struct {
 }
 
 type credentials struct {
+	OAuthAccess  []OAuthAccess  `json:"oauth_access,omitempty"`
+	OAuthClients []OAuthClient  `json:"oauth_clients,omitempty"`
+	OAuthCodes   []OAuthCode    `json:"oauth_codes,omitempty"`
+	OAuthRefresh []OAuthRefresh `json:"oauth_refresh,omitempty"`
+
 	Devices    []DeviceSession      `json:"devices,omitempty"`
 	Passkeys   []Passkey            `json:"passkeys,omitempty"`
 	WebEnroll  map[string]time.Time `json:"web_enroll,omitempty"`
@@ -346,31 +351,59 @@ func (a *Authority) CreateAPIToken(grants []contracts.Grant, remote bool) (strin
 }
 
 func (a *Authority) AuthenticateToken(token string) (Principal, error) {
-	var p Principal
 	d, err := a.load()
 	if err != nil {
+		return Principal{}, err
+	}
+	hash := Fingerprint([]byte(token))
+	p, err := credentialToken(d, hash)
+	if err != nil || p.Kind != "agent" {
 		return p, err
 	}
-	err = func() error {
-		hash := Fingerprint([]byte(token))
-		for _, candidate := range d.Principals {
-			if (candidate.Kind == "token" || candidate.Kind == "agent") && principalActive(candidate) && hmac.Equal([]byte(hash), []byte(candidate.TokenHash)) {
-				p = candidate
-				if p.Kind == "agent" {
-					p, err = a.useAgent(p.ID, hash)
-					if err != nil {
-						return err
-					}
-				}
-				if d.Enrollment != nil {
-					p.Grants = EffectiveGrants(p.Grants, d.Enrollment.Grants)
-				}
+	err = a.update(func(d *credentials) error {
+		current, err := credentialToken(*d, hash)
+		if err != nil {
+			return err
+		}
+		p = current
+		now := time.Now().UTC()
+		for i, candidate := range d.Principals {
+			if candidate.ID == p.ID {
+				d.Principals[i].LastUsed = &now
+				p.LastUsed = &now
 				return nil
 			}
 		}
 		return contracts.ErrUnauthorized
-	}()
+	})
 	return p, err
+}
+
+func credentialToken(d credentials, hash string) (Principal, error) {
+	for _, p := range d.Principals {
+		if p.Kind != "token" && p.Kind != "agent" || !principalActive(p) {
+			continue
+		}
+		matched := hmac.Equal([]byte(hash), []byte(p.TokenHash))
+		if !matched && p.Kind == "agent" {
+			for _, access := range d.OAuthAccess {
+				if access.Principal == p.ID && time.Now().Before(access.ExpiresAt) && hmac.Equal([]byte(hash), []byte(access.Hash)) {
+					matched = true
+					p.ExpiresAt = access.ExpiresAt
+					p.Resource = access.Resource
+					break
+				}
+			}
+		}
+		if !matched {
+			continue
+		}
+		if d.Enrollment != nil {
+			p.Grants = EffectiveGrants(p.Grants, d.Enrollment.Grants)
+		}
+		return p, nil
+	}
+	return Principal{}, contracts.ErrUnauthorized
 }
 
 func (a *Authority) AuthenticateCertificate(cert *x509.Certificate) (Principal, error) {

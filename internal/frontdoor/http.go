@@ -216,6 +216,15 @@ func Handler(deps Deps, descriptors []contracts.OperationDescriptor) http.Handle
 			return
 		}
 		p, err := deps.Authority.AuthenticateToken(strings.TrimPrefix(header, "Bearer "))
+		if err == nil && p.Resource != "" {
+			scheme := "http"
+			if r.TLS != nil {
+				scheme = "https"
+			}
+			if p.Resource != scheme+"://"+r.Host+"/mcp" {
+				err = contracts.ErrUnauthorized
+			}
+		}
 		if err == nil && public && !p.RemoteAllowed() {
 			err = contracts.ErrUnauthorized
 		}
