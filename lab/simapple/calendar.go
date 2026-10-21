@@ -70,6 +70,7 @@ func (f *fakeApple) calendarControl(mux *http.ServeMux) {
 	mux.HandleFunc("POST /calendar", func(w http.ResponseWriter, r *http.Request) {
 		var request struct {
 			Action string         `json:"action"`
+			Count  int            `json:"count"`
 			Key    string         `json:"key"`
 			Data   map[string]any `json:"data"`
 			Now    string         `json:"now"`
@@ -111,6 +112,19 @@ func (f *fakeApple) calendarControl(mux *http.ServeMux) {
 				f.records[o.NativeKey] = o
 			}
 
+		case "create_many":
+			if request.Count < 1 || request.Count > 3000 {
+				f.mu.Unlock()
+				http.Error(w, "invalid", 400)
+				return
+			}
+			for index := 0; index < request.Count; index++ {
+				key := fmt.Sprintf("%s/%d", request.Key, index)
+				data := map[string]any{"calendar_id": nativeReference("calendar.calendar", "test-calendar"), "title": fmt.Sprintf("%s %d", request.Data["title"], index), "start": request.Data["start"], "end": request.Data["end"], "all_day": false, "time_zone": "UTC", "is_exception": false}
+				next := calendarObservation(key, "calendar.event", data)
+				next.ScopedAlias = f.calendarScope("test-calendar") + key
+				f.records[key] = next
+			}
 		case "move":
 			o, ok := f.records[request.Key]
 			if !ok || o.Collection != "calendar.event" || o.Kind == "absent" {
@@ -529,23 +543,6 @@ func (f *fakeApple) calendarCommand(wire *applepeer.Wire, frame contracts.IPCFra
 	revision := f.durable.Revision[contracts.Calendar]
 	f.mu.Unlock()
 	if err != nil {
-		return err
-	}
-	encodedCapture, _ := json.Marshal(capture.Observations)
-	if a.Span == "future" && len(encodedCapture) > 240000 {
-		evidence, _ := json.Marshal(map[string]any{"reason": "calendar_atomic_capture_too_large", "observed": false})
-		outcome := contracts.IPCFrame{T: "Outcome", CommandID: t.CommandID, Disposition: "indeterminate", Evidence: evidence}
-		f.mu.Lock()
-		f.evidence[t.CommandID] = outcome
-		err = f.saveLocked()
-		f.mu.Unlock()
-		if err != nil {
-			return err
-		}
-		if err = f.guard(guardEntry{CommandID: t.CommandID, Outcome: &outcome}); err != nil {
-			return err
-		}
-		_, err = wire.Send(outcome)
 		return err
 	}
 	if err = emit(capture, revision); err != nil {

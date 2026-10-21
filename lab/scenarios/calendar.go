@@ -21,6 +21,9 @@ import (
 )
 
 func runCalendarScenario(ctx context.Context, s Scenario, level string) Evidence {
+	if s.ID == "CAL-LARGE-CAPTURE" {
+		return runCalendarLargeCapture(ctx, s, level)
+	}
 	scenarioID := s.ID
 	switch s.ID {
 	case "CAL-SPLIT-ATOMIC-ALLDAY":
@@ -281,11 +284,12 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 			}
 			truth, err := w.Truth("observe", map[string]any{"source": "calendar", "tag": tag, "title": recordTitle(r)})
 			rows, _ := truth["records"].([]any)
-			if err != nil {
+			aliases, aliasErr := gatewayAliases(w)
+			if err != nil || aliasErr != nil {
 				return false
 			}
 			for _, row := range rows {
-				if d, ok := row.(map[string]any); ok && sameCalendarTime(d["occurrence_date"], raw(r)["occurrence_date"]) {
+				if d, ok := row.(map[string]any); ok && aliases[aliasKey(contracts.Calendar, "calendar.event", calendarTruthNativeKey(d))] == r.ID {
 					return false
 				}
 			}
@@ -701,12 +705,13 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		add("other_occurrences_unchanged", unchanged == 2)
 	case "CAL-SPLIT-FRAME-CAP":
 		target := baseline[1]
-		finishSplit := watchCalendarSplit(ctx, w, tag)
-		err = submit("calendar.update_event", map[string]any{"id": target.ID, "span": "future", "title": tag + " oversized future", "recurrence": []any{map[string]any{"frequency": "daily", "interval": 1, "count": 400}}}, target.Version)
-		add("oversized_split_fails_loudly", err != nil && last.Disposition == "indeterminate" && strings.Contains(string(last.Evidence), "calendar_atomic_capture_too_large"))
-		add("oversized_split_never_claimed_observed", last.CommitSeq == 0 && len(last.ObservedRecordIDs) == 0)
-		atomic := finishSplit()
-		add("oversized_split_never_half_applied", reflect.DeepEqual(records(w.Gateway), baseline) && atomic)
+		err = submit("calendar.update_event", map[string]any{"id": target.ID, "span": "future", "title": tag + " oversized future"}, target.Version)
+		add("oversized_split_keeps_capture_progressing", err == nil && last.Disposition == "locally_observed" && awaitCount(400))
+		if err == nil {
+			target = records(w.Gateway)[1]
+			err = submit("calendar.update_event", map[string]any{"id": target.ID, "span": "this", "title": tag + " continued"}, target.Version)
+			add("source_captures_after_oversized_split", err == nil && last.Disposition == "locally_observed")
+		}
 	case "CAL-ALLDAY-FUTURE":
 		finishSplit := watchCalendarSplit(ctx, w, tag)
 		defer func() {
@@ -903,6 +908,11 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		private := filepath.Join(os.Getenv("HOME"), "Library/Application Support/AppleBridgeDev/cal-fix", e.RunID)
 		os.MkdirAll(private, 0700)
 		truth, _ := w.Truth("observe", map[string]any{"source": "calendar", "action": "audit", "tag": tag, "calendar_id": calendarNative})
+		if e.Metrics == nil {
+			e.Metrics = map[string]any{}
+		}
+		trace, _ := os.ReadFile(filepath.Join(w.Gateway.Home, "helper", "capture-trace.jsonl"))
+		e.Metrics["calendar_capture_splits"] = strings.Count(string(trace), "\"stage\":\"calendar_capture_split\"")
 		value := map[string]any{"bridge": records(w.Gateway), "truth": truth, "command": last}
 		bytes, _ := json.MarshalIndent(value, "", "  ")
 		os.WriteFile(filepath.Join(private, "state.json"), bytes, 0600)
