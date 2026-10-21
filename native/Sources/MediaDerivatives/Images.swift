@@ -5,6 +5,7 @@ import CoreGraphics
 
 extension MediaDerivatives {
     static func thumbnail(_ source: CGImageSource, maximum: Int) throws -> CGImage {
+        try Task.checkCancellation()
         guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceCreateThumbnailWithTransform: true, kCGImageSourceThumbnailMaxPixelSize: maximum, kCGImageSourceShouldCacheImmediately: true] as CFDictionary) else { throw MediaFailure.decode }
         return image
     }
@@ -30,6 +31,7 @@ extension MediaDerivatives {
         return result
     }
     static func write(_ image: CGImage, to file: URL, alpha: Bool, quality: Double) throws {
+        try Task.checkCancellation()
         guard let destination = CGImageDestinationCreateWithURL(file as CFURL, (alpha ? UTType.png : UTType.jpeg).identifier as CFString, 1, nil) else { throw MediaFailure.encode }
         CGImageDestinationAddImage(destination, image, [kCGImageDestinationLossyCompressionQuality: quality, kCGImagePropertyOrientation: 1] as CFDictionary)
         guard CGImageDestinationFinalize(destination) else { throw MediaFailure.encode }

@@ -12,6 +12,13 @@ import (
 )
 
 type nativeTrace struct {
+	LabPaused           bool     `json:"lab_paused"`
+	SystemPaused        bool     `json:"system_paused"`
+	Thermal             int      `json:"thermal"`
+	PendingMedia        int      `json:"pending_media"`
+	PendingBlobs        int      `json:"pending_blobs"`
+	QueuedNS            int64    `json:"queued_ns"`
+	Source              string   `json:"source"`
 	DeliveredNS         int64    `json:"delivered_ns"`
 	CommitStartedWallNS float64  `json:"commit_started_wall_ns"`
 	Live                bool     `json:"live"`
@@ -67,6 +74,19 @@ func readNativeTrace(path string) []nativeTrace {
 func nativeLatencyEvidence(w *world.World, e *Evidence, effects []any, observers []*watcher) {
 	trace := readNativeTrace(filepath.Join(w.Gateway.Home, "helper", "capture-trace.jsonl"))
 	commits := readNativeTrace(filepath.Join(w.Gateway.Home, "capture-trace.jsonl"))
+	counts := map[string]int{}
+	calendarRefetch := []float64{}
+	for _, event := range trace {
+		counts[event.Stage]++
+		if event.Stage == "refetch" && event.Source == "calendar" && event.FinishedNS >= event.StartedNS {
+			calendarRefetch = append(calendarRefetch, float64(event.FinishedNS-event.StartedNS)/float64(time.Millisecond))
+		}
+	}
+	if e.Metrics == nil {
+		e.Metrics = map[string]any{}
+	}
+	e.Metrics["capture_trace_stage_counts"] = counts
+	e.Latency["calendar_chunk_refetch"] = stats(calendarRefetch, 0)
 	values := map[string][]float64{}
 	sample := func(name string, from, through int64) {
 		if from > 0 && through >= from {

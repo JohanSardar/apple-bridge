@@ -1,37 +1,38 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[8.25 11.55 12.95] cpus=8 other_heavy=1; ubuntu: load=[0.65 0.47 0.39] cpus=8 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[2.55 3.3 3.73] cpus=8 other_heavy=0; ubuntu: load=[0.63 1.23 1.2] cpus=8 other_heavy=0"
   },
-  "status": "blocked",
-  "run_id": "relay_01M5EY013NK5149KQYV21Y1FF8",
+  "run_id": "relay_01M5FRA4CASY6TY9Y96WE9HP0Y",
   "network_path": "public Funnel; pinned public DNS through CONNECT egress; no peer or SSH tunnel",
   "metrics": {
     "live_samples": 200,
-    "post_burst_blob_stage_elapsed_ms": 5035.461666,
-    "post_burst_blob_stage_error_code": "timeout",
-    "post_burst_blob_stage_http_status": 0,
-    "post_burst_delete_command_id": "cmd_01M5EY3SXZ6G2TB4ENVBY3Q5MW",
-    "post_burst_delete_elapsed_ms": 11808.398766,
+    "nominal_blob_stage_elapsed_ms": 31.045833,
+    "post_burst_blob_stage_elapsed_ms": 29.54575,
+    "post_burst_blob_stage_error_code": "",
+    "post_burst_blob_stage_http_status": 200,
+    "post_burst_delete_command_id": "cmd_01M5FRAS09QJS0FSAQEBCCXN0F",
+    "post_burst_delete_elapsed_ms": 4228.306847,
     "post_burst_delete_error_code": "",
     "post_burst_delete_http_status": 200,
     "post_burst_delete_initial_http_status": 200,
-    "post_burst_delete_initial_response_ms": 11808.39838,
+    "post_burst_delete_initial_response_ms": 4228.30642,
     "post_burst_delete_normal_ttl_ms": 300000,
     "post_burst_delete_state": "observed",
     "public_connections": 2,
-    "public_ingress_ready_ms": 543.727959,
-    "relay_R_LIVE_budget_met": false,
+    "public_ingress_ready_ms": 577.067458,
+    "relay_R_LIVE_budget_met": true,
     "relay_R_LIVE_budget_ms": 1000,
-    "relay_clock_uncertainty_ms": 27.784102,
-    "revocation_clock_uncertainty_ms": 26.038528,
+    "relay_blob_bytes": 172032,
+    "relay_clock_uncertainty_ms": 28.044881,
+    "revocation_clock_uncertainty_ms": 32.024663,
     "snapshot_converged": true
   },
   "scenario": "WEB-RELAY-REPLICA",
   "level": "replica",
-  "passed": false,
-  "git_sha": "f274c9619ffcde43e406294deac6a99a3ecbe7f5",
-  "at": "2026-10-21T09:52:04.725586Z",
+  "passed": true,
+  "git_sha": "c7184770fa4063909cfc21f98f74749e30a16794",
+  "at": "2026-10-21T17:31:58.7303Z",
   "assertions": [
     {
       "name": "serve_config_before",
@@ -187,7 +188,11 @@
     },
     {
       "name": "synthetic_blob_staged_in_isolated_native_gateway",
-      "passed": false
+      "passed": true
+    },
+    {
+      "name": "blob_bytes_through_public_relay_match_gateway_digest",
+      "passed": true
     },
     {
       "name": "gateway_observer_scope",
@@ -206,10 +211,12 @@
       "passed": true
     },
     {
+      "name": "relay_R_LIVE_gateway_under_one_second",
+      "passed": true
+    },
+    {
       "name": "relay_R_LIVE_certification",
-      "passed": false,
-      "status": "blocked",
-      "detail": "Blocked on LIVE-FIX native R-LIVE and feed pipelining; measured samples and unchanged budget result are retained"
+      "passed": true
     },
     {
       "name": "tagged_native_fixture_cleanup",
@@ -229,9 +236,7 @@
     },
     {
       "name": "post_burst_blob_stage_available",
-      "passed": false,
-      "status": "blocked",
-      "detail": "LIVE-FIX: native blob fixture timeout after 5035.462 ms; default control timeout unchanged"
+      "passed": true
     },
     {
       "name": "post_burst_tagged_fixture_cleanup",
@@ -269,30 +274,30 @@
   "latency": {
     "apple_effect→gateway_local_feed": {
       "samples": 200,
-      "p50_ms": 8527.89625,
-      "p95_ms": 26539.67325,
-      "max_ms": 28487.654125,
+      "p50_ms": 477.876375,
+      "p95_ms": 681.85375,
+      "max_ms": 778.740625,
       "timeouts": 0
     },
     "apple_effect→ubuntu_local_feed": {
       "samples": 200,
-      "p50_ms": 8671.683542,
-      "p95_ms": 26684.333526,
-      "max_ms": 28632.33455,
+      "p50_ms": 513.650453,
+      "p95_ms": 720.33956,
+      "max_ms": 814.445398,
       "timeouts": 0
     },
     "gateway_local_feed→ubuntu_local_feed": {
       "samples": 200,
-      "p50_ms": 143.84958000000006,
-      "p95_ms": 144.62405500000023,
-      "max_ms": 203.26213500000085,
+      "p50_ms": 31.46454600000004,
+      "p95_ms": 42.86268000000001,
+      "max_ms": 167.92976499999992,
       "timeouts": 0
     },
     "revoke→public_feed_closed": {
       "samples": 1,
-      "p50_ms": 107.345433,
-      "p95_ms": 107.345433,
-      "max_ms": 107.345433,
+      "p50_ms": 134.596966,
+      "p95_ms": 134.596966,
+      "max_ms": 134.596966,
       "timeouts": 0
     }
   },

@@ -2,17 +2,21 @@
 set -euo pipefail
 if [ -z "${APPLE_BRIDGE_KEEP_SDKROOT:-}" ]; then matching=$("$(dirname "$0")/sdkroot.sh"); [ -n "$matching" ] && export SDKROOT="$matching"; fi
 if [ -n "${APPLE_BRIDGE_HEAVY_SLOT:-}" ]; then
-  [ "${1:-}" = "--exclusive" ] && shift
+  case "${1:-}" in --exclusive|--light) shift ;; esac
   exec "$@"
 fi
 exclusive=""
 if [ "${1:-}" = "--exclusive" ]; then exclusive=1; shift; fi
+light=""
+if [ "${1:-}" = "--light" ]; then light=1; shift; fi
 "$(dirname "$0")/trim-disk.sh" || true
 slots=2
 base=${APPLE_BRIDGE_HEAVY_BASE:-/tmp/apple-bridge-heavy}
+if [ -n "$light" ]; then base="$base-light"; slots=1; fi
 queue="$base-queue"
 mkdir -p "$queue"
 ticket="$queue/$(date +%s%N)-$$"
+[ -n "${APPLE_BRIDGE_HEAVY_PRIORITY:-}" ] && ticket="$queue/0-$(date +%s%N)-$$"
 touch "$ticket"
 held=""
 cleanup() { rm -f "$ticket"; for lock in $held; do rm -rf "$lock"; done; return 0; }
@@ -26,7 +30,7 @@ oldest_live() {
 }
 count() { set -- $held; echo $#; }
 usable() {
-  if [ -n "$exclusive" ]; then echo "$slots"; return; fi
+  if [ -n "$exclusive" ] || [ -n "$light" ]; then echo "$slots"; return; fi
   memory=$(sysctl -n hw.memsize 2>/dev/null || echo 0)
   if [ -z "${APPLE_BRIDGE_HEAVY_SLOTS:-}" ] && [ "$memory" -gt 0 ] && [ "$memory" -lt 12884901888 ]; then echo 1; return; fi
   if [ -n "${APPLE_BRIDGE_HEAVY_SLOTS:-}" ]; then echo "$APPLE_BRIDGE_HEAVY_SLOTS"; return; fi

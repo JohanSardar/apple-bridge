@@ -152,14 +152,14 @@ func runRelayWorld(ctx context.Context, s Scenario, level string, native bool) (
 		return
 	}
 	replica := w.Replicas[0]
-	var result relayQuery
-	gateway, err := relayGatewaySnapshot(ctx, w.Gateway)
-	add("gateway_snapshot_reference", err == nil)
-	if err != nil {
-		return
-	}
-	snapshotChecks := map[string]bool{"gateway_read": true}
+	var result, gateway relayQuery
+	snapshotChecks := map[string]bool{"gateway_read": false}
 	err = w.Await(20*time.Second, func() bool {
+		gateway, err = relayGatewaySnapshot(ctx, w.Gateway)
+		snapshotChecks["gateway_read"] = err == nil
+		if err != nil {
+			return false
+		}
 		err = w.RelayProbe("query", map[string]any{"URL": replica.URL, "Host": replica.Host, "Token": replica.Token, "Home": replica.Home, "Collection": "reminders.reminder", "ProxyReady": filepath.Join(w.Dir, "relay-route", "ready.json")}, &result)
 		snapshotChecks["replica_read"] = err == nil
 		if err != nil {
@@ -181,6 +181,7 @@ func runRelayWorld(ctx context.Context, s Scenario, level string, native bool) (
 		raw, _ := json.Marshal(snapshotChecks)
 		os.WriteFile(filepath.Join(w.Dir, "relay-snapshot-status.json"), raw, 0600)
 	}
+	add("gateway_snapshot_reference", snapshotChecks["gateway_read"])
 	add("public_relay_snapshot_converges", err == nil && result.Status.Snapshots > 0 && result.Status.SnapshotPages > 0)
 	add("public_tls_plus_pinned_gateway_identity", result.Enrollment != nil && result.Enrollment.Remote && result.Enrollment.Address == status.URL && result.Enrollment.Fingerprint == code.Fingerprint)
 	add("join_and_feed_forced_through_public_relay", result.PublicConnections >= 2)

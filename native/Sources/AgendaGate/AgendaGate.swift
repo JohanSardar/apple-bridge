@@ -21,7 +21,12 @@ private final class ReminderCompletion: @unchecked Sendable {
     }
 }
 
-@MainActor
+@globalActor
+public actor AgendaActor {
+    public static let shared = AgendaActor()
+}
+
+@AgendaActor
 public final class AgendaGate {
     public let store = EKEventStore()
     public let trace: CaptureTrace
@@ -32,24 +37,29 @@ public final class AgendaGate {
     private var observer: NSObjectProtocol?
     private var debounce: Task<Void, Never>?
     private var calendarDebounce: Task<Void, Never>?
+    private var reminderFetches = 0
+    private var reminderHintPending = false
+    private var debounceWaiting: [CheckedContinuation<Void, Never>] = []
+    private var calendarWaiting: [CheckedContinuation<Void, Never>] = []
     private var listeners: [UUID: (calendar: Bool, continuation: AsyncStream<Void>.Continuation)] = [:]
 
-    public init(trace: CaptureTrace = CaptureTrace()) {
+    public nonisolated init(trace: CaptureTrace = CaptureTrace()) {
         self.trace = trace
-        Task { @MainActor [weak self] in
+        Task { @AgendaActor [weak self] in
+            guard let self else { return }
+            observer = NotificationCenter.default.addObserver(forName: .EKEventStoreChanged, object: store, queue: nil) { @Sendable [weak self, trace] _ in
+                let delivered = CaptureTrace.now()
+                trace.record("notification", fields: ["delivered_ns": .integer(delivered)])
+                Task(priority: .high) { @AgendaActor in self?.changed(delivered) }
+            }
             var previous = [EKEventStore.authorizationStatus(for: .reminder), EKEventStore.authorizationStatus(for: .event)]
             while !Task.isCancelled {
                 do { try await Task.sleep(for: .seconds(1)) } catch { return }
-                guard let self else { return }
                 let current = [EKEventStore.authorizationStatus(for: .reminder), EKEventStore.authorizationStatus(for: .event)]
                 if current != previous { previous = current; self.reconcile() }
             }
         }
-        observer = NotificationCenter.default.addObserver(forName: .EKEventStoreChanged, object: store, queue: .main) { @Sendable [weak self, trace] _ in
-            let delivered = CaptureTrace.now()
-            trace.record("notification", fields: ["delivered_ns": .integer(delivered)])
-            Task { @MainActor in self?.changed(delivered) }
-        }
+
     }
 
     public func authorized(_ type: EKEntityType) -> Bool {
@@ -62,13 +72,51 @@ public final class AgendaGate {
 
     private func changed(_ delivered: UInt64) {
         calendarChanged(delivered)
-        debounce?.cancel()
-        debounce = Task { @MainActor in
+        guard debounce == nil else { return }
+        reminderHintPending = true
+        debounce = Task(priority: .high) { @AgendaActor in
+            let activity = ForegroundActivity.shared.begin()
+            defer {
+                ForegroundActivity.shared.end(activity)
+                debounce = nil
+                let ready = debounceWaiting
+                debounceWaiting.removeAll()
+                for continuation in ready { continuation.resume() }
+                resumeCalendar()
+            }
             do { try await Task.sleep(for: .milliseconds(50)) } catch { return }
-            notificationAt = delivered
+            notificationAt = max(notificationAt, delivered)
             debounceAt = CaptureTrace.now()
             trace.record("debounce", fields: ["notification_ns": .integer(notificationAt)])
             for listener in listeners.values where !listener.calendar { listener.continuation.yield(()) }
+        }
+    }
+
+    private var reminderPending: Bool {
+        debounce != nil || reminderFetches > 0 || (reminderHintPending && listeners.values.contains { !$0.calendar })
+    }
+
+    private func resumeCalendar() {
+        guard !reminderPending else { return }
+        let ready = calendarWaiting
+        calendarWaiting.removeAll()
+        for continuation in ready { continuation.resume() }
+    }
+
+    private func removeListener(_ id: UUID) {
+        listeners.removeValue(forKey: id)
+        resumeCalendar()
+    }
+
+    public func waitForReminderDebounce() async {
+        if debounce != nil {
+            await withCheckedContinuation { debounceWaiting.append($0) }
+        }
+    }
+
+    public func waitForReminderRefetch() async {
+        while reminderPending {
+            await withCheckedContinuation { calendarWaiting.append($0) }
         }
     }
 
@@ -79,7 +127,9 @@ public final class AgendaGate {
 
     private func calendarChanged(_ delivered: UInt64) {
         guard calendarDebounce == nil else { return }
-        calendarDebounce = Task { @MainActor in
+        calendarDebounce = Task(priority: .high) { @AgendaActor in
+            let activity = ForegroundActivity.shared.begin()
+            defer { ForegroundActivity.shared.end(activity) }
             do { try await Task.sleep(for: .milliseconds(50)) } catch { return }
             calendarNotificationAt = delivered
             calendarDebounceAt = CaptureTrace.now()
@@ -94,13 +144,19 @@ public final class AgendaGate {
         return AsyncStream(bufferingPolicy: .bufferingNewest(1)) { continuation in
             listeners[id] = (calendar, continuation)
             continuation.onTermination = { @Sendable [weak self] _ in
-                Task { @MainActor in self?.listeners.removeValue(forKey: id) }
+                Task { @AgendaActor in self?.removeListener(id) }
             }
         }
     }
 
     public func reminders() async throws -> [EKReminder] {
         guard authorized(.reminder) else { throw SourceFailure.permissionMissing }
+        reminderFetches += 1
+        defer {
+            reminderFetches -= 1
+            reminderHintPending = false
+            resumeCalendar()
+        }
         let trace = self.trace
         let predicate = store.predicateForReminders(in: nil)
         let fetched: ReminderFetch = try await withCheckedThrowingContinuation { continuation in

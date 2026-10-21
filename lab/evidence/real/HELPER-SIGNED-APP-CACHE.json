@@ -1,0 +1,106 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[4.41 3.48 5.07] cpus=8 other_heavy=0"
+  },
+  "run_id": "cache_01M5FPT05SMR8M1J6P0RTDZKG2",
+  "metrics": {
+    "AppleBridgeHelper_bundle_sha256": "70a1952fd62adb8ae4b2b28c0477bdd01579f0358a0b0fdf35a710271bac6db0",
+    "AppleBridgeHelper_content_key": "d93162f0d6c09869d1ed9859669fe85830ea2cc6ca5d3b955a7ae29bf66cb8df",
+    "AppleTruth_bundle_sha256": "ed8347230cd2457c919279933cca38d0bbfa5261efd52d27ef0e65f68c185b00",
+    "AppleTruth_content_key": "d93162f0d6c09869d1ed9859669fe85830ea2cc6ca5d3b955a7ae29bf66cb8df",
+    "cold_AppleBridgeHelper_setup_ms": 51963.622,
+    "cold_AppleTruth_setup_ms": 14963.842,
+    "cold_host_load": "{ 4.41 3.48 5.07 }",
+    "cold_host_swap": "total = 3072.00M  used = 1671.75M  free = 1400.25M  (encrypted)",
+    "cold_world_setup_ms": 68191.714167,
+    "warm_AppleBridgeHelper_setup_ms": 268.842,
+    "warm_AppleTruth_setup_ms": 233.629,
+    "warm_host_load": "{ 3.09 3.25 4.85 }",
+    "warm_host_swap": "total = 3072.00M  used = 1671.75M  free = 1400.25M  (encrypted)",
+    "warm_world_setup_ms": 1200.420208
+  },
+  "scenario": "HELPER-SIGNED-APP-CACHE",
+  "level": "real",
+  "passed": true,
+  "git_sha": "13d9245a1995f993f83953be074187df51e44ac8",
+  "at": "2026-10-21T17:05:41.561955Z",
+  "assertions": [
+    {
+      "name": "cold_helper_status_report",
+      "passed": true
+    },
+    {
+      "name": "cold_AppleBridgeHelper_expected_cache_result",
+      "passed": true
+    },
+    {
+      "name": "cold_AppleBridgeHelper_signature_valid",
+      "passed": true
+    },
+    {
+      "name": "cold_AppleTruth_expected_cache_result",
+      "passed": true
+    },
+    {
+      "name": "cold_AppleTruth_signature_valid",
+      "passed": true
+    },
+    {
+      "name": "cold_native_truth_verified",
+      "passed": true
+    },
+    {
+      "name": "warm_helper_status_report",
+      "passed": true
+    },
+    {
+      "name": "cached_app_preserves_native_tcc_status",
+      "passed": true
+    },
+    {
+      "name": "warm_AppleBridgeHelper_expected_cache_result",
+      "passed": true
+    },
+    {
+      "name": "AppleBridgeHelper_same_content_key",
+      "passed": true
+    },
+    {
+      "name": "warm_AppleBridgeHelper_signature_valid",
+      "passed": true
+    },
+    {
+      "name": "warm_AppleTruth_expected_cache_result",
+      "passed": true
+    },
+    {
+      "name": "AppleTruth_same_content_key",
+      "passed": true
+    },
+    {
+      "name": "warm_AppleTruth_signature_valid",
+      "passed": true
+    },
+    {
+      "name": "warm_native_truth_verified",
+      "passed": true
+    },
+    {
+      "name": "corrupt_entry_rebuilt_fresh",
+      "passed": true
+    },
+    {
+      "name": "cache_retains_last_three_entries",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

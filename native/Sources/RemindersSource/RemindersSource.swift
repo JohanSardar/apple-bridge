@@ -4,22 +4,23 @@ import CryptoKit
 import AgendaGate
 import SourceSupport
 
-@MainActor
+@AgendaActor
 public final class RemindersSource: Source {
     public nonisolated let name = "reminders"
     private let gate: AgendaGate
     private var committed: [String: JSON] = [:]
     private var tracked: [String: JSON] = [:]
+    private var savedIdentities: [String: JSON] = [:]
     private let commandsEnabled: Bool
     private let baselineURL: URL
     private var forceFull = true
     private var generation = ""
     private let generationURL: URL
     private var scanning = false
-    public static let operations = ["reminders.create", "reminders.update", "reminders.complete", "reminders.uncomplete", "reminders.delete", "reminders.create_list"]
-    public static let coverage: JSON = .object(["fields": .string("partial"), "missing": .array([.string("recurrence: next incomplete instance only")])])
+    public nonisolated static let operations = ["reminders.create", "reminders.update", "reminders.complete", "reminders.uncomplete", "reminders.delete", "reminders.create_list"]
+    public nonisolated static let coverage: JSON = .object(["fields": .string("partial"), "missing": .array([.string("recurrence: next incomplete instance only")])])
 
-    public init(gate: AgendaGate, home: URL, commandsEnabled: Bool = false) throws {
+    public nonisolated init(gate: AgendaGate, home: URL, commandsEnabled: Bool = false) throws {
         self.gate = gate; self.commandsEnabled = commandsEnabled
         baselineURL = home.appendingPathComponent("reminders-baseline.json")
         generationURL = home.appendingPathComponent("reminders-generation.json")
@@ -27,6 +28,7 @@ public final class RemindersSource: Source {
             committed = try JSONDecoder().decode([String: JSON].self, from: Data(contentsOf: baselineURL))
         }
         tracked = committed
+        savedIdentities = committed
     }
 
     private func refreshGeneration() throws {
@@ -55,27 +57,38 @@ public final class RemindersSource: Source {
         try save(tracked)
     }
 
-    public func revalidate(_ observations: [JSON], generation expected: String) throws -> [JSON] {
+    public func revalidate(_ observations: [JSON], generation expected: String) async throws -> [JSON]? {
         try refreshGeneration()
         guard generation == expected, gate.authorized(.reminder) else { throw SourceFailure.unavailable }
-        return observations.compactMap { previous in
+        guard !scanning else { return nil }
+        let revision = gate.debounceAt
+        var current: [JSON] = []
+        for previous in observations {
+            await Task.yield()
+            await gate.waitForReminderDebounce()
+            try Task.checkCancellation()
+            guard gate.debounceAt == revision, !scanning else { return nil }
+            guard generation == expected, gate.authorized(.reminder) else { throw SourceFailure.unavailable }
             let key = previous["native_key"].string
             if previous["collection"].string == "reminders.list" {
-                guard let calendar = gate.store.calendar(withIdentifier: key) else { return nil }
-                return observation("reminders.list", key, listData(calendar))
+                guard let calendar = gate.store.calendar(withIdentifier: key) else { continue }
+                current.append(observation("reminders.list", key, listData(calendar)))
+            } else if let reminder = gate.store.calendarItem(withIdentifier: key) as? EKReminder {
+                let alias = reminder.calendarItemExternalIdentifier.map { reminder.calendar.calendarIdentifier + "/" + $0 } ?? ""
+                current.append(observation("reminders.reminder", key, data(reminder), alias: alias))
             }
-            guard let reminder = gate.store.calendarItem(withIdentifier: key) as? EKReminder else { return nil }
-            let alias = reminder.calendarItemExternalIdentifier.map { reminder.calendar.calendarIdentifier + "/" + $0 } ?? ""
-            return observation("reminders.reminder", key, data(reminder), alias: alias)
         }
+        return current
     }
 
     private func save(_ baseline: [String: JSON]) throws {
         let identities = baseline.mapValues { value in
             JSON.object(value.object.filter { ["collection", "native_key", "scoped_alias"].contains($0.key) })
         }
+        guard identities != savedIdentities else { return }
         try JSONEncoder().encode(identities).write(to: baselineURL, options: .atomic)
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: baselineURL.path)
+        savedIdentities = identities
     }
 
     public func open() async -> SourceReadiness {
@@ -125,11 +138,15 @@ public final class RemindersSource: Source {
     }
 
     private func scan(into sink: any ObservationSink, live: Bool) async throws {
+        let activity = ForegroundActivity.shared.begin()
+        defer { ForegroundActivity.shared.end(activity) }
+        var ownsScan = false
         if live {
             while scanning { try await Task.sleep(for: .milliseconds(5)) }
             scanning = true
+            ownsScan = true
         }
-        defer { if live { scanning = false } }
+        defer { if ownsScan { scanning = false } }
         try refreshGeneration()
         let scanGeneration = generation
         let started = timestamp()
@@ -169,6 +186,7 @@ public final class RemindersSource: Source {
         gate.trace.record("refetch", keys: observations.map { $0["native_key"].string }, fields: ["notification_ns": .integer(notificationAt), "debounce_ns": .integer(debounceAt), "started_ns": .integer(refetchStarted), "finished_ns": .integer(refetchFinished), "live": .bool(live)])
         try await sink.emit(source: name, generation: scanGeneration, observations: observations, scanID: UUID().uuidString, scanStartedAt: started, scope: ["reminders.list", "reminders.reminder"], completionEvidence: "complete", blobHandles: [:], live: live)
         forceFull = false
+        if ownsScan { scanning = false; ownsScan = false }
         let readiness = await open()
         try await sink.sourceState(source: name, state: readiness.state, coverage: readiness.coverage, capabilities: readiness.capabilities, reason: readiness.reason)
     }
@@ -189,7 +207,7 @@ public final class RemindersSource: Source {
     public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {
         forceFull = true
         let changes = gate.changes()
-        let periodic = Task { @MainActor in
+        let periodic = Task { @AgendaActor in
             while !Task.isCancelled {
                 do { try await Task.sleep(for: .seconds(900)); self.gate.reconcile() } catch { return }
             }
@@ -200,7 +218,7 @@ public final class RemindersSource: Source {
                 try await self.scan(into: sink, live: false)
                 try await self.scan(into: sink, live: true)
             }
-            group.addTask {
+            group.addTask(priority: .high) {
                 for await _ in changes {
                     try Task.checkCancellation()
                     try await self.scan(into: sink, live: true)

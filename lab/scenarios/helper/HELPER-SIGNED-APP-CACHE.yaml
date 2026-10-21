@@ -1,0 +1,7 @@
+id: HELPER-SIGNED-APP-CACHE
+feature: helper.session
+levels: [real]
+given: [{world: {}}]
+when: [{tcc_ready: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

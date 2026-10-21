@@ -1,6 +1,11 @@
 #!/bin/bash
 set -euo pipefail
 root=$(cd "$(dirname "$0")/../.." && pwd)
+if [[ $# == 1 && ${APPLE_BRIDGE_SIGNED_CACHE_BUILD:-} != 1 ]]; then
+    [[ ! -e "$1" && ! -L "$1" ]]
+    if python3 "$root/packaging/dev/signed-app-cache.py" helper "$1"; then exit 0; fi
+    rm -rf -- "$1"
+fi
 APPLE_BRIDGE_NATIVE_TARGET=AppleBridgeHelper "$root/packaging/dev/build-native.sh" "$root/native"
 output=$(cat "$root/native/.build/native-output")
 [[ -f "$output/AppleBridgeHelper" ]]

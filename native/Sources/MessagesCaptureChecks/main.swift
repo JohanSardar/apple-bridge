@@ -70,6 +70,7 @@ struct MessagesCaptureChecks {
     }
     static func main() async throws {
         if CommandLine.arguments.contains("--rich") { try await RichCaptureChecks.run(); return }
+        if CommandLine.arguments.contains("--media-foreground") { try await MediaPriorityChecks.run(); return }
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("messages-capture-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         defer {

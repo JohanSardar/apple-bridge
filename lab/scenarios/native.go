@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -72,7 +73,17 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 		if s.ID == "HELPER-LIVE-BACKFILL" {
 			return runBackfillPriority(ctx, s, level, e)
 		}
-		w, err = world.NewReal(ctx, level, 1)
+		setup := world.NativeSetup{}
+		if s.ID == "CORE-LIVE-LATENCY" && os.Getenv("APPLE_BRIDGE_LAB_PAUSE_MEDIA") == "1" {
+			setup.BeforeStart = func(w *world.World) error {
+				home := filepath.Join(w.Dir, "gateway", "helper")
+				if err := os.MkdirAll(home, 0700); err != nil {
+					return err
+				}
+				return os.WriteFile(filepath.Join(home, "lab-pause-media"), []byte("paused"), 0600)
+			}
+		}
+		w, err = world.NewRealWithSetup(ctx, level, 1, setup)
 	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "native world startup:", err)
@@ -243,6 +254,32 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 		switch s.ID {
 		case "CORE-LIVE-LATENCY":
 			e.Conditions = nativeConditions()
+			cleanupTag := "[ab-test " + contracts.NewID("post-cleanup") + "]"
+			burstCommandTitle := cleanupTag + " post-burst command target"
+			cleanupTitle := cleanupTag + " post-cleanup command target"
+			defer func() {
+				if _, err := w.RecoverTruth("fixture", map[string]any{"action": "cleanup", "list": "Bridge Test", "tag": cleanupTag}); err != nil {
+					result.Passed = false
+					result.Assertions = append(result.Assertions, Assertion{Name: "post_cleanup_target_cleanup", Passed: false})
+				}
+			}()
+			for _, target := range []string{burstCommandTitle, cleanupTitle} {
+				if _, err := w.Truth("fixture", map[string]any{"action": "create", "list": "Bridge Test", "tag": cleanupTag, "title": target}); err != nil {
+					return failed("post_burst_command_target_fixture")
+				}
+			}
+			commandTargets := map[string]contracts.Record{}
+			if w.Await(3*time.Second, func() bool {
+				records, err := w.Records(w.Gateway)
+				for _, record := range records {
+					if record.Collection == "reminders.reminder" && (recordTitle(record) == burstCommandTitle || recordTitle(record) == cleanupTitle) {
+						commandTargets[recordTitle(record)] = record
+					}
+				}
+				return err == nil && len(commandTargets) == 2
+			}) != nil {
+				return failed("post_burst_command_targets_visible")
+			}
 			endpoints := append([]world.Endpoint{w.Gateway}, w.Replicas...)
 			observers := []*watcher{}
 			for _, endpoint := range endpoints {
@@ -261,6 +298,8 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 			if !ok || len(effects) != 200 {
 				return failed("two_hundred_external_effects")
 			}
+			add("post_burst_forwarded_delete", nativeForwardedDelete(ctx, w, &e, commandTargets[burstCommandTitle], "post_burst_forwarded_delete"))
+			add("post_burst_native_blob_stage", nativeBlobStage(w, &e, "post_burst_native_blob_stage"))
 			complete := w.Await(10*time.Second, func() bool {
 				for _, raw := range effects {
 					effect, ok := raw.(map[string]any)
@@ -308,7 +347,12 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 				add("contiguous_replica_application", observer.valid())
 			}
 			nativeLatencyEvidence(w, &e, effects, observers)
+			nativeMediaEvidence(w, &e, effects)
 			add("native_path_timestamps", len(e.NativeTimings) == 200 && e.Latency["refetch_duration"].Samples == 200 && e.Latency["capture_sent→gateway_commit"].Samples == 200)
+			_, cleanupErr := w.Truth("fixture", map[string]any{"action": "cleanup", "list": "Bridge Test", "tag": tag})
+			add("post_burst_bulk_truth_cleanup", cleanupErr == nil)
+			add("post_cleanup_forwarded_delete", nativeForwardedDelete(ctx, w, &e, commandTargets[cleanupTitle], "post_cleanup_forwarded_delete"))
+			add("post_cleanup_native_blob_stage", nativeBlobStage(w, &e, "post_cleanup_native_blob_stage"))
 		case "REM-LIST-CREATE", "REM-LIST-LOST-ACK":
 			var beforeLists map[string]bool
 			if level != "sim" {
@@ -623,6 +667,18 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 			add("independent_appletruth", err == nil && result["status"] == "verified")
 		}
 	}
+	if s.ID == "CORE-LIVE-LATENCY" {
+		_, _, stableReadErr := w.RecordsAt(w.Replicas[0])
+		e.Metrics["final_active_read_changed_during_pagination"] = stableReadErr != nil && stableReadErr.Error() == "snapshot changed during pagination"
+		pidBytes, pidErr := os.ReadFile(filepath.Join(w.Gateway.Home, "helper", "helper.pid"))
+		pid := strings.TrimSpace(string(pidBytes))
+		numericPID, parseErr := strconv.Atoi(pid)
+		if pidErr != nil || parseErr != nil || numericPID <= 1 || exec.Command("kill", "-STOP", pid).Run() != nil {
+			return failed("private_helper_paused_for_integrity")
+		}
+		defer exec.Command("kill", "-CONT", pid).Run()
+		add("private_helper_paused_for_integrity", true)
+	}
 	add("replica_convergence", w.Await(5*time.Second, func() bool {
 		gateway, head, err := w.RecordsAt(w.Gateway)
 		if err != nil {
@@ -630,7 +686,15 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 		}
 		for _, endpoint := range w.Replicas {
 			records, applied, err := w.RecordsAt(endpoint)
-			if err != nil || applied != head || !reflect.DeepEqual(withoutCommands(gateway), withoutCommands(records)) {
+			equal := reflect.DeepEqual(withoutCommands(gateway), withoutCommands(records))
+			if s.ID == "CORE-LIVE-LATENCY" {
+				e.Metrics["final_gateway_cursor_sequence"] = head.Sequence
+				e.Metrics["final_replica_cursor_sequence"] = applied.Sequence
+				e.Metrics["final_replica_records_equal"] = equal
+				e.Metrics["final_replica_read_succeeded"] = err == nil
+				e.Metrics["final_scenario_expired"] = ctx.Err() != nil
+			}
+			if err != nil || applied != head || !equal {
 				return false
 			}
 		}
