@@ -81,6 +81,7 @@ func (s *Store) openLedger(ctx context.Context, publishMirror ...bool) error {
 	s.ledger = db
 	_, err = db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY,value TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS commands(id TEXT PRIMARY KEY,principal TEXT NOT NULL,request_hash TEXT NOT NULL,state TEXT NOT NULL,payload BLOB NOT NULL);
+ CREATE INDEX IF NOT EXISTS commands_state ON commands(state);
  CREATE TABLE IF NOT EXISTS dedupe(command_id TEXT PRIMARY KEY,principal TEXT NOT NULL,request_hash TEXT NOT NULL,admission_era TEXT NOT NULL);
  INSERT OR IGNORE INTO meta(key,value) VALUES('admission_era','`+contracts.NewID("")+`');`)
 	if err != nil {
@@ -154,7 +155,9 @@ func (s *Store) Commands(ctx context.Context) ([]contracts.CommandRecord, error)
 func commandTransitionAllowed(from, to contracts.CommandState) bool {
 	switch from {
 	case "":
-		return to == contracts.CommandAdmitted
+		return to == contracts.CommandAdmitted || to == contracts.CommandAwaitingApproval
+	case contracts.CommandAwaitingApproval:
+		return to == contracts.CommandAdmitted || to == contracts.CommandRejectedByOwner || to == contracts.CommandExpired || to == contracts.CommandRejected
 	case contracts.CommandAdmitted:
 		return to == contracts.CommandPrepared || to == contracts.CommandRejected || to == contracts.CommandExpired
 	case contracts.CommandPrepared:
@@ -343,4 +346,25 @@ func rotateAdmissionEra(ctx context.Context, home, stagedPath string, accept boo
 	}
 	_, err = staged.ExecContext(ctx, "INSERT INTO meta(key,value) VALUES('admission_era',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", era)
 	return err
+}
+
+func (s *Store) PendingApprovals(ctx context.Context) ([]contracts.CommandRecord, error) {
+	rows, err := s.ledger.QueryContext(ctx, "SELECT payload FROM commands WHERE state='awaiting_approval' ORDER BY id")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []contracts.CommandRecord{}
+	for rows.Next() {
+		var raw []byte
+		var r contracts.CommandRecord
+		if err = rows.Scan(&raw); err != nil {
+			return nil, err
+		}
+		if err = json.Unmarshal(raw, &r); err != nil {
+			return nil, err
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
 }
