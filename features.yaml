@@ -524,6 +524,7 @@ features:
       - {id: WEB-MSG-PLACEHOLDERS, levels: [web]}
       - {id: WEB-MSG-DETAILS, levels: [web]}
       - {id: WEB-MSG-KEYBOARD, levels: [web]}
+      - {id: WEB-MSG-KEYBOARD-LIST, levels: [web]}
       - {id: WEB-MSG-A11Y, levels: [web]}
       - {id: WEB-MSG-PERF, levels: [web]}
       - {id: WEB-MSG-LIVE, levels: [web]}

@@ -1279,6 +1279,8 @@ Recently Deleted becomes `deleted_at` + `recoverable_until` on messages and chat
 **W2 scenarios:**
 - Level `web` on the demo world, all 12 projects unless noted:
   - WEB-MSG-LIST, WEB-MSG-FILTERS, WEB-MSG-SEARCH, WEB-MSG-THREAD-CORE, WEB-MSG-REACTIONS, WEB-MSG-REPLIES, WEB-MSG-EDIT-UNSEND-VIEW, WEB-MSG-GROUP-EVENTS, WEB-MSG-MEDIA, WEB-MSG-VIEWER, WEB-MSG-LINKS, WEB-MSG-STICKERS-GENMOJI, WEB-MSG-EFFECTS, WEB-MSG-PLACEHOLDERS, WEB-MSG-DETAILS, WEB-MSG-KEYBOARD, WEB-MSG-A11Y (axe-free structural checks plus labels), WEB-MSG-PERF.
+  - WEB-MSG-PERF uses one Chromium/light/desktop project with `web.huge: true`; list and transcript probes share the canonical 100k-message World and run in the exclusive lane.
+  - WEB-MSG-KEYBOARD-LIST covers list selection, chat cycling and pinned shortcuts; WEB-MSG-KEYBOARD covers transcript shortcuts.
   - WEB-MSG-LIVE: a sim inbound message appears with the receive animation in under 500 ms p95.
 - Level `real` (the real gateway on the Air, read-only):
   - WEB-MSG-REAL-READ: the real chat list and threads render without errors.
