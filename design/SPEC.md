@@ -1261,7 +1261,9 @@ Recently Deleted becomes `deleted_at` + `recoverable_until` on messages and chat
   - push/pop transitions
 - **Long tasks:** none during those journeys. Chromium is the gate, because the Long Task API isn't available elsewhere.
 - **Frame intervals** are still recorded but are only gates when the host display supports 120 Hz.
-- **Input to next frame** ≤ 8 ms p95 (Chromium Event Timing) for send, react, open chat and open media.
+- **Input responsiveness** ≤ 8 ms p95 for send, react, open chat and open media. This is our own main-thread cost for the input: Event Timing input delay plus processing (`processingEnd − startTime`), plus the script, style and layout work of the frame that renders the result.
+  - Click→next-frame (rAF) is recorded as descriptive data and becomes a gate only on a 120 Hz host. On 60 Hz or headless hosts the frame cadence alone is about 16.7 ms, so it measures display alignment, not our work.
+  - Decided 2026-10-21 during W2-LIST acceptance; the measured list was 0.3–0.6 ms processing and frame work p95 1.93 ms.
 - **WebKit:** WebKit jank must be explained and fixed. Show where the time goes (script, layout or paint) before claiming it's a headless artifact.
 
 **W2 units:**
