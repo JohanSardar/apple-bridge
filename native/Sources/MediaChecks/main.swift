@@ -1,5 +1,5 @@
 import Foundation
-import MediaDerivatives
+@_spi(Testing) import MediaDerivatives
 import AVFoundation
 import ImageIO
 import UniformTypeIdentifiers
@@ -10,6 +10,12 @@ struct MediaChecks {
     static func main() async throws {
         let args = CommandLine.arguments
         switch args[1] {
+        case "export-safety":
+            try await ExportSafetyChecks.run()
+        case "export-overlap":
+            try await ExportOverlapChecks.run()
+        case "export-worker":
+            try await ExportOverlapChecks.worker()
         case "thumbhash":
             struct Fixture: Decodable { let width: Int; let height: Int; let rgba: [UInt8]; let hash: String }
             let fixtures = try JSONDecoder().decode([Fixture].self, from: Data(contentsOf: URL(fileURLWithPath: args[2])))

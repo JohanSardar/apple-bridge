@@ -248,6 +248,7 @@ public actor Messages: Source {
             variantURLs[variant.handle] = MediaDerivatives.url(variant)
             blobDigests[variant.handle] = (variant.size, .distantPast, variant.digest)
         }
+        for (name, reason) in result.unavailable ?? [:] { derivatives[name] = ["state": "unavailable", "reason": reason] }
         data["derivatives"] = derivatives
     }
     private func publishMedia(_ result: MediaResult, job: MediaJob, token: String, sink: any ObservationSink) async throws {

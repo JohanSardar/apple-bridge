@@ -25,6 +25,7 @@ public struct MediaMetadata: Codable, Sendable {
 
 public struct MediaResult: Codable, Sendable {
     public var awaitingLive: Bool?
+    public var unavailable: [String: String]?
     public var derivatives: [String: MediaVariant] = [:]
     public var media = MediaMetadata()
 }
@@ -47,6 +48,7 @@ public enum MediaDerivatives {
     public static func cached(_ digest: String) -> MediaResult? {
         guard validDigest(digest), let bytes = try? Data(contentsOf: root.appendingPathComponent(digest + "/manifest.json")), let result = try? JSONDecoder().decode(MediaResult.self, from: bytes),
               result.derivatives.values.allSatisfy({ FileManager.default.fileExists(atPath: url($0).path) }) else { return nil }
+        if result.media.duration_ms != nil || result.media.live == true || result.awaitingLive == true || result.unavailable != nil { MediaLease.cleanIfIdle(root.appendingPathComponent(digest)) }
         return result
     }
     public static func url(_ variant: MediaVariant) -> URL { root.appendingPathComponent(variant.file) }
@@ -56,6 +58,10 @@ public enum MediaDerivatives {
         let directory = root.appendingPathComponent(digest, isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: root.path)
+        let lease = try await MediaLease.acquire(directory)
+        defer { withExtendedLifetime(lease) {} }
+        try MediaLease.removeAbandonedExports(directory)
+        if let existing = cached(digest), existing.awaitingLive != true { return existing }
         var result: MediaResult
         if let source = CGImageSourceCreateWithURL(input as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary), let identifier = CGImageSourceGetType(source), let type = UTType(identifier as String), type.conforms(to: .image) {
             result = try images(source, directory: directory, sticker: sticker)
@@ -67,13 +73,23 @@ public enum MediaDerivatives {
                     if (try? await movieIdentifier(companion)) == identifier {
                         let clip = try await movie(companion, directory: directory, name: "live")
                         result.derivatives["live"] = clip.derivatives["live"]
+                        result.unavailable = clip.unavailable?["live"].map { ["live": $0] }
                         result.media.live = true
                         result.awaitingLive = false
                         break
                     }
                 }
             }
-        } else { result = try await audiovisual(input, directory: directory) }
+        } else {
+            do { result = try await audiovisual(input, directory: directory) }
+            catch {
+                try Task.checkCancellation()
+                guard (error as NSError).domain == "AppleBridgeMediaExport" else { throw error }
+                result = MediaResult()
+                let name = UTType(filenameExtension: input.pathExtension)?.conforms(to: .audio) == true ? "audio" : "video"
+                result.unavailable = [name: safeExportReason(error, input: input, directory: directory)]
+            }
+        }
         try Task.checkCancellation()
         try persist(result, directory: directory)
         return result
