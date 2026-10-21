@@ -95,16 +95,19 @@ func lintGo(rel, path string) []finding {
 			importing = false
 		}
 	}
-	return out
+	return append(out, lintStateWrites(rel, src)...)
 }
 
 func checkImport(rel, imp string) string {
+	dir := filepath.ToSlash(filepath.Dir(rel))
+	if (imp == "database/sql" || imp == "modernc.org/sqlite") && dir != "internal/state" && dir != "internal/blobs" && !strings.HasPrefix(dir, "lab/") && !strings.HasPrefix(dir, "tools/") {
+		return "SQL storage belongs to State or the separate Blob protection database"
+	}
 	const module = "github.com/JohanSardar/apple-bridge/"
 	if !strings.HasPrefix(imp, module) {
 		return ""
 	}
 	target := strings.TrimPrefix(imp, module)
-	dir := filepath.ToSlash(filepath.Dir(rel))
 	if dir == "cmd/bridge" && strings.HasPrefix(target, "lab/") {
 		return "product command must not import " + target
 	}
