@@ -7,6 +7,7 @@ if [ -n "${APPLE_BRIDGE_HEAVY_SLOT:-}" ]; then
 fi
 exclusive=""
 if [ "${1:-}" = "--exclusive" ]; then exclusive=1; shift; fi
+"$(dirname "$0")/trim-disk.sh" || true
 slots=2
 base=${APPLE_BRIDGE_HEAVY_BASE:-/tmp/apple-bridge-heavy}
 queue="$base-queue"
