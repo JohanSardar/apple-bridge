@@ -119,6 +119,8 @@ test('WEB-SOURCES-STATUS JSON proofs bypass the service worker while trusted thu
     expect(navigation!.headers()['content-type']).toContain('application/json');
     expect(navigation!.headers()['cache-control']).toBe('no-store');
 });
+test.describe('late capability discovery',()=>{
+    test.use({serviceWorkers:'block'});
 test('WEB-SOURCES-STATUS-LATE-FAILURE repeated late discovery failures heal without reconnect or command dispatch',async({page,context},testInfo)=>{
     await context.addCookies(trusted);
     let welcomes=0,commands=0,requests=0;const sequences:number[]=[];
@@ -144,4 +146,5 @@ test('WEB-SOURCES-STATUS-LATE-FAILURE repeated late discovery failures heal with
     const starts=await page.evaluate(()=>(window as any).__lateSourceStarts as number[]);
     expect(starts[1]-starts[0]).toBeGreaterThanOrEqual(1000);expect(starts[2]-starts[1]).toBeGreaterThanOrEqual(2000);
     await testInfo.attach('source-retry.json',{body:JSON.stringify({requests,welcomes,commands,server_sequences:sequences,delays_ms:[starts[1]-starts[0],starts[2]-starts[1]]}),contentType:'application/json'});
+});
 });
