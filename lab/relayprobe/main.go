@@ -19,6 +19,8 @@ func main() {
 		switch os.Args[1] {
 		case "proxy":
 			err = proxy(ctx, os.Args[2:])
+		case "query":
+			err = query(ctx)
 		default:
 			err = fmt.Errorf("unknown probe action")
 		}
