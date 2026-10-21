@@ -13,6 +13,7 @@ base=${APPLE_BRIDGE_HEAVY_BASE:-/tmp/apple-bridge-heavy}
 queue="$base-queue"
 mkdir -p "$queue"
 ticket="$queue/$(date +%s%N)-$$"
+[ -n "${APPLE_BRIDGE_HEAVY_PRIORITY:-}" ] && ticket="$queue/0-$(date +%s%N)-$$"
 touch "$ticket"
 held=""
 cleanup() { rm -f "$ticket"; for lock in $held; do rm -rf "$lock"; done; return 0; }
