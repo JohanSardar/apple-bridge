@@ -1,0 +1,10 @@
+{
+  "fixture_round_trip": {
+    "samples": 10,
+    "p50_ms": 7.351249999999936,
+    "p95_ms": 8.81270799999993,
+    "max_ms": 8.81270799999993
+  },
+  "server": "mock",
+  "not_real_journal_latency": true
+}

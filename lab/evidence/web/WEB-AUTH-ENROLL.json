@@ -1,0 +1,58 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[8.78 7.18 7.67] cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5E425BC3PYWMMTJ8TR3HKBB",
+  "metrics": {
+    "matrix": [
+      "chromium-light-phone",
+      "chromium-light-desktop",
+      "chromium-dark-phone",
+      "chromium-dark-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-AUTH-ENROLL-chromium-light-phone-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-AUTH-ENROLL-chromium-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-AUTH-ENROLL-chromium-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-AUTH-ENROLL-chromium-dark-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-AUTH-ENROLL-chromium-dark-desktop-playwright.json"
+    ],
+    "server": "gateway"
+  },
+  "scenario": "WEB-AUTH-ENROLL",
+  "level": "web",
+  "passed": true,
+  "git_sha": "c937f950e3117b351b5f2d67dfd4fc70bfffdc12",
+  "at": "2026-10-21T02:18:51.628214Z",
+  "assertions": [
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/integration.spec.ts:12:1 › WEB-AUTH-ENROLL browser passkey enrollment, token single use and expiry (589ms)\n\n  1 passed (1.9s)\n"
+    },
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/integration.spec.ts:12:1 › WEB-AUTH-ENROLL browser passkey enrollment, token single use and expiry (389ms)\n\n  1 passed (764ms)\n"
+    },
+    {
+      "name": "chromium-dark-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-dark-phone] › tests/integration.spec.ts:12:1 › WEB-AUTH-ENROLL browser passkey enrollment, token single use and expiry (325ms)\n\n  1 passed (679ms)\n"
+    },
+    {
+      "name": "chromium-dark-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-dark-desktop] › tests/integration.spec.ts:12:1 › WEB-AUTH-ENROLL browser passkey enrollment, token single use and expiry (323ms)\n\n  1 passed (686ms)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

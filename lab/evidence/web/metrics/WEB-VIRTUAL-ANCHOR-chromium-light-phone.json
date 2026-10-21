@@ -1,0 +1,23 @@
+{
+  "frame": {
+    "samples": 179,
+    "p50_ms": 16.699999999999818,
+    "p95_ms": 16.700000000000273,
+    "max_ms": 16.800000000000182
+  },
+  "scroll_assignment": {
+    "samples": 180,
+    "p50_ms": 0,
+    "p95_ms": 0.09999990463256836,
+    "max_ms": 0.10000014305114746
+  },
+  "dropped_at_120hz": 179,
+  "dropped_at_60hz": 0,
+  "rows": 100000,
+  "rendered": 19,
+  "anchor_shift_px": 0,
+  "refresh_target_hz": 120,
+  "refresh_target_met": false,
+  "long_tasks": [],
+  "long_task_observer": true
+}

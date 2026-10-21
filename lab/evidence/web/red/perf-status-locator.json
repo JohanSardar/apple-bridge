@@ -1,0 +1,45 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[8.67 10.75 9.34] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5E1GV0241PX7TPXQY18EJCQ",
+  "metrics": {
+    "matrix": [
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "webkit-dark-phone",
+      "webkit-dark-desktop",
+      "chromium-light-phone",
+      "chromium-light-desktop",
+      "chromium-dark-phone",
+      "chromium-dark-desktop",
+      "firefox-light-phone",
+      "firefox-light-desktop",
+      "firefox-dark-phone",
+      "firefox-dark-desktop"
+    ],
+    "report": "WEB-PERF-SHELL-playwright.json",
+    "server": "mock"
+  },
+  "scenario": "WEB-PERF-SHELL",
+  "level": "web",
+  "passed": false,
+  "git_sha": "2315d2b9f33c2366da343d5546846a3846afd8b5",
+  "at": "2026-10-21T01:34:26.818482Z",
+  "assertions": [
+    {
+      "name": "playwright_matrix",
+      "passed": false,
+      "detail": "\nRunning 12 tests using 1 worker\n\n  ✘   1 [webkit-light-phone] › tests/foundations.spec.ts:91:1 › WEB-PERF-SHELL bundle, layout stability, navigation and warm cache budgets (1.3s)\nTesting stopped early after 1 maximum allowed failures.\n\n\n  1) [webkit-light-phone] › tests/foundations.spec.ts:91:1 › WEB-PERF-SHELL bundle, layout stability, navigation and warm cache budgets \n\n    Error: expect(locator).toHaveText(expected) failed\n\n    Locator: getByRole('status')\n    Expected: \"connected\"\n    Error: strict mode violation: getByRole('status') resolved to 2 elements:\n        1) \u003coutput aria-label=\"Live count\"\u003e0\u003c/output\u003e aka getByRole('status', { name: 'Live count' })\n        2) \u003cp role=\"status\"\u003econnected\u003c/p\u003e aka getByText('connected')\n\n    Call log:\n      - Expect \"toHaveText\" getByRole('status') with timeout 6000ms\n      - waiting for getByRole('status')\n\n\n      115 |     expect(navigation.longTasks.filter((value: number) =\u003e value \u003e 50)).toEqual([]);\n      116 |     await page.goto('/__fixtures/live');\n    \u003e 117 |     await expect(page.getByRole('status')).toHaveText('connected');\n          |                                            ^\n      118 |     await expect.poll(() =\u003e page.evaluate(async () =\u003e { const db = await new Promise\u003cIDBDatabase\u003e((resolve, reject) =\u003e { const request = indexedDB.open('ab.views'); request.onsuccess = () =\u003e resolve(request.result); request.onerror = () =\u003e reject(request.error); }); const count = await new Promise\u003cnumber\u003e(resolve =\u003e { const request = db.transaction('views').objectStore('views').count(); request.onsuccess = () =\u003e resolve(request.result); }); db.close(); return count; })).toBeGreaterThan(0);\n      119 |     const warm: number[] = [];\n      120 |     for (let i = 0; i \u003c 3; i++) {\n        at /Users/johansardar/apple-bridge/.worktrees/w1-ui/web/tests/foundations.spec.ts:117:44\n\n    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────\n    test-results/foundations-WEB-PERF-SHELL-d53ec-tion-and-warm-cache-budgets-webkit-light-phone/test-failed-1.png\n    ────────────────────────────────────────────────────────────────────────────────────────────────\n\n    Error Context: test-results/foundations-WEB-PERF-SHELL-d53ec-tion-and-warm-cache-budgets-webkit-light-phone/error-context.md\n\n    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────\n    test-results/foundations-WEB-PERF-SHELL-d53ec-tion-and-warm-cache-budgets-webkit-light-phone/trace.zip\n    Usage:\n\n        pnpm exec playwright show-trace test-results/foundations-WEB-PERF-SHELL-d53ec-tion-and-warm-cache-budgets-webkit-light-phone/trace.zip\n\n    ────────────────────────────────────────────────────────────────────────────────────────────────\n\n  1 failed\n    [webkit-light-phone] › tests/foundations.spec.ts:91:1 › WEB-PERF-SHELL bundle, layout stability, navigation and warm cache budgets \n  11 did not run\n  1 error was not a part of any test, see above for details\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

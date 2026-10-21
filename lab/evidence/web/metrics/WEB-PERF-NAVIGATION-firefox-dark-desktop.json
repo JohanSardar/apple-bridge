@@ -1,0 +1,28 @@
+{
+  "idle_frames": {
+    "samples": 179,
+    "p50_ms": 16.660000000000082,
+    "p95_ms": 18.38000000000011,
+    "max_ms": 18.66000000000031
+  },
+  "navigation_frames": {
+    "samples": 181,
+    "p50_ms": 16.659999999999854,
+    "p95_ms": 18.359999999999673,
+    "max_ms": 18.659999999999854
+  },
+  "click_dispatch": {
+    "samples": 1,
+    "p50_ms": 1,
+    "p95_ms": 1,
+    "max_ms": 1
+  },
+  "input_to_first_frame": {
+    "samples": 1,
+    "p50_ms": 1.8400000000001455,
+    "p95_ms": 1.8400000000001455,
+    "max_ms": 1.8400000000001455
+  },
+  "long_tasks": null,
+  "long_task_observer": false
+}

@@ -1,0 +1,114 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[13.57 11.85 9.32] cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5E4MJ75ZEKSP0Z99CYPST7Z",
+  "metrics": {
+    "matrix": [
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "webkit-dark-phone",
+      "webkit-dark-desktop",
+      "chromium-light-phone",
+      "chromium-light-desktop",
+      "chromium-dark-phone",
+      "chromium-dark-desktop",
+      "firefox-light-phone",
+      "firefox-light-desktop",
+      "firefox-dark-phone",
+      "firefox-dark-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-VIRTUAL-ANCHOR-webkit-light-phone-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-VIRTUAL-ANCHOR-webkit-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-VIRTUAL-ANCHOR-webkit-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-VIRTUAL-ANCHOR-webkit-dark-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-VIRTUAL-ANCHOR-webkit-dark-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-VIRTUAL-ANCHOR-chromium-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-VIRTUAL-ANCHOR-chromium-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-VIRTUAL-ANCHOR-chromium-dark-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-VIRTUAL-ANCHOR-chromium-dark-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-VIRTUAL-ANCHOR-firefox-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-VIRTUAL-ANCHOR-firefox-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-VIRTUAL-ANCHOR-firefox-dark-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-VIRTUAL-ANCHOR-firefox-dark-desktop-playwright.json"
+    ],
+    "server": "gateway"
+  },
+  "scenario": "WEB-VIRTUAL-ANCHOR",
+  "level": "web",
+  "passed": true,
+  "git_sha": "2c3c75939f9c05b3c72b197745d4c52b6bf48279",
+  "at": "2026-10-21T02:28:54.63019Z",
+  "assertions": [
+    {
+      "name": "webkit-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/foundations.spec.ts:8:1 › WEB-VIRTUAL-ANCHOR preserves measured anchors through prepend, append and keyboard navigation (5.2s)\n\n  1 passed (6.4s)\n"
+    },
+    {
+      "name": "webkit-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/foundations.spec.ts:8:1 › WEB-VIRTUAL-ANCHOR preserves measured anchors through prepend, append and keyboard navigation (5.3s)\n\n  1 passed (6.2s)\n"
+    },
+    {
+      "name": "webkit-dark-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-dark-phone] › tests/foundations.spec.ts:8:1 › WEB-VIRTUAL-ANCHOR preserves measured anchors through prepend, append and keyboard navigation (4.6s)\n\n  1 passed (5.5s)\n"
+    },
+    {
+      "name": "webkit-dark-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-dark-desktop] › tests/foundations.spec.ts:8:1 › WEB-VIRTUAL-ANCHOR preserves measured anchors through prepend, append and keyboard navigation (5.0s)\n\n  1 passed (5.6s)\n"
+    },
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/foundations.spec.ts:8:1 › WEB-VIRTUAL-ANCHOR preserves measured anchors through prepend, append and keyboard navigation (4.3s)\n\n  1 passed (4.9s)\n"
+    },
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/foundations.spec.ts:8:1 › WEB-VIRTUAL-ANCHOR preserves measured anchors through prepend, append and keyboard navigation (4.3s)\n\n  1 passed (4.7s)\n"
+    },
+    {
+      "name": "chromium-dark-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-dark-phone] › tests/foundations.spec.ts:8:1 › WEB-VIRTUAL-ANCHOR preserves measured anchors through prepend, append and keyboard navigation (4.0s)\n\n  1 passed (4.4s)\n"
+    },
+    {
+      "name": "chromium-dark-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-dark-desktop] › tests/foundations.spec.ts:8:1 › WEB-VIRTUAL-ANCHOR preserves measured anchors through prepend, append and keyboard navigation (4.2s)\n\n  1 passed (4.6s)\n"
+    },
+    {
+      "name": "firefox-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-light-phone] › tests/foundations.spec.ts:8:1 › WEB-VIRTUAL-ANCHOR preserves measured anchors through prepend, append and keyboard navigation (5.3s)\n\n  1 passed (7.3s)\n"
+    },
+    {
+      "name": "firefox-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-light-desktop] › tests/foundations.spec.ts:8:1 › WEB-VIRTUAL-ANCHOR preserves measured anchors through prepend, append and keyboard navigation (5.1s)\n\n  1 passed (6.9s)\n"
+    },
+    {
+      "name": "firefox-dark-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-dark-phone] › tests/foundations.spec.ts:8:1 › WEB-VIRTUAL-ANCHOR preserves measured anchors through prepend, append and keyboard navigation (5.2s)\n\n  1 passed (6.6s)\n"
+    },
+    {
+      "name": "firefox-dark-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-dark-desktop] › tests/foundations.spec.ts:8:1 › WEB-VIRTUAL-ANCHOR preserves measured anchors through prepend, append and keyboard navigation (5.3s)\n\n  1 passed (7.1s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

@@ -1,0 +1,236 @@
+{
+  "verdict": "incomplete_performance_acceptance",
+  "source_commit": "6afff21",
+  "checks": {
+    "make web": "pass",
+    "packaging/dev/heavy.sh sh -c \"make lint && make features && go build -p 2 ./... && cd web && pnpm test:math\"": "pass; 6 math tests"
+  },
+  "scenarios": [
+    {
+      "id": "WEB-AUTH-ENROLL",
+      "passed": true,
+      "projects": 4,
+      "server": "gateway",
+      "git_sha": "c937f950e3117b351b5f2d67dfd4fc70bfffdc12"
+    },
+    {
+      "id": "WEB-AUTH-LOGIN",
+      "passed": true,
+      "projects": 4,
+      "server": "gateway",
+      "git_sha": "010bae90f3606350f766420f8232bbd7d41d856a"
+    },
+    {
+      "id": "WEB-AUTH-REVOKE",
+      "passed": true,
+      "projects": 12,
+      "server": "gateway",
+      "git_sha": "010bae90f3606350f766420f8232bbd7d41d856a"
+    },
+    {
+      "id": "WEB-CACHE-POLICY",
+      "passed": true,
+      "projects": 12,
+      "server": "mock",
+      "git_sha": "6afff217aef6c23bff3675b67706ae7dae215899"
+    },
+    {
+      "id": "WEB-INPUT-GUARD",
+      "passed": true,
+      "projects": 12,
+      "server": "gateway",
+      "git_sha": "0c0edd3901bc2ed830271cf9e56dd9f97b67f0f2"
+    },
+    {
+      "id": "WEB-LIVE-DELTA",
+      "passed": true,
+      "projects": 12,
+      "server": "gateway",
+      "git_sha": "2c3c75939f9c05b3c72b197745d4c52b6bf48279"
+    },
+    {
+      "id": "WEB-LIVE-MOCK",
+      "passed": true,
+      "projects": 12,
+      "server": "mock",
+      "git_sha": "6afff217aef6c23bff3675b67706ae7dae215899"
+    },
+    {
+      "id": "WEB-LIVE-RESUME",
+      "passed": true,
+      "projects": 12,
+      "server": "gateway",
+      "git_sha": "2c3c75939f9c05b3c72b197745d4c52b6bf48279"
+    },
+    {
+      "id": "WEB-MOTION",
+      "passed": true,
+      "projects": 12,
+      "server": "gateway",
+      "git_sha": "2c3c75939f9c05b3c72b197745d4c52b6bf48279"
+    },
+    {
+      "id": "WEB-PERF-SHELL",
+      "passed": true,
+      "projects": 12,
+      "server": "gateway",
+      "git_sha": "010bae90f3606350f766420f8232bbd7d41d856a"
+    },
+    {
+      "id": "WEB-SERVE-EMBED",
+      "passed": true,
+      "projects": 12,
+      "server": "gateway",
+      "git_sha": "c937f950e3117b351b5f2d67dfd4fc70bfffdc12"
+    },
+    {
+      "id": "WEB-SHELL-JOURNEY",
+      "passed": true,
+      "projects": 12,
+      "server": "gateway",
+      "git_sha": "2c3c75939f9c05b3c72b197745d4c52b6bf48279"
+    },
+    {
+      "id": "WEB-VIRTUAL-ANCHOR",
+      "passed": true,
+      "projects": 12,
+      "server": "gateway",
+      "git_sha": "2c3c75939f9c05b3c72b197745d4c52b6bf48279"
+    }
+  ],
+  "browser_projects_passed": 140,
+  "bundle_gzip_bytes": 19127,
+  "warm_browser_project_max_ms": {
+    "min": 49.5,
+    "max": 91
+  },
+  "live_project_p50_range_ms": [
+    11,
+    17
+  ],
+  "live_project_p95_range_ms": [
+    13,
+    25
+  ],
+  "live_max_ms": 32,
+  "revocation_ms": {
+    "samples": 12,
+    "p50": 90,
+    "p95": 109,
+    "max": 109
+  },
+  "desktop_light_frames": {
+    "webkit": {
+      "frame": {
+        "samples": 179,
+        "p50_ms": 17,
+        "p95_ms": 39,
+        "max_ms": 45
+      },
+      "scroll_assignment": {
+        "samples": 180,
+        "p50_ms": 0,
+        "p95_ms": 0,
+        "max_ms": 1
+      },
+      "dropped_at_120hz": 229,
+      "dropped_at_60hz": 41,
+      "rows": 100000,
+      "rendered": 31,
+      "anchor_shift_px": 0,
+      "refresh_target_hz": 120,
+      "refresh_target_met": false,
+      "long_tasks": null,
+      "long_task_observer": false
+    },
+    "chromium": {
+      "frame": {
+        "samples": 179,
+        "p50_ms": 16.699999999999818,
+        "p95_ms": 16.799999999999955,
+        "max_ms": 16.800000000000182
+      },
+      "scroll_assignment": {
+        "samples": 180,
+        "p50_ms": 0,
+        "p95_ms": 0.09999990463256836,
+        "max_ms": 0.20000004768371582
+      },
+      "dropped_at_120hz": 179,
+      "dropped_at_60hz": 0,
+      "rows": 100000,
+      "rendered": 31,
+      "anchor_shift_px": 0,
+      "refresh_target_hz": 120,
+      "refresh_target_met": false,
+      "long_tasks": [],
+      "long_task_observer": true
+    },
+    "firefox": {
+      "frame": {
+        "samples": 179,
+        "p50_ms": 16.659999999999968,
+        "p95_ms": 18.620000000000346,
+        "max_ms": 18.699999999999818
+      },
+      "scroll_assignment": {
+        "samples": 180,
+        "p50_ms": 0,
+        "p95_ms": 1,
+        "max_ms": 2
+      },
+      "dropped_at_120hz": 179,
+      "dropped_at_60hz": 0,
+      "rows": 100000,
+      "rendered": 31,
+      "anchor_shift_px": 0,
+      "refresh_target_hz": 120,
+      "refresh_target_met": false,
+      "long_tasks": null,
+      "long_task_observer": false
+    }
+  },
+  "unproved": [
+    "120 Hz sustained scrolling; every project reports refresh_target_met=false",
+    "8 ms input-to-paint; first-rAF values are not paint measurements",
+    "CLS and Long Tasks on WebKit and Firefox: observers unsupported"
+  ],
+  "dependencies": "solid-js runtime; Vite, vite-plugin-solid, TypeScript and Playwright development; built-in node --test for permitted math tests",
+  "screenshots": "lab/evidence/private/web/shell-{webkit,chromium,firefox}-{light,dark}-{phone,desktop}.png",
+  "notes": [
+    "Gateway projects use independent sim worlds; browser auth enrollment and login use Chromium CDP virtual authenticators.",
+    "Revocation cleanup failure and initial failures retained under red/.",
+    "Warm-load browser navigation clock and automation round trips retained separately."
+  ],
+  "execution_context": "ssh -o ControlPath=none air; export PATH=/opt/homebrew/bin:$HOME/go/bin:$PATH; cd ~/apple-bridge/.worktrees/w1-ui",
+  "runs": [
+    {
+      "command": "make web",
+      "result": "pass"
+    },
+    {
+      "command": "packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios/web/WEB-AUTH-ENROLL.yaml lab/scenarios/web/WEB-AUTH-LOGIN.yaml lab/scenarios/web/WEB-SERVE-EMBED.yaml --level web --json > /tmp/w1-ui-gateway-auth.jsonl",
+      "result": "pass: 4 + 4 + 12 browser configurations"
+    },
+    {
+      "command": "packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios/web/WEB-INPUT-GUARD.yaml --level web --json > /tmp/w1-ui-cookie-scheme.jsonl",
+      "result": "pass: 12 browser configurations"
+    },
+    {
+      "command": "packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios/web/WEB-AUTH-REVOKE.yaml lab/scenarios/web/WEB-LIVE-DELTA.yaml lab/scenarios/web/WEB-LIVE-RESUME.yaml lab/scenarios/web/WEB-SHELL-JOURNEY.yaml lab/scenarios/web/WEB-VIRTUAL-ANCHOR.yaml lab/scenarios/web/WEB-MOTION.yaml lab/scenarios/web/WEB-PERF-SHELL.yaml --level web --json > /tmp/w1-ui-real-rest.jsonl",
+      "result": "live delta, live resume, shell, virtual anchor and motion each passed 12; revoke and performance failed, then were repaired/replaced by later runs"
+    },
+    {
+      "command": "packaging/dev/heavy.sh sh -c \"make lint && go build -p 2 ./... && go run ./cmd/bridge-lab run lab/scenarios/web/WEB-AUTH-REVOKE.yaml lab/scenarios/web/WEB-AUTH-LOGIN.yaml lab/scenarios/web/WEB-CACHE-POLICY.yaml lab/scenarios/web/WEB-PERF-SHELL.yaml --level web --json > /tmp/w1-ui-cache-final.jsonl\" > /tmp/w1-ui-cache-final-checks.log 2>&1",
+      "result": "lint/build pass; revoke12/login4/performance12 pass; mock cache report filename failed, fixed before final run"
+    },
+    {
+      "command": "packaging/dev/heavy.sh sh -c \"make lint && make features && go build -p 2 ./... && cd web && pnpm test:math && cd .. && go run ./cmd/bridge-lab run lab/scenarios/web/WEB-CACHE-POLICY.yaml lab/scenarios/web/WEB-LIVE-MOCK.yaml --level web --json > /tmp/w1-ui-final-mock.jsonl\" > /tmp/w1-ui-final-checks.log 2>&1",
+      "result": "pass: lint, features, Go build, 6 math tests, cache12 and mock live12"
+    },
+    {
+      "command": "packaging/dev/heavy.sh make features",
+      "result": "pass: 31 features; 203/213 scenario-levels; web.frontdoor in_progress because performance acceptance is incomplete"
+    }
+  ]
+}

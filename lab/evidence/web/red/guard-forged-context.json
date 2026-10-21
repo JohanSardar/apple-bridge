@@ -1,0 +1,45 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[4.34 6.94 8.04] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5E27JSD1ZZZ7KR3GF929XE1",
+  "metrics": {
+    "matrix": [
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "webkit-dark-phone",
+      "webkit-dark-desktop",
+      "chromium-light-phone",
+      "chromium-light-desktop",
+      "chromium-dark-phone",
+      "chromium-dark-desktop",
+      "firefox-light-phone",
+      "firefox-light-desktop",
+      "firefox-dark-phone",
+      "firefox-dark-desktop"
+    ],
+    "report": "WEB-INPUT-GUARD-playwright.json",
+    "server": "mock"
+  },
+  "scenario": "WEB-INPUT-GUARD",
+  "level": "web",
+  "passed": false,
+  "git_sha": "89c57e848dbf114c62e12d40d2a19b0970d8d1cb",
+  "at": "2026-10-21T01:46:52.077384Z",
+  "assertions": [
+    {
+      "name": "playwright_matrix",
+      "passed": false,
+      "detail": "\nRunning 12 tests using 1 worker\n\n  ✘   1 [webkit-light-phone] › tests/shell.spec.ts:62:1 › WEB-INPUT-GUARD denies synthetic events and delayed commands (8.3s)\nTesting stopped early after 1 maximum allowed failures.\n\n\n  1) [webkit-light-phone] › tests/shell.spec.ts:62:1 › WEB-INPUT-GUARD denies synthetic events and delayed commands \n\n    Error: expect(locator).toHaveText(expected) failed\n\n    Locator:  getByRole('status')\n    Expected: \"Trusted input required\"\n    Received: \"admitted\"\n    Timeout:  6000ms\n\n    Call log:\n      - Expect \"toHaveText\" getByRole('status') with timeout 6000ms\n      - waiting for getByRole('status')\n        16 × locator resolved to \u003coutput role=\"status\"\u003eadmitted\u003c/output\u003e\n           - unexpected value \"admitted\"\n\n\n      77 |     expect(frames).toHaveLength(1);\n      78 |     await page.getByRole('button',{name:'Forged fixture context'}).dispatchEvent('click');\n    \u003e 79 |     await expect(page.getByRole('status')).toHaveText('Trusted input required');\n         |                                            ^\n      80 |     expect(frames).toHaveLength(1);\n      81 |     await page.getByLabel('Programmatic change').evaluate((element:HTMLInputElement)=\u003eelement.click());\n      82 |     await expect(page.getByRole('status')).toHaveText('Trusted input required');\n        at /Users/johansardar/apple-bridge/.worktrees/w1-ui/web/tests/shell.spec.ts:79:44\n\n    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────\n    test-results/shell-WEB-INPUT-GUARD-deni-c92c3-events-and-delayed-commands-webkit-light-phone/test-failed-1.png\n    ────────────────────────────────────────────────────────────────────────────────────────────────\n\n    Error Context: test-results/shell-WEB-INPUT-GUARD-deni-c92c3-events-and-delayed-commands-webkit-light-phone/error-context.md\n\n    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────\n    test-results/shell-WEB-INPUT-GUARD-deni-c92c3-events-and-delayed-commands-webkit-light-phone/trace.zip\n    Usage:\n\n        pnpm exec playwright show-trace test-results/shell-WEB-INPUT-GUARD-deni-c92c3-events-and-delayed-commands-webkit-light-phone/trace.zip\n\n    ────────────────────────────────────────────────────────────────────────────────────────────────\n\n  1 failed\n    [webkit-light-phone] › tests/shell.spec.ts:62:1 › WEB-INPUT-GUARD denies synthetic events and delayed commands \n  11 did not run\n  1 error was not a part of any test, see above for details\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

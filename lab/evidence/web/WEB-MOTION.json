@@ -1,0 +1,114 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[5.26 6.27 7.14] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5E4B4GCW7GT49T417SA5HPV",
+  "metrics": {
+    "matrix": [
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "webkit-dark-phone",
+      "webkit-dark-desktop",
+      "chromium-light-phone",
+      "chromium-light-desktop",
+      "chromium-dark-phone",
+      "chromium-dark-desktop",
+      "firefox-light-phone",
+      "firefox-light-desktop",
+      "firefox-dark-phone",
+      "firefox-dark-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-MOTION-webkit-light-phone-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-MOTION-webkit-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MOTION-webkit-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MOTION-webkit-dark-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MOTION-webkit-dark-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MOTION-chromium-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MOTION-chromium-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MOTION-chromium-dark-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MOTION-chromium-dark-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MOTION-firefox-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MOTION-firefox-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MOTION-firefox-dark-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MOTION-firefox-dark-desktop-playwright.json"
+    ],
+    "server": "gateway"
+  },
+  "scenario": "WEB-MOTION",
+  "level": "web",
+  "passed": true,
+  "git_sha": "2c3c75939f9c05b3c72b197745d4c52b6bf48279",
+  "at": "2026-10-21T02:23:45.67688Z",
+  "assertions": [
+    {
+      "name": "webkit-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/foundations.spec.ts:96:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (3.5s)\n\n  1 passed (4.5s)\n"
+    },
+    {
+      "name": "webkit-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/foundations.spec.ts:96:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (3.0s)\n\n  1 passed (3.5s)\n"
+    },
+    {
+      "name": "webkit-dark-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-dark-phone] › tests/foundations.spec.ts:96:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (2.9s)\n\n  1 passed (3.4s)\n"
+    },
+    {
+      "name": "webkit-dark-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-dark-desktop] › tests/foundations.spec.ts:96:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (3.1s)\n\n  1 passed (3.6s)\n"
+    },
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/foundations.spec.ts:96:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (3.0s)\n\n  1 passed (3.7s)\n"
+    },
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/foundations.spec.ts:96:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (2.7s)\n\n  1 passed (3.1s)\n"
+    },
+    {
+      "name": "chromium-dark-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-dark-phone] › tests/foundations.spec.ts:96:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (2.7s)\n\n  1 passed (3.1s)\n"
+    },
+    {
+      "name": "chromium-dark-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-dark-desktop] › tests/foundations.spec.ts:96:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (2.6s)\n\n  1 passed (3.1s)\n"
+    },
+    {
+      "name": "firefox-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-light-phone] › tests/foundations.spec.ts:96:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (3.8s)\n\n  1 passed (6.5s)\n"
+    },
+    {
+      "name": "firefox-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-light-desktop] › tests/foundations.spec.ts:96:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (4.1s)\n\n  1 passed (6.4s)\n"
+    },
+    {
+      "name": "firefox-dark-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-dark-phone] › tests/foundations.spec.ts:96:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (3.7s)\n\n  1 passed (6.1s)\n"
+    },
+    {
+      "name": "firefox-dark-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-dark-desktop] › tests/foundations.spec.ts:96:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (3.6s)\n\n  1 passed (5.0s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

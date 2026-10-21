@@ -114,7 +114,8 @@ test('WEB-PERF-SHELL bundle, layout stability, navigation and warm cache budgets
     const shell = sizes.filter(value => !/^Settings-|^AuthPage-|^Fixtures-/.test(value.file)).reduce((sum, value) => sum + value.gzip, 0);
     expect(shell).toBeLessThanOrEqual(60 * 1024);
     await page.addInitScript(() => {
-        const metrics = { cls: 0, clsSupported:PerformanceObserver.supportedEntryTypes.includes('layout-shift'), longTasks: [] as number[], frames: [] as number[], clickWork:[] as number[], firstFrame:[] as number[], inputAt:0, longTaskSupported:PerformanceObserver.supportedEntryTypes.includes('longtask') };
+        const metrics = { cls: 0, cachedContentAt: null as number|null, clsSupported:PerformanceObserver.supportedEntryTypes.includes('layout-shift'), longTasks: [] as number[], frames: [] as number[], clickWork:[] as number[], firstFrame:[] as number[], inputAt:0, longTaskSupported:PerformanceObserver.supportedEntryTypes.includes('longtask') };
+        new MutationObserver(()=>{if(metrics.cachedContentAt!==null)return;const content=document.querySelector('[aria-label="Live count"]');if(!content||Number(content.textContent)<=0)return;metrics.cachedContentAt=-1;requestAnimationFrame(()=>requestAnimationFrame(()=>{metrics.cachedContentAt=performance.now();}));}).observe(document,{childList:true,subtree:true,characterData:true});
         const events=new WeakMap<Event,number>();
         window.addEventListener('click',event=>{if(event.isTrusted){metrics.inputAt=performance.now();events.set(event,metrics.inputAt);metrics.frames=[];metrics.longTasks=[];last=0;}},{capture:true});
         window.addEventListener('click',event=>{const start=events.get(event);if(start!==undefined)metrics.clickWork.push(performance.now()-start);});
@@ -151,16 +152,20 @@ test('WEB-PERF-SHELL bundle, layout stability, navigation and warm cache budgets
     const latest=gateway?await page.getByLabel('Latest message',{exact:true}).textContent():null;
     await expect.poll(()=>page.evaluate(async(expected)=>{const db=await new Promise<IDBDatabase>(resolve=>{const request=indexedDB.open('ab.views');request.onsuccess=()=>resolve(request.result);});const values=await new Promise<any[]>(resolve=>{const request=db.transaction('views').objectStore('views').getAll();request.onsuccess=()=>resolve(request.result);});db.close();return values.some(value=>expected?value.data.chats?.[0]?.last_message?.id===expected:value.data.chats?.length>0);},latest)).toBe(true);
     await page.routeWebSocket('**/web/v1/live',()=>{});
-    const warm: number[] = [];
+    const warm: number[] = [], automationWarm:number[]=[],navigationTiming:unknown[]=[];
     for(let i=0;i<3;i++){
         const start=performance.now();
         await page.reload();
         await expect(page.getByLabel(label,{exact:true})).toHaveText(String(initial+1));
         if(latest)await expect(page.getByLabel('Latest message',{exact:true})).toHaveText(latest);
-        warm.push(performance.now()-start);
+        automationWarm.push(performance.now()-start);
+        await expect.poll(()=>page.evaluate(()=>(window as any).__metrics.cachedContentAt??0)).toBeGreaterThan(0);
+        const timing=await page.evaluate(()=>({cachedContentAt:(window as any).__metrics.cachedContentAt,navigation:performance.getEntriesByType('navigation')[0]?.toJSON()}));
+        warm.push(timing.cachedContentAt);
+        navigationTiming.push(timing.navigation);
         await expect(page.getByRole('status',{name:'Connection'})).not.toHaveText('connected');
     }
     const warmStats = stats(warm);
+    await metrics('WEB-PERF-SHELL', info.project.name, { shell_gzip_bytes: shell, chunks: sizes, cls: navigation.clsSupported?navigation.cls:null, cls_observer:navigation.clsSupported, long_tasks: navigation.longTaskSupported?navigation.longTasks:null, navigation_frames: stats(navigation.frames),idle_frames:stats(idleFrames),click_dispatch:stats(navigation.clickWork),input_to_first_frame:stats(navigation.firstFrame), warm_load: warmStats, warm_endpoint:'navigation start to two animation frames after cached DOM content', automation_round_trip:stats(automationWarm), navigation_timing:navigationTiming, long_task_observer: navigation.longTaskSupported, paint_timing_verified:false,input_to_raf_8ms_met:stats(navigation.firstFrame).p95_ms<=8 });
     expect(warmStats.max_ms).toBeLessThan(1000);
-    await metrics('WEB-PERF-SHELL', info.project.name, { shell_gzip_bytes: shell, chunks: sizes, cls: navigation.clsSupported?navigation.cls:null, cls_observer:navigation.clsSupported, long_tasks: navigation.longTaskSupported?navigation.longTasks:null, navigation_frames: stats(navigation.frames),idle_frames:stats(idleFrames),click_dispatch:stats(navigation.clickWork),input_to_first_frame:stats(navigation.firstFrame), warm_load: warmStats, long_task_observer: navigation.longTaskSupported, paint_timing_verified:false,input_to_raf_8ms_met:stats(navigation.firstFrame).p95_ms<=8 });
 });

@@ -10,12 +10,14 @@ const [session, setSession] = createSignal<DeviceSession | null>(), [error, setE
 const [notice,setNotice]=createSignal('');
 const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('ab.session') : undefined;
 let signingOut: Promise<void> | undefined;
+let pwaSetup:Promise<void>=Promise.resolve();
 async function clearPrivateData() {
     viewCache.disable();
     setPreferencePersistence(false);
     setRouterPersistence(false);
     clearRouterPersistence();
     await viewCache.wipe();
+    await pwaSetup;
     if ('serviceWorker' in navigator) {
         for (const registration of await navigator.serviceWorker.getRegistrations()) {
             if(registration.active)await new Promise<void>(resolve=>{const channel=new MessageChannel();const timeout=setTimeout(resolve,5000);channel.port1.onmessage=()=>{clearTimeout(timeout);resolve();};registration.active!.postMessage({t:'wipe'},[channel.port2]);});
@@ -56,7 +58,7 @@ export async function establishSession(value: unknown) {
     setLive(new LiveClient(() => { void endSession(false, true); },frame=>{if(frame.t==='signin')setNotice(s.newSignIn);}));
     setSession(current);
     setError(false);
-    void configurePWA(current).catch(() => { });
+    pwaSetup=configurePWA(current).catch(() => { });
 }
 export async function loadSession() {
     try {
