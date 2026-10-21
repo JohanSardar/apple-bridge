@@ -1,0 +1,85 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[449.26 354.57 252.57] cpu_idle=50% cpus=8 other_heavy=2"
+  },
+  "run_id": "run_01M5HKF1R4HQGK6T4AR00C7FAY",
+  "metrics": {
+    "browser_budget_ms": 180000,
+    "capture_observer_resets": 0,
+    "demo_messages": 5000,
+    "demo_startup_ms": 45395,
+    "fixture_setup_ms": 45395,
+    "matrix": [
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "chromium-light-phone",
+      "chromium-light-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-MSG-TRANSCRIPT-VIEWER-webkit-light-phone-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-MSG-TRANSCRIPT-VIEWER-webkit-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-TRANSCRIPT-VIEWER-webkit-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-TRANSCRIPT-VIEWER-chromium-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-TRANSCRIPT-VIEWER-chromium-light-desktop-playwright.json"
+    ],
+    "server": "gateway",
+    "setups": [
+      {
+        "fixture_setup_ms": 45395,
+        "fixture_snapshot": null,
+        "project": "webkit-light-phone"
+      },
+      {
+        "fixture_setup_ms": 46795,
+        "fixture_snapshot": null,
+        "project": "webkit-light-desktop"
+      },
+      {
+        "fixture_setup_ms": 34321,
+        "fixture_snapshot": null,
+        "project": "chromium-light-phone"
+      },
+      {
+        "fixture_setup_ms": 37691,
+        "fixture_snapshot": null,
+        "project": "chromium-light-desktop"
+      }
+    ]
+  },
+  "scenario": "WEB-MSG-TRANSCRIPT-VIEWER",
+  "level": "web",
+  "passed": true,
+  "git_sha": "638edf11d1e43c1d57d2bf33ce7716571e0f7d42",
+  "at": "2026-10-22T10:45:45.861689Z",
+  "assertions": [
+    {
+      "name": "webkit-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/transcript-viewer.spec.ts:7:1 › WEB-MSG-TRANSCRIPT-VIEWER an actual image opens the whole-chat viewer and navigates to video (17.2s)\n  ✓  2 [webkit-light-phone] › tests/transcript-viewer.spec.ts:17:1 › WEB-MSG-TRANSCRIPT-VIEWER Show in Chat routes to and selects the owning message (5.8s)\n\n  2 passed (36.0s)\n"
+    },
+    {
+      "name": "webkit-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/transcript-viewer.spec.ts:7:1 › WEB-MSG-TRANSCRIPT-VIEWER an actual image opens the whole-chat viewer and navigates to video (18.9s)\n  ✓  2 [webkit-light-desktop] › tests/transcript-viewer.spec.ts:17:1 › WEB-MSG-TRANSCRIPT-VIEWER Show in Chat routes to and selects the owning message (12.5s)\n\n  2 passed (51.8s)\n"
+    },
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/transcript-viewer.spec.ts:7:1 › WEB-MSG-TRANSCRIPT-VIEWER an actual image opens the whole-chat viewer and navigates to video (16.3s)\n  ✓  2 [chromium-light-phone] › tests/transcript-viewer.spec.ts:17:1 › WEB-MSG-TRANSCRIPT-VIEWER Show in Chat routes to and selects the owning message (7.5s)\n\n  2 passed (57.9s)\n"
+    },
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/transcript-viewer.spec.ts:7:1 › WEB-MSG-TRANSCRIPT-VIEWER an actual image opens the whole-chat viewer and navigates to video (26.8s)\n  ✓  2 [chromium-light-desktop] › tests/transcript-viewer.spec.ts:17:1 › WEB-MSG-TRANSCRIPT-VIEWER Show in Chat routes to and selects the owning message (10.0s)\n\n  2 passed (57.6s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
