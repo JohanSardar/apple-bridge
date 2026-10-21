@@ -27,6 +27,9 @@ oldest_live() {
 count() { set -- $held; echo $#; }
 usable() {
   if [ -n "$exclusive" ]; then echo "$slots"; return; fi
+  memory=$(sysctl -n hw.memsize 2>/dev/null || echo 0)
+  if [ -z "${APPLE_BRIDGE_HEAVY_SLOTS:-}" ] && [ "$memory" -gt 0 ] && [ "$memory" -lt 12884901888 ]; then echo 1; return; fi
+  if [ -n "${APPLE_BRIDGE_HEAVY_SLOTS:-}" ]; then echo "$APPLE_BRIDGE_HEAVY_SLOTS"; return; fi
   level=$(sysctl -n kern.memorystatus_level 2>/dev/null || echo 100)
   load=$(sysctl -n vm.loadavg 2>/dev/null | awk '{printf "%d", $2}')
   cpus=$(sysctl -n hw.ncpu 2>/dev/null || echo 8)
