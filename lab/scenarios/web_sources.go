@@ -107,6 +107,36 @@ func runWebSources(ctx context.Context, w *world.World, client *webClient, auth 
 	var expected contracts.ReadResult
 	err = (scripted.Client{Endpoint: w.Gateway}).Call(ctx, "sources.status", struct{}{}, &expected)
 	add("source_route_matches_operations", err == nil && reflect.DeepEqual(expected.Records, public.Records))
+	publicSocket, err := client.socket()
+	add("public_live_source_socket", err == nil)
+	if err == nil {
+		defer publicSocket.CloseNow()
+		err = wsjson.Write(ctx, publicSocket, map[string]any{"t": "sub", "id": "public-source", "view": "record", "args": map[string]any{"collection": "system.source", "id": record.ID}})
+		for _, proven := range []bool{false, true} {
+			action := "capability-unproven"
+			if proven {
+				action = "capability-proven"
+			}
+			add("public_"+action+"_published", w.ControlAction("/messages", map[string]any{"action": action}) == nil)
+			bounded, cancel := context.WithTimeout(ctx, 5*time.Second)
+			matched := false
+			for err == nil && !matched {
+				var frame struct {
+					Data    contracts.ReadResult `json:"data"`
+					Changes []contracts.Change   `json:"changes"`
+				}
+				err = wsjson.Read(bounded, publicSocket, &frame)
+				records := frame.Data.Records
+				for _, change := range frame.Changes {
+					records = append(records, change.Record)
+				}
+				current, _, operation := messageReactionProof(records)
+				matched = current.ID == record.ID && operation.Proven == proven && operation.Reason != ""
+			}
+			cancel()
+			add("public_"+action+"_live", matched)
+		}
+	}
 	add("scoped_replica_started", w.AddReplicaScope("reminders:read,system:read") == nil)
 	if len(w.Replicas) == 0 {
 		return

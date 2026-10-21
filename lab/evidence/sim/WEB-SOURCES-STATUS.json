@@ -1,14 +1,14 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[8.68 9.11 9.74] cpus=8 other_heavy=1"
+    "summary": "air: load=[5.45 8.81 10.03] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M5F0WDR21ZRTSCRNKCTFXQ69",
+  "run_id": "run_01M5F52VKN3EG3YZWRS47ES4HF",
   "scenario": "WEB-SOURCES-STATUS",
   "level": "sim",
   "passed": true,
-  "git_sha": "2dcf2c734563acd342785db1b2577c83373f1c1d",
-  "at": "2026-10-21T10:42:32.322523Z",
+  "git_sha": "63e636599f55160a5e280608b2628e6c034ebcab",
+  "at": "2026-10-21T11:55:57.42996Z",
   "assertions": [
     {
       "name": "software_passkey_enrollment",
@@ -83,6 +83,26 @@
       "passed": true
     },
     {
+      "name": "public_live_source_socket",
+      "passed": true
+    },
+    {
+      "name": "public_capability-unproven_published",
+      "passed": true
+    },
+    {
+      "name": "public_capability-unproven_live",
+      "passed": true
+    },
+    {
+      "name": "public_capability-proven_published",
+      "passed": true
+    },
+    {
+      "name": "public_capability-proven_live",
+      "passed": true
+    },
+    {
       "name": "scoped_replica_started",
       "passed": true
     },
@@ -98,16 +118,16 @@
   "latency": {
     "capability-proven_to_live_source": {
       "samples": 1,
-      "p50_ms": 47.172583,
-      "p95_ms": 47.172583,
-      "max_ms": 47.172583,
+      "p50_ms": 7.645625,
+      "p95_ms": 7.645625,
+      "max_ms": 7.645625,
       "timeouts": 0
     },
     "capability-unproven_to_live_source": {
       "samples": 1,
-      "p50_ms": 381.696417,
-      "p95_ms": 381.696417,
-      "max_ms": 381.696417,
+      "p50_ms": 13.461458,
+      "p95_ms": 13.461458,
+      "max_ms": 13.461458,
       "timeouts": 0
     }
   },
