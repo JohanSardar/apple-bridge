@@ -1407,4 +1407,21 @@ Each app follows its spec (`design/web/reminders.md`, `calendar.md`, `contacts.m
 | W6-WRITE | Create (drag, double-click, quick event with client-side natural language), move and resize with snapping, edit and delete with the This/Future prompt, alerts, time zone, new calendar. WEB-CAL-WRITE (web, real on the "Bridge Test" calendar). |
 | W6-PARITY | Invitation responses, travel time and attachments through Calendar.app Accessibility where provable, otherwise hidden. WEB-CAL-PARITY. |
 
+**W7 units (Contacts):**
+
+| Unit | Contents |
+|---|---|
+| W7-READ | Read model `contacts.list{group?, sort}` with section keys and display/sort-order preferences, photo variants, "me" identification, linked conversations through `messages.handle.contact_id`. UI: lists sidebar, A–Z sections with an index scrubber, card with labeled fields and quick actions that open `tel:`/`facetime:`/`mailto:` or Messages new-message, vCard download. WEB-CON-READ. |
+| W7-WRITE | Inline edit mode (add/remove fields, label pickers, photo set/remove), create, delete with confirm, optimistic via `observed_record_ids`. WEB-CON-WRITE (web, real on the "Bridge Test" organization). |
+| W7-PARITY | Group membership writes through `CNSaveRequest`, and the contact poster if stored accessibly. Otherwise hidden. WEB-CON-PARITY. |
+
+**W8 units (Notes):**
+
+| Unit | Contents |
+|---|---|
+| W8-DECODE | Extend `Decoders.NotesProto` to full block structure: titles, headings, monostyled, lists, checklists with state, tables, links, quotes, highlights, collapsible sections, and attachment references with blobs and variants. Pinned and tags. Scrubbed fixtures and AppleTruth counts. Read model `notes.list{folder, sort}`. NOTE-DECODE-FULL (sim, real). |
+| W8-UI | Folders sidebar (accounts, nested folders, Recently Deleted read-only), note list (pinned section, date groups, previews, thumbnails, gallery), read-only rich editor rendering, locked notes title-only, search, keyboard. WEB-NOTE-READ. |
+| W8-WRITE | Plain-text editor for `editable: plain` notes with debounced autosave on `expected_version`, new note and folder, delete. WEB-NOTE-WRITE (web, real in the "Bridge Test" folder). |
+| W8-PARITY | Investigate checklist toggling and simple rich edits through AppleScript HTML bodies on losslessly round-tripped notes; keep only what's provable. WEB-NOTE-PARITY. |
+
 The shell's app switcher enables each app when its R step passes. Scenario families: `WEB-REM-*`, `WEB-CAL-*`, `WEB-CON-*`, `WEB-NOTE-*` (web level, 12 projects), plus `REM-STORE-*`, `CAL-STORE-*` and `NOTE-DECODE-FULL` (sim and real).
