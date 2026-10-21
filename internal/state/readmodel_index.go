@@ -18,6 +18,9 @@ func (s *Store) initReadModels(ctx context.Context) error {
 	_, err = tx.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS msg_by_chat(id TEXT PRIMARY KEY,chat_id TEXT NOT NULL,sent_at TEXT NOT NULL,unread INTEGER NOT NULL,originator TEXT NOT NULL,payload BLOB NOT NULL);
  CREATE INDEX IF NOT EXISTS msg_chat_time ON msg_by_chat(chat_id,sent_at,id);
  CREATE INDEX IF NOT EXISTS msg_unread ON msg_by_chat(chat_id,sent_at,id) WHERE unread=1;
+ CREATE INDEX IF NOT EXISTS msg_mention ON msg_by_chat(chat_id) WHERE json_extract(payload,'$.data.has_unseen_mention')=1 AND json_extract(payload,'$.data.deleted_at') IS NULL;
+ CREATE INDEX IF NOT EXISTS msg_spam ON msg_by_chat(chat_id) WHERE json_extract(payload,'$.data.is_spam')=1;
+ CREATE INDEX IF NOT EXISTS msg_balloon ON msg_by_chat(chat_id,json_extract(payload,'$.data.balloon.kind'),sent_at DESC,id);
  CREATE INDEX IF NOT EXISTS msg_originator ON msg_by_chat(originator);
  CREATE TABLE IF NOT EXISTS reaction_by_message(id TEXT PRIMARY KEY,message_id TEXT NOT NULL,at TEXT NOT NULL,seq INTEGER NOT NULL,payload BLOB NOT NULL);
  CREATE INDEX IF NOT EXISTS reaction_message ON reaction_by_message(message_id,at,seq,id);
@@ -48,7 +51,7 @@ func (s *Store) initReadModels(ctx context.Context) error {
 	if err != nil && err != sql.ErrNoRows {
 		return err
 	}
-	if version == "1" {
+	if version == "2" {
 		return tx.Commit()
 	}
 	rows, err := tx.QueryContext(ctx, "SELECT payload,seq FROM records WHERE collection LIKE 'messages.%' ORDER BY CASE collection WHEN 'messages.message' THEN 0 ELSE 1 END,id")
@@ -83,7 +86,7 @@ func (s *Store) initReadModels(ctx context.Context) error {
 			return err
 		}
 	}
-	if _, err = tx.ExecContext(ctx, "INSERT INTO meta(key,value) VALUES('readmodels_version','1') ON CONFLICT(key) DO UPDATE SET value='1'"); err != nil {
+	if _, err = tx.ExecContext(ctx, "INSERT INTO meta(key,value) VALUES('readmodels_version','2') ON CONFLICT(key) DO UPDATE SET value='2'"); err != nil {
 		return err
 	}
 	return tx.Commit()
@@ -136,7 +139,7 @@ func writeReadModel(ctx context.Context, tx *sql.Tx, r contracts.Record, seq uin
 			return nil
 		}
 		unread := 0
-		if !fieldBool(d, "is_from_me") && fieldString(d, "kind") == "message" && d["read_at"] == nil {
+		if !fieldBool(d, "is_from_me") && fieldString(d, "kind") == "message" && d["read_at"] == nil && d["deleted_at"] == nil {
 			unread = 1
 		}
 		chat := fieldString(d, "chat_id")

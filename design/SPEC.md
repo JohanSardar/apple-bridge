@@ -1001,21 +1001,21 @@ S→C signin{device, at} · approval{command} · session_revoked · error{code, 
 
 Operations (descriptors in `internal/contracts/operations.go`; available through REST, MCP and `web/1`; scope `messages:read`):
 
-- `messages.chats{filter?, limit≤200, after?}` → `{chats: ChatSummary[], next?}`. Ordered by `last_activity_at` desc, then id. ChatSummary fields:
+- `messages.chats{filter?: all|known|unknown|unread|deleted|spam|archived, limit≤200, after?}` → `{chats: ChatSummary[], next?}`. Ordered by `last_activity_at` desc, then id. ChatSummary fields:
   - `chat`: the record
   - `title`: display name, or the participants' contact names joined
   - `avatar_handles`: up to 3 handle ids with `contact_id`
   - `last_message`: `{id, sent_at, is_from_me, preview{kind: text|attachments|reaction|group_event|unsent|edited, text?, attachment_kinds?, count?, reaction?}}`
-  - `last_activity_at`, `unread_count`, `has_unseen_mention`
-  - `muted` and `pinned_index`, both null until W4
+  - `last_activity_at`, `unread_count`, `has_unseen_mention` (from captured message flags)
+  - `muted` and `pinned_index`, nullable where native state is unavailable
 - `messages.thread{chat_id, anchor?, before?, after?, limit≤200}` → `{items: ThreadItem[], before?, after?, unread_anchor?}`. ThreadItem is the message record plus:
   - `reactions[]`: current state per sender and part, with removals folded out
   - `attachments[]`: records including `derivatives` and `media`
   - `reply_count` for thread originators
   - Ordered by `sent_at`, then id. Cursors are stable under concurrent inserts.
-- `messages.collection{chat_id, kind: photos|videos|links|documents|locations|audio, after?, limit≤200}`.
+- `messages.collection{chat_id, kind: photos|videos|links|documents|locations|audio, after?, limit≤200}`. Links and locations return message records with `balloon.kind=link|find_my`; media kinds return attachment records. Hidden attachments and recoverable messages are excluded.
 
-**Unread:** a message counts as unread when it is not from me, has `kind = message`, and has `read_at` null.
+**Unread:** a message counts as unread when it is not from me, has `kind = message`, has `read_at` null, and is not recoverable. The default chat list excludes recoverable chats. Known includes native known-sender chats and chats with a linked contact; spam selects chats containing a spam message.
 
 **Implementation:**
 - Derived tables in `state.db` (`msg_by_chat`, `chat_summary`, `reaction_by_message`, `attachment_by_message`), updated in the same transaction as each record apply and rebuilt on snapshot install, on the gateway and replicas alike.

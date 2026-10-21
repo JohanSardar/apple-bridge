@@ -1,7 +1,7 @@
 package contracts
 
 type ChatsQuery struct {
-	Filter string `json:"filter,omitempty" description:"all (default), unread, or archived"`
+	Filter string `json:"filter,omitempty" description:"all (default), known, unknown, unread, deleted, spam, or archived"`
 	Limit  int    `json:"limit,omitempty" description:"Page size, default 50, maximum 200"`
 	After  string `json:"after,omitempty" description:"Opaque cursor from the previous page"`
 }
