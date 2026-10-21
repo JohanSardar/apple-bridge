@@ -417,6 +417,8 @@ func (f *fakeApple) messageCommand(wire *applepeer.Wire, frame contracts.IPCFram
 		evidence := map[string]any{"source": "messages", "collection": "messages." + collection, "native_key": native, "fingerprint": t.Hash, "observed": disposition != contracts.DispositionIndeterminate, "parts": parts, "candidate_count": 1}
 		if fault == "ghost-send" {
 			evidence["reason"] = "empty_unjoined_sms"
+			evidence["observed"] = false
+			delete(evidence, "native_key")
 		}
 		if fault == "identical-manual-send" {
 			evidence["candidate_count"] = 2
