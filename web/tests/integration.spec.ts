@@ -22,7 +22,7 @@ test('WEB-AUTH-LOGIN discoverable browser passkey sign-in chooses trusted or pub
     await page.getByRole('radio',{name:kind==='trusted'?'Yes, trust this computer':'No, this is a public computer',exact:false}).check();
     await page.getByRole('button',{name:'Sign in with a passkey',exact:true}).click();await expect(page.getByText('No Messages',{exact:true})).toBeVisible();
     const session=await page.request.get('/web/v1/session').then(response=>response.json());expect(session.kind).toBe(kind);expect(session.cache).toBe(kind==='trusted'?'persistent':'memory');
-    const cookie=(await context.cookies()).find(cookie=>cookie.name==='__Host-ab_session')!;expect(cookie.httpOnly&&cookie.secure&&cookie.sameSite==='Strict').toBe(true);
+    const cookie=(await context.cookies()).find(cookie=>cookie.name==='ab_session_local')!;expect(cookie.httpOnly&&!cookie.secure&&cookie.sameSite==='Strict').toBe(true);
     if(kind==='public'){
       expect(cookie.expires).toBe(-1);
       await expect.poll(()=>page.evaluate(async()=>({db:await indexedDB.databases(),cache:await caches.keys(),workers:(await navigator.serviceWorker.getRegistrations()).length,local:Object.keys(localStorage),session:Object.keys(sessionStorage)}))).toEqual({db:[],cache:[],workers:0,local:[],session:[]});

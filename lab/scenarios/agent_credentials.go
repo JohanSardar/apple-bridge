@@ -84,7 +84,7 @@ func runAgentCredentials(ctx context.Context, w *world.World, e *Evidence, add f
 		add("owner_session", false)
 		return
 	}
-	owner := &webClient{ctx: ctx, origin: strings.Replace(w.Gateway.URL, "127.0.0.1", "localhost", 1), cookie: &http.Cookie{Name: bridgeweb.SessionCookie, Value: token}}
+	owner := &webClient{ctx: ctx, origin: strings.Replace(w.Gateway.URL, "127.0.0.1", "localhost", 1), cookie: &http.Cookie{Name: bridgeweb.LocalSessionCookie, Value: token}}
 	resp, created, err := owner.request("POST", "agents", map[string]any{"name": "Bridge Test web agent", "scopes": []string{"messages:read"}})
 	add("owner_creates_agent", err == nil && resp.StatusCode == 201)
 	if err == nil && resp.StatusCode == 201 {

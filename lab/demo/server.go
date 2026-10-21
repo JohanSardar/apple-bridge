@@ -69,11 +69,11 @@ func Serve(w *world.World, listen string) (*Server, error) {
 		cookies := request.Cookies()
 		request.Header.Del("Cookie")
 		for _, cookie := range cookies {
-			if cookie.Name == bridgeweb.SessionCookie {
+			if cookie.Name == bridgeweb.LocalSessionCookie {
 				continue
 			}
 			if cookie.Name == SessionCookie {
-				cookie.Name = bridgeweb.SessionCookie
+				cookie.Name = bridgeweb.LocalSessionCookie
 			}
 			request.AddCookie(cookie)
 		}
@@ -85,7 +85,7 @@ func Serve(w *world.World, listen string) (*Server, error) {
 		cookies := response.Cookies()
 		response.Header.Del("Set-Cookie")
 		for _, cookie := range cookies {
-			if cookie.Name == bridgeweb.SessionCookie {
+			if cookie.Name == bridgeweb.LocalSessionCookie {
 				cookie.Name = SessionCookie
 				cookie.Secure = false
 			}

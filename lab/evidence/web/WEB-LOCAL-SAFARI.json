@@ -1,12 +1,12 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[6.11 7.69 9.47] cpus=8 other_heavy=1"
+    "summary": "air: load=[32.16 21.89 14.04] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M5EA5028BZTXKGSKCY0Q0E1K",
+  "run_id": "run_01M5EBMJ75XXXTNSXHM9V0BDN0",
   "metrics": {
     "demo_messages": 5000,
-    "demo_startup_ms": 5782,
+    "demo_startup_ms": 8240,
     "matrix": [
       "webkit-light-desktop"
     ],
@@ -19,13 +19,13 @@
   "scenario": "WEB-LOCAL-SAFARI",
   "level": "web",
   "passed": true,
-  "git_sha": "00c09effe9c210f242a176aad1ae5ec5efe80811",
-  "at": "2026-10-21T04:05:15.976589Z",
+  "git_sha": "69032ccdbda0b757e8bfcd21415087ee1343a2a0",
+  "at": "2026-10-21T04:31:14.664337Z",
   "assertions": [
     {
       "name": "webkit-light-desktop:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/local-safari.spec.ts:5:1 › WEB-LOCAL-SAFARI records Secure cookie acceptance after real HTTP localhost enrollment (1.4s)\n\n  1 passed (3.7s)\n"
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/local-safari.spec.ts:5:1 › WEB-LOCAL-SAFARI enrolls over HTTP localhost and opens a live session (1.8s)\n\n  1 passed (3.7s)\n"
     },
     {
       "name": "credential_backend_override_restored",

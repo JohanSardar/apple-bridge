@@ -31,7 +31,7 @@ func runAgentActivity(ctx context.Context, w *world.World, add func(string, bool
 		add("activity_owner", false)
 		return
 	}
-	owner := &webClient{ctx: ctx, origin: strings.Replace(w.Gateway.URL, "127.0.0.1", "localhost", 1), cookie: &http.Cookie{Name: bridgeweb.SessionCookie, Value: session}}
+	owner := &webClient{ctx: ctx, origin: strings.Replace(w.Gateway.URL, "127.0.0.1", "localhost", 1), cookie: &http.Cookie{Name: bridgeweb.LocalSessionCookie, Value: session}}
 	principal := w.Gateway
 	principal.Token = token
 	var out map[string]any

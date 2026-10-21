@@ -947,7 +947,7 @@ Same origin for everything. Served by the gateway and by replicas (any instance)
 
 **Sessions.**
 - **Principal:** `device:<id>` in Trust, with the owner's full grants.
-- **Cookie:** `__Host-ab_session` (Secure; HttpOnly; SameSite=Strict; Path=/), an opaque 256-bit value stored hashed.
+- **Cookie:** `__Host-ab_session` (Secure; HttpOnly; SameSite=Strict; Path=/), an opaque 256-bit value stored hashed. Only plain HTTP on a pinned `localhost:<port>` or `127.0.0.1:<port>` uses `ab_session_local` without Secure, retaining HttpOnly, SameSite=Strict and Path=/. Public and TLS requests never accept the local cookie; plain HTTP never accepts the `__Host-` cookie. Refresh and logout use the serving origin’s cookie.
 - **Trusted:** 30 days sliding, 90 days absolute.
 - **Public:** session cookie with no Max-Age, 30 minutes idle and 12 hours absolute, with `cache: memory`, meaning nothing goes to IndexedDB, Cache Storage or the service worker.
 
