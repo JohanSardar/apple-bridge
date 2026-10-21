@@ -470,6 +470,7 @@ features:
       - {id: MSG-DECODE-BALLOON, levels: [sim, real]}
       - {id: MSG-DECODE-FORMATTING, levels: [sim, real]}
       - {id: MSG-READ-RICH-FIELDS, levels: [sim, real]}
+      - {id: WEB-CONTACT-AVATAR-THUMB, levels: [web]}
       - {id: WEB-MSG-LIST, levels: [web]}
       - {id: WEB-MSG-FILTERS, levels: [web]}
       - {id: WEB-MSG-SEARCH, levels: [web]}

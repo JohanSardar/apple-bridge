@@ -60,6 +60,9 @@ func (s *server) blob(w http.ResponseWriter, r *http.Request) {
 		reject(w, 401, "unauthorized")
 		return
 	}
+	if result.Records[0].Collection == "contacts.contact" && variant == "thumb" {
+		variant = "original"
+	}
 	var attachment struct {
 		Blob struct {
 			Digest string `json:"digest"`
