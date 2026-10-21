@@ -1,0 +1,178 @@
+{
+  "latency_budget": "unverified; existing attachments only",
+  "network_path": "ssh_tunnel",
+  "new_messages_sent": 0,
+  "status": "verified_readonly",
+  "variants": [
+    {
+      "bytes": 24128,
+      "digest_verified": true,
+      "mime": "image/jpeg",
+      "remote": false,
+      "truth": {
+        "height": 1600,
+        "status": "verified",
+        "type": "public.jpeg",
+        "width": 800
+      },
+      "variant": "display"
+    },
+    {
+      "bytes": 5125,
+      "digest_verified": true,
+      "mime": "video/mp4",
+      "remote": false,
+      "truth": {
+        "duration_ms": 1000,
+        "height": 240,
+        "status": "verified",
+        "video": [
+          "avc1"
+        ],
+        "width": 320
+      },
+      "variant": "live"
+    },
+    {
+      "bytes": 2733,
+      "digest_verified": true,
+      "mime": "image/jpeg",
+      "remote": false,
+      "truth": {
+        "height": 400,
+        "status": "verified",
+        "type": "public.jpeg",
+        "width": 200
+      },
+      "variant": "thumb"
+    },
+    {
+      "bytes": 2181,
+      "digest_verified": true,
+      "mime": "audio/mp4",
+      "remote": false,
+      "truth": {
+        "audio": [
+          "aac "
+        ],
+        "duration_ms": 1000,
+        "status": "verified"
+      },
+      "variant": "audio"
+    },
+    {
+      "bytes": 8078,
+      "digest_verified": true,
+      "mime": "image/jpeg",
+      "remote": false,
+      "truth": {
+        "height": 240,
+        "status": "verified",
+        "type": "public.jpeg",
+        "width": 320
+      },
+      "variant": "poster"
+    },
+    {
+      "bytes": 5125,
+      "digest_verified": true,
+      "mime": "video/mp4",
+      "remote": false,
+      "truth": {
+        "duration_ms": 1000,
+        "height": 240,
+        "status": "verified",
+        "video": [
+          "avc1"
+        ],
+        "width": 320
+      },
+      "variant": "video"
+    },
+    {
+      "bytes": 5125,
+      "digest_verified": true,
+      "mime": "video/mp4",
+      "remote": true,
+      "truth": {
+        "duration_ms": 1000,
+        "height": 240,
+        "status": "verified",
+        "video": [
+          "avc1"
+        ],
+        "width": 320
+      },
+      "variant": "live"
+    },
+    {
+      "bytes": 2733,
+      "digest_verified": true,
+      "mime": "image/jpeg",
+      "remote": true,
+      "truth": {
+        "height": 400,
+        "status": "verified",
+        "type": "public.jpeg",
+        "width": 200
+      },
+      "variant": "thumb"
+    },
+    {
+      "bytes": 24128,
+      "digest_verified": true,
+      "mime": "image/jpeg",
+      "remote": true,
+      "truth": {
+        "height": 1600,
+        "status": "verified",
+        "type": "public.jpeg",
+        "width": 800
+      },
+      "variant": "display"
+    },
+    {
+      "bytes": 2181,
+      "digest_verified": true,
+      "mime": "audio/mp4",
+      "remote": true,
+      "truth": {
+        "audio": [
+          "aac "
+        ],
+        "duration_ms": 1000,
+        "status": "verified"
+      },
+      "variant": "audio"
+    },
+    {
+      "bytes": 8078,
+      "digest_verified": true,
+      "mime": "image/jpeg",
+      "remote": true,
+      "truth": {
+        "height": 240,
+        "status": "verified",
+        "type": "public.jpeg",
+        "width": 320
+      },
+      "variant": "poster"
+    },
+    {
+      "bytes": 5125,
+      "digest_verified": true,
+      "mime": "video/mp4",
+      "remote": true,
+      "truth": {
+        "duration_ms": 1000,
+        "height": 240,
+        "status": "verified",
+        "video": [
+          "avc1"
+        ],
+        "width": 320
+      },
+      "variant": "video"
+    }
+  ]
+}

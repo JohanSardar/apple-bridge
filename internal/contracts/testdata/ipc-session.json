@@ -52,7 +52,8 @@
       "reminders.reminder"
     ],
     "scan_started_at": "2026-10-17T10:00:00.000Z",
-    "completion_evidence": "complete"
+    "completion_evidence": "complete",
+    "live": true
   },
   {
     "t": "Committed",

@@ -1,27 +1,27 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[4.29 6.06 7.55] cpus=8 other_heavy=1"
+    "summary": "air: load=[4.81 6.09 7.06] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M5E2B4FAA8MKAJ6K48BKFD0V",
+  "run_id": "run_01M5E4BPZXBV5C3SG49DXVHT8P",
   "network_path": "loopback",
   "metrics": {
     "digest_check_0_bytes": 4194304,
     "digest_check_0_deadline_exceeded": false,
     "digest_check_0_error_type": "\u003cnil\u003e",
-    "digest_check_0_read_ms": 7.535125,
+    "digest_check_0_read_ms": 13.271542,
     "digest_check_0_status": 200,
     "digest_check_1_bytes": 4194304,
     "digest_check_1_deadline_exceeded": false,
     "digest_check_1_error_type": "\u003cnil\u003e",
-    "digest_check_1_read_ms": 2.79275,
+    "digest_check_1_read_ms": 6.605416,
     "digest_check_1_status": 200
   },
   "scenario": "CORE-BLOB-SLOW-READ",
   "level": "sim",
   "passed": true,
-  "git_sha": "efaa5a6e35704ea1419baf1306fc8efa10db78e2",
-  "at": "2026-10-21T01:48:48.490037Z",
+  "git_sha": "a8069903724459d7739c694800e63767619eb865",
+  "at": "2026-10-21T02:24:04.605884Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -119,30 +119,30 @@
   "latency": {
     "effect_done→blob_complete": {
       "samples": 1,
-      "p50_ms": 3934.19175,
-      "p95_ms": 3934.19175,
-      "max_ms": 3934.19175,
+      "p50_ms": 4041.114333,
+      "p95_ms": 4041.114333,
+      "max_ms": 4041.114333,
       "timeouts": 0
     },
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 6.077417,
-      "p95_ms": 6.077417,
-      "max_ms": 6.077417,
+      "p50_ms": 5.833583,
+      "p95_ms": 5.833583,
+      "max_ms": 5.833583,
       "timeouts": 0
     },
     "effect_done→metadata_during_slow_read": {
       "samples": 1,
-      "p50_ms": 44.7245,
-      "p95_ms": 44.7245,
-      "max_ms": 44.7245,
+      "p50_ms": 45.144166,
+      "p95_ms": 45.144166,
+      "max_ms": 45.144166,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 7.817458,
-      "p95_ms": 7.817458,
-      "max_ms": 7.817458,
+      "p50_ms": 7.654167,
+      "p95_ms": 7.654167,
+      "max_ms": 7.654167,
       "timeouts": 0
     }
   },

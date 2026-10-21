@@ -1,5 +1,7 @@
 import Foundation
 import Decoders
+import MediaDerivatives
+import UniformTypeIdentifiers
 import SourceSupport
 
 public actor Messages: Source {
@@ -30,7 +32,23 @@ public actor Messages: Source {
     private var lastComplete = Date.distantPast
     private var blobDigests: [String: (Int64, Date, String)] = [:]
     private var pendingBlobs: [String: URL] = [:]
+    private var pendingBlobOrder: [String: (Bool, Int64)] = [:]
+    private var activeBlob: (String, Bool, Task<(Int64, Date, String), any Error>)?
+    private var activeMedia: (MediaJob, Task<MediaResult, any Error>)?
     private var failedBlobs: Set<String> = []
+    private struct MediaJob: Sendable {
+        let key: String
+        let url: URL
+        let digest: String
+        let companions: [URL]
+        let sticker: Bool
+        let live: Bool
+        let position: Int64
+    }
+    private var pendingMedia: [String: MediaJob] = [:]
+    private var mediaResults: [String: MediaResult] = [:]
+    private var mediaRetry: [String: Date] = [:]
+    private var variantURLs: [String: URL] = [:]
     public init(path: String? = nil, diagnostics: URL? = nil, watcherEventsEnabled: Bool = true, labCommands: Bool = false) {
  commands = MessagesCommands(path:path, labCommands:labCommands, agentPolicy: diagnostics?.deletingLastPathComponent().appendingPathComponent("agent-message-policy.json"))
         self.watcherEventsEnabled = watcherEventsEnabled
@@ -84,6 +102,10 @@ public actor Messages: Source {
             firstSmallSnapshot = nil
             blobDigests = try baseline?.blobs() ?? [:]
             pendingBlobs.removeAll()
+            pendingBlobOrder.removeAll()
+            activeBlob?.2.cancel()
+            pendingMedia.removeAll()
+            activeMedia?.1.cancel()
             failedBlobs.removeAll()
             lastRowID = 0
             lastLiveVersion = nil
@@ -119,7 +141,7 @@ public actor Messages: Source {
         for (collection, key, original) in items where !key.isEmpty {
             var data = original
             if collection == "messages.attachment", var blob = data["blob"] as? [String: Any], blob["state"] as? String == "present", let reader,
-               let row = try reader.query("SELECT * FROM attachment WHERE guid=?", [key]).first, let url = reader.attachmentURL(row["filename"]) {
+               let row = try reader.query("SELECT ROWID AS derivative_position,* FROM attachment WHERE guid=?", [key]).first, let url = reader.attachmentURL(row["filename"]) {
                 do {
                     let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
                     let size = (attributes[.size] as? NSNumber)?.int64Value ?? -1
@@ -127,15 +149,37 @@ public actor Messages: Source {
                     if let cached = blobDigests[key], cached.0 == size, cached.1 == modified {
                         blob["digest"] = cached.2
                         blobHandles[cached.2] = key
+                        if MediaDerivatives.supports(url, uti: row["uti"], mime: row["mime_type"]) {
+                            let result = mediaResults[cached.2] ?? MediaDerivatives.cached(cached.2)
+                            data["media"] = [:] as [String: Any]
+                            if result == nil && mediaRetry[key] != nil { data["derivatives"] = [:] as [String: Any] }
+                            if let result {
+                                mediaResults[cached.2] = result
+                                try attachMedia(result, to: &data, handles: &blobHandles)
+                            }
+                            if (result == nil || result?.awaitingLive == true), activeMedia?.0.key != key, (mediaRetry[key] ?? .distantPast) < Date() {
+                                let companions = MediaDerivatives.liveIdentifier(url) == nil ? [] : try reader.query("SELECT filename FROM attachment WHERE lower(filename) LIKE '%.mov' ORDER BY abs(ROWID-?)", [String(row.integer("derivative_position"))]).compactMap { reader.attachmentURL($0["filename"]) }.filter { FileManager.default.fileExists(atPath: $0.path) && !BlobDigest.isDataless($0) }
+                                let job = MediaJob(key: key, url: url, digest: cached.2, companions: companions, sticker: row.flag("is_sticker"), live: live, position: row.integer("derivative_position"))
+                                if pendingMedia[key]?.live != true { pendingMedia[key] = job }
+                                if live, let activeMedia, !activeMedia.0.live || (UTType(filenameExtension: url.pathExtension) ?? UTType(row["uti"]))?.conforms(to: .image) == true { activeMedia.1.cancel() }
+                            }
+                        }
                     } else if failedBlobs.contains(key) {
                         blob = ["state": "failed"]
                     } else {
                         blob = ["state": "pending"]
                         pendingBlobs[key] = url
+                        pendingBlobOrder[key] = (live, row.integer("derivative_position"))
+                        if live, let activeBlob, activeBlob.0 != key, !activeBlob.1 || (UTType(filenameExtension: url.pathExtension) ?? UTType(row["uti"]))?.conforms(to: .image) == true { activeBlob.2.cancel() }
                     }
                     blob.removeValue(forKey: "handle")
                 } catch { blob = ["state": "missing"] }
                 data["blob"] = blob
+            } else if collection == "messages.attachment", var blob = data["blob"] as? [String: Any], ["offloaded", "missing"].contains(blob["state"] as? String ?? ""), let cached = blobDigests[key], let result = mediaResults[cached.2] ?? MediaDerivatives.cached(cached.2) {
+                blob["digest"] = cached.2
+                blob.removeValue(forKey: "handle")
+                data["blob"] = blob
+                try attachMedia(result, to: &data, handles: &blobHandles)
             }
             let encoded = try JSONSerialization.data(withJSONObject: data, options: [.sortedKeys])
             let digest = BodyDigest.hash(encoded)
@@ -180,15 +224,82 @@ public actor Messages: Source {
         for (key, hash) in updates where (hashTimes[key] ?? "") <= at { hashes[key] = hash; hashTimes[key] = at }
         try Task.checkCancellation()
     }
+    private func attachMedia(_ result: MediaResult, to data: inout [String: Any], handles: inout [String: String]) throws {
+        data["media"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode(result.media))
+        var derivatives: [String: Any] = [:]
+        for (name, variant) in result.derivatives {
+            var value = try JSONSerialization.jsonObject(with: JSONEncoder().encode(variant)) as? [String: Any] ?? [:]
+            value.removeValue(forKey: "file")
+            value["state"] = "present"
+            derivatives[name] = value
+            handles[variant.digest] = variant.handle
+            variantURLs[variant.handle] = MediaDerivatives.url(variant)
+            blobDigests[variant.handle] = (variant.size, .distantPast, variant.digest)
+        }
+        data["derivatives"] = derivatives
+    }
+    private func publishMedia(_ result: MediaResult, job: MediaJob, token: String, sink: any ObservationSink) async throws {
+        guard token == generation, blobDigests[job.key]?.2 == job.digest, let reader else { return }
+        mediaResults[job.digest] = result
+        try await emit(try reader.attachmentObservations(guid: job.key), sink: sink, live: job.live)
+    }
+    private func drainMedia(_ sink: any ObservationSink) async {
+        while !Task.isCancelled {
+            guard !MediaDerivatives.paused, let job = pendingMedia.values.filter({ (mediaRetry[$0.key] ?? .distantPast) < Date() }).sorted(by: { a, b in a.live == b.live ? a.position > b.position : a.live }).first else {
+                do { try await Task.sleep(for: .milliseconds(50)) } catch { return }
+                continue
+            }
+            pendingMedia.removeValue(forKey: job.key)
+            let token = generation
+            let work = Task.detached(priority: .utility) {
+                try await MediaDerivatives.make(job.url, digest: job.digest, companions: job.companions, sticker: job.sticker) { result in
+                    try await self.publishMedia(result, job: job, token: token, sink: sink)
+                }
+            }
+            activeMedia = (job, work)
+            let pressure = Task {
+                while !Task.isCancelled {
+                    do { try await Task.sleep(for: .seconds(1)) } catch { return }
+                    if MediaDerivatives.paused { work.cancel(); return }
+                }
+            }
+            defer { pressure.cancel(); activeMedia = nil }
+            do {
+                let result = try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
+                guard token == generation, blobDigests[job.key]?.2 == job.digest, !Task.isCancelled else { continue }
+                try await publishMedia(result, job: job, token: token, sink: sink)
+                if result.awaitingLive == true {
+                    mediaRetry[job.key] = Date().addingTimeInterval(2)
+                    if let reader {
+                        let companions = try reader.query("SELECT filename FROM attachment WHERE lower(filename) LIKE '%.mov' ORDER BY abs(ROWID-?)", [String(job.position)]).compactMap { reader.attachmentURL($0["filename"]) }.filter { FileManager.default.fileExists(atPath: $0.path) && !BlobDigest.isDataless($0) }
+                        pendingMedia[job.key] = MediaJob(key: job.key, url: job.url, digest: job.digest, companions: companions, sticker: job.sticker, live: false, position: job.position)
+                    }
+                }
+            } catch {
+                if work.isCancelled && !Task.isCancelled { pendingMedia[job.key] = job }
+                else {
+                    mediaRetry[job.key] = Date().addingTimeInterval(60)
+                    if let reader { try? await emit(try reader.attachmentObservations(guid: job.key), sink: sink, live: job.live) }
+                }
+            }
+        }
+    }
     private func drainBlobs(_ sink: any ObservationSink) async {
         while !Task.isCancelled {
-            guard let (key, url) = pendingBlobs.first else {
+            let next = pendingBlobs.keys.sorted { a, b in
+                let x = pendingBlobOrder[a] ?? (false, 0)
+                let y = pendingBlobOrder[b] ?? (false, 0)
+                return x.0 == y.0 ? x.1 > y.1 : x.0
+            }.first
+            guard let key = next, let url = pendingBlobs[key] else {
                 do { try await Task.sleep(for: .milliseconds(50)) } catch { return }
                 continue
             }
             pendingBlobs.removeValue(forKey: key)
+            let order = pendingBlobOrder.removeValue(forKey: key) ?? (false, 0)
+            let live = order.0
             let token = generation
-            let work = Task.detached { () throws -> (Int64, Date, String) in
+            let work = Task.detached(priority: .utility) { () throws -> (Int64, Date, String) in
                 let before = try FileManager.default.attributesOfItem(atPath: url.path)
                 let digest = try BlobDigest.file(url)
                 let after = try FileManager.default.attributesOfItem(atPath: url.path)
@@ -197,14 +308,20 @@ public actor Messages: Source {
                 guard size == (after[.size] as? NSNumber)?.int64Value, modified == after[.modificationDate] as? Date else { throw SourceFailure.conflict }
                 return (size, modified, digest)
             }
+            activeBlob = (key, live, work)
+            defer { activeBlob = nil }
             do {
                 let result = try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
                 guard token == generation, !Task.isCancelled else { continue }
                 try baseline?.saveBlob(key, result)
                 blobDigests[key] = result
-                if let reader { try await emit(try reader.attachmentObservations(guid: key), sink: sink, live: false) }
+                if let reader { try await emit(try reader.attachmentObservations(guid: key), sink: sink, live: live) }
             } catch {
                 guard token == generation, !Task.isCancelled else { continue }
+                if work.isCancelled {
+                    if pendingBlobs[key] == nil { pendingBlobs[key] = url; pendingBlobOrder[key] = order }
+                    continue
+                }
                 failedBlobs.insert(key)
                 if let reader { try? await emit(try reader.attachmentObservations(guid: key), sink: sink, live: false) }
             }
@@ -402,6 +519,8 @@ public actor Messages: Source {
         lastLiveVersion = nil
         let watcher = MessagesWatcher(path: path, diagnostics: diagnostics, eventsEnabled: watcherEventsEnabled)
         var blobs = Task { await self.drainBlobs(sink) }
+        let media = Task { await self.drainMedia(sink) }
+        defer { media.cancel() }
         var failure: (any Error)?
         var first = true
         do {
@@ -445,6 +564,8 @@ public actor Messages: Source {
         let previous = reconciliationTask
         previous?.cancel()
         blobs.cancel()
+        media.cancel()
+        await media.value
         await previous?.value
         await blobs.value
         reconciliationTask = nil
@@ -490,6 +611,13 @@ public actor Messages: Source {
         }
     }
     private func readBlobBytes(handle: String, offset: Int64, length: Int) throws -> Data {
+        if let url = variantURLs[handle], let cached = blobDigests[handle] {
+            guard offset >= 0, offset <= cached.0, length > 0, length <= 128 * 1024 else { throw SourceFailure.invalid }
+            let file = try FileHandle(forReadingFrom: url)
+            defer { try? file.close() }
+            try file.seek(toOffset: UInt64(offset))
+            return try file.read(upToCount: length) ?? Data()
+        }
         guard offset >= 0, length > 0, length <= 128 * 1024, let reader, let row = try reader.query("SELECT * FROM attachment WHERE guid=?", [handle]).first,
               let url = reader.attachmentURL(row["filename"]) else { throw SourceFailure.unavailable }
         let resource = try url.resourceValues(forKeys: [.isUbiquitousItemKey, .ubiquitousItemDownloadingStatusKey])

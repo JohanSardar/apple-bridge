@@ -21,8 +21,10 @@ import (
 func runNativeMessagesCommands(ctx context.Context, s Scenario, level string, e Evidence) Evidence {
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
 	replicas := 0
-	if level == "replica" {
+	if level == "replica" || s.ID == "WEB-MEDIA-VARIANTS" {
 		replicas = 1
+	}
+	if level == "replica" {
 		e.Hosts = append(e.Hosts, "ubuntu")
 	}
 	w, err := world.NewReal(ctx, level, replicas, world.BlobOptions{Scope: "messages:read,messages:write,system:read"})
@@ -114,6 +116,14 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 		args = map[string]any{"handles": []string{handle}, "service": "iMessage", "text": text}
 	}
 
+	if s.ID == "WEB-MEDIA-VARIANTS" {
+		files, problem := prepareMediaFiles(ctx, w, e.RunID)
+		add("synthetic_heic_mov_caf_staged", problem == nil)
+		if problem != nil {
+			return e
+		}
+		args["files"] = files
+	}
 	if s.ID == "MSG-SEND-FILES" {
 		large, problem := stageMessageFile(ctx, w.Gateway, "ab-"+e.RunID+"-one.txt", messageSyntheticFile(text))
 		add("five_mib_upload_staged", problem == nil)
@@ -133,6 +143,13 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 	}
 	cleanupPath := filepath.Join(cleanupDirectory, e.RunID+".json")
 	cleanup := map[string]any{"run_id": e.RunID, "command_id": c.ID, "baseline_max_row_id": maximum, "created_at": time.Now().UTC(), "cleanup_state": "pending_native_cleanup", "scenario": s.ID, "level": level}
+	if s.ID == "WEB-MEDIA-VARIANTS" {
+		names := []string{}
+		for _, file := range argsFiles(args) {
+			names = append(names, file.Name)
+		}
+		cleanup["media_attachment_names"] = names
+	}
 	saveCleanup := func() error {
 		data, err := json.Marshal(cleanup)
 		if err != nil {
@@ -148,6 +165,11 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 	defer func() {
 		ok, metrics := cleanupNativeMessageRun(w, e.RunID, false)
 		result.Assertions = append(result.Assertions, Assertion{Name: "tagged_messages_cleanup", Passed: ok})
+		if s.ID == "WEB-MEDIA-VARIANTS" {
+			var remaining int
+			problem := native.QueryRowContext(context.Background(), "SELECT COUNT(DISTINCT m.ROWID) FROM message m JOIN message_attachment_join j ON j.message_id=m.ROWID JOIN attachment a ON a.ROWID=j.attachment_id JOIN chat_message_join c ON c.message_id=m.ROWID WHERE m.ROWID>? AND a.filename LIKE ? AND NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=c.chat_id)", maximum, "%ab-"+e.RunID+".%").Scan(&remaining)
+			result.Assertions = append(result.Assertions, Assertion{Name: "tagged_media_cleanup_readonly_truth", Passed: problem == nil && remaining == 0})
+		}
 		if result.Metrics == nil {
 			result.Metrics = map[string]any{}
 		}
@@ -201,6 +223,12 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 		observers = append(observers, observer)
 		defer observer.close()
 	}
+	mediaCtx, stopMedia := context.WithCancel(ctx)
+	defer stopMedia()
+	var mediaAppeared func(string) time.Time
+	if s.ID == "WEB-MEDIA-VARIANTS" {
+		mediaAppeared = observeMediaAppearance(mediaCtx, native, e.RunID)
+	}
 	started := time.Now()
 	var outcome contracts.CommandRecord
 	err = client.Call(ctx, c.Op, c, &outcome)
@@ -253,6 +281,9 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 	cleanup["native_parts"] = evidence.Parts
 	cleanup["native_key"] = evidence.NativeKey
 	saveCleanup()
+	if s.ID == "WEB-MEDIA-VARIANTS" {
+		return verifyMediaVariants(ctx, e, w, "ab-"+e.RunID, mediaAppeared, observers)
+	}
 	if s.ID != "MSG-SEND-SELF-TEXT" && s.ID != "MSG-SEND-FILES" {
 		return runNativeMessageAction(ctx, s, e, w, evidence.NativeKey, text, stateDB)
 	}

@@ -1,0 +1,465 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[3.75 4.18 6.01] cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5E5J55KCNY7BF763WKFXJJC",
+  "metrics": {
+    "browser_playback": "Cross-engine playback is owned by the later UI unit",
+    "cap_entries": {
+      "08f7d7b0e3d082fb436690f8cc617fc2b8df78f314803ade42fdb66bcec49d50": {
+        "next_attempt_at": "0001-01-01T00:00:00Z",
+        "resumed_bytes": 0,
+        "corruptions": 0,
+        "state": "present",
+        "size": 1030,
+        "received": 1030,
+        "unreferenced_at": "0001-01-01T00:00:00Z"
+      },
+      "21c8a041403f9b7f55b60a3d07182e83ac039f559f8d6944234bbb68bcf4ba3b": {
+        "next_attempt_at": "0001-01-01T00:00:00Z",
+        "resumed_bytes": 0,
+        "corruptions": 0,
+        "state": "present",
+        "size": 1307,
+        "received": 1307,
+        "unreferenced_at": "0001-01-01T00:00:00Z"
+      },
+      "3de2153e3d603414ad3259f89bc2003af1563527e01b32a065229b9705f67981": {
+        "next_attempt_at": "0001-01-01T00:00:00Z",
+        "resumed_bytes": 0,
+        "corruptions": 0,
+        "state": "present",
+        "size": 55130,
+        "received": 55130,
+        "unreferenced_at": "0001-01-01T00:00:00Z"
+      },
+      "4e231ed74abc73852ee4b7608de1ed00748e869f1dbf167affa9461e9d17871e": {
+        "next_attempt_at": "0001-01-01T00:00:00Z",
+        "resumed_bytes": 0,
+        "corruptions": 0,
+        "state": "present",
+        "size": 968043,
+        "received": 968043,
+        "unreferenced_at": "0001-01-01T00:00:00Z"
+      },
+      "7997774bdad0c8d333c7a76c75ac3bd2c131c2dff5e26365515a9d3d17b355fc": {
+        "next_attempt_at": "0001-01-01T00:00:00Z",
+        "resumed_bytes": 0,
+        "corruptions": 0,
+        "state": "present",
+        "size": 599,
+        "received": 599,
+        "unreferenced_at": "0001-01-01T00:00:00Z"
+      },
+      "93b76d2131dc6ed1e4d72d99218b21dffe1841443017b132c08d296b6b9c72dd": {
+        "next_attempt_at": "0001-01-01T00:00:00Z",
+        "resumed_bytes": 0,
+        "corruptions": 0,
+        "state": "present",
+        "size": 1315,
+        "received": 1315,
+        "unreferenced_at": "0001-01-01T00:00:00Z"
+      },
+      "d50e62bc26c9d1bb926026e017b8ebae606b16848968cfa0c67a664b59cf177c": {
+        "next_attempt_at": "0001-01-01T00:00:00Z",
+        "resumed_bytes": 0,
+        "corruptions": 0,
+        "state": "present",
+        "size": 1022,
+        "received": 1022,
+        "unreferenced_at": "0001-01-01T00:00:00Z"
+      },
+      "fbb16e26ecfd1fdf67f30632116139ef996d92ae890a8169a1e924625a8d8c27": {
+        "next_attempt_at": "0001-01-01T00:00:00Z",
+        "resumed_bytes": 0,
+        "corruptions": 0,
+        "state": "over_cap",
+        "size": 8645081,
+        "received": 0,
+        "unreferenced_at": "0001-01-01T00:00:00Z"
+      }
+    },
+    "cap_references": [
+      {
+        "variant": true,
+        "digest": "4e231ed74abc73852ee4b7608de1ed00748e869f1dbf167affa9461e9d17871e",
+        "size": 968043,
+        "state": "present"
+      },
+      {
+        "variant": true,
+        "digest": "3de2153e3d603414ad3259f89bc2003af1563527e01b32a065229b9705f67981",
+        "size": 55130,
+        "state": "present"
+      },
+      {
+        "digest": "fbb16e26ecfd1fdf67f30632116139ef996d92ae890a8169a1e924625a8d8c27",
+        "size": 8645081,
+        "state": "present"
+      },
+      {
+        "variant": true,
+        "digest": "7997774bdad0c8d333c7a76c75ac3bd2c131c2dff5e26365515a9d3d17b355fc",
+        "size": 599,
+        "state": "present"
+      },
+      {
+        "variant": true,
+        "digest": "21c8a041403f9b7f55b60a3d07182e83ac039f559f8d6944234bbb68bcf4ba3b",
+        "size": 1307,
+        "state": "present"
+      },
+      {
+        "digest": "93b76d2131dc6ed1e4d72d99218b21dffe1841443017b132c08d296b6b9c72dd",
+        "size": 1315,
+        "state": "present"
+      },
+      {
+        "variant": true,
+        "digest": "d50e62bc26c9d1bb926026e017b8ebae606b16848968cfa0c67a664b59cf177c",
+        "size": 1022,
+        "state": "present"
+      },
+      {
+        "digest": "08f7d7b0e3d082fb436690f8cc617fc2b8df78f314803ade42fdb66bcec49d50",
+        "size": 1030,
+        "state": "present"
+      }
+    ]
+  },
+  "scenario": "WEB-MEDIA-CAP",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "e2722bd1f479fabbacf7e5a913c7fc9037f2d2dc",
+  "at": "2026-10-21T02:45:04.307986Z",
+  "assertions": [
+    {
+      "name": "seed_self",
+      "passed": true
+    },
+    {
+      "name": "self_chat_captured",
+      "passed": true
+    },
+    {
+      "name": "self_send_observed",
+      "passed": true
+    },
+    {
+      "name": "variants_captured_0",
+      "passed": true
+    },
+    {
+      "name": "audio_native_appearance_measured",
+      "passed": true
+    },
+    {
+      "name": "audio_original_preserved",
+      "passed": true
+    },
+    {
+      "name": "audio_duration_and_64_bounded_peaks",
+      "passed": true
+    },
+    {
+      "name": "private_handles_removed",
+      "passed": true
+    },
+    {
+      "name": "audio_authorized_blob_0",
+      "passed": true
+    },
+    {
+      "name": "variant_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "image_native_appearance_measured",
+      "passed": true
+    },
+    {
+      "name": "image_variants_within_2_seconds",
+      "passed": true
+    },
+    {
+      "name": "image_original_preserved",
+      "passed": true
+    },
+    {
+      "name": "image_dimensions_and_thumbhash",
+      "passed": true
+    },
+    {
+      "name": "private_handles_removed",
+      "passed": true
+    },
+    {
+      "name": "display_authorized_blob_0",
+      "passed": true
+    },
+    {
+      "name": "variant_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "display_browser_image",
+      "passed": true
+    },
+    {
+      "name": "display_dimensions_bounded",
+      "passed": true
+    },
+    {
+      "name": "private_handles_removed",
+      "passed": true
+    },
+    {
+      "name": "thumb_authorized_blob_0",
+      "passed": true
+    },
+    {
+      "name": "variant_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "thumb_browser_image",
+      "passed": true
+    },
+    {
+      "name": "thumb_dimensions_bounded",
+      "passed": true
+    },
+    {
+      "name": "video_native_appearance_measured",
+      "passed": true
+    },
+    {
+      "name": "video_original_preserved",
+      "passed": true
+    },
+    {
+      "name": "video_dimensions_and_thumbhash",
+      "passed": true
+    },
+    {
+      "name": "private_handles_removed",
+      "passed": true
+    },
+    {
+      "name": "poster_authorized_blob_0",
+      "passed": true
+    },
+    {
+      "name": "variant_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "poster_browser_image",
+      "passed": true
+    },
+    {
+      "name": "poster_dimensions_bounded",
+      "passed": true
+    },
+    {
+      "name": "private_handles_removed",
+      "passed": true
+    },
+    {
+      "name": "video_authorized_blob_0",
+      "passed": true
+    },
+    {
+      "name": "variant_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "variants_captured_1",
+      "passed": true
+    },
+    {
+      "name": "audio_native_appearance_measured",
+      "passed": true
+    },
+    {
+      "name": "audio_original_preserved",
+      "passed": true
+    },
+    {
+      "name": "audio_duration_and_64_bounded_peaks",
+      "passed": true
+    },
+    {
+      "name": "private_handles_removed",
+      "passed": true
+    },
+    {
+      "name": "audio_authorized_blob_1",
+      "passed": true
+    },
+    {
+      "name": "variant_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "image_native_appearance_measured",
+      "passed": true
+    },
+    {
+      "name": "image_original_preserved",
+      "passed": true
+    },
+    {
+      "name": "image_dimensions_and_thumbhash",
+      "passed": true
+    },
+    {
+      "name": "private_handles_removed",
+      "passed": true
+    },
+    {
+      "name": "display_authorized_blob_1",
+      "passed": true
+    },
+    {
+      "name": "variant_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "display_browser_image",
+      "passed": true
+    },
+    {
+      "name": "display_dimensions_bounded",
+      "passed": true
+    },
+    {
+      "name": "private_handles_removed",
+      "passed": true
+    },
+    {
+      "name": "thumb_authorized_blob_1",
+      "passed": true
+    },
+    {
+      "name": "variant_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "thumb_browser_image",
+      "passed": true
+    },
+    {
+      "name": "thumb_dimensions_bounded",
+      "passed": true
+    },
+    {
+      "name": "video_native_appearance_measured",
+      "passed": true
+    },
+    {
+      "name": "video_original_preserved",
+      "passed": true
+    },
+    {
+      "name": "video_dimensions_and_thumbhash",
+      "passed": true
+    },
+    {
+      "name": "private_handles_removed",
+      "passed": true
+    },
+    {
+      "name": "poster_authorized_blob_1",
+      "passed": true
+    },
+    {
+      "name": "variant_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "poster_browser_image",
+      "passed": true
+    },
+    {
+      "name": "poster_dimensions_bounded",
+      "passed": true
+    },
+    {
+      "name": "private_handles_removed",
+      "passed": true
+    },
+    {
+      "name": "video_authorized_blob_1",
+      "passed": true
+    },
+    {
+      "name": "variant_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "variants_fit_cap_original_deferred",
+      "passed": true
+    },
+    {
+      "name": "sim_restart",
+      "passed": true
+    },
+    {
+      "name": "variants_survive_restart",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "audio_appearance_to_variants_0": {
+      "samples": 1,
+      "p50_ms": 173.623834,
+      "p95_ms": 173.623834,
+      "max_ms": 173.623834,
+      "timeouts": 0
+    },
+    "audio_appearance_to_variants_1": {
+      "samples": 1,
+      "p50_ms": 185.971584,
+      "p95_ms": 185.971584,
+      "max_ms": 185.971584,
+      "timeouts": 0
+    },
+    "image_appearance_to_variants_0": {
+      "samples": 1,
+      "p50_ms": 173.623834,
+      "p95_ms": 173.623834,
+      "max_ms": 173.623834,
+      "timeouts": 0
+    },
+    "image_appearance_to_variants_1": {
+      "samples": 1,
+      "p50_ms": 185.971584,
+      "p95_ms": 185.971584,
+      "max_ms": 185.971584,
+      "timeouts": 0
+    },
+    "video_appearance_to_variants_0": {
+      "samples": 1,
+      "p50_ms": 173.623834,
+      "p95_ms": 173.623834,
+      "max_ms": 173.623834,
+      "timeouts": 0
+    },
+    "video_appearance_to_variants_1": {
+      "samples": 1,
+      "p50_ms": 185.971584,
+      "p95_ms": 185.971584,
+      "max_ms": 185.971584,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

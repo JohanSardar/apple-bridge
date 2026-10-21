@@ -417,9 +417,11 @@ features:
     milestone: W1
     modules: [native/MediaDerivatives, blobs, web]
     depends_on: [messages.read]
-    status: todo
+    status: in_progress
     scenarios:
-      - {id: WEB-MEDIA-VARIANTS, levels: [real]}
+      - {id: WEB-MEDIA-VARIANTS, levels: [sim, real, replica]}
+      - {id: WEB-MEDIA-CAP, levels: [sim]}
+    notes: Variants work on the real Air (12 read-only native variant downloads verified). Real and replica runs wait for cleanup of six tagged self-chat file bubbles (media-bubble Accessibility targeting, GUI needed once the Air's lid is open) and the cold-arrival latency measurement.
   - id: web.remote
     title: Reach from anywhere through the embedded Tailscale Funnel
     requirements: [R-WEB-REACH, R-SECURE]

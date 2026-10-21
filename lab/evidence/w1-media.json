@@ -1,0 +1,217 @@
+{
+  "unit": "W1-MEDIA",
+  "status": "limited_unmerged",
+  "branch": "w1-media",
+  "verification_directory": "~/apple-bridge/.worktrees/w1-media on air",
+  "modules": [
+    "native/Sources/MediaDerivatives",
+    "native/Sources/MediaChecks",
+    "native/Sources/MessagesSource",
+    "native/Sources/AppleSession",
+    "internal/blobs",
+    "internal/contracts",
+    "internal/replication",
+    "lab/simapple",
+    "lab/truth/native/Sources/AppleTruth/MediaTruth.swift"
+  ],
+  "commands": [
+    {
+      "command": "packaging/dev/heavy.sh env GOFLAGS=-p=2 make lint",
+      "result": "passed; includes gofmt, go vet and zero-comments lint"
+    },
+    {
+      "command": "packaging/dev/heavy.sh env GOFLAGS=-p=2 make features",
+      "result": "passed with explicit web.media real/replica limits"
+    },
+    {
+      "command": "packaging/dev/heavy.sh go test -p 2 ./internal/contracts ./internal/state ./lab/scenarios",
+      "result": "passed"
+    },
+    {
+      "command": "packaging/dev/heavy.sh packaging/dev/build-native.sh",
+      "result": "passed; release Swift 6 build with -warnings-as-errors"
+    },
+    {
+      "command": "native/.build/clt-release/MediaChecks thumbhash lab/fixtures/media/thumbhash.json",
+      "result": "4 public-reference codec fixtures passed"
+    },
+    {
+      "command": "go run ./cmd/bridge-lab wire-checks internal/contracts/testdata/ipc-session.json",
+      "result": "15 fixtures decoded"
+    },
+    {
+      "command": "native/.build/clt-release/AppleBridgeHelper wire-checks --fixtures internal/contracts/testdata/ipc-session.json",
+      "result": "15 fixtures decoded; no Apple access"
+    },
+    {
+      "command": "packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios/web/WEB-MEDIA-*.yaml lab/scenarios/messages/MSG-SEND-FILES.yaml lab/scenarios/messages/MSG-DECODE.yaml lab/scenarios/core/CORE-BLOB-*.yaml --level sim --json",
+      "result": "14 scenarios passed"
+    },
+    {
+      "command": "packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios/core/CORE-BLOB-INTERRUPT.yaml --level replica --json",
+      "result": "passed on Air and Ubuntu over the harness SSH tunnel"
+    },
+    {
+      "command": "packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios/web/WEB-MEDIA-VARIANTS.yaml --level real --json",
+      "result": "failed: staged filename prefix mismatch and tagged media cleanup; variants were produced"
+    },
+    {
+      "command": "packaging/dev/heavy.sh go run ./lab/verify-media run_01M5E0Z216CY3PB1AZEM62XQA5",
+      "result": "verified_readonly; 12 authorized, digest-verified variant reads across gateway and Ubuntu; independent signed AppleTruth verified JPEG, H.264 MP4, AAC M4A, dimensions and durations; faststart checked; no new messages sent"
+    }
+  ],
+  "sim_results": [
+    {
+      "scenario": "WEB-MEDIA-CAP",
+      "passed": true,
+      "latency": {
+        "audio_appearance_to_variants_0": {
+          "samples": 1,
+          "p50_ms": 211.242417,
+          "p95_ms": 211.242417,
+          "max_ms": 211.242417,
+          "timeouts": 0
+        },
+        "audio_appearance_to_variants_1": {
+          "samples": 1,
+          "p50_ms": 237.570209,
+          "p95_ms": 237.570209,
+          "max_ms": 237.570209,
+          "timeouts": 0
+        },
+        "image_appearance_to_variants_0": {
+          "samples": 1,
+          "p50_ms": 211.242417,
+          "p95_ms": 211.242417,
+          "max_ms": 211.242417,
+          "timeouts": 0
+        },
+        "image_appearance_to_variants_1": {
+          "samples": 1,
+          "p50_ms": 237.570209,
+          "p95_ms": 237.570209,
+          "max_ms": 237.570209,
+          "timeouts": 0
+        },
+        "video_appearance_to_variants_0": {
+          "samples": 1,
+          "p50_ms": 211.242417,
+          "p95_ms": 211.242417,
+          "max_ms": 211.242417,
+          "timeouts": 0
+        },
+        "video_appearance_to_variants_1": {
+          "samples": 1,
+          "p50_ms": 237.570209,
+          "p95_ms": 237.570209,
+          "max_ms": 237.570209,
+          "timeouts": 0
+        }
+      }
+    },
+    {
+      "scenario": "WEB-MEDIA-VARIANTS",
+      "passed": true,
+      "latency": {
+        "audio_appearance_to_variants_0": {
+          "samples": 1,
+          "p50_ms": 119.817083,
+          "p95_ms": 119.817083,
+          "max_ms": 119.817083,
+          "timeouts": 0
+        },
+        "audio_appearance_to_variants_1": {
+          "samples": 1,
+          "p50_ms": 131.327958,
+          "p95_ms": 131.327958,
+          "max_ms": 131.327958,
+          "timeouts": 0
+        },
+        "image_appearance_to_variants_0": {
+          "samples": 1,
+          "p50_ms": 119.817083,
+          "p95_ms": 119.817083,
+          "max_ms": 119.817083,
+          "timeouts": 0
+        },
+        "image_appearance_to_variants_1": {
+          "samples": 1,
+          "p50_ms": 131.327958,
+          "p95_ms": 131.327958,
+          "max_ms": 131.327958,
+          "timeouts": 0
+        },
+        "video_appearance_to_variants_0": {
+          "samples": 1,
+          "p50_ms": 119.817083,
+          "p95_ms": 119.817083,
+          "max_ms": 119.817083,
+          "timeouts": 0
+        },
+        "video_appearance_to_variants_1": {
+          "samples": 1,
+          "p50_ms": 131.327958,
+          "p95_ms": 131.327958,
+          "max_ms": 131.327958,
+          "timeouts": 0
+        }
+      }
+    }
+  ],
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[4.7 5.98 7] cpus=8 other_heavy=1"
+  },
+  "new_scenarios": [
+    "WEB-MEDIA-VARIANTS: sim, real, replica",
+    "WEB-MEDIA-CAP: sim"
+  ],
+  "deviations": [
+    "Full real cold-arrival latency and cleanup remain unverified; no merge or push performed.",
+    "Sim images and ThumbHash are generated in Go; video/audio use canonical synthetic codec fixtures through the Go standard library, rather than transcoding arbitrary inputs.",
+    "Capture.live is an optional private IPC scheduling hint, documented in SPEC 7.3 and covered by Go/Swift wire fixtures.",
+    "Browser playback across engines belongs to the later UI unit."
+  ],
+  "blockers": [
+    {
+      "kind": "safe_cleanup",
+      "run_id": "run_01M5E0Z216CY3PB1AZEM62XQA5",
+      "remaining_bubbles": 6,
+      "description": "Three outgoing attachment messages and three self echoes remain in the self chat: 0-ab-<run>.heic, 1-ab-<run>.mov, 2-ab-<run>.caf. The registered cleanup finds them in chat.db, but Accessibility returns validate:targetUnavailable. No media deletion was attempted without a verified target. Physical cleanup or a verified media-bubble target path is needed before more real sends."
+    },
+    {
+      "kind": "withheld_checks",
+      "description": "MSG-SEND-FILES real/replica and another full WEB-MEDIA-VARIANTS send cycle are withheld while safe media cleanup is unavailable."
+    },
+    {
+      "kind": "unverified_paths",
+      "description": "Battery/thermal pause, preemption under a long export, GIF/alpha/sticker paths and native offload retention are implemented but not induced in the real send journey."
+    }
+  ],
+  "signing": {
+    "designated_requirement_unchanged": true,
+    "full_disk_access": "granted",
+    "accessibility": "granted",
+    "automation_messages": "granted",
+    "calendar": "granted",
+    "contacts": "granted",
+    "reminders": "granted",
+    "onboard_run": false
+  },
+  "tested_code_commit": "a8069903724459d7739c694800e63767619eb865",
+  "implementation_commits": [
+    "a8069903724459d7739c694800e63767619eb865",
+    "b880d215c57e1f2a045677c24dea177ffa6d715e",
+    "59fc234e49965d1752a6bb249c040a811de9ee35"
+  ],
+  "rebased_onto": "d1106650e01ffd3a84351a9bc8992b7b75a5332f",
+  "post_rebase_results": {
+    "sim_scenarios": 14,
+    "all_passed": true,
+    "ubuntu_blob_resume": true,
+    "native_readonly_verified_variants": 12,
+    "new_messages_sent": 0
+  },
+  "exact_verification_script": "set -e; export GOFLAGS=-p=2; make lint; make features; go test -p 2 ./internal/contracts ./internal/state ./lab/scenarios; packaging/dev/build-native.sh; native/.build/clt-release/MediaChecks thumbhash lab/fixtures/media/thumbhash.json; go run ./cmd/bridge-lab wire-checks internal/contracts/testdata/ipc-session.json; native/.build/clt-release/AppleBridgeHelper wire-checks --fixtures internal/contracts/testdata/ipc-session.json; go run ./cmd/bridge-lab run lab/scenarios/web/WEB-MEDIA-*.yaml lab/scenarios/messages/MSG-SEND-FILES.yaml lab/scenarios/messages/MSG-DECODE.yaml lab/scenarios/core/CORE-BLOB-*.yaml --level sim --json > /tmp/w1-media-final-sim.jsonl; go run ./cmd/bridge-lab run lab/scenarios/core/CORE-BLOB-INTERRUPT.yaml --level replica --json > /tmp/w1-media-ubuntu-blob.jsonl; go run ./lab/verify-media run_01M5E0Z216CY3PB1AZEM62XQA5 > /tmp/w1-media-readonly-ubuntu.json",
+  "exact_verification_launcher": "ssh -o ControlPath=none air; export PATH=/opt/homebrew/bin:$HOME/go/bin:$PATH; cd ~/apple-bridge/.worktrees/w1-media; packaging/dev/heavy.sh bash -c <exact_verification_script>"
+}

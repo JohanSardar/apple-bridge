@@ -1,0 +1,7 @@
+id: WEB-MEDIA-VARIANTS
+feature: web.media
+levels: [sim, real, replica]
+given: [{world: {replicas: 1}}]
+when: [{media_variants: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

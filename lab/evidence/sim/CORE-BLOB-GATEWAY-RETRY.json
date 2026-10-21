@@ -1,24 +1,24 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[4.21 6.47 7.79] cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[5.32 6.38 7.22] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M5E29E34NYK5N38298CDXQA7",
+  "run_id": "run_01M5E4A4JAZYQN19H7TKHKRM0W",
   "network_path": "loopback",
   "metrics": {
     "digest_check_0_bytes": 4194304,
     "digest_check_0_deadline_exceeded": false,
     "digest_check_0_error_type": "\u003cnil\u003e",
-    "digest_check_0_read_ms": 5.500167,
+    "digest_check_0_read_ms": 4.796667,
     "digest_check_0_status": 200,
     "digest_check_1_bytes": 4194304,
     "digest_check_1_deadline_exceeded": false,
     "digest_check_1_error_type": "\u003cnil\u003e",
-    "digest_check_1_read_ms": 4.037375,
+    "digest_check_1_read_ms": 3.520125,
     "digest_check_1_status": 200,
     "retry_after_gateway_restart": {
       "retry_attempts": 5,
-      "next_attempt_at": "2026-10-21T01:48:15.794046Z",
+      "next_attempt_at": "2026-10-21T02:23:36.15233Z",
       "resumed_bytes": 0,
       "corruptions": 0,
       "state": "pending",
@@ -28,7 +28,7 @@
     },
     "retry_before_gateway_restart": {
       "retry_attempts": 5,
-      "next_attempt_at": "2026-10-21T01:48:15.794046Z",
+      "next_attempt_at": "2026-10-21T02:23:36.15233Z",
       "resumed_bytes": 0,
       "corruptions": 0,
       "state": "pending",
@@ -38,7 +38,7 @@
     },
     "retry_manifest_at_gateway_crash": {
       "retry_attempts": 5,
-      "next_attempt_at": "2026-10-21T01:48:15.794046Z",
+      "next_attempt_at": "2026-10-21T02:23:36.15233Z",
       "resumed_bytes": 0,
       "corruptions": 0,
       "state": "pending",
@@ -61,8 +61,8 @@
   "scenario": "CORE-BLOB-GATEWAY-RETRY",
   "level": "sim",
   "passed": true,
-  "git_sha": "efaa5a6e35704ea1419baf1306fc8efa10db78e2",
-  "at": "2026-10-21T01:47:52.804172Z",
+  "git_sha": "a8069903724459d7739c694800e63767619eb865",
+  "at": "2026-10-21T02:23:12.970138Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -208,30 +208,30 @@
   "latency": {
     "effect_done→blob_complete": {
       "samples": 1,
-      "p50_ms": 14671.287042,
-      "p95_ms": 14671.287042,
-      "max_ms": 14671.287042,
+      "p50_ms": 14744.414583,
+      "p95_ms": 14744.414583,
+      "max_ms": 14744.414583,
       "timeouts": 0
     },
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 5.547958,
-      "p95_ms": 5.547958,
-      "max_ms": 5.547958,
+      "p50_ms": 6.12575,
+      "p95_ms": 6.12575,
+      "max_ms": 6.12575,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 7.615042,
-      "p95_ms": 7.615042,
-      "max_ms": 7.615042,
+      "p50_ms": 7.957709,
+      "p95_ms": 7.957709,
+      "max_ms": 7.957709,
       "timeouts": 0
     },
     "retry_exhaustion→gateway_failed": {
       "samples": 1,
-      "p50_ms": 15925.03075,
-      "p95_ms": 15925.03075,
-      "max_ms": 15925.03075,
+      "p50_ms": 16004.67225,
+      "p95_ms": 16004.67225,
+      "max_ms": 16004.67225,
       "timeouts": 0
     }
   },

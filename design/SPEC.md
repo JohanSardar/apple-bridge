@@ -268,7 +268,7 @@ func Start(ctx, Config) error
 | `messages.handle` | `address` (phone/email), `service`, `contact_id?` |
 | `messages.message` | `chat_id`, `sender_handle_id?`, `is_from_me`, `sent_at`, `parts[]` (`{index, kind: text|attachment, text?, attachment_id?}`), `text` (joined plain text), `decode_status` (`decoded|partial|undecoded`), `raw_body_digest?`, `reply_to_id?`, `thread_originator_id?`, `edited_at?`, `edit_history[]`, `retracted_parts[]`, `retracted_at?`, `delivered_at?`, `read_at?`, `error_code`, `effect?`, `kind` (`message|group_event|system`), `group_event?` |
 | `messages.reaction` | `message_id`, `part_index`, `sender_handle_id?`, `is_from_me`, `kind` (love/like/dislike/laugh/emphasize/question/emoji/sticker), `emoji?`, `removed` |
-| `messages.attachment` | `message_id`, `filename`, `mime_type`, `uti`, `size`, `blob` (`{digest?, state: present|pending|offloaded|missing|over_cap|failed|disk_full}`) |
+| `messages.attachment` | `message_id`, `filename`, `mime_type`, `uti`, `size`, `blob` (`{digest?, state: present|pending|offloaded|missing|over_cap|failed|disk_full}`), `derivatives` (`{thumb|display|video|poster|audio|live: {digest, mime, size, state, width?, height?}}`), `media` (`{width?, height?, duration_ms?, thumbhash?, waveform?, live?}`; ThumbHash is base64, waveform is 64 peaks in 0–255; §23.7) |
 | `calendar.calendar` | `title`, `account`, `color`, `writable`, `type` |
 | `calendar.event` | `calendar_id`, `series_id?`, `occurrence_date?` (original), `title`, `notes`, `location`, `url`, `start`, `end`, `all_day`, `time_zone`, `recurrence?` (rule on series), `is_exception`, `attendees[]` (read-only), `alarms[]`, `availability`, `status` |
 | `reminders.list` | `title`, `account`, `color`, `writable` |
@@ -361,6 +361,7 @@ both Ping/Pong; Close(reason)
 - `generation` identifies one consistent native identity space (e.g. chat.db file identity + schema hash; EventKit store; Contacts history token lineage). A new generation resets capture identity, not gateway history. `predecessor` must equal the last committed checkpoint for that source, or Go answers `Reset(source)` and the Helper rescans.
 - A Capture may carry a private `blob_handles` map (native blob handle → collection/record key). Handles are opaque Helper references used only for `BlobRead`; they are never journaled or replicated.
 - `absent` observations are only valid inside a scan with `scanID`, `scope` and `completionEvidence: complete`. Go ignores absence without completion evidence and records a `degraded` coverage note. Candidates for deletion are revalidated, and records updated after the scan started are protected (F2, F13).
+- A Capture may carry a private `live` priority hint. The gateway fetches live variant handles before backfill handles and preserves arrival order within each lane. The hint is never journaled or replicated.
 - Live observations outrank backfill: the Helper keeps two queues (live, bulk) and always drains live first. Backfill revalidates before emitting so older data never overwrites newer observations (F14).
 - `byteCredit` bounds in-flight capture bytes (4 MiB). The Helper stops emitting when credit is exhausted.
 - A failed capture never implies an empty source (C4/C9).

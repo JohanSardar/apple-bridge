@@ -331,7 +331,8 @@ func (f *fakeApple) messageCommand(wire *applepeer.Wire, frame contracts.IPCFram
 					key := contracts.NewID("attachment")
 					msg := contracts.NewID("message")
 					newMessage(msg, "", chat, true)
-					put("attachment", key, map[string]any{"message_id": messageReference("message", msg), "filename": file.Name, "size": len(bytes), "mime_type": "application/octet-stream", "blob": map[string]any{"digest": digest, "state": "present"}}, false)
+					derivatives, media := f.mediaVariants(file.Name, bytes)
+					put("attachment", key, map[string]any{"message_id": messageReference("message", msg), "filename": file.Name, "size": len(bytes), "mime_type": simMediaMIME(file.Name, bytes), "blob": map[string]any{"digest": digest, "state": "present"}, "derivatives": derivatives, "media": media}, false)
 					parts = append(parts, map[string]any{"index": i + 1, "kind": "attachment", "native_key": msg, "disposition": "locally_observed"})
 				}
 			}

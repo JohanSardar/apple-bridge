@@ -1,174 +1,9 @@
 {
   "host_conditions": {
-    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
-    "start": {
-      "air": {
-        "at": "2026-10-17T19:15:54.728257Z",
-        "cpu_count": 8,
-        "load_average": [
-          2.97,
-          7.08,
-          8
-        ],
-        "cpu_idle_percent": 73,
-        "free_memory_bytes": 109395968,
-        "active_heavy_slots": 2,
-        "other_active_heavy_slots": 1,
-        "heavy_queue_length": 4,
-        "quiet": false
-      },
-      "ubuntu": {
-        "at": "2026-10-17T19:15:54.728257Z",
-        "cpu_count": 8,
-        "load_average": [
-          0.12,
-          0.32,
-          0.36
-        ],
-        "cpu_idle_percent": 97.7528,
-        "free_memory_bytes": 1259483136,
-        "active_heavy_slots": 0,
-        "other_active_heavy_slots": 0,
-        "heavy_queue_length": 0,
-        "quiet": true
-      }
-    },
-    "end": {
-      "air": {
-        "at": "2026-10-17T19:16:12.437619Z",
-        "cpu_count": 8,
-        "load_average": [
-          3.78,
-          6.99,
-          7.95
-        ],
-        "cpu_idle_percent": 75,
-        "free_memory_bytes": 438386688,
-        "active_heavy_slots": 2,
-        "other_active_heavy_slots": 1,
-        "heavy_queue_length": 4,
-        "quiet": false
-      },
-      "ubuntu": {
-        "at": "2026-10-17T19:16:12.43761Z",
-        "cpu_count": 8,
-        "load_average": [
-          0.86,
-          0.49,
-          0.41
-        ],
-        "cpu_idle_percent": 98.7453,
-        "free_memory_bytes": 1256726528,
-        "active_heavy_slots": 0,
-        "other_active_heavy_slots": 0,
-        "heavy_queue_length": 0,
-        "quiet": true
-      }
-    },
-    "periodic_samples": [
-      {
-        "air": {
-          "at": "2026-10-17T19:16:01.178501Z",
-          "cpu_count": 8,
-          "load_average": [
-            2.89,
-            7,
-            7.96
-          ],
-          "cpu_idle_percent": 79,
-          "free_memory_bytes": 118882304,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 4,
-          "quiet": false
-        },
-        "ubuntu": {
-          "at": "2026-10-17T19:16:01.178497Z",
-          "cpu_count": 8,
-          "load_average": [
-            0.83,
-            0.47,
-            0.4
-          ],
-          "cpu_idle_percent": 91.99,
-          "free_memory_bytes": 1216126976,
-          "active_heavy_slots": 0,
-          "other_active_heavy_slots": 0,
-          "heavy_queue_length": 0,
-          "quiet": true
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T19:16:06.178322Z",
-          "cpu_count": 8,
-          "load_average": [
-            3.62,
-            7.08,
-            7.99
-          ],
-          "cpu_idle_percent": 68,
-          "free_memory_bytes": 64618496,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 4,
-          "quiet": false
-        },
-        "ubuntu": {
-          "at": "2026-10-17T19:16:06.178169Z",
-          "cpu_count": 8,
-          "load_average": [
-            0.85,
-            0.48,
-            0.41
-          ],
-          "cpu_idle_percent": 88.8466,
-          "free_memory_bytes": 1213853696,
-          "active_heavy_slots": 0,
-          "other_active_heavy_slots": 0,
-          "heavy_queue_length": 0,
-          "quiet": true
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T19:16:11.1779Z",
-          "cpu_count": 8,
-          "load_average": [
-            3.41,
-            6.98,
-            7.95
-          ],
-          "cpu_idle_percent": 79,
-          "free_memory_bytes": 65093632,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 4,
-          "quiet": false
-        },
-        "ubuntu": {
-          "at": "2026-10-17T19:16:11.17783Z",
-          "cpu_count": 8,
-          "load_average": [
-            0.86,
-            0.49,
-            0.41
-          ],
-          "cpu_idle_percent": 88.6364,
-          "free_memory_bytes": 1191784448,
-          "active_heavy_slots": 0,
-          "other_active_heavy_slots": 0,
-          "heavy_queue_length": 0,
-          "quiet": true
-        }
-      }
-    ],
     "quiet": false,
-    "require_quiet": false,
-    "quiet_wait_ms": 0,
-    "quiet_wait_expired": false
+    "summary": "air: load=[4.4 5.85 6.93] cpus=8 other_heavy=1; ubuntu: load=[0.02 0.13 0.33] cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M55MNKNC3MGKG3S6F3YPKYKC",
+  "run_id": "run_01M5E4CPT88WP0D6Y73PSXWZ61",
   "network_path": "ssh_tunnel",
   "metrics": {
     "bulk_barrier_outstanding_bytes": 14680064,
@@ -176,23 +11,23 @@
     "digest_check_0_bytes": 16777216,
     "digest_check_0_deadline_exceeded": false,
     "digest_check_0_error_type": "\u003cnil\u003e",
-    "digest_check_0_read_ms": 17.0795,
+    "digest_check_0_read_ms": 46.158,
     "digest_check_0_status": 200,
     "digest_check_1_bytes": 16777216,
     "digest_check_1_deadline_exceeded": false,
     "digest_check_1_error_type": "\u003cnil\u003e",
-    "digest_check_1_read_ms": 2788.937166,
+    "digest_check_1_read_ms": 2916.28,
     "digest_check_1_status": 200,
     "feed_chunk_bytes": 1048576,
     "fixture_bytes": 16777216,
     "lab_delay_per_feed_chunk_ms": 150,
-    "metadata_observed_outstanding_bytes": 14680064
+    "metadata_observed_outstanding_bytes": 13631488
   },
   "scenario": "CORE-BLOB-INTERRUPT",
   "level": "replica",
   "passed": true,
-  "git_sha": "d7192c92d18042c300337105ece702609bbb68d8",
-  "at": "2026-10-17T19:15:56.204548Z",
+  "git_sha": "a8069903724459d7739c694800e63767619eb865",
+  "at": "2026-10-21T02:24:37.196522Z",
   "assertions": [
     {
       "name": "feed_network_ssh_tunnel",
@@ -326,65 +161,65 @@
   "latency": {
     "bulk_barrier→blob_complete": {
       "samples": 1,
-      "p50_ms": 2302.178292,
-      "p95_ms": 2302.178292,
-      "max_ms": 2302.178292,
+      "p50_ms": 2251.491917,
+      "p95_ms": 2251.491917,
+      "max_ms": 2251.491917,
       "timeouts": 0
     },
     "effect_done→blob_complete": {
       "samples": 1,
-      "p50_ms": 5775.710167,
-      "p95_ms": 5775.710167,
-      "max_ms": 5775.710167,
+      "p50_ms": 6318.759541,
+      "p95_ms": 6318.759541,
+      "max_ms": 6318.759541,
       "timeouts": 0
     },
     "effect_done→gateway_blob_present": {
       "samples": 1,
-      "p50_ms": 1836.170042,
-      "p95_ms": 1836.170042,
-      "max_ms": 1836.170042,
+      "p50_ms": 2388.518916,
+      "p95_ms": 2388.518916,
+      "max_ms": 2388.518916,
       "timeouts": 0
     },
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 12.44825,
-      "p95_ms": 12.44825,
-      "max_ms": 12.44825,
+      "p50_ms": 32.628834,
+      "p95_ms": 32.628834,
+      "max_ms": 32.628834,
       "timeouts": 0
     },
     "effect_done→metadata_during_blob": {
       "samples": 1,
-      "p50_ms": 164.325958,
-      "p95_ms": 164.325958,
-      "max_ms": 164.325958,
+      "p50_ms": 216.050083,
+      "p95_ms": 216.050083,
+      "max_ms": 216.050083,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 26.591792,
-      "p95_ms": 26.591792,
-      "max_ms": 26.591792,
+      "p50_ms": 49.252917,
+      "p95_ms": 49.252917,
+      "max_ms": 49.252917,
       "timeouts": 0
     },
     "gateway_present→replica_partial": {
       "samples": 1,
-      "p50_ms": 283.549875,
-      "p95_ms": 283.549875,
-      "max_ms": 283.549875,
+      "p50_ms": 285.711166,
+      "p95_ms": 285.711166,
+      "max_ms": 285.711166,
       "timeouts": 0
     },
     "interrupt→reconnected": {
       "samples": 1,
-      "p50_ms": 1087.286708,
-      "p95_ms": 1087.286708,
-      "max_ms": 1087.286708,
+      "p50_ms": 1094.089375,
+      "p95_ms": 1094.089375,
+      "max_ms": 1094.089375,
       "timeouts": 0
     },
     "reconnected→blob_complete": {
       "samples": 1,
-      "p50_ms": 2491.580959,
-      "p95_ms": 2491.580959,
-      "max_ms": 2491.580959,
+      "p50_ms": 2469.365834,
+      "p95_ms": 2469.365834,
+      "max_ms": 2469.365834,
       "timeouts": 0
     }
   },
