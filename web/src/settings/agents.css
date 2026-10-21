@@ -1,10 +1,6 @@
 .agent-access { max-inline-size: 780px; }
 .agent-access > .secondary { margin-block-end: 24px; line-height: 1.5; }
 .agent-access .group { margin-block: 20px; }
-.access-levels .choice { justify-content: flex-start; gap: 14px; cursor: pointer; margin: 0; border-radius: 0; }
-.access-levels .secondary { display: block; margin-block-start: 4px; line-height: 1.4; }
-.agent-access fieldset, .consent-card fieldset { padding: 0; border: 0; }
-.agent-access legend, .consent-card legend { font-weight: 600; margin-block-end: 10px; }
 .agent-access input[type=text], .agent-access input:not([type]), .connector input { min-inline-size: 0; inline-size: 100%; }
 .agent-actions { display: flex; justify-content: flex-end; gap: 12px; margin-block: 20px; }
 .agent-row, .activity-row { align-items: center; gap: 16px; }
@@ -14,7 +10,6 @@
 .token-reveal, .token-value { padding: 20px; }
 .token-value textarea { inline-size: 100%; min-block-size: 88px; margin-block: 12px; resize: vertical; font: 13px ui-monospace, monospace; overflow-wrap: anywhere; }
 .snippet { padding: 16px; }
-.snippet summary { cursor: pointer; font-weight: 600; }
 .agent-access pre { white-space: pre-wrap; overflow-wrap: anywhere; font: 13px/1.6 ui-monospace, monospace; }
 .connector { padding: 20px; }
 .connector input { margin-block-start: 8px; }
@@ -32,7 +27,24 @@
 
 .agent-row > div { flex: 1; }
 .agent-access input:not([type=checkbox]):not([type=radio]), .connector input { padding: 10px 12px; border-radius: 8px; border: 1px solid var(--separator); background: var(--fill-quaternary); color: var(--label); }
-.agent-access input[type=checkbox], .agent-access input[type=radio], .consent-card input { accent-color: var(--blue); }
 
-.consent-card .group-row:has(input[type=checkbox]) { justify-content: space-between; }
 :root[data-theme=dark] .consent-page { background: var(--background); }
+.access-section { margin-block: 24px; }
+.access-section h3 { margin-block-end: 10px; }
+.access-section .group, .consent-card .access-section .group { margin-block: 0; }
+.access-choice { inline-size: 100%; text-align: start; justify-content: space-between; padding-block: 16px; }
+.access-choice > span { flex: 1; }
+.access-choice .secondary { display: block; margin-block-start: 5px; line-height: 1.4; font-size: var(--callout); }
+.level-check { color: var(--blue); visibility: hidden; }
+.level-check.selected { visibility: visible; }
+.source-choice { justify-content: space-between; }
+.approval-card header .caption { margin-block-start: 6px; }
+.approval-preview { padding-block: 20px; }
+.approval-recipient { margin-block-end: 16px; }
+.approval-bubble { inline-size: fit-content; max-inline-size: 90%; margin-inline-start: auto; padding: 10px 16px; border-radius: 18px; border-end-end-radius: 6px; color: #fff; background: var(--blue); white-space: pre-wrap; overflow-wrap: anywhere; }
+.attachment-chips { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-block-start: 10px; }
+.attachment-chip { display: inline-flex; align-items: center; gap: 7px; padding: 8px 12px; border-radius: 10px; background: var(--fill-quaternary); overflow-wrap: anywhere; }
+.attachment-chip .icon { inline-size: 17px; block-size: 17px; }
+.approval-card > .disclosure { border-block-start: .5px solid var(--separator); }
+.approval-card .disclosure pre { font: 12px/1.6 ui-monospace, monospace; }
+.approval-card > .caption { margin-block-start: 12px; }

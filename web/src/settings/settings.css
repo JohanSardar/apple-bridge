@@ -1,0 +1,10 @@
+.settings-nav .settings-tile { display: inline-flex; align-items: center; justify-content: center; inline-size: 28px; block-size: 28px; border-radius: 7px; background: var(--gray-1); color: #fff; flex-shrink: 0; }
+.settings-nav .settings-tile .icon { inline-size: 19px; block-size: 19px; }
+.settings-tile.appearance { background: var(--blue); }
+.settings-tile.agents { background: var(--purple); }
+.settings-tile.approvals { background: var(--green); }
+.settings-tile.activity { background: var(--orange); }
+.settings-nav nav a { margin-block: 2px; padding: 8px; }
+.settings-nav nav a.selected { background: var(--blue); color: #fff; }
+.settings-layout { --purple: #af52de; --orange: #ff9500; }
+:root[data-theme=dark] .settings-layout { --purple: #bf5af2; --orange: #ff9f0a; }
