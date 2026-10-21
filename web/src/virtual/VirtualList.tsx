@@ -1,4 +1,5 @@
 import { createEffect, createMemo, createSignal, For, onCleanup, onMount, type JSX } from 'solid-js';
+import { beginWork } from '../motion/work';
 import { Positions } from './positions';
 export type VirtualListHandle = {
     scrollToIndex: (index: number, align?: 'start' | 'end') => void;
@@ -13,10 +14,17 @@ export function VirtualList<T>(props: {
     estimate?: (item: T) => number;
     render: (item: T, index: number) => JSX.Element;
     bottomAnchored?: boolean;
+    fixedHeights?: boolean;
+    selectedKey?: string;
+    keepTop?: boolean;
+    onActive?: (item:T)=>void;
+    onBottom?: (value:boolean)=>void;
     label: string;
     ref?: (handle: VirtualListHandle) => void;
     onVisible?: (start: number, end: number) => void;
 }) {
+    const controlled='selectedKey' in props;
+    const selected=()=>{revision();return controlled?(props.selectedKey?keyIndex.get(props.selectedKey)??-1:-1):active();};
     let viewport!: HTMLDivElement;
     let positions = new Positions([]), items: readonly T[] = [];
     let keyIndex = new Map<string, number>();
@@ -30,17 +38,20 @@ export function VirtualList<T>(props: {
     const scrollToIndex = (index: number, align: 'start' | 'end' = 'start') => { viewport.scrollTop = align === 'end' ? positions.offset(index + 1) - viewport.clientHeight : positions.offset(index); refresh(); if(align==='end'&&index===items.length-1)queueMicrotask(()=>{viewport.scrollTop=viewport.scrollHeight;refresh();}); };
     createEffect(() => {
         const next = props.items;
+        const finish=beginWork('virtual-items');
         const previous = viewport ? anchor() : undefined;
+        const atTop=viewport ? viewport.scrollTop<=2 : true;
         const atBottom = viewport ? viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight <= 2 : false;
         const first = items.length === 0;
         items = next;
         keyIndex = new Map(items.map((item, index) => [props.keyFor(item), index]));
-        positions = new Positions(items.map(item => { const estimate=cache.get(props.keyFor(item)) ?? props.estimate?.(item) ?? 60; return Number.isFinite(estimate)&&estimate>0?estimate:60; }));
+        positions = new Positions(items.map(item => { const estimate=(props.fixedHeights ? props.estimate?.(item) : cache.get(props.keyFor(item)) ?? props.estimate?.(item)) ?? 60; return Number.isFinite(estimate)&&estimate>0?estimate:60; }));
         if (viewport) {
             if (props.bottomAnchored && (atBottom || first)) {
                 viewport.scrollTop = Math.max(0, positions.total - viewport.clientHeight);
                 queueMicrotask(() => { viewport.scrollTop = viewport.scrollHeight; refresh(); });
             }
+            else if(props.keepTop&&atTop)viewport.scrollTop=0;
             else if (previous) {
                 const index = (keyIndex.get(previous.key) ?? -1);
                 if (index >= 0)
@@ -50,6 +61,7 @@ export function VirtualList<T>(props: {
         }
         else
             setRevision(value => value + 1);
+        finish();
     });
     onMount(() => {
         props.ref?.({ scrollToIndex, anchor });
@@ -86,17 +98,17 @@ export function VirtualList<T>(props: {
             }
         });
         observer.observe(viewport);
-        viewport.querySelectorAll('[data-index]').forEach(element => observer?.observe(element));
+        if(!props.fixedHeights)viewport.querySelectorAll('[data-index]').forEach(element => observer?.observe(element));
         if (props.bottomAnchored)
             scrollToIndex(items.length - 1, 'end');
         refresh();
     });
     onCleanup(() => { observer?.disconnect(); cancelAnimationFrame(frame); });
-    createEffect(() => { const value = range(); props.onVisible?.(value.start, value.end); });
-    const indices = createMemo(() => Array.from({ length: Math.max(0, range().end - range().start) }, (_, i) => range().start + i));
-    return <div ref={viewport} class="virtual-viewport" data-scroll={props.label} tabindex="0" role="listbox" aria-label={props.label} aria-activedescendant={items.length ? 'virtual-row-' + props.keyFor(items[active()]) : undefined} onScroll={() => { if (!frame)
-        frame = requestAnimationFrame(() => { frame = 0; setScroll(viewport.scrollTop); }); }} onKeyDown={event => {
-            let next = active();
+    createEffect(() => { const value = range(); props.onVisible?.(value.start, value.end); props.onBottom?.(positions.total-scroll()-height()<=2); });
+    const keys = createMemo(() => { revision(); return items.slice(range().start,range().end).map(props.keyFor); });
+    return <div ref={viewport} class="virtual-viewport" data-scroll={props.label} tabindex="0" role="listbox" aria-label={props.label} aria-activedescendant={(revision(),items[selected()] ? 'virtual-row-' + props.keyFor(items[selected()]) : undefined)} onScroll={() => { if (!frame)
+        frame = requestAnimationFrame(() => { frame = 0; const finish=beginWork('virtual-scroll'); setScroll(viewport.scrollTop); finish(); }); }} onKeyDown={event => {
+            let next = selected();
             if (event.key === 'ArrowDown')
                 next++;
             else if (event.key === 'ArrowUp')
@@ -114,12 +126,15 @@ export function VirtualList<T>(props: {
             event.preventDefault();
             next = Math.max(0, Math.min(items.length - 1, next));
             setActive(next);
+            if(items[next])props.onActive?.(items[next]);
             scrollToIndex(next);
-        }}><div class="virtual-content" style={{ height: (revision(), positions.total + 'px') }}><For each={indices()}>{index => {
+        }}><div class="virtual-content" style={{ height: (revision(), positions.total + 'px') }}><For each={keys()}>{key => {
             let row!: HTMLDivElement;
-            const item = createMemo(() => { revision(); return items[index]; });
-            onMount(() => observer?.observe(row));
+            const index=createMemo(()=>{revision();return keyIndex.get(key)??0;});
+            const item = createMemo(() => { revision(); return items[index()]; });
+            const content=createMemo(()=>props.render(item(),index()));
+            onMount(() => {if(!props.fixedHeights)observer?.observe(row);});
             onCleanup(() => observer?.unobserve(row));
-            return <div ref={row} id={'virtual-row-' + props.keyFor(item())} class="virtual-row" role="option" aria-selected={index === active()} aria-setsize={(revision(),items.length)} aria-posinset={index + 1} data-index={index} data-key={props.keyFor(item())} style={{ transform: `translateY(${(revision(), positions.offset(index))}px)` }}>{props.render(item(), index)}</div>;
+            return <div ref={row} id={'virtual-row-' + key} class="virtual-row" role="option" aria-selected={index() === selected()} aria-setsize={(revision(),items.length)} aria-posinset={index() + 1} data-index={index()} data-key={key} style={{ transform: `translateY(${(revision(), positions.offset(index()))}px)` }}>{content()}</div>;
         }}</For></div></div>;
 }
