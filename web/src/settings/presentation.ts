@@ -8,3 +8,10 @@ export function lastUsed(value: string, now = new Date()) {
     if (day === yesterday) return s.yesterday;
     return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', ...(date.getFullYear() !== now.getFullYear() ? { year: 'numeric' } : {}) });
 }
+export function expiry(value: string, now: number) {
+    const minutes = Math.min(1440, Math.ceil((Date.parse(value) - now) / 60000));
+    if (minutes <= 0) return s.expired;
+    if (minutes < 60) return s.expiresIn.replace('{time}', minutes + ' ' + (minutes === 1 ? s.minute : s.minutes));
+    const hours = Math.ceil(minutes / 60);
+    return s.expiresIn.replace('{time}', hours + ' ' + (hours === 1 ? s.hour : s.hours));
+}

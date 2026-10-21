@@ -76,6 +76,7 @@ Process: every change ships as a small PR (WORKER-RULES, Git and GitHub). Status
 - DONE W1-UI: Solid shell, design system, springs, virtual list and web-level runner (#6–#8). The 120 Hz and 8 ms targets are unproven on this 60 Hz, headless host.
 - IN PROGRESS W1-REMOTE: system Funnel backend real on the Air; public REST/MCP/SSE; REST p95 60 ms through Funnel (#27–#29, #34). Embedded tsnet backend: the real login needs a GUI approval on the Air.
 - DONE W1-AGENT: credentials (#18), activity (#26), SQLite capture fix (#47), owner approvals (#54), OAuth grants (#62) and endpoints (#64); grouped Agents/Approvals/Activity screens and browser consent pass the scripted flow. Replica delegation shipped separately in W1-RELAY (#73).
+- DONE W1-AGENT polish: neutral Bridge consent, human approval previews and relative times, custom access controls/disclosures, and colored Settings navigation.
 - IN PROGRESS W1-DEMO: generator (#20), demo sessions and CLI (#25), rich runner (#30) finishing exclusive performance reruns.
 - IN PROGRESS W1-MEDIA: Helper variants (#9). Real cleanup of six tagged self-chat file bubbles and the cold-arrival latency still need the GUI.
 - IN PROGRESS W1-RELAY: Safari (#40), relay auth/pairing/feed (#45, #52, #55), replay/revocation (#56), Remote commands (#67) and fresh replica agent delegation (#73) merged; public Ubuntu agent consent/read-your-write proven. Native latency/blob proof remains blocked on LIVE-FIX.

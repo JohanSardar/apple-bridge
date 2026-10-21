@@ -81,6 +81,7 @@ test('WEB-AGENT-OAUTH connector consent, access levels, approval screens and tok
     await page.getByRole('button', { name: 'Done', exact: true }).click();
     await expect(page.getByRole('textbox', { name: 'Agent token', exact: true })).toHaveCount(0);
     await page.locator('.settings-layout, .settings-content').evaluateAll(elements => elements.forEach(element => element.scrollTo(0, 0)));
+    await page.getByRole('link', { name: 'Agents', exact: true }).scrollIntoViewIfNeeded();
     await page.screenshot({ path: `${evidence}/agents-${info.project.name}.png`, fullPage: true });
     await page.getByRole('link', { name: 'Approvals', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'All caught up' })).toBeVisible();
@@ -91,7 +92,20 @@ test('WEB-AGENT-OAUTH connector consent, access levels, approval screens and tok
     expect((await pending.json()).state).toBe('awaiting_approval');
     await expect(page.getByText(text, { exact: true })).toBeVisible();
     await expect(page.getByText('Writing assistant', { exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Send a message', exact: true })).toBeVisible();
+    await expect(page.locator('.approval-recipient')).toContainText(chatTitle);
+    await expect(page.locator('.approval-bubble')).toHaveText(text);
+    await expect(page.locator('.attachment-chip')).toHaveText('Draft.txt');
+    await expect(page.getByText('Expires in 24 hours', { exact: true })).toBeVisible();
+    await expect(page.locator('details')).toHaveCount(0);
+    const details = page.getByRole('button', { name: 'Details', exact: true });
+    await details.click();
+    await expect(details).toHaveAttribute('aria-expanded', 'true');
+    await details.click();
+    await expect(details).toHaveAttribute('aria-expanded', 'false');
+    await expect(details.locator('.disclosure-chevron')).toHaveCSS('transform', 'matrix(-1, 0, 0, -1, 0, 0)');
     await page.locator('.settings-layout, .settings-content').evaluateAll(elements => elements.forEach(element => element.scrollTo(0, 0)));
+    await page.getByRole('link', { name: 'Approvals', exact: true }).scrollIntoViewIfNeeded();
     await page.screenshot({ path: `${evidence}/approvals-${info.project.name}.png`, fullPage: true });
     await page.getByRole('button', { name: 'Approve', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'All caught up' })).toBeVisible();

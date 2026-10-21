@@ -38,3 +38,13 @@
 .level-check { color: var(--blue); visibility: hidden; }
 .level-check.selected { visibility: visible; }
 .source-choice { justify-content: space-between; }
+.approval-card header .caption { margin-block-start: 6px; }
+.approval-preview { padding-block: 20px; }
+.approval-recipient { margin-block-end: 16px; }
+.approval-bubble { inline-size: fit-content; max-inline-size: 90%; margin-inline-start: auto; padding: 10px 16px; border-radius: 18px; border-end-end-radius: 6px; color: #fff; background: var(--blue); white-space: pre-wrap; overflow-wrap: anywhere; }
+.attachment-chips { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-block-start: 10px; }
+.attachment-chip { display: inline-flex; align-items: center; gap: 7px; padding: 8px 12px; border-radius: 10px; background: var(--fill-quaternary); overflow-wrap: anywhere; }
+.attachment-chip .icon { inline-size: 17px; block-size: 17px; }
+.approval-card > .disclosure { border-block-start: .5px solid var(--separator); }
+.approval-card .disclosure pre { font: 12px/1.6 ui-monospace, monospace; }
+.approval-card > .caption { margin-block-start: 12px; }
