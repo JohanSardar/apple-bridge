@@ -1,0 +1,32 @@
+{
+  "scenario": "REM-STORE-PERF",
+  "purpose": "Determine whether sim A/B measures the Swift enrichment change",
+  "original_gateway_sha256": {
+    "A": "03cd226f7c8f9b204d5479daf5eb3f08911708bc7668d9292f3d00bab90dca34",
+    "B": "162af9797d5cecf63a0f5739fe811a73acbbdf93259ca71ed22ff03b20ca9703"
+  },
+  "original_bridge_lab_sha256": {
+    "A1": "d623ebac9e21cc17b097e1c5fc74932feaa523004b8b06974b1db5a89aa1e41e",
+    "B1": "0ce16593dcb6448360896cf346af4b361fa627e16390a409998edf937e34da4a",
+    "A2": "5d2370673be700439a2c18b363826b43b50a504b20168a3467f9525b905c299a",
+    "B2": "0f9b0a29cc7ad187fe1f60d275c13ef2225147538a5f36af057c28bafdd625cc"
+  },
+  "normalization": {
+    "GOFLAGS": "-trimpath -buildvcs=false -p=2",
+    "gateway_A_sha256": "a85d2a809368ecbee7544897893957b6c908152b6138e366ba400fb98f4eed1f",
+    "gateway_B_sha256": "a85d2a809368ecbee7544897893957b6c908152b6138e366ba400fb98f4eed1f",
+    "gateway_cmp_exit": 0,
+    "shared_bridge_lab_v1_sha256": "d74b61d00d957f700ba8c9a4c3e341832eb750e3653faf6a5759c325b1394edd",
+    "shared_bridge_lab_v2_sha256": "1b6a4e6190167113f01b1e091c57c683102f1f015e089a56bddebf4b09870890",
+    "sim_apple_peer": "simapple subcommand of the same shared bridge-lab image"
+  },
+  "assets": {
+    "A_manifest_sha256": "7f424d02012500ea3f0f668cb85391bd6ddcc20e0a860a2604bccb8744ae9cae",
+    "B_manifest_sha256": "7f424d02012500ea3f0f668cb85391bd6ddcc20e0a860a2604bccb8744ae9cae",
+    "files": ["web/dist/.gitkeep"],
+    "file_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "explanation": "Gateway differences disappear after removing worktree paths and VCS build metadata. Runtime Go and SimApplePeer sources are unchanged. Original lab images also differ in added store scenarios and diagnostics; controlled candidates use one exact shared image. Swift enrichment does not execute in sim.",
+  "verdict": "sim A/B not applicable: identical controlled binaries",
+  "use_sim_tail_outliers_as_feature_regression_evidence": false
+}

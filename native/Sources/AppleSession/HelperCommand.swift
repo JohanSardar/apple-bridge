@@ -122,6 +122,23 @@ public enum HelperCommand {
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportURL.path)
             return
         }
+        if arguments.first == "reminders-store-flag-proof" {
+            func option(_ key: String) throws -> String {
+                guard let index = arguments.firstIndex(of: key), index + 1 < arguments.count else { throw ProbeFailure.invalidArguments }
+                return arguments[index + 1]
+            }
+            let tag = try option("--tag"), item = try option("--item-id"), list = try option("--list-id")
+            var result: Result<JSON, any Error>?
+            Task { @MainActor in
+                do { result = .success(try await RemindersFlagProof.run(tag: tag, itemIdentifier: item, listIdentifier: list)) }
+                catch { result = .failure(error) }
+            }
+            while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.005)) }
+            let proof = try result!.get()
+            try JSONEncoder().encode(proof).write(to: reportURL, options: .atomic)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportURL.path)
+            return
+        }
         if arguments.first == "reminders-store-proof" {
             func option(_ key: String) throws -> String {
                 guard let index = arguments.firstIndex(of: key), index + 1 < arguments.count else { throw ProbeFailure.invalidArguments }

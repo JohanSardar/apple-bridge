@@ -10,6 +10,14 @@ struct RemindersStoreChecks {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("bridge-reminders-store-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
+        var refreshHistogram = StoreRefreshHistogram()
+        let firstTiming = refreshHistogram.record(1000)
+        precondition(firstTiming["first_ms"].number == 1000 && firstTiming["warm"]["samples"].number == 0 && firstTiming["warm"]["p95_ms"] == .null)
+        var finalTiming = firstTiming
+        for value in 1...200 { finalTiming = refreshHistogram.record(Double(value)) }
+        precondition(finalTiming["first_ms"].number == 1000 && finalTiming["total_samples"].number == 201)
+        precondition(finalTiming["warm"]["samples"].number == 200 && finalTiming["warm"]["p50_ms"].number == 100 && finalTiming["warm"]["p95_ms"].number == 190 && finalTiming["warm"]["max_ms"].number == 200)
+        print("refresh histogram excludes first full read and retains exact warm percentiles: PASS")
         let path = directory.appendingPathComponent("fixture.sqlite").path
         let fixture = SyntheticReminderDatabase(path: path)
         fixture.execute("PRAGMA journal_mode=WAL; PRAGMA wal_autocheckpoint=0")
@@ -64,28 +72,6 @@ struct RemindersStoreChecks {
         ]
         for (name, passed) in contractChecks { print("\(name): \(passed ? "PASS" : "FAIL")") }
         if contractChecks.contains(where: { !$0.1 }) { exit(1) }
-        if let index = CommandLine.arguments.firstIndex(of: "--report"), index + 1 < CommandLine.arguments.count {
-            var parent = parentFields.object
-            parent["title"] = .string("Bridge Test Parent")
-            parent["completed"] = .bool(false)
-            parent["list_id"] = RemindersStoreSnapshot.reference("reminders.list", "list")
-            var child = childFields.object
-            child["title"] = .string("Bridge Test Child")
-            child["completed"] = .bool(false)
-            child["list_id"] = RemindersStoreSnapshot.reference("reminders.list", "list")
-            var list = listFields.object
-            list["title"] = .string("Bridge Test List")
-            list["writable"] = .bool(true)
-            func observation(_ collection: String, _ key: String, _ data: JSON) -> JSON {
-                .object(["kind": .string("upsert"), "collection": .string(collection), "native_key": .string(key), "data": data])
-            }
-            let result = JSON.object(["observations": .array([
-                observation("reminders.list", "list", .object(list)),
-                observation("reminders.reminder", "eventkit-parent", .object(parent)),
-                observation("reminders.reminder", "eventkit-child", .object(child))
-            ])])
-            try JSONEncoder().encode(result).write(to: URL(fileURLWithPath: CommandLine.arguments[index + 1]), options: .atomic)
-        }
         fixture.execute("UPDATE ZREMCDREMINDER SET ZFLAGGED=0 WHERE Z_PK=10")
         precondition(snapshot.reminders[0]["ZFLAGGED"] == .integer(1))
         let refreshed = try reader.read()
@@ -93,6 +79,10 @@ struct RemindersStoreChecks {
         try await StoreSessionChecks.run(path: path, execute: fixture.execute)
         if let index = CommandLine.arguments.firstIndex(of: "--perf-report"), index + 1 < CommandLine.arguments.count {
             try await StorePerformanceChecks.run(path: path, execute: fixture.execute, report: CommandLine.arguments[index + 1])
+        }
+        let observations = try await StoreEnrichmentChecks.run(path: path, execute: fixture.execute)
+        if let index = CommandLine.arguments.firstIndex(of: "--report"), index + 1 < CommandLine.arguments.count {
+            try JSONEncoder().encode(JSON.object(["observations": .array(observations)])).write(to: URL(fileURLWithPath: CommandLine.arguments[index + 1]), options: .atomic)
         }
         print("RemindersStore: synthetic schema, arbitrary entity IDs, WAL backup, isolation, deleted and pending exclusion passed")
     }

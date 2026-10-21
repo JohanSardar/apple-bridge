@@ -833,6 +833,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 		}
 		return true
 	})
+	if s.ID == "CORE-LIVE-LATENCY" {
+		retainLiveSamples(&evidence, effects, watchers)
+	}
 	for i, observer := range watchers {
 		values := []float64{}
 		timeouts := 0
@@ -1009,6 +1012,9 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		ran++
 		fmt.Fprintln(os.Stderr, "running", s.ID, level)
 		duration := 3 * time.Minute
+		if level == "real" && (s.ID == "CORE-LIVE-LATENCY" || s.ID == "REM-CRUD") {
+			duration = 8 * time.Minute
+		}
 		if s.Feature == "web.relay" && level == "replica" {
 			duration = 5 * time.Minute
 		}
@@ -1206,4 +1212,34 @@ func withoutCommands(records []contracts.Record) []contracts.Record {
 		}
 	}
 	return out
+}
+
+func retainLiveSamples(evidence *Evidence, effects map[string]time.Time, watchers []*watcher) {
+	titles := make([]string, 0, len(effects))
+	for title := range effects {
+		titles = append(titles, title)
+	}
+	slices.SortFunc(titles, func(a, b string) int { return effects[a].Compare(effects[b]) })
+	samples := make([]map[string]any, 0, len(titles))
+	for index, title := range titles {
+		effect := effects[title]
+		row := map[string]any{"index": index, "effect_at": effect.UTC().Format(time.RFC3339Nano)}
+		for endpoint, observer := range watchers {
+			seen, ok := observer.observed(title)
+			if !ok {
+				continue
+			}
+			name := "gateway"
+			if endpoint > 0 {
+				name = fmt.Sprintf("replica%d", endpoint-1)
+			}
+			row[name+"_visible_at"] = seen.At.UTC().Format(time.RFC3339Nano)
+			row[name+"_ms"] = max(0, float64(seen.At.Sub(effect))/float64(time.Millisecond))
+		}
+		samples = append(samples, row)
+	}
+	if evidence.Metrics == nil {
+		evidence.Metrics = map[string]any{}
+	}
+	evidence.Metrics["live_samples"] = samples
 }

@@ -603,6 +603,7 @@ features:
       - {id: WEB-REM-READ, levels: [web]}
       - {id: WEB-REM-WRITE, levels: [web, real]}
       - {id: WEB-REM-PARITY, levels: [web, real]}
+    notes: Store-only flag, section and tag changes currently depend on EventKit notifications. The real flag-only gateway propagation check is limited until the Helper has Reminders Apple Events authorization; if no notification arrives, follow up with a WAL FSEvents hint through the existing bounded coalescer. UI and remaining store decoders are still todo.
   - id: web.calendar
     title: Calendar web app (read, write, parity)
     requirements: [R-WEB-UI, R-WEB-FAST, R-RW]

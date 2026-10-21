@@ -3,6 +3,7 @@ import Darwin
 import SourceSupport
 import AgendaGate
 import RemindersSource
+import RemindersStore
 import NotesSource
 import ContactsSource
 import UsageSource
@@ -55,6 +56,8 @@ public actor AppleSession: ObservationSink {
     private let usage: UsageSource
     private let contacts: ContactsSource
     private let source: RemindersSource
+    private var remindersRefreshHistogram = StoreRefreshHistogram()
+    private let remindersStore: RemindersStoreEnrichment
  private let calendar: CalendarSource
     private let guardLog: DispatchGuard
     private let socket: String
@@ -74,6 +77,7 @@ public actor AppleSession: ObservationSink {
         let agenda = AgendaGate(trace: trace)
         self.agenda = agenda
         source = try RemindersSource(gate: agenda, home: home, commandsEnabled: true)
+        remindersStore = RemindersStoreEnrichment(trace: commandsEnabled ? trace : nil)
  calendar = try CalendarSource(gate: agenda, home: home, commandsEnabled: true)
         guardLog = try DispatchGuard(home: home)
         let pidFile = home.appendingPathComponent("helper.pid")
@@ -255,6 +259,15 @@ public actor AppleSession: ObservationSink {
 
     public func emitCheckpoint(source: String, generation: String, checkpoint: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) async throws {
         guard wire != nil else { throw SourceFailure.unavailable }
+        let connection = wire
+        let refreshStarted = source == "reminders" && labEnabled ? CaptureTrace.now() : 0
+        let observations = source == "reminders" ? await remindersStore.refresh(observations, generation: generation) : observations
+        let refreshFinished = source == "reminders" && labEnabled ? CaptureTrace.now() : 0
+        guard wire === connection, !Task.isCancelled else { throw SourceFailure.unavailable }
+        if source == "reminders", labEnabled {
+            let milliseconds = Double(refreshFinished - refreshStarted) / 1_000_000
+            trace.record("reminders_store_refresh", keys: observations.map { $0["native_key"].string }, fields: ["duration_ms": .number(milliseconds), "started_ns": .integer(refreshStarted), "finished_ns": .integer(refreshFinished), "histogram": remindersRefreshHistogram.record(milliseconds)])
+        }
         let chunks = try split(observations, maximumBytes: live ? 64000 : 16000)
         for (index,chunk) in chunks.enumerated() {
             try await withCheckedThrowingContinuation { continuation in
@@ -310,7 +323,8 @@ public actor AppleSession: ObservationSink {
                     if live.contains(where: { flights[$0.source] == nil }) { continue }
                     return
                 }
-                observations = validated
+                observations = await remindersStore.apply(validated)
+                guard wire === connection, !Task.isCancelled else { return }
                 if live.contains(where: { flights[$0.source] == nil }) { continue }
             } else { observations = pending.observations }
             let sending = Pending(source: pending.source, checkpoint: pending.checkpoint, generation: pending.generation, scanID: pending.scanID, completionEvidence: pending.completionEvidence, blobHandles: pending.blobHandles, observations: observations, started: pending.started, scope: pending.scope, completion: pending.completion)
@@ -326,7 +340,7 @@ public actor AppleSession: ObservationSink {
             let frame = JSON.object(capture)
             let size = try PeerWire.encode(frame).count
             guard size <= credit else { return }
-            trace.record("capture_sent", keys: observations.map { $0["native_key"].string }, fields: ["checkpoint": .string(checkpoint), "live": .bool(prioritized), "credit": .number(Double(credit)), "blob_count": .number(Double(pending.blobHandles.count))])
+            trace.record("capture_sent", keys: observations.map { $0["native_key"].string }, fields: ["source": .string(pending.source), "checkpoint": .string(checkpoint), "live": .bool(prioritized), "credit": .number(Double(credit)), "blob_count": .number(Double(pending.blobHandles.count))])
             try wire?.send(frame)
             credit -= size
             flights[pending.source] = Flight(pending: sending, checkpoint: checkpoint, bytes: size)
@@ -355,7 +369,7 @@ public actor AppleSession: ObservationSink {
             for observation in flight.pending.observations where ["upsert", "absent"].contains(observation["kind"].string) {
                 observedCheckpoints[observation["collection"].string + "/" + observation["native_key"].string] = flight.checkpoint
             }
-            if source == "reminders" { try await self.source.didCommit(flight.pending.observations, generation: flight.pending.generation) }
+            if source == "reminders" { try await self.source.didCommit(flight.pending.observations.map(RemindersStoreProjection.baseObservation), generation: flight.pending.generation) }
             flights.removeValue(forKey: source)
             flight.pending.completion.resume()
             try await drain()
@@ -500,7 +514,9 @@ let operation=outcome["evidence"]["prepared"]["action"]["op"].string
             preparing = nonce
             guard !(await guardLog.contains(frame["command_id"].string)) else { throw SourceFailure.conflict }
             let selected = additionalSources[frame["action"]["op"].string.components(separatedBy: ".").first ?? ""] ?? source
- let prepared = frame["action"]["op"].string.hasPrefix("contacts.") ? try await contacts.prepare(frame) : frame["action"]["op"].string.hasPrefix("calendar.") ? try await calendar.prepare(frame) : try await selected.prepare(frame)
+ var nativeFrame = frame.object
+            if frame["action"]["op"].string.hasPrefix("reminders.") { nativeFrame["expected_state"] = RemindersStoreProjection.baseData(frame["expected_state"]) }
+ let prepared = frame["action"]["op"].string.hasPrefix("contacts.") ? try await contacts.prepare(frame) : frame["action"]["op"].string.hasPrefix("calendar.") ? try await calendar.prepare(frame) : try await selected.prepare(.object(nativeFrame))
             guard !Task.isCancelled, wire === connection, fence == owner, preparing == nonce, expires > Date() else { throw SourceFailure.expired }
             let ticket = UUID().uuidString
             tickets[ticket] = Ticket(command: frame, prepared: prepared, expiry: ContinuousClock.now.advanced(by: .milliseconds(Int64(min(30, expires.timeIntervalSinceNow) * 1000))), fence: owner)

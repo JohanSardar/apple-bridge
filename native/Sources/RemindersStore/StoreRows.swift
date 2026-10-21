@@ -1,6 +1,10 @@
 import Foundation
 import SQLite3
 
+public enum StoreScalar: Equatable, Sendable {
+    case integer(Int64), real(Double), text(String)
+}
+
 public struct StoreIdentity: Equatable, Sendable {
     public let key: Int64
     public let entity: Int64
@@ -30,12 +34,12 @@ public struct StoreListRow: Equatable, Sendable {
     public let displayOrder: Double?
     public let pinned: Bool?
     public let pinnedDate: Double?
-    public let sortingStyle: String?
+    public let sortingStyle: StoreScalar?
     public let groceries: Bool?
     public let groceryLocale: String?
     public let sharingStatus: Int64?
     public let sharedOwner: String?
-    public let smartType: Int64?
+    public let smartType: StoreScalar?
     public let filter: Data?
     public let sectionOrder: Data?
     public let sectionMembership: Data?
@@ -78,17 +82,29 @@ struct StoreColumns {
     let statement: OpaquePointer
 
     func integer(_ index: Int32) -> Int64? {
-        sqlite3_column_type(statement, index) == SQLITE_NULL ? nil : sqlite3_column_int64(statement, index)
+        sqlite3_column_type(statement, index) == SQLITE_INTEGER ? sqlite3_column_int64(statement, index) : nil
     }
 
     func number(_ index: Int32) -> Double? {
-        sqlite3_column_type(statement, index) == SQLITE_NULL ? nil : sqlite3_column_double(statement, index)
+        [SQLITE_INTEGER, SQLITE_FLOAT].contains(sqlite3_column_type(statement, index)) ? sqlite3_column_double(statement, index) : nil
     }
 
-    func bool(_ index: Int32) -> Bool? { integer(index).map { $0 != 0 } }
+    func bool(_ index: Int32) -> Bool? {
+        guard let value = integer(index), value == 0 || value == 1 else { return nil }
+        return value == 1
+    }
+
+    func scalar(_ index: Int32) -> StoreScalar? {
+        switch sqlite3_column_type(statement, index) {
+        case SQLITE_INTEGER: return integer(index).map(StoreScalar.integer)
+        case SQLITE_FLOAT: return number(index).map(StoreScalar.real)
+        case SQLITE_TEXT: return text(index).map(StoreScalar.text)
+        default: return nil
+        }
+    }
 
     func text(_ index: Int32) -> String? {
-        guard sqlite3_column_type(statement, index) != SQLITE_NULL, let bytes = sqlite3_column_text(statement, index) else { return nil }
+        guard sqlite3_column_type(statement, index) == SQLITE_TEXT, let bytes = sqlite3_column_text(statement, index) else { return nil }
         return String(decoding: UnsafeBufferPointer(start: bytes, count: Int(sqlite3_column_bytes(statement, index))), as: UTF8.self)
     }
 
