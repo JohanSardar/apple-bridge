@@ -67,10 +67,21 @@ One line per unit. Rules: BUILD-GOAL.md (2026-10-17 update: no reviews, merge on
 - Verification: all 120 simulations pass, including 24/24 Messages; Go tests, lint, features and strict signing smoke pass. Fixed the scope probe command envelope and stale store-wide disk-capacity overlays; the quiet 200,000-message benchmark also passes. Features: 23 done, 1 limited, 0 blocked; 180/183 scenario-levels. Initial failures and diagnostics retained. No new scenario IDs or dependencies.
 
 ## Web app (DECISIONS 2026-10-20, SPEC §23)
-- IN PROGRESS W1-REMOTE: system Funnel preserves other Serve projects, public Ubuntu REST/MCP/SSE and security scenarios pass; embedded private startup/source checks pass, real GUI authorization remains pending. WebKit records that Secure cookies are not sent on HTTP localhost; public HTTPS is the primary path.
-- IN PROGRESS W1-AGENT: scoped hashed credentials, levels, CLI and owner management routes pass WEB-AGENT-CREDENTIALS sim; approve-first writes remain blocked pending the owner approval slice. Activity, OAuth and settings screens follow in separate PRs.
-- IN PROGRESS W1-UI: Solid shell/design system, springs, anchored 100k-row virtual list, private cache/PWA, passkey settings and web-level runner; native chrome and 12 real-server screenshots verified. Real browser enrollment/login, revocation, deltas and cursor resume pass; shell is 19.13 KB gzip and warm cached content is under 100 ms. The 120 Hz scrolling and 8 ms paint targets remain unproven; unsupported CLS/Long Task APIs are recorded as unavailable.
-- DONE W1-RM: transactional derived chat/thread/collection read models, REST/MCP contracts, snapshot and existing-store rebuilds; WEB-RM-CHATS and WEB-RM-THREAD pass at sim on synthetic data (500 chats, 170k messages), including Air latency budgets. Unseen mentions remain unavailable; older reactions without sent_at use observed_at.
-- W1-WEB: browser front door, passkeys/device sessions, web/1 live views, variant/upload routes and interactive command metadata pass 8/8 sim scenarios; record/read-model commit-to-frame p95 1.172/6.734 ms (32 samples each), revoke 102.393 ms; core latest matrix 56/56 with checkpoint-only fixture race fixed; lint/vet/features green. web.frontdoor stays in_progress for W1-UI browser proofs; replica upload forwarding and remaining chat filters are pending.
-- DONE W0 decisions + Messages spec draft (`design/web/messages.md`) + SPEC §23 + ADRs 0015–0020 + web features (todo). Waiting: Johan's skim of the Messages spec (gates W2). Pending: capture pass on the Air (lid closed during W0) to fill messages.md §17 and the "to verify" items.
-- LIMITED W1-MEDIA: Helper variants + ThumbHash, durable recompute, live/backfill scheduling, normal blob sync and Go sim implemented; sim/caps and read-only real codecs + Ubuntu transfer verified. Six tagged self-chat file bubbles need safe cleanup before the cold-arrival real scenario and local merge can complete.
+Process: every change ships as a small PR (WORKER-RULES, Git and GitHub). Status lives in features.yaml; one line per unit here.
+- DONE W0: decisions, Messages spec draft (`design/web/messages.md`), SPEC §23 including W2–W8, ADRs 0015–0020, and the drafts for Reminders, Calendar, Contacts and Notes. Johan's skim of the Messages spec is still open. W2 proceeds on the draft and applies his changes when they come.
+- DONE W1-RM: chat, thread and collection read models (#2); rich filters and collections, plus `messages.handles` (#14, #22).
+- DONE W1-WEB: front door, passkey device sessions and web/1 live views (#3–#5). Hardening: last passkey kept (#15), host pinning (#19), per-IP auth backoff (#23, #24), contact thumbnails (#16), handles route (#38). Pending: local Safari session (#40), and replica upload forwarding (W3).
+- DONE W1-UI: Solid shell, design system, springs, virtual list and web-level runner (#6–#8). The 120 Hz and 8 ms targets are unproven on this 60 Hz, headless host.
+- IN PROGRESS W1-REMOTE: system Funnel backend real on the Air; public REST/MCP/SSE; REST p95 60 ms through Funnel (#27–#29, #34). Embedded tsnet backend: the real login needs a GUI approval on the Air.
+- IN PROGRESS W1-AGENT: credentials (#18), activity log (#26). Approvals: an intermittent indeterminate first approved send is under diagnosis. OAuth and the agent screens follow.
+- IN PROGRESS W1-DEMO: generator (#20), demo sessions and CLI (#25), rich runner (#30) finishing exclusive performance reruns.
+- IN PROGRESS W1-MEDIA: Helper variants (#9). Real cleanup of six tagged self-chat file bubbles and the cold-arrival latency still need the GUI.
+- IN PROGRESS W1-RELAY: replicas over the Remote relay with device-key auth, after #40.
+- IN PROGRESS W2: shared primitives (#17), reader decoders (#31 balloons), transcript, list.
+- Dev infrastructure:
+  - heavy.sh: re-entrant (#11), SDK matching the OS (#35), exclusive lane for browser performance gates (#36, #37).
+  - Per-project web budgets (#39); dist placeholder kept after build (#41); detached Air runs (#42).
+- **Waiting on the Air being unlocked** (lock screen; never type passwords):
+  - Messages capture pass for `messages.md` §17 and the "to verify" rows.
+  - Cleanup of the six W1-MEDIA test bubbles.
+  - Embedded tsnet login approval (`remote-on.log` in `/tmp/ablab/w1-remote-embedded-check`).
