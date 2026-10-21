@@ -1,0 +1,82 @@
+# Calendar (web) spec
+
+Status: W6 draft, waiting for Johan's skim. The format follows `messages.md` and `reminders.md`. **When** within W6 is R (read), W (write), P (parity) or hide.
+
+**Bridge facts:**
+- EventKit window is 2 years back to 2 years ahead, sliding daily.
+- Events carry title, notes, location, url, start, end, all-day, time zone, recurrence (on every occurrence), exception flag, attendees (read-only), alarms, availability, status and calendar.
+- Calendars carry title, account, color, writable and type.
+- Writes: create, update and delete with span `this|future` (`all` rejects), and create calendar.
+- EventKit doesn't expose travel time, attachments, invitation replies (accept/decline), attendee editing or a structured location (geo).
+- `Calendar.sqlitedb` in the Calendar group container holds most of these. Read parity can come from it the same way as Reminders.
+
+## 1. Layouts and views
+
+| Width | Layout | Mirrors |
+|---|---|---|
+| ≥ 1024 px | Toolbar (Day / Week / Month / Year segmented control, Today, ‹ ›, search, +), optional calendars sidebar (accounts → calendars with color checkboxes, mini month), main view, event inspector popover | macOS Calendar |
+| < 1024 px | Month grid with an event list below (iOS default), or Day / List; tap an event to push details; "Calendars" sheet; "+" | iPhone Calendar |
+
+| View | Spec |
+|---|---|
+| Day | All-day strip on top, then a 24-hour timeline with a now-line (red dot and line, updated each minute) and overlapping events laid out in columns. Desktop shows the mini month and event details beside it |
+| Week | 7 columns, sticky all-day row, the same timeline layout, and today's column highlighted |
+| Month | 6×7 grid. Desktop shows event chips (colored dot + title + time) with "+N more"; phone shows dots per day plus the selected day's list |
+| Year | 12 mini months; desktop heat-tint optional; tapping a day opens it |
+| List (phone) | Chronological agenda with sticky day headers |
+
+**Navigation:**
+- Swipe or trackpad moves between periods with continuous scroll: vertical months on phone, horizontal on desktop with momentum.
+- Pinch zooms the hour height in Day/Week.
+- Keys: ⌘1–⌘4 for Day/Week/Month/Year, ⌘T for Today, ⌘←/⌘→ for previous/next.
+
+**Deep links:** `/calendar/<view>/<yyyy-mm-dd>` and `/calendar/event/<id>`.
+
+## 2. Events
+
+| Feature | Apple | Web | Bridge | When |
+|---|---|---|---|---|
+| Event block | Calendar color (tinted fill + solid left bar), title, time, location; declined events struck through; tentative ones hatched | Same | R; status R | R |
+| All-day / multi-day | Spans across days in the all-day row and month grid | Same | R | R |
+| Recurring | Repeat glyph; the edit/delete prompt asks "This Event Only / All Future Events" | Same two choices (no "All") | R; W with span this/future | R / W |
+| Create | Drag on the timeline, double-click, "+", or quick event with natural language ("Lunch with Sam Friday 1pm") | Same; natural language parsed client-side | create W | W |
+| Move / resize | Drag the block or its edges with 15-min snapping and live time labels | Same, with springy snap | update W | W |
+| Details inspector | Title, location (map snapshot, Get Directions link), all-day, starts, ends, time zone, repeat, travel time, calendar, invitees, alert(s), show as, URL, notes, attachments | Every field EventKit carries; map snapshot from the location text via a maps link (no geo) | R/W; travel time, attachments and geo `—` | R / W / P |
+| Invitees | List with response status; organizer | Read-only list with status badges | R (attendees) | R |
+| Respond to invitation | Accept / Maybe / Decline | Hidden unless provable through Accessibility | `—` | P (investigate) / hide |
+| Alerts | None, At time, 5/10/15/30 min, 1/2 h, 1/2 days, Custom; second alert | Same | R/W | W |
+| Time zone override | Per-event time zone | Same | R/W | W |
+| Delete | Confirm, with span for recurring events | Same | W | W |
+| Search | Across titles, locations, notes and invitees | Same, results grouped by date | R (`search`) | R |
+| Birthdays / holidays | Read-only subscribed calendars | Shown, read-only | R (calendar type) | R |
+| Calendars | Show/hide per calendar (local preference), color | Same; hiding is per device | R | R |
+| New calendar | Name, color, account | Same | create_calendar W | W |
+| Conflicts | Overlap layout | Columns layout algorithm with tests (layout math) | — | R |
+
+## 3. Motion
+
+| Moment | Spec |
+|---|---|
+| Period change | Pages slide with the finger and settle by velocity (springs). Month → day zooms from the tapped cell |
+| Create by drag | Ghost block grows under the pointer with live time labels; release springs to snapped times |
+| Move / resize | Lift (shadow), track 1:1, drop with a spring to the snapped position |
+| Now-line | Moves smoothly every minute (CSS transform) |
+
+## 4. Bridge work
+
+**R:**
+- Read models `calendar.range{start, end, calendars[]}`. It returns events laid out in time order with the overlap groups precomputed, kept under 10 ms p95 for a month.
+- Store-backed fields: travel time, attachments as blobs, structured location, invitation status of the owner.
+- AppleTruth checks.
+
+**W:** existing EventKit commands, plus the "This Event Only / All Future Events" prompt in the UI.
+
+**P:** invitation responses, travel time and attachments are written through Calendar.app Accessibility only where provable. Otherwise they stay hidden.
+
+## 5. Hidden
+
+- Calendar sharing and publishing
+- Delegates
+- Subscribing to new calendars
+- Apple Intelligence suggestions
+- Holiday calendar management

@@ -532,3 +532,50 @@ features:
       - {id: MSG-RECENTLY-DELETED, levels: [sim, real]}
       - {id: WEB-MSG-PARITY-UI, levels: [web]}
     notes: Group management (W4-GROUPS) completes the existing messages.groups feature and its scenarios instead of duplicating them.
+  - id: web.reminders
+    title: Reminders web app (read, write, parity)
+    requirements: [R-WEB-UI, R-WEB-FAST, R-RW]
+    milestone: W5
+    modules: [webui, native/RemindersSource, operations]
+    depends_on: [web.frontdoor, reminders.write]
+    status: todo
+    scenarios:
+      - {id: REM-STORE-READ, levels: [sim, real]}
+      - {id: WEB-REM-READ, levels: [web]}
+      - {id: WEB-REM-WRITE, levels: [web, real]}
+      - {id: WEB-REM-PARITY, levels: [web, real]}
+  - id: web.calendar
+    title: Calendar web app (read, write, parity)
+    requirements: [R-WEB-UI, R-WEB-FAST, R-RW]
+    milestone: W6
+    modules: [webui, native/CalendarSource, operations]
+    depends_on: [web.frontdoor, calendar.write]
+    status: todo
+    scenarios:
+      - {id: CAL-STORE-READ, levels: [sim, real]}
+      - {id: WEB-CAL-READ, levels: [web]}
+      - {id: WEB-CAL-WRITE, levels: [web, real]}
+      - {id: WEB-CAL-PARITY, levels: [web, real]}
+  - id: web.contacts
+    title: Contacts web app (read, write, parity)
+    requirements: [R-WEB-UI, R-WEB-FAST, R-RW]
+    milestone: W7
+    modules: [webui, native/ContactsSource, operations]
+    depends_on: [web.frontdoor, contacts.write]
+    status: todo
+    scenarios:
+      - {id: WEB-CON-READ, levels: [web]}
+      - {id: WEB-CON-WRITE, levels: [web, real]}
+      - {id: WEB-CON-PARITY, levels: [web, real]}
+  - id: web.notes
+    title: Notes web app (read, write, parity)
+    requirements: [R-WEB-UI, R-WEB-FAST, R-RW]
+    milestone: W8
+    modules: [webui, native/NotesSource, native/Decoders, operations]
+    depends_on: [web.frontdoor, notes.write]
+    status: todo
+    scenarios:
+      - {id: NOTE-DECODE-FULL, levels: [sim, real]}
+      - {id: WEB-NOTE-READ, levels: [web]}
+      - {id: WEB-NOTE-WRITE, levels: [web, real]}
+      - {id: WEB-NOTE-PARITY, levels: [web, real]}

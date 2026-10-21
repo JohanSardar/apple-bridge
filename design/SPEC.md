@@ -1344,3 +1344,19 @@ Items needing a second iMessage identity are `limited` at the real level (DECISI
 **UI:** the W4 rows of `design/web/messages.md` (pinned grid drag reorder, mute bell, Send Later bubble and sheet, long-press send effect picker with live preview, formatting toolbar, mention suggestions, audio message recorder with waveform, Recently Deleted actions, group management in details).
 
 **Units:** W4-HELPER-A (pins, mute, read receipts, Recently Deleted), W4-HELPER-B (Send Later, effects, formatting, mentions, audio message, Keep), W4-GROUPS, W4-UI, W4-TYPING (investigation, may close as hidden).
+
+### 23.15 W5–W8: Reminders, Calendar, Contacts, Notes
+
+Each app follows its spec (`design/web/reminders.md`, `calendar.md`, `contacts.md`, `notes.md`) in three steps. Each step starts with failing scenarios at sim/web and ends at real on the Air, using tagged "Bridge Test" containers and cleanup:
+- **R:** read at full fidelity, including store-backed fields beyond the public frameworks, with AppleTruth checks, read models and the UI.
+- **W:** basic writes through the existing commands, with the UI and optimistic state.
+- **P:** parity through AppleScript or Accessibility, proven per OS build or hidden.
+
+| Milestone | App | Store reader (R) | Read models |
+|---|---|---|---|
+| W5 | Reminders | Reminders Core Data store (consistent copy, FDA) linked to EventKit identifiers | `reminders.lists`, `reminders.items` |
+| W6 | Calendar | Calendar store for travel time, attachments, geo and invitation status | `calendar.range` with overlap groups |
+| W7 | Contacts | — (Contacts framework is complete except notes) | `contacts.list` |
+| W8 | Notes | Extended NoteStore protobuf decoder (full blocks) | `notes.list` |
+
+The shell's app switcher enables each app when its R step passes. Scenario families: `WEB-REM-*`, `WEB-CAL-*`, `WEB-CON-*`, `WEB-NOTE-*` (web level, 12 projects), plus `REM-STORE-*`, `CAL-STORE-*` and `NOTE-DECODE-FULL` (sim and real).
