@@ -103,6 +103,7 @@ func runRemindersStoreReal(ctx context.Context, s Scenario, level string) (resul
 		return e
 	}
 	add("eventkit_calendar_item_identifier_equals_da_text", proof.DAEqual)
+	add("eventkit_calendar_item_identifier_equals_store_uuid", proof.UUIDEqual)
 	add("external_identifier_is_not_identity_fallback", !proof.ExternalEqual)
 	add("list_uuid_bytes_link_to_eventkit", proof.ListEqual)
 	add("native_flag_and_subtask_absence_exact", proof.ReminderFields["flagged"] == false && proof.ReminderFields["parent_id"] == nil)

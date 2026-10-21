@@ -46,6 +46,8 @@ struct RemindersStoreChecks {
         precondition(snapshot.reminders[0]["ZCREATIONDATE"] == .number(800000000.5))
         precondition(snapshot.lists[0]["ZBADGEEMBLEM"] == .string("star"))
         precondition(snapshot.objects[0]["ZREMINDER3"] == .integer(11) && snapshot.labels[0]["ZNAME"] == .string("bridge-test"))
+        precondition(snapshot.lists[0]["ZCOLOR"] == .string("AQI="))
+        precondition(snapshot.reminders[0]["ZICSDISPLAYORDER"] == .integer(3))
         let parentKeys = [10: "eventkit-parent", 11: "eventkit-child"]
         let parentFields = snapshot.reminderFields(snapshot.reminders[0], parentKeys: parentKeys)
         let childFields = snapshot.reminderFields(snapshot.reminders[1], parentKeys: parentKeys)
@@ -56,7 +58,12 @@ struct RemindersStoreChecks {
         precondition(listFields["pinned"] == .bool(true) && listFields["sorting_style"] == .string("manual"))
         precondition(listFields["categorize_groceries"] == .bool(true) && listFields["grocery_locale"] == .string("en_US"))
         precondition(listFields["sharing_status"] == .integer(2) && listFields["shared_owner_name"] == .string("Bridge Test Owner"))
-        precondition(listFields["store_color"] == .string("AQI="))
+        let contractChecks = [
+            ("unsupported_store_color_is_null", listFields["store_color"] == .null),
+            ("ics_order_hint_stays_internal", parentFields.object["ics_display_order"] == nil)
+        ]
+        for (name, passed) in contractChecks { print("\(name): \(passed ? "PASS" : "FAIL")") }
+        if contractChecks.contains(where: { !$0.1 }) { exit(1) }
         if let index = CommandLine.arguments.firstIndex(of: "--report"), index + 1 < CommandLine.arguments.count {
             var parent = parentFields.object
             parent["title"] = .string("Bridge Test Parent")

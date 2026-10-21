@@ -9,7 +9,6 @@ public extension RemindersStoreSnapshot {
             "flagged": Self.boolean(row["ZFLAGGED"]),
             "parent_id": parent.isEmpty ? .null : Self.reference("reminders.reminder", parent),
             "created_at": Self.date(row["ZCREATIONDATE"]),
-            "ics_display_order": row["ZICSDISPLAYORDER"] ?? .null,
             "store_status": .string("partial")
         ]
         fields["store_coverage"] = .object([
@@ -17,7 +16,6 @@ public extension RemindersStoreSnapshot {
             "parent_id": Self.coverage(row["ZPARENTREMINDER"] == .null || row["ZPARENTREMINDER"]?.number == 0 || !parent.isEmpty ? "complete" : "partial"),
             "store_identifier": Self.coverage(row["ZIDENTIFIER"] == nil ? "unsupported" : "complete"),
             "created_at": Self.coverage(fields["created_at"] == .null ? "unavailable" : "complete"),
-            "ics_display_order": Self.coverage(row["ZICSDISPLAYORDER"] == nil ? "unsupported" : "complete"),
             "manual_order": Self.coverage("unsupported", reason: "mergeable_ordering_decoder_unverified"),
             "early_reminders": Self.coverage("unsupported", reason: "due_date_delta_decoder_unverified"),
             "section_id": Self.coverage("unsupported", reason: "section_membership_decoder_unverified")
@@ -26,10 +24,10 @@ public extension RemindersStoreSnapshot {
     }
 
     func listFields(_ row: [String: JSON], listKeys: [Int: String]) -> JSON {
-        var fields: [String: JSON] = ["store_identifier": row["ZIDENTIFIER"] ?? .null, "store_status": .string("partial")]
+        var fields: [String: JSON] = ["store_identifier": row["ZIDENTIFIER"] ?? .null, "store_status": .string("partial"), "store_color": .null]
         var coverage: [String: JSON] = ["store_identifier": Self.coverage(row["ZIDENTIFIER"] == nil ? "unsupported" : "complete")]
         for (column, field) in [
-            ("ZBADGEEMBLEM", "badge_emblem"), ("ZCOLOR", "store_color"),
+            ("ZBADGEEMBLEM", "badge_emblem"),
             ("ZDADISPLAYORDER", "display_order"), ("ZSORTINGSTYLE", "sorting_style"),
             ("ZGROCERYLOCALEID", "grocery_locale"), ("ZSHARINGSTATUS", "sharing_status"),
             ("ZSHAREDOWNERNAME", "shared_owner_name"), ("ZSMARTLISTTYPE", "smart_list_type")
