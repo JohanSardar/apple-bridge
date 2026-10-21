@@ -117,11 +117,8 @@ func relayNativeChecks(ctx context.Context, w *world.World, e *Evidence, add fun
 	e.Latency["apple_effect→ubuntu_local_feed"] = latency
 	e.Metrics["relay_clock_uncertainty_ms"] = live.Uncertainty
 	e.Metrics["live_samples"] = relayLiveSamples
-	add("relay_R_LIVE_p95_including_clock_uncertainty_under_one_second", latency.P95+live.Uncertainty < 1000)
-	if latency.P95+live.Uncertainty >= 1000 {
-		e.Status = "blocked"
-		assertion := &e.Assertions[len(e.Assertions)-1]
-		assertion.Status = "blocked"
-		assertion.Detail = "Blocked on LIVE-FIX native R-LIVE and feed pipelining; measured budget is unchanged"
-	}
+	e.Metrics["relay_R_LIVE_budget_ms"] = 1000
+	e.Metrics["relay_R_LIVE_budget_met"] = latency.P95+live.Uncertainty < 1000
+	e.Status = "blocked"
+	e.Assertions = append(e.Assertions, Assertion{Name: "relay_R_LIVE_certification", Status: "blocked", Detail: "Blocked on LIVE-FIX native R-LIVE and feed pipelining; measured samples and unchanged budget result are retained"})
 }
