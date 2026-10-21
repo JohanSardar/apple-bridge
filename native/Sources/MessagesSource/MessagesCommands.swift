@@ -32,9 +32,16 @@ public actor MessagesCommands {
     }
     public func operationCoverage() -> JSON {
         let routes = proofs()
+        var reasons: [String: [String]] = [:]
+        let reportURL = PrivateReport.directory.appendingPathComponent("messages-selftest.json")
+        if let data = try? Data(contentsOf: reportURL), let report = try? JSONDecoder().decode(JSON.self, from: data), report["os_build"].string == osBuild {
+            for step in report["steps"].array where !step["proven"].bool && !step["operation"].string.isEmpty && !step["reason"].string.isEmpty {
+                reasons[step["operation"].string, default: []].append(step["reason"].string)
+            }
+        }
         return .array(Self.operations.map { operation in
             let supported = proven(operation, routes: routes)
-            return .object(["operation": .string(operation), "proven": .bool(supported), "reason": .string(supported ? "proven_routes_and_parts_only" : "route_proof_required")])
+            return .object(["operation": .string(operation), "proven": .bool(supported), "reason": .string(supported ? "proven_routes_and_parts_only" : reasons[operation].map { Set($0).sorted().joined(separator: ",") } ?? "route_proof_required")])
         })
     }
     private func recordProof(_ route: JSON, parts: [JSON]) throws {
@@ -44,6 +51,14 @@ public actor MessagesCommands {
         try FileManager.default.createDirectory(at:proofURL.deletingLastPathComponent(),withIntermediateDirectories:true,attributes:[.posixPermissions:0o700])
         try data.write(to:proofURL,options:.atomic)
         try FileManager.default.setAttributes([.posixPermissions:0o600],ofItemAtPath:proofURL.path)
+    }
+    public func invalidateProof(_ operation: String) throws {
+        let kinds = operation == "messages.send" ? ["text", "attachment"] : [operation]
+        let routes = proofs().filter { route in !kinds.contains(where: { route.hasSuffix(":" + $0) }) }
+        let data = try JSONEncoder().encode(JSON.object(["os_build": .string(osBuild), "routes": .array(routes.sorted().map(JSON.string))]))
+        try FileManager.default.createDirectory(at: proofURL.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        try data.write(to: proofURL, options: .atomic)
+        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: proofURL.path)
     }
     private func tagged(_ text: String) -> Bool {
         text.range(of: #"\[ab-test [A-Za-z0-9_-]+\]"#, options: .regularExpression) != nil
