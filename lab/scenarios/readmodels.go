@@ -408,6 +408,7 @@ func rmNames(ctx context.Context, w *world.World, chatID string, add func(string
 	}
 	handles = append(handles, chat("", participants))
 	add("handle_contact_title_capture", rmPut(w, handles...) == nil)
+	rmHandles(ctx, w, add)
 	messageOnly := w.Gateway
 	token, err := w.ScopedToken(w.Gateway, "messages:read")
 	messageOnly.Token = token

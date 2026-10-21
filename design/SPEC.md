@@ -303,7 +303,7 @@ type OperationDescriptor struct {
 
 `Kind` is `read` (served locally on any machine) or `command` (routed to CommandTarget). The table in `internal/contracts/operations.go` is the single list; Frontdoor generates REST routes, MCP tools and OpenAPI from it. Input/Output are Go types; JSON Schema for MCP/OpenAPI is derived by reflection plus explicit enums/descriptions in struct tags.
 
-**Read operations** (all sources): `records.get`, `records.query` (collection + typed filters + order + cursor pagination), `search` (FTS over text fields within scope), `messages.thread` (chat history page with reactions/attachments inlined), `calendar.agenda` (time range), `reminders.open` (incomplete by list/due), `contacts.lookup` (by name/handle), `usage.summary` (device/day/app ranges), `sources.status`, `commands.status`, `commands.list`, `replica.status`, `blobs.get` (REST only streams bytes; MCP returns metadata and a local file path on the same machine).
+**Read operations** (all sources): `messages.handles` (batched handle names, initials, contact and avatar references; §23.12), `records.get`, `records.query` (collection + typed filters + order + cursor pagination), `search` (FTS over text fields within scope), `messages.thread` (chat history page with reactions/attachments inlined), `calendar.agenda` (time range), `reminders.open` (incomplete by list/due), `contacts.lookup` (by name/handle), `usage.summary` (device/day/app ranges), `sources.status`, `commands.status`, `commands.list`, `replica.status`, `blobs.get` (REST only streams bytes; MCP returns metadata and a local file path on the same machine).
 
 **Command operations** (each gated by a capability; §9 lists per-source evidence):
 
@@ -1016,6 +1016,8 @@ Operations (descriptors in `internal/contracts/operations.go`; available through
   - Ordered by `sent_at`, then id. Cursors are stable under concurrent inserts.
 - `messages.collection{chat_id, kind: photos|videos|links|documents|locations|audio, after?, limit≤200}`. Links and locations return message records with `balloon.kind=link|find_my`; media kinds return attachment records. Hidden attachments and recoverable messages are excluded.
 
+- `messages.handles{ids[]≤500}` → `{handles: [{handle_id, address, service, contact_id?, display_name, initials, avatar{digest, variant}?}], cursor}`. Duplicate IDs are folded and unknown IDs omitted. Contact names and avatars require contact visibility. Contact images use `variant=original` with the chosen thumbnail or original digest. Available as the `handles` live view as well as ordinary REST/MCP reads.
+
 **Unread:** a message counts as unread when it is not from me, has `kind = message`, has `read_at` null, and is not recoverable. The default chat list excludes recoverable chats. Known includes native known-sender chats and chats with a linked contact; spam selects chats containing a spam message.
 
 **Implementation:**
@@ -1207,7 +1209,7 @@ Recently Deleted becomes `deleted_at` + `recoverable_until` on messages and chat
 - `messages.chats` filters `known|unknown|unread|deleted|spam` become real.
 - `messages.collection` `links|locations` become real.
 - `has_unseen_mention` is real.
-- New read `messages.handles{ids[]≤500}` → `{handle_id, address, service, contact_id?, display_name, initials, avatar{digest, variant}?}`, for sender names and avatars in threads.
+- New read `messages.handles{ids[]≤500}` → `{handles: [{handle_id, address, service, contact_id?, display_name, initials, avatar{digest, variant}?}], cursor}`, for sender names and avatars in threads.
 
 **Client architecture (`web/src/messages/`):**
 

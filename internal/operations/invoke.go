@@ -14,6 +14,12 @@ func (s *Service) Invoke(ctx context.Context, p trust.Principal, name string, in
 		return nil, contracts.ErrUnsupported
 	}
 	switch name {
+	case "messages.handles":
+		var q contracts.HandlesQuery
+		if contracts.DecodeInput(input, &q) != nil {
+			return nil, contracts.ErrInvalid
+		}
+		return s.State.Handles(ctx, p.Visibility(), q)
 	case "messages.chats":
 		var q contracts.ChatsQuery
 		if contracts.DecodeInput(input, &q) != nil {
