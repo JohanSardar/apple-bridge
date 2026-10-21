@@ -48,6 +48,7 @@ func runOAuthCredentialAccess(ctx context.Context, w *world.World, authority *tr
 	err = change(w.Gateway.URL+"/mcp", time.Now().Add(-time.Second))
 	code, _ = world.Request(ctx, principal, "/v1/op/messages.chats", map[string]any{}, &result)
 	add("oauth_opaque_access_expires", err == nil && code == 401)
+	runOAuthGrants(ctx, w, authority, add)
 }
 
 func editAgentCredentials(home string, edit func(map[string]any)) error {
