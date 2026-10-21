@@ -165,6 +165,7 @@ func runReadModels(ctx context.Context, s Scenario, level string) Evidence {
 	rmBoundaries(ctx, w, chatID, add)
 	if s.ID == "WEB-RM-CHATS" {
 		rmPreviews(ctx, w, chatID, add)
+		rmRichFilters(ctx, w, chatID, add)
 	}
 	if s.ID == "WEB-RM-CHATS" {
 		add("replica_added_after_data_for_snapshot", w.AddReplicaScope("messages:read,contacts:read,system:read") == nil)

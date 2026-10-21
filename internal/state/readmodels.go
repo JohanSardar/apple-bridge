@@ -174,8 +174,8 @@ func fillSummary(ctx context.Context, tx *sql.Tx, v trust.Visibility, s *contrac
 		value := int(n)
 		s.PinnedIndex = &value
 	}
-	if until := fieldString(d, "muted_until"); until != "" {
-		value := until > time.Now().UTC().Format(time.RFC3339Nano)
+	if until, err := time.Parse(time.RFC3339Nano, fieldString(d, "muted_until")); err == nil {
+		value := until.After(time.Now())
 		s.Muted = &value
 	}
 	s.Title = fieldString(d, "display_name")
