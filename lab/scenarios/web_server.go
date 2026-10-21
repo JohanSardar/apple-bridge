@@ -904,5 +904,33 @@ func runWebRateWindows(ctx context.Context, w *world.World, add func(string, boo
 	}
 	add("global_failure_backoff_across_clients", failed && request("192.0.2.99", "login/options", map[string]any{}) == 429)
 	clock.Add(int64(2 * time.Second))
+
 	add("global_backoff_expires", request("192.0.2.99", "login/options", map[string]any{}) == 200)
+	live := &webClient{ctx: ctx, origin: strings.Replace(w.Gateway.URL, "127.0.0.1", "localhost", 1), cookie: c.cookie}
+	socket, err := live.socket()
+	if err != nil {
+		add("websocket_rate_fixture", false)
+		return
+	}
+	defer socket.CloseNow()
+	for i := 0; i < 51; i++ {
+		if socket.Write(ctx, websocket.MessageText, []byte("[")) != nil {
+			add("websocket_rate_send", false)
+			return
+		}
+	}
+	limited := false
+	bounded, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	for i := 0; i < 60; i++ {
+		var frame map[string]any
+		if wsjson.Read(bounded, socket, &frame) != nil {
+			break
+		}
+		if frame["code"] == "rate_limited" {
+			limited = true
+			break
+		}
+	}
+	add("malformed_live_frames_count_toward_rate_limit", limited)
 }
