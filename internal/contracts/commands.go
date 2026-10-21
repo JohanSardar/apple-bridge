@@ -76,20 +76,21 @@ type CommandEvent struct {
 	Evidence json.RawMessage `json:"evidence,omitempty"`
 }
 type CommandRecord struct {
-	Command      Command         `json:"command"`
-	Principal    string          `json:"principal"`
-	Source       Source          `json:"source"`
-	RequestHash  string          `json:"request_hash"`
-	State        CommandState    `json:"state"`
-	AdmissionEra string          `json:"admission_era"`
-	CreatedAt    time.Time       `json:"created_at"`
-	ExpiresAt    time.Time       `json:"expires_at"`
-	Evidence     json.RawMessage `json:"evidence,omitempty"`
-	Disposition  Disposition     `json:"disposition,omitempty"`
-	CommitSeq    uint64          `json:"commit_seq"`
-	Cursor       Cursor          `json:"cursor"`
-	History      []CommandEvent  `json:"history"`
-	Error        *Error          `json:"error,omitempty"`
+	Command           Command         `json:"command"`
+	Principal         string          `json:"principal"`
+	Source            Source          `json:"source"`
+	RequestHash       string          `json:"request_hash"`
+	State             CommandState    `json:"state"`
+	AdmissionEra      string          `json:"admission_era"`
+	CreatedAt         time.Time       `json:"created_at"`
+	ExpiresAt         time.Time       `json:"expires_at"`
+	Evidence          json.RawMessage `json:"evidence,omitempty"`
+	Disposition       Disposition     `json:"disposition,omitempty"`
+	CommitSeq         uint64          `json:"commit_seq"`
+	ObservedRecordIDs []string        `json:"observed_record_ids,omitempty"`
+	Cursor            Cursor          `json:"cursor"`
+	History           []CommandEvent  `json:"history"`
+	Error             *Error          `json:"error,omitempty"`
 }
 type NativeAction struct {
 	Origin          string              `json:"origin,omitempty"`

@@ -528,6 +528,7 @@ features:
     depends_on: [web.messages.read]
     status: todo
     scenarios:
+      - {id: MSG-COMMAND-OBSERVED-IDS, levels: [sim]}
       - {id: MSG-INTERACTIVE-GATE, levels: [sim, real]}
       - {id: MSG-MEDIA-CLEANUP, levels: [sim]}
       - {id: MSG-SELFTEST, levels: [real]}

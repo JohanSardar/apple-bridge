@@ -1,0 +1,309 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[7.45 12.1 13.89] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5EYY0N3SR45QZG5JGYJNNMV",
+  "scenario": "MSG-COMMAND-OBSERVED-IDS",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "ddc23dc5fcacc9d272ef8e37a18e371b0dbe1533",
+  "at": "2026-10-21T10:08:27.301071Z",
+  "assertions": [
+    {
+      "name": "seed_self_chat",
+      "passed": true
+    },
+    {
+      "name": "fixture_captured",
+      "passed": true
+    },
+    {
+      "name": "gateway_receipt_before_outcome_armed",
+      "passed": true
+    },
+    {
+      "name": "gateway_send_observed",
+      "passed": true
+    },
+    {
+      "name": "gateway_send_native_alias_exists",
+      "passed": true
+    },
+    {
+      "name": "gateway_send_rest_exact_observed_id",
+      "passed": true
+    },
+    {
+      "name": "gateway_send_mcp_exact_observed_id",
+      "passed": true
+    },
+    {
+      "name": "gateway_send_rest_mcp_parity",
+      "passed": true
+    },
+    {
+      "name": "gateway_send_immediately_readable_at_commit",
+      "passed": true
+    },
+    {
+      "name": "gateway_receipt_update_precedes_resolution",
+      "passed": true
+    },
+    {
+      "name": "gateway_send_replicas_converge",
+      "passed": true
+    },
+    {
+      "name": "gateway_send_replicated_observed_record",
+      "passed": true
+    },
+    {
+      "name": "gateway_reply_observed",
+      "passed": true
+    },
+    {
+      "name": "gateway_reply_native_alias_exists",
+      "passed": true
+    },
+    {
+      "name": "gateway_reply_rest_exact_observed_id",
+      "passed": true
+    },
+    {
+      "name": "gateway_reply_mcp_exact_observed_id",
+      "passed": true
+    },
+    {
+      "name": "gateway_reply_rest_mcp_parity",
+      "passed": true
+    },
+    {
+      "name": "gateway_reply_immediately_readable_at_commit",
+      "passed": true
+    },
+    {
+      "name": "gateway_reply_replicas_converge",
+      "passed": true
+    },
+    {
+      "name": "gateway_reply_replicated_observed_record",
+      "passed": true
+    },
+    {
+      "name": "gateway_edit_observed",
+      "passed": true
+    },
+    {
+      "name": "gateway_edit_native_alias_exists",
+      "passed": true
+    },
+    {
+      "name": "gateway_edit_rest_exact_observed_id",
+      "passed": true
+    },
+    {
+      "name": "gateway_edit_mcp_exact_observed_id",
+      "passed": true
+    },
+    {
+      "name": "gateway_edit_rest_mcp_parity",
+      "passed": true
+    },
+    {
+      "name": "gateway_edit_immediately_readable_at_commit",
+      "passed": true
+    },
+    {
+      "name": "gateway_edit_replicas_converge",
+      "passed": true
+    },
+    {
+      "name": "gateway_edit_replicated_observed_record",
+      "passed": true
+    },
+    {
+      "name": "replica_receipt_before_outcome_armed",
+      "passed": true
+    },
+    {
+      "name": "replica_send_observed",
+      "passed": true
+    },
+    {
+      "name": "replica_send_native_alias_exists",
+      "passed": true
+    },
+    {
+      "name": "replica_send_rest_exact_observed_id",
+      "passed": true
+    },
+    {
+      "name": "replica_send_mcp_exact_observed_id",
+      "passed": true
+    },
+    {
+      "name": "replica_send_rest_mcp_parity",
+      "passed": true
+    },
+    {
+      "name": "replica_send_immediately_readable_at_commit",
+      "passed": true
+    },
+    {
+      "name": "replica_receipt_update_precedes_resolution",
+      "passed": true
+    },
+    {
+      "name": "replica_send_replicas_converge",
+      "passed": true
+    },
+    {
+      "name": "replica_send_replicated_observed_record",
+      "passed": true
+    },
+    {
+      "name": "replica_reply_observed",
+      "passed": true
+    },
+    {
+      "name": "replica_reply_native_alias_exists",
+      "passed": true
+    },
+    {
+      "name": "replica_reply_rest_exact_observed_id",
+      "passed": true
+    },
+    {
+      "name": "replica_reply_mcp_exact_observed_id",
+      "passed": true
+    },
+    {
+      "name": "replica_reply_rest_mcp_parity",
+      "passed": true
+    },
+    {
+      "name": "replica_reply_immediately_readable_at_commit",
+      "passed": true
+    },
+    {
+      "name": "replica_reply_replicas_converge",
+      "passed": true
+    },
+    {
+      "name": "replica_reply_replicated_observed_record",
+      "passed": true
+    },
+    {
+      "name": "replica_edit_observed",
+      "passed": true
+    },
+    {
+      "name": "replica_edit_native_alias_exists",
+      "passed": true
+    },
+    {
+      "name": "replica_edit_rest_exact_observed_id",
+      "passed": true
+    },
+    {
+      "name": "replica_edit_mcp_exact_observed_id",
+      "passed": true
+    },
+    {
+      "name": "replica_edit_rest_mcp_parity",
+      "passed": true
+    },
+    {
+      "name": "replica_edit_immediately_readable_at_commit",
+      "passed": true
+    },
+    {
+      "name": "replica_edit_replicas_converge",
+      "passed": true
+    },
+    {
+      "name": "replica_edit_replicated_observed_record",
+      "passed": true
+    },
+    {
+      "name": "ambiguous_send_fault_armed",
+      "passed": true
+    },
+    {
+      "name": "ambiguous_send_does_not_invent_observed_ids",
+      "passed": true
+    },
+    {
+      "name": "ambiguous_retry_is_lookup_only",
+      "passed": true
+    },
+    {
+      "name": "web_command_submitted",
+      "passed": true
+    },
+    {
+      "name": "web_cmd_status_exact_observed_id",
+      "passed": true
+    },
+    {
+      "name": "web_reconnect_record_retains_exact_ids",
+      "passed": true
+    },
+    {
+      "name": "truth_and_replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "gateway_edit_command_to_readable_record": {
+      "samples": 1,
+      "p50_ms": 154.979667,
+      "p95_ms": 154.979667,
+      "max_ms": 154.979667,
+      "timeouts": 0
+    },
+    "gateway_reply_command_to_readable_record": {
+      "samples": 1,
+      "p50_ms": 118.485125,
+      "p95_ms": 118.485125,
+      "max_ms": 118.485125,
+      "timeouts": 0
+    },
+    "gateway_send_command_to_readable_record": {
+      "samples": 1,
+      "p50_ms": 206.696792,
+      "p95_ms": 206.696792,
+      "max_ms": 206.696792,
+      "timeouts": 0
+    },
+    "replica_edit_command_to_readable_record": {
+      "samples": 1,
+      "p50_ms": 185.373416,
+      "p95_ms": 185.373416,
+      "max_ms": 185.373416,
+      "timeouts": 0
+    },
+    "replica_reply_command_to_readable_record": {
+      "samples": 1,
+      "p50_ms": 168.574667,
+      "p95_ms": 168.574667,
+      "max_ms": 168.574667,
+      "timeouts": 0
+    },
+    "replica_send_command_to_readable_record": {
+      "samples": 1,
+      "p50_ms": 230.22975,
+      "p95_ms": 230.22975,
+      "max_ms": 230.22975,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

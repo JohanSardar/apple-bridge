@@ -544,6 +544,7 @@ Submit(principal, {id, op, args, expected_version?, expires_at?})
 - Correlation is conservative: evidence must match fingerprint **and** be after candidate IDs **and** be unique; two identical candidate rows (e.g. a manual identical send) → `indeterminate` with both candidates listed.
 - Stronger later evidence (from `Resolve` or capture) may move `indeterminate → locally_observed/delivered/failed_no_effect`, appending to `history`.
 - Status returns `commit_seq`; command submission and `commands.status` on a replica wait until its local cursor reaches the command cursor, so an observed result is immediately readable locally. A command from an older admission era remains lookup-only and skips the current-feed wait.
+- Observed outcomes also persist `observed_record_ids`: concrete bridge record IDs resolved from the correlated native key in the active source generation and command epoch. Subsequent record updates do not invalidate that stable identity. For multipart sends, this currently identifies the primary message record; attachments derive from it. REST, MCP and forwarded replica status return the same IDs. Missing aliases leave IDs absent; other lookup failures also record `record_id_resolution_error` in outcome evidence/history. Clients retain an honest pending/unknown echo without IDs and never match text or guess from the sequence alone. Rejected, failed-no-effect and indeterminate outcomes never invent observed IDs.
 
 ### 11.3 Replica
 
@@ -1012,6 +1013,7 @@ S→C signin{device, at} · approval{command} · session_revoked · error{code, 
 
 **Rules:**
 - **Deltas:** come from the State journal through the same iterator as local SSE (§12), filtered by Visibility and mapped to affected subscriptions.
+- **Optimistic reconciliation:** `cmd_status.command` and enriched `system.command` record subscriptions carry `observed_record_ids` with `commit_seq` (§11.2). A local echo is reconciled only after its concrete captured IDs appear in a compatible view cursor at or beyond the command commit; missing IDs or incomparable cursors retain pending/unknown state.
 - **Budget:** journal commit to frame written ≤ 20 ms p95 on the gateway.
 - **Reconnect:** the client resubscribes with its last cursor per view. The server replays from the journal when it can, otherwise sends a fresh `snap`.
 - **Backpressure:** at most 4 MiB unsent per socket; beyond that the socket closes with `overloaded` and the client reconnects.

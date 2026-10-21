@@ -309,6 +309,19 @@ func (s *Store) NativeKey(ctx context.Context, collection, id string) (string, e
 	return key, err
 }
 
+func (s *Store) ObservedRecordID(ctx context.Context, collection, nativeKey string, cursor contracts.Cursor) (string, error) {
+	var id string
+	err := s.db.QueryRowContext(ctx, `SELECT a.record_id FROM aliases a
+ JOIN checkpoints c ON c.source=a.source AND c.generation=a.generation
+ JOIN records r ON r.collection=a.collection AND r.id=a.record_id
+ WHERE a.source=? AND a.collection=? AND a.native_key=?
+ AND EXISTS(SELECT 1 FROM meta WHERE key='epoch' AND value=?)`, contracts.CollectionSource(collection), collection, nativeKey, cursor.Epoch).Scan(&id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", contracts.ErrNotFound
+	}
+	return id, err
+}
+
 func rotateAdmissionEra(ctx context.Context, home, stagedPath string, accept bool) error {
 	if !accept {
 		if _, err := os.Stat(filepath.Join(home, "state.db")); err == nil {
