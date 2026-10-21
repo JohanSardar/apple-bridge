@@ -13,7 +13,9 @@ export default function AuthPage() {
     async function submit() { setPending(true); setError(''); try {
         const session = await passkey(enroll() ? 'enroll' : 'login', enroll() ? 'trusted' : kind(), enrollmentToken);
         await establishSession(session);
-        router.navigate('/messages', true);
+        const returnTo = new URLSearchParams(location.search).get('return_to');
+        if (returnTo?.startsWith('/oauth/authorize?')) location.assign(returnTo);
+        else router.navigate('/messages', true);
     }
     catch (error) {
         setError(error instanceof DOMException && error.name === 'NotAllowedError' ? s.passkeyCancelled : s.unavailable);
