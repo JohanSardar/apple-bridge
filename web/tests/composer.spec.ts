@@ -73,6 +73,33 @@ test('WEB-MSG-COMPOSER waits for a coherent capture before Send and rejects over
     holding=false;held.splice(0).forEach(release=>release());await expect(send).toBeEnabled();
     await field.fill('x'.repeat(65537));await expect(send).toBeDisabled();await expect(page.getByRole('alert')).toHaveText('Message is too long');await field.press('Enter');expect(commands).toHaveLength(0);
 });
+test('WEB-MSG-COMPOSER-REVIEW defers storage, flushes lifecycle transitions, caches metrics and shows only user-facing failure status', async ({page,context}) => {
+    await context.addCookies(trusted);
+    await page.addInitScript(()=>{
+        const state=(window as any).__draftProbe={writes:0,before:0,synchronous:0,metrics:0};
+        window.addEventListener('input',()=>{state.before=state.writes;},true);window.addEventListener('input',()=>{state.synchronous+=state.writes-state.before;});
+        const write=Storage.prototype.setItem;Storage.prototype.setItem=function(key,value){if(key.startsWith('ab.messages.draft.'))state.writes++;return write.call(this,key,value);};
+        const style=window.getComputedStyle;window.getComputedStyle=function(element,pseudo){if(element.getAttribute('aria-label')==='Message')state.metrics++;return style.call(window,element,pseudo);};
+    });
+    const held:(()=>void)[]=[],statuses:any[]=[];let holding=true;
+    await page.routeWebSocket('**/web/v1/live',socket=>{
+        const server=socket.connectToServer();socket.onMessage(data=>server.send(data));server.onMessage(data=>{const frame=JSON.parse(String(data));if(frame.t==='cmd_status')statuses.push(frame);if(holding&&['ack','cmd_status','delta'].includes(frame.t)){held.push(()=>socket.send(data));return;}socket.send(data);});
+    });
+    await page.goto(path());const field=page.getByRole('textbox',{name:'Message',exact:true}),composer=page.getByRole('region',{name:'Message composer'});
+    await expect(field).toBeVisible();await page.evaluate(()=>new Promise(requestAnimationFrame));const baseline=await page.evaluate(()=>(window as any).__draftProbe.metrics);
+    for(const text of ['one','two','three']){await field.fill('[ab-test compose] '+text);await page.evaluate(()=>new Promise(requestAnimationFrame));}
+    expect.soft(await page.evaluate(()=>(window as any).__draftProbe.synchronous)).toBe(0);
+    expect.soft(await page.evaluate(()=>(window as any).__draftProbe.metrics)).toBe(baseline);
+    await expect.poll(()=>page.evaluate(()=>Object.entries(localStorage).some(([key,value])=>key.startsWith('ab.messages.draft.')&&value==='[ab-test compose] three'))).toBe(true);
+    await field.fill('[ab-test compose] flush on pagehide');await page.reload();await expect(field).toHaveValue('[ab-test compose] flush on pagehide');
+    await field.fill('[ab-test compose] flush on visibility');await page.evaluate(()=>document.dispatchEvent(new Event('visibilitychange')));
+    expect.soft(await page.evaluate(()=>Object.entries(localStorage).some(([key,value])=>key.startsWith('ab.messages.draft.')&&value==='[ab-test compose] flush on visibility'))).toBe(true);
+    await expect(page.getByRole('button',{name:'Send message',exact:true})).toBeEnabled();await field.press('Enter');
+    await expect(page.locator('[data-local-echo]')).toHaveCount(1);await expect.soft(composer).not.toContainText('Sending',{timeout:1000});
+    await expect.poll(()=>statuses.some(value=>value.command?.observed_record_ids?.length)).toBe(true);holding=false;held.splice(0).forEach(release=>release());await expect(page.locator('[data-local-echo]')).toHaveCount(0);await expect.soft(composer).not.toContainText('Sent',{timeout:1000});
+    await page.goto(path()+'&reject=1');await expect(field).toBeVisible();await field.fill('[ab-test compose] keep draft on reject');await page.getByRole('button',{name:'Send message',exact:true}).click();
+    await expect.soft(page.getByRole('alert')).toHaveText("Can't send right now. Check your connection.",{timeout:1000});await expect(field).toHaveValue('[ab-test compose] keep draft on reject');
+});
 test('WEB-MSG-COMPOSER signing out removes trusted drafts', async ({page,context}) => {
     await context.addCookies(trusted);await page.goto(path());
     const field=page.getByRole('textbox',{name:'Message',exact:true});await expect(field).toBeVisible();await field.fill('[ab-test compose] remove on sign out');

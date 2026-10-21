@@ -22,6 +22,6 @@ function ComposeChat(props: { live: LiveClient; commands: ReturnType<typeof crea
     onCleanup(() => { thread.dispose(); chat.dispose(); });
     return <div>
         <For each={rows()}>{item => <p data-record-id={item.id} data-local-echo={item.id.startsWith('command:') ? '' : undefined}>{String(item.data.text ?? '')}</p>}</For>
-        <Composer draftID={props.chatID} service={String(chat.data().records?.[0]?.data.service ?? '')} session={auth.session()!} available={Boolean(captured().cursor) && props.commands.capabilities.allowed('messages.send')} onSend={(event, content) => props.commands.send(event, { chat_id: props.chatID, ...content })} command={latest()} onCheck={() => { const command = latest(); if (command) props.commands.check(command.id); }} onCopy={event => { const command = latest(); if (command) void props.commands.copy(event, command.id); }}/>
+        <Composer draftID={props.chatID} service={String(chat.data().records?.[0]?.data.service ?? '')} session={auth.session()!} available={Boolean(captured().cursor) && props.commands.capabilities.allowed('messages.send')} onSend={(event, content) => { if (new URLSearchParams(location.search).has('reject')) throw new Error('internal_fixture_rejection'); return props.commands.send(event, { chat_id: props.chatID, ...content }); }} command={latest()} onCheck={() => { const command = latest(); if (command) props.commands.check(command.id); }} onCopy={event => { const command = latest(); if (command) void props.commands.copy(event, command.id); }}/>
     </div>;
 }

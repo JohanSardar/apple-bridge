@@ -1,8 +1,9 @@
-import { createEffect, createSignal, onCleanup, Show } from 'solid-js';
+import { createEffect, createMemo, createSignal, onCleanup, Show } from 'solid-js';
 import type { CommandState, DeviceSession } from '../../data/types';
 import { crossfade, reducedMotion, springAnimation } from '../../motion/animate';
 import { messageCommandLabel } from '../actions/commands';
-import { readDraft, writeDraft } from './drafts';
+import { appearance } from '../../app/preferences';
+import { flushDraft, readDraft, writeDraft } from './drafts';
 import './compose.css';
 export type ComposerProps = {
     draftID: string;
@@ -15,26 +16,37 @@ export type ComposerProps = {
     onCopy?: (event: Event) => void;
 };
 export function Composer(props: ComposerProps) {
-    const [text, setText] = createSignal(readDraft(props.session, props.draftID)), [error, setError] = createSignal('');
-    let field!: HTMLTextAreaElement, frame = 0;
+    const session = props.session;
+    const [text, setText] = createSignal(readDraft(session, props.draftID)), [error, setError] = createSignal('');
+    let field!: HTMLTextAreaElement, frame = 0, metrics: { border: number; maximum: number; width: number } | undefined;
     const sms = () => ['SMS', 'RCS'].includes(props.service ?? '');
     const content = () => Boolean(text().trim());
-    const valid = () => new TextEncoder().encode(text()).length <= 65536;
-    const update = (value: string) => { setText(value); writeDraft(props.session, props.draftID, value); setError(''); };
-    createEffect(() => {
-        text(); cancelAnimationFrame(frame);
+    const bytes = createMemo(() => new TextEncoder().encode(text()).length);
+    const valid = () => bytes() <= 65536;
+    const problem = () => props.command && ['failed', 'rejected', 'delivery_failed', 'expired', 'indeterminate'].includes(props.command.status) ? props.command : undefined;
+    const update = (value: string) => { setText(value); writeDraft(session, props.draftID, value); setError(''); };
+    const resize = () => {
+        cancelAnimationFrame(frame);
         frame = requestAnimationFrame(() => {
-            const style = getComputedStyle(field), border = parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth);
-            const maximum = parseFloat(style.lineHeight) * 6 + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) + border;
+            if (!metrics) {
+                const style = getComputedStyle(field), border = parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth);
+                metrics = { border, maximum: parseFloat(style.lineHeight) * 6 + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) + border, width: field.clientWidth };
+            }
             field.style.height = 'auto';
-            field.style.height = Math.min(field.scrollHeight + border, maximum) + 'px';
+            field.style.height = Math.min(field.scrollHeight + metrics.border, metrics.maximum) + 'px';
         });
-    });
-    onCleanup(() => cancelAnimationFrame(frame));
+    };
+    createEffect(() => { text(); resize(); });
+    createEffect(() => { appearance.textSize(); metrics = undefined; resize(); });
+    const observer = new ResizeObserver(() => { if (metrics && field.clientWidth !== metrics.width) { metrics.width = field.clientWidth; resize(); } });
+    const phone = matchMedia('(max-width:699px)'), typography = () => { metrics = undefined; resize(); };
+    phone.addEventListener('change', typography);
+    createEffect(() => { observer.observe(field); });
+    onCleanup(() => { cancelAnimationFrame(frame); observer.disconnect(); phone.removeEventListener('change', typography); flushDraft(session, props.draftID); });
     const send = (event: Event) => {
         if (!props.available || !content() || !valid()) return;
         try { props.onSend(event, { text: text() }); update(''); }
-        catch (error) { setError((error as Error).message); }
+        catch { setError("Can't send right now. Check your connection."); }
     };
     const enter = (element: HTMLButtonElement) => {
         if (reducedMotion()) { const animation = crossfade(element); onCleanup(() => animation.cancel()); return; }
@@ -51,6 +63,6 @@ export function Composer(props: ComposerProps) {
         </div>
         <Show when={!valid()}><p class="composer-error" role="alert">Message is too long</p></Show>
         <Show when={error()}><p class="composer-error" role="alert">{error()}</p></Show>
-        <Show when={props.command}>{command => <div class="composer-status" role="status">{messageCommandLabel(command())}<Show when={command().status === 'indeterminate'}> · <button class="button subtle" onClick={() => props.onCheck?.()}>Check</button><button class="button subtle" onClick={event => props.onCopy?.(event)}>Copy</button></Show></div>}</Show>
+        <Show when={problem()}>{command => <div class="composer-status" role="status">{messageCommandLabel(command())}<Show when={command().status === 'indeterminate'}> · <button class="button subtle" onClick={() => props.onCheck?.()}>Check</button><button class="button subtle" onClick={event => props.onCopy?.(event)}>Copy</button></Show></div>}</Show>
     </section>;
 }
