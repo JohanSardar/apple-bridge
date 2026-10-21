@@ -13,3 +13,9 @@ design/features.html
 .worktrees/
 
 /dist/
+
+web/node_modules/
+web/dist/*
+!web/dist/.gitkeep
+web/test-results/
+web/playwright-report/

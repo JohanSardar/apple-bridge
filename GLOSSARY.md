@@ -170,3 +170,41 @@ _Avoid_: test case, spec
 
 **Feature**:
 A user-visible capability tracked in the feature graph with its requirement, modules, scenarios and status.
+
+## Web
+
+**Web app**:
+The browser application served by any `bridge` instance, mirroring Apple's apps.
+_Avoid_: dashboard, frontend site, portal
+
+**Device session**:
+A signed-in browser, authenticated by a passkey, acting as the owner through a `device:` principal; either **trusted** (persistent cache) or **public** (memory only).
+_Avoid_: login, user account
+
+**Interactive command**:
+A command submitted by a device session from a real input event; it is not bound by lab gates.
+_Avoid_: manual send, UI send
+
+**Agent token**:
+A credential for a remote AI agent, with source scopes and a level of `read`, `approve` or `full`.
+_Avoid_: API key, bot token
+
+**Approval**:
+An agent command waiting in `awaiting_approval` until the owner approves or rejects it in the web app.
+_Avoid_: draft, pending send
+
+**Read model**:
+Derived, non-authoritative tables in State that answer one view (chats, thread, collection) quickly.
+_Avoid_: cache, materialized view
+
+**Variant**:
+A browser-safe derivative blob of an attachment (thumb, display, video, poster, audio, live).
+_Avoid_: transcode, thumbnail cache
+
+**Remote**:
+The embedded Tailscale node and Funnel listener that makes an instance reachable at its public HTTPS address.
+_Avoid_: tunnel, proxy, cloud
+
+**Live view**:
+A `web/1` subscription (chats, thread, record, collection) that receives a snapshot, then deltas.
+_Avoid_: stream, feed (feed is replication)

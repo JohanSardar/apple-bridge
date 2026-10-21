@@ -28,6 +28,7 @@ Companion files: [`../GLOSSARY.md`](../GLOSSARY.md), [`../PRINCIPLES.md`](../PRI
 20. Quality gates
 21. Milestones
 22. Known limits
+23. Web app (W milestones)
 
 ---
 
@@ -894,3 +895,269 @@ Each milestone proves its riskiest unknown first, starts every feature as a fail
 - Losing `ledger.db` (not just `state.db`) loses the ability to recognize earlier command IDs; recovery requires an explicit operator acknowledgement.
 - Packaged gateways use a dedicated `Apple Bridge.keychain-db` in their 0700 application support directory. Installation creates a random 256-bit password in a 0600 `keychain-password` file; the gateway unlocks this Keychain before credential operations, including after login or a crash. Credentials remain Keychain items, with `/usr/bin/security` as their trusted accessor. This permits unattended operation while the login Keychain is locked; possession of the support directory permits unlocking credentials, so it does not protect against another process running as the same user. The user Keychain search list is preserved. Unpackaged CLI use retains the login Keychain default; isolated lab worlds explicitly select file credentials.
 - Notarization is optional, not required. Users may build from source or use right-click → Open; optional notarization requires an Apple Developer ID.
+
+---
+
+## 23. Web app
+
+Decisions: `DECISIONS.md` (2026-10-20). Product spec per app: `design/web/<app>.md` (Messages: `design/web/messages.md`). This section is the binding architecture for the web milestones W1+.
+
+### 23.1 Modules
+
+| Module | Path | Owns | Depends on |
+|---|---|---|---|
+| Web | `internal/web/` | Browser front door: static app, `/web/v1` API, device sessions, passkeys, live views (`web/1`), agent management and OAuth pages, blob variants | Operations, Replication (journal iterator), Blobs, Trust, Contracts, `webui` |
+| Remote | `internal/remote/` | Embedded Tailscale node (tsnet), Funnel listener, public routing to Web / Frontdoor / Replication | handlers injected by Runtime; Trust (state secrets) |
+| WebUI | `web/` (TypeScript) + `web/embed.go` (package `webui`) | SolidJS app; built assets embedded into `bridge` | — (only `internal/web` imports `webui`) |
+| Read models | `internal/state/` (tables) + `internal/operations/` (ops) | Derived per-view indexes and the `messages.chats` / `messages.thread` / `messages.collection` reads | State, Trust, Contracts |
+| MediaDerivatives | `native/Sources/MediaDerivatives/` | Browser-safe variants of attachment blobs (Swift, system frameworks only) | AppleSession blob path |
+| Demo | `lab/demo/` + `bridge-lab demo` | Deterministic synthetic dataset on a sim world, serving the web UI | lab World, SimApplePeer |
+
+Frontdoor (§15) keeps REST/MCP semantics; Remote reuses its handler with a public-host policy (§23.5). `bridge web --demo` from DECISIONS is realized as `bridge-lab demo`, because the product binary never imports `lab/` (§5).
+
+New dependencies (approved): `tailscale.com` (tsnet, BSD-3), `github.com/go-webauthn/webauthn` (BSD-3). Frontend runtime: `solid-js` only. Frontend dev: `vite`, `vite-plugin-solid`, `typescript`, `@playwright/test`. Node and pnpm are build-time only (Homebrew on the Air); release binaries embed the built assets.
+
+### 23.2 Web front door
+
+Same origin for everything. Served by the gateway and by replicas (any instance), locally on the Frontdoor listener's host under `/` and publicly through Remote.
+
+**Static.** `GET /` and app routes return `index.html` (`Cache-Control: no-store`). `/assets/*` are content-hashed (`public, max-age=31536000, immutable`). `/sw.js` and `/manifest.webmanifest` are `no-cache`. If `web/dist/index.html` is absent (assets not built), `/` returns a plain page saying `make web` is needed.
+
+**API `/web/v1`** (JSON; cookie auth; every state-changing request and the WebSocket upgrade require `Origin` equal to the serving origin):
+
+| Route | Purpose |
+|---|---|
+| `GET session` | `{device_id, kind: trusted|public, expires_at, cache: persistent|memory}` or 401 |
+| `POST enroll/options`, `POST enroll/finish` | First passkey, authorized by a one-time enroll token |
+| `POST login/options`, `POST login/finish` | Discoverable-credential sign-in (user verification required); body picks `kind` |
+| `POST logout` | Ends this session |
+| `GET devices`, `DELETE devices/{id}` | Sessions list and revoke (revoked sockets close within 1 s; the client wipes its cache on `session_revoked`) |
+| `GET passkeys`, `POST passkeys/options`, `POST passkeys/finish`, `DELETE passkeys/{id}` | Manage passkeys from a signed-in session |
+| `GET agents`, `POST agents`, `DELETE agents/{id}`, `GET activity` | Agent tokens and activity log (§23.6) |
+| `GET approvals`, `POST approvals/{command_id}` | Approve or reject agent commands |
+| `GET blob/{digest}?record=<id>&variant=<v>` | Bytes with Range, `ETag` = digest, `private, max-age=31536000, immutable`; `variant` ∈ `original|thumb|display|video|poster|audio|live` |
+| `POST upload` | Stage a blob for sending (streamed, ≤ 100 MiB) |
+| `GET live` | WebSocket, protocol `web/1` (§23.3) |
+
+**Sessions.**
+- **Principal:** `device:<id>` in Trust, with the owner's full grants.
+- **Cookie:** `__Host-ab_session` (Secure; HttpOnly; SameSite=Strict; Path=/), an opaque 256-bit value stored hashed.
+- **Trusted:** 30 days sliding, 90 days absolute.
+- **Public:** session cookie with no Max-Age, 30 minutes idle and 12 hours absolute, with `cache: memory`, meaning nothing goes to IndexedDB, Cache Storage or the service worker.
+
+**Passkeys.**
+- **Relying-party ID:** the serving hostname: the Funnel name publicly, `localhost` locally. Each relying-party ID has its own credentials.
+- **First passkey:** registered only through an enroll token from `bridge web enroll`, which `bridge setup` calls. The token is 160-bit, valid 10 minutes, single use, and printed as a URL plus QR (`https://<host>/enroll#<token>`).
+- **Later passkeys:** added from signed-in sessions.
+- **Hostname change:** if the public hostname changes, passkeys must be enrolled again (documented).
+
+**Protection.**
+- **Rate limits:** sign-in and enroll at 10 per minute and 100 per day per client IP, plus a global failure backoff. API at 50 requests per second per session.
+- **Headers:**
+  - CSP `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'`
+  - `Referrer-Policy: no-referrer`
+  - `X-Content-Type-Options: nosniff`
+  - `Permissions-Policy: camera=(self), microphone=(self), geolocation=(self)`
+  - HSTS on HTTPS
+- **Revoke everything:** `bridge web lock` revokes every device session.
+- **Sign-in events:** each successful sign-in emits a `signin` event to every other live session.
+
+**Interactive principal.** Commands submitted by a `device:` principal through `web/1` are **interactive**. They carry `origin: interactive` into Operations and across the Apple seam. The Helper's lab gates (`[ab-test]` tag, own-handle routes) apply to lab and agent principals only. Interactive commands still need the operation's capability proof on this OS build (W3 self-test). Client code submits commands only from input-event handlers (enforced by a Playwright check that no command is sent without a preceding trusted input event).
+
+### 23.3 Live protocol `web/1`
+
+WebSocket `GET /web/v1/live`, JSON text frames `{"t": …}`.
+
+```text
+C→S hello{v:1}                                   S→C welcome{session, head}
+C→S sub{id, view, args}                          S→C snap{sub, data, cursor} then delta{sub, changes[], cursor}…
+C→S unsub{id}
+C→S cmd{id, op, args, expected_version?}         S→C ack{id, status} then cmd_status{id, status}… until final
+C→S ping                                         S→C pong; S→C beat{head} every 15 s
+S→C signin{device, at} · approval{command} · session_revoked · error{code, message}
+```
+
+**Views:**
+- `chats{filter: all|known|unknown|unread|deleted|spam}`: ChatSummary rows (§23.4) and order keys. Deltas upsert or remove rows.
+- `thread{chat_id, anchor: latest|unread|<message_id>, before?, after?}`: a window of ThreadItems. Deltas update items inside the window and report `newer`/`older` counts outside it.
+- `record{collection, id}`.
+- `collection{chat_id, kind}`.
+
+**Rules:**
+- **Deltas:** come from the State journal through the same iterator as local SSE (§12), filtered by Visibility and mapped to affected subscriptions.
+- **Budget:** journal commit to frame written ≤ 20 ms p95 on the gateway.
+- **Reconnect:** the client resubscribes with its last cursor per view. The server replays from the journal when it can, otherwise sends a fresh `snap`.
+- **Backpressure:** at most 4 MiB unsent per socket; beyond that the socket closes with `overloaded` and the client reconnects.
+- **Command IDs:** generated by the client (ULID), so a resend after reconnect is idempotent (§11.2).
+
+### 23.4 Read models
+
+Operations (descriptors in `internal/contracts/operations.go`; available through REST, MCP and `web/1`; scope `messages:read`):
+
+- `messages.chats{filter?, limit≤200, after?}` → `{chats: ChatSummary[], next?}`. Ordered by `last_activity_at` desc, then id. ChatSummary fields:
+  - `chat`: the record
+  - `title`: display name, or the participants' contact names joined
+  - `avatar_handles`: up to 3 handle ids with `contact_id`
+  - `last_message`: `{id, sent_at, is_from_me, preview{kind: text|attachments|reaction|group_event|unsent|edited, text?, attachment_kinds?, count?, reaction?}}`
+  - `last_activity_at`, `unread_count`, `has_unseen_mention`
+  - `muted` and `pinned_index`, both null until W4
+- `messages.thread{chat_id, anchor?, before?, after?, limit≤200}` → `{items: ThreadItem[], before?, after?, unread_anchor?}`. ThreadItem is the message record plus:
+  - `reactions[]`: current state per sender and part, with removals folded out
+  - `attachments[]`: records including `derivatives` and `media`
+  - `reply_count` for thread originators
+  - Ordered by `sent_at`, then id. Cursors are stable under concurrent inserts.
+- `messages.collection{chat_id, kind: photos|videos|links|documents|locations|audio, after?, limit≤200}`.
+
+**Unread:** a message counts as unread when it is not from me, has `kind = message`, and has `read_at` null.
+
+**Implementation:**
+- Derived tables in `state.db` (`msg_by_chat`, `chat_summary`, `reaction_by_message`, `attachment_by_message`), updated in the same transaction as each record apply and rebuilt on snapshot install, on the gateway and replicas alike.
+- They're never journaled and never authoritative.
+- Visibility is applied at read time, as for every read.
+
+**Budgets on the Air:**
+- `messages.chats` first page ≤ 15 ms p95 at 500 chats.
+- `messages.thread` page of 100 ≤ 10 ms p95 on a 170k-message store.
+
+### 23.5 Remote
+
+**Commands:**
+- `bridge remote on [--name <host>]` starts an embedded tsnet node, with state in `<home>/remote/`, mode 0700.
+  - If the node isn't logged in, it prints the Tailscale login URL and waits.
+  - If HTTPS or Funnel isn't enabled for the tailnet, it prints the exact admin URL that enables it, then waits and rechecks.
+  - Then it listens with Funnel on :443 and prints `https://<host>.<tailnet>.ts.net` and a terminal QR code.
+  - The enabled state persists across restarts.
+- `bridge remote off` closes the listener within 1 s.
+- `bridge remote status` prints state, URL and the last error.
+- Allowed on replicas, off by default. Tailnet devices reach the same hostname without Funnel.
+
+**Public routing:**
+
+| Path | Handler | Auth |
+|---|---|---|
+| `/`, app routes, `/assets/*`, `/web/*`, `/oauth/*`, `/.well-known/oauth-*` | Web | device session / OAuth |
+| `/v1/*`, `/mcp` | Frontdoor (public-host mode) | `Authorization: Bearer` with **agent** tokens only (§23.6); any `Origin` header rejects; local machine tokens are refused remotely |
+| `/v1/feed` | Replication | replica device key (later unit; see §23.11) |
+
+TLS ends inside `bridge`, using the ts.net certificate managed by tsnet. Funnel relays cannot read traffic. Bandwidth limits are Tailscale's (unpublished), so media variants (§23.7) keep transfers small.
+
+### 23.6 Agent access
+
+**Agent tokens:**
+- **Principal:** `agent:<id>`, created in the web UI (or `bridge agent create --name --level --scope`) and shown once.
+- **Scopes:** the source grants of §14.
+- **Levels:**
+  - `read`: read operations only.
+  - `approve`: every command is admitted as `awaiting_approval`, a new disposition before `admitted`.
+    - Device sessions receive an `approval` event, and the web UI lists the command with redacted arguments plus the full text for the owner.
+    - Approving resumes the normal lifecycle. The expiry clock starts at approval, with a 24-hour approval window.
+    - Rejecting finalizes as `rejected_by_owner`.
+    - `wait_ms` returns the current status.
+  - `full`: commands proceed directly, with the same Helper gates as interactive commands.
+- **Defaults:** new tokens start at `approve`. Lab and test principals keep today's gates.
+- **Activity log:** commands appear individually (redacted per §15), reads aggregated per minute per operation. Retention is 90 days.
+
+**MCP OAuth 2.1 (connector UIs such as claude.ai and ChatGPT):**
+- Endpoints: `/.well-known/oauth-protected-resource`, `/.well-known/oauth-authorization-server`, `/oauth/register` (dynamic client registration), `/oauth/authorize` (a consent page in the web app that requires a device session, where the owner picks the level and scopes), and `/oauth/token`.
+- PKCE S256 is mandatory.
+- Access tokens last 1 hour; refresh tokens rotate, last 90 days, and are revocable from the Agents list.
+- The resulting access token is an `agent:` principal.
+
+**Connection snippets** generated per token:
+- **Grok:** xAI SDK `mcp(server_url, authorization)`.
+- **Claude Code:** `claude mcp add --transport http … --header`.
+- **Codex:** `config.toml`.
+- **ChatGPT and claude.ai:** connector URL with OAuth.
+- **curl.**
+
+### 23.7 Media derivatives
+
+The Helper creates variants for present attachment blobs, as new blobs referenced from the attachment record:
+
+| Input | Variants | Metadata (`media`) |
+|---|---|---|
+| Image (HEIC, JPEG, PNG, WebP, AVIF, TIFF) | `thumb` ≤ 400 px, `display` ≤ 1600 px; JPEG q0.8/0.85, or PNG when there's alpha; orientation applied | `width`, `height`, `thumbhash` |
+| GIF | `thumb` (first frame); the original plays | same |
+| Video (MOV, MP4, 3GP) | `video` H.264/AAC MP4 ≤ 1080p with faststart; `poster` JPEG | `width`, `height`, `duration_ms`, `thumbhash` |
+| Live Photo (still + paired MOV) | image variants + `live` MP4 | + `live: true` |
+| Audio (CAF, AMR, M4A, MP3) | `audio` AAC M4A | `duration_ms`, `waveform` (64 peaks, 0–255) |
+| Sticker (HEIC/PNG with alpha) | `display` PNG | `width`, `height` |
+
+- **Encoders:** ImageIO and AVFoundation, which use the hardware encoders.
+- **Order:**
+  - New attachments come first: images within 2 s, video when its export completes.
+  - Backfill runs newest-first, one job at a time at utility QoS, and pauses below 20% battery or under serious thermal state.
+- **Sync:** variants count toward blob caps and sync like other blobs. Replicas fetch variants before originals.
+- **Fallback:** the web serves a browser-safe original when a variant is missing, or `variant_pending` otherwise.
+
+### 23.8 Frontend
+
+- **Stack:** `web/` with pnpm, Vite, SolidJS and TypeScript (strict). No UI libraries.
+- **Source layout:**
+  - `src/app`: shell, router, layouts, theme
+  - `src/design`: tokens.css from `design/web/messages.md` §16, materials, type, SVG icon sprite
+  - `src/motion`: springs, gestures, shared-element transitions
+  - `src/virtual`: virtual list with variable heights and anchor preservation
+  - `src/data`: `web/1` client, store, IndexedDB cache, optimistic commands
+  - `src/auth`, `src/settings` (devices, passkeys, agents, approvals, activity)
+  - `src/<app>` per app
+- **Budgets** (Playwright gates):
+  - shell JS ≤ 60 KB gzip; route chunks loaded lazily
+  - CLS 0
+  - no long task > 50 ms during scroll or navigation
+  - interaction-to-next-paint ≤ 8 ms p95 on the Air
+  - warm load to cached content < 1 s
+- **Lint:** `make lint` gains a zero-comments check for `.ts`/`.tsx` (the TypeScript tokenizer, so strings, templates and regexes are respected) and `tsc --noEmit`.
+- **Build:**
+  - `make web` runs `pnpm install --frozen-lockfile && pnpm build` into `web/dist/`, and `make build` depends on it.
+  - `web/dist/*` is gitignored except `.gitkeep`, so `go:embed all:dist` always compiles.
+- **PWA:**
+  - Manifest with our own icons.
+  - The service worker precaches the shell and caches blob thumbs in Cache Storage (200 MB LRU).
+  - Public sessions get no caching.
+
+### 23.9 Demo
+
+`bridge-lab demo [--listen 127.0.0.1:0]` starts a sim World gateway seeded by `lab/demo`:
+- **Dataset:** deterministic, synthetic and personal-data-free. About 40 chats (direct and group; iMessage, SMS and RCS) and about 5k messages, covering every item type the sim represents, with generated images, PDFs and vCards.
+- **Output:** it prints a URL with an auto-login **demo session**. That session exists only in lab builds and is impossible in the product binary.
+- **Uses:** contributors, README media and the `web` test level.
+
+### 23.10 Test level `web` and scenarios
+
+- **Level:** `web` is Playwright through `bridge-lab`. A scenario YAML with `level: web` runs `pnpm exec playwright test -g <ID>` against a fresh demo world.
+- **Matrix:** WebKit, Chromium and Firefox × light and dark × phone (390×844) and desktop (1440×900), as each scenario declares. Passkey flows use Chromium's virtual authenticator.
+- **Real-level web scenarios** drive the same UI against the real gateway on the Air.
+
+W1 scenarios:
+
+| ID | Level | Proves |
+|---|---|---|
+| WEB-SERVE-EMBED | sim, web | binary serves the app; immutable asset caching; route fallback; "not built" page |
+| WEB-AUTH-ENROLL | web | enroll token → passkey → trusted session; token single-use and expiring |
+| WEB-AUTH-LOGIN | web | discoverable sign-in; trusted vs public (public leaves no IndexedDB/Cache Storage) |
+| WEB-AUTH-REVOKE | web | revoke closes the other socket ≤ 1 s and wipes its cache; `bridge web lock` |
+| WEB-AUTH-ORIGIN | sim | foreign or missing Origin on state change or WS upgrade rejects; CSP and headers present |
+| WEB-AUTH-RATELIMIT | sim | sign-in and enroll limits |
+| WEB-RM-CHATS | sim | `messages.chats` equals Truth-derived summaries via REST and MCP; budget |
+| WEB-RM-THREAD | sim | thread pages stable, no gaps or duplicates under concurrent inserts; reactions folded; budget |
+| WEB-LIVE-DELTA | web | sim inbound message reaches the browser view ≤ 500 ms p95 (browser-observed) |
+| WEB-LIVE-RESUME | web | socket drop and reconnect converge without gaps |
+| WEB-MEDIA-VARIANTS | real | HEIC, MOV and CAF attachments on the Air get variants with correct dimensions and duration, and play in WebKit, Chromium and Firefox |
+| WEB-REMOTE-FUNNEL | real | `bridge remote on` → public URL reachable from Ubuntu with a valid certificate; agent REST/MCP works; local tokens refused; `off` closes ≤ 1 s |
+| WEB-AGENT-LEVELS | sim | read rejects commands; approve → `awaiting_approval` → approve executes / reject finalizes; full executes |
+| WEB-AGENT-OAUTH | sim, web | dynamic registration + PKCE + consent with a device session → MCP call succeeds; refresh rotates; revoke works |
+| WEB-PERF-SHELL | web | bundle, CLS and warm-load budgets |
+
+### 23.11 W1 units
+
+| Unit | Contents | Depends on |
+|---|---|---|
+| W1-RM | §23.4 read models + descriptors + WEB-RM-* | — |
+| W1-WEB | §23.2 + §23.3 server side (Web module, sessions, passkeys, live views, blob variants route, interactive principal marker) + WEB-AUTH-* (server parts) | W1-RM for live views of chats and threads (stub until merged) |
+| W1-UI | §23.8 scaffold: tokens, motion engine, virtual list, layouts, router, `web/1` client, auth and settings screens, PWA, lint, `make web`, embed, Playwright harness and `web` level | protocol in §23.3 (parallel with W1-WEB) |
+| W1-MEDIA | §23.7 + WEB-MEDIA-VARIANTS | — |
+| W1-REMOTE | §23.5 + WEB-REMOTE-FUNNEL | W1-WEB |
+| W1-AGENT | §23.6 + WEB-AGENT-* | W1-WEB, W1-REMOTE |
+| W1-DEMO | §23.9 | W1-RM, W1-UI |
+| W1-RELAY | replicas over Remote (`/v1/feed`, replica device-key auth instead of TLS client certs) | W1-REMOTE; lowest priority |

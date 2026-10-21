@@ -1,0 +1,3 @@
+# Reach from anywhere through an embedded Tailscale Funnel
+
+The requirement is any browser or agent, anywhere, at no cost to users, with nothing installed on the client and a stable address (passkeys and agent configs depend on it). Cloudflare quick tunnels change URL on every restart and drop SSE. ngrok's free tier caps traffic and shows a warning page. Port forwarding fails behind CGNAT. A project-run relay costs money to run. tsnet embeds a Tailscale node in `bridge`, and Funnel gives a stable `*.ts.net` HTTPS address. TLS ends inside `bridge`, so the relay cannot read traffic. The cost is one free Tailscale sign-in on the Mac and Tailscale's unpublished bandwidth limit. A Cloudflare named tunnel is documented as an alternative.
