@@ -438,6 +438,25 @@ func (f *fakeApple) messageCommand(wire *applepeer.Wire, frame contracts.IPCFram
 			return err
 		}
 		evidence["capture_checkpoint"] = checkpoint()
+		if fault == "receipt-before-outcome" {
+			f.mu.Lock()
+			receipt := f.records[native]
+			var data map[string]any
+			json.Unmarshal(receipt.Data, &data)
+			data["delivered_at"] = time.Now().UTC()
+			receipt.Data, _ = json.Marshal(data)
+			receipt.ObservedAt = time.Now().UTC()
+			f.records[native] = receipt
+			err = f.changedLocked(contracts.Messages)
+			revision = f.durable.Revision[contracts.Messages]
+			f.mu.Unlock()
+			if err != nil {
+				return err
+			}
+			if err = emit(contracts.Capture{Source: contracts.Messages, Observations: []contracts.Observation{receipt}}, revision); err != nil {
+				return err
+			}
+		}
 		outcome.Evidence, _ = json.Marshal(evidence)
 		f.mu.Lock()
 		f.evidence[t.CommandID] = outcome

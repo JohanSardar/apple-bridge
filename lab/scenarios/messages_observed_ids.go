@@ -24,6 +24,7 @@ func checkMessageCommandIDs(ctx context.Context, w *world.World, evidence *Evide
 			version := uint64(0)
 			if op == "send" {
 				args["chat_id"] = chat.ID
+				add(label+"_receipt_before_outcome_armed", w.ControlAction("/fault", map[string]any{"name": "receipt-before-outcome"}) == nil)
 			} else {
 				args["id"] = target.ID
 			}
@@ -65,6 +66,13 @@ func checkMessageCommandIDs(ctx context.Context, w *world.World, evidence *Evide
 				return
 			}
 			target = read.Records[0]
+			if op == "send" {
+				var data struct {
+					DeliveredAt string `json:"delivered_at"`
+				}
+				json.Unmarshal(target.Data, &data)
+				add(label+"_receipt_update_precedes_resolution", data.DeliveredAt != "" && target.Version > 1)
+			}
 			add(label+"_"+op+"_replicas_converge", w.Await(5*time.Second, func() bool { return convergence(w) }) == nil)
 			for _, replica := range w.Replicas {
 				var records contracts.ReadResult

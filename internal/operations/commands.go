@@ -453,6 +453,16 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 				r.CommitSeq = sequence.Sequence
 				if id, err := g.State.ObservedRecordID(ctx, collection, evidence.NativeKey, sequence); err == nil {
 					r.ObservedRecordIDs = []string{id}
+				} else if !errors.Is(err, contracts.ErrNotFound) {
+					var details map[string]any
+					json.Unmarshal(f.Evidence, &details)
+					problem := contracts.ErrUnavailable
+					var typed *contracts.Error
+					if errors.As(err, &typed) {
+						problem = typed
+					}
+					details["record_id_resolution_error"] = problem.Code
+					f.Evidence, _ = json.Marshal(details)
 				}
 			}
 		}

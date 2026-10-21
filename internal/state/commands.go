@@ -314,8 +314,8 @@ func (s *Store) ObservedRecordID(ctx context.Context, collection, nativeKey stri
 	err := s.db.QueryRowContext(ctx, `SELECT a.record_id FROM aliases a
  JOIN checkpoints c ON c.source=a.source AND c.generation=a.generation
  JOIN records r ON r.collection=a.collection AND r.id=a.record_id
- WHERE a.source=? AND a.collection=? AND a.native_key=? AND r.seq<=?
- AND EXISTS(SELECT 1 FROM meta WHERE key='epoch' AND value=?)`, contracts.CollectionSource(collection), collection, nativeKey, cursor.Sequence, cursor.Epoch).Scan(&id)
+ WHERE a.source=? AND a.collection=? AND a.native_key=?
+ AND EXISTS(SELECT 1 FROM meta WHERE key='epoch' AND value=?)`, contracts.CollectionSource(collection), collection, nativeKey, cursor.Epoch).Scan(&id)
 	if errors.Is(err, sql.ErrNoRows) {
 		return "", contracts.ErrNotFound
 	}
