@@ -1,0 +1,161 @@
+{
+  "expected_failure": "cold_full_read_main_queue_blocking_under_16_ms",
+  "phase": "actor_read_with_caller_setup_and_teardown",
+  "evidence": {
+    "host_conditions": {
+      "quiet": false,
+      "summary": "air: load=[6.7 8.49 9.02] cpus=8 other_heavy=1"
+    },
+    "run_id": "run_01M5FD3VAKT4VXYKFG8YBXGKHQ",
+    "metrics": {
+      "profile": {
+        "cold": {
+          "connection_open_ms": 0.4260831046849489,
+          "query_ms": 28.371334308758378,
+          "close_ms": 0,
+          "backup_ms": 0,
+          "total_ms": 41.733958292752504,
+          "decode_ms": 12.936540879309177
+        },
+        "iterations": 200,
+        "mode": "persistent_typed",
+        "profile_total_ms": 6249.815833289176,
+        "responsiveness": {
+          "main_queue_delay": {
+            "max_ms": 38.148875115439296,
+            "samples": 346,
+            "p95_ms": 3.8095414638519287,
+            "under_16_ms": false
+          },
+          "cold_full_elapsed_ms": 655.0451249349862
+        },
+        "warm_full": {
+          "query": {
+            "p50_ms": 22.096000611782074,
+            "p95_ms": 35.26982758194208,
+            "max_ms": 128.80916916765273,
+            "samples": 200
+          },
+          "decode": {
+            "p50_ms": 6.77521200850606,
+            "p95_ms": 8.058047387748957,
+            "max_ms": 14.533003093674779,
+            "samples": 200
+          },
+          "backup": {
+            "p50_ms": 0,
+            "p95_ms": 0,
+            "max_ms": 0,
+            "samples": 200
+          },
+          "connection_open": {
+            "p95_ms": 0,
+            "p50_ms": 0,
+            "max_ms": 0,
+            "samples": 200
+          },
+          "total": {
+            "p50_ms": 28.953332919627428,
+            "p95_ms": 43.32787496969104,
+            "max_ms": 136.1021250486374,
+            "samples": 200
+          }
+        },
+        "warm_incremental_unchanged": {
+          "query": {
+            "samples": 200,
+            "p95_ms": 0.030542956665158272,
+            "p50_ms": 0.028833281248807907,
+            "max_ms": 0.04508462734520435
+          },
+          "backup": {
+            "max_ms": 0,
+            "samples": 200,
+            "p50_ms": 0,
+            "p95_ms": 0
+          },
+          "connection_open": {
+            "max_ms": 0,
+            "samples": 200,
+            "p50_ms": 0,
+            "p95_ms": 0
+          },
+          "decode": {
+            "max_ms": 0.3334151115268469,
+            "p50_ms": 0.26550167240202427,
+            "samples": 200,
+            "p95_ms": 0.2830834127962589
+          },
+          "total": {
+            "max_ms": 0.37849973887205124,
+            "samples": 200,
+            "p50_ms": 0.2944581210613251,
+            "p95_ms": 0.3124999348074198
+          }
+        }
+      }
+    },
+    "scenario": "REM-STORE-PERF",
+    "level": "real",
+    "passed": false,
+    "git_sha": "5ac346f264da1ccc01aab03589243b97b1839277",
+    "at": "2026-10-21T14:16:18.515289Z",
+    "assertions": [
+      {
+        "name": "private_profile_directory",
+        "passed": true
+      },
+      {
+        "name": "private_signed_helper",
+        "passed": true
+      },
+      {
+        "name": "store_profile_completed",
+        "passed": true
+      },
+      {
+        "name": "timing_only_profile_decoded",
+        "passed": true
+      },
+      {
+        "name": "warm_full_200_samples_within_budget",
+        "passed": true
+      },
+      {
+        "name": "warm_incremental_unchanged_200_samples_within_budget",
+        "passed": true
+      },
+      {
+        "name": "full_and_incremental_measured",
+        "passed": true
+      },
+      {
+        "name": "cold_full_read_main_queue_blocking_under_16_ms",
+        "passed": false
+      },
+      {
+        "name": "credential_backend_override_restored",
+        "passed": true
+      }
+    ],
+    "latency": {
+      "warm_full": {
+        "samples": 200,
+        "p50_ms": 28.953332919627428,
+        "p95_ms": 43.32787496969104,
+        "max_ms": 136.1021250486374,
+        "timeouts": 0
+      },
+      "warm_incremental_unchanged": {
+        "samples": 200,
+        "p50_ms": 0.2944581210613251,
+        "p95_ms": 0.3124999348074198,
+        "max_ms": 0.37849973887205124,
+        "timeouts": 0
+      }
+    },
+    "hosts": [
+      "air"
+    ]
+  }
+}
