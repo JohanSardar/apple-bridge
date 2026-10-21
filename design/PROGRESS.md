@@ -98,3 +98,10 @@ Process: every change ships as a small PR (WORKER-RULES, Git and GitHub). Status
   - Messages capture pass for `messages.md` §17 and the "to verify" rows.
   - The W3 unlock script (cleanup of W1-MEDIA bubbles and self-test bubbles, then the UI proofs).
   - Embedded tsnet login approval (`/tmp/ablab/w1-remote-embedded-check/remote-on.log`).
+- UPDATE 2026-10-21 night:
+  - **Merged:** per-part command outcomes (#141), video and Live Photo bubbles (#108), the Reminders `reminders.lists`/`reminders.items` read models at gateway p95 about 5 ms (#150), a memory-gated sim lane beside the single heavy slot (#151–#153, #156), and a lab gate that fails any run during which the Helper crashed (#155).
+  - **Fixing:** a Helper SIGABRT in Messages media export. Cancellation reached `cancelExport()` before the async export configured its session (W2-MEDIA, priority). Real Calendar and Contacts acceptance reruns wait for that fix.
+- **Waiting on the Air's system Tailscale**, which has been stopped since before 16:31 local on 2026-10-21. That is Johan's host state and agents never change it. These gates are recorded as host-blocked and rerun when it's back:
+  - #141: the public relay gate (`remote_on_system`).
+  - #154: the six `runRelayWorld` relay scenarios (CONNECT, COMMAND, PUBLIC-AGENTS, NATIVE-AGENTS, REPLICA-BLOBS, REPLICA), plus CORE-GATEWAY-DIALS at replica level if its Tailscale dial fails.
+  - Contacts public-path R-LIVE (#139).

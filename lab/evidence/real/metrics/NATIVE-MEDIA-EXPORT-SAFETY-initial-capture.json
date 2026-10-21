@@ -1,0 +1,76 @@
+{
+  "evidence": {
+    "host_conditions": {
+      "quiet": true,
+      "summary": "air: load=[3.75 4.25 4.92] cpus=8 other_heavy=0"
+    },
+    "run_id": "run_01M5G9ZYS0356451C509TTT6NA",
+    "metrics": {
+      "media_drain_enabled": true,
+      "pending_items_terminal": true,
+      "synthetic_only": false,
+      "writes_submitted": 0
+    },
+    "scenario": "NATIVE-MEDIA-EXPORT-SAFETY",
+    "level": "real",
+    "passed": true,
+    "git_sha": "80f91102dd4635850b67c073b9966052452c5c2b",
+    "at": "2026-10-21T22:40:59.680154Z",
+    "assertions": [
+      {
+        "name": "private_pending_lookup_valid",
+        "passed": true
+      },
+      {
+        "name": "signed_real_world_ready",
+        "passed": true
+      },
+      {
+        "name": "media_drain_not_paused",
+        "passed": true
+      },
+      {
+        "name": "messages_source_ready",
+        "passed": true
+      },
+      {
+        "name": "previously_pending_audiovisual_terminal",
+        "passed": true
+      },
+      {
+        "name": "same_helper_survives_media_drain",
+        "passed": true
+      },
+      {
+        "name": "media_compute_completed",
+        "passed": true
+      },
+      {
+        "name": "credential_backend_override_restored",
+        "passed": true
+      }
+    ],
+    "latency": {},
+    "hosts": [
+      "air"
+    ]
+  },
+  "runtime_observations": {
+    "run_id": "run_01M5G9ZYS0356451C509TTT6NA",
+    "passed": true,
+    "compute_observed": true,
+    "yield_observed": true,
+    "export_attempt_on_backlog": true,
+    "guard_inputs_unchanged": true,
+    "guard_input_hashes": {
+      "native/Sources/MediaDerivatives/Audiovisual.swift": "bb851eec90144312024deff25c8084379521d39a06b61ed7b43d00817fc55ce9",
+      "native/Sources/MediaDerivatives/ExportAttempt.swift": "c6ee3f834297e6b28a4cc33d14a55dd8625e5b88b6a304f4af6ae6dd9844f670",
+      "native/Sources/MediaExportGuard/MediaExportGuard.m": "3f182139d8670dc565d679648299279874a4cf239ec178bd540adaea374fa2ea",
+      "native/Sources/MediaExportGuard/include/MediaExportGuard.h": "e2a97c470bfe74e3d5ecf79fb8a3fecaef6635bdb20c21105f6353dece0d6266"
+    },
+    "helper_crash_free": true,
+    "real_guard_exceptions_captured": false,
+    "all_previously_pending_present": true,
+    "observation_provenance": "Live private media-work-trace reads by real-progress.py during the run showed compute/foreground yields and fresh export temporary output on the metadata-probed backlog. Raw world traces were removed by normal world teardown; the diagnostic tool results are retained in the worker session."
+  }
+}

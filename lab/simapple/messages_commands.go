@@ -307,7 +307,12 @@ func (f *fakeApple) messageCommand(wire *applepeer.Wire, frame contracts.IPCFram
 				put("chat", chat, map[string]any{"service": m.Service, "style": style, "display_name": m.Name, "participants": peers}, false)
 			}
 			native = contracts.NewID("message")
-			newMessage(native, m.Text, chat, true)
+			hasText := m.Text != "" || a.Op != "messages.send" || len(m.Files) == 0
+			if hasText || fault == "delivery-failed" || fault == "ghost-send" {
+				newMessage(native, m.Text, chat, true)
+			} else {
+				native = ""
+			}
 			if a.Op == "messages.reply" {
 				o := f.records[native]
 				var d map[string]any
@@ -332,10 +337,18 @@ func (f *fakeApple) messageCommand(wire *applepeer.Wire, frame contracts.IPCFram
 				d["service"] = "SMS"
 				put("message", native, d, false)
 				disposition = contracts.DispositionDeliveryFailed
+				parts = append(parts, map[string]any{"index": 0, "kind": "text", "disposition": "delivery_failed", "observed": false, "reason": "empty_unjoined_sms"})
 			} else {
-				newMessage(native+"-echo", m.Text, chat, false)
-				parts = append(parts, map[string]any{"index": 0, "kind": "text", "native_key": native, "disposition": "locally_observed"})
-				for i, file := range m.Files {
+				if hasText {
+					newMessage(native+"-echo", m.Text, chat, false)
+					parts = append(parts, map[string]any{"index": 0, "kind": "text", "native_key": native, "disposition": "locally_observed", "observed": true})
+				}
+				for fileIndex, file := range m.Files {
+					if (fault == "part-no-effect" || fault == "part-progress-failure") && fileIndex == len(m.Files)-1 {
+						parts = append(parts, map[string]any{"index": len(parts), "kind": "attachment", "disposition": "failed_no_effect", "observed": false})
+						disposition = contracts.DispositionDeliveryFailed
+						continue
+					}
 					bytes, err := os.ReadFile(file.Path)
 					if err != nil {
 						f.mu.Unlock()
@@ -351,9 +364,34 @@ func (f *fakeApple) messageCommand(wire *applepeer.Wire, frame contracts.IPCFram
 					key := contracts.NewID("attachment")
 					msg := contracts.NewID("message")
 					newMessage(msg, "", chat, true)
+					if native == "" {
+						native = msg
+					}
 					derivatives, media := f.mediaVariants(file.Name, bytes)
 					put("attachment", key, map[string]any{"message_id": messageReference("message", msg), "filename": file.Name, "size": len(bytes), "mime_type": simMediaMIME(file.Name, bytes), "blob": map[string]any{"digest": digest, "state": "present"}, "derivatives": derivatives, "media": media}, false)
-					parts = append(parts, map[string]any{"index": i + 1, "kind": "attachment", "native_key": msg, "disposition": "locally_observed"})
+					parts = append(parts, map[string]any{"index": len(parts), "kind": "attachment", "native_key": msg, "disposition": "locally_observed", "observed": true})
+				}
+				if fault == "part-delivery-failed" && len(parts) > 0 {
+					failed := parts[len(parts)-1]
+					key, _ := failed["native_key"].(string)
+					var data map[string]any
+					json.Unmarshal(f.records[key].Data, &data)
+					data["error_code"] = 100
+					put("message", key, data, false)
+					failed["disposition"] = "delivery_failed"
+					disposition = contracts.DispositionDeliveryFailed
+				}
+			}
+			if fault == "part-progress" || fault == "part-progress-failure" {
+				for _, part := range parts {
+					if part["disposition"] == "failed_no_effect" {
+						continue
+					}
+					part["observed"] = false
+					part["disposition"] = "indeterminate"
+				}
+				if fault == "part-progress" {
+					disposition = contracts.DispositionIndeterminate
 				}
 			}
 			if fault == "identical-manual-send" {
@@ -415,6 +453,13 @@ func (f *fakeApple) messageCommand(wire *applepeer.Wire, frame contracts.IPCFram
 		}
 		f.effects[t.CommandID]++
 		evidence := map[string]any{"source": "messages", "collection": "messages." + collection, "native_key": native, "fingerprint": t.Hash, "observed": disposition != contracts.DispositionIndeterminate, "parts": parts, "candidate_count": 1}
+		if fault == "outcome-without-capture" {
+			evidence["reason"] = "capture_omitted"
+		}
+		if fault == "part-progress" || fault == "part-progress-failure" {
+			evidence["reason"] = "part_progress"
+			evidence["observed"] = false
+		}
 		if fault == "ghost-send" {
 			evidence["reason"] = "empty_unjoined_sms"
 			evidence["observed"] = false
@@ -435,6 +480,16 @@ func (f *fakeApple) messageCommand(wire *applepeer.Wire, frame contracts.IPCFram
 		capture := contracts.Capture{Source: contracts.Messages, Observations: observations, BlobHandles: f.blobHandles()}
 		if strings.HasPrefix(a.Op, "messages.delete_") {
 			capture = fullScanSource(observations, contracts.Messages)
+		}
+		if fault == "outcome-without-capture" {
+			_, err = wire.Send(outcome)
+			return err
+		}
+		if fault == "outcome-before-capture" {
+			if _, err = wire.Send(outcome); err != nil {
+				return err
+			}
+			time.Sleep(300 * time.Millisecond)
 		}
 		if err = emit(capture, revision); err != nil {
 			return err
@@ -467,6 +522,9 @@ func (f *fakeApple) messageCommand(wire *applepeer.Wire, frame contracts.IPCFram
 		if err != nil {
 			return err
 		}
+		if fault == "outcome-before-capture" {
+			return nil
+		}
 		if err = f.guard(guardEntry{CommandID: t.CommandID, Outcome: &outcome}); err != nil {
 			return err
 		}
@@ -475,11 +533,88 @@ func (f *fakeApple) messageCommand(wire *applepeer.Wire, frame contracts.IPCFram
 	case "Resolve":
 		f.mu.Lock()
 		outcome := f.evidence[frame.CommandID]
+		stale := f.fault == "part-progress-stale"
+		receiptFirst := f.fault == "part-receipt-failed-first"
+		receiptFailed := f.fault == "part-receipt-failed" || receiptFirst
+		unboundFailure := f.fault == "part-unbound-failure"
+		if stale || receiptFailed || unboundFailure {
+			f.fault = ""
+		}
 		f.mu.Unlock()
+		if receiptFailed {
+			var evidence map[string]any
+			json.Unmarshal(outcome.Evidence, &evidence)
+			parts, _ := evidence["parts"].([]any)
+			if len(parts) > 0 {
+				index := len(parts) - 1
+				if receiptFirst {
+					index = 0
+				}
+				part, _ := parts[index].(map[string]any)
+				key, _ := part["native_key"].(string)
+				f.mu.Lock()
+				record := f.records[key]
+				var data map[string]any
+				json.Unmarshal(record.Data, &data)
+				data["error_code"] = 100
+				record.Data, _ = json.Marshal(data)
+				record.ObservedAt = time.Now().UTC()
+				f.records[key] = record
+				err := f.changedLocked(contracts.Messages)
+				revision := f.durable.Revision[contracts.Messages]
+				f.mu.Unlock()
+				if err != nil {
+					return err
+				}
+				if err = emit(contracts.Capture{Source: contracts.Messages, Observations: []contracts.Observation{record}}, revision); err != nil {
+					return err
+				}
+				part["disposition"] = "delivery_failed"
+				evidence["capture_checkpoint"] = checkpoint()
+				outcome.Disposition = contracts.DispositionDeliveryFailed
+				outcome.Evidence, _ = json.Marshal(evidence)
+			}
+		}
+		if unboundFailure {
+			var evidence map[string]any
+			json.Unmarshal(outcome.Evidence, &evidence)
+			parts, _ := evidence["parts"].([]any)
+			if len(parts) > 0 {
+				part, _ := parts[len(parts)-1].(map[string]any)
+				delete(part, "native_key")
+				part["observed"] = false
+				part["disposition"] = "delivery_failed"
+				outcome.Disposition = contracts.DispositionDeliveryFailed
+				outcome.Evidence, _ = json.Marshal(evidence)
+			}
+		}
+		var progress map[string]any
+		json.Unmarshal(outcome.Evidence, &progress)
+		if progress["reason"] == "capture_omitted" {
+			progress["capture_checkpoint"] = checkpoint()
+			outcome.Evidence, _ = json.Marshal(progress)
+		}
+		if progress["reason"] == "part_progress" && !stale {
+			parts, _ := progress["parts"].([]any)
+			if len(parts) > 0 {
+				part, _ := parts[0].(map[string]any)
+				part["observed"] = true
+				part["disposition"] = "locally_observed"
+				progress["observed"] = true
+				outcome.Evidence, _ = json.Marshal(progress)
+			}
+		}
 		if outcome.Disposition == contracts.DispositionLocallyObserved {
 			var e map[string]any
 			json.Unmarshal(outcome.Evidence, &e)
 			e["delivery_evidence"] = "sim_is_delivered"
+			if parts, ok := e["parts"].([]any); ok {
+				for _, value := range parts {
+					if part, ok := value.(map[string]any); ok && part["disposition"] == "locally_observed" {
+						part["disposition"] = "delivered"
+					}
+				}
+			}
 			outcome.Disposition = contracts.DispositionDelivered
 			outcome.Evidence, _ = json.Marshal(e)
 		}

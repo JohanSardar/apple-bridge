@@ -1,0 +1,226 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[5.02 5.79 5.96] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5G8TMWZBTE2JQBVD1H7V6WJ",
+  "scenario": "WEB-COMMAND-RESOLVE",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "6e3c04f088edf6837e05d9ed03febe27ab966579",
+  "at": "2026-10-21T22:20:37.151213Z",
+  "assertions": [
+    {
+      "name": "software_passkey_enrollment",
+      "passed": true
+    },
+    {
+      "name": "local_cookie_flags",
+      "passed": true
+    },
+    {
+      "name": "trusted_thirty_days",
+      "passed": true
+    },
+    {
+      "name": "session_256_bits",
+      "passed": true
+    },
+    {
+      "name": "tokens_stored_hashed",
+      "passed": true
+    },
+    {
+      "name": "resolve_fixture_list",
+      "passed": true
+    },
+    {
+      "name": "resolve_socket",
+      "passed": true
+    },
+    {
+      "name": "resolve_ambiguous_fault",
+      "passed": true
+    },
+    {
+      "name": "resolve_initial_server_indeterminate",
+      "passed": true
+    },
+    {
+      "name": "resolve_initial_effect_is_one",
+      "passed": true
+    },
+    {
+      "name": "resolve_error_identifies_requested_command",
+      "passed": true
+    },
+    {
+      "name": "resolve_unknown_is_not_found_without_quota",
+      "passed": true
+    },
+    {
+      "name": "resolve_unknown_is_not_found_without_quota",
+      "passed": true
+    },
+    {
+      "name": "resolve_unknown_is_not_found_without_quota",
+      "passed": true
+    },
+    {
+      "name": "resolve_unknown_is_not_found_without_quota",
+      "passed": true
+    },
+    {
+      "name": "resolve_unknown_is_not_found_without_quota",
+      "passed": true
+    },
+    {
+      "name": "resolve_unknown_is_not_found_without_quota",
+      "passed": true
+    },
+    {
+      "name": "resolve_unknown_is_not_found_without_quota",
+      "passed": true
+    },
+    {
+      "name": "resolve_unknown_is_not_found_without_quota",
+      "passed": true
+    },
+    {
+      "name": "resolve_unknown_is_not_found_without_quota",
+      "passed": true
+    },
+    {
+      "name": "resolve_unknown_is_not_found_without_quota",
+      "passed": true
+    },
+    {
+      "name": "resolve_unknown_is_not_found_without_quota",
+      "passed": true
+    },
+    {
+      "name": "resolve_other_session_authority",
+      "passed": true
+    },
+    {
+      "name": "resolve_other_session",
+      "passed": true
+    },
+    {
+      "name": "resolve_other_socket",
+      "passed": true
+    },
+    {
+      "name": "resolve_foreign_owned_id_is_hidden",
+      "passed": true
+    },
+    {
+      "name": "resolve_check_strengthens_original_id",
+      "passed": true
+    },
+    {
+      "name": "resolve_per_command_throttle_returns_stored_status",
+      "passed": true
+    },
+    {
+      "name": "resolve_reconnect_socket",
+      "passed": true
+    },
+    {
+      "name": "resolve_reconnect_cannot_bypass_throttle",
+      "passed": true
+    },
+    {
+      "name": "resolve_quota_command_observed",
+      "passed": true
+    },
+    {
+      "name": "resolve_session_minute_limit",
+      "passed": true
+    },
+    {
+      "name": "resolve_quota_command_observed",
+      "passed": true
+    },
+    {
+      "name": "resolve_session_minute_limit",
+      "passed": true
+    },
+    {
+      "name": "resolve_quota_command_observed",
+      "passed": true
+    },
+    {
+      "name": "resolve_session_minute_limit",
+      "passed": true
+    },
+    {
+      "name": "resolve_quota_command_observed",
+      "passed": true
+    },
+    {
+      "name": "resolve_session_minute_limit",
+      "passed": true
+    },
+    {
+      "name": "resolve_quota_command_observed",
+      "passed": true
+    },
+    {
+      "name": "resolve_session_minute_limit",
+      "passed": true
+    },
+    {
+      "name": "resolve_quota_command_observed",
+      "passed": true
+    },
+    {
+      "name": "resolve_session_minute_limit",
+      "passed": true
+    },
+    {
+      "name": "resolve_quota_command_observed",
+      "passed": true
+    },
+    {
+      "name": "resolve_session_minute_limit",
+      "passed": true
+    },
+    {
+      "name": "resolve_quota_command_observed",
+      "passed": true
+    },
+    {
+      "name": "resolve_session_minute_limit",
+      "passed": true
+    },
+    {
+      "name": "resolve_quota_command_observed",
+      "passed": true
+    },
+    {
+      "name": "resolve_session_minute_limit",
+      "passed": true
+    },
+    {
+      "name": "resolve_quota_command_observed",
+      "passed": true
+    },
+    {
+      "name": "resolve_session_minute_limit",
+      "passed": true
+    },
+    {
+      "name": "resolve_original_effect_remains_one",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

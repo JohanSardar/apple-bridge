@@ -81,6 +81,7 @@ export type CommandState = {
     observed_record_ids?: string[];
     cursor?: Cursor;
     transport_lost?: boolean;
+    check_error?: string;
     optimistic?: unknown;
     error?: unknown;
     disposition?: string;

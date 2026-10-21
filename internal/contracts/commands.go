@@ -70,12 +70,21 @@ type CommandQuery struct {
 	Resolve bool   `json:"resolve,omitempty"`
 	Limit   int    `json:"limit,omitempty"`
 }
+type CommandPart struct {
+	Index       int    `json:"index"`
+	Kind        string `json:"kind"`
+	UploadID    string `json:"upload_id,omitempty"`
+	RecordID    string `json:"record_id,omitempty"`
+	Disposition string `json:"disposition"`
+}
 type CommandEvent struct {
-	State    CommandState    `json:"state"`
-	At       time.Time       `json:"at"`
-	Evidence json.RawMessage `json:"evidence,omitempty"`
+	Transition string          `json:"transition,omitempty"`
+	State      CommandState    `json:"state"`
+	At         time.Time       `json:"at"`
+	Evidence   json.RawMessage `json:"evidence,omitempty"`
 }
 type CommandRecord struct {
+	Parts             []CommandPart            `json:"parts,omitempty"`
 	UploadReferences  map[string]BlobReference `json:"upload_references,omitempty"`
 	Command           Command                  `json:"command"`
 	Principal         string                   `json:"principal"`

@@ -37,6 +37,7 @@ type Deps struct {
 }
 
 type server struct {
+	resolutions map[string][]commandResolution
 	sourceSeq   atomic.Uint64
 	deps        Deps
 	mu          sync.Mutex

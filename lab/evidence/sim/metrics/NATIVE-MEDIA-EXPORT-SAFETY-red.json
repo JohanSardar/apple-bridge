@@ -1,0 +1,19 @@
+{
+  "scenario": "NATIVE-MEDIA-EXPORT-SAFETY",
+  "level": "sim",
+  "run_id": "run_01M5G8NNP18Z5G3N9DADQKD6TH",
+  "source_sha": "9198fb2bc035343e0cfadb2a38985bc43701775d",
+  "synthetic_only": true,
+  "cancel_before_start": {
+    "passed": false,
+    "signal": "SIGABRT",
+    "exception_name": "NSInternalInconsistencyException",
+    "reason": "*** -[AVAssetExportSession setOutputURL:] Cannot alter output URL attribute on an AVAssetExportSession after an export has started."
+  },
+  "cross_process_overlap": {
+    "passed": false,
+    "simultaneous_producers_observed": true,
+    "marker": "same-digest work overlapped across processes"
+  },
+  "fixture_correction": "The still content identifier must round-trip through ImageIO. Final pairing uses one UUID for still and movie, verified before the overlap test; the original overlap RED reached both producer progress barriers before any movie lookup."
+}

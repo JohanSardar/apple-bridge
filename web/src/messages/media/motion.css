@@ -1,0 +1,15 @@
+.media-motion{position:absolute;inset:0;overflow:hidden;border-radius:inherit;isolation:isolate}
+.media-motion>video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 120ms ease-out;pointer-events:none}
+.media-motion[data-media-playing=true][data-media-frame=decoded]>video{opacity:1}
+.media-motion-badge{position:absolute;inset:6px auto auto 6px;display:flex;align-items:center;gap:3px;padding:2px 6px;border-radius:6px;background:rgb(0 0 0 / 25%);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:inset 0 0 0 .5px #fff3;color:#fff;font-size:var(--caption-1);line-height:var(--caption-1-line);font-weight:600;letter-spacing:.02em;font-variant-numeric:tabular-nums;pointer-events:none;transition:opacity 120ms ease-out}
+.media-motion-badge svg{width:16px;height:16px;stroke-width:1.5}
+.media-motion[data-media-live=false]>.media-motion-badge{inset:auto auto 6px 6px;background:#0009;backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:none}
+.media-motion-play{position:absolute;inset:50% auto auto 50%;translate:-50% -50%;display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:rgb(0 0 0 / 30%);backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);box-shadow:inset 0 0 0 .5px #fff6,0 2px 8px #0002;color:#fff;pointer-events:none;transition:opacity 120ms ease-out}
+.media-motion-play svg{width:28px;height:28px}
+.media-motion-badge,.media-motion-play{visibility:visible;transition:opacity 120ms ease-out,visibility 0s linear}
+.media-motion[data-media-playing=true]>.media-motion-badge,.media-motion[data-media-playing=true]>.media-motion-play{opacity:0;visibility:hidden;transition-delay:0s,120ms}
+.media-motion-status{position:absolute;inset:auto 8px 8px;padding:5px 8px;border-radius:8px;background:var(--background-secondary);color:var(--label-secondary);font-size:var(--footnote);text-align:center;pointer-events:none}
+.media-motion:has(.media-unavailable)>.media-open{display:none}
+.solid-material .media-motion-play,.solid-material .media-motion-badge{backdrop-filter:none;-webkit-backdrop-filter:none}
+@media(prefers-reduced-transparency:reduce){.media-motion-play,.media-motion-badge{backdrop-filter:none;-webkit-backdrop-filter:none}}
+@media(prefers-reduced-motion:reduce){.media-motion>video{transition-duration:150ms}.media-motion-play,.media-motion-badge{transition-duration:150ms,0s}.media-motion[data-media-playing=true]>:is(.media-motion-play,.media-motion-badge){transition-delay:0s,150ms}}

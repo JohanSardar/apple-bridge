@@ -1,0 +1,7 @@
+id: HELPER-IPC-RESPONSIVE
+feature: helper.session
+levels: [sim]
+given: [{world: {replicas: 1}}]
+when: [{helper_ipc: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

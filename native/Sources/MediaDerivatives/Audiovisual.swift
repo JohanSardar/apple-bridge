@@ -2,6 +2,7 @@ import Foundation
 import AVFoundation
 import Accelerate
 import UniformTypeIdentifiers
+import Darwin
 
 extension MediaDerivatives {
     static func movieIdentifier(_ url: URL) async throws -> String? {
@@ -30,8 +31,22 @@ extension MediaDerivatives {
         let asset = AVURLAsset(url: input)
         let seconds = try await asset.load(.duration).seconds
         guard seconds.isFinite, seconds > 0 else { throw MediaFailure.decode }
+        guard let original = try await asset.loadTracks(withMediaType: .video).first else { throw MediaFailure.decode }
+        let originalSize = try await original.load(.naturalSize)
+        let originalTransform = try await original.load(.preferredTransform)
+        let oriented = originalSize.applying(originalTransform)
+        var result = MediaResult()
+        result.media.width = Int(abs(oriented.width).rounded())
+        result.media.height = Int(abs(oriented.height).rounded())
+        result.media.duration_ms = Int((seconds * 1000).rounded())
         let file = directory.appendingPathComponent(name + ".mp4")
-        try await export(asset, preset: AVAssetExportPreset1920x1080, file: file, type: .mp4)
+        do { try await export(asset, preset: AVAssetExportPreset1920x1080, file: file, type: .mp4) }
+        catch {
+            try Task.checkCancellation()
+            guard (error as NSError).domain == "AppleBridgeMediaExport" else { throw error }
+            result.unavailable = [name: safeExportReason(error, input: input, directory: directory)]
+            return result
+        }
         let output = AVURLAsset(url: file)
         guard let track = try await output.loadTracks(withMediaType: .video).first else { throw MediaFailure.encode }
         let descriptions = try await track.load(.formatDescriptions)
@@ -42,14 +57,6 @@ extension MediaDerivatives {
         let width = Int(abs(size.width).rounded())
         let height = Int(abs(size.height).rounded())
         guard max(width, height) <= 1920, min(width, height) <= 1080 else { throw MediaFailure.encode }
-        var result = MediaResult()
-        guard let original = try await asset.loadTracks(withMediaType: .video).first else { throw MediaFailure.decode }
-        let originalSize = try await original.load(.naturalSize)
-        let originalTransform = try await original.load(.preferredTransform)
-        let oriented = originalSize.applying(originalTransform)
-        result.media.width = Int(abs(oriented.width).rounded())
-        result.media.height = Int(abs(oriented.height).rounded())
-        result.media.duration_ms = Int((seconds * 1000).rounded())
         let generator = AVAssetImageGenerator(asset: output)
         generator.appliesPreferredTrackTransform = true
         generator.maximumSize = CGSize(width: 400, height: 400)
@@ -62,16 +69,31 @@ extension MediaDerivatives {
         result.derivatives[name] = try variant(file, mime: "video/mp4", width: width, height: height)
         return result
     }
-    static func export(_ asset: AVAsset, preset: String, file: URL, type: AVFileType) async throws {
-        let temporary = file.deletingLastPathComponent().appendingPathComponent(UUID().uuidString + "." + file.pathExtension)
-        defer { try? FileManager.default.removeItem(at: temporary) }
-        guard let session = AVAssetExportSession(asset: asset, presetName: preset) else { throw MediaFailure.encode }
-        session.shouldOptimizeForNetworkUse = true
-        let cancellation = ExportCancellation(session: session)
-        try await withTaskCancellationHandler { try await session.export(to: temporary, as: type) } onCancel: { cancellation.session.cancelExport() }
+    @_spi(Testing) public static func export(_ asset: AVAsset, preset: String, file: URL, type: AVFileType) async throws {
         try Task.checkCancellation()
-        if FileManager.default.fileExists(atPath: file.path) { try FileManager.default.removeItem(at: file) }
-        try FileManager.default.moveItem(at: temporary, to: file)
+        let expected = type == .mp4 ? "mp4" : type == .m4a ? "m4a" : type == .mov ? "mov" : ""
+        guard file.isFileURL, !expected.isEmpty, file.pathExtension.lowercased() == expected else { throw exportFailure("Output URL or extension does not match file type") }
+        guard try await asset.load(.isExportable), await AVAssetExportSession.compatibility(ofExportPreset: preset, with: asset, outputFileType: type) else { throw exportFailure("Asset preset and file type are incompatible") }
+        try Task.checkCancellation()
+        let temporary = file.deletingLastPathComponent().appendingPathComponent(UUID().uuidString + "." + expected)
+        guard !FileManager.default.fileExists(atPath: temporary.path) else { throw exportFailure("Temporary export output already exists") }
+        defer { try? FileManager.default.removeItem(at: temporary) }
+        guard let session = AVAssetExportSession(asset: asset, presetName: preset), session.supportedFileTypes.contains(type) else { throw exportFailure("Export session does not support requested file type") }
+        session.shouldOptimizeForNetworkUse = true
+        let attempt = ExportAttempt(session)
+        do {
+            try await withTaskCancellationHandler {
+                try Task.checkCancellation()
+                try await withCheckedThrowingContinuation { continuation in attempt.start(temporary, type: type, continuation: continuation) }
+            } onCancel: { attempt.cancel() }
+        } catch {
+            try Task.checkCancellation()
+            if error is CancellationError { throw error }
+            if (error as NSError).domain == "AppleBridgeMediaExport" { throw error }
+            throw exportFailure((error as NSError).localizedDescription)
+        }
+        try Task.checkCancellation()
+        guard Darwin.rename(temporary.path, file.path) == 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
     }
     static func waveform(_ asset: AVAsset, track: AVAssetTrack, seconds: Double) throws -> [UInt8] {
         let reader = try AVAssetReader(asset: asset)
@@ -105,5 +127,3 @@ extension MediaDerivatives {
         return peaks.map { $0.isFinite ? UInt8((min(1, max(0, $0)) * 255).rounded()) : 0 }
     }
 }
-
-private struct ExportCancellation: @unchecked Sendable { let session: AVAssetExportSession }

@@ -379,6 +379,12 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "WEB-RM-REMINDERS-LISTS" {
 		return runRemindersSidebar(ctx, s, level)
 	}
+	if s.ID == "HELPER-IPC-RESPONSIVE" {
+		return runHelperIPC(ctx, s, level)
+	}
+	if s.ID == "NATIVE-MEDIA-EXPORT-SAFETY" {
+		return runMediaExportSafety(ctx, s, level)
+	}
 	if s.ID == "HELPER-SIGNED-APP-CACHE" {
 		return runNativeAppCache(ctx, s, level)
 	}
@@ -430,10 +436,10 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "MSG-DELETE-VISIBILITY" {
 		return runNativeDeleteVisibility(ctx, s, level)
 	}
-	if s.ID == "WEB-SOURCES-STATUS" {
+	if s.ID == "WEB-SOURCES-STATUS" || s.ID == "WEB-COMMAND-RESOLVE" {
 		return runWebServer(ctx, s, level)
 	}
-	if s.ID == "MSG-SELFTEST" || s.ID == "MSG-RESEND" || s.ID == "MSG-READSTATE-REAL" || s.ID == "MSG-DELETE-REAL" || s.ID == "MSG-COMMAND-OBSERVED-IDS" || s.ID == "MSG-FAILED-OBSERVED-IDS" {
+	if s.ID == "MSG-SELFTEST" || s.ID == "MSG-RESEND" || s.ID == "MSG-READSTATE-REAL" || s.ID == "MSG-DELETE-REAL" || s.ID == "MSG-COMMAND-OBSERVED-IDS" || s.ID == "MSG-FAILED-OBSERVED-IDS" || s.ID == "MSG-COMMAND-PARTS" {
 		return runMessagesCommands(ctx, s, level)
 	}
 	if s.ID == "MSG-MEDIA-CLEANUP" {

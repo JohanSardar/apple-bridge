@@ -94,6 +94,11 @@ func runRelayWorld(ctx context.Context, s Scenario, level string, native bool) (
 	cancel()
 	add("remote_on_system", err == nil)
 	if err != nil {
+		os.WriteFile(filepath.Join(privateDir, "remote-on-error.log"), []byte(err.Error()), 0600)
+		if status, problem := os.ReadFile(filepath.Join(w.Gateway.Home, "remote", "status.json")); problem == nil {
+			os.WriteFile(filepath.Join(privateDir, "remote-on-status.json"), status, 0600)
+		}
+		e.Assertions[len(e.Assertions)-1].Detail = "private remote-on-error.log"
 		return
 	}
 	var status remote.Status

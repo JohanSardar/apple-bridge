@@ -176,8 +176,10 @@ export class LiveClient {
         else if (frame.t === 'ack' || frame.t === 'cmd_status') {
             if (typeof frame.id !== 'string' || typeof frame.status !== 'string')
                 throw new Error('Invalid command status');
-            this.updateCommand(frame.id, frame.command, frame.status, frame.error);
+            this.updateCommand(frame.id, frame.command, frame.status, frame.error, frame.t === 'cmd_status');
         }
+        else if (frame.t === 'error' && typeof frame.id === 'string')
+            this.setCheckError(frame.id, typeof frame.code === 'string' ? frame.code : 'unavailable');
         else if (frame.t === 'session_revoked')
             this.revoke();
         else if (frame.t === 'error' && frame.code === 'reset') {
@@ -190,14 +192,14 @@ export class LiveClient {
         }
         this.event?.(frame);
     }
-    private updateCommand(id: string, value: unknown, status: string, error: unknown) {
+    private updateCommand(id: string, value: unknown, status: string, error: unknown, clearCheck = false) {
         const previous = this.commands.get(id);
         if (!previous) return;
         if (finalCommandStates.has(previous.status) && !previous.transport_lost && !finalCommandStates.has(status)) return;
         const record = value as Partial<CommandState> | undefined;
         const cursor = record?.cursor;
         if (!cursor && previous.cursor || cursor && previous.cursor && cursor.epoch === previous.cursor.epoch && cursor.subscription_revision === previous.cursor.subscription_revision && cursor.sequence < previous.cursor.sequence) return;
-        this.commands.set(id, { ...previous, status, error, transport_lost: false,
+        this.commands.set(id, { ...previous, status, error, transport_lost: false, check_error: clearCheck ? undefined : previous.check_error,
             disposition: record?.disposition ?? previous.disposition,
             commit_seq: record?.commit_seq ?? previous.commit_seq,
             observed_record_ids: record?.observed_record_ids?.slice() ?? previous.observed_record_ids,
@@ -248,9 +250,19 @@ export class LiveClient {
         return id;
     }
 
+    private setCheckError(id: string, code?: string) {
+        const command = this.commands.get(id);
+        if (!command || command.check_error === code) return;
+        this.commands.set(id, { ...command, check_error: code });
+        this.commandRevision[1](value => value + 1);
+    }
     checkCommand(id: string) {
         if (!this.commands.has(id) || this.status() !== 'connected') throw new Error('Unavailable');
-        this.reconcile(id, true);
+        this.setCheckError(id);
+        try {
+            this.send({ t: 'resolve', id });
+            this.reconcile(id, true);
+        } catch { this.setCheckError(id, 'unavailable'); }
     }
     reconnect() { this.socket?.close(4000,'reconnect'); }
     close() { this.stopped = true; clearTimeout(this.timer); clearInterval(this.heartbeat); this.socket?.close(); this.connection[1]('offline'); }

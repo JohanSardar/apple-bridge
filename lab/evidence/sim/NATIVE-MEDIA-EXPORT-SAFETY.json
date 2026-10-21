@@ -1,0 +1,33 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[4.07 4.08 4.36] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5GB2J95PN56N22F36FAC1W8",
+  "metrics": {
+    "synthetic_only": true
+  },
+  "scenario": "NATIVE-MEDIA-EXPORT-SAFETY",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "a71ec3767c2443a4c239dee0872a9dbad71a1916",
+  "at": "2026-10-21T22:59:53.765783Z",
+  "assertions": [
+    {
+      "name": "export-safety",
+      "passed": true
+    },
+    {
+      "name": "export-overlap",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

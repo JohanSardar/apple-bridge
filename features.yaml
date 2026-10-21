@@ -168,6 +168,7 @@ features:
       - {id: HELPER-RESTART-REAL, levels: [real]}
       - {id: HELPER-TCC-READY, levels: [real]}
       - {id: HELPER-LIVE-BACKFILL, levels: [real]}
+      - {id: HELPER-IPC-RESPONSIVE, levels: [sim]}
       - {id: HELPER-SESSION-SOAK, levels: [real]}
       - {id: HELPER-SIGNED-APP-CACHE, levels: [real]}
   - id: messages.read
@@ -419,6 +420,7 @@ features:
       - {id: WEB-AUTH-SOFTWARE, levels: [sim]}
       - {id: WEB-BLOB-ACCESS, levels: [sim]}
       - {id: WEB-COMMAND-INTERACTIVE, levels: [sim]}
+      - {id: WEB-COMMAND-RESOLVE, levels: [sim]}
       - {id: WEB-LIVE-RECORD, levels: [sim]}
       - {id: WEB-LIVE-READMODELS, levels: [sim]}
       - {id: WEB-SHELL-JOURNEY, levels: [web]}
@@ -437,6 +439,7 @@ features:
     scenarios:
       - {id: WEB-MEDIA-VARIANTS, levels: [sim, real, replica]}
       - {id: WEB-MEDIA-CAP, levels: [sim]}
+      - {id: NATIVE-MEDIA-EXPORT-SAFETY, levels: [sim, real]}
     notes: Variants work on the real Air (12 read-only native variant downloads verified). Real and replica runs wait for cleanup of six tagged self-chat file bubbles (media-bubble Accessibility targeting, GUI needed once the Air's lid is open) and the cold-arrival latency measurement.
   - id: web.remote
     title: Reach from anywhere through system or embedded Tailscale Funnel
@@ -554,6 +557,7 @@ features:
     scenarios:
       - {id: MSG-COMMAND-OBSERVED-IDS, levels: [sim]}
       - {id: MSG-FAILED-OBSERVED-IDS, levels: [sim]}
+      - {id: MSG-COMMAND-PARTS, levels: [sim]}
       - {id: WEB-SOURCES-STATUS, levels: [sim, web]}
       - {id: MSG-INTERACTIVE-GATE, levels: [sim, real]}
       - {id: MSG-MEDIA-CLEANUP, levels: [sim]}

@@ -166,13 +166,19 @@ func commandTransitionAllowed(from, to contracts.CommandState) bool {
 	case contracts.CommandObserved:
 		return to == contracts.CommandDelivered || to == contracts.CommandDeliveryFailed
 	case contracts.CommandIndeterminate:
-		return to == contracts.CommandObserved || to == contracts.CommandDelivered || to == contracts.CommandFailed
+		return to == contracts.CommandObserved || to == contracts.CommandDelivered || to == contracts.CommandFailed || to == contracts.CommandDeliveryFailed
 	}
 	return false
 }
 func (s *Store) TransitionCommand(ctx context.Context, t CommandTransition) (contracts.CommandRecord, error) {
+	return s.persistCommand(ctx, t, false)
+}
+func (s *Store) UpdateCommandParts(ctx context.Context, r contracts.CommandRecord) (contracts.CommandRecord, error) {
+	return s.persistCommand(ctx, CommandTransition{From: r.State, Record: r}, true)
+}
+func (s *Store) persistCommand(ctx context.Context, t CommandTransition, partsUpdated bool) (contracts.CommandRecord, error) {
 	r := t.Record
-	if !commandTransitionAllowed(t.From, r.State) {
+	if partsUpdated && (t.From != r.State || r.Command.Op != "messages.send") || !partsUpdated && !commandTransitionAllowed(t.From, r.State) {
 		return r, contracts.ErrConflict
 	}
 	s.write.Lock()
@@ -200,6 +206,10 @@ func (s *Store) TransitionCommand(ctx context.Context, t CommandTransition) (con
 	} else if t.From != "" {
 		return r, contracts.ErrConflict
 	}
+	changed, valid := commandPartsChange(old.Parts, r.Parts)
+	if !valid || partsUpdated && (!changed || r.Disposition != old.Disposition) {
+		return old, contracts.ErrConflict
+	}
 	if t.From == "" && err == nil {
 		return old, contracts.ErrConflict
 	}
@@ -216,7 +226,15 @@ func (s *Store) TransitionCommand(ctx context.Context, t CommandTransition) (con
 	if err != nil {
 		return r, err
 	}
-	r.History = append(old.History, contracts.CommandEvent{State: r.State, At: time.Now().UTC(), Evidence: r.Evidence})
+	event := contracts.CommandEvent{State: r.State, At: time.Now().UTC(), Evidence: r.Evidence}
+	if partsUpdated {
+		if cursor.Epoch != old.Cursor.Epoch || cursor.Sequence <= old.CommitSeq {
+			return old, contracts.ErrConflict
+		}
+		r.CommitSeq = cursor.Sequence
+		event.Transition = "parts_updated"
+	}
+	r.History = append(old.History, event)
 	cursor.Sequence++
 	r.Cursor = cursor
 	if (r.State == contracts.CommandObserved || r.State == contracts.CommandDelivered) && (r.CommitSeq == 0 || r.CommitSeq >= cursor.Sequence) {

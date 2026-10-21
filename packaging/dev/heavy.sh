@@ -16,6 +16,7 @@ sensitive() {
   case " $* " in
     *--exclusive*|*real*|*agent*|*quiet*|*atency*|*ATENCY*|*perf*|*Perf*|*PERF*) return 0 ;;
     *swift*|*build-helper*|*build-truth*|*build-native*|*xcodebuild*) return 0 ;;
+    *APPLE_BRIDGE_HEAVY_NO_SIM_LANE=*) return 0 ;;
   esac
   return 1
 }
