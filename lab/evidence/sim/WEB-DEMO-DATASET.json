@@ -1,9 +1,9 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[5.19 8.84 20.95] cpus=8 other_heavy=1"
+    "summary": "air: load=[5.13 5.81 7.37] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M5E8DZ38R5YD7EHZXT6B3Z26",
+  "run_id": "run_01M5EB0EA0KE7HPQPVB1TDB42E",
   "metrics": {
     "counts": {
       "contacts.contact": 60,
@@ -13,16 +13,108 @@
       "messages.message": 5000,
       "messages.reaction": 22
     },
-    "digest": "2c4cf9506171522e8d183670f831f668038b2b78a304427dbef189cac2afdc53"
+    "coverage": {
+      "audio": 1,
+      "audio_variants": 1,
+      "audio_waveform": 1,
+      "delivered": 1693,
+      "edited": 2,
+      "effect_com.apple.MobileSMS.expressivesend.gentle": 1,
+      "effect_com.apple.MobileSMS.expressivesend.impact": 1,
+      "effect_com.apple.MobileSMS.expressivesend.invisibleink": 1,
+      "effect_com.apple.MobileSMS.expressivesend.loud": 1,
+      "effect_com.apple.messages.effect.CKConfettiEffect": 1,
+      "effect_com.apple.messages.effect.CKEchoEffect": 1,
+      "effect_com.apple.messages.effect.CKFireworksEffect": 1,
+      "effect_com.apple.messages.effect.CKHappyBirthdayEffect": 1,
+      "effect_com.apple.messages.effect.CKHeartEffect": 1,
+      "effect_com.apple.messages.effect.CKLasersEffect": 1,
+      "effect_com.apple.messages.effect.CKSparklesEffect": 1,
+      "effect_com.apple.messages.effect.CKSpotlightEffect": 1,
+      "emoji_1": 1,
+      "emoji_2": 1,
+      "emoji_3": 1,
+      "failed": 1,
+      "geometry_demo-landscape.png": 2,
+      "geometry_demo-panorama.png": 1,
+      "geometry_demo-portrait.png": 3,
+      "geometry_demo-square.png": 3,
+      "geometry_demo-transparent.png": 1,
+      "geometry_demo-video.mp4": 1,
+      "gif": 1,
+      "gif_thumb": 1,
+      "group_add": 1,
+      "group_leave": 1,
+      "group_photo": 1,
+      "group_remove": 1,
+      "group_rename": 2,
+      "image_stack": 8,
+      "image_stack_run": 2,
+      "image_variants": 11,
+      "landscape": 2,
+      "long_text": 1,
+      "mention": 1,
+      "multipart": 1,
+      "multiple_reactors": 7,
+      "named_group": 8,
+      "nested_reply": 3,
+      "older": 4911,
+      "panorama": 1,
+      "pdf": 1,
+      "portrait": 3,
+      "preview_attachments": 1,
+      "preview_edited": 1,
+      "preview_group_event": 1,
+      "preview_reaction": 1,
+      "preview_text": 35,
+      "preview_unsent": 1,
+      "reaction_dislike": 3,
+      "reaction_emoji": 3,
+      "reaction_emphasize": 3,
+      "reaction_laugh": 3,
+      "reaction_like": 3,
+      "reaction_love": 3,
+      "reaction_question": 3,
+      "read": 4055,
+      "reply": 4,
+      "reply_count": 1,
+      "service_RCS": 13,
+      "service_SMS": 13,
+      "service_iMessage": 14,
+      "square": 3,
+      "style_direct": 25,
+      "style_group": 15,
+      "text": 4983,
+      "text_run_false": 2,
+      "text_run_true": 2,
+      "this_week": 27,
+      "today": 60,
+      "transparent": 1,
+      "transparent_display_png": 1,
+      "unnamed_group": 7,
+      "unsent": 2,
+      "url": 1,
+      "vcard": 1,
+      "video": 1,
+      "video_variants": 1,
+      "year_change": 162,
+      "yesterday": 2
+    },
+    "digest": "e7ffa00a204989854e33c3d68b085c8d2cf3acfcde94a3648ca1fdc61722807a",
+    "verified_blob_count": 52
   },
   "scenario": "WEB-DEMO-DATASET",
   "level": "sim",
   "passed": true,
-  "git_sha": "53a5f0bb64fbce78cc111d57e9d07af6793b9c01",
-  "at": "2026-10-21T03:35:12.744361Z",
+  "git_sha": "b99c57f558a7de5e9576664e917e1d0739903558",
+  "at": "2026-10-21T04:20:15.296938Z",
   "assertions": [
     {
       "name": "same_seed_byte_identical_records_and_blobs",
+      "passed": true
+    },
+    {
+      "name": "different_seed_changes_dataset",
       "passed": true
     },
     {
@@ -55,6 +147,386 @@
     },
     {
       "name": "readmodel_thread_visible",
+      "passed": true
+    },
+    {
+      "name": "messages_chats_38_active_2_archived",
+      "passed": true
+    },
+    {
+      "name": "all_5000_messages_visible_without_duplicates",
+      "passed": true
+    },
+    {
+      "name": "unread_backlogs_in_several_chats",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_service_iMessage",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_service_SMS",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_service_RCS",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_style_direct",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_style_group",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_named_group",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_unnamed_group",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_text",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_long_text",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_emoji_1",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_emoji_2",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_emoji_3",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_url",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_mention",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_reply",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_nested_reply",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_reply_count",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_edited",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_unsent",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_failed",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_delivered",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_read",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_multipart",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_group_rename",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_group_add",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_group_remove",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_group_leave",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_group_photo",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_portrait",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_landscape",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_square",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_panorama",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_transparent",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_gif",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_video",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_audio",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_pdf",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_vcard",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_image_stack",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_image_stack_run",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_text_run_true",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_text_run_false",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_reaction_love",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_reaction_like",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_reaction_dislike",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_reaction_laugh",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_reaction_emphasize",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_reaction_question",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_reaction_emoji",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_multiple_reactors",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_today",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_yesterday",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_this_week",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_older",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_year_change",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_preview_text",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_preview_attachments",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_preview_edited",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_preview_unsent",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_preview_group_event",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_preview_reaction",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_image_variants",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_video_variants",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_audio_variants",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_transparent_display_png",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_audio_waveform",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_gif_thumb",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_geometry_demo-portrait.png",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_geometry_demo-landscape.png",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_geometry_demo-square.png",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_geometry_demo-panorama.png",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_geometry_demo-transparent.png",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_geometry_demo-video.mp4",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_effect_com.apple.MobileSMS.expressivesend.impact",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_effect_com.apple.MobileSMS.expressivesend.loud",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_effect_com.apple.MobileSMS.expressivesend.gentle",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_effect_com.apple.MobileSMS.expressivesend.invisibleink",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_effect_com.apple.messages.effect.CKEchoEffect",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_effect_com.apple.messages.effect.CKSpotlightEffect",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_effect_com.apple.messages.effect.CKHappyBirthdayEffect",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_effect_com.apple.messages.effect.CKConfettiEffect",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_effect_com.apple.messages.effect.CKHeartEffect",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_effect_com.apple.messages.effect.CKLasersEffect",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_effect_com.apple.messages.effect.CKFireworksEffect",
+      "passed": true
+    },
+    {
+      "name": "readmodel_coverage_effect_com.apple.messages.effect.CKSparklesEffect",
+      "passed": true
+    },
+    {
+      "name": "captured_records_secret_scan",
+      "passed": true
+    },
+    {
+      "name": "removed_reaction_captured_and_folded_out",
+      "passed": true
+    },
+    {
+      "name": "contacts_30_generated_avatars_30_monograms",
+      "passed": true
+    },
+    {
+      "name": "contacts_linked_to_chat_avatars",
+      "passed": true
+    },
+    {
+      "name": "generated_originals_avatars_and_sim_variants_download_and_hash",
+      "passed": true
+    },
+    {
+      "name": "capture_records_and_variant_digests_repeat_identically",
+      "passed": true
+    },
+    {
+      "name": "alive_messages_and_reactions_captured",
       "passed": true
     },
     {
@@ -113,9 +585,9 @@
   "latency": {
     "default_startup": {
       "samples": 1,
-      "p50_ms": 5085.636709,
-      "p95_ms": 5085.636709,
-      "max_ms": 5085.636709,
+      "p50_ms": 4486.021208,
+      "p95_ms": 4486.021208,
+      "max_ms": 4486.021208,
       "timeouts": 0
     }
   },
