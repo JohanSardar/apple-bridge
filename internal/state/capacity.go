@@ -1,11 +1,13 @@
 package state
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"syscall"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
+	"github.com/JohanSardar/apple-bridge/internal/trust"
 )
 
 func IsCapacity(err error) bool {
@@ -51,4 +53,15 @@ func (s *Store) sourceStatus(record contracts.Record) contracts.Record {
 		record.Data, _ = json.Marshal(data)
 	}
 	return record
+}
+
+func (s *Store) SourceStatuses(ctx context.Context, visibility trust.Visibility) (contracts.ReadResult, error) {
+	result, err := s.Read(ctx, visibility, contracts.ReadQuery{Collection: "system.source"})
+	if err != nil {
+		return result, err
+	}
+	for i, record := range result.Records {
+		result.Records[i] = s.sourceStatus(record)
+	}
+	return result, nil
 }

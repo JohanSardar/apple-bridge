@@ -67,4 +67,18 @@ func runAgentCaptureRejection(ctx context.Context, w *world.World, add func(stri
 		return state == "ready" && reason == "gateway_capture_rejected:sqlite_5" && count > 0
 	})
 	add("capture_rejection_count_retained_after_reconnect", err == nil)
+	var raw contracts.ReadResult
+	code, readErr := world.Request(ctx, w.Gateway, "/v1/op/records.query", contracts.ReadQuery{Collection: "system.source"}, &raw)
+	clean, found := readErr == nil && code == 200, false
+	for _, record := range raw.Records {
+		var data map[string]any
+		if json.Unmarshal(record.Data, &data) != nil || data["source"] != "messages" {
+			continue
+		}
+		found = true
+		_, count := data["capture_rejected_count"]
+		_, reason := data["last_capture_rejected_reason"]
+		clean = clean && !count && !reason
+	}
+	add("raw_source_records_exclude_local_capture_diagnostics", clean && found)
 }
