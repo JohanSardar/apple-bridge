@@ -16,6 +16,14 @@ public struct MessageBody: Codable, Sendable {
     public var text: String?
     public var decodeStatus: String
     public var rawBodyDigest: String?
+    public var formatting: [MessageFormatting] = []
+}
+
+public struct MessageFormatting: Codable, Sendable {
+    public var utf16Location: Int
+    public var utf16Length: Int
+    public var styles: [String]
+    public var effect: String?
 }
 
 public enum DecodeFailure: Error { case malformed, unsupported, limit }
@@ -222,6 +230,7 @@ public enum TypedStream {
             let units = Array(string.utf16)
             var location = 0
             var parts: [MessagePart] = []
+            var formatting: [MessageFormatting] = []
             var index = 0
             var cursor = 1
             var attributeCache: [Int: [String: StreamValue]] = [:]
@@ -241,16 +250,27 @@ public enum TypedStream {
                 if let explicit = attributes["__kIMMessagePartAttributeName"]?.object?.groups.flatMap({ $0 }).compactMap(\.number).first { index = explicit }
                 let attachment = attributes["__kIMFileTransferGUIDAttributeName"]?.object?.string
                 let mention = attributes["__kIMMentionConfirmedMention"]?.object?.string ?? attributes["__kIMMentionConfirmedMentionAttributeName"]?.object?.string
+                var styles: [String] = []
+                for (key, style) in [("__kIMTextBoldAttributeName", "bold"), ("__kIMTextItalicAttributeName", "italic"), ("__kIMTextUnderlineAttributeName", "underline"), ("__kIMTextStrikethroughAttributeName", "strikethrough")] {
+                    if let value = attributes[key], scalar(value) != 0 { styles.append(style) }
+                }
+                let effectNumber = attributes["__kIMTextEffectAttributeName"].map(scalar)
+                let effects = [5: "big", 11: "small", 9: "shake", 8: "nod", 12: "explode", 4: "ripple", 6: "bloom", 10: "jitter"]
+                let effect = effectNumber.flatMap { effects[$0] }
+                if !styles.isEmpty || effect != nil { formatting.append(MessageFormatting(utf16Location: location, utf16Length: length, styles: styles, effect: effect)) }
                 let run = text.substring(with: NSRange(location: location, length: length))
-                parts.append(MessagePart(index: index, kind: attachment == nil ? "text" : "attachment", text: attachment == nil ? run : nil, attachmentGUID: attachment, mention: mention, utf16Location: location, utf16Length: length))
+                parts.append(MessagePart(index: index, kind: attributes["__kIMEmojiImageAttributeName"] != nil ? "genmoji" : attachment == nil ? "text" : "attachment", text: attachment == nil && attributes["__kIMEmojiImageAttributeName"] == nil ? run : nil, attachmentGUID: attachment, mention: mention, utf16Location: location, utf16Length: length))
                 location += length
                 index += 1
             }
             guard location == text.length else { throw DecodeFailure.malformed }
-            return MessageBody(parts: parts, text: parts.compactMap(\.text).joined(), decodeStatus: "decoded", rawBodyDigest: nil)
+            return MessageBody(parts: parts, text: parts.compactMap(\.text).joined(), decodeStatus: "decoded", rawBodyDigest: nil, formatting: formatting)
         } catch {
             return MessageBody(parts: [], text: nil, decodeStatus: "undecoded", rawBodyDigest: BodyDigest.hash(data))
         }
+    }
+    private static func scalar(_ value: StreamValue) -> Int {
+        value.number ?? value.object?.groups.flatMap { $0 }.compactMap(\.number).last ?? 0
     }
     private static func dictionaryValues(_ object: StreamObject) throws -> [String: StreamValue] {
         guard let count = object.groups.first?.first?.number, count >= 0, count <= 100_000 else { throw DecodeFailure.malformed }
@@ -270,7 +290,7 @@ public enum FixtureScrubber {
         let reader = StreamReader(data)
         _ = try reader.read()
         var result = data
-        let keys: Set<String> = ["__kIMMessagePartAttributeName", "__kIMFileTransferGUIDAttributeName", "__kIMMentionConfirmedMention", "__kIMMentionConfirmedMentionAttributeName", "__kIMBaseWritingDirectionAttributeName", "__kIMDataDetectedAttributeName", "__kIMLinkAttributeName"]
+        let keys: Set<String> = ["__kIMTextBoldAttributeName", "__kIMTextItalicAttributeName", "__kIMTextUnderlineAttributeName", "__kIMTextStrikethroughAttributeName", "__kIMTextEffectAttributeName", "__kIMEmojiImageAttributeName","__kIMMessagePartAttributeName", "__kIMFileTransferGUIDAttributeName", "__kIMMentionConfirmedMention", "__kIMMentionConfirmedMentionAttributeName", "__kIMBaseWritingDirectionAttributeName", "__kIMDataDetectedAttributeName", "__kIMLinkAttributeName"]
         let encodings: Set<String> = ["q", "Q", "i", "I", "s", "S", "c", "C", "l", "L", "f", "d", "B", "@", "^v"]
         let cStrings = reader.cStringRanges.filter { range in
             guard let string = String(data: data.subdata(in: range), encoding: .utf8) else { return true }
