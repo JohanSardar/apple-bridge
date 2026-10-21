@@ -1,0 +1,24 @@
+{
+  "read_only": true,
+  "pending": [
+    {
+      "run_id": "run_01M5E0Z216CY3PB1AZEM62XQA5",
+      "registered": true,
+      "active_text_messages": 0,
+      "active_file_messages": 6
+    },
+    {
+      "run_id": "selftest_464E45DD36FE42AFAB62410183FD8600",
+      "registered": true,
+      "active_text_messages": 2,
+      "active_file_messages": 2
+    }
+  ],
+  "scenario": "MSG-MEDIA-CLEANUP",
+  "level": "real",
+  "status": "environment-limited",
+  "passed": false,
+  "ui_target_verified": false,
+  "at": "2026-10-21T06:39:28.316693+00:00",
+  "reason": "UI cleanup deferred until unlock; native counts only"
+}

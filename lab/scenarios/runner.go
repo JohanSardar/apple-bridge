@@ -403,6 +403,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "MSG-SELFTEST" || s.ID == "MSG-RESEND" || s.ID == "MSG-READSTATE-REAL" || s.ID == "MSG-DELETE-REAL" {
 		return runMessagesCommands(ctx, s, level)
 	}
+	if s.ID == "MSG-MEDIA-CLEANUP" {
+		return runMediaCleanupProof(ctx, s, level)
+	}
 	if s.ID == "MSG-INTERACTIVE-GATE" {
 		if level == "real" {
 			return runMessagesCommands(ctx, s, level)

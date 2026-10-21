@@ -1,0 +1,133 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[11.21 9.61 10.12] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5EKSAFPBV4R3G7EP0KP6EXQ",
+  "scenario": "MSG-MEDIA-CLEANUP",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "1dac14260b21cd1ba26dd8b80ea9008c85bee6c8",
+  "at": "2026-10-21T06:53:39.190719Z",
+  "assertions": [
+    {
+      "name": "attachment_only_target",
+      "passed": true
+    },
+    {
+      "name": "empty_database_baseline_is_valid",
+      "passed": true
+    },
+    {
+      "name": "incoming_echo_is_separate_target",
+      "passed": true
+    },
+    {
+      "name": "baseline_data_denied",
+      "passed": true
+    },
+    {
+      "name": "other_chat_denied",
+      "passed": true
+    },
+    {
+      "name": "unregistered_attachment_denied",
+      "passed": true
+    },
+    {
+      "name": "mixed_attachment_bubble_denied",
+      "passed": true
+    },
+    {
+      "name": "similar_filename_denied",
+      "passed": true
+    },
+    {
+      "name": "other_registered_file_is_not_the_target",
+      "passed": true
+    },
+    {
+      "name": "ambiguous_ui_target_denied",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "ambiguous_ui_target_denied": {
+      "samples": 1,
+      "p50_ms": 99.894958,
+      "p95_ms": 99.894958,
+      "max_ms": 99.894958,
+      "timeouts": 0
+    },
+    "attachment_only_target": {
+      "samples": 1,
+      "p50_ms": 989.523708,
+      "p95_ms": 989.523708,
+      "max_ms": 989.523708,
+      "timeouts": 0
+    },
+    "baseline_data_denied": {
+      "samples": 1,
+      "p50_ms": 82.99425,
+      "p95_ms": 82.99425,
+      "max_ms": 82.99425,
+      "timeouts": 0
+    },
+    "empty_database_baseline_is_valid": {
+      "samples": 1,
+      "p50_ms": 88.568291,
+      "p95_ms": 88.568291,
+      "max_ms": 88.568291,
+      "timeouts": 0
+    },
+    "incoming_echo_is_separate_target": {
+      "samples": 1,
+      "p50_ms": 83.63375,
+      "p95_ms": 83.63375,
+      "max_ms": 83.63375,
+      "timeouts": 0
+    },
+    "mixed_attachment_bubble_denied": {
+      "samples": 1,
+      "p50_ms": 87.213042,
+      "p95_ms": 87.213042,
+      "max_ms": 87.213042,
+      "timeouts": 0
+    },
+    "other_chat_denied": {
+      "samples": 1,
+      "p50_ms": 81.5735,
+      "p95_ms": 81.5735,
+      "max_ms": 81.5735,
+      "timeouts": 0
+    },
+    "other_registered_file_is_not_the_target": {
+      "samples": 1,
+      "p50_ms": 133.644916,
+      "p95_ms": 133.644916,
+      "max_ms": 133.644916,
+      "timeouts": 0
+    },
+    "similar_filename_denied": {
+      "samples": 1,
+      "p50_ms": 82.85975,
+      "p95_ms": 82.85975,
+      "max_ms": 82.85975,
+      "timeouts": 0
+    },
+    "unregistered_attachment_denied": {
+      "samples": 1,
+      "p50_ms": 93.044125,
+      "p95_ms": 93.044125,
+      "max_ms": 93.044125,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

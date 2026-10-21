@@ -440,6 +440,8 @@ Every source publishes `system.source` with state, coverage, freshness and capab
 
 Conversation commands locate a unique sidebar row from the verified native target and snapshot all active members. Preparation requires Messages already in the foreground and does not open or activate a conversation. Dispatch rechecks the native read timestamp and member snapshot before the UI action. Lab conversation changes require entirely tagged fixtures; chat deletion additionally requires a private manifest proving this run created the chat after its recorded baseline. Real chat proofs and the UI self-test choose an unused discovered own handle and remain unverified for conversation-wide changes when no safe isolated chat can be created.
 
+Tagged attachment-only cleanup requires a private run manifest, a post-baseline native message, only registered attachments, and verified own-handle peers. UI targeting uses exact registered filenames, distinguishes outgoing bubbles from incoming self echoes, and rejects multiple matches. It never falls back to deleting an unverified nearby bubble.
+
 Every UI action records a before/after screenshot path in evidence (stored in the Helper support dir, excluded from git) where disk state alone cannot prove the visible effect.
 
 **Riskiest unknowns (prove first in M1):** AppleScript send on macOS 26.7.1 — **proven 2026-10-17**: send to self via raw `any;-;` chat id produced `is_sent=1, is_delivered=1`; the outgoing row has `text` NULL (content only in `attributedBody`), and a self-chat send also produces an incoming echo row, so correlation must decode `attributedBody` and distinguish the echo. Still open: Accessibility tree of Messages 26 for bubble targeting with SIP on.
@@ -1313,6 +1315,7 @@ Recently Deleted becomes `deleted_at` + `recoverable_until` on messages and chat
 |---|---|---|
 | MSG-INTERACTIVE-GATE | sim, real | interactive skips the tag and own-handle rules; lab and agent principals don't; expiry and no-redispatch unchanged. At real level, an untagged interactive send to own handle, then cleanup |
 | MSG-DELETE-VISIBILITY | sim, real | sim checks retained recoverable message/chat records and restoration; read-only real proof compares a previously cleaned test message with independent native Truth |
+| MSG-MEDIA-CLEANUP | sim | native manifest authorization and unambiguous attachment-only target selection; no effects on unproven data |
 | MSG-SELFTEST | real | the self-test proves each operation and cleans up completely |
 | MSG-READSTATE-REAL, MSG-DELETE-REAL | real | the conversation proofs listed above, using an isolated tagged self chat |
 | MSG-RESEND | sim, real | explicit fresh-command resend of a failed message; real proof requires a registered failed self fixture |
