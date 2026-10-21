@@ -1,3 +1,8 @@
+SDKROOT ?= $(shell packaging/dev/sdkroot.sh)
+ifneq ($(SDKROOT),)
+export SDKROOT
+endif
+
 export PATH := /opt/homebrew/bin:$(HOME)/go/bin:$(PATH)
 
 .PHONY: build lint features sim real replica agent dist native

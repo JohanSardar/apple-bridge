@@ -1,5 +1,6 @@
 #!/bin/bash
 set -euo pipefail
+if [ -z "${SDKROOT:-}" ]; then SDKROOT=$("$(dirname "$0")/sdkroot.sh"); [ -n "$SDKROOT" ] && export SDKROOT || unset SDKROOT; fi
 if [ -n "${APPLE_BRIDGE_HEAVY_SLOT:-}" ]; then exec "$@"; fi
 slots=2
 queue=/tmp/apple-bridge-heavy-queue
