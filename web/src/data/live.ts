@@ -160,7 +160,7 @@ export class LiveClient {
                 throw new Error('Invalid data');
             sub.generation++;
             sub.cursor = cursor;
-            sub.update(frame.t === 'snap' ? frame.data as ViewData : reduceView(sub.data(), frame.changes as ViewChange[]));
+            sub.update(frame.t === 'snap' ? frame.data as ViewData : { ...reduceView(sub.data(), frame.changes as ViewChange[]), ...(frame.page && typeof frame.page === 'object' ? { next: undefined, before: undefined, after: undefined, unread_anchor: undefined, ...frame.page } : {}) });
             void viewCache.write(sub.cacheKey, sub.data(), cursor).catch(() => { });
         }
         else if (frame.t === 'ack' || frame.t === 'cmd_status') {
@@ -211,7 +211,7 @@ export class LiveClient {
         } }).catch(() => { });
         if (this.status() === 'connected')
             this.send({ t: 'sub', id, view, args });
-        return { data, dispose: () => { this.subscriptions.delete(id); if (this.status() === 'connected')
+        return { data, cursor: () => { data(); return sub.cursor; }, dispose: () => { this.subscriptions.delete(id); if (this.status() === 'connected')
                 this.send({ t: 'unsub', id }); } };
     }
     command(op: string, args: unknown, optimistic?: unknown, expectedVersion?: number) { requireInput(); if (this.status() !== 'connected')
