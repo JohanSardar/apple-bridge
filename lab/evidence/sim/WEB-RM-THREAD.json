@@ -1,0 +1,282 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[7.29 13.17 9.81] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5E1BYWJD3W3Y9JNS6ETNVS5",
+  "metrics": {
+    "chats": 500,
+    "seed_messages": 170000
+  },
+  "scenario": "WEB-RM-THREAD",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "ee3cc74aca69aa26cbb097c2a7cdb46751941d88",
+  "at": "2026-10-21T01:31:46.962245Z",
+  "assertions": [
+    {
+      "name": "synthetic_sim_seed_committed",
+      "passed": true
+    },
+    {
+      "name": "truth_has_500_chats_and_501_thread_messages",
+      "passed": true
+    },
+    {
+      "name": "rest_chat_summaries",
+      "passed": true
+    },
+    {
+      "name": "rest_all_chats_stably_ordered",
+      "passed": true
+    },
+    {
+      "name": "rest_latest_thread_matches_truth",
+      "passed": true
+    },
+    {
+      "name": "mcp_chat_summaries",
+      "passed": true
+    },
+    {
+      "name": "mcp_all_chats_stably_ordered",
+      "passed": true
+    },
+    {
+      "name": "mcp_latest_thread_matches_truth",
+      "passed": true
+    },
+    {
+      "name": "restricted_token",
+      "passed": true
+    },
+    {
+      "name": "rest_visibility_chats",
+      "passed": true
+    },
+    {
+      "name": "rest_visibility_thread",
+      "passed": true
+    },
+    {
+      "name": "rest_visibility_collection",
+      "passed": true
+    },
+    {
+      "name": "mcp_visibility_chats",
+      "passed": true
+    },
+    {
+      "name": "mcp_visibility_thread",
+      "passed": true
+    },
+    {
+      "name": "mcp_visibility_collection",
+      "passed": true
+    },
+    {
+      "name": "rest_forward_concurrent_paging_no_gaps_or_duplicates",
+      "passed": true
+    },
+    {
+      "name": "rest_backward_concurrent_paging_no_gaps_or_duplicates",
+      "passed": true
+    },
+    {
+      "name": "mcp_forward_concurrent_paging_no_gaps_or_duplicates",
+      "passed": true
+    },
+    {
+      "name": "mcp_backward_concurrent_paging_no_gaps_or_duplicates",
+      "passed": true
+    },
+    {
+      "name": "inbound_reaction_attachment_reply_capture",
+      "passed": true
+    },
+    {
+      "name": "rest_live_reaction_preview_and_unread",
+      "passed": true
+    },
+    {
+      "name": "rest_unread_anchor_centered",
+      "passed": true
+    },
+    {
+      "name": "rest_explicit_anchor_folded_reactions_full_attachments_reply_count",
+      "passed": true
+    },
+    {
+      "name": "rest_collection_photos",
+      "passed": true
+    },
+    {
+      "name": "rest_collection_videos",
+      "passed": true
+    },
+    {
+      "name": "rest_collection_audio",
+      "passed": true
+    },
+    {
+      "name": "rest_collection_documents",
+      "passed": true
+    },
+    {
+      "name": "rest_collection_links",
+      "passed": true
+    },
+    {
+      "name": "rest_collection_locations",
+      "passed": true
+    },
+    {
+      "name": "mcp_live_reaction_preview_and_unread",
+      "passed": true
+    },
+    {
+      "name": "mcp_unread_anchor_centered",
+      "passed": true
+    },
+    {
+      "name": "mcp_explicit_anchor_folded_reactions_full_attachments_reply_count",
+      "passed": true
+    },
+    {
+      "name": "mcp_collection_photos",
+      "passed": true
+    },
+    {
+      "name": "mcp_collection_videos",
+      "passed": true
+    },
+    {
+      "name": "mcp_collection_audio",
+      "passed": true
+    },
+    {
+      "name": "mcp_collection_documents",
+      "passed": true
+    },
+    {
+      "name": "mcp_collection_links",
+      "passed": true
+    },
+    {
+      "name": "mcp_collection_locations",
+      "passed": true
+    },
+    {
+      "name": "classic_removal_capture",
+      "passed": true
+    },
+    {
+      "name": "rest_classic_and_sticker_removal_folded",
+      "passed": true
+    },
+    {
+      "name": "mcp_classic_and_sticker_removal_folded",
+      "passed": true
+    },
+    {
+      "name": "read_edit_capture",
+      "passed": true
+    },
+    {
+      "name": "rest_read_edit_live_summary",
+      "passed": true
+    },
+    {
+      "name": "rest_unread_falls_back_to_latest",
+      "passed": true
+    },
+    {
+      "name": "mcp_read_edit_live_summary",
+      "passed": true
+    },
+    {
+      "name": "mcp_unread_falls_back_to_latest",
+      "passed": true
+    },
+    {
+      "name": "rest_invalid_read_model_input_0",
+      "passed": true
+    },
+    {
+      "name": "rest_invalid_read_model_input_1",
+      "passed": true
+    },
+    {
+      "name": "rest_invalid_read_model_input_2",
+      "passed": true
+    },
+    {
+      "name": "rest_invalid_read_model_input_3",
+      "passed": true
+    },
+    {
+      "name": "rest_invalid_read_model_input_4",
+      "passed": true
+    },
+    {
+      "name": "mcp_invalid_read_model_input_0",
+      "passed": true
+    },
+    {
+      "name": "mcp_invalid_read_model_input_1",
+      "passed": true
+    },
+    {
+      "name": "mcp_invalid_read_model_input_2",
+      "passed": true
+    },
+    {
+      "name": "mcp_invalid_read_model_input_3",
+      "passed": true
+    },
+    {
+      "name": "mcp_invalid_read_model_input_4",
+      "passed": true
+    },
+    {
+      "name": "170000_message_sim_seed_committed",
+      "passed": true
+    },
+    {
+      "name": "rest_thread_p95_budget",
+      "passed": true
+    },
+    {
+      "name": "mcp_thread_p95_budget",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "mcp_thread": {
+      "samples": 100,
+      "p50_ms": 4.872959,
+      "p95_ms": 5.563584,
+      "max_ms": 11.94925,
+      "timeouts": 0
+    },
+    "rest_thread": {
+      "samples": 100,
+      "p50_ms": 1.318167,
+      "p95_ms": 1.808375,
+      "max_ms": 9.39425,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ],
+  "conditions": {
+    "dataset": "synthetic SimApplePeer only",
+    "read_state": "warm SQLite WAL, normal concurrent host activity",
+    "transport": "loopback HTTP REST and MCP"
+  }
+}

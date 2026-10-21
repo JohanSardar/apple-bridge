@@ -1,14 +1,14 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[3.38 4.09 6.93] cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[8.2 13.95 9.95] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M58DN5B5B3KGMX7FP1G4V8GA",
+  "run_id": "run_01M5E1AXQXW46G2RB866X3Q84N",
   "scenario": "MSG-PERMISSION-LOSS",
   "level": "sim",
   "passed": true,
-  "git_sha": "47549176312caf86b1d55e35f1e4c13562ed17f7",
-  "at": "2026-10-18T21:11:04.805767Z",
+  "git_sha": "ee3cc74aca69aa26cbb097c2a7cdb46751941d88",
+  "at": "2026-10-21T01:31:13.021742Z",
   "assertions": [
     {
       "name": "seed",
