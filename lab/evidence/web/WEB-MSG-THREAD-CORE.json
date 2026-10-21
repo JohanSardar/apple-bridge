@@ -1,0 +1,39 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[20.9 19.71 16.98] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5EWBTSYAJDX3FH5Z9MN7YC6",
+  "metrics": {
+    "demo_messages": 5000,
+    "demo_startup_ms": 5151,
+    "matrix": [
+      "chromium-light-phone"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-MSG-THREAD-CORE-chromium-light-phone-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-MSG-THREAD-CORE-chromium-light-phone-playwright.json"
+    ],
+    "server": "gateway"
+  },
+  "scenario": "WEB-MSG-THREAD-CORE",
+  "level": "web",
+  "passed": true,
+  "git_sha": "d7e4a8c17b10d2a25b3bc06e6a99df9e1c504c9a",
+  "at": "2026-10-21T09:23:34.334884Z",
+  "assertions": [
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 5 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/transcript-core.spec.ts:21:1 › WEB-MSG-THREAD-CORE transcript joins runs, preserves geometry and renders service colors (11.2s)\n  ✓  2 [chromium-light-phone] › tests/transcript-core.spec.ts:49:1 › WEB-MSG-THREAD-CORE transcript detects links and limits a mention to its UTF-16 range (6.5s)\n  ✓  3 [chromium-light-phone] › tests/transcript-core.spec.ts:55:1 › WEB-MSG-THREAD-CORE transcript shows edit, unsent, failure and group-event lines (5.7s)\n  ✓  4 [chromium-light-phone] › tests/transcript-core.spec.ts:64:1 › WEB-MSG-THREAD-CORE transcript opens at unread and bounds its paged window (1.7s)\n  ✓  5 [chromium-light-phone] › tests/transcript-core.spec.ts:77:1 › WEB-MSG-THREAD-CORE transcript keeps a visible bubble fixed when paging forward (2.3s)\n\n  5 passed (29.2s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
