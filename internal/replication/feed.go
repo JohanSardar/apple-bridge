@@ -105,7 +105,6 @@ func (s *Server) serve(ctx context.Context, conn *websocket.Conn, p trust.Princi
 		status.State = "connected"
 		status.LastHeartbeat = time.Now().UTC()
 	})
-	credits := min(hello.Credits, contracts.ByteCredit)
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	ctx = priorityWriter(ctx, conn)
@@ -126,7 +125,8 @@ func (s *Server) serve(ctx context.Context, conn *websocket.Conn, p trust.Princi
 		}
 	}
 
-	acks := make(chan contracts.FeedFrame, 8)
+	window := newFeedWindow(min(hello.Credits, contracts.ByteCredit))
+	defer window.close()
 	go func() {
 		defer cancel()
 		for {
@@ -172,9 +172,7 @@ func (s *Server) serve(ctx context.Context, conn *websocket.Conn, p trust.Princi
 				}
 
 			case "Ack":
-				select {
-				case acks <- f:
-				case <-ctx.Done():
+				if window.acknowledge(f) != nil {
 					return
 				}
 			case "BlobWant":
@@ -209,25 +207,20 @@ func (s *Server) serve(ctx context.Context, conn *websocket.Conn, p trust.Princi
 		if err != nil {
 			return err
 		}
-		if len(raw) > credits {
-			return contracts.ErrCapacity
+		receipt, err := window.reserve(ctx, cancel, len(raw), expected)
+		if err != nil {
+			return err
 		}
-		credits -= len(raw)
 		if _, err = send(ctx, conn, f); err != nil {
 			return err
 		}
-		timer := time.NewTimer(30 * time.Second)
-		defer timer.Stop()
+		if f.T == "Batch" {
+			return nil
+		}
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case <-timer.C:
-			return contracts.ErrExpired
-		case ack := <-acks:
-			if ack.Credits != len(raw) || (expected != nil && (ack.Cursor == nil || *ack.Cursor != *expected)) {
-				return contracts.ErrInvalid
-			}
-			credits += ack.Credits
+		case <-receipt.done:
 			return nil
 		}
 	}

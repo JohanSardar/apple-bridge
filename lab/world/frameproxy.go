@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -16,30 +17,49 @@ import (
 )
 
 type frameFaults struct {
-	server      tls.Certificate
-	client      tls.Certificate
-	dropBatch   bool
-	dropAcks    bool
-	dropped     int
-	connections int
+	server          tls.Certificate
+	client          tls.Certificate
+	dropBatch       bool
+	dropAcks        bool
+	dropped         int
+	connections     int
+	creditHighWater int
 }
 
-func (p *FaultProxy) Frames(gatewayHome, replicaHome string) error {
-	gateway, err := trust.Open(gatewayHome)
+func (w *World) configureFrameFaults() error {
+	gateway, err := trust.Open(w.Gateway.Home)
 	if err != nil {
 		return err
 	}
-	replica, err := trust.Open(replicaHome)
-	if err != nil {
-		return err
+	endpoint := w.Replicas[0]
+	var certificate tls.Certificate
+	if endpoint.Remote {
+		public, err := w.execute(true, "cat", filepath.Join(endpoint.Home, "identity.pem"))
+		if err != nil {
+			return err
+		}
+		key, err := w.execute(true, "cat", filepath.Join(endpoint.Home, "secrets", trust.Fingerprint([]byte("identity-key"))))
+		if err != nil {
+			return err
+		}
+		certificate, err = tls.X509KeyPair([]byte(public), []byte(key))
+		if err != nil {
+			return err
+		}
+	} else {
+		replica, err := trust.Open(endpoint.Home)
+		if err != nil {
+			return err
+		}
+		certificate = replica.Certificate
 	}
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	p.frames = &frameFaults{server: gateway.Certificate, client: replica.Certificate}
+	w.proxy.mu.Lock()
+	defer w.proxy.mu.Unlock()
+	w.proxy.frames = &frameFaults{server: gateway.Certificate, client: certificate}
 	return nil
 }
 func (w *World) DropBatch() error {
-	if err := w.proxy.Frames(w.Gateway.Home, w.Replicas[0].Home); err != nil {
+	if err := w.configureFrameFaults(); err != nil {
 		return err
 	}
 	w.proxy.Partition()
@@ -54,7 +74,7 @@ func (w *World) SuppressAcks(enabled bool) error {
 	configured := w.proxy.frames != nil
 	w.proxy.mu.Unlock()
 	if !configured {
-		if err := w.proxy.Frames(w.Gateway.Home, w.Replicas[0].Home); err != nil {
+		if err := w.configureFrameFaults(); err != nil {
 			return err
 		}
 		w.proxy.Partition()
@@ -69,6 +89,11 @@ func (w *World) DroppedFrames() int {
 	w.proxy.mu.Lock()
 	defer w.proxy.mu.Unlock()
 	return w.proxy.frames.dropped
+}
+func (w *World) FeedCreditHighWater() int {
+	w.proxy.mu.Lock()
+	defer w.proxy.mu.Unlock()
+	return w.proxy.frames.creditHighWater
 }
 func (w *World) FeedConnections() int {
 	w.proxy.mu.Lock()
@@ -116,6 +141,7 @@ func (p *FaultProxy) relayFrames(conn net.Conn, config frameFaults) {
 		p.mu.Lock()
 		p.frames.connections++
 		p.mu.Unlock()
+		outstanding := 0
 		go func() {
 			defer cancel()
 			for {
@@ -127,6 +153,9 @@ func (p *FaultProxy) relayFrames(conn net.Conn, config frameFaults) {
 				json.Unmarshal(data, &frame)
 				p.mu.Lock()
 				drop := p.frames.dropAcks && frame.T == "Ack"
+				if frame.T == "Ack" && !drop {
+					outstanding -= frame.Credits
+				}
 				p.mu.Unlock()
 				if drop {
 					continue
@@ -144,10 +173,16 @@ func (p *FaultProxy) relayFrames(conn net.Conn, config frameFaults) {
 			var frame contracts.FeedFrame
 			json.Unmarshal(data, &frame)
 			p.mu.Lock()
+			switch frame.T {
+			case "Welcome", "Reset", "SnapshotBegin", "SnapshotPage", "SnapshotEnd", "Batch":
+				outstanding += len(data)
+				p.frames.creditHighWater = max(p.frames.creditHighWater, outstanding)
+			}
 			drop := p.frames.dropBatch && frame.T == "Batch"
 			if drop {
 				p.frames.dropBatch = false
 				p.frames.dropped++
+				outstanding -= len(data)
 			}
 			p.mu.Unlock()
 			if drop {
