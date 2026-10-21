@@ -54,10 +54,11 @@ export function VirtualList<T>(props: {
     onMount(() => {
         props.ref?.({ scrollToIndex, anchor });
         observer = new ResizeObserver(entries => {
-            const saved = anchor(), atBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight <= 2;
-            let changed = false;
+            const saved = anchor(), atBottom = viewport.scrollHeight - viewport.scrollTop - height() <= 2;
+            let changed = false, resized=false;
             for (const entry of entries) {
                 if (entry.target === viewport) {
+                    resized=true;
                     setHeight(viewport.clientHeight);
                     continue;
                 }
@@ -71,7 +72,7 @@ export function VirtualList<T>(props: {
                     changed = true;
                 }
             }
-            if (changed) {
+            if (changed||resized) {
                 if (props.bottomAnchored && atBottom) {
                     viewport.scrollTop = Math.max(0, positions.total - viewport.clientHeight);
                     queueMicrotask(()=>{viewport.scrollTop=viewport.scrollHeight;refresh();});
@@ -93,7 +94,7 @@ export function VirtualList<T>(props: {
     onCleanup(() => { observer?.disconnect(); cancelAnimationFrame(frame); });
     createEffect(() => { const value = range(); props.onVisible?.(value.start, value.end); });
     const indices = createMemo(() => Array.from({ length: Math.max(0, range().end - range().start) }, (_, i) => range().start + i));
-    return <div ref={viewport} class="virtual-viewport" tabindex="0" role="listbox" aria-label={props.label} aria-activedescendant={items.length ? 'virtual-row-' + props.keyFor(items[active()]) : undefined} onScroll={() => { if (!frame)
+    return <div ref={viewport} class="virtual-viewport" data-scroll={props.label} tabindex="0" role="listbox" aria-label={props.label} aria-activedescendant={items.length ? 'virtual-row-' + props.keyFor(items[active()]) : undefined} onScroll={() => { if (!frame)
         frame = requestAnimationFrame(() => { frame = 0; setScroll(viewport.scrollTop); }); }} onKeyDown={event => {
             let next = active();
             if (event.key === 'ArrowDown')

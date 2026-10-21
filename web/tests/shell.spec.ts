@@ -39,6 +39,11 @@ test('WEB-SHELL-JOURNEY layouts, deep links, appearance, keyboard and history', 
     await page.goForward();
     await expect(page).toHaveURL(/messages\/new/);
     if(info.project.use.viewport?.width===390){
+        await page.getByRole('button',{name:'Details',exact:true}).click();
+        await expect(page).toHaveURL(/messages\/new\/details$/);
+        await expect(page.getByRole('main',{name:'Details'})).toBeVisible();
+        await page.getByRole('main',{name:'Details'}).getByRole('button',{name:'Back',exact:true}).click();
+        await expect(page).toHaveURL(/messages\/new$/);
         await expect.poll(()=>page.locator('.transcript').evaluate(element=>getComputedStyle(element).transform)).toBe('none');
         await page.mouse.move(5,400);await page.mouse.down();await page.mouse.move(55,400,{steps:5});
         const tracked=await page.locator('.transcript').evaluate(element=>new DOMMatrix(getComputedStyle(element).transform).m41);
@@ -75,4 +80,11 @@ test('WEB-INPUT-GUARD denies synthetic events and delayed commands', async ({ pa
     await page.getByRole('button', { name: 'Delayed fixture command' }).click();
     await expect(page.getByRole('status')).toHaveText('Trusted input required');
     expect(frames).toHaveLength(1);
+    await page.getByRole('button',{name:'Forged fixture context'}).dispatchEvent('click');
+    await expect(page.getByRole('status')).toHaveText('Trusted input required');
+    expect(frames).toHaveLength(1);
+    await page.getByLabel('Programmatic change').evaluate((element:HTMLInputElement)=>element.click());
+    await expect(page.getByRole('status')).toHaveText('Trusted input required');
+    expect(frames).toHaveLength(1);
 });
+

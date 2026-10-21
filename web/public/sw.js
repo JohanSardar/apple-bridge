@@ -1,5 +1,6 @@
 const SHELL='ab.shell.__VERSION__';
 const THUMBS='ab.thumbs';
+const MAX_THUMB_BYTES=200_000_000;
 const PRECACHE="__PRECACHE__";
 const trusted=new Set();
 let generation=0,queue=Promise.resolve();
@@ -33,7 +34,7 @@ self.addEventListener('message',event=>{
 async function thumbnail(request,response,version){
   if(version!==generation)return;
   const bytes=await response.arrayBuffer();
-  if(bytes.byteLength>200*1024*1024||version!==generation)return;
+  if(bytes.byteLength>MAX_THUMB_BYTES||version!==generation)return;
   const headers=new Headers(response.headers);
   headers.set('X-AB-Bytes',String(bytes.byteLength));
   headers.set('X-AB-Used',String(Date.now()));
@@ -48,7 +49,7 @@ async function thumbnail(request,response,version){
     entries.push({key,size,at:Number(value.headers.get('X-AB-Used')||0)});
   }
   entries.sort((a,b)=>a.at-b.at);
-  for(const entry of entries){if(total<=200*1024*1024)break;await cache.delete(entry.key);total-=entry.size;}
+  for(const entry of entries){if(total<=MAX_THUMB_BYTES)break;await cache.delete(entry.key);total-=entry.size;}
 }
 self.addEventListener('fetch',event=>{
   const request=event.request,url=new URL(request.url);
@@ -74,7 +75,7 @@ self.addEventListener('fetch',event=>{
   }
   if(!trusted.has(client))return;
   const thumb=url.pathname.startsWith('/web/v1/blob/')&&url.searchParams.get('variant')==='thumb';
-  const shell=url.pathname.startsWith('/assets/')||url.pathname==='/icon.svg'||url.pathname==='/manifest.webmanifest';
+  const shell=url.pathname.startsWith('/assets/')||url.pathname==='/icon.svg'||url.pathname==='/icons.svg'||url.pathname==='/manifest.webmanifest';
   if(!thumb&&!shell)return;
   event.respondWith((async()=>{
     const cached=await enqueue(async()=>{

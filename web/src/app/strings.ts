@@ -1,4 +1,6 @@
 export const strings = {
+    newSignIn: 'A new device signed in.',
+    dismiss: 'Dismiss',
     loading: 'Loading',
     skipContent: 'Skip to content',
     connectionFailed: 'Couldn’t connect to your Mac',

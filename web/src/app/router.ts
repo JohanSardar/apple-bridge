@@ -3,6 +3,7 @@ export type Route = {
     path: string;
     chat?: string;
     message?: string;
+    panel?: 'details';
     section?: string;
 };
 function parse(path: string): Route {
@@ -12,7 +13,7 @@ function parse(path: string): Route {
     catch {
         return part;
     } });
-    return { path, chat: parts[0] === 'messages' ? parts[1] : undefined, message: parts[0] === 'messages' ? parts[2] : undefined, section: parts[0] === 'settings' ? parts[1] ?? 'devices' : undefined };
+    return { path, chat: parts[0] === 'messages' ? parts[1] : undefined, message: parts[0] === 'messages'&&parts[2]!=='details' ? parts[2] : undefined, panel:parts[0]==='messages'&&parts[2]==='details'?'details':undefined, section: parts[0] === 'settings' ? parts[1] ?? 'devices' : undefined };
 }
 const [route, setRoute] = createSignal(parse(location.pathname));
 let key = history.state?.abKey ?? crypto.randomUUID();
@@ -22,7 +23,32 @@ const positions = new Map<string, Record<string, number>>();
 history.replaceState({ ...history.state, abKey: key }, '');
 history.scrollRestoration = 'manual';
 function save() { const offsets: Record<string, number> = {}; document.querySelectorAll<HTMLElement>('[data-scroll]').forEach(element => { offsets[element.dataset.scroll!] = element.scrollTop; }); positions.set(key, offsets); }
-function restore() { const offsets = positions.get(key) ?? {}; requestAnimationFrame(() => { document.querySelectorAll<HTMLElement>('[data-scroll]').forEach(element => { element.scrollTop = offsets[element.dataset.scroll!] ?? 0; }); }); }
+let restoreObserver:MutationObserver|undefined;
+let restoreFrame=0;
+let restoreTimeout:ReturnType<typeof setTimeout>|undefined;
+function stopRestore(){restoreObserver?.disconnect();restoreObserver=undefined;cancelAnimationFrame(restoreFrame);clearTimeout(restoreTimeout);}
+function restore(){
+    stopRestore();
+    const offsets=positions.get(key);
+    if(!offsets)return;
+    const pending=new Set(Object.keys(offsets));
+    const stable=new Map<string,number>();
+    const attempt=()=>{
+        for(const element of document.querySelectorAll<HTMLElement>('[data-scroll]')){
+            const name=element.dataset.scroll!;
+            if(!pending.has(name))continue;
+            const before=element.scrollTop;
+            element.scrollTop=offsets[name];
+            if(Math.abs(element.scrollTop-offsets[name])<1){const count=Math.abs(before-offsets[name])<1?(stable.get(name)??0)+1:0;stable.set(name,count);if(count>=2)pending.delete(name);else{cancelAnimationFrame(restoreFrame);restoreFrame=requestAnimationFrame(attempt);}}
+        }
+        if(!pending.size)stopRestore();
+    };
+    restoreObserver=new MutationObserver(()=>{cancelAnimationFrame(restoreFrame);restoreFrame=requestAnimationFrame(attempt);});
+    restoreObserver.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['style']});
+    restoreFrame=requestAnimationFrame(attempt);
+    restoreTimeout=setTimeout(stopRestore,10000);
+}
+for(const type of ['pointerdown','keydown','wheel','touchstart'])window.addEventListener(type,event=>{if(event.isTrusted)stopRestore();},{capture:true,passive:true});
 window.addEventListener('popstate', () => { save(); key = history.state?.abKey ?? crypto.randomUUID(); setRoute(parse(location.pathname)); restore(); });
 window.addEventListener('pagehide', () => { if (!persistent)
     return; save(); try {
@@ -41,7 +67,7 @@ try {
 catch {
     positions.delete(key);
 }
-export function clearRouterPersistence() { positions.clear(); try {
+export function clearRouterPersistence() { stopRestore(); positions.clear(); try {
     sessionStorage.removeItem('ab.scroll');
 }
 catch {

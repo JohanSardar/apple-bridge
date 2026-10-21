@@ -39,6 +39,7 @@ export function mockWeb() {
         }
         res.end('{}'); return;
       }
+      if (path === '/__mock/signin') { for(const client of sockets) client.socket.write(frame({t:'signin',device:'fixture-device',at:new Date().toISOString()}));res.end('{}');return; }
       if (path === '/__mock/drop') { for (const client of sockets) client.socket.destroy(); res.end('{}'); return; }
       if (path === '/__mock/delta') {
         sequence++;

@@ -9,3 +9,10 @@
 .solid-material .app-menu-control.glass{background:var(--background-elevated);backdrop-filter:none;-webkit-backdrop-filter:none}
 
 :dir(rtl) .back-button .icon{transform:rotate(180deg)}
+
+.session-notice{position:fixed;inset-block-start:calc(16px + env(safe-area-inset-top));inset-inline-end:16px;max-inline-size:calc(100vw - 32px);border-radius:16px;padding:6px 6px 6px 16px;display:flex;align-items:center;gap:16px;z-index:50}
+
+@media(max-width:699px){:root[data-theme=dark] .settings-layout,:root[data-theme=dark] .auth-page{background:var(--background)}}
+@media(min-width:700px){:root[data-theme=dark] .settings-layout{background:var(--window)}:root[data-theme=dark] .settings-content .group{background:var(--background-secondary-elevated)}}
+
+.phone-details{position:absolute;inset:0;z-index:4;background:var(--background);display:flex;flex-direction:column;padding-block-start:env(safe-area-inset-top);touch-action:pan-y}.phone-details .toolbar{flex-shrink:0}.phone-details .toolbar h2{font-size:var(--headline)}:dir(rtl) .phone-details .icon-button .icon{transform:rotate(180deg)}

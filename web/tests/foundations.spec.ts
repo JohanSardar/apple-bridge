@@ -23,6 +23,11 @@ test('WEB-VIRTUAL-ANCHOR preserves measured anchors through prepend, append and 
     await page.getByRole('button', { name: 'Bottom mode' }).click();
     await page.getByRole('button', { name: 'Append', exact: true }).click();
     await expect.poll(() => list.evaluate(element => element.scrollHeight - element.scrollTop - element.clientHeight)).toBeLessThan(2);
+    const viewport=page.viewportSize()!;
+    await page.setViewportSize({width:viewport.width,height:viewport.height-150});
+    await expect.poll(()=>list.evaluate(element=>element.scrollHeight-element.scrollTop-element.clientHeight)).toBeLessThan(2);
+    await page.setViewportSize(viewport);
+    await expect.poll(()=>list.evaluate(element=>element.scrollHeight-element.scrollTop-element.clientHeight)).toBeLessThan(2);
     const frames = await list.evaluate(async (element) => {
         const deltas: number[] = [], work: number[] = [];
         let previous = 0;
@@ -40,6 +45,9 @@ test('WEB-VIRTUAL-ANCHOR preserves measured anchors through prepend, append and 
     expect(frames.rendered).toBeLessThan(100);
     const timing = stats(frames.deltas), work = stats(frames.work);
     await metrics('WEB-VIRTUAL-ANCHOR', info.project.name, { frame: timing, scroll_assignment: work, dropped_at_120hz: frames.deltas.reduce((sum, value) => sum + Math.max(0, Math.round(value / (1000 / 120)) - 1), 0), dropped_at_60hz: frames.deltas.reduce((sum, value) => sum + Math.max(0, Math.round(value / (1000 / 60)) - 1), 0), rows: 100000, rendered: frames.rendered, anchor_shift_px: after - before.y, refresh_target_hz: 120 });
+    const savedScroll=await list.evaluate(element=>element.scrollTop);
+    await page.reload();
+    await expect.poll(()=>page.getByRole('listbox').evaluate((element,saved)=>Math.abs(element.scrollTop-saved),savedScroll)).toBeLessThan(2);
 });
 test('WEB-CACHE-POLICY public sessions persist nothing and revocation wipes trusted data', async ({ page }) => {
     await page.goto('/__fixtures/live');
@@ -59,6 +67,10 @@ test('WEB-CACHE-POLICY public sessions persist nothing and revocation wipes trus
 test('WEB-LIVE-MOCK receives deltas and resumes after a dropped socket with cached views', async ({ page }, info) => {
     await page.goto('/__fixtures/live');
     await expect(page.getByRole('status', {name:'Connection'})).toHaveText('connected');
+    await page.request.get('/__mock/signin');
+    await expect(page.getByRole('alert')).toContainText('A new device signed in.');
+    await page.getByRole('button',{name:'Dismiss',exact:true}).click();
+    await expect(page.getByRole('alert')).toHaveCount(0);
     const values: number[] = [];
     for (let i = 0; i < 10; i++) {
         const before = Number(await page.getByLabel('Live count').textContent());

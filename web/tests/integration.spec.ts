@@ -35,7 +35,7 @@ test('WEB-AUTH-REVOKE another session closes within one second, wipes cache, and
   const first=await bootstrap(context,request);
   await page.goto('/__fixtures/live');await expect(page.getByRole('status', {name:'Connection'})).toHaveText('connected');
   await expect.poll(()=>page.evaluate(async()=> (await indexedDB.databases()).length)).toBeGreaterThan(0);
-  const other=await browser.newContext({baseURL:process.env.AB_WEB_URL});await bootstrap(other,request);const controller=await other.newPage();await controller.goto('/settings/devices');
+  const other=await browser.newContext({baseURL:process.env.AB_WEB_URL});await bootstrap(other,request);await expect(page.getByRole('alert')).toContainText('A new device signed in.');const controller=await other.newPage();await controller.goto('/settings/devices');
   const opened=page.waitForEvent('websocket');
   await page.getByRole('button',{name:'Reconnect live view'}).click();
   const socket=await opened;

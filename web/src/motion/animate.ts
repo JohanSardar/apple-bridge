@@ -15,6 +15,7 @@ export function springAnimation(update: (value: number) => void, from: number, t
         }
         frame = requestAnimationFrame(tick);
     };
+    update(from);
     frame = requestAnimationFrame(tick);
     return { retarget(next: number, carriedVelocity?: number) { state = sampleSpring(origin, destination, initialVelocity, (performance.now() - start) / 1000, spring); origin = state.value; initialVelocity = carriedVelocity ?? state.velocity; destination = next; start = performance.now(); if (stopped) {
             stopped = false;

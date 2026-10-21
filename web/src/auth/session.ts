@@ -5,7 +5,9 @@ import { viewCache } from '../data/cache';
 import { setPreferencePersistence } from '../app/preferences';
 import { clearRouterPersistence, setRouterPersistence } from '../app/router';
 import { LiveClient } from '../data/live';
+import { strings as s } from '../app/strings';
 const [session, setSession] = createSignal<DeviceSession | null>(), [error, setError] = createSignal(false), [live, setLive] = createSignal<LiveClient>();
+const [notice,setNotice]=createSignal('');
 const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('ab.session') : undefined;
 let signingOut: Promise<void> | undefined;
 async function clearPrivateData() {
@@ -37,7 +39,8 @@ async function configurePWA(current: DeviceSession) {
     }
     const worker = registration.active ?? registration.waiting;
     if (worker)
-        await new Promise<void>(resolve => { const channel = new MessageChannel(); const timeout = setTimeout(resolve, 5000); channel.port1.onmessage = () => { clearTimeout(timeout); resolve(); }; worker.postMessage({ t: 'trusted' }, [channel.port2]); });
+        await new Promise<void>(resolve => { 
+const channel = new MessageChannel(); const timeout = setTimeout(resolve, 5000); channel.port1.onmessage = () => { clearTimeout(timeout); resolve(); }; worker.postMessage({ t: 'trusted' }, [channel.port2]); });
 }
 export async function establishSession(value: unknown) {
     if(signingOut) await signingOut.catch(()=>{});
@@ -50,7 +53,7 @@ export async function establishSession(value: unknown) {
     else
         await clearPrivateData();
     live()?.close();
-    setLive(new LiveClient(() => { void endSession(false, true); }));
+    setLive(new LiveClient(() => { void endSession(false, true); },frame=>{if(frame.t==='signin')setNotice(s.newSignIn);}));
     setSession(current);
     setError(false);
     void configurePWA(current).catch(() => { });
@@ -75,6 +78,7 @@ export function endSession(remote = true, broadcast = true) {
     live()?.close();
     setLive(undefined);
     setSession(null);
+    setNotice('');
     signingOut = (async () => {
         if (broadcast)
             channel?.postMessage({ t: 'signed-out', device: current?.device_id });
@@ -97,4 +101,5 @@ for (const event of ['pointerdown', 'keydown', 'input'])
     window.addEventListener(event, () => { lastInput = Date.now(); }, { passive: true });
 setInterval(() => { if (session()?.cache === 'memory' && Date.now() - lastInput >= 30 * 60 * 1000)
     void endSession(); }, 15000);
-export const auth = { session, error, live, retry: loadSession };
+window.addEventListener('pageshow',event=>{if(event.persisted){if(session()?.cache==='memory'&&Date.now()-lastInput>=30*60*1000)void endSession();else void loadSession();}});
+export const auth = { session, error, live, notice, dismissNotice:()=>setNotice(''), retry: loadSession };

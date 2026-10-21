@@ -90,10 +90,10 @@ func runWeb(ctx context.Context, s Scenario) Evidence {
 			return fail("web_ready", fmt.Errorf("%w: %s", err, output))
 		}
 	}
-	if err := os.MkdirAll("lab/evidence/web", 0700); err != nil {
+	if err := os.MkdirAll("lab/evidence/private/web/reports", 0700); err != nil {
 		return fail("web_evidence", err)
 	}
-	report, _ := filepath.Abs(filepath.Join("lab/evidence/web", s.ID+"-playwright.json"))
+	report, _ := filepath.Abs(filepath.Join("lab/evidence/private/web/reports", s.ID+"-playwright.json"))
 	test := exec.CommandContext(ctx, "pnpm", "exec", "playwright", "test", "-g", "\\b"+regexp.QuoteMeta(s.ID)+"\\b")
 	test.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	test.Cancel = func() error { return syscall.Kill(-test.Process.Pid, syscall.SIGKILL) }
@@ -103,8 +103,16 @@ func runWeb(ctx context.Context, s Scenario) Evidence {
 	output, err := test.CombinedOutput()
 	e.Metrics["matrix"] = projects
 	e.Metrics["server"] = s.Web.Server
-	e.Metrics["report"] = filepath.Base(report)
-	e.Assertions = append(e.Assertions, Assertion{Name: "playwright_matrix", Passed: err == nil, Detail: string(output)})
+	e.Metrics["report"] = "lab/evidence/private/web/reports/" + filepath.Base(report)
+	detail := string(output)
+	if err != nil {
+		logPath := strings.TrimSuffix(report, ".json") + ".log"
+		if writeErr := os.WriteFile(logPath, output, 0600); writeErr != nil {
+			return fail("web_private_log", writeErr)
+		}
+		detail = fmt.Sprintf("Playwright failed: %v; private log: %s", err, filepath.Base(logPath))
+	}
+	e.Assertions = append(e.Assertions, Assertion{Name: "playwright_matrix", Passed: err == nil, Detail: detail})
 	e.Passed = err == nil
 	return e
 }
