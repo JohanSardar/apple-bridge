@@ -135,6 +135,7 @@ func Subset(grants, ceiling []contracts.Grant) bool {
 }
 
 type PairCode struct {
+	Remote      bool      `json:"remote,omitempty"`
 	Dial        string    `json:"dial,omitempty"`
 	ID          string    `json:"id"`
 	Address     string    `json:"address"`
@@ -155,6 +156,7 @@ type pairing struct {
 }
 
 type Enrollment struct {
+	Remote      bool              `json:"remote,omitempty"`
 	PairingID   string            `json:"pairing_id,omitempty"`
 	Dial        string            `json:"dial,omitempty"`
 	Ceiling     []contracts.Grant `json:"ceiling,omitempty"`
@@ -422,11 +424,7 @@ func (a *Authority) PairDial(address, dial string, grants []contracts.Grant, ttl
 	if err != nil {
 		return "", err
 	}
-	b, err := json.Marshal(code)
-	if err != nil {
-		return "", err
-	}
-	return "ab1-" + base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(b), nil
+	return encodePairCode(code)
 }
 
 type JoinRequest struct {
@@ -475,6 +473,11 @@ func DecodePairCode(code string) (PairCode, error) {
 	}
 	if json.Unmarshal(b, &c) != nil || c.ID == "" || c.Address == "" || len(c.Fingerprint) != 64 || len(c.Secret) != 20 {
 		return c, contracts.ErrInvalid
+	}
+	if c.Remote {
+		if _, err := relayURL(c.Address); err != nil || c.Dial != "" {
+			return c, contracts.ErrInvalid
+		}
 	}
 	if time.Now().After(c.ExpiresAt) {
 		return c, contracts.ErrExpired
