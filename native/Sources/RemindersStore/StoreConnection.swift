@@ -138,7 +138,7 @@ final class StoreConnection {
                 snapshot.reminders[id.key] = StoreReminderRow(identity: id, calendarItemIdentifier: row.text(4), externalIdentifier: row.text(5), flagged: row.bool(6), parent: row.integer(7), list: row.integer(8), created: row.number(9), earlyReminder: row.data(10))
             case .list:
                 let id = row.identity
-                snapshot.lists[id.key] = StoreListRow(identity: id, name: row.text(4), emblem: row.text(5), isGroup: row.bool(6), parent: row.integer(7), alternateParent: row.integer(8), displayOrder: row.number(9), pinned: row.bool(10), pinnedDate: row.number(11), sortingStyle: row.text(12), groceries: row.bool(13), groceryLocale: row.text(14), sharingStatus: row.integer(15), sharedOwner: row.text(16), smartType: row.integer(17), filter: row.data(18), sectionOrder: row.data(19), sectionMembership: row.data(20), ordering: row.data(21), orderingJSON: row.data(22))
+                snapshot.lists[id.key] = StoreListRow(identity: id, name: row.text(4), emblem: row.text(5), isGroup: row.bool(6), parent: row.integer(7), alternateParent: row.integer(8), displayOrder: row.number(9), pinned: row.bool(10), pinnedDate: row.number(11), sortingStyle: row.scalar(12), groceries: row.bool(13), groceryLocale: row.text(14), sharingStatus: row.integer(15), sharedOwner: row.text(16), smartType: row.scalar(17), filter: row.data(18), sectionOrder: row.data(19), sectionMembership: row.data(20), ordering: row.data(21), orderingJSON: row.data(22))
             case .section:
                 let id = row.identity
                 snapshot.sections[id.key] = StoreSectionRow(identity: id, name: row.text(4), list: row.integer(5), smartList: row.integer(6))

@@ -6,6 +6,9 @@ public struct StoreReadResult: Sendable {
     public let timings: StoreTimings
     public let mode: String
     public let decodedRows: Int
+    public let reminderKeys: Set<Int64>
+    public let listKeys: Set<Int64>
+    public let columns: [String: Set<String>]
 }
 
 public actor RemindersStoreSession {
@@ -64,6 +67,8 @@ public actor RemindersStoreSession {
         var nextVersions = versions
         var mode = "unchanged"
         var decoded = 0
+        var reloaded: Set<StoreTable> = []
+        var changes: [StoreTable: Set<Int64>] = [:]
         let needsFull = full || !initialized || changedSchema || (hasHistory && !validToken)
         if needsFull {
             mode = "full"
@@ -72,7 +77,6 @@ public actor RemindersStoreSession {
             decoded = Self.count(next)
             nextVersions = hasHistory ? [:] : try readVersions()
         } else if version != dataVersion || latestHistory != historyToken {
-            var changes: [StoreTable: Set<Int64>] = [:]
             if validToken, let token = historyToken, latestHistory > token {
                 mode = "history"
                 try connection.query("SELECT ZENTITY,ZENTITYPK FROM ACHANGE WHERE Z_PK>? ORDER BY Z_PK", binding: token) { row in
@@ -86,8 +90,11 @@ public actor RemindersStoreSession {
                 let current = try readVersions()
                 for table in StoreTable.allCases {
                     guard let now = current[table], let previous = versions[table] else {
+                        let before = Self.keys(table, next)
                         Self.clear(table, from: &next)
                         try connection.read(table, into: &next)
+                        changes[table] = before.union(Self.keys(table, next))
+                        reloaded.insert(table)
                         decoded += Self.tableCount(table, next)
                         continue
                     }
@@ -96,7 +103,7 @@ public actor RemindersStoreSession {
                 nextVersions = current
             }
             if mode != "full" {
-                for (table, keys) in changes {
+                for (table, keys) in changes where !reloaded.contains(table) {
                     for key in keys {
                         Self.remove(table, key: key, from: &next)
                         try connection.read(table, key: key, into: &next)
@@ -117,6 +124,8 @@ public actor RemindersStoreSession {
             }
         }
         try connection.execute("COMMIT")
+        let reminderKeys = mode == "full" ? Set(next.reminders.keys).union(cached.reminders.keys) : changes[.reminder] ?? []
+        let listKeys = mode == "full" ? Set(next.lists.keys).union(cached.lists.keys) : changes[.list] ?? []
         cached = next
         versions = nextVersions
         initialized = true
@@ -128,7 +137,7 @@ public actor RemindersStoreSession {
         connection.timings.openMS = 0
         timings.totalMS = (ProcessInfo.processInfo.systemUptime - start) * 1000
         timings.decodeMS = max(0, timings.totalMS - timings.queryMS - timings.openMS)
-        return StoreReadResult(snapshot: next, timings: timings, mode: mode, decodedRows: decoded)
+        return StoreReadResult(snapshot: next, timings: timings, mode: mode, decodedRows: decoded, reminderKeys: reminderKeys, listKeys: listKeys, columns: connection.columns)
     }
 
     private func readVersions() throws -> [StoreTable: [Int64: Int64]] {
@@ -143,6 +152,16 @@ public actor RemindersStoreSession {
             result[table] = rows
         }
         return result
+    }
+
+    private static func keys(_ table: StoreTable, _ snapshot: TypedStoreSnapshot) -> Set<Int64> {
+        switch table {
+        case .reminder: Set(snapshot.reminders.keys)
+        case .list: Set(snapshot.lists.keys)
+        case .section: Set(snapshot.sections.keys)
+        case .object: Set(snapshot.objects.keys)
+        case .label: Set(snapshot.labels.keys)
+        }
     }
 
     private static func clear(_ table: StoreTable, from snapshot: inout TypedStoreSnapshot) {
