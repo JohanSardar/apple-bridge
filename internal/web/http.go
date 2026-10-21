@@ -138,6 +138,7 @@ func Handler(deps Deps) http.Handler {
 		mux.HandleFunc("POST /web/v1/"+flow+"/finish", func(w http.ResponseWriter, r *http.Request) { s.authFinish(w, r, flow) })
 	}
 	mux.HandleFunc("POST /web/v1/handles", s.handles)
+	mux.HandleFunc("GET /web/v1/sources", s.sources)
 	mux.HandleFunc("GET /web/v1/session", func(w http.ResponseWriter, r *http.Request) { respond(w, 200, current(r).Session) })
 	mux.HandleFunc("POST /web/v1/logout", func(w http.ResponseWriter, r *http.Request) {
 		if err := s.deps.Authority.Revoke(current(r).Principal.ID); err != nil {
