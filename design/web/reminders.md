@@ -104,6 +104,35 @@ Deep links: `/reminders`, `/reminders/<list|smart:today|scheduled|all|flagged|co
 - AppleTruth reads the store independently.
 - Read models: `reminders.lists` (sidebar with counts), `reminders.items{list|smart|tag, show_completed, sort}`.
 
+**Store mapping (R).** Column names were read from the Air's store on macOS 26.7.1, schema only. Foreign-key column variants (`ZREMINDER1…5`, `ZLIST`) differ per entity; the W5-STORE worker verifies each against a tagged "Bridge Test" fixture.
+
+| Field | Store source |
+|---|---|
+| reminder identity | `ZREMCDREMINDER.ZIDENTIFIER`; link to EventKit via `ZDACALENDARITEMUNIQUEIDENTIFIER` / `ZEXTERNALIDENTIFIER` (prove which equals `calendarItemIdentifier`) |
+| flag | `ZREMCDREMINDER.ZFLAGGED` |
+| subtask parent | `ZREMCDREMINDER.ZPARENTREMINDER` → `Z_PK` |
+| list | `ZREMCDREMINDER.ZLIST` → `ZREMCDBASELIST` |
+| manual order | list mergeable ordering column (excluded from the schema dump; locate it) and `ZICSDISPLAYORDER` |
+| deleted / pending | `ZMARKEDFORDELETION` |
+| early reminder | `ZDUEDATEDELTAALERTSDATA` (archived blob; decode with a pure fixture-tested decoder) |
+| When Messaging | `ZCONTACTHANDLES` (blob; read-only, hidden unless decodable) |
+| rich notes | `ZNOTESDOCUMENT` / `ZTITLEDOCUMENT` (prefer the EventKit plain text; decode only if needed) |
+| list name, color, icon/emoji | `ZREMCDBASELIST.ZNAME`, `ZCOLOR`, `ZBADGEEMBLEM` |
+| list groups | `ZISGROUP`, `ZPARENTLIST` |
+| list order, pin | `ZDADISPLAYORDER`, `ZISPINNEDBYCURRENTUSER`, `ZPINNEDDATE` |
+| sort style | `ZSORTINGSTYLE` |
+| groceries | `ZSHOULDCATEGORIZEGROCERYITEMS`, `ZGROCERYLOCALEID` |
+| shared list | `ZSHARINGSTATUS`, `ZSHAREDOWNERNAME` (display only) |
+| smart lists | `ZREMCDBASELIST` rows with entity `REMCDSmartList`, `ZSMARTLISTTYPE`, `ZFILTERDATA` (blob) |
+| sections | `ZREMCDBASESECTION.ZDISPLAYNAME`, `ZLIST`, `ZCREATIONDATE`; order from `ZSECTIONIDSORDERINGASDATA`; membership from `ZMEMBERSHIPSOFREMINDERSINSECTIONSASDATA` (blobs) |
+| tags | `ZREMCDOBJECT` entity `REMCDHashtag` → `ZHASHTAGLABEL` → `ZREMCDHASHTAGLABEL.ZNAME` |
+| images and files | `ZREMCDOBJECT` attachment entities (`ZUTI`, `ZFILENAME`, `ZFILESIZE`, `ZWIDTH`/`ZHEIGHT`, `ZSHA512SUM`), with bytes from the store's attachment files as blobs and variants |
+| alarms | `ZREMCDOBJECT` alarm and trigger entities (date, time-interval, location `ZLATITUDE`/`ZLONGITUDE`/`ZRADIUS`/`ZPROXIMITY`) |
+| assignment | `ZREMCDOBJECT` entity `REMCDAssignment` (`ZASSIGNEE`, `ZORIGINATOR`, `ZASSIGNEDDATE`) |
+| recurrence | `ZREMCDOBJECT` entity `REMCDRecurrenceRule` (`ZFREQUENCY`, `ZINTERVAL`, `ZOCCURRENCECOUNT`, `ZENDDATE`, `ZFIRSTDAYOFTHEWEEK`) |
+
+Change detection: the Reminders store directory (WAL) gets FSEvents hints, just like Calendar's database hints, coalesced with the existing EventKit notification path. Never refetch per hint (see LIVE-FIX's AgendaGate findings).
+
 **W (write):** existing EventKit commands, plus natural-language parsing in the client only.
 
 **P (parity), via AppleScript where the dictionary supports it (flagged, verify per OS build), otherwise Accessibility on Reminders.app:**
