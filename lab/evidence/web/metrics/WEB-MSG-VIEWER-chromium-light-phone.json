@@ -1,11 +1,11 @@
 {
-  "entry_chunk": "/assets/index-VDSmeWqu.js",
-  "entry_bytes": 57302,
-  "entry_gzip_bytes": 21318,
-  "entry_gzip9_bytes": 21298,
+  "entry_chunk": "/assets/index-IQuL0w-u.js",
+  "entry_bytes": 57627,
+  "entry_gzip_bytes": 21416,
+  "entry_gzip9_bytes": 21395,
   "entry_budget_gzip_bytes": 60000,
   "viewer_chunks": [
-    "/assets/ViewerSession-C1Cmqgqq.js"
+    "/assets/ViewerSession-DecUI8MV.js"
   ],
   "viewer_requested_at_startup": false,
   "viewer_prefetched_on_hover": true,
