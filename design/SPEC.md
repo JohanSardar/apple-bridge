@@ -434,7 +434,7 @@ Every source publishes `system.source` with state, coverage, freshness and capab
 | `edit` | Accessibility: bubble → Edit, replace text, confirm | `date_edited` changes and `message_summary_info` contains new text | Apple limits: 15 min, 5 edits, iMessage only |
 | `unsend` | Accessibility: bubble → Undo Send | `date_retracted` set / part retracted | 2 min, iMessage only |
 | `mark_read` / `mark_unread` | Accessibility (context menu on conversation) | `is_read` / chat `last_read_message_timestamp` | |
-| `delete_message` / `delete_chat` | Accessibility (context menu → Delete, confirm) | row/chat absent in complete scan | test-created data only in tests |
+| `delete_message` / `delete_chat` | Accessibility (context menu → Delete, confirm) | no active membership, with `deleted_at` from the recoverable join; physical absence only after a complete scan | retained recoverable records stay in the copy; test-created data only in tests |
 | `create_group` | Accessibility (new message, multiple recipients, send first message) | new chat with style group and participants | capability proven separately (F10) |
 | `rename_group`, `add_member`, `remove_member`, `leave_group` | Accessibility (conversation details) | `group_action_type` / `group_title` rows, `chat_handle_join` changes | iMessage groups only; RCS rename if proven |
 
@@ -1310,6 +1310,7 @@ Recently Deleted becomes `deleted_at` + `recoverable_until` on messages and chat
 | ID | Levels | Proves |
 |---|---|---|
 | MSG-INTERACTIVE-GATE | sim, real | interactive skips the tag and own-handle rules; lab and agent principals don't; expiry and no-redispatch unchanged. At real level, an untagged interactive send to own handle, then cleanup |
+| MSG-DELETE-VISIBILITY | sim, real | sim checks retained recoverable message/chat records and restoration; read-only real proof compares a previously cleaned test message with independent native Truth |
 | MSG-SELFTEST | real | the self-test proves each operation and cleans up completely |
 | MSG-READSTATE-REAL, MSG-DELETE-REAL, MSG-RESEND | real | the proofs listed above |
 | WEB-MSG-SEND | web, real | text send: tap to local bubble ≤ 1 frame; ack; delivered; no duplicate |

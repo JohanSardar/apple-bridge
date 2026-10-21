@@ -1,0 +1,47 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[8.75 10.38 9.94] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5EHKHAZM22NVS0C5ZH2H69D",
+  "metrics": {
+    "proof_scope": "retained_native_record_from_previously_verified_test_cleanup",
+    "target_run": "run_01M5EDJ04FVTWC8RFWH1Q5BQ1Y",
+    "writes_submitted": 0
+  },
+  "scenario": "MSG-DELETE-VISIBILITY",
+  "level": "real",
+  "passed": true,
+  "git_sha": "11bb6ee04e56519de77bc657a3ed6e2c2cabd4a6",
+  "at": "2026-10-21T06:15:32.447281Z",
+  "assertions": [
+    {
+      "name": "truth_retains_deleted_test_message",
+      "passed": true
+    },
+    {
+      "name": "retained_target_captured",
+      "passed": true
+    },
+    {
+      "name": "copy_retains_recoverable_record",
+      "passed": true
+    },
+    {
+      "name": "native_deleted_timestamp_matches_copy",
+      "passed": true
+    },
+    {
+      "name": "no_command_dispatched",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
