@@ -97,7 +97,13 @@ public enum HelperCommand {
             return
         }
         if arguments.first == "reminders-store-profile" {
-            let profile = try RemindersStoreProfile.typed()
+            var result: Result<JSON, any Error>?
+            Task { @MainActor in
+                do { result = .success(try await RemindersStoreProfile.typed()) }
+                catch { result = .failure(error) }
+            }
+            while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.005)) }
+            let profile = try result!.get()
             try JSONEncoder().encode(profile).write(to: reportURL, options: .atomic)
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportURL.path)
             return
