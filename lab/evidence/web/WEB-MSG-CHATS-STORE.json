@@ -1,12 +1,12 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[8.44 9.11 9.56] cpus=8 other_heavy=1"
+    "summary": "air: load=[17.86 14.73 11.7] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M5EJWMXT7CQYYCM6P6CGB7ND",
+  "run_id": "run_01M5ETPK3TC7XJHNNM4SPGCSXZ",
   "metrics": {
     "demo_messages": 5000,
-    "demo_startup_ms": 13684,
+    "demo_startup_ms": 4749,
     "matrix": [
       "webkit-light-phone",
       "webkit-light-desktop",
@@ -33,76 +33,195 @@
       "lab/evidence/private/web/reports/WEB-MSG-CHATS-STORE-chromium-dark-desktop-playwright.json",
       "lab/evidence/private/web/reports/WEB-MSG-CHATS-STORE-firefox-light-phone-playwright.json",
       "lab/evidence/private/web/reports/WEB-MSG-CHATS-STORE-firefox-light-desktop-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-CHATS-STORE-firefox-dark-phone-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-CHATS-STORE-firefox-dark-desktop-playwright.json"
+      "lab/evidence/private/web/reports/WEB-MSG-CHATS-STORE-firefox-dark-phone-playwright.json"
     ],
-    "server": "gateway"
+    "server": "gateway",
+    "fixture_setup_ms": [
+      {
+        "project": "chromium-dark-desktop",
+        "test": "WEB-MSG-CHATS-STORE canceled subscriptions leave other live views intact",
+        "fixture_setup_ms": 7472
+      },
+      {
+        "project": "chromium-dark-desktop",
+        "test": "WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages",
+        "fixture_setup_ms": 3733
+      },
+      {
+        "project": "chromium-dark-phone",
+        "test": "WEB-MSG-CHATS-STORE canceled subscriptions leave other live views intact",
+        "fixture_setup_ms": 9292
+      },
+      {
+        "project": "chromium-dark-phone",
+        "test": "WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages",
+        "fixture_setup_ms": 4324
+      },
+      {
+        "project": "chromium-light-desktop",
+        "test": "WEB-MSG-CHATS-STORE canceled subscriptions leave other live views intact",
+        "fixture_setup_ms": 9848
+      },
+      {
+        "project": "chromium-light-desktop",
+        "test": "WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages",
+        "fixture_setup_ms": 4704
+      },
+      {
+        "project": "chromium-light-phone",
+        "test": "WEB-MSG-CHATS-STORE canceled subscriptions leave other live views intact",
+        "fixture_setup_ms": 9262
+      },
+      {
+        "project": "chromium-light-phone",
+        "test": "WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages",
+        "fixture_setup_ms": 3508
+      },
+      {
+        "project": "firefox-dark-phone",
+        "test": "WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages",
+        "fixture_setup_ms": 5807
+      },
+      {
+        "project": "firefox-light-desktop",
+        "test": "WEB-MSG-CHATS-STORE canceled subscriptions leave other live views intact",
+        "fixture_setup_ms": 9365
+      },
+      {
+        "project": "firefox-light-desktop",
+        "test": "WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages",
+        "fixture_setup_ms": 5815
+      },
+      {
+        "project": "firefox-light-phone",
+        "test": "WEB-MSG-CHATS-STORE canceled subscriptions leave other live views intact",
+        "fixture_setup_ms": 9272
+      },
+      {
+        "project": "firefox-light-phone",
+        "test": "WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages",
+        "fixture_setup_ms": 3731
+      },
+      {
+        "project": "webkit-dark-desktop",
+        "test": "WEB-MSG-CHATS-STORE canceled subscriptions leave other live views intact",
+        "fixture_setup_ms": 9792
+      },
+      {
+        "project": "webkit-dark-desktop",
+        "test": "WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages",
+        "fixture_setup_ms": 5575
+      },
+      {
+        "project": "webkit-dark-phone",
+        "test": "WEB-MSG-CHATS-STORE canceled subscriptions leave other live views intact",
+        "fixture_setup_ms": 10069
+      },
+      {
+        "project": "webkit-dark-phone",
+        "test": "WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages",
+        "fixture_setup_ms": 4848
+      },
+      {
+        "project": "webkit-light-desktop",
+        "test": "WEB-MSG-CHATS-STORE canceled subscriptions leave other live views intact",
+        "fixture_setup_ms": 8905
+      },
+      {
+        "project": "webkit-light-desktop",
+        "test": "WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages",
+        "fixture_setup_ms": 3753
+      },
+      {
+        "project": "webkit-light-phone",
+        "test": "WEB-MSG-CHATS-STORE canceled subscriptions leave other live views intact",
+        "fixture_setup_ms": 7261
+      },
+      {
+        "project": "webkit-light-phone",
+        "test": "WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages",
+        "fixture_setup_ms": 3216
+      }
+    ],
+    "fixture_setup_summary_ms": {
+      "samples": 21,
+      "p50": 5815,
+      "p95": 9848,
+      "max": 10069
+    },
+    "fixture_setup_budget_ms": 180000,
+    "test_body_timeout_ms": 45000,
+    "expect_timeout_ms": 6000,
+    "known_separate_defect": {
+      "kind": "pre-existing offline cached page chain incomplete after cross-page reorder",
+      "project": "firefox-dark-phone",
+      "expected_count": 577,
+      "actual_count": 400,
+      "assertion": "chats-store.spec.ts final offline reload, six seconds unchanged",
+      "trace": "lab/evidence/private/web/reconnect/store-final-failures/chats-store-WEB-MSG-CHATS--1e138-tals-and-moves-across-pages-firefox-dark-phone/trace.zip",
+      "reconnect_cursor_assertion_passed": true
+    }
   },
   "scenario": "WEB-MSG-CHATS-STORE",
   "level": "web",
-  "passed": true,
-  "git_sha": "975e436d8bdf58a4b584640dba36ccdbe60563f3",
-  "at": "2026-10-21T06:37:59.610503Z",
+  "passed": false,
+  "git_sha": "e1ae7bce98ea0a6d47641f5ead39bc58211229ca",
+  "at": "2026-10-21T08:54:29.755258Z",
   "assertions": [
     {
       "name": "webkit-light-phone:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/chats-store.spec.ts:3:1 › WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages (15.1s)\n\n  1 passed (19.4s)\n"
+      "detail": "\nRunning 2 tests using 1 worker\n\n  \u2713  1 [webkit-light-phone] \u203a tests/chats-store.spec.ts:4:1 \u203a WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages (3.9s)\n  \u2713  2 [webkit-light-phone] \u203a tests/live-cancellation.spec.ts:5:1 \u203a WEB-MSG-CHATS-STORE canceled subscriptions leave other live views intact (2.7s)\n\n  2 passed (22.2s)\n"
     },
     {
       "name": "webkit-light-desktop:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/chats-store.spec.ts:3:1 › WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages (20.9s)\n\n  1 passed (33.3s)\n"
+      "detail": "\nRunning 2 tests using 1 worker\n\n  \u2713  1 [webkit-light-desktop] \u203a tests/chats-store.spec.ts:4:1 \u203a WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages (2.9s)\n  \u2713  2 [webkit-light-desktop] \u203a tests/live-cancellation.spec.ts:5:1 \u203a WEB-MSG-CHATS-STORE canceled subscriptions leave other live views intact (6.2s)\n\n  2 passed (24.6s)\n"
     },
     {
       "name": "webkit-dark-phone:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-dark-phone] › tests/chats-store.spec.ts:3:1 › WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages (11.8s)\n\n  1 passed (16.1s)\n"
+      "detail": "\nRunning 2 tests using 1 worker\n\n  \u2713  1 [webkit-dark-phone] \u203a tests/chats-store.spec.ts:4:1 \u203a WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages (6.6s)\n  \u2713  2 [webkit-dark-phone] \u203a tests/live-cancellation.spec.ts:5:1 \u203a WEB-MSG-CHATS-STORE canceled subscriptions leave other live views intact (3.1s)\n\n  2 passed (28.0s)\n"
     },
     {
       "name": "webkit-dark-desktop:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-dark-desktop] › tests/chats-store.spec.ts:3:1 › WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages (8.1s)\n\n  1 passed (10.7s)\n"
+      "detail": "\nRunning 2 tests using 1 worker\n\n  \u2713  1 [webkit-dark-desktop] \u203a tests/chats-store.spec.ts:4:1 \u203a WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages (5.7s)\n  \u2713  2 [webkit-dark-desktop] \u203a tests/live-cancellation.spec.ts:5:1 \u203a WEB-MSG-CHATS-STORE canceled subscriptions leave other live views intact (3.9s)\n\n  2 passed (27.8s)\n"
     },
     {
       "name": "chromium-light-phone:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/chats-store.spec.ts:3:1 › WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages (5.2s)\n\n  1 passed (6.2s)\n"
+      "detail": "\nRunning 2 tests using 1 worker\n\n  \u2713  1 [chromium-light-phone] \u203a tests/chats-store.spec.ts:4:1 \u203a WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages (2.2s)\n  \u2713  2 [chromium-light-phone] \u203a tests/live-cancellation.spec.ts:5:1 \u203a WEB-MSG-CHATS-STORE canceled subscriptions leave other live views intact (8.2s)\n\n  2 passed (25.6s)\n"
     },
     {
       "name": "chromium-light-desktop:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/chats-store.spec.ts:3:1 › WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages (5.3s)\n\n  1 passed (6.4s)\n"
+      "detail": "\nRunning 2 tests using 1 worker\n\n  \u2713  1 [chromium-light-desktop] \u203a tests/chats-store.spec.ts:4:1 \u203a WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages (7.3s)\n  \u2713  2 [chromium-light-desktop] \u203a tests/live-cancellation.spec.ts:5:1 \u203a WEB-MSG-CHATS-STORE canceled subscriptions leave other live views intact (2.5s)\n\n  2 passed (26.9s)\n"
     },
     {
       "name": "chromium-dark-phone:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-dark-phone] › tests/chats-store.spec.ts:3:1 › WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages (10.5s)\n\n  1 passed (11.5s)\n"
+      "detail": "\nRunning 2 tests using 1 worker\n\n  \u2713  1 [chromium-dark-phone] \u203a tests/chats-store.spec.ts:4:1 \u203a WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages (2.6s)\n  \u2713  2 [chromium-dark-phone] \u203a tests/live-cancellation.spec.ts:5:1 \u203a WEB-MSG-CHATS-STORE canceled subscriptions leave other live views intact (2.3s)\n\n  2 passed (20.3s)\n"
     },
     {
       "name": "chromium-dark-desktop:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-dark-desktop] › tests/chats-store.spec.ts:3:1 › WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages (7.7s)\n\n  1 passed (9.6s)\n"
+      "detail": "\nRunning 2 tests using 1 worker\n\n  \u2713  1 [chromium-dark-desktop] \u203a tests/chats-store.spec.ts:4:1 \u203a WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages (2.9s)\n  \u2713  2 [chromium-dark-desktop] \u203a tests/live-cancellation.spec.ts:5:1 \u203a WEB-MSG-CHATS-STORE canceled subscriptions leave other live views intact (2.7s)\n\n  2 passed (18.4s)\n"
     },
     {
       "name": "firefox-light-phone:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-light-phone] › tests/chats-store.spec.ts:3:1 › WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages (7.2s)\n\n  1 passed (10.6s)\n"
+      "detail": "\nRunning 2 tests using 1 worker\n\n  \u2713  1 [firefox-light-phone] \u203a tests/chats-store.spec.ts:4:1 \u203a WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages (4.7s)\n  \u2713  2 [firefox-light-phone] \u203a tests/live-cancellation.spec.ts:5:1 \u203a WEB-MSG-CHATS-STORE canceled subscriptions leave other live views intact (3.4s)\n\n  2 passed (24.9s)\n"
     },
     {
       "name": "firefox-light-desktop:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-light-desktop] › tests/chats-store.spec.ts:3:1 › WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages (6.7s)\n\n  1 passed (9.0s)\n"
+      "detail": "\nRunning 2 tests using 1 worker\n\n  \u2713  1 [firefox-light-desktop] \u203a tests/chats-store.spec.ts:4:1 \u203a WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages (7.4s)\n  \u2713  2 [firefox-light-desktop] \u203a tests/live-cancellation.spec.ts:5:1 \u203a WEB-MSG-CHATS-STORE canceled subscriptions leave other live views intact (7.9s)\n\n  2 passed (37.7s)\n"
     },
     {
       "name": "firefox-dark-phone:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-dark-phone] › tests/chats-store.spec.ts:3:1 › WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages (8.3s)\n\n  1 passed (11.2s)\n"
-    },
-    {
-      "name": "firefox-dark-desktop:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-dark-desktop] › tests/chats-store.spec.ts:3:1 › WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages (7.6s)\n\n  1 passed (10.2s)\n"
+      "passed": false,
+      "detail": "Playwright failed: exit status 1; private log: WEB-MSG-CHATS-STORE-firefox-dark-phone-playwright.log"
     },
     {
       "name": "credential_backend_override_restored",
