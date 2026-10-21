@@ -1168,3 +1168,91 @@ W1 scenarios:
 | W1-AGENT | §23.6 + WEB-AGENT-* | W1-WEB, W1-REMOTE |
 | W1-DEMO | §23.9 | W1-RM, W1-UI |
 | W1-RELAY | replicas over Remote (`/v1/feed`, replica device-key auth instead of TLS client certs) | W1-REMOTE; lowest priority |
+
+### 23.12 W2: Messages, reading at full fidelity
+
+**Scope:** every **W2** row of `design/web/messages.md`. W2 follows the draft spec. Rows Johan changes after his skim are applied when he gives them; this doesn't block W2.
+
+**Reader decoding (Swift Helper → records), added to §6.2.** Decoders are pure and fixture-tested (§19), with fixtures scrubbed to synthetic values.
+
+`messages.message` gains:
+- `balloon{bundle_id, kind, app_name?, link?, app?}`:
+  - `kind` is one of `link|app|digital_touch|handwriting|poll|check_in|apple_cash|find_my|chatbot|unknown`.
+  - `link`: `{url, title?, summary?, site_name?, image_attachment_id?, icon_attachment_id?, video_url?}`, from `payload_data` (keyed archive) plus the plugin payload attachments.
+  - `app`: `{caption?, subcaption?, trailing_caption?, image_attachment_id?, url?}`, from the MSMessage template layout when present.
+- `audio{is_audio_message, played_at?, expirable, kept, transcription?}`.
+- `schedule{state, scheduled_for}` (Send Later).
+- `subject`.
+- `delivery{quietly, notified_anyway}`.
+- `is_spam`, `has_unseen_mention`, `via_satellite`, `is_sos`.
+- `formatting[]`: `{utf16_location, utf16_length, styles[bold|italic|underline|strikethrough], effect?[big|small|shake|nod|explode|ripple|bloom|jitter]}`, from attributedBody attributes.
+- A `genmoji` kind in `parts[]`: `{attachment_id, description}`.
+
+`messages.attachment` gains:
+- `is_sticker`.
+- `sticker{target_message_id, part_index, x, y, scale, rotation}`, from `sticker_user_info`.
+- `hidden` (`hide_attachment`).
+- `genmoji`.
+
+`messages.chat` gains:
+- `filter: known|unknown`, from `is_filtered` and contact linkage.
+- `group_photo_attachment_id?`.
+- `read_receipts: on|off|default`.
+- `muted_until?` and `pinned_index?`, only if the Mac exposes them reliably without UI scraping. Otherwise null, with `coverage.missing`.
+
+Recently Deleted becomes `deleted_at` + `recoverable_until` on messages and chats, from the recoverable tables.
+
+**Read models:**
+- `messages.chats` filters `known|unknown|unread|deleted|spam` become real.
+- `messages.collection` `links|locations` become real.
+- `has_unseen_mention` is real.
+- New read `messages.handles{ids[]≤500}` → `{handle_id, address, service, contact_id?, display_name, initials, avatar{digest, variant}?}`, for sender names and avatars in threads.
+
+**Client architecture (`web/src/messages/`):**
+
+| Path | Owns |
+|---|---|
+| `routes.ts` | `/messages`, `/messages/<chat>`, `/messages/<chat>/<message>`, `/messages/new`, `/messages/search?q` |
+| `store/` | chats view store, thread window store (anchored window over `web.1` thread view, prefetching ±2 pages), handles cache (`messages.handles`, batched per frame), unread and badge |
+| `format/` | dates and times (§2/§3 rules, locale-aware), names ("A, B & 2 others"), preview wording (§15), byte sizes, durations |
+| `list/` | ConversationList (virtualized), ConversationRow, PinnedGrid, FiltersMenu, SearchField, Avatar (photo / monogram / group composite) |
+| `transcript/` | Transcript (bottom-anchored virtual list), layout engine (runs, tails, headers, receipts as pure functions over ThreadItems), Bubble, TextContent (data detectors, mentions, formatting), Reactions, ReplyConnector, ThreadOverlay, GroupEventLine, Receipt, NewMessagesPill |
+| `media/` | MediaBubble (single, stack, grid), VideoBubble, AudioBubble (waveform player), FileChip, ContactCard, LinkCard, StickerLayer, Genmoji, PlaceholderCard, MediaViewer (shared-element zoom, swipe, video controls, PiP, share and download) |
+| `effects/` | one canvas layer with GPU-only animation for bubble effects (slam, loud, gentle, invisible ink), screen effects (echo, spotlight, balloons, confetti, love, lasers, fireworks, celebration) and text effects (big, small, shake, nod, explode, ripple, bloom, jitter). Each ≤ 2.5 s, skippable, replaced by a static label under Reduce Motion |
+| `details/` | DetailsInspector (pane ≥1024, sheet below), member list, Collections tabs |
+| `search/` | SearchResults (sections, filter tokens, highlighted matches, jump-to-message with pulse) |
+
+**Rules:**
+- **Layout engine:** the transcript layout is a pure function `(items, handles, prefs, width) → rows`, with code-level tests allowed as layout math. Rows have deterministic heights from measured text plus known media dimensions (`media.width/height`), so there's never layout shift.
+- **Text measurement:** done in one batched pass per frame (canvas `measureText` with the bubble font), with DOM reflow only for rows containing mixed inline content.
+- **Media sizes:** media bubbles size from `media` before any byte loads. A ThumbHash placeholder fades to the image on decode, which happens off the main thread with `decode()`.
+
+**Performance acceptance (replaces rAF-interval proxies on 60 Hz/headless hosts):**
+- **Main-thread work per frame** (script + style + layout, measured in Chromium tracing and with in-page instrumentation in WebKit and Firefox) ≤ 4 ms p95 and ≤ 8 ms max during:
+  - a 100k-message transcript fling
+  - list scroll
+  - push/pop transitions
+- **Long tasks:** none during those journeys. Chromium is the gate, because the Long Task API isn't available elsewhere.
+- **Frame intervals** are still recorded but are only gates when the host display supports 120 Hz.
+- **Input to next frame** ≤ 8 ms p95 (Chromium Event Timing) for send, react, open chat and open media.
+- **WebKit:** WebKit jank must be explained and fixed. Show where the time goes (script, layout or paint) before claiming it's a headless artifact.
+
+**W2 units:**
+
+| Unit | Contents | Depends on |
+|---|---|---|
+| W2-READER | Decoding and records above, AppleTruth checks, SimApplePeer + demo dataset support for every new field, read-model filters and collections, `messages.handles` | W1-DEMO merged (for demo support) |
+| W2-LIST | `list/`, `format/`, `store/` (chats, handles), search field, keyboard navigation, live reordering with springs | W1-DEMO |
+| W2-TRANSCRIPT | `transcript/` core (text, runs, tails, headers, receipts, edits, unsends, reactions, replies and ThreadOverlay, group events, paging, anchors, new pill), the performance acceptance above, and the WebKit jank fix | W1-DEMO |
+| W2-MEDIA | `media/` bubbles and MediaViewer, link and app cards, stickers, Genmoji, placeholders, and `effects/` | W2-TRANSCRIPT layout engine, W2-READER fields |
+| W2-DETAILS | `details/`, `search/` results | W2-LIST |
+
+**W2 scenarios:**
+- Level `web` on the demo world, all 12 projects unless noted:
+  - WEB-MSG-LIST, WEB-MSG-FILTERS, WEB-MSG-SEARCH, WEB-MSG-THREAD-CORE, WEB-MSG-REACTIONS, WEB-MSG-REPLIES, WEB-MSG-EDIT-UNSEND-VIEW, WEB-MSG-GROUP-EVENTS, WEB-MSG-MEDIA, WEB-MSG-VIEWER, WEB-MSG-LINKS, WEB-MSG-STICKERS-GENMOJI, WEB-MSG-EFFECTS, WEB-MSG-PLACEHOLDERS, WEB-MSG-DETAILS, WEB-MSG-KEYBOARD, WEB-MSG-A11Y (axe-free structural checks plus labels), WEB-MSG-PERF.
+  - WEB-MSG-LIVE: a sim inbound message appears with the receive animation in under 500 ms p95.
+- Level `real` (the real gateway on the Air, read-only):
+  - WEB-MSG-REAL-READ: the real chat list and threads render without errors.
+  - Every decoded field kind present in real data renders. Evidence is counts only.
+- Reader level `sim` + `real`:
+  - MSG-DECODE-BALLOON, MSG-DECODE-FORMATTING, MSG-READ-RICH-FIELDS (AppleTruth agrees on counts per field kind).
