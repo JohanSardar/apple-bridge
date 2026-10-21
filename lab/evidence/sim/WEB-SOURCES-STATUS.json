@@ -1,0 +1,117 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[8.68 9.11 9.74] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5F0WDR21ZRTSCRNKCTFXQ69",
+  "scenario": "WEB-SOURCES-STATUS",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "2dcf2c734563acd342785db1b2577c83373f1c1d",
+  "at": "2026-10-21T10:42:32.322523Z",
+  "assertions": [
+    {
+      "name": "software_passkey_enrollment",
+      "passed": true
+    },
+    {
+      "name": "local_cookie_flags",
+      "passed": true
+    },
+    {
+      "name": "trusted_thirty_days",
+      "passed": true
+    },
+    {
+      "name": "session_256_bits",
+      "passed": true
+    },
+    {
+      "name": "tokens_stored_hashed",
+      "passed": true
+    },
+    {
+      "name": "source_status_requires_device_session",
+      "passed": true
+    },
+    {
+      "name": "source_status_device_read",
+      "passed": true
+    },
+    {
+      "name": "source_state_ids_and_coverage",
+      "passed": true
+    },
+    {
+      "name": "source_proofs_have_reasons",
+      "passed": true
+    },
+    {
+      "name": "source_id_subscribed",
+      "passed": true
+    },
+    {
+      "name": "capability-unproven_published",
+      "passed": true
+    },
+    {
+      "name": "capability-unproven_live_action_advertisement",
+      "passed": true
+    },
+    {
+      "name": "capability-proven_published",
+      "passed": true
+    },
+    {
+      "name": "proof_appears_as_live_delta",
+      "passed": true
+    },
+    {
+      "name": "capability-proven_live_action_advertisement",
+      "passed": true
+    },
+    {
+      "name": "public_source_session",
+      "passed": true
+    },
+    {
+      "name": "public_sees_same_proof_without_cache",
+      "passed": true
+    },
+    {
+      "name": "source_route_matches_operations",
+      "passed": true
+    },
+    {
+      "name": "scoped_replica_started",
+      "passed": true
+    },
+    {
+      "name": "scoped_source_visibility",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "capability-proven_to_live_source": {
+      "samples": 1,
+      "p50_ms": 47.172583,
+      "p95_ms": 47.172583,
+      "max_ms": 47.172583,
+      "timeouts": 0
+    },
+    "capability-unproven_to_live_source": {
+      "samples": 1,
+      "p50_ms": 381.696417,
+      "p95_ms": 381.696417,
+      "max_ms": 381.696417,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

@@ -538,6 +538,7 @@ features:
     scenarios:
       - {id: MSG-COMMAND-OBSERVED-IDS, levels: [sim]}
       - {id: MSG-FAILED-OBSERVED-IDS, levels: [sim]}
+      - {id: WEB-SOURCES-STATUS, levels: [sim, web]}
       - {id: MSG-INTERACTIVE-GATE, levels: [sim, real]}
       - {id: MSG-MEDIA-CLEANUP, levels: [sim]}
       - {id: MSG-SELFTEST, levels: [real]}
