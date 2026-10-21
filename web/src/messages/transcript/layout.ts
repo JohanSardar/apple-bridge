@@ -23,10 +23,11 @@ export function wrapText(value: string, maxWidth: number, measure: LayoutPrefs['
     }
     return {width:Math.min(maxWidth,Math.max(widest,line)),lines};
 }
+function mediaHeightCap(prefs:LayoutPrefs){return prefs.phone?(prefs.viewportHeight??844)*.6:360;}
 function mediaSize(dimensions:Record<string,unknown>,maxWidth:number,prefs:LayoutPrefs,alpha:boolean) {
     const width=Number(dimensions.width),height=Number(dimensions.height);
     if(!Number.isFinite(width)||!Number.isFinite(height)||width<=0||height<=0)return {width:Math.min(maxWidth,260),height:88};
-    const maxHeight=prefs.phone?(prefs.viewportHeight??844)*.6:360,scale=Math.min(1,maxWidth/width,prefs.phone&&!alpha?Infinity:maxHeight/height);
+    const maxHeight=mediaHeightCap(prefs),scale=Math.min(1,maxWidth/width,prefs.phone&&!alpha?Infinity:maxHeight/height);
     return {width:width*scale,height:Math.min(height*scale,maxHeight)};
 }
 function partSize(item:ThreadItem,part:Part,maxWidth:number,lineHeight:number,prefs:LayoutPrefs){
@@ -34,7 +35,10 @@ function partSize(item:ThreadItem,part:Part,maxWidth:number,lineHeight:number,pr
     const attachment=item.attachments?.find(value=>value.id===part.attachment_id),mime=text(attachment?.data.mime_type);
     if(mime.startsWith('audio/'))return {width:Math.min(maxWidth,280),height:76+(text(fields(item.data.audio).transcription).trim()?44:0)};
     if(attachment&&!/^(image|video)\//u.test(mime))return {width:Math.min(maxWidth,260),height:88};
-    if(attachment)return mediaSize(fields(attachment.data.media),maxWidth,prefs,attachmentHasAlpha(attachment));
+    if(attachment){
+        const dimensions=fields(attachment.data.media),size=mediaSize(dimensions,maxWidth,prefs,attachmentHasAlpha(attachment));
+        return mime.startsWith('video/')||dimensions.live===true?{width:Math.min(maxWidth,Math.max(120,size.width)),height:Math.min(mediaHeightCap(prefs),Math.max(120,size.height))}:size;
+    }
     const balloon=fields(item.data.balloon),kind=text(balloon.kind);
     if(kind==='link'||kind==='app')return {width:Math.min(maxWidth,280),height:fields(balloon[kind]).image_attachment_id?180:88};
     return {width:Math.min(maxWidth,260),height:88};
