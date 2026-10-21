@@ -3,24 +3,71 @@ import { Icon, type IconName } from '../design/Icon';
 import { strings as s } from './strings';
 import { router } from './router';
 import { registerShortcut } from './keyboard';
+import { appearance } from './preferences';
 import { auth } from '../auth/session';
-import { enterPane } from '../motion/animate';
+import { enterPane, reducedMotion, crossfade, springAnimation } from '../motion/animate';
 import { drag, swipeBack } from '../motion/gestures';
-const apps:[string,IconName][]=[[s.messages,'messages'],[s.reminders,'reminders'],[s.calendar,'calendar'],[s.contacts,'contacts'],[s.notes,'notes']];
-export default function Shell(){
-  const [switcher,setSwitcher]=createSignal(false),[details,setDetails]=createSignal(false);
-  let transcript!:HTMLElement,sidebar!:HTMLElement,resizer!:HTMLDivElement;
-  let cancelEnter:(()=>void)|undefined;
-  const chat=()=>router.route().chat;
-  const phone=()=>matchMedia('(max-width:699px)').matches;
-  onMount(()=>{
-    const dispose=swipeBack(transcript,sidebar,()=>phone()&&Boolean(chat()),()=>router.back());
-    let width=320;
-    const resize=drag(resizer,{start:()=>{width=sidebar.getBoundingClientRect().width;return true;},move:x=>document.documentElement.style.setProperty('--sidebar-width',Math.max(280,Math.min(420,width+x*(getComputedStyle(sidebar).direction==='rtl'?-1:1)))+'px'),end:()=>{}});
-    const shortcuts=[registerShortcut({key:',',action:()=>router.navigate('/settings/appearance')}),registerShortcut({key:'[',action:()=>router.back()})];
-    onCleanup(()=>{dispose();resize();shortcuts.forEach(dispose=>dispose());cancelEnter?.();});
-  });
-  createEffect(()=>{const selected=chat();if(selected&&transcript){cancelEnter?.();cancelEnter=enterPane(transcript,phone(),getComputedStyle(transcript).direction==='rtl'?-1:1);}});
-  function DetailContent(){return <div class="empty"><div class="hero-icon"><Icon name="info"/></div><h2>{s.details}</h2><p>Conversation details will appear here.</p></div>;}
-  return <div class="app-shell" classList={{'has-chat':Boolean(chat())}}><aside ref={sidebar} class="sidebar"><header class="toolbar glass"><div class="app-selector"><button class="icon-button" aria-label={s.switchApp} aria-expanded={switcher()} onClick={()=>setSwitcher(!switcher())}><Icon name="grid"/></button><Show when={switcher()}><div class="app-menu glass" role="group" aria-label={s.switchApp}><For each={apps}>{([name,icon],index)=><button disabled={index()>0} onClick={()=>setSwitcher(false)}><span class={'app-icon app-icon-'+icon}><Icon name={icon}/></span><span>{name}<Show when={index()>0}><small>{s.comingSoon}</small></Show></span><Show when={index()===0}><Icon name="check"/></Show></button>}</For></div></Show></div><span class="toolbar-brand">{s.brand}</span><button class="icon-button" aria-label={s.settings} onClick={()=>router.navigate('/settings/devices')}><Icon name="settings"/></button></header><div class="sidebar-heading"><h1>{s.messages}</h1><span class="caption status"><span classList={{online:auth.live()?.status()==='connected'}}/>{auth.live()?.status()==='connected'?s.connected:s.reconnecting}</span></div><div class="sidebar-body" data-scroll="sidebar"><div class="foundation-note"><span class="app-icon app-icon-messages"><Icon name="messages"/></span><h3>Everything starts here.</h3><p class="secondary">Your Mac. Your conversations.<br/>Together, wherever you are.</p></div><button class="preview-row" aria-label={s.openPreview} onClick={()=>router.navigate('/messages/shell-preview')}><span class="preview-avatar"><Icon name="spark"/></span><span><strong>{s.previewTitle}</strong><span class="secondary">{s.previewBody}</span></span><Icon name="chevron"/></button></div><footer class="sidebar-footer caption"><Icon name="shield"/>{s.privacy}</footer></aside><div ref={resizer} class="pane-resizer" role="separator" aria-label="Resize conversation list" aria-orientation="vertical" tabindex="0" onKeyDown={event=>{if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();const width=sidebar.getBoundingClientRect().width+(event.key==='ArrowRight'?10:-10);document.documentElement.style.setProperty('--sidebar-width',Math.max(280,Math.min(420,width))+'px');}}}/><main ref={transcript} class="transcript" data-scroll="transcript"><header class="toolbar glass"><button class="icon-button back-button" aria-label={s.back} onClick={()=>router.back()}><Icon name="chevron"/></button><span class="toolbar-title">{chat()?s.previewTitle:s.messages}</span><button class="icon-button" aria-label={s.details} aria-expanded={details()} onClick={()=>setDetails(!details())}><Icon name="info"/></button></header><div class="transcript-body"><div class="empty"><div class="hero-icon"><Icon name="messages"/></div><h2>{chat()?s.shellTitle:s.noSelection}</h2><p>{chat()?s.shellBody:s.noSelectionBody}</p><Show when={!chat()}><button class="button subtle" onClick={()=>router.navigate('/messages/shell-preview')}>Explore the shell</button></Show></div></div><footer class="transcript-footer caption">Messages · Foundation preview</footer></main><aside class="inspector" aria-label={s.details}><header class="toolbar glass"><span class="toolbar-title">{s.details}</span></header><DetailContent/></aside><Show when={details()}><div class="sheet-backdrop" onClick={()=>setDetails(false)}><section class="details-sheet glass" role="dialog" aria-modal="true" aria-label={s.details} onClick={event=>event.stopPropagation()} onKeyDown={event=>{if(event.key==='Escape')setDetails(false);}}><button autofocus class="icon-button sheet-close" aria-label="Close details" onClick={()=>setDetails(false)}><Icon name="close"/></button><DetailContent/></section></div></Show></div>;
+const apps: [
+    string,
+    IconName
+][] = [[s.messages, 'messages'], [s.reminders, 'reminders'], [s.calendar, 'calendar'], [s.contacts, 'contacts'], [s.notes, 'notes']];
+export default function Shell() {
+    const [switcher, setSwitcher] = createSignal(false), [filters, setFilters] = createSignal(false), [details, setDetails] = createSignal(false), [inspectorVisible, setInspectorVisible] = createSignal(false);
+    const [filter, setFilter] = createSignal(s.allMessages as string);
+    const compactMedia = matchMedia('(max-width:1023px)');
+    const [compact, setCompact] = createSignal(compactMedia.matches);
+    let transcript!: HTMLElement, sidebar!: HTMLElement, resizer!: HTMLDivElement, inspector: HTMLElement | undefined;
+    let cancelEnter: (() => void) | undefined, inspectorAnimation: ReturnType<typeof springAnimation> | undefined;
+    const chat = () => router.route().chat;
+    const phone = () => matchMedia('(max-width:699px)').matches;
+    function openInspector(open: boolean) {
+        setDetails(open);
+        inspectorAnimation?.cancel();
+        if (compact()) {
+            setInspectorVisible(false);
+            return;
+        }
+        if (open) {
+            setInspectorVisible(true);
+            requestAnimationFrame(() => {
+                if (!inspector)
+                    return;
+                if (reducedMotion()) {
+                    crossfade(inspector);
+                    return;
+                }
+                inspectorAnimation = springAnimation(value => { if (inspector)
+                    inspector.style.transform = `translateX(${value * (getComputedStyle(inspector).direction === 'rtl' ? -1 : 1)}px)`; }, 320, 0, { response: .35, damping: 1 });
+            });
+        }
+        else if (inspector) {
+            if (reducedMotion()) {
+                const animation = crossfade(inspector, false);
+                animation.finished.then(() => setInspectorVisible(false)).catch(() => { });
+                return;
+            }
+            inspectorAnimation = springAnimation(value => { if (inspector)
+                inspector.style.transform = `translateX(${value * (getComputedStyle(inspector).direction === 'rtl' ? -1 : 1)}px)`; }, 0, 320, { response: .35, damping: 1 }, 0, () => setInspectorVisible(false));
+        }
+    }
+    onMount(() => {
+        const mediaChanged = () => { setCompact(compactMedia.matches); setInspectorVisible(details() && !compactMedia.matches); };
+        compactMedia.addEventListener('change', mediaChanged);
+        const dispose = swipeBack(transcript, sidebar, () => phone() && Boolean(chat()), () => router.back());
+        let width = 320;
+        const resize = drag(resizer, { start: () => { width = sidebar.getBoundingClientRect().width; return true; }, move: x => document.documentElement.style.setProperty('--sidebar-width', Math.max(280, Math.min(420, width + x * (getComputedStyle(sidebar).direction === 'rtl' ? -1 : 1))) + 'px'), end: () => { } });
+        const shortcuts = [registerShortcut({ key: ',', action: () => router.navigate('/settings/appearance') }), registerShortcut({ key: '[', action: () => router.back() }), registerShortcut({ key: 'i', action: () => openInspector(!details()) }), registerShortcut({ key: 'n', action: () => router.navigate('/messages/new') }), registerShortcut({ key: '=', action: () => appearance.setTextSize(Math.min(1.5, appearance.textSize() + .05)) }), registerShortcut({ key: '+', shift: true, action: () => appearance.setTextSize(Math.min(1.5, appearance.textSize() + .05)) }), registerShortcut({ key: '-', action: () => appearance.setTextSize(Math.max(.85, appearance.textSize() - .05)) }), registerShortcut({ key: '0', action: () => appearance.setTextSize(1) })];
+        onCleanup(() => { dispose(); resize(); shortcuts.forEach(dispose => dispose()); cancelEnter?.(); inspectorAnimation?.cancel(); compactMedia.removeEventListener('change', mediaChanged); });
+    });
+    createEffect(() => { const selected = chat(); if (selected && transcript) {
+        cancelEnter?.();
+        cancelEnter = enterPane(transcript, phone(), getComputedStyle(transcript).direction === 'rtl' ? -1 : 1);
+    } });
+    function DetailContent() { return <div class="empty quiet-empty"><p>{s.noDetails}</p></div>; }
+    return <div class="app-shell" classList={{ 'has-chat': Boolean(chat()), 'inspector-open': inspectorVisible() }}><aside ref={sidebar} class="sidebar"><header class="toolbar sidebar-toolbar glass"><div class="filter-control"><button class="icon-button" aria-label={s.filters} aria-expanded={filters()} onClick={() => setFilters(!filters())}><Icon name="ellipsis"/></button><Show when={filters()}><div class="filter-menu glass" role="group" aria-label={s.filters}><For each={[s.allMessages, s.knownSenders, s.unknownSenders, s.unread]}>{name => <button aria-pressed={filter() === name} onClick={() => { setFilter(name); setFilters(false); }}>{name}<Show when={filter() === name}><Icon name="check"/></Show></button>}</For><button disabled>{s.edit}</button></div></Show></div><label class="sidebar-search"><Icon name="search"/><input type="search" aria-label={s.search} placeholder={s.search}/></label><span class="phone-toolbar-spacer"/><button class="icon-button" aria-label={s.compose} onClick={() => router.navigate('/messages/new')}><Icon name="compose"/></button></header><div class="sidebar-heading"><h1>{s.messages}</h1></div><Show when={auth.live()?.status() === 'offline'}><p class="offline-banner" role="status">{s.offline}</p></Show><div class="sidebar-body" data-scroll="sidebar"><p class="no-messages">{s.noMessages}</p></div><footer class="sidebar-footer"><div class="app-selector"><button class="icon-button app-menu-control glass" aria-label={s.switchApp} aria-expanded={switcher()} onClick={() => setSwitcher(!switcher())}><Icon name="grid"/></button><Show when={switcher()}><div class="app-menu glass" role="group" aria-label={s.appMenu} onKeyDown={event => { if (event.key === 'Escape')
+        setSwitcher(false); }}><For each={apps}>{([name, icon], index) => <button disabled={index() > 0} onClick={() => setSwitcher(false)}><span class={'app-icon app-icon-' + icon}><Icon name={icon}/></span><span>{name}<Show when={index() > 0}><small>{s.comingSoon}</small></Show></span><Show when={index() === 0}><Icon name="check"/></Show></button>}</For><button class="settings-menu-item" onClick={() => router.navigate('/settings/devices')}><Icon name="settings"/><span>{s.settings}</span></button></div></Show></div></footer></aside><div ref={resizer} class="pane-resizer" role="separator" aria-label={s.resizeSidebar} aria-orientation="vertical" tabindex="0" onKeyDown={event => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+        event.preventDefault();
+        const width = sidebar.getBoundingClientRect().width + (event.key === 'ArrowRight' ? 10 : -10);
+        document.documentElement.style.setProperty('--sidebar-width', Math.max(280, Math.min(420, width)) + 'px');
+    } }}/><main ref={transcript} class="transcript" data-scroll="transcript"><header class="toolbar glass"><button class="icon-button back-button" aria-label={s.back} onClick={() => router.back()}><Icon name="chevron"/></button><span class="toolbar-title">{chat() === 'new' ? s.compose : chat() ? s.previewTitle : ''}</span><button class="icon-button" aria-label={s.details} aria-expanded={details()} onClick={() => openInspector(!details())}><Icon name="info"/></button></header><div class="transcript-body"><div class="empty quiet-empty"><p>{s.noSelection}</p></div></div></main><Show when={inspectorVisible() && !compact()}><aside ref={inspector} class="inspector" aria-label={s.details}><header class="toolbar glass"><span class="toolbar-title">{s.details}</span><button class="icon-button" aria-label={s.closeDetails} onClick={() => openInspector(false)}><Icon name="close"/></button></header><DetailContent /></aside></Show><Show when={details() && compact()}><dialog ref={element => queueMicrotask(() => element.showModal())} class="details-sheet glass" aria-label={s.details} onClose={() => setDetails(false)}><button autofocus class="icon-button sheet-close" aria-label={s.closeDetails} onClick={() => setDetails(false)}><Icon name="close"/></button><DetailContent /></dialog></Show></div>;
 }
