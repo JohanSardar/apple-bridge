@@ -588,3 +588,13 @@ features:
       - {id: WEB-NOTE-READ, levels: [web]}
       - {id: WEB-NOTE-WRITE, levels: [web, real]}
       - {id: WEB-NOTE-PARITY, levels: [web, real]}
+
+  - id: web.relay
+    title: Replicas connect through Remote with paired device key authentication
+    requirements: [R-LIVE, R-FULL, R-SECURE, R-WEB-REACH]
+    milestone: W1
+    modules: [trust, replication, remote, runtime]
+    depends_on: [web.remote, core.replication, core.trust]
+    status: in_progress
+    scenarios:
+      - {id: WEB-RELAY-AUTH, levels: [sim]}

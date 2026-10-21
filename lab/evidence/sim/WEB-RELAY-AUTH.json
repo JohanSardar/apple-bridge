@@ -1,0 +1,130 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[7.19 10.09 10.54] cpus=8 other_heavy=1"
+  },
+  "run_id": "relay_01M5ECPTDG9C739WPTB7E944GJ",
+  "scenario": "WEB-RELAY-AUTH",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "75f28b7e1babfc1609a67d39c4dfc904d2b38236",
+  "at": "2026-10-21T04:49:57.168879Z",
+  "assertions": [
+    {
+      "name": "paired_world",
+      "passed": true
+    },
+    {
+      "name": "gateway_identity",
+      "passed": true
+    },
+    {
+      "name": "remote_websocket_without_client_tls_certificate",
+      "passed": true
+    },
+    {
+      "name": "replica_identity",
+      "passed": true
+    },
+    {
+      "name": "mutual_device_key_authentication",
+      "passed": true
+    },
+    {
+      "name": "capture_connection",
+      "passed": true
+    },
+    {
+      "name": "gateway_signed_both_nonces_and_pinned_identities",
+      "passed": true
+    },
+    {
+      "name": "independent_replica_signature_accepted",
+      "passed": true
+    },
+    {
+      "name": "replay_connection",
+      "passed": true
+    },
+    {
+      "name": "fresh_server_nonce_on_reused_client_nonce",
+      "passed": true
+    },
+    {
+      "name": "captured_auth_frame_replay_rejected",
+      "passed": true
+    },
+    {
+      "name": "gateway_replay_tls_connection",
+      "passed": true
+    },
+    {
+      "name": "replayed_gateway_signature_rejected_before_replica_proof",
+      "passed": true
+    },
+    {
+      "name": "hello_before_auth_rejected",
+      "passed": true
+    },
+    {
+      "name": "binary_auth_frame_rejected",
+      "passed": true
+    },
+    {
+      "name": "wrong_pin_tls_connection",
+      "passed": true
+    },
+    {
+      "name": "webpki_alone_does_not_authenticate_gateway",
+      "passed": true
+    },
+    {
+      "name": "unpaired_device_identity",
+      "passed": true
+    },
+    {
+      "name": "unpaired_device_tls_connection",
+      "passed": true
+    },
+    {
+      "name": "unpaired_device_key_rejected",
+      "passed": true
+    },
+    {
+      "name": "browser_origin_rejected",
+      "passed": true
+    },
+    {
+      "name": "scope_change_closes_authenticated_socket",
+      "passed": true
+    },
+    {
+      "name": "subscription_revision_and_scope_reauthenticated",
+      "passed": true
+    },
+    {
+      "name": "revocation_closes_within_one_second",
+      "passed": true
+    },
+    {
+      "name": "revoked_device_key_rejected",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "relay_revocation": {
+      "samples": 1,
+      "p50_ms": 101.232959,
+      "p95_ms": 101.232959,
+      "max_ms": 101.232959,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

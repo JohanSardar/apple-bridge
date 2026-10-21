@@ -1,0 +1,7 @@
+id: WEB-RELAY-AUTH
+feature: web.relay
+levels: [sim]
+given: []
+when: [{web: {}}]
+then: []
+cleanup: []
