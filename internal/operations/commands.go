@@ -160,18 +160,29 @@ func (g *LocalGateway) Submit(ctx context.Context, p trust.Principal, c contract
 		return empty, contracts.ErrExpired
 	}
 	deadline := time.Now().Add(expiry.Sub(now))
+	refs, releaseUploads, err := g.borrowUploads(ctx, p.ID, c)
+	if err != nil {
+		return empty, err
+	}
+	defer func() {
+		if releaseUploads != nil {
+			releaseUploads()
+		}
+	}()
 	if p.IsAgent() && p.Level == trust.AgentApprove {
-		r := contracts.CommandRecord{Command: c, Principal: p.ID, Source: contracts.CollectionSource(c.Op), RequestHash: hash, State: contracts.CommandAwaitingApproval, Disposition: contracts.DispositionAwaitingApproval, AdmissionEra: era, CreatedAt: now, ExpiresAt: now.Add(24 * time.Hour)}
+		r := contracts.CommandRecord{UploadReferences: refs, Command: c, Principal: p.ID, Source: contracts.CollectionSource(c.Op), RequestHash: hash, State: contracts.CommandAwaitingApproval, Disposition: contracts.DispositionAwaitingApproval, AdmissionEra: era, CreatedAt: now, ExpiresAt: now.Add(24 * time.Hour)}
 		return g.State.TransitionCommand(ctx, state.CommandTransition{Record: r})
 	}
 	if !g.Peer.Available() {
 		return empty, contracts.ErrUnavailable
 	}
-	r := contracts.CommandRecord{Command: c, Principal: p.ID, Source: contracts.CollectionSource(c.Op), RequestHash: hash, State: "admitted", AdmissionEra: era, CreatedAt: now, ExpiresAt: expiry}
+	r := contracts.CommandRecord{UploadReferences: refs, Command: c, Principal: p.ID, Source: contracts.CollectionSource(c.Op), RequestHash: hash, State: "admitted", AdmissionEra: era, CreatedAt: now, ExpiresAt: expiry}
 	r, err = g.State.TransitionCommand(ctx, state.CommandTransition{Record: r})
 	if err != nil {
 		return r, err
 	}
+	releaseUploads()
+	releaseUploads = nil
 	if g.Audit != nil {
 		g.Audit(r)
 	}
@@ -267,7 +278,12 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 			}
 			if err == nil {
 				var path, digest string
-				path, digest, err = g.Uploads.ResolveMessageUpload(runctx, p.ID, file.UploadID)
+				if ref, ok := r.UploadReferences[file.UploadID]; ok {
+					path, err = g.Uploads.CommandUpload(runctx, ref)
+					digest = ref.Digest
+				} else {
+					path, digest, err = g.Uploads.ResolveMessageUpload(runctx, p.ID, file.UploadID)
+				}
 				nativeArgs.Files = append(nativeArgs.Files, contracts.NativeMessageFile{Name: file.Name, Path: path, Digest: digest})
 			}
 			if err != nil {

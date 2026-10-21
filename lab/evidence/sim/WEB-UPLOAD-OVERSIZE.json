@@ -1,0 +1,38 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[7.79 14.39 13.6] cpus=8 other_heavy=1"
+  },
+  "run_id": "upload_01M5F44WNRFVBEQZ9XQXN84M9F",
+  "scenario": "WEB-UPLOAD-OVERSIZE",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "84e5eff2949c0fc06d6550aef3add8084bab2432",
+  "at": "2026-10-21T11:39:35.480765Z",
+  "assertions": [
+    {
+      "name": "gateway_upload_world",
+      "passed": true
+    },
+    {
+      "name": "serving_device_session",
+      "passed": true
+    },
+    {
+      "name": "oversize_declared_before_staging_rejected",
+      "passed": true
+    },
+    {
+      "name": "oversize_stream_rejected",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

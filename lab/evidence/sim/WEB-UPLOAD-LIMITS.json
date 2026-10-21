@@ -1,0 +1,38 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[7.64 14.05 13.49] cpus=8 other_heavy=1"
+  },
+  "run_id": "upload_01M5F45BACKMPPD40EBHDP8HSY",
+  "scenario": "WEB-UPLOAD-LIMITS",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "84e5eff2949c0fc06d6550aef3add8084bab2432",
+  "at": "2026-10-21T11:39:50.476741Z",
+  "assertions": [
+    {
+      "name": "gateway_upload_world",
+      "passed": true
+    },
+    {
+      "name": "serving_device_session",
+      "passed": true
+    },
+    {
+      "name": "file_count_live_channel",
+      "passed": true
+    },
+    {
+      "name": "eleven_files_rejected_before_admission",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

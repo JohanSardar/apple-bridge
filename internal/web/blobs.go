@@ -21,6 +21,14 @@ func (s *server) upload(w http.ResponseWriter, r *http.Request) {
 		reject(w, 503, "unavailable")
 		return
 	}
+	if r.Header.Get("Upload-ID") != "" || r.Header.Get("Upload-Length") != "" || r.Header.Get("Upload-Digest") != "" {
+		if s.replicaUpload() {
+			reject(w, 503, "unavailable")
+			return
+		}
+		s.streamUpload(w, r)
+		return
+	}
 	id, err := s.deps.Blobs.StageMessageUpload(r.Context(), p.ID, http.MaxBytesReader(w, r.Body, 100*1024*1024))
 	if err != nil {
 		var large *http.MaxBytesError
@@ -33,7 +41,16 @@ func (s *server) upload(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	respond(w, 200, map[string]string{"upload_id": id})
+	if s.replicaUpload() {
+		respond(w, 200, map[string]string{"upload_id": id})
+		return
+	}
+	out, err := s.deps.Blobs.Upload(r.Context(), p.ID, contracts.UploadRequest{Action: "status", ID: id})
+	if err != nil {
+		uploadError(w, err)
+		return
+	}
+	respond(w, 200, out)
 }
 func (s *server) blob(w http.ResponseWriter, r *http.Request) {
 	p := current(r).Principal

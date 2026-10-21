@@ -1,0 +1,34 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[7.79 14.18 13.53] cpus=8 other_heavy=1"
+  },
+  "run_id": "upload_01M5F458B25W4R64817906B40C",
+  "scenario": "WEB-UPLOAD-DIGEST",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "84e5eff2949c0fc06d6550aef3add8084bab2432",
+  "at": "2026-10-21T11:39:47.426602Z",
+  "assertions": [
+    {
+      "name": "gateway_upload_world",
+      "passed": true
+    },
+    {
+      "name": "serving_device_session",
+      "passed": true
+    },
+    {
+      "name": "mismatched_digest_rejected",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

@@ -79,11 +79,14 @@ func ValidateMessagesCommand(c Command) (MessagesArgs, error) {
 			return a, ErrInvalid
 		}
 	}
-	if a.PartIndex < 0 || len(a.Files) > 16 || len(a.Text) > 65536 {
+	if a.PartIndex < 0 || len(a.Files) > MessageFileCount || len(a.Text) > 65536 {
 		return a, ErrInvalid
 	}
 	for _, file := range a.Files {
-		_, err := base64.StdEncoding.DecodeString(file.Data)
+		data, err := base64.StdEncoding.DecodeString(file.Data)
+		if int64(len(data)) > MessageFileLimit {
+			return a, ErrTooLarge
+		}
 		if err != nil || (file.Data == "") == (file.UploadID == "") || file.Name == "" || file.Name == "." || file.Name == ".." || filepath.Base(file.Name) != file.Name {
 			return a, ErrInvalid
 		}

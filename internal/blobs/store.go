@@ -40,6 +40,9 @@ type manifest struct {
 	References contracts.ReferenceSet `json:"-"`
 }
 type Store struct {
+	uploadMu    sync.Mutex
+	uploadSweep time.Time
+
 	protection      *sql.DB
 	referenceCounts map[string]int
 	digestPins      map[string]map[string]bool
@@ -174,6 +177,9 @@ func (s *Store) used() int64 {
 	return n
 }
 func (s *Store) Stage(ctx context.Context, r io.Reader, expect Expect) (Digest, Pin, error) {
+	return s.stage(ctx, r, expect, "")
+}
+func (s *Store) stage(ctx context.Context, r io.Reader, expect Expect, pin string) (Digest, Pin, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if expect.Digest != "" && !contracts.ValidDigest(expect.Digest) {
@@ -229,7 +235,9 @@ func (s *Store) Stage(ctx context.Context, r io.Reader, expect Expect) (Digest, 
 	if err = syncDir(filepath.Dir(s.path(d))); err != nil {
 		return "", "", err
 	}
-	pin := contracts.NewID("pin")
+	if pin == "" {
+		pin = contracts.NewID("pin")
+	}
 	s.manifest.Pins[pin] = d
 	if s.digestPins[d] == nil {
 		s.digestPins[d] = map[string]bool{}
@@ -309,6 +317,7 @@ func (s *Store) protect(ctx context.Context, refs contracts.ReferenceSet, releas
 }
 
 func (s *Store) Collect(ctx context.Context) error {
+	s.collectUploads(ctx)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	changed := false
