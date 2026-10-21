@@ -169,6 +169,7 @@ features:
       - {id: HELPER-TCC-READY, levels: [real]}
       - {id: HELPER-LIVE-BACKFILL, levels: [real]}
       - {id: HELPER-SESSION-SOAK, levels: [real]}
+      - {id: HELPER-SIGNED-APP-CACHE, levels: [real]}
   - id: messages.read
     title: Messages history, live capture, decoding, receipts, attachments
     requirements: [R-FULL, R-LIVE, R-MSG-DEPTH, R-ATTACH, R-NO-FALSE-DELETE]

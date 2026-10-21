@@ -373,6 +373,9 @@ func convergence(w *world.World) bool {
 }
 
 func runScenario(ctx context.Context, s Scenario, level string) Evidence {
+	if s.ID == "HELPER-SIGNED-APP-CACHE" {
+		return runNativeAppCache(ctx, s, level)
+	}
 	if s.ID == "REM-STORE-READ" {
 		return runRemindersStore(ctx, s, level)
 	}
@@ -1026,6 +1029,9 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		}
 		if s.Feature == "messages.read" && level != "sim" {
 			duration = 20 * time.Minute
+		}
+		if s.ID == "HELPER-SIGNED-APP-CACHE" {
+			duration = 10 * time.Minute
 		}
 		if s.ID == "HELPER-SESSION-SOAK" {
 			duration = 12 * time.Minute
