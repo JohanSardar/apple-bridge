@@ -161,7 +161,7 @@ func Handler(deps Deps) http.Handler {
 		if r.TLS != nil {
 			w.Header().Set("Strict-Transport-Security", "max-age=31536000")
 		}
-		if deps.Address != "" {
+		if deps.Address != "" && r.TLS == nil {
 			_, port, _ := net.SplitHostPort(deps.Address)
 			if r.Host != "localhost:"+port && r.Host != "127.0.0.1:"+port {
 				reject(w, 403, "host")

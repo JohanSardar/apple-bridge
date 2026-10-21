@@ -1,6 +1,7 @@
 id: WEB-AUTH-ENROLL
 feature: web.frontdoor
 levels: [web]
+web: {browsers: [chromium], themes: [light], layouts: [desktop], server: gateway}
 given: []
 when: [{web: {}}]
 then: []

@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
-	"github.com/JohanSardar/apple-bridge/internal/operations"
 )
 
 func (s *server) upload(w http.ResponseWriter, r *http.Request) {
@@ -22,17 +21,15 @@ func (s *server) upload(w http.ResponseWriter, r *http.Request) {
 		reject(w, 503, "unavailable")
 		return
 	}
-	if _, local := s.deps.Operations.Target.(*operations.LocalGateway); !local {
-		reject(w, 422, "unsupported")
-		return
-	}
 	id, err := s.deps.Blobs.StageMessageUpload(r.Context(), p.ID, http.MaxBytesReader(w, r.Body, 100*1024*1024))
 	if err != nil {
 		var large *http.MaxBytesError
 		if errors.As(err, &large) {
 			reject(w, 413, "too_large")
+		} else if errors.Is(err, contracts.ErrCapacity) {
+			reject(w, 507, "capacity")
 		} else {
-			reject(w, 400, "invalid")
+			reject(w, 503, safeError(err).Code)
 		}
 		return
 	}
@@ -64,6 +61,9 @@ func (s *server) blob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var attachment struct {
+		Blob struct {
+			Digest string `json:"digest"`
+		} `json:"blob"`
 		MIME          string `json:"mime_type"`
 		MIMEAlternate string `json:"mime"`
 		Derivatives   map[string]struct {
@@ -77,6 +77,7 @@ func (s *server) blob(w http.ResponseWriter, r *http.Request) {
 	if mime == "" {
 		mime = attachment.MIMEAlternate
 	}
+	originalMIME := mime
 	if variant != "original" {
 		if derived, ok := attachment.Derivatives[variant]; ok && contracts.ValidDigest(derived.Digest) {
 			digest = derived.Digest
@@ -95,8 +96,18 @@ func (s *server) blob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	file, err := s.deps.Blobs.OpenAuthorized(r.Context(), grant, digest)
+	if err != nil && variant != "original" && browserSafe(originalMIME) && contracts.ValidDigest(attachment.Blob.Digest) {
+		digest = attachment.Blob.Digest
+		mime = originalMIME
+		file, err = s.deps.Blobs.OpenAuthorized(r.Context(), grant, digest)
+	}
 	if err != nil {
-		reject(w, 404, "not_found")
+		if variant != "original" {
+			w.Header().Set("Retry-After", "2")
+			reject(w, 409, "variant_pending")
+		} else {
+			reject(w, 404, "not_found")
+		}
 		return
 	}
 	defer file.Close()

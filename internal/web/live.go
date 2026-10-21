@@ -29,6 +29,8 @@ type liveSocket struct {
 	cancel        context.CancelFunc
 	queue         chan liveFrame
 	pending       atomic.Int64
+	closing       atomic.Bool
+	urgent        chan liveFrame
 	subscriptions map[string]context.CancelFunc
 	workers       sync.WaitGroup
 }
@@ -56,16 +58,32 @@ func (s *server) broadcast(value any, except string) {
 		socket.send(value, false)
 	}
 }
+func (l *liveSocket) overloaded() {
+	if l.closing.CompareAndSwap(false, true) {
+		go func() { l.conn.Close(websocket.StatusPolicyViolation, "overloaded"); l.cancel() }()
+	}
+}
 func (l *liveSocket) send(value any, revoke bool) bool {
+	if l.closing.Load() {
+		return false
+	}
 	data, err := json.Marshal(value)
 	if err != nil {
 		return false
 	}
 	size := int64(len(data))
+	if revoke {
+		if !l.closing.CompareAndSwap(false, true) {
+			return false
+		}
+		l.pending.Add(size)
+		l.urgent <- liveFrame{Data: data, Revoke: true}
+		time.AfterFunc(750*time.Millisecond, func() { l.cancel(); l.conn.CloseNow() })
+		return true
+	}
 	if l.pending.Add(size) > 4*1024*1024 {
 		l.pending.Add(-size)
-		l.cancel()
-		go l.conn.Close(websocket.StatusPolicyViolation, "overloaded")
+		l.overloaded()
 		return false
 	}
 	select {
@@ -76,8 +94,7 @@ func (l *liveSocket) send(value any, revoke bool) bool {
 		return false
 	default:
 		l.pending.Add(-size)
-		l.cancel()
-		go l.conn.Close(websocket.StatusPolicyViolation, "overloaded")
+		l.overloaded()
 		return false
 	}
 }
@@ -87,10 +104,18 @@ func (l *liveSocket) fail(code, message string) {
 func (l *liveSocket) write() {
 	defer l.cancel()
 	for {
+		var frame liveFrame
 		select {
-		case <-l.ctx.Done():
-			return
-		case frame := <-l.queue:
+		case frame = <-l.urgent:
+		default:
+			select {
+			case <-l.ctx.Done():
+				return
+			case frame = <-l.urgent:
+			case frame = <-l.queue:
+			}
+		}
+		{
 			ctx, cancel := context.WithTimeout(l.ctx, 500*time.Millisecond)
 			err := l.conn.Write(ctx, websocket.MessageText, frame.Data)
 			cancel()
@@ -125,7 +150,7 @@ func (s *server) live(w http.ResponseWriter, r *http.Request) {
 	}
 	conn.SetReadLimit(1024 * 1024)
 	ctx, cancel := context.WithCancel(r.Context())
-	l := &liveSocket{server: s, conn: conn, identity: current(r), ctx: ctx, cancel: cancel, queue: make(chan liveFrame, 4096), subscriptions: map[string]context.CancelFunc{}}
+	l := &liveSocket{server: s, conn: conn, identity: current(r), ctx: ctx, cancel: cancel, queue: make(chan liveFrame, 4096), urgent: make(chan liveFrame, 1), subscriptions: map[string]context.CancelFunc{}}
 	defer func() {
 		cancel()
 		conn.CloseNow()
@@ -179,7 +204,11 @@ func (s *server) live(w http.ResponseWriter, r *http.Request) {
 			l.fail("invalid", "invalid frame")
 			continue
 		}
-		if _, _, err := s.deps.Authority.AuthenticateDevice(l.identity.Token); err != nil {
+		authenticate := s.deps.Authority.AuthenticateDevice
+		if f.T == "ping" {
+			authenticate = s.deps.Authority.InspectDevice
+		}
+		if _, _, err := authenticate(l.identity.Token); err != nil {
 			l.send(map[string]any{"t": "session_revoked"}, true)
 			continue
 		}
@@ -236,7 +265,7 @@ func (l *liveSocket) command(f clientFrame) {
 		return
 	}
 	l.send(map[string]any{"t": "ack", "id": f.ID, "status": status.State}, false)
-	l.send(map[string]any{"t": "cmd_status", "id": f.ID, "status": status.State, "command": status}, false)
+	l.send(map[string]any{"t": "cmd_status", "id": f.ID, "status": status.State, "command": status, "error": status.Error}, false)
 	if status.Disposition != "" {
 		return
 	}
@@ -257,7 +286,7 @@ func (l *liveSocket) command(f clientFrame) {
 					l.fail(safeError(err).Code, "command status unavailable")
 					return
 				}
-				l.send(map[string]any{"t": "cmd_status", "id": f.ID, "status": next.State, "command": next}, false)
+				l.send(map[string]any{"t": "cmd_status", "id": f.ID, "status": next.State, "command": next, "error": next.Error}, false)
 				if next.Disposition != "" {
 					return
 				}
@@ -279,7 +308,19 @@ func (l *liveSocket) view(ctx context.Context, f clientFrame) (any, error) {
 		if contracts.DecodeInput(f.Args, &q) != nil {
 			return nil, contracts.ErrInvalid
 		}
-		return l.server.deps.Operations.Read(ctx, l.identity.Principal, "records.get", q)
+		result, err := l.server.deps.Operations.Read(ctx, l.identity.Principal, "records.get", q)
+		if err != nil {
+			return result, err
+		}
+		for i, record := range result.Records {
+			if record.Collection == "system.command" {
+				result.Records[i], err = l.commandRecord(ctx, record)
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+		return result, nil
 	}
 	if f.View == "chats" || f.View == "thread" || f.View == "collection" {
 		return l.server.deps.Operations.Invoke(ctx, l.identity.Principal, "messages."+f.View, f.Args)
@@ -343,6 +384,13 @@ func (l *liveSocket) subscribe(ctx context.Context, f clientFrame) {
 		for _, change := range batch.Changes {
 			if f.View == "record" {
 				if change.Record.Collection == recordArgs.Collection && change.Record.ID == recordArgs.ID {
+					if change.Record.Collection == "system.command" {
+						change.Record, err = l.commandRecord(ctx, change.Record)
+						if err != nil {
+							l.fail(safeError(err).Code, "command unavailable")
+							return
+						}
+					}
 					changes = append(changes, change)
 				}
 			} else if change.Record.Source == contracts.Messages || change.Record.Source == contracts.Contacts {
@@ -376,15 +424,6 @@ func (l *liveSocket) subscribe(ctx context.Context, f clientFrame) {
 				frame["older"] = older
 			}
 			previous = next
-			if next.Cursor.Epoch == cursor.Epoch && next.Cursor.SubscriptionRevision == cursor.SubscriptionRevision && next.Cursor.Sequence > cursor.Sequence {
-				cursor = next.Cursor
-				frame["cursor"] = cursor
-				iterator, err = l.server.deps.Operations.Observe(ctx, l.identity.Principal, cursor)
-				if err != nil {
-					l.fail("reset", "resubscribe required")
-					return
-				}
-			}
 		}
 		if !l.send(frame, false) {
 			return
@@ -447,7 +486,7 @@ func viewChanges(previous, next viewState) []any {
 	for index, id := range next.Order {
 		row := next.Rows[id]
 		if !bytes.Equal(previous.Rows[id], row) || index >= len(previous.Order) || previous.Order[index] != id {
-			changes = append(changes, map[string]any{"op": "upsert", "id": id, "data": row, "order": index})
+			changes = append(changes, map[string]any{"op": "upsert", "id": id, "row": row, "order": index})
 		}
 	}
 	return changes
@@ -459,7 +498,11 @@ func rowSentAt(row json.RawMessage) string {
 		} `json:"data"`
 	}
 	json.Unmarshal(row, &record)
-	return record.Data.SentAt
+	at, err := time.Parse(time.RFC3339Nano, record.Data.SentAt)
+	if err != nil {
+		return ""
+	}
+	return at.UTC().Format("2006-01-02T15:04:05.000000000Z")
 }
 func threadWindow(previous, next viewState, changes []contracts.Change, outside map[string]string, args json.RawMessage) viewState {
 	if len(previous.Order) == 0 {
@@ -486,6 +529,9 @@ func threadWindow(previous, next viewState, changes []contracts.Change, outside 
 		json.Unmarshal(change.Record.Data, &data)
 		if data.ChatID != query.ChatID {
 			continue
+		}
+		if at, err := time.Parse(time.RFC3339Nano, data.SentAt); err == nil {
+			data.SentAt = at.UTC().Format("2006-01-02T15:04:05.000000000Z")
 		}
 		if data.SentAt > last {
 			outside[change.Record.ID] = "newer"
@@ -528,4 +574,16 @@ func frameCursor(value any) *contracts.Cursor {
 		return nil
 	}
 	return &cursor
+}
+
+func (l *liveSocket) commandRecord(ctx context.Context, record contracts.Record) (contracts.Record, error) {
+	if l.server.deps.Operations.Target == nil {
+		return record, contracts.ErrUnavailable
+	}
+	status, err := l.server.deps.Operations.Target.Status(ctx, l.identity.Principal, contracts.CommandQuery{ID: record.ID})
+	if err != nil && status.Command.ID == "" {
+		return record, err
+	}
+	record.Data, err = json.Marshal(status)
+	return record, err
 }

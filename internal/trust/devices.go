@@ -86,7 +86,7 @@ func (a *Authority) SavePasskey(key Passkey, enroll string, principal *Principal
 			}
 		}
 		for _, existing := range d.Passkeys {
-			if existing.ID == key.ID {
+			if existing.ID == key.ID && existing.RPID == key.RPID {
 				return contracts.ErrConflict
 			}
 		}

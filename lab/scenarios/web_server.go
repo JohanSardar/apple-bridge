@@ -3,6 +3,9 @@ package scenarios
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	bridgeweb "github.com/JohanSardar/apple-bridge/internal/web"
@@ -23,7 +26,7 @@ import (
 	"github.com/JohanSardar/apple-bridge/lab/world"
 )
 
-func runWeb(ctx context.Context, s Scenario, level string) Evidence {
+func runWebServer(ctx context.Context, s Scenario, level string) Evidence {
 	sha, _ := exec.Command("git", "rev-parse", "HEAD").Output()
 	e := Evidence{GitSHA: strings.TrimSpace(string(sha)), RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, At: time.Now().UTC(), Latency: map[string]Latency{}, Hosts: []string{"air"}}
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
@@ -52,7 +55,7 @@ func runWeb(ctx context.Context, s Scenario, level string) Evidence {
 		body, _ := io.ReadAll(resp.Body)
 		return resp, string(body)
 	}
-	if s.ID == "WEB-AUTH-SOFTWARE" || s.ID == "WEB-LIVE-RECORD" || s.ID == "WEB-BLOB-ACCESS" || s.ID == "WEB-COMMAND-INTERACTIVE" {
+	if s.ID == "WEB-AUTH-SOFTWARE" || s.ID == "WEB-LIVE-RECORD" || s.ID == "WEB-BLOB-ACCESS" || s.ID == "WEB-COMMAND-INTERACTIVE" || s.ID == "WEB-LIVE-READMODELS" {
 		runWebSession(ctx, w, s.ID, &e, add)
 		e.Passed = len(e.Assertions) > 0
 		for _, a := range e.Assertions {
@@ -96,6 +99,13 @@ func runWeb(ctx context.Context, s Scenario, level string) Evidence {
 			}
 			fixture.Close()
 		}
+		secure := httptest.NewTLSServer(bridgeweb.Handler(bridgeweb.Deps{Assets: fstest.MapFS{}}))
+		tlsResponse, tlsErr := secure.Client().Get(secure.URL + "/")
+		add("hsts_on_https", tlsErr == nil && tlsResponse.Header.Get("Strict-Transport-Security") != "")
+		if tlsErr == nil {
+			tlsResponse.Body.Close()
+		}
+		secure.Close()
 		resp, body := request("GET", "/", "")
 		add("app_or_not_built", resp != nil && resp.StatusCode == 200 && (strings.Contains(body, "make web") || strings.Contains(body, "<html")))
 		add("index_no_store", resp != nil && resp.Header.Get("Cache-Control") == "no-store")
@@ -235,6 +245,15 @@ func runWebSession(ctx context.Context, w *world.World, id string, e *Evidence, 
 		return
 	}
 	add("host_cookie_flags", c.cookie != nil && c.cookie.Name == "__Host-ab_session" && c.cookie.Path == "/" && c.cookie.Secure && c.cookie.HttpOnly && c.cookie.SameSite == http.SameSiteStrictMode && c.cookie.MaxAge > 0 && c.cookie.Domain == "")
+	var trustedSession struct {
+		Expires time.Time `json:"expires_at"`
+	}
+	json.Unmarshal(body, &trustedSession)
+	add("trusted_thirty_days", time.Until(trustedSession.Expires) > 29*24*time.Hour && time.Until(trustedSession.Expires) <= 30*24*time.Hour)
+	decodedToken, decodeErr := base64.RawURLEncoding.DecodeString(c.cookie.Value)
+	add("session_256_bits", decodeErr == nil && len(decodedToken) == 32)
+	stored, _ := os.ReadFile(filepath.Join(w.Gateway.Home, "credentials.json"))
+	add("tokens_stored_hashed", !bytes.Contains(stored, []byte(c.cookie.Value)) && !bytes.Contains(stored, []byte(enrollURL.Fragment)))
 	if id == "WEB-BLOB-ACCESS" {
 		runWebBlobs(ctx, w, c, e, add)
 		return
@@ -253,6 +272,10 @@ func runWebSession(ctx context.Context, w *world.World, id string, e *Evidence, 
 		var frame map[string]any
 		err := wsjson.Read(bounded, conn, &frame)
 		return frame, err
+	}
+	if id == "WEB-LIVE-READMODELS" {
+		runWebReadModels(ctx, w, c, conn, e, add)
+		return
 	}
 	if id == "WEB-COMMAND-INTERACTIVE" {
 		var lists contracts.ReadResult
@@ -307,6 +330,11 @@ func runWebSession(ctx context.Context, w *world.World, id string, e *Evidence, 
 		if err != nil || status != 200 {
 			return
 		}
+		var publicSession struct {
+			Expires time.Time `json:"expires_at"`
+		}
+		json.Unmarshal(body, &publicSession)
+		add("public_thirty_minute_idle", time.Until(publicSession.Expires) > 29*time.Minute && time.Until(publicSession.Expires) <= 30*time.Minute)
 		add("public_session_cookie", public.cookie != nil && public.cookie.MaxAge == 0 && public.cookie.Expires.IsZero() && public.cookie.Secure && public.cookie.HttpOnly)
 		frame, err := read(conn)
 		add("signin_to_existing_session", err == nil && frame["t"] == "signin")
@@ -330,6 +358,32 @@ func runWebSession(ctx context.Context, w *world.World, id string, e *Evidence, 
 		add("revoke_closes_socket", closeErr != nil)
 		resp, _, err = public.request("GET", "session", nil)
 		add("revoked_cookie_rejected", err == nil && resp.StatusCode == 401)
+		expiredURL, expireErr := exec.CommandContext(ctx, "bin/bridge", "web", "enroll", "--home", w.Gateway.Home, "--host", c.origin).Output()
+		parsedExpired, _ := url.Parse(strings.TrimSpace(string(expiredURL)))
+		if expireErr == nil && parsedExpired != nil {
+			path := filepath.Join(w.Gateway.Home, "credentials.json")
+			stored, readErr := os.ReadFile(path)
+			var fixture map[string]any
+			json.Unmarshal(stored, &fixture)
+			hash := sha256.Sum256([]byte(parsedExpired.Fragment))
+			if tokens, ok := fixture["web_enroll"].(map[string]any); ok {
+				tokens[hex.EncodeToString(hash[:])] = time.Now().Add(-time.Minute).Format(time.RFC3339Nano)
+			}
+			modified, _ := json.Marshal(fixture)
+			writeErr := os.WriteFile(path+".web-expiry", modified, 0600)
+			if writeErr == nil {
+				writeErr = os.Rename(path+".web-expiry", path)
+			}
+			resp, _, err = c.request("POST", "enroll/options", map[string]any{"token": parsedExpired.Fragment})
+			add("expired_enroll_token_denied", readErr == nil && writeErr == nil && err == nil && resp.StatusCode == 401)
+			auth.UserVerified = false
+			invalid := &webClient{ctx: ctx, origin: c.origin}
+			status, _, err = invalid.signIn(auth, "login", "", "trusted")
+			add("user_verification_required", err == nil && status == 401 && invalid.cookie == nil)
+			auth.UserVerified = true
+		} else {
+			add("expired_enroll_fixture", false)
+		}
 		_, err = exec.CommandContext(ctx, "bin/bridge", "web", "lock", "--home", w.Gateway.Home).Output()
 		add("lock_cli", err == nil)
 		frame, err = read(conn)
@@ -480,4 +534,211 @@ func runWebBlobs(ctx context.Context, w *world.World, c *webClient, e *Evidence,
 	add("unsafe_original_variant_pending", err == nil && resp.StatusCode == 409)
 	resp, body, err = c.request("POST", "upload", map[string]string{"synthetic": "Bridge Test"})
 	add("streamed_upload_staged", err == nil && resp.StatusCode == 200 && bytes.Contains(body, []byte("upload_id")))
+
+	for _, size := range []int64{100 * 1024 * 1024, 100*1024*1024 + 1} {
+		request, _ := http.NewRequestWithContext(ctx, "POST", c.origin+"/web/v1/upload", io.LimitReader(webZeroReader{}, size))
+		request.Header.Set("Origin", c.origin)
+		request.AddCookie(c.cookie)
+		response, err := http.DefaultClient.Do(request)
+		expected := 200
+		if size > 100*1024*1024 {
+			expected = 413
+		}
+		add(fmt.Sprintf("stream_upload_%d_bytes", size), err == nil && response.StatusCode == expected)
+		if err == nil {
+			io.Copy(io.Discard, response.Body)
+			response.Body.Close()
+		}
+	}
+	for _, fixture := range []struct {
+		mime             string
+		variant, missing bool
+		status           int
+		name             string
+	}{
+		{"image/heic", true, false, 200, "derived_display_bytes"},
+		{"image/heic", true, true, 409, "missing_derivative_pending"},
+		{"image/png", true, true, 200, "missing_derivative_safe_original"},
+	} {
+		previousVersion := record.Version
+		err = w.ControlAction("/blob-fixture", map[string]any{"size": 1024, "mime_type": fixture.mime, "variant": fixture.variant, "missing_variant": fixture.missing})
+		if err != nil {
+			add(fixture.name+"_fixture", false)
+			return
+		}
+		err = w.Await(5*time.Second, func() bool {
+			_, err := world.Request(ctx, w.Gateway, "/v1/op/records.query", contracts.ReadQuery{Collection: "messages.attachment"}, &records)
+			if err != nil || len(records.Records) != 1 {
+				return false
+			}
+			record = records.Records[0]
+			return record.Version > previousVersion
+		})
+		var metadata struct {
+			Blob struct {
+				Digest string `json:"digest"`
+			} `json:"blob"`
+		}
+		json.Unmarshal(record.Data, &metadata)
+		path = "blob/" + metadata.Blob.Digest + "?record=" + record.ID + "&variant=display"
+		err = w.Await(5*time.Second, func() bool {
+			resp, body, err = c.request("GET", path, nil)
+			return err == nil && resp.StatusCode == fixture.status
+		})
+		valid := err == nil
+		if fixture.status == 200 {
+			valid = valid && resp.Header.Get("Content-Type") == "image/png" && len(body) > 8 && bytes.Equal(body[:8], []byte{137, 80, 78, 71, 13, 10, 26, 10})
+		}
+		add(fixture.name, valid)
+	}
+
 }
+
+func runWebReadModels(ctx context.Context, w *world.World, c *webClient, conn *websocket.Conn, e *Evidence, add func(string, bool)) {
+	if err := w.ControlAction("/messages", map[string]any{"action": "seed", "count": 3}); err != nil {
+		add("readmodel_seed", false)
+		return
+	}
+	var chats contracts.ReadResult
+	err := w.Await(5*time.Second, func() bool {
+		_, err := world.Request(ctx, w.Gateway, "/v1/op/records.query", contracts.ReadQuery{Collection: "messages.chat"}, &chats)
+		return err == nil && len(chats.Records) == 1
+	})
+	if err != nil {
+		add("chat_visible", false)
+		return
+	}
+	chatID := chats.Records[0].ID
+	read := func() (map[string]any, error) {
+		bounded, cancel := context.WithTimeout(ctx, 3*time.Second)
+		defer cancel()
+		var frame map[string]any
+		err := wsjson.Read(bounded, conn, &frame)
+		return frame, err
+	}
+	for _, view := range []string{"chats", "thread", "collection"} {
+		args := map[string]any{}
+		if view != "chats" {
+			args["chat_id"] = chatID
+		}
+		if view == "collection" {
+			args["kind"] = "photos"
+		}
+		wsjson.Write(ctx, conn, map[string]any{"t": "sub", "id": view, "view": view, "args": args})
+		found := false
+		for tries := 0; tries < 12; tries++ {
+			frame, err := read()
+			if err != nil {
+				break
+			}
+			if frame["t"] == "error" {
+				add("readmodel_"+view+"_available", false)
+				return
+			}
+			if frame["t"] == "snap" && frame["sub"] == view {
+				found = true
+				data, _ := frame["data"].(map[string]any)
+				field := "items"
+				count := 0
+				if view == "chats" {
+					field = "chats"
+					count = 1
+				} else if view == "thread" {
+					count = 3
+				}
+				rows, _ := data[field].([]any)
+				add("readmodel_"+view+"_snapshot_rows", len(rows) == count)
+				break
+			}
+		}
+		add("readmodel_"+view+"_snapshot", found)
+		if !found {
+			return
+		}
+	}
+	os.WriteFile(filepath.Join(w.Gateway.Home, "lab-web-metrics"), nil, 0600)
+	last := map[string]uint64{}
+	sawChatUpsert, sawOutside := false, false
+	for i := 0; i < 32; i++ {
+		action, key := "receipts", "message-000000"
+		if i == 0 {
+			action, key = "incoming", "web-readmodel-new"
+		}
+		if err := w.ControlAction("/messages", map[string]any{"action": action, "key": key}); err != nil {
+			add("readmodel_sim_change", false)
+			return
+		}
+		delivered := map[string]bool{}
+		for tries := 0; tries < 40 && len(delivered) < 3; tries++ {
+			frame, err := read()
+			if err != nil {
+				add("readmodel_live_frame", false)
+				return
+			}
+			if frame["t"] == "error" {
+				add("readmodel_live_error", false)
+				return
+			}
+			if frame["t"] != "delta" {
+				continue
+			}
+			sub, _ := frame["sub"].(string)
+			cursor, _ := frame["cursor"].(map[string]any)
+			seq, _ := cursor["sequence"].(float64)
+			if uint64(seq) <= last[sub] {
+				continue
+			}
+			last[sub] = uint64(seq)
+			delivered[sub] = true
+			if sub == "chats" {
+				changes, _ := frame["changes"].([]any)
+				for _, item := range changes {
+					change, _ := item.(map[string]any)
+					if change["op"] == "upsert" && change["row"] != nil {
+						sawChatUpsert = true
+					}
+				}
+			}
+			if sub == "thread" {
+				newer, _ := frame["newer"].(float64)
+				sawOutside = sawOutside || newer == 2
+			}
+		}
+		if len(delivered) != 3 {
+			add("all_readmodel_subscriptions_advance", false)
+			return
+		}
+	}
+	add("chat_row_upsert", sawChatUpsert)
+	add("thread_reports_newer_outside_window", sawOutside)
+	data, err := os.ReadFile(filepath.Join(w.Gateway.Home, "web-metrics.jsonl"))
+	commits, writes := map[uint64]int64{}, map[uint64]int64{}
+	for _, line := range bytes.Split(data, []byte{'\n'}) {
+		var metric struct {
+			Stage   string `json:"stage"`
+			Through uint64 `json:"through"`
+			At      int64  `json:"at"`
+		}
+		if json.Unmarshal(line, &metric) != nil {
+			continue
+		}
+		if metric.Stage == "commit" {
+			commits[metric.Through] = metric.At
+		} else if metric.At > writes[metric.Through] {
+			writes[metric.Through] = metric.At
+		}
+	}
+	samples := []float64{}
+	for seq, at := range commits {
+		if written := writes[seq]; written >= at {
+			samples = append(samples, float64(written-at)/float64(time.Millisecond))
+		}
+	}
+	e.Latency["journal_commit_to_last_readmodel_frame_written"] = stats(samples, 0)
+	add("readmodel_latency_32_samples", err == nil && len(samples) == 32)
+	add("readmodel_commit_to_frame_p95_20ms", len(samples) == 32 && stats(samples, 0).P95 <= 20)
+}
+
+type webZeroReader struct{}
+
+func (webZeroReader) Read(p []byte) (int, error) { clear(p); return len(p), nil }

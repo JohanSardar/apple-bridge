@@ -3,6 +3,7 @@ package simapple
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -69,6 +70,9 @@ func (f *fakeApple) blobRoutes(mux *http.ServeMux) {
 
 	mux.HandleFunc("POST /blob-fixture", func(w http.ResponseWriter, r *http.Request) {
 		var a struct {
+			MIME                     string `json:"mime_type"`
+			Variant                  bool   `json:"variant"`
+			MissingVariant           bool   `json:"missing_variant"`
 			RefreshBeforeUnavailable bool   `json:"refresh_before_unavailable"`
 			Busy                     int    `json:"unavailable_reads"`
 			Drops                    int    `json:"drop_reads"`
@@ -101,6 +105,9 @@ func (f *fakeApple) blobRoutes(mux *http.ServeMux) {
 			for i := range b {
 				b[i] = byte((i*31 + i/251) % 256)
 			}
+			if a.MIME == "image/png" {
+				b, _ = base64.StdEncoding.DecodeString("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aX1sAAAAASUVORK5CYII=")
+			}
 			sum := sha256.Sum256(b)
 			d := hex.EncodeToString(sum[:])
 			f.blobs[d] = b
@@ -117,6 +124,27 @@ func (f *fakeApple) blobRoutes(mux *http.ServeMux) {
 				collection := "messages.message"
 				if k == "blob-attachment" {
 					collection = "messages.attachment"
+				}
+				if k == "blob-attachment" {
+					attachment := data.(map[string]any)
+					if a.MIME != "" {
+						attachment["mime_type"] = a.MIME
+					}
+					if a.Variant {
+						variant, _ := base64.StdEncoding.DecodeString("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aX1sAAAAASUVORK5CYII=")
+						if a.MissingVariant {
+							variant = []byte("Bridge Test pending variant")
+						}
+						sum := sha256.Sum256(variant)
+						digest := hex.EncodeToString(sum[:])
+						state := "present"
+						if a.MissingVariant {
+							state = "pending"
+						} else {
+							f.blobs[digest] = variant
+						}
+						attachment["derivatives"] = map[string]any{"display": map[string]any{"digest": digest, "size": len(variant), "state": state, "mime": "image/png"}}
+					}
 				}
 				raw, _ := json.Marshal(data)
 				f.records[k] = contracts.Observation{Kind: "upsert", Collection: collection, NativeKey: k, ObservedAt: time.Now().UTC(), Data: raw}

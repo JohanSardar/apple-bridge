@@ -12,9 +12,10 @@ import (
 )
 
 type webAuthenticator struct {
-	Key     *ecdsa.PrivateKey
-	ID      []byte
-	Counter uint32
+	UserVerified bool
+	Key          *ecdsa.PrivateKey
+	ID           []byte
+	Counter      uint32
 }
 
 func newWebAuthenticator() (*webAuthenticator, error) {
@@ -24,7 +25,7 @@ func newWebAuthenticator() (*webAuthenticator, error) {
 	}
 	id := make([]byte, 32)
 	_, err = rand.Read(id)
-	return &webAuthenticator{Key: key, ID: id}, err
+	return &webAuthenticator{Key: key, ID: id, UserVerified: true}, err
 }
 func cborHead(major byte, size int) []byte {
 	if size < 24 {
@@ -72,6 +73,9 @@ func (a *webAuthenticator) credential(create bool, challenge, origin, rp string)
 	rpHash := sha256.Sum256([]byte(rp))
 	auth := append([]byte{}, rpHash[:]...)
 	flags := byte(5)
+	if !a.UserVerified {
+		flags = 1
+	}
 	if create {
 		flags |= 64
 	}

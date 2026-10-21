@@ -404,6 +404,7 @@ features:
       - {id: WEB-BLOB-ACCESS, levels: [sim]}
       - {id: WEB-COMMAND-INTERACTIVE, levels: [sim]}
       - {id: WEB-LIVE-RECORD, levels: [sim]}
+      - {id: WEB-LIVE-READMODELS, levels: [sim]}
   - id: web.media
     title: Browser-safe media variants made by the Helper
     requirements: [R-WEB-UI, R-ATTACH]

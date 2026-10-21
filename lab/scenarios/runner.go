@@ -24,6 +24,7 @@ import (
 )
 
 type Scenario struct {
+	Web     map[string]any              `yaml:"web,omitempty"`
 	ID      string                      `yaml:"id"`
 	Feature string                      `yaml:"feature"`
 	Levels  []string                    `yaml:"levels"`
@@ -372,7 +373,7 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 		return runReadModels(ctx, s, level)
 	}
 	if s.Feature == "web.frontdoor" {
-		return runWeb(ctx, s, level)
+		return runWebServer(ctx, s, level)
 	}
 	if strings.HasPrefix(s.ID, "USE-") {
 		return runUsage(ctx, s, level)
