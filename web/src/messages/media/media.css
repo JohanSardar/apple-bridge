@@ -16,3 +16,5 @@
 .media-image[data-media-alpha=true]>img,.media-image[data-media-alpha=true]>.media-placeholder{object-fit:contain}
 .media-image[data-media-alpha=true] .media-unavailable{background:transparent}
 @media(prefers-reduced-motion:reduce){.media-image>img,.media-placeholder{transition-duration:150ms}}
+
+.media-viewer-pending{position:fixed;z-index:10;inset:auto 16px calc(16px + env(safe-area-inset-bottom));padding:12px;border-radius:18px;background:var(--background-elevated);color:var(--label);text-align:center;box-shadow:0 4px 24px #0002}
