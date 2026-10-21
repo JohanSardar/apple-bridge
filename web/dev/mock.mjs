@@ -43,7 +43,8 @@ export function mockWeb() {
       if (path === '/__mock/drop') { for (const client of sockets) client.socket.destroy(); res.end('{}'); return; }
       if (path === '/__mock/delta') {
         sequence++;
-        const row = { id: 'fixture-' + sequence, title: 'Fixture update ' + sequence };
+        const id='fixture-'+sequence,title='Fixture update '+sequence;
+        const row={chat:{id,collection:'messages.chat',source:'messages',version:sequence,data:{display_name:title,participants:[],style:'direct',filter:'known'}},title,avatar_handles:[],last_message:null,last_activity_at:new Date().toISOString(),unread_count:0,has_unseen_mention:false,muted:null,pinned_index:null};
         snapshot.chats.push(row);
         for (const client of sockets) for (const id of client.subs) client.socket.write(frame({t:'delta',sub:id,changes:[{op:'upsert',row}],cursor:cursor()}));
         res.end(JSON.stringify(row)); return;
