@@ -927,10 +927,10 @@ func runWebRateWindows(ctx context.Context, w *world.World, add func(string, boo
 	for i := 0; i < 10; i++ {
 		failed = failed && request(fmt.Sprintf("192.0.2.%d", i+1), "enroll/options", map[string]any{"token": "invalid"}) == 401
 	}
-	add("global_failure_backoff_across_clients", failed && request("192.0.2.99", "login/options", map[string]any{}) == 429)
+	add("failure_backoff_isolated_across_clients", failed && request("192.0.2.99", "login/options", map[string]any{}) == 200)
 	clock.Add(int64(2 * time.Second))
 
-	add("global_backoff_expires", request("192.0.2.99", "login/options", map[string]any{}) == 200)
+	add("unaffected_client_stays_available", request("192.0.2.99", "login/options", map[string]any{}) == 200)
 	live := &webClient{ctx: ctx, origin: strings.Replace(w.Gateway.URL, "127.0.0.1", "localhost", 1), cookie: c.cookie}
 	socket, err := live.socket()
 	if err != nil {

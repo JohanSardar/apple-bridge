@@ -50,12 +50,20 @@ func (s *server) webAuthn(r *http.Request) (*webauthn.WebAuthn, owner, error) {
 	w, err := webauthn.New(&webauthn.Config{RPID: rpID(r), RPDisplayName: "Apple Bridge", RPOrigins: []string{servingOrigin(r)}, AuthenticatorSelection: protocol.AuthenticatorSelection{ResidentKey: protocol.ResidentKeyRequirementRequired, UserVerification: protocol.VerificationRequired}})
 	return w, u, err
 }
-func (s *server) authFailure(w http.ResponseWriter) {
+func (s *server) authFailure(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
-	s.failures++
-	if s.failures >= 10 {
-		s.retryAt = s.rateTime().Add(time.Duration(min(s.failures-9, 60)) * time.Second)
+	key := "auth:" + clientIP(r)
+	entry := s.rates[key]
+	now := s.rateTime()
+	if now.Sub(entry.FailureAt) >= 15*time.Minute {
+		entry.Failures = 0
 	}
+	entry.Failures++
+	entry.FailureAt = now
+	if entry.Failures >= 10 {
+		entry.RetryAt = now.Add(time.Duration(min(entry.Failures-9, 60)) * time.Second)
+	}
+	s.rates[key] = entry
 	s.mu.Unlock()
 	reject(w, 401, "unauthorized")
 }
@@ -74,7 +82,7 @@ func (s *server) authOptions(w http.ResponseWriter, r *http.Request, flow string
 	}
 	c := ceremony{Origin: servingOrigin(r), Flow: flow, Kind: input.Kind, Enroll: input.Token, Expires: time.Now().Add(5 * time.Minute)}
 	if flow == "enroll" && s.deps.Authority.CheckWebEnroll(input.Token) != nil {
-		s.authFailure(w)
+		s.authFailure(w, r)
 		return
 	}
 	if flow == "passkeys" {
@@ -129,7 +137,7 @@ func (s *server) authFinish(w http.ResponseWriter, r *http.Request, flow string)
 	delete(s.ceremonies, input.CeremonyID)
 	s.mu.Unlock()
 	if !ok || time.Now().After(c.Expires) || c.Flow != flow || c.Origin != servingOrigin(r) || flow == "passkeys" && (c.Principal == nil || c.Principal.ID != current(r).Principal.ID) {
-		s.authFailure(w)
+		s.authFailure(w, r)
 		return
 	}
 	wa, user, err := s.webAuthn(r)
@@ -165,12 +173,15 @@ func (s *server) authFinish(w http.ResponseWriter, r *http.Request, flow string)
 		}
 	}
 	if err != nil {
-		s.authFailure(w)
+		s.authFailure(w, r)
 		return
 	}
 	s.mu.Lock()
-	s.failures = 0
-	s.retryAt = time.Time{}
+	entry := s.rates["auth:"+clientIP(r)]
+	entry.Failures = 0
+	entry.RetryAt = time.Time{}
+	entry.FailureAt = time.Time{}
+	s.rates["auth:"+clientIP(r)] = entry
 	s.mu.Unlock()
 	if flow == "passkeys" {
 		respond(w, 200, map[string]string{"id": base64.RawURLEncoding.EncodeToString(key.ID)})

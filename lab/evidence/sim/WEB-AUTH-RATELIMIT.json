@@ -1,14 +1,14 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[4.8 7.15 8.22] cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[8.16 10.71 23.5] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M5E3PZXNQ3TT5ZXBBY3647S6",
+  "run_id": "run_01M5E89YZF7J6BZV6NJHGP2KSZ",
   "scenario": "WEB-AUTH-RATELIMIT",
   "level": "sim",
   "passed": true,
-  "git_sha": "a530cad13274d0630b04a4229d7518a7ecb46b1f",
-  "at": "2026-10-21T02:12:45.62117Z",
+  "git_sha": "5a44c1ac5aefacbdefe9d9180cef615208d13da8",
+  "at": "2026-10-21T03:33:01.551253Z",
   "assertions": [
     {
       "name": "signin_options_available",
@@ -35,11 +35,11 @@
       "passed": true
     },
     {
-      "name": "global_failure_backoff_across_clients",
+      "name": "failure_backoff_isolated_across_clients",
       "passed": true
     },
     {
-      "name": "global_backoff_expires",
+      "name": "unaffected_client_stays_available",
       "passed": true
     },
     {
