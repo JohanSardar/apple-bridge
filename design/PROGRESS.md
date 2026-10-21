@@ -73,6 +73,8 @@ Process: every change ships as a small PR (WORKER-RULES, Git and GitHub). Status
 - DONE W0: decisions, Messages spec draft (`design/web/messages.md`), SPEC §23 including W2–W8, ADRs 0015–0020, and the drafts for Reminders, Calendar, Contacts and Notes. Johan's skim of the Messages spec is still open. W2 proceeds on the draft and applies his changes when they come.
 - DONE W1-RM: chat, thread and collection read models (#2); rich filters and collections, plus `messages.handles` (#14, #22).
 - DONE W1-WEB: front door, passkey device sessions and web/1 live views (#3–#5). Hardening: last passkey kept (#15), host pinning (#19), per-IP auth backoff (#23, #24), contact thumbnails (#16), handles route (#38). Pending: local Safari session (#40), and replica upload forwarding (W3).
+- DONE W1-AGENT: credentials, activity, owner approvals, OAuth and agent screens (#18, #26, #32, #47, #54, #62, #64, #68, #81). The activity write-serialization bug was fixed with a structural guard (#47).
+- DONE web.frontdoor: every front-door scenario passes at its levels; the reconnect cancellation fix landed in #71.
 - DONE W1-UI: Solid shell, design system, springs, virtual list and web-level runner (#6–#8). The 120 Hz and 8 ms targets are unproven on this 60 Hz, headless host.
 - IN PROGRESS W1-REMOTE: system Funnel backend real on the Air; public REST/MCP/SSE; REST p95 60 ms through Funnel (#27–#29, #34). Embedded tsnet backend: the real login needs a GUI approval on the Air.
 - DONE W1-AGENT: credentials (#18), activity (#26), SQLite capture fix (#47), owner approvals (#54), OAuth grants (#62) and endpoints (#64); grouped Agents/Approvals/Activity screens and browser consent pass the scripted flow. Replica delegation shipped separately in W1-RELAY (#73).
