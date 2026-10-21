@@ -1,0 +1,57 @@
+import type { BridgeRecord, ThreadItem } from '../../data/types';
+import { array, fields, messageParts, sender, text, type Handles, type Part } from '../store/types';
+import { groupEvent, header, name, time, wording } from '../format';
+export type LayoutPrefs = { phone: boolean; group: boolean; service?: string; atLatest?: boolean; now: Date; locale?: string; scale: number; measure: (value:string)=>number; expanded: ReadonlySet<string> };
+export type BubbleLayout = { part: Part; width: number; height: number; emoji: boolean; media: boolean; reactions: BridgeRecord[]; tail: boolean };
+export type TranscriptRow = { id: string; item: ThreadItem; height: number; bubbles: BubbleLayout[]; sent: boolean; sender: string; senderName?: string; avatar?: string; header?: string; system?: string; receipt?: string; edited: boolean; history: {text:string;height:number;width:number}[]; unsent?:string; reply?: string; failed: boolean; gap: number };
+const emojiPattern = /^(?:\p{Extended_Pictographic}|\p{Regional_Indicator}|\p{Emoji_Modifier}|\uFE0F|\u200D|\u20E3|[0-9#*]\uFE0F?\u20E3|\s)+$/u;
+export function emojiOnly(value: string) {
+    if(!emojiPattern.test(value)||!/(?:\p{Extended_Pictographic}|\p{Regional_Indicator}|[0-9#*]\uFE0F?\u20E3)/u.test(value))return false;
+    const count=Array.from(new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(value.replace(/\s/gu,''))).length;
+    return count>=1&&count<=3;
+}
+export function wrapText(value: string, maxWidth: number, measure: LayoutPrefs['measure']) {
+    let line=0,lines=1,widest=0;
+    const tokens=value.split(/(\s+)/u);
+    for(const token of tokens){
+        if(token.includes('\n')){const chunks=token.split('\n');for(let i=0;i<chunks.length;i++){line+=measure(chunks[i]);if(i<chunks.length-1){widest=Math.max(widest,line);line=0;lines++;}}continue;}
+        const width=measure(token);
+        if(width>maxWidth){for(const character of Array.from(token)){const advance=measure(character);if(line+advance>maxWidth&&line>0){widest=Math.max(widest,line);line=0;lines++;}line+=advance;}continue;}
+        if(line+width>maxWidth&&line>0){widest=Math.max(widest,line);line=/^\s+$/u.test(token)?0:width;lines++;}else line+=width;
+    }
+    return {width:Math.min(maxWidth,Math.max(widest,line)),lines};
+}
+function mediaSize(dimensions:Record<string,unknown>,maxWidth:number) {
+    const width=Number(dimensions.width),height=Number(dimensions.height);
+    if(!Number.isFinite(width)||!Number.isFinite(height)||width<=0||height<=0)return {width:Math.min(maxWidth,260),height:120};
+    const scale=Math.min(1,maxWidth/width,360/height);
+    return {width:width*scale,height:height*scale};
+}
+function sameRun(a: ThreadItem|undefined,b: ThreadItem|undefined) { return !!a&&!!b&&a.data.kind!=='group_event'&&b.data.kind!=='group_event'&&!array(a.data.retracted_parts).length&&!array(b.data.retracted_parts).length&&Boolean(a.data.is_from_me)===Boolean(b.data.is_from_me)&&sender(a)===sender(b)&&Math.abs(Date.parse(b.data.sent_at)-Date.parse(a.data.sent_at))<=60000; }
+export function layout(items: readonly ThreadItem[], handles: Handles, prefs: LayoutPrefs, width: number): TranscriptRow[] {
+    const fontSize=(prefs.phone?17:13)*prefs.scale,lineHeight=(prefs.phone?22:16)*prefs.scale;
+    const maxWidth=Math.max(60,Math.min(prefs.phone?width*.7:480,width-(prefs.group?80:40))), padding=24;
+    const lastSent=items.findLastIndex(item=>Boolean(item.data.is_from_me)&&item.data.kind!=='group_event'&&!item.data.retracted_at&&messageParts(item).some(part=>!array(item.data.retracted_parts).includes(part.index)));
+    return items.map((item,index)=>{
+        const data=item.data,sent=Boolean(data.is_from_me),actor=sent?wording.you:name(sender(item),handles),previous=items[index-1],next=items[index+1],first=!sameRun(previous,item),last=!sameRun(item,next);
+        const dateHeader=!previous||Date.parse(data.sent_at)-Date.parse(previous.data.sent_at)>3600000?header(data.sent_at,prefs.now,prefs.locale):undefined;
+        const unsent=array(data.retracted_parts),parts=messageParts(item),visible=parts.filter(part=>!unsent.includes(part.index));
+        const system=data.kind==='group_event'?groupEvent(data.group_event,actor,handles):data.retracted_at||visible.length===0?wording.unsent(actor):undefined;
+        const bubbles: BubbleLayout[]=system?[]:visible.map((part,partIndex)=>{
+            const emoji=part.kind==='text'&&emojiOnly(part.text??''),media=!['text','mention'].includes(part.kind),attachment=item.attachments?.find(value=>value.id===part.attachment_id),dimensions=fields(attachment?.data.media);
+            const content=text(part.text)||text(data.text),wrapped=wrapText(content,maxWidth-padding,prefs.measure);
+            const size=mediaSize(dimensions,maxWidth);
+            const bubbleWidth=media?size.width:emoji?Math.min(maxWidth,Math.ceil(prefs.measure(content)*2.7)+4):Math.max(36,Math.ceil(wrapped.width)+padding);
+            const bubbleHeight=media?size.height:emoji?Math.ceil(fontSize*3):wrapped.lines*lineHeight+14;
+            return {part,width:bubbleWidth,height:bubbleHeight,emoji,media,reactions:(item.reactions??[]).filter(reaction=>Number(reaction.data.part_index??0)===part.index),tail:last&&partIndex===visible.length-1&&!emoji};
+        });
+        const edited=Boolean(data.edited_at)||array(data.edit_history).length>0,history=prefs.expanded.has(item.id)?array(data.edit_history).map(value=>{const content=text(fields(value).text);const wrapped=wrapText(content,maxWidth-padding,prefs.measure);return {text:content,width:Math.max(36,Math.ceil(wrapped.width)+padding),height:wrapped.lines*lineHeight+14};}):[];
+        const receipt=index===lastSent&&prefs.atLatest!==false&&Number(data.error_code??0)===0?(data.read_at?`Read ${time(text(data.read_at),prefs.locale)}`:data.delivered_at?fields(data.delivery).quietly?wording.deliveredQuietly:wording.delivered:undefined):undefined;
+        const reply=text(data.thread_originator_id),failed=Number(data.error_code??0)!==0;
+        const gap=first?12:3,senderName=prefs.group&&!sent&&first&&!system?actor:undefined;
+        let height=gap+(dateHeader?36:0)+(senderName?18:0)+(reply&&reply!==item.id?26:0);
+        height+=system?30:bubbles.reduce((sum,bubble)=>sum+bubble.height+(bubble.reactions.length?16:0)+3,0);
+        height+=(edited?22:0)+(receipt?20:0)+(failed?20:0)+(item.reply_count?24:0)+history.reduce((sum,version)=>sum+version.height+4,0)+(unsent.length&&visible.length?24:0);
+        return {id:item.id,item:data.service?item:{...item,data:{...data,service:prefs.service??'iMessage'}},height:Math.ceil(height),bubbles,sent,sender:actor,senderName,avatar:prefs.group&&!sent&&last&&!system?handles.get(sender(item))?.initials??'?':undefined,header:dateHeader,system,receipt,edited,history,reply:reply&&reply!==item.id?reply:undefined,failed,gap,unsent:unsent.length&&visible.length?wording.unsent(actor):undefined};
+    });
+}
