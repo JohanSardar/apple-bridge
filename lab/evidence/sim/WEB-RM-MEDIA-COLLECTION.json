@@ -1,14 +1,14 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[10.86 12.57 12.16] cpus=8 other_heavy=1"
+    "summary": "air: load=[10.83 12.43 12.15] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M5EV78ASR9QG4S6AQ56FVHQZ",
+  "run_id": "run_01M5EV9GBM97B5TPEF1X2A74TR",
   "scenario": "WEB-RM-MEDIA-COLLECTION",
   "level": "sim",
   "passed": true,
-  "git_sha": "92394ec1e8e967e4ea6be3beec5356163fc97939",
-  "at": "2026-10-21T09:03:35.769029Z",
+  "git_sha": "92d67fab472923ae6b07617c9ee29b92d1d61e85",
+  "at": "2026-10-21T09:04:49.525514Z",
   "assertions": [
     {
       "name": "world_start",
@@ -106,16 +106,16 @@
   "latency": {
     "mcp": {
       "samples": 1,
-      "p50_ms": 92.440458,
-      "p95_ms": 92.440458,
-      "max_ms": 92.440458,
+      "p50_ms": 77.528875,
+      "p95_ms": 77.528875,
+      "max_ms": 77.528875,
       "timeouts": 0
     },
     "rest": {
       "samples": 1,
-      "p50_ms": 102.0825,
-      "p95_ms": 102.0825,
-      "max_ms": 102.0825,
+      "p50_ms": 75.361416,
+      "p95_ms": 75.361416,
+      "max_ms": 75.361416,
       "timeouts": 0
     }
   },
