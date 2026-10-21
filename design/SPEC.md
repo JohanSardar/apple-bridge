@@ -958,7 +958,7 @@ Same origin for everything. Served by the gateway and by replicas (any instance)
 - **Hostname change:** if the public hostname changes, passkeys must be enrolled again (documented).
 
 **Protection.**
-- **Rate limits:** sign-in and enroll at 10 per minute and 100 per day per client IP, with failure backoff per IP escalating to 60 s. Recent failures from another IP never apply to a clean IP; only a high global ceiling of 600 auth requests per minute protects resources. API at 50 requests per second per session.
+- **Rate limits:** sign-in and enroll at 10 per minute and 100 per day per client IP (IPv6 grouped by /64), with failure backoff per IP escalating to 60 s. Recent failures from another IP never apply to a clean IP; only a high global ceiling of 600 auth requests per minute protects resources. API at 50 requests per second per session.
 - **Headers:**
   - CSP `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'`
   - `Referrer-Policy: no-referrer`

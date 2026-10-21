@@ -1,14 +1,14 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[8.16 10.71 23.5] cpus=8 other_heavy=1"
+    "summary": "air: load=[8.79 8.29 18.08] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M5E89YZF7J6BZV6NJHGP2KSZ",
+  "run_id": "run_01M5E8M53Y4DHS4T4V87004CY8",
   "scenario": "WEB-AUTH-RATELIMIT",
   "level": "sim",
   "passed": true,
-  "git_sha": "5a44c1ac5aefacbdefe9d9180cef615208d13da8",
-  "at": "2026-10-21T03:33:01.551253Z",
+  "git_sha": "d57d254cf0217791c5c42b0f0ef5320ec1222315",
+  "at": "2026-10-21T03:38:35.518218Z",
   "assertions": [
     {
       "name": "signin_options_available",
@@ -40,6 +40,18 @@
     },
     {
       "name": "unaffected_client_stays_available",
+      "passed": true
+    },
+    {
+      "name": "ipv6_64_shared_rate_bucket",
+      "passed": true
+    },
+    {
+      "name": "ipv6_distinct_64_independent",
+      "passed": true
+    },
+    {
+      "name": "local_forwarded_source_header_does_not_evade_limit",
       "passed": true
     },
     {

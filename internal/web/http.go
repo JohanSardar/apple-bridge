@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"net"
 	"net/http"
+	"net/netip"
 	"strings"
 	"sync"
 	"time"
@@ -107,9 +108,17 @@ func (s *server) serving(r *http.Request) (serving, bool) {
 func clientIP(r *http.Request) string {
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
-		return r.RemoteAddr
+		host = r.RemoteAddr
 	}
-	return host
+	ip, err := netip.ParseAddr(host)
+	if err != nil {
+		return "unknown"
+	}
+	ip = ip.Unmap()
+	if ip.Is6() {
+		return netip.PrefixFrom(ip, 64).Masked().String()
+	}
+	return ip.String()
 }
 func current(r *http.Request) identity {
 	value, _ := r.Context().Value(identityKey{}).(identity)
