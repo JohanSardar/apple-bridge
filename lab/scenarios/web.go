@@ -3,6 +3,7 @@ package scenarios
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -38,6 +39,45 @@ func validateWeb(s Scenario) error {
 }
 
 func runWeb(ctx context.Context, s Scenario) Evidence {
+	if err := validateWeb(s); err != nil {
+		return runWebProjects(ctx, s, nil)
+	}
+	projects := []string{}
+	for _, browser := range s.Web.Browsers {
+		for _, theme := range s.Web.Themes {
+			for _, layout := range s.Web.Layouts {
+				projects = append(projects, browser+"-"+theme+"-"+layout)
+			}
+		}
+	}
+
+	if s.Web == nil || s.Web.Server != "gateway" {
+		return runWebProjects(ctx, s, projects)
+	}
+	var result Evidence
+	reports := []any{}
+	for _, project := range projects {
+		part := runWebProjects(ctx, s, []string{project})
+		if result.RunID == "" {
+			result = part
+			result.Assertions = nil
+		}
+		for _, assertion := range part.Assertions {
+			assertion.Name = project + ":" + assertion.Name
+			result.Assertions = append(result.Assertions, assertion)
+		}
+		reports = append(reports, part.Metrics["report"])
+		result.Passed = part.Passed
+		if !part.Passed {
+			break
+		}
+	}
+	result.Metrics["matrix"] = projects
+	result.Metrics["reports"] = reports
+	return result
+}
+
+func runWebProjects(ctx context.Context, s Scenario, projects []string) Evidence {
 	sha, _ := exec.Command("git", "rev-parse", "HEAD").Output()
 	e := Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: "web", GitSHA: strings.TrimSpace(string(sha)), At: time.Now().UTC(), Hosts: []string{"air"}, Metrics: map[string]any{}, Assertions: []Assertion{}, Latency: map[string]Latency{}}
 	fail := func(name string, err error) Evidence {
@@ -47,20 +87,27 @@ func runWeb(ctx context.Context, s Scenario) Evidence {
 	if err := validateWeb(s); err != nil {
 		return fail("web_configuration", err)
 	}
-	w, err := world.New(ctx, "sim", 0, 4)
+	w, err := world.New(ctx, "sim", 0, 4, world.BlobOptions{Scope: "admin"})
 	if err != nil {
 		return fail("web_world", err)
 	}
 	defer w.Close()
-	projects := []string{}
-	for _, browser := range s.Web.Browsers {
-		for _, theme := range s.Web.Themes {
-			for _, layout := range s.Web.Layouts {
-				projects = append(projects, browser+"-"+theme+"-"+layout)
-			}
-		}
-	}
 	endpoint := w.Gateway.URL
+	controlURL, controlKey := "", ""
+	if s.Web.Server == "gateway" {
+		parsed, err := url.Parse(endpoint)
+		if err != nil {
+			return fail("web_origin", err)
+		}
+		parsed.Host = "localhost:" + parsed.Port()
+		endpoint = parsed.String()
+		if err := w.ControlAction("/messages", map[string]any{"action": "seed", "count": 4}); err != nil {
+			return fail("web_seed", err)
+		}
+		control, key := webBrowserControl(ctx, w, endpoint)
+		defer control.Close()
+		controlURL, controlKey = control.URL, key
+	}
 	if s.Web.Server == "mock" {
 		ready := filepath.Join(w.Dir, "web-ready")
 		server := exec.CommandContext(ctx, "pnpm", "exec", "node", "dev/serve.mjs")
@@ -93,13 +140,13 @@ func runWeb(ctx context.Context, s Scenario) Evidence {
 	if err := os.MkdirAll("lab/evidence/private/web/reports", 0700); err != nil {
 		return fail("web_evidence", err)
 	}
-	report, _ := filepath.Abs(filepath.Join("lab/evidence/private/web/reports", s.ID+"-playwright.json"))
+	report, _ := filepath.Abs(filepath.Join("lab/evidence/private/web/reports", s.ID+"-"+strings.Join(projects, "_")+"-playwright.json"))
 	test := exec.CommandContext(ctx, "pnpm", "exec", "playwright", "test", "-g", "\\b"+regexp.QuoteMeta(s.ID)+"\\b")
 	test.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	test.Cancel = func() error { return syscall.Kill(-test.Process.Pid, syscall.SIGKILL) }
 	test.WaitDelay = 5 * time.Second
 	test.Dir = "web"
-	test.Env = append(os.Environ(), "AB_WEB_URL="+endpoint, "AB_WEB_PROJECTS="+strings.Join(projects, ","), "AB_WEB_REPORT="+report, "AB_WEB_SERVER="+s.Web.Server, "AB_WEB_WORLD="+w.Gateway.URL)
+	test.Env = append(os.Environ(), "AB_WEB_CONTROL="+controlURL, "AB_WEB_CONTROL_KEY="+controlKey, "AB_WEB_URL="+endpoint, "AB_WEB_PROJECTS="+strings.Join(projects, ","), "AB_WEB_REPORT="+report, "AB_WEB_SERVER="+s.Web.Server, "AB_WEB_WORLD="+w.Gateway.URL)
 	output, err := test.CombinedOutput()
 	e.Metrics["matrix"] = projects
 	e.Metrics["server"] = s.Web.Server

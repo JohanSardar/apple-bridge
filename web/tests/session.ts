@@ -1,0 +1,4 @@
+import { expect, type APIRequestContext, type BrowserContext, type Page } from '@playwright/test';
+export async function control(request:APIRequestContext,path:string){const response=await request.post(process.env.AB_WEB_CONTROL!+path,{headers:{'X-Bridge-Lab':process.env.AB_WEB_CONTROL_KEY!}});expect(response.ok()).toBe(true);return response.json();}
+export async function bootstrap(context:BrowserContext,request:APIRequestContext,kind='trusted'){const value=await control(request,'/session?kind='+kind);if(context.browser()?.browserType().name()==='chromium')value.cookie.url=value.cookie.url.replace(/^http:/,'https:');await context.addCookies([value.cookie]);return value.session;}
+export async function prepareSession(page:Page){if(process.env.AB_WEB_SERVER==='gateway')await bootstrap(page.context(),page.request);else await page.request.get('/__mock/session');}
