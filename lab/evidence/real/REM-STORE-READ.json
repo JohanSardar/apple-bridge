@@ -1,0 +1,71 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[11.27 9.35 8.98] cpus=8 other_heavy=1"
+  },
+  "status": "limited",
+  "run_id": "run_01M5F9ETD56BZA04D15RSSGM56",
+  "metrics": {
+    "identity_da_equal": true,
+    "identity_external_equal": false,
+    "identity_uuid_equal": true,
+    "store_read_single_ms": 303.41375
+  },
+  "scenario": "REM-STORE-READ",
+  "level": "real",
+  "passed": true,
+  "git_sha": "02b3cad44a46aefb407a74497b7b2da377d31506",
+  "at": "2026-10-21T13:12:23.717945Z",
+  "assertions": [
+    {
+      "name": "tagged_eventkit_fixture_and_private_signed_apps",
+      "passed": true
+    },
+    {
+      "name": "helper_probe_launched",
+      "passed": true
+    },
+    {
+      "name": "helper_store_consistent_copy_report_decoded",
+      "passed": true
+    },
+    {
+      "name": "eventkit_calendar_item_identifier_equals_da_text",
+      "passed": true
+    },
+    {
+      "name": "eventkit_calendar_item_identifier_equals_store_uuid",
+      "passed": true
+    },
+    {
+      "name": "external_identifier_is_not_identity_fallback",
+      "passed": true
+    },
+    {
+      "name": "list_uuid_bytes_link_to_eventkit",
+      "passed": true
+    },
+    {
+      "name": "native_flag_and_subtask_absence_exact",
+      "passed": true
+    },
+    {
+      "name": "appletruth_store_counts",
+      "passed": false,
+      "status": "limited",
+      "detail": "AppleTruth lacks Full Disk Access to the Reminders Core Data store"
+    },
+    {
+      "name": "created_fixture_cleanup_and_sweep",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

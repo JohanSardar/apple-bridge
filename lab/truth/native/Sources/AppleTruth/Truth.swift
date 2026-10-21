@@ -80,7 +80,7 @@ struct AppleTruth {
         let tag = request["tag"] as? String ?? ""
         let title = request["title"] as? String ?? ""
         if verb == "fixture" {
-            guard listName == "Bridge Test", tag.hasPrefix("[ab-test "), tag.hasSuffix("]"), tag.count > 11, !tag.contains("\n") else { throw TruthFailure.invalid }
+            guard (listName == "Bridge Test" || listName == "Bridge Test " + tag), tag.hasPrefix("[ab-test "), tag.hasSuffix("]"), tag.count > 11, !tag.contains("\n") else { throw TruthFailure.invalid }
         } else if verb != "observe" { throw TruthFailure.invalid }
         let allLists = verb == "observe" && (request["all_lists"] as? Bool ?? false)
         var createdList = false
@@ -100,7 +100,7 @@ struct AppleTruth {
         if lists.isEmpty && verb == "fixture" && (action == "create" || action == "create_list" || action == "burst") {
             guard let source = store.defaultCalendarForNewReminders()?.source else { throw TruthFailure.unavailable }
             let list = EKCalendar(for: .reminder, eventStore: store)
-            list.title = "Bridge Test"; list.source = source
+            list.title = listName; list.source = source
             try store.saveCalendar(list, commit: true)
             lists = [list]
             createdList = true
