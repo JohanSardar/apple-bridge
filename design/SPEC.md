@@ -1256,3 +1256,91 @@ Recently Deleted becomes `deleted_at` + `recoverable_until` on messages and chat
   - Every decoded field kind present in real data renders. Evidence is counts only.
 - Reader level `sim` + `real`:
   - MSG-DECODE-BALLOON, MSG-DECODE-FORMATTING, MSG-READ-RICH-FIELDS (AppleTruth agrees on counts per field kind).
+
+### 23.13 W3: Messages, writing
+
+**Interactive gate (Helper).**
+- **Where interactive comes from:** a command arriving over ApplePeer with `origin: interactive`. Only the gateway sets this, only for `device:` principals (§23.2), and the IPC socket is owner-only.
+- **What it relaxes:** interactive commands skip the lab text tag (`[ab-test <id>]`) and the own-handle route restriction.
+- **What still applies:** the operation's capability proof for this OS build, expiry, the dispatch guard, conservative correlation, and the no-redispatch rules (§11.2).
+- **Other principals:** lab, test and `agent:` principals keep today's gates. `agent:` with level `full` gets interactive-equivalent routing only after owner approval or at level `full`, per §23.6.
+
+**Self-test (`bridge selftest messages`, run by `bridge setup`).** It proves each Messages operation on this Mac's OS build and records capability evidence (ADR 0008).
+- **Own handles:** discovered from the Messages account (`account_login` / `destination_caller_id`) and the Contacts "me" card.
+- **Run:** in a tagged self chat it does send text, send a file, reply, react (classic and emoji, add and remove), edit, unsend, mark read/unread, and delete message. Afterwards it cleans up everything it created.
+- **Result:** each passing operation becomes `proven` for the build; a failure leaves that operation hidden in the UI with the reason.
+- **Rerun:** automatic after a macOS update changes the build.
+
+**Proofs to finish at the real level** (sim-only today): `messages.mark_read`, `messages.mark_unread`, `messages.delete_message` and `messages.delete_chat` (tagged self chat only), plus resend of a failed message (`messages.send` with `resend_of`).
+
+**Upload path:**
+- `POST /web/v1/upload` streams to a staged blob on the serving instance.
+- **On a replica,** upload bytes are forwarded to the gateway over the feed's command channel in 1 MiB chunks, with the digest verified, before the command is admitted.
+- **Limits:** 100 MiB per file, 10 files per message.
+
+**Client (`web/src/messages/compose/`, `actions/`):**
+- **Composer:** text, Enter/Shift+Enter, autogrow to 6 lines, paste, drag and drop, file picker, phone camera capture, audio recording sent as a file (an audio message in W4), location sent as a maps link, our own desktop emoji picker (⌃⌘Space), and per-chat drafts in local storage. Public sessions keep drafts in memory only.
+- **Sending state:** pending → sent → delivered/read, failure with Try Again.
+- **Message actions** (long-press, right-click, ⌘T/⌘R/⌘E/⌘Z):
+  - Tapback picker (6 classic, emoji search, remove).
+  - Reply mode.
+  - Inline edit (15 min, 5 edits).
+  - Undo Send (2 min; particle dissolve).
+  - Delete (confirm).
+  - Copy, Forward (pre-filled new message), Save attachment.
+- **Chat actions:** mark read/unread (swipe and menu), delete chat (confirm, full-swipe).
+- **New message:** recipient tokens with `contacts.lookup` autocomplete, service hint from history, an existing chat loads under the To field, and send.
+- **Optimistic UI:** the local echo is reconciled by command ID and `commit_seq`. It never duplicates and never flickers.
+- **Gesture guard:** every command is submitted from input-event handlers only (§23.2).
+
+**Scenarios** (level `web` on the demo world, plus `real` on the Air with Johan's own handles only; never text anyone else):
+
+| ID | Levels | Proves |
+|---|---|---|
+| MSG-INTERACTIVE-GATE | sim, real | interactive skips the tag and own-handle rules; lab and agent principals don't; expiry and no-redispatch unchanged. At real level, an untagged interactive send to own handle, then cleanup |
+| MSG-SELFTEST | real | the self-test proves each operation and cleans up completely |
+| MSG-READSTATE-REAL, MSG-DELETE-REAL, MSG-RESEND | real | the proofs listed above |
+| WEB-MSG-SEND | web, real | text send: tap to local bubble ≤ 1 frame; ack; delivered; no duplicate |
+| WEB-MSG-ATTACH-SEND | web, real | photo, video, PDF and audio-file upload and send, including via a replica-served UI |
+| WEB-MSG-REACT, WEB-MSG-REPLY, WEB-MSG-EDIT, WEB-MSG-UNSEND | web, real | each action end to end, with the UI's time limits |
+| WEB-MSG-CHAT-ACTIONS | web | read/unread and delete chat via swipe and menu |
+| WEB-MSG-NEW | web | new message with autocomplete and service hint |
+| WEB-MSG-FAIL-RESEND | web | failure shows "Not Delivered" and Try Again resends |
+| WEB-MSG-OPTIMISTIC | web | reconnect mid-send converges with no duplicates |
+
+**Units:**
+
+| Unit | Contents |
+|---|---|
+| W3-HELPER | interactive gate in Swift, self-test, real proofs, resend |
+| W3-UPLOAD | replica upload forwarding, upload limits |
+| W3-COMPOSE | composer, actions, chat actions, new message, optimistic UI, emoji picker |
+
+### 23.14 W4: Messages parity
+
+**Approach.** Each item gets:
+- a Helper implementation through Accessibility or AppleScript (ADR 0009)
+- capability proof per OS build (an added self-test step where it can be done on self)
+- a sim scenario and a real scenario on self, or on the Ben RCS contact where a group is required
+
+Items needing a second iMessage identity are `limited` at the real level (DECISIONS 2026-10-16).
+
+| Item | Read | Write |
+|---|---|---|
+| Pins (order, pin/unpin, reorder) | §23.12 if readable; else via Accessibility snapshot of the sidebar on change | Accessibility |
+| Hide Alerts | as above | Accessibility (details pane toggle) |
+| Read receipts per chat | §23.12 | Accessibility |
+| Send Later (create, edit time, send now, delete) | §23.12 | Accessibility (+ menu → Send Later) |
+| Send with effect | — | Accessibility (effect picker) |
+| Formatting and text effects | §23.12 | Accessibility (format menu over a selection) |
+| Mentions | §23.12 | type `@name` and confirm the suggestion via Accessibility |
+| Audio message | §23.12 | send the recorded file as an audio message (Accessibility or the file-flag route; investigate) |
+| Keep expiring audio | §23.12 | Accessibility |
+| Recently Deleted (recover, delete now) | §23.12 | Accessibility |
+| Groups (create, rename, photo, add, remove, leave) | existing | Accessibility; real proofs RCS via Ben; iMessage-group parts `limited` |
+| Typing indicators | Accessibility tree of the open chat (investigate) | not feasible without driving the Mac's UI per keystroke; hidden unless reading proves reliable |
+| Link preview on send | sender-side preview generation | investigate whether Messages generates it for AppleScript sends; otherwise hidden |
+
+**UI:** the W4 rows of `design/web/messages.md` (pinned grid drag reorder, mute bell, Send Later bubble and sheet, long-press send effect picker with live preview, formatting toolbar, mention suggestions, audio message recorder with waveform, Recently Deleted actions, group management in details).
+
+**Units:** W4-HELPER-A (pins, mute, read receipts, Recently Deleted), W4-HELPER-B (Send Later, effects, formatting, mentions, audio message, Keep), W4-GROUPS, W4-UI, W4-TYPING (investigation, may close as hidden).

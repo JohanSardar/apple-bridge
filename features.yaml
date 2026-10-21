@@ -490,3 +490,45 @@ features:
       - {id: WEB-MSG-PERF, levels: [web]}
       - {id: WEB-MSG-LIVE, levels: [web]}
       - {id: WEB-MSG-REAL-READ, levels: [real]}
+  - id: web.messages.write
+    title: Messages web app writing (interactive gate, self-test, composer, actions, uploads)
+    requirements: [R-WEB-UI, R-RW, R-MSG-DEPTH, R-SAFE-CMD]
+    milestone: W3
+    modules: [native/MessagesSource, operations, web, webui, replication]
+    depends_on: [web.messages.read]
+    status: todo
+    scenarios:
+      - {id: MSG-INTERACTIVE-GATE, levels: [sim, real]}
+      - {id: MSG-SELFTEST, levels: [real]}
+      - {id: MSG-READSTATE-REAL, levels: [real]}
+      - {id: MSG-DELETE-REAL, levels: [real]}
+      - {id: MSG-RESEND, levels: [sim, real]}
+      - {id: WEB-MSG-SEND, levels: [web, real]}
+      - {id: WEB-MSG-ATTACH-SEND, levels: [web, real]}
+      - {id: WEB-MSG-REACT, levels: [web, real]}
+      - {id: WEB-MSG-REPLY, levels: [web, real]}
+      - {id: WEB-MSG-EDIT, levels: [web, real]}
+      - {id: WEB-MSG-UNSEND, levels: [web, real]}
+      - {id: WEB-MSG-CHAT-ACTIONS, levels: [web]}
+      - {id: WEB-MSG-NEW, levels: [web]}
+      - {id: WEB-MSG-FAIL-RESEND, levels: [web]}
+      - {id: WEB-MSG-OPTIMISTIC, levels: [web]}
+  - id: web.messages.parity
+    title: Messages parity (pins, mute, read receipts, Send Later, effects, formatting, mentions, audio messages, Recently Deleted, groups)
+    requirements: [R-WEB-UI, R-MSG-DEPTH]
+    milestone: W4
+    modules: [native/MessagesSource, operations, webui]
+    depends_on: [web.messages.write]
+    status: todo
+    scenarios:
+      - {id: MSG-PINS, levels: [sim, real]}
+      - {id: MSG-MUTE, levels: [sim, real]}
+      - {id: MSG-READ-RECEIPTS, levels: [sim, real]}
+      - {id: MSG-SEND-LATER, levels: [sim, real]}
+      - {id: MSG-SEND-EFFECT, levels: [sim, real]}
+      - {id: MSG-FORMATTING-SEND, levels: [sim, real]}
+      - {id: MSG-MENTION-SEND, levels: [sim]}
+      - {id: MSG-AUDIO-MESSAGE, levels: [sim, real]}
+      - {id: MSG-RECENTLY-DELETED, levels: [sim, real]}
+      - {id: MSG-GROUP-MANAGE, levels: [sim, real]}
+      - {id: WEB-MSG-PARITY-UI, levels: [web]}
