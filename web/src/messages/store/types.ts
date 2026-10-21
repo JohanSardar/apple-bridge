@@ -8,7 +8,7 @@ export function text(value: unknown): string { return typeof value === 'string' 
 export function messageParts(item: ThreadItem): Part[] {
     const parts = array(item.data.parts).map((value, index) => { const part = fields(value); return { ...part, index: Number(part.index ?? index), kind: text(part.kind) || 'unknown' } as Part; });
     if (!parts.length && text(item.data.text)) parts.push({index:0,kind:'text',text:text(item.data.text)});
-    for (const attachment of item.attachments ?? []) if (!parts.some(part => part.attachment_id === attachment.id)) parts.push({index:parts.length,kind:'attachment',attachment_id:attachment.id});
+    for (const attachment of item.attachments ?? []) if (!attachment.data.hidden&&!attachment.data.is_sticker&&!parts.some(part => part.attachment_id === attachment.id)) parts.push({index:parts.length,kind:'attachment',attachment_id:attachment.id});
     if (!parts.length) parts.push({index:0,kind:item.data.balloon?'balloon':'unknown'});
     return parts;
 }

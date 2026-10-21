@@ -1278,7 +1278,7 @@ Recently Deleted becomes `deleted_at` + `recoverable_until` on messages and chat
 - **Layout engine:** the transcript layout is a pure function `(items, handles, prefs, width) → rows`, with code-level tests allowed as layout math. Rows have deterministic heights from measured text plus known media dimensions (`media.width/height`), so there's never layout shift.
 - **Text measurement:** done in one batched pass per frame (canvas `measureText` with the bubble font), with DOM reflow only for rows containing mixed inline content.
 - **Viewer source:** the media viewer pages the whole chat through `messages.collection{chat_id, kind: media}`, independently of the transcript window. Owning `message_id` supports Show in Chat; `sent_at` preserves interleaved photo/video order.
-- **Media sizes:** media bubbles size from `media` before any byte loads. A ThumbHash placeholder fades to the image on decode, which happens off the main thread with `decode()`.
+- **Media sizes:** media bubbles size from `media` before any byte loads. A ThumbHash placeholder fades to the image on decode, which happens off the main thread with `decode()`. Phone images use at most 70% of transcript width and 60% of viewport height; opaque portraits exceeding the height cap crop at the center. Alpha images and stickers preserve their aspect within those bounds and float without fill, radius or clipping. Desktop media width is at most 480 px.
 
 **Performance acceptance (replaces rAF-interval proxies on 60 Hz/headless hosts):**
 - **Main-thread work per frame** (script + style + layout, measured in Chromium tracing and with in-page instrumentation in WebKit and Firefox) ≤ 4 ms p95 and ≤ 8 ms max during:
