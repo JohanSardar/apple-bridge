@@ -35,6 +35,9 @@ func runRelayConnect(ctx context.Context, s Scenario, level string) (e Evidence)
 		return
 	}
 	defer w.Close()
+	privateDir := filepath.Join("lab/evidence/private/relay", e.RunID)
+	os.MkdirAll(privateDir, 0700)
+	os.WriteFile(filepath.Join(privateDir, "serve-before.json"), before, 0600)
 	defer func() {
 		dir := filepath.Join("lab/evidence/private/relay", e.RunID)
 		os.MkdirAll(dir, 0700)
@@ -47,9 +50,19 @@ func runRelayConnect(ctx context.Context, s Scenario, level string) (e Evidence)
 	defer func() {
 		bounded, cancel := context.WithTimeout(context.Background(), 8*time.Second)
 		defer cancel()
+		if lease, err := os.ReadFile(filepath.Join(w.Gateway.Home, "remote", "lease.json")); err == nil {
+			os.WriteFile(filepath.Join(privateDir, "lease.json"), lease, 0600)
+		}
 		err := remote.Command(bounded, w.Gateway.Home, "off", "", "", &bytes.Buffer{})
+		if err != nil {
+			retry, stop := context.WithTimeout(context.Background(), 12*time.Second)
+			err = remote.Command(retry, w.Gateway.Home, "off", "", "", &bytes.Buffer{})
+			stop()
+		}
 		add("remote_off", err == nil)
-		after, err := exec.CommandContext(bounded, "/opt/homebrew/bin/tailscale", "serve", "status", "--json").Output()
+		verify, stop := context.WithTimeout(context.Background(), 3*time.Second)
+		defer stop()
+		after, err := exec.CommandContext(verify, "/opt/homebrew/bin/tailscale", "serve", "status", "--json").Output()
 		add("serve_config_byte_identical_after_off", err == nil && bytes.Equal(before, after))
 		e.Passed = len(e.Assertions) > 0
 		for _, assertion := range e.Assertions {
@@ -135,6 +148,9 @@ func runRelayConnect(ctx context.Context, s Scenario, level string) (e Evidence)
 	add("public_tls_plus_pinned_gateway_identity", result.Enrollment != nil && result.Enrollment.Remote && result.Enrollment.Address == status.URL && result.Enrollment.Fingerprint == code.Fingerprint)
 	add("join_and_feed_forced_through_public_relay", result.PublicConnections >= 2)
 	e.Metrics = map[string]any{"snapshot_records": result.Count, "snapshot_pages": result.Status.SnapshotPages, "public_connections": result.PublicConnections}
+	if err == nil && s.ID == "WEB-RELAY-COMMAND" {
+		relayCommandChecks(w, &e, add)
+	}
 	if err == nil && result.Enrollment != nil {
 		relaySecurityChecks(w, &e, add, result.Enrollment)
 	}
