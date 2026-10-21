@@ -15,7 +15,7 @@ func (s *Store) ThreadWindowCounts(ctx context.Context, v trust.Visibility, wind
 	var first, last struct {
 		SentAt string `json:"sent_at"`
 	}
-	if json.Unmarshal(window.First.Data, &first) != nil || json.Unmarshal(window.Last.Data, &last) != nil || first.SentAt == "" || last.SentAt == "" {
+	if json.Unmarshal(window.First.Data, &first) != nil || json.Unmarshal(window.Last.Data, &last) != nil {
 		return counts, contracts.ErrInvalid
 	}
 	err := s.db.QueryRowContext(ctx, `SELECT
