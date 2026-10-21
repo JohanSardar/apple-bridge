@@ -1,0 +1,7 @@
+id: CORE-BLOB-STAGE-DURING-TRANSFER
+feature: core.blobs
+levels: [sim]
+given: [{world: {replicas: 1}}]
+when: [{blobs: {case: stage-during-transfer}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

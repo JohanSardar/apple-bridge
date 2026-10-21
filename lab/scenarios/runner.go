@@ -445,7 +445,7 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if strings.HasPrefix(s.Feature, "messages.") && s.Feature != "messages.read" {
 		return runMessagesCommands(ctx, s, level)
 	}
-	if s.ID == "CORE-BLOB-NATIVE-STAGE" {
+	if s.ID == "CORE-BLOB-NATIVE-STAGE" || s.ID == "CORE-BLOB-STAGE-DURING-TRANSFER" || s.ID == "CORE-BLOB-STAGE-SAME-DIGEST" {
 		return runNativeBlobStage(ctx, s, level)
 	}
 	if nativeScenario(s.ID, level) {
