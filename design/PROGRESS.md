@@ -88,4 +88,4 @@ Process: every change ships as a small PR (WORKER-RULES, Git and GitHub). Status
   - Cleanup of the six W1-MEDIA test bubbles.
   - Embedded tsnet login approval (`remote-on.log` in `/tmp/ablab/w1-remote-embedded-check`).
 
-- IN PROGRESS W3-HELPER: interactive IPC origin validation and Messages tag/recipient routing; MSG-INTERACTIVE-GATE adds sim and self-only real verification, with manifest-bound cleanup for untagged test sends. UI-dependent real cleanup waits for the Air unlock.
+- IN PROGRESS W3-HELPER: interactive origin gate and untagged self-send/cleanup proven; cached per-build self-test proves AppleScript text/file sends; guarded resend, retained-deletion evidence, isolated chat-action proofs and manifest-bound media cleanup implemented. Full UI self-test/read-state/delete proofs, six W1 file bubbles and pending self-test bubble cleanup wait for unlock; real resend requires a safe registered failed self fixture.
