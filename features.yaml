@@ -459,12 +459,13 @@ features:
       - {id: WEB-DEMO-SESSION, levels: [web]}
   - id: web.relay
     title: Replicas connect through the Remote relay with device-key auth
-    requirements: [R-WEB-REACH, R-FULL]
+    requirements: [R-WEB-REACH, R-FULL, R-LIVE, R-SECURE]
     milestone: W1
-    modules: [replication, remote, trust]
-    depends_on: [web.remote]
+    modules: [replication, remote, trust, runtime]
+    depends_on: [web.remote, core.replication, core.trust]
     status: todo
     scenarios:
+      - {id: WEB-RELAY-AUTH, levels: [sim]}
       - {id: WEB-RELAY-REPLICA, levels: [replica]}
   - id: web.messages.read
     title: Messages web app reading at full fidelity (list, transcript, media, viewer, links, effects, details, search)
@@ -588,13 +589,3 @@ features:
       - {id: WEB-NOTE-READ, levels: [web]}
       - {id: WEB-NOTE-WRITE, levels: [web, real]}
       - {id: WEB-NOTE-PARITY, levels: [web, real]}
-
-  - id: web.relay
-    title: Replicas connect through Remote with paired device key authentication
-    requirements: [R-LIVE, R-FULL, R-SECURE, R-WEB-REACH]
-    milestone: W1
-    modules: [trust, replication, remote, runtime]
-    depends_on: [web.remote, core.replication, core.trust]
-    status: in_progress
-    scenarios:
-      - {id: WEB-RELAY-AUTH, levels: [sim]}
