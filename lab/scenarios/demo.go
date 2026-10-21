@@ -63,6 +63,7 @@ func runDemoDataset(ctx context.Context, s Scenario, level string) Evidence {
 		err = client.Call(ctx, "messages.thread", contracts.ThreadQuery{ChatID: active.Chats[0].Chat.ID, Limit: 200}, &thread)
 		add("readmodel_thread_visible", err == nil && len(thread.Items) > 0)
 	}
+	demoReadmodelCoverage(ctx, w, &e, add)
 	server, err := demo.Serve(w, "127.0.0.1:0")
 	add("demo_loopback_server", err == nil)
 	if err == nil {
