@@ -10,8 +10,9 @@ import (
 )
 
 type Dataset struct {
-	Records []contracts.Observation `json:"records"`
-	Blobs   map[string][]byte       `json:"blobs"`
+	Records    []contracts.Observation `json:"records"`
+	Blobs      map[string][]byte       `json:"blobs"`
+	LivePhotos map[string]string       `json:"live_photos,omitempty"`
 }
 
 func (f *fakeApple) datasetRoutes(mux *http.ServeMux) {
@@ -34,6 +35,11 @@ func (f *fakeApple) datasetRoutes(mux *http.ServeMux) {
 				http.Error(w, "invalid observation", 400)
 				return
 			}
+		}
+		pairs, valid := datasetLivePhotos(input)
+		if !valid {
+			http.Error(w, "invalid Live Photo pairing", 400)
+			return
 		}
 		f.mu.Lock()
 		for digest, blob := range input.Blobs {
@@ -58,7 +64,12 @@ func (f *fakeApple) datasetRoutes(mux *http.ServeMux) {
 				json.Unmarshal(o.Data, &data)
 				var fields map[string]any
 				json.Unmarshal(o.Data, &fields)
-				fields["derivatives"], fields["media"] = f.mediaVariants(data.Filename, f.blobs[data.Blob.Digest])
+				derivatives, media := f.mediaVariants(data.Filename, f.blobs[data.Blob.Digest])
+				if movie, exists := pairs[o.NativeKey]; exists {
+					clips, _ := f.mediaVariants(movie.filename, movie.data)
+					derivatives["live"], media["live"] = clips["video"], true
+				}
+				fields["derivatives"], fields["media"] = derivatives, media
 				o.Data, _ = json.Marshal(fields)
 			}
 			f.records[o.NativeKey] = o

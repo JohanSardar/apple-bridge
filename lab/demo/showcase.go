@@ -60,9 +60,9 @@ func (d *Dataset) showcase(i int, key string, sent time.Time, fields map[string]
 		fields["effect"] = Effects[i-14]
 	}
 	if i >= 26 && i <= 30 {
-		kind := []string{"rename", "add", "remove", "leave", "photo"}[i-26]
+		kind := []string{"rename", "member_added", "member_removed", "member_left", "photo_changed"}[i-26]
 		fields["kind"] = "group_event"
-		fields["group_event"] = map[string]any{"kind": kind, "title": "Demo Lantern Club", "item_type": []int{2, 1, 1, 1, 3}[i-26], "action_type": []int{0, 0, 1, 2, 0}[i-26], "handle_id": reference("messages.handle", handleKey(i))}
+		fields["group_event"] = map[string]any{"kind": kind, "title": "Demo Lantern Club", "item_type": []int{2, 1, 1, 3, 3}[i-26], "action_type": []int{0, 0, 1, 0, 1}[i-26], "target_handle_id": reference("messages.handle", handleKey(i)), "actor_handle_id": fields["sender_handle_id"]}
 	}
 	if i >= 32 && i < 32+len(media) || i >= 42 && i <= 45 {
 		which := i - 32
