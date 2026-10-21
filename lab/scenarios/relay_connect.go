@@ -135,6 +135,9 @@ func runRelayConnect(ctx context.Context, s Scenario, level string) (e Evidence)
 	add("public_tls_plus_pinned_gateway_identity", result.Enrollment != nil && result.Enrollment.Remote && result.Enrollment.Address == status.URL && result.Enrollment.Fingerprint == code.Fingerprint)
 	add("join_and_feed_forced_through_public_relay", result.PublicConnections >= 2)
 	e.Metrics = map[string]any{"snapshot_records": result.Count, "snapshot_pages": result.Status.SnapshotPages, "public_connections": result.PublicConnections}
+	if err == nil && result.Enrollment != nil {
+		relaySecurityChecks(w, &e, add, result.Enrollment)
+	}
 	return
 }
 
