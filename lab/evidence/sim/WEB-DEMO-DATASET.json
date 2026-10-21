@@ -1,9 +1,9 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[6.81 7.2 15.73] cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[5.29 6.81 15.34] cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5E8SN9QHRSM4GRJSC2285X0",
+  "run_id": "run_01M5E8TG6V5BQHCS9BRX8W4V3H",
   "metrics": {
     "counts": {
       "contacts.contact": 60,
@@ -92,16 +92,21 @@
       "year_change": 162,
       "yesterday": 2
     },
-    "digest": "2c4cf9506171522e8d183670f831f668038b2b78a304427dbef189cac2afdc53"
+    "digest": "2c4cf9506171522e8d183670f831f668038b2b78a304427dbef189cac2afdc53",
+    "verified_blob_count": 52
   },
   "scenario": "WEB-DEMO-DATASET",
   "level": "sim",
   "passed": true,
-  "git_sha": "6083aeb8f16b28fc336772b1ee05c0523e3e8fa0",
-  "at": "2026-10-21T03:41:35.927539Z",
+  "git_sha": "9b0410bf7b1565f846a24388f60de0b160150bf1",
+  "at": "2026-10-21T03:42:03.483054Z",
   "assertions": [
     {
       "name": "same_seed_byte_identical_records_and_blobs",
+      "passed": true
+    },
+    {
+      "name": "different_seed_changes_dataset",
       "passed": true
     },
     {
@@ -457,6 +462,34 @@
       "passed": true
     },
     {
+      "name": "captured_records_secret_scan",
+      "passed": true
+    },
+    {
+      "name": "removed_reaction_captured_and_folded_out",
+      "passed": true
+    },
+    {
+      "name": "contacts_30_generated_avatars_30_monograms",
+      "passed": true
+    },
+    {
+      "name": "contacts_linked_to_chat_avatars",
+      "passed": true
+    },
+    {
+      "name": "generated_originals_avatars_and_sim_variants_download_and_hash",
+      "passed": true
+    },
+    {
+      "name": "capture_records_and_variant_digests_repeat_identically",
+      "passed": true
+    },
+    {
+      "name": "alive_messages_and_reactions_captured",
+      "passed": true
+    },
+    {
       "name": "demo_loopback_server",
       "passed": true
     },
@@ -512,9 +545,9 @@
   "latency": {
     "default_startup": {
       "samples": 1,
-      "p50_ms": 5237.706125,
-      "p95_ms": 5237.706125,
-      "max_ms": 5237.706125,
+      "p50_ms": 6236.544958,
+      "p95_ms": 6236.544958,
+      "max_ms": 6236.544958,
       "timeouts": 0
     }
   },

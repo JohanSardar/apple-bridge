@@ -24,6 +24,7 @@ func runDemoDataset(ctx context.Context, s Scenario, level string) Evidence {
 	a, _ := json.Marshal(first)
 	b, _ := json.Marshal(second)
 	add("same_seed_byte_identical_records_and_blobs", bytes.Equal(a, b) && first.Digest() == second.Digest())
+	add("different_seed_changes_dataset", first.Digest() != demo.Generate(demo.Options{Seed: 18}).Digest())
 	add("generated_data_synthetic", demoSynthetic(a, first.Blobs))
 	e.Metrics["digest"] = first.Digest()
 	e.Metrics["counts"] = first.Counts
@@ -63,7 +64,8 @@ func runDemoDataset(ctx context.Context, s Scenario, level string) Evidence {
 		err = client.Call(ctx, "messages.thread", contracts.ThreadQuery{ChatID: active.Chats[0].Chat.ID, Limit: 200}, &thread)
 		add("readmodel_thread_visible", err == nil && len(thread.Items) > 0)
 	}
-	demoReadmodelCoverage(ctx, w, &e, add)
+	media := demoReadmodelCoverage(ctx, w, &e, add)
+	demoMediaCoverage(ctx, w, first, media, e.Metrics["coverage"].(map[string]int), &e, add)
 	server, err := demo.Serve(w, "127.0.0.1:0")
 	add("demo_loopback_server", err == nil)
 	if err == nil {
