@@ -1,14 +1,14 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[4.37 7.34 8.26] cpus=8 other_heavy=1"
+    "summary": "air: load=[7.64 14.05 13.49] cpus=8 other_heavy=1"
   },
-  "run_id": "upload_01M5F2TT2Q8HAPB0TGTXP9V75Q",
+  "run_id": "upload_01M5F45BACKMPPD40EBHDP8HSY",
   "scenario": "WEB-UPLOAD-LIMITS",
   "level": "sim",
   "passed": true,
-  "git_sha": "d550e0c1b62ca900077283ff504f96dc59ddfc5c",
-  "at": "2026-10-21T11:16:36.567647Z",
+  "git_sha": "84e5eff2949c0fc06d6550aef3add8084bab2432",
+  "at": "2026-10-21T11:39:50.476741Z",
   "assertions": [
     {
       "name": "gateway_upload_world",

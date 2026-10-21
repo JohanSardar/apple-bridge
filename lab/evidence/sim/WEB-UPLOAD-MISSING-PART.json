@@ -1,14 +1,14 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[12.85 10.09 9.17] cpus=8 other_heavy=1"
+    "summary": "air: load=[9.92 15.98 14.04] cpus=8 other_heavy=1"
   },
-  "run_id": "upload_01M5F2CWSJG704XH4HGDZF1QQE",
+  "run_id": "upload_01M5F42XTBS1MR89AFJ0B2YV1W",
   "scenario": "WEB-UPLOAD-MISSING-PART",
   "level": "sim",
   "passed": true,
-  "git_sha": "e2cf6d70f7bdd3e4108aa7121e6a569a633fd1a4",
-  "at": "2026-10-21T11:09:00.594983Z",
+  "git_sha": "84e5eff2949c0fc06d6550aef3add8084bab2432",
+  "at": "2026-10-21T11:38:31.115163Z",
   "assertions": [
     {
       "name": "gateway_upload_world",
