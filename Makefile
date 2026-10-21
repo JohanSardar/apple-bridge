@@ -11,7 +11,7 @@ native:
 
 lint:
 	cd web && pnpm lint
-	gofmt -l . | grep -v '^$$' && exit 1 || true
+	gofmt -l $$(find . -name '*.go' -not -path './.worktrees/*' -not -path '*/node_modules/*' -not -path './.build/*') | grep -v '^$$' && exit 1 || true
 	go vet ./...
 	go run ./tools/lint .
 

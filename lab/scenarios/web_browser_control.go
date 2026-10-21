@@ -121,6 +121,8 @@ func webBrowserControl(ctx context.Context, w *world.World, origin string) (*htt
 				break
 			}
 			value = map[string]any{"session": session, "cookie": map[string]any{"name": client.cookie.Name, "value": client.cookie.Value, "url": origin, "httpOnly": true, "secure": true, "sameSite": "Strict"}}
+		case "/contact-avatar":
+			value, err = webAvatarFixture(w)
 		case "/incoming":
 			started := time.Now().UnixMilli()
 			key := contracts.NewID("web-incoming")

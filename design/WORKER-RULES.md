@@ -25,9 +25,28 @@ You are a worker on Apple Bridge, delegated by the build leader. Read this file,
 - Never commit personal data (phone numbers, emails, message text, usage numbers, IPs, tokens). Evidence files are redacted.
 - A macOS permission dialog, password or physical action needed from Johan is a blocker: stop that line of work, report exactly what is needed, continue with everything else.
 
-## Git
-- Commit small, verifiable steps on `main` from the Air (`git -C ~/apple-bridge ...`). Pull/rebase before pushing if needed; never force-push. Commit messages end with `Co-Authored-By: GPT-6.1-Sol <noreply@openai.com>`.
-- Do not edit `design/SPEC.md`, `features.yaml` statuses, or `design/PROGRESS.md` unless your brief says so; propose spec changes in your report. You may add new scenarios to `lab/scenarios/` and list them in your report when you find an untested behaviour.
+## Git and GitHub (Johan's rules, binding)
+- **Branch:** one branch per slice, named `feat/…`, `fix/…`, `perf/…`, `refactor/…`, `docs/…`, `test/…` or `chore/…`. Each lives in your own worktree on the Air.
+- **Commits:**
+  - Small and frequent, one thing each, about 10–150 changed lines. Lockfiles, scrubbed fixtures and evidence JSON don't count.
+  - Each commit builds and passes the relevant tests.
+  - Conventional Commit messages (`feat(scope): …`, `fix(scope): …`), ending with `Co-Authored-By: GPT-6.1-Sol <noreply@openai.com>`.
+- **Identity:** the GitHub noreply address set in the repo config. Never change it.
+- **Before every commit,** check `git diff --cached` for secrets and personal data: tokens, keys, Tailscale state, real phone numbers, emails other than @example.com, real message text. Unstage anything found and gitignore it.
+- **Shipping a slice** (1–5 commits) as soon as it works:
+  1. `git push -u origin <branch>`
+  2. `gh pr create --base main --title "<conventional title>" --body "<what changed; how tested: exact commands and results>"`
+  3. Run the slice's tests and linters.
+  4. `gh pr merge <n> --merge --delete-branch`
+  5. Update the shared checkout: `ssh air 'cd ~/apple-bridge && git checkout main && git pull --ff-only'`, only when it's clean.
+  6. `git fetch origin && git rebase origin/main` before the next slice.
+- **Size:** many small PRs that each work alone. Never one giant PR.
+- **Evidence ownership:** a PR commits `lab/evidence/**` files only for the scenarios that PR adds or changes. Regression runs rewrite other scenarios' evidence; restore those before committing (`git checkout origin/main -- <paths>`) and quote the regression results in the PR body instead. When a rebase still conflicts on evidence JSON, keep `origin/main`'s version for scenarios you don't own.
+- **Red main:** if main is red, fixing it comes first.
+- **No padding:** no empty, whitespace-only or count-inflating commits.
+- **Reporting:** put every PR URL in your progress messages and final report.
+- **No force-pushing** to `main`.
+- **Leader-owned files:** don't edit `design/SPEC.md`, `features.yaml` statuses or `design/PROGRESS.md` unless your brief says so; propose spec changes in your report. You may add new scenarios to `lab/scenarios/` and list them in your report when you find an untested behaviour.
 
 ## Report back (final message)
 1. What you built (files/modules) and commits (SHAs).
@@ -41,9 +60,9 @@ You are a worker on Apple Bridge, delegated by the build leader. Read this file,
 - Check permissions without prompting: `open -W -a ~/Applications/AppleBridgeDev/AppleBridgeHelper.app --args status --report "$HOME/Library/Application Support/AppleBridgeDev/status.json"`. Never run `onboard` unless the leader says so.
 
 ## Parallel work (several workers run at once)
-- Work in your own git worktree on the Air, never in the shared checkout: `ssh air 'cd ~/apple-bridge && git worktree add .worktrees/<your-unit> -b <your-unit> main'`. Edit through the mount at `/home/johan/air/apple-bridge/.worktrees/<your-unit>/`. Build and test inside that directory on the Air.
-- Wrap every heavy command (go build/test of many packages, bridge-lab runs, swift builds) in `packaging/dev/heavy.sh <command...>` (from the repo root of your worktree). It allows at most 2 heavy commands at a time across all workers.
-- Integrate often: `git fetch` is not needed (same repo); `git rebase main` in your worktree, rerun your scenarios, then `cd ~/apple-bridge && git merge --ff-only <your-unit> && git push`. If the shared checkout has local changes, don't touch them; tell the leader. Remove your worktree when done (`git worktree remove`).
+- Work in your own git worktree on the Air, never in the shared checkout: `ssh air 'cd ~/apple-bridge && git fetch origin && git worktree add .worktrees/<your-unit> -b <type>/<slice> origin/main'`. Edit through the mount at `/home/johan/air/apple-bridge/.worktrees/<your-unit>/`. Build and test inside that directory on the Air.
+- Wrap every heavy command (go build/test of many packages, bridge-lab runs, swift builds, Playwright) in `packaging/dev/heavy.sh <command...>` (from the repo root of your worktree). It allows at most 2 heavy commands at a time across all workers, and nested calls run inside the caller's slot. `make web` and `make build` already gate internally. Run Playwright with `--workers=1` and focused subsets, and run the full 12-project matrix only right before merging.
+- Integrate often: `git fetch origin && git rebase origin/main` in your worktree, rerun your scenarios, then ship through a PR as in the Git section. If the shared checkout has local changes, don't touch them; tell the leader. Remove your worktree when done (`git worktree remove`).
 - Use unique world names and ports in lab runs (the World must allocate free ports; never hard-code ports that another worker's run could also use).
 
 ## GUI control of the Air

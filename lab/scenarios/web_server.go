@@ -107,6 +107,13 @@ func runWebServer(ctx context.Context, s Scenario, level string) Evidence {
 		if tlsErr == nil {
 			tlsResponse.Body.Close()
 		}
+		rogue, _ := http.NewRequestWithContext(ctx, "GET", secure.URL+"/", nil)
+		rogue.Host = "attacker.invalid"
+		rogueResponse, rogueErr := secure.Client().Do(rogue)
+		add("tls_arbitrary_host_rejected", rogueErr == nil && rogueResponse.StatusCode == 403)
+		if rogueErr == nil {
+			rogueResponse.Body.Close()
+		}
 		secure.Close()
 		resp, body := request("GET", "/", "")
 		add("app_or_not_built", resp != nil && resp.StatusCode == 200 && (strings.Contains(body, "make web") || strings.Contains(body, "<html")))
@@ -114,6 +121,7 @@ func runWebServer(ctx context.Context, s Scenario, level string) Evidence {
 		resp, _ = request("GET", "/messages/test", "")
 		add("app_route_fallback", resp != nil && resp.StatusCode == 200)
 	case "WEB-AUTH-ORIGIN":
+		runWebPinnedHosts(ctx, w, add)
 		for _, origin := range []string{"", "https://foreign.example"} {
 			for _, path := range []string{"/web/v1/login/options", "/web/v1/enroll/options", "/web/v1/logout"} {
 				resp, _ := request("POST", path, origin)
@@ -265,6 +273,10 @@ func runWebSession(ctx context.Context, w *world.World, id string, e *Evidence, 
 	add("session_256_bits", decodeErr == nil && len(decodedToken) == 32)
 	stored, _ := os.ReadFile(filepath.Join(w.Gateway.Home, "credentials.json"))
 	add("tokens_stored_hashed", !bytes.Contains(stored, []byte(c.cookie.Value)) && !bytes.Contains(stored, []byte(enrollURL.Fragment)))
+	if id == "WEB-AUTH-SOFTWARE" {
+		response, _, deleteErr := c.request("DELETE", "passkeys/"+base64.RawURLEncoding.EncodeToString(auth.ID), nil)
+		add("last_passkey_refused_409", deleteErr == nil && response.StatusCode == 409)
+	}
 	if id == "WEB-BLOB-ACCESS" {
 		runWebBlobs(ctx, w, c, e, add)
 		return
@@ -407,6 +419,17 @@ func runWebSession(ctx context.Context, w *world.World, id string, e *Evidence, 
 		} else {
 			add("expired_enroll_fixture", false)
 		}
+		extraKey, keyErr := newWebAuthenticator()
+		if keyErr != nil {
+			add("extra_passkey_fixture", false)
+			return
+		}
+		extraStatus, _, keyErr := c.signIn(extraKey, "passkeys", "", "trusted")
+		add("additional_passkey_registered", keyErr == nil && extraStatus == 200)
+		response, _, deleteErr := c.request("DELETE", "passkeys/"+base64.RawURLEncoding.EncodeToString(extraKey.ID), nil)
+		add("nonlast_passkey_deleted", deleteErr == nil && response.StatusCode == 200)
+		response, _, deleteErr = c.request("DELETE", "passkeys/"+base64.RawURLEncoding.EncodeToString(auth.ID), nil)
+		add("last_passkey_still_refused_after_deletion", deleteErr == nil && response.StatusCode == 409)
 		_, err = exec.CommandContext(ctx, "bin/bridge", "web", "lock", "--home", w.Gateway.Home).Output()
 		add("lock_cli", err == nil)
 		frame, err = read(conn)

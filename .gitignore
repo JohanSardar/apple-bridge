@@ -19,3 +19,10 @@ web/dist/*
 !web/dist/.gitkeep
 web/test-results/
 web/playwright-report/
+
+/remote/
+**/remote/*.json
+**/remote/*.key
+**/remote/*.pem
+**/remote/tailscaled.*
+**/tailscaled.state

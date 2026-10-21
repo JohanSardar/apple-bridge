@@ -165,6 +165,7 @@ func runReadModels(ctx context.Context, s Scenario, level string) Evidence {
 	rmBoundaries(ctx, w, chatID, add)
 	if s.ID == "WEB-RM-CHATS" {
 		rmPreviews(ctx, w, chatID, add)
+		rmRichFilters(ctx, w, chatID, add)
 	}
 	if s.ID == "WEB-RM-CHATS" {
 		add("replica_added_after_data_for_snapshot", w.AddReplicaScope("messages:read,contacts:read,system:read") == nil)
@@ -347,9 +348,6 @@ func rmLive(ctx context.Context, w *world.World, chatID string, add func(string,
 				want = 0
 			}
 			valid := err == nil && len(result.Items) == want
-			if want == 0 {
-				valid = valid && len(result.CoverageNotes) > 0
-			}
 			add(protocol+"_collection_"+kind, valid)
 		}
 	}

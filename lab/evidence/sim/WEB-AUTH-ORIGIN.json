@@ -1,15 +1,35 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[4.7 7.17 8.23] cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[4.58 18.71 34.07] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M5E3PY976GQNHWEAAMNHACXC",
+  "run_id": "run_01M5E7WBE0WAH04JRV5ZA65BVA",
   "scenario": "WEB-AUTH-ORIGIN",
   "level": "sim",
   "passed": true,
-  "git_sha": "a530cad13274d0630b04a4229d7518a7ecb46b1f",
-  "at": "2026-10-21T02:12:43.943241Z",
+  "git_sha": "e78c79da251089947998e224efa18e2b41f0368b",
+  "at": "2026-10-21T03:25:35.552586Z",
   "assertions": [
+    {
+      "name": "tls_arbitrary_host_rejected",
+      "passed": true
+    },
+    {
+      "name": "tls_localhost_allowed",
+      "passed": true
+    },
+    {
+      "name": "http_arbitrary_host_rejected",
+      "passed": true
+    },
+    {
+      "name": "tls_pinned_public_origin_and_rpid",
+      "passed": true
+    },
+    {
+      "name": "tls_unconfigured_public_port_rejected",
+      "passed": true
+    },
     {
       "name": "reject_origin_/web/v1/login/options",
       "passed": true
