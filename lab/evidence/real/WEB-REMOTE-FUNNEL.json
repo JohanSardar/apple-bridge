@@ -1,0 +1,395 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[9.16 9.16 12.41] cpus=8 other_heavy=1"
+  },
+  "run_id": "remote_01M5E9BXWP50A9QPWT10CMP3MF",
+  "network_path": "public DNS pinned Funnel relay; real system Tailscale; isolated synthetic gateway",
+  "scenario": "WEB-REMOTE-FUNNEL",
+  "level": "real",
+  "passed": true,
+  "git_sha": "454547942eb5262891bdd4c74be0d2bcbf7730d8",
+  "at": "2026-10-21T03:51:34.550921Z",
+  "assertions": [
+    {
+      "name": "serve_config_before",
+      "passed": true
+    },
+    {
+      "name": "isolated_gateway",
+      "passed": true
+    },
+    {
+      "name": "remote_on_system",
+      "passed": true
+    },
+    {
+      "name": "system_backend_port_10000",
+      "passed": true
+    },
+    {
+      "name": "remote_status_cli_state_backend_url",
+      "passed": true
+    },
+    {
+      "name": "direct_loopback_forwarding_spoof_rejected",
+      "passed": true
+    },
+    {
+      "name": "proxy_unconfigured_forwarded_host_rejected",
+      "passed": true
+    },
+    {
+      "name": "system_original_client_ip_rate_bucket",
+      "passed": true
+    },
+    {
+      "name": "system_distinct_client_ip_not_loopback_bucket",
+      "passed": true
+    },
+    {
+      "name": "existing_handlers_preserved_exactly_while_on",
+      "passed": true
+    },
+    {
+      "name": "ubuntu_public_dns",
+      "passed": true
+    },
+    {
+      "name": "ubuntu_curl_public_tls/",
+      "passed": true
+    },
+    {
+      "name": "ubuntu_curl_public_tls/v1/health",
+      "passed": true
+    },
+    {
+      "name": "probe_cross_compiled_on_air",
+      "passed": true
+    },
+    {
+      "name": "probe_copied_to_ubuntu",
+      "passed": true
+    },
+    {
+      "name": "remote_token_cli",
+      "passed": true
+    },
+    {
+      "name": "ubuntu_probe_off_false",
+      "passed": true
+    },
+    {
+      "name": "mcp_initialize",
+      "passed": true
+    },
+    {
+      "name": "mcp_read_tool",
+      "passed": true
+    },
+    {
+      "name": "public_health",
+      "passed": true
+    },
+    {
+      "name": "read_00",
+      "passed": true
+    },
+    {
+      "name": "read_04",
+      "passed": true
+    },
+    {
+      "name": "read_06",
+      "passed": true
+    },
+    {
+      "name": "read_08",
+      "passed": true
+    },
+    {
+      "name": "read_16",
+      "passed": true
+    },
+    {
+      "name": "mcp_tools_list",
+      "passed": true
+    },
+    {
+      "name": "origin_rejected",
+      "passed": true
+    },
+    {
+      "name": "read_01",
+      "passed": true
+    },
+    {
+      "name": "read_19",
+      "passed": true
+    },
+    {
+      "name": "public_passkey_origin_rpid",
+      "passed": true
+    },
+    {
+      "name": "read_13",
+      "passed": true
+    },
+    {
+      "name": "feed_reserved",
+      "passed": true
+    },
+    {
+      "name": "read_07",
+      "passed": true
+    },
+    {
+      "name": "read_09",
+      "passed": true
+    },
+    {
+      "name": "read_10",
+      "passed": true
+    },
+    {
+      "name": "read_18",
+      "passed": true
+    },
+    {
+      "name": "remote_token_rest",
+      "passed": true
+    },
+    {
+      "name": "read_11",
+      "passed": true
+    },
+    {
+      "name": "read_15",
+      "passed": true
+    },
+    {
+      "name": "html_valid_certificate",
+      "passed": true
+    },
+    {
+      "name": "read_14",
+      "passed": true
+    },
+    {
+      "name": "read_17",
+      "passed": true
+    },
+    {
+      "name": "local_token_rejected",
+      "passed": true
+    },
+    {
+      "name": "read_02",
+      "passed": true
+    },
+    {
+      "name": "read_03",
+      "passed": true
+    },
+    {
+      "name": "read_05",
+      "passed": true
+    },
+    {
+      "name": "read_12",
+      "passed": true
+    },
+    {
+      "name": "forwarded_headers_ignored",
+      "passed": true
+    },
+    {
+      "name": "mcp_sse_response",
+      "passed": true
+    },
+    {
+      "name": "gateway_restart",
+      "passed": true
+    },
+    {
+      "name": "remote_backend_url_restored",
+      "passed": true
+    },
+    {
+      "name": "ubuntu_probe_off_false",
+      "passed": true
+    },
+    {
+      "name": "read_07",
+      "passed": true
+    },
+    {
+      "name": "read_16",
+      "passed": true
+    },
+    {
+      "name": "html_valid_certificate",
+      "passed": true
+    },
+    {
+      "name": "read_02",
+      "passed": true
+    },
+    {
+      "name": "read_05",
+      "passed": true
+    },
+    {
+      "name": "read_10",
+      "passed": true
+    },
+    {
+      "name": "read_13",
+      "passed": true
+    },
+    {
+      "name": "read_12",
+      "passed": true
+    },
+    {
+      "name": "feed_reserved",
+      "passed": true
+    },
+    {
+      "name": "local_token_rejected",
+      "passed": true
+    },
+    {
+      "name": "mcp_tools_list",
+      "passed": true
+    },
+    {
+      "name": "read_03",
+      "passed": true
+    },
+    {
+      "name": "read_08",
+      "passed": true
+    },
+    {
+      "name": "read_18",
+      "passed": true
+    },
+    {
+      "name": "read_19",
+      "passed": true
+    },
+    {
+      "name": "public_passkey_origin_rpid",
+      "passed": true
+    },
+    {
+      "name": "read_00",
+      "passed": true
+    },
+    {
+      "name": "read_04",
+      "passed": true
+    },
+    {
+      "name": "read_11",
+      "passed": true
+    },
+    {
+      "name": "read_15",
+      "passed": true
+    },
+    {
+      "name": "read_17",
+      "passed": true
+    },
+    {
+      "name": "origin_rejected",
+      "passed": true
+    },
+    {
+      "name": "read_14",
+      "passed": true
+    },
+    {
+      "name": "public_health",
+      "passed": true
+    },
+    {
+      "name": "read_06",
+      "passed": true
+    },
+    {
+      "name": "remote_token_rest",
+      "passed": true
+    },
+    {
+      "name": "forwarded_headers_ignored",
+      "passed": true
+    },
+    {
+      "name": "mcp_read_tool",
+      "passed": true
+    },
+    {
+      "name": "read_09",
+      "passed": true
+    },
+    {
+      "name": "mcp_initialize",
+      "passed": true
+    },
+    {
+      "name": "mcp_sse_response",
+      "passed": true
+    },
+    {
+      "name": "read_01",
+      "passed": true
+    },
+    {
+      "name": "remote_off",
+      "passed": true
+    },
+    {
+      "name": "ubuntu_probe_off_true",
+      "passed": true
+    },
+    {
+      "name": "off_public_stopped",
+      "passed": true
+    },
+    {
+      "name": "off_within_one_second",
+      "passed": true
+    },
+    {
+      "name": "serve_config_byte_identical_after_off",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "remote_off_public_unreachable": {
+      "samples": 1,
+      "p50_ms": 543.221208,
+      "p95_ms": 543.22125,
+      "max_ms": 543.221333,
+      "timeouts": 0
+    },
+    "ubuntu_public_rest_records_query": {
+      "samples": 20,
+      "p50_ms": 56.510874,
+      "p95_ms": 124.202213,
+      "max_ms": 127.402179,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air",
+    "ubuntu"
+  ]
+}

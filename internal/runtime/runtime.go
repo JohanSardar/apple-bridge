@@ -22,6 +22,7 @@ import (
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/internal/frontdoor"
 	"github.com/JohanSardar/apple-bridge/internal/operations"
+	"github.com/JohanSardar/apple-bridge/internal/remote"
 	"github.com/JohanSardar/apple-bridge/internal/replication"
 	"github.com/JohanSardar/apple-bridge/internal/state"
 	"github.com/JohanSardar/apple-bridge/internal/trust"
@@ -312,7 +313,13 @@ func Start(ctx context.Context, cfg Config) error {
 	}
 	go service.MaintainAgentAccess(ctx)
 	apiHandler := frontdoor.Handler(frontdoor.Deps{Operations: service, Authority: authority, Address: cfg.APIAddress, Blobs: blobStore}, contracts.Operations)
-	webHandler := bridgeweb.Handler(bridgeweb.Deps{Operations: service, Authority: authority, Address: cfg.APIAddress, Blobs: blobStore, FrameWritten: func(cursor contracts.Cursor, at time.Time) { webFrameWritten(cfg.Home, cursor, at) }})
+	public := remote.New(cfg.Home)
+	webHandler := bridgeweb.Handler(bridgeweb.Deps{PublicHost: public.Host, Operations: service, Authority: authority, Address: cfg.APIAddress, Blobs: blobStore, FrameWritten: func(cursor contracts.Cursor, at time.Time) { webFrameWritten(cfg.Home, cursor, at) }})
+	publicAPI := frontdoor.Handler(frontdoor.Deps{Operations: service, Authority: authority, Address: cfg.APIAddress, PublicHost: public.Host, Blobs: blobStore}, contracts.Operations)
+	remoteCtx, stopRemote := context.WithCancel(ctx)
+	remoteDone := make(chan struct{})
+	go func() { defer close(remoteDone); public.Run(remoteCtx, webHandler, publicAPI) }()
+	defer func() { stopRemote(); <-remoteDone }()
 	localHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.URL.Path, "/v1/") || r.URL.Path == "/mcp" || strings.HasPrefix(r.URL.Path, "/mcp/") {
 			apiHandler.ServeHTTP(w, r)

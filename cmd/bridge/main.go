@@ -15,6 +15,7 @@ import (
 
 	"encoding/json"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
+	"github.com/JohanSardar/apple-bridge/internal/remote"
 	bridgeruntime "github.com/JohanSardar/apple-bridge/internal/runtime"
 	"github.com/JohanSardar/apple-bridge/internal/state"
 	"github.com/JohanSardar/apple-bridge/internal/trust"
@@ -41,7 +42,7 @@ func run(ctx context.Context, args []string) error {
 		args = args[1:]
 	}
 	webAction := ""
-	if verb == "web" {
+	if verb == "web" || verb == "remote" {
 		if len(args) == 0 {
 			return contracts.ErrInvalid
 		}
@@ -49,6 +50,8 @@ func run(ctx context.Context, args []string) error {
 		args = args[1:]
 	}
 	set := flag.NewFlagSet(verb, flag.ContinueOnError)
+	via := set.String("via", "", "remote backend: system or embedded")
+	remoteToken := set.Bool("remote", false, "allow this token through Remote")
 	home := set.String("home", defaultHome(), "private state directory")
 	webHost := set.String("host", "http://localhost:7780", "web serving origin")
 	role := set.String("role", "gateway", "gateway or replica")
@@ -80,6 +83,9 @@ func run(ctx context.Context, args []string) error {
 	}
 	if err := set.Parse(args); err != nil {
 		return err
+	}
+	if verb == "remote" {
+		return remote.Command(ctx, *home, webAction, *via, *name, os.Stdout)
 	}
 	if verb == "install-credentials" {
 		_, err := trust.Open(*home)
@@ -220,7 +226,7 @@ func run(ctx context.Context, args []string) error {
 		if err != nil {
 			return err
 		}
-		token, err := authority.CreateToken(grants)
+		token, err := authority.CreateAPIToken(grants, *remoteToken)
 		if err != nil {
 			return err
 		}

@@ -23,6 +23,7 @@ type Deps struct {
 
 	Operations *operations.Service
 	Authority  *trust.Authority
+	PublicHost func() string
 	Address    string
 }
 type window struct {
@@ -192,7 +193,12 @@ func Handler(deps Deps, descriptors []contracts.OperationDescriptor) http.Handle
 	rates := map[string]window{}
 	_, port, _ := net.SplitHostPort(deps.Address)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Host != "127.0.0.1:"+port && r.Host != "localhost:"+port {
+		public := deps.PublicHost != nil
+		hostAllowed := r.Host == "127.0.0.1:"+port || r.Host == "localhost:"+port
+		if public {
+			hostAllowed = deps.PublicHost() != "" && r.Host == deps.PublicHost()
+		}
+		if !hostAllowed {
 			respond(w, nil, contracts.ErrUnauthorized)
 			return
 		}
@@ -210,6 +216,9 @@ func Handler(deps Deps, descriptors []contracts.OperationDescriptor) http.Handle
 			return
 		}
 		p, err := deps.Authority.AuthenticateToken(strings.TrimPrefix(header, "Bearer "))
+		if err == nil && public && !p.RemoteAllowed() {
+			err = contracts.ErrUnauthorized
+		}
 		if err != nil {
 			respond(w, nil, err)
 			return

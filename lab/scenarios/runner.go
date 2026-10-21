@@ -382,6 +382,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.Feature == "web.demo" {
 		return runDemoDataset(ctx, s, level)
 	}
+	if s.Feature == "web.remote" {
+		return runRemote(ctx, s, level)
+	}
 	if s.Feature == "web.readmodels" {
 		return runReadModels(ctx, s, level)
 	}

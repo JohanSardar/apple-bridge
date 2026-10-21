@@ -1,0 +1,7 @@
+id: WEB-REMOTE-FUNNEL
+feature: web.remote
+levels: [real]
+given: [{world: {replicas: 1}}]
+when: [{web: {}}]
+then: []
+cleanup: [{world: {}}]
