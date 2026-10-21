@@ -1168,3 +1168,195 @@ W1 scenarios:
 | W1-AGENT | §23.6 + WEB-AGENT-* | W1-WEB, W1-REMOTE |
 | W1-DEMO | §23.9 | W1-RM, W1-UI |
 | W1-RELAY | replicas over Remote (`/v1/feed`, replica device-key auth instead of TLS client certs) | W1-REMOTE; lowest priority |
+
+### 23.12 W2: Messages, reading at full fidelity
+
+**Scope:** every **W2** row of `design/web/messages.md`. W2 follows the draft spec. Rows Johan changes after his skim are applied when he gives them; this doesn't block W2.
+
+**Reader decoding (Swift Helper → records), added to §6.2.** Decoders are pure and fixture-tested (§19), with fixtures scrubbed to synthetic values.
+
+`messages.message` gains:
+- `balloon{bundle_id, kind, app_name?, link?, app?}`:
+  - `kind` is one of `link|app|digital_touch|handwriting|poll|check_in|apple_cash|find_my|chatbot|unknown`.
+  - `link`: `{url, title?, summary?, site_name?, image_attachment_id?, icon_attachment_id?, video_url?}`, from `payload_data` (keyed archive) plus the plugin payload attachments.
+  - `app`: `{caption?, subcaption?, trailing_caption?, image_attachment_id?, url?}`, from the MSMessage template layout when present.
+- `audio{is_audio_message, played_at?, expirable, kept, transcription?}`.
+- `schedule{state, scheduled_for}` (Send Later).
+- `subject`.
+- `delivery{quietly, notified_anyway}`.
+- `is_spam`, `has_unseen_mention`, `via_satellite`, `is_sos`.
+- `formatting[]`: `{utf16_location, utf16_length, styles[bold|italic|underline|strikethrough], effect?[big|small|shake|nod|explode|ripple|bloom|jitter]}`, from attributedBody attributes.
+- A `genmoji` kind in `parts[]`: `{attachment_id, description}`.
+
+`messages.attachment` gains:
+- `is_sticker`.
+- `sticker{target_message_id, part_index, x, y, scale, rotation}`, from `sticker_user_info`.
+- `hidden` (`hide_attachment`).
+- `genmoji`.
+
+`messages.chat` gains:
+- `filter: known|unknown`, from `is_filtered` and contact linkage.
+- `group_photo_attachment_id?`.
+- `read_receipts: on|off|default`.
+- `muted_until?` and `pinned_index?`, only if the Mac exposes them reliably without UI scraping. Otherwise null, with `coverage.missing`.
+
+Recently Deleted becomes `deleted_at` + `recoverable_until` on messages and chats, from the recoverable tables.
+
+**Read models:**
+- `messages.chats` filters `known|unknown|unread|deleted|spam` become real.
+- `messages.collection` `links|locations` become real.
+- `has_unseen_mention` is real.
+- New read `messages.handles{ids[]≤500}` → `{handle_id, address, service, contact_id?, display_name, initials, avatar{digest, variant}?}`, for sender names and avatars in threads.
+
+**Client architecture (`web/src/messages/`):**
+
+| Path | Owns |
+|---|---|
+| `routes.ts` | `/messages`, `/messages/<chat>`, `/messages/<chat>/<message>`, `/messages/new`, `/messages/search?q` |
+| `store/` | chats view store, thread window store (anchored window over `web.1` thread view, prefetching ±2 pages), handles cache (`messages.handles`, batched per frame), unread and badge |
+| `format/` | dates and times (§2/§3 rules, locale-aware), names ("A, B & 2 others"), preview wording (§15), byte sizes, durations |
+| `list/` | ConversationList (virtualized), ConversationRow, PinnedGrid, FiltersMenu, SearchField, Avatar (photo / monogram / group composite) |
+| `transcript/` | Transcript (bottom-anchored virtual list), layout engine (runs, tails, headers, receipts as pure functions over ThreadItems), Bubble, TextContent (data detectors, mentions, formatting), Reactions, ReplyConnector, ThreadOverlay, GroupEventLine, Receipt, NewMessagesPill |
+| `media/` | MediaBubble (single, stack, grid), VideoBubble, AudioBubble (waveform player), FileChip, ContactCard, LinkCard, StickerLayer, Genmoji, PlaceholderCard, MediaViewer (shared-element zoom, swipe, video controls, PiP, share and download) |
+| `effects/` | one canvas layer with GPU-only animation for bubble effects (slam, loud, gentle, invisible ink), screen effects (echo, spotlight, balloons, confetti, love, lasers, fireworks, celebration) and text effects (big, small, shake, nod, explode, ripple, bloom, jitter). Each ≤ 2.5 s, skippable, replaced by a static label under Reduce Motion |
+| `details/` | DetailsInspector (pane ≥1024, sheet below), member list, Collections tabs |
+| `search/` | SearchResults (sections, filter tokens, highlighted matches, jump-to-message with pulse) |
+
+**Rules:**
+- **Layout engine:** the transcript layout is a pure function `(items, handles, prefs, width) → rows`, with code-level tests allowed as layout math. Rows have deterministic heights from measured text plus known media dimensions (`media.width/height`), so there's never layout shift.
+- **Text measurement:** done in one batched pass per frame (canvas `measureText` with the bubble font), with DOM reflow only for rows containing mixed inline content.
+- **Media sizes:** media bubbles size from `media` before any byte loads. A ThumbHash placeholder fades to the image on decode, which happens off the main thread with `decode()`.
+
+**Performance acceptance (replaces rAF-interval proxies on 60 Hz/headless hosts):**
+- **Main-thread work per frame** (script + style + layout, measured in Chromium tracing and with in-page instrumentation in WebKit and Firefox) ≤ 4 ms p95 and ≤ 8 ms max during:
+  - a 100k-message transcript fling
+  - list scroll
+  - push/pop transitions
+- **Long tasks:** none during those journeys. Chromium is the gate, because the Long Task API isn't available elsewhere.
+- **Frame intervals** are still recorded but are only gates when the host display supports 120 Hz.
+- **Input to next frame** ≤ 8 ms p95 (Chromium Event Timing) for send, react, open chat and open media.
+- **WebKit:** WebKit jank must be explained and fixed. Show where the time goes (script, layout or paint) before claiming it's a headless artifact.
+
+**W2 units:**
+
+| Unit | Contents | Depends on |
+|---|---|---|
+| W2-READER | Decoding and records above, AppleTruth checks, SimApplePeer + demo dataset support for every new field, read-model filters and collections, `messages.handles` | W1-DEMO merged (for demo support) |
+| W2-LIST | `list/`, `format/`, `store/` (chats, handles), search field, keyboard navigation, live reordering with springs | W1-DEMO |
+| W2-TRANSCRIPT | `transcript/` core (text, runs, tails, headers, receipts, edits, unsends, reactions, replies and ThreadOverlay, group events, paging, anchors, new pill), the performance acceptance above, and the WebKit jank fix | W1-DEMO |
+| W2-MEDIA | `media/` bubbles and MediaViewer, link and app cards, stickers, Genmoji, placeholders, and `effects/` | W2-TRANSCRIPT layout engine, W2-READER fields |
+| W2-DETAILS | `details/`, `search/` results | W2-LIST |
+
+**W2 scenarios:**
+- Level `web` on the demo world, all 12 projects unless noted:
+  - WEB-MSG-LIST, WEB-MSG-FILTERS, WEB-MSG-SEARCH, WEB-MSG-THREAD-CORE, WEB-MSG-REACTIONS, WEB-MSG-REPLIES, WEB-MSG-EDIT-UNSEND-VIEW, WEB-MSG-GROUP-EVENTS, WEB-MSG-MEDIA, WEB-MSG-VIEWER, WEB-MSG-LINKS, WEB-MSG-STICKERS-GENMOJI, WEB-MSG-EFFECTS, WEB-MSG-PLACEHOLDERS, WEB-MSG-DETAILS, WEB-MSG-KEYBOARD, WEB-MSG-A11Y (axe-free structural checks plus labels), WEB-MSG-PERF.
+  - WEB-MSG-LIVE: a sim inbound message appears with the receive animation in under 500 ms p95.
+- Level `real` (the real gateway on the Air, read-only):
+  - WEB-MSG-REAL-READ: the real chat list and threads render without errors.
+  - Every decoded field kind present in real data renders. Evidence is counts only.
+- Reader level `sim` + `real`:
+  - MSG-DECODE-BALLOON, MSG-DECODE-FORMATTING, MSG-READ-RICH-FIELDS (AppleTruth agrees on counts per field kind).
+
+### 23.13 W3: Messages, writing
+
+**Interactive gate (Helper).**
+- **Where interactive comes from:** a command arriving over ApplePeer with `origin: interactive`. Only the gateway sets this, only for `device:` principals (§23.2), and the IPC socket is owner-only.
+- **What it relaxes:** interactive commands skip the lab text tag (`[ab-test <id>]`) and the own-handle route restriction.
+- **What still applies:** the operation's capability proof for this OS build, expiry, the dispatch guard, conservative correlation, and the no-redispatch rules (§11.2).
+- **Other principals:** lab, test and `agent:` principals keep today's gates. `agent:` with level `full` gets interactive-equivalent routing only after owner approval or at level `full`, per §23.6.
+
+**Self-test (`bridge selftest messages`, run by `bridge setup`).** It proves each Messages operation on this Mac's OS build and records capability evidence (ADR 0008).
+- **Own handles:** discovered from the Messages account (`account_login` / `destination_caller_id`) and the Contacts "me" card.
+- **Run:** in a tagged self chat it does send text, send a file, reply, react (classic and emoji, add and remove), edit, unsend, mark read/unread, and delete message. Afterwards it cleans up everything it created.
+- **Result:** each passing operation becomes `proven` for the build; a failure leaves that operation hidden in the UI with the reason.
+- **Rerun:** automatic after a macOS update changes the build.
+
+**Proofs to finish at the real level** (sim-only today): `messages.mark_read`, `messages.mark_unread`, `messages.delete_message` and `messages.delete_chat` (tagged self chat only), plus resend of a failed message (`messages.send` with `resend_of`).
+
+**Upload path:**
+- `POST /web/v1/upload` streams to a staged blob on the serving instance.
+- **On a replica,** upload bytes are forwarded to the gateway over the feed's command channel in 1 MiB chunks, with the digest verified, before the command is admitted.
+- **Limits:** 100 MiB per file, 10 files per message.
+
+**Client (`web/src/messages/compose/`, `actions/`):**
+- **Composer:** text, Enter/Shift+Enter, autogrow to 6 lines, paste, drag and drop, file picker, phone camera capture, audio recording sent as a file (an audio message in W4), location sent as a maps link, our own desktop emoji picker (⌃⌘Space), and per-chat drafts in local storage. Public sessions keep drafts in memory only.
+- **Sending state:** pending → sent → delivered/read, failure with Try Again.
+- **Message actions** (long-press, right-click, ⌘T/⌘R/⌘E/⌘Z):
+  - Tapback picker (6 classic, emoji search, remove).
+  - Reply mode.
+  - Inline edit (15 min, 5 edits).
+  - Undo Send (2 min; particle dissolve).
+  - Delete (confirm).
+  - Copy, Forward (pre-filled new message), Save attachment.
+- **Chat actions:** mark read/unread (swipe and menu), delete chat (confirm, full-swipe).
+- **New message:** recipient tokens with `contacts.lookup` autocomplete, service hint from history, an existing chat loads under the To field, and send.
+- **Optimistic UI:** the local echo is reconciled by command ID and `commit_seq`. It never duplicates and never flickers.
+- **Gesture guard:** every command is submitted from input-event handlers only (§23.2).
+
+**Scenarios** (level `web` on the demo world, plus `real` on the Air with Johan's own handles only; never text anyone else):
+
+| ID | Levels | Proves |
+|---|---|---|
+| MSG-INTERACTIVE-GATE | sim, real | interactive skips the tag and own-handle rules; lab and agent principals don't; expiry and no-redispatch unchanged. At real level, an untagged interactive send to own handle, then cleanup |
+| MSG-SELFTEST | real | the self-test proves each operation and cleans up completely |
+| MSG-READSTATE-REAL, MSG-DELETE-REAL, MSG-RESEND | real | the proofs listed above |
+| WEB-MSG-SEND | web, real | text send: tap to local bubble ≤ 1 frame; ack; delivered; no duplicate |
+| WEB-MSG-ATTACH-SEND | web, real | photo, video, PDF and audio-file upload and send, including via a replica-served UI |
+| WEB-MSG-REACT, WEB-MSG-REPLY, WEB-MSG-EDIT, WEB-MSG-UNSEND | web, real | each action end to end, with the UI's time limits |
+| WEB-MSG-CHAT-ACTIONS | web | read/unread and delete chat via swipe and menu |
+| WEB-MSG-NEW | web | new message with autocomplete and service hint |
+| WEB-MSG-FAIL-RESEND | web | failure shows "Not Delivered" and Try Again resends |
+| WEB-MSG-OPTIMISTIC | web | reconnect mid-send converges with no duplicates |
+
+**Units:**
+
+| Unit | Contents |
+|---|---|
+| W3-HELPER | interactive gate in Swift, self-test, real proofs, resend |
+| W3-UPLOAD | replica upload forwarding, upload limits |
+| W3-COMPOSE | composer, actions, chat actions, new message, optimistic UI, emoji picker |
+
+### 23.14 W4: Messages parity
+
+**Approach.** Each item gets:
+- a Helper implementation through Accessibility or AppleScript (ADR 0009)
+- capability proof per OS build (an added self-test step where it can be done on self)
+- a sim scenario and a real scenario on self, or on the Ben RCS contact where a group is required
+
+Items needing a second iMessage identity are `limited` at the real level (DECISIONS 2026-10-16).
+
+| Item | Read | Write |
+|---|---|---|
+| Pins (order, pin/unpin, reorder) | §23.12 if readable; else via Accessibility snapshot of the sidebar on change | Accessibility |
+| Hide Alerts | as above | Accessibility (details pane toggle) |
+| Read receipts per chat | §23.12 | Accessibility |
+| Send Later (create, edit time, send now, delete) | §23.12 | Accessibility (+ menu → Send Later) |
+| Send with effect | — | Accessibility (effect picker) |
+| Formatting and text effects | §23.12 | Accessibility (format menu over a selection) |
+| Mentions | §23.12 | type `@name` and confirm the suggestion via Accessibility |
+| Audio message | §23.12 | send the recorded file as an audio message (Accessibility or the file-flag route; investigate) |
+| Keep expiring audio | §23.12 | Accessibility |
+| Recently Deleted (recover, delete now) | §23.12 | Accessibility |
+| Groups (create, rename, photo, add, remove, leave) | existing | Accessibility; real proofs RCS via Ben; iMessage-group parts `limited` |
+| Typing indicators | Accessibility tree of the open chat (investigate) | not feasible without driving the Mac's UI per keystroke; hidden unless reading proves reliable |
+| Link preview on send | sender-side preview generation | investigate whether Messages generates it for AppleScript sends; otherwise hidden |
+
+**UI:** the W4 rows of `design/web/messages.md` (pinned grid drag reorder, mute bell, Send Later bubble and sheet, long-press send effect picker with live preview, formatting toolbar, mention suggestions, audio message recorder with waveform, Recently Deleted actions, group management in details).
+
+**Units:** W4-HELPER-A (pins, mute, read receipts, Recently Deleted), W4-HELPER-B (Send Later, effects, formatting, mentions, audio message, Keep), W4-GROUPS, W4-UI, W4-TYPING (investigation, may close as hidden).
+
+### 23.15 W5–W8: Reminders, Calendar, Contacts, Notes
+
+Each app follows its spec (`design/web/reminders.md`, `calendar.md`, `contacts.md`, `notes.md`) in three steps. Each step starts with failing scenarios at sim/web and ends at real on the Air, using tagged "Bridge Test" containers and cleanup:
+- **R:** read at full fidelity, including store-backed fields beyond the public frameworks, with AppleTruth checks, read models and the UI.
+- **W:** basic writes through the existing commands, with the UI and optimistic state.
+- **P:** parity through AppleScript or Accessibility, proven per OS build or hidden.
+
+| Milestone | App | Store reader (R) | Read models |
+|---|---|---|---|
+| W5 | Reminders | Reminders Core Data store (consistent copy, FDA) linked to EventKit identifiers | `reminders.lists`, `reminders.items` |
+| W6 | Calendar | Calendar store for travel time, attachments, geo and invitation status | `calendar.range` with overlap groups |
+| W7 | Contacts | — (Contacts framework is complete except notes) | `contacts.list` |
+| W8 | Notes | Extended NoteStore protobuf decoder (full blocks) | `notes.list` |
+
+The shell's app switcher enables each app when its R step passes. Scenario families: `WEB-REM-*`, `WEB-CAL-*`, `WEB-CON-*`, `WEB-NOTE-*` (web level, 12 projects), plus `REM-STORE-*`, `CAL-STORE-*` and `NOTE-DECODE-FULL` (sim and real).

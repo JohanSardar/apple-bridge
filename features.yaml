@@ -459,3 +459,123 @@ features:
     status: todo
     scenarios:
       - {id: WEB-RELAY-REPLICA, levels: [replica]}
+  - id: web.messages.read
+    title: Messages web app reading at full fidelity (list, transcript, media, viewer, links, effects, details, search)
+    requirements: [R-WEB-UI, R-WEB-FAST, R-MSG-DEPTH]
+    milestone: W2
+    modules: [webui, web, operations, native/MessagesSource, lab/demo]
+    depends_on: [web.frontdoor, web.demo, web.media]
+    status: todo
+    scenarios:
+      - {id: MSG-DECODE-BALLOON, levels: [sim, real]}
+      - {id: MSG-DECODE-FORMATTING, levels: [sim, real]}
+      - {id: MSG-READ-RICH-FIELDS, levels: [sim, real]}
+      - {id: WEB-MSG-LIST, levels: [web]}
+      - {id: WEB-MSG-FILTERS, levels: [web]}
+      - {id: WEB-MSG-SEARCH, levels: [web]}
+      - {id: WEB-MSG-THREAD-CORE, levels: [web]}
+      - {id: WEB-MSG-REACTIONS, levels: [web]}
+      - {id: WEB-MSG-REPLIES, levels: [web]}
+      - {id: WEB-MSG-EDIT-UNSEND-VIEW, levels: [web]}
+      - {id: WEB-MSG-GROUP-EVENTS, levels: [web]}
+      - {id: WEB-MSG-MEDIA, levels: [web]}
+      - {id: WEB-MSG-VIEWER, levels: [web]}
+      - {id: WEB-MSG-LINKS, levels: [web]}
+      - {id: WEB-MSG-STICKERS-GENMOJI, levels: [web]}
+      - {id: WEB-MSG-EFFECTS, levels: [web]}
+      - {id: WEB-MSG-PLACEHOLDERS, levels: [web]}
+      - {id: WEB-MSG-DETAILS, levels: [web]}
+      - {id: WEB-MSG-KEYBOARD, levels: [web]}
+      - {id: WEB-MSG-A11Y, levels: [web]}
+      - {id: WEB-MSG-PERF, levels: [web]}
+      - {id: WEB-MSG-LIVE, levels: [web]}
+      - {id: WEB-MSG-REAL-READ, levels: [real]}
+  - id: web.messages.write
+    title: Messages web app writing (interactive gate, self-test, composer, actions, uploads)
+    requirements: [R-WEB-UI, R-RW, R-MSG-DEPTH, R-SAFE-CMD]
+    milestone: W3
+    modules: [native/MessagesSource, operations, web, webui, replication]
+    depends_on: [web.messages.read]
+    status: todo
+    scenarios:
+      - {id: MSG-INTERACTIVE-GATE, levels: [sim, real]}
+      - {id: MSG-SELFTEST, levels: [real]}
+      - {id: MSG-READSTATE-REAL, levels: [real]}
+      - {id: MSG-DELETE-REAL, levels: [real]}
+      - {id: MSG-RESEND, levels: [sim, real]}
+      - {id: WEB-MSG-SEND, levels: [web, real]}
+      - {id: WEB-MSG-ATTACH-SEND, levels: [web, real]}
+      - {id: WEB-MSG-REACT, levels: [web, real]}
+      - {id: WEB-MSG-REPLY, levels: [web, real]}
+      - {id: WEB-MSG-EDIT, levels: [web, real]}
+      - {id: WEB-MSG-UNSEND, levels: [web, real]}
+      - {id: WEB-MSG-CHAT-ACTIONS, levels: [web]}
+      - {id: WEB-MSG-NEW, levels: [web]}
+      - {id: WEB-MSG-FAIL-RESEND, levels: [web]}
+      - {id: WEB-MSG-OPTIMISTIC, levels: [web]}
+  - id: web.messages.parity
+    title: Messages parity (pins, mute, read receipts, Send Later, effects, formatting, mentions, audio messages, Recently Deleted, groups)
+    requirements: [R-WEB-UI, R-MSG-DEPTH]
+    milestone: W4
+    modules: [native/MessagesSource, operations, webui]
+    depends_on: [web.messages.write]
+    status: todo
+    scenarios:
+      - {id: MSG-PINS, levels: [sim, real]}
+      - {id: MSG-MUTE, levels: [sim, real]}
+      - {id: MSG-READ-RECEIPTS, levels: [sim, real]}
+      - {id: MSG-SEND-LATER, levels: [sim, real]}
+      - {id: MSG-SEND-EFFECT, levels: [sim, real]}
+      - {id: MSG-FORMATTING-SEND, levels: [sim, real]}
+      - {id: MSG-MENTION-SEND, levels: [sim]}
+      - {id: MSG-AUDIO-MESSAGE, levels: [sim, real]}
+      - {id: MSG-RECENTLY-DELETED, levels: [sim, real]}
+      - {id: WEB-MSG-PARITY-UI, levels: [web]}
+    notes: Group management (W4-GROUPS) completes the existing messages.groups feature and its scenarios instead of duplicating them.
+  - id: web.reminders
+    title: Reminders web app (read, write, parity)
+    requirements: [R-WEB-UI, R-WEB-FAST, R-RW]
+    milestone: W5
+    modules: [webui, native/RemindersSource, operations]
+    depends_on: [web.frontdoor, reminders.write]
+    status: todo
+    scenarios:
+      - {id: REM-STORE-READ, levels: [sim, real]}
+      - {id: WEB-REM-READ, levels: [web]}
+      - {id: WEB-REM-WRITE, levels: [web, real]}
+      - {id: WEB-REM-PARITY, levels: [web, real]}
+  - id: web.calendar
+    title: Calendar web app (read, write, parity)
+    requirements: [R-WEB-UI, R-WEB-FAST, R-RW]
+    milestone: W6
+    modules: [webui, native/CalendarSource, operations]
+    depends_on: [web.frontdoor, calendar.write]
+    status: todo
+    scenarios:
+      - {id: CAL-STORE-READ, levels: [sim, real]}
+      - {id: WEB-CAL-READ, levels: [web]}
+      - {id: WEB-CAL-WRITE, levels: [web, real]}
+      - {id: WEB-CAL-PARITY, levels: [web, real]}
+  - id: web.contacts
+    title: Contacts web app (read, write, parity)
+    requirements: [R-WEB-UI, R-WEB-FAST, R-RW]
+    milestone: W7
+    modules: [webui, native/ContactsSource, operations]
+    depends_on: [web.frontdoor, contacts.write]
+    status: todo
+    scenarios:
+      - {id: WEB-CON-READ, levels: [web]}
+      - {id: WEB-CON-WRITE, levels: [web, real]}
+      - {id: WEB-CON-PARITY, levels: [web, real]}
+  - id: web.notes
+    title: Notes web app (read, write, parity)
+    requirements: [R-WEB-UI, R-WEB-FAST, R-RW]
+    milestone: W8
+    modules: [webui, native/NotesSource, native/Decoders, operations]
+    depends_on: [web.frontdoor, notes.write]
+    status: todo
+    scenarios:
+      - {id: NOTE-DECODE-FULL, levels: [sim, real]}
+      - {id: WEB-NOTE-READ, levels: [web]}
+      - {id: WEB-NOTE-WRITE, levels: [web, real]}
+      - {id: WEB-NOTE-PARITY, levels: [web, real]}
