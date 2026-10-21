@@ -99,7 +99,7 @@ func main() {
 	status, _, _ = request("POST", "/v1/op/records.query", in.Remote, in.URL)
 	checks["origin_rejected"] = status == 401
 	status, _, _ = request("GET", "/v1/feed", in.Remote, "")
-	checks["feed_reserved"] = status == 404
+	checks["feed_requires_replica_handshake"] = status == 400 || status == 401 || status == 426
 	status, body, _ = request("POST", "/web/v1/login/options", "", in.URL)
 	var options struct {
 		PublicKey struct {

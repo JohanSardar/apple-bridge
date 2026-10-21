@@ -474,10 +474,14 @@ func (w *World) Close() {
 			commandOutput(ctx, "ssh", "ubuntu", "env APPLE_BRIDGE_SECRET_STORE=file "+quote(w.remoteLab)+" credential-cleanup --home "+quote(endpoint.Home))
 		}
 		commandOutput(ctx, "ssh", "ubuntu", "env APPLE_BRIDGE_SECRET_STORE=file "+quote(w.remoteLab)+" credential-cleanup --home "+quote(filepath.Join(w.Dir, "pairing")))
+		commandOutput(ctx, "ssh", "ubuntu", "rm -rf "+quote(w.Dir))
+		cancel()
+	}
+	if len(w.remoteExtraHomes) > 0 {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		for _, home := range w.remoteExtraHomes {
 			commandOutput(ctx, "ssh", "ubuntu", "rm -rf "+quote(home))
 		}
-		commandOutput(ctx, "ssh", "ubuntu", "rm -rf "+quote(w.Dir))
 		cancel()
 	}
 	for _, home := range w.secretHomes {

@@ -7,9 +7,10 @@ import (
 	"time"
 )
 
-func (r *Remote) Run(ctx context.Context, web, api http.Handler) {
+func (r *Remote) Run(ctx context.Context, web, api, feed http.Handler) {
 	r.web = web
 	r.api = api
+	r.feed = feed
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
 	var active string

@@ -137,6 +137,7 @@ func Start(ctx context.Context, cfg Config) error {
 	if err = serveBlobLab(ctx, cfg.Home, store, blobStore); err != nil {
 		return err
 	}
+	var relayFeed http.Handler
 	service := &operations.Service{State: store, Authority: authority}
 	service.LocalStatus = func() contracts.ReplicaStatus {
 		return contracts.ReplicaStatus{Role: "gateway", State: "ready", Cursor: store.Head(), GatewayHead: store.Head().Sequence, Blobs: blobStore.Progress()}
@@ -204,6 +205,7 @@ func Start(ctx context.Context, cfg Config) error {
 			}
 		}()
 		feed := &replication.Server{Store: store, Authority: authority, Blobs: blobStore, Command: gateway.Forward}
+		relayFeed = feed.RelayHandler()
 		service.LocalStatus = func() contracts.ReplicaStatus {
 			return contracts.ReplicaStatus{Role: "gateway", State: "ready", Cursor: store.Head(), GatewayHead: store.Head().Sequence, Blobs: blobStore.Progress(), DialReplicas: feed.DialStatus()}
 		}
@@ -325,7 +327,7 @@ func Start(ctx context.Context, cfg Config) error {
 	publicAPI := frontdoor.Handler(frontdoor.Deps{Operations: service, Authority: authority, Address: cfg.APIAddress, PublicHost: public.Host, Blobs: blobStore}, contracts.Operations)
 	remoteCtx, stopRemote := context.WithCancel(ctx)
 	remoteDone := make(chan struct{})
-	go func() { defer close(remoteDone); public.Run(remoteCtx, webHandler, publicAPI) }()
+	go func() { defer close(remoteDone); public.Run(remoteCtx, webHandler, publicAPI, relayFeed) }()
 	defer func() { stopRemote(); <-remoteDone }()
 	localHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.URL.Path, "/v1/") || r.URL.Path == "/mcp" || strings.HasPrefix(r.URL.Path, "/mcp/") {
