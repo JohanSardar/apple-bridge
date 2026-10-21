@@ -467,6 +467,7 @@ features:
     status: todo
     scenarios:
       - {id: WEB-RELAY-AUTH, levels: [sim]}
+      - {id: WEB-RELAY-PAIRING, levels: [sim]}
       - {id: WEB-RELAY-REPLICA, levels: [replica]}
   - id: web.messages.read
     title: Messages web app reading at full fidelity (list, transcript, media, viewer, links, effects, details, search)
