@@ -71,6 +71,7 @@ func runDemoDataset(ctx context.Context, s Scenario, level string) Evidence {
 	}
 	media := demoReadmodelCoverage(ctx, w, &e, add)
 	demoMediaCoverage(ctx, w, first, media, e.Metrics["coverage"].(map[string]int), &e, add)
+	demoRich(ctx, client, records, e.Metrics["coverage"].(map[string]int), add)
 	server, err := demo.Serve(w, "127.0.0.1:0")
 	add("demo_loopback_server", err == nil)
 	if err == nil {
