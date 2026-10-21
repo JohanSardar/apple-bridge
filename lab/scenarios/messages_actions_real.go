@@ -15,7 +15,10 @@ import (
 	"time"
 )
 
-func runNativeMessageAction(ctx context.Context, s Scenario, e Evidence, w *world.World, native, text string, state *sql.DB) Evidence {
+func runNativeMessageAction(ctx context.Context, s Scenario, e Evidence, w *world.World, native, text string, state *sql.DB, registerChild func(string) error) Evidence {
+	if s.ID == "MSG-READSTATE-REAL" || s.ID == "MSG-DELETE-REAL" {
+		return runNativeChatProof(ctx, s, e, w, native, state, registerChild)
+	}
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
 	report := filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "AppleBridgeDev", "action-ax-"+e.RunID+".json")
 	defer os.Remove(report)

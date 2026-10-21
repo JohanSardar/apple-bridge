@@ -1,0 +1,33 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[24.82 17.22 12.8] cpus=8 other_heavy=1"
+  },
+  "status": "environment-limited",
+  "run_id": "run_01M5EK14NR3JTQP1N75NV55F6W",
+  "metrics": {
+    "ui_deferred": true,
+    "writes_submitted": 0
+  },
+  "scenario": "MSG-READSTATE-REAL",
+  "level": "real",
+  "passed": false,
+  "git_sha": "fa4868a214cce48a022414250a2070075d264783",
+  "at": "2026-10-21T06:40:26.80884Z",
+  "assertions": [
+    {
+      "name": "unlocked_messages_window",
+      "passed": false,
+      "status": "unverified",
+      "detail": "UI proof deferred until the Air is unlocked; no world or command was created"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
