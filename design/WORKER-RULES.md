@@ -30,12 +30,13 @@ You are a worker on Apple Bridge, delegated by the build leader. Read this file,
 ## Git and GitHub (Johan's rules, binding)
 - **Branch:** one branch per slice, named `feat/…`, `fix/…`, `perf/…`, `refactor/…`, `docs/…`, `test/…` or `chore/…`. Each lives in your own worktree on the Air.
 - **Commits:**
-  - Small and frequent, one thing each, about 10–150 changed lines. Lockfiles, scrubbed fixtures and evidence JSON don't count.
+  - **Normal, professional size (Johan's rule since 2026-10-21 evening):** one commit per complete logical change. The implementation goes together with its tests, the scenario and evidence it owns, and its doc or SPEC lines, typically 100–800 changed lines. A PR usually has 1–3 commits.
+  - No separate commits for evidence-only updates, fixture tweaks, review fixes, formatting or "checkpoints". Fold them into the commit they belong to (`git commit --fixup` plus `git rebase -i --autosquash`, or amend) before pushing or merging. Squash local work-in-progress commits.
   - Each commit builds and passes the relevant tests.
   - Conventional Commit messages (`feat(scope): …`, `fix(scope): …`), ending with `Co-Authored-By: GPT-6.1-Sol <noreply@openai.com>`.
 - **Identity:** the GitHub noreply address set in the repo config. Never change it.
 - **Before every commit,** check `git diff --cached` for secrets and personal data: tokens, keys, Tailscale state, real phone numbers, emails other than @example.com, real message text. Unstage anything found and gitignore it.
-- **Shipping a slice** (1–5 commits) as soon as it works:
+- **Shipping a slice** (usually 1–3 commits) as soon as it works:
   1. `git push -u origin <branch>`
   2. `gh pr create --base main --title "<conventional title>" --body "<what changed; how tested: exact commands and results>"`
   3. Run the slice's tests and linters.
@@ -43,7 +44,7 @@ You are a worker on Apple Bridge, delegated by the build leader. Read this file,
   5. Update the shared checkout: `ssh air 'cd ~/apple-bridge && git checkout main && git fetch origin main && git merge --ff-only origin/main'`, only when it's clean.
   6. `git fetch origin && git rebase origin/main` before the next slice.
 - **Updating the shared checkout:** use `git fetch origin main && git merge --ff-only origin/main`, not `git pull`. All worktrees share one `.git/FETCH_HEAD`, so concurrent fetches by other workers can make `git pull` fail with "Cannot fast-forward to multiple branches".
-- **Size:** many small PRs that each work alone. Never one giant PR.
+- **Size:** one PR per feature or fix, a reviewable unit of roughly 200–1,500 lines. Put a fix and the test-harness change it needs in the same PR, not two. Never one giant PR that mixes unrelated features.
 - **Evidence ownership:** a PR commits `lab/evidence/**` files only for the scenarios that PR adds or changes. Regression runs rewrite other scenarios' evidence; restore those before committing (`git checkout origin/main -- <paths>`) and quote the regression results in the PR body instead. When a rebase still conflicts on evidence JSON, keep `origin/main`'s version for scenarios you don't own.
 - **Red main:** if main is red, fixing it comes first.
 - **No padding:** no empty, whitespace-only or count-inflating commits.

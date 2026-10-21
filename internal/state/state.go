@@ -496,7 +496,7 @@ func (s *Store) Read(ctx context.Context, v trust.Visibility, q contracts.ReadQu
 		if err != nil {
 			return result, err
 		}
-		result.Records = append(result.Records, s.sourceStatus(r))
+		result.Records = append(result.Records, r)
 	}
 	if err = rows.Err(); err != nil {
 		return result, err

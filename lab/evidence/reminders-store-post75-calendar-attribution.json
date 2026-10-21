@@ -1,0 +1,149 @@
+{
+  "source_head": "5f1808d50778b2e3ccc0c1ba6cbf53eb36f195b3",
+  "source_note": "uncommitted lab read-window diagnostics, committed with this evidence",
+  "lab_sha256": "878e218fe576f135b5f625779aedf61687a9df6846ef6e1cf94e968d00a894f0",
+  "helper_sha256": "86309762e720e9ad9fcbf67416d9eeb87f374c241dbe117a44b3fcf35d8368b9",
+  "passed": true,
+  "latency": {
+    "calendar_chunk_refetch": {
+      "samples": 53,
+      "p50_ms": 360.771834,
+      "p95_ms": 1756.634583,
+      "max_ms": 2371.132666,
+      "timeouts": 0
+    },
+    "effect_done\u2192gateway_visible": {
+      "samples": 200,
+      "p50_ms": 368.809875,
+      "p95_ms": 604.197041,
+      "max_ms": 740.884625,
+      "timeouts": 0
+    },
+    "effect_done\u2192replica_visible:replica0": {
+      "samples": 200,
+      "p50_ms": 373.016625,
+      "p95_ms": 607.244375,
+      "max_ms": 745.146041,
+      "timeouts": 0
+    },
+    "refetch_duration": {
+      "samples": 200,
+      "p50_ms": 172.6635,
+      "p95_ms": 231.011875,
+      "max_ms": 270.840334,
+      "timeouts": 0
+    },
+    "reminders_store_refresh_warm": {
+      "samples": 134,
+      "p50_ms": 4.08575,
+      "p95_ms": 10.366959,
+      "max_ms": 28.179666,
+      "timeouts": 0
+    }
+  },
+  "refresh_histogram": {
+    "first_ms": 791.467583,
+    "total_samples": 135,
+    "warm": {
+      "max_ms": 28.179666,
+      "p50_ms": 4.08575,
+      "p95_ms": 10.366959,
+      "samples": 134
+    }
+  },
+  "first_checkpoint_ms": 2254.646784,
+  "warm_full_read_count": 0,
+  "warm_versions_read_count": 0,
+  "warm_max_decoded_rows": 5,
+  "per_store_read_warm": {
+    "samples": 670,
+    "p50_ms": 0.144125,
+    "p95_ms": 1.094167,
+    "max_ms": 2.494875
+  },
+  "queue_wait": {
+    "samples": 135,
+    "p50_ms": 4.2e-05,
+    "p95_ms": 0.000125,
+    "max_ms": 0.000208
+  },
+  "read_refetch_overlap_during_effects": {
+    "reminders": 0,
+    "calendar": 326
+  },
+  "calendar": {
+    "run": "w5-store-post75-diag-b3",
+    "calendar_stages_whole_run": {
+      "calendar_baseline_saved": 5,
+      "calendar_chunk": 53,
+      "calendar_database_hint": 458,
+      "calendar_debounce": 242,
+      "calendar_lookups_saved": 5,
+      "calendar_scan_complete": 3,
+      "calendar_scan_started": 35
+    },
+    "calendar_chunk_refetch": {
+      "samples": 53,
+      "p50_ms": 360.771834,
+      "p95_ms": 1756.634583,
+      "max_ms": 2371.132666,
+      "timeouts": 0
+    },
+    "calendar_refetch_windows_during_effects": 40,
+    "tail_samples": 44,
+    "tails_at_calendar_refetch_debounce": 32,
+    "tails_at_calendar_refetch_start": 33
+  },
+  "maxima": {
+    "gateway": {
+      "index": 174,
+      "saved_at": "2026-10-21T19:37:08.995137+00:00",
+      "total_ms": 740.884625,
+      "phases": {
+        "save_to_refetch_ms": 414.053958,
+        "refetch_ms": 200.83925,
+        "refetch_end_to_await_ms": 108.851042,
+        "await_ms": 4.668375,
+        "await_end_to_send_ms": 2.8225,
+        "send_to_visible_ms": 9.6495,
+        "sdk_encoding_to_trace_ms": 106.043292,
+        "trace_to_await_ms": 2.80775
+      }
+    },
+    "replica": {
+      "index": 174,
+      "saved_at": "2026-10-21T19:37:08.995137+00:00",
+      "total_ms": 745.146041,
+      "phases": {
+        "save_to_refetch_ms": 414.053958,
+        "refetch_ms": 200.83925,
+        "refetch_end_to_await_ms": 108.851042,
+        "await_ms": 4.668375,
+        "await_end_to_send_ms": 2.8225,
+        "send_to_visible_ms": 13.910916,
+        "sdk_encoding_to_trace_ms": 106.043292,
+        "trace_to_await_ms": 2.80775
+      }
+    }
+  },
+  "limitation": "Calendar scan-start timestamps were not retained; scan-start stage counts cover the whole run, refetch-window overlaps cover the measured effect interval; active asynchronous spans do not prove exclusive actor CPU occupancy",
+  "follow_up": "Confirmatory paired A/B after CAL-FIX Calendar-hint crosstalk fix, evidence rather than gate; reopen if B exceeds A +10 ms with no Calendar activity",
+  "host_begin": {
+    "at": "2026-10-21T19:34:59.679419+00:00",
+    "load": [
+      9.54736328125,
+      10.0498046875,
+      12.7158203125
+    ],
+    "swap_used_mib": 1612.25
+  },
+  "host_end": {
+    "at": "2026-10-21T19:37:31.903453+00:00",
+    "load": [
+      6.67822265625,
+      8.32666015625,
+      11.55322265625
+    ],
+    "swap_used_mib": 1604.25
+  }
+}

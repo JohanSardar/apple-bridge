@@ -1,0 +1,368 @@
+{
+  "scenario": "REM-STORE-PERF",
+  "kind": "direct_helper_cost_before_live_fix",
+  "git_sha": "e16affbc0b6aa9249995f408e00814008cf9228e",
+  "source_scenario": "CORE-LIVE-LATENCY",
+  "source_scenario_passed": false,
+  "assertions": [
+    {
+      "name": "reminders_ready",
+      "passed": true
+    },
+    {
+      "name": "all_external_effects_visible",
+      "passed": true
+    },
+    {
+      "name": "latency_effect_done\u2192gateway_visible",
+      "passed": false
+    },
+    {
+      "name": "contiguous_replica_application",
+      "passed": true
+    },
+    {
+      "name": "latency_effect_done\u2192replica_visible:replica0",
+      "passed": false
+    },
+    {
+      "name": "contiguous_replica_application",
+      "passed": true
+    },
+    {
+      "name": "first_reminders_checkpoint_after_start_measured",
+      "passed": true
+    },
+    {
+      "name": "enrichment_direct_cost_measured_within_budget",
+      "passed": true
+    },
+    {
+      "name": "helper_refresh_histogram_matches_per_capture_timings",
+      "passed": true
+    },
+    {
+      "name": "native_path_timestamps",
+      "passed": true
+    },
+    {
+      "name": "independent_appletruth",
+      "passed": true
+    },
+    {
+      "name": "replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "histogram": {
+    "first_ms": 707.973916,
+    "total_samples": 40,
+    "warm": {
+      "max_ms": 28.977041,
+      "p50_ms": 2.291125,
+      "p95_ms": 12.919875,
+      "samples": 39
+    }
+  },
+  "independently_recomputed": {
+    "samples": 39,
+    "p50_ms": 2.291125,
+    "p95_ms": 12.919875,
+    "max_ms": 28.977041,
+    "timeouts": 0
+  },
+  "per_refresh_samples": [
+    {
+      "duration_ms": 707.973916,
+      "finished_ns": 1416487311743291,
+      "index": 0,
+      "started_ns": 1416486603769375
+    },
+    {
+      "duration_ms": 11.487958,
+      "finished_ns": 1416489990273166,
+      "index": 1,
+      "started_ns": 1416489978785208
+    },
+    {
+      "duration_ms": 3.600333,
+      "finished_ns": 1416491856425416,
+      "index": 2,
+      "started_ns": 1416491852825083
+    },
+    {
+      "duration_ms": 3.832,
+      "finished_ns": 1416492604168458,
+      "index": 3,
+      "started_ns": 1416492600336458
+    },
+    {
+      "duration_ms": 1.934667,
+      "finished_ns": 1416493409130208,
+      "index": 4,
+      "started_ns": 1416493407195541
+    },
+    {
+      "duration_ms": 2.238875,
+      "finished_ns": 1416494181333875,
+      "index": 5,
+      "started_ns": 1416494179095000
+    },
+    {
+      "duration_ms": 28.977041,
+      "finished_ns": 1416495032749041,
+      "index": 6,
+      "started_ns": 1416495003772000
+    },
+    {
+      "duration_ms": 9.33175,
+      "finished_ns": 1416495591386000,
+      "index": 7,
+      "started_ns": 1416495582054250
+    },
+    {
+      "duration_ms": 1.4085,
+      "finished_ns": 1416496309783125,
+      "index": 8,
+      "started_ns": 1416496308374625
+    },
+    {
+      "duration_ms": 6.665875,
+      "finished_ns": 1416497102742250,
+      "index": 9,
+      "started_ns": 1416497096076375
+    },
+    {
+      "duration_ms": 7.416584,
+      "finished_ns": 1416497745372750,
+      "index": 10,
+      "started_ns": 1416497737956166
+    },
+    {
+      "duration_ms": 1.826959,
+      "finished_ns": 1416498229805000,
+      "index": 11,
+      "started_ns": 1416498227978041
+    },
+    {
+      "duration_ms": 1.842208,
+      "finished_ns": 1416498756785791,
+      "index": 12,
+      "started_ns": 1416498754943583
+    },
+    {
+      "duration_ms": 3.138042,
+      "finished_ns": 1416499289178125,
+      "index": 13,
+      "started_ns": 1416499286040083
+    },
+    {
+      "duration_ms": 3.710625,
+      "finished_ns": 1416499766218750,
+      "index": 14,
+      "started_ns": 1416499762508125
+    },
+    {
+      "duration_ms": 2.504167,
+      "finished_ns": 1416500313971250,
+      "index": 15,
+      "started_ns": 1416500311467083
+    },
+    {
+      "duration_ms": 2.525708,
+      "finished_ns": 1416501185377583,
+      "index": 16,
+      "started_ns": 1416501182851875
+    },
+    {
+      "duration_ms": 2.103125,
+      "finished_ns": 1416502018612666,
+      "index": 17,
+      "started_ns": 1416502016509541
+    },
+    {
+      "duration_ms": 2.202959,
+      "finished_ns": 1416502543006250,
+      "index": 18,
+      "started_ns": 1416502540803291
+    },
+    {
+      "duration_ms": 2.085625,
+      "finished_ns": 1416503175190916,
+      "index": 19,
+      "started_ns": 1416503173105291
+    },
+    {
+      "duration_ms": 2.019875,
+      "finished_ns": 1416503783245875,
+      "index": 20,
+      "started_ns": 1416503781226000
+    },
+    {
+      "duration_ms": 3.177,
+      "finished_ns": 1416504371687250,
+      "index": 21,
+      "started_ns": 1416504368510250
+    },
+    {
+      "duration_ms": 2.2725,
+      "finished_ns": 1416504984791541,
+      "index": 22,
+      "started_ns": 1416504982519041
+    },
+    {
+      "duration_ms": 2.291125,
+      "finished_ns": 1416505761973375,
+      "index": 23,
+      "started_ns": 1416505759682250
+    },
+    {
+      "duration_ms": 2.859709,
+      "finished_ns": 1416506392149250,
+      "index": 24,
+      "started_ns": 1416506389289541
+    },
+    {
+      "duration_ms": 2.08975,
+      "finished_ns": 1416507103265000,
+      "index": 25,
+      "started_ns": 1416507101175250
+    },
+    {
+      "duration_ms": 1.952833,
+      "finished_ns": 1416507725806708,
+      "index": 26,
+      "started_ns": 1416507723853875
+    },
+    {
+      "duration_ms": 2.230166,
+      "finished_ns": 1416508352496916,
+      "index": 27,
+      "started_ns": 1416508350266750
+    },
+    {
+      "duration_ms": 1.998917,
+      "finished_ns": 1416508956437375,
+      "index": 28,
+      "started_ns": 1416508954438458
+    },
+    {
+      "duration_ms": 2.321833,
+      "finished_ns": 1416509945182666,
+      "index": 29,
+      "started_ns": 1416509942860833
+    },
+    {
+      "duration_ms": 2.4975,
+      "finished_ns": 1416511561064958,
+      "index": 30,
+      "started_ns": 1416511558567458
+    },
+    {
+      "duration_ms": 1.898125,
+      "finished_ns": 1416512942532250,
+      "index": 31,
+      "started_ns": 1416512940634125
+    },
+    {
+      "duration_ms": 1.869041,
+      "finished_ns": 1416514274487791,
+      "index": 32,
+      "started_ns": 1416514272618750
+    },
+    {
+      "duration_ms": 1.828041,
+      "finished_ns": 1416515536490791,
+      "index": 33,
+      "started_ns": 1416515534662750
+    },
+    {
+      "duration_ms": 1.56975,
+      "finished_ns": 1416516511348625,
+      "index": 34,
+      "started_ns": 1416516509778875
+    },
+    {
+      "duration_ms": 1.665875,
+      "finished_ns": 1416517639269583,
+      "index": 35,
+      "started_ns": 1416517637603708
+    },
+    {
+      "duration_ms": 3.930792,
+      "finished_ns": 1416518619226500,
+      "index": 36,
+      "started_ns": 1416518615295708
+    },
+    {
+      "duration_ms": 5.65325,
+      "finished_ns": 1416519788814625,
+      "index": 37,
+      "started_ns": 1416519783161375
+    },
+    {
+      "duration_ms": 12.919875,
+      "finished_ns": 1416521776967833,
+      "index": 38,
+      "started_ns": 1416521764047958
+    },
+    {
+      "duration_ms": 10.068792,
+      "finished_ns": 1416531857061958,
+      "index": 39,
+      "started_ns": 1416531846993166
+    }
+  ],
+  "first_reminders_checkpoint_after_start_ms": 4572.354816,
+  "helper_binary_sha256": "73bb4d4f39cdb934951012c6fb27efda006afa55507d17f492fbdaed3b89664c",
+  "host_begin": {
+    "at": "2026-10-21T16:48:45.729468+00:00",
+    "load": [
+      2.08642578125,
+      3.2353515625,
+      9.099609375
+    ],
+    "swap_used_mib": 1991.75,
+    "swap_raw": "vm.swapusage: total = 3072.00M  used = 1991.75M  free = 1080.25M  (encrypted)",
+    "candidate": "b",
+    "phase": "begin"
+  },
+  "host_end": {
+    "at": "2026-10-21T16:51:17.703179+00:00",
+    "load": [
+      7.009765625,
+      4.13525390625,
+      8.4404296875
+    ],
+    "swap_used_mib": 1855.75,
+    "swap_raw": "vm.swapusage: total = 3072.00M  used = 1855.75M  free = 1216.25M  (encrypted)",
+    "candidate": "b",
+    "phase": "end"
+  },
+  "conditions": {
+    "cpu": "CPU usage: 33.86% user, 31.7% sys, 35.5% idle \n",
+    "heavy_slots": "42437\n",
+    "memory_pressure": "The system has 8589934592 (524288 pages with a page size of 16384).\nSystem-wide memory free percentage: 65%\n",
+    "swap": "vm.swapusage: total = 3072.00M  used = 1895.75M  free = 1176.25M  (encrypted)\n",
+    "uptime": "11:50  up 17 days, 32 mins, 4 users, load averages: 2.83 3.17 8.48\n"
+  },
+  "limitation": "Known R-LIVE main regression fails end-to-end live budgets. Direct refresh cost and histogram equality passed. Repeat paired live gates after #75.",
+  "instrumentation_commits": [
+    "f824d19c",
+    "3b62f9e9",
+    "4d0705ef"
+  ],
+  "recorded_git_sha_excludes_uncommitted_diagnostics": true
+}

@@ -1,21 +1,21 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[11.27 9.35 8.98] cpus=8 other_heavy=1"
+    "summary": "air: load=[18.09 11.59 10.56] cpus=8 other_heavy=0"
   },
   "status": "limited",
-  "run_id": "run_01M5F9ETD56BZA04D15RSSGM56",
+  "run_id": "run_01M5G0J6NYHMY4Q6V777HWW67G",
   "metrics": {
     "identity_da_equal": true,
     "identity_external_equal": false,
     "identity_uuid_equal": true,
-    "store_read_single_ms": 303.41375
+    "store_read_single_ms": 245.669666
   },
   "scenario": "REM-STORE-READ",
   "level": "real",
   "passed": true,
-  "git_sha": "02b3cad44a46aefb407a74497b7b2da377d31506",
-  "at": "2026-10-21T13:12:23.717945Z",
+  "git_sha": "e1d36f710a94267e77e670be40845fb127b1f3f9",
+  "at": "2026-10-21T19:56:11.838307Z",
   "assertions": [
     {
       "name": "tagged_eventkit_fixture_and_private_signed_apps",
@@ -46,8 +46,18 @@
       "passed": true
     },
     {
-      "name": "native_flag_and_subtask_absence_exact",
+      "name": "native_subtask_absence_exact",
       "passed": true
+    },
+    {
+      "name": "tagged_flag_proof_report_decoded",
+      "passed": true
+    },
+    {
+      "name": "native_flag_true_then_cleared_exact",
+      "passed": false,
+      "status": "limited",
+      "detail": "Reminders Apple Events authorization unavailable without prompting (OSStatus -1744)"
     },
     {
       "name": "appletruth_store_counts",

@@ -1,0 +1,356 @@
+{
+  "scenario": "REM-STORE-PERF",
+  "kind": "excluded_sim_diagnostic",
+  "method": "Original sim A/B/A/B, shared normal gate, 200 samples each; zero-based chronological indexes retained only for A2/B2",
+  "runs": [
+    {
+      "run": "sim-a1",
+      "git_sha": "eb0aa7e5c61b34061ef53244c1a9bc3cc7660137",
+      "passed": true,
+      "latency": {
+        "effect_done\u2192gateway_visible": {
+          "samples": 200,
+          "p50_ms": 10.783084,
+          "p95_ms": 23.92375,
+          "max_ms": 37.716375,
+          "timeouts": 0
+        },
+        "effect_done\u2192replica_visible:replica0": {
+          "samples": 200,
+          "p50_ms": 16.420584,
+          "p95_ms": 34.516625,
+          "max_ms": 57.098542,
+          "timeouts": 0
+        }
+      },
+      "host": {
+        "load_begin": [
+          "10.66",
+          "18.42",
+          "17.72"
+        ],
+        "load_end": [
+          "7.46",
+          "15.74",
+          "16.79"
+        ],
+        "swap_begin_mib": {
+          "total": "7168.00",
+          "used": "5918.62",
+          "free": "1249.38"
+        },
+        "swap_end_mib": {
+          "total": "7168.00",
+          "used": "6031.50",
+          "free": "1136.50"
+        }
+      },
+      "sample_count": 0,
+      "peaks": {},
+      "samples_above_100ms": [],
+      "sample_retention_note": "Original summary-only sim harness; exact sample index, timestamp and endpoint correlation were not retained and cannot be recovered after World cleanup."
+    },
+    {
+      "run": "sim-b1",
+      "git_sha": "76c638755a57b25aaa27b4f3bdc96ad2786af2ee",
+      "passed": true,
+      "latency": {
+        "effect_done\u2192gateway_visible": {
+          "samples": 200,
+          "p50_ms": 11.506875,
+          "p95_ms": 27.540125,
+          "max_ms": 534.873458,
+          "timeouts": 0
+        },
+        "effect_done\u2192replica_visible:replica0": {
+          "samples": 200,
+          "p50_ms": 16.393459,
+          "p95_ms": 40.416583,
+          "max_ms": 568.276916,
+          "timeouts": 0
+        }
+      },
+      "host": {
+        "load_begin": [
+          "13.66",
+          "13.90",
+          "15.70"
+        ],
+        "load_end": [
+          "20.00",
+          "15.70",
+          "16.18"
+        ],
+        "swap_begin_mib": {
+          "total": "7168.00",
+          "used": "6118.81",
+          "free": "1049.19"
+        },
+        "swap_end_mib": {
+          "total": "7168.00",
+          "used": "6221.88",
+          "free": "946.12"
+        }
+      },
+      "sample_count": 0,
+      "peaks": {},
+      "samples_above_100ms": [],
+      "sample_retention_note": "Original summary-only sim harness; exact sample index, timestamp and endpoint correlation were not retained and cannot be recovered after World cleanup."
+    },
+    {
+      "run": "sim-a2",
+      "git_sha": "eb0aa7e5c61b34061ef53244c1a9bc3cc7660137",
+      "passed": true,
+      "latency": {
+        "effect_done\u2192gateway_visible": {
+          "samples": 200,
+          "p50_ms": 10.827375,
+          "p95_ms": 20.683583,
+          "max_ms": 119.817667,
+          "timeouts": 0
+        },
+        "effect_done\u2192replica_visible:replica0": {
+          "samples": 200,
+          "p50_ms": 15.507833,
+          "p95_ms": 33.148709,
+          "max_ms": 123.494417,
+          "timeouts": 0
+        }
+      },
+      "host": {
+        "load_begin": [
+          "44.11",
+          "45.98",
+          "34.35"
+        ],
+        "load_end": [
+          "25.47",
+          "39.94",
+          "33.37"
+        ],
+        "swap_begin_mib": {
+          "total": "8192.00",
+          "used": "7076.25",
+          "free": "1115.75"
+        },
+        "swap_end_mib": {
+          "total": "8192.00",
+          "used": "6700.25",
+          "free": "1491.75"
+        }
+      },
+      "sample_count": 200,
+      "peaks": {
+        "gateway": {
+          "effect_at": "2026-10-21T15:26:49.561911Z",
+          "gateway_ms": 119.817667,
+          "gateway_visible_at": "2026-10-21T15:26:49.68173Z",
+          "index": 160,
+          "replica0_ms": 122.564917,
+          "replica0_visible_at": "2026-10-21T15:26:49.684477Z"
+        },
+        "replica0": {
+          "effect_at": "2026-10-21T15:26:49.151847Z",
+          "gateway_ms": 47.624084,
+          "gateway_visible_at": "2026-10-21T15:26:49.199471Z",
+          "index": 158,
+          "replica0_ms": 123.494417,
+          "replica0_visible_at": "2026-10-21T15:26:49.275342Z"
+        },
+        "same_peak_index": false
+      },
+      "samples_above_100ms": [
+        {
+          "effect_at": "2026-10-21T15:26:49.151847Z",
+          "gateway_ms": 47.624084,
+          "gateway_visible_at": "2026-10-21T15:26:49.199471Z",
+          "index": 158,
+          "replica0_ms": 123.494417,
+          "replica0_visible_at": "2026-10-21T15:26:49.275342Z"
+        },
+        {
+          "effect_at": "2026-10-21T15:26:49.561911Z",
+          "gateway_ms": 119.817667,
+          "gateway_visible_at": "2026-10-21T15:26:49.68173Z",
+          "index": 160,
+          "replica0_ms": 122.564917,
+          "replica0_visible_at": "2026-10-21T15:26:49.684477Z"
+        },
+        {
+          "effect_at": "2026-10-21T15:26:56.154618Z",
+          "gateway_ms": 26.216875,
+          "gateway_visible_at": "2026-10-21T15:26:56.180835Z",
+          "index": 193,
+          "replica0_ms": 102.676167,
+          "replica0_visible_at": "2026-10-21T15:26:56.257295Z"
+        }
+      ],
+      "sample_retention_note": null
+    },
+    {
+      "run": "sim-b2",
+      "git_sha": "76c638755a57b25aaa27b4f3bdc96ad2786af2ee",
+      "passed": true,
+      "latency": {
+        "effect_done\u2192gateway_visible": {
+          "samples": 200,
+          "p50_ms": 12.244334,
+          "p95_ms": 59.439708,
+          "max_ms": 651.0585,
+          "timeouts": 0
+        },
+        "effect_done\u2192replica_visible:replica0": {
+          "samples": 200,
+          "p50_ms": 18.292125,
+          "p95_ms": 83.792416,
+          "max_ms": 707.696375,
+          "timeouts": 0
+        }
+      },
+      "host": {
+        "load_begin": [
+          "51.91",
+          "31.97",
+          "31.83"
+        ],
+        "load_end": [
+          "25.90",
+          "30.00",
+          "31.20"
+        ],
+        "swap_begin_mib": {
+          "total": "9216.00",
+          "used": "7751.00",
+          "free": "1465.00"
+        },
+        "swap_end_mib": {
+          "total": "9216.00",
+          "used": "8123.75",
+          "free": "1092.25"
+        }
+      },
+      "sample_count": 200,
+      "peaks": {
+        "gateway": {
+          "effect_at": "2026-10-21T15:36:36.246462Z",
+          "gateway_ms": 651.0585,
+          "gateway_visible_at": "2026-10-21T15:36:36.897526Z",
+          "index": 94,
+          "replica0_ms": 707.696375,
+          "replica0_visible_at": "2026-10-21T15:36:36.954165Z"
+        },
+        "replica0": {
+          "effect_at": "2026-10-21T15:36:36.246462Z",
+          "gateway_ms": 651.0585,
+          "gateway_visible_at": "2026-10-21T15:36:36.897526Z",
+          "index": 94,
+          "replica0_ms": 707.696375,
+          "replica0_visible_at": "2026-10-21T15:36:36.954165Z"
+        },
+        "same_peak_index": true
+      },
+      "samples_above_100ms": [
+        {
+          "effect_at": "2026-10-21T15:36:22.567476Z",
+          "gateway_ms": 117.327541,
+          "gateway_visible_at": "2026-10-21T15:36:22.684805Z",
+          "index": 26,
+          "replica0_ms": 122.445083,
+          "replica0_visible_at": "2026-10-21T15:36:22.689922Z"
+        },
+        {
+          "effect_at": "2026-10-21T15:36:35.725238Z",
+          "gateway_ms": 178.502958,
+          "gateway_visible_at": "2026-10-21T15:36:35.903743Z",
+          "index": 92,
+          "replica0_ms": 304.778792,
+          "replica0_visible_at": "2026-10-21T15:36:36.03002Z"
+        },
+        {
+          "effect_at": "2026-10-21T15:36:36.226475Z",
+          "gateway_ms": 222.133958,
+          "gateway_visible_at": "2026-10-21T15:36:36.448611Z",
+          "index": 93,
+          "replica0_ms": 671.1315,
+          "replica0_visible_at": "2026-10-21T15:36:36.897613Z"
+        },
+        {
+          "effect_at": "2026-10-21T15:36:36.246462Z",
+          "gateway_ms": 651.0585,
+          "gateway_visible_at": "2026-10-21T15:36:36.897526Z",
+          "index": 94,
+          "replica0_ms": 707.696375,
+          "replica0_visible_at": "2026-10-21T15:36:36.954165Z"
+        },
+        {
+          "effect_at": "2026-10-21T15:36:36.501058Z",
+          "gateway_ms": 474.450834,
+          "gateway_visible_at": "2026-10-21T15:36:36.975513Z",
+          "index": 95,
+          "replica0_ms": 474.116125,
+          "replica0_visible_at": "2026-10-21T15:36:36.975179Z"
+        },
+        {
+          "effect_at": "2026-10-21T15:36:36.814617Z",
+          "gateway_ms": 192.342042,
+          "gateway_visible_at": "2026-10-21T15:36:37.006961Z",
+          "index": 96,
+          "replica0_ms": 210.241417,
+          "replica0_visible_at": "2026-10-21T15:36:37.024861Z"
+        },
+        {
+          "effect_at": "2026-10-21T15:36:36.862632Z",
+          "gateway_ms": 172.048708,
+          "gateway_visible_at": "2026-10-21T15:36:37.034682Z",
+          "index": 97,
+          "replica0_ms": 225.594041,
+          "replica0_visible_at": "2026-10-21T15:36:37.088227Z"
+        },
+        {
+          "effect_at": "2026-10-21T15:36:36.957368Z",
+          "gateway_ms": 233.086083,
+          "gateway_visible_at": "2026-10-21T15:36:37.190457Z",
+          "index": 98,
+          "replica0_ms": 267.22425,
+          "replica0_visible_at": "2026-10-21T15:36:37.224595Z"
+        },
+        {
+          "effect_at": "2026-10-21T15:36:37.92426Z",
+          "gateway_ms": 49.303416,
+          "gateway_visible_at": "2026-10-21T15:36:37.973564Z",
+          "index": 103,
+          "replica0_ms": 595.579625,
+          "replica0_visible_at": "2026-10-21T15:36:38.519846Z"
+        }
+      ],
+      "sample_retention_note": null
+    }
+  ],
+  "original_p95_comparison": {
+    "sim/effect_done\u2192gateway_visible": {
+      "a_p95_spread_ms": [
+        20.683583,
+        23.92375
+      ],
+      "b_p95_ms": [
+        27.540125,
+        59.439708
+      ],
+      "limit_ms": 33.92375,
+      "passed": false
+    },
+    "sim/effect_done\u2192replica_visible:replica0": {
+      "a_p95_spread_ms": [
+        33.148709,
+        34.516625
+      ],
+      "b_p95_ms": [
+        40.416583,
+        83.792416
+      ],
+      "limit_ms": 44.516625,
+      "passed": false
+    }
+  },
+  "feature_verdict": "Not applicable after binary audit: Swift enrichment does not execute in sim; controlled binaries are identical. Retain tails and host snapshots as diagnostic data."
+}

@@ -1,0 +1,313 @@
+{
+  "baseline": "main bcb5708b includes LIVE-FIX #75",
+  "candidate": "#120 on #115 rebased onto bcb5708b",
+  "lab_sha256": "cee6d63317a016d7798cd8ea54f589e66a5e167e27c062bd8ca8ecd5c37e5d28",
+  "measurement": "200 native effects per run; shared normal gate per run; first source=reminders checkpoint committed acknowledgment from OS Helper process start",
+  "runs": [
+    {
+      "candidate": "a",
+      "pair": 1,
+      "source_head": "bcb5708b230af7b9c3722cbb3ad7029f934d14c4",
+      "passed": true,
+      "gateway_sha256": "b9101d58912d50994f8313fb3982042813fc5510eba02a6f106cc5d869a8b50e",
+      "helper_sha256": "5eeb2c758c431a5f3388ffd1e0c058b0a4b4c71d60d65b15cd07e55cd0de8574",
+      "host": {
+        "begin": {
+          "at": "2026-10-21T18:29:55.678172+00:00",
+          "load": [
+            37.2626953125,
+            18.4609375,
+            16.576171875
+          ],
+          "swap_used_mib": 1126.5,
+          "candidate": "a",
+          "phase": "begin"
+        },
+        "end": {
+          "at": "2026-10-21T18:32:15.049238+00:00",
+          "load": [
+            8.564453125,
+            13.28271484375,
+            14.73583984375
+          ],
+          "swap_used_mib": 1118.5,
+          "candidate": "a",
+          "phase": "end"
+        }
+      },
+      "latency": {
+        "effect_done\u2192gateway_visible": {
+          "samples": 200,
+          "p50_ms": 263.034,
+          "p95_ms": 470.917333,
+          "max_ms": 849.169959,
+          "timeouts": 0
+        },
+        "effect_done\u2192replica_visible:replica0": {
+          "samples": 200,
+          "p50_ms": 266.063834,
+          "p95_ms": 472.202958,
+          "max_ms": 851.701,
+          "timeouts": 0
+        }
+      },
+      "first_checkpoint_ms": 1467.352832,
+      "refresh_histogram": null,
+      "failed_assertions": [],
+      "maxima": {
+        "gateway": {
+          "chronological_index_zero_based": 94,
+          "latency_ms": 849.169959,
+          "effect_wall_ns": 1792607504821967000,
+          "effect_at_utc": "2026-10-21T18:31:44.821967+00:00",
+          "store_refresh_ms": null
+        },
+        "replica": {
+          "chronological_index_zero_based": 94,
+          "latency_ms": 851.701,
+          "effect_wall_ns": 1792607504821967000,
+          "effect_at_utc": "2026-10-21T18:31:44.821967+00:00",
+          "store_refresh_ms": null
+        }
+      }
+    },
+    {
+      "candidate": "a",
+      "pair": 2,
+      "source_head": "bcb5708b230af7b9c3722cbb3ad7029f934d14c4",
+      "passed": true,
+      "gateway_sha256": "b9101d58912d50994f8313fb3982042813fc5510eba02a6f106cc5d869a8b50e",
+      "helper_sha256": "6796032af175d81918403d7defd855baefdeb4c37ccaa1b6dce2e5384b985426",
+      "host": {
+        "begin": {
+          "at": "2026-10-21T19:00:27.685266+00:00",
+          "load": [
+            4.65576171875,
+            6.25,
+            10.93359375
+          ],
+          "swap_used_mib": 2027.44,
+          "candidate": "a",
+          "phase": "begin"
+        },
+        "end": {
+          "at": "2026-10-21T19:02:22.485524+00:00",
+          "load": [
+            6.748046875,
+            6.35302734375,
+            10.36279296875
+          ],
+          "swap_used_mib": 2003.44,
+          "candidate": "a",
+          "phase": "end"
+        }
+      },
+      "latency": {
+        "effect_done\u2192gateway_visible": {
+          "samples": 200,
+          "p50_ms": 173.055042,
+          "p95_ms": 291.943666,
+          "max_ms": 380.177584,
+          "timeouts": 0
+        },
+        "effect_done\u2192replica_visible:replica0": {
+          "samples": 200,
+          "p50_ms": 177.401042,
+          "p95_ms": 293.022291,
+          "max_ms": 381.213792,
+          "timeouts": 0
+        }
+      },
+      "first_checkpoint_ms": 1229.258752,
+      "refresh_histogram": null,
+      "failed_assertions": [],
+      "maxima": {
+        "gateway": {
+          "chronological_index_zero_based": 108,
+          "latency_ms": 380.177584,
+          "effect_wall_ns": 1792609317300225000,
+          "effect_at_utc": "2026-10-21T19:01:57.300225+00:00",
+          "store_refresh_ms": null
+        },
+        "replica": {
+          "chronological_index_zero_based": 108,
+          "latency_ms": 381.213792,
+          "effect_wall_ns": 1792609317300225000,
+          "effect_at_utc": "2026-10-21T19:01:57.300225+00:00",
+          "store_refresh_ms": null
+        }
+      }
+    },
+    {
+      "candidate": "b",
+      "pair": 1,
+      "source_head": "5f1808d50778b2e3ccc0c1ba6cbf53eb36f195b3",
+      "passed": true,
+      "gateway_sha256": "b9101d58912d50994f8313fb3982042813fc5510eba02a6f106cc5d869a8b50e",
+      "helper_sha256": "8d8ff1660cc3e09caadd49c87a7ec00f9da2c0d6bc1ddc2fd2c73c40317f65c4",
+      "host": {
+        "begin": {
+          "at": "2026-10-21T18:44:13.821907+00:00",
+          "load": [
+            26.49169921875,
+            24.55126953125,
+            22.46142578125
+          ],
+          "swap_used_mib": 1102.5,
+          "candidate": "b",
+          "phase": "begin"
+        },
+        "end": {
+          "at": "2026-10-21T18:46:59.861182+00:00",
+          "load": [
+            6.48583984375,
+            15.97705078125,
+            19.2431640625
+          ],
+          "swap_used_mib": 2649.56,
+          "candidate": "b",
+          "phase": "end"
+        }
+      },
+      "latency": {
+        "effect_done\u2192gateway_visible": {
+          "samples": 200,
+          "p50_ms": 282.567084,
+          "p95_ms": 462.2835,
+          "max_ms": 900.604125,
+          "timeouts": 0
+        },
+        "effect_done\u2192replica_visible:replica0": {
+          "samples": 200,
+          "p50_ms": 284.261,
+          "p95_ms": 465.823,
+          "max_ms": 902.306416,
+          "timeouts": 0
+        },
+        "reminders_store_refresh_warm": {
+          "samples": 164,
+          "p50_ms": 1.668291,
+          "p95_ms": 9.469792,
+          "max_ms": 56.98925,
+          "timeouts": 0
+        }
+      },
+      "first_checkpoint_ms": 2078.864896,
+      "refresh_histogram": {
+        "first_ms": 750.659542,
+        "total_samples": 165,
+        "warm": {
+          "max_ms": 56.98925,
+          "p50_ms": 1.668291,
+          "p95_ms": 9.469792,
+          "samples": 164
+        }
+      },
+      "failed_assertions": [],
+      "maxima": {
+        "gateway": {
+          "chronological_index_zero_based": 199,
+          "latency_ms": 900.604125,
+          "effect_wall_ns": 1792608403566128000,
+          "effect_at_utc": "2026-10-21T18:46:43.566128+00:00",
+          "store_refresh_ms": 8.229125
+        },
+        "replica": {
+          "chronological_index_zero_based": 199,
+          "latency_ms": 902.306416,
+          "effect_wall_ns": 1792608403566128000,
+          "effect_at_utc": "2026-10-21T18:46:43.566128+00:00",
+          "store_refresh_ms": 8.229125
+        }
+      }
+    },
+    {
+      "candidate": "b",
+      "pair": 2,
+      "source_head": "5f1808d50778b2e3ccc0c1ba6cbf53eb36f195b3",
+      "passed": true,
+      "gateway_sha256": "b9101d58912d50994f8313fb3982042813fc5510eba02a6f106cc5d869a8b50e",
+      "helper_sha256": "35baaa0489c259ba02cf2b842a6890e1853782760b763d67b2050f9247056b83",
+      "host": {
+        "begin": {
+          "at": "2026-10-21T19:13:32.154073+00:00",
+          "load": [
+            4.65380859375,
+            10.89306640625,
+            14.45703125
+          ],
+          "swap_used_mib": 1859.44,
+          "candidate": "b",
+          "phase": "begin"
+        },
+        "end": {
+          "at": "2026-10-21T19:16:05.815712+00:00",
+          "load": [
+            53.94140625,
+            21.12548828125,
+            17.5224609375
+          ],
+          "swap_used_mib": 2477.56,
+          "candidate": "b",
+          "phase": "end"
+        }
+      },
+      "latency": {
+        "effect_done\u2192gateway_visible": {
+          "samples": 200,
+          "p50_ms": 273.86425,
+          "p95_ms": 837.13825,
+          "max_ms": 1423.766625,
+          "timeouts": 0
+        },
+        "effect_done\u2192replica_visible:replica0": {
+          "samples": 200,
+          "p50_ms": 275.222084,
+          "p95_ms": 875.080292,
+          "max_ms": 1433.500875,
+          "timeouts": 0
+        },
+        "reminders_store_refresh_warm": {
+          "samples": 153,
+          "p50_ms": 1.723667,
+          "p95_ms": 11.037125,
+          "max_ms": 43.729959,
+          "timeouts": 0
+        }
+      },
+      "first_checkpoint_ms": 1983.251712,
+      "refresh_histogram": {
+        "first_ms": 842.6235,
+        "total_samples": 154,
+        "warm": {
+          "max_ms": 43.729959,
+          "p50_ms": 1.723667,
+          "p95_ms": 11.037125,
+          "samples": 153
+        }
+      },
+      "failed_assertions": [],
+      "maxima": {
+        "gateway": {
+          "chronological_index_zero_based": 120,
+          "latency_ms": 1423.766625,
+          "effect_wall_ns": 1792610107957457200,
+          "effect_at_utc": "2026-10-21T19:15:07.957457+00:00",
+          "store_refresh_ms": 4.294792
+        },
+        "replica": {
+          "chronological_index_zero_based": 120,
+          "latency_ms": 1433.500875,
+          "effect_wall_ns": 1792610107957457200,
+          "effect_at_utc": "2026-10-21T19:15:07.957457+00:00",
+          "store_refresh_ms": 4.294792
+        }
+      }
+    }
+  ],
+  "verdict": "leader authorized merge after confounder analysis superseded the numerical paired rule: Calendar hint crosstalk makes Calendar activity incomparable across arms",
+  "startup_decision": "paired first-checkpoint differences 611.512064 and 753.992960 ms; both below the 1000 ms EventKit-first startup threshold",
+  "diagnostic_limit": "Original runs do not retain read mode or decoded rows; no claim that full-read fallbacks were absent",
+  "original_paired_rule": "B2 exceeds the A-run p95 spread plus 10 ms; all individual runs pass the existing 1 s p95 budget",
+  "follow_up": "Confirmatory paired A/B after CAL-FIX Calendar-hint crosstalk fix, evidence rather than gate; reopen if B exceeds A +10 ms with no Calendar activity"
+}
