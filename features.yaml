@@ -137,6 +137,7 @@ features:
       - {id: CORE-BLOB-NO-DIGEST-AUTH, levels: [sim]}
       - {id: CORE-BLOB-GATEWAY-RETRY, levels: [sim]}
       - {id: CORE-BLOB-REFERENCE-INDEX, levels: [sim]}
+      - {id: CORE-BLOB-NATIVE-STAGE, levels: [sim, real]}
       - {id: CORE-BLOB-DUPLICATE-REFERENCE, levels: [sim]}
       - {id: CORE-BLOB-GC, levels: [sim]}
       - {id: CORE-BLOB-OFFLOADED, levels: [sim]}

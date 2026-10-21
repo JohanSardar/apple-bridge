@@ -1,0 +1,46 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[21.12 15.94 12.29] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5EQFRBVR4Y7KWW07CN49SA1",
+  "scenario": "CORE-BLOB-NATIVE-STAGE",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "f0002e5bb9fad47fa4caf4b7b3d383fd8623f6ff",
+  "at": "2026-10-21T07:58:20.027836Z",
+  "assertions": [
+    {
+      "name": "isolated_world_ready",
+      "passed": true
+    },
+    {
+      "name": "synthetic_blob_staged",
+      "passed": true
+    },
+    {
+      "name": "fixture_record_visible",
+      "passed": true
+    },
+    {
+      "name": "authorized_blob_bytes_match",
+      "passed": true
+    },
+    {
+      "name": "fixture_record_visible",
+      "passed": true
+    },
+    {
+      "name": "authorized_blob_bytes_match",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
