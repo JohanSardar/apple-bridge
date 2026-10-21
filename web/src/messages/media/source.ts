@@ -1,6 +1,11 @@
 import type { BridgeRecord } from '../../data/types';
 import { fields, text } from '../store/types';
 export type MediaVariant = 'thumb' | 'display' | 'video' | 'poster' | 'audio' | 'live' | 'original';
+export function attachmentHasAlpha(attachment: BridgeRecord): boolean {
+    if (attachment.data.is_sticker || attachment.data.genmoji) return true;
+    const hash = text(fields(attachment.data.media).thumbhash);
+    try { const bytes = hash.length <= 136 ? atob(hash) : ''; return bytes.length >= 5 && Boolean(bytes.charCodeAt(2) & 128); } catch { return false; }
+}
 export function mediaSource(attachment: BridgeRecord, variant: MediaVariant) {
     const blob = fields(attachment.data.blob), derivative = fields(fields(attachment.data.derivatives)[variant]);
     const digest = text(blob.digest) || text(derivative.digest);

@@ -1,7 +1,9 @@
-import { test, expect } from '@playwright/test';
-import { bootstrap, control } from './session';
+import { test, expect, type APIRequestContext, type BrowserContext } from '@playwright/test';
+import { control } from './session';
+let session:Promise<{cookie:Parameters<BrowserContext['addCookies']>[0][number]}>|undefined;
+async function mediaSession(context:BrowserContext,request:APIRequestContext){const value=await(session??=control(request,'/session?kind=public'));await context.addCookies([value.cookie]);}
 test('WEB-MSG-MEDIA image geometry is reserved before bytes and decoded thumb images crossfade without shift',async({page,context,request},info)=>{
-    await bootstrap(context,request,'public');
+    await mediaSession(context,request);
     const ids=await control(request,'/demo-fixtures');
     let release!:()=>void;
     const gate=new Promise<void>(resolve=>{release=resolve;});
@@ -30,7 +32,7 @@ test('WEB-MSG-MEDIA image geometry is reserved before bytes and decoded thumb im
     await info.attach('media-geometry',{body:JSON.stringify({before,after,cls:0,variants}),contentType:'application/json'});
 });
 test('WEB-MSG-MEDIA a pending variant keeps its slot and retries without downloading the original',async({page,context,request})=>{
-    await bootstrap(context,request,'public');const ids=await control(request,'/demo-fixtures');
+    await mediaSession(context,request);const ids=await control(request,'/demo-fixtures');
     let failedId='',failed=false;
     const variants:string[]=[];
     await page.route('**/web/v1/blob/**',async route=>{const url=new URL(route.request().url());variants.push(url.searchParams.get('variant')??'');if(!failed){failed=true;failedId=url.searchParams.get('record')!;await route.fulfill({status:409,contentType:'application/json',headers:{'Cache-Control':'no-store','Retry-After':'2'},body:JSON.stringify({error:{code:'variant_pending'}})});}else await route.continue();});
@@ -43,4 +45,16 @@ test('WEB-MSG-MEDIA a pending variant keeps its slot and retries without downloa
     await expect(image).toHaveAttribute('data-media-state','ready');
     expect(await image.boundingBox()).toEqual(before);
     expect(variants.every(value=>value==='thumb')).toBe(true);
+});
+test('WEB-MSG-MEDIA alpha images and placeholders float without a backing tile or rounded clip',async({page,context,request})=>{
+    await mediaSession(context,request);const ids=await control(request,'/demo-fixtures');
+    let release!:()=>void;const gate=new Promise<void>(resolve=>{release=resolve;});
+    await page.route('**/web/v1/blob/**',async route=>{await gate;await route.continue();});
+    await page.goto('/__fixtures/media?chat='+encodeURIComponent(ids['message-chat']),{waitUntil:'domcontentloaded'});
+    const slot=page.locator(`[data-message="${ids['demo-message-00-000036']}"]`),bubble=slot.locator('.media-bubble'),image=slot.locator('.media-image');
+    await expect(image).toBeVisible();
+    await expect(bubble).toHaveAttribute('data-media-alpha','true');
+    for(const element of [slot,bubble,image]){await expect(element).toHaveCSS('background-color','rgba(0, 0, 0, 0)');await expect(element).toHaveCSS('border-radius','0px');await expect(element).toHaveCSS('overflow','visible');}
+    expect(await image.locator('canvas').evaluate((canvas:HTMLCanvasElement)=>canvas.getContext('2d')!.getImageData(0,0,1,1).data[3])).toBeLessThan(255);
+    const before=await slot.boundingBox();release();await expect(image).toHaveAttribute('data-media-state','ready');expect(await slot.boundingBox()).toEqual(before);
 });

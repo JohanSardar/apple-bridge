@@ -1,12 +1,12 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[6.59 8.36 9.9] cpus=8 other_heavy=1"
+    "summary": "air: load=[7.94 8.65 9.23] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M5ESK2KGT6W2JVCGD62BVV4V",
+  "run_id": "run_01M5ETEJS3FW03DQNWGMRR08SA",
   "metrics": {
     "demo_messages": 5000,
-    "demo_startup_ms": 7308,
+    "demo_startup_ms": 4824,
     "matrix": [
       "webkit-light-phone",
       "webkit-light-desktop",
@@ -41,68 +41,68 @@
   "scenario": "WEB-MSG-MEDIA",
   "level": "web",
   "passed": true,
-  "git_sha": "dd0c313871941272bd07f9f226803c96702ca9b6",
-  "at": "2026-10-21T08:35:05.968305Z",
+  "git_sha": "723b3c362b2ce509c3982d789b256efe52ddc217",
+  "at": "2026-10-21T08:50:07.267825Z",
   "assertions": [
     {
       "name": "webkit-light-phone:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/media.spec.ts:3:1 › WEB-MSG-MEDIA image geometry is reserved before bytes and decoded thumb images crossfade without shift (2.6s)\n  ✓  2 [webkit-light-phone] › tests/media.spec.ts:32:1 › WEB-MSG-MEDIA a pending variant keeps its slot and retries without downloading the original (5.4s)\n\n  2 passed (9.9s)\n"
+      "detail": "\nRunning 3 tests using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/media.spec.ts:5:1 › WEB-MSG-MEDIA image geometry is reserved before bytes and decoded thumb images crossfade without shift (1.9s)\n  ✓  2 [webkit-light-phone] › tests/media.spec.ts:34:1 › WEB-MSG-MEDIA a pending variant keeps its slot and retries without downloading the original (730ms)\n  ✓  3 [webkit-light-phone] › tests/media.spec.ts:49:1 › WEB-MSG-MEDIA alpha images and placeholders float without a backing tile or rounded clip (503ms)\n\n  3 passed (6.5s)\n"
     },
     {
       "name": "webkit-light-desktop:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/media.spec.ts:3:1 › WEB-MSG-MEDIA image geometry is reserved before bytes and decoded thumb images crossfade without shift (3.5s)\n  ✓  2 [webkit-light-desktop] › tests/media.spec.ts:32:1 › WEB-MSG-MEDIA a pending variant keeps its slot and retries without downloading the original (1.5s)\n\n  2 passed (9.0s)\n"
+      "detail": "\nRunning 3 tests using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/media.spec.ts:5:1 › WEB-MSG-MEDIA image geometry is reserved before bytes and decoded thumb images crossfade without shift (1.7s)\n  ✓  2 [webkit-light-desktop] › tests/media.spec.ts:34:1 › WEB-MSG-MEDIA a pending variant keeps its slot and retries without downloading the original (611ms)\n  ✓  3 [webkit-light-desktop] › tests/media.spec.ts:49:1 › WEB-MSG-MEDIA alpha images and placeholders float without a backing tile or rounded clip (610ms)\n\n  3 passed (4.0s)\n"
     },
     {
       "name": "webkit-dark-phone:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [webkit-dark-phone] › tests/media.spec.ts:3:1 › WEB-MSG-MEDIA image geometry is reserved before bytes and decoded thumb images crossfade without shift (1.8s)\n  ✓  2 [webkit-dark-phone] › tests/media.spec.ts:32:1 › WEB-MSG-MEDIA a pending variant keeps its slot and retries without downloading the original (896ms)\n\n  2 passed (4.0s)\n"
+      "detail": "\nRunning 3 tests using 1 worker\n\n  ✓  1 [webkit-dark-phone] › tests/media.spec.ts:5:1 › WEB-MSG-MEDIA image geometry is reserved before bytes and decoded thumb images crossfade without shift (1.4s)\n  ✓  2 [webkit-dark-phone] › tests/media.spec.ts:34:1 › WEB-MSG-MEDIA a pending variant keeps its slot and retries without downloading the original (478ms)\n  ✓  3 [webkit-dark-phone] › tests/media.spec.ts:49:1 › WEB-MSG-MEDIA alpha images and placeholders float without a backing tile or rounded clip (442ms)\n\n  3 passed (3.3s)\n"
     },
     {
       "name": "webkit-dark-desktop:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [webkit-dark-desktop] › tests/media.spec.ts:3:1 › WEB-MSG-MEDIA image geometry is reserved before bytes and decoded thumb images crossfade without shift (2.3s)\n  ✓  2 [webkit-dark-desktop] › tests/media.spec.ts:32:1 › WEB-MSG-MEDIA a pending variant keeps its slot and retries without downloading the original (1.2s)\n\n  2 passed (4.5s)\n"
+      "detail": "\nRunning 3 tests using 1 worker\n\n  ✓  1 [webkit-dark-desktop] › tests/media.spec.ts:5:1 › WEB-MSG-MEDIA image geometry is reserved before bytes and decoded thumb images crossfade without shift (1.3s)\n  ✓  2 [webkit-dark-desktop] › tests/media.spec.ts:34:1 › WEB-MSG-MEDIA a pending variant keeps its slot and retries without downloading the original (526ms)\n  ✓  3 [webkit-dark-desktop] › tests/media.spec.ts:49:1 › WEB-MSG-MEDIA alpha images and placeholders float without a backing tile or rounded clip (509ms)\n\n  3 passed (4.4s)\n"
     },
     {
       "name": "chromium-light-phone:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/media.spec.ts:3:1 › WEB-MSG-MEDIA image geometry is reserved before bytes and decoded thumb images crossfade without shift (2.0s)\n  ✓  2 [chromium-light-phone] › tests/media.spec.ts:32:1 › WEB-MSG-MEDIA a pending variant keeps its slot and retries without downloading the original (1.1s)\n\n  2 passed (4.1s)\n"
+      "detail": "\nRunning 3 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/media.spec.ts:5:1 › WEB-MSG-MEDIA image geometry is reserved before bytes and decoded thumb images crossfade without shift (1.3s)\n  ✓  2 [chromium-light-phone] › tests/media.spec.ts:34:1 › WEB-MSG-MEDIA a pending variant keeps its slot and retries without downloading the original (390ms)\n  ✓  3 [chromium-light-phone] › tests/media.spec.ts:49:1 › WEB-MSG-MEDIA alpha images and placeholders float without a backing tile or rounded clip (372ms)\n\n  3 passed (2.8s)\n"
     },
     {
       "name": "chromium-light-desktop:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/media.spec.ts:3:1 › WEB-MSG-MEDIA image geometry is reserved before bytes and decoded thumb images crossfade without shift (1.3s)\n  ✓  2 [chromium-light-desktop] › tests/media.spec.ts:32:1 › WEB-MSG-MEDIA a pending variant keeps its slot and retries without downloading the original (696ms)\n\n  2 passed (2.6s)\n"
+      "detail": "\nRunning 3 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/media.spec.ts:5:1 › WEB-MSG-MEDIA image geometry is reserved before bytes and decoded thumb images crossfade without shift (1.0s)\n  ✓  2 [chromium-light-desktop] › tests/media.spec.ts:34:1 › WEB-MSG-MEDIA a pending variant keeps its slot and retries without downloading the original (356ms)\n  ✓  3 [chromium-light-desktop] › tests/media.spec.ts:49:1 › WEB-MSG-MEDIA alpha images and placeholders float without a backing tile or rounded clip (389ms)\n\n  3 passed (2.2s)\n"
     },
     {
       "name": "chromium-dark-phone:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [chromium-dark-phone] › tests/media.spec.ts:3:1 › WEB-MSG-MEDIA image geometry is reserved before bytes and decoded thumb images crossfade without shift (1.2s)\n  ✓  2 [chromium-dark-phone] › tests/media.spec.ts:32:1 › WEB-MSG-MEDIA a pending variant keeps its slot and retries without downloading the original (675ms)\n\n  2 passed (2.5s)\n"
+      "detail": "\nRunning 3 tests using 1 worker\n\n  ✓  1 [chromium-dark-phone] › tests/media.spec.ts:5:1 › WEB-MSG-MEDIA image geometry is reserved before bytes and decoded thumb images crossfade without shift (1.2s)\n  ✓  2 [chromium-dark-phone] › tests/media.spec.ts:34:1 › WEB-MSG-MEDIA a pending variant keeps its slot and retries without downloading the original (403ms)\n  ✓  3 [chromium-dark-phone] › tests/media.spec.ts:49:1 › WEB-MSG-MEDIA alpha images and placeholders float without a backing tile or rounded clip (303ms)\n\n  3 passed (2.4s)\n"
     },
     {
       "name": "chromium-dark-desktop:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [chromium-dark-desktop] › tests/media.spec.ts:3:1 › WEB-MSG-MEDIA image geometry is reserved before bytes and decoded thumb images crossfade without shift (1.2s)\n  ✓  2 [chromium-dark-desktop] › tests/media.spec.ts:32:1 › WEB-MSG-MEDIA a pending variant keeps its slot and retries without downloading the original (490ms)\n\n  2 passed (2.2s)\n"
+      "detail": "\nRunning 3 tests using 1 worker\n\n  ✓  1 [chromium-dark-desktop] › tests/media.spec.ts:5:1 › WEB-MSG-MEDIA image geometry is reserved before bytes and decoded thumb images crossfade without shift (1.2s)\n  ✓  2 [chromium-dark-desktop] › tests/media.spec.ts:34:1 › WEB-MSG-MEDIA a pending variant keeps its slot and retries without downloading the original (416ms)\n  ✓  3 [chromium-dark-desktop] › tests/media.spec.ts:49:1 › WEB-MSG-MEDIA alpha images and placeholders float without a backing tile or rounded clip (561ms)\n\n  3 passed (2.8s)\n"
     },
     {
       "name": "firefox-light-phone:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [firefox-light-phone] › tests/media.spec.ts:3:1 › WEB-MSG-MEDIA image geometry is reserved before bytes and decoded thumb images crossfade without shift (2.6s)\n  ✓  2 [firefox-light-phone] › tests/media.spec.ts:32:1 › WEB-MSG-MEDIA a pending variant keeps its slot and retries without downloading the original (559ms)\n\n  2 passed (4.9s)\n"
+      "detail": "\nRunning 3 tests using 1 worker\n\n  ✓  1 [firefox-light-phone] › tests/media.spec.ts:5:1 › WEB-MSG-MEDIA image geometry is reserved before bytes and decoded thumb images crossfade without shift (2.6s)\n  ✓  2 [firefox-light-phone] › tests/media.spec.ts:34:1 › WEB-MSG-MEDIA a pending variant keeps its slot and retries without downloading the original (501ms)\n  ✓  3 [firefox-light-phone] › tests/media.spec.ts:49:1 › WEB-MSG-MEDIA alpha images and placeholders float without a backing tile or rounded clip (557ms)\n\n  3 passed (6.7s)\n"
     },
     {
       "name": "firefox-light-desktop:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [firefox-light-desktop] › tests/media.spec.ts:3:1 › WEB-MSG-MEDIA image geometry is reserved before bytes and decoded thumb images crossfade without shift (2.9s)\n  ✓  2 [firefox-light-desktop] › tests/media.spec.ts:32:1 › WEB-MSG-MEDIA a pending variant keeps its slot and retries without downloading the original (2.4s)\n\n  2 passed (7.8s)\n"
+      "detail": "\nRunning 3 tests using 1 worker\n\n  ✓  1 [firefox-light-desktop] › tests/media.spec.ts:5:1 › WEB-MSG-MEDIA image geometry is reserved before bytes and decoded thumb images crossfade without shift (2.6s)\n  ✓  2 [firefox-light-desktop] › tests/media.spec.ts:34:1 › WEB-MSG-MEDIA a pending variant keeps its slot and retries without downloading the original (1.3s)\n  ✓  3 [firefox-light-desktop] › tests/media.spec.ts:49:1 › WEB-MSG-MEDIA alpha images and placeholders float without a backing tile or rounded clip (667ms)\n\n  3 passed (6.9s)\n"
     },
     {
       "name": "firefox-dark-phone:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [firefox-dark-phone] › tests/media.spec.ts:3:1 › WEB-MSG-MEDIA image geometry is reserved before bytes and decoded thumb images crossfade without shift (2.8s)\n  ✓  2 [firefox-dark-phone] › tests/media.spec.ts:32:1 › WEB-MSG-MEDIA a pending variant keeps its slot and retries without downloading the original (797ms)\n\n  2 passed (6.5s)\n"
+      "detail": "\nRunning 3 tests using 1 worker\n\n  ✓  1 [firefox-dark-phone] › tests/media.spec.ts:5:1 › WEB-MSG-MEDIA image geometry is reserved before bytes and decoded thumb images crossfade without shift (2.3s)\n  ✓  2 [firefox-dark-phone] › tests/media.spec.ts:34:1 › WEB-MSG-MEDIA a pending variant keeps its slot and retries without downloading the original (593ms)\n  ✓  3 [firefox-dark-phone] › tests/media.spec.ts:49:1 › WEB-MSG-MEDIA alpha images and placeholders float without a backing tile or rounded clip (673ms)\n\n  3 passed (7.1s)\n"
     },
     {
       "name": "firefox-dark-desktop:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [firefox-dark-desktop] › tests/media.spec.ts:3:1 › WEB-MSG-MEDIA image geometry is reserved before bytes and decoded thumb images crossfade without shift (2.2s)\n  ✓  2 [firefox-dark-desktop] › tests/media.spec.ts:32:1 › WEB-MSG-MEDIA a pending variant keeps its slot and retries without downloading the original (724ms)\n\n  2 passed (4.9s)\n"
+      "detail": "\nRunning 3 tests using 1 worker\n\n  ✓  1 [firefox-dark-desktop] › tests/media.spec.ts:5:1 › WEB-MSG-MEDIA image geometry is reserved before bytes and decoded thumb images crossfade without shift (3.5s)\n  ✓  2 [firefox-dark-desktop] › tests/media.spec.ts:34:1 › WEB-MSG-MEDIA a pending variant keeps its slot and retries without downloading the original (899ms)\n  ✓  3 [firefox-dark-desktop] › tests/media.spec.ts:49:1 › WEB-MSG-MEDIA alpha images and placeholders float without a backing tile or rounded clip (689ms)\n\n  3 passed (9.3s)\n"
     },
     {
       "name": "credential_backend_override_restored",
