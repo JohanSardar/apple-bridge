@@ -10,10 +10,6 @@ import (
 )
 
 func (s *server) uploadLease(w http.ResponseWriter, r *http.Request) {
-	if s.replicaUpload() {
-		reject(w, 503, "unavailable")
-		return
-	}
 	p := current(r).Principal
 	if s.deps.Authority.Authorize(p, "messages:write") != nil {
 		reject(w, 401, "unauthorized")
@@ -28,6 +24,17 @@ func (s *server) uploadLease(w http.ResponseWriter, r *http.Request) {
 		action = "abandon"
 	}
 	out, err := s.deps.Blobs.Upload(r.Context(), p.ID, contracts.UploadRequest{Action: action, ID: r.PathValue("id")})
+	if err != nil {
+		uploadError(w, err)
+		return
+	}
+	if s.deps.Operations != nil {
+		if action == "abandon" {
+			err = s.deps.Operations.AbandonUpload(r.Context(), p, out.ID)
+		} else {
+			out, err = s.deps.Operations.UploadState(r.Context(), p, out)
+		}
+	}
 	if err != nil {
 		uploadError(w, err)
 		return
@@ -102,6 +109,13 @@ func (s *server) streamUpload(w http.ResponseWriter, r *http.Request) {
 		uploadError(w, err)
 		return
 	}
+	if out.State == "ready" && s.deps.Operations != nil {
+		out, err = s.deps.Operations.ForwardUpload(r.Context(), p, out)
+	}
+	if err != nil {
+		uploadError(w, err)
+		return
+	}
 	respond(w, 200, out)
 }
 func uploadError(w http.ResponseWriter, err error) {
@@ -122,8 +136,4 @@ func uploadError(w http.ResponseWriter, err error) {
 	default:
 		reject(w, 503, safeError(err).Code)
 	}
-}
-
-func (s *server) replicaUpload() bool {
-	return s.deps.Operations != nil && s.deps.Operations.LocalStatus != nil && s.deps.Operations.LocalStatus().Role == "replica"
 }
