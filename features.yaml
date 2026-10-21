@@ -530,6 +530,7 @@ features:
       - {id: WEB-MSG-FILTERS, levels: [web]}
       - {id: WEB-MSG-SEARCH, levels: [web]}
       - {id: WEB-MSG-THREAD-CORE, levels: [web]}
+      - {id: WEB-MSG-TEXT-SIZING, levels: [web]}
       - {id: WEB-MSG-REACTIONS, levels: [web]}
       - {id: WEB-MSG-REPLIES, levels: [web]}
       - {id: WEB-MSG-EDIT-UNSEND-VIEW, levels: [web]}

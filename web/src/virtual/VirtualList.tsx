@@ -18,6 +18,7 @@ export function VirtualList<T>(props: {
     selectedKey?: string;
     keepTop?: boolean;
     windowKey?: string;
+    measurementKey?: string;
     onActive?: (item:T)=>void;
     onBottom?: (value:boolean)=>void;
     label: string;
@@ -27,17 +28,25 @@ export function VirtualList<T>(props: {
     const controlled='selectedKey' in props;
     const selected=()=>{revision();return controlled?(props.selectedKey?keyIndex.get(props.selectedKey)??-1:-1):active();};
     let viewport!: HTMLDivElement;
+    let content!:HTMLDivElement;
     let positions = new Positions([]), items: readonly T[] = [];
     let keyIndex = new Map<string, number>();
     let previousWindowKey=props.windowKey;
-    const cache = new Map<string, number>();
+    let previousMeasurementKey=props.measurementKey;
+    const cache = new Map<string,{height:number;estimate:number|undefined}>();
     const [revision, setRevision] = createSignal(0), [scroll, setScroll] = createSignal(0), [height, setHeight] = createSignal(800), [active, setActive] = createSignal(0);
-    let observer: ResizeObserver | undefined, frame = 0;
+    let observer: ResizeObserver | undefined, frame = 0, scrollResidual=0, assignedScroll:number|undefined;
+    const setScrollPosition=(top:number,preserve=false)=>{
+        if(assignedScroll!==undefined&&Math.abs(viewport.scrollTop-assignedScroll)>.01)scrollResidual=0;
+        const desired=top+(preserve?scrollResidual:0);viewport.scrollTop=desired;let actual=viewport.scrollTop;
+        if(Math.abs(desired-actual)>.5&&Math.abs(desired-actual)<1){viewport.scrollTop=Math.round(desired);actual=viewport.scrollTop;}
+        scrollResidual=preserve&&desired>=0&&desired<=viewport.scrollHeight-viewport.clientHeight&&Math.abs(desired-actual)<1?desired-actual:0;assignedScroll=actual;
+    };
     const range = createMemo(() => { revision(); const top = scroll(); const start = Math.max(0, positions.indexAt(top) - 6), end = Math.min(items.length, positions.indexAt(top + height()) + 7); return { start, end }; });
     const anchor = () => { if (!items.length)
         return; const index = positions.indexAt(viewport.scrollTop); return { key: props.keyFor(items[index]), offset: viewport.scrollTop - positions.offset(index) }; };
     const refresh = () => { setScroll(viewport.scrollTop); setHeight(viewport.clientHeight); setRevision(value => value + 1); };
-    const scrollToIndex = (index: number, align: 'start' | 'end' = 'start') => { viewport.scrollTop = align === 'end' ? positions.offset(index + 1) - viewport.clientHeight : positions.offset(index); refresh(); if(align==='end'&&index===items.length-1)queueMicrotask(()=>{viewport.scrollTop=viewport.scrollHeight;refresh();}); };
+    const scrollToIndex = (index: number, align: 'start' | 'end' = 'start') => { setScrollPosition(align === 'end' ? positions.offset(index + 1) - viewport.clientHeight : positions.offset(index)); refresh(); if(align==='end'&&index===items.length-1)queueMicrotask(()=>{setScrollPosition(viewport.scrollHeight);refresh();}); };
     createEffect(() => {
         const next = props.items;
         const finish=beginWork('virtual-items');
@@ -48,17 +57,22 @@ export function VirtualList<T>(props: {
         const first = items.length === 0;
         items = next;
         keyIndex = new Map(items.map((item, index) => [props.keyFor(item), index]));
-        positions = new Positions(items.map(item => { const estimate=(props.fixedHeights ? props.estimate?.(item) : cache.get(props.keyFor(item)) ?? props.estimate?.(item)) ?? 60; return Number.isFinite(estimate)&&estimate>0?estimate:60; }));
+        if(props.measurementKey!==previousMeasurementKey){cache.clear();previousMeasurementKey=props.measurementKey;viewport?.querySelectorAll('.virtual-row').forEach(row=>{observer?.unobserve(row);observer?.observe(row);});}
+        for(const key of cache.keys())if(!keyIndex.has(key))cache.delete(key);
+        const remeasure=new Set<string>();
+        positions = new Positions(items.map(item => {const key=props.keyFor(item),estimated=props.estimate?.(item),cached=cache.get(key);if(cached&&cached.estimate!==estimated)remeasure.add(key);const height=(!props.fixedHeights&&cached?.estimate===estimated?cached?.height:estimated)??60;return Number.isFinite(height)&&height>0?height:60;}));
+        if(remeasure.size)viewport?.querySelectorAll<HTMLElement>('.virtual-row').forEach(row=>{if(remeasure.has(row.dataset.key!)){observer?.unobserve(row);observer?.observe(row);}});
+        if(content)content.style.height=positions.total+'px';
         if (viewport) {
             if (props.bottomAnchored && (atBottom || first) && (!shifted || first)) {
-                viewport.scrollTop = Math.max(0, positions.total - viewport.clientHeight);
-                queueMicrotask(() => { viewport.scrollTop = viewport.scrollHeight; refresh(); });
+                setScrollPosition(Math.max(0,positions.total-viewport.clientHeight));
+                queueMicrotask(() => { setScrollPosition(viewport.scrollHeight); refresh(); });
             }
-            else if(props.keepTop&&atTop)viewport.scrollTop=0;
+            else if(props.keepTop&&atTop)setScrollPosition(0);
             else if (previous) {
                 const index = (keyIndex.get(previous.key) ?? -1);
                 if (index >= 0)
-                    viewport.scrollTop = positions.offset(index) + previous.offset;
+                    setScrollPosition(positions.offset(index)+previous.offset,true);
             }
             refresh();
         }
@@ -69,7 +83,7 @@ export function VirtualList<T>(props: {
     onMount(() => {
         props.ref?.({ scrollToIndex, anchor });
         observer = new ResizeObserver(entries => {
-            const saved = anchor(), atBottom = viewport.scrollHeight - viewport.scrollTop - height() <= 2;
+            const saved = anchor(), atBottom = positions.total - viewport.scrollTop - height() <= 2;
             let changed = false, resized=false;
             for (const entry of entries) {
                 if (entry.target === viewport) {
@@ -81,21 +95,22 @@ export function VirtualList<T>(props: {
                 if (!item || row.dataset.key !== props.keyFor(item))
                     continue;
                 const measured = entry.borderBoxSize?.[0]?.blockSize ?? entry.target.getBoundingClientRect().height;
-                if (Math.abs(positions.height(index) - measured) > .1) {
-                    cache.set(props.keyFor(item), measured);
+                cache.set(props.keyFor(item),{height:measured,estimate:props.estimate?.(item)});
+                if (Math.abs(positions.height(index) - measured) > .01) {
                     positions.measure(index, measured);
                     changed = true;
                 }
             }
             if (changed||resized) {
+                content.style.height=positions.total+'px';
                 if (props.bottomAnchored && atBottom) {
-                    viewport.scrollTop = Math.max(0, positions.total - viewport.clientHeight);
-                    queueMicrotask(()=>{viewport.scrollTop=viewport.scrollHeight;refresh();});
+                    setScrollPosition(Math.max(0,positions.total-viewport.clientHeight));
+                    queueMicrotask(()=>{setScrollPosition(viewport.scrollHeight);refresh();});
                 }
                 else if (saved) {
                     const index = (keyIndex.get(saved.key) ?? -1);
                     if (index >= 0)
-                        viewport.scrollTop = positions.offset(index) + saved.offset;
+                        setScrollPosition(positions.offset(index)+saved.offset,true);
                 }
                 refresh();
             }
@@ -132,7 +147,7 @@ export function VirtualList<T>(props: {
             setActive(next);
             if(items[next])props.onActive?.(items[next]);
             scrollToIndex(next);
-        }}><div class="virtual-content" style={{ height: (revision(), positions.total + 'px') }}><For each={keys()}>{key => {
+        }}><div ref={content} class="virtual-content" style={{ height: (revision(), positions.total + 'px') }}><For each={keys()}>{key => {
             let row!: HTMLDivElement;
             const index=createMemo(()=>{revision();return keyIndex.get(key)??0;});
             const item = createMemo(() => { revision(); return items[index()]; });

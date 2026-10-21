@@ -18,11 +18,12 @@ export function wrapText(value: string, maxWidth: number, measure: LayoutPrefs['
     for(const token of tokens){
         if(token.includes('\n')){const chunks=token.split('\n');for(let i=0;i<chunks.length;i++){line+=measure(chunks[i]);if(i<chunks.length-1){widest=Math.max(widest,line);line=0;lines++;}}continue;}
         const width=measure(token);
-        if(width>maxWidth){for(const character of Array.from(token)){const advance=measure(character);if(line+advance>maxWidth&&line>0){widest=Math.max(widest,line);line=0;lines++;}line+=advance;}continue;}
-        if(line+width>maxWidth&&line>0){widest=Math.max(widest,line);line=/^\s+$/u.test(token)?0:width;lines++;}else line+=width;
+        if(textWidthWithSlack(width)>maxWidth){for(const character of Array.from(token)){const advance=measure(character);if(textWidthWithSlack(line+advance)>maxWidth&&line>0){widest=Math.max(widest,line);line=0;lines++;}line+=advance;}continue;}
+        if(textWidthWithSlack(line+width)>maxWidth&&line>0){widest=Math.max(widest,line);line=/^\s+$/u.test(token)?0:width;lines++;}else line+=width;
     }
     return {width:Math.min(maxWidth,Math.max(widest,line)),lines};
 }
+export function textWidthWithSlack(width:number){return Math.ceil(Math.ceil(width)+Math.max(1,width*.005));}
 function mediaHeightCap(prefs:LayoutPrefs){return prefs.phone?(prefs.viewportHeight??844)*.6:360;}
 function mediaSize(dimensions:Record<string,unknown>,maxWidth:number,prefs:LayoutPrefs,alpha:boolean) {
     const width=Number(dimensions.width),height=Number(dimensions.height);
@@ -57,12 +58,12 @@ export function layout(items: readonly ThreadItem[], handles: Handles, prefs: La
             const emoji=part.kind==='text'&&emojiOnly(part.text??''),media=!['text','mention'].includes(part.kind);
             const content=text(part.text)||text(data.text),wrapped=wrapText(content,maxWidth-padding,prefs.measure);
             const size=partSize(item,part,maxWidth,lineHeight,prefs),subject=partIndex===0&&!media?text(data.subject):'',subjectSize=wrapText(subject,maxWidth-padding,value=>prefs.measure(value,{weight:700}));
-            const bubbleWidth=media?size.width:emoji?Math.min(maxWidth,Math.ceil(prefs.measure(content)*2.7)+4):Math.max(36,Math.ceil(Math.max(wrapped.width,subject?subjectSize.width:0))+padding);
+            const bubbleWidth=media?size.width:emoji?Math.min(maxWidth,Math.ceil(prefs.measure(content)*2.7)+4):Math.min(maxWidth,Math.max(36,textWidthWithSlack(Math.max(wrapped.width,subject?subjectSize.width:0))+padding));
             const bubbleHeight=media?size.height:emoji?Math.ceil(fontSize*3):wrapped.lines*lineHeight+14+(subject?subjectSize.lines*lineHeight:0);
             const attachment=item.attachments?.find(value=>value.id===part.attachment_id),floating=part.kind==='genmoji'||Boolean(attachment&&attachmentHasAlpha(attachment));
             return {part,floating,subject:subject||undefined,width:bubbleWidth,height:bubbleHeight,emoji,media,reactions:(item.reactions??[]).filter(reaction=>Number(reaction.data.part_index??0)===part.index),tail:last&&partIndex===visible.length-1&&!emoji};
         });
-        const edited=Boolean(data.edited_at)||array(data.edit_history).length>0,history=prefs.expanded.has(item.id)?array(data.edit_history).map(value=>{const content=text(fields(value).text);const wrapped=wrapText(content,maxWidth-padding,prefs.measure);return {text:content,width:Math.max(36,Math.ceil(wrapped.width)+padding),height:wrapped.lines*lineHeight+14};}):[];
+        const edited=Boolean(data.edited_at)||array(data.edit_history).length>0,history=prefs.expanded.has(item.id)?array(data.edit_history).map(value=>{const content=text(fields(value).text);const wrapped=wrapText(content,maxWidth-padding,prefs.measure);return {text:content,width:Math.min(maxWidth,Math.max(36,textWidthWithSlack(wrapped.width)+padding)),height:wrapped.lines*lineHeight+14};}):[];
         const receipt=index===lastSent&&prefs.atLatest!==false&&Number(data.error_code??0)===0?(data.read_at?`Read ${time(text(data.read_at),prefs.locale)}`:data.delivered_at?fields(data.delivery).quietly?wording.deliveredQuietly:wording.delivered:undefined):undefined;
         const reply=text(data.thread_originator_id),failed=Number(data.error_code??0)!==0;
         const gap=first?transcriptSpacing.betweenRuns:transcriptSpacing.withinRun,senderName=prefs.group&&!sent&&first&&!system?actor:undefined;

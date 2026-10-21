@@ -1,11 +1,17 @@
 import { test, expect } from '@playwright/test';
 import { header } from '../src/messages/format';
-import { emojiOnly, layout, type LayoutPrefs } from '../src/messages/transcript/layout';
+import { emojiOnly, layout, textWidthWithSlack, wrapText, type LayoutPrefs } from '../src/messages/transcript/layout';
 import type { ThreadItem } from '../src/data/types';
 import type { Handles } from '../src/messages/store/types';
 const now=new Date(2026,9,20,9,41);
 const handles:Handles=new Map([['alex',{id:'alex',display_name:'Alex Morgan',initials:'AM'}]]);
 const prefs:LayoutPrefs={phone:false,group:true,now,scale:1,measure:value=>Array.from(value).length*7,expanded:new Set(),locale:'en-US'};
+test('layout math leaves subpixel shaping slack before allocating or wrapping text',()=>{
+    expect(textWidthWithSlack(136.83679)).toBe(138);
+    expect(textWidthWithSlack(400)).toBe(402);
+    expect(wrapText('word word',137,value=>value==='word'?68:value===' '?0:0).lines).toBe(1);
+    expect(wrapText('word word',136,value=>value==='word'?68:value===' '?0:0).lines).toBe(2);
+});
 function message(id:string,offset:number,data:Record<string,unknown>={}):ThreadItem{return {id,source:'messages',collection:'messages.message',version:1,data:{sent_at:new Date(now.getTime()+offset).toISOString(),sender_handle_id:'alex',kind:'message',text:'Hello',parts:[{index:0,kind:'text',text:'Hello'}],...data},reactions:[],attachments:[],reply_count:0};}
 test('layout math groups sender runs within one minute and places only the last tail/avatar',()=>{
     const rows=layout([message('one',0),message('two',60000),message('three',120001)],handles,prefs,900);
@@ -94,4 +100,18 @@ test('transcript date math follows locale hour cycles and calendar-day header wo
     expect(header(local(2026,0,1,18,1),current,'en-US')).toBe('Thu, Jan 1 at 6:01 PM');
     expect(header(local(2025,11,31,18,1),current,'en-US')).toBe('Dec 31, 2025 at 6:01 PM');
     expect(header(local(2026,9,20,18,1),current,'sv-SE')).toBe('Today 18:01');
+});
+
+test('WEB-MSG-THREAD-CORE layout math gives exactly the final bubble a tail for every same-sender run regardless of ID ties',()=>{
+    const permutations=(values:string[]):string[][]=>values.length?values.flatMap((value,index)=>permutations(values.filter((_,other)=>other!==index)).map(rest=>[value,...rest])):[[]];
+    for(const mode of ['incoming','direction'])for(let mask=0;mask<16;mask++)for(const ids of permutations(['z','a','m','b'])){
+        const items=ids.map((id,index)=>message(id,0,{is_from_me:mode==='direction'&&Boolean(mask&(1<<index)),sender_handle_id:mode==='incoming'&&Boolean(mask&(1<<index))?'beau':'alex',parts:[{index:0,kind:'text',text:'First'},{index:1,kind:'text',text:'Last'}]})).sort((a,b)=>a.id.localeCompare(b.id));
+        const rows=layout(items,handles,prefs,900),runs:{sender:string;tails:boolean[]}[]=[];
+        for(let index=0;index<items.length;index++){
+            const item=items[index],sender=item.data.is_from_me?'self':String(item.data.sender_handle_id);
+            if(runs.at(-1)?.sender!==sender)runs.push({sender,tails:[]});
+            runs.at(-1)!.tails.push(...rows[index].bubbles.map(bubble=>bubble.tail));
+        }
+        for(const run of runs)expect(run.tails,mode+':'+mask+':'+ids.join(',')).toEqual(run.tails.map((_,index)=>index===run.tails.length-1));
+    }
 });
