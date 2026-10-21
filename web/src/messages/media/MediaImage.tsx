@@ -2,7 +2,7 @@ import { createEffect, createSignal, onCleanup, Show } from 'solid-js';
 import type { BridgeRecord } from '../../data/types';
 import { fields, text } from '../store/types';
 import { decodeThumbHash, type ThumbPixels } from './thumbhash';
-import { mediaSource, type MediaVariant } from './source';
+import { attachmentHasAlpha, mediaSource, type MediaVariant } from './source';
 import './media.css';
 const placeholders=new Map<string,ThumbPixels>();
 export function MediaImage(props: { attachment: BridgeRecord; variant?: MediaVariant; alt?: string }) {
@@ -24,7 +24,7 @@ export function MediaImage(props: { attachment: BridgeRecord; variant?: MediaVar
         const expected = source(),generation=attempt();
         try { await image.decode(); if (!disposed && source() === expected && generation===attempt()) setState('ready'); } catch { if (!disposed && source() === expected && generation===attempt()) setState('error'); }
     };
-    return <div class="media-image" data-media-id={props.attachment.id} data-media-width={fields(props.attachment.data.media).width} data-media-height={fields(props.attachment.data.media).height} data-media-state={state()}>
+    return <div class="media-image" data-media-alpha={attachmentHasAlpha(props.attachment)} data-media-id={props.attachment.id} data-media-width={fields(props.attachment.data.media).width} data-media-height={fields(props.attachment.data.media).height} data-media-state={state()}>
         <canvas ref={canvas} class="media-placeholder" aria-hidden="true"/>
         <Show when={source()} fallback={<span class="media-unavailable" role="status">Attachment unavailable</span>}>
             <Show keyed when={`${source()}#${attempt()}`}>{_key => <img src={source()} alt={props.alt ?? (text(props.attachment.data.description) || text(props.attachment.data.filename) || 'Photo')} decoding="async" draggable={false} onLoad={event => void decode(event.currentTarget)} onError={() => setState('error')}/>}</Show>
