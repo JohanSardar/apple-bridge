@@ -548,6 +548,10 @@ features:
       - {id: MSG-RESEND, levels: [sim, real]}
       - {id: WEB-MSG-SEND, levels: [web, real]}
       - {id: WEB-MSG-ATTACH-SEND, levels: [web, real]}
+      - {id: WEB-UPLOAD-REPLICA, levels: [sim]}
+      - {id: WEB-UPLOAD-REPLICA-RESUME, levels: [sim]}
+      - {id: WEB-UPLOAD-REPLICA-LOST-RESPONSE, levels: [sim]}
+      - {id: WEB-UPLOAD-REPLICA-FORWARD-RESUME, levels: [sim]}
       - {id: WEB-UPLOAD-RESUME, levels: [sim]}
       - {id: WEB-UPLOAD-OVERSIZE, levels: [sim]}
       - {id: WEB-UPLOAD-DIGEST, levels: [sim]}
