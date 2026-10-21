@@ -1,15 +1,15 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[3.81 5.98 10.28] cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[26.41 25.84 17.36] cpus=8 other_heavy=0"
   },
-  "run_id": "cal_01M58D1NJF3SJCPM079HPNRSFG",
+  "run_id": "cal_01M5G0VV5QP6J8JTE7HMBT1H6B",
   "network_path": "loopback",
   "scenario": "CAL-CRUD",
   "level": "sim",
   "passed": true,
-  "git_sha": "4f263fdf17b0f98019c10581b7d742880bb9b6af",
-  "at": "2026-10-18T21:00:26.063289Z",
+  "git_sha": "949f3a6e5054ccd6d1ea425b65220a0288295a8e",
+  "at": "2026-10-21T20:01:27.735274Z",
   "assertions": [
     {
       "name": "calendar_visible",
@@ -200,14 +200,77 @@
       "passed": true
     }
   ],
-  "latency": {},
+  "latency": {
+    "command_submit→calendar.create_calendar_observed": {
+      "samples": 1,
+      "p50_ms": 42.256709,
+      "p95_ms": 42.256709,
+      "max_ms": 42.256709,
+      "timeouts": 0
+    },
+    "command_submit→calendar.create_event_observed": {
+      "samples": 2,
+      "p50_ms": 37.34925,
+      "p95_ms": 46.060708,
+      "max_ms": 46.060708,
+      "timeouts": 0
+    },
+    "command_submit→calendar.delete_event_observed": {
+      "samples": 2,
+      "p50_ms": 35.138834,
+      "p95_ms": 44.620125,
+      "max_ms": 44.620125,
+      "timeouts": 0
+    },
+    "command_submit→calendar.update_event_observed": {
+      "samples": 1,
+      "p50_ms": 35.986875,
+      "p95_ms": 35.986875,
+      "max_ms": 35.986875,
+      "timeouts": 0
+    },
+    "mcp_command_submit→calendar.create_calendar_observed": {
+      "samples": 1,
+      "p50_ms": 39.347959,
+      "p95_ms": 39.347959,
+      "max_ms": 39.347959,
+      "timeouts": 0
+    },
+    "mcp_command_submit→calendar.create_event_observed": {
+      "samples": 2,
+      "p50_ms": 39.305875,
+      "p95_ms": 41.796292,
+      "max_ms": 41.796292,
+      "timeouts": 0
+    },
+    "mcp_command_submit→calendar.delete_event_observed": {
+      "samples": 2,
+      "p50_ms": 41.708417,
+      "p95_ms": 41.79975,
+      "max_ms": 41.79975,
+      "timeouts": 0
+    },
+    "mcp_command_submit→calendar.update_event_observed": {
+      "samples": 1,
+      "p50_ms": 35.8445,
+      "p95_ms": 35.8445,
+      "max_ms": 35.8445,
+      "timeouts": 0
+    }
+  },
   "hosts": [
     "air"
   ],
   "conditions": {
     "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
     "heavy_slots_in_use": "1",
-    "load_average": "3.81 5.98 10.28",
-    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"
+    "load_average": "26.41 25.84 17.36",
+    "mcp_clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
+    "mcp_heavy_slots_in_use": "1",
+    "mcp_load_average": "26.41 25.84 17.36",
+    "mcp_metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica",
+    "mcp_swap_usage": "total = 3072.00M  used = 2147.19M  free = 924.81M  (encrypted)",
+    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica",
+    "swap_usage": "total = 3072.00M  used = 2147.19M  free = 924.81M  (encrypted)"
   }
 }
