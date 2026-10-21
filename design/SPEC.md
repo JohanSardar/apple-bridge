@@ -1304,6 +1304,9 @@ Recently Deleted becomes `deleted_at` + `recoverable_until` on messages and chat
 - `POST /web/v1/upload` streams to a staged blob on the serving instance.
 - **On a replica,** upload bytes are forwarded to the gateway over the feed's command channel in 1 MiB chunks, with the digest verified, before the command is admitted.
 - **Limits:** 100 MiB per file, 10 files per message.
+- Gateway-local raw uploads retain their local staging path. A completed response carries `upload_id`, `offset`, `size`, `state: ready` and `expires_at`.
+- Optional resumable staging starts with an empty POST and `Upload-Length`; `Upload-Digest` is an optional lowercase SHA-256 digest. Append raw bytes with `Upload-ID` and `Upload-Offset`. `GET /web/v1/upload/{id}` returns progress; `DELETE` abandons it. IDs are principal-owned. Accepted writes extend the lease to ten minutes; status reads and commit do not extend it. Interrupted writes retain acknowledged offsets. Completion verifies the declared size and digest before readiness.
+- Expired or abandoned leases release temporary files, upload aliases and pins. Before admission (including awaiting owner approval), the gateway verifies ready upload IDs and persists their blob references with the command. Durable command protection survives upload lease expiry and owner approval; an upload ID alone never grants another principal access.
 
 **Client (`web/src/messages/compose/`, `actions/`):**
 - **Composer:** text, Enter/Shift+Enter, autogrow to 6 lines, paste, drag and drop, file picker, phone camera capture, audio recording sent as a file (an audio message in W4), location sent as a maps link, our own desktop emoji picker (⌃⌘Space), and per-chat drafts in local storage. Public sessions keep drafts in memory only.
