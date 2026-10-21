@@ -10,6 +10,8 @@ import (
 )
 
 func (s *Store) initReadModels(ctx context.Context) error {
+	s.write.Lock()
+	defer s.write.Unlock()
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err

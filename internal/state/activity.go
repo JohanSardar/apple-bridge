@@ -21,6 +21,8 @@ type AgentActivity struct {
 }
 
 func (s *Store) RecordAgentActivity(ctx context.Context, a AgentActivity) error {
+	s.write.Lock()
+	defer s.write.Unlock()
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -32,7 +34,7 @@ func (s *Store) RecordAgentActivity(ctx context.Context, a AgentActivity) error 
 	return tx.Commit()
 }
 func (s *Store) AgentActivity(ctx context.Context, principal, operation string) ([]AgentActivity, error) {
-	if _, err := s.db.ExecContext(ctx, "DELETE FROM agent_activity WHERE at < ?", time.Now().Add(-90*24*time.Hour).Unix()); err != nil {
+	if err := s.PruneAgentActivity(ctx); err != nil {
 		return nil, err
 	}
 	rows, err := s.db.QueryContext(ctx, `SELECT id,principal,operation,kind,state,at,count,argument_bytes,argument_hash FROM agent_activity WHERE (?='' OR principal=?) AND (?='' OR operation=?) ORDER BY at DESC,id DESC LIMIT 1000`, principal, principal, operation, operation)
@@ -57,6 +59,8 @@ func RedactedArguments(args []byte) map[string]any {
 }
 
 func (s *Store) PruneAgentActivity(ctx context.Context) error {
+	s.write.Lock()
+	defer s.write.Unlock()
 	_, err := s.db.ExecContext(ctx, "DELETE FROM agent_activity WHERE at < ?", time.Now().Add(-90*24*time.Hour).Unix())
 	return err
 }

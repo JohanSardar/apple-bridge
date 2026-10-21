@@ -54,6 +54,8 @@ func (s *Store) InitCommands(ctx context.Context) error {
 	return s.openLedger(ctx)
 }
 func (s *Store) openLedger(ctx context.Context, publishMirror ...bool) error {
+	s.write.Lock()
+	defer s.write.Unlock()
 	path := filepath.Join(s.home, "ledger.db")
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0600)
 	if err != nil {
@@ -105,7 +107,7 @@ func (s *Store) openLedger(ctx context.Context, publishMirror ...bool) error {
 			return err
 		}
 		if version != uint64(len(r.History)) {
-			if err = s.publishCommand(ctx, r); err != nil {
+			if err = s.publishCommandLocked(ctx, r); err != nil {
 				return err
 			}
 		}
@@ -237,12 +239,12 @@ func (s *Store) TransitionCommand(ctx context.Context, t CommandTransition) (con
 	if err = tx.Commit(); err != nil {
 		return r, err
 	}
-	if err = s.publishCommand(ctx, r); err != nil {
+	if err = s.publishCommandLocked(ctx, r); err != nil {
 		return r, err
 	}
 	return r, nil
 }
-func (s *Store) publishCommand(ctx context.Context, r contracts.CommandRecord) error {
+func (s *Store) publishCommandLocked(ctx context.Context, r contracts.CommandRecord) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err

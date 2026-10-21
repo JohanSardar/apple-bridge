@@ -86,4 +86,5 @@ func runAgentActivity(ctx context.Context, w *world.World, add func(string, bool
 	add("activity_retains_90_days", err == nil && pruneErr == nil && resp.StatusCode == 200 && bytes.Contains(pruned, []byte(`"activity":[]`)))
 	code, _ := world.Request(ctx, principal, "/web/v1/activity", nil, &out)
 	add("activity_owner_only", code == 401)
+	runAgentActivityCapture(ctx, w, authority, add)
 }
