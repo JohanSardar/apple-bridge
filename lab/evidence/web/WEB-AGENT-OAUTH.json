@@ -1,0 +1,60 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[10.39 11.51 11.33] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5ES9JMSZNKN2Z6WW7YNDGGY",
+  "metrics": {
+    "demo_messages": 5000,
+    "demo_startup_ms": 6672,
+    "matrix": [
+      "chromium-light-phone",
+      "chromium-light-desktop",
+      "chromium-dark-phone",
+      "chromium-dark-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-AGENT-OAUTH-chromium-light-phone-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-AGENT-OAUTH-chromium-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-AGENT-OAUTH-chromium-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-AGENT-OAUTH-chromium-dark-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-AGENT-OAUTH-chromium-dark-desktop-playwright.json"
+    ],
+    "server": "gateway"
+  },
+  "scenario": "WEB-AGENT-OAUTH",
+  "level": "web",
+  "passed": true,
+  "git_sha": "447448f474b9fe3c2f2ee06673dfd3201eef7b4e",
+  "at": "2026-10-21T08:29:54.713571Z",
+  "assertions": [
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/agents.spec.ts:10:1 › WEB-AGENT-OAUTH connector consent, access levels, approval screens and token rotation (2.8s)\n\n  1 passed (3.4s)\n"
+    },
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/agents.spec.ts:10:1 › WEB-AGENT-OAUTH connector consent, access levels, approval screens and token rotation (1.9s)\n\n  1 passed (2.5s)\n"
+    },
+    {
+      "name": "chromium-dark-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-dark-phone] › tests/agents.spec.ts:10:1 › WEB-AGENT-OAUTH connector consent, access levels, approval screens and token rotation (2.5s)\n\n  1 passed (3.1s)\n"
+    },
+    {
+      "name": "chromium-dark-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-dark-desktop] › tests/agents.spec.ts:10:1 › WEB-AGENT-OAUTH connector consent, access levels, approval screens and token rotation (3.2s)\n\n  1 passed (4.2s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
