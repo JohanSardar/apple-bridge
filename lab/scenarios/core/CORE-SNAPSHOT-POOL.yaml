@@ -1,0 +1,3 @@
+id: CORE-SNAPSHOT-POOL
+feature: core.replication
+levels: [sim]

@@ -1,0 +1,3 @@
+id: CORE-ITERATOR-POOL
+feature: core.replication
+levels: [sim]
