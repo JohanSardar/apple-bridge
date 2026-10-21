@@ -100,6 +100,8 @@ A per-part `delivery_failed` with a captured record uses that failed row, withou
 | Satellite / SOS / Check In | rare | Label "via satellite"; Check In as a placeholder card | `—` | placeholder |
 | Chat background (iOS 26) | — | Show the background image behind the transcript when readable | `—` | W4 / hide |
 
+Videos and Live Photos reserve at least 120 px on the short side, within the available width and height caps, with centered cover cropping. Images and stickers keep the no-upscale rule.
+
 ### 3.3 Transcript behavior
 
 - **Opening a chat:** it opens at the first unread message, or at the bottom. A floating "↓ N new" pill appears when new messages arrive above the fold. Catch-up arrow as in iOS 17.

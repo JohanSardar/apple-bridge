@@ -1,0 +1,97 @@
+{
+  "scenario": "WEB-MSG-MEDIA",
+  "test": "presented-frame comparison",
+  "test_sha256": "d10b9577d11b0cdbb1fc16d66395764bd8ffaaf09b2b7a5f5ef7cb5090a36688",
+  "limit": 3,
+  "sample_pixels": [
+    12,
+    12
+  ],
+  "presentation_timeout_ms": 2000,
+  "timeout_behavior": "fail with presentation-stage and playback diagnostic",
+  "original_first_frame_gate_unchanged": true,
+  "strict_geometry_unchanged": true,
+  "negative_control": {
+    "run_id": "run_01M5G5G6EAEMHQZCPYBDPDVFD1",
+    "project": "webkit-dark-phone",
+    "expected_failure": "unchanged residual assertion",
+    "maximum_residual": 201.0000000000003,
+    "reference": "deliberately mismatched magenta frame",
+    "temporary_code_committed": false
+  },
+  "focused_green": {
+    "run_id": "run_01M5G5QQHVX3AWJ1C8M05NEP89",
+    "project": "webkit-dark-phone",
+    "passed": 1,
+    "failed": 0,
+    "maximum_residuals": {
+      "playing-video-frame-comparison": 0,
+      "playing-live-frame-comparison": 0.22222222222225696
+    }
+  },
+  "full_matrix": {
+    "run_id": "run_01M5G649Q4A7SN4QEHH9Z6ZYYV",
+    "projects": 12,
+    "media_spec_passed": 96,
+    "complete_suite_passed": 168,
+    "failed": 0,
+    "skipped": 0,
+    "flaky": 0,
+    "comparisons": {
+      "webkit-light-phone": {
+        "playing-video-frame-comparison": 0,
+        "playing-live-frame-comparison": 0.22222222222225696
+      },
+      "webkit-light-desktop": {
+        "playing-video-frame-comparison": 0,
+        "playing-live-frame-comparison": 0.2777777777783115
+      },
+      "webkit-dark-phone": {
+        "playing-video-frame-comparison": 0,
+        "playing-live-frame-comparison": 0.22222222222225696
+      },
+      "webkit-dark-desktop": {
+        "playing-video-frame-comparison": 0,
+        "playing-live-frame-comparison": 0.2777777777783115
+      },
+      "chromium-light-phone": {
+        "playing-video-frame-comparison": 0,
+        "playing-live-frame-comparison": 0
+      },
+      "chromium-light-desktop": {
+        "playing-video-frame-comparison": 0,
+        "playing-live-frame-comparison": 0
+      },
+      "chromium-dark-phone": {
+        "playing-video-frame-comparison": 0,
+        "playing-live-frame-comparison": 0
+      },
+      "chromium-dark-desktop": {
+        "playing-video-frame-comparison": 0,
+        "playing-live-frame-comparison": 0
+      },
+      "firefox-light-phone": {
+        "playing-video-frame-comparison": 0,
+        "playing-live-frame-comparison": 0
+      },
+      "firefox-light-desktop": {
+        "playing-video-frame-comparison": 0,
+        "playing-live-frame-comparison": 0
+      },
+      "firefox-dark-phone": {
+        "playing-video-frame-comparison": 0,
+        "playing-live-frame-comparison": 0
+      },
+      "firefox-dark-desktop": {
+        "playing-video-frame-comparison": 0,
+        "playing-live-frame-comparison": 0
+      }
+    }
+  },
+  "source_invariants": {
+    "reference_commit": "12816b39d42965a7472ee1031897160616340694",
+    "formula_sha256": "4d9294da408cb41f405156cf50cd42bb6bdd08e7d3a3e546e3a4b31baf87c97b",
+    "first_frame_gate_sha256": "1c94af877794cfee649ba71ea9d8828949502b52f0571541c4ac4022e2b93d74",
+    "unchanged": true
+  }
+}
