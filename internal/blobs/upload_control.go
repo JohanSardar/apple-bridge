@@ -2,6 +2,7 @@ package blobs
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -28,6 +29,16 @@ func (s *Store) Upload(ctx context.Context, owner string, r contracts.UploadRequ
 			return empty, contracts.ErrInvalid
 		}
 		u = uploadLease{UploadStatus: contracts.UploadStatus{ID: r.ID, Size: r.Size, State: "uploading", ExpiresAt: time.Now().UTC().Add(contracts.UploadLease)}, Owner: owner, Pin: "upload-pin:" + filepath.Base(s.uploadPath(owner, r.ID)), ExpectedDigest: r.Digest}
+		if err = os.MkdirAll(filepath.Dir(s.uploadPath(owner, r.ID)), 0700); err != nil {
+			return empty, err
+		}
+		file, openErr := s.openUploadPart(u, true)
+		if openErr != nil {
+			return empty, openErr
+		}
+		if err = file.Close(); err != nil {
+			return empty, err
+		}
 		return u.UploadStatus, s.saveUpload(u)
 	}
 	if err != nil {

@@ -83,6 +83,8 @@ func runWebUpload(ctx context.Context, s Scenario, level string) (e Evidence) {
 		add("oversize_declared_before_staging_rejected", status == 413)
 		status, _ = uploadRequest(c, "POST", "upload", io.LimitReader(webZeroReader{}, 100*1024*1024+1), nil)
 		add("oversize_stream_rejected", status == 413)
+	case "WEB-UPLOAD-MISSING-PART":
+		uploadMissingPart(w, c, add)
 	case "WEB-UPLOAD-LEASE":
 		uploadApprovalLease(ctx, w, c, add)
 	case "WEB-UPLOAD-LIMITS":

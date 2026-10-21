@@ -33,7 +33,7 @@ func (s *Store) AppendUpload(ctx context.Context, owner, id string, offset int64
 	if u.Size >= 0 && next > u.Size {
 		return u.UploadStatus, contracts.ErrConflict
 	}
-	file, err := os.OpenFile(s.uploadPath(owner, id)+".part", os.O_CREATE|os.O_RDWR, 0600)
+	file, err := s.openUploadPart(u, true)
 	if err != nil {
 		return empty, err
 	}
@@ -53,7 +53,7 @@ func (s *Store) AppendUpload(ctx context.Context, owner, id string, offset int64
 }
 func (s *Store) commitUpload(ctx context.Context, u uploadLease) (contracts.UploadStatus, error) {
 	path := s.uploadPath(u.Owner, u.ID) + ".part"
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0600)
+	file, err := s.openUploadPart(u, false)
 	if err != nil {
 		return u.UploadStatus, err
 	}
@@ -86,4 +86,27 @@ func (s *Store) commitUpload(ctx context.Context, u uploadLease) (contracts.Uplo
 	}
 	os.Remove(path)
 	return u.UploadStatus, nil
+}
+
+func (s *Store) openUploadPart(u uploadLease, create bool) (*os.File, error) {
+	flags := os.O_RDWR
+	if create && u.Offset == 0 {
+		flags |= os.O_CREATE
+	}
+	file, err := os.OpenFile(s.uploadPath(u.Owner, u.ID)+".part", flags, 0600)
+	if os.IsNotExist(err) {
+		return nil, contracts.ErrConflict
+	}
+	if err != nil {
+		return nil, err
+	}
+	info, err := file.Stat()
+	if err == nil && (!info.Mode().IsRegular() || info.Size() < u.Offset) {
+		err = contracts.ErrConflict
+	}
+	if err != nil {
+		file.Close()
+		return nil, err
+	}
+	return file, nil
 }

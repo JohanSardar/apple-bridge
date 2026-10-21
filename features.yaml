@@ -545,6 +545,7 @@ features:
       - {id: WEB-UPLOAD-RESUME, levels: [sim]}
       - {id: WEB-UPLOAD-OVERSIZE, levels: [sim]}
       - {id: WEB-UPLOAD-DIGEST, levels: [sim]}
+      - {id: WEB-UPLOAD-MISSING-PART, levels: [sim]}
       - {id: WEB-UPLOAD-LIMITS, levels: [sim]}
       - {id: WEB-UPLOAD-LEASE, levels: [sim]}
       - {id: WEB-MSG-REACT, levels: [web, real]}
