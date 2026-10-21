@@ -1,0 +1,29 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[6.88 7.83 8.86] cpus=8 other_heavy=1"
+  },
+  "status": "environment-limited",
+  "run_id": "run_01M5EHE3SKDC7V8F1AWEF7PN19",
+  "scenario": "MSG-RESEND",
+  "level": "real",
+  "passed": false,
+  "git_sha": "11bb6ee04e56519de77bc657a3ed6e2c2cabd4a6",
+  "at": "2026-10-21T06:12:34.739493Z",
+  "assertions": [
+    {
+      "name": "safe_failed_self_fixture",
+      "passed": false,
+      "status": "unverified",
+      "detail": "Set APPLE_BRIDGE_RESEND_RUN to a registered run containing exactly one failed tagged self message; no native failure was induced"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

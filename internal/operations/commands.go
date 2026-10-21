@@ -237,6 +237,24 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 		m, _ := contracts.ValidateMessagesCommand(c)
 		nativeArgs := contracts.NativeMessagesArgs{MessagesArgs: m}
 		nativeArgs.MessagesArgs.Files = nil
+		if m.ResendOf != "" {
+			previous, problem := g.State.Read(runctx, p.Visibility(), contracts.ReadQuery{Collection: "messages.message", ID: m.ResendOf})
+			if problem != nil || len(previous.Records) != 1 {
+				return g.transition(g.Context, r, "rejected", "rejected_before_dispatch", nil, contracts.ErrNotFound)
+			}
+			var failed struct {
+				FromMe bool   `json:"is_from_me"`
+				Error  int    `json:"error_code"`
+				ChatID string `json:"chat_id"`
+			}
+			if json.Unmarshal(previous.Records[0].Data, &failed) != nil || !failed.FromMe || failed.Error == 0 || failed.ChatID != m.ChatID {
+				return g.transition(g.Context, r, "rejected", "rejected_before_dispatch", nil, contracts.ErrConflict)
+			}
+			nativeArgs.ResendOf, err = g.State.NativeKey(runctx, "messages.message", m.ResendOf)
+			if err != nil {
+				return g.transition(g.Context, r, "rejected", "rejected_before_dispatch", nil, contracts.ErrNotFound)
+			}
+		}
 		for i := range m.Files {
 			file := &m.Files[i]
 			if g.Uploads == nil {

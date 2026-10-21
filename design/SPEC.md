@@ -1283,7 +1283,7 @@ Recently Deleted becomes `deleted_at` + `recoverable_until` on messages and chat
 - **Result:** each passing operation becomes `proven` for the build; a failure leaves that operation hidden in the UI with the reason.
 - **Rerun:** automatic after a macOS update changes the build. The Helper caches one report per running build and does not repeat an interrupted run; `bridge selftest messages --force` starts a new, guarded run. `bridge setup` invokes the same self-test. `--no-ui` proves the AppleScript steps and records the remaining operations and cleanup as deferred. Private run manifests and the dispatch guard retain unfinished cleanup obligations; failures remain unproven with per-operation reasons.
 
-**Proofs to finish at the real level** (sim-only today): `messages.mark_read`, `messages.mark_unread`, `messages.delete_message` and `messages.delete_chat` (tagged self chat only), plus resend of a failed message (`messages.send` with `resend_of`).
+**Proofs to finish at the real level** (sim-only today): `messages.mark_read`, `messages.mark_unread`, `messages.delete_message` and `messages.delete_chat` (tagged self chat only), plus resend of a failed message (`messages.send` with `resend_of`). Resend names a visible failed outgoing message in the same `chat_id` and always uses a fresh command ID. Operations validates that reference, and the Helper rechecks native failure before preparation and dispatch. Reusing the resend command ID returns its existing outcome. Indeterminate effects are never automatically resent. The real proof requires an explicitly supplied registered failed self-message fixture; it never induces an unsafe native failure.
 
 **Upload path:**
 - `POST /web/v1/upload` streams to a staged blob on the serving instance.

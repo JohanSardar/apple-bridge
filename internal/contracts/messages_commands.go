@@ -24,6 +24,7 @@ type NativeMessagesArgs struct {
 }
 
 type MessagesArgs struct {
+	ResendOf  string        `json:"resend_of,omitempty"`
 	ID        string        `json:"id,omitempty"`
 	ChatID    string        `json:"chat_id,omitempty"`
 	Handles   []string      `json:"handles,omitempty"`
@@ -43,7 +44,7 @@ var MessagesOperations = []string{"messages.send", "messages.reply", "messages.r
 func MessagesArgumentFields(op string) []string {
 	switch op {
 	case "messages.send":
-		return []string{"chat_id", "handles", "service", "text", "files"}
+		return []string{"chat_id", "handles", "service", "text", "files", "resend_of"}
 	case "messages.reply":
 		return []string{"id", "part_index", "text", "files"}
 	case "messages.react":
@@ -89,6 +90,9 @@ func ValidateMessagesCommand(c Command) (MessagesArgs, error) {
 	}
 	switch c.Op {
 	case "messages.send":
+		if a.ResendOf != "" && a.ChatID == "" {
+			return a, ErrInvalid
+		}
 		if a.ChatID != "" && a.Service != "" || (a.ChatID == "") == (len(a.Handles) == 0) || a.Text == "" && len(a.Files) == 0 || c.ExpectedVersion != 0 {
 			return a, ErrInvalid
 		}
