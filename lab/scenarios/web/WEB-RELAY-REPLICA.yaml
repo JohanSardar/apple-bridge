@@ -1,0 +1,7 @@
+id: WEB-RELAY-REPLICA
+feature: web.relay
+levels: [replica]
+given: []
+when: [{web: {}}]
+then: []
+cleanup: []

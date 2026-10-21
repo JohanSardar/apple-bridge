@@ -383,6 +383,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 		return runDemoDataset(ctx, s, level)
 	}
 	if s.Feature == "web.relay" {
+		if s.ID == "WEB-RELAY-REPLICA" {
+			return runRelayReplica(ctx, s, level)
+		}
 		if s.ID == "WEB-RELAY-AGENTS" {
 			return runRelayAgents(ctx, s, level)
 		}
@@ -991,6 +994,12 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		ran++
 		fmt.Fprintln(os.Stderr, "running", s.ID, level)
 		duration := 3 * time.Minute
+		if s.Feature == "web.relay" && level == "replica" {
+			duration = 5 * time.Minute
+		}
+		if s.ID == "WEB-RELAY-REPLICA" {
+			duration = 10 * time.Minute
+		}
 		if s.Feature == "web.readmodels" || s.Feature == "web.messages.read" {
 			duration = 15 * time.Minute
 		}

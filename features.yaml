@@ -471,7 +471,7 @@ features:
     milestone: W1
     modules: [replication, remote, trust, runtime]
     depends_on: [web.remote, core.replication, core.trust]
-    status: todo
+    status: in_progress
     scenarios:
       - {id: WEB-RELAY-AUTH, levels: [sim]}
       - {id: WEB-RELAY-AGENTS, levels: [sim]}
