@@ -13,6 +13,26 @@ func (s *Service) Invoke(ctx context.Context, p trust.Principal, name string, in
 	if !ok {
 		return nil, contracts.ErrUnsupported
 	}
+	switch name {
+	case "messages.chats":
+		var q contracts.ChatsQuery
+		if contracts.DecodeInput(input, &q) != nil {
+			return nil, contracts.ErrInvalid
+		}
+		return s.State.Chats(ctx, p.Visibility(), q)
+	case "messages.thread":
+		var q contracts.ThreadQuery
+		if contracts.DecodeInput(input, &q) != nil {
+			return nil, contracts.ErrInvalid
+		}
+		return s.State.Thread(ctx, p.Visibility(), q)
+	case "messages.collection":
+		var q contracts.CollectionQuery
+		if contracts.DecodeInput(input, &q) != nil {
+			return nil, contracts.ErrInvalid
+		}
+		return s.State.Collection(ctx, p.Visibility(), q)
+	}
 	if name == "calendar.agenda" {
 		return s.agenda(ctx, p, input)
 	}

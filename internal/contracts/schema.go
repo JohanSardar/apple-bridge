@@ -14,7 +14,9 @@ func schemaType(t reflect.Type) map[string]any {
 		return map[string]any{}
 	}
 	if t.Kind() == reflect.Pointer {
-		return schemaType(t.Elem())
+		schema := schemaType(t.Elem())
+		schema["nullable"] = true
+		return schema
 	}
 	if t == reflect.TypeFor[time.Time]() {
 		return map[string]any{"type": "string", "format": "date-time"}
@@ -28,6 +30,14 @@ func schemaType(t reflect.Type) map[string]any {
 		required := []string{}
 		for i := 0; i < t.NumField(); i++ {
 			f := t.Field(i)
+			if f.Anonymous && f.Type.Kind() == reflect.Struct {
+				embedded := schemaType(f.Type)
+				for name, value := range embedded["properties"].(map[string]any) {
+					properties[name] = value
+				}
+				required = append(required, embedded["required"].([]string)...)
+				continue
+			}
 			tag := strings.Split(f.Tag.Get("json"), ",")
 			name := tag[0]
 			if name == "-" {
@@ -36,7 +46,14 @@ func schemaType(t reflect.Type) map[string]any {
 			if name == "" {
 				name = f.Name
 			}
-			properties[name] = schemaType(f.Type)
+			field := schemaType(f.Type)
+			if description := f.Tag.Get("description"); description != "" {
+				field["description"] = description
+			}
+			if enum := f.Tag.Get("enum"); enum != "" {
+				field["enum"] = strings.Split(enum, ",")
+			}
+			properties[name] = field
 			if !strings.Contains(f.Tag.Get("json"), "omitempty") {
 				required = append(required, name)
 			}
@@ -68,6 +85,12 @@ func OperationSchema(d OperationDescriptor) map[string]any {
 		collection := fields["collection"].(map[string]any)
 		collection["enum"] = collections
 		collection["description"] = "Collection name; use an empty string to query all visible collections. Follow next with after to read further pages."
+	}
+	if d.Name == "messages.chats" || d.Name == "messages.thread" || d.Name == "messages.collection" {
+		fields := s["properties"].(map[string]any)
+		fields["limit"].(map[string]any)["minimum"] = 0
+		fields["limit"].(map[string]any)["maximum"] = 200
+		return s
 	}
 	if strings.HasPrefix(d.Name, "notes.") {
 		return noteSchema(d, s)

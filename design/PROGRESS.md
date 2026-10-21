@@ -67,4 +67,5 @@ One line per unit. Rules: BUILD-GOAL.md (2026-10-17 update: no reviews, merge on
 - Verification: all 120 simulations pass, including 24/24 Messages; Go tests, lint, features and strict signing smoke pass. Fixed the scope probe command envelope and stale store-wide disk-capacity overlays; the quiet 200,000-message benchmark also passes. Features: 23 done, 1 limited, 0 blocked; 180/183 scenario-levels. Initial failures and diagnostics retained. No new scenario IDs or dependencies.
 
 ## Web app (DECISIONS 2026-10-20, SPEC §23)
+- DONE W1-RM: transactional derived chat/thread/collection read models, REST/MCP contracts, snapshot and existing-store rebuilds; WEB-RM-CHATS and WEB-RM-THREAD pass at sim on synthetic data (500 chats, 170k messages), including Air latency budgets. Unseen mentions remain unavailable; older reactions without sent_at use observed_at.
 - DONE W0 decisions + Messages spec draft (`design/web/messages.md`) + SPEC §23 + ADRs 0015–0020 + web features (todo). Waiting: Johan's skim of the Messages spec (gates W2). Pending: capture pass on the Air (lid closed during W0) to fill messages.md §17 and the "to verify" items.

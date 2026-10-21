@@ -1,0 +1,77 @@
+package contracts
+
+type ChatsQuery struct {
+	Filter string `json:"filter,omitempty" description:"all (default), unread, or archived"`
+	Limit  int    `json:"limit,omitempty" description:"Page size, default 50, maximum 200"`
+	After  string `json:"after,omitempty" description:"Opaque cursor from the previous page"`
+}
+type ThreadQuery struct {
+	ChatID string `json:"chat_id"`
+	Anchor string `json:"anchor,omitempty" description:"latest (default), unread, or a message ID"`
+	Before string `json:"before,omitempty"`
+	After  string `json:"after,omitempty"`
+	Limit  int    `json:"limit,omitempty" description:"Page size, default 50, maximum 200"`
+}
+type CollectionQuery struct {
+	ChatID string `json:"chat_id"`
+	Kind   string `json:"kind" enum:"photos,videos,links,documents,locations,audio"`
+	After  string `json:"after,omitempty"`
+	Limit  int    `json:"limit,omitempty"`
+}
+type AvatarHandle struct {
+	ID        string  `json:"id"`
+	ContactID *string `json:"contact_id"`
+}
+type MessagePreview struct {
+	Kind            string           `json:"kind" enum:"text,attachments,reaction,group_event,unsent,edited"`
+	Text            string           `json:"text,omitempty"`
+	AttachmentKinds []string         `json:"attachment_kinds,omitempty"`
+	Count           int              `json:"count,omitempty"`
+	Reaction        *ReactionPreview `json:"reaction,omitempty"`
+}
+type ReactionPreview struct {
+	Verb          string `json:"verb"`
+	TargetExcerpt string `json:"target_excerpt"`
+}
+type LastMessage struct {
+	ID       string         `json:"id"`
+	SentAt   string         `json:"sent_at"`
+	IsFromMe bool           `json:"is_from_me"`
+	Preview  MessagePreview `json:"preview"`
+}
+type ChatSummary struct {
+	Chat             Record         `json:"chat"`
+	Title            string         `json:"title"`
+	AvatarHandles    []AvatarHandle `json:"avatar_handles"`
+	LastMessage      *LastMessage   `json:"last_message"`
+	LastActivityAt   string         `json:"last_activity_at"`
+	UnreadCount      int            `json:"unread_count"`
+	HasUnseenMention bool           `json:"has_unseen_mention"`
+	Muted            *bool          `json:"muted"`
+	PinnedIndex      *int           `json:"pinned_index"`
+}
+type ChatsResult struct {
+	Chats         []ChatSummary `json:"chats"`
+	Next          string        `json:"next,omitempty"`
+	Cursor        Cursor        `json:"cursor"`
+	CoverageNotes []string      `json:"coverage_notes"`
+}
+type ThreadItem struct {
+	Record
+	Reactions   []Record `json:"reactions"`
+	Attachments []Record `json:"attachments"`
+	ReplyCount  int      `json:"reply_count"`
+}
+type ThreadResult struct {
+	Items        []ThreadItem `json:"items"`
+	Before       string       `json:"before,omitempty"`
+	After        string       `json:"after,omitempty"`
+	UnreadAnchor string       `json:"unread_anchor,omitempty"`
+	Cursor       Cursor       `json:"cursor"`
+}
+type CollectionResult struct {
+	Items         []Record `json:"items"`
+	Next          string   `json:"next,omitempty"`
+	Cursor        Cursor   `json:"cursor"`
+	CoverageNotes []string `json:"coverage_notes"`
+}

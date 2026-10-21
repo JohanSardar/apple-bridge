@@ -24,6 +24,10 @@ type OperationDescriptor struct {
 }
 
 var Operations = append(CalendarDescriptors(), []OperationDescriptor{
+	{Name: "messages.chats", Version: 1, Kind: ReadOp, Source: Messages, Scope: "messages:read", Input: ChatsQuery{}, Output: ChatsResult{}, Description: "Page visible local chat summaries by newest message, reaction or group event; mention coverage unavailable; muted and pinned_index are null", Examples: []Example{{Input: ChatsQuery{Limit: 50}, Output: ChatsResult{Chats: []ChatSummary{}, CoverageNotes: []string{"unseen mentions unavailable"}}}}},
+	{Name: "messages.thread", Version: 1, Kind: ReadOp, Source: Messages, Scope: "messages:read", Input: ThreadQuery{}, Output: ThreadResult{}, Description: "Read a local chat in sent_at and ID order with current reactions, complete attachments and reply counts; opaque before/after cursors and latest, unread or message anchors", Examples: []Example{{Input: ThreadQuery{ChatID: "cht_example", Anchor: "unread", Limit: 100}, Output: ThreadResult{Items: []ThreadItem{}}}}},
+	{Name: "messages.collection", Version: 1, Kind: ReadOp, Source: Messages, Scope: "messages:read", Input: CollectionQuery{}, Output: CollectionResult{}, Description: "Page visible chat attachments by media kind; links and locations return empty items with coverage notes until balloon decoding", Examples: []Example{{Input: CollectionQuery{ChatID: "cht_example", Kind: "photos", Limit: 50}, Output: CollectionResult{Items: []Record{}, CoverageNotes: []string{}}}}},
+
 	{Name: "replica.status", Version: 1, Kind: ReadOp, Source: System, Scope: "system:read", Input: struct{}{}, Output: ReadResult{}, Description: "Read local replication and blob progress"},
 	{Name: "search", Version: 1, Kind: ReadOp, Input: ReadQuery{}, Output: ReadResult{}, Description: "Search visible local record text"},
 	{Name: "records.get", Version: 1, Kind: ReadOp, Input: ReadQuery{}, Output: ReadResult{}, Description: "Read one visible local bridge record"},

@@ -86,6 +86,10 @@ func Open(home string) (*Store, error) {
 		db.Close()
 		return nil, err
 	}
+	if err = s.initReadModels(context.Background()); err != nil {
+		db.Close()
+		return nil, err
+	}
 	if err = s.initSearch(); err != nil {
 		db.Close()
 		return nil, err
@@ -179,6 +183,9 @@ func writeRecord(ctx context.Context, tx *sql.Tx, r contracts.Record, seq uint64
 	}
 	_, err = tx.ExecContext(ctx, `INSERT INTO records(collection,id,version,source,deleted,payload,seq,observed_at) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(collection,id) DO UPDATE SET version=excluded.version,source=excluded.source,deleted=excluded.deleted,payload=excluded.payload,seq=excluded.seq,observed_at=excluded.observed_at`, r.Collection, r.ID, r.Version, r.Source, r.Deleted, b, seq, r.ObservedAt.Format(time.RFC3339Nano))
 	if err != nil {
+		return err
+	}
+	if err = writeReadModel(ctx, tx, r, seq); err != nil {
 		return err
 	}
 	return writeBlobReferences(ctx, tx, "record:"+r.ID, r)
@@ -717,7 +724,7 @@ func (i *SnapshotInstall) InstallSnapshot(ctx context.Context) (contracts.Cursor
 	if time.Now().After(i.ExpiresAt) || len(records) != i.Count || Digest(records) != i.Digest {
 		return contracts.Cursor{}, contracts.ErrCorrupt
 	}
-	if _, err = tx.ExecContext(ctx, "DELETE FROM records; DELETE FROM journal; DELETE FROM applied_batches;"); err != nil {
+	if _, err = tx.ExecContext(ctx, "DELETE FROM msg_by_chat; DELETE FROM reaction_by_message; DELETE FROM attachment_by_message; DELETE FROM activity_by_chat; DELETE FROM chat_summary; DELETE FROM records; DELETE FROM journal; DELETE FROM applied_batches;"); err != nil {
 		return contracts.Cursor{}, err
 	}
 	for _, r := range records {

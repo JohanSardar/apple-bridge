@@ -379,7 +379,7 @@ features:
     milestone: W1
     modules: [state, operations, contracts]
     depends_on: [messages.read]
-    status: todo
+    status: done
     scenarios:
       - {id: WEB-RM-CHATS, levels: [sim]}
       - {id: WEB-RM-THREAD, levels: [sim]}
