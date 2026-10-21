@@ -488,8 +488,22 @@ func (f *fakeApple) calendarCommand(wire *applepeer.Wire, frame contracts.IPCFra
 				value["status"] = 1
 			}
 		}
+		alias := o.ScopedAlias
+		if a.Span == "future" && series != "" && t.Action.Op == "calendar.update_event" {
+			o.Kind = "absent"
+			o.Revalidated = true
+			o.ObservedAt = time.Now().UTC()
+			f.records[key] = o
+			originalKey := key
+			value["occurrence_date"] = value["start"]
+			key = newSeries + "|" + fmt.Sprint(value["occurrence_date"])
+			alias = f.calendarScope(t.Action.ListKey) + key
+			if originalKey == native {
+				native = key
+			}
+		}
 		next := calendarObservation(key, collection, value)
-		next.ScopedAlias = o.ScopedAlias
+		next.ScopedAlias = alias
 		if strings.HasSuffix(t.Action.Op, "delete_event") {
 			next.Kind = "absent"
 			next.Revalidated = true
@@ -515,6 +529,23 @@ func (f *fakeApple) calendarCommand(wire *applepeer.Wire, frame contracts.IPCFra
 	revision := f.durable.Revision[contracts.Calendar]
 	f.mu.Unlock()
 	if err != nil {
+		return err
+	}
+	encodedCapture, _ := json.Marshal(capture.Observations)
+	if a.Span == "future" && len(encodedCapture) > 240000 {
+		evidence, _ := json.Marshal(map[string]any{"reason": "calendar_atomic_capture_too_large", "observed": false})
+		outcome := contracts.IPCFrame{T: "Outcome", CommandID: t.CommandID, Disposition: "indeterminate", Evidence: evidence}
+		f.mu.Lock()
+		f.evidence[t.CommandID] = outcome
+		err = f.saveLocked()
+		f.mu.Unlock()
+		if err != nil {
+			return err
+		}
+		if err = f.guard(guardEntry{CommandID: t.CommandID, Outcome: &outcome}); err != nil {
+			return err
+		}
+		_, err = wire.Send(outcome)
 		return err
 	}
 	if err = emit(capture, revision); err != nil {
