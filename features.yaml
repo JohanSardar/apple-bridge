@@ -437,10 +437,12 @@ features:
     milestone: W1
     modules: [trust, operations, web, frontdoor]
     depends_on: [web.frontdoor, web.remote]
-    status: todo
+    status: in_progress
     scenarios:
+      - {id: WEB-AGENT-CREDENTIALS, levels: [sim]}
       - {id: WEB-AGENT-LEVELS, levels: [sim]}
       - {id: WEB-AGENT-OAUTH, levels: [sim, web]}
+    notes: Scoped credential and CLI slice in progress; owner approvals, activity, OAuth and settings screens follow in separate PRs.
   - id: web.demo
     title: Synthetic demo world serving the web app (bridge-lab demo)
     requirements: [R-WEB-UI]
