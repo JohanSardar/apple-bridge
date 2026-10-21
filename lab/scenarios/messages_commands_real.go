@@ -245,7 +245,12 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 	if s.ID == "MSG-INTERACTIVE-GATE" {
 		var rejected contracts.CommandRecord
 		problem := client.Call(ctx, c.Op, c, &rejected)
-		add("lab_untagged_rejected_before_dispatch", problem != nil && rejected.Disposition == contracts.DispositionRejectedBeforeDispatch)
+		_, lookupErr := world.Request(ctx, w.Gateway, "/v1/op/commands.status", contracts.CommandQuery{ID: c.ID}, &rejected)
+		dispatched := false
+		for _, event := range rejected.History {
+			dispatched = dispatched || event.State == contracts.CommandDispatched
+		}
+		add("lab_untagged_rejected_before_dispatch", problem != nil && lookupErr == nil && rejected.Disposition == contracts.DispositionRejectedBeforeDispatch && !dispatched)
 		c.ID = contracts.NewCommandID()
 		cleanup["command_id"] = c.ID
 		saveCleanup()

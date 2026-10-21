@@ -1,0 +1,114 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[6.54 8.55 9.18] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5EDHTZ0Y4RDFNKV90H169VC",
+  "scenario": "MSG-INTERACTIVE-GATE",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "a8bf8c5a809d46638cccb0e886ae1ede0d52fc0a",
+  "at": "2026-10-21T05:04:42.464655Z",
+  "assertions": [
+    {
+      "name": "software_passkey_enrollment",
+      "passed": true
+    },
+    {
+      "name": "local_cookie_flags",
+      "passed": true
+    },
+    {
+      "name": "trusted_thirty_days",
+      "passed": true
+    },
+    {
+      "name": "session_256_bits",
+      "passed": true
+    },
+    {
+      "name": "tokens_stored_hashed",
+      "passed": true
+    },
+    {
+      "name": "web1_hello_welcome",
+      "passed": true
+    },
+    {
+      "name": "upgrade_requires_web_dot_one",
+      "passed": true
+    },
+    {
+      "name": "interactive_untagged_nonown_observed",
+      "passed": true
+    },
+    {
+      "name": "interactive_retry_never_redispatches",
+      "passed": true
+    },
+    {
+      "name": "lab_cannot_forge_origin",
+      "passed": true
+    },
+    {
+      "name": "lab_nonown_route_blocked",
+      "passed": true
+    },
+    {
+      "name": "one_outgoing_truth_record",
+      "passed": true
+    },
+    {
+      "name": "agent_read_blocked",
+      "passed": true
+    },
+    {
+      "name": "agent_approve_blocked",
+      "passed": true
+    },
+    {
+      "name": "full_agent_interactive_routing",
+      "passed": true
+    },
+    {
+      "name": "interactive_expiry_before_dispatch",
+      "passed": true
+    },
+    {
+      "name": "ambiguity_armed",
+      "passed": true
+    },
+    {
+      "name": "interactive_ambiguous_effect_indeterminate",
+      "passed": true
+    },
+    {
+      "name": "interactive_ambiguous_effect_never_redispatched",
+      "passed": true
+    },
+    {
+      "name": "capability_revoked",
+      "passed": true
+    },
+    {
+      "name": "interactive_capability_proof_still_required",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "interactive_submit_to_observed": {
+      "samples": 1,
+      "p50_ms": 66.003333,
+      "p95_ms": 66.003333,
+      "max_ms": 66.003333,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}
