@@ -23,7 +23,7 @@ func webAvatarFixture(w *world.World) (webAvatar, error) {
 	image, _ := base64.StdEncoding.DecodeString("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aX1sAAAAASUVORK5CYII=")
 	digest := sha256.Sum256(image)
 	out.Digest = hex.EncodeToString(digest[:])
-	if err := w.ControlAction("/external-change", map[string]any{"key": "list-contact-photo", "collection": "contacts.contact", "data": map[string]any{"given_name": "Sam", "family_name": "Rivera", "thumbnail_image": map[string]any{"digest": out.Digest, "size": len(image), "state": "present"}}}); err != nil {
+	if err := w.ControlAction("/external-change", map[string]any{"key": "list-contact-photo", "collection": "contacts.contact", "data": map[string]any{"given_name": "Sam", "family_name": "Rivera", "emails": []any{map[string]any{"value": "photo@example.com"}}, "thumbnail_image": map[string]any{"digest": out.Digest, "size": len(image), "state": "present"}}}); err != nil {
 		return out, err
 	}
 	if err := w.FlushCaptures(10 * time.Second); err != nil {
