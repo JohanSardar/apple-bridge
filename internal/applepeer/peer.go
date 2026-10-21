@@ -215,6 +215,15 @@ func Serve(ctx context.Context, cfg Config) error {
 					}
 				}
 			}()
+			queue := startMutations(session, wire, func(frame contracts.IPCFrame, size int) (contracts.IPCFrame, error) {
+				mu.Lock()
+				defer mu.Unlock()
+				if active != conn || session.Err() != nil {
+					return contracts.IPCFrame{}, contracts.ErrUnavailable
+				}
+				return commitMutation(ctx, session, cfg, wire, frame, size)
+			})
+			defer func() { stop(); queue.stop(wire) }()
 			for {
 				f, n, err := wire.Receive()
 				if err != nil {
@@ -225,40 +234,12 @@ func Serve(ctx context.Context, cfg Config) error {
 					if cfg.Commands != nil {
 						cfg.Commands.receive(commands, f)
 					}
-				case "Capture":
-					if f.Capture == nil || n > contracts.ByteCredit {
-						return
-					}
-					mu.Lock()
-					if active != conn {
-						mu.Unlock()
-						return
-					}
-					degraded, err := cfg.CommitCapture(ctx, *f.Capture)
-					if err == nil && cfg.BlobCapture != nil {
-						cfg.BlobCapture(session, *f.Capture, wire)
-					}
-					mu.Unlock()
-					if err != nil {
-						if err == contracts.ErrReset {
-							wire.Send(contracts.IPCFrame{T: "Reset", Source: f.Capture.Source})
-							continue
-						}
-						cfg.SourceState(ctx, f.Capture.Source, "degraded", contracts.Coverage{Fields: "partial", Missing: []string{"capture_failed"}}, nil, "capture_failed")
-						return
-					}
-					if degraded {
-						cfg.SourceState(ctx, f.Capture.Source, "degraded", contracts.Coverage{Fields: "partial", Missing: []string{"incomplete_scan_absence_ignored"}}, nil, "incomplete_scan")
-					}
-					if _, err = wire.Send(contracts.IPCFrame{T: "Committed", Source: f.Capture.Source, Checkpoint: f.Capture.Checkpoint, Credit: n}); err != nil {
+				case "Capture", "SourceState":
+					if !queue.enqueue(f, n) {
 						return
 					}
 				case "BlobChunk", "BlobUnavailable":
 					wire.deliverBlob(f)
-				case "SourceState":
-					if err = cfg.SourceState(ctx, f.Source, f.State, f.Coverage[f.Source], f.Capabilities[f.Source], f.Reason); err != nil {
-						return
-					}
 				case "Ping":
 					if _, err = wire.Send(contracts.IPCFrame{T: "Pong"}); err != nil {
 						return

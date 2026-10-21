@@ -373,6 +373,9 @@ func convergence(w *world.World) bool {
 }
 
 func runScenario(ctx context.Context, s Scenario, level string) Evidence {
+	if s.ID == "HELPER-IPC-RESPONSIVE" {
+		return runHelperIPC(ctx, s, level)
+	}
 	if s.ID == "HELPER-SIGNED-APP-CACHE" {
 		return runNativeAppCache(ctx, s, level)
 	}

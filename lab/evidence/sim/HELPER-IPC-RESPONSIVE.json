@@ -1,0 +1,65 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[5.51 5.99 9.42] cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5G28399QFATKX8H9EFYV928",
+  "scenario": "HELPER-IPC-RESPONSIVE",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "86b021717d7ec167762c63b6d6f8a51d71380288",
+  "at": "2026-10-21T20:25:37.833545Z",
+  "assertions": [
+    {
+      "name": "isolated_gateway_started",
+      "passed": true
+    },
+    {
+      "name": "helper_authenticated_with_bounded_credit",
+      "passed": true
+    },
+    {
+      "name": "helper_ready_before_capture_hold",
+      "passed": true
+    },
+    {
+      "name": "capture_commit_held_before_acknowledgment",
+      "passed": true
+    },
+    {
+      "name": "blob_reply_progresses_while_capture_commit_is_held",
+      "passed": true
+    },
+    {
+      "name": "control_progresses_without_early_capture_ack",
+      "passed": true
+    },
+    {
+      "name": "capture_credit_exhaustion_closes_session",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "ipc_blob_reply_write": {
+      "samples": 1,
+      "p50_ms": 0.975959,
+      "p95_ms": 0.975959,
+      "max_ms": 0.975959,
+      "timeouts": 0
+    },
+    "ipc_control_round_trip": {
+      "samples": 1,
+      "p50_ms": 0.778625,
+      "p95_ms": 0.778625,
+      "max_ms": 0.778625,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}
