@@ -23,7 +23,7 @@ let package = Package(
         .executableTarget(name: "UsageChecks", dependencies: ["Decoders", "UsageSource", "SourceSupport"]),
         .executableTarget(name: "NotesDecoderChecks", dependencies: ["Decoders"]),
         .executableTarget(name: "DecoderChecks", dependencies: ["Decoders"]),
-        .executableTarget(name: "MessagesCaptureChecks", dependencies: ["MessagesSource", "SourceSupport"]),
+        .executableTarget(name: "MessagesCaptureChecks", dependencies: ["MessagesSource", "SourceSupport", "MediaDerivatives"]),
         .executableTarget(name: "MessagesBench", dependencies: ["MessagesSource", "SourceSupport"]),
         .target(name: "AppleSession", dependencies: ["UsageSource", "NotesSource", "CalendarSource", "ContactsSource", "MessagesSource", "RemindersSource", "RemindersStore", "AgendaGate", "SourceSupport"]),
         .executableTarget(name: "CalendarChecks", dependencies: ["CalendarSource"], path: "Tests/CalendarChecks"),

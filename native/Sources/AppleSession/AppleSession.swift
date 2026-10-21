@@ -74,7 +74,7 @@ public actor AppleSession: ObservationSink {
         let agenda = AgendaGate(trace: trace)
         self.agenda = agenda
         source = try RemindersSource(gate: agenda, home: home, commandsEnabled: true)
- calendar = try CalendarSource(gate:agenda,home:home,commandsEnabled:true)
+ calendar = try CalendarSource(gate: agenda, home: home, commandsEnabled: true)
         guardLog = try DispatchGuard(home: home)
         let pidFile = home.appendingPathComponent("helper.pid")
         try Data(String(getpid()).utf8).write(to: pidFile, options: .atomic)
@@ -156,6 +156,7 @@ public actor AppleSession: ObservationSink {
     public func sourceState(source: String, state: String, coverage: JSON, capabilities: [String], reason: String) async throws {
         guard let wire else { throw SourceFailure.unavailable }
         try wire.send(.object(["t": .string("SourceState"), "source": .string(source), "state": .string(state), "coverage": .object([source: coverage]), "capabilities": .object([source: .array(capabilities.map(JSON.string))]), "reason": .string(reason)]))
+        Task { do { try await drain() } catch { disconnect() } }
     }
 
     private func publishReadiness() async throws {
@@ -227,7 +228,12 @@ public actor AppleSession: ObservationSink {
     }
 
     private func readBlob(_ frame: JSON) async {
+        let activity = ForegroundActivity.shared.begin()
+        defer { ForegroundActivity.shared.end(activity) }
         guard let connection = wire else { return }
+        let started = CaptureTrace.now()
+        let source = frame["handle"].string.hasPrefix("contacts-image:") ? "contacts" : "messages"
+        defer { trace.record("helper_blob_read", fields: ["source": .string(source), "started_ns": .integer(started), "finished_ns": .integer(CaptureTrace.now())]) }
         do {
             guard !frame["handle"].string.isEmpty, frame["offset"].number >= 0, frame["offset"].number < Double(Int64.max), frame["length"].number > 0, frame["length"].number <= 131072, frame["length"].number.rounded(.down) == frame["length"].number, frame["offset"].number.rounded(.down) == frame["offset"].number else { throw SourceFailure.invalid }
             let response: JSON
@@ -249,7 +255,7 @@ public actor AppleSession: ObservationSink {
 
     public func emitCheckpoint(source: String, generation: String, checkpoint: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) async throws {
         guard wire != nil else { throw SourceFailure.unavailable }
-        let chunks = try split(observations, maximumBytes: live ? 240000 : 16000)
+        let chunks = try split(observations, maximumBytes: live ? 64000 : 16000)
         for (index,chunk) in chunks.enumerated() {
             try await withCheckedThrowingContinuation { continuation in
                 let pending = Pending(source: source, checkpoint: index == chunks.count-1 ? checkpoint : "", generation: generation, scanID: scanID, completionEvidence: completionEvidence, blobHandles: blobHandles.filter { digest, _ in Self.containsDigest(.array(chunk), digest: digest) }, observations: chunk, started: scanStartedAt, scope: scope, completion: continuation)
@@ -298,8 +304,13 @@ public actor AppleSession: ObservationSink {
             let connection = wire
             let observations: [JSON]
             if !prioritized && pending.source == "reminders" {
-                observations = try await source.revalidate(pending.observations, generation: pending.generation)
+                let validated = try await source.revalidate(pending.observations, generation: pending.generation)
                 guard wire === connection, !Task.isCancelled else { return }
+                guard let validated else {
+                    if live.contains(where: { flights[$0.source] == nil }) { continue }
+                    return
+                }
+                observations = validated
                 if live.contains(where: { flights[$0.source] == nil }) { continue }
             } else { observations = pending.observations }
             let sending = Pending(source: pending.source, checkpoint: pending.checkpoint, generation: pending.generation, scanID: pending.scanID, completionEvidence: pending.completionEvidence, blobHandles: pending.blobHandles, observations: observations, started: pending.started, scope: pending.scope, completion: pending.completion)
@@ -402,6 +413,8 @@ public actor AppleSession: ObservationSink {
     }
 
     private func resolve(_ frame: JSON) async {
+        let activity = ForegroundActivity.shared.begin()
+        defer { ForegroundActivity.shared.end(activity) }
         let id = frame["command_id"].string
         do {
             guard var outcome = await guardLog.outcomes[id] else { try reject(frame, code: "not_found"); return }
@@ -473,6 +486,8 @@ let operation=outcome["evidence"]["prepared"]["action"]["op"].string
     }
 
     private func prepare(_ frame: JSON) async {
+        let activity = ForegroundActivity.shared.begin()
+        defer { ForegroundActivity.shared.end(activity) }
         let nonce = UUID()
         guard let connection = wire else { return }
         let owner = fence
@@ -494,6 +509,8 @@ let operation=outcome["evidence"]["prepared"]["action"]["op"].string
     }
 
     private func dispatch(_ frame: JSON) async {
+        let activity = ForegroundActivity.shared.begin()
+        defer { ForegroundActivity.shared.end(activity) }
         guard let ticket = tickets.removeValue(forKey: frame["ticket"].string) else { try? reject(frame, code: "conflict"); return }
         let id = ticket.command["command_id"]
         guard !commandActive else { try? reject(ticket.command, code: "conflict"); return }
