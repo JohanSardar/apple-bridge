@@ -87,3 +87,5 @@ Process: every change ships as a small PR (WORKER-RULES, Git and GitHub). Status
   - Messages capture pass for `messages.md` §17 and the "to verify" rows.
   - Cleanup of the six W1-MEDIA test bubbles.
   - Embedded tsnet login approval (`remote-on.log` in `/tmp/ablab/w1-remote-embedded-check`).
+
+- IN PROGRESS W3-HELPER: interactive IPC origin validation and Messages tag/recipient routing; MSG-INTERACTIVE-GATE adds sim and self-only real verification, with manifest-bound cleanup for untagged test sends. UI-dependent real cleanup waits for the Air unlock.

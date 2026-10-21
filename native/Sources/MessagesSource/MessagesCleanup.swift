@@ -30,6 +30,8 @@ public enum MessagesCleanup {
         let reader = try MessagesReader(path: FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Messages/chat.db").path)
         var mediaNames: Set<String> = []
         var mediaBaseline: Int64 = 0
+        var interactiveText = ""
+        var interactiveBaseline: Int64 = 0
         if !tag.isEmpty {
             let run = String(tag.dropFirst(9).dropLast())
             let ledger = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/AppleBridgeDev/messages-command-cleanup/" + run + ".json")
@@ -41,10 +43,17 @@ public enum MessagesCleanup {
                     mediaNames.insert(String(index) + "-" + name)
                 }
             }
+            if let bytes = try? Data(contentsOf: ledger), let registration = try? JSONDecoder().decode(JSON.self, from: bytes), registration["scenario"].string == "MSG-INTERACTIVE-GATE", registration["run_id"].string == run, registration["interactive_text"].string == "Apple Bridge interactive self-check " + run {
+                interactiveText = registration["interactive_text"].string
+                interactiveBaseline = Int64(registration["baseline_max_row_id"].number)
+            }
         }
         func candidates() throws -> [(String, JSON)] {
             var rows = try reader.query("SELECT DISTINCT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID WHERE NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=j.chat_id AND r.message_id=m.ROWID) AND (instr(m.text,'[ab-test ')>0 OR instr(m.attributedBody,CAST('[ab-test ' AS BLOB))>0) ORDER BY m.ROWID DESC", [])
             var mediaByMessage: [String: [String]] = [:]
+            if !interactiveText.isEmpty, interactiveBaseline > 0 {
+                rows += try reader.query("SELECT DISTINCT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID WHERE m.ROWID>? AND NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=j.chat_id) AND (m.text=? OR instr(m.attributedBody,CAST(? AS BLOB))>0)", [String(interactiveBaseline), interactiveText, interactiveText])
+            }
             if !mediaNames.isEmpty, mediaBaseline > 0 {
                 for row in try reader.query("SELECT m.guid,a.filename FROM message m JOIN message_attachment_join j ON j.message_id=m.ROWID JOIN attachment a ON a.ROWID=j.attachment_id JOIN chat_message_join c ON c.message_id=m.ROWID WHERE m.ROWID>? AND NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=c.chat_id)", [String(mediaBaseline)]) {
                     let name = URL(fileURLWithPath: row["filename"]).lastPathComponent
@@ -65,6 +74,10 @@ public enum MessagesCleanup {
                     continue
                 }
                 let target = try JSONDecoder().decode(JSON.self, from: JSONSerialization.data(withJSONObject: fields))
+                if !interactiveText.isEmpty, target["text"].string == interactiveText, peers.allSatisfy({ own.contains(MessagesProbes.normalize($0["id"])) }) {
+                    result.append((row["guid"], target))
+                    continue
+                }
                 guard target["text"].string.range(of: #"\[ab-test [A-Za-z0-9_-]+\]"#, options: .regularExpression) != nil else { continue }
                 guard tag.isEmpty || target["text"].string.contains(tag) else { continue }
                 result.append((row["guid"], target))

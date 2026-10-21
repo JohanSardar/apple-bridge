@@ -58,7 +58,7 @@ func runWebServer(ctx context.Context, s Scenario, level string) Evidence {
 		body, _ := io.ReadAll(resp.Body)
 		return resp, string(body)
 	}
-	if s.ID == "WEB-AUTH-SOFTWARE" || s.ID == "WEB-LIVE-RECORD" || s.ID == "WEB-BLOB-ACCESS" || s.ID == "WEB-COMMAND-INTERACTIVE" || s.ID == "WEB-LIVE-READMODELS" {
+	if s.ID == "MSG-INTERACTIVE-GATE" || s.ID == "WEB-AUTH-SOFTWARE" || s.ID == "WEB-LIVE-RECORD" || s.ID == "WEB-BLOB-ACCESS" || s.ID == "WEB-COMMAND-INTERACTIVE" || s.ID == "WEB-LIVE-READMODELS" {
 		runWebSession(ctx, w, s.ID, &e, add)
 		e.Passed = len(e.Assertions) > 0
 		for _, a := range e.Assertions {
@@ -308,6 +308,10 @@ func runWebSession(ctx context.Context, w *world.World, id string, e *Evidence, 
 		var frame map[string]any
 		err := wsjson.Read(bounded, conn, &frame)
 		return frame, err
+	}
+	if id == "MSG-INTERACTIVE-GATE" {
+		runMessagesInteractive(ctx, w, conn, e, add)
+		return
 	}
 	if id == "WEB-LIVE-READMODELS" {
 		runWebReadModels(ctx, w, c, conn, e, add)

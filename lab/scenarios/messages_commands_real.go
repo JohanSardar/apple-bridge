@@ -7,6 +7,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
+	"github.com/JohanSardar/apple-bridge/internal/trust"
+	bridgeweb "github.com/JohanSardar/apple-bridge/internal/web"
 	"github.com/JohanSardar/apple-bridge/lab/scripted"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 	"io"
@@ -101,6 +103,9 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 	}
 	client := scripted.Client{Endpoint: w.Gateway}
 	text := "[ab-test " + e.RunID + "] self command"
+	if s.ID == "MSG-INTERACTIVE-GATE" {
+		text = "Apple Bridge interactive self-check " + e.RunID
+	}
 	args := map[string]any{"chat_id": chatID, "text": text}
 	if s.ID == "MSG-REPLY" {
 		contacts, err := nativeTestContacts()
@@ -143,6 +148,9 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 	}
 	cleanupPath := filepath.Join(cleanupDirectory, e.RunID+".json")
 	cleanup := map[string]any{"run_id": e.RunID, "command_id": c.ID, "baseline_max_row_id": maximum, "created_at": time.Now().UTC(), "cleanup_state": "pending_native_cleanup", "scenario": s.ID, "level": level}
+	if s.ID == "MSG-INTERACTIVE-GATE" {
+		cleanup["interactive_text"] = text
+	}
 	if s.ID == "WEB-MEDIA-VARIANTS" {
 		names := []string{}
 		for _, file := range argsFiles(args) {
@@ -164,6 +172,9 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 	add("cleanup_registered_before_submit", true)
 	defer func() {
 		ok, metrics := cleanupNativeMessageRun(w, e.RunID, false)
+		if s.ID == "MSG-INTERACTIVE-GATE" && !ok {
+			result.Status = "environment-limited"
+		}
 		result.Assertions = append(result.Assertions, Assertion{Name: "tagged_messages_cleanup", Passed: ok})
 		if s.ID == "WEB-MEDIA-VARIANTS" {
 			var remaining int
@@ -231,7 +242,34 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 	}
 	started := time.Now()
 	var outcome contracts.CommandRecord
-	err = client.Call(ctx, c.Op, c, &outcome)
+	if s.ID == "MSG-INTERACTIVE-GATE" {
+		var rejected contracts.CommandRecord
+		problem := client.Call(ctx, c.Op, c, &rejected)
+		add("lab_untagged_rejected_before_dispatch", problem != nil && rejected.Disposition == contracts.DispositionRejectedBeforeDispatch)
+		c.ID = contracts.NewCommandID()
+		cleanup["command_id"] = c.ID
+		saveCleanup()
+		authority, problem := trust.Open(w.Gateway.Home)
+		if problem != nil {
+			add("device_authority", false)
+			return e
+		}
+		token, _, problem := authority.CreateDeviceSession("trusted")
+		if problem != nil {
+			add("device_session", false)
+			return e
+		}
+		owner := &webClient{ctx: ctx, origin: strings.Replace(w.Gateway.URL, "127.0.0.1", "localhost", 1), cookie: &http.Cookie{Name: bridgeweb.LocalSessionCookie, Value: token}}
+		conn, problem := owner.socket()
+		if problem != nil {
+			add("interactive_socket", false)
+			return e
+		}
+		defer conn.CloseNow()
+		outcome, err = submitInteractiveMessage(ctx, conn, c)
+	} else {
+		err = client.Call(ctx, c.Op, c, &outcome)
+	}
 	if err == nil && (outcome.State == contracts.CommandAdmitted || outcome.State == contracts.CommandPrepared || outcome.State == contracts.CommandDispatched) {
 		w.Await(20*time.Second, func() bool {
 			client.Call(ctx, "commands.status", contracts.CommandQuery{ID: c.ID}, &outcome)
@@ -284,7 +322,7 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 	if s.ID == "WEB-MEDIA-VARIANTS" {
 		return verifyMediaVariants(ctx, e, w, "ab-"+e.RunID, mediaAppeared, observers)
 	}
-	if s.ID != "MSG-SEND-SELF-TEXT" && s.ID != "MSG-SEND-FILES" {
+	if s.ID != "MSG-SEND-SELF-TEXT" && s.ID != "MSG-SEND-FILES" && s.ID != "MSG-INTERACTIVE-GATE" {
 		return runNativeMessageAction(ctx, s, e, w, evidence.NativeKey, text, stateDB)
 	}
 
