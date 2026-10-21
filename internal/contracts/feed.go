@@ -20,12 +20,13 @@ type CommandResponse struct {
 }
 
 type FeedFrame struct {
-	ClockProtocol string           `json:"clock_protocol,omitempty"`
-	Clock         *ClockSample     `json:"clock,omitempty"`
-	Request       json.RawMessage  `json:"request,omitempty"`
-	Delegation    string           `json:"delegation,omitempty"`
-	Response      *CommandResponse `json:"response,omitempty"`
-	Offset        int64            `json:"offset,omitempty"`
+	DelegationProtocol string           `json:"delegation_protocol,omitempty"`
+	ClockProtocol      string           `json:"clock_protocol,omitempty"`
+	Clock              *ClockSample     `json:"clock,omitempty"`
+	Request            json.RawMessage  `json:"request,omitempty"`
+	Delegation         string           `json:"delegation,omitempty"`
+	Response           *CommandResponse `json:"response,omitempty"`
+	Offset             int64            `json:"offset,omitempty"`
 
 	T                    string    `json:"t"`
 	Protocol             string    `json:"protocol,omitempty"`

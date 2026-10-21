@@ -97,6 +97,10 @@ func (s *Server) serve(ctx context.Context, conn *websocket.Conn, p trust.Princi
 	if hello.ClockProtocol == contracts.FeedClockProtocol {
 		clockProtocol = contracts.FeedClockProtocol
 	}
+	negotiatedDelegation := ""
+	if hello.DelegationProtocol == delegationProtocol {
+		negotiatedDelegation = delegationProtocol
+	}
 	s.updateDial(p.ID, func(status *contracts.DialStatus) {
 		status.State = "connected"
 		status.LastHeartbeat = time.Now().UTC()
@@ -152,6 +156,10 @@ func (s *Server) serve(ctx context.Context, conn *websocket.Conn, p trust.Princi
 					return
 				}
 
+			case "DelegationResponse":
+				if negotiatedDelegation == "" || !s.deliverDelegation(p.ID, conn, f) {
+					return
+				}
 			case "CommandRequest":
 				if f.ID == "" || len(f.Request) == 0 || s.Command == nil {
 					return
@@ -230,8 +238,12 @@ func (s *Server) serve(ctx context.Context, conn *websocket.Conn, p trust.Princi
 	if resume {
 		reason = "resume"
 	}
-	if err = transmit(contracts.FeedFrame{T: "Welcome", ClockProtocol: clockProtocol, At: time.Now().UTC(), Protocol: contracts.FeedProtocol, GatewayID: s.Authority.Fingerprint, Epoch: head.Epoch, SubscriptionRevision: p.Revision, Scope: p.Grants, Head: head.Sequence, RetentionFloor: s.Store.RetentionFloor(), Schema: 1, Reason: reason}, nil); err != nil {
+	if err = transmit(contracts.FeedFrame{T: "Welcome", DelegationProtocol: negotiatedDelegation, ClockProtocol: clockProtocol, At: time.Now().UTC(), Protocol: contracts.FeedProtocol, GatewayID: s.Authority.Fingerprint, Epoch: head.Epoch, SubscriptionRevision: p.Revision, Scope: p.Grants, Head: head.Sequence, RetentionFloor: s.Store.RetentionFloor(), Schema: 1, Reason: reason}, nil); err != nil {
 		return err
+	}
+	if negotiatedDelegation != "" {
+		unregister := s.registerDelegation(ctx, conn, p, cert)
+		defer unregister()
 	}
 	cursor := head
 	if resume {
@@ -398,7 +410,7 @@ func (c *Client) consume(ctx context.Context, conn *websocket.Conn, e trust.Enro
 	}()
 	clock := &clockProbe{}
 	head := c.Store.Head()
-	if _, err := send(ctx, conn, contracts.FeedFrame{T: "Hello", ClockProtocol: contracts.FeedClockProtocol, Protocol: contracts.FeedProtocol, ReplicaID: e.ReplicaID, Cursor: &head, SchemaOffer: []int{1}, Credits: contracts.ByteCredit}); err != nil {
+	if _, err := send(ctx, conn, contracts.FeedFrame{T: "Hello", DelegationProtocol: delegationProtocol, ClockProtocol: contracts.FeedClockProtocol, Protocol: contracts.FeedProtocol, ReplicaID: e.ReplicaID, Cursor: &head, SchemaOffer: []int{1}, Credits: contracts.ByteCredit}); err != nil {
 		return err
 	}
 	go func() {
@@ -462,6 +474,15 @@ func (c *Client) consume(ctx context.Context, conn *websocket.Conn, e trust.Enro
 				if _, err := send(ctx, conn, contracts.FeedFrame{T: "ClockAck", ID: f.ID, Clock: &sample}); err != nil {
 					return err
 				}
+			}
+			continue
+		}
+		if f.T == "DelegationRequest" {
+			if welcome.DelegationProtocol != delegationProtocol {
+				return contracts.ErrInvalid
+			}
+			if err := c.answerDelegation(ctx, conn, f); err != nil {
+				return err
 			}
 			continue
 		}

@@ -205,6 +205,7 @@ func Start(ctx context.Context, cfg Config) error {
 			}
 		}()
 		feed := &replication.Server{Store: store, Authority: authority, Blobs: blobStore, Command: gateway.Forward}
+		gateway.Reauthorize = feed.Reauthorize
 		relayFeed = feed.RelayHandler()
 		service.LocalStatus = func() contracts.ReplicaStatus {
 			return contracts.ReplicaStatus{Role: "gateway", State: "ready", Cursor: store.Head(), GatewayHead: store.Head().Sequence, Blobs: blobStore.Progress(), DialReplicas: feed.DialStatus()}
