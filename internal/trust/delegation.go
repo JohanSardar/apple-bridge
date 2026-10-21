@@ -62,7 +62,7 @@ func (a *Authority) VerifyDelegation(cert *x509.Certificate, header, id, hash st
 		return empty, contracts.ErrUnauthorized
 	}
 	var d Delegation
-	if contracts.DecodeInput(b, &d) != nil || d.ReplicaID != replica.ID || !strings.HasPrefix(d.LocalPrincipal, "token:") || d.CommandID != id || d.RequestHash != hash || time.Now().Unix()-d.IAT > 60 || d.IAT > time.Now().Unix()+5 || !Subset(d.LocalGrants, replica.Grants) {
+	if contracts.DecodeInput(b, &d) != nil || d.ReplicaID != replica.ID || (!strings.HasPrefix(d.LocalPrincipal, "token:") && !strings.HasPrefix(d.LocalPrincipal, "device:")) || d.CommandID != id || d.RequestHash != hash || time.Now().Unix()-d.IAT > 60 || d.IAT > time.Now().Unix()+5 || !Subset(d.LocalGrants, replica.Grants) {
 		return empty, contracts.ErrUnauthorized
 	}
 	return Principal{ID: replica.ID + "/" + d.LocalPrincipal, Kind: "delegated", Grants: d.LocalGrants, Fingerprint: replica.Fingerprint}, nil

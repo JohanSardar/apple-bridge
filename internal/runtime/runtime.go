@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -24,6 +25,7 @@ import (
 	"github.com/JohanSardar/apple-bridge/internal/replication"
 	"github.com/JohanSardar/apple-bridge/internal/state"
 	"github.com/JohanSardar/apple-bridge/internal/trust"
+	bridgeweb "github.com/JohanSardar/apple-bridge/internal/web"
 )
 
 type Config struct {
@@ -243,6 +245,7 @@ func Start(ctx context.Context, cfg Config) error {
 						file.Close()
 					}
 				}
+				webCaptureCommitted(cfg.Home, result.After, result.Through, result.CommittedAt)
 				committedAt := result.CommittedAt.UnixNano()
 				if err == nil && cfg.HelperLabCommands && !result.CommittedAt.IsZero() {
 					keys := []string{}
@@ -307,7 +310,16 @@ func Start(ctx context.Context, cfg Config) error {
 			go func() { failures <- client.Follow(ctx) }()
 		}
 	}
-	server := &http.Server{Handler: frontdoor.Handler(frontdoor.Deps{Operations: service, Authority: authority, Address: cfg.APIAddress, Blobs: blobStore}, contracts.Operations), ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 30 * time.Second}
+	apiHandler := frontdoor.Handler(frontdoor.Deps{Operations: service, Authority: authority, Address: cfg.APIAddress, Blobs: blobStore}, contracts.Operations)
+	webHandler := bridgeweb.Handler(bridgeweb.Deps{Operations: service, Authority: authority, Address: cfg.APIAddress, Blobs: blobStore, FrameWritten: func(cursor contracts.Cursor, at time.Time) { webFrameWritten(cfg.Home, cursor, at) }})
+	localHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/v1/") || r.URL.Path == "/mcp" || strings.HasPrefix(r.URL.Path, "/mcp/") {
+			apiHandler.ServeHTTP(w, r)
+			return
+		}
+		webHandler.ServeHTTP(w, r)
+	})
+	server := &http.Server{Handler: localHandler, ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 30 * time.Second}
 	go func() { failures <- server.Serve(api) }()
 	defer server.Close()
 	b, err := json.Marshal(cfg)

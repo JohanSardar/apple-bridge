@@ -1,0 +1,7 @@
+id: WEB-LIVE-RESUME
+feature: web.frontdoor
+levels: [web]
+given: []
+when: [{web: {}}]
+then: []
+cleanup: []

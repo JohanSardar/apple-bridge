@@ -1,0 +1,7 @@
+id: WEB-AUTH-ENROLL
+feature: web.frontdoor
+levels: [web]
+given: []
+when: [{web: {}}]
+then: []
+cleanup: []

@@ -68,4 +68,5 @@ One line per unit. Rules: BUILD-GOAL.md (2026-10-17 update: no reviews, merge on
 
 ## Web app (DECISIONS 2026-10-20, SPEC §23)
 - DONE W1-RM: transactional derived chat/thread/collection read models, REST/MCP contracts, snapshot and existing-store rebuilds; WEB-RM-CHATS and WEB-RM-THREAD pass at sim on synthetic data (500 chats, 170k messages), including Air latency budgets. Unseen mentions remain unavailable; older reactions without sent_at use observed_at.
+- W1-WEB: browser HTTP front door, passkey device sessions, web/1 journal subscriptions, blob routes and interactive command metadata implemented; sim acceptance in progress; browser-level proof belongs to W1-UI.
 - DONE W0 decisions + Messages spec draft (`design/web/messages.md`) + SPEC §23 + ADRs 0015–0020 + web features (todo). Waiting: Johan's skim of the Messages spec (gates W2). Pending: capture pass on the Air (lid closed during W0) to fill messages.md §17 and the "to verify" items.

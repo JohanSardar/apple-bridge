@@ -939,6 +939,8 @@ Same origin for everything. Served by the gateway and by replicas (any instance)
 | `POST upload` | Stage a blob for sending (streamed, ≤ 100 MiB) |
 | `GET live` | WebSocket, protocol `web/1` (§23.3) |
 
+**Ceremony JSON.** Options requests accept `{token?, kind?: trusted|public}` (`token` is required for enrollment, `kind` defaults to trusted). Options responses contain the standard WebAuthn `publicKey` object and `ceremony_id`. Finish requests contain `{ceremony_id, credential}`, where `credential` is the WebAuthn credential JSON (base64url binary fields). The server binds the single-use ceremony to its flow, serving origin, chosen session kind and, for additional passkeys, the signed-in device. Ceremonies expire after five minutes. Passkey/device list responses are `{passkeys: [...]}` / `{devices: [...]}`. Passkey list rows expose only `id`, `rp_id`, `created_at`. Device IDs include the `device:` prefix. `bridge web enroll --host <origin>` defaults to `http://localhost:7780`; this implementation prints the enrollment URL only, avoiding another QR dependency.
+
 **Sessions.**
 - **Principal:** `device:<id>` in Trust, with the owner's full grants.
 - **Cookie:** `__Host-ab_session` (Secure; HttpOnly; SameSite=Strict; Path=/), an opaque 256-bit value stored hashed.
@@ -982,6 +984,8 @@ S→C signin{device, at} · approval{command} · session_revoked · error{code, 
 - `thread{chat_id, anchor: latest|unread|<message_id>, before?, after?}`: a window of ThreadItems. Deltas update items inside the window and report `newer`/`older` counts outside it.
 - `record{collection, id}`.
 - `collection{chat_id, kind}`.
+
+**View payloads.** The WebSocket upgrade offers subprotocol `web.1` for logical protocol `web/1`. `record` snapshots contain the `records.get` result (`records`, `cursor`); record deltas contain the same Change rows as SSE. Read-model snapshots contain the corresponding operation result. Read-model delta changes are `{op: upsert, id, data, order}` or `{op: remove, id}`; `order` is the zero-based position. A read-model delta also carries the ordered ID array `order` and pagination fields in `page`. Thread deltas include `newer` and `older` counts of changed messages outside the subscribed window since its snapshot. A subscription may provide its resume `cursor` next to `args`; record subscriptions replay journal rows. Derived subscriptions take a fresh snapshot on reconnect because their previous window membership is client state. Unsupported views produce `error{code: unsupported}` until their Operations descriptors are available. `ack.status` and `cmd_status.status` are command-state strings; `cmd_status.command` contains the command ledger record, and rejected acknowledgments carry `error`. Socket overload and revocation close with code 1008 and reason `overloaded` / `session_revoked`.
 
 **Rules:**
 - **Deltas:** come from the State journal through the same iterator as local SSE (§12), filtered by Visibility and mapped to affected subscriptions.

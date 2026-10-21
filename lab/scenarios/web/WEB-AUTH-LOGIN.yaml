@@ -1,0 +1,7 @@
+id: WEB-AUTH-LOGIN
+feature: web.frontdoor
+levels: [web]
+given: []
+when: [{web: {}}]
+then: []
+cleanup: []

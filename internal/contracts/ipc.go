@@ -43,6 +43,7 @@ type Checkpoint struct {
 }
 
 type IPCFrame struct {
+	Origin        string          `json:"origin,omitempty"`
 	Handle        string          `json:"handle,omitempty"`
 	Offset        int64           `json:"offset,omitempty"`
 	Length        int64           `json:"length,omitempty"`
@@ -93,6 +94,7 @@ type Pong IPCFrame
 type Close IPCFrame
 
 type Prepare struct {
+	Origin        string          `json:"origin,omitempty"`
 	T             string          `json:"t"`
 	CommandID     string          `json:"command_id"`
 	Principal     string          `json:"principal"`
@@ -111,6 +113,7 @@ type Prepared struct {
 	CandidateIDs []string        `json:"candidate_ids"`
 }
 type Dispatch struct {
+	Origin     string `json:"origin,omitempty"`
 	CommandID  string `json:"command_id"`
 	T          string `json:"t"`
 	Ticket     string `json:"ticket"`
