@@ -1,0 +1,4 @@
+id: WEB-SOURCES-STATUS
+feature: web.messages.write
+levels: [sim, web]
+web: {browsers: [webkit, chromium, firefox], themes: [light, dark], layouts: [phone, desktop], server: gateway}

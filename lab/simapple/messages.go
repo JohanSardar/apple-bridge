@@ -143,14 +143,23 @@ func (f *fakeApple) messageRoutes(mux *http.ServeMux) {
 					}
 				}
 			}
-		case "capability-unproven":
-			f.messages.capabilityUnproven = true
+		case "capability-unproven", "capability-proven", "capability-proven-empty-reason":
+			f.messages.capabilityUnproven = action.Action == "capability-unproven"
 			coverage := messageCoverage()
-			for i := range coverage.Operations {
-				coverage.Operations[i].Proven = false
-				coverage.Operations[i].Reason = "capability_unproven"
+			if action.Action == "capability-proven-empty-reason" {
+				for i := range coverage.Operations {
+					coverage.Operations[i].Reason = ""
+				}
 			}
-			sourceState = &contracts.IPCFrame{T: "SourceState", Source: contracts.Messages, State: "ready", Coverage: map[contracts.Source]contracts.Coverage{contracts.Messages: coverage}, Capabilities: map[contracts.Source][]string{contracts.Messages: {}}, Reason: "capability_unproven"}
+			capabilities, reason := messageCapabilities(), ""
+			if f.messages.capabilityUnproven {
+				for i := range coverage.Operations {
+					coverage.Operations[i].Proven = false
+					coverage.Operations[i].Reason = "capability_unproven"
+				}
+				capabilities, reason = nil, "capability_unproven"
+			}
+			sourceState = &contracts.IPCFrame{T: "SourceState", Source: contracts.Messages, State: "ready", Coverage: map[contracts.Source]contracts.Coverage{contracts.Messages: coverage}, Capabilities: map[contracts.Source][]string{contracts.Messages: capabilities}, Reason: reason}
 		case "permission-loss", "permission-restore":
 			f.messages.permitted = action.Action == "permission-restore"
 			state := "permission_missing"

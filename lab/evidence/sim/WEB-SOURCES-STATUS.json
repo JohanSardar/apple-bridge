@@ -1,0 +1,149 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[6.19 7.45 8.72] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5F8SV36Y99TGSKN24WASNGN",
+  "scenario": "WEB-SOURCES-STATUS",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "fa93566ae7751665664185e54d64ba85531f6277",
+  "at": "2026-10-21T13:00:56.296045Z",
+  "assertions": [
+    {
+      "name": "software_passkey_enrollment",
+      "passed": true
+    },
+    {
+      "name": "local_cookie_flags",
+      "passed": true
+    },
+    {
+      "name": "trusted_thirty_days",
+      "passed": true
+    },
+    {
+      "name": "session_256_bits",
+      "passed": true
+    },
+    {
+      "name": "tokens_stored_hashed",
+      "passed": true
+    },
+    {
+      "name": "source_backend_unavailable_is_503",
+      "passed": true
+    },
+    {
+      "name": "source_forbidden_origin_is_403",
+      "passed": true
+    },
+    {
+      "name": "source_status_requires_device_session",
+      "passed": true
+    },
+    {
+      "name": "source_status_device_read",
+      "passed": true
+    },
+    {
+      "name": "source_state_ids_and_coverage",
+      "passed": true
+    },
+    {
+      "name": "source_responses_have_increasing_server_sequence",
+      "passed": true
+    },
+    {
+      "name": "source_proofs_have_reasons",
+      "passed": true
+    },
+    {
+      "name": "source_id_subscribed",
+      "passed": true
+    },
+    {
+      "name": "capability-unproven_published",
+      "passed": true
+    },
+    {
+      "name": "capability-unproven_live_action_advertisement",
+      "passed": true
+    },
+    {
+      "name": "capability-proven_published",
+      "passed": true
+    },
+    {
+      "name": "proof_appears_as_live_delta",
+      "passed": true
+    },
+    {
+      "name": "capability-proven_live_action_advertisement",
+      "passed": true
+    },
+    {
+      "name": "public_source_session",
+      "passed": true
+    },
+    {
+      "name": "public_sees_same_proof_without_cache",
+      "passed": true
+    },
+    {
+      "name": "source_route_matches_operations",
+      "passed": true
+    },
+    {
+      "name": "public_live_source_socket",
+      "passed": true
+    },
+    {
+      "name": "public_capability-unproven_published",
+      "passed": true
+    },
+    {
+      "name": "public_capability-unproven_live",
+      "passed": true
+    },
+    {
+      "name": "public_capability-proven_published",
+      "passed": true
+    },
+    {
+      "name": "public_capability-proven_live",
+      "passed": true
+    },
+    {
+      "name": "scoped_replica_started",
+      "passed": true
+    },
+    {
+      "name": "scoped_source_visibility",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "capability-proven_to_live_source": {
+      "samples": 1,
+      "p50_ms": 12.990833,
+      "p95_ms": 12.990833,
+      "max_ms": 12.990833,
+      "timeouts": 0
+    },
+    "capability-unproven_to_live_source": {
+      "samples": 1,
+      "p50_ms": 16.039416,
+      "p95_ms": 16.039416,
+      "max_ms": 16.039416,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}
