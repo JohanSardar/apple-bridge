@@ -41,8 +41,8 @@ public enum MediaDerivatives {
         }
         return false
     }
-    public static func supports(_ url: URL) -> Bool {
-        guard let type = UTType(filenameExtension: url.pathExtension) else { return false }
+    public static func supports(_ url: URL, uti: String = "", mime: String = "") -> Bool {
+        guard let type = UTType(filenameExtension: url.pathExtension) ?? (uti.isEmpty ? nil : UTType(uti)) ?? (mime.isEmpty ? nil : UTType(mimeType: mime)) else { return false }
         return type.conforms(to: .image) || type.conforms(to: .audiovisualContent)
     }
     public static func cached(_ digest: String) -> MediaResult? {
@@ -57,7 +57,7 @@ public enum MediaDerivatives {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: root.path)
         var result: MediaResult
-        if let type = UTType(filenameExtension: input.pathExtension), type.conforms(to: .image), let source = CGImageSourceCreateWithURL(input as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary) {
+        if let source = CGImageSourceCreateWithURL(input as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary), let identifier = CGImageSourceGetType(source), let type = UTType(identifier as String), type.conforms(to: .image) {
             result = try images(source, directory: directory, sticker: sticker)
             if let identifier = contentIdentifier(source) {
                 result.awaitingLive = true
@@ -97,6 +97,10 @@ public enum MediaDerivatives {
         if FileManager.default.fileExists(atPath: immutable.path) { try FileManager.default.removeItem(at: file) }
         else { try FileManager.default.moveItem(at: file, to: immutable) }
         return MediaVariant(digest: digest, size: size, mime: mime, width: width, height: height, file: immutable.deletingLastPathComponent().lastPathComponent + "/" + immutable.lastPathComponent)
+    }
+    public static func liveIdentifier(_ url: URL) -> String? {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary) else { return nil }
+        return contentIdentifier(source)
     }
     static func contentIdentifier(_ source: CGImageSource) -> String? {
         let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any]

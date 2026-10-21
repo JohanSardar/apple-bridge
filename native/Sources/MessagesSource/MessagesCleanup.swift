@@ -35,7 +35,11 @@ public enum MessagesCleanup {
             let ledger = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/AppleBridgeDev/messages-command-cleanup/" + run + ".json")
             if let bytes = try? Data(contentsOf: ledger), let registration = try? JSONDecoder().decode(JSON.self, from: bytes), registration["scenario"].string == "WEB-MEDIA-VARIANTS", registration["run_id"].string == run {
                 mediaBaseline = Int64(registration["baseline_max_row_id"].number)
-                mediaNames = Set(registration["media_attachment_names"].array.map(\.string).filter { $0.hasPrefix("ab-" + run + ".") && $0 == URL(fileURLWithPath: $0).lastPathComponent })
+                let registered = registration["media_attachment_names"].array.map(\.string)
+                for (index, name) in registered.enumerated() where name.hasPrefix("ab-" + run + ".") && name == URL(fileURLWithPath: name).lastPathComponent {
+                    mediaNames.insert(name)
+                    mediaNames.insert(String(index) + "-" + name)
+                }
             }
         }
         func candidates() throws -> [(String, JSON)] {

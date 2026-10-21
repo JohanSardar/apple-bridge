@@ -23,6 +23,8 @@ func runNativeMessagesCommands(ctx context.Context, s Scenario, level string, e 
 	replicas := 0
 	if level == "replica" || s.ID == "WEB-MEDIA-VARIANTS" {
 		replicas = 1
+	}
+	if level == "replica" {
 		e.Hosts = append(e.Hosts, "ubuntu")
 	}
 	w, err := world.NewReal(ctx, level, replicas, world.BlobOptions{Scope: "messages:read,messages:write,system:read"})

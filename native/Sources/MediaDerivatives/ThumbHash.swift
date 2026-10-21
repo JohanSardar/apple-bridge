@@ -7,7 +7,7 @@ public enum ThumbHash {
         var average = [Double](repeating: 0, count: 4)
         for i in 0..<count {
             let alpha = Double(rgba[i * 4 + 3]) / 255
-            for c in 0..<3 { average[c] += alpha * Double(rgba[i * 4 + c]) / 255 }
+            for c in 0..<3 { average[c] += alpha / 255 * Double(rgba[i * 4 + c]) }
             average[3] += alpha
         }
         if average[3] > 0 { for c in 0..<3 { average[c] /= average[3] } }
@@ -18,9 +18,9 @@ public enum ThumbHash {
         var channels = [[Double]](repeating: [Double](repeating: 0, count: count), count: 4)
         for i in 0..<count {
             let alpha = Double(rgba[i * 4 + 3]) / 255
-            let r = average[0] * (1 - alpha) + alpha * Double(rgba[i * 4]) / 255
-            let g = average[1] * (1 - alpha) + alpha * Double(rgba[i * 4 + 1]) / 255
-            let b = average[2] * (1 - alpha) + alpha * Double(rgba[i * 4 + 2]) / 255
+            let r = average[0] * (1 - alpha) + alpha / 255 * Double(rgba[i * 4])
+            let g = average[1] * (1 - alpha) + alpha / 255 * Double(rgba[i * 4 + 1])
+            let b = average[2] * (1 - alpha) + alpha / 255 * Double(rgba[i * 4 + 2])
             channels[0][i] = (r + g + b) / 3
             channels[1][i] = (r + g) / 2 - b
             channels[2][i] = r - g

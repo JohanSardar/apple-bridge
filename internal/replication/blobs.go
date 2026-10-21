@@ -2,6 +2,7 @@ package replication
 
 import (
 	"context"
+	"errors"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/internal/trust"
 	"github.com/coder/websocket"
@@ -166,13 +167,20 @@ func (c *Client) followBlobs(ctx context.Context, conn *websocket.Conn, events <
 				return list[i].Digest < list[j].Digest
 			})
 			seen := map[string]bool{}
+			variantsPending := false
 			for _, ref := range list {
-				if seen[ref.Digest] {
+				if !ref.Variant && variantsPending {
+					continue
+				}
+				if ref.AwaitingVariants || seen[ref.Digest] {
 					continue
 				}
 				seen[ref.Digest] = true
 				source := &feedSource{conn: conn, events: events}
-				c.Blobs.Transfer(ctx, ref.Digest, source)
+				err := c.Blobs.Transfer(ctx, ref.Digest, source)
+				if ref.Variant && err != nil && !errors.Is(err, contracts.ErrCapacity) && !errors.Is(err, contracts.ErrNotFound) && !errors.Is(err, contracts.ErrUnsupported) && !errors.Is(err, contracts.ErrInvalid) && !errors.Is(err, contracts.ErrCorrupt) {
+					variantsPending = true
+				}
 				if source.started {
 					source.drain(ctx)
 				}

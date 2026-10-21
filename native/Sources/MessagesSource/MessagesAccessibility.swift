@@ -55,7 +55,7 @@ enum MessagesAccessibility {
             if !mediaNames.isEmpty, identifier == "Sticker" {
                 var mediaBudget = 100
                 let matched = matching(element, budget: &mediaBudget) { child in
-                    let values = [value(child, kAXDescriptionAttribute), value(child, kAXValueAttribute), value(child, "AXURL"), value(child, kAXTitleAttribute)]
+                    let values = [kAXDescriptionAttribute, kAXValueAttribute, "AXURL", kAXTitleAttribute, "AXFilename", kAXHelpAttribute, "AXDocument", "AXValueDescription"].map { value(child, $0) }
                     return mediaNames.contains { name in values.contains { $0.contains(name) || $0.removingPercentEncoding?.contains(name) == true } }
                 }
                 return !matched.isEmpty && mediaBudget > 0

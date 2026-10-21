@@ -1,0 +1,7 @@
+id: WEB-MEDIA-CAP
+feature: web.media
+levels: [sim]
+given: [{world: {replicas: 1}}]
+when: [{media_variants: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

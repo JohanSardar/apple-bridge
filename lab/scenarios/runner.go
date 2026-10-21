@@ -376,7 +376,7 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if level == "web" {
 		return runWeb(ctx, s)
 	}
-	if s.ID == "WEB-MEDIA-VARIANTS" {
+	if s.ID == "WEB-MEDIA-VARIANTS" || s.ID == "WEB-MEDIA-CAP" {
 		return runMediaVariants(ctx, s, level)
 	}
 	if s.Feature == "web.readmodels" {

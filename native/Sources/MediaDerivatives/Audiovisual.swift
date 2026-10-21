@@ -43,8 +43,12 @@ extension MediaDerivatives {
         let height = Int(abs(size.height).rounded())
         guard max(width, height) <= 1920, min(width, height) <= 1080 else { throw MediaFailure.encode }
         var result = MediaResult()
-        result.media.width = width
-        result.media.height = height
+        guard let original = try await asset.loadTracks(withMediaType: .video).first else { throw MediaFailure.decode }
+        let originalSize = try await original.load(.naturalSize)
+        let originalTransform = try await original.load(.preferredTransform)
+        let oriented = originalSize.applying(originalTransform)
+        result.media.width = Int(abs(oriented.width).rounded())
+        result.media.height = Int(abs(oriented.height).rounded())
         result.media.duration_ms = Int((seconds * 1000).rounded())
         let generator = AVAssetImageGenerator(asset: output)
         generator.appliesPreferredTrackTransform = true
@@ -98,7 +102,7 @@ extension MediaDerivatives {
             }
         }
         guard reader.status == .completed else { throw MediaFailure.decode }
-        return peaks.map { UInt8((min(1, max(0, $0)) * 255).rounded()) }
+        return peaks.map { $0.isFinite ? UInt8((min(1, max(0, $0)) * 255).rounded()) : 0 }
     }
 }
 

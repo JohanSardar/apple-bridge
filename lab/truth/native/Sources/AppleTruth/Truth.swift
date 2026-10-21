@@ -44,7 +44,10 @@ struct AppleTruth {
                     response = ["status": granted ? "verified" : "unverified", "granted": granted]
                 } else {
                 guard let requestPath = option("--request-file"), let request = try JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: requestPath))) as? [String: Any] else { throw TruthFailure.invalid }
-                if request["source"] as? String == "usage" {
+                if request["source"] as? String == "media" {
+                    guard verb == "observe" else { throw TruthFailure.invalid }
+                    response = try await MediaTruth.observe(request)
+                } else if request["source"] as? String == "usage" {
                     guard verb == "observe" else { throw TruthFailure.invalid }; response = try UsageTruth.observe(root: request["biome_root"] as? String)
                 } else if request["source"] as? String == "notes" {
                     response = request["sqlite"] as? Bool == true ? try notesSQLite(path: request["snapshot_path"] as? String) : try notes(verb, request)

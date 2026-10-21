@@ -52,7 +52,11 @@ func runMediaVariants(ctx context.Context, s Scenario, level string) Evidence {
 		return runNativeMessagesCommands(ctx, s, level, e)
 	}
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
-	w, err := world.New(ctx, level, 1, 0, world.BlobOptions{Scope: "messages:read,messages:write,system:read"})
+	options := world.BlobOptions{Scope: "messages:read,messages:write,system:read"}
+	if s.ID == "WEB-MEDIA-CAP" {
+		options.Cap = 9 * 1024 * 1024
+	}
+	w, err := world.New(ctx, level, 1, 0, options)
 	if err != nil {
 		add("world_start", false)
 		return e
@@ -69,9 +73,19 @@ func runMediaVariants(ctx context.Context, s Scenario, level string) Evidence {
 		return e
 	}
 	picture := image.NewNRGBA(image.Rect(0, 0, 2400, 1200))
+	noise := uint32(1)
 	for y := 0; y < 1200; y++ {
 		for x := 0; x < 2400; x++ {
-			picture.SetNRGBA(x, y, color.NRGBA{R: uint8(x % 256), G: uint8(y % 256), B: 90, A: 255})
+			pixel := color.NRGBA{R: uint8(x % 256), G: uint8(y % 256), B: 90, A: 255}
+			if s.ID == "WEB-MEDIA-CAP" {
+				noise = noise*1664525 + 1013904223
+				pixel.R = uint8(noise >> 24)
+				noise = noise*1664525 + 1013904223
+				pixel.G = uint8(noise >> 24)
+				noise = noise*1664525 + 1013904223
+				pixel.B = uint8(noise >> 24)
+			}
+			picture.SetNRGBA(x, y, pixel)
 		}
 	}
 	var buffer bytes.Buffer
@@ -106,6 +120,50 @@ func runMediaVariants(ctx context.Context, s Scenario, level string) Evidence {
 	err = client.Call(ctx, command.Op, command, &outcome)
 	add("self_send_observed", err == nil && outcome.State == contracts.CommandObserved)
 	e = verifyMediaVariants(ctx, e, w, prefix, func(string) time.Time { return started }, observers)
+	if s.ID == "WEB-MEDIA-CAP" {
+		add("variants_fit_cap_original_deferred", w.Await(10*time.Second, func() bool {
+			var records contracts.ReadResult
+			if client.Call(ctx, "records.query", contracts.ReadQuery{Collection: "messages.attachment", Limit: 100}, &records) != nil {
+				return false
+			}
+			progress, err := blobProgress(ctx, w.Replicas[0])
+			if err != nil || progress.Bytes > options.Cap {
+				return false
+			}
+			for _, record := range records.Records {
+				var data mediaAttachment
+				json.Unmarshal(record.Data, &data)
+				if strings.HasSuffix(data.Filename, ".png") {
+					return progress.Entries[data.Blob.Digest].State == "over_cap"
+				}
+			}
+			return false
+		}) == nil)
+	}
+	if s.ID == "WEB-MEDIA-CAP" {
+		progress, _ := blobProgress(ctx, w.Replicas[0])
+		if e.Metrics == nil {
+			e.Metrics = map[string]any{}
+		}
+		e.Metrics["cap_entries"] = progress.Entries
+		db, problem := sql.Open("sqlite", "file:"+filepath.Join(w.Replicas[0].Home, "state.db")+"?mode=ro")
+		if problem == nil {
+			defer db.Close()
+			refs := []contracts.BlobReference{}
+			rows, problem := db.QueryContext(ctx, "SELECT payload FROM blob_refs")
+			if problem == nil {
+				for rows.Next() {
+					var raw []byte
+					var ref contracts.BlobReference
+					if rows.Scan(&raw) == nil && json.Unmarshal(raw, &ref) == nil {
+						refs = append(refs, ref)
+					}
+				}
+				rows.Close()
+			}
+			e.Metrics["cap_references"] = refs
+		}
+	}
 	before := mediaSnapshot(ctx, w.Gateway, prefix)
 	add("sim_restart", w.RestartHelper() == nil)
 	add("variants_survive_restart", w.Await(15*time.Second, func() bool {
@@ -190,7 +248,7 @@ func verifyMediaVariants(ctx context.Context, e Evidence, w *world.World, prefix
 			}
 			for _, record := range result.Records {
 				var data mediaAttachment
-				if json.Unmarshal(record.Data, &data) != nil || !strings.HasPrefix(data.Filename, prefix+".") {
+				if json.Unmarshal(record.Data, &data) != nil || !strings.Contains(data.Filename, prefix+".") {
 					continue
 				}
 				wanted := []string{"thumb", "display"}
@@ -294,7 +352,8 @@ func verifyMediaVariants(ctx context.Context, e Evidence, w *world.World, prefix
 					}
 					file := filepath.Join(w.Dir, "inspect-"+variant.Digest+extension)
 					os.WriteFile(file, content, 0600)
-					output, err := exec.CommandContext(ctx, mediaTool(), "inspect", file).Output()
+					observation, err := w.Truth("observe", map[string]any{"source": "media", "file": file})
+					output, encodingErr := json.Marshal(observation)
 					var truth struct {
 						Width    int      `json:"width"`
 						Height   int      `json:"height"`
@@ -303,7 +362,7 @@ func verifyMediaVariants(ctx context.Context, e Evidence, w *world.World, prefix
 						Audio    []string `json:"audio"`
 						Type     string   `json:"type"`
 					}
-					parsed := err == nil && json.Unmarshal(output, &truth) == nil
+					parsed := err == nil && encodingErr == nil && json.Unmarshal(output, &truth) == nil
 					add(variantName+"_avfoundation_truth", parsed)
 					if variant.MIME == "video/mp4" {
 						add("mp4_h264_1080p_faststart", parsed && len(truth.Video) > 0 && truth.Video[0] == "avc1" && min(truth.Width, truth.Height) <= 1080 && max(truth.Width, truth.Height) <= 1920 && truth.Duration >= 950 && truth.Duration <= 1100 && bytes.Index(content, []byte("moov")) < bytes.Index(content, []byte("mdat")))
@@ -365,7 +424,7 @@ func mediaSnapshot(ctx context.Context, endpoint world.Endpoint, prefix string) 
 	snapshot := map[string]string{}
 	for _, record := range result.Records {
 		var data mediaAttachment
-		if json.Unmarshal(record.Data, &data) == nil && strings.HasPrefix(data.Filename, prefix+".") {
+		if json.Unmarshal(record.Data, &data) == nil && strings.Contains(data.Filename, prefix+".") {
 			canonical, _ := json.Marshal(data)
 			snapshot[data.Filename] = string(canonical)
 		}
