@@ -69,19 +69,31 @@ usable() {
   after=$(vm_stat 2>/dev/null | awk '/Swapouts/ {gsub(/\./,"",$2); print $2}')
   if [ -n "$before" ] && [ -n "$after" ] && [ $((after - before)) -gt "${APPLE_BRIDGE_HEAVY_MAX_SWAPOUTS:-256}" ]; then echo 1; else echo "$slots"; fi
 }
-# True while a normal-lane holder is sensitive. A holder that has not yet recorded its command counts as sensitive.
+# A holder's recorded command, or its process command line when it predates recording.
+holder_text() {
+  if [ -f "$1/cmd" ]; then cat "$1/cmd"; return; fi
+  [ -f "$1/pid" ] && ps -ww -o command= -p "$(cat "$1/pid")" 2>/dev/null
+}
+# True while a normal-lane holder is sensitive. A holder whose command is not yet known counts as sensitive.
 sensitive_holder() {
   for lock in "$normal"-[0-9]*.lock; do
     [ -d "$lock" ] || continue
     stale "$lock" && continue
-    [ -f "$lock/cmd" ] || return 0
-    sensitive "$(cat "$lock/cmd")" && return 0
+    text=$(holder_text "$lock")
+    [ -n "$text" ] || return 0
+    sensitive "$text" && return 0
   done
   return 1
+}
+# True when the next normal-lane job is sensitive, so a new sim job would only make it wait.
+sensitive_next() {
+  next=$(oldest_live "$normal-queue")
+  [ -n "$next" ] && sensitive "$(ps -ww -o command= -p "${next##*-}" 2>/dev/null)"
 }
 # The sim lane runs beside one normal job only while the Air has clear headroom.
 sim_ok() {
   sensitive_holder && return 1
+  sensitive_next && return 1
   level=$(sysctl -n kern.memorystatus_level 2>/dev/null || echo 0)
   [ "$level" -ge "${APPLE_BRIDGE_SIM_MIN_FREE_PCT:-45}" ] || return 1
   load=$(sysctl -n vm.loadavg 2>/dev/null | awk '{printf "%d", $2}')
