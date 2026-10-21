@@ -454,6 +454,7 @@ Every UI action records a before/after screenshot path in evidence (stored in th
 - Identity (F11): native key = `calendarItemIdentifier` + `occurrenceDate` (original) for occurrences; aliases also store `calendarItemExternalIdentifier` scoped by calendar/account. On local-identifier churn after full sync, the external identifier + occurrence date re-links to the same bridge ID.
 - Series: each occurrence in the window is a `calendar.event`; the series rule lives on every occurrence (`recurrence`) with `series_id`; detached occurrences have `is_exception=true`.
 - Change detection: `EKEventStoreChanged` → debounce → refetch window in chunks, nearest chunk (±30 days) first for latency, hash diff against the last committed set → observations. Complete scan of the window produces `absent` with completion evidence. Periodic full reconciliation every 15 min.
+- Interim Calendar capture limit: a delta larger than 240 KB is published in chunks to keep capture progressing; this case is not atomic and records `calendar_capture_split` with record and byte counts until transactional multi-frame IPC lands.
 - Commands: create (calendar must be writable), update with span `this|future` (`EKSpan`), delete with span. `all` rejects. Expected version checked against a fresh native refetch (F7). Per-series serialization.
 - All-day events keep floating dates; time zones preserved; DST tested.
 

@@ -26,6 +26,7 @@ public final class CalendarSource: Source {
     private var commandNeedsCapture = false
     private var lastFullScanStarted: UInt64 = 0
     private var persistence: Task<Void, Never>?
+    private var splitCaptures: UInt64 = 0
 
     private func touch(_ event: EKEvent, future: Bool) {
         let bounds = CalendarTime.window(Date())
@@ -288,8 +289,8 @@ public final class CalendarSource: Source {
         pending.removeAll { unchangedKeys.contains($0["collection"].string + "/" + $0["native_key"].string) }
         let captureBytes = try JSONEncoder().encode(JSON.array(pending)).count
         if captureBytes > 240000 {
-            gate.trace.record("calendar_atomic_capture_too_large", fields: ["records": .number(Double(pending.count))])
-            throw SourceFailure.unavailable
+            splitCaptures += 1
+            gate.trace.record("calendar_capture_split", fields: ["count": .integer(splitCaptures), "records": .number(Double(pending.count)), "bytes": .number(Double(captureBytes))])
         }
         if forceFull && !unchanged.isEmpty {
             gate.trace.record("calendar_replay_started", fields: ["scan": .string(scan), "records": .number(Double(unchanged.count))])
@@ -304,7 +305,7 @@ public final class CalendarSource: Source {
         committed = current; forceFull = false
         if scope == nil { lastFullScanStarted = scanNS }
         if persist { persistAccepted(current) }
-        gate.trace.record("calendar_scan_complete", fields: ["records": .number(Double(current.count))])
+        gate.trace.record("calendar_scan_complete", fields: ["records": .number(Double(current.count)), "capture_splits": .integer(splitCaptures)])
  let readiness=await open()
  try await sink.sourceState(source:name,state:readiness.state,coverage:readiness.coverage,capabilities:readiness.capabilities,reason:readiness.reason)
     }
