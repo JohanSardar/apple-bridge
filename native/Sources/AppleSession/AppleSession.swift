@@ -236,8 +236,9 @@ public actor AppleSession: ObservationSink {
         defer { ForegroundActivity.shared.end(activity) }
         guard let connection = wire else { return }
         let started = CaptureTrace.now()
+        var prepared: UInt64 = 0
         let source = frame["handle"].string.hasPrefix("contacts-image:") ? "contacts" : "messages"
-        defer { trace.record("helper_blob_read", fields: ["source": .string(source), "started_ns": .integer(started), "finished_ns": .integer(CaptureTrace.now())]) }
+        defer { trace.record("helper_blob_read", fields: ["source": .string(source), "started_ns": .integer(started), "prepared_ns": .integer(prepared), "finished_ns": .integer(CaptureTrace.now())]) }
         do {
             guard !frame["handle"].string.isEmpty, frame["offset"].number >= 0, frame["offset"].number < Double(Int64.max), frame["length"].number > 0, frame["length"].number <= 131072, frame["length"].number.rounded(.down) == frame["length"].number, frame["offset"].number.rounded(.down) == frame["offset"].number else { throw SourceFailure.invalid }
             let response: JSON
@@ -245,6 +246,7 @@ public actor AppleSession: ObservationSink {
             else if let blobReader { response = try await blobReader(frame["handle"].string, Int64(frame["offset"].number), Int(frame["length"].number)) }
             else { throw SourceFailure.unavailable }
             guard wire === connection, !Task.isCancelled else { return }
+            prepared = CaptureTrace.now()
             try connection.send(response)
         } catch {
             guard wire === connection, !Task.isCancelled else { return }
@@ -259,6 +261,8 @@ public actor AppleSession: ObservationSink {
 
     public func emitCheckpoint(source: String, generation: String, checkpoint: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) async throws {
         guard wire != nil else { throw SourceFailure.unavailable }
+        let metadata: [String: JSON] = ["source": .string(source), "scan_id": .string(scanID)]
+        trace.record("capture_received", fields: metadata)
         let connection = wire
         let refreshStarted = source == "reminders" && labEnabled ? CaptureTrace.now() : 0
         let observations = source == "reminders" ? await remindersStore.refresh(observations, generation: generation) : observations
@@ -269,9 +273,12 @@ public actor AppleSession: ObservationSink {
             trace.record("reminders_store_refresh", keys: observations.map { $0["native_key"].string }, fields: ["duration_ms": .number(milliseconds), "started_ns": .integer(refreshStarted), "finished_ns": .integer(refreshFinished), "histogram": remindersRefreshHistogram.record(milliseconds)])
         }
         let chunks = try split(observations, maximumBytes: live ? 64000 : 16000)
+        trace.record("capture_split", fields: metadata)
         for (index,chunk) in chunks.enumerated() {
             try await withCheckedThrowingContinuation { continuation in
+                trace.record("capture_chunk_preparing", fields: metadata)
                 let pending = Pending(source: source, checkpoint: index == chunks.count-1 ? checkpoint : "", generation: generation, scanID: scanID, completionEvidence: completionEvidence, blobHandles: blobHandles.filter { digest, _ in Self.containsDigest(.array(chunk), digest: digest) }, observations: chunk, started: scanStartedAt, scope: scope, completion: continuation)
+                trace.record("capture_enqueued", fields: ["source": .string(source), "scan_id": .string(scanID)])
                 if live { self.live.append(pending) } else { bulk.append(pending) }
                 Task { do { try await drain() } catch { disconnect() } }
             }
@@ -340,8 +347,9 @@ public actor AppleSession: ObservationSink {
             let frame = JSON.object(capture)
             let size = try PeerWire.encode(frame).count
             guard size <= credit else { return }
-            trace.record("capture_sent", keys: observations.map { $0["native_key"].string }, fields: ["source": .string(pending.source), "checkpoint": .string(checkpoint), "live": .bool(prioritized), "credit": .number(Double(credit)), "blob_count": .number(Double(pending.blobHandles.count))])
+            trace.record("capture_sent", keys: observations.map { $0["native_key"].string }, fields: ["source": .string(pending.source), "scan_id": .string(pending.scanID), "checkpoint": .string(checkpoint), "live": .bool(prioritized), "credit": .number(Double(credit)), "blob_count": .number(Double(pending.blobHandles.count))])
             try wire?.send(frame)
+            trace.record("capture_written", fields: ["source": .string(pending.source), "scan_id": .string(pending.scanID)])
             credit -= size
             flights[pending.source] = Flight(pending: sending, checkpoint: checkpoint, bytes: size)
             if prioritized { live.remove(at: index) } else { bulk.remove(at: index) }
@@ -357,11 +365,13 @@ public actor AppleSession: ObservationSink {
         case "Committed":
             let source = frame["source"].string
             guard let flight = flights[source], frame["checkpoint"].string == flight.checkpoint, frame["credit"].unsigned == UInt64(flight.bytes) else { throw SourceFailure.invalid }
-            trace.record("committed_ack", keys: flight.pending.observations.map { $0["native_key"].string }, fields: ["checkpoint": .string(flight.checkpoint)])
+            trace.record("committed_ack", keys: flight.pending.observations.map { $0["native_key"].string }, fields: ["source": .string(source), "scan_id": .string(flight.pending.scanID), "checkpoint": .string(flight.checkpoint)])
             try await pause("capture", observations: flight.pending.observations)
             credit += flight.bytes
             checkpoints[source] = .object(["generation": .string(flight.pending.generation), "checkpoint": .string(flight.checkpoint)])
             if labEnabled {
+                let markerStarted = CaptureTrace.now()
+                defer { trace.record("helper_marker_written", fields: ["source": .string(source), "started_ns": .integer(markerStarted), "finished_ns": .integer(CaptureTrace.now())]) }
                 let marker = home.appendingPathComponent("lab-committed-" + source)
                 try Data(flight.checkpoint.utf8).write(to: marker, options: .atomic)
                 try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: marker.path)
