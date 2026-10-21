@@ -348,6 +348,19 @@ func (l *liveSocket) subscribe(ctx context.Context, f clientFrame) {
 			return
 		}
 		previous = decodeViewState(data)
+		if f.View == "thread" {
+			previous.Counts, err = l.windowCounts(ctx, f, previous)
+			if err != nil {
+				l.fail(safeError(err).Code, "window unavailable")
+				return
+			}
+			raw, _ := json.Marshal(data)
+			object := map[string]any{}
+			json.Unmarshal(raw, &object)
+			object["newer"] = previous.Counts.Newer
+			object["older"] = previous.Counts.Older
+			data = object
+		}
 		if previous.Cursor.Epoch != "" {
 			cursor = previous.Cursor
 		}
@@ -369,7 +382,6 @@ func (l *liveSocket) subscribe(ctx context.Context, f clientFrame) {
 		l.fail("reset", "resubscribe required")
 		return
 	}
-	outside := map[string]string{}
 	for {
 		batch, err := iterator.Next(ctx)
 		if err != nil {
@@ -406,22 +418,26 @@ func (l *liveSocket) subscribe(ctx context.Context, f clientFrame) {
 			}
 			next := decodeViewState(data)
 			if f.View == "thread" {
-				next = threadWindow(previous, next, batch.Changes, outside, f.Args)
+				if err := l.refreshThreadEdges(ctx, f, previous, &next, batch.Changes); err != nil {
+					l.fail("reset", "resubscribe required")
+					return
+				}
+				next = threadWindow(previous, next, batch.Changes)
+				next.Counts, err = l.windowCounts(ctx, f, next)
+				if err != nil {
+					l.fail("reset", "window unavailable")
+					return
+				}
 			}
 			frame["changes"] = viewChanges(previous, next)
 			frame["order"] = next.Order
 			frame["page"] = next.Page
 			if f.View == "thread" {
-				newer, older := 0, 0
-				for _, side := range outside {
-					if side == "newer" {
-						newer++
-					} else {
-						older++
-					}
-				}
-				frame["newer"] = newer
-				frame["older"] = older
+				frame["newer"] = next.Counts.Newer
+				frame["older"] = next.Counts.Older
+				updates := frame["changes"].([]any)
+				updates = append(updates, map[string]any{"op": "window", "newer": next.Counts.Newer, "older": next.Counts.Older})
+				frame["changes"] = updates
 			}
 			previous = next
 		}
@@ -432,6 +448,7 @@ func (l *liveSocket) subscribe(ctx context.Context, f clientFrame) {
 }
 
 type viewState struct {
+	Counts contracts.WindowCounts
 	Rows   map[string]json.RawMessage
 	Order  []string
 	Page   map[string]any
@@ -504,39 +521,14 @@ func rowSentAt(row json.RawMessage) string {
 	}
 	return at.UTC().Format("2006-01-02T15:04:05.000000000Z")
 }
-func threadWindow(previous, next viewState, changes []contracts.Change, outside map[string]string, args json.RawMessage) viewState {
+func threadWindow(previous, next viewState, changes []contracts.Change) viewState {
 	if len(previous.Order) == 0 {
 		return next
 	}
-	var query struct {
-		ChatID string `json:"chat_id"`
-	}
-	json.Unmarshal(args, &query)
 	first, last := rowSentAt(previous.Rows[previous.Order[0]]), rowSentAt(previous.Rows[previous.Order[len(previous.Order)-1]])
 	for _, change := range changes {
-		if change.Record.Collection != "messages.message" {
-			continue
-		}
-		if change.Op == "delete" || change.Op == "evict" || change.Record.Deleted {
-			delete(outside, change.Record.ID)
+		if change.Record.Collection == "messages.message" && (change.Op == "delete" || change.Op == "evict" || change.Record.Deleted) {
 			delete(previous.Rows, change.Record.ID)
-			continue
-		}
-		var data struct {
-			ChatID string `json:"chat_id"`
-			SentAt string `json:"sent_at"`
-		}
-		json.Unmarshal(change.Record.Data, &data)
-		if data.ChatID != query.ChatID {
-			continue
-		}
-		if at, err := time.Parse(time.RFC3339Nano, data.SentAt); err == nil {
-			data.SentAt = at.UTC().Format("2006-01-02T15:04:05.000000000Z")
-		}
-		if data.SentAt > last {
-			outside[change.Record.ID] = "newer"
-		} else if data.SentAt < first {
-			outside[change.Record.ID] = "older"
 		}
 	}
 	for id, row := range previous.Rows {
@@ -551,6 +543,7 @@ func threadWindow(previous, next viewState, changes []contracts.Change, outside 
 			}
 		}
 	}
+	next.Page = previous.Page
 	next.Order = next.Order[:0]
 	for id := range next.Rows {
 		next.Order = append(next.Order, id)
@@ -562,6 +555,74 @@ func threadWindow(previous, next viewState, changes []contracts.Change, outside 
 		return strings.Compare(a, b)
 	})
 	return next
+}
+func (l *liveSocket) windowCounts(ctx context.Context, f clientFrame, state viewState) (contracts.WindowCounts, error) {
+	if len(state.Order) == 0 {
+		return contracts.WindowCounts{}, nil
+	}
+	var args struct {
+		ChatID string `json:"chat_id"`
+	}
+	json.Unmarshal(f.Args, &args)
+	window := contracts.ThreadWindow{ChatID: args.ChatID}
+	json.Unmarshal(state.Rows[state.Order[0]], &window.First)
+	json.Unmarshal(state.Rows[state.Order[len(state.Order)-1]], &window.Last)
+	return l.server.deps.Operations.ThreadWindowCounts(ctx, l.identity.Principal, window)
+}
+func (l *liveSocket) refreshThreadEdges(ctx context.Context, f clientFrame, previous viewState, next *viewState, changes []contracts.Change) error {
+	if len(previous.Order) == 0 {
+		return nil
+	}
+	first, last := rowSentAt(previous.Rows[previous.Order[0]]), rowSentAt(previous.Rows[previous.Order[len(previous.Order)-1]])
+	affected := map[string]bool{}
+	for _, change := range changes {
+		if change.Op == "delete" || change.Op == "evict" || change.Record.Deleted {
+			continue
+		}
+		var data struct {
+			MessageID  string `json:"message_id"`
+			Originator string `json:"thread_originator_id"`
+		}
+		json.Unmarshal(change.Record.Data, &data)
+		if change.Record.Collection == "messages.message" {
+			raw, _ := json.Marshal(change.Record)
+			at := rowSentAt(raw)
+			if _, present := previous.Rows[change.Record.ID]; present || at >= first && at <= last {
+				affected[change.Record.ID] = true
+			}
+			if data.Originator != "" {
+				affected[data.Originator] = true
+			}
+		}
+		if data.MessageID != "" {
+			affected[data.MessageID] = true
+		}
+	}
+	for id := range affected {
+		if next.Rows[id] != nil {
+			continue
+		}
+		args := map[string]any{}
+		json.Unmarshal(f.Args, &args)
+		args["anchor"] = id
+		args["limit"] = 1
+		delete(args, "before")
+		delete(args, "after")
+		query := f
+		query.Args, _ = json.Marshal(args)
+		data, err := l.view(ctx, query)
+		if errors.Is(err, contracts.ErrNotFound) {
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		current := decodeViewState(data)
+		if row := current.Rows[id]; row != nil {
+			next.Rows[id] = row
+		}
+	}
+	return nil
 }
 
 func frameCursor(value any) *contracts.Cursor {

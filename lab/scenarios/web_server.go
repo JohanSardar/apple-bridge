@@ -318,7 +318,19 @@ func runWebSession(ctx context.Context, w *world.World, id string, e *Evidence, 
 		}
 		add("interactive_crosses_ipc_as_data", err == nil && origins[commandID]["Prepare"] == "interactive" && origins[commandID]["Dispatch"] == "interactive" && origins[commandID]["action"] == "interactive")
 		effects, err := w.Effects()
+
 		add("one_native_effect", err == nil && effects[commandID] == 1)
+		wsjson.Write(ctx, conn, map[string]any{"t": "sub", "id": "command", "view": "record", "args": map[string]any{"collection": "system.command", "id": commandID}})
+		frame, err = read(conn)
+		data, _ := frame["data"].(map[string]any)
+		rows, _ := data["records"].([]any)
+		reconciled := false
+		if len(rows) == 1 {
+			record, _ := rows[0].(map[string]any)
+			status, _ := record["data"].(map[string]any)
+			reconciled = status["state"] == string(result.State) && status["disposition"] == string(result.Disposition)
+		}
+		add("command_record_reconnect_reconciles_ledger", err == nil && frame["t"] == "snap" && reconciled)
 		return
 	}
 	if id == "WEB-AUTH-SOFTWARE" {
@@ -656,6 +668,30 @@ func runWebReadModels(ctx context.Context, w *world.World, c *webClient, conn *w
 			return
 		}
 	}
+
+	var initialMessages contracts.ReadResult
+	_, err = world.Request(ctx, w.Gateway, "/v1/op/records.query", contracts.ReadQuery{Collection: "messages.message"}, &initialMessages)
+	if err != nil || len(initialMessages.Records) != 3 {
+		add("thread_window_fixture", false)
+		return
+	}
+	wsjson.Write(ctx, conn, map[string]any{"t": "sub", "id": "edge", "view": "thread", "args": map[string]any{"chat_id": chatID, "anchor": initialMessages.Records[0].ID, "limit": 1}})
+	foundEdge := false
+	for tries := 0; tries < 12; tries++ {
+		frame, err := read()
+		if err != nil {
+			break
+		}
+		if frame["t"] == "snap" && frame["sub"] == "edge" {
+			data, _ := frame["data"].(map[string]any)
+			newer, _ := data["newer"].(float64)
+			older, _ := data["older"].(float64)
+			foundEdge = newer == 2 && older == 0
+			break
+		}
+	}
+	add("initial_thread_outside_counts", foundEdge)
+	wsjson.Write(ctx, conn, map[string]any{"t": "unsub", "id": "edge"})
 	os.WriteFile(filepath.Join(w.Gateway.Home, "lab-web-metrics"), nil, 0600)
 	last := map[string]uint64{}
 	sawChatUpsert, sawOutside := false, false
@@ -683,6 +719,9 @@ func runWebReadModels(ctx context.Context, w *world.World, c *webClient, conn *w
 				continue
 			}
 			sub, _ := frame["sub"].(string)
+			if sub != "chats" && sub != "thread" && sub != "collection" {
+				continue
+			}
 			cursor, _ := frame["cursor"].(map[string]any)
 			seq, _ := cursor["sequence"].(float64)
 			if uint64(seq) <= last[sub] {
