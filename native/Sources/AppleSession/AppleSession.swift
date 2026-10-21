@@ -478,6 +478,7 @@ let operation=outcome["evidence"]["prepared"]["action"]["op"].string
         let owner = fence
         defer { if preparing == nonce { preparing = nil } }
         do {
+            _ = try CommandOrigin(frame)
             guard !frame["command_id"].string.isEmpty, !frame["principal"].string.isEmpty, !frame["request_hash"].string.isEmpty, let expires = parseTimestamp(frame["expires_at"].string), expires > Date() else { throw SourceFailure.invalid }
             tickets = tickets.filter { ContinuousClock.now < $0.value.expiry }
             guard !commandActive, tickets.isEmpty, preparing == nil else { throw SourceFailure.conflict }
@@ -500,7 +501,7 @@ let operation=outcome["evidence"]["prepared"]["action"]["op"].string
         defer { commandActive = false }
         var started = false
         do {
-            guard frame["command_id"] == id, frame["owner_fence"].unsigned == fence, ticket.fence == fence, ContinuousClock.now < ticket.expiry else { throw SourceFailure.expired }
+            guard frame["origin"] == ticket.command["origin"], frame["command_id"] == id, frame["owner_fence"].unsigned == fence, ticket.fence == fence, ContinuousClock.now < ticket.expiry else { throw SourceFailure.expired }
             let selected=additionalSources[ticket.prepared.action["op"].string.components(separatedBy: ".").first ?? ""] ?? source
  if ticket.prepared.action["op"].string.hasPrefix("notes."), let notes=additionalSources["notes"] as? NotesSource { try await notes.validate(ticket.prepared) } else if ticket.prepared.action["op"].string.hasPrefix("contacts.") {try await contacts.validate(ticket.prepared)} else if ticket.prepared.action["op"].string.hasPrefix("calendar.") {try await calendar.validate(ticket.prepared)} else if selected.name == "reminders" { try await source.validate(ticket.prepared) } else if let messages=selected as? Messages {try await messages.validate(ticket.prepared)}
             try Task.checkCancellation()

@@ -68,11 +68,12 @@ public actor MessagesCommands {
         let action = command["action"]
         let args = action["messages"]
         let handles = args["handles"].array.map { MessagesProbes.normalize($0.string) }
-        let allowed = try approvedHandles()
+        let interactive = try CommandOrigin(command) == .interactive
+        let allowed = interactive ? Set<String>() : try approvedHandles()
         let route = JSON.object(["kind": .string("group_addresses"), "handle": .string(handles.sorted().joined(separator: ",")), "service": args["service"]])
-        guard handles.count >= 2, Set(handles).count == handles.count, tagged(args["text"].string), ["iMessage", "SMS", "RCS"].contains(args["service"].string) else { throw SourceFailure.invalid }
+        guard handles.count >= 2, Set(handles).count == handles.count, interactive || tagged(args["text"].string), ["iMessage", "SMS", "RCS"].contains(args["service"].string) else { throw SourceFailure.invalid }
         guard args["name"].string.isEmpty else { throw SourceFailure.unsupported }
-        guard labCommands ? handles.allSatisfy({ allowed.contains($0) }) : proofs().contains(routeProof(route, kind: "messages.create_group")) else { throw SourceFailure.capabilityUnproven }
+        guard labCommands ? (interactive || handles.allSatisfy({ allowed.contains($0) })) : proofs().contains(routeProof(route, kind: "messages.create_group")) else { throw SourceFailure.capabilityUnproven }
         let reader = try MessagesReader(path: path)
         let maximumChat = try reader.query("SELECT COALESCE(MAX(ROWID),0) AS maximum FROM chat", []).first?["maximum"] ?? "0"
         return Prepared(nativeState: .object(["max_chat_row_id": .number(Double(maximumChat) ?? 0), "max_row_id": .number(Double(try reader.maximum())), "handles": .array(handles.map(JSON.string)), "destination": route]), fingerprint: command["request_hash"].string, action: action)
@@ -99,21 +100,21 @@ public actor MessagesCommands {
         } while ContinuousClock.now < deadline
         return .object(["source": .string("messages"), "observed": .bool(false), "disposition": .string("indeterminate"), "apple_event_error": .number(Double(error))])
     }
-    private func verifyRoute(_ action: JSON, reader: MessagesReader) throws -> JSON {
+    private func verifyRoute(_ action: JSON, reader: MessagesReader, interactive: Bool) throws -> JSON {
         let args = action["messages"]
-        let selfHandles = try approvedHandles()
-        guard !selfHandles.isEmpty else { throw SourceFailure.invalid }
+        let selfHandles = interactive ? Set<String>() : try approvedHandles()
+        guard interactive || !selfHandles.isEmpty else { throw SourceFailure.invalid }
         if !action["list_key"].string.isEmpty {
             let chat = action["list_key"].string
             let rows = try reader.query("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", [chat])
             let route = JSON.object(["kind": .string("chat_id_raw"), "chat": .string(chat)])
             let known = proofs()
             let provenRoute = action["op"].string == "messages.send" ? ["text", "attachment"].contains { known.contains(routeProof(route, kind: $0)) } : known.contains(routeProof(route, kind: action["op"].string))
-            guard !rows.isEmpty, rows.allSatisfy({ selfHandles.contains(MessagesProbes.normalize($0["id"])) }) || provenRoute else { throw SourceFailure.invalid }
+            guard !rows.isEmpty, interactive || rows.allSatisfy({ selfHandles.contains(MessagesProbes.normalize($0["id"])) }) || provenRoute else { throw SourceFailure.invalid }
             return route
         }
         let handles = args["handles"].array.map(\.string)
-        guard handles.count == 1, handles.allSatisfy({ selfHandles.contains(MessagesProbes.normalize($0)) }), args["service"].string == "iMessage" else { throw SourceFailure.unsupported }
+        guard handles.count == 1, interactive || handles.allSatisfy({ selfHandles.contains(MessagesProbes.normalize($0)) }), args["service"].string == "iMessage" else { throw SourceFailure.unsupported }
         let chats = try reader.query("SELECT c.guid,h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.service_name='iMessage' AND (SELECT count(*) FROM chat_handle_join x WHERE x.chat_id=c.ROWID)=1 ORDER BY c.ROWID DESC", [])
         if let chat = chats.first(where: { MessagesProbes.normalize($0["id"]) == MessagesProbes.normalize(handles[0]) }) {
             return .object(["kind": .string("chat_id_raw"), "chat": .string(chat["guid"])])
@@ -126,18 +127,19 @@ public actor MessagesCommands {
         guard action["op"].string == "messages.send", route["kind"].string == "chat_id_raw", route["chat"].string == policy["chat_guid"].string, action["messages"]["text"].string == policy["text"].string, action["messages"]["files"].array.isEmpty, !FileManager.default.fileExists(atPath: agentPolicy.path + ".used") else { throw SourceFailure.invalid }
     }
     public func prepare(_ command: JSON) async throws -> Prepared {
+        let interactive = try CommandOrigin(command) == .interactive
         let action = command["action"]
         if let agentPolicy, FileManager.default.fileExists(atPath: agentPolicy.path), action["op"].string != "messages.send" { throw SourceFailure.invalid }
         if action["op"].string == "messages.create_group" { return try prepareGroup(command) }
         if action["op"].string != "messages.send" {return try await prepareAccessibility(command)}
         let args = action["messages"]
-        guard args["text"].string.isEmpty || tagged(args["text"].string), !args["text"].string.isEmpty || !args["files"].array.isEmpty else { throw SourceFailure.invalid }
+        guard interactive || args["text"].string.isEmpty || tagged(args["text"].string), !args["text"].string.isEmpty || !args["files"].array.isEmpty else { throw SourceFailure.invalid }
         for file in args["files"].array {
             let name=file["name"].string
             guard !name.isEmpty,name==URL(fileURLWithPath:name).lastPathComponent,name != ".",name != "..",file["data"].string.isEmpty else {throw SourceFailure.invalid}
         }
         let reader = try MessagesReader(path: path)
-        let route = try verifyRoute(action, reader: reader)
+        let route = try verifyRoute(action, reader: reader, interactive: interactive)
         try validateAgentPolicy(action, route: route)
         if !labCommands {
             let kinds = (args["text"].string.isEmpty ? [] : ["text"]) + (args["files"].array.isEmpty ? [] : ["attachment"])
@@ -145,10 +147,11 @@ public actor MessagesCommands {
         }
         let maximum = try reader.maximum()
         let payload = try JSONEncoder().encode(args)
-        let state = JSON.object(["route": route["kind"], "destination": route, "max_row_id": .number(Double(maximum)), "payload_fingerprint": .string(BodyDigest.hash(payload)), "command_id": command["command_id"], "candidate_ids": .array([.string(String(maximum)), .string(route["chat"].string)])])
+        let state = JSON.object(["interactive": .bool(interactive), "route": route["kind"], "destination": route, "max_row_id": .number(Double(maximum)), "payload_fingerprint": .string(BodyDigest.hash(payload)), "command_id": command["command_id"], "candidate_ids": .array([.string(String(maximum)), .string(route["chat"].string)])])
         return Prepared(nativeState: state, fingerprint: command["request_hash"].string, action: action)
     }
     private func prepareAccessibility(_ command: JSON) async throws -> Prepared {
+        let interactive = try CommandOrigin(command) == .interactive
         let action=command["action"]
         let operation=try MessagesAction(operation:action["op"].string)
         let args=action["messages"]
@@ -162,11 +165,11 @@ public actor MessagesCommands {
         }
         guard let row=try reader.message(action["native_key"].string),let item=try reader.messageObservations(row).first else {throw SourceFailure.capabilityUnproven}
         let target=try JSONDecoder().decode(JSON.self,from:JSONSerialization.data(withJSONObject:item.2,options:.sortedKeys))
-        guard tagged(target["text"].string) else {throw SourceFailure.invalid}
-        if !args["text"].string.isEmpty && !tagged(args["text"].string) {throw SourceFailure.invalid}
+        guard interactive || tagged(target["text"].string) else {throw SourceFailure.invalid}
+        if !interactive && !args["text"].string.isEmpty && !tagged(args["text"].string) {throw SourceFailure.invalid}
         var destination=action.object
         destination["list_key"] = .string(row["capture_chat_guid"])
-        let route=try verifyRoute(.object(destination),reader:reader)
+        let route=try verifyRoute(.object(destination),reader:reader,interactive:interactive)
         if operation == .edit || operation == .unsend {
             guard row["service"] == "iMessage", row.flag("is_from_me"),let sent=parseTimestamp(target["sent_at"].string) else {throw SourceFailure.unsupported}
             let age=Date().timeIntervalSince(sent)
@@ -278,7 +281,7 @@ public actor MessagesCommands {
             return result
         }
         let reader = try MessagesReader(path: path)
-        let route = try verifyRoute(prepared.action, reader: reader)
+        let route = try verifyRoute(prepared.action, reader: reader, interactive: prepared.nativeState["interactive"].bool)
         guard route == prepared.nativeState["destination"] else { throw SourceFailure.conflict }
         try validateAgentPolicy(prepared.action, route: route)
         if let agentPolicy, FileManager.default.fileExists(atPath: agentPolicy.path) {

@@ -61,17 +61,17 @@ func (f *fakeApple) messageValidate(a contracts.NativeAction) *contracts.Error {
 			return contracts.ErrInvalid
 		}
 	}
-	if m.Text != "" && (!strings.Contains(m.Text, "[ab-test ") || !strings.Contains(m.Text, "]")) {
+	if a.Origin != "interactive" && m.Text != "" && (!strings.Contains(m.Text, "[ab-test ") || !strings.Contains(m.Text, "]")) {
 		return contracts.ErrInvalid
 	}
-	if a.Op == "messages.send" || a.Op == "messages.create_group" {
+	if a.Origin != "interactive" && (a.Op == "messages.send" || a.Op == "messages.create_group") {
 		for _, h := range m.Handles {
 			if h != "self@example.com" && h != "second-self@example.com" && (a.Op != "messages.create_group" || !simGroupHandle(h)) {
 				return contracts.ErrUnauthorized
 			}
 		}
 	}
-	if m.Handle != "" && !simGroupHandle(m.Handle) {
+	if a.Origin != "interactive" && m.Handle != "" && !simGroupHandle(m.Handle) {
 		return contracts.ErrUnauthorized
 	}
 	var data map[string]any
@@ -119,7 +119,7 @@ func (f *fakeApple) messageValidate(a contracts.NativeAction) *contracts.Error {
 		}
 		json.Unmarshal(raw, &peers)
 		for _, p := range peers {
-			if p.Ref.NativeKey != "message-self" && p.Ref.NativeKey != "message-self-email" && (a.Op == "messages.send" || a.Op == "messages.reply") {
+			if a.Origin != "interactive" && p.Ref.NativeKey != "message-self" && p.Ref.NativeKey != "message-self-email" && (a.Op == "messages.send" || a.Op == "messages.reply") {
 				return contracts.ErrUnauthorized
 			}
 		}
@@ -174,6 +174,10 @@ func (f *fakeApple) messageCommand(wire *applepeer.Wire, frame contracts.IPCFram
 			return reject(contracts.ErrInvalid)
 		}
 		a := *frame.Action
+		if frame.Origin != "" && frame.Origin != "interactive" || a.Origin != frame.Origin || frame.Origin == "interactive" && !(strings.HasPrefix(frame.Principal, "device:") || strings.HasPrefix(frame.Principal, "agent:") || strings.Contains(frame.Principal, "/device:")) {
+			f.mu.Unlock()
+			return reject(contracts.ErrInvalid)
+		}
 		if e := f.messageValidate(a); e != nil {
 			f.mu.Unlock()
 			return reject(e)
@@ -217,7 +221,7 @@ func (f *fakeApple) messageCommand(wire *applepeer.Wire, frame contracts.IPCFram
 		f.mu.Lock()
 		t, ok := f.tickets[frame.Ticket]
 		delete(f.tickets, frame.Ticket)
-		if !ok || t.CommandID != frame.CommandID || t.Fence != fence || frame.OwnerFence != fence || !time.Now().Before(t.Expires) {
+		if !ok || frame.Origin != t.Action.Origin || t.CommandID != frame.CommandID || t.Fence != fence || frame.OwnerFence != fence || !time.Now().Before(t.Expires) {
 			f.mu.Unlock()
 			return reject(contracts.ErrExpired)
 		}
