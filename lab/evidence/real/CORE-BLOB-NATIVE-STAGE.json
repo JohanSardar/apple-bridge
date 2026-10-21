@@ -1,14 +1,14 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[19.91 15.77 12.25] cpus=8 other_heavy=1"
+    "summary": "air: load=[6.77 8.83 9.92] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M5EQFWEFXQ41VHQVGXGRNET4",
+  "run_id": "run_01M5ESW0WRWQ7GZ67XJQ2DSAD0",
   "scenario": "CORE-BLOB-NATIVE-STAGE",
   "level": "real",
   "passed": true,
-  "git_sha": "f0002e5bb9fad47fa4caf4b7b3d383fd8623f6ff",
-  "at": "2026-10-21T07:58:24.207633Z",
+  "git_sha": "752a6c1c5e3133f73c3bae4d9cbd5f8881695bc0",
+  "at": "2026-10-21T08:39:59.128383Z",
   "assertions": [
     {
       "name": "isolated_world_ready",
