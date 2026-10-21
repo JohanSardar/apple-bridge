@@ -1,14 +1,14 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[7.03 7.9 17.43] cpus=8 other_heavy=1"
+    "summary": "air: load=[7.5 9.27 9.48] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M5E8NKGHV4EN1HY6AR8TKKZG",
+  "run_id": "run_01M5EDFBCXD1H07GXFJGP76WK1",
   "scenario": "WEB-AGENT-ACTIVITY",
   "level": "sim",
   "passed": true,
-  "git_sha": "30baf256a516e57f9d750cb993c5637db7f881ee",
-  "at": "2026-10-21T03:39:23.025659Z",
+  "git_sha": "a5c95df9bb1a5639e02a58c358c1be128769b019",
+  "at": "2026-10-21T05:03:20.989837Z",
   "assertions": [
     {
       "name": "activity_read",
@@ -64,6 +64,38 @@
     },
     {
       "name": "activity_owner_only",
+      "passed": true
+    },
+    {
+      "name": "activity_capture_fixture",
+      "passed": true
+    },
+    {
+      "name": "activity_capture_agent",
+      "passed": true
+    },
+    {
+      "name": "activity_concurrent_reads_succeed",
+      "passed": true
+    },
+    {
+      "name": "activity_concurrent_sends_observed_once",
+      "passed": true
+    },
+    {
+      "name": "capture_rejection_fixture",
+      "passed": true
+    },
+    {
+      "name": "capture_rejection_degraded_and_counted",
+      "passed": true
+    },
+    {
+      "name": "capture_rejection_logged",
+      "passed": true
+    },
+    {
+      "name": "capture_rejection_count_retained_after_reconnect",
       "passed": true
     },
     {

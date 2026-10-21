@@ -288,6 +288,8 @@ func writeBlobReferences(ctx context.Context, tx *sql.Tx, owner string, r contra
 	return nil
 }
 func (s *Store) initBlobReferences(ctx context.Context) error {
+	s.write.Lock()
+	defer s.write.Unlock()
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err

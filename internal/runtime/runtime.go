@@ -230,7 +230,10 @@ func Start(ctx context.Context, cfg Config) error {
 				commitStartedAt := time.Now().UnixNano()
 				result, err := store.CommitCapture(ctx, c)
 				store.Capacity(c.Source, err)
-				if err != nil && cfg.HelperLabCommands {
+				if err == nil {
+					store.CaptureResult(c.Source, "")
+				}
+				if err != nil && !errors.Is(err, contracts.ErrReset) {
 					code := "capture_error"
 					var problem *contracts.Error
 					if errors.As(err, &problem) {
@@ -241,9 +244,13 @@ func Start(ctx context.Context, cfg Config) error {
 						code = fmt.Sprintf("sqlite_%d", sqlite.Code())
 					}
 					data, _ := json.Marshal(map[string]any{"stage": "gateway_capture_rejected", "source": c.Source, "error_code": code, "error_type": fmt.Sprintf("%T", err), "observations": len(c.Observations)})
-					if file, openErr := os.OpenFile(filepath.Join(cfg.Home, "capture-trace.jsonl"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600); openErr == nil {
-						file.Write(append(data, '\n'))
-						file.Close()
+					store.CaptureResult(c.Source, code)
+					os.Stderr.Write(append(data, '\n'))
+					if cfg.HelperLabCommands {
+						if file, openErr := os.OpenFile(filepath.Join(cfg.Home, "capture-trace.jsonl"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600); openErr == nil {
+							file.Write(append(data, '\n'))
+							file.Close()
+						}
 					}
 				}
 				webCaptureCommitted(cfg.Home, result.After, result.Through, result.CommittedAt)

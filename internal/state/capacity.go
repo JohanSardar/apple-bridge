@@ -32,10 +32,22 @@ func (s *Store) sourceStatus(record contracts.Record) contracts.Record {
 	source, _ := data["source"].(string)
 	s.mu.Lock()
 	full := s.capacity[contracts.Source(source)]
+	failure := s.captureFailures[contracts.Source(source)]
 	s.mu.Unlock()
+	if failure.Count > 0 {
+		reason := "gateway_capture_rejected:" + failure.Code
+		data["capture_rejected_count"] = failure.Count
+		data["last_capture_rejected_reason"] = reason
+		if failure.Active {
+			data["state"] = "degraded"
+			data["reason"] = reason
+		}
+	}
 	if full {
 		data["state"] = "degraded"
 		data["reason"] = "capacity"
+	}
+	if full || failure.Count > 0 {
 		record.Data, _ = json.Marshal(data)
 	}
 	return record

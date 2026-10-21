@@ -6,6 +6,8 @@ import (
 )
 
 func (s *Store) initSearch() error {
+	s.write.Lock()
+	defer s.write.Unlock()
 	_, err := s.db.Exec(`CREATE VIRTUAL TABLE IF NOT EXISTS records_fts USING fts5(collection UNINDEXED,id UNINDEXED,source UNINDEXED,text);
  DROP TRIGGER IF EXISTS records_search_insert;
  DROP TRIGGER IF EXISTS records_search_update;
