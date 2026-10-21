@@ -19,6 +19,9 @@ import (
 )
 
 func runWebUpload(ctx context.Context, s Scenario, level string) (e Evidence) {
+	if level != "sim" && s.ID == "WEB-UPLOAD-NATIVE-STAGING" {
+		return runMessagesCommands(ctx, s, level)
+	}
 	sha, _ := exec.Command("git", "rev-parse", "HEAD").Output()
 	e = Evidence{RunID: contracts.NewID("upload"), Scenario: s.ID, Level: level, GitSHA: strings.TrimSpace(string(sha)), At: time.Now().UTC(), Metrics: map[string]any{}, Latency: map[string]Latency{}, Hosts: []string{"air"}}
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
@@ -50,6 +53,8 @@ func runWebUpload(ctx context.Context, s Scenario, level string) (e Evidence) {
 	sum := sha256.Sum256(data)
 	digest := hex.EncodeToString(sum[:])
 	switch s.ID {
+	case "WEB-UPLOAD-NATIVE-STAGING":
+		uploadNativeStaging(ctx, w, c, &e, add)
 	case "WEB-UPLOAD-RESUME":
 		status, out := uploadRequest(c, "POST", "upload", nil, map[string]string{"Upload-Length": fmt.Sprint(len(data)), "Upload-Digest": digest})
 		add("resumable_upload_started", status == 200 && out.ID != "" && out.State == "uploading" && out.Offset == 0)

@@ -13,7 +13,7 @@ public struct MessagesMediaCleanupProof: Sendable {
         case .integer, .number: break
         default: throw SourceFailure.invalid
         }
-        guard ["WEB-MEDIA-VARIANTS", "MSG-SELFTEST"].contains(registration["scenario"].string), registration["run_id"].string == run,
+        guard ["WEB-MEDIA-VARIANTS", "MSG-SELFTEST", "WEB-UPLOAD-NATIVE-STAGING"].contains(registration["scenario"].string), registration["run_id"].string == run,
               let baseline = Int64(exactly: registration["baseline_max_row_id"].number), baseline >= 0 else { throw SourceFailure.invalid }
         let files = registration["media_attachment_names"].array
         guard !files.isEmpty else { throw SourceFailure.invalid }

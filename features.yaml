@@ -577,6 +577,7 @@ features:
       - {id: WEB-UPLOAD-FEED, levels: [sim]}
       - {id: WEB-UPLOAD-LIMITS, levels: [sim]}
       - {id: WEB-UPLOAD-LEASE, levels: [sim]}
+      - {id: WEB-UPLOAD-NATIVE-STAGING, levels: [sim, real]}
       - {id: WEB-MSG-REACT, levels: [web, real]}
       - {id: WEB-MSG-REPLY, levels: [web, real]}
       - {id: WEB-MSG-EDIT, levels: [web, real]}
