@@ -28,20 +28,14 @@ public enum MessagesCleanup {
         }
         let own = Set(try MessagesProbes.discoverSelfHandles().handles)
         let reader = try MessagesReader(path: FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Messages/chat.db").path)
-        var mediaNames: Set<String> = []
-        var mediaBaseline: Int64 = 0
+        var mediaProof: MessagesMediaCleanupProof?
         var interactiveText = ""
         var interactiveBaseline: Int64 = 0
         if !tag.isEmpty {
             let run = String(tag.dropFirst(9).dropLast())
             let ledger = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/AppleBridgeDev/messages-command-cleanup/" + run + ".json")
-            if let bytes = try? Data(contentsOf: ledger), let registration = try? JSONDecoder().decode(JSON.self, from: bytes), ["WEB-MEDIA-VARIANTS", "MSG-SELFTEST"].contains(registration["scenario"].string), registration["run_id"].string == run {
-                mediaBaseline = Int64(registration["baseline_max_row_id"].number)
-                let registered = registration["media_attachment_names"].array.map(\.string)
-                for (index, name) in registered.enumerated() where name.hasPrefix("ab-" + run + ".") && name == URL(fileURLWithPath: name).lastPathComponent {
-                    mediaNames.insert(name)
-                    mediaNames.insert(String(index) + "-" + name)
-                }
+            if let bytes = try? Data(contentsOf: ledger), let registration = try? JSONDecoder().decode(JSON.self, from: bytes) {
+                mediaProof = try? MessagesMediaCleanupProof(registration: registration, tag: tag)
             }
             if let bytes = try? Data(contentsOf: ledger), let registration = try? JSONDecoder().decode(JSON.self, from: bytes), registration["scenario"].string == "MSG-INTERACTIVE-GATE", registration["run_id"].string == run, registration["interactive_text"].string == "Apple Bridge interactive self-check " + run {
                 interactiveText = registration["interactive_text"].string
@@ -54,12 +48,19 @@ public enum MessagesCleanup {
             if !interactiveText.isEmpty, interactiveBaseline > 0 {
                 rows += try reader.query("SELECT DISTINCT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID WHERE m.ROWID>? AND NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=j.chat_id) AND (m.text=? OR instr(m.attributedBody,CAST(? AS BLOB))>0)", [String(interactiveBaseline), interactiveText, interactiveText])
             }
-            if !mediaNames.isEmpty, mediaBaseline > 0 {
-                for row in try reader.query("SELECT m.guid,a.filename FROM message m JOIN message_attachment_join j ON j.message_id=m.ROWID JOIN attachment a ON a.ROWID=j.attachment_id JOIN chat_message_join c ON c.message_id=m.ROWID WHERE m.ROWID>? AND NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=c.chat_id)", [String(mediaBaseline)]) {
-                    let name = URL(fileURLWithPath: row["filename"]).lastPathComponent
-                    if mediaNames.contains(name) { mediaByMessage[row["guid"], default: []].append(name) }
+            if let proof = mediaProof {
+                var attachmentNames: [String: [String]] = [:]
+                var positions: [String: Int64] = [:]
+                for row in try reader.query("SELECT m.guid,m.ROWID AS native_row_id,a.filename FROM message m JOIN message_attachment_join j ON j.message_id=m.ROWID JOIN attachment a ON a.ROWID=j.attachment_id JOIN chat_message_join c ON c.message_id=m.ROWID WHERE m.ROWID>? AND NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=c.chat_id)", [String(proof.baseline)]) {
+                    attachmentNames[row["guid"], default: []].append(row["filename"])
+                    positions[row["guid"]] = row.integer("native_row_id")
                 }
-                rows += try reader.query("SELECT guid FROM message WHERE ROWID>?", [String(mediaBaseline)]).filter { mediaByMessage[$0["guid"]] != nil && !rows.map({ $0["guid"] }).contains($0["guid"]) }
+                for (guid, names) in attachmentNames {
+                    guard try reader.message(guid) != nil else { continue }
+                    let peers = try reader.query("SELECT DISTINCT h.id FROM message m JOIN chat_message_join cm ON cm.message_id=m.ROWID JOIN chat c ON c.ROWID=cm.chat_id JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE m.guid=? AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=c.ROWID)", [guid]).map { $0["id"] }
+                    if proof.authorizes(rowID: positions[guid] ?? 0, attachments: names, peers: peers, own: own) { mediaByMessage[guid] = proof.targetNames(names) }
+                }
+                rows += try reader.query("SELECT guid FROM message WHERE ROWID>?", [String(proof.baseline)]).filter { mediaByMessage[$0["guid"]] != nil && !rows.map({ $0["guid"] }).contains($0["guid"]) }
             }
             var result: [(String, JSON)] = []
             for key in rows {

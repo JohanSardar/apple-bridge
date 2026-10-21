@@ -58,17 +58,26 @@ enum MessagesAccessibility {
             guard budget > 0, rows.count == 1 else { throw MessagesUIFailure.targetUnavailable }
             return rows[0]
         }
+        if !mediaNames.isEmpty {
+            let bubbles = matching(root, budget: &budget) { value($0, kAXIdentifierAttribute) == "Sticker" }
+            var candidates: [JSON] = []
+            for bubble in bubbles {
+                var nested = 150
+                var values: [JSON] = []
+                _ = matching(bubble, budget: &nested) { child in
+                    values += [kAXDescriptionAttribute, kAXValueAttribute, "AXURL", kAXTitleAttribute, "AXFilename", kAXHelpAttribute, "AXDocument", "AXValueDescription"].map { .string(value(child, $0)) }
+                    return false
+                }
+                let description = value(bubble, kAXDescriptionAttribute)
+                let direction: JSON = description.hasPrefix("Your iMessage,") ? .bool(true) : description.hasPrefix("iMessage,") ? .bool(false) : .null
+                candidates.append(.object(["outgoing": direction, "values": nested > 0 ? .array(values) : .array([])]))
+            }
+            guard budget > 0, let index = MessagesMediaCleanupProof.targetIndex(candidates, names: Set(mediaNames), outgoing: outgoing) else { throw MessagesUIFailure.targetUnavailable }
+            return bubbles[index]
+        }
         let targets = matching(root, budget: &budget) { element in
             let identifier = value(element, kAXIdentifierAttribute)
             let description = value(element, kAXDescriptionAttribute)
-            if !mediaNames.isEmpty, identifier == "Sticker" {
-                var mediaBudget = 100
-                let matched = matching(element, budget: &mediaBudget) { child in
-                    let values = [kAXDescriptionAttribute, kAXValueAttribute, "AXURL", kAXTitleAttribute, "AXFilename", kAXHelpAttribute, "AXDocument", "AXValueDescription"].map { value(child, $0) }
-                    return mediaNames.contains { name in values.contains { $0.contains(name) || $0.removingPercentEncoding?.contains(name) == true } }
-                }
-                return !matched.isEmpty && mediaBudget > 0
-            }
             var textBudget = 100
             let exactText = identifier == "Sticker" && matching(element, budget: &textBudget) { value($0, kAXIdentifierAttribute) == "CKBalloonTextView" && textValue($0) == expected }.count == 1
             return exactText && (prepared.nativeState["cleanup_authorized"].bool || description.hasPrefix(outgoing ? "Your iMessage," : "iMessage,"))
