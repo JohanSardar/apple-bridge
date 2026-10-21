@@ -27,6 +27,12 @@ func run(ctx context.Context, args []string) error {
 	}
 	verb := args[0]
 	args = args[1:]
+	if verb == "selftest" {
+		if len(args) == 0 || args[0] != "messages" {
+			return contracts.ErrInvalid
+		}
+		args = args[1:]
+	}
 	if verb == "token" {
 		if len(args) == 0 || args[0] != "create" {
 			return contracts.ErrInvalid
@@ -50,6 +56,8 @@ func run(ctx context.Context, args []string) error {
 		args = args[1:]
 	}
 	set := flag.NewFlagSet(verb, flag.ContinueOnError)
+	noSelfTestUI := set.Bool("no-ui", false, "defer Messages UI steps and retain cleanup obligations")
+	forceSelfTest := set.Bool("force", false, "rerun the Messages self-test on this OS build")
 	via := set.String("via", "", "remote backend: system or embedded")
 	remoteToken := set.Bool("remote", false, "allow this token through Remote")
 	home := set.String("home", defaultHome(), "private state directory")
@@ -83,6 +91,20 @@ func run(ctx context.Context, args []string) error {
 		args = args[1:]
 	}
 	if err := set.Parse(args); err != nil {
+		return err
+	}
+	if *helperApp == "" && (verb == "selftest" || verb == "setup") {
+		executable, _ := os.Executable()
+		bundle := filepath.Dir(filepath.Dir(filepath.Dir(executable)))
+		if _, err := os.Stat(filepath.Join(bundle, "Contents", "Library", "LaunchAgents", "dev.applebridge.gateway.plist")); err == nil {
+			*helperApp = bundle
+		}
+	}
+	if verb == "selftest" || verb == "setup" {
+		data, err := bridgeruntime.MessagesSelfTest(ctx, *helperApp, *forceSelfTest, !*noSelfTestUI)
+		if len(data) > 0 {
+			fmt.Fprintln(os.Stdout, string(data))
+		}
 		return err
 	}
 	if verb == "remote" {

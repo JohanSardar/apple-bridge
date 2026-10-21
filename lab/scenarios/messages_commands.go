@@ -15,6 +15,9 @@ import (
 func runMessagesCommands(ctx context.Context, s Scenario, level string) Evidence {
 	sha, _ := exec.Command("git", "rev-parse", "HEAD").Output()
 	e := Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, GitSHA: strings.TrimSpace(string(sha)), At: time.Now().UTC(), Assertions: []Assertion{}, Latency: map[string]Latency{}, Hosts: []string{"air"}}
+	if s.ID == "MSG-SELFTEST" {
+		return runNativeMessagesSelfTest(ctx, e)
+	}
 	if level != "sim" {
 		return runNativeMessagesCommands(ctx, s, level, e)
 	}

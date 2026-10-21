@@ -1277,7 +1277,7 @@ Recently Deleted becomes `deleted_at` + `recoverable_until` on messages and chat
 - **Own handles:** discovered from the Messages account (`account_login` / `destination_caller_id`) and the Contacts "me" card.
 - **Run:** in a tagged self chat it does send text, send a file, reply, react (classic and emoji, add and remove), edit, unsend, mark read/unread, and delete message. Afterwards it cleans up everything it created.
 - **Result:** each passing operation becomes `proven` for the build; a failure leaves that operation hidden in the UI with the reason.
-- **Rerun:** automatic after a macOS update changes the build.
+- **Rerun:** automatic after a macOS update changes the build. The Helper caches one report per running build and does not repeat an interrupted run; `bridge selftest messages --force` starts a new, guarded run. `bridge setup` invokes the same self-test. `--no-ui` proves the AppleScript steps and records the remaining operations and cleanup as deferred. Private run manifests and the dispatch guard retain unfinished cleanup obligations; failures remain unproven with per-operation reasons.
 
 **Proofs to finish at the real level** (sim-only today): `messages.mark_read`, `messages.mark_unread`, `messages.delete_message` and `messages.delete_chat` (tagged self chat only), plus resend of a failed message (`messages.send` with `resend_of`).
 
