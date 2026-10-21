@@ -74,7 +74,7 @@ func (a *Authority) WatchPrincipal(ctx context.Context, p Principal) (context.Co
 				return
 			case <-tick.C:
 				current, err := a.Principal(p.ID)
-				if err != nil || current.Revision != p.Revision {
+				if err != nil || current.Revision != p.Revision || !principalActive(p) {
 					return
 				}
 			}

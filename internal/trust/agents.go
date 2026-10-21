@@ -93,20 +93,3 @@ func (a *Authority) Agents() ([]Agent, error) {
 	}
 	return out, nil
 }
-
-func (a *Authority) useAgent(id, hash string) (Principal, error) {
-	var p Principal
-	err := a.update(func(d *credentials) error {
-		for i, current := range d.Principals {
-			if current.ID == id && current.Kind == "agent" && principalActive(current) && current.TokenHash == hash {
-				now := time.Now().UTC()
-				current.LastUsed = &now
-				d.Principals[i] = current
-				p = current
-				return nil
-			}
-		}
-		return contracts.ErrUnauthorized
-	})
-	return p, err
-}
