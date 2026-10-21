@@ -1,0 +1,183 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[6.78 10.02 11.33] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5F00D81GS6FG7NNYE76G5NY",
+  "scenario": "MSG-FAILED-OBSERVED-IDS",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "d250345613bb53d4ed6ee79478a34804fdd9ec82",
+  "at": "2026-10-21T10:27:14.306524Z",
+  "assertions": [
+    {
+      "name": "seed_self_chat",
+      "passed": true
+    },
+    {
+      "name": "fixture_captured",
+      "passed": true
+    },
+    {
+      "name": "gateway_delivery-failed_armed",
+      "passed": true
+    },
+    {
+      "name": "gateway_delivery-failed_failure_is_honest",
+      "passed": true
+    },
+    {
+      "name": "gateway_concrete_failure_has_exact_id",
+      "passed": true
+    },
+    {
+      "name": "gateway_concrete_failure_readable_at_commit",
+      "passed": true
+    },
+    {
+      "name": "gateway_explicit_resend_targets_proven_failure",
+      "passed": true
+    },
+    {
+      "name": "gateway_delivery-failed_rest_status_parity",
+      "passed": true
+    },
+    {
+      "name": "gateway_delivery-failed_mcp_status_parity",
+      "passed": true
+    },
+    {
+      "name": "gateway_delivery-failed_retry_never_redispatches",
+      "passed": true
+    },
+    {
+      "name": "gateway_ghost-send_armed",
+      "passed": true
+    },
+    {
+      "name": "gateway_ghost-send_failure_is_honest",
+      "passed": true
+    },
+    {
+      "name": "gateway_ghost_has_no_matching_native_record",
+      "passed": true
+    },
+    {
+      "name": "gateway_ghost_no_guessed_record",
+      "passed": true
+    },
+    {
+      "name": "gateway_ghost-send_rest_status_parity",
+      "passed": true
+    },
+    {
+      "name": "gateway_ghost-send_mcp_status_parity",
+      "passed": true
+    },
+    {
+      "name": "gateway_ghost-send_retry_never_redispatches",
+      "passed": true
+    },
+    {
+      "name": "replica_delivery-failed_armed",
+      "passed": true
+    },
+    {
+      "name": "replica_delivery-failed_failure_is_honest",
+      "passed": true
+    },
+    {
+      "name": "replica_concrete_failure_has_exact_id",
+      "passed": true
+    },
+    {
+      "name": "replica_concrete_failure_readable_at_commit",
+      "passed": true
+    },
+    {
+      "name": "replica_explicit_resend_targets_proven_failure",
+      "passed": true
+    },
+    {
+      "name": "replica_delivery-failed_rest_status_parity",
+      "passed": true
+    },
+    {
+      "name": "replica_delivery-failed_mcp_status_parity",
+      "passed": true
+    },
+    {
+      "name": "replica_delivery-failed_retry_never_redispatches",
+      "passed": true
+    },
+    {
+      "name": "replica_ghost-send_armed",
+      "passed": true
+    },
+    {
+      "name": "replica_ghost-send_failure_is_honest",
+      "passed": true
+    },
+    {
+      "name": "replica_ghost_has_no_matching_native_record",
+      "passed": true
+    },
+    {
+      "name": "replica_ghost_no_guessed_record",
+      "passed": true
+    },
+    {
+      "name": "replica_ghost-send_rest_status_parity",
+      "passed": true
+    },
+    {
+      "name": "replica_ghost-send_mcp_status_parity",
+      "passed": true
+    },
+    {
+      "name": "replica_ghost-send_retry_never_redispatches",
+      "passed": true
+    },
+    {
+      "name": "truth_and_replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "gateway_delivery-failed_submit_to_failure": {
+      "samples": 1,
+      "p50_ms": 55.059292,
+      "p95_ms": 55.059292,
+      "max_ms": 55.059292,
+      "timeouts": 0
+    },
+    "gateway_ghost-send_submit_to_failure": {
+      "samples": 1,
+      "p50_ms": 45.45175,
+      "p95_ms": 45.45175,
+      "max_ms": 45.45175,
+      "timeouts": 0
+    },
+    "replica_delivery-failed_submit_to_failure": {
+      "samples": 1,
+      "p50_ms": 49.368709,
+      "p95_ms": 49.368709,
+      "max_ms": 49.368709,
+      "timeouts": 0
+    },
+    "replica_ghost-send_submit_to_failure": {
+      "samples": 1,
+      "p50_ms": 56.578792,
+      "p95_ms": 56.578792,
+      "max_ms": 56.578792,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

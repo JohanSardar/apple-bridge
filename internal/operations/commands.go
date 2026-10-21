@@ -409,7 +409,7 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 		to = "rejected"
 		f.Disposition = "rejected_before_dispatch"
 	}
-	if to == "observed" || to == "delivered" {
+	if to == "observed" || to == "delivered" || to == "delivery_failed" {
 		var evidence struct {
 			NativeKey         string `json:"native_key"`
 			Fingerprint       string `json:"fingerprint"`
@@ -442,13 +442,17 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 			collection = "reminders.list"
 		}
 		if json.Unmarshal(f.Evidence, &evidence) != nil || evidence.NativeKey == "" || evidence.Fingerprint != r.RequestHash || !evidence.Observed {
-			to = "indeterminate"
-			f.Disposition = "indeterminate"
+			if to != "delivery_failed" {
+				to = "indeterminate"
+				f.Disposition = "indeterminate"
+			}
 		} else {
 			sequence, err := g.Peer.CapturedSequence(r.Source, evidence.CaptureCheckpoint, collection, evidence.NativeKey)
 			if err != nil || sequence.Sequence == 0 || sequence.Epoch != g.State.Head().Epoch {
-				to = "indeterminate"
-				f.Disposition = "indeterminate"
+				if to != "delivery_failed" {
+					to = "indeterminate"
+					f.Disposition = "indeterminate"
+				}
 			} else {
 				r.CommitSeq = sequence.Sequence
 				if id, err := g.State.ObservedRecordID(ctx, collection, evidence.NativeKey, sequence); err == nil {
