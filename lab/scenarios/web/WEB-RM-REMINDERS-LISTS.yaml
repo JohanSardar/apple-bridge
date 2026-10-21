@@ -1,0 +1,7 @@
+id: WEB-RM-REMINDERS-LISTS
+feature: web.reminders
+levels: [sim]
+given: [{world: {replicas: 1}}]
+when: [{readmodels: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

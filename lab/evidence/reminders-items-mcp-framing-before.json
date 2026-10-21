@@ -1,0 +1,29 @@
+{
+  "scenario": "WEB-RM-REMINDERS-ITEMS",
+  "level": "sim",
+  "run_id": "run_01M5G45EC3G6V356K8FQV6MQWD",
+  "at": "2026-10-21T20:59:08.03568Z",
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[6.29 8.18 7.72] cpus=8 other_heavy=0"
+  },
+  "latency": {
+    "1000_reminders_items_mcp": {
+      "samples": 100,
+      "p50_ms": 12.0345,
+      "p95_ms": 12.859875,
+      "max_ms": 24.304709,
+      "timeouts": 0
+    },
+    "1000_reminders_items_rest": {
+      "samples": 100,
+      "p50_ms": 5.604958,
+      "p95_ms": 6.136,
+      "max_ms": 6.566083,
+      "timeouts": 0
+    }
+  },
+  "all_behavior_checks_passed": true,
+  "gateway_binary_sha256": "3bdebdc1ecea9022869853ea08a5196d571ac2503779c4c79bb0ca2cd2651d80",
+  "interpretation": "Client round trip, including JSON decoding. Server-side read-model computation is the SPEC budget; client timings are descriptive. Baseline MCP duplicated the full result as text and structuredContent."
+}

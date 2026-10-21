@@ -1,0 +1,536 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[6.89 5.08 5.25] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5G6PX55645W9W2P2WRSXR14",
+  "metrics": {
+    "mcp_1000_items_response_bytes": 872545,
+    "mcp_text_bytes": 412188,
+    "rest_1000_items_response_bytes": 412189
+  },
+  "scenario": "WEB-RM-REMINDERS-ITEMS",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "3907c1d45ea6f74919509314881afda7f639afe4",
+  "at": "2026-10-21T21:43:37.38163Z",
+  "assertions": [
+    {
+      "name": "world_start",
+      "passed": true
+    },
+    {
+      "name": "synthetic_reminders_gateway_and_replica",
+      "passed": true
+    },
+    {
+      "name": "list_reference_resolved",
+      "passed": true
+    },
+    {
+      "name": "rest_reminders.items_available",
+      "passed": true
+    },
+    {
+      "name": "rest_section_shape_and_filtered_count",
+      "passed": true
+    },
+    {
+      "name": "rest_native_and_empty_section_order",
+      "passed": true
+    },
+    {
+      "name": "rest_subtasks_nested_once",
+      "passed": true
+    },
+    {
+      "name": "mcp_reminders.items_available",
+      "passed": true
+    },
+    {
+      "name": "mcp_section_shape_and_filtered_count",
+      "passed": true
+    },
+    {
+      "name": "mcp_native_and_empty_section_order",
+      "passed": true
+    },
+    {
+      "name": "mcp_subtasks_nested_once",
+      "passed": true
+    },
+    {
+      "name": "reminders.items_mcp_text_matches_structured_json",
+      "passed": true
+    },
+    {
+      "name": "reminders.items_rest_mcp_structured_result_exact",
+      "passed": true
+    },
+    {
+      "name": "reminders_openapi_available",
+      "passed": true
+    },
+    {
+      "name": "reminders.items_output_schema_with_recursive_subtasks",
+      "passed": true
+    },
+    {
+      "name": "rest_today_grouping_and_count",
+      "passed": true
+    },
+    {
+      "name": "rest_scheduled_grouping_and_count",
+      "passed": true
+    },
+    {
+      "name": "rest_all_grouping_and_count",
+      "passed": true
+    },
+    {
+      "name": "rest_completed_grouping_and_count",
+      "passed": true
+    },
+    {
+      "name": "rest_flagged_grouping_and_count",
+      "passed": true
+    },
+    {
+      "name": "rest_assigned_grouping_and_count",
+      "passed": true
+    },
+    {
+      "name": "rest_work_grouping_and_count",
+      "passed": true
+    },
+    {
+      "name": "rest_show_completed_before_nesting",
+      "passed": true
+    },
+    {
+      "name": "rest_apple_priority_none_sorts_after_low",
+      "passed": true
+    },
+    {
+      "name": "mcp_today_grouping_and_count",
+      "passed": true
+    },
+    {
+      "name": "mcp_scheduled_grouping_and_count",
+      "passed": true
+    },
+    {
+      "name": "mcp_all_grouping_and_count",
+      "passed": true
+    },
+    {
+      "name": "mcp_completed_grouping_and_count",
+      "passed": true
+    },
+    {
+      "name": "mcp_flagged_grouping_and_count",
+      "passed": true
+    },
+    {
+      "name": "mcp_assigned_grouping_and_count",
+      "passed": true
+    },
+    {
+      "name": "mcp_work_grouping_and_count",
+      "passed": true
+    },
+    {
+      "name": "mcp_show_completed_before_nesting",
+      "passed": true
+    },
+    {
+      "name": "mcp_apple_priority_none_sorts_after_low",
+      "passed": true
+    },
+    {
+      "name": "replica_added_after_reminders_for_snapshot",
+      "passed": true
+    },
+    {
+      "name": "reminders.lists_gateway_before_replica",
+      "passed": true
+    },
+    {
+      "name": "reminders.lists_live_apply_matches_gateway",
+      "passed": true
+    },
+    {
+      "name": "reminders.lists_snapshot_rebuild_matches_gateway",
+      "passed": true
+    },
+    {
+      "name": "reminders.items_gateway_before_replica",
+      "passed": true
+    },
+    {
+      "name": "reminders.items_live_apply_matches_gateway",
+      "passed": true
+    },
+    {
+      "name": "reminders.items_snapshot_rebuild_matches_gateway",
+      "passed": true
+    },
+    {
+      "name": "dst_fixture_before",
+      "passed": true
+    },
+    {
+      "name": "dst_fixture_after",
+      "passed": true
+    },
+    {
+      "name": "dst_fixtures_converged",
+      "passed": true
+    },
+    {
+      "name": "rest_viewer_zone_across_dst_UTC",
+      "passed": true
+    },
+    {
+      "name": "rest_viewer_zone_across_dst_America/New_York",
+      "passed": true
+    },
+    {
+      "name": "mcp_viewer_zone_across_dst_UTC",
+      "passed": true
+    },
+    {
+      "name": "mcp_viewer_zone_across_dst_America/New_York",
+      "passed": true
+    },
+    {
+      "name": "restricted_token",
+      "passed": true
+    },
+    {
+      "name": "rest_invalid_selector_zone_or_sort",
+      "passed": true
+    },
+    {
+      "name": "rest_invalid_selector_zone_or_sort",
+      "passed": true
+    },
+    {
+      "name": "rest_invalid_selector_zone_or_sort",
+      "passed": true
+    },
+    {
+      "name": "rest_invalid_selector_zone_or_sort",
+      "passed": true
+    },
+    {
+      "name": "rest_invalid_selector_zone_or_sort",
+      "passed": true
+    },
+    {
+      "name": "rest_invalid_selector_zone_or_sort",
+      "passed": true
+    },
+    {
+      "name": "rest_visibility_before_sidebar_counts",
+      "passed": true
+    },
+    {
+      "name": "rest_visibility_before_items_and_nesting",
+      "passed": true
+    },
+    {
+      "name": "mcp_invalid_selector_zone_or_sort",
+      "passed": true
+    },
+    {
+      "name": "mcp_invalid_selector_zone_or_sort",
+      "passed": true
+    },
+    {
+      "name": "mcp_invalid_selector_zone_or_sort",
+      "passed": true
+    },
+    {
+      "name": "mcp_invalid_selector_zone_or_sort",
+      "passed": true
+    },
+    {
+      "name": "mcp_invalid_selector_zone_or_sort",
+      "passed": true
+    },
+    {
+      "name": "mcp_invalid_selector_zone_or_sort",
+      "passed": true
+    },
+    {
+      "name": "mcp_visibility_before_sidebar_counts",
+      "passed": true
+    },
+    {
+      "name": "mcp_visibility_before_items_and_nesting",
+      "passed": true
+    },
+    {
+      "name": "unknown_assignment_identity_capture",
+      "passed": true
+    },
+    {
+      "name": "unknown_assignment_identity_converged",
+      "passed": true
+    },
+    {
+      "name": "unknown_custom_filter_capture",
+      "passed": true
+    },
+    {
+      "name": "unknown_custom_filter_converged",
+      "passed": true
+    },
+    {
+      "name": "rest_assigned_identity_unknown_has_no_count",
+      "passed": true
+    },
+    {
+      "name": "rest_custom_filter_unknown_has_no_count",
+      "passed": true
+    },
+    {
+      "name": "mcp_assigned_identity_unknown_has_no_count",
+      "passed": true
+    },
+    {
+      "name": "mcp_custom_filter_unknown_has_no_count",
+      "passed": true
+    },
+    {
+      "name": "attachment_fixture_own",
+      "passed": true
+    },
+    {
+      "name": "attachment_fixture_other",
+      "passed": true
+    },
+    {
+      "name": "attachments_converged",
+      "passed": true
+    },
+    {
+      "name": "rest_attachments_are_owned_records",
+      "passed": true
+    },
+    {
+      "name": "mcp_attachments_are_owned_records",
+      "passed": true
+    },
+    {
+      "name": "nested_fixture_grandchild",
+      "passed": true
+    },
+    {
+      "name": "nested_fixture_cycle-a",
+      "passed": true
+    },
+    {
+      "name": "nested_fixture_cycle-b",
+      "passed": true
+    },
+    {
+      "name": "nested_fixture_aliases_converged",
+      "passed": true
+    },
+    {
+      "name": "nested_fixture_link_grandchild",
+      "passed": true
+    },
+    {
+      "name": "nested_fixture_link_cycle-a",
+      "passed": true
+    },
+    {
+      "name": "nested_fixture_link_cycle-b",
+      "passed": true
+    },
+    {
+      "name": "nested_fixtures_converged",
+      "passed": true
+    },
+    {
+      "name": "rest_recursive_subtasks_and_deterministic_cycle_break",
+      "passed": true
+    },
+    {
+      "name": "mcp_recursive_subtasks_and_deterministic_cycle_break",
+      "passed": true
+    },
+    {
+      "name": "completed_parent_capture",
+      "passed": true
+    },
+    {
+      "name": "completed_parent_converged",
+      "passed": true
+    },
+    {
+      "name": "completion_filter_before_recursive_nesting",
+      "passed": true
+    },
+    {
+      "name": "sort_list_capture",
+      "passed": true
+    },
+    {
+      "name": "sort_list_converged",
+      "passed": true
+    },
+    {
+      "name": "sort_list_reference",
+      "passed": true
+    },
+    {
+      "name": "sort_fixture_capture",
+      "passed": true
+    },
+    {
+      "name": "sort_fixture_capture",
+      "passed": true
+    },
+    {
+      "name": "sort_fixture_capture",
+      "passed": true
+    },
+    {
+      "name": "sort_fixture_capture",
+      "passed": true
+    },
+    {
+      "name": "sort_fixtures_converged",
+      "passed": true
+    },
+    {
+      "name": "rest_manual_sort_and_missing_values_last",
+      "passed": true
+    },
+    {
+      "name": "rest_created_sort_and_missing_values_last",
+      "passed": true
+    },
+    {
+      "name": "rest_priority_sort_and_missing_values_last",
+      "passed": true
+    },
+    {
+      "name": "rest_title_sort_and_missing_values_last",
+      "passed": true
+    },
+    {
+      "name": "rest_due_sort_and_missing_values_last",
+      "passed": true
+    },
+    {
+      "name": "mcp_manual_sort_and_missing_values_last",
+      "passed": true
+    },
+    {
+      "name": "mcp_created_sort_and_missing_values_last",
+      "passed": true
+    },
+    {
+      "name": "mcp_priority_sort_and_missing_values_last",
+      "passed": true
+    },
+    {
+      "name": "mcp_title_sort_and_missing_values_last",
+      "passed": true
+    },
+    {
+      "name": "mcp_due_sort_and_missing_values_last",
+      "passed": true
+    },
+    {
+      "name": "1000_reminders_perf_world",
+      "passed": true
+    },
+    {
+      "name": "1000_reminders_perf_convergence",
+      "passed": true
+    },
+    {
+      "name": "1000_reminders_perf_list",
+      "passed": true
+    },
+    {
+      "name": "rest_perf_token",
+      "passed": true
+    },
+    {
+      "name": "rest_perf_exactly_1000_items",
+      "passed": true
+    },
+    {
+      "name": "rest_1000_items_gateway_p95_under_10ms",
+      "passed": true
+    },
+    {
+      "name": "rest_1000_items_roundtrip_complete",
+      "passed": true
+    },
+    {
+      "name": "mcp_perf_token",
+      "passed": true
+    },
+    {
+      "name": "mcp_perf_exactly_1000_items",
+      "passed": true
+    },
+    {
+      "name": "mcp_1000_items_gateway_p95_under_10ms",
+      "passed": true
+    },
+    {
+      "name": "mcp_1000_items_roundtrip_complete",
+      "passed": true
+    },
+    {
+      "name": "mcp_large_result_text_matches_structured_json",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "1000_reminders_items_mcp": {
+      "samples": 100,
+      "p50_ms": 15.823875,
+      "p95_ms": 16.986708,
+      "max_ms": 32.984042,
+      "timeouts": 0
+    },
+    "1000_reminders_items_mcp_gateway": {
+      "samples": 100,
+      "p50_ms": 4.602083,
+      "p95_ms": 5.117334,
+      "max_ms": 20.375167,
+      "timeouts": 0
+    },
+    "1000_reminders_items_rest": {
+      "samples": 100,
+      "p50_ms": 7.537167,
+      "p95_ms": 8.334667,
+      "max_ms": 8.663417,
+      "timeouts": 0
+    },
+    "1000_reminders_items_rest_gateway": {
+      "samples": 100,
+      "p50_ms": 4.713833,
+      "p95_ms": 5.158083,
+      "max_ms": 5.204667,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

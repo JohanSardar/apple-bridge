@@ -17,7 +17,9 @@ func (s *Store) initReadModels(ctx context.Context) error {
 		return err
 	}
 	defer tx.Rollback()
-	_, err = tx.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS msg_by_chat(id TEXT PRIMARY KEY,chat_id TEXT NOT NULL,sent_at TEXT NOT NULL,unread INTEGER NOT NULL,originator TEXT NOT NULL,payload BLOB NOT NULL);
+	_, err = tx.ExecContext(ctx, `CREATE INDEX IF NOT EXISTS reminder_list ON records(json_extract(payload,'$.data.list_id'),id) WHERE collection='reminders.reminder' AND deleted=0;
+ CREATE INDEX IF NOT EXISTS reminder_attachment ON records(json_extract(payload,'$.data.reminder_id'),id) WHERE collection='reminders.attachment' AND deleted=0;
+ CREATE TABLE IF NOT EXISTS msg_by_chat(id TEXT PRIMARY KEY,chat_id TEXT NOT NULL,sent_at TEXT NOT NULL,unread INTEGER NOT NULL,originator TEXT NOT NULL,payload BLOB NOT NULL);
  CREATE INDEX IF NOT EXISTS msg_chat_time ON msg_by_chat(chat_id,sent_at,id);
  CREATE INDEX IF NOT EXISTS msg_unread ON msg_by_chat(chat_id,sent_at,id) WHERE unread=1;
  CREATE INDEX IF NOT EXISTS msg_mention ON msg_by_chat(chat_id) WHERE json_extract(payload,'$.data.has_unseen_mention')=1 AND json_extract(payload,'$.data.deleted_at') IS NULL;
