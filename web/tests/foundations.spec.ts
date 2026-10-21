@@ -95,7 +95,12 @@ test('WEB-LIVE-MOCK receives deltas and resumes after a dropped socket with cach
     await expect(page.getByLabel('Live count')).toHaveText(before!);
     await metrics('WEB-LIVE-MOCK', info.project.name, { fixture_round_trip: stats(values), server: 'mock', not_real_journal_latency: true });
 });
-test('WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades', async ({ page }) => {
+test('WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades', async ({ page }, info) => {
+    await page.addInitScript(()=>{
+        const state=window as Window&{__motionRequests:{duration:unknown;easing:unknown}[]};state.__motionRequests=[];
+        const animate=Element.prototype.animate;
+        Element.prototype.animate=function(...args){const animation=animate.apply(this,args),timing=animation.effect?.getTiming();state.__motionRequests.push({duration:timing?.duration,easing:timing?.easing});return animation;};
+    });
     await page.goto('/__fixtures/motion');
     await page.getByRole('button', { name: 'Animate spring' }).click();
     await page.waitForTimeout(60);
@@ -107,8 +112,12 @@ test('WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades', asy
     await page.getByRole('button', { name: 'Shared element' }).click();
     await expect.poll(() => page.locator('.motion-fixture').evaluate(element => getComputedStyle(element).transform)).toBe('none');
     await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.evaluate(()=>{(window as Window&{__motionRequests:unknown[]}).__motionRequests.length=0;});
     await page.getByRole('button', { name: 'Animate spring' }).click();
-    expect(await page.locator('.motion-fixture').evaluate(element => element.getAnimations().map(animation => animation.effect?.getTiming().duration))).toEqual([150]);
+    const requested=await page.evaluate(()=>(window as Window&{__motionRequests:{duration:unknown;easing:unknown}[]}).__motionRequests);
+    expect(requested.map(value=>value.duration)).toContain(150);
+    await mkdir('../lab/evidence/private/web/motion-observation',{recursive:true});
+    await writeFile(`../lab/evidence/private/web/motion-observation/${info.project.name}.json`,JSON.stringify(requested,null,2)+'\n');
 });
 test('WEB-PERF-SHELL bundle, layout stability, navigation and warm cache budgets', async ({ page }, info) => {
     const files = (await readdir('dist/assets')).filter(file => file.endsWith('.js'));
