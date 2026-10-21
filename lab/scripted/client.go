@@ -16,6 +16,7 @@ import (
 type Client struct {
 	Endpoint     world.Endpoint
 	Protocol     string
+	Observe      func(http.Header, []byte)
 	DropResponse bool
 }
 
@@ -47,6 +48,9 @@ func (c Client) Call(ctx context.Context, name string, input, output any) error 
 	raw, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
+	}
+	if c.Observe != nil {
+		c.Observe(resp.Header, raw)
 	}
 	if c.DropResponse {
 		return io.ErrUnexpectedEOF

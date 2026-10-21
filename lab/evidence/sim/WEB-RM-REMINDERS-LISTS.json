@@ -1,0 +1,246 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[7.77 6.6 5.87] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5G6Z9D09JTXZFQM2XYAVQGJ",
+  "scenario": "WEB-RM-REMINDERS-LISTS",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "3907c1d45ea6f74919509314881afda7f639afe4",
+  "at": "2026-10-21T21:48:12.064564Z",
+  "assertions": [
+    {
+      "name": "world_start",
+      "passed": true
+    },
+    {
+      "name": "synthetic_reminders_gateway_and_replica",
+      "passed": true
+    },
+    {
+      "name": "list_reference_resolved",
+      "passed": true
+    },
+    {
+      "name": "rest_reminders.lists_available",
+      "passed": true
+    },
+    {
+      "name": "rest_sidebar_shape",
+      "passed": true
+    },
+    {
+      "name": "rest_smart_today_definition",
+      "passed": true
+    },
+    {
+      "name": "rest_smart_scheduled_definition",
+      "passed": true
+    },
+    {
+      "name": "rest_smart_all_definition",
+      "passed": true
+    },
+    {
+      "name": "rest_smart_flagged_definition",
+      "passed": true
+    },
+    {
+      "name": "rest_smart_completed_definition",
+      "passed": true
+    },
+    {
+      "name": "rest_smart_assigned_definition",
+      "passed": true
+    },
+    {
+      "name": "rest_six_smart_tiles",
+      "passed": true
+    },
+    {
+      "name": "rest_native_sidebar_order",
+      "passed": true
+    },
+    {
+      "name": "rest_flat_group_and_incomplete_count",
+      "passed": true
+    },
+    {
+      "name": "rest_incomplete_tag_counts",
+      "passed": true
+    },
+    {
+      "name": "mcp_reminders.lists_available",
+      "passed": true
+    },
+    {
+      "name": "mcp_sidebar_shape",
+      "passed": true
+    },
+    {
+      "name": "mcp_smart_today_definition",
+      "passed": true
+    },
+    {
+      "name": "mcp_smart_scheduled_definition",
+      "passed": true
+    },
+    {
+      "name": "mcp_smart_all_definition",
+      "passed": true
+    },
+    {
+      "name": "mcp_smart_flagged_definition",
+      "passed": true
+    },
+    {
+      "name": "mcp_smart_completed_definition",
+      "passed": true
+    },
+    {
+      "name": "mcp_smart_assigned_definition",
+      "passed": true
+    },
+    {
+      "name": "mcp_six_smart_tiles",
+      "passed": true
+    },
+    {
+      "name": "mcp_native_sidebar_order",
+      "passed": true
+    },
+    {
+      "name": "mcp_flat_group_and_incomplete_count",
+      "passed": true
+    },
+    {
+      "name": "mcp_incomplete_tag_counts",
+      "passed": true
+    },
+    {
+      "name": "reminders.lists_mcp_text_matches_structured_json",
+      "passed": true
+    },
+    {
+      "name": "reminders.lists_rest_mcp_structured_result_exact",
+      "passed": true
+    },
+    {
+      "name": "reminders_openapi_available",
+      "passed": true
+    },
+    {
+      "name": "reminders.lists_output_schema",
+      "passed": true
+    },
+    {
+      "name": "replica_added_after_reminders_for_snapshot",
+      "passed": true
+    },
+    {
+      "name": "reminders.lists_gateway_before_replica",
+      "passed": true
+    },
+    {
+      "name": "reminders.lists_live_apply_matches_gateway",
+      "passed": true
+    },
+    {
+      "name": "reminders.lists_snapshot_rebuild_matches_gateway",
+      "passed": true
+    },
+    {
+      "name": "restricted_token",
+      "passed": true
+    },
+    {
+      "name": "rest_invalid_viewer_zone",
+      "passed": true
+    },
+    {
+      "name": "rest_invalid_viewer_zone",
+      "passed": true
+    },
+    {
+      "name": "rest_invalid_viewer_zone",
+      "passed": true
+    },
+    {
+      "name": "rest_visibility_before_sidebar_counts",
+      "passed": true
+    },
+    {
+      "name": "mcp_invalid_viewer_zone",
+      "passed": true
+    },
+    {
+      "name": "mcp_invalid_viewer_zone",
+      "passed": true
+    },
+    {
+      "name": "mcp_invalid_viewer_zone",
+      "passed": true
+    },
+    {
+      "name": "mcp_visibility_before_sidebar_counts",
+      "passed": true
+    },
+    {
+      "name": "unknown_assignment_identity_capture",
+      "passed": true
+    },
+    {
+      "name": "unknown_assignment_identity_converged",
+      "passed": true
+    },
+    {
+      "name": "unknown_custom_filter_capture",
+      "passed": true
+    },
+    {
+      "name": "unknown_custom_filter_converged",
+      "passed": true
+    },
+    {
+      "name": "rest_assigned_identity_unknown_has_no_count",
+      "passed": true
+    },
+    {
+      "name": "rest_flag_unknown_has_no_count",
+      "passed": true
+    },
+    {
+      "name": "rest_unknown_tags_hide_partial_counts",
+      "passed": true
+    },
+    {
+      "name": "rest_custom_filter_unknown_has_no_count",
+      "passed": true
+    },
+    {
+      "name": "mcp_assigned_identity_unknown_has_no_count",
+      "passed": true
+    },
+    {
+      "name": "mcp_flag_unknown_has_no_count",
+      "passed": true
+    },
+    {
+      "name": "mcp_unknown_tags_hide_partial_counts",
+      "passed": true
+    },
+    {
+      "name": "mcp_custom_filter_unknown_has_no_count",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
