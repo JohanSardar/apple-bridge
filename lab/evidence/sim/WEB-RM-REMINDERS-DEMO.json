@@ -1,0 +1,462 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[5.71 5.82 6.23] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5GC3PN8BRVVDAH5ECBP2XJF",
+  "scenario": "WEB-RM-REMINDERS-DEMO",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "b1782ae123e1f628f3b8e252a5bf089208e0eaf4",
+  "at": "2026-10-21T23:17:59.59222Z",
+  "assertions": [
+    {
+      "name": "generated_reminders_demo_records",
+      "passed": true
+    },
+    {
+      "name": "demo_reminders_world",
+      "passed": true
+    },
+    {
+      "name": "demo_reminders_sim_capture",
+      "passed": true
+    },
+    {
+      "name": "demo_reminders_replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "demo_reminders_read_records",
+      "passed": true
+    },
+    {
+      "name": "demo_reminders_lists_and_group",
+      "passed": true
+    },
+    {
+      "name": "demo_reminders_group_reference_resolved",
+      "passed": true
+    },
+    {
+      "name": "demo_reminders_native_order_pin_and_emblems",
+      "passed": true
+    },
+    {
+      "name": "demo_reminders_flags",
+      "passed": true
+    },
+    {
+      "name": "demo_reminders_recursive_subtasks",
+      "passed": true
+    },
+    {
+      "name": "demo_reminders_sections",
+      "passed": true
+    },
+    {
+      "name": "demo_reminders_tags",
+      "passed": true
+    },
+    {
+      "name": "demo_reminders_smart_list",
+      "passed": true
+    },
+    {
+      "name": "demo_reminders_source_verified_assignee",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_rest_lists_call",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_rest_lists_parity",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_rest_sidebar_order",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_rest_groups_order_and_pin",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_rest_Personal_sections",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_rest_Groceries_sections",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_rest_custom_unsupported",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_rest_smart_counts",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_rest_tags_incomplete_exact",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_rest_travel_call",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_rest_travel_parity",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_rest_travel_exact",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_rest_groceries_call",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_rest_groceries_parity",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_rest_groceries_exact",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_rest_personal_incomplete_call",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_rest_personal_incomplete_parity",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_rest_personal_incomplete_exact",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_rest_personal_completed_call",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_rest_personal_completed_parity",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_rest_personal_completed_exact",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_rest_assigned_call",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_rest_assigned_parity",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_rest_assigned_exact",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_mcp_lists_call",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_mcp_lists_parity",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_mcp_sidebar_order",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_mcp_groups_order_and_pin",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_mcp_Personal_sections",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_mcp_Groceries_sections",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_mcp_custom_unsupported",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_mcp_smart_counts",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_mcp_tags_incomplete_exact",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_mcp_assigned_call",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_mcp_assigned_parity",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_mcp_assigned_exact",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_mcp_travel_call",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_mcp_travel_parity",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_mcp_travel_exact",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_mcp_groceries_call",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_mcp_groceries_parity",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_mcp_groceries_exact",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_mcp_personal_incomplete_call",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_mcp_personal_incomplete_parity",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_mcp_personal_incomplete_exact",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_mcp_personal_completed_call",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_mcp_personal_completed_parity",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_0_mcp_personal_completed_exact",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_rest_lists_call",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_rest_lists_parity",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_rest_sidebar_order",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_rest_groups_order_and_pin",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_rest_Personal_sections",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_rest_Groceries_sections",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_rest_custom_unsupported",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_rest_smart_counts",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_rest_tags_incomplete_exact",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_rest_personal_completed_call",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_rest_personal_completed_parity",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_rest_personal_completed_exact",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_rest_assigned_call",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_rest_assigned_parity",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_rest_assigned_exact",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_rest_travel_call",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_rest_travel_parity",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_rest_travel_exact",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_rest_groceries_call",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_rest_groceries_parity",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_rest_groceries_exact",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_rest_personal_incomplete_call",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_rest_personal_incomplete_parity",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_rest_personal_incomplete_exact",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_mcp_lists_call",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_mcp_lists_parity",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_mcp_sidebar_order",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_mcp_groups_order_and_pin",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_mcp_Personal_sections",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_mcp_Groceries_sections",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_mcp_custom_unsupported",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_mcp_smart_counts",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_mcp_tags_incomplete_exact",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_mcp_personal_incomplete_call",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_mcp_personal_incomplete_parity",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_mcp_personal_incomplete_exact",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_mcp_personal_completed_call",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_mcp_personal_completed_parity",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_mcp_personal_completed_exact",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_mcp_assigned_call",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_mcp_assigned_parity",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_mcp_assigned_exact",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_mcp_travel_call",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_mcp_travel_parity",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_mcp_travel_exact",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_mcp_groceries_call",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_mcp_groceries_parity",
+      "passed": true
+    },
+    {
+      "name": "demo_readmodels_1_mcp_groceries_exact",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

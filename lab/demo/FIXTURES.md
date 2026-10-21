@@ -60,3 +60,23 @@ Live Photo pairs are explicit dataset references from a still attachment to its 
 Huge mode is opt-in and may take over a minute under host pressure. Gateway browser projects each receive a fresh world; use a focused declared project for an opt-in performance scenario within the default scenario timeout.
 
 Synthetic H.264/AAC clips are regenerated on macOS with `packaging/dev/heavy.sh swift lab/simapple/generate_media.swift`. Each one-second clip is under 50 KB. SimApple reports source geometry and presentation duration from the movie boxes; unparseable sources retain the 16×16 fallback with `dims_source: "sim-default"`.
+
+Reminders adds six list records and ten reminders after Messages generation, so
+it preserves the existing Messages random sequence. Home is a disclosure group
+for Personal and Groceries; Travel is pinned, and native display order is
+explicit. Personal and Groceries each contain two sections. The trip task has a
+child and grandchild; two tasks are flagged, tags cover home, work, travel and
+errands, one assignment is to the simulated current user, and another is to a
+different user. Assignment identity is explicit through `assignee.id` and
+`assignee.is_me`, independent of display names.
+
+Reminder dates use the same fixed epoch. One reminder has a 15-minute early
+reminder, and one is completed. Store coverage distinguishes known synthetic
+values from unsupported values. The custom Flagged errands smart list has no
+verified filter, so its count remains unsupported rather than inferred from its
+title. SimApple accepts and persists these Reminders observations through the
+same dataset capture route as the existing demo sources.
+
+Reminders import stamps each observation with the capture time, so its default
+list can replace an already captured list. Dates inside reminder data remain
+fixed at the demo epoch; generating the dataset stays deterministic.

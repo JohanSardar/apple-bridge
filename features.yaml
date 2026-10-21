@@ -619,6 +619,7 @@ features:
     scenarios:
       - {id: WEB-RM-REMINDERS-LISTS, levels: [sim]}
       - {id: WEB-RM-REMINDERS-ITEMS, levels: [sim]}
+      - {id: WEB-RM-REMINDERS-DEMO, levels: [sim]}
       - {id: REM-STORE-READ, levels: [sim, real]}
       - {id: REM-STORE-DECODE, levels: [sim]}
       - {id: REM-STORE-PERF, levels: [sim, real]}

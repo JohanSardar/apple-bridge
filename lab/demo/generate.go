@@ -38,5 +38,6 @@ func Generate(options Options) Dataset {
 		}
 	}
 	d.reactions()
+	d.reminders()
 	return d
 }
