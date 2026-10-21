@@ -1389,4 +1389,13 @@ Each app follows its spec (`design/web/reminders.md`, `calendar.md`, `contacts.m
 | W7 | Contacts | — (Contacts framework is complete except notes) | `contacts.list` |
 | W8 | Notes | Extended NoteStore protobuf decoder (full blocks) | `notes.list` |
 
+**W5 units (Reminders), runnable as worker capacity frees:**
+
+| Unit | Contents |
+|---|---|
+| W5-STORE | Swift store reader per the `reminders.md` §7 mapping. Pure blob decoders (early-reminder deltas, section order and membership, smart-list filter) with scrubbed fixtures. AppleTruth counts. SimApplePeer + demo dataset fields. Read models `reminders.lists` and `reminders.items` (smart, tag and section aware). Scenarios REM-STORE-READ (sim, real). |
+| W5-UI | Sidebar and home (smart tiles, lists with groups, tags), list content (rows, sections, subtasks, completed toggle, sort), details inspector (read), search, keyboard, motion. WEB-REM-READ. |
+| W5-WRITE | Inline create with client-side natural-language dates, edit, complete (signature motion), delete, move, create list; optimistic via `observed_record_ids`. WEB-REM-WRITE (web, real on "Bridge Test"). |
+| W5-PARITY | Flag, subtasks, sections, tags, list icon/emoji/group, manual reorder, images, custom smart lists, through AppleScript or Accessibility, proven per OS build or hidden. WEB-REM-PARITY. |
+
 The shell's app switcher enables each app when its R step passes. Scenario families: `WEB-REM-*`, `WEB-CAL-*`, `WEB-CON-*`, `WEB-NOTE-*` (web level, 12 projects), plus `REM-STORE-*`, `CAL-STORE-*` and `NOTE-DECODE-FULL` (sim and real).
