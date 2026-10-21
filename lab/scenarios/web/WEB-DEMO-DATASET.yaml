@@ -1,0 +1,7 @@
+id: WEB-DEMO-DATASET
+feature: web.demo
+levels: [sim]
+given: [{world: {replicas: 1}}]
+when: [{web: {}}]
+then: []
+cleanup: [{world: {}}]

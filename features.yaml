@@ -447,7 +447,7 @@ features:
     milestone: W1
     modules: [lab/demo, lab/world]
     depends_on: [web.readmodels, web.frontdoor]
-    status: todo
+    status: in_progress
     scenarios:
       - {id: WEB-DEMO-DATASET, levels: [sim]}
   - id: web.relay
