@@ -43,3 +43,7 @@ decoder-checks:
 .PHONY: web
 web:
 	packaging/dev/heavy.sh sh -c 'cd web && pnpm install --frozen-lockfile && pnpm build'
+
+.PHONY: demo
+demo: web
+	packaging/dev/heavy.sh go run ./cmd/bridge-lab demo

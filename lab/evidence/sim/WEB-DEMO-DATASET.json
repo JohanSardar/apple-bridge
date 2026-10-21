@@ -1,9 +1,9 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[4.45 17.76 33.37] cpus=8 other_heavy=1"
+    "summary": "air: load=[5.19 8.84 20.95] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M5E7WZJA5P3KPC78EEX4N0MA",
+  "run_id": "run_01M5E8DZ38R5YD7EHZXT6B3Z26",
   "metrics": {
     "counts": {
       "contacts.contact": 60,
@@ -18,8 +18,8 @@
   "scenario": "WEB-DEMO-DATASET",
   "level": "sim",
   "passed": true,
-  "git_sha": "52c176342ca6f899cd0bbb9cbffbd53f195187a7",
-  "at": "2026-10-21T03:25:56.170645Z",
+  "git_sha": "53a5f0bb64fbce78cc111d57e9d07af6793b9c01",
+  "at": "2026-10-21T03:35:12.744361Z",
   "assertions": [
     {
       "name": "same_seed_byte_identical_records_and_blobs",
@@ -58,6 +58,50 @@
       "passed": true
     },
     {
+      "name": "demo_loopback_server",
+      "passed": true
+    },
+    {
+      "name": "demo_link_redirects_to_app",
+      "passed": true
+    },
+    {
+      "name": "demo_session_cookie",
+      "passed": true
+    },
+    {
+      "name": "demo_session_authenticates_gateway",
+      "passed": true
+    },
+    {
+      "name": "demo_proxy_rejects_invalid_origin_0",
+      "passed": true
+    },
+    {
+      "name": "demo_proxy_rejects_invalid_origin_23",
+      "passed": true
+    },
+    {
+      "name": "demo_proxy_rejects_invalid_origin_18",
+      "passed": true
+    },
+    {
+      "name": "demo_proxy_rejects_invalid_origin_22",
+      "passed": true
+    },
+    {
+      "name": "demo_link_single_use",
+      "passed": true
+    },
+    {
+      "name": "product_gateway_cannot_create_demo_session",
+      "passed": true
+    },
+    {
+      "name": "demo_rejects_non_loopback_listener",
+      "passed": true
+    },
+    {
       "name": "captured_data_synthetic",
       "passed": true
     },
@@ -69,9 +113,9 @@
   "latency": {
     "default_startup": {
       "samples": 1,
-      "p50_ms": 4285.233,
-      "p95_ms": 4285.233,
-      "max_ms": 4285.233,
+      "p50_ms": 5085.636709,
+      "p95_ms": 5085.636709,
+      "max_ms": 5085.636709,
       "timeouts": 0
     }
   },

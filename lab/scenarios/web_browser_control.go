@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
+	"github.com/JohanSardar/apple-bridge/lab/demo"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 )
 
@@ -123,6 +124,8 @@ func webBrowserControl(ctx context.Context, w *world.World, origin string) (*htt
 			value = map[string]any{"session": session, "cookie": map[string]any{"name": client.cookie.Name, "value": client.cookie.Value, "url": origin, "httpOnly": true, "secure": true, "sameSite": "Strict"}}
 		case "/contact-avatar":
 			value, err = webAvatarFixture(w)
+		case "/demo-fixtures":
+			value, err = demo.Fixtures(ctx, w)
 		case "/incoming":
 			started := time.Now().UnixMilli()
 			key := contracts.NewID("web-incoming")

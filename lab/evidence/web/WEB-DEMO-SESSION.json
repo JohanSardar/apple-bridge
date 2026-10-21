@@ -1,0 +1,39 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[6.41 7.74 17.26] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5E8NTJZ5JCVDJYQRS8VZ12T",
+  "metrics": {
+    "demo_messages": 5000,
+    "demo_startup_ms": 5762,
+    "matrix": [
+      "chromium-light-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-DEMO-SESSION-chromium-light-desktop-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-DEMO-SESSION-chromium-light-desktop-playwright.json"
+    ],
+    "server": "gateway"
+  },
+  "scenario": "WEB-DEMO-SESSION",
+  "level": "web",
+  "passed": true,
+  "git_sha": "c7fc09ec1a7e245f284a3017b6ab1731e7c66bee",
+  "at": "2026-10-21T03:39:30.271501Z",
+  "assertions": [
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/demo.spec.ts:4:1 › WEB-DEMO-SESSION demo URL signs in, serves synthetic read models, and receives live capture (858ms)\n\n  1 passed (2.3s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

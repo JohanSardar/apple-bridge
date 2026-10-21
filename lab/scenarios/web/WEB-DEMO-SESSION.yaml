@@ -1,0 +1,8 @@
+id: WEB-DEMO-SESSION
+feature: web.demo
+levels: [web]
+web:
+  browsers: [webkit, chromium, firefox]
+  themes: [light, dark]
+  layouts: [phone, desktop]
+  server: gateway

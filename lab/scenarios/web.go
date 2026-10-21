@@ -14,10 +14,12 @@ import (
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
+	"github.com/JohanSardar/apple-bridge/lab/demo"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 )
 
 type WebOptions struct {
+	Huge     bool     `yaml:"huge,omitempty"`
 	Browsers []string `yaml:"browsers"`
 	Themes   []string `yaml:"themes"`
 	Layouts  []string `yaml:"layouts"`
@@ -87,13 +89,21 @@ func runWebProjects(ctx context.Context, s Scenario, projects []string) Evidence
 	if err := validateWeb(s); err != nil {
 		return fail("web_configuration", err)
 	}
-	w, err := world.New(ctx, "sim", 0, 4, world.BlobOptions{Scope: "admin"})
+	worldStarted := time.Now()
+	w, err := world.New(ctx, "sim", 0, 0, world.BlobOptions{Scope: "admin"})
 	if err != nil {
 		return fail("web_world", err)
 	}
 	defer w.Close()
+	dataset := demo.Generate(demo.Options{Seed: 1, Huge: s.Web.Huge})
+	if err := demo.Populate(w, dataset); err != nil {
+		return fail("web_demo_seed", err)
+	}
+	e.Metrics["demo_startup_ms"] = time.Since(worldStarted).Milliseconds()
+	e.Metrics["demo_messages"] = dataset.Counts["messages.message"]
 	endpoint := w.Gateway.URL
 	controlURL, controlKey := "", ""
+	demoURL := ""
 	if s.Web.Server == "gateway" {
 		parsed, err := url.Parse(endpoint)
 		if err != nil {
@@ -101,8 +111,15 @@ func runWebProjects(ctx context.Context, s Scenario, projects []string) Evidence
 		}
 		parsed.Host = "localhost:" + parsed.Port()
 		endpoint = parsed.String()
-		if err := w.ControlAction("/messages", map[string]any{"action": "seed", "count": 4}); err != nil {
-			return fail("web_seed", err)
+		if s.ID == "WEB-DEMO-SESSION" {
+			server, err := demo.Serve(w, "127.0.0.1:0")
+			if err != nil {
+				return fail("demo_server", err)
+			}
+			defer server.Close()
+			demoURL = server.URL
+			parsedDemo, _ := url.Parse(server.URL)
+			endpoint = parsedDemo.Scheme + "://" + parsedDemo.Host
 		}
 		control, key := webBrowserControl(ctx, w, endpoint)
 		defer control.Close()
@@ -145,12 +162,12 @@ func runWebProjects(ctx context.Context, s Scenario, projects []string) Evidence
 		suffix = projects[0]
 	}
 	report, _ := filepath.Abs(filepath.Join("lab/evidence/private/web/reports", s.ID+"-"+suffix+"-playwright.json"))
-	test := exec.CommandContext(ctx, "pnpm", "exec", "playwright", "test", "-g", "\\b"+regexp.QuoteMeta(s.ID)+"\\b")
+	test := exec.CommandContext(ctx, "pnpm", "exec", "playwright", "test", "--workers=1", "-g", "\\b"+regexp.QuoteMeta(s.ID)+"\\b")
 	test.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	test.Cancel = func() error { return syscall.Kill(-test.Process.Pid, syscall.SIGKILL) }
 	test.WaitDelay = 5 * time.Second
 	test.Dir = "web"
-	test.Env = append(os.Environ(), "AB_WEB_CONTROL="+controlURL, "AB_WEB_CONTROL_KEY="+controlKey, "AB_WEB_URL="+endpoint, "AB_WEB_PROJECTS="+strings.Join(projects, ","), "AB_WEB_REPORT="+report, "AB_WEB_SERVER="+s.Web.Server, "AB_WEB_WORLD="+w.Gateway.URL)
+	test.Env = append(os.Environ(), "AB_WEB_DEMO_URL="+demoURL, "AB_WEB_CONTROL="+controlURL, "AB_WEB_CONTROL_KEY="+controlKey, "AB_WEB_URL="+endpoint, "AB_WEB_PROJECTS="+strings.Join(projects, ","), "AB_WEB_REPORT="+report, "AB_WEB_SERVER="+s.Web.Server, "AB_WEB_WORLD="+w.Gateway.URL)
 	output, err := test.CombinedOutput()
 	e.Metrics["matrix"] = projects
 	e.Metrics["server"] = s.Web.Server
