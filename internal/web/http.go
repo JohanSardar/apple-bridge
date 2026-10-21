@@ -37,18 +37,20 @@ type server struct {
 	mu          sync.Mutex
 	rates       map[string]rate
 	ceremonies  map[string]ceremony
-	failures    int
-	retryAt     time.Time
+	globalAuth  rate
 	rateCleanup time.Time
 	sockets     map[*liveSocket]bool
 }
 type rate struct {
-	Minute  time.Time
-	Day     time.Time
-	Second  time.Time
-	Minutes int
-	Days    int
-	Seconds int
+	Failures  int
+	FailureAt time.Time
+	RetryAt   time.Time
+	Minute    time.Time
+	Day       time.Time
+	Second    time.Time
+	Minutes   int
+	Days      int
+	Seconds   int
 }
 type identity struct {
 	Principal trust.Principal
@@ -101,6 +103,13 @@ func (s *server) serving(r *http.Request) (serving, bool) {
 		scheme = "https"
 	}
 	return serving{Host: r.Host, Scheme: scheme}, true
+}
+func clientIP(r *http.Request) string {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return host
 }
 func current(r *http.Request) identity {
 	value, _ := r.Context().Value(identityKey{}).(identity)
@@ -211,10 +220,7 @@ func Handler(deps Deps) http.Handler {
 			w.Header().Set("Cache-Control", "no-store")
 			public := strings.HasPrefix(r.URL.Path, "/web/v1/login/") || strings.HasPrefix(r.URL.Path, "/web/v1/enroll/")
 			if public {
-				ip, _, err := net.SplitHostPort(r.RemoteAddr)
-				if err != nil {
-					ip = r.RemoteAddr
-				}
+				ip := clientIP(r)
 				if !s.allow("auth:"+ip, true) {
 					w.Header().Set("Retry-After", "60")
 					reject(w, 429, "rate_limited")
@@ -264,10 +270,43 @@ func (s *server) allow(key string, auth bool) bool {
 			}
 		}
 		if len(s.rates) >= 8192 || auth && len(s.rates) >= 4096 {
-			return false
+			if !auth {
+				return false
+			}
+			oldest := ""
+			var at time.Time
+			for id, entry := range s.rates {
+				if !strings.HasPrefix(id, "auth:") {
+					continue
+				}
+				if oldest == "" || entry.Day.Before(at) {
+					oldest = id
+					at = entry.Day
+				}
+			}
+			if oldest == "" {
+				for id := range s.rates {
+					oldest = id
+					break
+				}
+			}
+			delete(s.rates, oldest)
 		}
 	}
 	r := s.rates[key]
+	if auth {
+		if now.Sub(s.globalAuth.Minute) >= time.Minute {
+			s.globalAuth = rate{Minute: now}
+		}
+		s.globalAuth.Minutes++
+		if s.globalAuth.Minutes > 600 {
+			return false
+		}
+		if now.Sub(r.FailureAt) >= 15*time.Minute {
+			r.Failures = 0
+			r.RetryAt = time.Time{}
+		}
+	}
 	if now.Sub(r.Minute) >= time.Minute {
 		r.Minute = now
 		r.Minutes = 0
@@ -285,7 +324,7 @@ func (s *server) allow(key string, auth bool) bool {
 	r.Seconds++
 	s.rates[key] = r
 	if auth {
-		return r.Minutes <= 10 && r.Days <= 100 && !now.Before(s.retryAt)
+		return r.Minutes <= 10 && r.Days <= 100 && !now.Before(r.RetryAt)
 	}
 	return r.Seconds <= 50
 }

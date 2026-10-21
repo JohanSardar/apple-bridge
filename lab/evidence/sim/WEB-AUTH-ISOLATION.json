@@ -1,0 +1,58 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[5.72 8.77 20.71] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5E8EDYP7HWAB4WCNEQ837RE",
+  "scenario": "WEB-AUTH-ISOLATION",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "94f423a1760755e82e26f9c630df755f89cc1b23",
+  "at": "2026-10-21T03:35:27.95901Z",
+  "assertions": [
+    {
+      "name": "ip_a_fifty_failures_rejected",
+      "passed": true
+    },
+    {
+      "name": "ip_b_enrolls_immediately_after_a_fifty_failures",
+      "passed": true
+    },
+    {
+      "name": "ip_b_signs_in_immediately_after_a_fifty_failures",
+      "passed": true
+    },
+    {
+      "name": "only_failing_ip_is_backed_off",
+      "passed": true
+    },
+    {
+      "name": "failing_ip_backoff_expires",
+      "passed": true
+    },
+    {
+      "name": "distributed_failures_do_not_lock_owner",
+      "passed": true
+    },
+    {
+      "name": "global_ceiling_allows_600_auth_requests",
+      "passed": true
+    },
+    {
+      "name": "global_ceiling_rejects_request_601",
+      "passed": true
+    },
+    {
+      "name": "global_resource_ceiling_resets_next_minute",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

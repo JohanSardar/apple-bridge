@@ -397,6 +397,7 @@ features:
       - {id: WEB-AUTH-REVOKE, levels: [web]}
       - {id: WEB-AUTH-ORIGIN, levels: [sim]}
       - {id: WEB-AUTH-RATELIMIT, levels: [sim]}
+      - {id: WEB-AUTH-ISOLATION, levels: [sim]}
       - {id: WEB-LIVE-DELTA, levels: [web]}
       - {id: WEB-LIVE-RESUME, levels: [web]}
       - {id: WEB-PERF-SHELL, levels: [web]}

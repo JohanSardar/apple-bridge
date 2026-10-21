@@ -134,6 +134,8 @@ func runWebServer(ctx context.Context, s Scenario, level string) Evidence {
 		}
 		resp, _ := request("GET", "/", "")
 		add("security_headers", resp != nil && resp.Header.Get("Content-Security-Policy") != "" && resp.Header.Get("Referrer-Policy") == "no-referrer" && resp.Header.Get("X-Content-Type-Options") == "nosniff")
+	case "WEB-AUTH-ISOLATION":
+		runWebAuthIsolation(ctx, w, add)
 	case "WEB-AUTH-RATELIMIT":
 		statuses := []int{}
 		rateClient := &webClient{ctx: ctx, origin: strings.Replace(w.Gateway.URL, "127.0.0.1", "localhost", 1)}
@@ -161,9 +163,10 @@ func runWebServer(ctx context.Context, s Scenario, level string) Evidence {
 }
 
 type webClient struct {
-	ctx    context.Context
-	origin string
-	cookie *http.Cookie
+	ctx     context.Context
+	origin  string
+	cookie  *http.Cookie
+	headers http.Header
 }
 
 func (c *webClient) request(method, path string, input any) (*http.Response, []byte, error) {
@@ -177,6 +180,11 @@ func (c *webClient) request(method, path string, input any) (*http.Response, []b
 	}
 	req.Header.Set("Origin", c.origin)
 	req.Header.Set("Content-Type", "application/json")
+	for name, values := range c.headers {
+		for _, value := range values {
+			req.Header.Add(name, value)
+		}
+	}
 	if c.cookie != nil {
 		req.AddCookie(c.cookie)
 	}
@@ -927,10 +935,10 @@ func runWebRateWindows(ctx context.Context, w *world.World, add func(string, boo
 	for i := 0; i < 10; i++ {
 		failed = failed && request(fmt.Sprintf("192.0.2.%d", i+1), "enroll/options", map[string]any{"token": "invalid"}) == 401
 	}
-	add("global_failure_backoff_across_clients", failed && request("192.0.2.99", "login/options", map[string]any{}) == 429)
+	add("failure_backoff_isolated_across_clients", failed && request("192.0.2.99", "login/options", map[string]any{}) == 200)
 	clock.Add(int64(2 * time.Second))
 
-	add("global_backoff_expires", request("192.0.2.99", "login/options", map[string]any{}) == 200)
+	add("unaffected_client_stays_available", request("192.0.2.99", "login/options", map[string]any{}) == 200)
 	live := &webClient{ctx: ctx, origin: strings.Replace(w.Gateway.URL, "127.0.0.1", "localhost", 1), cookie: c.cookie}
 	socket, err := live.socket()
 	if err != nil {
