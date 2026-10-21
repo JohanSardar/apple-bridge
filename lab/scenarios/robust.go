@@ -485,13 +485,46 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 		}
 		add("capture_replays_do_not_duplicate_record_versions", deduplicated)
 	case "helper-restart":
-		if w.ControlAction("/blob-fixture", map[string]int{"size": 1024}) != nil {
+		if w.ControlAction("/blob-fixture", map[string]int{"size": 1024, "slow_ms": 1000}) != nil {
 			return fail("durable_helper_blob_fixture")
 		}
 		if w.ControlAction("/flush", struct{}{}) != nil {
 			return fail("helper_initial_checkpoint")
 		}
+
+		blobEndpoint := w.Gateway
+		blobEndpoint.Token, err = w.ScopedToken(w.Gateway, "messages:read,system:read")
+
+		if err != nil {
+			return fail("helper_blob_probe_grant")
+		}
+		if w.Await(10*time.Second, func() bool {
+			var status contracts.ReadResult
+			_, err := world.Request(ctx, blobEndpoint, "/v1/op/replica.status", struct{}{}, &status)
+			if err != nil || status.Replica == nil || len(status.Replica.Blobs.Entries) != 1 {
+				return false
+			}
+			for _, entry := range status.Replica.Blobs.Entries {
+				if entry.State != "present" {
+					return false
+				}
+			}
+			return true
+		}) != nil {
+			return fail("helper_blob_durable_before_restart")
+		}
+		add("helper_blob_durable_before_restart", true)
+		var before contracts.ReadResult
+		_, statusErr := world.Request(ctx, blobEndpoint, "/v1/op/replica.status", struct{}{}, &before)
+		if evidence.Metrics == nil {
+			evidence.Metrics = map[string]any{}
+		}
+		if statusErr == nil && before.Replica != nil {
+			evidence.Metrics["helper_restart_blob_backlog_before_stop"] = before.Replica.Blobs.Backlog
+			evidence.Metrics["helper_restart_blob_entries_before_stop"] = len(before.Replica.Blobs.Entries)
+		}
 		scans, err := w.HelperScans()
+		evidence.Metrics["helper_restart_scans_before"] = scans
 		if err != nil {
 			return fail("helper_scan_count")
 		}
@@ -516,7 +549,11 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 		if w.Await(10*time.Second, func() bool { _, err := w.Inspect(); return err == nil && convergence(w) }) != nil {
 			return fail("helper_reconnected")
 		}
+		if w.ControlAction("/flush", struct{}{}) != nil {
+			return fail("helper_restart_checkpoint_drained")
+		}
 		after, err := w.HelperScans()
+		evidence.Metrics["helper_restart_scans_after"] = after
 		add("helper_checkpoint_resume_without_rescan", err == nil && after == scans)
 		truth, inspectErr := w.Inspect()
 		attachments := 0

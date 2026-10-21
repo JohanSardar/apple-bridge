@@ -54,7 +54,7 @@ func (s *server) authFailure(w http.ResponseWriter) {
 	s.mu.Lock()
 	s.failures++
 	if s.failures >= 10 {
-		s.retryAt = time.Now().Add(time.Duration(min(s.failures-9, 60)) * time.Second)
+		s.retryAt = s.rateTime().Add(time.Duration(min(s.failures-9, 60)) * time.Second)
 	}
 	s.mu.Unlock()
 	reject(w, 401, "unauthorized")

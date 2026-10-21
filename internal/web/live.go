@@ -366,15 +366,6 @@ func (l *liveSocket) subscribe(ctx context.Context, f clientFrame) {
 		if !l.send(map[string]any{"t": "snap", "sub": f.ID, "data": data, "cursor": cursor}, false) {
 			return
 		}
-		if f.View == "thread" && len(previous.Order) > 0 {
-			args := map[string]any{}
-			json.Unmarshal(f.Args, &args)
-			delete(args, "before")
-			delete(args, "after")
-			args["anchor"] = previous.Order[len(previous.Order)/2]
-			args["limit"] = len(previous.Order)
-			f.Args, _ = json.Marshal(args)
-		}
 	}
 	iterator, err := l.server.deps.Operations.Observe(ctx, l.identity.Principal, cursor)
 	if err != nil {

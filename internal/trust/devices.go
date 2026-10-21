@@ -190,7 +190,7 @@ func (a *Authority) deviceSession(token string, touch bool) (Principal, DeviceSe
 		if d.Enrollment != nil {
 			p.Grants = EffectiveGrants(p.Grants, d.Enrollment.Grants)
 		}
-		if touch && now.Sub(session.LastSeen) >= time.Minute {
+		if touch {
 			err = a.update(func(current *credentials) error {
 				for i, s := range current.Devices {
 					if s.DeviceID == session.DeviceID && validDevice(s, now) {

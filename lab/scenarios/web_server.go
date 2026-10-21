@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/JohanSardar/apple-bridge/internal/trust"
 	bridgeweb "github.com/JohanSardar/apple-bridge/internal/web"
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
@@ -19,6 +20,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing/fstest"
 	"time"
 
@@ -131,6 +133,7 @@ func runWebServer(ctx context.Context, s Scenario, level string) Evidence {
 			}
 		}
 		add("signin_minute_limit", len(statuses) == 11 && statuses[10] == 429)
+		runWebRateWindows(ctx, w, add)
 	}
 	e.Passed = len(e.Assertions) > 0
 	for _, a := range e.Assertions {
@@ -621,6 +624,12 @@ func runWebReadModels(ctx context.Context, w *world.World, c *webClient, conn *w
 		return
 	}
 	chatID := chats.Records[0].ID
+	var initialMessages contracts.ReadResult
+	_, err = world.Request(ctx, w.Gateway, "/v1/op/records.query", contracts.ReadQuery{Collection: "messages.message"}, &initialMessages)
+	if err != nil || len(initialMessages.Records) != 3 {
+		add("thread_window_fixture", false)
+		return
+	}
 	read := func() (map[string]any, error) {
 		bounded, cancel := context.WithTimeout(ctx, 3*time.Second)
 		defer cancel()
@@ -632,6 +641,10 @@ func runWebReadModels(ctx context.Context, w *world.World, c *webClient, conn *w
 		args := map[string]any{}
 		if view != "chats" {
 			args["chat_id"] = chatID
+		}
+		if view == "thread" {
+			args["anchor"] = initialMessages.Records[1].ID
+			args["limit"] = 3
 		}
 		if view == "collection" {
 			args["kind"] = "photos"
@@ -669,12 +682,6 @@ func runWebReadModels(ctx context.Context, w *world.World, c *webClient, conn *w
 		}
 	}
 
-	var initialMessages contracts.ReadResult
-	_, err = world.Request(ctx, w.Gateway, "/v1/op/records.query", contracts.ReadQuery{Collection: "messages.message"}, &initialMessages)
-	if err != nil || len(initialMessages.Records) != 3 {
-		add("thread_window_fixture", false)
-		return
-	}
 	wsjson.Write(ctx, conn, map[string]any{"t": "sub", "id": "edge", "view": "thread", "args": map[string]any{"chat_id": chatID, "anchor": initialMessages.Records[0].ID, "limit": 1}})
 	foundEdge := false
 	for tries := 0; tries < 12; tries++ {
@@ -775,9 +782,118 @@ func runWebReadModels(ctx context.Context, w *world.World, c *webClient, conn *w
 	}
 	e.Latency["journal_commit_to_last_readmodel_frame_written"] = stats(samples, 0)
 	add("readmodel_latency_32_samples", err == nil && len(samples) == 32)
+
 	add("readmodel_commit_to_frame_p95_20ms", len(samples) == 32 && stats(samples, 0).P95 <= 20)
+	wsjson.Write(ctx, conn, map[string]any{"t": "sub", "id": "tail", "view": "thread", "args": map[string]any{"chat_id": chatID, "anchor": "latest", "limit": 3}})
+	ready := false
+	for tries := 0; tries < 12; tries++ {
+		frame, err := read()
+		if err != nil {
+			break
+		}
+		if frame["t"] == "snap" && frame["sub"] == "tail" {
+			data, _ := frame["data"].(map[string]any)
+			ready = data["newer"] == float64(0)
+			break
+		}
+	}
+	add("latest_thread_at_tail", ready)
+	err = w.ControlAction("/messages", map[string]any{"action": "incoming", "key": "web-readmodel-tail"})
+	followed := false
+	for tries := 0; tries < 20 && err == nil; tries++ {
+		frame, readErr := read()
+		if readErr != nil {
+			break
+		}
+		if frame["t"] != "delta" || frame["sub"] != "tail" {
+			continue
+		}
+		updates, _ := frame["changes"].([]any)
+		for _, update := range updates {
+			change, _ := update.(map[string]any)
+			row, _ := change["row"].(map[string]any)
+			data, _ := row["data"].(map[string]any)
+			title, _ := data["title"].(string)
+			if change["op"] == "upsert" && strings.Contains(title, "web-readmodel-tail") {
+				followed = true
+			}
+		}
+		if followed {
+			break
+		}
+	}
+	add("latest_thread_follows_new_inbound", followed)
 }
 
 type webZeroReader struct{}
 
 func (webZeroReader) Read(p []byte) (int, error) { clear(p); return len(p), nil }
+
+func runWebRateWindows(ctx context.Context, w *world.World, add func(string, bool)) {
+	authority, err := trust.Open(w.Gateway.Home)
+	if err != nil {
+		add("rate_authority", false)
+		return
+	}
+	var clock atomic.Int64
+	clock.Store(time.Now().UnixNano())
+	now := func() time.Time { return time.Unix(0, clock.Load()) }
+	fixture := httptest.NewServer(bridgeweb.Handler(bridgeweb.Deps{Authority: authority, RateClock: now}))
+	defer fixture.Close()
+	c := &webClient{ctx: ctx, origin: fixture.URL}
+	daily := true
+	for minute := 0; minute < 10; minute++ {
+		for count := 0; count < 10; count++ {
+			resp, _, err := c.request("POST", "login/options", map[string]any{})
+			daily = daily && err == nil && resp.StatusCode == 200
+		}
+		clock.Add(int64(time.Minute))
+	}
+	resp, _, err := c.request("POST", "login/options", map[string]any{})
+	add("signin_daily_100_limit", daily && err == nil && resp.StatusCode == 429)
+	clock.Add(int64(24 * time.Hour))
+	resp, _, err = c.request("POST", "login/options", map[string]any{})
+	add("signin_next_day_reset", err == nil && resp.StatusCode == 200)
+	token, _, err := authority.CreateDeviceSession("trusted")
+	if err != nil {
+		add("api_session_fixture", false)
+		return
+	}
+	c.cookie = &http.Cookie{Name: bridgeweb.SessionCookie, Value: token}
+	api := true
+	for count := 0; count < 50; count++ {
+		resp, _, err = c.request("GET", "session", nil)
+		api = api && err == nil && resp.StatusCode == 200
+	}
+	resp, _, err = c.request("GET", "session", nil)
+	add("api_50_per_second", api && err == nil && resp.StatusCode == 429)
+	clock.Add(int64(time.Second))
+	resp, _, err = c.request("GET", "session", nil)
+	add("api_second_reset", err == nil && resp.StatusCode == 200)
+	handler := bridgeweb.Handler(bridgeweb.Deps{Authority: authority, RateClock: now})
+	distributed := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.RemoteAddr = r.Header.Get("X-Lab-IP") + ":1234"
+		handler.ServeHTTP(w, r)
+	}))
+	defer distributed.Close()
+	failed := true
+	request := func(ip, path string, input any) int {
+		raw, _ := json.Marshal(input)
+		req, _ := http.NewRequestWithContext(ctx, "POST", distributed.URL+"/web/v1/"+path, bytes.NewReader(raw))
+		req.Header.Set("Origin", distributed.URL)
+		req.Header.Set("X-Lab-IP", ip)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return 0
+		}
+		io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+		return resp.StatusCode
+	}
+	for i := 0; i < 10; i++ {
+		failed = failed && request(fmt.Sprintf("192.0.2.%d", i+1), "enroll/options", map[string]any{"token": "invalid"}) == 401
+	}
+	add("global_failure_backoff_across_clients", failed && request("192.0.2.99", "login/options", map[string]any{}) == 429)
+	clock.Add(int64(2 * time.Second))
+	add("global_backoff_expires", request("192.0.2.99", "login/options", map[string]any{}) == 200)
+}
