@@ -27,9 +27,14 @@ auto_sim() {
   levels=$(printf ' %s ' "$*" | grep -o -- '--level[ =][A-Za-z]*' | sed 's/--level[ =]//' | sort -u)
   [ -z "$levels" ] || [ "$levels" = sim ]
 }
-if [ -z "$exclusive$light$sim" ] && [ -z "${APPLE_BRIDGE_HEAVY_NO_SIM_LANE:-}" ] && auto_sim "$@"; then sim=1; fi
+# Scenario files with latency or p95 budgets make a run sensitive even when the command does not name them.
+marks=""
+for arg in "$@"; do
+  case "$arg" in *.yaml|*.yml) [ -f "$arg" ] && grep -q -E 'latency|p95' "$arg" && marks=" latency-gate" ;; esac
+done
+if [ -z "$exclusive$light$sim$marks" ] && [ -z "${APPLE_BRIDGE_HEAVY_NO_SIM_LANE:-}" ] && auto_sim "$@"; then sim=1; fi
 # APPLE_BRIDGE_HEAVY_NO_SIM_LANE also keeps sim jobs from running beside this one.
-record="${exclusive:+--exclusive }${APPLE_BRIDGE_HEAVY_NO_SIM_LANE:+quiet }$*"
+record="${exclusive:+--exclusive }${APPLE_BRIDGE_HEAVY_NO_SIM_LANE:+quiet }$*$marks"
 "$(dirname "$0")/trim-disk.sh" || true
 slots=2
 base=${APPLE_BRIDGE_HEAVY_BASE:-/tmp/apple-bridge-heavy}
@@ -41,7 +46,7 @@ queue="$base-queue"
 mkdir -p "$queue"
 stamp() { if [ -n "${APPLE_BRIDGE_HEAVY_PRIORITY:-}" ]; then echo "0-$(date +%s%N)-$$"; else echo "$(date +%s%N)-$$"; fi; }
 ticket="$queue/$(stamp)"
-touch "$ticket"
+printf '%s\n' "$record" > "$ticket"
 simticket=""
 if [ -n "$sim" ]; then mkdir -p "$simqueue"; simticket="$simqueue/$(stamp)"; touch "$simticket"; fi
 held=""
@@ -89,7 +94,10 @@ sensitive_holder() {
 # True when the next normal-lane job is sensitive, so a new sim job would only make it wait.
 sensitive_next() {
   next=$(oldest_live "$normal-queue")
-  [ -n "$next" ] && sensitive "$(ps -ww -o command= -p "${next##*-}" 2>/dev/null)"
+  [ -n "$next" ] || return 1
+  text=$(cat "$next" 2>/dev/null)
+  [ -n "$text" ] || text=$(ps -ww -o command= -p "${next##*-}" 2>/dev/null)
+  sensitive "$text"
 }
 # The sim lane runs beside one normal job only while the Air has clear headroom.
 sim_ok() {
