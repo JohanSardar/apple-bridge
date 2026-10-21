@@ -1,0 +1,29 @@
+{
+  "base": "0b1b83e",
+  "scenario": "WEB-CONTACT-AVATAR-THUMB",
+  "matrix": [
+    "chromium-light-desktop"
+  ],
+  "workers": 1,
+  "red": {
+    "fix_reverted": true,
+    "expected_status": 200,
+    "actual_status": 409,
+    "passed": false
+  },
+  "green": {
+    "passed": true,
+    "assertions": [
+      "authorized thumbnail returns PNG bytes",
+      "private immutable cache headers",
+      "unreferenced digest rejected",
+      "unknown variant rejected"
+    ]
+  },
+  "commands": [
+    "packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/evidence/private/w2-avatar-chromium.yaml --level web --json",
+    "cd web && pnpm lint",
+    "git diff --check"
+  ],
+  "full_matrix": "pending until leader lifts heavy-run pause"
+}
