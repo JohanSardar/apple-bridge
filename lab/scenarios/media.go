@@ -37,12 +37,13 @@ type mediaAttachment struct {
 		Handle string `json:"handle"`
 	} `json:"derivatives"`
 	Media struct {
-		Width     int    `json:"width"`
-		Height    int    `json:"height"`
-		Duration  int    `json:"duration_ms"`
-		ThumbHash string `json:"thumbhash"`
-		Live      bool   `json:"live"`
-		Waveform  []int  `json:"waveform"`
+		Width      int    `json:"width"`
+		Height     int    `json:"height"`
+		Duration   int    `json:"duration_ms"`
+		ThumbHash  string `json:"thumbhash"`
+		Live       bool   `json:"live"`
+		DimsSource string `json:"dims_source"`
+		Waveform   []int  `json:"waveform"`
 	} `json:"media"`
 }
 
@@ -170,6 +171,10 @@ func runMediaVariants(ctx context.Context, s Scenario, level string) Evidence {
 	add("variants_survive_restart", w.Await(15*time.Second, func() bool {
 		return len(before) == 3 && reflect.DeepEqual(before, mediaSnapshot(ctx, w.Gateway, prefix))
 	}) == nil)
+	if s.ID == "WEB-MEDIA-VARIANTS" {
+		e = verifySourceVideoGeometry(ctx, e, w, chats.Records[0].ID, prefix)
+	}
+
 	e.Passed = len(e.Assertions) > 0
 	for _, a := range e.Assertions {
 		e.Passed = e.Passed && a.Passed
@@ -304,6 +309,9 @@ func verifyMediaVariants(ctx context.Context, e Evidence, w *world.World, prefix
 			add(kind+"_original_preserved", contracts.ValidDigest(data.Blob.Digest))
 			if kind == "image" && e.Level != "sim" {
 				add("live_photo_identifier_pair", data.Media.Live && data.Derivatives["live"].MIME == "video/mp4")
+			}
+			if kind == "video" && e.Level == "sim" {
+				add("source_video_metadata_landscape", data.Media.Width == 320 && data.Media.Height == 180 && data.Media.Duration == 1000 && data.Media.DimsSource == "source")
 			}
 			if kind == "audio" {
 				add("audio_duration_and_64_bounded_peaks", data.Media.Duration >= 950 && data.Media.Duration <= 1100 && len(data.Media.Waveform) == 64)

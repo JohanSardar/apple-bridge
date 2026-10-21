@@ -1,13 +1,13 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[7.43 7.43 8.19] cpus=8 other_heavy=1"
+    "summary": "air: load=[6.7 6.5 6.96] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M5EEMK713N9AHEEFA47BBVXF",
+  "run_id": "run_01M5FC4TFX960STZ7J4BJ4E880",
   "metrics": {
     "counts": {
       "contacts.contact": 60,
-      "messages.attachment": 29,
+      "messages.attachment": 30,
       "messages.chat": 40,
       "messages.handle": 60,
       "messages.message": 5000,
@@ -32,7 +32,7 @@
       "chat_group_avatar": 1,
       "deleted_at": 100,
       "deleted_chat": 1,
-      "delivered": 1693,
+      "delivered": 1694,
       "edited": 2,
       "effect_com.apple.MobileSMS.expressivesend.gentle": 1,
       "effect_com.apple.MobileSMS.expressivesend.impact": 1,
@@ -55,8 +55,9 @@
       "geometry_demo-landscape.png": 12,
       "geometry_demo-panorama.png": 1,
       "geometry_demo-portrait.png": 3,
-      "geometry_demo-square.png": 4,
+      "geometry_demo-square.png": 3,
       "geometry_demo-transparent.png": 3,
+      "geometry_demo-ultrawide.mp4": 1,
       "geometry_demo-video.mp4": 1,
       "gif": 1,
       "gif_thumb": 1,
@@ -70,7 +71,7 @@
       "group_unknown": 1,
       "has_unseen_mention": 1,
       "hidden": 12,
-      "image_stack": 19,
+      "image_stack": 18,
       "image_stack_run": 2,
       "image_variants": 24,
       "is_sos": 1,
@@ -113,12 +114,12 @@
       "service_SMS": 13,
       "service_iMessage": 14,
       "spam_chat": 1,
-      "square": 4,
+      "square": 3,
       "sticker": 1,
       "style_direct": 25,
       "style_group": 15,
       "subject": 1,
-      "text": 4968,
+      "text": 4967,
       "text_effect_big": 1,
       "text_effect_bloom": 1,
       "text_effect_explode": 1,
@@ -142,20 +143,81 @@
       "url": 1,
       "vcard": 1,
       "via_satellite": 1,
-      "video": 1,
-      "video_variants": 1,
+      "video": 2,
+      "video_variants": 2,
       "waveform": 1,
       "year_change": 162,
       "yesterday": 2
     },
-    "digest": "f286030ae16acb750b2a22826765edcf85d370e805a0301552603637051392b6",
-    "verified_blob_count": 52
+    "digest": "a6d118099da1b8262d584bd7be33fb92623f24915a940f2c49db9bee893fc4fc",
+    "verified_blob_count": 59,
+    "verified_blob_digests": [
+      "08f7d7b0e3d082fb436690f8cc617fc2b8df78f314803ade42fdb66bcec49d50",
+      "0f92fecae3b249438d99c6b869a1124d7de497ab9081107bc4b3d26f4634dd57",
+      "17a83481109dc2ec94cd733e173830fa50410577774448d94ff1530ebd14dc94",
+      "1d3e53281f70e730fcef19c4ae8ba20fe97c66221c3e8ca0f18b4a7a811538fa",
+      "1dee5acfc625d62733c1bed8aeefb0b437e2eb21eb4a8dc0a7808a1ff4a4a197",
+      "223e17159460ca54e2f0fc20313c90c4d1e51f4693a8c8291d276ddb487e086e",
+      "260f78d41441ff6628e3c27eccea80e33515049c7791571ff4839f46b7534d3a",
+      "34af7d8cba1d44f06818817e843af3204167c3799a650832543845c6810180f1",
+      "36084fe7c249b49474d7da55a85eb55e8f6292f0d8007d1085465e3e6fbafd35",
+      "3dfac3b3eb0feb0be1ec11bcd05faed0532e41b0cdb2a4ebf9a4e22b560fda11",
+      "3e0fcf08f313324c18526b4f0f80219ced2df138d2c4041264c1977618678ce7",
+      "474cd5bf77f5875924387cd2c93fbdb29b1ba254f3fe03105867c667077ef790",
+      "49525142d01dcdb460acd0d1e6570d87dd3cc18f0c309ea453ec4f0c1cba7134",
+      "49670ef9f3231fe0dd429eef824c04684ac1abce02036de2b2014b313086b490",
+      "4e77193d053518ea695baa3b319a909b27e43535af849a18fd8b42c44989e856",
+      "550569289640a460926ea540f28251deeec1ed5297393ce5ca5c3abf21bc695c",
+      "5fe3279ce6f50c404e799f4be894868ebacf2f0a16d37739f36363de7ae84c67",
+      "6050f13b068553cf1eede222ae7c2167d01e5dc0584c969121dd5c084bf67a3a",
+      "61295b71f24a6b5a3c6bfc6d11d346aa3f702463b884de99365b78852da5fac3",
+      "65acd7c8d0a6dbcedc345e73b2551efd2c453e8ecc7be5c79d5082724ec83923",
+      "69541b588ec71dbd6ed49639f721d205060d0447aeee106deb196e8019272233",
+      "7453dff268afc1c44114af4f337332dcff50b76b6eda55e40112e48b3673748d",
+      "74d329b19e5b6f2573abef80c5a36d436248469849a592dfd23d4d0168149ed0",
+      "74e3af8db1e947c0078fef0942bc499d6e2d66c3956a01abf3aed5fe136435da",
+      "7ce99d1b0b68632c732fb76f26984aa80d1dcba09eb523e2e1f4705a962cf7f7",
+      "7d6037287f81896b829088c416c283625bc9234c41eb3062b045372c48791066",
+      "82299dfb2451fcc81fccdc8534f464522214eaeba161adedb91a8bd60b929c7f",
+      "842ce108622c8289595ec61ef170ec0938f6bb33351ebacf529a7cb2caaafa43",
+      "867b951ace78a67c17aa5ec53ad7e36623313cfaf88bb8f80871f08c7c2f1b8a",
+      "884dda889ef32e0b1f7753028c17052af5fa7973139758c706e20936481edef0",
+      "8a7197a3b7a9c6603dc13cb7c7cb52a2fa5306c11ad049889b8e32ec740b5800",
+      "8b4f79ff8e139ac6b93310b6a1bb4a3342acc87537396ba3bc495266fb04cf01",
+      "9033ef87a606c7d5f27e7c4820af2744f34d4351ef795c314b1bd33d7e5d4a6d",
+      "920b3281fe361968c8245863052f6ecf2c9fe6b4a809fff9e58f09a156f03ab1",
+      "9669d986567b7bdc70cc8b78c4ac8801e04118a8577c3c6376fbf820d6ede4ca",
+      "9a45ff7bec8bd4436f0fbfdd0eef4daa419242cd3a0769669be504c4be68c5f7",
+      "ac12a9e5c5bf15ff8600c9c5011b3602cc7fc3d9ab06b11d05c5eafdd823e3e8",
+      "ad28e0fc101ae6a3e656a9c26a4035ca4d672e9b3a2c13a649151c1bcfd10a91",
+      "b463613b7b3cf08efbac7735bdf66e075aeaacaaa356e2cb6ee4b5ceed916dd2",
+      "b63dc18b4faa47c13d7f6fe536a4854ca3cd0cdd2910fa24df939629270fb26f",
+      "b6aeb94b54caaa39e71784e1e50108bb0d6e13c38b70c1d4e023a2f51359176a",
+      "be4390656bfe488692ef52cc66090ddec956af27255cf7b1c3636f36be233f54",
+      "c1cedcf424db4a876cf97c48dfac695d79dd18fb480f1779240d0656581d77e3",
+      "c800ca2a924292d9ced82dde1c16c6c78ea1de3df7551c3b72297f75b7035993",
+      "cfa1d53b596b7a50d666937d83a01c321b03f717f1a512e185172f98a6947669",
+      "d176ebe3faf33aecffe419f850bfb2a4e3d6c6262b1a38388b975bab917b76cd",
+      "d50e62bc26c9d1bb926026e017b8ebae606b16848968cfa0c67a664b59cf177c",
+      "de8457c3d414c858d28577bca8dbd316edfda9a33fb4c34aa3b4fac4a6e59896",
+      "e1acb0b0ff06c37662dfe3f3cb8071989b08624ee2d27af6081be43d52908f03",
+      "e32ba63c8e8a6d6f65ffb1e4c07ce177e8dcf66c3b80eb0b3a2b9198d975731f",
+      "e5b15f7d8fcccf20ff543b37878b308b809f36225459a19b6c2144488a06380f",
+      "e981d7e662dba6393bcb4a854d31a7f9ec6ce53bc47b9b39aba174e01cde2b3a",
+      "edb57641182db39dba4cc1cdca1ee22fed9c42a31ecdbbab62e256baae90ee93",
+      "ee44b715d39b7f77a99c0faef845d6049af8c386ec9afd99789e3edf658541e3",
+      "f795e877f21194afdb1d53a499e0216998cfab6222e573b4b387196fa10369a1",
+      "f8d7bff54db68e1cdf782261c4a0f60fd8a5e6ef2dec93e34a2ed83a608eb117",
+      "fe07fabb22934752e7e7d97d63d9bcef6e1e2f3a3dd50b7e185820c9545e0ece",
+      "fee7355ae83cf687320d8d248a5d90711f64554f74e52e4c2e8580a9bb4f313d",
+      "ffcfd4b8be4b966ea9ebb69e3172218041c26cb8d3365689fed9a5f64821a469"
+    ]
   },
   "scenario": "WEB-DEMO-DATASET",
   "level": "sim",
   "passed": true,
-  "git_sha": "abd7ecc240d739b7d8408d37fabe8c1d393b00b2",
-  "at": "2026-10-21T05:23:41.409543Z",
+  "git_sha": "e57af6a0d78a63ed541618e227d786ac8b0ce833",
+  "at": "2026-10-21T13:59:21.853783Z",
   "assertions": [
     {
       "name": "same_seed_byte_identical_records_and_blobs",
@@ -510,6 +572,10 @@
       "passed": true
     },
     {
+      "name": "readmodel_coverage_geometry_demo-ultrawide.mp4",
+      "passed": true
+    },
+    {
       "name": "readmodel_coverage_effect_com.apple.MobileSMS.expressivesend.impact",
       "passed": true
     },
@@ -662,6 +728,14 @@
       "passed": true
     },
     {
+      "name": "demo_filter_all",
+      "passed": true
+    },
+    {
+      "name": "demo_filter_known",
+      "passed": true
+    },
+    {
       "name": "demo_filter_unknown",
       "passed": true
     },
@@ -671,14 +745,6 @@
     },
     {
       "name": "demo_filter_spam",
-      "passed": true
-    },
-    {
-      "name": "demo_filter_all",
-      "passed": true
-    },
-    {
-      "name": "demo_filter_known",
       "passed": true
     },
     {
@@ -749,9 +815,9 @@
   "latency": {
     "default_startup": {
       "samples": 1,
-      "p50_ms": 5557.618833,
-      "p95_ms": 5557.618833,
-      "max_ms": 5557.618833,
+      "p50_ms": 7812.193833,
+      "p95_ms": 7812.193833,
+      "max_ms": 7812.193833,
       "timeouts": 0
     }
   },

@@ -191,6 +191,16 @@ func webBrowserControl(ctx context.Context, w *world.World, origin string) (*htt
 		case "/list-late-incoming":
 			err = webListLateIncoming(w)
 			value = map[string]any{"ok": err == nil}
+		case "/message-fault":
+			name := request.URL.Query().Get("name")
+			switch name {
+			case "", "ghost-send", "delivery-failed", "ui-interference":
+				err = w.ControlAction("/fault", map[string]any{"name": name})
+			default:
+				http.NotFound(response, request)
+				return
+			}
+			value = map[string]any{"ok": err == nil}
 		case "/incoming":
 			started := time.Now().UnixMilli()
 			key := contracts.NewID("web-incoming")

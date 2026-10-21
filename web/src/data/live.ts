@@ -7,6 +7,7 @@ function ulid() { const alphabet = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'; let time 
     time = Math.floor(time / 32);
 } const random = crypto.getRandomValues(new Uint8Array(16)); for (const byte of random)
     id += alphabet[byte & 31]; return id; }
+const finalCommandStates = new Set(['rejected', 'failed', 'observed', 'delivered', 'delivery_failed', 'indeterminate', 'expired']);
 function rowID(value: unknown): string | undefined { if (!value || typeof value !== 'object')
     return; const row = value as {
     id?: string;
@@ -109,6 +110,10 @@ export class LiveClient {
                 this.revoke();
                 return;
             }
+            for (const command of this.commands.values())
+                if (!command.disposition && !finalCommandStates.has(command.status))
+                    this.commands.set(command.id, { ...command, status: 'indeterminate', transport_lost: true, error: { code: 'transport_lost' } });
+            this.commandRevision[1](value => value + 1);
             if (!this.stopped) {
                 void fetch('/web/v1/session', { cache: 'no-store', credentials: 'same-origin' }).then(response => { if (response.status === 401)
                     this.revoke(); }).catch(() => { });
@@ -139,7 +144,7 @@ export class LiveClient {
             for (const sub of this.subscriptions.values())
                 this.send({ t: 'sub', id: sub.id, view: sub.view, args: sub.args, cursor: sub.cursor });
             for (const command of this.commands.values()) {
-                if (!command.disposition&&!['rejected', 'failed', 'observed', 'delivered', 'delivery_failed', 'indeterminate', 'expired'].includes(command.status))
+                if (command.transport_lost || !command.disposition && !finalCommandStates.has(command.status))
                     this.reconcile(command.id);
             }
         }
@@ -171,13 +176,7 @@ export class LiveClient {
         else if (frame.t === 'ack' || frame.t === 'cmd_status') {
             if (typeof frame.id !== 'string' || typeof frame.status !== 'string')
                 throw new Error('Invalid command status');
-            const command = this.commands.get(frame.id);
-            if (command) {
-                this.commands.set(frame.id, { ...command, status: frame.status, error: frame.error, disposition: (frame.command as {
-                        disposition?: string;
-                    } | undefined)?.disposition });
-                this.commandRevision[1](value => value + 1);
-            }
+            this.updateCommand(frame.id, frame.command, frame.status, frame.error);
         }
         else if (frame.t === 'session_revoked')
             this.revoke();
@@ -191,18 +190,36 @@ export class LiveClient {
         }
         this.event?.(frame);
     }
-    private reconcile(id: string) {
+    private updateCommand(id: string, value: unknown, status: string, error: unknown) {
+        const previous = this.commands.get(id);
+        if (!previous) return;
+        if (finalCommandStates.has(previous.status) && !previous.transport_lost && !finalCommandStates.has(status)) return;
+        const record = value as Partial<CommandState> | undefined;
+        const cursor = record?.cursor;
+        if (!cursor && previous.cursor || cursor && previous.cursor && cursor.epoch === previous.cursor.epoch && cursor.subscription_revision === previous.cursor.subscription_revision && cursor.sequence < previous.cursor.sequence) return;
+        this.commands.set(id, { ...previous, status, error, transport_lost: false,
+            disposition: record?.disposition ?? previous.disposition,
+            commit_seq: record?.commit_seq ?? previous.commit_seq,
+            observed_record_ids: record?.observed_record_ids?.slice() ?? previous.observed_record_ids,
+            cursor: cursor ?? previous.cursor });
+        this.commandRevision[1](value => value + 1);
+    }
+    private reconcile(id: string, force = false) {
         const subID = 'command:' + id;
+        const existing = this.subscriptions.get(subID);
+        if (existing) {
+            if (!force) return;
+            existing.cursor = undefined; existing.generation++; existing.update({});
+            this.send({ t: 'unsub', id: subID });
+            this.send({ t: 'sub', id: subID, view: existing.view, args: existing.args });
+            return;
+        }
         const [data, update] = createSignal<ViewData>({});
-        const sub: Subscription = { id: subID, view: 'record', args: { collection: 'system.command', id }, data, update, cacheKey: subID, generation: 0 };
+        const sub: Subscription = { id: subID, view: 'record', args: { collection: 'system.command', id }, data, update, cacheKey: subID, generation: 0, cache: false, resetOnReconnect: true };
         this.subscriptions.set(subID, sub);
         const original = update;
         sub.update = value => { original(value); const record = value.records?.[0]?.data; if (record && typeof record.state === 'string') {
-            const command = this.commands.get(id);
-            if (command) {
-                this.commands.set(id, { ...command, status: record.state, disposition: typeof record.disposition === 'string' ? record.disposition : undefined });
-                this.commandRevision[1](value => value + 1);
-            }
+            this.updateCommand(id, record, record.state, record.error);
         } };
         this.send({ t: 'sub', id: subID, view: sub.view, args: sub.args });
     }
@@ -220,8 +237,21 @@ export class LiveClient {
         return { data, cursor: () => { data(); return sub.cursor; }, dispose: () => { this.subscriptions.delete(id); if (untrack(this.status) === 'connected')
                 this.send({ t: 'unsub', id }); } };
     }
-    command(op: string, args: unknown, optimistic?: unknown, expectedVersion?: number) { requireInput(); if (this.status() !== 'connected')
-        throw new Error('Unavailable'); const id = ulid(); this.commands.set(id, { id, op, args, optimistic, expected_version: expectedVersion, status: 'pending' }); this.commandRevision[1](value => value + 1); this.send({ t: 'cmd', id, op, args, expected_version: expectedVersion }); return id; }
+    command(op: string, args: unknown, optimistic?: unknown, expectedVersion?: number) {
+        requireInput();
+        if (this.status() !== 'connected' || this.socket?.readyState !== WebSocket.OPEN) throw new Error('Unavailable');
+        const id = ulid();
+        this.commands.set(id, { id, op, args, optimistic, expected_version: expectedVersion, status: 'pending' });
+        try { this.send({ t: 'cmd', id, op, args, expected_version: expectedVersion }); }
+        catch { this.commands.set(id, { ...this.commands.get(id)!, status: 'indeterminate', transport_lost: true, error: { code: 'transport_lost' } }); }
+        this.commandRevision[1](value => value + 1);
+        return id;
+    }
+
+    checkCommand(id: string) {
+        if (!this.commands.has(id) || this.status() !== 'connected') throw new Error('Unavailable');
+        this.reconcile(id, true);
+    }
     reconnect() { this.socket?.close(4000,'reconnect'); }
     close() { this.stopped = true; clearTimeout(this.timer); clearInterval(this.heartbeat); this.socket?.close(); this.connection[1]('offline'); }
 }
