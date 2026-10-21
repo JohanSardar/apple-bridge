@@ -1,18 +1,22 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[8.33 8.6 9.67] cpus=8 other_heavy=1"
+    "summary": "air: load=[7.08 7.35 7.69] cpus=8 other_heavy=1"
   },
-  "run_id": "upload-replica_01M5F89E3T22FZ0SRQV26N5H6G",
+  "run_id": "upload-replica_01M5FB1HG5M8YWRDSEXRAN26VX",
   "network_path": "paired feed in both connection directions",
   "metrics": {
+    "gateway_dials_send_error_type": "\u003cnil\u003e",
+    "gateway_dials_send_state": "observed",
+    "replica_dials_send_error_type": "\u003cnil\u003e",
+    "replica_dials_send_state": "observed",
     "uploaded_bytes_per_direction": 2500000
   },
   "scenario": "WEB-UPLOAD-REPLICA",
   "level": "sim",
   "passed": true,
-  "git_sha": "19c8ef234b8650f341aff643071a7f8738dafdbe",
-  "at": "2026-10-21T12:51:58.715014Z",
+  "git_sha": "4f73fc4a72e33838d9deff90a130d2804f359bd8",
+  "at": "2026-10-21T13:40:05.765442Z",
   "assertions": [
     {
       "name": "replica_dials/scoped_paired_replica_world",
