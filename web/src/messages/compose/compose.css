@@ -1,0 +1,13 @@
+.message-composer{flex:none;padding:8px 16px max(12px,env(safe-area-inset-bottom));--send-color:var(--blue)}
+.message-composer.text-service{--send-color:var(--green)}
+.composer-field{display:flex;align-items:flex-end;gap:4px;border:1px solid var(--separator);border-radius:22px;padding:0 4px 0 0;min-height:36px}
+.composer-field textarea{display:block;flex:1;min-width:0;box-sizing:border-box;margin:0;border:0;border-radius:22px;resize:none;background:transparent;color:var(--label);font:inherit;font-size:calc(var(--body)*var(--text-size));line-height:calc(var(--body-line)*var(--text-size));padding:9px 12px;overflow-y:auto;outline:none}
+.composer-field:focus-within{border-color:var(--blue)}
+.composer-field textarea::placeholder{color:var(--label-secondary);opacity:1}
+.composer-send{display:grid;place-items:center;flex:none;width:28px;height:28px;padding:0;margin:3px 0;border:0;border-radius:50%;color:white;background:var(--send-color);touch-action:manipulation}
+.composer-send svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.composer-send:disabled{opacity:.4}
+.composer-status,.composer-error{margin:4px 12px 0;font-size:var(--caption-1);line-height:var(--caption-1-line);color:var(--label-secondary)}
+.composer-error{color:var(--red)}
+.composer-status .button{font-size:inherit;padding:0 4px;min-height:24px}
+@media(max-width:699px){.message-composer{padding-inline:10px}.composer-send{width:30px;height:30px;margin-bottom:5px}.composer-field{min-height:42px}}
