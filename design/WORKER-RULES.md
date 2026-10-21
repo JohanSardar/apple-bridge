@@ -41,6 +41,7 @@ You are a worker on Apple Bridge, delegated by the build leader. Read this file,
   5. Update the shared checkout: `ssh air 'cd ~/apple-bridge && git checkout main && git pull --ff-only'`, only when it's clean.
   6. `git fetch origin && git rebase origin/main` before the next slice.
 - **Size:** many small PRs that each work alone. Never one giant PR.
+- **Evidence ownership:** a PR commits `lab/evidence/**` files only for the scenarios that PR adds or changes. Regression runs rewrite other scenarios' evidence; restore those before committing (`git checkout origin/main -- <paths>`) and quote the regression results in the PR body instead. When a rebase still conflicts on evidence JSON, keep `origin/main`'s version for scenarios you don't own.
 - **Red main:** if main is red, fixing it comes first.
 - **No padding:** no empty, whitespace-only or count-inflating commits.
 - **Reporting:** put every PR URL in your progress messages and final report.
