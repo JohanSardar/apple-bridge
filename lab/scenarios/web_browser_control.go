@@ -190,6 +190,9 @@ func webBrowserControl(ctx context.Context, w *world.World, origin string) (*htt
 			key := contracts.NewID("web-incoming")
 			err = w.ControlAction("/messages", map[string]any{"action": "incoming", "key": key})
 			value = map[string]any{"started_at_ms": started}
+		case "/capability-unproven", "/capability-proven":
+			err = w.ControlAction("/messages", map[string]any{"action": strings.TrimPrefix(request.URL.Path, "/")})
+			value = map[string]any{"ok": err == nil}
 		case "/lock":
 			_, err = exec.CommandContext(ctx, "bin/bridge", "web", "lock", "--home", w.Gateway.Home).Output()
 			value = map[string]any{"ok": err == nil}

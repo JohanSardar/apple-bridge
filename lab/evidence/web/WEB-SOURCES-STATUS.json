@@ -1,0 +1,39 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[12.21 11.99 11.07] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5F5CH6N6ZQ7D6YQJWZCM41B",
+  "metrics": {
+    "demo_messages": 5000,
+    "demo_startup_ms": 7437,
+    "matrix": [
+      "chromium-light-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-SOURCES-STATUS-chromium-light-desktop-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-SOURCES-STATUS-chromium-light-desktop-playwright.json"
+    ],
+    "server": "gateway"
+  },
+  "scenario": "WEB-SOURCES-STATUS",
+  "level": "web",
+  "passed": true,
+  "git_sha": "788fa5a7db661ade0becb959d5c28204a56dfdf6",
+  "at": "2026-10-21T12:01:14.453419Z",
+  "assertions": [
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/sources.spec.ts:3:1 › WEB-SOURCES-STATUS live proofs gate actions and reconnect never reuses stale proof (5.3s)\n\n  1 passed (6.9s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

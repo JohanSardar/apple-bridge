@@ -63,6 +63,7 @@ type Subscription = {
     cacheKey: string;
     generation: number;
     cache?: boolean;
+    resetOnReconnect?: boolean;
 };
 export class LiveClient {
     private socket?: WebSocket;
@@ -132,6 +133,8 @@ export class LiveClient {
             if (session.cache === 'memory')
                 viewCache.disable();
             this.attempt = 0;
+            for (const sub of this.subscriptions.values())
+                if (sub.resetOnReconnect) { sub.cursor = undefined; sub.generation++; sub.update({}); }
             this.connection[1]('connected');
             for (const sub of this.subscriptions.values())
                 this.send({ t: 'sub', id: sub.id, view: sub.view, args: sub.args, cursor: sub.cursor });
@@ -153,6 +156,7 @@ export class LiveClient {
                 return;
             if (frame.t === 'delta' && (!sub.cursor || cursor.epoch !== sub.cursor.epoch || cursor.subscription_revision !== sub.cursor.subscription_revision)) {
                 sub.cursor = undefined;
+                if (sub.resetOnReconnect) sub.update({});
                 this.send({ t: 'unsub', id: sub.id });
                 this.send({ t: 'sub', id: sub.id, view: sub.view, args: sub.args });
                 return;
@@ -180,6 +184,7 @@ export class LiveClient {
         else if (frame.t === 'error' && frame.code === 'reset') {
             for (const sub of this.subscriptions.values()) {
                 sub.cursor = undefined;
+                if (sub.resetOnReconnect) { sub.generation++; sub.update({}); }
                 this.send({ t: 'unsub', id: sub.id });
                 this.send({ t: 'sub', id: sub.id, view: sub.view, args: sub.args });
             }
@@ -201,10 +206,10 @@ export class LiveClient {
         } };
         this.send({ t: 'sub', id: subID, view: sub.view, args: sub.args });
     }
-    subscribe(view: ViewName, args: Record<string, unknown>, options: {cache?:boolean;cursor?:Cursor} = {}) {
+    subscribe(view: ViewName, args: Record<string, unknown>, options: {cache?:boolean;cursor?:Cursor;resetOnReconnect?:boolean} = {}) {
         const id = ulid(), cacheKey = JSON.stringify([view, args]);
         const [data, update] = createSignal<ViewData>({});
-        const sub: Subscription = { id, view, args, data, update, cacheKey, generation: 0, cache:options.cache,cursor:options.cursor };
+        const sub: Subscription = { id, view, args, data, update, cacheKey, generation: 0, cache:options.cache,cursor:options.cursor,resetOnReconnect:options.resetOnReconnect };
         this.subscriptions.set(id, sub);
         if(options.cache!==false)void viewCache.read(cacheKey).then(cached => { if (cached && sub.generation === 0 && this.subscriptions.has(id)) {
             sub.cursor = cached.cursor;
