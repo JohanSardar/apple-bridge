@@ -438,7 +438,7 @@ features:
     milestone: W1
     modules: [trust, operations, web, frontdoor]
     depends_on: [web.frontdoor, web.remote]
-    status: in_progress
+    status: todo
     scenarios:
       - {id: WEB-AGENT-CREDENTIALS, levels: [sim]}
       - {id: WEB-AGENT-ACTIVITY, levels: [sim]}
