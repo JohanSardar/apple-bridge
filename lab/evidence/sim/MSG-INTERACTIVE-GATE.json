@@ -1,14 +1,14 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[6.54 8.55 9.18] cpus=8 other_heavy=1"
+    "summary": "air: load=[7.32 7.44 8.25] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M5EDHTZ0Y4RDFNKV90H169VC",
+  "run_id": "run_01M5EEJGTEDJ53DPRXXJXNJ4FC",
   "scenario": "MSG-INTERACTIVE-GATE",
   "level": "sim",
   "passed": true,
-  "git_sha": "a8bf8c5a809d46638cccb0e886ae1ede0d52fc0a",
-  "at": "2026-10-21T05:04:42.464655Z",
+  "git_sha": "f4b34b61ee9a82a21bfb045ea080e63dbe39f54c",
+  "at": "2026-10-21T05:22:33.42217Z",
   "assertions": [
     {
       "name": "software_passkey_enrollment",
@@ -102,9 +102,9 @@
   "latency": {
     "interactive_submit_to_observed": {
       "samples": 1,
-      "p50_ms": 66.003333,
-      "p95_ms": 66.003333,
-      "max_ms": 66.003333,
+      "p50_ms": 52.53825,
+      "p95_ms": 52.53825,
+      "max_ms": 52.53825,
       "timeouts": 0
     }
   },
