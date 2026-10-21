@@ -136,6 +136,11 @@ public actor MessagesCommands {
         }
         return .object(["kind": .string("imessage_buddy"), "handle": .string(handles[0]), "service": .string("iMessage")])
     }
+    private func validateResend(_ action: JSON, route: JSON, reader: MessagesReader) throws {
+        let native = action["messages"]["resend_of"].string
+        guard !native.isEmpty else { return }
+        guard let failed = try reader.message(native), failed.flag("is_from_me"), failed.integer("error") != 0, !route["chat"].string.isEmpty, failed["capture_chat_guid"] == route["chat"].string else { throw SourceFailure.conflict }
+    }
     private func validateAgentPolicy(_ action: JSON, route: JSON) throws {
         guard let agentPolicy, FileManager.default.fileExists(atPath: agentPolicy.path) else { return }
         let policy = try JSONDecoder().decode(JSON.self, from: Data(contentsOf: agentPolicy))
@@ -155,6 +160,7 @@ public actor MessagesCommands {
         }
         let reader = try MessagesReader(path: path)
         let route = try verifyRoute(action, reader: reader, interactive: interactive)
+        try validateResend(action, route: route, reader: reader)
         try validateAgentPolicy(action, route: route)
         if !labCommands {
             let kinds = (args["text"].string.isEmpty ? [] : ["text"]) + (args["files"].array.isEmpty ? [] : ["attachment"])
@@ -298,6 +304,7 @@ public actor MessagesCommands {
         let reader = try MessagesReader(path: path)
         let route = try verifyRoute(prepared.action, reader: reader, interactive: prepared.nativeState["interactive"].bool)
         guard route == prepared.nativeState["destination"] else { throw SourceFailure.conflict }
+        try validateResend(prepared.action, route: route, reader: reader)
         try validateAgentPolicy(prepared.action, route: route)
         if let agentPolicy, FileManager.default.fileExists(atPath: agentPolicy.path) {
             try Data(prepared.nativeState["command_id"].string.utf8).write(to: URL(fileURLWithPath: agentPolicy.path + ".used"), options: .withoutOverwriting)

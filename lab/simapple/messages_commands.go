@@ -53,6 +53,15 @@ func (f *fakeApple) messageValidate(a contracts.NativeAction) *contracts.Error {
 	if m == nil {
 		return contracts.ErrInvalid
 	}
+	if m.ResendOf != "" {
+		var previous struct {
+			FromMe bool `json:"is_from_me"`
+			Error  int  `json:"error_code"`
+		}
+		if json.Unmarshal(f.records[m.ResendOf].Data, &previous) != nil || !previous.FromMe || previous.Error == 0 {
+			return contracts.ErrConflict
+		}
+	}
 	if !f.messages.permitted || f.messages.capabilityUnproven {
 		return messageProblem("capability_unproven")
 	}
@@ -306,7 +315,14 @@ func (f *fakeApple) messageCommand(wire *applepeer.Wire, frame contracts.IPCFram
 				d["thread_originator_id"] = messageReference("message", a.NativeKey)
 				put("message", native, d, false)
 			}
-			if fault == "ghost-send" {
+			if fault == "delivery-failed" {
+				o := f.records[native]
+				var data map[string]any
+				json.Unmarshal(o.Data, &data)
+				data["error_code"] = 100
+				put("message", native, data, false)
+				disposition = contracts.DispositionDeliveryFailed
+			} else if fault == "ghost-send" {
 				o := f.records[native]
 				var d map[string]any
 				json.Unmarshal(o.Data, &d)
