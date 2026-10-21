@@ -42,4 +42,16 @@ func (s *server) agentRoutes(mux *http.ServeMux) {
 		}
 		respond(w, 200, map[string]bool{"ok": true})
 	})
+	mux.HandleFunc("GET /web/v1/activity", func(w http.ResponseWriter, r *http.Request) {
+		if s.deps.Operations == nil {
+			reject(w, 503, "unavailable")
+			return
+		}
+		rows, err := s.deps.Operations.State.AgentActivity(r.Context(), r.URL.Query().Get("principal"), r.URL.Query().Get("operation"))
+		if err != nil {
+			reject(w, 503, "unavailable")
+			return
+		}
+		respond(w, 200, map[string]any{"activity": rows})
+	})
 }

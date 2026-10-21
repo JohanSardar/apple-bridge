@@ -75,7 +75,20 @@ func (g *LocalGateway) transition(ctx context.Context, r contracts.CommandRecord
 	}
 	return record, err
 }
-func (g *LocalGateway) Submit(ctx context.Context, p trust.Principal, c contracts.Command) (contracts.CommandRecord, error) {
+func (g *LocalGateway) Submit(ctx context.Context, p trust.Principal, c contracts.Command) (result contracts.CommandRecord, resultErr error) {
+	defer func() {
+		if p.Kind == "agent" {
+			r := result
+			if r.Command.ID == "" {
+				r = contracts.CommandRecord{Command: c, Principal: p.ID, State: "rejected"}
+			}
+			if r.Cursor.Sequence == 0 {
+				if err := g.recordAgentCommand(r); err != nil && resultErr == nil {
+					resultErr = err
+				}
+			}
+		}
+	}()
 	var empty contracts.CommandRecord
 	c.Origin = ""
 	if p.Kind == "device" || p.Kind == "delegated" && strings.Contains(p.ID, "/device:") {
