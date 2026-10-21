@@ -3,15 +3,20 @@ export const wording = {
     delivered: 'Delivered', deliveredQuietly: 'Delivered Quietly', notDelivered: 'Not Delivered', edited: 'Edited', you: 'You', unsent: (name: string) => `${name} unsent a message`, replies: (count: number) => `${count} ${count === 1 ? 'Reply' : 'Replies'}`, newMessages: (count: number) => `↓ ${count} new`,
     reactions: {love:'❤️',like:'👍',dislike:'👎',laugh:'😂',emphasize:'‼️',question:'❓'} as Record<string,string>
 };
-export function time(value: string, locale?: string) { return new Intl.DateTimeFormat(locale, {hour:'numeric',minute:'2-digit',hour12:false}).format(new Date(value)).replace(/^0(?=\d)/u,''); }
+export function time(value: string, locale?: string) { return new Intl.DateTimeFormat(locale, {hour:'numeric',minute:'2-digit'}).format(new Date(value)); }
 export function dateLabel(value: string, now = new Date(), locale?: string) {
     const date = new Date(value), today = new Date(now.getFullYear(), now.getMonth(), now.getDate()), day = new Date(date.getFullYear(), date.getMonth(), date.getDate());
     const days = Math.round((today.getTime()-day.getTime())/86400000);
     if (days === 0) return 'Today';
     if (days === 1) return 'Yesterday';
-    return new Intl.DateTimeFormat(locale, days > 1 && days < 7 ? {weekday:'long'} : {month:'short',day:'numeric',...(date.getFullYear()!==now.getFullYear()?{year:'numeric'}:{})}).format(date);
+    return new Intl.DateTimeFormat(locale, days > 1 && days < 7 ? {weekday:'long'} : {month:'short',day:'numeric',...(date.getFullYear()!==now.getFullYear()?{year:'numeric'}:{weekday:'short'})}).format(date);
 }
-export function header(value: string, now?: Date, locale?: string) { return `${dateLabel(value,now,locale)} ${time(value,locale)}`; }
+export type HeaderParts={day:string;time:string;separator:string};
+export function headerParts(value:string,now=new Date(),locale?:string):HeaderParts {
+    const date=new Date(value),today=new Date(now.getFullYear(),now.getMonth(),now.getDate()),day=new Date(date.getFullYear(),date.getMonth(),date.getDate()),days=Math.round((today.getTime()-day.getTime())/86400000);
+    return {day:dateLabel(value,now,locale),time:time(value,locale),separator:days>=0&&days<7?' ':' at '};
+}
+export function header(value: string, now?: Date, locale?: string) { const parts=headerParts(value,now,locale);return `${parts.day}${parts.separator}${parts.time}`; }
 export function name(id: string, handles: Handles) { return handles.get(id)?.display_name || 'Unknown sender'; }
 export function initials(value: string) { return value.trim().split(/\s+/u).slice(0,2).map(word=>Array.from(word)[0]??'').join('').toLocaleUpperCase(); }
 export function names(values: string[]) { return values.length <= 2 ? values.join(' & ') : `${values[0]}, ${values[1]} & ${values.length-2} ${values.length===3?'other':'others'}`; }
