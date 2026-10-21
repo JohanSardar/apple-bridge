@@ -1,0 +1,7 @@
+id: REM-STORE-PERF
+feature: web.reminders
+levels: [sim, real]
+given: [{world: {replicas: 1}}]
+when: [{reminders_store_perf: {}}]
+then: [{latency: {p95_ms: 50, samples: 200}}]
+cleanup: [{world: {}}]

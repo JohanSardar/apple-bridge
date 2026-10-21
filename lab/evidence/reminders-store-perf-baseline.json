@@ -1,0 +1,65 @@
+{
+  "scenario": "REM-STORE-PERF",
+  "level": "real",
+  "phase": "backup_per_read_baseline",
+  "passed": false,
+  "reason": "warm_p95_store_read_exceeds_50_ms",
+  "git_sha": "a39e2f6c750fb986b433efa079a827422daf0d44",
+  "profile_sources_uncommitted": true,
+  "helper_sha256": "e42299c2b3d239a526aac9323f0a31048369d6586f6eef829cfeb0955b1f0fcc",
+  "completed_at": "2026-10-21T13:25:21.991024+00:00",
+  "host_telemetry_at_recording": "air load=(11.8427734375, 7.88232421875, 7.74072265625) cpus=8 normal heavy lane",
+  "profile": {
+    "cold": {
+      "total_ms": 520.14174987562,
+      "connection_open_ms": 3.490041708573699,
+      "query_ms": 11.483658337965608,
+      "backup_ms": 410.8779998496175,
+      "close_ms": 2.0845832768827677,
+      "decode_ms": 92.20546670258045
+    },
+    "iterations": 200,
+    "warm": {
+      "backup": {
+        "max_ms": 136.74012501724064,
+        "p95_ms": 66.02283334359527,
+        "samples": 200,
+        "p50_ms": 34.322333289310336
+      },
+      "decode": {
+        "samples": 200,
+        "p95_ms": 129.6472114045173,
+        "max_ms": 185.0583383347839,
+        "p50_ms": 100.96526914276183
+      },
+      "connection_open": {
+        "samples": 200,
+        "p95_ms": 0.9396246168762445,
+        "max_ms": 1.332416431978345,
+        "p50_ms": 0.5753750447183847
+      },
+      "query": {
+        "samples": 200,
+        "p95_ms": 17.738452181220055,
+        "max_ms": 24.955125292763114,
+        "p50_ms": 12.679633218795061
+      },
+      "close": {
+        "samples": 200,
+        "p95_ms": 4.640250001102686,
+        "max_ms": 7.134166778996587,
+        "p50_ms": 2.8747913893312216
+      },
+      "total": {
+        "samples": 200,
+        "p95_ms": 215.90254176408052,
+        "max_ms": 306.36674957349896,
+        "p50_ms": 149.71320843324065
+      }
+    },
+    "mode": "backup_per_read_baseline",
+    "profile_total_ms": 32644.763083430007,
+    "launch_and_report_elapsed_ms": 33684.10991597921,
+    "launch_report_overhead_ms": 1039.3468325491995
+  }
+}

@@ -23,7 +23,21 @@ public struct RemindersStore: Sendable {
     }
 
     public func read() throws -> RemindersStoreSnapshot {
+        try profile().snapshot
+    }
+
+    public func profile() throws -> (snapshot: RemindersStoreSnapshot, timings: StoreTimings) {
+        let start = ProcessInfo.processInfo.systemUptime
         let copy = try StoreCopy(path: path)
+        let snapshot = try snapshot(copy)
+        copy.close()
+        var timings = copy.timings
+        timings.totalMS = (ProcessInfo.processInfo.systemUptime - start) * 1000
+        timings.decodeMS = max(0, timings.totalMS - timings.openMS - timings.backupMS - timings.queryMS - timings.closeMS)
+        return (snapshot, timings)
+    }
+
+    private func snapshot(_ copy: StoreCopy) throws -> RemindersStoreSnapshot {
         let keys = try copy.rows("SELECT Z_ENT,Z_NAME,Z_SUPER FROM Z_PRIMARYKEY")
         var entities: [Int: String] = [:]
         for key in keys {

@@ -373,6 +373,9 @@ func convergence(w *world.World) bool {
 }
 
 func runScenario(ctx context.Context, s Scenario, level string) Evidence {
+	if s.ID == "REM-STORE-PERF" {
+		return runRemindersStorePerf(ctx, s, level)
+	}
 	if s.ID == "REM-STORE-READ" {
 		return runRemindersStore(ctx, s, level)
 	}

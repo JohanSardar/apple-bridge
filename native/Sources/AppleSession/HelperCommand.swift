@@ -96,6 +96,12 @@ public enum HelperCommand {
             while !finished { RunLoop.current.run(until: Date().addingTimeInterval(0.05)) }
             return
         }
+        if arguments.first == "reminders-store-profile" {
+            let profile = try RemindersStoreProfile.run()
+            try JSONEncoder().encode(profile).write(to: reportURL, options: .atomic)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportURL.path)
+            return
+        }
         if arguments.first == "reminders-store-proof" {
             func option(_ key: String) throws -> String {
                 guard let index = arguments.firstIndex(of: key), index + 1 < arguments.count else { throw ProbeFailure.invalidArguments }
