@@ -1,9 +1,9 @@
 import {test,expect,type APIRequestContext,type BrowserContext} from '@playwright/test';
 import {control} from './session';
+import {mediaSession} from './media-session';
 import {mkdir,readFile,writeFile} from 'node:fs/promises';
 import {gzipSync} from 'node:zlib';
-let session:Promise<{cookie:Parameters<BrowserContext['addCookies']>[0][number]}>|undefined;
-async function setup(context:BrowserContext,request:APIRequestContext){const value=await(session??=control(request,'/session?kind=public'));await context.addCookies([value.cookie]);return control(request,'/demo-fixtures');}
+async function setup(context:BrowserContext,request:APIRequestContext){await mediaSession(context,request);return control(request,'/demo-fixtures');}
 function path(ids:Record<string,string>){return '/__fixtures/media?chat='+encodeURIComponent(ids['message-chat'])+[42,43,44,45].map(index=>'&stack='+encodeURIComponent(ids[`demo-message-00-${String(index).padStart(6,'0')}`])).join('');}
 test('WEB-MSG-MEDIA-STACK fixed bounds survive decode, phone swiping and desktop grid opening into the exact cell',async({page,context,request},info)=>{
  const ids=await setup(context,request);let release!:()=>void;const gate=new Promise<void>(resolve=>{release=resolve;}),variants:string[]=[];

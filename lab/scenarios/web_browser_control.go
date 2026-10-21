@@ -186,6 +186,8 @@ func webBrowserControl(ctx context.Context, w *world.World, origin string) (*htt
 			value, err = webAvatarFixture(w)
 		case "/demo-fixtures":
 			value, err = demo.Fixtures(ctx, w)
+		case "/media-playback-scene":
+			value, err = webMediaPlaybackScene(ctx, w, request.URL.Query().Get("direction") == "received")
 		case "/handles-fixture":
 			value, err = webHandlesFixture(w)
 		case "/list-fixture":
