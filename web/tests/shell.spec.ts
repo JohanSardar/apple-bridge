@@ -65,11 +65,13 @@ test('WEB-SHELL-JOURNEY layouts, deep links, appearance, keyboard and history', 
     await page.screenshot({ path: `../lab/evidence/private/web/shell-${info.project.name}.png` });
 });
 test('WEB-INPUT-GUARD denies synthetic events and delayed commands', async ({ page }) => {
+    await page.addInitScript(()=>{const protocols:string[]=[];(window as any).__wireProtocols=protocols;window.WebSocket=class extends WebSocket{constructor(url:string|URL,requested?:string|string[]){super(url,requested);this.addEventListener('open',()=>protocols.push(this.protocol));}};});
     const frames: string[] = [];
     page.on('websocket', socket => socket.on('framesent', e => { if (String(e.payload).includes('"t":"cmd"'))
         frames.push(String(e.payload)); }));
     await page.goto('/__fixtures/input');
     await expect(page.getByRole('status')).toHaveText('Ready');
+    await expect.poll(()=>page.evaluate(()=>(window as any).__wireProtocols)).toEqual(['web.1']);
     await page.getByRole('button', { name: 'Submit fixture command' }).waitFor();
     await page.getByRole('button', { name: 'Submit fixture command' }).dispatchEvent('click');
     await expect(page.getByRole('status')).toHaveText('Trusted input required');
