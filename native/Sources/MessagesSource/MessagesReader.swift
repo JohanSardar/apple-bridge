@@ -28,7 +28,7 @@ final class MessagesReader {
         }
         sqlite3_busy_timeout(connection, 250)
         var schema: [String: Set<String>] = [:]
-        for table in ["message", "chat", "handle", "chat_handle_join", "chat_message_join", "message_attachment_join", "attachment"] {
+        for table in ["message", "chat", "handle", "chat_handle_join", "chat_message_join", "message_attachment_join", "attachment", "chat_recoverable_message_join"] {
             schema[table] = Set(try query("PRAGMA table_info(\(table))").map { $0["name"] })
         }
         guard schema["message"]?.contains("guid") == true else { throw ProbeFailure.unavailable }
@@ -87,10 +87,23 @@ final class MessagesReader {
     private func has(_ table: String, _ fields: String...) -> Bool {
         fields.allSatisfy { columns[table]?.contains($0) == true }
     }
+    private var recoverySupported: Bool {
+        has("chat_recoverable_message_join", "chat_id", "message_id", "delete_date") && has("chat_message_join", "chat_id", "message_id")
+    }
+    private var messageDeletionDate: String {
+        recoverySupported ? "(SELECT MAX(r.delete_date) FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND NOT EXISTS(SELECT 1 FROM chat_message_join j WHERE j.message_id=m.ROWID AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join visible WHERE visible.chat_id=j.chat_id AND visible.message_id=m.ROWID)))" : "NULL"
+    }
+    private var chatDeletionDate: String {
+        recoverySupported ? "(SELECT MAX(r.delete_date) FROM chat_recoverable_message_join r WHERE r.chat_id=c.ROWID AND NOT EXISTS(SELECT 1 FROM chat_message_join j WHERE j.chat_id=c.ROWID AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join visible WHERE visible.chat_id=c.ROWID AND visible.message_id=j.message_id)))" : "NULL"
+    }
+    func recoverableChat(_ guid: String) throws -> Bool {
+        let row = try query("SELECT " + chatDeletionDate + " AS deleted_date FROM chat c WHERE c.guid=?", [guid]).first
+        return (Double(row?["deleted_date"] ?? "") ?? 0) > 0
+    }
     private var messageProjection: String {
         let chat = has("chat", "guid") && has("chat_message_join", "chat_id", "message_id") ? "(SELECT c.guid FROM chat_message_join j JOIN chat c ON c.ROWID=j.chat_id WHERE j.message_id=m.ROWID ORDER BY c.guid LIMIT 1)" : "NULL"
         let sender = has("message", "handle_id") && has("handle", "service", "id") ? "(SELECT h.service || ':' || h.id FROM handle h WHERE h.ROWID=m.handle_id)" : "NULL"
-        return "m.ROWID AS row_position,m.*,\(chat) AS capture_chat_guid,\(sender) AS capture_sender_key"
+        return "m.ROWID AS row_position,m.*,\(chat) AS capture_chat_guid,\(sender) AS capture_sender_key,\(messageDeletionDate) AS capture_deleted_date"
     }
     func messageRows(after: Int64, through: Int64, limit: Int = 128) throws -> [SQLiteRow] {
         try query("SELECT \(messageProjection) FROM message m WHERE m.ROWID>? AND m.ROWID<=? ORDER BY m.ROWID LIMIT ?", [String(after), String(through), String(limit)])
@@ -121,6 +134,7 @@ final class MessagesReader {
         }
         var data: [String: Any] = ["is_from_me": row.flag("is_from_me"), "kind": row.integer("item_type") == 0 ? "message" : "group_event", "error_code": row.integer("error"), "edit_history": [], "retracted_parts": []]
         data["chat_id"] = chat.isEmpty ? nil : reference("chat", chat)
+        data["deleted_at"] = timestamp(row, "capture_deleted_date")
         data["sender_handle_id"] = senderKey.map { reference("handle", $0) }
         for (native, field) in [("date", "sent_at"), ("date_delivered", "delivered_at"), ("date_read", "read_at"), ("date_edited", "edited_at"), ("date_retracted", "retracted_at")] { data[field] = timestamp(row, native) }
         for (native, field) in [("reply_to_guid", "reply_to_id"), ("thread_originator_guid", "thread_originator_id")] {
@@ -173,10 +187,11 @@ final class MessagesReader {
         for row in try has("handle", "id", "service") ? query("SELECT ROWID AS row_position,* FROM handle") : [] {
             result.append(("messages.handle", row["service"] + ":" + row["id"], ["address": row["id"], "service": row["service"]]))
         }
-        for row in try has("chat", "guid") ? query("SELECT ROWID AS row_position,* FROM chat") : [] {
+        for row in try has("chat", "guid") ? query("SELECT c.ROWID AS row_position,c.*,\(chatDeletionDate) AS capture_deleted_date FROM chat c") : [] {
             let participants = try has("handle", "id", "service") && has("chat_handle_join", "chat_id", "handle_id") ? query("SELECT h.id,h.service FROM chat_handle_join j JOIN handle h ON h.ROWID=j.handle_id WHERE j.chat_id=? ORDER BY h.service,h.id", [row["row_position"]]).map { reference("handle", $0["service"] + ":" + $0["id"]) } : []
             var data: [String: Any] = ["service": row["service_name"], "style": row["guid"].contains(";+;") ? "group" : "direct", "display_name": row["display_name"], "participants": participants, "is_archived": row.flag("is_archived"), "capabilities": []]
             data["last_read_at"] = timestamp(row, "last_read_message_timestamp")
+            data["deleted_at"] = timestamp(row, "capture_deleted_date")
             result.append(("messages.chat", row["guid"], data))
         }
         return result + (try attachmentObservations())
