@@ -1,0 +1,94 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[3.8 4.21 4.65] cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5GAF8GV9DEG55QPG7P8B94M",
+  "metrics": {
+    "initial_abandoned_exports_present": true,
+    "media_drain_enabled": true,
+    "pending_items_terminal": true,
+    "prior_real_capture": "run_01M5G9ZYS0356451C509TTT6NA",
+    "synthetic_only": false,
+    "writes_submitted": 0
+  },
+  "scenario": "NATIVE-MEDIA-EXPORT-SAFETY",
+  "level": "real",
+  "passed": true,
+  "git_sha": "80f91102dd4635850b67c073b9966052452c5c2b",
+  "at": "2026-10-21T22:49:21.179062Z",
+  "assertions": [
+    {
+      "name": "private_pending_lookup_valid",
+      "passed": true
+    },
+    {
+      "name": "prior_capture_proof_valid",
+      "passed": true
+    },
+    {
+      "name": "diagnostic_reports_readable",
+      "passed": true
+    },
+    {
+      "name": "signed_real_world_ready",
+      "passed": true
+    },
+    {
+      "name": "media_drain_not_paused",
+      "passed": true
+    },
+    {
+      "name": "messages_source_ready",
+      "passed": true
+    },
+    {
+      "name": "previously_pending_audiovisual_terminal",
+      "passed": true
+    },
+    {
+      "name": "pending_records_captured_without_loss",
+      "passed": true
+    },
+    {
+      "name": "same_helper_survives_media_drain",
+      "passed": true
+    },
+    {
+      "name": "real_media_compute_observed",
+      "passed": true
+    },
+    {
+      "name": "actual_foreground_yield_observed",
+      "passed": true
+    },
+    {
+      "name": "export_path_attempt_on_prior_backlog",
+      "passed": true
+    },
+    {
+      "name": "no_command_dispatched",
+      "passed": true
+    },
+    {
+      "name": "helper_clean_shutdown",
+      "passed": true
+    },
+    {
+      "name": "export_temporaries_removed_after_restart_and_shutdown",
+      "passed": true
+    },
+    {
+      "name": "helper_crash_free",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

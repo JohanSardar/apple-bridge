@@ -1,0 +1,4 @@
+id: NATIVE-MEDIA-EXPORT-SAFETY
+feature: web.media
+levels: [sim, real]
+when: [{native_media_export_safety: {}}]
