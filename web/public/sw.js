@@ -88,6 +88,7 @@ self.addEventListener('fetch',event=>{
     if(cached)return cached;
     const response=await fetch(request);
     if(response.ok&&thumb)event.waitUntil(enqueue(()=>thumbnail(request,response.clone(),version)));
+    if(response.ok&&shell){const copy=response.clone();event.waitUntil(enqueue(async()=>{if(version===generation&&trusted.has(client))await(await caches.open(SHELL)).put(request,copy);}));}
     return response;
   })());
 });
