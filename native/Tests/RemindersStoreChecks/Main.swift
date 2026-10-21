@@ -64,28 +64,6 @@ struct RemindersStoreChecks {
         ]
         for (name, passed) in contractChecks { print("\(name): \(passed ? "PASS" : "FAIL")") }
         if contractChecks.contains(where: { !$0.1 }) { exit(1) }
-        if let index = CommandLine.arguments.firstIndex(of: "--report"), index + 1 < CommandLine.arguments.count {
-            var parent = parentFields.object
-            parent["title"] = .string("Bridge Test Parent")
-            parent["completed"] = .bool(false)
-            parent["list_id"] = RemindersStoreSnapshot.reference("reminders.list", "list")
-            var child = childFields.object
-            child["title"] = .string("Bridge Test Child")
-            child["completed"] = .bool(false)
-            child["list_id"] = RemindersStoreSnapshot.reference("reminders.list", "list")
-            var list = listFields.object
-            list["title"] = .string("Bridge Test List")
-            list["writable"] = .bool(true)
-            func observation(_ collection: String, _ key: String, _ data: JSON) -> JSON {
-                .object(["kind": .string("upsert"), "collection": .string(collection), "native_key": .string(key), "data": data])
-            }
-            let result = JSON.object(["observations": .array([
-                observation("reminders.list", "list", .object(list)),
-                observation("reminders.reminder", "eventkit-parent", .object(parent)),
-                observation("reminders.reminder", "eventkit-child", .object(child))
-            ])])
-            try JSONEncoder().encode(result).write(to: URL(fileURLWithPath: CommandLine.arguments[index + 1]), options: .atomic)
-        }
         fixture.execute("UPDATE ZREMCDREMINDER SET ZFLAGGED=0 WHERE Z_PK=10")
         precondition(snapshot.reminders[0]["ZFLAGGED"] == .integer(1))
         let refreshed = try reader.read()
@@ -93,6 +71,10 @@ struct RemindersStoreChecks {
         try await StoreSessionChecks.run(path: path, execute: fixture.execute)
         if let index = CommandLine.arguments.firstIndex(of: "--perf-report"), index + 1 < CommandLine.arguments.count {
             try await StorePerformanceChecks.run(path: path, execute: fixture.execute, report: CommandLine.arguments[index + 1])
+        }
+        let observations = try await StoreEnrichmentChecks.run(path: path, execute: fixture.execute)
+        if let index = CommandLine.arguments.firstIndex(of: "--report"), index + 1 < CommandLine.arguments.count {
+            try JSONEncoder().encode(JSON.object(["observations": .array(observations)])).write(to: URL(fileURLWithPath: CommandLine.arguments[index + 1]), options: .atomic)
         }
         print("RemindersStore: synthetic schema, arbitrary entity IDs, WAL backup, isolation, deleted and pending exclusion passed")
     }
