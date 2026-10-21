@@ -15,6 +15,9 @@ func webListFixture(w *world.World, update bool) error {
 	if update {
 		return rmPut(w, rmObservation("messages.message", "list-live", map[string]any{"chat_id": rmRef("messages.chat", "list-chat-001"), "sent_at": now.Add(time.Minute), "kind": "message", "text": "The plan is ready", "is_from_me": false, "parts": []any{}}))
 	}
+	previousTimeout := w.Control.Timeout
+	w.Control.Timeout = 3 * time.Minute
+	defer func() { w.Control.Timeout = previousTimeout }()
 	if _, err := webAvatarFixture(w); err != nil {
 		return err
 	}

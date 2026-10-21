@@ -178,8 +178,9 @@ func webBrowserControl(ctx context.Context, w *world.World, origin string) (*htt
 		case "/handles-fixture":
 			value, err = webHandlesFixture(w)
 		case "/list-fixture":
+			started := time.Now()
 			err = webListFixture(w, request.URL.Query().Get("update") == "1")
-			value = map[string]any{"ok": err == nil}
+			value = map[string]any{"ok": err == nil, "fixture_setup_ms": time.Since(started).Milliseconds()}
 		case "/list-late-incoming":
 			err = webListLateIncoming(w)
 			value = map[string]any{"ok": err == nil}
