@@ -27,9 +27,11 @@ export type ChatSummary = {
         id: string;
         sent_at: string;
         is_from_me: boolean;
+        sender_handle_id?: string;
         preview: {
             kind: 'text' | 'attachments' | 'reaction' | 'group_event' | 'unsent' | 'edited';
             text?: string;
+            group_event?: unknown;
             attachment_kinds?: string[];
             count?: number;
             reaction?: { verb: string; target_excerpt: string };
