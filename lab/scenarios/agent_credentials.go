@@ -6,10 +6,13 @@ import (
 	"encoding/json"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/internal/trust"
+	bridgeweb "github.com/JohanSardar/apple-bridge/internal/web"
 	"github.com/JohanSardar/apple-bridge/lab/world"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -70,6 +73,36 @@ func runAgentCredentials(ctx context.Context, w *world.World, e *Evidence, add f
 	for _, args := range [][]string{{"--level", "invalid", "--scope", "messages:read"}, {"--scope", "admin"}} {
 		_, err := exec.CommandContext(ctx, "bin/bridge", append([]string{"agent", "create", "--home", w.Gateway.Home, "--name", "Bridge Test invalid"}, args...)...).Output()
 		add("invalid_agent_refused", err != nil)
+	}
+	authority, err := trust.Open(w.Gateway.Home)
+	if err != nil {
+		add("owner_authority", false)
+		return
+	}
+	token, _, err := authority.CreateDeviceSession("trusted")
+	if err != nil {
+		add("owner_session", false)
+		return
+	}
+	owner := &webClient{ctx: ctx, origin: strings.Replace(w.Gateway.URL, "127.0.0.1", "localhost", 1), cookie: &http.Cookie{Name: bridgeweb.SessionCookie, Value: token}}
+	resp, created, err := owner.request("POST", "agents", map[string]any{"name": "Bridge Test web agent", "scopes": []string{"messages:read"}})
+	add("owner_creates_agent", err == nil && resp.StatusCode == 201)
+	if err == nil && resp.StatusCode == 201 {
+		var creation map[string]any
+		json.Unmarshal(created, &creation)
+		agent, _ := creation["agent"].(map[string]any)
+		id, _ := agent["id"].(string)
+		secret, _ := creation["token"].(string)
+		resp, listed, err := owner.request("GET", "agents", nil)
+		encoded := listed
+		add("owner_lists_without_secret", err == nil && resp.StatusCode == 200 && id != "" && secret != "" && bytes.Contains(encoded, []byte(id)) && !bytes.Contains(encoded, []byte(secret)))
+		principal := w.Gateway
+		principal.Token = secret
+		status, _ := world.Request(ctx, principal, "/web/v1/agents", nil, &output)
+		add("agent_cannot_manage_owner_routes", status == 401)
+		resp, _, err = owner.request("DELETE", "agents/"+id, nil)
+		status, _ = world.Request(ctx, principal, "/v1/op/messages.chats", map[string]any{}, &output)
+		add("owner_revokes_agent", err == nil && resp.StatusCode == 200 && status == 401)
 	}
 	e.Latency["agent_read"] = stats(samples, 0)
 }
