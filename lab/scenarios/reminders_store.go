@@ -29,7 +29,11 @@ func runRemindersStore(ctx context.Context, s Scenario, level string) Evidence {
 	}
 	defer w.Close()
 	report := filepath.Join(w.Dir, "reminders-store-fixture.json")
-	output, err := exec.CommandContext(ctx, "packaging/dev/check-reminders-store.sh", "--report", report).CombinedOutput()
+	arguments := []string{"--report", report}
+	if s.ID == "REM-STORE-DECODE" {
+		arguments = append(arguments, "--blob-checks")
+	}
+	output, err := exec.CommandContext(ctx, "packaging/dev/check-reminders-store.sh", arguments...).CombinedOutput()
 	add("synthetic_sqlite_arbitrary_entities_wal_isolation_and_projection", err == nil)
 	if err != nil {
 		e.Assertions[len(e.Assertions)-1].Detail = string(output)

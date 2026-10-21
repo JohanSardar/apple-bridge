@@ -385,7 +385,7 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "REM-STORE-PERF" {
 		return runRemindersStorePerf(ctx, s, level)
 	}
-	if s.ID == "REM-STORE-READ" {
+	if s.ID == "REM-STORE-READ" || s.ID == "REM-STORE-DECODE" {
 		return runRemindersStore(ctx, s, level)
 	}
 	if level == "web" {

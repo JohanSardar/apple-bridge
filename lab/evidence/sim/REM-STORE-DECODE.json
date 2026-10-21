@@ -1,0 +1,54 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[5.82 5.54 5.77] cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5G9E4E79053QH8Z609TJV19",
+  "scenario": "REM-STORE-DECODE",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "ab6a6ccdd0364a50e19a9596c215b8bf55e81f1f",
+  "at": "2026-10-21T22:31:15.655184Z",
+  "assertions": [
+    {
+      "name": "world_start",
+      "passed": true
+    },
+    {
+      "name": "synthetic_sqlite_arbitrary_entities_wal_isolation_and_projection",
+      "passed": true
+    },
+    {
+      "name": "synthetic_reader_observations",
+      "passed": true
+    },
+    {
+      "name": "store_fields_truth_gateway_and_replica",
+      "passed": true
+    },
+    {
+      "name": "gateway_records",
+      "passed": true
+    },
+    {
+      "name": "list_native_emblem_pin_order_grocery_sharing",
+      "passed": true
+    },
+    {
+      "name": "flagged_exact_and_parent_linked",
+      "passed": true
+    },
+    {
+      "name": "unsupported_order_and_sections_not_guessed",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
