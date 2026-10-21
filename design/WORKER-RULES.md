@@ -39,8 +39,9 @@ You are a worker on Apple Bridge, delegated by the build leader. Read this file,
   2. `gh pr create --base main --title "<conventional title>" --body "<what changed; how tested: exact commands and results>"`
   3. Run the slice's tests and linters.
   4. `gh pr merge <n> --merge --delete-branch`
-  5. Update the shared checkout: `ssh air 'cd ~/apple-bridge && git checkout main && git pull --ff-only'`, only when it's clean.
+  5. Update the shared checkout: `ssh air 'cd ~/apple-bridge && git checkout main && git fetch origin main && git merge --ff-only origin/main'`, only when it's clean.
   6. `git fetch origin && git rebase origin/main` before the next slice.
+- **Updating the shared checkout:** use `git fetch origin main && git merge --ff-only origin/main`, not `git pull`. All worktrees share one `.git/FETCH_HEAD`, so concurrent fetches by other workers can make `git pull` fail with "Cannot fast-forward to multiple branches".
 - **Size:** many small PRs that each work alone. Never one giant PR.
 - **Evidence ownership:** a PR commits `lab/evidence/**` files only for the scenarios that PR adds or changes. Regression runs rewrite other scenarios' evidence; restore those before committing (`git checkout origin/main -- <paths>`) and quote the regression results in the PR body instead. When a rebase still conflicts on evidence JSON, keep `origin/main`'s version for scenarios you don't own.
 - **Red main:** if main is red, fixing it comes first.
