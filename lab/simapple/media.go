@@ -216,10 +216,13 @@ func simMediaMIME(name string, data []byte) string {
 }
 
 func MediaFixture(kind string) []byte {
-	encoded := map[string]string{"video": simVideo, "audio": simAudio}[kind]
+	encoded := map[string]string{"video": simVideoLandscape, "video-portrait": simVideoPortrait, "video-panorama": simVideoPanorama, "video-live": simVideoLive, "live-still": simLiveStill, "audio": simAudio}[kind]
 	if encoded == "" {
 		return nil
 	}
 	data, _ := base64.StdEncoding.DecodeString(encoded)
+	if kind == "live-still" {
+		return data
+	}
 	return append(data, 0, 0, 0, 8, 'f', 'r', 'e', 'e')
 }
