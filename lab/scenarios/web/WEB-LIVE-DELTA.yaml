@@ -1,7 +1,7 @@
 id: WEB-LIVE-DELTA
 feature: web.frontdoor
 levels: [web]
-web: {browsers: [chromium], themes: [light], layouts: [desktop], server: gateway}
+web: {browsers: [webkit, chromium, firefox], themes: [light, dark], layouts: [phone, desktop], server: gateway}
 given: []
 when: [{web: {}}]
 then: []

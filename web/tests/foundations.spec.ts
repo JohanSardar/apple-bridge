@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { prepareSession } from './session';
+import { prepareSession, control } from './session';
 import { readdir, readFile, mkdir, writeFile } from 'node:fs/promises';
 import { gzipSync } from 'node:zlib';
 async function metrics(name: string, project: string, value: unknown) { await mkdir('../lab/evidence/web/metrics', { recursive: true }); await writeFile(`../lab/evidence/web/metrics/${name}-${project}.json`, JSON.stringify(value, null, 2) + '\n'); }
@@ -143,16 +143,20 @@ test('WEB-PERF-SHELL bundle, layout stability, navigation and warm cache budgets
     await page.goto('/__fixtures/live');
     await expect(page.getByRole('status', {name:'Connection'})).toHaveText('connected');
     await expect.poll(() => page.evaluate(async () => { const db = await new Promise<IDBDatabase>((resolve, reject) => { const request = indexedDB.open('ab.views'); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); }); const count = await new Promise<number>(resolve => { const request = db.transaction('views').objectStore('views').count(); request.onsuccess = () => resolve(request.result); }); db.close(); return count; })).toBeGreaterThan(0);
-    const initial = Number(await page.getByLabel('Live count',{exact:true}).textContent());
-    await page.request.get('/__mock/delta');
-    await expect(page.getByLabel('Live count',{exact:true})).toHaveText(String(initial+1));
-    await expect.poll(()=>page.evaluate(async()=>{const db=await new Promise<IDBDatabase>(resolve=>{const request=indexedDB.open('ab.views');request.onsuccess=()=>resolve(request.result);});const values=await new Promise<any[]>(resolve=>{const request=db.transaction('views').objectStore('views').getAll();request.onsuccess=()=>resolve(request.result);});db.close();return values.some(value=>value.data.chats?.length>0);})).toBe(true);
+    const gateway=process.env.AB_WEB_SERVER==='gateway';
+    const label=gateway?'Unread count':'Live count';
+    const initial = Number(await page.getByLabel(label,{exact:true}).textContent());
+    if(gateway)await control(page.request,'/incoming');else await page.request.get('/__mock/delta');
+    await expect(page.getByLabel(label,{exact:true})).toHaveText(String(initial+1));
+    const latest=gateway?await page.getByLabel('Latest message',{exact:true}).textContent():null;
+    await expect.poll(()=>page.evaluate(async(expected)=>{const db=await new Promise<IDBDatabase>(resolve=>{const request=indexedDB.open('ab.views');request.onsuccess=()=>resolve(request.result);});const values=await new Promise<any[]>(resolve=>{const request=db.transaction('views').objectStore('views').getAll();request.onsuccess=()=>resolve(request.result);});db.close();return values.some(value=>expected?value.data.chats?.[0]?.last_message?.id===expected:value.data.chats?.length>0);},latest)).toBe(true);
     await page.routeWebSocket('**/web/v1/live',()=>{});
     const warm: number[] = [];
     for(let i=0;i<3;i++){
         const start=performance.now();
         await page.reload();
-        await expect(page.getByLabel('Live count',{exact:true})).toHaveText(String(initial+1));
+        await expect(page.getByLabel(label,{exact:true})).toHaveText(String(initial+1));
+        if(latest)await expect(page.getByLabel('Latest message',{exact:true})).toHaveText(latest);
         warm.push(performance.now()-start);
         await expect(page.getByRole('status',{name:'Connection'})).not.toHaveText('connected');
     }

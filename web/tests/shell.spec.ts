@@ -78,7 +78,7 @@ test('WEB-INPUT-GUARD denies synthetic events and delayed commands', async ({ pa
     await expect(page.getByRole('status')).toHaveText('Trusted input required');
     expect(frames).toHaveLength(0);
     await page.getByRole('button', { name: 'Submit fixture command' }).click();
-    await expect(page.getByRole('status')).toContainText('admitted');
+    if(process.env.AB_WEB_SERVER==='gateway')await expect.poll(()=>frames.length).toBe(1);else await expect(page.getByRole('status')).toContainText('admitted');
     expect(frames).toHaveLength(1);
     await page.getByRole('button', { name: 'Delayed fixture command' }).click();
     await expect(page.getByRole('status')).toHaveText('Trusted input required');
