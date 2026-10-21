@@ -105,4 +105,5 @@ func runAgentCredentials(ctx context.Context, w *world.World, e *Evidence, add f
 		add("owner_revokes_agent", err == nil && resp.StatusCode == 200 && status == 401)
 	}
 	e.Latency["agent_read"] = stats(samples, 0)
+	runOAuthCredentialAccess(ctx, w, authority, add)
 }
