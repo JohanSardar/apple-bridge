@@ -3,6 +3,8 @@ package demo
 import (
 	"fmt"
 	"time"
+
+	"github.com/JohanSardar/apple-bridge/lab/simapple"
 )
 
 func (d *Dataset) richShowcase(i int, key string, sent time.Time, fields map[string]any, media []mediaAsset) {
@@ -54,13 +56,17 @@ func (d *Dataset) richShowcase(i int, key string, sent time.Time, fields map[str
 	case 125:
 		fields["via_satellite"], fields["is_sos"] = true, true
 	case 129:
-		d.richAttachment("demo-live-still", key, media[2], nil)
-		movie := media[6]
-		movie.name, movie.mime = "demo-live.mov", "video/quicktime"
+		d.richAttachment("demo-live-still", key, mediaAsset{"demo-live-still.png", "image/png", simapple.MediaFixture("live-still")}, nil)
+		movie := mediaAsset{"demo-live.mov", "video/quicktime", simapple.MediaFixture("video-live")}
 		d.richAttachment("demo-live-movie", key, movie, map[string]any{"hidden": true})
 		d.LivePhotos["demo-live-still"] = "demo-live-movie"
 		fields["text"] = ""
 		fields["parts"] = []any{map[string]any{"index": 0, "kind": "attachment", "attachment_id": reference("messages.attachment", "demo-live-still")}}
+	case 130:
+		d.richAttachment("demo-ultrawide", key, mediaAsset{"demo-ultrawide.mp4", "video/mp4", simapple.MediaFixture("video-panorama")}, nil)
+		fields["is_from_me"], fields["sender_handle_id"], fields["delivered_at"] = true, reference("messages.handle", handleKey(0)), sent.Add(time.Second)
+		fields["text"] = ""
+		fields["parts"] = []any{map[string]any{"index": 0, "kind": "attachment", "attachment_id": reference("messages.attachment", "demo-ultrawide")}}
 	case 126, 127, 128:
 		fields["kind"], fields["text"], fields["parts"] = "group_event", "", []any{}
 		fields["group_event"] = map[string]any{"kind": []string{"phone_changed", "photo_removed", "unknown"}[i-126], "item_type": []int{1, 3, 99}[i-126], "action_type": []int{0, 2, 0}[i-126], "title": "", "actor_handle_id": fields["sender_handle_id"]}

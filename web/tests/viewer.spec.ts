@@ -2,9 +2,10 @@ import {test,expect,type APIRequestContext,type BrowserContext} from '@playwrigh
 import {control} from './session';
 import {mkdir,readFile,writeFile} from 'node:fs/promises';
 import {gzipSync} from 'node:zlib';
+test.use({locale:'en-US',timezoneId:'America/Chicago'});
 let session:Promise<{cookie:Parameters<BrowserContext['addCookies']>[0][number]}>|undefined;
 async function setup(context:BrowserContext,request:APIRequestContext){const value=await(session??=control(request,'/session?kind=public'));await context.addCookies([value.cookie]);return control(request,'/demo-fixtures');}
-test('WEB-MSG-VIEWER collection source pages beyond the transcript window with interleaved photos and playable video',async({page,context,request},info)=>{
+test('WEB-MSG-VIEWER-META collection source pages beyond the transcript window with interleaved photos and playable video',async({page,context,request},info)=>{
  const ids=await setup(context,request),subscriptions:Record<string,unknown>[]=[],viewerChunks:string[]=[];
  page.on('request',request=>{if(/\/assets\/ViewerSession-[^/]+\.js$/u.test(new URL(request.url()).pathname))viewerChunks.push(request.url());});
  await page.addInitScript(()=>Object.defineProperty(navigator,'share',{value:async(payload:ShareData)=>{Object.defineProperty(window,'viewerShared',{value:payload,configurable:true});}}));
@@ -16,7 +17,8 @@ test('WEB-MSG-VIEWER collection source pages beyond the transcript window with i
  expect(subscriptions.filter(value=>value.view==='collection')).toHaveLength(0);
  await source.locator('.media-open').click();const viewer=page.getByRole('dialog',{name:'Media viewer'});await expect(viewer).toBeVisible();
  const decoded=await viewer.locator('.media-viewer-stage .media-image>img').elementHandle();
- await expect(viewer).toHaveAttribute('data-media-loading','false');await expect(viewer).toHaveAttribute('data-media-count','12');expect(await decoded!.evaluate(element=>element.isConnected)).toBe(true);
+ await expect(viewer).toHaveAttribute('data-media-loading','false');await expect(viewer).toHaveAttribute('data-media-count','13');expect(await decoded!.evaluate(element=>element.isConnected)).toBe(true);
+ await expect(viewer.locator('.media-viewer-heading time')).toHaveText('Dec 31, 2024 at 6:11 PM');
  expect(subscriptions.some(value=>value.view==='collection'&&(value.args as Record<string,unknown>).kind==='media')).toBe(true);
  expect(subscriptions.filter(value=>value.view==='collection').length).toBeGreaterThan(1);
  await expect(page.locator('.media-fixture-slot')).toHaveCount(1);

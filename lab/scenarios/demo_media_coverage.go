@@ -66,6 +66,12 @@ func demoMediaCoverage(ctx context.Context, w *world.World, dataset demo.Dataset
 			checked[ref.Digest] = true
 		}
 	}
+	digests := make([]string, 0, len(checked))
+	for digest := range checked {
+		digests = append(digests, digest)
+	}
+	sort.Strings(digests)
+	e.Metrics["verified_blob_digests"] = digests
 	e.Metrics["verified_blob_count"] = len(checked)
 	add("generated_originals_avatars_and_sim_variants_download_and_hash", blobsOK && len(checked) > 50)
 	before := demoObservationDigest(observations)
