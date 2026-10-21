@@ -23,7 +23,7 @@ func mcpHandler(deps Deps, descriptors []contracts.OperationDescriptor) http.Han
 			if !ok {
 				return nil, contracts.ErrUnauthorized
 			}
-			output, err := deps.Operations.Invoke(ctx, p, d.Name, req.Params.Arguments)
+			output, err, milliseconds := invokeTimed(ctx, deps, p, d.Name, req.Params.Arguments)
 			if err != nil {
 				typed := contracts.ErrUnavailable
 				var problem *contracts.Error
@@ -32,11 +32,15 @@ func mcpHandler(deps Deps, descriptors []contracts.OperationDescriptor) http.Han
 				}
 				output = map[string]any{"error": typed}
 			}
-			b, marshalErr := json.Marshal(output)
+			encoded, marshalErr := json.Marshal(output)
 			if marshalErr != nil {
 				return nil, marshalErr
 			}
-			return &mcp.CallToolResult{IsError: err != nil, StructuredContent: output, Content: []mcp.Content{&mcp.TextContent{Text: string(b)}}}, nil
+			var meta mcp.Meta
+			if reminderReadModel(d.Name) {
+				meta = mcp.Meta{"bridge/read_model_ms": milliseconds}
+			}
+			return &mcp.CallToolResult{Meta: meta, IsError: err != nil, StructuredContent: json.RawMessage(encoded), Content: []mcp.Content{&mcp.TextContent{Text: string(encoded)}}}, nil
 		})
 	}
 	handler := mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server { return server }, &mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: deps.PublicHost == nil, DisableLocalhostProtection: deps.PublicHost != nil})

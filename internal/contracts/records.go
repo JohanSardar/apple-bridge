@@ -26,7 +26,7 @@ const (
 var Sources = []Source{Messages, Calendar, Reminders, Contacts, Notes, Usage, System}
 var Collections = map[string]string{
 	"messages.chat": "cht", "messages.handle": "hdl", "messages.message": "msg", "messages.reaction": "rxn", "messages.attachment": "att",
-	"calendar.calendar": "cal", "calendar.event": "evt", "reminders.list": "lst", "reminders.reminder": "rmd",
+	"calendar.calendar": "cal", "calendar.event": "evt", "reminders.list": "lst", "reminders.reminder": "rmd", "reminders.attachment": "rat",
 	"contacts.contact": "con", "contacts.group": "grp", "notes.folder": "fld", "notes.note": "nte", "usage.device": "dev", "usage.app_day": "usd", "system.source": "src", "system.command": "cmd", "system.replica": "rpl",
 }
 

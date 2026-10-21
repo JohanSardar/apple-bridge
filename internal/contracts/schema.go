@@ -8,13 +8,28 @@ import (
 	"time"
 )
 
-func JSONSchema(value any) map[string]any { return schemaType(reflect.TypeOf(value)) }
-func schemaType(t reflect.Type) map[string]any {
+type schemaBuilder struct {
+	active      map[reflect.Type]bool
+	referenced  map[reflect.Type]bool
+	definitions map[string]any
+}
+
+func JSONSchema(value any) map[string]any {
+	builder := schemaBuilder{active: map[reflect.Type]bool{}, referenced: map[reflect.Type]bool{}, definitions: map[string]any{}}
+	schema := builder.build(reflect.TypeOf(value))
+	if len(builder.definitions) > 0 {
+		schema["$defs"] = builder.definitions
+		schema["$id"] = "urn:apple-bridge:schema:" + reflect.TypeOf(value).String()
+	}
+	return schema
+}
+
+func (builder *schemaBuilder) build(t reflect.Type) map[string]any {
 	if t == nil {
 		return map[string]any{}
 	}
 	if t.Kind() == reflect.Pointer {
-		schema := schemaType(t.Elem())
+		schema := builder.build(t.Elem())
 		schema["nullable"] = true
 		return schema
 	}
@@ -26,12 +41,18 @@ func schemaType(t reflect.Type) map[string]any {
 	}
 	switch t.Kind() {
 	case reflect.Struct:
+		if builder.active[t] {
+			builder.referenced[t] = true
+			return map[string]any{"$ref": "#/$defs/" + t.String()}
+		}
+		builder.active[t] = true
+		defer delete(builder.active, t)
 		properties := map[string]any{}
 		required := []string{}
 		for i := 0; i < t.NumField(); i++ {
 			f := t.Field(i)
 			if f.Anonymous && f.Type.Kind() == reflect.Struct {
-				embedded := schemaType(f.Type)
+				embedded := builder.build(f.Type)
 				for name, value := range embedded["properties"].(map[string]any) {
 					properties[name] = value
 				}
@@ -46,7 +67,7 @@ func schemaType(t reflect.Type) map[string]any {
 			if name == "" {
 				name = f.Name
 			}
-			field := schemaType(f.Type)
+			field := builder.build(f.Type)
 			if description := f.Tag.Get("description"); description != "" {
 				field["description"] = description
 			}
@@ -58,9 +79,13 @@ func schemaType(t reflect.Type) map[string]any {
 				required = append(required, name)
 			}
 		}
-		return map[string]any{"type": "object", "properties": properties, "required": required, "additionalProperties": false}
+		schema := map[string]any{"type": "object", "properties": properties, "required": required, "additionalProperties": false}
+		if builder.referenced[t] {
+			builder.definitions[t.String()] = schema
+		}
+		return schema
 	case reflect.Slice, reflect.Array:
-		return map[string]any{"type": "array", "items": schemaType(t.Elem())}
+		return map[string]any{"type": "array", "items": builder.build(t.Elem())}
 	case reflect.Bool:
 		return map[string]any{"type": "boolean"}
 	case reflect.Int, reflect.Int64, reflect.Uint64, reflect.Int32:

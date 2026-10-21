@@ -73,7 +73,10 @@ func Handler(deps Deps, descriptors []contracts.OperationDescriptor) http.Handle
 				respond(w, nil, contracts.ErrInvalid)
 				return
 			}
-			result, err := deps.Operations.Invoke(r.Context(), p, name, input)
+			result, err, milliseconds := invokeTimed(r.Context(), deps, p, name, input)
+			if reminderReadModel(name) {
+				w.Header().Set("Server-Timing", fmt.Sprintf("readmodel;dur=%.6f", milliseconds))
+			}
 			respond(w, result, err)
 		})
 	}

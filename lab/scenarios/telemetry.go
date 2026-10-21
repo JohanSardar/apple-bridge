@@ -88,7 +88,12 @@ func Run(ctx context.Context, s Scenario, level string) (e Evidence) {
 		summaries = append(summaries, fmt.Sprintf("%s: load=%v cpus=%d other_heavy=%d", host, sample.Load, sample.CPUCount, sample.OtherHeavySlots))
 	}
 	conditions.Summary = strings.Join(summaries, "; ")
+	reports := diagnosticReportsDir()
+	before, reportsErr := helperCrashReports(reports)
 	e = runScenario(ctx, s, level)
+	if reportsErr == nil {
+		e = failOnHelperCrashes(e, reports, before)
+	}
 	e.HostConditions = &conditions
 	return e
 }

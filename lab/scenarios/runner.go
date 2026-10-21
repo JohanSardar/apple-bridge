@@ -373,6 +373,12 @@ func convergence(w *world.World) bool {
 }
 
 func runScenario(ctx context.Context, s Scenario, level string) Evidence {
+	if s.ID == "WEB-RM-REMINDERS-ITEMS" {
+		return runRemindersItems(ctx, s, level)
+	}
+	if s.ID == "WEB-RM-REMINDERS-LISTS" {
+		return runRemindersSidebar(ctx, s, level)
+	}
 	if s.ID == "HELPER-SIGNED-APP-CACHE" {
 		return runNativeAppCache(ctx, s, level)
 	}
