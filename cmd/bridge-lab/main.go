@@ -6,10 +6,12 @@ import (
 	"flag"
 	"fmt"
 	"github.com/JohanSardar/apple-bridge/lab/agent"
+	"github.com/JohanSardar/apple-bridge/lab/demo"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/lab/scenarios"
@@ -21,6 +23,41 @@ func run(ctx context.Context, args []string) error {
 		return fmt.Errorf("expected run or simapple")
 	}
 	switch args[0] {
+	case "demo":
+		set := flag.NewFlagSet("demo", flag.ContinueOnError)
+		listen := set.String("listen", "127.0.0.1:0", "loopback web listener")
+		seed := set.Int64("seed", 1, "synthetic dataset seed")
+		huge := set.Bool("huge", false, "include a 100000-message performance chat")
+		alive := set.Bool("alive", false, "emit synthetic live messages and reactions")
+		if err := set.Parse(args[1:]); err != nil {
+			return err
+		}
+		if err := world.Build(ctx, "sim"); err != nil {
+			return err
+		}
+		started := time.Now()
+		w, err := world.New(ctx, "sim", 0, 0, world.BlobOptions{Scope: "admin"})
+		if err != nil {
+			return err
+		}
+		defer w.Close()
+		dataset := demo.Generate(demo.Options{Seed: *seed, Huge: *huge})
+		if err = demo.Populate(w, dataset); err != nil {
+			return err
+		}
+		server, err := demo.Serve(w, *listen)
+		if err != nil {
+			return err
+		}
+		defer server.Close()
+		if err := json.NewEncoder(os.Stdout).Encode(map[string]any{"url": server.URL, "seed": *seed, "counts": dataset.Counts, "digest": dataset.Digest(), "startup_ms": time.Since(started).Milliseconds(), "alive": *alive}); err != nil {
+			return err
+		}
+		if *alive {
+			return demo.Alive(ctx, w, 3*time.Second)
+		}
+		<-ctx.Done()
+		return nil
 	case "wire-checks":
 		if len(args) != 2 {
 			return contracts.ErrInvalid

@@ -105,6 +105,9 @@ func checkImport(rel, imp string) string {
 	}
 	target := strings.TrimPrefix(imp, module)
 	dir := filepath.ToSlash(filepath.Dir(rel))
+	if dir == "cmd/bridge" && strings.HasPrefix(target, "lab/") {
+		return "product command must not import " + target
+	}
 	if target == "web" && dir != "internal/web" {
 		return "only internal/web may import webui"
 	}
