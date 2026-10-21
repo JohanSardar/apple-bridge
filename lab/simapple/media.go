@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"image"
-	"image/color"
 	_ "image/gif"
 	"image/jpeg"
 	"image/png"
@@ -58,21 +57,36 @@ func (f *fakeApple) mediaVariants(name string, original []byte) (map[string]any,
 		ext := strings.ToLower(filepath.Ext(name))
 		switch ext {
 		case ".mov", ".mp4", ".3gp":
-			clip, _ := base64.StdEncoding.DecodeString(simVideo)
-			save("video", "video/mp4", clip, 16, 16)
-			poster := image.NewNRGBA(image.Rect(0, 0, 16, 16))
-			for y := 0; y < 16; y++ {
-				for x := 0; x < 16; x++ {
-					poster.SetNRGBA(x, y, color.NRGBA{R: 40, G: 120, B: 200, A: 255})
+			geometry, valid := sourceVideoGeometry(original)
+			encoded, clipWidth, clipHeight := simVideo, 16, 16
+			source := "sim-default"
+			if valid {
+				source, encoded, clipWidth, clipHeight = "source", simVideoLandscape, 320, 180
+				if geometry.height > geometry.width {
+					encoded, clipWidth, clipHeight = simVideoPortrait, 180, 320
+				}
+			} else {
+				geometry = videoGeometry{16, 16, 1000}
+			}
+			clip, _ := base64.StdEncoding.DecodeString(encoded)
+			for _, fixture := range []string{"video-panorama", "video-live"} {
+				if bytes.Equal(original, MediaFixture(fixture)) {
+					clip, clipWidth, clipHeight = original, geometry.width, geometry.height
+				}
+			}
+			save("video", "video/mp4", clip, clipWidth, clipHeight)
+			poster := sourceVideoPoster(geometry.width, geometry.height, valid)
+			if bytes.Equal(original, MediaFixture("video-live")) {
+				if still, _, err := image.Decode(bytes.NewReader(MediaFixture("live-still"))); err == nil {
+					poster = mediaResize(still, 320)
 				}
 			}
 			var buffer bytes.Buffer
 			jpeg.Encode(&buffer, poster, &jpeg.Options{Quality: 80})
-			save("poster", "image/jpeg", buffer.Bytes(), 16, 16)
-			media["width"] = 16
-			media["height"] = 16
-			media["duration_ms"] = 1000
-			media["thumbhash"] = mediaThumbHash(poster)
+			save("poster", "image/jpeg", buffer.Bytes(), poster.Bounds().Dx(), poster.Bounds().Dy())
+			media["width"], media["height"] = geometry.width, geometry.height
+			media["duration_ms"], media["dims_source"] = geometry.durationMS, source
+			media["thumbhash"] = mediaThumbHash(mediaResize(poster, 32))
 		case ".caf", ".m4a", ".mp3", ".amr", ".wav":
 			clip, _ := base64.StdEncoding.DecodeString(simAudio)
 			save("audio", "audio/mp4", clip, 0, 0)
