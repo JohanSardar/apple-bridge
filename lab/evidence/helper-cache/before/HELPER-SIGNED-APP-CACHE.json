@@ -1,0 +1,26 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[2.18 3.27 9.15] cpus=8 other_heavy=0"
+  },
+  "run_id": "cache_01M5FNTVHBWJ0P7J9MXFJ2E77Q",
+  "scenario": "HELPER-SIGNED-APP-CACHE",
+  "level": "real",
+  "passed": false,
+  "git_sha": "62f5771ef07a3d225862024d5597f396756c9f3c",
+  "at": "2026-10-21T16:48:41.003201Z",
+  "assertions": [
+    {
+      "name": "signed_app_cache_available",
+      "passed": false
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
