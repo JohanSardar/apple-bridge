@@ -16,29 +16,30 @@ import (
 )
 
 func mcpHandler(deps Deps, descriptors []contracts.OperationDescriptor) http.Handler {
-	handler := mcp.NewStreamableHTTPHandler(func(r *http.Request) *mcp.Server {
-		p := r.Context().Value(principalKey{}).(trust.Principal)
-		server := mcp.NewServer(&mcp.Implementation{Name: "apple-bridge", Version: "1"}, nil)
-		for _, d := range descriptors {
-			server.AddTool(&mcp.Tool{Name: strings.ReplaceAll(d.Name, ".", "_"), Description: fmt.Sprintf("%s (operation version %d)", d.Description, d.Version), InputSchema: contracts.OperationSchema(d)}, func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-				output, err := deps.Operations.Invoke(ctx, p, d.Name, req.Params.Arguments)
-				if err != nil {
-					typed := contracts.ErrUnavailable
-					var problem *contracts.Error
-					if errors.As(err, &problem) {
-						typed = problem
-					}
-					output = map[string]any{"error": typed}
+	server := mcp.NewServer(&mcp.Implementation{Name: "apple-bridge", Version: "1"}, nil)
+	for _, d := range descriptors {
+		server.AddTool(&mcp.Tool{Name: strings.ReplaceAll(d.Name, ".", "_"), Description: fmt.Sprintf("%s (operation version %d)", d.Description, d.Version), InputSchema: contracts.OperationSchema(d)}, func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			p, ok := ctx.Value(principalKey{}).(trust.Principal)
+			if !ok {
+				return nil, contracts.ErrUnauthorized
+			}
+			output, err := deps.Operations.Invoke(ctx, p, d.Name, req.Params.Arguments)
+			if err != nil {
+				typed := contracts.ErrUnavailable
+				var problem *contracts.Error
+				if errors.As(err, &problem) {
+					typed = problem
 				}
-				b, marshalErr := json.Marshal(output)
-				if marshalErr != nil {
-					return nil, marshalErr
-				}
-				return &mcp.CallToolResult{IsError: err != nil, StructuredContent: output, Content: []mcp.Content{&mcp.TextContent{Text: string(b)}}}, nil
-			})
-		}
-		return server
-	}, &mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true})
+				output = map[string]any{"error": typed}
+			}
+			b, marshalErr := json.Marshal(output)
+			if marshalErr != nil {
+				return nil, marshalErr
+			}
+			return &mcp.CallToolResult{IsError: err != nil, StructuredContent: output, Content: []mcp.Content{&mcp.TextContent{Text: string(b)}}}, nil
+		})
+	}
+	handler := mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server { return server }, &mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true})
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			original := r.Body
