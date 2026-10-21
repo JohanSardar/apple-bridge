@@ -57,6 +57,7 @@ func run(ctx context.Context, args []string) error {
 	role := set.String("role", "gateway", "gateway or replica")
 	listen := set.String("listen", "", "replica listen address")
 	dialReplica := set.String("dial-replica", "", "gateway dials replica address")
+	viaRemote := set.Bool("via-remote", false, "pair through the public Remote URL")
 	peer := set.String("peer-addr", "", "gateway peer listen address")
 	api := set.String("api-addr", "", "loopback API address")
 	helperApp := set.String("helper-app", "", "signed Helper app for real mode")
@@ -208,7 +209,12 @@ func run(ctx context.Context, args []string) error {
 		if *peer != "" {
 			address = *peer
 		}
-		code, err := authority.PairDial(address, *dialReplica, grants, *pairTTL)
+		var code string
+		if *viaRemote {
+			code, err = remotePairCode(ctx, authority, *home, *peer, *dialReplica, grants, *pairTTL)
+		} else {
+			code, err = authority.PairDial(address, *dialReplica, grants, *pairTTL)
+		}
 		if err != nil {
 			return err
 		}

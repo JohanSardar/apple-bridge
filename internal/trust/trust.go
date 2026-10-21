@@ -503,6 +503,9 @@ func (a *Authority) Join(ctx context.Context, code string) error {
 	if err != nil {
 		return err
 	}
+	if c.Remote {
+		return a.joinRemote(ctx, c)
+	}
 	if c.Dial != "" {
 		return contracts.ErrInvalid
 	}

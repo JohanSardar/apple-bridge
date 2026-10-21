@@ -12,6 +12,7 @@ type Remote struct {
 	status Status
 	web    http.Handler
 	api    http.Handler
+	feed   http.Handler
 }
 
 func New(home string) *Remote { return &Remote{home: home} }

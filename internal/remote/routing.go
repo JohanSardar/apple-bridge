@@ -68,6 +68,10 @@ func (r *Remote) handler(proxyPath string) http.Handler {
 				req.RemoteAddr = source
 			}
 		}
+		if req.URL.Path == "/v1/feed" && r.feed != nil {
+			r.feed.ServeHTTP(w, req)
+			return
+		}
 		if req.URL.Path == "/v1/feed" || strings.HasPrefix(req.URL.Path, "/v1/feed/") {
 			http.NotFound(w, req)
 			return
@@ -81,7 +85,7 @@ func (r *Remote) handler(proxyPath string) http.Handler {
 }
 
 func (r *Remote) serveListener(ctx context.Context, listener net.Listener, proxyPath string, fail func(error)) {
-	server := &http.Server{Handler: r.handler(proxyPath), ConnContext: clientConnection, ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 30 * time.Second}
+	server := &http.Server{BaseContext: func(net.Listener) context.Context { return ctx }, Handler: r.handler(proxyPath), ConnContext: clientConnection, ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 30 * time.Second}
 	defer server.Close()
 	done := make(chan error, 1)
 	go func() { done <- server.Serve(listener) }()

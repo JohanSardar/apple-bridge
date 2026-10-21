@@ -360,6 +360,13 @@ func (c *Client) Follow(ctx context.Context) error {
 	return nil
 }
 func (c *Client) follow(ctx context.Context, e trust.Enrollment) error {
+	if e.Remote {
+		conn, err := c.Authority.DialRelay(ctx, e)
+		if err != nil {
+			return err
+		}
+		return c.consume(ctx, conn, e)
+	}
 	transport := &http.Transport{TLSClientConfig: c.Authority.ClientTLS(e.Fingerprint)}
 	defer transport.CloseIdleConnections()
 	client := &http.Client{Transport: transport}
