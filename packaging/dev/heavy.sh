@@ -25,9 +25,14 @@ oldest_live() {
   done
 }
 count() { set -- $held; echo $#; }
+usable() {
+  if [ -n "$exclusive" ]; then echo "$slots"; return; fi
+  level=$(sysctl -n kern.memorystatus_level 2>/dev/null || echo 100)
+  if [ "$level" -lt "${APPLE_BRIDGE_HEAVY_MIN_FREE_PCT:-30}" ]; then echo 1; else echo "$slots"; fi
+}
 while true; do
   if [ "$(oldest_live)" = "$ticket" ]; then
-    for i in $(seq 1 "$slots"); do
+    for i in $(seq 1 "$(usable)"); do
       lock="$base-$i.lock"
       case " $held " in *" $lock "*) continue ;; esac
       if [ -f "$lock/pid" ] && ! kill -0 "$(cat "$lock/pid")" 2>/dev/null; then rm -rf "$lock"; fi
