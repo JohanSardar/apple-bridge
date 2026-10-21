@@ -1,0 +1,8 @@
+{
+  "scenario": "MSG-SELFTEST",
+  "level": "real",
+  "check": "same-build-cache",
+  "passed": true,
+  "run_unchanged": true,
+  "dispatch_guard_unchanged": true
+}
