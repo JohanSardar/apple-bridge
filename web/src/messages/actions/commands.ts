@@ -124,8 +124,13 @@ export function createMessageCommands(live: LiveClient) {
     const statuses = () => live.pending().filter(command => echoes.has(command.id));
     const notice = (chatID: string): DeliveryNotice | undefined => {
         revision();
-        const ids = statuses().filter(command => echoes.get(command.id)?.data.chat_id === chatID && command.status === 'indeterminate' && suppressed.has(command.id) && !resolved.has(command.id) && ambiguous(command.id)).map(command => command.id);
-        return ids.length ? { count: ids.length, command_ids: ids, text: ids.length === 1 ? '1 message may not have been delivered' : ids.length + ' messages may not have been delivered' } : undefined;
+        const commands = statuses().filter(command => echoes.get(command.id)?.data.chat_id === chatID);
+        const uncertain = commands.filter(command => command.status === 'indeterminate' && suppressed.has(command.id) && !resolved.has(command.id) && ambiguous(command.id));
+        const failedChecks = commands.filter(command => command.check_error);
+        const ids = [...new Set([...uncertain, ...failedChecks].map(command => command.id))];
+        const text = [uncertain.length ? uncertain.length === 1 ? '1 message may not have been delivered' : uncertain.length + ' messages may not have been delivered' : '',
+            failedChecks.length ? failedChecks.length === 1 ? "Couldn't check this message. Try again." : "Couldn't check these messages. Try again." : ''].filter(Boolean).join(' · ');
+        return ids.length ? { count: ids.length, command_ids: ids, text } : undefined;
     };
     const copy = (event: Event, id: string) => withInput(event, () => {
         const item = echoes.get(id);
