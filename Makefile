@@ -2,7 +2,7 @@ export PATH := /opt/homebrew/bin:$(HOME)/go/bin:$(PATH)
 
 .PHONY: build lint features sim real replica agent dist native
 
-build:
+build: web
 	packaging/dev/heavy.sh go build -p 2 ./...
 	packaging/dev/heavy.sh packaging/dev/build-native.sh
 
@@ -10,6 +10,7 @@ native:
 	packaging/dev/heavy.sh packaging/dev/build-native.sh
 
 lint:
+	cd web && pnpm lint
 	gofmt -l . | grep -v '^$$' && exit 1 || true
 	go vet ./...
 	go run ./tools/lint .
@@ -38,3 +39,7 @@ dist:
 .PHONY: decoder-checks
 decoder-checks:
 	packaging/dev/heavy.sh packaging/dev/check-decoders.sh
+
+.PHONY: web
+web:
+	packaging/dev/heavy.sh sh -c 'cd web && pnpm install --frozen-lockfile && pnpm build'
