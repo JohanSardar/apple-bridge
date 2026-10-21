@@ -352,6 +352,8 @@ func (s *Store) Thread(ctx context.Context, v trust.Visibility, q contracts.Thre
 		slices.Reverse(messages)
 	case q.After != "":
 		messages, err = query("AND (sent_at,id)>(?,?)", "ASC", limit, edge.At, edge.ID)
+	case q.Anchor == "oldest":
+		messages, err = query("", "ASC", limit)
 	case q.Anchor != "" && q.Anchor != "latest":
 		var at, id string
 		if q.Anchor == "unread" {
