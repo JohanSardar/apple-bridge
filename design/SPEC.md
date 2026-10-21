@@ -966,7 +966,7 @@ Same origin for everything. Served by the gateway and by replicas (any instance)
 
 ### 23.3 Live protocol `web/1`
 
-WebSocket `GET /web/v1/live`, JSON text frames `{"t": …}`.
+WebSocket `GET /web/v1/live`, JSON text frames `{"t": …}`. The logical protocol is `web/1`. The `Sec-WebSocket-Protocol` wire token is `web.1`, because `/` is not a legal HTTP token (WHATWG WebSockets, constructor step 9). Client, server and lab checks offer and select `web.1`.
 
 ```text
 C→S hello{v:1}                                   S→C welcome{session, head}
