@@ -23,7 +23,7 @@ struct CalendarTruth {
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: ownershipURL.path)
     }
     private static func remember(_ event: EKEvent, tag: String) throws {
-        guard event.calendar.title == "Bridge Test", (event.title ?? "").hasPrefix(tag), let identifier = event.eventIdentifier else { throw TruthFailure.invalid }
+        guard ["Bridge Test", "Bridge Test " + tag].contains(event.calendar.title), (event.title ?? "").hasPrefix(tag), let identifier = event.eventIdentifier else { throw TruthFailure.invalid }
         var value = try ownership()
         if !(value.events[tag] ?? []).contains(identifier) { value.events[tag, default: []].append(identifier) }
         try saveOwnership(value)
@@ -57,6 +57,26 @@ struct CalendarTruth {
         let action = request["action"] as? String ?? ""
         let tag = request["tag"] as? String ?? ""
         guard tag.hasPrefix("[ab-test "), tag.hasSuffix("]"), tag.count > 11, !tag.contains("\n") else { throw TruthFailure.invalid }
+        if action == "cleanup_run_calendar" {
+            guard verb == "fixture", let proof = request["empty_calendar_proof"] as? [String: Any], proof["tag"] as? String == tag,
+                  proof["all_dates"] as? Bool == true, proof["read_only"] as? Bool == true,
+                  let generated = proof["generated_at"] as? Double, (0...10).contains(Date().timeIntervalSince1970 - generated),
+                  let remaining = proof["remaining"] as? Int, let counts = proof["counts"] as? [String: NSNumber],
+                  let taggedCounts = proof["tagged_counts"] as? [String: NSNumber] else { throw TruthFailure.invalid }
+            var owned = try ownership()
+            let calendars = store.calendars(for: .event).filter { $0.title == "Bridge Test " + tag }
+            guard calendars.allSatisfy({ owned.calendars[$0.calendarIdentifier] == tag && counts[$0.calendarIdentifier] != nil && counts[$0.calendarIdentifier] == taggedCounts[$0.calendarIdentifier] }),
+                  calendars.reduce(0, { $0 + (taggedCounts[$1.calendarIdentifier]?.intValue ?? 0) }) == remaining else { throw TruthFailure.invalid }
+            for calendar in calendars {
+                try store.removeCalendar(calendar, commit: true)
+                owned.calendars.removeValue(forKey: calendar.calendarIdentifier)
+                owned.calendarReceipts?.removeValue(forKey: calendar.calendarIdentifier)
+                if owned.canonicalCalendar == calendar.calendarIdentifier { owned.canonicalCalendar = nil }
+            }
+            owned.events.removeValue(forKey: tag)
+            try saveOwnership(owned)
+            return ["status": "verified", "all_dates_remaining": 0, "removed_calendars": calendars.count]
+        }
         if action == "readonly" {
             guard verb == "observe" else { throw TruthFailure.invalid }
             let calendars = store.calendars(for: .event).filter { $0.isSubscribed }
@@ -86,7 +106,8 @@ struct CalendarTruth {
             return ["status": "verified", "removed_empty_build_calendars": calendars.count, "unbounded_item_count": 0]
         }
         let canonical = try ownership().canonicalCalendar
-        var calendars = store.calendars(for: .event).filter { $0.title == "Bridge Test" }.sorted {
+        let calendarTitle = "Bridge Test " + tag
+        var calendars = store.calendars(for: .event).filter { $0.title == calendarTitle || (request["calendar_id"] != nil && $0.title == "Bridge Test") }.sorted {
             if ($0.calendarIdentifier == canonical) != ($1.calendarIdentifier == canonical) { return $0.calendarIdentifier == canonical }
             return $0.calendarIdentifier < $1.calendarIdentifier
         }
@@ -94,7 +115,7 @@ struct CalendarTruth {
         if calendars.isEmpty && verb == "fixture" && ["create", "create_calendar"].contains(action) {
             guard let source = store.defaultCalendarForNewEvents?.source else { throw TruthFailure.unavailable }
             let calendar = EKCalendar(for: .event, eventStore: store)
-            calendar.title = "Bridge Test"; calendar.source = source
+            calendar.title = calendarTitle; calendar.source = source
             try store.saveCalendar(calendar, commit: true)
             var owned = try ownership(); owned.calendars[calendar.calendarIdentifier] = tag; owned.canonicalCalendar = calendar.calendarIdentifier; try saveOwnership(owned)
             calendars = [calendar]
@@ -119,7 +140,7 @@ struct CalendarTruth {
             start = end
         }
         for identifier in (verb == "fixture" || action == "audit" ? try ownership().events[tag] ?? [] : []) {
-            if let event = store.event(withIdentifier: identifier), event.calendar.title == "Bridge Test", calendars.contains(where: { $0.calendarIdentifier == event.calendar.calendarIdentifier }) {
+            if let event = store.event(withIdentifier: identifier), ["Bridge Test", "Bridge Test " + tag].contains(event.calendar.title), calendars.contains(where: { $0.calendarIdentifier == event.calendar.calendarIdentifier }) {
                 let key = event.calendarItemIdentifier + "|" + String(event.occurrenceDate?.timeIntervalSince1970 ?? 0)
                 if keys.insert(key).inserted { events.append(event) }
             }
@@ -133,7 +154,7 @@ struct CalendarTruth {
                 guard let calendar = calendars.first else { throw TruthFailure.unavailable }
                 return ["status": "verified", "id": calendar.calendarIdentifier]
             case "record_created_calendar":
-                guard let key = request["calendar_id"] as? String, let calendar = calendars.first(where: { $0.calendarIdentifier == key }), calendar.title == "Bridge Test", let fingerprint = request["creation_fingerprint"] as? String, !fingerprint.isEmpty else { throw TruthFailure.invalid }
+                guard let key = request["calendar_id"] as? String, let calendar = calendars.first(where: { $0.calendarIdentifier == key }), ["Bridge Test", "Bridge Test " + tag].contains(calendar.title), let fingerprint = request["creation_fingerprint"] as? String, !fingerprint.isEmpty else { throw TruthFailure.invalid }
                 var owned = try ownership(); owned.calendars[key] = tag
                 var receipts = owned.calendarReceipts ?? [:]; receipts[key] = fingerprint; owned.calendarReceipts = receipts
                 try saveOwnership(owned)
@@ -159,7 +180,7 @@ struct CalendarTruth {
             case "modify", "move":
                 guard let index = request["index"] as? Int, selected.indices.contains(index) else { throw TruthFailure.invalid }
                 let event = selected[index]
-                guard event.calendar.title == "Bridge Test", event.calendar.allowsContentModifications else { throw TruthFailure.invalid }
+                guard ["Bridge Test", "Bridge Test " + tag].contains(event.calendar.title), event.calendar.allowsContentModifications else { throw TruthFailure.invalid }
                 if let title = request["new_title"] as? String { guard title.hasPrefix(tag) else { throw TruthFailure.invalid }; event.title = title }
                 if let value = request["start"] as? String {
                     let duration = event.endDate.timeIntervalSince(event.startDate)
@@ -175,10 +196,10 @@ struct CalendarTruth {
                 return ["status": "verified", "effect_uptime_ns": effect, "effect_wall_ns": effectWall]
             case "cleanup", "delete", "cleanup_calendar":
                 if action == "cleanup_calendar" {
-                    guard let key = request["calendar_id"] as? String, calendars.contains(where: { $0.calendarIdentifier == key && $0.title == "Bridge Test" }) else { throw TruthFailure.invalid }
+                    guard let key = request["calendar_id"] as? String, calendars.contains(where: { $0.calendarIdentifier == key && ["Bridge Test", "Bridge Test " + tag].contains($0.title) }) else { throw TruthFailure.invalid }
                 }
                 for event in selected {
-                    guard event.calendar.title == "Bridge Test", (event.title ?? "").hasPrefix(tag), event.calendar.allowsContentModifications else { throw TruthFailure.invalid }
+                    guard ["Bridge Test", "Bridge Test " + tag].contains(event.calendar.title), (event.title ?? "").hasPrefix(tag), event.calendar.allowsContentModifications else { throw TruthFailure.invalid }
                     try store.remove(event, span: .thisEvent, commit: true)
                 }
                 return ["status": "verified", "calendar_retained": true, "all_dates_ownership_proven": false, "removed_tagged_occurrences": selected.count]
@@ -207,7 +228,7 @@ struct CalendarTruth {
         return ["status": "verified", "calendars": calendars.map { calendar in
             let names = ["local", "caldav", "exchange", "subscribed", "birthday"]
             let index = Int(calendar.type.rawValue)
-            return ["id": calendar.calendarIdentifier, "title": "Bridge Test", "writable": calendar.allowsContentModifications && !calendar.isSubscribed, "account": calendar.source.sourceIdentifier, "color": calendar.cgColor.map { String(describing: $0.components ?? []) } ?? "", "type": calendar.isSubscribed ? "subscribed" : (names.indices.contains(index) ? names[index] : "unknown")] as [String: Any]
+            return ["id": calendar.calendarIdentifier, "title": calendar.title, "writable": calendar.allowsContentModifications && !calendar.isSubscribed, "account": calendar.source.sourceIdentifier, "color": calendar.cgColor.map { String(describing: $0.components ?? []) } ?? "", "type": calendar.isSubscribed ? "subscribed" : (names.indices.contains(index) ? names[index] : "unknown")] as [String: Any]
         }, "records": records]
     }
 
