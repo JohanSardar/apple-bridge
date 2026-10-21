@@ -134,11 +134,11 @@ test('WEB-PERF-SHELL bundle, layout stability, navigation and warm cache budgets
                 metrics.longTasks.push(entry.duration); }).observe({ type: 'longtask', buffered: true });
     });
     await page.goto('/messages');
-    await page.getByText('No Messages', { exact: true }).waitFor();
+    await page.getByRole('listbox', { name: 'Conversations' }).waitFor();
     await page.waitForTimeout(200);
     const idleFrames=await page.evaluate(async()=>{for(let i=0;i<180;i++)await new Promise<void>(resolve=>requestAnimationFrame(()=>resolve()));return (window as any).__metrics.frames.slice(-179) as number[];});
-    await page.getByRole('button', { name: 'New Message', exact: true }).click();
-    await page.getByText('No Conversation Selected', { exact: true }).waitFor();
+    await page.locator('.conversation-row').first().click();
+    await expect(page.locator('main.transcript')).toBeVisible();
     const navigation = await page.evaluate(async()=>{for(let i=0;i<180;i++)await new Promise<void>(resolve=>requestAnimationFrame(()=>resolve()));return (window as any).__metrics;});
     await metrics('WEB-PERF-NAVIGATION',info.project.name,{idle_frames:stats(idleFrames),navigation_frames:stats(navigation.frames),click_dispatch:stats(navigation.clickWork),input_to_first_frame:stats(navigation.firstFrame),long_tasks:navigation.longTaskSupported?navigation.longTasks:null,long_task_observer:navigation.longTaskSupported});
     if(navigation.clsSupported)expect(navigation.cls).toBe(0);

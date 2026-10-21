@@ -2,7 +2,7 @@ import { test, expect, type Page, type APIRequestContext } from '@playwright/tes
 import { mkdir, writeFile } from 'node:fs/promises';
 import { control, bootstrap } from './session';
 async function virtualKey(page:Page){const cdp=await page.context().newCDPSession(page);await cdp.send('WebAuthn.enable');const {authenticatorId}=await cdp.send('WebAuthn.addVirtualAuthenticator',{options:{protocol:'ctap2',transport:'internal',hasResidentKey:true,hasUserVerification:true,isUserVerified:true,automaticPresenceSimulation:true}});return {cdp,authenticatorId};}
-async function enroll(page:Page,request:APIRequestContext){const key=await virtualKey(page);const {url}=await control(request,'/enroll');await page.goto(url);await page.getByRole('button',{name:'Continue',exact:true}).click();await expect(page.getByText('No Messages',{exact:true})).toBeVisible();return {key,url};}
+async function enroll(page:Page,request:APIRequestContext){const key=await virtualKey(page);const {url}=await control(request,'/enroll');await page.goto(url);await page.getByRole('button',{name:'Continue',exact:true}).click();await expect(page.getByRole('listbox',{name:'Conversations'})).toBeVisible();return {key,url};}
 test('WEB-SERVE-EMBED binary serves the app, routes, hashed assets and security headers',async({page,request},info)=>{
   const response=await request.get('/messages/deep-link');expect(response.status()).toBe(200);expect(response.headers()['cache-control']).toBe('no-store');expect(response.headers()['content-security-policy']).toContain("script-src 'self'");
   const html=await response.text();const asset=/src="(\/assets\/[^"]+\.js)"/.exec(html)![1];const script=await request.get(asset);expect(script.status()).toBe(200);expect(script.headers()['cache-control']).toBe('public, max-age=31536000, immutable');
@@ -23,7 +23,7 @@ test('WEB-AUTH-LOGIN discoverable browser passkey sign-in chooses trusted or pub
   for(const kind of ['trusted','public']){
     await page.goto('/settings/devices');await page.getByRole('button',{name:'Sign out',exact:true}).click();await expect(page.getByRole('heading',{name:'Sign in with a passkey'})).toBeVisible();
     await page.getByRole('radio',{name:kind==='trusted'?'Yes, trust this computer':'No, this is a public computer',exact:false}).check();
-    await page.getByRole('button',{name:'Sign in with a passkey',exact:true}).click();await expect(page.getByText('No Messages',{exact:true})).toBeVisible();
+    await page.getByRole('button',{name:'Sign in with a passkey',exact:true}).click();await expect(page.getByRole('listbox',{name:'Conversations'})).toBeVisible();
     const session=await page.request.get('/web/v1/session').then(response=>response.json());expect(session.kind).toBe(kind);expect(session.cache).toBe(kind==='trusted'?'persistent':'memory');
     const cookie=(await context.cookies()).find(cookie=>cookie.name==='ab_session_local')!;expect(cookie.httpOnly&&!cookie.secure&&cookie.sameSite==='Strict').toBe(true);
     if(kind==='public'){
