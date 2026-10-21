@@ -193,6 +193,7 @@ export class LiveClient {
     private updateCommand(id: string, value: unknown, status: string, error: unknown) {
         const previous = this.commands.get(id);
         if (!previous) return;
+        if (finalCommandStates.has(previous.status) && !previous.transport_lost && !finalCommandStates.has(status)) return;
         const record = value as Partial<CommandState> | undefined;
         const cursor = record?.cursor;
         if (!cursor && previous.cursor || cursor && previous.cursor && cursor.epoch === previous.cursor.epoch && cursor.subscription_revision === previous.cursor.subscription_revision && cursor.sequence < previous.cursor.sequence) return;
@@ -203,10 +204,18 @@ export class LiveClient {
             cursor: cursor ?? previous.cursor });
         this.commandRevision[1](value => value + 1);
     }
-    private reconcile(id: string) {
+    private reconcile(id: string, force = false) {
         const subID = 'command:' + id;
+        const existing = this.subscriptions.get(subID);
+        if (existing) {
+            if (!force) return;
+            existing.cursor = undefined; existing.generation++; existing.update({});
+            this.send({ t: 'unsub', id: subID });
+            this.send({ t: 'sub', id: subID, view: existing.view, args: existing.args });
+            return;
+        }
         const [data, update] = createSignal<ViewData>({});
-        const sub: Subscription = { id: subID, view: 'record', args: { collection: 'system.command', id }, data, update, cacheKey: subID, generation: 0 };
+        const sub: Subscription = { id: subID, view: 'record', args: { collection: 'system.command', id }, data, update, cacheKey: subID, generation: 0, cache: false, resetOnReconnect: true };
         this.subscriptions.set(subID, sub);
         const original = update;
         sub.update = value => { original(value); const record = value.records?.[0]?.data; if (record && typeof record.state === 'string') {
@@ -239,6 +248,10 @@ export class LiveClient {
         return id;
     }
 
+    checkCommand(id: string) {
+        if (!this.commands.has(id) || this.status() !== 'connected') throw new Error('Unavailable');
+        this.reconcile(id, true);
+    }
     reconnect() { this.socket?.close(4000,'reconnect'); }
     close() { this.stopped = true; clearTimeout(this.timer); clearInterval(this.heartbeat); this.socket?.close(); this.connection[1]('offline'); }
 }

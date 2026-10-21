@@ -9,6 +9,7 @@ export function CommandsFixture() {
     const [captured, setCaptured] = createSignal({ items: thread.data().items ?? [], cursor: thread.cursor() });
     createEffect(() => { const items = thread.data().items ?? [], cursor = thread.cursor(); untrack(() => batch(() => { commands.observe(items, cursor); setCaptured({ items, cursor }); })); });
     const rows = createMemo(() => [...commands.projectCaptured(captured().items, captured().cursor), ...commands.pending()]);
+    const notice = () => commands.notice(chatID);
     const latest = () => commands.statuses().find(command => command.id === id());
     onCleanup(() => { thread.dispose(); commands.dispose(); });
     return <section>
@@ -17,6 +18,8 @@ export function CommandsFixture() {
             try { setID(commands.send(event, { chat_id: chatID, text: text() })); setText(''); }
             catch (error) { setError((error as Error).message); }
         }}>Send fixture message</button>
+        <button disabled={!id() || live.status() !== 'connected'} onClick={() => commands.check(id())}>Check fixture command</button>
+        <button disabled={!id()} onClick={event => { void commands.copy(event, id()); }}>Copy fixture message</button>
         <button onClick={() => live.reconnect()}>Reconnect command fixture</button>
         <output aria-label="Fixture connection">{live.status()}</output>
         <output aria-label="Fixture ambiguity origin">{latest()?.transport_lost ? 'local transport' : latest()?.disposition ?? ''}</output>
@@ -24,7 +27,9 @@ export function CommandsFixture() {
         <output aria-label="Fixture command status">{latest() ? messageCommandLabel(latest()!) : ''}</output>
         <output aria-label="Captured metadata untouched">{String((thread.data().items ?? []).every(item => item.data.command_id === undefined))}</output>
         <output aria-label="Projection timeout count">{commands.timeoutCount()}</output>
+        <output aria-label="Missing observed identity count">{commands.missingIdentityCount()}</output>
+        <For each={notice() ? [notice()!] : []}>{value => <aside aria-label="Uncertain delivery">{value.text} · <button disabled={live.status() !== 'connected'} onClick={() => value.command_ids.forEach(id => commands.check(id))}>Check</button></aside>}</For>
         <output role="alert">{error()}</output>
-        <For each={rows()}>{item => <p data-record-id={item.id} data-command-sent-at={String(item.data.command_sent_at ?? '')} data-native-sent-at={item.data.sent_at} data-parts={JSON.stringify(item.data.parts ?? [])} data-command-id={String(item.data.command_id ?? '')} data-local-echo={item.id.startsWith('command:') ? '' : undefined}>{String(item.data.text ?? '')}</p>}</For>
+        <For each={rows()}>{item => <p data-record-id={item.id} data-send-state={String(item.data.send_state ?? '')} data-command-sent-at={String(item.data.command_sent_at ?? '')} data-native-sent-at={item.data.sent_at} data-parts={JSON.stringify(item.data.parts ?? [])} data-command-id={String(item.data.command_id ?? '')} data-local-echo={item.id.startsWith('command:') ? '' : undefined}>{String(item.data.text ?? '')}</p>}</For>
     </section>;
 }
