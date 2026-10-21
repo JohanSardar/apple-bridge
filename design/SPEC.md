@@ -1398,4 +1398,13 @@ Each app follows its spec (`design/web/reminders.md`, `calendar.md`, `contacts.m
 | W5-WRITE | Inline create with client-side natural-language dates, edit, complete (signature motion), delete, move, create list; optimistic via `observed_record_ids`. WEB-REM-WRITE (web, real on "Bridge Test"). |
 | W5-PARITY | Flag, subtasks, sections, tags, list icon/emoji/group, manual reorder, images, custom smart lists, through AppleScript or Accessibility, proven per OS build or hidden. WEB-REM-PARITY. |
 
+**W6 units (Calendar):**
+
+| Unit | Contents |
+|---|---|
+| W6-STORE | Store-backed fields per the `calendar.md` §4 mapping, AppleTruth counts, the read model `calendar.range` with precomputed overlap groups (≤ 10 ms p95 for a month), sim and demo dataset. CAL-STORE-READ. |
+| W6-UI | Day, Week, Month, Year and List views, calendars sidebar, mini month, event inspector (read), search, now-line, period paging with momentum, keyboard. WEB-CAL-READ. |
+| W6-WRITE | Create (drag, double-click, quick event with client-side natural language), move and resize with snapping, edit and delete with the This/Future prompt, alerts, time zone, new calendar. WEB-CAL-WRITE (web, real on the "Bridge Test" calendar). |
+| W6-PARITY | Invitation responses, travel time and attachments through Calendar.app Accessibility where provable, otherwise hidden. WEB-CAL-PARITY. |
+
 The shell's app switcher enables each app when its R step passes. Scenario families: `WEB-REM-*`, `WEB-CAL-*`, `WEB-CON-*`, `WEB-NOTE-*` (web level, 12 projects), plus `REM-STORE-*`, `CAL-STORE-*` and `NOTE-DECODE-FULL` (sim and real).

@@ -69,6 +69,22 @@ Status: W6 draft, waiting for Johan's skim. The format follows `messages.md` and
 - Store-backed fields: travel time, attachments as blobs, structured location, invitation status of the owner.
 - AppleTruth checks.
 
+**Store mapping (R).** `Calendar.sqlitedb` lives in the Calendar group container. Column names were read on the Air (macOS 26.7.1), schema only.
+
+| Field | Store source |
+|---|---|
+| link to EventKit | `CalendarItem.unique_identifier` / `UUID` / `external_id` (the W6-STORE worker proves which equals EventKit's `calendarItemIdentifier` and the external identifier) |
+| travel time | `CalendarItem.travel_time`, `travel_advisory_behavior`, start location via `start_location_id` → `Location` |
+| structured location | `Location.title`, `address`, `latitude`, `longitude`, `radius`, `mapkit_handle` (via `location_id`) |
+| attachments | `Attachment(owner_id → CalendarItem.ROWID, file_id → AttachmentFile)`; bytes become blobs with variants |
+| owner's invitation status | `CalendarItem.invitation_status`, `self_attendee_id` → `Participant.status` |
+| attendee proposals and comments | `Participant.proposed_start_date`, `comment` (display only) |
+| conference / video link | `Conference` table (display as a join link) |
+| privacy, priority | `CalendarItem.privacy_level`, `priority` |
+| alarms (extra detail) | `Alarm.trigger_interval`, `trigger_date`, `proximity`, `location_id`, `default_alarm` |
+
+Change detection reuses the existing Calendar database hints from `f585a30`, with bounded coalescing and never one refetch per hint (see LIVE-FIX).
+
 **W:** existing EventKit commands, plus the "This Event Only / All Future Events" prompt in the UI.
 
 **P:** invitation responses, travel time and attachments are written through Calendar.app Accessibility only where provable. Otherwise they stay hidden.
