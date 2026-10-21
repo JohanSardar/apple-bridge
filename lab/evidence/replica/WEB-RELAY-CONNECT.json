@@ -1,20 +1,21 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[5.21 6.06 7.18] cpus=8 other_heavy=1; ubuntu: load=[4.54 2.08 3.35] cpus=8 other_heavy=0"
+    "summary": "air: load=[10.32 12.63 10.5] cpus=8 other_heavy=1; ubuntu: load=[0.86 0.9 1.45] cpus=8 other_heavy=0"
   },
-  "run_id": "relay-connect_01M5EFKS54GDEAS8EHMTY613ZV",
+  "run_id": "relay-connect_01M5EGSMZ2HCVG8RFFT0F8P7KR",
   "network_path": "public Funnel; pinned public DNS through CONNECT egress; no peer or SSH tunnel",
   "metrics": {
     "public_connections": 2,
+    "revocation_clock_uncertainty_ms": 68.428308,
     "snapshot_pages": 1,
     "snapshot_records": 3
   },
   "scenario": "WEB-RELAY-CONNECT",
   "level": "replica",
   "passed": true,
-  "git_sha": "f2c80b527083ede66eab33ad847381b1d3dc4af8",
-  "at": "2026-10-21T05:40:43.301573Z",
+  "git_sha": "6bb968a76e5df617aa4ddad21104c313f002a32e",
+  "at": "2026-10-21T06:01:24.194411Z",
   "assertions": [
     {
       "name": "serve_config_before",
@@ -89,6 +90,22 @@
       "passed": true
     },
     {
+      "name": "captured_public_auth_frame_replay_rejected",
+      "passed": true
+    },
+    {
+      "name": "public_replica_feed_closes_on_revocation",
+      "passed": true
+    },
+    {
+      "name": "relay_revocation_closes_within_one_second",
+      "passed": true
+    },
+    {
+      "name": "running_ubuntu_replica_reports_revoked_connection_closed",
+      "passed": true
+    },
+    {
       "name": "remote_off",
       "passed": true
     },
@@ -101,7 +118,15 @@
       "passed": true
     }
   ],
-  "latency": {},
+  "latency": {
+    "revoke→public_feed_closed": {
+      "samples": 1,
+      "p50_ms": 147.773691,
+      "p95_ms": 147.773691,
+      "max_ms": 147.773691,
+      "timeouts": 0
+    }
+  },
   "hosts": [
     "air",
     "ubuntu"
