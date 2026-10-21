@@ -101,7 +101,7 @@ func summaryActivities(ctx context.Context, tx *sql.Tx, chats []contracts.ChatSu
 		return nil, err
 	}
 	for _, attachment := range attachments {
-		for _, id := range messageChats[fieldString(modelFields(attachment), "message_id")] {
+		for _, id := range messageChats[attachmentMessage(modelFields(attachment))] {
 			entry := out[id]
 			entry.attachments = append(entry.attachments, attachment)
 			out[id] = entry

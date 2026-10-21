@@ -104,11 +104,11 @@ func (s *Store) Chats(ctx context.Context, v trust.Visibility, q contracts.Chats
 	args := []any{}
 	if q.Filter == "archived" {
 		where += " AND coalesce(json_extract(r.payload,'$.data.is_archived'),0)=1"
-	} else {
+	} else if q.Filter != "deleted" {
 		where += " AND coalesce(json_extract(r.payload,'$.data.is_archived'),0)=0"
 	}
 	if q.Filter == "deleted" {
-		where += " AND json_extract(r.payload,'$.data.deleted_at') IS NOT NULL"
+		where += " AND (json_extract(r.payload,'$.data.deleted_at') IS NOT NULL OR EXISTS(SELECT 1 FROM msg_by_chat m WHERE m.chat_id=s.id AND json_extract(m.payload,'$.data.deleted_at') IS NOT NULL))"
 	} else {
 		where += " AND json_extract(r.payload,'$.data.deleted_at') IS NULL"
 	}
@@ -116,7 +116,7 @@ func (s *Store) Chats(ctx context.Context, v trust.Visibility, q contracts.Chats
 		where += " AND s.unread_count>0"
 	}
 	if q.Filter == "spam" {
-		where += " AND EXISTS(SELECT 1 FROM msg_by_chat m WHERE m.chat_id=s.id AND json_extract(m.payload,'$.data.is_spam')=1)"
+		where += " AND (coalesce(json_extract(r.payload,'$.data.is_spam'),0)=1 OR EXISTS(SELECT 1 FROM msg_by_chat m WHERE m.chat_id=s.id AND json_extract(m.payload,'$.data.is_spam')=1))"
 	}
 	if q.Filter == "known" || q.Filter == "unknown" {
 		known := "(coalesce(json_extract(r.payload,'$.data.filter'),'known')='known' OR EXISTS(SELECT 1 FROM json_each(r.payload,'$.data.participants') p JOIN records h ON h.collection='messages.handle' AND h.id=p.value AND h.deleted=0 WHERE json_extract(h.payload,'$.data.contact_id') IS NOT NULL))"
@@ -385,7 +385,7 @@ func (s *Store) Thread(ctx context.Context, v trust.Visibility, q contracts.Thre
 		}
 		byAttachment := map[string][]contracts.Record{}
 		for _, r := range attachments {
-			id := fieldString(modelFields(r), "message_id")
+			id := attachmentMessage(modelFields(r))
 			byAttachment[id] = append(byAttachment[id], r)
 		}
 		counts := map[string]int{}

@@ -264,7 +264,7 @@ func Start(ctx, Config) error
 
 | Collection | Key data fields |
 |---|---|
-| `messages.chat` | `service` (iMessage/SMS/RCS), `style` (direct/group), `display_name`, `participants[]` (handle ids), `is_archived`, `last_read_at`, `capabilities` (per-chat allowed actions) |
+| `messages.chat` | `service` (iMessage/SMS/RCS), `style` (direct/group), `display_name`, `participants[]` (handle ids), `is_archived`, `last_read_at`, `capabilities` (per-chat allowed actions), `is_spam` (native Junk tier) |
 | `messages.handle` | `address` (phone/email), `service`, `contact_id?` |
 | `messages.message` | `chat_id`, `sender_handle_id?`, `is_from_me`, `sent_at`, `parts[]` (`{index, kind: text|attachment, text?, attachment_id?}`), `text` (joined plain text), `decode_status` (`decoded|partial|undecoded`), `raw_body_digest?`, `reply_to_id?`, `thread_originator_id?`, `edited_at?`, `edit_history[]`, `retracted_parts[]`, `retracted_at?`, `delivered_at?`, `read_at?`, `error_code`, `effect?`, `kind` (`message|group_event|system`), `group_event?` |
 | `messages.reaction` | `message_id`, `part_index`, `sender_handle_id?`, `is_from_me`, `kind` (love/like/dislike/laugh/emphasize/question/emoji/sticker), `emoji?`, `removed` |
@@ -1024,7 +1024,7 @@ Operations (descriptors in `internal/contracts/operations.go`; available through
 
 - `messages.handles{ids[]≤500}` → `{handles: [{handle_id, address, service, contact_id?, display_name, initials, avatar{digest, variant}?}], cursor}`. Duplicate IDs are folded and unknown IDs omitted. Contact names and avatars require contact visibility. Contact images use `variant=original` with the chosen thumbnail or original digest. Available as the `handles` live view as well as ordinary REST/MCP reads.
 
-**Unread:** a message counts as unread when it is not from me, has `kind = message`, has `read_at` null, and is not recoverable. The default chat list excludes recoverable chats. Known includes native known-sender chats and chats with a linked contact; spam selects chats containing a spam message.
+**Unread:** a message counts as unread when it is not from me, has `kind = message`, has `read_at` null, and is not recoverable. The default chat list excludes recoverable chats; the deleted filter also includes active chats containing recoverable messages. Known includes native known-sender chats and chats with a linked contact; spam selects native Junk chats or chats containing a spam message.
 
 **Implementation:**
 - Derived tables in `state.db` (`msg_by_chat`, `chat_summary`, `reaction_by_message`, `attachment_by_message`), updated in the same transaction as each record apply and rebuilt on snapshot install, on the gateway and replicas alike.
