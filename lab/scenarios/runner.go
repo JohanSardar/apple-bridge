@@ -394,6 +394,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "REM-STORE-READ" || s.ID == "REM-STORE-DECODE" {
 		return runRemindersStore(ctx, s, level)
 	}
+	if s.ID == "WEB-RM-REMINDERS-DEMO" {
+		return runRemindersDemo(ctx, s, level)
+	}
 	if level == "web" {
 		return runWeb(ctx, s)
 	}
