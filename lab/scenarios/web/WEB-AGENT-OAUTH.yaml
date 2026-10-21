@@ -1,8 +1,0 @@
-id: WEB-AGENT-OAUTH
-feature: web.agents
-levels: [sim, web]
-web: {browsers: [chromium], themes: [light, dark], layouts: [phone, desktop], server: gateway}
-given: [{world: {replicas: 1}}]
-when: [{web: {}}]
-then: []
-cleanup: [{world: {}}]
