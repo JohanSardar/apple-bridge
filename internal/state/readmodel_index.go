@@ -19,6 +19,7 @@ func (s *Store) initReadModels(ctx context.Context) error {
  CREATE INDEX IF NOT EXISTS msg_chat_time ON msg_by_chat(chat_id,sent_at,id);
  CREATE INDEX IF NOT EXISTS msg_unread ON msg_by_chat(chat_id,sent_at,id) WHERE unread=1;
  CREATE INDEX IF NOT EXISTS msg_mention ON msg_by_chat(chat_id) WHERE json_extract(payload,'$.data.has_unseen_mention')=1 AND json_extract(payload,'$.data.deleted_at') IS NULL;
+ CREATE INDEX IF NOT EXISTS msg_deleted ON msg_by_chat(chat_id) WHERE json_extract(payload,'$.data.deleted_at') IS NOT NULL;
  CREATE INDEX IF NOT EXISTS msg_spam ON msg_by_chat(chat_id) WHERE json_extract(payload,'$.data.is_spam')=1;
  CREATE INDEX IF NOT EXISTS msg_balloon ON msg_by_chat(chat_id,json_extract(payload,'$.data.balloon.kind'),sent_at DESC,id);
  CREATE INDEX IF NOT EXISTS msg_originator ON msg_by_chat(originator);

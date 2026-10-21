@@ -1,9 +1,9 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[3.61 4.15 5.98] cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[9.91 8.66 9.28] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M5E5J9HY9BQNH769YVCBFF4Q",
+  "run_id": "run_01M5ED8RDKXMJQ29X90NG0DPDP",
   "metrics": {
     "chats": 500,
     "seed_messages": 170000
@@ -11,8 +11,8 @@
   "scenario": "WEB-RM-THREAD",
   "level": "sim",
   "passed": true,
-  "git_sha": "e2722bd1f479fabbacf7e5a913c7fc9037f2d2dc",
-  "at": "2026-10-21T02:45:08.798685Z",
+  "git_sha": "776c8d9f3c2c8940c4ad6fdf4b1f056cf1a6bea3",
+  "at": "2026-10-21T04:59:44.94723Z",
   "assertions": [
     {
       "name": "synthetic_sim_seed_committed",
@@ -88,6 +88,62 @@
     },
     {
       "name": "mcp_backward_concurrent_paging_no_gaps_or_duplicates",
+      "passed": true
+    },
+    {
+      "name": "placed_sticker_capture",
+      "passed": true
+    },
+    {
+      "name": "rest_sticker_on_target_bubble",
+      "passed": true
+    },
+    {
+      "name": "rest_sticker_target_preview",
+      "passed": true
+    },
+    {
+      "name": "mcp_sticker_on_target_bubble",
+      "passed": true
+    },
+    {
+      "name": "mcp_sticker_target_preview",
+      "passed": true
+    },
+    {
+      "name": "mixed_deleted_capture",
+      "passed": true
+    },
+    {
+      "name": "rest_deleted_filter_contains_mixed_chat",
+      "passed": true
+    },
+    {
+      "name": "rest_mixed_chat_retains_active_unread",
+      "passed": true
+    },
+    {
+      "name": "rest_recoverable_media_excluded",
+      "passed": true
+    },
+    {
+      "name": "rest_native_junk_without_messages",
+      "passed": true
+    },
+    {
+      "name": "mcp_deleted_filter_contains_mixed_chat",
+      "passed": true
+    },
+    {
+      "name": "mcp_mixed_chat_retains_active_unread",
+      "passed": true
+    },
+    {
+      "name": "mcp_recoverable_media_excluded",
+      "passed": true
+    },
+    {
+      "name": "mcp_native_junk_without_messages",
       "passed": true
     },
     {
@@ -258,16 +314,16 @@
   "latency": {
     "mcp_thread": {
       "samples": 100,
-      "p50_ms": 4.684208,
-      "p95_ms": 5.428708,
-      "max_ms": 8.689,
+      "p50_ms": 2.814541,
+      "p95_ms": 3.76425,
+      "max_ms": 19.008292,
       "timeouts": 0
     },
     "rest_thread": {
       "samples": 100,
-      "p50_ms": 1.28625,
-      "p95_ms": 1.645958,
-      "max_ms": 15.938291,
+      "p50_ms": 1.611833,
+      "p95_ms": 2.783792,
+      "max_ms": 35.399083,
       "timeouts": 0
     }
   },
