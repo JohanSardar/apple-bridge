@@ -1,15 +1,15 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[9.16 9.16 12.41] cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[5.19 6.89 8.79] cpus=8 other_heavy=0"
   },
-  "run_id": "remote_01M5E9BXWP50A9QPWT10CMP3MF",
+  "run_id": "remote_01M5EABATQFBP1X3T4MX0PR8CH",
   "network_path": "public DNS pinned Funnel relay; real system Tailscale; isolated synthetic gateway",
   "scenario": "WEB-REMOTE-FUNNEL",
   "level": "real",
   "passed": true,
-  "git_sha": "454547942eb5262891bdd4c74be0d2bcbf7730d8",
-  "at": "2026-10-21T03:51:34.550921Z",
+  "git_sha": "8d5ece419ca13dc0e8cf24327ddf1b536b03ba5c",
+  "at": "2026-10-21T04:08:43.607039Z",
   "assertions": [
     {
       "name": "serve_config_before",
@@ -80,35 +80,15 @@
       "passed": true
     },
     {
+      "name": "feed_reserved",
+      "passed": true
+    },
+    {
       "name": "mcp_initialize",
       "passed": true
     },
     {
-      "name": "mcp_read_tool",
-      "passed": true
-    },
-    {
-      "name": "public_health",
-      "passed": true
-    },
-    {
-      "name": "read_00",
-      "passed": true
-    },
-    {
-      "name": "read_04",
-      "passed": true
-    },
-    {
-      "name": "read_06",
-      "passed": true
-    },
-    {
-      "name": "read_08",
-      "passed": true
-    },
-    {
-      "name": "read_16",
+      "name": "mcp_sse_response",
       "passed": true
     },
     {
@@ -116,39 +96,11 @@
       "passed": true
     },
     {
-      "name": "origin_rejected",
-      "passed": true
-    },
-    {
       "name": "read_01",
       "passed": true
     },
     {
-      "name": "read_19",
-      "passed": true
-    },
-    {
-      "name": "public_passkey_origin_rpid",
-      "passed": true
-    },
-    {
-      "name": "read_13",
-      "passed": true
-    },
-    {
-      "name": "feed_reserved",
-      "passed": true
-    },
-    {
-      "name": "read_07",
-      "passed": true
-    },
-    {
-      "name": "read_09",
-      "passed": true
-    },
-    {
-      "name": "read_10",
+      "name": "read_12",
       "passed": true
     },
     {
@@ -156,31 +108,11 @@
       "passed": true
     },
     {
-      "name": "remote_token_rest",
+      "name": "read_19",
       "passed": true
     },
     {
-      "name": "read_11",
-      "passed": true
-    },
-    {
-      "name": "read_15",
-      "passed": true
-    },
-    {
-      "name": "html_valid_certificate",
-      "passed": true
-    },
-    {
-      "name": "read_14",
-      "passed": true
-    },
-    {
-      "name": "read_17",
-      "passed": true
-    },
-    {
-      "name": "local_token_rejected",
+      "name": "mcp_read_tool",
       "passed": true
     },
     {
@@ -192,11 +124,47 @@
       "passed": true
     },
     {
+      "name": "read_09",
+      "passed": true
+    },
+    {
+      "name": "read_10",
+      "passed": true
+    },
+    {
+      "name": "read_16",
+      "passed": true
+    },
+    {
+      "name": "read_17",
+      "passed": true
+    },
+    {
       "name": "read_05",
       "passed": true
     },
     {
-      "name": "read_12",
+      "name": "read_06",
+      "passed": true
+    },
+    {
+      "name": "read_15",
+      "passed": true
+    },
+    {
+      "name": "local_token_rejected",
+      "passed": true
+    },
+    {
+      "name": "public_passkey_origin_rpid",
+      "passed": true
+    },
+    {
+      "name": "read_08",
+      "passed": true
+    },
+    {
+      "name": "public_health",
       "passed": true
     },
     {
@@ -204,7 +172,39 @@
       "passed": true
     },
     {
-      "name": "mcp_sse_response",
+      "name": "origin_rejected",
+      "passed": true
+    },
+    {
+      "name": "read_00",
+      "passed": true
+    },
+    {
+      "name": "read_04",
+      "passed": true
+    },
+    {
+      "name": "read_13",
+      "passed": true
+    },
+    {
+      "name": "read_14",
+      "passed": true
+    },
+    {
+      "name": "html_valid_certificate",
+      "passed": true
+    },
+    {
+      "name": "read_07",
+      "passed": true
+    },
+    {
+      "name": "read_11",
+      "passed": true
+    },
+    {
+      "name": "remote_token_rest",
       "passed": true
     },
     {
@@ -220,23 +220,7 @@
       "passed": true
     },
     {
-      "name": "read_07",
-      "passed": true
-    },
-    {
-      "name": "read_16",
-      "passed": true
-    },
-    {
-      "name": "html_valid_certificate",
-      "passed": true
-    },
-    {
-      "name": "read_02",
-      "passed": true
-    },
-    {
-      "name": "read_05",
+      "name": "read_04",
       "passed": true
     },
     {
@@ -244,15 +228,7 @@
       "passed": true
     },
     {
-      "name": "read_13",
-      "passed": true
-    },
-    {
-      "name": "read_12",
-      "passed": true
-    },
-    {
-      "name": "feed_reserved",
+      "name": "read_15",
       "passed": true
     },
     {
@@ -264,47 +240,11 @@
       "passed": true
     },
     {
-      "name": "read_03",
-      "passed": true
-    },
-    {
-      "name": "read_08",
-      "passed": true
-    },
-    {
-      "name": "read_18",
-      "passed": true
-    },
-    {
-      "name": "read_19",
-      "passed": true
-    },
-    {
-      "name": "public_passkey_origin_rpid",
-      "passed": true
-    },
-    {
       "name": "read_00",
       "passed": true
     },
     {
-      "name": "read_04",
-      "passed": true
-    },
-    {
-      "name": "read_11",
-      "passed": true
-    },
-    {
-      "name": "read_15",
-      "passed": true
-    },
-    {
-      "name": "read_17",
-      "passed": true
-    },
-    {
-      "name": "origin_rejected",
+      "name": "read_01",
       "passed": true
     },
     {
@@ -312,11 +252,19 @@
       "passed": true
     },
     {
-      "name": "public_health",
+      "name": "html_valid_certificate",
       "passed": true
     },
     {
-      "name": "read_06",
+      "name": "read_05",
+      "passed": true
+    },
+    {
+      "name": "read_07",
+      "passed": true
+    },
+    {
+      "name": "read_08",
       "passed": true
     },
     {
@@ -332,11 +280,19 @@
       "passed": true
     },
     {
+      "name": "read_02",
+      "passed": true
+    },
+    {
       "name": "read_09",
       "passed": true
     },
     {
-      "name": "mcp_initialize",
+      "name": "read_17",
+      "passed": true
+    },
+    {
+      "name": "read_18",
       "passed": true
     },
     {
@@ -344,7 +300,51 @@
       "passed": true
     },
     {
-      "name": "read_01",
+      "name": "public_passkey_origin_rpid",
+      "passed": true
+    },
+    {
+      "name": "read_12",
+      "passed": true
+    },
+    {
+      "name": "feed_reserved",
+      "passed": true
+    },
+    {
+      "name": "public_health",
+      "passed": true
+    },
+    {
+      "name": "mcp_initialize",
+      "passed": true
+    },
+    {
+      "name": "origin_rejected",
+      "passed": true
+    },
+    {
+      "name": "read_06",
+      "passed": true
+    },
+    {
+      "name": "read_11",
+      "passed": true
+    },
+    {
+      "name": "read_13",
+      "passed": true
+    },
+    {
+      "name": "read_16",
+      "passed": true
+    },
+    {
+      "name": "read_03",
+      "passed": true
+    },
+    {
+      "name": "read_19",
       "passed": true
     },
     {
@@ -375,16 +375,16 @@
   "latency": {
     "remote_off_public_unreachable": {
       "samples": 1,
-      "p50_ms": 543.221208,
-      "p95_ms": 543.22125,
-      "max_ms": 543.221333,
+      "p50_ms": 465.671666,
+      "p95_ms": 465.67175,
+      "max_ms": 465.671791,
       "timeouts": 0
     },
     "ubuntu_public_rest_records_query": {
       "samples": 20,
-      "p50_ms": 56.510874,
-      "p95_ms": 124.202213,
-      "max_ms": 127.402179,
+      "p50_ms": 54.63802,
+      "p95_ms": 60.495482,
+      "max_ms": 82.005173,
       "timeouts": 0
     }
   },

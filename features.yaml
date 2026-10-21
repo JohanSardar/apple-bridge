@@ -424,15 +424,16 @@ features:
       - {id: WEB-MEDIA-CAP, levels: [sim]}
     notes: Variants work on the real Air (12 read-only native variant downloads verified). Real and replica runs wait for cleanup of six tagged self-chat file bubbles (media-bubble Accessibility targeting, GUI needed once the Air's lid is open) and the cold-arrival latency measurement.
   - id: web.remote
-    title: Reach from anywhere through the embedded Tailscale Funnel
+    title: Reach from anywhere through system or embedded Tailscale Funnel
     requirements: [R-WEB-REACH, R-SECURE]
     milestone: W1
     modules: [remote, web, frontdoor, runtime]
     depends_on: [web.frontdoor]
-    status: todo
+    status: in_progress
     scenarios:
       - {id: WEB-REMOTE-FUNNEL, levels: [real]}
       - {id: WEB-LOCAL-SAFARI, levels: [web]}
+    notes: System Funnel passes the public Ubuntu path, REST and MCP SSE; embedded startup is covered without network. Real embedded authorization awaits the leader in the Air GUI.
   - id: web.agents
     title: Agent tokens with read, approve-first and full levels; MCP OAuth for connectors
     requirements: [R-WEB-SECURE, R-AGENT]
