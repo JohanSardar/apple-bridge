@@ -1,0 +1,11 @@
+import { createResource, createSignal, Show } from 'solid-js';
+import { AccessPicker, selectedGrants, type Level } from './AgentAccess';
+import { strings as s } from '../app/strings';
+export default function Consent() {
+    const query = new URLSearchParams(location.search);
+    const [client] = createResource(async () => { const params = new URLSearchParams(query); params.set('format', 'json'); const response = await fetch('/oauth/authorize?' + params, { cache: 'no-store' }); if (!response.ok) throw new Error(s.unavailable); return response.json() as Promise<{ client_name: string; redirect_host: string; scopes: string[] }>; });
+    const [level, setLevel] = createSignal<Level>('approve'), [scopes, setScopes] = createSignal((query.get('scope') || 'messages:read').split(' ').map(scope => scope.split(':')[0]).filter((value, index, array) => array.indexOf(value) === index) ?? []);
+    const [error, setError] = createSignal(''), [busy, setBusy] = createSignal(false);
+    async function decide(decision: string) { setBusy(true); try { const response = await fetch('/oauth/authorize?' + query, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ decision, level: level(), scopes: selectedGrants(level(), scopes(), client()?.scopes) }) }); if (!response.ok) throw new Error(s.unavailable); const result = await response.json() as { redirect: string }; location.assign(result.redirect); } catch { setError(s.unavailable); setBusy(false); } }
+    return <main class="consent-page"><div class="consent-card"><h1>{s.consentTitle}</h1><Show when={client()}>{value => <><h2>{value().client_name}</h2><p class="secondary">{s.redirectHost} <strong>{value().redirect_host}</strong></p><p>{s.consentHint}</p><AccessPicker level={level()} setLevel={setLevel} scopes={scopes()} setScopes={setScopes} allowed={value().scopes} /><div class="agent-actions"><button class="button subtle" disabled={busy()} onClick={() => void decide('reject')}>{s.cancel}</button><button class="button" disabled={busy() || !scopes().length} onClick={() => void decide('approve')}>{s.allowConnection}</button></div></>}</Show><Show when={error() || client.error}><p class="error" role="alert">{error() || s.unavailable}</p></Show></div></main>;
+}
