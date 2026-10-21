@@ -21,6 +21,8 @@ func main() {
 			err = proxy(ctx, os.Args[2:])
 		case "replay":
 			err = replay(ctx)
+		case "revocation":
+			err = revocation(ctx)
 		case "query":
 			err = query(ctx)
 		default:
