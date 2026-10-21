@@ -376,6 +376,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "HELPER-SIGNED-APP-CACHE" {
 		return runNativeAppCache(ctx, s, level)
 	}
+	if s.ID == "REM-STORE-PERF" {
+		return runRemindersStorePerf(ctx, s, level)
+	}
 	if s.ID == "REM-STORE-READ" {
 		return runRemindersStore(ctx, s, level)
 	}
@@ -435,6 +438,12 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 			return runMessagesCommands(ctx, s, level)
 		}
 		return runWebServer(ctx, s, level)
+	}
+	if s.ID == "WEB-UPLOAD-CONTROL-PRODUCTION" {
+		return runUploadControlProduction(ctx, s, level)
+	}
+	if s.ID == "WEB-UPLOAD-REPLICA-CHECKPOINT" && !uploadControlLabEnabled() {
+		return runUploadTagged(ctx, s, level, true)
 	}
 	if strings.HasPrefix(s.ID, "WEB-UPLOAD-REPLICA") {
 		return runUploadReplica(ctx, s, level)

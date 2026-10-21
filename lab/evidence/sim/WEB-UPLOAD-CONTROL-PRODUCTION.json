@@ -1,0 +1,38 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[3.38 3.6 3.97] cpus=8 other_heavy=0"
+  },
+  "run_id": "control_01M5FR0JD6NJB7V1D62DQZ0KQN",
+  "scenario": "WEB-UPLOAD-CONTROL-PRODUCTION",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "a8547136bd20534366885258a4faafd1f8a7386e",
+  "at": "2026-10-21T17:26:45.414961Z",
+  "assertions": [
+    {
+      "name": "non_lab_route_absent:/replica-upload-checkpoint/arm",
+      "passed": true
+    },
+    {
+      "name": "non_lab_route_absent:/replica-upload-checkpoint/wait",
+      "passed": true
+    },
+    {
+      "name": "non_lab_route_absent:/replica-upload-checkpoint/release",
+      "passed": true
+    },
+    {
+      "name": "non_lab_route_absent:/command-effect",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": [
+    "air"
+  ]
+}

@@ -1,0 +1,157 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[9.9 9.05 9.11] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5FDH0DT1DG0WRASTJM2ST30",
+  "metrics": {
+    "profile": {
+      "cold": {
+        "connection_open_ms": 1.005916390568018,
+        "close_ms": 0,
+        "backup_ms": 0,
+        "total_ms": 178.8772081490606,
+        "decode_ms": 20.240216748788953,
+        "query_ms": 157.63107500970364
+      },
+      "iterations": 200,
+      "mode": "persistent_typed",
+      "profile_total_ms": 10064.49916656129,
+      "responsiveness": {
+        "main_queue_delay": {
+          "samples": 633,
+          "under_16_ms": true,
+          "max_ms": 1.8421248532831669,
+          "p95_ms": 0.10604155249893665
+        },
+        "cold_full_elapsed_ms": 1246.3152499403805
+      },
+      "warm_full": {
+        "connection_open": {
+          "samples": 200,
+          "max_ms": 0,
+          "p95_ms": 0,
+          "p50_ms": 0
+        },
+        "backup": {
+          "samples": 200,
+          "max_ms": 0,
+          "p95_ms": 0,
+          "p50_ms": 0
+        },
+        "query": {
+          "samples": 200,
+          "max_ms": 498.0165839660913,
+          "p95_ms": 59.06743253581226,
+          "p50_ms": 30.174540588632226
+        },
+        "total": {
+          "samples": 200,
+          "max_ms": 530.4970412980765,
+          "p95_ms": 72.523083537817,
+          "p50_ms": 39.28129165433347
+        },
+        "decode": {
+          "samples": 200,
+          "max_ms": 32.480457331985235,
+          "p95_ms": 14.032805571332574,
+          "p50_ms": 8.330717450007796
+        }
+      },
+      "warm_incremental_unchanged": {
+        "backup": {
+          "samples": 200,
+          "max_ms": 0,
+          "p95_ms": 0,
+          "p50_ms": 0
+        },
+        "connection_open": {
+          "samples": 200,
+          "max_ms": 0,
+          "p95_ms": 0,
+          "p50_ms": 0
+        },
+        "query": {
+          "samples": 200,
+          "max_ms": 3.0198325403034687,
+          "p95_ms": 0.5854172632098198,
+          "p50_ms": 0.07420871406793594
+        },
+        "total": {
+          "samples": 200,
+          "max_ms": 10.146541520953178,
+          "p95_ms": 2.2280002012848854,
+          "p50_ms": 0.5985416937619448
+        },
+        "decode": {
+          "samples": 200,
+          "max_ms": 9.74200014024973,
+          "p95_ms": 1.6452076379209757,
+          "p50_ms": 0.5024995189160109
+        }
+      }
+    }
+  },
+  "scenario": "REM-STORE-PERF",
+  "level": "real",
+  "passed": true,
+  "git_sha": "5ac346f264da1ccc01aab03589243b97b1839277",
+  "at": "2026-10-21T14:23:29.722961Z",
+  "assertions": [
+    {
+      "name": "private_profile_directory",
+      "passed": true
+    },
+    {
+      "name": "private_signed_helper",
+      "passed": true
+    },
+    {
+      "name": "store_profile_completed",
+      "passed": true
+    },
+    {
+      "name": "timing_only_profile_decoded",
+      "passed": true
+    },
+    {
+      "name": "warm_full_200_samples_within_budget",
+      "passed": true
+    },
+    {
+      "name": "warm_incremental_unchanged_200_samples_within_budget",
+      "passed": true
+    },
+    {
+      "name": "full_and_incremental_measured",
+      "passed": true
+    },
+    {
+      "name": "cold_full_read_main_queue_blocking_under_16_ms",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "warm_full": {
+      "samples": 200,
+      "p50_ms": 39.28129165433347,
+      "p95_ms": 72.523083537817,
+      "max_ms": 530.4970412980765,
+      "timeouts": 0
+    },
+    "warm_incremental_unchanged": {
+      "samples": 200,
+      "p50_ms": 0.5985416937619448,
+      "p95_ms": 2.2280002012848854,
+      "max_ms": 10.146541520953178,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

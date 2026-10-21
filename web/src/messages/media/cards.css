@@ -1,0 +1,41 @@
+.message-card{position:absolute;inset:0;overflow:hidden;border-radius:inherit;background:var(--background-secondary);color:var(--label);isolation:isolate}
+.message-card-art{position:absolute;inset:0 0 60px;overflow:hidden;background:var(--fill-quaternary)}
+.message-card-copy{position:absolute;inset:auto 0 0;min-width:0;height:60px;padding:9px 12px;display:flex;flex-direction:column;justify-content:center;gap:1px}
+.message-card[data-card-image=false] .message-card-copy{inset:0;height:100%;padding:12px}
+.message-card-title,.message-card-name,.message-card-domain,.message-card-device{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.message-card-title{font-size:var(--body);line-height:var(--body-line);font-weight:600}
+.message-card-domain,.message-card-device{font-size:var(--caption-1);line-height:var(--caption-1-line);color:var(--label-secondary)}
+.message-card-name{font-size:var(--caption-2);line-height:var(--caption-2-line);color:var(--label-secondary)}
+.message-card[data-card-kind=app] .message-card-copy{padding-block:5px;gap:0}
+.message-card[data-card-kind=app] .message-card-title{font-size:var(--body);line-height:var(--body-line)}
+.message-card-device{font-size:var(--caption-2);line-height:var(--caption-2-line)}
+.message-card-target{position:absolute;inset:0;z-index:1;border-radius:inherit}
+.message-card-target:focus-visible{outline:3px solid var(--blue);outline-offset:-3px}
+.message-card-missing{position:absolute;inset:0;display:grid;place-content:center;text-align:center;padding:12px;font-size:13px;color:var(--label-secondary)}
+.message-card-play,.message-card-video-badge{position:absolute;z-index:2;left:calc(50% - 22px);top:calc((100% - 60px)/2 - 22px);display:grid;place-content:center;width:44px;height:44px;border:0;border-radius:50%;color:white;background:#0005;backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);box-shadow:inset 0 0 0 .3px #fff8,0 2px 6px #0002}
+.message-card-play{cursor:pointer}
+.message-card :is(button,input):focus-visible{outline:3px solid #7ec8ff;outline-offset:-3px}
+.message-card-video-badge{pointer-events:none}
+.message-card :is(.message-card-play,.message-card-video-badge,button) svg{width:24px;height:24px}
+.message-card-trailing{position:absolute;z-index:2;inset-inline-end:12px;top:50%;transform:translateY(-50%);width:28px;height:28px;pointer-events:none}
+.message-card-trailing>.media-image{border-radius:6px;background:transparent}
+.message-card-trailing .media-image>img{object-fit:contain}
+.message-card-trailing .message-card-video-badge{inset:0;width:28px;height:28px;background:var(--fill);color:var(--label);backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:none}
+.message-card-trailing[data-card-icon=true] .message-card-video-badge{inset:auto -2px -2px auto;width:14px;height:14px;background:#242424cc;color:white}
+.message-card-trailing[data-card-icon=true] .message-card-video-badge svg{width:12px;height:12px}
+.message-card[data-card-image=false]:has(.message-card-trailing) .message-card-copy{padding-inline-end:52px}
+.message-card-player{position:absolute;inset:0;z-index:2;isolation:isolate}
+.message-card-player>video{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:cover;object-position:center;clip-path:inset(0 round 18px 18px 0 0);opacity:0;transition:opacity 120ms ease-out}
+.message-card-player[data-ready=true]>video{opacity:1}
+.message-card-controls{position:absolute;inset:auto 0 0;display:flex;gap:4px;align-items:center;padding:0 6px;color:white;background:linear-gradient(transparent,#000a)}
+.message-card-controls button{display:grid;place-content:center;flex:none;width:44px;height:44px;border:0;background:transparent;color:inherit;cursor:pointer}
+.message-card-controls input{min-width:0;flex:1;height:32px;appearance:none;background:linear-gradient(#fff8,#fff8) center/100% 3px no-repeat;accent-color:white;cursor:pointer;touch-action:none}
+.message-card-controls span{font-size:11px;min-width:28px;font-variant-numeric:tabular-nums}
+@media(prefers-reduced-motion:reduce){.message-card-play{transition:none}.message-card-player>video{transition-duration:150ms}}
+@media(prefers-reduced-transparency:reduce){.message-card-play,.message-card>.message-card-video-badge{background:#242424;backdrop-filter:none;-webkit-backdrop-filter:none}}
+.solid-material .message-card-play,.solid-material .message-card>.message-card-video-badge{background:#242424;backdrop-filter:none;-webkit-backdrop-filter:none}
+
+.message-card-controls input::-webkit-slider-runnable-track{height:3px;background:transparent}
+.message-card-controls input::-webkit-slider-thumb{appearance:none;width:10px;height:10px;margin-top:-3.5px;border:0;border-radius:50%;background:white;box-shadow:0 1px 3px #0004}
+.message-card-controls input::-moz-range-track{height:3px;background:transparent}
+.message-card-controls input::-moz-range-thumb{width:10px;height:10px;border:0;border-radius:50%;background:white;box-shadow:0 1px 3px #0004}

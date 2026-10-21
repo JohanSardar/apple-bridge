@@ -4,8 +4,10 @@ import SourceSupport
 
 final class StoreCopy {
     private var database: OpaquePointer?
+    private(set) var timings = StoreTimings()
 
     init(path: String) throws {
+        let opening = ProcessInfo.processInfo.systemUptime
         var live: OpaquePointer?
         guard sqlite3_open_v2(path, &live, SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX, nil) == SQLITE_OK else {
             if let live { sqlite3_close(live) }
@@ -18,6 +20,8 @@ final class StoreCopy {
             database = nil
             throw SourceFailure.unavailable
         }
+        timings.openMS = (ProcessInfo.processInfo.systemUptime - opening) * 1000
+        let copying = ProcessInfo.processInfo.systemUptime
         guard let backup = sqlite3_backup_init(database, "main", live, "main") else {
             sqlite3_close(database)
             database = nil
@@ -25,6 +29,7 @@ final class StoreCopy {
         }
         let step = sqlite3_backup_step(backup, -1)
         let finish = sqlite3_backup_finish(backup)
+        timings.backupMS = (ProcessInfo.processInfo.systemUptime - copying) * 1000
         guard step == SQLITE_DONE, finish == SQLITE_OK else {
             sqlite3_close(database)
             database = nil
@@ -34,13 +39,24 @@ final class StoreCopy {
 
     deinit { sqlite3_close(database) }
 
+    func close() {
+        let start = ProcessInfo.processInfo.systemUptime
+        sqlite3_close(database)
+        database = nil
+        timings.closeMS += (ProcessInfo.processInfo.systemUptime - start) * 1000
+    }
+
     func rows(_ sql: String) throws -> [[String: JSON]] {
+        let preparing = ProcessInfo.processInfo.systemUptime
         var statement: OpaquePointer?
         guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK else { throw SourceFailure.unsupported }
+        timings.queryMS += (ProcessInfo.processInfo.systemUptime - preparing) * 1000
         defer { sqlite3_finalize(statement) }
         var rows: [[String: JSON]] = []
         while true {
+            let stepping = ProcessInfo.processInfo.systemUptime
             let status = sqlite3_step(statement)
+            timings.queryMS += (ProcessInfo.processInfo.systemUptime - stepping) * 1000
             if status == SQLITE_DONE { return rows }
             guard status == SQLITE_ROW else { throw SourceFailure.corrupt }
             var row: [String: JSON] = [:]

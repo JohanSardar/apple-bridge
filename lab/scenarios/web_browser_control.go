@@ -75,6 +75,11 @@ func webBrowserControl(ctx context.Context, w *world.World, origin string) (*htt
 		var value any
 		var err error
 		switch request.URL.Path {
+		case "/replica-upload-checkpoint/arm", "/replica-upload-checkpoint/wait", "/replica-upload-checkpoint/release", "/command-effect":
+			if !webUploadCheckpointControl(response, request, w) {
+				http.NotFound(response, request)
+			}
+			return
 		case "/enroll":
 			var link string
 			link, err = enroll(request.URL.Query().Get("expired") == "1")
