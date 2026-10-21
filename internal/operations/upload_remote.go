@@ -85,6 +85,9 @@ func (g *RemoteGateway) ForwardUpload(ctx context.Context, p trust.Principal, lo
 			return local, contracts.ErrCorrupt
 		}
 		remote = next
+		if err = uploadForwardCheckpoint(ctx, local.ID, remote.Offset, info.Size()); err != nil {
+			return local, err
+		}
 	}
 	remote, err = g.UploadControl(ctx, p, contracts.UploadRequest{Action: "commit", ID: local.ID, Digest: digest})
 	if err != nil {

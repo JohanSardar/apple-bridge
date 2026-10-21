@@ -95,7 +95,7 @@ func uploadReplicaDirection(ctx context.Context, reverse bool, fault string, e *
 		return
 	}
 	data := bytes.Repeat([]byte("Bridge Test upload bytes\n"), 100000)
-	if e.Scenario == "WEB-UPLOAD-REPLICA-FORWARD-RESUME" {
+	if e.Scenario == "WEB-UPLOAD-REPLICA-FORWARD-RESUME" || e.Scenario == "WEB-UPLOAD-REPLICA-CHECKPOINT" {
 		data = bytes.Repeat([]byte("u"), 10<<20)
 	}
 	expected := sha256.Sum256(data)
@@ -104,7 +104,9 @@ func uploadReplicaDirection(ctx context.Context, reverse bool, fault string, e *
 	add("effect_baseline_available", err == nil)
 	var status int
 	var uploaded uploadResult
-	if e.Scenario == "WEB-UPLOAD-REPLICA-FORWARD-RESUME" {
+	if e.Scenario == "WEB-UPLOAD-REPLICA-CHECKPOINT" {
+		status, uploaded = uploadReplicaCheckpoint(w, c, data, add)
+	} else if e.Scenario == "WEB-UPLOAD-REPLICA-FORWARD-RESUME" {
 		status, uploaded = uploadReplicaForwardResume(w, c, data, e, add)
 	} else if e.Scenario == "WEB-UPLOAD-REPLICA-RESUME" {
 		status, uploaded = uploadReplicaResume(c, data, add)
@@ -171,6 +173,9 @@ func uploadReplicaDirection(ctx context.Context, reverse bool, fault string, e *
 	add("gateway_admission_retains_verified_blob_reference", ok && ref.Digest == digest && ref.Size == int64(len(data)))
 	effects, err = w.Effects()
 	add("exactly_one_explicit_send_effect", err == nil && effects[command.ID] == 1 && uploadEffectDelta(before, effects) == 1)
+	if e.Scenario == "WEB-UPLOAD-REPLICA-CHECKPOINT" {
+		uploadCheckpointEffect(ctx, w, command.ID, add)
+	}
 	if len(record.ObservedRecordIDs) == 0 {
 		add("immediate_replica_read_your_write", false)
 		return

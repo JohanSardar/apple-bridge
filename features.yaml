@@ -563,6 +563,8 @@ features:
       - {id: WEB-MSG-SEND, levels: [web, real]}
       - {id: WEB-MSG-ATTACH-SEND, levels: [web, real]}
       - {id: WEB-UPLOAD-REPLICA, levels: [sim]}
+      - {id: WEB-UPLOAD-REPLICA-CHECKPOINT, levels: [sim]}
+      - {id: WEB-UPLOAD-CONTROL-PRODUCTION, levels: [sim]}
       - {id: WEB-UPLOAD-REPLICA-RESUME, levels: [sim]}
       - {id: WEB-UPLOAD-REPLICA-STATUS, levels: [sim]}
       - {id: WEB-UPLOAD-REPLICA-STATUS-LOAD, levels: [sim]}
