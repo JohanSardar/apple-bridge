@@ -3,6 +3,8 @@ import Foundation
 import AgendaGate
 import SourceSupport
 
+private enum CalendarCaptureInvalidation: Error { case invalidated }
+
 @AgendaActor
 public final class CalendarSource: Source {
     public nonisolated let name = "calendar"
@@ -70,7 +72,7 @@ public final class CalendarSource: Source {
             let interval = DateInterval(start: anchor.addingTimeInterval(-180 * 86400), end: anchor.addingTimeInterval(180 * 86400))
             candidates += (try? events(interval)) ?? []
             nativeRules = candidates.first(where: {
-                $0.calendar.calendarIdentifier == event.calendar.calendarIdentifier && $0.calendar.source.sourceIdentifier == event.calendar.source.sourceIdentifier && (seriesIdentifier($0) == external || $0.calendarItemIdentifier == event.calendarItemIdentifier) && $0.hasRecurrenceRules
+                Self.canMaterialize($0) && $0.calendar.calendarIdentifier == event.calendar.calendarIdentifier && $0.calendar.source.sourceIdentifier == event.calendar.source.sourceIdentifier && (seriesIdentifier($0) == external || $0.calendarItemIdentifier == event.calendarItemIdentifier) && $0.hasRecurrenceRules
             })?.recurrenceRules
         }
         fields["recurrence"] = nativeRules.map { rules in .array(rules.map { rule in
@@ -118,7 +120,16 @@ public final class CalendarSource: Source {
         while scanning { try await Task.sleep(for: .milliseconds(10)) }
         scanning = true
         defer { scanning = false }
-        while try await !scanPass(into: sink, live: live) {}
+        var retried = false
+        while true {
+            do {
+                if try await scanPass(into: sink, live: live) { return }
+            } catch CalendarCaptureInvalidation.invalidated {
+                guard !retried else { throw CalendarCaptureInvalidation.invalidated }
+                retried = true
+                gate.trace.record("calendar_capture_invalidated_retry")
+            }
+        }
     }
 
     private func scanPass(into sink: any ObservationSink, live: Bool) async throws -> Bool {
@@ -143,8 +154,9 @@ public final class CalendarSource: Source {
                 await Task.yield()
                 await gate.waitForReminderRefetch()
                 try Task.checkCancellation()
+                guard Self.canMaterialize(event) else { throw CalendarCaptureInvalidation.invalidated }
                 let native = key(event)
-                remember(event)
+                try remember(event)
                 let identity = "calendar.event/" + native
                 if current[identity] != nil { continue }
                 let occurrence = event.hasRecurrenceRules || event.isDetached ? event.occurrenceDate.map { "|" + (event.isAllDay ? CalendarTime.floating($0, zone: .current) : timestamp($0)) } ?? "" : ""
@@ -161,6 +173,7 @@ public final class CalendarSource: Source {
                 await gate.waitForReminderRefetch()
                 try save(committed.merging(current) { _, new in new })
                 try await sink.emit(source: name, generation: "eventkit-calendar-v1", observations: pending, scanID: "", scanStartedAt: started, scope: [], completionEvidence: "", blobHandles: [:], live: live || index == 0)
+                committed.merge(current) { _, new in new }
             }
             pending = []
             await Task.yield()
@@ -177,7 +190,7 @@ public final class CalendarSource: Source {
             var evicted = false
             if previous["collection"].string == "calendar.event" {
                 let native = previous["native_key"].string
-                if let outside = lookup(native) {
+                if let outside = try lookup(native) {
                     let value = data(outside)
                     let zone = value["all_day"].bool ? TimeZone.current : (TimeZone(identifier: value["time_zone"].string) ?? .current)
                     guard let start = try? CalendarTime.date(value["start"].string, allDay: value["all_day"].bool, zone: zone), let end = try? CalendarTime.date(value["end"].string, allDay: value["all_day"].bool, zone: zone) else { current[identity] = previous; continue }
@@ -229,21 +242,29 @@ public final class CalendarSource: Source {
         for await _ in changes { try Task.checkCancellation(); try await scan(into: sink, live: true) }
     }
 
-    private func remember(_ event: EKEvent) {
-        lookups[key(event)] = .object(["event_identifier": .string(event.eventIdentifier ?? ""), "calendar": .string(event.calendar.calendarIdentifier), "account": .string(event.calendar.source.sourceIdentifier), "external": .string(event.calendarItemExternalIdentifier == nil ? "" : seriesIdentifier(event)), "occurrence": event.occurrenceDate.map { .string(timestamp($0)) } ?? .null])
+    public nonisolated static func canMaterialize(_ event: EKEvent) -> Bool {
+        guard event.startDate != nil, event.endDate != nil,
+              let calendar = event.calendar, calendar.source != nil else { return false }
+        return true
     }
 
-    private func lookup(_ native: String) -> EKEvent? {
+    private func remember(_ event: EKEvent) throws {
+        guard Self.canMaterialize(event), let calendar = event.calendar, let account = calendar.source else { throw CalendarCaptureInvalidation.invalidated }
+        lookups[key(event)] = .object(["event_identifier": .string(event.eventIdentifier ?? ""), "calendar": .string(calendar.calendarIdentifier), "account": .string(account.sourceIdentifier), "external": .string(event.calendarItemExternalIdentifier == nil ? "" : seriesIdentifier(event)), "occurrence": event.occurrenceDate.map { .string(timestamp($0)) } ?? .null])
+    }
+
+    private func lookup(_ native: String) throws -> EKEvent? {
         guard gate.authorized(.event), let identity = lookups[native] else { return nil }
-        func matches(_ event: EKEvent) -> Bool {
-            guard event.calendar.calendarIdentifier == identity["calendar"].string, event.calendar.source.sourceIdentifier == identity["account"].string else { return false }
+        func matches(_ event: EKEvent) throws -> Bool {
+            guard Self.canMaterialize(event), let calendar = event.calendar, let account = calendar.source else { throw CalendarCaptureInvalidation.invalidated }
+            guard calendar.calendarIdentifier == identity["calendar"].string, account.sourceIdentifier == identity["account"].string else { return false }
             if key(event) == native { return true }
             guard !identity["external"].string.isEmpty, seriesIdentifier(event) == identity["external"].string else { return false }
             return (event.occurrenceDate.map { JSON.string(timestamp($0)) } ?? .null) == identity["occurrence"]
         }
-        if let event = gate.store.event(withIdentifier: identity["event_identifier"].string), matches(event) { return event }
+        if let event = gate.store.event(withIdentifier: identity["event_identifier"].string), try matches(event) { return event }
         if !identity["external"].string.isEmpty {
-            if let event = gate.store.calendarItems(withExternalIdentifier: identity["external"].string).compactMap({ $0 as? EKEvent }).first(where: matches) { return event }
+            if let event = try gate.store.calendarItems(withExternalIdentifier: identity["external"].string).compactMap({ $0 as? EKEvent }).first(where: matches) { return event }
         }
         return nil
     }
@@ -255,9 +276,11 @@ public final class CalendarSource: Source {
 
     private func fresh(_ native: String) throws -> EKEvent {
         guard gate.authorized(.event) else { throw SourceFailure.permissionMissing }
-        if let event = lookup(native) { return event }
+        if let event = try lookup(native) { return event }
         for chunk in CalendarTime.chunks(Date()) {
-            if let event = try events(chunk).first(where: { key($0) == native }) { remember(event); return event }
+            let captured = try events(chunk)
+            guard captured.allSatisfy(Self.canMaterialize) else { throw SourceFailure.unavailable }
+            if let event = captured.first(where: { key($0) == native }) { try remember(event); return event }
         }
         throw SourceFailure.conflict
     }

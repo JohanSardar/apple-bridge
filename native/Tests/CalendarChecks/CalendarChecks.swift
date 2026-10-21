@@ -1,9 +1,22 @@
 import Foundation
 import CalendarSource
+import EventKit
+import Darwin
 
 @main
 struct CalendarChecks {
-    static func main() throws {
+    static func main() async throws {
+        if CommandLine.arguments.contains("--invalidated-event") {
+            let store = EKEventStore()
+            let event = EKEvent(eventStore: store)
+            event.title = "[ab-test invalidated-event]"
+            event.startDate = Date(timeIntervalSince1970: 1_792_000_000)
+            event.endDate = event.startDate.addingTimeInterval(3600)
+            guard !CalendarSource.canMaterialize(event) else { print("invalidated calendar object accepted"); exit(1) }
+            print("invalidated calendar object requires fresh rebuild")
+            return
+        }
+
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "America/New_York")!
         let now = try CalendarTime.date("2026-03-08T16:00:00Z", allDay: false, zone: calendar.timeZone)

@@ -21,6 +21,9 @@ import (
 )
 
 func runCalendarScenario(ctx context.Context, s Scenario, level string) Evidence {
+	if s.ID == "CAL-INVALIDATED-EVENT" {
+		return runCalendarInvalidation(ctx, s, level)
+	}
 	e := runCalendarProtocol(ctx, s, level, "rest")
 	if s.ID == "CAL-CRUD" && e.Passed {
 		m := runCalendarProtocol(ctx, s, level, "mcp")
