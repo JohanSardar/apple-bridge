@@ -269,6 +269,9 @@ func Start(ctx context.Context, cfg Config) error {
 						file.Close()
 					}
 				}
+				if err == nil {
+					commandCaptureBoundary(cfg.Home)
+				}
 				if err == nil && !result.Degraded && !result.Duplicate {
 					cursor := store.Head()
 					cursor.Sequence = result.Through

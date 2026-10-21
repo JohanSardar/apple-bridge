@@ -379,6 +379,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "WEB-RM-REMINDERS-LISTS" {
 		return runRemindersSidebar(ctx, s, level)
 	}
+	if s.ID == "HELPER-IPC-RESPONSIVE" {
+		return runHelperIPC(ctx, s, level)
+	}
 	if s.ID == "HELPER-SIGNED-APP-CACHE" {
 		return runNativeAppCache(ctx, s, level)
 	}
