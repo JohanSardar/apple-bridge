@@ -14,6 +14,13 @@ type CommandState string
 type Disposition string
 
 const (
+	CommandAwaitingApproval     CommandState = "awaiting_approval"
+	CommandRejectedByOwner      CommandState = "rejected_by_owner"
+	DispositionAwaitingApproval Disposition  = "awaiting_approval"
+	DispositionRejectedByOwner  Disposition  = "rejected_by_owner"
+)
+
+const (
 	CommandAdmitted       CommandState = "admitted"
 	CommandPrepared       CommandState = "prepared"
 	CommandDispatched     CommandState = "dispatched"

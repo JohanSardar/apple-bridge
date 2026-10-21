@@ -522,7 +522,8 @@ Submit(principal, {id, op, args, expected_version?, expires_at?})
   1 validate shape (Contracts) and authorize (Trust) — reject before any effect
   2 dedupe: same id+principal+hash → return existing status; same id different hash → ErrConflict(id_reused);
     id from an older admission era → lookup only (no execution)
-  3 admit: ledger row (admitted), per-object/series serialization slot
+  3 agent approve: persist awaiting_approval; device approval resumes at admit; owner rejection finalizes rejected_by_owner
+    admit: ledger row (admitted), per-object/series serialization slot
   4 conflict check: expected_version vs current State; mismatch → ErrConflict with current record
   5 Prepare over ApplePeer → persist prepared evidence (route, fingerprint, candidates)
   6 recheck authorization + server-UTC expiry (monotonic timer in-process) immediately before dispatch
@@ -531,6 +532,7 @@ Submit(principal, {id, op, args, expected_version?, expires_at?})
 ```
 
 - Expiry: default and maximum TTL per operation (messages 60 s/5 min, others 5 min/1 h). Clock skew: a request whose `expires_at` is in the past or beyond max TTL relative to the gateway clock rejects; requests carry no client clock assumptions otherwise. Wake/restart: admitted-not-dispatched commands are re-evaluated; if expired → `expired`.
+- `awaiting_approval` is persisted and nonfinal. Unanswered requests expire after 24 hours; `rejected_by_owner` is final. Command IDs remain idempotent across approval and restart; execution TTL starts at approval.
 - Helper unavailable → `ErrUnavailable` immediately (fail fast).
 - Lost response: the caller retries **with the original ID**, getting the stored status. Never automatic redispatch of `dispatched`/`indeterminate`.
 - Correlation is conservative: evidence must match fingerprint **and** be after candidate IDs **and** be unique; two identical candidate rows (e.g. a manual identical send) → `indeterminate` with both candidates listed.
@@ -1071,6 +1073,8 @@ TLS ends on the Mac: inside `bridge` with tsnet in embedded mode, or in system t
   - `full`: commands proceed directly, with the same Helper gates as interactive commands.
 - **Defaults:** new tokens start at `approve`. Lab and test principals keep today's gates.
 - **Activity log:** commands appear individually (redacted per §15), reads aggregated per minute per operation. Retention is 90 days.
+- **W1 routing:** agent commands and owner approvals execute on the gateway only. Replicas allow local scoped reads and reject agent commands before forwarding; replica agent delegation belongs to W1-RELAY.
+- **Owner routes:** `GET /web/v1/approvals` returns pending commands with hashed argument summaries and owner-only full arguments; `POST /web/v1/approvals/{command_id}` accepts `approve` or `reject`. Device sessions alone may call these routes. The `web.1` `approval` event carries command IDs for refetch.
 
 **MCP OAuth 2.1 (connector UIs such as claude.ai and ChatGPT):**
 - Endpoints: `/.well-known/oauth-protected-resource`, `/.well-known/oauth-authorization-server`, `/oauth/register` (dynamic client registration), `/oauth/authorize` (a consent page in the web app that requires a device session, where the owner picks the level and scopes), and `/oauth/token`.

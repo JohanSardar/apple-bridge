@@ -90,8 +90,19 @@ func (g *LocalGateway) Submit(ctx context.Context, p trust.Principal, c contract
 		}
 	}()
 	var empty contracts.CommandRecord
+	if p.Kind == "agent" {
+		current, err := g.Authority.Principal(p.ID)
+		if err != nil {
+			return empty, err
+		}
+		current.Grants = trust.EffectiveGrants(current.Grants, p.Grants)
+		p = current
+		if p.Level == trust.AgentRead {
+			return empty, contracts.ErrUnauthorized
+		}
+	}
 	c.Origin = ""
-	if p.Kind == "device" || p.Kind == "agent" && p.Level == trust.AgentFull || p.Kind == "delegated" && strings.Contains(p.ID, "/device:") {
+	if p.Kind == "device" || p.Kind == "agent" && (p.Level == trust.AgentFull || p.Level == trust.AgentApprove) || p.Kind == "delegated" && strings.Contains(p.ID, "/device:") {
 		c.Origin = "interactive"
 	}
 	a, err := contracts.ValidateCommand(c)
@@ -118,6 +129,12 @@ func (g *LocalGateway) Submit(ctx context.Context, p trust.Principal, c contract
 		if old.Principal != p.ID || old.RequestHash != hash {
 			return empty, &contracts.Error{Code: "id_reused", Message: "command ID already identifies another request"}
 		}
+		if old.State == contracts.CommandAwaitingApproval {
+			old, err = g.expireApproval(ctx, old)
+			if err != nil {
+				return old, err
+			}
+		}
 		if old.Error != nil {
 			return old, old.Error
 		}
@@ -142,6 +159,10 @@ func (g *LocalGateway) Submit(ctx context.Context, p trust.Principal, c contract
 		return empty, contracts.ErrExpired
 	}
 	deadline := time.Now().Add(expiry.Sub(now))
+	if p.Kind == "agent" && p.Level == trust.AgentApprove {
+		r := contracts.CommandRecord{Command: c, Principal: p.ID, Source: contracts.CollectionSource(c.Op), RequestHash: hash, State: contracts.CommandAwaitingApproval, Disposition: contracts.DispositionAwaitingApproval, AdmissionEra: era, CreatedAt: now, ExpiresAt: now.Add(24 * time.Hour)}
+		return g.State.TransitionCommand(ctx, state.CommandTransition{Record: r})
+	}
 	if !g.Peer.Available() {
 		return empty, contracts.ErrUnavailable
 	}
@@ -441,6 +462,12 @@ func (g *LocalGateway) Status(ctx context.Context, p trust.Principal, q contract
 	if r.Principal != p.ID || !p.Visibility()[r.Source] {
 		return contracts.CommandRecord{}, contracts.ErrNotFound
 	}
+	if r.State == contracts.CommandAwaitingApproval {
+		r, err = g.expireApproval(ctx, r)
+		if err != nil {
+			return r, err
+		}
+	}
 	if q.Resolve {
 		era, eraErr := g.State.AdmissionEra(ctx)
 		if eraErr != nil {
@@ -475,6 +502,12 @@ func (g *LocalGateway) List(ctx context.Context, p trust.Principal, q contracts.
 	out := []contracts.CommandRecord{}
 	for _, r := range all {
 		if r.Principal == p.ID && p.Visibility()[r.Source] {
+			if r.State == contracts.CommandAwaitingApproval {
+				r, err = g.expireApproval(ctx, r)
+				if err != nil {
+					return nil, err
+				}
+			}
 			out = append(out, r)
 		}
 	}
@@ -490,6 +523,8 @@ func (g *LocalGateway) Recover(ctx context.Context) error {
 	}
 	for _, r := range rows {
 		switch r.State {
+		case "awaiting_approval":
+			_, err = g.expireApproval(ctx, r)
 		case "dispatched":
 			_, err = g.transition(ctx, r, "indeterminate", "indeterminate", nil, nil)
 		case "admitted", "prepared":

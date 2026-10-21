@@ -3,6 +3,8 @@ package web
 import (
 	"encoding/json"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
+	"github.com/JohanSardar/apple-bridge/internal/operations"
+	"github.com/JohanSardar/apple-bridge/internal/state"
 	"github.com/JohanSardar/apple-bridge/internal/trust"
 	"net/http"
 	"strings"
@@ -53,5 +55,51 @@ func (s *server) agentRoutes(mux *http.ServeMux) {
 			return
 		}
 		respond(w, 200, map[string]any{"activity": rows})
+	})
+	mux.HandleFunc("GET /web/v1/approvals", func(w http.ResponseWriter, r *http.Request) {
+		if s.deps.Operations == nil {
+			reject(w, 503, "unavailable")
+			return
+		}
+		g, ok := s.deps.Operations.Target.(*operations.LocalGateway)
+		if !ok {
+			reject(w, 503, "unavailable")
+			return
+		}
+		rows, err := g.Approvals(r.Context())
+		if err != nil {
+			reject(w, 503, "unavailable")
+			return
+		}
+		out := []map[string]any{}
+		for _, v := range rows {
+			out = append(out, map[string]any{"command_id": v.Command.ID, "principal": v.Principal, "operation": v.Command.Op, "arguments": state.RedactedArguments(v.Command.Args), "owner_arguments": v.Command.Args, "created_at": v.CreatedAt, "expires_at": v.ExpiresAt})
+		}
+		respond(w, 200, map[string]any{"approvals": out})
+	})
+	mux.HandleFunc("POST /web/v1/approvals/{command_id}", func(w http.ResponseWriter, r *http.Request) {
+		var in struct {
+			Decision string `json:"decision"`
+		}
+		if json.NewDecoder(r.Body).Decode(&in) != nil || in.Decision != "approve" && in.Decision != "reject" {
+			reject(w, 400, "invalid")
+			return
+		}
+		if s.deps.Operations == nil {
+			reject(w, 503, "unavailable")
+			return
+		}
+		g, ok := s.deps.Operations.Target.(*operations.LocalGateway)
+		if !ok {
+			reject(w, 503, "unavailable")
+			return
+		}
+		record, err := g.DecideApproval(r.Context(), current(r).Principal, r.PathValue("command_id"), in.Decision == "approve")
+		if err != nil {
+			reject(w, 409, "conflict")
+			return
+		}
+		s.broadcast(map[string]any{"t": "approval", "command": map[string]any{"command_id": record.Command.ID, "state": record.State}}, "")
+		respond(w, 200, record)
 	})
 }

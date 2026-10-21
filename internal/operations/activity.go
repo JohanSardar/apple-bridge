@@ -28,6 +28,9 @@ func (s *Service) MaintainAgentAccess(ctx context.Context) {
 			return
 		case <-tick.C:
 			s.State.PruneAgentActivity(ctx)
+			if g, ok := s.Target.(*LocalGateway); ok {
+				g.Approvals(ctx)
+			}
 		}
 	}
 }

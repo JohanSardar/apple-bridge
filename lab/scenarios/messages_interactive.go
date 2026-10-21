@@ -91,7 +91,11 @@ func runMessagesInteractive(ctx context.Context, w *world.World, conn *websocket
 			return r, err
 		}()
 		effects, _ = w.Effects()
-		if level != trust.AgentFull {
+		if level == trust.AgentApprove {
+			add("agent_approve_awaiting_owner", problem == nil && result.State == contracts.CommandAwaitingApproval && result.Disposition == contracts.DispositionAwaitingApproval && effects[command.ID] == 0)
+			continue
+		}
+		if level == trust.AgentRead {
 			add("agent_"+string(level)+"_blocked", problem != nil && effects[command.ID] == 0)
 			continue
 		}
