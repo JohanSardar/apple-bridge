@@ -21,8 +21,9 @@ type captureReceipt struct {
 }
 
 type Commands struct {
-	mu      sync.Mutex
-	session *commandSession
+	captureChanges map[contracts.Source]chan struct{}
+	mu             sync.Mutex
+	session        *commandSession
 }
 
 func (c *Commands) attach(w *Wire, fence uint64) *commandSession {
@@ -114,6 +115,10 @@ func (c *Commands) RecordCapture(capture contracts.Capture, cursor contracts.Cur
 		delete(s.receipts, s.receiptOrder[0])
 		s.receiptOrder = s.receiptOrder[1:]
 	}
+	if changed := c.captureChanges[capture.Source]; changed != nil {
+		close(changed)
+		c.captureChanges[capture.Source] = make(chan struct{})
+	}
 }
 func (c *Commands) CapturedSequence(source contracts.Source, checkpoint, collection, nativeKey string) (contracts.Cursor, error) {
 	c.mu.Lock()
@@ -125,4 +130,16 @@ func (c *Commands) CapturedSequence(source contracts.Source, checkpoint, collect
 		}
 	}
 	return contracts.Cursor{}, contracts.ErrNotFound
+}
+
+func (c *Commands) CaptureChanges(source contracts.Source) <-chan struct{} {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.captureChanges == nil {
+		c.captureChanges = map[contracts.Source]chan struct{}{}
+	}
+	if c.captureChanges[source] == nil {
+		c.captureChanges[source] = make(chan struct{})
+	}
+	return c.captureChanges[source]
 }

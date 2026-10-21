@@ -408,6 +408,8 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 }
 
 func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f contracts.IPCFrame) (contracts.CommandRecord, error) {
+	f = g.awaitMessageCapture(ctx, r, f)
+	prior := r
 	to := contracts.CommandIndeterminate
 	disposition := f.Disposition
 	f.Disposition = "indeterminate"
@@ -438,6 +440,8 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 			Fingerprint       string `json:"fingerprint"`
 			Observed          bool   `json:"observed"`
 			CaptureCheckpoint string `json:"capture_checkpoint"`
+			Ambiguous         bool   `json:"ambiguous"`
+			CandidateCount    int    `json:"candidate_count"`
 		}
 		collection := "reminders.reminder"
 		if r.Source == contracts.Contacts {
@@ -464,7 +468,7 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 		if r.Command.Op == "reminders.create_list" {
 			collection = "reminders.list"
 		}
-		if json.Unmarshal(f.Evidence, &evidence) != nil || evidence.NativeKey == "" || evidence.Fingerprint != r.RequestHash || !evidence.Observed {
+		if json.Unmarshal(f.Evidence, &evidence) != nil || evidence.Ambiguous || evidence.CandidateCount > 1 || evidence.NativeKey == "" || evidence.Fingerprint != r.RequestHash || !evidence.Observed {
 			if to != "delivery_failed" {
 				to = "indeterminate"
 				f.Disposition = "indeterminate"
@@ -492,6 +496,24 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 					f.Evidence, _ = json.Marshal(details)
 				}
 			}
+		}
+	}
+	if g.messageParts(ctx, &r, &f) {
+		if r.CommitSeq < prior.CommitSeq {
+			r.CommitSeq = prior.CommitSeq
+		}
+		to, f.Disposition = aggregateMessageParts(r.Parts)
+		if r.State == to {
+			if sameMessageParts(prior.Parts, r.Parts) {
+				return prior, nil
+			}
+			r.Disposition = f.Disposition
+			r.Evidence = f.Evidence
+			result, err := g.State.UpdateCommandParts(ctx, r)
+			if err == nil && g.Audit != nil {
+				g.Audit(result)
+			}
+			return result, err
 		}
 	}
 	if r.State == "observed" && (to == "observed" || to == "indeterminate") {
@@ -536,7 +558,7 @@ func (g *LocalGateway) Status(ctx context.Context, p trust.Principal, q contract
 			return r, nil
 		}
 	}
-	if q.Resolve && (r.State == "indeterminate" || r.Source == contracts.Messages && r.State == "observed") {
+	if q.Resolve && (r.State == "indeterminate" || resolvableMessageParts(r)) {
 		release, err := g.lock(ctx, "command:"+q.ID)
 		if err != nil {
 			return r, err
@@ -546,7 +568,7 @@ func (g *LocalGateway) Status(ctx context.Context, p trust.Principal, q contract
 		if err != nil {
 			return r, err
 		}
-		if r.State == "indeterminate" || r.Source == contracts.Messages && r.State == "observed" {
+		if r.State == "indeterminate" || resolvableMessageParts(r) {
 			f, err := g.Peer.Exchange(ctx, contracts.IPCFrame{T: "Resolve", CommandID: q.ID})
 			if err != nil {
 				return r, err
