@@ -1,0 +1,114 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[4.82 6.62 7.4] cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5E4700V6WZ0WYQSSMD2EHCV",
+  "metrics": {
+    "matrix": [
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "webkit-dark-phone",
+      "webkit-dark-desktop",
+      "chromium-light-phone",
+      "chromium-light-desktop",
+      "chromium-dark-phone",
+      "chromium-dark-desktop",
+      "firefox-light-phone",
+      "firefox-light-desktop",
+      "firefox-dark-phone",
+      "firefox-dark-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-INPUT-GUARD-webkit-light-phone-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-INPUT-GUARD-webkit-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-INPUT-GUARD-webkit-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-INPUT-GUARD-webkit-dark-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-INPUT-GUARD-webkit-dark-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-INPUT-GUARD-chromium-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-INPUT-GUARD-chromium-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-INPUT-GUARD-chromium-dark-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-INPUT-GUARD-chromium-dark-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-INPUT-GUARD-firefox-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-INPUT-GUARD-firefox-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-INPUT-GUARD-firefox-dark-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-INPUT-GUARD-firefox-dark-desktop-playwright.json"
+    ],
+    "server": "gateway"
+  },
+  "scenario": "WEB-INPUT-GUARD",
+  "level": "web",
+  "passed": true,
+  "git_sha": "0c0edd3901bc2ed830271cf9e56dd9f97b67f0f2",
+  "at": "2026-10-21T02:21:30.011105Z",
+  "assertions": [
+    {
+      "name": "webkit-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/shell.spec.ts:68:1 › WEB-INPUT-GUARD denies synthetic events and delayed commands (1.1s)\n\n  1 passed (2.4s)\n"
+    },
+    {
+      "name": "webkit-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/shell.spec.ts:68:1 › WEB-INPUT-GUARD denies synthetic events and delayed commands (579ms)\n\n  1 passed (1.0s)\n"
+    },
+    {
+      "name": "webkit-dark-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-dark-phone] › tests/shell.spec.ts:68:1 › WEB-INPUT-GUARD denies synthetic events and delayed commands (587ms)\n\n  1 passed (1.0s)\n"
+    },
+    {
+      "name": "webkit-dark-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-dark-desktop] › tests/shell.spec.ts:68:1 › WEB-INPUT-GUARD denies synthetic events and delayed commands (564ms)\n\n  1 passed (1.0s)\n"
+    },
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/shell.spec.ts:68:1 › WEB-INPUT-GUARD denies synthetic events and delayed commands (555ms)\n\n  1 passed (1.2s)\n"
+    },
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/shell.spec.ts:68:1 › WEB-INPUT-GUARD denies synthetic events and delayed commands (298ms)\n\n  1 passed (678ms)\n"
+    },
+    {
+      "name": "chromium-dark-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-dark-phone] › tests/shell.spec.ts:68:1 › WEB-INPUT-GUARD denies synthetic events and delayed commands (295ms)\n\n  1 passed (655ms)\n"
+    },
+    {
+      "name": "chromium-dark-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-dark-desktop] › tests/shell.spec.ts:68:1 › WEB-INPUT-GUARD denies synthetic events and delayed commands (289ms)\n\n  1 passed (642ms)\n"
+    },
+    {
+      "name": "firefox-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-light-phone] › tests/shell.spec.ts:68:1 › WEB-INPUT-GUARD denies synthetic events and delayed commands (1.4s)\n\n  1 passed (3.2s)\n"
+    },
+    {
+      "name": "firefox-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-light-desktop] › tests/shell.spec.ts:68:1 › WEB-INPUT-GUARD denies synthetic events and delayed commands (1.2s)\n\n  1 passed (2.6s)\n"
+    },
+    {
+      "name": "firefox-dark-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-dark-phone] › tests/shell.spec.ts:68:1 › WEB-INPUT-GUARD denies synthetic events and delayed commands (1.4s)\n\n  1 passed (2.7s)\n"
+    },
+    {
+      "name": "firefox-dark-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-dark-desktop] › tests/shell.spec.ts:68:1 › WEB-INPUT-GUARD denies synthetic events and delayed commands (1.3s)\n\n  1 passed (2.9s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

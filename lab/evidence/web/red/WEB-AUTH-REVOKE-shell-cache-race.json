@@ -1,0 +1,78 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[5.64 6.61 7.35] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5E486E5DJTS9900ZCH249M2",
+  "metrics": {
+    "matrix": [
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "webkit-dark-phone",
+      "webkit-dark-desktop",
+      "chromium-light-phone",
+      "chromium-light-desktop",
+      "chromium-dark-phone",
+      "chromium-dark-desktop",
+      "firefox-light-phone",
+      "firefox-light-desktop",
+      "firefox-dark-phone",
+      "firefox-dark-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-AUTH-REVOKE-webkit-light-phone-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-AUTH-REVOKE-webkit-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-AUTH-REVOKE-webkit-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-AUTH-REVOKE-webkit-dark-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-AUTH-REVOKE-webkit-dark-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-AUTH-REVOKE-chromium-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-AUTH-REVOKE-chromium-light-desktop-playwright.json"
+    ],
+    "server": "gateway"
+  },
+  "scenario": "WEB-AUTH-REVOKE",
+  "level": "web",
+  "passed": false,
+  "git_sha": "2c3c75939f9c05b3c72b197745d4c52b6bf48279",
+  "at": "2026-10-21T02:22:09.349779Z",
+  "assertions": [
+    {
+      "name": "webkit-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/integration.spec.ts:32:1 › WEB-AUTH-REVOKE another session closes within one second, wipes cache, and web lock revokes all (1.9s)\n\n  1 passed (3.7s)\n"
+    },
+    {
+      "name": "webkit-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/integration.spec.ts:32:1 › WEB-AUTH-REVOKE another session closes within one second, wipes cache, and web lock revokes all (1.7s)\n\n  1 passed (2.7s)\n"
+    },
+    {
+      "name": "webkit-dark-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-dark-phone] › tests/integration.spec.ts:32:1 › WEB-AUTH-REVOKE another session closes within one second, wipes cache, and web lock revokes all (1.2s)\n\n  1 passed (1.7s)\n"
+    },
+    {
+      "name": "webkit-dark-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-dark-desktop] › tests/integration.spec.ts:32:1 › WEB-AUTH-REVOKE another session closes within one second, wipes cache, and web lock revokes all (1.3s)\n\n  1 passed (1.8s)\n"
+    },
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/integration.spec.ts:32:1 › WEB-AUTH-REVOKE another session closes within one second, wipes cache, and web lock revokes all (1.4s)\n\n  1 passed (2.0s)\n"
+    },
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": false,
+      "detail": "Playwright failed: exit status 1; private log: WEB-AUTH-REVOKE-chromium-light-desktop-playwright.log"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

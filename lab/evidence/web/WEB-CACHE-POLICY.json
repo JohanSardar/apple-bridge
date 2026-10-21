@@ -1,0 +1,45 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[5.39 7.61 8.14] cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5E519TYC6Z1SSJHJHXF60W5",
+  "metrics": {
+    "matrix": [
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "webkit-dark-phone",
+      "webkit-dark-desktop",
+      "chromium-light-phone",
+      "chromium-light-desktop",
+      "chromium-dark-phone",
+      "chromium-dark-desktop",
+      "firefox-light-phone",
+      "firefox-light-desktop",
+      "firefox-dark-phone",
+      "firefox-dark-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-CACHE-POLICY-matrix-playwright.json",
+    "server": "mock"
+  },
+  "scenario": "WEB-CACHE-POLICY",
+  "level": "web",
+  "passed": true,
+  "git_sha": "6afff217aef6c23bff3675b67706ae7dae215899",
+  "at": "2026-10-21T02:35:52.030891Z",
+  "assertions": [
+    {
+      "name": "playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 12 tests using 1 worker\n\n  ✓   1 [webkit-light-phone] › tests/foundations.spec.ts:60:1 › WEB-CACHE-POLICY public sessions persist nothing and revocation wipes trusted data (1.3s)\n  ✓   2 [webkit-light-desktop] › tests/foundations.spec.ts:60:1 › WEB-CACHE-POLICY public sessions persist nothing and revocation wipes trusted data (785ms)\n  ✓   3 [webkit-dark-phone] › tests/foundations.spec.ts:60:1 › WEB-CACHE-POLICY public sessions persist nothing and revocation wipes trusted data (590ms)\n  ✓   4 [webkit-dark-desktop] › tests/foundations.spec.ts:60:1 › WEB-CACHE-POLICY public sessions persist nothing and revocation wipes trusted data (937ms)\n  ✓   5 [chromium-light-phone] › tests/foundations.spec.ts:60:1 › WEB-CACHE-POLICY public sessions persist nothing and revocation wipes trusted data (613ms)\n  ✓   6 [chromium-light-desktop] › tests/foundations.spec.ts:60:1 › WEB-CACHE-POLICY public sessions persist nothing and revocation wipes trusted data (311ms)\n  ✓   7 [chromium-dark-phone] › tests/foundations.spec.ts:60:1 › WEB-CACHE-POLICY public sessions persist nothing and revocation wipes trusted data (255ms)\n  ✓   8 [chromium-dark-desktop] › tests/foundations.spec.ts:60:1 › WEB-CACHE-POLICY public sessions persist nothing and revocation wipes trusted data (351ms)\n  ✓   9 [firefox-light-phone] › tests/foundations.spec.ts:60:1 › WEB-CACHE-POLICY public sessions persist nothing and revocation wipes trusted data (1.9s)\n  ✓  10 [firefox-light-desktop] › tests/foundations.spec.ts:60:1 › WEB-CACHE-POLICY public sessions persist nothing and revocation wipes trusted data (1.2s)\n  ✓  11 [firefox-dark-phone] › tests/foundations.spec.ts:60:1 › WEB-CACHE-POLICY public sessions persist nothing and revocation wipes trusted data (1.5s)\n  ✓  12 [firefox-dark-desktop] › tests/foundations.spec.ts:60:1 › WEB-CACHE-POLICY public sessions persist nothing and revocation wipes trusted data (1.5s)\n\n  12 passed (22.1s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

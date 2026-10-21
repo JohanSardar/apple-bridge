@@ -1,0 +1,45 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[5 7.34 8.02] cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5E52280SG85X0G577YHEE5R",
+  "metrics": {
+    "matrix": [
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "webkit-dark-phone",
+      "webkit-dark-desktop",
+      "chromium-light-phone",
+      "chromium-light-desktop",
+      "chromium-dark-phone",
+      "chromium-dark-desktop",
+      "firefox-light-phone",
+      "firefox-light-desktop",
+      "firefox-dark-phone",
+      "firefox-dark-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-LIVE-MOCK-matrix-playwright.json",
+    "server": "mock"
+  },
+  "scenario": "WEB-LIVE-MOCK",
+  "level": "web",
+  "passed": true,
+  "git_sha": "6afff217aef6c23bff3675b67706ae7dae215899",
+  "at": "2026-10-21T02:36:17.024208Z",
+  "assertions": [
+    {
+      "name": "playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 12 tests using 1 worker\n\n  ✓   1 [webkit-light-phone] › tests/foundations.spec.ts:75:1 › WEB-LIVE-MOCK receives deltas and resumes after a dropped socket with cached views (1.3s)\n  ✓   2 [webkit-light-desktop] › tests/foundations.spec.ts:75:1 › WEB-LIVE-MOCK receives deltas and resumes after a dropped socket with cached views (672ms)\n  ✓   3 [webkit-dark-phone] › tests/foundations.spec.ts:75:1 › WEB-LIVE-MOCK receives deltas and resumes after a dropped socket with cached views (545ms)\n  ✓   4 [webkit-dark-desktop] › tests/foundations.spec.ts:75:1 › WEB-LIVE-MOCK receives deltas and resumes after a dropped socket with cached views (632ms)\n  ✓   5 [chromium-light-phone] › tests/foundations.spec.ts:75:1 › WEB-LIVE-MOCK receives deltas and resumes after a dropped socket with cached views (1.3s)\n  ✓   6 [chromium-light-desktop] › tests/foundations.spec.ts:75:1 › WEB-LIVE-MOCK receives deltas and resumes after a dropped socket with cached views (592ms)\n  ✓   7 [chromium-dark-phone] › tests/foundations.spec.ts:75:1 › WEB-LIVE-MOCK receives deltas and resumes after a dropped socket with cached views (566ms)\n  ✓   8 [chromium-dark-desktop] › tests/foundations.spec.ts:75:1 › WEB-LIVE-MOCK receives deltas and resumes after a dropped socket with cached views (572ms)\n  ✓   9 [firefox-light-phone] › tests/foundations.spec.ts:75:1 › WEB-LIVE-MOCK receives deltas and resumes after a dropped socket with cached views (2.1s)\n  ✓  10 [firefox-light-desktop] › tests/foundations.spec.ts:75:1 › WEB-LIVE-MOCK receives deltas and resumes after a dropped socket with cached views (1.3s)\n  ✓  11 [firefox-dark-phone] › tests/foundations.spec.ts:75:1 › WEB-LIVE-MOCK receives deltas and resumes after a dropped socket with cached views (1.8s)\n  ✓  12 [firefox-dark-desktop] › tests/foundations.spec.ts:75:1 › WEB-LIVE-MOCK receives deltas and resumes after a dropped socket with cached views (1.9s)\n\n  12 passed (23.9s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

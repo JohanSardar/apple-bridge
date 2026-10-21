@@ -1,0 +1,7 @@
+{
+  "samples": 20,
+  "p50_ms": 14,
+  "p95_ms": 17,
+  "max_ms": 19,
+  "endpoint": "sim capture start to browser live-view render"
+}
