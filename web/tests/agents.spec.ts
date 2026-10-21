@@ -58,6 +58,8 @@ test('WEB-AGENT-OAUTH connector consent, access levels, approval screens and tok
     const chatID = result.structuredContent.chats[0].chat.id;
     await page.goto('/settings/agents');
     await expect(page.getByRole('heading', { name: 'Research assistant' })).toBeVisible();
+    await expect(page.locator('.settings-tile')).toHaveCount(6);
+    for (const icon of await page.locator('.settings-tile use').all()) { await expect.poll(() => icon.evaluate(element => (element as SVGGraphicsElement).getBBox().width)).toBeGreaterThan(0); }
     await page.getByRole('button', { name: 'Connect an agent', exact: true }).click();
     await expect(page.getByRole('radio', { name: /Approve first/ })).toBeChecked();
     await page.getByRole('textbox', { name: 'Name', exact: true }).fill('Writing assistant');
