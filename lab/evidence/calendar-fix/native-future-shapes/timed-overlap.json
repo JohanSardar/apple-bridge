@@ -1,0 +1,53 @@
+{
+  "run_id": "cal-native-1792602292441463000-timed-overlap",
+  "oracle": "independent_EventKit_futureEvents_fixture",
+  "request": {
+    "frequency": "daily",
+    "interval": 1,
+    "end": "2026-11-03T06:30:00Z"
+  },
+  "resave": false,
+  "native": [
+    {
+      "start": "2026-11-01T05:30:00.000Z",
+      "end": "2026-11-02T13:30:00.000Z",
+      "recurrence": [
+        {
+          "count": 1,
+          "end": null,
+          "frequency": "daily",
+          "interval": 1
+        }
+      ],
+      "future": false
+    },
+    {
+      "start": "2026-11-02T06:30:00.000Z",
+      "end": "2026-11-03T13:30:00.000Z",
+      "recurrence": [
+        {
+          "count": 0,
+          "end": "2026-11-03T06:30:00.000Z",
+          "frequency": "daily",
+          "interval": 1
+        }
+      ],
+      "future": true
+    },
+    {
+      "start": "2026-11-03T06:30:00.000Z",
+      "end": "2026-11-04T13:30:00.000Z",
+      "recurrence": [
+        {
+          "count": 0,
+          "end": "2026-11-03T06:30:00.000Z",
+          "frequency": "daily",
+          "interval": 1
+        }
+      ],
+      "future": true
+    }
+  ],
+  "exactly_two_future_occurrences": true,
+  "all_dates_cleanup_remaining": 0
+}

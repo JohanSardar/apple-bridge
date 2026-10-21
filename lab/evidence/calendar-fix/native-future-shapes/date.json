@@ -1,0 +1,52 @@
+{
+  "run_id": "cal-native-1792594008555970000-date",
+  "oracle": "independent_EventKit_futureEvents_fixture",
+  "request": {
+    "frequency": "daily",
+    "interval": 2,
+    "end": "2026-11-04T23:59:59Z"
+  },
+  "resave": false,
+  "native": [
+    {
+      "start": "2026-11-01T05:30:00.000Z",
+      "end": "2026-11-01T07:30:00.000Z",
+      "recurrence": [
+        {
+          "count": 1,
+          "end": null,
+          "frequency": "daily",
+          "interval": 1
+        }
+      ],
+      "future": false
+    },
+    {
+      "start": "2026-11-02T06:30:00.000Z",
+      "end": "2026-11-02T07:30:00.000Z",
+      "recurrence": [
+        {
+          "count": 0,
+          "end": "2026-11-04T23:59:59.000Z",
+          "frequency": "daily",
+          "interval": 2
+        }
+      ],
+      "future": true
+    },
+    {
+      "start": "2026-11-04T06:30:00.000Z",
+      "end": "2026-11-04T07:30:00.000Z",
+      "recurrence": [
+        {
+          "count": 0,
+          "end": "2026-11-04T23:59:59.000Z",
+          "frequency": "daily",
+          "interval": 2
+        }
+      ],
+      "future": true
+    }
+  ],
+  "all_dates_cleanup_remaining": 0
+}
