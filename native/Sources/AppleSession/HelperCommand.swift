@@ -3,6 +3,7 @@ import AppKit
 import Darwin
 import MessagesSource
 import NotesSource
+import RemindersStore
 import SourceSupport
 
 public enum HelperCommand {
@@ -93,6 +94,16 @@ public enum HelperCommand {
                 finished = true
             }
             while !finished { RunLoop.current.run(until: Date().addingTimeInterval(0.05)) }
+            return
+        }
+        if arguments.first == "reminders-store-proof" {
+            func option(_ key: String) throws -> String {
+                guard let index = arguments.firstIndex(of: key), index + 1 < arguments.count else { throw ProbeFailure.invalidArguments }
+                return arguments[index + 1]
+            }
+            let proof = try RemindersStoreProof.run(tag: option("--tag"), itemIdentifier: option("--item-id"), listIdentifier: option("--list-id"))
+            try JSONEncoder().encode(proof).write(to: reportURL, options: .atomic)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportURL.path)
             return
         }
         if arguments.first == "notes-probe" {
