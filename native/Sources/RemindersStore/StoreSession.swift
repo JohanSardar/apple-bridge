@@ -8,11 +8,10 @@ public struct StoreReadResult: Sendable {
     public let decodedRows: Int
 }
 
-@MainActor
-public final class RemindersStoreSession {
+public actor RemindersStoreSession {
     private let path: String
-    private var connection: StoreConnection
-    private var fileIdentity: String
+    private var connection: StoreConnection?
+    private var fileIdentity = ""
     private var schemaVersion: Int64?
     private var dataVersion: Int64?
     private var historyToken: Int64?
@@ -22,9 +21,8 @@ public final class RemindersStoreSession {
     private var initialized = false
 
     public init(path: String) throws {
+        guard !path.isEmpty else { throw SourceFailure.invalid }
         self.path = path
-        connection = try StoreConnection(path: path)
-        fileIdentity = try Self.identity(path)
     }
 
     private static func identity(_ path: String) throws -> String {
@@ -32,22 +30,23 @@ public final class RemindersStoreSession {
         return "\(attributes[.systemNumber] ?? 0):\(attributes[.systemFileNumber] ?? 0)"
     }
 
-    public func read(full: Bool = false) throws -> StoreReadResult {
+    public func read(full: Bool = false) async throws -> StoreReadResult {
         let start = ProcessInfo.processInfo.systemUptime
         let identity = try Self.identity(path)
-        if identity != fileIdentity {
+        if identity != fileIdentity || connection == nil {
             connection = try StoreConnection(path: path)
             fileIdentity = identity
             schemaVersion = nil
             initialized = false
         }
+        guard let connection else { throw SourceFailure.unavailable }
         let opening = connection.timings.openMS
         connection.timings = StoreTimings()
         connection.timings.openMS = opening
+        let version = try connection.scalar("PRAGMA data_version")
         try connection.execute("BEGIN")
         defer { try? connection.execute("ROLLBACK") }
         let schema = try connection.scalar("PRAGMA schema_version")
-        let version = try connection.scalar("PRAGMA data_version")
         let changedSchema = schema != schemaVersion
         if changedSchema { try connection.configure() }
         let hasHistory = Set(["Z_PK", "ZENTITY", "ZENTITYPK", "ZTRANSACTIONID"]).isSubset(of: connection.columns["ACHANGE"] ?? []) && (connection.columns["ATRANSACTION"] ?? []).contains("Z_PK")
@@ -87,11 +86,10 @@ public final class RemindersStoreSession {
                 let current = try readVersions()
                 for table in StoreTable.allCases {
                     guard let now = current[table], let previous = versions[table] else {
-                        next = TypedStoreSnapshot()
-                        for table in StoreTable.allCases { try connection.read(table, into: &next) }
-                        decoded = Self.count(next)
-                        mode = "full"
-                        break
+                        Self.clear(table, from: &next)
+                        try connection.read(table, into: &next)
+                        decoded += Self.tableCount(table, next)
+                        continue
                     }
                     for key in Set(now.keys).union(previous.keys) where now[key] != previous[key] { changes[table, default: []].insert(key) }
                 }
@@ -128,12 +126,13 @@ public final class RemindersStoreSession {
         transactionToken = hasHistory ? latestTransaction : nil
         var timings = connection.timings
         connection.timings.openMS = 0
-        timings.totalMS = (ProcessInfo.processInfo.systemUptime - start) * 1000 + opening
+        timings.totalMS = (ProcessInfo.processInfo.systemUptime - start) * 1000
         timings.decodeMS = max(0, timings.totalMS - timings.queryMS - timings.openMS)
         return StoreReadResult(snapshot: next, timings: timings, mode: mode, decodedRows: decoded)
     }
 
     private func readVersions() throws -> [StoreTable: [Int64: Int64]] {
+        guard let connection else { throw SourceFailure.unavailable }
         var result: [StoreTable: [Int64: Int64]] = [:]
         for table in StoreTable.allCases {
             guard (connection.columns[table.rawValue] ?? []).contains("Z_OPT") else { continue }
@@ -144,6 +143,26 @@ public final class RemindersStoreSession {
             result[table] = rows
         }
         return result
+    }
+
+    private static func clear(_ table: StoreTable, from snapshot: inout TypedStoreSnapshot) {
+        switch table {
+        case .reminder: snapshot.reminders = [:]
+        case .list: snapshot.lists = [:]
+        case .section: snapshot.sections = [:]
+        case .object: snapshot.objects = [:]
+        case .label: snapshot.labels = [:]
+        }
+    }
+
+    private static func tableCount(_ table: StoreTable, _ snapshot: TypedStoreSnapshot) -> Int {
+        switch table {
+        case .reminder: snapshot.reminders.count
+        case .list: snapshot.lists.count
+        case .section: snapshot.sections.count
+        case .object: snapshot.objects.count
+        case .label: snapshot.labels.count
+        }
     }
 
     private static func count(_ snapshot: TypedStoreSnapshot) -> Int {

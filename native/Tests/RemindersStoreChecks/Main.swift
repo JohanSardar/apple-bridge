@@ -6,7 +6,7 @@ import SourceSupport
 @main
 struct RemindersStoreChecks {
     @MainActor
-    static func main() throws {
+    static func main() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("bridge-reminders-store-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -23,7 +23,7 @@ struct RemindersStoreChecks {
         fixture.execute("CREATE TABLE ZREMCDBASELIST(" + common + ",ZIDENTIFIER BLOB,ZNAME TEXT,ZBADGEEMBLEM TEXT,ZCOLOR BLOB,ZMEMBERSHIPSOFREMINDERSINSECTIONSASDATA BLOB,ZISGROUP INTEGER,ZPARENTLIST INTEGER,ZDADISPLAYORDER INTEGER,ZISPINNEDBYCURRENTUSER INTEGER,ZSORTINGSTYLE TEXT,ZPINNEDDATE REAL,ZSHOULDCATEGORIZEGROCERYITEMS INTEGER,ZGROCERYLOCALEID TEXT,ZSHARINGSTATUS INTEGER,ZSHAREDOWNERNAME TEXT)")
         fixture.execute("CREATE TABLE ZREMCDBASESECTION(" + common + ",ZIDENTIFIER BLOB,ZDISPLAYNAME TEXT,ZLIST INTEGER)")
         fixture.execute("CREATE TABLE ZREMCDOBJECT(" + common + ",ZIDENTIFIER BLOB,ZREMINDER3 INTEGER,ZHASHTAGLABEL INTEGER)")
-        fixture.execute("CREATE TABLE ZREMCDHASHTAGLABEL(Z_PK INTEGER PRIMARY KEY,Z_OPT INTEGER DEFAULT 1,ZNAME TEXT)")
+        fixture.execute("CREATE TABLE ZREMCDHASHTAGLABEL(Z_PK INTEGER PRIMARY KEY,ZNAME TEXT)")
         fixture.execute("PRAGMA wal_checkpoint(TRUNCATE)")
         fixture.execute("INSERT INTO ZREMCDBASELIST(Z_PK,Z_ENT,ZIDENTIFIER,ZNAME,ZBADGEEMBLEM,ZISGROUP,ZDADISPLAYORDER) VALUES(1,333,'list','Bridge Test','star',0,12),(2,408,'smart','Bridge Test Smart','flag',0,14)")
         fixture.execute("INSERT INTO ZREMCDREMINDER(Z_PK,Z_ENT,ZIDENTIFIER,ZDACALENDARITEMUNIQUEIDENTIFIER,ZEXTERNALIDENTIFIER,ZFLAGGED,ZPARENTREMINDER,ZLIST,ZICSDISPLAYORDER,ZCREATIONDATE) VALUES(10,101,X'11111111222233334444555555555555','eventkit-parent','external-parent',1,NULL,1,3,800000000.5),(11,101,'child','eventkit-child','external-child',0,10,1,4,800000001)")
@@ -90,9 +90,9 @@ struct RemindersStoreChecks {
         precondition(snapshot.reminders[0]["ZFLAGGED"] == .integer(1))
         let refreshed = try reader.read()
         precondition(refreshed.reminders[0]["ZFLAGGED"] == .integer(0))
-        try StoreSessionChecks.run(path: path, execute: fixture.execute)
+        try await StoreSessionChecks.run(path: path, execute: fixture.execute)
         if let index = CommandLine.arguments.firstIndex(of: "--perf-report"), index + 1 < CommandLine.arguments.count {
-            try StorePerformanceChecks.run(path: path, execute: fixture.execute, report: CommandLine.arguments[index + 1])
+            try await StorePerformanceChecks.run(path: path, execute: fixture.execute, report: CommandLine.arguments[index + 1])
         }
         print("RemindersStore: synthetic schema, arbitrary entity IDs, WAL backup, isolation, deleted and pending exclusion passed")
     }

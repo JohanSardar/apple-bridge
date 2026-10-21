@@ -59,24 +59,22 @@ public enum RemindersStoreProfile {
 
 extension RemindersStoreProfile {
     @MainActor
-    public static func typed(iterations: Int = 200) throws -> JSON {
+    public static func typed(iterations: Int = 200) async throws -> JSON {
         guard iterations == 200 else { throw SourceFailure.invalid }
         let start = ProcessInfo.processInfo.systemUptime
         let paths = try RemindersStore.paths()
         guard !paths.isEmpty else { throw SourceFailure.unavailable }
         let sessions = try paths.map { try RemindersStoreSession(path: $0) }
-        func sample(full: Bool) throws -> StoreTimings {
-            try autoreleasepool {
-                var total = StoreTimings()
-                for session in sessions { total.add(try session.read(full: full).timings) }
-                return total
-            }
+        func sample(full: Bool) async throws -> StoreTimings {
+            var total = StoreTimings()
+            for session in sessions { total.add(try await session.read(full: full).timings) }
+            return total
         }
-        let cold = try sample(full: true)
+        let cold = try await sample(full: true)
         var full: [StoreTimings] = []
         var incremental: [StoreTimings] = []
-        for _ in 0..<iterations { full.append(try sample(full: true)) }
-        for _ in 0..<iterations { incremental.append(try sample(full: false)) }
+        for _ in 0..<iterations { full.append(try await sample(full: true)) }
+        for _ in 0..<iterations { incremental.append(try await sample(full: false)) }
         func summarize(_ values: [Double]) -> JSON {
             let sorted = values.sorted()
             return .object(["samples": .number(Double(sorted.count)), "p50_ms": .number(sorted[99]), "p95_ms": .number(sorted[189]), "max_ms": .number(sorted.last ?? 0)])

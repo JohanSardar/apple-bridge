@@ -4,7 +4,7 @@ import SourceSupport
 
 @MainActor
 enum StorePerformanceChecks {
-    static func run(path: String, execute: (String) -> Void, report: String) throws {
+    static func run(path: String, execute: (String) -> Void, report: String) async throws {
         execute("CREATE TABLE ATRANSACTION(Z_PK INTEGER PRIMARY KEY)")
         execute("CREATE TABLE ACHANGE(Z_PK INTEGER PRIMARY KEY,ZENTITY INTEGER,ZENTITYPK INTEGER,ZTRANSACTIONID INTEGER)")
         execute("BEGIN")
@@ -13,12 +13,12 @@ enum StorePerformanceChecks {
         }
         execute("COMMIT")
         let reader = try RemindersStoreSession(path: path)
-        let cold = try reader.read()
+        let cold = try await reader.read()
         var full: [StoreTimings] = []
         var unchanged: [StoreTimings] = []
-        for _ in 0..<200 { full.append(try reader.read(full: true).timings) }
+        for _ in 0..<200 { full.append(try await reader.read(full: true).timings) }
         for _ in 0..<200 {
-            let result = try reader.read()
+            let result = try await reader.read()
             precondition(result.mode == "unchanged" && result.decodedRows == 0)
             unchanged.append(result.timings)
         }
@@ -30,13 +30,13 @@ enum StorePerformanceChecks {
                 token += 1
                 execute("BEGIN; UPDATE ZREMCDREMINDER SET ZFLAGGED=\(token % 2),Z_OPT=Z_OPT+1 WHERE Z_PK>=1000 AND Z_PK<\(1000 + size); INSERT INTO ATRANSACTION VALUES(\(token)); INSERT INTO ACHANGE SELECT Z_PK-1000+\(changeKey),101,Z_PK,\(token) FROM ZREMCDREMINDER WHERE Z_PK>=1000 AND Z_PK<\(1000 + size); COMMIT")
                 changeKey += size
-                let result = try reader.read()
+                let result = try await reader.read()
                 precondition(result.mode == "history" && result.decodedRows == size)
                 precondition(result.snapshot.reminders[1000]?.flagged == (token % 2 == 1))
                 batches[size, default: []].append(result.timings)
             }
-            let incremental = try reader.read()
-            let reference = try RemindersStoreSession(path: path).read(full: true)
+            let incremental = try await reader.read()
+            let reference = try await RemindersStoreSession(path: path).read(full: true)
             precondition(incremental.snapshot == reference.snapshot)
         }
         func summarize(_ values: [Double]) -> JSON {
