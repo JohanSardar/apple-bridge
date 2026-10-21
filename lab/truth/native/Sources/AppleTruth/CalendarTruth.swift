@@ -142,10 +142,11 @@ struct CalendarTruth {
                 guard let calendar = calendars.first, calendar.allowsContentModifications, let title = request["title"] as? String, title.hasPrefix(tag) else { throw TruthFailure.invalid }
                 let event = EKEvent(eventStore: store)
                 event.calendar = calendar; event.title = title
-                event.isAllDay = request["all_day"] as? Bool ?? false
+                let allDay = request["all_day"] as? Bool ?? false
                 event.timeZone = TimeZone(identifier: request["time_zone"] as? String ?? "America/New_York")
-                event.startDate = try date(request["start"] as? String ?? "", allDay: event.isAllDay, zone: event.isAllDay ? .current : (event.timeZone ?? .current))
-                event.endDate = try date(request["end"] as? String ?? "", allDay: event.isAllDay, zone: event.isAllDay ? .current : (event.timeZone ?? .current))
+                event.isAllDay = allDay
+                event.startDate = try date(request["start"] as? String ?? "", allDay: allDay, zone: allDay ? .current : (event.timeZone ?? .current))
+                event.endDate = try date(request["end"] as? String ?? "", allDay: allDay, zone: allDay ? .current : (event.timeZone ?? .current))
                 if let recurrence = request["recurrence"] as? [[String: Any]], let rule = recurrence.first {
                     let frequency: EKRecurrenceFrequency = rule["frequency"] as? String == "weekly" ? .weekly : .daily
                     event.addRecurrenceRule(EKRecurrenceRule(recurrenceWith: frequency, interval: rule["interval"] as? Int ?? 1, end: EKRecurrenceEnd(occurrenceCount: rule["count"] as? Int ?? 3)))
