@@ -1,0 +1,23 @@
+{
+  "reserved_before": {
+    "x": 20,
+    "y": 88,
+    "width": 360,
+    "height": 280
+  },
+  "reserved_after": {
+    "x": 20,
+    "y": 88,
+    "width": 360,
+    "height": 280
+  },
+  "decode_geometry_shift_px": 0,
+  "cls_supported": true,
+  "cls": 0,
+  "entry_chunk": "/assets/index-CBoLdb_v.js",
+  "entry_bytes": 57627,
+  "entry_gzip_bytes": 21418,
+  "entry_gzip9_bytes": 21398,
+  "entry_budget_gzip_bytes": 60000,
+  "stack_code_in_entry": false
+}
