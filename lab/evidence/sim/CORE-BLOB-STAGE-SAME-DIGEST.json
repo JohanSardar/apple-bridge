@@ -1,0 +1,66 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[8.11 8.59 9.41] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5F115V29YWBR6Y5CXMTZNJ3",
+  "scenario": "CORE-BLOB-STAGE-SAME-DIGEST",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "e90a79b54a85881f5e13e8dd7bb8553bfc205790",
+  "at": "2026-10-21T10:45:08.066839Z",
+  "assertions": [
+    {
+      "name": "isolated_world_ready",
+      "passed": true
+    },
+    {
+      "name": "slow_native_blob_fixture",
+      "passed": true
+    },
+    {
+      "name": "native_transfer_in_progress",
+      "passed": true
+    },
+    {
+      "name": "synthetic_blob_staged",
+      "passed": true
+    },
+    {
+      "name": "same_digest_partial_transfer_retired",
+      "passed": true
+    },
+    {
+      "name": "fixture_record_visible",
+      "passed": true
+    },
+    {
+      "name": "authorized_blob_bytes_match",
+      "passed": true
+    },
+    {
+      "name": "fixture_record_visible",
+      "passed": true
+    },
+    {
+      "name": "authorized_blob_bytes_match",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "local_blob_stage": {
+      "samples": 1,
+      "p50_ms": 69.752,
+      "p95_ms": 69.752,
+      "max_ms": 69.752,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

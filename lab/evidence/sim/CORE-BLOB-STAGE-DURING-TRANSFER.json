@@ -1,0 +1,58 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[8.7 8.71 9.46] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5F10SD3GM9CZ7BBSBHJ5Q03",
+  "scenario": "CORE-BLOB-STAGE-DURING-TRANSFER",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "e90a79b54a85881f5e13e8dd7bb8553bfc205790",
+  "at": "2026-10-21T10:44:55.33137Z",
+  "assertions": [
+    {
+      "name": "isolated_world_ready",
+      "passed": true
+    },
+    {
+      "name": "slow_native_blob_fixture",
+      "passed": true
+    },
+    {
+      "name": "native_transfer_in_progress",
+      "passed": true
+    },
+    {
+      "name": "synthetic_blob_staged",
+      "passed": true
+    },
+    {
+      "name": "fixture_record_visible",
+      "passed": true
+    },
+    {
+      "name": "authorized_blob_bytes_match",
+      "passed": true
+    },
+    {
+      "name": "fixture_record_visible",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "local_blob_stage": {
+      "samples": 1,
+      "p50_ms": 27.08,
+      "p95_ms": 27.08,
+      "max_ms": 27.08,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

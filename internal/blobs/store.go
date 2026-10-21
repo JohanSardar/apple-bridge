@@ -174,8 +174,6 @@ func (s *Store) used() int64 {
 	return n
 }
 func (s *Store) Stage(ctx context.Context, r io.Reader, expect Expect) (Digest, Pin, error) {
-	s.transfer.Lock()
-	defer s.transfer.Unlock()
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if expect.Digest != "" && !contracts.ValidDigest(expect.Digest) {
@@ -358,11 +356,16 @@ func (s *Store) Transfer(ctx context.Context, d Digest, source Source) error {
 	defer s.transfer.Unlock()
 	for attempt := 0; attempt < 3; attempt++ {
 		err := s.transferOnce(ctx, d, source)
-		if !errors.Is(err, contracts.ErrCorrupt) {
-			return err
-		}
 		s.mu.Lock()
 		e := s.manifest.Entries[d]
+		if e.State == "present" {
+			s.mu.Unlock()
+			return nil
+		}
+		if !errors.Is(err, contracts.ErrCorrupt) {
+			s.mu.Unlock()
+			return err
+		}
 		e.State = "pending"
 		e.Corruptions++
 		e.Received = 0
@@ -373,6 +376,10 @@ func (s *Store) Transfer(ctx context.Context, d Digest, source Source) error {
 	}
 	s.mu.Lock()
 	e := s.manifest.Entries[d]
+	if e.State == "present" {
+		s.mu.Unlock()
+		return nil
+	}
 	e.State = "failed"
 	e.Reason = "digest_mismatch"
 	s.manifest.Entries[d] = e
@@ -420,6 +427,10 @@ func (s *Store) transferOnce(ctx context.Context, d Digest, source Source) (resu
 		s.mu.Lock()
 		defer s.mu.Unlock()
 		e := s.manifest.Entries[d]
+		if e.State == "present" {
+			os.Remove(part)
+			return
+		}
 		switch {
 		case errors.Is(result, syscall.ENOSPC):
 			e.State = "disk_full"
@@ -450,28 +461,14 @@ func (s *Store) transferOnce(ctx context.Context, d Digest, source Source) (resu
 		if len(b) > 1<<20 || len(b) == 0 && !eof {
 			return contracts.ErrCorrupt
 		}
-		s.mu.Lock()
-		over := s.cfg.Cap > 0 && s.used()+int64(len(b)) > s.cfg.Cap
-		s.mu.Unlock()
-		if over {
-			return contracts.ErrCapacity
-		}
-		if _, err = f.Write(b); err != nil {
-			return err
-		}
-		if err = f.Sync(); err != nil {
-			return err
-		}
-		offset += int64(len(b))
-		s.mu.Lock()
-		e := s.manifest.Entries[d]
-		e.Received = offset
-		s.manifest.Entries[d] = e
-		err = s.save()
-		s.mu.Unlock()
+		complete, err := s.appendTransferChunk(d, f, b, offset)
 		if err != nil {
 			return err
 		}
+		if complete {
+			return nil
+		}
+		offset += int64(len(b))
 		if eof {
 			break
 		}
@@ -511,6 +508,27 @@ func (s *Store) transferOnce(ctx context.Context, d Digest, source Source) (resu
 	return s.save()
 }
 
+func (s *Store) appendTransferChunk(d Digest, f *os.File, chunk []byte, offset int64) (bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	entry := s.manifest.Entries[d]
+	if entry.State == "present" {
+		os.Remove(f.Name())
+		return true, nil
+	}
+	if s.cfg.Cap > 0 && s.used()+int64(len(chunk)) > s.cfg.Cap {
+		return false, contracts.ErrCapacity
+	}
+	if _, err := f.Write(chunk); err != nil {
+		return false, err
+	}
+	if err := f.Sync(); err != nil {
+		return false, err
+	}
+	entry.Received = offset + int64(len(chunk))
+	s.manifest.Entries[d] = entry
+	return false, s.save()
+}
 func (s *Store) Release(ctx context.Context, pin Pin) error {
 	if err := ctx.Err(); err != nil {
 		return err

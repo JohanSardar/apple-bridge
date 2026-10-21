@@ -1,0 +1,7 @@
+id: CORE-BLOB-STAGE-SAME-DIGEST
+feature: core.blobs
+levels: [sim]
+given: [{world: {replicas: 1}}]
+when: [{blobs: {case: stage-same-digest}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

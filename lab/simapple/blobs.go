@@ -79,6 +79,7 @@ func (f *fakeApple) blobRoutes(mux *http.ServeMux) {
 			Size                     int    `json:"size"`
 			State                    string `json:"state"`
 			SlowMS                   int    `json:"slow_ms"`
+			RelayFixture             bool   `json:"relay_fixture"`
 			Delete                   bool   `json:"delete"`
 		}
 		if json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&a) != nil || a.Size < 0 || a.Size > 32<<20 {
@@ -104,6 +105,9 @@ func (f *fakeApple) blobRoutes(mux *http.ServeMux) {
 			b := make([]byte, a.Size)
 			for i := range b {
 				b[i] = byte((i*31 + i/251) % 256)
+			}
+			if a.RelayFixture {
+				b = []byte(strings.Repeat("[ab-test] relay blob\n", 8192))
 			}
 			if a.MIME == "image/png" {
 				b, _ = base64.StdEncoding.DecodeString("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aX1sAAAAASUVORK5CYII=")
