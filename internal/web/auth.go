@@ -17,8 +17,8 @@ import (
 type owner struct{ Credentials []webauthn.Credential }
 
 func (u owner) WebAuthnID() []byte                         { return []byte("apple-bridge-owner") }
-func (u owner) WebAuthnName() string                       { return "Apple Bridge owner" }
-func (u owner) WebAuthnDisplayName() string                { return "Apple Bridge owner" }
+func (u owner) WebAuthnName() string                       { return "Bridge owner" }
+func (u owner) WebAuthnDisplayName() string                { return "Bridge owner" }
 func (u owner) WebAuthnCredentials() []webauthn.Credential { return u.Credentials }
 
 type ceremony struct {
@@ -47,7 +47,7 @@ func (s *server) webAuthn(r *http.Request) (*webauthn.WebAuthn, owner, error) {
 	for _, k := range keys {
 		u.Credentials = append(u.Credentials, k.Credential)
 	}
-	w, err := webauthn.New(&webauthn.Config{RPID: rpID(r), RPDisplayName: "Apple Bridge", RPOrigins: []string{servingOrigin(r)}, AuthenticatorSelection: protocol.AuthenticatorSelection{ResidentKey: protocol.ResidentKeyRequirementRequired, UserVerification: protocol.VerificationRequired}})
+	w, err := webauthn.New(&webauthn.Config{RPID: rpID(r), RPDisplayName: "Bridge", RPOrigins: []string{servingOrigin(r)}, AuthenticatorSelection: protocol.AuthenticatorSelection{ResidentKey: protocol.ResidentKeyRequirementRequired, UserVerification: protocol.VerificationRequired}})
 	return w, u, err
 }
 func (s *server) authFailure(w http.ResponseWriter, r *http.Request) {

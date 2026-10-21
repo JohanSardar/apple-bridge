@@ -76,5 +76,5 @@ func openAPI(descriptors []contracts.OperationDescriptor) any {
 	for _, d := range descriptors {
 		paths["/v1/op/"+d.Name] = map[string]any{"post": map[string]any{"operationId": d.Name, "description": d.Description, "requestBody": map[string]any{"required": true, "content": map[string]any{"application/json": map[string]any{"schema": contracts.OperationSchema(d)}}}, "responses": map[string]any{"200": map[string]any{"description": "Operation result", "content": map[string]any{"application/json": map[string]any{"schema": contracts.JSONSchema(d.Output)}}}}}}
 	}
-	return map[string]any{"openapi": "3.1.0", "info": map[string]string{"title": "Apple Bridge", "version": "1"}, "paths": paths}
+	return map[string]any{"openapi": "3.1.0", "info": map[string]string{"title": "Bridge", "version": "1"}, "paths": paths}
 }

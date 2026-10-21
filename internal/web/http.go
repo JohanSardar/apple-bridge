@@ -390,7 +390,7 @@ func (s *server) static(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if path == "index.html" {
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			w.Write([]byte("<!doctype html><html><body>Run make web to build Apple Bridge.</body></html>"))
+			w.Write([]byte("<!doctype html><html><body>Run make web to build the web app.</body></html>"))
 			return
 		}
 		http.NotFound(w, r)
