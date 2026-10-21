@@ -27,6 +27,8 @@ auto_sim() {
   [ -z "$levels" ] || [ "$levels" = sim ]
 }
 if [ -z "$exclusive$light$sim" ] && [ -z "${APPLE_BRIDGE_HEAVY_NO_SIM_LANE:-}" ] && auto_sim "$@"; then sim=1; fi
+# APPLE_BRIDGE_HEAVY_NO_SIM_LANE also keeps sim jobs from running beside this one.
+record="${exclusive:+--exclusive }${APPLE_BRIDGE_HEAVY_NO_SIM_LANE:+quiet }$*"
 "$(dirname "$0")/trim-disk.sh" || true
 slots=2
 base=${APPLE_BRIDGE_HEAVY_BASE:-/tmp/apple-bridge-heavy}
@@ -112,10 +114,10 @@ while true; do
       if stale "$lock"; then rm -rf "$lock"; fi
       if mkdir "$lock" 2>/dev/null; then
         echo $$ > "$lock/pid"
-        printf '%s\n' "${exclusive:+--exclusive }$*" > "$lock/cmd"
+        printf '%s\n' "$record" > "$lock/cmd"
         held="$held $lock"
         if [ -z "$exclusive" ] || [ "$(count)" -eq "$slots" ]; then
-          if [ -z "$light" ] && { [ -n "$exclusive" ] || sensitive "$*"; }; then wait_sim_idle; fi
+          if [ -z "$light" ] && sensitive "$record"; then wait_sim_idle; fi
           label=$i
           [ -n "$exclusive" ] && label=all
           run "$label" "$@"
