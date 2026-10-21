@@ -1,0 +1,12 @@
+.switch { position: relative; display: flex; align-items: center; inline-size: 51px; block-size: 44px; padding: 2px; flex-shrink: 0; }
+.switch::before { content: ""; position: absolute; inset: 6.5px 0; border-radius: 18px; background: var(--fill); transition: background .2s; }
+.switch > span { position: relative; display: block; inline-size: 27px; block-size: 27px; border-radius: 50%; background: #fff; box-shadow: 0 2px 4px rgb(0 0 0 / 18%); transition: transform .25s cubic-bezier(.2,.8,.2,1); }
+.switch[aria-checked=true]::before { background: var(--green); }
+.switch[aria-checked=true] > span { transform: translateX(20px); }
+:dir(rtl) .switch[aria-checked=true] > span { transform: translateX(-20px); }
+@media (prefers-reduced-motion: reduce) { .switch::before, .switch > span { transition: none; } }
+.disclosure-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-block-size: 44px; inline-size: 100%; text-align: start; font-weight: 600; padding: 12px 0; }
+.disclosure-chevron { display: inline-flex; transform: rotate(180deg); color: var(--label-tertiary); }
+.disclosure-chevron .icon { inline-size: 18px; block-size: 18px; }
+.disclosure-content { padding-block: 4px 12px; }
+:dir(rtl) .disclosure-chevron { scale: -1 1; }

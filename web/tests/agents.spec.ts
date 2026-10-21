@@ -30,12 +30,18 @@ test('WEB-AGENT-OAUTH connector consent, access levels, approval screens and tok
     await page.goto('/oauth/authorize?' + query);
     await expect(page).toHaveURL(/\/signin\?return_to=/);
     await page.getByRole('button', { name: 'Sign in with a passkey', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Connect to Apple Bridge' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Connect to Bridge' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Research assistant' })).toBeVisible();
     await expect(page.getByText('connector.example', { exact: true })).toBeVisible();
     await expect(page.getByRole('radio', { name: /Approve first/ })).toBeChecked();
+    await expect(page.locator('input[type=radio], input[type=checkbox]')).toHaveCount(0);
+    const source = page.getByRole('switch', { name: 'Messages', exact: true });
+    await expect(source).toBeChecked();
+    await source.click();
+    await expect(page.getByRole('button', { name: 'Allow connection', exact: true })).toBeDisabled();
+    await source.click();
     await page.screenshot({ path: `${evidence}/consent-${info.project.name}.png`, fullPage: true });
-    await page.getByRole('radio', { name: /Read only/ }).check();
+    await page.getByRole('radio', { name: /Read only/ }).click();
     await page.route('https://connector.example/callback?*', route => route.fulfill({ contentType: 'text/html', body: '<html><body>Connected</body></html>' }));
     await page.getByRole('button', { name: 'Allow connection', exact: true }).click();
     await expect(page).toHaveURL(/https:\/\/connector.example\/callback\?/);
@@ -56,8 +62,11 @@ test('WEB-AGENT-OAUTH connector consent, access levels, approval screens and tok
     const result = (await read.json()).result;
     expect(result.isError).not.toBe(true);
     const chatID = result.structuredContent.chats[0].chat.id;
+    const chatTitle = result.structuredContent.chats[0].title;
     await page.goto('/settings/agents');
     await expect(page.getByRole('heading', { name: 'Research assistant' })).toBeVisible();
+    await expect(page.getByText('Read only · Messages', { exact: true })).toBeVisible();
+    await expect(page.getByText(/^Today at /)).toBeVisible();
     await expect(page.locator('.settings-tile')).toHaveCount(6);
     for (const icon of await page.locator('.settings-tile use').all()) { await expect.poll(() => icon.evaluate(element => (element as SVGGraphicsElement).getBBox().width)).toBeGreaterThan(0); }
     await page.getByRole('button', { name: 'Connect an agent', exact: true }).click();
@@ -67,20 +76,22 @@ test('WEB-AGENT-OAUTH connector consent, access levels, approval screens and tok
     await expect(page.getByRole('heading', { name: 'Save this token now. It will only be shown once.' })).toBeVisible();
     const agentToken = await page.getByRole('textbox', { name: 'Agent token', exact: true }).inputValue();
     expect(agentToken).toMatch(/^aba-/);
-    for (const name of ['Grok', 'Claude Code', 'Codex', 'curl']) { await page.locator('summary').getByText(name, { exact: true }).click(); }
+    for (const name of ['Grok', 'Claude Code', 'Codex', 'curl']) { await page.getByRole('button', { name, exact: true }).click(); }
     expect(await page.locator('.snippet').allTextContents()).toEqual(expect.arrayContaining([expect.stringContaining(origin + '/mcp')]));
     await page.getByRole('button', { name: 'Done', exact: true }).click();
     await expect(page.getByRole('textbox', { name: 'Agent token', exact: true })).toHaveCount(0);
+    await page.locator('.settings-layout, .settings-content').evaluateAll(elements => elements.forEach(element => element.scrollTo(0, 0)));
     await page.screenshot({ path: `${evidence}/agents-${info.project.name}.png`, fullPage: true });
     await page.getByRole('link', { name: 'Approvals', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'All caught up' })).toBeVisible();
     const commandID = randomUUID();
     const text = '[ab-test browser] Please send this after my approval.';
-    const pending = await request.post('/v1/op/messages.send', { headers: { Authorization: 'Bearer ' + agentToken }, data: { command_id: commandID, args: { chat_id: chatID, text } } });
+    const pending = await request.post('/v1/op/messages.send', { headers: { Authorization: 'Bearer ' + agentToken }, data: { command_id: commandID, args: { chat_id: chatID, text, files: [{ name: 'Draft.txt', data: Buffer.from('[ab-test browser] Attachment preview').toString('base64') }] } } });
     expect(pending.status()).toBe(200);
     expect((await pending.json()).state).toBe('awaiting_approval');
     await expect(page.getByText(text, { exact: true })).toBeVisible();
     await expect(page.getByText('Writing assistant', { exact: true })).toBeVisible();
+    await page.locator('.settings-layout, .settings-content').evaluateAll(elements => elements.forEach(element => element.scrollTo(0, 0)));
     await page.screenshot({ path: `${evidence}/approvals-${info.project.name}.png`, fullPage: true });
     await page.getByRole('button', { name: 'Approve', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'All caught up' })).toBeVisible();
