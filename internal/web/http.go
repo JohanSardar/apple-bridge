@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/blobs"
@@ -36,6 +37,7 @@ type Deps struct {
 }
 
 type server struct {
+	sourceSeq   atomic.Uint64
 	deps        Deps
 	mu          sync.Mutex
 	rates       map[string]rate

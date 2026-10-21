@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -38,6 +39,7 @@ func messageReactionProof(records []contracts.Record) (contracts.Record, sourceP
 }
 
 func runWebSources(ctx context.Context, w *world.World, client *webClient, auth *webAuthenticator, evidence *Evidence, add func(string, bool)) {
+	runWebSourceErrors(ctx, w, client, add)
 	unauthorized := *client
 	unauthorized.cookie = nil
 	response, _, err := unauthorized.request("GET", "sources", nil)
@@ -50,6 +52,13 @@ func runWebSources(ctx context.Context, w *world.World, client *webClient, auth 
 	var result contracts.ReadResult
 	err = json.Unmarshal(body, &result)
 	add("source_state_ids_and_coverage", err == nil && len(result.Records) >= 6 && response.Header.Get("Cache-Control") == "no-store")
+	firstSequence, _ := strconv.ParseUint(response.Header.Get("X-Bridge-Source-Sequence"), 10, 64)
+	secondResponse, _, sequenceErr := client.request("GET", "sources", nil)
+	secondSequence := uint64(0)
+	if sequenceErr == nil {
+		secondSequence, _ = strconv.ParseUint(secondResponse.Header.Get("X-Bridge-Source-Sequence"), 10, 64)
+	}
+	add("source_responses_have_increasing_server_sequence", firstSequence > 0 && sequenceErr == nil && secondSequence > firstSequence && secondResponse.Header.Get("Cache-Control") == "no-store")
 	record, source, proof := messageReactionProof(result.Records)
 	add("source_proofs_have_reasons", record.ID != "" && record.Collection == "system.source" && source.State == "ready" && proof.Reason != "")
 	conn, err := client.socket()

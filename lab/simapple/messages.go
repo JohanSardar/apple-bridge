@@ -143,9 +143,14 @@ func (f *fakeApple) messageRoutes(mux *http.ServeMux) {
 					}
 				}
 			}
-		case "capability-unproven", "capability-proven":
+		case "capability-unproven", "capability-proven", "capability-proven-empty-reason":
 			f.messages.capabilityUnproven = action.Action == "capability-unproven"
 			coverage := messageCoverage()
+			if action.Action == "capability-proven-empty-reason" {
+				for i := range coverage.Operations {
+					coverage.Operations[i].Reason = ""
+				}
+			}
 			capabilities, reason := messageCapabilities(), ""
 			if f.messages.capabilityUnproven {
 				for i := range coverage.Operations {

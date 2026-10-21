@@ -1,14 +1,14 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[18.71 12.3 11.05] cpus=8 other_heavy=1"
+    "summary": "air: load=[6.19 7.45 8.72] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M5F59M92S7QNQZZSPGB248KN",
+  "run_id": "run_01M5F8SV36Y99TGSKN24WASNGN",
   "scenario": "WEB-SOURCES-STATUS",
   "level": "sim",
   "passed": true,
-  "git_sha": "788fa5a7db661ade0becb959d5c28204a56dfdf6",
-  "at": "2026-10-21T11:59:39.298998Z",
+  "git_sha": "fa93566ae7751665664185e54d64ba85531f6277",
+  "at": "2026-10-21T13:00:56.296045Z",
   "assertions": [
     {
       "name": "software_passkey_enrollment",
@@ -31,6 +31,14 @@
       "passed": true
     },
     {
+      "name": "source_backend_unavailable_is_503",
+      "passed": true
+    },
+    {
+      "name": "source_forbidden_origin_is_403",
+      "passed": true
+    },
+    {
       "name": "source_status_requires_device_session",
       "passed": true
     },
@@ -40,6 +48,10 @@
     },
     {
       "name": "source_state_ids_and_coverage",
+      "passed": true
+    },
+    {
+      "name": "source_responses_have_increasing_server_sequence",
       "passed": true
     },
     {
@@ -118,16 +130,16 @@
   "latency": {
     "capability-proven_to_live_source": {
       "samples": 1,
-      "p50_ms": 9.183708,
-      "p95_ms": 9.183708,
-      "max_ms": 9.183708,
+      "p50_ms": 12.990833,
+      "p95_ms": 12.990833,
+      "max_ms": 12.990833,
       "timeouts": 0
     },
     "capability-unproven_to_live_source": {
       "samples": 1,
-      "p50_ms": 10.410166,
-      "p95_ms": 10.410166,
-      "max_ms": 10.410166,
+      "p50_ms": 16.039416,
+      "p95_ms": 16.039416,
+      "max_ms": 16.039416,
       "timeouts": 0
     }
   },

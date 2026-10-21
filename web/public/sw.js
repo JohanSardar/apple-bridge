@@ -54,6 +54,7 @@ async function thumbnail(request,response,version){
 self.addEventListener('fetch',event=>{
   const request=event.request,url=new URL(request.url);
   if(request.method!=='GET'||url.origin!==self.location.origin||request.headers.has('Range'))return;
+  if(url.pathname.startsWith('/web/v1/')&&!url.pathname.startsWith('/web/v1/blob/'))return;
   const client=event.clientId||event.resultingClientId;
   const version=generation;
   if(request.mode==='navigate'){
@@ -87,7 +88,7 @@ self.addEventListener('fetch',event=>{
     });
     if(cached)return cached;
     const response=await fetch(request);
-    if(response.ok&&thumb)event.waitUntil(enqueue(()=>thumbnail(request,response.clone(),version)));
+    if(response.ok&&thumb){const copy=response.clone();event.waitUntil(enqueue(()=>thumbnail(request,copy,version)));}
     if(response.ok&&shell){const copy=response.clone();event.waitUntil(enqueue(async()=>{if(version===generation&&trusted.has(client))await(await caches.open(SHELL)).put(request,copy);}));}
     return response;
   })());
