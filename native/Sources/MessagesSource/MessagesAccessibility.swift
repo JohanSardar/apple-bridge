@@ -18,7 +18,7 @@ enum MessagesAccessibility {
     private static func value(_ element: AXUIElement, _ attribute: String) -> String {
         var result: CFTypeRef?
         guard AXUIElementCopyAttributeValue(element, attribute as CFString, &result) == .success else { return "" }
-        return (result as? NSAttributedString)?.string ?? result as? String ?? ""
+        return (result as? NSAttributedString)?.string ?? (result as? URL)?.absoluteString ?? result as? String ?? ""
     }
     private static func children(_ element: AXUIElement) -> [AXUIElement] {
         var result: CFTypeRef?
@@ -46,11 +46,20 @@ enum MessagesAccessibility {
         guard !guid.isEmpty else { throw SourceFailure.capabilityUnproven }
         var budget = 4000
         let expected = prepared.nativeState["target"]["text"].string
-        guard !expected.isEmpty else { throw SourceFailure.conflict }
+        let mediaNames = prepared.nativeState["cleanup_authorized"].bool ? prepared.nativeState["target"]["cleanup_media_names"].array.map(\.string) : []
+        guard !expected.isEmpty || !mediaNames.isEmpty else { throw SourceFailure.conflict }
         let outgoing = prepared.nativeState["target"]["is_from_me"].bool
         let targets = matching(root, budget: &budget) { element in
             let identifier = value(element, kAXIdentifierAttribute)
             let description = value(element, kAXDescriptionAttribute)
+            if !mediaNames.isEmpty, identifier == "Sticker" {
+                var mediaBudget = 100
+                let matched = matching(element, budget: &mediaBudget) { child in
+                    let values = [value(child, kAXDescriptionAttribute), value(child, kAXValueAttribute), value(child, "AXURL"), value(child, kAXTitleAttribute)]
+                    return mediaNames.contains { name in values.contains { $0.contains(name) || $0.removingPercentEncoding?.contains(name) == true } }
+                }
+                return !matched.isEmpty && mediaBudget > 0
+            }
             var textBudget = 100
             let exactText = identifier == "Sticker" && matching(element, budget: &textBudget) { value($0, kAXIdentifierAttribute) == "CKBalloonTextView" && textValue($0) == expected }.count == 1
             return exactText && (prepared.nativeState["cleanup_authorized"].bool || description.hasPrefix(outgoing ? "Your iMessage," : "iMessage,"))

@@ -376,6 +376,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if level == "web" {
 		return runWeb(ctx, s)
 	}
+	if s.ID == "WEB-MEDIA-VARIANTS" {
+		return runMediaVariants(ctx, s, level)
+	}
 	if s.Feature == "web.readmodels" {
 		return runReadModels(ctx, s, level)
 	}
@@ -937,7 +940,7 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		if s.Feature == "web.readmodels" {
 			duration = 15 * time.Minute
 		}
-		if level == "real" && (s.Feature == "messages.actions" || s.Feature == "messages.groups") {
+		if level == "real" && (s.Feature == "messages.actions" || s.Feature == "messages.groups" || s.Feature == "web.media") {
 			duration = 8 * time.Minute
 		}
 		if s.ID == "CAL-CRUD" && level != "sim" {

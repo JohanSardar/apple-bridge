@@ -28,14 +28,39 @@ public enum MessagesCleanup {
         }
         let own = Set(try MessagesProbes.discoverSelfHandles().handles)
         let reader = try MessagesReader(path: FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Messages/chat.db").path)
+        var mediaNames: Set<String> = []
+        var mediaBaseline: Int64 = 0
+        if !tag.isEmpty {
+            let run = String(tag.dropFirst(9).dropLast())
+            let ledger = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/AppleBridgeDev/messages-command-cleanup/" + run + ".json")
+            if let bytes = try? Data(contentsOf: ledger), let registration = try? JSONDecoder().decode(JSON.self, from: bytes), registration["scenario"].string == "WEB-MEDIA-VARIANTS", registration["run_id"].string == run {
+                mediaBaseline = Int64(registration["baseline_max_row_id"].number)
+                mediaNames = Set(registration["media_attachment_names"].array.map(\.string).filter { $0.hasPrefix("ab-" + run + ".") && $0 == URL(fileURLWithPath: $0).lastPathComponent })
+            }
+        }
         func candidates() throws -> [(String, JSON)] {
-            let rows = try reader.query("SELECT DISTINCT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID WHERE NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=j.chat_id AND r.message_id=m.ROWID) AND (instr(m.text,'[ab-test ')>0 OR instr(m.attributedBody,CAST('[ab-test ' AS BLOB))>0) ORDER BY m.ROWID DESC", [])
+            var rows = try reader.query("SELECT DISTINCT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID WHERE NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=j.chat_id AND r.message_id=m.ROWID) AND (instr(m.text,'[ab-test ')>0 OR instr(m.attributedBody,CAST('[ab-test ' AS BLOB))>0) ORDER BY m.ROWID DESC", [])
+            var mediaByMessage: [String: [String]] = [:]
+            if !mediaNames.isEmpty, mediaBaseline > 0 {
+                for row in try reader.query("SELECT m.guid,a.filename FROM message m JOIN message_attachment_join j ON j.message_id=m.ROWID JOIN attachment a ON a.ROWID=j.attachment_id JOIN chat_message_join c ON c.message_id=m.ROWID WHERE m.ROWID>? AND NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=c.chat_id)", [String(mediaBaseline)]) {
+                    let name = URL(fileURLWithPath: row["filename"]).lastPathComponent
+                    if mediaNames.contains(name) { mediaByMessage[row["guid"], default: []].append(name) }
+                }
+                rows += try reader.query("SELECT guid FROM message WHERE ROWID>?", [String(mediaBaseline)]).filter { mediaByMessage[$0["guid"]] != nil && !rows.map({ $0["guid"] }).contains($0["guid"]) }
+            }
             var result: [(String, JSON)] = []
             for key in rows {
                 guard let row = try reader.message(key["guid"]), let item = try reader.messageObservations(row).first, item.0 == "messages.message" else { continue }
                 let peers = try reader.query("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", [row["capture_chat_guid"]])
                 guard !peers.isEmpty, peers.allSatisfy({ own.union(approved).contains(MessagesProbes.normalize($0["id"])) }) else { continue }
-                let target = try JSONDecoder().decode(JSON.self, from: JSONSerialization.data(withJSONObject: item.2))
+                var fields = item.2
+                if let names = mediaByMessage[row["guid"]], peers.allSatisfy({ own.contains(MessagesProbes.normalize($0["id"])) }) {
+                    fields["cleanup_media_names"] = names
+                    let target = try JSONDecoder().decode(JSON.self, from: JSONSerialization.data(withJSONObject: fields))
+                    result.append((row["guid"], target))
+                    continue
+                }
+                let target = try JSONDecoder().decode(JSON.self, from: JSONSerialization.data(withJSONObject: fields))
                 guard target["text"].string.range(of: #"\[ab-test [A-Za-z0-9_-]+\]"#, options: .regularExpression) != nil else { continue }
                 guard tag.isEmpty || target["text"].string.contains(tag) else { continue }
                 result.append((row["guid"], target))

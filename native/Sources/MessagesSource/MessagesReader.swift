@@ -185,7 +185,7 @@ final class MessagesReader {
         guard has("attachment", "guid") else { return [] }
         var result: [(String, String, [String: Any])] = []
         let message = has("message_attachment_join", "message_id", "attachment_id") ? "(SELECT m.guid FROM message_attachment_join j JOIN message m ON m.ROWID=j.message_id WHERE j.attachment_id=a.ROWID ORDER BY m.ROWID LIMIT 1)" : "NULL"
-        for row in try query("SELECT a.ROWID AS row_position,a.*,\(message) AS message_guid FROM attachment a" + (guid == nil ? "" : " WHERE a.guid=?"), guid.map { [$0] } ?? []) {
+        for row in try query("SELECT a.ROWID AS row_position,a.*,\(message) AS message_guid FROM attachment a" + (guid == nil ? " ORDER BY a.ROWID DESC" : " WHERE a.guid=?"), guid.map { [$0] } ?? []) {
             let location = attachmentURL(row["filename"])
             let exists = location.map { FileManager.default.fileExists(atPath: $0.path) } ?? false
             let resource = try? location?.resourceValues(forKeys: [.isUbiquitousItemKey, .ubiquitousItemDownloadingStatusKey])

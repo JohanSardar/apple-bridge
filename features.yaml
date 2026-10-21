@@ -417,9 +417,9 @@ features:
     milestone: W1
     modules: [native/MediaDerivatives, blobs, web]
     depends_on: [messages.read]
-    status: todo
+    status: in_progress
     scenarios:
-      - {id: WEB-MEDIA-VARIANTS, levels: [real]}
+      - {id: WEB-MEDIA-VARIANTS, levels: [sim, real, replica]}
   - id: web.remote
     title: Reach from anywhere through the embedded Tailscale Funnel
     requirements: [R-WEB-REACH, R-SECURE]

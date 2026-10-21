@@ -6,6 +6,7 @@ import (
 	"github.com/JohanSardar/apple-bridge/internal/trust"
 	"github.com/coder/websocket"
 	"io"
+	"sort"
 	"time"
 )
 
@@ -154,18 +155,26 @@ func (c *Client) followBlobs(ctx context.Context, conn *websocket.Conn, events <
 			if err != nil {
 				continue
 			}
+			list := []contracts.BlobReference{}
+			for _, refs := range refs {
+				list = append(list, refs...)
+			}
+			sort.Slice(list, func(i, j int) bool {
+				if list[i].Variant != list[j].Variant {
+					return list[i].Variant
+				}
+				return list[i].Digest < list[j].Digest
+			})
 			seen := map[string]bool{}
-			for _, list := range refs {
-				for _, ref := range list {
-					if seen[ref.Digest] {
-						continue
-					}
-					seen[ref.Digest] = true
-					source := &feedSource{conn: conn, events: events}
-					c.Blobs.Transfer(ctx, ref.Digest, source)
-					if source.started {
-						source.drain(ctx)
-					}
+			for _, ref := range list {
+				if seen[ref.Digest] {
+					continue
+				}
+				seen[ref.Digest] = true
+				source := &feedSource{conn: conn, events: events}
+				c.Blobs.Transfer(ctx, ref.Digest, source)
+				if source.started {
+					source.drain(ctx)
 				}
 			}
 		}

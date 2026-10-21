@@ -268,7 +268,7 @@ func Start(ctx, Config) error
 | `messages.handle` | `address` (phone/email), `service`, `contact_id?` |
 | `messages.message` | `chat_id`, `sender_handle_id?`, `is_from_me`, `sent_at`, `parts[]` (`{index, kind: text|attachment, text?, attachment_id?}`), `text` (joined plain text), `decode_status` (`decoded|partial|undecoded`), `raw_body_digest?`, `reply_to_id?`, `thread_originator_id?`, `edited_at?`, `edit_history[]`, `retracted_parts[]`, `retracted_at?`, `delivered_at?`, `read_at?`, `error_code`, `effect?`, `kind` (`message|group_event|system`), `group_event?` |
 | `messages.reaction` | `message_id`, `part_index`, `sender_handle_id?`, `is_from_me`, `kind` (love/like/dislike/laugh/emphasize/question/emoji/sticker), `emoji?`, `removed` |
-| `messages.attachment` | `message_id`, `filename`, `mime_type`, `uti`, `size`, `blob` (`{digest?, state: present|pending|offloaded|missing|over_cap|failed|disk_full}`) |
+| `messages.attachment` | `message_id`, `filename`, `mime_type`, `uti`, `size`, `blob` (`{digest?, state: present|pending|offloaded|missing|over_cap|failed|disk_full}`), `derivatives` (`{thumb|display|video|poster|audio|live: {digest, mime, size, state, width?, height?}}`), `media` (`{width?, height?, duration_ms?, thumbhash?, waveform?, live?}`; ThumbHash is base64, waveform is 64 peaks in 0–255; §23.7) |
 | `calendar.calendar` | `title`, `account`, `color`, `writable`, `type` |
 | `calendar.event` | `calendar_id`, `series_id?`, `occurrence_date?` (original), `title`, `notes`, `location`, `url`, `start`, `end`, `all_day`, `time_zone`, `recurrence?` (rule on series), `is_exception`, `attendees[]` (read-only), `alarms[]`, `availability`, `status` |
 | `reminders.list` | `title`, `account`, `color`, `writable` |
