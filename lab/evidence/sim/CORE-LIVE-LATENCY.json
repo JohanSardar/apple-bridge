@@ -1,15 +1,18 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[12.67 8.91 8.39] cpus=8 other_heavy=1"
+    "summary": "air: load=[10.49 14.43 15.26] cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5E2H56Y0XZS24VEMYKR65JK",
+  "run_id": "run_01M5G1DTVQDRQC2945ZJA7KBT2",
   "network_path": "loopback",
+  "metrics": {
+    "calendar_live_delta_bytes": 208879
+  },
   "scenario": "CORE-LIVE-LATENCY",
   "level": "sim",
   "passed": true,
-  "git_sha": "4142c29bd4613a3195abc5738a25048c825acca2",
-  "at": "2026-10-21T01:52:05.854346Z",
+  "git_sha": "99df4286d83aea7f388323487568e5bfd7910c6a",
+  "at": "2026-10-21T20:11:17.239672Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -25,6 +28,10 @@
     },
     {
       "name": "scope_query_and_get",
+      "passed": true
+    },
+    {
+      "name": "calendar_200kb_delta_atomic_during_reminders_live",
       "passed": true
     },
     {
@@ -87,20 +94,27 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 200,
-      "p50_ms": 14.586709,
-      "p95_ms": 19.376791,
-      "max_ms": 47.807917,
+      "p50_ms": 9.398959,
+      "p95_ms": 19.233375,
+      "max_ms": 28.2085,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 200,
-      "p50_ms": 21.079167,
-      "p95_ms": 28.76975,
-      "max_ms": 63.612875,
+      "p50_ms": 15.47575,
+      "p95_ms": 31.391958,
+      "max_ms": 64.624625,
       "timeouts": 0
     }
   },
   "hosts": [
     "air"
-  ]
+  ],
+  "conditions": {
+    "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
+    "heavy_slots_in_use": "1",
+    "load_average": "9.83 14.00 15.08",
+    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica",
+    "swap_usage": "total = 3072.00M  used = 1923.19M  free = 1148.81M  (encrypted)"
+  }
 }

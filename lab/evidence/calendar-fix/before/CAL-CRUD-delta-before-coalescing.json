@@ -1,0 +1,335 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[68.87 68.81 43.59] cpus=8 other_heavy=0"
+  },
+  "run_id": "cal_01M5FM6W7P5NS790404F7K5AE4",
+  "network_path": "loopback",
+  "scenario": "CAL-CRUD",
+  "level": "real",
+  "passed": true,
+  "git_sha": "6bd25b9e32dbd3e633c06a513202303ab0959e07",
+  "at": "2026-10-21T16:20:17.782913Z",
+  "assertions": [
+    {
+      "name": "private_signed_apps_per_world",
+      "passed": true
+    },
+    {
+      "name": "initial_calendar_scan_complete",
+      "passed": true
+    },
+    {
+      "name": "calendar_visible",
+      "passed": true
+    },
+    {
+      "name": "truth_calendar_fields",
+      "passed": true
+    },
+    {
+      "name": "create_event_observed",
+      "passed": true
+    },
+    {
+      "name": "initial_occurrences_visible",
+      "passed": true
+    },
+    {
+      "name": "agenda_returns_occurrences",
+      "passed": true
+    },
+    {
+      "name": "update_preserves_bridge_id",
+      "passed": true
+    },
+    {
+      "name": "event_fields_and_alarm_updated",
+      "passed": true
+    },
+    {
+      "name": "truth_updated_event_fields",
+      "passed": true
+    },
+    {
+      "name": "stale_version_rejected",
+      "passed": true
+    },
+    {
+      "name": "delete_absence_visible",
+      "passed": true
+    },
+    {
+      "name": "truth_created_series_occurrences",
+      "passed": true
+    },
+    {
+      "name": "created_series_deleted_with_future_span",
+      "passed": true
+    },
+    {
+      "name": "create_calendar_observed",
+      "passed": true
+    },
+    {
+      "name": "created_calendar_ownership_durable",
+      "passed": true
+    },
+    {
+      "name": "independent_appletruth_equality",
+      "passed": true
+    },
+    {
+      "name": "replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "contiguous_feed_0",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "contiguous_feed_1",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_query",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_mcp_agenda",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_query",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_mcp_agenda",
+      "passed": true
+    },
+    {
+      "name": "private_helper_paused_for_integrity",
+      "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass",
+      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
+    },
+    {
+      "name": "tagged_fixture_cleanup_audit",
+      "passed": true
+    },
+    {
+      "name": "mcp_private_signed_apps_per_world",
+      "passed": true
+    },
+    {
+      "name": "mcp_initial_calendar_scan_complete",
+      "passed": true
+    },
+    {
+      "name": "mcp_calendar_visible",
+      "passed": true
+    },
+    {
+      "name": "mcp_truth_calendar_fields",
+      "passed": true
+    },
+    {
+      "name": "mcp_create_event_observed",
+      "passed": true
+    },
+    {
+      "name": "mcp_initial_occurrences_visible",
+      "passed": true
+    },
+    {
+      "name": "mcp_agenda_returns_occurrences",
+      "passed": true
+    },
+    {
+      "name": "mcp_update_preserves_bridge_id",
+      "passed": true
+    },
+    {
+      "name": "mcp_event_fields_and_alarm_updated",
+      "passed": true
+    },
+    {
+      "name": "mcp_truth_updated_event_fields",
+      "passed": true
+    },
+    {
+      "name": "mcp_stale_version_rejected",
+      "passed": true
+    },
+    {
+      "name": "mcp_delete_absence_visible",
+      "passed": true
+    },
+    {
+      "name": "mcp_truth_created_series_occurrences",
+      "passed": true
+    },
+    {
+      "name": "mcp_created_series_deleted_with_future_span",
+      "passed": true
+    },
+    {
+      "name": "mcp_create_calendar_observed",
+      "passed": true
+    },
+    {
+      "name": "mcp_created_calendar_ownership_durable",
+      "passed": true
+    },
+    {
+      "name": "mcp_independent_appletruth_equality",
+      "passed": true
+    },
+    {
+      "name": "mcp_replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "mcp_contiguous_feed_0",
+      "passed": true
+    },
+    {
+      "name": "mcp_no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "mcp_contiguous_feed_1",
+      "passed": true
+    },
+    {
+      "name": "mcp_no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "mcp_no_scope_leak_query",
+      "passed": true
+    },
+    {
+      "name": "mcp_no_scope_leak_mcp_agenda",
+      "passed": true
+    },
+    {
+      "name": "mcp_no_scope_leak_query",
+      "passed": true
+    },
+    {
+      "name": "mcp_no_scope_leak_mcp_agenda",
+      "passed": true
+    },
+    {
+      "name": "mcp_private_helper_paused_for_integrity",
+      "passed": true
+    },
+    {
+      "name": "mcp_replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass",
+      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+    },
+    {
+      "name": "mcp_replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
+    },
+    {
+      "name": "mcp_tagged_fixture_cleanup_audit",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "command_submit→calendar.create_calendar_observed": {
+      "samples": 1,
+      "p50_ms": 6408.567667,
+      "p95_ms": 6408.567667,
+      "max_ms": 6408.567667,
+      "timeouts": 0
+    },
+    "command_submit→calendar.create_event_observed": {
+      "samples": 2,
+      "p50_ms": 3951.152792,
+      "p95_ms": 8116.407667,
+      "max_ms": 8116.407667,
+      "timeouts": 0
+    },
+    "command_submit→calendar.delete_event_observed": {
+      "samples": 2,
+      "p50_ms": 6851.558875,
+      "p95_ms": 6863.533459,
+      "max_ms": 6863.533459,
+      "timeouts": 0
+    },
+    "command_submit→calendar.update_event_observed": {
+      "samples": 1,
+      "p50_ms": 4768.753084,
+      "p95_ms": 4768.753084,
+      "max_ms": 4768.753084,
+      "timeouts": 0
+    },
+    "mcp_command_submit→calendar.create_calendar_observed": {
+      "samples": 1,
+      "p50_ms": 11700.474375,
+      "p95_ms": 11700.474375,
+      "max_ms": 11700.474375,
+      "timeouts": 0
+    },
+    "mcp_command_submit→calendar.create_event_observed": {
+      "samples": 2,
+      "p50_ms": 5896.390292,
+      "p95_ms": 10062.885958,
+      "max_ms": 10062.885958,
+      "timeouts": 0
+    },
+    "mcp_command_submit→calendar.delete_event_observed": {
+      "samples": 2,
+      "p50_ms": 9681.63625,
+      "p95_ms": 12939.060417,
+      "max_ms": 12939.060417,
+      "timeouts": 0
+    },
+    "mcp_command_submit→calendar.update_event_observed": {
+      "samples": 1,
+      "p50_ms": 5857.365792,
+      "p95_ms": 5857.365792,
+      "max_ms": 5857.365792,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ],
+  "conditions": {
+    "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
+    "heavy_slots_in_use": "1",
+    "load_average": "68.87 68.81 43.59",
+    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica",
+    "swap_usage": "total = 2048.00M  used = 1257.75M  free = 790.25M  (encrypted)"
+  }
+}
