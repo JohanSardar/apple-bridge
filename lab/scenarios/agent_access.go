@@ -36,7 +36,7 @@ func runAgentAccess(ctx context.Context, s Scenario, level string, run func(cont
 		add("owner_session", false)
 		return e
 	}
-	c := &webClient{ctx: ctx, origin: strings.Replace(w.Gateway.URL, "127.0.0.1", "localhost", 1), cookie: &http.Cookie{Name: bridgeweb.SessionCookie, Value: token}}
+	c := &webClient{ctx: ctx, origin: strings.Replace(w.Gateway.URL, "127.0.0.1", "localhost", 1), cookie: &http.Cookie{Name: bridgeweb.LocalSessionCookie, Value: token}}
 	resp, _, err := c.request("GET", "agents", nil)
 	add("agents_available", err == nil && resp.StatusCode == 200)
 	run(ctx, w, c, &e, add)
