@@ -624,6 +624,12 @@ func runWebReadModels(ctx context.Context, w *world.World, c *webClient, conn *w
 		return
 	}
 	chatID := chats.Records[0].ID
+	var initialMessages contracts.ReadResult
+	_, err = world.Request(ctx, w.Gateway, "/v1/op/records.query", contracts.ReadQuery{Collection: "messages.message"}, &initialMessages)
+	if err != nil || len(initialMessages.Records) != 3 {
+		add("thread_window_fixture", false)
+		return
+	}
 	read := func() (map[string]any, error) {
 		bounded, cancel := context.WithTimeout(ctx, 3*time.Second)
 		defer cancel()
@@ -635,6 +641,10 @@ func runWebReadModels(ctx context.Context, w *world.World, c *webClient, conn *w
 		args := map[string]any{}
 		if view != "chats" {
 			args["chat_id"] = chatID
+		}
+		if view == "thread" {
+			args["anchor"] = initialMessages.Records[1].ID
+			args["limit"] = 3
 		}
 		if view == "collection" {
 			args["kind"] = "photos"
@@ -672,12 +682,6 @@ func runWebReadModels(ctx context.Context, w *world.World, c *webClient, conn *w
 		}
 	}
 
-	var initialMessages contracts.ReadResult
-	_, err = world.Request(ctx, w.Gateway, "/v1/op/records.query", contracts.ReadQuery{Collection: "messages.message"}, &initialMessages)
-	if err != nil || len(initialMessages.Records) != 3 {
-		add("thread_window_fixture", false)
-		return
-	}
 	wsjson.Write(ctx, conn, map[string]any{"t": "sub", "id": "edge", "view": "thread", "args": map[string]any{"chat_id": chatID, "anchor": initialMessages.Records[0].ID, "limit": 1}})
 	foundEdge := false
 	for tries := 0; tries < 12; tries++ {
@@ -778,7 +782,47 @@ func runWebReadModels(ctx context.Context, w *world.World, c *webClient, conn *w
 	}
 	e.Latency["journal_commit_to_last_readmodel_frame_written"] = stats(samples, 0)
 	add("readmodel_latency_32_samples", err == nil && len(samples) == 32)
+
 	add("readmodel_commit_to_frame_p95_20ms", len(samples) == 32 && stats(samples, 0).P95 <= 20)
+	wsjson.Write(ctx, conn, map[string]any{"t": "sub", "id": "tail", "view": "thread", "args": map[string]any{"chat_id": chatID, "anchor": "latest", "limit": 3}})
+	ready := false
+	for tries := 0; tries < 12; tries++ {
+		frame, err := read()
+		if err != nil {
+			break
+		}
+		if frame["t"] == "snap" && frame["sub"] == "tail" {
+			data, _ := frame["data"].(map[string]any)
+			ready = data["newer"] == float64(0)
+			break
+		}
+	}
+	add("latest_thread_at_tail", ready)
+	err = w.ControlAction("/messages", map[string]any{"action": "incoming", "key": "web-readmodel-tail"})
+	followed := false
+	for tries := 0; tries < 20 && err == nil; tries++ {
+		frame, readErr := read()
+		if readErr != nil {
+			break
+		}
+		if frame["t"] != "delta" || frame["sub"] != "tail" {
+			continue
+		}
+		updates, _ := frame["changes"].([]any)
+		for _, update := range updates {
+			change, _ := update.(map[string]any)
+			row, _ := change["row"].(map[string]any)
+			data, _ := row["data"].(map[string]any)
+			title, _ := data["title"].(string)
+			if change["op"] == "upsert" && strings.Contains(title, "web-readmodel-tail") {
+				followed = true
+			}
+		}
+		if followed {
+			break
+		}
+	}
+	add("latest_thread_follows_new_inbound", followed)
 }
 
 type webZeroReader struct{}
