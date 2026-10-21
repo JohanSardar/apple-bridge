@@ -226,7 +226,7 @@ func (c *webClient) signIn(auth *webAuthenticator, flow, token, kind string) (in
 		return 0, nil, err
 	}
 	for _, cookie := range resp.Cookies() {
-		if cookie.Name == bridgeweb.SessionCookie {
+		if cookie.Name == bridgeweb.LocalSessionCookie {
 			c.cookie = cookie
 		}
 	}
@@ -276,7 +276,7 @@ func runWebSession(ctx context.Context, w *world.World, id string, e *Evidence, 
 		e.Assertions = append(e.Assertions, Assertion{Name: "enrollment_status", Detail: fmt.Sprintf("status=%d error=%v body=%s", status, err, string(body)), Passed: false})
 		return
 	}
-	add("host_cookie_flags", c.cookie != nil && c.cookie.Name == "__Host-ab_session" && c.cookie.Path == "/" && c.cookie.Secure && c.cookie.HttpOnly && c.cookie.SameSite == http.SameSiteStrictMode && c.cookie.MaxAge > 0 && c.cookie.Domain == "")
+	add("local_cookie_flags", c.cookie != nil && c.cookie.Name == bridgeweb.LocalSessionCookie && c.cookie.Path == "/" && !c.cookie.Secure && c.cookie.HttpOnly && c.cookie.SameSite == http.SameSiteStrictMode && c.cookie.MaxAge > 0 && c.cookie.Domain == "")
 	var trustedSession struct {
 		Expires time.Time `json:"expires_at"`
 	}
@@ -383,7 +383,7 @@ func runWebSession(ctx context.Context, w *world.World, id string, e *Evidence, 
 		}
 		json.Unmarshal(body, &publicSession)
 		add("public_thirty_minute_idle", time.Until(publicSession.Expires) > 29*time.Minute && time.Until(publicSession.Expires) <= 30*time.Minute)
-		add("public_session_cookie", public.cookie != nil && public.cookie.MaxAge == 0 && public.cookie.Expires.IsZero() && public.cookie.Secure && public.cookie.HttpOnly)
+		add("public_session_cookie", public.cookie != nil && public.cookie.MaxAge == 0 && public.cookie.Expires.IsZero() && !public.cookie.Secure && public.cookie.HttpOnly)
 		frame, err := read(conn)
 		add("signin_to_existing_session", err == nil && frame["t"] == "signin")
 		other, err := public.socket()
@@ -903,7 +903,7 @@ func runWebRateWindows(ctx context.Context, w *world.World, add func(string, boo
 		add("api_session_fixture", false)
 		return
 	}
-	c.cookie = &http.Cookie{Name: bridgeweb.SessionCookie, Value: token}
+	c.cookie = &http.Cookie{Name: bridgeweb.LocalSessionCookie, Value: token}
 	api := true
 	for count := 0; count < 50; count++ {
 		resp, _, err = c.request("GET", "session", nil)

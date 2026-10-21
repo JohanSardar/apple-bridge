@@ -20,6 +20,7 @@ import (
 )
 
 const SessionCookie = "__Host-ab_session"
+const LocalSessionCookie = "ab_session_local"
 const CSP = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
 
 type Deps struct {
@@ -142,7 +143,7 @@ func Handler(deps Deps) http.Handler {
 			reject(w, 503, "unavailable")
 			return
 		}
-		setCookie(w, "", trust.DeviceSession{}, -1)
+		setCookie(w, r, "", trust.DeviceSession{}, -1)
 		respond(w, 200, map[string]bool{"ok": true})
 	})
 	mux.HandleFunc("GET /web/v1/devices", func(w http.ResponseWriter, r *http.Request) {
@@ -237,7 +238,7 @@ func Handler(deps Deps) http.Handler {
 					return
 				}
 			} else {
-				cookie, err := r.Cookie(SessionCookie)
+				cookie, err := r.Cookie(sessionCookie(r))
 				if err != nil {
 					reject(w, 401, "unauthorized")
 					return
@@ -253,7 +254,7 @@ func Handler(deps Deps) http.Handler {
 					return
 				}
 				if session.Kind == "trusted" {
-					setCookie(w, cookie.Value, session, 0)
+					setCookie(w, r, cookie.Value, session, 0)
 				}
 				r = r.WithContext(context.WithValue(r.Context(), identityKey{}, identity{p, session, cookie.Value}))
 			}
@@ -338,8 +339,16 @@ func (s *server) allow(key string, auth bool) bool {
 	}
 	return r.Seconds <= 50
 }
-func setCookie(w http.ResponseWriter, token string, session trust.DeviceSession, maxAge int) {
-	cookie := &http.Cookie{Name: SessionCookie, Value: token, Path: "/", Secure: true, HttpOnly: true, SameSite: http.SameSiteStrictMode, MaxAge: maxAge}
+func sessionCookie(r *http.Request) string {
+	value, _ := r.Context().Value(servingKey{}).(serving)
+	host, port, err := net.SplitHostPort(value.Host)
+	if value.Scheme == "http" && r.TLS == nil && err == nil && port != "" && (host == "localhost" || host == "127.0.0.1") {
+		return LocalSessionCookie
+	}
+	return SessionCookie
+}
+func setCookie(w http.ResponseWriter, r *http.Request, token string, session trust.DeviceSession, maxAge int) {
+	cookie := &http.Cookie{Name: sessionCookie(r), Value: token, Path: "/", Secure: sessionCookie(r) == SessionCookie, HttpOnly: true, SameSite: http.SameSiteStrictMode, MaxAge: maxAge}
 	if token != "" && session.Kind == "trusted" {
 		cookie.MaxAge = max(1, int(time.Until(session.ExpiresAt).Seconds()))
 		cookie.Expires = session.ExpiresAt

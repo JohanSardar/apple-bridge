@@ -192,7 +192,7 @@ func (s *server) authFinish(w http.ResponseWriter, r *http.Request, flow string)
 		reject(w, 503, "unavailable")
 		return
 	}
-	setCookie(w, token, session, 0)
+	setCookie(w, r, token, session, 0)
 	s.broadcast(map[string]any{"t": "signin", "device": session.DeviceID, "at": time.Now().UTC()}, session.DeviceID)
 	respond(w, 200, session)
 }

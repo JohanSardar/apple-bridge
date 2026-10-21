@@ -119,6 +119,14 @@ func webBrowserControl(ctx context.Context, w *world.World, origin string) (*htt
 			credential, err = authenticator.credential(true, options.PublicKey.Challenge, origin, parsed.Hostname())
 			value = map[string]any{"ceremony_id": options.ID, "credential": credential}
 
+		case "/cookie-boundaries":
+			var input struct {
+				Token string `json:"token"`
+			}
+			err = json.NewDecoder(request.Body).Decode(&input)
+			if err == nil {
+				value, err = webCookieBoundaries(ctx, w, input.Token)
+			}
 		case "/session":
 			var link string
 			link, err = enroll(false)
@@ -162,7 +170,7 @@ func webBrowserControl(ctx context.Context, w *world.World, origin string) (*htt
 			if err != nil {
 				break
 			}
-			value = map[string]any{"session": session, "cookie": map[string]any{"name": client.cookie.Name, "value": client.cookie.Value, "url": origin, "httpOnly": true, "secure": true, "sameSite": "Strict"}}
+			value = map[string]any{"session": session, "cookie": map[string]any{"name": client.cookie.Name, "value": client.cookie.Value, "url": origin, "httpOnly": true, "secure": client.cookie.Secure, "sameSite": "Strict"}}
 		case "/contact-avatar":
 			value, err = webAvatarFixture(w)
 		case "/demo-fixtures":
