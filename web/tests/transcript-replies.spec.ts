@@ -1,0 +1,41 @@
+import {test,expect,type BrowserContext} from '@playwright/test';
+import {control} from './session';
+import {mkdir} from 'node:fs/promises';
+let cookies:Parameters<BrowserContext['addCookies']>[0]=[];
+let fixture:Record<string,string>;
+test.beforeAll(async({request})=>{test.setTimeout(180000);cookies=[(await control(request,'/session')).cookie];fixture=await control(request,'/thread-overlay-fixture');});
+test('WEB-MSG-REPLIES a focused thread includes a distant reply outside the bounded main window',async({page,context},info)=>{
+    await context.addCookies(cookies);
+    await page.goto('/messages/'+encodeURIComponent(fixture.chat)+'/'+encodeURIComponent(fixture.root));
+    const transcript=page.locator('.messages-transcript').first(),root=transcript.locator('[data-message="'+fixture.root+'"]');
+    await expect(transcript).toHaveAttribute('aria-busy','false');await expect(root).toBeInViewport();
+    expect(Number(await transcript.getAttribute('data-window-size'))).toBeLessThanOrEqual(500);
+    await expect(transcript.locator('[data-message="'+fixture.distant+'"]')).toHaveCount(0);
+    const replies=root.getByRole('button',{name:'5 Replies',exact:true});await expect(replies).toBeVisible();await replies.click();
+    const dialog=page.getByRole('dialog',{name:'Replies',exact:true});await expect(dialog).toBeVisible();await expect(dialog.getByRole('heading',{name:'Replies',exact:true})).toBeFocused();const close=dialog.getByRole('button',{name:'Close replies',exact:true});expect((await close.boundingBox())!.width).toBe(30);await expect(close).not.toHaveCSS('outline-style','solid');
+    await expect(dialog.locator('[data-message="'+fixture.root+'"]')).toBeVisible();
+    await expect(dialog.locator('[data-message="'+fixture.distant+'"]')).toBeVisible();await dialog.locator('[data-message="'+fixture.distant+'"]').scrollIntoViewIfNeeded();await expect(dialog.locator('[data-message="'+fixture.distant+'"]')).toBeInViewport();
+    expect(Number(await dialog.locator('.messages-transcript').getAttribute('data-window-size'))).toBeLessThanOrEqual(200);
+    await expect(transcript).toHaveAttribute('inert','');
+    await mkdir('../lab/evidence/private/web',{recursive:true});await page.screenshot({path:`../lab/evidence/private/web/transcript-replies-${info.project.name}.png`});
+    const duplicateIDs=await page.evaluate(()=>{const ids=Array.from(document.querySelectorAll('[id]'),element=>element.id);return ids.filter((id,index)=>ids.indexOf(id)!==index);});expect(duplicateIDs).toEqual([]);
+    await page.keyboard.press('Escape');await expect(dialog).toHaveCount(0);await expect(replies).toBeFocused();
+    await expect(transcript).not.toHaveAttribute('inert','');await expect(transcript.locator('[data-message="'+fixture.distant+'"]')).toHaveCount(0);
+});
+
+test('WEB-MSG-REPLIES viewer hides only the active focused-thread source',async({page,context},info)=>{
+    await context.addCookies(cookies);
+    await page.goto('/messages/'+encodeURIComponent(fixture.chat)+'/'+encodeURIComponent(fixture.mediaRoot));
+    const main=page.locator('.messages-transcript').first(),root=main.locator('[data-message="'+fixture.mediaRoot+'"]');
+    await expect(main).toHaveAttribute('aria-busy','false');await root.getByRole('button',{name:'1 Reply',exact:true}).click();
+    const overlay=page.getByRole('dialog',{name:'Replies',exact:true}),source=overlay.locator('[data-message="'+fixture.mediaRoot+'"] .bubble[data-media-origin]'),background=main.locator('[data-message="'+fixture.mediaRoot+'"] .bubble[data-media-origin]');
+    await expect(overlay).toBeVisible();await expect(source).toBeInViewport();await expect(source.locator('img')).toBeVisible();
+    await expect.poll(()=>source.locator('img').evaluate((element:HTMLImageElement)=>element.complete&&element.naturalWidth>0)).toBe(true);
+    await expect.poll(()=>overlay.locator('.thread-card').evaluate(element=>getComputedStyle(element).transform)).toBe('none');
+    const button=source.locator('button.media-open');await button.focus();await page.evaluate(()=>new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve()))));const bounds=await source.boundingBox();
+    await button.click();const viewer=page.getByRole('dialog',{name:'Media viewer',exact:true});await expect(viewer).toBeVisible();
+    await expect(source).toHaveCSS('visibility','hidden');await expect(background).toHaveCSS('visibility','visible');expect(await source.boundingBox()).toEqual(bounds);
+    await mkdir('../lab/evidence/private/web',{recursive:true});await page.screenshot({path:`../lab/evidence/private/web/transcript-replies-viewer-${info.project.name}.png`});
+    await page.keyboard.press('Escape');await expect(viewer).toHaveCount(0);await expect(overlay).toBeVisible();await expect(source).toHaveCSS('visibility','visible');await expect(button).toBeFocused();expect(await source.boundingBox()).toEqual(bounds);
+    await button.click();await expect(viewer).toBeVisible();await viewer.getByRole('button',{name:'Show in Chat',exact:true}).click();await expect(viewer).toHaveCount(0);await expect(overlay).toHaveCount(0);await expect(main).not.toHaveAttribute('inert','');await expect(root).toBeInViewport();
+});

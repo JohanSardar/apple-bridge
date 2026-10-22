@@ -1,0 +1,85 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[32.78 40.16 39.32] cpu_idle=25% cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5HSFA2HXHK1FJP9G83JJWQG",
+  "metrics": {
+    "browser_budget_ms": 180000,
+    "capture_observer_resets": 0,
+    "demo_messages": 5000,
+    "demo_startup_ms": 18613,
+    "fixture_setup_ms": 18613,
+    "matrix": [
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "chromium-light-phone",
+      "chromium-light-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-MSG-REPLIES-webkit-light-phone-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-MSG-REPLIES-webkit-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-REPLIES-webkit-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-REPLIES-chromium-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-REPLIES-chromium-light-desktop-playwright.json"
+    ],
+    "server": "gateway",
+    "setups": [
+      {
+        "fixture_setup_ms": 18613,
+        "fixture_snapshot": null,
+        "project": "webkit-light-phone"
+      },
+      {
+        "fixture_setup_ms": 15966,
+        "fixture_snapshot": null,
+        "project": "webkit-light-desktop"
+      },
+      {
+        "fixture_setup_ms": 11765,
+        "fixture_snapshot": null,
+        "project": "chromium-light-phone"
+      },
+      {
+        "fixture_setup_ms": 10158,
+        "fixture_snapshot": null,
+        "project": "chromium-light-desktop"
+      }
+    ]
+  },
+  "scenario": "WEB-MSG-REPLIES",
+  "level": "web",
+  "passed": true,
+  "git_sha": "2ab2e8af1f6193c3af8e371970f482ff2a74c9b1",
+  "at": "2026-10-22T12:30:45.843225Z",
+  "assertions": [
+    {
+      "name": "webkit-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/transcript-replies.spec.ts:7:1 › WEB-MSG-REPLIES a focused thread includes a distant reply outside the bounded main window (6.9s)\n  ✓  2 [webkit-light-phone] › tests/transcript-replies.spec.ts:26:1 › WEB-MSG-REPLIES viewer hides only the active focused-thread source (6.9s)\n\n  2 passed (22.5s)\n"
+    },
+    {
+      "name": "webkit-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/transcript-replies.spec.ts:7:1 › WEB-MSG-REPLIES a focused thread includes a distant reply outside the bounded main window (5.8s)\n  ✓  2 [webkit-light-desktop] › tests/transcript-replies.spec.ts:26:1 › WEB-MSG-REPLIES viewer hides only the active focused-thread source (6.8s)\n\n  2 passed (23.0s)\n"
+    },
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/transcript-replies.spec.ts:7:1 › WEB-MSG-REPLIES a focused thread includes a distant reply outside the bounded main window (2.8s)\n  ✓  2 [chromium-light-phone] › tests/transcript-replies.spec.ts:26:1 › WEB-MSG-REPLIES viewer hides only the active focused-thread source (4.8s)\n\n  2 passed (12.8s)\n"
+    },
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/transcript-replies.spec.ts:7:1 › WEB-MSG-REPLIES a focused thread includes a distant reply outside the bounded main window (3.1s)\n  ✓  2 [chromium-light-desktop] › tests/transcript-replies.spec.ts:26:1 › WEB-MSG-REPLIES viewer hides only the active focused-thread source (5.2s)\n\n  2 passed (12.1s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
