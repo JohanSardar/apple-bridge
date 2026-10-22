@@ -33,3 +33,5 @@
 .reminders-app{--reminder-error:#ad2020}:root[data-theme=dark] .reminders-app{--reminder-error:#ff9696}.reminders-app .button{background:var(--fill-tertiary);color:var(--reminder-blue)}.reminders-app .button.primary{background:var(--reminder-blue);color:var(--background)}.reminders-app .button.danger{color:var(--reminder-error)}.reminder-editor input::placeholder{color:var(--reminder-secondary);opacity:1}.reminder-complete-control{display:grid;place-items:center;position:relative;flex-shrink:0;inline-size:44px;block-size:44px;margin:-10.5px -11.5px;background:transparent}.reminder-row-actions button{min-inline-size:44px;min-block-size:44px}.reminder-row-actions{margin-block:-10px}
 
 .reminder-complete-control[aria-disabled=true]{cursor:wait}
+
+.reminder-details dd p,.reminder-details-panel dd p{margin:0 0 4px}.reminder-details dd small,.reminder-details-panel dd small{color:var(--reminder-secondary);font-size:var(--caption-1)}

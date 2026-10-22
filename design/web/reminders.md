@@ -161,3 +161,5 @@ Each gets a sim scenario plus a real scenario on a tagged "Bridge Test" list, wi
 - Sharing and invitations
 - When Messaging (unless readable)
 - Apple Intelligence suggestions
+
+The details inspector reads EventKit recurrence selectors and end conditions, absolute and relative alerts, and arriving/leaving locations with radius and coordinates. Dates and times use the viewer’s zone. It labels recurring data as the next incomplete occurrence. Unknown or malformed schedule shapes hide the affected field and its row glyph; no raw blobs are displayed. Schedule configuration remains read-only; basic edits preserve it.

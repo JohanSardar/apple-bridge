@@ -67,3 +67,20 @@ func webReminderDraftRace(w *world.World) (any, error) {
 	}
 	return nil, fmt.Errorf("synthetic_reminder_fixture_missing")
 }
+
+func webReminderDetails(w *world.World) (any, error) {
+	records := []contracts.Observation{}
+	for index, title := range []string{"[ab-test] Custom schedule", "[ab-test] Unsupported schedule"} {
+		data := map[string]any{"title": title, "list_id": rmRef("reminders.list", "demo-rem-travel"), "completed": false, "priority": 0, "flagged": false, "tags": []string{}, "notes": "[ab-test] A schedule with a location", "due": "2028-01-02T14:00:00Z", "due_all_day": false}
+		if index == 0 {
+			data["recurrence"] = []any{map[string]any{"frequency": "weekly", "interval": 2, "count": 8, "end": nil, "days_of_week": []any{map[string]any{"day": 2, "week": 0}, map[string]any{"day": 4, "week": 0}}, "days_of_month": []int{}, "days_of_year": []int{}, "weeks_of_year": []int{}, "months": []int{}, "positions": []int{}}}
+			data["alarms"] = []any{map[string]any{"relative_offset": -900, "absolute_date": nil, "proximity": 0}, map[string]any{"relative_offset": 0, "absolute_date": "2028-01-02T14:00:00Z", "proximity": 0}, map[string]any{"relative_offset": 0, "absolute_date": nil, "proximity": 2, "location": map[string]any{"title": "Bridge Test park", "radius": 150, "latitude": 51.5, "longitude": -0.1}}}
+		} else {
+			data["recurrence"] = []any{map[string]any{"frequency": "constructor", "interval": 1}}
+			data["alarms"] = []any{map[string]any{"proximity": 99, "location": map[string]any{"title": "Unproven location", "radius": 20}}}
+		}
+		records = append(records, rmObservation("reminders.reminder", fmt.Sprintf("web-rem-details-%d", index), data))
+	}
+	err := w.ControlAction("/dataset", simapple.Dataset{Records: records})
+	return map[string]any{"ok": err == nil}, err
+}

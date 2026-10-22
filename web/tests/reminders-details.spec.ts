@@ -1,0 +1,25 @@
+import { test, expect } from '@playwright/test';
+import { bootstrap, control } from './session';
+test.use({ timezoneId: 'America/New_York', locale: 'en-US', reducedMotion: 'reduce' });
+test('WEB-REM-DETAILS recurrence, alerts and location are exact and unknown shapes hidden', async ({ page, context, request }) => {
+  await bootstrap(context, request); await control(request, '/reminders-details');
+  await page.goto('/reminders'); await page.getByRole('button', { name: 'Travel', exact: true }).click();
+  await page.getByRole('button', { name: 'Details for [ab-test] Custom schedule', exact: true }).click();
+  const details = page.getByLabel('Reminder details', { exact: true });
+  await expect(details).toContainText('Every 2 weeks');
+  await expect(details).toContainText('Monday, Wednesday');
+  await expect(details).toContainText('After 8 occurrences');
+  await expect(details).toContainText('15 minutes before');
+  await expect(details).toContainText(/Jan 2, 2028(?: at|,) 9:00 AM/u);
+  await expect(details).toContainText('When leaving: Bridge Test park');
+  await expect(details).toContainText('Radius: 150 m');
+  await expect(details).toContainText('51.5, -0.1');
+  await page.getByRole('button', { name: 'Close details', exact: true }).click();
+  await page.getByRole('button', { name: 'Details for [ab-test] Unsupported schedule', exact: true }).click();
+  await expect(details.locator('dt').filter({ hasText: /^Repeat$|^Alerts$|^Location$/u })).toHaveCount(0);
+  await expect(details).not.toContainText('Unproven location');
+  await page.getByRole('button', { name: 'Close details', exact: true }).click();
+  const unsupported = page.locator('.reminder-row').filter({ hasText: '[ab-test] Unsupported schedule' });
+  await expect(unsupported.getByLabel('Repeats', { exact: true })).toHaveCount(0);
+  await expect(unsupported.getByLabel('Location reminder', { exact: true })).toHaveCount(0);
+});
