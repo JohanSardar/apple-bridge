@@ -1,0 +1,12 @@
+id: WEB-CAL-PARITY
+feature: web.calendar.parity
+levels: [web]
+given: [{world: {replicas: 0}}]
+when: [{calendar_journey: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]
+web:
+  browsers: [chromium]
+  themes: [light]
+  layouts: [desktop]
+  server: gateway

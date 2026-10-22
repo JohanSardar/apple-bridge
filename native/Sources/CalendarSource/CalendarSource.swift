@@ -9,7 +9,7 @@ private enum CalendarCaptureInvalidation: Error { case invalidated }
 public final class CalendarSource: Source {
     public nonisolated let name = "calendar"
     public static let operations = ["calendar.create_event", "calendar.update_event", "calendar.delete_event", "calendar.create_calendar"]
-    public static let coverage: JSON = .object(["fields": .string("partial"), "missing": .array(["travel_time: positive native units unverified", "structured_location: coordinate units unverified", "detached store identities", "calendar attachment derivatives", "start location, proposals, comments and extra store alarms: positive native fixtures pending"].map(JSON.string))])
+    public static let coverage: JSON = .object(["operations": CalendarParity.coverage, "fields": .string("partial"), "missing": .array(["travel_time: positive native units unverified", "structured_location: coordinate units unverified", "detached store identities", "calendar attachment derivatives", "start location, proposals, comments and extra store alarms: positive native fixtures pending"].map(JSON.string))])
     private let gate: AgendaGate
     private let baselineURL: URL
     private let commandsEnabled: Bool
@@ -587,6 +587,7 @@ public final class CalendarSource: Source {
     private func validateNative(_ prepared: Prepared) throws {
         guard gate.authorized(.event) else { throw SourceFailure.permissionMissing }
         let action = prepared.action
+        guard Self.operations.contains(action["op"].string) else { throw SourceFailure.unsupported }
         if action["op"].string != "calendar.create_calendar" { _ = try writable(action["list_key"].string) }
         if !action["native_key"].string.isEmpty {
             let event = try fresh(action["native_key"].string)
