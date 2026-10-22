@@ -175,7 +175,8 @@ func (f *fakeApple) blobRoutes(mux *http.ServeMux) {
 		}
 		revision := f.durable.Revision[contracts.Messages]
 		f.mu.Unlock()
-		capture := contracts.Capture{Source: contracts.Messages, Observations: observations, BlobHandles: handles, ScanID: contracts.NewID("scan"), Scope: []string{"messages.message", "messages.attachment"}, ScanStartedAt: time.Now().UTC(), CompletionEvidence: "complete"}
+		capture := fullScanSource(observations, contracts.Messages)
+		capture.BlobHandles = handles
 		if err := f.enqueue(r.Context(), capture, false, revision); err != nil {
 			http.Error(w, "unavailable", 503)
 			return
