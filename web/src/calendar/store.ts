@@ -1,9 +1,9 @@
 import { createEffect, createSignal, onCleanup, type Accessor } from 'solid-js';
 import { auth } from '../auth/session';
-import type { BridgeRecord, ViewData, ViewName } from '../data/types';
+import type { BridgeRecord, Cursor, ViewData, ViewName } from '../data/types';
 export type CalendarView = 'day' | 'week' | 'month' | 'year' | 'list';
 export type CalendarEntry = { event: BridgeRecord; overlap_group: string; column: number; columns: number };
-export type CalendarPage = ViewData & { events?: CalendarEntry[]; calendars?: BridgeRecord[]; coverage_notes?: string[] };
+export type CalendarPage = ViewData & { _cursor?: Cursor; events?: CalendarEntry[]; calendars?: BridgeRecord[]; coverage_notes?: string[] };
 export const views: CalendarView[] = ['day', 'week', 'month', 'year', 'list'];
 export const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 export const text = (value: unknown) => typeof value === 'string' ? value : '';
@@ -19,7 +19,7 @@ export const day = (date: Date, offset = 0) => new Date(date.getFullYear(), date
 export const month = (date: Date, offset = 0) => new Date(date.getFullYear(), date.getMonth() + offset, 1);
 export const week = (date: Date) => day(date, -date.getDay());
 export function range(view: CalendarView, date: Date, searching = false): [Date, Date] {
-    if (searching) return [new Date(date.getFullYear() - 2, date.getMonth(), date.getDate()), new Date(date.getFullYear() + 2, date.getMonth(), date.getDate())];
+    if (searching) return [new Date(date.getTime() - 732 * 86400000), new Date(date.getTime() + 732 * 86400000)];
     if (view === 'day') return [day(date), day(date, 1)];
     if (view === 'week') return [week(date), day(week(date), 7)];
     if (view === 'month') return [week(month(date)), day(week(month(date)), 42)];
@@ -39,7 +39,7 @@ export function useCalendarView<T extends ViewData>(name: ViewName, args: Access
         const live = auth.live(), query = args(); setData(() => ({} as T));
         if (!live || !query) return;
         const subscription = live.subscribe(name, query, { resetOnReconnect: true });
-        createEffect(() => setData(() => subscription.data() as T));
+        createEffect(() => { const value = subscription.data() as T; setData(() => ({ ...value, _cursor: subscription.cursor() })); });
         onCleanup(subscription.dispose);
     });
     return data;

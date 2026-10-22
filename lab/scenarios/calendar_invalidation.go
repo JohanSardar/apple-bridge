@@ -33,6 +33,9 @@ func runCalendarInvalidation(ctx context.Context, s Scenario, level string) Evid
 		return e
 	}
 	flag := "--invalidated-event"
+	if s.ID == "CAL-FUTURE-COUNT-MATH" {
+		flag = "--recurrence-bounds"
+	}
 	if s.ID == "CAL-HINT-COVERAGE" {
 		flag = "--hint-coverage"
 	}
@@ -57,7 +60,11 @@ func runCalendarInvalidation(ctx context.Context, s Scenario, level string) Evid
 		}
 		return e
 	}
-	add("invalidated_calendar_object_rebuilds_without_trap", err == nil)
+	name := "invalidated_calendar_object_rebuilds_without_trap"
+	if s.ID == "CAL-FUTURE-COUNT-MATH" {
+		name = "native_recurrence_bounds_and_postconditions"
+	}
+	add(name, err == nil)
 	if err != nil {
 		os.Stderr.Write(output)
 	}

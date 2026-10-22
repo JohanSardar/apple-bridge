@@ -758,9 +758,14 @@ features:
     depends_on: [web.frontdoor, calendar.write]
     status: in_progress
     scenarios:
+      - {id: CAL-FUTURE-COUNT-MATH, levels: [sim]}
+      - {id: CAL-FUTURE-RULE-MISMATCH, levels: [sim]}
+      - {id: CAL-SPLIT-ATOMIC-TIMED, levels: [sim]}
       - {id: CAL-STORE-READ, levels: [sim, real, web]}
       - {id: WEB-CAL-READ, levels: [web]}
-    notes: Calendar range/store work is in progress; WEB-CAL-WRITE remains planned. WEB-CAL-PARITY covers the hidden parity actions and verified store reads. Positive travel-time units, structured coordinates, detached store identities and attachment derivatives require native proof and remain hidden when unsupported.
+      - {id: WEB-CAL-NAVIGATE, levels: [web]}
+      - {id: WEB-CAL-WRITE, levels: [sim, web, real]}
+    notes: Calendar read/store, navigation and basic event writes are implemented; full browser and real-data acceptance remain at the W6 milestone. WEB-CAL-PARITY covers the hidden parity actions and verified store reads. Positive travel-time units, structured coordinates, detached store identities and attachment derivatives require native proof and remain hidden when unsupported.
   - id: web.calendar.parity
     title: Calendar invitation responses, travel time and attachment parity
     requirements: [R-WEB-UI, R-RW]
@@ -778,6 +783,7 @@ features:
     scenarios:
       - {id: WEB-CAL-PARITY, levels: [web]}
     notes: On macOS 26.7.1 (25G241), the signed Helper real probe measured Calendar automation consent pending (-1744) and AX cannotComplete (-25204). Accept/Maybe/Decline have no proven Calendar.app Accessibility target and response verification; travel-time writes have no proven Accessibility edit and positive unit mapping; attachment add/remove have no proven Accessibility target and effect verification. These operations are not registered or advertised and their inspector controls remain hidden. EventKit writes do not accept parity fields. Verified zero travel time and locally present attachment originals remain read-only; unsupported coverage, unverified positive durations and unavailable bytes stay hidden. The opt-in consent attempt (60 seconds) and one non-prompting retry (30 seconds) returned no report after normal background launch; no new return codes, consent decision or effects are claimed. Native effects on tagged Bridge Test fixtures must be proven on the current OS build before a control is enabled; milestone acceptance does not substitute for capability proof.
+
   - id: web.contacts
     title: Contacts web app (read, write, parity)
     requirements: [R-WEB-UI, R-WEB-FAST, R-RW]

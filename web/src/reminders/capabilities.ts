@@ -46,7 +46,7 @@ export function createCapabilities(live: LiveClient, source = 'reminders') {
                 const operationProof = source.coverage?.operations?.find(value => value.operation === operation);
                 if (source.state !== 'ready') return { proven: false, reason: 'Source unavailable' };
                 if (operationProof) return { proven: operationProof.proven === true && source.capabilities?.includes(operation) === true, reason: operationProof.reason };
-                const eventKit = ['reminders.create', 'reminders.update', 'reminders.complete', 'reminders.uncomplete', 'reminders.delete', 'reminders.create_list'].includes(operation);
+                const eventKit = ['reminders.create', 'reminders.update', 'reminders.complete', 'reminders.uncomplete', 'reminders.delete', 'reminders.create_list', 'calendar.create_event', 'calendar.update_event', 'calendar.delete_event', 'calendar.create_calendar'].includes(operation);
                 if (eventKit && source.capabilities?.includes(operation)) return { proven: true, reason: 'authorized_eventkit_operation' };
                 if (['contacts.create','contacts.update','contacts.delete'].includes(operation) && source.capabilities?.includes(operation)) return { proven: true, reason: 'authorized_contacts_operation' };
             }

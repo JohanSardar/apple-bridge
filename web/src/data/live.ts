@@ -209,6 +209,7 @@ export class LiveClient {
         if (parts?.length && finalCommandStates.has(status)) status = commandPartsStatus(parts, status);
         this.commands.set(id, { ...previous, status, error, transport_lost: false, check_error: clearCheck ? undefined : previous.check_error,
             disposition: record?.disposition ?? previous.disposition,
+            evidence: record?.evidence ?? previous.evidence,
             commit_seq: record?.commit_seq ?? previous.commit_seq,
             observed_record_ids: record?.observed_record_ids?.slice() ?? previous.observed_record_ids,
             parts,

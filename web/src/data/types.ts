@@ -97,6 +97,7 @@ export type CommandState = {
     optimistic?: unknown;
     error?: unknown;
     disposition?: string;
+    evidence?: Record<string, unknown>;
 };
 export function parseSession(value: unknown): DeviceSession {
     if (!value || typeof value !== 'object')

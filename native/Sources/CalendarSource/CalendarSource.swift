@@ -106,10 +106,10 @@ public final class CalendarSource: Source {
         .object(["title": .string(calendar.title), "account": .string(calendar.source.sourceIdentifier), "color": .string(calendar.cgColor.map { String(describing: $0.components ?? []) } ?? ""), "writable": .bool(calendar.allowsContentModifications && !calendar.isSubscribed), "type": .string(calendar.isSubscribed ? "subscribed" : ["local", "caldav", "exchange", "subscribed", "birthday"].indices.contains(Int(calendar.type.rawValue)) ? ["local", "caldav", "exchange", "subscribed", "birthday"][Int(calendar.type.rawValue)] : "unknown")])
     }
 
-    private func data(_ event: EKEvent) -> JSON {
+    private func data(_ event: EKEvent, includeIdentity: Bool = true) -> JSON {
         let zone = event.isAllDay ? TimeZone.current : (event.timeZone ?? .current)
         var fields: [String: JSON] = ["calendar_id": ref(event.calendar), "title": .string(event.title ?? ""), "notes": event.notes.map(JSON.string) ?? .null, "location": event.location.map(JSON.string) ?? .null, "url": event.url.map { .string($0.absoluteString) } ?? .null, "start": .string(event.isAllDay ? CalendarTime.floating(event.startDate, zone: zone) : timestamp(event.startDate)), "end": .string(event.isAllDay ? CalendarTime.floating(event.endDate, zone: zone) : timestamp(event.endDate)), "all_day": .bool(event.isAllDay), "time_zone": event.timeZone.map { .string($0.identifier) } ?? .null, "is_exception": .bool(event.isDetached), "availability": .number(Double(event.availability.rawValue)), "status": .number(Double(event.status.rawValue)), "attendees": .array((event.attendees ?? []).map { .object(["name": $0.name.map(JSON.string) ?? .null, "url": .string($0.url.absoluteString), "status": .number(Double($0.participantStatus.rawValue)), "role": .number(Double($0.participantRole.rawValue)), "type": .number(Double($0.participantType.rawValue))]) }), "alarms": .array((event.alarms ?? []).map { .object(["absolute_date": $0.absoluteDate.map { .string(timestamp($0)) } ?? .null, "relative_offset": .number($0.relativeOffset)]) })]
-        if event.hasRecurrenceRules || event.isDetached {
+        if includeIdentity && (event.hasRecurrenceRules || event.isDetached) {
             fields["series_id"] = .string(seriesIdentifier(event))
             fields["occurrence_date"] = event.occurrenceDate.map { .string(event.isAllDay ? CalendarTime.floating($0, zone: .current) : timestamp($0)) } ?? .null
         }
@@ -125,11 +125,15 @@ public final class CalendarSource: Source {
                 Self.canMaterialize($0) && $0.calendar.calendarIdentifier == event.calendar.calendarIdentifier && $0.calendar.source.sourceIdentifier == event.calendar.source.sourceIdentifier && (seriesIdentifier($0) == external || $0.calendarItemIdentifier == event.calendarItemIdentifier) && $0.hasRecurrenceRules
             })?.recurrenceRules
         }
-        fields["recurrence"] = nativeRules.map { rules in .array(rules.map { rule in
+        fields["recurrence"] = nativeRules.map(encodedRules) ?? .null
+        return .object(fields)
+    }
+
+    private func encodedRules(_ rules: [EKRecurrenceRule]) -> JSON {
+        .array(rules.map { rule in
             func numbers(_ values: [NSNumber]?) -> JSON { .array((values ?? []).map { .number($0.doubleValue) }) }
             return .object(["frequency": .string(["daily", "weekly", "monthly", "yearly"][Int(rule.frequency.rawValue)]), "interval": .number(Double(rule.interval)), "count": .number(Double(rule.recurrenceEnd?.occurrenceCount ?? 0)), "end": rule.recurrenceEnd?.endDate.map { .string(timestamp($0)) } ?? .null, "first_day_of_week": .number(Double(rule.firstDayOfTheWeek)), "days_of_week": .array((rule.daysOfTheWeek ?? []).map { .object(["day": .number(Double($0.dayOfTheWeek.rawValue)), "week": .number(Double($0.weekNumber))]) }), "days_of_month": numbers(rule.daysOfTheMonth), "days_of_year": numbers(rule.daysOfTheYear), "weeks_of_year": numbers(rule.weeksOfTheYear), "months": numbers(rule.monthsOfTheYear), "positions": numbers(rule.setPositions)])
-        }) } ?? .null
-        return .object(fields)
+        })
     }
 
     private func observation(_ collection: String, _ key: String, _ data: JSON, alias: String = "") -> JSON {
@@ -527,8 +531,10 @@ public final class CalendarSource: Source {
         let action = command["action"]
         guard Self.operations.contains(action["op"].string), args(action)["span"].string != "all" else { throw SourceFailure.unsupported }
         var before = JSON.null
+        var existing: EKEvent? = nil
         if !action["native_key"].string.isEmpty {
             let event = try fresh(action["native_key"].string)
+            existing = event
             before = data(event)
             _ = try writable(event.calendar.calendarIdentifier)
             guard action["expected_list_key"].string == event.calendar.calendarIdentifier else { throw SourceFailure.conflict }
@@ -537,15 +543,14 @@ public final class CalendarSource: Source {
             for field in CalendarStoreEnrichment.fields { expected.removeValue(forKey: field) }
             guard expected == actual else { throw SourceFailure.conflict }
         }
-        if action["op"].string != "calendar.create_calendar" { _ = try writable(action["list_key"].string) }
-        else { guard gate.store.defaultCalendarForNewEvents?.allowsContentModifications == true else { throw SourceFailure.unsupported } }
-        let prepared = Prepared(nativeState: before, fingerprint: command["request_hash"].string, action: action)
-        if action["op"].string != "calendar.delete_event" && action["op"].string != "calendar.create_calendar" {
-            let probe = EKEvent(eventStore: gate.store)
-            if let event = try? fresh(action["native_key"].string) { probe.startDate = event.startDate; probe.endDate = event.endDate; probe.isAllDay = event.isAllDay; probe.timeZone = event.timeZone }
-            try patch(probe, args(action))
+        if action["op"].string != "calendar.create_calendar" {
+            let calendar = try writable(action["list_key"].string)
+            if action["op"].string != "calendar.delete_event" {
+                _ = try requestedGoal(existing ?? EKEvent(eventStore: gate.store), args(action), calendar: calendar)
+            }
         }
-        return prepared
+        else { guard gate.store.defaultCalendarForNewEvents?.allowsContentModifications == true else { throw SourceFailure.unsupported } }
+        return Prepared(nativeState: before, fingerprint: command["request_hash"].string, action: action)
     }
 
     private func patch(_ event: EKEvent, _ args: JSON) throws {
@@ -555,8 +560,11 @@ public final class CalendarSource: Source {
         if let value = args.object["url"] { event.url = value == .null ? nil : URL(string: value.string) }
         if let value = args.object["all_day"] { event.isAllDay = value.bool }
         if let value = args.object["time_zone"] {
-            guard let zone = TimeZone(identifier: value.string) else { throw SourceFailure.invalid }
-            event.timeZone = zone
+            if value == .null || value.string.isEmpty { event.timeZone = nil }
+            else {
+                guard let zone = TimeZone(identifier: value.string) else { throw SourceFailure.invalid }
+                event.timeZone = zone
+            }
         }
         let zone = event.isAllDay ? TimeZone.current : (event.timeZone ?? .current)
         if let value = args.object["start"] { event.startDate = try CalendarTime.date(value.string, allDay: event.isAllDay, zone: zone) }
@@ -577,27 +585,63 @@ public final class CalendarSource: Source {
                 let frequencies: [String: EKRecurrenceFrequency] = ["daily": .daily, "weekly": .weekly, "monthly": .monthly, "yearly": .yearly]
                 guard let frequency = frequencies[item["frequency"].string], let interval = Int(exactly: item["interval"].number), interval > 0 else { throw SourceFailure.invalid }
                 var end: EKRecurrenceEnd?
-                if item["count"].number > 0 { end = EKRecurrenceEnd(occurrenceCount: Int(item["count"].number)) }
+                if item["count"].number > 0 {
+                    guard let count = Int(exactly: item["count"].number) else { throw SourceFailure.invalid }
+                    if args["span"].string == "future" {
+                        let zone = event.isAllDay ? TimeZone(secondsFromGMT: 0)! : (event.timeZone ?? .current)
+                        let origin = event.isAllDay ? try CalendarTime.date(CalendarTime.floating(start, zone: .current), allDay: true, zone: zone) : start
+                        end = EKRecurrenceEnd(end: try CalendarTime.recurrenceEnd(start: origin, frequency: item["frequency"].string, interval: interval, count: count, zone: zone))
+                    } else { end = EKRecurrenceEnd(occurrenceCount: count) }
+                }
                 else if let date = parseTimestamp(item["end"].string) { end = EKRecurrenceEnd(end: date) }
                 return EKRecurrenceRule(recurrenceWith: frequency, interval: interval, end: end)
             }
         }
     }
 
-    private func validateNative(_ prepared: Prepared) throws {
+    private func requestedGoal(_ event: EKEvent, _ request: JSON, calendar: EKCalendar, baseline: JSON = .null) throws -> JSON {
+        let probe = EKEvent(eventStore: gate.store)
+        probe.calendar = calendar
+        probe.isAllDay = event.isAllDay
+        probe.timeZone = event.timeZone
+        probe.startDate = event.startDate
+        probe.endDate = event.endDate
+        if baseline != .null {
+            let values = baseline.object.filter { ["start", "end", "all_day", "time_zone"].contains($0.key) }
+            try patch(probe, .object(values))
+        }
+        try patch(probe, request)
+        var result = data(probe, includeIdentity: false).object.filter { request.object[$0.key] != nil && !["id", "span"].contains($0.key) }
+        if request.object["recurrence"] != nil { result["recurrence"] = encodedRules(probe.recurrenceRules ?? []) }
+        return .object(result)
+    }
+
+    private func nativeResult(_ event: EKEvent) -> JSON {
+        var result = data(event).object
+        result["recurrence"] = encodedRules(event.recurrenceRules ?? [])
+        return .object(result)
+    }
+
+    private func validateNative(_ prepared: Prepared) throws -> EKEvent? {
         guard gate.authorized(.event) else { throw SourceFailure.permissionMissing }
         let action = prepared.action
         guard Self.operations.contains(action["op"].string) else { throw SourceFailure.unsupported }
-        if action["op"].string != "calendar.create_calendar" { _ = try writable(action["list_key"].string) }
-        if !action["native_key"].string.isEmpty {
-            let event = try fresh(action["native_key"].string)
+        let existing = action["native_key"].string.isEmpty ? nil : try fresh(action["native_key"].string)
+        if let event = existing {
             guard data(event) == prepared.nativeState else { throw SourceFailure.conflict }
             _ = try writable(event.calendar.calendarIdentifier)
         }
+        if action["op"].string != "calendar.create_calendar" {
+            let calendar = try writable(action["list_key"].string)
+            if action["op"].string != "calendar.delete_event" {
+                _ = try requestedGoal(existing ?? EKEvent(eventStore: gate.store), args(action), calendar: calendar)
+            }
+        }
+        return existing
     }
 
     public func validate(_ prepared: Prepared) async throws {
-        try validateNative(prepared)
+        _ = try validateNative(prepared)
     }
 
     public func dispatch(_ prepared: Prepared) async throws -> JSON {
@@ -606,9 +650,10 @@ public final class CalendarSource: Source {
         defer { waitingCommands -= 1 }
         while scanning { try await Task.sleep(for: .milliseconds(10)) }
         gate.trace.record("calendar_command_scan_wait", fields: ["duration_ns": .integer(CaptureTrace.now() - waitStarted), "operation": .string(prepared.action["op"].string)])
-        try validateNative(prepared)
+        let validated = try validateNative(prepared)
         let action = prepared.action, operation = prepared.action["op"].string
         var native = action["native_key"].string
+        var actualResult = JSON.null
         if operation == "calendar.create_calendar" {
             guard let source = gate.store.defaultCalendarForNewEvents?.source else { throw SourceFailure.unavailable }
             let calendar = EKCalendar(for: .event, eventStore: gate.store)
@@ -618,12 +663,15 @@ public final class CalendarSource: Source {
             native = calendar.calendarIdentifier
             pendingScope = pendingScope ?? CalendarScanScope(interval: CalendarTime.window(Date()), calendars: [])
             gate.trace.record("calendar_native_effect", keys: [native], fields: ["operation": .string(operation)])
-            guard gate.store.calendar(withIdentifier: native)?.title == calendar.title else { throw SourceFailure.unavailable }
+            guard let observed = gate.store.calendar(withIdentifier: native), observed.title == calendar.title else { throw SourceFailure.unavailable }
+            actualResult = calendarData(observed)
         } else {
-            let event = operation == "calendar.create_event" ? EKEvent(eventStore: gate.store) : try fresh(native)
+            let event = operation == "calendar.create_event" ? EKEvent(eventStore: gate.store) : try validated ?? fresh(native)
             if operation != "calendar.create_event" { touch(event, future: args(action)["span"].string == "future") }
             event.calendar = try writable(action["list_key"].string)
             let span: EKSpan = args(action)["span"].string == "future" ? .futureEvents : .thisEvent
+            let goal = operation == "calendar.delete_event" ? JSON.null : try requestedGoal(event, args(action), calendar: event.calendar)
+            let intendedAllDay = args(action).object["all_day"]?.bool ?? event.isAllDay
             if operation == "calendar.delete_event" {
                 gate.trace.record("calendar_native_save_started", fields: ["operation": .string(operation)])
                 try gate.store.remove(event, span: span, commit: true)
@@ -631,20 +679,27 @@ public final class CalendarSource: Source {
                 try patch(event, args(action))
                 gate.trace.record("calendar_native_save_started", fields: ["operation": .string(operation)])
                 try gate.store.save(event, span: span, commit: true)
-                native = key(event)
+                if Self.canMaterialize(event) { native = key(event) }
             }
-            if operation != "calendar.delete_event" { touch(event, future: span == .futureEvents || event.hasRecurrenceRules) }
+            if operation != "calendar.delete_event" {
+                if Self.canMaterialize(event) { touch(event, future: span == .futureEvents || event.hasRecurrenceRules) }
+                else { pendingScope = nil }
+            }
             gate.trace.record("calendar_native_effect", keys: [native], fields: ["operation": .string(operation)])
             if operation == "calendar.delete_event" {
                 guard (try? fresh(native)) == nil else { throw SourceFailure.unavailable }
             } else {
-                let observed = try fresh(native)
-                guard data(observed) == data(event) else { throw SourceFailure.unavailable }
+                commandRevision += 1
+                commandNeedsCapture = true
+                let observed = try? fresh(native)
+                let actual = observed.map(nativeResult) ?? .null
+                if let observed { native = key(observed) }
+                return CalendarPostcondition.evidence(native: native, fingerprint: prepared.fingerprint, actual: actual, expected: goal, allDay: intendedAllDay)
             }
         }
         commandRevision += 1
         commandNeedsCapture = true
-        return .object(["native_key": .string(native), "fingerprint": .string(prepared.fingerprint), "observed": .bool(true), "absent": .bool(operation == "calendar.delete_event")])
+        return .object(["native_key": .string(native), "fingerprint": .string(prepared.fingerprint), "observed": .bool(true), "native_result": actualResult, "absent": .bool(operation == "calendar.delete_event")])
     }
 
     public func confirmAbsence(_ native: String, into sink: any ObservationSink) async throws {
@@ -656,7 +711,7 @@ public final class CalendarSource: Source {
     public func resolve(_ command: String, evidence: JSON) async -> JSON {
         guard gate.authorized(.event) else {return .null}
  let action=evidence["prepared"]["action"]
- let key=action["native_key"].string.isEmpty ? evidence["native_key"].string : action["native_key"].string
+ let key=evidence["native_key"].string.isEmpty ? action["native_key"].string : evidence["native_key"].string
  guard !key.isEmpty else {return .null}
         if action["op"].string == "calendar.create_calendar" {
             guard gate.store.calendar(withIdentifier: key)?.title == args(action)["title"].string else { return .null }
@@ -664,8 +719,15 @@ public final class CalendarSource: Source {
             guard (try? fresh(key)) == nil, knownAbsent(key) else { return .null }
         } else {
             guard let current = try? fresh(key) else { return .null }
-            let expected = args(action).object.filter { !["id", "calendar_id", "span"].contains($0.key) }
-            guard expected.allSatisfy({ data(current)[$0.key] == $0.value }) else { return .null }
+            let expected: JSON
+            if evidence["native_expected"] != .null { expected = evidence["native_expected"] }
+            else {
+                guard let goal = try? requestedGoal(current, args(action), calendar: try writable(action["list_key"].string), baseline: evidence["prepared"]["native_state"]) else { return .null }
+                expected = goal
+            }
+            var result = CalendarPostcondition.evidence(native: key, fingerprint: evidence["fingerprint"].string, actual: nativeResult(current), expected: expected, allDay: evidence["native_expected_all_day"] == .null ? current.isAllDay : evidence["native_expected_all_day"].bool).object
+            result["prepared"] = evidence["prepared"]
+            return .object(result)
         }
 var result=evidence.object
  result["native_key"] = .string(key);result["observed"] = .bool(true);result["absent"] = .bool(action["op"].string=="calendar.delete_event")
