@@ -311,7 +311,7 @@ public final class ContactsSource: Source {
         }
         guard let bytes = blobs[handle], offset >= 0, offset <= bytes.count, length > 0, length <= 131072 else { throw SourceFailure.unavailable }
         let end = min(offset + length, bytes.count)
-        return .object(["t": .string("BlobChunk"), "handle": .string(handle), "offset": .number(Double(offset)), "bytes": .string(bytes.subdata(in: offset..<end).base64EncodedString()), "digest": .string(hash(bytes)), "eof": .bool(end == bytes.count)])
+        return .object(["t": .string("BlobChunk"), "handle": .string(handle), "offset": .number(Double(offset)), "bytes": .string(bytes.subdata(in: offset..<end).base64EncodedString()), "digest": .string(String(handle.dropFirst("contacts-image:".count))), "eof": .bool(end == bytes.count)])
     }
     private func attachPhoto(_ result: MediaResult, to fields: inout [String: JSON]) throws {
         var derivatives: [String: JSON] = [:]
@@ -375,6 +375,7 @@ public final class ContactsSource: Source {
         guard authorized else { throw SourceFailure.permissionMissing }
         guard commandsEnabled, (Self.operations + Self.groupOperations).contains(command["action"]["op"].string) else { throw SourceFailure.unsupported }
         let action = command["action"]
+        trace.record("contacts_prepare_started", fields: ["operation": action["op"]])
         if Self.groupOperations.contains(action["op"].string) { return try prepareGroup(command) }
         var before = JSON.null
         if action["op"].string == "contacts.create" {
@@ -387,7 +388,9 @@ public final class ContactsSource: Source {
         }
         let candidate = CNMutableContact()
         try patch(candidate, action["args"])
-        return Prepared(nativeState: before, fingerprint: try hash(action), action: action)
+        let prepared = Prepared(nativeState: before, fingerprint: try hash(action), action: action)
+        trace.record("contacts_prepared", fields: ["operation": action["op"]])
+        return prepared
     }
     public func validate(_ prepared: Prepared) async throws {
         guard authorized else { throw SourceFailure.permissionMissing }
@@ -457,10 +460,12 @@ public final class ContactsSource: Source {
             if operation == "contacts.delete" { request.delete(contact) }
             else { try patch(contact, action["args"]); request.update(contact) }
         }
+        trace.record("contacts_save_started", keys: [contact.identifier], fields: ["operation": .string(operation)])
         try store.execute(request)
         trace.record("contacts_effect_done", keys: [contact.identifier], fields: ["operation": .string(operation)])
         if operation == "contacts.delete" { guard try isAbsent(contact.identifier) else { throw SourceFailure.unavailable } }
         else { guard try data(fresh(contact.identifier)) == data(contact) else { throw SourceFailure.unavailable } }
+        trace.record("contacts_effect_revalidated", keys: [contact.identifier], fields: ["operation": .string(operation)])
         return .object(["native_key": .string(contact.identifier), "observed": .bool(true), "absent": .bool(operation == "contacts.delete")])
     }
     public func resolve(_ command: String, evidence: JSON) async -> JSON {

@@ -55,6 +55,11 @@ func contactsLatencyEvidence(w *world.World, e *Evidence, observers []*watcher, 
 		if event.Stage == "helper_marker_written" {
 			sample("helper_marker_write:"+event.Source, event.StartedNS, event.FinishedNS)
 		}
+		if event.Stage == "helper_blob_sent" {
+			sample("helper_blob_queue:"+event.Source, event.QueuedNS, event.StartedNS)
+			sample("helper_blob_encode:"+event.Source, event.StartedNS, event.PreparedNS)
+			sample("helper_blob_socket_write:"+event.Source, event.PreparedNS, event.FinishedNS)
+		}
 		if event.Stage == "helper_blob_read" {
 			sample("helper_blob_write:"+event.Source, event.PreparedNS, event.FinishedNS)
 		}
@@ -171,6 +176,13 @@ func contactsLatencyEvidence(w *world.World, e *Evidence, observers []*watcher, 
 		e.Passed = e.Passed && groupFallbacks == 0
 	}
 	contactsCommandLatency(w, e, events, observers)
+	if e.Scenario == "CON-CRUD" && len(effects) == 0 {
+		for _, event := range events {
+			if event.Stage == "contacts_effect_done" {
+				effects = append(effects, contactsEffect{At: event.UptimeNS})
+			}
+		}
+	}
 	contactsNotificationLatency(e, events, effects)
 	if len(effects) > 0 {
 		rawEffects := []any{}
