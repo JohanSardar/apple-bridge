@@ -1,12 +1,24 @@
 type Variant={weight?:number;italic?:boolean};
 const properties=['font-family','font-size','font-weight','font-style','letter-spacing','font-feature-settings','font-variation-settings','font-kerning','font-variant','font-stretch','word-spacing','text-rendering'] as const;
+const measurements=new Map<string,Map<string,number>>();
+let textContext:CanvasRenderingContext2D|undefined;
 export function createTextMeasurer(){
-    const context=document.createElement('canvas').getContext('2d')!,cache=new Map<string,number>(),pending=new Map<string,{value:string;variant?:Variant}>();
-    let descriptor='',typography:Record<(typeof properties)[number],string>,advanced=false,host:HTMLElement;
+    const context=textContext??=document.createElement('canvas').getContext('2d')!;
+    let cache=new Map<string,number>();
+    const pending=new Map<string,{value:string;variant?:Variant}>();
+    let descriptor='',shared=false,typography:Record<(typeof properties)[number],string>,advanced=false,host:HTMLElement;
     function prepare(element:HTMLElement,measurementHost:HTMLElement){
         const style=getComputedStyle(element);typography=Object.fromEntries(properties.map(property=>[property,style.getPropertyValue(property)])) as Record<(typeof properties)[number],string>;host=measurementHost;
         const next=properties.map(property=>typography[property]).join('|');
-        if(next!==descriptor){descriptor=next;cache.clear();pending.clear();}
+        const share=document.fonts.size===0;
+        if(next!==descriptor||share!==shared){
+            descriptor=next;shared=share;pending.clear();
+            if(shared){
+                let saved=measurements.get(descriptor);
+                if(!saved){saved=new Map();if(measurements.size>=8)measurements.delete(measurements.keys().next().value!);measurements.set(descriptor,saved);}
+                cache=saved;
+            }else cache=new Map();
+        }
         advanced=typography['font-feature-settings']!=='normal'||typography['font-variation-settings']!=='normal'||typography['font-variant']!=='normal'||!['normal','100%'].includes(typography['font-stretch'])||!['normal','0px'].includes(typography['word-spacing']);
         context.letterSpacing=typography['letter-spacing']==='normal'?'0px':typography['letter-spacing'];
         context.wordSpacing=typography['word-spacing']==='normal'?'0px':typography['word-spacing'];

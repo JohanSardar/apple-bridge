@@ -16,3 +16,5 @@
 @media(min-width:700px){:root[data-theme=dark] .settings-layout{background:var(--window)}:root[data-theme=dark] .settings-content .group{background:var(--background-secondary-elevated)}}
 
 .phone-details{position:absolute;inset:0;z-index:4;background:var(--background);display:flex;flex-direction:column;padding-block-start:env(safe-area-inset-top);touch-action:pan-y}.phone-details .toolbar{flex-shrink:0}.phone-details .toolbar h2{font-size:var(--headline)}:dir(rtl) .phone-details .icon-button .icon{transform:rotate(180deg)}
+
+.messages-font-warmup{position:absolute;inset:0 auto auto 0;visibility:hidden;pointer-events:none;contain:layout style paint;white-space:pre;font-size:calc(var(--body)*var(--text-size));line-height:calc(var(--body-line)*var(--text-size))}

@@ -11,9 +11,10 @@ export type LayoutPrefs = { phone: boolean; reduceMotion?:boolean; selectedMessa
 export type BubbleLayout = { part: Part; pendingAttachment?:PendingAttachment; mediaAttachments?:readonly BridgeRecord[]; subject?:string; width: number; height: number; emoji: boolean; media: boolean; floating:boolean; reactions: BridgeRecord[]; tail: boolean };
 export type TranscriptRow = { key:string;service:string;effectLabel?:string;commandStatus?:{id:string;state:string;label:string};id: string; item: ThreadItem; members?:readonly ThreadItem[]; height: number; bubbles: BubbleLayout[]; sent: boolean; sender: string; senderName?: string; avatar?: string; header?: string; headerParts?:HeaderParts; system?: string; receipt?: string; edited: boolean; history: {text:string;height:number;width:number}[]; unsent?:string; reply?: string; failed: boolean; gap: number };
 const emojiPattern = /^(?:\p{Extended_Pictographic}|\p{Regional_Indicator}|\p{Emoji_Modifier}|\uFE0F|\u200D|\u20E3|[0-9#*]\uFE0F?\u20E3|\s)+$/u;
+let graphemes:Intl.Segmenter|undefined;
 export function emojiOnly(value: string) {
     if(!emojiPattern.test(value)||!/(?:\p{Extended_Pictographic}|\p{Regional_Indicator}|[0-9#*]\uFE0F?\u20E3)/u.test(value))return false;
-    const count=Array.from(new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(value.replace(/\s/gu,''))).length;
+    const count=Array.from((graphemes??=new Intl.Segmenter(undefined,{granularity:'grapheme'})).segment(value.replace(/\s/gu,''))).length;
     return count>=1&&count<=3;
 }
 export function wrapText(value: string, maxWidth: number, measure: LayoutPrefs['measure']) {
@@ -55,12 +56,58 @@ export function commandPartIndex(item:ThreadItem){const index=item.data.command_
 export function commandRenderKey(item:ThreadItem){const id=text(item.data.command_id),index=commandPartIndex(item);return id?'command:'+id+(index===undefined?'':':part:'+index):item.id;}
 const presentationTime=(item:ThreadItem)=>text(item.data.command_sent_at)||item.data.sent_at;
 function sameRun(a: ThreadItem|undefined,b: ThreadItem|undefined) { return !!a&&!!b&&a.data.kind!=='group_event'&&b.data.kind!=='group_event'&&!array(a.data.retracted_parts).length&&!array(b.data.retracted_parts).length&&Boolean(a.data.is_from_me)===Boolean(b.data.is_from_me)&&(a.data.is_from_me||sender(a)===sender(b))&&Math.abs(Date.parse(presentationTime(b))-Date.parse(presentationTime(a)))<=60000; }
-export function layout(items: readonly ThreadItem[], handles: Handles, prefs: LayoutPrefs, width: number): TranscriptRow[] {
+type CachedRow={
+    item:ThreadItem;
+    previous:ThreadItem|undefined;
+    next:ThreadItem|undefined;
+    lastSent:boolean;
+    latest:boolean;
+    actor:string;
+    target:string;
+    initials:string|undefined;
+    expanded:boolean;
+    row:TranscriptRow;
+};
+type LayoutCache=Map<string,CachedRow>;
+type LayoutRange={start:number;end:number};
+export function createTranscriptLayout(){
+    const cache:LayoutCache=new Map();
+    let signature='';
+    return (items:readonly ThreadItem[],handles:Handles,prefs:LayoutPrefs,width:number,measurementKey:string,range?:LayoutRange)=>{
+        const now=prefs.now;
+        const key=JSON.stringify([
+            width,measurementKey,prefs.phone,prefs.group,prefs.service,
+            prefs.viewportHeight,prefs.reduceMotion,prefs.scale,prefs.locale,
+            now.getFullYear(),now.getMonth(),now.getDate()
+        ]);
+        if(key!==signature){
+            cache.clear();
+            signature=key;
+        }
+        if(!range||range.start===0){
+            const present=new Set(items.map(item=>item.id));
+            for(const id of cache.keys())if(!present.has(id))cache.delete(id);
+        }
+        return layout(items,handles,prefs,width,cache,range);
+    };
+}
+export function layout(items: readonly ThreadItem[], handles: Handles, prefs: LayoutPrefs, width: number, cache?:LayoutCache,range?:LayoutRange): TranscriptRow[] {
     const fontSize=(prefs.phone?17:13)*prefs.scale,lineHeight=(prefs.phone?22:16)*prefs.scale;
     const maxWidth=Math.max(60,Math.min(prefs.phone?width*.7:480,width-(prefs.group?80:40))), padding=24;
     const lastSent=items.findLastIndex(item=>Boolean(item.data.is_from_me)&&item.data.kind!=='group_event'&&!item.data.retracted_at&&messageParts(item).some(part=>!array(item.data.retracted_parts).includes(part.index)));
-    const rows=items.map((item,index)=>{
-        const data=item.data,sent=Boolean(data.is_from_me),actor=sent?wording.you:name(text(fields(data.group_event).actor_handle_id)||sender(item),handles),previous=items[index-1],next=items[index+1],first=!sameRun(previous,item),last=!sameRun(item,next);
+    const source=range?items.slice(range.start,range.end):items;
+    const rows=source.map((item,offset)=>{
+        const index=offset+(range?.start??0);
+        const data=item.data,sent=Boolean(data.is_from_me),event=fields(data.group_event);
+        const actor=sent?wording.you:name(text(event.actor_handle_id)||sender(item),handles);
+        const target=name(text(event.handle_id??event.target_handle_id),handles),initials=handles.get(sender(item))?.initials;
+        const cached=cache?.get(item.id);
+        const isLastSent=index===lastSent,isExpanded=prefs.expanded.has(item.id),latest=!isLastSent||prefs.atLatest!==false;
+        if(cached&&cached.item===item&&cached.previous===items[index-1]&&cached.next===items[index+1]&&
+            cached.lastSent===isLastSent&&cached.expanded===isExpanded&&cached.latest===latest&&
+            cached.actor===actor&&cached.target===target&&cached.initials===initials)
+            return cached.row;
+        const previous=items[index-1],next=items[index+1],first=!sameRun(previous,item),last=!sameRun(item,next);
         const dateParts=!previous||Date.parse(presentationTime(item))-Date.parse(presentationTime(previous))>3600000?headerParts(presentationTime(item),prefs.now,prefs.locale):undefined,dateHeader=dateParts?`${dateParts.day}${dateParts.separator}${dateParts.time}`:undefined;
         const unsent=array(data.retracted_parts),parts=messageParts(item),visible=parts.filter(part=>!unsent.includes(part.index));
         const system=data.kind==='group_event'?groupEvent(data.group_event,actor,handles):data.retracted_at||visible.length===0?wording.unsent(actor):undefined;
@@ -83,7 +130,9 @@ export function layout(items: readonly ThreadItem[], handles: Handles, prefs: La
         let height=gap+(dateHeader?transcriptSpacing.dateLine+transcriptSpacing.afterHeader:0)+(senderName?transcriptSpacing.senderLine+transcriptSpacing.senderNameGap:0)+(reply&&reply!==item.id?26:0);
         height+=system?30:bubbles.reduce((sum,bubble,index)=>sum+bubble.height+(bubble.reactions.length?transcriptSpacing.reactionTop:0)+(index?transcriptSpacing.partGap:0),0);
         height+=(label?effectLineHeight:0)+(edited?22:0)+(commandStatus?44:(receipt?20:0)+(failed?20:0))+(item.reply_count?24:0)+history.reduce((sum,version)=>sum+version.height+4,0)+(unsent.length&&visible.length?24:0);
-        return {key:commandRenderKey(item),effectLabel:label,service:text(data.service)||prefs.service||'iMessage',commandStatus,id:item.id,item,height:Math.ceil(height),bubbles,sent,sender:actor,senderName,avatar:prefs.group&&!sent&&last&&!system?handles.get(sender(item))?.initials??'?':undefined,header:dateHeader,headerParts:dateParts,system,receipt:commandStatus?undefined:receipt,edited,history,reply:reply&&reply!==item.id?reply:undefined,failed:!commandStatus&&failed,gap,unsent:unsent.length&&visible.length?wording.unsent(actor):undefined};
+        const row:TranscriptRow={key:commandRenderKey(item),effectLabel:label,service:text(data.service)||prefs.service||'iMessage',commandStatus,id:item.id,item,height:Math.ceil(height),bubbles,sent,sender:actor,senderName,avatar:prefs.group&&!sent&&last&&!system?handles.get(sender(item))?.initials??'?':undefined,header:dateHeader,headerParts:dateParts,system,receipt:commandStatus?undefined:receipt,edited,history,reply:reply&&reply!==item.id?reply:undefined,failed:!commandStatus&&failed,gap,unsent:unsent.length&&visible.length?wording.unsent(actor):undefined};
+        cache?.set(item.id,{item,previous,next,lastSent:isLastSent,expanded:isExpanded,latest,actor,target,initials,row});
+        return row;
     });
     return stackImageRows(rows,prefs,maxWidth);
 }
@@ -91,11 +140,14 @@ export function layout(items: readonly ThreadItem[], handles: Handles, prefs: La
 function stackImageRows(rows:TranscriptRow[],prefs:LayoutPrefs,maxWidth:number):TranscriptRow[]{
     const targeted=new Set(rows.flatMap(row=>(row.item.attachments??[]).map(attachment=>text(fields(attachment.data.sticker).target_message_id)).filter(Boolean)));
     const attachmentFor=(row:TranscriptRow)=>{
-        if(row.system||row.edited||row.unsent||row.failed||row.reply||row.item.reply_count||row.commandStatus||text(row.item.data.effect)||text(row.item.data.command_id)||targeted.has(row.id)||row.bubbles.length!==1)return;
-        const bubble=row.bubbles[0],attachment=row.item.attachments?.find(value=>value.id===bubble.part.attachment_id),dimensions=fields(attachment?.data.media);
+        if(row.bubbles.length!==1)return;
+        const bubble=row.bubbles[0];
+        if(bubble.part.kind!=='attachment'||bubble.reactions.length||bubble.floating)return;
+        if(row.system||row.edited||row.unsent||row.failed||row.reply||row.item.reply_count||row.commandStatus||text(row.item.data.effect)||text(row.item.data.command_id)||targeted.has(row.id))return;
+        const attachment=row.item.attachments?.find(value=>value.id===bubble.part.attachment_id),dimensions=fields(attachment?.data.media);
         const nativePart=array(row.item.data.parts).map(fields).find(part=>part.attachment_id===attachment?.id),nativeIndex=nativePart?.index;
         if(typeof nativeIndex!=='number'||!Number.isSafeInteger(nativeIndex)||nativeIndex<0||nativeIndex!==bubble.part.index)return;
-        if(bubble.part.kind!=='attachment'||bubble.reactions.length||bubble.floating||!attachment||!text(attachment.data.mime_type).startsWith('image/')||dimensions.live===true)return;
+        if(!attachment||!text(attachment.data.mime_type).startsWith('image/')||dimensions.live===true)return;
         if(Number(dimensions.width)<=24||Number(dimensions.height)<=24)return;
         if(![dimensions.width,dimensions.height].every(value=>typeof value==='number'&&Number.isFinite(value)&&value>0))return;
         return attachment;

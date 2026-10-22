@@ -4,13 +4,35 @@ export const wording = {
     delivered: 'Delivered', deliveredQuietly: 'Delivered Quietly', notDelivered: 'Not Delivered', edited: 'Edited', you: 'You', unsent: (name: string) => `${name} unsent a message`, replies: (count: number) => `${count} ${count === 1 ? 'Reply' : 'Replies'}`, newMessages: (count: number) => `↓ ${count} new`,
     reactions: {love:'❤️',like:'👍',dislike:'👎',laugh:'😂',emphasize:'‼️',question:'❓'} as Record<string,string>
 };
-export function time(value: string, locale?: string) { return new Intl.DateTimeFormat(locale, {hour:'numeric',minute:'2-digit'}).format(new Date(value)); }
+const dateFormats=new Map<string,Intl.DateTimeFormat>();
+const dateOptions:Record<string,Intl.DateTimeFormatOptions>={
+    time:{hour:'numeric',minute:'2-digit'},
+    weekday:{weekday:'long'},
+    date:{month:'short',day:'numeric',weekday:'short'},
+    year:{month:'short',day:'numeric',year:'numeric'},
+    timestamp:{year:'numeric',month:'numeric',day:'numeric',hour:'numeric',minute:'numeric',second:'numeric'}
+};
+function formatDate(value:Date,kind:string,locale?:string){
+    const key=(locale??'')+':'+kind;
+    let formatter=dateFormats.get(key);
+    if(!formatter){
+        formatter=new Intl.DateTimeFormat(locale,dateOptions[kind]);
+        if(dateFormats.size>=32)dateFormats.delete(dateFormats.keys().next().value!);
+        dateFormats.set(key,formatter);
+    }
+    return formatter.format(value);
+}
+export function timestamp(value:string,locale?:string){
+    const date=new Date(value);
+    return Number.isFinite(date.getTime())?formatDate(date,'timestamp',locale):date.toLocaleString(locale);
+}
+export function time(value: string, locale?: string) { return formatDate(new Date(value),'time',locale); }
 export function dateLabel(value: string, now = new Date(), locale?: string) {
     const date = new Date(value), today = new Date(now.getFullYear(), now.getMonth(), now.getDate()), day = new Date(date.getFullYear(), date.getMonth(), date.getDate());
     const days = Math.round((today.getTime()-day.getTime())/86400000);
     if (days === 0) return 'Today';
     if (days === 1) return 'Yesterday';
-    return new Intl.DateTimeFormat(locale, days > 1 && days < 7 ? {weekday:'long'} : {month:'short',day:'numeric',...(date.getFullYear()!==now.getFullYear()?{year:'numeric'}:{weekday:'short'})}).format(date);
+    return formatDate(date,days>1&&days<7?'weekday':date.getFullYear()!==now.getFullYear()?'year':'date',locale);
 }
 export type HeaderParts={day:string;time:string;separator:string};
 export function headerParts(value:string,now=new Date(),locale?:string):HeaderParts {

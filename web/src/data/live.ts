@@ -75,6 +75,7 @@ export class LiveClient {
     private heartbeat: ReturnType<typeof setInterval> | undefined;
     private stopped = false;
     private attempt = 0;
+    private throttled = false;
     private lastFrame = 0;
     private connection = createSignal<'connecting' | 'connected' | 'offline'>('connecting');
     private commandRevision = createSignal(0);
@@ -118,7 +119,8 @@ export class LiveClient {
             if (!this.stopped) {
                 void fetch('/web/v1/session', { cache: 'no-store', credentials: 'same-origin' }).then(response => { if (response.status === 401)
                     this.revoke(); }).catch(() => { });
-                const delay = Math.min(30000, 250 * 2 ** Math.min(this.attempt++, 7)) * (.75 + Math.random() * .5);
+                const delay = Math.max(this.throttled?1000:0,Math.min(30000, 250 * 2 ** Math.min(this.attempt++, 7)) * (.75 + Math.random() * .5));
+                this.throttled=false;
                 this.timer = setTimeout(() => this.connect(), delay);
             }
         };
@@ -186,6 +188,10 @@ export class LiveClient {
         }
         else if (frame.t === 'error' && typeof frame.id === 'string')
             this.setCheckError(frame.id, typeof frame.code === 'string' ? frame.code : 'unavailable');
+        else if (frame.t === 'error' && frame.code === 'rate_limited') {
+            this.throttled=true;
+            this.socket?.close(4008,'rate_limited');
+        }
         else if (frame.t === 'session_revoked')
             this.revoke();
         else if (frame.t === 'error' && frame.code === 'reset') {

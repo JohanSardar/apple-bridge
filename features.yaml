@@ -601,6 +601,7 @@ features:
       - {id: WEB-MSG-SEARCH-LIST, levels: [web]}
       - {id: WEB-MSG-SIDEBAR, levels: [web]}
       - {id: WEB-MSG-THREAD-CORE, levels: [web]}
+      - {id: WEB-MSG-READ-THROTTLE, levels: [web]}
       - {id: WEB-MSG-TRANSCRIPT-VIEWER, levels: [web]}
       - {id: WEB-MSG-COMPOSITION, levels: [web]}
       - {id: WEB-MSG-TRANSCRIPT-HOOKS, levels: [web]}

@@ -23,6 +23,7 @@ function buildCache(live:LiveClient,capacity:number) {
     const [revision,setRevision]=createSignal(0);
     const subscriptions = new Map<string, ReturnType<LiveClient['subscribe']>>();
     const resolved=new Set<string>(),inFlight=new Set<string>(),pending=new Set<string>(),fallbackPending=new Set<string>();
+    let retry:ReturnType<typeof setTimeout>|undefined;
     let frame = 0, fallbackFrame=0, unavailable=false, stopped=false, resolving=false;
     function evict(id:string){resolved.delete(id);subscriptions.get(id)?.dispose();subscriptions.delete(id);}
     function put(id: string, data: Record<string,unknown>,confirmed=false) {
@@ -66,8 +67,14 @@ function buildCache(live:LiveClient,capacity:number) {
             if(stopped)return;
             for(const handle of result.handles){const id=text(handle.handle_id);put(id,handle,true);if(untrack(handles).has(id))resolved.add(id);}
         }catch(error){
-            if(error instanceof APIError&&[400,404,501].includes(error.status))unavailable=true;
-            fallback(ids);
+            if(stopped)return;
+            if(error instanceof APIError&&error.status===429){
+                for(const id of ids)pending.add(id);
+                retry=setTimeout(()=>{retry=undefined;schedule();},1000);
+            }else{
+                if(error instanceof APIError&&[400,404,501].includes(error.status))unavailable=true;
+                fallback(ids);
+            }
         }finally{
             for(const id of ids)inFlight.delete(id);
             resolving=false;
@@ -75,7 +82,7 @@ function buildCache(live:LiveClient,capacity:number) {
         }
     }
     function schedule(){
-        if(frame||resolving||stopped||!pending.size)return;
+        if(frame||retry||resolving||stopped||!pending.size)return;
         frame=requestAnimationFrame(()=>{frame=0;const ids=[...pending].slice(0,500);for(const id of ids){pending.delete(id);inFlight.add(id);}resolving=true;void resolve(ids);});
     }
     function ensure(ids: readonly string[]) {
@@ -88,6 +95,6 @@ function buildCache(live:LiveClient,capacity:number) {
         scheduleFallback();
         return handles();
     }
-    onCleanup(()=>{stopped=true;cancelAnimationFrame(frame);cancelAnimationFrame(fallbackFrame);for(const subscription of subscriptions.values())subscription.dispose();});
+    onCleanup(()=>{stopped=true;clearTimeout(retry);cancelAnimationFrame(frame);cancelAnimationFrame(fallbackFrame);for(const subscription of subscriptions.values())subscription.dispose();});
     return {read,ensure,seed};
 }

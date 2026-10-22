@@ -46,7 +46,12 @@ export function createThreadWindow(live:LiveClient,chat:string,initialAnchor='un
             if(!coherent&&publishedAnchor===value)for(const item of previous.items){map.set(item.id,item);const known=retained.get(item.id);if(known)versions.set(item.id,known);}
             for(const page of pages)for(const item of page.data.items??[]){
                 const known=versions.get(item.id),sequence=page.cursor?.sequence??0,epoch=page.cursor?.epoch;
-                if(!known||known.epoch!==epoch||sequence>known.sequence||sequence===known.sequence&&item.version>=known.item.version){map.set(item.id,item);versions.set(item.id,{item,epoch,sequence});}
+                if(!known||known.epoch!==epoch||sequence>known.sequence||sequence===known.sequence&&item.version>=known.item.version){
+                    const stable=retained.get(item.id);
+                    const value=stable&&stable.epoch===epoch&&sameThreadItem(stable.item,item)?stable.item:item;
+                    map.set(item.id,value);
+                    versions.set(item.id,{item:value,epoch,sequence});
+                }
             }
             const ordered=[...map.values()].sort((a,b)=>Date.parse(a.data.sent_at)-Date.parse(b.data.sent_at)||a.id.localeCompare(b.id));
             const middle=ordered.findIndex(item=>item.id===(center.data.items?.[Math.floor((center.data.items?.length??0)/2)]?.id));
@@ -66,4 +71,14 @@ export function createThreadWindow(live:LiveClient,chat:string,initialAnchor='un
         if(id&&id!==untrack(anchor))setAnchor(id);
     }
     return {view:window,items:()=>window().items,anchor,newer:()=>window().newer,older:()=>window().older,loading,unread:()=>window().unread,visible,jump:(id:string)=>setAnchor(id),latest:()=>setAnchor('latest'),oldest:()=>setAnchor('oldest')};
+}
+
+function sameThreadItem(a:ThreadItem,b:ThreadItem){
+    return a===b||a.id===b.id&&a.version===b.version&&a.reply_count===b.reply_count&&
+        sameRecords(a.reactions??[],b.reactions??[])&&sameRecords(a.attachments??[],b.attachments??[]);
+}
+function sameRecords(left:readonly {id:string;version:number}[],right:readonly {id:string;version:number}[]){
+    return left===right||left.length===right.length&&left.every((record,index)=>
+        record.id===right[index].id&&record.version===right[index].version
+    );
 }
