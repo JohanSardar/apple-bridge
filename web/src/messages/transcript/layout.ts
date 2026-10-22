@@ -2,7 +2,7 @@ import type { BridgeRecord, ThreadItem } from '../../data/types';
 import { array, fields, messageParts, sender, text, type Handles, type Part } from '../store/types';
 import { groupEvent, headerParts, name, time, wording, type HeaderParts } from '../format';
 import { attachmentHasAlpha } from '../media/source';
-export const transcriptSpacing={withinRun:3,betweenRuns:9,partGap:3,dateLine:16,afterHeader:9,senderLine:16,senderNameGap:2};
+export const transcriptSpacing={withinRun:3,betweenRuns:9,partGap:3,dateLine:16,afterHeader:9,senderLine:16,senderNameGap:2,reactionTop:16};
 export type LayoutPrefs = { phone: boolean; viewportHeight?:number; group: boolean; service?: string; atLatest?: boolean; now: Date; locale?: string; scale: number; measure: (value:string,font?:{weight?:number;italic?:boolean})=>number; expanded: ReadonlySet<string> };
 export type BubbleLayout = { part: Part; subject?:string; width: number; height: number; emoji: boolean; media: boolean; floating:boolean; reactions: BridgeRecord[]; tail: boolean };
 export type TranscriptRow = { key:string;service:string;commandStatus?:{id:string;state:string;label:string};id: string; item: ThreadItem; height: number; bubbles: BubbleLayout[]; sent: boolean; sender: string; senderName?: string; avatar?: string; header?: string; headerParts?:HeaderParts; system?: string; receipt?: string; edited: boolean; history: {text:string;height:number;width:number}[]; unsent?:string; reply?: string; failed: boolean; gap: number };
@@ -73,7 +73,7 @@ export function layout(items: readonly ThreadItem[], handles: Handles, prefs: La
         const commandStatus=commandID&&(index===lastSent||commandState==='failed'||commandState==='indeterminate')?{id:commandID,state:commandState,label:commandState==='failed'?wording.notDelivered:commandState==='indeterminate'?wording.deliveryUnknown:commandState==='pending'?wording.sending:receipt??wording.sent}:undefined;
         const gap=first?transcriptSpacing.betweenRuns:transcriptSpacing.withinRun,senderName=prefs.group&&!sent&&first&&!system?actor:undefined;
         let height=gap+(dateHeader?transcriptSpacing.dateLine+transcriptSpacing.afterHeader:0)+(senderName?transcriptSpacing.senderLine+transcriptSpacing.senderNameGap:0)+(reply&&reply!==item.id?26:0);
-        height+=system?30:bubbles.reduce((sum,bubble,index)=>sum+bubble.height+(bubble.reactions.length?16:0)+(index?transcriptSpacing.partGap:0),0);
+        height+=system?30:bubbles.reduce((sum,bubble,index)=>sum+bubble.height+(bubble.reactions.length?transcriptSpacing.reactionTop:0)+(index?transcriptSpacing.partGap:0),0);
         height+=(edited?22:0)+(commandStatus?44:(receipt?20:0)+(failed?20:0))+(item.reply_count?24:0)+history.reduce((sum,version)=>sum+version.height+4,0)+(unsent.length&&visible.length?24:0);
         return {key:commandRenderKey(item),service:text(data.service)||prefs.service||'iMessage',commandStatus,id:item.id,item,height:Math.ceil(height),bubbles,sent,sender:actor,senderName,avatar:prefs.group&&!sent&&last&&!system?handles.get(sender(item))?.initials??'?':undefined,header:dateHeader,headerParts:dateParts,system,receipt:commandStatus?undefined:receipt,edited,history,reply:reply&&reply!==item.id?reply:undefined,failed:!commandStatus&&failed,gap,unsent:unsent.length&&visible.length?wording.unsent(actor):undefined};
     });

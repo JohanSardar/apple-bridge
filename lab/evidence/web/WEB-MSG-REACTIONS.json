@@ -1,0 +1,61 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[176.17 179.8 192.17] cpu_idle=50% cpus=8 other_heavy=2"
+  },
+  "run_id": "run_01M5HGA7MH7TFNZFZ3WN3YSZV7",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "demo_messages": 5000,
+    "demo_startup_ms": 23755,
+    "matrix": [
+      "chromium-light-desktop",
+      "chromium-light-phone",
+      "webkit-light-desktop",
+      "webkit-light-phone"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-MSG-REACTIONS-chromium-light-desktop-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-MSG-REACTIONS-chromium-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-REACTIONS-chromium-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-REACTIONS-webkit-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-REACTIONS-webkit-light-phone-playwright.json"
+    ],
+    "server": "gateway"
+  },
+  "scenario": "WEB-MSG-REACTIONS",
+  "level": "web",
+  "passed": true,
+  "git_sha": "a3fc2e4160ea228bbd2630b82cea88e4f4498e23",
+  "at": "2026-10-22T09:50:42.322013Z",
+  "assertions": [
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 3 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/transcript-layout.spec.ts:119:1 › WEB-MSG-REACTIONS layout math reserves sixteen points above reaction-bearing bubbles (204ms)\n  ✓  2 [chromium-light-desktop] › tests/transcript-reactions.spec.ts:5:1 › WEB-MSG-REACTIONS transcript badges identify each reactor and preserve bubble geometry (26.3s)\n  ✓  3 [chromium-light-desktop] › tests/transcript-reactions.spec.ts:65:1 › WEB-MSG-REACTIONS transcript keeps emoji and sticker reactions on their own message part (9.2s)\n\n  3 passed (43.5s)\n"
+    },
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 3 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/transcript-layout.spec.ts:119:1 › WEB-MSG-REACTIONS layout math reserves sixteen points above reaction-bearing bubbles (76ms)\n  ✓  2 [chromium-light-phone] › tests/transcript-reactions.spec.ts:5:1 › WEB-MSG-REACTIONS transcript badges identify each reactor and preserve bubble geometry (19.2s)\n  ✓  3 [chromium-light-phone] › tests/transcript-reactions.spec.ts:65:1 › WEB-MSG-REACTIONS transcript keeps emoji and sticker reactions on their own message part (4.8s)\n\n  3 passed (27.9s)\n"
+    },
+    {
+      "name": "webkit-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 3 tests using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/transcript-layout.spec.ts:119:1 › WEB-MSG-REACTIONS layout math reserves sixteen points above reaction-bearing bubbles (180ms)\n  ✓  2 [webkit-light-desktop] › tests/transcript-reactions.spec.ts:5:1 › WEB-MSG-REACTIONS transcript badges identify each reactor and preserve bubble geometry (29.3s)\n  ✓  3 [webkit-light-desktop] › tests/transcript-reactions.spec.ts:65:1 › WEB-MSG-REACTIONS transcript keeps emoji and sticker reactions on their own message part (6.0s)\n\n  3 passed (46.3s)\n"
+    },
+    {
+      "name": "webkit-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 3 tests using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/transcript-layout.spec.ts:119:1 › WEB-MSG-REACTIONS layout math reserves sixteen points above reaction-bearing bubbles (176ms)\n  ✓  2 [webkit-light-phone] › tests/transcript-reactions.spec.ts:5:1 › WEB-MSG-REACTIONS transcript badges identify each reactor and preserve bubble geometry (23.6s)\n  ✓  3 [webkit-light-phone] › tests/transcript-reactions.spec.ts:65:1 › WEB-MSG-REACTIONS transcript keeps emoji and sticker reactions on their own message part (6.5s)\n\n  3 passed (38.1s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
