@@ -592,6 +592,7 @@ features:
       - {id: WEB-MSG-REACTIONS, levels: [web]}
       - {id: WEB-MSG-REPLIES, levels: [web]}
       - {id: WEB-MSG-REPLY-HANDOFF, levels: [web]}
+      - {id: WEB-MSG-POINTER, levels: [web]}
       - {id: WEB-MSG-EDIT-UNSEND-VIEW, levels: [web]}
       - {id: WEB-MSG-GROUP-EVENTS, levels: [web]}
       - {id: WEB-MSG-MOTION, levels: [web]}
