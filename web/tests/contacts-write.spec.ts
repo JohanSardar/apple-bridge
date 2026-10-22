@@ -48,9 +48,17 @@ test('WEB-CON-WRITE conflict keeps the draft for explicit review',async({page,co
     await page.getByRole('button',{name:'Save',exact:true}).click();await expect(page.getByRole('article')).toContainText('Reviewed job');
 });
 
-test('WEB-CON-WRITE selected vCards and bounded confirmed deletion',async({page,context,request})=>{
+test('WEB-CON-WRITE selected vCards and bounded confirmed deletion',async({page,context,request},info)=>{
     await bootstrap(context,request);await control(request,'/contacts-read');
-    await page.goto('/contacts');await page.getByRole('searchbox',{name:'Search Contacts',exact:true}).fill('Amy Zulu');await page.getByRole('button',{name:'Select',exact:true}).click();
+    let releaseSources!:()=>void;
+    const sourcesReady=new Promise<void>(resolve=>{releaseSources=resolve;});
+    await page.route('**/web/v1/sources',async route=>{await sourcesReady;await route.continue();});
+    await page.goto('/contacts');
+    if(info.project.use.viewport!.width<1024)await page.getByRole('button',{name:/All Contacts/}).click();
+    await page.getByRole('searchbox',{name:'Search Contacts',exact:true}).fill('Amy Zulu');
+    const select=page.getByRole('button',{name:'Select',exact:true}), selectY=(await select.boundingBox())!.y;
+    releaseSources();await expect(page.getByRole('button',{name:'New Contact',exact:true}).first()).toBeVisible();
+    expect((await select.boundingBox())!.y).toBe(selectY);await select.click();
     await page.getByRole('button',{name:'Amy Zulu',exact:true}).click();
     await expect(page.getByRole('button',{name:'Amy Zulu',exact:true})).toHaveAttribute('aria-pressed','true');
     const download=page.waitForEvent('download');await page.getByRole('button',{name:'Export selected',exact:true}).click();expect((await download).suggestedFilename()).toBe('Contacts.vcf');
