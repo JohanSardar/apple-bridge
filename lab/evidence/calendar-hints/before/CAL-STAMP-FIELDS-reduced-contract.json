@@ -1,0 +1,31 @@
+{
+  "run_id": "cal_01M5GHMPFVFVBJKSFB9XE3MEQS",
+  "scenario": "CAL-STAMP-FIELDS",
+  "level": "sim",
+  "git_sha": "07b2751a7e30d0d68368d613f92a6311686bb729",
+  "at": "2026-10-22T00:54:39.355434Z",
+  "passed": false,
+  "conditions": {
+    "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
+    "heavy_slots_in_use": "1",
+    "load_average": "5.05 4.78 5.01",
+    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica",
+    "swap_usage": "total = 3072.00M  used = 1971.94M  free = 1100.06M  (encrypted)"
+  },
+  "assertions": [
+    {
+      "name": "location_fast_path_without_modified_date",
+      "passed": false
+    },
+    {
+      "name": "alarm_absolute_fast_path_without_modified_date",
+      "passed": false
+    },
+    {
+      "name": "alarm_relative_fast_path_without_modified_date",
+      "passed": false
+    }
+  ],
+  "latency": {},
+  "assertion_count": 103
+}

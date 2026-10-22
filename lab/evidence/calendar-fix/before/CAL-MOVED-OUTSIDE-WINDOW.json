@@ -1,0 +1,64 @@
+{
+  "run_id": "cal_01M5FCNYFMTDKRS2GXGRA28BZW",
+  "scenario": "CAL-MOVED-OUTSIDE-WINDOW",
+  "level": "real",
+  "git_sha": "609ec44e5bff501eb678ee11946bffe87eb05b1c",
+  "at": "2026-10-21T14:08:42.996651Z",
+  "passed": false,
+  "conditions": {
+    "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
+    "heavy_slots_in_use": "2",
+    "load_average": "8.62 10.38 9.66",
+    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica",
+    "swap_usage": "not recorded"
+  },
+  "assertions": [
+    {
+      "name": "moved_outside_window_evicted",
+      "passed": false
+    },
+    {
+      "name": "moved_outside_window_never_deleted",
+      "passed": false
+    },
+    {
+      "name": "independent_appletruth_equality",
+      "passed": false
+    },
+    {
+      "name": "latency_effect_done\u2192gateway_visible",
+      "passed": false
+    },
+    {
+      "name": "latency_effect_done\u2192replica_visible:replica0",
+      "passed": false
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
+    },
+    {
+      "name": "tagged_fixture_cleanup_audit",
+      "passed": false
+    }
+  ],
+  "latency": {
+    "effect_done\u2192gateway_visible": {
+      "samples": 1,
+      "p50_ms": 1044.344208,
+      "p95_ms": 1044.344208,
+      "max_ms": 1044.344208,
+      "timeouts": 0
+    },
+    "effect_done\u2192replica_visible:replica0": {
+      "samples": 1,
+      "p50_ms": 1052.654708,
+      "p95_ms": 1052.654708,
+      "max_ms": 1052.654708,
+      "timeouts": 0
+    }
+  },
+  "assertion_count": 27
+}

@@ -1,0 +1,63 @@
+{
+  "run_id": "cal_01M5FYQCZTZCVXEDAP827ST8ES",
+  "scenario": "CAL-RECUR-THIS",
+  "level": "real",
+  "git_sha": "0d96adc5d1541baa58570b41c5dffb22d44b0312",
+  "at": "2026-10-21T19:24:04.987146Z",
+  "passed": false,
+  "conditions": {
+    "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
+    "heavy_slots_in_use": "1",
+    "load_average": "20.55 12.61 13.87",
+    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica",
+    "swap_usage": "total = 3072.00M  used = 1756.25M  free = 1315.75M  (encrypted)"
+  },
+  "assertions": [
+    {
+      "name": "delete_one_occurrence_is_observed",
+      "passed": false
+    },
+    {
+      "name": "latency_effect_done\u2192gateway_visible",
+      "passed": false
+    },
+    {
+      "name": "latency_effect_done\u2192replica_visible:replica0",
+      "passed": false
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
+    },
+    {
+      "name": "tagged_fixture_cleanup_audit",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "command_submit\u2192calendar.update_event_observed": {
+      "samples": 1,
+      "p50_ms": 545.275958,
+      "p95_ms": 545.275958,
+      "max_ms": 545.275958,
+      "timeouts": 0
+    },
+    "effect_done\u2192gateway_visible": {
+      "samples": 1,
+      "p50_ms": 1456.33725,
+      "p95_ms": 1456.33725,
+      "max_ms": 1456.33725,
+      "timeouts": 0
+    },
+    "effect_done\u2192replica_visible:replica0": {
+      "samples": 1,
+      "p50_ms": 1459.654167,
+      "p95_ms": 1459.654167,
+      "max_ms": 1459.654167,
+      "timeouts": 0
+    }
+  },
+  "assertion_count": 30
+}

@@ -1,15 +1,18 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[3.66 5.91 10.23] cpus=8 other_heavy=0"
+    "summary": "air: load=[5.23 4.24 6.21] cpu_idle=81% cpus=8 other_heavy=0"
   },
-  "run_id": "cal_01M58D1W9QBMEA6J1SVG8R0REZ",
+  "run_id": "cal_01M5HZDY3P845E4Z5P4BDVVMER",
   "network_path": "loopback",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
   "scenario": "CAL-MOVED-OUTSIDE-WINDOW",
   "level": "sim",
   "passed": true,
-  "git_sha": "4f263fdf17b0f98019c10581b7d742880bb9b6af",
-  "at": "2026-10-18T21:00:32.951314Z",
+  "git_sha": "5cf6465c877e6ee49fc7c693729f17585fe79f7b",
+  "at": "2026-10-22T14:14:52.278881Z",
   "assertions": [
     {
       "name": "calendar_visible",
@@ -87,7 +90,7 @@
       "name": "replica_records_versions_and_cursor_consistent",
       "passed": true,
       "status": "pass",
-      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+      "detail": "public records query, including versions and tombstones, matched at one full cursor at or beyond the starting watermark"
     },
     {
       "name": "replica_application_exactly_once",
@@ -103,16 +106,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 6.472,
-      "p95_ms": 6.472,
-      "max_ms": 6.472,
+      "p50_ms": 3.251,
+      "p95_ms": 3.251,
+      "max_ms": 3.251,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 10.709,
-      "p95_ms": 10.709,
-      "max_ms": 10.709,
+      "p50_ms": 5.381,
+      "p95_ms": 5.381,
+      "max_ms": 5.381,
       "timeouts": 0
     }
   },
@@ -122,7 +125,8 @@
   "conditions": {
     "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
     "heavy_slots_in_use": "1",
-    "load_average": "3.66 5.91 10.23",
-    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"
+    "load_average": "5.23 4.24 6.21",
+    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica",
+    "swap_usage": "total = 3072.00M  used = 2146.06M  free = 925.94M  (encrypted)"
   }
 }

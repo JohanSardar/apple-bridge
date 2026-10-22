@@ -9,10 +9,12 @@ final class CalendarDatabaseHints: @unchecked Sendable {
     private let queue = DispatchQueue(label: "applebridge.calendar.hints")
     private let paths: Set<String>
     private let directory: String
+    private let trace: CaptureTrace
     private var files: [String: (UInt64, any DispatchSourceFileSystemObject)] = [:]
     private var events: FSEventStreamRef?
 
-    init() {
+    init(trace: CaptureTrace = CaptureTrace()) {
+        self.trace = trace
         let database = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Group Containers/group.com.apple.calendar/Calendar.sqlitedb").path
         paths = [database, database + "-wal"]
         directory = URL(fileURLWithPath: database).deletingLastPathComponent().path
@@ -28,7 +30,7 @@ final class CalendarDatabaseHints: @unchecked Sendable {
             for index in 0..<count {
                 if watcher.paths.contains(changed[index]) || flags[index] & UInt32(kFSEventStreamEventFlagMustScanSubDirs | kFSEventStreamEventFlagRootChanged) != 0 {
                     watcher.rearm()
-                    watcher.continuation.yield(CaptureTrace.now())
+                    watcher.signal(watcher.paths.contains(changed[index]) ? (changed[index].hasSuffix("-wal") ? "wal_fsevent" : "database_fsevent") : "root_fsevent")
                     break
                 }
             }
@@ -37,6 +39,12 @@ final class CalendarDatabaseHints: @unchecked Sendable {
             FSEventStreamSetDispatchQueue(events, queue)
             if !FSEventStreamStart(events) { close() }
         }
+    }
+
+    private func signal(_ origin: String) {
+        let delivered = CaptureTrace.now()
+        trace.record("calendar_database_hint_origin", fields: ["origin": .string(origin), "delivered_ns": .integer(delivered)])
+        continuation.yield(delivered)
     }
 
     private func rearm() {
@@ -52,7 +60,7 @@ final class CalendarDatabaseHints: @unchecked Sendable {
             source.setEventHandler { [weak self] in
                 guard let self else { return }
                 rearm()
-                continuation.yield(CaptureTrace.now())
+                signal(path == directory ? "directory_dispatch" : (path.hasSuffix("-wal") ? "wal_dispatch" : "database_dispatch"))
             }
             files[path] = (identity, source)
             source.resume()

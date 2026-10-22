@@ -52,9 +52,15 @@ func (f *fakeApple) calendarInWindow(o contracts.Observation) bool {
 }
 func (f *fakeApple) calendarScanLocked() contracts.Capture {
 	observations := []contracts.Observation{}
-	for _, o := range f.records {
+	for key, o := range f.records {
 		if contracts.CollectionSource(o.Collection) != contracts.Calendar {
 			continue
+		}
+		if cached, ok := f.calendarUnchangedStamp[key]; ok {
+			previous, next := calendarData(cached), calendarData(o)
+			if f.calendarForcedStampMatch[key] || reflect.DeepEqual(previous["location"], next["location"]) && reflect.DeepEqual(previous["alarms"], next["alarms"]) {
+				o = cached
+			}
 		}
 		if !f.calendarInWindow(o) {
 			o.Kind = "evict"
@@ -69,10 +75,12 @@ func (f *fakeApple) calendarScanLocked() contracts.Capture {
 func (f *fakeApple) calendarControl(mux *http.ServeMux) {
 	mux.HandleFunc("POST /calendar", func(w http.ResponseWriter, r *http.Request) {
 		var request struct {
-			Action string         `json:"action"`
-			Key    string         `json:"key"`
-			Data   map[string]any `json:"data"`
-			Now    string         `json:"now"`
+			Action          string         `json:"action"`
+			ForceStampMatch bool           `json:"force_stamp_match"`
+			Count           int            `json:"count"`
+			Key             string         `json:"key"`
+			Data            map[string]any `json:"data"`
+			Now             string         `json:"now"`
 		}
 		if json.NewDecoder(r.Body).Decode(&request) != nil {
 			http.Error(w, "invalid", 400)
@@ -80,6 +88,28 @@ func (f *fakeApple) calendarControl(mux *http.ServeMux) {
 		}
 		f.mu.Lock()
 		switch request.Action {
+		case "server_update":
+			o, ok := f.records[request.Key]
+			if !ok || o.Collection != "calendar.event" {
+				f.mu.Unlock()
+				http.Error(w, "not found", 404)
+				return
+			}
+			if f.calendarUnchangedStamp == nil {
+				f.calendarUnchangedStamp = map[string]contracts.Observation{}
+				f.calendarForcedStampMatch = map[string]bool{}
+			}
+			f.calendarUnchangedStamp[request.Key] = o
+			f.calendarForcedStampMatch[request.Key] = request.ForceStampMatch
+			value := calendarData(o)
+			for key, next := range request.Data {
+				value[key] = next
+			}
+			o.Data, _ = json.Marshal(value)
+			f.records[request.Key] = o
+			f.mu.Unlock()
+			json.NewEncoder(w).Encode(map[string]any{"effect_done": true, "stamp_unchanged": request.ForceStampMatch})
+			return
 		case "calendar":
 			d := request.Data
 			if d == nil {
@@ -111,6 +141,22 @@ func (f *fakeApple) calendarControl(mux *http.ServeMux) {
 				f.records[o.NativeKey] = o
 			}
 
+		case "create_many":
+			if request.Count < 1 || request.Count > 3000 {
+				f.mu.Unlock()
+				http.Error(w, "invalid", 400)
+				return
+			}
+			for index := 0; index < request.Count; index++ {
+				key := fmt.Sprintf("%s/%d", request.Key, index)
+				data := map[string]any{"calendar_id": nativeReference("calendar.calendar", "test-calendar"), "title": fmt.Sprintf("%s %d", request.Data["title"], index), "start": request.Data["start"], "end": request.Data["end"], "all_day": false, "time_zone": "UTC", "is_exception": false}
+				if notes, ok := request.Data["notes"]; ok {
+					data["notes"] = notes
+				}
+				next := calendarObservation(key, "calendar.event", data)
+				next.ScopedAlias = f.calendarScope("test-calendar") + key
+				f.records[key] = next
+			}
 		case "move":
 			o, ok := f.records[request.Key]
 			if !ok || o.Collection != "calendar.event" || o.Kind == "absent" {
@@ -170,6 +216,11 @@ func (f *fakeApple) calendarControl(mux *http.ServeMux) {
 				return
 			}
 			f.calendarClock = now
+			if f.calendarVerificationAt.IsZero() || !now.Before(f.calendarVerificationAt.Add(15*time.Minute)) {
+				f.calendarUnchangedStamp = nil
+				f.calendarForcedStampMatch = nil
+				f.calendarVerificationAt = now
+			}
 		case "delete":
 			o, exists := f.records[request.Key]
 			if !exists {
@@ -187,6 +238,7 @@ func (f *fakeApple) calendarControl(mux *http.ServeMux) {
 			return
 		}
 		c := f.calendarScanLocked()
+		c.Live = true
 		denied := f.calendarDenied
 		err := f.changedLocked(contracts.Calendar)
 		revision := f.durable.Revision[contracts.Calendar]
@@ -201,7 +253,8 @@ func (f *fakeApple) calendarControl(mux *http.ServeMux) {
 				return
 			}
 		}
-		json.NewEncoder(w).Encode(map[string]any{"effect_done": true, "effect_at": effectAt.Format(time.RFC3339Nano)})
+		encoded, _ := json.Marshal(c.Observations)
+		json.NewEncoder(w).Encode(map[string]any{"effect_done": true, "effect_at": effectAt.Format(time.RFC3339Nano), "capture_bytes": len(encoded)})
 	})
 }
 func (f *fakeApple) isCalendarFrame(frame contracts.IPCFrame) bool {
@@ -488,8 +541,22 @@ func (f *fakeApple) calendarCommand(wire *applepeer.Wire, frame contracts.IPCFra
 				value["status"] = 1
 			}
 		}
+		alias := o.ScopedAlias
+		if a.Span == "future" && series != "" && t.Action.Op == "calendar.update_event" {
+			o.Kind = "absent"
+			o.Revalidated = true
+			o.ObservedAt = time.Now().UTC()
+			f.records[key] = o
+			originalKey := key
+			value["occurrence_date"] = value["start"]
+			key = newSeries + "|" + fmt.Sprint(value["occurrence_date"])
+			alias = f.calendarScope(t.Action.ListKey) + key
+			if originalKey == native {
+				native = key
+			}
+		}
 		next := calendarObservation(key, collection, value)
-		next.ScopedAlias = o.ScopedAlias
+		next.ScopedAlias = alias
 		if strings.HasSuffix(t.Action.Op, "delete_event") {
 			next.Kind = "absent"
 			next.Revalidated = true

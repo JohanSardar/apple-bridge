@@ -1,0 +1,131 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[4.89 4.19 6.17] cpu_idle=81% cpus=8 other_heavy=0"
+  },
+  "run_id": "cal_01M5HZEAGSS1HSB5A0081ER9A9",
+  "network_path": "loopback",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "CAL-SPLIT-FRAME-CAP",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "5cf6465c877e6ee49fc7c693729f17585fe79f7b",
+  "at": "2026-10-22T14:15:04.985622Z",
+  "assertions": [
+    {
+      "name": "calendar_visible",
+      "passed": true
+    },
+    {
+      "name": "initial_occurrences_visible",
+      "passed": true
+    },
+    {
+      "name": "agenda_returns_occurrences",
+      "passed": true
+    },
+    {
+      "name": "oversized_split_keeps_capture_progressing",
+      "passed": true
+    },
+    {
+      "name": "source_captures_after_oversized_split",
+      "passed": true
+    },
+    {
+      "name": "replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "contiguous_feed_0",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "contiguous_feed_1",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "latency_effect_done→gateway_visible",
+      "passed": true
+    },
+    {
+      "name": "latency_effect_done→replica_visible:replica0",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_query",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_mcp_agenda",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_query",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_mcp_agenda",
+      "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass",
+      "detail": "public records query, including versions and tombstones, matched at one full cursor at or beyond the starting watermark"
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "command_submit→calendar.update_event_observed": {
+      "samples": 2,
+      "p50_ms": 100.595333,
+      "p95_ms": 174.520875,
+      "max_ms": 174.520875,
+      "timeouts": 0
+    },
+    "effect_done→gateway_visible": {
+      "samples": 1,
+      "p50_ms": 59.381,
+      "p95_ms": 59.381,
+      "max_ms": 59.381,
+      "timeouts": 0
+    },
+    "effect_done→replica_visible:replica0": {
+      "samples": 1,
+      "p50_ms": 66.286,
+      "p95_ms": 66.286,
+      "max_ms": 66.286,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ],
+  "conditions": {
+    "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
+    "heavy_slots_in_use": "1",
+    "load_average": "4.89 4.19 6.17",
+    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica",
+    "swap_usage": "total = 3072.00M  used = 2146.06M  free = 925.94M  (encrypted)"
+  }
+}

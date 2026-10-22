@@ -42,6 +42,17 @@ func (w *World) truth(ctx context.Context, verb string, request map[string]any) 
 		}
 		request["empty_calendar_proof"] = proof
 	}
+	if calendarFixture && request["action"] == "cleanup_run_calendar" {
+		bytes, err := exec.CommandContext(ctx, "python3", filepath.Join(filepath.Dir(filepath.Dir(w.bridge)), "lab/truth/calendar-cleanup-audit.py"), "--tag", fmt.Sprint(request["tag"])).Output()
+		if err != nil {
+			return nil, err
+		}
+		var proof map[string]any
+		if json.Unmarshal(bytes, &proof) != nil {
+			return nil, fmt.Errorf("invalid tagged Calendar proof")
+		}
+		request["empty_calendar_proof"] = proof
+	}
 	id := contracts.NewID("truth")
 	input := filepath.Join(w.Dir, id+"-request.json")
 	output := filepath.Join(w.Dir, id+"-report.json")
@@ -130,7 +141,17 @@ func (w *World) truth(ctx context.Context, verb string, request map[string]any) 
 		return failure(reason)
 	}
 	os.Remove(output)
-	if calendarFixture && (request["action"] == "cleanup" || request["action"] == "cleanup_calendar") {
+	if calendarFixture && request["action"] == "cleanup_run_calendar" {
+		data, err := exec.CommandContext(ctx, "python3", filepath.Join(filepath.Dir(filepath.Dir(w.bridge)), "lab/truth/calendar-cleanup-audit.py"), "--tag", fmt.Sprint(request["tag"])).Output()
+		var audit struct {
+			Remaining int `json:"remaining"`
+		}
+		if err != nil || json.Unmarshal(data, &audit) != nil || audit.Remaining != 0 {
+			return nil, fmt.Errorf("Calendar exact-tag cleanup audit failed")
+		}
+		response["post_cleanup_remaining"] = audit.Remaining
+	}
+	if calendarFixture && request["consolidate_calendars"] == true && (request["action"] == "cleanup" || request["action"] == "cleanup_calendar") {
 		consolidation, err := w.truth(ctx, "fixture", map[string]any{"source": "calendar", "action": "consolidate_calendars", "tag": request["tag"]})
 		if err != nil {
 			return nil, err

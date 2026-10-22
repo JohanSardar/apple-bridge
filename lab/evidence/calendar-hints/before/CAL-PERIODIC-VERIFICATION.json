@@ -1,0 +1,27 @@
+{
+  "run_id": "cal_01M5G1W90FED8VD6Q89NR0790E",
+  "scenario": "CAL-PERIODIC-VERIFICATION",
+  "level": "sim",
+  "git_sha": "a2dba1dcd51690a9e8b809286bab415cf04778c2",
+  "at": "2026-10-21T20:19:10.479274Z",
+  "passed": false,
+  "conditions": {
+    "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
+    "heavy_slots_in_use": "1",
+    "load_average": "9.97 9.36 12.26",
+    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica",
+    "swap_usage": "total = 4096.00M  used = 2856.75M  free = 1239.25M  (encrypted)"
+  },
+  "assertions": [
+    {
+      "name": "periodic_verification_rebuilds_unstamped_status",
+      "passed": false
+    },
+    {
+      "name": "periodic_verification_matches_independent_truth",
+      "passed": false
+    }
+  ],
+  "latency": {},
+  "assertion_count": 11
+}

@@ -1,0 +1,72 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[5.23 4.24 6.21] cpu_idle=79% cpus=8 other_heavy=0"
+  },
+  "run_id": "cal_01M5HZDZJDEY12S8XS5VKZTJKM",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "CAL-PERIODIC-VERIFICATION",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "5cf6465c877e6ee49fc7c693729f17585fe79f7b",
+  "at": "2026-10-22T14:14:53.77332Z",
+  "assertions": [
+    {
+      "name": "world_start",
+      "passed": true
+    },
+    {
+      "name": "calendar_created",
+      "passed": true
+    },
+    {
+      "name": "verification_clock_started",
+      "passed": true
+    },
+    {
+      "name": "event_created",
+      "passed": true
+    },
+    {
+      "name": "initial_status_visible",
+      "passed": true
+    },
+    {
+      "name": "server_status_changes_with_injected_stamp_match",
+      "passed": true
+    },
+    {
+      "name": "ordinary_scan_reuses_unchanged_stamp",
+      "passed": true
+    },
+    {
+      "name": "periodic_verification_triggered",
+      "passed": true
+    },
+    {
+      "name": "periodic_verification_rebuilds_unstamped_status",
+      "passed": true
+    },
+    {
+      "name": "periodic_verification_matches_independent_truth",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ],
+  "conditions": {
+    "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
+    "heavy_slots_in_use": "1",
+    "load_average": "5.23 4.24 6.21",
+    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica",
+    "swap_usage": "total = 3072.00M  used = 2146.06M  free = 925.94M  (encrypted)"
+  }
+}
