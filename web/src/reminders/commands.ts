@@ -62,7 +62,7 @@ export function createReminderCommands(live: LiveClient) {
             const base = observed ?? byID.get(ids[0] ?? existingID ?? '')?.reminder ?? change.before?.reminder;
             const id = ids[0] ?? existingID ?? 'pending:' + change.id;
             if (!existingID && !ids.length && performance.now() >= (change.identityExpires ?? 0)) continue;
-            const data: Record<string, unknown> = { ...(base?.data ?? {}), ...change.args, ...(change.op === 'reminders.complete' ? { completed: true } : change.op === 'reminders.uncomplete' ? { completed: false } : {}), _pending: command.status !== 'observed' || !ids.length || !committed(observed ? change.watch?.cursor() : input._cursor, command), _completing: linger, _folding: linger && change.folding };
+            const data: Record<string, unknown> = { ...(base?.data ?? {}), ...change.args, ...(change.op === 'reminders.complete' ? { completed: true } : change.op === 'reminders.uncomplete' ? { completed: false } : {}), _creation: change.op === 'reminders.create' ? change.id : undefined, _pending: command.status !== 'observed' || !ids.length || !committed(observed ? change.watch?.cursor() : input._cursor, command), _completing: linger, _folding: linger && change.folding };
             delete data.id;
             const reminder: BridgeRecord = { id, collection: 'reminders.reminder', source: 'reminders', version: base?.version ?? 0, data };
             const item: Item = { ...(byID.get(id) ?? change.before ?? { subtasks: [], attachments: [] }), reminder };

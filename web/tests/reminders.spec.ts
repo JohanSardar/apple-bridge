@@ -126,7 +126,7 @@ test('WEB-REM-READ exact demo sidebar, nested sections, completed, sorts, keyboa
   await expect(page.getByRole(info.project.use.viewport!.width < 1024 ? 'dialog' : 'complementary', { name: 'Reminder details' })).toContainText('Compare two quiet cabins');
   await page.getByRole('button', { name: 'Close details', exact: true }).click();
   await expect(list).toBeFocused();
-  await page.locator('.reminder-title').filter({ hasText: 'Plan a weekend trip' }).click();
+  await page.getByRole('button', { name: 'Details for Plan a weekend trip', exact: true }).click();
   await expect(page.getByRole(info.project.use.viewport!.width < 1024 ? 'dialog' : 'complementary', { name: 'Reminder details' })).toContainText('Plan a weekend trip');
   await expect(page.getByRole(info.project.use.viewport!.width < 1024 ? 'dialog' : 'complementary', { name: 'Reminder details' }).getByText('High', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Close details', exact: true }).locator('svg')).toHaveCSS('visibility', 'visible');
