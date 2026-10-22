@@ -2,6 +2,8 @@ package scenarios
 
 import (
 	"encoding/json"
+	"math"
+	"math/big"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 )
@@ -55,4 +57,29 @@ func notesProjectionCounts(data map[string]any) (map[string]int, error) {
 	walk(blocks)
 	counts["links"], counts["attachments"], counts["tables"] = len(links), len(attachments), len(tables)
 	return counts, nil
+}
+
+func notesExactInteger(value any) (int64, bool) {
+	switch number := value.(type) {
+	case int64:
+		return number, true
+	case json.Number:
+		rational, ok := new(big.Rat).SetString(string(number))
+		if !ok || !rational.IsInt() || !rational.Num().IsInt64() {
+			return 0, false
+		}
+		return rational.Num().Int64(), true
+	case float64:
+		if math.IsNaN(number) || math.IsInf(number, 0) || math.Trunc(number) != number || number < -math.Ldexp(1, 63) || number >= math.Ldexp(1, 63) {
+			return 0, false
+		}
+		return int64(number), true
+	}
+	return 0, false
+}
+
+func notesIntegerEqual(left, right any) bool {
+	a, validA := notesExactInteger(left)
+	b, validB := notesExactInteger(right)
+	return validA && validB && a == b
 }
