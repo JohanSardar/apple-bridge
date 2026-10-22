@@ -12,13 +12,15 @@ test('WEB-MOTION WEB-MOTION-PANE-WIDTH uses cached pane geometry during trusted 
         new MutationObserver(records=>{if(!state.armed)return;for(const record of records){const target=record.target;if(target instanceof HTMLElement&&target.matches('.transcript')&&target.style.transform&&state.transforms.length<200)state.transforms.push(target.style.transform);}}).observe(document,{subtree:true,attributes:true,attributeFilter:['style']});
         (window as any).__paneMotion=state;
     });
-    await page.goto('/messages');await page.getByText('No Messages',{exact:true}).waitFor();
+    await page.goto('/messages');
+    if(process.env.AB_WEB_SERVER==='gateway')await page.getByRole('listbox',{name:'Conversations',exact:true}).waitFor();
+    else await page.getByText('No Messages',{exact:true}).waitFor();
     const viewport=page.viewportSize()!,phone=viewport.width<700,results:unknown[]=[];
     for(let phase=0;phase<2;phase++){
         if(phase){await page.setViewportSize({width:viewport.width+24,height:viewport.height});await page.evaluate(()=>{document.documentElement.dir='rtl';});}
         await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
         const pane=page.locator('main.transcript'),width=await pane.evaluate(element=>element.getBoundingClientRect().width);
-        await page.getByRole('button',{name:'New Message',exact:true}).click();await page.getByText('No Conversation Selected',{exact:true}).waitFor();
+        await page.getByRole('button',{name:'New Message',exact:true}).click();await page.getByRole('region',{name:'New message',exact:true}).waitFor();
         await expect.poll(()=>page.evaluate(()=>(window as any).__paneMotion.transforms.length)).toBeGreaterThan(0);
         const result=await page.evaluate(()=>(window as any).__paneMotion as {reads:string[];transforms:string[]});results.push({phase,width,reads:result.reads,first:result.transforms[0]});
         await mkdir('../lab/evidence/private/web',{recursive:true});await writeFile(`../lab/evidence/private/web/pane-motion-${info.project.name}.json`,JSON.stringify(results,null,2));
