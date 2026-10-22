@@ -15,6 +15,21 @@ struct NotesDecoderChecks {
             }
         }
         guard (try? NotesProto.decode(Data(contentsOf: URL(fileURLWithPath: root + "/malformed.gz")))) == nil else { throw CheckFailure.malformed }
+        let nativePlain = try NotesProto.decode(Data(contentsOf: URL(fileURLWithPath: root + "/native-plain.gz")))
+        guard !nativePlain.rich, nativePlain.lossless,
+              nativePlain.blocks.map(\.type) == ["paragraph", "paragraph"] else { throw CheckFailure.mismatch }
+        let splitTitle = try NotesProto.decode(Data(contentsOf: URL(fileURLWithPath: root + "/split-title.gz")))
+        guard splitTitle.blocks.map(\.type) == ["title", "paragraph"], !splitTitle.rich, splitTitle.lossless else { throw CheckFailure.mismatch }
+        let nativeRich = try NotesProto.decode(Data(contentsOf: URL(fileURLWithPath: root + "/native-rich.gz")))
+        guard nativeRich.rich else { throw CheckFailure.mismatch }
+        for name in ["native-direction", "native-unknown"] {
+            let unsupported = try NotesProto.decode(Data(contentsOf: URL(fileURLWithPath: root + "/" + name + ".gz")))
+            guard unsupported.rich, !unsupported.lossless else { throw CheckFailure.mismatch }
+        }
+        let titleAttachment = try NotesProto.decode(Data(contentsOf: URL(fileURLWithPath: root + "/title-attachment.gz")))
+        guard titleAttachment.rich, !titleAttachment.lossless, titleAttachment.blocks.count == 1,
+              titleAttachment.blocks[0].type == "title", titleAttachment.blocks[0].attachment_id == "fixture-title-image",
+              titleAttachment.blocks[0].runs.first?.attachment_id == "fixture-title-image" else { throw CheckFailure.mismatch }
         try full(root)
         #if LAB
         try await NotesSourceFixture.run(URL(fileURLWithPath: root))

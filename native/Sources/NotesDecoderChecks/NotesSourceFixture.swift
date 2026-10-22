@@ -61,10 +61,26 @@ enum NotesSourceFixture {
         try FileManager.default.createDirectory(at: media.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         let original = Data("[ab-test] exact Notes attachment bytes 🧪".utf8)
         try original.write(to: media)
+        for (pk, name) in [(3, "native-plain"), (4, "native-rich"), (5, "split-title"), (6, "title-attachment")] {
+            try sql("INSERT INTO ZICNOTEDATA VALUES(\(pk),?)", blob: Data(contentsOf: fixtures.appendingPathComponent(name + ".gz")))
+            try sql("INSERT INTO ZICCLOUDSYNCINGOBJECT(Z_PK,Z_ENT,ZIDENTIFIER,ZTITLE1,ZFOLDER,ZNOTEDATA) VALUES(\(40 + pk),2,'\(name)','[ab-test] Synthetic',12,\(pk))")
+        }
         let source = try NotesSource(home: home, fixtureDatabase: database), sink = Sink()
         try await source.reconcile(into: sink)
         let note = await sink.record("note"), locked = await sink.record("locked"), deleted = await sink.record("deleted")
         let large = await sink.record("large")
+        let plain = await sink.record("native-plain"), rich = await sink.record("native-rich")
+        guard plain["data"]["editable"].string == "plain", plain["data"]["content_status"].string == "complete",
+              rich["data"]["editable"].string == "none" else { throw Invalid.projection }
+        for candidate in [plain, rich] {
+            let action = JSON.object(["op": .string("notes.update"), "native_key": candidate["native_key"], "mode": .string("append"), "plain_text": .string("[ab-test] append")])
+            do {
+                _ = try await source.prepare(.object(["action": action, "expected_state": candidate["data"]]))
+                guard candidate == plain else { throw Invalid.boundary }
+            } catch SourceFailure.unsupported {
+                guard candidate == rich else { throw Invalid.boundary }
+            }
+        }
         let bodyRef = large["data"]["body_blob"]
         guard large["data"]["body_status"].string == "external", large["data"]["editable"].string == "none",
               large["data"]["plain_text"] == .null, large["data"]["preview"].string == String(repeating: "x", count: 160),
@@ -99,6 +115,13 @@ enum NotesSourceFixture {
             let expected: [String: Int] = ["titles": 1, "headings": 2, "monostyled": 1, "list_items": 3, "checklists": 2, "checked": 1, "quotes": 1, "highlighted_paragraphs": 1, "links": 1, "attachments": 2, "tables": 1, "table_cells": 4]
             guard process.terminationStatus == 0, response["status"].string == "verified", independent["plain_text"] == note["data"]["plain_text"],
                   expected.allSatisfy({ independent["structure_counts"][$0.key].number == Double($0.value) }) else { throw Invalid.projection }
+            for (id, titles) in [("native-plain", 0), ("split-title", 1), ("title-attachment", 1)] {
+                let truth = response["records"].array.first { $0["id"].string == id } ?? .null
+                let projection = await sink.record(id)
+                guard truth["content_status"].string == "complete", truth["structure_counts"]["titles"] != .null,
+                      truth["structure_counts"]["titles"].number == Double(titles),
+                      projection["data"]["blocks"].array.filter({ $0["type"].string == "title" }).count == titles else { throw Invalid.projection }
+            }
             print("Independent AppleTruth: 13 block paragraphs, 2 checklist states, 4 table cells")
         }
         let attachment = note["data"]["attachments"].array.first { $0["id"].string == "fixture-image" } ?? .null
