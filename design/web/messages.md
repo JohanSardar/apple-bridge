@@ -388,3 +388,5 @@ belong to HELPER-B.
 
 References: [Apple's group management guide](https://support.apple.com/guide/messages/icht3268ad23/mac)
 and [public Messages framework](https://developer.apple.com/documentation/messages).
+
+List chat actions use fresh Messages capability proof and a coherent captured chats cursor. Read/unread and delete are input guarded; opening an unread row forwards the native input. Menus and swipe actions expose read/unread and deletion, with confirmation even after a full delete swipe. Optimistic rows reconcile only against command observed_record_ids and a compatible captured cursor; failures and uncertain outcomes restore captured presentation without automatic replay. Pin, mute and Recently Deleted actions remain W4-owned.

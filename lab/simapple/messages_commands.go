@@ -434,6 +434,20 @@ func (f *fakeApple) messageCommand(wire *applepeer.Wire, frame contracts.IPCFram
 		case "messages.mark_read", "messages.mark_unread":
 			data["is_unread"] = a.Op == "messages.mark_unread"
 			data["last_read_at"] = now
+			for key, observation := range f.records {
+				if a.Op != "messages.mark_read" || observation.Collection != "messages.message" || observation.Kind == "absent" {
+					continue
+				}
+				var message map[string]any
+				json.Unmarshal(observation.Data, &message)
+				reference, _ := message["chat_id"].(map[string]any)
+				ref, _ := reference["$ref"].(map[string]any)
+				if ref["native_key"] != native || message["is_from_me"] == true || message["read_at"] != nil {
+					continue
+				}
+				message["read_at"] = now
+				put("message", key, message, false)
+			}
 			put(collection, native, data, false)
 		case "messages.delete_message", "messages.delete_chat":
 			put(collection, native, data, true)

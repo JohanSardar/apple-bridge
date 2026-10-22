@@ -93,7 +93,8 @@ function createChatView(live: LiveClient, filter: Accessor<ChatFilter | undefine
         const value=filter(),current=rows(),cursor=pages()[0]?.view.cursor()??cachedCursor;
         if(value&&ready()&&completeKnown())persist(JSON.stringify(['chats-snapshot',1,value]),current,cursor);
     });
-    return {rows,loading:()=>{rows();return !ready()||!completeKnown();},delayed};
+    const cursor=()=>{const current=pages(),first=current[0]?.view.cursor();if(live.status()!=='connected'||!first||!current.length||current.some((page,index)=>{const value=page.view.cursor();return !page.view.data().chats||!value||value.epoch!==first.epoch||value.subscription_revision!==first.subscription_revision||value.sequence!==first.sequence||page.view.data().next!==current[index+1]?.after;}))return;return first;};
+    return {rows,cursor,loading:()=>{rows();return !ready()||!completeKnown();},delayed};
 }
 function buildChatsStore(live: LiveClient) {
     const [filter,setFilter]=createSignal<ChatFilter>('all');
@@ -117,7 +118,7 @@ function buildChatsStore(live: LiveClient) {
     const rows=()=>{const value=filter();return value==='deleted'?deleted.rows():value==='spam'?spam.rows():buckets()[value];};
     const unread=createMemo(()=>buckets().unread.length);
     const active=()=>filter()==='deleted'?deleted:filter()==='spam'?spam:all;
-    return {all:visibleAll,rows,filter,setFilter,unread,loading:()=>active().loading(),delayed:()=>active().delayed()};
+    return {all:visibleAll,cursor:all.cursor,rows,filter,setFilter,unread,loading:()=>active().loading(),delayed:()=>active().delayed()};
 }
 const stores=new WeakMap<LiveClient,{store:ReturnType<typeof buildChatsStore>;dispose:()=>void;users:number}>();
 export function createChatsStore(live:LiveClient){
