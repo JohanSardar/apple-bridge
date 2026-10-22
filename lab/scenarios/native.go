@@ -2,6 +2,7 @@ package scenarios
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -119,6 +120,7 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 	add("reminders_ready", true)
 	checkpointPath := filepath.Join(w.Gateway.Home, "helper", "lab-committed-reminders")
 	if level != "sim" && w.Await(5*time.Second, func() bool { _, err := os.Stat(checkpointPath); return err == nil }) != nil {
+		nativeLatencyEvidence(w, &e, nil, nil)
 		return failed("native_capture_committed")
 	}
 	restart := func() error {
@@ -200,18 +202,29 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 				}
 			}()
 		}
+		var fixtureEffectNS int64
+		var fixtureEffectKey string
 		fixture := func(action string, options map[string]any) error {
 			options["action"] = action
 			options["list"] = "Bridge Test"
 			options["tag"] = tag
 			if level != "sim" {
-				_, err := w.Truth("fixture", options)
+				response, err := w.Truth("fixture", options)
+				if action == "create" {
+					if id, ok := response["id"].(string); ok {
+						fixtureEffectKey = fmt.Sprintf("%x", sha256.Sum256([]byte(id)))
+					}
+					if value, ok := response["effect_uptime_ns"].(json.Number); ok {
+						fixtureEffectNS, _ = value.Int64()
+					}
+				}
 				return err
 			}
 			if action == "create_list" {
 				return nil
 			}
 			if action == "create" {
+				fixtureEffectNS = world.UptimeNS()
 				data := map[string]any{"title": options["title"], "completed": false, "list_id": map[string]any{"$ref": map[string]string{"collection": "reminders.list", "native_key": "list"}}}
 				if options["recurring"] == true {
 					data["recurrence"] = "daily"
@@ -255,6 +268,62 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 			return nil
 		}
 		switch s.ID {
+		case "REM-CREATE-EXTERNAL":
+			observers := []*watcher{}
+			for _, endpoint := range append([]world.Endpoint{w.Gateway}, w.Replicas...) {
+				observer, err := watch(ctx, endpoint, false, func(contracts.Record) bool { return false })
+				if err != nil {
+					return failed("external_visibility_observer")
+				}
+				defer observer.close()
+				observers = append(observers, observer)
+			}
+			if fixture("create", map[string]any{"title": title}) != nil {
+				return failed("fixture_create")
+			}
+			if fixtureEffectNS <= 0 {
+				return failed("native_monotonic_timestamp")
+			}
+			if w.Await(3*time.Second, func() bool {
+				for _, observer := range observers {
+					if _, ok := observer.firstObservedExact(title); !ok {
+						return false
+					}
+				}
+				return true
+			}) != nil {
+				return failed("replica_visible")
+			}
+			for index, observer := range observers {
+				seen, _ := observer.firstObservedExact(title)
+				if seen.UptimeNS < fixtureEffectNS {
+					return failed("monotonic_clock_agreement")
+				}
+				name := "effect_done→gateway_visible"
+				assertion := "gateway_visible_under_one_second"
+				if index > 0 {
+					name = fmt.Sprintf("effect_done→replica_visible:replica%d", index-1)
+					assertion = "replica_visible_under_one_second"
+				}
+				value := float64(seen.UptimeNS-fixtureEffectNS) / float64(time.Millisecond)
+				e.Latency[name] = stats([]float64{value}, 0)
+				add(assertion, value < 1000)
+				add("contiguous_external_visibility_feed", observer.valid())
+			}
+			add("replica_read_after_first_visibility", w.Await(3*time.Second, func() bool {
+				for _, endpoint := range w.Replicas {
+					if _, ok := find(endpoint, "reminders.reminder", title); !ok {
+						return false
+					}
+				}
+				return true
+			}) == nil)
+			pollMS := float64(world.UptimeNS()-fixtureEffectNS) / float64(time.Millisecond)
+			e.Latency["effect_done→replica_poll_completed"] = stats([]float64{pollMS}, 0)
+			add("replica_poll_completed_under_one_second", pollMS < 1000)
+			if level != "sim" {
+				nativeLatencyEvidence(w, &e, []any{map[string]any{"title": title, "key": fixtureEffectKey, "effect_uptime_ns": json.Number(strconv.FormatInt(fixtureEffectNS, 10))}}, observers)
+			}
 		case "CORE-LIVE-LATENCY":
 			e.Conditions = nativeConditions()
 			for key, value := range calendarHostConditions() {
@@ -324,7 +393,7 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 					}
 					title, _ := effect["title"].(string)
 					for _, observer := range observers {
-						if _, ok := observer.observedExact(title); !ok {
+						if _, ok := observer.firstObservedExact(title); !ok {
 							return false
 						}
 					}
@@ -334,6 +403,7 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 			add("all_external_effects_visible", complete == nil)
 			for index, observer := range observers {
 				values := []float64{}
+				latest := []float64{}
 				timeouts := 0
 				for _, raw := range effects {
 					effect := raw.(map[string]any)
@@ -343,7 +413,7 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 						return failed("native_monotonic_timestamp")
 					}
 					effectTime, err := rawTime.Int64()
-					seen, visible := observer.observedExact(title)
+					seen, visible := observer.firstObservedExact(title)
 					if err != nil || effectTime <= 0 || (visible && seen.UptimeNS < effectTime) {
 						return failed("monotonic_clock_agreement")
 					}
@@ -352,6 +422,9 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 						continue
 					}
 					values = append(values, float64(seen.UptimeNS-effectTime)/float64(time.Millisecond))
+					if last, ok := observer.observedExact(title); ok {
+						latest = append(latest, float64(last.UptimeNS-effectTime)/float64(time.Millisecond))
+					}
 				}
 				name := "effect_done→gateway_visible"
 				if index > 0 {
@@ -359,6 +432,8 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 				}
 				latency := stats(values, timeouts)
 				e.Latency[name] = latency
+				e.Latency[name+"_latest_update"] = stats(latest, timeouts)
+				add("first_visibility_preserved_"+name, len(values) == len(latest) && latency.P95 <= e.Latency[name+"_latest_update"].P95)
 				add("latency_"+name, latency.Samples == 200 && latency.Timeouts == 0 && latency.P95 < 1000)
 				add("contiguous_replica_application", observer.valid())
 			}
@@ -757,6 +832,21 @@ func (w *watcher) observedExact(title string, collections ...string) (Seen, bool
 	defer w.mu.Unlock()
 	for _, seen := range w.seen {
 		if seen.Change.Record.Collection == collection && recordTitle(seen.Change.Record) == title {
+			return seen, true
+		}
+	}
+	return Seen{}, false
+}
+
+func (w *watcher) firstObservedExact(title string, collections ...string) (Seen, bool) {
+	collection := "reminders.reminder"
+	if len(collections) > 0 {
+		collection = collections[0]
+	}
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	for _, seen := range w.changes {
+		if seen.Change.Op != "delete" && seen.Change.Record.Collection == collection && recordTitle(seen.Change.Record) == title {
 			return seen, true
 		}
 	}

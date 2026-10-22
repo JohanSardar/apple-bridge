@@ -25,7 +25,7 @@ enum StoreTable: String, CaseIterable {
         case .reminder: return common + ["ZDACALENDARITEMUNIQUEIDENTIFIER", "ZEXTERNALIDENTIFIER", "ZFLAGGED", "ZPARENTREMINDER", "ZLIST", "ZCREATIONDATE", "ZDUEDATEDELTAALERTSDATA"]
         case .list: return common + ["ZNAME", "ZBADGEEMBLEM", "ZISGROUP", "ZPARENTLIST", "ZPARENTLIST1", "ZDADISPLAYORDER", "ZISPINNEDBYCURRENTUSER", "ZPINNEDDATE", "ZSORTINGSTYLE", "ZSHOULDCATEGORIZEGROCERYITEMS", "ZGROCERYLOCALEID", "ZSHARINGSTATUS", "ZSHAREDOWNERNAME", "ZSMARTLISTTYPE", "ZFILTERDATA", "ZSECTIONIDSORDERINGASDATA", "ZMEMBERSHIPSOFREMINDERSINSECTIONSASDATA", "ZREMINDERIDSMERGEABLEORDERING", "ZREMINDERIDSMERGEABLEORDERING_V2_JSON"]
         case .section: return common + ["ZDISPLAYNAME", "ZLIST", "ZSMARTLIST"]
-        case .object: return common + ["ZREMINDER", "ZREMINDER1", "ZREMINDER2", "ZREMINDER3", "ZREMINDER4", "ZREMINDER5", "ZHASHTAGLABEL"]
+        case .object: return common + ["ZREMINDER", "ZREMINDER1", "ZREMINDER2", "ZREMINDER3", "ZREMINDER4", "ZREMINDER5", "ZHASHTAGLABEL", "ZLIST"]
         case .label: return ["Z_PK", "ZNAME"]
         }
     }
@@ -144,7 +144,7 @@ final class StoreConnection {
                 snapshot.sections[id.key] = StoreSectionRow(identity: id, name: row.text(4), list: row.integer(5), smartList: row.integer(6))
             case .object:
                 let id = row.identity
-                snapshot.objects[id.key] = StoreObjectRow(identity: id, reminder: row.integer(4), reminder1: row.integer(5), reminder2: row.integer(6), reminder3: row.integer(7), reminder4: row.integer(8), reminder5: row.integer(9), hashtagLabel: row.integer(10))
+                snapshot.objects[id.key] = StoreObjectRow(identity: id, reminder: row.integer(4), reminder1: row.integer(5), reminder2: row.integer(6), reminder3: row.integer(7), reminder4: row.integer(8), reminder5: row.integer(9), hashtagLabel: row.integer(10), list: row.integer(11))
             case .label:
                 let key = row.integer(0)!
                 snapshot.labels[key] = StoreLabelRow(key: key, name: row.text(1))

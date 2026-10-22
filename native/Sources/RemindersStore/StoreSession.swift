@@ -8,6 +8,10 @@ public struct StoreReadResult: Sendable {
     public let decodedRows: Int
     public let reminderKeys: Set<Int64>
     public let listKeys: Set<Int64>
+    public let objectKeys: Set<Int64>
+    public let sectionKeys: Set<Int64>
+    public let labelKeys: Set<Int64>
+    public let entities: [Int64: String]
     public let columns: [String: Set<String>]
 }
 
@@ -126,6 +130,9 @@ public actor RemindersStoreSession {
         try connection.execute("COMMIT")
         let reminderKeys = mode == "full" ? Set(next.reminders.keys).union(cached.reminders.keys) : changes[.reminder] ?? []
         let listKeys = mode == "full" ? Set(next.lists.keys).union(cached.lists.keys) : changes[.list] ?? []
+        let objectKeys = mode == "full" ? Set(next.objects.keys).union(cached.objects.keys) : changes[.object] ?? []
+        let sectionKeys = mode == "full" ? Set(next.sections.keys).union(cached.sections.keys) : changes[.section] ?? []
+        let labelKeys = mode == "full" ? Set(next.labels.keys).union(cached.labels.keys) : changes[.label] ?? []
         cached = next
         versions = nextVersions
         initialized = true
@@ -137,7 +144,7 @@ public actor RemindersStoreSession {
         connection.timings.openMS = 0
         timings.totalMS = (ProcessInfo.processInfo.systemUptime - start) * 1000
         timings.decodeMS = max(0, timings.totalMS - timings.queryMS - timings.openMS)
-        return StoreReadResult(snapshot: next, timings: timings, mode: mode, decodedRows: decoded, reminderKeys: reminderKeys, listKeys: listKeys, columns: connection.columns)
+        return StoreReadResult(snapshot: next, timings: timings, mode: mode, decodedRows: decoded, reminderKeys: reminderKeys, listKeys: listKeys, objectKeys: objectKeys, sectionKeys: sectionKeys, labelKeys: labelKeys, entities: connection.entities, columns: connection.columns)
     }
 
     private func readVersions() throws -> [StoreTable: [Int64: Int64]] {

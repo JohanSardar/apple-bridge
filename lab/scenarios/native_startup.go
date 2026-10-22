@@ -29,7 +29,7 @@ func nativeStartupEvidence(w *world.World, e *Evidence, trace []nativeTrace) {
 		}
 	}
 	pid, err := os.ReadFile(filepath.Join(w.Gateway.Home, "helper", "helper.pid"))
-	if err != nil || committed == 0 {
+	if err != nil {
 		return
 	}
 	script := `import ctypes,sys
@@ -41,11 +41,15 @@ i=Info();lib=ctypes.CDLL("/usr/lib/libproc.dylib");n=lib.proc_pidinfo(int(sys.ar
 		return
 	}
 	started, err := strconv.ParseFloat(strings.TrimSpace(string(output)), 64)
-	if err != nil || started <= 0 || committed < started {
+	if err != nil || started <= 0 {
 		return
 	}
 	if e.Metrics == nil {
 		e.Metrics = map[string]any{}
+	}
+	e.Metrics["helper_started_wall_ns"] = started
+	if committed == 0 || committed < started {
+		return
 	}
 	e.Metrics["first_reminders_checkpoint_after_start_ms"] = (committed - started) / 1e6
 	e.Metrics["first_reminders_send_after_start_ms"] = (sent - started) / 1e6
