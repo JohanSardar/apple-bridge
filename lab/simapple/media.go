@@ -75,18 +75,19 @@ func (f *fakeApple) mediaVariants(name string, original []byte) (map[string]any,
 				}
 			}
 			save("video", "video/mp4", clip, clipWidth, clipHeight)
-			poster := sourceVideoPoster(geometry.width, geometry.height, valid)
+			legacyPoster := sourceVideoPoster(geometry.width, geometry.height, valid)
+			w, h := posterDimensions(geometry.width, geometry.height)
+			poster := sourceVideoPosterAtSize(w, h, valid)
 			if bytes.Equal(original, MediaFixture("video-live")) {
 				if still, _, err := image.Decode(bytes.NewReader(MediaFixture("live-still"))); err == nil {
-					poster = mediaResize(still, 320)
+					legacyPoster = mediaResize(still, 320)
+					poster = posterResize(still)
 				}
 			}
-			var buffer bytes.Buffer
-			jpeg.Encode(&buffer, poster, &jpeg.Options{Quality: 80})
-			save("poster", "image/jpeg", buffer.Bytes(), poster.Bounds().Dx(), poster.Bounds().Dy())
+			derivatives["poster"] = f.posterVariant(poster)
 			media["width"], media["height"] = geometry.width, geometry.height
 			media["duration_ms"], media["dims_source"] = geometry.durationMS, source
-			media["thumbhash"] = mediaThumbHash(mediaResize(poster, 32))
+			media["thumbhash"] = mediaThumbHash(mediaResize(legacyPoster, 32))
 		case ".caf", ".m4a", ".mp3", ".amr", ".wav":
 			clip, _ := base64.StdEncoding.DecodeString(simAudio)
 			save("audio", "audio/mp4", clip, 0, 0)

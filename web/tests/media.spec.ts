@@ -8,8 +8,8 @@ test('WEB-MSG-MEDIA image geometry is reserved before bytes and decoded thumb im
     const ids=await control(request,'/demo-fixtures');
     let release!:()=>void;
     const gate=new Promise<void>(resolve=>{release=resolve;});
-    const variants:string[]=[];
-    await page.route('**/web/v1/blob/**',async route=>{variants.push(new URL(route.request().url()).searchParams.get('variant')??'');await gate;await route.continue();});
+    const variants:{record:string;variant:string}[]=[];
+    await page.route('**/web/v1/blob/**',async route=>{const url=new URL(route.request().url());variants.push({record:url.searchParams.get('record')??'',variant:url.searchParams.get('variant')??''});await gate;await route.continue();});
     await page.goto('/__fixtures/media?chat='+encodeURIComponent(ids['message-chat']),{waitUntil:'domcontentloaded'});
     const media=page.locator('[data-media-id]');
     await expect(media.first()).toBeVisible();
@@ -27,7 +27,11 @@ test('WEB-MSG-MEDIA image geometry is reserved before bytes and decoded thumb im
     const after=await media.evaluateAll(elements=>elements.map(element=>{const r=element.getBoundingClientRect();return {id:element.getAttribute('data-media-id'),x:r.x,y:r.y,width:r.width,height:r.height};}));
     expect(after).toEqual(before);
     expect(await page.evaluate(()=>(window as any).__mediaShifts)).toBe(0);
-    expect(variants.length).toBeGreaterThan(0);expect(variants.every(value=>value==='thumb')).toBe(true);
+    const liveIds=await page.locator('.media-motion[data-media-live="true"] [data-media-id]').evaluateAll(elements=>elements.map(element=>element.getAttribute('data-media-id')!));
+    expect(liveIds.length).toBeGreaterThan(0);
+    expect(before.filter(item=>!liveIds.includes(item.id!)).length).toBeGreaterThan(0);
+    for(const item of before){const requests=variants.filter(value=>value.record===item.id);expect(requests.length,`requests for ${item.id}`).toBeGreaterThan(0);expect(requests.every(value=>value.variant===(liveIds.includes(item.id!)?'poster':'thumb')),`variant for ${item.id}`).toBe(true);}
+    expect(variants.every(value=>before.some(item=>item.id===value.record)&&value.variant===(liveIds.includes(value.record)?'poster':'thumb'))).toBe(true);
     await expect.poll(()=>media.locator('img').evaluateAll(images=>images.every(image=>getComputedStyle(image).opacity==='1'))).toBe(true);
     await page.screenshot({path:`../lab/evidence/private/web/media-bubbles-${info.project.name}.png`,fullPage:true});
     await info.attach('media-geometry',{body:JSON.stringify({before,after,cls:0,variants}),contentType:'application/json'});
@@ -35,8 +39,8 @@ test('WEB-MSG-MEDIA image geometry is reserved before bytes and decoded thumb im
 test('WEB-MSG-MEDIA a pending variant keeps its slot and retries without downloading the original',async({page,context,request})=>{
     await mediaSession(context,request);const ids=await control(request,'/demo-fixtures');
     let failedId='',failed=false;
-    const variants:string[]=[];
-    await page.route('**/web/v1/blob/**',async route=>{const url=new URL(route.request().url());variants.push(url.searchParams.get('variant')??'');if(!failed){failed=true;failedId=url.searchParams.get('record')!;await route.fulfill({status:409,contentType:'application/json',headers:{'Cache-Control':'no-store','Retry-After':'2'},body:JSON.stringify({error:{code:'variant_pending'}})});}else await route.continue();});
+    const variants:{record:string;variant:string}[]=[];
+    await page.route('**/web/v1/blob/**',async route=>{const url=new URL(route.request().url());variants.push({record:url.searchParams.get('record')??'',variant:url.searchParams.get('variant')??''});if(!failed){failed=true;failedId=url.searchParams.get('record')!;await route.fulfill({status:503,contentType:'application/json',headers:{'Cache-Control':'no-store','Retry-After':'2'},body:JSON.stringify({error:{code:'variant_pending'}})});}else await route.continue();});
     await page.goto('/__fixtures/media?chat='+encodeURIComponent(ids['message-chat']),{waitUntil:'domcontentloaded'});
     await expect.poll(()=>failedId).not.toBe('');
     const image=page.locator(`[data-media-id="${failedId}"]`);
@@ -45,7 +49,9 @@ test('WEB-MSG-MEDIA a pending variant keeps its slot and retries without downloa
     await image.getByRole('button',{name:'Try again'}).click();
     await expect(image).toHaveAttribute('data-media-state','ready');
     expect(await image.boundingBox()).toEqual(before);
-    expect(variants.every(value=>value==='thumb')).toBe(true);
+    const liveIds=await page.locator('.media-motion[data-media-live="true"] [data-media-id]').evaluateAll(elements=>elements.map(element=>element.getAttribute('data-media-id')!));
+    expect(variants.filter(value=>value.record===failedId).every(value=>value.variant===(liveIds.includes(failedId)?'poster':'thumb'))).toBe(true);
+    expect(variants.every(value=>value.variant===(liveIds.includes(value.record)?'poster':'thumb'))).toBe(true);
 });
 test('WEB-MSG-MEDIA alpha images and placeholders float without a backing tile or rounded clip',async({page,context,request})=>{
     await mediaSession(context,request);const ids=await control(request,'/demo-fixtures');
@@ -62,15 +68,15 @@ test('WEB-MSG-MEDIA alpha images and placeholders float without a backing tile o
 test('WEB-MSG-MEDIA-MOTION video and Live Photo reserve geometry, request interoperable variants and play only on intent',async({page,context,request},info)=>{
  await mediaSession(context,request);const ids=await control(request,'/demo-fixtures');
  let release!:()=>void;const gate=new Promise<void>(resolve=>{release=resolve;});await page.route('**/web/v1/blob/**',async route=>{if(['poster','thumb'].includes(new URL(route.request().url()).searchParams.get('variant')??''))await gate;await route.continue();});
- const variants:string[]=[],types:string[]=[];page.on('response',response=>{if(response.url().includes('/web/v1/blob/')){const variant=new URL(response.url()).searchParams.get('variant')!;variants.push(variant);if(variant==='video'||variant==='live')types.push(response.headers()['content-type']);}});
+ const variants:string[]=[],types:string[]=[],posterRecords=new Set<string>();page.on('response',response=>{if(response.url().includes('/web/v1/blob/')){const url=new URL(response.url()),variant=url.searchParams.get('variant')!;variants.push(variant);if(variant==='poster')posterRecords.add(url.searchParams.get('record')!);if(variant==='video'||variant==='live')types.push(response.headers()['content-type']);}});
  await page.goto('/__fixtures/media?motion=1&chat='+encodeURIComponent(ids['message-chat']));await expect(page.getByRole('region',{name:'Media bubbles'})).toBeVisible();
  for(const [index,kind] of [[38,'video'],[129,'live']] as const){await page.mouse.move(0,0);
-  const slot=page.locator(`[data-message="${ids[`demo-message-00-${String(index).padStart(6,'0')}`]}"]`),bubble=slot.locator('.media-motion');await expect(bubble).toBeVisible();await slot.scrollIntoViewIfNeeded();const before=await slot.boundingBox();expect(before!.width).toBe(info.project.name.endsWith('-phone')?240:320);expect(before!.height).toBe(kind==='live'?before!.width:before!.width*180/320);release();await expect(bubble.locator('.media-image')).toHaveAttribute('data-media-state','ready');expect(await slot.boundingBox()).toEqual(before);
+  const slot=page.locator(`[data-message="${ids[`demo-message-00-${String(index).padStart(6,'0')}`]}"]`),bubble=slot.locator('.media-motion');await expect(bubble).toBeVisible();await slot.scrollIntoViewIfNeeded();const before=await slot.boundingBox();expect(before!.width).toBe(info.project.name.endsWith('-phone')?240:320);expect(before!.height).toBe(kind==='live'?before!.width:before!.width*180/320);release();await expect(bubble.locator('.media-image')).toHaveAttribute('data-media-state','ready');expect(posterRecords.has((await bubble.locator('[data-media-id]').getAttribute('data-media-id'))!)).toBe(true);expect(await slot.boundingBox()).toEqual(before);
   await expect(bubble.locator('.media-motion-badge')).toHaveText(kind==='live'?'LIVE':'0:01');expect(await bubble.locator('video').count()).toBe(0);expect(variants).not.toContain(kind);
   const button=bubble.locator('.media-open');await button.focus();await page.keyboard.down('Space');const video=bubble.locator('video');await expect.poll(()=>video.evaluate((node:HTMLVideoElement)=>node.currentTime)).toBeGreaterThan(.05);expect(await video.evaluate((node:HTMLVideoElement)=>node.muted&&!node.controls&&node.hasAttribute('playsinline'))).toBe(true);await page.keyboard.up('Space');await expect.poll(()=>video.evaluate((node:HTMLVideoElement)=>node.paused)).toBe(true);expect(await slot.boundingBox()).toEqual(before);await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.waitForTimeout(450);await button.click();const viewer=page.getByRole('dialog',{name:'Media viewer'});await expect(viewer).toBeVisible();await page.keyboard.press('Escape');await expect(viewer).toBeHidden();await expect(button).toBeFocused();expect(await slot.boundingBox()).toEqual(before);
  }
- expect(variants).toContain('poster');expect(variants).toContain('thumb');expect(variants).toContain('video');expect(variants).toContain('live');expect(variants).not.toContain('original');expect(types.length).toBeGreaterThanOrEqual(2);expect(types.every(value=>value.startsWith('video/mp4'))).toBe(true);
+ expect(variants).toContain('poster');expect(variants).not.toContain('thumb');expect(variants).toContain('video');expect(variants).toContain('live');expect(variants).not.toContain('original');expect(types.length).toBeGreaterThanOrEqual(2);expect(types.every(value=>value.startsWith('video/mp4'))).toBe(true);
  const html=await readFile('dist/index.html','utf8'),entry=/<script[^>]+src="([^"]+)"/u.exec(html)![1],bytes=await readFile('dist'+entry),metrics={entry_chunk:entry,entry_bytes:bytes.length,entry_gzip9_bytes:gzipSync(bytes,{level:9}).length,entry_budget_gzip_bytes:60000,variants,content_types:types,decode_geometry_shift_px:0,playback_geometry_shift_px:0};expect(metrics.entry_gzip9_bytes).toBeLessThanOrEqual(60000);
  await mkdir('../lab/evidence/web/metrics',{recursive:true});await writeFile(`../lab/evidence/web/metrics/WEB-MSG-MEDIA-motion-${info.project.name}.json`,JSON.stringify(metrics,null,2)+'\n');
  await info.attach('motion-media-variants',{body:JSON.stringify(metrics),contentType:'application/json'});
@@ -90,7 +96,7 @@ test('WEB-MSG-MEDIA-MOTION Live Photo hover respects pointer capability and ends
 });
 test('WEB-MSG-MEDIA-CHROME glass play controls, Live badge and first-frame crossfade preserve bubble bounds',async({page,context,request},info)=>{
  await mediaSession(context,request);const ids=await control(request,'/demo-fixtures');
- await page.addInitScript(()=>{const prototype=HTMLVideoElement.prototype,original=prototype.requestVideoFrameCallback;(window as any).__nativeFrameForPaint=original;(window as any).__heldFrames=[];if(original)prototype.requestVideoFrameCallback=function(callback){return original.call(this,(at,metadata)=>{(window as any).__heldFrames.push(()=>callback(at,metadata));});};});
+ await page.addInitScript(()=>{document.addEventListener('play',event=>{const node=event.target;if(node instanceof HTMLVideoElement&&node.closest('.media-motion[data-media-live="false"]'))node.loop=true;},true);const prototype=HTMLVideoElement.prototype,original=prototype.requestVideoFrameCallback;(window as any).__nativeFrameForPaint=original;(window as any).__heldFrames=[];if(original)prototype.requestVideoFrameCallback=function(callback){return original.call(this,(at,metadata)=>{(window as any).__heldFrames.push(()=>callback(at,metadata));});};});
  await page.goto('/__fixtures/media?motion=1&chat='+encodeURIComponent(ids['message-chat']));
  for(const [index,kind] of [[38,'video'],[129,'live']] as const){
   await page.mouse.move(0,0);const bubble=page.locator(`[data-message="${ids[`demo-message-00-${String(index).padStart(6,'0')}`]}"] .media-motion`);await expect(bubble).toBeVisible();await bubble.scrollIntoViewIfNeeded();await expect(bubble.locator('.media-image')).toHaveAttribute('data-media-state','ready');const before=await bubble.boundingBox(),badge=bubble.locator('.media-motion-badge');
@@ -105,8 +111,8 @@ test('WEB-MSG-MEDIA-CHROME glass play controls, Live badge and first-frame cross
   await expect(bubble).toHaveAttribute('data-media-playing','true');const video=bubble.locator('video'),callback=await video.evaluate(node=>typeof (node as HTMLVideoElement).requestVideoFrameCallback==='function');
   if(callback){await expect.poll(()=>page.evaluate(()=>(window as any).__heldFrames.length)).toBeGreaterThan(0);await expect(video).toHaveCSS('opacity','0');await page.evaluate(()=>{for(const callback of (window as any).__heldFrames.splice(0))callback();});}
   await expect(bubble).toHaveAttribute('data-media-frame','decoded');await expect(video).toHaveCSS('transition-duration','0.12s');await expect(video).toHaveCSS('opacity','1');await expect(badge).toHaveCSS('opacity','0');await expect(badge).toHaveCSS('visibility','hidden');if(kind==='video')await expect(bubble.locator('.media-motion-play')).toHaveCSS('visibility','hidden');const during=await bubble.boundingBox();expect(during).toEqual(before);
-  if(kind==='video')await video.evaluate((node:HTMLVideoElement)=>{node.loop=true;});
   expect(await video.evaluate((node:HTMLVideoElement)=>node.paused)).toBe(false);
+  await video.evaluate((node:HTMLVideoElement)=>{node.playbackRate=.125;});
   await video.evaluate((node:HTMLVideoElement)=>new Promise<void>((resolve,reject)=>{
    let stage='video-frame',frame=0,paint=0;const native=(window as any).__nativeFrameForPaint;
    const timeout=setTimeout(()=>{node.cancelVideoFrameCallback(frame);cancelAnimationFrame(paint);reject(new Error(`Presented-frame timeout after 2000ms: ${JSON.stringify({stage,currentTime:node.currentTime,paused:node.paused,readyState:node.readyState,visibility:document.visibilityState})}`));},2000);

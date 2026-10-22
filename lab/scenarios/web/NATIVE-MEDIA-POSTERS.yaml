@@ -1,0 +1,4 @@
+id: NATIVE-MEDIA-POSTERS
+feature: web.media
+levels: [sim]
+when: [{native_media_posters: {}}]

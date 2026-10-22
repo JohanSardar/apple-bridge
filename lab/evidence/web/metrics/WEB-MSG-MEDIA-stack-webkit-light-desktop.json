@@ -14,10 +14,10 @@
   "decode_geometry_shift_px": 0,
   "cls_supported": false,
   "cls": null,
-  "entry_chunk": "/assets/index-Dio9u4qJ.js",
-  "entry_bytes": 61687,
-  "entry_gzip_bytes": 22680,
-  "entry_gzip9_bytes": 22654,
+  "entry_chunk": "/assets/index-CH651fxV.js",
+  "entry_bytes": 62378,
+  "entry_gzip_bytes": 22915,
+  "entry_gzip9_bytes": 22891,
   "entry_budget_gzip_bytes": 60000,
   "stack_code_in_entry": false
 }

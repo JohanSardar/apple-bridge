@@ -596,6 +596,7 @@ func runWebBlobs(ctx context.Context, w *world.World, c *webClient, e *Evidence,
 		return
 	}
 	add("blob_immutable_private_etag", resp.Header.Get("Cache-Control") == "private, max-age=31536000, immutable" && resp.Header.Get("ETag") == `"`+digest+`"`)
+	add("original_blob_immutable_matches_url_digest", fmt.Sprintf("%x", sha256.Sum256(body)) == digest)
 	req, _ := http.NewRequestWithContext(ctx, "GET", c.origin+"/web/v1/"+path, nil)
 	req.AddCookie(c.cookie)
 	req.Header.Set("Range", "bytes=10-19")
@@ -655,6 +656,9 @@ func runWebBlobs(ctx context.Context, w *world.World, c *webClient, e *Evidence,
 			Blob struct {
 				Digest string `json:"digest"`
 			} `json:"blob"`
+			Derivatives map[string]struct {
+				Digest string `json:"digest"`
+			} `json:"derivatives"`
 		}
 		json.Unmarshal(record.Data, &metadata)
 		path = "blob/" + metadata.Blob.Digest + "?record=" + record.ID + "&variant=display"
@@ -667,6 +671,31 @@ func runWebBlobs(ctx context.Context, w *world.World, c *webClient, e *Evidence,
 			valid = valid && resp.Header.Get("Content-Type") == "image/png" && len(body) > 8 && bytes.Equal(body[:8], []byte{137, 80, 78, 71, 13, 10, 26, 10})
 		}
 		add(fixture.name, valid)
+		if fixture.status == 200 {
+			add(fixture.name+"_immutable_matches_url_digest", err == nil && resp != nil && (resp.Header.Get("Cache-Control") != "private, max-age=31536000, immutable" || fmt.Sprintf("%x", sha256.Sum256(body)) == metadata.Blob.Digest))
+		}
+		if !fixture.missing {
+			derivedDigest := metadata.Derivatives["display"].Digest
+			explicit, content, requestError := c.request("GET", "blob/"+derivedDigest+"?record="+record.ID+"&variant=display", nil)
+			add("explicit_derivative_immutable_bytes_match_url", requestError == nil && explicit.StatusCode == 200 && explicit.Header.Get("Cache-Control") == "private, max-age=31536000, immutable" && fmt.Sprintf("%x", sha256.Sum256(content)) == derivedDigest)
+		}
+		if fixture.missing && fixture.mime == "image/png" {
+			explicitPath := "blob/" + metadata.Derivatives["display"].Digest + "?record=" + record.ID + "&variant=display"
+			resp, _, err = c.request("GET", explicitPath, nil)
+			add("explicit_pending_derivative_is_retryable_and_not_cached", err == nil && resp.StatusCode == 503 && resp.Header.Get("Retry-After") == "2" && resp.Header.Get("Cache-Control") == "no-store")
+			previousVersion := record.Version
+			changed := w.ControlAction("/blob-fixture", map[string]any{"size": 1024, "mime_type": "image/png", "variant": true, "missing_variant": true, "unavailable_variant": true})
+			if changed == nil {
+				changed = w.Await(5*time.Second, func() bool {
+					_, err := world.Request(ctx, w.Gateway, "/v1/op/records.query", contracts.ReadQuery{Collection: "messages.attachment"}, &records)
+					return err == nil && len(records.Records) == 1 && records.Records[0].Version > previousVersion
+				})
+			}
+			resp, _, err = c.request("GET", explicitPath, nil)
+			add("explicit_unavailable_derivative_is_not_cached", changed == nil && err == nil && resp.StatusCode == 404 && resp.Header.Get("Cache-Control") == "no-store")
+			legacy, content, legacyError := c.request("GET", path, nil)
+			add("unavailable_variant_original_digest_keeps_legacy_fallback", changed == nil && legacyError == nil && legacy.StatusCode == 200 && fmt.Sprintf("%x", sha256.Sum256(content)) == metadata.Blob.Digest)
+		}
 	}
 
 }

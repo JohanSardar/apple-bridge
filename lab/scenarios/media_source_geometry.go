@@ -83,13 +83,23 @@ func verifySourceVideoGeometry(ctx context.Context, e Evidence, w *world.World, 
 				size = poster.Bounds().Size()
 				r, g, b, _ := poster.At(size.X/2, size.Y/2).RGBA()
 				pixel = [3]uint32{r, g, b}
-				valid = size.X == 288 && size.Y == 30
+				valid = size.X*200 == size.Y*1920
 			}
 			if valid {
-				r, g, b, _ := poster.At(144, 15).RGBA()
+				r, g, b, _ := poster.At(size.X/2, size.Y/2).RGBA()
 				valid = r > 50000 && g < 12000 && b < 12000
 			}
 			e.Assertions = append(e.Assertions, Assertion{Name: "source_geometry_center_marker_poster", Passed: valid, Detail: fmt.Sprintf("status=%d size=%dx%d rgb16=%v", status, size.X, size.Y, pixel)})
+			if available && decodeErr == nil {
+				contrast := posterEdgeContrast(poster)
+				e.Assertions = append(e.Assertions,
+					Assertion{Name: "panorama_poster_retina_cover_resolution", Passed: min(size.X, size.Y) >= 360 && size.X*size.Y <= 1500000, Detail: fmt.Sprintf("size=%dx%d pixels=%d", size.X, size.Y, size.X*size.Y)},
+					Assertion{Name: "panorama_poster_retina_edge_contrast", Passed: contrast >= 0.5, Detail: fmt.Sprintf("contrast=%.6f minimum=0.500000", contrast)},
+				)
+			} else {
+				add("panorama_poster_retina_cover_resolution", false)
+				add("panorama_poster_retina_edge_contrast", false)
+			}
 			video := data.Derivatives["video"]
 			add("source_geometry_wide_decoded_frame", video.Width == 1920 && video.Height == 200)
 		}

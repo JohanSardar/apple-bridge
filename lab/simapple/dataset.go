@@ -73,6 +73,9 @@ func (f *fakeApple) datasetRoutes(mux *http.ServeMux) {
 				if movie, exists := pairs[o.NativeKey]; exists {
 					clips, _ := f.mediaVariants(movie.filename, movie.data)
 					derivatives["live"], media["live"] = clips["video"], true
+					if poster := f.livePoster(f.blobs[data.Blob.Digest]); poster != nil {
+						derivatives["poster"] = poster
+					}
 				}
 				fields["derivatives"], fields["media"] = derivatives, media
 				o.Data, _ = json.Marshal(fields)

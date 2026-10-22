@@ -343,10 +343,14 @@ func verifyMediaVariants(ctx context.Context, e Evidence, w *world.World, prefix
 					config, format, err := image.DecodeConfig(bytes.NewReader(content))
 					add(variantName+"_browser_image", err == nil && (format == "jpeg" || format == "png") && config.Width == variant.Width && config.Height == variant.Height)
 					maximum := 1600
-					if variantName == "thumb" || variantName == "poster" {
+					if variantName == "thumb" {
 						maximum = 400
 					}
-					add(variantName+"_dimensions_bounded", max(variant.Width, variant.Height) <= maximum)
+					bounded := max(variant.Width, variant.Height) <= maximum
+					if variantName == "poster" {
+						bounded = variant.Width > 0 && variant.Height > 0 && variant.Width <= 1500000/variant.Height
+					}
+					add(variantName+"_dimensions_bounded", bounded)
 				}
 				if e.Level != "sim" {
 					extension := ".m4a"

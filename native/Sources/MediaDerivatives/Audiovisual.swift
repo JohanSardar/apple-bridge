@@ -62,22 +62,21 @@ extension MediaDerivatives {
         let width = Int(abs(size.width).rounded())
         let height = Int(abs(size.height).rounded())
         guard max(width, height) <= 1920, min(width, height) <= 1080 else { throw MediaFailure.encode }
-        try await MediaWork.stage("video_poster")
+        if name == "video" {
+            result.derivatives["poster"] = try await moviePoster(asset, width: result.media.width!, height: result.media.height!, directory: directory)
+        }
+        try await MediaWork.stage("video_placeholder")
         let generator = AVAssetImageGenerator(asset: output)
         generator.appliesPreferredTrackTransform = true
-        generator.maximumSize = CGSize(width: 400, height: 400)
-        let poster = try await generator.image(at: .zero).image
-        let posterFile = directory.appendingPathComponent("poster.jpg")
-        try write(poster, to: posterFile, alpha: false, quality: 0.8)
-        result.derivatives["poster"] = try await variant(posterFile, mime: "image/jpeg", width: poster.width, height: poster.height)
-        try await MediaWork.yield()
         generator.maximumSize = CGSize(width: 100, height: 100)
-        result.media.thumbhash = try placeholder(try await generator.image(at: .zero).image)
+        let placeholderFrame = try await generator.image(at: .zero).image
+        try await MediaWork.yield()
+        result.media.thumbhash = try placeholder(placeholderFrame)
         result.derivatives[name] = try await variant(file, mime: "video/mp4", width: width, height: height)
         return result
     }
     @_spi(Testing) public static func export(_ asset: AVAsset, preset: String, file: URL, type: AVFileType) async throws {
-        try Task.checkCancellation()
+        try await MediaWork.yield()
         let expected = type == .mp4 ? "mp4" : type == .m4a ? "m4a" : type == .mov ? "mov" : ""
         guard file.isFileURL, !expected.isEmpty, file.pathExtension.lowercased() == expected else { throw exportFailure("Output URL or extension does not match file type") }
         guard try await asset.load(.isExportable), await AVAssetExportSession.compatibility(ofExportPreset: preset, with: asset, outputFileType: type) else { throw exportFailure("Asset preset and file type are incompatible") }

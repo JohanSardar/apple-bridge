@@ -441,6 +441,7 @@ features:
       - {id: WEB-MEDIA-CAP, levels: [sim]}
       - {id: NATIVE-MEDIA-EXPORT-SAFETY, levels: [sim, real]}
       - {id: NATIVE-MEDIA-YIELD, levels: [sim]}
+      - {id: NATIVE-MEDIA-POSTERS, levels: [sim]}
     notes: Variants work on the real Air (12 read-only native variant downloads verified). Real and replica runs wait for cleanup of six tagged self-chat file bubbles (media-bubble Accessibility targeting, GUI needed once the Air's lid is open) and the cold-arrival latency measurement.
   - id: web.remote
     title: Reach from anywhere through system or embedded Tailscale Funnel
@@ -476,7 +477,7 @@ features:
     scenarios:
       - {id: WEB-DEMO-DATASET, levels: [sim]}
       - {id: WEB-DEMO-SESSION, levels: [web]}
-    notes: Seeded 60-contact 40-chat 5000-message SimApple demo with generated media, one-use lab sign-in, live updates and optional 100000-message chat. Reader-only payload gaps are documented in lab/demo/FIXTURES.md.
+    notes: Seeded 60-contact 40-chat 5000-message SimApple demo with generated media, one-use lab sign-in, live updates and optional 100000-message chat. Reader-only payload gaps are documented in lab/demo/FIXTURES.md. WEB-DEMO-DATASET default_startup_under_10_seconds is deferred to the Messages milestone gate; its 10-second threshold remains unchanged.
   - id: web.relay
     title: Replicas connect through the Remote relay with device-key auth
     requirements: [R-WEB-REACH, R-FULL, R-LIVE, R-SECURE]

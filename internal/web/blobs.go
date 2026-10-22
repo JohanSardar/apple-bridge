@@ -89,6 +89,7 @@ func (s *server) blob(w http.ResponseWriter, r *http.Request) {
 			Digest        string `json:"digest"`
 			MIME          string `json:"mime_type"`
 			MIMEAlternate string `json:"mime"`
+			State         string `json:"state"`
 		} `json:"derivatives"`
 	}
 	json.Unmarshal(result.Records[0].Data, &attachment)
@@ -97,13 +98,26 @@ func (s *server) blob(w http.ResponseWriter, r *http.Request) {
 		mime = attachment.MIMEAlternate
 	}
 	originalMIME := mime
+	explicitVariant := variant != "original" && r.PathValue("digest") != attachment.Blob.Digest
+	if explicitVariant && attachment.Derivatives[variant].State == "unavailable" {
+		unavailableVariant(w, true)
+		return
+	}
 	if variant != "original" {
 		if derived, ok := attachment.Derivatives[variant]; ok && contracts.ValidDigest(derived.Digest) {
+			if explicitVariant && derived.State == "pending" {
+				unavailableVariant(w, false)
+				return
+			}
+
 			digest = derived.Digest
 			mime = derived.MIME
 			if mime == "" {
 				mime = derived.MIMEAlternate
 			}
+		} else if explicitVariant {
+			unavailableVariant(w, false)
+			return
 		} else if !browserSafe(mime) {
 			w.Header().Set("Retry-After", "2")
 			reject(w, 409, "variant_pending")
@@ -115,12 +129,16 @@ func (s *server) blob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	file, err := s.deps.Blobs.OpenAuthorized(r.Context(), grant, digest)
-	if err != nil && variant != "original" && browserSafe(originalMIME) && contracts.ValidDigest(attachment.Blob.Digest) {
+	if err != nil && !explicitVariant && variant != "original" && browserSafe(originalMIME) && contracts.ValidDigest(attachment.Blob.Digest) {
 		digest = attachment.Blob.Digest
 		mime = originalMIME
 		file, err = s.deps.Blobs.OpenAuthorized(r.Context(), grant, digest)
 	}
 	if err != nil {
+		if explicitVariant {
+			unavailableVariant(w, false)
+			return
+		}
 		if variant != "original" {
 			w.Header().Set("Retry-After", "2")
 			reject(w, 409, "variant_pending")
@@ -142,8 +160,21 @@ func (s *server) blob(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", mime)
 	w.Header().Set("ETag", `"`+digest+`"`)
-	w.Header().Set("Cache-Control", "private, max-age=31536000, immutable")
+	if digest == r.PathValue("digest") {
+		w.Header().Set("Cache-Control", "private, max-age=31536000, immutable")
+	} else {
+		w.Header().Set("Cache-Control", "no-store")
+	}
 	http.ServeContent(w, r, "", time.Time{}, file)
+}
+func unavailableVariant(w http.ResponseWriter, permanent bool) {
+	w.Header().Set("Cache-Control", "no-store")
+	if permanent {
+		reject(w, 404, "variant_unavailable")
+		return
+	}
+	w.Header().Set("Retry-After", "2")
+	reject(w, 503, "variant_pending")
 }
 func browserSafe(mime string) bool {
 	switch strings.Split(mime, ";")[0] {

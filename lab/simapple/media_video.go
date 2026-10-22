@@ -17,6 +17,10 @@ func sourceVideoPoster(width, height int, source bool) *image.NRGBA {
 	} else {
 		w, h = max(1, width*320/max(width, height)), max(1, height*320/max(width, height))
 	}
+	return sourceVideoPosterAtSize(w, h, source)
+}
+
+func sourceVideoPosterAtSize(w, h int, source bool) *image.NRGBA {
 	output := image.NewNRGBA(image.Rect(0, 0, w, h))
 	side := min(w, h) * 4 / 5
 	for y := 0; y < h; y++ {
