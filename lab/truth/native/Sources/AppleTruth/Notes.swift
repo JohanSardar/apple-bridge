@@ -36,7 +36,10 @@ extension AppleTruth {
             require(folders.length === 1);
             const folder = folders[0];
             require(folder.folders().length === 0 && folder.notes().every(n => n.name().startsWith(tag)));
-            app.delete(folder);
+            const parent = folder.container();
+            const folderID = folder.id();
+            app.delete(parent.folders.byId(folderID));
+            require(parent.folders.whose({id:folderID})().length === 0);
             return {status:'verified'};
         }
         if (action === 'cleanup' || action === 'delete') {
@@ -44,8 +47,11 @@ extension AppleTruth {
             identifiers.forEach(id => {
                 const note = app.notes.byId(id);
                 require(note.name().startsWith(tag));
-                app.delete(note);
+                const folder = note.container();
+                require(folder.name() === 'Bridge Test' || folder.name().startsWith('Bridge Test ' + tag + ' '));
+                app.delete(folder.notes.byId(id));
             });
+            require(taggedNotes().length === 0);
             return {status:'verified'};
         }
         if (action === 'modify') {
