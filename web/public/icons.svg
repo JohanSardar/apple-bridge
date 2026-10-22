@@ -2,4 +2,4 @@
 <symbol id="laptop" viewBox="0 0 24 24"><path d="M4 4h16v12H4ZM2 19h20l-2-3H4Z"/></symbol>
 <symbol id="appearance" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18Z" fill="currentColor" stroke="none"/></symbol>
 <symbol id="list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
-<symbol id="share" viewBox="0 0 24 24"><path d="M5 10v11h14V10M12 16V2M8 6l4-4 4 4"/></symbol><symbol id="download" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6v12m-5-5 5 5 5-5"/></symbol></svg>
+<symbol id="share" viewBox="0 0 24 24"><path d="M5 10v11h14V10M12 16V2M8 6l4-4 4 4"/></symbol><symbol id="download" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6v12m-5-5 5 5 5-5"/></symbol><symbol id="phone" viewBox="0 0 24 24"><path d="M5 3h4l2 5-3 2a17 17 0 0 0 6 6l2-3 5 2v4a2 2 0 0 1-2 2C10 21 3 14 3 5a2 2 0 0 1 2-2Z"/></symbol><symbol id="video" viewBox="0 0 24 24"><rect x="2" y="5" width="14" height="14" rx="3"/><path d="m16 9 6-4v14l-6-4Z"/></symbol><symbol id="mail" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="m3 6 9 7 9-7"/></symbol></svg>

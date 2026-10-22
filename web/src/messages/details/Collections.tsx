@@ -1,0 +1,35 @@
+import { strings as s } from '../../app/strings';
+import { createEffect, createMemo, createSignal, For, onCleanup, Show } from 'solid-js';
+import type { LiveClient } from '../../data/live';
+import type { BridgeRecord } from '../../data/types';
+import { router } from '../../app/router';
+import { fields, text } from '../store/types';
+import { bytes } from '../format';
+import { MediaImage } from '../media/MediaImage';
+import { ChatMediaViewer } from '../media/ChatMediaViewer';
+import { mediaSource } from '../media/source';
+const tabs=[['media',s.photos],['links',s.links],['documents',s.documents],['locations',s.locations]] as const;
+type Kind=typeof tabs[number][0];
+function createCollection(live:LiveClient,chatID:string,kind:Kind){
+    type Page={after?:string;view:ReturnType<LiveClient['subscribe']>};
+    const [pages,setPages]=createSignal<Page[]>([{view:live.subscribe('collection',{chat_id:chatID,kind,limit:48})}]);
+    const [requested,setRequested]=createSignal(1),[failed,setFailed]=createSignal(false),[attempt,setAttempt]=createSignal(0);
+    let complete:BridgeRecord[]=[];
+    const waiting=createMemo(()=>pages().filter(page=>!page.view.data().items).map(page=>page.after??'root').join('|'));
+    createEffect(()=>{attempt();if(!waiting()){setFailed(false);return;}const timer=setTimeout(()=>setFailed(true),10000);onCleanup(()=>clearTimeout(timer));});
+    createEffect(()=>{const current=pages();for(let index=0;index<Math.min(current.length,requested());index++){const data=current[index].view.data();if(!data.items)return;if(index+1>=requested()||!data.next){if(current.length>index+1){current.slice(index+1).forEach(page=>page.view.dispose());setPages(current.slice(0,index+1));}return;}if(data.next!==current[index+1]?.after){current.slice(index+1).forEach(page=>page.view.dispose());setPages([...current.slice(0,index+1),{after:data.next,view:live.subscribe('collection',{chat_id:chatID,kind,limit:48,after:data.next})}]);return;}}});
+    const rows=createMemo(()=>{const current=pages(),cursor=current[0].view.cursor(),unique=new Map<string,BridgeRecord>();let coherent=Boolean(cursor);for(const page of current){const next=page.view.cursor();coherent&&=Boolean(cursor&&next&&next.epoch===cursor.epoch&&next.sequence===cursor.sequence);for(const item of page.view.data().items??[])if(!unique.has(item.id))unique.set(item.id,item);}coherent&&=current.every(page=>Boolean(page.view.data().items));if(!coherent)for(const item of complete)if(!unique.has(item.id))unique.set(item.id,item);const result=[...unique.values()];if(coherent)complete=result;return result;});
+    onCleanup(()=>{pages().forEach(page=>page.view.dispose());});
+    const loading=()=>pages().some(page=>!page.view.data().items);
+    return {rows,loading,failed,more:()=>pages().at(-1)?.view.data().next,load:()=>setRequested(value=>value+1),retry:()=>{setFailed(false);setAttempt(value=>value+1);live.reconnect();}};
+}
+function safeLink(record:BridgeRecord){const link=fields(fields(record.data.balloon).link);try{const url=new URL(text(link.url));return ['http:','https:'].includes(url.protocol)?url.href:undefined;}catch{return undefined;}}
+export function Collections(props:{live:LiveClient;chatID:string;onShowInChat?:()=>void}){
+    const [kind,setKind]=createSignal<Kind>('media');let tablist!:HTMLDivElement;
+    function Items(value:{kind:Kind}){
+        const collection=createCollection(props.live,props.chatID,value.kind),[viewing,setViewing]=createSignal<{attachment:BridgeRecord;origin:DOMRectReadOnly}>();
+        const show=(record:BridgeRecord)=>{const replace=router.route().panel==='details';props.onShowInChat?.();router.navigate('/messages/'+encodeURIComponent(props.chatID)+'/'+encodeURIComponent(text(record.data.message_id)||record.id),replace);};
+        return <section class="details-collection" role="tabpanel" id={'collection-'+value.kind} aria-labelledby={'collection-tab-'+value.kind} aria-busy={collection.loading()}><Show when={collection.rows().length} fallback={<p class="secondary" role="status">{collection.failed()?s.collectionUnavailable:collection.loading()?s.loading:s.noSharedItems(tabs.find(tab=>tab[0]===value.kind)![1])}</p>}><div classList={{'details-photo-grid':value.kind==='media','details-collection-rows':value.kind!=='media'}}><For each={collection.rows()}>{record=><Show when={value.kind==='media'} fallback={<div class="details-collection-row"><Show when={value.kind==='links'} fallback={<Show when={value.kind==='documents'} fallback={<button type="button" data-message-id={record.id} onClick={()=>show(record)}>{text(fields(fields(record.data.balloon).app).caption)||s.location}<small>{s.showInChat}</small></button>}><Show when={mediaSource(record,'original')} fallback={<span>{text(record.data.filename)||s.document}<small>{s.attachmentUnavailable}</small></span>}><a href={mediaSource(record,'original')} download={text(record.data.filename)}>{text(record.data.filename)||s.document}<small>{bytes(Number(fields(record.data.blob).size)||0)}</small></a></Show></Show>}><Show when={safeLink(record)} fallback={<button type="button" onClick={()=>show(record)}>{s.linkUnavailable}<small>{s.showInChat}</small></button>}><a href={safeLink(record)} target="_blank" rel="noopener noreferrer">{text(fields(fields(record.data.balloon).link).title)||safeLink(record)}<small>{safeLink(record)}</small></a></Show></Show></div>}><button type="button" aria-label={s.openMedia(text(record.data.filename)||s.photos)} onClick={event=>setViewing({attachment:record,origin:event.currentTarget.getBoundingClientRect()})}><MediaImage attachment={record} variant={text(record.data.mime_type).startsWith('video/')?'poster':'thumb'} interactive={false}/></button></Show>}</For></div></Show><Show when={collection.failed()}><button type="button" class="details-more" onClick={collection.retry}>{s.tryAgain}</button></Show><Show when={collection.more()}><button type="button" class="details-more" disabled={collection.loading()} onClick={collection.load}>{s.showMore}</button></Show><Show when={viewing()}>{current=><ChatMediaViewer chatId={props.chatID} attachment={current().attachment} origin={current().origin} onClose={()=>setViewing(undefined)} onShowInChat={show}/>}</Show></section>;
+    }
+    return <div class="details-collections"><div ref={tablist} role="tablist" aria-label={s.sharedItems} class="details-tabs" onKeyDown={event=>{const buttons=[...tablist.querySelectorAll<HTMLButtonElement>('[role=tab]')],index=buttons.indexOf(document.activeElement as HTMLButtonElement);if(['ArrowLeft','ArrowRight','Home','End'].includes(event.key)){event.preventDefault();const next=event.key==='Home'?0:event.key==='End'?buttons.length-1:(index+(event.key==='ArrowRight'?1:-1)+buttons.length)%buttons.length;setKind(tabs[next][0]);buttons[next].focus();}}}><For each={tabs}>{([id,label])=><button type="button" role="tab" id={'collection-tab-'+id} aria-controls={'collection-'+id} aria-selected={kind()===id} tabindex={kind()===id?0:-1} onClick={()=>setKind(id)}>{label}</button>}</For></div><Show when={kind()} keyed>{selected=><Items kind={selected}/>}</Show></div>;
+}
