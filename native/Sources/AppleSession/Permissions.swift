@@ -12,7 +12,7 @@ public enum PermissionState: String {
 
 public final class PermissionReport: @unchecked Sendable {
     private let lock = NSLock()
-    private var values: [String: String] = Dictionary(uniqueKeysWithValues: ["full_disk_access", "automation_messages", "automation_system_events", "accessibility", "contacts", "calendar", "reminders"].map { ($0, "unknown") })
+    private var values: [String: String] = Dictionary(uniqueKeysWithValues: ["full_disk_access", "automation_messages", "automation_system_events", "automation_reminders", "accessibility", "contacts", "calendar", "reminders"].map { ($0, "unknown") })
 
     public func note(_ name: String, _ value: String) {
         lock.lock()
@@ -57,7 +57,7 @@ public final class PermissionSession {
             let state = EKEventStore.authorizationStatus(for: type)
             report.set(name, state == .fullAccess ? .granted : state == .notDetermined ? .notDetermined : state == .denied || state == .restricted || state == .writeOnly ? .denied : .unknown)
         }
-        for (name, bundle) in [("automation_messages", "com.apple.MobileSMS"), ("automation_system_events", "com.apple.systemevents")] {
+        for (name, bundle) in [("automation_messages", "com.apple.MobileSMS"), ("automation_system_events", "com.apple.systemevents"), ("automation_reminders", "com.apple.reminders")] {
             let report = self.report
             let done = DispatchSemaphore(value: 0)
             DispatchQueue.global().async { @Sendable in
@@ -70,6 +70,14 @@ public final class PermissionSession {
                 report.set(name, .unknown)
             }
         }
+    }
+
+    public func authorizeReminders() async {
+        let status = await Task.detached { @Sendable in
+            let target = NSAppleEventDescriptor(bundleIdentifier: "com.apple.reminders")
+            return AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), true)
+        }.value
+        report.set("automation_reminders", status == noErr ? .granted : status == -1744 ? .notDetermined : status == -1743 ? .denied : status == -600 ? .targetNotRunning : .unknown)
     }
 
     public func onboard() async {

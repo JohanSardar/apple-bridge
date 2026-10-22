@@ -694,11 +694,37 @@ features:
     modules: [webui, native/RemindersSource, native/RemindersStore, state, operations]
     depends_on: [web.frontdoor, reminders.write]
     status: in_progress
+    limits:
+      - scenario: WEB-REM-PARITY
+        level: real
+        reason: "Flag: limited: Reminders Automation consent pending on this Air (macOS 26.7.1, build 25G241)."
+      - scenario: WEB-REM-PARITY
+        level: real
+        reason: "Subtasks (indent/outdent): limited: Reminders Automation consent pending on this Air (macOS 26.7.1, build 25G241)."
+      - scenario: WEB-REM-PARITY
+        level: real
+        reason: "Sections (create/move): limited: Reminders Automation consent pending on this Air (macOS 26.7.1, build 25G241)."
+      - scenario: WEB-REM-PARITY
+        level: real
+        reason: "Tags: limited: Reminders Automation consent pending on this Air (macOS 26.7.1, build 25G241)."
+      - scenario: WEB-REM-PARITY
+        level: real
+        reason: "List icon, emoji and group: limited: Reminders Automation consent pending on this Air (macOS 26.7.1, build 25G241)."
+      - scenario: WEB-REM-PARITY
+        level: real
+        reason: "Manual reorder: limited: Reminders Automation consent pending on this Air (macOS 26.7.1, build 25G241)."
+      - scenario: WEB-REM-PARITY
+        level: real
+        reason: "Images: limited: Reminders Automation consent pending on this Air (macOS 26.7.1, build 25G241)."
+      - scenario: WEB-REM-PARITY
+        level: real
+        reason: "Custom smart lists: limited: Reminders Automation consent pending on this Air (macOS 26.7.1, build 25G241)."
     scenarios:
       - {id: WEB-REM-READ, levels: [web]}
       - {id: WEB-REM-DETAILS, levels: [web]}
       - {id: WEB-REM-WRITE, levels: [web, real]}
       - {id: WEB-REM-ENTRY, levels: [web]}
+      - {id: WEB-REM-PARITY, levels: [web]}
       - {id: WEB-RM-REMINDERS-HARDENING, levels: [sim]}
       - {id: WEB-RM-REMINDERS-LISTS, levels: [sim]}
       - {id: WEB-RM-REMINDERS-ITEMS, levels: [sim]}
@@ -706,7 +732,7 @@ features:
       - {id: REM-STORE-READ, levels: [sim, real]}
       - {id: REM-STORE-DECODE, levels: [sim]}
       - {id: REM-STORE-PERF, levels: [sim, real]}
-    notes: Gateway reminders.lists and reminders.items provide scoped counts, groups, sections, tags and recursive subtasks. The read-only web/1 UI renders the sidebar, sections and nested items, with completed visibility, sorts, search, details and live updates. Basic writes use trusted input events, identity-based optimistic reconciliation and completion motion; store-only parity remains limited. Views over 2 MiB fail explicitly; item paging remains a follow-up. Store-only flag, section and tag changes currently depend on EventKit notifications. The real flag-only gateway propagation check is limited until the Helper has Reminders Apple Events authorization; if no notification arrives, follow up with a WAL FSEvents hint through the existing bounded coalescer. The native V2 UUID-array manual-order decoder is verified; early reminders, section blobs and custom filters remain unsupported pending positive fixtures at unlock. Native tags, attachment IDs, assignment and store alarm/recurrence projections also remain unsupported; EventKit alarms and recurrence stay available. Remaining store decoders and unverified parity mutations stay hidden.
+    notes: The signed Helper authorize-reminders path requested ordinary OS consent once; its report remained not_determined and a subsequent non-prompting status returned unknown while consent was unresolved. Status now includes automation_reminders. Parity commands have explicit unproven coverage and remain hidden; WEB-REM-PARITY checks captured read affordances and absent mutation controls. Gateway reminders.lists and reminders.items provide scoped counts, groups, sections, tags and recursive subtasks. The read-only web/1 UI renders the sidebar, sections and nested items, with completed visibility, sorts, search, details and live updates. Basic writes use trusted input events, identity-based optimistic reconciliation and completion motion; store-only parity remains limited. Views over 2 MiB fail explicitly; item paging remains a follow-up. Store-only flag, section and tag changes currently depend on EventKit notifications. The real flag-only gateway propagation check is limited until the Helper has Reminders Apple Events authorization; if no notification arrives, follow up with a WAL FSEvents hint through the existing bounded coalescer. The native V2 UUID-array manual-order decoder is verified; early reminders, section blobs and custom filters remain unsupported pending positive fixtures at unlock. Native tags, attachment IDs, assignment and store alarm/recurrence projections also remain unsupported; EventKit alarms and recurrence stay available. Remaining store decoders and unverified parity mutations stay hidden.
   - id: web.calendar
     title: Calendar web app (read, write, parity)
     requirements: [R-WEB-UI, R-WEB-FAST, R-RW]
