@@ -40,10 +40,14 @@ actor MessagesSelfTest {
         let commands = MessagesCommands(path: nil, labCommands: true)
         let handles = try MessagesProbes.discoverSelfHandles().handles
         let database = try MessagesDatabase()
-        let chats = try database.rows("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.service_name='iMessage' AND (SELECT COUNT(*) FROM chat_handle_join x WHERE x.chat_id=c.ROWID)=1 ORDER BY c.ROWID DESC")
         let known = Set(try database.rows("SELECT DISTINCT h.id FROM chat_handle_join j JOIN handle h ON h.ROWID=j.handle_id").compactMap { $0["id"] }.map(MessagesProbes.normalize))
-        let unused: String? = uiAllowed ? handles.first(where: { !known.contains($0) }) : nil
-        guard let handle = unused ?? chats.compactMap({ $0["id"] }).first(where: { handles.contains(MessagesProbes.normalize($0)) }) ?? handles.first else { throw SourceFailure.invalid }
+        guard uiAllowed, let handle = handles.first(where: { !known.contains(MessagesProbes.normalize($0)) }) else {
+            let reason = uiAllowed ? "no unused own-handle alias on this Air; self-chat fallback refused to avoid touching personal conversations" : "ui_deferred_until_unlock"
+            let result = JSON.object(["os_build": .string(build), "run_id": .string(run), "state": .string("limited"), "writes_submitted": .number(0), "steps": .array([.object(["name": .string("isolated_test_self_chat"), "proven": .bool(false), "reason": .string(reason)])])])
+            try JSONEncoder().encode(result).write(to: reportURL, options: .atomic)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportURL.path)
+            return result
+        }
         let baselineChat = Int64(try database.rows("SELECT COALESCE(MAX(ROWID),0) AS maximum FROM chat").first?["maximum"] ?? "0") ?? 0
         let baseline = try database.rows("SELECT COALESCE(MAX(ROWID),0) AS maximum FROM message").first?["maximum"] ?? "0"
         let cleanup = PrivateReport.directory.appendingPathComponent("messages-command-cleanup", isDirectory: true)
@@ -106,7 +110,7 @@ actor MessagesSelfTest {
         let initial = await execute("send_text", "send", args: send)
         let target = initial["native_key"].string
         if uiAllowed, initial["observed"].bool {
-            if unused != nil, let conversation = try? database.rows("SELECT c.guid,c.ROWID AS row_position FROM chat c JOIN chat_message_join j ON j.chat_id=c.ROWID JOIN message m ON m.ROWID=j.message_id WHERE m.guid=?", bindings: [target]).first,
+            if let conversation = try? database.rows("SELECT c.guid,c.ROWID AS row_position FROM chat c JOIN chat_message_join j ON j.chat_id=c.ROWID JOIN message m ON m.ROWID=j.message_id WHERE m.guid=?", bindings: [target]).first,
                let chat = conversation["guid"], let position = Int64(conversation["row_position"] ?? ""), position > baselineChat {
                 registration["baseline_max_chat_row_id"] = baselineChat
                 registration["created_chat_key"] = chat
