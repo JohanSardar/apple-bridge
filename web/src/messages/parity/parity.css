@@ -1,0 +1,30 @@
+.parity-settings { margin: 20px 0; padding: 0 16px; border-radius: 12px; background: var(--fill-tertiary); }
+.parity-setting-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; width: 100%; min-height: 52px; padding: 10px 0; color: var(--label); background: transparent; border: 0; font: inherit; text-align: start; }
+.parity-setting-row + .parity-setting-row { border-top: .5px solid var(--separator); }
+.parity-setting-row small { display: block; margin-top: 3px; color: var(--label-secondary); font-size: 12px; }
+.parity-toggle { display: flex; align-items: center; justify-content: flex-end; flex: 0 0 52px; width: 52px; height: 44px; padding: 0; border: 0; background: transparent; }
+.parity-track { position: relative; width: 42px; height: 26px; border-radius: 20px; background: var(--fill-secondary); }
+.parity-track > i { position: absolute; top: 2px; left: 2px; width: 22px; height: 22px; background: white; border-radius: 50%; box-shadow: 0 1px 3px #0003; transition: transform 180ms cubic-bezier(.2,.85,.25,1); }
+.parity-toggle[aria-checked=true] .parity-track { background: var(--blue); }
+.parity-toggle[aria-checked=true] .parity-track > i { transform: translateX(16px); }
+.parity-toggle[aria-checked=mixed] .parity-track > i::after { content: ''; position: absolute; inset: 10px 6px; background: var(--label-secondary); }
+.parity-default { margin: 0 0 12px; border: 0; padding: 6px 0; min-height: 44px; background: transparent; color: var(--blue); font: inherit; font-size: 12px; }
+.parity-settings button:disabled { opacity: .45; }
+.parity-delete-confirm { width: min(340px,calc(100vw - 32px)); padding: 24px; color: var(--label); background: var(--background-elevated); border: .5px solid var(--separator); border-radius: 16px; box-shadow: 0 16px 60px #0004; }
+.parity-delete-confirm::backdrop { background: #0005; }
+.parity-delete-confirm h2 { margin: 0 0 12px; font-size: 18px; }
+.parity-delete-confirm p { margin: 0 0 18px; color: var(--label-secondary); font-size: 13px; line-height: 1.4; }
+.parity-delete-confirm > div { display: flex; justify-content: flex-end; gap: 12px; }
+.parity-delete-confirm button { padding: 8px 12px; border: 0; border-radius: 8px; background: var(--fill-secondary); color: var(--label); font: inherit; }
+.parity-delete-confirm .destructive { color: var(--red); }
+@media(prefers-reduced-motion:reduce) { .parity-track > i { transition: none; } }
+.pinned-conversation[data-reorderable=true] { touch-action: none; }
+.pinned-conversation[data-dragging=true] { position: relative; cursor: grabbing; filter: drop-shadow(0 6px 12px #0003); }
+.pinned-conversation[data-drop-target=true] .avatar { outline: 2px solid var(--blue); outline-offset: 4px; }
+.parity-delete-confirm button:disabled { opacity: .45; }
+
+.parity-notices:empty { display: none; }
+.parity-notices { padding: 0 16px; font-size: 13px; color: var(--label-secondary); }
+.parity-notices button { min-height: 44px; border: 0; background: transparent; color: var(--blue); font: inherit; }
+
+.chat-swipe-trailing > .parity-swipe-mute { flex: 0 0 88px; background: var(--gray-1); }

@@ -216,6 +216,8 @@ func webBrowserControl(ctx context.Context, w *world.World, origin string, prepa
 				avatar, err = webListFixture(w, request.URL.Query().Get("update") == "1")
 			}
 			value = map[string]any{"ok": err == nil, "fixture_setup_ms": time.Since(started).Milliseconds(), "fixture_flush_ms": avatar.FixtureFlushMS, "fixture_flush_budget_ms": avatar.FixtureFlushBudgetMS}
+		case "/parity-fixture":
+			value, err = webParityFixture(w)
 		case "/details-fixture":
 			err = webDetailsFixture(w)
 			value = map[string]any{"ok": err == nil}
