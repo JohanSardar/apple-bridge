@@ -68,9 +68,10 @@ test('WEB-MSG-REACTIONS transcript keeps emoji and sticker reactions on their ow
     const fixture:{message:string}=await control(request,'/reaction-fixture');
     await page.goto('/messages/'+encodeURIComponent(ids['message-chat'])+'/'+encodeURIComponent(fixture.message));
     const row=page.locator('[data-message="'+fixture.message+'"]');
-    await expect(row.locator('[data-part="0"]').locator('..').getByRole('button',{name:/reacted/})).toHaveCount(1);
-    await expect(row.locator('[data-part="1"]').locator('..').getByRole('button',{name:/reacted/})).toHaveCount(3);
-    await expect(row.locator('[data-part="1"]').locator('..').locator('.reaction-badge:not(.reaction-overflow)')).toHaveText(['👍','😂','▧']);
+    const part=(index:number)=>row.locator('.bubble-slot').filter({has:page.locator('[data-part="'+index+'"]')});
+    await expect(part(0).getByRole('button',{name:/reacted/})).toHaveCount(1);
+    await expect(part(1).getByRole('button',{name:/reacted/})).toHaveCount(3);
+    await expect(part(1).locator('.reaction-badge:not(.reaction-overflow)')).toHaveText(['👍','😂','▧']);
     const overflow=row.getByRole('button',{name:'See all 5 reactions'});await expect(overflow).toHaveText('+2');
     await overflow.click();
     const dialog=page.getByRole('dialog',{name:'Reactions',exact:true});
