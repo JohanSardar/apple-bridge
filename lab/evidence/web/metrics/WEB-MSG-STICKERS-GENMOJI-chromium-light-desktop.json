@@ -1,0 +1,24 @@
+{
+  "cls": 0,
+  "layout_shift_observer": true,
+  "bounds_delta_csspx": 0,
+  "reserved_bounds": {
+    "x": 48,
+    "y": 116,
+    "width": 280,
+    "height": 88
+  },
+  "placement": "approximate",
+  "source_units": "unverified",
+  "variants": [
+    "display",
+    "thumb",
+    "original",
+    "poster",
+    "live"
+  ],
+  "external_requests": [],
+  "entry_chunk": "/assets/index-CXbVHmLU.js",
+  "entry_bytes": 62376,
+  "entry_gzip9_bytes": 22886
+}

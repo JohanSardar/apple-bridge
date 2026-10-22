@@ -1,0 +1,60 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[75.51 114.28 194.01] cpu_idle=50% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5HC03KP0TD5A8G038KXE9KE",
+  "metrics": {
+    "demo_messages": 5000,
+    "demo_startup_ms": 26444,
+    "matrix": [
+      "chromium-light-phone",
+      "chromium-light-desktop",
+      "webkit-light-phone",
+      "webkit-light-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-MSG-STICKERS-GENMOJI-chromium-light-phone-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-MSG-STICKERS-GENMOJI-chromium-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-STICKERS-GENMOJI-chromium-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-STICKERS-GENMOJI-webkit-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-STICKERS-GENMOJI-webkit-light-desktop-playwright.json"
+    ],
+    "server": "gateway"
+  },
+  "scenario": "WEB-MSG-STICKERS-GENMOJI",
+  "level": "web",
+  "passed": true,
+  "git_sha": "cdfee3a7c494a094ca34a190560db4b3135ca91f",
+  "at": "2026-10-22T08:35:16.214343Z",
+  "assertions": [
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 7 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/stickers.spec.ts:7:1 › WEB-MSG-STICKERS-GENMOJI native placed sticker uses explicit approximate geometry and floats above its target (4.8s)\n  ✓  2 [chromium-light-phone] › tests/stickers.spec.ts:17:1 › WEB-MSG-STICKERS-GENMOJI native Genmoji remains a transparent inline glyph as text size changes (2.8s)\n  ✓  3 [chromium-light-phone] › tests/stickers.spec.ts:21:1 › WEB-MSG-STICKERS-GENMOJI captured GIF presentation uses original animation and a still under Reduce Motion (3.4s)\n  ✓  4 [chromium-light-phone] › tests/stickers.spec.ts:24:1 › WEB-MSG-STICKERS-GENMOJI captured Live presentation decodes a muted clip and stops under Reduce Motion (2.6s)\n  ✓  5 [chromium-light-phone] › tests/stickers.spec.ts:28:1 › WEB-MSG-STICKERS-GENMOJI unavailable decorative stickers add no nested retry control (1.3s)\n  ✓  6 [chromium-light-phone] › tests/stickers.spec.ts:32:1 › WEB-MSG-STICKERS-GENMOJI Reduce Motion startup requests the exact still variant for every attachment (2.6s)\n  ✓  7 [chromium-light-phone] › tests/stickers.spec.ts:37:1 › WEB-MSG-STICKERS-GENMOJI MessageMedia dispatches actual sticker and Genmoji records within supplied bounds (1.8s)\n\n  7 passed (25.9s)\n"
+    },
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 7 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/stickers.spec.ts:7:1 › WEB-MSG-STICKERS-GENMOJI native placed sticker uses explicit approximate geometry and floats above its target (4.3s)\n  ✓  2 [chromium-light-desktop] › tests/stickers.spec.ts:17:1 › WEB-MSG-STICKERS-GENMOJI native Genmoji remains a transparent inline glyph as text size changes (1.9s)\n  ✓  3 [chromium-light-desktop] › tests/stickers.spec.ts:21:1 › WEB-MSG-STICKERS-GENMOJI captured GIF presentation uses original animation and a still under Reduce Motion (1.3s)\n  ✓  4 [chromium-light-desktop] › tests/stickers.spec.ts:24:1 › WEB-MSG-STICKERS-GENMOJI captured Live presentation decodes a muted clip and stops under Reduce Motion (1.4s)\n  ✓  5 [chromium-light-desktop] › tests/stickers.spec.ts:28:1 › WEB-MSG-STICKERS-GENMOJI unavailable decorative stickers add no nested retry control (2.3s)\n  ✓  6 [chromium-light-desktop] › tests/stickers.spec.ts:32:1 › WEB-MSG-STICKERS-GENMOJI Reduce Motion startup requests the exact still variant for every attachment (1.4s)\n  ✓  7 [chromium-light-desktop] › tests/stickers.spec.ts:37:1 › WEB-MSG-STICKERS-GENMOJI MessageMedia dispatches actual sticker and Genmoji records within supplied bounds (1.5s)\n\n  7 passed (18.8s)\n"
+    },
+    {
+      "name": "webkit-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 7 tests using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/stickers.spec.ts:7:1 › WEB-MSG-STICKERS-GENMOJI native placed sticker uses explicit approximate geometry and floats above its target (12.2s)\n  ✓  2 [webkit-light-phone] › tests/stickers.spec.ts:17:1 › WEB-MSG-STICKERS-GENMOJI native Genmoji remains a transparent inline glyph as text size changes (3.6s)\n  ✓  3 [webkit-light-phone] › tests/stickers.spec.ts:21:1 › WEB-MSG-STICKERS-GENMOJI captured GIF presentation uses original animation and a still under Reduce Motion (2.7s)\n  ✓  4 [webkit-light-phone] › tests/stickers.spec.ts:24:1 › WEB-MSG-STICKERS-GENMOJI captured Live presentation decodes a muted clip and stops under Reduce Motion (3.6s)\n  ✓  5 [webkit-light-phone] › tests/stickers.spec.ts:28:1 › WEB-MSG-STICKERS-GENMOJI unavailable decorative stickers add no nested retry control (2.3s)\n  ✓  6 [webkit-light-phone] › tests/stickers.spec.ts:32:1 › WEB-MSG-STICKERS-GENMOJI Reduce Motion startup requests the exact still variant for every attachment (3.9s)\n  ✓  7 [webkit-light-phone] › tests/stickers.spec.ts:37:1 › WEB-MSG-STICKERS-GENMOJI MessageMedia dispatches actual sticker and Genmoji records within supplied bounds (1.9s)\n\n  7 passed (40.2s)\n"
+    },
+    {
+      "name": "webkit-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 7 tests using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/stickers.spec.ts:7:1 › WEB-MSG-STICKERS-GENMOJI native placed sticker uses explicit approximate geometry and floats above its target (10.1s)\n  ✓  2 [webkit-light-desktop] › tests/stickers.spec.ts:17:1 › WEB-MSG-STICKERS-GENMOJI native Genmoji remains a transparent inline glyph as text size changes (4.1s)\n  ✓  3 [webkit-light-desktop] › tests/stickers.spec.ts:21:1 › WEB-MSG-STICKERS-GENMOJI captured GIF presentation uses original animation and a still under Reduce Motion (3.6s)\n  ✓  4 [webkit-light-desktop] › tests/stickers.spec.ts:24:1 › WEB-MSG-STICKERS-GENMOJI captured Live presentation decodes a muted clip and stops under Reduce Motion (3.7s)\n  ✓  5 [webkit-light-desktop] › tests/stickers.spec.ts:28:1 › WEB-MSG-STICKERS-GENMOJI unavailable decorative stickers add no nested retry control (2.7s)\n  ✓  6 [webkit-light-desktop] › tests/stickers.spec.ts:32:1 › WEB-MSG-STICKERS-GENMOJI Reduce Motion startup requests the exact still variant for every attachment (3.7s)\n  ✓  7 [webkit-light-desktop] › tests/stickers.spec.ts:37:1 › WEB-MSG-STICKERS-GENMOJI MessageMedia dispatches actual sticker and Genmoji records within supplied bounds (2.5s)\n\n  7 passed (36.6s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

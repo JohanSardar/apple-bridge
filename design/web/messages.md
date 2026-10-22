@@ -323,6 +323,10 @@ To be filled from the Air before W2 starts, for both light and dark:
 - link card metrics, media bubble max sizes
 - context menu metrics
 
+| To verify | Evidence required | Current rendering |
+|---|---|---|
+| Native sticker placement coordinates, scale, base size and rotation | Aggregate-only signed Helper distributions, then compare a few real placements in Messages.app during the unlock capture pass | `placement: approximate`: 64 pt at the bubble’s top-trailing corner, unrotated; saved values are preserved without an inferred mapping |
+
 Captures stay in `lab/evidence/private/web/` (gitignored); only the numbers land here.
 
 ## 18. Hidden on purpose
