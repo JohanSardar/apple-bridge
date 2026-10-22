@@ -20,6 +20,18 @@ sensitive() {
   esac
   return 1
 }
+# The light lane is for quick checks. Native builds and other sensitive jobs would block it for minutes, so they use the
+# normal lane instead.
+too_heavy_for_light() {
+  case " $* " in
+    *"make build"*|*"make native"*|*NATIVE_TARGET=*|*build-native*|*build-helper*|*build-truth*|*swift*|*xcodebuild*) return 0 ;;
+  esac
+  sensitive "$@"
+}
+if [ -n "$light" ] && too_heavy_for_light "$@"; then
+  echo "heavy.sh: native or sensitive job moved from the light lane to the normal lane" >&2
+  light=""
+fi
 # A plain functional sim-level bridge-lab run (sim is the default level) is eligible for the sim lane.
 auto_sim() {
   case " $* " in *bridge-lab*) ;; *) return 1 ;; esac
