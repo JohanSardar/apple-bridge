@@ -125,6 +125,10 @@ func SampleHost(ctx context.Context, remote bool) HostSample {
 	if sample.FreeMemory == nil {
 		sample.Unavailable = append(sample.Unavailable, "free_memory")
 	}
-	sample.Quiet = len(sample.Unavailable) == 0 && sample.OtherHeavySlots == 0 && len(sample.Load) == 3 && sample.Load[0] < float64(sample.CPUCount)
+	sample.Quiet = hostQuiet(sample)
 	return sample
+}
+
+func hostQuiet(sample HostSample) bool {
+	return len(sample.Unavailable) == 0 && sample.OtherHeavySlots == 0 && sample.CPUIdle != nil && *sample.CPUIdle >= 40
 }

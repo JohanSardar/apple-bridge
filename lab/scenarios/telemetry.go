@@ -85,7 +85,11 @@ func Run(ctx context.Context, s Scenario, level string) (e Evidence) {
 	summaries := make([]string, 0, len(hosts))
 	for _, host := range hosts {
 		sample := conditions.Start[host]
-		summaries = append(summaries, fmt.Sprintf("%s: load=%v cpus=%d other_heavy=%d", host, sample.Load, sample.CPUCount, sample.OtherHeavySlots))
+		idle := "unknown"
+		if sample.CPUIdle != nil {
+			idle = fmt.Sprintf("%.0f%%", *sample.CPUIdle)
+		}
+		summaries = append(summaries, fmt.Sprintf("%s: load=%v cpu_idle=%s cpus=%d other_heavy=%d", host, sample.Load, idle, sample.CPUCount, sample.OtherHeavySlots))
 	}
 	conditions.Summary = strings.Join(summaries, "; ")
 	reports := diagnosticReportsDir()
