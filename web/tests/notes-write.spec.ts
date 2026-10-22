@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { prepareListSession as bootstrap } from './list-session';
 import { notesFixture } from './notes-fixtures';
+import { showNotesFolders, showNotesList } from './notes-navigation';
 test('WEB-NOTE-WRITE trusted saves, exact versions, conflict drafts, create and delete', async ({ page, context, request }) => {
     await bootstrap(context, request); const fixture = await notesFixture(page); await page.goto('/notes/folder/fld_test');
     await page.locator('[data-note-id="nte_plain"]').click();
@@ -17,6 +18,7 @@ test('WEB-NOTE-WRITE trusted saves, exact versions, conflict drafts, create and 
     await expect.poll(() => fixture.commands.length).toBe(2);
     expect(fixture.commands[1].expected_version).toBe(2);
     await expect(page.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible();
+    await showNotesList(page);
     await page.getByRole('button', { name: 'New Note', exact: true }).click();
     await page.getByRole('textbox', { name: 'New note text' }).fill('\nBody');
     await expect(page.getByRole('button', { name: 'Create', exact: true })).toBeDisabled();
@@ -31,6 +33,7 @@ test('WEB-NOTE-WRITE trusted saves, exact versions, conflict drafts, create and 
     await page.getByRole('button', { name: 'Delete', exact: true }).click();
     await expect(page.locator('[data-note-id="nte_created"]')).toHaveCount(0);
     expect(fixture.commands[3]).toMatchObject({ op: 'notes.delete', expected_version: 1 });
+    await showNotesList(page);
     if (await page.getByRole('button', { name: 'Show folders' }).getAttribute('aria-expanded') === 'false') await page.getByRole('button', { name: 'Show folders' }).click();
     await page.getByRole('button', { name: '+ New Folder', exact: true }).click();
     await page.getByRole('textbox', { name: 'Folder name' }).fill('[ab-test] Folder');
@@ -45,6 +48,7 @@ test('WEB-NOTE-WRITE trusted saves, exact versions, conflict drafts, create and 
     const count = fixture.commands.length;
     await editor.press('ArrowRight'); await page.getByRole('button', { name: 'Done', exact: true }).click();
     expect(fixture.commands).toHaveLength(count);
+    await showNotesFolders(page);
     await page.locator('.app-menu-control').click();
     await page.locator('.app-menu').getByRole('button', { name: 'Reminders', exact: true }).click();
     await expect(page).toHaveURL(/\/reminders$/);
@@ -65,6 +69,7 @@ test('WEB-NOTE-WRITE dirty drafts save before folder navigation and warn on unlo
     await editor.fill('[ab-test] Navigation save');
     const prevented = await page.evaluate(() => { const event = new Event('beforeunload', { cancelable: true }); window.dispatchEvent(event); return event.defaultPrevented; });
     expect(prevented).toBe(true); expect(fixture.commands).toHaveLength(0);
+    await showNotesList(page);
     if (await page.getByRole('button', { name: 'Show folders' }).getAttribute('aria-expanded') === 'false') await page.getByRole('button', { name: 'Show folders' }).click();
     await page.getByRole('button', { name: /^Nested/ }).click();
     await expect.poll(() => fixture.commands.length).toBe(1);
@@ -104,10 +109,14 @@ test('WEB-NOTE-WRITE retained drafts clear across a same-page session change', a
     const editor = page.getByRole('textbox', { name: 'Note text', exact: true }); await expect(editor).toBeVisible();
     fixture.conflict(); await editor.fill('[ab-test] Private local draft'); await editor.press('ControlOrMeta+s');
     await expect(page.getByRole('alert')).toContainText('Changed elsewhere');
+    await showNotesFolders(page);
+    const sourcesReady = page.waitForResponse(response => new URL(response.url()).pathname === '/web/v1/sources');
     await page.locator('.app-menu-control').click();
     await page.locator('.app-menu').getByRole('button', { name: 'Reminders', exact: true }).click();
     await expect(page.locator('.reminders-app')).toBeVisible();
+    await (await sourcesReady).finished();
     await bootstrap(context, request, 'public');
+    await expect.poll(() => page.evaluate(async () => (await (await fetch('/web/v1/session', { cache: 'no-store', credentials: 'same-origin' })).json()).kind)).toBe('public');
     await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })));
     await expect.poll(() => fixture.sessions.at(-1)).toBe('public');
     await page.locator('.app-menu-control').click();

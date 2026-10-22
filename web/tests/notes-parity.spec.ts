@@ -1,0 +1,20 @@
+import { test, expect } from '@playwright/test';
+import { prepareListSession as bootstrap } from './list-session';
+import { notesFixture } from './notes-fixtures';
+test('WEB-NOTE-PARITY rich editing and checklist writes stay unavailable without native proof', async ({ page, context, request }) => {
+    await bootstrap(context, request);
+    const fixture = await notesFixture(page);
+    await page.goto('/notes/nte_rich');
+    await expect(page.getByRole('heading', { name: 'Reading list', exact: true })).toBeVisible();
+    const checklist = page.getByRole('checkbox', { name: 'Read a book', exact: true });
+    await expect(checklist).toBeChecked();
+    await expect(checklist).toBeDisabled();
+    await expect(page.getByRole('textbox', { name: 'Note text', exact: true })).toHaveCount(0);
+    await expect(page.locator('.notes-editor [contenteditable=true]')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /^(Edit rich note|Toggle checklist|Save note)$/ })).toHaveCount(0);
+    await checklist.evaluate(element => element.dispatchEvent(new Event('change', { bubbles: true })));
+    await page.keyboard.press('ControlOrMeta+s');
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    await expect(checklist).toBeChecked();
+    expect(fixture.commands).toHaveLength(0);
+});

@@ -1,16 +1,22 @@
 import { test, expect } from '@playwright/test';
 import { prepareListSession as bootstrap } from './list-session';
 import { notesFixture } from './notes-fixtures';
-test('WEB-NOTE-READ folders, pins, rich blocks, locked privacy, search, gallery and keyboard', async ({ page, context, request }) => {
+import { hideNotesFolders, showNotesFolders, showNotesList } from './notes-navigation';
+test('WEB-NOTE-READ folders, pins, rich blocks, locked privacy, search, gallery and keyboard', async ({ page, context, request }, info) => {
     await bootstrap(context, request); const fixture = await notesFixture(page); await page.goto('/notes');
     await expect(page.getByRole('main', { name: 'Notes', exact: true })).toBeVisible();
+    await showNotesFolders(page);
     await expect(page.getByText('Test account', { exact: true })).toBeVisible();
+    await hideNotesFolders(page);
     await expect(page.getByText('Pinned', { exact: true })).toBeVisible();
+    await page.screenshot({ path: `../lab/evidence/private/web/notes-list-${info.project.name}.png` });
     await page.locator('[data-note-id="nte_rich"]').click();
+    await showNotesList(page);
     await page.locator('[data-note-id="nte_rich"]').focus();
     fixture.external();
     await expect(page.locator('[data-note-id="nte_plain"]')).toContainText('[ab-test] External');
     await expect(page.locator('[data-note-id="nte_rich"]')).toBeFocused();
+    await page.locator('[data-note-id="nte_rich"]').click();
     await expect(page.getByRole('heading', { name: 'Reading list' })).toBeVisible();
     await expect(page.locator('.notes-editor h1')).toHaveCount(1);
     await expect(page.getByText('Nested reading detail', { exact: true })).toBeVisible();
@@ -30,11 +36,14 @@ test('WEB-NOTE-READ folders, pins, rich blocks, locked privacy, search, gallery 
     await expect(page.getByText('Attachment unavailable', { exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Unsafe link' })).toHaveCount(0);
     await expect(page.getByText('Unsupported note block')).toBeVisible();
+    await page.screenshot({ path: `../lab/evidence/private/web/notes-rich-${info.project.name}.png` });
+    await showNotesList(page);
     await page.locator('[data-note-id="nte_locked"]').click();
     await expect(page.getByText('This note is locked.', { exact: false })).toBeVisible();
     await expect(page.getByRole('textbox', { name: 'Note text', exact: true })).toHaveCount(0);
     await expect(page.locator('body')).not.toContainText('SECRET');
     await expect(page.getByRole('button', { name: 'Delete note', exact: true })).toHaveCount(0);
+    await showNotesList(page);
     await page.getByRole('searchbox', { name: 'Search notes' }).fill('quiet');
     await expect(page.locator('[data-note-id]')).toHaveCount(1);
     await page.getByRole('searchbox', { name: 'Search notes' }).fill('SECRET');
@@ -49,6 +58,9 @@ test('WEB-NOTE-READ folders, pins, rich blocks, locked privacy, search, gallery 
     await page.keyboard.press('ArrowDown'); await expect(page).toHaveURL(/\/notes\/nte_rich$/);
     await page.keyboard.press('ArrowDown'); await expect(page).toHaveURL(/\/notes\/nte_locked$/);
     await expect(page.getByRole('listbox', { name: 'Notes', exact: true })).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(page.getByText('This note is locked.', { exact: false })).toBeVisible();
+    await showNotesList(page);
     if (await page.getByRole('button', { name: 'Show folders' }).getAttribute('aria-expanded') === 'false') await page.getByRole('button', { name: 'Show folders' }).click();
     await page.getByRole('button', { name: 'Toggle Bridge Test' }).click();
     await expect(page.getByRole('button', { name: /^Nested/ })).toHaveCount(0);
@@ -59,6 +71,7 @@ test('WEB-NOTE-READ folders, pins, rich blocks, locked privacy, search, gallery 
     await expect(page.getByRole('textbox', { name: 'Note text', exact: true })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Delete note', exact: true })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'New Note', exact: true })).toHaveCount(0);
+    await showNotesFolders(page);
     await page.locator('.app-menu-control').click();
     await page.locator('.app-menu').getByRole('button', { name: 'Notes', exact: true }).click();
     await expect(page).toHaveURL(/\/notes$/);
@@ -73,7 +86,9 @@ test('WEB-NOTE-READ real gateway live registration returns a Notes snapshot', as
 });
 test('WEB-NOTE-READ missing write capability keeps plain content read-only', async ({ page, context, request }) => {
     await bootstrap(context, request); await notesFixture(page, false, 'permission_missing'); await page.goto('/notes/nte_plain');
+    await showNotesList(page);
     await expect(page.getByRole('status').filter({ hasText: 'Notes are unavailable on this Mac.' })).toBeVisible();
+    await page.locator('[data-note-id="nte_plain"]').click();
     await expect(page.getByText('A quiet draft', { exact: false }).last()).toBeVisible();
     await expect(page.getByRole('textbox', { name: 'Note text', exact: true })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'New Note', exact: true })).toHaveCount(0);

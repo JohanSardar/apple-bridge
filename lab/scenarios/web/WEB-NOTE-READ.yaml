@@ -2,7 +2,7 @@ id: WEB-NOTE-READ
 feature: web.notes
 levels: [web]
 web:
-  browsers: [chromium]
-  themes: [light]
-  layouts: [desktop]
+  browsers: [webkit, chromium, firefox]
+  themes: [light, dark]
+  layouts: [phone, desktop]
   server: gateway
