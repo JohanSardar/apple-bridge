@@ -70,6 +70,11 @@ struct MessagesCaptureChecks {
     }
     static func main() async throws {
         if CommandLine.arguments.contains("--rich") { try await RichCaptureChecks.run(); return }
+        if CommandLine.arguments.contains("--media-yield-metadata") { try await MediaYieldChecks.run(metadata: true); return }
+        if CommandLine.arguments.contains("--media-yield-source-change") { try await MediaYieldChecks.run(change: true); return }
+        if CommandLine.arguments.contains("--media-yield-companion") { try await MediaYieldChecks.run(delayed: true); return }
+        if CommandLine.arguments.contains("--media-yield-export-race") { try await MediaExportYieldChecks.run(); return }
+        if CommandLine.arguments.contains("--media-yield-burst") { try await MediaYieldChecks.run(); return }
         if CommandLine.arguments.contains("--media-foreground") { try await MediaPriorityChecks.run(); return }
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("messages-capture-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)

@@ -9,7 +9,7 @@ extension MediaDerivatives {
         guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceCreateThumbnailWithTransform: true, kCGImageSourceThumbnailMaxPixelSize: maximum, kCGImageSourceShouldCacheImmediately: true] as CFDictionary) else { throw MediaFailure.decode }
         return image
     }
-    static func images(_ source: CGImageSource, directory: URL, sticker: Bool) throws -> MediaResult {
+    static func images(_ source: CGImageSource, directory: URL, sticker: Bool) async throws -> MediaResult {
         let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any] ?? [:]
         let width = properties[kCGImagePropertyPixelWidth as String] as? Int ?? 0
         let height = properties[kCGImagePropertyPixelHeight as String] as? Int ?? 0
@@ -18,15 +18,18 @@ extension MediaDerivatives {
         var result = MediaResult()
         result.media.width = orientation >= 5 ? height : width
         result.media.height = orientation >= 5 ? width : height
+        try await MediaWork.stage("image_placeholder")
         let small = try thumbnail(source, maximum: 100)
         result.media.thumbhash = try placeholder(small)
         let gif = CGImageSourceGetType(source).map { ($0 as String) == UTType.gif.identifier } ?? false
         for (name, maximum, quality) in sticker ? [("display", 1600, 0.85)] : gif ? [("thumb", 400, 0.8)] : [("thumb", 400, 0.8), ("display", 1600, 0.85)] {
+            try await MediaWork.stage("image_" + name)
             let image = try thumbnail(source, maximum: maximum)
             let alpha = sticker || properties[kCGImagePropertyHasAlpha as String] as? Bool == true
             let file = directory.appendingPathComponent(name + (alpha ? ".png" : ".jpg"))
+            try await MediaWork.yield()
             try write(image, to: file, alpha: alpha, quality: quality)
-            result.derivatives[name] = try variant(file, mime: alpha ? "image/png" : "image/jpeg", width: image.width, height: image.height)
+            result.derivatives[name] = try await variant(file, mime: alpha ? "image/png" : "image/jpeg", width: image.width, height: image.height)
         }
         return result
     }

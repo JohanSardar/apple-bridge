@@ -47,11 +47,14 @@ public actor Messages: Source {
         let sticker: Bool
         let live: Bool
         let position: Int64
-        let queuedNS = CaptureTrace.now()
+        var queuedNS = CaptureTrace.now()
     }
     private var pendingMedia: [String: MediaJob] = [:]
     private var mediaResults: [String: MediaResult] = [:]
+    private var mediaAttempts: [String: (String, Int)] = [:]
     private var mediaRetry: [String: Date] = [:]
+    private var mediaPressureChecked = ContinuousClock.now
+    private var mediaPressure = false
     private var variantURLs: [String: URL] = [:]
     public init(path: String? = nil, diagnostics: URL? = nil, watcherEventsEnabled: Bool = true, labCommands: Bool = false) {
  commands = MessagesCommands(path:path, labCommands:labCommands, agentPolicy: diagnostics?.deletingLastPathComponent().appendingPathComponent("agent-message-policy.json"))
@@ -112,6 +115,7 @@ public actor Messages: Source {
             pendingBlobOrder.removeAll()
             activeBlob?.2.cancel()
             pendingMedia.removeAll()
+            mediaAttempts.removeAll()
             activeMedia?.1.cancel()
             failedBlobs.removeAll()
             lastRowID = 0
@@ -167,12 +171,17 @@ public actor Messages: Source {
                             }
                             if !mediaLabPaused, (result == nil || result?.awaitingLive == true), activeMedia?.0.key != key, (mediaRetry[key] ?? .distantPast) < Date() {
                                 let companions = MediaDerivatives.liveIdentifier(url) == nil ? [] : try reader.query("SELECT filename FROM attachment WHERE lower(filename) LIKE '%.mov' ORDER BY abs(ROWID-?)", [String(row.integer("derivative_position"))]).compactMap { reader.attachmentURL($0["filename"]) }.filter { FileManager.default.fileExists(atPath: $0.path) && !BlobDigest.isDataless($0) }
-                                let job = MediaJob(key: key, url: url, digest: cached.2, companions: companions, sticker: row.flag("is_sticker"), live: live, position: row.integer("derivative_position"))
+                                var job = MediaJob(key: key, url: url, digest: cached.2, companions: companions, sticker: row.flag("is_sticker"), live: live, position: row.integer("derivative_position"))
+                                if let pending = pendingMedia[key], pending.digest == job.digest { job.queuedNS = pending.queuedNS }
                                 if pendingMedia[key]?.live != true {
                                     pendingMedia[key] = job
                                     workTrace.record("media_queued", fields: ["pending_media": .number(Double(pendingMedia.count))])
                                 }
-                                if live, let activeMedia, !activeMedia.0.live || (UTType(filenameExtension: url.pathExtension) ?? UTType(row["uti"]))?.conforms(to: .image) == true { activeMedia.1.cancel() }
+                                if live, let activeMedia, !activeMedia.0.live || (UTType(filenameExtension: url.pathExtension) ?? UTType(row["uti"]))?.conforms(to: .image) == true {
+                                    workTrace.record("media_preempted_by_live")
+                                    activeMedia.1.cancel()
+                                }
+
                             }
                         }
                     } else if failedBlobs.contains(key) {
@@ -260,10 +269,29 @@ public actor Messages: Source {
         guard let mediaPauseURL else { return false }
         return FileManager.default.fileExists(atPath: mediaPauseURL.path)
     }
+    private var mediaPressurePaused: Bool {
+        if mediaPressureChecked <= ContinuousClock.now {
+            mediaPressure = MediaDerivatives.paused
+            mediaPressureChecked = ContinuousClock.now + .seconds(1)
+        }
+        return mediaPressure || mediaLabPaused
+    }
+    private func mediaCheckpoint(_ job: MediaJob, token: String, stamp: MediaSourceStamp, quiet: Duration) async throws {
+        try await ForegroundActivity.shared.waitUntilIdle(for: quiet)
+        while mediaPressurePaused {
+            try await Task.sleep(for: .milliseconds(100))
+            try await ForegroundActivity.shared.waitUntilIdle(for: quiet)
+        }
+        try Task.checkCancellation()
+        guard token == generation, blobDigests[job.key]?.2 == job.digest else { throw MediaSourceChanged() }
+        try stamp.validate(job.url)
+        let attributes = try FileManager.default.attributesOfItem(atPath: job.url.path)
+        guard let source = blobDigests[job.key], source.0 == (attributes[.size] as? NSNumber)?.int64Value, source.1 == attributes[.modificationDate] as? Date else { throw MediaSourceChanged() }
+    }
     private func drainMedia(_ sink: any ObservationSink) async {
         var lastPaused: Bool?
         while !Task.isCancelled {
-            await ForegroundActivity.shared.waitUntilIdle()
+            do { try await ForegroundActivity.shared.waitUntilIdle(for: .milliseconds(250)) } catch { return }
             if Task.isCancelled { return }
             let labPaused = mediaLabPaused
             let systemPaused = MediaDerivatives.paused
@@ -276,44 +304,82 @@ public actor Messages: Source {
                 do { try await Task.sleep(for: .milliseconds(50)) } catch { return }
                 continue
             }
+            let previous = mediaAttempts[job.key]
+            let attempts = previous?.0 == job.digest ? previous!.1 + 1 : 1
+            if attempts > 3 {
+                do { try await ForegroundActivity.shared.waitUntilIdle(for: .seconds(2)) } catch { return }
+            }
+            mediaAttempts[job.key] = (job.digest, attempts)
             pendingMedia.removeValue(forKey: job.key)
             let token = generation
-            workTrace.record("media_started", fields: ["queued_ns": .integer(job.queuedNS), "pending_media": .number(Double(pendingMedia.count)), "live": .bool(job.live)])
+            workTrace.record("media_started", keys: [job.digest], fields: ["queued_ns": .integer(job.queuedNS), "pending_media": .number(Double(pendingMedia.count)), "live": .bool(job.live)])
             let workTrace = self.workTrace
             let work = Task.detached(executorPreference: MediaExecutor.shared, priority: .utility) {
                 try Task.checkCancellation()
-                workTrace.record("media_compute_started")
+                workTrace.record("media_compute_started", keys: [job.digest], fields: ["queued_ns": .integer(job.queuedNS)])
                 defer { workTrace.record("media_compute_finished") }
-                return try await MediaDerivatives.make(job.url, digest: job.digest, companions: job.companions, sticker: job.sticker) { result in
-                    try await self.publishMedia(result, job: job, token: token, sink: sink)
+                let stamp = try MediaSourceStamp(job.url, digest: job.digest)
+                let activity = MediaWork(digest: job.digest, checkpoint: { quiet in
+                    try await self.mediaCheckpoint(job, token: token, stamp: stamp, quiet: quiet)
+                }, interruption: { callback in
+                    let id = ForegroundActivity.shared.interrupt(callback)
+                    let pressure = Task {
+                        while !Task.isCancelled {
+                            do { try await Task.sleep(for: .seconds(1)) } catch { return }
+                            if await self.mediaPressurePaused { callback(); return }
+                        }
+                    }
+                    return { ForegroundActivity.shared.removeInterruption(id); pressure.cancel() }
+                }, trace: { stage in workTrace.record("media_stage_" + stage, fields: ["queued_ns": .integer(job.queuedNS)]) })
+                return try await MediaWork.$current.withValue(activity) {
+                    try await MediaDerivatives.make(job.url, digest: job.digest, companions: job.companions, sticker: job.sticker) { result in
+                        try stamp.validate(job.url)
+                        try await self.publishMedia(result, job: job, token: token, sink: sink)
+                    }
                 }
             }
             activeMedia = (job, work)
             let interruption = ForegroundActivity.shared.interrupt {
-                work.cancel()
                 workTrace.record("media_yielded_to_foreground")
             }
             defer { ForegroundActivity.shared.removeInterruption(interruption) }
-            let pressure = Task {
-                while !Task.isCancelled {
-                    do { try await Task.sleep(for: .seconds(1)) } catch { return }
-                    if MediaDerivatives.paused || self.mediaLabPaused { work.cancel(); return }
-                }
-            }
-            defer { pressure.cancel(); activeMedia = nil }
+            defer { activeMedia = nil }
             do {
                 let result = try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
                 guard token == generation, blobDigests[job.key]?.2 == job.digest, !Task.isCancelled else { continue }
                 try await publishMedia(result, job: job, token: token, sink: sink)
                 if result.awaitingLive == true {
-                    mediaRetry[job.key] = Date().addingTimeInterval(2)
+                    workTrace.record("media_waiting_for_companion", fields: ["queued_ns": .integer(job.queuedNS)])
+                    mediaRetry[job.key] = Date().addingTimeInterval(60)
+                    if attempts >= 3 { workTrace.record("media_idle_deferred", fields: ["queued_ns": .integer(job.queuedNS)]) }
                     if let reader {
                         let companions = try reader.query("SELECT filename FROM attachment WHERE lower(filename) LIKE '%.mov' ORDER BY abs(ROWID-?)", [String(job.position)]).compactMap { reader.attachmentURL($0["filename"]) }.filter { FileManager.default.fileExists(atPath: $0.path) && !BlobDigest.isDataless($0) }
-                        pendingMedia[job.key] = MediaJob(key: job.key, url: job.url, digest: job.digest, companions: companions, sticker: job.sticker, live: false, position: job.position)
+                        var deferred = MediaJob(key: job.key, url: job.url, digest: job.digest, companions: companions, sticker: job.sticker, live: false, position: job.position)
+                        deferred.queuedNS = job.queuedNS
+                        pendingMedia[job.key] = deferred
                     }
+                } else {
+                    workTrace.record("media_completed", fields: ["queued_ns": .integer(job.queuedNS), "unavailable": .bool(result.unavailable != nil)])
+                    mediaAttempts.removeValue(forKey: job.key)
                 }
             } catch {
-                if work.isCancelled && !Task.isCancelled { pendingMedia[job.key] = job }
+                guard token == generation, !Task.isCancelled else { continue }
+                if error is MediaSourceChanged {
+                    workTrace.record("media_source_changed", fields: ["queued_ns": .integer(job.queuedNS)])
+                    mediaResults.removeValue(forKey: job.digest)
+                    mediaAttempts.removeValue(forKey: job.key)
+                    if let reader, let row = try? reader.query("SELECT filename FROM attachment WHERE guid=?", [job.key]).first, let url = reader.attachmentURL(row["filename"]) {
+                        failedBlobs.remove(job.key)
+                        pendingBlobs[job.key] = url
+                        pendingBlobOrder[job.key] = (job.live, job.position)
+                    }
+                } else if work.isCancelled && !Task.isCancelled {
+                    pendingMedia[job.key] = job
+                    if attempts >= 3 {
+                        mediaRetry[job.key] = Date().addingTimeInterval(60)
+                        workTrace.record("media_idle_deferred", fields: ["queued_ns": .integer(job.queuedNS)])
+                    }
+                }
                 else {
                     mediaRetry[job.key] = Date().addingTimeInterval(60)
                     if let reader { try? await emit(try reader.attachmentObservations(guid: job.key), sink: sink, live: job.live) }
@@ -341,12 +407,14 @@ public actor Messages: Source {
             let work = Task.detached(priority: .utility) { () throws -> (Int64, Date, String) in
                 workTrace.record("hash_compute_started")
                 defer { workTrace.record("hash_compute_finished") }
+                let stamp = try MediaSourceStamp(url, digest: "")
                 let before = try FileManager.default.attributesOfItem(atPath: url.path)
-                let digest = try BlobDigest.file(url)
+                let digest = try await BlobDigest.background(url)
+                try stamp.validate(url)
                 let after = try FileManager.default.attributesOfItem(atPath: url.path)
                 let size = (before[.size] as? NSNumber)?.int64Value ?? -1
                 let modified = before[.modificationDate] as? Date ?? .distantPast
-                guard size == (after[.size] as? NSNumber)?.int64Value, modified == after[.modificationDate] as? Date else { throw SourceFailure.conflict }
+                guard size == (after[.size] as? NSNumber)?.int64Value, modified == after[.modificationDate] as? Date else { throw MediaSourceChanged() }
                 return (size, modified, digest)
             }
             activeBlob = (key, live, work)
@@ -356,10 +424,19 @@ public actor Messages: Source {
                 guard token == generation, !Task.isCancelled else { continue }
                 try baseline?.saveBlob(key, result)
                 blobDigests[key] = result
+                if UTType(filenameExtension: url.pathExtension)?.conforms(to: .movie) == true, let reader {
+                    for (mediaKey, job) in pendingMedia where mediaResults[job.digest]?.awaitingLive == true {
+                        let companions = try reader.query("SELECT filename FROM attachment WHERE lower(filename) LIKE '%.mov' ORDER BY abs(ROWID-?)", [String(job.position)]).compactMap { reader.attachmentURL($0["filename"]) }.filter { FileManager.default.fileExists(atPath: $0.path) && !BlobDigest.isDataless($0) }
+                        var resumed = MediaJob(key: job.key, url: job.url, digest: job.digest, companions: companions, sticker: job.sticker, live: job.live, position: job.position)
+                        resumed.queuedNS = job.queuedNS
+                        pendingMedia[mediaKey] = resumed
+                        mediaRetry[mediaKey] = .distantPast
+                    }
+                }
                 if let reader { try await emit(try reader.attachmentObservations(guid: key), sink: sink, live: live) }
             } catch {
                 guard token == generation, !Task.isCancelled else { continue }
-                if work.isCancelled {
+                if work.isCancelled || error is MediaSourceChanged {
                     if pendingBlobs[key] == nil { pendingBlobs[key] = url; pendingBlobOrder[key] = order }
                     continue
                 }

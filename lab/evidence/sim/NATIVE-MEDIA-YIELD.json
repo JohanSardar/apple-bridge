@@ -1,0 +1,77 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[34.28 60.02 51.02] cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5GZP53ZC1B0Q56J1ZB2KJFA",
+  "metrics": {
+    "changed_source_invalidates_retained_stages": {
+      "computes": 3,
+      "image_stages": 2,
+      "maximum_starts_per_digest": 1,
+      "mode": "changed_source",
+      "partial_publications": 2,
+      "starts": 3
+    },
+    "foreground_burst_reuses_completed_stages": {
+      "computes": 2,
+      "image_stages": 1,
+      "maximum_starts_per_digest": 1,
+      "mode": "burst",
+      "partial_publications": 1,
+      "starts": 2
+    },
+    "local_companion_wakes_deferred_live_photo": {
+      "computes": 3,
+      "image_stages": 1,
+      "maximum_starts_per_digest": 2,
+      "mode": "delayed_companion",
+      "partial_publications": 1,
+      "starts": 3
+    },
+    "metadata_only_changes_preserve_retained_stages": {
+      "computes": 2,
+      "image_stages": 1,
+      "maximum_starts_per_digest": 1,
+      "mode": "metadata_only",
+      "partial_publications": 1,
+      "starts": 2
+    },
+    "synthetic_only": true
+  },
+  "scenario": "NATIVE-MEDIA-YIELD",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "00db61161a94a53da0c9cfc628e034c03976ebaf",
+  "at": "2026-10-22T05:00:07.167204Z",
+  "assertions": [
+    {
+      "name": "foreground_burst_reuses_completed_stages",
+      "passed": true
+    },
+    {
+      "name": "metadata_only_changes_preserve_retained_stages",
+      "passed": true
+    },
+    {
+      "name": "changed_source_invalidates_retained_stages",
+      "passed": true
+    },
+    {
+      "name": "local_companion_wakes_deferred_live_photo",
+      "passed": true
+    },
+    {
+      "name": "export_yield_retries_without_cancelling_parent",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

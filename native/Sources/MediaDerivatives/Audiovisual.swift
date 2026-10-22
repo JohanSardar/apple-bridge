@@ -14,6 +14,7 @@ extension MediaDerivatives {
         return nil
     }
     static func audiovisual(_ input: URL, directory: URL) async throws -> MediaResult {
+        try await MediaWork.stage("asset_metadata")
         let asset = AVURLAsset(url: input)
         if try await !asset.loadTracks(withMediaType: .video).isEmpty { return try await movie(input, directory: directory, name: "video") }
         guard let track = try await asset.loadTracks(withMediaType: .audio).first else { throw MediaFailure.decode }
@@ -23,11 +24,15 @@ extension MediaDerivatives {
         try await export(asset, preset: AVAssetExportPresetAppleM4A, file: file, type: .m4a)
         var result = MediaResult()
         result.media.duration_ms = Int((seconds * 1000).rounded())
-        result.media.waveform = try waveform(asset, track: track, seconds: seconds)
-        result.derivatives["audio"] = try variant(file, mime: "audio/mp4")
+        result.media.waveform = try await waveform(asset, track: track, seconds: seconds)
+        result.derivatives["audio"] = try await variant(file, mime: "audio/mp4")
         return result
     }
     static func movie(_ input: URL, directory: URL, name: String) async throws -> MediaResult {
+        try await MediaWork.validating(input) { try await movieStages(input, directory: directory, name: name) }
+    }
+    private static func movieStages(_ input: URL, directory: URL, name: String) async throws -> MediaResult {
+        try await MediaWork.stage("asset_metadata")
         let asset = AVURLAsset(url: input)
         let seconds = try await asset.load(.duration).seconds
         guard seconds.isFinite, seconds > 0 else { throw MediaFailure.decode }
@@ -57,16 +62,18 @@ extension MediaDerivatives {
         let width = Int(abs(size.width).rounded())
         let height = Int(abs(size.height).rounded())
         guard max(width, height) <= 1920, min(width, height) <= 1080 else { throw MediaFailure.encode }
+        try await MediaWork.stage("video_poster")
         let generator = AVAssetImageGenerator(asset: output)
         generator.appliesPreferredTrackTransform = true
         generator.maximumSize = CGSize(width: 400, height: 400)
         let poster = try await generator.image(at: .zero).image
         let posterFile = directory.appendingPathComponent("poster.jpg")
         try write(poster, to: posterFile, alpha: false, quality: 0.8)
-        result.derivatives["poster"] = try variant(posterFile, mime: "image/jpeg", width: poster.width, height: poster.height)
+        result.derivatives["poster"] = try await variant(posterFile, mime: "image/jpeg", width: poster.width, height: poster.height)
+        try await MediaWork.yield()
         generator.maximumSize = CGSize(width: 100, height: 100)
         result.media.thumbhash = try placeholder(try await generator.image(at: .zero).image)
-        result.derivatives[name] = try variant(file, mime: "video/mp4", width: width, height: height)
+        result.derivatives[name] = try await variant(file, mime: "video/mp4", width: width, height: height)
         return result
     }
     @_spi(Testing) public static func export(_ asset: AVAsset, preset: String, file: URL, type: AVFileType) async throws {
@@ -75,12 +82,31 @@ extension MediaDerivatives {
         guard file.isFileURL, !expected.isEmpty, file.pathExtension.lowercased() == expected else { throw exportFailure("Output URL or extension does not match file type") }
         guard try await asset.load(.isExportable), await AVAssetExportSession.compatibility(ofExportPreset: preset, with: asset, outputFileType: type) else { throw exportFailure("Asset preset and file type are incompatible") }
         try Task.checkCancellation()
+        var interrupted = 0
+        while true {
+            try await MediaWork.yield(interrupted >= 3 ? .seconds(2) : .milliseconds(250))
+            if interrupted >= 3 { MediaWork.current?.trace("export_idle_resumed"); interrupted = 0 }
+            do {
+                try await exportAttempt(asset, preset: preset, file: file, type: type, expected: expected)
+                return
+            } catch is CancellationError {
+                try Task.checkCancellation()
+                guard MediaWork.current != nil else { throw CancellationError() }
+                interrupted += 1
+                MediaWork.current?.trace(interrupted >= 3 ? "export_idle_deferred" : "export_yielded")
+            }
+        }
+    }
+    private static func exportAttempt(_ asset: AVAsset, preset: String, file: URL, type: AVFileType, expected: String) async throws {
         let temporary = file.deletingLastPathComponent().appendingPathComponent(UUID().uuidString + "." + expected)
         guard !FileManager.default.fileExists(atPath: temporary.path) else { throw exportFailure("Temporary export output already exists") }
         defer { try? FileManager.default.removeItem(at: temporary) }
         guard let session = AVAssetExportSession(asset: asset, presetName: preset), session.supportedFileTypes.contains(type) else { throw exportFailure("Export session does not support requested file type") }
         session.shouldOptimizeForNetworkUse = true
         let attempt = ExportAttempt(session)
+        let removeInterruption = MediaWork.current?.interruption { attempt.cancel() }
+        defer { removeInterruption?() }
+        MediaWork.current?.trace("export_attempt")
         do {
             try await withTaskCancellationHandler {
                 try Task.checkCancellation()
@@ -88,14 +114,17 @@ extension MediaDerivatives {
             } onCancel: { attempt.cancel() }
         } catch {
             try Task.checkCancellation()
+            if attempt.isCancelled { throw CancellationError() }
             if error is CancellationError { throw error }
             if (error as NSError).domain == "AppleBridgeMediaExport" { throw error }
             throw exportFailure((error as NSError).localizedDescription)
         }
-        try Task.checkCancellation()
+        removeInterruption?()
+        try await MediaWork.yield()
         guard Darwin.rename(temporary.path, file.path) == 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
     }
-    static func waveform(_ asset: AVAsset, track: AVAssetTrack, seconds: Double) throws -> [UInt8] {
+
+    static func waveform(_ asset: AVAsset, track: AVAssetTrack, seconds: Double) async throws -> [UInt8] {
         let reader = try AVAssetReader(asset: asset)
         let output = AVAssetReaderTrackOutput(track: track, outputSettings: [AVFormatIDKey: kAudioFormatLinearPCM, AVSampleRateKey: 8000, AVNumberOfChannelsKey: 1, AVLinearPCMBitDepthKey: 32, AVLinearPCMIsFloatKey: true, AVLinearPCMIsBigEndianKey: false, AVLinearPCMIsNonInterleaved: false])
         guard reader.canAdd(output) else { throw MediaFailure.decode }
@@ -105,8 +134,9 @@ extension MediaDerivatives {
         var peaks = [Float](repeating: 0, count: 64)
         var position = 0
         let samples = max(1, Int(ceil(seconds * 8000)))
-        while let buffer = output.copyNextSampleBuffer() {
-            try Task.checkCancellation()
+        while true {
+            try await MediaWork.yield()
+            guard let buffer = output.copyNextSampleBuffer() else { break }
             guard let block = CMSampleBufferGetDataBuffer(buffer) else { throw MediaFailure.decode }
             let count = CMBlockBufferGetDataLength(block) / MemoryLayout<Float>.size
             var values = [Float](repeating: 0, count: count)

@@ -53,7 +53,8 @@ public enum MediaDerivatives {
     }
     public static func url(_ variant: MediaVariant) -> URL { root.appendingPathComponent(variant.file) }
     public static func make(_ input: URL, digest: String, companions: [URL] = [], sticker: Bool = false, progress: (@Sendable (MediaResult) async throws -> Void)? = nil) async throws -> MediaResult {
-        try Task.checkCancellation()
+        try await MediaWork.yield()
+        guard MediaWork.current == nil || MediaWork.current?.digest == digest else { throw MediaFailure.invalid }
         guard validDigest(digest) else { throw MediaFailure.invalid }
         let directory = root.appendingPathComponent(digest, isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
@@ -61,16 +62,24 @@ public enum MediaDerivatives {
         let lease = try await MediaLease.acquire(directory)
         defer { withExtendedLifetime(lease) {} }
         try MediaLease.removeAbandonedExports(directory)
+        try MediaLease.removeStageFiles(directory)
+        defer { try? MediaLease.removeStageFiles(directory) }
         if let existing = cached(digest), existing.awaitingLive != true { return existing }
+        let partial = cached(digest)
+        var usedCompanion: (URL, MediaSourceStamp)?
         var result: MediaResult
         if let source = CGImageSourceCreateWithURL(input as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary), let identifier = CGImageSourceGetType(source), let type = UTType(identifier as String), type.conforms(to: .image) {
-            result = try images(source, directory: directory, sticker: sticker)
+            if let partial { result = partial }
+            else { result = try await images(source, directory: directory, sticker: sticker) }
             if let identifier = contentIdentifier(source) {
                 result.awaitingLive = true
                 try persist(result, directory: directory)
-                try await progress?(result)
+                if partial == nil { try await progress?(result) }
+                try await MediaWork.yield()
                 for companion in companions where companion != input {
+                    try await MediaWork.yield()
                     if (try? await movieIdentifier(companion)) == identifier {
+                        usedCompanion = (companion, try MediaSourceStamp(companion, digest: digest))
                         let clip = try await movie(companion, directory: directory, name: "live")
                         result.derivatives["live"] = clip.derivatives["live"]
                         result.unavailable = clip.unavailable?["live"].map { ["live": $0] }
@@ -90,7 +99,8 @@ public enum MediaDerivatives {
                 result.unavailable = [name: safeExportReason(error, input: input, directory: directory)]
             }
         }
-        try Task.checkCancellation()
+        try await MediaWork.yield()
+        if let (companion, stamp) = usedCompanion { try stamp.validate(companion) }
         try persist(result, directory: directory)
         return result
     }
@@ -101,13 +111,18 @@ public enum MediaDerivatives {
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: manifest.path)
     }
     static func validDigest(_ value: String) -> Bool { value.count == 64 && value.allSatisfy { "0123456789abcdef".contains($0) } }
-    static func variant(_ file: URL, mime: String, width: Int? = nil, height: Int? = nil) throws -> MediaVariant {
+    static func variant(_ file: URL, mime: String, width: Int? = nil, height: Int? = nil) async throws -> MediaVariant {
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: file.path)
         let reader = try FileHandle(forReadingFrom: file)
         defer { try? reader.close() }
         var hash = SHA256()
         var size: Int64 = 0
-        while let bytes = try reader.read(upToCount: 128 * 1024), !bytes.isEmpty { try Task.checkCancellation(); hash.update(data: bytes); size += Int64(bytes.count) }
+        while true {
+            try await MediaWork.yield()
+            guard let bytes = try reader.read(upToCount: 128 * 1024), !bytes.isEmpty else { break }
+            hash.update(data: bytes)
+            size += Int64(bytes.count)
+        }
         let digest = hash.finalize().map { String(format: "%02x", $0) }.joined()
         let immutable = file.deletingLastPathComponent().appendingPathComponent(digest + "." + file.pathExtension)
         if FileManager.default.fileExists(atPath: immutable.path) { try FileManager.default.removeItem(at: file) }
