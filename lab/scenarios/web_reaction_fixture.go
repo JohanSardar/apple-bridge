@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func webReactionFixture(w *world.World) (map[string]any, error) {
+func webReactionFixture(w *world.World, removed bool) (map[string]any, error) {
 	message := "demo-message-00-000032"
 	reaction := func(key, kind string, part int) contracts.Observation {
 		handle := "demo-handle-01"
@@ -21,7 +21,7 @@ func webReactionFixture(w *world.World) (map[string]any, error) {
 			handle = "demo-handle-04"
 		}
 		offset := map[string]time.Duration{"question": -10, "emoji": 10, "sticker": 20, "laugh": 30, "like": 40}[kind]
-		data := map[string]any{"message_id": rmRef("messages.message", message), "part_index": part, "sender_handle_id": rmRef("messages.handle", handle), "kind": kind, "removed": false, "is_from_me": false, "sent_at": demo.Epoch.Add(offset * time.Second)}
+		data := map[string]any{"message_id": rmRef("messages.message", message), "part_index": part, "sender_handle_id": rmRef("messages.handle", handle), "kind": kind, "removed": removed, "is_from_me": false, "sent_at": demo.Epoch.Add(offset * time.Second)}
 		if kind == "emoji" {
 			data["emoji"] = "🪁"
 		}

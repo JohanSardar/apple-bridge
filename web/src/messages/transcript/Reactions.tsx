@@ -1,4 +1,5 @@
-import {createMemo,createSignal,createUniqueId,For,onCleanup,Show} from 'solid-js';
+import {createEffect,createMemo,createSignal,createUniqueId,For,onCleanup,onMount,Show,untrack} from 'solid-js';
+import {popReaction} from '../../motion/transcript';
 import {Portal} from 'solid-js/web';
 import {bubbleSilhouette} from './shape';
 import type {BridgeRecord} from '../../data/types';
@@ -12,12 +13,14 @@ export function ReactionBadges(props:{reactions:readonly BridgeRecord[];handles:
     const [open,setOpen]=createSignal(false);
     const popoverID=createUniqueId();
     let anchor!:HTMLDivElement;
-    let trigger:HTMLButtonElement|undefined,dialog:HTMLDialogElement|undefined;
+    let trigger:HTMLButtonElement|undefined,dialog:HTMLDialogElement|undefined,returnViewport:HTMLElement|undefined;
+    let knownGroups:Map<string,number>|undefined,popping=new Set<string>();
     let raised:HTMLElement|undefined,backdropRule:{sheet:CSSStyleSheet;rule:CSSRule}|undefined;
     const restore=()=>{raised?.classList.remove('reaction-anchor-raised');raised=undefined;if(backdropRule){const index=Array.from(backdropRule.sheet.cssRules).indexOf(backdropRule.rule);if(index>=0)backdropRule.sheet.deleteRule(index);backdropRule=undefined;}};
-    const close=()=>{if(dialog?.open)dialog.close();restore();setOpen(false);};
+    const close=()=>{const wasOpen=untrack(open);if(dialog?.open)dialog.close();restore();setOpen(false);if(wasOpen)queueMicrotask(()=>{const target=trigger?.isConnected?trigger:returnViewport;if(target?.isConnected)target.focus({preventScroll:true});});};
     onCleanup(restore);
-    const groups=createMemo(()=>{const result=new Map<string,BridgeRecord[]>();for(const reaction of [...props.reactions].sort((a,b)=>Date.parse(text(b.data.sent_at))-Date.parse(text(a.data.sent_at))||b.id.localeCompare(a.id))){const key=identity(reaction),group=result.get(key);if(group)group.push(reaction);else result.set(key,[reaction]);}return [...result.values()];});
+    const groups=createMemo(()=>{const result=new Map<string,BridgeRecord[]>();for(const reaction of [...props.reactions].sort((a,b)=>Date.parse(text(b.data.sent_at))-Date.parse(text(a.data.sent_at))||b.id.localeCompare(a.id))){const key=identity(reaction),group=result.get(key);if(group)group.push(reaction);else result.set(key,[reaction]);}const next=[...result.values()];popping=new Set(next.filter(group=>knownGroups!==undefined&&group.length>(knownGroups.get(identity(group[0]))??0)).map(group=>identity(group[0])));knownGroups=new Map(next.map(group=>[identity(group[0]),group.length]));return next;});
+    createEffect(()=>{if(!groups().length&&untrack(open))close();});
     const reactor=(reaction:BridgeRecord)=>reaction.data.is_from_me?wording.you:name(sender(reaction),props.handles);
     const content=(reaction:BridgeRecord)=><Show when={reaction.data.kind==='sticker'} fallback={symbol(reaction)}><span data-sticker-placeholder aria-hidden="true">▧</span></Show>;
     const position=(element:HTMLDialogElement)=>{dialog=element;queueMicrotask(()=>{
@@ -38,8 +41,8 @@ export function ReactionBadges(props:{reactions:readonly BridgeRecord[];handles:
         raised.classList.add('reaction-anchor-raised');
     });};
     return <Show when={groups().length}><div ref={anchor} class="reaction-stack" aria-label="Message reactions">
-        <For each={groups().slice(0,3)}>{(group,index)=><button class="reaction-badge" classList={{'own-reaction':group.some(reaction=>Boolean(reaction.data.is_from_me))}} style={{'--reaction-index':index()}} aria-label={`${group.length===1?reactor(group[0]):group.length+' people'} reacted ${symbol(group[0])}`} aria-haspopup="dialog" aria-expanded={open()} onClick={event=>{trigger=event.currentTarget;setOpen(true);}}>{content(group[0])}<Show when={group.length>1}><span class="reaction-count">{group.length}</span></Show></button>}</For>
-        <Show when={groups().length>3}><button class="reaction-badge reaction-overflow" style={{'--reaction-index':3}} aria-label={`See all ${groups().length} reactions`} aria-haspopup="dialog" onClick={event=>{trigger=event.currentTarget;setOpen(true);}}>+{groups().length-3}</button></Show>
+        <For each={groups().slice(0,3)}>{(group,index)=>{let button!:HTMLButtonElement;onMount(()=>{if(popping.has(identity(group[0])))onCleanup(popReaction(button));});return <button ref={button} data-reaction-key={identity(group[0])} class="reaction-badge" classList={{'own-reaction':group.some(reaction=>Boolean(reaction.data.is_from_me))}} style={{'--reaction-index':index()}} aria-label={`${group.length===1?reactor(group[0]):group.length+' people'} reacted ${symbol(group[0])}`} aria-haspopup="dialog" aria-expanded={open()} onClick={event=>{trigger=event.currentTarget;returnViewport=anchor.closest<HTMLElement>('.virtual-viewport')??undefined;setOpen(true);}}>{content(group[0])}<Show when={group.length>1}><span class="reaction-count">{group.length}</span></Show></button>;}}</For>
+        <Show when={groups().length>3}><button class="reaction-badge reaction-overflow" style={{'--reaction-index':3}} aria-label={`See all ${groups().length} reactions`} aria-haspopup="dialog" onClick={event=>{trigger=event.currentTarget;returnViewport=anchor.closest<HTMLElement>('.virtual-viewport')??undefined;setOpen(true);}}>+{groups().length-3}</button></Show>
     </div><Show when={open()}><Portal><dialog class="reactions-dialog who-reacted" data-reaction-popover={popoverID} aria-label="Reactions" ref={position} onClose={close} onCancel={event=>{event.preventDefault();event.stopPropagation();close();}} onKeyDown={event=>event.stopPropagation()} onClick={event=>{if(event.target!==event.currentTarget)return;const rect=event.currentTarget.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)close();}}>
         <span class="reaction-arrow" data-reaction-arrow aria-hidden="true"/>
         <header><h2 tabindex="-1">Reactions</h2><button class="reaction-close glass" aria-label="Close Reactions" onClick={close}><Icon name="close"/></button></header>
