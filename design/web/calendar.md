@@ -102,3 +102,11 @@ Locally available attachment originals become content-addressed blobs. Reads rem
 - Subscribing to new calendars
 - Apple Intelligence suggestions
 - Holiday calendar management
+
+## 6. Calendar read interface
+
+The read interface exposes Day, Week, Month, Year and List through `/calendar/<view>/<civil-date>` and event inspectors through `/calendar/event/<record-id>`. It subscribes to `calendar.range`, and the inspector subscribes to its individual record. Trusted-device calendar visibility uses the existing preference store and is cleared when persistence is disabled; search stays in memory. Public sessions write no Calendar data to browser storage. Search covers the captured window around the displayed date.
+
+The month uses civil dates, including on phones in a different zone from an event. Timelines render overlap columns from the read model, show floating all-day rows separately, and display a current-time line. The inspector displays timed bounds in the event's declared zone and floating bounds as inclusive visible dates. Unverified store fields and parity write actions stay hidden.
+
+Arrow keys page periods while the content is focused, Command/Control Left/Right page globally, T or Command/Control T returns to today, Command/Control 1–4 choose Day through Year, and Command/Control F focuses search. Touch paging settles with velocity, and timeline zoom supports pinch or Control-wheel. Reduced motion removes the spring and now-line animation.

@@ -5,7 +5,7 @@ import { strings as s } from './strings';
 const apps: { name: string; icon: IconName; path: string; enabled: boolean }[] = [
     { name: s.messages, icon: 'messages', path: '/messages', enabled: true },
     { name: s.reminders, icon: 'reminders', path: '/reminders', enabled: true },
-    { name: s.calendar, icon: 'calendar', path: '/calendar', enabled: false },
+    { name: s.calendar, icon: 'calendar', path: '/calendar', enabled: true },
     { name: s.contacts, icon: 'contacts', path: '/contacts', enabled: false },
     { name: s.notes, icon: 'notes', path: '/notes', enabled: false }
 ];

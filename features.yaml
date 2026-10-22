@@ -713,7 +713,8 @@ features:
     status: in_progress
     scenarios:
       - {id: CAL-STORE-READ, levels: [sim, real, web]}
-    notes: Calendar range/store work is in progress; WEB-CAL-READ, WEB-CAL-WRITE and WEB-CAL-PARITY remain planned. Positive travel-time units, structured coordinates, detached store identities and attachment derivatives require native proof and remain hidden when unsupported.
+      - {id: WEB-CAL-READ, levels: [web]}
+    notes: Calendar range/store work is in progress; WEB-CAL-WRITE and WEB-CAL-PARITY remain planned. Positive travel-time units, structured coordinates, detached store identities and attachment derivatives require native proof and remain hidden when unsupported.
   - id: web.contacts
     title: Contacts web app (read, write, parity)
     requirements: [R-WEB-UI, R-WEB-FAST, R-RW]
