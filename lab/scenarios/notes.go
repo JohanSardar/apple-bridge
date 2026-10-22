@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"syscall"
 	"time"
@@ -101,10 +102,14 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 		add("independent_sqlite_copy", true)
 		for _, entry := range []struct{ key, collection string }{{"folders", "notes.folder"}, {"records", "notes.note"}} {
 			truthRows, _ := response[entry.key].([]any)
+			reasons := map[string]bool{}
+			mismatch := func(field, kind string) { reasons[field+":"+kind] = true }
 			matches := w.Await(10*time.Second, func() bool {
+				clear(reasons)
 				aliases, _ = gatewayAliases(w)
 				records, readErr := w.Records(w.Gateway)
 				if readErr != nil {
+					mismatch("records", "read_failed")
 					return false
 				}
 				actual := map[string]contracts.Record{}
@@ -114,6 +119,7 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 					}
 				}
 				if len(actual) != len(truthRows) {
+					mismatch("records", "count")
 					return false
 				}
 				for _, value := range truthRows {
@@ -121,7 +127,8 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 					id := aliases[aliasKey(contracts.Notes, entry.collection, native["id"].(string))]
 					record, ok := actual[id]
 					if !ok {
-						return false
+						mismatch("record", "missing")
+						continue
 					}
 					var data map[string]any
 					json.Unmarshal(record.Data, &data)
@@ -129,45 +136,60 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 						digest, _ := body["digest"].(string)
 						status, bytes, blobErr := blobBytes(ctx, w.Gateway, digest, record.ID)
 						if blobErr != nil || status != 200 || fmt.Sprintf("%x", sha256.Sum256(bytes)) != digest {
-							return false
+							mismatch("body_blob", "fetch_or_integrity")
+							continue
 						}
 						var content map[string]any
 						if json.Unmarshal(bytes, &content) != nil {
-							return false
+							mismatch("body_blob", "decode")
+							continue
 						}
 						for _, field := range []string{"plain_text", "html", "blocks"} {
 							data[field] = content[field]
 						}
 					}
 					if data["title"] != native["title"] {
-						return false
+						mismatch("title", "value_or_type")
 					}
 					if entry.collection == "notes.note" {
 						for _, field := range []string{"plain_text", "locked", "content_status"} {
 							if data[field] != native[field] {
-								return false
+								mismatch(field, "value_or_type")
 							}
 						}
 						if s.ID == "NOTE-DECODE-FULL" && data["content_status"] == "complete" {
 							counts, countErr := notesProjectionCounts(data)
 							truthCounts, ok := native["structure_counts"].(map[string]any)
 							if countErr != nil || !ok {
-								return false
+								mismatch("structure_counts", "decode_or_missing")
+								continue
 							}
 							for name, count := range counts {
-								if truthCounts[name] != float64(count) {
-									return false
+								if !notesIntegerEqual(truthCounts[name], int64(count)) {
+									kind := "count"
+									if _, exact := notesExactInteger(truthCounts[name]); !exact {
+										kind = "not_exact_integer"
+									}
+									mismatch("structure_counts."+name, kind)
 								}
 							}
 						}
 						if data["folder_id"] != aliases[aliasKey(contracts.Notes, "notes.folder", native["folder_id"].(string))] {
-							return false
+							mismatch("folder_id", "value_or_type")
 						}
 					}
 				}
-				return true
+				return len(reasons) == 0
 			})
 			add(entry.key+"_equal_independent_truth", matches == nil)
+			if matches != nil {
+				details := make([]string, 0, len(reasons))
+				for reason := range reasons {
+					details = append(details, reason)
+				}
+				sort.Strings(details)
+				e.Assertions[len(e.Assertions)-1].Detail = strings.Join(details, ", ")
+			}
 		}
 		return
 	}
@@ -382,7 +404,7 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 			err = w.Await(5*time.Second, func() bool {
 				rows, _ := w.Records(endpoint)
 				for _, r := range rows {
-					if r.Collection == "notes.folder" && !knownFolders[r.ID] && !r.Deleted {
+					if r.Collection == "notes.folder" && !knownFolders[r.ID] && !r.Deleted && recordTitle(r) == folderTitle {
 						createdFolder = r.ID
 						return true
 					}
@@ -428,6 +450,14 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 				err = client.Call(ctx, "notes.update", contracts.Command{ID: contracts.NewCommandID(), Args: args, ExpectedVersion: created.Version, WaitMS: 15000}, &command)
 				add(protocol+"_"+mode+"_observed", err == nil && command.State == "observed")
 				if err != nil || command.State != "observed" {
+					reason := "state_not_observed"
+					for _, known := range []*contracts.Error{contracts.ErrUnsupported, contracts.ErrUnauthorized, contracts.ErrUnavailable, contracts.ErrConflict, contracts.ErrExpired, contracts.ErrCorrupt, contracts.ErrCapacity, contracts.ErrIndeterminate, contracts.ErrInvalid, contracts.ErrNotFound} {
+						if errors.Is(err, known) || command.Error != nil && command.Error.Code == known.Code {
+							reason = known.Code
+							break
+						}
+					}
+					e.Assertions[len(e.Assertions)-1].Detail = "command:" + reason
 					return
 				}
 				err = w.Await(5*time.Second, func() bool {
