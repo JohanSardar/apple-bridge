@@ -44,7 +44,7 @@ func webReminderCapacity(w *world.World) (any, error) {
 }
 
 func webReminderPerf(w *world.World) (any, error) {
-	records := []contracts.Observation{rmObservation("reminders.list", "web-rem-perf", map[string]any{"title": "Bridge Test 1000 reminders", "color": "#4b8cf5", "sections": []any{}, "display_order": 1000, "pinned": false})}
+	records := []contracts.Observation{rmObservation("reminders.list", "web-rem-perf", map[string]any{"title": "Bridge Test 1000 reminders", "writable": true, "color": "#4b8cf5", "sections": []any{}, "display_order": 1000, "pinned": false})}
 	for index := 0; index < 1000; index++ {
 		records = append(records, rmObservation("reminders.reminder", fmt.Sprintf("web-rem-perf-%04d", index), map[string]any{"title": fmt.Sprintf("Bridge Test Item %04d", index), "list_id": rmRef("reminders.list", "web-rem-perf"), "completed": false, "priority": 0, "flagged": false, "tags": []string{}, "manual_order": index}))
 	}
@@ -80,6 +80,17 @@ func webReminderDetails(w *world.World) (any, error) {
 			data["alarms"] = []any{map[string]any{"proximity": 99, "location": map[string]any{"title": "Unproven location", "radius": 20}}}
 		}
 		records = append(records, rmObservation("reminders.reminder", fmt.Sprintf("web-rem-details-%d", index), data))
+	}
+	err := w.ControlAction("/dataset", simapple.Dataset{Records: records})
+	return map[string]any{"ok": err == nil}, err
+}
+
+func webReminderReset(w *world.World) (any, error) {
+	records := []contracts.Observation{}
+	for _, record := range demo.Generate(demo.Options{Seed: 1}).Records {
+		if contracts.CollectionSource(record.Collection) == contracts.Reminders {
+			records = append(records, record)
+		}
 	}
 	err := w.ControlAction("/dataset", simapple.Dataset{Records: records})
 	return map[string]any{"ok": err == nil}, err

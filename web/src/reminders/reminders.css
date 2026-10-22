@@ -35,3 +35,62 @@
 .reminder-complete-control[aria-disabled=true]{cursor:wait}
 
 .reminder-details dd p,.reminder-details-panel dd p{margin:0 0 4px}.reminder-details dd small,.reminder-details-panel dd small{color:var(--reminder-secondary);font-size:var(--caption-1)}
+
+.reminder-selection-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 24px;
+    border-block-end: .5px solid var(--separator);
+}
+.reminder-selection-toolbar>span,.reminder-selection-message {
+    color: var(--reminder-secondary);
+    font-size: var(--callout);
+}
+.reminder-selection-message { padding-inline: 24px; }
+.reminder-row[data-selected=true] { background: var(--fill-secondary); }
+.reminder-select {
+    display: grid;
+    place-items: center;
+    flex: 0 0 44px;
+    inline-size: 44px;
+    block-size: 44px;
+    margin-block: -10px;
+    color: var(--background);
+}
+.reminder-selection-preview { max-block-size: 30dvh; overflow: auto; padding-inline-start: 24px; }
+.reminder-selection-preview li { padding-block: 4px; overflow-wrap: anywhere; }
+.reminder-move-label { display: grid; gap: 8px; }
+.reminder-move-label select { color: var(--label); background: var(--background); padding: 10px; }
+.reminder-columns {
+    display: flex;
+    gap: 16px;
+    padding: 0 24px 16px;
+    block-size: 100%;
+    overflow-x: auto;
+}
+.reminder-column {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 360px;
+    min-block-size: 0;
+    background: var(--background-secondary);
+    border-radius: 12px;
+}
+.reminder-column h2 { margin: 0; padding: 16px; font-size: var(--title-2); }
+.reminder-column .virtual-viewport { flex: 1; min-block-size: 0; }
+.reminder-column .reminder-row { padding-inline-start: calc(16px + var(--depth)*18px); padding-inline-end: 12px; }
+@media(max-width:1023px) {
+    .reminder-selection-toolbar { padding-inline: 16px; }
+    .reminder-row { touch-action: pan-y; }
+}
+
+.reminder-selection-receipt { padding: 8px 24px; font-size: var(--callout); }
+.reminder-selection-receipt ul { max-block-size: 24dvh; overflow: auto; padding: 0; list-style: none; }
+.reminder-selection-receipt li { display: flex; justify-content: space-between; gap: 12px; padding-block: 5px; }
+.reminder-selection-receipt li>span:first-child { flex: 1; overflow-wrap: anywhere; }
+
+.reminder-select>span { display: grid; place-items: center; inline-size: 24px; block-size: 24px; border: 1.5px solid var(--reminder-blue); border-radius: 5px; }
+.reminder-select[aria-checked=true]>span { background: var(--reminder-blue); }
+.reminder-select .icon { inline-size: 18px; block-size: 18px; }
