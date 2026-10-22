@@ -276,7 +276,7 @@ Ported from Apple's phrasing; localizable keys live in the string catalog.
 - **Reactions:** "Loved “…”", "Liked", "Disliked", "Laughed at", "Emphasized", "Questioned", "Reacted 🎉 to …".
 - **Reaction removals:** "Removed a heart from “…”", "Removed a like from “…”" and so on; never a preview bubble.
 - **Attachments:** "Attachment: N Images", "Video", "Audio Message", "Location", "Contact Card", "Sticker".
-- **Group events:** "X named the conversation “…”", "X added Y", "X left the conversation", "X changed the group photo".
+- **Group events:** "X named the conversation “…”", "X added Y", "X left the conversation", "X changed the group photo", "X removed the group photo".
 - **Unsent:** "You unsent a message".
 - **Status:** "Not Delivered", "Delivered Quietly", "Notify Anyway".
 

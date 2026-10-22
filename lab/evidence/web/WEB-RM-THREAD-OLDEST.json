@@ -1,38 +1,75 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[194.64 246.02 263.3] cpu_idle=49% cpus=8 other_heavy=2"
+    "summary": "air: load=[25.02 26.59 32.83] cpu_idle=27% cpus=8 other_heavy=2"
   },
-  "run_id": "run_01M5HMDYBAXQWAJ4F801K1SAGF",
+  "run_id": "run_01M5HSWEWT6WAA6QW3EXVHR9CN",
   "metrics": {
+    "browser_budget_ms": 180000,
     "capture_observer_resets": 0,
+    "demo_messages": 104900,
+    "demo_startup_ms": 147439,
+    "fixture_setup_ms": 147439,
+    "fixture_snapshot": {
+      "disk_bytes": 518402048,
+      "entry_bytes": 518409728,
+      "cache_bytes": 0,
+      "blob_payloads": 58,
+      "key": "40c68c00932ccffdfa3cc27fb8889db72fb50f7fd46e1ad6d400db0146de27a9",
+      "cache_hit": false,
+      "build_ms": 147068,
+      "copy_ms": 2874,
+      "records": 105134,
+      "fresh_digest": "f73d008d5d705eb41f9b21109da30df0d97117cec8c882765429949304f4bcc0",
+      "copy_digest": "f73d008d5d705eb41f9b21109da30df0d97117cec8c882765429949304f4bcc0",
+      "verified": true,
+      "copy_method": "clonefile"
+    },
     "matrix": [
-      "webkit-light-phone",
-      "webkit-light-desktop",
-      "chromium-light-phone",
       "chromium-light-desktop"
     ],
+    "report": "lab/evidence/private/web/reports/WEB-RM-THREAD-OLDEST-chromium-light-desktop-playwright.json",
     "reports": [
-      null
+      "lab/evidence/private/web/reports/WEB-RM-THREAD-OLDEST-chromium-light-desktop-playwright.json"
     ],
+    "server": "gateway",
     "setups": [
       {
-        "fixture_setup_ms": null,
-        "fixture_snapshot": null,
-        "project": "webkit-light-phone"
+        "fixture_setup_ms": 147439,
+        "fixture_snapshot": {
+          "disk_bytes": 518402048,
+          "entry_bytes": 518409728,
+          "cache_bytes": 0,
+          "blob_payloads": 58,
+          "key": "40c68c00932ccffdfa3cc27fb8889db72fb50f7fd46e1ad6d400db0146de27a9",
+          "cache_hit": false,
+          "build_ms": 147068,
+          "copy_ms": 2874,
+          "records": 105134,
+          "fresh_digest": "f73d008d5d705eb41f9b21109da30df0d97117cec8c882765429949304f4bcc0",
+          "copy_digest": "f73d008d5d705eb41f9b21109da30df0d97117cec8c882765429949304f4bcc0",
+          "verified": true,
+          "copy_method": "clonefile"
+        },
+        "project": "chromium-light-desktop"
       }
-    ]
+    ],
+    "template_cold_setup_ms": {
+      "generate": 4868,
+      "list": 0,
+      "seed": 134863
+    }
   },
   "scenario": "WEB-RM-THREAD-OLDEST",
   "level": "web",
-  "passed": false,
-  "git_sha": "cf83f696772a4020392117fdb01f10f19f78a7a3",
-  "at": "2026-10-22T11:02:38.187308Z",
+  "passed": true,
+  "git_sha": "c5cfcd05dacdf64727ca2a2023a7bd36fd699260",
+  "at": "2026-10-22T12:37:56.769478Z",
   "assertions": [
     {
-      "name": "webkit-light-phone:web_fixture_snapshot",
-      "passed": false,
-      "detail": "dataset messages observations 40960..45056: Post \"http://sim/dataset\": context deadline exceeded"
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/thread-oldest.spec.ts:4:1 › WEB-RM-THREAD-OLDEST oldest anchor pages forward through the huge archive (2.5s)\n\n  1 passed (4.4s)\n"
     },
     {
       "name": "credential_backend_override_restored",

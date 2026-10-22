@@ -1,0 +1,85 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[94.3 61.14 42.29] cpu_idle=46% cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5HTDVS04FHBMP22KK1H20BN",
+  "metrics": {
+    "browser_budget_ms": 180000,
+    "capture_observer_resets": 0,
+    "demo_messages": 5000,
+    "demo_startup_ms": 9355,
+    "fixture_setup_ms": 9355,
+    "matrix": [
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "chromium-light-phone",
+      "chromium-light-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-MSG-GROUP-EVENTS-webkit-light-phone-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-MSG-GROUP-EVENTS-webkit-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-GROUP-EVENTS-webkit-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-GROUP-EVENTS-chromium-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-GROUP-EVENTS-chromium-light-desktop-playwright.json"
+    ],
+    "server": "gateway",
+    "setups": [
+      {
+        "fixture_setup_ms": 9355,
+        "fixture_snapshot": null,
+        "project": "webkit-light-phone"
+      },
+      {
+        "fixture_setup_ms": 11639,
+        "fixture_snapshot": null,
+        "project": "webkit-light-desktop"
+      },
+      {
+        "fixture_setup_ms": 8538,
+        "fixture_snapshot": null,
+        "project": "chromium-light-phone"
+      },
+      {
+        "fixture_setup_ms": 9221,
+        "fixture_snapshot": null,
+        "project": "chromium-light-desktop"
+      }
+    ]
+  },
+  "scenario": "WEB-MSG-GROUP-EVENTS",
+  "level": "web",
+  "passed": true,
+  "git_sha": "c9a678ad046c4cdccdfdddecdd922cf424c37761",
+  "at": "2026-10-22T12:47:27.008506Z",
+  "assertions": [
+    {
+      "name": "webkit-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/transcript-group-events.spec.ts:4:1 › WEB-MSG-GROUP-EVENTS photo removal is not a member removal (4.4s)\n\n  1 passed (9.0s)\n"
+    },
+    {
+      "name": "webkit-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/transcript-group-events.spec.ts:4:1 › WEB-MSG-GROUP-EVENTS photo removal is not a member removal (5.5s)\n\n  1 passed (10.6s)\n"
+    },
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/transcript-group-events.spec.ts:4:1 › WEB-MSG-GROUP-EVENTS photo removal is not a member removal (3.3s)\n\n  1 passed (6.0s)\n"
+    },
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/transcript-group-events.spec.ts:4:1 › WEB-MSG-GROUP-EVENTS photo removal is not a member removal (2.6s)\n\n  1 passed (5.1s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
