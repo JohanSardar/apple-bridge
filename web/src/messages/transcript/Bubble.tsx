@@ -25,7 +25,9 @@ export function Bubble(props:{bubble:BubbleLayout;row:TranscriptRow;handles:Hand
     createEffect(()=>onCleanup(attachBubbleEffect(element,props.row.item.data.effect,{arrival:Boolean(props.arrival)})));
     createEffect(()=>{if(props.highlight)onCleanup(highlightMessage(element));});
     onMount(()=>{if(props.arrival&&!props.row.sent)onCleanup(receiveBubble(slot,false));});
-    onMount(()=>onCleanup(observeBubbleSize(element,(width,height)=>setSize({width,height}))));
+    createEffect(()=>{
+        if(tailed()||props.stickers?.length)onCleanup(observeBubbleSize(element,(width,height)=>setSize(previous=>previous?.width===width&&previous.height===height?previous:{width,height})));
+    });
     const part=()=>fields(props.bubble.part),content=()=>text(props.bubble.part.text)||text(props.row.item.data.text);
     const tailed=()=>props.bubble.tail&&(!props.bubble.media||audio()||card()),green=()=>props.row.sent&&/sms|rcs/iu.test(props.row.service),gradient=()=>fillID;
     const attachment=()=>props.row.item.attachments?.find(value=>value.id===props.bubble.part.attachment_id);
