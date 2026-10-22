@@ -11,3 +11,6 @@
 .composer-error{color:var(--red)}
 .composer-status .button{font-size:inherit;padding:0 4px;min-height:24px}
 @media(max-width:699px){.message-composer{padding-inline:10px}.composer-send{width:30px;height:30px;margin-bottom:5px}.composer-field{min-height:42px}}
+
+.composer-quote{display:flex;align-items:center;gap:8px;margin:0 4px 8px;padding:8px 4px 8px 12px;border-left:3px solid var(--send-color);border-radius:3px;color:var(--label-secondary);background:var(--fill-tertiary)}
+.composer-quote>div{flex:1;min-width:0}.composer-quote small{font-size:var(--caption-1)}.composer-quote p{margin:3px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--label)}
