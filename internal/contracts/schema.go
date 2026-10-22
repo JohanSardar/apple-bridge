@@ -205,6 +205,9 @@ func OperationSchema(d OperationDescriptor) map[string]any {
 		}
 		args["required"] = required
 		properties["args"] = args
+		if d.Source == Messages {
+			applyMessagesParitySchema(d.Name, s, args)
+		}
 		if d.Source != Messages && d.Name != "reminders.create" && d.Name != "reminders.create_list" && d.Name != "calendar.create_event" && d.Name != "calendar.create_calendar" {
 			s["required"] = []string{"args", "expected_version"}
 		}

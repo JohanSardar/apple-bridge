@@ -15,24 +15,24 @@ public enum MessagesAction: String, Sendable {
 @UIActor
 enum MessagesAccessibility {
     static var available: Bool { AXIsProcessTrusted() }
-    private static func value(_ element: AXUIElement, _ attribute: String) -> String {
+    static func value(_ element: AXUIElement, _ attribute: String) -> String {
         var result: CFTypeRef?
         guard AXUIElementCopyAttributeValue(element, attribute as CFString, &result) == .success else { return "" }
         return (result as? NSAttributedString)?.string ?? (result as? URL)?.absoluteString ?? result as? String ?? ""
     }
-    private static func children(_ element: AXUIElement) -> [AXUIElement] {
+    static func children(_ element: AXUIElement) -> [AXUIElement] {
         var result: CFTypeRef?
         guard AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &result) == .success else { return [] }
         return result as? [AXUIElement] ?? []
     }
-    private static func matching(_ root: AXUIElement, budget: inout Int, predicate: (AXUIElement) -> Bool) -> [AXUIElement] {
+    static func matching(_ root: AXUIElement, budget: inout Int, predicate: (AXUIElement) -> Bool) -> [AXUIElement] {
         guard budget > 0, value(root, kAXRoleAttribute) != kAXMenuBarRole else { return [] }
         budget -= 1
         var result = predicate(root) ? [root] : []
         for child in children(root) { result += matching(child, budget: &budget, predicate: predicate) }
         return result
     }
-    private static func rootApplication() throws -> (AXUIElement, pid_t) {
+    static func rootApplication() throws -> (AXUIElement, pid_t) {
         guard available, let app = MessagesNavigation.application, NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier else {
             try? PrivateReport.write(["stage": "frontmost_application"], to: PrivateReport.validate(PrivateReport.directory.appendingPathComponent("messages-prepare-diagnostic.json").path))
             throw SourceFailure.conflict
@@ -41,7 +41,7 @@ enum MessagesAccessibility {
         AXUIElementSetMessagingTimeout(root, 0.25)
         return (root, app.processIdentifier)
     }
-    private static func target(_ root: AXUIElement, prepared: Prepared) throws -> AXUIElement {
+    static func target(_ root: AXUIElement, prepared: Prepared) throws -> AXUIElement {
         let guid = prepared.action["native_key"].string
         guard !guid.isEmpty else { throw SourceFailure.capabilityUnproven }
         var budget = 4000
@@ -120,7 +120,7 @@ enum MessagesAccessibility {
                   (actions as? [String] ?? []).contains(where: { $0.hasPrefix("Name:" + prepared.action["messages"]["emoji"].string + "\n") }) else { throw SourceFailure.capabilityUnproven }
         }
     }
-    private static func press(_ root: AXUIElement, title: String) throws {
+    static func press(_ root: AXUIElement, title: String) throws {
         let deadline = Date().addingTimeInterval(2)
         repeat {
             var budget = 4000

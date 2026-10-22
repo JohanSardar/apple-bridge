@@ -264,7 +264,7 @@ func Start(ctx, Config) error
 
 | Collection | Key data fields |
 |---|---|
-| `messages.chat` | `service` (iMessage/SMS/RCS), `style` (direct/group), `display_name`, `participants[]` (handle ids), `is_archived`, `last_read_at`, `is_unread?` (explicit chat unread marker), `capabilities` (per-chat allowed actions), `filter` (`known|unknown`), `is_spam` (native Junk tier), `group_photo_attachment_id?`, `read_receipts` (`on|off|default`), `muted_until?`, `pinned_index?`, `deleted_at?`, `recoverable_until?` |
+| `messages.chat` | `service` (iMessage/SMS/RCS), `style` (direct/group), `display_name`, `participants[]` (handle ids), `is_archived`, `last_read_at`, `is_unread?` (explicit chat unread marker), `capabilities` (per-chat allowed actions), `filter` (`known|unknown`), `is_spam` (native Junk tier), `group_photo_attachment_id?`, `read_receipts` (`on|off|default`), `muted?` (known Hide Alerts boolean), `muted_until?`, `pinned_index?`, `deleted_at?`, `recoverable_until?` |
 | `messages.handle` | `address` (phone/email), `service`, `contact_id?` |
 | `messages.message` | `chat_id`, `sender_handle_id?`, `is_from_me`, `sent_at`, `parts[]` (`{index, kind: text|attachment|genmoji, text?, attachment_id?, description?}`), `text` (joined plain text), `decode_status` (`decoded|partial|undecoded`), `raw_body_digest?`, `reply_to_id?`, `thread_originator_id?`, `edited_at?`, `edit_history[]`, `retracted_parts[]`, `retracted_at?`, `delivered_at?`, `read_at?`, `error_code`, `effect?`, `kind` (`message|group_event|system`), `group_event?` (`kind`, raw `item_type/action_type/title`, `target_handle_id?`, `actor_handle_id?`), `balloon?` (§23.12; includes `decode_status` and `raw_payload_digest?` for failed archives), `audio` (`is_audio_message, played_at?, expirable, kept?, transcription?`), `schedule?` (`state, scheduled_for`), `subject?`, `delivery` (`quietly, notified_anyway`), `is_spam`, `has_unseen_mention`, `via_satellite`, `is_sos`, `formatting[]` (§23.12 UTF-16 ranges), `deleted_at?`, `recoverable_until?` |
 | `messages.reaction` | `message_id`, `part_index`, `sender_handle_id?`, `is_from_me`, `kind` (love/like/dislike/laugh/emphasize/question/emoji/sticker), `emoji?`, `removed` |
@@ -1283,7 +1283,7 @@ W1 scenarios:
 - `filter: known|unknown`, from `is_filtered` and contact linkage.
 - `group_photo_attachment_id?`.
 - `read_receipts: on|off|default`.
-- `muted_until?` and `pinned_index?`, only if the Mac exposes them reliably without UI scraping. Otherwise null, with `coverage.missing`.
+- `muted?` is the known Hide Alerts boolean, independent of an expiry. `muted_until?` and `pinned_index?` are emitted only when reliably captured. Unknown values stay null/absent with `coverage.missing`; a permanent mute never invents an expiry. A known `muted` boolean takes precedence over the legacy expiry projection.
 
 Recently Deleted becomes `deleted_at` + `recoverable_until` on messages and chats, from the recoverable tables.
 
@@ -1441,6 +1441,10 @@ Items needing a second iMessage identity are `limited` at the real level (DECISI
 | Groups (create, rename, photo, add, remove, leave) | existing | Accessibility; real proofs RCS via Ben; iMessage-group parts `limited` |
 | Typing indicators | Accessibility tree of the open chat (investigate) | not feasible without driving the Mac's UI per keystroke; hidden unless reading proves reliable |
 | Link preview on send | sender-side preview generation | investigate whether Messages generates it for AppleScript sends; otherwise hidden |
+
+**Helper A command contract.** `messages.pin({id,pinned_index})` uses -1 to unpin and 0–8 to insert/reorder; the pin set stays contiguous and has at most nine items. `messages.mute({id,muted})` records a known boolean without inventing a mute expiry. `messages.set_read_receipts({id,read_receipts})` accepts on/off/default. `messages.recover_chat({id})` and `messages.delete_chat_permanently({id})` require a recoverable conversation. All require `expected_version`; recovery and purge affect only that conversation's recoverable members. Simulation proves these transitions; it does not establish native support.
+
+The signed Helper's `selftest messages-parity --report <private-report>` uses an unused own handle and registers cleanup before sending. It never falls back to an existing conversation. Its per-OS-build ledger publishes exact failure reasons and leaves unproven operations out of capabilities. The 25G241 attempt returned an indeterminate isolated-fixture send; no native parity variant was enabled. Tagged cleanup found zero active messages; the late-effect reconciliation registration is retained. Mute capture may use only a property independently identified by an AX/native-properties round trip, and only for the service used in that proof; it never guesses a key. Pin order, receipt mutation and exact Recently Deleted AX targets remain unproven and hidden.
 
 **UI:** the W4 rows of `design/web/messages.md` (pinned grid drag reorder, mute bell, Send Later bubble and sheet, long-press send effect picker with live preview, formatting toolbar, mention suggestions, audio message recorder with waveform, Recently Deleted actions, group management in details).
 

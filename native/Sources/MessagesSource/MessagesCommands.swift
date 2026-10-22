@@ -28,7 +28,7 @@ public actor MessagesCommands {
     }
     public func capabilities() -> [String] {
         let routes = proofs()
-        return Self.operations.filter { proven($0, routes: routes) } + MessagesSendVariants.capabilities()
+        return Self.operations.filter { proven($0, routes: routes) } + MessagesSendVariants.capabilities() + MessagesParity.coverage().filter { $0["proven"].bool }.map { $0["operation"].string }
     }
     public func operationCoverage() -> JSON {
         let routes = proofs()
@@ -42,7 +42,7 @@ public actor MessagesCommands {
         return .array(Self.operations.map { operation in
             let supported = proven(operation, routes: routes)
             return .object(["operation": .string(operation), "proven": .bool(supported), "reason": .string(supported ? "proven_routes_and_parts_only" : reasons[operation].map { Set($0).sorted().joined(separator: ",") } ?? "route_proof_required")])
-        } + MessagesSendVariants.coverage())
+        } + MessagesSendVariants.coverage() + MessagesParity.coverage())
     }
     private func recordProof(_ route: JSON, parts: [JSON]) throws {
         var routes=proofs()
@@ -151,6 +151,7 @@ public actor MessagesCommands {
         let action = command["action"]
         if let agentPolicy, FileManager.default.fileExists(atPath: agentPolicy.path), action["op"].string != "messages.send" { throw SourceFailure.invalid }
         if action["op"].string == "messages.keep_audio" { throw SendVariantFailure.keptReadbackUnavailable }
+        if MessagesParity.operations.contains(action["op"].string) { return try await MessagesParity.prepare(command, path: path) }
         if action["op"].string == "messages.create_group" { return try prepareGroup(command) }
         if action["op"].string != "messages.send" {return try await prepareAccessibility(command)}
         let args = action["messages"]
@@ -378,6 +379,7 @@ public actor MessagesCommands {
             guard route==prepared.nativeState["destination"],labCommands || MessagesSendVariants.proven(MessagesSendVariants.operation(prepared.action["messages"]) ?? "",route:route,args:prepared.action["messages"]) else { throw SourceFailure.capabilityUnproven }
             return try await MessagesSendVariants.dispatch(prepared,path:path)
         }
+        if MessagesParity.operations.contains(prepared.action["op"].string) { return try await MessagesParity.dispatch(prepared, path: path) }
         if prepared.action["op"].string == "messages.create_group" { return try await dispatchGroup(prepared) }
         if prepared.action["op"].string != "messages.send" {
             let result = try await dispatchAccessibility(prepared)

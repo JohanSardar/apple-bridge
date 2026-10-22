@@ -79,7 +79,7 @@ public enum HelperCommand {
             while !finished { RunLoop.current.run(until:Date().addingTimeInterval(0.05)) }
             return
         }
-        if arguments.first == "selftest", arguments.dropFirst().first == "messages" {
+        if arguments.first == "selftest", ["messages", "messages-parity"].contains(arguments.dropFirst().first ?? "") {
             var finished = false
             DispatchQueue.global().asyncAfter(deadline: .now() + 600) { @Sendable in
                 try? PrivateReport.write(["state": "interrupted", "reason": "selftest_deadline", "disposition": "indeterminate"], to: reportURL)
@@ -87,7 +87,9 @@ public enum HelperCommand {
             }
             Task { @MainActor in
                 do {
-                    let result = try await MessagesSelfTest.shared.run(force: arguments.contains("--force"), includeUI: !arguments.contains("--no-ui"))
+                    let result: JSON
+                    if arguments.dropFirst().first == "messages-parity" { result = try await MessagesParitySelfTest.shared.run(force: arguments.contains("--force"), includeUI: !arguments.contains("--no-ui")) }
+                    else { result = try await MessagesSelfTest.shared.run(force: arguments.contains("--force"), includeUI: !arguments.contains("--no-ui")) }
                     try JSONEncoder().encode(result).write(to: reportURL, options: .atomic)
                     try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportURL.path)
                 } catch { try? PrivateReport.write(["state": "unavailable", "reason": String(describing: error)], to: reportURL) }

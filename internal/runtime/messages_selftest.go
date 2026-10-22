@@ -14,6 +14,14 @@ import (
 )
 
 func MessagesSelfTest(ctx context.Context, app string, force, includeUI bool) (json.RawMessage, error) {
+	return messagesSelfTest(ctx, app, force, includeUI, "messages")
+}
+
+func MessagesParitySelfTest(ctx context.Context, app string, force, includeUI bool) (json.RawMessage, error) {
+	return messagesSelfTest(ctx, app, force, includeUI, "messages-parity")
+}
+
+func messagesSelfTest(ctx context.Context, app string, force, includeUI bool, variant string) (json.RawMessage, error) {
 	if goruntime.GOOS != "darwin" {
 		return nil, contracts.ErrUnsupported
 	}
@@ -24,7 +32,7 @@ func MessagesSelfTest(ctx context.Context, app string, force, includeUI bool) (j
 	defer os.Remove(report)
 	bounded, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
-	args := []string{"-n", "-W", "-g", "-a", app, "--args", "selftest", "messages", "--report", report}
+	args := []string{"-n", "-W", "-g", "-a", app, "--args", "selftest", variant, "--report", report}
 	if !includeUI {
 		args = append(args, "--no-ui")
 	}

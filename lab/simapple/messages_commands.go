@@ -112,6 +112,9 @@ func (f *fakeApple) messageValidate(a contracts.NativeAction) *contracts.Error {
 			chat = ref.Ref.NativeKey
 		}
 	}
+	if problem := f.messageParityValidate(a, data); problem != nil {
+		return problem
+	}
 	service := m.Service
 	if chat != "" {
 		o, ok := f.records[chat]
@@ -202,12 +205,12 @@ func (f *fakeApple) messageCommand(wire *applepeer.Wire, frame contracts.IPCFram
 			f.mu.Unlock()
 			return reject(contracts.ErrConflict)
 		}
-		before := f.records[a.NativeKey].Data
+		before := f.messageBefore(a)
 		if a.NativeKey != "" && len(frame.ExpectedState) > 0 {
 			var expected, native map[string]any
 			json.Unmarshal(frame.ExpectedState, &expected)
-			json.Unmarshal(before, &native)
-			for _, field := range []string{"text", "sent_at", "is_from_me", "edit_history", "retracted_parts", "display_name", "service"} {
+			json.Unmarshal(f.records[a.NativeKey].Data, &native)
+			for _, field := range []string{"text", "sent_at", "is_from_me", "edit_history", "retracted_parts", "display_name", "service", "pinned_index", "muted", "read_receipts", "deleted_at"} {
 				if value, ok := expected[field]; ok && !reflect.DeepEqual(value, native[field]) {
 					f.mu.Unlock()
 					return reject(contracts.ErrConflict)
@@ -244,7 +247,7 @@ func (f *fakeApple) messageCommand(wire *applepeer.Wire, frame contracts.IPCFram
 			f.mu.Unlock()
 			return reject(e)
 		}
-		if !reflect.DeepEqual(t.Before, f.records[t.Action.NativeKey].Data) {
+		if !reflect.DeepEqual(t.Before, f.messageBefore(t.Action)) {
 			f.mu.Unlock()
 			return reject(contracts.ErrConflict)
 		}
@@ -276,7 +279,7 @@ func (f *fakeApple) messageCommand(wire *applepeer.Wire, frame contracts.IPCFram
 		native := a.NativeKey
 		collection := strings.TrimPrefix(contracts.MessagesTargetCollection(a.Op), "messages.")
 		var data map[string]any
-		json.Unmarshal(t.Before, &data)
+		json.Unmarshal(f.records[a.NativeKey].Data, &data)
 		if data == nil {
 			data = map[string]any{}
 		}
@@ -286,6 +289,8 @@ func (f *fakeApple) messageCommand(wire *applepeer.Wire, frame contracts.IPCFram
 			put("message", key, map[string]any{"chat_id": messageReference("chat", chat), "text": text, "parts": []any{map[string]any{"index": 0, "kind": "text", "text": text}}, "is_from_me": fromMe, "sent_at": now, "decode_status": "decoded", "edit_history": []any{}, "retracted_parts": []any{}, "kind": "message", "error_code": 0}, false)
 		}
 		switch a.Op {
+		case "messages.pin", "messages.mute", "messages.set_read_receipts", "messages.recover_chat", "messages.delete_chat_permanently":
+			f.messageParityApply(a, now, put)
 		case "messages.send", "messages.reply", "messages.create_group":
 			chat := a.ListKey
 			if a.Op == "messages.reply" {
@@ -501,12 +506,21 @@ func (f *fakeApple) messageCommand(wire *applepeer.Wire, frame contracts.IPCFram
 		f.evidence[t.CommandID] = outcome
 		err := f.changedLocked(contracts.Messages)
 		revision := f.durable.Revision[contracts.Messages]
+		var purgeSnapshot []contracts.Observation
+		if a.Op == "messages.delete_chat_permanently" {
+			for _, observation := range f.records {
+				purgeSnapshot = append(purgeSnapshot, observation)
+			}
+		}
 		f.mu.Unlock()
 		if err != nil {
 			return err
 		}
 		capture := contracts.Capture{Source: contracts.Messages, Observations: observations, BlobHandles: f.blobHandles()}
-		if strings.HasPrefix(a.Op, "messages.delete_") {
+		if a.Op == "messages.delete_chat_permanently" {
+			capture = fullScanSource(purgeSnapshot, contracts.Messages)
+			capture.BlobHandles = f.blobHandles()
+		} else if strings.HasPrefix(a.Op, "messages.delete_") {
 			capture = fullScanSource(observations, contracts.Messages)
 		}
 		if fault == "outcome-without-capture" {

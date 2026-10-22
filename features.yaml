@@ -702,6 +702,19 @@ features:
       - {id: MSG-AUDIO-MESSAGE, levels: [sim, real]}
       - {id: MSG-RECENTLY-DELETED, levels: [sim, real]}
       - {id: WEB-MSG-PARITY-UI, levels: [web]}
+    limits:
+      - scenario: MSG-PINS
+        level: real
+        reason: "macOS 26.7.1 build 25G241: the unused own-handle isolated-fixture send returned indeterminate without an observed native message. Existing conversations were not used. The signed per-build parity ledger keeps this operation hidden; tagged cleanup remains registered for reconciliation."
+      - scenario: MSG-MUTE
+        level: real
+        reason: "macOS 26.7.1 build 25G241: the unused own-handle isolated-fixture send returned indeterminate without an observed native message. Existing conversations were not used. The signed per-build parity ledger keeps this operation hidden; tagged cleanup remains registered for reconciliation."
+      - scenario: MSG-READ-RECEIPTS
+        level: real
+        reason: "macOS 26.7.1 build 25G241: the unused own-handle isolated-fixture send returned indeterminate without an observed native message. Existing conversations were not used. The signed per-build parity ledger keeps this operation hidden; tagged cleanup remains registered for reconciliation."
+      - scenario: MSG-RECENTLY-DELETED
+        level: real
+        reason: "macOS 26.7.1 build 25G241: the unused own-handle isolated-fixture send returned indeterminate without an observed native message. Existing conversations were not used. The signed per-build parity ledger keeps this operation hidden; tagged cleanup remains registered for reconciliation."
     notes: Group management (W4-GROUPS) completes the existing messages.groups feature and its scenarios instead of duplicating them.
   - id: web.reminders
     title: Reminders web app (read, write, parity)
