@@ -1,0 +1,61 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[3.28 6.26 11.32] cpu_idle=79% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5HYGY3MHE0PS3EAG244BA4M",
+  "metrics": {
+    "browser_budget_ms": 180000,
+    "capture_observer_resets": 0,
+    "demo_messages": 5000,
+    "demo_startup_ms": 3720,
+    "fixture_setup_ms": 3720,
+    "matrix": [
+      "chromium-light-phone",
+      "chromium-light-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-MSG-RICH-PARTS-chromium-light-phone-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-MSG-RICH-PARTS-chromium-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-RICH-PARTS-chromium-light-desktop-playwright.json"
+    ],
+    "server": "gateway",
+    "setups": [
+      {
+        "fixture_setup_ms": 3720,
+        "fixture_snapshot": null,
+        "project": "chromium-light-phone"
+      },
+      {
+        "fixture_setup_ms": 2899,
+        "fixture_snapshot": null,
+        "project": "chromium-light-desktop"
+      }
+    ]
+  },
+  "scenario": "WEB-MSG-RICH-PARTS",
+  "level": "web",
+  "passed": true,
+  "git_sha": "ed0cff50ce20f08c7bb522c52cedb7ad95a28111",
+  "at": "2026-10-22T13:59:02.004795Z",
+  "assertions": [
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 5 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/transcript-rich-parts.spec.ts:7:1 › WEB-MSG-RICH-PARTS actual audio, file and contact cells use their fixed media reservations (4.4s)\n  ✓  2 [chromium-light-phone] › tests/transcript-rich-parts.spec.ts:17:1 › WEB-MSG-RICH-PARTS captured link, app and unknown balloons use decoded chrome without resize (13.9s)\n  ✓  3 [chromium-light-phone] › tests/transcript-rich-parts.spec.ts:25:1 › WEB-MSG-RICH-PARTS decoded Genmoji and placed stickers preserve transparent fixed geometry (1.4s)\n  ✓  4 [chromium-light-phone] › tests/transcript-rich-parts.spec.ts:33:1 › WEB-MSG-RICH-PARTS sent and received text-to-card runs put the continuous tail on the final card (3.2s)\n  ✓  5 [chromium-light-phone] › tests/transcript-rich-parts.spec.ts:42:1 › WEB-MSG-RICH-PARTS composed stacks and whole-cell viewer sources remain usable in dark appearance (2.6s)\n\n  5 passed (26.7s)\n"
+    },
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 5 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/transcript-rich-parts.spec.ts:7:1 › WEB-MSG-RICH-PARTS actual audio, file and contact cells use their fixed media reservations (3.6s)\n  ✓  2 [chromium-light-desktop] › tests/transcript-rich-parts.spec.ts:17:1 › WEB-MSG-RICH-PARTS captured link, app and unknown balloons use decoded chrome without resize (10.5s)\n  ✓  3 [chromium-light-desktop] › tests/transcript-rich-parts.spec.ts:25:1 › WEB-MSG-RICH-PARTS decoded Genmoji and placed stickers preserve transparent fixed geometry (1.5s)\n  ✓  4 [chromium-light-desktop] › tests/transcript-rich-parts.spec.ts:33:1 › WEB-MSG-RICH-PARTS sent and received text-to-card runs put the continuous tail on the final card (2.4s)\n  ✓  5 [chromium-light-desktop] › tests/transcript-rich-parts.spec.ts:42:1 › WEB-MSG-RICH-PARTS composed stacks and whole-cell viewer sources remain usable in dark appearance (2.1s)\n\n  5 passed (21.0s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

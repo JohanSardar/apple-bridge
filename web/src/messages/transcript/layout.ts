@@ -2,6 +2,7 @@ import type { BridgeRecord, ThreadItem } from '../../data/types';
 import { array, fields, messageParts, sender, text, type Handles, type Part } from '../store/types';
 import { groupEvent, headerParts, name, time, wording, type HeaderParts } from '../format';
 import { attachmentHasAlpha } from '../media/source';
+import {messageCardData} from '../media/cards';
 export const transcriptSpacing={withinRun:3,betweenRuns:9,partGap:3,dateLine:16,afterHeader:9,senderLine:16,senderNameGap:2,reactionTop:16};
 export type LayoutPrefs = { phone: boolean; selectedMessageID?:string; viewportHeight?:number; group: boolean; service?: string; atLatest?: boolean; now: Date; locale?: string; scale: number; measure: (value:string,font?:{weight?:number;italic?:boolean})=>number; expanded: ReadonlySet<string> };
 export type BubbleLayout = { part: Part; mediaAttachments?:readonly BridgeRecord[]; subject?:string; width: number; height: number; emoji: boolean; media: boolean; floating:boolean; reactions: BridgeRecord[]; tail: boolean };
@@ -40,8 +41,8 @@ function partSize(item:ThreadItem,part:Part,maxWidth:number,lineHeight:number,pr
         const dimensions=fields(attachment.data.media),size=mediaSize(dimensions,maxWidth,prefs,attachmentHasAlpha(attachment));
         return mime.startsWith('video/')||dimensions.live===true?{width:Math.min(maxWidth,Math.max(120,size.width)),height:Math.min(mediaHeightCap(prefs),Math.max(120,size.height))}:size;
     }
-    const balloon=fields(item.data.balloon),kind=text(balloon.kind);
-    if(kind==='link'||kind==='app')return {width:Math.min(maxWidth,280),height:fields(balloon[kind]).image_attachment_id?180:88};
+    const card=messageCardData(item);
+    if(card)return {width:Math.min(maxWidth,280),height:card.hasImage?180:88};
     return {width:Math.min(maxWidth,260),height:88};
 }
 export function commandPartIndex(item:ThreadItem){const index=item.data.command_part_index;return typeof index==='number'&&Number.isSafeInteger(index)&&index>=0?index:undefined;}
