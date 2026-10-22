@@ -20,10 +20,11 @@ export default function MessagePane(props:{chatID:string;messageID?:string;title
     const check=(id:string)=>{if(commands.statuses().some(command=>command.id===id))commands.check(id);else props.actions.checkID(id);};
     const send=(event:Event,content:{text:string})=>{if(!available())throw new Error('Sending unavailable');const target=reply(),id=target?commands.reply(event,target.item,target.partIndex,content.text):commands.send(event,{chat_id:props.chatID,text:content.text});setCommandID(id);props.actions.cancelReply();return id;};
     createEffect(()=>{if(props.live.status()!=='connected')setBaseline();});
-    onCleanup(()=>{chat.dispose();if(reply())props.actions.cancelReply();});
+    createEffect(()=>{const record=chat.data().records?.find(record=>record.id===props.chatID),cursor=chat.cursor();untrack(()=>props.actions.changes.observeChat(record,cursor));});
+    onCleanup(()=>{chat.dispose();props.actions.changes.leaveChat(props.chatID);if(reply())props.actions.cancelReply();});
 
     let host!:HTMLDivElement,press:{event:PointerEvent;item:ThreadItem;x:number;y:number}|undefined,timer:ReturnType<typeof setTimeout>|undefined,suppressClickUntil=0;
-    let pendingShortcut:{event:KeyboardEvent;id:string;mode:'react'|'reply';revealed?:boolean}|undefined,cancelLatest:(()=>void)|undefined,shortcutTimer:ReturnType<typeof setTimeout>|undefined,shortcutFrame=0;
+    let pendingShortcut:{event:KeyboardEvent;id:string;mode:'react'|'reply'|'edit';revealed?:boolean}|undefined,cancelLatest:(()=>void)|undefined,shortcutTimer:ReturnType<typeof setTimeout>|undefined,shortcutFrame=0;
     const anchorFor=(id:string)=>{const cell=host.querySelector<HTMLElement>('[data-message="'+CSS.escape(id)+'"]');if(cell?.closest('[inert]'))return;return cell?.hasAttribute('data-media-origin')?cell:cell?.querySelector<HTMLElement>('.bubble');};
     const revealShortcut=()=>{
         const pending=pendingShortcut;if(!pending)return;
@@ -38,20 +39,20 @@ export default function MessagePane(props:{chatID:string;messageID?:string;title
         cancelAnimationFrame(shortcutFrame);
         shortcutFrame=requestAnimationFrame(()=>{
             const pending=pendingShortcut;if(!pending)return;
-            if(!(pending.mode==='reply'?props.actions.canReplyOperation():props.actions.canReact())||host.closest('[inert]')){cancelShortcut();return;}
+            if(!(pending.mode==='reply'?props.actions.canReplyOperation():pending.mode==='edit'?props.actions.changes.canOperation('edit'):props.actions.canReact())||host.closest('[inert]')){cancelShortcut();return;}
             const item=items.get(pending.id),anchor=anchorFor(pending.id);
             if(!item||!anchor){revealShortcut();return;}
-            anchor.scrollIntoView({block:'nearest',inline:'nearest'});pendingShortcut=undefined;clearTimeout(shortcutTimer);batch(()=>{props.actions.open(pending.event,item,anchor);if(pending.mode==='reply')props.actions.beginReply(pending.event);});
+            anchor.scrollIntoView({block:'nearest',inline:'nearest'});pendingShortcut=undefined;clearTimeout(shortcutTimer);batch(()=>{props.actions.open(pending.event,item,anchor);if(pending.mode==='reply')props.actions.beginReply(pending.event);else if(pending.mode==='edit')props.actions.changes.beginEdit(pending.event);});
         });
     };
-    const latest=(event:KeyboardEvent,mode:'react'|'reply')=>{
+    const latest=(event:KeyboardEvent,mode:'react'|'reply'|'edit')=>{
         event.preventDefault();cancelShortcut();
         try{
-            const view=props.live.subscribe('thread',{chat_id:props.chatID,anchor:'latest',limit:1},{cache:false});
+            const view=props.live.subscribe('thread',{chat_id:props.chatID,anchor:'latest',limit:mode==='edit'?100:1},{cache:false});
             cancelLatest=createRoot(dispose=>{
                 createEffect(()=>{
                     const captured=view.data().items,cursor=view.cursor();if(!cursor||!captured)return;
-                    const item=captured.at(-1);dispose();view.dispose();cancelLatest=undefined;
+                    const item=mode==='edit'?captured.findLast(item=>item.data.is_from_me===true):captured.at(-1);dispose();view.dispose();cancelLatest=undefined;
                     if(!item||!host.isConnected||host.closest('[inert]'))return;
                     pendingShortcut={event,id:item.id,mode};
                     revealShortcut();
@@ -69,16 +70,30 @@ export default function MessagePane(props:{chatID:string;messageID?:string;title
         if(!item)return;
         press={event,item,x:event.clientX,y:event.clientY};timer=setTimeout(()=>{if(press){props.actions.open(press.event,press.item);if(props.actions.target()?.item.id===press.item.id)suppressClickUntil=performance.now()+750;}press=undefined;},500);
     };
+    const latestSent=props.live.subscribe('thread',{chat_id:props.chatID,anchor:'latest',limit:100},{cache:false,resetOnReconnect:true});
+    onCleanup(latestSent.dispose);
     onMount(()=>{
         const trailingClick=(event:MouseEvent)=>{if(performance.now()<suppressClickUntil){suppressClickUntil=0;event.preventDefault();event.stopImmediatePropagation();}};
         host.addEventListener('click',trailingClick,true);onCleanup(()=>host.removeEventListener('click',trailingClick,true));
         const observer=new MutationObserver(openShortcut);observer.observe(host,{childList:true,subtree:true});onCleanup(()=>observer.disconnect());
-        const keyboard=(event:KeyboardEvent)=>{const key=event.key.toLowerCase(),mode=key==='r'?'reply':'react';if(!(event.metaKey||event.ctrlKey)||event.altKey||event.shiftKey||!['t','r'].includes(key)||event.repeat||event.isComposing||!items.size||!(mode==='reply'?props.actions.canReplyOperation():props.actions.canReact())||host.closest('[inert]')||document.querySelector('dialog[open]'))return;latest(event,mode);};
+        const keyboard=(event:KeyboardEvent)=>{
+            const key=event.key.toLowerCase();
+            if(!(event.metaKey||event.ctrlKey)||event.altKey||event.shiftKey||!['t','r','e','z'].includes(key)||event.repeat||event.isComposing||!items.size||host.closest('[inert]')||document.querySelector('dialog[open]')||props.actions.changes.editor())return;
+            if(key==='z'){
+                if(event.target instanceof Element&&event.target.closest('input,textarea,[contenteditable=true]')||!props.actions.changes.canOperation('unsend')||!latestSent.cursor())return;
+                const item=latestSent.data().items?.findLast(item=>item.data.is_from_me===true),anchor=item&&anchorFor(item.id);
+                if(!item||!anchor)return;
+                batch(()=>{props.actions.open(event,item,anchor);if(props.actions.changes.canUnsend()){event.preventDefault();props.actions.changes.unsend(event);}else props.actions.close();});return;
+            }
+            const mode=key==='r'?'reply':key==='e'?'edit':'react';
+            if(!(mode==='reply'?props.actions.canReplyOperation():mode==='edit'?props.actions.changes.canOperation('edit'):props.actions.canReact()))return;
+            latest(event,mode);
+        };
         window.addEventListener('keydown',keyboard);onCleanup(()=>window.removeEventListener('keydown',keyboard));
     });
     onCleanup(()=>{cancel();cancelShortcut();props.actions.close();});
     return <div ref={host} class="message-pane" style={{display:'contents'}} onPointerDown={start} onPointerUp={cancel} onPointerCancel={cancel} onPointerMove={event=>{if(press&&Math.hypot(event.clientX-press.x,event.clientY-press.y)>10)cancel();}}>
-        <Transcript chatID={props.chatID} messageID={props.messageID} title={props.title} onObserved={(captured,cursor)=>{if(!cursor)return;items.clear();for(const item of captured)items.set(item.id,item);props.actions.observe(captured,cursor,props.chatID);commands.observe(captured,cursor,props.chatID);setBaseline(cursor);openShortcut();}} pending={()=>commands.pending().filter(item=>item.data.chat_id===props.chatID)} projectCaptured={commands.projectCaptured} deliveryNotice={notice} onCheckCommand={check} onCopyCommand={commands.copy} composer={<Composer session={props.session} draftID={props.chatID} service={service()} available={available()} reply={quote()} onCancelReply={props.actions.cancelReply} command={status()} canCheck={props.live.status()==='connected'} onSend={send} onCheck={()=>check(commandID())} onCopy={event=>{void commands.copy(event,commandID());}}/>} onMessageAction={props.actions.open}/>
+        <Transcript chatID={props.chatID} messageID={props.messageID} title={props.title} replyingTo={()=>reply()?.item.id} onObserved={(captured,cursor)=>{if(!cursor)return;items.clear();for(const item of captured)items.set(item.id,item);props.actions.observe(captured,cursor,props.chatID);commands.observe(captured,cursor,props.chatID);setBaseline(cursor);openShortcut();}} pending={()=>commands.pending().filter(item=>item.data.chat_id===props.chatID)} projectCaptured={commands.projectCaptured} deliveryNotice={notice} onCheckCommand={check} onCopyCommand={commands.copy} composer={<Composer session={props.session} draftID={props.chatID} service={service()} available={available()} reply={quote()} onCancelReply={props.actions.cancelReply} command={status()} canCheck={props.live.status()==='connected'} onSend={send} onCheck={()=>check(commandID())} onCopy={event=>{void commands.copy(event,commandID());}}/>} onMessageAction={props.actions.open}/>
         <MessageActions actions={props.actions}/>
     </div>;
 }

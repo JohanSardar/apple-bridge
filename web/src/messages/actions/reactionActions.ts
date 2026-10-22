@@ -2,6 +2,7 @@ import {createSignal,onCleanup} from 'solid-js';
 import type {LiveClient} from '../../data/live';
 import type {CommandState,Cursor,ThreadItem} from '../../data/types';
 import {withInput} from '../../data/input';
+import {createMessageChanges} from './messageChanges';
 export const classicReactions = [
     {kind:'love',label:'Love',symbol:'❤️'},{kind:'like',label:'Like',symbol:'👍'},
     {kind:'dislike',label:'Dislike',symbol:'👎'},{kind:'laugh',label:'Laugh',symbol:'😂'},
@@ -26,6 +27,7 @@ export function createMessageActions(live:LiveClient,capabilities:{allowed:(oper
     let flightKey=0;
     const changed=()=>setRevision(value=>value+1);
     const current=()=>{const value=target();return value?{...value,item:captured.get(value.item.id)??value.item}:undefined;};
+    const changes=createMessageChanges(live,capabilities.allowed,current,()=>{setTarget();setError('');});
     const command=(intent:Intent)=>live.pending().find(value=>value.id===intent.commandID);
     const relevant=()=>{revision();const value=current();return value?[...intents.values()].filter(intent=>intent.messageID===value.item.id&&intent.partIndex===value.partIndex):[];};
     const unknown=()=>relevant().some(intent=>uncertain(command(intent)));
@@ -68,14 +70,15 @@ export function createMessageActions(live:LiveClient,capabilities:{allowed:(oper
             changed();close();
         });}catch{setError("Can't react right now. Check your connection.");}
     };
-    const checkID=(id:string)=>{if(![...intents.values()].some(intent=>intent.commandID===id))return;try{live.checkCommand(id);}catch{setError("Couldn't check this reaction. Try again.");}};
+    const checkID=(id:string)=>{if(changes.check(id))return;if(![...intents.values()].some(intent=>intent.commandID===id))return;try{live.checkCommand(id);}catch{setError("Couldn't check this reaction. Try again.");}};
     const check=()=>{for(const intent of relevant())if(uncertain(command(intent)))checkID(intent.commandID);};
-    const notice=(chatID:string)=>{
+    const reactionNotice=(chatID:string)=>{
         revision();const values=[...intents.values()].filter(intent=>intent.chatID===chatID),unknown=values.filter(intent=>uncertain(command(intent))),failed=values.filter(intent=>{const state=command(intent);return state&&!uncertain(state)&&['failed','rejected','expired'].includes(state.status);}),checks=values.filter(intent=>{const state=command(intent);return state&&!observed(state)&&state.check_error;});
         const ids=[...new Set([...unknown,...failed,...checks].map(intent=>intent.commandID))];
         const text=[unknown.length===1?'1 reaction may not have changed':unknown.length?unknown.length+' reactions may not have changed':'',failed.length===1?"1 reaction wasn't changed":failed.length?failed.length+" reactions weren't changed":'',checks.length?"Couldn't check this reaction. Try again.":''].filter(Boolean).join(' · ');
         return ids.length?{count:ids.length,command_ids:ids,text}:undefined;
     };
+    const notice=(chatID:string)=>{const values=[reactionNotice(chatID),changes.notice(chatID)].filter(value=>value!==undefined);return values.length?{count:values.reduce((sum,value)=>sum+value.count,0),command_ids:[...new Set(values.flatMap(value=>value.command_ids))],text:values.map(value=>value.text).join(' · ')}:undefined;};
     const problem=()=>{
         if(error())return error();
         if(relevant().some(intent=>{const state=command(intent);return state&&!observed(state)&&state.check_error;}))return "Couldn't check this reaction. Try again.";
@@ -87,6 +90,7 @@ export function createMessageActions(live:LiveClient,capabilities:{allowed:(oper
     const copy=(event:MouseEvent)=>{if(!event.isTrusted)return;try{withInput(event,()=>{void navigator.clipboard.writeText(text()).then(close,()=>setError("Couldn't copy this message."));});}catch{setError("Couldn't copy this message.");}};
     const observe=(items:readonly ThreadItem[],cursor:Cursor|undefined,chatID:string)=>{
         if(!cursor)return;
+        changes.observe(items,cursor,chatID);
         const ids=new Set(items.map(item=>item.id));for(const item of items)captured.set(item.id,item);
         for(const [key,intent] of intents){
             if(intent.chatID!==chatID)continue;
@@ -99,6 +103,6 @@ export function createMessageActions(live:LiveClient,capabilities:{allowed:(oper
     };
     const dispose=()=>{setTarget();setReplyTarget();captured.clear();intents.clear();setFlight();};
     onCleanup(dispose);
-    return {target:current,open,close,replying,canReplyOperation,canReply,beginReply,cancelReply,canReact,available,react,selected,unknown,busy,problem,check,checkID,notice,connected:()=>live.status()==='connected',copy,text,observe,flight,clearFlight:()=>setFlight(),dispose};
+    return {target:current,open,close,replying,canReplyOperation,canReply,beginReply,cancelReply,changes,canReact,available,react,selected,unknown,busy,problem,check,checkID,notice,connected:()=>live.status()==='connected',copy,text,observe,flight,clearFlight:()=>setFlight(),dispose};
 }
 export type MessageActionsController=ReturnType<typeof createMessageActions>;

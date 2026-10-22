@@ -1,0 +1,85 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[45.63 23.89 14.02] cpu_idle=50% cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5J285AZP1T4TTPS6X0P3X3Z",
+  "metrics": {
+    "browser_budget_ms": 180000,
+    "capture_observer_resets": 0,
+    "demo_messages": 5000,
+    "demo_startup_ms": 12100,
+    "fixture_setup_ms": 12100,
+    "matrix": [
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "chromium-light-phone",
+      "chromium-light-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-MSG-EDIT-webkit-light-phone-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-MSG-EDIT-webkit-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-EDIT-webkit-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-EDIT-chromium-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-EDIT-chromium-light-desktop-playwright.json"
+    ],
+    "server": "gateway",
+    "setups": [
+      {
+        "fixture_setup_ms": 12100,
+        "fixture_snapshot": null,
+        "project": "webkit-light-phone"
+      },
+      {
+        "fixture_setup_ms": 6612,
+        "fixture_snapshot": null,
+        "project": "webkit-light-desktop"
+      },
+      {
+        "fixture_setup_ms": 10531,
+        "fixture_snapshot": null,
+        "project": "chromium-light-phone"
+      },
+      {
+        "fixture_setup_ms": 6665,
+        "fixture_snapshot": null,
+        "project": "chromium-light-desktop"
+      }
+    ]
+  },
+  "scenario": "WEB-MSG-EDIT",
+  "level": "web",
+  "passed": true,
+  "git_sha": "7436cda3a386a9207fb56237300f653db54c3cb0",
+  "at": "2026-10-22T15:04:08.800296Z",
+  "assertions": [
+    {
+      "name": "webkit-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 15 tests using 1 worker\n\n  ✓   1 [webkit-light-phone] › tests/message-edit-actions.spec.ts:38:1 › WEB-MSG-EDIT WEB-MSG-EDIT-PLATE trusted Save edits the exact captured part with its captured version (7.7s)\n  ✓   2 [webkit-light-phone] › tests/message-edit-actions.spec.ts:70:1 › WEB-MSG-EDIT WEB-MSG-UNSEND trusted selection unsends the exact captured part once (3.3s)\n  ✓   3 [webkit-light-phone] › tests/message-edit-actions.spec.ts:93:1 › WEB-MSG-EDIT cancel and IME leave the captured message untouched (2.7s)\n  ✓   4 [webkit-light-phone] › tests/message-edit-actions.spec.ts:105:1 › WEB-MSG-EDIT WEB-MSG-UNSEND fresh proof reveals changes; synthetic Undo Send never dispatches (2.3s)\n  ✓   5 [webkit-light-phone] › tests/message-edit-actions.spec.ts:119:12 › WEB-MSG-EDIT WEB-MSG-UNSEND received capture hides both actions (2.0s)\n  ✓   6 [webkit-light-phone] › tests/message-edit-actions.spec.ts:119:12 › WEB-MSG-EDIT WEB-MSG-UNSEND future capture hides both actions (2.4s)\n  ✓   7 [webkit-light-phone] › tests/message-edit-actions.spec.ts:119:12 › WEB-MSG-EDIT WEB-MSG-UNSEND expired capture hides both actions (2.4s)\n  ✓   8 [webkit-light-phone] › tests/message-edit-actions.spec.ts:119:12 › WEB-MSG-EDIT WEB-MSG-UNSEND sms capture hides both actions (1.9s)\n  ✓   9 [webkit-light-phone] › tests/message-edit-actions.spec.ts:124:1 › WEB-MSG-EDIT WEB-MSG-UNSEND five edits and elapsed undo window hide their respective actions (2.3s)\n  ✓  10 [webkit-light-phone] › tests/message-edit-actions.spec.ts:128:1 › WEB-MSG-EDIT Check reconciles a lost edit result by original ID without another edit (3.0s)\n  ✓  11 [webkit-light-phone] › tests/message-edit-actions.spec.ts:143:1 › WEB-MSG-EDIT keyboard opens the last owned message and Enter saves once (1.4s)\n  ✓  12 [webkit-light-phone] › tests/message-edit-actions.spec.ts:151:1 › WEB-MSG-EDIT WEB-MSG-UNSEND keyboard undo preserves draft undo and unsends only a fresh native input (1.5s)\n  ✓  13 [webkit-light-phone] › tests/message-edit-actions.spec.ts:159:1 › WEB-MSG-EDIT reader Reply closes the reader and focuses the real main Composer (3.9s)\n  ✓  14 [webkit-light-phone] › tests/message-edit-actions.spec.ts:173:1 › WEB-MSG-EDIT WEB-MSG-UNSEND an elapsed undo window still permits Edit before fifteen minutes (2.9s)\n  ✓  15 [webkit-light-phone] › tests/message-edit-actions.spec.ts:177:1 › WEB-MSG-EDIT WEB-MSG-UNSEND an uncertain Undo Send is reconciled without a second unsend (3.6s)\n\n  15 passed (46.8s)\n"
+    },
+    {
+      "name": "webkit-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 15 tests using 1 worker\n\n  ✓   1 [webkit-light-desktop] › tests/message-edit-actions.spec.ts:38:1 › WEB-MSG-EDIT WEB-MSG-EDIT-PLATE trusted Save edits the exact captured part with its captured version (7.8s)\n  ✓   2 [webkit-light-desktop] › tests/message-edit-actions.spec.ts:70:1 › WEB-MSG-EDIT WEB-MSG-UNSEND trusted selection unsends the exact captured part once (6.1s)\n  ✓   3 [webkit-light-desktop] › tests/message-edit-actions.spec.ts:93:1 › WEB-MSG-EDIT cancel and IME leave the captured message untouched (7.5s)\n  ✓   4 [webkit-light-desktop] › tests/message-edit-actions.spec.ts:105:1 › WEB-MSG-EDIT WEB-MSG-UNSEND fresh proof reveals changes; synthetic Undo Send never dispatches (9.6s)\n  ✓   5 [webkit-light-desktop] › tests/message-edit-actions.spec.ts:119:12 › WEB-MSG-EDIT WEB-MSG-UNSEND received capture hides both actions (5.7s)\n  ✓   6 [webkit-light-desktop] › tests/message-edit-actions.spec.ts:119:12 › WEB-MSG-EDIT WEB-MSG-UNSEND future capture hides both actions (6.7s)\n  ✓   7 [webkit-light-desktop] › tests/message-edit-actions.spec.ts:119:12 › WEB-MSG-EDIT WEB-MSG-UNSEND expired capture hides both actions (6.1s)\n  ✓   8 [webkit-light-desktop] › tests/message-edit-actions.spec.ts:119:12 › WEB-MSG-EDIT WEB-MSG-UNSEND sms capture hides both actions (5.2s)\n  ✓   9 [webkit-light-desktop] › tests/message-edit-actions.spec.ts:124:1 › WEB-MSG-EDIT WEB-MSG-UNSEND five edits and elapsed undo window hide their respective actions (4.0s)\n  ✓  10 [webkit-light-desktop] › tests/message-edit-actions.spec.ts:128:1 › WEB-MSG-EDIT Check reconciles a lost edit result by original ID without another edit (8.5s)\n  ✓  11 [webkit-light-desktop] › tests/message-edit-actions.spec.ts:143:1 › WEB-MSG-EDIT keyboard opens the last owned message and Enter saves once (5.0s)\n  ✓  12 [webkit-light-desktop] › tests/message-edit-actions.spec.ts:151:1 › WEB-MSG-EDIT WEB-MSG-UNSEND keyboard undo preserves draft undo and unsends only a fresh native input (5.9s)\n  ✓  13 [webkit-light-desktop] › tests/message-edit-actions.spec.ts:159:1 › WEB-MSG-EDIT reader Reply closes the reader and focuses the real main Composer (7.4s)\n  ✓  14 [webkit-light-desktop] › tests/message-edit-actions.spec.ts:173:1 › WEB-MSG-EDIT WEB-MSG-UNSEND an elapsed undo window still permits Edit before fifteen minutes (5.0s)\n  ✓  15 [webkit-light-desktop] › tests/message-edit-actions.spec.ts:177:1 › WEB-MSG-EDIT WEB-MSG-UNSEND an uncertain Undo Send is reconciled without a second unsend (5.7s)\n\n  15 passed (1.7m)\n"
+    },
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 15 tests using 1 worker\n\n  ✓   1 [chromium-light-phone] › tests/message-edit-actions.spec.ts:38:1 › WEB-MSG-EDIT WEB-MSG-EDIT-PLATE trusted Save edits the exact captured part with its captured version (3.8s)\n  ✓   2 [chromium-light-phone] › tests/message-edit-actions.spec.ts:70:1 › WEB-MSG-EDIT WEB-MSG-UNSEND trusted selection unsends the exact captured part once (3.0s)\n  ✓   3 [chromium-light-phone] › tests/message-edit-actions.spec.ts:93:1 › WEB-MSG-EDIT cancel and IME leave the captured message untouched (2.7s)\n  ✓   4 [chromium-light-phone] › tests/message-edit-actions.spec.ts:105:1 › WEB-MSG-EDIT WEB-MSG-UNSEND fresh proof reveals changes; synthetic Undo Send never dispatches (2.3s)\n  ✓   5 [chromium-light-phone] › tests/message-edit-actions.spec.ts:119:12 › WEB-MSG-EDIT WEB-MSG-UNSEND received capture hides both actions (2.1s)\n  ✓   6 [chromium-light-phone] › tests/message-edit-actions.spec.ts:119:12 › WEB-MSG-EDIT WEB-MSG-UNSEND future capture hides both actions (2.1s)\n  ✓   7 [chromium-light-phone] › tests/message-edit-actions.spec.ts:119:12 › WEB-MSG-EDIT WEB-MSG-UNSEND expired capture hides both actions (2.1s)\n  ✓   8 [chromium-light-phone] › tests/message-edit-actions.spec.ts:119:12 › WEB-MSG-EDIT WEB-MSG-UNSEND sms capture hides both actions (2.1s)\n  ✓   9 [chromium-light-phone] › tests/message-edit-actions.spec.ts:124:1 › WEB-MSG-EDIT WEB-MSG-UNSEND five edits and elapsed undo window hide their respective actions (2.3s)\n  ✓  10 [chromium-light-phone] › tests/message-edit-actions.spec.ts:128:1 › WEB-MSG-EDIT Check reconciles a lost edit result by original ID without another edit (3.1s)\n  ✓  11 [chromium-light-phone] › tests/message-edit-actions.spec.ts:143:1 › WEB-MSG-EDIT keyboard opens the last owned message and Enter saves once (1.6s)\n  ✓  12 [chromium-light-phone] › tests/message-edit-actions.spec.ts:151:1 › WEB-MSG-EDIT WEB-MSG-UNSEND keyboard undo preserves draft undo and unsends only a fresh native input (2.1s)\n  ✓  13 [chromium-light-phone] › tests/message-edit-actions.spec.ts:159:1 › WEB-MSG-EDIT reader Reply closes the reader and focuses the real main Composer (3.6s)\n  ✓  14 [chromium-light-phone] › tests/message-edit-actions.spec.ts:173:1 › WEB-MSG-EDIT WEB-MSG-UNSEND an elapsed undo window still permits Edit before fifteen minutes (2.2s)\n  ✓  15 [chromium-light-phone] › tests/message-edit-actions.spec.ts:177:1 › WEB-MSG-EDIT WEB-MSG-UNSEND an uncertain Undo Send is reconciled without a second unsend (3.3s)\n\n  15 passed (41.5s)\n"
+    },
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 15 tests using 1 worker\n\n  ✓   1 [chromium-light-desktop] › tests/message-edit-actions.spec.ts:38:1 › WEB-MSG-EDIT WEB-MSG-EDIT-PLATE trusted Save edits the exact captured part with its captured version (5.9s)\n  ✓   2 [chromium-light-desktop] › tests/message-edit-actions.spec.ts:70:1 › WEB-MSG-EDIT WEB-MSG-UNSEND trusted selection unsends the exact captured part once (3.9s)\n  ✓   3 [chromium-light-desktop] › tests/message-edit-actions.spec.ts:93:1 › WEB-MSG-EDIT cancel and IME leave the captured message untouched (3.6s)\n  ✓   4 [chromium-light-desktop] › tests/message-edit-actions.spec.ts:105:1 › WEB-MSG-EDIT WEB-MSG-UNSEND fresh proof reveals changes; synthetic Undo Send never dispatches (3.5s)\n  ✓   5 [chromium-light-desktop] › tests/message-edit-actions.spec.ts:119:12 › WEB-MSG-EDIT WEB-MSG-UNSEND received capture hides both actions (2.9s)\n  ✓   6 [chromium-light-desktop] › tests/message-edit-actions.spec.ts:119:12 › WEB-MSG-EDIT WEB-MSG-UNSEND future capture hides both actions (3.1s)\n  ✓   7 [chromium-light-desktop] › tests/message-edit-actions.spec.ts:119:12 › WEB-MSG-EDIT WEB-MSG-UNSEND expired capture hides both actions (2.9s)\n  ✓   8 [chromium-light-desktop] › tests/message-edit-actions.spec.ts:119:12 › WEB-MSG-EDIT WEB-MSG-UNSEND sms capture hides both actions (3.3s)\n  ✓   9 [chromium-light-desktop] › tests/message-edit-actions.spec.ts:124:1 › WEB-MSG-EDIT WEB-MSG-UNSEND five edits and elapsed undo window hide their respective actions (3.0s)\n  ✓  10 [chromium-light-desktop] › tests/message-edit-actions.spec.ts:128:1 › WEB-MSG-EDIT Check reconciles a lost edit result by original ID without another edit (4.5s)\n  ✓  11 [chromium-light-desktop] › tests/message-edit-actions.spec.ts:143:1 › WEB-MSG-EDIT keyboard opens the last owned message and Enter saves once (2.6s)\n  ✓  12 [chromium-light-desktop] › tests/message-edit-actions.spec.ts:151:1 › WEB-MSG-EDIT WEB-MSG-UNSEND keyboard undo preserves draft undo and unsends only a fresh native input (2.2s)\n  ✓  13 [chromium-light-desktop] › tests/message-edit-actions.spec.ts:159:1 › WEB-MSG-EDIT reader Reply closes the reader and focuses the real main Composer (3.9s)\n  ✓  14 [chromium-light-desktop] › tests/message-edit-actions.spec.ts:173:1 › WEB-MSG-EDIT WEB-MSG-UNSEND an elapsed undo window still permits Edit before fifteen minutes (2.7s)\n  ✓  15 [chromium-light-desktop] › tests/message-edit-actions.spec.ts:177:1 › WEB-MSG-EDIT WEB-MSG-UNSEND an uncertain Undo Send is reconciled without a second unsend (3.9s)\n\n  15 passed (54.5s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
