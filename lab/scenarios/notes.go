@@ -16,6 +16,9 @@ import (
 )
 
 func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
+	if s.ID == "NOTE-LIST" {
+		return runNotesList(ctx, s, level)
+	}
 	sha, _ := exec.Command("git", "rev-parse", "HEAD").Output()
 	e = Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, GitSHA: strings.TrimSpace(string(sha)), At: time.Now().UTC(), Assertions: []Assertion{}, Latency: map[string]Latency{}, Hosts: []string{"air"}}
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }

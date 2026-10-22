@@ -1,0 +1,7 @@
+id: NOTE-LIST
+feature: web.notes
+levels: [sim]
+given: []
+when: [{web: {}}]
+then: []
+cleanup: []

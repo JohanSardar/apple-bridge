@@ -25,6 +25,7 @@ type OperationDescriptor struct {
 }
 
 var Operations = append(CalendarDescriptors(), []OperationDescriptor{
+	{Name: "notes.list", Version: 1, Kind: ReadOp, ReadModel: true, Source: Notes, Scope: "notes:read", Input: NotesListQuery{}, Output: NotesListResult{}, Description: "Read Notes accounts, nested folders, pinned and date-grouped notes with previews and thumbnail references; locked notes are title-only and Recently Deleted is read-only"},
 	{Name: "contacts.list", Version: 1, Kind: ReadOp, ReadModel: true, Source: Contacts, Scope: "contacts:read", Input: ContactsListQuery{}, Output: ContactsListResult{}, Description: "Read grouped contacts in deterministic A–Z sections with viewer name preferences, identity, avatar references and scope-filtered linked conversations"},
 	{Name: "reminders.items", Version: 1, Kind: ReadOp, ReadModel: true, Source: Reminders, Scope: "reminders:read", Input: ReminderItemsQuery{}, Output: ReminderItemsResult{}, Description: "Read visible reminders with sections, subtasks and attachments in the viewer time zone"},
 	{Name: "reminders.lists", Version: 1, Kind: ReadOp, ReadModel: true, Source: Reminders, Scope: "reminders:read", Input: ReminderListsQuery{}, Output: ReminderListsResult{}, Description: "Read native list and group order, tags and smart counts in the viewer time zone; unsupported counts are omitted"},

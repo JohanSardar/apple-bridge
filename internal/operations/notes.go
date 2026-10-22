@@ -35,13 +35,24 @@ func (g *LocalGateway) executeNote(r contracts.CommandRecord, p trust.Principal,
 			return reject(&contracts.Error{Code: "conflict", Message: "expected_version differs from current", Current: &current})
 		}
 		var data struct {
-			Editable string `json:"editable"`
+			Editable        string `json:"editable"`
+			FolderID        string `json:"folder_id"`
+			Locked          bool   `json:"locked"`
+			RecentlyDeleted bool   `json:"recently_deleted"`
 		}
 		if json.Unmarshal(current.Data, &data) != nil {
 			return reject(contracts.ErrCorrupt)
 		}
-		if c.Op == "notes.update" && data.Editable != "plain" {
+		if c.Op == "notes.update" && (data.Editable != "plain" || data.Locked) {
 			return reject(&contracts.Error{Code: "unsupported", Message: "rich_content"})
+		}
+		if data.RecentlyDeleted {
+			return reject(contracts.ErrUnsupported)
+		}
+		if data.FolderID != "" {
+			if err := g.writableNoteFolder(ctx, p, data.FolderID); err != nil {
+				return reject(err)
+			}
 		}
 		expected = current.Data
 		action.NativeKey, err = g.State.NativeKey(ctx, "notes.note", a.ID)
@@ -50,6 +61,9 @@ func (g *LocalGateway) executeNote(r contracts.CommandRecord, p trust.Principal,
 		}
 	}
 	if a.FolderID != "" {
+		if err := g.writableNoteFolder(ctx, p, a.FolderID); err != nil {
+			return reject(err)
+		}
 		result, readErr := g.State.Read(ctx, p.Visibility(), contracts.ReadQuery{Collection: "notes.folder", ID: a.FolderID})
 		if readErr != nil || len(result.Records) != 1 {
 			return reject(contracts.ErrNotFound)
@@ -91,4 +105,31 @@ func (g *LocalGateway) executeNote(r contracts.CommandRecord, p trust.Principal,
 		return g.transition(g.Context, r, "indeterminate", "indeterminate", nil, nil)
 	}
 	return g.outcome(g.Context, r, outcome)
+}
+
+func (g *LocalGateway) writableNoteFolder(ctx context.Context, p trust.Principal, id string) *contracts.Error {
+	seen := map[string]bool{}
+	for id != "" {
+		if seen[id] {
+			return contracts.ErrCorrupt
+		}
+		seen[id] = true
+		result, err := g.State.Read(ctx, p.Visibility(), contracts.ReadQuery{Collection: "notes.folder", ID: id})
+		if err != nil || len(result.Records) != 1 {
+			return contracts.ErrNotFound
+		}
+		var data struct {
+			ParentID        string `json:"parent_id"`
+			RecentlyDeleted bool   `json:"recently_deleted"`
+			ReadOnly        bool   `json:"read_only"`
+		}
+		if json.Unmarshal(result.Records[0].Data, &data) != nil {
+			return contracts.ErrCorrupt
+		}
+		if data.RecentlyDeleted || data.ReadOnly {
+			return contracts.ErrUnsupported
+		}
+		id = data.ParentID
+	}
+	return nil
 }
