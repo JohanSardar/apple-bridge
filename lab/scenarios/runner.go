@@ -388,6 +388,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "HELPER-IPC-RESPONSIVE" {
 		return runHelperIPC(ctx, s, level)
 	}
+	if s.ID == "NATIVE-MEDIA-YIELD" {
+		return runMediaYield(ctx, s, level)
+	}
 	if s.ID == "NATIVE-MEDIA-EXPORT-SAFETY" {
 		return runMediaExportSafety(ctx, s, level)
 	}

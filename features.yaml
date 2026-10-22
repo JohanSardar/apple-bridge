@@ -439,6 +439,7 @@ features:
       - {id: WEB-MEDIA-VARIANTS, levels: [sim, real, replica]}
       - {id: WEB-MEDIA-CAP, levels: [sim]}
       - {id: NATIVE-MEDIA-EXPORT-SAFETY, levels: [sim, real]}
+      - {id: NATIVE-MEDIA-YIELD, levels: [sim]}
     notes: Variants work on the real Air (12 read-only native variant downloads verified). Real and replica runs wait for cleanup of six tagged self-chat file bubbles (media-bubble Accessibility targeting, GUI needed once the Air's lid is open) and the cold-arrival latency measurement.
   - id: web.remote
     title: Reach from anywhere through system or embedded Tailscale Funnel

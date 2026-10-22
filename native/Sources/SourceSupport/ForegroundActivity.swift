@@ -5,12 +5,14 @@ public final class ForegroundActivity: @unchecked Sendable {
     private let lock = NSLock()
     private var active: Set<UUID> = []
     private var waiting: [CheckedContinuation<Void, Never>] = []
+    private var lastActivity = ContinuousClock.now
     private var interruptions: [UUID: @Sendable () -> Void] = [:]
 
     public func begin() -> UUID {
         let id = UUID()
         lock.lock()
         active.insert(id)
+        lastActivity = ContinuousClock.now
         let callbacks = Array(interruptions.values)
         lock.unlock()
         for callback in callbacks { callback() }
@@ -20,6 +22,7 @@ public final class ForegroundActivity: @unchecked Sendable {
     public func end(_ id: UUID) {
         lock.lock()
         active.remove(id)
+        lastActivity = ContinuousClock.now
         let ready = active.isEmpty ? waiting : []
         if active.isEmpty { waiting.removeAll() }
         lock.unlock()
@@ -36,6 +39,22 @@ public final class ForegroundActivity: @unchecked Sendable {
                 waiting.append(continuation)
                 lock.unlock()
             }
+        }
+    }
+
+    private func remainingQuiet(_ duration: Duration) -> Duration {
+        lock.lock()
+        defer { lock.unlock() }
+        if !active.isEmpty { return .milliseconds(25) }
+        return max(.zero, duration - lastActivity.duration(to: ContinuousClock.now))
+    }
+
+    public func waitUntilIdle(for duration: Duration) async throws {
+        while true {
+            try Task.checkCancellation()
+            let remaining = remainingQuiet(duration)
+            if remaining <= .zero { return }
+            try await Task.sleep(for: min(.milliseconds(25), remaining))
         }
     }
 

@@ -8,6 +8,11 @@ final class ExportAttempt: @unchecked Sendable {
     private var cancelled = false
     private var started = false
     init(_ session: AVAssetExportSession) { self.session = session }
+    var isCancelled: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return cancelled
+    }
     func cancel() {
         lock.lock()
         defer { lock.unlock() }
