@@ -115,3 +115,5 @@ Process: every change ships as a small PR (WORKER-RULES, Git and GitHub). Status
   - **Host:** Johan's own `com.excerlock.transcript-mirror` launchd job (another project, never touched by agents) runs every 30 minutes and pushes the 8 GB Air into heavy swap for part of each cycle. `heavy.sh` holds sensitive jobs and, during extreme thrash, other heavy jobs. Timing results that overlap such a window are host-invalid and rerun.
   - **Found:** every record update scans the whole FTS table (`records_fts` keyed by UNINDEXED columns). LIVE-FIX is fixing it with stable FTS row keys and a failing-first perf proof.
   - **Calendar:** a real probe (macOS 26.7.1) showed location and both alarm edits don't advance `lastModifiedDate`. The occurrence stamp is metadata plus location plus alarms, with the 900 s full rebuild as backstop (#143).
+
+- W2-LIST filter menu: elevated 94% surface with solid fallback; pointer and keyboard focus modes plus local pixel contrast are checked by WEB-MSG-FILTERS-MENU.
