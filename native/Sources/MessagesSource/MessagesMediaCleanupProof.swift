@@ -45,8 +45,18 @@ public struct MessagesMediaCleanupProof: Sendable {
         guard !value.isEmpty else { return false }
         let decoded = value.removingPercentEncoding ?? value
         if names.contains(decoded) { return true }
+        let fields = decoded.components(separatedBy: ", ")
+        if fields.count >= 3, names.contains(fields[1]) { return true }
         if let url = URL(string: value), url.isFileURL { return names.contains(url.lastPathComponent) }
         return decoded.hasPrefix("/") && names.contains(URL(fileURLWithPath: decoded).lastPathComponent)
+    }
+
+    public static func direction(_ description: String, names: Set<String>) -> Bool? {
+        let fields = description.components(separatedBy: ", ")
+        guard fields.count >= 3, !fields[0].isEmpty, names.contains(fields[1]) else { return nil }
+        if ["Your iMessage", "Your SMS", "Your RCS"].contains(fields[0]) { return true }
+        guard !fields[0].hasPrefix("Your ") else { return nil }
+        return false
     }
 
     public static func targetIndex(_ candidates: [JSON], names: Set<String>, outgoing: Bool) -> Int? {
