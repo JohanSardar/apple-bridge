@@ -191,6 +191,8 @@ func webBrowserControl(ctx context.Context, w *world.World, origin string, prepa
 			value, err = webMediaPlaybackScene(ctx, w, request.URL.Query().Get("direction") == "received")
 		case "/handles-fixture":
 			value, err = webHandlesFixture(w)
+		case "/thread-overlay-fixture":
+			value, err = webThreadOverlayFixture(w)
 		case "/reaction-fixture":
 			value, err = webReactionFixture(w)
 		case "/list-fixture":

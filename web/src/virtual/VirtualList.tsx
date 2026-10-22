@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createSignal, For, onCleanup, onMount, type JSX } from 'solid-js';
+import { createEffect, createMemo, createSignal, createUniqueId, For, onCleanup, onMount, type JSX } from 'solid-js';
 import { beginWork } from '../motion/work';
 import { Positions } from './positions';
 export type VirtualListHandle = {
@@ -25,6 +25,7 @@ export function VirtualList<T>(props: {
     ref?: (handle: VirtualListHandle) => void;
     onVisible?: (start: number, end: number) => void;
 }) {
+    const rowPrefix=createUniqueId()+'-virtual-row-';
     const controlled='selectedKey' in props;
     const selected=()=>{revision();return controlled?(props.selectedKey?keyIndex.get(props.selectedKey)??-1:-1):active();};
     let viewport!: HTMLDivElement;
@@ -124,7 +125,7 @@ export function VirtualList<T>(props: {
     onCleanup(() => { observer?.disconnect(); cancelAnimationFrame(frame); });
     createEffect(() => { const value = range(); props.onVisible?.(value.start, value.end); props.onBottom?.(positions.total-scroll()-height()<=2); });
     const keys = createMemo(() => { revision(); return items.slice(range().start,range().end).map(props.keyFor); });
-    const activeDescendant=createMemo(()=>{revision();const item=items[selected()];if(!item)return;const key=props.keyFor(item);return keys().includes(key)?'virtual-row-'+key:undefined;});
+    const activeDescendant=createMemo(()=>{revision();const item=items[selected()];if(!item)return;const key=props.keyFor(item);return keys().includes(key)?rowPrefix+key:undefined;});
     return <div ref={viewport} class="virtual-viewport" data-scroll={props.label} tabindex="0" role="listbox" aria-label={props.label} aria-activedescendant={activeDescendant()} onScroll={() => { if (!frame)
         frame = requestAnimationFrame(() => { frame = 0; const finish=beginWork('virtual-scroll'); setScroll(viewport.scrollTop); finish(); }); }} onKeyDown={event => {
             let next = selected();
@@ -154,6 +155,6 @@ export function VirtualList<T>(props: {
             const content=createMemo(()=>props.render(item(),index()));
             onMount(() => {if(!props.fixedHeights)observer?.observe(row);});
             onCleanup(() => observer?.unobserve(row));
-            return <div ref={row} id={'virtual-row-' + key} class="virtual-row" role="option" aria-selected={index() === selected()} aria-setsize={(revision(),items.length)} aria-posinset={index() + 1} data-index={index()} data-key={key} style={{ transform: `translateY(${(revision(), positions.offset(index()))}px)` }}>{content()}</div>;
+            return <div ref={row} id={rowPrefix + key} class="virtual-row" role="option" aria-selected={index() === selected()} aria-setsize={(revision(),items.length)} aria-posinset={index() + 1} data-index={index()} data-key={key} style={{ transform: `translateY(${(revision(), positions.offset(index()))}px)` }}>{content()}</div>;
         }}</For></div></div>;
 }
