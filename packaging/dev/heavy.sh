@@ -40,6 +40,7 @@ slots=2
 base=${APPLE_BRIDGE_HEAVY_BASE:-/tmp/apple-bridge-heavy}
 normal="$base"
 simlock="$base-sim-1.lock"
+lightlock="$base-light-1.lock"
 simqueue="$base-sim-queue"
 if [ -n "$light" ]; then base="$base-light"; slots=1; fi
 queue="$base-queue"
@@ -140,6 +141,25 @@ wait_thrash() {
     sleep 10
   done
 }
+# True while an exclusive gate holds the normal slots; new light jobs wait for it.
+exclusive_active() {
+  for lock in "$normal"-[0-9]*.lock; do
+    [ -d "$lock" ] || continue
+    stale "$lock" && continue
+    [ -f "$lock/cmd" ] && case "$(cat "$lock/cmd")" in --exclusive*) return 0 ;; esac
+  done
+  return 1
+}
+# Exclusive gates also take the light lane, so short checks cannot run beside a performance measurement.
+hold_light() {
+  until mkdir "$lightlock" 2>/dev/null; do
+    if stale "$lightlock"; then rm -rf "$lightlock"; continue; fi
+    sleep 1
+  done
+  echo $$ > "$lightlock/pid"
+  printf '%s\n' "--exclusive light hold" > "$lightlock/cmd"
+  held="$held $lightlock"
+}
 wait_sim_idle() {
   while [ -d "$simlock" ]; do
     if stale "$simlock"; then rm -rf "$simlock"; break; fi
@@ -155,7 +175,7 @@ run() {
   exit $?
 }
 while true; do
-  if [ "$(oldest_live "$queue")" = "$ticket" ]; then
+  if [ "$(oldest_live "$queue")" = "$ticket" ] && { [ -z "$light" ] || ! exclusive_active; }; then
     for i in $(seq 1 "$(usable)"); do
       lock="$base-$i.lock"
       case " $held " in *" $lock "*) continue ;; esac
@@ -165,7 +185,7 @@ while true; do
         printf '%s\n' "$record" > "$lock/cmd"
         held="$held $lock"
         if [ -z "$exclusive" ] || [ "$(count)" -eq "$slots" ]; then
-          if [ -z "$light" ] && sensitive "$record"; then wait_sim_idle; wait_thrash sensitive; elif [ -z "$light" ]; then wait_thrash heavy; fi
+          if [ -z "$light" ] && sensitive "$record"; then wait_sim_idle; [ -n "$exclusive" ] && hold_light; wait_thrash sensitive; elif [ -z "$light" ]; then wait_thrash heavy; fi
           label=$i
           [ -n "$exclusive" ] && label=all
           run "$label" "$@"
