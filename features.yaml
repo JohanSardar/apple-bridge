@@ -616,17 +616,15 @@ features:
     milestone: W5
     modules: [webui, native/RemindersSource, native/RemindersStore, state, operations]
     depends_on: [web.frontdoor, reminders.write]
-    status: todo
+    status: in_progress
     scenarios:
+      - {id: WEB-RM-REMINDERS-HARDENING, levels: [sim]}
       - {id: WEB-RM-REMINDERS-LISTS, levels: [sim]}
       - {id: WEB-RM-REMINDERS-ITEMS, levels: [sim]}
       - {id: WEB-RM-REMINDERS-DEMO, levels: [sim]}
       - {id: REM-STORE-READ, levels: [sim, real]}
       - {id: REM-STORE-DECODE, levels: [sim]}
       - {id: REM-STORE-PERF, levels: [sim, real]}
-      - {id: WEB-REM-READ, levels: [web]}
-      - {id: WEB-REM-WRITE, levels: [web, real]}
-      - {id: WEB-REM-PARITY, levels: [web, real]}
     notes: Gateway reminders.lists and reminders.items provide scoped counts, groups, sections, tags and recursive subtasks; UI is still todo. Store-only flag, section and tag changes currently depend on EventKit notifications. The real flag-only gateway propagation check is limited until the Helper has Reminders Apple Events authorization; if no notification arrives, follow up with a WAL FSEvents hint through the existing bounded coalescer. The native V2 UUID-array manual-order decoder is verified; early reminders, section blobs and custom filters remain unsupported pending positive fixtures at unlock. UI and remaining store decoders are still todo.
   - id: web.calendar
     title: Calendar web app (read, write, parity)
