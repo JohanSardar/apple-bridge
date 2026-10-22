@@ -1,11 +1,11 @@
 import { createEffect, createMemo, createSignal, onCleanup, type Accessor } from 'solid-js';
 import { auth } from '../auth/session';
-import type { BridgeRecord, ViewData, ViewName } from '../data/types';
+import type { BridgeRecord, Cursor, ViewData, ViewName } from '../data/types';
 export type Section = { kind: 'store' | 'list' | 'date' | 'daypart' | 'none'; id: string; title: string; list_id?: string };
 export type List = { list: BridgeRecord; count?: number; status?: string; group_id: string | null; pinned: boolean | null; sections: Section[] };
-export type Lists = ViewData & { smart?: { id: string; count?: number; status?: string }[]; lists?: List[]; tags?: { name: string; count: number }[] };
+export type Lists = ViewData & { _cursor?: Cursor; smart?: { id: string; count?: number; status?: string }[]; lists?: List[]; tags?: { name: string; count: number }[] };
 export type Item = { reminder: BridgeRecord; subtasks: Item[]; attachments: BridgeRecord[] };
-export type Items = ViewData & { sections?: { section: Section; items: Item[] }[]; count?: number };
+export type Items = ViewData & { _cursor?: Cursor; sections?: { section: Section; items: Item[] }[]; count?: number };
 export type Row = { item: Item | null; depth: number; section?: Section };
 export { smartNames } from './strings';
 export const viewerZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -17,7 +17,7 @@ export function useView<T extends ViewData>(name: ViewName, args: Accessor<Recor
         const live = auth.live(), query = args(); setValue(() => ({} as T));
         if (!live || !query) return;
         const sub = live.subscribe(name, query, { resetOnReconnect: true });
-        createEffect(() => { const data = sub.data() as T; setValue(() => data); });
+        createEffect(() => { const data = sub.data() as T; setValue(() => ({ ...data, _cursor: sub.cursor() })); });
         onCleanup(sub.dispose);
     });
     return value;

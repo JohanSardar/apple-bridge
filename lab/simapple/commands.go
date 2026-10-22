@@ -302,11 +302,24 @@ func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fenc
 		delete(patch, "id")
 		delete(patch, "list_id")
 		for k, v := range patch {
-			data[k] = v
+			if (k == "due" || k == "start" || k == "url" || k == "notes") && v == "" {
+				data[k] = nil
+			} else {
+				data[k] = v
+			}
 		}
 		if collection == "reminders.list" {
 			data["writable"] = true
 		} else {
+			if a.Op == "reminders.create" {
+				data["flagged"], data["parent_id"], data["section_id"] = false, nil, nil
+				data["tags"], data["assignment"], data["created_at"] = []string{}, nil, time.Now().UTC().Format(time.RFC3339Nano)
+				coverage := map[string]any{}
+				for _, field := range []string{"flagged", "parent_id", "section_id", "tags", "assignment", "created_at"} {
+					coverage[field] = map[string]string{"status": "complete"}
+				}
+				data["store_coverage"] = coverage
+			}
 			if _, ok := data["completed"]; !ok {
 				data["completed"] = false
 			}

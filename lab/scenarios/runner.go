@@ -421,6 +421,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if level == "web" {
 		return runWeb(ctx, s)
 	}
+	if s.ID == "WEB-REM-WRITE" && level == "real" {
+		return runRemindersWriteReal(ctx, s, level)
+	}
 	if s.ID == "WEB-MEDIA-VARIANTS" || s.ID == "WEB-MEDIA-CAP" {
 		return runMediaVariants(ctx, s, level)
 	}
@@ -1073,7 +1076,7 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		if s.ID == "CORE-SEARCH-UPDATE-PERF" {
 			duration = 10 * time.Minute
 		}
-		if level == "real" && (s.ID == "CORE-LIVE-LATENCY" || s.ID == "REM-CRUD") {
+		if level == "real" && (s.ID == "CORE-LIVE-LATENCY" || s.ID == "REM-CRUD" || s.ID == "WEB-REM-WRITE") {
 			duration = 8 * time.Minute
 		}
 		if (s.Feature == "web.relay" || s.ID == "CON-RELAY") && level == "replica" {

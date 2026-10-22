@@ -1,0 +1,111 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[5.38 8.76 9.52] cpu_idle=52% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5J4Q967SW1ZJA8Q2RSKASX1",
+  "metrics": {
+    "browser_proof": "WEB-REM-WRITE web; this level independently verifies the same commands through EventKit",
+    "capture_observer_resets": 0,
+    "cleared_notes_representation": "empty_string"
+  },
+  "scenario": "WEB-REM-WRITE",
+  "level": "real",
+  "passed": true,
+  "git_sha": "2e2e9b8e73c07e231e45b13c3f300ff2147ee6da",
+  "at": "2026-10-22T15:47:21.41598Z",
+  "assertions": [
+    {
+      "name": "private_signed_world_and_owned_tagged_fixture",
+      "passed": true
+    },
+    {
+      "name": "unique_owned_list_capture",
+      "passed": true
+    },
+    {
+      "name": "create_list_native_identity_and_observed_record_id",
+      "passed": true
+    },
+    {
+      "name": "create_blank_optional_fields",
+      "passed": true
+    },
+    {
+      "name": "eventkit_truth_blank_optional_fields_exact",
+      "passed": true
+    },
+    {
+      "name": "blank_fixture_deleted",
+      "passed": true
+    },
+    {
+      "name": "create_observed_identity",
+      "passed": true
+    },
+    {
+      "name": "eventkit_truth_create_fields_exact",
+      "passed": true
+    },
+    {
+      "name": "observed_id_locates_created_record",
+      "passed": true
+    },
+    {
+      "name": "edit_and_clear_date_url",
+      "passed": true
+    },
+    {
+      "name": "eventkit_truth_edited_fields_and_clears_exact",
+      "passed": true
+    },
+    {
+      "name": "reminders.complete_observed",
+      "passed": true
+    },
+    {
+      "name": "reminders.complete_eventkit_truth",
+      "passed": true
+    },
+    {
+      "name": "reminders.uncomplete_observed",
+      "passed": true
+    },
+    {
+      "name": "reminders.uncomplete_eventkit_truth",
+      "passed": true
+    },
+    {
+      "name": "move_observed_identity",
+      "passed": true
+    },
+    {
+      "name": "eventkit_truth_move_exact",
+      "passed": true
+    },
+    {
+      "name": "eventkit_truth_notes_cleared_on_move",
+      "passed": true
+    },
+    {
+      "name": "delete_observed_identity",
+      "passed": true
+    },
+    {
+      "name": "eventkit_truth_delete_exact",
+      "passed": true
+    },
+    {
+      "name": "owned_lists_tagged_items_cleanup_and_sweep",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": [
+    "air"
+  ]
+}

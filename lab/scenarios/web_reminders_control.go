@@ -1,6 +1,7 @@
 package scenarios
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -49,4 +50,20 @@ func webReminderPerf(w *world.World) (any, error) {
 	}
 	err := w.ControlAction("/dataset", simapple.Dataset{Records: records})
 	return map[string]any{"ok": err == nil}, err
+}
+
+func webReminderDraftRace(w *world.World) (any, error) {
+	for _, record := range demo.Generate(demo.Options{Seed: 1}).Records {
+		if record.NativeKey != "demo-rem-plants" {
+			continue
+		}
+		var data map[string]any
+		if err := json.Unmarshal(record.Data, &data); err != nil {
+			return nil, err
+		}
+		data["title"] = "[ab-test] changed while editing"
+		err := w.ControlAction("/external-change", map[string]any{"collection": "reminders.reminder", "key": record.NativeKey, "data": data})
+		return map[string]any{"ok": err == nil}, err
+	}
+	return nil, fmt.Errorf("synthetic_reminder_fixture_missing")
 }

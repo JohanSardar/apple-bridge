@@ -164,8 +164,15 @@ struct AppleTruth {
             }
             return ["status": "verified"]
         }
+        let fullFields = request["full_fields"] as? Bool == true
+        if fullFields { guard !tag.isEmpty, listName == "Bridge Test " + tag else { throw TruthFailure.invalid } }
         let records: [[String: Any]] = selected.map { reminder in
             var result: [String: Any] = ["id": reminder.calendarItemIdentifier, "title": reminder.title ?? "", "completed": reminder.isCompleted, "recurring": reminder.hasRecurrenceRules, "list": list.title]
+            if fullFields {
+                result["priority"] = reminder.priority
+                if let notes = reminder.notes { result["notes"] = notes }
+                if let url = reminder.url { result["url"] = url.absoluteString }
+            }
             if let due = reminder.dueDateComponents { result["due"] = ["year": due.year ?? 0, "month": due.month ?? 0, "day": due.day ?? 0, "hour": due.hour ?? -1, "minute": due.minute ?? -1] }
             return result
         }
