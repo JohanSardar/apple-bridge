@@ -1,4 +1,4 @@
-export type IconName = 'laptop' | 'appearance' | 'list' | 'search' | 'ellipsis' | 'messages' | 'reminders' | 'calendar' | 'contacts' | 'notes' | 'settings' | 'chevron' | 'grid' | 'key' | 'devices' | 'spark' | 'shield' | 'activity' | 'sun' | 'check' | 'close' | 'compose' | 'info' | 'share' | 'download';
+export type IconName = 'laptop' | 'appearance' | 'list' | 'search' | 'ellipsis' | 'messages' | 'reminders' | 'calendar' | 'contacts' | 'notes' | 'settings' | 'chevron' | 'grid' | 'key' | 'devices' | 'spark' | 'shield' | 'activity' | 'sun' | 'check' | 'close' | 'compose' | 'info' | 'share' | 'download' | 'phone' | 'video' | 'mail';
 export function Icon(props: {
     name: IconName;
     class?: string;

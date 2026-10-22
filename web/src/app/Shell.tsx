@@ -11,6 +11,7 @@ import { createMessageActions } from '../messages/actions/reactionActions';
 import { ConversationList } from '../messages/list/ConversationList';
 import { enterPane, reducedMotion, crossfade, springAnimation } from '../motion/animate';
 import { drag, swipeBack } from '../motion/gestures';
+const DetailsInspector=lazy(()=>import('../messages/details/DetailsInspector'));
 const NewMessage=lazy(()=>import('../messages/compose/NewMessage'));
 const MessagePane=lazy(()=>import('../messages/MessagePane'));
 export default function Shell() {
@@ -89,7 +90,8 @@ export default function Shell() {
         onCleanup(()=>{cancel();dispose();});
         return <section ref={pane} class="phone-details" role="main" aria-label={s.details}><header class="toolbar glass"><button class="icon-button" aria-label={s.back} onClick={()=>router.back()}><Icon name="chevron"/></button><h2>{s.details}</h2></header><DetailContent/></section>;
     }
-    function DetailContent() { return <div class="empty quiet-empty"><p>{s.noDetails}</p></div>; }
+    function closeInspectorForNavigation(){cancelAnimationFrame(inspectorFrame);inspectorAnimation?.cancel();inspectorFade?.cancel();setDetails(false);setInspectorVisible(false);}
+    function DetailContent() { return <Show when={hasConversation()&&chat()} keyed>{id=><Suspense><DetailsInspector live={auth.live()!} chatID={id} onShowInChat={closeInspectorForNavigation}/></Suspense>}</Show>; }
     return <div class="app-shell" classList={{ 'has-chat': Boolean(chat()), 'inspector-open': inspectorVisible() }}><aside ref={sidebar} class="sidebar" role={phone()&&!chat()?'main':undefined} inert={phone()&&Boolean(chat())}><Show when={auth.live()}>{live=><ConversationList live={live()}/>}</Show><footer class="sidebar-footer"><AppMenu/></footer></aside><div ref={resizer} class="pane-resizer" role="separator" aria-label={s.resizeSidebar} aria-orientation="vertical" aria-valuemin="280" aria-valuemax="420" aria-valuenow={appearance.sidebarWidth()} tabindex="0" onKeyDown={event => { if (['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) {
         event.preventDefault();
         const direction=getComputedStyle(sidebar).direction==='rtl'?-1:1;
