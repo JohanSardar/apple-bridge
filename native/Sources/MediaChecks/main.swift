@@ -47,9 +47,16 @@ struct MediaChecks {
             for i in 0..<16000 { buffer.floatChannelData![0][i] = tag == "sim" ? 0 : Float(sin(Double(i) * 2 * .pi * 440 / 16000) * Double(i) / 32000) }
             try file.write(from: buffer)
             print("synthetic HEIC, MOV and CAF created")
-        case "derive":
+        case "poster-safety":
+            try await PosterChecks.run(URL(fileURLWithPath: args[2]))
+        case "poster-cache":
             let file = URL(fileURLWithPath: args[2])
             let digest = SHA256.hash(data: try Data(contentsOf: file)).map { String(format: "%02x", $0) }.joined()
+            guard let result = MediaDerivatives.cached(digest) else { throw CheckFailure.mismatch }
+            print(String(data: try JSONSerialization.data(withJSONObject: ["needs_upgrade": MediaDerivatives.needsPosterUpgrade(result)]), encoding: .utf8)!)
+        case "derive":
+            let file = URL(fileURLWithPath: args[2])
+            let digest = args.count > 3 ? args[3] : SHA256.hash(data: try Data(contentsOf: file)).map { String(format: "%02x", $0) }.joined()
             let result = try await MediaDerivatives.make(file, digest: digest)
             print(String(data: try JSONEncoder().encode(result), encoding: .utf8)!)
         default: throw CheckFailure.mismatch

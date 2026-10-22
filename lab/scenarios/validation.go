@@ -75,7 +75,7 @@ func validateScenario(s Scenario) error {
 			for action, options := range step {
 				var target any
 				switch phase + "/" + action {
-				case "when/helper_ipc", "when/native_media_export_safety", "when/native_media_yield", "when/reminders_store_perf", "when/reminders_store", "when/media_variants", "when/readmodels", "when/web", "when/usage", "when/notes", "when/messages_commands", "when/calendar_journey", "when/contacts", "when/session_soak", "when/live_backfill", "when/restart_helper", "when/tcc_ready", "when/reminders_external", "when/reminders_crud", "when/reminders_list", "when/reminders_recurring", "when/reminders_permission_loss":
+				case "when/helper_ipc", "when/native_media_export_safety", "when/native_media_yield", "when/native_media_posters", "when/reminders_store_perf", "when/reminders_store", "when/media_variants", "when/readmodels", "when/web", "when/usage", "when/notes", "when/messages_commands", "when/calendar_journey", "when/contacts", "when/session_soak", "when/live_backfill", "when/restart_helper", "when/tcc_ready", "when/reminders_external", "when/reminders_crud", "when/reminders_list", "when/reminders_recurring", "when/reminders_permission_loss":
 					target = &struct{}{}
 				case "cleanup/fixture":
 					target = &fixtureCleanupOptions{}

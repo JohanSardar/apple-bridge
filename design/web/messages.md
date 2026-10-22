@@ -100,7 +100,7 @@ A per-part `delivery_failed` with a captured record uses that failed row, withou
 | Satellite / SOS / Check In | rare | Label "via satellite"; Check In as a placeholder card | `—` | placeholder |
 | Chat background (iOS 26) | — | Show the background image behind the transcript when readable | `—` | W4 / hide |
 
-Videos and Live Photos reserve at least 120 px on the short side, within the available width and height caps, with centered cover cropping. Images and stickers keep the no-upscale rule.
+Videos and Live Photos reserve at least 120 px on the short side, within the available width and height caps, with centered cover cropping. Images and stickers keep the no-upscale rule. Video and Live Photo poster variants target a 360 px short side with a 1.5 MP total budget, reducing the short side only for extreme aspect ratios. Video posters use the original video frame; Live Photo posters use the oriented key still. ThumbHash placeholders are unchanged.
 
 ### 3.3 Transcript behavior
 

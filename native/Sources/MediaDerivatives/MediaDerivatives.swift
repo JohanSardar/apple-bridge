@@ -61,10 +61,24 @@ public enum MediaDerivatives {
         try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: root.path)
         let lease = try await MediaLease.acquire(directory)
         defer { withExtendedLifetime(lease) {} }
+        try await MediaWork.yield()
         try MediaLease.removeAbandonedExports(directory)
         try MediaLease.removeStageFiles(directory)
         defer { try? MediaLease.removeStageFiles(directory) }
-        if let existing = cached(digest), existing.awaitingLive != true { return existing }
+        if let existing = cached(digest), existing.awaitingLive != true {
+            guard needsPosterUpgrade(existing), posterSourceAvailable(input) else { return existing }
+            do {
+                let updated = try await upgradedPoster(input, existing: existing, directory: directory)
+                try await MediaWork.yield()
+                try persist(updated, directory: directory)
+                return updated
+            } catch {
+                try Task.checkCancellation()
+                if error is MediaSourceChanged { throw error }
+                try await MediaWork.yield()
+                return existing
+            }
+        }
         let partial = cached(digest)
         var usedCompanion: (URL, MediaSourceStamp)?
         var result: MediaResult
@@ -84,6 +98,7 @@ public enum MediaDerivatives {
                         result.derivatives["live"] = clip.derivatives["live"]
                         result.unavailable = clip.unavailable?["live"].map { ["live": $0] }
                         result.media.live = true
+                        result.derivatives["poster"] = try await stillPoster(source, width: result.media.width!, height: result.media.height!, directory: directory)
                         result.awaitingLive = false
                         break
                     }

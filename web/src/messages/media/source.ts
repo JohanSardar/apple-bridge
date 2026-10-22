@@ -8,7 +8,7 @@ export function attachmentHasAlpha(attachment: BridgeRecord): boolean {
 }
 export function mediaSource(attachment: BridgeRecord, variant: MediaVariant) {
     const blob = fields(attachment.data.blob), derivative = fields(fields(attachment.data.derivatives)[variant]);
-    const digest = text(blob.digest) || text(derivative.digest);
+    const digest = variant === 'original' ? text(blob.digest) : text(derivative.digest) || text(blob.digest);
     if (!/^[a-f0-9]{64}$/u.test(digest)) return;
     return `/web/v1/blob/${digest}?record=${encodeURIComponent(attachment.id)}&variant=${variant}`;
 }

@@ -169,7 +169,7 @@ public actor Messages: Source {
                                 mediaResults[cached.2] = result
                                 try attachMedia(result, to: &data, handles: &blobHandles)
                             }
-                            if !mediaLabPaused, (result == nil || result?.awaitingLive == true), activeMedia?.0.key != key, (mediaRetry[key] ?? .distantPast) < Date() {
+                            if !mediaLabPaused, (result == nil || result?.awaitingLive == true || result.map(MediaDerivatives.needsPosterUpgrade) == true), activeMedia?.0.key != key, (mediaRetry[key] ?? .distantPast) < Date() {
                                 let companions = MediaDerivatives.liveIdentifier(url) == nil ? [] : try reader.query("SELECT filename FROM attachment WHERE lower(filename) LIKE '%.mov' ORDER BY abs(ROWID-?)", [String(row.integer("derivative_position"))]).compactMap { reader.attachmentURL($0["filename"]) }.filter { FileManager.default.fileExists(atPath: $0.path) && !BlobDigest.isDataless($0) }
                                 var job = MediaJob(key: key, url: url, digest: cached.2, companions: companions, sticker: row.flag("is_sticker"), live: live, position: row.integer("derivative_position"))
                                 if let pending = pendingMedia[key], pending.digest == job.digest { job.queuedNS = pending.queuedNS }

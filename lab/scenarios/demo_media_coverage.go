@@ -50,6 +50,7 @@ func demoMediaCoverage(ctx context.Context, w *world.World, dataset demo.Dataset
 		}
 	}
 	add("contacts_linked_to_chat_avatars", linked > 30)
+	verifyDemoPosterResolution(mediaRecords, add)
 	mediaRecords = append(mediaRecords, contacts.Records...)
 	checked := map[string]bool{}
 	blobsOK := true

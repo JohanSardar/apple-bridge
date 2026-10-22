@@ -1,0 +1,39 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[25.48 28.34 29.46] cpu_idle=49% cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5H4VXYWQZ26NED5RQG393WJ",
+  "metrics": {
+    "poster": {
+      "cache_upgrade_preserved_video_and_thumbhash": true,
+      "edge_contrast": 0.6372549019607843,
+      "edge_minimum": 0.5,
+      "height": 360,
+      "live_key_still_mean_rgb_error": 9.333333333333334,
+      "offline_fallback_preserved": true,
+      "pixels": 1244160,
+      "width": 3456
+    },
+    "synthetic_only": true
+  },
+  "scenario": "NATIVE-MEDIA-POSTERS",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "7d2b8a6405d448023e308e877beeff923c85ce7e",
+  "at": "2026-10-22T06:30:39.325452Z",
+  "assertions": [
+    {
+      "name": "native_poster_resolution_sharpness_cache_and_live_still",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": [
+    "air"
+  ]
+}

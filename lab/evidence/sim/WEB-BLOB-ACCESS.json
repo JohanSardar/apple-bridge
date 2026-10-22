@@ -1,21 +1,21 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[4.8 7.15 8.22] cpus=8 other_heavy=0"
+    "summary": "air: load=[237.48 265.6 175.66] cpu_idle=50% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5E3Q2Z7JC2D5YMMRYNBNNN6",
+  "run_id": "run_01M5H6B1EDX0Z5G2FBYWSQ8A8T",
   "scenario": "WEB-BLOB-ACCESS",
   "level": "sim",
   "passed": true,
-  "git_sha": "a530cad13274d0630b04a4229d7518a7ecb46b1f",
-  "at": "2026-10-21T02:12:48.743038Z",
+  "git_sha": "7d2b8a6405d448023e308e877beeff923c85ce7e",
+  "at": "2026-10-22T06:56:22.989031Z",
   "assertions": [
     {
       "name": "software_passkey_enrollment",
       "passed": true
     },
     {
-      "name": "host_cookie_flags",
+      "name": "local_cookie_flags",
       "passed": true
     },
     {
@@ -36,6 +36,10 @@
     },
     {
       "name": "blob_immutable_private_etag",
+      "passed": true
+    },
+    {
+      "name": "original_blob_immutable_matches_url_digest",
       "passed": true
     },
     {
@@ -67,11 +71,35 @@
       "passed": true
     },
     {
+      "name": "derived_display_bytes_immutable_matches_url_digest",
+      "passed": true
+    },
+    {
+      "name": "explicit_derivative_immutable_bytes_match_url",
+      "passed": true
+    },
+    {
       "name": "missing_derivative_pending",
       "passed": true
     },
     {
       "name": "missing_derivative_safe_original",
+      "passed": true
+    },
+    {
+      "name": "missing_derivative_safe_original_immutable_matches_url_digest",
+      "passed": true
+    },
+    {
+      "name": "explicit_pending_derivative_is_retryable_and_not_cached",
+      "passed": true
+    },
+    {
+      "name": "explicit_unavailable_derivative_is_not_cached",
+      "passed": true
+    },
+    {
+      "name": "unavailable_variant_original_digest_keeps_legacy_fallback",
       "passed": true
     },
     {

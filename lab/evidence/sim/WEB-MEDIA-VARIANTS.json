@@ -1,17 +1,17 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[6.99 7.8 7.89] cpus=8 other_heavy=1"
+    "summary": "air: load=[115.84 73.84 48.82] cpu_idle=45% cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M5FAY7D2MRKVYEA3FDYN5NBE",
+  "run_id": "run_01M5H5GW20FQWC7S9GT3529CFJ",
   "metrics": {
     "browser_playback": "Cross-engine playback is owned by the later UI unit"
   },
   "scenario": "WEB-MEDIA-VARIANTS",
   "level": "sim",
   "passed": true,
-  "git_sha": "8d34390cc4a984b59f671b649893b0c1679d5f93",
-  "at": "2026-10-21T13:38:17.1227Z",
+  "git_sha": "7d2b8a6405d448023e308e877beeff923c85ce7e",
+  "at": "2026-10-22T06:42:05.504836Z",
   "assertions": [
     {
       "name": "seed_self",
@@ -86,6 +86,30 @@
       "passed": true
     },
     {
+      "name": "audio_native_appearance_measured",
+      "passed": true
+    },
+    {
+      "name": "audio_original_preserved",
+      "passed": true
+    },
+    {
+      "name": "audio_duration_and_64_bounded_peaks",
+      "passed": true
+    },
+    {
+      "name": "private_handles_removed",
+      "passed": true
+    },
+    {
+      "name": "audio_authorized_blob_0",
+      "passed": true
+    },
+    {
+      "name": "variant_digest_verified",
+      "passed": true
+    },
+    {
       "name": "video_native_appearance_measured",
       "passed": true
     },
@@ -127,30 +151,6 @@
     },
     {
       "name": "video_authorized_blob_0",
-      "passed": true
-    },
-    {
-      "name": "variant_digest_verified",
-      "passed": true
-    },
-    {
-      "name": "audio_native_appearance_measured",
-      "passed": true
-    },
-    {
-      "name": "audio_original_preserved",
-      "passed": true
-    },
-    {
-      "name": "audio_duration_and_64_bounded_peaks",
-      "passed": true
-    },
-    {
-      "name": "private_handles_removed",
-      "passed": true
-    },
-    {
-      "name": "audio_authorized_blob_0",
       "passed": true
     },
     {
@@ -214,6 +214,30 @@
       "passed": true
     },
     {
+      "name": "audio_native_appearance_measured",
+      "passed": true
+    },
+    {
+      "name": "audio_original_preserved",
+      "passed": true
+    },
+    {
+      "name": "audio_duration_and_64_bounded_peaks",
+      "passed": true
+    },
+    {
+      "name": "private_handles_removed",
+      "passed": true
+    },
+    {
+      "name": "audio_authorized_blob_1",
+      "passed": true
+    },
+    {
+      "name": "variant_digest_verified",
+      "passed": true
+    },
+    {
       "name": "video_native_appearance_measured",
       "passed": true
     },
@@ -262,30 +286,6 @@
       "passed": true
     },
     {
-      "name": "audio_native_appearance_measured",
-      "passed": true
-    },
-    {
-      "name": "audio_original_preserved",
-      "passed": true
-    },
-    {
-      "name": "audio_duration_and_64_bounded_peaks",
-      "passed": true
-    },
-    {
-      "name": "private_handles_removed",
-      "passed": true
-    },
-    {
-      "name": "audio_authorized_blob_1",
-      "passed": true
-    },
-    {
-      "name": "variant_digest_verified",
-      "passed": true
-    },
-    {
       "name": "sim_restart",
       "passed": true
     },
@@ -312,7 +312,17 @@
     {
       "name": "source_geometry_center_marker_poster",
       "passed": true,
-      "detail": "status=200 size=288x30 rgb16=[64037 915 0]"
+      "detail": "status=200 size=3456x360 rgb16=[65113 102 26]"
+    },
+    {
+      "name": "panorama_poster_retina_cover_resolution",
+      "passed": true,
+      "detail": "size=3456x360 pixels=1244160"
+    },
+    {
+      "name": "panorama_poster_retina_edge_contrast",
+      "passed": true,
+      "detail": "contrast=0.887526 minimum=0.500000"
     },
     {
       "name": "source_geometry_wide_decoded_frame",
@@ -330,44 +340,44 @@
   "latency": {
     "audio_appearance_to_variants_0": {
       "samples": 1,
-      "p50_ms": 169.625084,
-      "p95_ms": 169.625084,
-      "max_ms": 169.625084,
+      "p50_ms": 1063.883166,
+      "p95_ms": 1063.883166,
+      "max_ms": 1063.883166,
       "timeouts": 0
     },
     "audio_appearance_to_variants_1": {
       "samples": 1,
-      "p50_ms": 181.010209,
-      "p95_ms": 181.010209,
-      "max_ms": 181.010209,
+      "p50_ms": 1141.800333,
+      "p95_ms": 1141.800333,
+      "max_ms": 1141.800333,
       "timeouts": 0
     },
     "image_appearance_to_variants_0": {
       "samples": 1,
-      "p50_ms": 169.625084,
-      "p95_ms": 169.625084,
-      "max_ms": 169.625084,
+      "p50_ms": 1063.883166,
+      "p95_ms": 1063.883166,
+      "max_ms": 1063.883166,
       "timeouts": 0
     },
     "image_appearance_to_variants_1": {
       "samples": 1,
-      "p50_ms": 181.010209,
-      "p95_ms": 181.010209,
-      "max_ms": 181.010209,
+      "p50_ms": 1141.800333,
+      "p95_ms": 1141.800333,
+      "max_ms": 1141.800333,
       "timeouts": 0
     },
     "video_appearance_to_variants_0": {
       "samples": 1,
-      "p50_ms": 169.625084,
-      "p95_ms": 169.625084,
-      "max_ms": 169.625084,
+      "p50_ms": 1063.883166,
+      "p95_ms": 1063.883166,
+      "max_ms": 1063.883166,
       "timeouts": 0
     },
     "video_appearance_to_variants_1": {
       "samples": 1,
-      "p50_ms": 181.010209,
-      "p95_ms": 181.010209,
-      "max_ms": 181.010209,
+      "p50_ms": 1141.800333,
+      "p95_ms": 1141.800333,
+      "max_ms": 1141.800333,
       "timeouts": 0
     }
   },

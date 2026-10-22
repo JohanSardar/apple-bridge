@@ -73,6 +73,7 @@ func (f *fakeApple) blobRoutes(mux *http.ServeMux) {
 			MIME                     string `json:"mime_type"`
 			Variant                  bool   `json:"variant"`
 			MissingVariant           bool   `json:"missing_variant"`
+			UnavailableVariant       bool   `json:"unavailable_variant"`
 			RefreshBeforeUnavailable bool   `json:"refresh_before_unavailable"`
 			Busy                     int    `json:"unavailable_reads"`
 			Drops                    int    `json:"drop_reads"`
@@ -146,6 +147,9 @@ func (f *fakeApple) blobRoutes(mux *http.ServeMux) {
 							state = "pending"
 						} else {
 							f.blobs[digest] = variant
+						}
+						if a.UnavailableVariant {
+							state = "unavailable"
 						}
 						attachment["derivatives"] = map[string]any{"display": map[string]any{"digest": digest, "size": len(variant), "state": state, "mime": "image/png"}}
 					}

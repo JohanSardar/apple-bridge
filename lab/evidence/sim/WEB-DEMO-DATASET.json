@@ -1,9 +1,9 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[6.7 6.5 6.96] cpus=8 other_heavy=1"
+    "summary": "air: load=[4.06 4.48 5.59] cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M5FC4TFX960STZ7J4BJ4E880",
+  "run_id": "run_01M5GGYEMA5AGV7EBYX2FY9Z86",
   "metrics": {
     "counts": {
       "contacts.contact": 60,
@@ -150,10 +150,12 @@
       "yesterday": 2
     },
     "digest": "a6d118099da1b8262d584bd7be33fb92623f24915a940f2c49db9bee893fc4fc",
-    "verified_blob_count": 59,
+    "verified_blob_count": 58,
     "verified_blob_digests": [
+      "00896bbd4bf519e2e7663b485b11851528cd4ed6d06e06bded8caea68dd29bf2",
       "08f7d7b0e3d082fb436690f8cc617fc2b8df78f314803ade42fdb66bcec49d50",
       "0f92fecae3b249438d99c6b869a1124d7de497ab9081107bc4b3d26f4634dd57",
+      "1648cd6abacb47c1d2bf10041c26ee5cc784d1f968698f93b15a2f86a8dc8639",
       "17a83481109dc2ec94cd733e173830fa50410577774448d94ff1530ebd14dc94",
       "1d3e53281f70e730fcef19c4ae8ba20fe97c66221c3e8ca0f18b4a7a811538fa",
       "1dee5acfc625d62733c1bed8aeefb0b437e2eb21eb4a8dc0a7808a1ff4a4a197",
@@ -173,7 +175,6 @@
       "61295b71f24a6b5a3c6bfc6d11d346aa3f702463b884de99365b78852da5fac3",
       "65acd7c8d0a6dbcedc345e73b2551efd2c453e8ecc7be5c79d5082724ec83923",
       "69541b588ec71dbd6ed49639f721d205060d0447aeee106deb196e8019272233",
-      "7453dff268afc1c44114af4f337332dcff50b76b6eda55e40112e48b3673748d",
       "74d329b19e5b6f2573abef80c5a36d436248469849a592dfd23d4d0168149ed0",
       "74e3af8db1e947c0078fef0942bc499d6e2d66c3956a01abf3aed5fe136435da",
       "7ce99d1b0b68632c732fb76f26984aa80d1dcba09eb523e2e1f4705a962cf7f7",
@@ -195,7 +196,6 @@
       "b6aeb94b54caaa39e71784e1e50108bb0d6e13c38b70c1d4e023a2f51359176a",
       "be4390656bfe488692ef52cc66090ddec956af27255cf7b1c3636f36be233f54",
       "c1cedcf424db4a876cf97c48dfac695d79dd18fb480f1779240d0656581d77e3",
-      "c800ca2a924292d9ced82dde1c16c6c78ea1de3df7551c3b72297f75b7035993",
       "cfa1d53b596b7a50d666937d83a01c321b03f717f1a512e185172f98a6947669",
       "d176ebe3faf33aecffe419f850bfb2a4e3d6c6262b1a38388b975bab917b76cd",
       "d50e62bc26c9d1bb926026e017b8ebae606b16848968cfa0c67a664b59cf177c",
@@ -204,7 +204,6 @@
       "e32ba63c8e8a6d6f65ffb1e4c07ce177e8dcf66c3b80eb0b3a2b9198d975731f",
       "e5b15f7d8fcccf20ff543b37878b308b809f36225459a19b6c2144488a06380f",
       "e981d7e662dba6393bcb4a854d31a7f9ec6ce53bc47b9b39aba174e01cde2b3a",
-      "edb57641182db39dba4cc1cdca1ee22fed9c42a31ecdbbab62e256baae90ee93",
       "ee44b715d39b7f77a99c0faef845d6049af8c386ec9afd99789e3edf658541e3",
       "f795e877f21194afdb1d53a499e0216998cfab6222e573b4b387196fa10369a1",
       "f8d7bff54db68e1cdf782261c4a0f60fd8a5e6ef2dec93e34a2ed83a608eb117",
@@ -216,8 +215,8 @@
   "scenario": "WEB-DEMO-DATASET",
   "level": "sim",
   "passed": true,
-  "git_sha": "e57af6a0d78a63ed541618e227d786ac8b0ce833",
-  "at": "2026-10-21T13:59:21.853783Z",
+  "git_sha": "28c51853ba670ce2198ebdd4d367909462286be3",
+  "at": "2026-10-22T00:42:30.410468Z",
   "assertions": [
     {
       "name": "same_seed_byte_identical_records_and_blobs",
@@ -640,6 +639,14 @@
       "passed": true
     },
     {
+      "name": "demo_video_posters_fit_retina_minimum_and_pixel_budget",
+      "passed": true
+    },
+    {
+      "name": "demo_live_posters_fit_retina_minimum_and_pixel_budget",
+      "passed": true
+    },
+    {
       "name": "generated_originals_avatars_and_sim_variants_download_and_hash",
       "passed": true
     },
@@ -815,9 +822,9 @@
   "latency": {
     "default_startup": {
       "samples": 1,
-      "p50_ms": 7812.193833,
-      "p95_ms": 7812.193833,
-      "max_ms": 7812.193833,
+      "p50_ms": 4554.165458,
+      "p95_ms": 4554.165458,
+      "max_ms": 4554.165458,
       "timeouts": 0
     }
   },

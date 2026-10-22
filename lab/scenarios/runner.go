@@ -391,6 +391,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "NATIVE-MEDIA-YIELD" {
 		return runMediaYield(ctx, s, level)
 	}
+	if s.ID == "NATIVE-MEDIA-POSTERS" {
+		return runNativeMediaPosters(ctx, s, level)
+	}
 	if s.ID == "NATIVE-MEDIA-EXPORT-SAFETY" {
 		return runMediaExportSafety(ctx, s, level)
 	}
