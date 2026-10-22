@@ -73,7 +73,7 @@ Status: W6 draft, waiting for Johan's skim. The format follows `messages.md` and
 
 | Field | Store source |
 |---|---|
-| link to EventKit | `CalendarItem.unique_identifier` / `UUID` / `external_id` (the W6-STORE worker proves which equals EventKit's `calendarItemIdentifier` and the external identifier) |
+| link to EventKit | `CalendarItem.unique_identifier` / `UUID` / `external_id` (the tagged macOS 26.7.1 (25G241) fixture proves `UUID` equals EventKit's `calendarItemIdentifier`, `unique_identifier` equals its external identifier, and `Calendar.UUID` equals its calendar identifier) |
 | travel time | `CalendarItem.travel_time`, `travel_advisory_behavior`, start location via `start_location_id` → `Location` |
 | structured location | `Location.title`, `address`, `latitude`, `longitude`, `radius`, `mapkit_handle` (via `location_id`) |
 | attachments | `Attachment(owner_id → CalendarItem.ROWID, file_id → AttachmentFile)`; bytes become blobs with variants |
@@ -84,6 +84,12 @@ Status: W6 draft, waiting for Johan's skim. The format follows `messages.md` and
 | alarms (extra detail) | `Alarm.trigger_interval`, `trigger_date`, `proximity`, `location_id`, `default_alarm` |
 
 Change detection reuses the existing Calendar database hints from `f585a30`, with bounded coalescing and never one refetch per hint (see LIVE-FIX).
+
+W6-STORE reads an in-memory SQLite backup opened read-only, and checks the required schema before joining. Joins must identify exactly one item in the EventKit calendar; detached occurrences are not inferred from their master. Each store field carries `store_coverage`, and an unavailable store or uncertain identity publishes nulls with an explicit reason. Positive travel-time units, coordinate units, start locations, attendee proposals/comments, extra store alarms and attachment derivatives remain limited until a positive native fixture proves their representation. The UI hides those unverified capabilities.
+
+Locally available attachment originals become content-addressed blobs. Reads remain within the Calendar group container, reject dataless files, and authorize only registered opaque handles. No read hydrates an iCloud placeholder. AppleTruth independently counts only this run's tagged items and attachments and compares identity columns without publishing identifiers.
+
+`calendar.range` uses half-open instant bounds and floating civil dates in the viewer zone, with calendar and text filters. Timed and all-day overlap groups are separate. A bounded 16-page/8 MiB cache holds computed layouts; its revision includes the durable Calendar record sequence and subscription epoch/revision. Visibility is checked before cache lookup, and every response carries the current transaction's cursor. The 1,000-event month scenario measures REST and MCP server computation against the 10 ms p95 budget; cached pages are copied before returning.
 
 **W:** existing EventKit commands, plus the "This Event Only / All Future Events" prompt in the UI.
 

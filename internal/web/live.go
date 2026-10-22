@@ -289,11 +289,11 @@ func safeError(err error) *contracts.Error {
 	return contracts.ErrUnavailable
 }
 
-func reminderView(name string) bool {
-	return name == "reminders.lists" || name == "reminders.items"
+func readModelView(name string) bool {
+	return name == "calendar.range" || name == "reminders.lists" || name == "reminders.items"
 }
 func (l *liveSocket) view(ctx context.Context, f clientFrame) (any, error) {
-	if reminderView(f.View) {
+	if readModelView(f.View) {
 		result, err := l.server.deps.Operations.Invoke(ctx, l.identity.Principal, f.View, f.Args)
 		if err != nil {
 			return nil, err
@@ -353,7 +353,7 @@ func (l *liveSocket) subscribe(ctx context.Context, f clientFrame) {
 	if !resume {
 		data, err := l.view(ctx, f)
 		if err != nil {
-			if reminderView(f.View) {
+			if readModelView(f.View) {
 				l.send(map[string]any{"t": "error", "id": f.ID, "code": safeError(err).Code}, false)
 			} else {
 				l.failView(ctx, safeError(err).Code, "view unavailable")
@@ -407,8 +407,8 @@ func (l *liveSocket) subscribe(ctx context.Context, f clientFrame) {
 					}
 					changes = append(changes, change)
 				}
-			} else if reminderView(f.View) {
-				affected = affected || change.Record.Source == contracts.Reminders
+			} else if readModelView(f.View) {
+				affected = affected || (f.View == "calendar.range" && change.Record.Source == contracts.Calendar) || (f.View != "calendar.range" && change.Record.Source == contracts.Reminders)
 			} else if change.Record.Source == contracts.Messages || change.Record.Source == contracts.Contacts {
 				affected = true
 			}
@@ -417,14 +417,14 @@ func (l *liveSocket) subscribe(ctx context.Context, f clientFrame) {
 		if affected {
 			data, err := l.view(ctx, f)
 			if err != nil {
-				if reminderView(f.View) {
+				if readModelView(f.View) {
 					l.send(map[string]any{"t": "error", "id": f.ID, "code": safeError(err).Code}, false)
 				} else {
 					l.failView(ctx, "reset", "resubscribe required")
 				}
 				return
 			}
-			if reminderView(f.View) {
+			if readModelView(f.View) {
 				frame["changes"] = []any{map[string]any{"op": "replace", "data": data}}
 				if !l.send(frame, false) {
 					return

@@ -1,0 +1,85 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[8.16 7.53 9.25] cpu_idle=38% cpus=8 other_heavy=2"
+  },
+  "run_id": "run_01M5J4C1YJZYHY3CXFACN7HCJG",
+  "metrics": {
+    "browser_budget_ms": 180000,
+    "capture_observer_resets": 0,
+    "demo_messages": 5000,
+    "demo_startup_ms": 12576,
+    "fixture_setup_ms": 12576,
+    "matrix": [
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "chromium-light-phone",
+      "chromium-light-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/CAL-STORE-READ-webkit-light-phone-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/CAL-STORE-READ-webkit-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/CAL-STORE-READ-webkit-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/CAL-STORE-READ-chromium-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/CAL-STORE-READ-chromium-light-desktop-playwright.json"
+    ],
+    "server": "gateway",
+    "setups": [
+      {
+        "fixture_setup_ms": 12576,
+        "fixture_snapshot": null,
+        "project": "webkit-light-phone"
+      },
+      {
+        "fixture_setup_ms": 14201,
+        "fixture_snapshot": null,
+        "project": "webkit-light-desktop"
+      },
+      {
+        "fixture_setup_ms": 9389,
+        "fixture_snapshot": null,
+        "project": "chromium-light-phone"
+      },
+      {
+        "fixture_setup_ms": 7011,
+        "fixture_snapshot": null,
+        "project": "chromium-light-desktop"
+      }
+    ]
+  },
+  "scenario": "CAL-STORE-READ",
+  "level": "web",
+  "passed": true,
+  "git_sha": "4a87aff119ed4f5a7a13381cbbc3f3c5415d4ba3",
+  "at": "2026-10-22T15:41:13.55427Z",
+  "assertions": [
+    {
+      "name": "webkit-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/calendar-store.spec.ts:4:1 › CAL-STORE-READ Calendar range snapshots use the authenticated live protocol (3.1s)\n\n  1 passed (8.0s)\n"
+    },
+    {
+      "name": "webkit-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/calendar-store.spec.ts:4:1 › CAL-STORE-READ Calendar range snapshots use the authenticated live protocol (3.1s)\n\n  1 passed (7.6s)\n"
+    },
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/calendar-store.spec.ts:4:1 › CAL-STORE-READ Calendar range snapshots use the authenticated live protocol (1.5s)\n\n  1 passed (4.9s)\n"
+    },
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/calendar-store.spec.ts:4:1 › CAL-STORE-READ Calendar range snapshots use the authenticated live protocol (1.4s)\n\n  1 passed (3.5s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

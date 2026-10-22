@@ -36,13 +36,20 @@ func runCalendarInvalidation(ctx context.Context, s Scenario, level string) Evid
 	if s.ID == "CAL-HINT-COVERAGE" {
 		flag = "--hint-coverage"
 	}
+	if s.ID == "CAL-STORE-NATIVE" {
+		flag = "--store-reader"
+	}
 	command = exec.CommandContext(ctx, filepath.Join(strings.TrimSpace(string(directory)), "CalendarChecks"), flag)
 	output, err = command.CombinedOutput()
-	if s.ID == "CAL-HINT-COVERAGE" {
+	if s.ID == "CAL-HINT-COVERAGE" || s.ID == "CAL-STORE-NATIVE" {
 		var checks map[string]bool
 		decoded := json.Unmarshal(output, &checks) == nil
 		add("native_hint_fixture_decoded", decoded)
-		for _, name := range []string{"late_coalesced_hint_requires_followup", "all_hints_before_scan_are_skipped", "hint_at_scan_start_requires_followup"} {
+		names := []string{"late_coalesced_hint_requires_followup", "all_hints_before_scan_are_skipped", "hint_at_scan_start_requires_followup"}
+		if s.ID == "CAL-STORE-NATIVE" {
+			names = []string{"store_blob_digest_and_bytes", "store_blob_scope_cannot_escape_calendar_root", "store_unverified_units_stay_hidden", "store_unique_identifier_join", "store_uuid_join", "store_external_identity_is_calendar_scoped", "store_unknown_calendar_rejects", "store_detached_identity_is_not_guessed", "store_fields_decoded_without_unit_guessing"}
+		}
+		for _, name := range names {
 			add(name, decoded && checks[name])
 		}
 		if !decoded {

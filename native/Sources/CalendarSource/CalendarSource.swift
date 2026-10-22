@@ -9,7 +9,7 @@ private enum CalendarCaptureInvalidation: Error { case invalidated }
 public final class CalendarSource: Source {
     public nonisolated let name = "calendar"
     public static let operations = ["calendar.create_event", "calendar.update_event", "calendar.delete_event", "calendar.create_calendar"]
-    public static let coverage: JSON = .object(["fields": .string("complete"), "missing": .array([])])
+    public static let coverage: JSON = .object(["fields": .string("partial"), "missing": .array(["travel_time: positive native units unverified", "structured_location: coordinate units unverified", "detached store identities", "calendar attachment derivatives", "start location, proposals, comments and extra store alarms: positive native fixtures pending"].map(JSON.string))])
     private let gate: AgendaGate
     private let baselineURL: URL
     private let commandsEnabled: Bool
@@ -32,6 +32,7 @@ public final class CalendarSource: Source {
     private var latestDatabaseHintAt: UInt64 = 0
     private var persistence: Task<Void, Never>?
     private var splitCaptures: UInt64 = 0
+    private let storeEnrichment = CalendarStoreEnrichment()
     private var materializations: [CalendarOccurrenceKey: CalendarMaterialization] = [:]
     private var verificationRevision: UInt64 = 0
     private var acceptedVerificationRevision: UInt64 = 0
@@ -75,6 +76,11 @@ public final class CalendarSource: Source {
         }
         savedLookups = lookups
         savedBaseline = Self.baselineData(committed)
+    }
+
+    public func readBlob(_ handle: String, offset: Int, length: Int) throws -> JSON {
+        guard gate.authorized(.event) else { throw SourceFailure.permissionMissing }
+        return try storeEnrichment.readBlob(handle, offset: offset, length: length)
     }
 
     public func open() async -> SourceReadiness {
@@ -307,7 +313,7 @@ public final class CalendarSource: Source {
             if streamInitial && !pending.isEmpty {
                 await gate.waitForReminderRefetch()
                 try offer(pending)
-                try await sink.emit(source: name, generation: "eventkit-calendar-v1", observations: pending, scanID: "", scanStartedAt: started, scope: [], completionEvidence: "", blobHandles: [:], live: live || index == 0)
+                try await sink.emit(source: name, generation: "eventkit-calendar-v1", observations: pending, scanID: "", scanStartedAt: started, scope: [], completionEvidence: "", blobHandles: storeEnrichment.handles, live: live || index == 0)
                 committed.merge(current) { _, new in new }
                 try save(committed)
                 try saveOffered(offered.filter { committed[$0.key] == nil })
@@ -354,6 +360,11 @@ public final class CalendarSource: Source {
         }
         guard gate.authorized(.event) else { throw SourceFailure.permissionMissing }
         gate.trace.record("calendar_revalidation", fields: ["scan": .string(scan), "duration_ns": .integer(CaptureTrace.now() - revalidateStarted)])
+        current = await storeEnrichment.enrich(current, lookups: lookups, force: rebuild)
+        pending.removeAll { $0["collection"].string == "calendar.event" && $0["kind"].string == "upsert" }
+        for (identity, observation) in current where observation["collection"].string == "calendar.event" {
+            if forceFull || observation["data"] != committed[identity]?["data"] || observation["scoped_alias"] != committed[identity]?["scoped_alias"] { pending.append(observation) }
+        }
         let unchanged = pending.filter { value in
             let identity = value["collection"].string + "/" + value["native_key"].string
             return value["kind"].string == "upsert" && value["data"] == committed[identity]?["data"] && value["scoped_alias"] == committed[identity]?["scoped_alias"]
@@ -367,12 +378,12 @@ public final class CalendarSource: Source {
         }
         if forceFull && !unchanged.isEmpty {
             gate.trace.record("calendar_replay_started", fields: ["scan": .string(scan), "records": .number(Double(unchanged.count))])
-            try await sink.emit(source: name, generation: "eventkit-calendar-v1", observations: unchanged, scanID: "", scanStartedAt: started, scope: [], completionEvidence: "", blobHandles: [:], live: false)
+            try await sink.emit(source: name, generation: "eventkit-calendar-v1", observations: unchanged, scanID: "", scanStartedAt: started, scope: [], completionEvidence: "", blobHandles: storeEnrichment.handles, live: false)
             gate.trace.record("calendar_replay_finished", fields: ["scan": .string(scan)])
         }
         gate.trace.record("calendar_publish_started", keys: pending.map { $0["native_key"].string }, fields: ["scan": .string(scan), "records": .number(Double(pending.count)), "bytes": .number(Double(captureBytes))])
         try offer(pending)
-        try await sink.emit(source: name, generation: "eventkit-calendar-v1", observations: pending, scanID: scan, scanStartedAt: started, scope: ["calendar.calendar", "calendar.event"], completionEvidence: "complete", blobHandles: [:], live: true)
+        try await sink.emit(source: name, generation: "eventkit-calendar-v1", observations: pending, scanID: scan, scanStartedAt: started, scope: ["calendar.calendar", "calendar.event"], completionEvidence: "complete", blobHandles: storeEnrichment.handles, live: true)
         gate.trace.record("calendar_publish_accepted", fields: ["scan": .string(scan)])
         let persist = forceFull || !pending.isEmpty
         committed = current; forceFull = false
@@ -523,6 +534,7 @@ public final class CalendarSource: Source {
             guard action["expected_list_key"].string == event.calendar.calendarIdentifier else { throw SourceFailure.conflict }
             var expected = command["expected_state"].object, actual = before.object
             expected.removeValue(forKey: "calendar_id"); actual.removeValue(forKey: "calendar_id")
+            for field in CalendarStoreEnrichment.fields { expected.removeValue(forKey: field) }
             guard expected == actual else { throw SourceFailure.conflict }
         }
         if action["op"].string != "calendar.create_calendar" { _ = try writable(action["list_key"].string) }
@@ -637,7 +649,7 @@ public final class CalendarSource: Source {
     public func confirmAbsence(_ native: String, into sink: any ObservationSink) async throws {
         guard gate.authorized(.event), (try? fresh(native)) == nil, knownAbsent(native) else { throw SourceFailure.conflict }
         let absent: JSON = .object(["kind": .string("absent"), "collection": .string("calendar.event"), "native_key": .string(native), "observed_at": .string(timestamp()), "revalidated": .bool(true)])
-        try await sink.emit(source: name, generation: "eventkit-calendar-v1", observations: [absent], scanID: UUID().uuidString, scanStartedAt: timestamp(), scope: ["calendar.event"], completionEvidence: "complete", blobHandles: [:], live: true)
+        try await sink.emit(source: name, generation: "eventkit-calendar-v1", observations: [absent], scanID: UUID().uuidString, scanStartedAt: timestamp(), scope: ["calendar.event"], completionEvidence: "complete", blobHandles: storeEnrichment.handles, live: true)
     }
 
     public func resolve(_ command: String, evidence: JSON) async -> JSON {

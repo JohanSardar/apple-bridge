@@ -1,0 +1,72 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[5.05 8.01 10.73] cpu_idle=78% cpus=8 other_heavy=0"
+  },
+  "run_id": "cal_01M5J3SKR5JGYQKP3W9JVZ3QMD",
+  "metrics": {
+    "calendar_identity_matches": 1,
+    "capture_observer_resets": 0,
+    "native_attachment_count": 0,
+    "native_event_count": 1,
+    "native_store_count": 1,
+    "store_external_identity_columns": {
+      "unique_identifier": 1
+    },
+    "store_identifier_match": "calendarItemIdentifier:UUID",
+    "store_identity_columns": {
+      "UUID": 1
+    },
+    "store_status": "partial"
+  },
+  "scenario": "CAL-STORE-READ",
+  "level": "real",
+  "passed": true,
+  "git_sha": "5b62ac198bedeab5fcaf0870d1700eb86f2d45e4",
+  "at": "2026-10-22T15:31:09.189837Z",
+  "assertions": [
+    {
+      "name": "world_start",
+      "passed": true
+    },
+    {
+      "name": "tagged_native_fixture",
+      "passed": true
+    },
+    {
+      "name": "native_fixture_store_capture",
+      "passed": true
+    },
+    {
+      "name": "independent_calendar_store_counts",
+      "passed": true
+    },
+    {
+      "name": "native_store_identity",
+      "passed": true
+    },
+    {
+      "name": "native_event_in_range_read_model",
+      "passed": true
+    },
+    {
+      "name": "tagged_fixture_cleanup_audit",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ],
+  "conditions": {
+    "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
+    "heavy_slots_in_use": "1",
+    "load_average": "5.05 8.01 10.73",
+    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica",
+    "swap_usage": "total = 3072.00M  used = 2054.81M  free = 1017.19M  (encrypted)"
+  }
+}

@@ -6,6 +6,7 @@ import Darwin
 @main
 struct CalendarChecks {
     static func main() async throws {
+        if CommandLine.arguments.contains("--store-reader") { try await CalendarStoreChecks.run(); return }
         if CommandLine.arguments.contains("--hint-coverage") {
             let checks = [
                 "late_coalesced_hint_requires_followup": !CalendarSource.hintIsCovered(first: 100, latest: 150, scanStarted: 125),

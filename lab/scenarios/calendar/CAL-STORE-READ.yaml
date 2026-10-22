@@ -1,0 +1,12 @@
+id: CAL-STORE-READ
+feature: web.calendar
+levels: [sim, real, web]
+given: [{world: {replicas: 1}}]
+when: [{calendar_journey: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]
+web:
+  browsers: [webkit, chromium]
+  themes: [light]
+  layouts: [phone, desktop]
+  server: gateway

@@ -24,7 +24,7 @@ func PopulateChunked(w *world.World, dataset Dataset, limit int) error {
 	w.Control.Timeout = 2 * time.Minute
 	defer func() { w.Control.Timeout = previous }()
 	first := true
-	for _, source := range []contracts.Source{contracts.Contacts, contracts.Messages, contracts.Reminders} {
+	for _, source := range []contracts.Source{contracts.Contacts, contracts.Messages, contracts.Reminders, contracts.Calendar} {
 		records := make([]contracts.Observation, 0)
 		positions := map[string]int{}
 		for _, record := range dataset.Records {

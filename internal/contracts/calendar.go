@@ -32,6 +32,26 @@ type CalendarAlarm struct {
 	RelativeOffset *float64 `json:"relative_offset,omitempty"`
 	AbsoluteDate   string   `json:"absolute_date,omitempty"`
 }
+type CalendarRangeQuery struct {
+	Start     string   `json:"start"`
+	End       string   `json:"end"`
+	Calendars []string `json:"calendars,omitempty"`
+	TimeZone  string   `json:"time_zone,omitempty"`
+	Text      string   `json:"text,omitempty"`
+}
+type CalendarRangeEvent struct {
+	Event        Record `json:"event"`
+	OverlapGroup string `json:"overlap_group"`
+	Column       int    `json:"column"`
+	Columns      int    `json:"columns"`
+}
+type CalendarRangeResult struct {
+	Events        []CalendarRangeEvent `json:"events"`
+	Calendars     []Record             `json:"calendars"`
+	Cursor        Cursor               `json:"cursor"`
+	CoverageNotes []string             `json:"coverage_notes"`
+}
+
 type AgendaQuery struct {
 	Start      string `json:"start"`
 	End        string `json:"end"`
@@ -154,6 +174,7 @@ func ValidateCalendar(c Command) (CalendarArgs, error) {
 }
 func CalendarDescriptors() []OperationDescriptor {
 	result := []OperationDescriptor{{Name: "calendar.agenda", Version: 1, Kind: ReadOp, ReadModel: true, Source: Calendar, Scope: "calendar:read", Input: AgendaQuery{}, Output: ReadResult{}, Description: "Read local occurrences overlapping a time range; all-day dates remain floating"}}
+	result = append(result, OperationDescriptor{Name: "calendar.range", Version: 1, Kind: ReadOp, ReadModel: true, Source: Calendar, Scope: "calendar:read", Input: CalendarRangeQuery{}, Output: CalendarRangeResult{}, Description: "Read a half-open Calendar range with floating dates, calendar filters and precomputed overlap groups"})
 	for _, op := range []string{"create_event", "update_event", "delete_event", "create_calendar"} {
 		name := "calendar." + op
 		result = append(result, OperationDescriptor{Name: name, Version: 1, Kind: CommandOp, Source: Calendar, Scope: "calendar:write", Capability: name, Input: Command{}, Output: CommandRecord{}, Description: "Calendar " + op + "; update and delete require expected_version and span this or future"})
