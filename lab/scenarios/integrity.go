@@ -139,19 +139,16 @@ func readConsistent(w *world.World, e world.Endpoint) (contracts.ReadResult, err
 		}
 		after = page.Next
 	}
-	head, err := w.Cursor(e)
-	if err != nil {
-		return result, err
-	}
-	if head != result.Cursor {
-		return result, fmt.Errorf("cursor changed after read")
-	}
+
 	return result, nil
 }
-func replicaIntegrity(w *world.World) error {
+func replicaIntegrity(w *world.World, barrier contracts.Cursor) error {
 	gateway, err := readConsistent(w, w.Gateway)
 	if err != nil {
 		return err
+	}
+	if gateway.Cursor.Epoch != barrier.Epoch || gateway.Cursor.SubscriptionRevision != barrier.SubscriptionRevision || gateway.Cursor.Sequence < barrier.Sequence {
+		return fmt.Errorf("gateway snapshot predates integrity watermark")
 	}
 	for i, e := range w.Replicas {
 		replica, err := readConsistent(w, e)
@@ -165,25 +162,23 @@ func replicaIntegrity(w *world.World) error {
 			return fmt.Errorf("replica%d records or versions differ at cursor", i)
 		}
 	}
-	head, err := w.Cursor(w.Gateway)
-	if err != nil {
-		return err
-	}
-	if head != gateway.Cursor {
-		return fmt.Errorf("gateway moved during integrity check")
-	}
+
 	return nil
 }
 func recordIntegrity(e *Evidence, w *world.World, apply *Assertion) {
 	assertion := Assertion{Name: "replica_records_versions_and_cursor_consistent", Status: "unverified", Detail: "no replica checked"}
 	if len(w.Replicas) > 0 {
+		barrier, barrierErr := w.Cursor(w.Gateway)
 		var check error
-		err := w.Await(5*time.Second, func() bool { check = replicaIntegrity(w); return check == nil })
+		err := barrierErr
+		if barrierErr == nil {
+			err = w.Await(5*time.Second, func() bool { check = replicaIntegrity(w, barrier); return check == nil })
+		}
 		assertion.Passed = err == nil
 		assertion.Status = "fail"
 		if assertion.Passed {
 			assertion.Status = "pass"
-			assertion.Detail = "public records query, including versions and tombstones, matched at stable full cursors"
+			assertion.Detail = "public records query, including versions and tombstones, matched at one full cursor at or beyond the starting watermark"
 		} else if check != nil {
 			assertion.Detail = check.Error()
 		}

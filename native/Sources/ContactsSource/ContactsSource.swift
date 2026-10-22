@@ -132,23 +132,35 @@ public final class ContactsSource: Source {
             return true
         }
     }
-    private func scan(into sink: any ObservationSink, live: Bool, force: Bool = false) async throws {
+    private func scan(into sink: any ObservationSink, live: Bool, force: Bool = false, notificationAt: UInt64 = 0) async throws {
+        let scanID = UUID().uuidString
+        let metadata: [String: JSON] = ["scan_id": .string(scanID), "notification_ns": .integer(notificationAt)]
+        trace.record("contacts_scan_requested", fields: metadata)
         while scanning { try await Task.sleep(for: .milliseconds(5)) }
-        scanning = true; defer { scanning = false }
+        var completed = false
+        scanning = true
+        defer {
+            scanning = false
+            trace.record(completed ? "contacts_scan_finished" : "contacts_scan_abandoned", fields: metadata)
+        }
         let started = timestamp()
-        trace.record("contacts_scan_started")
+        trace.record("contacts_scan_started", fields: metadata)
         let batch: AppleBridgeContactsHistoryBatch
         do { batch = try history(token) }
         catch {
             guard authorized else { throw SourceFailure.permissionMissing }
             guard token != nil else { throw error }
+            trace.record("contacts_history_reset", fields: metadata)
             token = nil
             batch = try history(nil)
         }
         let next = batch.token
         let drop = batch.droppedEverything
         let fullScan = force || drop || token == nil || batch.requiresFullScan
-        trace.record("contacts_history_fetched")
+        trace.record("contacts_history_fetched", fields: metadata.merging(["changed_groups": .number(Double(batch.changedGroupIdentifiers.count)), "full_scan": .bool(fullScan), "token_changed": .bool(next != token), "forced": .bool(force), "dropped_everything": .bool(drop), "initial_token": .bool(token == nil), "full_scan_event_kinds": .array(batch.fullScanEventKinds.map(JSON.string))]) { _, new in new })
+        guard fullScan || next != token else { completed = true; return }
+        let activity = ForegroundActivity.shared.begin()
+        defer { ForegroundActivity.shared.end(activity) }
         if drop { generation = UUID().uuidString }
         var current: [String: JSON] = fullScan ? [:] : committed
         if fullScan {
@@ -157,7 +169,7 @@ public final class ContactsSource: Source {
             for member in try contacts(CNContact.predicateForContactsInContainer(withIdentifier: container.identifier), identifiersOnly: true) { containers[member.identifier, default: []].insert(container.identifier) }
         }
         let fetched = try contacts()
-        trace.record("contacts_fetched")
+        trace.record("contacts_fetched", fields: metadata)
         for contact in fetched {
             let memberships = containers[contact.identifier] ?? []
             let containerID = memberships.count == 1 ? memberships.first ?? "" : ""
@@ -171,17 +183,32 @@ public final class ContactsSource: Source {
         } else {
             for key in batch.changedContactIdentifiers {
                 if try isAbsent(key) { current.removeValue(forKey: "contacts.contact/" + key) }
-                else { current["contacts.contact/" + key] = observation("contacts.contact", key, try data(fresh(key))) }
+                else {
+                    let contact = try fresh(key)
+                    trace.record("contacts_contact_fetched", fields: metadata)
+                    current["contacts.contact/" + key] = observation("contacts.contact", key, try data(contact))
+                }
+            }
+            if !batch.changedGroupIdentifiers.isEmpty {
+                let changedGroups = try store.groups(matching: CNGroup.predicateForGroups(withIdentifiers: batch.changedGroupIdentifiers))
+                let byID = Dictionary(uniqueKeysWithValues: changedGroups.map { ($0.identifier, $0) })
+                for key in batch.changedGroupIdentifiers {
+                    guard let group = byID[key] else { current.removeValue(forKey: "contacts.group/" + key); continue }
+                    let members = try contacts(CNContact.predicateForContactsInGroup(withIdentifier: group.identifier), identifiersOnly: true)
+                    let value: JSON = .object(["name": .string(group.name), "member_ids": .array(members.map { .object(["$ref": .object(["collection": .string("contacts.contact"), "native_key": .string($0.identifier)])]) })])
+                    current["contacts.group/" + key] = observation("contacts.group", key, value)
+                }
             }
         }
-        trace.record("contacts_encoded")
+        trace.record("contacts_encoded", fields: metadata)
         guard authorized else { throw SourceFailure.permissionMissing }
         var observations: [JSON] = []
         for key in current.keys.sorted() {
             guard let value = current[key] else { continue }
-            let changed = try hash(value["data"]) != hash(committed[key]?["data"] ?? .null)
+            let changed = value["data"] != (committed[key]?["data"] ?? .null)
             if force || drop || token == nil || changed { observations.append(value) }
         }
+        trace.record("contacts_compared", fields: metadata)
         if !drop {
             let groups = fullScan ? Set(try store.groups(matching: nil).map(\.identifier)) : Set(current.values.filter { $0["collection"].string == "contacts.group" }.map { $0["native_key"].string })
             for (key, previous) in committed where current[key] == nil {
@@ -193,14 +220,15 @@ public final class ContactsSource: Source {
             }
         }
         let handles = Dictionary(uniqueKeysWithValues: blobs.keys.map { (String($0.dropFirst("contacts-image:".count)), $0) })
-        trace.record("contacts_capture_ready")
-        try await sink.emitCheckpoint(source: name, generation: generation, checkpoint: next.base64EncodedString(), observations: observations, scanID: UUID().uuidString, scanStartedAt: started, scope: ["contacts.contact", "contacts.group"], completionEvidence: "complete", blobHandles: handles, live: live)
-        trace.record("contacts_capture_committed")
+        trace.record("contacts_capture_ready", fields: metadata.merging(["empty": .bool(observations.isEmpty)]) { _, new in new })
+        try await sink.emitCheckpoint(source: name, generation: generation, checkpoint: next.base64EncodedString(), observations: observations, scanID: scanID, scanStartedAt: started, scope: ["contacts.contact", "contacts.group"], completionEvidence: "complete", blobHandles: handles, live: live)
+        trace.record("contacts_capture_committed", fields: metadata)
         token = next
         committed = drop ? committed.merging(current) { _, new in new } : current
         let baseline: JSON = .object(["checkpoint": .string(next.base64EncodedString()), "generation": .string(generation), "records": .object(committed)])
         try JSONEncoder().encode(baseline).write(to: baselineURL, options: .atomic)
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: baselineURL.path)
+        completed = true
     }
     public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {
         token = Data(base64Encoded: resume["checkpoint"].string)
@@ -209,24 +237,24 @@ public final class ContactsSource: Source {
             committed = baseline["records"].object
             if baseline["checkpoint"] != resume["checkpoint"] { token = nil }
         } else { committed = [:]; token = nil }
-        let (changes, continuation) = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
-        let observer = NotificationCenter.default.addObserver(forName: .CNContactStoreDidChange, object: nil, queue: nil) { @Sendable [trace] _ in trace.record("contacts_notified"); continuation.yield(()) }
+        let (changes, continuation) = AsyncStream<UInt64>.makeStream(bufferingPolicy: .bufferingNewest(1))
+        let observer = NotificationCenter.default.addObserver(forName: .CNContactStoreDidChange, object: nil, queue: nil) { @Sendable [trace] _ in let delivered = CaptureTrace.now(); trace.record("contacts_notified", fields: ["delivered_ns": .integer(delivered)]); continuation.yield(delivered) }
         let polling = Task { @ContactsActor in
             while !Task.isCancelled {
-                do { try await Task.sleep(for: .seconds(2)); continuation.yield(()) } catch { return }
+                do { try await Task.sleep(for: .seconds(2)); continuation.yield(0) } catch { return }
             }
         }
         defer { polling.cancel(); NotificationCenter.default.removeObserver(observer); continuation.finish() }
         try await scan(into: sink, live: false, force: true)
-        for await _ in changes {
+        for await notified in changes {
             try Task.checkCancellation()
             try await Task.sleep(for: .milliseconds(50))
-            try await scan(into: sink, live: true)
+            try await scan(into: sink, live: true, notificationAt: notified)
         }
     }
 
     public func reconcile(into sink: any ObservationSink, key: String = "") async throws {
-        try await scan(into: sink, live: true, force: true)
+        try await scan(into: sink, live: true)
         if !key.isEmpty, try isAbsent(key) { try await confirmAbsence(key, into: sink) }
     }
     public func confirmAbsence(_ key: String, into sink: any ObservationSink) async throws {
@@ -325,6 +353,7 @@ public final class ContactsSource: Source {
             else { try patch(contact, action["args"]); request.update(contact) }
         }
         try store.execute(request)
+        trace.record("contacts_effect_done", keys: [contact.identifier], fields: ["operation": .string(operation)])
         if operation == "contacts.delete" { guard try isAbsent(contact.identifier) else { throw SourceFailure.unavailable } }
         else { guard try data(fresh(contact.identifier)) == data(contact) else { throw SourceFailure.unavailable } }
         return .object(["native_key": .string(contact.identifier), "observed": .bool(true), "absent": .bool(operation == "contacts.delete")])

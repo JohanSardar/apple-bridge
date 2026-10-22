@@ -311,18 +311,24 @@ features:
     milestone: M2
     modules: [native/ContactsSource]
     depends_on: [helper.session]
-    status: in_progress
+    status: limited
+    limits:
+      - scenario: CON-RELAY
+        level: replica
+        reason: "public Contacts qualification deferred to the app milestone under Fast process #181"
     scenarios:
       - {id: CON-IMPORT, levels: [sim, real]}
       - {id: CON-SEARCH, levels: [sim]}
       - {id: CON-EXTERNAL, levels: [sim, real, replica]}
+      - {id: CON-RELAY, levels: [replica]}
       - {id: CON-DROP-EVERYTHING, levels: [sim]}
       - {id: CON-TOKEN-CRASH, levels: [sim]}
       - {id: CON-PERMISSION-LOSS, levels: [sim]}
       - {id: CON-IMAGE, levels: [sim]}
       - {id: CON-HANDLE-LINK, levels: [sim]}
       - {id: CON-RECIPIENT-LOOKUP, levels: [sim]}
-    notes: External-change R-LIVE is under repair. Clean main 8b7d001a measured direct replica p95 1525.031 ms for 20 effects; the unchanged budget is 1000 ms. Stage instrumentation and direct/public certification are owned by CONTACTS-LIVE.
+    notes: >-
+      Direct external Contacts R-LIVE passes on candidate 165ea123 based on main b99d876b: 20 native changes, gateway p95 454.953 ms and Ubuntu replica p95 507.510 ms over the LAN SSH tunnel, below the unchanged 1000 ms budget. Media backfill is enabled, bulk capture peak is one, and the fresh signed Helper is crash-free. Public CON-RELAY is limited: public Contacts qualification deferred to the app milestone under Fast process #181. No current-source public latency samples were collected.
 
   - id: contacts.write
     title: Contacts create, update, delete
@@ -330,14 +336,19 @@ features:
     milestone: M2
     modules: [native/ContactsSource, operations]
     depends_on: [contacts.read]
-    status: in_progress
+    status: limited
+    limits:
+      - scenario: CON-RELAY
+        level: replica
+        reason: "public Contacts qualification deferred to the app milestone under Fast process #181"
     scenarios:
       - {id: CON-CRUD, levels: [sim, real, replica]}
       - {id: CON-READONLY-CONTAINER, levels: [sim]}
       - {id: CON-CONFLICT, levels: [sim]}
       - {id: CON-RESOLVE-RESTART, levels: [sim]}
 
-    notes: CRUD correctness has real coverage. Native-save-to-replica latency and public forwarding still need the CONTACTS-LIVE 1000 ms p95 proof; functional success alone does not certify R-LIVE.
+    notes: >-
+      Leader-accepted cold native Contacts CRUD on source 6f548790 based on main c2dcb28c: six native saves, gateway p95 528.632 ms and Ubuntu replica p95 563.151 ms over the LAN SSH tunnel, below the unchanged 1000 ms budget. Public proof is limited: public Contacts qualification deferred to the app milestone under Fast process #181. No current-source public certification is claimed.
 
   - id: notes.read
     title: Notes folders and notes, protobuf decoding, locked notes
@@ -515,9 +526,13 @@ features:
       463.385 ms and public Ubuntu p95 720.340 ms plus 28.045 ms clock uncertainty.
       The unchanged public scenario passed 59 assertions, including post-burst commands
       and blob staging. Feed pipelining PR76 and native staging PR90 are merged.
-      Wider R-LIVE certification remains in progress: Contacts external-change p95
-      fails on clean main (1525.031 ms) and the candidate (1755.575 ms), 20 samples
-      each. Calendar baseline failures remain with CAL-FIX; no thresholds were changed.
+      Contacts external R-LIVE passes on candidate 165ea123 based on main b99d876b,
+      over the Ubuntu LAN SSH tunnel: gateway/replica p95 454.953/507.510 ms
+      (20 changes, backfill enabled, bulk capture peak one, crash-free). Leader-accepted
+      cold CRUD on source 6f548790 remains 528.632/563.151 ms (six saves). Current-source public
+      Contacts proof is limited: public Contacts qualification deferred to the app milestone under Fast process #181;
+      it collected no latency samples. Calendar qualification remains with CAL-FIX.
+      Wider R-LIVE certification stays open; no thresholds were changed.
   - id: web.messages.read
     title: Messages web app reading at full fidelity (list, transcript, media, viewer, links, effects, details, search)
     requirements: [R-WEB-UI, R-WEB-FAST, R-MSG-DEPTH]
