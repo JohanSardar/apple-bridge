@@ -85,6 +85,20 @@ Process: every change ships as a small PR (WORKER-RULES, Git and GitHub). Status
   - **Open:** list (#104, plates approved), video minimum (#118), video/Live (#108), cards (#125), composer (#123), the Reminders faster reader and capture enrichment (#115/#120, waiting on #75), LIVE-FIX (#75).
   - **In flight:** CAL-FIX's real Calendar fixes (stale occurrences, outside-window eviction, count-to-date future splits, scoped live scans for ≤1 s), W1-RELAY's capture atomicity (CORE-REPLICA-CAPTURE-ATOMIC red pinned), and W3's per-part multi-file status.
   - **Known open issues:** the WebKit transcript text overflow (sub-pixel canvas vs DOM; W2-TRANSCRIPT fixing), Calendar real latency of 4–7 s (abandoned full-window scans; CAL-FIX fixing), and Reminders live p95 of about 18 s on main until #75 merges.
+- **Checkpoint 2026-10-22 (evening, leader).** Since the fast-process restart, 52+ PRs merged (#149–#223). Current state per unit:
+  - **W2-READER:** done.
+  - **W2-LIST:** done functionally: list, filters, search, keyboard, badges (#104), fixture snapshots (#176), menu legibility (#213).
+  - **W2-TRANSCRIPT:** done functionally: text sizing (#149), hooks (#185), reactions (#189), viewer (#192), replies overlay (#197, #207), oldest and originator paging (#61, #70), group events (#200), stacks and rich parts (#203, #205, #208), motion (#206, #209), effects (#214), pointer and keyboard (#216, #218).
+  - **W2-MEDIA:** done functionally: cooperative backfill (#177), posters (#167), stickers and Genmoji (#187), cards (#190), effects (#194), pending previews (#195), audio (#196), files and contacts (#199).
+  - **W2-DETAILS:** details and collections done (#217); search results in progress.
+  - **W3:** New Message (#183), per-part reconciliation (#193), tapbacks, emoji picker and Copy (#198), Reply (#204), Edit and Undo Send (#210). Delete, Forward, Save and chat actions in progress.
+  - **W4:** not started.
+  - **W5 Reminders:** read UI (#166, #220), writes (#211); inline entry (#222) and W5-PARITY in progress.
+  - **W6 Calendar:** capture fixes (#143, with #145 folded in), store and `calendar.range` (#215), first views and inspector (#219). Remaining W6-UI, W6-WRITE and W6-PARITY in progress.
+  - **W7 Contacts:** live capture (#139), `contacts.list` (#221); UI, write and parity in progress.
+  - **W8 Notes:** not started.
+  - **Milestone gates** (12-project matrix, exclusive perf, real-data R-LIVE): not yet run for any app. Known items for the Messages gate: chats p95 misses 15 ms on main as well (81–88 ms); demo startup misses 10 s on main (23.6 s); transcript frame/input budgets and WebKit attribution are unproven. After #191 the huge 100k setup and the originator 10 ms budget pass.
+  - **Host and process:** pressure and disk guards (#178, #179, #188, #201, #212), quiet labelling (#182), a second heavy slot (#184), fast and lean processes (#181, #223). Older private evidence is offloaded to the Ubuntu server.
 - DONE W2-READER: decoders, filters, collections, handles, native capture and the rich demo (#14, #22, #31, #33, #46, #50, #53). Real parity is limited because AppleTruth lacks Full Disk Access. Pin/mute, audio Keep and recovery deadlines remain explicit gaps.
 - DONE (functional) W2-LIST: store/cache (#49/#71/#84), fixture snapshots (#176), and the design-approved list, filters/search, keyboard, badges and sidebar (#104). Focused WebKit/Chromium phone/desktop acceptance is recorded in the PR; performance and 120 Hz input proof remain limited to the Messages milestone. The menu material repair follows #104.
 - IN PROGRESS W2-TRANSCRIPT: bounded transcript window and approved bubbles (#79); oldest anchor (#70), originator threads (#61), reactions and viewer integration follow. Transcript frame/input budgets and WebKit attribution remain unproven.
