@@ -1,5 +1,7 @@
 # Demo fixtures
 
+Attachment variants are reused within each dataset load by original digest, filename format and Live Photo companion. Repeated attachments retain the same generated metadata and bytes without repeating image decoding, resizing, poster encoding or ThumbHash calculation.
+
 Web scenarios use the seeded rich demo automatically. Set `web.huge: true` to expand `demo-chat-39` from 100 to 100,000 messages (104,900 total). CLI uses `bridge-lab demo --huge`; Go uses `demo.Options{Seed: 1, Huge: true}`.
 
 POST `/demo-fixtures` to the browser control URL with `X-Bridge-Lab` authenticates exactly like `/incoming`. The response is a flat JSON object mapping native keys to captured record IDs: `ids["message-chat"]`, `ids["demo-message-00-000011"]`. It includes all 40 chats, 60 handles, and 200 showcase messages. Read aliases directly with `records.query` and `include_aliases: true` when additional messages are needed.

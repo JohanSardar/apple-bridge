@@ -142,7 +142,7 @@ func (s *Store) Chats(ctx context.Context, v trust.Visibility, q contracts.Chats
 		where += " AND (coalesce(json_extract(r.payload,'$.data.is_spam'),0)=1 OR EXISTS(SELECT 1 FROM msg_by_chat m WHERE m.chat_id=s.id AND json_extract(m.payload,'$.data.is_spam')=1))"
 	}
 	if q.Filter == "known" || q.Filter == "unknown" {
-		known := "(coalesce(json_extract(r.payload,'$.data.filter'),'known')='known' OR EXISTS(SELECT 1 FROM json_each(r.payload,'$.data.participants') p JOIN records h ON h.collection='messages.handle' AND h.id=p.value AND h.deleted=0 WHERE json_extract(h.payload,'$.data.contact_id') IS NOT NULL))"
+		known := "(coalesce(json_extract(r.payload,'$.data.filter'),'known')='known' OR EXISTS(SELECT 1 FROM json_each(r.payload,'$.data.participants') p CROSS JOIN records h ON h.collection='messages.handle' AND h.id=p.value AND h.deleted=0 WHERE json_extract(h.payload,'$.data.contact_id') IS NOT NULL))"
 		if q.Filter == "unknown" {
 			where += " AND NOT " + known
 		} else {
@@ -154,7 +154,7 @@ func (s *Store) Chats(ctx context.Context, v trust.Visibility, q contracts.Chats
 		args = append(args, c.At, c.At, c.ID)
 	}
 	args = append(args, limit+1)
-	rows, err := tx.QueryContext(ctx, "SELECT r.payload,s.last_activity_at,s.unread_count,EXISTS(SELECT 1 FROM msg_by_chat m WHERE m.chat_id=s.id AND json_extract(m.payload,'$.data.has_unseen_mention')=1 AND json_extract(m.payload,'$.data.deleted_at') IS NULL) FROM chat_summary s JOIN records r ON r.collection='messages.chat' AND r.id=s.id WHERE "+where+" ORDER BY s.last_activity_at DESC,s.id LIMIT ?", args...)
+	rows, err := tx.QueryContext(ctx, "SELECT r.payload,s.last_activity_at,s.unread_count,EXISTS(SELECT 1 FROM msg_by_chat m WHERE m.chat_id=s.id AND json_extract(m.payload,'$.data.has_unseen_mention')=1 AND json_extract(m.payload,'$.data.deleted_at') IS NULL) FROM chat_summary s INDEXED BY chat_activity CROSS JOIN records r ON r.collection='messages.chat' AND r.id=s.id WHERE "+where+" ORDER BY s.last_activity_at DESC,s.id LIMIT ?", args...)
 	if err != nil {
 		return out, err
 	}
