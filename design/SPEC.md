@@ -1513,4 +1513,6 @@ Measure the first Reminders checkpoint after Helper start before and after enric
 
 Notes rich records retain `plain_text`, escaped fallback `html`, structured `blocks`, attachment references and optional `pinned` / `tags`. The block/run contract and unknown-format behavior are specified in `design/web/notes.md` §5. Locked bodies are never decoded or staged. A serializable block tree is not itself a write qualification: rich editing stays hidden until its per-OS proof passes. Recently Deleted is captured read-only; a delete may be observed as a move there rather than a tombstone.
 
+W8-PARITY is limited on macOS 26.7.1 (25G241): the tagged simple-rich HTML replacement did not preserve expected text/block structure, and public HTML checkbox import did not create native checklist identities. Neither rich edits nor checklist toggles are exposed. `NOTE-EDIT-PARITY` records the per-OS result with tagged-note cleanup; app acceptance remains a separate milestone gate.
+
 The shell's app switcher enables each app when its R step passes. Scenario families: `WEB-REM-*`, `WEB-CAL-*`, `WEB-CON-*`, `WEB-NOTE-*` (web level, 12 projects), plus `REM-STORE-*`, `CAL-STORE-*` and `NOTE-DECODE-FULL` (sim and real).

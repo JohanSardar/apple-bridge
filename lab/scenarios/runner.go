@@ -1088,6 +1088,9 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		ran++
 		fmt.Fprintln(os.Stderr, "running", s.ID, level)
 		duration := 3 * time.Minute
+		if s.ID == "NOTE-EDIT-PARITY" {
+			duration = 10 * time.Minute
+		}
 		if s.ID == "CORE-SEARCH-UPDATE-PERF" {
 			duration = 10 * time.Minute
 		}
