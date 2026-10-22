@@ -200,6 +200,8 @@ func webBrowserControl(ctx context.Context, w *world.World, origin string, prepa
 			value, err = webHandlesFixture(w)
 		case "/thread-overlay-fixture":
 			value, err = webThreadOverlayFixture(w)
+		case "/transcript-effect-fixture":
+			value, err = webTranscriptEffectFixture(w, request.URL.Query().Get("effect"), request.URL.Query().Get("sent") == "1")
 		case "/rich-parts-fixture":
 			value, err = webRichPartsFixture(w)
 		case "/reaction-fixture":
