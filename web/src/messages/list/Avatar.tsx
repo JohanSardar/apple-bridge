@@ -4,12 +4,12 @@ import type { BridgeRecord, ChatSummary } from '../../data/types';
 import type { Handles } from '../store/types';
 import { fields, text } from '../store/types';
 import { avatarInitials, conversationTitle } from '../format/list';
-export function Avatar(props:{title:string;handle?:string;handles:Handles;photo?:{digest:string;record:string};class?:string;nameReady?:boolean}) {
+export function Avatar(props:{title:string;handle?:string;handles:Handles;photo?:{digest:string;record:string};variant?:'thumb'|'display';class?:string;nameReady?:boolean}) {
     const [failed,setFailed]=createSignal(''),[loaded,setLoaded]=createSignal('');
     const person=()=>props.handle?props.handles.get(props.handle):undefined;
     const photo=()=>props.photo??(person()?.avatar?{digest:person()!.avatar!.digest,record:person()!.contact_id??props.handle!}:undefined);
     const monogram=createMemo(()=>props.nameReady===false||props.handle&&person()?.name_resolved!==true?'':avatarInitials(props.title,person()?.given_name,person()?.family_name));
-    const url=createMemo(()=>{const value=photo();return value?`/web/v1/blob/${encodeURIComponent(value.digest)}?record=${encodeURIComponent(value.record)}&variant=thumb`:'';});
+    const url=createMemo(()=>{const value=photo();return value?`/web/v1/blob/${encodeURIComponent(value.digest)}?record=${encodeURIComponent(value.record)}&variant=${props.variant??'thumb'}`:'';});
     return <span class={'avatar '+(props.class??'')} aria-hidden="true" classList={{'avatar-has-monogram':Boolean(monogram())}}><svg class="avatar-person" viewBox="0 0 40 40"><circle cx="20" cy="14" r="7" fill="currentColor"/><path d="M6 39v-3c0-8 6-13 14-13s14 5 14 13v3Z" fill="currentColor"/></svg><span class="avatar-monogram">{monogram()}</span><Show when={url()&&failed()!==url()}><img src={url()} alt="" decoding="async" loading="lazy" classList={{'avatar-image-ready':loaded()===url()}} onLoad={event=>{if(event.currentTarget.naturalWidth<=1||event.currentTarget.naturalHeight<=1)setFailed(url());else setLoaded(url());}} onError={()=>setFailed(url())}/></Show></span>;
 }
 export function ChatAvatar(props:{chat:ChatSummary;handles:Handles}) {

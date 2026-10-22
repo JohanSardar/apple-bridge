@@ -73,7 +73,9 @@ Deep links: `/contacts`, `/contacts/<id>`, `/contacts/list/<group>`.
 
 Each item includes its complete contact record, display name, folded sort key, initials, nullable avatar reference, nullable `is_me`, and `conversation_ids`. Unknown identity stays null. Only explicit native identity may produce My Card; it is never inferred from names or handles. Linked chats use captured `messages.handle.contact_id` plus the participant index, are deduplicated, and disappear without Messages visibility. Contacts visibility is checked before records, counts, groups or containers are read.
 
-The read-model slice forwards existing image references. Browser-safe variants and native identity capture belong to the following Contacts read UI slice; this slice does not certify either.
+Avatar references are enriched lazily; browser decode failures retain the monogram fallback.
+
+The Contacts web route uses the shared live client, virtual list, app switcher and motion primitives. Viewer preferences are stored only for trusted sessions. Native identity uses `CNContactStore.unifiedMeContactWithKeys(toFetch:)` (unknown stays null), and account containers are captured alongside groups. Photo conversion uses the shared utility executor and media derivative cache, one Contacts job at a time, with cooperative foreground yields between stages; results enrich only contacts still citing the same original digest and generation. Capture and commands do not await photo conversion. The first available original or thumbnail remains a browser-decoded fallback, with a monogram on decode failure. Native identity, accounts and derivative behavior are pending the Contacts milestone's real qualification; no real-person or public-path proof is claimed by the UI PR. Notes, posters, membership editing and duplicate merging stay hidden.
 
 ## 7. Group command capability
 

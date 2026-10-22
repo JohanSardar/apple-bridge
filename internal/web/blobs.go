@@ -76,7 +76,11 @@ func (s *server) blob(w http.ResponseWriter, r *http.Request) {
 		reject(w, 401, "unauthorized")
 		return
 	}
-	if result.Records[0].Collection == "contacts.contact" && variant == "thumb" {
+	var contactPhoto struct {
+		Derivatives map[string]json.RawMessage `json:"derivatives"`
+	}
+	json.Unmarshal(result.Records[0].Data, &contactPhoto)
+	if result.Records[0].Collection == "contacts.contact" && (variant == "thumb" || variant == "display") && len(contactPhoto.Derivatives[variant]) == 0 {
 		variant = "original"
 	}
 	var attachment struct {
