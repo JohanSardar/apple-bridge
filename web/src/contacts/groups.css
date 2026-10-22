@@ -1,0 +1,9 @@
+.contact-list-feedback{padding-block:8px;font-size:var(--footnote);color:var(--label-secondary)}
+.contact-list-feedback[role=alert]{color:var(--red)}
+.contact-memberships{inline-size:min(560px,100%);margin:16px auto;padding:20px;border-block-start:.5px solid var(--separator)}
+.contact-memberships h2{font-size:var(--headline);margin-block-end:12px}
+.contact-memberships ul{list-style:none;padding:0;margin:0}
+.contact-memberships li{display:flex;align-items:center;gap:12px;min-block-size:44px}
+.contact-memberships li>span{flex:1;overflow-wrap:anywhere}
+.contact-membership-add{display:flex;align-items:center;gap:10px;margin-block-start:12px}
+.contact-membership-add select{flex:1;min-inline-size:0;min-block-size:44px;padding:8px;border:.5px solid var(--separator);border-radius:8px;background:var(--background-elevated);color:var(--label)}

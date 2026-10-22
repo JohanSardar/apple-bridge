@@ -273,6 +273,8 @@ func webBrowserControl(ctx context.Context, w *world.World, origin string, prepa
 			value, err = webReminderPerf(w)
 		case "/reminders-capacity":
 			value, err = webReminderCapacity(w)
+		case "/contacts-parity":
+			value, err = webContactsParity(w, request.URL.Query().Get("unavailable") == "1")
 		case "/contacts-read":
 			value, err = webContactsRead(w, request.URL.Query().Get("update") == "1")
 		case "/reminders-live":
