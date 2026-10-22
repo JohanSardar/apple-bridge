@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"net/http"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
@@ -48,6 +50,7 @@ func (f *fakeApple) datasetRoutes(mux *http.ServeMux) {
 		}
 		captures := map[contracts.Source]contracts.Capture{}
 		capturedAt := time.Now().UTC()
+		variants := map[datasetMediaKey]datasetMedia{}
 		for _, o := range input.Records {
 			source := contracts.CollectionSource(o.Collection)
 			if source == contracts.Reminders {
@@ -69,14 +72,25 @@ func (f *fakeApple) datasetRoutes(mux *http.ServeMux) {
 				json.Unmarshal(o.Data, &data)
 				var fields map[string]any
 				json.Unmarshal(o.Data, &fields)
-				derivatives, media := f.mediaVariants(data.Filename, f.blobs[data.Blob.Digest])
-				if movie, exists := pairs[o.NativeKey]; exists {
-					clips, _ := f.mediaVariants(movie.filename, movie.data)
-					derivatives["live"], media["live"] = clips["video"], true
-					if poster := f.livePoster(f.blobs[data.Blob.Digest]); poster != nil {
-						derivatives["poster"] = poster
-					}
+				movie, live := pairs[o.NativeKey]
+				key := datasetMediaKey{digest: data.Blob.Digest, extension: strings.ToLower(filepath.Ext(data.Filename)), live: live}
+				if live {
+					key.movie = sha256.Sum256(movie.data)
 				}
+				variant, exists := variants[key]
+				if !exists {
+					derivatives, media := f.mediaVariants(data.Filename, f.blobs[data.Blob.Digest])
+					if live {
+						clips, _ := f.mediaVariants(movie.filename, movie.data)
+						derivatives["live"], media["live"] = clips["video"], true
+						if poster := f.livePoster(f.blobs[data.Blob.Digest]); poster != nil {
+							derivatives["poster"] = poster
+						}
+					}
+					variant = datasetMedia{derivatives, media}
+					variants[key] = variant
+				}
+				derivatives, media := variant.derivatives, variant.media
 				fields["derivatives"], fields["media"] = derivatives, media
 				o.Data, _ = json.Marshal(fields)
 			}
@@ -122,4 +136,15 @@ func (f *fakeApple) datasetRoutes(mux *http.ServeMux) {
 		}
 		json.NewEncoder(w).Encode(map[string]int{"records": len(input.Records)})
 	})
+}
+
+type datasetMediaKey struct {
+	digest    string
+	extension string
+	live      bool
+	movie     [32]byte
+}
+type datasetMedia struct {
+	derivatives map[string]any
+	media       map[string]any
 }
