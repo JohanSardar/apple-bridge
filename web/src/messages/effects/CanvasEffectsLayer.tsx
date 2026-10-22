@@ -1,0 +1,22 @@
+import {createSignal,onCleanup,onMount,Show} from 'solid-js';
+import {subscribeEffects,type ScreenRequest} from './events';
+import {EffectScene,type SceneOptions} from './scene';
+import './effects.css';
+export {playScreenEffect} from './events';
+export function CanvasEffectsLayer(props:{onLabel?:(label:string)=>void;onComplete?:(metrics:{frames:number;p95:number;max:number})=>void}){
+ const [active,setActive]=createSignal(false),[effect,setEffect]=createSignal(''),[label,setLabel]=createSignal(''),[frame,setFrame]=createSignal('pending'),[backend,setBackend]=createSignal('none');let surface!:HTMLDivElement,worker:Worker|undefined,raf=0,generation=0,previousFocus:HTMLElement|undefined;
+ const release=()=>{worker?.terminate();worker=undefined;cancelAnimationFrame(raf);surface?.replaceChildren();};
+ const stop=()=>{const restore=document.activeElement instanceof HTMLElement&&document.activeElement.closest('.effects-layer');generation++;release();setActive(false);if(restore&&previousFocus?.isConnected)previousFocus.focus({preventScroll:true});};
+ const start=(event:ScreenRequest)=>{
+  stop();previousFocus=document.activeElement instanceof HTMLElement?document.activeElement:undefined;setEffect(event.effect);setLabel(event.label);props.onLabel?.(event.label);if(matchMedia('(prefers-reduced-motion:reduce)').matches||document.hidden)return;const token=generation;setFrame('pending');setActive(true);
+  const launch=(offscreen:boolean)=>{
+   if(token!==generation)return;const canvas=document.createElement('canvas'),width=innerWidth,height=innerHeight,scale=Math.min(devicePixelRatio||1,1.5,Math.sqrt(2_000_000/(width*height)));canvas.width=Math.max(1,Math.round(width*scale));canvas.height=Math.max(1,Math.round(height*scale));canvas.setAttribute('aria-hidden','true');surface.appendChild(canvas);const options:SceneOptions={effect:event.effect,width,height,origin:event.origin,text:event.text,seed:event.sequence};
+   if(offscreen&&typeof canvas.transferControlToOffscreen==='function'&&typeof Worker!=='undefined'){
+    try {worker=new Worker(new URL('./worker.ts',import.meta.url),{type:'module'});worker.onmessage=message=>{if(token!==generation)return;if(message.data.type==='ready')setFrame('ready');if(message.data.type==='done'){props.onComplete?.(message.data);stop();}if(message.data.type==='error'){release();launch(false);}};worker.onerror=()=>{if(token!==generation)return;release();launch(false);};const transferred=canvas.transferControlToOffscreen();worker.postMessage({canvas:transferred,options,scale},[transferred]);setBackend('worker');return;}catch{release();launch(false);return;}
+   }
+   setBackend('main');const context=canvas.getContext('2d');if(!context){stop();return;}context.setTransform(scale,0,0,scale,0,0);const scene=new EffectScene(context,options),times:number[]=[];let began:number|undefined;const draw=(now:number)=>{if(token!==generation)return;began??=now;const before=performance.now(),alive=scene.draw(now-began);times.push(performance.now()-before);if(now-began>=60)setFrame('ready');if(alive)raf=requestAnimationFrame(draw);else {const sorted=times.sort((a,b)=>a-b);props.onComplete?.({frames:times.length,p95:sorted[Math.max(0,Math.ceil(sorted.length*.95)-1)],max:sorted.at(-1)??0});stop();}};raf=requestAnimationFrame(draw);
+  };queueMicrotask(()=>launch(true));
+ };
+ onMount(()=>{const unsubscribe=subscribeEffects(start),preference=matchMedia('(prefers-reduced-motion:reduce)'),reduce=()=>{if(preference.matches)stop();},hidden=()=>{if(document.hidden)stop();},key=(event:KeyboardEvent)=>{if(active()&&event.key==='Escape'){if(!document.querySelector('dialog[open],[role=dialog][aria-modal=true]')){event.preventDefault();event.stopPropagation();}stop();}};preference.addEventListener('change',reduce);document.addEventListener('visibilitychange',hidden);window.addEventListener('keydown',key,true);window.addEventListener('resize',stop);onCleanup(()=>{unsubscribe();preference.removeEventListener('change',reduce);document.removeEventListener('visibilitychange',hidden);window.removeEventListener('keydown',key,true);window.removeEventListener('resize',stop);stop();});});
+ return <div class="effects-layer" data-active={active()} data-effect={effect()} data-frame={frame()} data-renderer={backend()} style={{display:active()?'block':'none'}}><div ref={surface} class="effects-surface"/><Show when={active()}><button class="effects-skip" type="button" aria-label={'Skip '+label().slice(10)} title="Skip effect" onClick={stop}/></Show></div>;
+}

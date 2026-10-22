@@ -1,4 +1,5 @@
 import {For,Show,createSignal,onCleanup} from 'solid-js';
+import {EffectsFixture} from '../effects/EffectsFixture';
 import {auth} from '../../auth/session';
 import type {BridgeRecord,ThreadItem} from '../../data/types';
 import {fields,text} from '../store/types';
@@ -17,6 +18,7 @@ export function MediaFixture(){
  const stackIds=params.getAll('stack'),stack=()=>stackIds.flatMap(id=>items().filter(value=>value.message.id===id).map(value=>value.attachment)),phone=matchMedia('(max-width:699px)').matches;
  if(params.has('stickers'))return <StickerFixture items={view?.data().items??[]} standalone={params.get('stickers')==='standalone'}/>;
  if(params.has('placeholders'))return <PlaceholderFixture items={view?.data().items??[]} mode={params.get('placeholders')??'1'}/>;
+ if(params.has('effects'))return <EffectsFixture items={view?.data().items??[]}/>;
  if(params.has('cards')){
   const messages=():ThreadItem[]=>{const items=view?.data().items??[];if(params.get('cards')==='video'){const message=items.find(value=>value.attachments.some(attachment=>text(attachment.data.mime_type).startsWith('video/')));return message?[{...message,data:{...message.data,balloon:{kind:'link',link:{url:'https://example.com/local-video',title:'Local video preview',image_attachment_id:message.attachments.find(value=>text(value.data.mime_type).startsWith('video/'))?.id,video_url:'https://example.com/remote-video.mp4'}}}}]:[];}return items.filter(message=>['link','app'].includes(text(fields(message.data.balloon).kind))).map(message=>{if(params.get('cards')==='case'&&fields(message.data.balloon).kind==='app')return {...message,data:{...message.data,balloon:{...fields(message.data.balloon),app_name:' DEMO APP '}}};if(!['plain','invalid','icon'].includes(params.get('cards')??''))return message;const balloon=fields(message.data.balloon),kind=text(balloon.kind),payload=fields(balloon[kind]);return {...message,data:{...message.data,balloon:{...balloon,[kind]:{...payload,image_attachment_id:undefined,icon_attachment_id:params.get('cards')==='icon'?payload.icon_attachment_id:undefined,...(params.get('cards')==='invalid'?{url:'javascript:alert(1)'}:{})}}}};});};
   return <section class="media-fixture" aria-label="Message cards"><For each={messages()}>{message=>{const balloon=fields(message.data.balloon),payload=fields(balloon[text(balloon.kind)]),height=text(payload.image_attachment_id)?180:88;return <div class="media-fixture-slot" data-message={message.id} style={{width:'280px',height:height+'px'}}><MessageMedia message={message} part={{index:0,kind:'balloon'}} width={280} height={height}/></div>;}}</For></section>;
