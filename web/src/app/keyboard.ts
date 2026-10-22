@@ -2,7 +2,7 @@ type Shortcut = {
     key: string;
     shift?: boolean;
     alt?: boolean;
-    action: () => void;
+    action: (event: KeyboardEvent) => void;
     input?: boolean;
 };
 const shortcuts = new Set<Shortcut>();
@@ -15,7 +15,7 @@ window.addEventListener('keydown', event => {
     for (const shortcut of shortcuts) {
         if (event.key.toLowerCase() === shortcut.key.toLowerCase() && Boolean(event.shiftKey) === Boolean(shortcut.shift) && Boolean(event.altKey) === Boolean(shortcut.alt) && (!input || shortcut.input)) {
             event.preventDefault();
-            shortcut.action();
+            shortcut.action(event);
             return;
         }
     }

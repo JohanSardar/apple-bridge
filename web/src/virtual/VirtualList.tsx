@@ -21,7 +21,7 @@ export function VirtualList<T>(props: {
     keepTop?: boolean;
     windowKey?: string;
     measurementKey?: string;
-    onActive?: (item:T)=>void;
+    onActive?: (item:T,event:KeyboardEvent)=>void;
     onBottom?: (value:boolean)=>void;
     label: string;
     ref?: (handle: VirtualListHandle) => void;
@@ -149,7 +149,7 @@ export function VirtualList<T>(props: {
             event.preventDefault();
             next = Math.max(0, Math.min(items.length - 1, next));
             setActive(next);
-            if(items[next])props.onActive?.(items[next]);
+            if(items[next])props.onActive?.(items[next],event);
             scrollToIndex(next);
         }}><div ref={content} class="virtual-content" style={{ height: (revision(), positions.total + 'px') }}><For each={keys()}>{key => {
             let row!: HTMLDivElement;

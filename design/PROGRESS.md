@@ -133,3 +133,5 @@ Process: every change ships as a small PR (WORKER-RULES, Git and GitHub). Status
 - W2-LIST filter menu: elevated 94% surface with solid fallback; pointer and keyboard focus modes plus local pixel contrast are checked by WEB-MSG-FILTERS-MENU.
 - W2-DETAILS: read-only conversation identity, members and device links; paginated Photos, Links, Documents and Locations collections, reusing the shared media viewer. Search results ship in a separate slice.
 - DONE (functional) W2-DETAILS search: scoped full-text results with server-side sender/kind/unread intersections, conversation/contact sections, highlighted message links, Photos and Links, and owner-scoped recent searches.
+
+- W3 list chat actions: trusted menu/swipe read/unread, confirmed deletion, native row/pin/keyboard open forwarding, capability/coherent-capture gating and observed-ID optimistic reconciliation. Pin/mute and Recently Deleted writes remain W4-owned.
