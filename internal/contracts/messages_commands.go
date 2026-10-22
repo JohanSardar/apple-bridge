@@ -25,6 +25,7 @@ type NativeMessagesArgs struct {
 }
 
 type MessagesArgs struct {
+	MessagesParityArgs
 	Variant   *MessageSendVariant `json:"variant,omitempty"`
 	ResendOf  string              `json:"resend_of,omitempty"`
 	ID        string              `json:"id,omitempty"`
@@ -41,9 +42,12 @@ type MessagesArgs struct {
 	Handle    string              `json:"handle,omitempty"`
 }
 
-var MessagesOperations = []string{"messages.send", "messages.reply", "messages.react", "messages.edit", "messages.unsend", "messages.mark_read", "messages.mark_unread", "messages.delete_message", "messages.delete_chat", "messages.create_group", "messages.rename_group", "messages.add_member", "messages.remove_member", "messages.leave_group"}
+var MessagesOperations = []string{"messages.send", "messages.reply", "messages.react", "messages.edit", "messages.unsend", "messages.mark_read", "messages.mark_unread", "messages.delete_message", "messages.delete_chat", "messages.create_group", "messages.rename_group", "messages.add_member", "messages.remove_member", "messages.leave_group", "messages.pin", "messages.mute", "messages.set_read_receipts", "messages.recover_chat", "messages.delete_chat_permanently"}
 
 func MessagesArgumentFields(op string) []string {
+	if fields := MessagesParityFields(op); fields != nil {
+		return fields
+	}
 	switch op {
 	case "messages.send":
 		return []string{"chat_id", "handles", "service", "text", "files", "resend_of", "variant"}
@@ -94,6 +98,9 @@ func ValidateMessagesCommand(c Command) (MessagesArgs, error) {
 		if err != nil || (file.Data == "") == (file.UploadID == "") || file.Name == "" || file.Name == "." || file.Name == ".." || filepath.Base(file.Name) != file.Name {
 			return a, ErrInvalid
 		}
+	}
+	if IsMessagesParity(c.Op) {
+		return a, ValidateMessagesParity(c, a)
 	}
 	switch c.Op {
 	case "messages.send":
@@ -156,6 +163,9 @@ func ValidateMessagesCommand(c Command) (MessagesArgs, error) {
 	return a, nil
 }
 func MessagesTargetCollection(op string) string {
+	if IsMessagesParity(op) {
+		return "messages.chat"
+	}
 	switch op {
 	case "messages.mark_read", "messages.mark_unread", "messages.delete_chat", "messages.rename_group", "messages.add_member", "messages.remove_member", "messages.leave_group", "messages.create_group":
 		return "messages.chat"

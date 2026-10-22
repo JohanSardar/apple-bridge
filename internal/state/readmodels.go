@@ -208,7 +208,9 @@ func fillSummary(ctx context.Context, tx *sql.Tx, v trust.Visibility, s *contrac
 		value := int(n)
 		s.PinnedIndex = &value
 	}
-	if until, err := time.Parse(time.RFC3339Nano, fieldString(d, "muted_until")); err == nil {
+	if value, ok := d["muted"].(bool); ok {
+		s.Muted = &value
+	} else if until, err := time.Parse(time.RFC3339Nano, fieldString(d, "muted_until")); err == nil {
 		value := until.After(time.Now())
 		s.Muted = &value
 	}

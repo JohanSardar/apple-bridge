@@ -68,6 +68,11 @@ public enum MessagesProbes {
 
     public static func run(_ arguments: [String]) throws -> [String: Any] {
         switch arguments[1] {
+        case "parity-route":
+            let handles = try discoverSelfHandles().handles
+            let database = try MessagesDatabase()
+            let known = Set(try database.rows("SELECT DISTINCT h.id FROM chat_handle_join j JOIN handle h ON h.ROWID=j.handle_id").compactMap { $0["id"] }.map(normalize))
+            return ["os_build": ProcessInfo.processInfo.operatingSystemVersionString, "self_handle_count": handles.count, "unused_self_handle_count": handles.filter { !known.contains($0) }.count, "accessibility": AXIsProcessTrusted()]
         case "rich-counts":
             return try richCounts()
         case "dismiss-test-delete":

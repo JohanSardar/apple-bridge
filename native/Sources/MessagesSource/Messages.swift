@@ -88,7 +88,7 @@ public actor Messages: Source {
             "message_attachment_join": ["message_id", "attachment_id"],
             "chat_recoverable_message_join": ["chat_id", "message_id", "delete_date"]
         ]
-        let missing = ["messages.chat.muted_until", "messages.chat.pinned_index", "messages.message.audio.transcription", "messages.message.audio.kept", "messages.message.recoverable_until", "messages.chat.recoverable_until"] + expected.keys.sorted().flatMap { table in expected[table]!.filter { reader?.columns[table]?.contains($0) != true }.map { table + "." + $0 } }
+        let missing = (MessagesParity.muteProfile() == .null ? ["messages.chat.muted"] : []) + ["messages.chat.muted_until", "messages.chat.pinned_index", "messages.message.audio.transcription", "messages.message.audio.kept", "messages.message.recoverable_until", "messages.chat.recoverable_until"] + expected.keys.sorted().flatMap { table in expected[table]!.filter { reader?.columns[table]?.contains($0) != true }.map { table + "." + $0 } }
         return .object(["fields": .string(missing.isEmpty ? "complete" : "partial"), "missing": .array(missing.map(JSON.string))])
     }
     @discardableResult private func reopen() throws -> Bool {

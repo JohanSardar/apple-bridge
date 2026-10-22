@@ -327,6 +327,7 @@ To be filled from the Air before W2 starts, for both light and dark:
 
 | To verify | Evidence required | Current rendering |
 |---|---|---|
+| Native pin order, Hide Alerts, receipt mutation and Recently Deleted actions on 25G241 | Signed `selftest messages-parity`, an isolated tagged own-handle conversation, native state round trips and cleanup | Write controls stay hidden: the unused own-handle fixture send returned indeterminate without an observed message; no existing conversation was substituted. Recently Deleted remains readable; unknown deadlines remain unknown. |
 | Native sticker placement coordinates, scale, base size and rotation | Aggregate-only signed Helper distributions, then compare a few real placements in Messages.app during the unlock capture pass | `placement: approximate`: 64 pt at the bubble’s top-trailing corner, unrotated; saved values are preserved without an inferred mapping |
 
 Captures stay in `lab/evidence/private/web/` (gitignored); only the numbers land here.
