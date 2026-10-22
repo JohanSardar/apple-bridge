@@ -1,0 +1,9 @@
+# Accessible names and transcript structure; keyboard traversal, active descendant and modal focus return.
+id: WEB-MSG-A11Y
+feature: web.messages.read
+levels: [web]
+web:
+  browsers: [webkit, chromium, firefox]
+  themes: [light, dark]
+  layouts: [phone, desktop]
+  server: gateway

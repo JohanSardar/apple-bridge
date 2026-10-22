@@ -1,0 +1,9 @@
+# First-frame projection, acknowledgement, captured delivery and exact identity; reconnect convergence.
+id: WEB-MSG-SEND
+feature: web.messages.write
+levels: [web]
+web:
+  browsers: [webkit, chromium, firefox]
+  themes: [light, dark]
+  layouts: [phone, desktop]
+  server: gateway
