@@ -1,0 +1,8 @@
+id: WEB-NOTE-WRITE
+feature: web.notes
+levels: [web]
+web:
+  browsers: [chromium]
+  themes: [light]
+  layouts: [desktop]
+  server: gateway
