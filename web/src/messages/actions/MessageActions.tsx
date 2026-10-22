@@ -34,7 +34,7 @@ export function MessageActions(props:{actions:MessageActionsController}){
             if(index<0)return;
             event.preventDefault();buttons[event.key==='Home'?0:event.key==='End'?buttons.length-1:(index+(event.key==='ArrowLeft'?-1:1)+buttons.length)%buttons.length]?.focus();
         };
-        return <Portal><dialog ref={dialog} class="message-actions-dialog glass" aria-label="Message actions" onCancel={event=>{event.preventDefault();event.stopPropagation();actions.close();}} onKeyDown={keydown} onClick={event=>{if(event.target!==dialog)return;const rect=dialog.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)actions.close();}}>
+        return <Portal><dialog ref={dialog} class="message-actions-dialog glass" aria-label="Message actions" data-message-version={value.item.version} onCancel={event=>{event.preventDefault();event.stopPropagation();actions.close();}} onKeyDown={keydown} onClick={event=>{if(event.target!==dialog)return;const rect=dialog.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)actions.close();}}>
             <Show when={actions.available()}><div class="tapback-picker" role="group" aria-label="Tapbacks"><For each={classicReactions}>{(reaction,index)=><button style={{'--reaction-index':index()}} aria-label={reaction.label} aria-pressed={actions.selected(reaction)} disabled={actions.busy()||actions.unknown()} onClick={event=>actions.react(event,reaction)}><span aria-hidden="true">{reaction.symbol}</span></button>}</For></div>
                 <button class="message-action-item" disabled={actions.busy()||actions.unknown()} aria-expanded={more()} onClick={()=>{setMore(value=>!value);queueMicrotask(()=>searchField?.focus());}}>More reactions</button>
                 <Show when={more()}><div class="reaction-search"><input ref={searchField} type="search" aria-label="Search reactions" value={search()} onInput={event=>setSearch(event.currentTarget.value)} placeholder="Search emoji"/><div class="reaction-emoji-grid"><For each={results()}>{([symbol,label])=><button aria-label={label} aria-pressed={actions.selected({kind:'emoji',emoji:symbol,symbol})} disabled={actions.busy()||actions.unknown()} onClick={event=>actions.react(event,{kind:'emoji',emoji:symbol,symbol})}>{symbol}</button>}</For></div><Show when={!results().length}><p class="action-problem">No emoji found</p></Show></div></Show>
@@ -42,9 +42,40 @@ export function MessageActions(props:{actions:MessageActionsController}){
             <Show when={actions.problem()}><p class="action-problem" role="status">{actions.problem()}</p></Show>
             <Show when={actions.unknown()}><button class="message-action-item" disabled={!actions.connected()} onClick={actions.check}>Check</button></Show>
             <Show when={actions.canReply()}><button class="message-action-item" onClick={actions.beginReply}>Reply</button></Show>
+            <Show when={actions.changes.canEdit()}><button class="message-action-item" onClick={actions.changes.beginEdit}>Edit</button></Show>
+            <Show when={actions.changes.canUnsend()}><button class="message-action-item" onClick={actions.changes.unsend}>Undo Send</button></Show>
+            <Show when={actions.changes.pendingEdit()}><button class="message-action-item" onClick={actions.changes.copyPendingEdit}>Copy edit</button></Show>
             <Show when={actions.text()}><button class="message-action-item" onClick={actions.copy}>Copy</button></Show>
             <button class="message-action-item" onClick={actions.close}>Close</button>
         </dialog></Portal>;
+    }
+    function Editor(){
+        const changes=actions.changes,target=changes.editor()!.target;
+        let field!:HTMLTextAreaElement,form!:HTMLFormElement;
+        onMount(()=>{
+            target.anchor.classList.add('message-editing');queueMicrotask(()=>{if(field.isConnected){field.focus({preventScroll:true});field.setSelectionRange(field.value.length,field.value.length);}});
+            let frame=0;
+            const reveal=()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(()=>{if(form.isConnected)form.scrollIntoView({block:'nearest',inline:'nearest'});});};
+            const size=new ResizeObserver(reveal);size.observe(form);visualViewport?.addEventListener('resize',reveal);reveal();
+            const entrance=form.animate([{opacity:0},{opacity:1}],{duration:150});
+            onCleanup(()=>{entrance.cancel();cancelAnimationFrame(frame);size.disconnect();visualViewport?.removeEventListener('resize',reveal);target.anchor.classList.remove('message-editing');});
+        });
+        const status=()=>changes.editProblem()||(changes.editBusy()?['observed','delivered'].includes(changes.editState()?.status??'')?'Waiting for the updated message':'Saving…':'');
+        return <Portal mount={target.anchor} ref={element=>element.classList.add('message-editor-mount')}><form ref={form} class="message-inline-editor" aria-label="Edit message" onSubmit={event=>{event.preventDefault();}} onKeyDown={event=>{event.stopPropagation();if(event.isComposing||event.keyCode===229)return;if(event.key==='Escape'){event.preventDefault();changes.cancelEdit();}else if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();if(!event.repeat)changes.saveEdit(event);}}}>
+            <textarea ref={field} aria-label="Edit message" value={changes.editor()?.text??''} disabled={changes.editBusy()} rows={3} onInput={event=>changes.setEditText(event.currentTarget.value)}/>
+            <div class="message-edit-controls"><Show when={status()}><span role="status">{status()}</span></Show><Show when={changes.editLength()>65536}><span role="alert">Message is too long</span></Show><Show when={changes.editProblem()&&changes.editBusy()}><button type="button" disabled={!actions.connected()} onClick={()=>{const id=changes.editor()?.commandID;if(id)changes.check(id);}}>Check</button><button type="button" onClick={changes.copyEdit}>Copy</button></Show><button type="button" aria-label="Cancel edit" disabled={changes.editBusy()} onClick={changes.cancelEdit}>✕</button><button type="button" aria-label="Save edit" disabled={!changes.validEdit()} onClick={changes.saveEdit}>✓</button></div>
+        </form></Portal>;
+    }
+    function Dissolve(){
+        const value=actions.changes.dissolve()!,particles:HTMLSpanElement[]=[];
+        onMount(()=>{
+            const rect=value.target.anchor.getBoundingClientRect(),reduce=reducedMotion();
+            const animation=value.target.anchor.animate(reduce?[{opacity:1},{opacity:0}]:[{opacity:1,filter:'blur(0px)',transform:'scale(1)'},{opacity:0,filter:'blur(6px)',transform:'translateY(-8px) scale(.96)'}],{duration:reduce?180:500,easing:'ease-out',fill:'forwards'});
+            const burst=particles.map((particle,index)=>{particle.style.left=rect.left+(index+.5)*rect.width/particles.length+'px';particle.style.top=rect.top+rect.height/2+'px';return particle.animate([{opacity:0,transform:'translate(0,0) scale(1)'},{opacity:.8,offset:.25},{opacity:0,transform:`translate(${(index%3-1)*12}px,${-24-index%4*9}px) scale(0)`}],{duration:500,easing:'ease-out'});});
+            Promise.all([animation,...burst].map(animation=>animation.finished)).catch(()=>{});
+            onCleanup(()=>{animation.cancel();burst.forEach(animation=>animation.cancel());});
+        });
+        return <Portal><Show when={!reducedMotion()}><For each={[0,1,2,3,4,5,6,7,8,9,10,11]}>{()=> <span ref={element=>particles.push(element)} class="unsend-particle" aria-hidden="true"/>}</For></Show></Portal>;
     }
     function Flight(){
         let element!:HTMLSpanElement;
@@ -60,5 +91,5 @@ export function MessageActions(props:{actions:MessageActionsController}){
         });
         return <Portal><span ref={element} class="reaction-flight" aria-hidden="true">{value.symbol}</span><Show when={!reducedMotion()}><For each={[0,1,2,3,4,5]}>{()=> <span ref={element=>particles.push(element)} class="reaction-burst" style={{background:value.color}} aria-hidden="true"/>}</For></Show></Portal>;
     }
-    return <><Show when={actions.target()} keyed><Picker/></Show><Show when={actions.flight()?.key} keyed><Flight/></Show></>;
+    return <><Show when={actions.target()} keyed><Picker/></Show><Show when={actions.changes.editor()}><Editor/></Show><Show when={actions.changes.dissolve()?.id} keyed><Dissolve/></Show><Show when={actions.flight()?.key} keyed><Flight/></Show></>;
 }

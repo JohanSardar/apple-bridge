@@ -387,9 +387,14 @@ func runMessagesCommands(ctx context.Context, s Scenario, level string) Evidence
 					var data struct {
 						Text    string `json:"text"`
 						History []any  `json:"edit_history"`
+						Parts   []struct {
+							Index int    `json:"index"`
+							Text  string `json:"text"`
+						} `json:"parts"`
 					}
 					json.Unmarshal(current.Data, &data)
 					add("edit_history_and_new_text", data.Text == text+strings.Repeat("!", i+1) && len(data.History) == i+1)
+					add("edited_part_text_matches_capture", len(data.Parts) == 1 && data.Parts[0].Index == 0 && data.Parts[0].Text == data.Text)
 				} else {
 					add("sixth_edit_rejected", err != nil && count(c, 0))
 				}

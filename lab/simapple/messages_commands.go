@@ -407,6 +407,14 @@ func (f *fakeApple) messageCommand(wire *applepeer.Wire, frame contracts.IPCFram
 			history = append(history, map[string]any{"text": data["text"], "timestamp": now})
 			data["edit_history"] = history
 			data["text"] = m.Text
+			parts, _ := data["parts"].([]any)
+			for _, value := range parts {
+				part, _ := value.(map[string]any)
+				index, ok := part["index"].(float64)
+				if ok && index == float64(m.PartIndex) && part["kind"] == "text" {
+					part["text"] = m.Text
+				}
+			}
 			data["edited_at"] = now
 			put(collection, native, data, false)
 		case "messages.unsend":

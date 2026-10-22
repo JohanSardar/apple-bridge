@@ -1,14 +1,17 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[9.5 14.57 10.07] cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[38.46 19.45 15.04] cpu_idle=79% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5E1ACNRFTD6JA10PJHYV17F",
+  "run_id": "run_01M5J3A5PK3HH9X3ABT1YHPBQM",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
   "scenario": "MSG-EDIT",
   "level": "sim",
   "passed": true,
-  "git_sha": "ee3cc74aca69aa26cbb097c2a7cdb46751941d88",
-  "at": "2026-10-21T01:30:55.544508Z",
+  "git_sha": "7436cda3a386a9207fb56237300f653db54c3cb0",
+  "at": "2026-10-22T15:22:43.283984Z",
   "assertions": [
     {
       "name": "seed_self_chat",
@@ -31,11 +34,7 @@
       "passed": true
     },
     {
-      "name": "edit_within_limits",
-      "passed": true
-    },
-    {
-      "name": "edit_history_and_new_text",
+      "name": "edited_part_text_matches_capture",
       "passed": true
     },
     {
@@ -47,11 +46,7 @@
       "passed": true
     },
     {
-      "name": "edit_within_limits",
-      "passed": true
-    },
-    {
-      "name": "edit_history_and_new_text",
+      "name": "edited_part_text_matches_capture",
       "passed": true
     },
     {
@@ -60,6 +55,34 @@
     },
     {
       "name": "edit_history_and_new_text",
+      "passed": true
+    },
+    {
+      "name": "edited_part_text_matches_capture",
+      "passed": true
+    },
+    {
+      "name": "edit_within_limits",
+      "passed": true
+    },
+    {
+      "name": "edit_history_and_new_text",
+      "passed": true
+    },
+    {
+      "name": "edited_part_text_matches_capture",
+      "passed": true
+    },
+    {
+      "name": "edit_within_limits",
+      "passed": true
+    },
+    {
+      "name": "edit_history_and_new_text",
+      "passed": true
+    },
+    {
+      "name": "edited_part_text_matches_capture",
       "passed": true
     },
     {
