@@ -2,6 +2,7 @@ import Foundation
 import CryptoKit
 @preconcurrency import EventKit
 import AgendaGate
+import RemindersStore
 import SourceSupport
 
 @AgendaActor
@@ -17,6 +18,8 @@ public final class RemindersSource: Source {
     private var generation = ""
     private let generationURL: URL
     private var scanning = false
+    private var hasLiveBaseline = false
+    private let captureScope = RemindersCaptureScope()
     public nonisolated static let operations = ["reminders.create", "reminders.update", "reminders.complete", "reminders.uncomplete", "reminders.delete", "reminders.create_list"]
     public nonisolated static let coverage: JSON = .object(["fields": .string("partial"), "missing": .array([.string("recurrence: next incomplete instance only")]), "operations": RemindersParity.coverage])
 
@@ -137,7 +140,7 @@ public final class RemindersSource: Source {
         return .object(result)
     }
 
-    private func scan(into sink: any ObservationSink, live: Bool) async throws {
+    private func scan(into sink: any ObservationSink, live: Bool, fullRead: Bool = false) async throws {
         let activity = ForegroundActivity.shared.begin()
         defer { ForegroundActivity.shared.end(activity) }
         var ownsScan = false
@@ -151,11 +154,18 @@ public final class RemindersSource: Source {
         let scanGeneration = generation
         let started = timestamp()
         let notificationAt = gate.notificationAt, debounceAt = gate.debounceAt
+        let scopeStarted = CaptureTrace.now()
+        let scope: Set<String>?
+        if fullRead || forceFull || !hasLiveBaseline { scope = nil }
+        else { scope = await captureScope.read(trace: gate.trace) }
+        let scopeFinished = CaptureTrace.now()
+        let calendars = gate.store.calendars(for: .reminder)
+        let selected = scope.map { ids in calendars.filter { ids.contains($0.calendarIdentifier) } }
         let refetchStarted = CaptureTrace.now()
-        let reminders = try await gate.reminders()
+        let reminders = try await gate.reminders(in: selected)
         let refetchFinished = CaptureTrace.now()
         let observedAt = timestamp()
-        let calendars = gate.store.calendars(for: .reminder)
+        gate.trace.record("reminders_capture_scope", fields: ["mode": .string(scope == nil ? "full" : "incremental"), "lists": .number(Double(selected?.count ?? calendars.count)), "records": .number(Double(reminders.count))])
         var current: [String: JSON] = [:]
         for calendar in calendars {
             let key = "reminders.list/" + calendar.calendarIdentifier
@@ -176,6 +186,7 @@ public final class RemindersSource: Source {
         for (key, previous) in tracked where live && current[key] == nil {
             let alias = previous["scoped_alias"].string
             if !alias.isEmpty && current.values.contains(where: { $0["collection"] == previous["collection"] && $0["scoped_alias"].string == alias }) { continue }
+            if previous["collection"].string == "reminders.reminder", let scope, !scope.contains(previous["data"]["list_id"]["$ref"]["native_key"].string) { continue }
             if previous["collection"].string == "reminders.reminder", gate.store.calendarItem(withIdentifier: previous["native_key"].string) != nil { continue }
             var absent = previous.object
             absent["kind"] = .string("absent"); absent["revalidated"] = .bool(true); absent["observed_at"] = .string(timestamp())
@@ -183,9 +194,10 @@ public final class RemindersSource: Source {
         }
         tracked.merge(current) { _, new in new }
         try save(tracked)
-        gate.trace.record("refetch", keys: observations.map { $0["native_key"].string }, fields: ["notification_ns": .integer(notificationAt), "debounce_ns": .integer(debounceAt), "started_ns": .integer(refetchStarted), "finished_ns": .integer(refetchFinished), "live": .bool(live)])
+        gate.trace.record("refetch", keys: observations.map { $0["native_key"].string }, fields: ["mode": .string(scope == nil ? "full" : "incremental"), "scope_started_ns": .integer(scopeStarted), "scope_finished_ns": .integer(scopeFinished), "source": .string(name), "notification_ns": .integer(notificationAt), "debounce_ns": .integer(debounceAt), "started_ns": .integer(refetchStarted), "finished_ns": .integer(refetchFinished), "live": .bool(live)])
         try await sink.emit(source: name, generation: scanGeneration, observations: observations, scanID: UUID().uuidString, scanStartedAt: started, scope: ["reminders.list", "reminders.reminder"], completionEvidence: "complete", blobHandles: [:], live: live)
         forceFull = false
+        if live { hasLiveBaseline = true }
         if ownsScan { scanning = false; ownsScan = false }
         let readiness = await open()
         try await sink.sourceState(source: name, state: readiness.state, coverage: readiness.coverage, capabilities: readiness.capabilities, reason: readiness.reason)
@@ -206,17 +218,22 @@ public final class RemindersSource: Source {
 
     public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {
         forceFull = true
+        hasLiveBaseline = false
         let changes = gate.changes()
+        let databaseHints = RemindersDatabaseHints(trace: gate.trace)
+        let hints = Task { @AgendaActor [gate] in
+            for await delivered in databaseHints.changes { gate.remindersHint(delivered) }
+        }
+        defer { hints.cancel(); databaseHints.close() }
         let periodic = Task { @AgendaActor in
             while !Task.isCancelled {
-                do { try await Task.sleep(for: .seconds(900)); self.gate.reconcile() } catch { return }
+                do { try await Task.sleep(for: .seconds(900)); self.forceFull = true; self.gate.reconcile() } catch { return }
             }
         }
         defer { periodic.cancel() }
         try await withThrowingTaskGroup(of: Void.self) { group in
             group.addTask {
-                try await self.scan(into: sink, live: false)
-                try await self.scan(into: sink, live: true)
+                try await self.backfill(into: sink)
             }
             group.addTask(priority: .high) {
                 for await _ in changes {
@@ -226,6 +243,12 @@ public final class RemindersSource: Source {
             }
             while try await group.next() != nil { }
         }
+    }
+
+    private func backfill(into sink: any ObservationSink) async throws {
+        try await scan(into: sink, live: false)
+        _ = await captureScope.read(trace: gate.trace)
+        try await scan(into: sink, live: true, fullRead: true)
     }
 
     private func fresh(_ key: String) async throws -> EKReminder {

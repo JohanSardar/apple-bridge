@@ -50,7 +50,9 @@ func (w *watcher) resetSnapshot(ctx context.Context, endpoint world.Endpoint) er
 		if record.Deleted {
 			op = "delete"
 		}
-		w.seen[id] = Seen{Change: contracts.Change{Sequence: cursor.Sequence, Op: op, Record: record}, At: at, UptimeNS: uptime}
+		seen := Seen{Change: contracts.Change{Sequence: cursor.Sequence, Op: op, Record: record}, At: at, UptimeNS: uptime}
+		w.seen[id] = seen
+		w.changes = append(w.changes, seen)
 	}
 	w.snapshotResets++
 	w.last = cursor

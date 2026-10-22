@@ -63,6 +63,7 @@ public struct StoreObjectRow: Equatable, Sendable {
     public let reminder4: Int64?
     public let reminder5: Int64?
     public let hashtagLabel: Int64?
+    public let list: Int64?
 }
 
 public struct StoreLabelRow: Equatable, Sendable {

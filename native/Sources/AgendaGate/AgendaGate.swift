@@ -119,6 +119,11 @@ public final class AgendaGate {
         }
     }
 
+    public func remindersHint(_ delivered: UInt64) {
+        trace.record("reminders_database_hint", fields: ["delivered_ns": .integer(delivered)])
+        changed(delivered)
+    }
+
     public func calendarHint(_ delivered: UInt64) {
         trace.record("calendar_database_hint", fields: ["delivered_ns": .integer(delivered)])
         calendarChanged(delivered)
@@ -148,7 +153,7 @@ public final class AgendaGate {
         }
     }
 
-    public func reminders() async throws -> [EKReminder] {
+    public func reminders(in calendars: [EKCalendar]? = nil) async throws -> [EKReminder] {
         guard authorized(.reminder) else { throw SourceFailure.permissionMissing }
         reminderFetches += 1
         defer {
@@ -156,8 +161,9 @@ public final class AgendaGate {
             reminderHintPending = false
             resumeCalendar()
         }
+        if let calendars, calendars.isEmpty { return [] }
         let trace = self.trace
-        let predicate = store.predicateForReminders(in: nil)
+        let predicate = store.predicateForReminders(in: calendars)
         let fetched: ReminderFetch = try await withCheckedThrowingContinuation { continuation in
             let completion = ReminderCompletion(continuation)
             DispatchQueue.global().asyncAfter(deadline: .now() + 3) { @Sendable in
