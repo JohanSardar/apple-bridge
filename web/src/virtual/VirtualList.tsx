@@ -17,6 +17,7 @@ export function VirtualList<T>(props: {
     bottomAnchored?: boolean;
     fixedHeights?: boolean;
     selectedKey?: string;
+    selectedKeys?: ReadonlySet<string>;
     keepTop?: boolean;
     windowKey?: string;
     measurementKey?: string;
@@ -127,8 +128,9 @@ export function VirtualList<T>(props: {
     createEffect(() => { const value = range(); props.onVisible?.(value.start, value.end); props.onBottom?.(positions.total-scroll()-height()<=2); });
     const keys = createMemo(() => { revision(); return items.slice(range().start,range().end).map(props.keyFor); });
     const activeDescendant=createMemo(()=>{revision();const item=items[selected()];if(!item)return;const key=props.keyFor(item);return keys().includes(key)?rowPrefix+key:undefined;});
-    return <div ref={viewport} class="virtual-viewport" data-scroll={props.label} tabindex="0" role="listbox" aria-label={props.label} aria-activedescendant={activeDescendant()} onScroll={() => { if (!frame)
+    return <div ref={viewport} class="virtual-viewport" data-scroll={props.label} tabindex="0" role="listbox" aria-multiselectable={props.selectedKeys ? true : undefined} aria-label={props.label} aria-activedescendant={activeDescendant()} onScroll={() => { if (!frame)
         frame = requestAnimationFrame(() => { frame = 0; const finish=beginWork('virtual-scroll'); setScroll(viewport.scrollTop); finish(); }); }} onKeyDown={event => {
+            if (event.target !== event.currentTarget) return;
             let next = selected();
             if (event.key === 'ArrowDown')
                 next++;
@@ -157,6 +159,6 @@ export function VirtualList<T>(props: {
             const content=props.renderReactive?()=>stableContent:createMemo(()=>props.render(item(),index()));
             onMount(() => {if(!props.fixedHeights)observer?.observe(row);});
             onCleanup(() => observer?.unobserve(row));
-            return <div ref={row} id={rowPrefix + key} class="virtual-row" role="option" aria-selected={index() === selected()} aria-setsize={(revision(),items.length)} aria-posinset={index() + 1} data-index={index()} data-key={key} style={{ transform: `translateY(${(revision(), positions.offset(index()))}px)` }}>{content()}</div>;
+            return <div ref={row} id={rowPrefix + key} class="virtual-row" role="option" aria-selected={props.selectedKeys ? props.selectedKeys.has(key) : index() === selected()} aria-setsize={(revision(),items.length)} aria-posinset={index() + 1} data-index={index()} data-key={key} style={{ transform: `translateY(${(revision(), positions.offset(index()))}px)` }}>{content()}</div>;
         }}</For></div></div>;
 }

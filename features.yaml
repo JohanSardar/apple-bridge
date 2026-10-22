@@ -741,6 +741,7 @@ features:
       - {id: WEB-REM-WRITE, levels: [web, real]}
       - {id: WEB-REM-ENTRY, levels: [web]}
       - {id: WEB-REM-PARITY, levels: [web]}
+      - {id: WEB-REM-ACTIONS, levels: [web]}
       - {id: WEB-RM-REMINDERS-HARDENING, levels: [sim]}
       - {id: WEB-RM-REMINDERS-LISTS, levels: [sim]}
       - {id: WEB-RM-REMINDERS-ITEMS, levels: [sim]}

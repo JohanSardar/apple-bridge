@@ -4,7 +4,7 @@ export function localDay(date: Date) { return [date.getFullYear(), String(date.g
 export function parseReminder(value: string, now = new Date()): ParsedReminder {
     const title = value.trim(), empty = { title, date: '', time: '' };
     const match = /^(.*?)\s+(today|tomorrow|in \d{1,3} (?:days?|weeks?)|(?:next )?(?:sunday|monday|tuesday|wednesday|thursday|friday|saturday)|\d{4}-\d{2}-\d{2})(?:\s+(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?)?$/iu.exec(title);
-    if (!match || !match[1].trim()) return empty;
+    if (!match || !match[1].trim() || /\bevery(?:\s+other)?$/iu.test(match[1])) return empty;
     const date = new Date(now.getFullYear(), now.getMonth(), now.getDate()), phrase = match[2].toLowerCase();
     if (phrase === 'tomorrow') date.setDate(date.getDate() + 1);
     else if (phrase.startsWith('in ')) { const amount = Number(phrase.split(' ')[1]); date.setDate(date.getDate() + amount * (phrase.includes('week') ? 7 : 1)); }
