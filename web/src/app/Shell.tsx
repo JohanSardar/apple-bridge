@@ -5,6 +5,7 @@ import { router } from './router';
 import { AppMenu } from './AppMenu';
 import { registerShortcut } from './keyboard';
 import { appearance } from './preferences';
+import './viewport';
 import { auth } from '../auth/session';
 import {createUploads} from '../messages/compose/uploads';
 import { createMessageCommands } from '../messages/actions/commands';
@@ -83,7 +84,7 @@ export default function Shell() {
     createEffect(() => { const selected = chat(); if (selected && transcript) {
         const isPhone=phone(),width=isPhone?measuredPaneWidth():0;if(isPhone&&!width)return;
         cancelEnter?.();
-        cancelEnter = enterPane(transcript, isPhone, getComputedStyle(transcript).direction === 'rtl' ? -1 : 1,width);
+        cancelEnter = enterPane(transcript, isPhone, isPhone&&getComputedStyle(transcript).direction === 'rtl' ? -1 : 1,width);
     } });
     function PhoneDetails(){
         let pane!:HTMLElement;

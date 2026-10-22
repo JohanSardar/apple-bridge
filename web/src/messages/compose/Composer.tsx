@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createSignal, onCleanup, Show } from 'solid-js';
+import { batch, createEffect, createMemo, createSignal, onCleanup, Show } from 'solid-js';
 import type { CommandState, DeviceSession } from '../../data/types';
 import { crossfade, reducedMotion, springAnimation } from '../../motion/animate';
 import { messageCommandLabel } from '../actions/commands';
@@ -24,7 +24,7 @@ export type ComposerProps = {
 export function Composer(props: ComposerProps) {
     const session = props.session;
     const [text, setText] = createSignal(readDraft(session, props.draftID)), [error, setError] = createSignal('');
-    let field!: HTMLTextAreaElement, frame = 0, metrics: { border: number; maximum: number; width: number } | undefined;
+    let field!: HTMLTextAreaElement, frame = 0, metrics: { border: number; minimum: number; maximum: number } | undefined, measuredWidth=0;
     const sms = () => ['SMS', 'RCS'].includes(props.service ?? '');
     const content = () => Boolean(text().trim()||props.hasAttachments);
     const bytes = createMemo(() => new TextEncoder().encode(text()).length);
@@ -36,8 +36,10 @@ export function Composer(props: ComposerProps) {
         frame = requestAnimationFrame(() => {
             if (!metrics) {
                 const style = getComputedStyle(field), border = parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth);
-                metrics = { border, maximum: parseFloat(style.lineHeight) * 6 + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) + border, width: field.clientWidth };
+                const minimum=parseFloat(style.lineHeight)+parseFloat(style.paddingTop)+parseFloat(style.paddingBottom)+border;
+                metrics = { border, minimum, maximum: minimum+parseFloat(style.lineHeight)*5 };
             }
+            if(!field.value){field.style.height=metrics.minimum+'px';return;}
             field.style.height = 'auto';
             field.style.height = Math.min(field.scrollHeight + metrics.border, metrics.maximum) + 'px';
         });
@@ -47,14 +49,14 @@ export function Composer(props: ComposerProps) {
     createEffect(() => { if(replyKey())queueMicrotask(()=>field.focus()); });
     createEffect(() => { text(); resize(); });
     createEffect(() => { appearance.textSize(); metrics = undefined; resize(); });
-    const observer = new ResizeObserver(() => { if (metrics && field.clientWidth !== metrics.width) { metrics.width = field.clientWidth; resize(); } });
+    const observer = new ResizeObserver(entries => { const width=entries[0].contentRect.width;if(width!==measuredWidth){measuredWidth=width;resize();} });
     const phone = matchMedia('(max-width:699px)'), typography = () => { metrics = undefined; resize(); };
     phone.addEventListener('change', typography);
     createEffect(() => { observer.observe(field); });
     onCleanup(() => { cancelAnimationFrame(frame); observer.disconnect(); phone.removeEventListener('change', typography); flushDraft(session, props.draftID); });
     const send = (event: Event) => {
         if (!props.available || props.disabled || !content() || !valid()) return;
-        try { props.onSend(event, { text: text() }); update(''); }
+        try { batch(()=>{props.onSend(event, { text: text() }); update('');}); }
         catch { setError("Can't send right now. Check your connection."); }
     };
     const enter = (element: HTMLButtonElement) => {

@@ -1,4 +1,4 @@
-import {createSignal,onCleanup} from 'solid-js';
+import {batch,createSignal,onCleanup} from 'solid-js';
 import type {LiveClient} from '../../data/live';
 import type {CommandState,Cursor,ThreadItem} from '../../data/types';
 import {withInput} from '../../data/input';
@@ -65,13 +65,14 @@ export function createMessageActions(live:LiveClient,capabilities:{allowed:(oper
     const react=(event:MouseEvent,choice:ReactionChoice)=>{
         if(!event.isTrusted)return;
         const value=current();if(!value||!available()||busy()||unknown())return;
-        try{withInput(event,()=>{
+        try{withInput(event,()=>batch(()=>{
             if(!classicReactions.some(reaction=>reaction.kind===choice.kind)&&!(choice.kind==='emoji'&&choice.emoji))return;
-            const remove=selected(choice),id=live.command('messages.react',{id:value.item.id,part_index:value.partIndex,reaction:choice.kind,...(choice.kind==='emoji'?{emoji:choice.emoji}:{}),remove});
+            const remove=selected(choice),from=!remove?(event.currentTarget instanceof HTMLElement?event.currentTarget:value.anchor).getBoundingClientRect():undefined,to=from?value.anchor.getBoundingClientRect():undefined;
+            const id=live.command('messages.react',{id:value.item.id,part_index:value.partIndex,reaction:choice.kind,...(choice.kind==='emoji'?{emoji:choice.emoji}:{}),remove});
             intents.set(value.item.id+'/'+value.partIndex+'/'+family(choice),{commandID:id,messageID:value.item.id,chatID:String(value.item.data.chat_id??''),partIndex:value.partIndex,choice:{...choice},remove});
-            if(!remove)setFlight({symbol:choice.symbol,color:choice.kind==='love'?'var(--red)':'var(--blue)',from:event.currentTarget instanceof HTMLElement?event.currentTarget.getBoundingClientRect():value.anchor.getBoundingClientRect(),to:value.anchor.getBoundingClientRect(),key:++flightKey});
+            if(!remove)setFlight({symbol:choice.symbol,color:choice.kind==='love'?'var(--red)':'var(--blue)',from:from!,to:to!,key:++flightKey});
             changed();close();
-        });}catch{setError("Can't react right now. Check your connection.");}
+        }));}catch{setError("Can't react right now. Check your connection.");}
     };
     const checkID=(id:string)=>{if(changes.check(id)||management.check(id))return;if(![...intents.values()].some(intent=>intent.commandID===id))return;try{live.checkCommand(id);}catch{setError("Couldn't check this reaction. Try again.");}};
     const check=()=>{for(const intent of relevant())if(uncertain(command(intent)))checkID(intent.commandID);};
