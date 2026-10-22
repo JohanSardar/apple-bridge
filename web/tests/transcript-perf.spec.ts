@@ -20,6 +20,7 @@ test('WEB-MSG-PERF WEB-MSG-PERF-FRAME a 100k-message transcript fling stays with
     await viewport.evaluate(async element=>{
         const probe=(window as any).__listProbe;probe.scrollStart=performance.now();probe.phase='scroll';
         for(let index=0;index<181;index++)await new Promise<void>(resolve=>requestAnimationFrame(()=>{performance.mark('list-frame-'+index);element.scrollTop=Math.max(0,element.scrollTop-160);resolve();}));
+        await new Promise<void>(resolve=>(window as any).__listNativeRAF(()=>resolve()));
         probe.phase='idle';probe.scrollEnd=performance.now();
     });
     const cpu=profileCPU?await tracing!.send('Profiler.stop'):undefined;
