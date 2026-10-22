@@ -552,6 +552,7 @@ features:
       - {id: WEB-MSG-SEARCH, levels: [web]}
       - {id: WEB-MSG-THREAD-CORE, levels: [web]}
       - {id: WEB-MSG-TRANSCRIPT-VIEWER, levels: [web]}
+      - {id: WEB-MSG-COMPOSITION, levels: [web]}
       - {id: WEB-MSG-TRANSCRIPT-HOOKS, levels: [web]}
       - {id: WEB-MSG-TEXT-SIZING, levels: [web]}
       - {id: WEB-MSG-REACTIONS, levels: [web]}
