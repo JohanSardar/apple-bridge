@@ -1,0 +1,210 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[55.2 47.54 39.11] cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5H1Q8RF7J4T10XGCX2S46MF",
+  "scenario": "HELPER-RELEASE-COMMANDS",
+  "level": "real",
+  "passed": true,
+  "git_sha": "3a3251868e2f86abb64701c9fa0643e321858c15",
+  "at": "2026-10-22T05:35:40.81681Z",
+  "assertions": [
+    {
+      "name": "signed_helper_build_0",
+      "passed": true
+    },
+    {
+      "name": "signature_valid_0",
+      "passed": true
+    },
+    {
+      "name": "cache_attestation_0",
+      "passed": true
+    },
+    {
+      "name": "signed_helper_build_1",
+      "passed": true
+    },
+    {
+      "name": "signature_valid_1",
+      "passed": true
+    },
+    {
+      "name": "cache_attestation_1",
+      "passed": true
+    },
+    {
+      "name": "lab_and_release_cache_keys_differ",
+      "passed": true
+    },
+    {
+      "name": "release_rejects_reminders-store-blob-fixture",
+      "passed": true
+    },
+    {
+      "name": "lab_recognizes_reminders-store-blob-fixture",
+      "passed": true
+    },
+    {
+      "name": "release_rejects_reminders-store-proof",
+      "passed": true
+    },
+    {
+      "name": "lab_recognizes_reminders-store-proof",
+      "passed": true
+    },
+    {
+      "name": "release_rejects_reminders-store-flag-proof",
+      "passed": true
+    },
+    {
+      "name": "lab_recognizes_reminders-store-flag-proof",
+      "passed": true
+    },
+    {
+      "name": "release_rejects_reminders-store-profile",
+      "passed": true
+    },
+    {
+      "name": "lab_recognizes_reminders-store-profile",
+      "passed": true
+    },
+    {
+      "name": "release_rejects_notes-probe",
+      "passed": true
+    },
+    {
+      "name": "lab_recognizes_notes-probe",
+      "passed": true
+    },
+    {
+      "name": "release_rejects_functional",
+      "passed": true
+    },
+    {
+      "name": "lab_recognizes_functional",
+      "passed": true
+    },
+    {
+      "name": "release_rejects_probe",
+      "passed": true
+    },
+    {
+      "name": "lab_recognizes_probe",
+      "passed": true
+    },
+    {
+      "name": "release_rejects_wire-checks",
+      "passed": true
+    },
+    {
+      "name": "lab_recognizes_wire-checks",
+      "passed": true
+    },
+    {
+      "name": "release_rejects_media-cleanup-checks",
+      "passed": true
+    },
+    {
+      "name": "lab_recognizes_media-cleanup-checks",
+      "passed": true
+    },
+    {
+      "name": "product_command_0_session",
+      "passed": true
+    },
+    {
+      "name": "product_command_0_status",
+      "passed": true
+    },
+    {
+      "name": "product_command_0_onboard",
+      "passed": true
+    },
+    {
+      "name": "product_command_0_selftest",
+      "passed": true
+    },
+    {
+      "name": "product_command_1_session",
+      "passed": true
+    },
+    {
+      "name": "product_command_1_status",
+      "passed": true
+    },
+    {
+      "name": "product_command_1_onboard",
+      "passed": true
+    },
+    {
+      "name": "product_command_1_selftest",
+      "passed": true
+    },
+    {
+      "name": "release_rejects_valid_lab_fixture",
+      "passed": true
+    },
+    {
+      "name": "lab_executes_wire_fixture",
+      "passed": true
+    },
+    {
+      "name": "release_package_build",
+      "passed": true
+    },
+    {
+      "name": "release_package_signature",
+      "passed": true
+    },
+    {
+      "name": "release_package_overrides_lab_caller",
+      "passed": true
+    },
+    {
+      "name": "lab_reader_keeps_lab_binary_after_release_build",
+      "passed": true
+    },
+    {
+      "name": "lab_type_0_FunctionalProbe",
+      "passed": true
+    },
+    {
+      "name": "lab_type_0_RemindersStoreProof",
+      "passed": true
+    },
+    {
+      "name": "lab_type_0_RemindersStoreProfile",
+      "passed": true
+    },
+    {
+      "name": "lab_type_0_RemindersStoreResponsiveness",
+      "passed": true
+    },
+    {
+      "name": "lab_type_1_FunctionalProbe",
+      "passed": true
+    },
+    {
+      "name": "lab_type_1_RemindersStoreProof",
+      "passed": true
+    },
+    {
+      "name": "lab_type_1_RemindersStoreProfile",
+      "passed": true
+    },
+    {
+      "name": "lab_type_1_RemindersStoreResponsiveness",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

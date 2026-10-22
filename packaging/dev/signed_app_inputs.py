@@ -37,6 +37,8 @@ def source_key(root):
             if base.name != "dev" and path.suffix not in {".swift", ".m", ".mm", ".c", ".h", ".modulemap"}:
                 continue
             digest.update(str(path.relative_to(root)).encode() + b"\0" + path.read_bytes() + b"\0")
+    lab = (os.environ.get("APPLE_BRIDGE_NATIVE_LAB") or "1")
+    require(lab in {"0", "1"}, "APPLE_BRIDGE_NATIVE_LAB must be 0 or 1")
     compiler = os.environ.get("APPLE_BRIDGE_SWIFTC", "swiftc")
     sdk = Path(os.environ.get("APPLE_BRIDGE_SDK") or run(str(root / "packaging/dev/sdkroot.sh")) or run("xcrun", "--show-sdk-path"))
     toolchain = {"compiler": shutil.which(compiler), "version": run(compiler, "--version"), "clang_version": run("xcrun", "clang", "--version"), "manifest_compiler": run("xcrun", "--find", "swiftc"), "developer": run("xcode-select", "-p"), "sdk_path": run("xcrun", "--show-sdk-path"), "sdk_version": run("xcrun", "--show-sdk-version")}
@@ -53,6 +55,7 @@ def source_key(root):
                 digest.update(str(path).encode() + b"\0" + path.read_bytes() + b"\0")
     for name in ["APPLE_BRIDGE_SWIFTC", "APPLE_BRIDGE_SDK", "SDKROOT", "DEVELOPER_DIR", "TOOLCHAINS", "APPLE_BRIDGE_SIGNING_GUI", "APPLE_BRIDGE_KEEP_SDKROOT", "APPLE_BRIDGE_NATIVE_TARGET", "SWIFT_EXEC", "CC", "CXX", "CFLAGS", "CXXFLAGS", "SWIFTFLAGS"]:
         toolchain[name] = os.environ.get(name, "")
+    toolchain["native_lab_condition"] = lab
     certificate = run("security", "find-certificate", "-c", "Apple Bridge Dev Signing", "-Z", str(Path.home() / "Library/Keychains/apple-bridge-dev.keychain-db"))
     toolchain["signing_certificate"] = hashlib.sha256(certificate.encode()).hexdigest()
     digest.update(json.dumps(toolchain, sort_keys=True).encode())

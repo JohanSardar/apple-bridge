@@ -1,3 +1,4 @@
+#if LAB
 import Foundation
 import Decoders
 
@@ -54,3 +55,4 @@ extension MessagesProbes {
         return ["status": "verified", "counts": counts]
     }
 }
+#endif

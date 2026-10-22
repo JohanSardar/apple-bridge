@@ -1,3 +1,4 @@
+#if LAB
 import Foundation
 import SourceSupport
 
@@ -27,3 +28,4 @@ public enum RemindersStoreProof {
         ])
     }
 }
+#endif

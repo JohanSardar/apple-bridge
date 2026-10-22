@@ -23,6 +23,7 @@ public struct StoreTimings: Sendable {
     }
 }
 
+#if LAB
 public enum RemindersStoreProfile {
     public static func run(iterations: Int = 200) throws -> JSON {
         guard iterations == 200 else { throw SourceFailure.invalid }
@@ -85,3 +86,4 @@ extension RemindersStoreProfile {
         return .object(["mode": .string("persistent_typed"), "cold": cold.json, "warm_full": timings(full), "warm_incremental_unchanged": timings(incremental), "iterations": .number(Double(iterations)), "profile_total_ms": .number((ProcessInfo.processInfo.systemUptime - start) * 1000)])
     }
 }
+#endif

@@ -1,3 +1,4 @@
+#if LAB
 import Foundation
 import EventKit
 import RemindersStore
@@ -133,3 +134,4 @@ enum RemindersBlobFixture {
         guard !sweep.calendars(for: .reminder).contains(where: { $0.calendarIdentifier == listID || $0.title == "Bridge Test " + tag }) else { throw SourceFailure.conflict }
     }
 }
+#endif

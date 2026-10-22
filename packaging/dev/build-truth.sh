@@ -7,7 +7,7 @@ if [[ $# == 1 && ${APPLE_BRIDGE_SIGNED_CACHE_BUILD:-} != 1 ]]; then
     rm -rf -- "$1"
 fi
 "$root/packaging/dev/build-native.sh" "$root/lab/truth/native"
-directory=$(cat "$root/lab/truth/native/.build/native-output")
+directory=$(cat "$root/lab/truth/native/.build/native-output-${APPLE_BRIDGE_NATIVE_LAB:-1}")
 output="$directory/apple-truth"
 [[ -f "$output" ]] || output="$directory/AppleTruth"
 destination=${1:-"$HOME/Applications/AppleBridgeDev/AppleTruth.app"}

@@ -7,7 +7,10 @@ import subprocess
 import sys
 
 package = Path(sys.argv[1] if len(sys.argv) > 1 else "native").resolve()
-output = package / ".build" / "clt-release"
+lab = (os.environ.get("APPLE_BRIDGE_NATIVE_LAB") or "1")
+if lab not in {"0", "1"}:
+    raise SystemExit("APPLE_BRIDGE_NATIVE_LAB must be 0 or 1")
+output = package / ".build" / ("clt-release" if lab == "1" else "clt-product-release")
 output.mkdir(parents=True, exist_ok=True)
 sdk = os.environ.get("APPLE_BRIDGE_SDK", "/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk")
 compiler = os.environ.get("APPLE_BRIDGE_SWIFTC", "swiftc")
@@ -62,6 +65,8 @@ def build(name):
         built.add(name)
         return
     flags = [compiler, "-sdk", sdk, "-target", platform.machine() + "-apple-macosx26.0", "-swift-version", "6", "-warnings-as-errors", "-O", "-parse-as-library", "-I", str(output), "-module-name", name]
+    if lab == "1":
+        flags += ["-D", "LAB"]
     for module_map in clang_modules:
         flags += ["-Xcc", "-fmodule-map-file=" + module_map]
     closure = set()
