@@ -13,7 +13,10 @@ export type ComposerProps = {
     disabled?: boolean;
     disabledReason?: string;
     onSend: (event: Event, content: { text: string }) => string;
+    reply?: {key:string;text:string};
+    onCancelReply?: () => void;
     command?: CommandState;
+    canCheck?: boolean;
     onCheck?: () => void;
     onCopy?: (event: Event) => void;
 };
@@ -38,6 +41,9 @@ export function Composer(props: ComposerProps) {
             field.style.height = Math.min(field.scrollHeight + metrics.border, metrics.maximum) + 'px';
         });
     };
+    const replyKey=createMemo(()=>props.reply?.key);
+    const cancelReply=()=>{props.onCancelReply?.();field.focus();};
+    createEffect(() => { if(replyKey())queueMicrotask(()=>field.focus()); });
     createEffect(() => { text(); resize(); });
     createEffect(() => { appearance.textSize(); metrics = undefined; resize(); });
     const observer = new ResizeObserver(() => { if (metrics && field.clientWidth !== metrics.width) { metrics.width = field.clientWidth; resize(); } });
@@ -56,8 +62,10 @@ export function Composer(props: ComposerProps) {
         onCleanup(() => animation.cancel());
     };
     return <section class="message-composer" classList={{ 'text-service': sms() }} aria-label="Message composer">
+        <Show when={props.reply}>{reply=><section class="composer-quote" aria-label="Replying to message"><div><small>Replying to message</small><p>{reply().text}</p></div><button class="icon-button" aria-label="Cancel reply" onClick={cancelReply}>×</button></section>}</Show>
         <div class="composer-field glass">
             <textarea ref={field} aria-label="Message" placeholder={sms() ? 'Text Message' : 'iMessage'} rows={1} value={text()} onInput={event => update(event.currentTarget.value)} onKeyDown={event => {
+                if(event.key==='Escape'&&props.reply&&!event.isComposing&&event.keyCode!==229){event.preventDefault();cancelReply();return;}
                 if (event.key !== 'Enter' || event.shiftKey || event.isComposing || event.keyCode === 229) return;
                 event.preventDefault(); if (!event.repeat) send(event);
             }}/>
@@ -66,6 +74,6 @@ export function Composer(props: ComposerProps) {
         <Show when={props.disabledReason}><p class="composer-status" role="status">{props.disabledReason}</p></Show>
         <Show when={!valid()}><p class="composer-error" role="alert">Message is too long</p></Show>
         <Show when={error()}><p class="composer-error" role="alert">{error()}</p></Show>
-        <Show when={problem()}>{command => <div class="composer-status" role="status">{messageCommandLabel(command())}<Show when={command().status === 'indeterminate'}> · <button class="button subtle" onClick={() => props.onCheck?.()}>Check</button><button class="button subtle" onClick={event => props.onCopy?.(event)}>Copy</button></Show></div>}</Show>
+        <Show when={problem()}>{command => <div class="composer-status" role="status">{messageCommandLabel(command())}<Show when={command().status === 'indeterminate'}> · <button class="button subtle" disabled={props.canCheck===false} onClick={() => props.onCheck?.()}>Check</button><button class="button subtle" onClick={event => props.onCopy?.(event)}>Copy</button></Show></div>}</Show>
     </section>;
 }

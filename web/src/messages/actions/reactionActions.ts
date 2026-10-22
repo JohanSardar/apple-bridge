@@ -19,6 +19,7 @@ function nativeParts(item:ThreadItem):{index:number;kind?:string;text?:string}[]
     return typeof item.data.text==='string'?[{index:0,kind:'text',text:item.data.text}]:[];
 }
 export function createMessageActions(live:LiveClient,capabilities:{allowed:(operation:string)=>boolean}){
+    const [replyTarget,setReplyTarget]=createSignal<{item:ThreadItem;partIndex:number}>();
     const [target,setTarget]=createSignal<ActionTarget>(),[revision,setRevision]=createSignal(0),[error,setError]=createSignal('');
     const [flight,setFlight]=createSignal<{symbol:string;color:string;from:DOMRect;to:DOMRect;key:number}>();
     const captured=new Map<string,ThreadItem>(),intents=new Map<string,Intent>();
@@ -42,13 +43,18 @@ export function createMessageActions(live:LiveClient,capabilities:{allowed:(oper
         if(!event.isTrusted||item.id.startsWith('command:')||item.collection!=='messages.message'||item.version<1||item.data.kind==='group_event'||item.data.retracted_at)return;
         const origin=event.target instanceof Element?event.target:undefined;
         const bubble=anchorOverride??origin?.closest<HTMLElement>('.bubble[data-part]')??origin?.closest('.bubble-slot')?.querySelector<HTMLElement>('.bubble[data-part]');
-        const parts=nativeParts(item),index=bubble?Number(bubble.dataset.part):parts[0]?.index;
+        const parts=nativeParts(item),partTarget=bubble?.closest<HTMLElement>('[data-part]'),index=bubble?(partTarget?Number(partTarget.dataset.part):undefined):parts[0]?.index;
         if(index===undefined||!Number.isSafeInteger(index)||index<0||!parts.some(part=>part.index===index)||Array.isArray(item.data.retracted_parts)&&item.data.retracted_parts.includes(index))return;
         const anchor=bubble??(event.currentTarget instanceof HTMLElement?event.currentTarget:origin?.closest<HTMLElement>('[data-message]'));
         if(!anchor)return;
         if(target()?.item.id===item.id&&target()?.partIndex===index){event.preventDefault();return;}
         event.preventDefault();captured.set(item.id,item);setError('');setTarget({item,partIndex:index,anchor});
     };
+    const replying=()=>{revision();const value=replyTarget();return value?{...value,item:captured.get(value.item.id)??value.item}:undefined;};
+    const canReplyOperation=()=>capabilities.allowed('messages.reply')&&live.status()==='connected';
+    const canReply=()=>{const value=current();return Boolean(value&&canReplyOperation()&&!value.item.data.deleted_at&&!value.item.data.retracted_at&&nativeParts(value.item).some(part=>part.index===value.partIndex)&&!(Array.isArray(value.item.data.retracted_parts)&&value.item.data.retracted_parts.includes(value.partIndex)));};
+    const beginReply=(event:Event)=>{const value=current();if(!event.isTrusted||!value||!canReply())return;setReplyTarget({item:value.item,partIndex:value.partIndex});close();};
+    const cancelReply=()=>setReplyTarget();
     const canReact=()=>capabilities.allowed('messages.react')&&live.status()==='connected';
     const available=()=>Boolean(current()&&canReact());
     const react=(event:MouseEvent,choice:ReactionChoice)=>{
@@ -88,11 +94,11 @@ export function createMessageActions(live:LiveClient,capabilities:{allowed:(oper
             if(state&&final.has(state.status)&&!['indeterminate','delivery_failed'].includes(state.disposition??'')&&!ids.has(intent.messageID)&&target()?.item.id!==intent.messageID){intents.delete(key);continue;}
             if(state&&observed(state)&&state.observed_record_ids?.length&&same){intents.delete(key);if(!ids.has(intent.messageID))captured.delete(intent.messageID);}
         }
-        for(const [id] of captured)if(!ids.has(id)&&![...intents.values()].some(intent=>intent.messageID===id)&&target()?.item.id!==id)captured.delete(id);
+        for(const [id] of captured)if(!ids.has(id)&&![...intents.values()].some(intent=>intent.messageID===id)&&target()?.item.id!==id&&replyTarget()?.item.id!==id)captured.delete(id);
         changed();
     };
-    const dispose=()=>{setTarget();captured.clear();intents.clear();setFlight();};
+    const dispose=()=>{setTarget();setReplyTarget();captured.clear();intents.clear();setFlight();};
     onCleanup(dispose);
-    return {target:current,open,close,canReact,available,react,selected,unknown,busy,problem,check,checkID,notice,connected:()=>live.status()==='connected',copy,text,observe,flight,clearFlight:()=>setFlight(),dispose};
+    return {target:current,open,close,replying,canReplyOperation,canReply,beginReply,cancelReply,canReact,available,react,selected,unknown,busy,problem,check,checkID,notice,connected:()=>live.status()==='connected',copy,text,observe,flight,clearFlight:()=>setFlight(),dispose};
 }
 export type MessageActionsController=ReturnType<typeof createMessageActions>;

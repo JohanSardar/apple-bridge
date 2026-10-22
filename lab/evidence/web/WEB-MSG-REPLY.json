@@ -1,0 +1,85 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[3.26 3.68 6.41] cpu_idle=82% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5HZ9ND21353675N2PTJP5HY",
+  "metrics": {
+    "browser_budget_ms": 180000,
+    "capture_observer_resets": 0,
+    "demo_messages": 5000,
+    "demo_startup_ms": 3553,
+    "fixture_setup_ms": 3553,
+    "matrix": [
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "chromium-light-phone",
+      "chromium-light-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-MSG-REPLY-webkit-light-phone-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-MSG-REPLY-webkit-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-REPLY-webkit-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-REPLY-chromium-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-REPLY-chromium-light-desktop-playwright.json"
+    ],
+    "server": "gateway",
+    "setups": [
+      {
+        "fixture_setup_ms": 3553,
+        "fixture_snapshot": null,
+        "project": "webkit-light-phone"
+      },
+      {
+        "fixture_setup_ms": 3556,
+        "fixture_snapshot": null,
+        "project": "webkit-light-desktop"
+      },
+      {
+        "fixture_setup_ms": 3045,
+        "fixture_snapshot": null,
+        "project": "chromium-light-phone"
+      },
+      {
+        "fixture_setup_ms": 2861,
+        "fixture_snapshot": null,
+        "project": "chromium-light-desktop"
+      }
+    ]
+  },
+  "scenario": "WEB-MSG-REPLY",
+  "level": "web",
+  "passed": true,
+  "git_sha": "490f7ec01631119ac71efc190a945d20e5a9877b",
+  "at": "2026-10-22T14:12:32.290858Z",
+  "assertions": [
+    {
+      "name": "webkit-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 9 tests using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/message-replies.spec.ts:41:1 › WEB-MSG-REPLY existing-chat composer quotes the exact native part and sends once (3.1s)\n  ✓  2 [webkit-light-phone] › tests/message-replies.spec.ts:74:1 › WEB-MSG-REPLY-CANCEL cancel keeps the per-chat draft and never dispatches (2.0s)\n  ✓  3 [webkit-light-phone] › tests/message-replies.spec.ts:89:1 › WEB-MSG-REPLY-PROOF reply stays hidden until the fresh live capability is proven (1.9s)\n  ✓  4 [webkit-light-phone] › tests/message-replies.spec.ts:100:1 › WEB-MSG-REPLY-SEND existing-chat Send has one local echo in the first resulting frame (1.8s)\n  ✓  5 [webkit-light-phone] › tests/message-replies.spec.ts:122:1 › WEB-MSG-REPLY-AMBIGUITY Check reconciles the original reply without a second write (3.6s)\n  ✓  6 [webkit-light-phone] › tests/message-replies.spec.ts:145:1 › WEB-MSG-REPLY-CELL an actual grouped native cell anchors keyboard actions and replies to its owning part (2.4s)\n  ✓  7 [webkit-light-phone] › tests/message-replies.spec.ts:173:1 › WEB-MSG-REPLY-KEYBOARD Command-R quotes the latest exact captured part without sending until Enter (804ms)\n  ✓  8 [webkit-light-phone] › tests/message-replies.spec.ts:190:1 › WEB-MSG-REPLY-REVEAL Home then Command-T realizes the latest captured row again (1.1s)\n  ✓  9 [webkit-light-phone] › tests/message-replies.spec.ts:209:1 › WEB-MSG-REPLY-INACTIVE a hidden native stack member is revealed before its keyboard picker opens (1.2s)\n\n  9 passed (20.1s)\n"
+    },
+    {
+      "name": "webkit-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 9 tests using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/message-replies.spec.ts:41:1 › WEB-MSG-REPLY existing-chat composer quotes the exact native part and sends once (3.3s)\n  ✓  2 [webkit-light-desktop] › tests/message-replies.spec.ts:74:1 › WEB-MSG-REPLY-CANCEL cancel keeps the per-chat draft and never dispatches (3.0s)\n  ✓  3 [webkit-light-desktop] › tests/message-replies.spec.ts:89:1 › WEB-MSG-REPLY-PROOF reply stays hidden until the fresh live capability is proven (1.6s)\n  ✓  4 [webkit-light-desktop] › tests/message-replies.spec.ts:100:1 › WEB-MSG-REPLY-SEND existing-chat Send has one local echo in the first resulting frame (2.0s)\n  ✓  5 [webkit-light-desktop] › tests/message-replies.spec.ts:122:1 › WEB-MSG-REPLY-AMBIGUITY Check reconciles the original reply without a second write (3.3s)\n  ✓  6 [webkit-light-desktop] › tests/message-replies.spec.ts:145:1 › WEB-MSG-REPLY-CELL an actual grouped native cell anchors keyboard actions and replies to its owning part (1.6s)\n  ✓  7 [webkit-light-desktop] › tests/message-replies.spec.ts:173:1 › WEB-MSG-REPLY-KEYBOARD Command-R quotes the latest exact captured part without sending until Enter (1.1s)\n  ✓  8 [webkit-light-desktop] › tests/message-replies.spec.ts:190:1 › WEB-MSG-REPLY-REVEAL Home then Command-T realizes the latest captured row again (1.3s)\n  -  9 [webkit-light-desktop] › tests/message-replies.spec.ts:209:1 › WEB-MSG-REPLY-INACTIVE a hidden native stack member is revealed before its keyboard picker opens\n\n  1 skipped\n  8 passed (18.4s)\n"
+    },
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 9 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/message-replies.spec.ts:41:1 › WEB-MSG-REPLY existing-chat composer quotes the exact native part and sends once (2.0s)\n  ✓  2 [chromium-light-phone] › tests/message-replies.spec.ts:74:1 › WEB-MSG-REPLY-CANCEL cancel keeps the per-chat draft and never dispatches (1.6s)\n  ✓  3 [chromium-light-phone] › tests/message-replies.spec.ts:89:1 › WEB-MSG-REPLY-PROOF reply stays hidden until the fresh live capability is proven (1.5s)\n  ✓  4 [chromium-light-phone] › tests/message-replies.spec.ts:100:1 › WEB-MSG-REPLY-SEND existing-chat Send has one local echo in the first resulting frame (1.5s)\n  ✓  5 [chromium-light-phone] › tests/message-replies.spec.ts:122:1 › WEB-MSG-REPLY-AMBIGUITY Check reconciles the original reply without a second write (3.2s)\n  ✓  6 [chromium-light-phone] › tests/message-replies.spec.ts:145:1 › WEB-MSG-REPLY-CELL an actual grouped native cell anchors keyboard actions and replies to its owning part (2.0s)\n  ✓  7 [chromium-light-phone] › tests/message-replies.spec.ts:173:1 › WEB-MSG-REPLY-KEYBOARD Command-R quotes the latest exact captured part without sending until Enter (776ms)\n  ✓  8 [chromium-light-phone] › tests/message-replies.spec.ts:190:1 › WEB-MSG-REPLY-REVEAL Home then Command-T realizes the latest captured row again (929ms)\n  ✓  9 [chromium-light-phone] › tests/message-replies.spec.ts:209:1 › WEB-MSG-REPLY-INACTIVE a hidden native stack member is revealed before its keyboard picker opens (996ms)\n\n  9 passed (15.7s)\n"
+    },
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 9 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/message-replies.spec.ts:41:1 › WEB-MSG-REPLY existing-chat composer quotes the exact native part and sends once (2.2s)\n  ✓  2 [chromium-light-desktop] › tests/message-replies.spec.ts:74:1 › WEB-MSG-REPLY-CANCEL cancel keeps the per-chat draft and never dispatches (1.7s)\n  ✓  3 [chromium-light-desktop] › tests/message-replies.spec.ts:89:1 › WEB-MSG-REPLY-PROOF reply stays hidden until the fresh live capability is proven (1.7s)\n  ✓  4 [chromium-light-desktop] › tests/message-replies.spec.ts:100:1 › WEB-MSG-REPLY-SEND existing-chat Send has one local echo in the first resulting frame (1.9s)\n  ✓  5 [chromium-light-desktop] › tests/message-replies.spec.ts:122:1 › WEB-MSG-REPLY-AMBIGUITY Check reconciles the original reply without a second write (3.5s)\n  ✓  6 [chromium-light-desktop] › tests/message-replies.spec.ts:145:1 › WEB-MSG-REPLY-CELL an actual grouped native cell anchors keyboard actions and replies to its owning part (1.7s)\n  ✓  7 [chromium-light-desktop] › tests/message-replies.spec.ts:173:1 › WEB-MSG-REPLY-KEYBOARD Command-R quotes the latest exact captured part without sending until Enter (919ms)\n  ✓  8 [chromium-light-desktop] › tests/message-replies.spec.ts:190:1 › WEB-MSG-REPLY-REVEAL Home then Command-T realizes the latest captured row again (1.2s)\n  -  9 [chromium-light-desktop] › tests/message-replies.spec.ts:209:1 › WEB-MSG-REPLY-INACTIVE a hidden native stack member is revealed before its keyboard picker opens\n\n  1 skipped\n  8 passed (15.7s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

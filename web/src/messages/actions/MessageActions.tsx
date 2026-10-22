@@ -41,6 +41,7 @@ export function MessageActions(props:{actions:MessageActionsController}){
             </Show>
             <Show when={actions.problem()}><p class="action-problem" role="status">{actions.problem()}</p></Show>
             <Show when={actions.unknown()}><button class="message-action-item" disabled={!actions.connected()} onClick={actions.check}>Check</button></Show>
+            <Show when={actions.canReply()}><button class="message-action-item" onClick={actions.beginReply}>Reply</button></Show>
             <Show when={actions.text()}><button class="message-action-item" onClick={actions.copy}>Copy</button></Show>
             <button class="message-action-item" onClick={actions.close}>Close</button>
         </dialog></Portal>;
