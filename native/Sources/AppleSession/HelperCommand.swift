@@ -43,7 +43,7 @@ public enum HelperCommand {
             while !finished { RunLoop.current.run(until: Date().addingTimeInterval(0.05)) }
             return
         }
-        guard let command = arguments.first, ["selftest", "status", "onboard"].contains(command) else { throw HelperCommandFailure.unknownCommand }
+        guard let command = arguments.first, ["selftest", "status", "onboard", "authorize-reminders"].contains(command) else { throw HelperCommandFailure.unknownCommand }
         guard let reportIndex = arguments.firstIndex(of: "--report"), reportIndex + 1 < arguments.count else { throw ProbeFailure.invalidArguments }
         let reportURL = try PrivateReport.validate(arguments[reportIndex + 1])
         if arguments.first == "selftest", arguments.dropFirst().first == "messages" {
@@ -73,6 +73,17 @@ public enum HelperCommand {
         session.refresh()
         if arguments.first == "status" {
             try PrivateReport.write(session.report.snapshot(), to: reportURL)
+            return
+        }
+        if arguments.first == "authorize-reminders" {
+            try PrivateReport.write(session.report.snapshot(), to: reportURL)
+            var finished = false
+            Task { @MainActor in
+                await session.authorizeReminders()
+                try PrivateReport.write(session.report.snapshot(), to: reportURL)
+                finished = true
+            }
+            while !finished { RunLoop.current.run(until: Date().addingTimeInterval(0.05)) }
             return
         }
         if arguments.first == "onboard" {

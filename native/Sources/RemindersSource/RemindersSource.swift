@@ -18,7 +18,7 @@ public final class RemindersSource: Source {
     private let generationURL: URL
     private var scanning = false
     public nonisolated static let operations = ["reminders.create", "reminders.update", "reminders.complete", "reminders.uncomplete", "reminders.delete", "reminders.create_list"]
-    public nonisolated static let coverage: JSON = .object(["fields": .string("partial"), "missing": .array([.string("recurrence: next incomplete instance only")])])
+    public nonisolated static let coverage: JSON = .object(["fields": .string("partial"), "missing": .array([.string("recurrence: next incomplete instance only")]), "operations": RemindersParity.coverage])
 
     public nonisolated init(gate: AgendaGate, home: URL, commandsEnabled: Bool = false) throws {
         self.gate = gate; self.commandsEnabled = commandsEnabled
