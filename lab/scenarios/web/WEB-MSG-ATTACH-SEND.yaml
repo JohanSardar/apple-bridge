@@ -1,0 +1,4 @@
+id: WEB-MSG-ATTACH-SEND
+feature: web.messages.write
+levels: [web]
+web: {browsers: [chromium], themes: [light], layouts: [desktop], server: gateway}

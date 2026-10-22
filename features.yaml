@@ -677,6 +677,7 @@ features:
       - {id: WEB-MSG-REPLY, levels: [web, real]}
       - {id: WEB-MSG-EDIT, levels: [web, real]}
       - {id: WEB-MSG-UNSEND, levels: [web, real]}
+      - {id: WEB-MSG-MANAGE, levels: [web]}
       - {id: WEB-MSG-CHAT-ACTIONS, levels: [web]}
       - {id: WEB-MSG-NEW, levels: [web]}
       - {id: WEB-MSG-FAIL-RESEND, levels: [web]}

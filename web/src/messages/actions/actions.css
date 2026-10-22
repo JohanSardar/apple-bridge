@@ -25,3 +25,5 @@
 .message-edit-controls button:disabled{opacity:.4;cursor:default;}
 .message-edit-controls [role=status],.message-edit-controls [role=alert]{flex:1;min-width:100px;color:var(--label-secondary);font-size:12px;}
 .unsend-particle{position:fixed;z-index:2147483647;width:5px;height:5px;border-radius:50%;background:var(--blue);opacity:0;pointer-events:none;}
+
+.message-delete-dialog{border:0;border-radius:20px;color:var(--text-primary);max-inline-size:min(360px,calc(100vw - 32px));padding:24px}.message-delete-dialog h2{font-size:19px;margin:0 0 12px}.message-delete-dialog>div{display:flex;justify-content:flex-end;gap:12px;margin-top:20px}.message-delete-dialog button{min-block-size:44px;min-inline-size:80px}.message-delete-dialog::backdrop{background:rgb(0 0 0 / 28%)}.message-action-item.destructive,.message-delete-dialog .destructive{color:var(--red)}

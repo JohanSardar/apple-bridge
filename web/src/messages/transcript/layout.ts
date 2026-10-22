@@ -2,12 +2,13 @@ import type { BridgeRecord, ThreadItem } from '../../data/types';
 import { array, fields, messageParts, sender, text, type Handles, type Part } from '../store/types';
 import { groupEvent, headerParts, name, time, wording, type HeaderParts } from '../format';
 import { attachmentHasAlpha } from '../media/source';
+import {pendingGeometryKnown,type PendingAttachment} from '../media/pending';
 import {effectLabel} from '../effects/data';
 import {messageCardData} from '../media/cards';
 export const effectLineHeight=22;
 export const transcriptSpacing={withinRun:3,betweenRuns:9,partGap:3,dateLine:16,afterHeader:9,senderLine:16,senderNameGap:2,reactionTop:16};
 export type LayoutPrefs = { phone: boolean; reduceMotion?:boolean; selectedMessageID?:string; viewportHeight?:number; group: boolean; service?: string; atLatest?: boolean; now: Date; locale?: string; scale: number; measure: (value:string,font?:{weight?:number;italic?:boolean})=>number; expanded: ReadonlySet<string> };
-export type BubbleLayout = { part: Part; mediaAttachments?:readonly BridgeRecord[]; subject?:string; width: number; height: number; emoji: boolean; media: boolean; floating:boolean; reactions: BridgeRecord[]; tail: boolean };
+export type BubbleLayout = { part: Part; pendingAttachment?:PendingAttachment; mediaAttachments?:readonly BridgeRecord[]; subject?:string; width: number; height: number; emoji: boolean; media: boolean; floating:boolean; reactions: BridgeRecord[]; tail: boolean };
 export type TranscriptRow = { key:string;service:string;effectLabel?:string;commandStatus?:{id:string;state:string;label:string};id: string; item: ThreadItem; members?:readonly ThreadItem[]; height: number; bubbles: BubbleLayout[]; sent: boolean; sender: string; senderName?: string; avatar?: string; header?: string; headerParts?:HeaderParts; system?: string; receipt?: string; edited: boolean; history: {text:string;height:number;width:number}[]; unsent?:string; reply?: string; failed: boolean; gap: number };
 const emojiPattern = /^(?:\p{Extended_Pictographic}|\p{Regional_Indicator}|\p{Emoji_Modifier}|\uFE0F|\u200D|\u20E3|[0-9#*]\uFE0F?\u20E3|\s)+$/u;
 export function emojiOnly(value: string) {
@@ -34,7 +35,10 @@ function mediaSize(dimensions:Record<string,unknown>,maxWidth:number,prefs:Layou
     const maxHeight=mediaHeightCap(prefs),scale=Math.min(1,maxWidth/width,prefs.phone&&!alpha?Infinity:maxHeight/height);
     return {width:width*scale,height:Math.min(height*scale,maxHeight)};
 }
+function pendingAttachment(item:ThreadItem):PendingAttachment|undefined{return item.id.startsWith('command:')&&typeof item.data.command_id==='string'?array(item.data.local_attachments)[0] as PendingAttachment|undefined:undefined;}
 function partSize(item:ThreadItem,part:Part,maxWidth:number,lineHeight:number,prefs:LayoutPrefs){
+    const local=pendingAttachment(item);
+    if(local){if(!/^(image|video)\//u.test(local.type)||!pendingGeometryKnown(local))return {width:Math.min(maxWidth,260),height:local.type.startsWith('video/')?120:88};const size=mediaSize({width:local.width,height:local.height},maxWidth,prefs,local.alpha===true);return local.type.startsWith('video/')?{width:Math.min(maxWidth,Math.max(120,size.width)),height:Math.min(mediaHeightCap(prefs),Math.max(120,size.height))}:size;}
     if(part.kind==='genmoji')return {width:lineHeight,height:lineHeight};
     const attachment=item.attachments?.find(value=>value.id===part.attachment_id),mime=text(attachment?.data.mime_type);
     if(mime.startsWith('audio/'))return {width:Math.min(maxWidth,280),height:76+(text(fields(item.data.audio).transcription).trim()?44:0)};
@@ -67,7 +71,7 @@ export function layout(items: readonly ThreadItem[], handles: Handles, prefs: La
             const bubbleWidth=media?size.width:emoji?Math.min(maxWidth,Math.ceil(prefs.measure(content)*2.7)+4):Math.min(maxWidth,Math.max(36,textWidthWithSlack(Math.max(wrapped.width,subject?subjectSize.width:0))+padding));
             const bubbleHeight=media?size.height:emoji?Math.ceil(fontSize*3):wrapped.lines*lineHeight+14+(subject?subjectSize.lines*lineHeight:0);
             const attachment=item.attachments?.find(value=>value.id===part.attachment_id),floating=part.kind==='genmoji'||Boolean(attachment&&attachmentHasAlpha(attachment));
-            return {part,floating,subject:subject||undefined,width:bubbleWidth,height:bubbleHeight,emoji,media,reactions:(item.reactions??[]).filter(reaction=>Number(reaction.data.part_index??0)===part.index),tail:last&&partIndex===visible.length-1&&!emoji};
+            return {part,pendingAttachment:pendingAttachment(item),floating:floating||pendingAttachment(item)?.alpha===true,subject:subject||undefined,width:bubbleWidth,height:bubbleHeight,emoji,media,reactions:(item.reactions??[]).filter(reaction=>Number(reaction.data.part_index??0)===part.index),tail:last&&partIndex===visible.length-1&&!emoji};
         });
         const edited=Boolean(data.edited_at)||array(data.edit_history).length>0,history=prefs.expanded.has(item.id)?array(data.edit_history).map(value=>{const content=text(fields(value).text);const wrapped=wrapText(content,maxWidth-padding,prefs.measure);return {text:content,width:Math.min(maxWidth,Math.max(36,textWidthWithSlack(wrapped.width)+padding)),height:wrapped.lines*lineHeight+14};}):[];
         const receipt=index===lastSent&&prefs.atLatest!==false&&Number(data.error_code??0)===0?(data.read_at?`Read ${time(text(data.read_at),prefs.locale)}`:data.delivered_at?fields(data.delivery).quietly?wording.deliveredQuietly:wording.delivered:undefined):undefined;

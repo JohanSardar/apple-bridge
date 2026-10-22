@@ -3,6 +3,8 @@ import type {LiveClient} from '../../data/live';
 import type {CommandState,Cursor,ThreadItem} from '../../data/types';
 import {withInput} from '../../data/input';
 import {createMessageChanges} from './messageChanges';
+import {createMessageManagement} from './messageManagement';
+import {attachmentOriginal,saveAttachment} from '../media/files';
 export const classicReactions = [
     {kind:'love',label:'Love',symbol:'❤️'},{kind:'like',label:'Like',symbol:'👍'},
     {kind:'dislike',label:'Dislike',symbol:'👎'},{kind:'laugh',label:'Laugh',symbol:'😂'},
@@ -28,6 +30,7 @@ export function createMessageActions(live:LiveClient,capabilities:{allowed:(oper
     const changed=()=>setRevision(value=>value+1);
     const current=()=>{const value=target();return value?{...value,item:captured.get(value.item.id)??value.item}:undefined;};
     const changes=createMessageChanges(live,capabilities.allowed,current,()=>{setTarget();setError('');});
+    const management=createMessageManagement(live,capabilities.allowed,current,()=>{setTarget();setError('');});
     const command=(intent:Intent)=>live.pending().find(value=>value.id===intent.commandID);
     const relevant=()=>{revision();const value=current();return value?[...intents.values()].filter(intent=>intent.messageID===value.item.id&&intent.partIndex===value.partIndex):[];};
     const unknown=()=>relevant().some(intent=>uncertain(command(intent)));
@@ -44,7 +47,7 @@ export function createMessageActions(live:LiveClient,capabilities:{allowed:(oper
     const open=(event:MouseEvent|PointerEvent|KeyboardEvent,item:ThreadItem,anchorOverride?:HTMLElement)=>{
         if(!event.isTrusted||item.id.startsWith('command:')||item.collection!=='messages.message'||item.version<1||item.data.kind==='group_event'||item.data.retracted_at)return;
         const origin=event.target instanceof Element?event.target:undefined;
-        const bubble=anchorOverride??origin?.closest<HTMLElement>('.bubble[data-part]')??origin?.closest('.bubble-slot')?.querySelector<HTMLElement>('.bubble[data-part]');
+        const bubble=anchorOverride??origin?.closest<HTMLElement>('[data-media-origin][data-message]')??origin?.closest<HTMLElement>('.bubble[data-part]')??origin?.closest('.bubble-slot')?.querySelector<HTMLElement>('.bubble[data-part]');
         const parts=nativeParts(item),partTarget=bubble?.closest<HTMLElement>('[data-part]'),index=bubble?(partTarget?Number(partTarget.dataset.part):undefined):parts[0]?.index;
         if(index===undefined||!Number.isSafeInteger(index)||index<0||!parts.some(part=>part.index===index)||Array.isArray(item.data.retracted_parts)&&item.data.retracted_parts.includes(index))return;
         const anchor=bubble??(event.currentTarget instanceof HTMLElement?event.currentTarget:origin?.closest<HTMLElement>('[data-message]'));
@@ -70,7 +73,7 @@ export function createMessageActions(live:LiveClient,capabilities:{allowed:(oper
             changed();close();
         });}catch{setError("Can't react right now. Check your connection.");}
     };
-    const checkID=(id:string)=>{if(changes.check(id))return;if(![...intents.values()].some(intent=>intent.commandID===id))return;try{live.checkCommand(id);}catch{setError("Couldn't check this reaction. Try again.");}};
+    const checkID=(id:string)=>{if(changes.check(id)||management.check(id))return;if(![...intents.values()].some(intent=>intent.commandID===id))return;try{live.checkCommand(id);}catch{setError("Couldn't check this reaction. Try again.");}};
     const check=()=>{for(const intent of relevant())if(uncertain(command(intent)))checkID(intent.commandID);};
     const reactionNotice=(chatID:string)=>{
         revision();const values=[...intents.values()].filter(intent=>intent.chatID===chatID),unknown=values.filter(intent=>uncertain(command(intent))),failed=values.filter(intent=>{const state=command(intent);return state&&!uncertain(state)&&['failed','rejected','expired'].includes(state.status);}),checks=values.filter(intent=>{const state=command(intent);return state&&!observed(state)&&state.check_error;});
@@ -78,7 +81,7 @@ export function createMessageActions(live:LiveClient,capabilities:{allowed:(oper
         const text=[unknown.length===1?'1 reaction may not have changed':unknown.length?unknown.length+' reactions may not have changed':'',failed.length===1?"1 reaction wasn't changed":failed.length?failed.length+" reactions weren't changed":'',checks.length?"Couldn't check this reaction. Try again.":''].filter(Boolean).join(' · ');
         return ids.length?{count:ids.length,command_ids:ids,text}:undefined;
     };
-    const notice=(chatID:string)=>{const values=[reactionNotice(chatID),changes.notice(chatID)].filter(value=>value!==undefined);return values.length?{count:values.reduce((sum,value)=>sum+value.count,0),command_ids:[...new Set(values.flatMap(value=>value.command_ids))],text:values.map(value=>value.text).join(' · ')}:undefined;};
+    const notice=(chatID:string)=>{const values=[reactionNotice(chatID),changes.notice(chatID),management.notice(chatID)].filter(value=>value!==undefined);return values.length?{count:values.reduce((sum,value)=>sum+value.count,0),command_ids:[...new Set(values.flatMap(value=>value.command_ids))],text:values.map(value=>value.text).join(' · ')}:undefined;};
     const problem=()=>{
         if(error())return error();
         if(relevant().some(intent=>{const state=command(intent);return state&&!observed(state)&&state.check_error;}))return "Couldn't check this reaction. Try again.";
@@ -90,7 +93,7 @@ export function createMessageActions(live:LiveClient,capabilities:{allowed:(oper
     const copy=(event:MouseEvent)=>{if(!event.isTrusted)return;try{withInput(event,()=>{void navigator.clipboard.writeText(text()).then(close,()=>setError("Couldn't copy this message."));});}catch{setError("Couldn't copy this message.");}};
     const observe=(items:readonly ThreadItem[],cursor:Cursor|undefined,chatID:string)=>{
         if(!cursor)return;
-        changes.observe(items,cursor,chatID);
+        changes.observe(items,cursor,chatID);management.observe(items,cursor,chatID);
         const ids=new Set(items.map(item=>item.id));for(const item of items)captured.set(item.id,item);
         for(const [key,intent] of intents){
             if(intent.chatID!==chatID)continue;
@@ -101,8 +104,13 @@ export function createMessageActions(live:LiveClient,capabilities:{allowed:(oper
         for(const [id] of captured)if(!ids.has(id)&&![...intents.values()].some(intent=>intent.messageID===id)&&target()?.item.id!==id&&replyTarget()?.item.id!==id)captured.delete(id);
         changed();
     };
+    const attachment=()=>{const value=current();if(!value)return;const part=Array.isArray(value.item.data.parts)?value.item.data.parts.find(part=>part.index===value.partIndex):undefined;return part?.attachment_id?value.item.attachments.find(attachment=>attachment.id===part.attachment_id):undefined;};
+    const canSave=()=>{const value=attachment();return Boolean(value&&attachmentOriginal(value));};
+    const save=(event:Event)=>{if(!event.isTrusted)return;const value=attachment();if(!value)return;try{withInput(event,()=>{if(saveAttachment(value))close();else setError("Original attachment is unavailable.");});}catch{setError("Couldn't download this attachment.");}};
+    const canForward=()=>Boolean((text()||canSave()&&Number(attachment()?.data.size)<=100*1024*1024)&&live.status()==='connected'&&capabilities.allowed('messages.send'));
+    const leaveChat=(chatID:string)=>{changes.leaveChat(chatID);management.leaveChat(chatID);};
     const dispose=()=>{setTarget();setReplyTarget();captured.clear();intents.clear();setFlight();};
     onCleanup(dispose);
-    return {target:current,open,close,replying,canReplyOperation,canReply,beginReply,cancelReply,changes,canReact,available,react,selected,unknown,busy,problem,check,checkID,notice,connected:()=>live.status()==='connected',copy,text,observe,flight,clearFlight:()=>setFlight(),dispose};
+    return {target:current,open,close,replying,canReplyOperation,canReply,beginReply,cancelReply,changes,management,leaveChat,canSave,save,canForward,forwardAttachment:attachment,canReact,available,react,selected,unknown,busy,problem,check,checkID,notice,connected:()=>live.status()==='connected',copy,text,observe,flight,clearFlight:()=>setFlight(),dispose};
 }
 export type MessageActionsController=ReturnType<typeof createMessageActions>;
