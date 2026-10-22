@@ -80,3 +80,5 @@ same dataset capture route as the existing demo sources.
 Reminders import stamps each observation with the capture time, so its default
 list can replace an already captured list. Dates inside reminder data remain
 fixed at the demo epoch; generating the dataset stays deterministic.
+
+Calendar adds five synthetic calendars (Work, Personal, Family, Birthdays and Holidays), timed events across 57 days around the fixed epoch, weekly floating all-day events, a multi-day trip and overlapping reviews. Events include notes, locations, invitees at example.com, alerts and recurrence display data. These fixtures exercise the shared Calendar capture and range read model; synthetic travel and coordinate values do not establish native write capability.

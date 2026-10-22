@@ -152,6 +152,10 @@ struct CalendarTruth {
         let selected = events.filter { event in
             (event.title ?? "").hasPrefix(tag) && ((request["title"] as? String).map { event.title == $0 } ?? true) && ((request["occurrence_date"] as? String).map { stamp(event.occurrenceDate ?? event.startDate) == $0 } ?? true)
         }.sorted { $0.startDate < $1.startDate }
+        if action == "store_counts" {
+            guard verb == "observe", (try ownership()).calendars.values.contains(tag) else { throw TruthFailure.invalid }
+            return try CalendarStoreTruth.counts(tag: tag, events: selected)
+        }
         if verb == "fixture" {
             switch action {
             case "create_calendar":

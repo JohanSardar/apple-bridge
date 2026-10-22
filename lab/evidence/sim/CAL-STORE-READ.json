@@ -1,0 +1,296 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[5.1 7.89 9.98] cpu_idle=78% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5J44SW5WMN4F304ECMCDG5C",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "CAL-STORE-READ",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "4a87aff119ed4f5a7a13381cbbc3f3c5415d4ba3",
+  "at": "2026-10-22T15:37:15.909908Z",
+  "assertions": [
+    {
+      "name": "world_start",
+      "passed": true
+    },
+    {
+      "name": "fixtures_converged",
+      "passed": true
+    },
+    {
+      "name": "rest_0_range_available",
+      "passed": true
+    },
+    {
+      "name": "rest_0_half_open_dst_range",
+      "passed": true
+    },
+    {
+      "name": "rest_0_overlap_columns",
+      "passed": true
+    },
+    {
+      "name": "rest_0_touching_intervals_separate",
+      "passed": true
+    },
+    {
+      "name": "rest_0_floating_civil_dates",
+      "passed": true
+    },
+    {
+      "name": "rest_0_store_fields_preserved",
+      "passed": true
+    },
+    {
+      "name": "rest_0_calendar_filter",
+      "passed": true
+    },
+    {
+      "name": "rest_0_notes_search",
+      "passed": true
+    },
+    {
+      "name": "rest_0_invalid_range_rejected",
+      "passed": true
+    },
+    {
+      "name": "mcp_0_range_available",
+      "passed": true
+    },
+    {
+      "name": "mcp_0_half_open_dst_range",
+      "passed": true
+    },
+    {
+      "name": "mcp_0_overlap_columns",
+      "passed": true
+    },
+    {
+      "name": "mcp_0_touching_intervals_separate",
+      "passed": true
+    },
+    {
+      "name": "mcp_0_floating_civil_dates",
+      "passed": true
+    },
+    {
+      "name": "mcp_0_store_fields_preserved",
+      "passed": true
+    },
+    {
+      "name": "mcp_0_calendar_filter",
+      "passed": true
+    },
+    {
+      "name": "mcp_0_notes_search",
+      "passed": true
+    },
+    {
+      "name": "mcp_0_invalid_range_rejected",
+      "passed": true
+    },
+    {
+      "name": "rest_1_range_available",
+      "passed": true
+    },
+    {
+      "name": "rest_1_half_open_dst_range",
+      "passed": true
+    },
+    {
+      "name": "rest_1_overlap_columns",
+      "passed": true
+    },
+    {
+      "name": "rest_1_touching_intervals_separate",
+      "passed": true
+    },
+    {
+      "name": "rest_1_floating_civil_dates",
+      "passed": true
+    },
+    {
+      "name": "rest_1_store_fields_preserved",
+      "passed": true
+    },
+    {
+      "name": "rest_1_calendar_filter",
+      "passed": true
+    },
+    {
+      "name": "rest_1_notes_search",
+      "passed": true
+    },
+    {
+      "name": "rest_1_invalid_range_rejected",
+      "passed": true
+    },
+    {
+      "name": "mcp_1_range_available",
+      "passed": true
+    },
+    {
+      "name": "mcp_1_half_open_dst_range",
+      "passed": true
+    },
+    {
+      "name": "mcp_1_overlap_columns",
+      "passed": true
+    },
+    {
+      "name": "mcp_1_touching_intervals_separate",
+      "passed": true
+    },
+    {
+      "name": "mcp_1_floating_civil_dates",
+      "passed": true
+    },
+    {
+      "name": "mcp_1_store_fields_preserved",
+      "passed": true
+    },
+    {
+      "name": "mcp_1_calendar_filter",
+      "passed": true
+    },
+    {
+      "name": "mcp_1_notes_search",
+      "passed": true
+    },
+    {
+      "name": "mcp_1_invalid_range_rejected",
+      "passed": true
+    },
+    {
+      "name": "cache_update_fixture",
+      "passed": true
+    },
+    {
+      "name": "cached_range_invalidates_after_update",
+      "passed": true
+    },
+    {
+      "name": "cache_delete_fixture",
+      "passed": true
+    },
+    {
+      "name": "cached_range_invalidates_after_delete",
+      "passed": true
+    },
+    {
+      "name": "rest_warm_cache_respects_scope",
+      "passed": true
+    },
+    {
+      "name": "mcp_warm_cache_respects_scope",
+      "passed": true
+    },
+    {
+      "name": "rest_warm_cache_respects_scope",
+      "passed": true
+    },
+    {
+      "name": "mcp_warm_cache_respects_scope",
+      "passed": true
+    },
+    {
+      "name": "month_1000_fixture",
+      "passed": true
+    },
+    {
+      "name": "month_1000_converged",
+      "passed": true
+    },
+    {
+      "name": "rest_month_exactly_1000",
+      "passed": true
+    },
+    {
+      "name": "rest_month_handler_p95_under_10ms",
+      "passed": true
+    },
+    {
+      "name": "mcp_month_exactly_1000",
+      "passed": true
+    },
+    {
+      "name": "mcp_month_handler_p95_under_10ms",
+      "passed": true
+    },
+    {
+      "name": "native_calendar_checks_build",
+      "passed": true
+    },
+    {
+      "name": "native_checks_output_available",
+      "passed": true
+    },
+    {
+      "name": "native_hint_fixture_decoded",
+      "passed": true
+    },
+    {
+      "name": "store_blob_digest_and_bytes",
+      "passed": true
+    },
+    {
+      "name": "store_blob_scope_cannot_escape_calendar_root",
+      "passed": true
+    },
+    {
+      "name": "store_unverified_units_stay_hidden",
+      "passed": true
+    },
+    {
+      "name": "store_unique_identifier_join",
+      "passed": true
+    },
+    {
+      "name": "store_uuid_join",
+      "passed": true
+    },
+    {
+      "name": "store_external_identity_is_calendar_scoped",
+      "passed": true
+    },
+    {
+      "name": "store_unknown_calendar_rejects",
+      "passed": true
+    },
+    {
+      "name": "store_detached_identity_is_not_guessed",
+      "passed": true
+    },
+    {
+      "name": "store_fields_decoded_without_unit_guessing",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "calendar_range_1000_month_mcp_gateway": {
+      "samples": 100,
+      "p50_ms": 0.751792,
+      "p95_ms": 0.9655,
+      "max_ms": 1.239583,
+      "timeouts": 0
+    },
+    "calendar_range_1000_month_rest_gateway": {
+      "samples": 100,
+      "p50_ms": 0.570417,
+      "p95_ms": 0.854708,
+      "max_ms": 0.995375,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

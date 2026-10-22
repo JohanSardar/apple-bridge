@@ -22,6 +22,7 @@ import (
 )
 
 type Store struct {
+	calendarCache  calendarRangeCache
 	pendingCapture *contracts.Batch
 	BlobProtection func(context.Context, contracts.ReferenceSet) error
 	BlobDelta      func(context.Context, contracts.ReferenceSet, bool) error

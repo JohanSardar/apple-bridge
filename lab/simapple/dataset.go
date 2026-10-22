@@ -32,7 +32,7 @@ func (f *fakeApple) datasetRoutes(mux *http.ServeMux) {
 		}
 		for _, o := range input.Records {
 			source := contracts.CollectionSource(o.Collection)
-			if (source != contracts.Messages && source != contracts.Contacts && source != contracts.Reminders) || o.NativeKey == "" || o.Kind != "upsert" || !json.Valid(o.Data) {
+			if (source != contracts.Messages && source != contracts.Contacts && source != contracts.Reminders && source != contracts.Calendar) || o.NativeKey == "" || o.Kind != "upsert" || !json.Valid(o.Data) {
 				http.Error(w, "invalid observation", 400)
 				return
 			}
@@ -87,7 +87,7 @@ func (f *fakeApple) datasetRoutes(mux *http.ServeMux) {
 			captures[source] = capture
 		}
 		var persistErr error
-		for _, source := range []contracts.Source{contracts.Contacts, contracts.Messages, contracts.Reminders} {
+		for _, source := range []contracts.Source{contracts.Contacts, contracts.Messages, contracts.Reminders, contracts.Calendar} {
 			if _, exists := captures[source]; exists && persistErr == nil {
 				persistErr = f.changedLocked(source)
 			}
@@ -105,7 +105,7 @@ func (f *fakeApple) datasetRoutes(mux *http.ServeMux) {
 			http.Error(w, "persist", 500)
 			return
 		}
-		for _, source := range []contracts.Source{contracts.Contacts, contracts.Messages, contracts.Reminders} {
+		for _, source := range []contracts.Source{contracts.Contacts, contracts.Messages, contracts.Reminders, contracts.Calendar} {
 			capture, exists := captures[source]
 			if !exists {
 				continue

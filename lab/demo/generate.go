@@ -39,5 +39,6 @@ func Generate(options Options) Dataset {
 	}
 	d.reactions()
 	d.reminders()
+	d.calendars()
 	return d
 }
