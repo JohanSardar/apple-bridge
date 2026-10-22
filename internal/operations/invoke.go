@@ -73,6 +73,12 @@ func (s *Service) Invoke(ctx context.Context, p trust.Principal, name string, in
 			return nil, contracts.ErrInvalid
 		}
 		return s.State.Thread(ctx, p.Visibility(), q)
+	case "messages.search":
+		var q contracts.MessageSearchQuery
+		if contracts.DecodeInput(input, &q) != nil {
+			return nil, contracts.ErrInvalid
+		}
+		return s.State.SearchMessages(ctx, p.Visibility(), q)
 	case "messages.collection":
 		var q contracts.CollectionQuery
 		if contracts.DecodeInput(input, &q) != nil {

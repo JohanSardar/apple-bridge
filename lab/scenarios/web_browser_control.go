@@ -219,6 +219,12 @@ func webBrowserControl(ctx context.Context, w *world.World, origin string, prepa
 		case "/details-fixture":
 			err = webDetailsFixture(w)
 			value = map[string]any{"ok": err == nil}
+		case "/search-update":
+			err = webSearchUpdate(w)
+			value = map[string]any{"ok": err == nil}
+		case "/search-fixture":
+			err = webSearchFixture(w)
+			value = map[string]any{"ok": err == nil}
 		case "/list-filters":
 			err = webListFilterFixture(w)
 			value = map[string]any{"ok": err == nil}

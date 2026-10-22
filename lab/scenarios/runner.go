@@ -460,6 +460,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "WEB-RM-THREAD-ORIGINATOR" || s.ID == "WEB-RM-THREAD-ORIGINATOR-PERF" {
 		return runThreadOriginator(ctx, s, level)
 	}
+	if s.ID == "WEB-RM-SEARCH" {
+		return runMessageSearch(ctx, s, level)
+	}
 	if s.Feature == "web.readmodels" {
 		return runReadModels(ctx, s, level)
 	}

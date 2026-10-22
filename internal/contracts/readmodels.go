@@ -111,3 +111,19 @@ type HandlesResult struct {
 	Handles []HandleSummary `json:"handles"`
 	Cursor  Cursor          `json:"cursor"`
 }
+
+type MessageSearchQuery struct {
+	Text          string `json:"text,omitempty"`
+	Kind          string `json:"kind,omitempty" enum:",photos,links,documents,locations"`
+	FromHandleID  string `json:"from_handle_id,omitempty"`
+	FromContactID string `json:"from_contact_id,omitempty"`
+	Unread        bool   `json:"unread,omitempty"`
+	After         string `json:"after,omitempty"`
+	Limit         int    `json:"limit,omitempty"`
+}
+type MessageSearchResult struct {
+	Items         []ThreadItem `json:"items"`
+	Next          string       `json:"next,omitempty"`
+	Cursor        Cursor       `json:"cursor"`
+	CoverageNotes []string     `json:"coverage_notes"`
+}

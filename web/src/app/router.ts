@@ -15,7 +15,7 @@ function parse(path: string): Route {
     } });
     return { path, chat: parts[0] === 'messages' ? parts[1] : undefined, message: parts[0] === 'messages'&&parts[2]!=='details' ? parts[2] : undefined, panel:parts[0]==='messages'&&parts[2]==='details'?'details':undefined, section: parts[0] === 'settings' ? parts[1] ?? 'devices' : undefined };
 }
-const [route, setRoute] = createSignal(parse(location.pathname));
+const [route, setRoute] = createSignal(parse(location.pathname+location.search));
 let key = history.state?.abKey ?? crypto.randomUUID();
 let persistent = false;
 export function setRouterPersistence(value: boolean) { persistent = value; }
@@ -49,7 +49,7 @@ function restore(){
     restoreTimeout=setTimeout(stopRestore,10000);
 }
 for(const type of ['pointerdown','keydown','wheel','touchstart'])window.addEventListener(type,event=>{if(event.isTrusted)stopRestore();},{capture:true,passive:true});
-window.addEventListener('popstate', () => { save(); key = history.state?.abKey ?? crypto.randomUUID(); setRoute(parse(location.pathname)); restore(); });
+window.addEventListener('popstate', () => { save(); key = history.state?.abKey ?? crypto.randomUUID(); setRoute(parse(location.pathname+location.search)); restore(); });
 window.addEventListener('pagehide', () => { if (!persistent)
     return; save(); try {
     sessionStorage.setItem('ab.scroll', JSON.stringify({ key, offsets: positions.get(key) }));

@@ -10,10 +10,10 @@ import (
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 )
 
-const searchVersion = "3"
+const searchVersion = "4"
 
 func searchTextSQL(payload string) string {
-	fields := []string{"text", "title", "notes", "plain_text", "given_name", "middle_name", "family_name", "nickname", "organization", "job_title"}
+	fields := []string{"text", "title", "notes", "plain_text", "given_name", "middle_name", "family_name", "nickname", "organization", "job_title", "filename", "balloon.link.title", "balloon.app.caption"}
 	parts := make([]string, len(fields))
 	for i, field := range fields {
 		parts[i] = fmt.Sprintf("coalesce(json_extract(%s,'$.data.%s'),'')", payload, field)
@@ -67,7 +67,7 @@ func (s *Store) initSearch() (bool, error) {
 	if _, err = tx.Exec(dropSearchTriggers); err != nil {
 		return false, err
 	}
-	if version != "building3" {
+	if version != "building"+searchVersion {
 		if _, err = tx.Exec("DROP TABLE IF EXISTS records_fts_next; DROP TABLE IF EXISTS records_fts_map"); err != nil {
 			return false, err
 		}
@@ -83,9 +83,9 @@ func (s *Store) initSearch() (bool, error) {
 	}
 	table := "records_fts"
 	ready := searchVersion
-	if populated || version == "building3" {
+	if populated || version == "building"+searchVersion {
 		table = "records_fts_next"
-		ready = "building3"
+		ready = "building" + searchVersion
 		if _, err = tx.Exec("CREATE VIRTUAL TABLE IF NOT EXISTS records_fts_next USING fts5(collection UNINDEXED,id UNINDEXED,source UNINDEXED,text)"); err != nil {
 			return false, err
 		}
