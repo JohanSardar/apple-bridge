@@ -193,6 +193,8 @@ func webBrowserControl(ctx context.Context, w *world.World, origin string, prepa
 			value, err = webHandlesFixture(w)
 		case "/thread-overlay-fixture":
 			value, err = webThreadOverlayFixture(w)
+		case "/rich-parts-fixture":
+			value, err = webRichPartsFixture(w)
 		case "/reaction-fixture":
 			value, err = webReactionFixture(w)
 		case "/list-fixture":
