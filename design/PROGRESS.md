@@ -69,7 +69,7 @@ One line per unit. Rules: BUILD-GOAL.md (2026-10-17 update: no reviews, merge on
 ## Web app (DECISIONS 2026-10-20, SPEC §23)
 Process: every change ships as a small PR (WORKER-RULES, Git and GitHub). Status lives in features.yaml; one line per unit here. Updated 2026-10-21.
 
-- DONE W0: decisions, the Messages spec (`design/web/messages.md`), SPEC §23 with W2–W8 unit tables (#98–#100), ADRs 0015–0020 and the Reminders/Calendar/Contacts/Notes drafts. Johan's skim is still open; work proceeds on the drafts. The input gate was redefined as our own main-thread cost (#103), and the list rules were pinned (#105).
+- DONE W0: decisions, the Messages spec (`design/web/messages.md`), SPEC §23 with W2–W8 unit tables (#98–#100), ADRs 0015–0020 and the Reminders/Calendar/Contacts/Notes drafts. On 2026-10-22 Johan delegated the skim to the leader, who approved the drafts as the working spec. The input gate was redefined as our own main-thread cost (#103), and the list rules were pinned (#105).
 - DONE W1-RM: chat, thread and collection read models (#2), plus rich filters, collections and `messages.handles` (#14, #22).
 - DONE W1-WEB / web.frontdoor: front door, passkey sessions and `web/1` live views (#3–#5); hardening (#15, #19, #23, #24); contact thumbnails and the handles route (#16, #38); canceled-view errors (#71).
 - DONE W1-AGENT: credentials, activity, approvals, OAuth, screens and polish (#18, #26, #32, #47, #54, #62, #64, #68, #81). Replica delegation (#73) and approved replica writes (#78) shipped with W1-RELAY.
@@ -106,6 +106,7 @@ Process: every change ships as a small PR (WORKER-RULES, Git and GitHub). Status
   - #141: the public relay gate (`remote_on_system`).
   - #154: the six `runRelayWorld` relay scenarios (CONNECT, COMMAND, PUBLIC-AGENTS, NATIVE-AGENTS, REPLICA-BLOBS, REPLICA), plus CORE-GATEWAY-DIALS at replica level if its Tailscale dial fails.
   - Contacts public-path R-LIVE (#139).
+  - **Update 2026-10-22:** Johan delegated host fixes, and the leader turned the Air's Tailscale back on (`tailscale up`, Serve config unchanged by md5). The gates above are no longer host-blocked; each PR reruns its public gates before merge.
   - The Air reaches the Ubuntu replica host over LAN while Tailscale is stopped: its lab `ubuntu` SSH alias tries `ubuntu-server` first and falls back to the Ubuntu LAN address (original config at `~/.ssh/config.bak-ablab-20261021`).
 - UPDATE 2026-10-21 late night:
   - **Merged:** Helper media-export crash fix (#159), Calendar invalidated-capture crash fix (#163), demo Reminders data (#157), native manual ordering (#160), read-model hardening (#161), and dev infrastructure: YAML latency classification (#162), the dispatch-only rebase rule (#164), and host-thrash guards for sensitive and extreme cases (#168–#170).
