@@ -373,6 +373,9 @@ func convergence(w *world.World) bool {
 }
 
 func runScenario(ctx context.Context, s Scenario, level string) Evidence {
+	if s.ID == "CORE-SEARCH-UPDATE-PERF" {
+		return runSearchUpdatePerf(ctx, s, level)
+	}
 	if s.ID == "WEB-RM-REMINDERS-HARDENING" {
 		return runRemindersHardening(ctx, s, level)
 	}
@@ -1036,6 +1039,9 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		ran++
 		fmt.Fprintln(os.Stderr, "running", s.ID, level)
 		duration := 3 * time.Minute
+		if s.ID == "CORE-SEARCH-UPDATE-PERF" {
+			duration = 10 * time.Minute
+		}
 		if level == "real" && (s.ID == "CORE-LIVE-LATENCY" || s.ID == "REM-CRUD") {
 			duration = 8 * time.Minute
 		}

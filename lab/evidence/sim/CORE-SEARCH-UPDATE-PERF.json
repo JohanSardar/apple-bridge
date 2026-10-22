@@ -1,0 +1,188 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[12.99 23.61 22.95] cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5GQWD7PKWY914APZKN1S7QM",
+  "metrics": {
+    "persisted_messages": 104900,
+    "query_matches_Synthetic Studio": 60,
+    "query_matches_ftsDefinitelyAbsent": 0,
+    "query_matches_imaginary garden": 13252,
+    "query_matches_paper boats": 12,
+    "query_matches_prototype": 13010,
+    "query_set_sha256_Synthetic Studio": "b4957647bee75836d5de1aa8bb26f6a666e1d913270e546e2a44f54e551ff9ed",
+    "query_set_sha256_ftsDefinitelyAbsent": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "query_set_sha256_imaginary garden": "4cc62f7945b04db446a3c78b5865ba1aeb81f2a3a9ce4df7e00238b90fa01ce0",
+    "query_set_sha256_paper boats": "3d0a7c33cdc92e0d73302bedc9a281ad805660f055eb989d3969fa88c294d30f",
+    "query_set_sha256_prototype": "08028f35fc962aecff96bea0e1c66f027b19c4e4ffb3ceae2ea8182397f21e1f"
+  },
+  "scenario": "CORE-SEARCH-UPDATE-PERF",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "aa2d5696ecd8cc8477bc49caf13d3f781c918965",
+  "at": "2026-10-22T02:43:43.479002Z",
+  "assertions": [
+    {
+      "name": "unchanged_huge_demo_104900_messages",
+      "passed": true
+    },
+    {
+      "name": "persisted_104900_messages",
+      "passed": true
+    },
+    {
+      "name": "five_samples_commit_exactly_100_updates",
+      "passed": true
+    },
+    {
+      "name": "hundred_record_commit_p95_under_one_second",
+      "passed": true
+    },
+    {
+      "name": "fixed_search_sets_equal_after_updates",
+      "passed": true
+    },
+    {
+      "name": "search_unavailable_during_rebuild",
+      "passed": true
+    },
+    {
+      "name": "search_rest_preparing_is_retryable_error_not_empty",
+      "passed": true
+    },
+    {
+      "name": "search_mcp_preparing_is_retryable_error_not_empty",
+      "passed": true
+    },
+    {
+      "name": "ordinary_reads_available_during_rebuild",
+      "passed": true
+    },
+    {
+      "name": "restart_resumes_pending_rebuild",
+      "passed": true
+    },
+    {
+      "name": "migration_startup_under_500ms",
+      "passed": true
+    },
+    {
+      "name": "capture_progress_during_rebuild",
+      "passed": true
+    },
+    {
+      "name": "capture_during_rebuild_under_one_second",
+      "passed": true
+    },
+    {
+      "name": "fts_version_three",
+      "passed": true
+    },
+    {
+      "name": "fixed_search_sets_equal_after_rebuild",
+      "passed": true
+    },
+    {
+      "name": "vacuum_completed",
+      "passed": true
+    },
+    {
+      "name": "stable_fts_key_after_record_rowid_change_and_vacuum",
+      "passed": true
+    },
+    {
+      "name": "fixed_search_sets_equal_after_vacuum_update",
+      "passed": true
+    },
+    {
+      "name": "changed_text_indexed_once",
+      "passed": true
+    },
+    {
+      "name": "delete_removes_search_match",
+      "passed": true
+    },
+    {
+      "name": "calendar_search_match",
+      "passed": true
+    },
+    {
+      "name": "eviction_removes_search_match",
+      "passed": true
+    },
+    {
+      "name": "deleted_and_evicted_fts_rows_absent",
+      "passed": true
+    },
+    {
+      "name": "hard_delete_removes_mapping",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "capture_during_rebuild": {
+      "samples": 1,
+      "p50_ms": 64.397416,
+      "p95_ms": 64.397416,
+      "max_ms": 64.397416,
+      "timeouts": 0
+    },
+    "fixture_startup": {
+      "samples": 1,
+      "p50_ms": 10.599708,
+      "p95_ms": 10.599708,
+      "max_ms": 10.599708,
+      "timeouts": 0
+    },
+    "fixture_until_search_ready": {
+      "samples": 1,
+      "p50_ms": 7151.246708,
+      "p95_ms": 7151.246708,
+      "max_ms": 7151.246708,
+      "timeouts": 0
+    },
+    "huge_demo_seed": {
+      "samples": 1,
+      "p50_ms": 6527.620875,
+      "p95_ms": 6527.620875,
+      "max_ms": 6527.620875,
+      "timeouts": 0
+    },
+    "hundred_record_capture_commit": {
+      "samples": 5,
+      "p50_ms": 91.789208,
+      "p95_ms": 101.229625,
+      "max_ms": 101.229625,
+      "timeouts": 0
+    },
+    "migration_resume_startup": {
+      "samples": 1,
+      "p50_ms": 1.7435,
+      "p95_ms": 1.7435,
+      "max_ms": 1.7435,
+      "timeouts": 0
+    },
+    "migration_startup": {
+      "samples": 1,
+      "p50_ms": 2.221167,
+      "p95_ms": 2.221167,
+      "max_ms": 2.221167,
+      "timeouts": 0
+    },
+    "migration_until_search_ready": {
+      "samples": 1,
+      "p50_ms": 6081.53525,
+      "p95_ms": 6081.53525,
+      "max_ms": 6081.53525,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}
