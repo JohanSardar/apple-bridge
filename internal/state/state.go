@@ -36,6 +36,8 @@ type Store struct {
 	leases          map[string]snapshotLease
 	captureFailures map[contracts.Source]captureFailure
 	capacity        map[contracts.Source]bool
+	searchCancel    context.CancelFunc
+	searchDone      chan struct{}
 }
 type CommitResult struct {
 	CommittedAt time.Time `json:"-"`
@@ -93,7 +95,8 @@ func Open(home string) (*Store, error) {
 		db.Close()
 		return nil, err
 	}
-	if err = s.initSearch(); err != nil {
+	searchPending, err := s.initSearch()
+	if err != nil {
 		db.Close()
 		return nil, err
 	}
@@ -102,9 +105,16 @@ func Open(home string) (*Store, error) {
 		return nil, err
 	}
 	initializeApplyBoundary(s)
+	if searchPending {
+		s.startSearchRebuild()
+	}
 	return s, nil
 }
 func (s *Store) Close() error {
+	if s.searchCancel != nil {
+		s.searchCancel()
+		<-s.searchDone
+	}
 	if s.ledger != nil {
 		return errors.Join(s.ledger.Close(), s.db.Close())
 	}
@@ -462,6 +472,9 @@ func (s *Store) Read(ctx context.Context, v trust.Visibility, q contracts.ReadQu
 	}
 	query := "SELECT payload FROM records WHERE (?='' OR collection=?) AND (?='' OR id=?) AND (deleted=0 OR ?) AND (collection,id)>(?,?) AND source IN (" + strings.Join(sources, ",") + ")"
 	if q.Text != "" {
+		if err = requireSearchReady(ctx, tx); err != nil {
+			return result, err
+		}
 		query += " AND (collection,id) IN (SELECT collection,id FROM records_fts WHERE records_fts MATCH ?)"
 		args = append(args, searchTerms(q.Text))
 	}

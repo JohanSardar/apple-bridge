@@ -156,6 +156,7 @@ features:
     status: done
     scenarios:
       - {id: CORE-BENCH, levels: [sim, replica]}
+      - {id: CORE-SEARCH-UPDATE-PERF, levels: [sim]}
 
   - id: helper.session
     title: Swift Helper session, IPC auth, fencing, dispatch guard, UI actor, stable signing and TCC
