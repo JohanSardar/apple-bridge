@@ -1,3 +1,4 @@
+import {AudioFixture} from './AudioFixture';
 import {For,Show,createSignal,onCleanup} from 'solid-js';
 import {PendingFixture} from './PendingFixture';
 import {EffectsFixture} from '../effects/EffectsFixture';
@@ -19,6 +20,7 @@ export function MediaFixture(){
  const stackIds=params.getAll('stack'),stack=()=>stackIds.flatMap(id=>items().filter(value=>value.message.id===id).map(value=>value.attachment)),phone=matchMedia('(max-width:699px)').matches;
  if(params.has('stickers'))return <StickerFixture items={view?.data().items??[]} standalone={params.get('stickers')==='standalone'}/>;
  if(params.has('placeholders'))return <PlaceholderFixture items={view?.data().items??[]} mode={params.get('placeholders')??'1'}/>;
+ if(params.has('audio'))return <AudioFixture items={view?.data().items??[]} plain={params.get('audio')==='plain'}/>;
  if(params.has('effects'))return <EffectsFixture items={view?.data().items??[]}/>;
  if(params.has('pending'))return <PendingFixture items={view?.data().items??[]} mode={params.get('pending')??'image'}/>;
  if(params.has('cards')){

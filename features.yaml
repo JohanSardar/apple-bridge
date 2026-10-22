@@ -563,6 +563,7 @@ features:
       - {id: WEB-MSG-LINKS, levels: [web]}
       - {id: WEB-MSG-STICKERS-GENMOJI, levels: [web]}
       - {id: WEB-MSG-EFFECTS, levels: [web]}
+      - {id: WEB-MSG-AUDIO, levels: [web]}
       - {id: WEB-MSG-PLACEHOLDERS, levels: [web]}
       - {id: WEB-MSG-PENDING, levels: [web]}
       - {id: WEB-MSG-DETAILS, levels: [web]}
