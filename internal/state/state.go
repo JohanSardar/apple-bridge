@@ -205,88 +205,24 @@ func (s *Store) Checkpoints(ctx context.Context) (map[contracts.Source]contracts
 }
 
 func recordAt(ctx context.Context, tx *sql.Tx, collection, id string) (contracts.Record, error) {
-	var r contracts.Record
-	var b []byte
-	err := tx.QueryRowContext(ctx, "SELECT payload FROM records WHERE collection=? AND id=?", collection, id).Scan(&b)
-	if err != nil {
-		return r, err
-	}
-	err = json.Unmarshal(b, &r)
-	return r, err
+	writer := newRecordWriter(tx)
+	defer writer.close()
+	return writer.recordAt(ctx, collection, id)
 }
 func writeRecord(ctx context.Context, tx *sql.Tx, r contracts.Record, seq uint64) error {
-	b, err := json.Marshal(r)
-	if err != nil {
-		return err
-	}
-	_, err = tx.ExecContext(ctx, `INSERT INTO records(collection,id,version,source,deleted,payload,seq,observed_at) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(collection,id) DO UPDATE SET version=excluded.version,source=excluded.source,deleted=excluded.deleted,payload=excluded.payload,seq=excluded.seq,observed_at=excluded.observed_at`, r.Collection, r.ID, r.Version, r.Source, r.Deleted, b, seq, r.ObservedAt.Format(time.RFC3339Nano))
-	if err != nil {
-		return err
-	}
-	if err = writeReadModel(ctx, tx, r, seq); err != nil {
-		return err
-	}
-	return writeBlobReferences(ctx, tx, "record:"+r.ID, r)
+	writer := newRecordWriter(tx)
+	defer writer.close()
+	return writer.writeRecord(ctx, r, seq)
 }
 func appendChange(ctx context.Context, tx *sql.Tx, c contracts.Cursor, r contracts.Record, op string) error {
-	change := contracts.Change{Sequence: c.Sequence, Record: r, Op: op}
-	b, err := json.Marshal(change)
-	if err != nil {
-		return err
-	}
-	_, err = tx.ExecContext(ctx, "INSERT INTO journal(seq,epoch,source,payload,committed_at) VALUES(?,?,?,?,unixepoch())", c.Sequence, c.Epoch, r.Source, b)
-	return err
+	writer := newRecordWriter(tx)
+	defer writer.close()
+	return writer.appendChange(ctx, c, r, op)
 }
-
 func resolveID(ctx context.Context, tx *sql.Tx, c contracts.Capture, o contracts.Observation, create bool) (string, error) {
-	var id string
-	err := tx.QueryRowContext(ctx, "SELECT record_id FROM aliases WHERE source=? AND generation=? AND collection=? AND native_key=?", c.Source, c.Generation, o.Collection, o.NativeKey).Scan(&id)
-	if err == nil {
-		return id, nil
-	}
-	if !errors.Is(err, sql.ErrNoRows) {
-		return "", err
-	}
-	if o.ScopedAlias != "" {
-		err = tx.QueryRowContext(ctx, "SELECT record_id FROM aliases WHERE source=? AND collection=? AND scoped_alias=? LIMIT 1", c.Source, o.Collection, o.ScopedAlias).Scan(&id)
-		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			return "", err
-		}
-	}
-	if id == "" {
-		if !create {
-			return "", sql.ErrNoRows
-		}
-		id = contracts.NewID(contracts.Collections[o.Collection])
-	}
-	_, err = tx.ExecContext(ctx, "INSERT INTO aliases(source,generation,collection,native_key,scoped_alias,record_id) VALUES(?,?,?,?,?,?)", c.Source, c.Generation, o.Collection, o.NativeKey, o.ScopedAlias, id)
-	return id, err
-}
-func resolveReferences(ctx context.Context, tx *sql.Tx, c contracts.Capture, value any) (any, error) {
-	switch v := value.(type) {
-	case map[string]any:
-		if reference, ok := v["$ref"].(map[string]any); ok {
-			collection, _ := reference["collection"].(string)
-			native, _ := reference["native_key"].(string)
-			return resolveID(ctx, tx, c, contracts.Observation{Collection: collection, NativeKey: native}, false)
-		}
-		for k, item := range v {
-			resolved, err := resolveReferences(ctx, tx, c, item)
-			if err != nil {
-				return nil, err
-			}
-			v[k] = resolved
-		}
-	case []any:
-		for i, item := range v {
-			resolved, err := resolveReferences(ctx, tx, c, item)
-			if err != nil {
-				return nil, err
-			}
-			v[i] = resolved
-		}
-	}
-	return value, nil
+	writer := newRecordWriter(tx)
+	defer writer.close()
+	return writer.resolveID(ctx, c, o, create)
 }
 
 func (s *Store) CommitCapture(ctx context.Context, c contracts.Capture) (CommitResult, error) {
@@ -315,6 +251,8 @@ func (s *Store) CommitCapture(ctx context.Context, c contracts.Capture) (CommitR
 		return result, err
 	}
 	defer tx.Rollback()
+	writer := newRecordWriter(tx)
+	defer writer.close()
 	cursor, err := cursorAt(ctx, tx)
 	if err != nil {
 		return result, err
@@ -339,7 +277,7 @@ func (s *Store) CommitCapture(ctx context.Context, c contracts.Capture) (CommitR
 	}
 	for _, o := range c.Observations {
 		if o.Kind != "absent" && o.Kind != "evict" {
-			if _, err = resolveID(ctx, tx, c, o, true); err != nil {
+			if _, err = writer.resolveID(ctx, c, o, true); err != nil {
 				return result, err
 			}
 		}
@@ -359,14 +297,14 @@ func (s *Store) CommitCapture(ctx context.Context, c contracts.Capture) (CommitR
 			result.Degraded = true
 			continue
 		}
-		id, err := resolveID(ctx, tx, c, o, o.Kind == "upsert")
+		id, err := writer.resolveID(ctx, c, o, o.Kind == "upsert")
 		if errors.Is(err, sql.ErrNoRows) {
 			continue
 		}
 		if err != nil {
 			return result, err
 		}
-		old, err := recordAt(ctx, tx, o.Collection, id)
+		old, err := writer.recordAt(ctx, o.Collection, id)
 		exists := err == nil
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return result, err
@@ -374,7 +312,7 @@ func (s *Store) CommitCapture(ctx context.Context, c contracts.Capture) (CommitR
 		latest := old.ObservedAt
 		if exists {
 			var observed string
-			if err = tx.QueryRowContext(ctx, "SELECT observed_at FROM records WHERE collection=? AND id=?", o.Collection, id).Scan(&observed); err != nil {
+			if err = writer.row(ctx, "SELECT observed_at FROM records WHERE collection=? AND id=?", o.Collection, id).Scan(&observed); err != nil {
 				return result, err
 			}
 			if latest, err = time.Parse(time.RFC3339Nano, observed); err != nil {
@@ -400,7 +338,7 @@ func (s *Store) CommitCapture(ctx context.Context, c contracts.Capture) (CommitR
 			if err = decoder.Decode(&value); err != nil {
 				return result, err
 			}
-			value, err = resolveReferences(ctx, tx, c, value)
+			value, err = writer.resolveReferences(ctx, c, value)
 			if err != nil {
 				return result, err
 			}
@@ -417,7 +355,7 @@ func (s *Store) CommitCapture(ctx context.Context, c contracts.Capture) (CommitR
 		}
 		deleted := o.Kind == "absent" || o.Kind == "evict"
 		if exists && old.Deleted == deleted && string(old.Data) == string(data) {
-			if _, err = tx.ExecContext(ctx, "UPDATE records SET observed_at=? WHERE collection=? AND id=?", o.ObservedAt.Format(time.RFC3339Nano), o.Collection, id); err != nil {
+			if _, err = writer.exec(ctx, "UPDATE records SET observed_at=? WHERE collection=? AND id=?", o.ObservedAt.Format(time.RFC3339Nano), o.Collection, id); err != nil {
 				return result, err
 			}
 			continue
@@ -434,7 +372,7 @@ func (s *Store) CommitCapture(ctx context.Context, c contracts.Capture) (CommitR
 			return result, contracts.ErrCapacity
 		}
 		cursor.Sequence++
-		if err = writeRecord(ctx, tx, record, cursor.Sequence); err != nil {
+		if err = writer.writeRecord(ctx, record, cursor.Sequence); err != nil {
 			return result, err
 		}
 		op := "upsert"
@@ -444,7 +382,7 @@ func (s *Store) CommitCapture(ctx context.Context, c contracts.Capture) (CommitR
 		if o.Kind == "evict" {
 			op = "evict"
 		}
-		if err = appendChange(ctx, tx, cursor, record, op); err != nil {
+		if err = writer.appendChange(ctx, cursor, record, op); err != nil {
 			return result, err
 		}
 	}
@@ -739,6 +677,8 @@ func (i *SnapshotInstall) InstallSnapshot(ctx context.Context) (contracts.Cursor
 		return contracts.Cursor{}, err
 	}
 	defer tx.Rollback()
+	writer := newRecordWriter(tx)
+	defer writer.close()
 	rows, err := tx.QueryContext(ctx, "SELECT payload FROM staging_records WHERE snapshot=? ORDER BY collection,id", i.ID)
 	if err != nil {
 		return contracts.Cursor{}, err
@@ -769,7 +709,7 @@ func (i *SnapshotInstall) InstallSnapshot(ctx context.Context) (contracts.Cursor
 		return contracts.Cursor{}, err
 	}
 	for _, r := range records {
-		if err = writeRecord(ctx, tx, r, i.Cursor.Sequence); err != nil {
+		if err = writer.writeRecord(ctx, r, i.Cursor.Sequence); err != nil {
 			return contracts.Cursor{}, err
 		}
 	}

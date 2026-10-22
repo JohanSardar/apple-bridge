@@ -1,0 +1,71 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[10.09 16.75 27.13] cpu_idle=36% cpus=8 other_heavy=2"
+  },
+  "run_id": "run_01M5HQZ5Q8S3CXNJ1FY798TFPD",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "chats": 500,
+    "messages": 512
+  },
+  "scenario": "CORE-SIM-PROGRESS-RECOVERY",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "c90f32452cd566e9e7876cbe8c1de31730a11b72",
+  "at": "2026-10-22T12:04:28.520241Z",
+  "assertions": [
+    {
+      "name": "initial_captures_durable",
+      "passed": true
+    },
+    {
+      "name": "multiple_chunks_acknowledged_before_pause",
+      "passed": true
+    },
+    {
+      "name": "durable_start_marker_retains_unfinished_revision",
+      "passed": true
+    },
+    {
+      "name": "intermediate_acks_do_not_force_progress_fsync",
+      "passed": true
+    },
+    {
+      "name": "helper_restarts_from_durable_start",
+      "passed": true
+    },
+    {
+      "name": "replayed_capture_finishes",
+      "passed": true
+    },
+    {
+      "name": "gateway_and_replica_equal_source_truth",
+      "passed": true
+    },
+    {
+      "name": "all_512_messages_and_500_chats_retained",
+      "passed": true
+    },
+    {
+      "name": "replay_does_not_duplicate_record_versions",
+      "passed": true
+    },
+    {
+      "name": "final_checkpoint_and_revision_are_durable",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": [
+    "air"
+  ],
+  "conditions": {
+    "boundary": "full capture paused after multiple intermediate ACKs, then SimApple process restart",
+    "dataset": "512 synthetic messages and 500 synthetic chats"
+  }
+}

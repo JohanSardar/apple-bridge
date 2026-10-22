@@ -1,0 +1,124 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[13.15 19.6 30.27] cpu_idle=21% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5HQSKP8WNBZB5G8CDTB91XM",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "fixture_sha256": "be3df96d71551dc78a282ea368e0b7fe7a31f61069e5598eda5f73dde281ec4c",
+    "persisted_messages": 104900,
+    "readmodels_after": {
+      "activity_by_chat": "701534f5edeff9194506d79d72d097127d1994d9e804e25a4ed7e89d86373a0e",
+      "attachment_by_message": "329d2bf81fc83aada0589d7d5a41f491ea2b5bbc64f0f9a89e23f4a8bb5b5261",
+      "chat_summary": "1c481def25333975880945dfe26c230a83903098c93505c9ace873fcd7025ede",
+      "msg_by_chat": "1e21bb5e9cd71bf09a51dcb36d35cd748948fa234f3352bfc7704eed70829e2d",
+      "reaction_by_message": "255e1bd68879d4691d2a1f3ef3d5b7bc0871ddd8e32c3e5de1b5580cc1977340"
+    },
+    "readmodels_before": {
+      "activity_by_chat": "701534f5edeff9194506d79d72d097127d1994d9e804e25a4ed7e89d86373a0e",
+      "attachment_by_message": "329d2bf81fc83aada0589d7d5a41f491ea2b5bbc64f0f9a89e23f4a8bb5b5261",
+      "chat_summary": "1c481def25333975880945dfe26c230a83903098c93505c9ace873fcd7025ede",
+      "msg_by_chat": "bf462c128fe28ea5861ab05711037a0fc226a18f9a3e80d446922223685b44ee",
+      "reaction_by_message": "255e1bd68879d4691d2a1f3ef3d5b7bc0871ddd8e32c3e5de1b5580cc1977340"
+    }
+  },
+  "scenario": "CORE-READMODEL-UPDATE-PERF",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "c90f32452cd566e9e7876cbe8c1de31730a11b72",
+  "at": "2026-10-22T12:01:26.217468Z",
+  "assertions": [
+    {
+      "name": "clone_closed_fixture",
+      "passed": true
+    },
+    {
+      "name": "synthetic_fixture_generation",
+      "passed": true
+    },
+    {
+      "name": "fixed_104900_message_fixture",
+      "passed": true
+    },
+    {
+      "name": "exactly_100_existing_update_targets",
+      "passed": true
+    },
+    {
+      "name": "capture_commits_exactly_100_changes",
+      "passed": true
+    },
+    {
+      "name": "capture_commits_exactly_100_changes",
+      "passed": true
+    },
+    {
+      "name": "capture_commits_exactly_100_changes",
+      "passed": true
+    },
+    {
+      "name": "capture_commits_exactly_100_changes",
+      "passed": true
+    },
+    {
+      "name": "capture_commits_exactly_100_changes",
+      "passed": true
+    },
+    {
+      "name": "capture_commit_p95_under_one_second",
+      "passed": true
+    },
+    {
+      "name": "attachment_rows_and_payloads_match_canonical",
+      "passed": true
+    },
+    {
+      "name": "chat_summaries_match_index_aggregates",
+      "passed": true
+    },
+    {
+      "name": "activity_rows_match_messages_and_reactions",
+      "passed": true
+    },
+    {
+      "name": "message_rows_and_payloads_match_canonical",
+      "passed": true
+    },
+    {
+      "name": "reaction_rows_and_payloads_match_canonical",
+      "passed": true
+    },
+    {
+      "name": "identical_cloned_canonical_fixture",
+      "passed": true
+    },
+    {
+      "name": "all_five_readmodel_tables_byte_equal_to_baseline",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "capture_100_commit": {
+      "samples": 5,
+      "p50_ms": 293.4205,
+      "p95_ms": 371.00575,
+      "max_ms": 371.00575,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ],
+  "conditions": {
+    "budget": "1000 ms p95 transaction guard derived from R-LIVE; not end-to-end certification",
+    "capture": "five captures of 100 existing messages",
+    "dataset": "synthetic huge demo",
+    "seed": "APFS clone of closed synthetic fixture; seed timing measured separately",
+    "transport": "State capture transaction API"
+  }
+}

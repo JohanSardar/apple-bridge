@@ -270,22 +270,9 @@ func (s *Store) SetBlobReferences(ctx context.Context, owner string, refs []cont
 }
 
 func writeBlobReferences(ctx context.Context, tx *sql.Tx, owner string, r contracts.Record) error {
-	if _, err := tx.ExecContext(ctx, "DELETE FROM blob_refs WHERE owner=?", owner); err != nil {
-		return err
-	}
-	if r.Deleted {
-		return nil
-	}
-	for _, ref := range contracts.BlobReferences(r.Data) {
-		b, err := json.Marshal(ref)
-		if err != nil {
-			return err
-		}
-		if _, err = tx.ExecContext(ctx, "INSERT INTO blob_refs(owner,digest,payload) VALUES(?,?,?) ON CONFLICT(owner,digest) DO UPDATE SET payload=excluded.payload", owner, ref.Digest, b); err != nil {
-			return err
-		}
-	}
-	return nil
+	writer := newRecordWriter(tx)
+	defer writer.close()
+	return writer.writeBlobReferences(ctx, owner, r)
 }
 func (s *Store) initBlobReferences(ctx context.Context) error {
 	s.write.Lock()

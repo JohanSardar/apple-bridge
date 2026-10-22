@@ -361,6 +361,15 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "HELPER-RELEASE-COMMANDS" {
 		return runHelperReleaseCommands(ctx, s, level)
 	}
+	if s.ID == "CORE-SIM-PROGRESS-RECOVERY" {
+		return runSimProgressRecovery(ctx, s, level)
+	}
+	if s.ID == "CORE-CAPTURE-ALIASES" {
+		return runCaptureAliases(ctx, s, level)
+	}
+	if s.ID == "CORE-READMODEL-UPDATE-PERF" {
+		return runReadmodelUpdatePerf(ctx, s, level)
+	}
 	if s.ID == "CORE-SEARCH-UPDATE-PERF" {
 		return runSearchUpdatePerf(ctx, s, level)
 	}
