@@ -91,7 +91,8 @@ Process: every change ships as a small PR (WORKER-RULES, Git and GitHub). Status
 - IN PROGRESS W2-MEDIA: image bubbles (#77), transparent media (#80), collections and viewer (#82, #87, #93), photo stacks and desktop grids (#102), precache fix (#97). Video and Live bubbles are next.
 - IN PROGRESS W3-COMPOSE: exact observed record IDs (#86), safe resend identity (#88), State pool fix (#94), live source capability proofs (#101). The command layer and composer are next.
 - DONE (code) W3-HELPER: interactive origin gate, self-test, guarded resend, recoverable delete and chat actions (#51, #57, #59, #60, #63, #65). UI proofs wait for the unlock.
-- IN PROGRESS W5-STORE: Reminders Core Data store reader, decoders and the `reminders.*` read models (started 2026-10-21).
+- DONE (store) W5-STORE: Reminders Core Data reader and enrichment (#115, #120), `reminders.lists`/`reminders.items` read models at gateway p95 about 4–5 ms (#150, hardening #161), verified native manual ordering (#160) and rich demo data (#157). Tags, attachment IDs, assignment, store alarms/recurrence, early reminders, sections, filters and the color archive remain unsupported from the native store until positive fixtures exist.
+- IN PROGRESS W5-UI: read-only Reminders sidebar and list views with `web/1` live updates (#166). Paging is a documented follow-up, because Johan's largest real view is far below the 2 MiB view cap.
 - TODO: W2-DETAILS (after #104), W4 parity, W5-UI/WRITE/PARITY, W6–W8.
 - Dev infrastructure: re-entrant heavy.sh with an OS-matching SDK and an exclusive lane (#11, #35, #36, #37, #44), per-step gating (#74), per-project web budgets (#39), detached Air runs (#42), explicit ff updates (#89), disk trim (#95).
 - **Waiting on the Air being unlocked** (lock screen; passwords are never typed):
@@ -105,3 +106,9 @@ Process: every change ships as a small PR (WORKER-RULES, Git and GitHub). Status
   - #141: the public relay gate (`remote_on_system`).
   - #154: the six `runRelayWorld` relay scenarios (CONNECT, COMMAND, PUBLIC-AGENTS, NATIVE-AGENTS, REPLICA-BLOBS, REPLICA), plus CORE-GATEWAY-DIALS at replica level if its Tailscale dial fails.
   - Contacts public-path R-LIVE (#139).
+  - The Air reaches the Ubuntu replica host over LAN while Tailscale is stopped: its lab `ubuntu` SSH alias tries `ubuntu-server` first and falls back to the Ubuntu LAN address (original config at `~/.ssh/config.bak-ablab-20261021`).
+- UPDATE 2026-10-21 late night:
+  - **Merged:** Helper media-export crash fix (#159), Calendar invalidated-capture crash fix (#163), demo Reminders data (#157), native manual ordering (#160), read-model hardening (#161), and dev infrastructure: YAML latency classification (#162), the dispatch-only rebase rule (#164), and host-thrash guards for sensitive and extreme cases (#168–#170).
+  - **Host:** Johan's own `com.excerlock.transcript-mirror` launchd job (another project, never touched by agents) runs every 30 minutes and pushes the 8 GB Air into heavy swap for part of each cycle. `heavy.sh` holds sensitive jobs and, during extreme thrash, other heavy jobs. Timing results that overlap such a window are host-invalid and rerun.
+  - **Found:** every record update scans the whole FTS table (`records_fts` keyed by UNINDEXED columns). LIVE-FIX is fixing it with stable FTS row keys and a failing-first perf proof.
+  - **Calendar:** a real probe (macOS 26.7.1) showed location and both alarm edits don't advance `lastModifiedDate`. The occurrence stamp is metadata plus location plus alarms, with the 900 s full rebuild as backstop (#143).
