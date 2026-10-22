@@ -1149,8 +1149,8 @@ The Helper creates variants for present attachment blobs, as new blobs reference
 |---|---|---|
 | Image (HEIC, JPEG, PNG, WebP, AVIF, TIFF) | `thumb` ≤ 400 px, `display` ≤ 1600 px; JPEG q0.8/0.85, or PNG when there's alpha; orientation applied | `width`, `height`, `thumbhash` |
 | GIF | `thumb` (first frame); the original plays | same |
-| Video (MOV, MP4, 3GP) | `video` H.264/AAC MP4 ≤ 1080p with faststart; `poster` JPEG | `width`, `height`, `duration_ms`, `thumbhash` |
-| Live Photo (still + paired MOV) | image variants + `live` MP4 | + `live: true` |
+| Video (MOV, MP4, 3GP) | `video` H.264/AAC MP4 ≤ 1080p with faststart; `poster` JPEG from the source frame, 360 px on the short side, at most 1.5 MP | `width`, `height`, `duration_ms`, `thumbhash` |
+| Live Photo (still + paired MOV) | image variants + `live` MP4; `poster` from the oriented key still, same size rule | + `live: true` |
 | Audio (CAF, AMR, M4A, MP3) | `audio` AAC M4A | `duration_ms`, `waveform` (64 peaks, 0–255) |
 | Sticker (HEIC/PNG with alpha) | `display` PNG | `width`, `height` |
 
@@ -1158,8 +1158,11 @@ The Helper creates variants for present attachment blobs, as new blobs reference
 - **Order:**
   - New attachments come first: images within 2 s, video when its export completes.
   - Backfill runs newest-first, one job at a time at utility QoS, and pauses below 20% battery or under serious thermal state.
+  - Backfill yields to foreground capture at stage checkpoints instead of cancelling. Completed stages are reused by digest. A job whose source changes (device, inode, size or modification time; extended attributes don't count) restarts from a fresh digest.
+- **Upgrades:** completed entries upgrade only their poster while the source is local; offline sources keep the cached poster. The cache format is unchanged.
 - **Sync:** variants count toward blob caps and sync like other blobs. Replicas fetch variants before originals.
-- **Fallback:** the web serves a browser-safe original when a variant is missing, or `variant_pending` otherwise.
+- **Fallback:** a request by the original digest serves a browser-safe original when a variant is missing, or `variant_pending` otherwise.
+- **Exact variants:** clients request the selected derivative's digest. A pending derivative returns 503 `variant_pending` with `Retry-After`; an unavailable one returns 404 `variant_unavailable`; both are `no-store`. `immutable` caching applies only when the body's digest equals the URL digest.
 
 ### 23.8 Frontend
 
