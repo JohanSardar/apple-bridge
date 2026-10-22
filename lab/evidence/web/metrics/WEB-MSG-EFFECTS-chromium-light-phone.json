@@ -1,0 +1,8 @@
+{
+  "scope": "canvas draw duration; whole-frame acceptance deferred to Messages milestone",
+  "renderer": "worker",
+  "type": "done",
+  "frames": 141,
+  "p95": 1.5,
+  "max": 3.1000001430511475
+}
