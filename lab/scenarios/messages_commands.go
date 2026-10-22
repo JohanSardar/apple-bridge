@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/lab/scripted"
 	"github.com/JohanSardar/apple-bridge/lab/world"
@@ -159,6 +160,75 @@ func runMessagesCommands(ctx context.Context, s Scenario, level string) Evidence
 		_, problem = submit(wrong)
 		add("resend_successful_target_rejected", successful.ID != "" && problem != nil && count(wrong, 0))
 
+	case "MSG-SEND-VARIANTS":
+		var sources contracts.ReadResult
+		add("source_status", client.Call(ctx, "sources.status", struct{}{}, &sources) == nil)
+		coverage := map[string]contracts.OperationCapability{}
+		for _, source := range sources.Records {
+			var data struct {
+				Coverage     contracts.Coverage `json:"coverage"`
+				Capabilities []string           `json:"capabilities"`
+			}
+			json.Unmarshal(source.Data, &data)
+			for _, item := range data.Coverage.Operations {
+				coverage[item.Operation] = item
+			}
+			for _, name := range contracts.MessageVariantCapabilities {
+				advertised := false
+				for _, capability := range data.Capabilities {
+					advertised = advertised || capability == name
+				}
+				add("not_advertised_"+name, !advertised)
+			}
+		}
+		for _, name := range contracts.MessageVariantCapabilities {
+			proof, ok := coverage[name]
+			add("limited_reason_"+name, ok && !proof.Proven && proof.Reason == "per_os_variant_proof_required")
+		}
+		variants := []map[string]any{
+			{"kind": "schedule", "scheduled_for": time.Now().Add(time.Hour).UTC().Format(time.RFC3339Nano)},
+			{"kind": "effect", "effect": "loud"},
+			{"kind": "formatting", "formatting": []any{map[string]any{"utf16_location": 0, "utf16_length": 1, "styles": []string{"bold"}}}},
+			{"kind": "mention", "handle_id": "handle-self", "utf16_location": 0, "utf16_length": 1},
+			{"kind": "audio"},
+		}
+		for _, variant := range variants {
+			args := map[string]any{"chat_id": chat.ID, "text": text, "variant": variant}
+			if variant["kind"] == "audio" {
+				args["text"] = ""
+				args["files"] = []any{map[string]any{"name": "ab-test-audio.wav", "data": base64.StdEncoding.EncodeToString([]byte("synthetic audio"))}}
+			}
+			c := command("send", args, 0)
+			_, problem := submit(c)
+			failure, ok := problem.(*contracts.Error)
+			add("unproven_"+variant["kind"].(string)+"_no_plain_fallback", ok && failure.Code == "capability_unproven" && count(c, 0))
+		}
+		invalid := []map[string]any{
+			{"kind": "unknown"},
+			{"kind": "schedule", "scheduled_for": time.Now().Add(-time.Hour).UTC().Format(time.RFC3339Nano)},
+			{"kind": "effect", "effect": "invented"},
+			{"kind": "effect", "effect": "loud", "scheduled_for": time.Now().Add(time.Hour).UTC().Format(time.RFC3339Nano)},
+			{"kind": "formatting", "formatting": []any{map[string]any{"utf16_location": 2, "utf16_length": 1, "styles": []string{"bold"}}}},
+			{"kind": "formatting", "formatting": []any{map[string]any{"utf16_location": 0, "utf16_length": 0, "styles": []string{"bold"}}}},
+			{"kind": "formatting", "formatting": []any{map[string]any{"utf16_location": 0, "utf16_length": 1, "styles": []string{"bold", "bold"}}}},
+		}
+		for index, variant := range invalid {
+			c := command("send", map[string]any{"chat_id": chat.ID, "text": "A😀B", "variant": variant}, 0)
+			_, problem := submit(c)
+			failure, ok := problem.(*contracts.Error)
+			add(fmt.Sprintf("invalid_variant_%d_no_effect", index), ok && failure.Code == "invalid" && count(c, 0))
+		}
+		ordinary, problem := send()
+		add("plain_send_unchanged", observed(ordinary, problem))
+		if len(ordinary.ObservedRecordIDs) > 0 {
+			target := record("messages.message", ordinary.ObservedRecordIDs[0])
+			c := command("keep_audio", map[string]any{"id": target.ID}, target.Version)
+			_, problem = submit(c)
+			failure, ok := problem.(*contracts.Error)
+			add("keep_unproven_no_effect", ok && failure.Code == "capability_unproven" && count(c, 0))
+		} else {
+			add("keep_unproven_no_effect", false)
+		}
 	case "MSG-CAPABILITY-MATRIX":
 		var status contracts.ReadResult
 		err := client.Call(ctx, "sources.status", struct{}{}, &status)

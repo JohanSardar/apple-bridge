@@ -17,6 +17,9 @@ func messageCoverage() contracts.Coverage {
 	for _, op := range contracts.MessagesOperations {
 		c.Operations = append(c.Operations, contracts.OperationCapability{Operation: op, Proven: true, Reason: "simulated_native_route"})
 	}
+	for _, op := range contracts.MessageVariantCapabilities {
+		c.Operations = append(c.Operations, contracts.OperationCapability{Operation: op, Proven: false, Reason: "per_os_variant_proof_required"})
+	}
 	return c
 }
 func messageCapabilities() []string { return contracts.MessagesOperations }
@@ -50,6 +53,9 @@ func simHandleKey(handle string) string {
 }
 func (f *fakeApple) messageValidate(a contracts.NativeAction) *contracts.Error {
 	m := a.Messages
+	if m != nil && (m.Variant != nil || a.Op == "messages.keep_audio") {
+		return messageProblem("capability_unproven")
+	}
 	if m == nil {
 		return contracts.ErrInvalid
 	}

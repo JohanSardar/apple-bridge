@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 type MessageFile struct {
@@ -24,19 +25,20 @@ type NativeMessagesArgs struct {
 }
 
 type MessagesArgs struct {
-	ResendOf  string        `json:"resend_of,omitempty"`
-	ID        string        `json:"id,omitempty"`
-	ChatID    string        `json:"chat_id,omitempty"`
-	Handles   []string      `json:"handles,omitempty"`
-	Service   string        `json:"service,omitempty"`
-	Text      string        `json:"text,omitempty"`
-	Files     []MessageFile `json:"files,omitempty"`
-	PartIndex int           `json:"part_index,omitempty"`
-	Reaction  string        `json:"reaction,omitempty"`
-	Emoji     string        `json:"emoji,omitempty"`
-	Remove    bool          `json:"remove,omitempty"`
-	Name      string        `json:"name,omitempty"`
-	Handle    string        `json:"handle,omitempty"`
+	Variant   *MessageSendVariant `json:"variant,omitempty"`
+	ResendOf  string              `json:"resend_of,omitempty"`
+	ID        string              `json:"id,omitempty"`
+	ChatID    string              `json:"chat_id,omitempty"`
+	Handles   []string            `json:"handles,omitempty"`
+	Service   string              `json:"service,omitempty"`
+	Text      string              `json:"text,omitempty"`
+	Files     []MessageFile       `json:"files,omitempty"`
+	PartIndex int                 `json:"part_index,omitempty"`
+	Reaction  string              `json:"reaction,omitempty"`
+	Emoji     string              `json:"emoji,omitempty"`
+	Remove    bool                `json:"remove,omitempty"`
+	Name      string              `json:"name,omitempty"`
+	Handle    string              `json:"handle,omitempty"`
 }
 
 var MessagesOperations = []string{"messages.send", "messages.reply", "messages.react", "messages.edit", "messages.unsend", "messages.mark_read", "messages.mark_unread", "messages.delete_message", "messages.delete_chat", "messages.create_group", "messages.rename_group", "messages.add_member", "messages.remove_member", "messages.leave_group"}
@@ -44,13 +46,15 @@ var MessagesOperations = []string{"messages.send", "messages.reply", "messages.r
 func MessagesArgumentFields(op string) []string {
 	switch op {
 	case "messages.send":
-		return []string{"chat_id", "handles", "service", "text", "files", "resend_of"}
+		return []string{"chat_id", "handles", "service", "text", "files", "resend_of", "variant"}
 	case "messages.reply":
 		return []string{"id", "part_index", "text", "files"}
 	case "messages.react":
 		return []string{"id", "part_index", "reaction", "emoji", "remove"}
 	case "messages.edit":
 		return []string{"id", "part_index", "text"}
+	case "messages.keep_audio":
+		return []string{"id"}
 	case "messages.unsend":
 		return []string{"id", "part_index"}
 	case "messages.create_group":
@@ -138,6 +142,17 @@ func ValidateMessagesCommand(c Command) (MessagesArgs, error) {
 			return a, ErrInvalid
 		}
 	}
+	if c.Op != "messages.send" && a.Variant != nil {
+		return a, ErrInvalid
+	}
+	if c.Op == "messages.send" {
+		if err := ValidateMessageSendVariant(a, time.Now()); err != nil {
+			return a, err
+		}
+	}
+	if c.Op == "messages.keep_audio" && c.ExpectedVersion == 0 {
+		return a, ErrInvalid
+	}
 	return a, nil
 }
 func MessagesTargetCollection(op string) string {
@@ -148,7 +163,7 @@ func MessagesTargetCollection(op string) string {
 	return "messages.message"
 }
 func init() {
-	for _, op := range MessagesOperations {
+	for _, op := range append(append([]string{}, MessagesOperations...), "messages.keep_audio") {
 		Operations = append(Operations, OperationDescriptor{Name: op, Version: 1, Kind: CommandOp, Source: Messages, Scope: "messages:write", Capability: op, Input: Command{}, Output: CommandRecord{}, Description: "Messages command with evidence; unproven native routes reject before dispatch"})
 	}
 }
