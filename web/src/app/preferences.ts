@@ -12,6 +12,7 @@ const parsed: {
     theme?: Theme;
     textSize?: number;
     sidebarWidth?: number;
+    calendarHidden?: string[];
 } = (() => { try {
     return JSON.parse(saved ?? '{}');
 }
@@ -21,6 +22,7 @@ catch {
 const [theme, setTheme] = createSignal<Theme>(['system', 'light', 'dark'].includes(parsed.theme ?? '') ? parsed.theme! : 'system');
 const [textSize, setTextSize] = createSignal(Math.min(1.5, Math.max(.85, typeof parsed.textSize==='number'&&Number.isFinite(parsed.textSize)?parsed.textSize:1)));
 const [sidebarWidth,setSidebarWidth]=createSignal(typeof parsed.sidebarWidth==='number'&&Number.isFinite(parsed.sidebarWidth)?Math.max(280,Math.min(420,parsed.sidebarWidth)):320);
+const [calendarHidden, setCalendarHidden] = createSignal<string[]>(Array.isArray(parsed.calendarHidden) ? parsed.calendarHidden.filter(value => typeof value === 'string' && /^[A-Za-z0-9_-]{1,100}$/u.test(value)).slice(0, 256) : []);
 let persistent = false;
 function apply() {
     document.documentElement.dataset.theme = theme() === 'system' ? system.matches ? 'dark' : 'light' : theme();
@@ -32,14 +34,14 @@ function save() {
     apply();
     if (persistent)
         try {
-            localStorage.setItem('ab.appearance', JSON.stringify({ theme: theme(), textSize: textSize(), sidebarWidth: sidebarWidth() }));
+            localStorage.setItem('ab.appearance', JSON.stringify({ theme: theme(), textSize: textSize(), sidebarWidth: sidebarWidth(), calendarHidden: calendarHidden() }));
         }
         catch {
             return;
         }
 }
 export function setPreferencePersistence(value: boolean) { persistent = value; if (!value) {
-    setSidebarWidth(320);apply();
+    setCalendarHidden([]);setSidebarWidth(320);apply();
     try {
         localStorage.removeItem('ab.appearance');
     }
@@ -47,6 +49,7 @@ export function setPreferencePersistence(value: boolean) { persistent = value; i
         return;
     }
 } }
+export const calendarPreferences = { hidden: calendarHidden, setHidden(value: string[]) { setCalendarHidden(value.slice(0, 256)); save(); } };
 export const appearance = { theme, textSize, sidebarWidth, setSidebarWidth(value:number){if(!Number.isFinite(value))return;setSidebarWidth(Math.max(280,Math.min(420,value)));save();}, setTheme(value: Theme) { setTheme(value); save(); }, setTextSize(value: number) { setTextSize(value); save(); } };
 system.addEventListener('change', apply);
 apply();
