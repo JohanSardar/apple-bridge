@@ -144,10 +144,11 @@ test('WEB-REM-ACTIONS trusted touch reveals actions without issuing a write', as
     page.on('websocket', socket => socket.on('framesent', event => { const frame = JSON.parse(String(event.payload)); if (frame.t === 'cmd') commands.push(frame); }));
     await page.goto('/reminders');
     await page.getByRole('button', { name: 'Travel', exact: true }).click();
+    await expect(page.locator('.reminders-content')).toHaveCSS('transform', 'none');
     const row = page.locator('.reminder-row').filter({ has: page.locator('.reminder-title').filter({ hasText: 'Plan a weekend trip' }) });
-    const box = await row.boundingBox();
+    const box = await row.locator('.reminder-copy').boundingBox();
     expect(box).not.toBeNull();
-    const touch = await context.newCDPSession(page), y = box!.y + 20, x = box!.x + box!.width - 55;
+    const touch = await context.newCDPSession(page), y = box!.y + 10, x = box!.x + box!.width - 16;
     await touch.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
     for (const delta of [20, 40, 80, 140]) await touch.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x - delta, y }] });
     await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });

@@ -33,6 +33,7 @@ export function reminderSwipe(element: HTMLElement, enabled: () => boolean, reve
         if (!reducedMotion()) element.style.transform = `translateX(${offset * direction}px)`;
     };
     const end = (event: PointerEvent) => {
+        if (event.type === 'lostpointercapture' && event.target !== element) return;
         if (event.pointerId !== pointer) return;
         const show = event.type === 'pointerup' && horizontal && offset < -50;
         suppressClick = horizontal;

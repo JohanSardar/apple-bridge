@@ -2,7 +2,7 @@ id: WEB-REM-ENTRY
 feature: web.reminders
 levels: [web]
 web:
-  browsers: [webkit, chromium]
-  themes: [light]
+  browsers: [webkit, chromium, firefox]
+  themes: [light, dark]
   layouts: [phone, desktop]
   server: gateway

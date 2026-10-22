@@ -2,7 +2,7 @@ id: WEB-REM-ACTIONS
 feature: web.reminders
 levels: [web]
 web:
-  browsers: [webkit, chromium]
+  browsers: [webkit, chromium, firefox]
   themes: [light, dark]
   layouts: [phone, desktop]
   server: gateway
