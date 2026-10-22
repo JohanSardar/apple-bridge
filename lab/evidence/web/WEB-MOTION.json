@@ -1,12 +1,12 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[11.1 10.83 14.46] cpus=8 other_heavy=1"
+    "summary": "air: load=[12.62 9.2 7.97] cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5FK19VQ7XHJ699ZRK1XKH5X",
+  "run_id": "run_01M5GTZN2JN54QWSZSTCBSMCNB",
   "metrics": {
     "demo_messages": 5000,
-    "demo_startup_ms": 9819,
+    "demo_startup_ms": 8964,
     "matrix": [
       "webkit-light-phone",
       "webkit-light-desktop",
@@ -41,68 +41,68 @@
   "scenario": "WEB-MOTION",
   "level": "web",
   "passed": true,
-  "git_sha": "734f67cccc3f085a6f80d4c466e13ac90b7a1c48",
-  "at": "2026-10-21T15:59:46.553603Z",
+  "git_sha": "d47423ea47bd717a1efd81ac30f96caf8998341a",
+  "at": "2026-10-22T03:37:55.538169Z",
   "assertions": [
     {
       "name": "webkit-light-phone:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/foundations.spec.ts:98:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (5.9s)\n\n  1 passed (11.1s)\n"
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/foundations.spec.ts:98:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (4.7s)\n  ✓  2 [webkit-light-phone] › tests/pane-motion.spec.ts:4:1 › WEB-MOTION WEB-MOTION-PANE-WIDTH uses cached pane geometry during trusted navigation (3.4s)\n\n  2 passed (10.2s)\n"
     },
     {
       "name": "webkit-light-desktop:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/foundations.spec.ts:98:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (5.1s)\n\n  1 passed (8.2s)\n"
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/foundations.spec.ts:98:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (3.9s)\n  ✓  2 [webkit-light-desktop] › tests/pane-motion.spec.ts:4:1 › WEB-MOTION WEB-MOTION-PANE-WIDTH uses cached pane geometry during trusted navigation (2.4s)\n\n  2 passed (7.7s)\n"
     },
     {
       "name": "webkit-dark-phone:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-dark-phone] › tests/foundations.spec.ts:98:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (4.0s)\n\n  1 passed (6.0s)\n"
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [webkit-dark-phone] › tests/foundations.spec.ts:98:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (4.5s)\n  ✓  2 [webkit-dark-phone] › tests/pane-motion.spec.ts:4:1 › WEB-MOTION WEB-MOTION-PANE-WIDTH uses cached pane geometry during trusted navigation (3.6s)\n\n  2 passed (9.7s)\n"
     },
     {
       "name": "webkit-dark-desktop:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-dark-desktop] › tests/foundations.spec.ts:98:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (3.8s)\n\n  1 passed (5.0s)\n"
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [webkit-dark-desktop] › tests/foundations.spec.ts:98:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (4.0s)\n  ✓  2 [webkit-dark-desktop] › tests/pane-motion.spec.ts:4:1 › WEB-MOTION WEB-MOTION-PANE-WIDTH uses cached pane geometry during trusted navigation (2.3s)\n\n  2 passed (7.4s)\n"
     },
     {
       "name": "chromium-light-phone:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/foundations.spec.ts:98:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (3.6s)\n\n  1 passed (5.0s)\n"
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/foundations.spec.ts:98:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (3.0s)\n  ✓  2 [chromium-light-phone] › tests/pane-motion.spec.ts:4:1 › WEB-MOTION WEB-MOTION-PANE-WIDTH uses cached pane geometry during trusted navigation (3.0s)\n\n  2 passed (7.3s)\n"
     },
     {
       "name": "chromium-light-desktop:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/foundations.spec.ts:98:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (3.6s)\n\n  1 passed (5.2s)\n"
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/foundations.spec.ts:98:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (3.1s)\n  ✓  2 [chromium-light-desktop] › tests/pane-motion.spec.ts:4:1 › WEB-MOTION WEB-MOTION-PANE-WIDTH uses cached pane geometry during trusted navigation (2.3s)\n\n  2 passed (6.6s)\n"
     },
     {
       "name": "chromium-dark-phone:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-dark-phone] › tests/foundations.spec.ts:98:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (3.1s)\n\n  1 passed (4.3s)\n"
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [chromium-dark-phone] › tests/foundations.spec.ts:98:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (2.9s)\n  ✓  2 [chromium-dark-phone] › tests/pane-motion.spec.ts:4:1 › WEB-MOTION WEB-MOTION-PANE-WIDTH uses cached pane geometry during trusted navigation (3.0s)\n\n  2 passed (6.7s)\n"
     },
     {
       "name": "chromium-dark-desktop:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-dark-desktop] › tests/foundations.spec.ts:98:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (3.2s)\n\n  1 passed (4.4s)\n"
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [chromium-dark-desktop] › tests/foundations.spec.ts:98:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (2.8s)\n  ✓  2 [chromium-dark-desktop] › tests/pane-motion.spec.ts:4:1 › WEB-MOTION WEB-MOTION-PANE-WIDTH uses cached pane geometry during trusted navigation (2.0s)\n\n  2 passed (5.7s)\n"
     },
     {
       "name": "firefox-light-phone:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-light-phone] › tests/foundations.spec.ts:98:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (5.5s)\n\n  1 passed (10.1s)\n"
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [firefox-light-phone] › tests/foundations.spec.ts:98:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (6.0s)\n  ✓  2 [firefox-light-phone] › tests/pane-motion.spec.ts:4:1 › WEB-MOTION WEB-MOTION-PANE-WIDTH uses cached pane geometry during trusted navigation (3.5s)\n\n  2 passed (13.3s)\n"
     },
     {
       "name": "firefox-light-desktop:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-light-desktop] › tests/foundations.spec.ts:98:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (5.6s)\n\n  1 passed (9.8s)\n"
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [firefox-light-desktop] › tests/foundations.spec.ts:98:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (4.7s)\n  ✓  2 [firefox-light-desktop] › tests/pane-motion.spec.ts:4:1 › WEB-MOTION WEB-MOTION-PANE-WIDTH uses cached pane geometry during trusted navigation (2.3s)\n\n  2 passed (8.8s)\n"
     },
     {
       "name": "firefox-dark-phone:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-dark-phone] › tests/foundations.spec.ts:98:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (4.9s)\n\n  1 passed (8.0s)\n"
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [firefox-dark-phone] › tests/foundations.spec.ts:98:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (10.6s)\n  ✓  2 [firefox-dark-phone] › tests/pane-motion.spec.ts:4:1 › WEB-MOTION WEB-MOTION-PANE-WIDTH uses cached pane geometry during trusted navigation (3.8s)\n\n  2 passed (18.7s)\n"
     },
     {
       "name": "firefox-dark-desktop:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [firefox-dark-desktop] › tests/foundations.spec.ts:98:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (5.7s)\n\n  1 passed (10.4s)\n"
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [firefox-dark-desktop] › tests/foundations.spec.ts:98:1 › WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades (5.2s)\n  ✓  2 [firefox-dark-desktop] › tests/pane-motion.spec.ts:4:1 › WEB-MOTION WEB-MOTION-PANE-WIDTH uses cached pane geometry during trusted navigation (2.2s)\n\n  2 passed (10.6s)\n"
     },
     {
       "name": "credential_backend_override_restored",

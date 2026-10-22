@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createSignal, For, lazy, onCleanup, onMount, Show, Suspense } from 'solid-js';
+import { createEffect, createMemo, createSignal, For, lazy, onCleanup, onMount, Show, Suspense, untrack } from 'solid-js';
 import { Icon, type IconName } from '../design/Icon';
 import { strings as s } from './strings';
 import { router } from './router';
@@ -22,7 +22,9 @@ export default function Shell() {
     let transcript!: HTMLElement, sidebar!: HTMLElement, resizer!: HTMLDivElement, inspector: HTMLElement | undefined;
     let cancelEnter: (() => void) | undefined, inspectorAnimation: ReturnType<typeof springAnimation> | undefined;
     const chat = createMemo(() => router.route().chat);
-    const [threadTitle,setThreadTitle]=createSignal('');
+    const [threadTitle,setThreadTitle]=createSignal(''),[paneWidth,setPaneWidth]=createSignal(0);
+    let measuredPhone=phoneMedia.matches;
+    const measuredPaneWidth=()=>untrack(paneWidth)||paneWidth();
     const threadRoute=createMemo(()=>{
         const path=new URL(router.route().path,location.origin).pathname.split('/').filter(Boolean);
         const decode=(value?:string)=>{try{return decodeURIComponent(value??'');}catch{return value??'';}};
@@ -60,8 +62,9 @@ export default function Shell() {
     onMount(() => {
         const mediaChanged = () => { setCompact(compactMedia.matches); setInspectorVisible(details() && !compactMedia.matches); };
         compactMedia.addEventListener('change', mediaChanged);
-        const phoneChanged=()=>setPhone(phoneMedia.matches);
+        const phoneChanged=()=>{if(measuredPhone!==phoneMedia.matches)setPaneWidth(0);setPhone(phoneMedia.matches);};
         phoneMedia.addEventListener('change',phoneChanged);
+        const measurements=new ResizeObserver(entries=>{measuredPhone=phoneMedia.matches;setPaneWidth(Math.round(entries[0].contentRect.width));});measurements.observe(transcript);onCleanup(()=>measurements.disconnect());
         if(router.route().panel==='details'&&!phone())openInspector(true);
         const dispose = swipeBack(transcript, sidebar, () => phone() && Boolean(chat()), () => router.back(),()=>cancelEnter?.());
         let width = 320;
@@ -70,14 +73,15 @@ export default function Shell() {
         onCleanup(() => { dispose(); resize(); shortcuts.forEach(dispose => dispose()); cancelEnter?.(); inspectorAnimation?.cancel(); inspectorFade?.cancel(); cancelAnimationFrame(inspectorFrame); compactMedia.removeEventListener('change', mediaChanged); phoneMedia.removeEventListener('change',phoneChanged); });
     });
     createEffect(() => { const selected = chat(); if (selected && transcript) {
+        const isPhone=phone(),width=isPhone?measuredPaneWidth():0;if(isPhone&&!width)return;
         cancelEnter?.();
-        cancelEnter = enterPane(transcript, phone(), getComputedStyle(transcript).direction === 'rtl' ? -1 : 1);
+        cancelEnter = enterPane(transcript, isPhone, getComputedStyle(transcript).direction === 'rtl' ? -1 : 1,width);
     } });
     function PhoneDetails(){
         let pane!:HTMLElement;
         let cancel:()=>void=()=>{};
         let dispose:()=>void=()=>{};
-        onMount(()=>{cancel=enterPane(pane,true,getComputedStyle(pane).direction==='rtl'?-1:1);dispose=swipeBack(pane,transcript,()=>phoneDetails(),()=>router.back(),()=>cancel());});
+        onMount(()=>{createEffect(()=>{const width=measuredPaneWidth();if(!width)return;cancel();cancel=enterPane(pane,true,getComputedStyle(pane).direction==='rtl'?-1:1,width);});dispose=swipeBack(pane,transcript,()=>phoneDetails(),()=>router.back(),()=>cancel());});
         onCleanup(()=>{cancel();dispose();});
         return <section ref={pane} class="phone-details" role="main" aria-label={s.details}><header class="toolbar glass"><button class="icon-button" aria-label={s.back} onClick={()=>router.back()}><Icon name="chevron"/></button><h2>{s.details}</h2></header><DetailContent/></section>;
     }
