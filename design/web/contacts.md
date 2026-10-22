@@ -5,7 +5,7 @@ Status: W7 draft, waiting for Johan's skim. The format follows `messages.md`. **
 **Bridge facts:**
 - Read: unified contacts with names (including phonetic and nickname), organization, job title, department, phones, emails, postal addresses, URLs, birthday, dates, social profiles, instant messages, relations, image and thumbnail (blobs), container and writable.
 - `note` is unavailable without Apple's restricted entitlement.
-- Groups and membership are read-only.
+- Groups and membership are readable; group writes require the OS-build and default-container capability proof.
 - Writes: create, update (field patch) and delete.
 - Lookup by name, phone or email (`contacts.lookup`).
 
@@ -74,3 +74,25 @@ Deep links: `/contacts`, `/contacts/<id>`, `/contacts/list/<group>`.
 Each item includes its complete contact record, display name, folded sort key, initials, nullable avatar reference, nullable `is_me`, and `conversation_ids`. Unknown identity stays null. Only explicit native identity may produce My Card; it is never inferred from names or handles. Linked chats use captured `messages.handle.contact_id` plus the participant index, are deduplicated, and disappear without Messages visibility. Contacts visibility is checked before records, counts, groups or containers are read.
 
 The read-model slice forwards existing image references. Browser-safe variants and native identity capture belong to the following Contacts read UI slice; this slice does not certify either.
+
+## 7. Group command capability
+
+`contacts.create_group{name}`, `contacts.rename_group{id,name}`, `contacts.delete_group{id}`,
+`contacts.add_member{id,contact_id}` and `contacts.remove_member{id,contact_id}` use the public
+`CNSaveRequest` route. Existing groups require `expected_version`; membership commands target
+the group version. Only the default container is writable, and contacts must belong to that
+same container. Removing membership or deleting a group never deletes its contacts.
+
+Run the signed Helper with `selftest contacts-groups --report <private report path>` to qualify
+this OS build and default container. The self-test creates its own tagged Bridge Test contact
+and group, verifies every operation by a fresh public-framework read, and cleans both before
+writing the private proof ledger. Failed or stale proofs leave controls hidden.
+
+Contact posters remain **limited** and hidden: the public macOS 26.5 `CNContact.h` exposes
+`imageData` and `thumbnailImageData`, with no poster property or fetch key. Ordinary contact
+photos remain available. No private Contacts properties or database fields are used.
+
+Current qualification is **limited**: on this Air, `removeMember` completed without the removal
+becoming visible through fresh public Contacts reads within the bounded wait. The self-test
+cleaned its tagged contact and group and withheld the ledger. Group controls remain hidden
+until this is resolved and the complete proof passes.

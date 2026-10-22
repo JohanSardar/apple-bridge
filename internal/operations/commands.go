@@ -245,7 +245,21 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 	}
 	if a.Contact != nil {
 		collection = "contacts.contact"
+		if contracts.ContactGroupOperation(c.Op) {
+			collection = "contacts.group"
+		}
 		action.Args = a.Contact
+		var group contracts.ContactGroupArgs
+		if contracts.ContactGroupOperation(c.Op) && json.Unmarshal(a.Contact, &group) == nil && group.ContactID != "" {
+			visible, problem := g.State.Read(runctx, p.Visibility(), contracts.ReadQuery{Collection: "contacts.contact", ID: group.ContactID})
+			if problem != nil || len(visible.Records) != 1 {
+				return g.transition(g.Context, r, "rejected", "rejected_before_dispatch", nil, contracts.ErrNotFound)
+			}
+			action.ListKey, err = g.State.NativeKey(runctx, "contacts.contact", group.ContactID)
+			if err != nil {
+				return g.transition(g.Context, r, "rejected", "rejected_before_dispatch", nil, contracts.ErrNotFound)
+			}
+		}
 	}
 	var current *contracts.Record
 	if strings.HasPrefix(c.Op, "messages.") {
@@ -353,6 +367,12 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 	var expected json.RawMessage
 	if current != nil {
 		expected = current.Data
+		if contracts.ContactGroupOperation(c.Op) {
+			expected, err = g.contactGroupExpected(runctx, current.Data)
+			if err != nil {
+				return g.transition(g.Context, r, "rejected", "rejected_before_dispatch", nil, contracts.ErrUnavailable)
+			}
+		}
 	}
 	prepared, err := g.Peer.Exchange(runctx, contracts.IPCFrame{T: "Prepare", Origin: c.Origin, CommandID: c.ID, Principal: p.ID, RequestHash: hash, Action: &action, ExpectedState: expected, ExpiresAt: expiry})
 	if err != nil {
@@ -446,6 +466,9 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 		collection := "reminders.reminder"
 		if r.Source == contracts.Contacts {
 			collection = "contacts.contact"
+			if contracts.ContactGroupOperation(r.Command.Op) {
+				collection = "contacts.group"
+			}
 		}
 		if r.Source == contracts.Calendar {
 			collection = "calendar.event"

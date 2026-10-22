@@ -18,6 +18,9 @@ type ContactLookup struct {
 var ContactFields = []string{"previous_family_name", "phonetic_organization", "given_name", "middle_name", "family_name", "nickname", "name_prefix", "name_suffix", "phonetic_given_name", "phonetic_middle_name", "phonetic_family_name", "organization", "job_title", "department", "phones", "emails", "postal_addresses", "urls", "birthday", "non_gregorian_birthday", "dates", "social_profiles", "instant_messages", "relations", "image"}
 
 func validateContactCommand(c Command) (ReminderArgs, error) {
+	if ContactGroupOperation(c.Op) {
+		return validateContactGroupCommand(c)
+	}
 	a := ReminderArgs{Contact: c.Args}
 	if c.ID == "" || len(c.ID) > 200 || c.WaitMS < 0 || c.WaitMS > 15000 {
 		return a, ErrInvalid
@@ -177,4 +180,49 @@ func ContactHandles(data map[string]any) []string {
 		}
 	}
 	return result
+}
+
+func ContactGroupOperation(op string) bool {
+	switch op {
+	case "contacts.create_group", "contacts.rename_group", "contacts.delete_group", "contacts.add_member", "contacts.remove_member":
+		return true
+	}
+	return false
+}
+
+type ContactGroupArgs struct {
+	ID        string `json:"id,omitempty"`
+	Name      string `json:"name,omitempty"`
+	ContactID string `json:"contact_id,omitempty"`
+}
+
+func validateContactGroupCommand(c Command) (ReminderArgs, error) {
+	a := ReminderArgs{Contact: c.Args}
+	var group ContactGroupArgs
+	if c.ID == "" || len(c.ID) > 200 || c.WaitMS < 0 || c.WaitMS > 15000 || DecodeInput(c.Args, &group) != nil {
+		return a, ErrInvalid
+	}
+	a.ID = group.ID
+	named := strings.TrimSpace(group.Name) != "" && len(group.Name) <= 256
+	switch c.Op {
+	case "contacts.create_group":
+		if group.ID != "" || c.ExpectedVersion != 0 || !named || group.ContactID != "" {
+			return a, ErrInvalid
+		}
+	case "contacts.rename_group":
+		if group.ID == "" || c.ExpectedVersion == 0 || !named || group.ContactID != "" {
+			return a, ErrInvalid
+		}
+	case "contacts.delete_group":
+		if group.ID == "" || c.ExpectedVersion == 0 || group.Name != "" || group.ContactID != "" {
+			return a, ErrInvalid
+		}
+	case "contacts.add_member", "contacts.remove_member":
+		if group.ID == "" || c.ExpectedVersion == 0 || group.Name != "" || group.ContactID == "" {
+			return a, ErrInvalid
+		}
+	default:
+		return a, ErrUnsupported
+	}
+	return a, nil
 }

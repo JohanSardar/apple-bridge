@@ -744,10 +744,11 @@ features:
     status: todo
     scenarios:
       - {id: WEB-CON-LIST, levels: [sim]}
+      - {id: CON-GROUPS, levels: [sim]}
       - {id: WEB-CON-READ, levels: [web]}
       - {id: WEB-CON-WRITE, levels: [web, real]}
       - {id: WEB-CON-PARITY, levels: [web, real]}
-    notes: Contacts list read model in progress; web UI, browser-safe photo variants, native me identification and writes remain unqualified.
+    notes: Contacts list read model in progress; web UI, browser-safe photo variants, native me identification and writes remain unqualified. Contact poster is limited and hidden; the macOS 26.5 public Contacts SDK exposes imageData and thumbnailImageData but no poster field or fetch key. Group commands require a matching OS-build and default-container CNSaveRequest proof ledger. Native group capability is currently limited and hidden because removeMember returned without the removal becoming visible through fresh public Contacts reads; tagged fixture cleanup passed.
   - id: web.notes
     title: Notes web app (read, write, parity)
     requirements: [R-WEB-UI, R-WEB-FAST, R-RW]

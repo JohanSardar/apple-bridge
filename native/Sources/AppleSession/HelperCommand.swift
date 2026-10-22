@@ -3,6 +3,7 @@ import AppKit
 import Darwin
 import MessagesSource
 import NotesSource
+import ContactsSource
 import SourceSupport
 
 public enum HelperCommand {
@@ -46,6 +47,24 @@ public enum HelperCommand {
         guard let command = arguments.first, ["selftest", "status", "onboard"].contains(command) else { throw HelperCommandFailure.unknownCommand }
         guard let reportIndex = arguments.firstIndex(of: "--report"), reportIndex + 1 < arguments.count else { throw ProbeFailure.invalidArguments }
         let reportURL = try PrivateReport.validate(arguments[reportIndex + 1])
+        if arguments.first == "selftest", arguments.dropFirst().first == "contacts-groups" {
+            let descriptor = Darwin.open(PrivateReport.directory.appendingPathComponent("contacts-groups-selftest.lock").path, O_CREAT | O_RDWR | O_NOFOLLOW, 0o600)
+            guard descriptor >= 0 else { throw ProbeFailure.unavailable }
+            defer { Darwin.close(descriptor) }
+            guard flock(descriptor, LOCK_EX | LOCK_NB) == 0 else { throw ProbeFailure.unavailable }
+            var finished = false
+            Task { @MainActor in
+                do {
+                    let source = try ContactsSource(home: PrivateReport.directory, commandsEnabled: true)
+                    let result = await source.proveGroups()
+                    try JSONEncoder().encode(result).write(to: reportURL, options: .atomic)
+                    try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportURL.path)
+                } catch { try? PrivateReport.write(["state": "limited", "reason": String(describing: error)], to: reportURL) }
+                finished = true
+            }
+            while !finished { RunLoop.current.run(until: Date().addingTimeInterval(0.05)) }
+            return
+        }
         if arguments.first == "selftest", arguments.dropFirst().first == "messages" {
             var finished = false
             DispatchQueue.global().asyncAfter(deadline: .now() + 600) { @Sendable in
