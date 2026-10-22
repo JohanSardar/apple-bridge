@@ -65,7 +65,13 @@ stale() { [ -f "$1/pid" ] && ! kill -0 "$(cat "$1/pid")" 2>/dev/null; }
 usable() {
   if [ -n "$exclusive" ] || [ -n "$light" ]; then echo "$slots"; return; fi
   memory=$(sysctl -n hw.memsize 2>/dev/null || echo 0)
-  if [ -z "${APPLE_BRIDGE_HEAVY_SLOTS:-}" ] && [ "$memory" -gt 0 ] && [ "$memory" -lt 12884901888 ]; then echo 1; return; fi
+  if [ -z "${APPLE_BRIDGE_HEAVY_SLOTS:-}" ] && [ "$memory" -gt 0 ] && [ "$memory" -lt 12884901888 ]; then
+    # Small hosts open a second slot only for non-sensitive jobs beside non-sensitive holders with clear memory headroom.
+    if sensitive "$record" || [ ! -d "$base-1.lock" ] || stale "$base-1.lock" || sensitive_holder; then echo 1; return; fi
+    level=$(sysctl -n kern.memorystatus_level 2>/dev/null || echo 0)
+    if [ "$level" -ge "${APPLE_BRIDGE_SMALL_SECOND_SLOT_FREE_PCT:-40}" ] && [ "$(cpu_idle)" -ge "${APPLE_BRIDGE_SMALL_SECOND_SLOT_IDLE_PCT:-30}" ]; then echo "$slots"; else echo 1; fi
+    return
+  fi
   if [ -n "${APPLE_BRIDGE_HEAVY_SLOTS:-}" ]; then echo "$APPLE_BRIDGE_HEAVY_SLOTS"; return; fi
   level=$(sysctl -n kern.memorystatus_level 2>/dev/null || echo 100)
   load=$(sysctl -n vm.loadavg 2>/dev/null | awk '{printf "%d", $2}')
@@ -160,6 +166,20 @@ hold_light() {
   printf '%s\n' "--exclusive light hold" > "$lightlock/cmd"
   held="$held $lightlock"
 }
+# A sensitive job on a small host waits until it is the only normal-lane holder.
+wait_normal_alone() {
+  while true; do
+    alone=1
+    for lock in "$normal"-[0-9]*.lock; do
+      [ -d "$lock" ] || continue
+      case " $held " in *" $lock "*) continue ;; esac
+      stale "$lock" && continue
+      alone=""
+    done
+    [ -n "$alone" ] && return
+    sleep 2
+  done
+}
 wait_sim_idle() {
   while [ -d "$simlock" ]; do
     if stale "$simlock"; then rm -rf "$simlock"; break; fi
@@ -185,7 +205,7 @@ while true; do
         printf '%s\n' "$record" > "$lock/cmd"
         held="$held $lock"
         if [ -z "$exclusive" ] || [ "$(count)" -eq "$slots" ]; then
-          if [ -z "$light" ] && sensitive "$record"; then wait_sim_idle; [ -n "$exclusive" ] && hold_light; wait_thrash sensitive; elif [ -z "$light" ]; then wait_thrash heavy; fi
+          if [ -z "$light" ] && sensitive "$record"; then wait_sim_idle; wait_normal_alone; [ -n "$exclusive" ] && hold_light; wait_thrash sensitive; elif [ -z "$light" ]; then wait_thrash heavy; fi
           label=$i
           [ -n "$exclusive" ] && label=all
           run "$label" "$@"
