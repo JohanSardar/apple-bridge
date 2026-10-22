@@ -38,7 +38,7 @@ func webThreadOverlayFixture(w *world.World) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
-	result := map[string]any{"chat": aliases[aliasKey(contracts.Messages, "messages.chat", "message-chat")], "root": aliases[aliasKey(contracts.Messages, "messages.message", root)], "distant": aliases[aliasKey(contracts.Messages, "messages.message", distant)], "mediaRoot": aliases[aliasKey(contracts.Messages, "messages.message", "demo-message-00-000032")]}
+	result := map[string]any{"chat": aliases[aliasKey(contracts.Messages, "messages.chat", "message-chat")], "root": aliases[aliasKey(contracts.Messages, "messages.message", root)], "distant": aliases[aliasKey(contracts.Messages, "messages.message", distant)], "mediaRoot": aliases[aliasKey(contracts.Messages, "messages.message", "demo-message-00-000032")], "latest": aliases[aliasKey(contracts.Messages, "messages.message", "web-media-thread-reply")]}
 	for _, value := range result {
 		if value == "" {
 			return nil, fmt.Errorf("thread overlay fixture incomplete")

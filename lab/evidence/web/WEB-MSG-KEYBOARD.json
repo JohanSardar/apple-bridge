@@ -1,0 +1,85 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[9.11 10 9.98] cpu_idle=77% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5J4N8ZVSGNY63W6ESP9TA79",
+  "metrics": {
+    "browser_budget_ms": 180000,
+    "capture_observer_resets": 0,
+    "demo_messages": 5000,
+    "demo_startup_ms": 6765,
+    "fixture_setup_ms": 6765,
+    "matrix": [
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "chromium-light-phone",
+      "chromium-light-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-MSG-KEYBOARD-webkit-light-phone-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-MSG-KEYBOARD-webkit-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-KEYBOARD-webkit-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-KEYBOARD-chromium-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-KEYBOARD-chromium-light-desktop-playwright.json"
+    ],
+    "server": "gateway",
+    "setups": [
+      {
+        "fixture_setup_ms": 6765,
+        "fixture_snapshot": null,
+        "project": "webkit-light-phone"
+      },
+      {
+        "fixture_setup_ms": 4166,
+        "fixture_snapshot": null,
+        "project": "webkit-light-desktop"
+      },
+      {
+        "fixture_setup_ms": 3906,
+        "fixture_snapshot": null,
+        "project": "chromium-light-phone"
+      },
+      {
+        "fixture_setup_ms": 4176,
+        "fixture_snapshot": null,
+        "project": "chromium-light-desktop"
+      }
+    ]
+  },
+  "scenario": "WEB-MSG-KEYBOARD",
+  "level": "web",
+  "passed": true,
+  "git_sha": "f5a167a2b6d4d26aca3ac03f2462931f40007c78",
+  "at": "2026-10-22T15:46:15.675484Z",
+  "assertions": [
+    {
+      "name": "webkit-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 3 tests using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/transcript-keyboard.spec.ts:6:1 › WEB-MSG-KEYBOARD Command arrows reach the real endpoints and forward paging preserves the visible anchor (3.0s)\n  ✓  2 [webkit-light-phone] › tests/transcript-keyboard.spec.ts:11:1 › WEB-MSG-KEYBOARD arrow focus and native Copy target the selected message while native text selection keeps browser Copy (1.6s)\n  ✓  3 [webkit-light-phone] › tests/transcript-keyboard.spec.ts:15:1 › WEB-MSG-KEYBOARD Escape dismisses the replies reader and restores its trigger (1.6s)\n\n  3 passed (10.5s)\n"
+    },
+    {
+      "name": "webkit-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 3 tests using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/transcript-keyboard.spec.ts:6:1 › WEB-MSG-KEYBOARD Command arrows reach the real endpoints and forward paging preserves the visible anchor (2.1s)\n  ✓  2 [webkit-light-desktop] › tests/transcript-keyboard.spec.ts:11:1 › WEB-MSG-KEYBOARD arrow focus and native Copy target the selected message while native text selection keeps browser Copy (1.3s)\n  ✓  3 [webkit-light-desktop] › tests/transcript-keyboard.spec.ts:15:1 › WEB-MSG-KEYBOARD Escape dismisses the replies reader and restores its trigger (1.7s)\n\n  3 passed (6.8s)\n"
+    },
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 3 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/transcript-keyboard.spec.ts:6:1 › WEB-MSG-KEYBOARD Command arrows reach the real endpoints and forward paging preserves the visible anchor (1.7s)\n  ✓  2 [chromium-light-phone] › tests/transcript-keyboard.spec.ts:11:1 › WEB-MSG-KEYBOARD arrow focus and native Copy target the selected message while native text selection keeps browser Copy (2.0s)\n  ✓  3 [chromium-light-phone] › tests/transcript-keyboard.spec.ts:15:1 › WEB-MSG-KEYBOARD Escape dismisses the replies reader and restores its trigger (1.3s)\n\n  3 passed (6.7s)\n"
+    },
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 3 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/transcript-keyboard.spec.ts:6:1 › WEB-MSG-KEYBOARD Command arrows reach the real endpoints and forward paging preserves the visible anchor (1.5s)\n  ✓  2 [chromium-light-desktop] › tests/transcript-keyboard.spec.ts:11:1 › WEB-MSG-KEYBOARD arrow focus and native Copy target the selected message while native text selection keeps browser Copy (1.3s)\n  ✓  3 [chromium-light-desktop] › tests/transcript-keyboard.spec.ts:15:1 › WEB-MSG-KEYBOARD Escape dismisses the replies reader and restores its trigger (1.0s)\n\n  3 passed (5.6s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
