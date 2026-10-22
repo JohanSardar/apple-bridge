@@ -249,7 +249,11 @@ func (s *Server) serve(ctx context.Context, conn *websocket.Conn, p trust.Princi
 	if resume {
 		reason = "resume"
 	}
-	if err = transmit(contracts.FeedFrame{T: "Welcome", DelegationProtocol: negotiatedDelegation, ClockProtocol: clockProtocol, At: time.Now().UTC(), Protocol: contracts.FeedProtocol, GatewayID: s.Authority.Fingerprint, Epoch: head.Epoch, SubscriptionRevision: p.Revision, Scope: p.Grants, Head: head.Sequence, RetentionFloor: s.Store.RetentionFloor(), Schema: 1, Reason: reason}, nil); err != nil {
+	features := []string(nil)
+	if slices.Contains(hello.Features, "capture_atomic") {
+		features = []string{"capture_atomic"}
+	}
+	if err = transmit(contracts.FeedFrame{T: "Welcome", Features: features, DelegationProtocol: negotiatedDelegation, ClockProtocol: clockProtocol, At: time.Now().UTC(), Protocol: contracts.FeedProtocol, GatewayID: s.Authority.Fingerprint, Epoch: head.Epoch, SubscriptionRevision: p.Revision, Scope: p.Grants, Head: head.Sequence, RetentionFloor: s.Store.RetentionFloor(), Schema: 1, Reason: reason}, nil); err != nil {
 		return err
 	}
 	if negotiatedDelegation != "" {
@@ -305,7 +309,11 @@ func (s *Server) serve(ctx context.Context, conn *websocket.Conn, p trust.Princi
 	}
 	journalCursor := cursor
 	journalCursor.SubscriptionRevision = s.Store.Head().SubscriptionRevision
-	iterator, err := s.Store.Changes(ctx, p.Visibility(), journalCursor)
+	changes := s.Store.FeedChanges
+	if len(features) == 0 {
+		changes = s.Store.LegacyChanges
+	}
+	iterator, err := changes(ctx, p.Visibility(), journalCursor)
 	if err != nil {
 		return err
 	}
@@ -319,7 +327,11 @@ func (s *Server) serve(ctx context.Context, conn *websocket.Conn, p trust.Princi
 		}
 		batch.SubscriptionRevision = p.Revision
 		cursor.Sequence = batch.Through
-		if err = transmit(contracts.FeedFrame{T: "Batch", Batch: &batch}, &cursor); err != nil {
+		expected := &cursor
+		if batch.Partial {
+			expected = nil
+		}
+		if err = transmit(contracts.FeedFrame{T: "Batch", Batch: &batch}, expected); err != nil {
 			return err
 		}
 	}
@@ -403,6 +415,11 @@ func (c *Client) follow(ctx context.Context, e trust.Enrollment) error {
 	return c.consume(ctx, conn, e)
 }
 func (c *Client) consume(ctx context.Context, conn *websocket.Conn, e trust.Enrollment) error {
+	if err := c.Store.DiscardCapture(ctx); err != nil {
+		conn.CloseNow()
+		return err
+	}
+	defer c.Store.DiscardCapture(context.WithoutCancel(ctx))
 	defer conn.CloseNow()
 	conn.SetReadLimit(contracts.BlobChunkSize + 64)
 	ctx, stop := context.WithCancel(ctx)
@@ -422,7 +439,7 @@ func (c *Client) consume(ctx context.Context, conn *websocket.Conn, e trust.Enro
 	}()
 	clock := &clockProbe{}
 	head := c.Store.Head()
-	if _, err := send(ctx, conn, contracts.FeedFrame{T: "Hello", DelegationProtocol: delegationProtocol, ClockProtocol: contracts.FeedClockProtocol, Protocol: contracts.FeedProtocol, ReplicaID: e.ReplicaID, Cursor: &head, SchemaOffer: []int{1}, Credits: contracts.ByteCredit}); err != nil {
+	if _, err := send(ctx, conn, contracts.FeedFrame{T: "Hello", Features: captureFeatures(), DelegationProtocol: delegationProtocol, ClockProtocol: contracts.FeedClockProtocol, Protocol: contracts.FeedProtocol, ReplicaID: e.ReplicaID, Cursor: &head, SchemaOffer: []int{1}, Credits: contracts.ByteCredit}); err != nil {
 		return err
 	}
 	go func() {
@@ -590,7 +607,7 @@ func (c *Client) consume(ctx context.Context, conn *websocket.Conn, e trust.Enro
 			ack.Cursor = &cursor
 			c.update(func(s *FollowStatus) { s.State = "connected"; s.Snapshots++ })
 		case "Batch":
-			if staging != nil || f.Batch == nil {
+			if staging != nil || f.Batch == nil || f.Batch.Partial && !slices.Contains(welcome.Features, "capture_atomic") {
 				return contracts.ErrInvalid
 			}
 			for _, change := range f.Batch.Changes {
@@ -605,7 +622,13 @@ func (c *Client) consume(ctx context.Context, conn *websocket.Conn, e trust.Enro
 			if err != nil {
 				return err
 			}
-			ack.Cursor = &cursor
+			if f.Batch.Partial {
+				if err = capturePartBoundary(ctx); err != nil {
+					return err
+				}
+			} else {
+				ack.Cursor = &cursor
+			}
 		case "Heartbeat":
 
 			select {
@@ -615,6 +638,9 @@ func (c *Client) consume(ctx context.Context, conn *websocket.Conn, e trust.Enro
 			c.update(func(s *FollowStatus) { s.GatewayHead = f.Head })
 			continue
 		case "Reset":
+			if err = c.Store.DiscardCapture(ctx); err != nil {
+				return err
+			}
 			if staging != nil {
 				return contracts.ErrInvalid
 			}
@@ -645,6 +671,16 @@ func (c *Client) Wait(ctx context.Context, target contracts.Cursor) error {
 			return nil
 		}
 		if _, err = iterator.Next(ctx); err != nil {
+			if errors.Is(err, contracts.ErrReset) {
+				head := c.Store.Head()
+				if head.Epoch != target.Epoch {
+					return contracts.ErrReset
+				}
+				iterator, err = c.Store.Changes(ctx, trust.AllVisibility(), head)
+				if err == nil {
+					continue
+				}
+			}
 			return err
 		}
 	}

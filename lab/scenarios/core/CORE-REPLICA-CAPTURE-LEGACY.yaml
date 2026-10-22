@@ -1,0 +1,7 @@
+id: CORE-REPLICA-CAPTURE-LEGACY
+feature: core.replication
+levels: [sim]
+given: []
+when: [{capture_atomic: {}}]
+then: []
+cleanup: []

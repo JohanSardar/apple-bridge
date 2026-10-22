@@ -1,0 +1,141 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[283.78 311.97 309.64] cpu_idle=50% cpus=8 other_heavy=2"
+  },
+  "run_id": "run_01M5HB6K1JYWAY4ST1B3JYTP5W",
+  "metrics": {
+    "capture_observer_resets": 8
+  },
+  "scenario": "CORE-REPLICA-CAPTURE-OBSERVERS",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "1771e86c1bd61d6ed0d66b4e76963cd670ce9b55",
+  "at": "2026-10-22T08:21:20.050459Z",
+  "assertions": [
+    {
+      "name": "agents_available",
+      "passed": true
+    },
+    {
+      "name": "approval_agent_created",
+      "passed": true
+    },
+    {
+      "name": "approval_pending_before_observation",
+      "passed": true
+    },
+    {
+      "name": "approval_socket_registered_after_pending",
+      "passed": true
+    },
+    {
+      "name": "approval_pending_replicated_before_observation",
+      "passed": true
+    },
+    {
+      "name": "replica_approval_socket_registered_after_pending",
+      "passed": true
+    },
+    {
+      "name": "approval_oversized_capture_committed",
+      "passed": true
+    },
+    {
+      "name": "approval_watch_rereads_pending_after_reset",
+      "passed": true
+    },
+    {
+      "name": "replica_approval_watch_rereads_pending_after_reset",
+      "passed": true
+    },
+    {
+      "name": "approval_reset_never_executes_pending_command",
+      "passed": true
+    },
+    {
+      "name": "approval_resolved_on_gateway",
+      "passed": true
+    },
+    {
+      "name": "approval_resolution_replicated",
+      "passed": true
+    },
+    {
+      "name": "resolved_approval_oversized_capture_committed",
+      "passed": true
+    },
+    {
+      "name": "resolved_approval_capture_replicated",
+      "passed": true
+    },
+    {
+      "name": "replica_resolved_approval_never_reemitted_after_reset",
+      "passed": true
+    },
+    {
+      "name": "observer_fixture_converges",
+      "passed": true
+    },
+    {
+      "name": "observer_target",
+      "passed": true
+    },
+    {
+      "name": "replica_web_session",
+      "passed": true
+    },
+    {
+      "name": "replica_web_socket",
+      "passed": true
+    },
+    {
+      "name": "record_snapshot_before_capture",
+      "passed": true
+    },
+    {
+      "name": "ordinary_sse_client_registered",
+      "passed": true
+    },
+    {
+      "name": "rest_observer_registered",
+      "passed": true
+    },
+    {
+      "name": "oversized_observer_capture_committed",
+      "passed": true
+    },
+    {
+      "name": "oversized_observer_capture_applied",
+      "passed": true
+    },
+    {
+      "name": "ordinary_sse_client_resnapshots_without_partial_rows",
+      "passed": true
+    },
+    {
+      "name": "rest_reset_before_any_capture_batch",
+      "passed": true
+    },
+    {
+      "name": "web_view_reset_before_any_capture_delta",
+      "passed": true
+    },
+    {
+      "name": "web_view_resnapshot_has_committed_capture",
+      "passed": true
+    },
+    {
+      "name": "capture_observer_resets_counted",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

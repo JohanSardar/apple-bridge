@@ -1,0 +1,137 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[320.42 315.69 309.53] cpu_idle=50% cpus=8 other_heavy=3"
+  },
+  "run_id": "staging_01M5HB1QHDF1XGEMP9ZETNJJ6G",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "reset_partial_bytes": 241332,
+    "reset_partial_frames": 1,
+    "retention_floor": 87,
+    "retention_target": 87,
+    "upgrade-crash_partial_bytes": 5550764,
+    "upgrade-crash_partial_frames": 23,
+    "upgrade-crash_staged_bytes_at_kill": 241201,
+    "upgrade-crash_staged_rows_at_kill": 4
+  },
+  "scenario": "CORE-REPLICA-CAPTURE-STAGING",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "1771e86c1bd61d6ed0d66b4e76963cd670ce9b55",
+  "at": "2026-10-22T08:18:40.813569Z",
+  "assertions": [
+    {
+      "name": "upgrade-crash/world",
+      "passed": true
+    },
+    {
+      "name": "upgrade-crash/visible_baseline",
+      "passed": true
+    },
+    {
+      "name": "upgrade-crash/upgrade_coalesces_retained_legacy_history",
+      "passed": true
+    },
+    {
+      "name": "upgrade-crash/partial_durable_on_disk",
+      "passed": true
+    },
+    {
+      "name": "upgrade-crash/partial_does_not_advance_visible_cursor",
+      "passed": true
+    },
+    {
+      "name": "upgrade-crash/partial_staging_is_absent_from_ordinary_reads",
+      "passed": true
+    },
+    {
+      "name": "upgrade-crash/restart_while_ingress_partitioned",
+      "passed": true
+    },
+    {
+      "name": "upgrade-crash/staging_cleared_before_hello",
+      "passed": true
+    },
+    {
+      "name": "upgrade-crash/backlog_converges",
+      "passed": true
+    },
+    {
+      "name": "upgrade-crash/capture_atomic_negotiated",
+      "passed": true
+    },
+    {
+      "name": "upgrade-crash/staging_empty_after_install",
+      "passed": true
+    },
+    {
+      "name": "upgrade-crash/partial_credits_do_not_ack_uncommitted_cursor",
+      "passed": true
+    },
+    {
+      "name": "upgrade-crash/oversized_backlog_streams_beyond_credit_window",
+      "passed": true
+    },
+    {
+      "name": "upgrade-crash/resume_starts_at_capture_beginning",
+      "passed": true
+    },
+    {
+      "name": "upgrade-crash/legacy_backlog_applied_in_one_streamed_transaction",
+      "passed": true
+    },
+    {
+      "name": "upgrade-crash/retention_advances_on_commit_boundary",
+      "passed": true
+    },
+    {
+      "name": "upgrade-crash/retention_prunes_commit_end_rows",
+      "passed": true
+    },
+    {
+      "name": "reset/world",
+      "passed": true
+    },
+    {
+      "name": "reset/visible_baseline",
+      "passed": true
+    },
+    {
+      "name": "reset/upgrade_coalesces_retained_legacy_history",
+      "passed": true
+    },
+    {
+      "name": "reset/backlog_converges",
+      "passed": true
+    },
+    {
+      "name": "reset/capture_atomic_negotiated",
+      "passed": true
+    },
+    {
+      "name": "reset/staging_empty_after_install",
+      "passed": true
+    },
+    {
+      "name": "reset/reset_discards_pending_capture",
+      "passed": true
+    },
+    {
+      "name": "reset/resnapshot_never_interleaves_partial_apply",
+      "passed": true
+    },
+    {
+      "name": "no_oversized_capture_observer_resets",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

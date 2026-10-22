@@ -57,10 +57,21 @@ func (s *Store) Prune(ctx context.Context, policy Retention) error {
 	if err = tx.QueryRowContext(ctx, "SELECT value FROM meta WHERE key='retention_floor'").Scan(&current); err != nil {
 		return err
 	}
+	var boundary sql.NullInt64
+	if err = tx.QueryRowContext(ctx, "SELECT MAX(through_seq) FROM journal_commits WHERE epoch=? AND through_seq<=?", head.Epoch, floor).Scan(&boundary); err != nil {
+		return err
+	}
+	if !boundary.Valid {
+		return nil
+	}
+	floor = uint64(boundary.Int64)
 	if floor <= current {
 		return nil
 	}
 	if _, err = tx.ExecContext(ctx, "DELETE FROM journal WHERE seq<=?", floor); err != nil {
+		return err
+	}
+	if _, err = tx.ExecContext(ctx, "DELETE FROM journal_commits WHERE through_seq<=?", floor); err != nil {
 		return err
 	}
 	if _, err = tx.ExecContext(ctx, "UPDATE meta SET value=? WHERE key='retention_floor'", fmt.Sprint(floor)); err != nil {

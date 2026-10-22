@@ -42,3 +42,11 @@ func commandVisibilityHeld(id string) bool {
 	os.WriteFile(filepath.Join(home, "command-status-held"), []byte(id), 0600)
 	return true
 }
+
+func commandStatusReset() {
+	home := os.Getenv("APPLE_BRIDGE_HOME")
+	raw, err := os.ReadFile(filepath.Join(home, "command-status-probe"))
+	if err == nil && contracts.ValidCommandID(string(raw)) {
+		os.WriteFile(filepath.Join(home, "command-observe-reset"), raw, 0600)
+	}
+}

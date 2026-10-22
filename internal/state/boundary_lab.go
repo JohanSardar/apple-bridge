@@ -22,3 +22,17 @@ func initializeApplyBoundary(s *Store) {
 		}
 	}
 }
+
+func captureDiscarded(home string, pending bool) {
+	if pending {
+		os.WriteFile(filepath.Join(home, "lab-capture-discarded"), []byte("discarded"), 0600)
+	}
+}
+
+func captureObserverReset(home string) {
+	file, err := os.OpenFile(filepath.Join(home, "lab-capture-observer-resets"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
+	if err == nil {
+		file.WriteString("reset\n")
+		file.Close()
+	}
+}

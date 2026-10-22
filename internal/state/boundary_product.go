@@ -3,3 +3,7 @@
 package state
 
 func initializeApplyBoundary(s *Store) {}
+
+func captureDiscarded(string, bool) {}
+
+func captureObserverReset(string) {}

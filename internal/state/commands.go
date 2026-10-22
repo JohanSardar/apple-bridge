@@ -281,9 +281,10 @@ func (s *Store) publishCommandLocked(ctx context.Context, r contracts.CommandRec
 	}
 	cursor.Sequence++
 	b, err := json.Marshal(struct {
-		CommandID string `json:"command_id"`
-		Principal string `json:"principal"`
-	}{r.Command.ID, r.Principal})
+		CommandID        string `json:"command_id"`
+		Principal        string `json:"principal"`
+		AwaitingApproval bool   `json:"awaiting_approval,omitempty"`
+	}{r.Command.ID, r.Principal, r.State == contracts.CommandAwaitingApproval})
 	if err != nil {
 		return err
 	}

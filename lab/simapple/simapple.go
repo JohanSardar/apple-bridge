@@ -32,6 +32,7 @@ type Action struct {
 	Delete      bool            `json:"delete"`
 }
 type captureRequest struct {
+	Whole       bool
 	SourceState *contracts.IPCFrame
 	Capture     contracts.Capture
 	Done        chan struct{}
@@ -93,6 +94,9 @@ func (f *fakeApple) inspect() []contracts.Observation {
 	return records
 }
 func (f *fakeApple) enqueue(ctx context.Context, c contracts.Capture, wait bool, revisions ...uint64) error {
+	return f.enqueueCapture(ctx, c, wait, false, revisions...)
+}
+func (f *fakeApple) enqueueCapture(ctx context.Context, c contracts.Capture, wait, whole bool, revisions ...uint64) error {
 	revision := uint64(0)
 	if len(revisions) > 0 {
 		revision = revisions[0]
@@ -100,7 +104,7 @@ func (f *fakeApple) enqueue(ctx context.Context, c contracts.Capture, wait bool,
 	if c.Source == contracts.Messages && c.ScanID == "" {
 		c.Live = true
 	}
-	req := captureRequest{Capture: c, Revision: revision}
+	req := captureRequest{Capture: c, Revision: revision, Whole: whole}
 	if wait {
 		req.Done = make(chan struct{})
 	}
@@ -333,20 +337,25 @@ func Run(ctx context.Context, cfg Config) error {
 		}
 		json.NewEncoder(w).Encode(map[string]bool{"effect_done": true})
 	})
-	mux.HandleFunc("POST /capture", func(w http.ResponseWriter, r *http.Request) {
-		var capture contracts.Capture
-		if json.NewDecoder(http.MaxBytesReader(w, r.Body, contracts.MaxFrame)).Decode(&capture) != nil {
-			http.Error(w, "invalid", 400)
-			return
+	captureHandler := func(whole bool) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			var capture contracts.Capture
+			if json.NewDecoder(http.MaxBytesReader(w, r.Body, contracts.MaxFrame)).Decode(&capture) != nil {
+				http.Error(w, "invalid", 400)
+				return
+			}
+			if capture.Source == "" {
+				capture.Source = contracts.Reminders
+			}
+			if fake.enqueueCapture(r.Context(), capture, true, whole) != nil {
+				return
+			}
+			json.NewEncoder(w).Encode(map[string]bool{"committed": true})
 		}
-		if capture.Source == "" {
-			capture.Source = contracts.Reminders
-		}
-		if fake.enqueue(r.Context(), capture, true) != nil {
-			return
-		}
-		json.NewEncoder(w).Encode(map[string]bool{"committed": true})
-	})
+	}
+	mux.HandleFunc("POST /capture", captureHandler(false))
+	mux.HandleFunc("POST /capture-atomic", captureHandler(true))
+
 	mux.HandleFunc("POST /flush", func(w http.ResponseWriter, r *http.Request) {
 		if fake.enqueue(r.Context(), contracts.Capture{Source: contracts.Messages}, true) != nil {
 			return
@@ -567,7 +576,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 			}
 		}
 	}
-	emit := func(capture contracts.Capture) error {
+	emit := func(capture contracts.Capture, whole bool) error {
 		if capture.Source == contracts.Calendar {
 			f.mu.Lock()
 			denied := f.calendarDenied
@@ -606,6 +615,9 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 		})
 		for offset := 0; offset < len(capture.Observations); {
 			end := min(offset+64, len(capture.Observations))
+			if whole {
+				end = len(capture.Observations)
+			}
 			part := capture
 			for {
 				part = capture
@@ -622,7 +634,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 				}
 				if _, err := contracts.EncodeFrame(contracts.IPCFrame{T: "Capture", Capture: &part}); err == nil {
 					break
-				} else if err != contracts.ErrCapacity || end == offset+1 {
+				} else if err != contracts.ErrCapacity || end == offset+1 || whole {
 					return err
 				}
 				end--
@@ -694,7 +706,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 		}
 		emitFull = false
 		emitRevision = revision
-		return emit(capture)
+		return emit(capture, false)
 	}
 	for _, source := range []contracts.Source{contracts.Reminders, contracts.Messages, contracts.Contacts, contracts.Calendar, contracts.Notes, contracts.Usage} {
 		f.mu.Lock()
@@ -728,7 +740,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 				capture.BlobHandles = f.blobHandles()
 			}
 			emitFull = true
-			err = emit(capture)
+			err = emit(capture, false)
 			emitFull = false
 			if err != nil {
 				return err
@@ -781,7 +793,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 				}
 				continue
 			}
-			if err = emit(req.Capture); err != nil {
+			if err = emit(req.Capture, req.Whole); err != nil {
 				return err
 			}
 			if req.Done != nil {
@@ -800,7 +812,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 			}
 			emitRevision = req.Revision
 			emitFull = req.Capture.Source == contracts.Messages && req.Capture.ScanID != "" && req.Capture.CompletionEvidence == "complete"
-			if err = emit(req.Capture); err != nil {
+			if err = emit(req.Capture, req.Whole); err != nil {
 				return err
 			}
 			if req.Done != nil {

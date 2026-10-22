@@ -6,6 +6,7 @@ import (
 )
 
 type Batch struct {
+	Partial              bool     `json:"partial,omitempty"`
 	Epoch                string   `json:"epoch"`
 	SubscriptionRevision uint64   `json:"subscription_revision"`
 	After                uint64   `json:"after"`
@@ -20,6 +21,7 @@ type CommandResponse struct {
 }
 
 type FeedFrame struct {
+	Features           []string         `json:"features,omitempty"`
 	DelegationProtocol string           `json:"delegation_protocol,omitempty"`
 	ClockProtocol      string           `json:"clock_protocol,omitempty"`
 	Clock              *ClockSample     `json:"clock,omitempty"`
