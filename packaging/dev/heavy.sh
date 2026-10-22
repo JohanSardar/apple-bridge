@@ -113,13 +113,13 @@ sim_ok() {
   after=$(vm_stat 2>/dev/null | awk '/Swapouts/ {gsub(/\./,"",$2); print $2}')
   [ -n "$before" ] && [ -n "$after" ] && [ $((after - before)) -le "${APPLE_BRIDGE_SIM_MAX_SWAPOUTS:-64}" ]
 }
-# Sensitive jobs wait out host memory thrash (a 1-minute load above 4x the CPUs, free memory below 25%, or heavy swap traffic), at most 20 minutes.
+# Sensitive jobs wait out host memory thrash (a 1-minute load above 2x the CPUs, free memory below 25%, or heavy swap traffic), at most 20 minutes.
 thrashing() {
   level=$(sysctl -n kern.memorystatus_level 2>/dev/null || echo 100)
   [ "$level" -lt "${APPLE_BRIDGE_THRASH_MIN_FREE_PCT:-25}" ] && return 0
   load=$(sysctl -n vm.loadavg 2>/dev/null | awk '{printf "%d", $2}')
   cpus=$(sysctl -n hw.ncpu 2>/dev/null || echo 8)
-  [ "${load:-0}" -gt $((cpus * ${APPLE_BRIDGE_THRASH_LOAD_PER_CPU:-4})) ] && return 0
+  [ "${load:-0}" -gt $((cpus * ${APPLE_BRIDGE_THRASH_LOAD_PER_CPU:-2})) ] && return 0
   before=$(vm_stat 2>/dev/null | awk '/Swapouts|Swapins/ {gsub(/\./,"",$2); total+=$2} END {print total}')
   sleep 2
   after=$(vm_stat 2>/dev/null | awk '/Swapouts|Swapins/ {gsub(/\./,"",$2); total+=$2} END {print total}')
