@@ -1,0 +1,31 @@
+import { expect } from '@playwright/test';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { test } from './list-session';
+import { menuPixels, menuStyle } from './list-menu-pixels';
+test.use({serviceWorkers:'block'});
+test('WEB-MSG-FILTERS WEB-MSG-FILTERS-MENU menu pixels stay legible and focus follows opening mode',async({page},info)=>{
+    await page.goto('/messages');await expect(page.getByRole('listbox',{name:'Conversations'})).toBeVisible();
+    const trigger=page.getByRole('button',{name:'Filters and Edit',exact:true}),menu=page.getByRole('menu',{name:'Message filters'});
+    await trigger.click();await expect(menu).toBeVisible();await expect(menu.locator(':focus-visible')).toHaveCount(0);
+    await mkdir('../lab/evidence/private/web',{recursive:true});
+    await page.screenshot({path:`../lab/evidence/private/web/list-menu-pointer-${info.project.name}.png`});
+    await trigger.click();await trigger.focus();await trigger.press('ArrowDown');const first=menu.getByRole('menuitemradio').first();
+    await expect(first).toBeFocused();expect(await first.evaluate(element=>element.matches(':focus-visible'))).toBe(true);expect(await first.evaluate(element=>parseFloat(getComputedStyle(element).outlineWidth))).toBeGreaterThan(0);
+    await page.screenshot({path:`../lab/evidence/private/web/list-menu-keyboard-${info.project.name}.png`});
+    const normal=await menuPixels(page,menu),noBlurStyle=await menuStyle(page,'.conversation-filter-menu{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}');
+    const noBlur=await menuPixels(page,menu);
+    await menu.evaluate(element=>{const backing=document.createElement('div');backing.className='list-menu-test-backing';backing.style.cssText='position:fixed;inset:0;z-index:29;pointer-events:none;background:#000';element.before(backing);});
+    const clearSurface=()=>menuStyle(page,'.conversation-filter-menu,.conversation-filter-menu button{background:transparent!important;box-shadow:none!important}.conversation-filter-menu::before{display:none!important}');
+    const clearBlack=await clearSurface(),bareBlack=await menuPixels(page,menu);await clearBlack.evaluate(element=>element.remove());
+    const black=await menuPixels(page,menu);await page.locator('.list-menu-test-backing').evaluate(element=>(element as HTMLElement).style.background='#fff');const white=await menuPixels(page,menu);
+    const clearWhite=await clearSurface(),bareWhite=await menuPixels(page,menu);await clearWhite.evaluate(element=>element.remove());await page.locator('.list-menu-test-backing').evaluate(element=>element.remove());
+    await noBlurStyle.evaluate(element=>element.remove());
+    const wasSolid=await page.locator('html').evaluate(element=>element.classList.contains('solid-material'));await page.locator('html').evaluate(element=>element.classList.add('solid-material'));const solid=await menuPixels(page,menu);if(!wasSolid)await page.locator('html').evaluate(element=>element.classList.remove('solid-material'));
+    const transmission=Math.max(...black.backgrounds.flatMap((value,index)=>value.map((channel,component)=>Math.abs(channel-white.backgrounds[index][component]))));
+    const bareTransmission=Math.min(...bareWhite.backgrounds.flatMap((value,index)=>value.map((channel,component)=>channel-bareBlack.backgrounds[index][component])));
+    const sample=(value:typeof normal)=>({contrast_min:value.contrast_min,samples:value.samples,regions:value.regions,fill_alpha:value.fill_alpha});
+    const metrics={normal:sample(normal),no_backdrop:sample(noBlur),solid_fallback:sample(solid),backdrop_channel_transmission:transmission,bare_backdrop_difference:bareTransmission};
+    await mkdir('../lab/evidence/web/metrics',{recursive:true});await writeFile(`../lab/evidence/web/metrics/WEB-MSG-FILTERS-contrast-${info.project.name}.json`,JSON.stringify(metrics,null,2)+'\n');
+    for(const sample of [normal,noBlur,solid]){expect(sample.regions).toBe(6);expect(sample.samples).toBeGreaterThan(1000);expect(sample.contrast_min).toBeGreaterThanOrEqual(4.5);}
+    expect(bareTransmission).toBeGreaterThanOrEqual(250);expect(normal.fill_alpha).toBeGreaterThanOrEqual(.92);expect(transmission).toBeLessThanOrEqual(24);
+});

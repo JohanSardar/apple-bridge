@@ -1,0 +1,265 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[11.45 13.37 13.31] cpu_idle=54% cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5J2SD5WTMXCX83W0633REG0",
+  "metrics": {
+    "browser_budget_ms": 180000,
+    "capture_observer_resets": 0,
+    "demo_messages": 5000,
+    "demo_startup_ms": 17265,
+    "fixture_setup_ms": 17265,
+    "fixture_snapshot": {
+      "disk_bytes": 30650368,
+      "entry_bytes": 30658176,
+      "cache_bytes": 61357568,
+      "blob_payloads": 59,
+      "key": "fb495eb12035ed7e8fbc9f5999ada4b816f323bab6355f41180ece331ae0e1d2",
+      "cache_hit": false,
+      "build_ms": 17171,
+      "copy_ms": 1361,
+      "records": 6865,
+      "fresh_digest": "46f38ec4580783e816f0b71e3b8ff190a8a55bdb26c1cd00d5463d7fbb07196d",
+      "copy_digest": "46f38ec4580783e816f0b71e3b8ff190a8a55bdb26c1cd00d5463d7fbb07196d",
+      "verified": true,
+      "copy_method": "clonefile"
+    },
+    "matrix": [
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "webkit-dark-phone",
+      "webkit-dark-desktop",
+      "chromium-light-phone",
+      "chromium-light-desktop",
+      "chromium-dark-phone",
+      "chromium-dark-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-MSG-FILTERS-MENU-webkit-light-phone-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-MSG-FILTERS-MENU-webkit-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-FILTERS-MENU-webkit-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-FILTERS-MENU-webkit-dark-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-FILTERS-MENU-webkit-dark-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-FILTERS-MENU-chromium-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-FILTERS-MENU-chromium-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-FILTERS-MENU-chromium-dark-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-FILTERS-MENU-chromium-dark-desktop-playwright.json"
+    ],
+    "server": "gateway",
+    "setups": [
+      {
+        "fixture_setup_ms": 17265,
+        "fixture_snapshot": {
+          "disk_bytes": 30650368,
+          "entry_bytes": 30658176,
+          "cache_bytes": 61357568,
+          "blob_payloads": 59,
+          "key": "fb495eb12035ed7e8fbc9f5999ada4b816f323bab6355f41180ece331ae0e1d2",
+          "cache_hit": false,
+          "build_ms": 17171,
+          "copy_ms": 1361,
+          "records": 6865,
+          "fresh_digest": "46f38ec4580783e816f0b71e3b8ff190a8a55bdb26c1cd00d5463d7fbb07196d",
+          "copy_digest": "46f38ec4580783e816f0b71e3b8ff190a8a55bdb26c1cd00d5463d7fbb07196d",
+          "verified": true,
+          "copy_method": "clonefile"
+        },
+        "project": "webkit-light-phone"
+      },
+      {
+        "fixture_setup_ms": 1395,
+        "fixture_snapshot": {
+          "disk_bytes": 30650368,
+          "entry_bytes": 30658176,
+          "cache_bytes": 61357568,
+          "blob_payloads": 59,
+          "key": "fb495eb12035ed7e8fbc9f5999ada4b816f323bab6355f41180ece331ae0e1d2",
+          "cache_hit": true,
+          "build_ms": 0,
+          "copy_ms": 1287,
+          "records": 6865,
+          "fresh_digest": "46f38ec4580783e816f0b71e3b8ff190a8a55bdb26c1cd00d5463d7fbb07196d",
+          "copy_digest": "46f38ec4580783e816f0b71e3b8ff190a8a55bdb26c1cd00d5463d7fbb07196d",
+          "verified": true,
+          "copy_method": "clonefile"
+        },
+        "project": "webkit-light-desktop"
+      },
+      {
+        "fixture_setup_ms": 1430,
+        "fixture_snapshot": {
+          "disk_bytes": 30650368,
+          "entry_bytes": 30658176,
+          "cache_bytes": 61357568,
+          "blob_payloads": 59,
+          "key": "fb495eb12035ed7e8fbc9f5999ada4b816f323bab6355f41180ece331ae0e1d2",
+          "cache_hit": true,
+          "build_ms": 0,
+          "copy_ms": 1333,
+          "records": 6865,
+          "fresh_digest": "46f38ec4580783e816f0b71e3b8ff190a8a55bdb26c1cd00d5463d7fbb07196d",
+          "copy_digest": "46f38ec4580783e816f0b71e3b8ff190a8a55bdb26c1cd00d5463d7fbb07196d",
+          "verified": true,
+          "copy_method": "clonefile"
+        },
+        "project": "webkit-dark-phone"
+      },
+      {
+        "fixture_setup_ms": 1034,
+        "fixture_snapshot": {
+          "disk_bytes": 30650368,
+          "entry_bytes": 30658176,
+          "cache_bytes": 61357568,
+          "blob_payloads": 59,
+          "key": "fb495eb12035ed7e8fbc9f5999ada4b816f323bab6355f41180ece331ae0e1d2",
+          "cache_hit": true,
+          "build_ms": 0,
+          "copy_ms": 957,
+          "records": 6865,
+          "fresh_digest": "46f38ec4580783e816f0b71e3b8ff190a8a55bdb26c1cd00d5463d7fbb07196d",
+          "copy_digest": "46f38ec4580783e816f0b71e3b8ff190a8a55bdb26c1cd00d5463d7fbb07196d",
+          "verified": true,
+          "copy_method": "clonefile"
+        },
+        "project": "webkit-dark-desktop"
+      },
+      {
+        "fixture_setup_ms": 952,
+        "fixture_snapshot": {
+          "disk_bytes": 30650368,
+          "entry_bytes": 30658176,
+          "cache_bytes": 61357568,
+          "blob_payloads": 59,
+          "key": "fb495eb12035ed7e8fbc9f5999ada4b816f323bab6355f41180ece331ae0e1d2",
+          "cache_hit": true,
+          "build_ms": 0,
+          "copy_ms": 877,
+          "records": 6865,
+          "fresh_digest": "46f38ec4580783e816f0b71e3b8ff190a8a55bdb26c1cd00d5463d7fbb07196d",
+          "copy_digest": "46f38ec4580783e816f0b71e3b8ff190a8a55bdb26c1cd00d5463d7fbb07196d",
+          "verified": true,
+          "copy_method": "clonefile"
+        },
+        "project": "chromium-light-phone"
+      },
+      {
+        "fixture_setup_ms": 1342,
+        "fixture_snapshot": {
+          "disk_bytes": 30650368,
+          "entry_bytes": 30658176,
+          "cache_bytes": 61357568,
+          "blob_payloads": 59,
+          "key": "fb495eb12035ed7e8fbc9f5999ada4b816f323bab6355f41180ece331ae0e1d2",
+          "cache_hit": true,
+          "build_ms": 0,
+          "copy_ms": 1252,
+          "records": 6865,
+          "fresh_digest": "46f38ec4580783e816f0b71e3b8ff190a8a55bdb26c1cd00d5463d7fbb07196d",
+          "copy_digest": "46f38ec4580783e816f0b71e3b8ff190a8a55bdb26c1cd00d5463d7fbb07196d",
+          "verified": true,
+          "copy_method": "clonefile"
+        },
+        "project": "chromium-light-desktop"
+      },
+      {
+        "fixture_setup_ms": 1262,
+        "fixture_snapshot": {
+          "disk_bytes": 30650368,
+          "entry_bytes": 30658176,
+          "cache_bytes": 61357568,
+          "blob_payloads": 59,
+          "key": "fb495eb12035ed7e8fbc9f5999ada4b816f323bab6355f41180ece331ae0e1d2",
+          "cache_hit": true,
+          "build_ms": 0,
+          "copy_ms": 1176,
+          "records": 6865,
+          "fresh_digest": "46f38ec4580783e816f0b71e3b8ff190a8a55bdb26c1cd00d5463d7fbb07196d",
+          "copy_digest": "46f38ec4580783e816f0b71e3b8ff190a8a55bdb26c1cd00d5463d7fbb07196d",
+          "verified": true,
+          "copy_method": "clonefile"
+        },
+        "project": "chromium-dark-phone"
+      },
+      {
+        "fixture_setup_ms": 1305,
+        "fixture_snapshot": {
+          "disk_bytes": 30650368,
+          "entry_bytes": 30658176,
+          "cache_bytes": 61357568,
+          "blob_payloads": 59,
+          "key": "fb495eb12035ed7e8fbc9f5999ada4b816f323bab6355f41180ece331ae0e1d2",
+          "cache_hit": true,
+          "build_ms": 0,
+          "copy_ms": 1225,
+          "records": 6865,
+          "fresh_digest": "46f38ec4580783e816f0b71e3b8ff190a8a55bdb26c1cd00d5463d7fbb07196d",
+          "copy_digest": "46f38ec4580783e816f0b71e3b8ff190a8a55bdb26c1cd00d5463d7fbb07196d",
+          "verified": true,
+          "copy_method": "clonefile"
+        },
+        "project": "chromium-dark-desktop"
+      }
+    ],
+    "template_cold_setup_ms": {
+      "generate": 187,
+      "list": 4677,
+      "seed": 8281
+    }
+  },
+  "scenario": "WEB-MSG-FILTERS-MENU",
+  "level": "web",
+  "passed": true,
+  "git_sha": "b29266d82a278c1192abd18aebaf6af9d990ce43",
+  "at": "2026-10-22T15:13:33.884082Z",
+  "assertions": [
+    {
+      "name": "webkit-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/list-menu.spec.ts:6:1 › WEB-MSG-FILTERS WEB-MSG-FILTERS-MENU menu pixels stay legible and focus follows opening mode (6.7s)\n\n  1 passed (11.6s)\n"
+    },
+    {
+      "name": "webkit-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/list-menu.spec.ts:6:1 › WEB-MSG-FILTERS WEB-MSG-FILTERS-MENU menu pixels stay legible and focus follows opening mode (6.4s)\n\n  1 passed (9.8s)\n"
+    },
+    {
+      "name": "webkit-dark-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-dark-phone] › tests/list-menu.spec.ts:6:1 › WEB-MSG-FILTERS WEB-MSG-FILTERS-MENU menu pixels stay legible and focus follows opening mode (4.4s)\n\n  1 passed (7.2s)\n"
+    },
+    {
+      "name": "webkit-dark-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-dark-desktop] › tests/list-menu.spec.ts:6:1 › WEB-MSG-FILTERS WEB-MSG-FILTERS-MENU menu pixels stay legible and focus follows opening mode (3.9s)\n\n  1 passed (5.8s)\n"
+    },
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/list-menu.spec.ts:6:1 › WEB-MSG-FILTERS WEB-MSG-FILTERS-MENU menu pixels stay legible and focus follows opening mode (3.8s)\n\n  1 passed (6.4s)\n"
+    },
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/list-menu.spec.ts:6:1 › WEB-MSG-FILTERS WEB-MSG-FILTERS-MENU menu pixels stay legible and focus follows opening mode (3.7s)\n\n  1 passed (6.6s)\n"
+    },
+    {
+      "name": "chromium-dark-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-dark-phone] › tests/list-menu.spec.ts:6:1 › WEB-MSG-FILTERS WEB-MSG-FILTERS-MENU menu pixels stay legible and focus follows opening mode (3.4s)\n\n  1 passed (6.0s)\n"
+    },
+    {
+      "name": "chromium-dark-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-dark-desktop] › tests/list-menu.spec.ts:6:1 › WEB-MSG-FILTERS WEB-MSG-FILTERS-MENU menu pixels stay legible and focus follows opening mode (3.9s)\n\n  1 passed (6.9s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

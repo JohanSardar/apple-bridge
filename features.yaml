@@ -580,6 +580,7 @@ features:
       - {id: WEB-MSG-LOADING, levels: [web]}
       - {id: WEB-MSG-REORDER, levels: [web]}
       - {id: WEB-MSG-FILTERS, levels: [web]}
+      - {id: WEB-MSG-FILTERS-MENU, levels: [web]}
       - {id: WEB-MSG-SEARCH, levels: [web]}
       - {id: WEB-MSG-SEARCH-LIST, levels: [web]}
       - {id: WEB-MSG-SIDEBAR, levels: [web]}

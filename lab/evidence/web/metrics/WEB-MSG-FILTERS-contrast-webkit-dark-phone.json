@@ -1,0 +1,22 @@
+{
+  "normal": {
+    "contrast_min": 9.247785702149388,
+    "samples": 11660,
+    "regions": 6,
+    "fill_alpha": 0.9411764705882353
+  },
+  "no_backdrop": {
+    "contrast_min": 9.247785702149388,
+    "samples": 11660,
+    "regions": 6,
+    "fill_alpha": 0.9411764705882353
+  },
+  "solid_fallback": {
+    "contrast_min": 10.799209034303885,
+    "samples": 11660,
+    "regions": 6,
+    "fill_alpha": 1
+  },
+  "backdrop_channel_transmission": 15,
+  "bare_backdrop_difference": 255
+}
