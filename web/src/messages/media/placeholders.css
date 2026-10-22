@@ -1,0 +1,16 @@
+.message-placeholder{position:absolute;inset:0;display:grid;grid-template-columns:48px minmax(0,1fr);align-items:center;gap:10px;box-sizing:border-box;padding:12px;border-radius:inherit;background:var(--background-secondary);color:var(--label);overflow:hidden}
+.placeholder-art{position:relative;display:grid;place-items:center;width:48px;height:48px;border-radius:10px;overflow:hidden;background:var(--fill-tertiary)}
+.placeholder-glyph{width:28px;height:28px;fill:none;stroke:var(--blue);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.placeholder-art>.media-image{position:absolute;inset:0;border-radius:10px}
+.placeholder-art img,.placeholder-art .media-placeholder{object-fit:contain}
+.placeholder-art:has(img)>.placeholder-glyph{visibility:hidden}
+.placeholder-art:has([data-media-state=error])>.media-image{display:none}
+.placeholder-art:has([data-media-state=error])>.placeholder-glyph{visibility:visible}
+.placeholder-art:has([data-media-alpha=true]),.placeholder-art>.media-image[data-media-alpha=true]{background:transparent;border-radius:0;overflow:visible}
+.placeholder-copy{display:flex;min-width:0;flex-direction:column;gap:2px}
+.placeholder-copy>strong{font-size:var(--subheadline);line-height:20px;font-weight:600;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.placeholder-caption,.placeholder-hint{font-size:var(--caption-1);line-height:16px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:var(--label-secondary)}
+.placeholder-chevron{position:absolute;right:8px;top:35px;width:14px;height:18px;color:var(--label-tertiary)}
+.message-placeholder:has(.placeholder-open){padding-right:24px}
+.placeholder-open{position:absolute;inset:0;border-radius:inherit}
+.placeholder-open:focus-visible{outline:3px solid var(--blue);outline-offset:-3px}
