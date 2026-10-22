@@ -90,6 +90,7 @@ Johan delegated all decisions and wants SPEC §23 finished as fast as possible.
 - **Per-PR gates (all that's required to merge):** build, typecheck, lint/vet, features, the PR's own focused tests on WebKit + Chromium (desktop and phone), and the sims it touches. Merge on green with `gh pr merge --merge --delete-branch --match-head-commit <sha>`. Failing-first proof is still preferred for bug fixes, but don't spend more than one focused run on it.
 - **No per-PR** full 12-project matrices, exclusive perf runs or real-data R-LIVE runs. They run **once per app** at its milestone gate, after its last PR, and failures there get follow-up PRs.
 - **Rebases:** rerun only build, typecheck, lint, features and your own focused tests.
+- **Lanes:** run build, typecheck, lint/vet and features checks with `heavy.sh --light` so they never wait behind long scenario runs. On hosts under 12 GiB, `heavy.sh` opens a second normal slot for non-sensitive jobs while free memory is at least 40% and CPU idle at least 30%. Sensitive jobs (Swift, real, latency, perf, quiet, exclusive) still run alone in the normal lane.
 - The leader reviews quickly for correctness, spec fit and security, and spot-checks UI from one screenshot set per app.
 
 ## Speed rules (2026-10-17, binding)
