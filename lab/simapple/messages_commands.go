@@ -374,7 +374,7 @@ func (f *fakeApple) messageCommand(wire *applepeer.Wire, frame contracts.IPCFram
 					f.blobs[digest] = bytes
 					key := contracts.NewID("attachment")
 					msg := contracts.NewID("message")
-					newMessage(msg, "", chat, true)
+					put("message", msg, map[string]any{"chat_id": messageReference("chat", chat), "text": "", "parts": []any{map[string]any{"index": 0, "kind": "attachment", "attachment_id": messageReference("attachment", key)}}, "is_from_me": true, "sent_at": now, "decode_status": "decoded", "kind": "message", "error_code": 0}, false)
 					if native == "" {
 						native = msg
 					}

@@ -1,10 +1,11 @@
+import type {BridgeRecord} from '../../data/types';
 import {createSignal,For,onCleanup,onMount,Show} from 'solid-js';
 import {Portal} from 'solid-js/web';
 import {reducedMotion,springAnimation} from '../../motion/animate';
 import {classicReactions,type MessageActionsController} from './reactionActions';
 import {reactionEmoji} from './emoji';
 import './actions.css';
-export function MessageActions(props:{actions:MessageActionsController}){
+export function MessageActions(props:{actions:MessageActionsController;onForward?:(event:Event,text:string,attachment?:BridgeRecord)=>void}){
     const actions=props.actions;
     function Picker(){
         const [search,setSearch]=createSignal(''),[more,setMore]=createSignal(false);
@@ -46,8 +47,16 @@ export function MessageActions(props:{actions:MessageActionsController}){
             <Show when={actions.changes.canUnsend()}><button class="message-action-item" onClick={actions.changes.unsend}>Undo Send</button></Show>
             <Show when={actions.changes.pendingEdit()}><button class="message-action-item" onClick={actions.changes.copyPendingEdit}>Copy edit</button></Show>
             <Show when={actions.text()}><button class="message-action-item" onClick={actions.copy}>Copy</button></Show>
+            <Show when={props.onForward&&actions.canForward()}><button class="message-action-item" onClick={event=>{if(!event.isTrusted||!actions.canForward())return;const text=actions.text();props.onForward?.(event,text,actions.forwardAttachment());}}>Forward</button></Show>
+            <Show when={actions.canSave()}><button class="message-action-item" onClick={actions.save}>Save Attachment</button></Show>
+            <Show when={actions.management.canDelete()}><button class="message-action-item destructive" onClick={actions.management.requestDelete}>Delete</button></Show>
             <button class="message-action-item" onClick={actions.close}>Close</button>
         </dialog></Portal>;
+    }
+    function DeleteConfirmation(){
+        let dialog!:HTMLDialogElement;
+        onMount(()=>{dialog.showModal();dialog.querySelector<HTMLButtonElement>('button')?.focus();});
+        return <Portal><dialog ref={dialog} class="message-delete-dialog glass" aria-label="Delete Message" onCancel={event=>{event.preventDefault();event.stopPropagation();actions.management.cancelDelete();}} onKeyDown={event=>event.stopPropagation()}><h2>Delete Message?</h2><p>This message will be deleted for you.</p><Show when={actions.management.problem()}><p role="status">{actions.management.problem()}</p></Show><div><button class="button subtle" onClick={actions.management.cancelDelete}>Cancel</button><button class="button destructive" disabled={!actions.management.canConfirm()} onClick={actions.management.confirmDelete}>Delete</button></div></dialog></Portal>;
     }
     function Editor(){
         const changes=actions.changes,target=changes.editor()!.target;
@@ -91,5 +100,5 @@ export function MessageActions(props:{actions:MessageActionsController}){
         });
         return <Portal><span ref={element} class="reaction-flight" aria-hidden="true">{value.symbol}</span><Show when={!reducedMotion()}><For each={[0,1,2,3,4,5]}>{()=> <span ref={element=>particles.push(element)} class="reaction-burst" style={{background:value.color}} aria-hidden="true"/>}</For></Show></Portal>;
     }
-    return <><Show when={actions.target()} keyed><Picker/></Show><Show when={actions.changes.editor()}><Editor/></Show><Show when={actions.changes.dissolve()?.id} keyed><Dissolve/></Show><Show when={actions.flight()?.key} keyed><Flight/></Show></>;
+    return <><Show when={actions.target()} keyed><Picker/></Show><Show when={actions.management.confirmation()}><DeleteConfirmation/></Show><Show when={actions.changes.editor()}><Editor/></Show><Show when={actions.changes.dissolve()?.id} keyed><Dissolve/></Show><Show when={actions.flight()?.key} keyed><Flight/></Show></>;
 }

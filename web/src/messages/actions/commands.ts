@@ -3,6 +3,8 @@ import type { LiveClient } from '../../data/live';
 import { withInput } from '../../data/input';
 import type { CommandPart, CommandState, Cursor, ThreadItem } from '../../data/types';
 import { createCapabilities } from './capabilities';
+import type {PendingAttachment} from '../media/pending';
+export type LocalMessageFile = {file:File;attachment:PendingAttachment;upload:MessageFile;expires_at:string};
 export type MessageFile = { upload_id: string; name: string };
 export type SendMessage = { chat_id: string; text?: string; files?: MessageFile[]; handles?: string[]; service?: string; resend_of?: string };
 export type MessageSendState = 'pending' | 'sent' | 'failed' | 'indeterminate';
@@ -18,6 +20,8 @@ export function messageCommandLabel(command: CommandState) {
 }
 export function createMessageCommands(live: LiveClient) {
     const capabilities = createCapabilities(live);
+    const localFiles=new Map<string,LocalMessageFile>();
+    const releaseFile=(key:string)=>{const file=localFiles.get(key);if(file){URL.revokeObjectURL(file.attachment.url);localFiles.delete(key);}};
     const replies = new Map<string,{target:ThreadItem;partIndex:number}>();
     const echoes = new Map<string, Echo>(), owned = new Map<string, SendMessage>(), suppressed = new Set<string>(), resolved = new Set<string>();
     const identities = new Map<string, string>(), displayed = new Map<string, string>(), held = new Map<string, string>();
@@ -75,7 +79,7 @@ export function createMessageCommands(live: LiveClient) {
             if (recordID && compatible(command, capture?.cursor)) {
                 if (resolved.has(key) && !capture!.ids.has(recordID)) {
                     if (identities.get(recordID) === key) identities.delete(recordID);
-                    displayed.delete(recordID); echoes.delete(key); retries.delete(key); resolved.delete(key); suppressed.delete(key); released.delete(key); missingIdentities.delete(key);
+                    displayed.delete(recordID); releaseFile(key); echoes.delete(key); retries.delete(key); resolved.delete(key); suppressed.delete(key); released.delete(key); missingIdentities.delete(key);
                     if (![...echoes.values()].some(value => value.commandID === echo.commandID)) {owned.delete(echo.commandID);replies.delete(echo.commandID);}
                     continue;
                 }
@@ -139,22 +143,25 @@ export function createMessageCommands(live: LiveClient) {
         const commands = new Map(live.pending().map(command => [command.id, command]));
         return [...echoes].filter(([key]) => !suppressed.has(key) && !resolved.has(key)).map(([, echo]) => ({...echo.item,data:{...echo.item.data,send_state:stateOf(echo,commands.get(echo.commandID))}}));
     };
-    const addEchoes=(id:string,submitted:SendMessage,replyData:Record<string,unknown>={})=>{
+    const addEchoes=(id:string,submitted:SendMessage,replyData:Record<string,unknown>={},files:readonly LocalMessageFile[]=[])=>{
         const sentAt=new Date().toISOString(),legacy=!submitted.files?.length;
         const content: {kind:'text'|'attachment';text:string}[] = [...(submitted.text ? [{kind:'text' as const,text:submitted.text}] : []), ...(submitted.files ?? []).map(() => ({kind:'attachment' as const,text:''}))];
         owned.set(id, submitted);
+        let fileIndex=0;
         content.forEach((part, index) => {
             const key = legacy ? id : id + ':part:' + index;
+            const file=part.kind==='attachment'?files[fileIndex++]:undefined;if(file)localFiles.set(key,file);
             echoes.set(key, {commandID:id,index,kind:part.kind,legacy,item:{id:'command:'+key,collection:'messages.message',source:'messages',version:0,
-                data:{command_id:id,...(!legacy ? {command_part_index:index} : {}),command_sent_at:sentAt,chat_id:submitted.chat_id,text:part.text,parts:part.kind === 'text' ? [{index:0,kind:'text',text:part.text}] : [],is_from_me:true,sent_at:sentAt,send_state:'pending',...replyData},attachments:[],reactions:[],reply_count:0}});
+                data:{command_id:id,...(!legacy ? {command_part_index:index} : {}),command_sent_at:sentAt,chat_id:submitted.chat_id,text:part.text,...(file?{local_attachments:[file.attachment]}:{}),parts:part.kind === 'text' ? [{index:0,kind:'text',text:part.text}] : [{index:0,kind:'attachment'}],is_from_me:true,sent_at:sentAt,send_state:'pending',...replyData},attachments:[],reactions:[],reply_count:0}});
         });
         refresh();
     };
-    const send = (event: Event, args: SendMessage) => withInput(event, () => {
+    const send = (event: Event, args: SendMessage, files:readonly LocalMessageFile[]=[]) => withInput(event, () => {
         if (!capabilities.allowed('messages.send') || !args.text && !args.files?.length || (args.files?.length ?? 0) > 10) throw new Error('Sending is unavailable');
+        if(files.length&&(files.length!==args.files?.length||files.some((file,index)=>file.upload.upload_id!==args.files![index].upload_id||Date.parse(file.expires_at)<=Date.now())))throw new Error('Attachments unavailable');
         const submitted = {...args,...(args.files ? {files:args.files.map(file => ({...file}))} : {}),...(args.handles ? {handles:args.handles.slice()} : {})};
         const id=live.command('messages.send',submitted);
-        addEchoes(id,submitted);
+        addEchoes(id,submitted,{},files);
         return id;
     });
     const reply=(event:Event,target:ThreadItem,partIndex:number,text:string)=>withInput(event,()=>{
@@ -168,18 +175,20 @@ export function createMessageCommands(live: LiveClient) {
     const echoKey = (id:string,index?:number) => index === undefined ? id : Number.isSafeInteger(index) && index >= 0 ? id+':part:'+index : '';
     const canRetry = (id:string,index?:number,file?:MessageFile) => {
         revision();
-        const key=echoKey(id,index), echo=echoes.get(key), command=live.pending().find(value => value.id===id);
+        const key=echoKey(id,index);
+        const echo=echoes.get(key), command=live.pending().find(value => value.id===id);
         return Boolean(echo && command && !retries.has(key) && stateOf(echo,command)==='failed' && !ghostFailure(echo,command) && (!recordOf(echo,command) || chatOf(echo)) && (echo.kind==='text' || file?.upload_id && file.name) && live.status()==='connected' && (!replies.has(id)||!recordOf(echo,command)) && capabilities.allowed(replies.has(id)?'messages.reply':'messages.send'));
     };
-    const retry = (event:Event,id:string,index?:number,file?:MessageFile) => withInput(event,() => batch(() => {
-        const key=echoKey(id,index), existing=retries.get(key);
+    const retry = (event:Event,id:string,index?:number,file?:MessageFile,replacement?:LocalMessageFile) => withInput(event,() => batch(() => {
+        const key=echoKey(id,index), local=localFiles.get(key);
+        const existing=retries.get(key);
         if(existing)return existing;
         if(!canRetry(id,index,file))throw new Error('Message unavailable');
         const echo=echoes.get(key)!, original=owned.get(id)!, command=live.pending().find(value => value.id===id), recordID=recordOf(echo,command), chatID=chatOf(echo);
         const context=replies.get(id);
-        const next=context?reply(event,context.target,context.partIndex,String(echo.item.data.text??'')):send(event,{chat_id:chatID,...(!chatID ? {handles:original.handles?.slice(),service:original.service} : {}),...(echo.kind==='text' ? {text:String(echo.item.data.text ?? '')} : {files:[{upload_id:file!.upload_id,name:file!.name}]}),...(recordID ? {resend_of:recordID} : {})});
+        const next=context?reply(event,context.target,context.partIndex,String(echo.item.data.text??'')):send(event,{chat_id:chatID,...(!chatID ? {handles:original.handles?.slice(),service:original.service} : {}),...(echo.kind==='text' ? {text:String(echo.item.data.text ?? '')} : {files:[{upload_id:file!.upload_id,name:file!.name}]}),...(recordID ? {resend_of:recordID} : {})},replacement?[replacement]:local&&echo.kind==='attachment'?[{...local,attachment:{...local.attachment,key:crypto.randomUUID(),url:URL.createObjectURL(local.file)},upload:file!}]:[]);
         retries.set(key,next);
-        if(!recordID){echoes.delete(key);retries.delete(key);suppressed.delete(key);released.delete(key);missingIdentities.delete(key);if(![...echoes.values()].some(value => value.commandID===id)){owned.delete(id);replies.delete(id);}}
+        if(!recordID){releaseFile(key);echoes.delete(key);retries.delete(key);suppressed.delete(key);released.delete(key);missingIdentities.delete(key);if(![...echoes.values()].some(value => value.commandID===id)){owned.delete(id);replies.delete(id);}}
         refresh();
         return next;
     }));
@@ -203,11 +212,12 @@ export function createMessageCommands(live: LiveClient) {
     };
     const copy = (event: Event, id: string, partIndex?: number) => withInput(event, () => {
         if (partIndex !== undefined && (!Number.isSafeInteger(partIndex) || partIndex < 0)) throw new Error('Message unavailable');
-        const echo = partIndex === undefined ? echoes.get(id) : echoes.get(id+':part:'+partIndex);
-        if (!echo || echo.kind === 'attachment') throw new Error('Message unavailable');
+        const echo = partIndex === undefined ? echoes.get(id)??[...echoes.values()].find(value=>value.commandID===id&&value.kind==='text') : echoes.get(id+':part:'+partIndex);
+        if(!echo)throw new Error('Message unavailable');
+        if(echo.kind==='attachment'){const file=localFiles.get(echoKey(id,partIndex));if(!file)throw new Error('Message unavailable');const link=document.createElement('a');link.href=file.attachment.url;link.download=file.attachment.name;link.hidden=true;document.body.appendChild(link);link.click();link.remove();return Promise.resolve();}
         return navigator.clipboard.writeText(String(echo.item.data.text ?? ''));
     });
-    const dispose = () => { disposed = true; for (const timer of timers.values()) clearTimeout(timer); timers.clear(); snapshots.clear(); echoes.clear(); owned.clear(); identities.clear(); held.clear(); displayed.clear(); released.clear(); suppressed.clear(); resolved.clear(); missingIdentities.clear(); retries.clear(); replies.clear(); capabilities.dispose(); };
+    const dispose = () => { disposed = true; for (const timer of timers.values()) clearTimeout(timer); timers.clear(); snapshots.clear(); for(const key of localFiles.keys())releaseFile(key);echoes.clear(); owned.clear(); identities.clear(); held.clear(); displayed.clear(); released.clear(); suppressed.clear(); resolved.clear(); missingIdentities.clear(); retries.clear(); replies.clear(); capabilities.dispose(); };
     onCleanup(dispose);
-    return {send,reply,retry,canRetry,pending,observe,projectCaptured,statuses,notice,timeoutCount,missingIdentityCount,capabilities,check:(id:string)=>live.checkCommand(id),copy,dispose};
+    return {send,reply,retry,canRetry,canCopy:(id:string)=>{revision();return [...echoes.values()].some(echo=>echo.commandID===id&&echo.kind==='text');},localFile:(id:string,index?:number)=>localFiles.get(echoKey(id,index)),pending,observe,projectCaptured,statuses,notice,timeoutCount,missingIdentityCount,capabilities,check:(id:string)=>live.checkCommand(id),copy,dispose};
 }

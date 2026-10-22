@@ -4,14 +4,21 @@ import { router } from '../../app/router';
 import type { createMessageCommands } from '../actions/commands';
 import { messageCommandLabel } from '../actions/commands';
 import { Composer } from './Composer';
+import {UploadDock} from './UploadDock';
+import type {Uploads} from './uploads';
+import type {PendingAttachment} from '../media/pending';
+import {PendingMedia} from '../media/PendingMedia';
+import {takeForward,discardDraft} from './drafts';
 import { createRecipientHistory } from './history';
 import { lookupRecipients, rawRecipient, recipientKey, recipientOptions, type Recipient } from './recipients';
 import './new-message.css';
 const Transcript = lazy(() => import('../transcript/Transcript'));
-export default function NewMessage(props: {commands:ReturnType<typeof createMessageCommands>}) {
+export default function NewMessage(props: {commands:ReturnType<typeof createMessageCommands>;uploads:Uploads}) {
     const live = auth.live()!, session = auth.session()!, commands = props.commands;
     const incoming = rawRecipient(new URLSearchParams(location.search).get('to') ?? '');
-    const recover = untrack(() => incoming ? undefined : commands.statuses().findLast(command => {
+    const forward=takeForward(session),draftID=forward?.draftID??"new-message";
+    onCleanup(()=>{if(forward){discardDraft(session,forward.draftID);props.uploads.cancelImport(forward.draftID);for(const entry of props.uploads.files(forward.draftID))props.uploads.remove(forward.draftID,entry.key);}});
+    const recover = untrack(() => incoming || forward ? undefined : commands.statuses().findLast(command => {
         const args = command.args as {chat_id?:string;handles?:string[]};
         return !args.chat_id && args.handles?.length === 1 && !['observed','delivered'].includes(command.status);
     }));
@@ -68,12 +75,13 @@ export default function NewMessage(props: {commands:ReturnType<typeof createMess
     };
     const send = (event: Event, content: {text:string}) => {
         if (!capable() || blocked()) throw new Error('Sending unavailable');
-        const chat = knownChat(), args = {chat_id:chat?.chat.id ?? '',text:content.text,...(chat ? {} : {handles:[recipients()[0].value],service:service() || 'iMessage'})};
-        const id = commands.send(event,args);
+        const files=props.uploads.files(draftID).length?props.uploads.prepared(draftID):[];
+        const chat = knownChat(), args = {chat_id:chat?.chat.id ?? '',text:content.text,...(files.length?{files:files.map(file=>file.upload)}:{}),...(chat ? {} : {handles:[recipients()[0].value],service:service() || 'iMessage'})};
+        const id = commands.send(event,args,files);props.uploads.sent(draftID,files);
         setStartedChat(chat?.chat.id ?? ''); setCommandID(id);
         return id;
     };
-    return <section class="new-message-pane" aria-label="New message">
+    return <section onDragOver={event=>{if(event.dataTransfer?.types.includes("Files"))event.preventDefault();}} onDrop={event=>{if(event.defaultPrevented||!event.dataTransfer?.files.length)return;event.preventDefault();props.uploads.add(draftID,Array.from(event.dataTransfer.files));}} class="new-message-pane" aria-label="New message">
         <div class="recipient-header">
             <span class="recipient-to">To:</span>
             <div class="recipient-entry">
@@ -91,7 +99,7 @@ export default function NewMessage(props: {commands:ReturnType<typeof createMess
         </div>
         <Show when={lookupHint()}><p class="recipient-hint" role="status">{lookupHint()}</p></Show>
         <Show when={history.failed()}><p class="recipient-hint">Couldn't load earlier messages</p></Show>
-        <div class="new-message-history"><Show when={existing()?.chat.id} keyed fallback={<div class="new-message-empty"/>}>{chatID => <section class="new-existing" aria-label="Existing conversation" data-chat-id={chatID}><Suspense><Transcript chatID={chatID} title={() => {}}/></Suspense></section>}</Show><Show when={local().length}><div class="new-pending" role="log" aria-label="Pending messages"><For each={local()}>{item => <div class="new-pending-row"><p>{String(item.data.text ?? '')}</p><small>{latest() ? messageCommandLabel(latest()!) : 'Sending…'}</small></div>}</For></div></Show></div>
-        <Composer session={session} draftID="new-message" service={service()} available={capable()} disabled={blocked()} disabledReason={recipients().length > 1 ? "New group messages aren't available yet" : undefined} command={latest()} canCheck={live.status()==='connected'} onSend={send} onCheck={() => commands.check(commandID())} onCopy={event => { void commands.copy(event,commandID()); }}/>
+        <div class="new-message-history"><Show when={existing()?.chat.id} keyed fallback={<div class="new-message-empty"/>}>{chatID => <section class="new-existing" aria-label="Existing conversation" data-chat-id={chatID}><Suspense><Transcript chatID={chatID} title={() => {}}/></Suspense></section>}</Show><Show when={local().length}><div class="new-pending" role="log" aria-label="Pending messages"><For each={local()}>{item => <div class="new-pending-row"><For each={Array.isArray(item.data.local_attachments)?item.data.local_attachments as PendingAttachment[]:[]}>{attachment=><div style={{position:"relative",width:"260px",height:"120px"}}><PendingMedia attachment={attachment} width={260} height={120}/></div>}</For><p>{String(item.data.text ?? '')}</p><small>{latest() ? messageCommandLabel(latest()!) : 'Sending…'}</small></div>}</For></div></Show></div>
+        <UploadDock uploads={props.uploads} draftID={draftID}><Composer session={session} draftID={draftID} hasAttachments={props.uploads.files(draftID).length>0} service={service()} available={capable()} disabled={blocked()||props.uploads.busy(draftID)||props.uploads.files(draftID).length>0&&!props.uploads.ready(draftID)} disabledReason={recipients().length > 1 ? "New group messages aren't available yet" : undefined} command={latest()} canCheck={live.status()==='connected'} onSend={send} onCheck={() => commands.check(commandID())} onCopy={commands.canCopy(commandID())?event => { void commands.copy(event,commandID()); }:undefined}/></UploadDock>
     </section>;
 }

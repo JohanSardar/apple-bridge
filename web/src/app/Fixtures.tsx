@@ -20,7 +20,7 @@ type Row = {
     text: string;
 };
 export default function Fixtures() {
-    const kind = () => router.route().path.split('/').at(-1);
+    const kind = () => new URL(router.route().path,location.origin).pathname.split('/').at(-1);
     const [status, setStatus] = createSignal('Ready');
     const [observed,setObserved]=createSignal(0);
     const [rows, setRows] = createSignal<Row[]>(kind() === 'virtual' || kind() === 'perf' ? Array.from({ length: 100000 }, (_, i) => ({ id: String(i), text: `Row ${i} · ` + 'Variable height content. '.repeat(i % 7 + 1) })) : []);

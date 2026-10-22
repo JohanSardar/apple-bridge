@@ -10,6 +10,7 @@ export type ComposerProps = {
     service?: string;
     session: DeviceSession;
     available: boolean;
+    hasAttachments?: boolean;
     disabled?: boolean;
     disabledReason?: string;
     onSend: (event: Event, content: { text: string }) => string;
@@ -25,7 +26,7 @@ export function Composer(props: ComposerProps) {
     const [text, setText] = createSignal(readDraft(session, props.draftID)), [error, setError] = createSignal('');
     let field!: HTMLTextAreaElement, frame = 0, metrics: { border: number; maximum: number; width: number } | undefined;
     const sms = () => ['SMS', 'RCS'].includes(props.service ?? '');
-    const content = () => Boolean(text().trim());
+    const content = () => Boolean(text().trim()||props.hasAttachments);
     const bytes = createMemo(() => new TextEncoder().encode(text()).length);
     const valid = () => bytes() <= 65536;
     const problem = () => props.command && ['failed', 'rejected', 'delivery_failed', 'expired', 'indeterminate'].includes(props.command.status) ? props.command : undefined;
@@ -74,6 +75,6 @@ export function Composer(props: ComposerProps) {
         <Show when={props.disabledReason}><p class="composer-status" role="status">{props.disabledReason}</p></Show>
         <Show when={!valid()}><p class="composer-error" role="alert">Message is too long</p></Show>
         <Show when={error()}><p class="composer-error" role="alert">{error()}</p></Show>
-        <Show when={problem()}>{command => <div class="composer-status" role="status">{messageCommandLabel(command())}<Show when={command().status === 'indeterminate'}> · <button class="button subtle" disabled={props.canCheck===false} onClick={() => props.onCheck?.()}>Check</button><button class="button subtle" onClick={event => props.onCopy?.(event)}>Copy</button></Show></div>}</Show>
+        <Show when={problem()}>{command => <div class="composer-status" role="status">{messageCommandLabel(command())}<Show when={command().status === 'indeterminate'}> · <button class="button subtle" disabled={props.canCheck===false} onClick={() => props.onCheck?.()}>Check</button><Show when={props.onCopy}><button class="button subtle" onClick={event => props.onCopy?.(event)}>Copy</button></Show></Show></div>}</Show>
     </section>;
 }
