@@ -37,11 +37,11 @@ func validateBatchChange(change contracts.Change, previous, through uint64) erro
 	}
 	return nil
 }
-func applyBatchChange(ctx context.Context, tx *sql.Tx, epoch string, change contracts.Change) error {
-	if err := writeRecord(ctx, tx, change.Record, change.Sequence); err != nil {
+func (w *recordWriter) applyBatchChange(ctx context.Context, epoch string, change contracts.Change) error {
+	if err := w.writeRecord(ctx, change.Record, change.Sequence); err != nil {
 		return err
 	}
-	return appendChange(ctx, tx, contracts.Cursor{Epoch: epoch, Sequence: change.Sequence}, change.Record, change.Op)
+	return w.appendChange(ctx, contracts.Cursor{Epoch: epoch, Sequence: change.Sequence}, change.Record, change.Op)
 }
 func (s *Store) ApplyBatch(ctx context.Context, b contracts.Batch) (contracts.Cursor, error) {
 	s.write.Lock()
@@ -51,6 +51,8 @@ func (s *Store) ApplyBatch(ctx context.Context, b contracts.Batch) (contracts.Cu
 		return contracts.Cursor{}, err
 	}
 	defer tx.Rollback()
+	writer := newRecordWriter(tx)
+	defer writer.close()
 	c, err := cursorAt(ctx, tx)
 	if err != nil {
 		return c, err
@@ -80,13 +82,13 @@ func (s *Store) ApplyBatch(ctx context.Context, b contracts.Batch) (contracts.Cu
 			if err != nil {
 				return c, err
 			}
-			if _, err = tx.ExecContext(ctx, "INSERT INTO pending_changes(seq,payload) VALUES(?,?)", change.Sequence, raw); err != nil {
+			if _, err = writer.exec(ctx, "INSERT INTO pending_changes(seq,payload) VALUES(?,?)", change.Sequence, raw); err != nil {
 				return c, err
 			}
-			if err = writeBlobReferences(ctx, tx, fmt.Sprintf("capture-stage:%d", change.Sequence), change.Record); err != nil {
+			if err = writer.writeBlobReferences(ctx, fmt.Sprintf("capture-stage:%d", change.Sequence), change.Record); err != nil {
 				return c, err
 			}
-		} else if err = applyBatchChange(ctx, tx, c.Epoch, change); err != nil {
+		} else if err = writer.applyBatchChange(ctx, c.Epoch, change); err != nil {
 			return c, err
 		}
 	}
@@ -115,7 +117,7 @@ func (s *Store) ApplyBatch(ctx context.Context, b contracts.Batch) (contracts.Cu
 				err = json.Unmarshal(raw, &change)
 			}
 			if err == nil {
-				err = applyBatchChange(ctx, tx, c.Epoch, change)
+				err = writer.applyBatchChange(ctx, c.Epoch, change)
 			}
 			if err != nil {
 				rows.Close()

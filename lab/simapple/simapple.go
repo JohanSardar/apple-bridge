@@ -562,9 +562,12 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 						f.durable.InProgress[capture.Source] = scanActive[capture.Source]
 					}
 					f.durable.Checkpoints[capture.Source] = capture.Checkpoint
-					f.progressLocked()
+					var progressErr error
+					if final {
+						progressErr = f.progressLocked()
+					}
 					f.mu.Unlock()
-					return nil
+					return progressErr
 				case "Ping":
 					if _, err = wire.Send(contracts.IPCFrame{T: "Pong"}); err != nil {
 						return err

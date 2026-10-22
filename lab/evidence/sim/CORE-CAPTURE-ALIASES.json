@@ -1,0 +1,37 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[10.62 16.96 27.27] cpu_idle=42% cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5HQYXYYX8FJZG0R1N4EYD2N",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "CORE-CAPTURE-ALIASES",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "c90f32452cd566e9e7876cbe8c1de31730a11b72",
+  "at": "2026-10-22T12:04:20.574083Z",
+  "assertions": [
+    {
+      "name": "capture_alias_scopes_generations_and_forward_references",
+      "passed": true
+    },
+    {
+      "name": "no_oversized_capture_observer_resets",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": [
+    "air"
+  ],
+  "conditions": {
+    "dataset": "synthetic contacts-free Messages identity fixture",
+    "transport": "State capture and query APIs"
+  }
+}

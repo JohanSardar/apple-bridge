@@ -89,8 +89,10 @@ func (s *Store) initReadModels(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	writer := newRecordWriter(tx)
+	defer writer.close()
 	for _, e := range entries {
-		if err = writeReadModel(ctx, tx, e.record, e.seq); err != nil {
+		if err = writer.writeReadModel(ctx, e.record, e.seq); err != nil {
 			return err
 		}
 	}
@@ -122,7 +124,7 @@ func attachmentKind(d map[string]any) string {
 		return "documents"
 	}
 }
-func writeReadModel(ctx context.Context, tx *sql.Tx, r contracts.Record, seq uint64) error {
+func (w *recordWriter) writeReadModel(ctx context.Context, r contracts.Record, seq uint64) error {
 	switch r.Collection {
 	case "messages.handle", "messages.chat", "messages.message", "messages.reaction", "messages.attachment":
 	default:
@@ -135,17 +137,17 @@ func writeReadModel(ctx context.Context, tx *sql.Tx, r contracts.Record, seq uin
 	}
 	switch r.Collection {
 	case "messages.handle":
-		return writeChatParticipantsTx(ctx, tx, r, d)
+		return writeChatParticipantsTx(ctx, w.tx, r, d)
 	case "messages.chat":
-		if err = writeChatParticipantsTx(ctx, tx, r, d); err != nil {
+		if err = writeChatParticipantsTx(ctx, w.tx, r, d); err != nil {
 			return err
 		}
-		_, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO chat_summary(id) VALUES(?)", r.ID)
+		_, err = w.exec(ctx, "INSERT OR IGNORE INTO chat_summary(id) VALUES(?)", r.ID)
 	case "messages.message":
-		if _, err = tx.ExecContext(ctx, "DELETE FROM msg_by_chat WHERE id=?", r.ID); err != nil {
+		if _, err = w.exec(ctx, "DELETE FROM msg_by_chat WHERE id=?", r.ID); err != nil {
 			return err
 		}
-		if _, err = tx.ExecContext(ctx, "DELETE FROM activity_by_chat WHERE message_id=?", r.ID); err != nil {
+		if _, err = w.exec(ctx, "DELETE FROM activity_by_chat WHERE message_id=?", r.ID); err != nil {
 			return err
 		}
 		if r.Deleted {
@@ -157,18 +159,18 @@ func writeReadModel(ctx context.Context, tx *sql.Tx, r contracts.Record, seq uin
 		}
 		chat := fieldString(d, "chat_id")
 		at := modelTime(fieldString(d, "sent_at"))
-		_, err = tx.ExecContext(ctx, "INSERT INTO msg_by_chat VALUES(?,?,?,?,?,?)", r.ID, chat, at, unread, fieldString(d, "thread_originator_id"), payload)
+		_, err = w.exec(ctx, "INSERT INTO msg_by_chat VALUES(?,?,?,?,?,?)", r.ID, chat, at, unread, fieldString(d, "thread_originator_id"), payload)
 		if err == nil {
-			_, err = tx.ExecContext(ctx, "INSERT INTO activity_by_chat VALUES(?,?,?,?)", r.ID, chat, at, r.ID)
+			_, err = w.exec(ctx, "INSERT INTO activity_by_chat VALUES(?,?,?,?)", r.ID, chat, at, r.ID)
 		}
 		if err == nil {
-			_, err = tx.ExecContext(ctx, "INSERT INTO activity_by_chat SELECT id,?,at,message_id FROM reaction_by_message WHERE message_id=?", chat, r.ID)
+			_, err = w.exec(ctx, "INSERT INTO activity_by_chat SELECT id,?,at,message_id FROM reaction_by_message WHERE message_id=?", chat, r.ID)
 		}
 	case "messages.reaction":
-		if _, err = tx.ExecContext(ctx, "DELETE FROM reaction_by_message WHERE id=?", r.ID); err != nil {
+		if _, err = w.exec(ctx, "DELETE FROM reaction_by_message WHERE id=?", r.ID); err != nil {
 			return err
 		}
-		if _, err = tx.ExecContext(ctx, "DELETE FROM activity_by_chat WHERE id=?", r.ID); err != nil {
+		if _, err = w.exec(ctx, "DELETE FROM activity_by_chat WHERE id=?", r.ID); err != nil {
 			return err
 		}
 		if r.Deleted {
@@ -179,17 +181,17 @@ func writeReadModel(ctx context.Context, tx *sql.Tx, r contracts.Record, seq uin
 		if at == "" {
 			at = r.ObservedAt.UTC().Format("2006-01-02T15:04:05.000000000Z")
 		}
-		_, err = tx.ExecContext(ctx, "INSERT INTO reaction_by_message VALUES(?,?,?,?,?)", r.ID, message, at, seq, payload)
+		_, err = w.exec(ctx, "INSERT INTO reaction_by_message VALUES(?,?,?,?,?)", r.ID, message, at, seq, payload)
 		if err == nil {
-			_, err = tx.ExecContext(ctx, "INSERT INTO activity_by_chat SELECT ?,chat_id,?,id FROM msg_by_chat WHERE id=?", r.ID, at, message)
+			_, err = w.exec(ctx, "INSERT INTO activity_by_chat SELECT ?,chat_id,?,id FROM msg_by_chat WHERE id=?", r.ID, at, message)
 		}
 	case "messages.attachment":
-		if _, err = tx.ExecContext(ctx, "DELETE FROM attachment_by_message WHERE id=?", r.ID); err != nil {
+		if _, err = w.exec(ctx, "DELETE FROM attachment_by_message WHERE id=?", r.ID); err != nil {
 			return err
 		}
 		if !r.Deleted {
 			messageID := attachmentMessage(d)
-			_, err = tx.ExecContext(ctx, "INSERT INTO attachment_by_message VALUES(?,?,?,?)", r.ID, messageID, attachmentKind(d), payload)
+			_, err = w.exec(ctx, "INSERT INTO attachment_by_message VALUES(?,?,?,?)", r.ID, messageID, attachmentKind(d), payload)
 		}
 	}
 	return err

@@ -1,0 +1,7 @@
+id: CORE-READMODEL-UPDATE-PERF
+feature: core.bench
+levels: [sim]
+given: [{world: {}}]
+when: [{robustness: {case: bench}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]
