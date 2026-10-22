@@ -19,3 +19,5 @@
 .inline-media-missing>svg{display:block;inline-size:80%;block-size:80%}
 
 .edit-history{max-inline-size:100%}.edit-history-content{display:flex;flex-direction:column;align-items:flex-start}.outgoing .edit-history-content{align-items:flex-end}
+
+.bubble-effect-host{position:relative;max-inline-size:100%;border-radius:18px}

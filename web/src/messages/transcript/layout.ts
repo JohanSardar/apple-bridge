@@ -2,11 +2,13 @@ import type { BridgeRecord, ThreadItem } from '../../data/types';
 import { array, fields, messageParts, sender, text, type Handles, type Part } from '../store/types';
 import { groupEvent, headerParts, name, time, wording, type HeaderParts } from '../format';
 import { attachmentHasAlpha } from '../media/source';
+import {effectLabel} from '../effects/data';
 import {messageCardData} from '../media/cards';
+export const effectLineHeight=22;
 export const transcriptSpacing={withinRun:3,betweenRuns:9,partGap:3,dateLine:16,afterHeader:9,senderLine:16,senderNameGap:2,reactionTop:16};
-export type LayoutPrefs = { phone: boolean; selectedMessageID?:string; viewportHeight?:number; group: boolean; service?: string; atLatest?: boolean; now: Date; locale?: string; scale: number; measure: (value:string,font?:{weight?:number;italic?:boolean})=>number; expanded: ReadonlySet<string> };
+export type LayoutPrefs = { phone: boolean; reduceMotion?:boolean; selectedMessageID?:string; viewportHeight?:number; group: boolean; service?: string; atLatest?: boolean; now: Date; locale?: string; scale: number; measure: (value:string,font?:{weight?:number;italic?:boolean})=>number; expanded: ReadonlySet<string> };
 export type BubbleLayout = { part: Part; mediaAttachments?:readonly BridgeRecord[]; subject?:string; width: number; height: number; emoji: boolean; media: boolean; floating:boolean; reactions: BridgeRecord[]; tail: boolean };
-export type TranscriptRow = { key:string;service:string;commandStatus?:{id:string;state:string;label:string};id: string; item: ThreadItem; members?:readonly ThreadItem[]; height: number; bubbles: BubbleLayout[]; sent: boolean; sender: string; senderName?: string; avatar?: string; header?: string; headerParts?:HeaderParts; system?: string; receipt?: string; edited: boolean; history: {text:string;height:number;width:number}[]; unsent?:string; reply?: string; failed: boolean; gap: number };
+export type TranscriptRow = { key:string;service:string;effectLabel?:string;commandStatus?:{id:string;state:string;label:string};id: string; item: ThreadItem; members?:readonly ThreadItem[]; height: number; bubbles: BubbleLayout[]; sent: boolean; sender: string; senderName?: string; avatar?: string; header?: string; headerParts?:HeaderParts; system?: string; receipt?: string; edited: boolean; history: {text:string;height:number;width:number}[]; unsent?:string; reply?: string; failed: boolean; gap: number };
 const emojiPattern = /^(?:\p{Extended_Pictographic}|\p{Regional_Indicator}|\p{Emoji_Modifier}|\uFE0F|\u200D|\u20E3|[0-9#*]\uFE0F?\u20E3|\s)+$/u;
 export function emojiOnly(value: string) {
     if(!emojiPattern.test(value)||!/(?:\p{Extended_Pictographic}|\p{Regional_Indicator}|[0-9#*]\uFE0F?\u20E3)/u.test(value))return false;
@@ -72,11 +74,12 @@ export function layout(items: readonly ThreadItem[], handles: Handles, prefs: La
         const reply=text(data.thread_originator_id),failed=Number(data.error_code??0)!==0;
         const commandID=text(data.command_id),commandState=failed?'failed':text(data.send_state)||'sent';
         const commandStatus=commandID&&(index===lastSent||commandState==='failed'||commandState==='indeterminate')?{id:commandID,state:commandState,label:commandState==='failed'?wording.notDelivered:commandState==='indeterminate'?wording.deliveryUnknown:commandState==='pending'?wording.sending:receipt??wording.sent}:undefined;
+        const label=prefs.reduceMotion?effectLabel(data.effect):undefined;
         const gap=first?transcriptSpacing.betweenRuns:transcriptSpacing.withinRun,senderName=prefs.group&&!sent&&first&&!system?actor:undefined;
         let height=gap+(dateHeader?transcriptSpacing.dateLine+transcriptSpacing.afterHeader:0)+(senderName?transcriptSpacing.senderLine+transcriptSpacing.senderNameGap:0)+(reply&&reply!==item.id?26:0);
         height+=system?30:bubbles.reduce((sum,bubble,index)=>sum+bubble.height+(bubble.reactions.length?transcriptSpacing.reactionTop:0)+(index?transcriptSpacing.partGap:0),0);
-        height+=(edited?22:0)+(commandStatus?44:(receipt?20:0)+(failed?20:0))+(item.reply_count?24:0)+history.reduce((sum,version)=>sum+version.height+4,0)+(unsent.length&&visible.length?24:0);
-        return {key:commandRenderKey(item),service:text(data.service)||prefs.service||'iMessage',commandStatus,id:item.id,item,height:Math.ceil(height),bubbles,sent,sender:actor,senderName,avatar:prefs.group&&!sent&&last&&!system?handles.get(sender(item))?.initials??'?':undefined,header:dateHeader,headerParts:dateParts,system,receipt:commandStatus?undefined:receipt,edited,history,reply:reply&&reply!==item.id?reply:undefined,failed:!commandStatus&&failed,gap,unsent:unsent.length&&visible.length?wording.unsent(actor):undefined};
+        height+=(label?effectLineHeight:0)+(edited?22:0)+(commandStatus?44:(receipt?20:0)+(failed?20:0))+(item.reply_count?24:0)+history.reduce((sum,version)=>sum+version.height+4,0)+(unsent.length&&visible.length?24:0);
+        return {key:commandRenderKey(item),effectLabel:label,service:text(data.service)||prefs.service||'iMessage',commandStatus,id:item.id,item,height:Math.ceil(height),bubbles,sent,sender:actor,senderName,avatar:prefs.group&&!sent&&last&&!system?handles.get(sender(item))?.initials??'?':undefined,header:dateHeader,headerParts:dateParts,system,receipt:commandStatus?undefined:receipt,edited,history,reply:reply&&reply!==item.id?reply:undefined,failed:!commandStatus&&failed,gap,unsent:unsent.length&&visible.length?wording.unsent(actor):undefined};
     });
     return stackImageRows(rows,prefs,maxWidth);
 }
@@ -84,7 +87,7 @@ export function layout(items: readonly ThreadItem[], handles: Handles, prefs: La
 function stackImageRows(rows:TranscriptRow[],prefs:LayoutPrefs,maxWidth:number):TranscriptRow[]{
     const targeted=new Set(rows.flatMap(row=>(row.item.attachments??[]).map(attachment=>text(fields(attachment.data.sticker).target_message_id)).filter(Boolean)));
     const attachmentFor=(row:TranscriptRow)=>{
-        if(row.system||row.edited||row.unsent||row.failed||row.reply||row.item.reply_count||row.commandStatus||text(row.item.data.command_id)||targeted.has(row.id)||row.bubbles.length!==1)return;
+        if(row.system||row.edited||row.unsent||row.failed||row.reply||row.item.reply_count||row.commandStatus||text(row.item.data.effect)||text(row.item.data.command_id)||targeted.has(row.id)||row.bubbles.length!==1)return;
         const bubble=row.bubbles[0],attachment=row.item.attachments?.find(value=>value.id===bubble.part.attachment_id),dimensions=fields(attachment?.data.media);
         const nativePart=array(row.item.data.parts).map(fields).find(part=>part.attachment_id===attachment?.id),nativeIndex=nativePart?.index;
         if(typeof nativeIndex!=='number'||!Number.isSafeInteger(nativeIndex)||nativeIndex<0||nativeIndex!==bubble.part.index)return;

@@ -598,6 +598,7 @@ features:
       - {id: WEB-MSG-FONTS, levels: [web]}
       - {id: WEB-MSG-MEDIA, levels: [web]}
       - {id: WEB-MSG-RICH-PARTS, levels: [web]}
+      - {id: WEB-MSG-EFFECTS-TRANSCRIPT, levels: [web]}
       - {id: WEB-MSG-CARD-SURFACES, levels: [web]}
       - {id: WEB-MSG-VIEWER, levels: [web]}
       - {id: WEB-MSG-LINKS, levels: [web]}
