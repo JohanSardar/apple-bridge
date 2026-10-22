@@ -1,0 +1,4 @@
+id: WEB-MSG-SEND-VARIANTS
+feature: web.messages.parity
+levels: [web]
+web: {browsers: [chromium], themes: [light], layouts: [desktop], server: gateway}

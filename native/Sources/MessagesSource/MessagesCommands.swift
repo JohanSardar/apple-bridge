@@ -28,7 +28,7 @@ public actor MessagesCommands {
     }
     public func capabilities() -> [String] {
         let routes = proofs()
-        return Self.operations.filter { proven($0, routes: routes) }
+        return Self.operations.filter { proven($0, routes: routes) } + MessagesSendVariants.capabilities()
     }
     public func operationCoverage() -> JSON {
         let routes = proofs()
@@ -42,7 +42,7 @@ public actor MessagesCommands {
         return .array(Self.operations.map { operation in
             let supported = proven(operation, routes: routes)
             return .object(["operation": .string(operation), "proven": .bool(supported), "reason": .string(supported ? "proven_routes_and_parts_only" : reasons[operation].map { Set($0).sorted().joined(separator: ",") } ?? "route_proof_required")])
-        })
+        } + MessagesSendVariants.coverage())
     }
     private func recordProof(_ route: JSON, parts: [JSON]) throws {
         var routes=proofs()
@@ -144,12 +144,13 @@ public actor MessagesCommands {
     private func validateAgentPolicy(_ action: JSON, route: JSON) throws {
         guard let agentPolicy, FileManager.default.fileExists(atPath: agentPolicy.path) else { return }
         let policy = try JSONDecoder().decode(JSON.self, from: Data(contentsOf: agentPolicy))
-        guard action["op"].string == "messages.send", route["kind"].string == "chat_id_raw", route["chat"].string == policy["chat_guid"].string, action["messages"]["text"].string == policy["text"].string, action["messages"]["files"].array.isEmpty, !FileManager.default.fileExists(atPath: agentPolicy.path + ".used") else { throw SourceFailure.invalid }
+        guard action["messages"]["variant"] == .null, action["op"].string == "messages.send", route["kind"].string == "chat_id_raw", route["chat"].string == policy["chat_guid"].string, action["messages"]["text"].string == policy["text"].string, action["messages"]["files"].array.isEmpty, !FileManager.default.fileExists(atPath: agentPolicy.path + ".used") else { throw SourceFailure.invalid }
     }
     public func prepare(_ command: JSON) async throws -> Prepared {
         let interactive = try CommandOrigin(command) == .interactive
         let action = command["action"]
         if let agentPolicy, FileManager.default.fileExists(atPath: agentPolicy.path), action["op"].string != "messages.send" { throw SourceFailure.invalid }
+        if action["op"].string == "messages.keep_audio" { throw SendVariantFailure.keptReadbackUnavailable }
         if action["op"].string == "messages.create_group" { return try prepareGroup(command) }
         if action["op"].string != "messages.send" {return try await prepareAccessibility(command)}
         let args = action["messages"]
@@ -160,6 +161,10 @@ public actor MessagesCommands {
         }
         let reader = try MessagesReader(path: path)
         let route = try verifyRoute(action, reader: reader, interactive: interactive)
+        if args["variant"] != .null {
+            try MessagesSendVariants.validate(args)
+            guard labCommands || MessagesSendVariants.proven(MessagesSendVariants.operation(args) ?? "",route:route,args:args) else { throw SourceFailure.capabilityUnproven }
+        }
         try validateResend(action, route: route, reader: reader)
         try validateAgentPolicy(action, route: route)
         if !labCommands {
@@ -168,7 +173,7 @@ public actor MessagesCommands {
         }
         let maximum = try reader.maximum()
         let payload = try JSONEncoder().encode(args)
-        let state = JSON.object(["interactive": .bool(interactive), "route": route["kind"], "destination": route, "max_row_id": .number(Double(maximum)), "payload_fingerprint": .string(BodyDigest.hash(payload)), "command_id": command["command_id"], "candidate_ids": .array([.string(String(maximum)), .string(route["chat"].string)])])
+        let state = JSON.object(["interactive": .bool(interactive), "route": route["kind"], "destination": route, "max_row_id": .number(Double(maximum)), "payload_fingerprint": .string(BodyDigest.hash(payload)), "command_id": command["command_id"], "expires_at": command["expires_at"], "candidate_ids": .array([.string(String(maximum)), .string(route["chat"].string)])])
         return Prepared(nativeState: state, fingerprint: command["request_hash"].string, action: action)
     }
     private func prepareAccessibility(_ command: JSON) async throws -> Prepared {
@@ -368,6 +373,11 @@ public actor MessagesCommands {
         return parts
     }
     public func dispatch(_ prepared: Prepared) async throws -> JSON {
+        if prepared.action["messages"]["variant"] != .null {
+            let reader=try MessagesReader(path:path),route=try verifyRoute(prepared.action,reader:reader,interactive:prepared.nativeState["interactive"].bool)
+            guard route==prepared.nativeState["destination"],labCommands || MessagesSendVariants.proven(MessagesSendVariants.operation(prepared.action["messages"]) ?? "",route:route,args:prepared.action["messages"]) else { throw SourceFailure.capabilityUnproven }
+            return try await MessagesSendVariants.dispatch(prepared,path:path)
+        }
         if prepared.action["op"].string == "messages.create_group" { return try await dispatchGroup(prepared) }
         if prepared.action["op"].string != "messages.send" {
             let result = try await dispatchAccessibility(prepared)

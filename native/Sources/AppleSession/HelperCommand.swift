@@ -65,6 +65,20 @@ public enum HelperCommand {
             while !finished { RunLoop.current.run(until: Date().addingTimeInterval(0.05)) }
             return
         }
+        if arguments.first == "selftest",arguments.dropFirst().first == "messages-variants" {
+            DispatchQueue.global().asyncAfter(deadline:.now()+600) { @Sendable in
+                try? PrivateReport.write(["state":"limited","reason":"variant_proof_deadline","disposition":"indeterminate"],to:reportURL)
+                exit(1)
+            }
+            var finished=false
+            Task { @MainActor in
+                do { let result=try await MessagesSendVariantProof.run();try JSONEncoder().encode(result).write(to:reportURL,options:.atomic) }
+                catch { try? PrivateReport.write(["state":"limited","reason":String(describing:error)],to:reportURL) }
+                finished=true
+            }
+            while !finished { RunLoop.current.run(until:Date().addingTimeInterval(0.05)) }
+            return
+        }
         if arguments.first == "selftest", arguments.dropFirst().first == "messages" {
             var finished = false
             DispatchQueue.global().asyncAfter(deadline: .now() + 600) { @Sendable in

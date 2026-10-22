@@ -481,7 +481,7 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "WEB-SOURCES-STATUS" || s.ID == "WEB-COMMAND-RESOLVE" {
 		return runWebServer(ctx, s, level)
 	}
-	if s.ID == "MSG-SELFTEST" || s.ID == "MSG-RESEND" || s.ID == "MSG-READSTATE-REAL" || s.ID == "MSG-DELETE-REAL" || s.ID == "MSG-COMMAND-OBSERVED-IDS" || s.ID == "MSG-FAILED-OBSERVED-IDS" || s.ID == "MSG-COMMAND-PARTS" {
+	if s.ID == "MSG-SEND-VARIANTS" || s.ID == "MSG-SELFTEST" || s.ID == "MSG-RESEND" || s.ID == "MSG-READSTATE-REAL" || s.ID == "MSG-DELETE-REAL" || s.ID == "MSG-COMMAND-OBSERVED-IDS" || s.ID == "MSG-FAILED-OBSERVED-IDS" || s.ID == "MSG-COMMAND-PARTS" {
 		return runMessagesCommands(ctx, s, level)
 	}
 	if s.ID == "MSG-MEDIA-CLEANUP" {

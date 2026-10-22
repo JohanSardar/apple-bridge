@@ -179,7 +179,7 @@ enum MessagesAccessibility {
         let script = "tell application \"System Events\"\ntell process \"Messages\"\nset frontmost to true\nkey code 53\nkey down control\ntry\nclick at {" + String(Int(center.x)) + "," + String(Int(center.y)) + "}\non error\nkey up control\nerror number -1\nend try\nkey up control\nend tell\nend tell"
         guard MessagesAppleScript.execute(script) == 0 else { throw SourceFailure.conflict }
     }
-    private static func replace(_ root: AXUIElement, text: String) throws {
+    static func replace(_ root: AXUIElement, text: String) throws {
         let deadline = Date().addingTimeInterval(2)
         repeat {
             var focused: CFTypeRef?

@@ -199,7 +199,7 @@ func OperationSchema(d OperationDescriptor) map[string]any {
 				args["oneOf"] = []any{map[string]any{"required": []string{"chat_id"}}, map[string]any{"required": []string{"handles", "service"}}}
 				args["anyOf"] = []any{map[string]any{"required": []string{"text"}}, map[string]any{"required": []string{"files"}}}
 			}
-			if d.Name == "messages.edit" || d.Name == "messages.unsend" || strings.HasPrefix(d.Name, "messages.delete_") {
+			if d.Name == "messages.edit" || d.Name == "messages.unsend" || d.Name == "messages.keep_audio" || strings.HasPrefix(d.Name, "messages.delete_") {
 				s["required"] = []string{"args", "expected_version"}
 			}
 		}

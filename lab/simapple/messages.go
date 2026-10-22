@@ -148,12 +148,18 @@ func (f *fakeApple) messageRoutes(mux *http.ServeMux) {
 			coverage := messageCoverage()
 			if action.Action == "capability-proven-empty-reason" {
 				for i := range coverage.Operations {
+					if !coverage.Operations[i].Proven {
+						continue
+					}
 					coverage.Operations[i].Reason = ""
 				}
 			}
 			capabilities, reason := messageCapabilities(), ""
 			if f.messages.capabilityUnproven {
 				for i := range coverage.Operations {
+					if !coverage.Operations[i].Proven {
+						continue
+					}
 					coverage.Operations[i].Proven = false
 					coverage.Operations[i].Reason = "capability_unproven"
 				}

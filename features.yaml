@@ -693,6 +693,8 @@ features:
       - {id: MSG-PINS, levels: [sim, real]}
       - {id: MSG-MUTE, levels: [sim, real]}
       - {id: MSG-READ-RECEIPTS, levels: [sim, real]}
+      - {id: MSG-SEND-VARIANTS, levels: [sim]}
+      - {id: WEB-MSG-SEND-VARIANTS, levels: [web]}
       - {id: MSG-SEND-LATER, levels: [sim, real]}
       - {id: MSG-SEND-EFFECT, levels: [sim, real]}
       - {id: MSG-FORMATTING-SEND, levels: [sim, real]}
