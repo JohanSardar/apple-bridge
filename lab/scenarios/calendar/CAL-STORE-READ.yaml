@@ -6,7 +6,7 @@ when: [{calendar_journey: {}}]
 then: [{converge: {}}]
 cleanup: [{world: {}}]
 web:
-  browsers: [webkit, chromium]
-  themes: [light]
+  browsers: [webkit, chromium, firefox]
+  themes: [light, dark]
   layouts: [phone, desktop]
   server: gateway

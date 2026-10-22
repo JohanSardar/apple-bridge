@@ -42,6 +42,7 @@ export function calendarCommands() {
         let events = (input.events ?? []).filter(entry => !held.some(change => !change.baseline.has(entry.event.id)));
         for (const change of active) {
             const command = state(change.id)!, ids = command.observed_record_ids ?? [], oldID = change.before?.id;
+            if (change.op === 'calendar.update_event' && change.args.span === 'future' && !ids.length) continue;
             if (change.op === 'calendar.delete_event') { events = events.filter(entry => entry.event.id !== oldID); continue; }
             if (!oldID && !ids.length && performance.now() >= change.expires) continue;
             const id = ids[0] ?? oldID ?? 'pending:' + change.id;
