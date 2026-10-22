@@ -1,0 +1,7 @@
+id: CON-GROUPS
+feature: web.contacts
+levels: [sim]
+given: [{world: {}}]
+when: [{readmodels: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

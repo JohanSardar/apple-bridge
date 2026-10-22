@@ -20,9 +20,12 @@ public final class ContactsSource: Source {
     private var committed: [String: JSON] = [:]
     private var blobs: [String: Data] = [:]
     private var scanning = false
+    private var groupSelfTesting = false
+    private var groupSelfTestCreatedKey = ""
     private let baselineURL: URL
+    private static let groupOperations = ["contacts.create_group", "contacts.rename_group", "contacts.delete_group", "contacts.add_member", "contacts.remove_member"]
     private static let operations = ["contacts.create", "contacts.update", "contacts.delete"]
-    public nonisolated static let coverage: JSON = .object(["fields": .string("partial"), "missing": .array([.string("note: unavailable without restricted entitlement"), .string("writability: conservatively limited to default container")])])
+    public nonisolated static let coverage: JSON = .object(["fields": .string("partial"), "missing": .array([.string("note: unavailable without restricted entitlement"), .string("writability: conservatively limited to default container"), .string("contact_poster: unavailable through public Contacts API on this SDK")])])
     private static let scalarKeys = ["given_name": CNContactGivenNameKey, "middle_name": CNContactMiddleNameKey, "family_name": CNContactFamilyNameKey, "previous_family_name": CNContactPreviousFamilyNameKey, "nickname": CNContactNicknameKey, "name_prefix": CNContactNamePrefixKey, "name_suffix": CNContactNameSuffixKey, "phonetic_given_name": CNContactPhoneticGivenNameKey, "phonetic_middle_name": CNContactPhoneticMiddleNameKey, "phonetic_family_name": CNContactPhoneticFamilyNameKey, "phonetic_organization": CNContactPhoneticOrganizationNameKey, "organization": CNContactOrganizationNameKey, "job_title": CNContactJobTitleKey, "department": CNContactDepartmentNameKey]
     private static var keys: [any CNKeyDescriptor] {
         (Array(scalarKeys.values) + [CNContactIdentifierKey, CNContactTypeKey, CNContactPhoneNumbersKey, CNContactEmailAddressesKey, CNContactPostalAddressesKey, CNContactUrlAddressesKey, CNContactBirthdayKey, CNContactNonGregorianBirthdayKey, CNContactDatesKey, CNContactSocialProfilesKey, CNContactInstantMessageAddressesKey, CNContactRelationsKey, CNContactImageDataKey, CNContactThumbnailImageDataKey, CNContactImageDataAvailableKey]).map { $0 as NSString }
@@ -37,7 +40,10 @@ public final class ContactsSource: Source {
     private var authorized: Bool { CNContactStore.authorizationStatus(for: .contacts) == .authorized }
 
     public func open() async -> SourceReadiness {
-        SourceReadiness(state: authorized ? "ready" : "permission_missing", coverage: Self.coverage, capabilities: authorized && commandsEnabled ? Self.operations : [], reason: authorized ? "" : "contacts_full_access_required")
+        var coverage = Self.coverage.object
+        let proven = groupCapabilities()
+        coverage["operations"] = .array(Self.groupOperations.map { .object(["operation": .string($0), "proven": .bool(proven.contains($0)), "reason": .string(proven.contains($0) ? "proven_public_contacts_save_request" : "os_build_group_proof_required")]) })
+        return SourceReadiness(state: authorized ? "ready" : "permission_missing", coverage: .object(coverage), capabilities: authorized && commandsEnabled ? (Self.operations + groupCapabilities()) : [], reason: authorized ? "" : "contacts_full_access_required")
     }
 
     private func hash(_ bytes: Data) -> String { SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined() }
@@ -177,7 +183,7 @@ public final class ContactsSource: Source {
         }
         for group in try store.groups(matching: nil) {
             let members = try contacts(CNContact.predicateForContactsInGroup(withIdentifier: group.identifier), identifiersOnly: true)
-            let value: JSON = .object(["name": .string(group.name), "member_ids": .array(members.map { .object(["$ref": .object(["collection": .string("contacts.contact"), "native_key": .string($0.identifier)])]) })])
+            let value = try groupData(group, members: members)
             current["contacts.group/" + group.identifier] = observation("contacts.group", group.identifier, value)
         }
         } else {
@@ -195,7 +201,7 @@ public final class ContactsSource: Source {
                 for key in batch.changedGroupIdentifiers {
                     guard let group = byID[key] else { current.removeValue(forKey: "contacts.group/" + key); continue }
                     let members = try contacts(CNContact.predicateForContactsInGroup(withIdentifier: group.identifier), identifiersOnly: true)
-                    let value: JSON = .object(["name": .string(group.name), "member_ids": .array(members.map { .object(["$ref": .object(["collection": .string("contacts.contact"), "native_key": .string($0.identifier)])]) })])
+                    let value = try groupData(group, members: members)
                     current["contacts.group/" + key] = observation("contacts.group", key, value)
                 }
             }
@@ -254,8 +260,9 @@ public final class ContactsSource: Source {
     }
 
     public func reconcile(into sink: any ObservationSink, key: String = "") async throws {
+        let wasGroup = committed["contacts.group/" + key] != nil
         try await scan(into: sink, live: true)
-        if !key.isEmpty, try isAbsent(key) { try await confirmAbsence(key, into: sink) }
+        if !key.isEmpty, !wasGroup, try store.groups(matching: CNGroup.predicateForGroups(withIdentifiers: [key])).isEmpty, try isAbsent(key) { try await confirmAbsence(key, into: sink) }
     }
     public func confirmAbsence(_ key: String, into sink: any ObservationSink) async throws {
         guard try isAbsent(key) else { throw SourceFailure.conflict }
@@ -271,8 +278,9 @@ public final class ContactsSource: Source {
     }
     public func prepare(_ command: JSON) async throws -> Prepared {
         guard authorized else { throw SourceFailure.permissionMissing }
-        guard commandsEnabled, Self.operations.contains(command["action"]["op"].string) else { throw SourceFailure.unsupported }
+        guard commandsEnabled, (Self.operations + Self.groupOperations).contains(command["action"]["op"].string) else { throw SourceFailure.unsupported }
         let action = command["action"]
+        if Self.groupOperations.contains(action["op"].string) { return try prepareGroup(command) }
         var before = JSON.null
         if action["op"].string == "contacts.create" {
             let key = store.defaultContainerIdentifier()
@@ -288,6 +296,7 @@ public final class ContactsSource: Source {
     }
     public func validate(_ prepared: Prepared) async throws {
         guard authorized else { throw SourceFailure.permissionMissing }
+        if Self.groupOperations.contains(prepared.action["op"].string) { try validateGroup(prepared); return }
         if prepared.action["op"].string != "contacts.create" {
             let current = try data(commandContact(prepared.action["native_key"].string))
             guard current == prepared.nativeState else { throw SourceFailure.conflict }
@@ -342,6 +351,7 @@ public final class ContactsSource: Source {
     }
     public func dispatch(_ prepared: Prepared) async throws -> JSON {
         try await validate(prepared)
+        if Self.groupOperations.contains(prepared.action["op"].string) { return try await dispatchGroup(prepared) }
         let action = prepared.action, operation = prepared.action["op"].string
         let request = CNSaveRequest()
         let contact: CNMutableContact
@@ -361,6 +371,7 @@ public final class ContactsSource: Source {
     public func resolve(_ command: String, evidence: JSON) async -> JSON {
         guard authorized else { return .null }
         let action = evidence["prepared"]["action"]
+        if Self.groupOperations.contains(action["op"].string) { return resolveGroup(evidence) }
         let key = action["native_key"].string.isEmpty ? evidence["native_key"].string : action["native_key"].string
         guard !key.isEmpty else { return .null }
         do {
@@ -374,4 +385,188 @@ public final class ContactsSource: Source {
             return .object(["native_key": .string(key), "observed": .bool(true), "absent": .bool(action["op"].string == "contacts.delete"), "prepared": evidence["prepared"]])
         } catch { return .null }
     }
+
+    private var groupProofURL: URL { FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/AppleBridgeDev/contacts-group-proofs.json") }
+    private func groupCapabilities() -> [String] {
+        guard let bytes = try? Data(contentsOf: groupProofURL), let value = try? JSONDecoder().decode(JSON.self, from: bytes), value["os_build"].string == ProcessInfo.processInfo.operatingSystemVersionString, value["container_id"].string == store.defaultContainerIdentifier(), value["cleaned"].bool else { return [] }
+        return Self.groupOperations.filter { op in value["operations"].array.contains(.string(op)) }
+    }
+    private func requireGroupCapability(_ operation: String) throws {
+        if groupSelfTesting { return }
+#if LAB
+        if commandsEnabled { return }
+#endif
+        guard groupCapabilities().contains(operation) else { throw SourceFailure.capabilityUnproven }
+    }
+    private func group(_ key: String) throws -> CNGroup {
+        guard let result = try store.groups(matching: CNGroup.predicateForGroups(withIdentifiers: [key])).first else { throw SourceFailure.conflict }
+        return result
+    }
+    private func groupData(_ group: CNGroup, members: [CNContact]? = nil) throws -> JSON {
+        let containers = try store.containers(matching: CNContainer.predicateForContainerOfGroup(withIdentifier: group.identifier))
+        let container = containers.count == 1 ? containers[0].identifier : ""
+        let contacts = try members ?? self.contacts(CNContact.predicateForContactsInGroup(withIdentifier: group.identifier), identifiersOnly: true)
+        return .object(["name": .string(group.name), "container_id": .string(container), "writable": .bool(!container.isEmpty && container == store.defaultContainerIdentifier()), "member_ids": .array(contacts.sorted { $0.identifier < $1.identifier }.map { .object(["$ref": .object(["collection": .string("contacts.contact"), "native_key": .string($0.identifier)])]) })])
+    }
+    private func prepareGroup(_ command: JSON) throws -> Prepared {
+        let action = command["action"]
+        try requireGroupCapability(action["op"].string)
+        let before: JSON
+        if action["op"].string == "contacts.create_group" {
+            let key = store.defaultContainerIdentifier()
+            guard !key.isEmpty, try store.containers(matching: CNContainer.predicateForContainers(withIdentifiers: [key])).count == 1 else { throw SourceFailure.unsupported }
+            before = .null
+        } else {
+            before = try groupData(group(action["native_key"].string))
+            guard before == command["expected_state"] else { throw SourceFailure.conflict }
+            guard before["writable"].bool else { throw SourceFailure.unsupported }
+        }
+        let prepared = Prepared(nativeState: before, fingerprint: try hash(action), action: action)
+        try validateGroup(prepared)
+        return prepared
+    }
+    private func validateGroup(_ prepared: Prepared) throws {
+        let action = prepared.action, op = action["op"].string
+        try requireGroupCapability(op)
+        if op != "contacts.create_group" {
+            let current = try groupData(group(action["native_key"].string))
+            guard current == prepared.nativeState else { throw SourceFailure.conflict }
+            guard current["writable"].bool else { throw SourceFailure.unsupported }
+        }
+        if op == "contacts.create_group" || op == "contacts.rename_group" {
+            let name = action["args"]["name"].string
+            guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, name.utf8.count <= 256 else { throw SourceFailure.invalid }
+        }
+        if op == "contacts.add_member" || op == "contacts.remove_member" {
+            let contact = try commandContact(action["list_key"].string)
+            guard try container(contact) == prepared.nativeState["container_id"].string else { throw SourceFailure.unsupported }
+        }
+    }
+    private func groupEffect(_ action: JSON, key: String) throws -> Bool {
+        let op = action["op"].string
+        let observer = CNContactStore()
+        let groups = try observer.groups(matching: CNGroup.predicateForGroups(withIdentifiers: [key]))
+        if op == "contacts.delete_group" { return groups.isEmpty }
+        guard let current = groups.first else { return false }
+        if op == "contacts.create_group" || op == "contacts.rename_group" { return current.name == action["args"]["name"].string }
+        let members = try observer.unifiedContacts(matching: CNContact.predicateForContactsInGroup(withIdentifier: key), keysToFetch: [CNContactIdentifierKey as NSString])
+        return members.contains { $0.identifier == action["list_key"].string } == (op == "contacts.add_member")
+    }
+    private func dispatchGroup(_ prepared: Prepared) async throws -> JSON {
+        let action = prepared.action, op = prepared.action["op"].string
+        let request = CNSaveRequest()
+        let mutable: CNMutableGroup
+        if op == "contacts.create_group" {
+            mutable = CNMutableGroup(); mutable.name = action["args"]["name"].string
+            request.add(mutable, toContainerWithIdentifier: store.defaultContainerIdentifier())
+        } else {
+            guard let value = try group(action["native_key"].string).mutableCopy() as? CNMutableGroup else { throw SourceFailure.corrupt }
+            mutable = value
+            switch op {
+            case "contacts.rename_group": mutable.name = action["args"]["name"].string; request.update(mutable)
+            case "contacts.delete_group": request.delete(mutable)
+            case "contacts.add_member", "contacts.remove_member":
+                let contact = try commandContact(action["list_key"].string)
+                if op == "contacts.add_member" { request.addMember(contact, to: mutable) }
+                else { request.removeMember(contact, from: mutable) }
+            default: throw SourceFailure.unsupported
+            }
+        }
+        try store.execute(request)
+        if groupSelfTesting && op == "contacts.create_group" { groupSelfTestCreatedKey = mutable.identifier }
+        var observed = false
+        for _ in 0..<20 {
+            if try groupEffect(action, key: mutable.identifier) { observed = true; break }
+            try await Task.sleep(for: .milliseconds(50))
+        }
+        guard observed else { throw SourceFailure.unavailable }
+        return .object(["native_key": .string(mutable.identifier), "observed": .bool(true), "absent": .bool(op == "contacts.delete_group")])
+    }
+    private func resolveGroup(_ evidence: JSON) -> JSON {
+        let action = evidence["prepared"]["action"]
+        let key = action["native_key"].string.isEmpty ? evidence["native_key"].string : action["native_key"].string
+        guard !key.isEmpty, (try? groupEffect(action, key: key)) == true else { return .null }
+        return .object(["native_key": .string(key), "observed": .bool(true), "absent": .bool(action["op"].string == "contacts.delete_group"), "prepared": evidence["prepared"]])
+    }
+    public func proveGroups() async -> JSON {
+        guard authorized else { return .object(["state": .string("limited"), "reason": .string("contacts_full_access_required")]) }
+        guard !groupSelfTesting else { return .object(["state": .string("limited"), "reason": .string("proof_already_running")]) }
+        groupSelfTesting = true
+        groupSelfTestCreatedKey = ""
+        defer { groupSelfTesting = false }
+        let tag = "[ab-test " + UUID().uuidString + "]"
+        let contact = CNMutableContact()
+        contact.givenName = tag; contact.organizationName = "Bridge Test"
+        var contactCreated = false
+        var groupKey = ""
+        var steps: [JSON] = []
+        var operation = "contacts.create_fixture"
+        var verification = "save"
+        func cleanup() throws {
+            if !groupKey.isEmpty, let owned = try store.groups(matching: CNGroup.predicateForGroups(withIdentifiers: [groupKey])).first {
+                guard owned.name.hasPrefix("Bridge Test " + tag) else { throw SourceFailure.conflict }
+                let members = try contacts(CNContact.predicateForContactsInGroup(withIdentifier: groupKey), identifiersOnly: true)
+                let ownedContactKey = contact.identifier
+                guard members.allSatisfy({ $0.identifier == ownedContactKey }) else { throw SourceFailure.conflict }
+                guard let mutable = owned.mutableCopy() as? CNMutableGroup else { throw SourceFailure.corrupt }
+                let request = CNSaveRequest(); request.delete(mutable); try store.execute(request)
+            }
+            if contactCreated, !((try? isAbsent(contact.identifier)) ?? false) {
+                guard let mutable = try fresh(contact.identifier).mutableCopy() as? CNMutableContact, mutable.organizationName == "Bridge Test", mutable.givenName == tag else { throw SourceFailure.conflict }
+                let request = CNSaveRequest(); request.delete(mutable); try store.execute(request)
+            }
+        }
+        do {
+            let request = CNSaveRequest(); request.add(contact, toContainerWithIdentifier: store.defaultContainerIdentifier()); try store.execute(request)
+            contactCreated = true
+            for op in Self.groupOperations.filter({ $0 != "contacts.delete_group" }) + ["contacts.add_member", "contacts.delete_group"] {
+                operation = op
+                var args: [String: JSON] = [:]
+                if op == "contacts.create_group" || op == "contacts.rename_group" { args["name"] = .string("Bridge Test " + tag + (op == "contacts.rename_group" ? " renamed" : "")) }
+                let action: JSON = .object(["op": .string(op), "native_key": .string(groupKey), "list_key": .string(contact.identifier), "args": .object(args)])
+                let expected = groupKey.isEmpty ? JSON.null : try groupData(group(groupKey))
+                let prepared = try prepareGroup(.object(["action": action, "expected_state": expected]))
+                verification = "dispatch_and_read_back"
+                let result = try await dispatch(prepared)
+                groupKey = result["native_key"].string
+                verification = "independent_read_back"
+                guard try groupEffect(action, key: groupKey) else { throw SourceFailure.unavailable }
+                verification = "contact_preserved"
+                guard try !isAbsent(contact.identifier) else { throw SourceFailure.unavailable }
+                steps.append(.object(["operation": .string(op), "proven": .bool(true)]))
+            }
+            try cleanup()
+            guard try isAbsent(contact.identifier), try store.groups(matching: CNGroup.predicateForGroups(withIdentifiers: [groupKey])).isEmpty else { throw SourceFailure.unavailable }
+            let proof: JSON = .object(["os_build": .string(ProcessInfo.processInfo.operatingSystemVersionString), "operations": .array(Self.groupOperations.map(JSON.string)), "container_id": .string(store.defaultContainerIdentifier()), "route": .string("CNSaveRequest"), "cleaned": .bool(true)])
+            try FileManager.default.createDirectory(at: groupProofURL.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+            try JSONEncoder().encode(proof).write(to: groupProofURL, options: .atomic)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: groupProofURL.path)
+            return .object(["state": .string("proven"), "steps": .array(steps), "cleaned": .bool(true)])
+        } catch {
+            let reason = String(describing: error)
+            if groupKey.isEmpty { groupKey = groupSelfTestCreatedKey }
+            var diagnostic = JSON.null
+            if operation == "contacts.remove_member", !groupKey.isEmpty {
+                do {
+                    let rawRequest = CNContactFetchRequest(keysToFetch: [CNContactIdentifierKey as NSString])
+                    rawRequest.unifyResults = false
+                    rawRequest.predicate = CNContact.predicateForContactsInGroup(withIdentifier: groupKey)
+                    var rawKeys: [String] = []
+                    try CNContactStore().enumerateContacts(with: rawRequest) { value, _ in rawKeys.append(value.identifier) }
+                    let rawCount = rawKeys.count
+                    let rawMatches = rawKeys.contains(contact.identifier)
+                    let request = CNSaveRequest()
+                    request.removeMember(contact, from: try group(groupKey))
+                    try store.execute(request)
+                    let action: JSON = .object(["op": .string(operation), "list_key": .string(contact.identifier)])
+                    diagnostic = .object(["raw_member_count_after_unified_remove": .number(Double(rawCount)), "raw_member_matches_created": .bool(rawMatches), "original_contact_remove_observed": .bool(try groupEffect(action, key: groupKey))])
+                } catch { diagnostic = .object(["reason": .string(String(describing: error))]) }
+            }
+            let cleaned: Bool
+            do { try cleanup(); cleaned = true } catch { cleaned = false }
+            try? FileManager.default.removeItem(at: groupProofURL)
+            return .object(["state": .string("limited"), "reason": .string(reason), "operation": .string(operation), "verification": .string(verification), "diagnostic": diagnostic, "steps": .array(steps), "cleaned": .bool(cleaned)])
+        }
+    }
+
 }

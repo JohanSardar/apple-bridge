@@ -104,3 +104,24 @@ func (s *Service) lookupContacts(ctx context.Context, p trust.Principal, q contr
 	result.Records = filtered
 	return result, nil
 }
+
+func (g *LocalGateway) contactGroupExpected(ctx context.Context, raw json.RawMessage) (json.RawMessage, error) {
+	var fields map[string]json.RawMessage
+	if json.Unmarshal(raw, &fields) != nil {
+		return nil, contracts.ErrCorrupt
+	}
+	var members []string
+	if json.Unmarshal(fields["member_ids"], &members) != nil {
+		return nil, contracts.ErrCorrupt
+	}
+	native := []any{}
+	for _, id := range members {
+		key, err := g.State.NativeKey(ctx, "contacts.contact", id)
+		if err != nil {
+			return nil, err
+		}
+		native = append(native, map[string]any{"$ref": map[string]string{"collection": "contacts.contact", "native_key": key}})
+	}
+	fields["member_ids"], _ = json.Marshal(native)
+	return json.Marshal(fields)
+}

@@ -175,6 +175,18 @@ func (f *fakeApple) isContactCommand(frame contracts.IPCFrame) bool {
 	}
 	return false
 }
+func (f *fakeApple) contactMemberAvailable(a contracts.NativeAction) bool {
+	if a.Op != "contacts.add_member" && a.Op != "contacts.remove_member" {
+		return true
+	}
+	group, groupExists := f.records[a.NativeKey]
+	contact, exists := f.records[a.ListKey]
+	var groupData, contactData map[string]any
+	decodeNative(group.Data, &groupData)
+	decodeNative(contact.Data, &contactData)
+	return groupExists && exists && group.Kind != "absent" && contact.Kind != "absent" && contact.Collection == "contacts.contact" && groupData["container_id"] != nil && groupData["container_id"] == contactData["container_id"]
+}
+
 func (f *fakeApple) contactCommand(wire *applepeer.Wire, frame contracts.IPCFrame, fence uint64, emit func(contracts.Capture) error, checkpoint func(contracts.Source) string) error {
 	reject := func(e *contracts.Error) error {
 		_, err := wire.Send(contracts.IPCFrame{T: "Rejected", CommandID: frame.CommandID, Error: e, Disposition: "rejected_before_dispatch"})
@@ -220,6 +232,10 @@ func (f *fakeApple) contactCommand(wire *applepeer.Wire, frame contracts.IPCFram
 				return reject(contracts.ErrUnsupported)
 			}
 		}
+		if !f.contactMemberAvailable(a) {
+			f.mu.Unlock()
+			return reject(contracts.ErrUnsupported)
+		}
 		key := contracts.NewID("ticket")
 		expiry := time.Now().Add(30 * time.Second)
 		if frame.ExpiresAt.Before(expiry) {
@@ -245,6 +261,10 @@ func (f *fakeApple) contactCommand(wire *applepeer.Wire, frame contracts.IPCFram
 			f.mu.Unlock()
 			return rejectConflict(t.Action.NativeKey)
 		}
+		if !f.contactMemberAvailable(t.Action) {
+			f.mu.Unlock()
+			return reject(contracts.ErrUnsupported)
+		}
 		if err := f.guard(guardEntry{CommandID: t.CommandID, Ticket: frame.Ticket, StartedAt: time.Now().UTC()}); err != nil {
 			f.mu.Unlock()
 			return err
@@ -261,6 +281,39 @@ func (f *fakeApple) contactCommand(wire *applepeer.Wire, frame contracts.IPCFram
 		var patch map[string]any
 		decodeNative(raw, &patch)
 		delete(patch, "id")
+		delete(patch, "contact_id")
+		if contracts.ContactGroupOperation(t.Action.Op) {
+			if t.Before == nil {
+				data = map[string]any{"container_id": "default", "writable": true, "member_ids": []any{}}
+			}
+			if t.Action.Op == "contacts.add_member" || t.Action.Op == "contacts.remove_member" {
+				contact, exists := f.records[t.Action.ListKey]
+				var fields map[string]any
+				decodeNative(contact.Data, &fields)
+				if !exists || contact.Kind == "absent" || fields["container_id"] != data["container_id"] {
+					f.mu.Unlock()
+					return reject(contracts.ErrUnsupported)
+				}
+				members, _ := data["member_ids"].([]any)
+				remaining := []any{}
+				for _, member := range members {
+					encoded, _ := json.Marshal(member)
+					var ref struct {
+						Ref struct {
+							NativeKey string `json:"native_key"`
+						} `json:"$ref"`
+					}
+					json.Unmarshal(encoded, &ref)
+					if ref.Ref.NativeKey != t.Action.ListKey {
+						remaining = append(remaining, member)
+					}
+				}
+				if t.Action.Op == "contacts.add_member" {
+					remaining = append(remaining, map[string]any{"$ref": map[string]string{"collection": "contacts.contact", "native_key": t.Action.ListKey}})
+				}
+				data["member_ids"] = remaining
+			}
+		}
 		for k, v := range patch {
 			data[k] = v
 		}
@@ -279,7 +332,11 @@ func (f *fakeApple) contactCommand(wire *applepeer.Wire, frame contracts.IPCFram
 
 		raw, _ = json.Marshal(data)
 		o := contracts.Observation{Kind: "upsert", Collection: "contacts.contact", NativeKey: key, ScopedAlias: "contacts/contacts.contact/" + key, Data: raw, ObservedAt: time.Now().UTC()}
-		if t.Action.Op == "contacts.delete" {
+		if contracts.ContactGroupOperation(t.Action.Op) {
+			o.Collection = "contacts.group"
+			o.ScopedAlias = "contacts/contacts.group/" + key
+		}
+		if t.Action.Op == "contacts.delete" || t.Action.Op == "contacts.delete_group" {
 			o.Kind = "absent"
 			o.Revalidated = true
 		}
@@ -362,3 +419,11 @@ func (f *fakeApple) contactCommand(wire *applepeer.Wire, frame contracts.IPCFram
 }
 
 func contactDigest(data []byte) string { sum := sha256.Sum256(data); return hex.EncodeToString(sum[:]) }
+
+func contactCoverage() contracts.Coverage {
+	coverage := contracts.Coverage{Fields: "partial", Missing: []string{"note", "contact_poster: unavailable through public Contacts API"}}
+	for _, op := range []string{"contacts.create_group", "contacts.rename_group", "contacts.delete_group", "contacts.add_member", "contacts.remove_member"} {
+		coverage.Operations = append(coverage.Operations, contracts.OperationCapability{Operation: op, Proven: true, Reason: "simulated_public_contacts_save_request"})
+	}
+	return coverage
+}
