@@ -6,11 +6,15 @@ test('WEB-CAL-WRITE trusted create, edit, alerts, floating dates and delete', as
   const commands: any[] = [];
   page.on('websocket', socket => socket.on('framesent', event => { const frame = JSON.parse(String(event.payload)); if (frame.t === 'cmd') commands.push(frame); }));
   await page.goto('/calendar/day/2026-10-20');
+  const calendars = page.getByRole('button', { name: 'Show calendars', exact: true });
+  if (await calendars.getAttribute('aria-expanded') === 'false') await calendars.click();
   await page.getByRole('button', { name: 'New calendar', exact: true }).click();
   let editor = page.getByRole('dialog', { name: 'New calendar', exact: true });
   await editor.getByLabel('Title', { exact: true }).fill('Bridge Test [ab-test] Web Calendar');
   await editor.getByRole('button', { name: 'Create calendar', exact: true }).click();
   await expect(page.getByRole('checkbox', { name: 'Bridge Test [ab-test] Web Calendar', exact: true })).toBeVisible();
+  const closeCalendars = page.getByRole('button', { name: 'Close calendars', exact: true });
+  if (await closeCalendars.isVisible()) await closeCalendars.click();
   await page.getByLabel('Quick event', { exact: true }).fill('[ab-test] Lunch Friday 1pm');
   await page.getByRole('button', { name: 'Preview', exact: true }).click();
   editor = page.getByRole('dialog', { name: 'New event', exact: true });
@@ -55,6 +59,13 @@ test('WEB-CAL-WRITE trusted create, edit, alerts, floating dates and delete', as
 });
 test('WEB-CAL-WRITE recurring scope, DST validation and timeline drag', async ({ page, context, request }) => {
   await bootstrap(context, request);
+  let splitID = '', splitSnapshot = false, releaseSplit = () => {};
+  await page.routeWebSocket('**/web/v1/live', socket => {
+    const server = socket.connectToServer(), held: string[] = [];
+    releaseSplit = () => { for (const frame of held.splice(0)) socket.send(frame); splitID = ''; };
+    socket.onMessage(raw => { const frame = JSON.parse(String(raw)); if (frame.t === 'cmd' && frame.op === 'calendar.update_event' && frame.args.span === 'future') splitID = frame.id; server.send(raw); });
+    server.onMessage(raw => { const frame = JSON.parse(String(raw)); if (splitID && frame.id === splitID && (frame.t === 'ack' || frame.t === 'cmd_status')) { held.push(String(raw)); return; } socket.send(raw); if (splitID && String(raw).includes('[ab-test] Future')) splitSnapshot = true; });
+  });
   const commands: any[] = [];
   page.on('websocket', socket => socket.on('framesent', event => { const frame = JSON.parse(String(event.payload)); if (frame.t === 'cmd') commands.push(frame); }));
   await page.goto('/calendar/day/2026-10-20');
@@ -78,6 +89,11 @@ test('WEB-CAL-WRITE recurring scope, DST validation and timeline drag', async ({
   await editor.getByLabel('Title', { exact: true }).fill('[ab-test] Future');
   await editor.getByLabel('All Future Events', { exact: true }).check();
   await editor.getByRole('button', { name: 'Save event', exact: true }).click();
+  await expect.poll(() => splitSnapshot).toBe(true);
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await expect(page.locator('.calendar-event').filter({ hasText: '[ab-test] Future' })).toHaveCount(1);
+  await expect(page.locator('.calendar-event').filter({ hasText: '[ab-test] Future' })).toBeEnabled();
+  releaseSplit();
   await expect(page.locator('.calendar-event').filter({ hasText: '[ab-test] Future' })).toBeEnabled();
   expect(commands[1].args.span).toBe('future'); expect(commands[1].args.recurrence).toBeUndefined();
   const column = page.locator('.calendar-time-day'); await column.scrollIntoViewIfNeeded();
