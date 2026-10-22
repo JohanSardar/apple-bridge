@@ -98,3 +98,8 @@ Current qualification is **limited**: on this Air, `removeMember` completed with
 becoming visible through fresh public Contacts reads within the bounded wait. The self-test
 cleaned its tagged contact and group and withheld the ledger. Group controls remain hidden
 until this is resolved and the complete proof passes.
+## 8. Contact editing
+
+Basic contact writes use the shared trusted-input command channel and captured versions. Inline edits preserve the starting version, so a concurrent change returns a conflict instead of replacing newer data. Review edit restores the draft against the current record; saving again is an explicit action. Optimistic cards resolve identities exclusively through `observed_record_ids` and settle when the live cursor reaches the observed commit. Uncertain delivery offers status lookup without redispatch.
+
+The editor supports names, organization, labeled field arrays, dates and photo set/remove. Photos are decoded locally, resized to at most 512 pixels and encoded into the existing bounded image command; unsupported formats stay unsaved with an error. Notes remain hidden. Multi-selection permits up to 32 contacts for vCard export or individually versioned deletions after confirmation. Accounts conservatively marked unwritable have no edit/delete controls. Native write/photo fidelity, real Bridge Test cleanup and full browser qualification remain limited until the Contacts milestone; the focused PR checks use synthetic data.
