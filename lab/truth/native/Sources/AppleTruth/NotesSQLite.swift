@@ -14,10 +14,15 @@ extension AppleTruth {
         guard let backup = sqlite3_backup_init(database, "main", original, "main") else { throw NSError(domain: "NotesBackupInit", code: Int(sqlite3_errcode(database))) }
         let status = sqlite3_backup_step(backup, -1), finished = sqlite3_backup_finish(backup)
         guard status == SQLITE_DONE, finished == SQLITE_OK else { throw NSError(domain: "NotesBackupStep", code: Int(status == SQLITE_DONE ? finished : status)) }
-        func rows(_ sql: String) throws -> [[String: Any]] {
+        func rows(_ sql: String, _ bindings: [String] = []) throws -> [[String: Any]] {
             var statement: OpaquePointer?
             guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK else { throw NSError(domain: "NotesSQLiteQuery", code: Int(sqlite3_errcode(database)), userInfo: [NSLocalizedDescriptionKey: String(cString: sqlite3_errmsg(database))]) }
             defer { sqlite3_finalize(statement) }
+            for (index, value) in bindings.enumerated() {
+                let text = value as NSString
+                guard sqlite3_bind_text(statement, Int32(index + 1), text.utf8String, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self)) == SQLITE_OK else { throw NotesSQLiteFailure.read }
+                withExtendedLifetime(text) {}
+            }
             var output: [[String: Any]] = []
             while true {
                 let result = sqlite3_step(statement)
@@ -39,42 +44,40 @@ extension AppleTruth {
         }
         let entities = try rows("SELECT Z_NAME,Z_ENT FROM Z_PRIMARYKEY")
         guard let note = entities.first(where: { $0["Z_NAME"] as? String == "ICNote" })?["Z_ENT"] as? Int64, let folder = entities.first(where: { $0["Z_NAME"] as? String == "ICFolder" })?["Z_ENT"] as? Int64 else { throw NotesSQLiteFailure.schema }
-        let folders = try rows("SELECT ZIDENTIFIER AS id,ZTITLE2 AS title,Z_PK FROM ZICCLOUDSYNCINGOBJECT WHERE Z_ENT=\(folder) AND COALESCE(ZMARKEDFORDELETION,0)=0 AND COALESCE(ZFOLDERTYPE,0)<>1")
+        let folders = try rows("SELECT ZIDENTIFIER AS id,ZTITLE2 AS title,Z_PK,ZFOLDERTYPE FROM ZICCLOUDSYNCINGOBJECT WHERE Z_ENT=\(folder) AND COALESCE(ZMARKEDFORDELETION,0)=0")
         let folderKeys = Dictionary(uniqueKeysWithValues: folders.map { ($0["Z_PK"] as? Int64 ?? 0, $0["id"] as? String ?? "") })
-        let objects = try rows("SELECT o.ZIDENTIFIER AS id,o.ZTITLE1 AS title,o.ZISPASSWORDPROTECTED AS locked,o.ZFOLDER,d.ZDATA FROM ZICCLOUDSYNCINGOBJECT o LEFT JOIN ZICNOTEDATA d ON d.Z_PK=o.ZNOTEDATA WHERE o.Z_ENT=\(note) AND COALESCE(o.ZMARKEDFORDELETION,0)=0 AND o.ZFOLDER NOT IN (SELECT Z_PK FROM ZICCLOUDSYNCINGOBJECT WHERE Z_ENT=\(folder) AND COALESCE(ZFOLDERTYPE,0)=1)")
+        let columns = Set(try rows("PRAGMA table_info(ZICCLOUDSYNCINGOBJECT)").compactMap { $0["name"] as? String })
+        let owners = ["ZNOTE", "ZNOTE1"].filter { columns.contains($0) }
+        let tableColumn = ["ZMERGEABLEDATA1", "ZMERGEABLEDATA"].first { columns.contains($0) }
+        let objects = try rows("SELECT o.Z_PK AS native_pk,o.ZIDENTIFIER AS id,o.ZTITLE1 AS title,o.ZISPASSWORDPROTECTED AS locked,o.ZFOLDER,d.ZDATA FROM ZICCLOUDSYNCINGOBJECT o LEFT JOIN ZICNOTEDATA d ON d.Z_PK=o.ZNOTEDATA WHERE o.Z_ENT=\(note) AND COALESCE(o.ZMARKEDFORDELETION,0)=0")
         var notes: [[String: Any]] = []
         for object in objects {
+            guard let folderKey = folderKeys[object["ZFOLDER"] as? Int64 ?? 0], !folderKey.isEmpty else { continue }
             let locked = (object["locked"] as? Int64 ?? 0) != 0
-            var row: [String: Any] = ["id":object["id"] as? String ?? "", "title":object["title"] as? String ?? "", "locked":locked, "plain_text":"", "content_status":locked ? "locked" : "offloaded", "folder_id":folderKeys[object["ZFOLDER"] as? Int64 ?? 0] ?? ""]
+            var row: [String: Any] = ["id":object["id"] as? String ?? "", "title":object["title"] as? String ?? "", "locked":locked, "plain_text":"", "content_status":locked ? "locked" : "offloaded", "folder_id":folderKey]
             if !locked, let compressed = object["ZDATA"] as? Data, !compressed.isEmpty {
-                if let text = try? truthNoteText(compressed) { row["plain_text"] = text; row["content_status"] = "complete" }
+                if let decoded = try? truthNoteText(compressed) {
+                    row["plain_text"] = decoded.0; row["content_status"] = "complete"
+                    var counts = decoded.1, cells = 0, complete = true
+                    for id in decoded.2 {
+                        guard let tableColumn, !owners.isEmpty, let owner = object["native_pk"] as? Int64 else { complete = false; break }
+                        let condition = owners.map { $0 + "=?" }.joined(separator: " OR ")
+                        let tableRows = try rows("SELECT \(tableColumn) AS bytes FROM ZICCLOUDSYNCINGOBJECT WHERE ZIDENTIFIER=? AND (\(condition))", [id] + owners.map { _ in String(owner) })
+                        guard tableRows.count == 1, let bytes = tableRows[0]["bytes"] as? Data, let count = try? NotesTruthStructure.tableCells(bytes) else { complete = false; break }
+                        cells += count
+                    }
+                    if complete { counts["table_cells"] = cells }
+                    row["structure_counts"] = counts
+                    row["table_cells_status"] = complete ? "complete" : "unavailable"
+                }
                 else { row["content_status"] = "undecoded" }
             }
             notes.append(row)
         }
-        return ["status":"verified", "records":notes, "folders":folders.map { ["id":$0["id"] as? String ?? "", "title":$0["title"] as? String ?? ""] }]
+        return ["status":"verified", "records":notes, "folders":folders.map { ["id":$0["id"] as? String ?? "", "title":$0["title"] as? String ?? "", "recently_deleted":($0["ZFOLDERTYPE"] as? Int64 ?? 0) == 1] as [String: Any] }]
     }
-    private static func truthNoteText(_ input: Data) throws -> String {
-        var raw = input
-        if input.starts(with: [31,139]) {
-            var state = z_stream()
-            guard inflateInit2_(&state, 31, ZLIB_VERSION, Int32(MemoryLayout<z_stream>.size)) == Z_OK else { throw NotesSQLiteFailure.decode }
-            defer { inflateEnd(&state) }
-            raw = try input.withUnsafeBytes { bytes in
-                state.next_in = UnsafeMutablePointer(mutating: bytes.bindMemory(to: Bytef.self).baseAddress); state.avail_in = uInt(bytes.count)
-                var result = Data(), block = [UInt8](repeating: 0, count: 8192)
-                while true {
-                    let code = block.withUnsafeMutableBytes { destination in
-                        state.next_out = destination.bindMemory(to: Bytef.self).baseAddress; state.avail_out = uInt(destination.count)
-                        return inflate(&state, Z_NO_FLUSH)
-                    }
-                    result.append(contentsOf: block.prefix(block.count - Int(state.avail_out)))
-                    guard result.count < 32 * 1024 * 1024 else { throw NotesSQLiteFailure.decode }
-                    if code == Z_STREAM_END { return result }
-                    guard code == Z_OK else { throw NotesSQLiteFailure.decode }
-                }
-            }
-        }
+    private static func truthNoteText(_ input: Data) throws -> (String, [String: Int], [String]) {
+        let raw = try NotesTruthStructure.unpack(input)
         func child(_ data: Data, number: Int) throws -> Data {
             let bytes = Array(data)
             var position = 0
@@ -105,8 +108,10 @@ extension AppleTruth {
             }
             throw NotesSQLiteFailure.decode
         }
-        guard let text = String(data: try child(child(child(raw, number: 2), number: 3), number: 2), encoding: .utf8) else { throw NotesSQLiteFailure.decode }
-        return text
+        let note = try child(child(raw, number: 2), number: 3)
+        guard let text = String(data: try child(note, number: 2), encoding: .utf8) else { throw NotesSQLiteFailure.decode }
+        let counts = try NotesTruthStructure.count(note)
+        return (text, counts, try NotesTruthStructure.tableIDs(note))
     }
 }
 

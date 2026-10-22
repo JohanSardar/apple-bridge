@@ -16,6 +16,9 @@ struct NotesDecoderChecks {
         }
         guard (try? NotesProto.decode(Data(contentsOf: URL(fileURLWithPath: root + "/malformed.gz")))) == nil else { throw CheckFailure.malformed }
         try full(root)
+        #if LAB
+        try await NotesSourceFixture.run(URL(fileURLWithPath: root))
+        #endif
         print("Notes decoder fixtures passed")
     }
     private struct Expected: Decodable {

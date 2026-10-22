@@ -276,7 +276,7 @@ func Start(ctx, Config) error
 | `contacts.contact` | names (given/middle/family/nickname/prefix/suffix/phonetic), `organization`, `job_title`, `department`, `phones[]`, `emails[]`, `postal_addresses[]`, `urls[]`, `birthday?`, `dates[]`, `social_profiles[]`, `instant_messages[]`, `relations[]`, `image` (blob ref), `container_id`, `writable`, `note` (`unavailable` without entitlement) |
 | `contacts.group` | `name`, `member_ids[]` (read-only in v1) |
 | `notes.folder` | `title`, `account`, `parent_id?` |
-| `notes.note` | `folder_id`, `title`, `plain_text`, `html?`, `created_at`, `modified_at`, `locked`, `attachments[]`, `content_status` (`complete|locked|offloaded|undecoded`), `editable` (`plain|none`) |
+| `notes.note` | `folder_id`, `title`, `plain_text` (inline when it fits), `html?`, `blocks?`, `body_blob?`, `body_status?`, `preview?`, `created_at`, `modified_at`, `locked`, `attachments[]`, `pinned?`, `tags?`, `content_status` (`complete|locked|offloaded|undecoded`), `editable` (`plain|none`); external body contract in `design/web/notes.md` §5 |
 | `usage.device` | `name`, `platform` (mac/iphone/ipad), `build`, `is_local` |
 | `usage.app_day` | `device_id`, `day` (local date + tz), `bundle_id`, `seconds_estimated`, `sessions`, `clipped_seconds`, `provenance` (`biome.app_infocus`), `decoder_version`, `latest_event_at`, `uncertainty` |
 | `system.source` | per source: `state` (`ready|degraded|unavailable|permission_missing|unsupported`), `coverage`, `freshness` (`last_capture_at`, `capture_lag_ms`, `last_complete_scan_at`), `capabilities[]`, `reason?` |
@@ -1510,5 +1510,7 @@ Measure the first Reminders checkpoint after Helper start before and after enric
 | W8-UI | Folders sidebar (accounts, nested folders, Recently Deleted read-only), note list (pinned section, date groups, previews, thumbnails, gallery), read-only rich editor rendering, locked notes title-only, search, keyboard. WEB-NOTE-READ. |
 | W8-WRITE | Plain-text editor for `editable: plain` notes with debounced autosave on `expected_version`, new note and folder, delete. WEB-NOTE-WRITE (web, real in the "Bridge Test" folder). |
 | W8-PARITY | Investigate checklist toggling and simple rich edits through AppleScript HTML bodies on losslessly round-tripped notes; keep only what's provable. WEB-NOTE-PARITY. |
+
+Notes rich records retain `plain_text`, escaped fallback `html`, structured `blocks`, attachment references and optional `pinned` / `tags`. The block/run contract and unknown-format behavior are specified in `design/web/notes.md` §5. Locked bodies are never decoded or staged. A serializable block tree is not itself a write qualification: rich editing stays hidden until its per-OS proof passes. Recently Deleted is captured read-only; a delete may be observed as a move there rather than a tombstone.
 
 The shell's app switcher enables each app when its R step passes. Scenario families: `WEB-REM-*`, `WEB-CAL-*`, `WEB-CON-*`, `WEB-NOTE-*` (web level, 12 projects), plus `REM-STORE-*`, `CAL-STORE-*` and `NOTE-DECODE-FULL` (sim and real).

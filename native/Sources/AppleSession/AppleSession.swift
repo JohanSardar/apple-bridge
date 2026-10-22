@@ -239,12 +239,16 @@ public actor AppleSession: ObservationSink {
         guard let connection = wire else { return }
         let started = CaptureTrace.now()
         var prepared: UInt64 = 0
-        let source = frame["handle"].string.hasPrefix("contacts-image:") ? "contacts" : (frame["handle"].string.hasPrefix("calendar-attachment:") ? "calendar" : "messages")
+        let source = frame["handle"].string.hasPrefix("notes-blob:") ? "notes" : (frame["handle"].string.hasPrefix("contacts-image:") ? "contacts" : (frame["handle"].string.hasPrefix("calendar-attachment:") ? "calendar" : "messages"))
         defer { trace.record("helper_blob_read", fields: ["source": .string(source), "started_ns": .integer(started), "prepared_ns": .integer(prepared), "finished_ns": .integer(CaptureTrace.now())]) }
         do {
             guard !frame["handle"].string.isEmpty, frame["offset"].number >= 0, frame["offset"].number < Double(Int64.max), frame["length"].number > 0, frame["length"].number <= 131072, frame["length"].number.rounded(.down) == frame["length"].number, frame["offset"].number.rounded(.down) == frame["offset"].number else { throw SourceFailure.invalid }
             let response: JSON
-            if frame["handle"].string.hasPrefix("contacts-image:") { response = try await contacts.readBlob(frame["handle"].string, offset: Int(frame["offset"].number), length: Int(frame["length"].number)) }
+            if frame["handle"].string.hasPrefix("notes-blob:") {
+                guard let notes = additionalSources["notes"] as? NotesSource else { throw SourceFailure.unavailable }
+                response = try await notes.readBlob(frame["handle"].string, offset: Int(frame["offset"].number), length: Int(frame["length"].number))
+            }
+            else if frame["handle"].string.hasPrefix("contacts-image:") { response = try await contacts.readBlob(frame["handle"].string, offset: Int(frame["offset"].number), length: Int(frame["length"].number)) }
             else if frame["handle"].string.hasPrefix("calendar-attachment:") { response = try await calendar.readBlob(frame["handle"].string, offset: Int(frame["offset"].number), length: Int(frame["length"].number)) }
             else if let blobReader { response = try await blobReader(frame["handle"].string, Int64(frame["offset"].number), Int(frame["length"].number)) }
             else { throw SourceFailure.unavailable }

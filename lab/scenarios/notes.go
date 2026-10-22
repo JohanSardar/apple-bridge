@@ -2,6 +2,7 @@ package scenarios
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -28,24 +30,42 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 			e.Passed = e.Passed && a.Passed
 		}
 	}()
-	if s.ID == "NOTE-DECODE" {
-		cmd := exec.CommandContext(ctx, "packaging/dev/build-native.sh")
-		cmd.Env = append(os.Environ(), "APPLE_BRIDGE_NATIVE_LAB=1")
+	if s.ID == "NOTE-DECODE" || s.ID == "NOTE-DECODE-FULL" && level == "sim" {
+		build := func(pkg, target string) (string, error) {
+			cmd := exec.CommandContext(ctx, "packaging/dev/build-native.sh", pkg)
+			cmd.Env = append(os.Environ(), "APPLE_BRIDGE_NATIVE_LAB=1", "APPLE_BRIDGE_NATIVE_TARGET="+target)
+			cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+			cmd.Cancel = func() error { return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) }
+			output, err := cmd.CombinedOutput()
+			if err != nil {
+				fmt.Fprintln(os.Stderr, string(output))
+				return "", err
+			}
+			directory, err := os.ReadFile(filepath.Join(pkg, ".build/native-output-1"))
+			return strings.TrimSpace(string(directory)), err
+		}
+		truth := ""
+		if s.ID == "NOTE-DECODE-FULL" {
+			directory, err := build("lab/truth/native", "AppleTruth")
+			if err != nil {
+				add("truth_build", false)
+				return
+			}
+			truth = filepath.Join(directory, "AppleTruth")
+		}
+		directory, err := build("native", "NotesDecoderChecks")
+		if err != nil {
+			add("decoder_build", false)
+			return
+		}
+		cmd := exec.CommandContext(ctx, filepath.Join(directory, "NotesDecoderChecks"), "lab/fixtures/notes")
+		cmd.Env = append(os.Environ(), "APPLE_BRIDGE_NOTES_TRUTH="+truth)
+		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+		cmd.Cancel = func() error { return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) }
 		output, err := cmd.CombinedOutput()
-		if err != nil {
-			fmt.Fprintln(os.Stderr, string(output))
-			add("decoder_build", false)
-			return
-		}
-		directory, err := os.ReadFile("native/.build/native-output-1")
-		if err != nil {
-			add("decoder_build", false)
-			return
-		}
-		cmd = exec.CommandContext(ctx, filepath.Join(strings.TrimSpace(string(directory)), "NotesDecoderChecks"), "lab/fixtures/notes")
-		output, err = cmd.CombinedOutput()
-		if err != nil {
-			fmt.Fprintln(os.Stderr, string(output))
+		fmt.Fprintln(os.Stderr, strings.TrimSpace(string(output)))
+		if s.ID == "NOTE-DECODE-FULL" {
+			add("independent_truth_counts", err == nil)
 		}
 		add("gzip_protobuf_scrubbed_fixtures", err == nil)
 		return
@@ -64,7 +84,7 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 		return
 	}
 	defer w.Close()
-	if s.ID == "NOTE-IMPORT" && level == "real" {
+	if (s.ID == "NOTE-IMPORT" || s.ID == "NOTE-DECODE-FULL") && level == "real" {
 		response, truthErr := w.Truth("observe", map[string]any{"source": "notes", "sqlite": true})
 		if truthErr != nil {
 			add("independent_sqlite_copy", false)
@@ -102,6 +122,20 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 					}
 					var data map[string]any
 					json.Unmarshal(record.Data, &data)
+					if body, ok := data["body_blob"].(map[string]any); ok {
+						digest, _ := body["digest"].(string)
+						status, bytes, blobErr := blobBytes(ctx, w.Gateway, digest, record.ID)
+						if blobErr != nil || status != 200 || fmt.Sprintf("%x", sha256.Sum256(bytes)) != digest {
+							return false
+						}
+						var content map[string]any
+						if json.Unmarshal(bytes, &content) != nil {
+							return false
+						}
+						for _, field := range []string{"plain_text", "html", "blocks"} {
+							data[field] = content[field]
+						}
+					}
 					if data["title"] != native["title"] {
 						return false
 					}
@@ -109,6 +143,18 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 						for _, field := range []string{"plain_text", "locked", "content_status"} {
 							if data[field] != native[field] {
 								return false
+							}
+						}
+						if s.ID == "NOTE-DECODE-FULL" && data["content_status"] == "complete" {
+							counts, countErr := notesProjectionCounts(data)
+							truthCounts, ok := native["structure_counts"].(map[string]any)
+							if countErr != nil || !ok {
+								return false
+							}
+							for name, count := range counts {
+								if truthCounts[name] != float64(count) {
+									return false
+								}
 							}
 						}
 						if data["folder_id"] != aliases[aliasKey(contracts.Notes, "notes.folder", native["folder_id"].(string))] {
@@ -138,6 +184,11 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 		}
 		for _, r := range records {
 			if r.Collection == collection && recordTitle(r) == title && !r.Deleted {
+				var fields map[string]any
+				json.Unmarshal(r.Data, &fields)
+				if collection == "notes.note" && fields["recently_deleted"] == true {
+					continue
+				}
 				return r, true
 			}
 		}
