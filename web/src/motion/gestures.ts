@@ -20,7 +20,7 @@ export function drag(element: HTMLElement, handlers: {
     element.addEventListener('lostpointercapture', end);
     return () => { element.removeEventListener('pointerdown', down); element.removeEventListener('pointermove', move); element.removeEventListener('pointerup', end); element.removeEventListener('pointercancel', end); element.removeEventListener('lostpointercapture', end); };
 }
-export function swipeBack(element: HTMLElement, background: HTMLElement, enabled: () => boolean, back: () => void, interrupt?: () => void) {
+export function swipeBack(element: HTMLElement, background: HTMLElement, enabled: () => boolean, back: () => void, interrupt?: () => void, settled?: () => void) {
     let animation: ReturnType<typeof springAnimation> | undefined;
     let direction = 1, origin=0;
     const update = (x: number) => { const width = element.clientWidth; const progress = Math.min(1, Math.max(0, x / width)); element.style.transform = `translateX(${x * direction}px)`; background.style.transform = `translateX(${(progress - 1) * width * .3 * direction}px)`; background.style.opacity = String(.7 + progress * .3); };
@@ -32,8 +32,9 @@ export function swipeBack(element: HTMLElement, background: HTMLElement, enabled
                 back();
             crossfade(background);
             clear();
+            settled?.();
             return;
         } animation = springAnimation(update, position, commit ? element.clientWidth : 0, { response: .35, damping: 1 }, vx * direction, () => { if (commit)
-            back(); clear(); }); } });
+            back(); clear(); settled?.(); }); } });
     return () => { dispose(); animation?.cancel(); clear(); };
 }

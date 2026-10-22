@@ -1,7 +1,8 @@
 import { createEffect, createMemo, createSignal, For, lazy, onCleanup, onMount, Show, Suspense, untrack } from 'solid-js';
-import { Icon, type IconName } from '../design/Icon';
+import { Icon } from '../design/Icon';
 import { strings as s } from './strings';
 import { router } from './router';
+import { AppMenu } from './AppMenu';
 import { registerShortcut } from './keyboard';
 import { appearance } from './preferences';
 import { auth } from '../auth/session';
@@ -11,14 +12,10 @@ import { enterPane, reducedMotion, crossfade, springAnimation } from '../motion/
 import { drag, swipeBack } from '../motion/gestures';
 const NewMessage=lazy(()=>import('../messages/compose/NewMessage'));
 const MessagePane=lazy(()=>import('../messages/MessagePane'));
-const apps: [
-    string,
-    IconName
-][] = [[s.messages, 'messages'], [s.reminders, 'reminders'], [s.calendar, 'calendar'], [s.contacts, 'contacts'], [s.notes, 'notes']];
 export default function Shell() {
     const messageCommands=createMessageCommands(auth.live()!);
     const messageActions=createMessageActions(auth.live()!,messageCommands.capabilities);
-    const [switcher, setSwitcher] = createSignal(false), [filters, setFilters] = createSignal(false), [details, setDetails] = createSignal(false), [inspectorVisible, setInspectorVisible] = createSignal(false);
+    const [filters, setFilters] = createSignal(false), [details, setDetails] = createSignal(false), [inspectorVisible, setInspectorVisible] = createSignal(false);
     const [filter, setFilter] = createSignal(s.allMessages as string);
     const phoneMedia=matchMedia('(max-width:699px)');
     const [phone,setPhone]=createSignal(phoneMedia.matches);
@@ -91,8 +88,7 @@ export default function Shell() {
         return <section ref={pane} class="phone-details" role="main" aria-label={s.details}><header class="toolbar glass"><button class="icon-button" aria-label={s.back} onClick={()=>router.back()}><Icon name="chevron"/></button><h2>{s.details}</h2></header><DetailContent/></section>;
     }
     function DetailContent() { return <div class="empty quiet-empty"><p>{s.noDetails}</p></div>; }
-    return <div class="app-shell" classList={{ 'has-chat': Boolean(chat()), 'inspector-open': inspectorVisible() }}><aside ref={sidebar} class="sidebar" role={phone()&&!chat()?'main':undefined} inert={phone()&&Boolean(chat())}><header class="toolbar sidebar-toolbar glass"><div class="filter-control"><button class="icon-button" aria-label={s.filters} aria-expanded={filters()} onClick={() => setFilters(!filters())}><Icon name="ellipsis"/></button><Show when={filters()}><div class="filter-menu glass" role="group" aria-label={s.filters}><For each={[s.allMessages, s.knownSenders, s.unknownSenders, s.unread]}>{name => <button aria-pressed={filter() === name} onClick={() => { setFilter(name); setFilters(false); }}>{name}<Show when={filter() === name}><Icon name="check"/></Show></button>}</For><button disabled>{s.edit}</button></div></Show></div><label class="sidebar-search"><Icon name="search"/><input type="search" aria-label={s.search} placeholder={s.search}/></label><span class="phone-toolbar-spacer"/><button class="icon-button" aria-label={s.compose} onClick={() => router.navigate('/messages/new')}><Icon name="compose"/></button></header><div class="sidebar-heading"><h1>{s.messages}</h1></div><Show when={auth.live()?.status() === 'offline'}><p class="offline-banner" role="status">{s.offline}</p></Show><div class="sidebar-body" data-scroll="sidebar"><p class="no-messages">{s.noMessages}</p></div><footer class="sidebar-footer"><div class="app-selector"><button class="icon-button app-menu-control glass" aria-label={s.switchApp} aria-expanded={switcher()} onClick={() => setSwitcher(!switcher())}><Icon name="grid"/></button><Show when={switcher()}><div class="app-menu glass" role="group" aria-label={s.appMenu} onKeyDown={event => { if (event.key === 'Escape')
-        setSwitcher(false); }}><For each={apps}>{([name, icon], index) => <button disabled={index() > 0} onClick={() => setSwitcher(false)}><span class={'app-icon app-icon-' + icon}><Icon name={icon}/></span><span>{name}<Show when={index() > 0}><small>{s.comingSoon}</small></Show></span><Show when={index() === 0}><Icon name="check"/></Show></button>}</For><button class="settings-menu-item" onClick={() => router.navigate('/settings/devices')}><Icon name="settings"/><span>{s.settings}</span></button></div></Show></div></footer></aside><div ref={resizer} class="pane-resizer" role="separator" aria-label={s.resizeSidebar} aria-orientation="vertical" tabindex="0" onKeyDown={event => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+    return <div class="app-shell" classList={{ 'has-chat': Boolean(chat()), 'inspector-open': inspectorVisible() }}><aside ref={sidebar} class="sidebar" role={phone()&&!chat()?'main':undefined} inert={phone()&&Boolean(chat())}><header class="toolbar sidebar-toolbar glass"><div class="filter-control"><button class="icon-button" aria-label={s.filters} aria-expanded={filters()} onClick={() => setFilters(!filters())}><Icon name="ellipsis"/></button><Show when={filters()}><div class="filter-menu glass" role="group" aria-label={s.filters}><For each={[s.allMessages, s.knownSenders, s.unknownSenders, s.unread]}>{name => <button aria-pressed={filter() === name} onClick={() => { setFilter(name); setFilters(false); }}>{name}<Show when={filter() === name}><Icon name="check"/></Show></button>}</For><button disabled>{s.edit}</button></div></Show></div><label class="sidebar-search"><Icon name="search"/><input type="search" aria-label={s.search} placeholder={s.search}/></label><span class="phone-toolbar-spacer"/><button class="icon-button" aria-label={s.compose} onClick={() => router.navigate('/messages/new')}><Icon name="compose"/></button></header><div class="sidebar-heading"><h1>{s.messages}</h1></div><Show when={auth.live()?.status() === 'offline'}><p class="offline-banner" role="status">{s.offline}</p></Show><div class="sidebar-body" data-scroll="sidebar"><p class="no-messages">{s.noMessages}</p></div><footer class="sidebar-footer"><AppMenu/></footer></aside><div ref={resizer} class="pane-resizer" role="separator" aria-label={s.resizeSidebar} aria-orientation="vertical" tabindex="0" onKeyDown={event => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
         event.preventDefault();
         const width = sidebar.getBoundingClientRect().width + (event.key === 'ArrowRight' ? 10 : -10);
         document.documentElement.style.setProperty('--sidebar-width', Math.max(280, Math.min(420, width)) + 'px');

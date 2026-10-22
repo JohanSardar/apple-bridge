@@ -218,6 +218,12 @@ func webBrowserControl(ctx context.Context, w *world.World, origin string, prepa
 				return
 			}
 			value = map[string]any{"ok": err == nil}
+		case "/reminders-perf":
+			value, err = webReminderPerf(w)
+		case "/reminders-capacity":
+			value, err = webReminderCapacity(w)
+		case "/reminders-live":
+			value, err = webReminderLive(w, request.URL.Query().Get("index"))
 		case "/incoming":
 			started := time.Now().UnixMilli()
 			key := contracts.NewID("web-incoming")

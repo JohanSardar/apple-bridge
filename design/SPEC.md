@@ -1184,7 +1184,9 @@ The Helper creates variants for present attachment blobs, as new blobs reference
   - `src/auth`, `src/settings` (devices, passkeys, agents, approvals, activity)
   - `src/<app>` per app
 - **Budgets** (Playwright gates):
-  - shell JS ≤ 60 KB gzip; route chunks loaded lazily
+  - shell JS ≤ 60 KiB gzip, measured over the `index.html` static-import closure; route chunks loaded lazily
+  - each app-route lazy JS closure, including its lazy descendants and excluding shared shell chunks, ≤ 60 KiB gzip
+  - record actual service-worker precache gzip bytes; the full cacheable distribution, including lazy assets and fonts, ≤ 600 KiB gzip
   - CLS 0
   - no long task > 50 ms during scroll or navigation
   - interaction-to-next-paint ≤ 8 ms p95 on the Air
