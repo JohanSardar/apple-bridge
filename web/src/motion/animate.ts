@@ -25,12 +25,12 @@ export function springAnimation(update: (value: number) => void, from: number, t
 export function crossfade(element: Element, entering = true) {
     return element.animate([{ opacity: entering ? 0 : 1 }, { opacity: entering ? 1 : 0 }], { duration: reducedMotion() ? 150 : 180, easing: 'ease-out' });
 }
-export function enterPane(element: HTMLElement, phone: boolean, direction = 1) {
+export function enterPane(element: HTMLElement, phone: boolean, direction: number, width: number) {
     if (reducedMotion()) {
         const animation = crossfade(element);
         return () => animation.cancel();
     }
-    const distance = phone ? element.clientWidth * direction : 8;
+    const distance = phone ? width * direction : 8;
     const animation = springAnimation(value => { element.style.transform = phone ? `translateX(${value}px)` : `translateY(${value}px)`; element.style.opacity = String(1 - Math.min(1, Math.abs(value / distance)) * .15); }, distance, 0, { response: .35, damping: 1 }, 0, () => { element.style.transform = ''; element.style.opacity = ''; });
     return () => animation.cancel();
 }
