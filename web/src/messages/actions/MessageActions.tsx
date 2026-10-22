@@ -1,0 +1,63 @@
+import {createSignal,For,onCleanup,onMount,Show} from 'solid-js';
+import {Portal} from 'solid-js/web';
+import {reducedMotion,springAnimation} from '../../motion/animate';
+import {classicReactions,type MessageActionsController} from './reactionActions';
+import {reactionEmoji} from './emoji';
+import './actions.css';
+export function MessageActions(props:{actions:MessageActionsController}){
+    const actions=props.actions;
+    function Picker(){
+        const [search,setSearch]=createSignal(''),[more,setMore]=createSignal(false);
+        let dialog!:HTMLDialogElement,searchField:HTMLInputElement|undefined;
+        const value=actions.target()!,anchor=value.anchor;
+        let lift:ReturnType<typeof springAnimation>|undefined,rule:{sheet:CSSStyleSheet;rule:CSSRule}|undefined;
+        onMount(()=>{
+            dialog.showModal();
+            const position=()=>{const bubble=anchor.getBoundingClientRect(),rect=dialog.getBoundingClientRect();dialog.style.left=Math.max(12,Math.min(innerWidth-rect.width-12,bubble.right-rect.width))+'px';dialog.style.top=Math.max(12,Math.min(innerHeight-rect.height-12,bubble.top>rect.height+24?bubble.top-rect.height-12:bubble.bottom+12))+'px';};
+            position();const resize=new ResizeObserver(position);resize.observe(dialog);let frame=0;
+            const moved=()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(position);};window.addEventListener('resize',moved);window.addEventListener('scroll',moved,true);onCleanup(()=>{resize.disconnect();cancelAnimationFrame(frame);window.removeEventListener('resize',moved);window.removeEventListener('scroll',moved,true);});
+            const bubble=anchor.getBoundingClientRect();
+            dialog.querySelector<HTMLElement>('button')?.focus({preventScroll:true});
+            anchor.classList.add('message-action-anchor');
+            const sheet=Array.from(document.styleSheets).find(sheet=>sheet.href?.startsWith(location.origin+'/'));
+            if(sheet){const {left:x,top:y,right:r,bottom:b}=bubble,radius=Math.min(18,bubble.width/2,bubble.height/2),hole=`M${x+radius} ${y}H${r-radius}Q${r} ${y} ${r} ${y+radius}V${b-radius}Q${r} ${b} ${r-radius} ${b}H${x+radius}Q${x} ${b} ${x} ${b-radius}V${y+radius}Q${x} ${y} ${x+radius} ${y}Z`;const index=sheet.insertRule(`.message-actions-dialog::backdrop{clip-path:path(evenodd,"M0 0H${innerWidth}V${innerHeight}H0Z ${hole}")}`,sheet.cssRules.length);rule={sheet,rule:sheet.cssRules[index]};}
+            if(!reducedMotion())lift=springAnimation(scale=>{anchor.style.scale=String(scale);},1,1.03,{response:.3,damping:.8});
+            else{const fade=dialog.animate([{opacity:0},{opacity:1}],{duration:150});onCleanup(()=>fade.cancel());}
+        });
+        onCleanup(()=>{lift?.cancel();anchor.classList.remove('message-action-anchor');anchor.style.scale='';if(rule){const index=Array.from(rule.sheet.cssRules).indexOf(rule.rule);if(index>=0)rule.sheet.deleteRule(index);}});
+        const results=()=>reactionEmoji.filter(([symbol,label,tags])=>(symbol+' '+label+' '+tags).toLocaleLowerCase().includes(search().trim().toLocaleLowerCase()));
+        const keydown=(event:KeyboardEvent)=>{
+            event.stopPropagation();
+            if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)||event.target instanceof HTMLInputElement)return;
+            const buttons=Array.from(dialog.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'));
+            const index=buttons.indexOf(document.activeElement as HTMLButtonElement);
+            if(index<0)return;
+            event.preventDefault();buttons[event.key==='Home'?0:event.key==='End'?buttons.length-1:(index+(event.key==='ArrowLeft'?-1:1)+buttons.length)%buttons.length]?.focus();
+        };
+        return <Portal><dialog ref={dialog} class="message-actions-dialog glass" aria-label="Message actions" onCancel={event=>{event.preventDefault();event.stopPropagation();actions.close();}} onKeyDown={keydown} onClick={event=>{if(event.target!==dialog)return;const rect=dialog.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)actions.close();}}>
+            <Show when={actions.available()}><div class="tapback-picker" role="group" aria-label="Tapbacks"><For each={classicReactions}>{(reaction,index)=><button style={{'--reaction-index':index()}} aria-label={reaction.label} aria-pressed={actions.selected(reaction)} disabled={actions.busy()||actions.unknown()} onClick={event=>actions.react(event,reaction)}><span aria-hidden="true">{reaction.symbol}</span></button>}</For></div>
+                <button class="message-action-item" disabled={actions.busy()||actions.unknown()} aria-expanded={more()} onClick={()=>{setMore(value=>!value);queueMicrotask(()=>searchField?.focus());}}>More reactions</button>
+                <Show when={more()}><div class="reaction-search"><input ref={searchField} type="search" aria-label="Search reactions" value={search()} onInput={event=>setSearch(event.currentTarget.value)} placeholder="Search emoji"/><div class="reaction-emoji-grid"><For each={results()}>{([symbol,label])=><button aria-label={label} aria-pressed={actions.selected({kind:'emoji',emoji:symbol,symbol})} disabled={actions.busy()||actions.unknown()} onClick={event=>actions.react(event,{kind:'emoji',emoji:symbol,symbol})}>{symbol}</button>}</For></div><Show when={!results().length}><p class="action-problem">No emoji found</p></Show></div></Show>
+            </Show>
+            <Show when={actions.problem()}><p class="action-problem" role="status">{actions.problem()}</p></Show>
+            <Show when={actions.unknown()}><button class="message-action-item" disabled={!actions.connected()} onClick={actions.check}>Check</button></Show>
+            <Show when={actions.text()}><button class="message-action-item" onClick={actions.copy}>Copy</button></Show>
+            <button class="message-action-item" onClick={actions.close}>Close</button>
+        </dialog></Portal>;
+    }
+    function Flight(){
+        let element!:HTMLSpanElement;
+        const particles:HTMLSpanElement[]=[];
+        const value=actions.flight()!;
+        onMount(()=>{
+            const from={x:value.from.left+value.from.width/2,y:value.from.top+value.from.height/2},to={x:value.to.right-12,y:value.to.top};
+            element.style.left=from.x+'px';element.style.top=from.y+'px';
+            const animation=element.animate(reducedMotion()?[{opacity:1},{opacity:0}]:[{transform:'translate(-50%,-50%) scale(1)',opacity:1},{transform:`translate(${(to.x-from.x)*.5-14}px,${Math.min(-48,(to.y-from.y)*.5-36)}px) scale(1.25)`,opacity:1,offset:.5},{transform:`translate(${to.x-from.x-14}px,${to.y-from.y-14}px) scale(.7)`,opacity:0}],{duration:reducedMotion()?150:420,easing:'cubic-bezier(.2,.7,.3,1)'});
+            const burst=particles.map((particle,index)=>{particle.style.left=to.x+'px';particle.style.top=to.y+'px';return particle.animate([{transform:'translate(0,0) scale(1)',opacity:1},{transform:`translate(${Math.cos(index*Math.PI/3)*24}px,${Math.sin(index*Math.PI/3)*24}px) scale(0)`,opacity:0}],{delay:330,duration:260,easing:'ease-out',fill:'both'});});
+            Promise.all([animation,...burst].map(value=>value.finished)).then(()=>{if(actions.flight()?.key===value.key)actions.clearFlight();}).catch(()=>{});
+            onCleanup(()=>{animation.cancel();burst.forEach(value=>value.cancel());});
+        });
+        return <Portal><span ref={element} class="reaction-flight" aria-hidden="true">{value.symbol}</span><Show when={!reducedMotion()}><For each={[0,1,2,3,4,5]}>{()=> <span ref={element=>particles.push(element)} class="reaction-burst" style={{background:value.color}} aria-hidden="true"/>}</For></Show></Portal>;
+    }
+    return <><Show when={actions.target()} keyed><Picker/></Show><Show when={actions.flight()?.key} keyed><Flight/></Show></>;
+}

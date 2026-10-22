@@ -1,0 +1,14 @@
+export const reactionEmoji = [
+    ['😀','Grinning face','happy smile'],['😃','Smiling face','happy smile'],['😂','Face with tears of joy','laugh funny'],
+    ['🥰','Smiling face with hearts','love'],['😍','Heart eyes','love'],['😘','Blowing a kiss','love'],
+    ['😊','Smiling eyes','happy'],['😎','Sunglasses','cool'],['🤔','Thinking face','think question'],
+    ['😢','Crying face','sad'],['😭','Loudly crying face','sad'],['😮','Surprised face','wow'],
+    ['😡','Angry face','mad'],['🙃','Upside down face','silly'],['🤗','Hugging face','hug'],
+    ['🥳','Partying face','party celebrate'],['🎉','Party popper','party celebrate congratulations'],['🎊','Confetti ball','party celebrate'],
+    ['❤️','Red heart','love'],['💙','Blue heart','love'],['💚','Green heart','love'],['💜','Purple heart','love'],
+    ['🔥','Fire','hot'],['✨','Sparkles','magic'],['⭐','Star','favorite'],['💯','Hundred points','perfect'],
+    ['👍','Thumbs up','yes like'],['👎','Thumbs down','no dislike'],['👏','Clapping hands','applause'],['🙌','Raising hands','celebrate'],
+    ['🙏','Folded hands','thanks please'],['👋','Waving hand','hello goodbye'],['🤝','Handshake','agree'],['💪','Flexed biceps','strong'],
+    ['✅','Check mark','done yes'],['❌','Cross mark','no'],['👀','Eyes','look'],['🎂','Birthday cake','birthday party'],
+    ['☕','Hot beverage','coffee tea'],['🍕','Pizza','food'],['🌈','Rainbow','pride'],['🌻','Sunflower','flower'],
+] as const;
