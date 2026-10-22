@@ -3,7 +3,7 @@ import type { LiveClient } from '../../data/live';
 import type { Cursor, ThreadItem, ViewData } from '../../data/types';
 export const threadPageSize=100;
 export const threadWindowLimit=500;
-type WindowState={anchor:string;items:ThreadItem[];before?:string;after?:string;older:number;newer:number;unread?:string};
+type WindowState={cursor?:Cursor;anchor:string;items:ThreadItem[];before?:string;after?:string;older:number;newer:number;unread?:string};
 type Page={data:ViewData;cursor?:Cursor};
 type Pages={ready:boolean;pages:Page[];token?:string};
 type Subscription={data:Accessor<ViewData>;cursor:Accessor<Cursor|undefined>;dispose:()=>void};
@@ -53,7 +53,7 @@ export function createThreadWindow(live:LiveClient,chat:string,initialAnchor='un
             const items=next.length===previous.items.length&&next.every((item,index)=>item===previous.items[index])?previous.items:next;
             const first=older.pages.at(-1)?.data??center.data,last=newer.pages.at(-1)?.data??center.data;
             publishedAnchor=value;retained=new Map(next.map(item=>[item.id,versions.get(item.id)!]));
-            batch(()=>{setWindow({anchor:value,items,before:first.before,after:last.after,older:Number(first.older??0),newer:Number(last.newer??0),unread:center.data.unread_anchor});setLoading(false);});
+            batch(()=>{setWindow({cursor:coherent?head:undefined,anchor:value,items,before:first.before,after:last.after,older:Number(first.older??0),newer:Number(last.newer??0),unread:center.data.unread_anchor});setLoading(false);});
             });
         });
     });
