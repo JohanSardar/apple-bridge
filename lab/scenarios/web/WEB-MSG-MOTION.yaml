@@ -1,0 +1,4 @@
+id: WEB-MSG-MOTION
+feature: web.messages.read
+levels: [web]
+web: {browsers: [webkit, chromium], themes: [light], layouts: [phone, desktop], server: gateway}

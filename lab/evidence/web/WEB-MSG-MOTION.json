@@ -1,0 +1,85 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[5.49 6.2 6.56] cpu_idle=81% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5HZVRRJ2BWGAQJBX2MQCW8W",
+  "metrics": {
+    "browser_budget_ms": 180000,
+    "capture_observer_resets": 0,
+    "demo_messages": 5000,
+    "demo_startup_ms": 3650,
+    "fixture_setup_ms": 3650,
+    "matrix": [
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "chromium-light-phone",
+      "chromium-light-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-MSG-MOTION-webkit-light-phone-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-MSG-MOTION-webkit-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-MOTION-webkit-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-MOTION-chromium-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-MOTION-chromium-light-desktop-playwright.json"
+    ],
+    "server": "gateway",
+    "setups": [
+      {
+        "fixture_setup_ms": 3650,
+        "fixture_snapshot": null,
+        "project": "webkit-light-phone"
+      },
+      {
+        "fixture_setup_ms": 3376,
+        "fixture_snapshot": null,
+        "project": "webkit-light-desktop"
+      },
+      {
+        "fixture_setup_ms": 3640,
+        "fixture_snapshot": null,
+        "project": "chromium-light-phone"
+      },
+      {
+        "fixture_setup_ms": 3078,
+        "fixture_snapshot": null,
+        "project": "chromium-light-desktop"
+      }
+    ]
+  },
+  "scenario": "WEB-MSG-MOTION",
+  "level": "web",
+  "passed": true,
+  "git_sha": "c4f2ef6dea835e129fd7d2ab311c90b4fb71c7c1",
+  "at": "2026-10-22T14:22:25.554172Z",
+  "assertions": [
+    {
+      "name": "webkit-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/transcript-motion.spec.ts:20:1 › WEB-MSG-MOTION a live incoming bubble scales from its tail with an overshoot while history stays still (2.8s)\n  ✓  2 [webkit-light-phone] › tests/transcript-motion.spec.ts:28:1 › WEB-MSG-MOTION Reduce Motion requests a150ms receive fade without scaling (652ms)\n\n  2 passed (5.1s)\n"
+    },
+    {
+      "name": "webkit-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/transcript-motion.spec.ts:20:1 › WEB-MSG-MOTION a live incoming bubble scales from its tail with an overshoot while history stays still (2.0s)\n  ✓  2 [webkit-light-desktop] › tests/transcript-motion.spec.ts:28:1 › WEB-MSG-MOTION Reduce Motion requests a150ms receive fade without scaling (838ms)\n\n  2 passed (4.2s)\n"
+    },
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/transcript-motion.spec.ts:20:1 › WEB-MSG-MOTION a live incoming bubble scales from its tail with an overshoot while history stays still (1.9s)\n  ✓  2 [chromium-light-phone] › tests/transcript-motion.spec.ts:28:1 › WEB-MSG-MOTION Reduce Motion requests a150ms receive fade without scaling (416ms)\n\n  2 passed (3.2s)\n"
+    },
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/transcript-motion.spec.ts:20:1 › WEB-MSG-MOTION a live incoming bubble scales from its tail with an overshoot while history stays still (1.8s)\n  ✓  2 [chromium-light-desktop] › tests/transcript-motion.spec.ts:28:1 › WEB-MSG-MOTION Reduce Motion requests a150ms receive fade without scaling (481ms)\n\n  2 passed (3.0s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
