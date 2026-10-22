@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -182,6 +183,12 @@ func webBrowserControl(ctx context.Context, w *world.World, origin string, prepa
 			if err != nil {
 				break
 			}
+			if request.URL.Query().Get("contacts") == "hidden" {
+				err = webListHideContacts(w, session["device_id"].(string))
+				if err != nil {
+					break
+				}
+			}
 			value = map[string]any{"session": session, "cookie": map[string]any{"name": client.cookie.Name, "value": client.cookie.Value, "url": origin, "httpOnly": true, "secure": client.cookie.Secure, "sameSite": "Strict"}}
 		case "/contact-avatar":
 			value, err = webAvatarFixture(w)
@@ -207,6 +214,27 @@ func webBrowserControl(ctx context.Context, w *world.World, origin string, prepa
 				avatar, err = webListFixture(w, request.URL.Query().Get("update") == "1")
 			}
 			value = map[string]any{"ok": err == nil, "fixture_setup_ms": time.Since(started).Milliseconds(), "fixture_flush_ms": avatar.FixtureFlushMS, "fixture_flush_budget_ms": avatar.FixtureFlushBudgetMS}
+		case "/list-filters":
+			err = webListFilterFixture(w)
+			value = map[string]any{"ok": err == nil}
+		case "/list-cache-delta":
+			var index int
+			index, err = strconv.Atoi(request.URL.Query().Get("index"))
+			if err == nil {
+				err = webListCacheDelta(w, index)
+			}
+			value = map[string]any{"ok": err == nil}
+		case "/list-filter-oracle":
+			value, err = webListFilterOracle(ctx, w, request.URL.Query().Get("contacts") == "hidden")
+		case "/list-filter-group":
+			err = webListFilterGroup(w, request.URL.Query().Get("known") != "0", request.URL.Query().Get("unread") != "0")
+			value = map[string]any{"ok": err == nil}
+		case "/list-empty":
+			err = webListEmptyFixture(ctx, w)
+			value = map[string]any{"ok": err == nil}
+		case "/list-pins":
+			err = webListPinFixture(w)
+			value = map[string]any{"ok": err == nil}
 		case "/list-late-incoming":
 			err = webListLateIncoming(w)
 			value = map[string]any{"ok": err == nil}

@@ -69,11 +69,7 @@ func NewFixture(ctx context.Context, options FixtureOptions, prepare func(*World
 	if options.GatewayBinary == "" {
 		options.GatewayBinary, _ = filepath.Abs("bin/bridge")
 	}
-	simulator, err := os.Executable()
-	if err != nil {
-		return nil, nil, FixtureMetrics{}, err
-	}
-	key, err := fixtureFingerprint(options.Kind+"\x00"+options.Key, options.GatewayBinary, simulator)
+	key, err := fixtureFingerprint(options.Kind+"\x00"+options.Key, options.GatewayBinary)
 	if err != nil {
 		return nil, nil, FixtureMetrics{}, err
 	}

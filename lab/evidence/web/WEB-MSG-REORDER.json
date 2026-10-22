@@ -1,0 +1,161 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[3.18 4.52 5.48] cpu_idle=80% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5J0B462776BXTHP6F0K4894",
+  "metrics": {
+    "browser_budget_ms": 180000,
+    "capture_observer_resets": 0,
+    "demo_messages": 5000,
+    "demo_startup_ms": 5562,
+    "fixture_setup_ms": 5562,
+    "fixture_snapshot": {
+      "disk_bytes": 30711808,
+      "entry_bytes": 30719616,
+      "cache_bytes": 0,
+      "blob_payloads": 59,
+      "key": "1ee03ac13adfe00f6a8c62d4adb611a03b727123223b789da078c388556b74e6",
+      "cache_hit": false,
+      "build_ms": 5508,
+      "copy_ms": 572,
+      "records": 6865,
+      "fresh_digest": "a29393cc57351d3f9a1d0880a95db553c2ae293b725e95fa7e646aa0de832906",
+      "copy_digest": "a29393cc57351d3f9a1d0880a95db553c2ae293b725e95fa7e646aa0de832906",
+      "verified": true,
+      "copy_method": "clonefile"
+    },
+    "matrix": [
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "chromium-light-phone",
+      "chromium-light-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-MSG-REORDER-webkit-light-phone-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-MSG-REORDER-webkit-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-REORDER-webkit-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-REORDER-chromium-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-REORDER-chromium-light-desktop-playwright.json"
+    ],
+    "server": "gateway",
+    "setups": [
+      {
+        "fixture_setup_ms": 5562,
+        "fixture_snapshot": {
+          "disk_bytes": 30711808,
+          "entry_bytes": 30719616,
+          "cache_bytes": 0,
+          "blob_payloads": 59,
+          "key": "1ee03ac13adfe00f6a8c62d4adb611a03b727123223b789da078c388556b74e6",
+          "cache_hit": false,
+          "build_ms": 5508,
+          "copy_ms": 572,
+          "records": 6865,
+          "fresh_digest": "a29393cc57351d3f9a1d0880a95db553c2ae293b725e95fa7e646aa0de832906",
+          "copy_digest": "a29393cc57351d3f9a1d0880a95db553c2ae293b725e95fa7e646aa0de832906",
+          "verified": true,
+          "copy_method": "clonefile"
+        },
+        "project": "webkit-light-phone"
+      },
+      {
+        "fixture_setup_ms": 5165,
+        "fixture_snapshot": {
+          "disk_bytes": 30679040,
+          "entry_bytes": 30686848,
+          "cache_bytes": 0,
+          "blob_payloads": 59,
+          "key": "1ee03ac13adfe00f6a8c62d4adb611a03b727123223b789da078c388556b74e6",
+          "cache_hit": false,
+          "build_ms": 5121,
+          "copy_ms": 575,
+          "records": 6865,
+          "fresh_digest": "276d033fc05a284faa8e386908e05e84649dd508a2c74a9923ac0e01279557c7",
+          "copy_digest": "276d033fc05a284faa8e386908e05e84649dd508a2c74a9923ac0e01279557c7",
+          "verified": true,
+          "copy_method": "clonefile"
+        },
+        "project": "webkit-light-desktop"
+      },
+      {
+        "fixture_setup_ms": 5310,
+        "fixture_snapshot": {
+          "disk_bytes": 30687232,
+          "entry_bytes": 30695040,
+          "cache_bytes": 0,
+          "blob_payloads": 59,
+          "key": "1ee03ac13adfe00f6a8c62d4adb611a03b727123223b789da078c388556b74e6",
+          "cache_hit": false,
+          "build_ms": 5267,
+          "copy_ms": 605,
+          "records": 6865,
+          "fresh_digest": "2eb610eb6a412b03198cb2da32e9732fcd5fc59cba47c3fcd98c9db919a21ef0",
+          "copy_digest": "2eb610eb6a412b03198cb2da32e9732fcd5fc59cba47c3fcd98c9db919a21ef0",
+          "verified": true,
+          "copy_method": "clonefile"
+        },
+        "project": "chromium-light-phone"
+      },
+      {
+        "fixture_setup_ms": 8295,
+        "fixture_snapshot": {
+          "disk_bytes": 30740480,
+          "entry_bytes": 30748288,
+          "cache_bytes": 0,
+          "blob_payloads": 59,
+          "key": "1ee03ac13adfe00f6a8c62d4adb611a03b727123223b789da078c388556b74e6",
+          "cache_hit": false,
+          "build_ms": 8225,
+          "copy_ms": 1144,
+          "records": 6865,
+          "fresh_digest": "714e459efbd30a44eef1cafe6adfb420eb2232f7d6b5fb2fefcadfc5b83de6bf",
+          "copy_digest": "714e459efbd30a44eef1cafe6adfb420eb2232f7d6b5fb2fefcadfc5b83de6bf",
+          "verified": true,
+          "copy_method": "clonefile"
+        },
+        "project": "chromium-light-desktop"
+      }
+    ],
+    "template_cold_setup_ms": {
+      "generate": 93,
+      "list": 1201,
+      "seed": 2661
+    }
+  },
+  "scenario": "WEB-MSG-REORDER",
+  "level": "web",
+  "passed": true,
+  "git_sha": "448155dab96415e80926775cc1981e8461651d84",
+  "at": "2026-10-22T14:30:48.770389Z",
+  "assertions": [
+    {
+      "name": "webkit-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/list.spec.ts:51:1 › WEB-MSG-REORDER live rows spring to the top and unread dots animate once (2.1s)\n\n  1 passed (2.9s)\n"
+    },
+    {
+      "name": "webkit-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/list.spec.ts:51:1 › WEB-MSG-REORDER live rows spring to the top and unread dots animate once (1.7s)\n\n  1 passed (2.4s)\n"
+    },
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/list.spec.ts:51:1 › WEB-MSG-REORDER live rows spring to the top and unread dots animate once (2.5s)\n\n  1 passed (3.3s)\n"
+    },
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/list.spec.ts:51:1 › WEB-MSG-REORDER live rows spring to the top and unread dots animate once (3.0s)\n\n  1 passed (5.1s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

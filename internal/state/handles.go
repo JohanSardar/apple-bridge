@@ -59,6 +59,8 @@ func handleSummary(ctx context.Context, tx *sql.Tx, v trust.Visibility, h contra
 		if err == nil {
 			out.ContactID = &cid
 			cd := modelFields(contact)
+			out.GivenName = fieldString(cd, "given_name")
+			out.FamilyName = fieldString(cd, "family_name")
 			parts := []string{}
 			for _, key := range []string{"given_name", "middle_name", "family_name"} {
 				if p := fieldString(cd, key); p != "" {

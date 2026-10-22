@@ -7,7 +7,7 @@ export type Route = {
     section?: string;
 };
 function parse(path: string): Route {
-    const parts = path.split('/').filter(Boolean).map(part => { try {
+    const parts = new URL(path,location.origin).pathname.split('/').filter(Boolean).map(part => { try {
         return decodeURIComponent(part);
     }
     catch {

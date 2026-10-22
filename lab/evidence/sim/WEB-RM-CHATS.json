@@ -1,19 +1,22 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[159.61 177.01 191.71] cpu_idle=50% cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[4.58 6.09 6.26] cpu_idle=81% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5HG94Y6TAYX0TFJ5DCVTSKF",
+  "run_id": "run_01M5J10QM0GM1B5JFKK0KNSD8N",
   "metrics": {
     "capture_observer_resets": 0,
     "chats": 500,
+    "latency_sample_gap_ms": 10,
+    "mcp_rate_limited_samples": 0,
+    "rest_rate_limited_samples": 0,
     "seed_messages": 1000
   },
   "scenario": "WEB-RM-CHATS",
   "level": "sim",
-  "passed": false,
-  "git_sha": "f3dd80ec8104e1e8f658680176645194a4b6e448",
-  "at": "2026-10-22T09:50:06.79098Z",
+  "passed": true,
+  "git_sha": "448155dab96415e80926775cc1981e8461651d84",
+  "at": "2026-10-22T14:42:36.800997Z",
   "assertions": [
     {
       "name": "synthetic_sim_seed_committed",
@@ -129,6 +132,50 @@
     },
     {
       "name": "mcp_handles_input_budget",
+      "passed": true
+    },
+    {
+      "name": "known_sender_fixture_true",
+      "passed": true
+    },
+    {
+      "name": "rest_known_sender_true_contacts_hidden_false_matches_server_filters",
+      "passed": true
+    },
+    {
+      "name": "rest_known_sender_true_contacts_hidden_true_matches_server_filters",
+      "passed": true
+    },
+    {
+      "name": "mcp_known_sender_true_contacts_hidden_false_matches_server_filters",
+      "passed": true
+    },
+    {
+      "name": "mcp_known_sender_true_contacts_hidden_true_matches_server_filters",
+      "passed": true
+    },
+    {
+      "name": "known_sender_fixture_false",
+      "passed": true
+    },
+    {
+      "name": "rest_known_sender_false_contacts_hidden_false_matches_server_filters",
+      "passed": true
+    },
+    {
+      "name": "rest_known_sender_false_contacts_hidden_true_matches_server_filters",
+      "passed": true
+    },
+    {
+      "name": "mcp_known_sender_false_contacts_hidden_false_matches_server_filters",
+      "passed": true
+    },
+    {
+      "name": "mcp_known_sender_false_contacts_hidden_true_matches_server_filters",
+      "passed": true
+    },
+    {
+      "name": "known_sender_original_title_fixture_restored",
       "passed": true
     },
     {
@@ -436,6 +483,54 @@
       "passed": true
     },
     {
+      "name": "pin_preview_60_outgoing_fixture",
+      "passed": true
+    },
+    {
+      "name": "rest_pin_preview_latest_unread_incoming_not_outgoing_or_removal",
+      "passed": true
+    },
+    {
+      "name": "mcp_pin_preview_latest_unread_incoming_not_outgoing_or_removal",
+      "passed": true
+    },
+    {
+      "name": "pin_preview_edit_capture",
+      "passed": true
+    },
+    {
+      "name": "rest_pin_preview_updates_with_read_model",
+      "passed": true
+    },
+    {
+      "name": "mcp_pin_preview_updates_with_read_model",
+      "passed": true
+    },
+    {
+      "name": "pin_preview_images_capture",
+      "passed": true
+    },
+    {
+      "name": "rest_pin_preview_attachment_wording",
+      "passed": true
+    },
+    {
+      "name": "mcp_pin_preview_attachment_wording",
+      "passed": true
+    },
+    {
+      "name": "pin_preview_read_capture",
+      "passed": true
+    },
+    {
+      "name": "rest_read_pin_preview_is_null",
+      "passed": true
+    },
+    {
+      "name": "mcp_read_pin_preview_is_null",
+      "passed": true
+    },
+    {
       "name": "replica_added_after_data_for_snapshot",
       "passed": true
     },
@@ -460,12 +555,20 @@
       "passed": true
     },
     {
+      "name": "rest_chats_requests_succeed",
+      "passed": true
+    },
+    {
       "name": "rest_chats_p95_budget",
-      "passed": false
+      "passed": true
+    },
+    {
+      "name": "mcp_chats_requests_succeed",
+      "passed": true
     },
     {
       "name": "mcp_chats_p95_budget",
-      "passed": false
+      "passed": true
     },
     {
       "name": "exact_participant_aliases",
@@ -631,16 +734,16 @@
   "latency": {
     "mcp_chats": {
       "samples": 100,
-      "p50_ms": 31.92375,
-      "p95_ms": 49.743458,
-      "max_ms": 79.004125,
+      "p50_ms": 9.422375,
+      "p95_ms": 12.708041,
+      "max_ms": 19.907625,
       "timeouts": 0
     },
     "rest_chats": {
       "samples": 100,
-      "p50_ms": 37.459583,
-      "p95_ms": 74.408625,
-      "max_ms": 136.114583,
+      "p50_ms": 8.864042,
+      "p95_ms": 12.502959,
+      "max_ms": 14.814083,
       "timeouts": 0
     }
   },

@@ -11,7 +11,7 @@ async function snapshot(page:Page){return page.evaluate(async()=>{
     while(!visited.has(after)){visited.add(after);const page=pages.find(page=>page.after===after);if(!page){missing=after;break;}chain.push(page);if(!page.next)break;after=page.next;}
     const materialized=values.find(value=>{try{const [view,version,filter]=JSON.parse(value.key);return view==='chats-snapshot'&&version===1&&filter==='all';}catch{return false;}});
     const ids=materialized?.data.chats?.map((row:any)=>row.chat.id)??chain.flatMap(page=>page.ids);
-    return {pages,chain,missing,count:new Set(ids).size,ids,materialized:materialized?{version:materialized.data.snapshot_version,cursor:materialized.cursor,bytes:new TextEncoder().encode(JSON.stringify(materialized)).length,complete:materialized.data.snapshot_complete}:null};
+    return {pages,chain,missing,count:new Set(ids).size,ids,materialized:materialized?{version:materialized.data.snapshot_version,cursor:materialized.cursor,bytes:new Blob([JSON.stringify(materialized)]).size,complete:materialized.data.snapshot_complete}:null};
 });}
 test('WEB-MSG-CHATS-CACHE offline reload keeps the complete reordered chat view',async({page,request},info)=>{
     let hold=false,tail=0;const subscriptions=new Map<string,any>(),wire:any[]=[],states:any[]=[];
@@ -42,12 +42,31 @@ test('WEB-MSG-CHATS-CACHE offline reload keeps the complete reordered chat view'
     }
 });
 
+test('WEB-MSG-CHATS-CACHE-BURST fifty live deltas coalesce snapshot construction and persist the final state',async({page,request},info)=>{
+    const subscriptions=new Map<string,any>(),buffer:(()=>void)[]=[];let hold=false,root='',held=0;
+    await page.addInitScript(()=>{const Original=TextEncoder;let builds=0;(window as any).__snapshotBuilds=()=>builds;window.TextEncoder=class extends Original{constructor(){super();builds++;}};});
+    await page.routeWebSocket('**/web/v1/live',route=>{const server=route.connectToServer();route.onMessage(message=>{const frame=JSON.parse(String(message));if(frame.t==='sub'&&frame.view==='chats'){subscriptions.set(frame.id,frame.args);if(frame.args.filter==='all'&&!frame.args.after)root=frame.id;}server.send(message);});server.onMessage(message=>{const frame=JSON.parse(String(message));if(hold&&frame.t==='delta'&&subscriptions.has(frame.sub)){if(frame.sub===root)held++;buffer.push(()=>route.send(message));}else route.send(message);});});
+    await page.goto('/__fixtures/live');await expect.poll(async()=>(await snapshot(page)).count).toBeGreaterThanOrEqual(540);
+    const total=Number(await page.getByLabel('Live count',{exact:true}).textContent());
+    hold=true;
+    for(let index=0;index<50;index++){await control(request,'/list-cache-delta?index='+index);await expect.poll(()=>held).toBeGreaterThanOrEqual(index+1);}
+    const before=await page.evaluate(()=>(window as any).__snapshotBuilds());hold=false;for(const send of buffer)send();
+    await expect(page.locator('.fixture>p[data-chat]').first()).toHaveText('Maya Chen');await expect(page.getByLabel('Latest preview',{exact:true})).toHaveText('[ab-test] Cache burst 49');
+    await expect.poll(async()=>{const data=await snapshot(page);return data.count===total&&data.ids.length===new Set(data.ids).size&&data.materialized&&await page.evaluate(async()=>{const db=await new Promise<IDBDatabase>(resolve=>{const open=indexedDB.open('ab.views');open.onsuccess=()=>resolve(open.result);});const value=await new Promise<any>(resolve=>{const read=db.transaction('views').objectStore('views').get(JSON.stringify(['chats-snapshot',1,'all']));read.onsuccess=()=>resolve(read.result);});db.close();return value?.data.chats[0]?.last_message?.preview?.text==='[ab-test] Cache burst 49';});}).toBe(true);
+    const builds=await page.evaluate(()=>(window as any).__snapshotBuilds())-before;expect(held).toBe(50);expect(builds).toBeGreaterThan(0);expect(builds).toBeLessThanOrEqual(4);
+    await mkdir('../lab/evidence/private/web/cache-chain',{recursive:true});await writeFile('../lab/evidence/private/web/cache-chain/burst-'+info.project.name+'.json',JSON.stringify({deltas:held,snapshot_builds:builds,rendered:total,cache:await snapshot(page)}));
+    await page.routeWebSocket('**/web/v1/live',()=>{});await page.reload();await expect(page.getByLabel('Live count',{exact:true})).toHaveText(String(total));expect((await snapshot(page)).ids).toHaveLength(total);
+});
+
 test('WEB-MSG-CHATS-CACHE device revocation wipes the materialized chats snapshot',async({page,request,browser})=>{
     const sent:any[]=[];page.on('websocket',socket=>socket.on('framesent',event=>{try{sent.push(JSON.parse(String(event.payload)));}catch{}}));
     const current=await page.request.get('/web/v1/session').then(response=>response.json());
     await page.goto('/__fixtures/live');await expect.poll(async()=>(await snapshot(page)).count).toBeGreaterThanOrEqual(540);
     const cursor=(await snapshot(page)).materialized!.cursor;sent.length=0;await page.reload();await expect.poll(()=>sent.some(frame=>frame.t==='sub'&&frame.view==='chats'&&!frame.args.after&&frame.cursor?.epoch===cursor.epoch&&frame.cursor?.sequence===cursor.sequence)).toBe(true);
     await expect(page.getByLabel('Live count',{exact:true})).toHaveText('577');
+    await page.goto('/sw.js');
+    await page.evaluate(async()=>{const db=await new Promise<IDBDatabase>(resolve=>{const open=indexedDB.open('ab.views');open.onsuccess=()=>resolve(open.result);});await new Promise<void>(resolve=>{const tx=db.transaction('views','readwrite'),store=tx.objectStore('views'),read=store.get(JSON.stringify(['chats-snapshot',1,'all']));read.onsuccess=()=>{const value=read.result;for(const row of value.data.chats)delete row.known_sender;store.put(value);};tx.oncomplete=()=>resolve();});db.close();});
+    sent.length=0;await page.goto('/__fixtures/live');await expect.poll(()=>sent.some(frame=>frame.t==='sub'&&frame.view==='chats'&&frame.args.filter==='all'&&!frame.args.after&&!frame.cursor)).toBe(true);await expect(page.getByLabel('Live count',{exact:true})).toHaveText('577');
     const controller=await browser.newContext({baseURL:process.env.AB_WEB_URL});try{
         await bootstrap(controller,request);const response=await controller.request.delete('/web/v1/devices/'+encodeURIComponent(current.device_id),{headers:{Origin:process.env.AB_WEB_URL!}});expect(response.ok()).toBe(true);
         await expect(page.getByRole('heading',{name:'Sign in with a passkey'})).toBeVisible();await expect.poll(()=>page.evaluate(()=>indexedDB.databases())).toEqual([]);

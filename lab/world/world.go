@@ -253,13 +253,9 @@ func newEnvironment(ctx context.Context, level string, replicas, seed int, nativ
 	if err != nil {
 		return nil, err
 	}
-	lab, err := os.Executable()
-	if err != nil {
-		return nil, err
-	}
 	id := strings.ToLower(contracts.NewID(""))
 	id = id[len(id)-10:]
-	w := &World{Dir: filepath.Join("/tmp/ablab", id), Level: level, Native: native, bridge: filepath.Join(root, "bin", "bridge"), lab: lab, ctx: ctx}
+	w := &World{Dir: filepath.Join("/tmp/ablab", id), Level: level, Native: native, bridge: filepath.Join(root, "bin", "bridge"), ctx: ctx}
 	if len(blobOptions) > 0 {
 		w.blobOptions = blobOptions[0]
 	}
@@ -282,6 +278,13 @@ func newEnvironment(ctx context.Context, level string, replicas, seed int, nativ
 			w.Close()
 		}
 	}()
+	w.lab = filepath.Join(w.Dir, "run", "bridge-lab")
+	if err = os.MkdirAll(filepath.Dir(w.lab), 0700); err != nil {
+		return nil, err
+	}
+	if err = stageExecutable(w.lab); err != nil {
+		return nil, err
+	}
 	w.previousSecretStore, w.previousSecretStoreSet = os.LookupEnv("APPLE_BRIDGE_SECRET_STORE")
 	w.secretOverride = true
 	os.Setenv("APPLE_BRIDGE_SECRET_STORE", "file")

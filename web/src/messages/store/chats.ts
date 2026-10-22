@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createSignal, onCleanup, type Accessor } from 'solid-js';
+import { createEffect, createMemo, createSignal, createRoot, onCleanup, type Accessor } from 'solid-js';
 import type { LiveClient } from '../../data/live';
 import type { ChatSummary, Cursor } from '../../data/types';
 import { viewCache } from '../../data/cache';
@@ -17,20 +17,47 @@ function boundedSnapshot(rows:ChatSummary[]){
     for(const row of rows.slice(0,2000)){const size=encoder.encode(JSON.stringify(row)).byteLength+1;if(bytes+size>2*1024*1024-1024)break;chats.push(row);bytes+=size;}
     return {chats,snapshot_version:1,snapshot_complete:chats.length===rows.length};
 }
+function createSnapshotWriter() {
+    type Scheduler={postTask:(callback:()=>void,options:{priority:'background';signal:AbortSignal})=>Promise<void>};
+    const scheduler=(window as Window&{scheduler?:Scheduler}).scheduler;
+    let pending:{key:string;rows:ChatSummary[];cursor?:Cursor}|undefined,timer=0,frame=0,last=performance.now(),disposed=false,task:AbortController|undefined,saved:ChatSummary[]|undefined;
+    const flush=()=>{
+        clearTimeout(timer);cancelAnimationFrame(frame);task?.abort();task=undefined;timer=frame=0;
+        if(disposed||!pending)return;
+        const current=pending;pending=undefined;saved=current.rows;last=performance.now();
+        void viewCache.write(current.key,boundedSnapshot(current.rows),current.cursor).catch(()=>{if(saved===current.rows)saved=undefined;});
+    };
+    const hidden=()=>{if(document.hidden)flush();};
+    window.addEventListener('pagehide',flush);document.addEventListener('visibilitychange',hidden);
+    onCleanup(()=>{disposed=true;pending=undefined;clearTimeout(timer);cancelAnimationFrame(frame);task?.abort();window.removeEventListener('pagehide',flush);document.removeEventListener('visibilitychange',hidden);});
+    return (key:string,rows:ChatSummary[],cursor?:Cursor)=>{
+        if(saved===rows&&!pending)return;
+        pending={key,rows,cursor};
+        if(timer||frame||task)return;
+        timer=window.setTimeout(()=>{
+            timer=0;
+            if(document.hidden){flush();return;}
+            if(scheduler){task=new AbortController();void scheduler.postTask(()=>{task=undefined;flush();},{priority:'background',signal:task.signal}).catch(()=>{});return;}
+            frame=requestAnimationFrame(()=>{frame=0;timer=window.setTimeout(flush,0);});
+        },Math.max(0,500-(performance.now()-last)));
+    };
+}
 function createChatView(live: LiveClient, filter: Accessor<ChatFilter | undefined>) {
     type Page={after?:string;view:ReturnType<LiveClient['subscribe']>};
     const [pages,setPages]=createSignal<Page[]>([]),[delayed,setDelayed]=createSignal(false);
     const [ready,setReady]=createSignal(false);
-    let complete:ChatSummary[]=[],completeKnown=false,cachedCursor:Cursor|undefined;
+    let complete:ChatSummary[]=[],cachedCursor:Cursor|undefined;
+    const [completeKnown,setCompleteKnown]=createSignal(false);
+    const persist=createSnapshotWriter();
     createEffect(()=>{
         const value=filter();
-        complete=[];completeKnown=false;cachedCursor=undefined;setReady(false);setPages([]);setDelayed(false);
+        complete=[];setCompleteKnown(false);cachedCursor=undefined;setReady(false);setPages([]);setDelayed(false);
         if(!value){setReady(true);return;}
         let active=true;
         const timer=setTimeout(()=>setDelayed(true),150);
         void viewCache.read(JSON.stringify(['chats-snapshot',1,value])).then(cached=>{
             if(!active)return;
-            if(cached?.data.snapshot_version===1&&cached.data.chats){complete=cached.data.chats;completeKnown=true;cachedCursor=cached.cursor;}
+            if(cached?.data.snapshot_version===1&&cached.data.chats){complete=cached.data.chats;setCompleteKnown(cached.data.snapshot_complete===true&&complete.every(chat=>typeof chat.known_sender==='boolean'));cachedCursor=completeKnown()?cached.cursor:undefined;}
         }).catch(()=>{}).then(()=>{
             if(!active)return;
             setPages([{view:live.subscribe('chats',{filter:value,limit:200},{cache:false,cursor:cachedCursor})}]);setReady(true);
@@ -50,45 +77,54 @@ function createChatView(live: LiveClient, filter: Accessor<ChatFilter | undefine
             break;
         }
     });
-    const rows=createMemo(()=>{
+    const rows=createMemo<ChatSummary[]>((previous)=>{
         if(!ready())return [];
         const unique=new Map<string,ChatSummary>();
-        for(const page of pages())for(const chat of page.view.data().chats??[])if(chat.chat?.id&&!chat.chat.data.is_archived&&!unique.has(chat.chat.id)){const pinned=chat.chat.data.pinned_index;unique.set(chat.chat.id,chat.pinned_index==null&&typeof pinned==='number'?{...chat,pinned_index:pinned}:chat);}
+        for(const page of pages())for(const chat of page.view.data().chats??[])if(chat.chat?.id&&(filter()==='deleted'||!chat.chat.data.is_archived)&&!unique.has(chat.chat.id)){const pinned=chat.chat.data.pinned_index;unique.set(chat.chat.id,chat.pinned_index==null&&typeof pinned==='number'?{...chat,pinned_index:pinned}:chat);}
         const current=pages(),last=current.at(-1)?.view.data();
         const cursor=current[0]?.view.cursor();
         const pending=current.some(page=>{const next=page.view.cursor();return !cursor||!next||next.epoch!==cursor.epoch||next.sequence!==cursor.sequence;})||current.some((page,index)=>!page.view.data().chats||page.view.data().next!==current[index+1]?.after)||Boolean(last?.next);
         if(pending)for(const chat of complete)if(!unique.has(chat.chat.id))unique.set(chat.chat.id,chat);
         const ordered=[...unique.values()].sort((a,b)=>(Date.parse(b.last_activity_at)||0)-(Date.parse(a.last_activity_at)||0)||a.chat.id.localeCompare(b.chat.id));
-        if(!pending){complete=ordered;completeKnown=true;}
-        return ordered;
-    });
+        if(!pending){complete=ordered;setCompleteKnown(true);}
+        return ordered.length===previous.length&&ordered.every((row,index)=>row===previous[index])?previous:ordered;
+    },[]);
     createEffect(()=>{
         const value=filter(),current=rows(),cursor=pages()[0]?.view.cursor()??cachedCursor;
-        if(value&&ready()&&completeKnown)void viewCache.write(JSON.stringify(['chats-snapshot',1,value]),boundedSnapshot(current),cursor).catch(()=>{});
+        if(value&&ready()&&completeKnown())persist(JSON.stringify(['chats-snapshot',1,value]),current,cursor);
     });
-    return {rows,loading:()=>{rows();return !ready()||(!completeKnown&&!pages()[0]?.view.data().chats);},delayed};
+    return {rows,loading:()=>{rows();return !ready()||!completeKnown();},delayed};
 }
-export function createChatsStore(live: LiveClient) {
+function buildChatsStore(live: LiveClient) {
     const [filter,setFilter]=createSignal<ChatFilter>('all');
     const all=createChatView(live,()=> 'all');
-    const filtered=createChatView(live,()=>filter()==='all'?undefined:filter());
-    const visibleAll=createMemo(()=>all.rows().filter(chat=>!chat.chat.data.deleted_at));
-    const cachedFilter=createMemo(()=>{
-        const value=filter();
-        return all.rows().filter(chat=>{
-            const data=chat.chat.data;
-            if(value==='deleted')return Boolean(data.deleted_at);
-            if(data.deleted_at)return false;
-            if(value==='unread')return chat.unread_count>0;
-            const linked=(chat.avatar_handles??[]).some(handle=>Boolean(handle.contact_id));
-            if(value==='known')return (data.filter??'known')==='known'||linked;
-            if(value==='unknown')return data.filter==='unknown'&&!linked;
-            if(value==='spam')return data.is_spam===true;
-            return true;
-        });
+    const [specials,setSpecials]=createSignal(false);
+    let timer=0;
+    const frame=requestAnimationFrame(()=>{timer=window.setTimeout(()=>setSpecials(true),0);});
+    onCleanup(()=>{cancelAnimationFrame(frame);clearTimeout(timer);});
+    const deleted=createChatView(live,()=>specials()?'deleted':undefined),spam=createChatView(live,()=>specials()?'spam':undefined);
+    const buckets=createMemo(()=>{
+        const result:{all:ChatSummary[];known:ChatSummary[];unknown:ChatSummary[];unread:ChatSummary[]}={all:[],known:[],unknown:[],unread:[]};
+        for(const chat of all.rows()){
+            if(chat.chat.data.deleted_at)continue;
+            result.all.push(chat);
+            if(typeof chat.known_sender==='boolean')result[chat.known_sender?'known':'unknown'].push(chat);
+            if(chat.unread_count>0)result.unread.push(chat);
+        }
+        return result;
     });
-    const rows=()=>filter()==='all'?visibleAll():filtered.loading()?cachedFilter():filtered.rows();
-    const unread=createMemo(()=>visibleAll().filter(row=>row.unread_count>0).length);
-    return {all:visibleAll,rows,filter,setFilter,unread,loading:()=>filter()==='all'?all.loading():filtered.loading()&&cachedFilter().length===0,delayed:()=>filter()==='all'?all.delayed():filtered.delayed()};
+    const visibleAll=()=>buckets().all;
+    const rows=()=>{const value=filter();return value==='deleted'?deleted.rows():value==='spam'?spam.rows():buckets()[value];};
+    const unread=createMemo(()=>buckets().unread.length);
+    const active=()=>filter()==='deleted'?deleted:filter()==='spam'?spam:all;
+    return {all:visibleAll,rows,filter,setFilter,unread,loading:()=>active().loading(),delayed:()=>active().delayed()};
+}
+const stores=new WeakMap<LiveClient,{store:ReturnType<typeof buildChatsStore>;dispose:()=>void;users:number}>();
+export function createChatsStore(live:LiveClient){
+    let entry=stores.get(live);
+    if(!entry){let dispose=()=>{};const store=createRoot(release=>{dispose=release;return buildChatsStore(live);});entry={store,dispose,users:0};stores.set(live,entry);}
+    const shared=entry;shared.users++;
+    onCleanup(()=>{shared.users--;if(!shared.users){shared.dispose();stores.delete(live);}});
+    return shared.store;
 }
 export type ChatsStore=ReturnType<typeof createChatsStore>;

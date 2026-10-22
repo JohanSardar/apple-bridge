@@ -26,17 +26,16 @@ func fixtureFileDigest(path string) (string, error) {
 	return hex.EncodeToString(hash.Sum(nil)), nil
 }
 
-func fixtureFingerprint(inputs, gateway, simulator string) (string, error) {
+func fixtureFingerprint(inputs, gateway string) (string, error) {
 	gatewayHash, err := fixtureFileDigest(gateway)
 	if err != nil {
 		return "", err
 	}
-	simulatorHash, err := fixtureFileDigest(simulator)
-	if err != nil {
-		return "", err
+	if labImage.err != nil {
+		return "", labImage.err
 	}
 	inputHash := sha256.Sum256([]byte(inputs))
-	raw, _ := json.Marshal([]string{"fixture-v1", runtime.Version(), hex.EncodeToString(inputHash[:]), gatewayHash, simulatorHash})
+	raw, _ := json.Marshal([]string{"fixture-v1", runtime.Version(), hex.EncodeToString(inputHash[:]), gatewayHash, labImage.digest})
 	sum := sha256.Sum256(raw)
 	return hex.EncodeToString(sum[:]), nil
 }

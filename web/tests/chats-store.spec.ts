@@ -1,7 +1,7 @@
 import { expect } from '@playwright/test';
 import { test } from './list-session';
 import { control } from './session';
-test('WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages',async({page,request})=>{
+test('WEB-MSG-CHATS-STORE paged live chats, stable filter transport, unread totals and moves across pages',async({page,request})=>{
     let holdRoot=false;const roots=new Set<string>();
     await page.routeWebSocket('**/web/v1/live',route=>{const server=route.connectToServer();route.onMessage(message=>{const frame=JSON.parse(String(message));if(frame.t==='sub'&&frame.view==='chats'&&!frame.args?.after)roots.add(frame.id);server.send(message);});server.onMessage(message=>{const frame=JSON.parse(String(message));if(holdRoot&&frame.t==='delta'&&roots.has(frame.sub))setTimeout(()=>route.send(message),120);else route.send(message);});});
     const frames:any[]=[];page.on('websocket',socket=>socket.on('framesent',event=>{try{frames.push(JSON.parse(String(event.payload)));}catch{}}));
@@ -11,14 +11,18 @@ test('WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals an
     await expect.poll(async()=>Number(await unread.textContent())).toBeGreaterThanOrEqual(270);
     const total=Number(await count.textContent()),beforeUnread=Number(await unread.textContent());
     expect(await page.locator('.fixture>p').evaluateAll(elements=>{const names=elements.map(element=>element.textContent);return names.indexOf('Conversation 009')<names.indexOf('Conversation 008');})).toBe(true);
+    await expect.poll(()=>new Set(frames.filter(frame=>frame.t==='sub'&&frame.view==='chats'&&!frame.args?.after&&['deleted','spam'].includes(frame.args?.filter)).map(frame=>frame.args.filter)).size).toBe(2);
+    const transport=frames.filter(frame=>frame.t==='sub'&&frame.view==='chats').map(frame=>frame.id).sort();
+    await page.getByLabel('Chat filter',{exact:true}).selectOption('unread');await expect.poll(async()=>Number(await count.textContent())).toBeLessThan(total);await expect.poll(async()=>Number(await count.textContent())).toBeGreaterThan(0);expect(frames.filter(frame=>frame.t==='sub'&&frame.view==='chats').map(frame=>frame.id).sort()).toEqual(transport);
+    await page.getByLabel('Chat filter',{exact:true}).selectOption('known');await expect.poll(async()=>Number(await count.textContent())).toBeGreaterThan(0);expect(frames.filter(frame=>frame.t==='sub'&&frame.view==='chats').map(frame=>frame.id).sort()).toEqual(transport);
+    await page.getByLabel('Chat filter',{exact:true}).selectOption('all');await expect(count).toHaveText(String(total));
     const seen:number[]=[];await count.evaluate(element=>{(window as any).__chatCounts=[];(window as any).__chatUnique=[];new MutationObserver(()=>{const ids=Array.from(document.querySelectorAll('.fixture>p[data-chat]'),row=>(row as HTMLElement).dataset.chat);(window as any).__chatCounts.push(Number(element.textContent));(window as any).__chatUnique.push(ids.length===new Set(ids).size&&ids.length===Number(element.textContent));}).observe(element.closest('main')!,{childList:true,subtree:true,characterData:true});});
     holdRoot=true;await control(request,'/list-late-incoming');await expect(page.locator('.fixture>p').first()).toHaveText('Conversation 539');
     await expect(unread).toHaveText(String(beforeUnread+1));await expect(count).toHaveText(String(total));
     seen.push(...await page.evaluate(()=>(window as any).__chatCounts));expect(seen,JSON.stringify({total,seen:[...new Set(seen)]})).toEqual(seen.map(()=>total));
     expect(await page.evaluate(()=>(window as any).__chatUnique.every(Boolean))).toBe(true);
-    await page.getByLabel('Chat filter',{exact:true}).selectOption('unread');await expect.poll(async()=>Number(await count.textContent())).toBeLessThan(total);await expect.poll(async()=>Number(await count.textContent())).toBeGreaterThan(0);await expect.poll(()=>frames.some(frame=>frame.t==='sub'&&frame.args?.filter==='unread')).toBe(true);
-    await page.getByLabel('Chat filter',{exact:true}).selectOption('known');await expect.poll(async()=>Number(await count.textContent())).toBeGreaterThan(0);await expect.poll(()=>frames.some(frame=>frame.t==='sub'&&frame.args?.filter==='known')).toBe(true);
-    await page.getByLabel('Chat filter',{exact:true}).selectOption('all');await expect(count).toHaveText(String(total));
+    expect(frames.filter(frame=>frame.t==='sub'&&frame.view==='chats'&&!frame.args?.after&&frame.args?.filter==='all')).toHaveLength(1);
+    expect(frames.filter(frame=>frame.t==='sub'&&frame.view==='chats'&&['known','unknown','unread'].includes(frame.args?.filter))).toEqual([]);
     const root=frames.find(frame=>frame.t==='sub'&&frame.view==='chats'&&!frame.args?.after&&frame.args?.filter==='all').id;frames.length=0;
     await page.getByRole('button',{name:'Reconnect live view'}).click();await expect(page.getByRole('status',{name:'Connection'})).toHaveText('connected');await expect.poll(()=>frames.some(frame=>frame.t==='sub'&&frame.id===root&&frame.cursor)).toBe(true);await expect(count).toHaveText(String(total));
     await page.routeWebSocket('**/web/v1/live',()=>{});await page.reload();await expect(count).toHaveText(String(total));

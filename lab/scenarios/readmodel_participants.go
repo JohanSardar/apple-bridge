@@ -12,7 +12,7 @@ import (
 	"github.com/JohanSardar/apple-bridge/lab/world"
 )
 
-func rmExactParticipants(ctx context.Context, w *world.World, add func(string, bool)) {
+func rmExactParticipants(ctx context.Context, w *world.World, add func(string, bool)) error {
 	addresses := []string{"participant.a@example.com", "participant.b@example.com", "participant.c@example.com"}
 	records := []contracts.Observation{}
 	for index, key := range []string{"a", "b", "c"} {
@@ -32,9 +32,10 @@ func rmExactParticipants(ctx context.Context, w *world.World, add func(string, b
 	records = append(records, chat("a", "a"), chat("ab", "a", "b"), chat("abc", "a", "b", "c"))
 	if err := rmPut(w, records...); err != nil {
 		add("exact_participant_fixture", false)
-		return
+		return err
 	}
 	aliases, err := gatewayAliases(w)
+	aliasError := err
 	add("exact_participant_aliases", err == nil)
 	queries := []struct {
 		name    string
@@ -106,5 +107,7 @@ func rmExactParticipants(ctx context.Context, w *world.World, add func(string, b
 	add("participant_index_migration_restart", w.RestartGateway() == nil)
 	check("rebuilt_address", []string{"participant.changed@example.com"}, "a")
 	check("rebuilt_membership", []string{"participant.changed@example.com", addresses[2]}, "ab")
+
+	return aliasError
 
 }

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os/exec"
 	"path/filepath"
 	"reflect"
@@ -168,6 +169,7 @@ func runReadModels(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "WEB-RM-CHATS" {
 		rmPreviews(ctx, w, chatID, add)
 		rmRichFilters(ctx, w, chatID, add)
+		rmPinPreview(ctx, w, add)
 	}
 	if s.ID == "WEB-RM-CHATS" {
 		add("replica_added_after_data_for_snapshot", w.AddReplicaScope("messages:read,contacts:read,system:read") == nil)
@@ -179,6 +181,38 @@ func runReadModels(ctx context.Context, s Scenario, level string) Evidence {
 				err := (scripted.Client{Endpoint: w.Replicas[0]}).Call(ctx, "messages.chats", contracts.ChatsQuery{Limit: 200}, &got)
 				return err == nil && reflect.DeepEqual(want.Chats, got.Chats)
 			})
+			if err != nil {
+				wanted, actual := map[string]contracts.ChatSummary{}, map[string]contracts.ChatSummary{}
+				for _, row := range want.Chats {
+					wanted[row.Chat.ID] = row
+				}
+				for _, row := range got.Chats {
+					actual[row.Chat.ID] = row
+				}
+				missing, extra := 0, 0
+				differing := map[string]int{}
+				for id, row := range wanted {
+					other, ok := actual[id]
+					if !ok {
+						missing++
+						continue
+					}
+					left, right := map[string]any{}, map[string]any{}
+					json.Unmarshal(mustJSON(row), &left)
+					json.Unmarshal(mustJSON(other), &right)
+					for field, value := range left {
+						if !reflect.DeepEqual(value, right[field]) {
+							differing[field]++
+						}
+					}
+				}
+				for id := range actual {
+					if _, ok := wanted[id]; !ok {
+						extra++
+					}
+				}
+				e.Metrics["snapshot_rebuild_diagnostic"] = map[string]any{"gateway_count": len(want.Chats), "replica_count": len(got.Chats), "missing": missing, "extra": extra, "different_fields": differing, "gateway_sequence": want.Cursor.Sequence, "replica_sequence": got.Cursor.Sequence}
+			}
 			add("snapshot_rebuild_matches_gateway", err == nil)
 			rmPut(w, rmMessage("rm-live-replica", time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC), nil))
 			c.Call(ctx, "messages.chats", contracts.ChatsQuery{Limit: 200}, &want)
@@ -198,9 +232,18 @@ func runReadModels(ctx context.Context, s Scenario, level string) Evidence {
 	}
 	for _, protocol := range []string{"rest", "mcp"} {
 		c := scripted.Client{Endpoint: w.Gateway, Protocol: protocol}
+		rateLimited := 0
+		c.Observe = func(_ http.Header, raw []byte) {
+			if len(raw) <= 32 && strings.TrimSpace(string(raw)) == "rate limited" {
+				rateLimited++
+			}
+		}
 		durations := []float64{}
 		ok := true
 		for i := 0; i < 100; i++ {
+			if s.ID == "WEB-RM-CHATS" {
+				time.Sleep(10 * time.Millisecond)
+			}
 			start := time.Now()
 			if s.ID == "WEB-RM-CHATS" {
 				var r contracts.ChatsResult
@@ -216,14 +259,23 @@ func runReadModels(ctx context.Context, s Scenario, level string) Evidence {
 		name := protocol + "_" + strings.ToLower(strings.TrimPrefix(s.ID, "WEB-RM-"))
 		latency := stats(durations, 0)
 		e.Latency[name] = latency
+		e.Metrics[protocol+"_rate_limited_samples"] = rateLimited
 		budget := 15.0
 		if s.ID == "WEB-RM-THREAD" {
 			budget = 10
 		}
+		if s.ID == "WEB-RM-CHATS" {
+			add(name+"_requests_succeed", ok)
+		}
 		add(name+"_p95_budget", ok && latency.P95 <= budget)
 	}
 	if s.ID == "WEB-RM-CHATS" {
-		rmExactParticipants(ctx, w, add)
+		if err := rmExactParticipants(ctx, w, add); err != nil {
+			e.Metrics["exact_participant_aliases_error"] = err.Error()
+		}
+	}
+	if s.ID == "WEB-RM-CHATS" {
+		e.Metrics["latency_sample_gap_ms"] = 10
 	}
 	e.Metrics["chats"] = 500
 	if s.ID == "WEB-RM-THREAD" {
@@ -414,6 +466,8 @@ func rmNames(ctx context.Context, w *world.World, chatID string, add func(string
 	handles = append(handles, chat("", participants))
 	add("handle_contact_title_capture", rmPut(w, handles...) == nil)
 	rmHandles(ctx, w, add)
+	rmKnownSender(ctx, w, chatID, add)
+	add("known_sender_original_title_fixture_restored", rmPut(w, chat("", participants)) == nil)
 	messageOnly := w.Gateway
 	token, err := w.ScopedToken(w.Gateway, "messages:read")
 	messageOnly.Token = token

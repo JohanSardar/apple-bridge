@@ -146,7 +146,7 @@ test('WEB-PERF-SHELL bundle, layout stability, navigation and warm cache budgets
     const cacheableBytes = await compressedBytes([...new Set([...precacheFiles, ...assetFiles.map(file => 'assets/' + file)])]);
     expect(cacheableBytes).toBeLessThanOrEqual(600 * 1024);
     await page.addInitScript(() => {
-        const metrics = { cls: 0, cachedContentAt: null as number|null, clsSupported:PerformanceObserver.supportedEntryTypes.includes('layout-shift'), longTasks: [] as number[], frames: [] as number[], clickWork:[] as number[], firstFrame:[] as number[], inputAt:0, longTaskSupported:PerformanceObserver.supportedEntryTypes.includes('longtask') };
+        const metrics = { cls: 0, layoutShifts: [] as unknown[], cachedContentAt: null as number|null, clsSupported:PerformanceObserver.supportedEntryTypes.includes('layout-shift'), longTasks: [] as number[], frames: [] as number[], clickWork:[] as number[], firstFrame:[] as number[], inputAt:0, longTaskSupported:PerformanceObserver.supportedEntryTypes.includes('longtask') };
         new MutationObserver(()=>{if(metrics.cachedContentAt!==null)return;const content=document.querySelector('[aria-label="Live count"]');if(!content||Number(content.textContent)<=0)return;metrics.cachedContentAt=-1;requestAnimationFrame(()=>requestAnimationFrame(()=>{metrics.cachedContentAt=performance.now();}));}).observe(document,{childList:true,subtree:true,characterData:true});
         const events=new WeakMap<Event,number>();
         window.addEventListener('click',event=>{if(event.isTrusted){metrics.inputAt=performance.now();events.set(event,metrics.inputAt);metrics.frames=[];metrics.longTasks=[];last=0;}},{capture:true});
@@ -157,20 +157,20 @@ test('WEB-PERF-SHELL bundle, layout stability, navigation and warm cache budgets
         (window as any).__metrics = metrics;
         if (PerformanceObserver.supportedEntryTypes.includes('layout-shift'))
             new PerformanceObserver(list => { for (const entry of list.getEntries())
-                if (!(entry as any).hadRecentInput)
-                    metrics.cls += (entry as any).value; }).observe({ type: 'layout-shift', buffered: true });
+                if (!(entry as any).hadRecentInput){
+                    metrics.cls += (entry as any).value;metrics.layoutShifts.push({at:entry.startTime,value:(entry as any).value,sources:(entry as any).sources.map((source:any)=>({node:source.node?.nodeName,class:source.node?.className,text:source.node?.textContent?.slice(0,100),previous:source.previousRect,current:source.currentRect}))});} }).observe({ type: 'layout-shift', buffered: true });
         if (PerformanceObserver.supportedEntryTypes.includes('longtask'))
             new PerformanceObserver(list => { for (const entry of list.getEntries())
                 metrics.longTasks.push(entry.duration); }).observe({ type: 'longtask', buffered: true });
     });
     await page.goto('/messages');
-    await page.getByText('No Messages', { exact: true }).waitFor();
+    await page.getByRole('listbox', { name: 'Conversations' }).waitFor();
     await page.waitForTimeout(200);
     const idleFrames=await page.evaluate(async()=>{for(let i=0;i<180;i++)await new Promise<void>(resolve=>requestAnimationFrame(()=>resolve()));return (window as any).__metrics.frames.slice(-179) as number[];});
-    await page.getByRole('button', { name: 'New Message', exact: true }).click();
-    await page.getByText('No Conversation Selected', { exact: true }).waitFor();
+    await page.locator('.conversation-row').first().click();
+    await expect(page.locator('main.transcript')).toBeVisible();
     const navigation = await page.evaluate(async()=>{for(let i=0;i<180;i++)await new Promise<void>(resolve=>requestAnimationFrame(()=>resolve()));return (window as any).__metrics;});
-    await metrics('WEB-PERF-NAVIGATION',info.project.name,{idle_frames:stats(idleFrames),navigation_frames:stats(navigation.frames),click_dispatch:stats(navigation.clickWork),input_to_first_frame:stats(navigation.firstFrame),long_tasks:navigation.longTaskSupported?navigation.longTasks:null,long_task_observer:navigation.longTaskSupported});
+    await metrics('WEB-PERF-NAVIGATION',info.project.name,{cls:navigation.cls,layout_shifts:navigation.layoutShifts,idle_frames:stats(idleFrames),navigation_frames:stats(navigation.frames),click_dispatch:stats(navigation.clickWork),input_to_first_frame:stats(navigation.firstFrame),long_tasks:navigation.longTaskSupported?navigation.longTasks:null,long_task_observer:navigation.longTaskSupported});
     if(navigation.clsSupported)expect(navigation.cls).toBe(0);
     if(navigation.longTaskSupported)expect(navigation.longTasks.filter((value:number)=>value>50)).toEqual([]);
     await page.goto('/__fixtures/live');

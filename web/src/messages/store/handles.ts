@@ -25,16 +25,16 @@ function buildCache(live:LiveClient,capacity:number) {
     const resolved=new Set<string>(),inFlight=new Set<string>(),pending=new Set<string>(),fallbackPending=new Set<string>();
     let frame = 0, fallbackFrame=0, unavailable=false, stopped=false, resolving=false;
     function evict(id:string){resolved.delete(id);subscriptions.get(id)?.dispose();subscriptions.delete(id);}
-    function put(id: string, data: Record<string,unknown>) {
+    function put(id: string, data: Record<string,unknown>,confirmed=false) {
         const display = text(data.display_name ?? data.full_name ?? data.name ?? data.address);
         if (!id||!display) return;
         const avatar=fields(data.avatar),digest=text(avatar.digest);
         setHandles(previous => {
-            const old=previous.get(id),contact_id=text(data.contact_id)||old?.contact_id;
-            if(old?.display_name===display&&(!digest||old?.avatar?.digest===digest)&&old?.contact_id===contact_id)return previous;
+            const old=previous.get(id),contact_id=text(data.contact_id)||old?.contact_id,given_name=text(data.given_name)||old?.given_name,family_name=text(data.family_name)||old?.family_name,name_resolved=confirmed||old?.name_resolved===true;
+            if(old?.display_name===display&&(!digest||old?.avatar?.digest===digest)&&old?.contact_id===contact_id&&old?.given_name===given_name&&old?.family_name===family_name&&old?.name_resolved===name_resolved)return previous;
             const next = new Map(previous);
             next.delete(id);
-            next.set(id,{id,display_name:display,initials:text(data.initials)||initials(display),address:text(data.address)||old?.address,contact_id,avatar:digest?{digest,variant:text(avatar.variant)||'thumb'}:old?.avatar});
+            next.set(id,{id,name_resolved,display_name:display,given_name,family_name,initials:text(data.initials)||initials(display),address:text(data.address)||old?.address,contact_id,avatar:digest?{digest,variant:text(avatar.variant)||'thumb'}:old?.avatar});
             while(next.size>capacity){const key=next.keys().next().value!;next.delete(key);evict(key);}
             return next;
         });
@@ -64,7 +64,7 @@ function buildCache(live:LiveClient,capacity:number) {
             if(unavailable){fallback(ids);return;}
             const result=await api<{handles:Record<string,unknown>[]}>('handles',{ids});
             if(stopped)return;
-            for(const handle of result.handles){const id=text(handle.handle_id);put(id,handle);if(untrack(handles).has(id))resolved.add(id);}
+            for(const handle of result.handles){const id=text(handle.handle_id);put(id,handle,true);if(untrack(handles).has(id))resolved.add(id);}
         }catch(error){
             if(error instanceof APIError&&[400,404,501].includes(error.status))unavailable=true;
             fallback(ids);
@@ -84,7 +84,7 @@ function buildCache(live:LiveClient,capacity:number) {
     }
     function read() {
         revision();
-        for(const [id,subscription] of subscriptions){const data=subscription.data();if(data.records===undefined)continue;const record=data.records[0];if(record)put(id,record.data);resolved.add(id);subscription.dispose();subscriptions.delete(id);}
+        for(const [id,subscription] of subscriptions){const data=subscription.data();if(data.records===undefined)continue;const record=data.records[0];if(record)put(id,record.data,true);resolved.add(id);subscription.dispose();subscriptions.delete(id);}
         scheduleFallback();
         return handles();
     }

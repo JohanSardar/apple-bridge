@@ -1,27 +1,27 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[94.97 110.79 110.94] cpu_idle=50% cpus=8 other_heavy=2"
+    "quiet": true,
+    "summary": "air: load=[6.23 6.63 6.45] cpu_idle=54% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5HDZEDEG9Y2Q7XV93AN27G0",
+  "run_id": "run_01M5J0YX1X2KDDQASZ52BNPF9S",
   "metrics": {
     "browser_budget_ms": 180000,
     "capture_observer_resets": 0,
     "demo_messages": 5000,
-    "demo_startup_ms": 58856,
-    "fixture_setup_ms": 58856,
+    "demo_startup_ms": 7940,
+    "fixture_setup_ms": 7940,
     "fixture_snapshot": {
-      "disk_bytes": 29716480,
-      "entry_bytes": 29724288,
-      "cache_bytes": 29728512,
+      "disk_bytes": 30621696,
+      "entry_bytes": 30629504,
+      "cache_bytes": 0,
       "blob_payloads": 59,
-      "key": "a40beb343a5ae684eea67e2d9a2726b9f96660b27c8a0027851bdbab922a54d0",
+      "key": "1ee03ac13adfe00f6a8c62d4adb611a03b727123223b789da078c388556b74e6",
       "cache_hit": false,
-      "build_ms": 58360,
-      "copy_ms": 879,
-      "records": 6863,
-      "fresh_digest": "a5a51d7a5d1a4bd81f120af51edf362b80f1c9ff496159da954d19730c105d0a",
-      "copy_digest": "a5a51d7a5d1a4bd81f120af51edf362b80f1c9ff496159da954d19730c105d0a",
+      "build_ms": 7883,
+      "copy_ms": 725,
+      "records": 6865,
+      "fresh_digest": "f4f9346bae5a4a26ff2128770d2a1a940db814adb6da77b41c355d547e6e188b",
+      "copy_digest": "f4f9346bae5a4a26ff2128770d2a1a940db814adb6da77b41c355d547e6e188b",
       "verified": true,
       "copy_method": "clonefile"
     },
@@ -41,76 +41,76 @@
     "server": "gateway",
     "setups": [
       {
-        "fixture_setup_ms": 58856,
+        "fixture_setup_ms": 7940,
         "fixture_snapshot": {
-          "disk_bytes": 29716480,
-          "entry_bytes": 29724288,
-          "cache_bytes": 29728512,
+          "disk_bytes": 30621696,
+          "entry_bytes": 30629504,
+          "cache_bytes": 0,
           "blob_payloads": 59,
-          "key": "a40beb343a5ae684eea67e2d9a2726b9f96660b27c8a0027851bdbab922a54d0",
+          "key": "1ee03ac13adfe00f6a8c62d4adb611a03b727123223b789da078c388556b74e6",
           "cache_hit": false,
-          "build_ms": 58360,
-          "copy_ms": 879,
-          "records": 6863,
-          "fresh_digest": "a5a51d7a5d1a4bd81f120af51edf362b80f1c9ff496159da954d19730c105d0a",
-          "copy_digest": "a5a51d7a5d1a4bd81f120af51edf362b80f1c9ff496159da954d19730c105d0a",
+          "build_ms": 7883,
+          "copy_ms": 725,
+          "records": 6865,
+          "fresh_digest": "f4f9346bae5a4a26ff2128770d2a1a940db814adb6da77b41c355d547e6e188b",
+          "copy_digest": "f4f9346bae5a4a26ff2128770d2a1a940db814adb6da77b41c355d547e6e188b",
           "verified": true,
           "copy_method": "clonefile"
         },
         "project": "webkit-light-phone"
       },
       {
-        "fixture_setup_ms": 698,
+        "fixture_setup_ms": 6414,
         "fixture_snapshot": {
-          "disk_bytes": 29716480,
-          "entry_bytes": 29724288,
-          "cache_bytes": 29728512,
+          "disk_bytes": 30744576,
+          "entry_bytes": 30752384,
+          "cache_bytes": 0,
           "blob_payloads": 59,
-          "key": "a40beb343a5ae684eea67e2d9a2726b9f96660b27c8a0027851bdbab922a54d0",
-          "cache_hit": true,
-          "build_ms": 0,
-          "copy_ms": 592,
-          "records": 6863,
-          "fresh_digest": "a5a51d7a5d1a4bd81f120af51edf362b80f1c9ff496159da954d19730c105d0a",
-          "copy_digest": "a5a51d7a5d1a4bd81f120af51edf362b80f1c9ff496159da954d19730c105d0a",
+          "key": "1ee03ac13adfe00f6a8c62d4adb611a03b727123223b789da078c388556b74e6",
+          "cache_hit": false,
+          "build_ms": 6369,
+          "copy_ms": 650,
+          "records": 6865,
+          "fresh_digest": "25c4beb69d661f29e5a1336b5b3014ab8037d40208bb9e82fa4bdb4cd2a567fe",
+          "copy_digest": "25c4beb69d661f29e5a1336b5b3014ab8037d40208bb9e82fa4bdb4cd2a567fe",
           "verified": true,
           "copy_method": "clonefile"
         },
         "project": "webkit-light-desktop"
       },
       {
-        "fixture_setup_ms": 2443,
+        "fixture_setup_ms": 5973,
         "fixture_snapshot": {
-          "disk_bytes": 29716480,
-          "entry_bytes": 29724288,
-          "cache_bytes": 29728512,
+          "disk_bytes": 30642176,
+          "entry_bytes": 30649984,
+          "cache_bytes": 0,
           "blob_payloads": 59,
-          "key": "a40beb343a5ae684eea67e2d9a2726b9f96660b27c8a0027851bdbab922a54d0",
-          "cache_hit": true,
-          "build_ms": 0,
-          "copy_ms": 2253,
-          "records": 6863,
-          "fresh_digest": "a5a51d7a5d1a4bd81f120af51edf362b80f1c9ff496159da954d19730c105d0a",
-          "copy_digest": "a5a51d7a5d1a4bd81f120af51edf362b80f1c9ff496159da954d19730c105d0a",
+          "key": "1ee03ac13adfe00f6a8c62d4adb611a03b727123223b789da078c388556b74e6",
+          "cache_hit": false,
+          "build_ms": 5927,
+          "copy_ms": 621,
+          "records": 6865,
+          "fresh_digest": "33041e834137fa4c0d8c9b2ea19f9f5a9fa19e9c6a0c2eb1935ec0b9309e2d4c",
+          "copy_digest": "33041e834137fa4c0d8c9b2ea19f9f5a9fa19e9c6a0c2eb1935ec0b9309e2d4c",
           "verified": true,
           "copy_method": "clonefile"
         },
         "project": "chromium-light-phone"
       },
       {
-        "fixture_setup_ms": 864,
+        "fixture_setup_ms": 6547,
         "fixture_snapshot": {
-          "disk_bytes": 29716480,
-          "entry_bytes": 29724288,
-          "cache_bytes": 29728512,
+          "disk_bytes": 30711808,
+          "entry_bytes": 30719616,
+          "cache_bytes": 0,
           "blob_payloads": 59,
-          "key": "a40beb343a5ae684eea67e2d9a2726b9f96660b27c8a0027851bdbab922a54d0",
-          "cache_hit": true,
-          "build_ms": 0,
-          "copy_ms": 754,
-          "records": 6863,
-          "fresh_digest": "a5a51d7a5d1a4bd81f120af51edf362b80f1c9ff496159da954d19730c105d0a",
-          "copy_digest": "a5a51d7a5d1a4bd81f120af51edf362b80f1c9ff496159da954d19730c105d0a",
+          "key": "1ee03ac13adfe00f6a8c62d4adb611a03b727123223b789da078c388556b74e6",
+          "cache_hit": false,
+          "build_ms": 6503,
+          "copy_ms": 656,
+          "records": 6865,
+          "fresh_digest": "44e951110a7e62218ddd73d0af6afcb21669e07063420447bb512884d08c9b21",
+          "copy_digest": "44e951110a7e62218ddd73d0af6afcb21669e07063420447bb512884d08c9b21",
           "verified": true,
           "copy_method": "clonefile"
         },
@@ -118,36 +118,36 @@
       }
     ],
     "template_cold_setup_ms": {
-      "generate": 417,
-      "list": 18430,
-      "seed": 30434
+      "generate": 123,
+      "list": 2020,
+      "seed": 3798
     }
   },
   "scenario": "WEB-MSG-CHATS-STORE",
   "level": "web",
   "passed": true,
-  "git_sha": "b4624c9513abafcba17c603466051977fa226a15",
-  "at": "2026-10-22T09:09:51.663293Z",
+  "git_sha": "448155dab96415e80926775cc1981e8461651d84",
+  "at": "2026-10-22T14:41:36.829223Z",
   "assertions": [
     {
       "name": "webkit-light-phone:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/chats-store.spec.ts:4:1 › WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages (17.9s)\n  ✓  2 [webkit-light-phone] › tests/live-cancellation.spec.ts:5:1 › WEB-MSG-CHATS-STORE canceled subscriptions leave other live views intact (7.8s)\n\n  2 passed (54.2s)\n"
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/chats-store.spec.ts:4:1 › WEB-MSG-CHATS-STORE paged live chats, stable filter transport, unread totals and moves across pages (1.9s)\n  ✓  2 [webkit-light-phone] › tests/live-cancellation.spec.ts:5:1 › WEB-MSG-CHATS-STORE canceled subscriptions leave other live views intact (1.3s)\n\n  2 passed (6.7s)\n"
     },
     {
       "name": "webkit-light-desktop:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/chats-store.spec.ts:4:1 › WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages (10.3s)\n  ✓  2 [webkit-light-desktop] › tests/live-cancellation.spec.ts:5:1 › WEB-MSG-CHATS-STORE canceled subscriptions leave other live views intact (4.8s)\n\n  2 passed (45.3s)\n"
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/chats-store.spec.ts:4:1 › WEB-MSG-CHATS-STORE paged live chats, stable filter transport, unread totals and moves across pages (2.2s)\n  ✓  2 [webkit-light-desktop] › tests/live-cancellation.spec.ts:5:1 › WEB-MSG-CHATS-STORE canceled subscriptions leave other live views intact (1.2s)\n\n  2 passed (6.0s)\n"
     },
     {
       "name": "chromium-light-phone:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/chats-store.spec.ts:4:1 › WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages (6.4s)\n  ✓  2 [chromium-light-phone] › tests/live-cancellation.spec.ts:5:1 › WEB-MSG-CHATS-STORE canceled subscriptions leave other live views intact (2.5s)\n\n  2 passed (40.3s)\n"
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/chats-store.spec.ts:4:1 › WEB-MSG-CHATS-STORE paged live chats, stable filter transport, unread totals and moves across pages (1.5s)\n  ✓  2 [chromium-light-phone] › tests/live-cancellation.spec.ts:5:1 › WEB-MSG-CHATS-STORE canceled subscriptions leave other live views intact (1.1s)\n\n  2 passed (5.2s)\n"
     },
     {
       "name": "chromium-light-desktop:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/chats-store.spec.ts:4:1 › WEB-MSG-CHATS-STORE paged live chats, filter wire values, unread totals and moves across pages (4.2s)\n  ✓  2 [chromium-light-desktop] › tests/live-cancellation.spec.ts:5:1 › WEB-MSG-CHATS-STORE canceled subscriptions leave other live views intact (4.0s)\n\n  2 passed (40.5s)\n"
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/chats-store.spec.ts:4:1 › WEB-MSG-CHATS-STORE paged live chats, stable filter transport, unread totals and moves across pages (1.4s)\n  ✓  2 [chromium-light-desktop] › tests/live-cancellation.spec.ts:5:1 › WEB-MSG-CHATS-STORE canceled subscriptions leave other live views intact (1.5s)\n\n  2 passed (6.4s)\n"
     },
     {
       "name": "credential_backend_override_restored",

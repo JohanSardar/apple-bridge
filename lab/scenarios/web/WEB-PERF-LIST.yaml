@@ -1,0 +1,4 @@
+id: WEB-PERF-LIST
+feature: web.messages.read
+levels: [web]
+web: {browsers: [chromium], themes: [light], layouts: [desktop], server: gateway, huge: true, fixture: list}

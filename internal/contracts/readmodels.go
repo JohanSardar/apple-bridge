@@ -33,6 +33,8 @@ type MessagePreview struct {
 	Reaction        *ReactionPreview `json:"reaction,omitempty"`
 }
 type ReactionPreview struct {
+	Kind          string `json:"kind,omitempty"`
+	Removed       bool   `json:"removed,omitempty"`
 	Verb          string `json:"verb"`
 	TargetExcerpt string `json:"target_excerpt"`
 }
@@ -43,7 +45,14 @@ type LastMessage struct {
 	IsFromMe       bool           `json:"is_from_me"`
 	Preview        MessagePreview `json:"preview"`
 }
+type PinPreview struct {
+	MessageID   string `json:"message_id"`
+	TextPreview string `json:"text_preview"`
+	At          string `json:"at"`
+}
 type ChatSummary struct {
+	KnownSender      bool           `json:"known_sender"`
+	PinPreview       *PinPreview    `json:"pin_preview"`
 	Chat             Record         `json:"chat"`
 	Title            string         `json:"title"`
 	AvatarHandles    []AvatarHandle `json:"avatar_handles"`
@@ -93,6 +102,8 @@ type HandleSummary struct {
 	Service     string        `json:"service"`
 	ContactID   *string       `json:"contact_id,omitempty"`
 	DisplayName string        `json:"display_name"`
+	GivenName   string        `json:"given_name,omitempty"`
+	FamilyName  string        `json:"family_name,omitempty"`
 	Initials    string        `json:"initials"`
 	Avatar      *HandleAvatar `json:"avatar,omitempty"`
 }
