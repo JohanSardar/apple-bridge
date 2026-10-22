@@ -1,0 +1,270 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[7.78 15.35 25.89] cpu_idle=50% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5HT5C9J0YT2HCR6Y1RWXJJQ",
+  "metrics": {
+    "archive_base_messages": 100000,
+    "archive_messages": 100206,
+    "budget_status": "measured",
+    "capture_observer_resets": 0,
+    "filtered_items": 206,
+    "fixture_setup_ms": 83322.190416,
+    "page_limit": 200
+  },
+  "scenario": "WEB-RM-THREAD-ORIGINATOR-PERF",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "c5cfcd05dacdf64727ca2a2023a7bd36fd699260",
+  "at": "2026-10-22T12:42:49.010757Z",
+  "assertions": [
+    {
+      "name": "world_start",
+      "passed": true
+    },
+    {
+      "name": "canonical_demo_and_distant_thread_captured",
+      "passed": true
+    },
+    {
+      "name": "rest_read_token",
+      "passed": true
+    },
+    {
+      "name": "rest_root_and_first_199_distant_replies",
+      "passed": true
+    },
+    {
+      "name": "rest_filtered_oldest_anchor",
+      "passed": true
+    },
+    {
+      "name": "rest_bounded_forward_page",
+      "passed": true
+    },
+    {
+      "name": "rest_reverse_page_without_duplicates",
+      "passed": true
+    },
+    {
+      "name": "rest_filtered_cursor_rejected_without_filter",
+      "passed": true
+    },
+    {
+      "name": "rest_filtered_cursor_rejected_for_other_root",
+      "passed": true
+    },
+    {
+      "name": "rest_page_limit_200",
+      "passed": true
+    },
+    {
+      "name": "rest_root_in_other_chat_rejected",
+      "passed": true
+    },
+    {
+      "name": "rest_missing_root_rejected",
+      "passed": true
+    },
+    {
+      "name": "rest_replies_outside_current_500_item_window",
+      "passed": true
+    },
+    {
+      "name": "rest_filtered_batch_results",
+      "passed": true
+    },
+    {
+      "name": "rest_filtered_batch_p95_10ms",
+      "passed": true
+    },
+    {
+      "name": "rest_ab_token",
+      "passed": true
+    },
+    {
+      "name": "rest_reference_token",
+      "passed": true
+    },
+    {
+      "name": "rest_unfiltered_reference_results",
+      "passed": true
+    },
+    {
+      "name": "rest_100k_filtered_read_results",
+      "passed": true
+    },
+    {
+      "name": "rest_100k_filtered_read_p95_10ms",
+      "passed": true
+    },
+    {
+      "name": "mcp_read_token",
+      "passed": true
+    },
+    {
+      "name": "mcp_root_and_first_199_distant_replies",
+      "passed": true
+    },
+    {
+      "name": "mcp_filtered_oldest_anchor",
+      "passed": true
+    },
+    {
+      "name": "mcp_bounded_forward_page",
+      "passed": true
+    },
+    {
+      "name": "mcp_reverse_page_without_duplicates",
+      "passed": true
+    },
+    {
+      "name": "mcp_filtered_cursor_rejected_without_filter",
+      "passed": true
+    },
+    {
+      "name": "mcp_filtered_cursor_rejected_for_other_root",
+      "passed": true
+    },
+    {
+      "name": "mcp_page_limit_200",
+      "passed": true
+    },
+    {
+      "name": "mcp_root_in_other_chat_rejected",
+      "passed": true
+    },
+    {
+      "name": "mcp_missing_root_rejected",
+      "passed": true
+    },
+    {
+      "name": "mcp_replies_outside_current_500_item_window",
+      "passed": true
+    },
+    {
+      "name": "mcp_filtered_batch_results",
+      "passed": true
+    },
+    {
+      "name": "mcp_filtered_batch_p95_10ms",
+      "passed": true
+    },
+    {
+      "name": "mcp_ab_token",
+      "passed": true
+    },
+    {
+      "name": "mcp_reference_token",
+      "passed": true
+    },
+    {
+      "name": "mcp_unfiltered_reference_results",
+      "passed": true
+    },
+    {
+      "name": "mcp_100k_filtered_read_results",
+      "passed": true
+    },
+    {
+      "name": "mcp_100k_filtered_read_p95_10ms",
+      "passed": true
+    },
+    {
+      "name": "restricted_token",
+      "passed": true
+    },
+    {
+      "name": "rest_filtered_visibility",
+      "passed": true
+    },
+    {
+      "name": "mcp_filtered_visibility",
+      "passed": true
+    },
+    {
+      "name": "filtered_live_session",
+      "passed": true
+    },
+    {
+      "name": "filtered_live_web_1_socket",
+      "passed": true
+    },
+    {
+      "name": "filtered_live_subscribe",
+      "passed": true
+    },
+    {
+      "name": "filtered_live_snapshot_scoped_counts",
+      "passed": true
+    },
+    {
+      "name": "unrelated_live_message_excluded",
+      "passed": true
+    },
+    {
+      "name": "distant_live_reply_inserted_with_filtered_counts",
+      "passed": true
+    },
+    {
+      "name": "reassigned_live_reply_removed",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "mcp_filtered_batch": {
+      "samples": 100,
+      "p50_ms": 5.359041,
+      "p95_ms": 6.723417,
+      "max_ms": 8.040958,
+      "timeouts": 0
+    },
+    "mcp_filtered_thread": {
+      "samples": 100,
+      "p50_ms": 5.442375,
+      "p95_ms": 7.059166,
+      "max_ms": 8.251,
+      "timeouts": 0
+    },
+    "mcp_unfiltered_reference": {
+      "samples": 100,
+      "p50_ms": 5.59125,
+      "p95_ms": 7.854208,
+      "max_ms": 19.161083,
+      "timeouts": 0
+    },
+    "rest_filtered_batch": {
+      "samples": 100,
+      "p50_ms": 3.163,
+      "p95_ms": 4.275042,
+      "max_ms": 4.897917,
+      "timeouts": 0
+    },
+    "rest_filtered_thread": {
+      "samples": 100,
+      "p50_ms": 4.296625,
+      "p95_ms": 5.352167,
+      "max_ms": 5.865625,
+      "timeouts": 0
+    },
+    "rest_unfiltered_reference": {
+      "samples": 100,
+      "p50_ms": 3.84175,
+      "p95_ms": 4.857208,
+      "max_ms": 5.869791,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ],
+  "conditions": {
+    "dataset": "canonical huge demo plus synthetic distant thread replies",
+    "transport": "REST, MCP and authenticated web.1"
+  }
+}

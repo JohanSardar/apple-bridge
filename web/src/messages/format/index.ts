@@ -26,9 +26,9 @@ export function duration(seconds: number) { return `${Math.floor(seconds/60)}:${
 export function groupEvent(value: unknown, actor: string, handles: Handles) {
     const event = fields(value), kind = text(event.kind ?? event.type), target = name(text(event.handle_id ?? event.target_handle_id), handles);
     if (/name|rename/u.test(kind)||!kind&&text(event.title)) return `${actor} named the conversation “${text(event.name ?? event.title)}”`;
+    if (/photo/u.test(kind)) return `${actor} ${/remove/u.test(kind)?'removed':'changed'} the group photo`;
     if (/add/u.test(kind)) return `${actor} added ${target}`;
     if (/remove/u.test(kind)) return `${actor} removed ${target}`;
     if (/left|leave/u.test(kind)) return `${actor} left the conversation`;
-    if (/photo/u.test(kind)) return `${actor} changed the group photo`;
     return text(event.text) || `${actor} updated the conversation`;
 }
