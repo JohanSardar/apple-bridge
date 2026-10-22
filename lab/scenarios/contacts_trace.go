@@ -17,6 +17,7 @@ type contactsTrace struct {
 	ScanID              string   `json:"scan_id,omitempty"`
 	Source              string   `json:"source,omitempty"`
 	Checkpoint          string   `json:"checkpoint,omitempty"`
+	QueuedNS            int64    `json:"queued_ns,omitempty"`
 	StartedNS           int64    `json:"started_ns,omitempty"`
 	PreparedNS          int64    `json:"prepared_ns,omitempty"`
 	FinishedNS          int64    `json:"finished_ns,omitempty"`

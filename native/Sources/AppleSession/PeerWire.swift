@@ -7,6 +7,7 @@ final class PeerWire: @unchecked Sendable {
     let descriptor: Int32
     private let writeLock = NSLock()
     private let closeLock = NSLock()
+    private let blobWrites = DispatchQueue(label: "applebridge.ipc.blobs", qos: .utility)
     private var closed = false
 
     init(socket path: String, secretFile: String) throws {
@@ -63,8 +64,13 @@ final class PeerWire: @unchecked Sendable {
 
     func close() {
         closeLock.lock()
-        defer { closeLock.unlock() }
-        if !closed { closed = true; shutdown(descriptor, SHUT_RDWR); Darwin.close(descriptor) }
+        guard !closed else { closeLock.unlock(); return }
+        closed = true
+        shutdown(descriptor, SHUT_RDWR)
+        closeLock.unlock()
+        writeLock.lock()
+        Darwin.close(descriptor)
+        writeLock.unlock()
     }
 
     private func read(_ size: Int) throws -> Data {
@@ -89,9 +95,32 @@ final class PeerWire: @unchecked Sendable {
     }
 
     func send(_ value: JSON) throws {
-        let bytes = try Self.encode(value)
+        try write(Self.encode(value))
+    }
+
+    func sendBlob(_ value: JSON, trace: CaptureTrace, source: String) async throws {
+        let queued = CaptureTrace.now()
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+            blobWrites.async { [self] in
+                let started = CaptureTrace.now()
+                do {
+                    let bytes = try Self.encode(value)
+                    let encoded = CaptureTrace.now()
+                    try write(bytes)
+                    trace.record("helper_blob_sent", fields: ["source": .string(source), "queued_ns": .integer(queued), "started_ns": .integer(started), "prepared_ns": .integer(encoded), "finished_ns": .integer(CaptureTrace.now())])
+                    continuation.resume()
+                } catch { continuation.resume(throwing: error) }
+            }
+        }
+    }
+
+    private func write(_ bytes: Data) throws {
         writeLock.lock()
         defer { writeLock.unlock() }
+        closeLock.lock()
+        let available = !closed
+        closeLock.unlock()
+        guard available else { throw SourceFailure.unavailable }
         try bytes.withUnsafeBytes { buffer in
             var position = 0
             while position < bytes.count {

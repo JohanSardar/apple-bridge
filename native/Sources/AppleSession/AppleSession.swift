@@ -250,7 +250,7 @@ public actor AppleSession: ObservationSink {
             else { throw SourceFailure.unavailable }
             guard wire === connection, !Task.isCancelled else { return }
             prepared = CaptureTrace.now()
-            try connection.send(response)
+            try await connection.sendBlob(response, trace: trace, source: source)
         } catch {
             guard wire === connection, !Task.isCancelled else { return }
             try? connection.send(.object(["t": .string("BlobUnavailable"), "handle": frame["handle"], "reason": .string("unavailable")]))
@@ -408,6 +408,7 @@ public actor AppleSession: ObservationSink {
         }
         let calendarCommand = operation.hasPrefix("calendar.")
         if operation.hasPrefix("contacts.") {
+            trace.record("contacts_command_reconcile_requested", keys: [evidence["native_key"].string], fields: ["operation": .string(operation)])
             try await contacts.reconcile(into: self)
             if evidence["absent"].bool { try await contacts.confirmAbsence(evidence["native_key"].string, into: self) }
             guard let checkpoint = observedCheckpoints["contacts.contact/" + evidence["native_key"].string] else { throw SourceFailure.unavailable }
