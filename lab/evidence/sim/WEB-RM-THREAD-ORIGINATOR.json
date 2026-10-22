@@ -1,0 +1,171 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[18.29 22.87 40.21] cpu_idle=30% cpus=8 other_heavy=2"
+  },
+  "run_id": "run_01M5HQ7S2SHY0PB16MEBD617ES",
+  "metrics": {
+    "archive_base_messages": 750,
+    "archive_messages": 956,
+    "budget_status": "deferred_to_messages_milestone",
+    "capture_observer_resets": 0,
+    "filtered_items": 206,
+    "fixture_setup_ms": 31910.568833,
+    "page_limit": 200
+  },
+  "scenario": "WEB-RM-THREAD-ORIGINATOR",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "329dc98f0214f60661ab55643ec1c8532f133837",
+  "at": "2026-10-22T11:51:41.913785Z",
+  "assertions": [
+    {
+      "name": "world_start",
+      "passed": true
+    },
+    {
+      "name": "canonical_demo_and_distant_thread_captured",
+      "passed": true
+    },
+    {
+      "name": "rest_read_token",
+      "passed": true
+    },
+    {
+      "name": "rest_root_and_first_199_distant_replies",
+      "passed": true
+    },
+    {
+      "name": "rest_filtered_oldest_anchor",
+      "passed": true
+    },
+    {
+      "name": "rest_bounded_forward_page",
+      "passed": true
+    },
+    {
+      "name": "rest_reverse_page_without_duplicates",
+      "passed": true
+    },
+    {
+      "name": "rest_filtered_cursor_rejected_without_filter",
+      "passed": true
+    },
+    {
+      "name": "rest_filtered_cursor_rejected_for_other_root",
+      "passed": true
+    },
+    {
+      "name": "rest_page_limit_200",
+      "passed": true
+    },
+    {
+      "name": "rest_root_in_other_chat_rejected",
+      "passed": true
+    },
+    {
+      "name": "rest_missing_root_rejected",
+      "passed": true
+    },
+    {
+      "name": "rest_replies_outside_current_500_item_window",
+      "passed": true
+    },
+    {
+      "name": "mcp_read_token",
+      "passed": true
+    },
+    {
+      "name": "mcp_root_and_first_199_distant_replies",
+      "passed": true
+    },
+    {
+      "name": "mcp_filtered_oldest_anchor",
+      "passed": true
+    },
+    {
+      "name": "mcp_bounded_forward_page",
+      "passed": true
+    },
+    {
+      "name": "mcp_reverse_page_without_duplicates",
+      "passed": true
+    },
+    {
+      "name": "mcp_filtered_cursor_rejected_without_filter",
+      "passed": true
+    },
+    {
+      "name": "mcp_filtered_cursor_rejected_for_other_root",
+      "passed": true
+    },
+    {
+      "name": "mcp_page_limit_200",
+      "passed": true
+    },
+    {
+      "name": "mcp_root_in_other_chat_rejected",
+      "passed": true
+    },
+    {
+      "name": "mcp_missing_root_rejected",
+      "passed": true
+    },
+    {
+      "name": "mcp_replies_outside_current_500_item_window",
+      "passed": true
+    },
+    {
+      "name": "restricted_token",
+      "passed": true
+    },
+    {
+      "name": "rest_filtered_visibility",
+      "passed": true
+    },
+    {
+      "name": "mcp_filtered_visibility",
+      "passed": true
+    },
+    {
+      "name": "filtered_live_session",
+      "passed": true
+    },
+    {
+      "name": "filtered_live_web_1_socket",
+      "passed": true
+    },
+    {
+      "name": "filtered_live_subscribe",
+      "passed": true
+    },
+    {
+      "name": "filtered_live_snapshot_scoped_counts",
+      "passed": true
+    },
+    {
+      "name": "unrelated_live_message_excluded",
+      "passed": true
+    },
+    {
+      "name": "distant_live_reply_inserted_with_filtered_counts",
+      "passed": true
+    },
+    {
+      "name": "reassigned_live_reply_removed",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ],
+  "conditions": {
+    "dataset": "canonical demo plus bounded synthetic gaps and distant replies",
+    "transport": "REST, MCP and authenticated web.1"
+  }
+}

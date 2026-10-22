@@ -18,8 +18,9 @@ func (s *Store) ThreadWindowCounts(ctx context.Context, v trust.Visibility, wind
 	if json.Unmarshal(window.First.Data, &first) != nil || json.Unmarshal(window.Last.Data, &last) != nil {
 		return counts, contracts.ErrInvalid
 	}
-	err := s.db.QueryRowContext(ctx, `SELECT
- (SELECT count(*) FROM msg_by_chat WHERE chat_id=? AND (sent_at,id)<(?,?)),
- (SELECT count(*) FROM msg_by_chat WHERE chat_id=? AND (sent_at,id)>(?,?))`, window.ChatID, modelTime(first.SentAt), window.First.ID, window.ChatID, modelTime(last.SentAt), window.Last.ID).Scan(&counts.Older, &counts.Newer)
+	selection, args := threadSelection(window.ChatID, window.ThreadOriginatorID)
+	before := append(append([]any{}, args...), modelTime(first.SentAt), window.First.ID)
+	after := append(append([]any{}, args...), modelTime(last.SentAt), window.Last.ID)
+	err := s.db.QueryRowContext(ctx, "SELECT (SELECT count(*) FROM "+selection+" AND (sent_at,id)<(?,?)), (SELECT count(*) FROM "+selection+" AND (sent_at,id)>(?,?))", append(before, after...)...).Scan(&counts.Older, &counts.Newer)
 	return counts, err
 }

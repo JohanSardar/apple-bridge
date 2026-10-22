@@ -1,0 +1,7 @@
+id: WEB-RM-THREAD-ORIGINATOR-PERF
+feature: web.readmodels
+levels: [sim]
+given: []
+when: [{readmodels: {}}]
+then: []
+cleanup: [{world: {}}]

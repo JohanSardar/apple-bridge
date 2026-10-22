@@ -95,6 +95,7 @@ Process: every change ships as a small PR (WORKER-RULES, Git and GitHub). Status
 - DONE (store) W5-STORE: Reminders Core Data reader and enrichment (#115, #120), `reminders.lists`/`reminders.items` read models at gateway p95 about 4–5 ms (#150, hardening #161), verified native manual ordering (#160) and rich demo data (#157). Tags, attachment IDs, assignment, store alarms/recurrence, early reminders, sections, filters and the color archive remain unsupported from the native store until positive fixtures exist.
 - IN PROGRESS W5-UI: read-only Reminders sidebar and list views with `web/1` live updates (#166). Paging is a documented follow-up, because Johan's largest real view is far below the 2 MiB view cap.
 - TODO: W2-DETAILS (after #104), W4 parity, W5-UI/WRITE/PARITY, W6–W8.
+- IN PROGRESS W2-TRANSCRIPT: indexed originator-filtered reads and scoped live counts (#61); focused overlay DOM proof and transcript motion/performance remain pending.
 - Dev infrastructure: re-entrant heavy.sh with an OS-matching SDK and an exclusive lane (#11, #35, #36, #37, #44), per-step gating (#74), per-project web budgets (#39), detached Air runs (#42), explicit ff updates (#89), disk trim (#95).
 - **Waiting on the Air being unlocked** (lock screen; passwords are never typed):
   - Messages capture pass for `messages.md` §17 and the "to verify" rows.

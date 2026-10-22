@@ -494,11 +494,9 @@ func (l *liveSocket) windowCounts(ctx context.Context, f clientFrame, state view
 	if len(state.Order) == 0 {
 		return contracts.WindowCounts{}, nil
 	}
-	var args struct {
-		ChatID string `json:"chat_id"`
-	}
+	var args contracts.ThreadQuery
 	json.Unmarshal(f.Args, &args)
-	window := contracts.ThreadWindow{ChatID: args.ChatID}
+	window := contracts.ThreadWindow{ChatID: args.ChatID, ThreadOriginatorID: args.ThreadOriginatorID}
 	json.Unmarshal(state.Rows[state.Order[0]], &window.First)
 	json.Unmarshal(state.Rows[state.Order[len(state.Order)-1]], &window.Last)
 	return l.server.deps.Operations.ThreadWindowCounts(ctx, l.identity.Principal, window)

@@ -1025,7 +1025,7 @@ S→C signin{device, at} · approval{command} · session_revoked · error{code, 
 
 **Views:**
 - `chats{filter: all|known|unknown|unread|deleted|spam, participants?}`: ChatSummary rows (§23.4) and order keys. Deltas upsert or remove rows.
-- `thread{chat_id, anchor: latest|oldest|unread|<message_id>, before?, after?}`: a window of ThreadItems. Deltas update items inside the window and report `newer`/`older` counts outside it.
+- `thread{chat_id, thread_originator_id?, anchor: latest|oldest|unread|<message_id>, before?, after?}`: a window of ThreadItems. Deltas update items inside the window and report `newer`/`older` counts outside it.
 - `record{collection, id}`.
 - `collection{chat_id, kind}`.
 
@@ -1051,11 +1051,13 @@ Operations (descriptors in `internal/contracts/operations.go`; available through
   - `last_message`: `{id, sent_at, is_from_me, sender_handle_id?, preview{group_event?, kind: text|attachments|reaction|group_event|unsent|edited, text?, attachment_kinds?, count?, reaction?}}`
   - `last_activity_at`, `unread_count`, `has_unseen_mention` (from captured message flags)
   - `muted` and `pinned_index`, nullable where native state is unavailable
-- `messages.thread{chat_id, anchor?, before?, after?, limit≤200}` → `{items: ThreadItem[], before?, after?, unread_anchor?}`. ThreadItem is the message record plus:
+- `messages.thread{chat_id, thread_originator_id?, anchor?, before?, after?, limit≤200}` → `{items: ThreadItem[], before?, after?, unread_anchor?}`. ThreadItem is the message record plus:
   - `reactions[]`: current state per sender and part, with removals folded out
   - `attachments[]`: records including `derivatives` and `media`
   - `reply_count` for thread originators
   - Ordered by `sent_at`, then id. Cursors are stable under concurrent inserts.
+  - Optional `thread_originator_id` restricts the view to that root and all messages whose originator matches it in the same chat. The root must exist in that chat. Visibility, anchors, the 200-item page bound and live deltas apply unchanged; outside-window counts are restricted to the selected thread. Filtered cursors bind both chat and originator and cannot be reused in another thread or an unfiltered view.
+  - A composite `(chat_id, originator, sent_at, id)` index keeps distant replies readable without scanning the surrounding chat.
   - `anchor: oldest` returns the first bounded page in ascending order, symmetric to `latest` at the tail. Continue forward with `after`; `before` returns the preceding page. This anchor supports transcript ⌘↑ without fetching intervening history.
 - `messages.collection{chat_id, kind: photos|videos|media|links|documents|locations|audio, after?, limit≤200}`. Links and locations return message records with `balloon.kind=link|find_my`; media kinds return attachment records. Hidden attachments and recoverable messages are excluded. `kind: media` combines photos and videos in the existing owning-message join, ordered by owning message `sent_at` descending, then attachment id ascending. Each attachment projects its owning `data.message_id` and `data.sent_at` without mutating the stored record. It shares collection visibility, limits, budgets and kind-scoped cursors; inserts newer than the cursor do not change older pages.
 
@@ -1297,6 +1299,7 @@ Recently Deleted becomes `deleted_at` + `recoverable_until` on messages and chat
 
 **Rules:**
 - **Chats cache:** trusted sessions atomically persist a versioned materialized view with its cursor, capped at 2,000 chats and 2 MiB serialized in display order. Hydration renders this snapshot before reconciling a fresh live view; transport pages do not independently hydrate or persist. IndexedDB upgrade removes legacy chat-page keys. Public sessions persist nothing, and session removal wipes the snapshot. WEB-MSG-CHATS-CACHE covers interrupted cross-page reorder, offline reload, upgrade and privacy.
+- **Focused replies:** ThreadOverlay owns a bounded, paged `thread` subscription with `thread_originator_id`, so replies outside the main transcript window remain available without loading the whole chat.
 - **Layout engine:** the transcript layout is a pure function `(items, handles, prefs, width) → rows`, with code-level tests allowed as layout math. Rows have deterministic height estimates from measured text plus known media dimensions (`media.width/height`). The DOM is authoritative for rendered text height; ResizeObserver corrects virtual positions with scroll-anchor compensation; residual estimate differences may require one frame of correction without clipping text. Media reservations remain fixed.
 - **Text measurement:** done in one batched pass per frame using the exact computed text-node font family, size, weight, letter spacing, feature settings and variation settings. Canvas estimates reserve `ceil(width) + max(1 px, 0.5% of width)` before applying the bubble width cap. Nondefault font features or variations use batched DOM text measurements. Font-set readiness and matching FontFace loaded promises invalidate measurements, with an intrinsic font probe detecting later changes without depending on loadingdone events; intrinsic text height and tail silhouettes follow the observed DOM bounds.
 - **Viewer source:** the media viewer pages the whole chat through `messages.collection{chat_id, kind: media}`, independently of the transcript window. Owning `message_id` supports Show in Chat; `sent_at` preserves interleaved photo/video order.
