@@ -1,0 +1,9 @@
+# Twenty sim inbound captures reach the real transcript within 500 ms p95; receive and Reduce Motion animations.
+id: WEB-MSG-LIVE
+feature: web.messages.read
+levels: [web]
+web:
+  browsers: [webkit, chromium, firefox]
+  themes: [light, dark]
+  layouts: [phone, desktop]
+  server: gateway

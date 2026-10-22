@@ -1,0 +1,9 @@
+# Visible text failure and Try Again; exact failed-part resend with a fresh command and upload.
+id: WEB-MSG-FAIL-RESEND
+feature: web.messages.write
+levels: [web]
+web:
+  browsers: [webkit, chromium, firefox]
+  themes: [light, dark]
+  layouts: [phone, desktop]
+  server: gateway

@@ -230,7 +230,7 @@ test('WEB-MSG-PARTS STRENGTHEN Check strengthens one unknown part while another 
     await effect(request, f.command().id);
 });
 
-for(const fault of ['part-delivery-failed','part-no-effect']) test('WEB-MSG-PARTS RETRY '+fault+' retries only the explicit failed part with a new input and upload',async ({page,context,request}) => {
+for(const fault of ['part-delivery-failed','part-no-effect']) test('WEB-MSG-PARTS WEB-MSG-FAIL-RESEND PART-RETRY '+fault+' retries only the explicit failed part with a new input and upload',async ({page,context,request}) => {
     const f=await fixture(page,context,request);
     await f.ready(fault); await f.send();
     const final=await finalParts(f), original=f.command(), failed=final.command.parts[2];

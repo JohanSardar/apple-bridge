@@ -7,7 +7,7 @@ test.afterEach(async ({page}, info) => {
     const counts = await page.evaluate(() => ({ timeout_count: Number(document.querySelector('[aria-label="Projection timeout count"]')?.textContent ?? 0), missing_identity_count: Number(document.querySelector('[aria-label="Missing observed identity count"]')?.textContent ?? 0) }));
     console.log('compose_metric:' + JSON.stringify({test: info.title, status: info.status, ...counts}));
 });
-test('WEB-MSG-OPTIMISTIC first-frame echo swaps only on exact captured identity and never redispatches',async({page,context,request})=>{
+test('WEB-MSG-OPTIMISTIC WEB-MSG-SEND PROJECTION first-frame echo swaps only on exact captured identity and never redispatches',async({page,context,request})=>{
     await context.addCookies(sessionCookies);
     const ids=await control(request,'/demo-fixtures');
     const commands:string[]=[],statuses:any[]=[],captured:any[]=[];

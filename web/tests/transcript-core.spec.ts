@@ -57,7 +57,7 @@ test('WEB-MSG-THREAD-CORE transcript detects links and limits a mention to its U
     await jump(page,ids,113);const formatted=row(page,ids,113);await expect(formatted.getByText('Bold',{exact:true})).toHaveCSS('font-weight','700');await expect(formatted.getByText('Bold',{exact:true})).toHaveCSS('font-style','italic');await expect(formatted.getByText('paper',{exact:true})).toHaveCSS('text-decoration-line',/underline/);await expect(formatted.getByText('paper',{exact:true})).toHaveCSS('text-decoration-line',/line-through/);
     await jump(page,ids,123);await expect(row(page,ids,123).getByText('Synthetic studio update',{exact:true})).toHaveCSS('font-weight','700');
 });
-test('WEB-MSG-THREAD-CORE transcript shows edit, unsent, failure and group-event lines',async({page,request})=>{
+test('WEB-MSG-THREAD-CORE WEB-MSG-EDIT-UNSEND-VIEW CAPTURED transcript shows edit, unsent, failure and group-event lines',async({page,request})=>{
     const ids=await fixture(page,request,11);
     await expect(row(page,ids,11).getByRole('button',{name:'Edited',exact:true})).toBeVisible();
     await expect(row(page,ids,12).locator('.system-line')).toHaveText(/unsent a message$/);
