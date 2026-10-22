@@ -21,7 +21,7 @@ async function captureNewPlate(page:Page, project:string, state:string) {
     await expect(page.locator('main.transcript')).toHaveCSS('opacity','1');
     await page.screenshot({path:`../lab/evidence/private/web/compose-new-${state}-${project}.png`,animations:'disabled'});
 }
-test('WEB-MSG-NEW-TOKENS keyboard and pointer autocomplete tokenize recipients and load an existing read-only chat', async ({page}, info) => {
+test('WEB-MSG-NEW TOKENS keyboard and pointer autocomplete tokenize recipients and load an existing read-only chat', async ({page}, info) => {
     const ids = demoFixtures, sent: any[] = [], received: any[] = [];
     page.on('websocket', socket => {
         socket.on('framesent', event => { try { sent.push(JSON.parse(String(event.payload))); } catch {} });
@@ -68,7 +68,7 @@ test('WEB-MSG-NEW-TOKENS keyboard and pointer autocomplete tokenize recipients a
     await expect(page.getByRole('list', {name:'Recipients'}).getByRole('listitem')).toHaveAttribute('data-recipient-value','demo.person01@example.com');
     expect(sent.filter(frame => frame.t === 'cmd')).toHaveLength(0);
 });
-test('WEB-MSG-NEW-GROUP raw handles tokenize once, new groups stay disabled and an exact existing group loads', async ({page}, info) => {
+test('WEB-MSG-NEW GROUP raw handles tokenize once, new groups stay disabled and an exact existing group loads', async ({page}, info) => {
     const ids=demoFixtures;
     await page.goto('/messages/new');
     const to = page.getByRole('combobox', {name:'To', exact:true});
@@ -97,7 +97,7 @@ test('WEB-MSG-NEW-GROUP raw handles tokenize once, new groups stay disabled and 
 });
 test.describe('Recipient response ordering fault injection', () => {
 test.use({serviceWorkers:'block'});
-test('WEB-MSG-NEW-LATEST lookup debounces, cancels stale requests and only displays the latest query', async ({page}) => {
+test('WEB-MSG-NEW LATEST lookup debounces, cancels stale requests and only displays the latest query', async ({page}) => {
     const calls: {q:string;at:number}[] = [];
     let release: (() => Promise<void>) | undefined;
     await page.addInitScript(() => {
@@ -129,7 +129,7 @@ test('WEB-MSG-NEW-LATEST lookup debounces, cancels stale requests and only displ
     expect(calls.map(call => call.q)).toEqual(['Aster00','Beryl01']);
 });
 });
-test('WEB-MSG-NEW-SEND unknown recipient creates no empty chat, sends once and survives reconnect without redispatch', async ({page, request}, info) => {
+test('WEB-MSG-NEW SEND unknown recipient creates no empty chat, sends once and survives reconnect without redispatch', async ({page, request}, info) => {
     const recipient='new.'+info.project.name+'@example.com';
     const fixtures = demoFixtures;
     const before = new Set(Object.entries(fixtures).filter(([key]) => key.startsWith('demo-chat-')).map(([,value]) => value));
@@ -185,7 +185,7 @@ test('WEB-MSG-NEW-SEND unknown recipient creates no empty chat, sends once and s
     const effect = await request.post(process.env.AB_WEB_CONTROL!+'/command-effect',{headers:{'X-Bridge-Lab':process.env.AB_WEB_CONTROL_KEY!},data:{command_id:command.id}});
     expect(effect.ok()).toBe(true); expect((await effect.json()).count).toBe(1);
 });
-test('WEB-MSG-NEW-LOOKUP returns bounded projected recipient fields with no-store and validates query limits', async ({page, request}) => {
+test('WEB-MSG-NEW LOOKUP returns bounded projected recipient fields with no-store and validates query limits', async ({page, request}) => {
     await page.goto('/messages/new');
     const unauthorized = await request.post(new URL('/web/v1/lookup',page.url()).href,{headers:{Origin:new URL(page.url()).origin},data:{q:'Demo'}});
     expect(unauthorized.status()).toBe(401);
@@ -197,7 +197,7 @@ test('WEB-MSG-NEW-LOOKUP returns bounded projected recipient fields with no-stor
     const partial = await lookup({q:'person01@'}); expect((await partial.json()).results).toHaveLength(1);
     for(const body of [{q:''},{q:' '.repeat(5)},{q:'x'.repeat(65)},{q:'Demo',limit:21},{q:'Demo',limit:0}])expect((await lookup(body)).status()).toBe(400);
 });
-test('WEB-MSG-NEW-SCOPE a device without contacts scope gets no results and retains raw handle entry', async ({browser}, info) => {
+test('WEB-MSG-NEW SCOPE a device without contacts scope gets no results and retains raw handle entry', async ({browser}, info) => {
     const replica = scopedReplica;
     const context = await browser.newContext({viewport:info.project.use.viewport,colorScheme:info.project.use.colorScheme,hasTouch:info.project.use.hasTouch});
     try {
@@ -214,7 +214,7 @@ test('WEB-MSG-NEW-SCOPE a device without contacts scope gets no results and reta
     } finally { await context.close(); }
 });
 
-test('WEB-MSG-NEW-HISTORY unavailable history stays quiet and never blocks an explicit send', async ({page, request}, info) => {
+test('WEB-MSG-NEW HISTORY unavailable history stays quiet and never blocks an explicit send', async ({page, request}, info) => {
     const recipient='history.unavailable.'+info.project.name+'@example.com';
     const held = new Set<string>(), writes: any[] = [], statuses: any[] = [];
     let blockedFrames=0;
@@ -242,7 +242,7 @@ test('WEB-MSG-NEW-HISTORY unavailable history stays quiet and never blocks an ex
     expect(writes).toHaveLength(1); expect(writes[0].args.handles).toEqual([recipient]);
 });
 
-test('WEB-MSG-NEW-EXISTING live metadata keeps the existing transcript mounted during send', async ({page}) => {
+test('WEB-MSG-NEW EXISTING live metadata keeps the existing transcript mounted during send', async ({page}) => {
     const ids=demoFixtures, writes:any[]=[], historySubs=new Set<string>(), metadataMessages=new Set<string>();
     let observedID='';
     await page.routeWebSocket('**/web/v1/live', socket => {

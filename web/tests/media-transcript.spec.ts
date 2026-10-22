@@ -7,7 +7,7 @@ async function jump(page:Page,ids:Record<string,string>,index:number){
  const row=page.locator('[data-message="'+ids[native(index)]+'"]');await expect(row).toBeVisible();
  await expect.poll(()=>page.locator('.transcript').evaluate(element=>getComputedStyle(element).transform)).toBe('none');return row;
 }
-test('WEB-MSG-MEDIA-TRANSCRIPT source videos dispatch into the real reserved transcript slot',async({page,request})=>{
+test('WEB-MSG-MEDIA TRANSCRIPT source videos dispatch into the real reserved transcript slot',async({page,request})=>{
  await mediaSession(page.context(),request);const ids=await control(request,'/demo-fixtures');await page.clock.setFixedTime(new Date('2026-10-20T16:00:00Z'));
  const row=await jump(page,ids,38),bubble=row.locator('.media-reserved');await expect(bubble.locator('.media-motion')).toBeVisible();
  await expect(bubble.locator('.media-motion .media-image')).toHaveAttribute('data-media-state','ready');const bounds=await bubble.boundingBox();expect(bounds!.width).toBeGreaterThanOrEqual(120);expect(bounds!.height).toBeGreaterThanOrEqual(120);
@@ -26,12 +26,12 @@ async function playbackPlates(page:Page,ids:Record<string,string>,info:TestInfo,
  }
  await info.attach(evidenceName,{body:JSON.stringify(proofs),contentType:'application/json'});
 }
-test('WEB-MSG-MEDIA-TRANSCRIPT native portrait, landscape and Live playback preserve composed bounds',async({page,request},info)=>{
+test('WEB-MSG-MEDIA TRANSCRIPT native portrait, landscape and Live playback preserve composed bounds',async({page,request},info)=>{
  await mediaSession(page.context(),request);const ids=await control(request,'/media-playback-scene');await page.clock.setFixedTime(new Date('2026-10-20T16:00:00Z'));
  await playbackPlates(page,ids,info,[[38,'landscape','received'],[131,'portrait','received'],[132,'portrait','sent'],[133,'landscape','sent'],[129,'live','sent']]);
  const received=await control(request,'/media-playback-scene?direction=received');try{await playbackPlates(page,received,info,[[129,'live','received'],[130,'ultrawide','received']],'composed-received-live-wide-geometry');}finally{await control(request,'/media-playback-scene');}
 });
-test('WEB-MSG-MEDIA-ULTRAWIDE the minimum-sized native panorama preserves composed playback bounds',async({page,request},info)=>{
+test('WEB-MSG-MEDIA ULTRAWIDE the minimum-sized native panorama preserves composed playback bounds',async({page,request},info)=>{
  await mediaSession(page.context(),request);const ids=await control(request,'/demo-fixtures');await page.clock.setFixedTime(new Date('2026-10-20T16:00:00Z'));
  await playbackPlates(page,ids,info,[[130,'ultrawide','sent']]);
 });

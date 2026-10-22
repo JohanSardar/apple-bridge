@@ -88,12 +88,20 @@ export default function Contacts() {
     onCleanup(() => { cancelPane?.(); cancelAvatar?.(); cancelEdit?.(); });
     return <main class="contacts-app" data-pane={pane()}>
         <aside class="contacts-sidebar" aria-label={s.lists} aria-hidden={compact() && pane() !== 'lists'}>
-            <header><h1>{s.lists}</h1><Show when={canWrite('contacts.create')}><button class="contact-new" aria-label="New Contact" disabled={commands.pending()||commands.uncertain().length>0} onClick={create}>New Contact</button></Show></header><nav aria-label="Contact lists"><button classList={{selected:group()==='all'}} onClick={() => goList('all')}><span>{s.all}</span><Show when={group()==='all' && page().count !== undefined}><span>{page().count}</span></Show></button>
+            <header><h1>{s.lists}</h1><div class="contact-new-slot" aria-hidden={!canWrite('contacts.create')}>
+                    <button class="contact-new" aria-label="New Contact"
+                        disabled={!canWrite('contacts.create')||commands.pending()||commands.uncertain().length>0}
+                        onClick={create}>New Contact</button>
+                </div></header><nav aria-label="Contact lists"><button classList={{selected:group()==='all'}} onClick={() => goList('all')}><span>{s.all}</span><Show when={group()==='all' && page().count !== undefined}><span>{page().count}</span></Show></button>
                 <For each={page().containers}>{container => <button classList={{selected:group()==='account:'+container.id}} onClick={() => goList('account:'+container.id)}><span>{text(container.data.name)}</span></button>}</For><For each={page().groups}>{entry => <button classList={{selected:group()===entry.group.id}} onClick={() => goList(entry.group.id)}><span>{text(entry.group.data.name)}</span><span>{entry.count}</span></button>}</For>
             </nav><footer><AppMenu/></footer>
         </aside>
         <section class="contacts-list-pane" aria-label={s.app} aria-hidden={compact() && pane() !== 'contacts'}>
-            <header class="contacts-list-header"><Show when={compact()}><button class="contact-back" onClick={back}>{s.backLists}</button></Show><h1>{title()}</h1><Show when={canWrite('contacts.create')}><button class="contact-new" aria-label="New Contact" disabled={commands.pending()||commands.uncertain().length>0} onClick={create}>New Contact</button></Show>
+            <header class="contacts-list-header"><Show when={compact()}><button class="contact-back" onClick={back}>{s.backLists}</button></Show><h1>{title()}</h1><div class="contact-new-slot" aria-hidden={!canWrite('contacts.create')}>
+                    <button class="contact-new" aria-label="New Contact"
+                        disabled={!canWrite('contacts.create')||commands.pending()||commands.uncertain().length>0}
+                        onClick={create}>New Contact</button>
+                </div>
                 <div class="contact-selection-toolbar"><button class="contact-back" onClick={()=>{setSelecting(value=>!value);setChecked(new Set<string>());}}>{selecting()?'Done':'Select'}</button><Show when={selecting()}><span role="status">{selectedContacts().length} selected (up to 32)</span><button class="contact-back" disabled={!selectedContacts().length} onClick={()=>downloadContacts(selectedContacts())}>Export selected</button><Show when={canWrite('contacts.delete')}><button class="contact-back" disabled={!selectedContacts().length||commands.pending()||selectedContacts().some(item=>!canWrite('contacts.delete',item))} onClick={()=>setDeleting(selectedContacts())}>Delete selected</button></Show></Show></div>
                 <input ref={searchField} type="search" aria-label={s.search} placeholder={s.search} value={search()} onInput={event => setSearch(event.currentTarget.value)}/>
                 <div class="contact-preferences"><label>{s.sort}<select aria-label={s.sort} value={preferences.sort()} onChange={event => preferences.sortBy(event.currentTarget.value)}><option value="given">{s.given}</option><option value="family">{s.family}</option></select></label><label>{s.display}<select aria-label={s.display} value={preferences.display()} onChange={event => preferences.displayAs(event.currentTarget.value)}><option value="given">{s.given}</option><option value="family">{s.family}</option></select></label></div>

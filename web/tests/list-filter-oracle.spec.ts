@@ -3,7 +3,7 @@ import { test } from './list-session';
 import { control } from './session';
 const filters=['all','known','unknown','unread','deleted','spam'] as const;
 const ids=(rows:any[])=>rows.map(row=>row.chat.id).sort();
-test('WEB-MSG-FILTERS-ORACLE stable transport equals server filters with fourth linked participant and hidden Contacts',async({page,context,request})=>{
+test('WEB-MSG-FILTERS ORACLE stable transport equals server filters with fourth linked participant and hidden Contacts',async({page,context,request})=>{
     await control(request,'/list-filters');
     const sent:any[]=[],received:any[]=[];
     page.on('websocket',socket=>{socket.on('framesent',frame=>{try{sent.push(JSON.parse(String(frame.payload)));}catch{}});socket.on('framereceived',frame=>{try{received.push(JSON.parse(String(frame.payload)));}catch{}});});

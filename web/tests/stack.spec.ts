@@ -5,7 +5,7 @@ import {mkdir,readFile,writeFile} from 'node:fs/promises';
 import {gzipSync} from 'node:zlib';
 async function setup(context:BrowserContext,request:APIRequestContext){await mediaSession(context,request);return control(request,'/demo-fixtures');}
 function path(ids:Record<string,string>){return '/__fixtures/media?chat='+encodeURIComponent(ids['message-chat'])+[42,43,44,45].map(index=>'&stack='+encodeURIComponent(ids[`demo-message-00-${String(index).padStart(6,'0')}`])).join('');}
-test('WEB-MSG-MEDIA-STACK fixed bounds survive decode, phone swiping and desktop grid opening into the exact cell',async({page,context,request},info)=>{
+test('WEB-MSG-MEDIA STACK fixed bounds survive decode, phone swiping and desktop grid opening into the exact cell',async({page,context,request},info)=>{
  const ids=await setup(context,request);let release!:()=>void;const gate=new Promise<void>(resolve=>{release=resolve;}),variants:string[]=[];
  await page.route('**/web/v1/blob/**',async route=>{variants.push(new URL(route.request().url()).searchParams.get('variant')??'');await gate;await route.continue();});
  await page.goto(path(ids),{waitUntil:'domcontentloaded'});const stack=page.getByRole('group',{name:'Photos'});await expect(stack).toBeVisible();
@@ -31,7 +31,7 @@ test('WEB-MSG-MEDIA-STACK fixed bounds survive decode, phone swiping and desktop
  const html=await readFile('dist/index.html','utf8'),entry=/<script[^>]+src="([^"]+)"/u.exec(html)![1],bytes=await readFile('dist'+entry);expect(bytes.toString()).not.toContain('media-stack-cell');expect(gzipSync(bytes).byteLength).toBeLessThanOrEqual(60000);
  await mkdir('../lab/evidence/web/metrics',{recursive:true});await writeFile(`../lab/evidence/web/metrics/WEB-MSG-MEDIA-stack-${info.project.name}.json`,JSON.stringify({reserved_before:before,reserved_after:await stack.boundingBox(),decode_geometry_shift_px:0,cls_supported:clsSupported,cls:clsSupported?cls:null,entry_chunk:entry,entry_bytes:bytes.byteLength,entry_gzip_bytes:gzipSync(bytes).byteLength,entry_gzip9_bytes:gzipSync(bytes,{level:9}).byteLength,entry_budget_gzip_bytes:60000,stack_code_in_entry:false},null,2)+'\n');
 });
-test('WEB-MSG-MEDIA-STACK Reduce Motion and keyboard navigation settle without changing reserved geometry',async({page,context,request},info)=>{
+test('WEB-MSG-MEDIA STACK Reduce Motion and keyboard navigation settle without changing reserved geometry',async({page,context,request},info)=>{
  const ids=await setup(context,request);await page.emulateMedia({reducedMotion:'reduce'});await page.goto(path(ids));const stack=page.getByRole('group',{name:'Photos'});await expect(stack).toBeVisible();
  const cells=stack.locator('.media-stack-cell'),before=await stack.boundingBox(),first=await cells.first().boundingBox();await cells.first().locator('.media-open').focus();await page.keyboard.press('ArrowRight');await page.evaluate(()=>new Promise(requestAnimationFrame));
  await expect(stack).toHaveAttribute('data-stack-index','1');await expect(stack).toHaveAttribute('data-stack-motion','settled');await expect(cells.nth(1).locator('.media-open')).toBeFocused();expect(await stack.boundingBox()).toEqual(before);

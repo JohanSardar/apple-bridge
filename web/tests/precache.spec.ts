@@ -3,7 +3,7 @@ import {mkdir,readFile,writeFile} from 'node:fs/promises';
 import {gzipSync} from 'node:zlib';
 import {bootstrap,control} from './session';
 type Chunk={file:string;isEntry?:boolean;imports?:string[];dynamicImports?:string[];css?:string[]};
-test('WEB-MSG-VIEWER-PRECACHE precache artifact contains the shell static closure and excludes dynamic-only chunks',async()=>{
+test('WEB-MSG-VIEWER PRECACHE precache artifact contains the shell static closure and excludes dynamic-only chunks',async()=>{
  const manifest:Record<string,Chunk>=JSON.parse(await readFile('dist/.vite/manifest.json','utf8'));
  const html=await readFile('dist/index.html','utf8'),entry=/<script[^>]+src="([^"]+)"/u.exec(html)![1];
  const root=Object.keys(manifest).find(key=>'/'+manifest[key].file===entry);expect(root).toBeDefined();expect(manifest[root!].isEntry).toBe(true);
@@ -16,7 +16,7 @@ test('WEB-MSG-VIEWER-PRECACHE precache artifact contains the shell static closur
  expect(precache.filter(asset=>dynamicOnly.includes(asset))).toEqual([]);
  expect(precache.filter(asset=>/\.(js|css)$/u.test(asset)).sort()).toEqual([...required].sort());
 });
-test('WEB-MSG-VIEWER-PRECACHE trusted startup leaves the viewer unloaded until hover and caches its first use',async({page,context,request},info)=>{
+test('WEB-MSG-VIEWER PRECACHE trusted startup leaves the viewer unloaded until hover and caches its first use',async({page,context,request},info)=>{
  await bootstrap(context,request);const ids=await control(request,'/demo-fixtures'),requests:string[]=[];
  context.on('request',value=>{const path=new URL(value.url()).pathname;if(/\/assets\/ViewerSession-[^/]+\.js$/u.test(path))requests.push(path);});
  const manifest:Record<string,Chunk>=JSON.parse(await readFile('dist/.vite/manifest.json','utf8')),viewer=Object.values(manifest).find(chunk=>/ViewerSession-[^/]+\.js$/u.test(chunk.file));expect(viewer).toBeDefined();

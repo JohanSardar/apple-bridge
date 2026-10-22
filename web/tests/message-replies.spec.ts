@@ -71,7 +71,7 @@ test('WEB-MSG-REPLY existing-chat composer quotes the exact native part and send
     expect(f.commands.filter(command=>command.op==='messages.reply')).toHaveLength(1);
 });
 
-test('WEB-MSG-REPLY-CANCEL cancel keeps the per-chat draft and never dispatches',async ({page,context}) => {
+test('WEB-MSG-REPLY CANCEL cancel keeps the per-chat draft and never dispatches',async ({page,context}) => {
     const f=await fixture(page,context);
     await page.goto('/messages/'+encodeURIComponent(chat)+'/'+encodeURIComponent(f.recordID!));
     const composer=page.getByRole('region',{name:'Message composer',exact:true});
@@ -86,7 +86,7 @@ test('WEB-MSG-REPLY-CANCEL cancel keeps the per-chat draft and never dispatches'
     expect(f.commands.filter(command=>command.op==='messages.reply')).toHaveLength(0);
 });
 
-test('WEB-MSG-REPLY-PROOF reply stays hidden until the fresh live capability is proven',async ({page,context}) => {
+test('WEB-MSG-REPLY PROOF reply stays hidden until the fresh live capability is proven',async ({page,context}) => {
     const f=await fixture(page,context,true);
     await page.goto('/messages/'+encodeURIComponent(chat)+'/'+encodeURIComponent(f.recordID!));
     await page.locator('.message-row[data-message="'+f.recordID+'"] .bubble[data-part="0"]').click({button:'right'});
@@ -97,7 +97,7 @@ test('WEB-MSG-REPLY-PROOF reply stays hidden until the fresh live capability is 
     await expect(menu.getByRole('button',{name:'Reply',exact:true})).toBeVisible();
     expect(f.commands.filter(command=>command.op==='messages.reply')).toHaveLength(0);
 });
-test('WEB-MSG-REPLY-SEND existing-chat Send has one local echo in the first resulting frame',async ({page,context}) => {
+test('WEB-MSG-REPLY SEND existing-chat Send has one local echo in the first resulting frame',async ({page,context}) => {
     const f=await fixture(page,context);
     await page.goto('/messages/'+encodeURIComponent(chat)+'/'+encodeURIComponent(f.recordID!));
     const composer=page.getByRole('region',{name:'Message composer',exact:true});
@@ -119,7 +119,7 @@ test('WEB-MSG-REPLY-SEND existing-chat Send has one local echo in the first resu
     expect(f.commands.filter(value=>value.op==='messages.send').map(value=>value.id)).toEqual([f.commands[0].id,command.id]);
 });
 
-test('WEB-MSG-REPLY-AMBIGUITY Check reconciles the original reply without a second write',async ({page,context,request}) => {
+test('WEB-MSG-REPLY AMBIGUITY Check reconciles the original reply without a second write',async ({page,context,request}) => {
     const f=await fixture(page,context);
     await page.goto('/messages/'+encodeURIComponent(chat)+'/'+encodeURIComponent(f.recordID!));
     await page.locator('.message-row[data-message="'+f.recordID+'"] .bubble[data-part="0"]').click({button:'right'});
@@ -142,7 +142,7 @@ test('WEB-MSG-REPLY-AMBIGUITY Check reconciles the original reply without a seco
     expect(effect.ok()).toBe(true);expect((await effect.json()).count).toBe(1);
 });
 
-test('WEB-MSG-REPLY-CELL an actual grouped native cell anchors keyboard actions and replies to its owning part',async ({page,context,request}) => {
+test('WEB-MSG-REPLY CELL an actual grouped native cell anchors keyboard actions and replies to its owning part',async ({page,context,request}) => {
     const f=await fixture(page,context),ids=await control(request,'/demo-fixtures');
     const leading=ids['demo-message-00-000042'],member=ids['demo-message-00-000043'];
     await page.goto('/messages/'+encodeURIComponent(chat)+'/'+encodeURIComponent(leading));
@@ -170,7 +170,7 @@ test('WEB-MSG-REPLY-CELL an actual grouped native cell anchors keyboard actions 
     expect(f.commands.filter(command=>command.op==='messages.react')).toHaveLength(0);
 });
 
-test('WEB-MSG-REPLY-KEYBOARD Command-R quotes the latest exact captured part without sending until Enter',async ({page,context}) => {
+test('WEB-MSG-REPLY KEYBOARD Command-R quotes the latest exact captured part without sending until Enter',async ({page,context}) => {
     const f=await fixture(page,context);
     await page.goto('/messages/'+encodeURIComponent(chat)+'/'+encodeURIComponent(f.recordID!));
     const composer=page.getByRole('region',{name:'Message composer',exact:true});
@@ -187,7 +187,7 @@ test('WEB-MSG-REPLY-KEYBOARD Command-R quotes the latest exact captured part wit
     expect(f.commands.find(command=>command.op==='messages.reply').args).toEqual({id:latest,part_index:part,text:'[ab-test actions] keyboard reply'});
 });
 
-test('WEB-MSG-REPLY-REVEAL Home then Command-T realizes the latest captured row again',async ({page,context})=>{
+test('WEB-MSG-REPLY REVEAL Home then Command-T realizes the latest captured row again',async ({page,context})=>{
     const f=await fixture(page,context);
     await page.goto('/messages/'+encodeURIComponent(chat)+'/'+encodeURIComponent(f.recordID!));
     const field=page.getByRole('textbox',{name:'Message',exact:true});await field.fill('[ab-test actions] unsent reveal draft');
@@ -206,7 +206,7 @@ test('WEB-MSG-REPLY-REVEAL Home then Command-T realizes the latest captured row 
     expect(await anchor.evaluate(element=>element.closest('[data-message]')?.getAttribute('data-message'))).toBe(latest);
     expect(f.commands.filter(command=>command.op==='messages.react'||command.op==='messages.reply')).toHaveLength(0);
 });
-test('WEB-MSG-REPLY-INACTIVE a hidden native stack member is revealed before its keyboard picker opens',async ({page,context,request})=>{
+test('WEB-MSG-REPLY INACTIVE a hidden native stack member is revealed before its keyboard picker opens',async ({page,context,request})=>{
     test.skip(!test.info().project.name.endsWith('-phone'),'Desktop stack cells are all active.');
     const f=await fixture(page,context),ids=await control(request,'/demo-fixtures');
     const leading=ids['demo-message-00-000042'],member=ids['demo-message-00-000045'];

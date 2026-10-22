@@ -1,4 +1,4 @@
 id: WEB-CON-WRITE
 feature: web.contacts
 levels: [web]
-web: {browsers: [chromium], themes: [light], layouts: [desktop], server: gateway}
+web: {browsers: [webkit, chromium, firefox], themes: [light, dark], layouts: [phone, desktop], server: gateway}

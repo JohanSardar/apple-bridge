@@ -2,7 +2,7 @@ import {test,expect} from '@playwright/test';
 import {control} from './session';
 import {mediaSession} from './media-session';
 
-test('WEB-MSG-MEDIA-POSTER a retina panorama keeps source geometry and uses immutable derivative identity',async({page,request},info)=>{
+test('WEB-MSG-MEDIA POSTER a retina panorama keeps source geometry and uses immutable derivative identity',async({page,request},info)=>{
  await mediaSession(page.context(),request);const ids=await control(request,'/demo-fixtures');
  let release!:()=>void;const gate=new Promise<void>(resolve=>{release=resolve;}),responses:{digest:string;etag:string}[]=[];
  await page.route('**/web/v1/blob/**',async route=>{if(new URL(route.request().url()).searchParams.get('variant')==='poster')await gate;await route.continue();});
@@ -23,7 +23,7 @@ test('WEB-MSG-MEDIA-POSTER a retina panorama keeps source geometry and uses immu
  expect(await slot.boundingBox()).toEqual(before);await info.attach('panorama-poster-resolution-and-cache-identity',{body:JSON.stringify({before,after:await slot.boundingBox(),natural,responses,cls,focusOutline}),contentType:'application/json'});
 });
 
-test('WEB-MSG-MEDIA-POSTER a Live Photo uses its high resolution key still without moving the reserved bubble',async({page,request},info)=>{
+test('WEB-MSG-MEDIA POSTER a Live Photo uses its high resolution key still without moving the reserved bubble',async({page,request},info)=>{
  await mediaSession(page.context(),request);const ids=await control(request,'/demo-fixtures');
  await page.mouse.move(0,0);await page.goto('/messages/'+encodeURIComponent(ids['message-chat'])+'/'+encodeURIComponent(ids['demo-message-00-000129']));
  const slot=page.locator('[data-message="'+ids['demo-message-00-000129']+'"] .media-reserved'),image=slot.locator('.media-image');

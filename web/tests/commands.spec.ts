@@ -79,7 +79,7 @@ test('WEB-MSG-OPTIMISTIC first-frame echo swaps only on exact captured identity 
     await expect(page.locator('[data-record-id="'+recordID+'"][data-command-id="'+commandID+'"]')).toHaveCount(1);
     expect(commands).toEqual([commandID]);
 });
-test('WEB-MSG-OPTIMISTIC-AMBIGUITY lost response preserves the command ID and reconciles through reads only',async({page,context,request})=>{
+test('WEB-MSG-OPTIMISTIC AMBIGUITY lost response preserves the command ID and reconciles through reads only',async({page,context,request})=>{
     await context.addCookies(sessionCookies);
     const ids=await control(request,'/demo-fixtures');
     const commands:string[]=[],lookups:string[]=[],lookupConnections:number[]=[];
@@ -198,7 +198,7 @@ test('WEB-MSG-OPTIMISTIC unrelated outgoing rows release atomically at the ambig
     expect(commands).toHaveLength(1);
     console.log('compose: timeout_count=1; forced_status_delay=true; unrelated_native_preserved=true');
 });
-test('WEB-MSG-OPTIMISTIC-OBSERVED observed without record IDs remains Sent and uses one captured row',async({page,context,request})=>{
+test('WEB-MSG-OPTIMISTIC OBSERVED observed without record IDs remains Sent and uses one captured row',async({page,context,request})=>{
     await context.addCookies(sessionCookies);const ids=await control(request,'/demo-fixtures');let recordID='';const commands:string[]=[];
     await page.routeWebSocket('**/web/v1/live',socket=>{
         const server=socket.connectToServer();socket.onMessage(data=>{const frame=JSON.parse(String(data));if(frame.t==='cmd')commands.push(frame.id);server.send(data);});
@@ -217,7 +217,7 @@ test('WEB-MSG-OPTIMISTIC-OBSERVED observed without record IDs remains Sent and u
     await expect(page.getByText('Not sure if delivered',{exact:true})).toHaveCount(0);
     expect(commands).toHaveLength(1);console.log('compose: missing_observed_ids=1; timeout_count=1; disposition=observed');
 });
-test('WEB-MSG-OPTIMISTIC-FAILURE a definitive no-effect part failure restores its suppressed bubble',async({page,context,request})=>{
+test('WEB-MSG-OPTIMISTIC FAILURE a definitive no-effect part failure restores its suppressed bubble',async({page,context,request})=>{
     await context.addCookies(sessionCookies);const ids=await control(request,'/demo-fixtures');await control(request,'/message-fault?name=part-no-effect');
     const held:(()=>void)[]=[],captures:any[]=[],commands:string[]=[];let failed=false,holdStatus=true;
     await page.routeWebSocket('**/web/v1/live',socket=>{
@@ -239,7 +239,7 @@ test('WEB-MSG-OPTIMISTIC-FAILURE a definitive no-effect part failure restores it
         expect(commands).toHaveLength(1);
     }finally{await control(request,'/message-fault?name=');}
 });
-test('WEB-MSG-OPTIMISTIC-MONOTONIC a stale same-cursor reconcile record cannot regress observed',async({page,context,request})=>{
+test('WEB-MSG-OPTIMISTIC MONOTONIC a stale same-cursor reconcile record cannot regress observed',async({page,context,request})=>{
     await context.addCookies(sessionCookies);const ids=await control(request,'/demo-fixtures');let stale:(()=>void)|undefined;const commands:string[]=[];
     await page.routeWebSocket('**/web/v1/live',socket=>{
         const server=socket.connectToServer();socket.onMessage(data=>{const frame=JSON.parse(String(data));if(frame.t==='cmd')commands.push(frame.id);server.send(data);});
@@ -252,7 +252,7 @@ test('WEB-MSG-OPTIMISTIC-MONOTONIC a stale same-cursor reconcile record cannot r
     await page.getByRole('button',{name:'Check fixture command',exact:true}).click();await expect.poll(()=>Boolean(stale)).toBe(true);stale!();
     await page.evaluate(()=>new Promise(requestAnimationFrame));await expect(page.getByLabel('Fixture command status')).toHaveText('Sent');expect(commands).toHaveLength(1);
 });
-test('WEB-MSG-OPTIMISTIC-NO-CANDIDATE server indeterminate without a released candidate keeps an echo with Check and Copy',async({page,context,request})=>{
+test('WEB-MSG-OPTIMISTIC NO-CANDIDATE server indeterminate without a released candidate keeps an echo with Check and Copy',async({page,context,request})=>{
     await context.addCookies(sessionCookies);const ids=await control(request,'/demo-fixtures');await control(request,'/message-fault?name=ui-interference');let reads=0;const commands:string[]=[];
     await page.addInitScript(()=>{Object.defineProperty(navigator,'clipboard',{value:{writeText:async(value:string)=>{(window as any).__copied=value;}}});});
     await page.routeWebSocket('**/web/v1/live',socket=>{const server=socket.connectToServer();socket.onMessage(data=>{const frame=JSON.parse(String(data));if(frame.t==='cmd')commands.push(frame.id);if(frame.t==='sub'&&frame.args?.collection==='system.command')reads++;server.send(data);});server.onMessage(data=>socket.send(data));});

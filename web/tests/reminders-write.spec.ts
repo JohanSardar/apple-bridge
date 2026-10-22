@@ -101,7 +101,7 @@ test('WEB-REM-WRITE reduced-motion reopen and conflict rollback without retry', 
   expect(commands.map(value => value.op)).toEqual(['reminders.complete', 'reminders.complete', 'reminders.uncomplete', 'reminders.complete']);
 });
 
-test('WEB-REM-WRITE-FOCUS live changes preserve the editor and its original version', async ({ page, context, request }) => {
+test('WEB-REM-WRITE live changes preserve the editor and its original version', async ({ page, context, request }) => {
   await bootstrap(context, request);
   const commands: any[] = []; let nativeCaptured = false; page.on('websocket', socket => { socket.on('framesent', event => { const frame = JSON.parse(String(event.payload)); if (frame.t === 'cmd') commands.push(frame); }); socket.on('framereceived', event => { if (String(event.payload).includes('[ab-test] changed while editing')) nativeCaptured = true; }); });
   await page.goto('/reminders'); await page.getByRole('button', { name: 'Personal', exact: true }).click();

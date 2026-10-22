@@ -73,7 +73,7 @@ test('WEB-MSG-COMPOSER waits for a coherent capture before Send and rejects over
     holding=false;held.splice(0).forEach(release=>release());await expect(send).toBeEnabled();
     await field.fill('x'.repeat(65537));await expect(send).toBeDisabled();await expect(page.getByRole('alert')).toHaveText('Message is too long');await field.press('Enter');expect(commands).toHaveLength(0);
 });
-test('WEB-MSG-COMPOSER-REVIEW defers storage, flushes lifecycle transitions, caches metrics and shows only user-facing failure status', async ({page,context}) => {
+test('WEB-MSG-COMPOSER REVIEW defers storage, flushes lifecycle transitions, caches metrics and shows only user-facing failure status', async ({page,context}) => {
     await context.addCookies(trusted);
     await page.addInitScript(()=>{
         const state=(window as any).__draftProbe={writes:0,before:0,synchronous:0,metrics:0};

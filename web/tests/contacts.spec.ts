@@ -10,6 +10,7 @@ test('WEB-CON-READ lists, sections, scrubber, labeled card, safe actions, vCard 
     if(compact)await page.getByRole('button',{name:/All Contacts/}).click();
     await expect(page.getByRole('heading',{name:'All Contacts',exact:true})).toBeVisible();
     await expect(page.getByRole('button',{name:/Zoe M Adler/}).first()).toBeVisible();
+    await page.screenshot({path:`../lab/evidence/private/web/contacts-list-${info.project.name}.png`});
     const lists=page.getByRole('navigation',{name:'Contact lists'});
     if(compact)await page.getByRole('button',{name:'Back to lists',exact:true}).click();
     await lists.getByRole('button',{name:'Bridge Test Account',exact:true}).click();
@@ -45,6 +46,7 @@ test('WEB-CON-READ lists, sections, scrubber, labeled card, safe actions, vCard 
     await expect(card).toContainText('Example Friend');
     await expect(card.getByRole('link',{name:'javascript:alert(1)',exact:true})).toHaveCount(0);
     await expect(card).not.toContainText('hidden sensitive note');
+    await page.screenshot({path:`../lab/evidence/private/web/contacts-card-${info.project.name}.png`});
     await expect(card.getByRole('link',{name:/1 Example Street/})).toHaveAttribute('href',/^https:\/\/maps.apple.com\//);
     const download=page.waitForEvent('download');
     await card.getByRole('button',{name:'Export vCard',exact:true}).click();
