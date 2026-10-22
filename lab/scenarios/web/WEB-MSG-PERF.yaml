@@ -1,0 +1,9 @@
+id: WEB-MSG-PERF
+feature: web.messages.read
+levels: [web]
+web:
+  huge: true
+  browsers: [chromium, webkit, firefox]
+  themes: [light, dark]
+  layouts: [phone, desktop]
+  server: gateway
