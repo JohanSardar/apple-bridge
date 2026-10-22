@@ -86,7 +86,7 @@ async function effect(request: APIRequestContext, id: string) {
     expect(response.ok()).toBe(true);
     expect((await response.json()).count).toBe(1);
 }
-test('WEB-MSG-PARTS-SWAP first-frame parts swap independently only with exact IDs and a compatible cursor', async ({ page, context, request }) => {
+test('WEB-MSG-PARTS SWAP first-frame parts swap independently only with exact IDs and a compatible cursor', async ({ page, context, request }) => {
     const f = await fixture(page, context, request);
     await f.ready();
     await page.evaluate(() => {
@@ -135,7 +135,7 @@ test('WEB-MSG-PARTS-SWAP first-frame parts swap independently only with exact ID
     expect(f.sent.filter(frame => frame.t === 'cmd')).toHaveLength(1);
     await effect(request, id);
 });
-for (const fault of ['part-delivery-failed', 'part-no-effect']) test('WEB-MSG-PARTS-' + (fault === 'part-delivery-failed' ? 'CAPTURED-FAILURE' : 'NO-EFFECT') + ' mixed outcomes preserve successful parts and distinguish ' + fault, async ({ page, context, request }) => {
+for (const fault of ['part-delivery-failed', 'part-no-effect']) test('WEB-MSG-PARTS ' + (fault === 'part-delivery-failed' ? 'CAPTURED-FAILURE' : 'NO-EFFECT') + ' mixed outcomes preserve successful parts and distinguish ' + fault, async ({ page, context, request }) => {
     const f = await fixture(page, context, request);
     await f.ready(fault); await f.send();
     const final = await finalParts(f), id = f.command().id, parts = final.command.parts;
@@ -159,7 +159,7 @@ for (const fault of ['part-delivery-failed', 'part-no-effect']) test('WEB-MSG-PA
     expect(f.sent.filter(frame => frame.t === 'cmd')).toHaveLength(1);
     await effect(request, id);
 });
-test('WEB-MSG-PARTS-STALE stale per-part evidence cannot erase a verified mapping or regress its state', async ({ page, context, request }) => {
+test('WEB-MSG-PARTS STALE stale per-part evidence cannot erase a verified mapping or regress its state', async ({ page, context, request }) => {
     const f = await fixture(page, context, request);
     await f.ready(); await f.send();
     const final = await finalParts(f), id = f.command().id, parts = final.command.parts;
@@ -175,7 +175,7 @@ test('WEB-MSG-PARTS-STALE stale per-part evidence cannot erase a verified mappin
     await expect(page.getByLabel('Fixture command status')).toHaveText('Sent');
     expect(f.sent.filter(frame => frame.t === 'cmd')).toHaveLength(1);
 });
-for (const candidate of [false, true]) test('WEB-MSG-PARTS-GHOST-' + (candidate ? 'CANDIDATE' : 'ECHO') + ' unresolved delivery failure ' + (candidate ? 'uses a notice after releasing a native candidate' : 'retains its echo without inventing an identity'), async ({ page, context, request }) => {
+for (const candidate of [false, true]) test('WEB-MSG-PARTS GHOST-' + (candidate ? 'CANDIDATE' : 'ECHO') + ' unresolved delivery failure ' + (candidate ? 'uses a notice after releasing a native candidate' : 'retains its echo without inventing an identity'), async ({ page, context, request }) => {
     const f = await fixture(page, context, request);
     await f.ready('ghost-send', false); f.freeze(); await f.send();
     await expect.poll(() => f.statuses.some(frame => frame.command?.disposition === 'delivery_failed')).toBe(true);
@@ -202,7 +202,7 @@ for (const candidate of [false, true]) test('WEB-MSG-PARTS-GHOST-' + (candidate 
     expect(f.sent.filter(frame => frame.t === 'cmd')).toHaveLength(1);
     expect(f.sent.filter(frame => frame.t === 'resolve')).toHaveLength(0);
 });
-test('WEB-MSG-PARTS-STRENGTHEN Check strengthens one unknown part while another stays unknown and a no-effect failure remains visible', async ({ page, context, request }) => {
+test('WEB-MSG-PARTS STRENGTHEN Check strengthens one unknown part while another stays unknown and a no-effect failure remains visible', async ({ page, context, request }) => {
     const f = await fixture(page, context, request);
     await f.ready('part-progress-failure'); await f.send();
     await expect.poll(() => f.statuses.some(frame => frame.command?.parts?.length === 3 && frame.command.parts[2].disposition === 'failed_no_effect')).toBe(true);
@@ -230,7 +230,7 @@ test('WEB-MSG-PARTS-STRENGTHEN Check strengthens one unknown part while another 
     await effect(request, f.command().id);
 });
 
-for(const fault of ['part-delivery-failed','part-no-effect']) test('WEB-MSG-PARTS-RETRY '+fault+' retries only the explicit failed part with a new input and upload',async ({page,context,request}) => {
+for(const fault of ['part-delivery-failed','part-no-effect']) test('WEB-MSG-PARTS RETRY '+fault+' retries only the explicit failed part with a new input and upload',async ({page,context,request}) => {
     const f=await fixture(page,context,request);
     await f.ready(fault); await f.send();
     const final=await finalParts(f), original=f.command(), failed=final.command.parts[2];
@@ -260,7 +260,7 @@ for(const fault of ['part-delivery-failed','part-no-effect']) test('WEB-MSG-PART
     await effect(request,original.id); await effect(request,next.id);
 });
 
-test('WEB-MSG-PARTS-LATE-FAILURE an exact released failed row does not gain a duplicate echo while its cursor catches up',async ({page,context,request}) => {
+test('WEB-MSG-PARTS LATE-FAILURE an exact released failed row does not gain a duplicate echo while its cursor catches up',async ({page,context,request}) => {
     const f=await fixture(page,context,request);
     await f.ready('part-delivery-failed'); f.freeze(); await f.send();
     const final=await finalParts(f), failed=final.command.parts[2];
@@ -279,7 +279,7 @@ test('WEB-MSG-PARTS-LATE-FAILURE an exact released failed row does not gain a du
     await effect(request,f.command().id);
 });
 
-test('WEB-MSG-PARTS-PENDING local part status is reactive before any command acknowledgement',async ({page,context,request}) => {
+test('WEB-MSG-PARTS PENDING local part status is reactive before any command acknowledgement',async ({page,context,request}) => {
     const f=await fixture(page,context,request);
     await f.ready(); f.freeze(); await f.send();
     await expect(page.getByLabel('Fixture command status')).toHaveText('Sending…');

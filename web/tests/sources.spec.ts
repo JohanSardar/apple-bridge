@@ -121,7 +121,7 @@ test('WEB-SOURCES-STATUS JSON proofs bypass the service worker while trusted thu
 });
 test.describe('late capability discovery',()=>{
     test.use({serviceWorkers:'block'});
-test('WEB-SOURCES-STATUS-LATE-FAILURE repeated late discovery failures heal without reconnect or command dispatch',async({page,context},testInfo)=>{
+test('WEB-SOURCES-STATUS LATE-FAILURE repeated late discovery failures heal without reconnect or command dispatch',async({page,context},testInfo)=>{
     await context.addCookies(trusted);
     let welcomes=0,commands=0,requests=0;const sequences:number[]=[];
     await page.addInitScript(()=>{

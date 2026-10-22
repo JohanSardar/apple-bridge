@@ -53,7 +53,7 @@ test('WEB-MSG-REACT native context menu opens six tapbacks and one trusted selec
     await expect(menu).toHaveCount(0);
     await expect.poll(() => f.statuses.some(frame => frame.id === command.id && ['observed','delivered'].includes(frame.status))).toBe(true);
 });
-test('WEB-MSG-REACT-REMOVE a matching own tapback removes it and emoji search sends the exact selected emoji',async ({page,context}) => {
+test('WEB-MSG-REACT REMOVE a matching own tapback removes it and emoji search sends the exact selected emoji',async ({page,context}) => {
     const f = await fixture(page,context);
     const menu = page.getByRole('dialog',{name:'Message actions',exact:true});
     await f.target.click({button:'right'}); await menu.getByRole('button',{name:'Love',exact:true}).click();
@@ -71,7 +71,7 @@ test('WEB-MSG-REACT-REMOVE a matching own tapback removes it and emoji search se
     await expect.poll(() => f.commands.filter(command => command.op === 'messages.react').length).toBe(3);
     expect(f.commands.filter(command => command.op === 'messages.react')[2].args).toEqual({id:f.recordID,part_index:0,reaction:'emoji',emoji:'🎉',remove:false});
 });
-test('WEB-MSG-REACT-PROOF unproven reactions stay hidden until the live proof arrives without dispatch',async ({page,context}) => {
+test('WEB-MSG-REACT PROOF unproven reactions stay hidden until the live proof arrives without dispatch',async ({page,context}) => {
     const f = await fixture(page,context,true);
     await f.target.click({button:'right'});
     const menu = page.getByRole('dialog',{name:'Message actions',exact:true});
@@ -85,7 +85,7 @@ test('WEB-MSG-REACT-PROOF unproven reactions stay hidden until the live proof ar
     expect(f.commands.filter(command => command.op === 'messages.react')).toHaveLength(0);
 });
 
-test('WEB-MSG-REACT-AMBIGUITY a lost result blocks repeated reaction writes until read-only Check recovers the original command',async ({page,context,request}) => {
+test('WEB-MSG-REACT AMBIGUITY a lost result blocks repeated reaction writes until read-only Check recovers the original command',async ({page,context,request}) => {
     const f=await fixture(page,context), menu=page.getByRole('dialog',{name:'Message actions',exact:true});
     f.holdResults();
     await f.target.click({button:'right'}); await menu.getByRole('button',{name:'Love',exact:true}).click();
@@ -107,7 +107,7 @@ test('WEB-MSG-REACT-AMBIGUITY a lost result blocks repeated reaction writes unti
     expect(effect.ok()).toBe(true); expect((await effect.json()).count).toBe(1);
 });
 
-test('WEB-MSG-REACT-APP the actual transcript opens the guarded picker for a captured native part',async ({page,context}) => {
+test('WEB-MSG-REACT APP the actual transcript opens the guarded picker for a captured native part',async ({page,context}) => {
     const f=await fixture(page,context);
     await page.goto('/messages/'+encodeURIComponent(chat)+'/'+encodeURIComponent(f.recordID!));
     const row=page.locator('.message-row[data-message="'+f.recordID+'"]');
@@ -136,7 +136,7 @@ test('WEB-MSG-REACT-APP the actual transcript opens the guarded picker for a cap
     expect(f.commands.filter(command=>command.op==='messages.react')).toHaveLength(1);
 });
 
-test('WEB-MSG-REACT-TOUCH a trusted long press opens once and touch release cannot choose a reaction',async ({page,context,browserName}) => {
+test('WEB-MSG-REACT TOUCH a trusted long press opens once and touch release cannot choose a reaction',async ({page,context,browserName}) => {
     test.skip(browserName!=='chromium'||!test.info().project.name.endsWith('phone'),'Trusted held touch uses the Chromium protocol; native context-menu and keyboard remain cross-browser.');
     const f=await fixture(page,context);
     await page.goto('/messages/'+encodeURIComponent(chat)+'/'+encodeURIComponent(f.recordID!));
@@ -157,7 +157,7 @@ test('WEB-MSG-REACT-TOUCH a trusted long press opens once and touch release cann
     await session.detach();
 });
 
-test('WEB-MSG-REACT-COPY copies only the selected captured text and never dispatches',async ({page,context}) => {
+test('WEB-MSG-REACT COPY copies only the selected captured text and never dispatches',async ({page,context}) => {
     const f=await fixture(page,context), before=f.commands.length;
     await page.evaluate(() => { (window as any).__actionCopies=[]; Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async (text:string) => { (window as any).__actionCopies.push(text); }}}); });
     await f.target.click({button:'right'});

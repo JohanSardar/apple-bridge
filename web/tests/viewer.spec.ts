@@ -5,7 +5,7 @@ import {gzipSync} from 'node:zlib';
 test.use({locale:'en-US',timezoneId:'America/Chicago'});
 let session:Promise<{cookie:Parameters<BrowserContext['addCookies']>[0][number]}>|undefined;
 async function setup(context:BrowserContext,request:APIRequestContext){const value=await(session??=control(request,'/session?kind=public'));await context.addCookies([value.cookie]);return control(request,'/demo-fixtures');}
-test('WEB-MSG-VIEWER-META collection source pages beyond the transcript window with interleaved photos and playable video',async({page,context,request},info)=>{
+test('WEB-MSG-VIEWER META collection source pages beyond the transcript window with interleaved photos and playable video',async({page,context,request},info)=>{
  const ids=await setup(context,request),subscriptions:Record<string,unknown>[]=[],viewerChunks:string[]=[];
  page.on('request',request=>{if(/\/assets\/ViewerSession-[^/]+\.js$/u.test(new URL(request.url()).pathname))viewerChunks.push(request.url());});
  await page.addInitScript(()=>Object.defineProperty(navigator,'share',{value:async(payload:ShareData)=>{Object.defineProperty(window,'viewerShared',{value:payload,configurable:true});}}));
@@ -68,7 +68,7 @@ test('WEB-MSG-VIEWER Reduce Motion uses a short fade with stable geometry and Es
  expect(await viewer.evaluate(element=>element.getAnimations({subtree:true}).every(animation=>Number(animation.effect?.getTiming().duration)<=150))).toBe(true);
  await page.keyboard.press('Escape');await expect(viewer).toBeHidden();expect(await source.boundingBox()).toEqual(before);
 });
-test('WEB-MSG-VIEWER-DISMISS themed backdrop and interactive dismissal preserve the source silhouette',async({page,context,request},info)=>{
+test('WEB-MSG-VIEWER DISMISS themed backdrop and interactive dismissal preserve the source silhouette',async({page,context,request},info)=>{
  const ids=await setup(context,request);await page.goto('/__fixtures/media?chat='+encodeURIComponent(ids['message-chat']));
  const source=page.locator(`[data-message="${ids['demo-message-00-000033']}"]`);await source.locator('.media-open').click();
  const viewer=page.getByRole('dialog',{name:'Media viewer'}),stage=viewer.locator('.media-viewer-stage');

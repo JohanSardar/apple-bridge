@@ -42,7 +42,7 @@ test('WEB-MSG-CHATS-CACHE offline reload keeps the complete reordered chat view'
     }
 });
 
-test('WEB-MSG-CHATS-CACHE-BURST fifty live deltas coalesce snapshot construction and persist the final state',async({page,request},info)=>{
+test('WEB-MSG-CHATS-CACHE BURST fifty live deltas coalesce snapshot construction and persist the final state',async({page,request},info)=>{
     const subscriptions=new Map<string,any>(),buffer:(()=>void)[]=[];let hold=false,root='',held=0;
     await page.addInitScript(()=>{const Original=TextEncoder;let builds=0;(window as any).__snapshotBuilds=()=>builds;window.TextEncoder=class extends Original{constructor(){super();builds++;}};});
     await page.routeWebSocket('**/web/v1/live',route=>{const server=route.connectToServer();route.onMessage(message=>{const frame=JSON.parse(String(message));if(frame.t==='sub'&&frame.view==='chats'){subscriptions.set(frame.id,frame.args);if(frame.args.filter==='all'&&!frame.args.after)root=frame.id;}server.send(message);});server.onMessage(message=>{const frame=JSON.parse(String(message));if(hold&&frame.t==='delta'&&subscriptions.has(frame.sub)){if(frame.sub===root)held++;buffer.push(()=>route.send(message));}else route.send(message);});});

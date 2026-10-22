@@ -1,6 +1,6 @@
 import {test,expect} from '@playwright/test';
 import {control} from './session';
-test('WEB-MSG-LINKS-SOLID compact previews keep a legible icon on low-power material fallback',async({page,context,request},info)=>{
+test('WEB-MSG-LINKS SOLID compact previews keep a legible icon on low-power material fallback',async({page,context,request},info)=>{
  const session=await control(request,'/session?kind=public');await context.addCookies([session.cookie]);const ids=await control(request,'/demo-fixtures');
  await page.addInitScript(()=>Object.defineProperty(navigator,'hardwareConcurrency',{configurable:true,value:2}));
  await page.goto('/__fixtures/media?cards=plain&chat='+encodeURIComponent(ids['message-chat']));await expect(page.locator('html')).toHaveClass(/solid-material/u);

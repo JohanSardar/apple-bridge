@@ -17,7 +17,7 @@ async function marker(page:Page,png:Uint8Array,width:number,height:number){
   return{width:(right-left+1)/scaleX,height:(bottom-top+1)/scaleY,centerX:(left+right+1)/2/scaleX,centerY:(top+bottom+1)/2/scaleY,count,edge:[data[edge],data[edge+1],data[edge+2]],pixels:{width:canvas.width,height:canvas.height}};
  },{bytes:Array.from(png),width,height});
 }
-test('WEB-MSG-MEDIA-MOTION real transcript covers an ultrawide poster and playing frame without distortion',async({page,request},info)=>{
+test('WEB-MSG-MEDIA MOTION real transcript covers an ultrawide poster and playing frame without distortion',async({page,request},info)=>{
  await prepareSession(page);const ids:Record<string,string>=await control(request,'/demo-fixtures');
  await page.mouse.move(0,0);await page.goto('/messages/'+encodeURIComponent(ids['message-chat'])+'/'+encodeURIComponent(ids['demo-message-00-000130']));
  const row=page.locator('[data-message="'+ids['demo-message-00-000130']+'"]'),slot=row.locator('.media-reserved'),motion=slot.locator('.media-motion'),button=motion.locator('button.media-open');
