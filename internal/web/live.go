@@ -289,7 +289,24 @@ func safeError(err error) *contracts.Error {
 	return contracts.ErrUnavailable
 }
 
+func reminderView(name string) bool {
+	return name == "reminders.lists" || name == "reminders.items"
+}
 func (l *liveSocket) view(ctx context.Context, f clientFrame) (any, error) {
+	if reminderView(f.View) {
+		result, err := l.server.deps.Operations.Invoke(ctx, l.identity.Principal, f.View, f.Args)
+		if err != nil {
+			return nil, err
+		}
+		raw, err := json.Marshal(result)
+		if err != nil {
+			return nil, err
+		}
+		if len(raw) > 2*1024*1024 {
+			return nil, contracts.ErrCapacity
+		}
+		return json.RawMessage(raw), nil
+	}
 	if f.View == "record" {
 		var q contracts.ReadQuery
 		if contracts.DecodeInput(f.Args, &q) != nil {
@@ -336,7 +353,11 @@ func (l *liveSocket) subscribe(ctx context.Context, f clientFrame) {
 	if !resume {
 		data, err := l.view(ctx, f)
 		if err != nil {
-			l.failView(ctx, safeError(err).Code, "view unavailable")
+			if reminderView(f.View) {
+				l.send(map[string]any{"t": "error", "id": f.ID, "code": safeError(err).Code}, false)
+			} else {
+				l.failView(ctx, safeError(err).Code, "view unavailable")
+			}
 			return
 		}
 		previous = decodeViewState(data)
@@ -386,6 +407,8 @@ func (l *liveSocket) subscribe(ctx context.Context, f clientFrame) {
 					}
 					changes = append(changes, change)
 				}
+			} else if reminderView(f.View) {
+				affected = affected || change.Record.Source == contracts.Reminders
 			} else if change.Record.Source == contracts.Messages || change.Record.Source == contracts.Contacts {
 				affected = true
 			}
@@ -394,8 +417,19 @@ func (l *liveSocket) subscribe(ctx context.Context, f clientFrame) {
 		if affected {
 			data, err := l.view(ctx, f)
 			if err != nil {
-				l.failView(ctx, "reset", "resubscribe required")
+				if reminderView(f.View) {
+					l.send(map[string]any{"t": "error", "id": f.ID, "code": safeError(err).Code}, false)
+				} else {
+					l.failView(ctx, "reset", "resubscribe required")
+				}
 				return
+			}
+			if reminderView(f.View) {
+				frame["changes"] = []any{map[string]any{"op": "replace", "data": data}}
+				if !l.send(frame, false) {
+					return
+				}
+				continue
 			}
 			next := decodeViewState(data)
 			if f.View == "thread" {

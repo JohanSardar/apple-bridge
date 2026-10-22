@@ -1,0 +1,85 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[7.09 9.19 14.93] cpu_idle=54% cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5HWB30WGNZDECJ4E880YE9K",
+  "metrics": {
+    "browser_budget_ms": 180000,
+    "capture_observer_resets": 0,
+    "demo_messages": 5000,
+    "demo_startup_ms": 7483,
+    "fixture_setup_ms": 7483,
+    "matrix": [
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "chromium-light-phone",
+      "chromium-light-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-REM-READ-webkit-light-phone-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-REM-READ-webkit-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-REM-READ-webkit-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-REM-READ-chromium-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-REM-READ-chromium-light-desktop-playwright.json"
+    ],
+    "server": "gateway",
+    "setups": [
+      {
+        "fixture_setup_ms": 7483,
+        "fixture_snapshot": null,
+        "project": "webkit-light-phone"
+      },
+      {
+        "fixture_setup_ms": 8811,
+        "fixture_snapshot": null,
+        "project": "webkit-light-desktop"
+      },
+      {
+        "fixture_setup_ms": 8881,
+        "fixture_snapshot": null,
+        "project": "chromium-light-phone"
+      },
+      {
+        "fixture_setup_ms": 4969,
+        "fixture_snapshot": null,
+        "project": "chromium-light-desktop"
+      }
+    ]
+  },
+  "scenario": "WEB-REM-READ",
+  "level": "web",
+  "passed": true,
+  "git_sha": "505b0b710a1b853cc06a99f25e5191afda760598",
+  "at": "2026-10-22T13:20:53.276513Z",
+  "assertions": [
+    {
+      "name": "webkit-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/reminders.spec.ts:58:1 › WEB-REM-READ exact demo sidebar, nested sections, completed, sorts, keyboard and native live updates (31.2s)\n  ✓  2 [webkit-light-phone] › tests/reminders.spec.ts:242:1 › WEB-REM-READ empty-section keyboard selection and sidebar design (6.0s)\n\n  2 passed (41.2s)\n"
+    },
+    {
+      "name": "webkit-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/reminders.spec.ts:58:1 › WEB-REM-READ exact demo sidebar, nested sections, completed, sorts, keyboard and native live updates (23.5s)\n  ✓  2 [webkit-light-desktop] › tests/reminders.spec.ts:242:1 › WEB-REM-READ empty-section keyboard selection and sidebar design (7.9s)\n\n  2 passed (35.5s)\n"
+    },
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/reminders.spec.ts:58:1 › WEB-REM-READ exact demo sidebar, nested sections, completed, sorts, keyboard and native live updates (23.9s)\n  ✓  2 [chromium-light-phone] › tests/reminders.spec.ts:242:1 › WEB-REM-READ empty-section keyboard selection and sidebar design (4.4s)\n\n  2 passed (31.8s)\n"
+    },
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/reminders.spec.ts:58:1 › WEB-REM-READ exact demo sidebar, nested sections, completed, sorts, keyboard and native live updates (14.4s)\n  ✓  2 [chromium-light-desktop] › tests/reminders.spec.ts:242:1 › WEB-REM-READ empty-section keyboard selection and sidebar design (3.6s)\n\n  2 passed (19.2s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

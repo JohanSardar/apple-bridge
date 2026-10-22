@@ -19,7 +19,7 @@ test('WEB-SHELL-JOURNEY layouts, deep links, appearance, keyboard and history', 
     else
         await expect(page.getByLabel('Search', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Switch app' }).click();
-    await expect(page.getByRole('button', { name: 'Reminders Coming soon' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Reminders', exact: true })).toBeEnabled();
     await page.getByRole('button', { name: 'Switch app' }).click();
     await page.getByRole('button', { name: 'New Message', exact: true }).click();
     await expect(page).toHaveURL(/messages\/new/);

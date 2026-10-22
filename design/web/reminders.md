@@ -29,6 +29,7 @@ Deep links: `/reminders`, `/reminders/<list|smart:today|scheduled|all|flagged|co
 | Feature | Apple | Web | Bridge | When |
 |---|---|---|---|---|
 | Smart tiles | Today, Scheduled, All, Flagged, Completed, Assigned to Me; each with a colored glyph and count; reorder or hide via Edit | Same, counts live | partial (computable from R fields; flags `—`) | R |
+| Pinned lists | List-colored tiles with emblem and count after the smart tiles; omitted from My Lists | Same | pin, emblem and order R (store) | R (store) |
 | My Lists | Colored circle with glyph or emoji, name, count; drag to reorder; groups as disclosure folders | Same | names and colors R; icon, emoji, groups and order `—` | R (store) |
 | Custom smart lists | Tag/date/priority/flag filters | Shown and evaluated client-side | `—` | P |
 | Tags section | `#tag` chips filter across lists | Same | `—` | R (store) |
@@ -97,10 +98,14 @@ Deep links: `/reminders`, `/reminders/<list|smart:today|scheduled|all|flagged|co
 
 ## 7. Bridge work
 
+The read UI uses `reminders.lists` and `reminders.items` views over `web/1`, with the viewer's IANA `time_zone`. Relevant Reminders record changes re-query the visibility-scoped read model and replace that view. Each view is capped at 2 MiB; capacity errors clear its rows and show an inline explanation, a known count when available, and guidance to choose a smaller list or tag. They never truncate the result. Cursor paging is the next W5 slice before writes if a counts-only real read proof finds any list or supported smart view above about 3,000 items; otherwise it stays a follow-up. Large notes or attachment metadata can reach the byte cap at smaller item counts.
+
+Read navigation preserves the flat sidebar order and group disclosures, uses generic section headers and recursive subtasks, and offers completed visibility, server sorts, read-only details and search across titles, notes, URLs and tags. Search uses the bounded All projection with completed reminders included and highlights title and note matches. Details use a desktop inspector or a compact sheet. Phone push and back keep both panes rendered for the spring, then hide the outgoing pane; focus moves only after the incoming pane is shown. Reduced motion settles immediately. Live replacements preserve sidebar focus. Completed rows use a filled list-colored circle and secondary title text without strikethrough. The phone sidebar reserves space for its floating app switcher and the safe area. Review captures omit focus rings; keyboard captures retain them. Empty section headers retain a visible keyboard selection; Info and Enter open details only for reminder rows. Completion and other writes follow in W5-WRITE.
+
 **R (read):**
-- A Core Data store reader in the Helper: consistent backup copy, same pattern as Notes (§9.5).
+- A Core Data store reader in the Helper: a long-lived read-only connection and short WAL snapshot transactions; cached typed statements and persistent-history incremental reads. The consistent-copy reader remains an independent oracle.
 - Fields: flags, parent/subtasks, sections and membership, tags, list icon/emoji/color/group/order, smart lists (definitions), manual order hints, images (blobs plus variants), due-date delta alerts, assignments.
-- EventKit stays the write path and the identity anchor. Store rows link to EventKit identifiers through the reminder's `calendarItemIdentifier` / external id.
+- EventKit stays the write path and the identity anchor. Store rows link by exact equality of the DA text identifier and normalized 16-byte UUID with EventKit's `calendarItemIdentifier`. External identifiers are never a fallback.
 - AppleTruth reads the store independently.
 - Read models: `reminders.lists` (sidebar with counts), `reminders.items{list|smart|tag, show_completed, sort}`.
 
@@ -108,7 +113,7 @@ Deep links: `/reminders`, `/reminders/<list|smart:today|scheduled|all|flagged|co
 
 | Field | Store source |
 |---|---|
-| reminder identity | `ZREMCDREMINDER.ZIDENTIFIER`; link to EventKit via `ZDACALENDARITEMUNIQUEIDENTIFIER` / `ZEXTERNALIDENTIFIER` (prove which equals `calendarItemIdentifier`) |
+| reminder identity | `ZREMCDREMINDER.ZIDENTIFIER`; exact equality of normalized `ZIDENTIFIER` UUID bytes and `ZDACALENDARITEMUNIQUEIDENTIFIER` text with `calendarItemIdentifier`; never fall back to `ZEXTERNALIDENTIFIER` |
 | flag | `ZREMCDREMINDER.ZFLAGGED` |
 | subtask parent | `ZREMCDREMINDER.ZPARENTREMINDER` → `Z_PK` |
 | list | `ZREMCDREMINDER.ZLIST` → `ZREMCDBASELIST` |
@@ -131,7 +136,7 @@ Deep links: `/reminders`, `/reminders/<list|smart:today|scheduled|all|flagged|co
 | assignment | `ZREMCDOBJECT` entity `REMCDAssignment` (`ZASSIGNEE`, `ZORIGINATOR`, `ZASSIGNEDDATE`) |
 | recurrence | `ZREMCDOBJECT` entity `REMCDRecurrenceRule` (`ZFREQUENCY`, `ZINTERVAL`, `ZOCCURRENCECOUNT`, `ZENDDATE`, `ZFIRSTDAYOFTHEWEEK`) |
 
-Change detection: the Reminders store directory (WAL) gets FSEvents hints, just like Calendar's database hints, coalesced with the existing EventKit notification path. Never refetch per hint (see LIVE-FIX's AgendaGate findings).
+Change detection: enrichment refreshes after EventKit capture completion. There is no store watcher in this unit, so a store-only change depends on EventKit also posting a notification. The real flag-only propagation proof remains limited until the Helper has Reminders Apple Events authorization. If that proof finds a missing notification, follow up with a WAL FSEvents hint through the existing bounded coalescer, never one refetch per hint (see LIVE-FIX's AgendaGate findings).
 
 **W (write):** existing EventKit commands, plus natural-language parsing in the client only.
 

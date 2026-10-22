@@ -49,7 +49,7 @@ export type ThreadItem = BridgeRecord<{
     attachments: BridgeRecord[];
     reply_count: number;
 };
-export type ViewName = 'chats' | 'thread' | 'record' | 'collection';
+export type ViewName = 'chats' | 'thread' | 'record' | 'collection' | 'reminders.lists' | 'reminders.items';
 export type ViewData = {
     chats?: ChatSummary[];
     items?: ThreadItem[];

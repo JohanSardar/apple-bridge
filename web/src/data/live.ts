@@ -179,6 +179,11 @@ export class LiveClient {
                 throw new Error('Invalid command status');
             this.updateCommand(frame.id, frame.command, frame.status, frame.error, frame.t === 'cmd_status');
         }
+        else if (frame.t === 'error' && typeof frame.id === 'string' && this.subscriptions.has(frame.id)) {
+            const sub = this.subscriptions.get(frame.id)!;
+            sub.generation++; sub.update({ error: typeof frame.code === 'string' ? frame.code : 'unavailable' });
+            if (sub.cache !== false) void viewCache.write(sub.cacheKey, sub.data(), sub.cursor).catch(() => {});
+        }
         else if (frame.t === 'error' && typeof frame.id === 'string')
             this.setCheckError(frame.id, typeof frame.code === 'string' ? frame.code : 'unavailable');
         else if (frame.t === 'session_revoked')

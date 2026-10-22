@@ -120,10 +120,31 @@ test('WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades', asy
     await writeFile(`../lab/evidence/private/web/motion-observation/${info.project.name}.json`,JSON.stringify(requested,null,2)+'\n');
 });
 test('WEB-PERF-SHELL bundle, layout stability, navigation and warm cache budgets', async ({ page }, info) => {
-    const files = (await readdir('dist/assets')).filter(file => file.endsWith('.js'));
+    const assetFiles = await readdir('dist/assets'), files = assetFiles.filter(file => file.endsWith('.js'));
     const sizes = await Promise.all(files.map(async (file) => ({ file, gzip: gzipSync(await readFile('dist/assets/' + file)).byteLength })));
-    const shell = sizes.filter(value => !/^Settings-|^AuthPage-|^Fixtures-/.test(value.file)).reduce((sum, value) => sum + value.gzip, 0);
+    const manifest = JSON.parse(await readFile('dist/.vite/manifest.json', 'utf8')) as Record<string, { file: string; imports?: string[]; dynamicImports?: string[]; isEntry?: boolean; isDynamicEntry?: boolean }>;
+    expect(manifest['index.html'].isEntry).toBe(true);
+    function closure(root: string, lazy = false, excluded = new Set<string>()) {
+        const keys = new Set<string>();
+        function include(key: string) { if (keys.has(key) || excluded.has(key)) return; keys.add(key); const chunk = manifest[key]; for (const dependency of [...(chunk.imports ?? []), ...(lazy ? chunk.dynamicImports ?? [] : [])]) include(dependency); }
+        include(root); return keys;
+    }
+    const entryKeys = closure('index.html');
+    const chunkFiles = (keys: Set<string>) => new Set([...keys].map(key => manifest[key].file).filter(file => file.endsWith('.js')).map(file => file.slice('assets/'.length)));
+    const entryChunks = chunkFiles(entryKeys), gzipBytes = (chunks: Set<string>) => sizes.filter(value => chunks.has(value.file)).reduce((sum, value) => sum + value.gzip, 0);
+    const shell = gzipBytes(entryChunks);
     expect(shell).toBeLessThanOrEqual(60 * 1024);
+    const routes = Object.entries(manifest).filter(([, chunk]) => chunk.isDynamicEntry).map(([route]) => { const chunks = chunkFiles(closure(route, true, entryKeys)); return { route, gzip_bytes: gzipBytes(chunks), chunks: [...chunks] }; });
+    expect(routes.length).toBeGreaterThan(0);
+    for (const route of routes) expect(route.gzip_bytes, route.route).toBeLessThanOrEqual(60 * 1024);
+    const precacheMatch = (await readFile('dist/sw.js', 'utf8')).match(/const PRECACHE=(\[[^\n]*\]);/u);
+    expect(precacheMatch).not.toBeNull();
+    const precache = JSON.parse(precacheMatch![1]) as string[];
+    const precacheFiles = precache.map(url => url === '/' ? 'index.html' : url.slice(1));
+    const compressedBytes = async (paths: string[]) => (await Promise.all(paths.map(async path => gzipSync(await readFile('dist/' + path)).byteLength))).reduce((sum, bytes) => sum + bytes, 0);
+    const precacheBytes = await compressedBytes(precacheFiles);
+    const cacheableBytes = await compressedBytes([...new Set([...precacheFiles, ...assetFiles.map(file => 'assets/' + file)])]);
+    expect(cacheableBytes).toBeLessThanOrEqual(600 * 1024);
     await page.addInitScript(() => {
         const metrics = { cls: 0, cachedContentAt: null as number|null, clsSupported:PerformanceObserver.supportedEntryTypes.includes('layout-shift'), longTasks: [] as number[], frames: [] as number[], clickWork:[] as number[], firstFrame:[] as number[], inputAt:0, longTaskSupported:PerformanceObserver.supportedEntryTypes.includes('longtask') };
         new MutationObserver(()=>{if(metrics.cachedContentAt!==null)return;const content=document.querySelector('[aria-label="Live count"]');if(!content||Number(content.textContent)<=0)return;metrics.cachedContentAt=-1;requestAnimationFrame(()=>requestAnimationFrame(()=>{metrics.cachedContentAt=performance.now();}));}).observe(document,{childList:true,subtree:true,characterData:true});
@@ -177,6 +198,6 @@ test('WEB-PERF-SHELL bundle, layout stability, navigation and warm cache budgets
         await expect(page.getByRole('status',{name:'Connection'})).not.toHaveText('connected');
     }
     const warmStats = stats(warm);
-    await metrics('WEB-PERF-SHELL', info.project.name, { shell_gzip_bytes: shell, chunks: sizes, cls: navigation.clsSupported?navigation.cls:null, cls_observer:navigation.clsSupported, long_tasks: navigation.longTaskSupported?navigation.longTasks:null, navigation_frames: stats(navigation.frames),idle_frames:stats(idleFrames),click_dispatch:stats(navigation.clickWork),input_to_first_frame:stats(navigation.firstFrame), warm_load: warmStats, warm_endpoint:'navigation start to two animation frames after cached DOM content', automation_round_trip:stats(automationWarm), navigation_timing:navigationTiming, long_task_observer: navigation.longTaskSupported, paint_timing_verified:false,input_to_raf_8ms_met:stats(navigation.firstFrame).p95_ms<=8 });
+    await metrics('WEB-PERF-SHELL', info.project.name, { shell_gzip_bytes: shell, shell_chunks: [...entryChunks], routes, precache_gzip_bytes: precacheBytes, total_cacheable_gzip_bytes: cacheableBytes, chunks: sizes, cls: navigation.clsSupported?navigation.cls:null, cls_observer:navigation.clsSupported, long_tasks: navigation.longTaskSupported?navigation.longTasks:null, navigation_frames: stats(navigation.frames),idle_frames:stats(idleFrames),click_dispatch:stats(navigation.clickWork),input_to_first_frame:stats(navigation.firstFrame), warm_load: warmStats, warm_endpoint:'navigation start to two animation frames after cached DOM content', automation_round_trip:stats(automationWarm), navigation_timing:navigationTiming, long_task_observer: navigation.longTaskSupported, paint_timing_verified:false,input_to_raf_8ms_met:stats(navigation.firstFrame).p95_ms<=8 });
     expect(warmStats.max_ms).toBeLessThan(1000);
 });
