@@ -1,11 +1,12 @@
 #!/bin/bash
 set -uo pipefail
 python3 "$(dirname "$0")/signed-app-cache.py" --trim || true
-threshold_kb=${APPLE_BRIDGE_MIN_FREE_KB:-5242880}
+threshold_kb=${APPLE_BRIDGE_MIN_FREE_KB:-15728640}
 free_kb=$(df -k / | awk 'NR==2{print $4}')
 [ "$free_kb" -ge "$threshold_kb" ] && exit 0
 cache=$(go env GOCACHE 2>/dev/null)
 if [ -n "$cache" ] && [ -d "$cache" ]; then
+  find "$cache" -type f -size +20M -mmin +60 -delete 2>/dev/null
   find "$cache" -type f -mmin +360 -delete 2>/dev/null
   find "$cache" -type d -empty -delete 2>/dev/null
 fi
