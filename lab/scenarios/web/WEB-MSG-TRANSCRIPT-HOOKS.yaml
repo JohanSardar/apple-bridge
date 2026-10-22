@@ -1,0 +1,8 @@
+id: WEB-MSG-TRANSCRIPT-HOOKS
+feature: web.messages.read
+levels: [web]
+web:
+  browsers: [webkit, chromium, firefox]
+  themes: [light, dark]
+  layouts: [phone, desktop]
+  server: gateway

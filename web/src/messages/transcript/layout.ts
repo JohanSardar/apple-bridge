@@ -5,7 +5,7 @@ import { attachmentHasAlpha } from '../media/source';
 export const transcriptSpacing={withinRun:3,betweenRuns:9,partGap:3,dateLine:16,afterHeader:9,senderLine:16,senderNameGap:2};
 export type LayoutPrefs = { phone: boolean; viewportHeight?:number; group: boolean; service?: string; atLatest?: boolean; now: Date; locale?: string; scale: number; measure: (value:string,font?:{weight?:number;italic?:boolean})=>number; expanded: ReadonlySet<string> };
 export type BubbleLayout = { part: Part; subject?:string; width: number; height: number; emoji: boolean; media: boolean; floating:boolean; reactions: BridgeRecord[]; tail: boolean };
-export type TranscriptRow = { id: string; item: ThreadItem; height: number; bubbles: BubbleLayout[]; sent: boolean; sender: string; senderName?: string; avatar?: string; header?: string; headerParts?:HeaderParts; system?: string; receipt?: string; edited: boolean; history: {text:string;height:number;width:number}[]; unsent?:string; reply?: string; failed: boolean; gap: number };
+export type TranscriptRow = { key:string;service:string;commandStatus?:{id:string;state:string;label:string};id: string; item: ThreadItem; height: number; bubbles: BubbleLayout[]; sent: boolean; sender: string; senderName?: string; avatar?: string; header?: string; headerParts?:HeaderParts; system?: string; receipt?: string; edited: boolean; history: {text:string;height:number;width:number}[]; unsent?:string; reply?: string; failed: boolean; gap: number };
 const emojiPattern = /^(?:\p{Extended_Pictographic}|\p{Regional_Indicator}|\p{Emoji_Modifier}|\uFE0F|\u200D|\u20E3|[0-9#*]\uFE0F?\u20E3|\s)+$/u;
 export function emojiOnly(value: string) {
     if(!emojiPattern.test(value)||!/(?:\p{Extended_Pictographic}|\p{Regional_Indicator}|[0-9#*]\uFE0F?\u20E3)/u.test(value))return false;
@@ -44,14 +44,17 @@ function partSize(item:ThreadItem,part:Part,maxWidth:number,lineHeight:number,pr
     if(kind==='link'||kind==='app')return {width:Math.min(maxWidth,280),height:fields(balloon[kind]).image_attachment_id?180:88};
     return {width:Math.min(maxWidth,260),height:88};
 }
-function sameRun(a: ThreadItem|undefined,b: ThreadItem|undefined) { return !!a&&!!b&&a.data.kind!=='group_event'&&b.data.kind!=='group_event'&&!array(a.data.retracted_parts).length&&!array(b.data.retracted_parts).length&&Boolean(a.data.is_from_me)===Boolean(b.data.is_from_me)&&sender(a)===sender(b)&&Math.abs(Date.parse(b.data.sent_at)-Date.parse(a.data.sent_at))<=60000; }
+export function commandPartIndex(item:ThreadItem){const index=item.data.command_part_index;return typeof index==='number'&&Number.isSafeInteger(index)&&index>=0?index:undefined;}
+export function commandRenderKey(item:ThreadItem){const id=text(item.data.command_id),index=commandPartIndex(item);return id?'command:'+id+(index===undefined?'':':part:'+index):item.id;}
+const presentationTime=(item:ThreadItem)=>text(item.data.command_sent_at)||item.data.sent_at;
+function sameRun(a: ThreadItem|undefined,b: ThreadItem|undefined) { return !!a&&!!b&&a.data.kind!=='group_event'&&b.data.kind!=='group_event'&&!array(a.data.retracted_parts).length&&!array(b.data.retracted_parts).length&&Boolean(a.data.is_from_me)===Boolean(b.data.is_from_me)&&(a.data.is_from_me||sender(a)===sender(b))&&Math.abs(Date.parse(presentationTime(b))-Date.parse(presentationTime(a)))<=60000; }
 export function layout(items: readonly ThreadItem[], handles: Handles, prefs: LayoutPrefs, width: number): TranscriptRow[] {
     const fontSize=(prefs.phone?17:13)*prefs.scale,lineHeight=(prefs.phone?22:16)*prefs.scale;
     const maxWidth=Math.max(60,Math.min(prefs.phone?width*.7:480,width-(prefs.group?80:40))), padding=24;
     const lastSent=items.findLastIndex(item=>Boolean(item.data.is_from_me)&&item.data.kind!=='group_event'&&!item.data.retracted_at&&messageParts(item).some(part=>!array(item.data.retracted_parts).includes(part.index)));
     return items.map((item,index)=>{
         const data=item.data,sent=Boolean(data.is_from_me),actor=sent?wording.you:name(text(fields(data.group_event).actor_handle_id)||sender(item),handles),previous=items[index-1],next=items[index+1],first=!sameRun(previous,item),last=!sameRun(item,next);
-        const dateParts=!previous||Date.parse(data.sent_at)-Date.parse(previous.data.sent_at)>3600000?headerParts(data.sent_at,prefs.now,prefs.locale):undefined,dateHeader=dateParts?`${dateParts.day}${dateParts.separator}${dateParts.time}`:undefined;
+        const dateParts=!previous||Date.parse(presentationTime(item))-Date.parse(presentationTime(previous))>3600000?headerParts(presentationTime(item),prefs.now,prefs.locale):undefined,dateHeader=dateParts?`${dateParts.day}${dateParts.separator}${dateParts.time}`:undefined;
         const unsent=array(data.retracted_parts),parts=messageParts(item),visible=parts.filter(part=>!unsent.includes(part.index));
         const system=data.kind==='group_event'?groupEvent(data.group_event,actor,handles):data.retracted_at||visible.length===0?wording.unsent(actor):undefined;
         const bubbles: BubbleLayout[]=system?[]:visible.map((part,partIndex)=>{
@@ -66,10 +69,12 @@ export function layout(items: readonly ThreadItem[], handles: Handles, prefs: La
         const edited=Boolean(data.edited_at)||array(data.edit_history).length>0,history=prefs.expanded.has(item.id)?array(data.edit_history).map(value=>{const content=text(fields(value).text);const wrapped=wrapText(content,maxWidth-padding,prefs.measure);return {text:content,width:Math.min(maxWidth,Math.max(36,textWidthWithSlack(wrapped.width)+padding)),height:wrapped.lines*lineHeight+14};}):[];
         const receipt=index===lastSent&&prefs.atLatest!==false&&Number(data.error_code??0)===0?(data.read_at?`Read ${time(text(data.read_at),prefs.locale)}`:data.delivered_at?fields(data.delivery).quietly?wording.deliveredQuietly:wording.delivered:undefined):undefined;
         const reply=text(data.thread_originator_id),failed=Number(data.error_code??0)!==0;
+        const commandID=text(data.command_id),commandState=failed?'failed':text(data.send_state)||'sent';
+        const commandStatus=commandID&&(index===lastSent||commandState==='failed'||commandState==='indeterminate')?{id:commandID,state:commandState,label:commandState==='failed'?wording.notDelivered:commandState==='indeterminate'?wording.deliveryUnknown:commandState==='pending'?wording.sending:receipt??wording.sent}:undefined;
         const gap=first?transcriptSpacing.betweenRuns:transcriptSpacing.withinRun,senderName=prefs.group&&!sent&&first&&!system?actor:undefined;
         let height=gap+(dateHeader?transcriptSpacing.dateLine+transcriptSpacing.afterHeader:0)+(senderName?transcriptSpacing.senderLine+transcriptSpacing.senderNameGap:0)+(reply&&reply!==item.id?26:0);
         height+=system?30:bubbles.reduce((sum,bubble,index)=>sum+bubble.height+(bubble.reactions.length?16:0)+(index?transcriptSpacing.partGap:0),0);
-        height+=(edited?22:0)+(receipt?20:0)+(failed?20:0)+(item.reply_count?24:0)+history.reduce((sum,version)=>sum+version.height+4,0)+(unsent.length&&visible.length?24:0);
-        return {id:item.id,item:data.service?item:{...item,data:{...data,service:prefs.service??'iMessage'}},height:Math.ceil(height),bubbles,sent,sender:actor,senderName,avatar:prefs.group&&!sent&&last&&!system?handles.get(sender(item))?.initials??'?':undefined,header:dateHeader,headerParts:dateParts,system,receipt,edited,history,reply:reply&&reply!==item.id?reply:undefined,failed,gap,unsent:unsent.length&&visible.length?wording.unsent(actor):undefined};
+        height+=(edited?22:0)+(commandStatus?44:(receipt?20:0)+(failed?20:0))+(item.reply_count?24:0)+history.reduce((sum,version)=>sum+version.height+4,0)+(unsent.length&&visible.length?24:0);
+        return {key:commandRenderKey(item),service:text(data.service)||prefs.service||'iMessage',commandStatus,id:item.id,item,height:Math.ceil(height),bubbles,sent,sender:actor,senderName,avatar:prefs.group&&!sent&&last&&!system?handles.get(sender(item))?.initials??'?':undefined,header:dateHeader,headerParts:dateParts,system,receipt:commandStatus?undefined:receipt,edited,history,reply:reply&&reply!==item.id?reply:undefined,failed:!commandStatus&&failed,gap,unsent:unsent.length&&visible.length?wording.unsent(actor):undefined};
     });
 }

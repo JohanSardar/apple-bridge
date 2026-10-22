@@ -1,5 +1,6 @@
 import { fields, text, type Handles } from '../store/types';
 export const wording = {
+    sending:'Sending…',sent:'Sent',deliveryUnknown:'Not sure if delivered',
     delivered: 'Delivered', deliveredQuietly: 'Delivered Quietly', notDelivered: 'Not Delivered', edited: 'Edited', you: 'You', unsent: (name: string) => `${name} unsent a message`, replies: (count: number) => `${count} ${count === 1 ? 'Reply' : 'Replies'}`, newMessages: (count: number) => `↓ ${count} new`,
     reactions: {love:'❤️',like:'👍',dislike:'👎',laugh:'😂',emphasize:'‼️',question:'❓'} as Record<string,string>
 };
