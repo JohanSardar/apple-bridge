@@ -1,6 +1,7 @@
 import { createSignal, untrack } from 'solid-js';
 import { viewCache } from './cache';
 import { requireInput } from './input';
+import { mergeCommandParts, commandPartsStatus } from './commandParts';
 import { parseSession, type Cursor, type ViewData, type ViewChange, type ViewName, type DeviceSession, type CommandState } from './types';
 function ulid() { const alphabet = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'; let time = Date.now(), id = ''; for (let i = 0; i < 10; i++) {
     id = alphabet[time % 32] + id;
@@ -199,10 +200,13 @@ export class LiveClient {
         const record = value as Partial<CommandState> | undefined;
         const cursor = record?.cursor;
         if (!cursor && previous.cursor || cursor && previous.cursor && cursor.epoch === previous.cursor.epoch && cursor.subscription_revision === previous.cursor.subscription_revision && cursor.sequence < previous.cursor.sequence) return;
+        const parts = previous.op === 'messages.send' ? mergeCommandParts(previous.parts, record?.parts, previous.args) : undefined;
+        if (parts?.length && finalCommandStates.has(status)) status = commandPartsStatus(parts, status);
         this.commands.set(id, { ...previous, status, error, transport_lost: false, check_error: clearCheck ? undefined : previous.check_error,
             disposition: record?.disposition ?? previous.disposition,
             commit_seq: record?.commit_seq ?? previous.commit_seq,
             observed_record_ids: record?.observed_record_ids?.slice() ?? previous.observed_record_ids,
+            parts,
             cursor: cursor ?? previous.cursor });
         this.commandRevision[1](value => value + 1);
     }
