@@ -1,0 +1,8 @@
+id: WEB-REM-WRITE
+feature: web.reminders
+levels: [web, real]
+web:
+  browsers: [webkit, chromium]
+  themes: [light]
+  layouts: [phone, desktop]
+  server: gateway

@@ -13,6 +13,7 @@ export function VirtualList<T>(props: {
     keyFor: (item: T) => string;
     estimate?: (item: T) => number;
     render: (item: T, index: number) => JSX.Element;
+    renderReactive?: (item: () => T, index: () => number) => JSX.Element;
     bottomAnchored?: boolean;
     fixedHeights?: boolean;
     selectedKey?: string;
@@ -152,7 +153,8 @@ export function VirtualList<T>(props: {
             let row!: HTMLDivElement;
             const index=createMemo(()=>{revision();return keyIndex.get(key)??0;});
             const item = createMemo(() => { revision(); return items[index()]; });
-            const content=createMemo(()=>props.render(item(),index()));
+            const stableContent=props.renderReactive?.(item,index);
+            const content=props.renderReactive?()=>stableContent:createMemo(()=>props.render(item(),index()));
             onMount(() => {if(!props.fixedHeights)observer?.observe(row);});
             onCleanup(() => observer?.unobserve(row));
             return <div ref={row} id={rowPrefix + key} class="virtual-row" role="option" aria-selected={index() === selected()} aria-setsize={(revision(),items.length)} aria-posinset={index() + 1} data-index={index()} data-key={key} style={{ transform: `translateY(${(revision(), positions.offset(index()))}px)` }}>{content()}</div>;

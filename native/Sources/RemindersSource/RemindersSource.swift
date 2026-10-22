@@ -263,8 +263,8 @@ public final class RemindersSource: Source {
 
     private func patch(_ reminder: EKReminder, _ args: JSON) throws {
         if let title = args.object["title"] { reminder.title = title.string }
-        if let notes = args.object["notes"] { reminder.notes = notes == .null ? nil : notes.string }
-        if let url = args.object["url"] { reminder.url = url == .null ? nil : URL(string: url.string) }
+        if let notes = args.object["notes"] { reminder.notes = notes == .null || notes.string.isEmpty ? nil : notes.string }
+        if let url = args.object["url"] { reminder.url = url == .null || url.string.isEmpty ? nil : URL(string: url.string) }
         if let priority = args.object["priority"] {
             guard let value = Int(exactly: priority.number), (0...9).contains(value) else { throw SourceFailure.invalid }
             reminder.priority = value
@@ -272,7 +272,7 @@ public final class RemindersSource: Source {
         for field in ["due", "start"] {
             guard let value = args.object[field] else { continue }
             var result: DateComponents?
-            if value != .null {
+            if value != .null && !value.string.isEmpty {
                 if let date = parseTimestamp(value.string) {
                     let fields: Set<Calendar.Component> = args["due_all_day"].bool ? [.year, .month, .day] : [.year, .month, .day, .hour, .minute, .second, .timeZone]
                     result = Calendar.current.dateComponents(fields, from: date)
@@ -360,7 +360,11 @@ public final class RemindersSource: Source {
             if operation == "reminders.uncomplete" && current.isCompleted { return .null }
             if operation == "reminders.update" || operation == "reminders.create" {
                 let fields = action["args"].object.filter { !["id", "list_id", "due_all_day"].contains($0.key) }
-                guard !fields.isEmpty, fields.allSatisfy({ actual[$0.key] == $0.value }) else { return .null }
+                guard !fields.isEmpty, fields.allSatisfy({ field, value in
+                    let expected: JSON = ["due", "start", "url", "notes"].contains(field) && value == .string("") ? .null : value
+                    if field == "notes", expected == .null { return actual[field] == .null || actual[field] == .string("") }
+                    return actual[field] == expected
+                }) else { return .null }
             }
         }
         return .object(["native_key": .string(key), "observed": .bool(true), "absent": .bool(current == nil), "resolved": .bool(true), "prepared": evidence["prepared"]])

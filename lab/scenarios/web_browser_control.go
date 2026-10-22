@@ -253,6 +253,11 @@ func webBrowserControl(ctx context.Context, w *world.World, origin string, prepa
 				return
 			}
 			value = map[string]any{"ok": err == nil}
+		case "/reminders-write-draft-race":
+			value, err = webReminderDraftRace(w)
+		case "/reminders-write-conflict":
+			err = w.ControlAction("/fault", map[string]any{"name": "external-edit-between-prepare-and-dispatch"})
+			value = map[string]any{"ok": err == nil}
 		case "/reminders-perf":
 			value, err = webReminderPerf(w)
 		case "/reminders-capacity":
