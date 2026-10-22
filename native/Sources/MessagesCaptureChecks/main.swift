@@ -69,6 +69,7 @@ struct MessagesCaptureChecks {
         return false
     }
     static func main() async throws {
+        if CommandLine.arguments.contains("--selftest-isolation") { try SelfTestIsolationChecks.run(); return }
         if CommandLine.arguments.contains("--rich") { try await RichCaptureChecks.run(); return }
         if CommandLine.arguments.contains("--media-yield-metadata") { try await MediaYieldChecks.run(metadata: true); return }
         if CommandLine.arguments.contains("--media-yield-source-change") { try await MediaYieldChecks.run(change: true); return }

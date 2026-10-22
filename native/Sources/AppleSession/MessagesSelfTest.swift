@@ -40,8 +40,8 @@ actor MessagesSelfTest {
         let commands = MessagesCommands(path: nil, labCommands: true)
         let handles = try MessagesProbes.discoverSelfHandles().handles
         let database = try MessagesDatabase()
-        let known = Set(try database.rows("SELECT DISTINCT h.id FROM chat_handle_join j JOIN handle h ON h.ROWID=j.handle_id").compactMap { $0["id"] }.map(MessagesProbes.normalize))
-        guard uiAllowed, let handle = handles.first(where: { !known.contains(MessagesProbes.normalize($0)) }) else {
+        let unused = try MessagesSelfTestIsolation.unused(handles, database: database)
+        guard uiAllowed, let handle = unused.first else {
             let reason = uiAllowed ? "no unused own-handle alias on this Air; self-chat fallback refused to avoid touching personal conversations" : "ui_deferred_until_unlock"
             let result = JSON.object(["os_build": .string(build), "run_id": .string(run), "state": .string("limited"), "writes_submitted": .number(0), "steps": .array([.object(["name": .string("isolated_test_self_chat"), "proven": .bool(false), "reason": .string(reason)])])])
             try JSONEncoder().encode(result).write(to: reportURL, options: .atomic)
