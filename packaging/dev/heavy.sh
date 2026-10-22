@@ -113,23 +113,29 @@ sim_ok() {
   after=$(vm_stat 2>/dev/null | awk '/Swapouts/ {gsub(/\./,"",$2); print $2}')
   [ -n "$before" ] && [ -n "$after" ] && [ $((after - before)) -le "${APPLE_BRIDGE_SIM_MAX_SWAPOUTS:-64}" ]
 }
-# Sensitive jobs wait out host memory thrash (a 1-minute load above 2x the CPUs, free memory below 25%, or heavy swap traffic), at most 20 minutes.
+# Heavy jobs wait out host memory thrash, at most 20 minutes. Sensitive jobs hold at a 1-minute load above 2x the CPUs, free memory
+# below 25% or more than 2,048 swapped pages in 2 s; other heavy jobs hold only through extreme thrash (4x the CPUs, 15%, 8,192 pages).
 thrashing() {
   level=$(sysctl -n kern.memorystatus_level 2>/dev/null || echo 100)
-  [ "$level" -lt "${APPLE_BRIDGE_THRASH_MIN_FREE_PCT:-25}" ] && return 0
+  [ "$level" -lt "$2" ] && return 0
   load=$(sysctl -n vm.loadavg 2>/dev/null | awk '{printf "%d", $2}')
   cpus=$(sysctl -n hw.ncpu 2>/dev/null || echo 8)
-  [ "${load:-0}" -gt $((cpus * ${APPLE_BRIDGE_THRASH_LOAD_PER_CPU:-2})) ] && return 0
+  [ "${load:-0}" -gt $((cpus * $1)) ] && return 0
   before=$(vm_stat 2>/dev/null | awk '/Swapouts|Swapins/ {gsub(/\./,"",$2); total+=$2} END {print total}')
   sleep 2
   after=$(vm_stat 2>/dev/null | awk '/Swapouts|Swapins/ {gsub(/\./,"",$2); total+=$2} END {print total}')
-  [ -n "$before" ] && [ -n "$after" ] && [ $((after - before)) -gt "${APPLE_BRIDGE_THRASH_MAX_SWAP_PAGES:-2048}" ]
+  [ -n "$before" ] && [ -n "$after" ] && [ $((after - before)) -gt "$3" ]
 }
 wait_thrash() {
+  if [ "$1" = sensitive ]; then
+    limits="${APPLE_BRIDGE_THRASH_LOAD_PER_CPU:-2} ${APPLE_BRIDGE_THRASH_MIN_FREE_PCT:-25} ${APPLE_BRIDGE_THRASH_MAX_SWAP_PAGES:-2048}"
+  else
+    limits="${APPLE_BRIDGE_EXTREME_LOAD_PER_CPU:-4} ${APPLE_BRIDGE_EXTREME_MIN_FREE_PCT:-15} ${APPLE_BRIDGE_EXTREME_MAX_SWAP_PAGES:-8192}"
+  fi
   deadline=$(( $(date +%s) + ${APPLE_BRIDGE_THRASH_WAIT_SECONDS:-1200} ))
   announced=""
-  while thrashing; do
-    [ -z "$announced" ] && { echo "heavy.sh: host memory thrash; holding sensitive job until it passes" >&2; announced=1; }
+  while thrashing $limits; do
+    [ -z "$announced" ] && { echo "heavy.sh: host memory thrash; holding $1 job until it passes" >&2; announced=1; }
     [ "$(date +%s)" -ge "$deadline" ] && { echo "heavy.sh: thrash wait expired; running anyway" >&2; return; }
     sleep 10
   done
@@ -159,7 +165,7 @@ while true; do
         printf '%s\n' "$record" > "$lock/cmd"
         held="$held $lock"
         if [ -z "$exclusive" ] || [ "$(count)" -eq "$slots" ]; then
-          if [ -z "$light" ] && sensitive "$record"; then wait_sim_idle; wait_thrash; fi
+          if [ -z "$light" ] && sensitive "$record"; then wait_sim_idle; wait_thrash sensitive; elif [ -z "$light" ]; then wait_thrash heavy; fi
           label=$i
           [ -n "$exclusive" ] && label=all
           run "$label" "$@"
