@@ -67,6 +67,7 @@ One line per unit. Rules: BUILD-GOAL.md (2026-10-17 update: no reviews, merge on
 - Verification: all 120 simulations pass, including 24/24 Messages; Go tests, lint, features and strict signing smoke pass. Fixed the scope probe command envelope and stale store-wide disk-capacity overlays; the quiet 200,000-message benchmark also passes. Features: 23 done, 1 limited, 0 blocked; 180/183 scenario-levels. Initial failures and diagnostics retained. No new scenario IDs or dependencies.
 
 ## Web app (DECISIONS 2026-10-20, SPEC §23)
+- Transcript text leaves subpixel shaping slack; DOM sizes correct virtual heights and tail silhouettes with anchor compensation. Font readiness, matching loaded promises and an intrinsic probe handle late fonts without loadingdone. WEB-MSG-TEXT-SIZING covers the reported string, 500 seeded cases, demo text and late-font/anchor geometry.
 Process: every change ships as a small PR (WORKER-RULES, Git and GitHub). Status lives in features.yaml; one line per unit here. Updated 2026-10-21.
 
 - DONE W0: decisions, the Messages spec (`design/web/messages.md`), SPEC §23 with W2–W8 unit tables (#98–#100), ADRs 0015–0020 and the Reminders/Calendar/Contacts/Notes drafts. On 2026-10-22 Johan delegated the skim to the leader, who approved the drafts as the working spec. The input gate was redefined as our own main-thread cost (#103), and the list rules were pinned (#105).

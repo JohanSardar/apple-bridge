@@ -1,0 +1,60 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[48.63 75.48 67.31] cpu_idle=47% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5H2M44N0W1F8E7B6KXQS64X",
+  "metrics": {
+    "demo_messages": 5000,
+    "demo_startup_ms": 21843,
+    "matrix": [
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "chromium-light-phone",
+      "chromium-light-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-MSG-TEXT-SIZING-webkit-light-phone-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-MSG-TEXT-SIZING-webkit-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-TEXT-SIZING-webkit-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-TEXT-SIZING-chromium-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-TEXT-SIZING-chromium-light-desktop-playwright.json"
+    ],
+    "server": "gateway"
+  },
+  "scenario": "WEB-MSG-TEXT-SIZING",
+  "level": "web",
+  "passed": true,
+  "git_sha": "f71addca38a8991808dd6c324122b817c9662946",
+  "at": "2026-10-22T05:51:26.357394Z",
+  "assertions": [
+    {
+      "name": "webkit-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 4 tests using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/transcript-text-sizing.spec.ts:6:1 › WEB-MSG-TEXT-SIZING the exact reported string stays on one line inside its bubble (16.6s)\n  ✓  2 [webkit-light-phone] › tests/transcript-text-sizing.spec.ts:13:1 › WEB-MSG-TEXT-SIZING 500 seeded mixed-script strings stay inside their bubbles (28.8s)\n  ✓  3 [webkit-light-phone] › tests/transcript-text-sizing.spec.ts:39:1 › WEB-MSG-TEXT-SIZING every loaded demo text bubble contains its DOM ranges (16.6s)\n  ✓  4 [webkit-light-phone] › tests/transcript-text-sizing.spec.ts:81:1 › WEB-MSG-TEXT-SIZING DOM height corrections preserve the visible scroll anchor (6.4s)\n\n  4 passed (1.4m)\n"
+    },
+    {
+      "name": "webkit-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 4 tests using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/transcript-text-sizing.spec.ts:6:1 › WEB-MSG-TEXT-SIZING the exact reported string stays on one line inside its bubble (5.3s)\n  ✓  2 [webkit-light-desktop] › tests/transcript-text-sizing.spec.ts:13:1 › WEB-MSG-TEXT-SIZING 500 seeded mixed-script strings stay inside their bubbles (8.4s)\n  ✓  3 [webkit-light-desktop] › tests/transcript-text-sizing.spec.ts:39:1 › WEB-MSG-TEXT-SIZING every loaded demo text bubble contains its DOM ranges (8.6s)\n  ✓  4 [webkit-light-desktop] › tests/transcript-text-sizing.spec.ts:81:1 › WEB-MSG-TEXT-SIZING DOM height corrections preserve the visible scroll anchor (3.4s)\n\n  4 passed (33.3s)\n"
+    },
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 4 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/transcript-text-sizing.spec.ts:6:1 › WEB-MSG-TEXT-SIZING the exact reported string stays on one line inside its bubble (1.7s)\n  ✓  2 [chromium-light-phone] › tests/transcript-text-sizing.spec.ts:13:1 › WEB-MSG-TEXT-SIZING 500 seeded mixed-script strings stay inside their bubbles (7.9s)\n  ✓  3 [chromium-light-phone] › tests/transcript-text-sizing.spec.ts:39:1 › WEB-MSG-TEXT-SIZING every loaded demo text bubble contains its DOM ranges (6.4s)\n  ✓  4 [chromium-light-phone] › tests/transcript-text-sizing.spec.ts:81:1 › WEB-MSG-TEXT-SIZING DOM height corrections preserve the visible scroll anchor (1.3s)\n\n  4 passed (22.9s)\n"
+    },
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 4 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/transcript-text-sizing.spec.ts:6:1 › WEB-MSG-TEXT-SIZING the exact reported string stays on one line inside its bubble (2.2s)\n  ✓  2 [chromium-light-desktop] › tests/transcript-text-sizing.spec.ts:13:1 › WEB-MSG-TEXT-SIZING 500 seeded mixed-script strings stay inside their bubbles (4.5s)\n  ✓  3 [chromium-light-desktop] › tests/transcript-text-sizing.spec.ts:39:1 › WEB-MSG-TEXT-SIZING every loaded demo text bubble contains its DOM ranges (10.3s)\n  ✓  4 [chromium-light-desktop] › tests/transcript-text-sizing.spec.ts:81:1 › WEB-MSG-TEXT-SIZING DOM height corrections preserve the visible scroll anchor (1.8s)\n\n  4 passed (23.0s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
