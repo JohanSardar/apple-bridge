@@ -1,0 +1,7 @@
+id: WEB-CON-LIST
+feature: web.contacts
+levels: [sim]
+given: [{world: {replicas: 1}}]
+when: [{readmodels: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

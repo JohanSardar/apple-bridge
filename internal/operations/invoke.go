@@ -31,6 +31,12 @@ func (s *Service) Invoke(ctx context.Context, p trust.Principal, name string, in
 		}()
 	}
 	switch name {
+	case "contacts.list":
+		var query contracts.ContactsListQuery
+		if contracts.DecodeInput(input, &query) != nil {
+			return nil, contracts.ErrInvalid
+		}
+		return s.State.ContactsList(ctx, p.Visibility(), query)
 	case "calendar.range":
 		var query contracts.CalendarRangeQuery
 		if contracts.DecodeInput(input, &query) != nil {

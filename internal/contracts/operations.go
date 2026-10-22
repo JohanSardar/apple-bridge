@@ -25,6 +25,7 @@ type OperationDescriptor struct {
 }
 
 var Operations = append(CalendarDescriptors(), []OperationDescriptor{
+	{Name: "contacts.list", Version: 1, Kind: ReadOp, ReadModel: true, Source: Contacts, Scope: "contacts:read", Input: ContactsListQuery{}, Output: ContactsListResult{}, Description: "Read grouped contacts in deterministic A–Z sections with viewer name preferences, identity, avatar references and scope-filtered linked conversations"},
 	{Name: "reminders.items", Version: 1, Kind: ReadOp, ReadModel: true, Source: Reminders, Scope: "reminders:read", Input: ReminderItemsQuery{}, Output: ReminderItemsResult{}, Description: "Read visible reminders with sections, subtasks and attachments in the viewer time zone"},
 	{Name: "reminders.lists", Version: 1, Kind: ReadOp, ReadModel: true, Source: Reminders, Scope: "reminders:read", Input: ReminderListsQuery{}, Output: ReminderListsResult{}, Description: "Read native list and group order, tags and smart counts in the viewer time zone; unsupported counts are omitted"},
 	{Name: "messages.chats", Version: 1, Kind: ReadOp, ReadModel: true, Source: Messages, Scope: "messages:read", Input: ChatsQuery{}, Output: ChatsResult{}, Description: "Page visible local chat summaries by newest activity, optionally matching an exact normalized participant handle set through indexes; sender filters, unread and unseen mentions; mute and pinned state remain nullable", Examples: []Example{{Input: ChatsQuery{Limit: 50}, Output: ChatsResult{Chats: []ChatSummary{}, CoverageNotes: []string{}}}}},
