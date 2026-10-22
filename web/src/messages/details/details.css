@@ -4,3 +4,63 @@
 .details-sheet .conversation-details{padding-block-start:60px}.details-identity{--avatar-ring:var(--background-secondary)}
 
 .details-actions a,.details-actions button{gap:4px;min-block-size:62px;font-size:var(--footnote)}.details-actions .icon{inline-size:23px;block-size:23px}
+.details-group-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+.details-group-heading button,
+.details-group-actions button,
+.details-group-editor-actions button {
+    min-block-size: 44px;
+    color: var(--blue);
+    text-align: start;
+}
+.details-group-actions {
+    display: flex;
+    flex-direction: column;
+    border-block-start: .5px solid var(--separator);
+}
+.details-members .details-group-destructive {
+    color: var(--red);
+}
+.details-members button:disabled {
+    opacity: .45;
+    cursor: default;
+}
+.details-group-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    border-block-start: .5px solid var(--separator);
+    padding-block-start: 16px;
+    margin-block-start: 8px;
+    overflow-wrap: anywhere;
+}
+.details-group-editor label {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.details-group-editor input {
+    min-inline-size: 0;
+    inline-size: 100%;
+    min-block-size: 44px;
+    padding: 10px;
+    border: .5px solid var(--separator);
+    border-radius: 8px;
+    color: var(--label-primary);
+    background: var(--background-primary);
+    font: inherit;
+}
+.details-group-editor-actions {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+.details-member .details-group-destructive {
+    flex-shrink: 0;
+    font-size: var(--footnote);
+}
