@@ -253,6 +253,9 @@ func webBrowserControl(ctx context.Context, w *world.World, origin string, prepa
 				return
 			}
 			value = map[string]any{"ok": err == nil}
+		case "/reminders-entry-pause":
+			err = w.ControlAction("/fault", map[string]any{"name": "pause", "ms": 750})
+			value = map[string]any{"ok": err == nil}
 		case "/reminders-details":
 			value, err = webReminderDetails(w)
 		case "/reminders-write-draft-race":

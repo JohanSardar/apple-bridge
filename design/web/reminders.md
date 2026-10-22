@@ -163,3 +163,5 @@ Each gets a sim scenario plus a real scenario on a tagged "Bridge Test" list, wi
 - Apple Intelligence suggestions
 
 The details inspector reads EventKit recurrence selectors and end conditions, absolute and relative alerts, and arriving/leaving locations with radius and coordinates. Dates and times use the viewer’s zone. It labels recurring data as the next incomplete occurrence. Unknown or malformed schedule shapes hide the affected field and its row glyph; no raw blobs are displayed. Schedule configuration remains read-only; basic edits preserve it.
+
+Inline entry keeps a fresh, focused draft after a trusted Enter creates a reminder; Add Reminder closes the draft. Escape cancels without sending. Clicking an editable title opens its inline editor, while the info button and keyboard Info retain the inspector. New optimistic rows grow with the shared spring; identity acknowledgements do not restart the entrance, and reduced motion settles immediately.

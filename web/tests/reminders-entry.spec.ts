@@ -1,0 +1,46 @@
+import { test, expect } from '@playwright/test';
+import { bootstrap, control } from './session';
+test.use({ reducedMotion: 'reduce' });
+test('WEB-REM-ENTRY Enter keeps a fresh editor and title clicks edit inline', async ({ page, context, request }) => {
+  await bootstrap(context, request);
+  const commands: any[] = []; page.on('websocket', socket => socket.on('framesent', event => { const frame = JSON.parse(String(event.payload)); if (frame.t === 'cmd') commands.push(frame); }));
+  await page.goto('/reminders'); await page.getByRole('button', { name: 'Travel', exact: true }).click();
+  await page.getByRole('button', { name: 'New Reminder', exact: true }).click();
+  const title = page.getByRole('textbox', { name: 'Reminder title', exact: true });
+  await title.fill('[ab-test] Continuous entry'); await title.press('Enter');
+  await expect(title).toHaveValue(''); await expect(title).toBeFocused();
+  const row = page.locator('.reminder-row').filter({ hasText: '[ab-test] Continuous entry' });
+  await expect(row).toHaveCount(1); await expect(row).not.toHaveAttribute('data-pending', 'true');
+  expect(commands.map(frame => frame.op)).toEqual(['reminders.create']);
+  await title.press('Escape'); await expect(title).toHaveCount(0);
+  await row.locator('.reminder-title').click();
+  await expect(title).toHaveValue('[ab-test] Continuous entry'); await expect(title).toBeFocused();
+  await expect(page.getByLabel('Reminder details', { exact: true })).toHaveCount(0);
+  await title.fill('[ab-test] Edited inline'); await page.getByRole('textbox', { name: 'Reminder notes', exact: true }).fill('[ab-test] Notes stay inline');
+  await page.getByRole('button', { name: 'Save Reminder', exact: true }).click();
+  await expect(page.locator('.reminder-title').filter({ hasText: '[ab-test] Edited inline' })).toHaveCount(1);
+  await expect(page.locator('.reminder-row').filter({ hasText: '[ab-test] Edited inline' })).not.toHaveAttribute('data-pending', 'true');
+  expect(commands.map(frame => frame.op)).toEqual(['reminders.create', 'reminders.update']);
+  expect(commands[1].expected_version).toBeGreaterThan(0);
+  expect(Object.keys(commands[1].args).sort()).toEqual(['id', 'notes', 'title']);
+  await page.getByRole('button', { name: 'Details for [ab-test] Edited inline', exact: true }).click();
+  await expect(page.getByLabel('Reminder details', { exact: true })).toContainText('[ab-test] Notes stay inline');
+});
+
+test('WEB-REM-ENTRY new rows grow and keep draft focus across capture', async ({ page, context, request }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' }); await bootstrap(context, request);
+  await page.goto('/reminders'); await page.getByRole('button', { name: 'Travel', exact: true }).click();
+  await control(request, '/reminders-entry-pause');
+  await page.getByRole('button', { name: 'New Reminder', exact: true }).click();
+  const title = page.getByRole('textbox', { name: 'Reminder title', exact: true }); await title.fill('[ab-test] Animated entry');
+  await page.evaluate(() => { const state = window as any; state.entryHeights = []; const started = performance.now(); const sample = () => { const row = [...document.querySelectorAll<HTMLElement>('.reminder-row')].find(row => row.textContent?.includes('[ab-test] Animated entry')); if (row) state.entryHeights.push(row.getBoundingClientRect().height); if (performance.now() - started < 500) requestAnimationFrame(sample); else state.entryFramesDone = true; }; requestAnimationFrame(sample); });
+  await title.press('Enter');
+  await expect.poll(() => page.evaluate(() => (window as any).entryFramesDone === true)).toBe(true);
+  const heights: number[] = await page.evaluate(() => (window as any).entryHeights);
+  expect(heights.some(height => height < 60)).toBe(true); expect(heights.some(height => height > 60)).toBe(true);
+  const row = page.locator('.reminder-row').filter({ hasText: '[ab-test] Animated entry' });
+  await expect(row).toHaveCount(1); await expect(row).not.toHaveAttribute('data-pending', 'true');
+  expect((await row.boundingBox())!.height).toBe(66);
+  await expect(title).toHaveValue(''); await expect(title).toBeFocused();
+  await title.press('Escape');
+});
