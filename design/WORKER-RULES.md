@@ -83,6 +83,15 @@ You are a worker on Apple Bridge, delegated by the build leader. Read this file,
 
 - Real Worlds stage immutable, signed Helper and AppleTruth bundles under their own `/tmp/ablab/<world>/apps/` from the current worktree using `packaging/dev/build-helper.sh <destination.app>` and `packaging/dev/build-truth.sh <destination.app>`. Always pass a new destination; never rebuild a running World’s bundle or install into the shared dev apps during worker verification. Signing still uses `packaging/dev/sign.sh` and the existing certificate, bundle IDs and designated requirements. Launch with `open -n -W -a`.
 
+## Fast process (2026-10-22, binding; overrides any stricter per-PR gate rule below)
+Johan delegated all decisions and wants SPEC §23 finished as fast as possible.
+- **Never ask Johan anything.** The leader decides. Unprovable items are recorded `limited` with the reason.
+- **Reporting:** message the leader **only** for (1) a PR ready for review, (2) a real blocker or decision, or (3) a merge. No status, queue-wait, progress or "still running" messages. Put details in the PR body.
+- **Per-PR gates (all that's required to merge):** build, typecheck, lint/vet, features, the PR's own focused tests on WebKit + Chromium (desktop and phone), and the sims it touches. Merge on green with `gh pr merge --merge --delete-branch --match-head-commit <sha>`. Failing-first proof is still preferred for bug fixes, but don't spend more than one focused run on it.
+- **No per-PR** full 12-project matrices, exclusive perf runs or real-data R-LIVE runs. They run **once per app** at its milestone gate, after its last PR, and failures there get follow-up PRs.
+- **Rebases:** rerun only build, typecheck, lint, features and your own focused tests.
+- The leader reviews quickly for correctness, spec fit and security, and spot-checks UI from one screenshot set per app.
+
 ## Speed rules (2026-10-17, binding)
 - Reviews: only new units get one review, by one reviewer doing both axes (Standards + Spec) in a single pass. Never spawn review sub-agents. Fix rounds are not re-reviewed: the fixer proves each fix with its failing-then-passing scenario (or by reverting it locally to show the check fails).
 - Merge first: merge to main as soon as the unit's scenarios pass; don't sit on branches. List anything unproven precisely instead of polishing.
