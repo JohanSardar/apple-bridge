@@ -122,3 +122,15 @@ test('WEB-MSG-REACTIONS layout math reserves sixteen points above reaction-beari
     const reacted=layout([item],handles,prefs,900)[0];
     expect(transcriptSpacing.reactionTop).toBe(16);expect(reacted.height-plain.height).toBe(transcriptSpacing.reactionTop);
 });
+
+test('WEB-MSG-COMPOSITION layout math groups only compatible image runs and retains actual members',()=>{
+    const photo=(id:string,index:number)=>{const item=message(id,index*10000,{text:'',parts:[{index:0,kind:'attachment',attachment_id:'asset-'+id}]});item.attachments=[{id:'asset-'+id,source:'messages',collection:'messages.attachment',version:1,data:{mime_type:'image/jpeg',media:{width:240,height:400}}}];return item;};
+    const items=['a','b','c','d'].map(photo);
+    for(const phone of [false,true]){
+        const rows=layout(items,handles,{...prefs,phone,viewportHeight:844},phone?390:900);expect(rows).toHaveLength(1);expect(rows[0].members?.map(item=>item.id)).toEqual(['a','b','c','d']);expect(rows[0].bubbles[0].mediaAttachments?.map(item=>item.id)).toEqual(['asset-a','asset-b','asset-c','asset-d']);expect(rows[0].bubbles[0].tail).toBe(false);expect(rows[0].bubbles[0].width).toBe(phone?240:480);expect(rows[0].bubbles[0].height).toBe(360);
+        const split=layout(items,handles,{...prefs,phone,selectedMessageID:'c'},phone?390:900);expect(split.map(row=>row.members?.map(item=>item.id))).toEqual([['a','b'],['c','d']]);
+    }
+    for(const mutate of [(item:ThreadItem)=>item.data.parts=[{index:1,kind:'attachment',attachment_id:item.attachments![0].id}],(item:ThreadItem)=>item.data.parts=[],(item:ThreadItem)=>item.reactions=[{id:'reaction',source:'messages',collection:'messages.reaction',version:1,data:{kind:'like'}}],(item:ThreadItem)=>item.data.edited_at=now.toISOString(),(item:ThreadItem)=>item.attachments![0].data.media={width:240,height:400,live:true},(item:ThreadItem)=>item.attachments![0].data.mime_type='video/mp4']){
+        const isolated=items.map(item=>structuredClone(item));mutate(isolated[1]);const rows=layout(isolated,handles,prefs,900);expect(rows.find(row=>row.id==='b')?.members).toBeUndefined();
+    }
+});
