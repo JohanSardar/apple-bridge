@@ -19,7 +19,13 @@ extension AppleTruth {
         const tag = request.tag || '';
         const action = request.action || '';
         function require(value) { if (!value) throw new Error('invalid_fixture'); }
-        function taggedNotes() { return app.notes.whose({name:{_beginsWith:tag}})(); }
+        function fixtureFolder(folder) {
+            const name = folder.name();
+            return name === 'Bridge Test' || name === 'Bridge Test ' + tag || name.startsWith('Bridge Test ' + tag + ' ');
+        }
+        function taggedNotes() {
+            return app.folders().filter(fixtureFolder).reduce((notes, folder) => notes.concat(folder.notes().filter(note => note.name().startsWith(tag))), []);
+        }
         function html(text) {
             return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').split('\n').map(line => '<div>' + line + '</div>').join('');
         }
@@ -43,12 +49,11 @@ extension AppleTruth {
             return {status:'verified'};
         }
         if (action === 'cleanup' || action === 'delete') {
-            const identifiers = taggedNotes().map(n => n.id());
-            identifiers.forEach(id => {
-                const note = app.notes.byId(id);
+            taggedNotes().forEach(note => {
+                const id = note.id();
                 require(note.name().startsWith(tag));
                 const folder = note.container();
-                require(folder.name() === 'Bridge Test' || folder.name().startsWith('Bridge Test ' + tag + ' '));
+                require(fixtureFolder(folder));
                 app.delete(folder.notes.byId(id));
             });
             require(taggedNotes().length === 0);
