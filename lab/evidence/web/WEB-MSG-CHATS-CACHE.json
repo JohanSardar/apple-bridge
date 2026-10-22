@@ -1,27 +1,27 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[171.53 158.93 134.93] cpu_idle=50% cpus=8 other_heavy=2"
+    "quiet": true,
+    "summary": "air: load=[5.21 6.58 6.36] cpu_idle=82% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5HEE1V3QECGD8JY7FH5J58X",
+  "run_id": "run_01M5J0S22ZJKAZN956HA31YN8D",
   "metrics": {
     "browser_budget_ms": 180000,
     "capture_observer_resets": 0,
     "demo_messages": 5000,
-    "demo_startup_ms": 1448,
-    "fixture_setup_ms": 1448,
+    "demo_startup_ms": 5630,
+    "fixture_setup_ms": 5630,
     "fixture_snapshot": {
-      "disk_bytes": 29716480,
-      "entry_bytes": 29724288,
-      "cache_bytes": 29728512,
+      "disk_bytes": 30797824,
+      "entry_bytes": 30805632,
+      "cache_bytes": 0,
       "blob_payloads": 59,
-      "key": "a40beb343a5ae684eea67e2d9a2726b9f96660b27c8a0027851bdbab922a54d0",
-      "cache_hit": true,
-      "build_ms": 0,
-      "copy_ms": 1309,
-      "records": 6863,
-      "fresh_digest": "a5a51d7a5d1a4bd81f120af51edf362b80f1c9ff496159da954d19730c105d0a",
-      "copy_digest": "a5a51d7a5d1a4bd81f120af51edf362b80f1c9ff496159da954d19730c105d0a",
+      "key": "1ee03ac13adfe00f6a8c62d4adb611a03b727123223b789da078c388556b74e6",
+      "cache_hit": false,
+      "build_ms": 5567,
+      "copy_ms": 580,
+      "records": 6865,
+      "fresh_digest": "607f0d70ee7e65518e2a54492d2b6b902fbd1e3ea3fd51b4b77cc711e2e1b7e8",
+      "copy_digest": "607f0d70ee7e65518e2a54492d2b6b902fbd1e3ea3fd51b4b77cc711e2e1b7e8",
       "verified": true,
       "copy_method": "clonefile"
     },
@@ -41,76 +41,76 @@
     "server": "gateway",
     "setups": [
       {
-        "fixture_setup_ms": 1448,
+        "fixture_setup_ms": 5630,
         "fixture_snapshot": {
-          "disk_bytes": 29716480,
-          "entry_bytes": 29724288,
-          "cache_bytes": 29728512,
+          "disk_bytes": 30797824,
+          "entry_bytes": 30805632,
+          "cache_bytes": 0,
           "blob_payloads": 59,
-          "key": "a40beb343a5ae684eea67e2d9a2726b9f96660b27c8a0027851bdbab922a54d0",
-          "cache_hit": true,
-          "build_ms": 0,
-          "copy_ms": 1309,
-          "records": 6863,
-          "fresh_digest": "a5a51d7a5d1a4bd81f120af51edf362b80f1c9ff496159da954d19730c105d0a",
-          "copy_digest": "a5a51d7a5d1a4bd81f120af51edf362b80f1c9ff496159da954d19730c105d0a",
+          "key": "1ee03ac13adfe00f6a8c62d4adb611a03b727123223b789da078c388556b74e6",
+          "cache_hit": false,
+          "build_ms": 5567,
+          "copy_ms": 580,
+          "records": 6865,
+          "fresh_digest": "607f0d70ee7e65518e2a54492d2b6b902fbd1e3ea3fd51b4b77cc711e2e1b7e8",
+          "copy_digest": "607f0d70ee7e65518e2a54492d2b6b902fbd1e3ea3fd51b4b77cc711e2e1b7e8",
           "verified": true,
           "copy_method": "clonefile"
         },
         "project": "webkit-light-phone"
       },
       {
-        "fixture_setup_ms": 988,
+        "fixture_setup_ms": 13149,
         "fixture_snapshot": {
-          "disk_bytes": 29716480,
-          "entry_bytes": 29724288,
-          "cache_bytes": 29728512,
+          "disk_bytes": 30736384,
+          "entry_bytes": 30744192,
+          "cache_bytes": 0,
           "blob_payloads": 59,
-          "key": "a40beb343a5ae684eea67e2d9a2726b9f96660b27c8a0027851bdbab922a54d0",
-          "cache_hit": true,
-          "build_ms": 0,
-          "copy_ms": 859,
-          "records": 6863,
-          "fresh_digest": "a5a51d7a5d1a4bd81f120af51edf362b80f1c9ff496159da954d19730c105d0a",
-          "copy_digest": "a5a51d7a5d1a4bd81f120af51edf362b80f1c9ff496159da954d19730c105d0a",
+          "key": "1ee03ac13adfe00f6a8c62d4adb611a03b727123223b789da078c388556b74e6",
+          "cache_hit": false,
+          "build_ms": 13049,
+          "copy_ms": 1168,
+          "records": 6865,
+          "fresh_digest": "9e0fb51286aba14f95b09325139eb96649b8bf448d79fd2dd8fb56095856ba4a",
+          "copy_digest": "9e0fb51286aba14f95b09325139eb96649b8bf448d79fd2dd8fb56095856ba4a",
           "verified": true,
           "copy_method": "clonefile"
         },
         "project": "webkit-light-desktop"
       },
       {
-        "fixture_setup_ms": 686,
+        "fixture_setup_ms": 6723,
         "fixture_snapshot": {
-          "disk_bytes": 29716480,
-          "entry_bytes": 29724288,
-          "cache_bytes": 29728512,
+          "disk_bytes": 30720000,
+          "entry_bytes": 30727808,
+          "cache_bytes": 0,
           "blob_payloads": 59,
-          "key": "a40beb343a5ae684eea67e2d9a2726b9f96660b27c8a0027851bdbab922a54d0",
-          "cache_hit": true,
-          "build_ms": 0,
-          "copy_ms": 570,
-          "records": 6863,
-          "fresh_digest": "a5a51d7a5d1a4bd81f120af51edf362b80f1c9ff496159da954d19730c105d0a",
-          "copy_digest": "a5a51d7a5d1a4bd81f120af51edf362b80f1c9ff496159da954d19730c105d0a",
+          "key": "1ee03ac13adfe00f6a8c62d4adb611a03b727123223b789da078c388556b74e6",
+          "cache_hit": false,
+          "build_ms": 6652,
+          "copy_ms": 651,
+          "records": 6865,
+          "fresh_digest": "9092529ccf84fdee39bafa5f5a779eb5ba2bfccf72e93bcfe40f86a77f61e257",
+          "copy_digest": "9092529ccf84fdee39bafa5f5a779eb5ba2bfccf72e93bcfe40f86a77f61e257",
           "verified": true,
           "copy_method": "clonefile"
         },
         "project": "chromium-light-phone"
       },
       {
-        "fixture_setup_ms": 615,
+        "fixture_setup_ms": 5707,
         "fixture_snapshot": {
-          "disk_bytes": 29716480,
-          "entry_bytes": 29724288,
-          "cache_bytes": 29728512,
+          "disk_bytes": 30695424,
+          "entry_bytes": 30703232,
+          "cache_bytes": 0,
           "blob_payloads": 59,
-          "key": "a40beb343a5ae684eea67e2d9a2726b9f96660b27c8a0027851bdbab922a54d0",
-          "cache_hit": true,
-          "build_ms": 0,
-          "copy_ms": 512,
-          "records": 6863,
-          "fresh_digest": "a5a51d7a5d1a4bd81f120af51edf362b80f1c9ff496159da954d19730c105d0a",
-          "copy_digest": "a5a51d7a5d1a4bd81f120af51edf362b80f1c9ff496159da954d19730c105d0a",
+          "key": "1ee03ac13adfe00f6a8c62d4adb611a03b727123223b789da078c388556b74e6",
+          "cache_hit": false,
+          "build_ms": 5661,
+          "copy_ms": 609,
+          "records": 6865,
+          "fresh_digest": "be170778f6e6efb355062a87719d67e0d436e3ad1ecd7b18abe0e428fd8fbca5",
+          "copy_digest": "be170778f6e6efb355062a87719d67e0d436e3ad1ecd7b18abe0e428fd8fbca5",
           "verified": true,
           "copy_method": "clonefile"
         },
@@ -118,36 +118,36 @@
       }
     ],
     "template_cold_setup_ms": {
-      "generate": 417,
-      "list": 18430,
-      "seed": 30434
+      "generate": 95,
+      "list": 1223,
+      "seed": 2654
     }
   },
   "scenario": "WEB-MSG-CHATS-CACHE",
   "level": "web",
   "passed": true,
-  "git_sha": "b4624c9513abafcba17c603466051977fa226a15",
-  "at": "2026-10-22T09:17:50.30909Z",
+  "git_sha": "448155dab96415e80926775cc1981e8461651d84",
+  "at": "2026-10-22T14:38:25.375079Z",
   "assertions": [
     {
       "name": "webkit-light-phone:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/chats-cache-chain.spec.ts:16:1 › WEB-MSG-CHATS-CACHE offline reload keeps the complete reordered chat view (13.0s)\n  ✓  2 [webkit-light-phone] › tests/chats-cache-chain.spec.ts:45:1 › WEB-MSG-CHATS-CACHE device revocation wipes the materialized chats snapshot (6.5s)\n\n  2 passed (54.1s)\n"
+      "detail": "\nRunning 3 tests using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/chats-cache-chain.spec.ts:16:1 › WEB-MSG-CHATS-CACHE offline reload keeps the complete reordered chat view (2.7s)\n  ✓  2 [webkit-light-phone] › tests/chats-cache-chain.spec.ts:45:1 › WEB-MSG-CHATS-CACHE-BURST fifty live deltas coalesce snapshot construction and persist the final state (9.6s)\n  ✓  3 [webkit-light-phone] › tests/chats-cache-chain.spec.ts:61:1 › WEB-MSG-CHATS-CACHE device revocation wipes the materialized chats snapshot (2.3s)\n\n  3 passed (21.1s)\n"
     },
     {
       "name": "webkit-light-desktop:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/chats-cache-chain.spec.ts:16:1 › WEB-MSG-CHATS-CACHE offline reload keeps the complete reordered chat view (18.3s)\n  ✓  2 [webkit-light-desktop] › tests/chats-cache-chain.spec.ts:45:1 › WEB-MSG-CHATS-CACHE device revocation wipes the materialized chats snapshot (4.4s)\n\n  2 passed (54.2s)\n"
+      "detail": "\nRunning 3 tests using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/chats-cache-chain.spec.ts:16:1 › WEB-MSG-CHATS-CACHE offline reload keeps the complete reordered chat view (5.7s)\n  ✓  2 [webkit-light-desktop] › tests/chats-cache-chain.spec.ts:45:1 › WEB-MSG-CHATS-CACHE-BURST fifty live deltas coalesce snapshot construction and persist the final state (12.1s)\n  ✓  3 [webkit-light-desktop] › tests/chats-cache-chain.spec.ts:61:1 › WEB-MSG-CHATS-CACHE device revocation wipes the materialized chats snapshot (2.2s)\n\n  3 passed (33.4s)\n"
     },
     {
       "name": "chromium-light-phone:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/chats-cache-chain.spec.ts:16:1 › WEB-MSG-CHATS-CACHE offline reload keeps the complete reordered chat view (7.3s)\n  ✓  2 [chromium-light-phone] › tests/chats-cache-chain.spec.ts:45:1 › WEB-MSG-CHATS-CACHE device revocation wipes the materialized chats snapshot (3.4s)\n\n  2 passed (35.0s)\n"
+      "detail": "\nRunning 3 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/chats-cache-chain.spec.ts:16:1 › WEB-MSG-CHATS-CACHE offline reload keeps the complete reordered chat view (1.9s)\n  ✓  2 [chromium-light-phone] › tests/chats-cache-chain.spec.ts:45:1 › WEB-MSG-CHATS-CACHE-BURST fifty live deltas coalesce snapshot construction and persist the final state (8.9s)\n  ✓  3 [chromium-light-phone] › tests/chats-cache-chain.spec.ts:61:1 › WEB-MSG-CHATS-CACHE device revocation wipes the materialized chats snapshot (1.6s)\n\n  3 passed (16.5s)\n"
     },
     {
       "name": "chromium-light-desktop:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/chats-cache-chain.spec.ts:16:1 › WEB-MSG-CHATS-CACHE offline reload keeps the complete reordered chat view (8.3s)\n  ✓  2 [chromium-light-desktop] › tests/chats-cache-chain.spec.ts:45:1 › WEB-MSG-CHATS-CACHE device revocation wipes the materialized chats snapshot (1.7s)\n\n  2 passed (35.8s)\n"
+      "detail": "\nRunning 3 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/chats-cache-chain.spec.ts:16:1 › WEB-MSG-CHATS-CACHE offline reload keeps the complete reordered chat view (1.8s)\n  ✓  2 [chromium-light-desktop] › tests/chats-cache-chain.spec.ts:45:1 › WEB-MSG-CHATS-CACHE-BURST fifty live deltas coalesce snapshot construction and persist the final state (8.5s)\n  ✓  3 [chromium-light-desktop] › tests/chats-cache-chain.spec.ts:61:1 › WEB-MSG-CHATS-CACHE device revocation wipes the materialized chats snapshot (1.5s)\n\n  3 passed (16.3s)\n"
     },
     {
       "name": "credential_backend_override_restored",

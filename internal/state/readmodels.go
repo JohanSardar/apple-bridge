@@ -189,7 +189,12 @@ func (s *Store) Chats(ctx context.Context, v trust.Visibility, q contracts.Chats
 	if err != nil {
 		return out, err
 	}
+	pins, err := summaryPinPreviews(ctx, tx, out.Chats)
+	if err != nil {
+		return out, err
+	}
 	for i := range out.Chats {
+		out.Chats[i].PinPreview = pins[out.Chats[i].Chat.ID]
 		if err = fillSummary(ctx, tx, v, &out.Chats[i], people, activities[out.Chats[i].Chat.ID]); err != nil {
 			return out, err
 		}
@@ -198,6 +203,7 @@ func (s *Store) Chats(ctx context.Context, v trust.Visibility, q contracts.Chats
 }
 func fillSummary(ctx context.Context, tx *sql.Tx, v trust.Visibility, s *contracts.ChatSummary, people map[string]contracts.Record, activity summaryActivity) error {
 	d := modelFields(s.Chat)
+	s.KnownSender = d["filter"] == nil || fieldString(d, "filter") == "known"
 	if n, ok := d["pinned_index"].(float64); ok {
 		value := int(n)
 		s.PinnedIndex = &value
@@ -217,6 +223,7 @@ func fillSummary(ctx context.Context, tx *sql.Tx, v trust.Visibility, s *contrac
 				continue
 			}
 			hd := modelFields(h)
+			s.KnownSender = s.KnownSender || hd["contact_id"] != nil
 			name := fieldString(hd, "address")
 			var contactID *string
 			if v[contracts.Contacts] {
@@ -304,7 +311,7 @@ func fillSummary(ctx context.Context, tx *sql.Tx, v trust.Visibility, s *contrac
 		if fieldBool(rd, "removed") {
 			verb = "Removed reaction from"
 		}
-		last.Preview = contracts.MessagePreview{Kind: "reaction", Reaction: &contracts.ReactionPreview{Verb: verb, TargetExcerpt: fieldString(md, "text")}}
+		last.Preview = contracts.MessagePreview{Kind: "reaction", Reaction: &contracts.ReactionPreview{Verb: verb, Kind: fieldString(rd, "kind"), Removed: fieldBool(rd, "removed"), TargetExcerpt: fieldString(md, "text")}}
 	}
 	s.LastMessage = last
 	return nil

@@ -1,0 +1,161 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[4.12 4.87 5.65] cpu_idle=79% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5J09S9ED5JZ96CHJ5P5V6Q3",
+  "metrics": {
+    "browser_budget_ms": 180000,
+    "capture_observer_resets": 0,
+    "demo_messages": 5000,
+    "demo_startup_ms": 5714,
+    "fixture_setup_ms": 5714,
+    "fixture_snapshot": {
+      "disk_bytes": 30760960,
+      "entry_bytes": 30768768,
+      "cache_bytes": 0,
+      "blob_payloads": 59,
+      "key": "1ee03ac13adfe00f6a8c62d4adb611a03b727123223b789da078c388556b74e6",
+      "cache_hit": false,
+      "build_ms": 5651,
+      "copy_ms": 573,
+      "records": 6865,
+      "fresh_digest": "2532a8e21e78cea9326f37636b09fbc468f21147f9f00488c58820b0dda2eb1a",
+      "copy_digest": "2532a8e21e78cea9326f37636b09fbc468f21147f9f00488c58820b0dda2eb1a",
+      "verified": true,
+      "copy_method": "clonefile"
+    },
+    "matrix": [
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "chromium-light-phone",
+      "chromium-light-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-MSG-LOADING-webkit-light-phone-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-MSG-LOADING-webkit-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-LOADING-webkit-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-LOADING-chromium-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-LOADING-chromium-light-desktop-playwright.json"
+    ],
+    "server": "gateway",
+    "setups": [
+      {
+        "fixture_setup_ms": 5714,
+        "fixture_snapshot": {
+          "disk_bytes": 30760960,
+          "entry_bytes": 30768768,
+          "cache_bytes": 0,
+          "blob_payloads": 59,
+          "key": "1ee03ac13adfe00f6a8c62d4adb611a03b727123223b789da078c388556b74e6",
+          "cache_hit": false,
+          "build_ms": 5651,
+          "copy_ms": 573,
+          "records": 6865,
+          "fresh_digest": "2532a8e21e78cea9326f37636b09fbc468f21147f9f00488c58820b0dda2eb1a",
+          "copy_digest": "2532a8e21e78cea9326f37636b09fbc468f21147f9f00488c58820b0dda2eb1a",
+          "verified": true,
+          "copy_method": "clonefile"
+        },
+        "project": "webkit-light-phone"
+      },
+      {
+        "fixture_setup_ms": 5233,
+        "fixture_snapshot": {
+          "disk_bytes": 30687232,
+          "entry_bytes": 30695040,
+          "cache_bytes": 0,
+          "blob_payloads": 59,
+          "key": "1ee03ac13adfe00f6a8c62d4adb611a03b727123223b789da078c388556b74e6",
+          "cache_hit": false,
+          "build_ms": 5192,
+          "copy_ms": 574,
+          "records": 6865,
+          "fresh_digest": "900e1d21716388c33eb78e4a2594c1946c6d82e6dd450c8345b6422857fad7b6",
+          "copy_digest": "900e1d21716388c33eb78e4a2594c1946c6d82e6dd450c8345b6422857fad7b6",
+          "verified": true,
+          "copy_method": "clonefile"
+        },
+        "project": "webkit-light-desktop"
+      },
+      {
+        "fixture_setup_ms": 5248,
+        "fixture_snapshot": {
+          "disk_bytes": 30687232,
+          "entry_bytes": 30695040,
+          "cache_bytes": 0,
+          "blob_payloads": 59,
+          "key": "1ee03ac13adfe00f6a8c62d4adb611a03b727123223b789da078c388556b74e6",
+          "cache_hit": false,
+          "build_ms": 5206,
+          "copy_ms": 573,
+          "records": 6865,
+          "fresh_digest": "5806a6401a37f4ea3dbf073b36dab15ff2361e571086c220ed8f29fd870a1451",
+          "copy_digest": "5806a6401a37f4ea3dbf073b36dab15ff2361e571086c220ed8f29fd870a1451",
+          "verified": true,
+          "copy_method": "clonefile"
+        },
+        "project": "chromium-light-phone"
+      },
+      {
+        "fixture_setup_ms": 5198,
+        "fixture_snapshot": {
+          "disk_bytes": 30699520,
+          "entry_bytes": 30707328,
+          "cache_bytes": 0,
+          "blob_payloads": 59,
+          "key": "1ee03ac13adfe00f6a8c62d4adb611a03b727123223b789da078c388556b74e6",
+          "cache_hit": false,
+          "build_ms": 5155,
+          "copy_ms": 526,
+          "records": 6865,
+          "fresh_digest": "3bf83601b4c36098a0f0a54932e4b35d8a42c784131a1357674ebcbf95cbabba",
+          "copy_digest": "3bf83601b4c36098a0f0a54932e4b35d8a42c784131a1357674ebcbf95cbabba",
+          "verified": true,
+          "copy_method": "clonefile"
+        },
+        "project": "chromium-light-desktop"
+      }
+    ],
+    "template_cold_setup_ms": {
+      "generate": 99,
+      "list": 1164,
+      "seed": 2825
+    }
+  },
+  "scenario": "WEB-MSG-LOADING",
+  "level": "web",
+  "passed": true,
+  "git_sha": "448155dab96415e80926775cc1981e8461651d84",
+  "at": "2026-10-22T14:30:04.846435Z",
+  "assertions": [
+    {
+      "name": "webkit-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/list.spec.ts:78:1 › WEB-MSG-LOADING coherent cached rows paint before an offline connection without skeletons (1.6s)\n  ✓  2 [webkit-light-phone] › tests/list.spec.ts:116:1 › Public conversation loading › WEB-MSG-LOADING uncached loading waits before skeletons and clears on live data (877ms)\n\n  2 passed (4.6s)\n"
+    },
+    {
+      "name": "webkit-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/list.spec.ts:78:1 › WEB-MSG-LOADING coherent cached rows paint before an offline connection without skeletons (1.2s)\n  ✓  2 [webkit-light-desktop] › tests/list.spec.ts:116:1 › Public conversation loading › WEB-MSG-LOADING uncached loading waits before skeletons and clears on live data (736ms)\n\n  2 passed (4.0s)\n"
+    },
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/list.spec.ts:78:1 › WEB-MSG-LOADING coherent cached rows paint before an offline connection without skeletons (1.1s)\n  ✓  2 [chromium-light-phone] › tests/list.spec.ts:116:1 › Public conversation loading › WEB-MSG-LOADING uncached loading waits before skeletons and clears on live data (500ms)\n\n  2 passed (3.7s)\n"
+    },
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/list.spec.ts:78:1 › WEB-MSG-LOADING coherent cached rows paint before an offline connection without skeletons (1.4s)\n  ✓  2 [chromium-light-desktop] › tests/list.spec.ts:116:1 › Public conversation loading › WEB-MSG-LOADING uncached loading waits before skeletons and clears on live data (579ms)\n\n  2 passed (3.9s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

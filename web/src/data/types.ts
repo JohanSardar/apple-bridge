@@ -17,6 +17,8 @@ export type BridgeRecord<T = Record<string, unknown>> = {
     data: T;
 };
 export type ChatSummary = {
+    known_sender?: boolean;
+    pin_preview?: {message_id:string;text_preview:string;at:string}|null;
     chat: BridgeRecord;
     title: string;
     avatar_handles: {
@@ -27,12 +29,14 @@ export type ChatSummary = {
         id: string;
         sent_at: string;
         is_from_me: boolean;
+        sender_handle_id?: string;
         preview: {
             kind: 'text' | 'attachments' | 'reaction' | 'group_event' | 'unsent' | 'edited';
             text?: string;
+            group_event?: unknown;
             attachment_kinds?: string[];
             count?: number;
-            reaction?: { verb: string; target_excerpt: string };
+            reaction?: { verb: string; target_excerpt: string; kind?: string; removed?: boolean };
         };
     } | null;
     last_activity_at: string;

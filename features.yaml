@@ -429,6 +429,10 @@ features:
       - {id: WEB-RM-THREAD-ORIGINATOR, levels: [sim]}
       - {id: WEB-RM-THREAD-ORIGINATOR-BROWSER, levels: [web]}
       - {id: WEB-RM-THREAD-ORIGINATOR-PERF, levels: [sim]}
+    limits:
+      - scenario: WEB-RM-CHATS
+        level: sim
+        reason: "The 15 ms REST/MCP chats budgets remain deferred to the Messages milestone after the known main miss in PR183. The final focused run passes all 178 checks: REST/MCP p95 11.06/10.93 ms, with a 10 ms client gap outside each measured RPC and no rate-limited responses. Product thresholds and the 200 HTTP requests/second principal cap are unchanged."
     notes: Functional read-model contracts, including exact participant sets, are verified. WEB-RM-CHATS rest_chats_p95_budget and mcp_chats_p95_budget are deferred to the Messages milestone gate; both retain the 15 ms threshold. One isolated main/PR attribution pair reproduced the miss on main; PR183 p95 was lower in both protocols.
   - id: web.frontdoor
     title: Web front door, passkey device sessions, live views (web/1), embedded app shell
@@ -547,6 +551,9 @@ features:
     depends_on: [web.frontdoor, web.demo, web.media]
     status: todo
     limits:
+      - scenario: WEB-PERF-LIST
+        level: web
+        reason: "List frame and own-input budgets are deferred to the Messages milestone under the fast process. No per-PR exclusive performance run; input_8ms_proven remains false on the 60 Hz host. Thresholds are unchanged."
       - scenario: WEB-MSG-CHATS-STORE
         level: web
         reason: "Optional 100k-world cold-template setup is limited and deferred to the Messages milestone. A back-to-back origin/main versus head run in the same normal lane with APPLE_BRIDGE_HEAVY_NO_SIM_LANE=1 fails setup on both: main exceeds its unchanged 120-second dataset request bound; head reaches the unchanged six-minute cold bound before publication. No 100k entry exists to measure. The normal 5000-message prepared fixture passes WebKit/Chromium phone/desktop store and cache checks. LIVE-FIX owns the existing SQLite trigger-preparation ingestion cost; no thresholds changed."
@@ -569,8 +576,13 @@ features:
       - {id: WEB-MSG-CHATS-CACHE, levels: [web]}
       - {id: WEB-FIXTURE-SNAPSHOT, levels: [sim]}
       - {id: WEB-MSG-LIST, levels: [web]}
+      - {id: WEB-MSG-AVATAR-READY, levels: [web]}
+      - {id: WEB-MSG-LOADING, levels: [web]}
+      - {id: WEB-MSG-REORDER, levels: [web]}
       - {id: WEB-MSG-FILTERS, levels: [web]}
       - {id: WEB-MSG-SEARCH, levels: [web]}
+      - {id: WEB-MSG-SEARCH-LIST, levels: [web]}
+      - {id: WEB-MSG-SIDEBAR, levels: [web]}
       - {id: WEB-MSG-THREAD-CORE, levels: [web]}
       - {id: WEB-MSG-TRANSCRIPT-VIEWER, levels: [web]}
       - {id: WEB-MSG-COMPOSITION, levels: [web]}
@@ -596,8 +608,10 @@ features:
       - {id: WEB-MSG-PENDING, levels: [web]}
       - {id: WEB-MSG-DETAILS, levels: [web]}
       - {id: WEB-MSG-KEYBOARD, levels: [web]}
+      - {id: WEB-MSG-KEYBOARD-LIST, levels: [web]}
       - {id: WEB-MSG-A11Y, levels: [web]}
       - {id: WEB-MSG-PERF, levels: [web]}
+      - {id: WEB-PERF-LIST, levels: [web]}
       - {id: WEB-MSG-LIVE, levels: [web]}
       - {id: WEB-MSG-REAL-READ, levels: [real]}
   - id: web.messages.write

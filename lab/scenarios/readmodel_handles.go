@@ -24,7 +24,7 @@ func rmHandles(ctx context.Context, w *world.World, add func(string, bool)) {
 		valid := err == nil && len(out.Handles) == 1
 		if valid {
 			h := out.Handles[0]
-			valid = h.HandleID == id && h.DisplayName == "Alpha" && h.Initials == "A" && h.ContactID != nil && h.Avatar != nil && h.Avatar.Digest == digest && h.Avatar.Variant == "original"
+			valid = h.HandleID == id && h.DisplayName == "Alpha" && h.GivenName == "Alpha" && h.FamilyName == "" && h.Initials == "A" && h.ContactID != nil && h.Avatar != nil && h.Avatar.Digest == digest && h.Avatar.Variant == "original"
 		}
 		add(protocol+"_batched_handle_name_avatar_dedup", valid)
 		var hidden contracts.HandlesResult
@@ -32,7 +32,7 @@ func rmHandles(ctx context.Context, w *world.World, add func(string, bool)) {
 		valid = err == nil && len(hidden.Handles) == 1
 		if valid {
 			h := hidden.Handles[0]
-			valid = h.DisplayName == "synthetic-0@example.invalid" && h.ContactID == nil && h.Avatar == nil
+			valid = h.DisplayName == "synthetic-0@example.invalid" && h.ContactID == nil && h.Avatar == nil && h.GivenName == "" && h.FamilyName == ""
 		}
 		add(protocol+"_handle_contact_visibility", valid)
 		add(protocol+"_handles_input_budget", c.Call(ctx, "messages.handles", contracts.HandlesQuery{IDs: make([]string, 501)}, nil) != nil)

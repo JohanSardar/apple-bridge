@@ -1026,7 +1026,7 @@ S→C signin{device, at} · approval{command} · session_revoked · error{code, 
 ```
 
 **Views:**
-- `chats{filter: all|known|unknown|unread|deleted|spam, participants?}`: ChatSummary rows (§23.4) and order keys. Deltas upsert or remove rows.
+- `chats{filter: all|known|unknown|unread|deleted|spam, participants?}`: ChatSummary rows (§23.4) and order keys. Deltas upsert or remove rows. The conversation list keeps one stable paginated `all` view and starts fixed `deleted` and `spam` views after paint. All/Known/Unknown/Unread arrays are precomputed from the all-view rows and updated by live deltas; selecting a filter only switches arrays, without a new subscription or snapshot reply. Server filters remain the membership oracle for all six views, including Contacts-hidden principals.
 - `thread{chat_id, thread_originator_id?, anchor: latest|oldest|unread|<message_id>, before?, after?}`: a window of ThreadItems. Deltas update items inside the window and report `newer`/`older` counts outside it.
 - `record{collection, id}`.
 - `collection{chat_id, kind}`.
@@ -1050,9 +1050,12 @@ Operations (descriptors in `internal/contracts/operations.go`; available through
   - `chat`: the record
   - `title`: display name, or the participants' contact names joined
   - `avatar_handles`: up to 3 handle ids with `contact_id`
+  - `known_sender`: boolean matching the Known Senders server filter: native known classification (including its default), or a non-deleted participant handle with a contact link. Derived from the already-loaded full participant handle set, including members beyond the three avatar handles. Contact visibility does not change this membership bit; it never exposes contact names or IDs.
   - `last_message`: `{id, sent_at, is_from_me, sender_handle_id?, preview{group_event?, kind: text|attachments|reaction|group_event|unsent|edited, text?, attachment_kinds?, count?, reaction?}}`
   - `last_activity_at`, `unread_count`, `has_unseen_mention` (from captured message flags)
   - `muted` and `pinned_index`, nullable where native state is unavailable
+  - `pin_preview`: `{message_id, text_preview, at} | null`, the latest unread incoming message with text bounded to 200 Unicode code points plus an ellipsis, maintained by the read model’s existing deltas. The UI reads this field directly and never pages through a thread to construct a pin bubble.
+  - The client persists one atomic owner-scoped materialized snapshot per transport view, bounded to the first 2,000 rows and 2 MiB. Deltas mark persistence dirty; snapshot construction, UTF-8 encoding and size checks run together after paint in a coalesced background task at most once per 500 ms, with pagehide/hidden-page flushes. Per-page transport entries are neither persisted nor hydrated. Public sessions persist nothing and sign-out/revocation wipe the snapshots.
 - `messages.thread{chat_id, thread_originator_id?, anchor?, before?, after?, limit≤200}` → `{items: ThreadItem[], before?, after?, unread_anchor?}`. ThreadItem is the message record plus:
   - `reactions[]`: current state per sender and part, with removals folded out
   - `attachments[]`: records including `derivatives` and `media`
@@ -1063,7 +1066,7 @@ Operations (descriptors in `internal/contracts/operations.go`; available through
   - `anchor: oldest` returns the first bounded page in ascending order, symmetric to `latest` at the tail. Continue forward with `after`; `before` returns the preceding page. This anchor supports transcript ⌘↑ without fetching intervening history.
 - `messages.collection{chat_id, kind: photos|videos|media|links|documents|locations|audio, after?, limit≤200}`. Links and locations return message records with `balloon.kind=link|find_my`; media kinds return attachment records. Hidden attachments and recoverable messages are excluded. `kind: media` combines photos and videos in the existing owning-message join, ordered by owning message `sent_at` descending, then attachment id ascending. Each attachment projects its owning `data.message_id` and `data.sent_at` without mutating the stored record. It shares collection visibility, limits, budgets and kind-scoped cursors; inserts newer than the cursor do not change older pages.
 
-- `messages.handles{ids[]≤500}` → `{handles: [{handle_id, address, service, contact_id?, display_name, initials, avatar{digest, variant}?}], cursor}`. Duplicate IDs are folded and unknown IDs omitted. Contact names and avatars require contact visibility. Contact images use `variant=original` with the chosen thumbnail or original digest. Available as the `handles` live view as well as ordinary REST/MCP reads.
+- `messages.handles{ids[]≤500}` → `{handles: [{handle_id, address, service, contact_id?, display_name, given_name?, family_name?, initials, avatar{digest, variant}?}], cursor}`. Duplicate IDs are folded and unknown IDs omitted. Contact names and avatars require contact visibility. Contact images use `variant=original` with the chosen thumbnail or original digest. Available as the `handles` live view as well as ordinary REST/MCP reads.
 
 **Unread:** a message counts as unread when it is not from me, has `kind = message`, has `read_at` null, and is not recoverable. The default chat list excludes recoverable chats; the deleted filter also includes active chats containing recoverable messages. Known includes native known-sender chats and chats with a linked contact; spam selects native Junk chats or chats containing a spam message.
 
@@ -1285,7 +1288,7 @@ Recently Deleted becomes `deleted_at` + `recoverable_until` on messages and chat
 - `messages.chats` filters `known|unknown|unread|deleted|spam` become real.
 - `messages.collection` `links|locations` become real.
 - `has_unseen_mention` is real.
-- New read `messages.handles{ids[]≤500}` → `{handles: [{handle_id, address, service, contact_id?, display_name, initials, avatar{digest, variant}?}], cursor}`, for sender names and avatars in threads.
+- New read `messages.handles{ids[]≤500}` → `{handles: [{handle_id, address, service, contact_id?, display_name, given_name?, family_name?, initials, avatar{digest, variant}?}], cursor}`, for sender names and avatars in threads.
 
 **Client architecture (`web/src/messages/`):**
 
@@ -1333,7 +1336,11 @@ Recently Deleted becomes `deleted_at` + `recoverable_until` on messages and chat
 
 **W2 scenarios:**
 - Level `web` on the demo world, all 12 projects unless noted:
-  - WEB-MSG-LIST, WEB-MSG-FILTERS, WEB-MSG-SEARCH, WEB-MSG-THREAD-CORE, WEB-MSG-REACTIONS, WEB-MSG-REPLIES, WEB-MSG-EDIT-UNSEND-VIEW, WEB-MSG-GROUP-EVENTS, WEB-MSG-MEDIA, WEB-MSG-VIEWER, WEB-MSG-LINKS, WEB-MSG-STICKERS-GENMOJI, WEB-MSG-EFFECTS, WEB-MSG-PLACEHOLDERS, WEB-MSG-DETAILS, WEB-MSG-KEYBOARD, WEB-MSG-A11Y (axe-free structural checks plus labels), WEB-MSG-PERF.
+  - WEB-MSG-LIST, WEB-MSG-AVATAR-READY (delayed handle names, neutral avatars and stable monogram geometry), WEB-MSG-LOADING (cached first paint and delayed skeletons), WEB-MSG-REORDER (live ordering and unread springs), WEB-MSG-FILTERS, WEB-MSG-SEARCH, WEB-MSG-THREAD-CORE, WEB-MSG-REACTIONS, WEB-MSG-REPLIES, WEB-MSG-EDIT-UNSEND-VIEW, WEB-MSG-GROUP-EVENTS, WEB-MSG-MEDIA, WEB-MSG-VIEWER, WEB-MSG-LINKS, WEB-MSG-STICKERS-GENMOJI, WEB-MSG-EFFECTS, WEB-MSG-PLACEHOLDERS, WEB-MSG-DETAILS, WEB-MSG-KEYBOARD, WEB-MSG-A11Y (axe-free structural checks plus labels), WEB-MSG-PERF.
+  - WEB-PERF-LIST uses one Chromium/light/desktop project with `web.huge: true` for list scroll, filter switching, search typing and live reorder. It runs in the exclusive lane with frame work p95 ≤ 4 ms / max ≤ 8 ms and own-input cost p95 ≤ 8 ms. WEB-MSG-PERF is transcript-only and its canonical manifest is owned by W2-TRANSCRIPT.
+  - WEB-MSG-SIDEBAR separately verifies desktop sidebar resize bounds, RTL keyboard handling and trusted-only width persistence. Its separate World avoids unrelated fixture authentication bursts.
+  - WEB-MSG-SEARCH-LIST covers inline conversation matches, search-field shortcuts and the full-results route hook; WEB-MSG-SEARCH covers the full results page.
+  - WEB-MSG-KEYBOARD-LIST covers list selection, chat cycling and pinned shortcuts; WEB-MSG-KEYBOARD covers transcript shortcuts.
   - WEB-MSG-LIVE: a sim inbound message appears with the receive animation in under 500 ms p95.
 - Level `real` (the real gateway on the Air, read-only):
   - WEB-MSG-REAL-READ: the real chat list and threads render without errors.

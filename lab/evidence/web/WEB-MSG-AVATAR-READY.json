@@ -1,0 +1,161 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[4.86 5.07 5.76] cpu_idle=71% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5J08DDYESZ6X7V4Y68DM422",
+  "metrics": {
+    "browser_budget_ms": 180000,
+    "capture_observer_resets": 0,
+    "demo_messages": 5000,
+    "demo_startup_ms": 5508,
+    "fixture_setup_ms": 5508,
+    "fixture_snapshot": {
+      "disk_bytes": 30740480,
+      "entry_bytes": 30748288,
+      "cache_bytes": 0,
+      "blob_payloads": 59,
+      "key": "1ee03ac13adfe00f6a8c62d4adb611a03b727123223b789da078c388556b74e6",
+      "cache_hit": false,
+      "build_ms": 5446,
+      "copy_ms": 578,
+      "records": 6865,
+      "fresh_digest": "aae62ecec342dfe609446971ea25fabb524561ecd7dba9ccef07b1ca06c7b25a",
+      "copy_digest": "aae62ecec342dfe609446971ea25fabb524561ecd7dba9ccef07b1ca06c7b25a",
+      "verified": true,
+      "copy_method": "clonefile"
+    },
+    "matrix": [
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "chromium-light-phone",
+      "chromium-light-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-MSG-AVATAR-READY-webkit-light-phone-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-MSG-AVATAR-READY-webkit-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-AVATAR-READY-webkit-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-AVATAR-READY-chromium-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-AVATAR-READY-chromium-light-desktop-playwright.json"
+    ],
+    "server": "gateway",
+    "setups": [
+      {
+        "fixture_setup_ms": 5508,
+        "fixture_snapshot": {
+          "disk_bytes": 30740480,
+          "entry_bytes": 30748288,
+          "cache_bytes": 0,
+          "blob_payloads": 59,
+          "key": "1ee03ac13adfe00f6a8c62d4adb611a03b727123223b789da078c388556b74e6",
+          "cache_hit": false,
+          "build_ms": 5446,
+          "copy_ms": 578,
+          "records": 6865,
+          "fresh_digest": "aae62ecec342dfe609446971ea25fabb524561ecd7dba9ccef07b1ca06c7b25a",
+          "copy_digest": "aae62ecec342dfe609446971ea25fabb524561ecd7dba9ccef07b1ca06c7b25a",
+          "verified": true,
+          "copy_method": "clonefile"
+        },
+        "project": "webkit-light-phone"
+      },
+      {
+        "fixture_setup_ms": 5246,
+        "fixture_snapshot": {
+          "disk_bytes": 30683136,
+          "entry_bytes": 30690944,
+          "cache_bytes": 0,
+          "blob_payloads": 59,
+          "key": "1ee03ac13adfe00f6a8c62d4adb611a03b727123223b789da078c388556b74e6",
+          "cache_hit": false,
+          "build_ms": 5203,
+          "copy_ms": 578,
+          "records": 6865,
+          "fresh_digest": "e1187764b860b65f94ffdb9b8b4dcf4cbccffad1787f2f908740e2b26734af55",
+          "copy_digest": "e1187764b860b65f94ffdb9b8b4dcf4cbccffad1787f2f908740e2b26734af55",
+          "verified": true,
+          "copy_method": "clonefile"
+        },
+        "project": "webkit-light-desktop"
+      },
+      {
+        "fixture_setup_ms": 5219,
+        "fixture_snapshot": {
+          "disk_bytes": 30654464,
+          "entry_bytes": 30662272,
+          "cache_bytes": 0,
+          "blob_payloads": 59,
+          "key": "1ee03ac13adfe00f6a8c62d4adb611a03b727123223b789da078c388556b74e6",
+          "cache_hit": false,
+          "build_ms": 5175,
+          "copy_ms": 578,
+          "records": 6865,
+          "fresh_digest": "08df532163f20f11e9fa76161872aa127cbf252681c016d2c1c0bb8158f02dfa",
+          "copy_digest": "08df532163f20f11e9fa76161872aa127cbf252681c016d2c1c0bb8158f02dfa",
+          "verified": true,
+          "copy_method": "clonefile"
+        },
+        "project": "chromium-light-phone"
+      },
+      {
+        "fixture_setup_ms": 5150,
+        "fixture_snapshot": {
+          "disk_bytes": 30572544,
+          "entry_bytes": 30580352,
+          "cache_bytes": 0,
+          "blob_payloads": 59,
+          "key": "1ee03ac13adfe00f6a8c62d4adb611a03b727123223b789da078c388556b74e6",
+          "cache_hit": false,
+          "build_ms": 5109,
+          "copy_ms": 547,
+          "records": 6865,
+          "fresh_digest": "a41a073830736e9f84ec9d175ad600ba6fe7d61b8e3bbdecd9b06cde8e601b22",
+          "copy_digest": "a41a073830736e9f84ec9d175ad600ba6fe7d61b8e3bbdecd9b06cde8e601b22",
+          "verified": true,
+          "copy_method": "clonefile"
+        },
+        "project": "chromium-light-desktop"
+      }
+    ],
+    "template_cold_setup_ms": {
+      "generate": 113,
+      "list": 1225,
+      "seed": 2607
+    }
+  },
+  "scenario": "WEB-MSG-AVATAR-READY",
+  "level": "web",
+  "passed": true,
+  "git_sha": "448155dab96415e80926775cc1981e8461651d84",
+  "at": "2026-10-22T14:29:19.934274Z",
+  "assertions": [
+    {
+      "name": "webkit-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/list.spec.ts:70:1 › WEB-MSG-AVATAR-READY failed and empty photos retain a visible monogram (1.3s)\n  ✓  2 [webkit-light-phone] › tests/list.spec.ts:141:1 › WEB-MSG-AVATAR-READY delayed handles never publish provisional initials or move the monogram box (1.4s)\n\n  2 passed (4.9s)\n"
+    },
+    {
+      "name": "webkit-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/list.spec.ts:70:1 › WEB-MSG-AVATAR-READY failed and empty photos retain a visible monogram (1.4s)\n  ✓  2 [webkit-light-desktop] › tests/list.spec.ts:141:1 › WEB-MSG-AVATAR-READY delayed handles never publish provisional initials or move the monogram box (1.4s)\n\n  2 passed (5.0s)\n"
+    },
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/list.spec.ts:70:1 › WEB-MSG-AVATAR-READY failed and empty photos retain a visible monogram (732ms)\n  ✓  2 [chromium-light-phone] › tests/list.spec.ts:141:1 › WEB-MSG-AVATAR-READY delayed handles never publish provisional initials or move the monogram box (1.1s)\n\n  2 passed (3.9s)\n"
+    },
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/list.spec.ts:70:1 › WEB-MSG-AVATAR-READY failed and empty photos retain a visible monogram (608ms)\n  ✓  2 [chromium-light-desktop] › tests/list.spec.ts:141:1 › WEB-MSG-AVATAR-READY delayed handles never publish provisional initials or move the monogram box (1.2s)\n\n  2 passed (3.8s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

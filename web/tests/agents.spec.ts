@@ -12,7 +12,7 @@ test('WEB-AGENT-OAUTH connector consent, access levels, approval screens and tok
     const { url } = await control(request, '/enroll');
     await page.goto(url);
     await page.getByRole('button', { name: 'Continue', exact: true }).click();
-    await expect(page.getByText('No Messages', { exact: true })).toBeVisible();
+    await expect(page.getByRole('listbox', { name: 'Conversations' })).toBeVisible();
     const origin = new URL(process.env.AB_WEB_URL!).origin;
     const ownerHeaders = { Origin: origin };
     const evidence = '../lab/evidence/private/web';

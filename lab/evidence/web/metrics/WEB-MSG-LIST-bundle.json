@@ -1,0 +1,47 @@
+{
+  "baseline_commit": "c4e0124f9bdd36952cb52eb9230558b172608396",
+  "head_source_commit": "342215c03f3db4d5164e50855a5fcfd9f4a4ab6d",
+  "compression": "gzip level 6, mtime 0",
+  "baseline": [
+    {
+      "asset": "/assets/index-MdE2Mqkn.js",
+      "kind": "js",
+      "raw_bytes": 82992,
+      "gzip_bytes": 29935,
+      "sha256": "60dec6c99acf1dad2b5b74d3b82c3bf457a5d370fb9f036bed51cfb449a26c6c"
+    },
+    {
+      "asset": "/assets/style-DdJJAkGF.css",
+      "kind": "css",
+      "raw_bytes": 84897,
+      "gzip_bytes": 16253,
+      "sha256": "3070ddef03d1b3aa4a389d74b669482e4091350c9f988b2b648e5d948cf4b5f7"
+    }
+  ],
+  "head": [
+    {
+      "asset": "/assets/index-Dl0xv0u1.js",
+      "kind": "js",
+      "raw_bytes": 116384,
+      "gzip_bytes": 41507,
+      "sha256": "b4c9a50017b5b33dbdf76b8a5e71bc2c3cf6114e03b6bb95be8214b5d0b85927"
+    },
+    {
+      "asset": "/assets/style-pQFZ5Rpq.css",
+      "kind": "css",
+      "raw_bytes": 97737,
+      "gzip_bytes": 18203,
+      "sha256": "4c9b382832b9ef064e1146f33dee04f044ab897d3659a9a5422a38d75bc21cc5"
+    }
+  ],
+  "delta": {
+    "js": {
+      "raw_bytes": 33392,
+      "gzip_bytes": 11572
+    },
+    "css": {
+      "raw_bytes": 12840,
+      "gzip_bytes": 1950
+    }
+  }
+}

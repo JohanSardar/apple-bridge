@@ -31,7 +31,7 @@ Status: W0 draft, waiting for Johan's skim. Decisions: `design/DECISIONS.md` (20
 | Feature | Apple behavior | Web | Bridge | When |
 |---|---|---|---|---|
 | Row | Avatar 40 pt (iOS 52), name (Headline), one or two preview lines (Subheadline, secondary), time or date on the right (Footnote, secondary), chevron on iOS | Same. Time uses the viewer's locale and hour cycle (`Intl.DateTimeFormat`, so "9:41 AM" in en-US and "09:41" in en-GB), then "Yesterday", the weekday within 7 days, then the short date. Unnamed groups are titled from given names ("Alex, Sam & 3 more"; exact wording to verify in §17) | R | W2 |
-| Avatar | Contact photo, else monogram on a gray gradient. Groups: up to 3 overlapping member avatars, or the group photo | Same. Monogram: first letter of the given name plus first letter of the family name, letters only; one letter when only one side is a letter; the person glyph when there is none (phone numbers, emails). A photo that fails or decodes empty falls back to the monogram. Group composite: 2 members on a diagonal, 3 in a triangle, each mini avatar ringed in the row background so overlaps read apart, monogram text about 0.42× its circle | R (contact images); group photo `—` | W2 / W4 |
+| Avatar | Contact photo, else monogram on a gray gradient. Groups: up to 3 overlapping member avatars, or the group photo | Same. Monogram: first letter of the given name plus first letter of the family name, letters only; one letter when only one side is a letter; the person glyph when there is none (phone numbers, emails). Until the handles that determine the name resolve, show the neutral person glyph rather than provisional initials. Keep the glyph and initials in the same fixed avatar box; crossfade with opacity only for at most 150 ms, with no transition under reduced motion. A photo that fails or decodes empty falls back to the monogram. Group composite: 2 members on a diagonal, 3 in a triangle, each mini avatar ringed in the row background so overlaps read apart, monogram text about 0.42× its circle | R (contact images); group photo `—` | W2 / W4 |
 | Unread | Blue dot left of the avatar; the preview is not bolded | Same, plus an unread count in the tab and app badge | R (`last_read_at`, `read_at`) | W2 |
 | Preview text | Last message; attachments become "Attachment: 1 Image", "Video", "Audio Message", "Location", "Link"; reactions become "Loved 'text'"; system events are worded | Same wording table (§15) | R | W2 |
 | Typing in row | Pins show a typing bubble (row behavior to verify) | Only if typing can be read (§13) | `—` | W4 / hide |
@@ -39,13 +39,13 @@ Status: W0 draft, waiting for Johan's skim. Decisions: `design/DECISIONS.md` (20
 | Pinned grid | Up to 9 pins in a 3-column grid of large avatars. Unread pins show the latest incoming message in a bubble above the avatar (never a reaction removal); the bubble stays inside the safe area with its tail on the avatar. Drag to reorder; pin/unpin from the context menu or swipe | Same, including drag reorder with a spring | `—` (pins live in Messages prefs, iCloud-synced) | W4 read and write |
 | Swipe actions (touch) | Leading: Mark read/unread. Trailing: Hide Alerts, Delete (full swipe deletes) | Same; full-swipe with a rubber band and haptic-style snap | Mark read W sim-only; Delete chat W sim-only | W3 |
 | Context menu | Pin, Mark as Read/Unread, Hide Alerts, Delete; mac adds Open in New Window | Same, minus New Window; ⌘-click opens a new browser tab | as above | W3 / W4 |
-| Filters | All Messages, Known Senders, Unknown Senders, Unread, Recently Deleted, Spam | Same menu, top-left on phone and in the sidebar header on desktop | Unknown/Spam `—` (`chat.is_filtered`, `message.is_spam` not read); Recently Deleted `—` | W2 read, W4 actions |
+| Filters | All Messages, Known Senders, Unknown Senders, Unread, Recently Deleted, Spam | Same menu, top-left on phone and in the sidebar header on desktop. Keep one stable all subscription, precompute All/Known/Unknown/Unread arrays from its rows, and start fixed deleted/spam views after paint. Switching filters creates no subscriptions. `known_sender` includes every participant, not only avatar handles, and requires no Contacts details; live deltas update sender and unread membership. All six client views equal the server-filter oracle | Unknown/Spam `—` (`chat.is_filtered`, `message.is_spam` not read); Recently Deleted `—` | W2 read, W4 actions |
 | Recently Deleted | Deleted conversations and messages for 30 days; Recover, Delete permanently | Same view | `—` (recoverable tables not read) | W2 read, W4 write |
 | Edit / select | Multi-select for Delete and Mark Read | Same; Shift/⌘-click ranges on desktop | as above | W3 |
 | Compose button | Square-pencil, top right | Same; ⌘N. Hidden until W3 rather than shown disabled | — | W3 |
 | Search field | Top of sidebar (mac); iOS placement to verify (bottom glass bar on 26+?) | Desktop: sidebar top. Phone: bottom glass bar (§8) | R (`search`) | W2 |
-| Empty and loading | "No Messages", "No Results" | Skeleton rows only past 150 ms; never a spinner over cached data | — | W2 |
-| Archived chats | Not shown | Hidden (`is_archived`) | R | W2 |
+| Empty and loading | "No Messages", "No Results" | Skeleton rows only past 150 ms; never a spinner over cached data. Cache construction and size checks are coalesced off the live-message path (at most once per 500 ms, flushing on pagehide/hidden visibility); snapshots stay atomic, owner-scoped and bounded to 2 MiB | — | W2 |
+| Archived chats | Not shown | Hidden (`is_archived`) in live-message filters; Recently Deleted follows the recoverable server-filter result | R | W2 |
 
 ## 3. Transcript
 
@@ -314,6 +314,8 @@ Ported from Apple's phrasing; localizable keys live in the string catalog.
 **Materials:** standard materials (mac) are #ECECEC at 38/50/63/76/88% for Ultra Thin through Ultra Thick (light). Liquid Glass Regular is a 70% white fill over a blurred backdrop, with a 0.3 px rim highlight, inner edge shading and an 18/46 px drop shadow at 25% (dark: #1A1A1A 50–90%). The web implementation uses `backdrop-filter: blur(24px) saturate(180%)` plus the rim and shadow layers, only on chrome surfaces.
 
 ## 17. Measurements from the real app (pending captures)
+
+Unnamed conversation titles use participants’ given names, then “Alex, Sam & 3 more” for larger groups: verify in capture pass.
 
 To be filled from the Air before W2 starts, for both light and dark:
 - bubble radius, padding, tail geometry, group spacing

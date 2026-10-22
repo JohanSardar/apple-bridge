@@ -11,7 +11,7 @@ test('WEB-HANDLES-ROUTE frame batches resolve contact names and guard session, o
     expect(response.status()).toBe(200);
     const result=await response.json();
     expect(result.handles).toHaveLength(2);
-    expect(result.handles[0]).toMatchObject({handle_id:fixture.ids[0],display_name:'Sam Rivera',initials:'SR',contact_id:fixture.avatar.record,avatar:{digest:fixture.avatar.digest}});
+    expect(result.handles[0]).toMatchObject({handle_id:fixture.ids[0],display_name:'Sam Rivera',given_name:'Sam',family_name:'Rivera',initials:'SR',contact_id:fixture.avatar.record,avatar:{digest:fixture.avatar.digest}});
     expect(result.handles[1]).toMatchObject({handle_id:fixture.ids[1],display_name:'plain@example.com',service:'SMS'});
     const duplicate=await page.request.post('/web/v1/handles',{headers,data:{ids:Array(500).fill(fixture.ids[0])}});
     expect(duplicate.status()).toBe(200);
