@@ -19,6 +19,7 @@ import (
 )
 
 type WebOptions struct {
+	Fixture  string   `yaml:"fixture,omitempty"`
 	Huge     bool     `yaml:"huge,omitempty"`
 	Browsers []string `yaml:"browsers"`
 	Themes   []string `yaml:"themes"`
@@ -29,6 +30,9 @@ type WebOptions struct {
 func validateWeb(s Scenario) error {
 	if !slices.Contains(s.Levels, "web") || s.Web == nil || len(s.Web.Browsers)*len(s.Web.Themes)*len(s.Web.Layouts) == 0 || (s.Web.Server != "mock" && s.Web.Server != "gateway") {
 		return fmt.Errorf("web scenario requires matrix and server")
+	}
+	if s.Web.Fixture != "" && (s.Web.Fixture != "list" || s.Web.Server != "gateway") {
+		return fmt.Errorf("invalid web fixture %q", s.Web.Fixture)
 	}
 	for _, pair := range []struct{ values, allowed []string }{{s.Web.Browsers, []string{"webkit", "chromium", "firefox"}}, {s.Web.Themes, []string{"light", "dark"}}, {s.Web.Layouts, []string{"phone", "desktop"}}} {
 		for _, value := range pair.values {
@@ -41,6 +45,17 @@ func validateWeb(s Scenario) error {
 }
 
 const webProjectBudget = 3 * time.Minute
+const webFixtureBuildBudget = 6 * time.Minute
+
+func webSnapshotEnabled(s Scenario) bool {
+	return s.Web != nil && s.Web.Server == "gateway" && (s.Web.Huge || s.Web.Fixture == "list")
+}
+func webRunBudget(s Scenario) time.Duration {
+	if webSnapshotEnabled(s) {
+		return webProjectBudget + webFixtureBuildBudget
+	}
+	return webProjectBudget
+}
 
 func runWeb(ctx context.Context, s Scenario) Evidence {
 	if err := validateWeb(s); err != nil {
@@ -60,8 +75,9 @@ func runWeb(ctx context.Context, s Scenario) Evidence {
 	}
 	var result Evidence
 	reports := []any{}
+	setups := []any{}
 	for _, project := range projects {
-		bounded, cancel := context.WithTimeout(ctx, webProjectBudget)
+		bounded, cancel := context.WithTimeout(ctx, webRunBudget(s))
 		part := runWebProjects(bounded, s, []string{project})
 		cancel()
 		if result.RunID == "" {
@@ -73,6 +89,7 @@ func runWeb(ctx context.Context, s Scenario) Evidence {
 			result.Assertions = append(result.Assertions, assertion)
 		}
 		reports = append(reports, part.Metrics["report"])
+		setups = append(setups, map[string]any{"project": project, "fixture_setup_ms": part.Metrics["fixture_setup_ms"], "fixture_snapshot": part.Metrics["fixture_snapshot"]})
 		result.Passed = part.Passed
 		if !part.Passed {
 			break
@@ -80,6 +97,7 @@ func runWeb(ctx context.Context, s Scenario) Evidence {
 	}
 	result.Metrics["matrix"] = projects
 	result.Metrics["reports"] = reports
+	result.Metrics["setups"] = setups
 	return result
 }
 
@@ -94,17 +112,41 @@ func runWebProjects(ctx context.Context, s Scenario, projects []string) Evidence
 		return fail("web_configuration", err)
 	}
 	worldStarted := time.Now()
-	w, err := world.New(ctx, "sim", 0, 0, world.BlobOptions{Scope: "admin"})
-	if err != nil {
-		return fail("web_world", err)
+	var w *world.World
+	var err error
+	var prepared *webFixtureMetadata
+	if webSnapshotEnabled(s) {
+		var metadata webFixtureMetadata
+		var metrics world.FixtureMetrics
+		w, metadata, metrics, err = webSnapshotWorld(ctx, s)
+		if err != nil {
+			return fail("web_fixture_snapshot", err)
+		}
+		prepared = &metadata
+		e.Metrics["fixture_snapshot"] = metrics
+		e.Metrics["template_cold_setup_ms"] = map[string]int64{"generate": metadata.GenerateMS, "seed": metadata.SeedMS, "list": metadata.ListMS}
+		e.Metrics["demo_messages"] = metadata.Messages
+	} else {
+		w, err = world.New(ctx, "sim", 0, 0, world.BlobOptions{Scope: "admin"})
+		if err != nil {
+			return fail("web_world", err)
+		}
+		dataset := demo.Generate(demo.Options{Seed: 1, Huge: s.Web.Huge})
+		if err := demo.Populate(w, dataset); err != nil {
+			w.Close()
+			return fail("web_demo_seed", err)
+		}
+		e.Metrics["demo_messages"] = dataset.Counts["messages.message"]
 	}
 	defer w.Close()
-	dataset := demo.Generate(demo.Options{Seed: 1, Huge: s.Web.Huge})
-	if err := demo.Populate(w, dataset); err != nil {
-		return fail("web_demo_seed", err)
-	}
+	e.Metrics["fixture_setup_ms"] = time.Since(worldStarted).Milliseconds()
 	e.Metrics["demo_startup_ms"] = time.Since(worldStarted).Milliseconds()
-	e.Metrics["demo_messages"] = dataset.Counts["messages.message"]
+	if webSnapshotEnabled(s) {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, webProjectBudget)
+		defer cancel()
+	}
+	e.Metrics["browser_budget_ms"] = webProjectBudget.Milliseconds()
 	endpoint := w.Gateway.URL
 	controlURL, controlKey := "", ""
 	demoURL := ""
@@ -125,7 +167,7 @@ func runWebProjects(ctx context.Context, s Scenario, projects []string) Evidence
 			parsedDemo, _ := url.Parse(server.URL)
 			endpoint = parsedDemo.Scheme + "://" + parsedDemo.Host
 		}
-		control, key := webBrowserControl(ctx, w, endpoint)
+		control, key := webBrowserControl(ctx, w, endpoint, prepared)
 		defer control.Close()
 		controlURL, controlKey = control.URL, key
 	}

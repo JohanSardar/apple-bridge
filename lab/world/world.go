@@ -60,8 +60,9 @@ type NativeSetup struct {
 }
 
 type World struct {
-	dialCode         string
-	remoteExtraHomes []string
+	fixtureCopyMethod string
+	dialCode          string
+	remoteExtraHomes  []string
 
 	blobOptions            BlobOptions
 	secretOverride         bool
@@ -312,6 +313,22 @@ func newEnvironment(ctx context.Context, level string, replicas, seed int, nativ
 		}
 	}
 	gatewayHome := filepath.Join(w.Dir, "gateway")
+	restore, _ := ctx.Value(fixtureRestoreKey{}).(fixtureRestore)
+	restored := restore.Directory
+	if restored != "" {
+		if native || level != "sim" {
+			return nil, contracts.ErrInvalid
+		}
+		w.fixtureCopyMethod, err = copyFixtureTree(restored, w.Dir, false)
+		if err != nil {
+			return nil, err
+		}
+		if restore.Verify != nil {
+			if err = restore.Verify(w.Dir); err != nil {
+				return nil, err
+			}
+		}
+	}
 	if gatewayBinary == "" {
 		gatewayBinary = w.bridge
 	}
@@ -400,18 +417,39 @@ func newEnvironment(ctx context.Context, level string, replicas, seed int, nativ
 			return (&net.Dialer{}).DialContext(ctx, "unix", control)
 		}}
 		w.Control = &http.Client{Transport: transport, Timeout: 5 * time.Second}
-		if err = w.Await(10*time.Second, func() bool { _, err := w.Inspect(); return err == nil }); err != nil {
+		if err = w.Await(10*time.Second, func() bool {
+			if restored != "" {
+				response, err := w.Control.Get("http://sim/stats")
+				if err != nil {
+					return false
+				}
+				response.Body.Close()
+				return response.StatusCode == 200
+			}
+			_, err := w.Inspect()
+			return err == nil
+		}); err != nil {
 			return nil, err
 		}
-		if err = w.ControlAction("/seed", map[string]int{"count": seed}); err != nil {
-			return nil, err
-		}
-		minimum := seed + 2
-		if w.blobOptions.Scope != "" {
-			minimum = 1
-		}
-		if err = w.Await(10*time.Second, func() bool { records, err := w.Records(w.Gateway); return err == nil && len(records) >= minimum }); err != nil {
-			return nil, err
+		if restored == "" {
+			if err = w.ControlAction("/seed", map[string]int{"count": seed}); err != nil {
+				return nil, err
+			}
+			minimum := seed + 2
+			if w.blobOptions.Scope != "" {
+				minimum = 1
+			}
+			if err = w.Await(10*time.Second, func() bool { records, err := w.Records(w.Gateway); return err == nil && len(records) >= minimum }); err != nil {
+				return nil, err
+			}
+		} else {
+			if err = w.Await(10*time.Second, func() bool {
+				var page contracts.ReadResult
+				_, err := Request(w.ctx, w.Gateway, "/v1/op/records.query", contracts.ReadQuery{Limit: 1}, &page)
+				return err == nil && len(page.Records) > 0
+			}); err != nil {
+				return nil, err
+			}
 		}
 	} else {
 		if err = w.Await(15*time.Second, func() bool { _, err := os.Stat(filepath.Join(gatewayHome, "helper", "helper.pid")); return err == nil }); err != nil {
