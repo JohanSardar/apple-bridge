@@ -83,6 +83,15 @@ You are a worker on Apple Bridge, delegated by the build leader. Read this file,
 
 - Real Worlds stage immutable, signed Helper and AppleTruth bundles under their own `/tmp/ablab/<world>/apps/` from the current worktree using `packaging/dev/build-helper.sh <destination.app>` and `packaging/dev/build-truth.sh <destination.app>`. Always pass a new destination; never rebuild a running World’s bundle or install into the shared dev apps during worker verification. Signing still uses `packaging/dev/sign.sh` and the existing certificate, bundle IDs and designated requirements. Launch with `open -n -W -a`.
 
+## Lean process (2026-10-22 evening, binding; overrides the per-PR parts of the fast process below)
+Measured on 52 PRs merged under the fast process: 77% of added lines were tests, lab scenarios and evidence, and the median PR changed 68 product lines. The per-PR overhead, not the code, set the pace.
+- **PR size:** one PR per real feature slice, 300–1,500 product lines. Small fixes ride along with the next feature PR.
+- **No per-PR ceremony:** no failing-first runs, committed evidence JSON, screenshots, bundle or SHA manifests, private-evidence archives or frozen traces. Evidence is produced once per app at its milestone gate.
+- **Per-PR gate:** build, typecheck, lint/vet and features (`heavy.sh --light`), then the PR's own focused tests in one browser project (chromium-light-desktop). WebKit, phone, the full matrix, perf and real-data checks run at the milestone.
+- **Tests** stay proportionate to the change (test lines at or below product lines) and reuse existing fixtures.
+- **Merge on green immediately.** The leader reviews after merge and asks for follow-ups. Workers message only "merged #N" or a real blocker.
+- **PR bodies** stay under 10 lines. A clean rebase reruns build and typecheck only.
+
 ## Fast process (2026-10-22, binding; overrides any stricter per-PR gate rule below)
 Johan delegated all decisions and wants SPEC §23 finished as fast as possible.
 - **Never ask Johan anything.** The leader decides. Unprovable items are recorded `limited` with the reason.
