@@ -113,6 +113,27 @@ sim_ok() {
   after=$(vm_stat 2>/dev/null | awk '/Swapouts/ {gsub(/\./,"",$2); print $2}')
   [ -n "$before" ] && [ -n "$after" ] && [ $((after - before)) -le "${APPLE_BRIDGE_SIM_MAX_SWAPOUTS:-64}" ]
 }
+# Sensitive jobs wait out host memory thrash (a 1-minute load above 4x the CPUs, free memory below 25%, or heavy swap traffic), at most 20 minutes.
+thrashing() {
+  level=$(sysctl -n kern.memorystatus_level 2>/dev/null || echo 100)
+  [ "$level" -lt "${APPLE_BRIDGE_THRASH_MIN_FREE_PCT:-25}" ] && return 0
+  load=$(sysctl -n vm.loadavg 2>/dev/null | awk '{printf "%d", $2}')
+  cpus=$(sysctl -n hw.ncpu 2>/dev/null || echo 8)
+  [ "${load:-0}" -gt $((cpus * ${APPLE_BRIDGE_THRASH_LOAD_PER_CPU:-4})) ] && return 0
+  before=$(vm_stat 2>/dev/null | awk '/Swapouts|Swapins/ {gsub(/\./,"",$2); total+=$2} END {print total}')
+  sleep 2
+  after=$(vm_stat 2>/dev/null | awk '/Swapouts|Swapins/ {gsub(/\./,"",$2); total+=$2} END {print total}')
+  [ -n "$before" ] && [ -n "$after" ] && [ $((after - before)) -gt "${APPLE_BRIDGE_THRASH_MAX_SWAP_PAGES:-2048}" ]
+}
+wait_thrash() {
+  deadline=$(( $(date +%s) + ${APPLE_BRIDGE_THRASH_WAIT_SECONDS:-1200} ))
+  announced=""
+  while thrashing; do
+    [ -z "$announced" ] && { echo "heavy.sh: host memory thrash; holding sensitive job until it passes" >&2; announced=1; }
+    [ "$(date +%s)" -ge "$deadline" ] && { echo "heavy.sh: thrash wait expired; running anyway" >&2; return; }
+    sleep 10
+  done
+}
 wait_sim_idle() {
   while [ -d "$simlock" ]; do
     if stale "$simlock"; then rm -rf "$simlock"; break; fi
@@ -138,7 +159,7 @@ while true; do
         printf '%s\n' "$record" > "$lock/cmd"
         held="$held $lock"
         if [ -z "$exclusive" ] || [ "$(count)" -eq "$slots" ]; then
-          if [ -z "$light" ] && sensitive "$record"; then wait_sim_idle; fi
+          if [ -z "$light" ] && sensitive "$record"; then wait_sim_idle; wait_thrash; fi
           label=$i
           [ -n "$exclusive" ] && label=all
           run "$label" "$@"
