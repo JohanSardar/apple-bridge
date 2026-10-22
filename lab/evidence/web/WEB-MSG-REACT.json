@@ -1,0 +1,85 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[13.64 17.2 24.12] cpu_idle=24% cpus=8 other_heavy=2"
+  },
+  "run_id": "run_01M5HVFC1NQS6M537K1R7KZKPQ",
+  "metrics": {
+    "browser_budget_ms": 180000,
+    "capture_observer_resets": 0,
+    "demo_messages": 5000,
+    "demo_startup_ms": 12315,
+    "fixture_setup_ms": 12315,
+    "matrix": [
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "chromium-light-phone",
+      "chromium-light-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-MSG-REACT-webkit-light-phone-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-MSG-REACT-webkit-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-REACT-webkit-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-REACT-chromium-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-REACT-chromium-light-desktop-playwright.json"
+    ],
+    "server": "gateway",
+    "setups": [
+      {
+        "fixture_setup_ms": 12315,
+        "fixture_snapshot": null,
+        "project": "webkit-light-phone"
+      },
+      {
+        "fixture_setup_ms": 13126,
+        "fixture_snapshot": null,
+        "project": "webkit-light-desktop"
+      },
+      {
+        "fixture_setup_ms": 12283,
+        "fixture_snapshot": null,
+        "project": "chromium-light-phone"
+      },
+      {
+        "fixture_setup_ms": 10786,
+        "fixture_snapshot": null,
+        "project": "chromium-light-desktop"
+      }
+    ]
+  },
+  "scenario": "WEB-MSG-REACT",
+  "level": "web",
+  "passed": true,
+  "git_sha": "d8c6c024dcf5e0113d621e0e43e90aad55627e5e",
+  "at": "2026-10-22T13:05:45.014147Z",
+  "assertions": [
+    {
+      "name": "webkit-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 7 tests using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/message-actions.spec.ts:39:1 › WEB-MSG-REACT native context menu opens six tapbacks and one trusted selection dispatches once (4.2s)\n  ✓  2 [webkit-light-phone] › tests/message-actions.spec.ts:56:1 › WEB-MSG-REACT-REMOVE a matching own tapback removes it and emoji search sends the exact selected emoji (3.4s)\n  ✓  3 [webkit-light-phone] › tests/message-actions.spec.ts:74:1 › WEB-MSG-REACT-PROOF unproven reactions stay hidden until the live proof arrives without dispatch (2.1s)\n  ✓  4 [webkit-light-phone] › tests/message-actions.spec.ts:88:1 › WEB-MSG-REACT-AMBIGUITY a lost result blocks repeated reaction writes until read-only Check recovers the original command (3.2s)\n  ✓  5 [webkit-light-phone] › tests/message-actions.spec.ts:110:1 › WEB-MSG-REACT-APP the actual transcript opens the guarded picker for a captured native part (4.9s)\n  -  6 [webkit-light-phone] › tests/message-actions.spec.ts:139:1 › WEB-MSG-REACT-TOUCH a trusted long press opens once and touch release cannot choose a reaction\n  ✓  7 [webkit-light-phone] › tests/message-actions.spec.ts:160:1 › WEB-MSG-REACT-COPY copies only the selected captured text and never dispatches (3.1s)\n\n  1 skipped\n  6 passed (26.9s)\n"
+    },
+    {
+      "name": "webkit-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 7 tests using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/message-actions.spec.ts:39:1 › WEB-MSG-REACT native context menu opens six tapbacks and one trusted selection dispatches once (5.1s)\n  ✓  2 [webkit-light-desktop] › tests/message-actions.spec.ts:56:1 › WEB-MSG-REACT-REMOVE a matching own tapback removes it and emoji search sends the exact selected emoji (4.7s)\n  ✓  3 [webkit-light-desktop] › tests/message-actions.spec.ts:74:1 › WEB-MSG-REACT-PROOF unproven reactions stay hidden until the live proof arrives without dispatch (1.9s)\n  ✓  4 [webkit-light-desktop] › tests/message-actions.spec.ts:88:1 › WEB-MSG-REACT-AMBIGUITY a lost result blocks repeated reaction writes until read-only Check recovers the original command (3.4s)\n  ✓  5 [webkit-light-desktop] › tests/message-actions.spec.ts:110:1 › WEB-MSG-REACT-APP the actual transcript opens the guarded picker for a captured native part (6.3s)\n  -  6 [webkit-light-desktop] › tests/message-actions.spec.ts:139:1 › WEB-MSG-REACT-TOUCH a trusted long press opens once and touch release cannot choose a reaction\n  ✓  7 [webkit-light-desktop] › tests/message-actions.spec.ts:160:1 › WEB-MSG-REACT-COPY copies only the selected captured text and never dispatches (2.5s)\n\n  1 skipped\n  6 passed (29.5s)\n"
+    },
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 7 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/message-actions.spec.ts:39:1 › WEB-MSG-REACT native context menu opens six tapbacks and one trusted selection dispatches once (4.0s)\n  ✓  2 [chromium-light-phone] › tests/message-actions.spec.ts:56:1 › WEB-MSG-REACT-REMOVE a matching own tapback removes it and emoji search sends the exact selected emoji (4.8s)\n  ✓  3 [chromium-light-phone] › tests/message-actions.spec.ts:74:1 › WEB-MSG-REACT-PROOF unproven reactions stay hidden until the live proof arrives without dispatch (2.1s)\n  ✓  4 [chromium-light-phone] › tests/message-actions.spec.ts:88:1 › WEB-MSG-REACT-AMBIGUITY a lost result blocks repeated reaction writes until read-only Check recovers the original command (3.4s)\n  ✓  5 [chromium-light-phone] › tests/message-actions.spec.ts:110:1 › WEB-MSG-REACT-APP the actual transcript opens the guarded picker for a captured native part (4.2s)\n  ✓  6 [chromium-light-phone] › tests/message-actions.spec.ts:139:1 › WEB-MSG-REACT-TOUCH a trusted long press opens once and touch release cannot choose a reaction (3.5s)\n  ✓  7 [chromium-light-phone] › tests/message-actions.spec.ts:160:1 › WEB-MSG-REACT-COPY copies only the selected captured text and never dispatches (2.0s)\n\n  7 passed (27.6s)\n"
+    },
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 7 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/message-actions.spec.ts:39:1 › WEB-MSG-REACT native context menu opens six tapbacks and one trusted selection dispatches once (3.0s)\n  ✓  2 [chromium-light-desktop] › tests/message-actions.spec.ts:56:1 › WEB-MSG-REACT-REMOVE a matching own tapback removes it and emoji search sends the exact selected emoji (3.9s)\n  ✓  3 [chromium-light-desktop] › tests/message-actions.spec.ts:74:1 › WEB-MSG-REACT-PROOF unproven reactions stay hidden until the live proof arrives without dispatch (2.1s)\n  ✓  4 [chromium-light-desktop] › tests/message-actions.spec.ts:88:1 › WEB-MSG-REACT-AMBIGUITY a lost result blocks repeated reaction writes until read-only Check recovers the original command (3.4s)\n  ✓  5 [chromium-light-desktop] › tests/message-actions.spec.ts:110:1 › WEB-MSG-REACT-APP the actual transcript opens the guarded picker for a captured native part (6.4s)\n  -  6 [chromium-light-desktop] › tests/message-actions.spec.ts:139:1 › WEB-MSG-REACT-TOUCH a trusted long press opens once and touch release cannot choose a reaction\n  ✓  7 [chromium-light-desktop] › tests/message-actions.spec.ts:160:1 › WEB-MSG-REACT-COPY copies only the selected captured text and never dispatches (2.5s)\n\n  1 skipped\n  6 passed (25.2s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
