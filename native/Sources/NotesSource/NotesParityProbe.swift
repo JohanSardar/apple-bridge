@@ -102,7 +102,7 @@ public enum NotesParityProbe {
                 _ = try script("delete note id " + NotesScript.quote(id))
             }
             for attempt in 0..<50 {
-                let remaining = try store.read().observations.contains { $0["collection"].string == "notes.note" && $0["data"]["title"].string.hasPrefix(tag) && $0["data"]["folder_id"]["$ref"]["native_key"].string == key }
+                let remaining = try notes.contains { try !["gone", "marked", "trashed"].contains(store.deletionState($0["native_key"].string, collection: "notes.note")) }
                 if !remaining { break }
                 if attempt == 49 { cleanup = false }
                 try await Task.sleep(for: .milliseconds(100))

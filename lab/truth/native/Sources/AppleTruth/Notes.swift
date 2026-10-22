@@ -10,6 +10,8 @@ extension AppleTruth {
         if verb == "fixture" {
             guard tag.hasPrefix("[ab-test "), tag.hasSuffix("]"), !tag.contains("\n"), tag.count > 11 else { throw NotesTruthFailure.invalid }
         }
+        let cleanup = verb == "fixture" && ["cleanup", "delete", "cleanup_created_folder"].contains(request["action"] as? String ?? "")
+        let storeTargets = cleanup ? try notesDeletionTargets(tag: tag, folderKey: request["action"] as? String == "cleanup_created_folder" ? request["native_key"] as? String : nil) : []
         var input = request
         input["verb"] = verb
         let encoded = try JSONSerialization.data(withJSONObject: input, options: [.sortedKeys])
@@ -46,10 +48,11 @@ extension AppleTruth {
             const folderID = folder.id();
             app.delete(parent.folders.byId(folderID));
             require(parent.folders.whose({id:folderID})().length === 0);
-            return {status:'verified'};
+            return {status:'verified', deleted_ids:[folderID]};
         }
         if (action === 'cleanup' || action === 'delete') {
-            taggedNotes().forEach(note => {
+            const selected = taggedNotes(), deletedIDs = selected.map(note => note.id());
+            selected.forEach(note => {
                 const id = note.id();
                 require(note.name().startsWith(tag));
                 const folder = note.container();
@@ -57,7 +60,7 @@ extension AppleTruth {
                 app.delete(folder.notes.byId(id));
             });
             require(taggedNotes().length === 0);
-            return {status:'verified'};
+            return {status:'verified', deleted_ids:deletedIDs};
         }
         if (action === 'modify') {
             require(request.id && request.plain_text.startsWith(tag));
@@ -86,6 +89,15 @@ extension AppleTruth {
         let result = OSAScript(source: source, language: language).executeAndReturnError(&error)
         if let error { throw NSError(domain: "NotesJavaScript", code: error[OSAScriptErrorNumber] as? Int ?? 0, userInfo: [NSLocalizedDescriptionKey: error[OSAScriptErrorMessage] as? String ?? "automation_failed"]) }
         guard let text = result?.stringValue, let bytes = text.data(using: .utf8), var response = try JSONSerialization.jsonObject(with: bytes) as? [String: Any] else { throw NotesTruthFailure.invalid }
+        if cleanup {
+            let ids = Array(Set(storeTargets + (response.removeValue(forKey: "deleted_ids") as? [String] ?? [])))
+            var verified = false
+            for _ in 0..<100 {
+                if try notesDeletionVerified(ids) { verified = true; break }
+                Thread.sleep(forTimeInterval: 0.05)
+            }
+            guard verified else { throw NSError(domain: "NotesCleanup", code: 1, userInfo: [NSLocalizedDescriptionKey: "notestore_deletion_unverified"]) }
+        }
         if verb == "fixture" { response["effect_uptime_ns"] = clock_gettime_nsec_np(CLOCK_UPTIME_RAW) }
         return response
     }

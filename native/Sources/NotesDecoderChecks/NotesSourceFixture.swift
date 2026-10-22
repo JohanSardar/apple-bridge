@@ -66,6 +66,14 @@ enum NotesSourceFixture {
             try sql("INSERT INTO ZICCLOUDSYNCINGOBJECT(Z_PK,Z_ENT,ZIDENTIFIER,ZTITLE1,ZFOLDER,ZNOTEDATA) VALUES(\(40 + pk),2,'\(name)','[ab-test] Synthetic',12,\(pk))")
         }
         let source = try NotesSource(home: home, fixtureDatabase: database), sink = Sink()
+        guard !(await source.open()).capabilities.contains("notes.delete") else { throw Invalid.boundary }
+        for operation in ["notes.delete", "notes.delete_folder"] {
+            let action = JSON.object(["op": .string(operation), "native_key": .string("native-plain")])
+            do { _ = try await source.prepare(.object(["action": action])); throw Invalid.boundary }
+            catch SourceFailure.capabilityUnproven {}
+            do { try source.validate(Prepared(nativeState: .null, fingerprint: "", action: action)); throw Invalid.boundary }
+            catch SourceFailure.capabilityUnproven {}
+        }
         try await source.reconcile(into: sink)
         let note = await sink.record("note"), locked = await sink.record("locked"), deleted = await sink.record("deleted")
         let large = await sink.record("large")
@@ -135,10 +143,51 @@ enum NotesSourceFixture {
               (attrs[.ownerAccountID] as? NSNumber)?.uint32Value == geteuid() else { throw Invalid.boundary }
         guard deleted["data"]["attachments"].array.allSatisfy({ $0["blob"] == .null }) else { throw Invalid.boundary }
         for protected in [locked, deleted] {
+            let action = JSON.object(["op": .string("notes.update"), "native_key": protected["native_key"]])
+            do { _ = try await source.prepare(.object(["action": action, "expected_state": protected["data"]])); throw Invalid.boundary }
+            catch SourceFailure.unsupported {}
+        }
+        try sql("INSERT INTO ZICCLOUDSYNCINGOBJECT(Z_PK,Z_ENT,ZIDENTIFIER,ZTITLE1,ZFOLDER) VALUES(60,2,'delete-proof','[ab-test] Deletion proof',10)")
+        guard try source.deletionState(nativeKey: "delete-proof", collection: "notes.note") == "active",
+              try source.deletionState(nativeKey: "deleted", collection: "notes.note") == "trashed",
+              try source.deletionState(nativeKey: "absent", collection: "notes.note") == "gone" else { throw Invalid.boundary }
+        do { try await source.qualifyDeletion("notes.delete", nativeKey: "delete-proof", perform: {}); throw Invalid.boundary }
+        catch SourceFailure.capabilityUnproven {}
+        guard !(await source.open()).capabilities.contains("notes.delete") else { throw Invalid.boundary }
+        try await source.qualifyDeletion("notes.delete", nativeKey: "delete-proof") { try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET ZMARKEDFORDELETION=1 WHERE Z_PK=60") }
+        guard try source.deletionState(nativeKey: "delete-proof", collection: "notes.note") == "marked",
+              (await source.open()).capabilities.contains("notes.delete") else { throw Invalid.boundary }
+        for protected in [locked, deleted] {
             let action = JSON.object(["op": .string("notes.delete"), "native_key": protected["native_key"]])
             do { _ = try await source.prepare(.object(["action": action, "expected_state": protected["data"]])); throw Invalid.boundary }
             catch SourceFailure.unsupported {}
         }
+        try sql("INSERT INTO ZICCLOUDSYNCINGOBJECT(Z_PK,Z_ENT,ZIDENTIFIER,ZTITLE2,ZACCOUNT8) VALUES(13,1,'delete-folder-proof','Bridge Test [ab-test] Deletion proof',1)")
+        guard try source.deletionState(nativeKey: "delete-folder-proof", collection: "notes.folder") == "active" else { throw Invalid.boundary }
+        try await source.qualifyDeletion("notes.delete_folder", nativeKey: "delete-folder-proof") { try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET ZMARKEDFORDELETION=1 WHERE Z_PK=13") }
+        guard try source.deletionState(nativeKey: "delete-folder-proof", collection: "notes.folder") == "marked" else { throw Invalid.boundary }
+        let proofURL = home.appendingPathComponent("notes-deletion-proofs.json")
+        var proof = try JSONDecoder().decode(JSON.self, from: Data(contentsOf: proofURL)).object
+        let validProof = proof
+        proof["os_build"] = .string("different-build")
+        try JSONEncoder().encode(JSON.object(proof)).write(to: proofURL)
+        guard !(await source.open()).capabilities.contains("notes.delete") else { throw Invalid.boundary }
+        proof = validProof; proof["generation"] = .string("different-store")
+        try JSONEncoder().encode(JSON.object(proof)).write(to: proofURL)
+        guard !(await source.open()).capabilities.contains("notes.delete") else { throw Invalid.boundary }
+        if let executable = ProcessInfo.processInfo.environment["APPLE_BRIDGE_NOTES_TRUTH"], !executable.isEmpty {
+            for (ids, expected) in [(["ICNote/p20"], false), (["ICNote/p22","ICNote/p60","ICNote/p9999","ICFolder/p13"], true), (["ICFolder/p10"], false)] {
+                let request = root.appendingPathComponent("deletion-request.json"), report = root.appendingPathComponent("deletion-report.json")
+                try JSONSerialization.data(withJSONObject: ["source":"notes", "snapshot_path":database.path, "verify_deleted_ids":ids.map { "x-coredata://ab-test-notes-store/\($0)" }]).write(to: request)
+                let process = Process(); process.executableURL = URL(fileURLWithPath: executable)
+                process.arguments = ["observe", "--request-file", request.path, "--report", report.path]
+                process.standardOutput = FileHandle.nullDevice; process.standardError = FileHandle.nullDevice
+                try process.run(); process.waitUntilExit()
+                let result = try JSONDecoder().decode(JSON.self, from: Data(contentsOf: report))
+                guard process.terminationStatus == 0, result["status"].string == "verified", result["deletion_verified"].bool == expected else { throw Invalid.boundary }
+            }
+        }
+        print("Notes deletion: no-op command cannot qualify; marked/trash/gone states and OS-build invalidation verified")
         do { _ = try source.readBlob("notes-blob:" + String(repeating: "0", count: 64), offset: 0, length: 1); throw Invalid.boundary }
         catch SourceFailure.unavailable {}
         try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET ZFILENAME='../escape.bin' WHERE Z_PK=31")

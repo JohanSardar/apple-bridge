@@ -7,7 +7,8 @@ import MediaDerivatives
 public final class NotesSource: Source {
     public nonisolated let name = "notes"
     public static let operations = ["notes.create", "notes.update", "notes.delete", "notes.create_folder"]
-    private let store: NotesStore
+    let store: NotesStore
+    let deletionProofURL: URL
     private let baselineURL: URL
     private let assets: NotesAssets
     private var previous: [String: JSON] = [:]
@@ -24,6 +25,7 @@ public final class NotesSource: Source {
     private init(home: URL, database: URL) throws {
         assets = try NotesAssets(home: home)
         store = NotesStore(path: database.path)
+        deletionProofURL = home.appendingPathComponent("notes-deletion-proofs.json")
         baselineURL = home.appendingPathComponent("notes-identities.json")
         if let bytes = try? Data(contentsOf: baselineURL), let saved = try? JSONDecoder().decode(JSON.self, from: bytes) {
             generation = saved["generation"].string
@@ -32,7 +34,11 @@ public final class NotesSource: Source {
     }
     public func open() async -> SourceReadiness {
         let readable = (try? store.read()) != nil
-        return SourceReadiness(state: readable ? "ready" : "permission_missing", coverage: .object(["fields": .string("partial"), "missing": .array([.string("unknown protobuf fields and unavailable attachment bytes are explicit; rich edits unproven")])]), capabilities: readable ? Self.operations : [], reason: readable ? "" : "notes_database_access_required")
+        let proven = deletionCapabilities()
+        let deletionCoverage = Self.deletionOperations.map { operation in
+            JSON.object(["operation": .string(operation), "proven": .bool(proven.contains(operation)), "reason": .string(proven.contains(operation) ? "os_build_notestore_deletion_verified" : "capability_unproven")])
+        }
+        return SourceReadiness(state: readable ? "ready" : "permission_missing", coverage: .object(["fields": .string("partial"), "operations": .array(deletionCoverage), "missing": .array([.string("unknown protobuf fields and unavailable attachment bytes are explicit; rich edits and deletion require per-build proof")])]), capabilities: readable ? Self.operations.filter { !Self.deletionOperations.contains($0) || proven.contains($0) } : [], reason: readable ? "" : "notes_database_access_required")
     }
     public func reconcile(into sink: any ObservationSink) async throws {
         while scanning { try await Task.sleep(for: .milliseconds(5)) }
@@ -131,6 +137,7 @@ public final class NotesSource: Source {
     }
     public func prepare(_ command: JSON) async throws -> Prepared {
         let action = command["action"]
+        try requireDeletionProof(action["op"].string)
         guard Self.operations.contains(action["op"].string) else { throw SourceFailure.unsupported }
         var before = JSON.null
         if !action["native_key"].string.isEmpty {
@@ -151,6 +158,7 @@ public final class NotesSource: Source {
         return Prepared(nativeState: before, fingerprint: SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined(), action: action)
     }
     public func validate(_ prepared: Prepared) throws {
+        try requireDeletionProof(prepared.action["op"].string)
         if !prepared.action["native_key"].string.isEmpty {
             guard try find(prepared.action["native_key"].string)["data"]["native_fingerprint"] == prepared.nativeState["native_fingerprint"] else { throw SourceFailure.conflict }
         }
@@ -182,7 +190,7 @@ public final class NotesSource: Source {
         for _ in 0..<100 {
             let snapshot = try store.read()
             let observed = snapshot.observations.first { $0["scoped_alias"].string == scriptID }
-            if op == "notes.delete", observed == nil || observed?["data"]["recently_deleted"].bool == true {
+            if op == "notes.delete", try ["gone", "marked", "trashed"].contains(store.deletionState(action["native_key"].string, collection: "notes.note")) {
                 return .object(["native_key": action["native_key"], "observed": .bool(true), "absent": .bool(observed == nil)])
             }
             if let observed, op != "notes.delete" {
@@ -191,6 +199,10 @@ public final class NotesSource: Source {
                 }
             }
             try await Task.sleep(for: .milliseconds(50))
+        }
+        if op == "notes.delete" {
+            try? FileManager.default.removeItem(at: deletionProofURL)
+            throw SourceFailure.capabilityUnproven
         }
         throw SourceFailure.unavailable
     }
