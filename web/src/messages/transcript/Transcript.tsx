@@ -117,6 +117,12 @@ export default function Transcript(props:TranscriptProps){
         cancelAnimationFrame(jumpFrame);
         jumpFrame=requestAnimationFrame(()=>{api.scrollToIndex(index,!target||target==='latest'?'end':'start');setFocused(rows.items[index]?.key);batch(()=>{setPendingJump(undefined);setSettled(true);});});
     });
+    onMount(()=>{
+        const editable=(target:EventTarget|null)=>target instanceof Element&&Boolean(target.closest('input,textarea,select,[contenteditable]:not([contenteditable="false"])'));
+        const key=(event:KeyboardEvent)=>{if(editable(event.target)||event.isComposing||event.altKey||event.shiftKey||!(event.metaKey||event.ctrlKey)||!['ArrowUp','ArrowDown'].includes(event.key))return;event.preventDefault();event.stopPropagation();setKeyboardFocus(true);setSettled(false);const oldest=event.key==='ArrowUp';setPendingJump(oldest?'oldest':'latest');if(oldest)thread.oldest();else thread.latest();};
+        const copy=(event:ClipboardEvent)=>{if(editable(event.target)||window.getSelection()?.toString()||!event.clipboardData)return;const row=rows.items.find(value=>value.key===focused());if(!row)return;const value=text(row.item.data.text)||row.bubbles.map(bubble=>text(bubble.part.text)).filter(Boolean).join('\n');if(!value)return;event.clipboardData.setData('text/plain',value);event.preventDefault();};
+        container.addEventListener('keydown',key,true);container.addEventListener('copy',copy,true);onCleanup(()=>{container.removeEventListener('keydown',key,true);container.removeEventListener('copy',copy,true);});
+    });
     onMount(()=>{fonts.watch(fontProbe,fontProbe);onCleanup(fonts.dispose);const resize=()=>setViewportHeight(window.visualViewport?.height??window.innerHeight);resize();window.addEventListener('resize',resize);window.visualViewport?.addEventListener('resize',resize);onCleanup(()=>{window.removeEventListener('resize',resize);window.visualViewport?.removeEventListener('resize',resize);});setWidth(container.clientWidth);const observer=new ResizeObserver(entries=>setWidth(entries[0].contentRect.width));observer.observe(container);onCleanup(()=>observer.disconnect());});
     onCleanup(()=>{metadata.dispose();cancelAnimationFrame(threadIntroFrame);cancelAnimationFrame(frame);cancelAnimationFrame(jumpFrame);clearTimeout(loadingTimer);});
     function showInChat(id:string){if(props.threadOriginatorID){props.onShowInChat?.(id);return;}closeReplies();setSettled(false);setPendingJump(id);thread.jump(id);router.navigate("/messages/"+encodeURIComponent(props.chatID)+"/"+encodeURIComponent(id));}

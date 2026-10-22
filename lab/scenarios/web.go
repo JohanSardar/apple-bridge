@@ -208,7 +208,7 @@ func runWebProjects(ctx context.Context, s Scenario, projects []string) Evidence
 		suffix = projects[0]
 	}
 	report, _ := filepath.Abs(filepath.Join("lab/evidence/private/web/reports", s.ID+"-"+suffix+"-playwright.json"))
-	test := exec.CommandContext(ctx, "pnpm", "exec", "playwright", "test", "--workers=1", "-g", "\\b"+regexp.QuoteMeta(s.ID)+"\\b")
+	test := exec.CommandContext(ctx, "pnpm", "exec", "playwright", "test", "--workers=1", "-g", "\\b"+regexp.QuoteMeta(s.ID)+"(?![\\w-])")
 	test.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	test.Cancel = func() error { return syscall.Kill(-test.Process.Pid, syscall.SIGKILL) }
 	test.WaitDelay = 5 * time.Second
