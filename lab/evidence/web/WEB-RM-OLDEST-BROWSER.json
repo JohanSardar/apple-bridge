@@ -1,0 +1,85 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[50.45 50.88 89.01] cpu_idle=36% cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5HNXTGA0HBW56PAP3QYVXRN",
+  "metrics": {
+    "browser_budget_ms": 180000,
+    "capture_observer_resets": 0,
+    "demo_messages": 5000,
+    "demo_startup_ms": 41454,
+    "fixture_setup_ms": 41454,
+    "matrix": [
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "chromium-light-phone",
+      "chromium-light-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-RM-OLDEST-BROWSER-webkit-light-phone-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-RM-OLDEST-BROWSER-webkit-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-RM-OLDEST-BROWSER-webkit-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-RM-OLDEST-BROWSER-chromium-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-RM-OLDEST-BROWSER-chromium-light-desktop-playwright.json"
+    ],
+    "server": "gateway",
+    "setups": [
+      {
+        "fixture_setup_ms": 41454,
+        "fixture_snapshot": null,
+        "project": "webkit-light-phone"
+      },
+      {
+        "fixture_setup_ms": 34509,
+        "fixture_snapshot": null,
+        "project": "webkit-light-desktop"
+      },
+      {
+        "fixture_setup_ms": 39825,
+        "fixture_snapshot": null,
+        "project": "chromium-light-phone"
+      },
+      {
+        "fixture_setup_ms": 35426,
+        "fixture_snapshot": null,
+        "project": "chromium-light-desktop"
+      }
+    ]
+  },
+  "scenario": "WEB-RM-OLDEST-BROWSER",
+  "level": "web",
+  "passed": true,
+  "git_sha": "16042bdee0696923718ffdbc2f1bed556495f90d",
+  "at": "2026-10-22T11:28:47.115002Z",
+  "assertions": [
+    {
+      "name": "webkit-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/thread-oldest-browser.spec.ts:4:1 › WEB-RM-OLDEST-BROWSER oldest anchor pages forward and back through the ordinary archive (5.2s)\n\n  1 passed (11.0s)\n"
+    },
+    {
+      "name": "webkit-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/thread-oldest-browser.spec.ts:4:1 › WEB-RM-OLDEST-BROWSER oldest anchor pages forward and back through the ordinary archive (6.3s)\n\n  1 passed (14.4s)\n"
+    },
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/thread-oldest-browser.spec.ts:4:1 › WEB-RM-OLDEST-BROWSER oldest anchor pages forward and back through the ordinary archive (4.4s)\n\n  1 passed (9.7s)\n"
+    },
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/thread-oldest-browser.spec.ts:4:1 › WEB-RM-OLDEST-BROWSER oldest anchor pages forward and back through the ordinary archive (3.2s)\n\n  1 passed (7.4s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

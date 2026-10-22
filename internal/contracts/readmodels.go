@@ -8,7 +8,7 @@ type ChatsQuery struct {
 }
 type ThreadQuery struct {
 	ChatID string `json:"chat_id"`
-	Anchor string `json:"anchor,omitempty" description:"latest (default), unread, or a message ID"`
+	Anchor string `json:"anchor,omitempty" description:"latest (default), oldest, unread, or a message ID"`
 	Before string `json:"before,omitempty"`
 	After  string `json:"after,omitempty"`
 	Limit  int    `json:"limit,omitempty" description:"Page size, default 50, maximum 200"`

@@ -1,0 +1,46 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[194.64 246.02 263.3] cpu_idle=49% cpus=8 other_heavy=2"
+  },
+  "run_id": "run_01M5HMDYBAXQWAJ4F801K1SAGF",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "matrix": [
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "chromium-light-phone",
+      "chromium-light-desktop"
+    ],
+    "reports": [
+      null
+    ],
+    "setups": [
+      {
+        "fixture_setup_ms": null,
+        "fixture_snapshot": null,
+        "project": "webkit-light-phone"
+      }
+    ]
+  },
+  "scenario": "WEB-RM-THREAD-OLDEST",
+  "level": "web",
+  "passed": false,
+  "git_sha": "cf83f696772a4020392117fdb01f10f19f78a7a3",
+  "at": "2026-10-22T11:02:38.187308Z",
+  "assertions": [
+    {
+      "name": "webkit-light-phone:web_fixture_snapshot",
+      "passed": false,
+      "detail": "dataset messages observations 40960..45056: Post \"http://sim/dataset\": context deadline exceeded"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
