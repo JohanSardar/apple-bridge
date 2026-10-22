@@ -4,8 +4,8 @@ import { Avatar } from '../messages/list/Avatar';
 import { addressText, dateText, label, labeled, object, safeURL, text, type Item } from './store';
 import { downloadContacts } from './vcard';
 import { s } from './strings';
-export function ContactAvatar(props: { item: Item; large?: boolean }) {
-    return <Avatar variant={props.large?'display':'thumb'} title={props.item.display_name} handles={new Map()} photo={props.item.avatar ? { digest: props.item.avatar.digest, record: props.item.contact.id } : undefined}/>;
+export function ContactAvatar(props: { item: Item }) {
+    return <Avatar variant={props.item.avatar?.variant==='display'?'display':'thumb'} title={props.item.display_name} handles={new Map()} photo={props.item.avatar ? { digest: props.item.avatar.digest, record: props.item.contact.id } : undefined}/>;
 }
 export function Card(props: { item: Item }) {
     const data = createMemo(() => props.item.contact.data);
@@ -13,7 +13,7 @@ export function Card(props: { item: Item }) {
     const recipient = () => phone() || email();
     const phonetic = () => ['phonetic_given_name','phonetic_middle_name','phonetic_family_name','phonetic_organization'].map(key => text(data()[key])).filter(Boolean).join(' ');
     return <article class="contact-card" aria-label={props.item.display_name}>
-        <header class="contact-heading"><ContactAvatar item={props.item} large/><h1 tabindex="-1">{props.item.display_name}</h1><Show when={props.item.is_me === true}><p>{s.myCard}</p></Show><Show when={phonetic()}><p aria-label={s.phonetic}>{phonetic()}</p></Show><p>{[text(data().job_title), text(data().department), text(data().organization)].filter(Boolean).join(' · ')}</p></header>
+        <header class="contact-heading"><ContactAvatar item={props.item}/><h1 tabindex="-1">{props.item.display_name}</h1><Show when={props.item.is_me === true}><p>{s.myCard}</p></Show><Show when={phonetic()}><p aria-label={s.phonetic}>{phonetic()}</p></Show><p>{[text(data().job_title), text(data().department), text(data().organization)].filter(Boolean).join(' · ')}</p></header>
         <nav class="contact-actions" aria-label="Quick actions">
             <Show when={recipient()}><button onClick={() => router.navigate('/messages/new?to=' + encodeURIComponent(recipient()))}>{s.message}</button></Show>
             <Show when={phone()}><a href={'tel:' + encodeURIComponent(phone())}>{s.call}</a></Show>

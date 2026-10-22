@@ -48,7 +48,7 @@ Deep links: `/contacts`, `/contacts/<id>`, `/contacts/list/<group>`.
 
 ## 4. Motion
 
-- Card push uses the shared header avatar: it travels from the row to the card header.
+- Card push uses the pane transition. Row and card avatars remain contained and use the available captured photo variant.
 - Edit mode morphs fields into their editable form in place.
 - Index scrubbing gives instant jumps with a letter bubble.
 

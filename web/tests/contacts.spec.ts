@@ -10,6 +10,10 @@ test('WEB-CON-READ lists, sections, scrubber, labeled card, safe actions, vCard 
     if(compact)await page.getByRole('button',{name:/All Contacts/}).click();
     await expect(page.getByRole('heading',{name:'All Contacts',exact:true})).toBeVisible();
     await expect(page.getByRole('button',{name:/Zoe M Adler/}).first()).toBeVisible();
+    const titleBox=(await page.locator('.contacts-list-header h1').boundingBox())!;
+    const selectBox=(await page.getByRole('button',{name:'Select',exact:true}).boundingBox())!;
+    const headerGap=await page.locator('.contacts-list-header').evaluate(element=>parseFloat(getComputedStyle(element).rowGap));
+    expect(selectBox.y-titleBox.y-titleBox.height).toBeCloseTo(headerGap,1);
     await page.screenshot({path:`../lab/evidence/private/web/contacts-list-${info.project.name}.png`});
     const lists=page.getByRole('navigation',{name:'Contact lists'});
     if(compact)await page.getByRole('button',{name:'Back to lists',exact:true}).click();
@@ -35,9 +39,14 @@ test('WEB-CON-READ lists, sections, scrubber, labeled card, safe actions, vCard 
     await search.fill('Test City');
     await expect(page.locator('.contact-row')).toHaveCount(1);
     await expect(page.locator('.contact-row')).toContainText('Adler Zoe M');
+    const photoURL=await page.locator('.contact-row .avatar img').getAttribute('src');
+    expect(photoURL).toBeTruthy();
     await page.locator('.contact-row').click();
     const card=page.getByRole('article',{name:'Adler Zoe M'});
     await expect(card).toBeVisible();
+    await expect(page.locator('body > .avatar')).toHaveCount(0);
+    await expect(card.locator('.avatar img')).toHaveAttribute('src',photoURL!);
+    await expect(card.locator('.avatar img')).toHaveClass(/avatar-image-ready/);
     await expect(card.getByRole('heading',{name:'Adler Zoe M',exact:true})).toBeVisible();
     await expect(card.getByRole('link',{name:'call',exact:true})).toHaveAttribute('href','tel:%2B15555550123');
     await expect(card.getByRole('link',{name:'mail',exact:true})).toHaveAttribute('href','mailto:contacts-read%40example.com');
