@@ -1,0 +1,24 @@
+import {test,expect,type BrowserContext} from '@playwright/test';
+import {mkdir} from 'node:fs/promises';
+import {control} from './session';
+test.use({deviceScaleFactor:2});
+let cookies:Parameters<BrowserContext['addCookies']>[0]=[];
+test.beforeAll(async({request})=>{cookies=[(await control(request,'/session')).cookie];});
+test('WEB-MSG-TRANSCRIPT-VIEWER an actual image opens the whole-chat viewer and navigates to video',async({page,context,request},info)=>{
+    await context.addCookies(cookies);const ids=await control(request,'/demo-fixtures');await page.goto('/messages/'+encodeURIComponent(ids['message-chat'])+'/'+encodeURIComponent(ids['demo-message-00-000032']));
+    const source=page.locator('[data-message="'+ids['demo-message-00-000032']+'"] .media-reserved'),button=source.locator('button.media-open');await expect(button).toBeVisible();await expect(page.locator('.messages-transcript')).toHaveAttribute('aria-busy','false');await expect(page.locator('.transcript')).toHaveCSS('transform','none');await expect(page.locator('.transcript')).toHaveCSS('opacity','1');await expect.poll(()=>source.locator('img').evaluate((image:HTMLImageElement)=>image.complete&&image.naturalWidth>0)).toBe(true);await button.focus();await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));const before=await source.boundingBox();await button.click();
+    const viewer=page.getByRole('dialog',{name:'Media viewer'});await expect(viewer).toBeVisible();await expect(viewer).toHaveAttribute('data-media-loading','false');await expect(viewer).toHaveAttribute('data-media-count','13');await expect(source).toHaveCSS('visibility','hidden');expect(await source.boundingBox()).toEqual(before);
+    const stage=viewer.locator('.media-viewer-stage');await expect.poll(()=>stage.evaluate(element=>new DOMMatrixReadOnly(getComputedStyle(element).transform).a)).toBeCloseTo(1,3);await mkdir('../lab/evidence/private/web',{recursive:true});await page.screenshot({path:`../lab/evidence/private/web/transcript-viewer-open-${info.project.name}.png`});const rect=await stage.boundingBox(),x=rect!.x+rect!.width/2,y=rect!.y+rect!.height/2;await page.mouse.move(x,y);await page.mouse.down();await page.mouse.move(x,y+70,{steps:10});await expect(source).toHaveCSS('visibility','hidden');expect(await source.boundingBox()).toEqual(before);await page.screenshot({path:`../lab/evidence/private/web/transcript-viewer-dismiss-${info.project.name}.png`});await page.mouse.move(x,y,{steps:10});await page.mouse.up();await expect.poll(()=>stage.evaluate(element=>new DOMMatrixReadOnly(getComputedStyle(element).transform).a)).toBeCloseTo(1,3);
+    await stage.focus();for(let index=0;index<6;index++)await page.keyboard.press('ArrowRight');await expect(viewer).toHaveAttribute('data-media-message',ids['demo-message-00-000038']);await expect(viewer.locator('video')).toBeVisible();
+    await expect.poll(()=>viewer.locator('video').evaluate((element:HTMLVideoElement)=>element.currentTime)).toBeGreaterThan(.05);
+    await mkdir('../lab/evidence/private/web',{recursive:true});await page.screenshot({path:`../lab/evidence/private/web/transcript-viewer-${info.project.name}.png`});await page.keyboard.press('Escape');await expect(viewer).toBeHidden();await expect(source).toHaveCSS('visibility','visible');expect(await source.boundingBox()).toEqual(before);await expect(button).toBeFocused();
+});
+
+test('WEB-MSG-TRANSCRIPT-VIEWER Show in Chat routes to and selects the owning message',async({page,context,request})=>{
+    await context.addCookies(cookies);const ids=await control(request,'/demo-fixtures'),chat=ids['message-chat'],message=ids['demo-message-00-000033'],targetID=ids['demo-message-00-000034'];
+    await page.goto('/messages/'+encodeURIComponent(chat)+'/'+encodeURIComponent(message));
+    const source=page.locator('[data-message="'+message+'"]');await expect(source.locator('button.media-open')).toBeVisible();await expect(page.locator('.messages-transcript')).toHaveAttribute('aria-busy','false');await expect(page.locator('.transcript')).toHaveCSS('transform','none');
+    await source.locator('button.media-open').click();const viewer=page.getByRole('dialog',{name:'Media viewer'});await expect(viewer).toHaveAttribute('data-media-loading','false');await viewer.locator('.media-viewer-stage').focus();await page.keyboard.press('ArrowRight');await expect(viewer).toHaveAttribute('data-media-message',targetID);
+    await page.mouse.move(24,24);await viewer.getByRole('button',{name:'Show in Chat',exact:true}).click();await expect(viewer).toBeHidden();await expect(page).toHaveURL(new RegExp('/'+targetID+'$'));
+    const target=page.locator('[data-message="'+targetID+'"]');await expect(target.locator('..')).toHaveAttribute('aria-selected','true');await expect(target).toBeInViewport();
+});
