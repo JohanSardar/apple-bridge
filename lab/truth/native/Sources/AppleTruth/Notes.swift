@@ -19,7 +19,13 @@ extension AppleTruth {
         const tag = request.tag || '';
         const action = request.action || '';
         function require(value) { if (!value) throw new Error('invalid_fixture'); }
-        function taggedNotes() { return app.notes.whose({name:{_beginsWith:tag}})(); }
+        function fixtureFolder(folder) {
+            const name = folder.name();
+            return name === 'Bridge Test' || name === 'Bridge Test ' + tag || name.startsWith('Bridge Test ' + tag + ' ');
+        }
+        function taggedNotes() {
+            return app.folders().filter(fixtureFolder).reduce((notes, folder) => notes.concat(folder.notes().filter(note => note.name().startsWith(tag))), []);
+        }
         function html(text) {
             return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').split('\n').map(line => '<div>' + line + '</div>').join('');
         }
@@ -36,16 +42,21 @@ extension AppleTruth {
             require(folders.length === 1);
             const folder = folders[0];
             require(folder.folders().length === 0 && folder.notes().every(n => n.name().startsWith(tag)));
-            app.delete(folder);
+            const parent = folder.container();
+            const folderID = folder.id();
+            app.delete(parent.folders.byId(folderID));
+            require(parent.folders.whose({id:folderID})().length === 0);
             return {status:'verified'};
         }
         if (action === 'cleanup' || action === 'delete') {
-            const identifiers = taggedNotes().map(n => n.id());
-            identifiers.forEach(id => {
-                const note = app.notes.byId(id);
+            taggedNotes().forEach(note => {
+                const id = note.id();
                 require(note.name().startsWith(tag));
-                app.delete(note);
+                const folder = note.container();
+                require(fixtureFolder(folder));
+                app.delete(folder.notes.byId(id));
             });
+            require(taggedNotes().length === 0);
             return {status:'verified'};
         }
         if (action === 'modify') {

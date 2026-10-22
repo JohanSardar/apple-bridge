@@ -169,7 +169,11 @@ public final class NotesSource: Source {
         } else {
             let note = try find(action["native_key"].string)
             scriptID = note["scoped_alias"].string
-            if op == "notes.delete" { _ = try NotesScript.run("delete note id " + NotesScript.quote(scriptID)) }
+            if op == "notes.delete" {
+                let folderKey = note["data"]["folder_id"]["$ref"]["native_key"].string
+                let folder = try find(folderKey, collection: "notes.folder")
+                _ = try NotesScript.run("delete note id " + NotesScript.quote(scriptID) + " of folder id " + NotesScript.quote(folder["scoped_alias"].string))
+            }
             else {
                 let content = args["mode"].string == "append" ? note["data"]["plain_text"].string + args["plain_text"].string : args["plain_text"].string
                 _ = try NotesScript.run("set body of note id " + NotesScript.quote(scriptID) + " to " + NotesScript.quote(NotesScript.html(content)))
