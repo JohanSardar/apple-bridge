@@ -106,22 +106,22 @@ sim_ok() {
   sensitive_next && return 1
   level=$(sysctl -n kern.memorystatus_level 2>/dev/null || echo 0)
   [ "$level" -ge "${APPLE_BRIDGE_SIM_MIN_FREE_PCT:-45}" ] || return 1
-  load=$(sysctl -n vm.loadavg 2>/dev/null | awk '{printf "%d", $2}')
-  cpus=$(sysctl -n hw.ncpu 2>/dev/null || echo 8)
-  [ "${load:-99}" -lt "$cpus" ] || return 1
+  [ "$(cpu_idle)" -ge "${APPLE_BRIDGE_SIM_MIN_IDLE_PCT:-50}" ] || return 1
   before=$(vm_stat 2>/dev/null | awk '/Swapouts/ {gsub(/\./,"",$2); print $2}')
   sleep 2
   after=$(vm_stat 2>/dev/null | awk '/Swapouts/ {gsub(/\./,"",$2); print $2}')
   [ -n "$before" ] && [ -n "$after" ] && [ $((after - before)) -le "${APPLE_BRIDGE_SIM_MAX_SWAPOUTS:-64}" ]
 }
-# Heavy jobs wait out host memory thrash, at most 20 minutes. Sensitive jobs hold at a 1-minute load above 2x the CPUs, free memory
-# below 25% or more than 2,048 swapped pages in 2 s; other heavy jobs hold only through extreme thrash (4x the CPUs, 15%, 8,192 pages).
+# Heavy jobs wait out real host pressure, at most 20 minutes. macOS load averages count tasks blocked on disk, so they are
+# not used. Sensitive jobs hold while CPU idle is below 40%, free memory is below 25% or more than 2,048 pages swap in 2 s;
+# other heavy jobs hold only through memory thrash (free memory below 15% or more than 8,192 swapped pages in 2 s).
+cpu_idle() {
+  top -l 2 -n 0 -s 1 2>/dev/null | awk '/CPU usage/ {idle=$7} END {gsub(/%/,"",idle); printf "%d", (idle==""?100:idle)}'
+}
 thrashing() {
   level=$(sysctl -n kern.memorystatus_level 2>/dev/null || echo 100)
   [ "$level" -lt "$2" ] && return 0
-  load=$(sysctl -n vm.loadavg 2>/dev/null | awk '{printf "%d", $2}')
-  cpus=$(sysctl -n hw.ncpu 2>/dev/null || echo 8)
-  [ "${load:-0}" -gt $((cpus * $1)) ] && return 0
+  if [ "$1" -gt 0 ] && [ "$(cpu_idle)" -lt "$1" ]; then return 0; fi
   before=$(vm_stat 2>/dev/null | awk '/Swapouts|Swapins/ {gsub(/\./,"",$2); total+=$2} END {print total}')
   sleep 2
   after=$(vm_stat 2>/dev/null | awk '/Swapouts|Swapins/ {gsub(/\./,"",$2); total+=$2} END {print total}')
@@ -129,15 +129,15 @@ thrashing() {
 }
 wait_thrash() {
   if [ "$1" = sensitive ]; then
-    limits="${APPLE_BRIDGE_THRASH_LOAD_PER_CPU:-2} ${APPLE_BRIDGE_THRASH_MIN_FREE_PCT:-25} ${APPLE_BRIDGE_THRASH_MAX_SWAP_PAGES:-2048}"
+    limits="${APPLE_BRIDGE_THRASH_MIN_IDLE_PCT:-40} ${APPLE_BRIDGE_THRASH_MIN_FREE_PCT:-25} ${APPLE_BRIDGE_THRASH_MAX_SWAP_PAGES:-2048}"
   else
-    limits="${APPLE_BRIDGE_EXTREME_LOAD_PER_CPU:-4} ${APPLE_BRIDGE_EXTREME_MIN_FREE_PCT:-15} ${APPLE_BRIDGE_EXTREME_MAX_SWAP_PAGES:-8192}"
+    limits="0 ${APPLE_BRIDGE_EXTREME_MIN_FREE_PCT:-15} ${APPLE_BRIDGE_EXTREME_MAX_SWAP_PAGES:-8192}"
   fi
   deadline=$(( $(date +%s) + ${APPLE_BRIDGE_THRASH_WAIT_SECONDS:-1200} ))
   announced=""
   while thrashing $limits; do
-    [ -z "$announced" ] && { echo "heavy.sh: host memory thrash; holding $1 job until it passes" >&2; announced=1; }
-    [ "$(date +%s)" -ge "$deadline" ] && { echo "heavy.sh: thrash wait expired; running anyway" >&2; return; }
+    [ -z "$announced" ] && { echo "heavy.sh: host pressure; holding $1 job until it passes" >&2; announced=1; }
+    [ "$(date +%s)" -ge "$deadline" ] && { echo "heavy.sh: pressure wait expired; running anyway" >&2; return; }
     sleep 10
   done
 }
