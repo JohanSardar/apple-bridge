@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { header } from '../src/messages/format';
-import { emojiOnly, layout, transcriptSpacing, textWidthWithSlack, wrapText, type LayoutPrefs } from '../src/messages/transcript/layout';
+import { createTranscriptLayout, emojiOnly, layout, transcriptSpacing, textWidthWithSlack, wrapText, type LayoutPrefs } from '../src/messages/transcript/layout';
 import type { ThreadItem } from '../src/data/types';
 import type { Handles } from '../src/messages/store/types';
 const now=new Date(2026,9,20,9,41);
@@ -133,4 +133,17 @@ test('WEB-MSG-COMPOSITION layout math groups only compatible image runs and reta
     for(const mutate of [(item:ThreadItem)=>item.data.parts=[{index:1,kind:'attachment',attachment_id:item.attachments![0].id}],(item:ThreadItem)=>item.data.parts=[],(item:ThreadItem)=>item.reactions=[{id:'reaction',source:'messages',collection:'messages.reaction',version:1,data:{kind:'like'}}],(item:ThreadItem)=>item.data.edited_at=now.toISOString(),(item:ThreadItem)=>item.attachments![0].data.media={width:240,height:400,live:true},(item:ThreadItem)=>item.attachments![0].data.mime_type='video/mp4']){
         const isolated=items.map(item=>structuredClone(item));mutate(isolated[1]);const rows=layout(isolated,handles,prefs,900);expect(rows.find(row=>row.id==='b')?.members).toBeUndefined();
     }
+});
+
+test('layout math cached windows match fresh layouts after boundary, content and typography changes',()=>{
+    const cached=createTranscriptLayout(),one=message('one',0,{is_from_me:true,read_at:now.toISOString()}),two=message('two',60000),three=message('three',120001);
+    cached([one,two,three],handles,prefs,900,'font-1',{start:0,end:2});
+    const initial=cached([one,two,three],handles,prefs,900,'font-1');
+    expect(initial).toEqual(layout([one,two,three],handles,prefs,900));
+    expect(cached([one,two,three],handles,prefs,900,'font-1')[1]).toBe(initial[1]);
+    const windows=[[message('older',-60000),one,two,three],[one,two],[one,{...two,version:2,data:{...two.data,text:'Changed',parts:[{index:0,kind:'text',text:'Changed'}]}},three]];
+    for(const items of windows)expect(cached(items,handles,prefs,900,'font-1')).toEqual(layout(items,handles,prefs,900));
+    for(const change of [{...prefs,atLatest:false},{...prefs,scale:1.5},{...prefs,expanded:new Set(['one'])},{...prefs,now:new Date(now.getTime()+86400000)},{...prefs,measure:(value:string)=>value.length*12}])expect(cached([one,two,three],handles,change,390,'font-2')).toEqual(layout([one,two,three],handles,change,390));
+    const renamed:Handles=new Map([['alex',{id:'alex',display_name:'Alex Example',initials:'AE'}]]);
+    expect(cached([one,two,three],renamed,prefs,900,'font-1')).toEqual(layout([one,two,three],renamed,prefs,900));
 });

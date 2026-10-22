@@ -8,14 +8,16 @@ export type VirtualListHandle = {
         offset: number;
     } | undefined;
 };
+type VirtualRenderer<T>={render:(item:T,index:number)=>JSX.Element;renderReactive?:(item:()=>T,index:()=>number)=>JSX.Element}|{render?:never;renderReactive:(item:()=>T,index:()=>number)=>JSX.Element};
 export function VirtualList<T>(props: {
     items: readonly T[];
     keyFor: (item: T) => string;
     estimate?: (item: T) => number;
-    render: (item: T, index: number) => JSX.Element;
-    renderReactive?: (item: () => T, index: () => number) => JSX.Element;
     bottomAnchored?: boolean;
     fixedHeights?: boolean;
+    initialIndex?: number;
+    initialAlign?: 'start'|'end';
+    overscan?: number;
     selectedKey?: string;
     selectedKeys?: ReadonlySet<string>;
     keepTop?: boolean;
@@ -26,7 +28,7 @@ export function VirtualList<T>(props: {
     label: string;
     ref?: (handle: VirtualListHandle) => void;
     onVisible?: (start: number, end: number) => void;
-}) {
+} & VirtualRenderer<T>) {
     const rowPrefix=createUniqueId()+'-virtual-row-';
     const controlled='selectedKey' in props;
     const selected=()=>{revision();return controlled?(props.selectedKey?keyIndex.get(props.selectedKey)??-1:-1):active();};
@@ -45,7 +47,7 @@ export function VirtualList<T>(props: {
         if(Math.abs(desired-actual)>.5&&Math.abs(desired-actual)<1){viewport.scrollTop=Math.round(desired);actual=viewport.scrollTop;}
         scrollResidual=preserve&&desired>=0&&desired<=viewport.scrollHeight-viewport.clientHeight&&Math.abs(desired-actual)<1?desired-actual:0;assignedScroll=actual;
     };
-    const range = createMemo(() => { revision(); const top = scroll(); const start = Math.max(0, positions.indexAt(top) - 6), end = Math.min(items.length, positions.indexAt(top + height()) + 7); return { start, end }; });
+    const range = createMemo(() => { revision(); const top = scroll(),padding=props.overscan??6; const start = Math.max(0, positions.indexAt(top) - padding), end = Math.min(items.length, positions.indexAt(top + height()) + padding+1); return { start, end }; });
     const anchor = () => { if (!items.length)
         return; const index = positions.indexAt(viewport.scrollTop); return { key: props.keyFor(items[index]), offset: viewport.scrollTop - positions.offset(index) }; };
     const refresh = () => { setScroll(viewport.scrollTop); setHeight(viewport.clientHeight); setRevision(value => value + 1); };
@@ -67,7 +69,11 @@ export function VirtualList<T>(props: {
         if(remeasure.size)viewport?.querySelectorAll<HTMLElement>('.virtual-row').forEach(row=>{if(remeasure.has(row.dataset.key!)){observer?.unobserve(row);observer?.observe(row);}});
         if(content)content.style.height=positions.total+'px';
         if (viewport) {
-            if (props.bottomAnchored && (atBottom || first) && (!shifted || first)) {
+            if(first&&props.initialIndex!==undefined){
+                const index=Math.max(0,Math.min(items.length-1,props.initialIndex));
+                setScrollPosition(props.initialAlign==='end'?positions.offset(index+1)-viewport.clientHeight:positions.offset(index));
+            }
+            else if (props.bottomAnchored && (atBottom || first) && (!shifted || first)) {
                 setScrollPosition(Math.max(0,positions.total-viewport.clientHeight));
                 queueMicrotask(() => { setScrollPosition(viewport.scrollHeight); refresh(); });
             }
@@ -141,9 +147,9 @@ export function VirtualList<T>(props: {
             else if (event.key === 'End')
                 next = items.length - 1;
             else if (event.key === 'PageDown')
-                next += Math.max(1, range().end - range().start - 12);
+                next += Math.max(1, range().end - range().start - 2*(props.overscan??6));
             else if (event.key === 'PageUp')
-                next -= Math.max(1, range().end - range().start - 12);
+                next -= Math.max(1, range().end - range().start - 2*(props.overscan??6));
             else
                 return;
             event.preventDefault();
@@ -156,7 +162,7 @@ export function VirtualList<T>(props: {
             const index=createMemo(()=>{revision();return keyIndex.get(key)??0;});
             const item = createMemo(() => { revision(); return items[index()]; });
             const stableContent=props.renderReactive?.(item,index);
-            const content=props.renderReactive?()=>stableContent:createMemo(()=>props.render(item(),index()));
+            const content=props.renderReactive?()=>stableContent:createMemo(()=>props.render!(item(),index()));
             onMount(() => {if(!props.fixedHeights)observer?.observe(row);});
             onCleanup(() => observer?.unobserve(row));
             return <div ref={row} id={rowPrefix + key} class="virtual-row" role="option" aria-selected={props.selectedKeys ? props.selectedKeys.has(key) : index() === selected()} aria-setsize={(revision(),items.length)} aria-posinset={index() + 1} data-index={index()} data-key={key} style={{ transform: `translateY(${(revision(), positions.offset(index()))}px)` }}>{content()}</div>;

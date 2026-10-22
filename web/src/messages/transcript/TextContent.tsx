@@ -6,7 +6,13 @@ import { array, fields } from '../store/types';
 type Mention={start:number;end:number;address:string};
 type Segment={value:string;href?:string;mention?:string;styles:string[];effect?:TextEffect};
 const detector=/(https?:\/\/[^\s<>]+|\+?\d[\d ()-]{6,}\d|\b\d{1,5}\s+(?:[\p{L}\d]+\s+){0,5}(?:Street|St|Avenue|Ave|Road|Rd|Lane|Ln|Drive|Dr|Boulevard|Blvd)\b)/giu;
-export function TextContent(props:{value:string;arrival?:boolean;formatting?:unknown;offset?:number;mentions?:Mention[]}){
+type TextContentProps={value:string;arrival?:boolean;formatting?:unknown;offset?:number;mentions?:Mention[]};
+const plainDetector=new RegExp(detector.source,'iu');
+export function TextContent(props:TextContentProps){
+    const plain=createMemo(()=>!array(props.formatting).length&&!props.mentions?.length&&!plainDetector.test(props.value));
+    return <Show when={plain()} fallback={<RichTextContent {...props}/>}><span class="message-text">{props.value}</span></Show>;
+}
+function RichTextContent(props:TextContentProps){
     const [contact,setContact]=createSignal<{name:string;address:string}>();
     const groups=createMemo(()=>{
         const boundaries=new Set([0,props.value.length]);
