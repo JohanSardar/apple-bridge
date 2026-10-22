@@ -558,6 +558,7 @@ features:
       - {id: WEB-MSG-REPLIES, levels: [web]}
       - {id: WEB-MSG-EDIT-UNSEND-VIEW, levels: [web]}
       - {id: WEB-MSG-GROUP-EVENTS, levels: [web]}
+      - {id: WEB-MSG-FONTS, levels: [web]}
       - {id: WEB-MSG-MEDIA, levels: [web]}
       - {id: WEB-MSG-VIEWER, levels: [web]}
       - {id: WEB-MSG-LINKS, levels: [web]}
