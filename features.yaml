@@ -387,7 +387,14 @@ features:
     milestone: M3
     modules: [native/NotesSource, operations]
     depends_on: [notes.read]
-    status: done
+    status: limited
+    limits:
+      - scenario: NOTE-CRUD
+        level: real
+        reason: "The initial 2026-10-22 milestone real check creates the tagged folder/note and matches Truth, then append returns unsupported; cleanup passes. Native fixes #266 and #269 are merged. Fresh acceptance awaits the Notes latency fix and independent reruns."
+      - scenario: NOTE-CRUD
+        level: replica
+        reason: "Fresh forwarded CRUD acceptance is pending independent reruns after native fixes #266 and #269 and the Notes latency fix. Earlier replica proof does not establish the current milestone source behavior."
     scenarios:
       - {id: NOTE-CRUD, levels: [sim, real, replica]}
       - {id: NOTE-RICH-REJECT, levels: [sim, real]}

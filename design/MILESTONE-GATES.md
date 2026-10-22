@@ -1,121 +1,45 @@
-# App milestone gate inventory
+# App milestone gates
 
-Inventory at origin/main 2303b82a, 2026-10-22. This is a run plan, not passing evidence. Private reports and screenshot sets stay in `lab/evidence/private/`.
+Inventory refreshed during milestone qualification on 2026-10-22. This file distinguishes executed proof from pending and limited acceptance. Reports, native traces, host samples and screenshots stay private under `lab/evidence/private/`. Fix PRs carry no evidence JSON. Final milestone qualification may include sanitized summaries once; raw native data, traces and screenshots remain private.
 
-Every functional web scenario runs WebKit, Chromium and Firefox × light/dark × phone/desktop (12 projects, one worker). Small per-PR manifests must be expanded before the milestone. Performance scenarios retain their specified project restrictions and run exclusively. A matrix denominator counts executed test configurations, not merely configured projects; skipped and unexecuted checks remain limited.
+## Scenarios and levels
 
-## Shared budgets and validity
+Every functional browser scenario targets WebKit, Chromium and Firefox × light/dark × phone/desktop: 12 projects, one Playwright worker, no retries. Count test configurations, and report skipped or unexecuted cases separately. Existing performance scenarios retain their declared projects and run exclusively.
 
-SPEC §23.8: shell and each lazy route closure ≤60 KiB gzip; precache ≤600 KiB gzip; CLS 0; no scroll/navigation task >50 ms; own-input work ≤8 ms p95; cached warm content <1 s. SPEC §23.12: frame work ≤4 ms p95/≤8 ms max, no Chromium long tasks; 120 Hz frame/input cadence unproven on a 60 Hz host. WebKit script/layout/paint attribution is required before explaining jank as headless. R-LIVE is native effect to visible replica record ≤1 s p95; a browser sim live check does not certify it. Preserve timing endpoints, sample counts, p50/p95/max, load/swap and causal attribution. No threshold changes.
+| App | Functional browser scenarios | Additional sim / native qualification |
+|---|---|---|
+| Contacts | WEB-CON-READ, WEB-CON-WRITE, WEB-CON-PARITY | WEB-CON-LIST, CON-GROUPS (sim); CON-EXTERNAL, CON-CRUD, CON-IMAGE (real) |
+| Reminders | WEB-REM-READ, DETAILS, ENTRY, WRITE, PARITY, ACTIONS | WEB-RM-REMINDERS-* (sim); REM-STORE-READ (sim/real), DECODE (sim), PERF (sim/real); WEB-REM-WRITE, REM-CREATE-EXTERNAL, CORE-LIVE-LATENCY (real) |
+| Calendar | WEB-CAL-READ, NAVIGATE, WRITE, PARITY; CAL-STORE-READ | CAL-STORE-READ (sim/real), WEB-CAL-WRITE (sim/real), CAL-CREATE-EXTERNAL (real); recurring split/math scenarios as declared in features.yaml |
+| Notes | WEB-NOTE-READ, WRITE, PARITY; NOTE-LIST-LIVE | NOTE-LIST (sim), NOTE-DECODE-FULL (sim/real), NOTE-EDIT-PARITY, NOTE-EXTERNAL, NOTE-CRUD (real) |
+| Messages | All registered WEB-MSG-* and associated WEB-RM-* entries in features.yaml; canonical manifests refreshed in #255 | Dedicated Messages milestone worker owns the matrix and native gate. WEB-MSG-PERF owns transcript frame/input and WebKit attribution. |
 
-## App gates
+Native journey inventory gaps: WEB-CON-WRITE has no dedicated real handler; CON-CRUD is independent native basic-command proof, not the missing combined web journey.
 
-- Reminders: WEB-REM-READ, DETAILS, WRITE, ENTRY, PARITY; WRITE also real. Read-model scenarios WEB-RM-REMINDERS-* at sim; REM-STORE-READ sim/real; REM-STORE-DECODE sim; REM-STORE-PERF sim/real. Gateway 1,000-item items <10 ms p95. Store 200-sample changed 1/10 <5 ms p95, changed 100/1,000 and unchanged <50 ms, full warm <100 ms, fresh full main-queue blocking <16 ms; cold separately. R-LIVE CORE-LIVE-LATENCY real (Reminders source), plus REM-CREATE-EXTERNAL real. Real enrichment attribution requires interleaved A/B/A/B and restart if initial swap >7 GB. Automation parity stays hidden while unproven; store-only flag propagation and missing positive fixtures remain limited.
-- Calendar: WEB-CAL-READ and PARITY, CAL-STORE-READ sim/real/web; WRITE planned until merged. Month/1,000-event calendar.range ≤10 ms p95 REST/MCP. R-LIVE CAL-CREATE-EXTERNAL real. Invitation replies/travel/attachment actions stay hidden without verified capabilities.
-- Contacts: WEB-CON-READ/WRITE/PARITY (read web, write/parity web+real); WEB-CON-LIST and CON-GROUPS sim. R-LIVE CON-EXTERNAL real. No separate per-app numeric read-model budget specified; shared UI budgets still apply. Wait for owning units; do not treat missing scenarios as pass.
-- Messages: all WEB-MSG-* and associated WEB-RM-* browser scenarios in features.yaml; writing web/real as declared. Exclusive WEB-PERF-SHELL, LIST, SEARCH, WEB-MSG-PERF, LIVE and WEB-LIVE-DELTA. WEB-RM-CHATS first page at 500 chats ≤15 ms p95 REST/MCP; 100-item thread page on a 170k-message store and originator ≤10 ms; demo startup <10 s; bounded response-to-DOM search ≤50 ms; sim inbound browser ≤500 ms p95. R-LIVE uses owned self-handle fixtures only; rich field Truth and read-only real UI are separate evidence. Known main chats/startup misses and unproven frame/input/WebKit attribution remain limited until measured or fixed. Huge fixture setup/originator improvements after #191 require fresh verification.
-- Notes: NOTE-DECODE-FULL sim/real; WEB-NOTE-READ web, WRITE/PARITY web+real. R-LIVE NOTE-EXTERNAL real. No separate numeric app budget specified; shared UI budgets apply. Units absent on this inventory SHA, so the gate is not ready.
+Notes inventory gap: features.yaml declares WEB-NOTE-WRITE at real, but its manifest and runner only implement web. Native NOTE-CRUD is independent basic-command proof, not that missing journey. WEB-NOTE-PARITY also lacked a manifest/test after the units merged; its browser qualification now covers all 12 projects. Its declared real level remains limited by the failed native rich-edit/checklist proof, recorded under NOTE-EDIT-PARITY. Never report an empty/default runner as native parity proof.
 
-## Scenario manifest inventory
+## Budgets and endpoints
 
-### Reminders
+- SPEC §23.8: shell and every lazy route closure ≤61,440 gzip bytes; precache ≤614,400; CLS 0; no scroll/navigation task >50 ms; own-input work ≤8 ms p95; cached warm content <1 s.
+- SPEC §23.12: frame work ≤4 ms p95 / ≤8 ms max; no Chromium long tasks. A 60 Hz host does not prove 120 Hz cadence. WebKit script/layout/paint attribution is required before calling jank a headless artifact.
+- Reminders: 1,000-item `reminders.items` handler <10 ms p95. Store enrichment: 200 samples per mode; changed 1/10 <5 ms p95, changed 100/1,000 and unchanged <50 ms, full warm <100 ms. Fresh forced-full main-queue blocking <16 ms; cold elapsed separately. Real changed-set modes and interleaved A/B/A/B attribution require their own native proof; restart a pair if initial swap exceeds 7 GiB.
+- Calendar: month / 1,000-event `calendar.range` handler ≤10 ms p95, independently for REST and MCP. Handler timing is not HTTP round-trip or browser paint timing.
+- Messages: 500-chat first page ≤15 ms p95 REST/MCP; 100-item page on 170k messages and originator ≤10 ms; demo startup <10 s; search response-to-DOM ≤50 ms; sim inbound browser ≤500 ms p95. Dedicated owners retain the remaining frame/input qualifications.
+- Contacts and Notes have no additional numeric app read-model budget; shared UI budgets still apply.
+- R-LIVE: native effect to visible replica record ≤1 s p95. Browser/sim deltas do not prove native propagation. Retain sample counts, p50/p95/max, monotonic endpoints, load/swap and causal attribution. Shared Messages/foundation PERF-SHELL does not prove each other app's own input, layout/paint or warm-content budgets.
 
-- `WEB-REM-DETAILS`: [web]; `lab/scenarios/web/WEB-REM-DETAILS.yaml`.
-- `WEB-REM-ENTRY`: [web]; `lab/scenarios/web/WEB-REM-ENTRY.yaml`.
-- `WEB-REM-PARITY`: [web]; `lab/scenarios/web/WEB-REM-PARITY.yaml`.
-- `WEB-REM-READ`: [web]; `lab/scenarios/web/WEB-REM-READ.yaml`.
-- `WEB-REM-WRITE`: [web, real]; `lab/scenarios/web/WEB-REM-WRITE.yaml`.
+## Qualification checkpoint
 
-### Calendar
+Contacts: READ 12, WRITE 36 and PARITY 12 pass across all projects, without skips/flakes. #249 fixes the capability-response Select geometry race and phone journeys; #251 fixes contained avatars, matching card/list photo variants and phone spacing. Private list/card screenshots cover all projects; fresh spot fixes are in `web/contacts-spot-fix/`. #257 splits 15 lazy fixture routes: shell 59,090 bytes, largest fixture closure 54,681, with no fixture surface in entry chunks. The later Notes-build exclusive audit measures shell 59,095, Contacts route 14,939 and all cacheable assets 613,834 bytes (limits 61,440 / 61,440 / 614,400). That earlier build’s MessagePane was 63,989 bytes; #263 is now merged and the rebased shared gate is queued. CON-EXTERNAL real passes 20 changes at each endpoint: gateway p50/p95/max 415.9/795.7/837.3 ms, replica 447.9/807.8/880.0 ms. CON-CRUD's earlier 1,174/1,210 ms miss is fixed by #248 (reported p95 788.5/808.2 ms). CON-IMAGE proves a Truth-installed image read/digest, not native photo-command set/remove fidelity. Group writes/posters stay hidden. Native photo-command fidelity, a 200-change/5-Hz Contacts burst, kill-during-apply and app-specific UI timings remain limited.
 
-- `WEB-CAL-PARITY`: [web]; `lab/scenarios/web/WEB-CAL-PARITY.yaml`.
-- `WEB-CAL-READ`: [web]; `lab/scenarios/web/WEB-CAL-READ.yaml`.
+Reminders: READ 24, DETAILS 12, ENTRY 24, WRITE 48, PARITY 12 and ACTIONS 68 pass. Of 204 configured cases, 12 are desktop/phone cases not applicable and four are unproven WebKit/Firefox phone touch cases; no executed failures or flakes remain. #258 fixes a descendant lostpointercapture cancelling the row swipe, retains trusted CDP/no-write assertions, expands all manifests and isolates artifacts by report. Native basic writes, field preservation and guarded cleanup pass. Items handler p95 REST/MCP is 3.463/3.757 ms; MCP HTTP round-trip p95 is separately 12.183 ms. Synthetic store modes all pass (changed 1/10/100/1,000 p95 0.155/0.208/0.598/4.296 ms). Real warm-full/unchanged p95 is 21.64/0.224 ms; fresh full main-queue max is 0.033 ms across 352 samples; cold elapsed is 674.9 ms. Real changed-set modes are absent, hence limited. Eight unproven Automation mutations remain hidden.
 
-### Contacts
+Reminders R-LIVE remains pending a store-worker fix: the single external check measured 1,118.835 ms. The 200-change run reported 40,851/40,877 ms gateway/replica p95, but its watcher overwrites `seen[record]` on every update and `observedExact` returns the latest update. Those figures do not establish first visibility. First observer timestamps were not retained; capture-to-first matching gateway commit p95 290.6 ms cannot substitute for observer delivery. Truth cleanup and final convergence pass; a post-cleanup forwarded delete returns conflict. The store worker owns both the oracle/native corrections and real before/after stages. No threshold changes or parallel watcher edits. Rerun after its PR merges.
 
-- `WEB-CON-LIST`: [sim]; `lab/scenarios/web/WEB-CON-LIST.yaml`.
-- `WEB-CON-PARITY`: planned; no manifest on inventory SHA.
-- `WEB-CON-READ`: planned; no manifest on inventory SHA.
-- `WEB-CON-WRITE`: planned; no manifest on inventory SHA.
+Calendar: READ 12, NAVIGATE 24, WRITE 36, PARITY 60 and authenticated store-read browser 12 pass: 144/144, without skips or flakes. CAL-STORE-READ sim passes the 1,000-event month handler gate: REST/MCP p95 0.921/0.910 ms. WRITE's first phone case exposed missing sidebar navigation. Its full rerun then exposed a recurring-split identity race: a controlled command-response barrier reproduces two Future rows. Future edits now wait for observed identities before optimistic projection; the authoritative view stays visible. The controlled regression passes all 12 projects; #262 landed the reconciliation fix and complete WRITE matrix. Private month/week screenshots cover all projects. Native store capture/identity/Truth counts, basic writes and guarded cleanup pass. Ten native external changes pass: gateway/replica p95 468.9/471.3 ms. The 200-change/5-Hz Calendar burst, kill-during-apply and app-specific UI timings remain limited. Native stages run exclusively and never overlap the Reminders worker’s real stages. Calendar parity writes remain hidden pending -1744 / -25204 consent/accessibility proof.
 
-### Messages
+Notes: all units are merged (#240, #243, #246, #252, #256). READ 108, WRITE 60, LIST-LIVE 24 and browser PARITY 12 pass across all projects: 204/204, without skips or flakes. External-body HTTP mocks explicitly block service workers in their test file because worker-controlled WebKit requests bypass Playwright interception; the unmodified worker-enabled checks captured zero interceptions and returned the gateway’s actual 401 for synthetic blob references. All six body cases pass on all 12 projects with interception positively asserted. Worker-enabled external-body integration remains limited. WRITE retains service workers and every draft-isolation assertion. Its session-switch setup waits for the prior sources response before replacing the fixture cookie, so a stale Set-Cookie cannot undo that switch. A positive browser-session check establishes the public-session precondition before the unchanged draft-isolation assertions. Private list/rich captures cover all 12 projects. NOTE-LIST and NOTE-DECODE-FULL sim pass. NOTE-DECODE-FULL real first exposed a json.Number/float64 oracle mismatch. #264 compares exact int64 values (fractions and overflow fail) and adds value-free diagnostics. The corrected pre-fix real rerun differed in structure_counts.titles only. Native folder/create/Truth and guarded cleanup passed before append returned unsupported. Native fixes #266 and #269 are now merged; fresh native acceptance awaits the Notes latency fix and independent reruns. NOTE-EXTERNAL converges and cleans up, but recorded native-save to post-Truth HTTP observation p95 is 1,531.7 ms gateway / 2,264.2 ms replica (five each). First visibility is unproven because observation begins after Truth returns; the Notes source worker owns the measurement and any capture fix. Rerun these native gates after their fixes merge. Native rich replacement did not preserve text/block structure, and checkbox import yielded zero native checklist items; rich edits/checklist toggles remain hidden. Native format/variant completeness requires NOTE-DECODE-FULL real proof. The 200-change/5-Hz Notes burst, kill-during-apply and app-specific UI timings remain limited.
 
-- `WEB-MSG-A11Y`: planned; no manifest on inventory SHA.
-- `WEB-MSG-ATTACH-SEND`: planned; no manifest on inventory SHA.
-- `WEB-MSG-AUDIO`: [web]; `lab/scenarios/web/WEB-MSG-AUDIO.yaml`.
-- `WEB-MSG-AVATAR-READY`: [web]; `lab/scenarios/web/WEB-MSG-AVATAR-READY.yaml`.
-- `WEB-MSG-CARD-SURFACES`: [web]; `lab/scenarios/web/WEB-MSG-CARD-SURFACES.yaml`.
-- `WEB-MSG-CHAT-ACTIONS`: planned; no manifest on inventory SHA.
-- `WEB-MSG-CHATS-CACHE`: [web]; `lab/scenarios/web/WEB-MSG-CHATS-CACHE.yaml`.
-- `WEB-MSG-CHATS-STORE`: [web]; `lab/scenarios/web/WEB-MSG-CHATS-STORE.yaml`.
-- `WEB-MSG-COMPOSER`: [web]; `lab/scenarios/web/WEB-MSG-COMPOSER.yaml`.
-- `WEB-MSG-COMPOSITION`: [web]; `lab/scenarios/web/WEB-MSG-COMPOSITION.yaml`.
-- `WEB-MSG-DETAILS`: [web]; `lab/scenarios/web/WEB-MSG-DETAILS.yaml`.
-- `WEB-MSG-EDIT`: [web]; `lab/scenarios/web/WEB-MSG-EDIT.yaml`.
-- `WEB-MSG-EDIT-UNSEND-VIEW`: planned; no manifest on inventory SHA.
-- `WEB-MSG-EFFECTS`: [web]; `lab/scenarios/web/WEB-MSG-EFFECTS.yaml`.
-- `WEB-MSG-EFFECTS-TRANSCRIPT`: [web]; `lab/scenarios/web/WEB-MSG-EFFECTS-TRANSCRIPT.yaml`.
-- `WEB-MSG-FAIL-RESEND`: planned; no manifest on inventory SHA.
-- `WEB-MSG-FILES`: [web]; `lab/scenarios/web/WEB-MSG-FILES.yaml`.
-- `WEB-MSG-FILTERS`: [web]; `lab/scenarios/web/WEB-MSG-FILTERS.yaml`.
-- `WEB-MSG-FILTERS-MENU`: [web]; `lab/scenarios/web/WEB-MSG-FILTERS-MENU.yaml`.
-- `WEB-MSG-FONTS`: [web]; `lab/scenarios/web/WEB-MSG-FONTS.yaml`.
-- `WEB-MSG-GROUP-EVENTS`: [web]; `lab/scenarios/web/WEB-MSG-GROUP-EVENTS.yaml`.
-- `WEB-MSG-INTERACTION-MOTION`: [web]; `lab/scenarios/web/WEB-MSG-INTERACTION-MOTION.yaml`.
-- `WEB-MSG-KEYBOARD`: [web]; `lab/scenarios/web/WEB-MSG-KEYBOARD.yaml`.
-- `WEB-MSG-KEYBOARD-LIST`: [web]; `lab/scenarios/web/WEB-MSG-KEYBOARD-LIST.yaml`.
-- `WEB-MSG-LINKS`: [web]; `lab/scenarios/web/WEB-MSG-LINKS.yaml`.
-- `WEB-MSG-LIST`: [web]; `lab/scenarios/web/WEB-MSG-LIST.yaml`.
-- `WEB-MSG-LIVE`: planned; no manifest on inventory SHA.
-- `WEB-MSG-LOADING`: [web]; `lab/scenarios/web/WEB-MSG-LOADING.yaml`.
-- `WEB-MSG-MEDIA`: [web]; `lab/scenarios/web/WEB-MSG-MEDIA.yaml`.
-- `WEB-MSG-MOTION`: [web]; `lab/scenarios/web/WEB-MSG-MOTION.yaml`.
-- `WEB-MSG-NEW`: [web]; `lab/scenarios/web/WEB-MSG-NEW.yaml`.
-- `WEB-MSG-OPTIMISTIC`: [web]; `lab/scenarios/web/WEB-MSG-OPTIMISTIC.yaml`.
-- `WEB-MSG-PARITY-UI`: planned; no manifest on inventory SHA.
-- `WEB-MSG-PARTS`: [web]; `lab/scenarios/web/WEB-MSG-PARTS.yaml`.
-- `WEB-MSG-PENDING`: [web]; `lab/scenarios/web/WEB-MSG-PENDING.yaml`.
-- `WEB-MSG-PERF`: planned; no manifest on inventory SHA.
-- `WEB-MSG-PLACEHOLDERS`: [web]; `lab/scenarios/web/WEB-MSG-PLACEHOLDERS.yaml`.
-- `WEB-MSG-POINTER`: [web]; `lab/scenarios/web/WEB-MSG-POINTER.yaml`.
-- `WEB-MSG-REACT`: [web]; `lab/scenarios/web/WEB-MSG-REACT.yaml`.
-- `WEB-MSG-REACTIONS`: [web]; `lab/scenarios/web/WEB-MSG-REACTIONS.yaml`.
-- `WEB-MSG-REAL-READ`: planned; no manifest on inventory SHA.
-- `WEB-MSG-REORDER`: [web]; `lab/scenarios/web/WEB-MSG-REORDER.yaml`.
-- `WEB-MSG-REPLIES`: [web]; `lab/scenarios/web/WEB-MSG-REPLIES.yaml`.
-- `WEB-MSG-REPLY`: [web]; `lab/scenarios/web/WEB-MSG-REPLY.yaml`.
-- `WEB-MSG-REPLY-HANDOFF`: [web]; `lab/scenarios/web/WEB-MSG-REPLY-HANDOFF.yaml`.
-- `WEB-MSG-RICH-PARTS`: [web]; `lab/scenarios/web/WEB-MSG-RICH-PARTS.yaml`.
-- `WEB-MSG-SEARCH`: [web]; `lab/scenarios/web/WEB-MSG-SEARCH.yaml`.
-- `WEB-MSG-SEARCH-LIST`: [web]; `lab/scenarios/web/WEB-MSG-SEARCH-LIST.yaml`.
-- `WEB-MSG-SEND`: planned; no manifest on inventory SHA.
-- `WEB-MSG-SIDEBAR`: [web]; `lab/scenarios/web/WEB-MSG-SIDEBAR.yaml`.
-- `WEB-MSG-STICKERS-GENMOJI`: [web]; `lab/scenarios/web/WEB-MSG-STICKERS-GENMOJI.yaml`.
-- `WEB-MSG-TEXT-SIZING`: [web]; `lab/scenarios/web/WEB-MSG-TEXT-SIZING.yaml`.
-- `WEB-MSG-THREAD-CORE`: [web]; `lab/scenarios/web/WEB-MSG-THREAD-CORE.yaml`.
-- `WEB-MSG-TRANSCRIPT-HOOKS`: [web]; `lab/scenarios/web/WEB-MSG-TRANSCRIPT-HOOKS.yaml`.
-- `WEB-MSG-TRANSCRIPT-VIEWER`: [web]; `lab/scenarios/web/WEB-MSG-TRANSCRIPT-VIEWER.yaml`.
-- `WEB-MSG-UNSEND`: [web]; `lab/scenarios/web/WEB-MSG-UNSEND.yaml`.
-- `WEB-MSG-VIEWER`: [web]; `lab/scenarios/web/WEB-MSG-VIEWER.yaml`.
+## Tooling proof
 
-### Notes
-
-- `WEB-NOTE-PARITY`: planned; no manifest on inventory SHA.
-- `WEB-NOTE-READ`: planned; no manifest on inventory SHA.
-- `WEB-NOTE-WRITE`: planned; no manifest on inventory SHA.
-
-## Matrix tooling dry-run
-
-Air command: `heavy.sh --light bash -c 'cd web && pnpm install --frozen-lockfile && pnpm exec playwright test --list -g "WEB-(REM|CAL|CON|NOTE)-"'`: PASS, 192 configurations across 12 projects on the initial inventory tree. Reminders owns 120 configurations (read 24, details 12, entry 24, writes 48, hidden parity 12). The write draft-race test originally used an unregistered `WEB-REM-WRITE-FOCUS` title; the runner’s exact-ID matcher excluded it from every registered gate. It now shares `WEB-REM-WRITE`, preserving all assertions and including it in that scenario’s 48 configurations. No Contacts or Notes UI tests exist on the inventory SHA.
-
-## Readiness correction
-
-The leader subsequently identified final units still in flight: Reminders selection/columns #234 and Contacts group UI #236. The initial Reminders read (24/24) and details (12/12) checks on 2303b82a are archived privately under `lab/evidence/private/milestone/pre-readiness-2303b82a/`; they are pre-readiness checks, not the completed app milestone. The old-revision batch was stopped before writes/performance/real effects. Start the first app whose final unit merges and refresh the inventory and build at that revision. The leader reports #235 fixes chats p95, demo startup and the 170k thread; those reported results still require fresh milestone verification.
-
-## Contacts gate revision
-
-Refreshed to 926349b5 after #236 merged. Contacts milestone manifests target all 12 projects: READ (12 configurations), WRITE (36), PARITY (12). READ passes 12/12 and saves private list/card captures for each project. The first phone WRITE and PARITY runs exposed missing Lists navigation in the test journeys. Firefox then exposed a real capability-response race: inserting New Contact moved Select from y=64 to y=120 during a click. The repair reserves the hidden, disabled button’s layout space until capability proof arrives. A controlled real-response barrier reproduces the original shift and proves the repaired geometry, retaining all original assertions and timeouts. Fresh READ (12/12), WRITE (36/36) and PARITY (12/12) matrices pass without skips or flakes. The exclusive shared performance gate fails the combined Fixtures route closure (71,037 bytes gzip versus 61,440); fixture-route splitting follows #237. Contacts-specific own-input, layout/paint and warm-content timings remain unproven by that shared Messages/foundation probe. Native CON-EXTERNAL passes 20 external changes at each endpoint: gateway p50/p95/max 415.9/795.7/837.3 ms and replica 447.9/807.8/880.0 ms. CON-CRUD verifies six REST/MCP saves and cleanup, but native command visibility misses the 1-second budget: gateway p95/max 1174.3 ms, replica 1210.2 ms. CPU samples attribute the window to Helper/gateway/contactsd work, so this is a product miss. CON-IMAGE passes Truth-installed image read/digest proof. Native photo-command fidelity, 200-change/5-Hz burst acceptance and kill-during-apply qualification remain limited; these checks do not prove them. Native follow-up uses the existing guarded CON-EXTERNAL, CON-CRUD and CON-IMAGE real scenarios. Native photo command fidelity remains a separate claim from reading an image installed by Truth.
-
-## Canonical subflow discovery
-
-Unregistered hyphenated subflow titles now use whitespace after their longest registered owning scenario ID. Registered child scenarios retain their own IDs and fixture selection. `make features` enumerates Playwright’s expanded titles and fails any scenario-prefixed title whose complete leading ID has no manifest. The check applies across all apps and performance titles. Its first run caught two additional generated command-part titles missed by a source-only scan. All 57 edited title declarations retain their test bodies and assertions; newly included scenarios still require execution and any unavailable platform coverage must be recorded as limited.
+The initial Air dry run at 2303b82a listed 192 configurations across all 12 projects; it was an inventory check, not the final app milestone. #249 maps 57 unregistered hyphenated test-title declarations to their longest registered owning scenario, including dynamic PARTS titles and the Reminders draft-race subflow, without dropping bodies/assertions. `make features` enumerates expanded Playwright titles and rejects every scenario-like leading token with no manifest, across all apps and PERF titles. Registered child scenarios retain their own IDs and fixture selection. Newly included failures are fixed or recorded limited; none are silently excluded.
