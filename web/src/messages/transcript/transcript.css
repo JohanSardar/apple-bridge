@@ -17,3 +17,5 @@
 .bubble.card-reserved>.message-card::after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 .5px 0 var(--separator);pointer-events:none;z-index:3}
 .inline-media-missing{border-radius:4px;background:var(--fill-secondary);color:var(--label-secondary);box-shadow:inset 0 0 0 .5px var(--separator)}
 .inline-media-missing>svg{display:block;inline-size:80%;block-size:80%}
+
+.edit-history{max-inline-size:100%}.edit-history-content{display:flex;flex-direction:column;align-items:flex-start}.outgoing .edit-history-content{align-items:flex-end}

@@ -594,6 +594,7 @@ features:
       - {id: WEB-MSG-EDIT-UNSEND-VIEW, levels: [web]}
       - {id: WEB-MSG-GROUP-EVENTS, levels: [web]}
       - {id: WEB-MSG-MOTION, levels: [web]}
+      - {id: WEB-MSG-INTERACTION-MOTION, levels: [web]}
       - {id: WEB-MSG-FONTS, levels: [web]}
       - {id: WEB-MSG-MEDIA, levels: [web]}
       - {id: WEB-MSG-RICH-PARTS, levels: [web]}

@@ -203,7 +203,7 @@ func webBrowserControl(ctx context.Context, w *world.World, origin string, prepa
 		case "/rich-parts-fixture":
 			value, err = webRichPartsFixture(w)
 		case "/reaction-fixture":
-			value, err = webReactionFixture(w)
+			value, err = webReactionFixture(w, request.URL.Query().Get("remove") == "1")
 		case "/list-fixture":
 			started := time.Now()
 			var avatar webAvatar
