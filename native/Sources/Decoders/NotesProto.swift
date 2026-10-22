@@ -1,6 +1,15 @@
 import Foundation
 
 public enum NotesProto {
+    public static func plainText(_ data: Data) throws -> String {
+        let root = try NotesProtoMessage(NotesProtoWire.unpack(data))
+        try root.validate([2: 2])
+        guard let document = try root.message(2), let note = try document.message(3) else { throw NotesProtoFailure.malformed }
+        try document.validate([2: 0, 3: 2]); try note.validate([2: 2, 3: 2, 4: 2, 5: 2], repeated: [3, 5])
+        guard let text = try note.string(2) else { throw NotesProtoFailure.malformed }
+        return text
+    }
+
     public static func decode(_ data: Data, tables: [String: Data] = [:]) throws -> NotesBody {
         let root = try NotesProtoMessage(NotesProtoWire.unpack(data))
         try root.validate([2: 2])

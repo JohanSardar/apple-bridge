@@ -1,10 +1,9 @@
 import Foundation
-import SQLite3
 import CryptoKit
 import SourceSupport
 import Decoders
 
-struct NotesSnapshot {
+struct NotesSnapshot: Sendable {
     let generation: String
     let observations: [JSON]
     let attachments: [String: NotesAttachment]
@@ -13,50 +12,24 @@ struct NotesSnapshot {
 
 struct NotesStore {
     let path: String
-    func read() throws -> NotesSnapshot {
-        var source: OpaquePointer?
-        guard sqlite3_open_v2(path, &source, SQLITE_OPEN_READONLY, nil) == SQLITE_OK else { if source != nil { sqlite3_close(source) }; throw SourceFailure.permissionMissing }
-        defer { sqlite3_close(source) }
-        sqlite3_busy_timeout(source, 1000)
-        var copy: OpaquePointer?
-        guard sqlite3_open(":memory:", &copy) == SQLITE_OK else { throw SourceFailure.unavailable }
-        defer { sqlite3_close(copy) }
-        guard let backup = sqlite3_backup_init(copy, "main", source, "main") else { throw SourceFailure.unavailable }
-        let status = sqlite3_backup_step(backup, -1), finish = sqlite3_backup_finish(backup)
-        guard status == SQLITE_DONE, finish == SQLITE_OK else { throw SourceFailure.unavailable }
-        func query(_ sql: String, _ values: [String] = []) throws -> [[String: JSON]] {
-            var statement: OpaquePointer?
-            guard sqlite3_prepare_v2(copy, sql, -1, &statement, nil) == SQLITE_OK else { throw SourceFailure.unavailable }
-            defer { sqlite3_finalize(statement) }
-            for (index, value) in values.enumerated() {
-                let result = value.withCString { sqlite3_bind_text(statement, Int32(index + 1), $0, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self)) }
-                guard result == SQLITE_OK else { throw SourceFailure.unavailable }
-            }
-            var result: [[String: JSON]] = []
-            while true {
-                let step = sqlite3_step(statement)
-                if step == SQLITE_DONE { return result }
-                guard step == SQLITE_ROW else { throw SourceFailure.unavailable }
-                var row: [String: JSON] = [:]
-                for column in 0..<sqlite3_column_count(statement) {
-                    let name = String(cString: sqlite3_column_name(statement, column))
-                    switch sqlite3_column_type(statement, column) {
-                    case SQLITE_INTEGER, SQLITE_FLOAT: row[name] = .number(sqlite3_column_double(statement, column))
-                    case SQLITE_TEXT: row[name] = .string(String(cString: sqlite3_column_text(statement, column)))
-                    case SQLITE_BLOB:
-                        if let bytes = sqlite3_column_blob(statement, column) { row[name] = .string(Data(bytes: bytes, count: Int(sqlite3_column_bytes(statement, column))).base64EncodedString()) }
-                    default: break
-                    }
-                }
-                result.append(row)
-            }
-        }
+    func read(nativeID: String) throws -> NotesSnapshot {
+        guard let tail = nativeID.split(separator: "/").last, tail.first == "p", let number = Int(tail.dropFirst()) else { throw SourceFailure.conflict }
+        let db = try NotesDatabase(path: path)
+        let key = try db.query("SELECT ZIDENTIFIER FROM ZICCLOUDSYNCINGOBJECT WHERE Z_PK=?", [String(number)]).first?["ZIDENTIFIER"]?.string
+        return try read(keys: Set(key.map { [$0] } ?? []), database: db)
+    }
+    func read(keys: Set<String>? = nil, metadataOnly: Bool = false, database: NotesDatabase? = nil) throws -> NotesSnapshot {
+        let database = try database ?? NotesDatabase(path: path)
+        func query(_ sql: String, _ values: [String] = []) throws -> [[String: JSON]] { try database.query(sql, values) }
         guard let uuid = try query("SELECT Z_UUID FROM Z_METADATA").first?["Z_UUID"]?.string, !uuid.isEmpty else { throw SourceFailure.corrupt }
         let entities = try query("SELECT Z_ENT,Z_NAME FROM Z_PRIMARYKEY")
         guard let noteEntity = entities.first(where: { $0["Z_NAME"]?.string == "ICNote" })?["Z_ENT"]?.number,
               let folderEntity = entities.first(where: { $0["Z_NAME"]?.string == "ICFolder" })?["Z_ENT"]?.number,
               try query("PRAGMA table_info(ZICCLOUDSYNCINGOBJECT)").contains(where: { $0["name"]?.string == "ZISPASSWORDPROTECTED" }) else { throw SourceFailure.unsupported }
-        let objects = try query("SELECT o.*,d.ZDATA AS BODY FROM ZICCLOUDSYNCINGOBJECT o LEFT JOIN ZICNOTEDATA d ON d.Z_PK=o.ZNOTEDATA WHERE o.Z_ENT IN (\(Int(noteEntity)),\(Int(folderEntity))) AND COALESCE(o.ZMARKEDFORDELETION,0)=0 ORDER BY o.Z_ENT DESC,o.Z_PK")
+        let selected = keys.map { $0.sorted() } ?? []
+        let filter = keys == nil ? "" : " AND o.ZIDENTIFIER IN (" + (selected.isEmpty ? "NULL" : Array(repeating: "?", count: selected.count).joined(separator: ",")) + ")"
+        let noteRows = try query("SELECT o.*,d.ZDATA AS BODY FROM ZICCLOUDSYNCINGOBJECT o LEFT JOIN ZICNOTEDATA d ON d.Z_PK=o.ZNOTEDATA WHERE o.Z_ENT=\(Int(noteEntity)) AND COALESCE(o.ZMARKEDFORDELETION,0)=0" + filter + " ORDER BY o.Z_PK", selected)
+        let objects = noteRows + (try query("SELECT * FROM ZICCLOUDSYNCINGOBJECT WHERE Z_ENT=\(Int(folderEntity)) AND COALESCE(ZMARKEDFORDELETION,0)=0 ORDER BY Z_PK"))
         let accountRows = try query("SELECT * FROM ZICCLOUDSYNCINGOBJECT WHERE Z_ENT=(SELECT Z_ENT FROM Z_PRIMARYKEY WHERE Z_NAME='ICAccount') AND COALESCE(ZMARKEDFORDELETION,0)=0")
         let accounts = Dictionary(uniqueKeysWithValues: accountRows.map { (Int($0["Z_PK"]?.number ?? 0), $0) })
         let folderRows = objects.filter { $0["Z_ENT"]?.number == folderEntity }
@@ -109,10 +82,13 @@ struct NotesStore {
                 if let value = row[native]?.number { data[field] = .string(timestamp(Date(timeIntervalSinceReferenceDate: value))) }
             }
             if let pinned = row["ZISPINNED"]?.number, pinned == 0 || pinned == 1 { data["pinned"] = .bool(pinned == 1) }
-            var bodyDigest = "", stamps: [String: JSON] = [:]
+            var bodyDigest = ""
             if !locked, let bytes = Data(base64Encoded: row["BODY"]?.string ?? ""), !bytes.isEmpty {
                 bodyDigest = digest(bytes)
-                do {
+                if metadataOnly {
+                    if let text = try? NotesProto.plainText(bytes) { data["plain_text"] = .string(text); data["content_status"] = .string("partial") }
+                    data["body_status"] = .string("pending")
+                } else { do {
                     var decoded = try NotesProto.decode(bytes)
                     var known: [String: [String: JSON]] = [:], tables: [String: Data] = [:]
                     for _ in 0..<8 {
@@ -149,7 +125,6 @@ struct NotesStore {
                         let asset = try NotesAttachment(row: value, account: owner["ZIDENTIFIER"]?.string ?? "", root: URL(fileURLWithPath: path).deletingLastPathComponent(), query: query)
                         attachments[key + ":" + id] = asset
                         values.append(asset.metadata)
-                        stamps[id] = .string(asset.stamp)
                         if asset.uti == "com.apple.notes.inlinetextattachment.hashtag", asset.alternateText.hasPrefix("#") { tags.insert(asset.alternateText) }
                     }
                     data["attachments"] = .array(values)
@@ -162,11 +137,19 @@ struct NotesStore {
                     data["content_status"] = .string("undecoded")
                     data["raw_body_digest"] = .string(bodyDigest)
                     rawBodies[key] = bytes
-                }
+                } }
             }
-            var fingerprint = data
+            var fingerprint = row.filter { $0.key != "BODY" }
             fingerprint["body_digest"] = .string(bodyDigest)
-            fingerprint["media_stamps"] = .object(stamps)
+            fingerprint["generation"] = .string(uuid)
+            fingerprint["folder_state"] = .object(["key": .string(folderKey), "read_only": .bool(flags.readOnly), "recently_deleted": .bool(recent)])
+            let columns = try database.columns("ZICCLOUDSYNCINGOBJECT")
+            let owners = ["ZNOTE", "ZNOTE1"].filter { columns.contains($0) }.map { $0 + "=?" }
+            if !owners.isEmpty, columns.contains("Z_OPT") {
+                let ownerValues = Array(repeating: String(Int(row["Z_PK"]?.number ?? 0)), count: owners.count)
+                let dependencies = try query("WITH RECURSIVE owned(pk) AS (SELECT Z_PK FROM ZICCLOUDSYNCINGOBJECT WHERE " + owners.joined(separator: " OR ") + " UNION SELECT a.Z_PK FROM ZICCLOUDSYNCINGOBJECT a JOIN owned p ON a.ZPARENTATTACHMENT=p.pk) SELECT Z_PK,Z_OPT FROM ZICCLOUDSYNCINGOBJECT WHERE Z_PK IN (SELECT pk FROM owned) OR Z_PK IN (SELECT ZMEDIA FROM ZICCLOUDSYNCINGOBJECT WHERE Z_PK IN (SELECT pk FROM owned)) ORDER BY Z_PK", ownerValues)
+                fingerprint["dependencies"] = .array(dependencies.map(JSON.object))
+            }
             let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
             data["native_fingerprint"] = .string(digest(try encoder.encode(JSON.object(fingerprint))))
             observations.append(try observation("notes.note", row, data))

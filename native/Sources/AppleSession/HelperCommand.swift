@@ -34,7 +34,7 @@ public enum HelperCommand {
             Task { @MainActor in
                 if !arguments.contains("--lab-commands") { _ = try? await MessagesSelfTest.shared.run() }
                 let messages = Messages(diagnostics: arguments.contains("--lab-commands") ? home.appendingPathComponent("messages-watch.json") : nil, labCommands: arguments.contains("--lab-commands"))
-                try? await peer.register(try NotesSource(home: home))
+                try? await peer.register(try NotesSource(home: home, trace: CaptureTrace(url: arguments.contains("--lab-commands") ? home.appendingPathComponent("capture-trace.jsonl") : nil)))
                 try? await peer.register(messages, readBlob: { handle, offset, length in
                     try await messages.readBlob(handle: handle, offset: offset, length: length)
                 })
