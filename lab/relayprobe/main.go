@@ -17,6 +17,8 @@ func main() {
 		err = fmt.Errorf("probe action required")
 	} else {
 		switch os.Args[1] {
+		case "contacts-crud":
+			err = contactsCRUD(ctx)
 		case "postburst":
 			err = postburst(ctx)
 		case "blob":

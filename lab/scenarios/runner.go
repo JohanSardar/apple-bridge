@@ -511,6 +511,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if strings.HasPrefix(s.ID, "NOTE-") {
 		return runNotes(ctx, s, level)
 	}
+	if s.ID == "CON-RELAY" {
+		return runRelayWorld(ctx, s, level, true)
+	}
 	if strings.HasPrefix(s.ID, "CON-") {
 		return runContacts(ctx, s, level)
 	}
@@ -1066,7 +1069,7 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		if level == "real" && (s.ID == "CORE-LIVE-LATENCY" || s.ID == "REM-CRUD") {
 			duration = 8 * time.Minute
 		}
-		if s.Feature == "web.relay" && level == "replica" {
+		if (s.Feature == "web.relay" || s.ID == "CON-RELAY") && level == "replica" {
 			duration = 5 * time.Minute
 		}
 		if s.ID == "WEB-RELAY-REPLICA" {

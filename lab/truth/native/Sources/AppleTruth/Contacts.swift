@@ -1,6 +1,7 @@
 import Foundation
 @preconcurrency import Contacts
 import CryptoKit
+import Darwin
 
 extension AppleTruth {
     @MainActor
@@ -20,7 +21,8 @@ extension AppleTruth {
         let initial = try read()
         let initialGroups = try store.groups(matching: nil).map(\.identifier).sorted()
         let initialContainers = try store.containers(matching: nil).map(\.identifier).sorted()
-        var effectAt = DispatchTime.now().uptimeNanoseconds
+        var effectAt = clock_gettime_nsec_np(CLOCK_UPTIME_RAW)
+        var effectWall = Date().timeIntervalSince1970 * 1_000_000_000
         func owned(_ contact: CNContact) -> Bool { contact.organizationName == "Bridge Test" && !tag.isEmpty && contact.givenName.hasPrefix(tag + " ") }
         if verb == "fixture" {
             guard tag.hasPrefix("[ab-test "), tag.hasSuffix("]"), tag.count > 11, !tag.contains("\n") else { return ["status": "unverified", "reason": "invalid_test_tag"] }
@@ -57,7 +59,8 @@ extension AppleTruth {
                 }
             }
             try store.execute(save)
-            effectAt = DispatchTime.now().uptimeNanoseconds
+            effectAt = clock_gettime_nsec_np(CLOCK_UPTIME_RAW)
+            effectWall = Date().timeIntervalSince1970 * 1_000_000_000
         } else if verb != "observe" { return ["status": "unverified", "reason": "invalid_verb"] }
         let all = try read()
         let tagged = all.filter(owned)
@@ -94,6 +97,6 @@ extension AppleTruth {
             }
         }
         let cleanupAudit: [String: Any] = ["selected_count": initial.filter(owned).count, "unowned_before_count": unownedBefore.count, "unowned_after_count": unownedAfter.count, "unowned_identifiers_before_sha256": digest(unownedBefore.map(\.identifier).sorted().joined(separator: "\n")), "unowned_identifiers_after_sha256": digest(unownedAfter.map(\.identifier).sorted().joined(separator: "\n")), "unowned_fields_unchanged": untouched, "groups_preserved": initialGroups == (try store.groups(matching: nil).map(\.identifier).sorted()), "containers_preserved": initialContainers == (try store.containers(matching: nil).map(\.identifier).sorted()), "whole_container_operations": 0]
-        return ["cleanup_audit": verb == "fixture" && action == "cleanup" ? cleanupAudit : [:], "status": "verified", "identifier_exists": all.contains { digest($0.identifier) == (request["identifier_hash"] as? String ?? "") }, "total_count": all.count, "bridge_test_count": all.filter { $0.organizationName == "Bridge Test" }.count, "tagged_count": tagged.count, "records": records, "coverage_counts": coverage, "groups": groups, "effect_uptime_ns": effectAt]
+        return ["cleanup_audit": verb == "fixture" && action == "cleanup" ? cleanupAudit : [:], "status": "verified", "identifier_exists": all.contains { digest($0.identifier) == (request["identifier_hash"] as? String ?? "") }, "total_count": all.count, "bridge_test_count": all.filter { $0.organizationName == "Bridge Test" }.count, "tagged_count": tagged.count, "records": records, "coverage_counts": coverage, "groups": groups, "effect_uptime_ns": effectAt, "effect_wall_ns": effectWall]
     }
 }

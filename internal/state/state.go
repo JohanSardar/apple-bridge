@@ -282,6 +282,7 @@ func (s *Store) CommitCapture(ctx context.Context, c contracts.Capture) (CommitR
 			}
 		}
 	}
+	refreshLinks := false
 	var contactHandles map[string]string
 	if c.Source == contracts.Messages && slices.ContainsFunc(c.Observations, func(o contracts.Observation) bool { return o.Kind == "upsert" && o.Collection == "messages.handle" }) {
 		contactHandles, err = contactIndex(ctx, tx)
@@ -364,6 +365,13 @@ func (s *Store) CommitCapture(ctx context.Context, c contracts.Capture) (CommitR
 		if o.Kind == "evict" {
 			record.TombstoneReason = "window_evicted"
 		}
+		if record.Collection == "contacts.contact" {
+			changed, problem := contactLinkChanged(old, record)
+			if problem != nil {
+				return result, problem
+			}
+			refreshLinks = refreshLinks || changed
+		}
 		encoded, err := json.Marshal(record)
 		if err != nil {
 			return result, err
@@ -386,7 +394,7 @@ func (s *Store) CommitCapture(ctx context.Context, c contracts.Capture) (CommitR
 			return result, err
 		}
 	}
-	if c.Source == contracts.Contacts {
+	if c.Source == contracts.Contacts && refreshLinks {
 		if err = refreshContactLinks(ctx, tx, &cursor); err != nil {
 			return result, err
 		}

@@ -1,14 +1,28 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[3.76 5.82 10.12] cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[6.86 16.53 22.02] cpu_idle=48% cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M58D2BR47C8F6VMCKXR23P0T",
+  "run_id": "run_01M5HXCBDFDS6TFY25SK0MAN0D",
+  "network_path": "loopback",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "contacts_effect_uptimes_ns": [],
+    "contacts_scan_counts": {
+      "bulk_capture_peak_in_flight": 0,
+      "contacts_scan_abandoned": 0,
+      "group_events_causing_full_contact_scan": 0,
+      "incremental_group_identifiers": 0,
+      "unchanged_history_publications": 0,
+      "unchanged_history_scans": 0
+    },
+    "contacts_stage_scope": "all scans recorded before World teardown"
+  },
   "scenario": "CON-EXTERNAL",
   "level": "sim",
   "passed": true,
-  "git_sha": "4f263fdf17b0f98019c10581b7d742880bb9b6af",
-  "at": "2026-10-18T21:00:48.772098Z",
+  "git_sha": "eff927d0f34f5cf264a9edbfbeb9be9fbe98f535",
+  "at": "2026-10-22T13:39:03.215819Z",
   "assertions": [
     {
       "name": "unified_contacts_imported",
@@ -134,7 +148,7 @@
       "name": "replica_records_versions_and_cursor_consistent",
       "passed": true,
       "status": "pass",
-      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+      "detail": "public records query, including versions and tombstones, matched at one full cursor at or beyond the starting watermark"
     },
     {
       "name": "replica_application_exactly_once",
@@ -150,16 +164,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 20,
-      "p50_ms": 18.246917,
-      "p95_ms": 21.687,
-      "max_ms": 22.8635,
+      "p50_ms": 15.847709,
+      "p95_ms": 34.866375,
+      "max_ms": 38.028417,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 20,
-      "p50_ms": 23.488291,
-      "p95_ms": 25.870458,
-      "max_ms": 26.234625,
+      "p50_ms": 23.76,
+      "p95_ms": 39.470583,
+      "max_ms": 41.750584,
       "timeouts": 0
     }
   },

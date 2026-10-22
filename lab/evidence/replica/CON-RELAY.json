@@ -1,0 +1,48 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[5.53 6.87 7.49] cpus=8 other_heavy=0; ubuntu: load=[] cpus=0 other_heavy=0"
+  },
+  "run_id": "relay_01M5G4M2EMJFWT8MJMRKMNYMSX",
+  "network_path": "public Funnel; pinned public DNS through CONNECT egress; no peer or SSH tunnel",
+  "scenario": "CON-RELAY",
+  "level": "replica",
+  "passed": false,
+  "git_sha": "9f0bedf1293a124a7fbe2191b16314308fb0a7a9",
+  "at": "2026-10-21T21:07:07.348545Z",
+  "assertions": [
+    {
+      "name": "serve_config_before",
+      "passed": true
+    },
+    {
+      "name": "isolated_gateway",
+      "passed": true
+    },
+    {
+      "name": "signed_native_helper_contacts_capture_ready",
+      "passed": true
+    },
+    {
+      "name": "remote_on_system",
+      "passed": false
+    },
+    {
+      "name": "remote_off",
+      "passed": true
+    },
+    {
+      "name": "serve_config_byte_identical_after_off",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air",
+    "ubuntu"
+  ]
+}

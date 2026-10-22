@@ -15,8 +15,9 @@ import (
 )
 
 type effect struct {
-	Title  string `json:"title"`
-	WallNS int64  `json:"wall_ns"`
+	Title         string `json:"title"`
+	WallNS        int64  `json:"wall_ns"`
+	StartedWallNS int64  `json:"started_wall_ns,omitempty"`
 }
 
 func live(ctx context.Context) error {
@@ -25,10 +26,14 @@ func live(ctx context.Context) error {
 	decoder := json.NewDecoder(os.Stdin)
 	var in struct {
 		input
+		Field  string
 		Prefix string
 	}
 	if err := decoder.Decode(&in); err != nil {
 		return err
+	}
+	if in.Field == "" {
+		in.Field = "title"
 	}
 	var head contracts.ReadResult
 	if err := request(ctx, in.input, "records.query", contracts.ReadQuery{Limit: 1}, &head); err != nil {
@@ -79,11 +84,16 @@ func live(ctx context.Context) error {
 			}
 			mu.Lock()
 			for _, change := range batch.Changes {
-				var data struct {
-					Title string `json:"title"`
+				var data map[string]any
+				if in.Collection != "" && change.Record.Collection != in.Collection {
+					continue
 				}
-				if json.Unmarshal(change.Record.Data, &data) == nil && strings.HasPrefix(data.Title, in.Prefix) && seen[data.Title] == 0 {
-					seen[data.Title] = at
+				if json.Unmarshal(change.Record.Data, &data) != nil {
+					continue
+				}
+				value, ok := data[in.Field].(string)
+				if ok && strings.HasPrefix(value, in.Prefix) && seen[value] == 0 {
+					seen[value] = at
 				}
 			}
 			mu.Unlock()
@@ -107,7 +117,8 @@ func live(ctx context.Context) error {
 		for _, effect := range effects {
 			if at := seen[effect.Title]; at != 0 {
 				latency := time.Duration(at-effect.WallNS) + offset
-				if effect.WallNS <= 0 || latency < -uncertainty {
+				beforeSave := effect.StartedWallNS > 0 && effect.StartedWallNS <= effect.WallNS && at+int64(offset) >= effect.StartedWallNS-int64(uncertainty)
+				if effect.WallNS <= 0 || latency < -uncertainty && !beforeSave {
 					mu.Unlock()
 					return fmt.Errorf("clock agreement failed")
 				}

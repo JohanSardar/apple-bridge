@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"slices"
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
@@ -54,6 +55,28 @@ func linkedHandleData(raw json.RawMessage, index map[string]string) (json.RawMes
 		fields["contact_id"], _ = json.Marshal(id)
 	}
 	return json.Marshal(fields)
+}
+
+func contactLinkHandles(record contracts.Record) ([]string, error) {
+	if record.ID == "" || record.Deleted {
+		return nil, nil
+	}
+	var data map[string]any
+	if json.Unmarshal(record.Data, &data) != nil {
+		return nil, contracts.ErrCorrupt
+	}
+	handles := contracts.ContactHandles(data)
+	slices.Sort(handles)
+	return slices.Compact(handles), nil
+}
+
+func contactLinkChanged(before, after contracts.Record) (bool, error) {
+	previous, err := contactLinkHandles(before)
+	if err != nil {
+		return false, err
+	}
+	current, err := contactLinkHandles(after)
+	return !slices.Equal(previous, current), err
 }
 
 func refreshContactLinks(ctx context.Context, tx *sql.Tx, cursor *contracts.Cursor) error {

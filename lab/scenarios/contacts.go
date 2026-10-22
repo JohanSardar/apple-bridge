@@ -33,40 +33,37 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 	}
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
 	fail := func(name string) Evidence { add(name, false); return e }
+	observers := []*watcher{}
+	visibilityObservers := []*watcher{}
+	effects := []contactsEffect{}
 	native := level == "real" || level == "replica"
-	w, err := world.NewContacts(ctx, level, 1, native, s.ID == "CON-HANDLE-LINK")
+	setup := world.NativeSetup{}
+	if native && os.Getenv("APPLE_BRIDGE_LAB_PAUSE_MEDIA") == "1" {
+		setup.BeforeStart = func(w *world.World) error {
+			home := filepath.Join(w.Dir, "gateway", "helper")
+			if err := os.MkdirAll(home, 0700); err != nil {
+				return err
+			}
+			return os.WriteFile(filepath.Join(home, "lab-pause-media"), []byte("paused"), 0600)
+		}
+	}
+	w, err := world.NewContacts(ctx, level, 1, native, s.ID == "CON-HANDLE-LINK", setup)
 	if err != nil {
 		return fail("world_start")
 	}
+	e.NetworkPath = w.NetworkPath
 	defer w.Close()
-	defer func() {
-		bytes, err := os.ReadFile(filepath.Join(w.Gateway.Home, "helper", "capture-trace.jsonl"))
-		if err != nil {
-			return
-		}
-		events := []map[string]any{}
-		for _, line := range strings.Split(string(bytes), "\n") {
-			var event map[string]any
-			if json.Unmarshal([]byte(line), &event) == nil {
-				stage, _ := event["stage"].(string)
-				if strings.HasPrefix(stage, "contacts_") {
-					events = append(events, map[string]any{"stage": stage, "uptime_ns": event["uptime_ns"]})
-				}
-			}
-		}
-		if result.Metrics == nil {
-			result.Metrics = map[string]any{}
-		}
-		result.Metrics["contacts_capture_phases"] = events
-	}()
+	defer func() { contactsLatencyEvidence(w, &result, visibilityObservers, effects) }()
 	tag := "[ab-test " + contracts.NewID("contacts") + "]"
 	synthetic := map[string]any{"given_name": tag + " Testperson", "family_name": "Testfamily", "organization": "Bridge Test", "job_title": "Testjob", "phones": []any{map[string]any{"label": "mobile", "value": "+15555550123"}}, "emails": []any{map[string]any{"label": "home", "value": "bridge-test@example.com"}}}
 	truth := func() (map[string]any, error) {
 		return w.Truth("observe", map[string]any{"source": "contacts", "tag": tag})
 	}
 	lastEffect := int64(0)
+	lastEffectStarted := int64(0)
 	fixture := func(action string, fields map[string]any) error {
 		lastEffect = world.UptimeNS()
+		lastEffectStarted = lastEffect
 		if native {
 			fields["source"] = "contacts"
 			fields["tag"] = tag
@@ -74,6 +71,20 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 			response, err := w.Truth("fixture", fields)
 			if value, ok := response["effect_uptime_ns"].(json.Number); ok {
 				lastEffect, _ = value.Int64()
+				if action == "modify" {
+					effects = append(effects, contactsEffect{At: lastEffect})
+				}
+			}
+			if err == nil && action == "modify" {
+				records, _ := response["records"].([]any)
+				persisted := len(records) == 1
+				if persisted {
+					fieldsAfter, _ := records[0].(map[string]any)
+					persisted = fieldsAfter["job_title"] == fields["job_title"]
+				}
+				if !persisted {
+					return fmt.Errorf("native fixture did not retain requested job title")
+				}
 			}
 			return err
 		}
@@ -137,7 +148,6 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 	}
 	add("unified_contacts_imported", true)
 	endpoints := append([]world.Endpoint{w.Gateway}, w.Replicas...)
-	observers := []*watcher{}
 	for _, endpoint := range endpoints {
 		observer, err := watch(ctx, endpoint, false, func(record contracts.Record) bool {
 			if record.Collection != "contacts.contact" {
@@ -169,6 +179,15 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 		}
 		defer observer.close()
 		observers = append(observers, observer)
+		visibility := observer
+		if native && s.ID == "CON-CRUD" {
+			visibility, err = watch(ctx, endpoint, false, func(contracts.Record) bool { return true })
+			if err != nil {
+				return fail("visibility_observer")
+			}
+			defer visibility.close()
+		}
+		visibilityObservers = append(visibilityObservers, visibility)
 	}
 	submit := func(protocol, operation string, args map[string]any, version uint64) (contracts.CommandRecord, error) {
 		_, err := w.Cursor(w.Gateway)
@@ -296,13 +315,23 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 			effect := lastEffect
 			for i, observer := range observers {
 				if w.Await(3*time.Second, func() bool { _, ok := observer.observedContact(tag, value); return ok }) != nil {
+					contactsVisibilityFailure(ctx, w, e.RunID, tag, value, observers)
 					return fail("external_visible")
 				}
 				seen, ok := observer.observedContact(tag, value)
-				if !ok || effect <= 0 || seen.UptimeNS < effect {
+				if !ok || effect < lastEffectStarted || effect > world.UptimeNS() || seen.UptimeNS < lastEffectStarted {
 					return fail("monotonic_clock_agreement")
 				}
-				values[i] = append(values[i], float64(seen.UptimeNS-effect)/float64(time.Millisecond))
+				elapsed := float64(seen.UptimeNS-effect) / float64(time.Millisecond)
+				if elapsed < 0 {
+					if e.Metrics == nil {
+						e.Metrics = map[string]any{}
+					}
+					name := fmt.Sprintf("contacts_visible_before_save_return_ms_endpoint%d", i)
+					earlier, _ := e.Metrics[name].([]float64)
+					e.Metrics[name] = append(earlier, -elapsed)
+				}
+				values[i] = append(values[i], max(0, elapsed))
 			}
 			add("bounded_fixture_execution", time.Since(started) < 10*time.Second)
 		}
@@ -338,6 +367,10 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 				}
 				command, err = submit(protocol, operation, args, record.Version)
 				if err != nil || command.Disposition != "locally_observed" || command.CommitSeq == 0 {
+					if e.Metrics == nil {
+						e.Metrics = map[string]any{}
+					}
+					e.Metrics["contacts_command_failure"] = map[string]any{"operation": operation, "protocol": protocol, "error_type": fmt.Sprintf("%T", err), "disposition": command.Disposition, "state": command.State}
 					return fail(protocol + "_" + operation)
 				}
 				add(protocol+"_"+operation, true)
@@ -625,6 +658,34 @@ func runContacts(ctx context.Context, s Scenario, level string) (result Evidence
 				}
 				return false
 			}
+			beforeHandles := map[string]uint64{}
+			beforeRecords, problem := contactRecords(ctx, w, w.Gateway)
+			for _, record := range beforeRecords {
+				if record.Collection == "messages.handle" {
+					beforeHandles[record.ID] = record.Version
+				}
+			}
+			if problem != nil || len(beforeHandles) == 0 || fixture("modify", map[string]any{"job_title": "Link unchanged"}) != nil {
+				return fail("non_handle_contact_edit_fixture")
+			}
+			add("non_handle_edit_preserves_links_and_versions", w.Await(5*time.Second, func() bool {
+				contact, ok := find(w.Gateway)
+				var fields map[string]any
+				json.Unmarshal(contact.Data, &fields)
+				if !ok || fields["job_title"] != "Link unchanged" || !linked() {
+					return false
+				}
+				records, problem := contactRecords(ctx, w, w.Gateway)
+				if problem != nil {
+					return false
+				}
+				for _, record := range records {
+					if record.Collection == "messages.handle" && beforeHandles[record.ID] != record.Version {
+						return false
+					}
+				}
+				return true
+			}) == nil)
 			if fixture("modify", map[string]any{"phones": []any{}, "emails": []any{}}) != nil {
 				return fail("contact_handles_removed")
 			}
