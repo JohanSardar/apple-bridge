@@ -419,10 +419,19 @@ func (f *fakeApple) calendarCommand(wire *applepeer.Wire, frame contracts.IPCFra
 		}
 	}
 	newSeries := contracts.NewID("series")
-	if a.Span == "future" && series != "" && a.Recurrence != nil && t.Action.Op == "calendar.update_event" {
+	if a.Span == "future" && series != "" && a.Recurrence != nil && (t.Action.Op == "calendar.update_event" || t.Action.Op == "calendar.create_event") {
 		base := calendarData(target)
 		for k, v := range patch {
 			base[k] = v
+		}
+		if f.fault == "calendar-rule-mismatch" {
+			f.fault = ""
+			var rules []map[string]any
+			encoded, _ := json.Marshal(base["recurrence"])
+			if json.Unmarshal(encoded, &rules) == nil && len(rules) > 0 {
+				rules[0]["count"] = 1
+				base["recurrence"] = []any{rules[0]}
+			}
 		}
 		base["is_exception"] = false
 		expanded, err := expandCalendar(calendarObservation(newSeries, collection, base), f.calendarScope(t.Action.ListKey))
@@ -449,8 +458,6 @@ func (f *fakeApple) calendarCommand(wire *applepeer.Wire, frame contracts.IPCFra
 					oldValue["recurrence"] = base["recurrence"]
 					next.Data, _ = json.Marshal(oldValue)
 				}
-				next.NativeKey = old.NativeKey
-				next.ScopedAlias = old.ScopedAlias
 				used[occurrence] = true
 			}
 			f.records[next.NativeKey] = next
@@ -461,8 +468,13 @@ func (f *fakeApple) calendarCommand(wire *applepeer.Wire, frame contracts.IPCFra
 		for occurrence, old := range prior {
 			value := calendarData(old)
 			if !used[occurrence] && value["is_exception"] == true {
-				value["series_id"] = newSeries
-				value["recurrence"] = base["recurrence"]
+				delete(value, "series_id")
+				delete(value, "occurrence_date")
+				value["recurrence"] = []any{}
+				value["is_exception"] = false
+				old.NativeKey = contracts.NewID("event")
+				old.ScopedAlias = f.calendarScope(t.Action.ListKey) + old.NativeKey
+				old.Revalidated = false
 				old.Data, _ = json.Marshal(value)
 				old.Kind = "upsert"
 				old.ObservedAt = time.Now().UTC()
@@ -592,8 +604,28 @@ func (f *fakeApple) calendarCommand(wire *applepeer.Wire, frame contracts.IPCFra
 			return err
 		}
 	}
-	evidence, _ := json.Marshal(map[string]any{"native_key": native, "fingerprint": t.Hash, "observed": true, "capture_checkpoint": checkpoint(contracts.Calendar), "absent": strings.HasSuffix(t.Action.Op, "delete_event")})
-	outcome := contracts.IPCFrame{T: "Outcome", CommandID: t.CommandID, Disposition: "locally_observed", Evidence: evidence}
+	actual := calendarData(primary)
+	matched := true
+	if a.Recurrence != nil && (t.Action.Op == "calendar.update_event" || t.Action.Op == "calendar.create_event") {
+		encoded, _ := json.Marshal(actual["recurrence"])
+		var rules []contracts.CalendarRecurrence
+		matched = json.Unmarshal(encoded, &rules) == nil && len(rules) == len(*a.Recurrence) && (len(rules) == 0 || reflect.DeepEqual(rules, *a.Recurrence))
+	}
+	absent := strings.HasSuffix(t.Action.Op, "delete_event")
+	var nativeResult any = actual
+	if absent {
+		nativeResult = nil
+	}
+	values := map[string]any{"native_key": native, "native_result": nativeResult, "fingerprint": t.Hash, "observed": matched, "absent": absent}
+	disposition := contracts.Disposition("locally_observed")
+	if matched {
+		values["capture_checkpoint"] = checkpoint(contracts.Calendar)
+	} else {
+		disposition = "indeterminate"
+		values["reason"] = "native_postcondition_mismatch"
+	}
+	evidence, _ := json.Marshal(values)
+	outcome := contracts.IPCFrame{T: "Outcome", CommandID: t.CommandID, Disposition: disposition, Evidence: evidence}
 	f.mu.Lock()
 	f.evidence[t.CommandID] = outcome
 	err = f.saveLocked()

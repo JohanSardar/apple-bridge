@@ -427,6 +427,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if level == "web" {
 		return runWeb(ctx, s)
 	}
+	if s.ID == "WEB-CAL-WRITE" && (level == "sim" || level == "real") {
+		return runCalendarScenario(ctx, s, level)
+	}
 	if s.ID == "WEB-REM-WRITE" && level == "real" {
 		return runRemindersWriteReal(ctx, s, level)
 	}
@@ -1100,7 +1103,7 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		if level == "real" && (s.Feature == "messages.actions" || s.Feature == "messages.groups" || s.Feature == "web.media") {
 			duration = 8 * time.Minute
 		}
-		if strings.HasPrefix(s.ID, "CAL-") && level != "sim" {
+		if (strings.HasPrefix(s.ID, "CAL-") || s.ID == "WEB-CAL-WRITE") && level != "sim" {
 			duration = 6 * time.Minute
 		}
 		if s.ID == "CORE-BENCH" {

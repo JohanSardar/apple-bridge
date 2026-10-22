@@ -24,7 +24,7 @@ func runCalendarScenario(ctx context.Context, s Scenario, level string) Evidence
 	if s.ID == "CAL-STORE-READ" {
 		return runCalendarStore(ctx, s, level)
 	}
-	if s.ID == "CAL-INVALIDATED-EVENT" || s.ID == "CAL-HINT-COVERAGE" {
+	if s.ID == "CAL-FUTURE-COUNT-MATH" || s.ID == "CAL-INVALIDATED-EVENT" || s.ID == "CAL-HINT-COVERAGE" {
 		return runCalendarInvalidation(ctx, s, level)
 	}
 	if s.ID == "CAL-STAMP-FIELDS" {
@@ -38,11 +38,21 @@ func runCalendarScenario(ctx context.Context, s Scenario, level string) Evidence
 	}
 	scenarioID := s.ID
 	switch s.ID {
+	case "WEB-CAL-WRITE":
+		s.ID = "CAL-CRUD"
 	case "CAL-SPLIT-ATOMIC-ALLDAY":
 		s.ID = "CAL-ALLDAY-FUTURE"
+	case "CAL-SPLIT-ATOMIC-TIMED":
+		s.ID = "CAL-RECUR-FUTURE"
 	}
 	e := runCalendarProtocol(ctx, s, level, "rest")
 	e.Scenario = scenarioID
+	if scenarioID == "WEB-CAL-WRITE" {
+		if e.Metrics == nil {
+			e.Metrics = map[string]any{}
+		}
+		e.Metrics["browser_proof"] = "WEB-CAL-WRITE web covers trusted gestures; this level independently verifies the Calendar write contract and tagged cleanup"
+	}
 	if s.ID == "CAL-CRUD" && e.Passed {
 		m := runCalendarProtocol(ctx, s, level, "mcp")
 		e.Conditions["mcp_run_id"] = m.RunID
@@ -443,7 +453,7 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		start, end = "2026-11-01", "2026-11-03"
 	}
 	event := map[string]any{"title": title, "start": start, "end": end, "all_day": allDay, "time_zone": "America/New_York"}
-	recurring := s.ID == "CAL-RECUR-THIS" || s.ID == "CAL-RECUR-FUTURE" || s.ID == "CAL-MOVED-OCCURRENCE" || s.ID == "CAL-MOVED-OUTSIDE-WINDOW" || s.ID == "CAL-ALLDAY-FUTURE" || s.ID == "CAL-EXCEPTION-INITIAL-CAPTURE" || s.ID == "CAL-SPLIT-FRAME-CAP"
+	recurring := s.ID == "CAL-RECUR-THIS" || s.ID == "CAL-RECUR-FUTURE" || s.ID == "CAL-FUTURE-RULE-MISMATCH" || s.ID == "CAL-MOVED-OCCURRENCE" || s.ID == "CAL-MOVED-OUTSIDE-WINDOW" || s.ID == "CAL-ALLDAY-FUTURE" || s.ID == "CAL-EXCEPTION-INITIAL-CAPTURE" || s.ID == "CAL-SPLIT-FRAME-CAP"
 	if recurring {
 		event["recurrence"] = []any{map[string]any{"frequency": "daily", "interval": 1, "count": 3}}
 		if s.ID == "CAL-SPLIT-FRAME-CAP" {
@@ -766,6 +776,25 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		add("future_split_replaces_occurrence_identities", identities)
 		add("future_split_atomic_on_gateway_and_replica", finishSplit())
 		finishSplit = nil
+	case "CAL-FUTURE-RULE-MISMATCH":
+		add("mismatch_fault_set", w.ControlAction("/fault", map[string]any{"name": "calendar-rule-mismatch"}) == nil)
+		target := baseline[1]
+		err = submit("calendar.update_event", map[string]any{"id": target.ID, "span": "future", "title": tag + " native mismatch", "recurrence": []any{map[string]any{"frequency": "daily", "interval": 2, "count": 2}}}, target.Version)
+		var evidence struct {
+			Observed     bool   `json:"observed"`
+			Reason       string `json:"reason"`
+			NativeResult struct {
+				Title      string                         `json:"title"`
+				Recurrence []contracts.CalendarRecurrence `json:"recurrence"`
+			} `json:"native_result"`
+		}
+		decoded := json.Unmarshal(last.Evidence, &evidence) == nil
+		add("mismatch_is_indeterminate_after_effect", err != nil && last.Disposition == "indeterminate" && evidence.Reason == "native_postcondition_mismatch")
+		rules := evidence.NativeResult.Recurrence
+		add("mismatch_reports_actual_native_rule", decoded && !evidence.Observed && evidence.NativeResult.Title == tag+" native mismatch" && len(rules) == 1 && rules[0].Count == 1 && rules[0].Interval == 2)
+		effects, effectErr := w.Effects()
+		add("mismatch_never_retries_or_writes_twice", effectErr == nil && effects[last.Command.ID] == 1)
+		add("mismatch_never_claims_observed", last.CommitSeq == 0 && len(last.ObservedRecordIDs) == 0)
 	case "CAL-RECUR-FUTURE":
 		exception := baseline[2]
 		if err = submit("calendar.update_event", map[string]any{"id": exception.ID, "span": "this", "title": tag + " preserved exception"}, exception.Version); err != nil {
@@ -791,29 +820,54 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		if err = submit("calendar.update_event", map[string]any{"id": target.ID, "span": "future", "title": tag + " future", "recurrence": []any{map[string]any{"frequency": "daily", "interval": 2, "count": 2}}}, target.Version); err != nil {
 			return fail("future_update", err)
 		}
+		if level != "sim" {
+			var evidence struct {
+				NativeResult struct {
+					Start      string                         `json:"start"`
+					Recurrence []contracts.CalendarRecurrence `json:"recurrence"`
+				} `json:"native_result"`
+			}
+			decoded := json.Unmarshal(last.Evidence, &evidence) == nil
+			rule := evidence.NativeResult.Recurrence
+			add("native_result_reports_date_ended_rule", decoded && len(rule) == 1 && rule[0].Count == 0 && rule[0].Interval == 2 && sameCalendarTime(rule[0].Until, "2026-11-04T06:30:00Z") && sameCalendarTime(evidence.NativeResult.Start, "2026-11-02T06:30:00Z"))
+		}
 		add("new_rule_regenerates_occurrences", awaitCount(4))
 		after := records(w.Gateway)
-		preserved, generated := false, false
+		preserved, generated, identities := false, false, len(after) == 4
 		for _, r := range after {
 			d := raw(r)
-			preserved = preserved || (recordTitle(r) == tag+" preserved exception" && d["is_exception"] == true && sameCalendarTime(d["start"], raw(exception)["start"]))
+			preserved = preserved || (recordTitle(r) == tag+" preserved exception" && d["is_exception"] == false && d["series_id"] == nil && d["occurrence_date"] == nil && r.ID != exception.ID && sameCalendarTime(d["start"], raw(exception)["start"]))
+			if recordTitle(r) == title {
+				identities = identities && r.ID == baseline[0].ID
+			} else {
+				for _, old := range baseline[1:] {
+					identities = identities && r.ID != old.ID
+				}
+			}
 			generated = generated || (recordTitle(r) == tag+" future" && sameCalendarTime(d["start"], "2026-11-04T06:30:00Z"))
 		}
-		add("future_split_preserves_exception", preserved)
+		add("future_split_preserves_exception_as_new_standalone", preserved)
+		add("future_split_replaces_occurrence_identities", identities)
 		add("future_rule_changes_dates", generated)
 		series := map[string]bool{}
 		for _, r := range after {
-			series[fmt.Sprint(raw(r)["series_id"])] = true
+			if value, ok := raw(r)["series_id"].(string); ok && value != "" {
+				series[value] = true
+			}
 		}
 		add("future_span_splits_series", len(series) == 2)
 		add("future_split_atomic_on_gateway_and_replica", finishSplit())
 		finishSplit = nil
-		if len(after) >= 2 {
-			target = after[1]
+		for _, candidate := range after {
+			if recordTitle(candidate) != tag+" future" {
+				continue
+			}
+			target = candidate
 			if err = submit("calendar.delete_event", map[string]any{"id": target.ID, "span": "future"}, target.Version); err != nil {
 				return fail("delete_future", err)
 			}
-			add("delete_future_preserves_past", awaitCount(1) && recordTitle(records(w.Gateway)[0]) == title)
+			add("delete_future_preserves_past_and_standalone", awaitCount(2) && recordTitle(records(w.Gateway)[0]) == title && recordTitle(records(w.Gateway)[1]) == tag+" preserved exception")
+			break
 		}
 	case "CAL-RECUR-ALL-REJECT":
 		target := baseline[0]
@@ -1070,6 +1124,9 @@ func calendarTruthEqual(truth, actual map[string]any) bool {
 	actualZone, _ := actual["time_zone"].(string)
 	if expectedZone != actualZone {
 		return false
+	}
+	if truth["recurring"] != true && truth["is_exception"] != true {
+		return actual["series_id"] == nil && actual["occurrence_date"] == nil
 	}
 	if actual["occurrence_date"] != nil {
 		series := truth["series_id"]

@@ -1,0 +1,12 @@
+id: WEB-CAL-NAVIGATE
+feature: web.calendar
+levels: [web]
+given: [{world: {replicas: 0}}]
+when: [{calendar_journey: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]
+web:
+  browsers: [webkit, chromium, firefox]
+  themes: [light, dark]
+  layouts: [phone, desktop]
+  server: gateway

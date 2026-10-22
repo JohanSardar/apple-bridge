@@ -177,7 +177,8 @@ struct CalendarTruth {
                 event.startDate = try date(request["start"] as? String ?? "", allDay: allDay, zone: allDay ? .current : (event.timeZone ?? .current))
                 event.endDate = try date(request["end"] as? String ?? "", allDay: allDay, zone: allDay ? .current : (event.timeZone ?? .current))
                 if let recurrence = request["recurrence"] as? [[String: Any]], let rule = recurrence.first {
-                    let frequency: EKRecurrenceFrequency = rule["frequency"] as? String == "weekly" ? .weekly : .daily
+                    let frequencies: [String: EKRecurrenceFrequency] = ["daily": .daily, "weekly": .weekly, "monthly": .monthly, "yearly": .yearly]
+                    guard let frequency = frequencies[rule["frequency"] as? String ?? ""] else { throw TruthFailure.invalid }
                     event.addRecurrenceRule(EKRecurrenceRule(recurrenceWith: frequency, interval: rule["interval"] as? Int ?? 1, end: EKRecurrenceEnd(occurrenceCount: rule["count"] as? Int ?? 3)))
                 }
                 try store.save(event, span: .thisEvent, commit: true)

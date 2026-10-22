@@ -46,4 +46,40 @@ public enum CalendarTime {
     public static func identity(_ identifier: String, occurrence: Date?, floatingZone: TimeZone? = nil) -> String {
         identifier + (occurrence.map { date in "|" + (floatingZone.map { zone in floating(date, zone: zone) } ?? timestamp(date)) } ?? "")
     }
+
+    public static func recurrenceEnd(start: Date, frequency: String, interval: Int, count: Int, zone: TimeZone) throws -> Date {
+        guard interval > 0, count > 0 else { throw SourceFailure.invalid }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = zone
+        let component: Calendar.Component
+        let multiplier: Int
+        switch frequency {
+        case "daily": component = .day; multiplier = 1
+        case "weekly": component = .day; multiplier = 7
+        case "monthly": component = .month; multiplier = 1
+        case "yearly": component = .year; multiplier = 1
+        default: throw SourceFailure.invalid
+        }
+        let (stride, strideOverflow) = interval.multipliedReportingOverflow(by: multiplier)
+        guard !strideOverflow else { throw SourceFailure.invalid }
+        if component == .day {
+            let (offset, overflow) = stride.multipliedReportingOverflow(by: count - 1)
+            guard !overflow, let result = calendar.date(byAdding: component, value: offset, to: start) else { throw SourceFailure.invalid }
+            return result
+        }
+        let original = calendar.dateComponents([.month, .day], from: start)
+        var occurrence = 1, step = 0, result = start
+        while occurrence < count {
+            guard step < 100000 else { throw SourceFailure.invalid }
+            let (next, stepOverflow) = step.addingReportingOverflow(1)
+            let (offset, offsetOverflow) = stride.multipliedReportingOverflow(by: next)
+            guard !stepOverflow, !offsetOverflow, let candidate = calendar.date(byAdding: component, value: offset, to: start), candidate > result else { throw SourceFailure.invalid }
+            step = next
+            let civil = calendar.dateComponents([.month, .day], from: candidate)
+            if civil.day != original.day || component == .year && civil.month != original.month { continue }
+            result = candidate
+            occurrence += 1
+        }
+        return result
+    }
 }

@@ -1,0 +1,7 @@
+id: CAL-FUTURE-COUNT-MATH
+feature: web.calendar
+levels: [sim]
+given: [{world: {replicas: 1}}]
+when: [{calendar_journey: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]
