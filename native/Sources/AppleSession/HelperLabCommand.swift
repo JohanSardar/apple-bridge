@@ -113,6 +113,17 @@ enum HelperLabCommand {
             try JSONEncoder().encode(proof).write(to: reportURL, options: .atomic)
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportURL.path)
             return true
+        case "calendar-parity-probe":
+            let reportURL = try report(arguments)
+            var result: Result<JSON, any Error>?
+            Task { @MainActor in
+                do { result = .success(try await CalendarParityProbe.run()) }
+                catch { result = .failure(error) }
+            }
+            while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.005)) }
+            try JSONEncoder().encode(try result!.get()).write(to: reportURL, options: .atomic)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportURL.path)
+            return true
         case "notes-probe":
             let reportURL = try report(arguments)
             var error: NSDictionary?
