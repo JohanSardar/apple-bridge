@@ -3,48 +3,14 @@ import AppKit
 import Darwin
 import MessagesSource
 import NotesSource
-import RemindersStore
 import SourceSupport
 
 public enum HelperCommand {
     @MainActor
     public static func run(_ arguments: [String]) throws {
-        if arguments.first == "media-cleanup-checks" {
-            guard let index = arguments.firstIndex(of: "--fixtures"), index + 1 < arguments.count else { throw ProbeFailure.invalidArguments }
-            let fixture = try JSONDecoder().decode(JSON.self, from: Data(contentsOf: URL(fileURLWithPath: arguments[index + 1])))
-            let proof = try MessagesMediaCleanupProof(registration: fixture["registration"], tag: fixture["tag"].string)
-            let row = fixture["row"]
-            guard let rowID = Int64(exactly: row["row_id"].number) else { throw ProbeFailure.invalidArguments }
-            let authorized = proof.authorizes(rowID: rowID, attachments: row["attachments"].array.map(\.string), peers: row["peers"].array.map(\.string), own: Set(fixture["own"].array.map { MessagesProbes.normalize($0.string) }))
-            let target = MessagesMediaCleanupProof.targetIndex(fixture["candidates"].array, names: Set(proof.targetNames(row["attachments"].array.map(\.string))), outgoing: row["is_from_me"].bool)
-            let result = JSON.object(["authorized": .bool(authorized), "target_verified": .bool(authorized && target != nil)])
-            print(String(decoding: try JSONEncoder().encode(result), as: UTF8.self))
-            return
-        }
-        if arguments.first == "wire-checks" {
-            guard let index = arguments.firstIndex(of: "--fixtures"), index + 1 < arguments.count else { throw ProbeFailure.invalidArguments }
-            let frames = try JSONDecoder().decode([JSON].self, from: Data(contentsOf: URL(fileURLWithPath: arguments[index + 1])))
-            for frame in frames {
-                let bytes = try PeerWire.encode(frame)
-                let decoded = try JSONDecoder().decode(JSON.self, from: bytes.dropFirst(4))
-                guard decoded == frame else { throw ProbeFailure.invalidArguments }
-                switch frame["t"].string {
-                case "Open": guard frame["protocol"].string == "ipc/1", frame["owner_fence"].number > 0 else { throw ProbeFailure.invalidArguments }
-                case "Prepare":
-                    _ = try CommandOrigin(frame)
-                    guard !frame["command_id"].string.isEmpty, parseTimestamp(frame["expires_at"].string) != nil else { throw ProbeFailure.invalidArguments }
-                case "Dispatch": guard !frame["command_id"].string.isEmpty, !frame["ticket"].string.isEmpty, frame["owner_fence"].unsigned > 0 else { throw ProbeFailure.invalidArguments }
-                case "Outcome": if frame["disposition"].string == "locally_observed" {
-                    let evidence = frame["evidence"]
-                    guard !evidence["fingerprint"].string.isEmpty, !evidence["capture_checkpoint"].string.isEmpty, !evidence["native_key"].string.isEmpty, evidence["observed"].bool else { throw ProbeFailure.invalidArguments }
-                }
-                case "Capture": guard !frame["generation"].string.isEmpty, !frame["checkpoint"].string.isEmpty else { throw ProbeFailure.invalidArguments }
-                default: break
-                }
-            }
-            print("wire fixtures: \(frames.count) decoded")
-            return
-        }
+        #if LAB
+        if try HelperLabCommand.run(arguments) { return }
+        #endif
         if arguments.first == "session" {
             func option(_ key: String) throws -> String {
                 guard let index = arguments.firstIndex(of: key), index + 1 < arguments.count else { throw ProbeFailure.invalidArguments }
@@ -77,6 +43,7 @@ public enum HelperCommand {
             while !finished { RunLoop.current.run(until: Date().addingTimeInterval(0.05)) }
             return
         }
+        guard let command = arguments.first, ["selftest", "status", "onboard"].contains(command) else { throw HelperCommandFailure.unknownCommand }
         guard let reportIndex = arguments.firstIndex(of: "--report"), reportIndex + 1 < arguments.count else { throw ProbeFailure.invalidArguments }
         let reportURL = try PrivateReport.validate(arguments[reportIndex + 1])
         if arguments.first == "selftest", arguments.dropFirst().first == "messages" {
@@ -94,109 +61,6 @@ public enum HelperCommand {
                 finished = true
             }
             while !finished { RunLoop.current.run(until: Date().addingTimeInterval(0.05)) }
-            return
-        }
-        if arguments.first == "reminders-store-profile" {
-            var result: Result<JSON, any Error>?
-            var stage = "cold_responsiveness"
-            Task { @MainActor in
-                do {
-                    let responsiveness = try await RemindersStoreResponsiveness.run()
-                    stage = "warm_profile"
-                    var profile = try await RemindersStoreProfile.typed().object
-                    profile["responsiveness"] = responsiveness
-                    result = .success(.object(profile))
-                }
-                catch { result = .failure(error) }
-            }
-            while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.005)) }
-            let profile: JSON
-            do { profile = try result!.get() }
-            catch {
-                let failure = error as NSError
-                let reason = error is SourceFailure ? String(describing: error) : failure.domain + ":" + String(failure.code)
-                try PrivateReport.write(["status": "unavailable", "stage": stage, "reason": reason], to: reportURL)
-                throw error
-            }
-            try JSONEncoder().encode(profile).write(to: reportURL, options: .atomic)
-            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportURL.path)
-            return
-        }
-        if arguments.first == "reminders-store-flag-proof" {
-            func option(_ key: String) throws -> String {
-                guard let index = arguments.firstIndex(of: key), index + 1 < arguments.count else { throw ProbeFailure.invalidArguments }
-                return arguments[index + 1]
-            }
-            let tag = try option("--tag"), item = try option("--item-id"), list = try option("--list-id")
-            var result: Result<JSON, any Error>?
-            Task { @MainActor in
-                do { result = .success(try await RemindersFlagProof.run(tag: tag, itemIdentifier: item, listIdentifier: list)) }
-                catch { result = .failure(error) }
-            }
-            while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.005)) }
-            let proof = try result!.get()
-            try JSONEncoder().encode(proof).write(to: reportURL, options: .atomic)
-            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportURL.path)
-            return
-        }
-        if arguments.first == "reminders-store-blob-fixture" {
-            var result: Result<JSON, any Error>?
-            Task { @MainActor in
-                do {
-                    let proof: JSON
-                    if arguments.contains("--cleanup") { proof = try await RemindersBlobFixture.recover(journal: reportURL) }
-                    else { proof = try await RemindersBlobFixture.run(journal: reportURL) }
-                    result = .success(proof)
-                }
-                catch { result = .failure(error) }
-            }
-            while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.005)) }
-            try JSONEncoder().encode(try result!.get()).write(to: reportURL, options: .atomic)
-            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportURL.path)
-            return
-        }
-        if arguments.first == "reminders-store-proof" {
-            func option(_ key: String) throws -> String {
-                guard let index = arguments.firstIndex(of: key), index + 1 < arguments.count else { throw ProbeFailure.invalidArguments }
-                return arguments[index + 1]
-            }
-            let proof = try RemindersStoreProof.run(tag: option("--tag"), itemIdentifier: option("--item-id"), listIdentifier: option("--list-id"))
-            try JSONEncoder().encode(proof).write(to: reportURL, options: .atomic)
-            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportURL.path)
-            return
-        }
-        if arguments.first == "notes-probe" {
-            var error: NSDictionary?
-            let result = NSAppleScript(source: "with timeout of 5 seconds\ntell application \"Notes\" to count accounts\nend timeout")?.executeAndReturnError(&error)
-            try PrivateReport.write(["state": error == nil ? "ready" : "unavailable", "error_code": error?["NSAppleScriptErrorNumber"] as? Int ?? 0, "count": result?.int32Value ?? 0], to: reportURL)
-            return
-        }
-        if arguments.first == "functional" {
-            DispatchQueue.global().asyncAfter(deadline: .now() + 30) { @Sendable in
-                try? PrivateReport.write(["state": "timed_out"], to: reportURL)
-                exit(1)
-            }
-            try PrivateReport.write(FunctionalProbe.run(), to: reportURL)
-            return
-        }
-        if arguments.first == "probe" {
-            try PrivateReport.write(["state":"running"], to:reportURL)
-            DispatchQueue.global().asyncAfter(deadline:.now()+(arguments.contains("cleanup-tagged-self") ? 600 : 35)) { @Sendable in
-                try? PrivateReport.write(["state":"timed_out","disposition":"indeterminate"],to:reportURL)
-                exit(1)
-            }
-            var finished=false
-            Task { @MainActor in
-                do {
-                    let data: Data
-                    if arguments.count > 1 && arguments[1] == "cleanup-tagged-self" { data = try await MessagesCleanup.run(arguments) }
-                    else { data=try JSONSerialization.data(withJSONObject:MessagesProbes.run(arguments)) }
-                    try data.write(to:reportURL,options:.atomic)
-                    try FileManager.default.setAttributes([.posixPermissions:0o600],ofItemAtPath:reportURL.path)
-                } catch {try? PrivateReport.write(["state":"unavailable","reason":String(describing:error)],to:reportURL)}
-                finished=true
-            }
-            while !finished {RunLoop.current.run(until:Date().addingTimeInterval(0.05))}
             return
         }
         let session = PermissionSession()
@@ -231,4 +95,8 @@ public enum HelperCommand {
         }
         throw ProbeFailure.invalidArguments
     }
+}
+
+enum HelperCommandFailure: Error {
+    case unknownCommand
 }

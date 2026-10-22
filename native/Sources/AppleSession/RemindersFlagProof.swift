@@ -1,3 +1,4 @@
+#if LAB
 import Foundation
 import AppKit
 import EventKit
@@ -48,3 +49,4 @@ enum RemindersFlagProof {
         return .object(["status": .string("ready"), "store_flag_true": .bool(present), "store_flag_cleared": .bool(cleared)])
     }
 }
+#endif

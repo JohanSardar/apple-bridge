@@ -19,14 +19,14 @@ func runCalendarInvalidation(ctx context.Context, s Scenario, level string) Evid
 		e.Passed = e.Passed && ok
 	}
 	command := exec.CommandContext(ctx, "packaging/dev/build-native.sh")
-	command.Env = append(os.Environ(), "APPLE_BRIDGE_NATIVE_TARGET=CalendarChecks")
+	command.Env = append(os.Environ(), "APPLE_BRIDGE_NATIVE_TARGET=CalendarChecks", "APPLE_BRIDGE_NATIVE_LAB=1")
 	output, err := command.CombinedOutput()
 	add("native_calendar_checks_build", err == nil)
 	if err != nil {
 		os.Stderr.Write(output)
 		return e
 	}
-	directory, err := os.ReadFile("native/.build/native-output")
+	directory, err := os.ReadFile("native/.build/native-output-1")
 	add("native_checks_output_available", err == nil)
 	if err != nil {
 		return e

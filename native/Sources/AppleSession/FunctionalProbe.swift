@@ -1,3 +1,4 @@
+#if LAB
 import Foundation
 import EventKit
 import Contacts
@@ -53,3 +54,4 @@ public enum FunctionalProbe {
         }
     }
 }
+#endif

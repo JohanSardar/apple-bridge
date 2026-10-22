@@ -27,13 +27,14 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 	}()
 	if s.ID == "NOTE-DECODE" {
 		cmd := exec.CommandContext(ctx, "packaging/dev/build-native.sh")
+		cmd.Env = append(os.Environ(), "APPLE_BRIDGE_NATIVE_LAB=1")
 		output, err := cmd.CombinedOutput()
 		if err != nil {
 			fmt.Fprintln(os.Stderr, string(output))
 			add("decoder_build", false)
 			return
 		}
-		directory, err := os.ReadFile("native/.build/native-output")
+		directory, err := os.ReadFile("native/.build/native-output-1")
 		if err != nil {
 			add("decoder_build", false)
 			return

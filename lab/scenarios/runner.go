@@ -373,6 +373,9 @@ func convergence(w *world.World) bool {
 }
 
 func runScenario(ctx context.Context, s Scenario, level string) Evidence {
+	if s.ID == "HELPER-RELEASE-COMMANDS" {
+		return runHelperReleaseCommands(ctx, s, level)
+	}
 	if s.ID == "CORE-SEARCH-UPDATE-PERF" {
 		return runSearchUpdatePerf(ctx, s, level)
 	}
@@ -1072,7 +1075,7 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		if s.Feature == "messages.read" && level != "sim" {
 			duration = 20 * time.Minute
 		}
-		if s.ID == "HELPER-SIGNED-APP-CACHE" {
+		if s.ID == "HELPER-SIGNED-APP-CACHE" || s.ID == "HELPER-RELEASE-COMMANDS" {
 			duration = 10 * time.Minute
 		}
 		if s.ID == "HELPER-SESSION-SOAK" {

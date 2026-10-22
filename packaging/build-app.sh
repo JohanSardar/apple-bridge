@@ -22,8 +22,8 @@ stage=$(mktemp -d "$(dirname "$destination")/.app-stage.XXXXXX")
 trap 'rm -rf "$stage"' EXIT
 app="$stage/Apple Bridge.app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Library/LaunchAgents"
-APPLE_BRIDGE_NATIVE_TARGET=AppleBridgeHelper "$root/packaging/dev/build-native.sh" "$root/native"
-cp "$(cat "$root/native/.build/native-output")/AppleBridgeHelper" "$app/Contents/MacOS/AppleBridgeHelper"
+APPLE_BRIDGE_NATIVE_LAB=0 APPLE_BRIDGE_NATIVE_TARGET=AppleBridgeHelper "$root/packaging/dev/build-native.sh" "$root/native"
+cp "$(cat "$root/native/.build/native-output-0")/AppleBridgeHelper" "$app/Contents/MacOS/AppleBridgeHelper"
 (cd "$root" && go build -p 2 -o "$app/Contents/MacOS/bridge" ./cmd/bridge)
 cp "$root/packaging/dev/Info.plist" "$app/Contents/Info.plist"
 python3 - "$app" "$app_home" "$api" "$peer" <<'CONFIG'

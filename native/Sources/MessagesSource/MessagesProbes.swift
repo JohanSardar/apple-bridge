@@ -44,6 +44,7 @@ public enum MessagesProbes {
         return text.filter { $0.isNumber || $0 == "+" }
     }
 
+    #if LAB
     private static var handlesURL: URL {
         PrivateReport.directory.appendingPathComponent("self-handles.json")
     }
@@ -370,4 +371,5 @@ public enum MessagesProbes {
         }
         return node
     }
+    #endif
 }

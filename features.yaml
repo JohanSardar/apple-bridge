@@ -172,6 +172,7 @@ features:
       - {id: HELPER-IPC-RESPONSIVE, levels: [sim]}
       - {id: HELPER-SESSION-SOAK, levels: [real]}
       - {id: HELPER-SIGNED-APP-CACHE, levels: [real]}
+      - {id: HELPER-RELEASE-COMMANDS, levels: [real]}
   - id: messages.read
     title: Messages history, live capture, decoding, receipts, attachments
     requirements: [R-FULL, R-LIVE, R-MSG-DEPTH, R-ATTACH, R-NO-FALSE-DELETE]

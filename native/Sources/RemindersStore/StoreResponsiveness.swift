@@ -1,3 +1,4 @@
+#if LAB
 import Foundation
 import SourceSupport
 
@@ -41,3 +42,4 @@ public enum RemindersStoreResponsiveness {
         return .object(["cold_full_elapsed_ms": .number(elapsed), "main_queue_delay": probe.json])
     }
 }
+#endif

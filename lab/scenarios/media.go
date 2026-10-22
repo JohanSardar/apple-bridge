@@ -183,7 +183,7 @@ func runMediaVariants(ctx context.Context, s Scenario, level string) Evidence {
 }
 
 func mediaTool() string {
-	data, _ := os.ReadFile("native/.build/native-output")
+	data, _ := os.ReadFile("native/.build/native-output-1")
 	return filepath.Join(strings.TrimSpace(string(data)), "MediaChecks")
 }
 

@@ -71,7 +71,7 @@ func runUsage(ctx context.Context, s Scenario, level string) Evidence {
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
 	fail := func(name string) Evidence { add(name, false); return e }
 	if s.ID == "USE-SEGB-DECODE" {
-		output, err := os.ReadFile("native/.build/native-output")
+		output, err := os.ReadFile("native/.build/native-output-1")
 		if err != nil {
 			return fail("native_decoder_built")
 		}
