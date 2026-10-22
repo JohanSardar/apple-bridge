@@ -69,7 +69,7 @@ enum MessagesAccessibility {
                     return false
                 }
                 let description = value(bubble, kAXDescriptionAttribute)
-                let direction: JSON = description.hasPrefix("Your iMessage,") ? .bool(true) : description.hasPrefix("iMessage,") ? .bool(false) : .null
+                let direction = MessagesMediaCleanupProof.direction(description, names: Set(mediaNames)).map(JSON.bool) ?? .null
                 candidates.append(.object(["outgoing": direction, "values": nested > 0 ? .array(values) : .array([])]))
             }
             guard budget > 0, let index = MessagesMediaCleanupProof.targetIndex(candidates, names: Set(mediaNames), outgoing: outgoing) else { throw MessagesUIFailure.targetUnavailable }

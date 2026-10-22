@@ -18,7 +18,15 @@ enum HelperLabCommand {
             let row = fixture["row"]
             guard let rowID = Int64(exactly: row["row_id"].number) else { throw ProbeFailure.invalidArguments }
             let authorized = proof.authorizes(rowID: rowID, attachments: row["attachments"].array.map(\.string), peers: row["peers"].array.map(\.string), own: Set(fixture["own"].array.map { MessagesProbes.normalize($0.string) }))
-            let target = MessagesMediaCleanupProof.targetIndex(fixture["candidates"].array, names: Set(proof.targetNames(row["attachments"].array.map(\.string))), outgoing: row["is_from_me"].bool)
+            let names = Set(proof.targetNames(row["attachments"].array.map(\.string)))
+            let candidates = fixture["candidates"].array.map { candidate -> JSON in
+                guard !candidate["description"].string.isEmpty else { return candidate }
+                var value = candidate.object
+                value["outgoing"] = MessagesMediaCleanupProof.direction(candidate["description"].string, names: names).map(JSON.bool) ?? .null
+                value["values"] = .array(candidate["values"].array + [candidate["description"]])
+                return .object(value)
+            }
+            let target = MessagesMediaCleanupProof.targetIndex(candidates, names: names, outgoing: row["is_from_me"].bool)
             let result = JSON.object(["authorized": .bool(authorized), "target_verified": .bool(authorized && target != nil)])
             print(String(decoding: try JSONEncoder().encode(result), as: UTF8.self))
             return true

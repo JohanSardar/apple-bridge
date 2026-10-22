@@ -53,6 +53,20 @@ func runMediaCleanupProof(ctx context.Context, s Scenario, level string) Evidenc
 		input["row"].(map[string]any)["row_id"] = 1
 	}, true, true)
 	run("incoming_echo_is_separate_target", func(input map[string]any) { input["row"].(map[string]any)["is_from_me"] = false }, true, true)
+	run("native_file_description_outgoing", func(input map[string]any) {
+		input["candidates"] = []any{map[string]any{"description": "Your iMessage, 0-" + filename + ", Text Document · 66 bytes, 3:45 PM"}}
+	}, true, true)
+	run("native_file_description_incoming", func(input map[string]any) {
+		input["row"].(map[string]any)["is_from_me"] = false
+		input["candidates"] = []any{map[string]any{"description": "Self Test, 0-" + filename + ", Text Document · 66 bytes, 3:45 PM"}}
+	}, true, true)
+	run("native_file_description_substring_denied", func(input map[string]any) {
+		input["candidates"] = []any{map[string]any{"description": "Your iMessage, prefix-" + filename + ", Text Document · 66 bytes, 3:45 PM"}}
+	}, true, false)
+	run("native_file_description_ambiguous_denied", func(input map[string]any) {
+		candidate := map[string]any{"description": "Your iMessage, 0-" + filename + ", Text Document · 66 bytes, 3:45 PM"}
+		input["candidates"] = []any{candidate, candidate}
+	}, true, false)
 	run("baseline_data_denied", func(input map[string]any) { input["row"].(map[string]any)["row_id"] = 30 }, false, false)
 	run("other_chat_denied", func(input map[string]any) { input["row"].(map[string]any)["peers"] = []string{"other@example.com"} }, false, false)
 	run("unregistered_attachment_denied", func(input map[string]any) { input["row"].(map[string]any)["attachments"] = []string{"personal.heic"} }, false, false)
