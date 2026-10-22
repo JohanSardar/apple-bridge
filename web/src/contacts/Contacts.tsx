@@ -3,7 +3,7 @@ import { AppMenu } from '../app/AppMenu';
 import { router } from '../app/router';
 import { registerShortcut } from '../app/keyboard';
 import { auth } from '../auth/session';
-import { enterPane, reducedMotion, sharedElement, springAnimation } from '../motion/animate';
+import { enterPane, sharedElement } from '../motion/animate';
 import { VirtualList, type VirtualListHandle } from '../virtual/VirtualList';
 import { Card, ContactAvatar } from './Card';
 import { ContactEditor } from './Editor';
@@ -43,21 +43,13 @@ export default function Contacts() {
     const title = () => group() === 'all' ? s.all : group().startsWith('account:') ? text(page().containers?.find(entry => entry.id === group().slice(8))?.data.name) || s.app : text(page().groups?.find(entry => entry.group.id === group())?.group.data.name) || s.app;
     const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ#'.split('');
     let list: VirtualListHandle | undefined, card!: HTMLElement, searchField!: HTMLInputElement;
-    let cancelPane: (() => void) | undefined, cancelAvatar: (() => void) | undefined, cancelEdit: (() => void) | undefined;
+    let cancelPane: (() => void) | undefined, cancelEdit: (() => void) | undefined;
     const goList = (value: string) => { setSelecting(false);setChecked(new Set<string>());setEditing(false); setSearch(''); setActive(''); router.navigate('/contacts/list/' + encodeURIComponent(value)); };
     const back = () => { setEditing(false);router.navigate(id() || isNew() ? '/contacts/list/' + encodeURIComponent(group()) : '/contacts'); };
-    const open = (item: Item, source?: Element | null) => {
+    const open = (item: Item) => {
         if(selecting()){toggleSelection(item);return;}
-        setEditing(false);cancelAvatar?.();
-        const before = source?.getBoundingClientRect(), clone = source?.cloneNode(true) as HTMLElement | undefined;
-        if (clone && before && !reducedMotion()) { clone.setAttribute('aria-hidden','true'); Object.assign(clone.style,{position:'fixed',left:before.x+'px',top:before.y+'px',width:before.width+'px',height:before.height+'px',zIndex:'100',pointerEvents:'none',transformOrigin:'top left'}); document.body.append(clone); }
+        setEditing(false);
         router.navigate('/contacts/' + encodeURIComponent(item.contact.id));
-        if (clone) requestAnimationFrame(() => {
-            const after = card?.querySelector('.avatar')?.getBoundingClientRect();
-            if (!before || !after || reducedMotion()) { clone.remove(); return; }
-            const animation = springAnimation(value => { clone.style.transform = `translate(${(after.x-before.x)*value}px,${(after.y-before.y)*value}px) scale(${1+(after.width/before.width-1)*value})`; },0,1,{response:.42,damping:.9},0,() => clone.remove());
-            cancelAvatar = () => { animation.cancel(); clone.remove(); };
-        });
     };
     const canWrite = (operation: string, item?: Item) => commands.capabilities.allowed(operation) && (!item || item.contact.version>0 && item.contact.data.writable===true && !item.contact.data._pending);
     function edit(item?: Item, recover?: Record<string,unknown>) { cancelEdit?.();const change=()=>{setEditorItem(item);setRecovery(recover);editingRoute=router.route().path;setEditorRevision(value=>value+1);setEditing(true);};if(card)cancelEdit=sharedElement(card,change);else change(); }
@@ -85,7 +77,7 @@ export default function Contacts() {
         onCleanup(() => { compactMedia.removeEventListener('change',resized); for (const dispose of disposers) dispose(); });
     });
     createEffect(() => { const selectedID = id(); cancelPane?.(); if (selectedID && card) queueMicrotask(() => { if (id() === selectedID) { cancelPane = enterPane(card,compact(),1,card.clientWidth); card.querySelector<HTMLElement>('h1')?.focus({preventScroll:true}); } }); });
-    onCleanup(() => { cancelPane?.(); cancelAvatar?.(); cancelEdit?.(); });
+    onCleanup(() => { cancelPane?.(); cancelEdit?.(); });
     return <main class="contacts-app" data-pane={pane()}>
         <aside class="contacts-sidebar" aria-label={s.lists} aria-hidden={compact() && pane() !== 'lists'}>
             <header><h1>{s.lists}</h1><div class="contact-new-slot" aria-hidden={!canWrite('contacts.create')}>
@@ -97,21 +89,21 @@ export default function Contacts() {
             </nav><footer><AppMenu/></footer>
         </aside>
         <section class="contacts-list-pane" aria-label={s.app} aria-hidden={compact() && pane() !== 'contacts'}>
-            <header class="contacts-list-header"><Show when={compact()}><button class="contact-back" onClick={back}>{s.backLists}</button></Show><h1>{title()}</h1><div class="contact-new-slot" aria-hidden={!canWrite('contacts.create')}>
+            <header class="contacts-list-header"><Show when={compact()}><button class="contact-back" onClick={back}>{s.backLists}</button></Show><h1>{title()}</h1>
+                <div class="contact-selection-toolbar"><button class="contact-back" onClick={()=>{setSelecting(value=>!value);setChecked(new Set<string>());}}>{selecting()?'Done':'Select'}</button><div class="contact-new-slot" aria-hidden={!canWrite('contacts.create')}>
                     <button class="contact-new" aria-label="New Contact"
                         disabled={!canWrite('contacts.create')||commands.pending()||commands.uncertain().length>0}
                         onClick={create}>New Contact</button>
-                </div>
-                <div class="contact-selection-toolbar"><button class="contact-back" onClick={()=>{setSelecting(value=>!value);setChecked(new Set<string>());}}>{selecting()?'Done':'Select'}</button><Show when={selecting()}><span role="status">{selectedContacts().length} selected (up to 32)</span><button class="contact-back" disabled={!selectedContacts().length} onClick={()=>downloadContacts(selectedContacts())}>Export selected</button><Show when={canWrite('contacts.delete')}><button class="contact-back" disabled={!selectedContacts().length||commands.pending()||selectedContacts().some(item=>!canWrite('contacts.delete',item))} onClick={()=>setDeleting(selectedContacts())}>Delete selected</button></Show></Show></div>
+                </div><Show when={selecting()}><span role="status">{selectedContacts().length} selected (up to 32)</span><button class="contact-back" disabled={!selectedContacts().length} onClick={()=>downloadContacts(selectedContacts())}>Export selected</button><Show when={canWrite('contacts.delete')}><button class="contact-back" disabled={!selectedContacts().length||commands.pending()||selectedContacts().some(item=>!canWrite('contacts.delete',item))} onClick={()=>setDeleting(selectedContacts())}>Delete selected</button></Show></Show></div>
                 <input ref={searchField} type="search" aria-label={s.search} placeholder={s.search} value={search()} onInput={event => setSearch(event.currentTarget.value)}/>
                 <div class="contact-preferences"><label>{s.sort}<select aria-label={s.sort} value={preferences.sort()} onChange={event => preferences.sortBy(event.currentTarget.value)}><option value="given">{s.given}</option><option value="family">{s.family}</option></select></label><label>{s.display}<select aria-label={s.display} value={preferences.display()} onChange={event => preferences.displayAs(event.currentTarget.value)}><option value="given">{s.given}</option><option value="family">{s.family}</option></select></label></div>
             </header>
-            <Show when={me() && !search().trim()}><button class="contact-my-card" aria-pressed={selecting()?checked().has(me()!.contact.id):undefined} onClick={event => open(me()!,event.currentTarget.querySelector('.avatar'))}><ContactAvatar item={me()!}/><span><strong>{me()!.display_name}</strong><small>{s.myCard}</small></span></button></Show>
+            <Show when={me() && !search().trim()}><button class="contact-my-card" aria-pressed={selecting()?checked().has(me()!.contact.id):undefined} onClick={() => open(me()!)}><ContactAvatar item={me()!}/><span><strong>{me()!.display_name}</strong><small>{s.myCard}</small></span></button></Show>
             <Show when={!page().error} fallback={<div class="empty" role="alert"><p>{s.unavailable}</p><button class="button subtle" onClick={() => setRetry(value=>value+1)}>{s.retry}</button></div>}>
                 <Show when={page().sections} fallback={<p class="contact-loading" role="status">{auth.live()?.status() === 'offline' ? s.unavailable : s.loading}</p>}>
                     <Show when={rows().length} fallback={<p class="contact-loading" role="status">{search().trim() ? s.noResults : me() ? '' : s.empty}</p>}>
                         <div class="contacts-indexed-list" onKeyDown={event => { if (event.key === 'Enter' && event.target === event.currentTarget.querySelector('.virtual-viewport')) { const item = rows().find(row => row.item.contact.id === active())?.item ?? rows()[0]?.item; if (item) { event.preventDefault(); open(item); } } }}>
-                            <VirtualList items={rows()} keyFor={row=>row.item.contact.id} estimate={row=>row.first?88:60} fixedHeights ref={value=>list=value} label={s.app} selectedKey={active() || id()} onActive={row=>setActive(row.item.contact.id)} windowKey={group()+preferences.sort()+search()} render={row=><div class="contact-row-group"><Show when={row.first}><h2 class="contact-section">{row.section}</h2></Show><button class="contact-row" data-contact={row.item.contact.id} aria-label={row.item.display_name} aria-pressed={selecting()?checked().has(row.item.contact.id):undefined} classList={{'contact-selected':selecting()&&checked().has(row.item.contact.id)}} onClick={event=>open(row.item,event.currentTarget.querySelector('.avatar'))}><ContactAvatar item={row.item}/><span><strong>{row.item.display_name}</strong><small>{text(row.item.contact.data.organization)}</small></span></button></div>}/>
+                            <VirtualList items={rows()} keyFor={row=>row.item.contact.id} estimate={row=>row.first?88:60} fixedHeights ref={value=>list=value} label={s.app} selectedKey={active() || id()} onActive={row=>setActive(row.item.contact.id)} windowKey={group()+preferences.sort()+search()} render={row=><div class="contact-row-group"><Show when={row.first}><h2 class="contact-section">{row.section}</h2></Show><button class="contact-row" data-contact={row.item.contact.id} aria-label={row.item.display_name} aria-pressed={selecting()?checked().has(row.item.contact.id):undefined} classList={{'contact-selected':selecting()&&checked().has(row.item.contact.id)}} onClick={()=>open(row.item)}><ContactAvatar item={row.item}/><span><strong>{row.item.display_name}</strong><small>{text(row.item.contact.data.organization)}</small></span></button></div>}/>
                             <nav class="contact-index" aria-label={s.index} onPointerDown={event=>{event.preventDefault();event.currentTarget.setPointerCapture(event.pointerId);scrub(event);}} onPointerMove={event=>{if(event.currentTarget.hasPointerCapture(event.pointerId))scrub(event);}} onPointerUp={()=>setBubble('')} onPointerCancel={()=>setBubble('')}><For each={letters}>{letter=><button tabindex="0" aria-label={'Jump to '+letter} onClick={()=>{jump(letter);setBubble('');}}>{letter}</button>}</For></nav><Show when={bubble()}><span class="contact-letter-bubble" aria-hidden="true">{bubble()}</span></Show>
                         </div>
                     </Show>
