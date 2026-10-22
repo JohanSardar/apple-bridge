@@ -253,6 +253,8 @@ func webBrowserControl(ctx context.Context, w *world.World, origin string, prepa
 				return
 			}
 			value = map[string]any{"ok": err == nil}
+		case "/reminders-details":
+			value, err = webReminderDetails(w)
 		case "/reminders-write-draft-race":
 			value, err = webReminderDraftRace(w)
 		case "/reminders-write-conflict":

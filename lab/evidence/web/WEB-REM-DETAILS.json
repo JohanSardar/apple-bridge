@@ -1,0 +1,85 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[6.68 6.8 8.43] cpu_idle=56% cpus=8 other_heavy=2"
+  },
+  "run_id": "run_01M5J4Y0PYJV44XF95F33JHQVG",
+  "metrics": {
+    "browser_budget_ms": 180000,
+    "capture_observer_resets": 0,
+    "demo_messages": 5000,
+    "demo_startup_ms": 11785,
+    "fixture_setup_ms": 11785,
+    "matrix": [
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "chromium-light-phone",
+      "chromium-light-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-REM-DETAILS-webkit-light-phone-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-REM-DETAILS-webkit-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-REM-DETAILS-webkit-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-REM-DETAILS-chromium-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-REM-DETAILS-chromium-light-desktop-playwright.json"
+    ],
+    "server": "gateway",
+    "setups": [
+      {
+        "fixture_setup_ms": 11785,
+        "fixture_snapshot": null,
+        "project": "webkit-light-phone"
+      },
+      {
+        "fixture_setup_ms": 14416,
+        "fixture_snapshot": null,
+        "project": "webkit-light-desktop"
+      },
+      {
+        "fixture_setup_ms": 12168,
+        "fixture_snapshot": null,
+        "project": "chromium-light-phone"
+      },
+      {
+        "fixture_setup_ms": 11616,
+        "fixture_snapshot": null,
+        "project": "chromium-light-desktop"
+      }
+    ]
+  },
+  "scenario": "WEB-REM-DETAILS",
+  "level": "web",
+  "passed": true,
+  "git_sha": "af7a02c3e31dd1393b40e50dcfcc4be95fbd277e",
+  "at": "2026-10-22T15:51:02.110809Z",
+  "assertions": [
+    {
+      "name": "webkit-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/reminders-details.spec.ts:4:1 › WEB-REM-DETAILS recurrence, alerts and location are exact and unknown shapes hidden (5.9s)\n\n  1 passed (13.8s)\n"
+    },
+    {
+      "name": "webkit-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/reminders-details.spec.ts:4:1 › WEB-REM-DETAILS recurrence, alerts and location are exact and unknown shapes hidden (10.0s)\n\n  1 passed (16.4s)\n"
+    },
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/reminders-details.spec.ts:4:1 › WEB-REM-DETAILS recurrence, alerts and location are exact and unknown shapes hidden (2.5s)\n\n  1 passed (7.1s)\n"
+    },
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/reminders-details.spec.ts:4:1 › WEB-REM-DETAILS recurrence, alerts and location are exact and unknown shapes hidden (2.0s)\n\n  1 passed (4.5s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
