@@ -108,7 +108,7 @@ Process: every change ships as a small PR (WORKER-RULES, Git and GitHub). Status
 - DONE (code) W3-HELPER: interactive origin gate, self-test, guarded resend, recoverable delete and chat actions (#51, #57, #59, #60, #63, #65). UI proofs wait for the unlock.
 - DONE (store) W5-STORE: Reminders Core Data reader and enrichment (#115, #120), `reminders.lists`/`reminders.items` read models at gateway p95 about 4–5 ms (#150, hardening #161), verified native manual ordering (#160) and rich demo data (#157). Tags, attachment IDs, assignment, store alarms/recurrence, early reminders, sections, filters and the color archive remain unsupported from the native store until positive fixtures exist.
 - IN PROGRESS W5-UI: read-only Reminders sidebar and list views with `web/1` live updates (#166). Paging is a documented follow-up, because Johan's largest real view is far below the 2 MiB view cap.
-- TODO: W2-DETAILS search, W4 parity, W5-UI/WRITE/PARITY, W6–W8.
+- TODO: W4 parity, W5-UI/WRITE/PARITY, W6–W8.
 - IN PROGRESS W2-TRANSCRIPT: indexed originator-filtered reads and scoped live counts (#61); focused replies use an independent bounded reader with native modal dismissal and active-source viewer restoration. Transcript motion/performance remain pending.
 - Dev infrastructure: re-entrant heavy.sh with an OS-matching SDK and an exclusive lane (#11, #35, #36, #37, #44), per-step gating (#74), per-project web budgets (#39), detached Air runs (#42), explicit ff updates (#89), disk trim (#95).
 - **Waiting on the Air being unlocked** (lock screen; passwords are never typed):
@@ -131,4 +131,5 @@ Process: every change ships as a small PR (WORKER-RULES, Git and GitHub). Status
   - **Calendar:** a real probe (macOS 26.7.1) showed location and both alarm edits don't advance `lastModifiedDate`. The occurrence stamp is metadata plus location plus alarms, with the 900 s full rebuild as backstop (#143).
 
 - W2-LIST filter menu: elevated 94% surface with solid fallback; pointer and keyboard focus modes plus local pixel contrast are checked by WEB-MSG-FILTERS-MENU.
-- W2-DETAILS: read-only conversation identity, members and device links; paginated Photos, Links, Documents and Locations collections, reusing the shared media viewer. Search results follow in a separate slice.
+- W2-DETAILS: read-only conversation identity, members and device links; paginated Photos, Links, Documents and Locations collections, reusing the shared media viewer. Search results ship in a separate slice.
+- DONE (functional) W2-DETAILS search: scoped full-text results with server-side sender/kind/unread intersections, conversation/contact sections, highlighted message links, Photos and Links, and owner-scoped recent searches.

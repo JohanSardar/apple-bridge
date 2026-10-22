@@ -326,7 +326,7 @@ func (l *liveSocket) view(ctx context.Context, f clientFrame) (any, error) {
 		}
 		return result, nil
 	}
-	if f.View == "chats" || f.View == "thread" || f.View == "collection" || f.View == "handles" {
+	if f.View == "chats" || f.View == "thread" || f.View == "collection" || f.View == "search" || f.View == "handles" {
 		return l.server.deps.Operations.Invoke(ctx, l.identity.Principal, "messages."+f.View, f.Args)
 	}
 	return nil, contracts.ErrUnsupported

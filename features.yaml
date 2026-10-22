@@ -422,6 +422,7 @@ features:
     status: in_progress
     scenarios:
       - {id: WEB-RM-CHATS, levels: [sim]}
+      - {id: WEB-RM-SEARCH, levels: [sim]}
       - {id: WEB-RM-THREAD, levels: [sim]}
       - {id: WEB-RM-MEDIA-COLLECTION, levels: [sim]}
       - {id: WEB-RM-THREAD-OLDEST, levels: [web]}
@@ -582,6 +583,7 @@ features:
       - {id: WEB-MSG-FILTERS, levels: [web]}
       - {id: WEB-MSG-FILTERS-MENU, levels: [web]}
       - {id: WEB-MSG-SEARCH, levels: [web]}
+      - {id: WEB-PERF-SEARCH, levels: [web]}
       - {id: WEB-MSG-SEARCH-LIST, levels: [web]}
       - {id: WEB-MSG-SIDEBAR, levels: [web]}
       - {id: WEB-MSG-THREAD-CORE, levels: [web]}

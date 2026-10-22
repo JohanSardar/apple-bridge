@@ -1,0 +1,4 @@
+id: WEB-PERF-SEARCH
+feature: web.messages.read
+levels: [web]
+web: {browsers: [chromium], themes: [light], layouts: [desktop], server: gateway, fixture: list}

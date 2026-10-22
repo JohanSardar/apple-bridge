@@ -1,0 +1,4 @@
+id: WEB-MSG-SEARCH
+feature: web.messages.read
+levels: [web]
+web: {browsers: [webkit, chromium, firefox], themes: [light, dark], layouts: [phone, desktop], server: gateway, fixture: list}

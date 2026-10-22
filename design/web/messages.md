@@ -172,7 +172,7 @@ Opened by long-press (touch), right-click (desktop) or the tapback hotkey (⌘T)
 - **Filter tokens:** From: person, Photos, Links, Documents, Locations, Unread.
 - **Results:** sections for Conversations, Contacts, Messages (with the match highlighted), Photos (grid), Links. Picking a message opens its chat scrolled to it and highlighted with a pulse.
 - **Speed:** results while typing within 50 ms of the server responding; recent searches are stored locally.
-- **Bridge:** `search` R (full-text). Filters need read-model support (W1).
+- **Bridge:** `messages.search` R (literal prefix full-text over messages and attachment filenames). Sender, Photos, Links, Documents, Locations and Unread filters apply server-side before pagination; contact-based sender filters require Contacts visibility. Conversation and contact sections reuse their existing scoped sources. Results are paged in groups of at most 24. Recent searches use the owner-scoped trusted cache; public sessions keep them in memory.
 - **When:** W2.
 
 ## 9. Media viewer

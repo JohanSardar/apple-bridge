@@ -115,8 +115,11 @@ func OperationSchema(d OperationDescriptor) map[string]any {
 		s["properties"].(map[string]any)["ids"].(map[string]any)["maxItems"] = 500
 		return s
 	}
-	if d.Name == "messages.chats" || d.Name == "messages.thread" || d.Name == "messages.collection" {
+	if d.Name == "messages.chats" || d.Name == "messages.thread" || d.Name == "messages.collection" || d.Name == "messages.search" {
 		fields := s["properties"].(map[string]any)
+		if d.Name == "messages.search" {
+			fields["text"].(map[string]any)["maxLength"] = 512
+		}
 		if d.Name == "messages.chats" {
 			fields["participants"].(map[string]any)["minItems"] = 1
 			fields["participants"].(map[string]any)["maxItems"] = 32
