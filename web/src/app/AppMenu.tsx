@@ -7,7 +7,7 @@ const apps: { name: string; icon: IconName; path: string; enabled: boolean }[] =
     { name: s.reminders, icon: 'reminders', path: '/reminders', enabled: true },
     { name: s.calendar, icon: 'calendar', path: '/calendar', enabled: true },
     { name: s.contacts, icon: 'contacts', path: '/contacts', enabled: true },
-    { name: s.notes, icon: 'notes', path: '/notes', enabled: false }
+    { name: s.notes, icon: 'notes', path: '/notes', enabled: true }
 ];
 export function AppMenu() {
     const [open, setOpen] = createSignal(false);
