@@ -48,6 +48,7 @@ export function createCapabilities(live: LiveClient, source = 'reminders') {
                 if (operationProof) return { proven: operationProof.proven === true && source.capabilities?.includes(operation) === true, reason: operationProof.reason };
                 const eventKit = ['reminders.create', 'reminders.update', 'reminders.complete', 'reminders.uncomplete', 'reminders.delete', 'reminders.create_list'].includes(operation);
                 if (eventKit && source.capabilities?.includes(operation)) return { proven: true, reason: 'authorized_eventkit_operation' };
+                if (['contacts.create','contacts.update','contacts.delete'].includes(operation) && source.capabilities?.includes(operation)) return { proven: true, reason: 'authorized_contacts_operation' };
             }
         }
         return { proven: false, reason: error() ? 'Couldn’t check available actions' : 'Waiting for capability proof' };
