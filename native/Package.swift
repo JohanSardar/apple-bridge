@@ -8,7 +8,7 @@ let package = Package(
     targets: [
         .target(name: "SourceSupport"),
         .target(name: "ContactsHistory", publicHeadersPath: "include"),
-        .target(name: "ContactsSource", dependencies: ["SourceSupport", "ContactsHistory"]),
+        .target(name: "ContactsSource", dependencies: ["SourceSupport", "ContactsHistory", "MediaDerivatives"]),
         .target(name: "Decoders"),
         .target(name: "MediaExportGuard", publicHeadersPath: "include"),
         .target(name: "MediaDerivatives", dependencies: ["MediaExportGuard"]),

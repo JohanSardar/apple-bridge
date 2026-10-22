@@ -10,12 +10,13 @@ import './new-message.css';
 const Transcript = lazy(() => import('../transcript/Transcript'));
 export default function NewMessage(props: {commands:ReturnType<typeof createMessageCommands>}) {
     const live = auth.live()!, session = auth.session()!, commands = props.commands;
-    const recover = untrack(() => commands.statuses().findLast(command => {
+    const incoming = rawRecipient(new URLSearchParams(location.search).get('to') ?? '');
+    const recover = untrack(() => incoming ? undefined : commands.statuses().findLast(command => {
         const args = command.args as {chat_id?:string;handles?:string[]};
         return !args.chat_id && args.handles?.length === 1 && !['observed','delivered'].includes(command.status);
     }));
     const recovered = recover?.args as {handles?:string[]} | undefined;
-    const [recipients,setRecipients] = createSignal<Recipient[]>(recovered?.handles?.flatMap(value => rawRecipient(value) ?? []) ?? []);
+    const [recipients,setRecipients] = createSignal<Recipient[]>(recovered?.handles?.flatMap(value => rawRecipient(value) ?? []) ?? (incoming ? [incoming] : []));
     const [query,setQuery] = createSignal(''), [options,setOptions] = createSignal<Recipient[]>([]), [active,setActive] = createSignal(-1), [open,setOpen] = createSignal(false), [lookupHint,setLookupHint] = createSignal('');
     const [commandID,setCommandID] = createSignal(recover?.id ?? ''), [startedChat,setStartedChat] = createSignal('');
     let field!: HTMLInputElement;

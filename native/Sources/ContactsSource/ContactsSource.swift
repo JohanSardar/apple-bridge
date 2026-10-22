@@ -2,6 +2,7 @@ import Foundation
 @preconcurrency import Contacts
 import CryptoKit
 import ContactsHistory
+import MediaDerivatives
 import SourceSupport
 
 @globalActor
@@ -22,6 +23,12 @@ public final class ContactsSource: Source {
     private var scanning = false
     private var groupSelfTesting = false
     private var groupSelfTestCreatedKey = ""
+    private var meIdentifier: String?
+    private var photoContinuation: AsyncStream<String>.Continuation?
+    private var queuedPhotos: Set<String> = []
+    private var photoResults: [String: MediaResult] = [:]
+    private var variantURLs: [String: URL] = [:]
+    private let photoInputDirectory: URL
     private let baselineURL: URL
     private static let groupOperations = ["contacts.create_group", "contacts.rename_group", "contacts.delete_group", "contacts.add_member", "contacts.remove_member"]
     private static let operations = ["contacts.create", "contacts.update", "contacts.delete"]
@@ -35,6 +42,7 @@ public final class ContactsSource: Source {
         self.trace = trace
         self.commandsEnabled = commandsEnabled
         baselineURL = home.appendingPathComponent("contacts-baseline.json")
+        photoInputDirectory = home.appendingPathComponent("contacts-photo-inputs", isDirectory: true)
     }
 
     private var authorized: Bool { CNContactStore.authorizationStatus(for: .contacts) == .authorized }
@@ -73,6 +81,7 @@ public final class ContactsSource: Source {
         var fields = Self.scalarKeys.mapValues { JSON.string(contact.value(forKey: $0) as? String ?? "") }
         fields["contact_type"] = .string(contact.contactType == .organization ? "organization" : "person")
         fields["note"] = .string("unavailable")
+        fields["is_me"] = meIdentifier.map { .bool(contact.identifier == $0) } ?? .null
         fields["phones"] = labeled(contact.phoneNumbers) { .string($0.stringValue) }
         fields["emails"] = labeled(contact.emailAddresses) { .string($0 as String) }
         fields["urls"] = labeled(contact.urlAddresses) { .string($0 as String) }
@@ -92,6 +101,9 @@ public final class ContactsSource: Source {
             let digest = hash(image)
             blobs["contacts-image:" + digest] = image
             fields["image"] = .object(["digest": .string(digest), "state": .string("present")])
+            if photoResults[digest] == nil { photoResults[digest] = MediaDerivatives.cached(digest) }
+            if let result = photoResults[digest] { try attachPhoto(result, to: &fields) }
+            else if queuedPhotos.insert(digest).inserted { photoContinuation?.yield(digest) }
         }
         if let image = contact.thumbnailImageData {
             let digest = hash(image)
@@ -168,10 +180,13 @@ public final class ContactsSource: Source {
         let activity = ForegroundActivity.shared.begin()
         defer { ForegroundActivity.shared.end(activity) }
         if drop { generation = UUID().uuidString }
+        meIdentifier = try? store.unifiedMeContactWithKeys(toFetch: [CNContactIdentifierKey as NSString]).identifier
         var current: [String: JSON] = fullScan ? [:] : committed
         if fullScan {
         var containers: [String: Set<String>] = [:]
         for container in try store.containers(matching: nil) {
+            let value: JSON = .object(["identifier": .string(container.identifier), "name": .string(container.name), "type": .number(Double(container.type.rawValue)), "writable": .bool(container.identifier == store.defaultContainerIdentifier())])
+            current["contacts.container/" + container.identifier] = observation("contacts.container", container.identifier, value)
             for member in try contacts(CNContact.predicateForContactsInContainer(withIdentifier: container.identifier), identifiersOnly: true) { containers[member.identifier, default: []].insert(container.identifier) }
         }
         let fetched = try contacts()
@@ -225,9 +240,10 @@ public final class ContactsSource: Source {
                 observations.append(.object(absent))
             }
         }
-        let handles = Dictionary(uniqueKeysWithValues: blobs.keys.map { (String($0.dropFirst("contacts-image:".count)), $0) })
+        var handles = Dictionary(uniqueKeysWithValues: blobs.keys.map { (String($0.dropFirst("contacts-image:".count)), $0) })
+        for handle in variantURLs.keys { handles[String(handle.dropFirst("media:".count))] = handle }
         trace.record("contacts_capture_ready", fields: metadata.merging(["empty": .bool(observations.isEmpty)]) { _, new in new })
-        try await sink.emitCheckpoint(source: name, generation: generation, checkpoint: next.base64EncodedString(), observations: observations, scanID: scanID, scanStartedAt: started, scope: ["contacts.contact", "contacts.group"], completionEvidence: "complete", blobHandles: handles, live: live)
+        try await sink.emitCheckpoint(source: name, generation: generation, checkpoint: next.base64EncodedString(), observations: observations, scanID: scanID, scanStartedAt: started, scope: ["contacts.contact", "contacts.group", "contacts.container"], completionEvidence: "complete", blobHandles: handles, live: live)
         trace.record("contacts_capture_committed", fields: metadata)
         token = next
         committed = drop ? committed.merging(current) { _, new in new } : current
@@ -243,6 +259,16 @@ public final class ContactsSource: Source {
             committed = baseline["records"].object
             if baseline["checkpoint"] != resume["checkpoint"] { token = nil }
         } else { committed = [:]; token = nil }
+        let (photoJobs, photoSink) = AsyncStream<String>.makeStream()
+        photoContinuation = photoSink
+        queuedPhotos = []
+        let photoWorker = Task { @ContactsActor in
+            for await digest in photoJobs {
+                guard !Task.isCancelled else { return }
+                await makePhoto(digest, into: sink)
+            }
+        }
+        defer { photoSink.finish(); photoContinuation = nil; photoWorker.cancel() }
         let (changes, continuation) = AsyncStream<UInt64>.makeStream(bufferingPolicy: .bufferingNewest(1))
         let observer = NotificationCenter.default.addObserver(forName: .CNContactStoreDidChange, object: nil, queue: nil) { @Sendable [trace] _ in let delivered = CaptureTrace.now(); trace.record("contacts_notified", fields: ["delivered_ns": .integer(delivered)]); continuation.yield(delivered) }
         let polling = Task { @ContactsActor in
@@ -272,9 +298,78 @@ public final class ContactsSource: Source {
         token = next
     }
     public func readBlob(_ handle: String, offset: Int, length: Int) throws -> JSON {
-        guard authorized, let bytes = blobs[handle], offset >= 0, offset <= bytes.count, length > 0, length <= 131072 else { throw SourceFailure.unavailable }
+        guard authorized else { throw SourceFailure.permissionMissing }
+        if let url = variantURLs[handle] {
+            guard offset >= 0, length > 0, length <= 131072 else { throw SourceFailure.invalid }
+            let file = try FileHandle(forReadingFrom: url)
+            defer { try? file.close() }
+            let size = try file.seekToEnd()
+            guard UInt64(offset) <= size else { throw SourceFailure.invalid }
+            try file.seek(toOffset: UInt64(offset))
+            let bytes = try file.read(upToCount: length) ?? Data()
+            return .object(["t": .string("BlobChunk"), "handle": .string(handle), "offset": .number(Double(offset)), "bytes": .string(bytes.base64EncodedString()), "digest": .string(String(handle.dropFirst("media:".count))), "eof": .bool(UInt64(offset + bytes.count) == size)])
+        }
+        guard let bytes = blobs[handle], offset >= 0, offset <= bytes.count, length > 0, length <= 131072 else { throw SourceFailure.unavailable }
         let end = min(offset + length, bytes.count)
         return .object(["t": .string("BlobChunk"), "handle": .string(handle), "offset": .number(Double(offset)), "bytes": .string(bytes.subdata(in: offset..<end).base64EncodedString()), "digest": .string(hash(bytes)), "eof": .bool(end == bytes.count)])
+    }
+    private func attachPhoto(_ result: MediaResult, to fields: inout [String: JSON]) throws {
+        var derivatives: [String: JSON] = [:]
+        for (name, variant) in result.derivatives {
+            var value = try JSONDecoder().decode(JSON.self, from: JSONEncoder().encode(variant)).object
+            value.removeValue(forKey: "file")
+            value["state"] = .string("present")
+            derivatives[name] = .object(value)
+            variantURLs[variant.handle] = MediaDerivatives.url(variant)
+        }
+        fields["derivatives"] = .object(derivatives)
+        fields["media"] = try JSONDecoder().decode(JSON.self, from: JSONEncoder().encode(result.media))
+    }
+    private func makePhoto(_ digest: String, into sink: any ObservationSink) async {
+        defer { queuedPhotos.remove(digest) }
+        guard let bytes = blobs["contacts-image:" + digest] else { return }
+        let expectedGeneration = generation
+        let input = photoInputDirectory.appendingPathComponent(digest + ".image")
+        let work = Task.detached(executorPreference: MediaExecutor.shared, priority: .utility) {
+            try await ForegroundActivity.shared.waitUntilIdle(for: .milliseconds(250))
+            try FileManager.default.createDirectory(at: input.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+            try bytes.write(to: input, options: .atomic)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: input.path)
+            defer { try? FileManager.default.removeItem(at: input) }
+            let activity = MediaWork(digest: digest, checkpoint: { quiet in
+                try await ForegroundActivity.shared.waitUntilIdle(for: quiet)
+                while MediaDerivatives.paused { try await Task.sleep(for: .seconds(1)); try Task.checkCancellation() }
+            }, interruption: { callback in
+                let id = ForegroundActivity.shared.interrupt(callback)
+                return { ForegroundActivity.shared.removeInterruption(id) }
+            }, trace: { _ in })
+            return try await MediaWork.$current.withValue(activity) { try await MediaDerivatives.make(input, digest: digest) }
+        }
+        do {
+            let result = try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
+            while scanning { try await Task.sleep(for: .milliseconds(5)) }
+            guard !Task.isCancelled, authorized, expectedGeneration == generation else { return }
+            scanning = true
+            defer { scanning = false }
+            photoResults[digest] = result
+            var observations: [JSON] = []
+            var changed: [String: JSON] = [:]
+            for (key, previous) in committed where previous["collection"].string == "contacts.contact" && previous["data"]["image"]["digest"].string == digest {
+                var fields = previous["data"].object
+                try attachPhoto(result, to: &fields)
+                let value = observation("contacts.contact", previous["native_key"].string, .object(fields))
+                changed[key] = value
+                observations.append(value)
+            }
+            guard !observations.isEmpty, let token else { return }
+            var handles: [String: String] = [:]
+            for variant in result.derivatives.values { handles[variant.digest] = variant.handle }
+            try await sink.emitCheckpoint(source: name, generation: generation, checkpoint: token.base64EncodedString(), observations: observations, scanID: UUID().uuidString, scanStartedAt: timestamp(), scope: ["contacts.contact"], completionEvidence: "", blobHandles: handles, live: false)
+            committed.merge(changed) { _, new in new }
+            let baseline: JSON = .object(["checkpoint": .string(token.base64EncodedString()), "generation": .string(generation), "records": .object(committed)])
+            try JSONEncoder().encode(baseline).write(to: baselineURL, options: .atomic)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: baselineURL.path)
+        } catch { trace.record("contacts_photo_deferred") }
     }
     public func prepare(_ command: JSON) async throws -> Prepared {
         guard authorized else { throw SourceFailure.permissionMissing }
