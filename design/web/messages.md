@@ -89,7 +89,7 @@ A per-part `delivery_failed` with a captured record uses that failed row, withou
 | PDF and other files | occasional | File chip with icon, name and size; opens or downloads | R | W2 |
 | Contact card (vCard) | occasional | Card with name and photo; "View" shows the fields | R (attachment) | W2 |
 | Audio message | rare | Waveform bubble with play/pause, scrub, duration and speed; transcript text when present; "Keep" on expiring audio | partial (attachment); flags `—` | W2 read, W4 Keep |
-| Location / Find My | rare | Map snapshot card from the coordinates; opens maps. Live location becomes a placeholder | `—` | W2 / placeholder |
+| Location / Find My | rare | Captured map link only; opens Maps without a map-tiles service. Live location becomes an honest placeholder | `—` | W2 / placeholder |
 | Scheduled (Send Later) | rare | Dashed-outline bubble with "Send Later at 9:00"; edit time, send now, delete | `—` (`schedule_*`) | W4 |
 | Live Photo | rare | Still with a LIVE badge; press or hover plays the clip | `—` (pairing) | W2 |
 | Text formatting and animated text | rare | Bold, italic, underline and strikethrough render natively. Big, Small, Shake, Nod, Explode, Ripple, Bloom and Jitter are our own animations | `—` (attributedBody attributes not decoded) | W2 read |

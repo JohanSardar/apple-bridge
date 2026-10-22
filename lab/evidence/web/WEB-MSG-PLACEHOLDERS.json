@@ -1,0 +1,61 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[81.96 125.01 162.06] cpu_idle=50% cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5HGRDQQK4PTQXQGRAEWNQRG",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "demo_messages": 5000,
+    "demo_startup_ms": 24694,
+    "matrix": [
+      "chromium-light-phone",
+      "chromium-light-desktop",
+      "webkit-light-phone",
+      "webkit-light-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-MSG-PLACEHOLDERS-chromium-light-phone-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-MSG-PLACEHOLDERS-chromium-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-PLACEHOLDERS-chromium-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-PLACEHOLDERS-webkit-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-PLACEHOLDERS-webkit-light-desktop-playwright.json"
+    ],
+    "server": "gateway"
+  },
+  "scenario": "WEB-MSG-PLACEHOLDERS",
+  "level": "web",
+  "passed": true,
+  "git_sha": "186462a5f30eb1be070d59ccefa7de5242b100f4",
+  "at": "2026-10-22T09:58:27.319345Z",
+  "assertions": [
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 4 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/placeholders.spec.ts:5:1 › WEB-MSG-PLACEHOLDERS captured unsupported items have honest content, local artwork and fixed geometry (3.1s)\n  ✓  2 [chromium-light-phone] › tests/placeholders.spec.ts:8:1 › WEB-MSG-PLACEHOLDERS absent artwork uses glyphs without inferring unrelated attachments (1.1s)\n  ✓  3 [chromium-light-phone] › tests/placeholders.spec.ts:11:1 › WEB-MSG-PLACEHOLDERS only captured safe map links become actions and no map tiles are fetched (2.7s)\n  ✓  4 [chromium-light-phone] › tests/placeholders.spec.ts:14:1 › WEB-MSG-PLACEHOLDERS duplicate captions disappear while unknown payloads remain readable (1.3s)\n\n  4 passed (14.9s)\n"
+    },
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 4 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/placeholders.spec.ts:5:1 › WEB-MSG-PLACEHOLDERS captured unsupported items have honest content, local artwork and fixed geometry (6.1s)\n  ✓  2 [chromium-light-desktop] › tests/placeholders.spec.ts:8:1 › WEB-MSG-PLACEHOLDERS absent artwork uses glyphs without inferring unrelated attachments (744ms)\n  ✓  3 [chromium-light-desktop] › tests/placeholders.spec.ts:11:1 › WEB-MSG-PLACEHOLDERS only captured safe map links become actions and no map tiles are fetched (1.8s)\n  ✓  4 [chromium-light-desktop] › tests/placeholders.spec.ts:14:1 › WEB-MSG-PLACEHOLDERS duplicate captions disappear while unknown payloads remain readable (1.6s)\n\n  4 passed (18.6s)\n"
+    },
+    {
+      "name": "webkit-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 4 tests using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/placeholders.spec.ts:5:1 › WEB-MSG-PLACEHOLDERS captured unsupported items have honest content, local artwork and fixed geometry (10.0s)\n  ✓  2 [webkit-light-phone] › tests/placeholders.spec.ts:8:1 › WEB-MSG-PLACEHOLDERS absent artwork uses glyphs without inferring unrelated attachments (2.2s)\n  ✓  3 [webkit-light-phone] › tests/placeholders.spec.ts:11:1 › WEB-MSG-PLACEHOLDERS only captured safe map links become actions and no map tiles are fetched (4.4s)\n  ✓  4 [webkit-light-phone] › tests/placeholders.spec.ts:14:1 › WEB-MSG-PLACEHOLDERS duplicate captions disappear while unknown payloads remain readable (3.0s)\n\n  4 passed (31.0s)\n"
+    },
+    {
+      "name": "webkit-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 4 tests using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/placeholders.spec.ts:5:1 › WEB-MSG-PLACEHOLDERS captured unsupported items have honest content, local artwork and fixed geometry (9.6s)\n  ✓  2 [webkit-light-desktop] › tests/placeholders.spec.ts:8:1 › WEB-MSG-PLACEHOLDERS absent artwork uses glyphs without inferring unrelated attachments (2.7s)\n  ✓  3 [webkit-light-desktop] › tests/placeholders.spec.ts:11:1 › WEB-MSG-PLACEHOLDERS only captured safe map links become actions and no map tiles are fetched (2.1s)\n  ✓  4 [webkit-light-desktop] › tests/placeholders.spec.ts:14:1 › WEB-MSG-PLACEHOLDERS duplicate captions disappear while unknown payloads remain readable (5.0s)\n\n  4 passed (23.9s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
