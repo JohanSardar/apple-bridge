@@ -51,7 +51,7 @@ extension NotesProto {
     }
 
     static func paragraphBlock(_ paragraph: NotesProtoMessage) throws -> NotesBlock {
-        try paragraph.validate([1: 0, 2: 0, 4: 0, 5: 2, 8: 0])
+        try paragraph.validate([1: 0, 2: 0, 3: 0, 4: 0, 5: 2, 8: 0, 9: 2])
         let style = Int(Int32(truncatingIfNeeded: paragraph.integer(1) ?? UInt64.max))
         var block = NotesBlock(type: "paragraph", text: "", runs: [])
         switch style {
@@ -87,7 +87,9 @@ extension NotesProto {
             guard alignment <= 3 else { throw NotesProtoFailure.unsupported }
             block.alignment = ["left", "center", "right", "justify"][Int(alignment)]
         }
-        if paragraph.fields.contains(where: { ![1, 2, 4, 5, 8].contains($0.number) }) { block.unsupported = "unknown_paragraph_attribute" }
+        if let direction = paragraph.integer(3), direction != 1 { block.unsupported = "unsupported_writing_direction" }
+        if let identifier = paragraph.bytes(9), identifier.count != 16 { throw NotesProtoFailure.malformed }
+        if paragraph.fields.contains(where: { ![1, 2, 3, 4, 5, 8, 9].contains($0.number) }) { block.unsupported = "unknown_paragraph_attribute" }
         return block
     }
 }

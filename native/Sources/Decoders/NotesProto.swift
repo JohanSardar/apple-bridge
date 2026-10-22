@@ -10,12 +10,12 @@ public enum NotesProto {
     }
 
     static func decodeNote(_ note: NotesProtoMessage, tables: [String: Data], depth: Int) throws -> NotesBody {
-        try note.validate([2: 2, 5: 2], repeated: [5])
+        try note.validate([2: 2, 3: 2, 4: 2, 5: 2], repeated: [3, 5])
         guard depth < 8, let text = try note.string(2) else { throw NotesProtoFailure.malformed }
         let attributes = try note.repeated(5).map(NotesProtoMessage.init)
         var attachments: [String] = []
         for attribute in attributes {
-            try attribute.validate([1: 0, 2: 2, 3: 2, 5: 0, 6: 0, 7: 0, 8: 0, 9: 2, 10: 2, 12: 2, 14: 0])
+            try attribute.validate([1: 0, 2: 2, 3: 2, 5: 0, 6: 0, 7: 0, 8: 0, 9: 2, 10: 2, 12: 2, 13: 0, 14: 0])
             if let identifier = try attribute.message(12)?.string(1), !attachments.contains(identifier) { attachments.append(identifier) }
         }
         if attributes.contains(where: { $0.integer(1) == nil }) {
@@ -24,7 +24,7 @@ public enum NotesProto {
         }
         let units = Array(text.utf16)
         var offset = 0
-        var complete = note.fields.allSatisfy { [2, 5].contains($0.number) }
+        var complete = note.fields.allSatisfy { [2, 3, 4, 5].contains($0.number) }
         var flat: [NotesBlock] = []
         var current = NotesBlock(type: "paragraph", text: "", runs: [])
         func append(_ run: NotesRun, paragraph: NotesBlock?) {
@@ -68,7 +68,7 @@ public enum NotesProto {
                 run = NotesRun(text: segment)
                 paragraph = NotesBlock(type: "unknown", text: "", runs: [], unsupported: "unsupported_attributes")
             }
-            if attribute.fields.contains(where: { ![1, 2, 3, 5, 6, 7, 8, 9, 10, 12, 14].contains($0.number) }) {
+            if attribute.fields.contains(where: { ![1, 2, 3, 5, 6, 7, 8, 9, 10, 12, 13, 14].contains($0.number) }) {
                 complete = false
                 if paragraph == nil { paragraph = NotesBlock(type: "paragraph", text: "", runs: []) }
                 paragraph?.unsupported = "unknown_attribute"
@@ -85,7 +85,7 @@ public enum NotesProto {
             complete = complete && attributes.isEmpty
         }
         if !current.runs.isEmpty || flat.isEmpty { flat.append(current) }
-        if note.fields.contains(where: { ![2, 5].contains($0.number) }) {
+        if note.fields.contains(where: { ![2, 3, 4, 5].contains($0.number) }) {
             flat.append(NotesBlock(type: "unknown", text: "", runs: [], unsupported: "unknown_note_field"))
         }
         for index in flat.indices {
@@ -98,7 +98,7 @@ public enum NotesProto {
                     if let data = tables[ids[0]], let rows = try? table(data, tables: tables, depth: depth + 1) {
                         flat[index].rows = rows
                     } else { flat[index].unsupported = "table_data_unavailable" }
-                } else { flat[index].type = "attachment" }
+                } else if flat[index].type == "paragraph" { flat[index].type = "attachment" }
                 complete = false
             } else if flat[index].text.contains("\u{fffc}"), ids.isEmpty {
                 flat[index].type = "unknown"
