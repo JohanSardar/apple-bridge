@@ -564,6 +564,7 @@ features:
       - {id: WEB-MSG-STICKERS-GENMOJI, levels: [web]}
       - {id: WEB-MSG-EFFECTS, levels: [web]}
       - {id: WEB-MSG-PLACEHOLDERS, levels: [web]}
+      - {id: WEB-MSG-PENDING, levels: [web]}
       - {id: WEB-MSG-DETAILS, levels: [web]}
       - {id: WEB-MSG-KEYBOARD, levels: [web]}
       - {id: WEB-MSG-A11Y, levels: [web]}

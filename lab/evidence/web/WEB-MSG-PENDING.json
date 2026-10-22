@@ -1,0 +1,85 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[10.32 16.37 26.76] cpu_idle=35% cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5HQZQZBXTXKMMBFCQ2977E0",
+  "metrics": {
+    "browser_budget_ms": 180000,
+    "capture_observer_resets": 0,
+    "demo_messages": 5000,
+    "demo_startup_ms": 15628,
+    "fixture_setup_ms": 15628,
+    "matrix": [
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "chromium-light-phone",
+      "chromium-light-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-MSG-PENDING-webkit-light-phone-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-MSG-PENDING-webkit-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-PENDING-webkit-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-PENDING-chromium-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-PENDING-chromium-light-desktop-playwright.json"
+    ],
+    "server": "gateway",
+    "setups": [
+      {
+        "fixture_setup_ms": 15628,
+        "fixture_snapshot": null,
+        "project": "webkit-light-phone"
+      },
+      {
+        "fixture_setup_ms": 11958,
+        "fixture_snapshot": null,
+        "project": "webkit-light-desktop"
+      },
+      {
+        "fixture_setup_ms": 18385,
+        "fixture_snapshot": null,
+        "project": "chromium-light-phone"
+      },
+      {
+        "fixture_setup_ms": 16519,
+        "fixture_snapshot": null,
+        "project": "chromium-light-desktop"
+      }
+    ]
+  },
+  "scenario": "WEB-MSG-PENDING",
+  "level": "web",
+  "passed": true,
+  "git_sha": "b6b99148f5e7c1ceb2b5583687db8db659af8cd7",
+  "at": "2026-10-22T12:04:47.211843Z",
+  "assertions": [
+    {
+      "name": "webkit-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 4 tests using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/pending.spec.ts:5:1 › WEB-MSG-PENDING local decoded previews keep supplied bounds and Composer retains URL ownership (5.0s)\n  ✓  2 [webkit-light-phone] › tests/pending.spec.ts:6:1 › WEB-MSG-PENDING transparent previews float and unknown dimensions use the explicit tile (2.9s)\n  ✓  3 [webkit-light-phone] › tests/pending.spec.ts:7:1 › WEB-MSG-PENDING known video decodes one paused frame without a persisted record (3.0s)\n  ✓  4 [webkit-light-phone] › tests/pending.spec.ts:8:1 › WEB-MSG-PENDING remote URLs stay inert and Reduce Motion removes the decode fade (1.7s)\n\n  4 passed (17.3s)\n"
+    },
+    {
+      "name": "webkit-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 4 tests using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/pending.spec.ts:5:1 › WEB-MSG-PENDING local decoded previews keep supplied bounds and Composer retains URL ownership (4.2s)\n  ✓  2 [webkit-light-desktop] › tests/pending.spec.ts:6:1 › WEB-MSG-PENDING transparent previews float and unknown dimensions use the explicit tile (2.7s)\n  ✓  3 [webkit-light-desktop] › tests/pending.spec.ts:7:1 › WEB-MSG-PENDING known video decodes one paused frame without a persisted record (2.8s)\n  ✓  4 [webkit-light-desktop] › tests/pending.spec.ts:8:1 › WEB-MSG-PENDING remote URLs stay inert and Reduce Motion removes the decode fade (2.3s)\n\n  4 passed (16.7s)\n"
+    },
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 4 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/pending.spec.ts:5:1 › WEB-MSG-PENDING local decoded previews keep supplied bounds and Composer retains URL ownership (2.4s)\n  ✓  2 [chromium-light-phone] › tests/pending.spec.ts:6:1 › WEB-MSG-PENDING transparent previews float and unknown dimensions use the explicit tile (1.7s)\n  ✓  3 [chromium-light-phone] › tests/pending.spec.ts:7:1 › WEB-MSG-PENDING known video decodes one paused frame without a persisted record (1.7s)\n  ✓  4 [chromium-light-phone] › tests/pending.spec.ts:8:1 › WEB-MSG-PENDING remote URLs stay inert and Reduce Motion removes the decode fade (816ms)\n\n  4 passed (10.8s)\n"
+    },
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 4 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/pending.spec.ts:5:1 › WEB-MSG-PENDING local decoded previews keep supplied bounds and Composer retains URL ownership (1.7s)\n  ✓  2 [chromium-light-desktop] › tests/pending.spec.ts:6:1 › WEB-MSG-PENDING transparent previews float and unknown dimensions use the explicit tile (1.8s)\n  ✓  3 [chromium-light-desktop] › tests/pending.spec.ts:7:1 › WEB-MSG-PENDING known video decodes one paused frame without a persisted record (1.2s)\n  ✓  4 [chromium-light-desktop] › tests/pending.spec.ts:8:1 › WEB-MSG-PENDING remote URLs stay inert and Reduce Motion removes the decode fade (1.1s)\n\n  4 passed (8.4s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
