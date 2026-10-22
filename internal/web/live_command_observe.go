@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -28,8 +29,8 @@ func (l *liveSocket) nextCommand(iterator *state.ChangeIterator) (contracts.Batc
 func (l *liveSocket) sendCommandStatus(status contracts.CommandRecord) {
 	l.send(map[string]any{"t": "cmd_status", "id": status.Command.ID, "status": status.State, "command": status, "error": status.Error}, false)
 }
-func (l *liveSocket) localCommandStatus(id string) (contracts.CommandRecord, error) {
-	result, err := l.server.deps.Operations.Read(l.ctx, l.identity.Principal, "records.get", contracts.ReadQuery{Collection: "system.command", ID: id})
+func (l *liveSocket) localCommandStatus(ctx context.Context, id string) (contracts.CommandRecord, error) {
+	result, err := l.server.deps.Operations.Read(ctx, l.identity.Principal, "records.get", contracts.ReadQuery{Collection: "system.command", ID: id})
 	if err != nil {
 		return contracts.CommandRecord{}, err
 	}
@@ -38,10 +39,14 @@ func (l *liveSocket) localCommandStatus(id string) (contracts.CommandRecord, err
 			continue
 		}
 		commandStatusLookup(id)
-		status, err := l.server.deps.Operations.Target.Status(l.ctx, l.identity.Principal, contracts.CommandQuery{ID: id})
-		head := l.server.deps.Operations.Head()
-		if err != nil && !(errors.Is(err, contracts.ErrReset) && status.Command.ID == id && head.Epoch > status.Cursor.Epoch) {
-			return status, err
+		status, err := l.server.deps.Operations.Target.Status(ctx, l.identity.Principal, contracts.CommandQuery{ID: id})
+		if err != nil {
+			if !errors.Is(err, contracts.ErrReset) || status.Command.ID != id || ctx.Err() != nil {
+				return status, err
+			}
+			if l.server.deps.Operations.Head().Epoch <= status.Cursor.Epoch {
+				return status, err
+			}
 		}
 		return status, nil
 	}
@@ -55,7 +60,7 @@ func (l *liveSocket) watchCommand(id string, iterator *state.ChangeIterator, sta
 	delay := 100 * time.Millisecond
 	for l.ctx.Err() == nil {
 		if lookup {
-			next, err := l.localCommandStatus(id)
+			next, err := l.localCommandStatus(l.ctx, id)
 			if err == nil {
 				status = next
 			} else if !errors.Is(err, contracts.ErrNotFound) {

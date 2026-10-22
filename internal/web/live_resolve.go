@@ -60,7 +60,9 @@ func (l *liveSocket) resolveCommand(id string) {
 		fail("unavailable", "commands unavailable")
 		return
 	}
-	status, err := l.localCommandStatus(id)
+	ctx, stop := context.WithTimeout(l.ctx, 15*time.Second)
+	defer stop()
+	status, err := l.localCommandStatus(ctx, id)
 	if err != nil {
 		problem := safeError(err)
 		fail(problem.Code, problem.Message)
@@ -68,9 +70,7 @@ func (l *liveSocket) resolveCommand(id string) {
 	}
 	throttled := !l.server.allowResolve(l.identity.Session.DeviceID, id)
 	if !throttled {
-		ctx, stop := context.WithTimeout(l.ctx, 15*time.Second)
 		status, err = l.server.deps.Operations.Target.Status(ctx, l.identity.Principal, contracts.CommandQuery{ID: id, Resolve: true})
-		stop()
 		if err != nil {
 			problem := safeError(err)
 			fail(problem.Code, problem.Message)
