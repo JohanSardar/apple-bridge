@@ -722,9 +722,11 @@ features:
     depends_on: [web.frontdoor, contacts.write]
     status: todo
     scenarios:
+      - {id: WEB-CON-LIST, levels: [sim]}
       - {id: WEB-CON-READ, levels: [web]}
       - {id: WEB-CON-WRITE, levels: [web, real]}
       - {id: WEB-CON-PARITY, levels: [web, real]}
+    notes: Contacts list read model in progress; web UI, browser-safe photo variants, native me identification and writes remain unqualified.
   - id: web.notes
     title: Notes web app (read, write, parity)
     requirements: [R-WEB-UI, R-WEB-FAST, R-RW]

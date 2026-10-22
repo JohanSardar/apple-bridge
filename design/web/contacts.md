@@ -64,3 +64,13 @@ Deep links: `/contacts`, `/contacts/<id>`, `/contacts/list/<group>`.
 **P:**
 - Group membership writes (CNSaveRequest supports group add/remove; it was outside v1 scope).
 - Contact poster read if it's stored accessibly.
+
+## 6. Contacts list contract
+
+`contacts.list` reads one local transaction and returns `sections`, `groups` (records with visible member counts), `containers`, `count` and the replication `cursor`. An optional `group` is a Bridge group ID; a missing or deleted group is `not_found`. Tombstoned contacts and stale membership IDs never count. Both REST and MCP expose the same shape, and the web live view replaces this snapshot after relevant commits.
+
+`sort` and `display_order` independently accept `given` or `family`. Their defaults are `family` and `given`; the UI stores overrides on the viewing device. Company contacts use their organization; nameless contacts fall back to nickname/organization and ultimately “No Name”. Sorting folds case and combining accents, then uses the Bridge ID for ties. Sections are A–Z and `#` for other initials. This deterministic initial contract does not claim locale-specific collation.
+
+Each item includes its complete contact record, display name, folded sort key, initials, nullable avatar reference, nullable `is_me`, and `conversation_ids`. Unknown identity stays null. Only explicit native identity may produce My Card; it is never inferred from names or handles. Linked chats use captured `messages.handle.contact_id` plus the participant index, are deduplicated, and disappear without Messages visibility. Contacts visibility is checked before records, counts, groups or containers are read.
+
+The read-model slice forwards existing image references. Browser-safe variants and native identity capture belong to the following Contacts read UI slice; this slice does not certify either.

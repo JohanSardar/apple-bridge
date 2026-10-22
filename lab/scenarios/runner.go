@@ -358,6 +358,9 @@ func convergence(w *world.World) bool {
 }
 
 func runScenario(ctx context.Context, s Scenario, level string) Evidence {
+	if s.ID == "WEB-CON-LIST" {
+		return runContactsList(ctx, s, level)
+	}
 	if s.ID == "HELPER-RELEASE-COMMANDS" {
 		return runHelperReleaseCommands(ctx, s, level)
 	}
