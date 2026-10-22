@@ -5,8 +5,9 @@ import {createMediaCollection} from './collection';
 import {MediaViewer} from './MediaViewer';
 import type {ChatMediaViewerProps} from './ChatMediaViewer';
 import {createHandlesCache} from '../store/handles';
-import {text} from '../store/types';
-import {header,name,wording} from '../format';
+import {fields,text} from '../store/types';
+import {duration,header,name,wording} from '../format';
+import {mediaSource} from './source';
 export function ViewerSession(props:ChatMediaViewerProps){
     const sources=new Map<HTMLElement,string>();
     const [selected,setSelected]=createSignal(props.attachment);
@@ -32,4 +33,15 @@ export function ViewerSession(props:ChatMediaViewerProps){
         const senderName=()=>owner()?.data.is_from_me?wording.you:name(text(owner()?.data.sender_handle_id),handles.read());
         return <MediaViewer {...props} onClose={close} onSelection={value=>setSelected(value)} senderName={senderName()} timestamp={timestamp()} subtitle={subtitle()} originFor={originFor} shareUrl={shareUrl} attachments={collection.attachments()} loading={collection.loading()} error={collection.error()} onRetry={collection.retry}/>;
     }}</Show>;
+}
+
+export function CardVideo(props:{attachment:BridgeRecord}) {
+    const [ready,setReady]=createSignal(false),[playing,setPlaying]=createSignal(false),[position,setPosition]=createSignal(0),[length,setLength]=createSignal(Number(fields(props.attachment.data.media).duration_ms??0)/1000),[status,setStatus]=createSignal('');
+    let video!:HTMLVideoElement,frame:number|undefined,disposed=false;
+    const decoded=()=>{if('requestVideoFrameCallback' in video){if(frame===undefined)frame=video.requestVideoFrameCallback(()=>{frame=undefined;if(!disposed)setReady(true);});}else setReady(true);};
+    const toggle=()=>{if(video.paused){setStatus('');void video.play().catch(()=>setStatus('Video unavailable'));}else video.pause();};
+    onCleanup(()=>{disposed=true;if(frame!==undefined)video.cancelVideoFrameCallback(frame);video.pause();video.removeAttribute('src');video.load();});
+    return <div class="message-card-player" data-ready={ready()}><video ref={video} src={mediaSource(props.attachment,'video')} playsinline autoplay muted preload="metadata" aria-label="Video preview" onLoadedData={decoded} onPlaying={()=>{setPlaying(true);decoded();}} onPause={()=>setPlaying(false)} onEnded={()=>setPlaying(false)} onTimeUpdate={()=>setPosition(video.currentTime)} onLoadedMetadata={()=>{if(Number.isFinite(video.duration))setLength(video.duration);}} onError={()=>setStatus('Video unavailable')}/>
+        <div class="message-card-controls"><button type="button" aria-label={playing()?'Pause video':'Play video'} onClick={toggle}><svg viewBox="0 0 24 24" aria-hidden="true"><Show when={playing()} fallback={<use width="24" height="24" href="/icons.svg#message-card-play"/>}><use width="24" height="24" href="/icons.svg#message-card-pause"/></Show></svg></button><input type="range" aria-label="Video position" min="0" max={length()} step="0.1" value={position()} onInput={event=>{if(Number.isFinite(video.duration))video.currentTime=Number(event.currentTarget.value);}}/><span>{duration(position())}</span></div><Show when={status()}><span class="message-card-missing" role="status">{status()}</span></Show>
+    </div>;
 }

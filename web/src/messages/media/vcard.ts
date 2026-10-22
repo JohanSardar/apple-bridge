@@ -1,5 +1,6 @@
 export type ContactField={label:string;value:string};
 export type VCard={name:string;fields:ContactField[];photo?:{type:'image/png'|'image/jpeg';bytes:Uint8Array}};
+const labels:Record<string,string>={TEL:'Phone',EMAIL:'Email',ORG:'Company',TITLE:'Job title',ADR:'Address',URL:'Website',NOTE:'Note',BDAY:'Birthday'};
 function unescape(value:string){return value.replace(/\\([nN,;\\])/gu,(_,letter:string)=>letter.toLowerCase()==='n'?'\n':letter).trim().slice(0,1024);}
 function components(value:string){const result:string[]=[];let field='',escaped=false;for(const character of value){if(character===';'&&!escaped){result.push(field);field='';}else field+=character;escaped=character==='\\'?!escaped:false;}result.push(field);return result;}
 function picture(value:string):VCard['photo']{
@@ -15,7 +16,7 @@ export function decodeVCard(source:string):VCard {
   if(key==='FN')contact.name=value;
   else if(key==='N')structured=[3,1,2,0,4].map(index=>unescape(components(raw)[index]??'')).filter(Boolean).join(' ');
   else if(key==='PHOTO')contact.photo=picture(raw);
-  else if(['TEL','EMAIL','ORG','TITLE','ADR','URL','NOTE','BDAY'].includes(key)&&contact.fields.length<32){const label:Record<string,string>={TEL:'Phone',EMAIL:'Email',ORG:'Company',TITLE:'Job title',ADR:'Address',URL:'Website',NOTE:'Note',BDAY:'Birthday'};contact.fields.push({label:label[key],value:key==='ADR'||key==='ORG'?components(raw).map(unescape).filter(Boolean).join(', '):value});}
+  else if(Object.hasOwn(labels,key)&&contact.fields.length<32){contact.fields.push({label:labels[key],value:key==='ADR'||key==='ORG'?components(raw).map(unescape).filter(Boolean).join(', '):value});}
  }
  if(contact.name==='Contact Card'&&structured)contact.name=structured;
  return contact;

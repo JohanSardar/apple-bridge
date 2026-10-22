@@ -6,8 +6,7 @@ import { mediaSource } from './source';
 import {MediaImage} from './MediaImage';
 type PiPVideo=HTMLVideoElement&{webkitSetPresentationMode?:(mode:string)=>void;webkitSupportsPresentationMode?:(mode:string)=>boolean};
 function PlayerIcon(props:{name:'play'|'pause'|'volume'|'muted'|'pip'}){
-    const paths={play:'M8 5v14l11-7Z',pause:'M8 5v14M16 5v14',volume:'M11 4 6 9H3v6h3l5 5ZM15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14',muted:'M11 4 6 9H3v6h3l5 5ZM16 8l6 8m0-8-6 8',pip:'M3 5h18v14H3ZM12 12h8v6h-8Z'};
-    return <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" fill={props.name==='play'?'currentColor':'none'}><path d={paths[props.name]}/></svg>;
+    return <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" fill={props.name==='play'?'currentColor':'none'}><use width="24" height="24" href={'/icons.svg#media-'+props.name}/></svg>;
 }
 export function VideoPlayer(props:{attachment:BridgeRecord;live?:boolean;ref?:(video:HTMLVideoElement)=>void}) {
     const [ready,setReady]=createSignal(false);

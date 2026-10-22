@@ -1,3 +1,5 @@
+import framesURL from './text-frames.json?url&no-inline';
+import {loadCatalog} from '../catalog';
 import {normalizeEffect,textEffects,type TextEffect} from './data';
 import {sampleSpring} from '../../motion/spring';
 import './effects.css';
@@ -5,6 +7,8 @@ export {normalizeEffect,effectLabel} from './data';
 export {playScreenEffect} from './events';
 export type AnimationOptions={arrival:boolean;replay?:boolean};
 const active=new WeakMap<HTMLElement,()=>void>();
+let textFrames:Record<TextEffect,Keyframe[]>|undefined;
+export function preloadTextEffects(){return loadCatalog<Record<TextEffect,Keyframe[]>>(framesURL).then(frames=>textFrames=frames);}
 function animated(element:HTMLElement,frames:Keyframe[],duration:number):()=>void {
  const preference=matchMedia('(prefers-reduced-motion:reduce)'),animation=element.animate(frames,{duration,easing:'linear',fill:'none'});
  const skip=(event:Event)=>{if(animation.playState!=='running')return;event.preventDefault();event.stopPropagation();animation.cancel();},reduce=()=>{if(preference.matches)animation.cancel();};
@@ -31,6 +35,6 @@ export function attachBubbleEffect(element:HTMLElement,raw:unknown,options:Anima
 }
 export function attachTextEffect(element:HTMLElement,raw:unknown,options:AnimationOptions):()=>void {
  active.get(element)?.();if(typeof raw!=='string'||!(textEffects as readonly string[]).includes(raw)||(!options.arrival&&!options.replay)||matchMedia('(prefers-reduced-motion:reduce)').matches)return ()=>{};
- const effect=raw as TextEffect,frames:Record<TextEffect,Keyframe[]>={big:[{transform:'scale(1)'},{transform:'scale(1.35)',offset:.4},{transform:'scale(.98)',offset:.75},{transform:'none'}],small:[{transform:'scale(1)'},{transform:'scale(.65)',offset:.4},{transform:'scale(1.02)',offset:.8},{transform:'none'}],shake:[{transform:'none'},{transform:'translateX(-4px) rotate(-3deg)',offset:.2},{transform:'translateX(4px) rotate(3deg)',offset:.4},{transform:'translateX(-3px)',offset:.6},{transform:'translateX(2px)',offset:.8},{transform:'none'}],nod:[{transform:'none'},{transform:'translateY(-5px)',offset:.25},{transform:'translateY(3px)',offset:.5},{transform:'translateY(-2px)',offset:.75},{transform:'none'}],explode:[{transform:'none',opacity:1},{transform:'scale(1.5) rotate(6deg)',opacity:0,offset:.45},{transform:'scale(.85) rotate(-3deg)',opacity:0,offset:.5},{transform:'none',opacity:1}],ripple:[{transform:'none'},{transform:'translateY(-5px) rotate(-4deg)',offset:.3},{transform:'translateY(3px) rotate(3deg)',offset:.6},{transform:'none'}],bloom:[{transform:'scale(.75)',opacity:.2},{transform:'scale(1.12)',opacity:1,offset:.7},{transform:'none'}],jitter:[{transform:'none'},{transform:'translate(-2px,1px)',offset:.15},{transform:'translate(2px,-1px)',offset:.3},{transform:'translate(-1px,-2px)',offset:.45},{transform:'translate(2px,2px)',offset:.6},{transform:'translate(-1px,1px)',offset:.8},{transform:'none'}]};
- const stop=animated(element,frames[effect],effect==='explode'?1300:950);let disposed=false;const cleanup=()=>{if(disposed)return;disposed=true;stop();if(active.get(element)===cleanup)active.delete(element);};active.set(element,cleanup);return cleanup;
+ const effect=raw as TextEffect;let stop=()=>{},disposed=false;
+ const start=(frames:Record<TextEffect,Keyframe[]>)=>{if(!disposed&&!matchMedia('(prefers-reduced-motion:reduce)').matches)stop=animated(element,frames[effect],effect==='explode'?1300:950);};if(textFrames)start(textFrames);else void preloadTextEffects().then(start).catch(()=>{});const cleanup=()=>{if(disposed)return;disposed=true;stop();if(active.get(element)===cleanup)active.delete(element);};active.set(element,cleanup);return cleanup;
 }

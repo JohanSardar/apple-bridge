@@ -3,12 +3,13 @@ import {createSignal,For,onCleanup,onMount,Show} from 'solid-js';
 import {Portal} from 'solid-js/web';
 import {reducedMotion,springAnimation} from '../../motion/animate';
 import {classicReactions,type MessageActionsController} from './reactionActions';
-import {reactionEmoji} from './emoji';
+import {loadReactionEmoji,type ReactionEmoji} from './emoji';
 import './actions.css';
 export function MessageActions(props:{actions:MessageActionsController;onForward?:(event:Event,text:string,attachment?:BridgeRecord)=>void}){
     const actions=props.actions;
     function Picker(){
-        const [search,setSearch]=createSignal(''),[more,setMore]=createSignal(false);
+        const [search,setSearch]=createSignal(''),[more,setMore]=createSignal(false),[emoji,setEmoji]=createSignal<readonly ReactionEmoji[]>([]),[emojiProblem,setEmojiProblem]=createSignal('');
+        const loadEmoji=()=>{setEmojiProblem('');void loadReactionEmoji().then(setEmoji).catch(()=>setEmojiProblem("Couldn't load emoji"));};
         let dialog!:HTMLDialogElement,searchField:HTMLInputElement|undefined;
         const value=actions.target()!,anchor=value.anchor;
         let lift:ReturnType<typeof springAnimation>|undefined,rule:{sheet:CSSStyleSheet;rule:CSSRule}|undefined;
@@ -26,7 +27,7 @@ export function MessageActions(props:{actions:MessageActionsController;onForward
             else{const fade=dialog.animate([{opacity:0},{opacity:1}],{duration:150});onCleanup(()=>fade.cancel());}
         });
         onCleanup(()=>{lift?.cancel();anchor.classList.remove('message-action-anchor');anchor.style.scale='';if(rule){const index=Array.from(rule.sheet.cssRules).indexOf(rule.rule);if(index>=0)rule.sheet.deleteRule(index);}});
-        const results=()=>reactionEmoji.filter(([symbol,label,tags])=>(symbol+' '+label+' '+tags).toLocaleLowerCase().includes(search().trim().toLocaleLowerCase()));
+        const results=()=>emoji().filter(([symbol,label,tags])=>(symbol+' '+label+' '+tags).toLocaleLowerCase().includes(search().trim().toLocaleLowerCase()));
         const keydown=(event:KeyboardEvent)=>{
             event.stopPropagation();
             if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)||event.target instanceof HTMLInputElement)return;
@@ -37,8 +38,8 @@ export function MessageActions(props:{actions:MessageActionsController;onForward
         };
         return <Portal><dialog ref={dialog} class="message-actions-dialog glass" aria-label="Message actions" data-message-version={value.item.version} onCancel={event=>{event.preventDefault();event.stopPropagation();actions.close();}} onKeyDown={keydown} onClick={event=>{if(event.target!==dialog)return;const rect=dialog.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)actions.close();}}>
             <Show when={actions.available()}><div class="tapback-picker" role="group" aria-label="Tapbacks"><For each={classicReactions}>{(reaction,index)=><button style={{'--reaction-index':index()}} aria-label={reaction.label} aria-pressed={actions.selected(reaction)} disabled={actions.busy()||actions.unknown()} onClick={event=>actions.react(event,reaction)}><span aria-hidden="true">{reaction.symbol}</span></button>}</For></div>
-                <button class="message-action-item" disabled={actions.busy()||actions.unknown()} aria-expanded={more()} onClick={()=>{setMore(value=>!value);queueMicrotask(()=>searchField?.focus());}}>More reactions</button>
-                <Show when={more()}><div class="reaction-search"><input ref={searchField} type="search" aria-label="Search reactions" value={search()} onInput={event=>setSearch(event.currentTarget.value)} placeholder="Search emoji"/><div class="reaction-emoji-grid"><For each={results()}>{([symbol,label])=><button aria-label={label} aria-pressed={actions.selected({kind:'emoji',emoji:symbol,symbol})} disabled={actions.busy()||actions.unknown()} onClick={event=>actions.react(event,{kind:'emoji',emoji:symbol,symbol})}>{symbol}</button>}</For></div><Show when={!results().length}><p class="action-problem">No emoji found</p></Show></div></Show>
+                <button class="message-action-item" disabled={actions.busy()||actions.unknown()} aria-expanded={more()} onClick={()=>{setMore(value=>!value);if(more())loadEmoji();queueMicrotask(()=>searchField?.focus());}}>More reactions</button>
+                <Show when={more()}><div class="reaction-search"><input ref={searchField} type="search" aria-label="Search reactions" value={search()} onInput={event=>setSearch(event.currentTarget.value)} placeholder="Search emoji"/><div class="reaction-emoji-grid"><For each={results()}>{([symbol,label])=><button aria-label={label} aria-pressed={actions.selected({kind:'emoji',emoji:symbol,symbol})} disabled={actions.busy()||actions.unknown()} onClick={event=>actions.react(event,{kind:'emoji',emoji:symbol,symbol})}>{symbol}</button>}</For></div><Show when={emojiProblem()}><p class="action-problem" role="status">{emojiProblem()} <button onClick={loadEmoji}>Try Again</button></p></Show><Show when={emoji().length&&!results().length}><p class="action-problem">No emoji found</p></Show></div></Show>
             </Show>
             <Show when={actions.problem()}><p class="action-problem" role="status">{actions.problem()}</p></Show>
             <Show when={actions.unknown()}><button class="message-action-item" disabled={!actions.connected()} onClick={actions.check}>Check</button></Show>

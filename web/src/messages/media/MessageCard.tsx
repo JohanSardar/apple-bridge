@@ -25,4 +25,4 @@ export function MessageCard(props:{message:ThreadItem}) {
         <Show when={card().hasImage&&card().video&&!playing()}><Show when={video()} fallback={<span class="message-card-video-badge" role="img" aria-label="Video link"><PlayGlyph/></span>}><button type="button" class="message-card-play" ref={control} aria-label="Play video preview" onPointerDown={event=>{if(event.button===0)press(.92);}} onPointerUp={()=>press(1)} onPointerLeave={()=>press(1)} onPointerCancel={()=>press(1)} onKeyDown={event=>{if(event.key===' ')press(.92);}} onKeyUp={()=>press(1)} onBlur={()=>press(1)} onClick={()=>{motion?.cancel();motion=undefined;control=undefined;setPlaying(true);}}><PlayGlyph/></button></Show></Show>
     </div>}</Show>;
 }
-function PlayGlyph(){return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5.5v13l10-6.5Z" fill="currentColor"/></svg>;}
+function PlayGlyph(){return <svg viewBox="0 0 24 24" aria-hidden="true"><use width="24" height="24" href="/icons.svg#message-card-play"/></svg>;}

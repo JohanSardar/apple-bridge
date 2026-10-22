@@ -1,4 +1,4 @@
-import {batch,createEffect,createRoot,createSignal,Show,onCleanup,onMount,untrack} from 'solid-js';
+import {batch,createEffect,createRoot,createSignal,lazy,Show,Suspense,onCleanup,onMount,untrack} from 'solid-js';
 import type {LiveClient} from '../data/live';
 import type {Cursor,DeviceSession,ThreadItem} from '../data/types';
 import {router} from '../app/router';
@@ -9,7 +9,7 @@ import {prepareForward} from './compose/drafts';
 import {withInput} from '../data/input';
 import type {createMessageCommands} from './actions/commands';
 import Transcript from './transcript/Transcript';
-import {MessageActions} from './actions/MessageActions';
+const MessageActions=lazy(()=>import('./actions/MessageActions').then(module=>({default:module.MessageActions})));
 import type {MessageActionsController} from './actions/reactionActions';
 export default function MessagePane(props:{chatID:string;messageID?:string;title:(value:string)=>void;actions:MessageActionsController;live:LiveClient;commands:ReturnType<typeof createMessageCommands>;session:DeviceSession;uploads:Uploads}){
     const [retryProblem,setRetryProblem]=createSignal('');
@@ -119,6 +119,6 @@ export default function MessagePane(props:{chatID:string;messageID?:string;title
     onCleanup(()=>{cancel();cancelShortcut();props.actions.close();});
     return <div ref={host} onDragOver={event=>{if(event.dataTransfer?.types.includes("Files"))event.preventDefault();}} onDrop={event=>{if(event.defaultPrevented||!event.dataTransfer?.files.length)return;event.preventDefault();if(!reply())props.uploads.add(props.chatID,Array.from(event.dataTransfer.files));}} class="message-pane" style={{display:'contents'}}>
         <Show when={transcriptGeneration()} keyed>{_generation=> <Transcript chatID={props.chatID} messageID={props.messageID} title={props.title} replyingTo={()=>reply()?.item.id} onObserved={(captured,cursor)=>{if(!cursor)return;items.clear();for(const item of captured)items.set(item.id,item);props.actions.observe(captured,cursor,props.chatID);commands.observe(captured,cursor,props.chatID);setBaseline(cursor);openShortcut();}} pending={()=>commands.pending().filter(item=>item.data.chat_id===props.chatID)} projectCaptured={commands.projectCaptured} deliveryNotice={notice} onCheckCommand={check} onCopyCommand={commands.copy} onRetryCommand={retry} canRetryCommand={canRetry} composer={<><Show when={retryProblem()}><p class="composer-error" role="alert">{retryProblem()}</p></Show><Show when={retryTarget()}><UploadDock uploads={props.uploads} draftID={retryDraft} locked><div class="composer-status">Prepare this attachment, then try again.<button class="button" aria-label="Send attachment again" disabled={!props.uploads.ready(retryDraft)} onClick={retrySend}>Try Again</button><button class="button subtle" onClick={()=>{for(const entry of props.uploads.files(retryDraft))props.uploads.remove(retryDraft,entry.key);setRetryTarget();}}>Cancel</button></div></UploadDock></Show><UploadDock uploads={props.uploads} draftID={props.chatID} disabled={Boolean(reply())}><Composer hasAttachments={props.uploads.files(props.chatID).length>0} disabled={props.uploads.files(props.chatID).length>0&&(!props.uploads.ready(props.chatID)||Boolean(reply()))} session={props.session} draftID={props.chatID} service={service()} available={available()} reply={quote()} onCancelReply={props.actions.cancelReply} command={status()} canCheck={props.live.status()==='connected'} onSend={send} onCheck={()=>check(commandID())} onCopy={commands.canCopy(commandID())?event=>{void commands.copy(event,commandID());}:undefined}/></UploadDock></>} onMessageAction={props.actions.open} onMessagePointer={pointer}/>}</Show>
-        <MessageActions actions={props.actions} onForward={(event,text,attachment)=>withInput(event,()=>{const draft=prepareForward(props.session,text);if(attachment)void props.uploads.importAttachment(draft,attachment);props.actions.close();router.navigate('/messages/new');})}/>
+        <Show when={props.actions.target()||props.actions.management.confirmation()||props.actions.changes.editor()||props.actions.changes.dissolve()||props.actions.flight()}><Suspense><MessageActions actions={props.actions} onForward={(event,text,attachment)=>withInput(event,()=>{const draft=prepareForward(props.session,text);if(attachment)void props.uploads.importAttachment(draft,attachment);props.actions.close();router.navigate('/messages/new');})}/></Suspense></Show>
     </div>;
 }
