@@ -1,0 +1,452 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[4.62 4.16 6.13] cpu_idle=56% cpus=8 other_heavy=1"
+  },
+  "run_id": "cal_01M5HZEJB0GEBXR5HEWF2BP6X7",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "captured_field_edits": 32,
+    "fast_path_fields": [
+      "location",
+      "alarm_absolute",
+      "alarm_relative"
+    ],
+    "forced_stamp_match_for_backstop_fields": true,
+    "verification_interval_seconds": 900
+  },
+  "scenario": "CAL-STAMP-FIELDS",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "5cf6465c877e6ee49fc7c693729f17585fe79f7b",
+  "at": "2026-10-22T14:15:12.992515Z",
+  "assertions": [
+    {
+      "name": "world_start",
+      "passed": true
+    },
+    {
+      "name": "calendar_created",
+      "passed": true
+    },
+    {
+      "name": "second_calendar_created",
+      "passed": true
+    },
+    {
+      "name": "verification_clock_started",
+      "passed": true
+    },
+    {
+      "name": "calendar_id_initial",
+      "passed": true
+    },
+    {
+      "name": "calendar_id_retained_before_verification",
+      "passed": true
+    },
+    {
+      "name": "calendar_id_periodic_verification_without_modified_date",
+      "passed": true
+    },
+    {
+      "name": "title_initial",
+      "passed": true
+    },
+    {
+      "name": "title_retained_before_verification",
+      "passed": true
+    },
+    {
+      "name": "title_periodic_verification_without_modified_date",
+      "passed": true
+    },
+    {
+      "name": "notes_initial",
+      "passed": true
+    },
+    {
+      "name": "notes_retained_before_verification",
+      "passed": true
+    },
+    {
+      "name": "notes_periodic_verification_without_modified_date",
+      "passed": true
+    },
+    {
+      "name": "location_initial",
+      "passed": true
+    },
+    {
+      "name": "location_fast_path_without_modified_date",
+      "passed": true
+    },
+    {
+      "name": "location_periodic_verification_without_modified_date",
+      "passed": true
+    },
+    {
+      "name": "url_initial",
+      "passed": true
+    },
+    {
+      "name": "url_retained_before_verification",
+      "passed": true
+    },
+    {
+      "name": "url_periodic_verification_without_modified_date",
+      "passed": true
+    },
+    {
+      "name": "start_initial",
+      "passed": true
+    },
+    {
+      "name": "start_retained_before_verification",
+      "passed": true
+    },
+    {
+      "name": "start_periodic_verification_without_modified_date",
+      "passed": true
+    },
+    {
+      "name": "end_initial",
+      "passed": true
+    },
+    {
+      "name": "end_retained_before_verification",
+      "passed": true
+    },
+    {
+      "name": "end_periodic_verification_without_modified_date",
+      "passed": true
+    },
+    {
+      "name": "all_day_initial",
+      "passed": true
+    },
+    {
+      "name": "all_day_retained_before_verification",
+      "passed": true
+    },
+    {
+      "name": "all_day_periodic_verification_without_modified_date",
+      "passed": true
+    },
+    {
+      "name": "time_zone_initial",
+      "passed": true
+    },
+    {
+      "name": "time_zone_retained_before_verification",
+      "passed": true
+    },
+    {
+      "name": "time_zone_periodic_verification_without_modified_date",
+      "passed": true
+    },
+    {
+      "name": "is_exception_initial",
+      "passed": true
+    },
+    {
+      "name": "is_exception_retained_before_verification",
+      "passed": true
+    },
+    {
+      "name": "is_exception_periodic_verification_without_modified_date",
+      "passed": true
+    },
+    {
+      "name": "availability_initial",
+      "passed": true
+    },
+    {
+      "name": "availability_retained_before_verification",
+      "passed": true
+    },
+    {
+      "name": "availability_periodic_verification_without_modified_date",
+      "passed": true
+    },
+    {
+      "name": "status_initial",
+      "passed": true
+    },
+    {
+      "name": "status_retained_before_verification",
+      "passed": true
+    },
+    {
+      "name": "status_periodic_verification_without_modified_date",
+      "passed": true
+    },
+    {
+      "name": "series_id_initial",
+      "passed": true
+    },
+    {
+      "name": "series_id_retained_before_verification",
+      "passed": true
+    },
+    {
+      "name": "series_id_periodic_verification_without_modified_date",
+      "passed": true
+    },
+    {
+      "name": "occurrence_date_initial",
+      "passed": true
+    },
+    {
+      "name": "occurrence_date_retained_before_verification",
+      "passed": true
+    },
+    {
+      "name": "occurrence_date_periodic_verification_without_modified_date",
+      "passed": true
+    },
+    {
+      "name": "attendee_name_initial",
+      "passed": true
+    },
+    {
+      "name": "attendee_name_retained_before_verification",
+      "passed": true
+    },
+    {
+      "name": "attendee_name_periodic_verification_without_modified_date",
+      "passed": true
+    },
+    {
+      "name": "attendee_url_initial",
+      "passed": true
+    },
+    {
+      "name": "attendee_url_retained_before_verification",
+      "passed": true
+    },
+    {
+      "name": "attendee_url_periodic_verification_without_modified_date",
+      "passed": true
+    },
+    {
+      "name": "attendee_status_initial",
+      "passed": true
+    },
+    {
+      "name": "attendee_status_retained_before_verification",
+      "passed": true
+    },
+    {
+      "name": "attendee_status_periodic_verification_without_modified_date",
+      "passed": true
+    },
+    {
+      "name": "attendee_role_initial",
+      "passed": true
+    },
+    {
+      "name": "attendee_role_retained_before_verification",
+      "passed": true
+    },
+    {
+      "name": "attendee_role_periodic_verification_without_modified_date",
+      "passed": true
+    },
+    {
+      "name": "attendee_type_initial",
+      "passed": true
+    },
+    {
+      "name": "attendee_type_retained_before_verification",
+      "passed": true
+    },
+    {
+      "name": "attendee_type_periodic_verification_without_modified_date",
+      "passed": true
+    },
+    {
+      "name": "alarm_absolute_initial",
+      "passed": true
+    },
+    {
+      "name": "alarm_absolute_fast_path_without_modified_date",
+      "passed": true
+    },
+    {
+      "name": "alarm_absolute_periodic_verification_without_modified_date",
+      "passed": true
+    },
+    {
+      "name": "alarm_relative_initial",
+      "passed": true
+    },
+    {
+      "name": "alarm_relative_fast_path_without_modified_date",
+      "passed": true
+    },
+    {
+      "name": "alarm_relative_periodic_verification_without_modified_date",
+      "passed": true
+    },
+    {
+      "name": "recurrence_frequency_initial",
+      "passed": true
+    },
+    {
+      "name": "recurrence_frequency_retained_before_verification",
+      "passed": true
+    },
+    {
+      "name": "recurrence_frequency_periodic_verification_without_modified_date",
+      "passed": true
+    },
+    {
+      "name": "recurrence_interval_initial",
+      "passed": true
+    },
+    {
+      "name": "recurrence_interval_retained_before_verification",
+      "passed": true
+    },
+    {
+      "name": "recurrence_interval_periodic_verification_without_modified_date",
+      "passed": true
+    },
+    {
+      "name": "recurrence_count_initial",
+      "passed": true
+    },
+    {
+      "name": "recurrence_count_retained_before_verification",
+      "passed": true
+    },
+    {
+      "name": "recurrence_count_periodic_verification_without_modified_date",
+      "passed": true
+    },
+    {
+      "name": "recurrence_end_initial",
+      "passed": true
+    },
+    {
+      "name": "recurrence_end_retained_before_verification",
+      "passed": true
+    },
+    {
+      "name": "recurrence_end_periodic_verification_without_modified_date",
+      "passed": true
+    },
+    {
+      "name": "recurrence_first_day_initial",
+      "passed": true
+    },
+    {
+      "name": "recurrence_first_day_retained_before_verification",
+      "passed": true
+    },
+    {
+      "name": "recurrence_first_day_periodic_verification_without_modified_date",
+      "passed": true
+    },
+    {
+      "name": "recurrence_weekday_initial",
+      "passed": true
+    },
+    {
+      "name": "recurrence_weekday_retained_before_verification",
+      "passed": true
+    },
+    {
+      "name": "recurrence_weekday_periodic_verification_without_modified_date",
+      "passed": true
+    },
+    {
+      "name": "recurrence_monthday_initial",
+      "passed": true
+    },
+    {
+      "name": "recurrence_monthday_retained_before_verification",
+      "passed": true
+    },
+    {
+      "name": "recurrence_monthday_periodic_verification_without_modified_date",
+      "passed": true
+    },
+    {
+      "name": "recurrence_yearday_initial",
+      "passed": true
+    },
+    {
+      "name": "recurrence_yearday_retained_before_verification",
+      "passed": true
+    },
+    {
+      "name": "recurrence_yearday_periodic_verification_without_modified_date",
+      "passed": true
+    },
+    {
+      "name": "recurrence_yearweek_initial",
+      "passed": true
+    },
+    {
+      "name": "recurrence_yearweek_retained_before_verification",
+      "passed": true
+    },
+    {
+      "name": "recurrence_yearweek_periodic_verification_without_modified_date",
+      "passed": true
+    },
+    {
+      "name": "recurrence_month_initial",
+      "passed": true
+    },
+    {
+      "name": "recurrence_month_retained_before_verification",
+      "passed": true
+    },
+    {
+      "name": "recurrence_month_periodic_verification_without_modified_date",
+      "passed": true
+    },
+    {
+      "name": "recurrence_position_initial",
+      "passed": true
+    },
+    {
+      "name": "recurrence_position_retained_before_verification",
+      "passed": true
+    },
+    {
+      "name": "recurrence_position_periodic_verification_without_modified_date",
+      "passed": true
+    },
+    {
+      "name": "metadata_unchanged_edit_unpublished_before_restart",
+      "passed": true
+    },
+    {
+      "name": "helper_restart_discards_in_memory_stamps",
+      "passed": true
+    },
+    {
+      "name": "restart_full_capture_matches_truth",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ],
+  "conditions": {
+    "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
+    "heavy_slots_in_use": "2",
+    "load_average": "4.62 4.16 6.13",
+    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica",
+    "swap_usage": "total = 3072.00M  used = 2146.06M  free = 925.94M  (encrypted)"
+  }
+}

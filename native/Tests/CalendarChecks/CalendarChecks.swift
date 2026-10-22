@@ -6,6 +6,16 @@ import Darwin
 @main
 struct CalendarChecks {
     static func main() async throws {
+        if CommandLine.arguments.contains("--hint-coverage") {
+            let checks = [
+                "late_coalesced_hint_requires_followup": !CalendarSource.hintIsCovered(first: 100, latest: 150, scanStarted: 125),
+                "all_hints_before_scan_are_skipped": CalendarSource.hintIsCovered(first: 100, latest: 120, scanStarted: 125),
+                "hint_at_scan_start_requires_followup": !CalendarSource.hintIsCovered(first: 100, latest: 125, scanStarted: 125)
+            ]
+            let output = try JSONSerialization.data(withJSONObject: checks, options: [.sortedKeys])
+            print(String(decoding: output, as: UTF8.self))
+            exit(checks.values.allSatisfy { $0 } ? 0 : 1)
+        }
         if CommandLine.arguments.contains("--invalidated-event") {
             let store = EKEventStore()
             let event = EKEvent(eventStore: store)

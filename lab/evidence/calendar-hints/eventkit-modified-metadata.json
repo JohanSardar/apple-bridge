@@ -1,0 +1,302 @@
+{
+  "run_id": "calmeta_20261021T193546_9cc2ed0f",
+  "conditions": {
+    "load_average": "{ 3.98 4.53 6.27 }",
+    "swap_usage": "total = 4096.00M  used = 2454.62M  free = 1641.38M  (encrypted)",
+    "os_version": "26.7.1",
+    "os_build": "25G241",
+    "sdk_version": "26.5",
+    "native_source_key": "82b51fb9d5d11f5ec579c818e341e7a4aebb146aa64ce2dd38f1fe6c9704cc88",
+    "signed_bundle_sha256": "ba4c4ba85f273ac97e596f35467e802d6ef36746a63eb7f0fea8052c2efc610f",
+    "probe_source_sha256": "116d3f706a09da967f8225472e65748f8ddb25d620f9c70c1c9cd21f8a3cd05c"
+  },
+  "passed": true,
+  "fields": [
+    {
+      "after_modified_present": true,
+      "before_modified_present": true,
+      "exercised": true,
+      "field": "calendar_id",
+      "field_changed": true,
+      "modified_changed": true,
+      "modified_delta_seconds": 2.154718041419983,
+      "native_identity_changed": false
+    },
+    {
+      "after_modified_present": true,
+      "before_modified_present": true,
+      "exercised": true,
+      "field": "title",
+      "field_changed": true,
+      "modified_changed": true,
+      "modified_delta_seconds": 2.2123749256134033,
+      "native_identity_changed": false
+    },
+    {
+      "after_modified_present": true,
+      "before_modified_present": true,
+      "exercised": true,
+      "field": "notes",
+      "field_changed": true,
+      "modified_changed": true,
+      "modified_delta_seconds": 2.265797972679138,
+      "native_identity_changed": false
+    },
+    {
+      "after_modified_present": true,
+      "before_modified_present": true,
+      "exercised": true,
+      "field": "location",
+      "field_changed": true,
+      "modified_changed": false,
+      "modified_delta_seconds": 0,
+      "native_identity_changed": false
+    },
+    {
+      "after_modified_present": true,
+      "before_modified_present": true,
+      "exercised": true,
+      "field": "url",
+      "field_changed": true,
+      "modified_changed": true,
+      "modified_delta_seconds": 2.3491220474243164,
+      "native_identity_changed": false
+    },
+    {
+      "after_modified_present": true,
+      "before_modified_present": true,
+      "exercised": true,
+      "field": "start",
+      "field_changed": true,
+      "modified_changed": true,
+      "modified_delta_seconds": 2.3878049850463867,
+      "native_identity_changed": false
+    },
+    {
+      "after_modified_present": true,
+      "before_modified_present": true,
+      "exercised": true,
+      "field": "end",
+      "field_changed": true,
+      "modified_changed": true,
+      "modified_delta_seconds": 2.426982045173645,
+      "native_identity_changed": false
+    },
+    {
+      "after_modified_present": true,
+      "before_modified_present": true,
+      "exercised": true,
+      "field": "all_day",
+      "field_changed": true,
+      "modified_changed": true,
+      "modified_delta_seconds": 2.465672016143799,
+      "native_identity_changed": false
+    },
+    {
+      "after_modified_present": true,
+      "before_modified_present": true,
+      "exercised": true,
+      "field": "time_zone",
+      "field_changed": true,
+      "modified_changed": true,
+      "modified_delta_seconds": 2.504549980163574,
+      "native_identity_changed": false
+    },
+    {
+      "after_modified_present": true,
+      "before_modified_present": true,
+      "exercised": true,
+      "field": "is_exception",
+      "field_changed": true,
+      "modified_changed": true,
+      "modified_delta_seconds": 2.540161967277527,
+      "native_identity_changed": true
+    },
+    {
+      "after_modified_present": true,
+      "before_modified_present": true,
+      "exercised": true,
+      "field": "availability",
+      "field_changed": true,
+      "modified_changed": true,
+      "modified_delta_seconds": 2.576939105987549,
+      "native_identity_changed": false
+    },
+    {
+      "exercised": false,
+      "field": "status",
+      "reason": "read_only_public_api"
+    },
+    {
+      "exercised": false,
+      "field": "series_id",
+      "reason": "derived_identity"
+    },
+    {
+      "exercised": false,
+      "field": "occurrence_date",
+      "reason": "read_only_original_occurrence"
+    },
+    {
+      "exercised": false,
+      "field": "attendee_name",
+      "reason": "no_public_participant_setter"
+    },
+    {
+      "exercised": false,
+      "field": "attendee_url",
+      "reason": "no_public_participant_setter"
+    },
+    {
+      "exercised": false,
+      "field": "attendee_status",
+      "reason": "remote_sync_not_exercised"
+    },
+    {
+      "exercised": false,
+      "field": "attendee_role",
+      "reason": "no_public_participant_setter"
+    },
+    {
+      "exercised": false,
+      "field": "attendee_type",
+      "reason": "no_public_participant_setter"
+    },
+    {
+      "after_modified_present": true,
+      "before_modified_present": true,
+      "exercised": true,
+      "field": "alarm_absolute",
+      "field_changed": true,
+      "modified_changed": false,
+      "modified_delta_seconds": 0,
+      "native_identity_changed": false
+    },
+    {
+      "after_modified_present": true,
+      "before_modified_present": true,
+      "exercised": true,
+      "field": "alarm_relative",
+      "field_changed": true,
+      "modified_changed": false,
+      "modified_delta_seconds": 0,
+      "native_identity_changed": false
+    },
+    {
+      "after_modified_present": true,
+      "before_modified_present": true,
+      "exercised": true,
+      "field": "recurrence_frequency",
+      "field_changed": true,
+      "modified_changed": true,
+      "modified_delta_seconds": 2.6718980073928833,
+      "native_identity_changed": false
+    },
+    {
+      "after_modified_present": true,
+      "before_modified_present": true,
+      "exercised": true,
+      "field": "recurrence_interval",
+      "field_changed": true,
+      "modified_changed": true,
+      "modified_delta_seconds": 2.7108219861984253,
+      "native_identity_changed": false
+    },
+    {
+      "after_modified_present": true,
+      "before_modified_present": true,
+      "exercised": true,
+      "field": "recurrence_count",
+      "field_changed": true,
+      "modified_changed": true,
+      "modified_delta_seconds": 2.75123393535614,
+      "native_identity_changed": false
+    },
+    {
+      "after_modified_present": true,
+      "before_modified_present": true,
+      "exercised": true,
+      "field": "recurrence_end",
+      "field_changed": true,
+      "modified_changed": true,
+      "modified_delta_seconds": 2.791324019432068,
+      "native_identity_changed": false
+    },
+    {
+      "exercised": false,
+      "field": "recurrence_first_day",
+      "reason": "read_only_public_api"
+    },
+    {
+      "after_modified_present": true,
+      "before_modified_present": true,
+      "exercised": true,
+      "field": "recurrence_weekday",
+      "field_changed": true,
+      "modified_changed": true,
+      "modified_delta_seconds": 2.838006019592285,
+      "native_identity_changed": false
+    },
+    {
+      "after_modified_present": true,
+      "before_modified_present": true,
+      "exercised": true,
+      "field": "recurrence_monthday",
+      "field_changed": true,
+      "modified_changed": true,
+      "modified_delta_seconds": 2.87806499004364,
+      "native_identity_changed": false
+    },
+    {
+      "after_modified_present": true,
+      "before_modified_present": true,
+      "exercised": true,
+      "field": "recurrence_yearday",
+      "field_changed": true,
+      "modified_changed": true,
+      "modified_delta_seconds": 2.9193609952926636,
+      "native_identity_changed": false
+    },
+    {
+      "after_modified_present": true,
+      "before_modified_present": true,
+      "exercised": true,
+      "field": "recurrence_yearweek",
+      "field_changed": true,
+      "modified_changed": true,
+      "modified_delta_seconds": 2.9750969409942627,
+      "native_identity_changed": false
+    },
+    {
+      "after_modified_present": true,
+      "before_modified_present": true,
+      "exercised": true,
+      "field": "recurrence_month",
+      "field_changed": true,
+      "modified_changed": true,
+      "modified_delta_seconds": 3.0153310298919678,
+      "native_identity_changed": false
+    },
+    {
+      "after_modified_present": true,
+      "before_modified_present": true,
+      "exercised": true,
+      "field": "recurrence_position",
+      "field_changed": true,
+      "modified_changed": true,
+      "modified_delta_seconds": 3.059030055999756,
+      "native_identity_changed": false
+    }
+  ],
+  "fixtures_saved": 23,
+  "probe_strategy": "single_store_reset_and_refetch",
+  "public_eventkit_saves_only": true,
+  "remote_attendee_sync_exercised": false,
+  "status": "verified",
+  "cleanup": {
+    "all_dates": true,
+    "remaining": 0,
+    "owned_calendars_remaining": 0,
+    "removed_calendars": 2
+  }
+}

@@ -1,15 +1,18 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[3.57 5.81 10.15] cpus=8 other_heavy=0"
+    "summary": "air: load=[4.89 4.19 6.17] cpu_idle=79% cpus=8 other_heavy=0"
   },
-  "run_id": "cal_01M58D243H4NNRYBFEH9K5J0D7",
+  "run_id": "cal_01M5HZE7FFTE8SY38795VVGCMA",
   "network_path": "loopback",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
   "scenario": "CAL-RECUR-THIS",
   "level": "sim",
   "passed": true,
-  "git_sha": "4f263fdf17b0f98019c10581b7d742880bb9b6af",
-  "at": "2026-10-18T21:00:40.945717Z",
+  "git_sha": "5cf6465c877e6ee49fc7c693729f17585fe79f7b",
+  "at": "2026-10-22T14:15:01.871272Z",
   "assertions": [
     {
       "name": "calendar_visible",
@@ -37,6 +40,18 @@
     },
     {
       "name": "other_occurrences_unchanged",
+      "passed": true
+    },
+    {
+      "name": "delete_one_occurrence_is_observed",
+      "passed": true
+    },
+    {
+      "name": "delete_one_occurrence_keeps_surviving_series",
+      "passed": true
+    },
+    {
+      "name": "delete_one_occurrence_preserves_other_identities",
       "passed": true
     },
     {
@@ -91,7 +106,7 @@
       "name": "replica_records_versions_and_cursor_consistent",
       "passed": true,
       "status": "pass",
-      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+      "detail": "public records query, including versions and tombstones, matched at one full cursor at or beyond the starting watermark"
     },
     {
       "name": "replica_application_exactly_once",
@@ -105,18 +120,32 @@
     }
   ],
   "latency": {
+    "command_submit→calendar.delete_event_observed": {
+      "samples": 1,
+      "p50_ms": 37.380167,
+      "p95_ms": 37.380167,
+      "max_ms": 37.380167,
+      "timeouts": 0
+    },
+    "command_submit→calendar.update_event_observed": {
+      "samples": 1,
+      "p50_ms": 36.079417,
+      "p95_ms": 36.079417,
+      "max_ms": 36.079417,
+      "timeouts": 0
+    },
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 5.976,
-      "p95_ms": 5.976,
-      "max_ms": 5.976,
+      "p50_ms": 4.53,
+      "p95_ms": 4.53,
+      "max_ms": 4.53,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 9.88,
-      "p95_ms": 9.88,
-      "max_ms": 9.88,
+      "p50_ms": 7.538,
+      "p95_ms": 7.538,
+      "max_ms": 7.538,
       "timeouts": 0
     }
   },
@@ -126,7 +155,8 @@
   "conditions": {
     "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
     "heavy_slots_in_use": "1",
-    "load_average": "3.57 5.81 10.15",
-    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"
+    "load_average": "4.89 4.19 6.17",
+    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica",
+    "swap_usage": "total = 3072.00M  used = 2146.06M  free = 925.94M  (encrypted)"
   }
 }

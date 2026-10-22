@@ -71,7 +71,6 @@ public final class AgendaGate {
     }
 
     private func changed(_ delivered: UInt64) {
-        calendarChanged(delivered)
         guard debounce == nil else { return }
         reminderHintPending = true
         debounce = Task(priority: .high) { @AgendaActor in

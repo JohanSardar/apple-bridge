@@ -1,0 +1,44 @@
+{
+  "run_id": "run_01M5FY1NCWBE1AP4381EBTYXCS",
+  "scenario": "CORE-LIVE-LATENCY",
+  "level": "sim",
+  "git_sha": "ec19895d5b04e60ed29dc098965ab986531017fb",
+  "at": "2026-10-21T19:12:12.700514Z",
+  "passed": false,
+  "conditions": {
+    "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
+    "heavy_slots_in_use": "1",
+    "load_average": "8.65 12.80 15.35",
+    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica",
+    "swap_usage": "total = 3072.00M  used = 1859.44M  free = 1212.56M  (encrypted)"
+  },
+  "assertions": [
+    {
+      "name": "calendar_200kb_delta_atomic_during_reminders_live",
+      "passed": false
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
+    }
+  ],
+  "latency": {
+    "effect_done\u2192gateway_visible": {
+      "samples": 200,
+      "p50_ms": 6.409917,
+      "p95_ms": 14.788834,
+      "max_ms": 175.001792,
+      "timeouts": 0
+    },
+    "effect_done\u2192replica_visible:replica0": {
+      "samples": 200,
+      "p50_ms": 9.196458,
+      "p95_ms": 19.622917,
+      "max_ms": 178.395209,
+      "timeouts": 0
+    }
+  },
+  "assertion_count": 18
+}

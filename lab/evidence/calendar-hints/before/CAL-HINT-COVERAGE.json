@@ -1,0 +1,31 @@
+{
+  "run_id": "cal_01M5GAWEHWQDRZ3RF8YJKQKYDB",
+  "scenario": "CAL-HINT-COVERAGE",
+  "level": "sim",
+  "git_sha": "b02cdb34461c680fdd89f6fda62033a3125e8718",
+  "at": "2026-10-21T22:56:33.340268Z",
+  "passed": false,
+  "conditions": {
+    "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
+    "heavy_slots_in_use": "1",
+    "load_average": "4.31 4.32 4.52",
+    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica",
+    "swap_usage": "total = 3072.00M  used = 1565.06M  free = 1506.94M  (encrypted)"
+  },
+  "assertions": [
+    {
+      "name": "native_hint_fixture_decoded",
+      "passed": true
+    },
+    {
+      "name": "late_coalesced_hint_requires_followup",
+      "passed": false
+    },
+    {
+      "name": "hint_at_scan_start_requires_followup",
+      "passed": false
+    }
+  ],
+  "latency": {},
+  "assertion_count": 7
+}

@@ -287,6 +287,10 @@ features:
       - {id: CAL-DST, levels: [sim]}
       - {id: CAL-ALLDAY, levels: [sim]}
       - {id: CAL-WINDOW-SLIDE, levels: [sim]}
+      - {id: CAL-LARGE-CAPTURE, levels: [sim]}
+      - {id: CAL-PERIODIC-VERIFICATION, levels: [sim]}
+      - {id: CAL-STAMP-FIELDS, levels: [sim]}
+      - {id: CAL-HINT-COVERAGE, levels: [sim]}
       - {id: CAL-INVALIDATED-EVENT, levels: [sim]}
       - {id: CAL-ID-CHURN, levels: [sim]}
       - {id: CAL-PERMISSION-LOSS, levels: [sim]}
@@ -302,6 +306,8 @@ features:
       - {id: CAL-RECUR-THIS, levels: [sim, real]}
       - {id: CAL-RECUR-FUTURE, levels: [sim]}
       - {id: CAL-ALLDAY-FUTURE, levels: [sim]}
+      - {id: CAL-SPLIT-ATOMIC-ALLDAY, levels: [sim]}
+      - {id: CAL-SPLIT-FRAME-CAP, levels: [sim]}
       - {id: CAL-RECUR-ALL-REJECT, levels: [sim]}
       - {id: CAL-READONLY, levels: [sim]}
 

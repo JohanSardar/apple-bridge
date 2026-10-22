@@ -1,0 +1,56 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[3.71 3.79 6.14] cpu_idle=79% cpus=8 other_heavy=0"
+  },
+  "run_id": "cal_01M5HZCYS1Y0NPQFXDMA82F5G7",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "CAL-HINT-COVERAGE",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "5cf6465c877e6ee49fc7c693729f17585fe79f7b",
+  "at": "2026-10-22T14:14:20.193214Z",
+  "assertions": [
+    {
+      "name": "native_calendar_checks_build",
+      "passed": true
+    },
+    {
+      "name": "native_checks_output_available",
+      "passed": true
+    },
+    {
+      "name": "native_hint_fixture_decoded",
+      "passed": true
+    },
+    {
+      "name": "late_coalesced_hint_requires_followup",
+      "passed": true
+    },
+    {
+      "name": "all_hints_before_scan_are_skipped",
+      "passed": true
+    },
+    {
+      "name": "hint_at_scan_start_requires_followup",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ],
+  "conditions": {
+    "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
+    "heavy_slots_in_use": "1",
+    "load_average": "3.49 3.74 6.11",
+    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica",
+    "swap_usage": "total = 3072.00M  used = 2178.12M  free = 893.88M  (encrypted)"
+  }
+}

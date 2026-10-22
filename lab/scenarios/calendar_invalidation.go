@@ -2,6 +2,7 @@ package scenarios
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -31,8 +32,24 @@ func runCalendarInvalidation(ctx context.Context, s Scenario, level string) Evid
 	if err != nil {
 		return e
 	}
-	command = exec.CommandContext(ctx, filepath.Join(strings.TrimSpace(string(directory)), "CalendarChecks"), "--invalidated-event")
+	flag := "--invalidated-event"
+	if s.ID == "CAL-HINT-COVERAGE" {
+		flag = "--hint-coverage"
+	}
+	command = exec.CommandContext(ctx, filepath.Join(strings.TrimSpace(string(directory)), "CalendarChecks"), flag)
 	output, err = command.CombinedOutput()
+	if s.ID == "CAL-HINT-COVERAGE" {
+		var checks map[string]bool
+		decoded := json.Unmarshal(output, &checks) == nil
+		add("native_hint_fixture_decoded", decoded)
+		for _, name := range []string{"late_coalesced_hint_requires_followup", "all_hints_before_scan_are_skipped", "hint_at_scan_start_requires_followup"} {
+			add(name, decoded && checks[name])
+		}
+		if !decoded {
+			os.Stderr.Write(output)
+		}
+		return e
+	}
 	add("invalidated_calendar_object_rebuilds_without_trap", err == nil)
 	if err != nil {
 		os.Stderr.Write(output)

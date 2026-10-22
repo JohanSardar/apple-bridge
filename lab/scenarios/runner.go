@@ -800,7 +800,11 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 					return fail("change_parameters")
 				}
 				next := time.Now()
+				var finishCalendar func() bool
 				for i := 0; i < count; i++ {
+					if s.ID == "CORE-LIVE-LATENCY" && i == count/2 {
+						finishCalendar = startCalendarLiveDelta(ctx, w, &evidence, watchers)
+					}
 					if err = change(fmt.Sprintf("live-%03d", i), true); err != nil {
 						return fail("external_change")
 					}
@@ -810,6 +814,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 							return fail("canceled")
 						}
 					}
+				}
+				if finishCalendar != nil {
+					add("calendar_200kb_delta_atomic_during_reminders_live", finishCalendar())
 				}
 			case "disconnect":
 				if w.Await(5*time.Second, func() bool { return convergence(w) }) != nil {
@@ -1081,7 +1088,7 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		if level == "real" && (s.Feature == "messages.actions" || s.Feature == "messages.groups" || s.Feature == "web.media") {
 			duration = 8 * time.Minute
 		}
-		if s.ID == "CAL-CRUD" && level != "sim" {
+		if strings.HasPrefix(s.ID, "CAL-") && level != "sim" {
 			duration = 6 * time.Minute
 		}
 		if s.ID == "CORE-BENCH" {

@@ -1,15 +1,18 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[3.95 6.08 10.37] cpus=8 other_heavy=0"
+    "summary": "air: load=[4.21 3.89 6.2] cpu_idle=81% cpus=8 other_heavy=0"
   },
-  "run_id": "cal_01M58D1G0F2DAF5K39DGKZYNMG",
+  "run_id": "cal_01M5HZCNJV42PWHKCY1QGBK3X0",
   "network_path": "loopback",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
   "scenario": "CAL-ALLDAY-FUTURE",
   "level": "sim",
   "passed": true,
-  "git_sha": "4f263fdf17b0f98019c10581b7d742880bb9b6af",
-  "at": "2026-10-18T21:00:20.367459Z",
+  "git_sha": "5cf6465c877e6ee49fc7c693729f17585fe79f7b",
+  "at": "2026-10-22T14:14:10.779161Z",
   "assertions": [
     {
       "name": "calendar_visible",
@@ -25,6 +28,14 @@
     },
     {
       "name": "all_day_future_civil_offsets",
+      "passed": true
+    },
+    {
+      "name": "future_split_replaces_occurrence_identities",
+      "passed": true
+    },
+    {
+      "name": "future_split_atomic_on_gateway_and_replica",
       "passed": true
     },
     {
@@ -79,7 +90,7 @@
       "name": "replica_records_versions_and_cursor_consistent",
       "passed": true,
       "status": "pass",
-      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+      "detail": "public records query, including versions and tombstones, matched at one full cursor at or beyond the starting watermark"
     },
     {
       "name": "replica_application_exactly_once",
@@ -93,18 +104,25 @@
     }
   ],
   "latency": {
+    "command_submit→calendar.update_event_observed": {
+      "samples": 1,
+      "p50_ms": 38.8775,
+      "p95_ms": 38.8775,
+      "max_ms": 38.8775,
+      "timeouts": 0
+    },
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 6.221,
-      "p95_ms": 6.221,
-      "max_ms": 6.221,
+      "p50_ms": 4.437,
+      "p95_ms": 4.437,
+      "max_ms": 4.437,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 9.621,
-      "p95_ms": 9.621,
-      "max_ms": 9.621,
+      "p50_ms": 5.531,
+      "p95_ms": 5.531,
+      "max_ms": 5.531,
       "timeouts": 0
     }
   },
@@ -113,8 +131,9 @@
   ],
   "conditions": {
     "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
-    "heavy_slots_in_use": "2",
-    "load_average": "3.79 6.01 10.32",
-    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"
+    "heavy_slots_in_use": "1",
+    "load_average": "3.95 3.84 6.17",
+    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica",
+    "swap_usage": "total = 3072.00M  used = 2178.12M  free = 893.88M  (encrypted)"
   }
 }

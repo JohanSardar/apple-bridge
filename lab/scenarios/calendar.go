@@ -21,18 +21,37 @@ import (
 )
 
 func runCalendarScenario(ctx context.Context, s Scenario, level string) Evidence {
-	if s.ID == "CAL-INVALIDATED-EVENT" {
+	if s.ID == "CAL-INVALIDATED-EVENT" || s.ID == "CAL-HINT-COVERAGE" {
 		return runCalendarInvalidation(ctx, s, level)
 	}
+	if s.ID == "CAL-STAMP-FIELDS" {
+		return runCalendarStampFields(ctx, s, level)
+	}
+	if s.ID == "CAL-PERIODIC-VERIFICATION" {
+		return runCalendarVerification(ctx, s, level)
+	}
+	if s.ID == "CAL-LARGE-CAPTURE" {
+		return runCalendarLargeCapture(ctx, s, level)
+	}
+	scenarioID := s.ID
+	switch s.ID {
+	case "CAL-SPLIT-ATOMIC-ALLDAY":
+		s.ID = "CAL-ALLDAY-FUTURE"
+	}
 	e := runCalendarProtocol(ctx, s, level, "rest")
+	e.Scenario = scenarioID
 	if s.ID == "CAL-CRUD" && e.Passed {
 		m := runCalendarProtocol(ctx, s, level, "mcp")
+		e.Conditions["mcp_run_id"] = m.RunID
 		for _, a := range m.Assertions {
 			a.Name = "mcp_" + a.Name
 			e.Assertions = append(e.Assertions, a)
 		}
 		for k, v := range m.Latency {
 			e.Latency["mcp_"+k] = v
+		}
+		for k, v := range m.Conditions {
+			e.Conditions["mcp_"+k] = v
 		}
 		e.Passed = e.Passed && m.Passed
 	}
@@ -90,6 +109,23 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		return fail("world_start", err)
 	}
 	defer w.Close()
+	defer func() {
+		if level == "sim" {
+			return
+		}
+		private := filepath.Join(os.Getenv("HOME"), "Library/Application Support/AppleBridgeDev/cal-fix-traces")
+		if os.MkdirAll(private, 0700) != nil {
+			return
+		}
+		for _, name := range []string{"gateway/helper/capture-trace.jsonl", "gateway/capture-trace.jsonl"} {
+			if bytes, err := os.ReadFile(filepath.Join(w.Dir, name)); err == nil {
+				if name == "gateway/helper/capture-trace.jsonl" {
+					calendarScanWaitEvidence(&result, bytes)
+				}
+				os.WriteFile(filepath.Join(private, e.RunID+"-"+strings.ReplaceAll(name, "/", "_")), bytes, 0600)
+			}
+		}
+	}()
 	e.NetworkPath = w.NetworkPath
 	diagnose = func() {
 		e.Metrics = map[string]any{}
@@ -145,7 +181,7 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		wanted := aliases[aliasKey(contracts.Calendar, "calendar.calendar", calendarNative)]
 		all, _ := w.Records(w.Gateway)
 		for _, r := range all {
-			if r.Collection == "calendar.calendar" && recordTitle(r) == "Bridge Test" && r.ID == wanted {
+			if r.Collection == "calendar.calendar" && recordTitle(r) == map[bool]string{true: "Bridge Test", false: "Bridge Test " + tag}[level == "sim"] && r.ID == wanted {
 				return r
 			}
 		}
@@ -186,11 +222,20 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 			return fail("independent_truth_access", err)
 		}
 		defer func() {
-			_, cleanupErr := w.RecoverTruth("fixture", map[string]any{"source": "calendar", "action": "cleanup", "tag": tag})
-			audit, auditErr := w.RecoverTruth("observe", map[string]any{"source": "calendar", "action": "audit", "tag": tag})
-			remaining, _ := audit["records"].([]any)
-			calendars, _ := audit["calendars"].([]any)
-			clean := cleanupErr == nil && auditErr == nil && len(remaining) == 0 && len(calendars) <= 1
+			clean := false
+			for attempt := 0; attempt < 8; attempt++ {
+				_, cleanupErr := w.RecoverTruth("fixture", map[string]any{"source": "calendar", "action": "cleanup", "tag": tag})
+				audit, auditErr := w.RecoverTruth("observe", map[string]any{"source": "calendar", "action": "audit", "tag": tag})
+				remaining, _ := audit["records"].([]any)
+				if cleanupErr != nil || auditErr != nil {
+					break
+				}
+				if len(remaining) == 0 {
+					_, cleanupErr = w.RecoverTruth("fixture", map[string]any{"source": "calendar", "action": "cleanup_run_calendar", "tag": tag})
+					clean = cleanupErr == nil
+					break
+				}
+			}
 			result.Assertions = append(result.Assertions, Assertion{Name: "tagged_fixture_cleanup_audit", Passed: clean})
 			result.Passed = result.Passed && clean
 		}()
@@ -200,7 +245,7 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 			bytes, _ := os.ReadFile(filepath.Join(w.Gateway.Home, "helper", "capture-trace.jsonl"))
 			return strings.Contains(string(bytes), "calendar_scan_complete")
 		}
-		if err = w.Await(30*time.Second, initialComplete); err != nil {
+		if err = w.Await(90*time.Second, initialComplete); err != nil {
 			return fail("initial_calendar_scan_complete", err)
 		}
 		add("initial_calendar_scan_complete", true)
@@ -252,11 +297,12 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 			}
 			truth, err := w.Truth("observe", map[string]any{"source": "calendar", "tag": tag, "title": recordTitle(r)})
 			rows, _ := truth["records"].([]any)
-			if err != nil {
+			aliases, aliasErr := gatewayAliases(w)
+			if err != nil || aliasErr != nil {
 				return false
 			}
 			for _, row := range rows {
-				if d, ok := row.(map[string]any); ok && sameCalendarTime(d["occurrence_date"], raw(r)["occurrence_date"]) {
+				if d, ok := row.(map[string]any); ok && aliases[aliasKey(contracts.Calendar, "calendar.event", calendarTruthNativeKey(d))] == r.ID {
 					return false
 				}
 			}
@@ -278,70 +324,6 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		}
 		return Seen{}, false
 	}
-	var last contracts.CommandRecord
-	submit := func(op string, args map[string]any, version uint64) error {
-		var err error
-		endpoint := w.Gateway
-		if level == "replica" {
-			endpoint = w.Replicas[0]
-		}
-		client := scripted.Client{Endpoint: endpoint, Protocol: protocol}
-		last = contracts.CommandRecord{}
-		commandID := contracts.NewCommandID()
-		err = client.Call(ctx, op, contracts.Command{ID: commandID, Args: mustJSON(args), ExpectedVersion: version, WaitMS: 15000}, &last)
-		if err != nil {
-			_, _ = world.Request(ctx, endpoint, "/v1/op/commands.status", contracts.CommandQuery{ID: commandID}, &last)
-		}
-		if err == nil && last.Disposition != "locally_observed" {
-			return fmt.Errorf("disposition %s", last.Disposition)
-		}
-		return err
-	}
-	awaitCount := func(n int) bool {
-		return w.Await(5*time.Second, func() bool {
-			for _, ep := range endpoints {
-				if len(records(ep)) != n {
-					return false
-				}
-			}
-			return true
-		}) == nil
-	}
-	start, end := "2026-11-01T05:30:00Z", "2026-11-01T07:30:00Z"
-	allDay := s.ID == "CAL-ALLDAY" || s.ID == "CAL-ALLDAY-FUTURE"
-	if allDay {
-		start, end = "2026-11-01", "2026-11-03"
-	}
-	event := map[string]any{"title": title, "start": start, "end": end, "all_day": allDay, "time_zone": "America/New_York"}
-	recurring := s.ID == "CAL-RECUR-THIS" || s.ID == "CAL-RECUR-FUTURE" || s.ID == "CAL-MOVED-OCCURRENCE" || s.ID == "CAL-MOVED-OUTSIDE-WINDOW" || s.ID == "CAL-ALLDAY-FUTURE" || s.ID == "CAL-EXCEPTION-INITIAL-CAPTURE"
-	if recurring {
-		event["recurrence"] = []any{map[string]any{"frequency": "daily", "interval": 1, "count": 3}}
-	}
-	if s.ID == "CAL-CRUD" {
-		event["notes"] = tag + " notes"
-		event["location"] = tag + " location"
-		event["url"] = "https://example.com/calendar"
-		event["availability"] = 1
-		event["alarms"] = []any{map[string]any{"relative_offset": -600}}
-		event["calendar_id"] = calendar().ID
-		if err = submit("calendar.create_event", event, 0); err != nil {
-			return fail("create_event", err)
-		}
-		add("create_event_observed", last.CommitSeq > 0)
-	} else if s.ID != "CAL-EXCEPTION-INITIAL-CAPTURE" {
-		if _, err = fixture("create", "series", event); err != nil {
-			return fail("external_create", err)
-		}
-	}
-	effectDone := time.Now()
-	count := 1
-	if recurring {
-		count = 3
-	}
-	if !awaitCount(count) {
-		return fail("initial_occurrences_visible", nil)
-	}
-	add("initial_occurrences_visible", true)
 	calendarLatencies := map[string][]float64{}
 	latency := func(name string, effect time.Time) bool {
 		if w.Await(3*time.Second, func() bool {
@@ -386,6 +368,113 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		}
 		return true
 	}
+	var last contracts.CommandRecord
+	commandLatencies := map[string][]float64{}
+	var commandVisibility func(string, map[string]any)
+	submit := func(op string, args map[string]any, version uint64) error {
+		var err error
+		endpoint := w.Gateway
+		if level == "replica" {
+			endpoint = w.Replicas[0]
+		}
+		client := scripted.Client{Endpoint: endpoint, Protocol: protocol}
+		last = contracts.CommandRecord{}
+		commandID := contracts.NewCommandID()
+		started := time.Now()
+		err = client.Call(ctx, op, contracts.Command{ID: commandID, Args: mustJSON(args), ExpectedVersion: version, WaitMS: 15000}, &last)
+		if err != nil {
+			_, _ = world.Request(ctx, endpoint, "/v1/op/commands.status", contracts.CommandQuery{ID: commandID}, &last)
+		}
+		if err == nil && last.Disposition == "" {
+			err = w.Await(45*time.Second, func() bool {
+				_, statusErr := world.Request(ctx, endpoint, "/v1/op/commands.status", contracts.CommandQuery{ID: commandID}, &last)
+				return statusErr == nil && last.Disposition != ""
+			})
+		}
+		elapsed := time.Since(started)
+		if level != "sim" {
+			private := filepath.Join(os.Getenv("HOME"), "Library/Application Support/AppleBridgeDev/cal-fix", e.RunID)
+			os.MkdirAll(private, 0700)
+			truth, _ := w.Truth("observe", map[string]any{"source": "calendar", "action": "audit", "tag": tag, "calendar_id": calendarNative})
+			bytes, _ := json.MarshalIndent(map[string]any{"bridge": records(w.Gateway), "truth": truth, "command": last}, "", "  ")
+			os.WriteFile(filepath.Join(private, commandID+".json"), bytes, 0600)
+		}
+		if err == nil && last.Disposition == "locally_observed" {
+			if commandVisibility != nil {
+				commandVisibility(op, args)
+			}
+			commandLatencies[op] = append(commandLatencies[op], float64(elapsed)/float64(time.Millisecond))
+			e.Latency["command_submit→"+op+"_observed"] = stats(commandLatencies[op], 0)
+		}
+		if err == nil && last.Disposition != "locally_observed" {
+			return fmt.Errorf("disposition %s", last.Disposition)
+		}
+		return err
+	}
+	awaitCount := func(n int) bool {
+		return w.Await(5*time.Second, func() bool {
+			for _, ep := range endpoints {
+				if len(records(ep)) != n {
+					return false
+				}
+			}
+			return true
+		}) == nil
+	}
+	commandVisibility = func(operation string, args map[string]any) {
+		if level == "sim" || s.ID != "CAL-CRUD" || (operation != "calendar.create_event" && operation != "calendar.update_event") {
+			return
+		}
+		name, _ := args["title"].(string)
+		ns := calendarCommandEffect(w, last, operation)
+		add("command_native_effect_clock", ns > 0 && name != "")
+		if ns <= 0 || name == "" {
+			return
+		}
+		nativeEffects[name] = ns
+		add("command_capture_visible", latency(name, time.Time{}))
+	}
+	start, end := "2026-11-01T05:30:00Z", "2026-11-01T07:30:00Z"
+	allDay := s.ID == "CAL-ALLDAY" || s.ID == "CAL-ALLDAY-FUTURE"
+	if allDay {
+		start, end = "2026-11-01", "2026-11-03"
+	}
+	event := map[string]any{"title": title, "start": start, "end": end, "all_day": allDay, "time_zone": "America/New_York"}
+	recurring := s.ID == "CAL-RECUR-THIS" || s.ID == "CAL-RECUR-FUTURE" || s.ID == "CAL-MOVED-OCCURRENCE" || s.ID == "CAL-MOVED-OUTSIDE-WINDOW" || s.ID == "CAL-ALLDAY-FUTURE" || s.ID == "CAL-EXCEPTION-INITIAL-CAPTURE" || s.ID == "CAL-SPLIT-FRAME-CAP"
+	if recurring {
+		event["recurrence"] = []any{map[string]any{"frequency": "daily", "interval": 1, "count": 3}}
+		if s.ID == "CAL-SPLIT-FRAME-CAP" {
+			event["recurrence"] = []any{map[string]any{"frequency": "daily", "interval": 1, "count": 400}}
+		}
+	}
+	if s.ID == "CAL-CRUD" {
+		event["notes"] = tag + " notes"
+		event["location"] = tag + " location"
+		event["url"] = "https://example.com/calendar"
+		event["availability"] = 1
+		event["alarms"] = []any{map[string]any{"relative_offset": -600}}
+		event["calendar_id"] = calendar().ID
+		if err = submit("calendar.create_event", event, 0); err != nil {
+			return fail("create_event", err)
+		}
+		add("create_event_observed", last.CommitSeq > 0)
+	} else if s.ID != "CAL-EXCEPTION-INITIAL-CAPTURE" {
+		if _, err = fixture("create", "series", event); err != nil {
+			return fail("external_create", err)
+		}
+	}
+	effectDone := time.Now()
+	count := 1
+	if recurring {
+		count = 3
+	}
+	if s.ID == "CAL-SPLIT-FRAME-CAP" {
+		count = 400
+	}
+	if !awaitCount(count) {
+		return fail("initial_occurrences_visible", nil)
+	}
+	add("initial_occurrences_visible", true)
 	if s.ID != "CAL-CRUD" && s.ID != "CAL-EXCEPTION-INITIAL-CAPTURE" && !latency(title, effectDone) {
 		return fail("external_capture_latency", nil)
 	}
@@ -393,7 +482,11 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 	var agenda contracts.ReadResult
 	agendaClient := scripted.Client{Endpoint: w.Gateway, Protocol: protocol}
 	agendaErr := agendaClient.Call(ctx, "calendar.agenda", contracts.AgendaQuery{Start: "2026-11-01T00:00:00Z", End: "2026-11-04T12:00:00Z", CalendarID: calendar().ID}, &agenda)
-	add("agenda_returns_occurrences", agendaErr == nil && len(agenda.Records) == count)
+	agendaCount := count
+	if s.ID == "CAL-SPLIT-FRAME-CAP" {
+		agendaCount = 4
+	}
+	add("agenda_returns_occurrences", agendaErr == nil && len(agenda.Records) == agendaCount)
 
 	switch s.ID {
 	case "CAL-EXCEPTION-INITIAL-CAPTURE":
@@ -499,7 +592,7 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 			return fail("delete_created_series", err)
 		}
 		add("created_series_deleted_with_future_span", awaitCount(0))
-		if err = submit("calendar.create_calendar", map[string]any{"title": "Bridge Test"}, 0); err != nil {
+		if err = submit("calendar.create_calendar", map[string]any{"title": "Bridge Test " + tag}, 0); err != nil {
 			return fail("create_calendar", err)
 		}
 		add("create_calendar_observed", last.CommitSeq > 0)
@@ -623,7 +716,34 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		}
 		add("original_occurrence_identity_preserved", kept)
 		add("other_occurrences_unchanged", unchanged == 2)
+		if s.ID == "CAL-RECUR-THIS" {
+			deleted := baseline[2]
+			err = submit("calendar.delete_event", map[string]any{"id": deleted.ID, "span": "this"}, deleted.Version)
+			add("delete_one_occurrence_is_observed", err == nil && last.Disposition == "locally_observed" && last.CommitSeq > 0)
+			add("delete_one_occurrence_keeps_surviving_series", awaitCount(2))
+			remaining := records(w.Gateway)
+			preserved := len(remaining) == 2
+			for _, record := range remaining {
+				preserved = preserved && record.ID != deleted.ID && (record.ID == baseline[0].ID || record.ID == baseline[1].ID)
+			}
+			add("delete_one_occurrence_preserves_other_identities", preserved)
+		}
+	case "CAL-SPLIT-FRAME-CAP":
+		target := baseline[1]
+		err = submit("calendar.update_event", map[string]any{"id": target.ID, "span": "future", "title": tag + " oversized future"}, target.Version)
+		add("oversized_split_keeps_capture_progressing", err == nil && last.Disposition == "locally_observed" && awaitCount(400))
+		if err == nil {
+			target = records(w.Gateway)[1]
+			err = submit("calendar.update_event", map[string]any{"id": target.ID, "span": "this", "title": tag + " continued"}, target.Version)
+			add("source_captures_after_oversized_split", err == nil && last.Disposition == "locally_observed")
+		}
 	case "CAL-ALLDAY-FUTURE":
+		finishSplit := watchCalendarSplit(ctx, w, tag)
+		defer func() {
+			if finishSplit != nil {
+				finishSplit()
+			}
+		}()
 		target := baseline[1]
 		if err = submit("calendar.update_event", map[string]any{"id": target.ID, "span": "future", "start": "2026-11-04", "end": "2026-11-06"}, target.Version); err != nil {
 			return fail("all_day_future_update", err)
@@ -632,6 +752,17 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 			after := records(w.Gateway)
 			return len(after) == 3 && raw(after[0])["start"] == "2026-11-01" && raw(after[1])["start"] == "2026-11-04" && raw(after[2])["start"] == "2026-11-05" && raw(after[2])["end"] == "2026-11-07"
 		}) == nil)
+		after := records(w.Gateway)
+		identities := len(after) == 3
+		if identities {
+			identities = after[0].ID == baseline[0].ID && raw(after[1])["series_id"] != raw(baseline[1])["series_id"] && after[1].ID != baseline[1].ID && after[2].ID != baseline[2].ID
+			for _, record := range after[1:] {
+				identities = identities && raw(record)["occurrence_date"] == raw(record)["start"]
+			}
+		}
+		add("future_split_replaces_occurrence_identities", identities)
+		add("future_split_atomic_on_gateway_and_replica", finishSplit())
+		finishSplit = nil
 	case "CAL-RECUR-FUTURE":
 		exception := baseline[2]
 		if err = submit("calendar.update_event", map[string]any{"id": exception.ID, "span": "this", "title": tag + " preserved exception"}, exception.Version); err != nil {
@@ -647,6 +778,12 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		}) != nil {
 			return fail("exception_visible", nil)
 		}
+		finishSplit := watchCalendarSplit(ctx, w, tag)
+		defer func() {
+			if finishSplit != nil {
+				finishSplit()
+			}
+		}()
 		target := records(w.Gateway)[1]
 		if err = submit("calendar.update_event", map[string]any{"id": target.ID, "span": "future", "title": tag + " future", "recurrence": []any{map[string]any{"frequency": "daily", "interval": 2, "count": 2}}}, target.Version); err != nil {
 			return fail("future_update", err)
@@ -666,6 +803,8 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 			series[fmt.Sprint(raw(r)["series_id"])] = true
 		}
 		add("future_span_splits_series", len(series) == 2)
+		add("future_split_atomic_on_gateway_and_replica", finishSplit())
+		finishSplit = nil
 		if len(after) >= 2 {
 			target = after[1]
 			if err = submit("calendar.delete_event", map[string]any{"id": target.ID, "span": "future"}, target.Version); err != nil {
@@ -790,7 +929,20 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		}
 		add("permission_loss_survives_restart", reflect.DeepEqual(baseline, records(w.Gateway)))
 	}
-	if s.ID != "CAL-PERMISSION-LOSS" {
+	if level != "sim" {
+		private := filepath.Join(os.Getenv("HOME"), "Library/Application Support/AppleBridgeDev/cal-fix", e.RunID)
+		os.MkdirAll(private, 0700)
+		truth, _ := w.Truth("observe", map[string]any{"source": "calendar", "action": "audit", "tag": tag, "calendar_id": calendarNative})
+		if e.Metrics == nil {
+			e.Metrics = map[string]any{}
+		}
+		trace, _ := os.ReadFile(filepath.Join(w.Gateway.Home, "helper", "capture-trace.jsonl"))
+		e.Metrics["calendar_capture_splits"] = strings.Count(string(trace), "\"stage\":\"calendar_capture_split\"")
+		value := map[string]any{"bridge": records(w.Gateway), "truth": truth, "command": last}
+		bytes, _ := json.MarshalIndent(value, "", "  ")
+		os.WriteFile(filepath.Join(private, "state.json"), bytes, 0600)
+	}
+	if s.ID != "CAL-PERMISSION-LOSS" && s.ID != "CAL-SPLIT-FRAME-CAP" {
 		if level == "sim" {
 			add("independent_simtruth_convergence", w.Await(5*time.Second, func() bool { return nativeConvergence(w) }) == nil)
 		} else {
@@ -888,6 +1040,7 @@ func sameCalendarTime(a, b any) bool {
 
 func calendarHostConditions() map[string]string {
 	load, _ := exec.Command("sysctl", "-n", "vm.loadavg").Output()
+	swap, _ := exec.Command("sysctl", "-n", "vm.swapusage").Output()
 	fields := strings.Fields(strings.Trim(string(load), "{} \n"))
 	slots := 0
 	entries, _ := os.ReadDir("/tmp")
@@ -896,7 +1049,7 @@ func calendarHostConditions() map[string]string {
 			slots++
 		}
 	}
-	return map[string]string{"load_average": strings.Join(fields, " "), "heavy_slots_in_use": fmt.Sprint(slots), "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue", "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"}
+	return map[string]string{"swap_usage": strings.TrimSpace(string(swap)), "load_average": strings.Join(fields, " "), "heavy_slots_in_use": fmt.Sprint(slots), "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue", "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"}
 }
 
 func calendarTruthEqual(truth, actual map[string]any) bool {

@@ -79,7 +79,7 @@ public actor AppleSession: ObservationSink {
         self.agenda = agenda
         source = try RemindersSource(gate: agenda, home: home, commandsEnabled: true)
         remindersStore = RemindersStoreEnrichment(trace: commandsEnabled ? trace : nil)
- calendar = try CalendarSource(gate: agenda, home: home, commandsEnabled: true)
+ calendar = try CalendarSource(gate: agenda, home: home, commandsEnabled: true, profilingEnabled: commandsEnabled)
         guardLog = try DispatchGuard(home: home)
         let pidFile = home.appendingPathComponent("helper.pid")
         try Data(String(getpid()).utf8).write(to: pidFile, options: .atomic)
@@ -274,7 +274,8 @@ public actor AppleSession: ObservationSink {
             let milliseconds = Double(refreshFinished - refreshStarted) / 1_000_000
             trace.record("reminders_store_refresh", keys: observations.map { $0["native_key"].string }, fields: ["duration_ms": .number(milliseconds), "started_ns": .integer(refreshStarted), "finished_ns": .integer(refreshFinished), "histogram": remindersRefreshHistogram.record(milliseconds)])
         }
-        let chunks = try split(observations, maximumBytes: live ? 64000 : 16000)
+        let maximumBytes = live ? (source == "calendar" ? 240000 : 64000) : 16000
+        let chunks = try split(observations, maximumBytes: maximumBytes)
         trace.record("capture_split", fields: metadata)
         for (index,chunk) in chunks.enumerated() {
             try await withCheckedThrowingContinuation { continuation in

@@ -1,15 +1,18 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[3.81 5.98 10.28] cpus=8 other_heavy=0"
+    "summary": "air: load=[3.71 3.79 6.14] cpu_idle=80% cpus=8 other_heavy=0"
   },
-  "run_id": "cal_01M58D1NJF3SJCPM079HPNRSFG",
+  "run_id": "cal_01M5HZCTZTWPSZ0HR2YDFEGKS6",
   "network_path": "loopback",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
   "scenario": "CAL-CRUD",
   "level": "sim",
   "passed": true,
-  "git_sha": "4f263fdf17b0f98019c10581b7d742880bb9b6af",
-  "at": "2026-10-18T21:00:26.063289Z",
+  "git_sha": "5cf6465c877e6ee49fc7c693729f17585fe79f7b",
+  "at": "2026-10-22T14:14:16.314316Z",
   "assertions": [
     {
       "name": "calendar_visible",
@@ -95,7 +98,7 @@
       "name": "replica_records_versions_and_cursor_consistent",
       "passed": true,
       "status": "pass",
-      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+      "detail": "public records query, including versions and tombstones, matched at one full cursor at or beyond the starting watermark"
     },
     {
       "name": "replica_application_exactly_once",
@@ -187,7 +190,7 @@
       "name": "mcp_replica_records_versions_and_cursor_consistent",
       "passed": true,
       "status": "pass",
-      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+      "detail": "public records query, including versions and tombstones, matched at one full cursor at or beyond the starting watermark"
     },
     {
       "name": "mcp_replica_application_exactly_once",
@@ -200,14 +203,78 @@
       "passed": true
     }
   ],
-  "latency": {},
+  "latency": {
+    "command_submit→calendar.create_calendar_observed": {
+      "samples": 1,
+      "p50_ms": 42.18125,
+      "p95_ms": 42.18125,
+      "max_ms": 42.18125,
+      "timeouts": 0
+    },
+    "command_submit→calendar.create_event_observed": {
+      "samples": 2,
+      "p50_ms": 36.67725,
+      "p95_ms": 45.146875,
+      "max_ms": 45.146875,
+      "timeouts": 0
+    },
+    "command_submit→calendar.delete_event_observed": {
+      "samples": 2,
+      "p50_ms": 35.25525,
+      "p95_ms": 44.219625,
+      "max_ms": 44.219625,
+      "timeouts": 0
+    },
+    "command_submit→calendar.update_event_observed": {
+      "samples": 1,
+      "p50_ms": 41.321333,
+      "p95_ms": 41.321333,
+      "max_ms": 41.321333,
+      "timeouts": 0
+    },
+    "mcp_command_submit→calendar.create_calendar_observed": {
+      "samples": 1,
+      "p50_ms": 46.5105,
+      "p95_ms": 46.5105,
+      "max_ms": 46.5105,
+      "timeouts": 0
+    },
+    "mcp_command_submit→calendar.create_event_observed": {
+      "samples": 2,
+      "p50_ms": 41.308042,
+      "p95_ms": 43.153834,
+      "max_ms": 43.153834,
+      "timeouts": 0
+    },
+    "mcp_command_submit→calendar.delete_event_observed": {
+      "samples": 2,
+      "p50_ms": 35.292542,
+      "p95_ms": 38.866083,
+      "max_ms": 38.866083,
+      "timeouts": 0
+    },
+    "mcp_command_submit→calendar.update_event_observed": {
+      "samples": 1,
+      "p50_ms": 38.433416,
+      "p95_ms": 38.433416,
+      "max_ms": 38.433416,
+      "timeouts": 0
+    }
+  },
   "hosts": [
     "air"
   ],
   "conditions": {
     "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
     "heavy_slots_in_use": "1",
-    "load_average": "3.81 5.98 10.28",
-    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"
+    "load_average": "3.71 3.79 6.14",
+    "mcp_clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
+    "mcp_heavy_slots_in_use": "1",
+    "mcp_load_average": "3.71 3.79 6.14",
+    "mcp_metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica",
+    "mcp_run_id": "cal_01M5HZCVMZWKHS007FTC7T68XV",
+    "mcp_swap_usage": "total = 3072.00M  used = 2178.12M  free = 893.88M  (encrypted)",
+    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica",
+    "swap_usage": "total = 3072.00M  used = 2178.12M  free = 893.88M  (encrypted)"
   }
 }
