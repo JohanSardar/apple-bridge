@@ -202,7 +202,7 @@ test('WEB-MSG-OPTIMISTIC-OBSERVED observed without record IDs remains Sent and u
     await context.addCookies(sessionCookies);const ids=await control(request,'/demo-fixtures');let recordID='';const commands:string[]=[];
     await page.routeWebSocket('**/web/v1/live',socket=>{
         const server=socket.connectToServer();socket.onMessage(data=>{const frame=JSON.parse(String(data));if(frame.t==='cmd')commands.push(frame.id);server.send(data);});
-        server.onMessage(data=>{const frame=JSON.parse(String(data));if(frame.t==='cmd_status'&&frame.command?.observed_record_ids?.length){recordID=frame.command.observed_record_ids[0];socket.send(JSON.stringify({...frame,command:{...frame.command,observed_record_ids:[]}}));return;}socket.send(data);});
+        server.onMessage(data=>{const frame=JSON.parse(String(data));if(frame.t==='cmd_status'&&frame.command?.observed_record_ids?.length){recordID=frame.command.observed_record_ids[0];socket.send(JSON.stringify({...frame,command:{...frame.command,observed_record_ids:[],parts:frame.command.parts?.map((part:any)=>({...part,record_id:undefined}))}}));return;}socket.send(data);});
     });
     await page.goto('/__fixtures/commands?chat='+encodeURIComponent(ids['message-chat']));
     await expect(page.getByRole('button',{name:'Send fixture message',exact:true})).toBeEnabled();
@@ -217,8 +217,8 @@ test('WEB-MSG-OPTIMISTIC-OBSERVED observed without record IDs remains Sent and u
     await expect(page.getByText('Not sure if delivered',{exact:true})).toHaveCount(0);
     expect(commands).toHaveLength(1);console.log('compose: missing_observed_ids=1; timeout_count=1; disposition=observed');
 });
-test('WEB-MSG-OPTIMISTIC-FAILURE a definitive failure restores its suppressed bubble',async({page,context,request})=>{
-    await context.addCookies(sessionCookies);const ids=await control(request,'/demo-fixtures');await control(request,'/message-fault?name=ghost-send');
+test('WEB-MSG-OPTIMISTIC-FAILURE a definitive no-effect part failure restores its suppressed bubble',async({page,context,request})=>{
+    await context.addCookies(sessionCookies);const ids=await control(request,'/demo-fixtures');await control(request,'/message-fault?name=part-no-effect');
     const held:(()=>void)[]=[],captures:any[]=[],commands:string[]=[];let failed=false,holdStatus=true;
     await page.routeWebSocket('**/web/v1/live',socket=>{
         const server=socket.connectToServer();socket.onMessage(data=>{const frame=JSON.parse(String(data));if(frame.t==='cmd')commands.push(frame.id);server.send(data);});
@@ -228,6 +228,8 @@ test('WEB-MSG-OPTIMISTIC-FAILURE a definitive failure restores its suppressed bu
         await page.goto('/__fixtures/commands?chat='+encodeURIComponent(ids['message-chat']));
         await expect(page.getByRole('button',{name:'Send fixture message',exact:true})).toBeEnabled();
         await page.getByRole('textbox',{name:'Fixture message',exact:true}).fill('[ab-test compose] definitive failure');
+        await page.getByLabel('Fixture attachments').setInputFiles([{name:'bridge-no-effect-part.txt',mimeType:'text/plain',buffer:Buffer.from('[ab-test compose] no-effect attachment')}]);
+        await expect(page.getByLabel('Fixture ready attachments')).toHaveText('1');
         await page.getByRole('button',{name:'Send fixture message',exact:true}).click();await expect.poll(()=>failed).toBe(true);
         await control(request,'/incoming');await expect.poll(()=>captures.length).toBeGreaterThan(0);
         await expect(page.getByLabel('Projection timeout count')).toHaveText('1');await expect(page.locator('[data-local-echo]')).toHaveCount(0);

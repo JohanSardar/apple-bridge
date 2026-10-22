@@ -611,6 +611,7 @@ features:
       - {id: WEB-MSG-NEW, levels: [web]}
       - {id: WEB-MSG-FAIL-RESEND, levels: [web]}
       - {id: WEB-MSG-OPTIMISTIC, levels: [web]}
+      - {id: WEB-MSG-PARTS, levels: [web]}
   - id: web.messages.parity
     title: Messages parity (pins, mute, read receipts, Send Later, effects, formatting, mentions, audio messages, Recently Deleted, groups)
     requirements: [R-WEB-UI, R-MSG-DEPTH]

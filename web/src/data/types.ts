@@ -71,6 +71,13 @@ export type ViewChange = {
     newer?: number;
     older?: number;
 };
+export type CommandPart = {
+    index: number;
+    kind: 'text' | 'attachment';
+    upload_id?: string;
+    record_id?: string;
+    disposition: 'observed' | 'delivered' | 'delivery_failed' | 'failed_no_effect' | 'indeterminate';
+};
 export type CommandState = {
     id: string;
     op: string;
@@ -79,6 +86,7 @@ export type CommandState = {
     status: string;
     commit_seq?: number;
     observed_record_ids?: string[];
+    parts?: readonly CommandPart[];
     cursor?: Cursor;
     transport_lost?: boolean;
     check_error?: string;

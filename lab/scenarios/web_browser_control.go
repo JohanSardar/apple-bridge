@@ -209,7 +209,7 @@ func webBrowserControl(ctx context.Context, w *world.World, origin string, prepa
 		case "/message-fault":
 			name := request.URL.Query().Get("name")
 			switch name {
-			case "", "ghost-send", "delivery-failed", "ui-interference", "part-progress":
+			case "", "ghost-send", "delivery-failed", "ui-interference", "part-progress", "part-no-effect", "part-delivery-failed", "part-progress-failure":
 				err = w.ControlAction("/fault", map[string]any{"name": name})
 			default:
 				http.NotFound(response, request)
