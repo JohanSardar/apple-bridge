@@ -31,6 +31,12 @@ func (s *Service) Invoke(ctx context.Context, p trust.Principal, name string, in
 		}()
 	}
 	switch name {
+	case "notes.list":
+		var query contracts.NotesListQuery
+		if contracts.DecodeInput(input, &query) != nil {
+			return nil, contracts.ErrInvalid
+		}
+		return s.State.NotesList(ctx, p.Visibility(), query)
 	case "contacts.list":
 		var query contracts.ContactsListQuery
 		if contracts.DecodeInput(input, &query) != nil {

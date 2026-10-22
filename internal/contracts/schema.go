@@ -128,7 +128,7 @@ func OperationSchema(d OperationDescriptor) map[string]any {
 		fields["limit"].(map[string]any)["maximum"] = 200
 		return s
 	}
-	if strings.HasPrefix(d.Name, "notes.") {
+	if d.Kind == CommandOp && strings.HasPrefix(d.Name, "notes.") {
 		return noteSchema(d, s)
 	}
 	if d.Kind == CommandOp {

@@ -800,6 +800,8 @@ features:
     depends_on: [web.frontdoor, notes.write]
     status: todo
     scenarios:
+      - {id: NOTE-LIST, levels: [sim]}
+      - {id: NOTE-LIST-LIVE, levels: [web]}
       - {id: NOTE-DECODE-FULL, levels: [sim, real]}
       - {id: WEB-NOTE-READ, levels: [web]}
       - {id: WEB-NOTE-WRITE, levels: [web, real]}

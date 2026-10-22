@@ -1,0 +1,8 @@
+id: NOTE-LIST-LIVE
+feature: web.notes
+levels: [web]
+web: {browsers: [chromium], themes: [light], layouts: [desktop], server: gateway}
+given: []
+when: [{web: {}}]
+then: []
+cleanup: []

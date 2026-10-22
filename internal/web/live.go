@@ -290,7 +290,7 @@ func safeError(err error) *contracts.Error {
 }
 
 func readModelView(name string) bool {
-	return name == "contacts.list" || name == "calendar.range" || name == "reminders.lists" || name == "reminders.items"
+	return name == "notes.list" || name == "contacts.list" || name == "calendar.range" || name == "reminders.lists" || name == "reminders.items"
 }
 func (l *liveSocket) view(ctx context.Context, f clientFrame) (any, error) {
 	if readModelView(f.View) {
@@ -408,7 +408,7 @@ func (l *liveSocket) subscribe(ctx context.Context, f clientFrame) {
 					changes = append(changes, change)
 				}
 			} else if readModelView(f.View) {
-				affected = affected || (f.View == "calendar.range" && change.Record.Source == contracts.Calendar) || ((f.View == "reminders.lists" || f.View == "reminders.items") && change.Record.Source == contracts.Reminders) || (f.View == "contacts.list" && (change.Record.Source == contracts.Contacts || change.Record.Source == contracts.Messages))
+				affected = affected || (f.View == "notes.list" && change.Record.Source == contracts.Notes) || (f.View == "calendar.range" && change.Record.Source == contracts.Calendar) || ((f.View == "reminders.lists" || f.View == "reminders.items") && change.Record.Source == contracts.Reminders) || (f.View == "contacts.list" && (change.Record.Source == contracts.Contacts || change.Record.Source == contracts.Messages))
 			} else if change.Record.Source == contracts.Messages || change.Record.Source == contracts.Contacts {
 				affected = true
 			}
