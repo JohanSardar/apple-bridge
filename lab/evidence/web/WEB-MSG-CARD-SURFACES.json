@@ -1,0 +1,85 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[6.97 6.77 6.31] cpu_idle=36% cpus=8 other_heavy=2"
+  },
+  "run_id": "run_01M5J0HFYCHY08BFQCP3BGZJQB",
+  "metrics": {
+    "browser_budget_ms": 180000,
+    "capture_observer_resets": 0,
+    "demo_messages": 5000,
+    "demo_startup_ms": 6504,
+    "fixture_setup_ms": 6504,
+    "matrix": [
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "chromium-light-phone",
+      "chromium-light-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-MSG-CARD-SURFACES-webkit-light-phone-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-MSG-CARD-SURFACES-webkit-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-CARD-SURFACES-webkit-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-CARD-SURFACES-chromium-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-CARD-SURFACES-chromium-light-desktop-playwright.json"
+    ],
+    "server": "gateway",
+    "setups": [
+      {
+        "fixture_setup_ms": 6504,
+        "fixture_snapshot": null,
+        "project": "webkit-light-phone"
+      },
+      {
+        "fixture_setup_ms": 5658,
+        "fixture_snapshot": null,
+        "project": "webkit-light-desktop"
+      },
+      {
+        "fixture_setup_ms": 4540,
+        "fixture_snapshot": null,
+        "project": "chromium-light-phone"
+      },
+      {
+        "fixture_setup_ms": 5538,
+        "fixture_snapshot": null,
+        "project": "chromium-light-desktop"
+      }
+    ]
+  },
+  "scenario": "WEB-MSG-CARD-SURFACES",
+  "level": "web",
+  "passed": true,
+  "git_sha": "43fc7d3be474a7ed8cce9c28c7547228b77e0e92",
+  "at": "2026-10-22T14:34:17.42034Z",
+  "assertions": [
+    {
+      "name": "webkit-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 3 tests using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/transcript-card-surfaces.spec.ts:6:1 › WEB-MSG-CARD-SURFACES sent and received cards retain a distinct surface and continuous tail in both appearances (4.0s)\n  ✓  2 [webkit-light-phone] › tests/transcript-card-surfaces.spec.ts:14:1 › WEB-MSG-CARD-SURFACES decoded link and app artwork keep the same card surface without changing geometry (2.9s)\n  ✓  3 [webkit-light-phone] › tests/transcript-card-surfaces.spec.ts:18:1 › WEB-MSG-CARD-SURFACES missing Genmoji bytes render an honest reserved tile rather than a bare glyph (1.6s)\n\n  3 passed (11.6s)\n"
+    },
+    {
+      "name": "webkit-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 3 tests using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/transcript-card-surfaces.spec.ts:6:1 › WEB-MSG-CARD-SURFACES sent and received cards retain a distinct surface and continuous tail in both appearances (3.0s)\n  ✓  2 [webkit-light-desktop] › tests/transcript-card-surfaces.spec.ts:14:1 › WEB-MSG-CARD-SURFACES decoded link and app artwork keep the same card surface without changing geometry (2.8s)\n  ✓  3 [webkit-light-desktop] › tests/transcript-card-surfaces.spec.ts:18:1 › WEB-MSG-CARD-SURFACES missing Genmoji bytes render an honest reserved tile rather than a bare glyph (1.7s)\n\n  3 passed (9.4s)\n"
+    },
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 3 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/transcript-card-surfaces.spec.ts:6:1 › WEB-MSG-CARD-SURFACES sent and received cards retain a distinct surface and continuous tail in both appearances (3.0s)\n  ✓  2 [chromium-light-phone] › tests/transcript-card-surfaces.spec.ts:14:1 › WEB-MSG-CARD-SURFACES decoded link and app artwork keep the same card surface without changing geometry (2.4s)\n  ✓  3 [chromium-light-phone] › tests/transcript-card-surfaces.spec.ts:18:1 › WEB-MSG-CARD-SURFACES missing Genmoji bytes render an honest reserved tile rather than a bare glyph (1.2s)\n\n  3 passed (8.3s)\n"
+    },
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 3 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/transcript-card-surfaces.spec.ts:6:1 › WEB-MSG-CARD-SURFACES sent and received cards retain a distinct surface and continuous tail in both appearances (3.1s)\n  ✓  2 [chromium-light-desktop] › tests/transcript-card-surfaces.spec.ts:14:1 › WEB-MSG-CARD-SURFACES decoded link and app artwork keep the same card surface without changing geometry (2.5s)\n  ✓  3 [chromium-light-desktop] › tests/transcript-card-surfaces.spec.ts:18:1 › WEB-MSG-CARD-SURFACES missing Genmoji bytes render an honest reserved tile rather than a bare glyph (1.4s)\n\n  3 passed (8.4s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
