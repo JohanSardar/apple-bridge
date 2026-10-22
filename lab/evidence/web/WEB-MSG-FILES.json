@@ -1,0 +1,85 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[26.16 46.8 38.79] cpu_idle=39% cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5HTGWK5NQFSKQXKJWC3NPGC",
+  "metrics": {
+    "browser_budget_ms": 180000,
+    "capture_observer_resets": 0,
+    "demo_messages": 5000,
+    "demo_startup_ms": 10651,
+    "fixture_setup_ms": 10651,
+    "matrix": [
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "chromium-light-phone",
+      "chromium-light-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-MSG-FILES-webkit-light-phone-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-MSG-FILES-webkit-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-FILES-webkit-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-FILES-chromium-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-FILES-chromium-light-desktop-playwright.json"
+    ],
+    "server": "gateway",
+    "setups": [
+      {
+        "fixture_setup_ms": 10651,
+        "fixture_snapshot": null,
+        "project": "webkit-light-phone"
+      },
+      {
+        "fixture_setup_ms": 23218,
+        "fixture_snapshot": null,
+        "project": "webkit-light-desktop"
+      },
+      {
+        "fixture_setup_ms": 12701,
+        "fixture_snapshot": null,
+        "project": "chromium-light-phone"
+      },
+      {
+        "fixture_setup_ms": 17581,
+        "fixture_snapshot": null,
+        "project": "chromium-light-desktop"
+      }
+    ]
+  },
+  "scenario": "WEB-MSG-FILES",
+  "level": "web",
+  "passed": true,
+  "git_sha": "11703e0b20fb722842e939883a409b6e028e7923",
+  "at": "2026-10-22T12:49:06.150407Z",
+  "assertions": [
+    {
+      "name": "webkit-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 3 tests using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/files.spec.ts:7:1 › WEB-MSG-FILES the PDF chip downloads exact original bytes and retains its reserved geometry (4.1s)\n  ✓  2 [webkit-light-phone] › tests/files.spec.ts:10:1 › WEB-MSG-FILES a local vCard decodes without changing bounds and View exposes captured fields (1.7s)\n  ✓  3 [webkit-light-phone] › tests/files.spec.ts:13:1 › WEB-MSG-FILES unavailable contacts retain original download and pending files have no actions (2.0s)\n\n  3 passed (11.8s)\n"
+    },
+    {
+      "name": "webkit-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 3 tests using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/files.spec.ts:7:1 › WEB-MSG-FILES the PDF chip downloads exact original bytes and retains its reserved geometry (4.3s)\n  ✓  2 [webkit-light-desktop] › tests/files.spec.ts:10:1 › WEB-MSG-FILES a local vCard decodes without changing bounds and View exposes captured fields (1.8s)\n  ✓  3 [webkit-light-desktop] › tests/files.spec.ts:13:1 › WEB-MSG-FILES unavailable contacts retain original download and pending files have no actions (1.4s)\n\n  3 passed (12.7s)\n"
+    },
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 3 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/files.spec.ts:7:1 › WEB-MSG-FILES the PDF chip downloads exact original bytes and retains its reserved geometry (2.3s)\n  ✓  2 [chromium-light-phone] › tests/files.spec.ts:10:1 › WEB-MSG-FILES a local vCard decodes without changing bounds and View exposes captured fields (1.9s)\n  ✓  3 [chromium-light-phone] › tests/files.spec.ts:13:1 › WEB-MSG-FILES unavailable contacts retain original download and pending files have no actions (1.3s)\n\n  3 passed (9.5s)\n"
+    },
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 3 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/files.spec.ts:7:1 › WEB-MSG-FILES the PDF chip downloads exact original bytes and retains its reserved geometry (2.1s)\n  ✓  2 [chromium-light-desktop] › tests/files.spec.ts:10:1 › WEB-MSG-FILES a local vCard decodes without changing bounds and View exposes captured fields (2.1s)\n  ✓  3 [chromium-light-desktop] › tests/files.spec.ts:13:1 › WEB-MSG-FILES unavailable contacts retain original download and pending files have no actions (1.1s)\n\n  3 passed (10.0s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

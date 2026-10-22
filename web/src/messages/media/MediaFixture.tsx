@@ -1,3 +1,4 @@
+import {FilesFixture} from './FilesFixture';
 import {AudioFixture} from './AudioFixture';
 import {For,Show,createSignal,onCleanup} from 'solid-js';
 import {PendingFixture} from './PendingFixture';
@@ -21,6 +22,7 @@ export function MediaFixture(){
  if(params.has('stickers'))return <StickerFixture items={view?.data().items??[]} standalone={params.get('stickers')==='standalone'}/>;
  if(params.has('placeholders'))return <PlaceholderFixture items={view?.data().items??[]} mode={params.get('placeholders')??'1'}/>;
  if(params.has('audio'))return <AudioFixture items={view?.data().items??[]} plain={params.get('audio')==='plain'}/>;
+ if(params.has('files'))return <FilesFixture items={view?.data().items??[]} pending={params.get('files')==='pending'}/>;
  if(params.has('effects'))return <EffectsFixture items={view?.data().items??[]}/>;
  if(params.has('pending'))return <PendingFixture items={view?.data().items??[]} mode={params.get('pending')??'image'}/>;
  if(params.has('cards')){
