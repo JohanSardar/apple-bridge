@@ -7,6 +7,7 @@ import { enterPane, reducedMotion, sharedElement, springAnimation } from '../mot
 import { VirtualList, type VirtualListHandle } from '../virtual/VirtualList';
 import { Card, ContactAvatar } from './Card';
 import { ContactEditor } from './Editor';
+import { ContactLists } from './Groups';
 import { createContactCommands } from './commands';
 import { object, searchable, text, useContactPreferences, useContacts, type Item } from './store';
 import { s } from './strings';
@@ -113,7 +114,7 @@ export default function Contacts() {
             <Show when={commands.error()}><div class="contact-write-status" role="alert"><p>{commands.error()}</p><Show when={lastCommand() && (!lastBefore || selected())}><button onClick={review}>Review edit</button></Show></div></Show>
             <Show when={commands.pending()}><p class="contact-write-status" role="status">Saving…</p></Show>
             <For each={commands.uncertain()}>{command=><div class="contact-write-status" role="status"><p>Not sure if saved. Check before trying again.</p><button onClick={()=>commands.check(command)}>Check status</button></div>}</For>
-            <Show when={editing() || isNew()?editorRevision():0} keyed fallback={<><div class="contact-write-toolbar"><Show when={id()}><button class="contact-back" onClick={back}>{s.back}</button></Show><Show when={selected() && canWrite('contacts.update',selected())}><button class="contact-back" onClick={()=>edit(selected())}>Edit</button></Show></div><Show when={selected()} fallback={<div class="empty"><p>{id() ? page().sections ? s.unavailable : s.loading : s.select}</p></div>}>{item=><Card item={item()}/>}</Show></>}>
+            <Show when={editing() || isNew()?editorRevision():0} keyed fallback={<><div class="contact-write-toolbar"><Show when={id()}><button class="contact-back" onClick={back}>{s.back}</button></Show><Show when={selected() && canWrite('contacts.update',selected())}><button class="contact-back" onClick={()=>edit(selected())}>Edit</button></Show></div><Show when={selected()} fallback={<div class="empty"><p>{id() ? page().sections ? s.unavailable : s.loading : s.select}</p></div>}>{item=><><Card item={item()}/><ContactLists page={page()} contact={item().contact} current={group()}/></>}</Show></>}>
                 {_revision=> <ContactEditor item={editorItem()} initial={recovery()} busy={commands.pending()} cancel={()=>{setEditing(false);if(isNew())back();}} save={save} remove={editorItem() && canWrite('contacts.delete',editorItem())?()=>setDeleting([editorItem()!]):undefined}/>}
             </Show>
         </section>

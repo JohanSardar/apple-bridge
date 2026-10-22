@@ -488,9 +488,6 @@ public final class ContactsSource: Source {
     }
     private func requireGroupCapability(_ operation: String) throws {
         if groupSelfTesting { return }
-#if LAB
-        if commandsEnabled { return }
-#endif
         guard groupCapabilities().contains(operation) else { throw SourceFailure.capabilityUnproven }
     }
     private func group(_ key: String) throws -> CNGroup {

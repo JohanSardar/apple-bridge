@@ -103,3 +103,12 @@ until this is resolved and the complete proof passes.
 Basic contact writes use the shared trusted-input command channel and captured versions. Inline edits preserve the starting version, so a concurrent change returns a conflict instead of replacing newer data. Review edit restores the draft against the current record; saving again is an explicit action. Optimistic cards resolve identities exclusively through `observed_record_ids` and settle when the live cursor reaches the observed commit. Uncertain delivery offers status lookup without redispatch.
 
 The editor supports names, organization, labeled field arrays, dates and photo set/remove. Photos are decoded locally, resized to at most 512 pixels and encoded into the existing bounded image command; unsupported formats stay unsaved with an error. Notes remain hidden. Multi-selection permits up to 32 contacts for vCard export or individually versioned deletions after confirmation. Accounts conservatively marked unwritable have no edit/delete controls. Native write/photo fidelity, real Bridge Test cleanup and full browser qualification remain limited until the Contacts milestone; the focused PR checks use synthetic data.
+
+The card's membership affordances use the shared trusted-input command layer, the current
+group version and `observed_record_ids` with the captured cursor before settling. They are
+restricted to writable contacts and groups in the same container and disappear when capability
+or source readiness is absent. Group names and counts remain read-only in the web app; no
+create, rename or delete list controls are exposed. Native membership controls remain hidden
+while the complete group proof is limited. `WEB-CON-PARITY` exercises the conditional controls
+against the isolated gateway fixture in Chromium light desktop; real-data acceptance remains
+at the Contacts milestone.
