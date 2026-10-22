@@ -364,6 +364,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "CORE-SEARCH-UPDATE-PERF" {
 		return runSearchUpdatePerf(ctx, s, level)
 	}
+	if s.ID == "WEB-FIXTURE-SNAPSHOT" {
+		return runWebFixtureSnapshot(ctx, s, level)
+	}
 	if s.ID == "WEB-RM-REMINDERS-HARDENING" {
 		return runRemindersHardening(ctx, s, level)
 	}
@@ -1079,7 +1082,7 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 			duration = 12 * time.Minute
 		}
 		if level == "web" && s.Web != nil {
-			duration = time.Duration(max(1, len(s.Web.Browsers)*len(s.Web.Themes)*len(s.Web.Layouts))) * webProjectBudget
+			duration = time.Duration(max(1, len(s.Web.Browsers)*len(s.Web.Themes)*len(s.Web.Layouts))) * webRunBudget(s)
 		}
 		bounded, cancel := context.WithTimeout(ctx, duration)
 		secretBefore, secretWasSet := os.LookupEnv("APPLE_BRIDGE_SECRET_STORE")

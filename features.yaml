@@ -516,6 +516,9 @@ features:
     depends_on: [web.frontdoor, web.demo, web.media]
     status: todo
     limits:
+      - scenario: WEB-MSG-CHATS-STORE
+        level: web
+        reason: "Optional 100k-world cold-template setup is limited and deferred to the Messages milestone. A back-to-back origin/main versus head run in the same normal lane with APPLE_BRIDGE_HEAVY_NO_SIM_LANE=1 fails setup on both: main exceeds its unchanged 120-second dataset request bound; head reaches the unchanged six-minute cold bound before publication. No 100k entry exists to measure. The normal 5000-message prepared fixture passes WebKit/Chromium phone/desktop store and cache checks. LIVE-FIX owns the existing SQLite trigger-preparation ingestion cost; no thresholds changed."
       - scenario: MSG-DECODE-BALLOON
         level: real
         reason: "Signed dev.applebridge.truth lacks Full Disk Access to the Messages database. Granting access requires Johan's admin authentication in System Settings, which the automation never performs or requests. Identity-bound real parity is limited; signed Helper counts are supporting evidence only."
@@ -533,6 +536,7 @@ features:
       - {id: WEB-HANDLES-ROUTE, levels: [web]}
       - {id: WEB-MSG-CHATS-STORE, levels: [web]}
       - {id: WEB-MSG-CHATS-CACHE, levels: [web]}
+      - {id: WEB-FIXTURE-SNAPSHOT, levels: [sim]}
       - {id: WEB-MSG-LIST, levels: [web]}
       - {id: WEB-MSG-FILTERS, levels: [web]}
       - {id: WEB-MSG-SEARCH, levels: [web]}

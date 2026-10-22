@@ -1,108 +1,153 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[6.69 8.89 11.71] cpus=8 other_heavy=1"
+    "summary": "air: load=[171.53 158.93 134.93] cpu_idle=50% cpus=8 other_heavy=2"
   },
-  "run_id": "run_01M5EZ9WM4VBBRW36W187KP9SH",
+  "run_id": "run_01M5HEE1V3QECGD8JY7FH5J58X",
   "metrics": {
+    "browser_budget_ms": 180000,
+    "capture_observer_resets": 0,
     "demo_messages": 5000,
-    "demo_startup_ms": 6492,
+    "demo_startup_ms": 1448,
+    "fixture_setup_ms": 1448,
+    "fixture_snapshot": {
+      "disk_bytes": 29716480,
+      "entry_bytes": 29724288,
+      "cache_bytes": 29728512,
+      "blob_payloads": 59,
+      "key": "a40beb343a5ae684eea67e2d9a2726b9f96660b27c8a0027851bdbab922a54d0",
+      "cache_hit": true,
+      "build_ms": 0,
+      "copy_ms": 1309,
+      "records": 6863,
+      "fresh_digest": "a5a51d7a5d1a4bd81f120af51edf362b80f1c9ff496159da954d19730c105d0a",
+      "copy_digest": "a5a51d7a5d1a4bd81f120af51edf362b80f1c9ff496159da954d19730c105d0a",
+      "verified": true,
+      "copy_method": "clonefile"
+    },
     "matrix": [
       "webkit-light-phone",
       "webkit-light-desktop",
-      "webkit-dark-phone",
-      "webkit-dark-desktop",
       "chromium-light-phone",
-      "chromium-light-desktop",
-      "chromium-dark-phone",
-      "chromium-dark-desktop",
-      "firefox-light-phone",
-      "firefox-light-desktop",
-      "firefox-dark-phone",
-      "firefox-dark-desktop"
+      "chromium-light-desktop"
     ],
     "report": "lab/evidence/private/web/reports/WEB-MSG-CHATS-CACHE-webkit-light-phone-playwright.json",
     "reports": [
       "lab/evidence/private/web/reports/WEB-MSG-CHATS-CACHE-webkit-light-phone-playwright.json",
       "lab/evidence/private/web/reports/WEB-MSG-CHATS-CACHE-webkit-light-desktop-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-CHATS-CACHE-webkit-dark-phone-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-CHATS-CACHE-webkit-dark-desktop-playwright.json",
       "lab/evidence/private/web/reports/WEB-MSG-CHATS-CACHE-chromium-light-phone-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-CHATS-CACHE-chromium-light-desktop-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-CHATS-CACHE-chromium-dark-phone-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-CHATS-CACHE-chromium-dark-desktop-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-CHATS-CACHE-firefox-light-phone-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-CHATS-CACHE-firefox-light-desktop-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-CHATS-CACHE-firefox-dark-phone-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-CHATS-CACHE-firefox-dark-desktop-playwright.json"
+      "lab/evidence/private/web/reports/WEB-MSG-CHATS-CACHE-chromium-light-desktop-playwright.json"
     ],
-    "server": "gateway"
+    "server": "gateway",
+    "setups": [
+      {
+        "fixture_setup_ms": 1448,
+        "fixture_snapshot": {
+          "disk_bytes": 29716480,
+          "entry_bytes": 29724288,
+          "cache_bytes": 29728512,
+          "blob_payloads": 59,
+          "key": "a40beb343a5ae684eea67e2d9a2726b9f96660b27c8a0027851bdbab922a54d0",
+          "cache_hit": true,
+          "build_ms": 0,
+          "copy_ms": 1309,
+          "records": 6863,
+          "fresh_digest": "a5a51d7a5d1a4bd81f120af51edf362b80f1c9ff496159da954d19730c105d0a",
+          "copy_digest": "a5a51d7a5d1a4bd81f120af51edf362b80f1c9ff496159da954d19730c105d0a",
+          "verified": true,
+          "copy_method": "clonefile"
+        },
+        "project": "webkit-light-phone"
+      },
+      {
+        "fixture_setup_ms": 988,
+        "fixture_snapshot": {
+          "disk_bytes": 29716480,
+          "entry_bytes": 29724288,
+          "cache_bytes": 29728512,
+          "blob_payloads": 59,
+          "key": "a40beb343a5ae684eea67e2d9a2726b9f96660b27c8a0027851bdbab922a54d0",
+          "cache_hit": true,
+          "build_ms": 0,
+          "copy_ms": 859,
+          "records": 6863,
+          "fresh_digest": "a5a51d7a5d1a4bd81f120af51edf362b80f1c9ff496159da954d19730c105d0a",
+          "copy_digest": "a5a51d7a5d1a4bd81f120af51edf362b80f1c9ff496159da954d19730c105d0a",
+          "verified": true,
+          "copy_method": "clonefile"
+        },
+        "project": "webkit-light-desktop"
+      },
+      {
+        "fixture_setup_ms": 686,
+        "fixture_snapshot": {
+          "disk_bytes": 29716480,
+          "entry_bytes": 29724288,
+          "cache_bytes": 29728512,
+          "blob_payloads": 59,
+          "key": "a40beb343a5ae684eea67e2d9a2726b9f96660b27c8a0027851bdbab922a54d0",
+          "cache_hit": true,
+          "build_ms": 0,
+          "copy_ms": 570,
+          "records": 6863,
+          "fresh_digest": "a5a51d7a5d1a4bd81f120af51edf362b80f1c9ff496159da954d19730c105d0a",
+          "copy_digest": "a5a51d7a5d1a4bd81f120af51edf362b80f1c9ff496159da954d19730c105d0a",
+          "verified": true,
+          "copy_method": "clonefile"
+        },
+        "project": "chromium-light-phone"
+      },
+      {
+        "fixture_setup_ms": 615,
+        "fixture_snapshot": {
+          "disk_bytes": 29716480,
+          "entry_bytes": 29724288,
+          "cache_bytes": 29728512,
+          "blob_payloads": 59,
+          "key": "a40beb343a5ae684eea67e2d9a2726b9f96660b27c8a0027851bdbab922a54d0",
+          "cache_hit": true,
+          "build_ms": 0,
+          "copy_ms": 512,
+          "records": 6863,
+          "fresh_digest": "a5a51d7a5d1a4bd81f120af51edf362b80f1c9ff496159da954d19730c105d0a",
+          "copy_digest": "a5a51d7a5d1a4bd81f120af51edf362b80f1c9ff496159da954d19730c105d0a",
+          "verified": true,
+          "copy_method": "clonefile"
+        },
+        "project": "chromium-light-desktop"
+      }
+    ],
+    "template_cold_setup_ms": {
+      "generate": 417,
+      "list": 18430,
+      "seed": 30434
+    }
   },
   "scenario": "WEB-MSG-CHATS-CACHE",
   "level": "web",
   "passed": true,
-  "git_sha": "b1d467bf9f89c2704760800b442dc7afacfba3ae",
-  "at": "2026-10-21T10:14:56.388575Z",
+  "git_sha": "b4624c9513abafcba17c603466051977fa226a15",
+  "at": "2026-10-22T09:17:50.30909Z",
   "assertions": [
     {
       "name": "webkit-light-phone:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/chats-cache-chain.spec.ts:16:1 › WEB-MSG-CHATS-CACHE offline reload keeps the complete reordered chat view (3.6s)\n  ✓  2 [webkit-light-phone] › tests/chats-cache-chain.spec.ts:45:1 › WEB-MSG-CHATS-CACHE device revocation wipes the materialized chats snapshot (1.8s)\n\n  2 passed (21.0s)\n"
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/chats-cache-chain.spec.ts:16:1 › WEB-MSG-CHATS-CACHE offline reload keeps the complete reordered chat view (13.0s)\n  ✓  2 [webkit-light-phone] › tests/chats-cache-chain.spec.ts:45:1 › WEB-MSG-CHATS-CACHE device revocation wipes the materialized chats snapshot (6.5s)\n\n  2 passed (54.1s)\n"
     },
     {
       "name": "webkit-light-desktop:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/chats-cache-chain.spec.ts:16:1 › WEB-MSG-CHATS-CACHE offline reload keeps the complete reordered chat view (4.5s)\n  ✓  2 [webkit-light-desktop] › tests/chats-cache-chain.spec.ts:45:1 › WEB-MSG-CHATS-CACHE device revocation wipes the materialized chats snapshot (2.9s)\n\n  2 passed (23.3s)\n"
-    },
-    {
-      "name": "webkit-dark-phone:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [webkit-dark-phone] › tests/chats-cache-chain.spec.ts:16:1 › WEB-MSG-CHATS-CACHE offline reload keeps the complete reordered chat view (3.6s)\n  ✓  2 [webkit-dark-phone] › tests/chats-cache-chain.spec.ts:45:1 › WEB-MSG-CHATS-CACHE device revocation wipes the materialized chats snapshot (1.5s)\n\n  2 passed (21.3s)\n"
-    },
-    {
-      "name": "webkit-dark-desktop:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [webkit-dark-desktop] › tests/chats-cache-chain.spec.ts:16:1 › WEB-MSG-CHATS-CACHE offline reload keeps the complete reordered chat view (3.4s)\n  ✓  2 [webkit-dark-desktop] › tests/chats-cache-chain.spec.ts:45:1 › WEB-MSG-CHATS-CACHE device revocation wipes the materialized chats snapshot (1.5s)\n\n  2 passed (18.7s)\n"
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/chats-cache-chain.spec.ts:16:1 › WEB-MSG-CHATS-CACHE offline reload keeps the complete reordered chat view (18.3s)\n  ✓  2 [webkit-light-desktop] › tests/chats-cache-chain.spec.ts:45:1 › WEB-MSG-CHATS-CACHE device revocation wipes the materialized chats snapshot (4.4s)\n\n  2 passed (54.2s)\n"
     },
     {
       "name": "chromium-light-phone:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/chats-cache-chain.spec.ts:16:1 › WEB-MSG-CHATS-CACHE offline reload keeps the complete reordered chat view (2.0s)\n  ✓  2 [chromium-light-phone] › tests/chats-cache-chain.spec.ts:45:1 › WEB-MSG-CHATS-CACHE device revocation wipes the materialized chats snapshot (1.6s)\n\n  2 passed (15.2s)\n"
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/chats-cache-chain.spec.ts:16:1 › WEB-MSG-CHATS-CACHE offline reload keeps the complete reordered chat view (7.3s)\n  ✓  2 [chromium-light-phone] › tests/chats-cache-chain.spec.ts:45:1 › WEB-MSG-CHATS-CACHE device revocation wipes the materialized chats snapshot (3.4s)\n\n  2 passed (35.0s)\n"
     },
     {
       "name": "chromium-light-desktop:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/chats-cache-chain.spec.ts:16:1 › WEB-MSG-CHATS-CACHE offline reload keeps the complete reordered chat view (2.2s)\n  ✓  2 [chromium-light-desktop] › tests/chats-cache-chain.spec.ts:45:1 › WEB-MSG-CHATS-CACHE device revocation wipes the materialized chats snapshot (1.2s)\n\n  2 passed (19.3s)\n"
-    },
-    {
-      "name": "chromium-dark-phone:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [chromium-dark-phone] › tests/chats-cache-chain.spec.ts:16:1 › WEB-MSG-CHATS-CACHE offline reload keeps the complete reordered chat view (1.5s)\n  ✓  2 [chromium-dark-phone] › tests/chats-cache-chain.spec.ts:45:1 › WEB-MSG-CHATS-CACHE device revocation wipes the materialized chats snapshot (1.1s)\n\n  2 passed (14.5s)\n"
-    },
-    {
-      "name": "chromium-dark-desktop:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [chromium-dark-desktop] › tests/chats-cache-chain.spec.ts:16:1 › WEB-MSG-CHATS-CACHE offline reload keeps the complete reordered chat view (1.9s)\n  ✓  2 [chromium-dark-desktop] › tests/chats-cache-chain.spec.ts:45:1 › WEB-MSG-CHATS-CACHE device revocation wipes the materialized chats snapshot (834ms)\n\n  2 passed (13.5s)\n"
-    },
-    {
-      "name": "firefox-light-phone:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [firefox-light-phone] › tests/chats-cache-chain.spec.ts:16:1 › WEB-MSG-CHATS-CACHE offline reload keeps the complete reordered chat view (3.8s)\n  ✓  2 [firefox-light-phone] › tests/chats-cache-chain.spec.ts:45:1 › WEB-MSG-CHATS-CACHE device revocation wipes the materialized chats snapshot (2.8s)\n\n  2 passed (24.4s)\n"
-    },
-    {
-      "name": "firefox-light-desktop:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [firefox-light-desktop] › tests/chats-cache-chain.spec.ts:16:1 › WEB-MSG-CHATS-CACHE offline reload keeps the complete reordered chat view (2.8s)\n  ✓  2 [firefox-light-desktop] › tests/chats-cache-chain.spec.ts:45:1 › WEB-MSG-CHATS-CACHE device revocation wipes the materialized chats snapshot (1.5s)\n\n  2 passed (20.1s)\n"
-    },
-    {
-      "name": "firefox-dark-phone:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [firefox-dark-phone] › tests/chats-cache-chain.spec.ts:16:1 › WEB-MSG-CHATS-CACHE offline reload keeps the complete reordered chat view (3.7s)\n  ✓  2 [firefox-dark-phone] › tests/chats-cache-chain.spec.ts:45:1 › WEB-MSG-CHATS-CACHE device revocation wipes the materialized chats snapshot (3.1s)\n\n  2 passed (22.3s)\n"
-    },
-    {
-      "name": "firefox-dark-desktop:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [firefox-dark-desktop] › tests/chats-cache-chain.spec.ts:16:1 › WEB-MSG-CHATS-CACHE offline reload keeps the complete reordered chat view (5.3s)\n  ✓  2 [firefox-dark-desktop] › tests/chats-cache-chain.spec.ts:45:1 › WEB-MSG-CHATS-CACHE device revocation wipes the materialized chats snapshot (2.9s)\n\n  2 passed (26.3s)\n"
+      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/chats-cache-chain.spec.ts:16:1 › WEB-MSG-CHATS-CACHE offline reload keeps the complete reordered chat view (8.3s)\n  ✓  2 [chromium-light-desktop] › tests/chats-cache-chain.spec.ts:45:1 › WEB-MSG-CHATS-CACHE device revocation wipes the materialized chats snapshot (1.7s)\n\n  2 passed (35.8s)\n"
     },
     {
       "name": "credential_backend_override_restored",

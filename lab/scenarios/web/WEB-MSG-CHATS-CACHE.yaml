@@ -1,4 +1,4 @@
 id: WEB-MSG-CHATS-CACHE
 feature: web.messages.read
 levels: [web]
-web: {browsers: [webkit, chromium, firefox], themes: [light, dark], layouts: [phone, desktop], server: gateway}
+web: {fixture: list, browsers: [webkit, chromium, firefox], themes: [light, dark], layouts: [phone, desktop], server: gateway}

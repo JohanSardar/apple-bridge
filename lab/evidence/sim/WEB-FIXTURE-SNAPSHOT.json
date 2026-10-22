@@ -1,0 +1,174 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[98.99 120.97 114.26] cpu_idle=50% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5HDVZQ5PTRH07EANWN2FTZC",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "chunked_seed": {
+      "chunked": "1a3e17164ecb74d576953dd9fcbc03b8bd722de658131bb561e2eb69f6e82648",
+      "single": "1a3e17164ecb74d576953dd9fcbc03b8bd722de658131bb561e2eb69f6e82648"
+    },
+    "different_gateway": {
+      "disk_bytes": 421888,
+      "entry_bytes": 423040,
+      "cache_bytes": 854528,
+      "blob_payloads": 1,
+      "key": "5ea13b42e118f261766d2708739d58ac5146e817ca85d71307bd75a832e6b090",
+      "cache_hit": false,
+      "build_ms": 2846,
+      "copy_ms": 250,
+      "records": 9,
+      "fresh_digest": "37299e70fb900645188328e3367957d096dbddcfca2293a7973793e32d8b5cfd",
+      "copy_digest": "37299e70fb900645188328e3367957d096dbddcfca2293a7973793e32d8b5cfd",
+      "verified": true,
+      "copy_method": "clonefile"
+    },
+    "disk_eviction": {
+      "assertions": {
+        "cache_hit_updates_last_used": true,
+        "low_free_space_override_prevents_retention": true,
+        "stale_staging_reaped_fresh_staging_preserved": true,
+        "three_keys_keep_two_most_recently_used_per_kind": true,
+        "total_cache_byte_cap_evicts_across_fixture_kinds": true
+      },
+      "disk_bytes": 430080,
+      "cache_bytes": 431360,
+      "limit_bytes": 846080
+    },
+    "first": {
+      "disk_bytes": 413696,
+      "entry_bytes": 414848,
+      "cache_bytes": 419072,
+      "blob_payloads": 1,
+      "key": "7e4397166cb72139dd80ff36b8d0514b2b4754c82c99cc65084631d79d4274c4",
+      "cache_hit": false,
+      "build_ms": 2526,
+      "copy_ms": 353,
+      "records": 9,
+      "fresh_digest": "937809d60d74340bcc484a7a053d823a40d0067f140aaac7fb12c93582fa8d22",
+      "copy_digest": "937809d60d74340bcc484a7a053d823a40d0067f140aaac7fb12c93582fa8d22",
+      "verified": true,
+      "copy_method": "clonefile"
+    },
+    "generator_calls": 10,
+    "second": {
+      "disk_bytes": 413696,
+      "entry_bytes": 414848,
+      "cache_bytes": 419072,
+      "blob_payloads": 1,
+      "key": "7e4397166cb72139dd80ff36b8d0514b2b4754c82c99cc65084631d79d4274c4",
+      "cache_hit": true,
+      "build_ms": 0,
+      "copy_ms": 711,
+      "records": 9,
+      "fresh_digest": "937809d60d74340bcc484a7a053d823a40d0067f140aaac7fb12c93582fa8d22",
+      "copy_digest": "937809d60d74340bcc484a7a053d823a40d0067f140aaac7fb12c93582fa8d22",
+      "verified": true,
+      "copy_method": "clonefile"
+    },
+    "third": {
+      "disk_bytes": 421888,
+      "entry_bytes": 423040,
+      "cache_bytes": 846336,
+      "blob_payloads": 1,
+      "key": "f6ca47688125f27e3420798f6ed3e9bc6e7d09a345acd26bcbf67b893a6be978",
+      "cache_hit": false,
+      "build_ms": 1866,
+      "copy_ms": 484,
+      "records": 9,
+      "fresh_digest": "427ebc6626907eda64c3a2fb7493f1ea58b1da464e8e114e253354d2876e22cb",
+      "copy_digest": "427ebc6626907eda64c3a2fb7493f1ea58b1da464e8e114e253354d2876e22cb",
+      "verified": true,
+      "copy_method": "clonefile"
+    }
+  },
+  "scenario": "WEB-FIXTURE-SNAPSHOT",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "b4624c9513abafcba17c603466051977fa226a15",
+  "at": "2026-10-22T09:07:58.309607Z",
+  "assertions": [
+    {
+      "name": "first_world_prepared",
+      "passed": true
+    },
+    {
+      "name": "second_world_prepared",
+      "passed": true
+    },
+    {
+      "name": "runtime_application_records_equal_and_exclude_copy_mutation",
+      "passed": true
+    },
+    {
+      "name": "runtime_source_record_ids_survive_reconnect",
+      "passed": true
+    },
+    {
+      "name": "copied_blob_bytes_and_metadata_equal_fresh_seed",
+      "passed": true
+    },
+    {
+      "name": "cache_directory_is_owner_only",
+      "passed": true
+    },
+    {
+      "name": "same_key_generates_once",
+      "passed": true
+    },
+    {
+      "name": "gateway_blob_payloads_are_verified",
+      "passed": true
+    },
+    {
+      "name": "fresh_copy_proof_is_recorded",
+      "passed": true
+    },
+    {
+      "name": "changed_input_prepares_new_template",
+      "passed": true
+    },
+    {
+      "name": "alternate_gateway_binary_builds",
+      "passed": true
+    },
+    {
+      "name": "different_gateway_binary_misses_cache",
+      "passed": true
+    },
+    {
+      "name": "chunked_seed_matches_single_upload_digest",
+      "passed": true
+    },
+    {
+      "name": "low_free_space_override_prevents_retention",
+      "passed": true
+    },
+    {
+      "name": "stale_staging_reaped_fresh_staging_preserved",
+      "passed": true
+    },
+    {
+      "name": "cache_hit_updates_last_used",
+      "passed": true
+    },
+    {
+      "name": "three_keys_keep_two_most_recently_used_per_kind",
+      "passed": true
+    },
+    {
+      "name": "total_cache_byte_cap_evicts_across_fixture_kinds",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

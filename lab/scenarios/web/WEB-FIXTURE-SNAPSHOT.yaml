@@ -1,0 +1,4 @@
+id: WEB-FIXTURE-SNAPSHOT
+feature: web.messages.read
+levels: [sim]
+when: [{fixture_snapshot: {}}]

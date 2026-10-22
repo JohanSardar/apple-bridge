@@ -21,10 +21,11 @@ import (
 	"github.com/JohanSardar/apple-bridge/lab/world"
 )
 
-func webBrowserControl(ctx context.Context, w *world.World, origin string) (*httptest.Server, string) {
+func webBrowserControl(ctx context.Context, w *world.World, origin string, prepared ...*webFixtureMetadata) (*httptest.Server, string) {
 	secret := contracts.NewID("browser")
 	var mu sync.Mutex
 	var browserReplica *world.Endpoint
+	preparedListUsed := false
 	enroll := func(expired bool) (string, error) {
 		output, err := exec.CommandContext(ctx, "bin/bridge", "web", "enroll", "--home", w.Gateway.Home, "--host", origin).Output()
 		if err != nil {
@@ -192,8 +193,13 @@ func webBrowserControl(ctx context.Context, w *world.World, origin string) (*htt
 			value, err = webHandlesFixture(w)
 		case "/list-fixture":
 			started := time.Now()
-			avatar, setupErr := webListFixture(w, request.URL.Query().Get("update") == "1")
-			err = setupErr
+			var avatar webAvatar
+			if !preparedListUsed && request.URL.Query().Get("update") != "1" && len(prepared) > 0 && prepared[0] != nil && prepared[0].Avatar != nil {
+				avatar = *prepared[0].Avatar
+				preparedListUsed = true
+			} else {
+				avatar, err = webListFixture(w, request.URL.Query().Get("update") == "1")
+			}
 			value = map[string]any{"ok": err == nil, "fixture_setup_ms": time.Since(started).Milliseconds(), "fixture_flush_ms": avatar.FixtureFlushMS, "fixture_flush_budget_ms": avatar.FixtureFlushBudgetMS}
 		case "/list-late-incoming":
 			err = webListLateIncoming(w)
