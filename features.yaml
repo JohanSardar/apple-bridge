@@ -631,6 +631,8 @@ features:
       - {id: WEB-MSG-KEYBOARD-LIST, levels: [web]}
       - {id: WEB-MSG-A11Y, levels: [web]}
       - {id: WEB-MSG-PERF, levels: [web]}
+      - {id: WEB-MSG-PERF-FRAME, levels: [web]}
+      - {id: WEB-MSG-PERF-INPUT, levels: [web]}
       - {id: WEB-PERF-LIST, levels: [web]}
       - {id: WEB-MSG-LIVE, levels: [web]}
       - {id: WEB-MSG-REAL-READ, levels: [real]}

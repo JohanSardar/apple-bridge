@@ -3,21 +3,21 @@ export function stats(values:number[]) {
     const sorted=[...values].sort((a,b)=>a-b),at=(q:number)=>sorted[Math.min(sorted.length-1,Math.ceil(sorted.length*q)-1)]??0;
     return {samples:values.length,p50_ms:at(.5),p95_ms:at(.95),max_ms:at(1)};
 }
-export async function installProbe(page:Page) {
-    await page.evaluate(()=>{
+export async function installProbe(page:Page,selectionInputs=true) {
+    await page.evaluate(selectionInputs=>{
         const probe={phase:'idle',scrollStart:0,scrollEnd:0,frames:[] as {at:number;work:number}[],input:[] as number[],inputFrames:0,inputNext:0,inputRendered:[] as boolean[],events:[] as {name:string;duration:number;startTime:number;processingEnd:number;processing:number;interaction:number}[],longTasks:[] as number[]};
         (window as any).__listProbe=probe;
-        const native=window.requestAnimationFrame.bind(window);
+        const native=window.requestAnimationFrame.bind(window);(window as any).__listNativeRAF=native;
         window.requestAnimationFrame=callback=>native(at=>{
             if(probe.phase==='scroll'){
-                const start=performance.now();callback(at);document.body.getBoundingClientRect();
+                const start=performance.now();callback(at);(probe as any).captureResult?.(at);document.body.getBoundingClientRect();
                 const last=probe.frames.at(-1);if(last?.at===at)last.work+=performance.now()-start;else probe.frames.push({at,work:performance.now()-start});
             }else callback(at);
         });
-        window.addEventListener('click',event=>{if(event.isTrusted&&(event.target as Element).closest('.conversation-row')){const start=performance.now(),index=probe.inputNext++,row=(event.target as Element).closest('.conversation-row')!;performance.mark('list-input-event-'+index);native(()=>{performance.mark('list-input-frame-start-'+index);probe.input.push(performance.now()-start);probe.inputRendered.push(row.parentElement?.getAttribute('aria-selected')==='true');native(()=>{performance.mark('list-input-frame-end-'+index);probe.inputFrames++;});});}},{capture:true});
+        window.addEventListener('click',event=>{if(selectionInputs&&event.isTrusted&&(event.target as Element).closest('.conversation-row')){const start=performance.now(),index=probe.inputNext++,row=(event.target as Element).closest('.conversation-row')!;performance.mark('list-input-event-'+index);native(()=>{performance.mark('list-input-frame-start-'+index);probe.input.push(performance.now()-start);probe.inputRendered.push(row.parentElement?.getAttribute('aria-selected')==='true');native(()=>{performance.mark('list-input-frame-end-'+index);probe.inputFrames++;});});}},{capture:true});
         if(PerformanceObserver.supportedEntryTypes.includes('event'))new PerformanceObserver(list=>{for(const item of list.getEntries()){const entry=item as PerformanceEventTiming;if(entry.interactionId)probe.events.push({name:entry.name,duration:entry.duration,startTime:entry.startTime,processingEnd:entry.processingEnd,processing:entry.processingEnd-entry.processingStart,interaction:entry.interactionId});}}).observe({type:'event',durationThreshold:0});
         if(PerformanceObserver.supportedEntryTypes.includes('longtask'))new PerformanceObserver(list=>{for(const entry of list.getEntries())if(entry.startTime>=probe.scrollStart&&(!probe.scrollEnd||entry.startTime<=probe.scrollEnd))probe.longTasks.push(entry.duration);}).observe({type:'longtask'});
-    });
+    },selectionInputs);
 }
 type TraceEvent={name:string;ts:number;dur?:number;pid:number;tid:number;ph:string;args?:any};
 export async function startTrace(page:Page):Promise<CDPSession|undefined> {

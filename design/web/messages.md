@@ -104,6 +104,8 @@ Videos and Live Photos reserve at least 120 px on the short side, within the ava
 
 ### 3.3 Transcript behavior
 
+`WEB-MSG-PERF` runs a 100k-message synthetic transcript fling and open-chat, send, react and open-media journeys across all 12 browser projects. `WEB-MSG-PERF-FRAME` selects the fling; `WEB-MSG-PERF-INPUT` selects the input journeys and phone push/pop frames. Existing SPEC frame and input limits remain assertions, so an over-budget implementation produces a RED milestone result. Playwright’s screenshot/snapshot recorder is disabled during measurement; performance traces and probes remain active. Chromium traces measure the union of main-thread script/style/layout spans. Input probes identify the actual rendered result, including asynchronous transcript publication, and exclude dispatch already counted by Event Timing. WebKit and Firefox collect callback and observer work with forced layout accounting. Frame intervals remain descriptive on a 60 Hz host. Optional `AB_WEB_CPU_PROFILE=1` and `AB_WEB_STAGE_PROFILE=1` enable diagnostic profiles and stage timings; acceptance leaves both unset.
+
 - **Opening a chat:** it opens at the first unread message, or at the bottom. A floating "↓ N new" pill appears when new messages arrive above the fold. Catch-up arrow as in iOS 17.
 - **Loading history:** scrolling up loads older history in pages with no jump; the scroll anchor stays on the visible message.
 - **Selection and copy:** text selection inside a bubble works on desktop; double-click selects a word.
