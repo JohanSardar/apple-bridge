@@ -52,6 +52,12 @@ func runNotesList(ctx context.Context, s Scenario, level string) (e Evidence) {
 			data["pinned"] = true
 			data["attachments"] = []any{map[string]any{"derivatives": map[string]any{"thumb": map[string]any{"digest": strings.Repeat("b", 64), "state": "present"}}}}
 		}
+		if i == 1 {
+			data["plain_text"] = ""
+			data["preview"] = "[ab-test] Preview 🧪"
+			data["content_status"] = "offloaded"
+			data["editable"] = "none"
+		}
 		if i == 2 {
 			data["locked"] = true
 			data["html"] = "private locked body"

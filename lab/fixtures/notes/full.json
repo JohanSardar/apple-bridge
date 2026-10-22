@@ -1,0 +1,32 @@
+{
+  "text": "[ab-test decoder] Full 🧪\nHeading\nSubheading\nCode <&>\nBullet\nDash\nNumber\nUnchecked\nChecked\nQuote\nStyled link\n￼\n￼\n",
+  "types": [
+    "title",
+    "heading",
+    "heading",
+    "monostyled",
+    "list_item",
+    "list_item",
+    "list_item",
+    "checklist_item",
+    "checklist_item",
+    "quote",
+    "paragraph",
+    "attachment",
+    "table"
+  ],
+  "table": [
+    [
+      "A1",
+      "B1"
+    ],
+    [
+      "A2",
+      "B2"
+    ]
+  ],
+  "attachments": [
+    "fixture-image",
+    "fixture-table"
+  ]
+}

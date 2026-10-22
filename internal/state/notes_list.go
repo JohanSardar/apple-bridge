@@ -120,7 +120,10 @@ func (s *Store) NotesList(ctx context.Context, visibility trust.Visibility, quer
 			item.ReadOnly = true
 			item.Note.Data, _ = json.Marshal(map[string]any{"title": fieldString(fields, "title"), "folder_id": folderID, "locked": true, "content_status": "locked", "editable": "none", "created_at": fieldString(fields, "created_at"), "modified_at": fieldString(fields, "modified_at")})
 		} else {
-			item.Preview = notePreview(fieldString(fields, "plain_text"), fieldString(fields, "title"))
+			item.Preview = notePreview(fieldString(fields, "preview"), "")
+			if item.Preview == "" {
+				item.Preview = notePreview(fieldString(fields, "plain_text"), fieldString(fields, "title"))
+			}
 			item.Thumbnail = noteThumbnail(fields)
 		}
 		field := "modified_at"

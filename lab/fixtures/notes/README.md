@@ -1,0 +1,5 @@
+The gzip fixtures contain synthetic, tagged Notes protobuf data, not copies of a user's database. `full.json` is the independent expected text, block order and table cell order for `full.gz` plus `full-table.gz`. The table serializes its column and cell dictionaries out of display order to exercise ordered-set reconstruction.
+
+The full fixture covers heading hierarchy, monostyled text, all three list styles, both checklist states and distinct checklist identities, quotes, inline emphasis, a link, highlighting and attachment references. The malformed fixtures cover a split UTF-16 surrogate, duplicate text fields and an incorrect wire type; unknown paragraph styles remain explicit read-only placeholders. Existing small fixtures retain legacy decode coverage.
+
+Field numbers follow the public [Notes schema](https://github.com/threeplanetssoftware/apple_cloud_notes_parser/blob/master/proto/notestore.proto). Decoder and SQLite projection checks run in `NotesDecoderChecks`; AppleTruth counts use a separate parser and do not call the production decoder. Native format coverage is qualified at the Notes milestone.

@@ -1,0 +1,7 @@
+id: NOTE-DECODE-FULL
+feature: web.notes
+levels: [sim, real]
+given: [{world: {replicas: 1}}]
+when: [{notes: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]
