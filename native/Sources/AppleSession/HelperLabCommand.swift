@@ -5,6 +5,7 @@ import Darwin
 import MessagesSource
 import RemindersStore
 import SourceSupport
+import NotesSource
 
 enum HelperLabCommand {
     @MainActor
@@ -122,6 +123,14 @@ enum HelperLabCommand {
             }
             while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.005)) }
             try JSONEncoder().encode(try result!.get()).write(to: reportURL, options: .atomic)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportURL.path)
+            return true
+        case "notes-parity-probe":
+            let reportURL = try report(arguments)
+            var result: JSON?
+            Task { @MainActor in result = await NotesParityProbe.run() }
+            while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.01)) }
+            try JSONEncoder().encode(result!).write(to: reportURL, options: .atomic)
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportURL.path)
             return true
         case "notes-probe":

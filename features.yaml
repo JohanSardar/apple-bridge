@@ -821,10 +821,18 @@ features:
     modules: [webui, native/NotesSource, native/Decoders, operations]
     depends_on: [web.frontdoor, notes.write]
     status: todo
+    limits:
+      - scenario: NOTE-EDIT-PARITY
+        level: real
+        reason: "macOS 26.7.1 build 25G241: the simple-rich HTML replacement did not preserve expected text/block structure; unknown note and paragraph attributes prevent a lossless round trip. Rich edits remain hidden."
+      - scenario: NOTE-EDIT-PARITY
+        level: real
+        reason: "macOS 26.7.1 build 25G241: public HTML checkbox import produced zero native checklist items before and after the attempted toggle, so identity/state preservation is unproven. Checklist toggles remain hidden."
     scenarios:
       - {id: NOTE-LIST, levels: [sim]}
       - {id: NOTE-LIST-LIVE, levels: [web]}
       - {id: NOTE-DECODE-FULL, levels: [sim, real]}
+      - {id: NOTE-EDIT-PARITY, levels: [real]}
       - {id: WEB-NOTE-READ, levels: [web]}
       - {id: WEB-NOTE-WRITE, levels: [web, real]}
       - {id: WEB-NOTE-PARITY, levels: [web, real]}

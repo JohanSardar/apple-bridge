@@ -18,6 +18,9 @@ import (
 )
 
 func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
+	if s.ID == "NOTE-EDIT-PARITY" {
+		return runNotesParity(ctx, s, level)
+	}
 	if s.ID == "NOTE-LIST" {
 		return runNotesList(ctx, s, level)
 	}

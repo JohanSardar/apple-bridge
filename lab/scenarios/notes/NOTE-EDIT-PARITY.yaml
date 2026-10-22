@@ -1,0 +1,7 @@
+id: NOTE-EDIT-PARITY
+feature: web.notes
+levels: [real]
+given: []
+when: [{notes: {}}]
+then: []
+cleanup: []
