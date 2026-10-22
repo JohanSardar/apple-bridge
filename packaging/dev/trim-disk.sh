@@ -12,8 +12,8 @@ if [ -n "$cache" ] && [ -d "$cache" ]; then
   # Go refreshes an entry's mtime on use once it is over an hour old, so entries older than two hours went unused for
   # at least an hour. Five workers building different trees grow the cache by gigabytes between trims.
   find "$cache" -type f -mmin +120 -delete 2>/dev/null
-  # Below the hard floor itself, also drop entries untouched for an hour; a miss only costs a rebuild.
-  [ "$(df -k / | awk 'NR==2{print $4}')" -lt "$threshold_kb" ] && find "$cache" -type f -mmin +60 -delete 2>/dev/null
+  # Still under the floor plus headroom: also drop entries untouched for an hour; a miss only costs a rebuild.
+  [ "$(df -k / | awk 'NR==2{print $4}')" -lt $((threshold_kb + headroom_kb)) ] && find "$cache" -type f -mmin +60 -delete 2>/dev/null
   find "$cache" -type d -empty -delete 2>/dev/null
 fi
 find /tmp/ablab -mindepth 1 -maxdepth 1 -type d -mmin +360 -exec rm -rf {} + 2>/dev/null
