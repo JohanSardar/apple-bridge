@@ -1,0 +1,13 @@
+import {createEffect,createMemo,createSignal,onCleanup,Show} from 'solid-js';
+import {duration} from '../format';
+import {pendingGeometryKnown,pendingLocalURL,type PendingAttachment} from './pending';
+import './pending.css';
+export type {PendingAttachment} from './pending';
+export function PendingMedia(props:{attachment:PendingAttachment;width:number;height:number}){
+ const known=createMemo(()=>pendingGeometryKnown(props.attachment)),source=createMemo(()=>pendingLocalURL(props.attachment)),image=()=>/^image\//iu.test(props.attachment.type),video=()=>/^video\//iu.test(props.attachment.type),[ready,setReady]=createSignal(false),[failed,setFailed]=createSignal(false);let generation=0,disposed=false;
+ createEffect(()=>{source();known();props.attachment.type;generation++;setReady(false);setFailed(false);});onCleanup(()=>{disposed=true;generation++;});
+ const decoded=async(element:HTMLImageElement)=>{const token=generation,url=element.currentSrc||element.src;try{await element.decode();if(!disposed&&token===generation&&url===source())setReady(true);}catch{if(!disposed&&token===generation)setFailed(true);}};
+ const frame=(element:HTMLVideoElement)=>{if(!disposed&&element.currentSrc===source()&&element.readyState>=2&&element.videoWidth>0)setReady(true);};
+ const caption=()=>failed()||!source()?'Preview unavailable':!known()&&(image()||video())?'Preparing preview':'Sending attachment';
+ return <div class="pending-media" role="group" aria-label={'Sending '+props.attachment.name} data-pending-key={props.attachment.key} data-pending-known={known()} data-pending-alpha={props.attachment.alpha===true} data-ready={ready()} style={{width:props.width+'px',height:props.height+'px'}}><Show when={known()&&source()&&!failed()&&(image()||video())} fallback={<div class="pending-tile"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 2h9l5 5v15H5ZM14 2v6h5M8 13h8M8 17h6"/></svg><strong title={props.attachment.name}>{props.attachment.name}</strong></div>}><Show when={image()} fallback={<video src={source()} muted playsinline preload="auto" aria-label={'Video preview: '+props.attachment.name} onLoadedData={event=>frame(event.currentTarget)} onError={()=>setFailed(true)}/>}><img src={source()} alt={props.attachment.name} decoding="async" draggable={false} onLoad={event=>void decoded(event.currentTarget)} onError={()=>setFailed(true)}/></Show></Show><span class="pending-status" role="status">{caption()}<Show when={video()&&Number.isFinite(props.attachment.duration_ms)&&Number(props.attachment.duration_ms)>0}> · {duration(Number(props.attachment.duration_ms)/1000)}</Show></span></div>;
+}

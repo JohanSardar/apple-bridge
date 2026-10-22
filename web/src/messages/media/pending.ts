@@ -1,0 +1,3 @@
+export type PendingAttachment={key:string;name:string;type:string;size:number;url:string;width?:number;height?:number;duration_ms?:number;alpha?:boolean};
+export function pendingGeometryKnown(attachment:PendingAttachment):boolean{return typeof attachment.width==='number'&&Number.isFinite(attachment.width)&&attachment.width>0&&typeof attachment.height==='number'&&Number.isFinite(attachment.height)&&attachment.height>0;}
+export function pendingLocalURL(attachment:PendingAttachment):string|undefined{try{const url=new URL(attachment.url);if(url.protocol==='blob:'&&url.origin===location.origin)return attachment.url;}catch{}return;}
