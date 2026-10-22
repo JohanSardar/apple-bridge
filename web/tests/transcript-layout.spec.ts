@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import {traceWork,resultFrames} from './list-performance';
 import { header } from '../src/messages/format';
 import { createTranscriptLayout, emojiOnly, layout, transcriptSpacing, textWidthWithSlack, wrapText, type LayoutPrefs } from '../src/messages/transcript/layout';
 import type { ThreadItem } from '../src/data/types';
@@ -146,4 +147,19 @@ test('layout math cached windows match fresh layouts after boundary, content and
     for(const change of [{...prefs,atLatest:false},{...prefs,scale:1.5},{...prefs,expanded:new Set(['one'])},{...prefs,now:new Date(now.getTime()+86400000)},{...prefs,measure:(value:string)=>value.length*12}])expect(cached([one,two,three],handles,change,390,'font-2')).toEqual(layout([one,two,three],handles,change,390));
     const renamed:Handles=new Map([['alex',{id:'alex',display_name:'Alex Example',initials:'AE'}]]);
     expect(cached([one,two,three],renamed,prefs,900,'font-1')).toEqual(layout([one,two,three],renamed,prefs,900));
+});
+
+test('native frame math keeps work in its completed frame instead of blending adjacent rAF callbacks',()=>{
+    const events:{name:string;ts:number;dur?:number;pid:number;tid:number;ph:string}[]=[];
+    const add=(name:string,ts:number,ph:string,dur?:number)=>events.push({name,ts,ph,dur,pid:1,tid:1});
+    for(let index=0;index<102;index++){add('list-frame-'+index,index*10000+5000,'R');add('AnimationFrame',index*10000+9000,'e');if(index>0&&index<101)add('FunctionCall',index*10000+(index%2?6000:1000),'X',index%2?3000:2000);}
+    const raw=JSON.stringify({traceEvents:events}),native=traceWork(raw,'scroll',true),raf=traceWork(raw);
+    expect(native.frame_work.samples).toBeGreaterThanOrEqual(100);expect(native.frame_work.max_ms).toBe(3);expect(raf.frame_work.max_ms).toBe(5);
+    expect(native.frames.reduce((sum,value)=>sum+value,0)).toBe(raf.frames.reduce((sum,value)=>sum+value,0));
+});
+test('input frame math includes asynchronous result work and excludes the already completed frame',()=>{
+    const events:{name:string;ts:number;dur?:number;pid:number;tid:number;ph:string}[]=[];
+    const add=(name:string,ts:number,ph:string,dur?:number)=>events.push({name,ts,ph,dur,pid:1,tid:1});
+    for(let index=0;index<24;index++){const at=index*20000;add('AnimationFrame',at,'b');add('AnimationFrame',at+1000,'e');add('FunctionCall',at+500,'X',200);add('EventDispatch',at+2000,'X',400);add('list-input-event-'+index,at+2100,'R');add('list-input-frame-start-'+index,at+2500,'R');add('FunctionCall',at+3000,'X',1000);add('list-input-result-'+index,at+3500,'R');add('AnimationFrame',at+10000,'b');add('Layout',at+10020,'X',200);add('AnimationFrame',at+11000,'e');add('list-input-frame-end-'+index,at+12000,'R');}
+    const frames=resultFrames(JSON.stringify({traceEvents:events})).frames;expect(frames).toHaveLength(24);expect(frames.every(value=>Math.abs(value-1.2)<1e-9)).toBe(true);
 });
