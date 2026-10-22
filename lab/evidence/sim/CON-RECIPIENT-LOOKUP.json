@@ -1,0 +1,177 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[270.65 248.32 211.21] cpu_idle=50% cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5HFSFZZ6N6CTPMGCN4TWR3N",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "CON-RECIPIENT-LOOKUP",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "f3dd80ec8104e1e8f658680176645194a4b6e448",
+  "at": "2026-10-22T09:41:33.823976Z",
+  "assertions": [
+    {
+      "name": "name_rest_count",
+      "passed": true
+    },
+    {
+      "name": "name_mcp_count",
+      "passed": true
+    },
+    {
+      "name": "name_rest_mcp_parity",
+      "passed": true
+    },
+    {
+      "name": "name_with_digits_rest_count",
+      "passed": true
+    },
+    {
+      "name": "name_with_digits_mcp_count",
+      "passed": true
+    },
+    {
+      "name": "name_with_digits_rest_mcp_parity",
+      "passed": true
+    },
+    {
+      "name": "partial_email_rest_count",
+      "passed": true
+    },
+    {
+      "name": "partial_email_mcp_count",
+      "passed": true
+    },
+    {
+      "name": "partial_email_rest_mcp_parity",
+      "passed": true
+    },
+    {
+      "name": "normalized_phone_rest_count",
+      "passed": true
+    },
+    {
+      "name": "normalized_phone_mcp_count",
+      "passed": true
+    },
+    {
+      "name": "normalized_phone_rest_mcp_parity",
+      "passed": true
+    },
+    {
+      "name": "bounded_rest_count",
+      "passed": true
+    },
+    {
+      "name": "rest_deterministic_name_order",
+      "passed": true
+    },
+    {
+      "name": "bounded_mcp_count",
+      "passed": true
+    },
+    {
+      "name": "mcp_deterministic_name_order",
+      "passed": true
+    },
+    {
+      "name": "bounded_rest_mcp_parity",
+      "passed": true
+    },
+    {
+      "name": "capped_rest_count",
+      "passed": true
+    },
+    {
+      "name": "capped_mcp_count",
+      "passed": true
+    },
+    {
+      "name": "capped_rest_mcp_parity",
+      "passed": true
+    },
+    {
+      "name": "default_rest_count",
+      "passed": true
+    },
+    {
+      "name": "default_mcp_count",
+      "passed": true
+    },
+    {
+      "name": "default_rest_mcp_parity",
+      "passed": true
+    },
+    {
+      "name": "legacy_name_query",
+      "passed": true
+    },
+    {
+      "name": "legacy_name_cardinality",
+      "passed": true
+    },
+    {
+      "name": "invalid_lookup_0_rest_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_lookup_1_rest_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_lookup_2_rest_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_lookup_3_rest_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_lookup_0_mcp_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_lookup_1_mcp_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_lookup_2_mcp_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_lookup_3_mcp_rejected",
+      "passed": true
+    },
+    {
+      "name": "lookup_rate_http_fixture",
+      "passed": true
+    },
+    {
+      "name": "lookup_20_per_server_second_then_429",
+      "passed": true
+    },
+    {
+      "name": "lookup_rate_retry_after",
+      "passed": true
+    },
+    {
+      "name": "lookup_rate_exact_second_reset",
+      "passed": true
+    },
+    {
+      "name": "lookup_rate_session_isolation",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

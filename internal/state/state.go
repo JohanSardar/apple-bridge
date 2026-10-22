@@ -765,7 +765,7 @@ func (i *SnapshotInstall) InstallSnapshot(ctx context.Context) (contracts.Cursor
 	if time.Now().After(i.ExpiresAt) || len(records) != i.Count || Digest(records) != i.Digest {
 		return contracts.Cursor{}, contracts.ErrCorrupt
 	}
-	if _, err = tx.ExecContext(ctx, "DELETE FROM msg_by_chat; DELETE FROM reaction_by_message; DELETE FROM attachment_by_message; DELETE FROM activity_by_chat; DELETE FROM chat_summary; DELETE FROM records; DELETE FROM journal; DELETE FROM journal_commits; DELETE FROM applied_batches;"); err != nil {
+	if _, err = tx.ExecContext(ctx, "DELETE FROM handle_address; DELETE FROM chat_participant; DELETE FROM msg_by_chat; DELETE FROM reaction_by_message; DELETE FROM attachment_by_message; DELETE FROM activity_by_chat; DELETE FROM chat_summary; DELETE FROM records; DELETE FROM journal; DELETE FROM journal_commits; DELETE FROM applied_batches;"); err != nil {
 		return contracts.Cursor{}, err
 	}
 	for _, r := range records {

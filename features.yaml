@@ -318,6 +318,7 @@ features:
       - {id: CON-PERMISSION-LOSS, levels: [sim]}
       - {id: CON-IMAGE, levels: [sim]}
       - {id: CON-HANDLE-LINK, levels: [sim]}
+      - {id: CON-RECIPIENT-LOOKUP, levels: [sim]}
     notes: External-change R-LIVE is under repair. Clean main 8b7d001a measured direct replica p95 1525.031 ms for 20 effects; the unchanged budget is 1000 ms. Stage instrumentation and direct/public certification are owned by CONTACTS-LIVE.
 
   - id: contacts.write
@@ -398,11 +399,12 @@ features:
     milestone: W1
     modules: [state, operations, contracts]
     depends_on: [messages.read]
-    status: done
+    status: in_progress
     scenarios:
       - {id: WEB-RM-CHATS, levels: [sim]}
       - {id: WEB-RM-THREAD, levels: [sim]}
       - {id: WEB-RM-MEDIA-COLLECTION, levels: [sim]}
+    notes: Functional read-model contracts, including exact participant sets, are verified. WEB-RM-CHATS rest_chats_p95_budget and mcp_chats_p95_budget are deferred to the Messages milestone gate; both retain the 15 ms threshold. One isolated main/PR attribution pair reproduced the miss on main; PR183 p95 was lower in both protocols.
   - id: web.frontdoor
     title: Web front door, passkey device sessions, live views (web/1), embedded app shell
     requirements: [R-WEB-SECURE, R-WEB-FAST, R-WEB-UI]

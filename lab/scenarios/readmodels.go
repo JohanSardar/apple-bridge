@@ -222,6 +222,9 @@ func runReadModels(ctx context.Context, s Scenario, level string) Evidence {
 		}
 		add(name+"_p95_budget", ok && latency.P95 <= budget)
 	}
+	if s.ID == "WEB-RM-CHATS" {
+		rmExactParticipants(ctx, w, add)
+	}
 	e.Metrics["chats"] = 500
 	if s.ID == "WEB-RM-THREAD" {
 		e.Metrics["seed_messages"] = 170000

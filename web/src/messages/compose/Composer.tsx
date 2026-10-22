@@ -10,6 +10,8 @@ export type ComposerProps = {
     service?: string;
     session: DeviceSession;
     available: boolean;
+    disabled?: boolean;
+    disabledReason?: string;
     onSend: (event: Event, content: { text: string }) => string;
     command?: CommandState;
     onCheck?: () => void;
@@ -44,13 +46,13 @@ export function Composer(props: ComposerProps) {
     createEffect(() => { observer.observe(field); });
     onCleanup(() => { cancelAnimationFrame(frame); observer.disconnect(); phone.removeEventListener('change', typography); flushDraft(session, props.draftID); });
     const send = (event: Event) => {
-        if (!props.available || !content() || !valid()) return;
+        if (!props.available || props.disabled || !content() || !valid()) return;
         try { props.onSend(event, { text: text() }); update(''); }
         catch { setError("Can't send right now. Check your connection."); }
     };
     const enter = (element: HTMLButtonElement) => {
         if (reducedMotion()) { const animation = crossfade(element); onCleanup(() => animation.cancel()); return; }
-        const animation = springAnimation(value => { element.style.transform = `scale(${value})`; element.style.opacity = String(Math.min(1, value)); }, .6, 1, { response: .35, damping: .72 });
+        const animation = springAnimation(value => { element.style.transform = `scale(${value})`; element.style.opacity = String(Math.min(1, value)); }, .6, 1, { response: .35, damping: .72 }, 0, () => { element.style.transform = ''; element.style.opacity = ''; });
         onCleanup(() => animation.cancel());
     };
     return <section class="message-composer" classList={{ 'text-service': sms() }} aria-label="Message composer">
@@ -59,8 +61,9 @@ export function Composer(props: ComposerProps) {
                 if (event.key !== 'Enter' || event.shiftKey || event.isComposing || event.keyCode === 229) return;
                 event.preventDefault(); if (!event.repeat) send(event);
             }}/>
-            <Show when={content() && props.available}><button ref={enter} class="composer-send" aria-label="Send message" disabled={!valid()} onClick={send}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button></Show>
+            <Show when={content() && props.available}><button ref={enter} class="composer-send" aria-label="Send message" disabled={props.disabled || !valid()} onClick={send}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button></Show>
         </div>
+        <Show when={props.disabledReason}><p class="composer-status" role="status">{props.disabledReason}</p></Show>
         <Show when={!valid()}><p class="composer-error" role="alert">Message is too long</p></Show>
         <Show when={error()}><p class="composer-error" role="alert">{error()}</p></Show>
         <Show when={problem()}>{command => <div class="composer-status" role="status">{messageCommandLabel(command())}<Show when={command().status === 'indeterminate'}> · <button class="button subtle" onClick={() => props.onCheck?.()}>Check</button><button class="button subtle" onClick={event => props.onCopy?.(event)}>Copy</button></Show></div>}</Show>

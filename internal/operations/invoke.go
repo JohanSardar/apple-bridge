@@ -115,6 +115,10 @@ func (s *Service) Invoke(ctx context.Context, p trust.Principal, name string, in
 		if contracts.DecodeInput(input, &q) != nil {
 			return nil, contracts.ErrInvalid
 		}
+		var fields map[string]json.RawMessage
+		if json.Unmarshal(input, &fields) != nil || fields["q"] != nil && q.Query == "" {
+			return nil, contracts.ErrInvalid
+		}
 		return s.lookupContacts(ctx, p, q)
 	}
 	var q contracts.ReadQuery

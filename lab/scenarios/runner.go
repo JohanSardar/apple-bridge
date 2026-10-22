@@ -448,6 +448,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "MSG-DELETE-VISIBILITY" {
 		return runNativeDeleteVisibility(ctx, s, level)
 	}
+	if s.ID == "CON-RECIPIENT-LOOKUP" {
+		return runRecipientLookup(ctx, s, level)
+	}
 	if s.ID == "WEB-SOURCES-STATUS" || s.ID == "WEB-COMMAND-RESOLVE" {
 		return runWebServer(ctx, s, level)
 	}
