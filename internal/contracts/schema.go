@@ -117,6 +117,10 @@ func OperationSchema(d OperationDescriptor) map[string]any {
 	}
 	if d.Name == "messages.chats" || d.Name == "messages.thread" || d.Name == "messages.collection" {
 		fields := s["properties"].(map[string]any)
+		if d.Name == "messages.chats" {
+			fields["participants"].(map[string]any)["minItems"] = 1
+			fields["participants"].(map[string]any)["maxItems"] = 32
+		}
 		fields["limit"].(map[string]any)["minimum"] = 0
 		fields["limit"].(map[string]any)["maximum"] = 200
 		return s

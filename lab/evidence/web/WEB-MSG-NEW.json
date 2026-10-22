@@ -1,0 +1,61 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[156.28 154.78 148.34] cpu_idle=50% cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5HF68S9T0H8AZ3F732F3V8X",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "demo_messages": 5000,
+    "demo_startup_ms": 38455,
+    "matrix": [
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "chromium-light-phone",
+      "chromium-light-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-MSG-NEW-webkit-light-phone-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-MSG-NEW-webkit-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-NEW-webkit-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-NEW-chromium-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-NEW-chromium-light-desktop-playwright.json"
+    ],
+    "server": "gateway"
+  },
+  "scenario": "WEB-MSG-NEW",
+  "level": "web",
+  "passed": true,
+  "git_sha": "f3dd80ec8104e1e8f658680176645194a4b6e448",
+  "at": "2026-10-22T09:31:03.849645Z",
+  "assertions": [
+    {
+      "name": "webkit-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 8 tests using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/new-message.spec.ts:24:1 › WEB-MSG-NEW-TOKENS keyboard and pointer autocomplete tokenize recipients and load an existing read-only chat (8.1s)\n  ✓  2 [webkit-light-phone] › tests/new-message.spec.ts:71:1 › WEB-MSG-NEW-GROUP raw handles tokenize once, new groups stay disabled and an exact existing group loads (4.7s)\n  ✓  3 [webkit-light-phone] › tests/new-message.spec.ts:100:1 › Recipient response ordering fault injection › WEB-MSG-NEW-LATEST lookup debounces, cancels stale requests and only displays the latest query (5.5s)\n  ✓  4 [webkit-light-phone] › tests/new-message.spec.ts:132:1 › WEB-MSG-NEW-SEND unknown recipient creates no empty chat, sends once and survives reconnect without redispatch (4.4s)\n  ✓  5 [webkit-light-phone] › tests/new-message.spec.ts:188:1 › WEB-MSG-NEW-LOOKUP returns bounded projected recipient fields with no-store and validates query limits (4.9s)\n  ✓  6 [webkit-light-phone] › tests/new-message.spec.ts:200:1 › WEB-MSG-NEW-SCOPE a device without contacts scope gets no results and retains raw handle entry (3.6s)\n  ✓  7 [webkit-light-phone] › tests/new-message.spec.ts:217:1 › WEB-MSG-NEW-HISTORY unavailable history stays quiet and never blocks an explicit send (4.7s)\n  ✓  8 [webkit-light-phone] › tests/new-message.spec.ts:245:1 › WEB-MSG-NEW-EXISTING live metadata keeps the existing transcript mounted during send (7.7s)\n\n  8 passed (55.9s)\n"
+    },
+    {
+      "name": "webkit-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 8 tests using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/new-message.spec.ts:24:1 › WEB-MSG-NEW-TOKENS keyboard and pointer autocomplete tokenize recipients and load an existing read-only chat (15.8s)\n  ✓  2 [webkit-light-desktop] › tests/new-message.spec.ts:71:1 › WEB-MSG-NEW-GROUP raw handles tokenize once, new groups stay disabled and an exact existing group loads (7.4s)\n  ✓  3 [webkit-light-desktop] › tests/new-message.spec.ts:100:1 › Recipient response ordering fault injection › WEB-MSG-NEW-LATEST lookup debounces, cancels stale requests and only displays the latest query (3.4s)\n  ✓  4 [webkit-light-desktop] › tests/new-message.spec.ts:132:1 › WEB-MSG-NEW-SEND unknown recipient creates no empty chat, sends once and survives reconnect without redispatch (4.0s)\n  ✓  5 [webkit-light-desktop] › tests/new-message.spec.ts:188:1 › WEB-MSG-NEW-LOOKUP returns bounded projected recipient fields with no-store and validates query limits (2.4s)\n  ✓  6 [webkit-light-desktop] › tests/new-message.spec.ts:200:1 › WEB-MSG-NEW-SCOPE a device without contacts scope gets no results and retains raw handle entry (6.9s)\n  ✓  7 [webkit-light-desktop] › tests/new-message.spec.ts:217:1 › WEB-MSG-NEW-HISTORY unavailable history stays quiet and never blocks an explicit send (7.5s)\n  ✓  8 [webkit-light-desktop] › tests/new-message.spec.ts:245:1 › WEB-MSG-NEW-EXISTING live metadata keeps the existing transcript mounted during send (10.1s)\n\n  8 passed (1.2m)\n"
+    },
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 8 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/new-message.spec.ts:24:1 › WEB-MSG-NEW-TOKENS keyboard and pointer autocomplete tokenize recipients and load an existing read-only chat (8.6s)\n  ✓  2 [chromium-light-phone] › tests/new-message.spec.ts:71:1 › WEB-MSG-NEW-GROUP raw handles tokenize once, new groups stay disabled and an exact existing group loads (3.9s)\n  ✓  3 [chromium-light-phone] › tests/new-message.spec.ts:100:1 › Recipient response ordering fault injection › WEB-MSG-NEW-LATEST lookup debounces, cancels stale requests and only displays the latest query (2.3s)\n  ✓  4 [chromium-light-phone] › tests/new-message.spec.ts:132:1 › WEB-MSG-NEW-SEND unknown recipient creates no empty chat, sends once and survives reconnect without redispatch (15.1s)\n  ✓  5 [chromium-light-phone] › tests/new-message.spec.ts:188:1 › WEB-MSG-NEW-LOOKUP returns bounded projected recipient fields with no-store and validates query limits (3.3s)\n  ✓  6 [chromium-light-phone] › tests/new-message.spec.ts:200:1 › WEB-MSG-NEW-SCOPE a device without contacts scope gets no results and retains raw handle entry (2.3s)\n  ✓  7 [chromium-light-phone] › tests/new-message.spec.ts:217:1 › WEB-MSG-NEW-HISTORY unavailable history stays quiet and never blocks an explicit send (5.1s)\n  ✓  8 [chromium-light-phone] › tests/new-message.spec.ts:245:1 › WEB-MSG-NEW-EXISTING live metadata keeps the existing transcript mounted during send (4.5s)\n\n  8 passed (54.1s)\n"
+    },
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 8 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/new-message.spec.ts:24:1 › WEB-MSG-NEW-TOKENS keyboard and pointer autocomplete tokenize recipients and load an existing read-only chat (8.0s)\n  ✓  2 [chromium-light-desktop] › tests/new-message.spec.ts:71:1 › WEB-MSG-NEW-GROUP raw handles tokenize once, new groups stay disabled and an exact existing group loads (4.3s)\n  ✓  3 [chromium-light-desktop] › tests/new-message.spec.ts:100:1 › Recipient response ordering fault injection › WEB-MSG-NEW-LATEST lookup debounces, cancels stale requests and only displays the latest query (3.1s)\n  ✓  4 [chromium-light-desktop] › tests/new-message.spec.ts:132:1 › WEB-MSG-NEW-SEND unknown recipient creates no empty chat, sends once and survives reconnect without redispatch (6.6s)\n  ✓  5 [chromium-light-desktop] › tests/new-message.spec.ts:188:1 › WEB-MSG-NEW-LOOKUP returns bounded projected recipient fields with no-store and validates query limits (1.7s)\n  ✓  6 [chromium-light-desktop] › tests/new-message.spec.ts:200:1 › WEB-MSG-NEW-SCOPE a device without contacts scope gets no results and retains raw handle entry (1.9s)\n  ✓  7 [chromium-light-desktop] › tests/new-message.spec.ts:217:1 › WEB-MSG-NEW-HISTORY unavailable history stays quiet and never blocks an explicit send (8.3s)\n  ✓  8 [chromium-light-desktop] › tests/new-message.spec.ts:245:1 › WEB-MSG-NEW-EXISTING live metadata keeps the existing transcript mounted during send (5.8s)\n\n  8 passed (49.1s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

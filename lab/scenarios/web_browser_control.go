@@ -134,7 +134,7 @@ func webBrowserControl(ctx context.Context, w *world.World, origin string) (*htt
 				value, err = webCookieBoundaries(ctx, w, input.Token)
 			}
 		case "/replica-session":
-			value, err = webReplicaSession(ctx, w, &browserReplica)
+			value, err = webReplicaSession(ctx, w, &browserReplica, request.URL.Query().Get("ready") != "serving")
 			if err != nil {
 				err = fmt.Errorf("replica session unavailable")
 			}

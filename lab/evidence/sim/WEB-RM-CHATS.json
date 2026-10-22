@@ -1,18 +1,19 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[7.16 9.9 9.2] cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[159.61 177.01 191.71] cpu_idle=50% cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M5E1M526QECAX8ZS842118GC",
+  "run_id": "run_01M5HG94Y6TAYX0TFJ5DCVTSKF",
   "metrics": {
+    "capture_observer_resets": 0,
     "chats": 500,
     "seed_messages": 1000
   },
   "scenario": "WEB-RM-CHATS",
   "level": "sim",
-  "passed": true,
-  "git_sha": "00d6f2181134ddc1ea8bf43cac67ffabf2243cb2",
-  "at": "2026-10-21T01:36:15.430891Z",
+  "passed": false,
+  "git_sha": "f3dd80ec8104e1e8f658680176645194a4b6e448",
+  "at": "2026-10-22T09:50:06.79098Z",
   "assertions": [
     {
       "name": "synthetic_sim_seed_committed",
@@ -96,6 +97,38 @@
     },
     {
       "name": "handle_contact_title_capture",
+      "passed": true
+    },
+    {
+      "name": "handle_avatar_fixture",
+      "passed": true
+    },
+    {
+      "name": "handle_avatar_capture",
+      "passed": true
+    },
+    {
+      "name": "rest_batched_handle_name_avatar_dedup",
+      "passed": true
+    },
+    {
+      "name": "rest_handle_contact_visibility",
+      "passed": true
+    },
+    {
+      "name": "rest_handles_input_budget",
+      "passed": true
+    },
+    {
+      "name": "mcp_batched_handle_name_avatar_dedup",
+      "passed": true
+    },
+    {
+      "name": "mcp_handle_contact_visibility",
+      "passed": true
+    },
+    {
+      "name": "mcp_handles_input_budget",
       "passed": true
     },
     {
@@ -327,6 +360,82 @@
       "passed": true
     },
     {
+      "name": "rich_filter_fixtures",
+      "passed": true
+    },
+    {
+      "name": "rest_rich_filter_all",
+      "passed": true
+    },
+    {
+      "name": "rest_rich_filter_known",
+      "passed": true
+    },
+    {
+      "name": "rest_rich_filter_unknown",
+      "passed": true
+    },
+    {
+      "name": "rest_rich_filter_unread",
+      "passed": true
+    },
+    {
+      "name": "rest_rich_filter_deleted",
+      "passed": true
+    },
+    {
+      "name": "rest_rich_filter_spam",
+      "passed": true
+    },
+    {
+      "name": "rest_captured_unseen_mention",
+      "passed": true
+    },
+    {
+      "name": "rest_balloon_collection_links",
+      "passed": true
+    },
+    {
+      "name": "rest_balloon_collection_locations",
+      "passed": true
+    },
+    {
+      "name": "mcp_rich_filter_all",
+      "passed": true
+    },
+    {
+      "name": "mcp_rich_filter_known",
+      "passed": true
+    },
+    {
+      "name": "mcp_rich_filter_unknown",
+      "passed": true
+    },
+    {
+      "name": "mcp_rich_filter_unread",
+      "passed": true
+    },
+    {
+      "name": "mcp_rich_filter_deleted",
+      "passed": true
+    },
+    {
+      "name": "mcp_rich_filter_spam",
+      "passed": true
+    },
+    {
+      "name": "mcp_captured_unseen_mention",
+      "passed": true
+    },
+    {
+      "name": "mcp_balloon_collection_links",
+      "passed": true
+    },
+    {
+      "name": "mcp_balloon_collection_locations",
+      "passed": true
+    },
+    {
       "name": "replica_added_after_data_for_snapshot",
       "passed": true
     },
@@ -352,10 +461,166 @@
     },
     {
       "name": "rest_chats_p95_budget",
-      "passed": true
+      "passed": false
     },
     {
       "name": "mcp_chats_p95_budget",
+      "passed": false
+    },
+    {
+      "name": "exact_participant_aliases",
+      "passed": true
+    },
+    {
+      "name": "rest_exact_participants_single",
+      "passed": true
+    },
+    {
+      "name": "mcp_exact_participants_single",
+      "passed": true
+    },
+    {
+      "name": "exact_participants_single_parity",
+      "passed": true
+    },
+    {
+      "name": "rest_exact_participants_group",
+      "passed": true
+    },
+    {
+      "name": "mcp_exact_participants_group",
+      "passed": true
+    },
+    {
+      "name": "exact_participants_group_parity",
+      "passed": true
+    },
+    {
+      "name": "rest_exact_participants_reordered_set",
+      "passed": true
+    },
+    {
+      "name": "mcp_exact_participants_reordered_set",
+      "passed": true
+    },
+    {
+      "name": "exact_participants_reordered_set_parity",
+      "passed": true
+    },
+    {
+      "name": "rest_exact_participants_superset",
+      "passed": true
+    },
+    {
+      "name": "mcp_exact_participants_superset",
+      "passed": true
+    },
+    {
+      "name": "exact_participants_superset_parity",
+      "passed": true
+    },
+    {
+      "name": "rest_exact_participants_different_set",
+      "passed": true
+    },
+    {
+      "name": "mcp_exact_participants_different_set",
+      "passed": true
+    },
+    {
+      "name": "exact_participants_different_set_parity",
+      "passed": true
+    },
+    {
+      "name": "rest_exact_participants_unknown",
+      "passed": true
+    },
+    {
+      "name": "mcp_exact_participants_unknown",
+      "passed": true
+    },
+    {
+      "name": "exact_participants_unknown_parity",
+      "passed": true
+    },
+    {
+      "name": "exact_participants_visibility",
+      "passed": true
+    },
+    {
+      "name": "exact_participant_membership_change",
+      "passed": true
+    },
+    {
+      "name": "rest_exact_participants_old_membership_absent",
+      "passed": true
+    },
+    {
+      "name": "mcp_exact_participants_old_membership_absent",
+      "passed": true
+    },
+    {
+      "name": "rest_exact_participants_new_membership",
+      "passed": true
+    },
+    {
+      "name": "mcp_exact_participants_new_membership",
+      "passed": true
+    },
+    {
+      "name": "exact_participant_address_change",
+      "passed": true
+    },
+    {
+      "name": "rest_exact_participants_old_address_absent",
+      "passed": true
+    },
+    {
+      "name": "mcp_exact_participants_old_address_absent",
+      "passed": true
+    },
+    {
+      "name": "rest_exact_participants_changed_address",
+      "passed": true
+    },
+    {
+      "name": "mcp_exact_participants_changed_address",
+      "passed": true
+    },
+    {
+      "name": "invalid_participant_set_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_participant_set_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_participant_set_rejected",
+      "passed": true
+    },
+    {
+      "name": "participant_index_migration_fixture",
+      "passed": true
+    },
+    {
+      "name": "participant_index_migration_restart",
+      "passed": true
+    },
+    {
+      "name": "rest_exact_participants_rebuilt_address",
+      "passed": true
+    },
+    {
+      "name": "mcp_exact_participants_rebuilt_address",
+      "passed": true
+    },
+    {
+      "name": "rest_exact_participants_rebuilt_membership",
+      "passed": true
+    },
+    {
+      "name": "mcp_exact_participants_rebuilt_membership",
       "passed": true
     },
     {
@@ -366,16 +631,16 @@
   "latency": {
     "mcp_chats": {
       "samples": 100,
-      "p50_ms": 8.227375,
-      "p95_ms": 8.887083,
-      "max_ms": 9.345042,
+      "p50_ms": 31.92375,
+      "p95_ms": 49.743458,
+      "max_ms": 79.004125,
       "timeouts": 0
     },
     "rest_chats": {
       "samples": 100,
-      "p50_ms": 4.428625,
-      "p95_ms": 4.71725,
-      "max_ms": 6.281334,
+      "p50_ms": 37.459583,
+      "p95_ms": 74.408625,
+      "max_ms": 136.114583,
       "timeouts": 0
     }
   },

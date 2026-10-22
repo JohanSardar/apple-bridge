@@ -303,7 +303,7 @@ type OperationDescriptor struct {
 
 `Kind` is `read` (served locally on any machine) or `command` (routed to CommandTarget). The table in `internal/contracts/operations.go` is the single list; Frontdoor generates REST routes, MCP tools and OpenAPI from it. Input/Output are Go types; JSON Schema for MCP/OpenAPI is derived by reflection plus explicit enums/descriptions in struct tags.
 
-**Read operations** (all sources): `messages.handles` (batched handle names, initials, contact and avatar references; §23.12), `records.get`, `records.query` (collection + typed filters + order + cursor pagination), `search` (FTS over text fields within scope), `messages.thread` (chat history page with reactions/attachments inlined), `calendar.agenda` (time range), `reminders.open` (incomplete by list/due), `contacts.lookup` (by name/handle), `usage.summary` (device/day/app ranges), `sources.status`, `commands.status`, `commands.list`, `replica.status`, `blobs.get` (REST only streams bytes; MCP returns metadata and a local file path on the same machine).
+**Read operations** (all sources): `messages.handles` (batched handle names, initials, contact and avatar references; §23.12), `records.get`, `records.query` (collection + typed filters + order + cursor pagination), `search` (FTS over text fields within scope), `messages.thread` (chat history page with reactions/attachments inlined), `calendar.agenda` (time range), `reminders.open` (incomplete by list/due), `contacts.lookup` (legacy name/exact handle; additive `q` searches partial names, normalized phones and emails in deterministic name/ID order, default and maximum 25 for `q`, with positive `limit` capped at 25), `usage.summary` (device/day/app ranges), `sources.status`, `commands.status`, `commands.list`, `replica.status`, `blobs.get` (REST only streams bytes; MCP returns metadata and a local file path on the same machine).
 
 **Command operations** (each gated by a capability; §9 lists per-source evidence):
 
@@ -971,8 +971,11 @@ Same origin for everything. Served by the gateway and by replicas (any instance)
 | `GET blob/{digest}?record=<id>&variant=<v>` | Bytes with Range, `ETag` = digest, `private, max-age=31536000, immutable`; `variant` ∈ `original|thumb|display|video|poster|audio|live` |
 | `POST upload` | Stage a blob for sending (streamed, ≤ 100 MiB) |
 | `POST handles` | Read-only `messages.handles{ids[]≤500}` for frame-batched names and contact avatars |
+| `POST lookup` | Device-session recipient lookup through Operations `contacts.lookup`; projected `{results:[{contact_id,display_name,handles:[{value,kind:phone|email,label}]}],capability}` only |
 | `GET sources` | Read-only `sources.status` through Operations with Scope and Visibility; source states, per-operation proven/unproven capabilities and reasons, and each `system.source` record ID for live proof subscriptions |
 | `GET live` | WebSocket, protocol `web/1` (§23.3) |
+
+**Recipient lookup.** `POST lookup` accepts `{q,limit?}`: trim `q`, then require 1–64 Unicode characters; `limit` defaults to 8 and accepts 1–20. `contacts:read` and the device principal’s Visibility apply. Without that scope, return `{results:[],capability:"unavailable"}` so raw handle entry remains available. Responses use `Cache-Control: no-store`. Limit each session to 20 lookups per second; excess requests return 429 with `Retry-After`. The client debounces 80 ms, aborts stale requests and displays only the latest query’s results. Agents keep using the existing MCP/REST `contacts.lookup` path; `/web/v1` remains device-cookie authenticated.
 
 **Source discovery freshness.** Responses use `Cache-Control: no-store` and an increasing `X-Bridge-Source-Sequence` per serving process. Discovery supplies source IDs; actions require fresh live proven coverage. JSON API routes bypass the service worker; the approved trusted blob thumbnail cache remains separate.
 
@@ -1021,7 +1024,7 @@ S→C signin{device, at} · approval{command} · session_revoked · error{code, 
 ```
 
 **Views:**
-- `chats{filter: all|known|unknown|unread|deleted|spam}`: ChatSummary rows (§23.4) and order keys. Deltas upsert or remove rows.
+- `chats{filter: all|known|unknown|unread|deleted|spam, participants?}`: ChatSummary rows (§23.4) and order keys. Deltas upsert or remove rows.
 - `thread{chat_id, anchor: latest|unread|<message_id>, before?, after?}`: a window of ThreadItems. Deltas update items inside the window and report `newer`/`older` counts outside it.
 - `record{collection, id}`.
 - `collection{chat_id, kind}`.
@@ -1041,7 +1044,7 @@ S→C signin{device, at} · approval{command} · session_revoked · error{code, 
 
 Operations (descriptors in `internal/contracts/operations.go`; available through REST, MCP and `web/1`; scope `messages:read`):
 
-- `messages.chats{filter?: all|known|unknown|unread|deleted|spam|archived, limit≤200, after?}` → `{chats: ChatSummary[], next?}`. Ordered by `last_activity_at` desc, then id. ChatSummary fields:
+- `messages.chats{filter?: all|known|unknown|unread|deleted|spam|archived, participants?: handle[], limit≤200, after?}` → `{chats: ChatSummary[], next?}`. Ordered by `last_activity_at` desc, then id. Optional `participants` contains 1–32 phone/email handles and matches the exact normalized set (case-folded email and normalized phone; duplicates folded), never a subset or superset. It uses the handle-address and chat-membership indexes in one bounded lookup, applies Visibility, and binds pagination cursors to the normalized set. ChatSummary fields:
   - `chat`: the record
   - `title`: display name, or the participants' contact names joined
   - `avatar_handles`: up to 3 handle ids with `contact_id`
@@ -1365,7 +1368,7 @@ Recently Deleted becomes `deleted_at` + `recoverable_until` on messages and chat
   - Delete (confirm).
   - Copy, Forward (pre-filled new message), Save attachment.
 - **Chat actions:** mark read/unread (swipe and menu), delete chat (confirm, full-swipe).
-- **New message:** recipient tokens with `contacts.lookup` autocomplete, service hint from history, an existing chat loads under the To field, and send.
+- **New message:** recipient tokens with `contacts.lookup` autocomplete, service hint from an exact-participant `messages.chats` lookup, an existing chat loads under the To field, and send. History lookup never blocks a single-recipient Send; a failure only shows "Couldn't load earlier messages". Sending to a handle lets native Messages select or create the chat only after send succeeds. Two or more tokens show "New group messages aren't available yet" beside disabled Send, while an exact existing group can still load read-only history.
 - **Optimistic UI:** each pending part has a distinct presentation key and swaps only by its own exact `record_id` at a compatible captured cursor reaching `commit_seq`. Actual captured IDs and versions remain unchanged. No text, filename or time matching is permitted. Multi-file app sending stays disabled until per-part mapping and cardinality proof land. It never duplicates and never flickers.
 - **Gesture guard:** every command is submitted from input-event handlers only (§23.2).
 

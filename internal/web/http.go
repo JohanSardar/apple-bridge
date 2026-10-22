@@ -141,6 +141,7 @@ func Handler(deps Deps) http.Handler {
 		mux.HandleFunc("POST /web/v1/"+flow+"/finish", func(w http.ResponseWriter, r *http.Request) { s.authFinish(w, r, flow) })
 	}
 	mux.HandleFunc("POST /web/v1/handles", s.handles)
+	mux.HandleFunc("POST /web/v1/lookup", s.lookup)
 	mux.HandleFunc("GET /web/v1/sources", s.sources)
 	mux.HandleFunc("GET /web/v1/session", func(w http.ResponseWriter, r *http.Request) { respond(w, 200, current(r).Session) })
 	mux.HandleFunc("POST /web/v1/logout", func(w http.ResponseWriter, r *http.Request) {
@@ -294,6 +295,10 @@ func Handler(deps Deps) http.Handler {
 }
 
 func (s *server) allow(key string, auth bool) bool {
+	return s.allowRate(key, auth, 50)
+}
+
+func (s *server) allowRate(key string, auth bool, perSecond int) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -364,7 +369,7 @@ func (s *server) allow(key string, auth bool) bool {
 	if auth {
 		return r.Minutes <= 10 && r.Days <= 100 && !now.Before(r.RetryAt)
 	}
-	return r.Seconds <= 50
+	return r.Seconds <= perSecond
 }
 func sessionCookie(r *http.Request) string {
 	value, _ := r.Context().Value(servingKey{}).(serving)

@@ -1,0 +1,3 @@
+id: CON-RECIPIENT-LOOKUP
+feature: contacts.read
+levels: [sim]

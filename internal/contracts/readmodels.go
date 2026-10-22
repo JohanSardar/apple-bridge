@@ -1,9 +1,10 @@
 package contracts
 
 type ChatsQuery struct {
-	Filter string `json:"filter,omitempty" description:"all (default), known, unknown, unread, deleted, spam, or archived"`
-	Limit  int    `json:"limit,omitempty" description:"Page size, default 50, maximum 200"`
-	After  string `json:"after,omitempty" description:"Opaque cursor from the previous page"`
+	Participants []string `json:"participants,omitempty" description:"Exact normalized phone/email handle set, 1–32 inputs; duplicates folded"`
+	Filter       string   `json:"filter,omitempty" description:"all (default), known, unknown, unread, deleted, spam, or archived"`
+	Limit        int      `json:"limit,omitempty" description:"Page size, default 50, maximum 200"`
+	After        string   `json:"after,omitempty" description:"Opaque cursor from the previous page"`
 }
 type ThreadQuery struct {
 	ChatID string `json:"chat_id"`

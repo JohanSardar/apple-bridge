@@ -51,6 +51,9 @@ func (s *Store) initReadModels(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	if err = initChatParticipantsTx(ctx, tx); err != nil {
+		return err
+	}
 	var version string
 	err = tx.QueryRowContext(ctx, "SELECT value FROM meta WHERE key='readmodels_version'").Scan(&version)
 	if err != nil && err != sql.ErrNoRows {
@@ -121,7 +124,7 @@ func attachmentKind(d map[string]any) string {
 }
 func writeReadModel(ctx context.Context, tx *sql.Tx, r contracts.Record, seq uint64) error {
 	switch r.Collection {
-	case "messages.chat", "messages.message", "messages.reaction", "messages.attachment":
+	case "messages.handle", "messages.chat", "messages.message", "messages.reaction", "messages.attachment":
 	default:
 		return nil
 	}
@@ -131,7 +134,12 @@ func writeReadModel(ctx context.Context, tx *sql.Tx, r contracts.Record, seq uin
 		return err
 	}
 	switch r.Collection {
+	case "messages.handle":
+		return writeChatParticipantsTx(ctx, tx, r, d)
 	case "messages.chat":
+		if err = writeChatParticipantsTx(ctx, tx, r, d); err != nil {
+			return err
+		}
 		_, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO chat_summary(id) VALUES(?)", r.ID)
 	case "messages.message":
 		if _, err = tx.ExecContext(ctx, "DELETE FROM msg_by_chat WHERE id=?", r.ID); err != nil {

@@ -9,6 +9,8 @@ import (
 )
 
 type ContactLookup struct {
+	Query  string `json:"q,omitempty" description:"Partial name, normalized phone or email; 1–64 characters after trimming"`
+	Limit  int    `json:"limit,omitempty" description:"New q searches default to 25; positive limits are capped at 25"`
 	Name   string `json:"name,omitempty"`
 	Handle string `json:"handle,omitempty"`
 }

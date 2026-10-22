@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/internal/trust"
@@ -84,9 +85,26 @@ func (s *Store) Chats(ctx context.Context, v trust.Visibility, q contracts.Chats
 	if !slices.Contains([]string{"", "all", "known", "unknown", "unread", "deleted", "spam", "archived"}, q.Filter) {
 		return out, contracts.ErrInvalid
 	}
+	var participants []string
+	if q.Participants != nil {
+		if len(q.Participants) == 0 || len(q.Participants) > 32 {
+			return out, contracts.ErrInvalid
+		}
+		participants = []string{}
+		for _, handle := range q.Participants {
+			normalized := contracts.NormalizeContactHandle(handle)
+			if normalized == "" || utf8.RuneCountInString(handle) > 254 {
+				return out, contracts.ErrInvalid
+			}
+			participants = append(participants, normalized)
+		}
+		slices.Sort(participants)
+		participants = slices.Compact(participants)
+	}
+	scope := participantScope(q.Filter, participants)
 	var c viewCursor
 	if q.After != "" {
-		c, err = decodeView(q.After, "chats", q.Filter)
+		c, err = decodeView(q.After, "chats", scope)
 		if err != nil {
 			return out, err
 		}
@@ -102,6 +120,11 @@ func (s *Store) Chats(ctx context.Context, v trust.Visibility, q contracts.Chats
 	}
 	where := "r.collection='messages.chat' AND r.deleted=0"
 	args := []any{}
+	if participants != nil {
+		predicate, values := exactParticipantPredicate(participants)
+		where += " AND " + predicate
+		args = append(args, values...)
+	}
 	if q.Filter == "archived" {
 		where += " AND coalesce(json_extract(r.payload,'$.data.is_archived'),0)=1"
 	} else if q.Filter != "deleted" {
@@ -156,7 +179,7 @@ func (s *Store) Chats(ctx context.Context, v trust.Visibility, q contracts.Chats
 	if len(out.Chats) > limit {
 		out.Chats = out.Chats[:limit]
 		last := out.Chats[len(out.Chats)-1]
-		out.Next = encodeView("chats", q.Filter, last.LastActivityAt, last.Chat.ID)
+		out.Next = encodeView("chats", scope, last.LastActivityAt, last.Chat.ID)
 	}
 	people, err := summaryPeople(ctx, tx, v, out.Chats)
 	if err != nil {
