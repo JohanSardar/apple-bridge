@@ -241,11 +241,25 @@ features:
         reason: "2026-10-18 approved Remy/Ben pair offers SMS only in the fresh signed-Helper group probe. No RCS group send claimed. See lab/evidence/messages-finish.json."
       - scenario: MSG-GROUP-MANAGE
         level: real
-        reason: "Apple requires two eligible other iMessage participants for rename/add and three for removal/leave. The approved Remy/Ben pair offers SMS, and an own email is not a proven distinct other participant. No additional recipients authorized. See lab/evidence/messages-finish.json."
+        reason: "W4-GROUPS limited on macOS 26.7.1/25G241: Messages.sdef has no group-mutation route. Rename, photo, add/remove member and leave have no per-build Accessibility proof. A group made only of Johan's own handles cannot serve as an eligible distinct-participant proof; proving with others would text other people, forbidden by the hard rules. Native management stays fail-closed and its controls hidden; captured name, members and photo remain readable."
     scenarios:
       - {id: MSG-GROUP-CREATE, levels: [sim, real]}
       - {id: MSG-GROUP-MANAGE, levels: [sim, real]}
       - {id: MSG-SEND-RCS-GROUP, levels: [sim, real]}
+  - id: messages.typing
+    title: Messages typing indicators (hidden without a public proof)
+    requirements: [R-MSG-DEPTH, R-WEB-UI]
+    milestone: W4
+    modules: [native/MessagesSource, webui]
+    depends_on: [messages.groups]
+    status: limited
+    limits:
+      - scenario: WEB-MSG-TYPING
+        level: web
+        reason: "W4-TYPING limited on macOS 26.7.1/25G241: Messages.sdef has no typing route and chat.db has no typing field. Reliable Accessibility observation and transmission are unproven. A group made only of Johan's own handles cannot serve as a distinct-participant proof; proving with others would text other people, forbidden by the hard rules. Typing indicators and per-keystroke native driving remain hidden."
+    scenarios:
+      - {id: WEB-MSG-TYPING, levels: [web]}
+    notes: Browser coverage verifies the hidden surface, not native typing capability. Link-preview generation on send and chat backgrounds also remain hidden without a per-build proof; received link cards and existing placeholders remain available.
   - id: reminders.read
     title: Reminders lists and items, live capture, recurrence coverage
     requirements: [R-FULL, R-LIVE, R-REM, R-NO-FALSE-DELETE]

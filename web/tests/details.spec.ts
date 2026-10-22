@@ -2,15 +2,16 @@ import { expect } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
 import { test } from './list-session';
 import { control } from './session';
-test('WEB-MSG-DETAILS read-only group members and responsive inspector',async({page},info)=>{
+test('WEB-MSG-DETAILS read-only group members and responsive inspector',async({page,request},info)=>{
     const frames:any[]=[];page.on('websocket',socket=>socket.on('framesent',frame=>{try{frames.push(JSON.parse(String(frame.payload)));}catch{}}));
-    await page.goto('/messages');const href=await page.locator('.conversation-row').filter({hasText:'Weekend Crew'}).getAttribute('href');await page.goto(href!);await page.getByRole('button',{name:'Details',exact:true}).click();
+    await control(request,'/capability-unproven');await page.goto('/messages');const href=await page.locator('.conversation-row').filter({hasText:'Weekend Crew'}).getAttribute('href');await page.goto(href!);await page.getByRole('button',{name:'Details',exact:true}).click();
     const details=page.locator('.conversation-details');await expect(details.getByRole('heading',{name:'Weekend Crew',exact:true})).toBeVisible();await expect(details.locator('.details-member')).toHaveCount(4);await expect(details.getByRole('region',{name:'Conversation members'})).toContainText('Maya Chen');await expect(details.getByRole('region',{name:'Conversation members'})).toContainText('Sam Rivera');
     await expect(details.getByRole('button',{name:/Add|Remove|Delete|Mute|Hide Alerts/})).toHaveCount(0);await details.getByRole('button',{name:'Info for Sam Rivera',exact:true}).click();await expect(details.getByRole('region',{name:'Contact information',exact:true})).toContainText('photo@example.com');
     const phone=info.project.use.viewport?.width===390;
     if(phone){await expect(page).toHaveURL(/\/details$/);await expect(page.locator('.phone-details')).toBeVisible();}else{await expect(page.getByRole('complementary',{name:'Details',exact:true})).toHaveCSS('width','320px');}
     await mkdir('../lab/evidence/private/web',{recursive:true});await page.screenshot({path:`../lab/evidence/private/web/details-members-${info.project.name}.png`});
     expect(frames.filter(frame=>frame.t==='cmd')).toEqual([]);
+    await control(request,'/capability-proven');
     if(phone){await page.locator('.phone-details').getByRole('button',{name:'Back',exact:true}).click();await expect(details).toHaveCount(0);}else{await page.getByRole('button',{name:'Close details',exact:true}).click();await expect(details).toHaveCount(0);await page.setViewportSize({width:900,height:900});await page.getByRole('button',{name:'Details',exact:true}).click();await expect(page.getByRole('dialog',{name:'Details',exact:true})).toBeVisible();await expect(details.getByRole('heading',{name:'Weekend Crew',exact:true})).toBeVisible();await page.keyboard.press('Escape');await expect(details).toHaveCount(0);}
 });
 test('WEB-MSG-DETAILS viewer-device links and direct phone route',async({page},info)=>{

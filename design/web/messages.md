@@ -148,13 +148,13 @@ Opened by long-press (touch), right-click (desktop) or the tapback hotkey (⌘T)
 | Feature | Web | Bridge | When |
 |---|---|---|---|
 | Header | Avatar (large), name; buttons: Call, FaceTime, Mail open `tel:` / `facetime:` / `mailto:` on the viewer's device; Info opens the contact | R | W2 |
-| Group name and photo | Shown; edit in W4 | rename W unproven; photo `—` | W2 / W4 |
-| Members | List with add (+) and remove (swipe) | add/remove W unproven | W2 / W4 |
+| Group name and photo | Shown; edit in W4 | W4 limited on 25G241; captured photo remains readable | W2 / W4 |
+| Members | List with add (+) and remove (swipe) | W4 limited on 25G241; controls hidden without proof | W2 / W4 |
 | Hide Alerts | Toggle | `—` | W4 |
 | Send Read Receipts | Per-chat toggle | `—` | W4 |
 | Share Focus Status | Hidden | — | hide |
 | Share My Location | Hidden | — | hide |
-| Leave this Conversation | Group only, with confirm | W unproven | W4 |
+| Leave this Conversation | Group only, with confirm | W4 limited on 25G241; control hidden without proof | W4 |
 | Delete Conversation | With confirm | W sim-only | W3 |
 | Collections | Tabs: Photos (grid), Links, Documents, Locations; from attachments and link balloons | R / `—` (links) | W2 |
 | Block / Report Junk | Hidden | — | hide |
@@ -344,3 +344,47 @@ Captures stay in `lab/evidence/private/web/` (gitignored); only the numbers land
 - Digital Touch and handwriting creation
 - Image Playground
 - Chat backgrounds editing
+
+## 19. W4 groups, remaining surfaces and typing (2026-10-22)
+
+W4-GROUPS management is **limited** on macOS 26.7.1 (25G241). The installed
+`Messages.sdef` has only `send`, `login` and `logout` commands; its chat properties
+are `id`, `name` and `account`. It has no group-mutation or typing route.
+A group made only of Johan's own handles cannot serve as a proof of an eligible
+conversation with distinct participants. Proving with others would text other
+people, which the hard rules forbid. The existing real group scenario includes
+another contact and must not run under the own-handles-only restriction.
+
+Rename, group photo, add/remove member and leave therefore have no per-build
+Accessibility proof. Native management stays fail-closed. The details inspector
+keeps captured name, members and group photo visible. Rename, add/remove and
+leave controls require fresh operation proofs, an active eligible group and a
+live connection. A simulator proof never advertises a native capability. Photo
+editing has no proven public route and no control is rendered.
+
+The management forms use trusted input, expected record versions and explicit
+confirmation for removing a member or leaving. They never change the displayed
+name or membership optimistically. A form closes after the command identifies
+the observed chat and its live capture passes the command's commit cursor.
+An uncertain outcome stays locked with a read-only Check action; it is never
+redispatched automatically. Invalid addresses and duplicate members cannot be
+submitted, and revoked proofs prevent further submission.
+
+W4-TYPING is **limited and hidden**. A read-only schema inspection on this build
+found no typing field. The scripting dictionary has no typing command or event.
+The public Messages framework documents extension conversations and content
+insertion, not a macOS typing subscription. Reliable open-chat Accessibility
+observation has not been proven with an allowed independent participant; own
+aliases cannot establish an incoming remote typing signal. Sending by driving
+the native composer per keystroke is not a proven public route and is hidden.
+No local composer activity is presented as another person's typing.
+
+W4-UI's remaining surfaces stay truthful: polls retain the existing placeholder,
+chat backgrounds stay hidden, and sender-side link-preview generation is
+unproven for AppleScript sends and has no composer toggle. Captured incoming
+link cards continue to render. Pins/mute/read receipts/Recently Deleted belong
+to HELPER-A; Send Later/effects/formatting/mentions/audio/Keep and composer extras
+belong to HELPER-B.
+
+References: [Apple's group management guide](https://support.apple.com/guide/messages/icht3268ad23/mac)
+and [public Messages framework](https://developer.apple.com/documentation/messages).
