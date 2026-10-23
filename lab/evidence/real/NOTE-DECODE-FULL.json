@@ -7,7 +7,14 @@
   "metrics": {
     "capture_observer_resets": 0,
     "summary_only": true,
-    "qualification": "Independent real rerun after #266/#274; content_status mismatch routed to source owner. Exact integer counts remain strict."
+    "qualification": "Historical pre-#283 real run; content_status compared before hydration completed. #283 passes leader-reported current real DECODE-FULL 5/5.",
+    "current_qualification": {
+      "source": "leader acceptance of merged #283",
+      "checks_passed": 5,
+      "checks_total": 5,
+      "largest_fixture_hydration_complete_ms": 39800,
+      "passed": true
+    }
   },
   "scenario": "NOTE-DECODE-FULL",
   "level": "real",

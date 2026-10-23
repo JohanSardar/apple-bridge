@@ -395,6 +395,9 @@ features:
       - scenario: NOTE-CRUD
         level: replica
         reason: "Forwarded CRUD deletion remains limited on 25G241 without a per-build NoteStore effect proof. Earlier replica proof does not establish the current milestone source behavior."
+      - scenario: NOTE-CRUD
+        level: real
+        reason: "The pre-#283 real run passes REST create/Truth then append conflicts; replace/MCP are not reached and tagged cleanup fails. #283 fixes hydration-safe write versions with REST/MCP sim 34/34. Real append/replace on the fixed source remain unproven; further writes are stopped until a verified cleanup route exists. There is no local On My Mac account."
     scenarios:
       - {id: NOTE-CRUD, levels: [sim, real, replica]}
       - {id: NOTE-RICH-REJECT, levels: [sim, real]}
@@ -853,15 +856,12 @@ features:
       - scenario: WEB-NOTE-WRITE
         level: real
         reason: "Delete limited: AppleScript delete reports success but iCloud NoteStore rows stay active on 25G241. Delete stays hidden without per-build NoteStore deletion proof; synthetic browser deletion is not native qualification."
-      - scenario: NOTE-DECODE-FULL
-        level: real
-        reason: "The independent real rerun on 54a61fa1 after #266/#274 finds content_status:value_or_type; routed to the Notes source owner to distinguish hydration readiness from a terminal status error. Numeric representations and integer counts compare exactly; no approximate tolerance is used."
       - scenario: WEB-NOTE-READ
         level: web
         reason: "READ 108/108 passes, including 4.5:1 highlighted text/link contrast in both appearances. Body mocks require service workers blocked for WebKit interception; worker-enabled external-body integration remains unproven. App-specific input/paint/warm-content, a 200-change/5-Hz native burst and kill-during-apply are unproven. Leader-accepted #274 passes first-record visibility for 20 real saves, gateway/Ubuntu replica p95 476.3/870.2 ms. Full-content p95 1430/1420 ms is reported separately."
       - scenario: WEB-NOTE-WRITE
         level: real
-        reason: "The declared combined native/browser WRITE journey has no dedicated real manifest or handler. Browser 84/84 passes with service workers enabled and positive public-session setup; separate native CRUD does not prove that missing journey. Current-source create/append/replace acceptance awaits an independent native rerun; delete remains gated and limited."
+        reason: "The declared combined native/browser WRITE journey has no dedicated real manifest or handler. Browser 84/84 passes with service workers enabled and positive public-session setup; separate native CRUD does not prove that missing journey. The pre-#283 real CRUD run passes REST create/Truth then append conflicts; replace/MCP are not reached and tagged cleanup fails. #283 fixes hydration-safe write versions with REST/MCP sim 34/34; fixed-source real append/replace remain unproven. Further real Notes writes are stopped and limited pending a verified cleanup route; no local On My Mac account exists, and delete remains gated."
       - scenario: WEB-NOTE-PARITY
         level: real
         reason: "Browser parity verifies read-only structure and absent rich/checklist mutations in all 12 projects. It has no dedicated real journey; native rich replacement and checklist identity/state preservation remain unproven and hidden."
@@ -879,4 +879,4 @@ features:
       - {id: WEB-NOTE-READ, levels: [web]}
       - {id: WEB-NOTE-WRITE, levels: [web, real]}
       - {id: WEB-NOTE-PARITY, levels: [web, real]}
-    notes: Browser milestone 228/228 passes without skips or flakes; READ includes 4.5:1 highlight/link contrast across all five colors and both appearances. Native decode/CRUD acceptance awaits current-source reruns after #266/#269. Leader-accepted #274 passes 20 real first-record saves, p95 gateway/Ubuntu replica 476.3/870.2 ms; full content 1430/1420 ms is separate. Rich/checklist mutations stay hidden; combined native/browser journeys, worker-enabled external-body integration, burst/crash and app-specific UI timing remain limited.
+    notes: Browser milestone 228/228 passes without skips or flakes; READ includes 4.5:1 highlight/link contrast across all five colors and both appearances. Milestone closed with explicit limits: #283 establishes leader-reported real DECODE-FULL 5/5 and REST/MCP CRUD sim 34/34. The pre-fix real append conflicted; replace/MCP were not reached, and tagged cleanup failed. Further real Notes writes are stopped and limited pending a verified cleanup route; no local On My Mac account exists. Leader-accepted #274 passes 20 real first-record saves, p95 gateway/Ubuntu replica 476.3/870.2 ms; full content 1430/1420 ms is separate. Rich/checklist mutations stay hidden; combined native/browser journeys, worker-enabled external-body integration, burst/crash and app-specific UI timing remain limited.
