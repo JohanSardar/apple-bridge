@@ -72,7 +72,7 @@ func runCalendarScenario(ctx context.Context, s Scenario, level string) Evidence
 }
 func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string) (result Evidence) {
 	sha, _ := exec.Command("git", "rev-parse", "HEAD").Output()
-	e := Evidence{Conditions: calendarHostConditions(), RunID: contracts.NewID("cal"), Scenario: s.ID, Level: level, GitSHA: strings.TrimSpace(string(sha)), At: time.Now().UTC(), Assertions: []Assertion{}, Latency: map[string]Latency{}, Hosts: []string{"air"}}
+	e := Evidence{Conditions: calendarHostConditions(), Metrics: map[string]any{}, RunID: contracts.NewID("cal"), Scenario: s.ID, Level: level, GitSHA: strings.TrimSpace(string(sha)), At: time.Now().UTC(), Assertions: []Assertion{}, Latency: map[string]Latency{}, Hosts: []string{"air"}}
 	if level == "replica" {
 		e.Hosts = append(e.Hosts, "ubuntu")
 	}
@@ -751,7 +751,7 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 			add("source_captures_after_oversized_split", err == nil && last.Disposition == "locally_observed")
 		}
 	case "CAL-ALLDAY-FUTURE":
-		finishSplit := watchCalendarSplit(ctx, w, tag)
+		finishSplit := watchCalendarSplit(ctx, w, tag, e.Metrics)
 		defer func() {
 			if finishSplit != nil {
 				finishSplit()
@@ -796,6 +796,11 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		add("mismatch_never_retries_or_writes_twice", effectErr == nil && effects[last.Command.ID] == 1)
 		add("mismatch_never_claims_observed", last.CommitSeq == 0 && len(last.ObservedRecordIDs) == 0)
 	case "CAL-RECUR-FUTURE":
+		if level == "sim" {
+			w.DelayNetwork(100 * time.Millisecond)
+			defer w.DelayNetwork(0)
+			e.Metrics["sim_replica_network_delay_ms"] = 100
+		}
 		exception := baseline[2]
 		if err = submit("calendar.update_event", map[string]any{"id": exception.ID, "span": "this", "title": tag + " preserved exception"}, exception.Version); err != nil {
 			return fail("seed_exception", err)
@@ -810,7 +815,7 @@ func runCalendarProtocol(ctx context.Context, s Scenario, level, protocol string
 		}) != nil {
 			return fail("exception_visible", nil)
 		}
-		finishSplit := watchCalendarSplit(ctx, w, tag)
+		finishSplit := watchCalendarSplit(ctx, w, tag, e.Metrics)
 		defer func() {
 			if finishSplit != nil {
 				finishSplit()

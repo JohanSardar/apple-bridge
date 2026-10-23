@@ -12,7 +12,10 @@ import (
 func startCalendarLiveDelta(ctx context.Context, w *world.World, e *Evidence, observers []*watcher) func() bool {
 	e.Conditions = calendarHostConditions()
 	tag := "[ab-test " + e.RunID + "]"
-	finish := watchCalendarSplit(ctx, w, tag)
+	if e.Metrics == nil {
+		e.Metrics = map[string]any{}
+	}
+	finish := watchCalendarSplit(ctx, w, tag, e.Metrics)
 	done := make(chan bool, 1)
 	var result struct {
 		Bytes int `json:"capture_bytes"`
