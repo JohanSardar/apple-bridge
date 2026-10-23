@@ -142,6 +142,7 @@ test('WEB-MSG-EDIT Check reconciles a lost edit result by original ID without an
 });
 test('WEB-MSG-EDIT keyboard opens the last owned message and Enter saves once',async({page,context})=>{
     const f=await fixture(page,context);await page.goto('/messages/'+encodeURIComponent(chat)+'/'+encodeURIComponent(f.recordID!));
+    await expect(page.locator('.messages-transcript')).toHaveAttribute('aria-busy','false');
     await expect(page.locator('[data-message="'+f.recordID+'"]')).toBeVisible();await page.keyboard.press('Meta+e');
     const field=page.getByRole('textbox',{name:'Edit message',exact:true});await expect(field).toHaveValue('[ab-test actions] fresh self message');
     await field.fill('[ab-test actions] keyboard edit');await field.press('Enter');
