@@ -1,3 +1,4 @@
+.media-file-slot{position:relative;width:260px;height:88px;border-radius:18px}
 .media-file-chip{position:absolute;inset:0;display:grid;grid-template-columns:40px minmax(0,1fr) 28px;align-items:center;gap:10px;box-sizing:border-box;padding:12px;border-radius:inherit;background:var(--background-secondary);color:var(--label);overflow:hidden}
 .media-file-glyph{width:36px;height:44px;color:var(--blue)}
 .media-file-glyph>svg{display:block;width:36px;height:44px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linejoin:round}
