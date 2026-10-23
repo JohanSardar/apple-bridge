@@ -2,7 +2,7 @@
 .message-actions-dialog::backdrop{background:#0003;}
 .tapback-picker{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:2px;padding-block:2px 8px;}
 .tapback-picker button,.reaction-emoji-grid button{appearance:none;min-width:44px;min-height:44px;padding:4px;border-radius:50%;font-size:26px;line-height:1;}
-.tapback-picker span{display:block;animation:tapback-unfurl 230ms cubic-bezier(.2,.7,.3,1) both;animation-delay:calc(var(--reaction-index)*15ms);}
+.tapback-picker span{display:block;}
 .tapback-picker button[aria-pressed=true],.reaction-emoji-grid button[aria-pressed=true]{background:var(--blue);box-shadow:0 0 0 2px #fff8 inset;}
 .message-action-item{appearance:none;display:block;min-height:44px;width:100%;padding:10px 14px;text-align:start;border-top:1px solid var(--separator);}
 .message-action-item:focus-visible,.tapback-picker button:focus-visible,.reaction-emoji-grid button:focus-visible{outline:2px solid var(--blue);outline-offset:-2px;}
@@ -14,8 +14,6 @@
 .reaction-flight,.unsend-particle{position:fixed;z-index:2147483647;pointer-events:none;}
 .reaction-flight{font-size:28px;line-height:1;will-change:transform,opacity;}
 .unsend-particle{border-radius:50%;opacity:0;}
-@keyframes tapback-unfurl{from{transform:translateY(8px) scale(.6);opacity:0;}to{transform:translateY(0) scale(1);opacity:1;}}
-@media(prefers-reduced-motion:reduce){.tapback-picker span{animation:none;}}
 .bubble.message-editing{width:min(300px,calc(100vw - 80px))!important;min-width:min(260px,calc(100vw - 80px));height:auto!important;background:var(--background-secondary);color:var(--label);border:1px solid var(--separator);border-radius:20px;}
 .bubble.message-editing>:not(.message-editor-mount){display:none!important;}
 .message-inline-editor{position:relative;z-index:1;padding:4px;}

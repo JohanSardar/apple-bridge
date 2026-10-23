@@ -26,7 +26,7 @@ export function createMessageActions(live:LiveClient,capabilities:{allowed:(oper
     const [target,setTarget]=createSignal<ActionTarget>(),[revision,setRevision]=createSignal(0),[error,setError]=createSignal('');
     const [flight,setFlight]=createSignal<{symbol:string;from:DOMRect;to:DOMRect;key:number}>();
     const captured=new Map<string,ThreadItem>(),intents=new Map<string,Intent>();
-    let flightKey=0,flightFrame=0;
+    let flightKey=0,flightFrame=0,focusFrame=0,dismissFrame=0;
     const clearFlight=()=>{cancelAnimationFrame(flightFrame);setFlight();};
     const changed=()=>setRevision(value=>value+1);
     const current=()=>{const value=target();return value?{...value,item:captured.get(value.item.id)??value.item}:undefined;};
@@ -44,7 +44,8 @@ export function createMessageActions(live:LiveClient,capabilities:{allowed:(oper
         if(intent&&state&&(!final.has(state.status)||observed(state)))return !intent.remove&&intent.choice.kind===choice.kind&&intent.choice.emoji===choice.emoji;
         return nativeSelected(value,choice);
     };
-    const close=()=>{const anchor=target()?.anchor;setTarget();setError('');queueMicrotask(()=>{if(anchor?.isConnected){const focus=anchor.closest<HTMLElement>('button,[tabindex]')??anchor;const before=focus.getAttribute('tabindex');if(before===null)focus.tabIndex=-1;focus.focus({preventScroll:true});if(before===null)focus.removeAttribute('tabindex');}});};
+    const dismiss=(afterPaint:boolean)=>{cancelAnimationFrame(focusFrame);cancelAnimationFrame(dismissFrame);dismissFrame=0;const anchor=target()?.anchor;const restoreFocus=()=>{if(anchor?.isConnected){const focus=anchor.closest<HTMLElement>('button,[tabindex]')??anchor;const before=focus.getAttribute('tabindex');if(before===null)focus.tabIndex=-1;focus.focus({preventScroll:true});if(before===null)focus.removeAttribute('tabindex');}};if(afterPaint){document.querySelector<HTMLDialogElement>('.message-actions-dialog[open]')?.close();dismissFrame=requestAnimationFrame(()=>{dismissFrame=requestAnimationFrame(()=>{dismissFrame=0;setTarget();setError('');});});focusFrame=requestAnimationFrame(()=>{focusFrame=requestAnimationFrame(restoreFocus);});}else{setTarget();setError('');queueMicrotask(restoreFocus);}};
+    const close=()=>dismiss(false);
     const open=(event:MouseEvent|PointerEvent|KeyboardEvent,item:ThreadItem,anchorOverride?:HTMLElement)=>{
         if(!event.isTrusted||item.id.startsWith('command:')||item.collection!=='messages.message'||item.version<1||item.data.kind==='group_event'||item.data.retracted_at)return;
         const origin=event.target instanceof Element?event.target:undefined;
@@ -53,8 +54,8 @@ export function createMessageActions(live:LiveClient,capabilities:{allowed:(oper
         if(index===undefined||!Number.isSafeInteger(index)||index<0||!parts.some(part=>part.index===index)||Array.isArray(item.data.retracted_parts)&&item.data.retracted_parts.includes(index))return;
         const anchor=bubble??(event.currentTarget instanceof HTMLElement?event.currentTarget:origin?.closest<HTMLElement>('[data-message]'));
         if(!anchor)return;
-        if(target()?.item.id===item.id&&target()?.partIndex===index){event.preventDefault();return;}
-        event.preventDefault();captured.set(item.id,item);setError('');setTarget({item,partIndex:index,anchor});
+        if(!dismissFrame&&target()?.item.id===item.id&&target()?.partIndex===index){event.preventDefault();return;}
+        event.preventDefault();cancelAnimationFrame(focusFrame);if(dismissFrame){cancelAnimationFrame(dismissFrame);dismissFrame=0;setTarget();}captured.set(item.id,item);setError('');setTarget({item,partIndex:index,anchor});
     };
     const replying=()=>{revision();const value=replyTarget();return value?{...value,item:captured.get(value.item.id)??value.item}:undefined;};
     const canReplyOperation=()=>capabilities.allowed('messages.reply')&&live.status()==='connected';
@@ -68,12 +69,16 @@ export function createMessageActions(live:LiveClient,capabilities:{allowed:(oper
         const value=current();if(!value||!available()||busy()||unknown())return;
         try{withInput(event,()=>batch(()=>{
             if(!classicReactions.some(reaction=>reaction.kind===choice.kind)&&!(choice.kind==='emoji'&&choice.emoji))return;
-            const remove=selected(choice),from=!remove?(event.currentTarget instanceof HTMLElement?event.currentTarget:value.anchor).getBoundingClientRect():undefined,to=from?value.anchor.getBoundingClientRect():undefined;
+            const remove=selected(choice),anchor=value.anchor,point={x:event.clientX,y:event.clientY};
             const id=live.command('messages.react',{id:value.item.id,part_index:value.partIndex,reaction:choice.kind,...(choice.kind==='emoji'?{emoji:choice.emoji}:{}),remove});
             intents.set(value.item.id+'/'+value.partIndex+'/'+family(choice),{commandID:id,messageID:value.item.id,chatID:String(value.item.data.chat_id??''),partIndex:value.partIndex,choice:{...choice},remove});
             clearFlight();
-            if(!remove)flightFrame=requestAnimationFrame(()=>{flightFrame=requestAnimationFrame(()=>setFlight({symbol:choice.symbol,from:from!,to:to!,key:++flightKey}));});
-            changed();close();
+            if(!remove)flightFrame=requestAnimationFrame(()=>{flightFrame=requestAnimationFrame(()=>{
+                if(!anchor.isConnected)return;
+                const to=anchor.getBoundingClientRect();
+                setFlight({symbol:choice.symbol,from:point.x||point.y?new DOMRect(point.x,point.y,0,0):to,to,key:++flightKey});
+            });});
+            changed();dismiss(true);
         }));}catch{setError("Can't react right now. Check your connection.");}
     };
     const checkID=(id:string)=>{if(changes.check(id)||management.check(id))return;if(![...intents.values()].some(intent=>intent.commandID===id))return;try{live.checkCommand(id);}catch{setError("Couldn't check this reaction. Try again.");}};
@@ -112,7 +117,7 @@ export function createMessageActions(live:LiveClient,capabilities:{allowed:(oper
     const save=(event:Event)=>{if(!event.isTrusted)return;const value=attachment();if(!value)return;try{withInput(event,()=>{if(saveAttachment(value))close();else setError("Original attachment is unavailable.");});}catch{setError("Couldn't download this attachment.");}};
     const canForward=()=>Boolean((text()||canSave()&&Number(attachment()?.data.size)<=100*1024*1024)&&live.status()==='connected'&&capabilities.allowed('messages.send'));
     const leaveChat=(chatID:string)=>{changes.leaveChat(chatID);management.leaveChat(chatID);clearFlight();};
-    const dispose=()=>{setTarget();setReplyTarget();captured.clear();intents.clear();clearFlight();};
+    const dispose=()=>{setTarget();setReplyTarget();captured.clear();intents.clear();clearFlight();cancelAnimationFrame(focusFrame);cancelAnimationFrame(dismissFrame);};
     onCleanup(dispose);
     return {target:current,open,close,replying,canReplyOperation,canReply,beginReply,cancelReply,changes,management,leaveChat,canSave,save,canForward,forwardAttachment:attachment,canReact,available,react,selected,unknown,busy,problem,check,checkID,notice,connected:()=>live.status()==='connected',copy,text,observe,flight,clearFlight,dispose};
 }
