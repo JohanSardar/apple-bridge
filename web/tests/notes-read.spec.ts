@@ -32,7 +32,17 @@ test('WEB-NOTE-READ folders, pins, rich blocks, locked privacy, search, gallery 
     await expect(styled).toHaveCSS('font-weight', '700'); await expect(styled).toHaveCSS('font-style', 'italic');
     await expect(styled).toHaveCSS('font-size', '16px'); await expect(styled).toHaveCSS('color', 'rgb(17, 34, 51)');
     await expect(styled).toHaveCSS('text-decoration-line', 'underline line-through');
-    await expect(page.locator('.notes-highlight-mint')).toContainText('Safe link');
+    await expect(page.getByRole('link', { name: 'Safe link', exact: true }).locator('.notes-highlight-mint')).toContainText('Safe link');
+    const contrasts = await page.locator('.notes-rich mark').evaluateAll(marks => marks.map(mark => {
+        const rgba = (value: string) => value.match(/[\d.]+/g)!.map(Number);
+        const foreground = rgba(getComputedStyle(mark.querySelector('span')!).color), background = rgba(getComputedStyle(mark).backgroundColor);
+        const luminance = (rgb: number[]) => rgb.slice(0, 3).map(channel => channel / 255).map(channel => channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4).reduce((sum, channel, index) => sum + channel * [0.2126, 0.7152, 0.0722][index], 0);
+        const a = luminance(foreground), b = luminance(background);
+        return { text: mark.textContent, link: Boolean(mark.closest('a')), alpha: background[3] ?? 1, ratio: (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05) };
+    }));
+    expect(contrasts.filter(value => value.link)).toHaveLength(6);
+    expect(contrasts.filter(value => !value.link)).toHaveLength(5);
+    for (const contrast of contrasts) { expect(contrast.alpha).toBe(1); expect(contrast.ratio, contrast.text!).toBeGreaterThanOrEqual(4.5); }
     await expect(page.getByText('Attachment unavailable', { exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Unsafe link' })).toHaveCount(0);
     await expect(page.getByText('Unsupported note block')).toBeVisible();

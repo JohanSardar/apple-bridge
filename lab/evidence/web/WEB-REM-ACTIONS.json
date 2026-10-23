@@ -1,0 +1,107 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[7.03 4.91 4.61] cpu_idle=48% cpus=8 other_heavy=2"
+  },
+  "run_id": "run_01M5JP27YB5BPBJMPXWQZ9SWX5",
+  "metrics": {
+    "browser_budget_ms": 180000,
+    "capture_observer_resets": 0,
+    "matrix": [
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "webkit-dark-phone",
+      "webkit-dark-desktop",
+      "chromium-light-phone",
+      "chromium-light-desktop",
+      "chromium-dark-phone",
+      "chromium-dark-desktop",
+      "firefox-light-phone",
+      "firefox-light-desktop",
+      "firefox-dark-phone",
+      "firefox-dark-desktop"
+    ],
+    "server": "gateway",
+    "qualification_limits": {
+      "not_applicable": 12,
+      "unproven_touch": 4,
+      "executed_pass": 68,
+      "configured": 84
+    }
+  },
+  "scenario": "WEB-REM-ACTIONS",
+  "level": "web",
+  "passed": true,
+  "git_sha": "3fd9aee29e414bf91bde26c4c98d7e437f4daecd",
+  "at": "2026-10-22T20:50:26.379687Z",
+  "assertions": [
+    {
+      "name": "webkit-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "2 skipped, 5 passed"
+    },
+    {
+      "name": "webkit-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "1 skipped, 6 passed"
+    },
+    {
+      "name": "webkit-dark-phone:playwright_matrix",
+      "passed": true,
+      "detail": "2 skipped, 5 passed"
+    },
+    {
+      "name": "webkit-dark-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "1 skipped, 6 passed"
+    },
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "1 skipped, 6 passed"
+    },
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "1 skipped, 6 passed"
+    },
+    {
+      "name": "chromium-dark-phone:playwright_matrix",
+      "passed": true,
+      "detail": "1 skipped, 6 passed"
+    },
+    {
+      "name": "chromium-dark-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "1 skipped, 6 passed"
+    },
+    {
+      "name": "firefox-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "2 skipped, 5 passed"
+    },
+    {
+      "name": "firefox-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "1 skipped, 6 passed"
+    },
+    {
+      "name": "firefox-dark-phone:playwright_matrix",
+      "passed": true,
+      "detail": "2 skipped, 5 passed"
+    },
+    {
+      "name": "firefox-dark-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "1 skipped, 6 passed"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
