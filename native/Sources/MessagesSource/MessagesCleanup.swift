@@ -9,6 +9,15 @@ public enum MessagesCleanup {
                   arguments[index + 1].range(of: #"^\[ab-test [A-Za-z0-9_-]+\]$"#, options: .regularExpression) != nil else { throw ProbeFailure.invalidArguments }
             tag = arguments[index + 1]
         }
+        let scopedChat: Int64?
+        if let index = arguments.firstIndex(of: "--only-chat-id") {
+            guard index + 1 < arguments.count, let value = Int64(arguments[index + 1]), value > 0 else { throw ProbeFailure.invalidArguments }
+            scopedChat = value
+        } else {
+            scopedChat = nil
+        }
+        guard scopedChat == nil || !tag.isEmpty else { throw ProbeFailure.invalidArguments }
+        guard !(arguments.contains("--skip-draft") && arguments.contains("--group-draft")) else { throw ProbeFailure.invalidArguments }
         var approved: Set<String> = []
         var groupHandles: [String: String] = [:]
         if arguments.contains("--approved-contacts") {
@@ -21,7 +30,7 @@ public enum MessagesCleanup {
                 }
             }
         }
-        var draftsCleared = try await MessagesAccessibility.clearTaggedDraft(tag) ? 1 : 0
+        var draftsCleared = arguments.contains("--skip-draft") ? 0 : (try await MessagesAccessibility.clearTaggedDraft(tag) ? 1 : 0)
         if arguments.contains("--group-draft") {
             guard let remy = groupHandles["REMY_IMESSAGE_TEST_HANDLE"], let ben = groupHandles["BEN_GROUP_TEST_HANDLE"], remy != ben else { throw ProbeFailure.invalidArguments }
             if try await MessagesAccessibility.clearTaggedDraft(tag, groupHandles: [remy, ben]) { draftsCleared += 1 }
@@ -64,6 +73,7 @@ public enum MessagesCleanup {
             }
             var result: [(String, JSON)] = []
             for key in rows {
+                if let scopedChat, try reader.query("SELECT 1 FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID WHERE m.guid=? AND j.chat_id=? AND NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=j.chat_id AND r.message_id=m.ROWID)", [key["guid"], String(scopedChat)]).isEmpty { continue }
                 guard let row = try reader.message(key["guid"]), let item = try reader.messageObservations(row).first, item.0 == "messages.message" else { continue }
                 let peers = try reader.query("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", [row["capture_chat_guid"]])
                 guard !peers.isEmpty, peers.allSatisfy({ own.union(approved).contains(MessagesProbes.normalize($0["id"])) }) else { continue }
@@ -98,8 +108,8 @@ public enum MessagesCleanup {
             let prepared = Prepared(nativeState: .object(["target": target, "cleanup_authorized": .bool(true)]), fingerprint: "authorized-tagged-self-cleanup", action: .object(["op": .string("messages.delete_message"), "native_key": .string(guid)]))
             var phase = "open"
             do {
-                try await MessagesAccessibility.openMessage(guid, settle: 0.25)
-                if try await MessagesAccessibility.acknowledgeDeletedInfo() { try await MessagesAccessibility.openMessage(guid, settle: 0.25) }
+                try await MessagesAccessibility.openMessage(guid, settle: 0.25, resetEditor: scopedChat == nil)
+                if scopedChat == nil, try await MessagesAccessibility.acknowledgeDeletedInfo() { try await MessagesAccessibility.openMessage(guid, settle: 0.25) }
                 phase = "validate"
                 try await MessagesAccessibility.validate(prepared)
                 phase = "delete"
