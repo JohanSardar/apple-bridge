@@ -9,7 +9,17 @@
     "summary_only": true,
     "first_visibility_proven": false,
     "r_live_budget_passed": false,
-    "observed_endpoint": "post-Truth HTTP observation; initial source before latency fix"
+    "observed_endpoint": "post-Truth HTTP observation; initial source before latency fix",
+    "qualification": "Historical post-Truth observation; not a first-visibility measurement. Superseded for first-record acceptance by leader-reported #274.",
+    "current_qualification": {
+      "source": "leader acceptance of merged #274",
+      "real_saves": 20,
+      "first_record_p95_ms": 870.2,
+      "first_record_budget_ms": 1000,
+      "first_record_budget_passed": true,
+      "full_content_p95_ms": 1420,
+      "measured_endpoint": "first matching watcher record; full content separately"
+    }
   },
   "scenario": "NOTE-EXTERNAL",
   "level": "replica",

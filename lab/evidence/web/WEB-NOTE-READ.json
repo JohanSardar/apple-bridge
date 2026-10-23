@@ -1,9 +1,9 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[5.7 7.46 10.02] cpu_idle=74% cpus=8 other_heavy=1"
+    "summary": "air: load=[22.35 15.63 12.77] cpu_idle=38% cpus=8 other_heavy=2"
   },
-  "run_id": "run_01M5K239VRZGFY3TBJTH4E8T37",
+  "run_id": "run_01M5K8QDY44MM975TMZ6A5C971",
   "metrics": {
     "browser_budget_ms": 180000,
     "capture_observer_resets": 0,
@@ -27,8 +27,8 @@
   "scenario": "WEB-NOTE-READ",
   "level": "web",
   "passed": true,
-  "git_sha": "0d2cd4771a2a1b173e2f126a13ffeb6e6e9d5836",
-  "at": "2026-10-23T00:20:44.024921Z",
+  "git_sha": "08eba935df60e78c8b63d9565fb0c035be218966",
+  "at": "2026-10-23T02:16:35.0132Z",
   "assertions": [
     {
       "name": "webkit-light-phone:playwright_matrix",

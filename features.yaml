@@ -855,13 +855,13 @@ features:
         reason: "Delete limited: AppleScript delete reports success but iCloud NoteStore rows stay active on 25G241. Delete stays hidden without per-build NoteStore deletion proof; synthetic browser deletion is not native qualification."
       - scenario: NOTE-DECODE-FULL
         level: real
-        reason: "The corrected exact-count oracle found structure_counts.titles:count before native fixes #266/#269. Those fixes are merged; independent current-source acceptance awaits the Notes latency fix and rerun. Numeric representations compare exactly; no approximate count tolerance is used."
+        reason: "The independent real rerun on 54a61fa1 after #266/#274 finds content_status:value_or_type; routed to the Notes source owner to distinguish hydration readiness from a terminal status error. Numeric representations and integer counts compare exactly; no approximate tolerance is used."
       - scenario: WEB-NOTE-READ
         level: web
-        reason: "READ 108/108 passes, including 4.5:1 highlighted text/link contrast in both appearances. Body mocks require service workers blocked for WebKit interception; worker-enabled external-body integration remains unproven. App-specific input/paint/warm-content, a 200-change/5-Hz native burst and kill-during-apply are unproven. NOTE-EXTERNAL initially converges but first visibility is unproven and post-Truth observation p95 1531.7/2264.2 ms misses 1 s; the Notes source worker owns its correction."
+        reason: "READ 108/108 passes, including 4.5:1 highlighted text/link contrast in both appearances. Body mocks require service workers blocked for WebKit interception; worker-enabled external-body integration remains unproven. App-specific input/paint/warm-content, a 200-change/5-Hz native burst and kill-during-apply are unproven. Leader-accepted #274 passes first-record visibility for 20 real saves, gateway/Ubuntu replica p95 476.3/870.2 ms. Full-content p95 1430/1420 ms is reported separately."
       - scenario: WEB-NOTE-WRITE
         level: real
-        reason: "The declared combined native/browser WRITE journey has no dedicated real manifest or handler. Browser 60/60 passes with service workers enabled and positive public-session setup; separate native CRUD does not prove that missing journey. Current-source CRUD acceptance awaits native/latency fixes and independent reruns."
+        reason: "The declared combined native/browser WRITE journey has no dedicated real manifest or handler. Browser 84/84 passes with service workers enabled and positive public-session setup; separate native CRUD does not prove that missing journey. Current-source create/append/replace acceptance awaits an independent native rerun; delete remains gated and limited."
       - scenario: WEB-NOTE-PARITY
         level: real
         reason: "Browser parity verifies read-only structure and absent rich/checklist mutations in all 12 projects. It has no dedicated real journey; native rich replacement and checklist identity/state preservation remain unproven and hidden."
@@ -879,4 +879,4 @@ features:
       - {id: WEB-NOTE-READ, levels: [web]}
       - {id: WEB-NOTE-WRITE, levels: [web, real]}
       - {id: WEB-NOTE-PARITY, levels: [web, real]}
-    notes: Browser milestone 204/204 passes without skips or flakes; READ includes 4.5:1 highlight/link contrast across all five colors and both appearances. Native decode/CRUD acceptance awaits current-source reruns after #266/#269 and the Notes latency fix. Rich/checklist mutations stay hidden; combined native/browser journeys, worker-enabled external-body integration, burst/crash and app-specific UI timing remain limited.
+    notes: Browser milestone 228/228 passes without skips or flakes; READ includes 4.5:1 highlight/link contrast across all five colors and both appearances. Native decode/CRUD acceptance awaits current-source reruns after #266/#269. Leader-accepted #274 passes 20 real first-record saves, p95 gateway/Ubuntu replica 476.3/870.2 ms; full content 1430/1420 ms is separate. Rich/checklist mutations stay hidden; combined native/browser journeys, worker-enabled external-body integration, burst/crash and app-specific UI timing remain limited.
