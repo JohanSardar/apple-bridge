@@ -335,7 +335,7 @@ features:
     limits:
       - scenario: CON-RELAY
         level: replica
-        reason: "2026-10-23 public CON-RELAY joined and converged a snapshot, but its live stage returned 0/20 replica latency samples; 20 gateway samples had p95 2952.531 ms against the 1000 ms budget. Tagged contact cleanup and Serve configuration restoration passed."
+        reason: "2026-10-23 isolated public CON-RELAY rerun converged and delivered all 20 live contact changes to Ubuntu, but gateway/replica p95 was 1453.922/1481.835 ms against the 1000 ms budget. TCC activity surged after the quiet precheck, so public R-LIVE is not certified. Tagged cleanup passed; the immediate Serve byte check failed, while a later canonical configuration read matched the baseline."
     scenarios:
       - {id: CON-IMPORT, levels: [sim, real]}
       - {id: CON-SEARCH, levels: [sim]}
@@ -348,7 +348,7 @@ features:
       - {id: CON-HANDLE-LINK, levels: [sim]}
       - {id: CON-RECIPIENT-LOOKUP, levels: [sim]}
     notes: >-
-      Direct external Contacts R-LIVE passes on candidate 165ea123 based on main b99d876b: 20 native changes, gateway p95 454.953 ms and Ubuntu replica p95 507.510 ms over the LAN SSH tunnel, below the unchanged 1000 ms budget. Media backfill is enabled, bulk capture peak is one, and the fresh signed Helper is crash-free. On 2026-10-23, public CON-RELAY paired and converged its snapshot, but its live stage returned no replica latency samples and gateway p95 was 2952.531 ms for 20 changes against the unchanged 1000 ms budget. Tagged contact cleanup and Serve configuration restoration passed.
+      Direct external Contacts R-LIVE passes on candidate 165ea123 based on main b99d876b: 20 native changes, gateway p95 454.953 ms and Ubuntu replica p95 507.510 ms over the LAN SSH tunnel, below the unchanged 1000 ms budget. Media backfill is enabled, bulk capture peak is one, and the fresh signed Helper is crash-free. The isolated 2026-10-23 public CON-RELAY rerun proves scope, subscription and live-feed delivery with 20/20 replica samples; the earlier 0/20 observation is superseded. Gateway/replica p95 was 1453.922/1481.835 ms against the unchanged 1000 ms budget, with a TCC activity surge during the run after a quiet precheck. Tagged contact cleanup passed. The immediate Serve byte comparison failed, but a later canonical configuration read matched the saved baseline.
 
   - id: contacts.write
     title: Contacts create, update, delete
@@ -360,7 +360,7 @@ features:
     limits:
       - scenario: CON-RELAY
         level: replica
-        reason: "2026-10-23 public CON-RELAY joined and converged a snapshot, but its live stage returned 0/20 replica latency samples; 20 gateway samples had p95 2952.531 ms against the 1000 ms budget. Tagged contact cleanup and Serve configuration restoration passed."
+        reason: "2026-10-23 isolated public CON-RELAY rerun delivered 20/20 live changes and six public commands, but native-change replica p95 was 1481.835 ms and command replica p95 1788.080 ms against the 1000 ms budget. TCC activity surged after the quiet precheck, so public write latency is not certified. Tagged cleanup passed; the immediate Serve byte check failed, while a later canonical configuration read matched the baseline."
     scenarios:
       - {id: CON-CRUD, levels: [sim, real, replica]}
       - {id: CON-READONLY-CONTAINER, levels: [sim]}
@@ -368,7 +368,7 @@ features:
       - {id: CON-RESOLVE-RESTART, levels: [sim]}
 
     notes: >-
-      Leader-accepted cold native Contacts CRUD on source 6f548790 based on main c2dcb28c: six native saves, gateway p95 528.632 ms and Ubuntu replica p95 563.151 ms over the LAN SSH tunnel, below the unchanged 1000 ms budget. On 2026-10-23, public CON-RELAY paired and converged its snapshot, but its live stage returned no replica latency samples and gateway p95 was 2952.531 ms for 20 changes against the unchanged 1000 ms budget. Tagged contact cleanup and Serve configuration restoration passed; public certification remains limited.
+      Leader-accepted cold native Contacts CRUD on source 6f548790 based on main c2dcb28c: six native saves, gateway p95 528.632 ms and Ubuntu replica p95 563.151 ms over the LAN SSH tunnel, below the unchanged 1000 ms budget. The isolated 2026-10-23 public CON-RELAY rerun delivered all 20 native changes and six public commands; command replica p95 was 1788.080 ms against the unchanged 1000 ms budget. TCC activity surged during the run after a quiet precheck, so public write latency remains limited. Tagged cleanup passed. The immediate Serve byte comparison failed, but a later canonical configuration read matched the saved baseline.
 
   - id: notes.read
     title: Notes folders and notes, protobuf decoding, locked notes

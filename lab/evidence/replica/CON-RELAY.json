@@ -1,9 +1,9 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[6.62 4.95 5.35] cpu_idle=77% cpus=8 other_heavy=1; ubuntu: load=[0.38 0.45 0.45] cpu_idle=96% cpus=8 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[2.66 15.78 34.54] cpu_idle=87% cpus=8 other_heavy=0; ubuntu: load=[0.35 0.56 0.46] cpu_idle=95% cpus=8 other_heavy=0"
   },
-  "run_id": "relay_01M5N1C7NWNZ4SAZ45NJQBSD9P",
+  "run_id": "relay_01M5N2CQRVM925YDQP0ZB49YH7",
   "network_path": "public Funnel; pinned public DNS through CONNECT egress; no peer or SSH tunnel",
   "metrics": {
     "capture_observer_resets": 0,
@@ -16,37 +16,45 @@
       "containers_preserved": true,
       "whole_container_operations": 0
     },
-    "contacts_clock_uncertainty_ms": 0,
+    "contacts_clock_uncertainty_ms": 29.533176,
+    "contacts_command_clock_uncertainty_ms": 30.528052,
     "contacts_effect_uptimes_ns": [],
     "contacts_scan_counts": {
       "bulk_capture_peak_in_flight": 1,
-      "contacts_capture_committed": 23,
-      "contacts_capture_ready": 23,
-      "contacts_compared": 23,
-      "contacts_contact_fetched": 21,
-      "contacts_encoded": 23,
+      "contacts_capture_committed": 30,
+      "contacts_capture_ready": 30,
+      "contacts_command_reconcile_requested": 6,
+      "contacts_compared": 30,
+      "contacts_contact_fetched": 25,
+      "contacts_effect_done": 6,
+      "contacts_effect_revalidated": 6,
+      "contacts_encoded": 30,
       "contacts_fetched": 1,
-      "contacts_history_fetched": 105,
-      "contacts_notified": 86,
+      "contacts_history_fetched": 125,
+      "contacts_notified": 196,
+      "contacts_prepare_started": 6,
+      "contacts_prepared": 6,
+      "contacts_save_started": 6,
       "contacts_scan_abandoned": 0,
-      "contacts_scan_finished": 105,
-      "contacts_scan_requested": 105,
-      "contacts_scan_started": 105,
+      "contacts_scan_finished": 125,
+      "contacts_scan_requested": 125,
+      "contacts_scan_started": 125,
+      "empty_scans": 1,
       "full_scans": 1,
       "group_events_causing_full_contact_scan": 0,
-      "incremental_group_identifiers": 0,
+      "incremental_group_identifiers": 1,
       "unchanged_history_publications": 0,
-      "unchanged_history_scans": 82
+      "unchanged_history_scans": 95
     },
     "public_connections": 2,
-    "public_ingress_ready_ms": 613.546125,
+    "public_ingress_ready_ms": 609.235125,
     "snapshot_converged": true
   },
   "scenario": "CON-RELAY",
   "level": "replica",
   "passed": false,
-  "git_sha": "8d28b21c7132da659b3df8a65cecd8799703df10",
-  "at": "2026-10-23T18:46:36.988679Z",
+  "git_sha": "11816ae426cb77acd37c179f2a8070a71578f0c6",
+  "at": "2026-10-23T19:04:22.043513Z",
   "assertions": [
     {
       "name": "serve_config_before",
@@ -142,7 +150,7 @@
     },
     {
       "name": "twenty_contacts_reach_public_replica",
-      "passed": false
+      "passed": true
     },
     {
       "name": "contacts_direct_p95_under_one_second",
@@ -151,6 +159,18 @@
     {
       "name": "contacts_public_p95_under_one_second",
       "passed": false
+    },
+    {
+      "name": "public_contacts_rest_and_mcp_crud",
+      "passed": true
+    },
+    {
+      "name": "public_contacts_command_p95_under_one_second",
+      "passed": false
+    },
+    {
+      "name": "independent_public_command_cleanup",
+      "passed": true
     },
     {
       "name": "tagged_contacts_cleaned",
@@ -166,7 +186,7 @@
     },
     {
       "name": "serve_config_byte_identical_after_off",
-      "passed": true
+      "passed": false
     },
     {
       "name": "credential_backend_override_restored",
@@ -175,360 +195,346 @@
   ],
   "latency": {
     "contacts_actor_queue": {
-      "samples": 23,
-      "p50_ms": 0.319041,
-      "p95_ms": 453.572666,
-      "max_ms": 908.712708,
+      "samples": 30,
+      "p50_ms": 0.174667,
+      "p95_ms": 374.906542,
+      "max_ms": 2041.654667,
+      "timeouts": 0
+    },
+    "contacts_command_effect_to_public_read": {
+      "samples": 6,
+      "p50_ms": 1178.586898,
+      "p95_ms": 1976.811819,
+      "max_ms": 1976.811819,
+      "timeouts": 0
+    },
+    "contacts_command_effect_to_public_replica": {
+      "samples": 6,
+      "p50_ms": 669.8414290000001,
+      "p95_ms": 1788.080424,
+      "max_ms": 1788.080424,
       "timeouts": 0
     },
     "contacts_compare": {
-      "samples": 23,
-      "p50_ms": 1.095,
-      "p95_ms": 2.668334,
-      "max_ms": 4.442625,
+      "samples": 30,
+      "p50_ms": 0.535041,
+      "p95_ms": 1.287125,
+      "max_ms": 2.24775,
       "timeouts": 0
     },
     "contacts_effect_to_gateway": {
       "samples": 20,
-      "p50_ms": 1407.832583,
-      "p95_ms": 2952.530583,
-      "max_ms": 3641.8475,
+      "p50_ms": 339.258208,
+      "p95_ms": 1453.921792,
+      "max_ms": 1955.359792,
       "timeouts": 0
     },
     "contacts_effect_to_public_replica": {
-      "samples": 0,
-      "p50_ms": 0,
-      "p95_ms": 0,
-      "max_ms": 0,
-      "timeouts": 20
+      "samples": 20,
+      "p50_ms": 360.362335,
+      "p95_ms": 1481.835381,
+      "max_ms": 1976.020165,
+      "timeouts": 0
     },
     "contacts_fetch": {
-      "samples": 22,
-      "p50_ms": 71.971708,
-      "p95_ms": 210.730625,
-      "max_ms": 2551.636625,
+      "samples": 26,
+      "p50_ms": 28.235625,
+      "p95_ms": 137.342959,
+      "max_ms": 1235.878375,
       "timeouts": 0
     },
     "contacts_gateway_commit": {
-      "samples": 33,
-      "p50_ms": 40.022016,
-      "p95_ms": 581.444096,
-      "max_ms": 751.986944,
+      "samples": 42,
+      "p50_ms": 8.148992,
+      "p95_ms": 50.80192,
+      "max_ms": 1506.887936,
       "timeouts": 0
     },
     "contacts_history_fetch": {
-      "samples": 105,
-      "p50_ms": 22.324791,
-      "p95_ms": 95.622041,
-      "max_ms": 189.757167,
+      "samples": 125,
+      "p50_ms": 13.239959,
+      "p95_ms": 46.538875,
+      "max_ms": 251.935541,
       "timeouts": 0
     },
     "contacts_materialize": {
-      "samples": 22,
-      "p50_ms": 24.894375,
-      "p95_ms": 121.819958,
-      "max_ms": 458.413916,
+      "samples": 26,
+      "p50_ms": 11.240709,
+      "p95_ms": 22.483333,
+      "max_ms": 141.1715,
       "timeouts": 0
     },
     "contacts_notification_to_scan": {
-      "samples": 27,
-      "p50_ms": 55.101875,
-      "p95_ms": 1219.324,
-      "max_ms": 1366.062375,
+      "samples": 63,
+      "p50_ms": 123.322084,
+      "p95_ms": 579.162708,
+      "max_ms": 2133.08,
       "timeouts": 0
     },
     "contacts_publish_queue": {
-      "samples": 33,
-      "p50_ms": 1.106875,
-      "p95_ms": 178.12875,
-      "max_ms": 178.881667,
+      "samples": 42,
+      "p50_ms": 0.398167,
+      "p95_ms": 44.407125,
+      "max_ms": 97.081875,
       "timeouts": 0
     },
     "contacts_publish_to_ack": {
-      "samples": 33,
-      "p50_ms": 720.76325,
-      "p95_ms": 2763.382667,
-      "max_ms": 4167.325208,
+      "samples": 42,
+      "p50_ms": 128.068417,
+      "p95_ms": 1227.540917,
+      "max_ms": 2345.60675,
       "timeouts": 0
     },
     "contacts_publish_to_commit_start": {
-      "samples": 33,
-      "p50_ms": 610.828032,
-      "p95_ms": 2735.710976,
-      "max_ms": 4062.354176,
+      "samples": 42,
+      "p50_ms": 81.985024,
+      "p95_ms": 883.42016,
+      "max_ms": 1700.701184,
       "timeouts": 0
     },
     "contacts_ready_to_commit": {
-      "samples": 23,
-      "p50_ms": 1213.6735,
-      "p95_ms": 3473.143708,
-      "max_ms": 4177.608084,
+      "samples": 30,
+      "p50_ms": 271.718458,
+      "p95_ms": 1758.779209,
+      "max_ms": 4391.3165,
       "timeouts": 0
     },
     "contacts_ready_to_enqueue": {
-      "samples": 23,
-      "p50_ms": 1.665792,
-      "p95_ms": 909.888917,
-      "max_ms": 1933.183833,
+      "samples": 30,
+      "p50_ms": 1.136667,
+      "p95_ms": 624.363209,
+      "max_ms": 2043.051083,
       "timeouts": 0
     },
     "contacts_scan_queue": {
-      "samples": 105,
-      "p50_ms": 0.449084,
-      "p95_ms": 3.752875,
-      "max_ms": 42.742833,
-      "timeouts": 0
-    },
-    "helper_blob_encode:contacts": {
-      "samples": 164,
-      "p50_ms": 2.751333,
-      "p95_ms": 104.526833,
-      "max_ms": 1309.063667,
+      "samples": 125,
+      "p50_ms": 0.429834,
+      "p95_ms": 65.65125,
+      "max_ms": 1246.697625,
       "timeouts": 0
     },
     "helper_blob_encode:messages": {
-      "samples": 204,
-      "p50_ms": 4.414583,
-      "p95_ms": 540.197917,
-      "max_ms": 1029.752042,
+      "samples": 1320,
+      "p50_ms": 1.054833,
+      "p95_ms": 19.928458,
+      "max_ms": 3887.362541,
       "timeouts": 0
     },
     "helper_blob_encode:notes": {
-      "samples": 161,
-      "p50_ms": 7.091666,
-      "p95_ms": 328.885208,
-      "max_ms": 1591.89475,
-      "timeouts": 0
-    },
-    "helper_blob_queue:contacts": {
-      "samples": 164,
-      "p50_ms": 0.460875,
-      "p95_ms": 31.875542,
-      "max_ms": 203.357,
+      "samples": 82,
+      "p50_ms": 0.524833,
+      "p95_ms": 1.479458,
+      "max_ms": 3.908625,
       "timeouts": 0
     },
     "helper_blob_queue:messages": {
-      "samples": 204,
-      "p50_ms": 1.772916,
-      "p95_ms": 303.217875,
-      "max_ms": 708.736666,
+      "samples": 1320,
+      "p50_ms": 0.022125,
+      "p95_ms": 11.440292,
+      "max_ms": 2384.58125,
       "timeouts": 0
     },
     "helper_blob_queue:notes": {
-      "samples": 161,
-      "p50_ms": 2.040292,
-      "p95_ms": 198.903375,
-      "max_ms": 1017.318417,
-      "timeouts": 0
-    },
-    "helper_blob_socket_write:contacts": {
-      "samples": 164,
-      "p50_ms": 4.591,
-      "p95_ms": 93.5205,
-      "max_ms": 1003.499709,
+      "samples": 82,
+      "p50_ms": 0.010208,
+      "p95_ms": 0.065333,
+      "max_ms": 0.828375,
       "timeouts": 0
     },
     "helper_blob_socket_write:messages": {
-      "samples": 204,
-      "p50_ms": 48.727542,
-      "p95_ms": 656.70525,
-      "max_ms": 1248.312667,
+      "samples": 1320,
+      "p50_ms": 0.611125,
+      "p95_ms": 33.308958,
+      "max_ms": 2344.516375,
       "timeouts": 0
     },
     "helper_blob_socket_write:notes": {
-      "samples": 161,
-      "p50_ms": 35.962416,
-      "p95_ms": 744.0645,
-      "max_ms": 1796.621042,
-      "timeouts": 0
-    },
-    "helper_blob_write:contacts": {
-      "samples": 165,
-      "p50_ms": 20.55975,
-      "p95_ms": 344.450625,
-      "max_ms": 2027.168208,
+      "samples": 82,
+      "p50_ms": 0.162083,
+      "p95_ms": 1.135459,
+      "max_ms": 2.967417,
       "timeouts": 0
     },
     "helper_blob_write:messages": {
-      "samples": 204,
-      "p50_ms": 142.023958,
-      "p95_ms": 1392.424625,
-      "max_ms": 2310.558875,
+      "samples": 1320,
+      "p50_ms": 3.450083,
+      "p95_ms": 104.3865,
+      "max_ms": 8061.180708,
       "timeouts": 0
     },
     "helper_blob_write:notes": {
-      "samples": 161,
-      "p50_ms": 79.888625,
-      "p95_ms": 1279.403667,
-      "max_ms": 3310.821583,
+      "samples": 82,
+      "p50_ms": 1.108375,
+      "p95_ms": 11.854875,
+      "max_ms": 18.281333,
       "timeouts": 0
     },
     "helper_capture_write:calendar": {
-      "samples": 23,
-      "p50_ms": 49.564125,
-      "p95_ms": 392.581166,
-      "max_ms": 1479.2315,
+      "samples": 67,
+      "p50_ms": 1.2125,
+      "p95_ms": 10.823166,
+      "max_ms": 21.270417,
       "timeouts": 0
     },
     "helper_capture_write:contacts": {
-      "samples": 33,
-      "p50_ms": 2.966333,
-      "p95_ms": 1090.023292,
-      "max_ms": 1525.8325,
+      "samples": 42,
+      "p50_ms": 0.691166,
+      "p95_ms": 217.218541,
+      "max_ms": 1403.908,
       "timeouts": 0
     },
     "helper_capture_write:messages": {
-      "samples": 262,
-      "p50_ms": 10.218416,
-      "p95_ms": 98.449583,
-      "max_ms": 908.289958,
+      "samples": 1141,
+      "p50_ms": 2.71375,
+      "p95_ms": 15.364167,
+      "max_ms": 2401.095167,
       "timeouts": 0
     },
     "helper_capture_write:notes": {
       "samples": 150,
-      "p50_ms": 1.426375,
-      "p95_ms": 38.822875,
-      "max_ms": 155.020417,
+      "p50_ms": 0.271291,
+      "p95_ms": 3.029875,
+      "max_ms": 8.550042,
       "timeouts": 0
     },
     "helper_capture_write:reminders": {
-      "samples": 49,
-      "p50_ms": 2.605834,
-      "p95_ms": 5.992334,
-      "max_ms": 30.103708,
+      "samples": 65,
+      "p50_ms": 0.813292,
+      "p95_ms": 0.897667,
+      "max_ms": 13.653541,
       "timeouts": 0
     },
     "helper_capture_write:usage": {
-      "samples": 230,
-      "p50_ms": 2.360416,
-      "p95_ms": 46.846541,
-      "max_ms": 608.581125,
+      "samples": 269,
+      "p50_ms": 0.243708,
+      "p95_ms": 17.132042,
+      "max_ms": 722.834125,
       "timeouts": 0
     },
     "helper_chunk_prepare:calendar": {
-      "samples": 23,
-      "p50_ms": 0.2525,
-      "p95_ms": 0.480125,
-      "max_ms": 0.504458,
+      "samples": 67,
+      "p50_ms": 0.054041,
+      "p95_ms": 0.396458,
+      "max_ms": 13.795792,
       "timeouts": 0
     },
     "helper_chunk_prepare:contacts": {
-      "samples": 33,
-      "p50_ms": 0.910834,
-      "p95_ms": 4.086167,
-      "max_ms": 49.036583,
+      "samples": 42,
+      "p50_ms": 0.487084,
+      "p95_ms": 1.345667,
+      "max_ms": 1.407,
       "timeouts": 0
     },
     "helper_chunk_prepare:messages": {
-      "samples": 262,
-      "p50_ms": 0.213959,
-      "p95_ms": 1.877833,
-      "max_ms": 8.737291,
+      "samples": 1141,
+      "p50_ms": 0.07675,
+      "p95_ms": 0.334667,
+      "max_ms": 13.182667,
       "timeouts": 0
     },
     "helper_chunk_prepare:notes": {
       "samples": 150,
-      "p50_ms": 0.139083,
-      "p95_ms": 0.475125,
-      "max_ms": 2.810084,
+      "p50_ms": 0.03925,
+      "p95_ms": 0.109458,
+      "max_ms": 2.691875,
       "timeouts": 0
     },
     "helper_chunk_prepare:reminders": {
-      "samples": 49,
-      "p50_ms": 0.138208,
-      "p95_ms": 1.031417,
-      "max_ms": 3.115333,
+      "samples": 65,
+      "p50_ms": 0.0415,
+      "p95_ms": 0.105917,
+      "max_ms": 0.811667,
       "timeouts": 0
     },
     "helper_chunk_prepare:usage": {
-      "samples": 230,
-      "p50_ms": 0.152583,
-      "p95_ms": 1.125333,
-      "max_ms": 5.96625,
+      "samples": 269,
+      "p50_ms": 0.098333,
+      "p95_ms": 0.268084,
+      "max_ms": 5.749041,
       "timeouts": 0
     },
     "helper_marker_write:calendar": {
-      "samples": 129,
-      "p50_ms": 1.084459,
-      "p95_ms": 4.766584,
-      "max_ms": 9.73675,
+      "samples": 173,
+      "p50_ms": 0.342125,
+      "p95_ms": 3.865917,
+      "max_ms": 16.251541,
       "timeouts": 0
     },
     "helper_marker_write:contacts": {
-      "samples": 33,
-      "p50_ms": 1.040459,
-      "p95_ms": 4.091042,
-      "max_ms": 7.519125,
+      "samples": 42,
+      "p50_ms": 0.579583,
+      "p95_ms": 1.710167,
+      "max_ms": 3.206458,
       "timeouts": 0
     },
     "helper_marker_write:messages": {
-      "samples": 391,
-      "p50_ms": 1.121833,
-      "p95_ms": 4.939416,
-      "max_ms": 23.012875,
+      "samples": 1268,
+      "p50_ms": 0.639708,
+      "p95_ms": 3.302959,
+      "max_ms": 64.537916,
       "timeouts": 0
     },
     "helper_marker_write:notes": {
       "samples": 150,
-      "p50_ms": 1.122709,
-      "p95_ms": 6.038625,
-      "max_ms": 26.202416,
+      "p50_ms": 0.275458,
+      "p95_ms": 3.29875,
+      "max_ms": 5.560375,
       "timeouts": 0
     },
     "helper_marker_write:reminders": {
-      "samples": 49,
-      "p50_ms": 1.0735,
-      "p95_ms": 4.950083,
-      "max_ms": 8.700542,
+      "samples": 65,
+      "p50_ms": 0.311542,
+      "p95_ms": 1.238916,
+      "max_ms": 1.818125,
       "timeouts": 0
     },
     "helper_marker_write:usage": {
-      "samples": 230,
-      "p50_ms": 0.966875,
-      "p95_ms": 4.910708,
-      "max_ms": 8.266416,
+      "samples": 269,
+      "p50_ms": 0.69225,
+      "p95_ms": 3.352375,
+      "max_ms": 16.883875,
       "timeouts": 0
     },
     "helper_split:calendar": {
-      "samples": 6,
-      "p50_ms": 0.949667,
-      "p95_ms": 437.90325,
-      "max_ms": 437.90325,
+      "samples": 50,
+      "p50_ms": 0.148583,
+      "p95_ms": 2.769583,
+      "max_ms": 124.209459,
       "timeouts": 0
     },
     "helper_split:contacts": {
-      "samples": 23,
-      "p50_ms": 0.332667,
-      "p95_ms": 6.325333,
-      "max_ms": 16.719542,
+      "samples": 32,
+      "p50_ms": 0.268458,
+      "p95_ms": 0.552958,
+      "max_ms": 5.293708,
       "timeouts": 0
     },
     "helper_split:messages": {
-      "samples": 89,
-      "p50_ms": 4.165417,
-      "p95_ms": 13.700667,
-      "max_ms": 37.983208,
+      "samples": 271,
+      "p50_ms": 2.833583,
+      "p95_ms": 9.839584,
+      "max_ms": 43.310667,
       "timeouts": 0
     },
     "helper_split:notes": {
       "samples": 148,
-      "p50_ms": 0.643166,
-      "p95_ms": 5.412709,
-      "max_ms": 9.227667,
+      "p50_ms": 0.185459,
+      "p95_ms": 1.446167,
+      "max_ms": 7.564042,
       "timeouts": 0
     },
     "helper_split:reminders": {
-      "samples": 4,
-      "p50_ms": 5.612042,
-      "p95_ms": 1286.953542,
-      "max_ms": 1286.953542,
+      "samples": 20,
+      "p50_ms": 2.1575,
+      "p95_ms": 13.532875,
+      "max_ms": 1405.058041,
       "timeouts": 0
     },
     "helper_split:usage": {
-      "samples": 160,
-      "p50_ms": 0.414667,
-      "p95_ms": 3.126709,
-      "max_ms": 67.422916,
+      "samples": 199,
+      "p50_ms": 0.346625,
+      "p95_ms": 3.351125,
+      "max_ms": 23.772625,
       "timeouts": 0
     }
   },
