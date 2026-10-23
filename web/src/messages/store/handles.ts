@@ -1,4 +1,4 @@
-import { createRoot, createSignal, onCleanup, untrack } from 'solid-js';
+import { batch, createRoot, createSignal, onCleanup, untrack } from 'solid-js';
 import { api, APIError } from '../../auth/api';
 import type { LiveClient } from '../../data/live';
 import type { ChatSummary } from '../../data/types';
@@ -41,7 +41,7 @@ function buildCache(live:LiveClient,capacity:number) {
         });
     }
     function seed(chats: readonly ChatSummary[]) {
-        for (const chat of chats) for (const participant of array(chat.chat.data.participants)) { const data=fields(participant); put(text(data.handle_id ?? data.id),data); }
+        batch(()=>{for (const chat of chats) for (const participant of array(chat.chat.data.participants)) { const data=fields(participant); put(text(data.handle_id ?? data.id),data); }});
     }
     function scheduleFallback(){
         if(fallbackFrame||stopped||!fallbackPending.size||subscriptions.size>=48)return;
@@ -65,7 +65,7 @@ function buildCache(live:LiveClient,capacity:number) {
             if(unavailable){fallback(ids);return;}
             const result=await api<{handles:Record<string,unknown>[]}>('handles',{ids});
             if(stopped)return;
-            for(const handle of result.handles){const id=text(handle.handle_id);put(id,handle,true);if(untrack(handles).has(id))resolved.add(id);}
+            batch(()=>{for(const handle of result.handles){const id=text(handle.handle_id);put(id,handle,true);if(untrack(handles).has(id))resolved.add(id);}});
         }catch(error){
             if(stopped)return;
             if(error instanceof APIError&&error.status===429){
@@ -91,7 +91,7 @@ function buildCache(live:LiveClient,capacity:number) {
     }
     function read() {
         revision();
-        for(const [id,subscription] of subscriptions){const data=subscription.data();if(data.records===undefined)continue;const record=data.records[0];if(record)put(id,record.data,true);resolved.add(id);subscription.dispose();subscriptions.delete(id);}
+        batch(()=>{for(const [id,subscription] of subscriptions){const data=subscription.data();if(data.records===undefined)continue;const record=data.records[0];if(record)put(id,record.data,true);resolved.add(id);subscription.dispose();subscriptions.delete(id);}});
         scheduleFallback();
         return handles();
     }

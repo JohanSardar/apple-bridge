@@ -1,24 +1,18 @@
 import {crossfade,reducedMotion,springAnimation} from './animate';
 import {sampleSpring} from './spring';
 export function receiveBubble(element:HTMLElement,sent:boolean){
-    element.dataset.motion='receive';
-    element.style.transformOrigin=sent?'right bottom':'left bottom';
-    const reset=()=>{element.style.transform='';element.style.transformOrigin='';delete element.dataset.motion;};
-    if(reducedMotion()){
-        const animation=crossfade(element);animation.onfinish=reset;
-        return ()=>{animation.cancel();reset();};
-    }
-    const animation=springAnimation(value=>{element.style.transform=`scale(${value})`;},.92,1,{response:.38,damping:.75},0,reset);
-    return ()=>{animation.cancel();reset();};
+    return pop(element,'receive',.92,{response:.38,damping:.75},false,sent?'right bottom':'left bottom');
 }
 
-function pop(element:HTMLElement,name:string,from:number){
+function pop(element:HTMLElement|SVGSVGElement,name:string,from:number,spring={response:.3,damping:.65},fade?:boolean,origin?:string){
     element.dataset.motion=name;
-    const reset=()=>{element.style.transform='';delete element.dataset.motion;};
+    if(origin)element.style.transformOrigin=origin;
+    const reset=()=>{element.style.transform='';if(origin)element.style.transformOrigin='';if(fade)element.style.opacity='';delete element.dataset.motion;};
     if(reducedMotion()){const animation=crossfade(element);animation.onfinish=reset;return ()=>{animation.cancel();reset();};}
-    const animation=springAnimation(value=>{element.style.transform=`scale(${value})`;},from,1,{response:.3,damping:.65},0,reset);
+    const animation=springAnimation(value=>{element.style.transform=`scale(${value})`;if(fade)element.style.opacity=String(Math.min(1,value));},from,1,spring,0,reset);
     return ()=>{animation.cancel();reset();};
 }
+export const enterSendIcon=(element:SVGSVGElement)=>pop(element,'send',.6,{response:.35,damping:.72},true);
 export const popReaction=(element:HTMLElement)=>pop(element,'reaction-pop',.6);
 export const enterNewPill=(element:HTMLElement)=>pop(element,'new-pill',.9);
 export function enterThreadRow(element:HTMLElement,index:number){

@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createSignal, createUniqueId, For, onCleanup, onMount, type JSX } from 'solid-js';
+import { batch, createEffect, createMemo, createSignal, createUniqueId, For, onCleanup, onMount, type JSX } from 'solid-js';
 import { beginWork } from '../motion/work';
 import { Positions } from './positions';
 export type VirtualListHandle = {
@@ -50,8 +50,9 @@ export function VirtualList<T>(props: {
     const range = createMemo(() => { revision(); const top = scroll(),padding=props.overscan??6; const start = Math.max(0, positions.indexAt(top) - padding), end = Math.min(items.length, positions.indexAt(top + height()) + padding+1); return { start, end }; });
     const anchor = () => { if (!items.length)
         return; const index = positions.indexAt(viewport.scrollTop); return { key: props.keyFor(items[index]), offset: viewport.scrollTop - positions.offset(index) }; };
-    const refresh = () => { setScroll(viewport.scrollTop); setHeight(viewport.clientHeight); setRevision(value => value + 1); };
-    const scrollToIndex = (index: number, align: 'start' | 'end' = 'start') => { setScrollPosition(align === 'end' ? positions.offset(index + 1) - viewport.clientHeight : positions.offset(index)); refresh(); if(align==='end'&&index===items.length-1)queueMicrotask(()=>{setScrollPosition(viewport.scrollHeight);refresh();}); };
+    const refresh = () => batch(() => { setScroll(viewport.scrollTop); setHeight(viewport.clientHeight); setRevision(value => value + 1); });
+    const bottom=()=>{setScrollPosition(viewport.scrollHeight);refresh();};
+    const scrollToIndex = (index: number, align: 'start' | 'end' = 'start') => { setScrollPosition(align === 'end' ? positions.offset(index + 1) - viewport.clientHeight : positions.offset(index)); refresh(); if(align==='end'&&index===items.length-1)queueMicrotask(bottom); };
     createEffect(() => {
         const next = props.items;
         const finish=beginWork('virtual-items');
@@ -75,7 +76,7 @@ export function VirtualList<T>(props: {
             }
             else if (props.bottomAnchored && (atBottom || first) && (!shifted || first)) {
                 setScrollPosition(Math.max(0,positions.total-viewport.clientHeight));
-                queueMicrotask(() => { setScrollPosition(viewport.scrollHeight); refresh(); });
+                queueMicrotask(bottom);
             }
             else if(props.keepTop&&atTop)setScrollPosition(0);
             else if (previous) {
@@ -91,7 +92,7 @@ export function VirtualList<T>(props: {
     });
     onMount(() => {
         props.ref?.({ scrollToIndex, anchor });
-        observer = new ResizeObserver(entries => {
+        observer = new ResizeObserver(entries => batch(() => {
             const saved = anchor(), atBottom = positions.total - viewport.scrollTop - height() <= 2;
             let changed = false, resized=false;
             for (const entry of entries) {
@@ -114,7 +115,7 @@ export function VirtualList<T>(props: {
                 content.style.height=positions.total+'px';
                 if (props.bottomAnchored && atBottom) {
                     setScrollPosition(Math.max(0,positions.total-viewport.clientHeight));
-                    queueMicrotask(()=>{setScrollPosition(viewport.scrollHeight);refresh();});
+                    queueMicrotask(bottom);
                 }
                 else if (saved) {
                     const index = (keyIndex.get(saved.key) ?? -1);
@@ -123,7 +124,7 @@ export function VirtualList<T>(props: {
                 }
                 refresh();
             }
-        });
+        }));
         observer.observe(viewport);
         if(!props.fixedHeights)viewport.querySelectorAll('[data-index]').forEach(element => observer?.observe(element));
         if (props.bottomAnchored)
@@ -133,7 +134,7 @@ export function VirtualList<T>(props: {
     onCleanup(() => { observer?.disconnect(); cancelAnimationFrame(frame); });
     createEffect(() => { const value = range(); props.onVisible?.(value.start, value.end); props.onBottom?.(positions.total-scroll()-height()<=2); });
     const keys = createMemo(() => { revision(); return items.slice(range().start,range().end).map(props.keyFor); });
-    const activeDescendant=createMemo(()=>{revision();const item=items[selected()];if(!item)return;const key=props.keyFor(item);return keys().includes(key)?rowPrefix+key:undefined;});
+    const activeDescendant=createMemo(()=>{const item=items[selected()];if(!item)return;const key=props.keyFor(item);return keys().includes(key)?rowPrefix+key:undefined;});
     return <div ref={viewport} class="virtual-viewport" data-scroll={props.label} tabindex="0" role="listbox" aria-multiselectable={props.selectedKeys ? true : undefined} aria-label={props.label} aria-activedescendant={activeDescendant()} onScroll={() => { if (!frame)
         frame = requestAnimationFrame(() => { frame = 0; const finish=beginWork('virtual-scroll'); setScroll(viewport.scrollTop); finish(); }); }} onKeyDown={event => {
             if (event.target !== event.currentTarget) return;
@@ -157,7 +158,7 @@ export function VirtualList<T>(props: {
             setActive(next);
             if(items[next])props.onActive?.(items[next],event);
             scrollToIndex(next);
-        }}><div ref={content} class="virtual-content" style={{ height: (revision(), positions.total + 'px') }}><For each={keys()}>{key => {
+        }}><div ref={content} class="virtual-content"><For each={keys()}>{key => {
             let row!: HTMLDivElement;
             const index=createMemo(()=>{revision();return keyIndex.get(key)??0;});
             const item = createMemo(() => { revision(); return items[index()]; });
