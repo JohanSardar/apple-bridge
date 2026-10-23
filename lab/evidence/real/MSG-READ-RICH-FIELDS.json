@@ -1,14 +1,14 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[6.74 9.31 10.34] cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[4.03 4.49 5.26] cpu_idle=85% cpus=8 other_heavy=0"
   },
-  "status": "limited",
-  "run_id": "run_01M5ER33NE0X7K052040RDXEC8",
+  "run_id": "run_01M5N19GETCK0KXJ163MTKPMED",
   "metrics": {
+    "capture_observer_resets": 0,
     "helper_counts": {
       "attachment.genmoji": 0,
-      "attachment.hidden": 1138,
+      "attachment.hidden": 1142,
       "attachment.is_sticker": 21,
       "attachment.sticker": 2,
       "audio": 12,
@@ -25,47 +25,87 @@
       "balloon.digital_touch": 1,
       "balloon.find_my": 16,
       "balloon.handwriting": 0,
-      "balloon.image_reference": 25,
-      "balloon.link": 1150,
-      "balloon.link.icon_attachment_id": 61,
-      "balloon.link.site_name": 753,
-      "balloon.link.summary": 910,
-      "balloon.link.title": 1077,
+      "balloon.image_reference": 27,
+      "balloon.link": 1152,
+      "balloon.link.icon_attachment_id": 63,
+      "balloon.link.site_name": 755,
+      "balloon.link.summary": 912,
+      "balloon.link.title": 1079,
       "balloon.link.video_url": 0,
-      "balloon.link_card": 1103,
-      "balloon.payload_decoded": 1203,
+      "balloon.link_card": 1105,
+      "balloon.payload_decoded": 1205,
       "balloon.poll": 0,
       "balloon.unknown": 0,
       "chat.deleted_at": 2,
       "chat.group_photo": 29,
       "chat.is_spam": 3,
       "chat.read_receipts": 2,
-      "chat.unknown": 387,
+      "chat.unknown": 390,
       "delivery.notified_anyway": 2574,
-      "delivery.quietly": 26663,
+      "delivery.quietly": 26671,
       "formatting": 53,
       "genmoji": 15,
       "has_unseen_mention": 198,
       "is_sos": 0,
       "is_spam": 0,
-      "message.deleted_at": 227,
+      "message.deleted_at": 238,
       "schedule": 1,
       "subject": 20,
       "via_satellite": 0
     },
-    "limits": [
-      {
-        "level": "real",
-        "reason": "Signed dev.applebridge.truth lacks Full Disk Access to the Messages database. Granting access requires Johan's admin authentication in System Settings; identity-bound real parity is limited. No authorization is requested.",
-        "scenario": "MSG-READ-RICH-FIELDS"
-      }
-    ]
+    "truth_counts": {
+      "attachment.genmoji": 0,
+      "attachment.hidden": 1142,
+      "attachment.is_sticker": 21,
+      "attachment.sticker": 2,
+      "audio": 12,
+      "audio.expirable": 12,
+      "audio.played": 2,
+      "balloon.app": 57,
+      "balloon.app.subcaption": 0,
+      "balloon.app.trailing_caption": 0,
+      "balloon.app.url": 74,
+      "balloon.app_caption": 74,
+      "balloon.apple_cash": 1,
+      "balloon.chatbot": 28,
+      "balloon.check_in": 0,
+      "balloon.digital_touch": 1,
+      "balloon.find_my": 16,
+      "balloon.handwriting": 0,
+      "balloon.image_reference": 27,
+      "balloon.link": 1152,
+      "balloon.link.icon_attachment_id": 63,
+      "balloon.link.site_name": 755,
+      "balloon.link.summary": 912,
+      "balloon.link.title": 1079,
+      "balloon.link.video_url": 0,
+      "balloon.link_card": 1105,
+      "balloon.payload_decoded": 1205,
+      "balloon.poll": 0,
+      "balloon.unknown": 0,
+      "chat.deleted_at": 2,
+      "chat.group_photo": 29,
+      "chat.is_spam": 3,
+      "chat.read_receipts": 2,
+      "chat.unknown": 390,
+      "delivery.notified_anyway": 2574,
+      "delivery.quietly": 26671,
+      "formatting": 53,
+      "genmoji": 15,
+      "has_unseen_mention": 198,
+      "is_sos": 0,
+      "is_spam": 0,
+      "message.deleted_at": 238,
+      "schedule": 1,
+      "subject": 20,
+      "via_satellite": 0
+    }
   },
   "scenario": "MSG-READ-RICH-FIELDS",
   "level": "real",
-  "passed": false,
-  "git_sha": "64dcd17305e94582cc0b2ffd54fb7f8e52520e3f",
-  "at": "2026-10-21T08:08:54.191077Z",
+  "passed": true,
+  "git_sha": "8d28b21c7132da659b3df8a65cecd8799703df10",
+  "at": "2026-10-23T18:45:07.674307Z",
   "assertions": [
     {
       "name": "build-helper.sh",
@@ -81,9 +121,191 @@
     },
     {
       "name": "independent_apple_truth_readonly_counts",
-      "passed": false,
-      "status": "unverified",
-      "detail": "Signed dev.applebridge.truth lacks Full Disk Access to the Messages database. Granting access requires Johan's admin authentication in System Settings; identity-bound real parity is limited. No authorization is requested."
+      "passed": true
+    },
+    {
+      "name": "counts_match_chat.group_photo",
+      "passed": true
+    },
+    {
+      "name": "counts_match_chat.read_receipts",
+      "passed": true
+    },
+    {
+      "name": "counts_match_has_unseen_mention",
+      "passed": true
+    },
+    {
+      "name": "counts_match_balloon.app.subcaption",
+      "passed": true
+    },
+    {
+      "name": "counts_match_balloon.app.trailing_caption",
+      "passed": true
+    },
+    {
+      "name": "counts_match_balloon.app.url",
+      "passed": true
+    },
+    {
+      "name": "counts_match_balloon.handwriting",
+      "passed": true
+    },
+    {
+      "name": "counts_match_balloon.poll",
+      "passed": true
+    },
+    {
+      "name": "counts_match_balloon.app_caption",
+      "passed": true
+    },
+    {
+      "name": "counts_match_balloon.link.title",
+      "passed": true
+    },
+    {
+      "name": "counts_match_chat.deleted_at",
+      "passed": true
+    },
+    {
+      "name": "counts_match_balloon.check_in",
+      "passed": true
+    },
+    {
+      "name": "counts_match_balloon.digital_touch",
+      "passed": true
+    },
+    {
+      "name": "counts_match_balloon.find_my",
+      "passed": true
+    },
+    {
+      "name": "counts_match_balloon.image_reference",
+      "passed": true
+    },
+    {
+      "name": "counts_match_balloon.link",
+      "passed": true
+    },
+    {
+      "name": "counts_match_chat.unknown",
+      "passed": true
+    },
+    {
+      "name": "counts_match_is_sos",
+      "passed": true
+    },
+    {
+      "name": "counts_match_message.deleted_at",
+      "passed": true
+    },
+    {
+      "name": "counts_match_attachment.genmoji",
+      "passed": true
+    },
+    {
+      "name": "counts_match_balloon.link.icon_attachment_id",
+      "passed": true
+    },
+    {
+      "name": "counts_match_balloon.payload_decoded",
+      "passed": true
+    },
+    {
+      "name": "counts_match_schedule",
+      "passed": true
+    },
+    {
+      "name": "counts_match_subject",
+      "passed": true
+    },
+    {
+      "name": "counts_match_balloon.link_card",
+      "passed": true
+    },
+    {
+      "name": "counts_match_balloon.link.video_url",
+      "passed": true
+    },
+    {
+      "name": "counts_match_chat.is_spam",
+      "passed": true
+    },
+    {
+      "name": "counts_match_is_spam",
+      "passed": true
+    },
+    {
+      "name": "counts_match_attachment.sticker",
+      "passed": true
+    },
+    {
+      "name": "counts_match_audio",
+      "passed": true
+    },
+    {
+      "name": "counts_match_audio.expirable",
+      "passed": true
+    },
+    {
+      "name": "counts_match_balloon.app",
+      "passed": true
+    },
+    {
+      "name": "counts_match_balloon.chatbot",
+      "passed": true
+    },
+    {
+      "name": "counts_match_balloon.link.site_name",
+      "passed": true
+    },
+    {
+      "name": "counts_match_formatting",
+      "passed": true
+    },
+    {
+      "name": "counts_match_genmoji",
+      "passed": true
+    },
+    {
+      "name": "counts_match_attachment.is_sticker",
+      "passed": true
+    },
+    {
+      "name": "counts_match_balloon.apple_cash",
+      "passed": true
+    },
+    {
+      "name": "counts_match_balloon.link.summary",
+      "passed": true
+    },
+    {
+      "name": "counts_match_balloon.unknown",
+      "passed": true
+    },
+    {
+      "name": "counts_match_delivery.notified_anyway",
+      "passed": true
+    },
+    {
+      "name": "counts_match_delivery.quietly",
+      "passed": true
+    },
+    {
+      "name": "counts_match_via_satellite",
+      "passed": true
+    },
+    {
+      "name": "counts_match_attachment.hidden",
+      "passed": true
+    },
+    {
+      "name": "counts_match_audio.played",
+      "passed": true
+    },
+    {
+      "name": "every_count_has_independent_truth",
+      "passed": true
     },
     {
       "name": "credential_backend_override_restored",
@@ -93,9 +315,9 @@
   "latency": {
     "readonly_helper_decoding": {
       "samples": 1,
-      "p50_ms": 8343.722084,
-      "p95_ms": 8343.722084,
-      "max_ms": 8343.722084,
+      "p50_ms": 11227.573125,
+      "p95_ms": 11227.573125,
+      "max_ms": 11227.573125,
       "timeouts": 0
     }
   },

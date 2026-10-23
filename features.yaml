@@ -335,7 +335,7 @@ features:
     limits:
       - scenario: CON-RELAY
         level: replica
-        reason: "public Contacts qualification deferred to the app milestone under Fast process #181"
+        reason: "2026-10-23 public CON-RELAY joined and converged a snapshot, but its live stage returned 0/20 replica latency samples; 20 gateway samples had p95 2952.531 ms against the 1000 ms budget. Tagged contact cleanup and Serve configuration restoration passed."
     scenarios:
       - {id: CON-IMPORT, levels: [sim, real]}
       - {id: CON-SEARCH, levels: [sim]}
@@ -348,7 +348,7 @@ features:
       - {id: CON-HANDLE-LINK, levels: [sim]}
       - {id: CON-RECIPIENT-LOOKUP, levels: [sim]}
     notes: >-
-      Direct external Contacts R-LIVE passes on candidate 165ea123 based on main b99d876b: 20 native changes, gateway p95 454.953 ms and Ubuntu replica p95 507.510 ms over the LAN SSH tunnel, below the unchanged 1000 ms budget. Media backfill is enabled, bulk capture peak is one, and the fresh signed Helper is crash-free. Public CON-RELAY is limited: public Contacts qualification deferred to the app milestone under Fast process #181. No current-source public latency samples were collected.
+      Direct external Contacts R-LIVE passes on candidate 165ea123 based on main b99d876b: 20 native changes, gateway p95 454.953 ms and Ubuntu replica p95 507.510 ms over the LAN SSH tunnel, below the unchanged 1000 ms budget. Media backfill is enabled, bulk capture peak is one, and the fresh signed Helper is crash-free. On 2026-10-23, public CON-RELAY paired and converged its snapshot, but its live stage returned no replica latency samples and gateway p95 was 2952.531 ms for 20 changes against the unchanged 1000 ms budget. Tagged contact cleanup and Serve configuration restoration passed.
 
   - id: contacts.write
     title: Contacts create, update, delete
@@ -360,7 +360,7 @@ features:
     limits:
       - scenario: CON-RELAY
         level: replica
-        reason: "public Contacts qualification deferred to the app milestone under Fast process #181"
+        reason: "2026-10-23 public CON-RELAY joined and converged a snapshot, but its live stage returned 0/20 replica latency samples; 20 gateway samples had p95 2952.531 ms against the 1000 ms budget. Tagged contact cleanup and Serve configuration restoration passed."
     scenarios:
       - {id: CON-CRUD, levels: [sim, real, replica]}
       - {id: CON-READONLY-CONTAINER, levels: [sim]}
@@ -368,7 +368,7 @@ features:
       - {id: CON-RESOLVE-RESTART, levels: [sim]}
 
     notes: >-
-      Leader-accepted cold native Contacts CRUD on source 6f548790 based on main c2dcb28c: six native saves, gateway p95 528.632 ms and Ubuntu replica p95 563.151 ms over the LAN SSH tunnel, below the unchanged 1000 ms budget. Public proof is limited: public Contacts qualification deferred to the app milestone under Fast process #181. No current-source public certification is claimed.
+      Leader-accepted cold native Contacts CRUD on source 6f548790 based on main c2dcb28c: six native saves, gateway p95 528.632 ms and Ubuntu replica p95 563.151 ms over the LAN SSH tunnel, below the unchanged 1000 ms budget. On 2026-10-23, public CON-RELAY paired and converged its snapshot, but its live stage returned no replica latency samples and gateway p95 was 2952.531 ms for 20 changes against the unchanged 1000 ms budget. Tagged contact cleanup and Serve configuration restoration passed; public certification remains limited.
 
   - id: notes.read
     title: Notes folders and notes, protobuf decoding, locked notes
@@ -589,15 +589,6 @@ features:
       - scenario: WEB-MSG-CHATS-STORE
         level: web
         reason: "Optional 100k-world cold-template setup is limited and deferred to the Messages milestone. A back-to-back origin/main versus head run in the same normal lane with APPLE_BRIDGE_HEAVY_NO_SIM_LANE=1 fails setup on both: main exceeds its unchanged 120-second dataset request bound; head reaches the unchanged six-minute cold bound before publication. No 100k entry exists to measure. The normal 5000-message prepared fixture passes WebKit/Chromium phone/desktop store and cache checks. LIVE-FIX owns the existing SQLite trigger-preparation ingestion cost; no thresholds changed."
-      - scenario: MSG-DECODE-BALLOON
-        level: real
-        reason: "Signed dev.applebridge.truth lacks Full Disk Access to the Messages database. Granting access requires Johan's admin authentication in System Settings, which the automation never performs or requests. Identity-bound real parity is limited; signed Helper counts are supporting evidence only."
-      - scenario: MSG-DECODE-FORMATTING
-        level: real
-        reason: "Signed dev.applebridge.truth lacks Full Disk Access to the Messages database. Granting access requires Johan's admin authentication in System Settings, which the automation never performs or requests. Identity-bound real parity is limited; signed Helper counts are supporting evidence only."
-      - scenario: MSG-READ-RICH-FIELDS
-        level: real
-        reason: "Signed dev.applebridge.truth lacks Full Disk Access to the Messages database. Granting access requires Johan's admin authentication in System Settings, which the automation never performs or requests. Identity-bound real parity is limited; signed Helper counts are supporting evidence only."
     scenarios:
       - {id: MSG-DECODE-BALLOON, levels: [sim, real]}
       - {id: MSG-DECODE-FORMATTING, levels: [sim, real]}
