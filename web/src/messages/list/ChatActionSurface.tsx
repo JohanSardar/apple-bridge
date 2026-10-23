@@ -87,12 +87,16 @@ export function ChatActionSurface(props: {
     }
     return <>
         <Show when={props.surface.target()} keyed>{value => <Panel value={value}/>}</Show>
-        <Show when={props.actions.problem()}><p role="status" class="chat-action-notice">{props.actions.problem()}</p></Show>
-        <For each={props.actions.notices()}>{notice => <div class="chat-action-notice" role="status">
-            {notice.text}
-            <Show when={notice.check}><button onClick={() => props.actions.check(notice.id)}>{s.checkAction}</button></Show>
-            <Show when={notice.dismiss}><button onClick={() => props.actions.dismiss(notice.id)}>{s.dismiss}</button></Show>
-        </div>}</For>
+        <Show when={props.actions.problem() || props.actions.notices().length}>
+            <div class="chat-action-feedback">
+                <Show when={props.actions.problem()}><p role="status" class="chat-action-notice">{props.actions.problem()}</p></Show>
+                <For each={props.actions.notices()}>{notice => <div class="chat-action-notice" role="status">
+                    {notice.text}
+                    <Show when={notice.check}><button onClick={() => props.actions.check(notice.id)}>{s.checkAction}</button></Show>
+                    <Show when={notice.dismiss}><button onClick={() => props.actions.dismiss(notice.id)}>{s.dismiss}</button></Show>
+                </div>}</For>
+            </div>
+        </Show>
     </>;
 }
 export function SwipeChatRow(props: {
