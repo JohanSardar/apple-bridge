@@ -282,18 +282,21 @@ test('WEB-PERF-SHELL Reminders keeps a thousand-row view virtual, responsive and
   await observePanes(page);
   await bootstrap(context, request); await control(request, '/reminders-perf');
   await page.addInitScript(() => {
-    const metrics = { input: [] as number[], nextFrame: [] as number[], long: [] as number[], cls: 0, paint: 0, measuring: true, longSupported: PerformanceObserver.supportedEntryTypes.includes('longtask'), clsSupported: PerformanceObserver.supportedEntryTypes.includes('layout-shift') };
+    const metrics = { input: [] as number[], nextFrame: [] as number[], long: [] as number[], tasks: [] as { start: number; duration: number }[], cls: 0, paint: 0, measuring: true, longSupported: PerformanceObserver.supportedEntryTypes.includes('longtask'), clsSupported: PerformanceObserver.supportedEntryTypes.includes('layout-shift') };
     (window as any).__remPerf = metrics;
     document.addEventListener('keydown', event => {
       if (!metrics.measuring || !event.isTrusted) return;
       const start = performance.now(); queueMicrotask(() => { document.body.getBoundingClientRect(); metrics.input.push(performance.now() - start); }); requestAnimationFrame(() => metrics.nextFrame.push(performance.now() - start));
     }, { capture: true });
-    if (metrics.longSupported) new PerformanceObserver(list => { if (metrics.measuring) metrics.long.push(...list.getEntries().map(entry => entry.duration)); }).observe({ type: 'longtask' });
+    if (metrics.longSupported) new PerformanceObserver(list => { if (metrics.measuring) { metrics.long.push(...list.getEntries().map(entry => entry.duration)); metrics.tasks.push(...list.getEntries().map(entry => ({ start: entry.startTime, duration: entry.duration }))); } }).observe({ type: 'longtask' });
     if (metrics.clsSupported) new PerformanceObserver(list => { if (metrics.measuring) for (const entry of list.getEntries()) if (!(entry as any).hadRecentInput) metrics.cls += (entry as any).value; }).observe({ type: 'layout-shift' });
     new MutationObserver(() => { if (!metrics.paint && document.querySelector('.reminder-title')) { metrics.paint = -1; const painted = () => { const title = document.querySelector('.reminder-title'), rect = title?.getBoundingClientRect(); if (title && rect && rect.width > 0 && rect.left >= 0 && rect.right <= innerWidth && rect.top >= 0 && rect.bottom <= innerHeight && getComputedStyle(title).visibility === 'visible') requestAnimationFrame(() => requestAnimationFrame(() => { metrics.paint = performance.now(); })); else requestAnimationFrame(painted); }; painted(); } }).observe(document, { subtree: true, childList: true });
   });
+  const profiler = process.env.AB_WEB_REMINDERS_PROFILE && info.project.name.startsWith('chromium') ? await context.newCDPSession(page) : undefined;
+  if (profiler) { await profiler.send('Profiler.enable'); await profiler.send('Profiler.start'); }
   await page.goto('/reminders'); await openList(page, 'Bridge Test 1000 reminders');
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  if (profiler) { const result = await profiler.send('Profiler.stop'); await mkdir('../lab/evidence/private/web/profiles', { recursive: true }); await writeFile(`../lab/evidence/private/web/profiles/reminders-navigation-${info.project.name}.cpuprofile`, JSON.stringify(Object.assign(result.profile, { webNavigation: await page.evaluate(() => ({ now: performance.now(), tasks: (window as any).__remPerf.tasks })) }))); await profiler.detach(); }
   const navigation = await page.evaluate(() => { const value = (window as any).__remPerf; value.measuring = false; const result = { long: [...value.long], cls: value.cls, longSupported: value.longSupported, clsSupported: value.clsSupported }; value.long = []; value.cls = 0; return result; });
   if (navigation.longSupported) expect(navigation.long.filter((ms: number) => ms > 50)).toEqual([]);
   if (navigation.clsSupported) expect(navigation.cls).toBe(0);
