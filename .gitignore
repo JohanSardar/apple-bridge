@@ -17,6 +17,7 @@ design/features.html
 web/node_modules/
 web/dist/*
 !web/dist/.gitkeep
+web/dist-release/
 web/test-results/
 web/playwright-report/
 
