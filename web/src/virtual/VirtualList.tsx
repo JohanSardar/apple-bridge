@@ -18,6 +18,8 @@ export function VirtualList<T>(props: {
     fixedHeights?: boolean;
     initialKey?: string;
     initialAlign?: 'start'|'end';
+    initialPrefetch?: boolean;
+    initialHeight?: number;
     overscan?: number;
     selectedKey?: string;
     selectedKeys?: ReadonlySet<string>;
@@ -38,10 +40,11 @@ export function VirtualList<T>(props: {
     let positions = new Positions([]), items: readonly T[] = [];
     let keyIndex = new Map<string, number>();
     const initialIndex=()=>keyIndex.get(initialKey!)??0;
+    let firstMountAnchor:boolean|undefined=props.initialPrefetch?true:undefined;
     let previousWindowKey=props.windowKey;
     let previousMeasurementKey=props.measurementKey;
     const cache = new Map<string,{height:number;estimate:number|undefined}>();
-    const [revision, setRevision] = createSignal(0), [scroll, setScroll] = createSignal(0), [height, setHeight] = createSignal(Math.max(1,viewportHeight()-140)), [active, setActive] = createSignal(0);
+    const [revision, setRevision] = createSignal(0), [scroll, setScroll] = createSignal(0), [height, setHeight] = createSignal(Math.max(1,props.initialHeight??viewportHeight()-140)), [active, setActive] = createSignal(0);
     let frame = 0, scrollResidual=0, assignedScroll:number|undefined;
     const setScrollPosition=(top:number,preserve=false)=>{
         if(assignedScroll!==undefined&&Math.abs(viewport.scrollTop-assignedScroll)>.01)scrollResidual=0;
@@ -60,12 +63,15 @@ export function VirtualList<T>(props: {
         if(initial)refresh(Math.max(0,Math.min(top,positions.total-height())));
         else{mounting=false;setScrollPosition(top);refresh();if(align==='end'&&index===items.length-1)queueMicrotask(bottom);}
     };
+    const cancelFirstMountAnchor=(event:Event)=>{if(firstMountAnchor&&event.isTrusted&&Math.abs(viewport.scrollTop-(assignedScroll??scroll()))>.5)firstMountAnchor=false;};
     createEffect(() => {
         const next = props.items;
+        const userTop=firstMountAnchor===false?viewport.scrollTop:undefined;
+        if(!props.initialPrefetch)firstMountAnchor=undefined;
         const finish=beginWork('virtual-items');
         const shifted=props.windowKey!==previousWindowKey;previousWindowKey=props.windowKey;
-        const first = items.length === 0;
-        const previous = !first ? anchor() : undefined;
+        const first = items.length === 0||mounting;
+        const previous = !first&&userTop===undefined ? anchor() : undefined;
         const atTop=!first ? viewport.scrollTop<=2 : true;
         const atBottom = !first ? viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight <= 2 : false;
         items = next;
@@ -77,6 +83,7 @@ export function VirtualList<T>(props: {
         positions = new Positions(items.map(item => {const key=props.keyFor(item),estimated=props.estimate?.(item),cached=cache.get(key);if(cached&&cached.estimate!==estimated)remeasure.add(key);const height=(!props.fixedHeights&&cached?.estimate===estimated?cached?.height:estimated)??60;return Number.isFinite(height)&&height>0?height:60;}));
         if(invalidated||remeasure.size)viewport.querySelectorAll<HTMLElement>('.virtual-row').forEach(row=>{if(invalidated||remeasure.has(row.dataset.key!)){observer.unobserve(row);observer.observe(row);}});
         content.style.height=positions.total+'px';
+        if(userTop!==undefined){mounting=false;refresh(userTop);finish();return;}
         if(first&&initialKey!=null)scrollToIndex(initialIndex(),initialAlign,true);
         else {
             if (props.bottomAnchored && (atBottom || first) && (!shifted || first)) {
@@ -115,7 +122,7 @@ export function VirtualList<T>(props: {
         }
         if (changed) {
             content.style.height=positions.total+'px';
-            if(mounting){scrollToIndex(initialIndex(),initialAlign,true);viewport.scrollTop=scroll();mounting=false;return;}
+            if(mounting){if(firstMountAnchor===false)refresh(scroll());else{scrollToIndex(initialIndex(),initialAlign,true);viewport.scrollTop=scroll();}mounting=false;return;}
             if (props.bottomAnchored && atBottom) {
                 setScrollPosition(Math.max(0,positions.total-viewport.clientHeight));
                 queueMicrotask(bottom);
@@ -133,7 +140,7 @@ export function VirtualList<T>(props: {
     createEffect(() => { const value = range(); props.onVisible?.(value.start, value.end); props.onBottom?.(positions.total-scroll()-height()<=2); });
     const keys = createMemo(() => { revision(); return items.slice(range().start,range().end).map(props.keyFor); });
     const activeDescendant=createMemo(()=>{const item=items[selected()];if(!item)return;const key=props.keyFor(item);return keys().includes(key)?rowPrefix+key:undefined;});
-    return <div ref={viewport} class="virtual-viewport" data-scroll={props.label} tabindex="0" role="listbox" aria-multiselectable={props.selectedKeys ? true : undefined} aria-label={props.label} aria-activedescendant={activeDescendant()} onScroll={() => { if (!frame)
+    return <div ref={viewport} class="virtual-viewport" data-scroll={props.label} tabindex="0" role="listbox" aria-multiselectable={props.selectedKeys ? true : undefined} aria-label={props.label} aria-activedescendant={activeDescendant()} onScroll={event => { cancelFirstMountAnchor(event); if (!frame)
         frame = requestAnimationFrame(() => { frame = 0; const finish=beginWork('virtual-scroll'); setScroll(viewport.scrollTop); finish(); }); }} onKeyDown={event => {
             if (event.target !== event.currentTarget) return;
             let next = selected();

@@ -1,6 +1,6 @@
 import {lazy,Suspense} from 'solid-js';
 import type {MediaViewerProps} from './MediaViewer';
-export type ChatMediaViewerProps=Omit<MediaViewerProps,'attachments'|'loading'|'error'|'onRetry'|'shareUrl'|'onSelection'|'senderName'|'timestamp'|'subtitle'> & {chatId:string;pageSize?:number;locale?:string;now?:Date};
+export type ChatMediaViewerProps=Omit<MediaViewerProps,'attachments'|'loading'|'error'|'onRetry'|'shareUrl'|'onSelection'|'senderName'|'timestamp'|'subtitle'|'originFor'> & {sourceRoot?:ParentNode;chatId:string;pageSize?:number;locale?:string;now?:Date};
 let pending:Promise<typeof import('./ViewerSession')>|undefined;
 export function preloadMediaViewer(){return pending??=import('./ViewerSession').catch(error=>{pending=undefined;throw error;});}
 const Viewer=lazy(()=>preloadMediaViewer().then(module=>({default:module.ViewerSession})));

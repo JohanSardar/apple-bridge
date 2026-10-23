@@ -5,6 +5,7 @@ test('WEB-MOTION WEB-MOTION-PANE-WIDTH uses cached pane geometry during trusted 
     await prepareSession(page);
     await page.addInitScript(()=>{
         const state={active:false,armed:false,reads:[] as string[],transforms:[] as string[]};
+        const computed=window.getComputedStyle;window.getComputedStyle=(element,pseudo)=>{if(state.active&&element.matches('.transcript,.phone-details'))state.reads.push('style:'+element.className);return computed.call(window,element,pseudo);};
         const descriptor=Object.getOwnPropertyDescriptor(Element.prototype,'clientWidth')!;
         Object.defineProperty(Element.prototype,'clientWidth',{...descriptor,get(){if(state.active&&this instanceof Element&&this.matches('.transcript,.phone-details'))state.reads.push(this.className);return descriptor.get!.call(this);}});
         window.addEventListener('click',event=>{if((event.target as Element).closest('button[aria-label="New Message"]')){state.active=true;state.armed=true;state.reads=[];state.transforms=[];}},{capture:true});

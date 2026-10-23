@@ -102,6 +102,7 @@ test('WEB-MSG-THREAD-CORE transcript keeps a visible bubble fixed when paging fo
 });
 
 test('WEB-MSG-THREAD-CORE first transcript paints while prefetched pages are delayed',async({page,request})=>{
+    await page.addInitScript(()=>{const send=WebSocket.prototype.send;(window as any).__prefetchRows=[];WebSocket.prototype.send=function(data){if(typeof data==='string'){const frame=JSON.parse(data);if(frame.t==='sub'&&frame.view==='thread'&&(frame.args.before||frame.args.after))(window as any).__prefetchRows.push(document.querySelectorAll('.message-row').length);}return send.call(this,data);};});
     if(initialSession)await page.context().addCookies(initialSession);else await prepareSession(page);const ids:Fixtures=await control(request,'/demo-fixtures'),held:(()=>void)[]=[];let holding=true;
     await page.routeWebSocket('**/web/v1/live',socket=>{
         const server=socket.connectToServer(),prefetch=new Set<string>();
@@ -110,6 +111,7 @@ test('WEB-MSG-THREAD-CORE first transcript paints while prefetched pages are del
     });
     await page.goto('/messages/'+encodeURIComponent(ids['message-chat'])+'/'+encodeURIComponent(ids[native(58)]));
     const transcript=page.locator('.messages-transcript');await expect.poll(()=>held.length).toBeGreaterThan(0);
+    expect(await page.evaluate(()=>(window as any).__prefetchRows.every((count:number)=>count>0))).toBe(true);
     await expect(transcript).toHaveAttribute('aria-busy','false');await expect(row(page,ids,58)).toBeVisible();await expect(transcript).toHaveAttribute('data-window-size','100');
     await expect(page.locator('.transcript')).toHaveCSS('transform','none');
     const origin=await row(page,ids,58).boundingBox();holding=false;held.splice(0).forEach(release=>release());
@@ -119,6 +121,7 @@ test('WEB-MSG-THREAD-CORE first transcript paints while prefetched pages are del
 
 test('WEB-MSG-THREAD-CORE first resize keeps the requested key after prefetch prepends rows',async({page,request})=>{
     await page.addInitScript(()=>{
+        const send=WebSocket.prototype.send;(window as any).__latestSentRows=[];WebSocket.prototype.send=function(data){if(typeof data==='string'){const frame=JSON.parse(data);if(frame.t==='sub'&&frame.view==='thread'&&frame.args.anchor==='latest'&&frame.args.limit===100)(window as any).__latestSentRows.push(document.querySelectorAll('.message-row').length);}return send.call(this,data);};
         const Native=window.ResizeObserver,pending:(()=>void)[]=[];let holding=true;
         (window as any).__releaseTranscriptResize=()=>{holding=false;pending.splice(0).forEach(run=>run());};
         window.ResizeObserver=class extends Native{constructor(callback:ResizeObserverCallback){let transcript=false;super((entries,observer)=>{transcript ||= entries.some(entry=>entry.target instanceof HTMLElement&&entry.target.dataset.scroll==='Messages transcript');if(transcript&&holding)pending.push(()=>callback(entries,observer));else callback(entries,observer);});}};
@@ -128,6 +131,8 @@ test('WEB-MSG-THREAD-CORE first resize keeps the requested key after prefetch pr
     await page.goto('/messages/'+encodeURIComponent(ids['message-chat'])+'/'+encodeURIComponent(target));
     const viewport=page.getByRole('listbox',{name:'Messages transcript'});
     await expect.poll(async()=>Number(await viewport.locator('.virtual-row').first().getAttribute('aria-setsize'))).toBeGreaterThan(100);
+    await expect(page.locator('[data-message="'+target+'"]')).toHaveCount(1);
+    await expect.poll(()=>page.evaluate(()=>(window as any).__latestSentRows[0]??0)).toBeGreaterThan(0);
     await page.evaluate(()=>(window as any).__releaseTranscriptResize());
     const selected=page.locator('[data-message="'+target+'"]');await expect(selected).toBeInViewport();await expect(selected.locator('..')).toHaveAttribute('aria-selected','true');
 });
