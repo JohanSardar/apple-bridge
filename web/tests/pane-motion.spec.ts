@@ -31,3 +31,14 @@ test('WEB-MOTION WEB-MOTION-PANE-WIDTH uses cached pane geometry during trusted 
         await expect(pane).toHaveCSS('transform','none');await page.goBack();await expect(page).toHaveURL(/\/messages$/u);
     }
 });
+
+test('WEB-MOTION covered phone sidebar preserves scroll through cancelled and committed back gestures',async({page})=>{
+    await page.setViewportSize({width:390,height:844});await prepareSession(page);await page.goto('/messages');await expect(page.locator('.conversation-row').first()).toBeVisible();
+    const list=page.getByRole('listbox',{name:'Conversations',exact:true});await list.evaluate(element=>element.scrollTop=600);await expect.poll(()=>list.evaluate(element=>element.scrollTop)).toBeGreaterThan(0);
+    const id=await page.evaluate(()=>document.elementFromPoint(180,300)?.closest('.conversation-row')?.getAttribute('data-chat'));expect(id).toBeTruthy();const selected=page.locator('.conversation-row[data-chat="'+id+'"]');await selected.click();const top=await list.evaluate(element=>element.scrollTop);
+    const sidebar=page.locator('.sidebar'),pane=page.locator('.transcript');await expect(pane).toHaveCSS('transform','none');await expect(sidebar).toHaveCSS('content-visibility','hidden');
+    await page.mouse.move(5,400);await page.mouse.down();await page.mouse.move(85,400,{steps:10});await expect(sidebar).toHaveCSS('content-visibility','visible');await page.waitForTimeout(100);await page.mouse.up();
+    await expect(pane).toHaveCSS('transform','none');await expect(sidebar).toHaveCSS('content-visibility','hidden');
+    await page.mouse.move(5,400);await page.mouse.down();await page.mouse.move(250,400,{steps:10});await page.mouse.up();await expect(page).toHaveURL(/\/messages$/u);await expect(sidebar).toHaveCSS('content-visibility','visible');await expect(selected).toBeVisible();await expect.poll(async()=>Math.abs(await list.evaluate(element=>element.scrollTop)-top)).toBeLessThanOrEqual(1);
+    await page.emulateMedia({reducedMotion:'reduce'});await selected.click();await expect(sidebar).toHaveCSS('content-visibility','visible');
+});

@@ -26,12 +26,12 @@ export function decodeThumbHash(value: string): ThumbPixels | undefined {
         const rgba = new Uint8ClampedArray(width * height * 4);
         const cosineX=Array.from({length:width},(_,x)=>Array.from({length:7},(_,frequency)=>Math.cos(Math.PI*(x+.5)*frequency/width)));
         const cosineY=Array.from({length:height},(_,y)=>Array.from({length:7},(_,frequency)=>Math.cos(Math.PI*(y+.5)*frequency/height)));
+        const sum=(coefficients:typeof l,dc:number,x:number,y:number)=>{for(const coefficient of coefficients)dc+=2*coefficient.value*cosineX[x][coefficient.x]*cosineY[y][coefficient.y];return dc;};
         for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
-            const sum = (coefficients: typeof l, dc: number) => coefficients.reduce((value, coefficient) => value + 2 * coefficient.value * cosineX[x][coefficient.x] * cosineY[y][coefficient.y], dc);
-            const light = sum(l, (header & 63) / 63), blueYellow = sum(p, ((header >> 6) & 63) / 31.5 - 1), redGreen = sum(q, ((header >> 12) & 63) / 31.5 - 1);
+            const light = sum(l, (header & 63) / 63,x,y), blueYellow = sum(p, ((header >> 6) & 63) / 31.5 - 1,x,y), redGreen = sum(q, ((header >> 12) & 63) / 31.5 - 1,x,y);
             const blue = light - blueYellow * 2 / 3, red = (3 * light - blue + redGreen) / 2;
             const offset = (y * width + x) * 4;
-            rgba[offset] = red * 255; rgba[offset + 1] = (red - redGreen) * 255; rgba[offset + 2] = blue * 255; rgba[offset + 3] = (alpha ? sum(a, (hash[5] & 15) / 15) : 1) * 255;
+            rgba[offset] = red * 255; rgba[offset + 1] = (red - redGreen) * 255; rgba[offset + 2] = blue * 255; rgba[offset + 3] = (alpha ? sum(a, (hash[5] & 15) / 15,x,y) : 1) * 255;
         }
         return { width, height, rgba };
     } catch { return; }
