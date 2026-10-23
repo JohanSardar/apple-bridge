@@ -26,7 +26,8 @@ export function createMessageActions(live:LiveClient,capabilities:{allowed:(oper
     const [target,setTarget]=createSignal<ActionTarget>(),[revision,setRevision]=createSignal(0),[error,setError]=createSignal('');
     const [flight,setFlight]=createSignal<{symbol:string;color:string;from:DOMRect;to:DOMRect;key:number}>();
     const captured=new Map<string,ThreadItem>(),intents=new Map<string,Intent>();
-    let flightKey=0;
+    let flightKey=0,flightFrame=0;
+    const clearFlight=()=>{cancelAnimationFrame(flightFrame);setFlight();};
     const changed=()=>setRevision(value=>value+1);
     const current=()=>{const value=target();return value?{...value,item:captured.get(value.item.id)??value.item}:undefined;};
     const changes=createMessageChanges(live,capabilities.allowed,current,()=>{setTarget();setError('');});
@@ -70,7 +71,8 @@ export function createMessageActions(live:LiveClient,capabilities:{allowed:(oper
             const remove=selected(choice),from=!remove?(event.currentTarget instanceof HTMLElement?event.currentTarget:value.anchor).getBoundingClientRect():undefined,to=from?value.anchor.getBoundingClientRect():undefined;
             const id=live.command('messages.react',{id:value.item.id,part_index:value.partIndex,reaction:choice.kind,...(choice.kind==='emoji'?{emoji:choice.emoji}:{}),remove});
             intents.set(value.item.id+'/'+value.partIndex+'/'+family(choice),{commandID:id,messageID:value.item.id,chatID:String(value.item.data.chat_id??''),partIndex:value.partIndex,choice:{...choice},remove});
-            if(!remove)setFlight({symbol:choice.symbol,color:choice.kind==='love'?'var(--red)':'var(--blue)',from:from!,to:to!,key:++flightKey});
+            clearFlight();
+            if(!remove)flightFrame=requestAnimationFrame(()=>{flightFrame=requestAnimationFrame(()=>setFlight({symbol:choice.symbol,color:choice.kind==='love'?'var(--red)':'var(--blue)',from:from!,to:to!,key:++flightKey}));});
             changed();close();
         }));}catch{setError("Can't react right now. Check your connection.");}
     };
@@ -109,9 +111,9 @@ export function createMessageActions(live:LiveClient,capabilities:{allowed:(oper
     const canSave=()=>{const value=attachment();return Boolean(value&&attachmentOriginal(value));};
     const save=(event:Event)=>{if(!event.isTrusted)return;const value=attachment();if(!value)return;try{withInput(event,()=>{if(saveAttachment(value))close();else setError("Original attachment is unavailable.");});}catch{setError("Couldn't download this attachment.");}};
     const canForward=()=>Boolean((text()||canSave()&&Number(attachment()?.data.size)<=100*1024*1024)&&live.status()==='connected'&&capabilities.allowed('messages.send'));
-    const leaveChat=(chatID:string)=>{changes.leaveChat(chatID);management.leaveChat(chatID);};
-    const dispose=()=>{setTarget();setReplyTarget();captured.clear();intents.clear();setFlight();};
+    const leaveChat=(chatID:string)=>{changes.leaveChat(chatID);management.leaveChat(chatID);clearFlight();};
+    const dispose=()=>{setTarget();setReplyTarget();captured.clear();intents.clear();clearFlight();};
     onCleanup(dispose);
-    return {target:current,open,close,replying,canReplyOperation,canReply,beginReply,cancelReply,changes,management,leaveChat,canSave,save,canForward,forwardAttachment:attachment,canReact,available,react,selected,unknown,busy,problem,check,checkID,notice,connected:()=>live.status()==='connected',copy,text,observe,flight,clearFlight:()=>setFlight(),dispose};
+    return {target:current,open,close,replying,canReplyOperation,canReply,beginReply,cancelReply,changes,management,leaveChat,canSave,save,canForward,forwardAttachment:attachment,canReact,available,react,selected,unknown,busy,problem,check,checkID,notice,connected:()=>live.status()==='connected',copy,text,observe,flight,clearFlight,dispose};
 }
 export type MessageActionsController=ReturnType<typeof createMessageActions>;
