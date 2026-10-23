@@ -1,0 +1,8 @@
+.media-fixture[aria-label="Stickers and Genmoji"]{padding:48px;overflow:visible}
+.media-fixture [data-sticker-target]{position:relative;width:280px;height:88px;border-radius:18px;background:var(--background-secondary)}
+.media-fixture [data-sticker-target]>span:first-child{display:block;padding:12px}
+.media-fixture [data-sticker-target]>button[aria-label="Activate sticker target"]{position:absolute;inset:0;border:0;background:transparent}
+.media-fixture [data-sticker-target]>button[aria-label="Sticker target reaction"]{position:absolute;right:-8px;top:-12px;width:24px;height:24px;border-radius:50%;border:0;background:var(--background-secondary);padding:0;display:grid;place-items:center;z-index:4}
+.media-fixture [data-genmoji-source]{display:flex;align-items:center;font-size:17px;line-height:22px;margin:0}
+.media-fixture [data-genmoji-source] .genmoji{display:block;vertical-align:top}
+.media-fixture [data-sticker-animation]{position:relative;width:64px;height:64px}
