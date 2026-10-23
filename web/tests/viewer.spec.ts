@@ -8,6 +8,7 @@ async function setup(context:BrowserContext,request:APIRequestContext){const val
 test('WEB-MSG-VIEWER META collection source pages beyond the transcript window with interleaved photos and playable video',async({page,context,request},info)=>{
  const ids=await setup(context,request),subscriptions:Record<string,unknown>[]=[],viewerChunks:string[]=[];
  await page.addInitScript(()=>{window.requestIdleCallback=callback=>{(window as any).__viewerIdle=()=>callback({didTimeout:false,timeRemaining:()=>50});return 1;};window.cancelIdleCallback=()=>{delete (window as any).__viewerIdle;};});
+ await page.addInitScript(()=>{const show=HTMLDialogElement.prototype.showModal,send=WebSocket.prototype.send;(window as any).__collectionAfterPaint=[];HTMLDialogElement.prototype.showModal=function(){const result=show.call(this);if(this.classList.contains('media-viewer'))requestAnimationFrame(()=>(window as any).__viewerFrame=true);return result;};WebSocket.prototype.send=function(data){if(typeof data==='string'){const frame=JSON.parse(data);if(frame.t==='sub'&&frame.view==='collection'&&frame.args.kind==='media')(window as any).__collectionAfterPaint.push(Boolean((window as any).__viewerFrame));}return send.call(this,data);};});
  await page.addInitScript(id=>{const show=HTMLDialogElement.prototype.showModal;HTMLDialogElement.prototype.showModal=function(){if(this.classList.contains('media-viewer'))(window as any).__sourceHiddenBeforeModal=[...document.querySelectorAll<HTMLElement>('[data-message="'+id+'"],[data-message="'+id+'"] *')].some(element=>element.style.visibility==='hidden');return show.call(this);};},ids['demo-message-00-000032']);
  page.on('request',request=>{if(/\/assets\/ViewerSession-[^/]+\.js$/u.test(new URL(request.url()).pathname))viewerChunks.push(request.url());});
  await page.addInitScript(()=>Object.defineProperty(navigator,'share',{value:async(payload:ShareData)=>{Object.defineProperty(window,'viewerShared',{value:payload,configurable:true});}}));
@@ -25,6 +26,7 @@ test('WEB-MSG-VIEWER META collection source pages beyond the transcript window w
  await expect(viewer.locator('.media-viewer-heading time')).toHaveText('Dec 31, 2024 at 6:11 PM');
  expect(subscriptions.some(value=>value.view==='collection'&&(value.args as Record<string,unknown>).kind==='media')).toBe(true);
  expect(subscriptions.filter(value=>value.view==='collection').length).toBeGreaterThan(1);
+ expect(await page.evaluate(()=>(window as any).__collectionAfterPaint.every(Boolean))).toBe(true);
  await expect(page.locator('.media-fixture-slot')).toHaveCount(1);
  await expect(viewer.locator('.media-viewer-stage .media-image')).toHaveAttribute('data-media-state','ready');expect(variants).toContain('display');
  await page.mouse.move(24,24);await viewer.getByRole('button',{name:'Share media'}).click();expect(await page.evaluate(()=>Boolean((window as unknown as {viewerShared?:ShareData}).viewerShared?.url))).toBe(true);
