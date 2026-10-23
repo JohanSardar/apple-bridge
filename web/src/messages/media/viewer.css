@@ -1,4 +1,4 @@
-.media-viewer{position:fixed;inset:0;margin:0;padding:0;width:100vw;height:100dvh;max-width:none;max-height:none;border:0;background:transparent;color:var(--label);overflow:hidden;touch-action:none;user-select:none;outline:none;overscroll-behavior:contain}
+.media-viewer{position:fixed;inset:0;margin:0;padding:0;width:100vw;height:100dvh;max-width:none;max-height:none;border:0;background:transparent;color:var(--label);overflow:hidden;touch-action:none;user-select:none;outline:none;overscroll-behavior:contain;contain:strict}
 .media-viewer::backdrop{background:transparent}
 .media-viewer-backdrop{position:absolute;inset:0;background:var(--background);opacity:0;pointer-events:none}
 .media-viewer-preview{position:absolute;inset:0;opacity:0;pointer-events:none;will-change:transform}

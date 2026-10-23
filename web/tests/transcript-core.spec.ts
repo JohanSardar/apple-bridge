@@ -1,11 +1,12 @@
-import { test, expect, type Page, type APIRequestContext } from '@playwright/test';
+import { test, expect, type Page, type APIRequestContext, type BrowserContext } from '@playwright/test';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { prepareSession, control } from './session';
 test.use({deviceScaleFactor:2});
 type Fixtures=Record<string,string>;
+let initialSession:Parameters<BrowserContext['addCookies']>[0]|undefined;
 const native=(index:number)=>'demo-message-00-'+String(index).padStart(6,'0');
 async function fixture(page:Page,request:APIRequestContext,index:number){
-    await prepareSession(page);
+    await prepareSession(page);initialSession??=await page.context().cookies();
     const ids:Fixtures=await control(request,'/demo-fixtures');
     await page.clock.setFixedTime(new Date('2026-10-20T16:00:00Z'));
     await jump(page,ids,index);
@@ -98,4 +99,20 @@ test('WEB-MSG-THREAD-CORE transcript keeps a visible bubble fixed when paging fo
     const difference=await bubble.evaluate(element=>element.getBoundingClientRect().bottom-element.closest('.virtual-viewport')!.getBoundingClientRect().bottom);
     expect(Math.abs(difference)).toBeLessThanOrEqual(1);
     expect(Number(await window.getAttribute('data-window-size'))).toBeLessThanOrEqual(500);
+});
+
+test('WEB-MSG-THREAD-CORE first transcript paints while prefetched pages are delayed',async({page,request})=>{
+    if(initialSession)await page.context().addCookies(initialSession);else await prepareSession(page);const ids:Fixtures=await control(request,'/demo-fixtures'),held:(()=>void)[]=[];let holding=true;
+    await page.routeWebSocket('**/web/v1/live',socket=>{
+        const server=socket.connectToServer(),prefetch=new Set<string>();
+        socket.onMessage(data=>{const frame=JSON.parse(String(data));if(frame.t==='sub'&&frame.view==='thread'&&(frame.args.before||frame.args.after))prefetch.add(frame.id);server.send(data);});
+        server.onMessage(data=>{const frame=JSON.parse(String(data));if(holding&&prefetch.has(frame.sub)){held.push(()=>socket.send(data));return;}socket.send(data);});
+    });
+    await page.goto('/messages/'+encodeURIComponent(ids['message-chat'])+'/'+encodeURIComponent(ids[native(58)]));
+    const transcript=page.locator('.messages-transcript');await expect.poll(()=>held.length).toBeGreaterThan(0);
+    await expect(transcript).toHaveAttribute('aria-busy','false');await expect(row(page,ids,58)).toBeVisible();await expect(transcript).toHaveAttribute('data-window-size','100');
+    await expect(page.locator('.transcript')).toHaveCSS('transform','none');
+    const origin=await row(page,ids,58).boundingBox();holding=false;held.splice(0).forEach(release=>release());
+    await expect.poll(async()=>Number(await transcript.getAttribute('data-window-size'))).toBeGreaterThan(100);
+    await expect.poll(async()=>Math.abs((await row(page,ids,58).boundingBox())!.y-origin!.y)).toBeLessThanOrEqual(1);
 });

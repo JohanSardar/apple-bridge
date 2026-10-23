@@ -10,18 +10,21 @@ type Subscription={data:Accessor<ViewData>;cursor:Accessor<Cursor|undefined>;dis
 export function createThreadWindow(live:LiveClient,chat:string,initialAnchor='unread',originator?:string){
     const pageSize=originator?40:threadPageSize,windowLimit=originator?200:threadWindowLimit;
     const scope=originator?{thread_originator_id:originator}:{};
-    const [anchor,setAnchor]=createSignal(initialAnchor),[loading,setLoading]=createSignal(true);
+    const [anchor,setAnchor]=createSignal(initialAnchor),[loading,setLoading]=createSignal(true),[prefetching,setPrefetching]=createSignal(true);
     const [window,setWindow]=createSignal<WindowState>({anchor:initialAnchor,items:[],older:0,newer:0});
     let publishedAnchor='',frame=0;
     let retained=new Map<string,{item:ThreadItem;epoch?:string;sequence:number}>();
     onCleanup(()=>cancelAnimationFrame(frame));
     createEffect(()=>{
-        const value=anchor();setLoading(true);
+        const value=anchor();setLoading(true);setPrefetching(true);
+        let warmFrame=0,warming=Boolean(publishedAnchor);
+        const [warm,setWarm]=createSignal(warming);
+        onCleanup(()=>cancelAnimationFrame(warmFrame));
         const main:Subscription=live.subscribe('thread',{chat_id:chat,anchor:value,limit:pageSize,...scope});
         onCleanup(()=>{main.dispose();cancelAnimationFrame(frame);});
         function prefetch(source:Subscription,direction:'before'|'after',depth:number):Accessor<Pages>{
             const [result,setResult]=createSignal<Pages>({ready:false,pages:[]});
-            const token=createMemo(()=>source.data()[direction]);
+            const token=createMemo(()=>warm()?source.data()[direction]:undefined);
             createEffect(()=>{
                 const requested=token();
                 if(!requested){setResult({ready:true,pages:[],token:requested});return;}
@@ -60,12 +63,13 @@ export function createThreadWindow(live:LiveClient,chat:string,initialAnchor='un
             const items=next.length===previous.items.length&&next.every((item,index)=>item===previous.items[index])?previous.items:next;
             const first=older.pages.at(-1)?.data??center.data,last=newer.pages.at(-1)?.data??center.data;
             publishedAnchor=value;retained=new Map(next.map(item=>[item.id,versions.get(item.id)!]));
-            batch(()=>{setWindow({cursor:coherent?head:undefined,anchor:value,items,before:first.before,after:last.after,older:Number(first.older??0),newer:Number(last.newer??0),unread:center.data.unread_anchor});setLoading(false);});
+            batch(()=>{setWindow({cursor:coherent?head:undefined,anchor:value,items,before:first.before,after:last.after,older:Number(first.older??0),newer:Number(last.newer??0),unread:center.data.unread_anchor});setLoading(false);setPrefetching(!warm());});
+            if(!warming){warming=true;warmFrame=requestAnimationFrame(()=>{warmFrame=requestAnimationFrame(()=>setWarm(true));});}
             });
         });
     });
     function visible(start:number,end:number){
-        const state=untrack(window);if(untrack(loading)||state.items.length<pageSize)return;
+        const state=untrack(window);if(untrack(loading)||untrack(prefetching)||state.items.length<pageSize)return;
         const edge=Math.floor(pageSize/4),step=Math.floor(pageSize/2);
         const id=start<edge&&state.before?state.items[Math.min(start+step,state.items.length-1)]?.id:end>state.items.length-edge&&state.after?state.items[Math.max(0,end-step)]?.id:undefined;
         if(id&&id!==untrack(anchor))setAnchor(id);
