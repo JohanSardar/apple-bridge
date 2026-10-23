@@ -263,6 +263,10 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 	err = w.Await(15*time.Second, func() bool { var ok bool; note, ok = find("notes.note", title); return ok })
 	add("external_note_imported", err == nil)
 	if err != nil {
+		if s.ID == "NOTE-EXTERNAL" {
+			notesImportDiagnostics(w, &e, title)
+			e.Metrics["notes_import_context_expired"] = ctx.Err() != nil
+		}
 		return
 	}
 	if s.ID == "NOTE-IMPORT" && level == "sim" {
@@ -300,48 +304,11 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 		return
 	}
 	if s.ID == "NOTE-EXTERNAL" {
-		samples := []float64{}
-		for i := 0; i < 5; i++ {
-			replacement := fmt.Sprintf("%s edit-%d", tag, i)
-			effectNS := world.UptimeNS()
-			if level == "sim" {
-				data := map[string]any{"title": replacement, "plain_text": replacement + "\nbody\n", "locked": false, "editable": "plain", "folder_id": map[string]any{"$ref": map[string]string{"collection": "notes.folder", "native_key": "note-folder"}}}
-				err = w.ControlAction("/external-change", map[string]any{"key": "external-note", "collection": "notes.note", "data": data})
-			} else {
-				response, fixtureErr := w.Truth("observe", map[string]any{"source": "notes", "tag": tag})
-				if fixtureErr != nil {
-					add("truth_before_edit", false)
-					return
-				}
-				rows, _ := response["records"].([]any)
-				if len(rows) != 1 {
-					add("truth_identity", false)
-					return
-				}
-				response, err = w.Truth("fixture", map[string]any{"source": "notes", "tag": tag, "action": "modify", "id": rows[0].(map[string]any)["id"], "plain_text": replacement + "\nbody"})
-				if err == nil {
-					if number, ok := response["effect_uptime_ns"].(json.Number); ok {
-						effectNS, _ = number.Int64()
-					}
-				}
-			}
-			if level == "sim" {
-				effectNS = world.UptimeNS()
-			}
-			if err != nil {
-				add("native_edit", false)
-				return
-			}
-			err = w.Await(15*time.Second, func() bool { _, ok := find("notes.note", replacement); return ok })
-
-			if err != nil {
-				add("external_edit_visible", false)
-				return
-			}
-			samples = append(samples, float64(world.UptimeNS()-effectNS)/float64(time.Millisecond))
+		err := measureNotesExternal(ctx, w, level, tag, note.ID, &e)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "notes visibility:", err)
 		}
-		e.Latency["native_save_to_copy_visible_ms"] = stats(samples, 0)
-		add("external_edits_converge", true)
+		add("external_edits_converge", err == nil)
 		return
 	}
 	truthMatches := func(record contracts.Record) bool {

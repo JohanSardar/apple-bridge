@@ -13,6 +13,13 @@ enum NotesSourceFixture {
         var handles: [String: String] = [:]
         func sourceState(source: String, state: String, coverage: JSON, capabilities: [String], reason: String) async throws {}
         func emit(source: String, generation: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) async throws {
+            if live {
+                var sawNote = false
+                for item in observations where item["kind"].string == "upsert" {
+                    if item["collection"].string == "notes.note" { sawNote = true }
+                    if item["collection"].string == "notes.folder", sawNote { throw Invalid.projection }
+                }
+            }
             for item in observations { records[item["native_key"].string] = item }
             handles.merge(blobHandles) { _, new in new }
         }
@@ -44,14 +51,16 @@ enum NotesSourceFixture {
         try sql("INSERT INTO Z_METADATA VALUES('ab-test-notes-store')")
         try sql("CREATE TABLE Z_PRIMARYKEY(Z_ENT INTEGER,Z_NAME TEXT)")
         try sql("INSERT INTO Z_PRIMARYKEY VALUES(1,'ICFolder'),(2,'ICNote'),(3,'ICAccount'),(4,'ICAttachment'),(5,'ICMedia')")
-        try sql("CREATE TABLE ZICNOTEDATA(Z_PK INTEGER PRIMARY KEY,ZDATA BLOB)")
-        try sql("CREATE TABLE ZICCLOUDSYNCINGOBJECT(Z_PK INTEGER PRIMARY KEY,Z_ENT INTEGER,ZIDENTIFIER TEXT,ZTITLE1 TEXT,ZTITLE2 TEXT,ZNAME TEXT,ZACCOUNT8 INTEGER,ZPARENT INTEGER,ZFOLDER INTEGER,ZNOTEDATA INTEGER,ZMARKEDFORDELETION INTEGER DEFAULT 0,ZFOLDERTYPE INTEGER DEFAULT 0,ZISPASSWORDPROTECTED INTEGER DEFAULT 0,ZISPINNED INTEGER DEFAULT 0,ZNOTE1 INTEGER,ZPARENTATTACHMENT INTEGER,ZMEDIA INTEGER,ZTYPEUTI1 TEXT,ZFILENAME TEXT,ZMERGEABLEDATA1 BLOB,ZALTTEXT TEXT,ZGENERATION TEXT)")
+        try sql("CREATE TABLE ZICNOTEDATA(Z_PK INTEGER PRIMARY KEY,ZDATA BLOB,Z_OPT INTEGER DEFAULT 1)")
+        try sql("CREATE TABLE ZICCLOUDSYNCINGOBJECT(Z_PK INTEGER PRIMARY KEY,Z_ENT INTEGER,ZIDENTIFIER TEXT,ZTITLE1 TEXT,ZTITLE2 TEXT,ZNAME TEXT,ZACCOUNT8 INTEGER,ZPARENT INTEGER,ZFOLDER INTEGER,ZNOTEDATA INTEGER,ZMARKEDFORDELETION INTEGER DEFAULT 0,ZFOLDERTYPE INTEGER DEFAULT 0,ZISPASSWORDPROTECTED INTEGER DEFAULT 0,ZISPINNED INTEGER DEFAULT 0,ZNOTE1 INTEGER,ZPARENTATTACHMENT INTEGER,ZMEDIA INTEGER,ZTYPEUTI1 TEXT,ZFILENAME TEXT,ZMERGEABLEDATA1 BLOB,ZALTTEXT TEXT,ZGENERATION TEXT,Z_OPT INTEGER DEFAULT 1)")
         try sql("INSERT INTO ZICCLOUDSYNCINGOBJECT(Z_PK,Z_ENT,ZIDENTIFIER,ZNAME) VALUES(1,3,'account','Bridge Test Account')")
         try sql("INSERT INTO ZICCLOUDSYNCINGOBJECT(Z_PK,Z_ENT,ZIDENTIFIER,ZTITLE2,ZACCOUNT8,ZPARENT,ZFOLDERTYPE) VALUES(10,1,'root','Bridge Test',1,NULL,0),(11,1,'trash','Recently Deleted',1,NULL,1),(12,1,'nested','Nested',1,10,0)")
+        try sql("CREATE TRIGGER object_revision AFTER UPDATE ON ZICCLOUDSYNCINGOBJECT WHEN NEW.Z_OPT=OLD.Z_OPT BEGIN UPDATE ZICCLOUDSYNCINGOBJECT SET Z_OPT=OLD.Z_OPT+1 WHERE Z_PK=NEW.Z_PK; END")
+        try sql("CREATE TRIGGER body_revision AFTER UPDATE ON ZICNOTEDATA WHEN NEW.Z_OPT=OLD.Z_OPT BEGIN UPDATE ZICNOTEDATA SET Z_OPT=OLD.Z_OPT+1 WHERE Z_PK=NEW.Z_PK; END")
         let body = try Data(contentsOf: fixtures.appendingPathComponent("full.gz"))
         let table = try Data(contentsOf: fixtures.appendingPathComponent("full-table.gz"))
-        try sql("INSERT INTO ZICNOTEDATA VALUES(1,?)", blob: body)
-        try sql("INSERT INTO ZICNOTEDATA VALUES(2,?)", blob: Data(contentsOf: fixtures.appendingPathComponent("large-body.gz")))
+        try sql("INSERT INTO ZICNOTEDATA(Z_PK,ZDATA) VALUES(1,?)", blob: body)
+        try sql("INSERT INTO ZICNOTEDATA(Z_PK,ZDATA) VALUES(2,?)", blob: Data(contentsOf: fixtures.appendingPathComponent("large-body.gz")))
         try sql("INSERT INTO ZICCLOUDSYNCINGOBJECT(Z_PK,Z_ENT,ZIDENTIFIER,ZTITLE1,ZFOLDER,ZNOTEDATA,ZISPINNED,ZISPASSWORDPROTECTED) VALUES(20,2,'note','[ab-test] Full',12,1,1,0),(21,2,'locked','[ab-test] Locked',12,1,0,1),(22,2,'deleted','[ab-test] Deleted',11,1,0,0)")
         try sql("INSERT INTO ZICCLOUDSYNCINGOBJECT(Z_PK,Z_ENT,ZIDENTIFIER,ZTITLE1,ZFOLDER,ZNOTEDATA) VALUES(24,2,'large','[ab-test] Large',12,2)")
         try sql("INSERT INTO ZICCLOUDSYNCINGOBJECT(Z_PK,Z_ENT,ZIDENTIFIER,ZNOTE1,ZMEDIA,ZTYPEUTI1) VALUES(30,4,'fixture-image',20,31,'public.data'),(32,4,'fixture-table',20,NULL,'com.apple.notes.table')")
@@ -62,10 +71,11 @@ enum NotesSourceFixture {
         let original = Data("[ab-test] exact Notes attachment bytes 🧪".utf8)
         try original.write(to: media)
         for (pk, name) in [(3, "native-plain"), (4, "native-rich"), (5, "split-title"), (6, "title-attachment")] {
-            try sql("INSERT INTO ZICNOTEDATA VALUES(\(pk),?)", blob: Data(contentsOf: fixtures.appendingPathComponent(name + ".gz")))
+            try sql("INSERT INTO ZICNOTEDATA(Z_PK,ZDATA) VALUES(\(pk),?)", blob: Data(contentsOf: fixtures.appendingPathComponent(name + ".gz")))
             try sql("INSERT INTO ZICCLOUDSYNCINGOBJECT(Z_PK,Z_ENT,ZIDENTIFIER,ZTITLE1,ZFOLDER,ZNOTEDATA) VALUES(\(40 + pk),2,'\(name)','[ab-test] Synthetic',12,\(pk))")
         }
-        let source = try NotesSource(home: home, fixtureDatabase: database), sink = Sink()
+        let traceURL = root.appendingPathComponent("capture-trace.jsonl")
+        let source = try NotesSource(home: home, fixtureDatabase: database, trace: CaptureTrace(url: traceURL)), sink = Sink()
         guard !(await source.open()).capabilities.contains("notes.delete") else { throw Invalid.boundary }
         for operation in ["notes.delete", "notes.delete_folder"] {
             let action = JSON.object(["op": .string(operation), "native_key": .string("native-plain")])
@@ -75,6 +85,7 @@ enum NotesSourceFixture {
             catch SourceFailure.capabilityUnproven {}
         }
         try await source.reconcile(into: sink)
+        try await source.waitForHydration()
         let note = await sink.record("note"), locked = await sink.record("locked"), deleted = await sink.record("deleted")
         let large = await sink.record("large")
         let plain = await sink.record("native-plain"), rich = await sink.record("native-rich")
@@ -190,10 +201,62 @@ enum NotesSourceFixture {
         print("Notes deletion: no-op command cannot qualify; marked/trash/gone states and OS-build invalidation verified")
         do { _ = try source.readBlob("notes-blob:" + String(repeating: "0", count: 64), offset: 0, length: 1); throw Invalid.boundary }
         catch SourceFailure.unavailable {}
+        let hold = home.appendingPathComponent("lab-notes-hold-hydration")
+        try Data().write(to: hold)
+        try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET ZTITLE1='[ab-test] Incremental 1' WHERE Z_PK=20")
+        try await source.reconcile(into: sink)
+        let first = await sink.record("note")
+        guard first["data"]["title"].string == "[ab-test] Incremental 1", first["data"]["body_status"].string == "pending", first["data"]["content_status"].string == "partial",
+              !first["data"]["plain_text"].string.isEmpty, first["data"]["blocks"] == .null,
+              source.lastChangedNotes == 1, source.bootstrapScans == 1 else { throw Invalid.projection }
+        try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET ZTITLE1='[ab-test] Incremental 2' WHERE Z_PK=20")
+        try await source.reconcile(into: sink)
+        guard source.lastChangedNotes == 1 else { throw Invalid.projection }
+        try FileManager.default.removeItem(at: hold)
+        try await source.waitForHydration()
+        let final = await sink.record("note")
+        guard final["data"]["title"].string == "[ab-test] Incremental 2", final["data"]["blocks"].array.first?["type"].string == "title" else { throw Invalid.projection }
+        try sql("UPDATE ZICNOTEDATA SET ZDATA=? WHERE Z_PK=2", blob: body)
+        try await source.reconcile(into: sink)
+        guard source.lastChangedNotes == 1, (await sink.record("large"))["data"]["plain_text"] == note["data"]["plain_text"] else { throw Invalid.projection }
+        try await source.waitForHydration()
+        try sql("DELETE FROM ZICCLOUDSYNCINGOBJECT WHERE Z_PK=24")
+        try await source.reconcile(into: sink)
+        guard (await sink.record("large"))["kind"].string == "absent" else { throw Invalid.projection }
+        try sql("ALTER TABLE ZICCLOUDSYNCINGOBJECT ADD COLUMN ZSCHEMAFIXTURE INTEGER")
+        try await source.reconcile(into: sink)
+        try await source.waitForHydration()
+        guard source.bootstrapScans == 2 else { throw Invalid.projection }
+        let events = try String(contentsOf: traceURL, encoding: .utf8).split(separator: "\n").map { try JSONDecoder().decode(JSON.self, from: Data($0.utf8)) }
+        let started = events.first { $0["stage"].string == "notes_hydration_started" }?["uptime_ns"].number ?? 0
+        let committed = events.first { $0["stage"].string == "notes_capture_committed" }?["uptime_ns"].number ?? 0
+        guard committed > 0, started > committed else { throw Invalid.projection }
+        print("Notes metadata commits before hydration; single-row/body-only changes, stale hydration, hard deletion and schema checkpoint fallback passed")
+        let downloaded = Data("[ab-test] replacement Native media bytes".utf8)
+        try downloaded.write(to: media)
+        try await source.reconcile(into: sink, assetPaths: [media.standardizedFileURL.path])
+        try await source.waitForHydration()
+        let downloadedBlob = (await sink.record("note"))["data"]["attachments"].array.first { $0["id"].string == "fixture-image" }?["blob"] ?? .null
+        guard source.lastChangedNotes == 0, downloadedBlob["digest"].string == SHA256.hash(data: downloaded).map({ String(format: "%02x", $0) }).joined() else { throw Invalid.blob }
+        try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET ZNOTE1=43 WHERE Z_PK=30")
+        try await source.reconcile(into: sink)
+        try await source.waitForHydration()
+        let detachedBlob = (await sink.record("note"))["data"]["attachments"].array.first { $0["id"].string == "fixture-image" }?["blob"] ?? .null
+        guard source.lastChangedNotes == 2, detachedBlob == .null else { throw Invalid.boundary }
+        try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET ZNOTE1=20 WHERE Z_PK=30")
+        try await source.reconcile(into: sink)
+        try await source.waitForHydration()
+        let restoredBlob = (await sink.record("note"))["data"]["attachments"].array.first { $0["id"].string == "fixture-image" }?["blob"] ?? .null
+        guard source.lastChangedNotes == 2, restoredBlob["digest"] == downloadedBlob["digest"] else { throw Invalid.boundary }
         try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET ZFILENAME='../escape.bin' WHERE Z_PK=31")
         try await source.reconcile(into: sink)
+        try await source.waitForHydration()
         let unsafe = (await sink.record("note"))["data"]["attachments"].array.first { $0["id"].string == "fixture-image" } ?? .null
         guard unsafe["state"].string == "unavailable", unsafe["blob"] == .null else { throw Invalid.boundary }
+        try sql("UPDATE ZICCLOUDSYNCINGOBJECT SET ZPARENT=11 WHERE Z_PK=12")
+        try await source.reconcile(into: sink)
+        try await source.waitForHydration()
+        guard (await sink.record("note"))["data"]["read_only"].bool, (await sink.record("locked"))["data"]["read_only"].bool else { throw Invalid.boundary }
         let moved = root.appendingPathComponent("unavailable.sqlite")
         try FileManager.default.moveItem(at: database, to: moved)
         defer { try? FileManager.default.moveItem(at: moved, to: database) }

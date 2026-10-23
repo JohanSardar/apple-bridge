@@ -15,19 +15,37 @@ enum NotesBodyProjection {
         }
         return result
     }
-    private static func size(_ data: [String: JSON]) throws -> Int {
-        try JSONEncoder().encode(JSON.object(data)).count + Set(references(data).map { $0["digest"].string }).count * 160 + 4096
+    static func pending(_ original: [String: JSON]) -> [String: JSON] {
+        var data = original
+        let text = original["plain_text", default: .string("")].string
+        let lines = text.components(separatedBy: "\n")
+        let content = lines.first == original["title"]?.string ? Array(lines.dropFirst()) : lines
+        let preview = (content.first(where: { !$0.isEmpty }) ?? "").replacingOccurrences(of: "\u{fffc}", with: "")
+        data["preview"] = .string(String(String.UnicodeScalarView(preview.unicodeScalars.prefix(160))))
+        func fits() -> Bool { ((try? JSONEncoder().encode(JSON.object(data)).count) ?? Int.max) < 220000 }
+        if text.utf8.count > 160000 || !fits() { data.removeValue(forKey: "plain_text"); data["search_status"] = .string("metadata_only") }
+        if !fits() {
+            data["title"] = .string(String(String.UnicodeScalarView(original["title", default: .string("")].string.unicodeScalars.prefix(160))))
+            data["title_status"] = .string("metadata_capacity")
+        }
+        return data
+    }
+    private static func size(_ data: [String: JSON]) async throws -> Int {
+        let count = try await Task.detached(priority: .utility) { try JSONEncoder().encode(JSON.object(data)).count }.value
+        return count + Set(references(data).map { $0["digest"].string }).count * 160 + 4096
     }
     static func fit(_ original: [String: JSON], assets: NotesAssets) async throws -> [String: JSON] {
-        guard try size(original) >= 224000 else { return original }
+        guard try await size(original) >= 224000 else { return original }
         var data = original
         if original["locked"]?.bool == true {
             data["title"] = .string(String(String.UnicodeScalarView(original["title", default: .string("")].string.unicodeScalars.prefix(160))))
             data["title_status"] = .string("metadata_capacity")
             return data
         }
-        let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
-        let body = try encoder.encode(JSON.object(["plain_text": original["plain_text"] ?? .string(""), "html": original["html"] ?? .string(""), "blocks": original["blocks"] ?? .array([])]))
+        let body = try await Task.detached(priority: .utility) {
+            let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+            return try encoder.encode(JSON.object(["plain_text": original["plain_text"] ?? .string(""), "html": original["html"] ?? .string(""), "blocks": original["blocks"] ?? .array([])]))
+        }.value
         let lines = original["plain_text", default: .string("")].string.components(separatedBy: "\n")
         let content = lines.first?.trimmingCharacters(in: .whitespacesAndNewlines) == original["title", default: .string("")].string.trimmingCharacters(in: .whitespacesAndNewlines) ? Array(lines.dropFirst()) : lines
         let preview = content.map { $0.replacingOccurrences(of: "\u{fffc}", with: "").split(whereSeparator: \.isWhitespace).joined(separator: " ") }.first(where: { !$0.isEmpty }) ?? ""
@@ -43,21 +61,21 @@ enum NotesBodyProjection {
             data["body_status"] = .string("unavailable")
             data["content_status"] = .string("offloaded")
         }
-        if try size(data) >= 224000 { data.removeValue(forKey: "plain_text"); data["search_status"] = .string("metadata_only") }
-        if try size(data) >= 224000 {
+        if try await size(data) >= 224000 { data.removeValue(forKey: "plain_text"); data["search_status"] = .string("metadata_only") }
+        if try await size(data) >= 224000 {
             let thumb = data["attachments", default: .array([])].array.compactMap { $0["derivatives"]["thumb"] == .null ? nil : $0["derivatives"]["thumb"] }.first
             data["thumbnail"] = thumb
             data["attachments"] = .array([])
             data["attachment_status"] = .string("metadata_capacity")
             data["block_status"] = .string("partial")
         }
-        if try size(data) >= 224000 {
+        if try await size(data) >= 224000 {
             data.removeValue(forKey: "tags")
             data["tags_status"] = .string("metadata_capacity")
             data["title"] = .string(String(String.UnicodeScalarView(original["title", default: .string("")].string.unicodeScalars.prefix(160))))
             data["title_status"] = .string("metadata_capacity")
         }
-        guard try size(data) < 224000 else { throw SourceFailure.invalid }
+        guard try await size(data) < 224000 else { throw SourceFailure.invalid }
         return data
     }
 }

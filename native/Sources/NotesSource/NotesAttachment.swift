@@ -4,7 +4,7 @@ import Decoders
 import UniformTypeIdentifiers
 import CryptoKit
 
-struct NotesAttachment {
+struct NotesAttachment: Sendable {
     let id: String
     let uti: String
     let alternateText: String
