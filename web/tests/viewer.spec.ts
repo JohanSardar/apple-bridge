@@ -1,10 +1,14 @@
-import {test,expect,type APIRequestContext,type BrowserContext} from '@playwright/test';
+import {test,expect,type APIRequestContext,type BrowserContext,type Locator} from '@playwright/test';
 import {control} from './session';
 import {mkdir,readFile,writeFile} from 'node:fs/promises';
 import {gzipSync} from 'node:zlib';
 test.use({locale:'en-US',timezoneId:'America/Chicago'});
 let session:Promise<{cookie:Parameters<BrowserContext['addCookies']>[0][number]}>|undefined;
 async function setup(context:BrowserContext,request:APIRequestContext){const value=await(session??=control(request,'/session?kind=public'));await context.addCookies([value.cookie]);return control(request,'/demo-fixtures');}
+async function transcriptPhotoReady(source:Locator){
+ const image=source.locator('..').locator('.media-image');
+ await expect.poll(async()=>{const retry=image.getByRole('button',{name:'Try again',exact:true});if(await retry.isVisible())await retry.click();return image.getAttribute('data-media-state');}).toBe('ready');
+}
 test('WEB-MSG-VIEWER META collection source pages beyond the transcript window with interleaved photos and playable video',async({page,context,request},info)=>{
  const ids=await setup(context,request),subscriptions:Record<string,unknown>[]=[],viewerChunks:string[]=[];
  await page.addInitScript(()=>{window.requestIdleCallback=callback=>{(window as any).__viewerIdle=()=>callback({didTimeout:false,timeRemaining:()=>50});return 1;};window.cancelIdleCallback=()=>{delete (window as any).__viewerIdle;};});
@@ -128,6 +132,7 @@ test('WEB-MSG-VIEWER opening a transcript photo trims background overscan and re
  const ids=await setup(context,request),id=ids['demo-message-00-000032'];await page.goto('/messages/'+encodeURIComponent(ids['message-chat'])+'/'+encodeURIComponent(id));
  await expect(page.locator('.messages-transcript')).toHaveAttribute('aria-busy','false');await expect(page.locator('main.transcript')).toHaveCSS('transform','none');
  await expect.poll(async()=>Number(await page.locator('.messages-transcript .virtual-row').first().getAttribute('aria-setsize'))).toBeGreaterThan(100);await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+ await transcriptPhotoReady(page.locator('[data-message="'+id+'"] .media-open'));
  const rows=page.locator('.messages-transcript .virtual-row'),before=await rows.count(),source=page.locator('[data-message="'+id+'"] .media-open'),box=await source.boundingBox();
  await source.click();const viewer=page.getByRole('dialog',{name:'Media viewer',exact:true});await expect(viewer).toBeVisible();await expect.poll(()=>rows.count()).toBeLessThan(before);
  await page.keyboard.press('Escape');await expect(viewer).not.toBeVisible();await expect(rows).toHaveCount(before);expect(await source.boundingBox()).toEqual(box);
@@ -138,7 +143,44 @@ test('WEB-MSG-VIEWER early opening preserves source geometry when the held first
  await page.routeWebSocket('**/web/v1/live',socket=>{const server=socket.connectToServer(),prefetch=new Set<string>();socket.onMessage(data=>{const frame=JSON.parse(String(data));if(frame.t==='sub'&&frame.view==='thread'&&(frame.args.before||frame.args.after))prefetch.add(frame.id);server.send(data);});server.onMessage(data=>{const frame=JSON.parse(String(data));if(holding&&prefetch.has(frame.sub))held.push(()=>socket.send(data));else socket.send(data);});});
  try{
   await page.goto('/messages/'+encodeURIComponent(ids['message-chat'])+'/'+encodeURIComponent(id));await expect.poll(()=>held.length).toBeGreaterThan(0);await expect(page.locator('.messages-transcript')).toHaveAttribute('aria-busy','false');await expect(page.locator('main.transcript')).toHaveCSS('transform','none');
+  await transcriptPhotoReady(page.locator('[data-message="'+id+'"] .media-open'));
   const source=page.locator('[data-message="'+id+'"] .media-open'),box=await source.boundingBox();await source.click();const viewer=page.getByRole('dialog',{name:'Media viewer',exact:true});await expect(viewer).toBeVisible();release();
   await expect.poll(async()=>Number(await page.locator('.messages-transcript .virtual-row').first().getAttribute('aria-setsize'))).toBeGreaterThan(100);await page.keyboard.press('Escape');await expect(viewer).not.toBeVisible();expect(await source.boundingBox()).toEqual(box);
  }finally{release();}
+});
+
+test('WEB-MSG-VIEWER retained native shell reopens fresh, releases playback and clears on chat switch',async({page,context,request})=>{
+ const ids=await setup(context,request),id=ids['demo-message-00-000032'];
+ await page.addInitScript(()=>{const show=HTMLDialogElement.prototype.showModal;(window as any).__viewerFirstFrames=[];HTMLDialogElement.prototype.showModal=function(){const result=show.call(this);if(this.classList.contains('media-viewer'))requestAnimationFrame(()=>(window as any).__viewerFirstFrames.push({message:this.dataset.mediaMessage,media:this.querySelector('.media-viewer-stage .media-image')?.getAttribute('data-media-id')}));return result;};});
+ await page.goto('/messages/'+encodeURIComponent(ids['message-chat'])+'/'+encodeURIComponent(id));
+ await expect(page.locator('.messages-transcript')).toHaveAttribute('aria-busy','false');await expect(page.locator('main.transcript')).toHaveCSS('transform','none');
+ const source=page.locator('[data-message="'+id+'"] .media-open').first(),shell=page.locator('dialog.media-viewer'),viewer=page.getByRole('dialog',{name:'Media viewer'});
+ await transcriptPhotoReady(source);await source.click();await expect(viewer).toBeVisible();await expect(viewer).toHaveAttribute('data-media-loading','false');
+ const retained=await shell.elementHandle();await page.keyboard.press('Escape');await expect(viewer).toHaveCount(0);await expect(source).toBeFocused();await expect(shell).toHaveCount(1);await expect(shell).not.toHaveAttribute('open');await expect(shell.locator('img,video,audio')).toHaveCount(0);
+ expect(await shell.evaluate(element=>element.getAnimations({subtree:true}).length)).toBe(0);
+ expect(await shell.evaluate(element=>element.dispatchEvent(new WheelEvent('wheel',{cancelable:true,deltaY:-100})))).toBe(true);
+ const closedStyle=await shell.locator('.media-viewer-stage').getAttribute('style');await page.evaluate(()=>{const width=innerWidth;Object.defineProperty(window,'innerWidth',{value:width+80,configurable:true});window.dispatchEvent(new Event('resize'));Object.defineProperty(window,'innerWidth',{value:width,configurable:true});});expect(await shell.locator('.media-viewer-stage').getAttribute('style')).toBe(closedStyle);
+ await source.click();await expect(viewer).toHaveAttribute('data-media-message',id);expect(await retained!.evaluate(element=>element===document.querySelector('dialog.media-viewer'))).toBe(true);
+ await page.keyboard.press('Escape');await expect(source).toBeFocused();
+ const otherId=ids['demo-message-00-000033'],other=page.locator('[data-message="'+otherId+'"] .media-open').first();await other.scrollIntoViewIfNeeded();const attachment=await other.locator('..').locator('.media-image').getAttribute('data-media-id');
+ await other.click();await expect(viewer).toHaveAttribute('data-media-message',otherId);await expect.poll(()=>page.evaluate(()=>(window as any).__viewerFirstFrames.at(-1)?.message)).toBe(otherId);
+ const first=await page.evaluate(()=>(window as any).__viewerFirstFrames.at(-1));expect(first.media).toBe(attachment);
+ await expect(viewer).toHaveAttribute('data-media-loading','false');await viewer.locator('.media-viewer-stage').focus();
+ for(let index=0;index<5;index++)await page.keyboard.press('ArrowRight');
+ await expect(viewer).toHaveAttribute('data-media-message',ids['demo-message-00-000038']);const video=viewer.locator('video');await expect(video).toBeVisible();const player=await video.elementHandle();await expect.poll(()=>video.evaluate((element:HTMLVideoElement)=>element.paused)).toBe(false);
+ await page.keyboard.press('Escape');await expect(viewer).toHaveCount(0);expect(await player!.evaluate((element:HTMLVideoElement)=>element.paused&&!element.hasAttribute('src'))).toBe(true);await expect(shell.locator('img,video,audio')).toHaveCount(0);await expect(other).toBeFocused();
+ await other.click();await expect(viewer).toHaveAttribute('data-media-message',otherId);await viewer.dispatchEvent('cancel',{cancelable:true});await expect(viewer).toHaveCount(0);await expect(other).toBeFocused();
+ await page.locator('.conversation-row[data-chat="'+ids['demo-chat-01']+'"]').dispatchEvent('click');await expect(shell).toHaveCount(0);
+});
+
+for(const removal of ['unsent','deleted','evicted'] as const)test('WEB-MSG-VIEWER retained payload is released when its message is '+removal,async({page,context,request})=>{
+ const ids=await setup(context,request),id=ids['demo-message-00-000032'];let invalidate=()=>{};
+ await page.routeWebSocket('**/web/v1/live',socket=>{
+  const server=socket.connectToServer(),threads=new Set<string>(),snapshots=new Map<string,any>();
+  socket.onMessage(data=>{const frame=JSON.parse(String(data));if(frame.t==='sub'&&frame.view==='thread')threads.add(frame.id);if(frame.t==='unsub'){threads.delete(frame.id);snapshots.delete(frame.id);}server.send(data);});
+  server.onMessage(data=>{const frame=JSON.parse(String(data));if(frame.t==='snap'&&threads.has(frame.sub))snapshots.set(frame.sub,frame);socket.send(data);});
+  invalidate=()=>{for(const frame of snapshots.values()){const items=frame.data.items.flatMap((item:any)=>item.id!==id?[item]:removal==='evicted'?[]:[{...item,version:item.version+1,data:{...item.data,...(removal==='unsent'?{retracted_at:'2026-01-01T00:00:00Z'}:{deleted_at:'2026-01-01T00:00:00Z'})}}]);socket.send(JSON.stringify({...frame,data:{...frame.data,items}}));}};
+ });
+ await page.goto('/messages/'+encodeURIComponent(ids['message-chat'])+'/'+encodeURIComponent(id));await expect(page.locator('.messages-transcript')).toHaveAttribute('aria-busy','false');await expect(page.locator('main.transcript')).toHaveCSS('transform','none');await expect.poll(async()=>Number(await page.locator('.messages-transcript .virtual-row').first().getAttribute('aria-setsize'))).toBeGreaterThan(100);
+ await transcriptPhotoReady(page.locator('[data-message="'+id+'"] .media-open').first());await page.locator('[data-message="'+id+'"] .media-open').first().click();await expect(page.getByRole('dialog',{name:'Media viewer'})).toBeVisible();await page.keyboard.press('Escape');await expect(page.locator('dialog.media-viewer')).toHaveCount(1);invalidate();await expect(page.locator('dialog.media-viewer')).toHaveCount(0);
 });
