@@ -117,6 +117,12 @@ test('WEB-MSG-THREAD-CORE first transcript paints while prefetched pages are del
     const origin=await row(page,ids,58).boundingBox();holding=false;held.splice(0).forEach(release=>release());
     await expect.poll(async()=>Number(await transcript.getAttribute('data-window-size'))).toBeGreaterThan(100);
     await expect.poll(async()=>Math.abs((await row(page,ids,58).boundingBox())!.y-origin!.y)).toBeLessThanOrEqual(1);
+    holding=true;held.length=0;await page.goto('/messages/'+encodeURIComponent(ids['message-chat'])+'/'+encodeURIComponent(ids[native(59)]));
+    await expect.poll(()=>held.length).toBeGreaterThan(0);await expect(transcript).toHaveAttribute('aria-busy','false');await expect(page.locator('.transcript')).toHaveCSS('transform','none');
+    const viewport=page.getByRole('listbox',{name:'Messages transcript'});await viewport.focus();await page.keyboard.press('ArrowDown');
+    const selected=page.locator('.virtual-row[aria-selected=true]'),key=await selected.getAttribute('data-key'),position=await selected.boundingBox();
+    holding=false;held.splice(0).forEach(release=>release());await expect.poll(async()=>Number(await transcript.getAttribute('data-window-size'))).toBeGreaterThan(100);
+    await expect(selected).toHaveAttribute('data-key',key!);await expect.poll(async()=>Math.abs((await selected.boundingBox())!.y-position!.y)).toBeLessThanOrEqual(1);
 });
 
 test('WEB-MSG-THREAD-CORE first resize keeps the requested key after prefetch prepends rows',async({page,request})=>{

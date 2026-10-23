@@ -127,7 +127,18 @@ test('WEB-MSG-VIEWER press prefetches code without opening or downloading displa
 test('WEB-MSG-VIEWER opening a transcript photo trims background overscan and restores it on close',async({page,context,request})=>{
  const ids=await setup(context,request),id=ids['demo-message-00-000032'];await page.goto('/messages/'+encodeURIComponent(ids['message-chat'])+'/'+encodeURIComponent(id));
  await expect(page.locator('.messages-transcript')).toHaveAttribute('aria-busy','false');await expect(page.locator('main.transcript')).toHaveCSS('transform','none');
+ await expect.poll(async()=>Number(await page.locator('.messages-transcript .virtual-row').first().getAttribute('aria-setsize'))).toBeGreaterThan(100);await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
  const rows=page.locator('.messages-transcript .virtual-row'),before=await rows.count(),source=page.locator('[data-message="'+id+'"] .media-open'),box=await source.boundingBox();
  await source.click();const viewer=page.getByRole('dialog',{name:'Media viewer',exact:true});await expect(viewer).toBeVisible();await expect.poll(()=>rows.count()).toBeLessThan(before);
  await page.keyboard.press('Escape');await expect(viewer).not.toBeVisible();await expect(rows).toHaveCount(before);expect(await source.boundingBox()).toEqual(box);
+});
+
+test('WEB-MSG-VIEWER early opening preserves source geometry when the held first prefetch publishes',async({page,context,request})=>{
+ const ids=await setup(context,request),id=ids['demo-message-00-000032'],held:(()=>void)[]=[];let holding=true;const release=()=>{holding=false;held.splice(0).forEach(send=>send());};
+ await page.routeWebSocket('**/web/v1/live',socket=>{const server=socket.connectToServer(),prefetch=new Set<string>();socket.onMessage(data=>{const frame=JSON.parse(String(data));if(frame.t==='sub'&&frame.view==='thread'&&(frame.args.before||frame.args.after))prefetch.add(frame.id);server.send(data);});server.onMessage(data=>{const frame=JSON.parse(String(data));if(holding&&prefetch.has(frame.sub))held.push(()=>socket.send(data));else socket.send(data);});});
+ try{
+  await page.goto('/messages/'+encodeURIComponent(ids['message-chat'])+'/'+encodeURIComponent(id));await expect.poll(()=>held.length).toBeGreaterThan(0);await expect(page.locator('.messages-transcript')).toHaveAttribute('aria-busy','false');await expect(page.locator('main.transcript')).toHaveCSS('transform','none');
+  const source=page.locator('[data-message="'+id+'"] .media-open'),box=await source.boundingBox();await source.click();const viewer=page.getByRole('dialog',{name:'Media viewer',exact:true});await expect(viewer).toBeVisible();release();
+  await expect.poll(async()=>Number(await page.locator('.messages-transcript .virtual-row').first().getAttribute('aria-setsize'))).toBeGreaterThan(100);await page.keyboard.press('Escape');await expect(viewer).not.toBeVisible();expect(await source.boundingBox()).toEqual(box);
+ }finally{release();}
 });

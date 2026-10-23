@@ -15,11 +15,14 @@ export function MediaImage(props: { attachment: BridgeRecord; variant?: MediaVar
     createEffect(() => { source(); attempt(); setState('loading'); });
     createEffect(() => {
         const hash=placeholder();
-        let pixels=placeholders.get(hash);
-        if(!pixels){const decoded=decodeThumbHash(hash);if(decoded){pixels=new ImageData(decoded.rgba,decoded.width,decoded.height);if(placeholders.size>=64)placeholders.delete(placeholders.keys().next().value!);placeholders.set(hash,pixels);}}
-        canvas.width=pixels?.width??32;canvas.height=pixels?.height??32;
-        canvas.dataset.thumbhash = pixels ? 'decoded' : 'missing';
-        if(pixels)canvas.getContext('2d')?.putImageData(pixels,0,0);
+        const paint=()=>{
+            let pixels=placeholders.get(hash);
+            if(!pixels){const decoded=decodeThumbHash(hash);if(decoded){pixels=new ImageData(decoded.rgba,decoded.width,decoded.height);if(placeholders.size>=64)placeholders.delete(placeholders.keys().next().value!);placeholders.set(hash,pixels);}}
+            canvas.width=pixels?.width??32;canvas.height=pixels?.height??32;
+            canvas.dataset.thumbhash = pixels ? 'decoded' : 'missing';
+            if(pixels)canvas.getContext('2d')?.putImageData(pixels,0,0);
+        };
+        if(!hash||placeholders.has(hash))paint();else{canvas.width=32;let frame=requestAnimationFrame(()=>{frame=requestAnimationFrame(paint);});onCleanup(()=>cancelAnimationFrame(frame));}
     });
     const decode = async (image: HTMLImageElement) => {
         const expected = source(),generation=attempt();

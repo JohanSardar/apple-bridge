@@ -1,4 +1,4 @@
-import { batch, createEffect, createMemo, createSignal, createUniqueId, For, onCleanup, onMount, type JSX } from 'solid-js';
+import { batch, createEffect, createMemo, createSignal, createUniqueId, For, onCleanup, onMount, untrack, type JSX } from 'solid-js';
 import { beginWork } from '../motion/work';
 import { Positions } from './positions';
 import { viewportHeight } from '../app/viewport';
@@ -67,10 +67,10 @@ export function VirtualList<T>(props: {
     createEffect(() => {
         const next = props.items;
         const userTop=firstMountAnchor===false?viewport.scrollTop:undefined;
-        if(!props.initialPrefetch)firstMountAnchor=undefined;
         const finish=beginWork('virtual-items');
         const shifted=props.windowKey!==previousWindowKey;previousWindowKey=props.windowKey;
-        const first = items.length === 0||mounting;
+        const first = items.length === 0||mounting||firstMountAnchor===true&&(!controlled||untrack(selected)===initialIndex());
+        if(!props.initialPrefetch)firstMountAnchor=undefined;
         const previous = !first&&userTop===undefined ? anchor() : undefined;
         const atTop=!first ? viewport.scrollTop<=2 : true;
         const atBottom = !first ? viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight <= 2 : false;
@@ -84,7 +84,7 @@ export function VirtualList<T>(props: {
         if(invalidated||remeasure.size)viewport.querySelectorAll<HTMLElement>('.virtual-row').forEach(row=>{if(invalidated||remeasure.has(row.dataset.key!)){observer.unobserve(row);observer.observe(row);}});
         content.style.height=positions.total+'px';
         if(userTop!==undefined){mounting=false;refresh(userTop);finish();return;}
-        if(first&&initialKey!=null)scrollToIndex(initialIndex(),initialAlign,true);
+        if(first&&initialKey!=null){scrollToIndex(initialIndex(),initialAlign,true);if(!mounting)viewport.scrollTop=assignedScroll=scroll();}
         else {
             if (props.bottomAnchored && (atBottom || first) && (!shifted || first)) {
                 setScrollPosition(Math.max(0,positions.total-viewport.clientHeight));
