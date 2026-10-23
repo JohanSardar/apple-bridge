@@ -8,6 +8,33 @@ One line per unit. Rules: BUILD-GOAL.md (2026-10-17 update: no reviews, merge on
 - TCC: Helper (dev.applebridge.helper) and AppleTruth (dev.applebridge.truth) hold Reminders/Calendar/Contacts (user TCC rows, backups in `~/Library/Application Support/AppleBridgeDev/`); Helper also FDA, Accessibility, Automation. Never change the dev signing cert; per-run app copies only.
 - Johan unreachable: identity-bound items → `limited` with reason.
 
+## Final status (2026-10-23, leader)
+This section supersedes the earlier IN PROGRESS, TODO and "waiting" lines below. Per-app results and exact numbers are in design/MILESTONE-GATES.md.
+- **Units:** every SPEC §23 unit W2–W8 is merged (PRs up to #325).
+- **features.yaml:** 40 features: 25 done, 12 limited, 1 in progress, 2 todo; 388/448 scenario-levels have passing evidence.
+  - web.messages.write is in progress: one red REPLY cell.
+  - web.messages.read and web.messages.parity stay todo by checker rule, because scenarios they list were never authored: WEB-MSG-REAL-READ, and the five W4-HELPER-B send variants.
+- **Contacts, Calendar, Reminders, Notes:** milestone gates green with explicit limits. R-LIVE gateway/replica p95: Contacts 795.7/807.8 ms, Calendar 468.9/471.3 ms, Reminders 560/563 ms, Notes 476.3/870.2 ms.
+- **Messages:**
+  - 62/64 web manifests pass all 12 projects. Open product defects: WEB-MSG-REPLY (WebKit light-phone hidden-stack action anchor) and WEB-MSG-EFFECTS (Firefox phone Balloons).
+  - Read-model, thread, search and demo budgets are met.
+  - Measured and not met: open-chat and media own-input p95, cold chat-open frames, and the list filter frame and input budgets. Thresholds are unchanged.
+  - Send, react and fling timing could not be certified under external TCC load.
+- **Limited, outside project control:**
+  - Messages R-LIVE, native W3 actions and W4 native variants: no unused own-handle alias exists, and the personal-chat fallback is refused.
+  - Groups and typing: own-handles-only rule.
+  - Reminders and Calendar parity mutations: Automation consent pending, never automated.
+  - Notes delete and real writes: AppleScript delete no-ops on 25G241, and no verified cleanup route exists.
+  - Embedded tsnet Remote: needs a tailnet device approval through Johan's login.
+  - Contacts public relay: 20/20 delivered, but p95 1.45 s under external TCC load.
+  - web.media cold arrival: same own-handle send restriction.
+- **Release web build:** lab fixtures excluded (#315). Cacheable gzip is 593,179 of 614,400 bytes; the largest route is 60,296 of 61,440.
+- **Test data left on Johan's Apple ID (disclosed, never purged):**
+  - Messages own-handle chat (ROWID 40): 29 of 57 tagged items removed to Recently Deleted, 28 remain active.
+  - Messages Recently Deleted: earlier tagged items there expire with the OS.
+  - Notes: 1 active tagged test note, 1 tagged test folder and the untagged "Bridge Test" base folder. 35 tagged notes sit in Recently Deleted.
+- **Host:** Johan's transcript-mirror launchd job is restored at wrap-up.
+
 ## Units
 - DONE spec + tooling: SPEC, glossary, ADRs, features.yaml + checker, zero-comment lint.
 - DONE M0 core: State, replication, commands (opaque IDs, ledger.db), REST+MCP, blobs, trust, restore, faults — 9 core features done; core.trust limited (real Keychain locked).
@@ -100,7 +127,7 @@ Process: every change ships as a small PR (WORKER-RULES, Git and GitHub). Status
   - **Milestone gates** (12-project matrix, exclusive perf, real-data R-LIVE): Contacts, Reminders, Calendar and Notes core gates are green with explicit limits and owned follow-ups. Detailed results and limits are in design/MILESTONE-GATES.md. The Messages result is recorded there on 2026-10-23; earlier chats/demo misses were fixed by #235 and #191 established the huge setup and originator budget.
   - **Host and process:** pressure and disk guards (#178, #179, #188, #201, #212), quiet labelling (#182), a second heavy slot (#184), fast and lean processes (#181, #223). Older private evidence is offloaded to the Ubuntu server.
 - **Messages milestone result (2026-10-23):** all W2/W3/W4 implementation units are merged, with unproven native variants hidden. The 12-project browser qualification has 61/64 manifests fully green; Reply, Manage and Effects retain the exact red cells in design/MILESTONE-GATES.md. Earlier quiet exclusive 500-chat, 170k-thread and demo read-model measurements met their budgets on their measured source. Final quiet open-chat/media input p95 and cold chat-open frame budgets are **not met** at the unchanged thresholds; send/react/fling could not be certified under external TCC load. R-LIVE and W3 native actions are limited: no truly unused own alias exists, so the personal self-chat fallback is refused and the native batch was not rerun. W4 native variants, group management and typing retain their documented limits. Two prior test attachments are in Recently Deleted for the ROWID 40 own-handle chat, pending OS expiry; no whole-chat purge was attempted. The read-only tagged-item audit and private evidence locations are in design/MILESTONE-GATES.md.
-- DONE W2-READER: decoders, filters, collections, handles, native capture and the rich demo (#14, #22, #31, #33, #46, #50, #53). Real parity is limited because AppleTruth lacks Full Disk Access. Pin/mute, audio Keep and recovery deadlines remain explicit gaps.
+- DONE W2-READER: decoders, filters, collections, handles, native capture and the rich demo (#14, #22, #31, #33, #46, #50, #53). Real parity was limited because AppleTruth lacked Full Disk Access; resolved 2026-10-23 (#321: MSG-DECODE-BALLOON, MSG-DECODE-FORMATTING and MSG-READ-RICH-FIELDS real pass). Pin/mute, audio Keep and recovery deadlines remain explicit gaps.
 - DONE (functional) W2-LIST: store/cache (#49/#71/#84), fixture snapshots (#176), and the design-approved list, filters/search, keyboard, badges and sidebar (#104). Focused WebKit/Chromium phone/desktop acceptance is recorded in the PR; performance and 120 Hz input proof remain limited to the Messages milestone. The menu material repair follows #104.
 - IN PROGRESS W2-TRANSCRIPT: bounded transcript window and approved bubbles (#79); oldest anchor (#70), originator threads (#61), reactions and viewer integration follow. Transcript frame/input budgets and WebKit attribution remain unproven.
 - W2-TRANSCRIPT #118: video/Live boxes have a 120 px minimum within caps; 14 layout-math tests, 229 scoped normal configurations and 24 exclusive configurations pass. Transcript performance acceptance remains pending.
