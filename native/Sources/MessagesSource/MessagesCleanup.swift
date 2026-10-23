@@ -17,6 +17,13 @@ public enum MessagesCleanup {
             scopedChat = nil
         }
         guard scopedChat == nil || !tag.isEmpty else { throw ProbeFailure.invalidArguments }
+        let scopedGUID: String?
+        if let index = arguments.firstIndex(of: "--only-guid") {
+            guard scopedChat != nil, index + 1 < arguments.count, !arguments[index + 1].isEmpty, arguments[index + 1].count <= 256, !arguments[index + 1].contains("\n") else { throw ProbeFailure.invalidArguments }
+            scopedGUID = arguments[index + 1]
+        } else {
+            scopedGUID = nil
+        }
         guard !(arguments.contains("--skip-draft") && arguments.contains("--group-draft")) else { throw ProbeFailure.invalidArguments }
         var approved: Set<String> = []
         var groupHandles: [String: String] = [:]
@@ -73,6 +80,7 @@ public enum MessagesCleanup {
             }
             var result: [(String, JSON)] = []
             for key in rows {
+                if let scopedGUID, key["guid"] != scopedGUID { continue }
                 if let scopedChat, try reader.query("SELECT 1 FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID WHERE m.guid=? AND j.chat_id=? AND NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=j.chat_id AND r.message_id=m.ROWID)", [key["guid"], String(scopedChat)]).isEmpty { continue }
                 guard let row = try reader.message(key["guid"]), let item = try reader.messageObservations(row).first, item.0 == "messages.message" else { continue }
                 let peers = try reader.query("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", [row["capture_chat_guid"]])
