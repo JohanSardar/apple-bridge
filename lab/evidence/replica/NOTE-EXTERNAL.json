@@ -1,14 +1,21 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[4.57 5.77 7.8] cpus=8 other_heavy=1; ubuntu: load=[0.6 0.43 0.37] cpus=8 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[5.77 7.41 6.88] cpu_idle=78% cpus=8 other_heavy=0; ubuntu: load=[0.42 0.43 0.42] cpu_idle=96% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M55WRKGXPF73C2JFJS54P0YN",
+  "run_id": "run_01M5JTBBSQB0SPQA228C2DRHTM",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "summary_only": true,
+    "first_visibility_proven": false,
+    "r_live_budget_passed": false,
+    "observed_endpoint": "post-Truth HTTP observation; initial source before latency fix"
+  },
   "scenario": "NOTE-EXTERNAL",
   "level": "replica",
   "passed": true,
-  "git_sha": "abf7a5e960ae5c0352bcbb8b6df75f934b210872",
-  "at": "2026-10-17T21:37:22.97373Z",
+  "git_sha": "bbb1b7d8ba25976736adc2ed81df999498ec4b55",
+  "at": "2026-10-22T22:05:19.543667Z",
   "assertions": [
     {
       "name": "external_note_imported",
@@ -30,9 +37,9 @@
   "latency": {
     "native_save_to_copy_visible_ms": {
       "samples": 5,
-      "p50_ms": 419.800541,
-      "p95_ms": 555.256167,
-      "max_ms": 555.256167,
+      "p50_ms": 1545.389125,
+      "p95_ms": 2264.20725,
+      "max_ms": 2264.20725,
       "timeouts": 0
     }
   },

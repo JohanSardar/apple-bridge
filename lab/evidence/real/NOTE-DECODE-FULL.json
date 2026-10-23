@@ -1,0 +1,40 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[7.4 8.03 7.33] cpu_idle=89% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5JTJXHSJ9GM8MNHZ8EQ3VHH",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "summary_only": true,
+    "qualification": "Before native fixes #266/#269; independent current-source rerun pending Notes latency fix."
+  },
+  "scenario": "NOTE-DECODE-FULL",
+  "level": "real",
+  "passed": false,
+  "git_sha": "bbb1b7d8ba25976736adc2ed81df999498ec4b55",
+  "at": "2026-10-22T22:09:27.097439Z",
+  "assertions": [
+    {
+      "name": "independent_sqlite_copy",
+      "passed": true
+    },
+    {
+      "name": "folders_equal_independent_truth",
+      "passed": true
+    },
+    {
+      "name": "records_equal_independent_truth",
+      "passed": false,
+      "detail": "structure_counts.titles:count"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

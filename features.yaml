@@ -786,7 +786,11 @@ features:
     milestone: W6
     modules: [webui, native/CalendarSource, operations]
     depends_on: [web.frontdoor, calendar.write]
-    status: in_progress
+    status: limited
+    limits:
+      - scenario: WEB-CAL-READ
+        level: web
+        reason: "All 144 browser configurations pass; app-specific own-input, paint/layout and warm-content budgets remain unproven. A 200-change/5-Hz native burst and kill-during-apply are not established by the ten-change R-LIVE run."
     scenarios:
       - {id: CAL-FUTURE-COUNT-MATH, levels: [sim]}
       - {id: CAL-FUTURE-RULE-MISMATCH, levels: [sim]}
@@ -795,7 +799,7 @@ features:
       - {id: WEB-CAL-READ, levels: [web]}
       - {id: WEB-CAL-NAVIGATE, levels: [web]}
       - {id: WEB-CAL-WRITE, levels: [sim, web, real]}
-    notes: Calendar read/store, navigation and basic event writes are implemented; full browser and real-data acceptance remain at the W6 milestone. WEB-CAL-PARITY covers the hidden parity actions and verified store reads. Positive travel-time units, structured coordinates, detached store identities and attachment derivatives require native proof and remain hidden when unsupported.
+    notes: Milestone browser 144/144 passes without skips or flakes; #262 fixes recurring future-split reconciliation under a controlled response barrier. Native store/identity/counts and basic writes/cleanup pass. Ten-change R-LIVE gateway/replica p95 468.9/471.3 ms passes; REST/MCP month handlers p95 0.921/0.910 ms pass. Replica exactly-once attribution remains unverified despite convergence. Screenshots and raw reports remain private. WEB-CAL-PARITY covers the hidden parity actions and verified store reads. Positive travel-time units, structured coordinates, detached store identities and attachment derivatives require native proof and remain hidden when unsupported.
   - id: web.calendar.parity
     title: Calendar invitation responses, travel time and attachment parity
     requirements: [R-WEB-UI, R-RW]
@@ -820,25 +824,47 @@ features:
     milestone: W7
     modules: [webui, native/ContactsSource, operations]
     depends_on: [web.frontdoor, contacts.write]
-    status: todo
+    status: limited
+    limits:
+      - scenario: WEB-CON-WRITE
+        level: real
+        reason: "The declared combined native/browser WRITE journey has no dedicated real handler. Browser 36/36 and separate native CRUD #248 (reported p95 gateway/replica 788.5/808.2 ms) do not prove that missing journey. Native photo-command set/remove fidelity remains unproven; CON-IMAGE proves Truth-installed photo read/digest only."
+      - scenario: WEB-CON-PARITY
+        level: real
+        reason: "Native group removeMember did not become visible through fresh public reads; group writes remain hidden. Posters have no public SDK field. Browser absence/read-only checks pass, without proving native mutations."
+      - scenario: WEB-CON-READ
+        level: web
+        reason: "All 60 browser configurations pass; app-specific own-input, paint/layout and warm-content budgets, a 200-change/5-Hz native burst and kill-during-apply remain unproven."
     scenarios:
       - {id: WEB-CON-LIST, levels: [sim]}
       - {id: CON-GROUPS, levels: [sim]}
       - {id: WEB-CON-READ, levels: [web]}
       - {id: WEB-CON-WRITE, levels: [web, real]}
       - {id: WEB-CON-PARITY, levels: [web, real]}
-    notes: Contacts read UI and local list model implemented; native identity, account capture and cooperative photo derivatives await Contacts milestone qualification. Basic create/edit/delete, photo set/remove, selected export/delete and optimistic observed-record reconciliation are implemented with synthetic Chromium coverage; native write/photo and full-browser qualification remain limited until the Contacts milestone. Notes stay hidden. Contact poster is limited and hidden; the macOS 26.5 public Contacts SDK exposes imageData and thumbnailImageData but no poster field or fetch key. Group commands require a matching OS-build and default-container CNSaveRequest proof ledger. Native group capability is currently limited and hidden because removeMember returned without the removal becoming visible through fresh public Contacts reads; tagged fixture cleanup passed. Membership affordances are capability-gated and remain hidden while the native group proof is limited; group display stays read-only. WEB-CON-PARITY covers the isolated Chromium light desktop gateway fixture; real-data acceptance remains at the Contacts milestone.
+    notes: Milestone browser 60/60 passes without skips or flakes; #249 repairs source-response geometry, #251 contains avatars, shares card/list photos and tightens phone spacing. #257 removes fixture surfaces from the shell; rebased exclusive audit passes shell 58213, Contacts route 14939 and all cacheable assets 611408 bytes. Native external changes pass 20/20 per endpoint: gateway/replica p95 795.7/807.8 ms. Native CRUD after #248 is leader-reported separately. Groups/posters stay hidden; photo-command fidelity and combined native/browser write acceptance remain limited. Replica exactly-once attribution remains unverified despite convergence. Raw reports and screenshots stay private.
   - id: web.notes
     title: Notes web app (read, write, parity)
     requirements: [R-WEB-UI, R-WEB-FAST, R-RW]
     milestone: W8
     modules: [webui, native/NotesSource, native/Decoders, operations]
     depends_on: [web.frontdoor, notes.write]
-    status: todo
+    status: limited
     limits:
       - scenario: WEB-NOTE-WRITE
         level: real
         reason: "Delete limited: AppleScript delete reports success but iCloud NoteStore rows stay active on 25G241. Delete stays hidden without per-build NoteStore deletion proof; synthetic browser deletion is not native qualification."
+      - scenario: NOTE-DECODE-FULL
+        level: real
+        reason: "The corrected exact-count oracle found structure_counts.titles:count before native fixes #266/#269. Those fixes are merged; independent current-source acceptance awaits the Notes latency fix and rerun. Numeric representations compare exactly; no approximate count tolerance is used."
+      - scenario: WEB-NOTE-READ
+        level: web
+        reason: "READ 108/108 passes, including 4.5:1 highlighted text/link contrast in both appearances. Body mocks require service workers blocked for WebKit interception; worker-enabled external-body integration remains unproven. App-specific input/paint/warm-content, a 200-change/5-Hz native burst and kill-during-apply are unproven. NOTE-EXTERNAL initially converges but first visibility is unproven and post-Truth observation p95 1531.7/2264.2 ms misses 1 s; the Notes source worker owns its correction."
+      - scenario: WEB-NOTE-WRITE
+        level: real
+        reason: "The declared combined native/browser WRITE journey has no dedicated real manifest or handler. Browser 60/60 passes with service workers enabled and positive public-session setup; separate native CRUD does not prove that missing journey. Current-source CRUD acceptance awaits native/latency fixes and independent reruns."
+      - scenario: WEB-NOTE-PARITY
+        level: real
+        reason: "Browser parity verifies read-only structure and absent rich/checklist mutations in all 12 projects. It has no dedicated real journey; native rich replacement and checklist identity/state preservation remain unproven and hidden."
       - scenario: NOTE-EDIT-PARITY
         level: real
         reason: "macOS 26.7.1 build 25G241: the simple-rich HTML replacement did not preserve expected text/block structure; unknown note and paragraph attributes prevent a lossless round trip. Rich edits remain hidden."
@@ -853,3 +879,4 @@ features:
       - {id: WEB-NOTE-READ, levels: [web]}
       - {id: WEB-NOTE-WRITE, levels: [web, real]}
       - {id: WEB-NOTE-PARITY, levels: [web, real]}
+    notes: Browser milestone 204/204 passes without skips or flakes; READ includes 4.5:1 highlight/link contrast across all five colors and both appearances. Native decode/CRUD acceptance awaits current-source reruns after #266/#269 and the Notes latency fix. Rich/checklist mutations stay hidden; combined native/browser journeys, worker-enabled external-body integration, burst/crash and app-specific UI timing remain limited.

@@ -1,0 +1,230 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[3.12 3.78 4.4] cpu_idle=80% cpus=8 other_heavy=0"
+  },
+  "run_id": "notes-list_01M5JQMX5YHRQCDK85NZ0ADSZS",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "summary_only": true
+  },
+  "scenario": "NOTE-LIST",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-22T21:18:06.526872Z",
+  "assertions": [
+    {
+      "name": "world",
+      "passed": true
+    },
+    {
+      "name": "captured",
+      "passed": true
+    },
+    {
+      "name": "replica_converged",
+      "passed": true
+    },
+    {
+      "name": "rest_0_pinned_date_sections",
+      "passed": true
+    },
+    {
+      "name": "rest_0_locked_title_only",
+      "passed": true
+    },
+    {
+      "name": "rest_0_preview_thumbnail",
+      "passed": true
+    },
+    {
+      "name": "rest_0_account_nested_counts",
+      "passed": true
+    },
+    {
+      "name": "rest_0_title_sort",
+      "passed": true
+    },
+    {
+      "name": "rest_0_created_date_groups",
+      "passed": true
+    },
+    {
+      "name": "rest_0_recently_deleted_read_only",
+      "passed": true
+    },
+    {
+      "name": "rest_0_deleted_folder_write_refused",
+      "passed": true
+    },
+    {
+      "name": "rest_0_all_excludes_deleted",
+      "passed": true
+    },
+    {
+      "name": "rest_0_invalid_sort_refused",
+      "passed": true
+    },
+    {
+      "name": "rest_0_invalid_zone_refused",
+      "passed": true
+    },
+    {
+      "name": "rest_0_notes_scope",
+      "passed": true
+    },
+    {
+      "name": "mcp_0_pinned_date_sections",
+      "passed": true
+    },
+    {
+      "name": "mcp_0_locked_title_only",
+      "passed": true
+    },
+    {
+      "name": "mcp_0_preview_thumbnail",
+      "passed": true
+    },
+    {
+      "name": "mcp_0_account_nested_counts",
+      "passed": true
+    },
+    {
+      "name": "mcp_0_title_sort",
+      "passed": true
+    },
+    {
+      "name": "mcp_0_created_date_groups",
+      "passed": true
+    },
+    {
+      "name": "mcp_0_recently_deleted_read_only",
+      "passed": true
+    },
+    {
+      "name": "mcp_0_deleted_folder_write_refused",
+      "passed": true
+    },
+    {
+      "name": "mcp_0_all_excludes_deleted",
+      "passed": true
+    },
+    {
+      "name": "mcp_0_invalid_sort_refused",
+      "passed": true
+    },
+    {
+      "name": "mcp_0_invalid_zone_refused",
+      "passed": true
+    },
+    {
+      "name": "mcp_0_notes_scope",
+      "passed": true
+    },
+    {
+      "name": "rest_1_pinned_date_sections",
+      "passed": true
+    },
+    {
+      "name": "rest_1_locked_title_only",
+      "passed": true
+    },
+    {
+      "name": "rest_1_preview_thumbnail",
+      "passed": true
+    },
+    {
+      "name": "rest_1_account_nested_counts",
+      "passed": true
+    },
+    {
+      "name": "rest_1_title_sort",
+      "passed": true
+    },
+    {
+      "name": "rest_1_created_date_groups",
+      "passed": true
+    },
+    {
+      "name": "rest_1_recently_deleted_read_only",
+      "passed": true
+    },
+    {
+      "name": "rest_1_deleted_folder_write_refused",
+      "passed": true
+    },
+    {
+      "name": "rest_1_all_excludes_deleted",
+      "passed": true
+    },
+    {
+      "name": "rest_1_invalid_sort_refused",
+      "passed": true
+    },
+    {
+      "name": "rest_1_invalid_zone_refused",
+      "passed": true
+    },
+    {
+      "name": "rest_1_notes_scope",
+      "passed": true
+    },
+    {
+      "name": "mcp_1_pinned_date_sections",
+      "passed": true
+    },
+    {
+      "name": "mcp_1_locked_title_only",
+      "passed": true
+    },
+    {
+      "name": "mcp_1_preview_thumbnail",
+      "passed": true
+    },
+    {
+      "name": "mcp_1_account_nested_counts",
+      "passed": true
+    },
+    {
+      "name": "mcp_1_title_sort",
+      "passed": true
+    },
+    {
+      "name": "mcp_1_created_date_groups",
+      "passed": true
+    },
+    {
+      "name": "mcp_1_recently_deleted_read_only",
+      "passed": true
+    },
+    {
+      "name": "mcp_1_deleted_folder_write_refused",
+      "passed": true
+    },
+    {
+      "name": "mcp_1_all_excludes_deleted",
+      "passed": true
+    },
+    {
+      "name": "mcp_1_invalid_sort_refused",
+      "passed": true
+    },
+    {
+      "name": "mcp_1_invalid_zone_refused",
+      "passed": true
+    },
+    {
+      "name": "mcp_1_notes_scope",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": [
+    "air"
+  ]
+}

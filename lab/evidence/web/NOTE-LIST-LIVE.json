@@ -1,0 +1,102 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[4.25 4.35 4.69] cpu_idle=64% cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M5JYPWWE64MF5E4JSTBN2ABE",
+  "metrics": {
+    "browser_budget_ms": 180000,
+    "capture_observer_resets": 0,
+    "matrix": [
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "webkit-dark-phone",
+      "webkit-dark-desktop",
+      "chromium-light-phone",
+      "chromium-light-desktop",
+      "chromium-dark-phone",
+      "chromium-dark-desktop",
+      "firefox-light-phone",
+      "firefox-light-desktop",
+      "firefox-dark-phone",
+      "firefox-dark-desktop"
+    ],
+    "server": "gateway",
+    "summary_only": true
+  },
+  "scenario": "NOTE-LIST-LIVE",
+  "level": "web",
+  "passed": true,
+  "git_sha": "bbb1b7d8ba25976736adc2ed81df999498ec4b55",
+  "at": "2026-10-22T23:21:31.790636Z",
+  "assertions": [
+    {
+      "name": "webkit-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "2 passed"
+    },
+    {
+      "name": "webkit-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "2 passed"
+    },
+    {
+      "name": "webkit-dark-phone:playwright_matrix",
+      "passed": true,
+      "detail": "2 passed"
+    },
+    {
+      "name": "webkit-dark-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "2 passed"
+    },
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "2 passed"
+    },
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "2 passed"
+    },
+    {
+      "name": "chromium-dark-phone:playwright_matrix",
+      "passed": true,
+      "detail": "2 passed"
+    },
+    {
+      "name": "chromium-dark-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "2 passed"
+    },
+    {
+      "name": "firefox-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "2 passed"
+    },
+    {
+      "name": "firefox-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "2 passed"
+    },
+    {
+      "name": "firefox-dark-phone:playwright_matrix",
+      "passed": true,
+      "detail": "2 passed"
+    },
+    {
+      "name": "firefox-dark-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "2 passed"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

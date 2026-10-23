@@ -1,17 +1,18 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[5.1 7.89 9.98] cpu_idle=78% cpus=8 other_heavy=0"
+    "summary": "air: load=[2.91 5.04 4.92] cpu_idle=84% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5J44SW5WMN4F304ECMCDG5C",
+  "run_id": "run_01M5JPBFQ252C8ZN56N5XZP8S8",
   "metrics": {
-    "capture_observer_resets": 0
+    "capture_observer_resets": 0,
+    "summary_only": true
   },
   "scenario": "CAL-STORE-READ",
   "level": "sim",
   "passed": true,
-  "git_sha": "4a87aff119ed4f5a7a13381cbbc3f3c5415d4ba3",
-  "at": "2026-10-22T15:37:15.909908Z",
+  "git_sha": "3fd9aee29e414bf91bde26c4c98d7e437f4daecd",
+  "at": "2026-10-22T20:55:29.250285Z",
   "assertions": [
     {
       "name": "world_start",
@@ -277,16 +278,16 @@
   "latency": {
     "calendar_range_1000_month_mcp_gateway": {
       "samples": 100,
-      "p50_ms": 0.751792,
-      "p95_ms": 0.9655,
-      "max_ms": 1.239583,
+      "p50_ms": 0.792667,
+      "p95_ms": 0.909583,
+      "max_ms": 1.352709,
       "timeouts": 0
     },
     "calendar_range_1000_month_rest_gateway": {
       "samples": 100,
-      "p50_ms": 0.570417,
-      "p95_ms": 0.854708,
-      "max_ms": 0.995375,
+      "p50_ms": 0.638292,
+      "p95_ms": 0.921,
+      "max_ms": 1.095541,
       "timeouts": 0
     }
   },

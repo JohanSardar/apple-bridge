@@ -1,0 +1,34 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[3.24 3.76 4.2] cpu_idle=77% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5JR08WARVAWRD7H2TTENTT1",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "summary_only": true
+  },
+  "scenario": "NOTE-DECODE-FULL",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "bbb1b7d8ba25976736adc2ed81df999498ec4b55",
+  "at": "2026-10-22T21:24:18.954862Z",
+  "assertions": [
+    {
+      "name": "independent_truth_counts",
+      "passed": true
+    },
+    {
+      "name": "gzip_protobuf_scrubbed_fixtures",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

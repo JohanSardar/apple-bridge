@@ -1,0 +1,433 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[3.53 6.16 5.6] cpu_idle=87% cpus=8 other_heavy=0"
+  },
+  "run_id": "cal_01M5JREJ7RTHMC993W47FY1DK6",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "summary_only": true
+  },
+  "scenario": "WEB-CAL-WRITE",
+  "level": "real",
+  "passed": true,
+  "git_sha": "3f45d9e4f50dbd657faf195a7b19d957685de297",
+  "at": "2026-10-22T21:32:07.28886Z",
+  "assertions": [
+    {
+      "name": "private_signed_apps_per_world",
+      "passed": true
+    },
+    {
+      "name": "initial_calendar_scan_complete",
+      "passed": true
+    },
+    {
+      "name": "calendar_visible",
+      "passed": true
+    },
+    {
+      "name": "truth_calendar_fields",
+      "passed": true
+    },
+    {
+      "name": "command_native_effect_clock",
+      "passed": true
+    },
+    {
+      "name": "command_capture_visible",
+      "passed": true
+    },
+    {
+      "name": "create_event_observed",
+      "passed": true
+    },
+    {
+      "name": "initial_occurrences_visible",
+      "passed": true
+    },
+    {
+      "name": "agenda_returns_occurrences",
+      "passed": true
+    },
+    {
+      "name": "command_native_effect_clock",
+      "passed": true
+    },
+    {
+      "name": "command_capture_visible",
+      "passed": true
+    },
+    {
+      "name": "update_preserves_bridge_id",
+      "passed": true
+    },
+    {
+      "name": "event_fields_and_alarm_updated",
+      "passed": true
+    },
+    {
+      "name": "truth_updated_event_fields",
+      "passed": true
+    },
+    {
+      "name": "stale_version_rejected",
+      "passed": true
+    },
+    {
+      "name": "delete_absence_visible",
+      "passed": true
+    },
+    {
+      "name": "command_native_effect_clock",
+      "passed": true
+    },
+    {
+      "name": "command_capture_visible",
+      "passed": true
+    },
+    {
+      "name": "truth_created_series_occurrences",
+      "passed": true
+    },
+    {
+      "name": "created_series_deleted_with_future_span",
+      "passed": true
+    },
+    {
+      "name": "create_calendar_observed",
+      "passed": true
+    },
+    {
+      "name": "created_calendar_ownership_durable",
+      "passed": true
+    },
+    {
+      "name": "independent_appletruth_equality",
+      "passed": true
+    },
+    {
+      "name": "replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "contiguous_feed_0",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "contiguous_feed_1",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "latency_effect_done\u2192gateway_visible",
+      "passed": true
+    },
+    {
+      "name": "latency_effect_done\u2192replica_visible:replica0",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_query",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_mcp_agenda",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_query",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_mcp_agenda",
+      "passed": true
+    },
+    {
+      "name": "private_helper_paused_for_integrity",
+      "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass"
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified"
+    },
+    {
+      "name": "tagged_fixture_cleanup_audit",
+      "passed": true
+    },
+    {
+      "name": "mcp_private_signed_apps_per_world",
+      "passed": true
+    },
+    {
+      "name": "mcp_initial_calendar_scan_complete",
+      "passed": true
+    },
+    {
+      "name": "mcp_calendar_visible",
+      "passed": true
+    },
+    {
+      "name": "mcp_truth_calendar_fields",
+      "passed": true
+    },
+    {
+      "name": "mcp_command_native_effect_clock",
+      "passed": true
+    },
+    {
+      "name": "mcp_command_capture_visible",
+      "passed": true
+    },
+    {
+      "name": "mcp_create_event_observed",
+      "passed": true
+    },
+    {
+      "name": "mcp_initial_occurrences_visible",
+      "passed": true
+    },
+    {
+      "name": "mcp_agenda_returns_occurrences",
+      "passed": true
+    },
+    {
+      "name": "mcp_command_native_effect_clock",
+      "passed": true
+    },
+    {
+      "name": "mcp_command_capture_visible",
+      "passed": true
+    },
+    {
+      "name": "mcp_update_preserves_bridge_id",
+      "passed": true
+    },
+    {
+      "name": "mcp_event_fields_and_alarm_updated",
+      "passed": true
+    },
+    {
+      "name": "mcp_truth_updated_event_fields",
+      "passed": true
+    },
+    {
+      "name": "mcp_stale_version_rejected",
+      "passed": true
+    },
+    {
+      "name": "mcp_delete_absence_visible",
+      "passed": true
+    },
+    {
+      "name": "mcp_command_native_effect_clock",
+      "passed": true
+    },
+    {
+      "name": "mcp_command_capture_visible",
+      "passed": true
+    },
+    {
+      "name": "mcp_truth_created_series_occurrences",
+      "passed": true
+    },
+    {
+      "name": "mcp_created_series_deleted_with_future_span",
+      "passed": true
+    },
+    {
+      "name": "mcp_create_calendar_observed",
+      "passed": true
+    },
+    {
+      "name": "mcp_created_calendar_ownership_durable",
+      "passed": true
+    },
+    {
+      "name": "mcp_independent_appletruth_equality",
+      "passed": true
+    },
+    {
+      "name": "mcp_replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "mcp_contiguous_feed_0",
+      "passed": true
+    },
+    {
+      "name": "mcp_no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "mcp_contiguous_feed_1",
+      "passed": true
+    },
+    {
+      "name": "mcp_no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "mcp_latency_effect_done\u2192gateway_visible",
+      "passed": true
+    },
+    {
+      "name": "mcp_latency_effect_done\u2192replica_visible:replica0",
+      "passed": true
+    },
+    {
+      "name": "mcp_no_scope_leak_query",
+      "passed": true
+    },
+    {
+      "name": "mcp_no_scope_leak_mcp_agenda",
+      "passed": true
+    },
+    {
+      "name": "mcp_no_scope_leak_query",
+      "passed": true
+    },
+    {
+      "name": "mcp_no_scope_leak_mcp_agenda",
+      "passed": true
+    },
+    {
+      "name": "mcp_private_helper_paused_for_integrity",
+      "passed": true
+    },
+    {
+      "name": "mcp_replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass"
+    },
+    {
+      "name": "mcp_replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified"
+    },
+    {
+      "name": "mcp_tagged_fixture_cleanup_audit",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "calendar_command_scan_wait": {
+      "samples": 6,
+      "p50_ms": 0.000291,
+      "p95_ms": 253.027167,
+      "max_ms": 253.027167,
+      "timeouts": 0
+    },
+    "command_submit\u2192calendar.create_calendar_observed": {
+      "samples": 1,
+      "p50_ms": 362.189625,
+      "p95_ms": 362.189625,
+      "max_ms": 362.189625,
+      "timeouts": 0
+    },
+    "command_submit\u2192calendar.create_event_observed": {
+      "samples": 2,
+      "p50_ms": 393.23075,
+      "p95_ms": 965.70475,
+      "max_ms": 965.70475,
+      "timeouts": 0
+    },
+    "command_submit\u2192calendar.delete_event_observed": {
+      "samples": 2,
+      "p50_ms": 970.418583,
+      "p95_ms": 1458.207792,
+      "max_ms": 1458.207792,
+      "timeouts": 0
+    },
+    "command_submit\u2192calendar.update_event_observed": {
+      "samples": 1,
+      "p50_ms": 265.72375,
+      "p95_ms": 265.72375,
+      "max_ms": 265.72375,
+      "timeouts": 0
+    },
+    "effect_done\u2192gateway_visible": {
+      "samples": 3,
+      "p50_ms": 192.983625,
+      "p95_ms": 326.639917,
+      "max_ms": 326.639917,
+      "timeouts": 0
+    },
+    "effect_done\u2192replica_visible:replica0": {
+      "samples": 3,
+      "p50_ms": 196.771917,
+      "p95_ms": 329.857083,
+      "max_ms": 329.857083,
+      "timeouts": 0
+    },
+    "mcp_calendar_command_scan_wait": {
+      "samples": 6,
+      "p50_ms": 0.000375,
+      "p95_ms": 309.590208,
+      "max_ms": 309.590208,
+      "timeouts": 0
+    },
+    "mcp_command_submit\u2192calendar.create_calendar_observed": {
+      "samples": 1,
+      "p50_ms": 374.226167,
+      "p95_ms": 374.226167,
+      "max_ms": 374.226167,
+      "timeouts": 0
+    },
+    "mcp_command_submit\u2192calendar.create_event_observed": {
+      "samples": 2,
+      "p50_ms": 353.680917,
+      "p95_ms": 719.806292,
+      "max_ms": 719.806292,
+      "timeouts": 0
+    },
+    "mcp_command_submit\u2192calendar.delete_event_observed": {
+      "samples": 2,
+      "p50_ms": 1141.81575,
+      "p95_ms": 1415.617625,
+      "max_ms": 1415.617625,
+      "timeouts": 0
+    },
+    "mcp_command_submit\u2192calendar.update_event_observed": {
+      "samples": 1,
+      "p50_ms": 606.563875,
+      "p95_ms": 606.563875,
+      "max_ms": 606.563875,
+      "timeouts": 0
+    },
+    "mcp_effect_done\u2192gateway_visible": {
+      "samples": 3,
+      "p50_ms": 212.740875,
+      "p95_ms": 451.350125,
+      "max_ms": 451.350125,
+      "timeouts": 0
+    },
+    "mcp_effect_done\u2192replica_visible:replica0": {
+      "samples": 3,
+      "p50_ms": 219.043209,
+      "p95_ms": 454.049333,
+      "max_ms": 454.049333,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}
