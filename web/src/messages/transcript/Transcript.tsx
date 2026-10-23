@@ -57,7 +57,7 @@ export default function Transcript(props:TranscriptProps){
     const [replies,setReplies]=createSignal<{id:string;trigger:HTMLButtonElement}>();
     const closeReplies=(restoreFocus=true)=>{const trigger=replies()?.trigger;setReplies(undefined);if(restoreFocus)queueMicrotask(()=>trigger?.isConnected&&trigger.focus({preventScroll:true}));};
     const openReplies=(event:MouseEvent,item:ThreadItem)=>setReplies({id:item.id,trigger:event.currentTarget as HTMLButtonElement});
-    const local=createMemo<readonly ThreadItem[]>(previous=>{const next=(!props.threadOriginatorID?props.pending?.():undefined)?.filter(item=>item.data.chat_id===props.chatID)??[];return next.length?next:previous.length?[]:previous;},[]);
+    const local=createMemo<readonly ThreadItem[]>(previous=>{const next=(!props.threadOriginatorID?props.pending?.():undefined)?.filter(item=>item.data.chat_id===props.chatID)??[];return next.length===previous.length&&next.every((item,index)=>item===previous[index])?previous:next;},[]);
     const displayed=createMemo<readonly ThreadItem[]>(previous=>{const state=captured(),projected=linkOriginals(state.items,(!props.threadOriginatorID?props.projectCaptured?.(state.items,state.cursor):undefined)??state.items),next=[...projected,...local()].sort((a,b)=>Date.parse(text(a.data.command_sent_at)||a.data.sent_at)-Date.parse(text(b.data.command_sent_at)||b.data.sent_at)||(text(a.data.command_id)||a.id).localeCompare(text(b.data.command_id)||b.id)||(commandPartIndex(a)??-1)-(commandPartIndex(b)??-1)||a.id.localeCompare(b.id));return next.length===previous.length&&next.every((item,index)=>item===previous[index])?previous:next;},[]);
     const stickers=createMemo(()=>{const targets=new Map<string,BridgeRecord[]>();for(const item of displayed())for(const attachment of item.attachments??[]){const target=text(fields(attachment.data.sticker).target_message_id);if(!target||attachment.data.is_sticker!==true)continue;const values=targets.get(target)??[];values.push(attachment);targets.set(target,values);}return targets;});
     const notice=()=>props.deliveryNotice?.();
@@ -101,15 +101,16 @@ export default function Transcript(props:TranscriptProps){
     createEffect(()=>{
         const state=captured(),items=displayed(),pending=local(),data=record()?.data,map=handleMap(),loading=thread.loading(),size=width(),viewport=viewportHeight(),scale=appearance.textSize(),open=expanded(),reduced=reduceMotion();
         const signature=pending.map(item=>item.id+':'+text(item.data.send_state)).join('|'),immediate=signature!==previousLocal&&(Boolean(signature)||Boolean(previousLocal)),added=pending.some(item=>!previousLocalIDs.has(item.id));
-        if(added){setPendingJump('latest');setSettled(false);untrack(thread.latest);}
+        if(added){setPendingJump('latest');untrack(thread.latest);}
         fontRevision();
         cancelAnimationFrame(frame);
         if(!data||!size||(!untrack(ready)&&loading&&!pending.length))return;
-        previousLocal=signature;previousLocalIDs=new Set(pending.map(item=>item.id));
         const staged=!immediate&&state.anchor!==untrack(()=>rows().scope);
-        let prepared=0,descriptor:string|undefined;
+        let prepared=0,descriptor:string|undefined,active=true;
         const phone=matchMedia('(max-width:699px)').matches;
+        onCleanup(()=>{active=false;});
         const commit=()=>{
+            if(!active)return;
             const finish=beginWork('transcript-layout');
             if(descriptor===undefined){const textNode=container.querySelector<HTMLElement>('.bubble:not(.emoji-only):not(.media-reserved) .message-text')??fontProbe;if(document.fonts.size)fonts.watch(textNode,fontProbe);descriptor=measurer.prepare(textNode,measurementHost);}
             const prefs={phone,reduceMotion:reduced,selectedMessageID:props.messageID,viewportHeight:viewport,group:data.style==='group'||participants().length>1,service:text(data.service),atLatest:state.newer===0,now:new Date(),scale,measure:measurer.measure,expanded:open};
@@ -128,13 +129,14 @@ export default function Transcript(props:TranscriptProps){
             finish();
             const publish=()=>{
                 const finishPublish=beginWork('transcript-publish');
+                previousLocal=signature;previousLocalIDs=new Set(pending.map(item=>item.id));
                 batch(()=>{setMeasurementKey(descriptor+':'+untrack(fontRevision)+':'+size+':'+viewport);setRows({items:next,scope:state.anchor});setReady(true);});
                 if(added)queueMicrotask(()=>list()?.scrollToIndex(rows().items.length-1,'end'));
                 finishPublish();
             };
             if(staged)frame=requestAnimationFrame(publish);else publish();
         };
-        frame=requestAnimationFrame(commit);
+        if(immediate)queueMicrotask(commit);else frame=requestAnimationFrame(commit);
     });
     const initialTarget=()=>{const pending=pendingJump();return pending==='unread'?thread.unread():pending;};
     const initialIndex=()=>{const target=initialTarget();return target==='oldest'?0:!target||target==='latest'?rows().items.length-1:rows().items.findIndex(row=>row.id===target||row.members?.some(item=>item.id===target));};

@@ -41,6 +41,8 @@ test('WEB-MSG-REACT native context menu opens six tapbacks and one trusted selec
     await f.target.click({button:'right'});
     const menu = page.getByRole('dialog',{name:'Message actions',exact:true});
     await expect(menu).toBeVisible();
+    const cutout=()=>menu.evaluate(element=>getComputedStyle(element,'::backdrop').clipPath);
+    expect(await cutout()).toMatch(/^path\(evenodd,/u);
     for(const label of ['Love','Like','Dislike','Laugh','Emphasize','Question'])await expect(menu.getByRole('button',{name:label,exact:true})).toBeVisible();
     expect(f.commands.filter(command => command.op === 'messages.react')).toHaveLength(0);
     await menu.getByRole('button',{name:'Love',exact:true}).evaluate(button => button.dispatchEvent(new MouseEvent('click',{bubbles:true})));
@@ -52,6 +54,10 @@ test('WEB-MSG-REACT native context menu opens six tapbacks and one trusted selec
     expect(command.args).toEqual({id:f.recordID,part_index:0,reaction:'love',remove:false});
     await expect(menu).toHaveCount(0);
     await expect.poll(() => f.statuses.some(frame => frame.id === command.id && ['observed','delivered'].includes(frame.status))).toBe(true);
+    await f.target.click({button:'right'});await expect(menu).toBeVisible();
+    expect(await cutout()).toMatch(/^path\(evenodd,/u);
+    await menu.getByRole('button',{name:'Close',exact:true}).click();await expect(menu).toHaveCount(0);
+    expect(f.commands.filter(command=>command.op==='messages.react')).toHaveLength(1);
 });
 test('WEB-MSG-REACT REMOVE a matching own tapback removes it and emoji search sends the exact selected emoji',async ({page,context}) => {
     const f = await fixture(page,context);

@@ -4,7 +4,9 @@ import {Portal} from 'solid-js/web';
 import {reducedMotion,springAnimation} from '../../motion/animate';
 import {classicReactions,type MessageActionsController} from './reactionActions';
 import {loadReactionEmoji,type ReactionEmoji} from './emoji';
+import {bubbleSilhouette} from '../transcript/shape';
 import './actions.css';
+let backdrop:CSSStyleRule|undefined;
 export function MessageActions(props:{actions:MessageActionsController;onForward?:(event:Event,text:string,attachment?:BridgeRecord)=>void}){
     const actions=props.actions;
     function Picker(){
@@ -12,7 +14,7 @@ export function MessageActions(props:{actions:MessageActionsController;onForward
         const loadEmoji=()=>{setEmojiProblem('');void loadReactionEmoji().then(setEmoji).catch(()=>setEmojiProblem("Couldn't load emoji"));};
         let dialog!:HTMLDialogElement,searchField:HTMLInputElement|undefined;
         const value=actions.target()!,anchor=value.anchor;
-        let lift:ReturnType<typeof springAnimation>|undefined,rule:{sheet:CSSStyleSheet;rule:CSSRule}|undefined;
+        let lift:ReturnType<typeof springAnimation>|undefined;
         onMount(()=>{
             dialog.showModal();
             const position=()=>{const bubble=anchor.getBoundingClientRect(),rect=dialog.getBoundingClientRect();dialog.style.left=Math.max(12,Math.min(innerWidth-rect.width-12,bubble.right-rect.width))+'px';dialog.style.top=Math.max(12,Math.min(innerHeight-rect.height-12,bubble.top>rect.height+24?bubble.top-rect.height-12:bubble.bottom+12))+'px';};
@@ -22,11 +24,11 @@ export function MessageActions(props:{actions:MessageActionsController;onForward
             dialog.querySelector<HTMLElement>('button')?.focus({preventScroll:true});
             anchor.classList.add('message-action-anchor');
             const sheet=Array.from(document.styleSheets).find(sheet=>sheet.href?.startsWith(location.origin+'/'));
-            if(sheet){const {left:x,top:y,right:r,bottom:b}=bubble,radius=Math.min(18,bubble.width/2,bubble.height/2),hole=`M${x+radius} ${y}H${r-radius}Q${r} ${y} ${r} ${y+radius}V${b-radius}Q${r} ${b} ${r-radius} ${b}H${x+radius}Q${x} ${b} ${x} ${b-radius}V${y+radius}Q${x} ${y} ${x+radius} ${y}Z`;const index=sheet.insertRule(`.message-actions-dialog::backdrop{clip-path:path(evenodd,"M0 0H${innerWidth}V${innerHeight}H0Z ${hole}")}`,sheet.cssRules.length);rule={sheet,rule:sheet.cssRules[index]};}
+            if(sheet){const hole=bubbleSilhouette(bubble.width,bubble.height,{x:bubble.left,y:bubble.top,tail:false});backdrop??=[...sheet.cssRules].find(rule=>(rule as CSSStyleRule).selectorText==='.message-actions-dialog::backdrop') as CSSStyleRule|undefined;if(backdrop)backdrop.style.clipPath=`path(evenodd,"M0 0H${innerWidth}V${innerHeight}H0Z ${hole}")`;}
             if(!reducedMotion())lift=springAnimation(scale=>{anchor.style.scale=String(scale);},1,1.03,{response:.3,damping:.8});
             else{const fade=dialog.animate([{opacity:0},{opacity:1}],{duration:150});onCleanup(()=>fade.cancel());}
         });
-        onCleanup(()=>{lift?.cancel();anchor.classList.remove('message-action-anchor');anchor.style.scale='';if(rule){const index=Array.from(rule.sheet.cssRules).indexOf(rule.rule);if(index>=0)rule.sheet.deleteRule(index);}});
+        onCleanup(()=>{lift?.cancel();anchor.classList.remove('message-action-anchor');anchor.style.scale='';});
         const results=()=>emoji().filter(([symbol,label,tags])=>(symbol+' '+label+' '+tags).toLocaleLowerCase().includes(search().trim().toLocaleLowerCase()));
         const keydown=(event:KeyboardEvent)=>{
             event.stopPropagation();
