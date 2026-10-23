@@ -1,7 +1,7 @@
 import type {BridgeRecord} from '../../data/types';
 import {createSignal,For,onCleanup,onMount,Show} from 'solid-js';
 import {Portal} from 'solid-js/web';
-import {reducedMotion,springAnimation} from '../../motion/animate';
+import {reducedMotion} from '../../motion/animate';
 import {classicReactions,type MessageActionsController} from './reactionActions';
 import {loadReactionEmoji,type ReactionEmoji} from './emoji';
 import {bubbleSilhouette} from '../transcript/shape';
@@ -14,7 +14,6 @@ export function MessageActions(props:{actions:MessageActionsController;onForward
         const loadEmoji=()=>{setEmojiProblem('');void loadReactionEmoji().then(setEmoji).catch(()=>setEmojiProblem("Couldn't load emoji"));};
         let dialog!:HTMLDialogElement,searchField:HTMLInputElement|undefined;
         const value=actions.target()!,anchor=value.anchor;
-        let lift:ReturnType<typeof springAnimation>|undefined;
         onMount(()=>{
             dialog.showModal();
             const position=()=>{const bubble=anchor.getBoundingClientRect(),rect=dialog.getBoundingClientRect();dialog.style.left=Math.max(12,Math.min(innerWidth-rect.width-12,bubble.right-rect.width))+'px';dialog.style.top=Math.max(12,Math.min(innerHeight-rect.height-12,bubble.top>rect.height+24?bubble.top-rect.height-12:bubble.bottom+12))+'px';};
@@ -25,10 +24,8 @@ export function MessageActions(props:{actions:MessageActionsController;onForward
             anchor.classList.add('message-action-anchor');
             const sheet=Array.from(document.styleSheets).find(sheet=>sheet.href?.startsWith(location.origin+'/'));
             if(sheet){const hole=bubbleSilhouette(bubble.width,bubble.height,{x:bubble.left,y:bubble.top,tail:false});backdrop??=[...sheet.cssRules].find(rule=>(rule as CSSStyleRule).selectorText==='.message-actions-dialog::backdrop') as CSSStyleRule|undefined;if(backdrop)backdrop.style.clipPath=`path(evenodd,"M0 0H${innerWidth}V${innerHeight}H0Z ${hole}")`;}
-            if(!reducedMotion())lift=springAnimation(scale=>{anchor.style.scale=String(scale);},1,1.03,{response:.3,damping:.8});
-            else{const fade=dialog.animate([{opacity:0},{opacity:1}],{duration:150});onCleanup(()=>fade.cancel());}
         });
-        onCleanup(()=>{lift?.cancel();anchor.classList.remove('message-action-anchor');anchor.style.scale='';});
+        onCleanup(()=>anchor.classList.remove('message-action-anchor'));
         const results=()=>emoji().filter(([symbol,label,tags])=>(symbol+' '+label+' '+tags).toLocaleLowerCase().includes(search().trim().toLocaleLowerCase()));
         const keydown=(event:KeyboardEvent)=>{
             event.stopPropagation();
@@ -39,7 +36,7 @@ export function MessageActions(props:{actions:MessageActionsController;onForward
             event.preventDefault();buttons[event.key==='Home'?0:event.key==='End'?buttons.length-1:(index+(event.key==='ArrowLeft'?-1:1)+buttons.length)%buttons.length]?.focus();
         };
         return <Portal><dialog ref={dialog} class="message-actions-dialog" aria-label="Message actions" data-message-version={value.item.version} onCancel={event=>{event.preventDefault();event.stopPropagation();actions.close();}} onKeyDown={keydown} onClick={event=>{if(event.target!==dialog)return;const rect=dialog.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)actions.close();}}>
-            <Show when={actions.available()}><div class="tapback-picker" role="group" aria-label="Tapbacks"><For each={classicReactions}>{(reaction,index)=><button style={{'--reaction-index':index()}} aria-label={reaction.label} aria-pressed={actions.selected(reaction)} disabled={actions.busy()||actions.unknown()} onClick={event=>actions.react(event,reaction)}><span aria-hidden="true">{reaction.symbol}</span></button>}</For></div>
+            <Show when={actions.available()}><div class="tapback-picker" role="group" aria-label="Tapbacks"><For each={classicReactions}>{reaction=><button aria-label={reaction.label} aria-pressed={actions.selected(reaction)} disabled={actions.busy()||actions.unknown()} onClick={event=>actions.react(event,reaction)}><span aria-hidden="true">{reaction.symbol}</span></button>}</For></div>
                 <button class="message-action-item" disabled={actions.busy()||actions.unknown()} aria-expanded={more()} onClick={()=>{setMore(value=>!value);if(more())loadEmoji();queueMicrotask(()=>searchField?.focus());}}>More reactions</button>
                 <Show when={more()}><div class="reaction-search"><input ref={searchField} type="search" aria-label="Search reactions" value={search()} onInput={event=>setSearch(event.currentTarget.value)} placeholder="Search emoji"/><div class="reaction-emoji-grid"><For each={results()}>{([symbol,label])=><button aria-label={label} aria-pressed={actions.selected({kind:'emoji',emoji:symbol,symbol})} disabled={actions.busy()||actions.unknown()} onClick={event=>actions.react(event,{kind:'emoji',emoji:symbol,symbol})}>{symbol}</button>}</For></div><Show when={emojiProblem()}><p class="action-problem" role="status">{emojiProblem()} <button onClick={loadEmoji}>Try Again</button></p></Show><Show when={emoji().length&&!results().length}><p class="action-problem">No emoji found</p></Show></div></Show>
             </Show>
