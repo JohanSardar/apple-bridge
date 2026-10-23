@@ -1,4 +1,4 @@
-export type ThumbPixels = { width: number; height: number; rgba: Uint8ClampedArray };
+export type ThumbPixels = { width: number; height: number; rgba: Uint8ClampedArray<ArrayBuffer> };
 export function decodeThumbHash(value: string): ThumbPixels | undefined {
     let hash: Uint8Array;
     try { hash = Uint8Array.from(atob(value), character => character.charCodeAt(0)); } catch { return; }

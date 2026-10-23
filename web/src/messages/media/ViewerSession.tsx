@@ -1,4 +1,4 @@
-import {Show,onMount,onCleanup,createSignal,createEffect,createMemo} from 'solid-js';
+import {Show,onCleanup,createSignal,createEffect,createMemo} from 'solid-js';
 import {auth} from '../../auth/session';
 import type {BridgeRecord} from '../../data/types';
 import {createMediaCollection} from './collection';
@@ -9,16 +9,16 @@ import {fields,text} from '../store/types';
 import {duration,header,name,wording} from '../format';
 import {mediaSource} from './source';
 export function ViewerSession(props:ChatMediaViewerProps){
-    const sources=new Map<HTMLElement,string>();
+    let hidden:HTMLElement|undefined,visibility='';
     const [selected,setSelected]=createSignal(props.attachment);
-    const restore=()=>{for(const [element,visibility] of sources)element.style.visibility=visibility;sources.clear();};
-    const source=(attachment:BridgeRecord)=>[...document.querySelectorAll<HTMLElement>(`[data-media-origin="${CSS.escape(attachment.id)}"],[data-media-id="${CSS.escape(attachment.id)}"]`)].find(element=>!element.closest('.media-viewer,[inert]'));
-    const hide=(element?:HTMLElement)=>{if(element){sources.set(element,element.style.visibility);element.style.visibility='hidden';}};
+    const restore=()=>{if(hidden){hidden.style.visibility=visibility;hidden=undefined;}};
+    const source=(attachment:BridgeRecord)=>(props.sourceRoot??document).querySelector<HTMLElement>(`[data-media-origin="${CSS.escape(attachment.id)}"]:not([inert],[inert] *)`);
+    const hide=(element?:HTMLElement|null)=>{if(element){hidden=element;visibility=element.style.visibility;element.style.visibility='hidden';}};
     const originFor=(attachment:BridgeRecord)=>{
-        restore();const image=source(attachment),rect=props.originFor?props.originFor(attachment):image?.getBoundingClientRect();
+        const image=source(attachment),rect=image?.getBoundingClientRect();restore();
         if(rect&&rect.width>0&&rect.height>0&&rect.bottom>0&&rect.top<innerHeight&&rect.right>0&&rect.left<innerWidth){hide(image);return rect;}
     };
-    onMount(()=>hide(source(props.attachment)));onCleanup(restore);
+    hide(source(props.attachment));onCleanup(restore);
     const close=()=>{restore();const element=source(props.attachment),trigger=element?.querySelector<HTMLElement>('.media-open')??element?.closest<HTMLElement>('button,a')??element?.closest('.media-bubble')?.querySelector<HTMLElement>('.media-open');trigger?.focus({preventScroll:true});props.onClose();};
     const shareUrl=(attachment:BridgeRecord)=>new URL(`/messages/${encodeURIComponent(props.chatId)}/${encodeURIComponent(String(attachment.data.message_id??''))}`,location.origin).href;
     return <Show keyed when={auth.live()}>{live=>{

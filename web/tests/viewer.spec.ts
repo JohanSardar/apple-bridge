@@ -8,6 +8,7 @@ async function setup(context:BrowserContext,request:APIRequestContext){const val
 test('WEB-MSG-VIEWER META collection source pages beyond the transcript window with interleaved photos and playable video',async({page,context,request},info)=>{
  const ids=await setup(context,request),subscriptions:Record<string,unknown>[]=[],viewerChunks:string[]=[];
  await page.addInitScript(()=>{window.requestIdleCallback=callback=>{(window as any).__viewerIdle=()=>callback({didTimeout:false,timeRemaining:()=>50});return 1;};window.cancelIdleCallback=()=>{delete (window as any).__viewerIdle;};});
+ await page.addInitScript(id=>{const show=HTMLDialogElement.prototype.showModal;HTMLDialogElement.prototype.showModal=function(){if(this.classList.contains('media-viewer'))(window as any).__sourceHiddenBeforeModal=[...document.querySelectorAll<HTMLElement>('[data-message="'+id+'"],[data-message="'+id+'"] *')].some(element=>element.style.visibility==='hidden');return show.call(this);};},ids['demo-message-00-000032']);
  page.on('request',request=>{if(/\/assets\/ViewerSession-[^/]+\.js$/u.test(new URL(request.url()).pathname))viewerChunks.push(request.url());});
  await page.addInitScript(()=>Object.defineProperty(navigator,'share',{value:async(payload:ShareData)=>{Object.defineProperty(window,'viewerShared',{value:payload,configurable:true});}}));
  page.on('websocket',socket=>socket.on('framesent',({payload})=>{try{const frame=JSON.parse(String(payload));if(frame.t==='sub')subscriptions.push(frame);}catch{}}));
@@ -17,6 +18,7 @@ test('WEB-MSG-VIEWER META collection source pages beyond the transcript window w
  expect(viewerChunks).toHaveLength(0);await source.locator('.media-open').hover();await expect.poll(()=>viewerChunks.length).toBeGreaterThan(0);await expect(page.getByRole('dialog',{name:'Media viewer'})).toHaveCount(0);
  expect(subscriptions.filter(value=>value.view==='collection')).toHaveLength(0);
  await source.locator('.media-open').click();const viewer=page.getByRole('dialog',{name:'Media viewer'});await expect(viewer).toBeVisible();await expect(viewer.locator('.media-viewer-stage')).toBeFocused();
+ expect(await page.evaluate(()=>(window as any).__sourceHiddenBeforeModal)).toBe(true);
  await expect(viewer.locator('.media-viewer-preview')).toHaveCount(0);await page.evaluate(()=>(window as any).__viewerIdle());await expect(viewer.locator('.media-viewer-preview')).toHaveCount(2);
  const decoded=await viewer.locator('.media-viewer-stage .media-image>img').elementHandle();
  await expect(viewer).toHaveAttribute('data-media-loading','false');await expect(viewer).toHaveAttribute('data-media-count','13');expect(await decoded!.evaluate(element=>element.isConnected)).toBe(true);
@@ -118,4 +120,12 @@ test('WEB-MSG-VIEWER press prefetches code without opening or downloading displa
  await page.goto('/__fixtures/media?chat='+encodeURIComponent(ids['message-chat']));const source=page.locator(`[data-message="${ids['demo-message-00-000032']}"] .media-open`);await expect(source).toBeAttached();expect(chunks).toHaveLength(0);
  await source.dispatchEvent('pointerdown',{pointerId:91,pointerType:'touch',isPrimary:true});await expect.poll(()=>chunks.length).toBeGreaterThan(0);await expect(page.getByRole('dialog',{name:'Media viewer'})).toHaveCount(0);expect(variants).not.toContain('display');expect(variants).not.toContain('video');
  const path=`../lab/evidence/web/metrics/WEB-MSG-VIEWER-${info.project.name}.json`,metrics=JSON.parse(await readFile(path,'utf8'));await writeFile(path,JSON.stringify({...metrics,viewer_prefetched_on_press:true},null,2)+'\n');
+});
+
+test('WEB-MSG-VIEWER opening a transcript photo trims background overscan and restores it on close',async({page,context,request})=>{
+ const ids=await setup(context,request),id=ids['demo-message-00-000032'];await page.goto('/messages/'+encodeURIComponent(ids['message-chat'])+'/'+encodeURIComponent(id));
+ await expect(page.locator('.messages-transcript')).toHaveAttribute('aria-busy','false');await expect(page.locator('main.transcript')).toHaveCSS('transform','none');
+ const rows=page.locator('.messages-transcript .virtual-row'),before=await rows.count(),source=page.locator('[data-message="'+id+'"] .media-open'),box=await source.boundingBox();
+ await source.click();const viewer=page.getByRole('dialog',{name:'Media viewer',exact:true});await expect(viewer).toBeVisible();await expect.poll(()=>rows.count()).toBeLessThan(before);
+ await page.keyboard.press('Escape');await expect(viewer).not.toBeVisible();await expect(rows).toHaveCount(before);expect(await source.boundingBox()).toEqual(box);
 });

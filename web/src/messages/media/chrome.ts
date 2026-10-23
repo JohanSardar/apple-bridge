@@ -25,7 +25,7 @@ export function attachViewerChrome(root:HTMLDialogElement){
     const leave=()=>{last={x:innerWidth/2,y:innerHeight/2};updateEdges();};
     const focus=()=>{wake();updateEdges();};
     const changed=()=>{for(const track of [chrome,left,right]){track.animation?.cancel();track.animation=undefined;}chrome.value=visible?1:0;writeChrome(chrome.value);left.value=left.target;right.value=right.target;writeEdge(previous,left.value,-1);writeEdge(next,right.value,1);updateEdges();};
-    previous.dataset.navVisible='false';next.dataset.navVisible='false';root.dataset.chromeVisible='true';arm();
+    arm();
     root.addEventListener('pointerdown',down,true);root.addEventListener('pointermove',move);root.addEventListener('pointerup',up,true);root.addEventListener('pointercancel',up,true);root.addEventListener('pointerleave',leave);root.addEventListener('keydown',wake);root.addEventListener('focusin',focus);root.addEventListener('focusout',updateEdges);desktop.addEventListener('change',changed);motion.addEventListener('change',changed);
     return ()=>{stopped=true;clearTimeout(timer);for(const track of [chrome,left,right])track.animation?.cancel();root.removeEventListener('pointerdown',down,true);root.removeEventListener('pointermove',move);root.removeEventListener('pointerup',up,true);root.removeEventListener('pointercancel',up,true);root.removeEventListener('pointerleave',leave);root.removeEventListener('keydown',wake);root.removeEventListener('focusin',focus);root.removeEventListener('focusout',updateEdges);desktop.removeEventListener('change',changed);motion.removeEventListener('change',changed);};
 }

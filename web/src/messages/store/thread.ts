@@ -12,14 +12,14 @@ export function createThreadWindow(live:LiveClient,chat:string,initialAnchor='un
     const scope=originator?{thread_originator_id:originator}:{};
     const [anchor,setAnchor]=createSignal(initialAnchor),[loading,setLoading]=createSignal(true),[prefetching,setPrefetching]=createSignal(true);
     const [window,setWindow]=createSignal<WindowState>({anchor:initialAnchor,items:[],older:0,newer:0});
+    const [painted,setPainted]=createSignal(false);
     let publishedAnchor='',frame=0;
     let retained=new Map<string,{item:ThreadItem;epoch?:string;sequence:number}>();
     onCleanup(()=>cancelAnimationFrame(frame));
     createEffect(()=>{
         const value=anchor();setLoading(true);setPrefetching(true);
-        let warmFrame=0,warming=Boolean(publishedAnchor);
-        const [warm,setWarm]=createSignal(warming);
-        onCleanup(()=>cancelAnimationFrame(warmFrame));
+        const [warm,setWarm]=createSignal(Boolean(publishedAnchor));
+        createEffect(()=>{if(painted())setWarm(true);});
         const main:Subscription=live.subscribe('thread',{chat_id:chat,anchor:value,limit:pageSize,...scope});
         onCleanup(()=>{main.dispose();cancelAnimationFrame(frame);});
         function prefetch(source:Subscription,direction:'before'|'after',depth:number):Accessor<Pages>{
@@ -64,7 +64,6 @@ export function createThreadWindow(live:LiveClient,chat:string,initialAnchor='un
             const first=older.pages.at(-1)?.data??center.data,last=newer.pages.at(-1)?.data??center.data;
             publishedAnchor=value;retained=new Map(next.map(item=>[item.id,versions.get(item.id)!]));
             batch(()=>{setWindow({cursor:coherent?head:undefined,anchor:value,items,before:first.before,after:last.after,older:Number(first.older??0),newer:Number(last.newer??0),unread:center.data.unread_anchor});setLoading(false);setPrefetching(!warm());});
-            if(!warming){warming=true;warmFrame=requestAnimationFrame(()=>{warmFrame=requestAnimationFrame(()=>setWarm(true));});}
             });
         });
     });
@@ -74,7 +73,7 @@ export function createThreadWindow(live:LiveClient,chat:string,initialAnchor='un
         const id=start<edge&&state.before?state.items[Math.min(start+step,state.items.length-1)]?.id:end>state.items.length-edge&&state.after?state.items[Math.max(0,end-step)]?.id:undefined;
         if(id&&id!==untrack(anchor))setAnchor(id);
     }
-    return {view:window,items:()=>window().items,anchor,newer:()=>window().newer,older:()=>window().older,loading,unread:()=>window().unread,visible,jump:(id:string)=>setAnchor(id),latest:()=>setAnchor('latest'),oldest:()=>setAnchor('oldest')};
+    return {prefetching,presented:()=>setPainted(true),view:window,items:()=>window().items,anchor,newer:()=>window().newer,older:()=>window().older,loading,unread:()=>window().unread,visible,jump:(id:string)=>setAnchor(id),latest:()=>setAnchor('latest'),oldest:()=>setAnchor('oldest')};
 }
 
 function sameThreadItem(a:ThreadItem,b:ThreadItem){

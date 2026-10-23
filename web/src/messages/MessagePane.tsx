@@ -51,6 +51,7 @@ export default function MessagePane(props:{chatID:string;messageID?:string;title
     };
     const cancelShortcut=()=>{cancelLatest?.();cancelLatest=undefined;clearTimeout(shortcutTimer);cancelAnimationFrame(shortcutFrame);pendingShortcut=undefined;};
     const openShortcut=()=>{
+        if(!latestSent&&host.querySelector('.message-row'))latestSent=props.live.subscribe('thread',{chat_id:props.chatID,anchor:'latest',limit:100},{cache:false,resetOnReconnect:true});
         if(!pendingShortcut)return;
         cancelAnimationFrame(shortcutFrame);
         shortcutFrame=requestAnimationFrame(()=>{
@@ -92,8 +93,8 @@ export default function MessagePane(props:{chatID:string;messageID?:string;title
         press={event,item,anchor,x:event.clientX,y:event.clientY};
         timer=setTimeout(()=>{const value=press;press=undefined;if(!value?.anchor.isConnected)return;props.actions.open(value.event,value.item,value.anchor);if(props.actions.target()?.item.id===value.item.id)held={anchor:value.anchor,until:performance.now()+750};},500);
     };
-    const latestSent=props.live.subscribe('thread',{chat_id:props.chatID,anchor:'latest',limit:100},{cache:false,resetOnReconnect:true});
-    onCleanup(latestSent.dispose);
+    let latestSent:ReturnType<LiveClient['subscribe']>|undefined;
+    onCleanup(()=>latestSent?.dispose());
     onMount(()=>{
         const trailingClick=(event:MouseEvent)=>{const value=held;if(!value)return;if(performance.now()>=value.until){held=undefined;return;}if(event.target instanceof Node&&value.anchor.contains(event.target)){held=undefined;event.preventDefault();event.stopImmediatePropagation();}};
         const finishPointer=(event:PointerEvent)=>{if(press?.event.pointerId===event.pointerId)cancel();};
@@ -105,7 +106,7 @@ export default function MessagePane(props:{chatID:string;messageID?:string;title
             const key=event.key.toLowerCase();
             if(!(event.metaKey||event.ctrlKey)||event.altKey||event.shiftKey||!['t','r','e','z'].includes(key)||event.repeat||event.isComposing||host.closest('[inert]')||document.querySelector('dialog[open]')||props.actions.changes.editor())return;
             if(key==='z'){
-                if(event.target instanceof Element&&event.target.closest('input,textarea,[contenteditable=true]')||!props.actions.changes.canOperation('unsend')||!latestSent.cursor())return;
+                if(event.target instanceof Element&&event.target.closest('input,textarea,[contenteditable=true]')||!props.actions.changes.canOperation('unsend')||!latestSent?.cursor())return;
                 const item=latestSent.data().items?.findLast(item=>item.data.is_from_me===true),anchor=item&&anchorFor(item.id);
                 if(!item||!anchor)return;
                 batch(()=>{props.actions.open(event,item,anchor);if(props.actions.changes.canUnsend()){event.preventDefault();props.actions.changes.unsend(event);}else props.actions.close();});return;

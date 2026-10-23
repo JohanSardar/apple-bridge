@@ -1,10 +1,10 @@
 import { createEffect, createMemo, createSignal, onCleanup, Show } from 'solid-js';
 import type { BridgeRecord } from '../../data/types';
 import { fields, text } from '../store/types';
-import { decodeThumbHash, type ThumbPixels } from './thumbhash';
+import { decodeThumbHash } from './thumbhash';
 import { attachmentHasAlpha, mediaSource, type MediaVariant } from './source';
 import './media.css';
-const placeholders=new Map<string,ThumbPixels>();
+const placeholders=new Map<string,ImageData>();
 export function MediaImage(props: { attachment: BridgeRecord; variant?: MediaVariant; alt?: string; interactive?: boolean }) {
     const [state, setState] = createSignal<'loading' | 'ready' | 'error'>('loading');
     const [attempt, setAttempt] = createSignal(0);
@@ -15,11 +15,11 @@ export function MediaImage(props: { attachment: BridgeRecord; variant?: MediaVar
     createEffect(() => { source(); attempt(); setState('loading'); });
     createEffect(() => {
         const hash=placeholder();
-        const pixels = placeholders.get(hash) ?? decodeThumbHash(hash);
-        if(pixels&&!placeholders.has(hash)){if(placeholders.size>=64)placeholders.delete(placeholders.keys().next().value!);placeholders.set(hash,pixels);}
-        canvas.width=32;canvas.height=32;
+        let pixels=placeholders.get(hash);
+        if(!pixels){const decoded=decodeThumbHash(hash);if(decoded){pixels=new ImageData(decoded.rgba,decoded.width,decoded.height);if(placeholders.size>=64)placeholders.delete(placeholders.keys().next().value!);placeholders.set(hash,pixels);}}
+        canvas.width=pixels?.width??32;canvas.height=pixels?.height??32;
         canvas.dataset.thumbhash = pixels ? 'decoded' : 'missing';
-        if (pixels) { canvas.width = pixels.width; canvas.height = pixels.height; const context=canvas.getContext('2d'); if(context){const data=context.createImageData(pixels.width,pixels.height);data.data.set(pixels.rgba);context.putImageData(data,0,0);} }
+        if(pixels)canvas.getContext('2d')?.putImageData(pixels,0,0);
     });
     const decode = async (image: HTMLImageElement) => {
         const expected = source(),generation=attempt();

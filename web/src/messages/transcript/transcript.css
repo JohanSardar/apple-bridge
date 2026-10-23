@@ -5,7 +5,7 @@
 
 .bubble.floating-media.sent,.bubble.floating-media.received{background:none;border:0;border-radius:0;overflow:visible}
 
-.text-measure-host{position:absolute;visibility:hidden;pointer-events:none;inset:0 auto auto 0;contain:layout style paint}.text-font-probe{display:inline-block;white-space:pre;font-size:var(--bubble-font);line-height:var(--bubble-line)}
+.text-measure-host{position:absolute;visibility:hidden;pointer-events:none;inset:0 auto auto 0;contain:content}.text-font-probe{display:inline-block;white-space:pre;font-size:var(--bubble-font);line-height:var(--bubble-line)}
 @media(max-width:699px){.text-font-probe{letter-spacing:-.012em}}
 .messages-transcript{display:flex;flex-direction:column}.transcript-viewport{position:relative;flex:1;min-block-size:0}.command-status{display:flex;align-items:center;justify-content:flex-end;gap:8px;min-block-size:44px;font-size:var(--caption-1);line-height:18px;color:var(--label-secondary)}.command-status button,.delivery-notice button{min-block-size:44px;min-inline-size:44px;color:var(--blue)}.command-status[data-command-state=failed]{color:var(--red)}.message-row[data-local-echo][data-send-state=pending] .bubble{opacity:.68}.delivery-notice{display:flex;align-items:center;justify-content:center;gap:8px;padding-inline:12px;font-size:var(--caption-1);color:var(--label-secondary);min-block-size:44px;border-block-start:1px solid var(--separator)}
 
