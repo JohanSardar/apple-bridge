@@ -18,22 +18,22 @@ export function ViewerSession(props:ChatMediaViewerProps){
         const image=source(attachment),rect=image?.getBoundingClientRect();restore();
         if(rect&&rect.width>0&&rect.height>0&&rect.bottom>0&&rect.top<innerHeight&&rect.right>0&&rect.left<innerWidth){hide(image);return rect;}
     };
-    hide(source(props.attachment));onCleanup(restore);
-    const close=()=>{restore();const element=source(props.attachment),trigger=element?.querySelector<HTMLElement>('.media-open')??element?.closest<HTMLElement>('button,a')??element?.closest('.media-bubble')?.querySelector<HTMLElement>('.media-open');trigger?.focus({preventScroll:true});props.onClose();};
+    createEffect(()=>{if(props.open!==false)hide(source(props.attachment));else setSelected(props.attachment);onCleanup(restore);});
+    const close=()=>{const attachment=props.attachment;restore();props.onClose();queueMicrotask(()=>{source(attachment)?.querySelector<HTMLElement>('.media-open')?.focus({preventScroll:true});});};
     const shareUrl=(attachment:BridgeRecord)=>new URL(`/messages/${encodeURIComponent(props.chatId)}/${encodeURIComponent(String(attachment.data.message_id??''))}`,location.origin).href;
     return <Show keyed when={auth.live()}>{live=>{
         const [presented,setPresented]=createSignal(false);
-        let frame=requestAnimationFrame(()=>{frame=requestAnimationFrame(()=>setPresented(true));});onCleanup(()=>cancelAnimationFrame(frame));
+        createEffect(()=>{if(props.open===false)return;let frame=requestAnimationFrame(()=>{frame=requestAnimationFrame(()=>setPresented(true));});onCleanup(()=>{cancelAnimationFrame(frame);setPresented(false);});});
         const collection=createMemo(()=>presented()?createMediaCollection(live,props.chatId,Math.max(1,Math.min(200,props.pageSize??200))):undefined),handles=createHandlesCache(live),cache=new Map<string,BridgeRecord>();
-        const [owner,setOwner]=createSignal<BridgeRecord>(),[record,setRecord]=createSignal<ReturnType<typeof live.subscribe>>();
+        const [record,setRecord]=createSignal<ReturnType<typeof live.subscribe>>();
         const ownerId=createMemo(()=>text(selected().data.message_id));
-        createEffect(()=>{const id=ownerId();if(!presented())return;setOwner(cache.get(id));setRecord(undefined);if(!id)return;let subscription:ReturnType<typeof live.subscribe>|undefined;const timer=setTimeout(()=>{subscription=live.subscribe('record',{collection:'messages.message',id});setRecord(subscription);},80);onCleanup(()=>{clearTimeout(timer);subscription?.dispose();});});
-        createEffect(()=>{const message=record()?.data().records?.find(value=>value.id===ownerId());if(message){cache.delete(message.id);cache.set(message.id,message);if(cache.size>64)cache.delete(cache.keys().next().value!);setOwner(message);}});
+        createEffect(()=>{const id=ownerId();setRecord(undefined);if(!presented()||!id)return;let subscription:ReturnType<typeof live.subscribe>|undefined;const timer=setTimeout(()=>{subscription=live.subscribe('record',{collection:'messages.message',id});setRecord(subscription);},80);onCleanup(()=>{clearTimeout(timer);subscription?.dispose();});});
+        const owner=createMemo(()=>{if(!presented())return;const id=ownerId(),message=record()?.data().records?.find(value=>value.id===id);if(message){cache.delete(id);cache.set(id,message);if(cache.size>64)cache.delete(cache.keys().next().value!);}return message??cache.get(id);});
         createEffect(()=>{const sender=text(owner()?.data.sender_handle_id);if(sender)handles.ensure([sender]);});
         const timestamp=()=>text(owner()?.data.sent_at)||text(selected().data.sent_at);
         const subtitle=()=>Number.isFinite(Date.parse(timestamp()))?header(timestamp(),props.now,props.locale):'';
         const senderName=()=>owner()?.data.is_from_me?wording.you:name(text(owner()?.data.sender_handle_id),handles.read());
-        return <MediaViewer {...props} onClose={close} onSelection={value=>setSelected(value)} senderName={senderName()} timestamp={timestamp()} subtitle={subtitle()} originFor={originFor} shareUrl={shareUrl} attachments={collection()?.attachments()??[]} loading={collection()?.loading()??true} error={collection()?.error()} onRetry={()=>collection()?.retry()}/>;
+        return <MediaViewer {...props} onClose={close} onSelection={setSelected} senderName={senderName()} timestamp={timestamp()} subtitle={subtitle()} originFor={originFor} shareUrl={shareUrl} attachments={collection()?.attachments()??[]} loading={collection()?.loading()??true} error={collection()?.error()} onRetry={()=>collection()?.retry()}/>;
     }}</Show>;
 }
 
