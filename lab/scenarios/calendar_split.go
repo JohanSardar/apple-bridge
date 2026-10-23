@@ -11,7 +11,7 @@ import (
 	"github.com/JohanSardar/apple-bridge/lab/world"
 )
 
-func watchCalendarSplit(ctx context.Context, w *world.World, tag string) func() bool {
+func watchCalendarSplit(ctx context.Context, w *world.World, tag string, diagnostics map[string]any) func() bool {
 	endpoints := append([]world.Endpoint{w.Gateway}, w.Replicas...)
 	snapshot := func(endpoint world.Endpoint) string {
 		records, err := w.Records(endpoint)
@@ -33,6 +33,28 @@ func watchCalendarSplit(ctx context.Context, w *world.World, tag string) func() 
 		return strings.Join(identities, "\n")
 	}
 	before := snapshot(w.Gateway)
+	mismatched := map[int]bool{}
+	ready := before != "read_failed" && before != "decode_failed" && w.Await(5*time.Second, func() bool {
+		matched := true
+		for index, endpoint := range endpoints {
+			if snapshot(endpoint) != before {
+				mismatched[index] = true
+				matched = false
+			}
+		}
+		return matched
+	}) == nil
+	indices := []int{}
+	for index := range endpoints {
+		if mismatched[index] {
+			indices = append(indices, index)
+		}
+	}
+	diagnostics["split_baseline_ready"] = ready
+	diagnostics["split_baseline_initially_mismatched_endpoints"] = indices
+	if !ready {
+		return func() bool { return false }
+	}
 	stop, done := make(chan struct{}), make(chan []string, 1)
 	go func() {
 		observed := []string{}
