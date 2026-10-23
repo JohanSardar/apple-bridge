@@ -1,77 +1,94 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[15.48 15.44 12.6] cpu_idle=24% cpus=8 other_heavy=2"
+    "summary": "air: load=[3.02 3.39 4.73] cpu_idle=91% cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M5J595TGB6N92F43ZPXBY64F",
+  "run_id": "run_01M5JN830N49WZC4V1A30PMV0W",
   "metrics": {
     "browser_budget_ms": 180000,
     "capture_observer_resets": 0,
-    "demo_messages": 5000,
-    "demo_startup_ms": 6884,
-    "fixture_setup_ms": 6884,
     "matrix": [
       "webkit-light-phone",
       "webkit-light-desktop",
+      "webkit-dark-phone",
+      "webkit-dark-desktop",
       "chromium-light-phone",
-      "chromium-light-desktop"
-    ],
-    "report": "lab/evidence/private/web/reports/WEB-CAL-READ-webkit-light-phone-playwright.json",
-    "reports": [
-      "lab/evidence/private/web/reports/WEB-CAL-READ-webkit-light-phone-playwright.json",
-      "lab/evidence/private/web/reports/WEB-CAL-READ-webkit-light-desktop-playwright.json",
-      "lab/evidence/private/web/reports/WEB-CAL-READ-chromium-light-phone-playwright.json",
-      "lab/evidence/private/web/reports/WEB-CAL-READ-chromium-light-desktop-playwright.json"
+      "chromium-light-desktop",
+      "chromium-dark-phone",
+      "chromium-dark-desktop",
+      "firefox-light-phone",
+      "firefox-light-desktop",
+      "firefox-dark-phone",
+      "firefox-dark-desktop"
     ],
     "server": "gateway",
-    "setups": [
-      {
-        "fixture_setup_ms": 6884,
-        "fixture_snapshot": null,
-        "project": "webkit-light-phone"
-      },
-      {
-        "fixture_setup_ms": 5293,
-        "fixture_snapshot": null,
-        "project": "webkit-light-desktop"
-      },
-      {
-        "fixture_setup_ms": 4641,
-        "fixture_snapshot": null,
-        "project": "chromium-light-phone"
-      },
-      {
-        "fixture_setup_ms": 6666,
-        "fixture_snapshot": null,
-        "project": "chromium-light-desktop"
-      }
-    ]
+    "summary_only": true
   },
   "scenario": "WEB-CAL-READ",
   "level": "web",
   "passed": true,
-  "git_sha": "32d58d761f590384796123ca5522c3bc22e9137a",
-  "at": "2026-10-22T15:57:07.792476Z",
+  "git_sha": "3fd9aee29e414bf91bde26c4c98d7e437f4daecd",
+  "at": "2026-10-22T20:36:09.365084Z",
   "assertions": [
     {
       "name": "webkit-light-phone:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/calendar-read.spec.ts:6:1 › WEB-CAL-READ all views, civil dates, inspector, filters, search and history (6.2s)\n\n  1 passed (10.3s)\n"
+      "detail": "1 passed"
     },
     {
       "name": "webkit-light-desktop:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/calendar-read.spec.ts:6:1 › WEB-CAL-READ all views, civil dates, inspector, filters, search and history (5.2s)\n\n  1 passed (7.0s)\n"
+      "detail": "1 passed"
+    },
+    {
+      "name": "webkit-dark-phone:playwright_matrix",
+      "passed": true,
+      "detail": "1 passed"
+    },
+    {
+      "name": "webkit-dark-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "1 passed"
     },
     {
       "name": "chromium-light-phone:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/calendar-read.spec.ts:6:1 › WEB-CAL-READ all views, civil dates, inspector, filters, search and history (4.2s)\n\n  1 passed (5.7s)\n"
+      "detail": "1 passed"
     },
     {
       "name": "chromium-light-desktop:playwright_matrix",
       "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/calendar-read.spec.ts:6:1 › WEB-CAL-READ all views, civil dates, inspector, filters, search and history (4.5s)\n\n  1 passed (6.1s)\n"
+      "detail": "1 passed"
+    },
+    {
+      "name": "chromium-dark-phone:playwright_matrix",
+      "passed": true,
+      "detail": "1 passed"
+    },
+    {
+      "name": "chromium-dark-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "1 passed"
+    },
+    {
+      "name": "firefox-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "1 passed"
+    },
+    {
+      "name": "firefox-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "1 passed"
+    },
+    {
+      "name": "firefox-dark-phone:playwright_matrix",
+      "passed": true,
+      "detail": "1 passed"
+    },
+    {
+      "name": "firefox-dark-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "1 passed"
     },
     {
       "name": "credential_backend_override_restored",

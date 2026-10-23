@@ -1,208 +1,18 @@
 {
-  "host_telemetry": {
-    "heavy_jobs": "2",
-    "load_average": "{ 6.47 6.90 7.81 }",
-    "logical_cpus": "8"
-  },
   "host_conditions": {
-    "quiet_definition": "Load averages are ordered 1/5/15 minutes. Every observed host sample: no other heavy.sh slot active and one-minute load below logical CPU count; CPU idle is a one-second sample; free memory excludes cache. Sampled at start, every five seconds, and end.",
-    "start": {
-      "air": {
-        "at": "2026-10-17T19:17:31.725858Z",
-        "cpu_count": 8,
-        "load_average": [
-          6.47,
-          6.9,
-          7.81
-        ],
-        "cpu_idle_percent": 69,
-        "free_memory_bytes": 333365248,
-        "active_heavy_slots": 2,
-        "other_active_heavy_slots": 1,
-        "heavy_queue_length": 3,
-        "quiet": false
-      }
-    },
-    "end": {
-      "air": {
-        "at": "2026-10-17T19:18:14.332897Z",
-        "cpu_count": 8,
-        "load_average": [
-          5.17,
-          6.5,
-          7.62
-        ],
-        "cpu_idle_percent": 65,
-        "free_memory_bytes": 273612800,
-        "active_heavy_slots": 2,
-        "other_active_heavy_slots": 1,
-        "heavy_queue_length": 4,
-        "quiet": false
-      }
-    },
-    "periodic_samples": [
-      {
-        "air": {
-          "at": "2026-10-17T19:17:37.792082Z",
-          "cpu_count": 8,
-          "load_average": [
-            6.19,
-            6.84,
-            7.79
-          ],
-          "cpu_idle_percent": 63,
-          "free_memory_bytes": 60473344,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 3,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T19:17:42.792118Z",
-          "cpu_count": 8,
-          "load_average": [
-            6.02,
-            6.79,
-            7.76
-          ],
-          "cpu_idle_percent": 76,
-          "free_memory_bytes": 72499200,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 3,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T19:17:47.792225Z",
-          "cpu_count": 8,
-          "load_average": [
-            5.69,
-            6.71,
-            7.73
-          ],
-          "cpu_idle_percent": 78,
-          "free_memory_bytes": 65241088,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 3,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T19:17:52.79231Z",
-          "cpu_count": 8,
-          "load_average": [
-            5.4,
-            6.63,
-            7.7
-          ],
-          "cpu_idle_percent": 75,
-          "free_memory_bytes": 138756096,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 3,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T19:17:57.79253Z",
-          "cpu_count": 8,
-          "load_average": [
-            5.13,
-            6.56,
-            7.66
-          ],
-          "cpu_idle_percent": 76,
-          "free_memory_bytes": 227917824,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 4,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T19:18:02.792583Z",
-          "cpu_count": 8,
-          "load_average": [
-            5.2,
-            6.55,
-            7.65
-          ],
-          "cpu_idle_percent": 34,
-          "free_memory_bytes": 59015168,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 4,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T19:18:07.792651Z",
-          "cpu_count": 8,
-          "load_average": [
-            5.1,
-            6.5,
-            7.63
-          ],
-          "cpu_idle_percent": 47,
-          "free_memory_bytes": 59031552,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 4,
-          "quiet": false
-        }
-      },
-      {
-        "air": {
-          "at": "2026-10-17T19:18:12.792233Z",
-          "cpu_count": 8,
-          "load_average": [
-            5.17,
-            6.5,
-            7.62
-          ],
-          "cpu_idle_percent": 27,
-          "free_memory_bytes": 55148544,
-          "active_heavy_slots": 2,
-          "other_active_heavy_slots": 1,
-          "heavy_queue_length": 4,
-          "quiet": false
-        }
-      }
-    ],
-    "quiet": false,
-    "require_quiet": false,
-    "quiet_wait_ms": 0,
-    "quiet_wait_expired": false
+    "quiet": true,
+    "summary": "air: load=[13.77 26.94 21.35] cpu_idle=84% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M55MRJ0PVE9FW5GYRNH9FHDM",
+  "run_id": "run_01M5JH7VP5K8ZCV7NB6X0T6Y07",
   "metrics": {
-    "cleanup_audit": {
-      "containers_preserved": true,
-      "groups_preserved": true,
-      "selected_count": 1,
-      "unowned_after_count": 154,
-      "unowned_before_count": 154,
-      "unowned_fields_unchanged": true,
-      "unowned_identifiers_after_sha256": "e18d53df58a026fc0514c0631a57d2da157f1d2f020f018fd228a1da0023e33a",
-      "unowned_identifiers_before_sha256": "e18d53df58a026fc0514c0631a57d2da157f1d2f020f018fd228a1da0023e33a",
-      "whole_container_operations": 0
-    },
-    "contacts_capture_phases": []
+    "capture_observer_resets": 0,
+    "summary_only": true
   },
   "scenario": "CON-IMAGE",
   "level": "real",
   "passed": true,
-  "git_sha": "8b97aa24c7391962d04cc8294f287674557e9797",
-  "at": "2026-10-17T19:17:32.822184Z",
+  "git_sha": "f9ff7832973c230f960cdc20a73a287c515ba92f",
+  "at": "2026-10-22T19:26:07.557432Z",
   "assertions": [
     {
       "name": "unified_contacts_imported",
@@ -243,14 +53,12 @@
     {
       "name": "replica_records_versions_and_cursor_consistent",
       "passed": true,
-      "status": "pass",
-      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+      "status": "pass"
     },
     {
       "name": "replica_application_exactly_once",
       "passed": false,
-      "status": "unverified",
-      "detail": "kill-during-apply check did not run"
+      "status": "unverified"
     },
     {
       "name": "owned_test_contacts_cleaned",

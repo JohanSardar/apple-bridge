@@ -1,14 +1,25 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[5.14 8.36 9.37] cpus=8 other_heavy=1"
+    "summary": "air: load=[5.74 6.43 7.75] cpu_idle=57% cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M55WEADW2QCR9905K73YREB2",
+  "run_id": "run_01M5KAG9307YE61M0F5K2XDRVW",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "summary_only": true,
+    "qualification": "Historical pre-#283 real run: REST append conflict and tagged cleanup failure. #283 REST/MCP sim CRUD 34/34; fixed-source real writes remain limited pending verified cleanup.",
+    "current_sim_qualification": {
+      "source": "leader acceptance of merged #283",
+      "checks_passed": 34,
+      "checks_total": 34,
+      "passed": true
+    }
+  },
   "scenario": "NOTE-CRUD",
   "level": "real",
-  "passed": true,
-  "git_sha": "abf7a5e960ae5c0352bcbb8b6df75f934b210872",
-  "at": "2026-10-17T21:31:45.980341Z",
+  "passed": false,
+  "git_sha": "54a61fa10ca7e2544834c077b177411f467b2bc7",
+  "at": "2026-10-23T02:47:37.824362Z",
   "assertions": [
     {
       "name": "external_note_imported",
@@ -28,101 +39,8 @@
     },
     {
       "name": "rest_append_observed",
-      "passed": true
-    },
-    {
-      "name": "rest_append_visible",
-      "passed": true
-    },
-    {
-      "name": "rest_append_matches_truth",
-      "passed": true
-    },
-    {
-      "name": "rest_append_content",
-      "passed": true
-    },
-    {
-      "name": "rest_replace_observed",
-      "passed": true
-    },
-    {
-      "name": "rest_replace_visible",
-      "passed": true
-    },
-    {
-      "name": "rest_replace_matches_truth",
-      "passed": true
-    },
-    {
-      "name": "rest_replace_content",
-      "passed": true
-    },
-    {
-      "name": "rest_delete_observed",
-      "passed": true,
-      "detail": "observed:"
-    },
-    {
-      "name": "rest_delete_replicated",
-      "passed": true
-    },
-    {
-      "name": "mcp_create_folder_observed",
-      "passed": true
-    },
-    {
-      "name": "mcp_create_observed",
-      "passed": true
-    },
-    {
-      "name": "mcp_create_matches_truth",
-      "passed": true
-    },
-    {
-      "name": "mcp_append_observed",
-      "passed": true
-    },
-    {
-      "name": "mcp_append_visible",
-      "passed": true
-    },
-    {
-      "name": "mcp_append_matches_truth",
-      "passed": true
-    },
-    {
-      "name": "mcp_append_content",
-      "passed": true
-    },
-    {
-      "name": "mcp_replace_observed",
-      "passed": true
-    },
-    {
-      "name": "mcp_replace_visible",
-      "passed": true
-    },
-    {
-      "name": "mcp_replace_matches_truth",
-      "passed": true
-    },
-    {
-      "name": "mcp_replace_content",
-      "passed": true
-    },
-    {
-      "name": "mcp_delete_observed",
-      "passed": true,
-      "detail": "observed:"
-    },
-    {
-      "name": "mcp_delete_replicated",
-      "passed": true
-    },
-    {
-      "name": "run_created_folder_cleaned",
-      "passed": true
+      "passed": false,
+      "detail": "command:conflict"
     },
     {
       "name": "run_created_folder_cleaned",
@@ -130,7 +48,7 @@
     },
     {
       "name": "tagged_notes_cleaned",
-      "passed": true
+      "passed": false
     },
     {
       "name": "credential_backend_override_restored",

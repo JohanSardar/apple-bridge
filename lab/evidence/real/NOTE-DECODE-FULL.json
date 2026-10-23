@@ -1,0 +1,16 @@
+{
+  "scenario": "NOTE-DECODE-FULL",
+  "level": "real",
+  "passed": true,
+  "run_id": "run_01M5KCGZTVPMR00FMFE54W917W",
+  "metrics": {
+    "summary_only": true,
+    "qualification_source": "merged PR #283 body and leader acceptance",
+    "checks_passed": 5,
+    "checks_total": 5,
+    "largest_fixture_hydration_complete_ms": 39810,
+    "writes_performed": false,
+    "historical_pre_fix_run_id": "run_01M5K9V531NT88JPJRDXPNA6PX"
+  },
+  "assertions": []
+}
