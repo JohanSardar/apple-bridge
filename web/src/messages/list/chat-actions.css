@@ -3,3 +3,5 @@
 @media(max-width:699px){.chat-swipe-row:has(.chat-swipe-buttons) .chat-swipe-content{background:var(--background)}}
 
 .chat-swipe-trailing{display:flex;flex-shrink:0}.chat-swipe-trailing button{flex-shrink:0}
+.chat-action-feedback{flex-shrink:0}
+@media(max-width:699px){.conversation-list .chat-action-feedback{padding-block-end:calc(82px + env(safe-area-inset-bottom))}}
