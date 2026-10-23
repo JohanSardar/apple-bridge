@@ -20,7 +20,7 @@ export function messageCommandLabel(command: CommandState) {
 }
 export function createMessageCommands(live: LiveClient) {
     const capabilities = createCapabilities(live);
-    const commandIndex=createMemo(()=>new Map(live.pending().map(command=>[command.id,command])));
+    const commandIndex=createMemo(()=>new Map(live.pending().filter(command=>command.op==='messages.send'||command.op==='messages.reply').map(command=>[command.id,command])),undefined,{equals:(previous,next)=>previous.size===next.size&&[...previous].every(([id,command])=>next.get(id)===command)});
     const localFiles=new Map<string,LocalMessageFile>();
     const releaseFile=(key:string)=>{const file=localFiles.get(key);if(file){URL.revokeObjectURL(file.attachment.url);localFiles.delete(key);}};
     const replies = new Map<string,{target:ThreadItem;partIndex:number}>();

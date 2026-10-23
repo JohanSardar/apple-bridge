@@ -44,8 +44,8 @@ export function createMessageActions(live:LiveClient,capabilities:{allowed:(oper
         if(intent&&state&&(!final.has(state.status)||observed(state)))return !intent.remove&&intent.choice.kind===choice.kind&&intent.choice.emoji===choice.emoji;
         return nativeSelected(value,choice);
     };
-    const dismiss=(afterPaint:boolean)=>{cancelAnimationFrame(focusFrame);const anchor=target()?.anchor;setTarget();setError('');const restoreFocus=()=>{if(anchor?.isConnected){const focus=anchor.closest<HTMLElement>('button,[tabindex]')??anchor;const before=focus.getAttribute('tabindex');if(before===null)focus.tabIndex=-1;focus.focus({preventScroll:true});if(before===null)focus.removeAttribute('tabindex');}};if(afterPaint)focusFrame=requestAnimationFrame(()=>{focusFrame=requestAnimationFrame(restoreFocus);});else queueMicrotask(restoreFocus);};
-    const close=()=>dismiss(false);
+    const dismiss=(dialog?:HTMLDialogElement)=>{cancelAnimationFrame(focusFrame);const anchor=target()?.anchor;const restoreFocus=()=>{if(anchor?.isConnected){const focus=anchor.closest<HTMLElement>('button,[tabindex]')??anchor;const before=focus.getAttribute('tabindex');if(before===null)focus.tabIndex=-1;focus.focus({preventScroll:true});if(before===null)focus.removeAttribute('tabindex');}};if(dialog){focusFrame=requestAnimationFrame(()=>{focusFrame=requestAnimationFrame(()=>{dialog.close();focusFrame=0;setTarget();restoreFocus();});});}else{setTarget();setError('');queueMicrotask(restoreFocus);}};
+    const close=()=>dismiss();
     const open=(event:MouseEvent|PointerEvent|KeyboardEvent,item:ThreadItem,anchorOverride?:HTMLElement)=>{
         if(!event.isTrusted||item.id.startsWith('command:')||item.collection!=='messages.message'||item.version<1||item.data.kind==='group_event'||item.data.retracted_at)return;
         const origin=event.target instanceof Element?event.target:undefined;
@@ -54,8 +54,8 @@ export function createMessageActions(live:LiveClient,capabilities:{allowed:(oper
         if(index===undefined||!Number.isSafeInteger(index)||index<0||!parts.some(part=>part.index===index)||Array.isArray(item.data.retracted_parts)&&item.data.retracted_parts.includes(index))return;
         const anchor=bubble??(event.currentTarget instanceof HTMLElement?event.currentTarget:origin?.closest<HTMLElement>('[data-message]'));
         if(!anchor)return;
-        if(target()?.item.id===item.id&&target()?.partIndex===index){event.preventDefault();return;}
-        event.preventDefault();cancelAnimationFrame(focusFrame);captured.set(item.id,item);setError('');setTarget({item,partIndex:index,anchor});
+        if(!focusFrame&&target()?.item.id===item.id&&target()?.partIndex===index){event.preventDefault();return;}
+        event.preventDefault();if(focusFrame){cancelAnimationFrame(focusFrame);focusFrame=0;}captured.set(item.id,item);setError('');setTarget({item,partIndex:index,anchor});
     };
     const replying=()=>{revision();const value=replyTarget();return value?{...value,item:captured.get(value.item.id)??value.item}:undefined;};
     const canReplyOperation=()=>capabilities.allowed('messages.reply')&&live.status()==='connected';
@@ -66,7 +66,7 @@ export function createMessageActions(live:LiveClient,capabilities:{allowed:(oper
     const available=()=>Boolean(current()&&canReact());
     const react=(event:MouseEvent,choice:ReactionChoice)=>{
         if(!event.isTrusted)return;
-        const value=current();if(!value||!available()||busy()||unknown())return;
+        const value=current();if(!value||!canReact()||relevant().some(intent=>{const state=command(intent);return !state||!final.has(state.status)||uncertain(state);}))return;
         try{withInput(event,()=>batch(()=>{
             if(!classicReactions.some(reaction=>reaction.kind===choice.kind)&&!(choice.kind==='emoji'&&choice.emoji))return;
             const remove=selected(choice),anchor=value.anchor,point={x:event.clientX,y:event.clientY};
@@ -78,7 +78,7 @@ export function createMessageActions(live:LiveClient,capabilities:{allowed:(oper
                 const to=anchor.getBoundingClientRect();
                 setFlight({symbol:choice.symbol,from:point.x||point.y?new DOMRect(point.x,point.y,0,0):to,to,key:++flightKey});
             });});
-            changed();dismiss(true);
+            dismiss((event.currentTarget as Element).closest('dialog')??undefined);
         }));}catch{setError("Can't react right now. Check your connection.");}
     };
     const checkID=(id:string)=>{if(changes.check(id)||management.check(id))return;if(![...intents.values()].some(intent=>intent.commandID===id))return;try{live.checkCommand(id);}catch{setError("Couldn't check this reaction. Try again.");}};

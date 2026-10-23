@@ -41,6 +41,7 @@ test('WEB-MSG-REACT native context menu opens six tapbacks and one trusted selec
     await f.target.click({button:'right'});
     const menu = page.getByRole('dialog',{name:'Message actions',exact:true});
     await expect(menu).toBeVisible();
+    await expect(menu.getByRole('button',{name:'Love',exact:true})).toBeFocused();
     const cutout=()=>menu.evaluate(element=>getComputedStyle(element,'::backdrop').clipPath);
     expect(await cutout()).toMatch(/^path\(evenodd,/u);
     for(const label of ['Love','Like','Dislike','Laugh','Emphasize','Question'])await expect(menu.getByRole('button',{name:label,exact:true})).toBeVisible();
