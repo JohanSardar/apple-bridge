@@ -116,3 +116,18 @@ test('WEB-MSG-THREAD-CORE first transcript paints while prefetched pages are del
     await expect.poll(async()=>Number(await transcript.getAttribute('data-window-size'))).toBeGreaterThan(100);
     await expect.poll(async()=>Math.abs((await row(page,ids,58).boundingBox())!.y-origin!.y)).toBeLessThanOrEqual(1);
 });
+
+test('WEB-MSG-THREAD-CORE first resize keeps the requested key after prefetch prepends rows',async({page,request})=>{
+    await page.addInitScript(()=>{
+        const Native=window.ResizeObserver,pending:(()=>void)[]=[];let holding=true;
+        (window as any).__releaseTranscriptResize=()=>{holding=false;pending.splice(0).forEach(run=>run());};
+        window.ResizeObserver=class extends Native{constructor(callback:ResizeObserverCallback){let transcript=false;super((entries,observer)=>{transcript ||= entries.some(entry=>entry.target instanceof HTMLElement&&entry.target.dataset.scroll==='Messages transcript');if(transcript&&holding)pending.push(()=>callback(entries,observer));else callback(entries,observer);});}};
+    });
+    if(initialSession)await page.context().addCookies(initialSession);else await prepareSession(page);
+    const ids:Fixtures=await control(request,'/demo-fixtures'),target=ids[native(129)];
+    await page.goto('/messages/'+encodeURIComponent(ids['message-chat'])+'/'+encodeURIComponent(target));
+    const viewport=page.getByRole('listbox',{name:'Messages transcript'});
+    await expect.poll(async()=>Number(await viewport.locator('.virtual-row').first().getAttribute('aria-setsize'))).toBeGreaterThan(100);
+    await page.evaluate(()=>(window as any).__releaseTranscriptResize());
+    const selected=page.locator('[data-message="'+target+'"]');await expect(selected).toBeInViewport();await expect(selected.locator('..')).toHaveAttribute('aria-selected','true');
+});

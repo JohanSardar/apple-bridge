@@ -16,7 +16,7 @@ export function VirtualList<T>(props: {
     estimate?: (item: T) => number;
     bottomAnchored?: boolean;
     fixedHeights?: boolean;
-    initialIndex?: number;
+    initialKey?: string;
     initialAlign?: 'start'|'end';
     overscan?: number;
     selectedKey?: string;
@@ -30,13 +30,14 @@ export function VirtualList<T>(props: {
     ref?: (handle: VirtualListHandle) => void;
     onVisible?: (start: number, end: number) => void;
 } & VirtualRenderer<T>) {
-    const rowPrefix=createUniqueId()+'-virtual-row-',initialIndex=props.initialIndex,initialAlign=props.initialAlign;
+    const rowPrefix=createUniqueId()+'-virtual-row-',initialKey=props.initialKey,initialAlign=props.initialAlign;
     const controlled='selectedKey' in props;
     const selected=()=>{revision();return controlled?(props.selectedKey?keyIndex.get(props.selectedKey)??-1:-1):active();};
     let viewport!: HTMLDivElement;
     let content!:HTMLDivElement;
     let positions = new Positions([]), items: readonly T[] = [];
     let keyIndex = new Map<string, number>();
+    const initialIndex=()=>keyIndex.get(initialKey!)??0;
     let previousWindowKey=props.windowKey;
     let previousMeasurementKey=props.measurementKey;
     const cache = new Map<string,{height:number;estimate:number|undefined}>();
@@ -54,7 +55,7 @@ export function VirtualList<T>(props: {
     const refresh = (top=viewport.scrollTop) => batch(() => { setScroll(top); setRevision(value => value + 1); });
     const bottom=()=>{setScrollPosition(viewport.scrollHeight);refresh();};
     const scrollToIndex = (index: number, align: 'start' | 'end' = 'start',initial=false) => {
-        if(!initial&&mounting&&index===initialIndex&&align===initialAlign)return;
+        if(!initial&&mounting&&index===initialIndex()&&align===initialAlign)return;
         const top=align==='end'?positions.offset(index+1)-(initial?height():viewport.clientHeight):positions.offset(index);
         if(initial)refresh(Math.max(0,Math.min(top,positions.total-height())));
         else{mounting=false;setScrollPosition(top);refresh();if(align==='end'&&index===items.length-1)queueMicrotask(bottom);}
@@ -76,7 +77,7 @@ export function VirtualList<T>(props: {
         positions = new Positions(items.map(item => {const key=props.keyFor(item),estimated=props.estimate?.(item),cached=cache.get(key);if(cached&&cached.estimate!==estimated)remeasure.add(key);const height=(!props.fixedHeights&&cached?.estimate===estimated?cached?.height:estimated)??60;return Number.isFinite(height)&&height>0?height:60;}));
         if(invalidated||remeasure.size)viewport.querySelectorAll<HTMLElement>('.virtual-row').forEach(row=>{if(invalidated||remeasure.has(row.dataset.key!)){observer.unobserve(row);observer.observe(row);}});
         content.style.height=positions.total+'px';
-        if(first&&initialIndex!=null)scrollToIndex(initialIndex,initialAlign,true);
+        if(first&&initialKey!=null)scrollToIndex(initialIndex(),initialAlign,true);
         else {
             if (props.bottomAnchored && (atBottom || first) && (!shifted || first)) {
                 setScrollPosition(Math.max(0,positions.total-viewport.clientHeight));
@@ -92,7 +93,7 @@ export function VirtualList<T>(props: {
         }
         finish();
     });
-    let mounting=initialIndex!=null;
+    let mounting=initialKey!=null;
     const observer = new ResizeObserver(entries=>batch(() => {
         const saved = mounting?undefined:anchor(), atBottom = !mounting&&positions.total - viewport.scrollTop - height() <= 2;
         let changed = false;
@@ -114,7 +115,7 @@ export function VirtualList<T>(props: {
         }
         if (changed) {
             content.style.height=positions.total+'px';
-            if(mounting){scrollToIndex(initialIndex!,initialAlign,true);viewport.scrollTop=scroll();mounting=false;return;}
+            if(mounting){scrollToIndex(initialIndex(),initialAlign,true);viewport.scrollTop=scroll();mounting=false;return;}
             if (props.bottomAnchored && atBottom) {
                 setScrollPosition(Math.max(0,positions.total-viewport.clientHeight));
                 queueMicrotask(bottom);
