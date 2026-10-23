@@ -12,6 +12,15 @@ async function open(page:Page,context:BrowserContext,origin?:string,replicaCooki
 }
 async function effect(request:APIRequestContext,id:string){const response=await request.post(process.env.AB_WEB_CONTROL!+'/command-effect',{headers:{'X-Bridge-Lab':process.env.AB_WEB_CONTROL_KEY!},data:{command_id:id}});expect(response.ok()).toBe(true);expect((await response.json()).count).toBe(1);}
 const ready=(page:Page,count:number)=>expect(page.locator('.upload-files [data-upload-state="ready"]')).toHaveCount(count);
+test('WEB-MSG-MANAGE WEB-MSG-ATTACH-SEND a rate-limited upload honors Retry-After and becomes ready without a second user action',async({page,context})=>{
+    const f=await open(page,context);let attempts=0,first=0,second=0;
+    await page.route('**/web/v1/upload',async route=>{
+        if(route.request().headers()['upload-length']){attempts++;if(attempts===1){first=Date.now();await route.fulfill({status:429,headers:{'Retry-After':'1','Content-Type':'application/json'},body:'{"error":{"code":"rate_limited"}}'});return;}if(attempts===2)second=Date.now();}
+        await route.continue();
+    });
+    await page.getByLabel('Choose attachments').setInputFiles(document);await ready(page,1);
+    expect(attempts).toBeGreaterThanOrEqual(2);expect(second-first).toBeGreaterThanOrEqual(950);expect(f.commands).toEqual([]);
+});
 test('WEB-MSG-MANAGE WEB-MSG-ATTACH-SEND text plus two files keeps exact independent parts and no local metadata on wire',async({page,context,request})=>{
     const f=await open(page,context);await expect.poll(()=>f.unread.length).toBeGreaterThan(0);await expect(page.locator('[data-message="'+f.unread[0]+'"]')).toBeVisible();let release!:()=>void;const held=new Promise<void>(resolve=>release=resolve);await page.route('**/web/v1/upload',async route=>{if(route.request().headers()['upload-id'])await held;await route.continue();});
     await page.getByLabel('Choose attachments').setInputFiles([image,document]);await expect(page.locator('.upload-files li')).toHaveCount(2);await expect(page.getByRole('button',{name:'Send message',exact:true})).toBeDisabled();expect(f.commands).toEqual([]);release();await ready(page,2);await expect(page.locator('.upload-files').getByRole('status')).toHaveText(['Ready to send','Ready to send']);await expect(page.getByRole('button',{name:'Send message',exact:true})).toBeEnabled();expect(f.commands).toEqual([]);
