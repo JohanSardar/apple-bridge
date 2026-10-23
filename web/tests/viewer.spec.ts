@@ -7,6 +7,7 @@ let session:Promise<{cookie:Parameters<BrowserContext['addCookies']>[0][number]}
 async function setup(context:BrowserContext,request:APIRequestContext){const value=await(session??=control(request,'/session?kind=public'));await context.addCookies([value.cookie]);return control(request,'/demo-fixtures');}
 test('WEB-MSG-VIEWER META collection source pages beyond the transcript window with interleaved photos and playable video',async({page,context,request},info)=>{
  const ids=await setup(context,request),subscriptions:Record<string,unknown>[]=[],viewerChunks:string[]=[];
+ await page.addInitScript(()=>{window.requestIdleCallback=callback=>{(window as any).__viewerIdle=()=>callback({didTimeout:false,timeRemaining:()=>50});return 1;};window.cancelIdleCallback=()=>{delete (window as any).__viewerIdle;};});
  page.on('request',request=>{if(/\/assets\/ViewerSession-[^/]+\.js$/u.test(new URL(request.url()).pathname))viewerChunks.push(request.url());});
  await page.addInitScript(()=>Object.defineProperty(navigator,'share',{value:async(payload:ShareData)=>{Object.defineProperty(window,'viewerShared',{value:payload,configurable:true});}}));
  page.on('websocket',socket=>socket.on('framesent',({payload})=>{try{const frame=JSON.parse(String(payload));if(frame.t==='sub')subscriptions.push(frame);}catch{}}));
@@ -16,6 +17,7 @@ test('WEB-MSG-VIEWER META collection source pages beyond the transcript window w
  expect(viewerChunks).toHaveLength(0);await source.locator('.media-open').hover();await expect.poll(()=>viewerChunks.length).toBeGreaterThan(0);await expect(page.getByRole('dialog',{name:'Media viewer'})).toHaveCount(0);
  expect(subscriptions.filter(value=>value.view==='collection')).toHaveLength(0);
  await source.locator('.media-open').click();const viewer=page.getByRole('dialog',{name:'Media viewer'});await expect(viewer).toBeVisible();await expect(viewer.locator('.media-viewer-stage')).toBeFocused();
+ await expect(viewer.locator('.media-viewer-preview')).toHaveCount(0);await page.evaluate(()=>(window as any).__viewerIdle());await expect(viewer.locator('.media-viewer-preview')).toHaveCount(2);
  const decoded=await viewer.locator('.media-viewer-stage .media-image>img').elementHandle();
  await expect(viewer).toHaveAttribute('data-media-loading','false');await expect(viewer).toHaveAttribute('data-media-count','13');expect(await decoded!.evaluate(element=>element.isConnected)).toBe(true);
  await expect(viewer.locator('.media-viewer-heading time')).toHaveText('Dec 31, 2024 at 6:11 PM');

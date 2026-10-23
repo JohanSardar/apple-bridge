@@ -12,7 +12,7 @@ export function ViewerSession(props:ChatMediaViewerProps){
     const sources=new Map<HTMLElement,string>();
     const [selected,setSelected]=createSignal(props.attachment);
     const restore=()=>{for(const [element,visibility] of sources)element.style.visibility=visibility;sources.clear();};
-    const source=(attachment:BridgeRecord)=>[...document.querySelectorAll<HTMLElement>(`[data-media-origin="${CSS.escape(attachment.id)}"],[data-media-id="${CSS.escape(attachment.id)}"]`)].find(element=>!element.closest('.media-viewer')&&!element.closest('[inert]'));
+    const source=(attachment:BridgeRecord)=>[...document.querySelectorAll<HTMLElement>(`[data-media-origin="${CSS.escape(attachment.id)}"],[data-media-id="${CSS.escape(attachment.id)}"]`)].find(element=>!element.closest('.media-viewer,[inert]'));
     const hide=(element?:HTMLElement)=>{if(element){sources.set(element,element.style.visibility);element.style.visibility='hidden';}};
     const originFor=(attachment:BridgeRecord)=>{
         restore();const image=source(attachment),rect=props.originFor?props.originFor(attachment):image?.getBoundingClientRect();
