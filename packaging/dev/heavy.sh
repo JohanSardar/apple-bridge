@@ -180,7 +180,8 @@ hold_light() {
   printf '%s\n' "--exclusive light hold" > "$lightlock/cmd"
   held="$held $lightlock"
 }
-# A sensitive job on a small host waits until it is the only normal-lane holder.
+# A sensitive job on a small host waits until it is the only normal-lane holder. An exclusive gate that holds only part
+# of the normal lane is still waiting and runs nothing, so it does not count; counting it would deadlock both jobs.
 wait_normal_alone() {
   while true; do
     alone=1
@@ -188,6 +189,7 @@ wait_normal_alone() {
       [ -d "$lock" ] || continue
       case " $held " in *" $lock "*) continue ;; esac
       stale "$lock" && continue
+      [ -f "$lock/cmd" ] && case "$(cat "$lock/cmd")" in --exclusive*) continue ;; esac
       alone=""
     done
     [ -n "$alone" ] && return
