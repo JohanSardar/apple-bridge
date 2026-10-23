@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { prepareSession, control } from './session';
 import { readdir, readFile, mkdir, writeFile } from 'node:fs/promises';
 import { gzipSync } from 'node:zlib';
+import { execFileSync } from 'node:child_process';
 async function metrics(name: string, project: string, value: unknown) { await mkdir('../lab/evidence/web/metrics', { recursive: true }); await writeFile(`../lab/evidence/web/metrics/${name}-${project}.json`, JSON.stringify(value, null, 2) + '\n'); }
 function stats(values: number[]) { const sorted = [...values].sort((a, b) => a - b); return { samples: sorted.length, p50_ms: sorted[Math.ceil(sorted.length * .5) - 1] ?? 0, p95_ms: sorted[Math.ceil(sorted.length * .95) - 1] ?? 0, max_ms: sorted.at(-1) ?? 0 }; }
 test.beforeEach(async ({ page }) => { await prepareSession(page); });
@@ -120,10 +121,15 @@ test('WEB-MOTION interruptible springs, FLIP and reduced-motion crossfades', asy
     await writeFile(`../lab/evidence/private/web/motion-observation/${info.project.name}.json`,JSON.stringify(requested,null,2)+'\n');
 });
 test('WEB-PERF-SHELL bundle, layout stability, navigation and warm cache budgets', async ({ page }, info) => {
-    const assetFiles = await readdir('dist/assets'), files = assetFiles.filter(file => file.endsWith('.js'));
-    const sizes = await Promise.all(files.map(async (file) => ({ file, gzip: gzipSync(await readFile('dist/assets/' + file)).byteLength })));
-    const manifest = JSON.parse(await readFile('dist/.vite/manifest.json', 'utf8')) as Record<string, { file: string; imports?: string[]; dynamicImports?: string[]; isEntry?: boolean; isDynamicEntry?: boolean }>;
+    const release = 'dist-release';
+    const build = JSON.parse(await readFile(`${release}/release-build.json`, 'utf8')) as { commit: string };
+    expect(build.commit).toBe(execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim());
+    const assetFiles = await readdir(`${release}/assets`), files = assetFiles.filter(file => file.endsWith('.js'));
+    const sizes = await Promise.all(files.map(async (file) => ({ file, gzip: gzipSync(await readFile(`${release}/assets/` + file)).byteLength })));
+    const manifest = JSON.parse(await readFile(`${release}/.vite/manifest.json`, 'utf8')) as Record<string, { file: string; imports?: string[]; dynamicImports?: string[]; isEntry?: boolean; isDynamicEntry?: boolean }>;
     expect(manifest['index.html'].isEntry).toBe(true);
+    expect(Object.keys(manifest).filter(key => key.includes('/app/fixtures/'))).toEqual([]);
+    expect((await readFile(`${release}/` + manifest['index.html'].file, 'utf8'))).not.toContain('/__fixtures/');
     function closure(root: string, lazy = false, excluded = new Set<string>()) {
         const keys = new Set<string>();
         function include(key: string) { if (keys.has(key) || excluded.has(key)) return; keys.add(key); const chunk = manifest[key]; for (const dependency of [...(chunk.imports ?? []), ...(lazy ? chunk.dynamicImports ?? [] : [])]) include(dependency); }
@@ -137,11 +143,11 @@ test('WEB-PERF-SHELL bundle, layout stability, navigation and warm cache budgets
     const routes = Object.entries(manifest).filter(([, chunk]) => chunk.isDynamicEntry).map(([route]) => { const chunks = chunkFiles(closure(route, true, entryKeys)); return { route, gzip_bytes: gzipBytes(chunks), chunks: [...chunks] }; });
     expect(routes.length).toBeGreaterThan(0);
     for (const route of routes) expect(route.gzip_bytes, route.route).toBeLessThanOrEqual(60 * 1024);
-    const precacheMatch = (await readFile('dist/sw.js', 'utf8')).match(/const PRECACHE=(\[[^\n]*\]);/u);
+    const precacheMatch = (await readFile(`${release}/sw.js`, 'utf8')).match(/const PRECACHE=(\[[^\n]*\]);/u);
     expect(precacheMatch).not.toBeNull();
     const precache = JSON.parse(precacheMatch![1]) as string[];
     const precacheFiles = precache.map(url => url === '/' ? 'index.html' : url.slice(1));
-    const compressedBytes = async (paths: string[]) => (await Promise.all(paths.map(async path => gzipSync(await readFile('dist/' + path)).byteLength))).reduce((sum, bytes) => sum + bytes, 0);
+    const compressedBytes = async (paths: string[]) => (await Promise.all(paths.map(async path => gzipSync(await readFile(`${release}/` + path)).byteLength))).reduce((sum, bytes) => sum + bytes, 0);
     const precacheBytes = await compressedBytes(precacheFiles);
     const cacheableBytes = await compressedBytes([...new Set([...precacheFiles, ...assetFiles.map(file => 'assets/' + file)])]);
     expect(cacheableBytes).toBeLessThanOrEqual(600 * 1024);

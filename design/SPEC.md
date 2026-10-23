@@ -1201,7 +1201,7 @@ The Helper creates variants for present attachment blobs, as new blobs reference
   - warm load to cached content < 1 s
 - **Lint:** `make lint` gains a zero-comments check for `.ts`/`.tsx` (the TypeScript tokenizer, so strings, templates and regexes are respected) and `tsc --noEmit`.
 - **Build:**
-  - `make web` runs `pnpm install --frozen-lockfile && pnpm build` into `web/dist/`, and `make build` depends on it.
+  - `make web` runs `pnpm install --frozen-lockfile && pnpm build:release` into `web/dist/`, and `make build` depends on it. The lab uses `pnpm build` with browser fixtures.
   - `web/dist/*` is gitignored except `.gitkeep`, so `go:embed all:dist` always compiles.
 - **PWA:**
   - Manifest with our own icons.

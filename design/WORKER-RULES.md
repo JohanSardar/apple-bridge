@@ -84,6 +84,8 @@ You are a worker on Apple Bridge, delegated by the build leader. Read this file,
 - Real Worlds stage immutable, signed Helper and AppleTruth bundles under their own `/tmp/ablab/<world>/apps/` from the current worktree using `packaging/dev/build-helper.sh <destination.app>` and `packaging/dev/build-truth.sh <destination.app>`. Always pass a new destination; never rebuild a running World’s bundle or install into the shared dev apps during worker verification. Signing still uses `packaging/dev/sign.sh` and the existing certificate, bundle IDs and designated requirements. Launch with `open -n -W -a`.
 
 ## Lean process (2026-10-22 evening, binding; overrides the per-PR parts of the fast process below)
+
+Web browser and lab runs use `cd web && pnpm build`, which keeps `__fixtures` routes. `make web` uses `pnpm build:release` for the embedded production `web/dist`. Before WEB-PERF-SHELL, run `cd web && AB_WEB_RELEASE_OUTDIR=dist-release pnpm build:release` through `heavy.sh --light`; the byte gate reads that release artifact and verifies its commit.
 Measured on 52 PRs merged under the fast process: 77% of added lines were tests, lab scenarios and evidence, and the median PR changed 68 product lines. The per-PR overhead, not the code, set the pace.
 - **PR size:** one PR per real feature slice, 300–1,500 product lines. Small fixes ride along with the next feature PR.
 - **No per-PR ceremony:** no failing-first runs, committed evidence JSON, screenshots, bundle or SHA manifests, private-evidence archives or frozen traces. Evidence is produced once per app at its milestone gate.
