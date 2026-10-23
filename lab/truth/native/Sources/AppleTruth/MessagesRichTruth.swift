@@ -62,10 +62,14 @@ enum MessagesRichTruth {
                     if (archive.text(layout, "caption") ?? archive.text(layout, "ldtext")) != nil { counts["balloon.app_caption", default: 0] += 1 }
                     for (source, field) in [("subcaption", "subcaption"), ("secondary-subcaption", "trailing_caption"), ("URL", "url")] where archive.text(layout, source) != nil { counts["balloon.app." + field, default: 0] += 1 }
                 }
-                let images = try count("attachment a JOIN message_attachment_join j ON j.attachment_id=a.ROWID", "j.message_id=" + String(sqlite3_column_int64(statement, 2)) + " AND (a.mime_type LIKE 'image/%' OR a.uti LIKE 'dyn.age81%')")
                 if kind == "link" {
+                    let images = try count("attachment a JOIN message_attachment_join j ON j.attachment_id=a.ROWID", "j.message_id=" + String(sqlite3_column_int64(statement, 2)) + " AND (a.mime_type LIKE 'image/%' OR a.uti LIKE 'dyn.age81%')")
                     if link, let index = archive.field(archive.field(metadata, "image"), "richLinkImageAttachmentSubstituteIndex") as? Int, index >= 0, index < images { counts["balloon.image_reference", default: 0] += 1 }
-                } else if images > 0 { counts["balloon.image_reference", default: 0] += 1 }
+                }
+            }
+            if kind != "link" {
+                let images = try count("attachment a JOIN message_attachment_join j ON j.attachment_id=a.ROWID", "j.message_id=" + String(sqlite3_column_int64(statement, 2)) + " AND (a.mime_type LIKE 'image/%' OR a.uti LIKE 'dyn.age81%')")
+                if images > 0 { counts["balloon.image_reference", default: 0] += 1 }
             }
         }
         sqlite3_finalize(statement)
