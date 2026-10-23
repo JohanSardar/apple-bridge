@@ -578,17 +578,17 @@ features:
     modules: [webui, web, operations, native/MessagesSource, lab/demo]
     depends_on: [web.frontdoor, web.demo, web.media]
     status: todo
-    # 2026-10-23 gate: 61/64 Messages web manifests have complete 12-project
-    # passes. WEB-MSG-EFFECTS remains red in Firefox phone. Quiet open-chat/media
-    # input and cold-open frame budgets are measured and not met; unchanged
+    # 2026-10-23 gate: 62/64 Messages web manifests have complete 12-project
+    # passes. WEB-MSG-REPLY and WEB-MSG-EFFECTS remain red. Quiet list,
+    # open-chat/media input and cold-open frame budgets are measured and not met; unchanged
     # thresholds and exact results are in design/MILESTONE-GATES.md.
     limits:
       - scenario: WEB-PERF-LIST
         level: web
-        reason: "List frame and own-input budgets are deferred to the Messages milestone under the fast process. No per-PR exclusive performance run; input_8ms_proven remains false on the 60 Hz host. Thresholds are unchanged."
+        reason: "Measured, not met, in a quiet exclusive Chromium light-desktop 104,900-message fixture: filter frame p95/max 10.489/15.777 ms versus 4/8 ms; own-input p95 22.374 ms versus 8 ms (22 samples). Later search/live/reorder/warm phases were not reached. Thresholds are unchanged."
       - scenario: WEB-MSG-CHATS-STORE
         level: web
-        reason: "Optional 100k-world cold-template setup is limited and deferred to the Messages milestone. A back-to-back origin/main versus head run in the same normal lane with APPLE_BRIDGE_HEAVY_NO_SIM_LANE=1 fails setup on both: main exceeds its unchanged 120-second dataset request bound; head reaches the unchanged six-minute cold bound before publication. No 100k entry exists to measure. The normal 5000-message prepared fixture passes WebKit/Chromium phone/desktop store and cache checks. LIVE-FIX owns the existing SQLite trigger-preparation ingestion cost; no thresholds changed."
+        reason: "The optional 100k-world cold-template comparison cannot run: its paired origin/main setup exceeded the unchanged 120-second dataset request bound, while head reached the unchanged six-minute cold bound before publishing a prepared entry. No prepared 100k CHATS-STORE entry exists to measure and no current-main cold-template rerun was made. The normal 5000-message CHATS-STORE matrix passes; thresholds are unchanged."
     scenarios:
       - {id: MSG-DECODE-BALLOON, levels: [sim, real]}
       - {id: MSG-DECODE-FORMATTING, levels: [sim, real]}
@@ -652,7 +652,7 @@ features:
     modules: [native/MessagesSource, operations, web, webui, replication]
     depends_on: [web.messages.read]
     status: todo
-    # WEB-MSG-REPLY and WEB-MSG-MANAGE retain red browser cells. Final
+    # WEB-MSG-REPLY retains red browser cells; WEB-MSG-MANAGE is 12/12. Final
     # send/react/fling timing runs are host-invalid under external TCC load.
     limits:
       - scenario: MSG-SELFTEST
