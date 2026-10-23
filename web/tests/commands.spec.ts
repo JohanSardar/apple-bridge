@@ -1,5 +1,6 @@
 import { test, expect, type BrowserContext } from '@playwright/test';
 import { control } from './session';
+import { matchesHeldText } from '../src/messages/actions/heldText';
 let sessionCookies: Parameters<BrowserContext['addCookies']>[0] = [];
 test.beforeAll(async ({request}) => { sessionCookies = [(await control(request, '/session')).cookie]; });
 test.afterEach(async ({page}, info) => {
@@ -238,6 +239,15 @@ test('WEB-MSG-OPTIMISTIC FAILURE a definitive no-effect part failure restores it
         await expect(page.locator('[data-local-echo][data-send-state="failed"]')).toHaveCount(1);
         expect(commands).toHaveLength(1);
     }finally{await control(request,'/message-fault?name=');}
+});
+test('WEB-MSG-OPTIMISTIC held text uses one canonical form for native and echo candidates',()=>{
+    const textAndFile={data:{text:'[ab-test compose] attached text\uFFFC',parts:[{index:0,kind:'text',text:'[ab-test compose] attached text'},{index:1,kind:'attachment',attachment_id:'fixture-file'}]}};
+    expect(textAndFile.data.parts[1].kind).toBe('attachment');
+    expect(matchesHeldText(textAndFile.data.text,'[ab-test compose] attached text')).toBe(true);
+    expect(matchesHeldText('[ab-test compose] cafe\u0301','[ab-test compose] caf\u00e9')).toBe(true);
+    expect(matchesHeldText('[ab-test compose] final line\r\n','[ab-test compose] final line')).toBe(true);
+    expect(matchesHeldText('[ab-test compose] final line\u2028','[ab-test compose] final line')).toBe(true);
+    expect(matchesHeldText('[ab-test compose] unrelated','[ab-test compose] final line')).toBe(false);
 });
 test('WEB-MSG-OPTIMISTIC MONOTONIC a stale same-cursor reconcile record cannot regress observed',async({page,context,request})=>{
     await context.addCookies(sessionCookies);const ids=await control(request,'/demo-fixtures');let stale:(()=>void)|undefined;const commands:string[]=[];

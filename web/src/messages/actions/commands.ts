@@ -3,6 +3,7 @@ import type { LiveClient } from '../../data/live';
 import { withInput } from '../../data/input';
 import type { CommandPart, CommandState, Cursor, ThreadItem } from '../../data/types';
 import { createCapabilities } from './capabilities';
+import { matchesHeldText } from './heldText';
 import type {PendingAttachment} from '../media/pending';
 export type LocalMessageFile = {file:File;attachment:PendingAttachment;upload:MessageFile;expires_at:string};
 export type MessageFile = { upload_id: string; name: string };
@@ -66,7 +67,7 @@ export function createMessageCommands(live: LiveClient) {
         for (const [key, echo] of echoes) {
             const command = commands.get(echo.commandID);
             if (chatOf(echo) !== chatID || resolved.has(key) || ambiguous(key) || !(all && stateOf(echo, command) !== 'failed' || ghostFailure(echo, command))) continue;
-            const candidates = [...held].filter(([id, chat]) => chat === chatID && (echo.kind !== 'text' || heldText.get(id) === undefined || heldText.get(id) === echo.item.data.text)).map(([id]) => id);
+            const candidates = [...held].filter(([id, chat]) => chat === chatID && (echo.kind !== 'text' || matchesHeldText(heldText.get(id), typeof echo.item.data.text === 'string' ? echo.item.data.text : undefined))).map(([id]) => id);
             if (!candidates.length) continue;
             released.set(key, new Set([...(released.get(key) ?? []), ...candidates])); suppressed.add(key);
         }
