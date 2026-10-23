@@ -1,4 +1,4 @@
-import { batch, createEffect, createSignal, onCleanup } from 'solid-js';
+import { batch, createEffect, createMemo, createSignal, onCleanup } from 'solid-js';
 import type { LiveClient } from '../../data/live';
 import { withInput } from '../../data/input';
 import type { CommandPart, CommandState, Cursor, ThreadItem } from '../../data/types';
@@ -20,6 +20,7 @@ export function messageCommandLabel(command: CommandState) {
 }
 export function createMessageCommands(live: LiveClient) {
     const capabilities = createCapabilities(live);
+    const commandIndex=createMemo(()=>new Map(live.pending().map(command=>[command.id,command])));
     const localFiles=new Map<string,LocalMessageFile>();
     const releaseFile=(key:string)=>{const file=localFiles.get(key);if(file){URL.revokeObjectURL(file.attachment.url);localFiles.delete(key);}};
     const replies = new Map<string,{target:ThreadItem;partIndex:number}>();
@@ -46,6 +47,13 @@ export function createMessageCommands(live: LiveClient) {
         if (!echo.legacy && (command.status === 'delivery_failed' || command.disposition === 'delivery_failed')) return 'indeterminate';
         return messageSendState(command);
     };
+    const presentations=new WeakMap<ThreadItem,{echo:Echo;item:ThreadItem}>();
+    const present=(item:ThreadItem,echo:Echo,command:CommandState|undefined)=>{
+        const state=stateOf(echo,command),previous=presentations.get(item);
+        if(previous?.echo===echo&&previous.item.data.send_state===state)return previous.item;
+        const next={...item,data:{...item.data,command_id:echo.commandID,...(!echo.legacy?{command_part_index:echo.index}:{}),command_sent_at:echo.item.data.sent_at,send_state:state}};
+        presentations.set(item,{echo,item:next});return next;
+    };
     const recordOf = (echo: Echo, command: CommandState | undefined) => command?.parts ? partOf(echo, command)?.record_id : echo.legacy && command?.observed_record_ids?.length === 1 ? command.observed_record_ids[0] : undefined;
     const ghostFailure = (echo: Echo, command: CommandState | undefined) => !recordOf(echo, command) && (partOf(echo, command)?.disposition === 'delivery_failed' || echo.legacy && !command?.parts && (command?.status === 'delivery_failed' || command?.disposition === 'delivery_failed'));
     const hasEcho = (chatID: string, commands: Map<string, CommandState>) => [...echoes].some(([key, echo]) => chatOf(echo) === chatID && !suppressed.has(key) && !resolved.has(key) && stateOf(echo, commands.get(echo.commandID)) !== 'failed');
@@ -65,7 +73,7 @@ export function createMessageCommands(live: LiveClient) {
     };
     const refresh = () => {
         if (disposed) return;
-        const commands = new Map(live.pending().map(command => [command.id, command]));
+        const commands = commandIndex();
         for (const [key, echo] of echoes) {
             const command = commands.get(echo.commandID);
             if (!command) continue;
@@ -98,7 +106,7 @@ export function createMessageCommands(live: LiveClient) {
             if (timers.has(chatID)) continue;
             timers.set(chatID, setTimeout(() => batch(() => {
                 if (disposed) return;
-                rememberCandidates(chatID, new Map(live.pending().map(command => [command.id, command])), true);
+                rememberCandidates(chatID, commandIndex(), true);
                 release(chatID); setTimeoutCount(value => value + 1); changed();
             }), 500));
         }
@@ -113,7 +121,7 @@ export function createMessageCommands(live: LiveClient) {
             if (!chats.has(id)) chats.set(id, []);
             chats.get(id)!.push(item);
         }
-        const commands = new Map(live.pending().map(command => [command.id, command]));
+        const commands = commandIndex();
         for (const [id, captured] of chats) {
             const current = new Set(captured.map(item => item.id));
             if (cursor) {
@@ -132,16 +140,16 @@ export function createMessageCommands(live: LiveClient) {
     const projectCaptured = (items: readonly ThreadItem[], _cursor: Cursor | undefined): readonly ThreadItem[] => {
         revision();
         if (!held.size && !identities.size) return items;
-        const commands = new Map(live.pending().map(command => [command.id, command]));
+        const commands = commandIndex();
         return items.filter(item => !held.has(item.id)).map(item => {
             const echo = echoes.get(identities.get(item.id) ?? '');
-            return echo ? {...item,data:{...item.data,command_id:echo.commandID,...(!echo.legacy ? {command_part_index:echo.index} : {}),command_sent_at:echo.item.data.sent_at,send_state:stateOf(echo,commands.get(echo.commandID))}} : item;
+            return echo ? present(item,echo,commands.get(echo.commandID)) : item;
         });
     };
     const pending = (): readonly ThreadItem[] => {
         revision();
-        const commands = new Map(live.pending().map(command => [command.id, command]));
-        return [...echoes].filter(([key]) => !suppressed.has(key) && !resolved.has(key)).map(([, echo]) => ({...echo.item,data:{...echo.item.data,send_state:stateOf(echo,commands.get(echo.commandID))}}));
+        const commands = commandIndex();
+        return [...echoes].filter(([key]) => !suppressed.has(key) && !resolved.has(key)).map(([, echo]) => present(echo.item,echo,commands.get(echo.commandID)));
     };
     const addEchoes=(id:string,submitted:SendMessage,replyData:Record<string,unknown>={},files:readonly LocalMessageFile[]=[])=>{
         const sentAt=new Date().toISOString(),legacy=!submitted.files?.length;
@@ -176,7 +184,7 @@ export function createMessageCommands(live: LiveClient) {
     const canRetry = (id:string,index?:number,file?:MessageFile) => {
         revision();
         const key=echoKey(id,index);
-        const echo=echoes.get(key), command=live.pending().find(value => value.id===id);
+        const echo=echoes.get(key), command=commandIndex().get(id);
         return Boolean(echo && command && !retries.has(key) && stateOf(echo,command)==='failed' && !ghostFailure(echo,command) && (!recordOf(echo,command) || chatOf(echo)) && (echo.kind==='text' || file?.upload_id && file.name) && live.status()==='connected' && (!replies.has(id)||!recordOf(echo,command)) && capabilities.allowed(replies.has(id)?'messages.reply':'messages.send'));
     };
     const retry = (event:Event,id:string,index?:number,file?:MessageFile,replacement?:LocalMessageFile) => withInput(event,() => batch(() => {
@@ -184,7 +192,7 @@ export function createMessageCommands(live: LiveClient) {
         const existing=retries.get(key);
         if(existing)return existing;
         if(!canRetry(id,index,file))throw new Error('Message unavailable');
-        const echo=echoes.get(key)!, original=owned.get(id)!, command=live.pending().find(value => value.id===id), recordID=recordOf(echo,command), chatID=chatOf(echo);
+        const echo=echoes.get(key)!, original=owned.get(id)!, command=commandIndex().get(id), recordID=recordOf(echo,command), chatID=chatOf(echo);
         const context=replies.get(id);
         const next=context?reply(event,context.target,context.partIndex,String(echo.item.data.text??'')):send(event,{chat_id:chatID,...(!chatID ? {handles:original.handles?.slice(),service:original.service} : {}),...(echo.kind==='text' ? {text:String(echo.item.data.text ?? '')} : {files:[{upload_id:file!.upload_id,name:file!.name}]}),...(recordID ? {resend_of:recordID} : {})},replacement?[replacement]:local&&echo.kind==='attachment'?[{...local,attachment:{...local.attachment,key:crypto.randomUUID(),url:URL.createObjectURL(local.file)},upload:file!}]:[]);
         retries.set(key,next);
