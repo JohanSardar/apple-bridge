@@ -102,12 +102,13 @@ test('WEB-MSG-KEYBOARD-LIST optional pins, preview bubbles and numbered shortcut
 test('WEB-MSG-KEYBOARD-LIST arrows, chat cycling and New Message',async({page},info)=>{
     test.skip(info.project.use.viewport?.width===390,'Desktop keyboard shortcuts');
     const modifier=await page.evaluate(()=>/Mac|iPhone|iPad/.test(navigator.platform)?'Meta':'Control');
-    await page.getByRole('listbox',{name:'Conversations'}).focus();
-    await page.keyboard.press('ArrowDown');await expect(page.locator('.conversation-row').first().locator('..')).toHaveAttribute('aria-selected','true');
-    await page.keyboard.press('ArrowDown');await expect(page.locator('.conversation-row').nth(1).locator('..')).toHaveAttribute('aria-selected','true');
-    await page.keyboard.press('ArrowUp');await expect(page.locator('.conversation-row').first().locator('..')).toHaveAttribute('aria-selected','true');
-    await page.keyboard.press('Control+Tab');await expect(page.locator('.conversation-row').nth(1).locator('..')).toHaveAttribute('aria-selected','true');
-    await page.keyboard.press('Control+Shift+Tab');await expect(page.locator('.conversation-row').first().locator('..')).toHaveAttribute('aria-selected','true');
+    const list=page.getByRole('listbox',{name:'Conversations'}),options=list.getByRole('option');
+    await list.focus();
+    await page.keyboard.press('ArrowDown');await expect(options.first()).toHaveAttribute('aria-selected','true');
+    await page.keyboard.press('ArrowDown');await expect(options.nth(1)).toHaveAttribute('aria-selected','true');
+    await page.keyboard.press('ArrowUp');await expect(options.first()).toHaveAttribute('aria-selected','true');
+    await page.keyboard.press('Control+Tab');await expect(options.nth(1)).toHaveAttribute('aria-selected','true');
+    await page.keyboard.press('Control+Shift+Tab');await expect(options.first()).toHaveAttribute('aria-selected','true');
     await page.keyboard.press(modifier+'+n');await expect(page).toHaveURL(/messages\/new$/);await page.goBack();await page.getByRole('button',{name:'New Message',exact:true}).click();await expect(page).toHaveURL(/messages\/new$/);
 });
 
