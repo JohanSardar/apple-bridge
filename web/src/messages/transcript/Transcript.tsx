@@ -56,8 +56,10 @@ export default function Transcript(props:TranscriptProps){
     const [replies,setReplies]=createSignal<{id:string;trigger:HTMLButtonElement}>();
     const closeReplies=(restoreFocus=true)=>{const trigger=replies()?.trigger;setReplies(undefined);if(restoreFocus)queueMicrotask(()=>trigger?.isConnected&&trigger.focus({preventScroll:true}));};
     const openReplies=(event:MouseEvent,item:ThreadItem)=>setReplies({id:item.id,trigger:event.currentTarget as HTMLButtonElement});
-    const local=createMemo<readonly ThreadItem[]>(previous=>{const next=(!props.threadOriginatorID?props.pending?.():undefined)?.filter(item=>item.data.chat_id===props.chatID)??[];return next.length===previous.length&&next.every((item,index)=>item===previous[index])?previous:next;},[]);
-    const displayed=createMemo<readonly ThreadItem[]>(previous=>{const state=captured(),projected=linkOriginals(state.items,(!props.threadOriginatorID?props.projectCaptured?.(state.items,state.cursor):undefined)??state.items),next=[...projected,...local()].sort((a,b)=>Date.parse(text(a.data.command_sent_at)||a.data.sent_at)-Date.parse(text(b.data.command_sent_at)||b.data.sent_at)||(text(a.data.command_id)||a.id).localeCompare(text(b.data.command_id)||b.id)||(commandPartIndex(a)??-1)-(commandPartIndex(b)??-1)||a.id.localeCompare(b.id));return next.length===previous.length&&next.every((item,index)=>item===previous[index])?previous:next;},[]);
+    const sameItems=(a:readonly ThreadItem[],b:readonly ThreadItem[])=>a===b||a.length===b.length&&a.every((item,index)=>item===b[index]);
+    const local=createMemo<readonly ThreadItem[]>(()=> (!props.threadOriginatorID?props.pending?.():undefined)?.filter(item=>item.data.chat_id===props.chatID)??[],[],{equals:sameItems});
+    const projected=createMemo<readonly ThreadItem[]>(previous=>{const state=captured(),next=(!props.threadOriginatorID?props.projectCaptured?.(state.items,state.cursor):undefined)??state.items;return sameItems(next,previous)?previous:linkOriginals(state.items,next);},[]);
+    const displayed=createMemo<readonly ThreadItem[]>(()=>[...projected(),...local()].sort((a,b)=>Date.parse(text(a.data.command_sent_at)||a.data.sent_at)-Date.parse(text(b.data.command_sent_at)||b.data.sent_at)||(text(a.data.command_id)||a.id).localeCompare(text(b.data.command_id)||b.id)||(commandPartIndex(a)??-1)-(commandPartIndex(b)??-1)||a.id.localeCompare(b.id)),[],{equals:sameItems});
     const stickers=createMemo(()=>{const targets=new Map<string,BridgeRecord[]>();for(const item of displayed())for(const attachment of item.attachments??[]){const target=text(fields(attachment.data.sticker).target_message_id);if(!target||attachment.data.is_sticker!==true)continue;const values=targets.get(target)??[];values.push(attachment);targets.set(target,values);}return targets;});
     const notice=()=>props.deliveryNotice?.();
     const openMedia=(attachment:BridgeRecord,origin:DOMRectReadOnly)=>{if(props.onOpen)props.onOpen(attachment,origin);else setViewer({attachment,origin});};
@@ -97,8 +99,10 @@ export default function Transcript(props:TranscriptProps){
     createEffect(()=>{handles.ensure([...participants(),...thread.items().flatMap(item=>{const event=fields(item.data.group_event);return[sender(item),text(event.actor_handle_id),text(event.target_handle_id),text(event.handle_id),...(item.reactions??[]).map(sender)];})]);});
     createEffect(()=>{const data=record()?.data,map=handleMap();if(data)props.title(text(data.display_name)||names(participants().map(id=>map.get(id)?.display_name??'Unknown sender'))||'Messages');});
     createEffect(()=>{clearTimeout(loadingTimer);if(thread.loading())loadingTimer=setTimeout(()=>setLoadingVisible(true),150);else setLoadingVisible(false);});
+    const layoutContext=createMemo(()=>JSON.stringify([Boolean(record()),captured().anchor,captured().newer===0,record()?.data.style,record()?.data.service,participants().length]));
     createEffect(()=>{
-        const state=captured(),items=displayed(),pending=local(),data=record()?.data,map=handleMap(),loading=thread.loading(),size=width(),viewport=viewportHeight(),scale=appearance.textSize(),open=expanded(),reduced=reduceMotion();
+        layoutContext();
+        const state=untrack(captured),items=displayed(),pending=local(),data=untrack(record)?.data,map=handleMap(),loading=thread.loading(),size=width(),viewport=viewportHeight(),scale=appearance.textSize(),open=expanded(),reduced=reduceMotion();
         const immediate=pending!==previousLocal&&Boolean(pending.length||previousLocal.length),added=pending.some(item=>!previousLocal.some(previous=>previous.id===item.id));
         if(added){setFollowLatest(true);setPendingJump('latest');untrack(thread.latest);}
         fontRevision();

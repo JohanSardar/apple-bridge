@@ -5,6 +5,14 @@ import {transcriptInputs,transcriptObservers} from './transcript-performance';
 import {installProbe,startTrace,stopTrace,stats} from './list-performance';
 test.use({trace:'off'});
 test.beforeEach(async({page})=>{await transcriptObservers(page);});
+test.afterEach(async({page},info)=>{
+    if(info.status==='passed')return;
+    const partial=await page.evaluate(()=>{const probe=(window as any).__listProbe;return probe&&{actions:probe.actions?.map((action:any)=>({index:action.index,at:action.at,processed:action.processed,frame:action.frame,resultAt:action.resultAt,reactions:action.reactions})),actionFrames:probe.actionFrames,phaseDone:probe.phaseDone,echoes:[...document.querySelectorAll<HTMLElement>('[data-local-echo]')].map(row=>({message:row.dataset.message,command:row.dataset.commandId,state:row.dataset.sendState,text:row.textContent?.slice(0,80)}))};}).catch(()=>undefined);
+    if(!partial)return;
+    await mkdir('../lab/evidence/private/web',{recursive:true});
+    const action=info.title.includes('sending text')?'send':info.title.includes('reactions')?'react':'other';
+    await writeFile(`../lab/evidence/private/web/transcript-failure-${action}-${info.project.name}.json`,JSON.stringify(partial,null,2)+'\n');
+});
 test('WEB-MSG-PERF WEB-MSG-PERF-FRAME a 100k-message transcript fling stays within main-thread frame budgets',async({page,request},info)=>{
     await prepareSession(page);const ids=await control(request,'/demo-fixtures');let population=0;const releases:(()=>void)[]=[];
     const observe=(socket:Socket)=>{const read=(event:{payload:string|Buffer})=>{const frame=JSON.parse(String(event.payload));if(frame.t==='snap'&&frame.data?.items?.[0]?.data.chat_id===ids['demo-chat-39'])population=Math.max(population,frame.data.items.length+Number(frame.data.older??0)+Number(frame.data.newer??0));};socket.on('framereceived',read);releases.push(()=>socket.off('framereceived',read));};

@@ -52,7 +52,7 @@ export function VirtualList<T>(props: {
         if(Math.abs(desired-actual)>.5&&Math.abs(desired-actual)<1){viewport.scrollTop=Math.round(desired);actual=viewport.scrollTop;}
         scrollResidual=preserve&&desired>=0&&desired<=viewport.scrollHeight-viewport.clientHeight&&Math.abs(desired-actual)<1?desired-actual:0;assignedScroll=actual;
     };
-    const range = createMemo(() => { revision(); const top = scroll(),padding=props.overscan??6; const start = Math.max(0, positions.indexAt(top) - padding), end = Math.min(items.length, positions.indexAt(top + height()) + padding+1); return { start, end }; });
+    const range = createMemo(() => { revision(); const top = scroll(),padding=props.overscan??6; const start = Math.max(0, positions.indexAt(top) - padding), end = Math.min(items.length, positions.indexAt(top + height()) + padding+1); return { start, end }; },undefined,{equals:(a,b)=>a.start===b.start&&a.end===b.end});
     const anchor = () => { if (!items.length)
         return; const index = positions.indexAt(viewport.scrollTop); return { key: props.keyFor(items[index]), offset: viewport.scrollTop - positions.offset(index) }; };
     const refresh = (top=viewport.scrollTop) => batch(() => { setScroll(top); setRevision(value => value + 1); });
@@ -137,7 +137,8 @@ export function VirtualList<T>(props: {
     }));
     onMount(() => { props.ref?.({ scrollToIndex, anchor }); observer.observe(viewport); });
     onCleanup(() => { observer.disconnect(); cancelAnimationFrame(frame); });
-    createEffect(() => { const value = range(); props.onVisible?.(value.start, value.end); props.onBottom?.(positions.total-scroll()-height()<=2); });
+    createEffect(() => { revision(); const value=range(); props.onVisible?.(value.start,value.end); });
+    createEffect(() => {revision();props.onBottom?.(positions.total-scroll()-height()<=2);});
     const keys = createMemo(() => { revision(); return items.slice(range().start,range().end).map(props.keyFor); });
     const activeDescendant=createMemo(()=>{const item=items[selected()];if(!item)return;const key=props.keyFor(item);return keys().includes(key)?rowPrefix+key:undefined;});
     return <div ref={viewport} class="virtual-viewport" data-scroll={props.label} tabindex="0" role="listbox" aria-multiselectable={props.selectedKeys ? true : undefined} aria-label={props.label} aria-activedescendant={activeDescendant()} onScroll={event => { cancelFirstMountAnchor(event); if (!frame)
