@@ -1,0 +1,27 @@
+{
+  "scenario": "CON-RELAY",
+  "level": "replica",
+  "run_id": "relay_01M5N2CQRVM925YDQP0ZB49YH7",
+  "git_sha": "11816ae426cb77acd37c179f2a8070a71578f0c6",
+  "public_snapshot_converged": true,
+  "public_live_samples": 20,
+  "public_command_samples": 6,
+  "gateway_p95_ms": 1453.921792,
+  "public_replica_p95_ms": 1481.835381,
+  "public_command_replica_p95_ms": 1788.080424,
+  "latency_budget_ms": 1000,
+  "tccd_precheck_line_counts_per_10s": [
+    1,
+    1
+  ],
+  "tccd_run_line_counts_per_minute": [
+    4,
+    14216,
+    6297
+  ],
+  "tagged_contacts_cleaned": true,
+  "unowned_contacts_preserved": true,
+  "remote_off": true,
+  "serve_byte_identical_immediately_after_off": false,
+  "serve_json_canonically_equal_on_later_read": true
+}
