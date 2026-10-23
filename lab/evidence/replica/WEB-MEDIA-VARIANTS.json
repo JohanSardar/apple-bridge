@@ -1,0 +1,26 @@
+{
+  "scenario": "WEB-MEDIA-VARIANTS",
+  "level": "replica",
+  "passed": false,
+  "status": "environment-limited",
+  "git_sha": "49666226a72fbfc9a304deef1967bffb1a662706",
+  "at": "2026-10-23T18:15:07Z",
+  "hosts": ["air", "ubuntu"],
+  "conditions": {
+    "method": "read-only existing-attachment verifier",
+    "scope": "Air gateway and Ubuntu replica; no messages sent or changed"
+  },
+  "metrics": {
+    "existing_attachments_required": 3,
+    "all_existing_attachments_captured": false,
+    "variant_downloads_verified": 0,
+    "capture_timeout_seconds": 45,
+    "new_messages_sent": 0
+  },
+  "assertions": [
+    {"name": "read_only", "passed": true},
+    {"name": "existing_synthetic_attachments_captured", "passed": false}
+  ],
+  "latency": {},
+  "limit_reason": "The existing synthetic attachments were not captured within 45 seconds, so current replica variant downloads and cold-arrival latency are unverified."
+}

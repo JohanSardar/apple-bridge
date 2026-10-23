@@ -443,7 +443,7 @@ features:
     milestone: W1
     modules: [state, operations, contracts]
     depends_on: [messages.read]
-    status: in_progress
+    status: done
     scenarios:
       - {id: WEB-RM-CHATS, levels: [sim]}
       - {id: WEB-RM-SEARCH, levels: [sim]}
@@ -454,11 +454,7 @@ features:
       - {id: WEB-RM-THREAD-ORIGINATOR, levels: [sim]}
       - {id: WEB-RM-THREAD-ORIGINATOR-BROWSER, levels: [web]}
       - {id: WEB-RM-THREAD-ORIGINATOR-PERF, levels: [sim]}
-    limits:
-      - scenario: WEB-RM-CHATS
-        level: sim
-        reason: "The 15 ms REST/MCP chats budgets remain deferred to the Messages milestone after the known main miss in PR183. The final focused run passes all 178 checks: REST/MCP p95 11.06/10.93 ms, with a 10 ms client gap outside each measured RPC and no rate-limited responses. Product thresholds and the 200 HTTP requests/second principal cap are unchanged."
-    notes: Functional read-model contracts, including exact participant sets, are verified. WEB-RM-CHATS rest_chats_p95_budget and mcp_chats_p95_budget are deferred to the Messages milestone gate; both retain the 15 ms threshold. One isolated main/PR attribution pair reproduced the miss on main; PR183 p95 was lower in both protocols.
+    notes: Functional read-model contracts, including exact participant sets and search, pass at all listed levels. One exclusive quiet WEB-RM-CHATS sim run passed all 178 checks with REST/MCP chats p95 9.85/10.55 ms against the unchanged 15 ms budgets; the prior deferral is closed.
   - id: web.frontdoor
     title: Web front door, passkey device sessions, live views (web/1), embedded app shell
     requirements: [R-WEB-SECURE, R-WEB-FAST, R-WEB-UI]
@@ -495,14 +491,21 @@ features:
     milestone: W1
     modules: [native/MediaDerivatives, blobs, web]
     depends_on: [messages.read]
-    status: in_progress
+    status: limited
     scenarios:
       - {id: WEB-MEDIA-VARIANTS, levels: [sim, real, replica]}
       - {id: WEB-MEDIA-CAP, levels: [sim]}
       - {id: NATIVE-MEDIA-EXPORT-SAFETY, levels: [sim, real]}
       - {id: NATIVE-MEDIA-YIELD, levels: [sim]}
       - {id: NATIVE-MEDIA-POSTERS, levels: [sim]}
-    notes: Variants work on the real Air (12 read-only native variant downloads verified). Real and replica runs wait for cleanup of six tagged self-chat file bubbles (media-bubble Accessibility targeting, GUI needed once the Air's lid is open) and the cold-arrival latency measurement.
+    limits:
+      - scenario: WEB-MEDIA-VARIANTS
+        level: real
+        reason: "The checked-in real scenario failed during native variant capture and tagged file-bubble cleanup. A prior read-only verifier checked 12 existing variants, but the full cold-arrival journey cannot be repeated safely while six registered self-chat file bubbles remain and verified GUI cleanup is unavailable."
+      - scenario: WEB-MEDIA-VARIANTS
+        level: replica
+        reason: "One read-only Air gateway to Ubuntu replica attempt could not capture the three existing synthetic attachments within 45 seconds, so no current variant downloads or cold-arrival latency were certified. The full scenario sends a new message and was withheld while six registered self-chat file bubbles remain."
+    notes: Sim and native export-safety levels pass. The checked-in real WEB-MEDIA-VARIANTS evidence fails; an earlier separate read-only verifier checked 12 existing variants on the Air and Ubuntu. A fresh replica read-only attempt did not capture the existing attachments. A read-only registered-cleanup audit still finds six active self-chat file bubbles (three outgoing, three echoes); nothing was deleted or sent. Cold-arrival latency remains unverified.
   - id: web.remote
     title: Reach from anywhere through system or embedded Tailscale Funnel
     requirements: [R-WEB-REACH, R-SECURE]
