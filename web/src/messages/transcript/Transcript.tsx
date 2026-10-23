@@ -136,16 +136,15 @@ export default function Transcript(props:TranscriptProps){
         frame=requestAnimationFrame(commit);
     });
     const initialTarget=()=>{const pending=pendingJump();return pending==='unread'?thread.unread():pending;};
-    const initialIndex=()=>{const target=initialTarget();return target==='oldest'?0:!target||target==='latest'?rows().items.length-1:Math.max(0,rows().items.findIndex(row=>row.id===target||row.members?.some(item=>item.id===target)));};
+    const initialIndex=()=>{const target=initialTarget();return target==='oldest'?0:!target||target==='latest'?rows().items.length-1:rows().items.findIndex(row=>row.id===target||row.members?.some(item=>item.id===target));};
     let requested=props.messageID;
     createEffect(()=>{const target=props.messageID;if(target&&target!==requested){requested=target;closeReplies();setSettled(false);setPendingJump(target);thread.jump(target);}});
     createEffect(()=>{
         const api=list(),pending=pendingJump();
-        if(!api||!ready()||thread.loading()||rows().scope!==thread.view().anchor||settled()&&!pending||!rows().items.length)return;
-        const target=pending==='unread'?thread.unread():pending;
-        const index=target==='oldest'?0:!target||target==='latest'?rows().items.length-1:rows().items.findIndex(row=>row.id===target||row.members?.some(item=>item.id===target));
-        if(index<0)return;
         cancelAnimationFrame(jumpFrame);
+        if(!api||!ready()||thread.loading()||rows().scope!==thread.view().anchor||settled()&&!pending||!rows().items.length)return;
+        const target=initialTarget(),index=initialIndex();
+        if(index<0)return;
         jumpFrame=requestAnimationFrame(()=>{api.scrollToIndex(index,!target||target==='latest'?'end':'start');setFocused(rows().items[index]?.key);batch(()=>{setPendingJump(undefined);setSettled(true);});});
     });
     onMount(()=>{
