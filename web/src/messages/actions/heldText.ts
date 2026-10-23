@@ -1,4 +1,3 @@
-// Messages may preserve attachment placeholders or a different Unicode/line-ending form.
 function comparableText(text: string): string {
     return text.replace(/\uFFFC/g, '').replace(/\r\n?|\u2028/g, '\n').normalize('NFC').trim();
 }

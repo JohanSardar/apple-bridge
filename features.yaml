@@ -575,6 +575,10 @@ features:
     modules: [webui, web, operations, native/MessagesSource, lab/demo]
     depends_on: [web.frontdoor, web.demo, web.media]
     status: todo
+    # 2026-10-23 gate: 61/64 Messages web manifests have complete 12-project
+    # passes. WEB-MSG-EFFECTS remains red in Firefox phone. Quiet open-chat/media
+    # input and cold-open frame budgets are measured and not met; unchanged
+    # thresholds and exact results are in design/MILESTONE-GATES.md.
     limits:
       - scenario: WEB-PERF-LIST
         level: web
@@ -654,6 +658,30 @@ features:
     modules: [native/MessagesSource, operations, web, webui, replication]
     depends_on: [web.messages.read]
     status: todo
+    # WEB-MSG-REPLY and WEB-MSG-MANAGE retain red browser cells. Final
+    # send/react/fling timing runs are host-invalid under external TCC load.
+    limits:
+      - scenario: MSG-SELFTEST
+        level: real
+        reason: "No truly unused own-handle alias exists on this Air; self-chat fallback refused to avoid touching personal conversations. The native batch was not rerun and submitted zero writes for this gate."
+      - scenario: WEB-MSG-REPLY
+        level: real
+        reason: "The real fixture targets another person's handle and is forbidden by the own-handles-only hard rule; it was not run."
+      - scenario: WEB-MSG-SEND
+        level: real
+        reason: "No truly unused own-handle alias exists on this Air; the personal self-chat fallback is refused. No final real send was submitted."
+      - scenario: WEB-MSG-ATTACH-SEND
+        level: real
+        reason: "No truly unused own-handle alias exists on this Air; the personal self-chat fallback is refused. No final real attachment send was submitted."
+      - scenario: WEB-MSG-REACT
+        level: real
+        reason: "No truly unused own-handle alias exists on this Air; the personal self-chat fallback is refused. No final native action was submitted."
+      - scenario: WEB-MSG-EDIT
+        level: real
+        reason: "No truly unused own-handle alias exists on this Air; the personal self-chat fallback is refused. No final native action was submitted."
+      - scenario: WEB-MSG-UNSEND
+        level: real
+        reason: "No truly unused own-handle alias exists on this Air; the personal self-chat fallback is refused. No final native action was submitted."
     scenarios:
       - {id: MSG-COMMAND-OBSERVED-IDS, levels: [sim]}
       - {id: MSG-FAILED-OBSERVED-IDS, levels: [sim]}
@@ -703,6 +731,8 @@ features:
     modules: [native/MessagesSource, operations, webui]
     depends_on: [web.messages.write]
     status: todo
+    # Native variants without per-build proof stay hidden. Browser PARITY-UI
+    # passed its 12-project cohort; native status is independent of that pass.
     scenarios:
       - {id: MSG-PINS, levels: [sim, real]}
       - {id: MSG-MUTE, levels: [sim, real]}
@@ -719,16 +749,16 @@ features:
     limits:
       - scenario: MSG-PINS
         level: real
-        reason: "macOS 26.7.1 build 25G241: the unused own-handle isolated-fixture send returned indeterminate without an observed native message. Existing conversations were not used. The signed per-build parity ledger keeps this operation hidden; tagged cleanup remains registered for reconciliation."
+        reason: "No truly unused own-handle alias exists on this Air. The personal self-chat fallback is refused, so this native variant was not rerun; the per-build parity ledger keeps it hidden."
       - scenario: MSG-MUTE
         level: real
-        reason: "macOS 26.7.1 build 25G241: the unused own-handle isolated-fixture send returned indeterminate without an observed native message. Existing conversations were not used. The signed per-build parity ledger keeps this operation hidden; tagged cleanup remains registered for reconciliation."
+        reason: "No truly unused own-handle alias exists on this Air. The personal self-chat fallback is refused, so this native variant was not rerun; the per-build parity ledger keeps it hidden."
       - scenario: MSG-READ-RECEIPTS
         level: real
-        reason: "macOS 26.7.1 build 25G241: the unused own-handle isolated-fixture send returned indeterminate without an observed native message. Existing conversations were not used. The signed per-build parity ledger keeps this operation hidden; tagged cleanup remains registered for reconciliation."
+        reason: "No truly unused own-handle alias exists on this Air. The personal self-chat fallback is refused, so this native variant was not rerun; the per-build parity ledger keeps it hidden."
       - scenario: MSG-RECENTLY-DELETED
         level: real
-        reason: "macOS 26.7.1 build 25G241: the unused own-handle isolated-fixture send returned indeterminate without an observed native message. Existing conversations were not used. The signed per-build parity ledger keeps this operation hidden; tagged cleanup remains registered for reconciliation."
+        reason: "No truly unused own-handle alias exists on this Air. The personal self-chat fallback is refused, so this native variant was not rerun; the per-build parity ledger keeps it hidden. Two exact tagged attachments remain in Recently Deleted pending OS expiry."
     notes: Group management (W4-GROUPS) completes the existing messages.groups feature and its scenarios instead of duplicating them.
   - id: web.reminders
     title: Reminders web app (read, write, parity)
