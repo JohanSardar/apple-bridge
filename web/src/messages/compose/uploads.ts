@@ -7,17 +7,29 @@ import type {PendingAttachment} from '../media/pending';
 type UploadReply={upload_id:string;offset:number;size:number;state:'uploading'|'ready';expires_at:string};
 export type StagedFile={key:string;file:File;attachment:PendingAttachment;phase:'uploading'|'finishing'|'paused'|'ready';bytes:number;remote?:UploadReply;problem:string;abort:AbortController;generation:number;metadata:boolean};
 const maximum=100*1024*1024,chunkSize=1024*1024;
-class UploadError extends Error {constructor(readonly status:number){super('Upload unavailable');}}
+class UploadError extends Error {constructor(readonly status:number,readonly retryAfter:number=1000){super('Upload unavailable');}}
 function request(method:string,path:string,body:Blob|undefined,headers:Record<string,string>,signal:AbortSignal,progress?:(bytes:number,finished:boolean)=>void):Promise<UploadReply>{
     return new Promise((resolve,reject)=>{
         const xhr=new XMLHttpRequest();xhr.open(method,path);xhr.withCredentials=true;xhr.timeout=0;xhr.responseType='json';
         for(const [name,value] of Object.entries(headers))xhr.setRequestHeader(name,value);
         const cancel=()=>xhr.abort(),finish=()=>signal.removeEventListener('abort',cancel);
-        xhr.upload.onprogress=event=>progress?.(event.loaded,false);xhr.upload.onload=()=>progress?.(body?.size??0,true);
-        xhr.onload=()=>{finish();if(xhr.status<200||xhr.status>=300){reject(new UploadError(xhr.status));return;}const value=xhr.response as UploadReply;if(!value||typeof value.upload_id!=='string'||!Number.isSafeInteger(value.offset)||!Number.isSafeInteger(value.size)||value.offset<0||value.offset>value.size||!['uploading','ready'].includes(value.state)||!Number.isFinite(Date.parse(value.expires_at))){reject(new UploadError(503));return;}resolve(value);};
+        xhr.upload.onprogress=event=>progress?.(event.loaded,Boolean(body?.size&&event.loaded>=body.size));xhr.upload.onload=()=>progress?.(body?.size??0,true);
+        xhr.onload=()=>{finish();if(xhr.status<200||xhr.status>=300){const header=xhr.getResponseHeader('Retry-After'),seconds=header===null?NaN:Number(header);reject(new UploadError(xhr.status,Number.isFinite(seconds)&&seconds>=0?Math.min(seconds*1000,5000):1000));return;}const value=xhr.response as UploadReply;if(!value||typeof value.upload_id!=='string'||!Number.isSafeInteger(value.offset)||!Number.isSafeInteger(value.size)||value.offset<0||value.offset>value.size||!['uploading','ready'].includes(value.state)||!Number.isFinite(Date.parse(value.expires_at))){reject(new UploadError(503));return;}resolve(value);};
         xhr.onerror=()=>{finish();reject(new UploadError(0));};xhr.onabort=()=>{finish();reject(new DOMException('Upload paused','AbortError'));};
         signal.addEventListener('abort',cancel,{once:true});if(signal.aborted){reject(new DOMException('Upload paused','AbortError'));return;}xhr.send(body??null);
     });
+}
+async function uploadRequest(method:string,path:string,body:Blob|undefined,headers:Record<string,string>,signal:AbortSignal,progress?:(bytes:number,finished:boolean)=>void):Promise<UploadReply>{
+    for(let attempt=0;;attempt++){
+        try{return await request(method,path,body,headers,signal,progress);}
+        catch(error){
+            if(!(error instanceof UploadError)||error.status!==429||attempt===2)throw error;
+            await new Promise<void>((resolve,reject)=>{
+                const done=()=>{clearTimeout(timer);signal.removeEventListener('abort',cancel);resolve();},cancel=()=>{clearTimeout(timer);reject(new DOMException('Upload paused','AbortError'));},timer=setTimeout(done,error.retryAfter);
+                signal.addEventListener('abort',cancel,{once:true});if(signal.aborted)cancel();
+            });
+        }
+    }
 }
 async function metadata(file:File,url:string,signal:AbortSignal):Promise<Partial<PendingAttachment>>{
     if(!/^(image|video)\//u.test(file.type))return {};
@@ -47,11 +59,11 @@ export function createUploads(){
         entry.abort.abort();entry.abort=new AbortController();const signal=entry.abort.signal,token=++entry.generation;entry.phase='uploading';entry.problem='';changed();
         const preview=entry.metadata?Promise.resolve():metadata(entry.file,entry.attachment.url,signal).then(value=>{if(token===entry.generation){Object.assign(entry.attachment,value);entry.metadata=true;changed();}});
         try{
-            if(entry.remote){try{accept(entry,await request('GET','/web/v1/upload/'+encodeURIComponent(entry.remote.upload_id),undefined,{},signal));}catch(error){if(error instanceof UploadError&&[404,410].includes(error.status))entry.remote=undefined;else throw error;}}
-            if(!entry.remote)accept(entry,await request('POST','/web/v1/upload',new Blob(),{'Upload-Length':String(entry.file.size)},signal));
+            if(entry.remote){try{accept(entry,await uploadRequest('GET','/web/v1/upload/'+encodeURIComponent(entry.remote.upload_id),undefined,{},signal));}catch(error){if(error instanceof UploadError&&[404,410].includes(error.status))entry.remote=undefined;else throw error;}}
+            if(!entry.remote)accept(entry,await uploadRequest('POST','/web/v1/upload',new Blob(),{'Upload-Length':String(entry.file.size)},signal));
             while(entry.remote!.state!=='ready'){
                 const offset=entry.remote!.offset,body=entry.file.slice(offset,Math.min(entry.file.size,offset+chunkSize));
-                const result=await request('POST','/web/v1/upload',body,{'Upload-ID':entry.remote!.upload_id,'Upload-Offset':String(offset),'Content-Type':'application/octet-stream'},signal,(bytes,finished)=>{if(token!==entry.generation)return;entry.bytes=Math.min(entry.file.size,offset+bytes);entry.phase=finished&&entry.bytes===entry.file.size?'finishing':'uploading';changed();});
+                const result=await uploadRequest('POST','/web/v1/upload',body,{'Upload-ID':entry.remote!.upload_id,'Upload-Offset':String(offset),'Content-Type':'application/octet-stream'},signal,(bytes,finished)=>{if(token!==entry.generation)return;entry.bytes=Math.min(entry.file.size,offset+bytes);entry.phase=finished&&entry.bytes===entry.file.size?'finishing':'uploading';changed();});
                 if(token!==entry.generation)return;accept(entry,result);
                 if(result.state==='uploading'&&result.offset<=offset)throw new UploadError(503);
             }
