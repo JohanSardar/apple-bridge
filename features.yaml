@@ -737,7 +737,7 @@ features:
     limits:
       - scenario: WEB-REM-ACTIONS
         level: web
-        reason: "Of 84 configurations, 68 execute and pass, 12 are not applicable by layout and four WebKit/Firefox phone trusted-touch cases remain unproven. Chromium phone trusted CDP swipes pass; no executed failures or flakes remain. App-specific input, paint and warm-content budgets remain unproven."
+        reason: "Of 84 configurations, 68 execute and pass, 12 are not applicable by layout and four WebKit/Firefox phone trusted-touch cases remain unproven. Chromium phone trusted CDP swipes pass; no executed failures or flakes remain. A later exclusive PERF-SHELL run fails Chromium light phone navigation with a 73 ms long task against 50 ms; CPU idle 81%, no other heavy jobs. App-specific paint attribution and remaining timing cases remain unproven."
       - scenario: REM-STORE-PERF
         level: real
         reason: "Native warm-full and unchanged modes pass; changed-set modes require native fixtures and remain unproven. Synthetic changed 1/10/100/1000 modes pass."
