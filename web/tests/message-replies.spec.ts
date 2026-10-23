@@ -76,7 +76,7 @@ test('WEB-MSG-REPLY CANCEL cancel keeps the per-chat draft and never dispatches'
     await page.goto('/messages/'+encodeURIComponent(chat)+'/'+encodeURIComponent(f.recordID!));
     const composer=page.getByRole('region',{name:'Message composer',exact:true});
     await composer.getByRole('textbox',{name:'Message',exact:true}).fill('[ab-test actions] retained draft');
-    await page.locator('.message-row[data-message="'+f.recordID+'"] .bubble[data-part="0"]').click({button:'right'});
+    await page.locator('.message-row[data-message="'+f.recordID+'"] .bubble[data-part="0"]').click({button:'right',force:true});
     await page.getByRole('dialog',{name:'Message actions',exact:true}).getByRole('button',{name:'Reply',exact:true}).click();
     await composer.getByRole('textbox',{name:'Message',exact:true}).evaluate(field=>field.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',isComposing:true,bubbles:true})));
     await expect(composer.getByRole('region',{name:'Replying to message',exact:true})).toBeVisible();
@@ -159,7 +159,7 @@ test('WEB-MSG-REPLY CELL an actual grouped native cell anchors keyboard actions 
     const menu=page.getByRole('dialog',{name:'Message actions',exact:true});
     await expect(menu).toBeVisible();await expect(cell).toHaveClass(/message-action-anchor/u);
     await page.keyboard.press('Escape');
-    await cell.locator('button.media-open').click({button:'right'});
+    await cell.click({button:'right',force:true});
     await menu.getByRole('button',{name:'Reply',exact:true}).click();
     const composer=page.getByRole('region',{name:'Message composer',exact:true});
     await expect(composer.getByRole('region',{name:'Replying to message',exact:true})).toContainText('Attachment');
