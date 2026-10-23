@@ -2,6 +2,15 @@ import { test, expect } from '@playwright/test';
 import { prepareListSession as bootstrap } from './list-session';
 import { notesFixture } from './notes-fixtures';
 import { showNotesFolders, showNotesList } from './notes-navigation';
+for (const deletionProven of [false, 'missing'] as const) test(`WEB-NOTE-WRITE ${deletionProven === false ? 'unproven' : 'missing proof for'} deletion stays hidden while plain editing remains available`, async ({ page, context, request }) => {
+    await bootstrap(context, request); const fixture = await notesFixture(page, true, 'ready', deletionProven); await page.goto('/notes/nte_plain');
+    const editor = page.getByRole('textbox', { name: 'Note text', exact: true });
+    await expect(editor).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Delete note', exact: true })).toHaveCount(0);
+    await editor.fill('[ab-test] Deletion limited'); await editor.press('ControlOrMeta+s');
+    await expect.poll(() => fixture.commands.length).toBe(1);
+    expect(fixture.commands[0].op).toBe('notes.update');
+});
 test('WEB-NOTE-WRITE trusted saves, exact versions, conflict drafts, create and delete', async ({ page, context, request }) => {
     await bootstrap(context, request); const fixture = await notesFixture(page); await page.goto('/notes/folder/fld_test');
     await page.locator('[data-note-id="nte_plain"]').click();

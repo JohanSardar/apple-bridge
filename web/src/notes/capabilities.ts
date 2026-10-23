@@ -27,6 +27,7 @@ export function noteCapabilities(live: LiveClient) {
                 if (source.source !== 'notes' || source.state !== 'ready') continue;
                 const entries = Array.isArray(coverage.operations) ? coverage.operations : [];
                 const explicit = entries.map(object).find(entry => entry.operation === operation);
+                if (operation === 'notes.delete' && explicit?.proven !== true) return { proven: false, reason: text(explicit?.reason) || 'capability_unproven' };
                 if (explicit?.proven === false) return { proven: false, reason: text(explicit.reason) || 'Action unavailable on this Mac' };
                 if (Array.isArray(source.capabilities) && source.capabilities.includes(operation)) return { proven: true, reason: text(explicit?.reason) || 'advertised_notes_operation' };
             }

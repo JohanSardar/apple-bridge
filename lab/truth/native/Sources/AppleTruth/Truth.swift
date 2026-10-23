@@ -50,7 +50,11 @@ struct AppleTruth {
                 } else if request["source"] as? String == "usage" {
                     guard verb == "observe" else { throw TruthFailure.invalid }; response = try UsageTruth.observe(root: request["biome_root"] as? String)
                 } else if request["source"] as? String == "notes" {
-                    response = request["sqlite"] as? Bool == true ? try notesSQLite(path: request["snapshot_path"] as? String) : try notes(verb, request)
+                    if verb == "observe", let ids = request["verify_deleted_ids"] as? [String] {
+                        response = ["status":"verified", "deletion_verified":try notesDeletionVerified(ids, path: request["snapshot_path"] as? String)]
+                    } else {
+                        response = request["sqlite"] as? Bool == true ? try notesSQLite(path: request["snapshot_path"] as? String) : try notes(verb, request)
+                    }
                 } else if request["source"] as? String == "messages" {
                     guard verb == "observe" else { throw TruthFailure.invalid }
                     response = request["rich_counts"] as? Bool == true ? try MessagesRichTruth.observe(request) : try messages(request)

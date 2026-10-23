@@ -31,7 +31,7 @@ Deep links: `/notes`, `/notes/folder/<id>`, `/notes/<id>`.
 | Search | Full-text, including attachments' names | Same | R (`search`) | R |
 | New note | ⌘N; the title comes from the first line | Same | create W | W |
 | New folder | Name | Same | create_folder W | W |
-| Delete / move | Swipe or menu; Recently Deleted for 30 days | Delete W; move `—`; Recently Deleted read-only | delete W | W / P |
+| Delete / move | Swipe or menu; Recently Deleted for 30 days | Delete hidden without per-build NoteStore proof; move `—`; Recently Deleted read-only | delete limited | P |
 
 ## 3. Editor
 
@@ -69,6 +69,14 @@ Bodies that exceed the existing metadata frame budget use `body_status: external
 
 `NOTE-EDIT-PARITY` runs the signed Helper against two notes it creates with a unique `[ab-test …]` tag in the Bridge Test folder. It tries one simple-rich HTML replacement and one checkbox-state replacement, compares the native SQLite projections, and deletes only the tagged notes it created. The reusable Bridge Test container is retained. The lab probe and control command are absent from production builds.
 
-On macOS 26.7.1 (25G241), neither edit is qualified. The simple-rich replacement did not reproduce the expected plain text and block tree; the decoder also reported unknown note and paragraph attributes, preventing a lossless guarantee. Standard HTML checkbox inputs produced zero native checklist items before and after replacement, so neither native identity nor state preservation could be established. Four public mutation calls (two creates and two replacements) completed, and tagged-note cleanup was verified. Rich editing and checklist toggling remain hidden; existing plain-text commands retain their `editable: plain` guard.
+On macOS 26.7.1 (25G241), neither edit is qualified. The simple-rich replacement did not reproduce the expected plain text and block tree; the decoder also reported unknown note and paragraph attributes, preventing a lossless guarantee. Standard HTML checkbox inputs produced zero native checklist items before and after replacement, so neither native identity nor state preservation could be established. Four public mutation calls (two creates and two replacements) completed. Cleanup was initially reported complete from collection checks; that does not establish NoteStore deletion (see §7). Rich editing and checklist toggling remain hidden; existing plain-text commands retain their `editable: plain` guard.
 
 Run the per-OS proof with `packaging/dev/heavy.sh go run ./cmd/bridge-lab run lab/scenarios/notes/NOTE-EDIT-PARITY.yaml --level real --json`. A future candidate must also pass the production command path before any capability is exposed; this probe never enables one automatically.
+
+## 7. Deletion qualification
+
+**Limited: AppleScript delete reports success but iCloud NoteStore rows stay active on 25G241** (macOS 26.7.1). The real NOTE-CRUD create, append and replace steps passed native Truth; its delete step remains limited. No further real CRUD rerun is required while deletion is unproven. Two tagged test notes and three tagged test folders remain active; they were retained for disclosure rather than retried. Recently Deleted was not purged.
+
+`notes.delete` is omitted from advertised capabilities and its web control stays hidden unless a local proof matches both the OS build and NoteStore generation. Native prepare, validation and dispatch reject an unproven delete with `capability_unproven`. No product folder-delete operation is registered; the native boundary also gates `notes.delete_folder`. The LAB-only qualification hook accepts an isolated tagged-fixture command and records proof only after an active NoteStore row becomes gone, marked for deletion, or moves under a Recently Deleted ancestor. AppleScript success alone cannot qualify an operation. A stale build or store invalidates the proof; an unverified production deletion revokes it.
+
+Lab cleanup captures tagged targets independently from NoteStore before issuing cleanup. It reports success only when every captured row is gone, marked or trashed, even if AppleScript no longer enumerates the target. SQLite read errors and still-active rows fail cleanup. Synthetic fixtures cover a successful no-op that cannot qualify, verified deletion states and build invalidation; Chromium WRITE coverage checks that an explicitly unproven Delete stays hidden while plain edits remain available.

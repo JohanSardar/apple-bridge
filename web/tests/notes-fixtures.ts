@@ -1,9 +1,9 @@
 import type { Page } from '@playwright/test';
 import type { BridgeRecord } from '../src/data/types';
 const record = (id: string, collection: string, data: Record<string, unknown>): BridgeRecord => ({ id, collection, source: 'notes', version: 1, data });
-export async function notesFixture(page: Page, writable = true, state = 'ready') {
+export async function notesFixture(page: Page, writable = true, state = 'ready', deletionProven: boolean | 'missing' = true) {
     const operations = ['notes.create', 'notes.update', 'notes.delete', 'notes.create_folder'];
-    const source = record('src_notes', 'system.source', { source: 'notes', state, capabilities: writable ? operations : [], coverage: { operations: operations.map(operation => ({ operation, proven: true, reason: 'synthetic_fixture' })) } });
+    const source = record('src_notes', 'system.source', { source: 'notes', state, capabilities: writable ? operations : [], coverage: { operations: operations.filter(operation => operation !== 'notes.delete' || deletionProven !== 'missing').map(operation => ({ operation, proven: operation !== 'notes.delete' || deletionProven === true, reason: operation === 'notes.delete' && !deletionProven ? 'capability_unproven' : 'synthetic_fixture' })) } });
     const folders = [record('fld_test', 'notes.folder', { title: 'Bridge Test', account: 'test' }), record('fld_child', 'notes.folder', { title: 'Nested', account: 'test', parent_id: 'fld_test' }), record('fld_deleted', 'notes.folder', { title: 'Recently Deleted', account: 'test' })];
     let notes = [
         record('nte_plain', 'notes.note', { title: '[ab-test] Plain', folder_id: 'fld_test', plain_text: '[ab-test] Plain\nA quiet draft', editable: 'plain', content_status: 'complete', modified_at: '2026-10-22T15:00:00Z', created_at: '2026-10-20T12:00:00Z', pinned: true }),

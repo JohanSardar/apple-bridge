@@ -391,10 +391,10 @@ features:
     limits:
       - scenario: NOTE-CRUD
         level: real
-        reason: "The initial 2026-10-22 milestone real check creates the tagged folder/note and matches Truth, then append returns unsupported; cleanup passes. Native fixes #266 and #269 are merged. Fresh acceptance awaits the Notes latency fix and independent reruns."
+        reason: "Delete step limited: AppleScript delete reports success but iCloud NoteStore rows stay active on 25G241 (macOS 26.7.1). notes.delete and folder deletion require a matching per-build NoteStore effect proof; unproven commands reject capability_unproven. No further real delete rerun was attempted."
       - scenario: NOTE-CRUD
         level: replica
-        reason: "Fresh forwarded CRUD acceptance is pending independent reruns after native fixes #266 and #269 and the Notes latency fix. Earlier replica proof does not establish the current milestone source behavior."
+        reason: "Forwarded CRUD deletion remains limited on 25G241 without a per-build NoteStore effect proof. Earlier replica proof does not establish the current milestone source behavior."
     scenarios:
       - {id: NOTE-CRUD, levels: [sim, real, replica]}
       - {id: NOTE-RICH-REJECT, levels: [sim, real]}
@@ -830,6 +830,9 @@ features:
     depends_on: [web.frontdoor, notes.write]
     status: todo
     limits:
+      - scenario: WEB-NOTE-WRITE
+        level: real
+        reason: "Delete limited: AppleScript delete reports success but iCloud NoteStore rows stay active on 25G241. Delete stays hidden without per-build NoteStore deletion proof; synthetic browser deletion is not native qualification."
       - scenario: NOTE-EDIT-PARITY
         level: real
         reason: "macOS 26.7.1 build 25G241: the simple-rich HTML replacement did not preserve expected text/block structure; unknown note and paragraph attributes prevent a lossless round trip. Rich edits remain hidden."
