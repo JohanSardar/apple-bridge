@@ -257,7 +257,7 @@ enum MessagesAccessibility {
         RunLoop.current.run(until: Date().addingTimeInterval(0.35))
         return true
     }
-    static func openMessage(_ guid: String, settle: TimeInterval = 3) throws {
+    static func openMessage(_ guid: String, settle: TimeInterval = 3, resetEditor: Bool = true) throws {
         var components = URLComponents()
         components.scheme = "imessage"
         components.path = "open"
@@ -265,7 +265,13 @@ enum MessagesAccessibility {
         guard let url = components.url else { throw MessagesUIFailure.navigationUnavailable }
         _ = MessagesNavigation.application?.activate()
         RunLoop.current.run(until: Date().addingTimeInterval(0.2))
-        _ = try resetTaggedEditor()
+        if resetEditor {
+            _ = try resetTaggedEditor()
+        } else {
+            let (root, _) = try rootApplication()
+            var budget = 2000
+            guard matching(root, budget: &budget, predicate: { value($0, kAXDescriptionAttribute) == "Cancel edit" }).isEmpty, budget > 0 else { throw SourceFailure.conflict }
+        }
         try MessagesNavigation.open(url)
         RunLoop.current.run(until: Date().addingTimeInterval(settle))
     }

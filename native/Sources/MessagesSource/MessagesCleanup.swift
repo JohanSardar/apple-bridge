@@ -108,8 +108,8 @@ public enum MessagesCleanup {
             let prepared = Prepared(nativeState: .object(["target": target, "cleanup_authorized": .bool(true)]), fingerprint: "authorized-tagged-self-cleanup", action: .object(["op": .string("messages.delete_message"), "native_key": .string(guid)]))
             var phase = "open"
             do {
-                try await MessagesAccessibility.openMessage(guid, settle: 0.25)
-                if try await MessagesAccessibility.acknowledgeDeletedInfo() { try await MessagesAccessibility.openMessage(guid, settle: 0.25) }
+                try await MessagesAccessibility.openMessage(guid, settle: 0.25, resetEditor: scopedChat == nil)
+                if scopedChat == nil, try await MessagesAccessibility.acknowledgeDeletedInfo() { try await MessagesAccessibility.openMessage(guid, settle: 0.25) }
                 phase = "validate"
                 try await MessagesAccessibility.validate(prepared)
                 phase = "delete"
