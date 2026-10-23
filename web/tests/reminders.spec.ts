@@ -62,7 +62,10 @@ test('WEB-REM-READ exact demo sidebar, nested sections, completed, sorts, keyboa
     socket.on('framesent', event => { const frame = JSON.parse(String(event.payload)); if (frame.t === 'sub' && frame.view === 'reminders.items') subscriptions.set(frame.id, frame.args.sort ?? 'manual'); });
     socket.on('framereceived', event => { const frame = JSON.parse(String(event.payload)); if (frame.t === 'snap' && subscriptions.has(frame.sub)) servedSort = subscriptions.get(frame.sub)!; });
   });
-  const manifest = JSON.parse(await readFile('dist/.vite/manifest.json', 'utf8')), routeChunk = '/' + manifest['src/reminders/Reminders.tsx'].file, requested: string[] = [];
+  const manifest = JSON.parse(await readFile('dist/.vite/manifest.json', 'utf8')) as Record<string, { file: string; name?: string; isDynamicEntry?: boolean }>;
+  const route = manifest['src/reminders/Reminders.tsx'] ?? Object.values(manifest).find(entry => entry.name === 'Reminders' && entry.isDynamicEntry);
+  expect(route?.file).toBeTruthy();
+  const routeChunk = '/' + route!.file, requested: string[] = [];
   page.on('request', request => requested.push(new URL(request.url()).pathname));
   await bootstrap(context, request);
   await page.goto('/messages');
