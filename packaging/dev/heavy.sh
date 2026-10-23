@@ -159,14 +159,16 @@ wait_thrash() {
     sleep 10
   done
 }
-# True while an exclusive gate holds the normal slots; new light jobs wait for it.
+# True once an exclusive gate holds every normal slot; new light jobs then wait for it. An exclusive job that is still
+# waiting for a slot must not block quick checks.
 exclusive_active() {
+  held_by_exclusive=0
   for lock in "$normal"-[0-9]*.lock; do
     [ -d "$lock" ] || continue
     stale "$lock" && continue
-    [ -f "$lock/cmd" ] && case "$(cat "$lock/cmd")" in --exclusive*) return 0 ;; esac
+    [ -f "$lock/cmd" ] && case "$(cat "$lock/cmd")" in --exclusive*) held_by_exclusive=$((held_by_exclusive + 1)) ;; esac
   done
-  return 1
+  [ "$held_by_exclusive" -ge 2 ]
 }
 # Exclusive gates also take the light lane, so short checks cannot run beside a performance measurement.
 hold_light() {
