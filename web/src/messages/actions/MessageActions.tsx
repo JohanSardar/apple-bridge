@@ -16,14 +16,12 @@ export function MessageActions(props:{actions:MessageActionsController;onForward
         const value=actions.target()!,anchor=value.anchor;
         onMount(()=>{
             dialog.showModal();
-            const position=()=>{const bubble=anchor.getBoundingClientRect(),rect=dialog.getBoundingClientRect();dialog.style.left=Math.max(12,Math.min(innerWidth-rect.width-12,bubble.right-rect.width))+'px';dialog.style.top=Math.max(12,Math.min(innerHeight-rect.height-12,bubble.top>rect.height+24?bubble.top-rect.height-12:bubble.bottom+12))+'px';};
-            position();const resize=new ResizeObserver(position);resize.observe(dialog);let frame=0;
+            const position=()=>{const bubble=anchor.getBoundingClientRect(),rect=dialog.getBoundingClientRect();dialog.style.left=Math.max(12,Math.min(innerWidth-rect.width-12,bubble.right-rect.width))+'px';dialog.style.top=Math.max(12,Math.min(innerHeight-rect.height-12,bubble.top>rect.height+24?bubble.top-rect.height-12:bubble.bottom+12))+'px';return bubble;};
+            const bubble=position();const resize=new ResizeObserver(position);resize.observe(dialog);let frame=0;
             const moved=()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(position);};window.addEventListener('resize',moved);window.addEventListener('scroll',moved,true);onCleanup(()=>{resize.disconnect();cancelAnimationFrame(frame);window.removeEventListener('resize',moved);window.removeEventListener('scroll',moved,true);});
-            const bubble=anchor.getBoundingClientRect();
-            dialog.querySelector<HTMLElement>('button')?.focus({preventScroll:true});
             anchor.classList.add('message-action-anchor');
-            const sheet=Array.from(document.styleSheets).find(sheet=>sheet.href?.startsWith(location.origin+'/'));
-            if(sheet){const hole=bubbleSilhouette(bubble.width,bubble.height,{x:bubble.left,y:bubble.top,tail:false});backdrop??=[...sheet.cssRules].find(rule=>(rule as CSSStyleRule).selectorText==='.message-actions-dialog::backdrop') as CSSStyleRule|undefined;if(backdrop)backdrop.style.clipPath=`path(evenodd,"M0 0H${innerWidth}V${innerHeight}H0Z ${hole}")`;}
+            if(!backdrop){const sheet=document.querySelector<HTMLLinkElement>('link[rel=stylesheet]')?.sheet;backdrop=sheet?[...sheet.cssRules].find(rule=>(rule as CSSStyleRule).selectorText==='.message-actions-dialog::backdrop') as CSSStyleRule:undefined;}
+            if(backdrop){const hole=bubbleSilhouette(bubble.width,bubble.height,{x:bubble.left,y:bubble.top,tail:false});backdrop.style.clipPath=`path(evenodd,"M0 0H${innerWidth}V${innerHeight}H0Z ${hole}")`;}
         });
         onCleanup(()=>anchor.classList.remove('message-action-anchor'));
         const results=()=>emoji().filter(([symbol,label,tags])=>(symbol+' '+label+' '+tags).toLocaleLowerCase().includes(search().trim().toLocaleLowerCase()));
