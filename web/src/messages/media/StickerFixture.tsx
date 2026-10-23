@@ -4,6 +4,7 @@ import {fields,text} from '../store/types';
 import {StickerLayer} from './StickerLayer';
 import {StickerImage} from './StickerImage';
 import {Genmoji} from './Genmoji';
+import './sticker-fixture.css';
 import {MessageMedia} from './MessageMedia';
 export function StickerFixture(props:{items:readonly ThreadItem[];standalone?:boolean}){
  const [activated,setActivated]=createSignal(0),[opened,setOpened]=createSignal('');

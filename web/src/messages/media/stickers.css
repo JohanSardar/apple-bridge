@@ -1,4 +1,9 @@
 .sticker-image{position:relative;display:inline-block;vertical-align:middle;background:transparent;border-radius:0;overflow:visible}
+.sticker-layer{position:absolute;inset:0;overflow:visible;pointer-events:none;z-index:2}
+.sticker-placement{position:absolute;top:0;right:0;width:64px;height:64px;transform:none;transform-origin:center}
+.sticker-placement>.sticker-image{width:64px;height:64px}
+.genmoji{display:inline-block;position:relative;width:1em;height:1em;vertical-align:-.12em;line-height:0}
+.media-genmoji-slot>.genmoji{width:100%;height:100%}
 .sticker-image>.media-image{background:transparent;border-radius:0;overflow:visible;contain:layout style size}
 .sticker-image>.media-image>img,.sticker-image>.media-image>.media-placeholder{object-fit:contain}
 .sticker-image .media-unavailable{background:transparent;font-size:var(--caption-2);line-height:var(--caption-2-line)}
