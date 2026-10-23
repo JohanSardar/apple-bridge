@@ -328,13 +328,6 @@
     }
   ],
   "latency": {
-    "calendar_command_scan_wait": {
-      "samples": 6,
-      "p50_ms": 0.000291,
-      "p95_ms": 253.027167,
-      "max_ms": 253.027167,
-      "timeouts": 0
-    },
     "command_submit\u2192calendar.create_calendar_observed": {
       "samples": 1,
       "p50_ms": 362.189625,
@@ -375,13 +368,6 @@
       "p50_ms": 196.771917,
       "p95_ms": 329.857083,
       "max_ms": 329.857083,
-      "timeouts": 0
-    },
-    "mcp_calendar_command_scan_wait": {
-      "samples": 6,
-      "p50_ms": 0.000375,
-      "p95_ms": 309.590208,
-      "max_ms": 309.590208,
       "timeouts": 0
     },
     "mcp_command_submit\u2192calendar.create_calendar_observed": {

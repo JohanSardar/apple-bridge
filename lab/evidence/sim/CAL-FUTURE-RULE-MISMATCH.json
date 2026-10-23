@@ -1,0 +1,132 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[18.85 14.08 12.68] cpu_idle=45% cpus=8 other_heavy=2"
+  },
+  "run_id": "cal_01M5K49NS4A46Q3M78ATSR4DTT",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "summary_only": true
+  },
+  "scenario": "CAL-FUTURE-RULE-MISMATCH",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "8073854e1321791f791ad99da2cef76864dd5336",
+  "at": "2026-10-23T00:59:09.988618Z",
+  "assertions": [
+    {
+      "name": "calendar_visible",
+      "passed": true
+    },
+    {
+      "name": "initial_occurrences_visible",
+      "passed": true
+    },
+    {
+      "name": "agenda_returns_occurrences",
+      "passed": true
+    },
+    {
+      "name": "mismatch_fault_set",
+      "passed": true
+    },
+    {
+      "name": "mismatch_is_indeterminate_after_effect",
+      "passed": true
+    },
+    {
+      "name": "mismatch_reports_actual_native_rule",
+      "passed": true
+    },
+    {
+      "name": "mismatch_never_retries_or_writes_twice",
+      "passed": true
+    },
+    {
+      "name": "mismatch_never_claims_observed",
+      "passed": true
+    },
+    {
+      "name": "independent_simtruth_convergence",
+      "passed": true
+    },
+    {
+      "name": "replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "contiguous_feed_0",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_0",
+      "passed": true
+    },
+    {
+      "name": "contiguous_feed_1",
+      "passed": true
+    },
+    {
+      "name": "no_false_deletion_1",
+      "passed": true
+    },
+    {
+      "name": "latency_effect_done\u2192gateway_visible",
+      "passed": true
+    },
+    {
+      "name": "latency_effect_done\u2192replica_visible:replica0",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_query",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_mcp_agenda",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_query",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak_mcp_agenda",
+      "passed": true
+    },
+    {
+      "name": "replica_records_versions_and_cursor_consistent",
+      "passed": true,
+      "status": "pass"
+    },
+    {
+      "name": "replica_application_exactly_once",
+      "passed": false,
+      "status": "unverified",
+      "detail": "kill-during-apply check did not run"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "effect_done\u2192gateway_visible": {
+      "samples": 1,
+      "p50_ms": 16.425,
+      "p95_ms": 16.425,
+      "max_ms": 16.425,
+      "timeouts": 0
+    },
+    "effect_done\u2192replica_visible:replica0": {
+      "samples": 1,
+      "p50_ms": 26.951,
+      "p95_ms": 26.951,
+      "max_ms": 26.951,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

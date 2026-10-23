@@ -1,0 +1,38 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[5.95 10.65 12.04] cpu_idle=56% cpus=8 other_heavy=1"
+  },
+  "run_id": "cal_01M5K2WGPXW1GZBC43R86PZTE3",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "summary_only": true
+  },
+  "scenario": "CAL-FUTURE-COUNT-MATH",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "0d2cd4771a2a1b173e2f126a13ffeb6e6e9d5836",
+  "at": "2026-10-23T00:34:30.237639Z",
+  "assertions": [
+    {
+      "name": "native_calendar_checks_build",
+      "passed": true
+    },
+    {
+      "name": "native_checks_output_available",
+      "passed": true
+    },
+    {
+      "name": "native_recurrence_bounds_and_postconditions",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

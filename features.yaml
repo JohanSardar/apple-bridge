@@ -841,7 +841,7 @@ features:
       - {id: WEB-CON-READ, levels: [web]}
       - {id: WEB-CON-WRITE, levels: [web, real]}
       - {id: WEB-CON-PARITY, levels: [web, real]}
-    notes: Milestone browser 60/60 passes without skips or flakes; #249 repairs source-response geometry, #251 contains avatars, shares card/list photos and tightens phone spacing. #257 removes fixture surfaces from the shell; rebased exclusive audit passes shell 58213, Contacts route 14939 and all cacheable assets 611408 bytes. Native external changes pass 20/20 per endpoint: gateway/replica p95 795.7/807.8 ms. Native CRUD after #248 is leader-reported separately. Groups/posters stay hidden; photo-command fidelity and combined native/browser write acceptance remain limited. Replica exactly-once attribution remains unverified despite convergence. Raw reports and screenshots stay private.
+    notes: Milestone browser 60/60 passes without skips or flakes; #249 repairs source-response geometry, #251 contains avatars, shares card/list photos and tightens phone spacing. #257 removes fixture surfaces from the shell; rebased exclusive audit passes shell 58213, Contacts route 14939 and all cacheable assets 611420 bytes. Native external changes pass 20/20 per endpoint: gateway/replica p95 795.7/807.8 ms. Native CRUD after #248 is leader-reported separately. Groups/posters stay hidden; photo-command fidelity and combined native/browser write acceptance remain limited. Replica exactly-once attribution remains unverified despite convergence. Raw reports and screenshots stay private.
   - id: web.notes
     title: Notes web app (read, write, parity)
     requirements: [R-WEB-UI, R-WEB-FAST, R-RW]

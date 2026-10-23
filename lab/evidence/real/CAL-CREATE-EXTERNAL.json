@@ -118,46 +118,11 @@
     }
   ],
   "latency": {
-    "calendar_chunk_refetch": {
-      "samples": 23,
-      "p50_ms": 164.411083,
-      "p95_ms": 298.948834,
-      "max_ms": 328.483167,
-      "timeouts": 0
-    },
-    "calendar_command_scan_wait": {
-      "samples": 0,
-      "p50_ms": 0,
-      "p95_ms": 0,
-      "max_ms": 0,
-      "timeouts": 0
-    },
-    "capture_sent\u2192commit_ack": {
-      "samples": 10,
-      "p50_ms": 4.048958,
-      "p95_ms": 15.426417,
-      "max_ms": 15.426417,
-      "timeouts": 0
-    },
     "capture_sent\u2192gateway_commit": {
       "samples": 10,
       "p50_ms": 2.827008,
       "p95_ms": 13.973248,
       "max_ms": 13.973248,
-      "timeouts": 0
-    },
-    "capture_sent\u2192gateway_commit_start": {
-      "samples": 10,
-      "p50_ms": 0.299008,
-      "p95_ms": 11.661056,
-      "max_ms": 11.661056,
-      "timeouts": 0
-    },
-    "debounce\u2192refetch_start": {
-      "samples": 10,
-      "p50_ms": 14.338209,
-      "p95_ms": 163.603833,
-      "max_ms": 163.603833,
       "timeouts": 0
     },
     "effect_done\u2192gateway_visible": {
@@ -172,13 +137,6 @@
       "p50_ms": 325.245583,
       "p95_ms": 471.284417,
       "max_ms": 471.284417,
-      "timeouts": 0
-    },
-    "gateway_commit_duration": {
-      "samples": 10,
-      "p50_ms": 2.312192,
-      "p95_ms": 6.936064,
-      "max_ms": 6.936064,
       "timeouts": 0
     },
     "gateway_commit\u2192replica_visible": {
@@ -201,41 +159,6 @@
       "p50_ms": 607.216208,
       "p95_ms": 1119.026458,
       "max_ms": 1119.026458,
-      "timeouts": 0
-    },
-    "refetch_duration": {
-      "samples": 10,
-      "p50_ms": 162.729292,
-      "p95_ms": 298.948834,
-      "max_ms": 298.948834,
-      "timeouts": 0
-    },
-    "refetch_finished\u2192capture_sent": {
-      "samples": 10,
-      "p50_ms": 61.316625,
-      "p95_ms": 86.614209,
-      "max_ms": 86.614209,
-      "timeouts": 0
-    },
-    "reminders_store_refresh_warm": {
-      "samples": 6,
-      "p50_ms": 1.797584,
-      "p95_ms": 3.636458,
-      "max_ms": 3.636458,
-      "timeouts": 0
-    },
-    "trigger_notification\u2192debounce": {
-      "samples": 10,
-      "p50_ms": 52.607167,
-      "p95_ms": 85.801875,
-      "max_ms": 85.801875,
-      "timeouts": 0
-    },
-    "trigger_notification\u2192replica_visible": {
-      "samples": 10,
-      "p50_ms": 325.047375,
-      "p95_ms": 471.57375,
-      "max_ms": 471.57375,
       "timeouts": 0
     }
   },
