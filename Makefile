@@ -50,7 +50,7 @@ decoder-checks:
 
 .PHONY: web
 web:
-	packaging/dev/heavy.sh sh -c 'cd web && pnpm install --frozen-lockfile && pnpm build:release'
+	packaging/dev/heavy.sh --light sh -c 'cd web && pnpm install --frozen-lockfile && pnpm build:release'
 
 .PHONY: demo
 demo: web
