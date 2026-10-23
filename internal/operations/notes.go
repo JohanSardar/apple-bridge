@@ -31,17 +31,22 @@ func (g *LocalGateway) executeNote(r contracts.CommandRecord, p trust.Principal,
 			return reject(contracts.ErrNotFound)
 		}
 		current := result.Records[0]
-		if current.Version != c.ExpectedVersion {
-			return reject(&contracts.Error{Code: "conflict", Message: "expected_version differs from current", Current: &current})
-		}
 		var data struct {
 			Editable        string `json:"editable"`
+			ContentVersion  uint64 `json:"content_version"`
 			FolderID        string `json:"folder_id"`
 			Locked          bool   `json:"locked"`
 			RecentlyDeleted bool   `json:"recently_deleted"`
 		}
 		if json.Unmarshal(current.Data, &data) != nil {
 			return reject(contracts.ErrCorrupt)
+		}
+		contentVersion := data.ContentVersion
+		if contentVersion == 0 || contentVersion > current.Version {
+			contentVersion = current.Version
+		}
+		if c.ExpectedVersion < contentVersion || c.ExpectedVersion > current.Version {
+			return reject(&contracts.Error{Code: "conflict", Message: "expected_version differs from current content", Current: &current})
 		}
 		if c.Op == "notes.update" && (data.Editable != "plain" || data.Locked) {
 			return reject(&contracts.Error{Code: "unsupported", Message: "rich_content"})

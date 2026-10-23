@@ -355,6 +355,12 @@ func (s *Store) CommitCapture(ctx context.Context, c contracts.Capture) (CommitR
 				return result, err
 			}
 		}
+		if o.Kind == "upsert" && o.Collection == "notes.note" {
+			data, err = noteContentVersion(old, data)
+			if err != nil {
+				return result, err
+			}
+		}
 		deleted := o.Kind == "absent" || o.Kind == "evict"
 		if exists && old.Deleted == deleted && string(old.Data) == string(data) {
 			if _, err = writer.exec(ctx, "UPDATE records SET observed_at=? WHERE collection=? AND id=?", o.ObservedAt.Format(time.RFC3339Nano), o.Collection, id); err != nil {

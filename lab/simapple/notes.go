@@ -33,6 +33,7 @@ func (f *fakeApple) noteCommand(wire *applepeer.Wire, frame contracts.IPCFrame, 
 			var expected, native map[string]any
 			json.Unmarshal(frame.ExpectedState, &expected)
 			json.Unmarshal(before, &native)
+			delete(expected, "content_version")
 			delete(expected, "folder_id")
 			delete(native, "folder_id")
 			if !reflect.DeepEqual(expected, native) {
