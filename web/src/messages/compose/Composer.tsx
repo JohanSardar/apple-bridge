@@ -1,4 +1,4 @@
-import { batch, createEffect, createMemo, createSignal, onCleanup, Show } from 'solid-js';
+import { batch, createEffect, createMemo, createSignal, onCleanup, Show, untrack } from 'solid-js';
 import type { CommandState, DeviceSession } from '../../data/types';
 import { enterSendIcon } from '../../motion/transcript';
 import { messageCommandLabel } from '../actions/commands';
@@ -24,34 +24,33 @@ export type ComposerProps = {
 export function Composer(props: ComposerProps) {
     const session = props.session;
     const [text, setText] = createSignal(readDraft(session, props.draftID)), [error, setError] = createSignal('');
-    let field!: HTMLTextAreaElement, frame = 0, metrics: { border: number; minimum: number; maximum: number } | undefined, measuredWidth=0;
+    let field!: HTMLTextAreaElement, frame = 0, metrics: { maximum: number; width: number } | undefined;
     const sms = () => ['SMS', 'RCS'].includes(props.service ?? '');
     const content = () => Boolean(text().trim()||props.hasAttachments);
     const bytes = createMemo(() => new TextEncoder().encode(text()).length);
     const valid = () => bytes() <= 65536;
     const problem = () => props.command && ['failed', 'rejected', 'delivery_failed', 'expired', 'indeterminate'].includes(props.command.status) ? props.command : undefined;
     const update = (value: string) => { setText(value); writeDraft(session, props.draftID, value); setError(''); };
-    const fit = () => {
-        if (!metrics) {
-            const style = getComputedStyle(field), border = parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth);
-            const minimum=parseFloat(style.lineHeight)+parseFloat(style.paddingTop)+parseFloat(style.paddingBottom)+border;
-            metrics = { border, minimum, maximum: minimum+parseFloat(style.lineHeight)*5 };
-        }
-        if(!field.value){field.style.height=metrics.minimum+'px';return;}
-        field.style.height = 'auto';
-        field.style.height = Math.min(field.scrollHeight + metrics.border, metrics.maximum) + 'px';
-    };
     const resize = () => {
         cancelAnimationFrame(frame);
-        if(metrics&&!field.value)fit();else frame=requestAnimationFrame(fit);
+        if (!untrack(text)) { field.style.height = ''; return; }
+        frame = requestAnimationFrame(() => {
+            if (!metrics) return;
+            field.style.height = 'auto';
+            field.style.height = Math.min(field.scrollHeight, metrics.maximum) + 'px';
+        });
     };
     const replyKey=createMemo(()=>props.reply?.key);
     const cancelReply=()=>{props.onCancelReply?.();field.focus();};
     createEffect(() => { if(replyKey())queueMicrotask(()=>field.focus()); });
     createEffect(() => { text(); resize(); });
-    createEffect(() => { appearance.textSize(); metrics = undefined; resize(); });
-    const observer = new ResizeObserver(entries => { const width=entries[0].contentRect.width;if(width!==measuredWidth){measuredWidth=width;resize();} });
-    const phone = matchMedia('(max-width:699px)'), typography = () => { metrics = undefined; resize(); };
+    createEffect(() => { appearance.textSize(); metrics = undefined; field.style.height = ''; resize(); });
+    const observer = new ResizeObserver(([entry]) => {
+        const box = entry.borderBoxSize[0];
+        if (!metrics) { metrics = { maximum: box.blockSize + entry.contentRect.height * 5, width: box.inlineSize }; if (text()) resize(); }
+        else if (box.inlineSize !== metrics.width) { metrics.width = box.inlineSize; resize(); }
+    });
+    const phone = matchMedia('(max-width:699px)'), typography = () => { metrics = undefined; field.style.height = ''; resize(); };
     phone.addEventListener('change', typography);
     createEffect(() => { observer.observe(field); });
     onCleanup(() => { cancelAnimationFrame(frame); observer.disconnect(); phone.removeEventListener('change', typography); flushDraft(session, props.draftID); });

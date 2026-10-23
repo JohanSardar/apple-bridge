@@ -37,12 +37,12 @@ test('WEB-MSG-COMPOSER trusted Enter sends once, Shift+Enter preserves a newline
 });
 test('WEB-MSG-COMPOSER trusted drafts stay per chat, restore after reload and the field stops at six lines', async ({page,context}) => {
     await context.addCookies(trusted);await page.goto(path());
-    const field=page.getByRole('textbox',{name:'Message',exact:true});await expect(field).toBeVisible();
+    const field=page.getByRole('textbox',{name:'Message',exact:true});await expect(field).toBeVisible();const emptyHeight=(await field.boundingBox())!.height;
     const draft=Array.from({length:12},(_,index)=>'[ab-test compose] line '+index).join('\n');await field.fill(draft);
     await page.evaluate(()=>new Promise(requestAnimationFrame));
     const geometry=await field.evaluate(element=>{const style=getComputedStyle(element);return {height:element.getBoundingClientRect().height,maximum:parseFloat(style.lineHeight)*6+parseFloat(style.paddingTop)+parseFloat(style.paddingBottom)+parseFloat(style.borderTopWidth)+parseFloat(style.borderBottomWidth),scroll:element.scrollHeight,client:element.clientHeight};});
     expect(geometry.height).toBeLessThanOrEqual(geometry.maximum+1);expect(geometry.height).toBeGreaterThanOrEqual(geometry.maximum-1);expect(geometry.scroll).toBeGreaterThan(geometry.client);
-    await page.getByRole('button',{name:'Switch fixture chat',exact:true}).click();await expect(field).toHaveValue('');await expect(field).toHaveAttribute('placeholder','Text Message');
+    await page.getByRole('button',{name:'Switch fixture chat',exact:true}).click();await expect(field).toHaveValue('');await expect(field).toHaveAttribute('placeholder','Text Message');await expect.poll(async()=>(await field.boundingBox())!.height).toBe(emptyHeight);
     await field.fill('[ab-test compose] separate draft');await page.getByRole('button',{name:'Switch fixture chat',exact:true}).click();await expect(field).toHaveValue(draft);
     await page.reload();await expect(field).toHaveValue(draft);
 });

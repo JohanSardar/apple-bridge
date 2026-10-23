@@ -15,7 +15,7 @@ test('WEB-MSG-VIEWER META collection source pages beyond the transcript window w
  const source=page.locator(`[data-message="${ids['demo-message-00-000032']}"]`);await source.scrollIntoViewIfNeeded();const before=await source.boundingBox();
  expect(viewerChunks).toHaveLength(0);await source.locator('.media-open').hover();await expect.poll(()=>viewerChunks.length).toBeGreaterThan(0);await expect(page.getByRole('dialog',{name:'Media viewer'})).toHaveCount(0);
  expect(subscriptions.filter(value=>value.view==='collection')).toHaveLength(0);
- await source.locator('.media-open').click();const viewer=page.getByRole('dialog',{name:'Media viewer'});await expect(viewer).toBeVisible();
+ await source.locator('.media-open').click();const viewer=page.getByRole('dialog',{name:'Media viewer'});await expect(viewer).toBeVisible();await expect(viewer.locator('.media-viewer-stage')).toBeFocused();
  const decoded=await viewer.locator('.media-viewer-stage .media-image>img').elementHandle();
  await expect(viewer).toHaveAttribute('data-media-loading','false');await expect(viewer).toHaveAttribute('data-media-count','13');expect(await decoded!.evaluate(element=>element.isConnected)).toBe(true);
  await expect(viewer.locator('.media-viewer-heading time')).toHaveText('Dec 31, 2024 at 6:11 PM');
