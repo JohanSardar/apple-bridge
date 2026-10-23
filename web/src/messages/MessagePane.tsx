@@ -103,7 +103,7 @@ export default function MessagePane(props:{chatID:string;messageID?:string;title
         const observer=new MutationObserver(openShortcut);observer.observe(host,{childList:true,subtree:true});onCleanup(()=>observer.disconnect());
         const keyboard=(event:KeyboardEvent)=>{
             const key=event.key.toLowerCase();
-            if(!(event.metaKey||event.ctrlKey)||event.altKey||event.shiftKey||!['t','r','e','z'].includes(key)||event.repeat||event.isComposing||!items.size||host.closest('[inert]')||document.querySelector('dialog[open]')||props.actions.changes.editor())return;
+            if(!(event.metaKey||event.ctrlKey)||event.altKey||event.shiftKey||!['t','r','e','z'].includes(key)||event.repeat||event.isComposing||host.closest('[inert]')||document.querySelector('dialog[open]')||props.actions.changes.editor())return;
             if(key==='z'){
                 if(event.target instanceof Element&&event.target.closest('input,textarea,[contenteditable=true]')||!props.actions.changes.canOperation('unsend')||!latestSent.cursor())return;
                 const item=latestSent.data().items?.findLast(item=>item.data.is_from_me===true),anchor=item&&anchorFor(item.id);
