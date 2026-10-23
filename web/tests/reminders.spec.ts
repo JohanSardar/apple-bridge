@@ -297,9 +297,10 @@ test('WEB-PERF-SHELL Reminders keeps a thousand-row view virtual, responsive and
   });
   const profiler = process.env.AB_WEB_REMINDERS_PROFILE && info.project.name.startsWith('chromium') ? await context.newCDPSession(page) : undefined;
   if (profiler) { await profiler.send('Profiler.enable'); if (process.env.AB_WEB_REMINDERS_TRACE) await profiler.send('Tracing.start', { categories: 'devtools.timeline,v8,blink.user_timing,disabled-by-default-devtools.timeline,disabled-by-default-v8.compile', transferMode: 'ReturnAsStream' }); await profiler.send('Profiler.start'); }
-  await page.goto('/reminders'); await openList(page, 'Bridge Test 1000 reminders');
+  await page.goto('/reminders'); const beforeList = await page.evaluate(() => performance.now());
+  await openList(page, 'Bridge Test 1000 reminders');
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-  if (profiler) { const result = await profiler.send('Profiler.stop'); await mkdir('../lab/evidence/private/web/profiles', { recursive: true }); await writeFile(`../lab/evidence/private/web/profiles/reminders-navigation-${info.project.name}.cpuprofile`, JSON.stringify(Object.assign(result.profile, { webNavigation: await page.evaluate(() => ({ now: performance.now(), tasks: (window as any).__remPerf.tasks })) }))); if (process.env.AB_WEB_REMINDERS_TRACE) {
+  if (profiler) { const result = await profiler.send('Profiler.stop'); await mkdir('../lab/evidence/private/web/profiles', { recursive: true }); await writeFile(`../lab/evidence/private/web/profiles/reminders-navigation-${info.project.name}.cpuprofile`, JSON.stringify(Object.assign(result.profile, { webNavigation: await page.evaluate(beforeList => ({ now: performance.now(), beforeList, tasks: (window as any).__remPerf.tasks }), beforeList) }))); if (process.env.AB_WEB_REMINDERS_TRACE) {
       const ready = new Promise<string>(resolve => profiler.once('Tracing.tracingComplete', event => resolve(event.stream)));
       await profiler.send('Tracing.end'); const handle = await ready; let raw = '';
       while (true) { const part = await profiler.send('IO.read', { handle }); raw += part.data; if (part.eof) break; }
