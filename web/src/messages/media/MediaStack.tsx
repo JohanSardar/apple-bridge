@@ -1,4 +1,4 @@
-import {For,Show,createEffect,createMemo,createSignal,onCleanup} from 'solid-js';
+import {For,Show,createEffect,createMemo,createSignal,onCleanup,onMount} from 'solid-js';
 import type {BridgeRecord} from '../../data/types';
 import {reducedMotion,springAnimation} from '../../motion/animate';
 import {fields,text} from '../store/types';
@@ -48,8 +48,10 @@ export function MediaStack(props:MediaStackProps){
   if(next===undefined)return;event.preventDefault();event.stopPropagation();suppress=false;settle(next,0,true);
  };
  const changed=()=>{animation?.cancel();pointer=undefined;setPhone(breakpoint.matches);setProgress(index());setState('settled');};
+ const reveal=(event:Event)=>{const position=(event as CustomEvent<number>).detail;if(Number.isInteger(position)&&position>=0&&position<ids().length)settle(position);};
+ onMount(()=>root.addEventListener('applebridge:reveal-stack-cell',reveal));
  breakpoint.addEventListener('change',changed);motion.addEventListener('change',changed);
- onCleanup(()=>{disposed=true;animation?.cancel();breakpoint.removeEventListener('change',changed);motion.removeEventListener('change',changed);});
+ onCleanup(()=>{disposed=true;animation?.cancel();root.removeEventListener('applebridge:reveal-stack-cell',reveal);breakpoint.removeEventListener('change',changed);motion.removeEventListener('change',changed);});
  createEffect(()=>{if(index()!==bound(index()))settle(bound(index()));});
  const transform=(position:number)=>{const distance=position-progress(),back=Math.min(2,Math.max(0,distance));return `translate3d(${distance<0?distance*(props.width+12):back*5}px,${-back*4}px,0) scale(${1-back*.035}) rotate(${distance<0?distance*3:back*2}deg)`;};
  return <div ref={root} class="media-stack" role="group" aria-label="Photos" aria-roledescription={phone()?'carousel':undefined} data-stack-index={index()} data-stack-motion={state()} data-media-alpha={props.attachments.length>0&&props.attachments.every(attachmentHasAlpha)} style={{width:`${props.width}px`,height:`${props.height}px`,'--media-stack-rows':Math.max(1,Math.ceil(ids().length/2)),'--media-stack-columns':Math.max(1,Math.min(2,ids().length))}} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} onKeyDown={key}>

@@ -44,13 +44,13 @@ export default function MessagePane(props:{chatID:string;messageID?:string;title
     const [revealRequest,setRevealRequest]=createSignal<{id:string}>();
     let shortcutActionOpen=false;
     createEffect(()=>{if(props.actions.target())shortcutActionOpen=true;else if(shortcutActionOpen){shortcutActionOpen=false;setRevealRequest(undefined);}});
-    const anchorFor=(id:string)=>{const cell=host.querySelector<HTMLElement>('[data-message="'+CSS.escape(id)+'"]');if(cell?.closest('[inert]'))return;return cell?.hasAttribute('data-media-origin')?cell:cell?.querySelector<HTMLElement>('.bubble');};
+    const anchorFor=(id:string)=>{const cell=host.querySelector<HTMLElement>('[data-message="'+CSS.escape(id)+'"]');const hidden=cell?.closest<HTMLElement>('[inert]');if(hidden){if(hidden===cell&&cell?.classList.contains('media-stack-cell')){const position=Number(cell.dataset.stackPosition);if(Number.isInteger(position))cell.closest('.media-stack')?.dispatchEvent(new CustomEvent('applebridge:reveal-stack-cell',{detail:position}));}return;}return cell?.hasAttribute('data-media-origin')?cell:cell?.querySelector<HTMLElement>('.bubble');};
     const revealShortcut=()=>{
         const pending=pendingShortcut;if(!pending)return;
         const anchor=anchorFor(pending.id);if(anchor){anchor.scrollIntoView({block:'nearest',inline:'nearest'});return;}
         if(pending.revealed)return;pending.revealed=true;
+        setRevealRequest({id:pending.id});
         if(props.messageID!==pending.id)router.navigate('/messages/'+encodeURIComponent(props.chatID)+'/'+encodeURIComponent(pending.id),true);
-        else setRevealRequest({id:pending.id});
     };
     const cancelShortcut=()=>{cancelLatest?.();cancelLatest=undefined;clearTimeout(shortcutTimer);cancelAnimationFrame(shortcutFrame);pendingShortcut=undefined;setRevealRequest(undefined);};
     const openShortcut=()=>{
