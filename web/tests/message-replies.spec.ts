@@ -139,7 +139,7 @@ test('WEB-MSG-REPLY AMBIGUITY Check reconciles the original reply without a seco
     expect(f.resolves).toEqual([original.id]);
     expect(f.commands.filter(command=>command.op==='messages.reply').map(command=>command.id)).toEqual([original.id]);
     const effect=await request.post(process.env.AB_WEB_CONTROL!+'/command-effect',{headers:{'X-Bridge-Lab':process.env.AB_WEB_CONTROL_KEY!},data:{command_id:original.id}});
-    expect(effect.ok()).toBe(true);expect((await effect.json()).count).toBe(1);
+    expect(effect.ok(),`command-effect HTTP ${effect.status()}`).toBe(true);expect((await effect.json()).count).toBe(1);
 });
 
 test('WEB-MSG-REPLY CELL an actual grouped native cell anchors keyboard actions and replies to its owning part',async ({page,context,request}) => {
