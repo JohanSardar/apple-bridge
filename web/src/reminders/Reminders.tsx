@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createSignal, For, onCleanup, onMount, on, Show } from 'solid-js';
+import { createEffect, createMemo, createSignal, For, lazy, onCleanup, onMount, on, Show } from 'solid-js';
 import { AppMenu } from '../app/AppMenu';
 import { registerShortcut } from '../app/keyboard';
 import { router } from '../app/router';
@@ -12,15 +12,25 @@ import { dueLabel, sectionLabel, object, overdue, smartNames, text, useRows, use
 import './reminders.css';
 import { repeatLines, alarmLines } from './schedule';
 import { createReminderCommands } from './commands';
-import { ReminderEditor, NewList } from './Editor';
 import { createReminderSelection, SelectionToolbar } from './Selection';
 import { reminderSwipe } from './rowSwipe';
 import { reminderStrings as s, priorities, reminderCount, priorityLabel, earlyLabel, subtaskLabel, disclosureLabel, incompleteCount, completedCount } from './strings';
 const rowKey = (row: Row) => row.item?.reminder.id ?? 'section:' + row.section!.id;
 const tileColors: Record<string, string> = { today: '#2785e9', scheduled: '#bd2828', all: '#555555', flagged: '#bb6400', completed: '#58616b', assigned: '#277c30' };
+const ReminderEditor = lazy(() => import('./Editor').then(module => ({ default: module.ReminderEditor })));
+const NewList = lazy(() => import('./Editor').then(module => ({ default: module.NewList })));
 function routeParts() { return router.route().path.split('/').filter(Boolean).map(part => { try { return decodeURIComponent(part); } catch { return part; } }); }
 function safeURL(value: unknown) { try { const url = new URL(text(value)); return ['http:', 'https:'].includes(url.protocol) ? url.href : undefined; } catch { return; } }
-export default function Reminders() {
+export default function RemindersRoute() {
+    const [ready, setReady] = createSignal(false);
+    onMount(() => {
+        let second = 0;
+        const first = requestAnimationFrame(() => { second = requestAnimationFrame(() => setReady(true)); });
+        onCleanup(() => { cancelAnimationFrame(first); cancelAnimationFrame(second); });
+    });
+    return <Show when={ready()} fallback={<div class="app-shell reminders-app" aria-busy="true"/>}><Reminders/></Show>;
+}
+function Reminders() {
     const commands = createReminderCommands(auth.live()!);
     const introduced = new Set<string>();
     const [creating, setCreating] = createSignal(false), [newList, setNewList] = createSignal(false), [editing, setEditing] = createSignal<Item>(), [inlineEdit, setInlineEdit] = createSignal<Item>(), [deleting, setDeleting] = createSignal<Item>();
@@ -47,6 +57,16 @@ export default function Reminders() {
     });
     const items = commands.project(capturedItems, selector, () => completed() || Boolean(search().trim()));
     const rows = useRows(items, search, closedSubtasks);
+    const [rowsReady, setRowsReady] = createSignal(false);
+    let readyFor = '';
+    createEffect(() => {
+        const selected = selector(), available = items().sections;
+        if (!selected) { readyFor = ''; setRowsReady(false); return; }
+        if (selected === readyFor || !available) return;
+        setRowsReady(false);
+        const frame = requestAnimationFrame(() => { readyFor = selected; setRowsReady(true); });
+        onCleanup(() => cancelAnimationFrame(frame));
+    });
     const columnGroups = createMemo(() => new Map((items().sections ?? []).map(group => [group.section.id, group])));
     const selectionRows = useRows(items, search, () => new Set<string>());
     const selection = createReminderSelection(rows, canWrite, commands.issue, () => auth.live()!.pending(), selectionRows);
@@ -95,13 +115,13 @@ export default function Reminders() {
     }
     function transition(forward: boolean, finished: () => void) {
         const token = ++motionGeneration, interrupted = phase() === 'push' || phase() === 'back' || phase() === 'swipe';
-        const direction = getComputedStyle(content).direction === 'rtl' ? -1 : 1;
+        const direction = document.documentElement.dir === 'rtl' ? -1 : 1;
         const offset = interrupted ? new DOMMatrix(getComputedStyle(content).transform).m41 * direction / Math.max(1, content.clientWidth) : forward ? 1 : 0;
         cancelEnter?.(); setPhase(forward ? 'push' : 'back');
         if (reducedMotion()) { finished(); return; }
-        queueMicrotask(() => {
+        requestAnimationFrame(() => {
             if (token !== motionGeneration || !content.isConnected) return;
-            const width = content.clientWidth;
+            const width = visualViewport?.width ?? innerWidth;
             const animation = springAnimation(value => { content.style.transform = `translateX(${value * width * direction}px)`; sidebar.style.transform = `translateX(${(value - 1) * width * .3 * direction}px)`; sidebar.style.opacity = String(.7 + value * .3); }, offset, forward ? 0 : 1, { response: .35, damping: 1 }, 0, () => { if (token === motionGeneration) finished(); });
             cancelEnter = () => animation.cancel();
         });
@@ -184,12 +204,12 @@ export default function Reminders() {
     }
     return <div onKeyDown={event => { if (!event.isTrusted || event.isComposing) return; const modifier = /Mac|iPhone|iPad/.test(navigator.platform) ? event.metaKey : event.ctrlKey, input = event.target instanceof HTMLElement && Boolean(event.target.closest('input,textarea,select,[contenteditable=true]')); if (!input && event.key === 'Escape' && selection.enabled()) { selection.reset(); return; } if (modifier && event.key.toLowerCase() === 'n') { event.preventDefault(); if (event.shiftKey && canWrite('reminders.create_list')) setNewList(true); else if (!event.shiftKey && selectedList()?.list.data.writable === true && canWrite('reminders.create')) setCreating(true); } const item = keyboardItem(); if (!item || item.reminder.data._pending || input || !(event.target instanceof HTMLElement) || !event.target.classList.contains('virtual-viewport')) return; if (modifier && event.key === 'Enter' && canWrite(item.reminder.data.completed ? 'reminders.uncomplete' : 'reminders.complete', item)) { event.preventDefault(); commands.issue(event, item.reminder.data.completed ? 'reminders.uncomplete' : 'reminders.complete', { id: item.reminder.id }, item); } if (event.key === 'F2' && canWrite('reminders.update', item)) { event.preventDefault(); setInlineEdit(item); } if ((event.key === 'Delete' || event.key === 'Backspace') && canWrite('reminders.delete', item)) { event.preventDefault(); setDeleting(item); } }} class="app-shell reminders-app" classList={{ 'reminders-selected': hasSelection(), 'reminders-details-open': Boolean(selectedItem()), 'reminders-show-sidebar': phase() !== 'list', 'reminders-show-content': phase() !== 'home' }} data-phase={phase()}>
         <aside ref={sidebar} class="sidebar reminders-sidebar" inert={compact() && phase() !== 'home'} aria-hidden={compact() && phase() !== 'home' ? true : undefined}>
-            <header class="toolbar"><h1>{s.app}</h1></header><div class="reminders-sidebar-body" data-scroll="reminders-sidebar">
+            <header class="toolbar"><h1>{s.app}</h1></header><div class="reminders-sidebar-body" data-scroll="reminders-sidebar" style={{ visibility: lists().smart && lists().lists ? 'visible' : 'hidden' }} aria-busy={!lists().smart || !lists().lists}>
                 <Show when={!compact() || phase() !== 'list'}><Search/></Show>
                 <Show when={auth.live()?.status() === 'offline'}><p class="offline-banner" role="status">{s.offline}</p></Show>
                 <Show when={lists().error}><p role="alert">{s.listError}</p></Show><Show when={commands.error() && !hasSelection()}><p class="reminder-write-error" role="alert">{commands.error()}</p></Show>
                 <nav class="reminder-tiles" aria-label={s.smartLists}><For each={lists().smart?.map(tile => tile.id)}>{id => <Show when={tileByID().get(id)}>{tile => <button data-smart={tile().id} data-selector={'smart:' + tile().id} class={'reminder-tile tile-' + tile().id} aria-label={smartNames[tile().id]} aria-pressed={selector() === 'smart:' + tile().id} disabled={tile().status === 'unsupported'} onClick={() => navigate('smart:' + tile().id)}><span class="reminder-tile-glyph" style={{ 'background-color': tileColors[tile().id] }} aria-hidden="true"><Show when={tile().id === 'flagged'} fallback={<Icon name={tile().id === 'assigned' ? 'contacts' : tile().id === 'completed' ? 'check' : tile().id === 'all' ? 'list' : 'calendar'}/>}>⚑</Show></span><Count value={tile().count}/><span>{smartNames[tile().id]}</span><Show when={tile().status === 'unsupported'}><small>{s.unavailable}</small></Show></button>}</Show>}</For><For each={lists().lists?.filter(entry => entry.pinned === true).map(entry => entry.list.id)}>{id => <Show when={listByID().get(id)}>{entry => <button class="reminder-tile reminder-pinned-tile" data-selector={id} aria-label={text(entry().list.data.title)} aria-pressed={selector() === id} disabled={entry().status === 'unsupported'} onClick={() => navigate(id)}><span class="reminder-tile-glyph" style={{ 'background-color': text(entry().list.data.color) || '#4b8cf5' }} aria-hidden="true">{text(entry().list.data.badge_emblem) || '☷'}</span><Count value={entry().count}/><span>{text(entry().list.data.title)}</span><Show when={entry().status === 'unsupported'}><small>{s.unavailable}</small></Show></button>}</Show>}</For></nav>
-                <h2 class="reminder-sidebar-title">{s.myLists}</h2><nav class="reminder-lists" aria-label={s.myLists}><For each={lists().lists?.filter(entry => entry.pinned !== true).map(entry => entry.list.id)}>{id => <Show when={listByID().get(id)}>{entry => <Show when={!groupHidden(entry())}><button class="reminder-list" data-selector={entry().list.id} classList={{ selected: selector() === entry().list.id, 'reminder-group': entry().list.data.is_group === true, 'reminder-group-child': Boolean(entry().group_id) }} aria-label={text(entry().list.data.title)} aria-expanded={entry().list.data.is_group === true ? !collapsed().has(entry().list.id) : undefined} disabled={entry().status === 'unsupported'} aria-describedby={entry().status === 'unsupported' ? 'reminder-unsupported-' + entry().list.id : undefined} onClick={() => {
+                <Show when={lists().smart && lists().lists}><h2 class="reminder-sidebar-title">{s.myLists}</h2></Show><nav class="reminder-lists" aria-label={s.myLists}><For each={lists().lists?.filter(entry => entry.pinned !== true).map(entry => entry.list.id)}>{id => <Show when={listByID().get(id)}>{entry => <Show when={!groupHidden(entry())}><button class="reminder-list" data-selector={entry().list.id} classList={{ selected: selector() === entry().list.id, 'reminder-group': entry().list.data.is_group === true, 'reminder-group-child': Boolean(entry().group_id) }} aria-label={text(entry().list.data.title)} aria-expanded={entry().list.data.is_group === true ? !collapsed().has(entry().list.id) : undefined} disabled={entry().status === 'unsupported'} aria-describedby={entry().status === 'unsupported' ? 'reminder-unsupported-' + entry().list.id : undefined} onClick={() => {
                     if (entry().list.data.is_group === true) setCollapsed(previous => { const next = new Set(previous); if (next.has(entry().list.id)) next.delete(entry().list.id); else next.add(entry().list.id); return next; });
                     else navigate(entry().list.id);
                 }}><span class="reminder-emblem" style={{ 'background-color': entry().list.data.is_group === true ? 'transparent' : text(entry().list.data.color) || '#4b8cf5' }} aria-hidden="true">{entry().list.data.is_group === true ? collapsed().has(entry().list.id) ? '›' : '⌄' : text(entry().list.data.badge_emblem) || '☷'}</span><span class="reminder-list-name">{text(entry().list.data.title)}</span><Show when={entry().status !== 'unsupported'}><Count value={entry().count}/></Show><Show when={entry().status === 'unsupported'}><span id={'reminder-unsupported-' + entry().list.id} class="reminder-unsupported" title={s.unsupportedFilterHelp} aria-label={s.unsupportedFilter}>{s.unavailable}</span></Show></button></Show>}</Show>}</For></nav>
@@ -200,7 +220,7 @@ export default function Reminders() {
                 <header class="reminders-toolbar toolbar"><button class="reminders-back icon-button" aria-label={s.back} onClick={backToLists}><Icon name="chevron"/></button><Show when={compact()}><Search/></Show><div class="reminders-controls"><Show when={!compact() && selectedList()?.sections.length}><button class="button" disabled={Boolean(inlineEdit() || editing() || creating())} aria-pressed={columns()} onClick={() => setColumns(value => !value)}>Columns</button></Show><label><input type="checkbox" checked={completed()} onChange={event => setCompleted(event.currentTarget.checked)}/>{s.showCompleted}</label><label class="reminder-sort">{s.sort}<select aria-label={s.sort} value={sort()} onChange={event => setSort(event.currentTarget.value)}><option value="manual">{s.manual}</option><option value="due">{s.dueDate}</option><option value="created">{s.created}</option><option value="priority">{s.priority}</option><option value="title">{s.title}</option></select></label></div></header>
                 <Show when={canWrite('reminders.update') && items().sections && !items().error}><SelectionToolbar selection={selection} lists={lists().lists ?? []} check={commands.check} showCompleted={completed() || selector() === 'smart:completed'}/></Show>
                 <Show when={commands.error()}><p class="reminder-write-error" role="alert">{commands.error()}</p></Show><Show when={commands.pending()}><p class="reminder-write-status" role="status">Saving…</p></Show><For each={commands.uncertain()}>{id => <p role="status">Not sure if this change was saved. <button onClick={() => commands.check(id)}>Check Status</button></p>}</For><div class="reminders-heading" style={{ '--list-color': text(selectedList()?.list.data.color) || tileColors[selector().slice(6)] || '#4b8cf5' }}><h1>{title()}</h1><Show when={knownCount() !== undefined}><p>{countText()}</p></Show></div>
-                <Show when={items().error} fallback={<Show when={items().sections} fallback={<p class="reminders-message" role="status">{s.loading}</p>}><Show when={rows().length} fallback={<p class="reminders-message">{s.empty}</p>}><div class="reminders-virtual" onKeyDown={event => { if (event.target instanceof HTMLElement && event.target.classList.contains('virtual-viewport') && selection.keyboard(event, keyboardItem())) { event.stopPropagation(); return; } const selected = keyboardItem(); if (event.target === event.currentTarget.querySelector('.virtual-viewport') && (event.key === 'ArrowLeft' || event.key === 'ArrowRight') && selected?.subtasks.length) { event.preventDefault(); toggleSubtasks(selected, event.key === 'ArrowRight'); } if (event.target === event.currentTarget.querySelector('.virtual-viewport') && (event.key === 'Enter' || event.key === ' ') && !event.metaKey && !event.ctrlKey && !event.altKey && !selection.enabled()) { event.preventDefault(); openDetails(keyboardItem()); } }}><Show when={columns() && !compact() && !search().trim() && selectedList()?.sections.length} fallback={<VirtualList items={rows()} keyFor={rowKey} selectedKeys={selectedKeys()} estimate={row => 70 + (row.section ? 44 : 0)} label={s.app} selectedKey={activeKey() ?? detailID()} windowKey={selector() + search()} onActive={row => setActiveKey(rowKey(row))} render={row => <VirtualReminder row={row}/>} renderReactive={row => <VirtualReminder row={row()}/>}/>}>
+                <Show when={items().error} fallback={<Show when={items().sections && rowsReady()} fallback={<p class="reminders-message" role="status">{s.loading}</p>}><Show when={rows().length} fallback={<p class="reminders-message">{s.empty}</p>}><div class="reminders-virtual" onKeyDown={event => { if (event.target instanceof HTMLElement && event.target.classList.contains('virtual-viewport') && selection.keyboard(event, keyboardItem())) { event.stopPropagation(); return; } const selected = keyboardItem(); if (event.target === event.currentTarget.querySelector('.virtual-viewport') && (event.key === 'ArrowLeft' || event.key === 'ArrowRight') && selected?.subtasks.length) { event.preventDefault(); toggleSubtasks(selected, event.key === 'ArrowRight'); } if (event.target === event.currentTarget.querySelector('.virtual-viewport') && (event.key === 'Enter' || event.key === ' ') && !event.metaKey && !event.ctrlKey && !event.altKey && !selection.enabled()) { event.preventDefault(); openDetails(keyboardItem()); } }}><Show when={columns() && !compact() && !search().trim() && selectedList()?.sections.length} fallback={<VirtualList items={rows()} overscan={2} initialViewportHeight={240} deferInitialMeasure keyFor={rowKey} selectedKeys={selectedKeys()} estimate={row => 70 + (row.section ? 44 : 0)} label={s.app} selectedKey={activeKey() ?? detailID()} windowKey={selector() + search()} onActive={row => setActiveKey(rowKey(row))} render={row => <VirtualReminder row={row}/>} renderReactive={row => <VirtualReminder row={row()}/>}/>}>
                     <div class="reminder-columns" aria-label="Sections as columns"><For each={items().sections?.map(group => group.section.id)}>{id => {
                         const group = () => columnGroups().get(id)!;
                         const columnRows = () => {
