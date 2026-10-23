@@ -58,6 +58,7 @@ test('WEB-MSG-PARITY-UI pin drag changes captured order; Escape leaves order unc
     await page.keyboard.press('Escape'); await page.mouse.up();
     await first.evaluate(element => Promise.all(element.getAnimations().map(animation => animation.finished.catch(() => {}))));
     expect(commands).toHaveLength(0);
+    await expect(page).toHaveURL(/\/messages$/u);
     await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2); await page.mouse.down();
     await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 8 }); await page.mouse.up();
     await expect.poll(() => commands.length).toBe(1);
