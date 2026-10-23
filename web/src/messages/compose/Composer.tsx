@@ -70,7 +70,7 @@ export function Composer(props: ComposerProps) {
                 if (event.key !== 'Enter' || event.shiftKey || event.isComposing || event.keyCode === 229) return;
                 event.preventDefault(); if (!event.repeat) send(event);
             }}/>
-            <Show when={content() && props.available}><button ref={enter} class="composer-send" aria-label="Send message" disabled={props.disabled || !valid()} onClick={send}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button></Show>
+            <Show when={content() && props.available}><button ref={enter} class="composer-send" tabindex="0" aria-label="Send message" disabled={props.disabled || !valid()} onClick={send}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button></Show>
         </div>
         <Show when={props.disabledReason}><p class="composer-status" role="status">{props.disabledReason}</p></Show>
         <Show when={!valid()}><p class="composer-error" role="alert">Message is too long</p></Show>
