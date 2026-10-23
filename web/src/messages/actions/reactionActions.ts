@@ -24,7 +24,7 @@ function nativeParts(item:ThreadItem):{index:number;kind?:string;text?:string}[]
 export function createMessageActions(live:LiveClient,capabilities:{allowed:(operation:string)=>boolean}){
     const [replyTarget,setReplyTarget]=createSignal<{item:ThreadItem;partIndex:number}>();
     const [target,setTarget]=createSignal<ActionTarget>(),[revision,setRevision]=createSignal(0),[error,setError]=createSignal('');
-    const [flight,setFlight]=createSignal<{symbol:string;color:string;from:DOMRect;to:DOMRect;key:number}>();
+    const [flight,setFlight]=createSignal<{symbol:string;from:DOMRect;to:DOMRect;key:number}>();
     const captured=new Map<string,ThreadItem>(),intents=new Map<string,Intent>();
     let flightKey=0,flightFrame=0;
     const clearFlight=()=>{cancelAnimationFrame(flightFrame);setFlight();};
@@ -72,7 +72,7 @@ export function createMessageActions(live:LiveClient,capabilities:{allowed:(oper
             const id=live.command('messages.react',{id:value.item.id,part_index:value.partIndex,reaction:choice.kind,...(choice.kind==='emoji'?{emoji:choice.emoji}:{}),remove});
             intents.set(value.item.id+'/'+value.partIndex+'/'+family(choice),{commandID:id,messageID:value.item.id,chatID:String(value.item.data.chat_id??''),partIndex:value.partIndex,choice:{...choice},remove});
             clearFlight();
-            if(!remove)flightFrame=requestAnimationFrame(()=>{flightFrame=requestAnimationFrame(()=>setFlight({symbol:choice.symbol,color:choice.kind==='love'?'var(--red)':'var(--blue)',from:from!,to:to!,key:++flightKey}));});
+            if(!remove)flightFrame=requestAnimationFrame(()=>{flightFrame=requestAnimationFrame(()=>setFlight({symbol:choice.symbol,from:from!,to:to!,key:++flightKey}));});
             changed();close();
         }));}catch{setError("Can't react right now. Check your connection.");}
     };
