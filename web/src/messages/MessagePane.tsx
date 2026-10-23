@@ -41,15 +41,18 @@ export default function MessagePane(props:{chatID:string;messageID?:string;title
 
     let host!:HTMLDivElement,press:{event:PointerEvent;item:ThreadItem;anchor:HTMLElement;x:number;y:number}|undefined,timer:ReturnType<typeof setTimeout>|undefined,held:{anchor:HTMLElement;until:number}|undefined;
     let pendingShortcut:{event:KeyboardEvent;id:string;mode:'react'|'reply'|'edit';revealed?:boolean}|undefined,cancelLatest:(()=>void)|undefined,shortcutTimer:ReturnType<typeof setTimeout>|undefined,shortcutFrame=0;
+    const [revealRequest,setRevealRequest]=createSignal<{id:string}>();
+    let shortcutActionOpen=false;
+    createEffect(()=>{if(props.actions.target())shortcutActionOpen=true;else if(shortcutActionOpen){shortcutActionOpen=false;setRevealRequest(undefined);}});
     const anchorFor=(id:string)=>{const cell=host.querySelector<HTMLElement>('[data-message="'+CSS.escape(id)+'"]');if(cell?.closest('[inert]'))return;return cell?.hasAttribute('data-media-origin')?cell:cell?.querySelector<HTMLElement>('.bubble');};
     const revealShortcut=()=>{
         const pending=pendingShortcut;if(!pending)return;
         const anchor=anchorFor(pending.id);if(anchor){anchor.scrollIntoView({block:'nearest',inline:'nearest'});return;}
         if(pending.revealed)return;pending.revealed=true;
         if(props.messageID!==pending.id)router.navigate('/messages/'+encodeURIComponent(props.chatID)+'/'+encodeURIComponent(pending.id),true);
-        else{const viewport=host.querySelector<HTMLElement>('[role="listbox"][aria-label="Messages transcript"]');if(viewport)viewport.scrollTop=viewport.scrollHeight;}
+        else setRevealRequest({id:pending.id});
     };
-    const cancelShortcut=()=>{cancelLatest?.();cancelLatest=undefined;clearTimeout(shortcutTimer);cancelAnimationFrame(shortcutFrame);pendingShortcut=undefined;};
+    const cancelShortcut=()=>{cancelLatest?.();cancelLatest=undefined;clearTimeout(shortcutTimer);cancelAnimationFrame(shortcutFrame);pendingShortcut=undefined;setRevealRequest(undefined);};
     const openShortcut=()=>{
         if(!latestSent&&host.querySelector('.message-row'))latestSent=props.live.subscribe('thread',{chat_id:props.chatID,anchor:'latest',limit:100},{cache:false,resetOnReconnect:true});
         if(!pendingShortcut)return;
@@ -58,7 +61,7 @@ export default function MessagePane(props:{chatID:string;messageID?:string;title
             const pending=pendingShortcut;if(!pending)return;
             if(!(pending.mode==='reply'?props.actions.canReplyOperation():pending.mode==='edit'?props.actions.changes.canOperation('edit'):props.actions.canReact())||host.closest('[inert]')){cancelShortcut();return;}
             const item=items.get(pending.id),anchor=anchorFor(pending.id);
-            if(!item||!anchor){revealShortcut();return;}
+            if(!item||!anchor){revealShortcut();shortcutFrame=requestAnimationFrame(openShortcut);return;}
             anchor.scrollIntoView({block:'nearest',inline:'nearest'});pendingShortcut=undefined;clearTimeout(shortcutTimer);batch(()=>{props.actions.open(pending.event,item,anchor);if(pending.mode==='reply')props.actions.beginReply(pending.event);else if(pending.mode==='edit')props.actions.changes.beginEdit(pending.event);});
         });
     };
@@ -68,7 +71,7 @@ export default function MessagePane(props:{chatID:string;messageID?:string;title
             const view=props.live.subscribe('thread',{chat_id:props.chatID,anchor:'latest',limit:mode==='edit'?100:1},{cache:false});
             cancelLatest=createRoot(dispose=>{
                 createEffect(()=>{
-                    const captured=view.data().items,cursor=view.cursor();if(!cursor||!captured)return;
+                    const captured=view.data().items,cursor=view.cursor();if(!cursor||!captured?.length)return;
                     const item=mode==='edit'?captured.findLast(item=>item.data.is_from_me===true):captured.at(-1);dispose();view.dispose();cancelLatest=undefined;
                     if(!item||!host.isConnected||host.closest('[inert]'))return;
                     pendingShortcut={event,id:item.id,mode};
@@ -119,7 +122,7 @@ export default function MessagePane(props:{chatID:string;messageID?:string;title
     });
     onCleanup(()=>{cancel();cancelShortcut();props.actions.close();});
     return <div ref={host} onDragOver={event=>{if(event.dataTransfer?.types.includes("Files"))event.preventDefault();}} onDrop={event=>{if(event.defaultPrevented||!event.dataTransfer?.files.length)return;event.preventDefault();if(!reply())props.uploads.add(props.chatID,Array.from(event.dataTransfer.files));}} class="message-pane">
-        <Show when={transcriptGeneration()} keyed>{_generation=> <Transcript chatID={props.chatID} messageID={props.messageID} title={props.title} replyingTo={()=>reply()?.item.id} onObserved={(captured,cursor)=>{if(!cursor)return;items.clear();for(const item of captured)items.set(item.id,item);props.actions.observe(captured,cursor,props.chatID);commands.observe(captured,cursor,props.chatID);setBaseline(cursor);openShortcut();}} pending={()=>commands.pending().filter(item=>item.data.chat_id===props.chatID)} projectCaptured={commands.projectCaptured} deliveryNotice={notice} onCheckCommand={check} onCopyCommand={commands.copy} onRetryCommand={retry} canRetryCommand={canRetry} composer={<Show when={baseline()}><Show when={retryProblem()}><p class="composer-error" role="alert">{retryProblem()}</p></Show><Show when={retryTarget()}><UploadDock uploads={props.uploads} draftID={retryDraft} locked><div class="composer-status">Prepare this attachment, then try again.<button class="button" aria-label="Send attachment again" disabled={!props.uploads.ready(retryDraft)} onClick={retrySend}>Try Again</button><button class="button subtle" onClick={()=>{for(const entry of props.uploads.files(retryDraft))props.uploads.remove(retryDraft,entry.key);setRetryTarget();}}>Cancel</button></div></UploadDock></Show><UploadDock uploads={props.uploads} draftID={props.chatID} disabled={Boolean(reply())}><Composer hasAttachments={props.uploads.files(props.chatID).length>0} disabled={props.uploads.files(props.chatID).length>0&&(!props.uploads.ready(props.chatID)||Boolean(reply()))} session={props.session} draftID={props.chatID} service={service()} available={available()} reply={quote()} onCancelReply={props.actions.cancelReply} command={status()} canCheck={props.live.status()==='connected'} onSend={send} onCheck={()=>check(commandID())} onCopy={commands.canCopy(commandID())?event=>{void commands.copy(event,commandID());}:undefined}/></UploadDock></Show>} onMessageAction={props.actions.open} onMessagePointer={pointer}/>}</Show>
+        <Show when={transcriptGeneration()} keyed>{_generation=> <Transcript chatID={props.chatID} messageID={props.messageID} revealRequest={revealRequest()} title={props.title} replyingTo={()=>reply()?.item.id} onObserved={(captured,cursor)=>{if(!cursor)return;items.clear();for(const item of captured)items.set(item.id,item);props.actions.observe(captured,cursor,props.chatID);commands.observe(captured,cursor,props.chatID);setBaseline(cursor);openShortcut();}} pending={()=>commands.pending().filter(item=>item.data.chat_id===props.chatID)} projectCaptured={commands.projectCaptured} deliveryNotice={notice} onCheckCommand={check} onCopyCommand={commands.copy} onRetryCommand={retry} canRetryCommand={canRetry} composer={<Show when={baseline()}><Show when={retryProblem()}><p class="composer-error" role="alert">{retryProblem()}</p></Show><Show when={retryTarget()}><UploadDock uploads={props.uploads} draftID={retryDraft} locked><div class="composer-status">Prepare this attachment, then try again.<button class="button" aria-label="Send attachment again" disabled={!props.uploads.ready(retryDraft)} onClick={retrySend}>Try Again</button><button class="button subtle" onClick={()=>{for(const entry of props.uploads.files(retryDraft))props.uploads.remove(retryDraft,entry.key);setRetryTarget();}}>Cancel</button></div></UploadDock></Show><UploadDock uploads={props.uploads} draftID={props.chatID} disabled={Boolean(reply())}><Composer hasAttachments={props.uploads.files(props.chatID).length>0} disabled={props.uploads.files(props.chatID).length>0&&(!props.uploads.ready(props.chatID)||Boolean(reply()))} session={props.session} draftID={props.chatID} service={service()} available={available()} reply={quote()} onCancelReply={props.actions.cancelReply} command={status()} canCheck={props.live.status()==='connected'} onSend={send} onCheck={()=>check(commandID())} onCopy={commands.canCopy(commandID())?event=>{void commands.copy(event,commandID());}:undefined}/></UploadDock></Show>} onMessageAction={props.actions.open} onMessagePointer={pointer}/>}</Show>
         <Show when={props.actions.target()||props.actions.management.confirmation()||props.actions.changes.editor()||props.actions.changes.dissolve()||props.actions.flight()}><Suspense><MessageActions actions={props.actions} onForward={(event,text,attachment)=>withInput(event,()=>{const draft=prepareForward(props.session,text);if(attachment)void props.uploads.importAttachment(draft,attachment);props.actions.close();router.navigate('/messages/new');})}/></Suspense></Show>
     </div>;
 }
