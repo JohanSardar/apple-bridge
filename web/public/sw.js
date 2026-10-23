@@ -54,7 +54,7 @@ async function thumbnail(request,response,version){
 self.addEventListener('fetch',event=>{
   const request=event.request,url=new URL(request.url);
   if(request.method!=='GET'||url.origin!==self.location.origin||request.headers.has('Range'))return;
-  if(url.pathname.startsWith('/web/v1/')&&!url.pathname.startsWith('/web/v1/blob/'))return;
+  if(url.pathname.startsWith('/web/v1/')&&(request.mode==='navigate'||!url.pathname.startsWith('/web/v1/blob/')))return;
   const client=event.clientId||event.resultingClientId;
   const version=generation;
   if(request.mode==='navigate'){
