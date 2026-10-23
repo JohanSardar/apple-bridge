@@ -34,8 +34,8 @@ test('WEB-MSG-NEW TOKENS keyboard and pointer autocomplete tokenize recipients a
     const to = page.getByRole('combobox', {name:'To', exact:true});
     await expect(to).toBeFocused();
     await to.fill('Beryl01');
-    await expect(page.getByRole('option').first()).toContainText('Demo Beryl01 Example');
-    await expect(page.getByRole('option')).toHaveCount(2);
+    await expect(page.getByRole('listbox',{name:'Contacts'}).getByRole('option').first()).toContainText('Demo Beryl01 Example');
+    await expect(page.getByRole('listbox',{name:'Contacts'}).getByRole('option')).toHaveCount(2);
     await captureNewPlate(page,info.project.name,'lookup');
     await to.press('ArrowUp');
     await expect(to).toHaveAttribute('aria-activedescendant','recipient-option-1');
@@ -57,13 +57,13 @@ test('WEB-MSG-NEW TOKENS keyboard and pointer autocomplete tokenize recipients a
     expect(sent.filter(frame => frame.t === 'sub' && frame.view === 'thread').some(frame => frame.args.chat_id === ids['demo-chat-01'])).toBe(true);
     await page.getByRole('button', {name:/Remove Demo Beryl01/}).click();
     await to.fill('Cobalt02');
-    await page.getByRole('option').filter({hasText:'mobile'}).click();
+    await page.getByRole('listbox',{name:'Contacts'}).getByRole('option').filter({hasText:'mobile'}).click();
     await expect(page.getByRole('list', {name:'Recipients'})).toContainText('Demo Cobalt02 Example');
     await expect(page.getByRole('status', {name:'Message service'})).toContainText('RCS');
     await page.getByRole('button', {name:/Remove Demo Cobalt02/}).click();
     await to.fill('person01@');
-    await expect(page.getByRole('option')).toHaveCount(1);
-    await expect(page.getByRole('option')).toContainText('demo.person01@example.com');
+    await expect(page.getByRole('listbox',{name:'Contacts'}).getByRole('option')).toHaveCount(1);
+    await expect(page.getByRole('listbox',{name:'Contacts'}).getByRole('option')).toContainText('demo.person01@example.com');
     await to.press('Enter');
     await expect(page.getByRole('list', {name:'Recipients'}).getByRole('listitem')).toHaveAttribute('data-recipient-value','demo.person01@example.com');
     expect(sent.filter(frame => frame.t === 'cmd')).toHaveLength(0);
@@ -85,7 +85,7 @@ test('WEB-MSG-NEW GROUP raw handles tokenize once, new groups stay disabled and 
     await expect(page.getByText("New group messages aren't available yet", {exact:true})).toHaveCount(0);
     await page.getByRole('button',{name:'Remove first.recipient@example.com',exact:true}).click();
     for(const query of ['Aster00','Beryl01','Cobalt02']) {
-        await to.fill(query); await page.getByRole('option').filter({hasText:'mobile'}).click();
+        await to.fill(query); await page.getByRole('listbox',{name:'Contacts'}).getByRole('option').filter({hasText:'mobile'}).click();
         if(query==='Beryl01')await expect(page.getByText("New group messages aren't available yet",{exact:true})).toBeVisible();
     }
     await expect(page.getByRole('region',{name:'Existing conversation'})).toHaveAttribute('data-chat-id',ids['demo-chat-00']);
@@ -122,7 +122,7 @@ test('WEB-MSG-NEW LATEST lookup debounces, cancels stale requests and only displ
     await expect.poll(() => calls.length).toBe(1);
     expect(calls[0].q).toBe('Aster00');
     await to.fill('Beryl01');
-    await expect(page.getByRole('option').first()).toContainText('Demo Beryl01 Example');
+    await expect(page.getByRole('listbox',{name:'Contacts'}).getByRole('option').first()).toContainText('Demo Beryl01 Example');
     await expect.poll(() => page.evaluate(() => (window as any).__lookupAborted === true)).toBe(true);
     await release!();
     await expect(page.getByText('STALE RESULT', {exact:true})).toHaveCount(0);
@@ -210,7 +210,7 @@ test('WEB-MSG-NEW SCOPE a device without contacts scope gets no results and reta
         const to = page.getByRole('combobox',{name:'To',exact:true});
         await to.fill('raw.recipient@example.com'); await to.press('Enter');
         await expect(page.getByRole('list',{name:'Recipients'})).toContainText('raw.recipient@example.com');
-        await expect(page.getByRole('option')).toHaveCount(0);
+        await expect(page.getByRole('listbox',{name:'Contacts'}).getByRole('option')).toHaveCount(0);
     } finally { await context.close(); }
 });
 
@@ -257,7 +257,7 @@ test('WEB-MSG-NEW EXISTING live metadata keeps the existing transcript mounted d
     });
     await page.goto('/messages/new');
     await page.getByRole('combobox',{name:'To',exact:true}).fill('Beryl01');
-    await page.getByRole('option').filter({hasText:'mobile'}).click();
+    await page.getByRole('listbox',{name:'Contacts'}).getByRole('option').filter({hasText:'mobile'}).click();
     await expect(page.getByRole('region',{name:'Existing conversation'})).toHaveAttribute('data-chat-id',ids['demo-chat-01']);
     await expect(page.locator('.message-row').first()).toBeVisible();
     await expect.poll(() => metadataMessages.size).toBeGreaterThan(0);
