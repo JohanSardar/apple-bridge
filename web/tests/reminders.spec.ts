@@ -62,7 +62,10 @@ test('WEB-REM-READ exact demo sidebar, nested sections, completed, sorts, keyboa
     socket.on('framesent', event => { const frame = JSON.parse(String(event.payload)); if (frame.t === 'sub' && frame.view === 'reminders.items') subscriptions.set(frame.id, frame.args.sort ?? 'manual'); });
     socket.on('framereceived', event => { const frame = JSON.parse(String(event.payload)); if (frame.t === 'snap' && subscriptions.has(frame.sub)) servedSort = subscriptions.get(frame.sub)!; });
   });
-  const manifest = JSON.parse(await readFile('dist/.vite/manifest.json', 'utf8')), routeChunk = '/' + manifest['src/reminders/Reminders.tsx'].file, requested: string[] = [];
+  const manifest = JSON.parse(await readFile('dist/.vite/manifest.json', 'utf8')) as Record<string, { file: string; name?: string; isDynamicEntry?: boolean }>;
+  const route = manifest['src/reminders/Reminders.tsx'] ?? Object.values(manifest).find(entry => entry.name === 'Reminders' && entry.isDynamicEntry);
+  expect(route?.file).toBeTruthy();
+  const routeChunk = '/' + route!.file, requested: string[] = [];
   page.on('request', request => requested.push(new URL(request.url()).pathname));
   await bootstrap(context, request);
   await page.goto('/messages');
@@ -282,21 +285,32 @@ test('WEB-PERF-SHELL Reminders keeps a thousand-row view virtual, responsive and
   await observePanes(page);
   await bootstrap(context, request); await control(request, '/reminders-perf');
   await page.addInitScript(() => {
-    const metrics = { input: [] as number[], nextFrame: [] as number[], long: [] as number[], cls: 0, paint: 0, measuring: true, longSupported: PerformanceObserver.supportedEntryTypes.includes('longtask'), clsSupported: PerformanceObserver.supportedEntryTypes.includes('layout-shift') };
+    const metrics = { input: [] as number[], nextFrame: [] as number[], long: [] as number[], tasks: [] as { start: number; duration: number }[], shifts: [] as { value: number; sources: string[] }[], cls: 0, paint: 0, measuring: true, longSupported: PerformanceObserver.supportedEntryTypes.includes('longtask'), clsSupported: PerformanceObserver.supportedEntryTypes.includes('layout-shift') };
     (window as any).__remPerf = metrics;
     document.addEventListener('keydown', event => {
       if (!metrics.measuring || !event.isTrusted) return;
       const start = performance.now(); queueMicrotask(() => { document.body.getBoundingClientRect(); metrics.input.push(performance.now() - start); }); requestAnimationFrame(() => metrics.nextFrame.push(performance.now() - start));
     }, { capture: true });
-    if (metrics.longSupported) new PerformanceObserver(list => { if (metrics.measuring) metrics.long.push(...list.getEntries().map(entry => entry.duration)); }).observe({ type: 'longtask' });
-    if (metrics.clsSupported) new PerformanceObserver(list => { if (metrics.measuring) for (const entry of list.getEntries()) if (!(entry as any).hadRecentInput) metrics.cls += (entry as any).value; }).observe({ type: 'layout-shift' });
+    if (metrics.longSupported) new PerformanceObserver(list => { if (metrics.measuring) { metrics.long.push(...list.getEntries().map(entry => entry.duration)); metrics.tasks.push(...list.getEntries().map(entry => ({ start: entry.startTime, duration: entry.duration }))); } }).observe({ type: 'longtask' });
+    if (metrics.clsSupported) new PerformanceObserver(list => { if (metrics.measuring) for (const entry of list.getEntries()) if (!(entry as any).hadRecentInput) { metrics.cls += (entry as any).value; metrics.shifts.push({ value: (entry as any).value, sources: ((entry as any).sources ?? []).map((source: any) => source.node?.tagName + '.' + String(source.node?.className ?? '')) }); } }).observe({ type: 'layout-shift' });
     new MutationObserver(() => { if (!metrics.paint && document.querySelector('.reminder-title')) { metrics.paint = -1; const painted = () => { const title = document.querySelector('.reminder-title'), rect = title?.getBoundingClientRect(); if (title && rect && rect.width > 0 && rect.left >= 0 && rect.right <= innerWidth && rect.top >= 0 && rect.bottom <= innerHeight && getComputedStyle(title).visibility === 'visible') requestAnimationFrame(() => requestAnimationFrame(() => { metrics.paint = performance.now(); })); else requestAnimationFrame(painted); }; painted(); } }).observe(document, { subtree: true, childList: true });
   });
-  await page.goto('/reminders'); await openList(page, 'Bridge Test 1000 reminders');
+  const profiler = process.env.AB_WEB_REMINDERS_PROFILE && info.project.name.startsWith('chromium') ? await context.newCDPSession(page) : undefined;
+  if (profiler) { await profiler.send('Profiler.enable'); if (process.env.AB_WEB_REMINDERS_TRACE) await profiler.send('Tracing.start', { categories: 'devtools.timeline,v8,blink.user_timing,disabled-by-default-devtools.timeline,disabled-by-default-v8.compile', transferMode: 'ReturnAsStream' }); await profiler.send('Profiler.start'); }
+  await page.goto('/reminders'); const beforeList = await page.evaluate(() => performance.now());
+  await openList(page, 'Bridge Test 1000 reminders');
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-  const navigation = await page.evaluate(() => { const value = (window as any).__remPerf; value.measuring = false; const result = { long: [...value.long], cls: value.cls, longSupported: value.longSupported, clsSupported: value.clsSupported }; value.long = []; value.cls = 0; return result; });
+  if (profiler) { const result = await profiler.send('Profiler.stop'); await mkdir('../lab/evidence/private/web/profiles', { recursive: true }); await writeFile(`../lab/evidence/private/web/profiles/reminders-navigation-${info.project.name}.cpuprofile`, JSON.stringify(Object.assign(result.profile, { webNavigation: await page.evaluate(beforeList => ({ now: performance.now(), beforeList, tasks: (window as any).__remPerf.tasks }), beforeList) }))); if (process.env.AB_WEB_REMINDERS_TRACE) {
+      const ready = new Promise<string>(resolve => profiler.once('Tracing.tracingComplete', event => resolve(event.stream)));
+      await profiler.send('Tracing.end'); const handle = await ready; let raw = '';
+      while (true) { const part = await profiler.send('IO.read', { handle }); raw += part.data; if (part.eof) break; }
+      await profiler.send('IO.close', { handle });
+      await writeFile(`../lab/evidence/private/web/profiles/reminders-navigation-${info.project.name}.trace.json`, raw);
+    }
+    await profiler.detach(); }
+  const navigation = await page.evaluate(() => { const value = (window as any).__remPerf; value.measuring = false; const result = { long: [...value.long], cls: value.cls, shifts: value.shifts, longSupported: value.longSupported, clsSupported: value.clsSupported }; value.long = []; value.cls = 0; return result; });
   if (navigation.longSupported) expect(navigation.long.filter((ms: number) => ms > 50)).toEqual([]);
-  if (navigation.clsSupported) expect(navigation.cls).toBe(0);
+  if (navigation.clsSupported) expect(navigation.cls, JSON.stringify(navigation.shifts)).toBe(0);
   const list = page.getByRole('listbox', { name: 'Reminders', exact: true });
   await expect(list.getByRole('option').first()).toHaveAttribute('aria-setsize', '1000');
   expect(await list.getByRole('option').count()).toBeLessThan(80);

@@ -76,11 +76,11 @@ func runWeb(ctx context.Context, s Scenario) Evidence {
 	var result Evidence
 	reports := []any{}
 	setups := []any{}
-	for _, project := range projects {
+	for index, project := range projects {
 		bounded, cancel := context.WithTimeout(ctx, webRunBudget(s))
 		part := runWebProjects(bounded, s, []string{project})
 		cancel()
-		if result.RunID == "" {
+		if index == 0 {
 			result = part
 			result.Assertions = nil
 		}
@@ -90,10 +90,7 @@ func runWeb(ctx context.Context, s Scenario) Evidence {
 		}
 		reports = append(reports, part.Metrics["report"])
 		setups = append(setups, map[string]any{"project": project, "fixture_setup_ms": part.Metrics["fixture_setup_ms"], "fixture_snapshot": part.Metrics["fixture_snapshot"]})
-		result.Passed = part.Passed
-		if !part.Passed {
-			break
-		}
+		result.Passed = result.Passed && part.Passed
 	}
 	result.Metrics["matrix"] = projects
 	result.Metrics["reports"] = reports
