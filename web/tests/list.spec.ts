@@ -39,7 +39,7 @@ test('WEB-MSG-LIST relative dates, selection and window focus',async({page},info
     const target=rows.filter({hasText:'Weekend Crew'}); const id=await target.getAttribute('data-chat');
     await target.click(); await expect(page).toHaveURL(new RegExp('/messages/'+id+'$'));
     if(info.project.use.viewport?.width===1440){
-        await expect(target.locator('..')).toHaveAttribute('aria-selected','true');
+        await expect(listViewport.getByRole('option').filter({has:target})).toHaveAttribute('aria-selected','true');
         await page.evaluate(()=>{Object.defineProperty(document,'hasFocus',{configurable:true,value:()=>true});window.dispatchEvent(new Event('focus'));});
         await expect(page.locator('.conversation-list')).not.toHaveClass(/window-inactive/);
         const fill=await target.evaluate(element=>getComputedStyle(element).backgroundColor);await expect(target.locator('.avatar-member').first()).toHaveCSS('border-top-color',fill);await mkdir('../lab/evidence/private/web',{recursive:true});await page.screenshot({path:`../lab/evidence/private/web/list-selected-focused-${info.project.name}.png`});
