@@ -20,7 +20,7 @@ async function arrive(page:Page,request:APIRequestContext){
 test('WEB-MSG-MOTION WEB-MSG-LIVE RECEIVE a live incoming bubble scales from its tail with an overshoot while history stays still',async({page,context,request},info)=>{
     await context.addCookies(cookies);await instrument(page);const id=await arrive(page,request);
     await expect.poll(()=>page.evaluate(id=>(window as any).__transcriptMotion.filter((entry:any)=>entry.name==='receive'&&entry.id===id),id)).not.toEqual([]);
-    const first=await page.evaluate(id=>(window as any).__transcriptMotion.find((entry:any)=>entry.name==='receive'&&entry.id===id),id);expect(first.transform).toBe('scale(0.92)');expect(first.origin).toBe('left bottom');
+    const first=await page.evaluate(id=>(window as any).__transcriptMotion.find((entry:any)=>entry.name==='receive'&&entry.id===id),id);expect(first.transform).toBe('scale(0.92)');expect(first.origin).toMatch(/^left bottom(?: 0px)?$/u);
     await expect.poll(()=>page.evaluate(id=>(window as any).__transcriptMotion.filter((entry:any)=>entry.name==='receive'&&entry.id===id).some((entry:any)=>Number(/^scale\(([^)]+)\)$/u.exec(entry.transform)?.[1])>1),id)).toBe(true);await expect(page.locator('[data-message="'+id+'"] .bubble-slot').first()).toHaveCSS('transform','none');
     expect(await page.evaluate(()=>([...new Set((window as any).__transcriptMotion.filter((entry:any)=>entry.name==='receive').map((entry:any)=>entry.id))]))).toEqual([id]);
     await mkdir('../lab/evidence/private/web',{recursive:true});await page.screenshot({path:`../lab/evidence/private/web/transcript-motion-receive-${info.project.name}.png`});
