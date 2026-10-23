@@ -25,7 +25,7 @@ export function createMessageCommands(live: LiveClient) {
     const releaseFile=(key:string)=>{const file=localFiles.get(key);if(file){URL.revokeObjectURL(file.attachment.url);localFiles.delete(key);}};
     const replies = new Map<string,{target:ThreadItem;partIndex:number}>();
     const echoes = new Map<string, Echo>(), owned = new Map<string, SendMessage>(), suppressed = new Set<string>(), resolved = new Set<string>();
-    const identities = new Map<string, string>(), displayed = new Map<string, string>(), held = new Map<string, string>();
+    const identities = new Map<string, string>(), displayed = new Map<string, string>(), held = new Map<string, string>(), heldText = new Map<string, string | undefined>();
     const snapshots = new Map<string, { ids: Set<string>; cursor?: Cursor }>();
     const released = new Map<string, Set<string>>(), missingIdentities = new Set<string>();
     const timers = new Map<string, ReturnType<typeof setTimeout>>(), retries = new Map<string,string>();
@@ -59,15 +59,15 @@ export function createMessageCommands(live: LiveClient) {
     const hasEcho = (chatID: string, commands: Map<string, CommandState>) => [...echoes].some(([key, echo]) => chatOf(echo) === chatID && !suppressed.has(key) && !resolved.has(key) && stateOf(echo, commands.get(echo.commandID)) !== 'failed');
     const release = (chatID: string) => {
         clearTimeout(timers.get(chatID)); timers.delete(chatID);
-        for (const [id, chat] of held) if (chat === chatID) { held.delete(id); displayed.set(id, chatID); }
+        for (const [id, chat] of held) if (chat === chatID) { held.delete(id); heldText.delete(id); displayed.set(id, chatID); }
     };
     const compatible = (command: CommandState, cursor: Cursor | undefined) => Boolean(command.commit_seq && command.cursor && cursor && cursor.epoch === command.cursor.epoch && cursor.subscription_revision === command.cursor.subscription_revision && cursor.sequence >= command.commit_seq);
     const rememberCandidates = (chatID: string, commands: Map<string, CommandState>, all: boolean) => {
-        const candidates = [...held].filter(([, chat]) => chat === chatID).map(([id]) => id);
-        if (!candidates.length) return;
         for (const [key, echo] of echoes) {
             const command = commands.get(echo.commandID);
             if (chatOf(echo) !== chatID || resolved.has(key) || ambiguous(key) || !(all && stateOf(echo, command) !== 'failed' || ghostFailure(echo, command))) continue;
+            const candidates = [...held].filter(([id, chat]) => chat === chatID && (echo.kind !== 'text' || heldText.get(id) === undefined || heldText.get(id) === echo.item.data.text)).map(([id]) => id);
+            if (!candidates.length) continue;
             released.set(key, new Set([...(released.get(key) ?? []), ...candidates])); suppressed.add(key);
         }
     };
@@ -92,7 +92,7 @@ export function createMessageCommands(live: LiveClient) {
                     continue;
                 }
                 if (capture!.ids.has(recordID)) {
-                    identities.set(recordID, key); held.delete(recordID); displayed.set(recordID, chatOf(echo));
+                    identities.set(recordID, key); held.delete(recordID); heldText.delete(recordID); displayed.set(recordID, chatOf(echo));
                     for (const candidates of released.values()) candidates.delete(recordID);
                     resolved.add(key);
                 }
@@ -126,13 +126,13 @@ export function createMessageCommands(live: LiveClient) {
             const current = new Set(captured.map(item => item.id));
             if (cursor) {
                 for (const [recordID, chat] of displayed) if (chat === id && !current.has(recordID)) displayed.delete(recordID);
-                for (const [recordID, chat] of held) if (chat === id && !current.has(recordID)) held.delete(recordID);
+                for (const [recordID, chat] of held) if (chat === id && !current.has(recordID)) {held.delete(recordID);heldText.delete(recordID);}
             }
             snapshots.set(id, {ids:current,cursor});
             const holding = hasEcho(id, commands);
             for (const item of captured) {
-                if (!holding || displayed.has(item.id) || identities.has(item.id) || !item.data.is_from_me) { displayed.set(item.id, id); held.delete(item.id); }
-                else held.set(item.id, id);
+                if (!holding || displayed.has(item.id) || identities.has(item.id) || !item.data.is_from_me) { displayed.set(item.id, id); held.delete(item.id); heldText.delete(item.id); }
+                else {held.set(item.id, id);heldText.set(item.id, typeof item.data.text === 'string' ? item.data.text : undefined);}
             }
         }
         refresh();
@@ -225,7 +225,7 @@ export function createMessageCommands(live: LiveClient) {
         if(echo.kind==='attachment'){const file=localFiles.get(echoKey(id,partIndex));if(!file)throw new Error('Message unavailable');const link=document.createElement('a');link.href=file.attachment.url;link.download=file.attachment.name;link.hidden=true;document.body.appendChild(link);link.click();link.remove();return Promise.resolve();}
         return navigator.clipboard.writeText(String(echo.item.data.text ?? ''));
     });
-    const dispose = () => { disposed = true; for (const timer of timers.values()) clearTimeout(timer); timers.clear(); snapshots.clear(); for(const key of localFiles.keys())releaseFile(key);echoes.clear(); owned.clear(); identities.clear(); held.clear(); displayed.clear(); released.clear(); suppressed.clear(); resolved.clear(); missingIdentities.clear(); retries.clear(); replies.clear(); capabilities.dispose(); };
+    const dispose = () => { disposed = true; for (const timer of timers.values()) clearTimeout(timer); timers.clear(); snapshots.clear(); for(const key of localFiles.keys())releaseFile(key);echoes.clear(); owned.clear(); identities.clear(); held.clear(); heldText.clear(); displayed.clear(); released.clear(); suppressed.clear(); resolved.clear(); missingIdentities.clear(); retries.clear(); replies.clear(); capabilities.dispose(); };
     onCleanup(dispose);
     return {send,reply,retry,canRetry,canCopy:(id:string)=>{revision();return [...echoes.values()].some(echo=>echo.commandID===id&&echo.kind==='text');},localFile:(id:string,index?:number)=>localFiles.get(echoKey(id,index)),pending,observe,projectCaptured,statuses,notice,timeoutCount,missingIdentityCount,capabilities,check:(id:string)=>live.checkCommand(id),copy,dispose};
 }
