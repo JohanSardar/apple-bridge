@@ -9,6 +9,7 @@ import (
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/lab/scripted"
 	"github.com/JohanSardar/apple-bridge/lab/world"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -94,6 +95,53 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 			add("independent_sqlite_copy", false)
 			return
 		}
+		e.Metrics = map[string]any{}
+		hydrationStarted := time.Now()
+		pendingPeak, pendingLast := 0, 0
+		statusCounts := map[string]int{}
+		hydrationErr := w.Await(time.Minute, func() bool {
+			records, readErr := w.Records(w.Gateway)
+			if readErr != nil || len(records) == 0 {
+				return false
+			}
+			pending, count := 0, 0
+			clear(statusCounts)
+			for _, record := range records {
+				if record.Collection != "notes.note" || record.Deleted {
+					continue
+				}
+				count++
+				var data map[string]any
+				if json.Unmarshal(record.Data, &data) != nil {
+					return false
+				}
+				if data["body_status"] == "pending" {
+					pending++
+				}
+				status, _ := data["content_status"].(string)
+				switch status {
+				case "complete", "partial", "offloaded", "undecoded", "locked":
+					statusCounts[status]++
+				default:
+					statusCounts["unknown"]++
+				}
+			}
+			if pending > pendingPeak {
+				e.Metrics["hydration_pending_status_counts"] = maps.Clone(statusCounts)
+			}
+			pendingLast = pending
+			pendingPeak = max(pendingPeak, pending)
+			truthRows, _ := response["records"].([]any)
+			return pending == 0 && count == len(truthRows)
+		})
+		e.Metrics["hydration_wait_ms"] = float64(time.Since(hydrationStarted).Microseconds()) / 1000
+		e.Metrics["hydration_pending_peak"] = pendingPeak
+		e.Metrics["hydration_pending_final"] = pendingLast
+		e.Metrics["hydration_final_status_counts"] = statusCounts
+		add("hydration_finished_before_comparison", hydrationErr == nil)
+		if hydrationErr != nil {
+			return
+		}
 		aliases, aliasErr := gatewayAliases(w)
 		if aliasErr != nil {
 			add("identity_map", false)
@@ -132,6 +180,10 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 					}
 					var data map[string]any
 					json.Unmarshal(record.Data, &data)
+					if data["body_status"] == "pending" {
+						mismatch("body_status", "hydration_pending")
+						continue
+					}
 					if body, ok := data["body_blob"].(map[string]any); ok {
 						digest, _ := body["digest"].(string)
 						status, bytes, blobErr := blobBytes(ctx, w.Gateway, digest, record.ID)
@@ -154,6 +206,17 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 					if entry.collection == "notes.note" {
 						for _, field := range []string{"plain_text", "locked", "content_status"} {
 							if data[field] != native[field] {
+								if field == "content_status" {
+									for label, value := range map[string]any{"production": data[field], "truth": native[field], "body": data["body_status"]} {
+										status, _ := value.(string)
+										switch status {
+										case "complete", "partial", "offloaded", "undecoded", "locked", "pending", "external", "unavailable", "":
+											mismatch("content_status."+label, fmt.Sprintf("%T_%s", value, status))
+										default:
+											mismatch("content_status."+label, "unknown_value")
+										}
+									}
+								}
 								mismatch(field, "value_or_type")
 							}
 						}
@@ -408,6 +471,49 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 				return
 			}
 			add(protocol+"_create_matches_truth", truthMatches(created))
+			if level == "sim" {
+				var evidence struct {
+					NativeKey string `json:"native_key"`
+				}
+				json.Unmarshal(command.Evidence, &evidence)
+				observations, inspectErr := w.Inspect()
+				var metadata map[string]any
+				for _, observation := range observations {
+					if observation.NativeKey == evidence.NativeKey {
+						json.Unmarshal(observation.Data, &metadata)
+					}
+				}
+				if inspectErr != nil || metadata == nil {
+					add(protocol+"_hydration_fixture", false)
+					return
+				}
+				metadata["native_fingerprint"] = "ab-test-content-fingerprint"
+				metadata["body_status"], metadata["content_status"], metadata["editable"] = "pending", "partial", "none"
+				change := func() error {
+					return w.ControlAction("/external-change", map[string]any{"key": evidence.NativeKey, "collection": "notes.note", "data": metadata})
+				}
+				previousVersion := created.Version
+				if change() != nil || w.Await(5*time.Second, func() bool {
+					current, ok := find("notes.note", newTitle)
+					if ok && current.Version > previousVersion {
+						created = current
+						return true
+					}
+					return false
+				}) != nil {
+					add(protocol+"_metadata_visible", false)
+					return
+				}
+				metadata["content_status"], metadata["editable"] = "complete", "plain"
+				delete(metadata, "body_status")
+				err = change()
+				add(protocol+"_hydration_advances_revision", err == nil && w.Await(5*time.Second, func() bool {
+					current, ok := find("notes.note", newTitle)
+					return ok && current.Version > created.Version
+				}) == nil)
+			}
+			staleVersion := created.Version
+
 			for _, mode := range []string{"append", "replace"} {
 				replacement := "\nappended"
 				if mode == "replace" {
@@ -441,6 +547,15 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 				json.Unmarshal(created.Data, &updated)
 				actual, _ := updated["plain_text"].(string)
 				add(protocol+"_"+mode+"_content", strings.Contains(actual, strings.TrimSpace(replacement)))
+				if level == "sim" && mode == "append" {
+					staleID := contracts.NewCommandID()
+					var rejected contracts.CommandRecord
+					staleErr := client.Call(ctx, "notes.update", contracts.Command{ID: staleID, Args: args, ExpectedVersion: staleVersion, WaitMS: 15000}, &rejected)
+					add(protocol+"_content_change_rejects_stale_version", errors.Is(staleErr, contracts.ErrConflict) || rejected.Error != nil && rejected.Error.Code == "conflict")
+					effects, effectErr := w.Effects()
+					add(protocol+"_stale_version_no_effect", effectErr == nil && effects[staleID] == 0)
+				}
+
 			}
 			args, _ = json.Marshal(map[string]any{"id": created.ID})
 			command = contracts.CommandRecord{}
