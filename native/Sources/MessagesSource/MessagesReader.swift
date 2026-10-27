@@ -121,11 +121,11 @@ final class MessagesReader {
     func recent() throws -> [SQLiteRow] { try query("SELECT \(messageProjection) FROM message m ORDER BY m.ROWID DESC LIMIT 2000") }
     func message(_ guid: String) throws -> SQLiteRow? { try query("SELECT \(messageProjection) FROM message m WHERE m.guid=?", [guid]).first }
     func reference(_ collection: String, _ guid: String) -> [String: Any] { ["$ref": ["collection": "messages." + collection, "native_key": guid]] }
-    func timestamp(_ row: SQLiteRow, _ column: String) -> Any? {
+    func date(_ row: SQLiteRow, _ column: String) -> Date? {
         guard let raw = Double(row[column]), raw > 0 else { return nil }
-        let seconds = raw > 1e12 ? raw / 1e9 : raw
-        return dateFormat.string(from: Date(timeIntervalSinceReferenceDate: seconds))
+        return Date(timeIntervalSinceReferenceDate: raw > 1e12 ? raw / 1e9 : raw)
     }
+    func timestamp(_ row: SQLiteRow, _ column: String) -> Any? { date(row, column).map { dateFormat.string(from: $0) } }
     private func targetGUID(_ value: String) -> String {
         if value.hasPrefix("p:"), let slash = value.firstIndex(of: "/") { return String(value[value.index(after: slash)...]) }
         return value.hasPrefix("bp:") ? String(value.dropFirst(3)) : value
@@ -229,6 +229,10 @@ final class MessagesReader {
                 data["summary_raw_digest"] = summary.rawBodyDigest
                 if data["decode_status"] as? String == "decoded" { data["decode_status"] = "partial" }
             }
+        }
+        if let window = MessageActionWindow(service: row["service"], isFromMe: row.flag("is_from_me"), isMessage: row.integer("item_type") == 0, sentAt: date(row, "date"), edits: (data["edit_history"] as? [Any])?.count ?? 0) {
+            data["edit_until"] = window.editUntil.map { dateFormat.string(from: $0) }
+            data["unsend_until"] = dateFormat.string(from: window.unsendUntil)
         }
         if row.integer("item_type") != 0 {
             var event: [String: Any] = ["item_type": row.integer("item_type"), "action_type": row.integer("group_action_type"), "title": row["group_title"], "kind": MessageRich.groupEventKind(item: Int(row.integer("item_type")), action: Int(row.integer("group_action_type")), hasMember: row.integer("other_handle") > 0, senderIsMember: row.integer("handle_id") == row.integer("other_handle"), title: row["group_title"])]
