@@ -13,6 +13,7 @@ public final class UsageSource: Source {
     private var committed: [String: JSON] = [:]
     private var generation = UUID().uuidString
     private var power: [InFocusEvent] = []
+    private var scanned: UsageInputs?
     public init(root: URL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Biome")) { self.root = root }
     public func open() async -> SourceReadiness {
         let ready = FileManager.default.isReadableFile(atPath: root.appendingPathComponent("streams/restricted/App.InFocus/local").path)
@@ -51,6 +52,7 @@ public final class UsageSource: Source {
     }
     private func scan(_ sink: any ObservationSink, live: Bool) async throws {
         let started = timestamp()
+        let inputs = UsageInputs(root, power: power.count)
         let base = root.appendingPathComponent("streams/restricted/App.InFocus")
         var current: [String: JSON] = [:]
         let peers = try peers()
@@ -77,6 +79,7 @@ public final class UsageSource: Source {
         }
         try await sink.emitCheckpoint(source: name, generation: generation, checkpoint: UUID().uuidString, observations: observations, scanID: UUID().uuidString, scanStartedAt: started, scope: ["usage.device", "usage.app_day"], completionEvidence: "complete", blobHandles: [:], live: live)
         committed = current
+        scanned = inputs
     }
     public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {
         if !resume["generation"].string.isEmpty { generation = resume["generation"].string }
@@ -99,7 +102,11 @@ public final class UsageSource: Source {
         }
         defer { polling.cancel(); watcher.cancel(); observers.forEach { center.removeObserver($0) }; continuation.finish() }
         try await scan(sink, live: false)
-        for await _ in changes { try Task.checkCancellation(); try await scan(sink, live: true) }
+        for await _ in changes {
+            try Task.checkCancellation()
+            if let inputs = UsageInputs(root, power: power.count), inputs == scanned { continue }
+            try await scan(sink, live: true)
+        }
     }
     public func prepare(_ command: JSON) async throws -> Prepared { throw SourceFailure.unsupported }
     public func dispatch(_ prepared: Prepared) async throws -> JSON { throw SourceFailure.unsupported }
