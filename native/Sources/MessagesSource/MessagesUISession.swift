@@ -42,10 +42,7 @@ public struct MessagesUISession {
         AXUIElementSetMessagingTimeout(root, 0.25)
     }
     public static func frontmost(_ driver: any MessagesUIDriver = LiveMessagesUIDriver(), trusted: Bool = AXIsProcessTrusted()) throws -> MessagesUISession {
-        guard trusted, let pid = driver.messagesProcess(), driver.frontmostProcess() == pid else {
-            try? PrivateReport.write(["stage": "frontmost_application"], to: PrivateReport.validate(PrivateReport.directory.appendingPathComponent("messages-prepare-diagnostic.json").path))
-            throw SourceFailure.conflict
-        }
+        guard trusted, let pid = driver.messagesProcess(), driver.frontmostProcess() == pid else { throw SourceFailure.conflict }
         return MessagesUISession(pid: pid, driver: driver)
     }
     public static func activate(_ driver: any MessagesUIDriver = LiveMessagesUIDriver(), settle: TimeInterval = 0.2) {

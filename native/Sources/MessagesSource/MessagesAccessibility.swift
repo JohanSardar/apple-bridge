@@ -32,7 +32,12 @@ enum MessagesAccessibility {
         for child in children(root) { result += matching(child, budget: &budget, predicate: predicate) }
         return result
     }
-    static func uiSession() throws -> MessagesUISession { try MessagesUISession.frontmost(trusted: available) }
+    static func uiSession() throws -> MessagesUISession {
+        do { return try MessagesUISession.frontmost(trusted: available) } catch {
+            try? PrivateReport.write(["stage": "frontmost_application"], to: PrivateReport.validate(PrivateReport.directory.appendingPathComponent("messages-prepare-diagnostic.json").path))
+            throw error
+        }
+    }
     static func target(_ root: AXUIElement, prepared: Prepared) throws -> AXUIElement {
         let guid = prepared.action["native_key"].string
         guard !guid.isEmpty else { throw SourceFailure.capabilityUnproven }
