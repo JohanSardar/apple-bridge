@@ -3,7 +3,7 @@ import type {LiveClient} from '../../data/live';
 import type {BridgeRecord,CommandState,Cursor,ThreadItem} from '../../data/types';
 import {withInput} from '../../data/input';
 import type {ActionTarget} from './reactionActions';
-import {chatService,messageService,nativeParts,partText as nativePartText} from '../store/message';
+import {actionWindowOpen,nativeParts,partText as nativePartText} from '../store/message';
 type Change={id:string;kind:'edit'|'unsend';target:ActionTarget;text?:string;complete?:boolean};
 type Editor={target:ActionTarget;text:string;commandID?:string};
 const observed=(state:CommandState|undefined)=>state&&['observed','delivered'].includes(state.status);
@@ -23,10 +23,10 @@ export function createMessageChanges(live:LiveClient,allowed:(operation:string)=
     const eligible=(target:ActionTarget|undefined,kind:'edit'|'unsend')=>{
         revision();clock();const now=Date.now();if(!target||live.status()!=='connected'||!allowed('messages.'+kind))return false;
         const capture=messages.get(target.item.id),chat=chats.get(String(target.item.data.chat_id??''));
-        if(!capture||!chat||!compatible(capture.cursor,chat.cursor)||messageService(capture.item,chatService(chat.record))!=='iMessage')return false;
-        const item=capture.item,age=(now-Date.parse(item.data.sent_at))/1000;
-        if(item.id.startsWith('command:')||item.collection!=='messages.message'||!Number.isSafeInteger(item.version)||item.version<1||item.data.is_from_me!==true||item.data.deleted_at||item.data.retracted_at||!Number.isFinite(age)||age<0||age>=(kind==='edit'?900:120)||!Number.isSafeInteger(target.partIndex)||target.partIndex<0||!nativeParts(item).some(part=>part.index===target.partIndex)||Array.isArray(item.data.retracted_parts)&&item.data.retracted_parts.includes(target.partIndex))return false;
-        if(kind==='edit'&&(partText({...target,item})===undefined||!Array.isArray(item.data.edit_history)&&item.data.edit_history!=null||Array.isArray(item.data.edit_history)&&item.data.edit_history.length>=5))return false;
+        if(!capture||!chat||!compatible(capture.cursor,chat.cursor))return false;
+        const item=capture.item;
+        if(item.id.startsWith('command:')||item.collection!=='messages.message'||!Number.isSafeInteger(item.version)||item.version<1||item.data.deleted_at||item.data.retracted_at||!actionWindowOpen(item,kind,now)||!Number.isSafeInteger(target.partIndex)||target.partIndex<0||!nativeParts(item).some(part=>part.index===target.partIndex)||Array.isArray(item.data.retracted_parts)&&item.data.retracted_parts.includes(target.partIndex))return false;
+        if(kind==='edit'&&partText({...target,item})===undefined)return false;
         return !locked(target);
     };
     const canEdit=()=>!editor()&&!current()?.anchor.closest('dialog[aria-label="Replies"]')&&eligible(current(),'edit'),canUnsend=()=>!dissolve()&&!current()?.anchor.closest('dialog[aria-label="Replies"]')&&eligible(current(),'unsend');

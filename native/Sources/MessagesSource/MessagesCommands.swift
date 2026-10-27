@@ -200,9 +200,7 @@ public actor MessagesCommands {
         destination["list_key"] = .string(row["capture_chat_guid"])
         let route=try verifyRoute(.object(destination),reader:reader,interactive:interactive)
         if operation == .edit || operation == .unsend {
-            guard row["service"] == "iMessage", row.flag("is_from_me"),let sent=parseTimestamp(target["sent_at"].string) else {throw SourceFailure.unsupported}
-            let age=Date().timeIntervalSince(sent)
-            guard age >= 0, age < (operation == .edit ? 900 : 120), operation != .edit || target["edit_history"].array.count < 5 else {throw SourceFailure.unsupported}
+            guard MessageActionWindow(service: row["service"], isFromMe: row.flag("is_from_me"), isMessage: row.integer("item_type") == 0, sentAt: parseTimestamp(target["sent_at"].string), edits: target["edit_history"].array.count)?.allows(edit: operation == .edit) == true else {throw SourceFailure.unsupported}
         }
         for field in ["text","edit_history","retracted_parts"] {
             let expected=command["expected_state"][field]

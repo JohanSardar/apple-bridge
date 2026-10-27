@@ -95,6 +95,10 @@ _Avoid_: chat type, protocol
 The service a conversation is using now: its latest message's service, or the chat's label when that is unknown.
 _Avoid_: default service
 
+**Action window**:
+The period, published by the Helper on each of the owner's own iMessages, in which Edit or Undo Send is still possible.
+_Avoid_: edit timeout, grace period
+
 ## Commands
 
 **Command**:

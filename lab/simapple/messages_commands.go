@@ -152,24 +152,7 @@ func (f *fakeApple) messageValidate(a contracts.NativeAction) *contracts.Error {
 	}
 	switch a.Op {
 	case "messages.edit", "messages.unsend":
-		if service != "iMessage" || data["is_from_me"] != true {
-			return contracts.ErrUnsupported
-		}
-		sent, _ := data["sent_at"].(string)
-		at, err := time.Parse(time.RFC3339Nano, sent)
-		if err != nil {
-			return contracts.ErrInvalid
-		}
-		age := time.Since(at)
-		limit := 15 * time.Minute
-		if a.Op == "messages.unsend" {
-			limit = 2 * time.Minute
-		}
-		if age < 0 || age >= limit {
-			return contracts.ErrUnsupported
-		}
-		history, _ := data["edit_history"].([]any)
-		if a.Op == "messages.edit" && len(history) >= 5 {
+		if !actionWindowOpen(data, a.Op == "messages.edit", time.Now()) {
 			return contracts.ErrUnsupported
 		}
 	case "messages.add_member", "messages.remove_member", "messages.leave_group", "messages.rename_group":
@@ -267,6 +250,9 @@ func (f *fakeApple) messageCommand(wire *applepeer.Wire, frame contracts.IPCFram
 		now := time.Now().UTC()
 		observations := []contracts.Observation{}
 		put := func(collection, key string, data map[string]any, absent bool) {
+			if collection == "message" && !absent {
+				f.messageFacts(data)
+			}
 			raw, _ := json.Marshal(data)
 			kind := "upsert"
 			if absent {
