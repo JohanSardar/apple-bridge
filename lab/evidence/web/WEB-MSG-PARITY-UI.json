@@ -1,0 +1,83 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[24.46 42.75 47.93] cpu_idle=46% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5YWVHYTCNHSWQACBPPG7764",
+  "metrics": {
+    "browser_budget_ms": 180000,
+    "capture_observer_resets": 0,
+    "demo_messages": 5000,
+    "demo_startup_ms": 18467,
+    "fixture_setup_ms": 18467,
+    "fixture_snapshot": {
+      "disk_bytes": 35823616,
+      "entry_bytes": 35831424,
+      "cache_bytes": 0,
+      "blob_payloads": 59,
+      "key": "e5086bc63c5fdaa74283a7ed93fe0ff73c431f55f1e59262f14e4c94020b9269",
+      "cache_hit": false,
+      "build_ms": 18301,
+      "copy_ms": 1566,
+      "records": 7052,
+      "fresh_digest": "65c46c90b8ea5ab53832b88c756eed86bf5a56e1db3398f6142f8901945b8a49",
+      "copy_digest": "65c46c90b8ea5ab53832b88c756eed86bf5a56e1db3398f6142f8901945b8a49",
+      "verified": true,
+      "copy_method": "clonefile"
+    },
+    "matrix": [
+      "chromium-light-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-MSG-PARITY-UI-chromium-light-desktop-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-MSG-PARITY-UI-chromium-light-desktop-playwright.json"
+    ],
+    "server": "gateway",
+    "setups": [
+      {
+        "fixture_setup_ms": 18467,
+        "fixture_snapshot": {
+          "disk_bytes": 35823616,
+          "entry_bytes": 35831424,
+          "cache_bytes": 0,
+          "blob_payloads": 59,
+          "key": "e5086bc63c5fdaa74283a7ed93fe0ff73c431f55f1e59262f14e4c94020b9269",
+          "cache_hit": false,
+          "build_ms": 18301,
+          "copy_ms": 1566,
+          "records": 7052,
+          "fresh_digest": "65c46c90b8ea5ab53832b88c756eed86bf5a56e1db3398f6142f8901945b8a49",
+          "copy_digest": "65c46c90b8ea5ab53832b88c756eed86bf5a56e1db3398f6142f8901945b8a49",
+          "verified": true,
+          "copy_method": "clonefile"
+        },
+        "project": "chromium-light-desktop"
+      }
+    ],
+    "template_cold_setup_ms": {
+      "generate": 394,
+      "list": 4619,
+      "seed": 9029
+    }
+  },
+  "scenario": "WEB-MSG-PARITY-UI",
+  "level": "web",
+  "passed": true,
+  "git_sha": "da32284945fe5f595e96b36f0265c62e66fd193d",
+  "at": "2026-10-27T14:40:00.474795Z",
+  "assertions": [
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 5 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/conversation-parity.spec.ts:26:1 › WEB-MSG-PARITY-UI trusted pin, mute and receipt settings use the captured target and version (9.1s)\n  ✓  2 [chromium-light-desktop] › tests/conversation-parity.spec.ts:49:1 › WEB-MSG-PARITY-UI pin drag changes captured order; Escape leaves order unchanged (6.7s)\n  ✓  3 [chromium-light-desktop] › tests/conversation-parity.spec.ts:71:1 › WEB-MSG-PARITY-UI Recently Deleted recovery and confirmed purge preserve unrelated conversations (12.0s)\n  ✓  4 [chromium-light-desktop] › tests/conversation-parity.spec.ts:101:1 › WEB-MSG-PARITY-UI unproven controls stay hidden and uncertain changes only check the original command (4.8s)\n  ✓  5 [chromium-light-desktop] › tests/conversation-parity.spec.ts:118:1 › WEB-MSG-PARITY-UI trailing swipe offers proven Hide Alerts without opening delete confirmation (5.3s)\n\n  5 passed (1.0m)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
