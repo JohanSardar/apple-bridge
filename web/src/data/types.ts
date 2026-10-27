@@ -30,6 +30,7 @@ export type ChatSummary = {
         sent_at: string;
         is_from_me: boolean;
         sender_handle_id?: string;
+        service?: string;
         preview: {
             kind: 'text' | 'attachments' | 'reaction' | 'group_event' | 'unsent' | 'edited';
             text?: string;

@@ -4,6 +4,7 @@ import type { BridgeRecord, CommandState, Cursor } from '../../data/types';
 import { withInput } from '../../data/input';
 import type { Handles } from '../store/types';
 import { array, text } from '../store/types';
+import { chatService } from '../store/message';
 import { createCapabilities } from '../actions/capabilities';
 import { rawRecipient, recipientKey } from '../compose/recipients';
 
@@ -20,7 +21,7 @@ export function createGroupCommands(live: LiveClient, record: () => BridgeRecord
     const [submission, setSubmission] = createSignal<Submission>();
     const [problem, setProblem] = createSignal('');
     const participants = () => array(record()?.data.participants).filter((id): id is string => typeof id === 'string');
-    const isGroup = () => record()?.data.style === 'group' && record()?.data.service === 'iMessage' && record()?.data.left !== true;
+    const isGroup = () => record()?.data.style === 'group' && chatService(record()) === 'iMessage' && record()?.data.left !== true;
     const eligible = (action: GroupAction) => isGroup() && participants().length >= (action === 'remove_member' || action === 'leave_group' ? 3 : 2);
     const allowed = (action: GroupAction) => eligible(action) && capabilities.allowed('messages.' + action);
     const state = createMemo(() => live.pending().find(command => command.id === submission()?.id));

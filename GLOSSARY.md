@@ -87,6 +87,14 @@ Proof from an authorized read that a principal may open the blobs a record refer
 **Reference set**:
 The blobs protected from collection by records, snapshots and commands.
 
+**Message service**:
+The transport one message used (iMessage, SMS or RCS), read from the message itself; a chat's own service label can differ from its messages'.
+_Avoid_: chat type, protocol
+
+**Conversation service**:
+The service a conversation is using now: its latest message's service, or the chat's label when that is unknown.
+_Avoid_: default service
+
 ## Commands
 
 **Command**:

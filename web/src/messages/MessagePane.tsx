@@ -11,6 +11,7 @@ import type {createMessageCommands} from './actions/commands';
 import Transcript from './transcript/Transcript';
 const MessageActions=lazy(()=>import('./actions/MessageActions').then(module=>({default:module.MessageActions})));
 import type {MessageActionsController} from './actions/reactionActions';
+import {conversationService,partText} from './store/message';
 export default function MessagePane(props:{chatID:string;messageID?:string;title:(value:string)=>void;actions:MessageActionsController;live:LiveClient;commands:ReturnType<typeof createMessageCommands>;session:DeviceSession;uploads:Uploads}){
     const [retryProblem,setRetryProblem]=createSignal('');
     const [retryTarget,setRetryTarget]=createSignal<{id:string;index?:number}>();
@@ -21,9 +22,10 @@ export default function MessagePane(props:{chatID:string;messageID?:string;title
     const [baseline,setBaseline]=createSignal<Cursor>(),[commandID,setCommandID]=createSignal(untrack(()=>commands.statuses(props.chatID).at(-1)?.id??''));
     const reply=()=>{const value=props.actions.replying();return value?.item.data.chat_id===props.chatID?value:undefined;};
     const available=()=>{const observed=baseline(),cursor=chat.cursor();return Boolean(observed&&cursor&&observed.epoch===cursor.epoch&&observed.subscription_revision===cursor.subscription_revision&&commands.capabilities.allowed(reply()?'messages.reply':'messages.send'));};
-    const service=()=>String(chat.data().records?.find(record=>record.id===props.chatID)?.data.service??'');
+    const newest=props.live.subscribe('thread',{chat_id:props.chatID,anchor:'latest',limit:1},{cache:false,resetOnReconnect:true});
+    const service=()=>conversationService(chat.data().records?.find(record=>record.id===props.chatID),newest.data().items?.at(-1));
     const status=()=>commands.statuses().find(command=>command.id===commandID());
-    const quote=()=>{const value=reply();if(!value)return;const part=Array.isArray(value.item.data.parts)?value.item.data.parts.find(part=>part.index===value.partIndex):undefined;return {key:value.item.id+'/'+value.partIndex,text:part?.kind==='text'?String(part.text??''):'Attachment'};};
+    const quote=()=>{const value=reply();if(!value)return;return {key:value.item.id+'/'+value.partIndex,text:partText(value.item,value.partIndex)??'Attachment'};};
     const notice=()=>{const values=[commands.notice(props.chatID),props.actions.notice(props.chatID)].filter(value=>value!==undefined);return values.length?{count:values.reduce((sum,value)=>sum+value.count,0),command_ids:[...new Set(values.flatMap(value=>value.command_ids))],text:values.map(value=>value.text).join(' · ')}:undefined;};
     const check=(id:string)=>{if(commands.statuses().some(command=>command.id===id))commands.check(id);else props.actions.checkID(id);};
     const canRetry=(id:string,index?:number)=>props.commands.canRetry(id,index,props.commands.localFile(id,index)?.upload);
@@ -37,7 +39,7 @@ export default function MessagePane(props:{chatID:string;messageID?:string;title
     });
     createEffect(()=>{if(props.live.status()!=='connected')setBaseline();});
     createEffect(()=>{const record=chat.data().records?.find(record=>record.id===props.chatID),cursor=chat.cursor();untrack(()=>props.actions.changes.observeChat(record,cursor));});
-    onCleanup(()=>{chat.dispose();props.actions.leaveChat(props.chatID);if(reply())props.actions.cancelReply();});
+    onCleanup(()=>{chat.dispose();newest.dispose();props.actions.leaveChat(props.chatID);if(reply())props.actions.cancelReply();});
 
     let host!:HTMLDivElement,press:{event:PointerEvent;item:ThreadItem;anchor:HTMLElement;x:number;y:number}|undefined,timer:ReturnType<typeof setTimeout>|undefined,held:{anchor:HTMLElement;until:number}|undefined;
     let pendingShortcut:{event:KeyboardEvent;id:string;mode:'react'|'reply'|'edit';revealed?:boolean}|undefined,cancelLatest:(()=>void)|undefined,shortcutTimer:ReturnType<typeof setTimeout>|undefined,shortcutFrame=0;
