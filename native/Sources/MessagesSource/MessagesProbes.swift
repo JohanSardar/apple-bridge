@@ -100,7 +100,7 @@ public enum MessagesProbes {
             AXValueGetValue(unsafeDowncast(size, to: AXValue.self), .cgSize, &dimensions)
             let x = Int(origin.x + dimensions.width / 2)
             let y = Int(origin.y + dimensions.height / 2)
-            let code = MessagesAppleScript.execute("tell application \"System Events\" to tell process \"Messages\" to click at {" + String(x) + "," + String(y) + "}")
+            let code = MessagesAppleScript.execute(MessagesUIScript.click(CGPoint(x: x, y: y)))
             return ["apple_event_error": code, "cancel_count": matches.count]
         case "keychain-state":
             return try keychainState()
@@ -251,7 +251,7 @@ public enum MessagesProbes {
         }
         guard AXIsProcessTrusted() else { throw ProbeFailure.unavailable }
         if arguments.contains("--compose") {
-            let code = MessagesAppleScript.execute("tell application \"Messages\" to activate\ntell application \"System Events\" to tell process \"Messages\" to key code 45 using {command down}")
+            let code = MessagesAppleScript.execute("tell application \"Messages\" to activate\n" + MessagesUIScript.keys([45], command: true))
             guard code == 0 else { return ["state": "unavailable", "apple_event_error": code] }
         }
         var components = URLComponents()
@@ -270,7 +270,7 @@ public enum MessagesProbes {
         let deadline = Date().addingTimeInterval(3)
         while Date() < deadline { RunLoop.current.run(until: Date().addingTimeInterval(0.1)) }
         guard let app = MessagesNavigation.application,
-              NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier else { throw ProbeFailure.unavailable }
+              LiveMessagesUIDriver().frontmostProcess() == app.processIdentifier else { throw ProbeFailure.unavailable }
         let root = AXUIElementCreateApplication(app.processIdentifier)
         AXUIElementSetMessagingTimeout(root, 0.5)
         if let index = arguments.firstIndex(of: "--menu-tag") ?? arguments.firstIndex(of: "--reply-tag"), index + 1 < arguments.count {
@@ -307,7 +307,7 @@ public enum MessagesProbes {
             AXValueGetValue(unsafeDowncast(position, to: AXValue.self), .cgPoint, &origin)
             AXValueGetValue(unsafeDowncast(size, to: AXValue.self), .cgSize, &dimensions)
             let point = CGPoint(x: origin.x + dimensions.width / 2, y: origin.y + dimensions.height / 2)
-            let script = "tell application \"System Events\"\ntell process \"Messages\"\nset frontmost to true\nkey down control\ntry\nclick at {" + String(Int(point.x)) + "," + String(Int(point.y)) + "}\non error\nkey up control\nerror number -1\nend try\nkey up control\nend tell\nend tell"
+            let script = MessagesUIScript.controlClick(point, dismissFirst: false)
             let code = MessagesAppleScript.execute(script)
             guard code == 0 else { return ["state": "unavailable", "apple_event_error": code] }
             RunLoop.current.run(until: Date().addingTimeInterval(0.3))

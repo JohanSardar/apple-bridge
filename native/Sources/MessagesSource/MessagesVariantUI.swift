@@ -29,14 +29,9 @@ enum MessagesVariantUI {
         }
         return walk(root)
     }
-    static func focused(_ root: AXUIElement, editor: AXUIElement) -> Bool {
-        var current:CFTypeRef?
-        guard AXUIElementCopyAttributeValue(root,kAXFocusedUIElementAttribute as CFString,&current) == .success,let current,CFGetTypeID(current)==AXUIElementGetTypeID() else { return false }
-        return CFEqual(current,editor)
-    }
-    static func root() throws -> (AXUIElement,pid_t) {
-        guard AXIsProcessTrusted(),NSEvent.modifierFlags.intersection([.command,.control,.option,.shift]).isEmpty,let app=MessagesNavigation.application,NSWorkspace.shared.frontmostApplication?.processIdentifier==app.processIdentifier else { throw SourceFailure.conflict }
-        let root=AXUIElementCreateApplication(app.processIdentifier);AXUIElementSetMessagingTimeout(root,0.25);return (root,app.processIdentifier)
+    static func uiSession() throws -> MessagesUISession {
+        guard NSEvent.modifierFlags.intersection([.command,.control,.option,.shift]).isEmpty else { throw SourceFailure.conflict }
+        return try MessagesUISession.frontmost()
     }
     static func press(_ element: AXUIElement) throws {
         guard AXUIElementPerformAction(element,kAXPressAction as CFString) == .success else { throw SendVariantFailure.automationDenied }
@@ -46,9 +41,9 @@ enum MessagesVariantUI {
         guard elements.count==1 else { throw failure };return elements[0]
     }
     static func menu(_ title: String) throws {
-        let (root,_)=try root()
-        try press(try unique(find(root,role:kAXMenuBarItemRole,name:"Format"),failure:.formatMenuUnavailable))
-        try press(try unique(find(root,role:kAXMenuItemRole,name:title),failure:.formatMenuUnavailable))
+        let application=try uiSession().root
+        try press(try unique(find(application,role:kAXMenuBarItemRole,name:"Format"),failure:.formatMenuUnavailable))
+        try press(try unique(find(application,role:kAXMenuItemRole,name:title),failure:.formatMenuUnavailable))
     }
     static func send(_ args: JSON, target: String, targetData: JSON = .null, expiresAt: Date = Date().addingTimeInterval(30)) throws {
         if NSRunningApplication.runningApplications(withBundleIdentifier:"com.apple.systemevents").isEmpty {
@@ -72,18 +67,15 @@ enum MessagesVariantUI {
         try MessagesNavigation.open(destination)
         RunLoop.current.run(until:Date().addingTimeInterval(1))
         try MessagesAccessibility.validate(Prepared(nativeState:.object(["target":targetData]),fingerprint:"",action:.object(["op":.string("messages.send"),"native_key":.string(target)])))
-        let (application,pid)=try root(),editor=try unique(find(application,identifier:"messageBodyField"),failure:.composerUnavailable)
+        let session=try uiSession(),application=session.root,editor=try unique(find(application,identifier:"messageBodyField"),failure:.composerUnavailable)
         guard value(editor,kAXValueAttribute).isEmpty else { throw SendVariantFailure.draftPresent }
         var sendStarted=false
         defer {
-            if !sendStarted,NSWorkspace.shared.frontmostApplication?.processIdentifier==pid,value(editor,kAXValueAttribute)==args["text"].string {
-                if AXUIElementSetAttributeValue(editor,kAXFocusedAttribute as CFString,kCFBooleanTrue) == .success,focused(application,editor:editor) {
-                    _=MessagesAppleScript.execute("tell application \"System Events\" to tell process \"Messages\" to key code 0 using {command down}")
-                    if NSWorkspace.shared.frontmostApplication?.processIdentifier==pid,focused(application,editor:editor),value(editor,kAXValueAttribute)==args["text"].string { _=MessagesAppleScript.execute("tell application \"System Events\" to tell process \"Messages\" to key code 51") }
-                }
+            if !sendStarted,(try? session.fence()) != nil,value(editor,kAXValueAttribute)==args["text"].string,(try? session.focus(editor,failure:SendVariantFailure.composerUnavailable)) != nil {
+                if (try? session.press(0,command:true)) != nil,session.focused(editor),value(editor,kAXValueAttribute)==args["text"].string { try? session.press(51) }
             }
         }
-        try MessagesAccessibility.replace(application,text:args["text"].string)
+        try MessagesAccessibility.replace(session,text:args["text"].string)
         if kind=="schedule" {
             let buttons=find(application,role:kAXButtonRole).filter { ["Apps","Add","Show Apps"].contains(value($0,kAXDescriptionAttribute)) || ["AppsButton","AppDrawerButton"].contains(value($0,kAXIdentifierAttribute)) }
             try press(try unique(buttons,failure:.scheduleDateControlsUnverified))
@@ -113,11 +105,12 @@ enum MessagesVariantUI {
             let label=variant["effect"].string=="invisible-ink" ? "Invisible Ink":variant["effect"].string.capitalized
             try press(try unique(find(application,name:label),failure:.effectPickerUnavailable))
         } else { throw SendVariantFailure.invalidVariant }
-        guard NSWorkspace.shared.frontmostApplication?.processIdentifier==pid,value(editor,kAXValueAttribute)==args["text"].string else { throw SendVariantFailure.draftChanged }
+        guard (try? session.fence()) != nil,value(editor,kAXValueAttribute)==args["text"].string else { throw SendVariantFailure.draftChanged }
         try MessagesAccessibility.validate(Prepared(nativeState:.object(["target":targetData]),fingerprint:"",action:.object(["op":.string("messages.send"),"native_key":.string(target)])))
-        guard AXUIElementSetAttributeValue(editor,kAXFocusedAttribute as CFString,kCFBooleanTrue) == .success,focused(application,editor:editor) else { throw SendVariantFailure.composerUnavailable }
+        try session.focus(editor,failure:SendVariantFailure.composerUnavailable)
         guard Date()<expiresAt else { throw SourceFailure.expired }
+        try session.fence()
         sendStarted=true
-        guard MessagesAppleScript.execute("tell application \"System Events\" to tell process \"Messages\" to key code 36")==0 else { throw SendVariantFailure.sendReceiptUnknown }
+        guard session.driver.systemEvents(MessagesUIScript.keys([MessagesUISession.enter]))==0 else { throw SendVariantFailure.sendReceiptUnknown }
     }
 }

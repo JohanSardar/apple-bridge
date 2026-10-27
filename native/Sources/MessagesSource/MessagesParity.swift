@@ -35,31 +35,29 @@ public enum MessagesParity {
         return decoded
     }
     @UIActor
-    static func menu(_ prepared: Prepared) throws -> (AXUIElement, Set<String>) {
-        let (root, pid) = try MessagesAccessibility.rootApplication()
+    static func menu(_ prepared: Prepared) throws -> (MessagesUISession, Set<String>) {
+        let session = try MessagesAccessibility.uiSession(), root = session.root
         let row = try MessagesAccessibility.target(root, prepared: prepared)
-        try MessagesAccessibility.contextMenu(row, pid: pid)
+        try MessagesAccessibility.contextMenu(row, session: session)
         var budget = 4000
         let items = MessagesAccessibility.matching(root, budget: &budget) { MessagesAccessibility.value($0, kAXRoleAttribute) == kAXMenuItemRole }
         guard budget > 0 else { throw SourceFailure.conflict }
-        return (root, Set(items.map { MessagesAccessibility.value($0, kAXTitleAttribute) }))
+        return (session, Set(items.map { MessagesAccessibility.value($0, kAXTitleAttribute) }))
     }
     @UIActor
-    static func dismiss() throws {
-        guard MessagesAppleScript.execute("tell application id \"com.apple.systemevents\" to tell process \"Messages\" to key code 53") == 0 else { throw SourceFailure.conflict }
-    }
+    static func dismiss(_ session: MessagesUISession) throws { try session.press(MessagesUISession.escape) }
     @UIActor
     static func mute(_ prepared: Prepared, value: Bool) throws {
-        let (root, titles) = try menu(prepared)
+        let (session, titles) = try menu(prepared)
         let action = value ? "Hide Alerts" : "Show Alerts"
         let opposite = value ? "Show Alerts" : "Hide Alerts"
-        guard titles.contains(action) != titles.contains(opposite) else { try? dismiss(); throw SourceFailure.capabilityUnproven }
-        if titles.contains(action) { try MessagesAccessibility.press(root, title: action) } else { try dismiss() }
+        guard titles.contains(action) != titles.contains(opposite) else { try? dismiss(session); throw SourceFailure.capabilityUnproven }
+        if titles.contains(action) { try MessagesAccessibility.press(session, title: action) } else { try dismiss(session) }
         let deadline = Date().addingTimeInterval(3)
         repeat {
             RunLoop.current.run(until: Date().addingTimeInterval(0.1))
-            let (_, after) = try menu(prepared)
-            try dismiss()
+            let (menuSession, after) = try menu(prepared)
+            try dismiss(menuSession)
             if after.contains(opposite) && !after.contains(action) { return }
         } while Date() < deadline
         throw SourceFailure.conflict
@@ -97,14 +95,14 @@ public enum MessagesParity {
         }
         do {
             try MessagesAccessibility.openMessage(prepared.nativeState["message_guid"].string)
-            let (root, pid) = try MessagesAccessibility.rootApplication()
+            let session = try MessagesAccessibility.uiSession(), root = session.root
             let row = try MessagesAccessibility.target(root, prepared: prepared)
-            try MessagesAccessibility.contextMenu(row, pid: pid)
+            try MessagesAccessibility.contextMenu(row, session: session)
             var budget = 4000
             let items = MessagesAccessibility.matching(root, budget: &budget) { MessagesAccessibility.value($0, kAXRoleAttribute) == kAXMenuItemRole }
             let titles = Set(items.map { MessagesAccessibility.value($0, kAXTitleAttribute) })
             guard budget > 0 else { throw SourceFailure.conflict }
-            guard MessagesAppleScript.execute("tell application id \"com.apple.systemevents\" to tell process \"Messages\" to key code 53") == 0 else { throw SourceFailure.conflict }
+            try dismiss(session)
             var steps: [JSON] = []
             for (operation, labels, reason) in [
                 ("messages.pin", ["Pin", "Unpin"], "pinned_order_capture_unproven"),
