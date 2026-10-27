@@ -1,14 +1,17 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[11.37 15.17 10.2] cpus=8 other_heavy=1"
+    "summary": "air: load=[18.92 24.97 22.53] cpu_idle=37% cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M5E19YMN6HC614W3QYSCT16V",
+  "run_id": "run_01M5XQW20SPSB0VT4NQAGHGMR3",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
   "scenario": "MSG-CAPABILITY-MATRIX",
   "level": "sim",
   "passed": true,
-  "git_sha": "ee3cc74aca69aa26cbb097c2a7cdb46751941d88",
-  "at": "2026-10-21T01:30:41.173124Z",
+  "git_sha": "2cb02a219933e847b35563ebd4f2b803494f2803",
+  "at": "2026-10-27T03:53:39.609255Z",
   "assertions": [
     {
       "name": "seed_self_chat",
@@ -79,6 +82,26 @@
       "passed": true
     },
     {
+      "name": "capability_reason_messages.pin",
+      "passed": true
+    },
+    {
+      "name": "capability_reason_messages.mute",
+      "passed": true
+    },
+    {
+      "name": "capability_reason_messages.set_read_receipts",
+      "passed": true
+    },
+    {
+      "name": "capability_reason_messages.recover_chat",
+      "passed": true
+    },
+    {
+      "name": "capability_reason_messages.delete_chat_permanently",
+      "passed": true
+    },
+    {
       "name": "descriptor_messages.send",
       "passed": true
     },
@@ -132,6 +155,26 @@
     },
     {
       "name": "descriptor_messages.leave_group",
+      "passed": true
+    },
+    {
+      "name": "descriptor_messages.pin",
+      "passed": true
+    },
+    {
+      "name": "descriptor_messages.mute",
+      "passed": true
+    },
+    {
+      "name": "descriptor_messages.set_read_receipts",
+      "passed": true
+    },
+    {
+      "name": "descriptor_messages.recover_chat",
+      "passed": true
+    },
+    {
+      "name": "descriptor_messages.delete_chat_permanently",
       "passed": true
     },
     {
