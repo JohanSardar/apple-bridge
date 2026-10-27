@@ -146,6 +146,7 @@ final class MessagesReader {
         data["chat_id"] = chat.isEmpty ? nil : reference("chat", chat)
         data["deleted_at"] = timestamp(row, "capture_deleted_date")
         data["sender_handle_id"] = senderKey.map { reference("handle", $0) }
+        data["service"] = row["service"].isEmpty ? nil : row["service"]
         for (native, field) in [("date", "sent_at"), ("date_delivered", "delivered_at"), ("date_read", "read_at"), ("date_edited", "edited_at"), ("date_retracted", "retracted_at")] { data[field] = timestamp(row, native) }
         for (native, field) in [("reply_to_guid", "reply_to_id"), ("thread_originator_guid", "thread_originator_id")] {
             if !row[native].isEmpty { data[field] = reference("message", targetGUID(row[native])) }
