@@ -277,7 +277,7 @@ func fillSummary(ctx context.Context, tx *sql.Tx, v trust.Visibility, s *contrac
 	}
 	messageID, activityID := message.ID, activity.activityID
 	md := modelFields(message)
-	last := &contracts.LastMessage{ID: message.ID, SentAt: fieldString(md, "sent_at"), IsFromMe: fieldBool(md, "is_from_me"), Preview: contracts.MessagePreview{Kind: "text", Text: fieldString(md, "text")}}
+	last := &contracts.LastMessage{ID: message.ID, SentAt: fieldString(md, "sent_at"), IsFromMe: fieldBool(md, "is_from_me"), Service: fieldString(md, "service"), Preview: contracts.MessagePreview{Kind: "text", Text: fieldString(md, "text")}}
 	if sender := fieldString(md, "sender_handle_id"); sender != "" {
 		last.SenderHandleID = &sender
 	}

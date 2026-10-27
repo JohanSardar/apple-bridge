@@ -4,6 +4,7 @@ import { enterSendIcon } from '../../motion/transcript';
 import { messageCommandLabel } from '../actions/commands';
 import { appearance } from '../../app/preferences';
 import { flushDraft, readDraft, writeDraft } from './drafts';
+import { textService } from '../store/message';
 import './compose.css';
 export type ComposerProps = {
     draftID: string;
@@ -25,7 +26,7 @@ export function Composer(props: ComposerProps) {
     const session = props.session;
     const [text, setText] = createSignal(readDraft(session, props.draftID)), [error, setError] = createSignal('');
     let field!: HTMLTextAreaElement, frame = 0, metrics: { maximum: number; width: number } | undefined;
-    const sms = () => ['SMS', 'RCS'].includes(props.service ?? '');
+    const sms = () => textService(props.service ?? '');
     const content = () => Boolean(text().trim()||props.hasAttachments);
     const bytes = createMemo(() => new TextEncoder().encode(text()).length);
     const valid = () => bytes() <= 65536;

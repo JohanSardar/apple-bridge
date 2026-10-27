@@ -6,7 +6,7 @@ test('ThumbHash decoder rejects malformed and truncated input',()=>{
     for(const value of ['', '!', 'YWJj', 'AAAAAAA=', 'A'.repeat(140)])assert.equal(decodeThumbHash(value),undefined);
 });
 test('ThumbHash decoder consumes the Swift encoder fixtures with bounded geometry',()=>{
-    const fixtures=JSON.parse(readFileSync('lab/fixtures/media/thumbhash.json','utf8')) as {hash:string;width:number;height:number}[];
+    const fixtures=JSON.parse(readFileSync(new URL('../../../../lab/fixtures/media/thumbhash.json',import.meta.url),'utf8')) as {hash:string;width:number;height:number}[];
     for(const fixture of fixtures){const decoded=decodeThumbHash(fixture.hash)!;assert.ok(decoded);assert.equal(decoded.rgba.length,decoded.width*decoded.height*4);assert.equal(Math.max(decoded.width,decoded.height),32);assert.ok(Math.abs(decoded.width/decoded.height-fixture.width/fixture.height)<.25);}
 });
 test('zero AC scales yield a constant image, independently of packed AC values',()=>{

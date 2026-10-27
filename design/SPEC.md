@@ -1053,7 +1053,7 @@ Operations (descriptors in `internal/contracts/operations.go`; available through
   - `title`: display name, or the participants' contact names joined
   - `avatar_handles`: up to 3 handle ids with `contact_id`
   - `known_sender`: boolean matching the Known Senders server filter: native known classification (including its default), or a non-deleted participant handle with a contact link. Derived from the already-loaded full participant handle set, including members beyond the three avatar handles. Contact visibility does not change this membership bit; it never exposes contact names or IDs.
-  - `last_message`: `{id, sent_at, is_from_me, sender_handle_id?, preview{group_event?, kind: text|attachments|reaction|group_event|unsent|edited, text?, attachment_kinds?, count?, reaction?}}`
+  - `last_message`: `{id, sent_at, is_from_me, sender_handle_id?, service?, preview{group_event?, kind: text|attachments|reaction|group_event|unsent|edited, text?, attachment_kinds?, count?, reaction?}}`
   - `last_activity_at`, `unread_count`, `has_unseen_mention` (from captured message flags)
   - `muted` and `pinned_index`, nullable where native state is unavailable
   - `pin_preview`: `{message_id, text_preview, at} | null`, the latest unread incoming message with text bounded to 200 Unicode code points plus an ellipsis, maintained by the read model’s existing deltas. The UI reads this field directly and never pages through a thread to construct a pin bubble.

@@ -1,5 +1,6 @@
 import type { BridgeRecord, ThreadItem } from '../../data/types';
-import { array, fields, messageParts, sender, text, type Handles, type Part } from '../store/types';
+import { array, fields, text, type Handles, type Part } from '../store/types';
+import { messageParts, messageService, nativeParts, sender } from '../store/message';
 import { groupEvent, headerParts, name, time, wording, type HeaderParts } from '../format';
 import { attachmentHasAlpha } from '../media/source';
 import {pendingGeometryKnown,type PendingAttachment} from '../media/pending';
@@ -130,7 +131,7 @@ export function layout(items: readonly ThreadItem[], handles: Handles, prefs: La
         let height=gap+(dateHeader?transcriptSpacing.dateLine+transcriptSpacing.afterHeader:0)+(senderName?transcriptSpacing.senderLine+transcriptSpacing.senderNameGap:0)+(reply&&reply!==item.id?26:0);
         height+=system?30:bubbles.reduce((sum,bubble,index)=>sum+bubble.height+(bubble.reactions.length?transcriptSpacing.reactionTop:0)+(index?transcriptSpacing.partGap:0),0);
         height+=(label?effectLineHeight:0)+(edited?22:0)+(commandStatus?44:(receipt?20:0)+(failed?20:0))+(item.reply_count?24:0)+history.reduce((sum,version)=>sum+version.height+4,0)+(unsent.length&&visible.length?24:0);
-        const row:TranscriptRow={key:commandRenderKey(item),effectLabel:label,service:text(data.service)||prefs.service||'iMessage',commandStatus,id:item.id,item,height:Math.ceil(height),bubbles,sent,sender:actor,senderName,avatar:prefs.group&&!sent&&last&&!system?handles.get(sender(item))?.initials??'?':undefined,header:dateHeader,headerParts:dateParts,system,receipt:commandStatus?undefined:receipt,edited,history,reply:reply&&reply!==item.id?reply:undefined,failed:!commandStatus&&failed,gap,unsent:unsent.length&&visible.length?wording.unsent(actor):undefined};
+        const row:TranscriptRow={key:commandRenderKey(item),effectLabel:label,service:messageService(item,prefs.service??''),commandStatus,id:item.id,item,height:Math.ceil(height),bubbles,sent,sender:actor,senderName,avatar:prefs.group&&!sent&&last&&!system?handles.get(sender(item))?.initials??'?':undefined,header:dateHeader,headerParts:dateParts,system,receipt:commandStatus?undefined:receipt,edited,history,reply:reply&&reply!==item.id?reply:undefined,failed:!commandStatus&&failed,gap,unsent:unsent.length&&visible.length?wording.unsent(actor):undefined};
         cache?.set(item.id,{item,previous,next,lastSent:isLastSent,expanded:isExpanded,latest,actor,target,initials,row});
         return row;
     });
@@ -145,7 +146,7 @@ function stackImageRows(rows:TranscriptRow[],prefs:LayoutPrefs,maxWidth:number):
         if(bubble.part.kind!=='attachment'||bubble.reactions.length||bubble.floating)return;
         if(row.system||row.edited||row.unsent||row.failed||row.reply||row.item.reply_count||row.commandStatus||text(row.item.data.effect)||text(row.item.data.command_id)||targeted.has(row.id))return;
         const attachment=row.item.attachments?.find(value=>value.id===bubble.part.attachment_id),dimensions=fields(attachment?.data.media);
-        const nativePart=array(row.item.data.parts).map(fields).find(part=>part.attachment_id===attachment?.id),nativeIndex=nativePart?.index;
+        const nativePart=nativeParts(row.item).find(part=>part.attachment_id===attachment?.id),nativeIndex=nativePart?.index;
         if(typeof nativeIndex!=='number'||!Number.isSafeInteger(nativeIndex)||nativeIndex<0||nativeIndex!==bubble.part.index)return;
         if(!attachment||!text(attachment.data.mime_type).startsWith('image/')||dimensions.live===true)return;
         if(Number(dimensions.width)<=24||Number(dimensions.height)<=24)return;
