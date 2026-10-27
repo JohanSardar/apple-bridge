@@ -250,8 +250,8 @@ func (f *fakeApple) messageCommand(wire *applepeer.Wire, frame contracts.IPCFram
 		now := time.Now().UTC()
 		observations := []contracts.Observation{}
 		put := func(collection, key string, data map[string]any, absent bool) {
-			if collection == "message" && !absent {
-				f.messageFacts(data)
+			if !absent {
+				f.observationFacts(collection, data)
 			}
 			raw, _ := json.Marshal(data)
 			kind := "upsert"

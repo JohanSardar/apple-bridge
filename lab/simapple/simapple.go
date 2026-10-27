@@ -305,10 +305,10 @@ func Run(ctx context.Context, cfg Config) error {
 				action.Data, _ = json.Marshal(map[string]any{"title": "[ab-test] " + action.Key, "completed": false, "opaque_number": json.Number("9007199254740993"), "list_id": map[string]any{"$ref": map[string]string{"collection": "reminders.list", "native_key": "list"}}})
 			}
 			o = contracts.Observation{Kind: "upsert", Collection: action.Collection, NativeKey: action.Key, ObservedAt: time.Now().UTC(), Data: action.Data}
-			if o.Collection == "messages.message" {
+			if contracts.CollectionSource(o.Collection) == contracts.Messages {
 				var data map[string]any
 				if json.Unmarshal(o.Data, &data) == nil && data != nil {
-					fake.messageFacts(data)
+					fake.observationFacts(o.Collection, data)
 					o.Data, _ = json.Marshal(data)
 				}
 			}

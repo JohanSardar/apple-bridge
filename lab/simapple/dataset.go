@@ -62,6 +62,13 @@ func (f *fakeApple) datasetRoutes(mux *http.ServeMux) {
 			} else {
 				o.ScopedAlias = o.Collection + "/" + o.NativeKey
 			}
+			if source == contracts.Messages {
+				var fields map[string]any
+				if json.Unmarshal(o.Data, &fields) == nil && fields != nil {
+					f.observationFacts(o.Collection, fields)
+					o.Data, _ = json.Marshal(fields)
+				}
+			}
 			if o.Collection == "messages.attachment" {
 				var data struct {
 					Filename string `json:"filename"`

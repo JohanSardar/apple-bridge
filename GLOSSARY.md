@@ -99,6 +99,10 @@ _Avoid_: default service
 The period, published by the Helper on each of the owner's own iMessages, in which Edit or Undo Send is still possible.
 _Avoid_: edit timeout, grace period
 
+**Record shape**:
+The declared fields, value types and always-present fields of one collection's bridge records; the Messages shapes live in one module that the Helper, SimApplePeer and the demo are checked against.
+_Avoid_: schema, model
+
 ## Commands
 
 **Command**:
