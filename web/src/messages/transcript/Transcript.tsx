@@ -11,7 +11,8 @@ import { beginWork } from '../../motion/work';
 import { createThreadWindow } from '../store/thread';
 import { createHandlesCache } from '../store/handles';
 import { names, wording } from '../format';
-import { array, fields, messageParts, sender, text } from '../store/types';
+import { array, fields, text } from '../store/types';
+import { chatService, messageParts, sender } from '../store/message';
 import { commandPartIndex, commandRenderKey, createTranscriptLayout, type TranscriptRow } from './layout';
 import { MessageRow } from './Bubble';
 import { createTextMeasurer } from './measure';
@@ -105,7 +106,7 @@ export default function Transcript(props:TranscriptProps){
     createEffect(()=>{handles.ensure([...participants(),...thread.items().flatMap(item=>{const event=fields(item.data.group_event);return[sender(item),text(event.actor_handle_id),text(event.target_handle_id),text(event.handle_id),...(item.reactions??[]).map(sender)];})]);});
     createEffect(()=>{const data=record()?.data,map=handleMap();if(data)props.title(text(data.display_name)||names(participants().map(id=>map.get(id)?.display_name??'Unknown sender'))||'Messages');});
     createEffect(()=>{clearTimeout(loadingTimer);if(thread.loading())loadingTimer=setTimeout(()=>setLoadingVisible(true),150);else setLoadingVisible(false);});
-    const layoutContext=createMemo(()=>JSON.stringify([Boolean(record()),captured().anchor,captured().newer===0,record()?.data.style,record()?.data.service,participants().length]));
+    const layoutContext=createMemo(()=>JSON.stringify([Boolean(record()),captured().anchor,captured().newer===0,record()?.data.style,chatService(record()),participants().length]));
     createEffect(()=>{
         layoutContext();
         const state=untrack(captured),items=displayed(),pending=local(),data=untrack(record)?.data,map=handleMap(),loading=thread.loading(),size=width(),viewport=viewportHeight(),scale=appearance.textSize(),open=expanded(),reduced=reduceMotion();
@@ -122,7 +123,7 @@ export default function Transcript(props:TranscriptProps){
             if(!active)return;
             const finish=beginWork('transcript-layout');
             if(descriptor===undefined){const textNode=container.querySelector<HTMLElement>('.bubble:not(.emoji-only):not(.media-reserved) .message-text')??fontProbe;const style=getComputedStyle(textNode);fonts.watch(style);descriptor=measurer.prepare(style,measurementHost);}
-            const prefs={phone,reduceMotion:reduced,selectedMessageID:props.messageID,viewportHeight:viewport,group:data.style==='group'||participants().length>1,service:text(data.service),atLatest:state.newer===0,now:new Date(),scale,measure:measurer.measure,expanded:open};
+            const prefs={phone,reduceMotion:reduced,selectedMessageID:props.messageID,viewportHeight:viewport,group:data.style==='group'||participants().length>1,service:chatService(record()),atLatest:state.newer===0,now:new Date(),scale,measure:measurer.measure,expanded:open};
             const layoutKey=descriptor+':'+untrack(fontRevision)+':'+textMeasurementRevision;
             if(staged){
                 const started=performance.now();

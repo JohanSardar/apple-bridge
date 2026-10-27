@@ -43,6 +43,7 @@ type LastMessage struct {
 	ID             string         `json:"id"`
 	SentAt         string         `json:"sent_at"`
 	IsFromMe       bool           `json:"is_from_me"`
+	Service        string         `json:"service,omitempty"`
 	Preview        MessagePreview `json:"preview"`
 }
 type PinPreview struct {

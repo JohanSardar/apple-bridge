@@ -10,6 +10,7 @@ import type {PendingAttachment} from '../media/pending';
 import {PendingMedia} from '../media/PendingMedia';
 import {takeForward,discardDraft} from './drafts';
 import { createRecipientHistory } from './history';
+import { conversationService, textService } from '../store/message';
 import { lookupRecipients, rawRecipient, recipientKey, recipientOptions, type Recipient } from './recipients';
 import './new-message.css';
 const Transcript = lazy(() => import('../transcript/Transcript'));
@@ -30,7 +31,7 @@ export default function NewMessage(props: {commands:ReturnType<typeof createMess
     const latest = () => commands.statuses().find(command => command.id === commandID());
     const history = createRecipientHistory(live,() => recipients().map(recipient => recipient.value));
     const knownChat = createMemo(() => history.rows()[0]);
-    const service = () => String(knownChat()?.chat.data.service ?? '');
+    const service = () => conversationService(knownChat()?.chat, knownChat()?.last_message);
     const existing = () => commandID() && !startedChat() && !['observed','delivered'].includes(latest()?.status ?? '') ? undefined : knownChat();
     const capable = () => commands.capabilities.allowed('messages.send');
     const blocked = () => recipients().length !== 1 || Boolean(commandID());
@@ -94,7 +95,7 @@ export default function NewMessage(props: {commands:ReturnType<typeof createMess
                     else if (event.key === 'Backspace' && !query()) setRecipients(values => values.slice(0,-1));
                 }}/>
             </div>
-            <Show when={recipients().length === 1}><span class="recipient-service" classList={{imessage:service() === 'iMessage',text:['SMS','RCS'].includes(service())}} role="status" aria-label="Message service">{history.ready() || history.failed() ? service() || 'Unknown' : 'Checking history…'}</span></Show>
+            <Show when={recipients().length === 1}><span class="recipient-service" classList={{imessage:service() === 'iMessage',text:textService(service())}} role="status" aria-label="Message service">{history.ready() || history.failed() ? service() || 'Unknown' : 'Checking history…'}</span></Show>
             <Show when={open() && options().length}><ul id="recipient-options" class="recipient-options glass" role="listbox" aria-label="Contacts"><For each={options()}>{(option,index) => <li id={'recipient-option-'+index()} role="option" aria-selected={active() === index()} onPointerDown={event => event.preventDefault()} onClick={() => choose(option)}><strong>{option.display_name}</strong><span>{option.label ? option.label+' · ' : ''}{option.value}</span></li>}</For></ul></Show>
         </div>
         <Show when={lookupHint()}><p class="recipient-hint" role="status">{lookupHint()}</p></Show>

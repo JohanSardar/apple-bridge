@@ -3,6 +3,7 @@ import type { LiveClient } from '../../data/live';
 import type { BridgeRecord, CommandState } from '../../data/types';
 import { withInput } from '../../data/input';
 import { createCapabilities } from '../actions/capabilities';
+import { chatService } from '../store/message';
 export type ParityOperation = 'pin' | 'mute' | 'set_read_receipts' | 'recover_chat' | 'delete_chat_permanently';
 const operations: readonly ParityOperation[] = ['pin', 'mute', 'set_read_receipts', 'recover_chat', 'delete_chat_permanently'];
 const kind = (command: CommandState) => operations.includes(command.op.replace(/^messages\./u, '') as ParityOperation);
@@ -29,7 +30,7 @@ export function createParityCommands(live: LiveClient, targets: () => readonly s
         const deleted = Boolean(record.data.deleted_at);
         if (deleted !== ['recover_chat', 'delete_chat_permanently'].includes(operation)) return false;
         if (operation === 'mute' && capturedMute(record) === undefined) return false;
-        if (operation === 'set_read_receipts' && (record.data.service !== 'iMessage' || !['default', 'on', 'off'].includes(String(record.data.read_receipts)))) return false;
+        if (operation === 'set_read_receipts' && (chatService(record) !== 'iMessage' || !['default', 'on', 'off'].includes(String(record.data.read_receipts)))) return false;
         return true;
     };
     const can = (operation: ParityOperation, record: BridgeRecord | undefined) => {

@@ -4,6 +4,7 @@ import { withInput } from '../../data/input';
 import type { CommandPart, CommandState, Cursor, ThreadItem } from '../../data/types';
 import { createCapabilities } from './capabilities';
 import { matchesHeldText } from './heldText';
+import { nativeParts } from '../store/message';
 import type {PendingAttachment} from '../media/pending';
 export type LocalMessageFile = {file:File;attachment:PendingAttachment;upload:MessageFile;expires_at:string};
 export type MessageFile = { upload_id: string; name: string };
@@ -174,8 +175,8 @@ export function createMessageCommands(live: LiveClient) {
         return id;
     });
     const reply=(event:Event,target:ThreadItem,partIndex:number,text:string)=>withInput(event,()=>{
-        const parts=Array.isArray(target.data.parts)?target.data.parts:[];
-        if(!capabilities.allowed('messages.reply')||target.collection!=='messages.message'||target.version<1||target.id.startsWith('command:')||target.data.retracted_at||target.data.deleted_at||typeof target.data.chat_id!=='string'||!target.data.chat_id||!Number.isSafeInteger(partIndex)||partIndex<0||!parts.some(part=>part?.index===partIndex)||Array.isArray(target.data.retracted_parts)&&target.data.retracted_parts.includes(partIndex)||!text.trim()||new TextEncoder().encode(text).length>65536)throw new Error('Reply unavailable');
+        const parts=nativeParts(target);
+        if(!capabilities.allowed('messages.reply')||target.collection!=='messages.message'||target.version<1||target.id.startsWith('command:')||target.data.retracted_at||target.data.deleted_at||typeof target.data.chat_id!=='string'||!target.data.chat_id||!Number.isSafeInteger(partIndex)||partIndex<0||!parts.some(part=>part.index===partIndex)||Array.isArray(target.data.retracted_parts)&&target.data.retracted_parts.includes(partIndex)||!text.trim()||new TextEncoder().encode(text).length>65536)throw new Error('Reply unavailable');
         const id=live.command('messages.reply',{id:target.id,part_index:partIndex,text});
         replies.set(id,{target:{...target,data:{...target.data}},partIndex});
         addEchoes(id,{chat_id:String(target.data.chat_id??''),text},{reply_to_id:target.id,thread_originator_id:typeof target.data.thread_originator_id==='string'&&target.data.thread_originator_id?target.data.thread_originator_id:target.id});

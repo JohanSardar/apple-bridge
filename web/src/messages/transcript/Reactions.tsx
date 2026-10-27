@@ -5,7 +5,8 @@ import {bubbleSilhouette} from './shape';
 import type {BridgeRecord} from '../../data/types';
 import {Icon} from '../../design/Icon';
 import {name,wording} from '../format';
-import {sender,text,type Handles} from '../store/types';
+import {text,type Handles} from '../store/types';
+import {sender} from '../store/message';
 const symbols:Record<string,string>={love:'❤️',like:'👍',dislike:'👎',laugh:'😂',emphasize:'‼️',question:'❓'};
 function symbol(reaction:BridgeRecord){const kind=text(reaction.data.kind);return kind==='emoji'?text(reaction.data.emoji)||'Reaction':Object.hasOwn(symbols,kind)?symbols[kind]:kind==='sticker'?'Sticker':'Reaction';}
 function identity(reaction:BridgeRecord){const data=reaction.data;return [data.kind,data.kind==='emoji'?data.emoji:data.kind==='sticker'?data.sticker_id??data.attachment_id:''].join(':');}

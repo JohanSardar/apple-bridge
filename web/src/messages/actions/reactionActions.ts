@@ -5,6 +5,7 @@ import {withInput} from '../../data/input';
 import {createMessageChanges} from './messageChanges';
 import {createMessageManagement} from './messageManagement';
 import {attachmentOriginal,saveAttachment} from '../media/files';
+import {nativeParts,partAttachmentID} from '../store/message';
 export const classicReactions = [
     {kind:'love',label:'Love',symbol:'❤️'},{kind:'like',label:'Like',symbol:'👍'},
     {kind:'dislike',label:'Dislike',symbol:'👎'},{kind:'laugh',label:'Laugh',symbol:'😂'},
@@ -17,10 +18,6 @@ const final=new Set(['observed','delivered','failed','rejected','expired']);
 const observed=(command:CommandState)=>['observed','delivered'].includes(command.status);
 const uncertain=(command:CommandState|undefined)=>command?.status==='indeterminate'||command?.status==='delivery_failed'||command?.disposition==='indeterminate'||command?.disposition==='delivery_failed';
 const family=(choice:ReactionChoice)=>choice.kind==='emoji'?'emoji:'+choice.emoji:'classic';
-function nativeParts(item:ThreadItem):{index:number;kind?:string;text?:string}[]{
-    if(Array.isArray(item.data.parts)&&item.data.parts.length)return item.data.parts.filter(part=>part&&typeof part==='object'&&Number.isSafeInteger(part.index)&&part.index>=0);
-    return typeof item.data.text==='string'?[{index:0,kind:'text',text:item.data.text}]:[];
-}
 export function createMessageActions(live:LiveClient,capabilities:{allowed:(operation:string)=>boolean}){
     const [replyTarget,setReplyTarget]=createSignal<{item:ThreadItem;partIndex:number}>();
     const [target,setTarget]=createSignal<ActionTarget>(),[revision,setRevision]=createSignal(0),[error,setError]=createSignal('');
@@ -112,7 +109,7 @@ export function createMessageActions(live:LiveClient,capabilities:{allowed:(oper
         for(const [id] of captured)if(!ids.has(id)&&![...intents.values()].some(intent=>intent.messageID===id)&&target()?.item.id!==id&&replyTarget()?.item.id!==id)captured.delete(id);
         changed();
     };
-    const attachment=()=>{const value=current();if(!value)return;const part=Array.isArray(value.item.data.parts)?value.item.data.parts.find(part=>part.index===value.partIndex):undefined;return part?.attachment_id?value.item.attachments.find(attachment=>attachment.id===part.attachment_id):undefined;};
+    const attachment=()=>{const value=current();if(!value)return;const id=partAttachmentID(value.item,value.partIndex);return id?value.item.attachments.find(attachment=>attachment.id===id):undefined;};
     const canSave=()=>{const value=attachment();return Boolean(value&&attachmentOriginal(value));};
     const save=(event:Event)=>{if(!event.isTrusted)return;const value=attachment();if(!value)return;try{withInput(event,()=>{if(saveAttachment(value))close();else setError("Original attachment is unavailable.");});}catch{setError("Couldn't download this attachment.");}};
     const canForward=()=>Boolean((text()||canSave()&&Number(attachment()?.data.size)<=100*1024*1024)&&live.status()==='connected'&&capabilities.allowed('messages.send'));
