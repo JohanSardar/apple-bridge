@@ -1,18 +1,19 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[3.16 3.81 6.54] cpus=8 other_heavy=0"
+    "summary": "air: load=[11.67 11.5 13.91] cpu_idle=53% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M58DQTB6GPFZT9R7YA9JY7V2",
+  "run_id": "run_01M5YZP0MNSEVNQRXJEYVFMPCE",
   "metrics": {
     "app_days": 1,
+    "capture_observer_resets": 0,
     "devices": 1
   },
   "scenario": "USE-READONLY",
   "level": "sim",
   "passed": true,
-  "git_sha": "e3ed609ac06a6dced68c1fd688462eaaf6566d9a",
-  "at": "2026-10-18T21:12:31.846019Z",
+  "git_sha": "582a8a1943513c7583890c02902d18cc8ee73e50",
+  "at": "2026-10-27T15:29:24.629975Z",
   "assertions": [
     {
       "name": "mac_lock_clipped",
