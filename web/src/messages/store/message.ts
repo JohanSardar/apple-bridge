@@ -8,6 +8,10 @@ export function conversationService(chat: BridgeRecord | undefined, latest: Brid
     return text(service) || chatService(chat);
 }
 export function textService(service: string): boolean { return /^(sms|rcs)$/iu.test(service); }
+export function actionWindowOpen(message: BridgeRecord, action: 'edit' | 'unsend', now: number): boolean {
+    const sent = Date.parse(text(message.data.sent_at)), until = Date.parse(text(message.data[action === 'edit' ? 'edit_until' : 'unsend_until']));
+    return Number.isFinite(sent) && Number.isFinite(until) && now >= sent && now < until;
+}
 export function sender(message: BridgeRecord): string { return text(message.data.sender_handle_id); }
 export function nativeParts(message: BridgeRecord): Part[] {
     const parts = array(message.data.parts);

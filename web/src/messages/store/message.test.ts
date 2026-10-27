@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { chatService, conversationService, messageParts, messageService, messageText, nativeParts, partAttachmentID, partText, sender, textService } from './message.ts';
+import { actionWindowOpen, chatService, conversationService, messageParts, messageService, messageText, nativeParts, partAttachmentID, partText, sender, textService } from './message.ts';
 const record = (data: Record<string, unknown>, collection = 'messages.message') => ({ id: 'record-1', collection, source: 'messages', version: 1, deleted: false, data }) as never;
 const item = (data: Record<string, unknown>, attachments: unknown[] = []) => ({ ...(record(data) as object), reactions: [], attachments, reply_count: 0 }) as never;
 const chat = (service: string) => record({ service }, 'messages.chat');
@@ -29,6 +29,19 @@ test('the conversation service follows the latest message, from a thread item or
     assert.equal(conversationService(chat('SMS'), record({})), 'SMS');
     assert.equal(conversationService(chat('RCS'), null), 'RCS');
     assert.equal(conversationService(undefined, undefined), '');
+});
+
+test('edit and undo send follow the deadlines the Helper published', () => {
+    const sent = Date.parse('2026-10-26T12:00:00.000Z');
+    const message = record({ sent_at: '2026-10-26T12:00:00.000Z', edit_until: '2026-10-26T12:15:00.000Z', unsend_until: '2026-10-26T12:02:00.000Z' });
+    assert.equal(actionWindowOpen(message, 'edit', sent), true);
+    assert.equal(actionWindowOpen(message, 'unsend', sent + 119999), true);
+    assert.equal(actionWindowOpen(message, 'unsend', sent + 120000), false);
+    assert.equal(actionWindowOpen(message, 'edit', sent + 899999), true);
+    assert.equal(actionWindowOpen(message, 'edit', sent + 900000), false);
+    assert.equal(actionWindowOpen(message, 'edit', sent - 1), false);
+    assert.equal(actionWindowOpen(record({ sent_at: '2026-10-26T12:00:00.000Z', unsend_until: '2026-10-26T12:02:00.000Z' }), 'edit', sent), false);
+    assert.equal(actionWindowOpen(record({ sent_at: '2026-10-26T12:00:00.000Z' }), 'unsend', sent), false);
 });
 
 test('chat-level settings read the chat label', () => {

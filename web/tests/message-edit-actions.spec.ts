@@ -2,6 +2,7 @@ import { test, expect, type BrowserContext, type Page } from '@playwright/test';
 import { control } from './session';
 let cookies: Parameters<BrowserContext['addCookies']>[0] = [], chat = '';
 test.beforeAll(async ({request}) => { cookies = [(await control(request,'/session')).cookie]; chat = (await control(request,'/demo-fixtures'))['message-chat']; });
+function published(record:any,sent:number){record.data.sent_at=new Date(sent).toISOString();record.data.edit_until=new Date(sent+900000).toISOString();record.data.unsend_until=new Date(sent+120000).toISOString();}
 async function fixture(page:Page,context:BrowserContext,holdProof=false,mutate?:(record:any)=>void) {
     await page.goto(new URL(cookies[0].url!).origin);
     await expect(page.getByRole('heading',{name:'Sign in with a passkey',exact:true})).toBeVisible();
@@ -112,17 +113,17 @@ test('WEB-MSG-EDIT WEB-MSG-UNSEND fresh proof reveals changes; synthetic Undo Se
     expect(f.commands.filter(command=>command.op==='messages.unsend')).toHaveLength(0);
 });
 for(const [name,change] of [
-    ['received',(record:any)=>{if(record.collection==='messages.message')record.data.is_from_me=false;}],
+    ['received',(record:any)=>{if(record.collection==='messages.message'){record.data.is_from_me=false;delete record.data.edit_until;delete record.data.unsend_until;}}],
     ['future',(record:any)=>{if(record.collection==='messages.message')record.data.sent_at=new Date(Date.now()+60000).toISOString();}],
-    ['expired',(record:any)=>{if(record.collection==='messages.message')record.data.sent_at=new Date(Date.now()-901000).toISOString();}],
-    ['sms',(record:any)=>{if(record.collection==='messages.chat')record.data.service='SMS';}],
+    ['expired',(record:any)=>{if(record.collection==='messages.message')published(record,Date.now()-901000);}],
+    ['sms',(record:any)=>{if(record.collection==='messages.message'){record.data.service='SMS';delete record.data.edit_until;delete record.data.unsend_until;}}],
 ] as const)test('WEB-MSG-EDIT WEB-MSG-UNSEND '+name+' capture hides both actions',async({page,context})=>{
     const f=await fixture(page,context,false,change),{menu}=await openMain(page,f);
     await expect(menu).toBeVisible();await expect(menu.getByRole('button',{name:'Edit',exact:true})).toHaveCount(0);await expect(menu.getByRole('button',{name:'Undo Send',exact:true})).toHaveCount(0);
     expect(f.commands.filter(command=>['messages.edit','messages.unsend'].includes(command.op))).toHaveLength(0);
 });
 test('WEB-MSG-EDIT WEB-MSG-UNSEND five edits and elapsed undo window hide their respective actions',async({page,context})=>{
-    const f=await fixture(page,context,false,record=>{if(record.collection==='messages.message'){record.data.sent_at=new Date(Date.now()-121000).toISOString();record.data.edit_history=Array.from({length:5},()=>({text:'[ab-test actions] previous version'}));}}),{menu}=await openMain(page,f);
+    const f=await fixture(page,context,false,record=>{if(record.collection==='messages.message'){published(record,Date.now()-121000);delete record.data.edit_until;record.data.edit_history=Array.from({length:5},()=>({text:'[ab-test actions] previous version'}));}}),{menu}=await openMain(page,f);
     await expect(menu).toBeVisible();await expect(menu.getByRole('button',{name:'Edit',exact:true})).toHaveCount(0);await expect(menu.getByRole('button',{name:'Undo Send',exact:true})).toHaveCount(0);
 });
 test('WEB-MSG-EDIT Check reconciles a lost edit result by original ID without another edit',async({page,context,request})=>{
@@ -172,7 +173,7 @@ test('WEB-MSG-EDIT reader Reply closes the reader and focuses the real main Comp
 });
 
 test('WEB-MSG-EDIT WEB-MSG-UNSEND an elapsed undo window still permits Edit before fifteen minutes',async({page,context})=>{
-    const f=await fixture(page,context,false,record=>{if(record.collection==='messages.message')record.data.sent_at=new Date(Date.now()-121000).toISOString();}),{menu}=await openMain(page,f);
+    const f=await fixture(page,context,false,record=>{if(record.collection==='messages.message')published(record,Date.now()-121000);}),{menu}=await openMain(page,f);
     await expect(menu.getByRole('button',{name:'Edit',exact:true})).toBeVisible();await expect(menu.getByRole('button',{name:'Undo Send',exact:true})).toHaveCount(0);
 });
 test('WEB-MSG-EDIT WEB-MSG-UNSEND an uncertain Undo Send is reconciled without a second unsend',async({page,context,request})=>{
