@@ -1,17 +1,17 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[18.92 24.97 22.53] cpu_idle=37% cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[33.73 41.75 28.97] cpu_idle=47% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5XQW20SPSB0VT4NQAGHGMR3",
+  "run_id": "run_01M5Y3HEV3FTVESY9FPRRT32PG",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "MSG-CAPABILITY-MATRIX",
   "level": "sim",
   "passed": true,
-  "git_sha": "2cb02a219933e847b35563ebd4f2b803494f2803",
-  "at": "2026-10-27T03:53:39.609255Z",
+  "git_sha": "b4e5a413b06271297147928411bf4b7b827a7ef9",
+  "at": "2026-10-27T07:17:35.203503Z",
   "assertions": [
     {
       "name": "seed_self_chat",
