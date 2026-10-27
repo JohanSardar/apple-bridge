@@ -53,9 +53,7 @@ func (f *fakeApple) messageRoutes(mux *http.ServeMux) {
 		f.mu.Lock()
 		now := time.Now().UTC()
 		put := func(collection, key string, data map[string]any) {
-			if collection == "message" {
-				f.messageFacts(data)
-			}
+			f.observationFacts(collection, data)
 			raw, _ := json.Marshal(data)
 			f.records[key] = contracts.Observation{Kind: "upsert", Collection: "messages." + collection, NativeKey: key, ScopedAlias: "messages." + collection + "/" + key, ObservedAt: now, Data: raw}
 		}

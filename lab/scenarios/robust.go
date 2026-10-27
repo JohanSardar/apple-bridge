@@ -12,6 +12,7 @@ import (
 
 	"encoding/json"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
+	"github.com/JohanSardar/apple-bridge/lab/demo"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 )
 
@@ -343,6 +344,34 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 		warned, unavailable, warningErr := w.DoctorClockWarnings(w.Replicas[0])
 		add("clock_skew_warning_actionable", warningErr == nil && warned)
 		add("clock_sample_unavailable_warning_actionable", warningErr == nil && unavailable)
+	case "messages-shape":
+		if w.ControlAction("/messages", map[string]any{"action": "seed", "count": 32}) != nil || w.ControlAction("/messages", map[string]any{"action": "incoming", "key": contracts.NewID("shape")}) != nil {
+			return fail("sim_messages_seeded")
+		}
+		if demo.Populate(w, demo.Generate(demo.Options{Seed: 1})) != nil {
+			return fail("demo_dataset_loaded")
+		}
+		if w.Await(30*time.Second, func() bool {
+			report, err := w.Doctor(w.Gateway)
+			records, _ := report["records"].(map[string]any)
+			count, _ := records["messages.message"].(float64)
+			return err == nil && count >= 5000
+		}) != nil {
+			return fail("demo_dataset_captured")
+		}
+		gateway, err := w.Doctor(w.Gateway)
+		shape, ok := gateway["shape"].(map[string]any)
+		if err != nil || !ok {
+			return fail("doctor_reports_messages_shape")
+		}
+		drift := map[string]any{}
+		for key, count := range shape {
+			if !strings.HasSuffix(key, ".title: unknown_field") {
+				drift[key] = count
+			}
+		}
+		evidence.Metrics = map[string]any{"shape": shape, "drift": drift}
+		add("sim_messages_cover_the_helper_shape", len(drift) == 0)
 	case "cred-lifecycle":
 		result, err := w.Credentials()
 		if err != nil {

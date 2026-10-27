@@ -1,0 +1,7 @@
+id: CORE-MESSAGES-SHAPE
+feature: messages.read
+levels: [sim]
+given: [{world: {}}]
+when: [{robustness: {case: messages-shape}}]
+then: []
+cleanup: [{world: {}}]

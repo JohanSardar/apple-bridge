@@ -34,6 +34,7 @@ type DoctorReport struct {
 	Encryption         string            `json:"disk_encryption"`
 	ClockSkew          string            `json:"clock_skew"`
 	Versions           map[string]string `json:"versions"`
+	Shape              map[string]uint64 `json:"shape"`
 }
 
 func Doctor(ctx context.Context, home string) (DoctorReport, error) {
@@ -59,7 +60,11 @@ func Doctor(ctx context.Context, home string) (DoctorReport, error) {
 		}
 		return DoctorReport{}, err
 	}
-	report := DoctorReport{Credentials: credentials, Integrity: integrity, PrivateModes: true, Encryption: "unverified", ClockSkew: "unverified", Versions: map[string]string{"runtime": goruntime.Version(), "ipc": contracts.IPCProtocol, "feed": contracts.FeedProtocol}}
+	shape, err := store.ShapeViolations(ctx)
+	if err != nil {
+		return DoctorReport{}, err
+	}
+	report := DoctorReport{Credentials: credentials, Integrity: integrity, Shape: shape, PrivateModes: true, Encryption: "unverified", ClockSkew: "unverified", Versions: map[string]string{"runtime": goruntime.Version(), "ipc": contracts.IPCProtocol, "feed": contracts.FeedProtocol}}
 	err = filepath.WalkDir(home, func(path string, entry os.DirEntry, err error) error {
 		if err != nil {
 			return err

@@ -195,6 +195,7 @@ features:
       - {id: MSG-DB-REPLACED, levels: [sim]}
       - {id: MSG-WATCHER-REARM, levels: [sim]}
       - {id: MSG-PERMISSION-LOSS, levels: [sim]}
+      - {id: CORE-MESSAGES-SHAPE, levels: [sim]}
   - id: messages.send
     title: Send text and files to self, new handles and existing groups with truthful dispositions
     requirements: [R-RW, R-MSG-DEPTH, R-SAFE-CMD]

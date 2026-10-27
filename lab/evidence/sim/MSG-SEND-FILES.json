@@ -1,9 +1,9 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[21.65 24.86 22.58] cpu_idle=33% cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[19.23 35.55 27.69] cpu_idle=48% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5XQX6ZBS32Y81SK9XGP4E9N",
+  "run_id": "run_01M5Y3KV8BKD62H8F346GE7QT8",
   "metrics": {
     "capture_observer_resets": 0,
     "ipc_file_transport": "private_path_and_digest",
@@ -12,8 +12,8 @@
   "scenario": "MSG-SEND-FILES",
   "level": "sim",
   "passed": true,
-  "git_sha": "2cb02a219933e847b35563ebd4f2b803494f2803",
-  "at": "2026-10-27T03:54:17.484661Z",
+  "git_sha": "b4e5a413b06271297147928411bf4b7b827a7ef9",
+  "at": "2026-10-27T07:18:53.452001Z",
   "assertions": [
     {
       "name": "seed_self_chat",
@@ -135,16 +135,16 @@
   "latency": {
     "mcp_command_to_replica": {
       "samples": 1,
-      "p50_ms": 2004.539791,
-      "p95_ms": 2004.539791,
-      "max_ms": 2004.539791,
+      "p50_ms": 230.721042,
+      "p95_ms": 230.721042,
+      "max_ms": 230.721042,
       "timeouts": 0
     },
     "rest_command_to_replica": {
       "samples": 1,
-      "p50_ms": 792.241958,
-      "p95_ms": 792.241958,
-      "max_ms": 792.241958,
+      "p50_ms": 312.921542,
+      "p95_ms": 312.921542,
+      "max_ms": 312.921542,
       "timeouts": 0
     }
   },
