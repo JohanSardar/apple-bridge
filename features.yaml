@@ -1059,17 +1059,17 @@ features:
     title: Bounded Shortcuts CLI runner
     requirements: [R-RW]
     milestone: M0
-    modules: [internal/shortcut, packaging/shortcuts]
+    modules: [internal/shortcut, packaging/shortcuts, native/Sources/ShortcutsSource]
     depends_on: [core.shortcuts]
     status: limited
-    notes: CLI adapter and signed Echo source only; native capture, command registration, Clock, Focus and file transforms remain unimplemented. Pack import requires leader action.
+    notes: Native inventory and text runner integrated; Clock, Focus, action discovery and file transforms remain unimplemented. Pack import and real qualification require leader action.
     scenarios:
       - {id: SC-CAPTURE, levels: [sim]}
       - {id: SC-RUN, levels: [sim]}
     limits:
       - scenario: SC-CAPTURE
         level: sim
-        reason: Exercises CLI inventory adapter changes; persistent source capture is not yet integrated.
+        reason: Native fixture checks and CLI inventory changes; gateway replication and idle qualification remain unverified.
       - scenario: SC-RUN
         level: sim
-        reason: Exercises subprocess adapter; public shortcuts.run command is not yet integrated.
+        reason: Native and Go subprocess adapters plus command validation; public gateway submission is exercised in sim; file blobs and real pack qualification remain unverified.

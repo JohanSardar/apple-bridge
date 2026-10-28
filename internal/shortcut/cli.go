@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
+	"syscall"
 	"time"
 )
 
@@ -52,10 +54,16 @@ func ParseInventory(raw []byte) ([]Entry, error) {
 	return entries, nil
 }
 
-type boundedOutput struct{ data []byte }
+type boundedOutput struct {
+	data     []byte
+	exceeded func()
+}
 
 func (b *boundedOutput) Write(p []byte) (int, error) {
 	if len(b.data)+len(p) > MaxBytes {
+		if b.exceeded != nil {
+			b.exceeded()
+		}
 		return 0, fmt.Errorf("shortcut output exceeds limit")
 	}
 	b.data = append(b.data, p...)
@@ -82,6 +90,13 @@ func (c CLI) Inventory(ctx context.Context, folders bool, folder string) ([]Entr
 	var output boundedOutput
 	cmd := exec.CommandContext(ctx, c.executable(), args...)
 	cmd.Stdout = &output
+	output.exceeded = func() {
+		if cmd.Process != nil {
+			_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+		}
+	}
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd.Cancel = func() error { return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) }
 	cmd.WaitDelay = time.Second
 	if err := cmd.Run(); err != nil {
 		return nil, fmt.Errorf("shortcuts inventory unavailable")
@@ -117,8 +132,52 @@ func (c CLI) Run(ctx context.Context, input Input) (Result, error) {
 		args = append(args, "--output-type", input.OutputType)
 	}
 	cmd := exec.CommandContext(ctx, c.executable(), args...)
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd.Cancel = func() error { return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) }
 	cmd.WaitDelay = time.Second
-	err = cmd.Run()
+	var overflow bool
+	var overflowMu sync.Mutex
+	killOverflow := func() {
+		overflowMu.Lock()
+		overflow = true
+		overflowMu.Unlock()
+		if cmd.Process != nil {
+			_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+		}
+	}
+	stdout := boundedOutput{exceeded: killOverflow}
+	cmd.Stdout = &stdout
+	if err = cmd.Start(); err != nil {
+		return result, fmt.Errorf("shortcut process unavailable")
+	}
+	defer syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+	done := make(chan struct{})
+	monitored := make(chan struct{})
+	go func() {
+		defer close(monitored)
+		ticker := time.NewTicker(5 * time.Millisecond)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-done:
+				return
+			case <-ticker.C:
+				if info, statErr := os.Lstat(output); statErr == nil && (!info.Mode().IsRegular() || info.Size() > MaxBytes) {
+					killOverflow()
+					return
+				}
+			}
+		}
+	}()
+	err = cmd.Wait()
+	close(done)
+	<-monitored
+	overflowMu.Lock()
+	exceeded := overflow
+	overflowMu.Unlock()
+	if exceeded {
+		return result, fmt.Errorf("shortcut output exceeds limit")
+	}
 	result.TimedOut = errors.Is(ctx.Err(), context.DeadlineExceeded)
 	if cmd.ProcessState != nil {
 		result.ExitStatus = cmd.ProcessState.ExitCode()

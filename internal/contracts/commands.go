@@ -140,6 +140,9 @@ func ValidCommandID(id string) bool {
 }
 
 func ValidateCommand(c Command) (ReminderArgs, error) {
+	if c.Op == "shortcuts.run" {
+		return ReminderArgs{}, ValidateShortcutRun(c)
+	}
 	if strings.HasPrefix(c.Op, "notes.") {
 		a, err := ValidateNoteCommand(c)
 		return ReminderArgs{ID: a.ID}, err

@@ -20,10 +20,12 @@ const (
 	Contacts  Source = "contacts"
 	Notes     Source = "notes"
 	Usage     Source = "usage"
+	Shortcuts Source = "shortcuts"
 	System    Source = "system"
 )
 
 var Collections = map[string]string{
+	"shortcuts.shortcut": "sct", "shortcuts.folder": "scf",
 	"messages.chat": "cht", "messages.handle": "hdl", "messages.message": "msg", "messages.reaction": "rxn", "messages.attachment": "att",
 	"calendar.calendar": "cal", "calendar.event": "evt", "reminders.list": "lst", "reminders.reminder": "rmd", "reminders.attachment": "rat",
 	"contacts.container": "ctn", "contacts.contact": "con", "contacts.group": "grp", "notes.folder": "fld", "notes.note": "nte", "usage.device": "dev", "usage.app_day": "usd", "system.source": "src", "system.command": "cmd", "system.replica": "rpl",
@@ -36,9 +38,10 @@ type OperationCapability struct {
 }
 
 type Coverage struct {
-	Operations []OperationCapability `json:"operations,omitempty"`
-	Fields     string                `json:"fields"`
-	Missing    []string              `json:"missing"`
+	PackVersion string                `json:"pack_version,omitempty"`
+	Operations  []OperationCapability `json:"operations,omitempty"`
+	Fields      string                `json:"fields"`
+	Missing     []string              `json:"missing"`
 }
 
 type Record struct {

@@ -2,8 +2,10 @@ package scenarios
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -12,6 +14,8 @@ import (
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/internal/shortcut"
+	"github.com/JohanSardar/apple-bridge/lab/scripted"
+	"github.com/JohanSardar/apple-bridge/lab/world"
 )
 
 func runShortcutsRunner(ctx context.Context, s Scenario, level string) Evidence {
@@ -49,7 +53,10 @@ while [ "$#" -gt 0 ]; do
 done
 case "$name" in
  fail) exit 7;;
- timeout) echo $$ > "$(dirname "$0")/pid"; exec sleep 30;;
+ flood) yes synthetic > "$output";;
+ stdout-flood) yes synthetic;;
+ timeout) echo $$ > "$(dirname "$0")/pid"; sleep 30 & echo $! > "$(dirname "$0")/child"; wait;;
+ slow) sleep 16; cat "$input" > "$output";;
  binary) printf '\000\001\377' > "$output";;
  *) cat "$input" > "$output";;
 esac
@@ -58,6 +65,29 @@ esac
 	add("fake_cli", err == nil)
 	if err != nil {
 		return e
+	}
+	nativeDirectory, directoryErr := os.ReadFile("native/.build/native-output-1")
+	fresh := directoryErr == nil && shortcutsChecksFresh(filepath.Join(strings.TrimSpace(string(nativeDirectory)), "ShortcutsChecks"))
+	if !fresh {
+		build := exec.CommandContext(ctx, "packaging/dev/build-native.sh")
+		build.Env = append(os.Environ(), "APPLE_BRIDGE_NATIVE_TARGET=ShortcutsChecks")
+		buildOutput, buildErr := build.CombinedOutput()
+		add("native_shortcuts_build", buildErr == nil)
+		if buildErr != nil {
+			os.Stderr.Write(buildOutput)
+			return e
+		}
+		nativeDirectory, directoryErr = os.ReadFile("native/.build/native-output-1")
+	}
+	add("native_shortcuts_output", directoryErr == nil)
+	if directoryErr != nil {
+		return e
+	}
+	check := exec.CommandContext(ctx, filepath.Join(strings.TrimSpace(string(nativeDirectory)), "ShortcutsChecks"), executable, s.ID)
+	nativeOutput, nativeErr := check.CombinedOutput()
+	add("native_source_fixture", nativeErr == nil)
+	if nativeErr != nil {
+		os.Stderr.Write(nativeOutput)
 	}
 	cli := shortcut.CLI{Executable: executable}
 	if s.ID == "SC-CAPTURE" {
@@ -73,6 +103,49 @@ esac
 		add("duplicate_identifiers_rejected", err != nil)
 		return e
 	}
+	descriptor, registered := contracts.Descriptor("shortcuts.run")
+	add("public_command_registered", registered && descriptor.Kind == contracts.CommandOp && descriptor.Scope == "shortcuts:write")
+	args, _ := json.Marshal(contracts.ShortcutRunArgs{Shortcut: "AB Echo", Input: "synthetic", TimeoutMS: 1000})
+	_, validationErr := contracts.ValidateCommand(contracts.Command{ID: "cmd_synthetic", Op: "shortcuts.run", Args: args})
+	add("public_command_validated", validationErr == nil)
+	publicContext := world.WithOptions(ctx, world.Options{Scope: "calendar:read,reminders:read,shortcuts:read,shortcuts:write,system:read"})
+	w, worldErr := world.New(publicContext, level, 0, 0)
+	add("public_gateway_start", worldErr == nil)
+	if worldErr != nil {
+		os.Stderr.WriteString(worldErr.Error() + "\n")
+	}
+	if worldErr == nil {
+		defer w.Close()
+		client := scripted.Client{Endpoint: w.Gateway, Protocol: "rest"}
+		readyErr := w.Await(5*time.Second, func() bool {
+			var version contracts.QueryResult
+			return client.Call(ctx, "helper.version", contracts.Query{Args: json.RawMessage(`{}`)}, &version) == nil
+		})
+		add("public_helper_ready", readyErr == nil)
+		var command contracts.CommandRecord
+		callErr := client.Call(ctx, "shortcuts.run", contracts.Command{ID: contracts.NewCommandID(), Args: args, WaitMS: 15000}, &command)
+		add("public_runner_completion", callErr == nil && command.State == "observed")
+		if callErr != nil {
+			os.Stderr.WriteString("public call: " + callErr.Error() + "\n")
+		}
+		var result struct {
+			Output string `json:"output_base64"`
+		}
+		json.Unmarshal(command.Evidence, &result)
+		add("public_runner_output", result.Output == "c3ludGhldGlj")
+		slowArgs, _ := json.Marshal(contracts.ShortcutRunArgs{Shortcut: "[ab-test slow runner]", Input: "synthetic", TimeoutMS: 20000})
+		slowID := contracts.NewCommandID()
+		started := time.Now()
+		callErr = client.Call(ctx, "shortcuts.run", contracts.Command{ID: slowID, Args: slowArgs, WaitMS: 15000}, &command)
+		add("long_runner_admitted", callErr == nil)
+		waitErr := w.Await(10*time.Second, func() bool {
+			return client.Call(ctx, "commands.status", contracts.CommandQuery{ID: slowID}, &command) == nil && command.State == "observed"
+		})
+		e.Metrics["long_runner_elapsed_ms"] = time.Since(started).Milliseconds()
+		add("gateway_waits_beyond_15_seconds", waitErr == nil && time.Since(started) > 15*time.Second && command.State == "observed")
+
+	}
+
 	for _, input := range [][]byte{[]byte("[ab-test synthetic]"), []byte("https://example.com/synthetic"), {0, 1, 255}} {
 		result, err := cli.Run(ctx, shortcut.Input{Shortcut: "echo", Data: input})
 		add("input_output_bytes", err == nil && result.ExitStatus == 0 && string(result.Data) == string(input))
@@ -91,9 +164,41 @@ esac
 		gone = errors.Is(syscall.Kill(pid, 0), syscall.ESRCH)
 	}
 	add("timeout_process_reaped", result.ExitStatus == -1 && gone)
+	childRaw, childErr := os.ReadFile(filepath.Join(dir, "child"))
+	child, childParse := strconv.Atoi(strings.TrimSpace(string(childRaw)))
+	time.Sleep(100 * time.Millisecond)
+	add("timeout_descendant_killed", childErr == nil && childParse == nil && errors.Is(syscall.Kill(child, 0), syscall.ESRCH))
+	for _, name := range []string{"flood", "stdout-flood"} {
+		start := time.Now()
+		_, err := cli.Run(ctx, shortcut.Input{Shortcut: name, Timeout: 10 * time.Second})
+		add(name+"_bounded_while_running", err != nil && !errors.Is(err, context.DeadlineExceeded) && time.Since(start) < 5*time.Second)
+	}
 	_, err = cli.Run(ctx, shortcut.Input{Shortcut: "--help"})
 	add("option_injection_rejected", err != nil)
 	_, err = cli.Run(ctx, shortcut.Input{Shortcut: "echo", Data: make([]byte, shortcut.MaxBytes+1)})
 	add("oversized_input_rejected", err != nil)
 	return e
+}
+
+func shortcutsChecksFresh(path string) bool {
+	binary, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+	for _, input := range []string{"native/Package.swift", "native/Sources/ShortcutsChecks", "native/Sources/ShortcutsSource", "native/Sources/SourceSupport"} {
+		fresh := true
+		err := filepath.Walk(input, func(_ string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if !info.IsDir() && info.ModTime().After(binary.ModTime()) {
+				fresh = false
+			}
+			return nil
+		})
+		if err != nil || !fresh {
+			return false
+		}
+	}
+	return true
 }

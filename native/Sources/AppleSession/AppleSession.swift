@@ -490,7 +490,9 @@ let operation=outcome["evidence"]["prepared"]["action"]["op"].string
  let selected=additionalSources[saved["prepared"]["action"]["op"].string.components(separatedBy:".").first ?? ""] ?? source
  let evidence = operation.hasPrefix("contacts.") ? await contacts.resolve(id,evidence:saved) : operation.hasPrefix("calendar.") ? await calendar.resolve(id,evidence:saved) : await selected.resolve(id, evidence: saved)
                 if evidence["observed"].bool {
-                    let committed = try await observedEvidence(evidence, fingerprint: outcome["evidence"]["prepared"]["request_hash"], operation: operation)
+                    let committed: JSON
+                    if operation == "shortcuts.run" { committed = evidence }
+                    else { committed = try await observedEvidence(evidence, fingerprint: outcome["evidence"]["prepared"]["request_hash"], operation: operation) }
                     outcome = .object(["t": .string("Outcome"), "command_id": .string(id), "disposition": evidence["disposition"].string.isEmpty ? .string("locally_observed") : evidence["disposition"], "evidence": committed])
                     try await guardLog.append(outcome)
                 } else {
