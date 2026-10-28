@@ -358,7 +358,7 @@ func convergence(w *world.World) bool {
 }
 
 func runScenario(ctx context.Context, s Scenario, level string) Evidence {
-	if s.Feature == "mail.capture" || s.Feature == "mail.body" {
+	if s.Feature == "mail.commands" || s.Feature == "mail.capture" || s.Feature == "mail.body" {
 		return runMail(ctx, s, level)
 	}
 	if s.Feature == "vision.queries" {

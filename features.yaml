@@ -1224,3 +1224,20 @@ features:
       - {scenario: PHO-IMPORT-REAL, level: real, reason: "Photos readWrite authorization is not_determined; prompt forbidden"}
       - {scenario: PHO-ORIGINAL-REAL, level: real, reason: "Photos readWrite authorization is not_determined; prompt forbidden"}
     notes: "Grant needed: Photos readWrite for dev.applebridge.helper. Deleted imports remain in Recently Deleted for 30 days."
+
+  - id: mail.commands
+    title: Mail commands with readback
+    requirements: [R-RW]
+    milestone: M0
+    modules: [native/Sources/MailSource, internal/contracts, internal/operations]
+    depends_on: [mail.capture]
+    status: limited
+    scenarios:
+      - {id: MAIL-COMMANDS, levels: [sim]}
+      - {id: MAIL-SEND-SELF-REAL, levels: [real]}
+      - {id: MAIL-DRAFT-REAL, levels: [real]}
+      - {id: MAIL-ORGANIZE-REAL, levels: [real]}
+    limits:
+      - {scenario: MAIL-SEND-SELF-REAL, level: real, reason: "grant: Automation dev.applebridge.helper → com.apple.mail; no configured Mail account. Attachments and reply/forward remain unsupported; capabilities withheld pending qualification."}
+      - {scenario: MAIL-DRAFT-REAL, level: real, reason: "grant: Automation dev.applebridge.helper → com.apple.mail; no configured Mail account"}
+      - {scenario: MAIL-ORGANIZE-REAL, level: real, reason: "grant: Automation dev.applebridge.helper → com.apple.mail; no configured Mail account"}

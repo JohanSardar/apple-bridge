@@ -27,7 +27,9 @@ struct MailChecks {
         try require(captured.filter { $0["collection"].string == "mail.mailbox" }.count == 3)
         try require(records.allSatisfy { $0["data"]["subject"].string == "synthetic subject" && $0["data"]["from"].string == "sender@example.com" && !$0["scoped_alias"].string.isEmpty })
         let scenario = CommandLine.arguments.last ?? ""
-        if scenario == "MAIL-BODY" {
+        if scenario == "MAIL-COMMANDS" {
+ try await checkMailCommands()
+ } else if scenario == "MAIL-BODY" {
             try await checkMailBodies(directory)
         } else if scenario == "MAIL-NO-FALSE-DELETE" {
             let (_, partial, done) = try await source.snapshot(maxRows: 10)

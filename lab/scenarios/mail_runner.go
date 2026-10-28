@@ -15,6 +15,12 @@ import (
 
 func runMail(ctx context.Context, s Scenario, level string) Evidence {
 	e := Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, At: time.Now().UTC(), Passed: true}
+	if s.Feature == "mail.commands" && level == "real" {
+		e.Passed = false
+		e.Status = "limited"
+		e.Conditions = map[string]string{"reason": "grant: Automation dev.applebridge.helper → com.apple.mail; no configured Mail account"}
+		return e
+	}
 	if s.ID == "MAIL-BODY-REAL" {
 		_, err := os.Stat(filepath.Join(os.Getenv("HOME"), "Library/Mail/V10/MailData/Envelope Index"))
 		e.Assertions = append(e.Assertions, Assertion{Name: "real_mail_store_available", Passed: err == nil})
@@ -37,7 +43,7 @@ func runMail(ctx context.Context, s Scenario, level string) Evidence {
 		return runMailReplica(ctx, s, level)
 	}
 	binary := ""
-	if s.ID == "MAIL-BODY" {
+	if s.ID == "MAIL-BODY" || s.ID == "MAIL-COMMANDS" {
 		binary = cachedMailChecks()
 	}
 	var output []byte

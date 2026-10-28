@@ -238,7 +238,7 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 	}
 	defer release()
 	action := contracts.NativeAction{Op: c.Op, Args: a, Origin: c.Origin}
-	if strings.HasPrefix(c.Op, "photos.") {
+	if strings.HasPrefix(c.Op, "photos.") || strings.HasPrefix(c.Op, "mail.") {
 		action.Args = c.Args
 	}
 	if c.Op == "shortcuts.run" {
@@ -249,6 +249,9 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 		action.Args = args
 	}
 	collection := "reminders.reminder"
+	if strings.HasPrefix(c.Op, "mail.") {
+		collection = "mail.message"
+	}
 	if strings.HasPrefix(c.Op, "photos.") {
 		collection = "photos.asset"
 		if c.Op == "photos.create_album" {
@@ -371,7 +374,7 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 		}
 		var containerID string
 		json.Unmarshal(data[containerField], &containerID)
-		if err == nil && a.Contact == nil && collection != "reminders.list" {
+		if err == nil && a.Contact == nil && collection != "reminders.list" && collection != "mail.message" {
 			action.ExpectedListKey, err = g.State.NativeKey(runctx, containerCollection, containerID)
 		}
 		if a.ListID == "" {
