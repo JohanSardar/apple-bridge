@@ -191,6 +191,14 @@ func ValidateCommand(c Command) (ReminderArgs, error) {
 		if a.ID != "" || a.ListID != "" || c.ExpectedVersion != 0 || a.Title == nil || a.Notes != nil || a.URL != nil || a.Due != nil || a.DueAllDay != nil || a.Start != nil || a.Priority != nil {
 			return a, ErrInvalid
 		}
+	case "reminders.rename_list":
+		if a.ID == "" || c.ExpectedVersion == 0 || a.Title == nil {
+			return a, ErrInvalid
+		}
+	case "reminders.delete_list":
+		if a.ID == "" || c.ExpectedVersion == 0 {
+			return a, ErrInvalid
+		}
 	case "reminders.update":
 		if a.ID == "" || c.ExpectedVersion == 0 || (!patch && a.ListID == "") {
 			return a, ErrInvalid
@@ -247,6 +255,10 @@ func ReminderArgumentFields(op string) []string {
 		return []string{"list_id", "title", "notes", "url", "due", "due_all_day", "start", "priority"}
 	case "reminders.create_list":
 		return []string{"title"}
+	case "reminders.rename_list":
+		return []string{"id", "title"}
+	case "reminders.delete_list":
+		return []string{"id"}
 	case "reminders.update":
 		return []string{"id", "list_id", "title", "notes", "url", "due", "due_all_day", "start", "priority"}
 	case "reminders.complete", "reminders.uncomplete", "reminders.delete":

@@ -246,6 +246,9 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 		action.Args = args
 	}
 	collection := "reminders.reminder"
+	if c.Op == "reminders.rename_list" || c.Op == "reminders.delete_list" {
+		collection = "reminders.list"
+	}
 	containerCollection, containerField := "reminders.list", "list_id"
 	if r.Source == contracts.Calendar {
 		ca, _ := contracts.ValidateCalendar(c)
@@ -359,7 +362,7 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 		}
 		var containerID string
 		json.Unmarshal(data[containerField], &containerID)
-		if err == nil && a.Contact == nil {
+		if err == nil && a.Contact == nil && collection != "reminders.list" {
 			action.ExpectedListKey, err = g.State.NativeKey(runctx, containerCollection, containerID)
 		}
 		if a.ListID == "" {
@@ -514,7 +517,7 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 				collection = "messages.reaction"
 			}
 		}
-		if r.Command.Op == "reminders.create_list" {
+		if r.Command.Op == "reminders.create_list" || r.Command.Op == "reminders.rename_list" || r.Command.Op == "reminders.delete_list" {
 			collection = "reminders.list"
 		}
 		if json.Unmarshal(f.Evidence, &evidence) != nil || evidence.Ambiguous || evidence.CandidateCount > 1 || evidence.NativeKey == "" || evidence.Fingerprint != r.RequestHash || !evidence.Observed {

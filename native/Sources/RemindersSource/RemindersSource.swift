@@ -20,7 +20,7 @@ public final class RemindersSource: Source {
     private var scanning = false
     private var hasLiveBaseline = false
     private let captureScope = RemindersCaptureScope()
-    public nonisolated static let operations = ["reminders.create", "reminders.update", "reminders.complete", "reminders.uncomplete", "reminders.delete", "reminders.create_list"]
+    public nonisolated static let operations = ["reminders.create", "reminders.update", "reminders.complete", "reminders.uncomplete", "reminders.delete", "reminders.create_list", "reminders.rename_list", "reminders.delete_list"]
     public nonisolated static let coverage: JSON = .object(["fields": .string("partial"), "missing": .array([.string("recurrence: next incomplete instance only")]), "operations": RemindersParity.coverage])
 
     public nonisolated init(gate: AgendaGate, home: URL, commandsEnabled: Bool = false) throws {
@@ -263,16 +263,23 @@ public final class RemindersSource: Source {
         guard Self.operations.contains(action["op"].string) else { throw SourceFailure.unsupported }
         var before = JSON.null
         if !action["native_key"].string.isEmpty {
-            let reminder = try await fresh(action["native_key"].string)
-            before = data(reminder)
-            if !action["expected_list_key"].string.isEmpty && reminder.calendar.calendarIdentifier != action["expected_list_key"].string { throw SourceFailure.conflict }
-            var expected = command["expected_state"].object
-            var native = before.object
-            expected.removeValue(forKey: "list_id"); native.removeValue(forKey: "list_id")
-            guard expected == native else { throw SourceFailure.conflict }
-            guard reminder.calendar.allowsContentModifications else { throw SourceFailure.unsupported }
+            if action["op"].string == "reminders.rename_list" || action["op"].string == "reminders.delete_list" {
+                guard let list = gate.store.calendar(withIdentifier: action["native_key"].string), list.allowsContentModifications else { throw SourceFailure.unsupported }
+                before = listData(list)
+                let expected = JSON.object(command["expected_state"].object.filter { !RemindersStoreProjection.fields.contains($0.key) })
+                guard before == expected else { throw SourceFailure.conflict }
+            } else {
+                let reminder = try await fresh(action["native_key"].string)
+                before = data(reminder)
+                if !action["expected_list_key"].string.isEmpty && reminder.calendar.calendarIdentifier != action["expected_list_key"].string { throw SourceFailure.conflict }
+                var expected = command["expected_state"].object
+                var native = before.object
+                expected.removeValue(forKey: "list_id"); native.removeValue(forKey: "list_id")
+                guard expected == native else { throw SourceFailure.conflict }
+                guard reminder.calendar.allowsContentModifications else { throw SourceFailure.unsupported }
+            }
         }
-        if action["op"].string != "reminders.create_list" {
+        if !["reminders.create_list", "reminders.rename_list", "reminders.delete_list"].contains(action["op"].string) {
             guard let calendar = gate.store.calendar(withIdentifier: action["list_key"].string), calendar.allowsContentModifications else { throw SourceFailure.unsupported }
         }
         if action["op"].string == "reminders.create_list" {
@@ -312,10 +319,15 @@ public final class RemindersSource: Source {
     public func validate(_ prepared: Prepared) async throws {
         guard gate.authorized(.reminder) else { throw SourceFailure.permissionMissing }
         let action = prepared.action
-        if action["op"].string != "reminders.create_list" {
+        if !["reminders.create_list", "reminders.rename_list", "reminders.delete_list"].contains(action["op"].string) {
             guard let calendar = gate.store.calendar(withIdentifier: action["list_key"].string), calendar.allowsContentModifications else { throw SourceFailure.unsupported }
         }
         if !action["native_key"].string.isEmpty {
+            if ["reminders.rename_list", "reminders.delete_list"].contains(action["op"].string) {
+                guard let list = gate.store.calendar(withIdentifier: action["native_key"].string), list.allowsContentModifications else { throw SourceFailure.unsupported }
+                guard listData(list) == prepared.nativeState else { throw SourceFailure.conflict }
+                return
+            }
             let current = try await fresh(action["native_key"].string)
             guard data(current) == prepared.nativeState else { throw SourceFailure.conflict }
             guard current.calendar.allowsContentModifications else { throw SourceFailure.unsupported }
@@ -327,7 +339,15 @@ public final class RemindersSource: Source {
         let action = prepared.action
         let operation = action["op"].string
         var nativeKey = action["native_key"].string
-        if operation == "reminders.create_list" {
+        if operation == "reminders.rename_list" || operation == "reminders.delete_list" {
+            guard let list = gate.store.calendar(withIdentifier: nativeKey), list.allowsContentModifications else { throw SourceFailure.unsupported }
+            guard listData(list) == prepared.nativeState else { throw SourceFailure.conflict }
+            if operation == "reminders.delete_list" { try gate.store.removeCalendar(list, commit: true) }
+            else { list.title = action["args"]["title"].string; try gate.store.saveCalendar(list, commit: true) }
+            let observed = gate.store.calendar(withIdentifier: nativeKey)
+            if operation == "reminders.delete_list" { guard observed == nil else { throw SourceFailure.unavailable } }
+            else { guard observed?.title == list.title else { throw SourceFailure.unavailable } }
+        } else if operation == "reminders.create_list" {
             guard let source = gate.store.defaultCalendarForNewReminders()?.source else { throw SourceFailure.unavailable }
             let calendar = EKCalendar(for: .reminder, eventStore: gate.store)
             calendar.title = action["args"]["title"].string; calendar.source = source
@@ -361,13 +381,17 @@ public final class RemindersSource: Source {
                 guard let observed, data(observed) == data(reminder) else { throw SourceFailure.unavailable }
             }
         }
-        return .object(["native_key": .string(nativeKey), "fingerprint": .string(prepared.fingerprint), "observed": .bool(true), "absent": .bool(operation == "reminders.delete")])
+        return .object(["native_key": .string(nativeKey), "fingerprint": .string(prepared.fingerprint), "observed": .bool(true), "absent": .bool(operation == "reminders.delete" || operation == "reminders.delete_list")])
     }
 
     public func resolve(_ command: String, evidence: JSON) async -> JSON {
         let action = evidence["prepared"]["action"]
         let key = action["native_key"].string.isEmpty ? evidence["native_key"].string : action["native_key"].string
-        if action["op"].string == "reminders.create_list" {
+        if action["op"].string == "reminders.delete_list" {
+            guard gate.authorized(.reminder), !key.isEmpty, gate.store.calendar(withIdentifier: key) == nil else { return .null }
+            return .object(["native_key": .string(key), "observed": .bool(true), "absent": .bool(true), "prepared": evidence["prepared"]])
+        }
+        if ["reminders.create_list", "reminders.rename_list"].contains(action["op"].string) {
             guard gate.authorized(.reminder), !key.isEmpty, let list = gate.store.calendar(withIdentifier: key), list.title == action["args"]["title"].string else { return .null }
             return .object(["native_key": .string(key), "observed": .bool(true), "prepared": evidence["prepared"]])
         }

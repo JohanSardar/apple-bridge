@@ -324,10 +324,16 @@ features:
     milestone: M1
     modules: [native/RemindersSource, operations]
     depends_on: [reminders.read]
-    status: done
+    status: limited
+    limits:
+      - {scenario: REM-LIST-MANAGE, level: real, reason: "Isolated signed Helper build reached the native World startup deadline before fixtures; real rename/delete readbacks unverified"}
+      - {scenario: REM-SECTIONS, level: sim, reason: "EventKit has no sections API; supported store section membership and order decoders are unverified"}
+      - {scenario: REM-SECTIONS, level: real, reason: "EventKit has no sections API; supported store section membership and order decoders are unverified"}
     scenarios:
       - {id: REM-CRUD, levels: [sim, real, replica]}
       - {id: REM-LIST-CREATE, levels: [sim, real]}
+      - {id: REM-LIST-MANAGE, levels: [sim, real]}
+      - {id: REM-SECTIONS, levels: [sim, real]}
       - {id: REM-LIST-LOST-ACK, levels: [real]}
       - {id: REM-CONFLICT, levels: [sim]}
       - {id: REM-EXTERNAL-RACE, levels: [sim]}

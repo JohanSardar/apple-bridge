@@ -20,7 +20,7 @@ import (
 
 func nativeScenario(id, level string) bool {
 	switch id {
-	case "HELPER-LIVE-BACKFILL", "HELPER-SESSION-SOAK", "HELPER-RESTART-REAL", "HELPER-TCC-READY", "REM-CREATE-EXTERNAL", "REM-LIST-CREATE", "REM-LIST-LOST-ACK", "REM-RECURRING", "REM-PERMISSION-LOSS":
+	case "HELPER-LIVE-BACKFILL", "HELPER-SESSION-SOAK", "HELPER-RESTART-REAL", "HELPER-TCC-READY", "REM-CREATE-EXTERNAL", "REM-LIST-MANAGE", "REM-SECTIONS", "REM-LIST-CREATE", "REM-LIST-LOST-ACK", "REM-RECURRING", "REM-PERMISSION-LOSS":
 		return true
 	case "REM-CRUD":
 		return level == "real" || level == "replica"
@@ -457,6 +457,57 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 			add("post_burst_bulk_truth_cleanup", cleanupErr == nil)
 			add("post_cleanup_forwarded_delete", nativeForwardedDelete(ctx, w, &e, commandTargets[cleanupTitle], "post_cleanup_forwarded_delete"))
 			add("post_cleanup_native_blob_stage", nativeBlobStage(w, &e, "post_cleanup_native_blob_stage"))
+		case "REM-SECTIONS":
+			e.Status = "limited"
+			e.Assertions = append(e.Assertions, Assertion{Name: "section_membership_supported_path", Status: "limited", Detail: "EventKit has no sections API; existing store reader marks section order and membership decoders unverified"})
+		case "REM-LIST-MANAGE":
+			name := "Bridge Test " + tag
+			if submit("reminders.create_list", map[string]any{"title": name}, 0) != nil {
+				return failed("create_owned_list")
+			}
+			createdEvidence, _ := lastCommand["evidence"].(map[string]any)
+			createdKey, _ := createdEvidence["native_key"].(string)
+			var owned contracts.Record
+			defer func() {
+				if level != "sim" {
+					key := createdKey
+					if key != "" {
+						var cleanupErr error
+						for _, listName := range []string{name, name + " renamed"} {
+							_, err := w.RecoverTruth("fixture", map[string]any{"action": "cleanup_list", "list": listName, "list_id": key, "tag": tag})
+							if err != nil {
+								cleanupErr = err
+							}
+						}
+						if cleanupErr != nil {
+							result.Passed = false
+							result.Assertions = append(result.Assertions, Assertion{Name: "owned_list_cleanup", Passed: false})
+						}
+					}
+				}
+			}()
+			if w.Await(3*time.Second, func() bool { var ok bool; owned, ok = find(w.Gateway, "reminders.list", name); return ok }) != nil {
+				return failed("owned_list_capture")
+			}
+			renamed := name + " renamed"
+			add("stale_rename_rejected", submit("reminders.rename_list", map[string]any{"id": owned.ID, "title": renamed}, owned.Version+1) != nil)
+			if submit("reminders.rename_list", map[string]any{"id": owned.ID, "title": renamed}, owned.Version) != nil {
+				return failed("rename_owned_list")
+			}
+			add("rename_readback", w.Await(3*time.Second, func() bool { var ok bool; owned, ok = find(w.Gateway, "reminders.list", renamed); return ok }) == nil)
+			if level != "sim" {
+				truth, err := w.Truth("observe", map[string]any{"list": renamed, "list_id": createdKey, "tag": tag})
+				add("truth_renamed_list", err == nil && truth["list_exists"] == true)
+			}
+			add("stale_delete_rejected", submit("reminders.delete_list", map[string]any{"id": owned.ID}, owned.Version+1) != nil)
+			if submit("reminders.delete_list", map[string]any{"id": owned.ID}, owned.Version) != nil {
+				return failed("delete_owned_list")
+			}
+			add("delete_readback", w.Await(3*time.Second, func() bool { _, ok := find(w.Gateway, "reminders.list", renamed); return !ok }) == nil)
+			if level != "sim" {
+				truth, err := w.Truth("observe", map[string]any{"list": renamed, "list_id": createdKey, "tag": tag})
+				add("truth_deleted_list", err == nil && truth["list_exists"] == false)
+			}
 		case "REM-LIST-CREATE", "REM-LIST-LOST-ACK":
 			var beforeLists map[string]bool
 			if level != "sim" {
@@ -816,7 +867,7 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 	}
 	e.Passed = true
 	for _, assertion := range e.Assertions {
-		if !assertion.Passed {
+		if !assertion.Passed && !(s.ID == "REM-SECTIONS" && assertion.Status == "limited") {
 			e.Passed = false
 		}
 	}

@@ -195,6 +195,8 @@ func OperationSchema(d OperationDescriptor) map[string]any {
 			required = []string{"list_id", "title"}
 		case "calendar.create_calendar", "reminders.create_list":
 			required = []string{"title"}
+		case "reminders.rename_list":
+			required = []string{"id", "title"}
 		case "reminders.update":
 			args["minProperties"] = 2
 		}

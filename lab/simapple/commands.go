@@ -107,7 +107,7 @@ func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fenc
 			return reject(contracts.ErrInvalid)
 		}
 		switch frame.Action.Op {
-		case "reminders.create", "reminders.create_list", "reminders.update", "reminders.complete", "reminders.uncomplete", "reminders.delete":
+		case "reminders.create", "reminders.create_list", "reminders.rename_list", "reminders.delete_list", "reminders.update", "reminders.complete", "reminders.uncomplete", "reminders.delete":
 		default:
 			return reject(contracts.ErrUnsupported)
 		}
@@ -138,6 +138,16 @@ func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fenc
 				return reject(contracts.ErrNotFound)
 			}
 			before = o.Data
+			if a.Op == "reminders.rename_list" || a.Op == "reminders.delete_list" {
+				var list struct {
+					Writable bool `json:"writable"`
+				}
+				json.Unmarshal(o.Data, &list)
+				if o.Collection != "reminders.list" || !list.Writable {
+					f.mu.Unlock()
+					return reject(contracts.ErrUnsupported)
+				}
+			}
 			var expected, native map[string]any
 			if len(frame.ExpectedState) > 0 {
 				decodeNative(frame.ExpectedState, &expected)
@@ -161,7 +171,7 @@ func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fenc
 				}
 			}
 		}
-		if a.Op != "reminders.create_list" {
+		if a.Op != "reminders.create_list" && a.Op != "reminders.rename_list" && a.Op != "reminders.delete_list" {
 			list, ok := f.records[a.ListKey]
 			var data struct {
 				Writable bool `json:"writable"`
@@ -238,7 +248,7 @@ func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fenc
 			f.mu.Unlock()
 			return rejectConflict(o)
 		}
-		if t.Action.Op != "reminders.create_list" {
+		if t.Action.Op != "reminders.create_list" && t.Action.Op != "reminders.rename_list" && t.Action.Op != "reminders.delete_list" {
 			var list struct {
 				Writable bool `json:"writable"`
 			}
@@ -266,7 +276,7 @@ func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fenc
 			native = contracts.NewID("native")
 		}
 		collection := "reminders.reminder"
-		if a.Op == "reminders.create_list" {
+		if a.Op == "reminders.create_list" || a.Op == "reminders.rename_list" || a.Op == "reminders.delete_list" {
 			collection = "reminders.list"
 		}
 		var data map[string]any
@@ -312,7 +322,7 @@ func (f *fakeApple) command(wire *applepeer.Wire, frame contracts.IPCFrame, fenc
 		}
 		raw, _ := json.Marshal(data)
 		o := contracts.Observation{Kind: "upsert", Collection: collection, NativeKey: native, Data: raw, ObservedAt: time.Now().UTC()}
-		if a.Op == "reminders.delete" {
+		if a.Op == "reminders.delete" || a.Op == "reminders.delete_list" {
 			o.Kind = "absent"
 			o.Revalidated = true
 		}
