@@ -514,6 +514,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if strings.HasPrefix(s.ID, "WEB-UPLOAD-") {
 		return runWebUpload(ctx, s, level)
 	}
+	if s.ID == "WEB-AGENT-OAUTH-CIMD" {
+		return runAgentAccess(ctx, s, level, runAgentOAuthCIMD)
+	}
 	if s.ID == "WEB-AGENT-OAUTH" {
 		return runAgentAccess(ctx, s, level, runAgentOAuth)
 	}

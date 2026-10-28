@@ -8,9 +8,9 @@ import (
 	"strings"
 )
 
-func validRedirect(raw string) bool {
+func ValidOAuthRedirect(raw string) bool {
 	u, err := url.Parse(raw)
-	if err != nil || u.Host == "" || u.Fragment != "" || u.User != nil || len(raw) > 2048 {
+	if err != nil || u.Host == "" || strings.Contains(raw, "#") || u.User != nil || len(raw) > 2048 {
 		return false
 	}
 	if u.Scheme == "https" {
@@ -27,7 +27,7 @@ func (a *Authority) RegisterOAuth(c OAuthClient) (OAuthClient, error) {
 		return c, contracts.ErrInvalid
 	}
 	for _, u := range c.RedirectURIs {
-		if !validRedirect(u) {
+		if !ValidOAuthRedirect(u) {
 			return c, contracts.ErrInvalid
 		}
 	}

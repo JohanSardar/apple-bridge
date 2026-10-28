@@ -1,0 +1,5 @@
+# OAuth client metadata
+
+HTTPS client IDs resolve to metadata documents with an exact matching client_id and redirect_uris membership. Client ID URLs require a non-root path, no fragment delimiter and no dot segments. Every document redirect uses the same HTTPS or HTTP loopback validation as dynamic registration before caching or consent. The fetcher allows only public resolved addresses, pins connections to validated addresses, validates every redirect, limits responses to 5 KiB and the entire fetch to 3 seconds, and caches successful documents according to Cache-Control. No-cache and no-store disable caching. Dynamic registration remains supported. DNS, transport and the final connection dial are injectable for offline lab coverage.
+
+WEB-AGENT-OAUTH-CIMD exercises consent, token exchange, mismatched IDs, invalid redirects, private addresses and redirects, otherwise-valid oversized documents, timeouts and DNS rebinding through the production transport at sim level. The web level checks discovery and rejection of private client URLs in Chromium light desktop.

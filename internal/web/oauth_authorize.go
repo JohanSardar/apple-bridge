@@ -18,7 +18,11 @@ func (s *server) oauthAuthorizationRoutes(mux *http.ServeMux) {
 			return
 		}
 		if r.URL.Query().Get("format") == "json" {
-			u, _ := url.Parse(r.URL.Query().Get("redirect_uri"))
+			u, err := url.Parse(r.URL.Query().Get("redirect_uri"))
+			if err != nil {
+				respond(w, 400, map[string]string{"error": "invalid_request"})
+				return
+			}
 			respond(w, 200, map[string]any{"client_name": c.Name, "redirect_host": u.Host, "scopes": requestedScopes(r.URL.Query())})
 			return
 		}
@@ -39,7 +43,11 @@ func (s *server) oauthAuthorizationRoutes(mux *http.ServeMux) {
 			respond(w, 400, map[string]string{"error": "invalid_request"})
 			return
 		}
-		dest, _ := url.Parse(code.RedirectURI)
+		dest, err := url.Parse(code.RedirectURI)
+		if err != nil {
+			respond(w, 400, map[string]string{"error": "invalid_request"})
+			return
+		}
 		q := dest.Query()
 		q.Set("state", r.URL.Query().Get("state"))
 		q.Set("iss", servingOrigin(r))
@@ -98,7 +106,12 @@ func (s *server) authorizationRequest(r *http.Request) (trust.OAuthClient, trust
 	if _, err = trust.AgentGrants(trust.AgentApprove, toGrants(requestedScopes(q))); err != nil {
 		return empty, code, err
 	}
-	client, err := s.deps.Authority.OAuthClient(q.Get("client_id"), q.Get("redirect_uri"))
+	var client trust.OAuthClient
+	if strings.HasPrefix(q.Get("client_id"), "https://") {
+		client, err = s.deps.ClientMetadata.Fetch(r.Context(), q.Get("client_id"), q.Get("redirect_uri"))
+	} else {
+		client, err = s.deps.Authority.OAuthClient(q.Get("client_id"), q.Get("redirect_uri"))
+	}
 	if err != nil {
 		return empty, code, err
 	}

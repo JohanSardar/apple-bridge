@@ -534,7 +534,8 @@ features:
       - {id: WEB-AGENT-ACTIVITY, levels: [sim]}
       - {id: WEB-AGENT-LEVELS, levels: [sim]}
       - {id: WEB-AGENT-OAUTH, levels: [sim, web]}
-    notes: Agent credentials and levels, durable gateway approvals, redacted 90-day activity, public-client OAuth and grouped settings/consent screens pass sim and browser coverage. Replica agent delegation is covered by web.relay.
+      - {id: WEB-AGENT-OAUTH-CIMD, levels: [sim, web]}
+    notes: Agent credentials and levels, durable gateway approvals, redacted 90-day activity, public-client OAuth and grouped settings/consent screens pass sim and browser coverage. CIMD rejects malformed redirects and client URLs, oversized metadata, private redirects and DNS rebinding before connections. Replica agent delegation is covered by web.relay.
   - id: web.demo
     title: Synthetic demo world serving the web app (bridge-lab demo)
     requirements: [R-WEB-UI]

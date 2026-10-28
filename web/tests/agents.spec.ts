@@ -131,3 +131,18 @@ test('WEB-AGENT-OAUTH connector consent, access levels, approval screens and tok
     expect(revoked.ok()).toBe(true);
     expect((await mcp(agentToken, 'tools/list', {})).status()).toBe(401);
 });
+
+test('WEB-AGENT-OAUTH-CIMD advertises metadata and rejects private client URLs', async ({ page, request }) => {
+    await virtualKey(page);
+    const { url } = await control(request, '/enroll');
+    await page.goto(url);
+    await page.getByRole('button', { name: 'Continue', exact: true }).click();
+    await expect(page.getByRole('listbox', { name: 'Conversations' })).toBeVisible();
+    const discovery = await page.request.get('/.well-known/oauth-authorization-server');
+    expect((await discovery.json()).client_id_metadata_document_supported).toBe(true);
+    const origin = new URL(process.env.AB_WEB_URL!).origin;
+    const query = new URLSearchParams({ client_id: 'https://127.0.0.1/client.json', response_type: 'code', redirect_uri: 'https://connector.example/callback', resource: origin + '/mcp', code_challenge: createHash('sha256').update('a'.repeat(43)).digest('base64url'), code_challenge_method: 'S256', format: 'json' });
+    const response = await page.request.get('/oauth/authorize?' + query);
+    expect(response.status()).toBe(400);
+    expect((await response.json()).error).toBe('invalid_request');
+});

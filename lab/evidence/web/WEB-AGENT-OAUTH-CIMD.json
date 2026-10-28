@@ -1,0 +1,49 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[8.89 9.14 9.05] cpu_idle=56% cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M60MDJ3HKJM88P5QVBGCNSK4",
+  "metrics": {
+    "browser_budget_ms": 180000,
+    "capture_observer_resets": 0,
+    "demo_messages": 5000,
+    "demo_startup_ms": 8392,
+    "fixture_setup_ms": 8392,
+    "matrix": [
+      "chromium-light-desktop"
+    ],
+    "report": "lab/evidence/private/web/reports/WEB-AGENT-OAUTH-CIMD-chromium-light-desktop-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-AGENT-OAUTH-CIMD-chromium-light-desktop-playwright.json"
+    ],
+    "server": "gateway",
+    "setups": [
+      {
+        "fixture_setup_ms": 8392,
+        "fixture_snapshot": null,
+        "project": "chromium-light-desktop"
+      }
+    ]
+  },
+  "scenario": "WEB-AGENT-OAUTH-CIMD",
+  "level": "web",
+  "passed": true,
+  "git_sha": "6d3393beeee0b7626b97f7e9ed78548c2391599b",
+  "at": "2026-10-28T06:51:02.12907Z",
+  "assertions": [
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 1 test using 1 worker\n\n(node:14193) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\n  ✓  1 [chromium-light-desktop] › tests/agents.spec.ts:135:1 › WEB-AGENT-OAUTH-CIMD advertises metadata and rejects private client URLs (1.6s)\n\n  1 passed (3.8s)\n"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
