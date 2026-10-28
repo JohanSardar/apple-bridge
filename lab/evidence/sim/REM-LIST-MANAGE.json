@@ -1,0 +1,61 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[16.13 11.51 9.48] cpu_idle=66% cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M61MHRMJYRQ4PGMBXQ029SDV",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "REM-LIST-MANAGE",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "41b438a2a449dd82d7e06384fbe3cf2911023352",
+  "at": "2026-10-28T16:12:34.323902Z",
+  "assertions": [
+    {
+      "name": "reminders_ready",
+      "passed": true
+    },
+    {
+      "name": "stale_rename_rejected",
+      "passed": true
+    },
+    {
+      "name": "rename_readback",
+      "passed": true
+    },
+    {
+      "name": "stale_delete_rejected",
+      "passed": true
+    },
+    {
+      "name": "delete_readback",
+      "passed": true
+    },
+    {
+      "name": "independent_simtruth_convergence",
+      "passed": true
+    },
+    {
+      "name": "replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak",
+      "passed": true
+    },
+    {
+      "name": "no_scope_leak",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

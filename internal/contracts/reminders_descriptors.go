@@ -10,8 +10,10 @@ func RemindersDescriptors() []OperationDescriptor {
 		{Name: "reminders.complete", Version: 1, Kind: CommandOp, Source: Reminders, Scope: "reminders:write", Capability: "reminders.complete", Input: Command{}, Output: CommandRecord{}, Description: "Complete a reminder with expected_version"},
 		{Name: "reminders.uncomplete", Version: 1, Kind: CommandOp, Source: Reminders, Scope: "reminders:write", Capability: "reminders.uncomplete", Input: Command{}, Output: CommandRecord{}, Description: "Reopen a reminder with expected_version"},
 		{Name: "reminders.delete", Version: 1, Kind: CommandOp, Source: Reminders, Scope: "reminders:write", Capability: "reminders.delete", Input: Command{}, Output: CommandRecord{}, Description: "Delete a reminder with expected_version"},
+		{Name: "reminders.rename_list", Version: 1, Kind: CommandOp, Source: Reminders, Scope: "reminders:write", Capability: "reminders.rename_list", Input: Command{}, Output: CommandRecord{}, Description: "Rename a Reminders list with expected_version"},
+		{Name: "reminders.delete_list", Version: 1, Kind: CommandOp, Source: Reminders, Scope: "reminders:write", Capability: "reminders.delete_list", Input: Command{}, Output: CommandRecord{}, Description: "Delete a Reminders list with expected_version"},
 	}
 	return descriptors
 }
 
-func init() { registerDescriptors(RemindersDescriptors, 8, 9, 22, 23, 24, 25, 26, 27) }
+func init() { registerDescriptors(RemindersDescriptors, 8, 9, 22, 23, 24, 25, 26, 27, 69, 70) }

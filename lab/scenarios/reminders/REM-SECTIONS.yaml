@@ -1,0 +1,7 @@
+id: REM-SECTIONS
+feature: reminders.write
+levels: [sim, real]
+given: [{world: {replicas: 1}}]
+when: [{reminders_list: {}}]
+then: [{converge: {}}]
+cleanup: [{fixture: {cleanup: reminders}}]
