@@ -1,0 +1,111 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[4.13 7.46 7.67] cpu_idle=77% cpus=8 other_heavy=2"
+  },
+  "run_id": "run_01M61K3R9M3ZT3V9KDRCQP6X1M",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "MAC-CAPTURE",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-28T15:47:26.644548Z",
+  "assertions": [
+    {
+      "name": "world_started",
+      "passed": true
+    },
+    {
+      "name": "scope_granted",
+      "passed": true
+    },
+    {
+      "name": "fake_change_accepted",
+      "passed": true
+    },
+    {
+      "name": "change_visible_under_second",
+      "passed": true
+    },
+    {
+      "name": "fake_change_accepted",
+      "passed": true
+    },
+    {
+      "name": "change_visible_under_second",
+      "passed": true
+    },
+    {
+      "name": "fake_change_accepted",
+      "passed": true
+    },
+    {
+      "name": "change_visible_under_second",
+      "passed": true
+    },
+    {
+      "name": "fake_change_accepted",
+      "passed": true
+    },
+    {
+      "name": "change_visible_under_second",
+      "passed": true
+    },
+    {
+      "name": "fake_change_accepted",
+      "passed": true
+    },
+    {
+      "name": "change_visible_under_second",
+      "passed": true
+    },
+    {
+      "name": "fake_change_accepted",
+      "passed": true
+    },
+    {
+      "name": "change_visible_under_second",
+      "passed": true
+    },
+    {
+      "name": "fake_change_accepted",
+      "passed": true
+    },
+    {
+      "name": "change_visible_under_second",
+      "passed": true
+    },
+    {
+      "name": "fake_change_accepted",
+      "passed": true
+    },
+    {
+      "name": "change_visible_under_second",
+      "passed": true
+    },
+    {
+      "name": "fake_change_accepted",
+      "passed": true
+    },
+    {
+      "name": "change_visible_under_second",
+      "passed": true
+    },
+    {
+      "name": "fake_change_accepted",
+      "passed": true
+    },
+    {
+      "name": "change_visible_under_second",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

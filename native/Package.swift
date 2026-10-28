@@ -2,6 +2,7 @@
 import PackageDescription
 
 let sourceTargets: [Target] = [
+    .target(name: "MacSource", dependencies: ["SourceSupport"]),
     .target(name: "VisionSource", dependencies: ["SourceSupport"]),
     .target(name: "PDFSource", dependencies: ["SourceSupport"]),
     .target(name: "ShortcutsSource", dependencies: ["SourceSupport"]),

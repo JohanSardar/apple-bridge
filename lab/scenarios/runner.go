@@ -554,6 +554,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.Feature == "web.frontdoor" || s.Feature == "web.agents" {
 		return runWebServer(ctx, s, level)
 	}
+	if strings.HasPrefix(s.ID, "MAC-") {
+		return runMac(ctx, s, level)
+	}
 	if strings.HasPrefix(s.ID, "USE-") {
 		return runUsage(ctx, s, level)
 	}
@@ -1175,6 +1178,9 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		}
 		if level == "web" && s.Web != nil {
 			duration = time.Duration(max(1, len(s.Web.Browsers)*len(s.Web.Themes)*len(s.Web.Layouts))) * webRunBudget(s)
+		}
+		if strings.HasPrefix(s.ID, "MAC-") && level == "real" {
+			duration = 20 * time.Minute
 		}
 		bounded, cancel := context.WithTimeout(ctx, duration)
 		secretBefore, secretWasSet := os.LookupEnv("APPLE_BRIDGE_SECRET_STORE")

@@ -407,6 +407,8 @@ Contacts Me-card and notes entitlement contract: [spec/contacts.md](spec/contact
 
 Permission status and explicit requests: [permissions](spec/permissions.md).
 
+Mac capture: [contract](spec/mac.md).
+
 Transient Helper queries and the query-with-effect rule: [query contract](spec/query.md).
 Vision and PDF query slice: [inputs, bounds and remaining work](spec/vision.md).
 Shared helpers for new sources: [SourceSupport](spec/source-support.md).

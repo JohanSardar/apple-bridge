@@ -1,0 +1,5 @@
+id: MAC-POWER-REAL
+feature: mac.capture
+levels: [real]
+when:
+  - mac: {}

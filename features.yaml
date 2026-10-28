@@ -1107,3 +1107,20 @@ features:
       - scenario: CLK-TIMER-REAL
         level: real
         reason: Leader import and independent running timer readback required; start action alone cannot establish running state.
+
+  - id: mac.capture
+    title: Mac system state capture
+    requirements: [R-API, R-SCOPE]
+    milestone: G6
+    modules: [native/Sources/MacSource]
+    depends_on: []
+    status: limited
+    scenarios:
+      - {id: MAC-CAPTURE, levels: [sim]}
+      - {id: MAC-IDLE, levels: [sim, real]}
+      - {id: MAC-POWER-REAL, levels: [real]}
+    limits:
+      - scenario: MAC-IDLE
+        level: real
+        reason: Whole-Helper idle CPU was 56.61 percent over 300 seconds after narrowing CoreAudio subscriptions. A trace sample had only 2 Mac captures versus 954 Messages and 148 Notes captures; per-source CPU is unmeasured.
+    notes: Night Shift omitted; SSID requires Location authorization. VPN uses interface heuristics.
