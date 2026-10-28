@@ -1,7 +1,7 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[6.11 5.08 6.36] cpu_idle=52% cpus=8 other_heavy=1"
+    "summary": "air: load=[5.83 5.14 6.18] cpu_idle=45% cpus=8 other_heavy=1"
   },
   "run_id": "relay-own-domain",
   "network_path": "loopback TLS origins through raw relay tunnel interface",
@@ -11,8 +11,8 @@
   "scenario": "RELAY-OWN-DOMAIN",
   "level": "sim",
   "passed": true,
-  "git_sha": "489fa272dcfa447fa25825cbbfa87ee06292b6fd",
-  "at": "2026-10-28T15:17:30.152449Z",
+  "git_sha": "89ee2a64d1dfb0137bbfd937513f20680aea4b30",
+  "at": "2026-10-28T15:56:47.820943Z",
   "assertions": [
     {
       "name": "two_distinct_device_enrollments",

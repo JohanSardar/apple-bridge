@@ -39,9 +39,9 @@ func (d *acmeDNS) TXT(_ context.Context, name, value string) error {
 	return nil
 }
 func relayPebble(ctx context.Context, lab *relayLab, key ed25519.PrivateKey, credential relay.Credential, custom bool, add func(string, bool)) error {
-	binary := os.Getenv("AB_LAB_PEBBLE")
-	if binary == "" {
-		return fmt.Errorf("AB_LAB_PEBBLE must name a Pebble binary")
+	binary, err := pebbleBinary(ctx)
+	if err != nil {
+		return err
 	}
 	dir, err := os.MkdirTemp("", "ab-pebble-")
 	if err != nil {
@@ -187,4 +187,28 @@ func relayPebble(ctx context.Context, lab *relayLab, key ed25519.PrivateKey, cre
 	dns.mu.Unlock()
 	add("dns_challenge_cleaned_up", value == "")
 	return nil
+}
+
+func pebbleBinary(ctx context.Context) (string, error) {
+	if binary := os.Getenv("AB_LAB_PEBBLE"); binary != "" {
+		return binary, nil
+	}
+	cache, err := os.UserCacheDir()
+	if err != nil {
+		return "", err
+	}
+	bin := filepath.Join(cache, "apple-bridge", "lab-tools")
+	binary := filepath.Join(bin, "pebble")
+	if _, err := os.Stat(binary); err == nil {
+		return binary, nil
+	}
+	if err := os.MkdirAll(bin, 0700); err != nil {
+		return "", err
+	}
+	install := exec.CommandContext(ctx, "go", "install", "github.com/letsencrypt/pebble/v2/cmd/pebble@v2.8.0")
+	install.Env = append(os.Environ(), "GOBIN="+bin, "GOFLAGS=-mod=mod")
+	if output, err := install.CombinedOutput(); err != nil {
+		return "", fmt.Errorf("install pebble: %w: %s", err, output)
+	}
+	return binary, nil
 }
