@@ -1122,8 +1122,5 @@ features:
     limits:
       - scenario: MAC-IDLE
         level: real
-        reason: Five-minute Helper CPU measurement remains unverified; sim capture does not establish idle CPU.
-      - scenario: MAC-POWER-REAL
-        level: real
-        reason: Independent pmset comparison has not yet passed.
+        reason: Whole-Helper idle CPU was 56.61 percent over 300 seconds after narrowing CoreAudio subscriptions. A trace sample had only 2 Mac captures versus 954 Messages and 148 Notes captures; per-source CPU is unmeasured.
     notes: Night Shift omitted; SSID requires Location authorization. VPN uses interface heuristics.

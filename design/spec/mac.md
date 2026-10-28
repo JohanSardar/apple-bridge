@@ -2,4 +2,4 @@
 
 The mac source captures audio devices, display appearance and geometry, power, network path and running applications. Grants are mac:read and mac:write; this slice exposes no mutations. Capture uses bounded notification streams, CoreAudio listeners, workspace notifications, IOPS and NWPathMonitor. Unknown device volume and mute are omitted. Night Shift is omitted. SSID is included only with existing Location authorization; capture never requests it. Time remaining is seconds when IOPS supplies an estimate. Keep-awake describes system idle-sleep assertions.
 
-Limitations: VPN is an interface heuristic, not an authenticated tunnel health check. Real battery parity and five-minute CPU measurement remain unverified.
+Limitations: VPN is an interface heuristic, not an authenticated tunnel health check. Real battery percentage, charging and source match pmset. Whole-Helper idle CPU remains 56.61 percent over 300 seconds after narrowing CoreAudio subscriptions. A trace sample showed 2 Mac captures versus 954 Messages and 148 Notes captures; per-source CPU is unmeasured. Assertion-only changes to keep-awake state have not been independently verified.

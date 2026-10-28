@@ -124,16 +124,27 @@ public final class MacSource: Source {
             Unmanaged<MacChange>.fromOpaque(context).takeUnretainedValue().signal()
         }, Unmanaged.passUnretained(powerContext).toOpaque())?.takeRetainedValue()
         if let power { CFRunLoopAddSource(CFRunLoopGetMain(), power, .commonModes) }
-        var address = AudioObjectPropertyAddress(mSelector: kAudioObjectPropertySelectorWildcard, mScope: kAudioObjectPropertyScopeWildcard, mElement: kAudioObjectPropertyElementWildcard)
+        func addresses(_ device: AudioObjectID) -> [AudioObjectPropertyAddress] {
+            if device == AudioObjectID(kAudioObjectSystemObject) {
+                return [kAudioHardwarePropertyDevices, kAudioHardwarePropertyDefaultInputDevice, kAudioHardwarePropertyDefaultOutputDevice].map { AudioObjectPropertyAddress(mSelector: $0, mScope: kAudioObjectPropertyScopeGlobal, mElement: 0) }
+            }
+            var result = [AudioObjectPropertyAddress(mSelector: kAudioObjectPropertyName, mScope: kAudioObjectPropertyScopeGlobal, mElement: 0)]
+            for scope in [kAudioDevicePropertyScopeInput, kAudioDevicePropertyScopeOutput] {
+                for selector in [kAudioDevicePropertyStreams, kAudioDevicePropertyVolumeScalar, kAudioDevicePropertyMute] {
+                    result.append(AudioObjectPropertyAddress(mSelector: selector, mScope: scope, mElement: 0))
+                }
+            }
+            return result
+        }
         let listener: AudioObjectPropertyListenerBlock = { _, _ in continuation.yield(()) }
         var devices = initialDevices
-        for device in devices { AudioObjectAddPropertyListenerBlock(device, &address, .main, listener) }
+        for device in devices { for var address in addresses(device) { AudioObjectAddPropertyListenerBlock(device, &address, .main, listener) } }
         defer {
             try? wifi.stopMonitoringAllEvents(); wifi.delegate = nil
             withExtendedLifetime(wifiEvents) {}
             monitor.cancel(); tokens.forEach { center.removeObserver($0) }; NotificationCenter.default.removeObserver(display); NotificationCenter.default.removeObserver(lowPower); DistributedNotificationCenter.default().removeObserver(appearance)
             if let power { CFRunLoopRemoveSource(CFRunLoopGetMain(), power, .commonModes) }
-            for device in devices { AudioObjectRemovePropertyListenerBlock(device, &address, .main, listener) }
+            for device in devices { for var address in addresses(device) { AudioObjectRemovePropertyListenerBlock(device, &address, .main, listener) } }
             withExtendedLifetime(powerContext) {}
             continuation.finish()
         }
@@ -141,8 +152,8 @@ public final class MacSource: Source {
         for await _ in changes {
             try Task.checkCancellation()
             let current = Set(try audio().compactMap { UInt32($0.0) } + [AudioObjectID(kAudioObjectSystemObject)])
-            for device in devices.subtracting(current) { AudioObjectRemovePropertyListenerBlock(device, &address, .main, listener) }
-            for device in current.subtracting(devices) { AudioObjectAddPropertyListenerBlock(device, &address, .main, listener) }
+            for device in devices.subtracting(current) { for var address in addresses(device) { AudioObjectRemovePropertyListenerBlock(device, &address, .main, listener) } }
+            for device in current.subtracting(devices) { for var address in addresses(device) { AudioObjectAddPropertyListenerBlock(device, &address, .main, listener) } }
             devices = current
             try await scan(sink, live: true)
         }
