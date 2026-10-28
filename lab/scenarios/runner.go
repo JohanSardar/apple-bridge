@@ -358,6 +358,9 @@ func convergence(w *world.World) bool {
 }
 
 func runScenario(ctx context.Context, s Scenario, level string) Evidence {
+	if s.Feature == "remote.relay" {
+		return runRelayService(ctx, s, level)
+	}
 	if s.ID == "CON-GROUPS" {
 		return runContactGroups(ctx, s, level)
 	}

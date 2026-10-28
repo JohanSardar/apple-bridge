@@ -1,0 +1,70 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[9.46 9.64 9.21] cpu_idle=55% cpus=8 other_heavy=2"
+  },
+  "run_id": "relay-enroll",
+  "network_path": "loopback TLS origins through raw relay tunnel interface",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "RELAY-ENROLL",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "b96f140cce4212e720c29d70585570a188aa410d",
+  "at": "2026-10-28T06:48:06.918527Z",
+  "assertions": [
+    {
+      "name": "two_distinct_device_enrollments",
+      "passed": true
+    },
+    {
+      "name": "stable_hostname_after_restart",
+      "passed": true
+    },
+    {
+      "name": "old_credential_refused",
+      "passed": true
+    },
+    {
+      "name": "rotated_credential_accepted",
+      "passed": true
+    },
+    {
+      "name": "hostname_claim_by_other_key_refused",
+      "passed": true
+    },
+    {
+      "name": "key_possession_required",
+      "passed": true
+    },
+    {
+      "name": "revoke",
+      "passed": true
+    },
+    {
+      "name": "revocation_blocks_tunnel_and_reenrollment",
+      "passed": true
+    },
+    {
+      "name": "revocation_persists",
+      "passed": true
+    },
+    {
+      "name": "revoked_state",
+      "passed": true
+    },
+    {
+      "name": "private_state_no_bearer_credentials",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": [
+    "air"
+  ]
+}

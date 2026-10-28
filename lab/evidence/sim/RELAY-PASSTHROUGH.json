@@ -1,0 +1,70 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[5.3 9.13 9] cpu_idle=55% cpus=8 other_heavy=1"
+  },
+  "run_id": "relay-passthrough",
+  "network_path": "loopback TLS origins through raw relay tunnel interface",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "RELAY-PASSTHROUGH",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "b96f140cce4212e720c29d70585570a188aa410d",
+  "at": "2026-10-28T06:46:38.796043Z",
+  "assertions": [
+    {
+      "name": "two_distinct_device_enrollments",
+      "passed": true
+    },
+    {
+      "name": "authenticated_device_tunnels",
+      "passed": true
+    },
+    {
+      "name": "cross_device_credential_refused",
+      "passed": true
+    },
+    {
+      "name": "hosts_reach_only_their_bridge",
+      "passed": true
+    },
+    {
+      "name": "unknown_sni_closed",
+      "passed": true
+    },
+    {
+      "name": "unknown_sni_opens_no_tunnel",
+      "passed": true
+    },
+    {
+      "name": "listener_exit_active_stream",
+      "passed": true
+    },
+    {
+      "name": "listener_exit_returns_promptly",
+      "passed": true
+    },
+    {
+      "name": "listener_exit_closes_stream",
+      "passed": true
+    },
+    {
+      "name": "listener_exit_drains_streams",
+      "passed": true
+    },
+    {
+      "name": "relay_tunnel_buffers_contain_ciphertext_only",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": [
+    "air"
+  ]
+}
