@@ -51,6 +51,11 @@ public actor AppleSession: ObservationSink {
     private var additionalSources: [String: any Source] = [:]
     private var blobReader: (@Sendable (String, Int64, Int) async throws -> JSON)?
     private var captureTasks: [Task<Void, Never>] = []
+    private var queryHandlers: [String: @Sendable (JSON) async throws -> JSON] = [:]
+    public func registerQuery(_ name: String, handler: @escaping @Sendable (JSON) async throws -> JSON) throws {
+        guard wire == nil, queryHandlers[name] == nil else { throw SourceFailure.conflict }
+        queryHandlers[name] = handler
+    }
     private var queryTasks: [String: Task<Void, Never>] = [:]
     private var frameTasks: [UUID: Task<Void, Never>] = [:]
     private let trace: CaptureTrace
@@ -230,6 +235,19 @@ public actor AppleSession: ObservationSink {
     private func query(_ frame: JSON) async {
         guard !Task.isCancelled else { return }
         let id = frame["id"]
+        if let handler = queryHandlers[frame["op"].string] {
+            do {
+                let result = try await handler(frame["args"])
+                guard !Task.isCancelled else { return }
+                let encoded = try JSONEncoder().encode(result)
+                guard encoded.count <= 1 << 20 else { throw SourceFailure.invalid }
+                try? wire?.send(.object(["t": .string("QueryResult"), "id": id, "result_json": result, "blobs": .array([])]))
+            } catch {
+                let code = error is CancellationError ? "deadline" : (error as? SourceFailure == .invalid ? "invalid" : "unavailable")
+                try? wire?.send(.object(["t": .string("QueryError"), "id": id, "code": .string(code)]))
+            }
+            return
+        }
         guard frame["op"].string == "helper.version" else {
             try? wire?.send(.object(["t": .string("QueryError"), "id": id, "code": .string("unsupported")]))
             return

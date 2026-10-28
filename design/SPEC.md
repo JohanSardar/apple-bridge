@@ -404,6 +404,7 @@ protocol Source: Sendable {
 ## 9. Sources at full depth
 
 Transient Helper queries and the query-with-effect rule: [query contract](spec/query.md).
+Vision and PDF query slice: [inputs, bounds and remaining work](spec/vision.md).
 
 Relay service and enrollment: [G2-1 / G2-2](spec/relay.md).
 OAuth client metadata: [fetch and lab contract](spec/oauth.md).

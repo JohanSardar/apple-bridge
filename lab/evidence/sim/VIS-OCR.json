@@ -1,0 +1,97 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[4.66 5.26 7.59] cpu_idle=89% cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M61GWQ18VFS53JCEV1BRECAF",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "VIS-OCR",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "b7c13422e830a0b2af6c761bd2f1a370920b36d5",
+  "at": "2026-10-28T15:08:38.824177Z",
+  "assertions": [
+    {
+      "name": "world_started",
+      "passed": true
+    },
+    {
+      "name": "query_scopes_granted",
+      "passed": true
+    },
+    {
+      "name": "malformed_document_rejected",
+      "passed": true
+    },
+    {
+      "name": "generated_fixture_read",
+      "passed": true
+    },
+    {
+      "name": "fixture_query_completed",
+      "passed": true
+    },
+    {
+      "name": "fixture_content_matched",
+      "passed": true
+    },
+    {
+      "name": "file_input_matches_inline",
+      "passed": true
+    },
+    {
+      "name": "ocr_shape",
+      "passed": true
+    },
+    {
+      "name": "generated_fixture_read",
+      "passed": true
+    },
+    {
+      "name": "fixture_query_completed",
+      "passed": true
+    },
+    {
+      "name": "fixture_content_matched",
+      "passed": true
+    },
+    {
+      "name": "file_input_matches_inline",
+      "passed": true
+    },
+    {
+      "name": "ocr_shape",
+      "passed": true
+    },
+    {
+      "name": "generated_fixture_read",
+      "passed": true
+    },
+    {
+      "name": "fixture_query_completed",
+      "passed": true
+    },
+    {
+      "name": "fixture_content_matched",
+      "passed": true
+    },
+    {
+      "name": "file_input_matches_inline",
+      "passed": true
+    },
+    {
+      "name": "ocr_shape",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

@@ -988,3 +988,20 @@ features:
       - scenario: RELAY-PASSTHROUGH
         level: sim
         reason: Locally generated fixture CA replaces unavailable Pebble; ciphertext observed at relay buffers, without an independent process heap/log scan.
+  - id: vision.queries
+    title: Transient Vision OCR and PDF extraction
+    requirements: [R-API, R-SCOPE]
+    milestone: G8
+    modules: [native/Sources/VisionSource, native/Sources/PDFSource]
+    depends_on: [core.queries]
+    status: limited
+    scenarios:
+      - {id: VIS-OCR, levels: [sim, real]}
+      - {id: PDF-TEXT, levels: [sim, real]}
+    limits:
+      - scenario: VIS-OCR
+        level: real
+        reason: Digest-backed blob inputs, doctor readiness and five-minute idle CPU proof are not implemented; inline and local-file queries only.
+      - scenario: PDF-TEXT
+        level: real
+        reason: pdf.annotate command and its artifact readback evidence are not implemented; extraction and search only.

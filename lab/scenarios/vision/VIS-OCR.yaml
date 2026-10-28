@@ -1,0 +1,5 @@
+id: VIS-OCR
+feature: vision.queries
+levels: [sim, real]
+when:
+  - queries: {}
