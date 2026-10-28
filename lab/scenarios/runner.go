@@ -397,6 +397,10 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "HELPER-RELEASE-COMMANDS" {
 		return runHelperReleaseCommands(ctx, s, level)
 	}
+	if s.ID == "SAF-CAPTURE" || s.ID == "SAF-IDLE" || s.ID == "SAF-HISTORY-REAL" || s.ID == "SAF-BOOKMARKS-REAL" {
+		return runSafariCapture(ctx, s, level)
+	}
+
 	if s.ID == "CORE-SOURCE-SUPPORT" {
 		return runSourceSupport(ctx, s, level)
 	}
@@ -1137,6 +1141,9 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		ran++
 		fmt.Fprintln(os.Stderr, "running", s.ID, level)
 		duration := 3 * time.Minute
+		if s.Feature == "safari.capture" {
+			duration = 60 * time.Minute
+		}
 		if s.ID == "RELAY-STREAMS" {
 			duration = 12 * time.Minute
 		}

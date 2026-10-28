@@ -1,0 +1,61 @@
+package scenarios
+
+import (
+	"context"
+	"encoding/json"
+	"github.com/JohanSardar/apple-bridge/internal/contracts"
+	"github.com/JohanSardar/apple-bridge/lab/world"
+	"reflect"
+	"time"
+)
+
+func safariGateway(ctx context.Context, e Evidence, observations []contracts.Observation) Evidence {
+	add := func(name string, passed bool) {
+		e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: passed})
+		e.Passed = e.Passed && passed
+	}
+	for _, row := range observations {
+		add("registered_shape_"+row.Collection, contracts.HasShape(row.Collection) && len(contracts.CheckShape(row.Collection, row.Data)) == 0)
+	}
+	grants, known := contracts.GrantsForSource(contracts.Safari)
+	add("read_and_write_grants_registered", known && len(grants.Grants) == 2 && grants.Grants[0] == "safari:read" && grants.Grants[1] == "safari:write")
+	ctx = world.WithOptions(ctx, world.Options{Scope: "safari:read,system:read"})
+	w, err := world.New(ctx, "sim", 1, 0)
+	add("gateway_and_replica", err == nil)
+	if err != nil {
+		return e
+	}
+	defer w.Close()
+	add("simulated_native_capture", w.ControlAction("/safari", observations) == nil)
+	matches := func(endpoint world.Endpoint) bool {
+		rows, err := w.Records(endpoint)
+		if err != nil {
+			return false
+		}
+		found := 0
+		for _, row := range rows {
+			if row.Source != contracts.Safari || row.Deleted {
+				continue
+			}
+			match := false
+			for _, observation := range observations {
+				if row.Collection != observation.Collection {
+					continue
+				}
+				var actual, want any
+				if json.Unmarshal(row.Data, &actual) == nil && json.Unmarshal(observation.Data, &want) == nil && reflect.DeepEqual(actual, want) {
+					match = true
+					break
+				}
+			}
+			if !match {
+				return false
+			}
+			found++
+		}
+		return found == len(observations)
+	}
+	add("gateway_fields_match_native_fixture", w.Await(15*time.Second, func() bool { return matches(w.Gateway) }) == nil)
+	add("replica_fields_match_native_fixture", w.Await(15*time.Second, func() bool { return matches(w.Replicas[0]) }) == nil)
+	return e
+}
