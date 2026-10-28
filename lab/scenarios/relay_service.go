@@ -192,6 +192,11 @@ func runRelayService(ctx context.Context, s Scenario, level string) Evidence {
 	sha, _ := exec.Command("git", "rev-parse", "HEAD").Output()
 	e := Evidence{Scenario: s.ID, Level: level, At: time.Now().UTC(), GitSHA: strings.TrimSpace(string(sha)), RunID: "relay-" + strings.ToLower(strings.TrimPrefix(s.ID, "RELAY-")), Hosts: []string{"air"}, NetworkPath: "loopback TLS origins through raw relay tunnel interface"}
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
+	if level == "real" {
+		e.Status = "limited"
+		e.Assertions = append(e.Assertions, Assertion{Name: "public_relay_readiness", Status: "limited", Detail: "NS delegation absent; trusted control TLS and VM DNS scopes/IAM require operator setup"})
+		return e
+	}
 	dir, err := os.MkdirTemp("", "ab-relay-lab-")
 	if err != nil {
 		add("fixture", false)
@@ -220,6 +225,16 @@ func runRelayService(ctx context.Context, s Scenario, level string) Evidence {
 		return e
 	}
 	switch s.ID {
+	case "RELAY-ACME":
+		relayDNSProof(ctx, lab, key1, a, b, add)
+		if err := relayPebble(ctx, lab, key1, a, false, add); err != nil {
+			add("pebble_issue_renew: "+err.Error(), false)
+		}
+	case "RELAY-OWN-DOMAIN":
+		relayOwnDomain(ctx, lab, key1, a, b, add)
+		if err := relayPebble(ctx, lab, key1, a, true, add); err != nil {
+			add("own_domain_certificate: "+err.Error(), false)
+		}
 	case "RELAY-STREAMS":
 		relayStreams(ctx, lab, key1, a, add)
 	case "RELAY-ENROLL":

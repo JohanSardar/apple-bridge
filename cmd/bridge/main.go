@@ -59,6 +59,7 @@ func run(ctx context.Context, args []string) error {
 	noSelfTestUI := set.Bool("no-ui", false, "defer Messages UI steps and retain cleanup obligations")
 	forceSelfTest := set.Bool("force", false, "rerun the Messages self-test on this OS build")
 	via := set.String("via", "", "remote backend: embedded (default) or tailscale-app")
+	domain := set.String("domain", "", "custom relay hostname")
 	snippets := set.Bool("snippets", false, "print remote connection snippets")
 	remoteToken := set.Bool("remote", false, "allow this token through Remote")
 	home := set.String("home", defaultHome(), "private state directory")
@@ -115,7 +116,7 @@ func run(ctx context.Context, args []string) error {
 			}
 			return remote.Snippets(*home, os.Stdout)
 		}
-		return remote.Command(ctx, *home, webAction, *via, *name, os.Stdout)
+		return remote.CommandDomain(ctx, *home, webAction, *via, *name, *domain, os.Stdout)
 	}
 	if verb == "install-credentials" {
 		_, err := trust.Open(*home)

@@ -1,0 +1,62 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[6.21 5.08 6.37] cpu_idle=64% cpus=8 other_heavy=1"
+  },
+  "run_id": "relay-acme",
+  "network_path": "loopback TLS origins through raw relay tunnel interface",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "RELAY-ACME",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "489fa272dcfa447fa25825cbbfa87ee06292b6fd",
+  "at": "2026-10-28T15:17:26.42641Z",
+  "assertions": [
+    {
+      "name": "two_distinct_device_enrollments",
+      "passed": true
+    },
+    {
+      "name": "signed_dns_own_host_only",
+      "passed": true
+    },
+    {
+      "name": "dns_proof_replay_refused",
+      "passed": true
+    },
+    {
+      "name": "cross_device_dns_refused",
+      "passed": true
+    },
+    {
+      "name": "dns_value_bound_to_signature",
+      "passed": true
+    },
+    {
+      "name": "pebble_certificate_hostname",
+      "passed": true
+    },
+    {
+      "name": "renewal_inside_30_days",
+      "passed": true
+    },
+    {
+      "name": "private_key_only_under_bridge_home",
+      "passed": true
+    },
+    {
+      "name": "dns_challenge_cleaned_up",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": [
+    "air"
+  ]
+}

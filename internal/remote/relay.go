@@ -6,13 +6,14 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -73,7 +74,7 @@ func relayEnroll(ctx context.Context, home, endpoint, zone string) (relayIdentit
 func (r *Remote) serveRelay(ctx context.Context, cfg Config, status *Status, fail func(error)) {
 	endpoint := os.Getenv("APPLE_BRIDGE_RELAY_URL")
 	if endpoint == "" {
-		endpoint = "https://control.ab.lexaai.tech:8443"
+		endpoint = "https://control.ab.lexaai.tech"
 	}
 	if !strings.HasPrefix(endpoint, "https://") {
 		fail(fmt.Errorf("relay control requires HTTPS"))
@@ -93,13 +94,108 @@ func (r *Remote) serveRelay(ctx context.Context, cfg Config, status *Status, fai
 	host := id.Credential.Hostname
 	status.URL = "https://" + host
 	r.publish(*status)
-	cert, err := tls.LoadX509KeyPair(filepath.Join(r.home, "remote", "relay-cert.pem"), filepath.Join(r.home, "remote", "relay-key.pem"))
+	if cfg.Domain != "" {
+		host = cfg.Domain
+		for {
+			missing := relay.MissingRecords(ctx, net.DefaultResolver, host, id.Credential.Hostname)
+			if len(missing) == 0 {
+				break
+			}
+			status.State = "pending"
+			status.Message = "Missing DNS records: " + strings.Join(missing, "; ")
+			r.publish(*status)
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(5 * time.Second):
+			}
+		}
+		p, e := relay.NewProof(ctx, http.DefaultClient, endpoint, id.Key, id.Credential, "domain:"+host)
+		if e != nil {
+			fail(e)
+			return
+		}
+		if e = relayRequest(ctx, endpoint+"/domain", map[string]any{"proof": p, "domain": host}); e != nil {
+			fail(e)
+			return
+		}
+	}
+	status.URL = "https://" + host
+	r.publish(*status)
+	go r.watchCT(ctx, id)
+	manager := &certificateManager{home: r.home, identity: id, host: host}
+	bounded, cancel = context.WithTimeout(ctx, 5*time.Minute)
+	err = manager.ensure(bounded)
+	cancel()
 	if err != nil {
 		fail(err)
 		return
 	}
+	go func() {
+		ticker := time.NewTicker(12 * time.Hour)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				bounded, cancel := context.WithTimeout(ctx, 5*time.Minute)
+				err := manager.ensure(bounded)
+				cancel()
+				if ctx.Err() == nil {
+					r.mu.Lock()
+					if r.status.ID == cfg.ID {
+						if err != nil {
+							r.status.LastError = "Certificate renewal failed"
+						} else if cert, e := manager.get(nil); e == nil {
+							if leaf, e := x509.ParseCertificate(cert.Certificate[0]); e == nil {
+								r.status.CertificateExpiry = leaf.NotAfter
+							}
+						}
+						write(r.home, "status", r.status)
+					}
+					r.mu.Unlock()
+				}
+			}
+		}
+	}()
 	listener := relay.ListenTunnel(ctx, endpoint, http.DefaultClient, id.Key, id.Credential)
 	defer listener.Close()
-	secure := tls.NewListener(listener, &tls.Config{MinVersion: tls.VersionTLS12, Certificates: []tls.Certificate{cert}})
+	secure := tls.NewListener(listener, &tls.Config{MinVersion: tls.VersionTLS12, GetCertificate: manager.get})
 	r.ready(ctx, status, secure, "", fail)
+}
+
+func (r *Remote) watchCT(ctx context.Context, id relayIdentity) {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
+		bounded, cancel := context.WithTimeout(ctx, 15*time.Second)
+		p, err := relay.NewProof(bounded, http.DefaultClient, id.Endpoint, id.Key, id.Credential, "ct")
+		if err == nil {
+			raw, _ := json.Marshal(p)
+			req, _ := http.NewRequestWithContext(bounded, "GET", id.Endpoint+"/ct", nil)
+			req.Header.Set("X-Bridge-Proof", base64.RawURLEncoding.EncodeToString(raw))
+			resp, e := http.DefaultClient.Do(req)
+			if e == nil {
+				var result struct {
+					Warning string `json:"warning"`
+				}
+				if resp.StatusCode == 200 && json.NewDecoder(io.LimitReader(resp.Body, 4096)).Decode(&result) == nil {
+					r.mu.Lock()
+					if ctx.Err() == nil && r.status.Backend == "relay" {
+						r.status.CTWarning = result.Warning
+					}
+					write(r.home, "status", r.status)
+					r.mu.Unlock()
+				}
+				resp.Body.Close()
+			}
+		}
+		cancel()
+	}
 }
