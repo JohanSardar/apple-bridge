@@ -1,0 +1,81 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[12.97 24.43 24.64] cpu_idle=51% cpus=8 other_heavy=2"
+  },
+  "run_id": "run_01M6283V1DF5HAYR2SBVMQQMKZ",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "MUS-SIM",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-28T21:54:29.549751Z",
+  "assertions": [
+    {
+      "name": "world_started",
+      "passed": true
+    },
+    {
+      "name": "scopes",
+      "passed": true
+    },
+    {
+      "name": "catalog_query",
+      "passed": true
+    },
+    {
+      "name": "catalog_id",
+      "passed": true
+    },
+    {
+      "name": "invalid_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_rejected",
+      "passed": true
+    },
+    {
+      "name": "entity_song",
+      "passed": true
+    },
+    {
+      "name": "entity_album",
+      "passed": true
+    },
+    {
+      "name": "entity_musicArtist",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

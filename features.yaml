@@ -1288,3 +1288,16 @@ features:
       - scenario: FOC-SET-REAL
         level: real
         reason: Verified Set Focus action and parameters plus AB Focus import required; no real mutation attempted. DND syncs to Johan's iPhone.
+  - id: music.catalog
+    title: Public Music catalog search
+    requirements: [R-API, R-SCOPE]
+    milestone: G7
+    modules: [native/Sources/MusicSource, internal/contracts]
+    depends_on: [core.queries]
+    status: limited
+    scenarios:
+      - {id: MUS-SIM, levels: [sim]}
+      - {id: MUS-CATALOG-REAL, levels: [real]}
+    limits:
+      - {scenario: MUS-CATALOG-REAL, level: real, reason: Qualification pending native build.}
+    notes: "Control and library capture pending; Automation dev.applebridge.helper → com.apple.Music missing. Public API has no playlist search. Whole Helper idle qualification blocked by T53."

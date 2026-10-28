@@ -100,6 +100,14 @@ func (s *querySession) receive(f contracts.IPCFrame) bool {
 		case "helper.version":
 			out.ResultJSON = json.RawMessage(`{"version":"sim","protocol":"ipc/1"}`)
 		default:
+			if code, result, handled := simulateMusicQuery(f.Op, f.Args); handled {
+				out.ResultJSON = result
+				if code != "" {
+					out.T = "QueryError"
+					out.Code = code
+				}
+				break
+			}
 			if photos, handled := s.fake.photosQuery(f); handled {
 				out = photos
 				break
