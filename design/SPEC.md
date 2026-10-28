@@ -403,6 +403,8 @@ protocol Source: Sendable {
 
 ## 9. Sources at full depth
 
+Relay service and enrollment: [G2-1 / G2-2](spec/relay.md).
+
 Every source publishes `system.source` with state, coverage, freshness and capabilities, and exposes capabilities individually gated on OS build and proven behaviour. A capability is advertised only after its real-level scenario passed on this OS build (recorded in `features.yaml`); otherwise operations return `ErrUnsupported` with reason `capability_unproven`.
 
 ### 9.1 Messages

@@ -1,0 +1,134 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[9.34 9.61 9.2] cpu_idle=64% cpus=8 other_heavy=1"
+  },
+  "run_id": "relay-limits",
+  "network_path": "loopback TLS origins through raw relay tunnel interface",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "RELAY-LIMITS",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "b96f140cce4212e720c29d70585570a188aa410d",
+  "at": "2026-10-28T06:48:11.801864Z",
+  "assertions": [
+    {
+      "name": "two_distinct_device_enrollments",
+      "passed": true
+    },
+    {
+      "name": "authenticated_device_tunnels",
+      "passed": true
+    },
+    {
+      "name": "cross_device_credential_refused",
+      "passed": true
+    },
+    {
+      "name": "hosts_reach_only_their_bridge",
+      "passed": true
+    },
+    {
+      "name": "unknown_sni_closed",
+      "passed": true
+    },
+    {
+      "name": "unknown_sni_opens_no_tunnel",
+      "passed": true
+    },
+    {
+      "name": "connection_policy",
+      "passed": true
+    },
+    {
+      "name": "stalled_tls_releases_slot",
+      "passed": true
+    },
+    {
+      "name": "stalled_tls_slot_reusable",
+      "passed": true
+    },
+    {
+      "name": "stalled_tls_probe_drains",
+      "passed": true
+    },
+    {
+      "name": "blocked_tunnel_write_releases_slot",
+      "passed": true
+    },
+    {
+      "name": "restore_origin_after_idle",
+      "passed": true
+    },
+    {
+      "name": "slot_reusable_after_idle",
+      "passed": true
+    },
+    {
+      "name": "idle_probe_drains",
+      "passed": true
+    },
+    {
+      "name": "first_connection_accepted",
+      "passed": true
+    },
+    {
+      "name": "excess_connection_rejected",
+      "passed": true
+    },
+    {
+      "name": "kill_switch",
+      "passed": true
+    },
+    {
+      "name": "kill_closes_active_connection",
+      "passed": true
+    },
+    {
+      "name": "kill_drains_stream",
+      "passed": true
+    },
+    {
+      "name": "kill_blocks_reattach",
+      "passed": true
+    },
+    {
+      "name": "bandwidth_policy",
+      "passed": true
+    },
+    {
+      "name": "aggregate_bandwidth_throttled",
+      "passed": true
+    },
+    {
+      "name": "monthly_policy",
+      "passed": true
+    },
+    {
+      "name": "monthly_budget_rejects",
+      "passed": true
+    },
+    {
+      "name": "monthly_usage_persisted",
+      "passed": true
+    },
+    {
+      "name": "other_device_unaffected",
+      "passed": true
+    },
+    {
+      "name": "relay_tunnel_buffers_contain_ciphertext_only",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": [
+    "air"
+  ]
+}

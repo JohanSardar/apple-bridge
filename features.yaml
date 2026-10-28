@@ -922,3 +922,20 @@ features:
       - {id: WEB-NOTE-PARITY, levels: [web, real]}
     notes: >-
       Browser milestone 228/228 passes without skips or flakes; READ includes 4.5:1 highlight/link contrast across all five colors and both appearances. Core milestone green with explicit limits: #283 establishes leader-reported real DECODE-FULL 5/5 and REST/MCP CRUD sim 34/34. The pre-fix real append conflicted; replace/MCP were not reached, and tagged cleanup failed. Further real Notes writes are stopped and limited pending a verified cleanup route; no local On My Mac account exists. Leader-accepted #274 passes 20 real first-record saves, p95 gateway/Ubuntu replica 476.3/870.2 ms; full content 1430/1420 ms is separate. Rich/checklist mutations stay hidden; combined native/browser journeys, worker-enabled external-body integration, burst/crash and app-specific UI timing remain limited.
+
+  - id: remote.relay
+    title: SNI passthrough relay, stable device enrollment and persistent budgets
+    requirements: [R-SECURE, R-WEB-REACH]
+    milestone: M0
+    modules: [relay]
+    depends_on: []
+    status: limited
+    notes: G2-1/G2-2 server and T13 stream interface; listener-exit cancellation, configurable stream inactivity limits, strict unknown-SNI closure without tunnel admission, and kill-switch drain checks pass sim. Network tunnel transport belongs to T13.
+    scenarios:
+      - {id: RELAY-PASSTHROUGH, levels: [sim]}
+      - {id: RELAY-ENROLL, levels: [sim]}
+      - {id: RELAY-LIMITS, levels: [sim]}
+    limits:
+      - scenario: RELAY-PASSTHROUGH
+        level: sim
+        reason: Locally generated fixture CA replaces unavailable Pebble; ciphertext observed at relay buffers, without an independent process heap/log scan.
