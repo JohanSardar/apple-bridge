@@ -25,12 +25,13 @@ func runMac(ctx context.Context, s Scenario, level string) (e Evidence) {
 			e.Passed = e.Passed && a.Passed
 		}
 	}()
+	ctx = world.WithOptions(ctx, world.Options{Scope: "mac:read,mac:write,system:read"})
 	var w *world.World
 	var err error
-	if level == "real" {
-		w, err = world.NewReal(ctx, level, 0)
+	if level == "real" || s.ID == "MAC-REPLICA" {
+		w, err = world.NewRealWithSetup(ctx, level, 1, world.NativeSetup{IndependentTruth: true})
 	} else {
-		w, err = world.New(ctx, level, 1, 0)
+		w, err = world.New(ctx, level, 1, 0, world.BlobOptions{Scope: "mac:read,mac:write,reminders:read,system:read"})
 	}
 	add("world_started", err == nil)
 	if err != nil {
@@ -40,9 +41,52 @@ func runMac(ctx context.Context, s Scenario, level string) (e Evidence) {
 	defer w.Close()
 
 	endpoint := w.Gateway
-	endpoint.Token, err = w.ScopedToken(endpoint, "mac:read,system:read")
+	if s.ID == "MAC-REPLICA" && len(w.Replicas) > 0 {
+		endpoint = w.Replicas[0]
+	}
+	endpoint.Token, err = w.ScopedToken(endpoint, "mac:read,mac:write,system:read")
 	add("scope_granted", err == nil)
 	client := scripted.Client{Endpoint: endpoint}
+	err = w.Await(20*time.Second, func() bool {
+		var out contracts.QueryResult
+		return client.Call(ctx, "helper.version", contracts.Query{Args: json.RawMessage(`{}`)}, &out) == nil
+	})
+	add("helper_ready", err == nil)
+	if err != nil {
+		return
+	}
+	if s.ID != "MAC-COMMANDS" && s.ID != "MAC-CAPTURE" && s.ID != "MAC-IDLE" && s.ID != "MAC-POWER-REAL" {
+		if s.ID == "MAC-CLIPBOARD-REAL" {
+			macClipboardCommands(ctx, client, w, true, add)
+		} else {
+			macRealCommands(ctx, s, client, add)
+		}
+		return
+	}
+	if s.ID == "MAC-COMMANDS" {
+		macCommandSchemas(add)
+		for _, test := range []struct {
+			op   string
+			args map[string]any
+		}{
+			{"mac.set_volume", map[string]any{"volume": 23}},
+			{"mac.set_mute", map[string]any{"muted": true}},
+			{"mac.set_output_device", map[string]any{"device": "fixture"}},
+			{"mac.set_appearance", map[string]any{"appearance": "dark"}},
+			{"mac.launch_app", map[string]any{"bundle_id": "com.apple.calculator"}},
+			{"mac.activate_app", map[string]any{"bundle_id": "com.apple.calculator"}},
+			{"mac.quit_app", map[string]any{"bundle_id": "com.apple.calculator"}},
+			{"mac.keep_awake", map[string]any{"on": true, "duration": 60}},
+			{"mac.keep_awake", map[string]any{"on": false}},
+		} {
+			raw, _ := json.Marshal(test.args)
+			var result contracts.CommandRecord
+			err = client.Call(ctx, test.op, contracts.Command{ID: contracts.NewID("cmd"), Op: test.op, Args: raw, WaitMS: 15000}, &result)
+			add(test.op+"_readback", err == nil && result.State == contracts.CommandObserved && contracts.MacCompletionEvidence(result.Evidence, result.RequestHash))
+		}
+		macClipboardCommands(ctx, client, w, false, add)
+		return
+	}
 	if level == "real" {
 		var out contracts.ReadResult
 		err = w.Await(20*time.Second, func() bool {

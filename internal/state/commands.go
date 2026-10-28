@@ -238,7 +238,8 @@ func (s *Store) persistCommand(ctx context.Context, t CommandTransition, partsUp
 	cursor.Sequence++
 	r.Cursor = cursor
 	runnerCompletion := r.Command.Op == "shortcuts.run" && r.Source == contracts.Shortcuts && r.State == contracts.CommandObserved && r.CommitSeq == 0 && contracts.ShortcutCompletionEvidence(r.Evidence, r.RequestHash)
-	if !runnerCompletion && (r.State == contracts.CommandObserved || r.State == contracts.CommandDelivered) && (r.CommitSeq == 0 || r.CommitSeq >= cursor.Sequence) {
+	macCompletion := r.Source == "mac" && r.State == contracts.CommandObserved && contracts.MacCompletionEvidence(r.Evidence, r.RequestHash)
+	if !macCompletion && !runnerCompletion && (r.State == contracts.CommandObserved || r.State == contracts.CommandDelivered) && (r.CommitSeq == 0 || r.CommitSeq >= cursor.Sequence) {
 		return r, contracts.ErrCorrupt
 	}
 	b, err = json.Marshal(r)

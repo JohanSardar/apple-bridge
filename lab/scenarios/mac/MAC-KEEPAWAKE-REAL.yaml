@@ -1,0 +1,5 @@
+id: MAC-KEEPAWAKE-REAL
+feature: mac.commands
+levels: [real]
+when:
+  - mac: {}
