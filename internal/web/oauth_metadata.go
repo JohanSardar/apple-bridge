@@ -2,22 +2,19 @@ package web
 
 import (
 	"encoding/json"
+	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/internal/trust"
 	"net/http"
 )
 
 func oauthScopes() []string {
-	out := []string{}
-	for _, v := range []string{"messages", "reminders", "calendar", "contacts", "notes", "usage"} {
-		out = append(out, v+":read", v+":write")
-	}
-	return out
+	return contracts.AgentScopes()
 }
 func (s *server) oauthRoutes(mux *http.ServeMux) {
 	s.oauthAuthorizationRoutes(mux)
 	s.oauthTokenRoute(mux)
 	protected := func(w http.ResponseWriter, r *http.Request) {
-		respond(w, 200, map[string]any{"resource": servingOrigin(r) + "/mcp", "authorization_servers": []string{servingOrigin(r)}, "scopes_supported": []string{"messages:read"}, "bearer_methods_supported": []string{"header"}})
+		respond(w, 200, map[string]any{"resource": servingOrigin(r) + "/mcp", "authorization_servers": []string{servingOrigin(r)}, "scopes_supported": oauthScopes(), "bearer_methods_supported": []string{"header"}})
 	}
 	mux.HandleFunc("GET /.well-known/oauth-protected-resource", protected)
 	mux.HandleFunc("GET /.well-known/oauth-protected-resource/mcp", protected)

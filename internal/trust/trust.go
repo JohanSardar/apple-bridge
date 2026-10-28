@@ -84,7 +84,7 @@ func (p Principal) Visibility() Visibility {
 		if g == "admin" {
 			return AllVisibility()
 		}
-		if len(parts) == 2 && (parts[1] == "read" || parts[1] == "write") {
+		if contracts.KnownGrant(g) && len(parts) == 2 && (parts[1] == "read" || parts[1] == "write") {
 			v[contracts.Source(parts[0])] = true
 		}
 	}
@@ -97,21 +97,7 @@ func ParseGrants(scope string) ([]contracts.Grant, error) {
 	}
 	out := []contracts.Grant{}
 	for _, s := range strings.Split(scope, ",") {
-		if s == "admin" {
-			out = append(out, "admin")
-			continue
-		}
-		p := strings.Split(s, ":")
-		if len(p) != 2 || (p[1] != "read" && p[1] != "write") {
-			return nil, contracts.ErrInvalid
-		}
-		found := false
-		for _, source := range contracts.Sources {
-			if p[0] == string(source) {
-				found = true
-			}
-		}
-		if !found {
+		if !contracts.KnownGrant(contracts.Grant(s)) {
 			return nil, contracts.ErrInvalid
 		}
 		out = append(out, contracts.Grant(s))
