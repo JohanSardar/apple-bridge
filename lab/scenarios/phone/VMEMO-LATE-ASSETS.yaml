@@ -1,0 +1,7 @@
+id: VMEMO-LATE-ASSETS
+feature: recordings.read
+levels: [sim]
+given: [{world: {replicas: 0}}]
+when: [{recordings: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

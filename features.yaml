@@ -1288,3 +1288,17 @@ features:
       - scenario: FOC-SET-REAL
         level: real
         reason: Verified Set Focus action and parameters plus AB Focus import required; no real mutation attempted. DND syncs to Johan's iPhone.
+  - id: recordings.read
+    title: Voice Memos and voicemail metadata
+    requirements: [R-API, R-SCOPE]
+    milestone: G4
+    modules: [native/Sources/VoiceMemosSource, native/Sources/VoicemailSource, internal/contracts]
+    depends_on: []
+    status: limited
+    scenarios:
+      - {id: VMEMO-CAPTURE, levels: [sim]}
+      - {id: VM-CAPTURE, levels: [sim]}
+      - {id: VMEMO-LATE-ASSETS, levels: [sim]}
+    limits:
+      - {scenario: VMEMO-LATE-ASSETS, level: sim, reason: "Metadata slice only; timed transcript decoding, folders and on-demand audio hydration remain unimplemented"}
+    notes: "VMEMO-READ-REAL and VM-READ-REAL: no data on this Mac. VMEMO-NEW-REAL needs Johan to record a memo. Real idle qualification blocked by existing Helper Messages CPU issue T53."
