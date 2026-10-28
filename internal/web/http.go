@@ -26,14 +26,15 @@ const LocalSessionCookie = "ab_session_local"
 const CSP = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
 
 type Deps struct {
-	RateClock    func() time.Time
-	FrameWritten func(contracts.Cursor, time.Time)
-	Operations   *operations.Service
-	Authority    *trust.Authority
-	Blobs        *blobs.Store
-	PublicHost   func() string
-	Address      string
-	Assets       fs.FS
+	ClientMetadata *ClientMetadataFetcher
+	RateClock      func() time.Time
+	FrameWritten   func(contracts.Cursor, time.Time)
+	Operations     *operations.Service
+	Authority      *trust.Authority
+	Blobs          *blobs.Store
+	PublicHost     func() string
+	Address        string
+	Assets         fs.FS
 }
 
 type server struct {
@@ -131,6 +132,9 @@ func current(r *http.Request) identity {
 }
 
 func Handler(deps Deps) http.Handler {
+	if deps.ClientMetadata == nil {
+		deps.ClientMetadata = &ClientMetadataFetcher{}
+	}
 	if deps.Assets == nil {
 		deps.Assets = webui.Assets
 	}
