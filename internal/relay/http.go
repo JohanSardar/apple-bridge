@@ -8,6 +8,7 @@ import (
 
 func (s *Server) Handler(admin string) http.Handler {
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /tunnel", s.tunnel)
 	mux.HandleFunc("GET /challenge", func(w http.ResponseWriter, r *http.Request) {
 		nonce, err := s.Store.Challenge()
 		if err != nil {
