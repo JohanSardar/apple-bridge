@@ -3,6 +3,7 @@ package simapple
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"github.com/JohanSardar/apple-bridge/internal/applepeer"
@@ -114,6 +115,39 @@ func (s *querySession) receive(f contracts.IPCFrame) bool {
 			}
 			if files, handled := s.fake.filesQuery(f); handled {
 				out = files
+				break
+			}
+			for _, handler := range []func(string, json.RawMessage) (string, json.RawMessage, bool){simulateTranscription, simulateAIQuery} {
+				if code, result, handled := handler(f.Op, f.Args); handled {
+					out.ResultJSON = result
+					if code != "" {
+						out.T = "QueryError"
+						out.Code = code
+					}
+					_, _ = s.wire.Send(out)
+					return
+				}
+			}
+			if code, result, handled := simulateAudioQuery(f.Op, f.Args); handled {
+				out.ResultJSON = result
+				if f.Op == "speech.synthesize" && code == "" {
+					var value struct {
+						Data string `json:"data_base64"`
+					}
+					json.Unmarshal(result, &value)
+					data, _ := base64.StdEncoding.DecodeString(value.Data)
+					sum := sha256.Sum256(data)
+					digest := hex.EncodeToString(sum[:])
+					s.fake.mu.Lock()
+					s.fake.blobs[digest] = data
+					s.fake.mu.Unlock()
+					out.ResultJSON = json.RawMessage(`{"media_type":"audio/wav"}`)
+					out.Blobs = []contracts.QueryBlob{{Digest: digest, Size: int64(len(data)), Handle: digest}}
+				}
+				if code != "" {
+					out.T = "QueryError"
+					out.Code = code
+				}
 				break
 			}
 			if code, result, handled := simulatePDFQuery(f.Op, f.Args); handled {

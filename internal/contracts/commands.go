@@ -146,6 +146,9 @@ func ValidateCommand(c Command) (ReminderArgs, error) {
 	if strings.HasPrefix(c.Op, "photos.") {
 		return ReminderArgs{}, ValidatePhotoCommand(c)
 	}
+	if PlaybackOperation(c.Op) {
+		return ReminderArgs{}, ValidatePlayback(c)
+	}
 	if c.Op == "shortcuts.run" {
 		return ReminderArgs{}, ValidateShortcutRun(c)
 	}

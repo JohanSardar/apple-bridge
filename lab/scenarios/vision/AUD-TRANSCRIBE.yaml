@@ -1,0 +1,5 @@
+id: AUD-TRANSCRIBE
+feature: audio.queries
+levels: [real]
+when:
+  - queries: {}

@@ -1,0 +1,5 @@
+id: AUD-SIM
+feature: audio.queries
+levels: [sim]
+when:
+  - queries: {}

@@ -1323,3 +1323,19 @@ features:
       - {id: FILES-TRANSFORM, levels: [sim]}
     limits:
       - {scenario: FILES-TRANSFORM, level: sim, reason: Generated native fixtures; real qualification batched at end.}
+  - id: audio.queries
+    title: On-device audio and language queries
+    requirements: [R-API, R-SCOPE]
+    milestone: G8
+    modules: [native/Sources/AudioSource, native/Sources/SpeechSource, native/Sources/AISource]
+    depends_on: [core.queries]
+    status: limited
+    scenarios:
+      - {id: AUD-SIM, levels: [sim]}
+      - {id: SPEECH-SAY, levels: [real]}
+      - {id: AI-LOCAL, levels: [real]}
+      - {id: AUD-TRANSCRIBE, levels: [real]}
+    limits:
+      - {scenario: SPEECH-SAY, level: real, reason: real qualification batched at end}
+      - {scenario: AUD-TRANSCRIBE, level: real, reason: real qualification batched at end}
+      - {scenario: AI-LOCAL, level: real, reason: real qualification batched at end}

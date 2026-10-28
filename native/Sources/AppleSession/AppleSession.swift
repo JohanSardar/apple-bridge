@@ -54,6 +54,7 @@ public actor AppleSession: ObservationSink {
     private var additionalSources: [String: any Source] = [:]
     private var blobReader: (@Sendable (String, Int64, Int) async throws -> JSON)?
     private var captureTasks: [Task<Void, Never>] = []
+    private var queryAudio: [String: (Data, Date)] = [:]
     private var queryHandlers: [String: @Sendable (JSON) async throws -> JSON] = [:]
     public func registerQuery(_ name: String, handler: @escaping @Sendable (JSON) async throws -> JSON) throws {
         guard wire == nil, queryHandlers[name] == nil else { throw SourceFailure.conflict }
@@ -242,7 +243,17 @@ public actor AppleSession: ObservationSink {
         let id = frame["id"]
         if let handler = queryHandlers[frame["op"].string] {
             do {
-                let result = try await handler(frame["args"])
+                var result = try await handler(frame["args"])
+                var blobs: [JSON] = []
+                if frame["op"].string == "speech.synthesize", let data = Data(base64Encoded: result["data_base64"].string), !data.isEmpty {
+                    queryAudio = queryAudio.filter { Date().timeIntervalSince($0.value.1) < 60 }
+                    guard queryAudio.count < 8 else { throw SourceFailure.unavailable }
+                    let digest = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+                    let handle = "query-audio:" + UUID().uuidString
+                    queryAudio[handle] = (data, Date())
+                    result = .object(["media_type": .string("audio/wav")])
+                    blobs = [.object(["digest": .string(digest), "size": .number(Double(data.count)), "handle": .string(handle)])]
+                }
                 guard !Task.isCancelled else { return }
                 let encoded = try JSONEncoder().encode(result)
                 guard encoded.count <= 64 << 20 else { throw SourceFailure.invalid }
@@ -257,7 +268,7 @@ public actor AppleSession: ObservationSink {
                     return
                 }
                 let photoBlob = frame["op"].string == "photos.original" || frame["op"].string == "photos.thumbnail"
-                let blobs: [JSON] = photoBlob ? [.object(["digest": result["digest"], "size": result["size"], "handle": result["handle"]])] : frame["op"].string == "files.read" ? [.object(["digest": result["digest"], "size": result["size"], "handle": .string("files-blob:" + result["digest"].string)])] : []
+                blobs = photoBlob ? [.object(["digest": result["digest"], "size": result["size"], "handle": result["handle"]])] : frame["op"].string == "files.read" ? [.object(["digest": result["digest"], "size": result["size"], "handle": .string("files-blob:" + result["digest"].string)])] : blobs
                 try? wire?.send(.object(["t": .string("QueryResult"), "id": id, "result_json": result, "blobs": .array(blobs)]))
             } catch {
                 let code = error is CancellationError ? "deadline" : (error as? SourceFailure == .invalid ? "invalid" : "unavailable")
@@ -294,6 +305,13 @@ public actor AppleSession: ObservationSink {
                 let digest = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
                 response = .object(["t": .string("BlobChunk"), "handle": frame["handle"], "offset": .number(Double(offset)), "bytes": .string(data.subdata(in: offset..<end).base64EncodedString()), "digest": .string(digest), "eof": .bool(end == data.count)])
                 if end == data.count { queryBodies.removeValue(forKey: frame["handle"].string) }
+            } else if frame["handle"].string.hasPrefix("query-audio:") {
+                guard let cached = queryAudio[frame["handle"].string], Date().timeIntervalSince(cached.1) < 60 else { throw SourceFailure.unavailable }
+                let offset = Int(frame["offset"].number)
+                guard offset <= cached.0.count else { throw SourceFailure.invalid }
+                let end = min(cached.0.count, offset + Int(frame["length"].number))
+                let digest = SHA256.hash(data: cached.0).map { String(format: "%02x", $0) }.joined()
+                response = .object(["t": .string("BlobChunk"), "handle": frame["handle"], "offset": frame["offset"], "bytes": .string(cached.0.subdata(in: offset..<end).base64EncodedString()), "digest": .string(digest), "eof": .bool(end == cached.0.count)])
             }
             else if frame["handle"].string.hasPrefix("notes-blob:") {
                 guard let notes = additionalSources["notes"] as? NotesSource else { throw SourceFailure.unavailable }
@@ -470,6 +488,10 @@ public actor AppleSession: ObservationSink {
     }
 
     private func observedEvidence(_ evidence: JSON, fingerprint: JSON, operation: String) async throws -> JSON {
+        if ["speech.say", "capture.play_sound"].contains(operation) {
+            guard evidence["finished_callback"].bool, evidence["prepared"]["request_hash"] == fingerprint else { throw SourceFailure.unavailable }
+            return evidence
+        }
         if operation.hasPrefix("photos."), let photos = additionalSources["photos"] as? PhotosSource {
             try await photos.captureCommand(evidence, into: self)
             let collection = operation == "photos.create_album" ? "photos.album" : "photos.asset"
@@ -534,7 +556,7 @@ let operation=outcome["evidence"]["prepared"]["action"]["op"].string
  let evidence = operation.hasPrefix("contacts.") ? await contacts.resolve(id,evidence:saved) : operation.hasPrefix("calendar.") ? await calendar.resolve(id,evidence:saved) : await selected.resolve(id, evidence: saved)
                 if evidence["observed"].bool {
                     let committed: JSON
-                    if operation == "shortcuts.run" { committed = evidence }
+                    if ["shortcuts.run", "speech.say", "capture.play_sound"].contains(operation) { committed = evidence }
                     else { committed = try await observedEvidence(evidence, fingerprint: outcome["evidence"]["prepared"]["request_hash"], operation: operation) }
                     outcome = .object(["t": .string("Outcome"), "command_id": .string(id), "disposition": evidence["disposition"].string.isEmpty ? .string("locally_observed") : evidence["disposition"], "evidence": committed])
                     try await guardLog.append(outcome)
