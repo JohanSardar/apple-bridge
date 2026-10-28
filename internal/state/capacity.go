@@ -49,9 +49,10 @@ func (s *Store) sourceStatus(record contracts.Record) contracts.Record {
 		data["state"] = "degraded"
 		data["reason"] = "capacity"
 	}
-	if full || failure.Count > 0 {
-		record.Data, _ = json.Marshal(data)
+	if group, ok := contracts.GrantsForSource(contracts.Source(source)); ok {
+		data["grants"] = group.Grants
 	}
+	record.Data, _ = json.Marshal(data)
 	return record
 }
 

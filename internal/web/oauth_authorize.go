@@ -23,7 +23,7 @@ func (s *server) oauthAuthorizationRoutes(mux *http.ServeMux) {
 				respond(w, 400, map[string]string{"error": "invalid_request"})
 				return
 			}
-			respond(w, 200, map[string]any{"client_name": c.Name, "redirect_host": u.Host, "scopes": requestedScopes(r.URL.Query())})
+			respond(w, 200, map[string]any{"client_name": c.Name, "redirect_host": u.Host, "scopes": requestedScopes(r.URL.Query()), "groups": contracts.GrantGroups(true)})
 			return
 		}
 		s.static(w, r)

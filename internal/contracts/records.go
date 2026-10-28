@@ -23,7 +23,6 @@ const (
 	System    Source = "system"
 )
 
-var Sources = []Source{Messages, Calendar, Reminders, Contacts, Notes, Usage, System}
 var Collections = map[string]string{
 	"messages.chat": "cht", "messages.handle": "hdl", "messages.message": "msg", "messages.reaction": "rxn", "messages.attachment": "att",
 	"calendar.calendar": "cal", "calendar.event": "evt", "reminders.list": "lst", "reminders.reminder": "rmd", "reminders.attachment": "rat",

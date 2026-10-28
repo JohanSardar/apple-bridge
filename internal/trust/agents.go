@@ -37,7 +37,8 @@ func AgentGrants(level AgentLevel, scopes []contracts.Grant) ([]contracts.Grant,
 	out := []contracts.Grant{}
 	for _, g := range scopes {
 		parts := strings.Split(string(g), ":")
-		if len(parts) != 2 || parts[0] == "system" || parts[1] != "read" && parts[1] != "write" {
+		group, known := contracts.GrantsForSource(contracts.Source(parts[0]))
+		if !known || !group.Agent || len(parts) != 2 || parts[1] != "read" && parts[1] != "write" {
 			return nil, contracts.ErrInvalid
 		}
 		if _, err := ParseGrants(string(g)); err != nil {

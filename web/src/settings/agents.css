@@ -48,3 +48,8 @@
 .approval-card > .disclosure { border-block-start: .5px solid var(--separator); }
 .approval-card .disclosure pre { font: 12px/1.6 ui-monospace, monospace; }
 .approval-card > .caption { margin-block-start: 12px; }
+
+fieldset.source-choice { min-inline-size: 0; margin: 0; border: 0; border-block-end: 1px solid var(--separator); }
+.source-choice legend { padding: 0; font-weight: 600; }
+.source-choice .caption { overflow-wrap: anywhere; min-inline-size: 0; }
+.source-choice .switch { flex-shrink: 0; }

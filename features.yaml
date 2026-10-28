@@ -101,6 +101,7 @@ features:
     depends_on: [core.replication]
     status: done
     scenarios:
+      - {id: CORE-SOURCE-GRANTS, levels: [sim]}
       - {id: CORE-SCOPE-LEAK, levels: [sim, replica]}
       - {id: CORE-SCOPE-CHANGE, levels: [sim]}
       - {id: CORE-PAIR, levels: [sim, replica]}

@@ -344,6 +344,8 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 		warned, unavailable, warningErr := w.DoctorClockWarnings(w.Replicas[0])
 		add("clock_skew_warning_actionable", warningErr == nil && warned)
 		add("clock_sample_unavailable_warning_actionable", warningErr == nil && unavailable)
+	case "source-grants":
+		runSourceGrants(ctx, w, add)
 	case "messages-shape":
 		if w.ControlAction("/messages", map[string]any{"action": "seed", "count": 32}) != nil || w.ControlAction("/messages", map[string]any{"action": "incoming", "key": contracts.NewID("shape")}) != nil {
 			return fail("sim_messages_seeded")

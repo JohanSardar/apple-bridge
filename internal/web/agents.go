@@ -11,6 +11,9 @@ import (
 )
 
 func (s *server) agentRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("GET /web/v1/grants", func(w http.ResponseWriter, r *http.Request) {
+		respond(w, 200, map[string]any{"groups": contracts.GrantGroups(true)})
+	})
 	mux.HandleFunc("GET /web/v1/agents", func(w http.ResponseWriter, r *http.Request) {
 		agents, err := s.deps.Authority.Agents()
 		if err != nil {
