@@ -1,0 +1,4 @@
+id: RELAY-REAL
+feature: remote.relay
+levels: [real]
+when: [{relay_service: {}}]

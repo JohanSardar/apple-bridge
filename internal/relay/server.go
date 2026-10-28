@@ -24,6 +24,8 @@ type session struct {
 type Server struct {
 	CTClient    *http.Client
 	Resolver    *net.Resolver
+	ControlHost string
+	Control     *ControlListener
 	ctWarnings  map[string]string
 	DNS         DNSProvider
 	IdleTimeout time.Duration
@@ -119,6 +121,10 @@ func (s *Server) forward(ctx context.Context, c net.Conn) {
 		return
 	}
 	c.SetReadDeadline(time.Time{})
+	if s.Control != nil && host == s.ControlHost {
+		s.Control.forward(ctx, c, hello)
+		return
+	}
 	host = s.Store.canonical(host)
 	s.mu.Lock()
 	v := s.sessions[host]

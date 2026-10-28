@@ -1,0 +1,4 @@
+id: CONN-RELAY-CLAUDE
+feature: remote.relay
+levels: [real]
+when: [{relay_service: {}}]
