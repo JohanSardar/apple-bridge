@@ -1158,5 +1158,4 @@ features:
     limits:
       - {scenario: FILE-IDLE, level: sim, reason: Full Helper CPU qualification pending.}
       - {scenario: FILE-IDLE, level: real, reason: Five-minute source CPU qualification pending.}
-      - {scenario: FILE-SEARCH-REAL, level: real, reason: Real Spotlight indexing qualification pending.}
-      - {scenario: FILE-OFFLOAD-REAL, level: real, reason: Real iCloud eviction and hydration qualification pending.}
+      - {scenario: FILE-OFFLOAD-REAL, level: real, reason: Single real run failed the native eviction capability guard; hydration remains unverified.}

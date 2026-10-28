@@ -1,0 +1,27 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[4.11 7.12 10] cpu_idle=60% cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M61XYZ23TX9JA40JA3TNQ997",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "FILE-SEARCH-REAL",
+  "level": "real",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-28T18:57:04.067399Z",
+  "assertions": [
+    {
+      "name": "native_files_checks",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}
