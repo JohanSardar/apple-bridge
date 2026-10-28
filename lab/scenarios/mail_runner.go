@@ -15,6 +15,17 @@ import (
 
 func runMail(ctx context.Context, s Scenario, level string) Evidence {
 	e := Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, At: time.Now().UTC(), Passed: true}
+	if s.ID == "MAIL-READ-REAL" {
+		return runMailRead(ctx, s, level)
+	}
+	if s.ID == "MAIL-IDLE" && level == "real" {
+		e.Assertions = append(e.Assertions, Assertion{Name: "mail_idle_qualification_pending_T53_and_real_mail_store", Passed: false})
+		e.Passed = false
+		return e
+	}
+	if s.ID == "MAIL-REPLICA" {
+		return runMailReplica(ctx, s, level)
+	}
 	build := exec.CommandContext(ctx, "packaging/dev/build-native.sh")
 	build.Env = append(os.Environ(), "APPLE_BRIDGE_NATIVE_TARGET=MailChecks")
 	output, err := build.CombinedOutput()

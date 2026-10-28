@@ -10,6 +10,7 @@ import (
 	"github.com/JohanSardar/apple-bridge/lab/world"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -123,6 +124,9 @@ func run(ctx context.Context, args []string) error {
 			return fmt.Errorf("scenario paths required")
 		}
 		if level == "agent" {
+			if len(paths) == 1 && filepath.Base(paths[0]) == "MAIL-AGENT.yaml" {
+				return agent.Mail(ctx, asJSON)
+			}
 			return agent.Suite(ctx, paths, asJSON)
 		}
 		return scenarios.Suite(ctx, paths, level, asJSON)
