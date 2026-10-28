@@ -12,4 +12,12 @@
 <key>NSContactsUsageDescription</key><string>Apple Bridge discovers your own contact handles for self-only development probes.</string>
 <key>NSCalendarsFullAccessUsageDescription</key><string>Apple Bridge synchronizes your calendars.</string>
 <key>NSRemindersFullAccessUsageDescription</key><string>Apple Bridge synchronizes your reminders.</string>
+<key>NSLocationUsageDescription</key><string>Apple Bridge requests access when you explicitly request this permission.</string>
+<key>NSLocationWhenInUseUsageDescription</key><string>Apple Bridge requests access when you explicitly request this permission.</string>
+<key>NSCameraUsageDescription</key><string>Apple Bridge requests access when you explicitly request this permission.</string>
+<key>NSMicrophoneUsageDescription</key><string>Apple Bridge requests access when you explicitly request this permission.</string>
+<key>NSSpeechRecognitionUsageDescription</key><string>Apple Bridge requests access when you explicitly request this permission.</string>
+<key>NSFocusStatusUsageDescription</key><string>Apple Bridge requests access when you explicitly request this permission.</string>
+<key>NSPhotoLibraryUsageDescription</key><string>Apple Bridge requests access when you explicitly request this permission.</string>
+<key>NSBluetoothAlwaysUsageDescription</key><string>Apple Bridge requests access when you explicitly request this permission.</string>
 </dict></plist>

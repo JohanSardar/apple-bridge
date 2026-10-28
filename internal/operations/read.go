@@ -12,10 +12,11 @@ import (
 )
 
 type Service struct {
-	Authority   *trust.Authority
-	Target      CommandTarget
-	State       *state.Store
-	LocalStatus func() contracts.ReplicaStatus
+	Authority        *trust.Authority
+	Target           CommandTarget
+	State            *state.Store
+	PermissionStatus func(context.Context) (map[string]string, error)
+	LocalStatus      func() contracts.ReplicaStatus
 }
 
 func (s *Service) Read(ctx context.Context, p trust.Principal, name string, q contracts.ReadQuery) (output contracts.ReadResult, resultErr error) {
@@ -65,6 +66,9 @@ func (s *Service) Read(ctx context.Context, p trust.Principal, name string, q co
 	var err error
 	if name == "sources.status" {
 		result, err = s.State.SourceStatuses(ctx, p.Visibility())
+		if err == nil && p.Visibility()[contracts.System] && s.PermissionStatus != nil {
+			result.Permissions, err = s.PermissionStatus(ctx)
+		}
 	} else {
 		result, err = s.State.Read(ctx, p.Visibility(), q)
 	}

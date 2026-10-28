@@ -1,0 +1,134 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[10.42 7.08 6.95] cpu_idle=54% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M61NK80YTDHJTAXK2NF4Y25E",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "request_api_calls": 0,
+    "states": {
+      "automation_mail": "unknown",
+      "automation_music": "unknown",
+      "automation_safari": "not_determined",
+      "automation_shortcuts_events": "unknown",
+      "bluetooth": "not_determined",
+      "camera": "not_determined",
+      "focus": "not_determined",
+      "location": "not_determined",
+      "microphone": "not_determined",
+      "notifications": "not_determined",
+      "photos": "not_determined",
+      "screen_recording": "unknown",
+      "speech_recognition": "not_determined"
+    },
+    "window_owner_counts": {
+      "after": {
+        "UserNotificationCenter": 1
+      },
+      "before": {
+        "UserNotificationCenter": 1
+      },
+      "peak": {
+        "UserNotificationCenter": 1
+      }
+    }
+  },
+  "scenario": "CORE-PERMISSION-STATUS",
+  "level": "real",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-28T16:30:51.422016Z",
+  "assertions": [
+    {
+      "name": "zero_native_request_api_calls",
+      "passed": true
+    },
+    {
+      "name": "window_observation_before",
+      "passed": true
+    },
+    {
+      "name": "window_observation_after",
+      "passed": true
+    },
+    {
+      "name": "window_observation_peak",
+      "passed": true
+    },
+    {
+      "name": "no_new_dialog_windows",
+      "passed": true
+    },
+    {
+      "name": "helper_report",
+      "passed": true
+    },
+    {
+      "name": "microphone",
+      "passed": true
+    },
+    {
+      "name": "automation_music",
+      "passed": true
+    },
+    {
+      "name": "automation_safari",
+      "passed": true
+    },
+    {
+      "name": "notifications",
+      "passed": true
+    },
+    {
+      "name": "screen_recording",
+      "passed": true
+    },
+    {
+      "name": "photos",
+      "passed": true
+    },
+    {
+      "name": "speech_recognition",
+      "passed": true
+    },
+    {
+      "name": "location",
+      "passed": true
+    },
+    {
+      "name": "automation_mail",
+      "passed": true
+    },
+    {
+      "name": "automation_shortcuts_events",
+      "passed": true
+    },
+    {
+      "name": "bluetooth",
+      "passed": true
+    },
+    {
+      "name": "camera",
+      "passed": true
+    },
+    {
+      "name": "focus",
+      "passed": true
+    },
+    {
+      "name": "tcc_database_readable",
+      "passed": true
+    },
+    {
+      "name": "tcc_database_unchanged",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

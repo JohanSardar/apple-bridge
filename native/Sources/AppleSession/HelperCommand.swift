@@ -9,6 +9,55 @@ import SourceSupport
 public enum HelperCommand {
     @MainActor
     public static func run(_ arguments: [String]) throws {
+        if arguments.first == "permission-status-proof" || arguments.first == "permission-status" || arguments.first == "permission-request" || arguments.first == "permission-fake" {
+            guard let index = arguments.firstIndex(of: "--report"), index + 1 < arguments.count else { throw ProbeFailure.invalidArguments }
+            let report = try PrivateReport.validate(arguments[index + 1])
+            var finished = false
+            var failure: (any Error)?
+            Task { @MainActor in
+                do {
+                    if arguments.first == "permission-status-proof" {
+                        try PrivateReport.write(try await NewPermissions.statusProof(), to: report)
+                    } else if arguments.first == "permission-status" {
+                        try PrivateReport.write(await NewPermissions.status(), to: report)
+                    } else if arguments.first == "permission-fake" {
+                        var counts: [String: String] = [:]
+                        for name in NewPermissions.names {
+                            var calls = Dictionary(uniqueKeysWithValues: NewPermissions.names.map { ($0, 0) })
+                            let adapters = Dictionary(uniqueKeysWithValues: NewPermissions.names.map { selected in
+                                (selected, { @MainActor in calls[selected, default: 0] += 1 } as NewPermissions.RequestAdapter)
+                            })
+                            let before = NewPermissions.requestAPICalls
+                            try await NewPermissions.requestNative(name, adapters: adapters)
+                            guard NewPermissions.requestAPICalls == before + 1, calls[name] == 1, calls.values.reduce(0, +) == 1 else { throw ProbeFailure.invalidArguments }
+                            counts[name] = String(calls[name] ?? 0)
+                        }
+                        var unknownCalls = 0
+                        let adapters = Dictionary(uniqueKeysWithValues: NewPermissions.names.map { name in
+                            (name, { @MainActor in unknownCalls += 1 } as NewPermissions.RequestAdapter)
+                        })
+                        let before = NewPermissions.requestAPICalls
+                        do {
+                            try await NewPermissions.requestNative("unknown_permission", adapters: adapters)
+                            throw ProbeFailure.invalidArguments
+                        } catch HelperCommandFailure.unknownCommand {
+                            guard unknownCalls == 0, NewPermissions.requestAPICalls == before else { throw ProbeFailure.invalidArguments }
+                            counts["unknown_rejected"] = "1"
+                        }
+                        try PrivateReport.write(counts, to: report)
+                    } else {
+                        guard arguments.count > 1 else { throw ProbeFailure.invalidArguments }
+                        try await NewPermissions.requestNative(arguments[1])
+                        try await Task.sleep(for: .seconds(2))
+                        try PrivateReport.write(["request": arguments[1]], to: report)
+                    }
+                } catch { failure = error }
+                finished = true
+            }
+            while !finished { RunLoop.current.run(until: Date().addingTimeInterval(0.05)) }
+            if let failure { throw failure }
+            return
+        }
         #if LAB
         if try HelperLabCommand.run(arguments) { return }
         #endif

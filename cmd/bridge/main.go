@@ -27,6 +27,19 @@ func run(ctx context.Context, args []string) error {
 	if len(args) == 0 {
 		return contracts.ErrInvalid
 	}
+	if args[0] == "permissions" {
+		if len(args) < 3 || args[1] != "request" || !strings.Contains(",location,camera,microphone,screen_recording,speech_recognition,focus,photos,bluetooth,notifications,automation_mail,automation_music,automation_safari,automation_shortcuts_events,", ","+args[2]+",") || args[2] == "" {
+			return contracts.ErrInvalid
+		}
+		app := ""
+		if len(args) == 5 && args[3] == "--helper-app" {
+			app = args[4]
+		} else if len(args) != 3 {
+			return contracts.ErrInvalid
+		}
+		_, err := bridgeruntime.Permissions(ctx, app, args[2])
+		return err
+	}
 	verb := args[0]
 	args = args[1:]
 	if verb == "selftest" {

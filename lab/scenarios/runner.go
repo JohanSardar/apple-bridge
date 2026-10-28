@@ -361,6 +361,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.Feature == "vision.queries" {
 		return runVisionQueries(ctx, s, level)
 	}
+	if s.Feature == "core.permissions" {
+		return runPermissionStatus(ctx, s, level)
+	}
 	if s.Feature == "core.queries" {
 		return runQueries(ctx, s, level)
 	}
@@ -1089,7 +1092,7 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 	}
 	packagingOnly := true
 	for _, scenario := range scenarios {
-		packagingOnly = packagingOnly && (scenario.Feature == "packaging.app" || scenario.Feature == "core.shortcuts")
+		packagingOnly = packagingOnly && (scenario.Feature == "packaging.app" || scenario.Feature == "core.shortcuts" || scenario.Feature == "core.permissions")
 	}
 	if !packagingOnly {
 		if err = world.Build(ctx, level); err != nil {

@@ -139,6 +139,9 @@ func Start(ctx context.Context, cfg Config) error {
 	}
 	var relayFeed http.Handler
 	service := &operations.Service{State: store, Authority: authority}
+	if cfg.HelperApp != "" {
+		service.PermissionStatus = func(ctx context.Context) (map[string]string, error) { return Permissions(ctx, cfg.HelperApp, "") }
+	}
 	service.LocalStatus = func() contracts.ReplicaStatus {
 		return contracts.ReplicaStatus{Role: "gateway", State: "ready", Cursor: store.Head(), GatewayHead: store.Head().Sequence, Blobs: blobStore.Progress()}
 	}
