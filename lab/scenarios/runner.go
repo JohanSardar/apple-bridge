@@ -382,6 +382,10 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "HELPER-RELEASE-COMMANDS" {
 		return runHelperReleaseCommands(ctx, s, level)
 	}
+	if s.ID == "CORE-SOURCE-SUPPORT" {
+		return runSourceSupport(ctx, s, level)
+	}
+
 	if s.ID == "CORE-SIM-PROGRESS-RECOVERY" {
 		return runSimProgressRecovery(ctx, s, level)
 	}

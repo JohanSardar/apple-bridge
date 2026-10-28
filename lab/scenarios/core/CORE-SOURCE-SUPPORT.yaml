@@ -1,0 +1,7 @@
+id: CORE-SOURCE-SUPPORT
+feature: core.source-support
+levels: [sim]
+given: []
+when: []
+then: []
+cleanup: []

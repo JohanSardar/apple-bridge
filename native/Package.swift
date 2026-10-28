@@ -18,6 +18,7 @@ let package = Package(
     products: [.executable(name: "AppleBridgeHelper", targets: ["AppleBridgeHelper"])],
     targets: sourceTargets + [
         .target(name: "SourceSupport"),
+        .executableTarget(name: "SourceSupportChecks", dependencies: ["SourceSupport"]),
         .target(name: "ContactsHistory", publicHeadersPath: "include"),
         .target(name: "Decoders"),
         .target(name: "MediaExportGuard", publicHeadersPath: "include"),

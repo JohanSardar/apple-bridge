@@ -1,0 +1,15 @@
+# Shared native source helpers
+
+New sources use SourceSupport without changing the existing Messages, Notes or Reminders implementations.
+
+`SQLiteSnapshot(path:generationSQL:)` opens a read-only SQLite transaction with ordinary WAL visibility. The source supplies a read-only query returning one nonempty text generation identifier (for example its native store UUID); an in-place rebuild must change that identifier. File device, inode and birth time, logical identity and schema form the generation digest. `isCurrent()` opens a fresh snapshot to detect replacement, rebuild or schema change. Ordinary WAL commits preserve generation. Failure throws rather than becoming an empty database. Open a new reader for each capture; readers belong to one serial capture context.
+
+`requireSchema` probes required tables and columns. `query` binds text parameters and preserves integer, real, text, blob and null values. It returns completion only at SQLITE_DONE, with row and monotonic time bounds; long SQLite execution also has a progress deadline. Cancellation throws. Bounds apply to returned rows and query execution, not an individual blob size.
+
+`CompleteScan.read` requires a query enumerating the entire declared scope, without caller-added pagination or LIMIT. Only an exhausted, valid-key scan against a current snapshot can be complete. Absence additionally requires the previous scope and generation to match. Truncation, deadline expiry, invalid keys, permission or SQLite errors and generation changes never authorize absence. Returned absent keys are candidates: the source revalidates them before emitting absence through the existing capture protocol, with scan ID, start time, scope and complete evidence. Callers retain previous keys only for the same scope and generation. This is SQLite-backed enumeration; framework sources may retain their existing capture paths.
+
+`DatabaseWatcher` monitors the database, WAL, SHM and parent directory, rearms replaced files and coalesces bursts with a bounded first-event delay. Its newest-only stream carries hints, not evidence of deletion. A low-frequency fallback hint catches missed events. Call `close` to finish consumption; deinitialization also releases monitors.
+
+`BlobWriter(directory:)` receives the source's existing private blob staging directory. Both byte and file inputs produce digest-named files, a SHA-256 digest, size and the existing present-blob reference shape. File inputs reject symlinks, non-regular and dataless files; copy in bounded chunks and reject detected size/time changes. Temporary files use mode 0600, directory mode 0700, and synchronize before atomic publication. The source owns handle registration and serving through the existing blob protocol; paths never enter record metadata. The writer is media-neutral for audio, image and file bytes.
+
+`SourceSupportChecks` and the sim scenario CORE-SOURCE-SUPPORT use temporary synthetic SQLite stores and bytes only. They prove generation changes, WAL hints and reads, bounded-scan absence safety, and known SHA-256 output. Mail (T16) supplies the first live integration; no live source or grant is added here.

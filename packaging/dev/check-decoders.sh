@@ -16,3 +16,7 @@ if [[ ${1:-} == --capture-rich-fixtures ]]; then
 fi
 swiftc -sdk "$sdk" -target arm64-apple-macosx26.0 -swift-version 6 -warnings-as-errors -O -parse-as-library -I "$output" native/Sources/DecoderChecks/*.swift "$output/Decoders.o" -o "$output/DecoderChecks"
 "$output/DecoderChecks" "$root/lab/fixtures/messages"
+
+APPLE_BRIDGE_NATIVE_TARGET=SourceSupportChecks "$root/packaging/dev/build-native.sh"
+native_output=$(cat "$root/native/.build/native-output-${APPLE_BRIDGE_NATIVE_LAB:-1}")
+"$native_output/SourceSupportChecks"
