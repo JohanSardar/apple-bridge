@@ -2,7 +2,7 @@
 
 `go run ./tools/shortcuts build` compiles every `packaging/shortcuts/*.json` source into `.build/shortcuts/`, then signs each workflow using the system `/usr/bin/shortcuts sign`. Use `-source path.json` for one source, `-out directory` for another build directory, and `-unsigned` for portable compilation without signing. Signing defaults to `-mode auto`: try `anyone`, then `people-who-know-me`. Explicit modes disable fallback. The JSON stdout and `manifest.json` record the actual mode and unsigned SHA-256 for each file. A failed signer exits nonzero and never publishes its partial signed file.
 
-`go run ./tools/shortcuts open .build/shortcuts/noop.shortcut` opens the signed file with macOS `open` for the user's import review. Build never opens or imports a workflow. CORE-SHORTCUT-SIGN never opens, imports or runs it.
+`go run ./tools/shortcuts open ".build/shortcuts/[ab-test noop] Apple Bridge Signing Test.shortcut"` opens the signed file with macOS `open` for the user's import review. Build never opens or imports a workflow. CORE-SHORTCUT-SIGN never opens, imports or runs it.
 
 ## Source format
 
@@ -35,7 +35,7 @@ CORE-SHORTCUT-SIGN at sim compiles twice and compares bytes/digests, then indepe
 
 Runs accept input bytes (text, URL text or file content) and return output bytes, process exit status and timeout status. Private temporary directories are removed after every result. Input and output are capped at 16 MiB. The default timeout is 30 seconds, bounded to five minutes; cancellation kills the CLI process group and reaps the CLI process. It does not promise to cancel downstream work that Shortcuts may already have handed to an app. Process success proves only runner completion, never arbitrary shortcut business effects. The adapter intentionally discards process stdout/stderr to avoid retaining personal diagnostics.
 
-`bridge shortcuts install-pack [-pack directory]` validates all three signed AEA files before opening them for user review. It never clicks Add Shortcut. The required files are `ab-echo.shortcut`, `ab-clock.shortcut` and `ab-focus.shortcut`; only the `AB Echo` source is supplied in this partial change. Missing Clock/Focus files cause the installer to reject before opening anything. Coverage publishes the bundled protocol version; imported pack version qualification remains pending.
+`bridge shortcuts install-pack [-pack directory]` validates all three signed AEA files before opening them for user review. It never clicks Add Shortcut. The required files are `AB Echo.shortcut`, `AB Clock.shortcut` and `AB Focus.shortcut`; only the `AB Echo` source is supplied in this partial change. Missing Clock/Focus files cause the installer to reject before opening anything. Coverage publishes the bundled protocol version; imported pack version qualification remains pending.
 
 SC-CAPTURE sim tests inventory adapter changes and native capture, not replication. SC-RUN sim tests byte input/output, binary output, exit status, timeout, invalid shortcut names and input size. Complete pack sources, Clock, Focus, actions discovery and file transforms remain outstanding. No real shortcut has been run. The leader can import the signed Echo artifact for subsequent real qualification; that import alone does not complete T26.
 

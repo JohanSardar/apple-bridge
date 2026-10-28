@@ -1,9 +1,9 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[7.37 10.75 12.8] cpu_idle=43% cpus=8 other_heavy=1"
+    "summary": "air: load=[11 108.93 151.79] cpu_idle=46% cpus=8 other_heavy=2"
   },
-  "run_id": "run_01M61F2VGBJQHTECZCECE8DRE4",
+  "run_id": "run_01M61TCTTZQFV0KMWKR008161D",
   "metrics": {
     "capture_observer_resets": 0,
     "unsigned_sha256": "855970e74b2213941b9d4975e1798f8d07994a5823ab438ac78d83286bd4b09b"
@@ -11,8 +11,8 @@
   "scenario": "CORE-SHORTCUT-SIGN",
   "level": "sim",
   "passed": true,
-  "git_sha": "a31c7b4c814bdbef06ddb45d4cb9a357878c76e2",
-  "at": "2026-10-28T14:37:02.859684Z",
+  "git_sha": "4f77d9f7892fe2d1a98db2d82dd335e7bd151665",
+  "at": "2026-10-28T17:54:44.191628Z",
   "assertions": [
     {
       "name": "temporary_build_directory",

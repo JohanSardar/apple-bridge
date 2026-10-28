@@ -273,6 +273,7 @@ func run(ctx context.Context, args []string) error {
 		return err
 	}
 	artifacts := []artifact{}
+	seenNames := map[string]bool{}
 	for _, path := range paths {
 		stem := strings.TrimSuffix(filepath.Base(path), ".json")
 		if !safeName.MatchString(stem) {
@@ -282,12 +283,27 @@ func run(ctx context.Context, args []string) error {
 		if err != nil {
 			return fmt.Errorf("%s: %w", path, err)
 		}
+		sourceBytes, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		var display workflow
+		if err = json.Unmarshal(sourceBytes, &display); err != nil {
+			return err
+		}
+		if strings.TrimSpace(display.Name) != display.Name || strings.ContainsAny(display.Name, "/\\\x00") || display.Name == "." || display.Name == ".." {
+			return fmt.Errorf("invalid display name")
+		}
+		if seenNames[display.Name] {
+			return fmt.Errorf("duplicate display name")
+		}
+		seenNames[display.Name] = true
 		a := artifact{Source: path, Unsigned: filepath.Join(*out, stem+".unsigned.shortcut"), Mode: "unsigned", SHA256: fmt.Sprintf("%x", sha256.Sum256(data))}
 		if err = os.WriteFile(a.Unsigned, data, 0644); err != nil {
 			return err
 		}
 		if !*unsigned {
-			a.Signed = filepath.Join(*out, stem+".shortcut")
+			a.Signed = filepath.Join(*out, display.Name+".shortcut")
 			a.Mode, err = sign(ctx, a.Unsigned, a.Signed, *mode)
 			if err != nil {
 				return err

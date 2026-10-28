@@ -1,0 +1,11 @@
+# Clock pack (T27)
+
+G5-4 through G5-7 remain limited. No Clock operation is advertised until structured native readback is qualified. No capture is synthesized from CLI success or an empty output. Clock has no registered source, grants, doctor claim or polling loop yet.
+
+`packaging/shortcuts/ab-clock.json` builds the display name `AB Clock`. The single Find Alarms action comes from the macOS Shortcuts action library. A temporary synthetic workflow containing Toggle Alarm, Add Alarm, Find Alarms, Delete Alarms and Start Timer was exported without execution on 2026-10-28. Its saved workflow action plist supplied the identifiers and descriptors in `clock-actions.verified.txt`. The workflow was exported before execution. During cleanup a library click inadvertently started the synthetic workflow; it was stopped and deleted. Its native effects were not independently established. No claim of unchanged alarm state is made. The exported workflow itself is not bundled because it contains unconfigured mutating actions.
+
+The pack currently returns native Find Alarms output for manual qualification. It does not yet serialize identifier, label, time, repeat days and enabled fields into a versioned protocol. `internal/clockpack` bounds inspection to 15 seconds and 32 KiB, propagates cancellation and rejects timeout/nonzero completion. Even successful inspection cannot establish `clock.alarm` capture. The production CLI runner supplies process group termination.
+
+Create, toggle and delete require verified parameter binding and matching alarm capture before exposure. Start Timer is verified as an action identifier only; its action output does not prove running state. No world-time action or city resolution has been verified. These operations remain unavailable rather than claiming effects from runner completion.
+
+CLK-SIM uses a fake pack runner to check bounds, error handling and refusal to advertise unqualified operations. It is partial qualification, not proof of alarm CRUD. CLK-ALARM-REAL and CLK-TIMER-REAL explicitly report limited without dispatch. The leader must import `.build/shortcuts/AB Clock.shortcut` using the exact name `AB Clock`, then qualify the remaining protocol using only `[ab-test]` alarms. Real tests remain pending.

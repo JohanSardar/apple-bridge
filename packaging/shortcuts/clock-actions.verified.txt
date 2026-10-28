@@ -1,0 +1,51 @@
+{
+  "provenance": "macOS Shortcuts action library; synthetic workflow 8FBF89BF-BE03-4391-AE2A-2E81C85E8B9D, inspected 2026-10-28; exported before any execution. Parameters and business readback remain unqualified.",
+  "actions": [
+    {
+      "identifier": "com.apple.mobiletimer-framework.MobileTimerIntents.MTToggleAlarmIntent",
+      "descriptor": {
+        "AppIntentIdentifier": "ToggleAlarmIntent",
+        "BundleIdentifier": "com.apple.clock",
+        "Name": "Clock",
+        "TeamIdentifier": "0000000000"
+      }
+    },
+    {
+      "identifier": "com.apple.mobiletimer-framework.MobileTimerIntents.MTCreateAlarmIntent",
+      "descriptor": {
+        "AppIntentIdentifier": "CreateAlarmIntent",
+        "BundleIdentifier": "com.apple.clock",
+        "Name": "Clock",
+        "TeamIdentifier": "0000000000"
+      }
+    },
+    {
+      "identifier": "com.apple.mobiletimer-framework.MobileTimerIntents.MTGetAlarmsIntent",
+      "descriptor": {
+        "ActionRequiresAppInstallation": true,
+        "AppIntentIdentifier": "AlarmEntity",
+        "BundleIdentifier": "com.apple.clock",
+        "Name": "Clock",
+        "TeamIdentifier": "0000000000"
+      }
+    },
+    {
+      "identifier": "com.apple.clock.DeleteAlarmIntent",
+      "descriptor": {
+        "AppIntentIdentifier": "DeleteAlarmIntent",
+        "BundleIdentifier": "com.apple.clock",
+        "Name": "Clock",
+        "TeamIdentifier": "0000000000"
+      }
+    },
+    {
+      "identifier": "is.workflow.actions.timer.start",
+      "descriptor": {
+        "BundleIdentifier": "com.apple.clock",
+        "ExtensionBundleIdentifier": "com.apple.mobiletimer-framework.MobileTimerIntents",
+        "Name": "Clock",
+        "TeamIdentifier": "0000000000"
+      }
+    }
+  ]
+}
