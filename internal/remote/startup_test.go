@@ -55,3 +55,28 @@ func TestFunnelSourceWithoutNetwork(t *testing.T) {
 		t.Fatal("untrusted connection gained Funnel source")
 	}
 }
+
+func TestPublicProbeAddressClassification(t *testing.T) {
+	for address, want := range map[string]bool{"1.1.1.1": true, "100.64.0.1": false, "::ffff:100.64.0.1": false, "100.127.255.254": false, "127.0.0.1": false, "10.0.0.1": false, "192.168.1.1": false, "169.254.1.1": false, "0.0.0.0": false} {
+		if got := publicAddress(netip.MustParseAddr(address)); got != want {
+			t.Fatalf("public address %s: got %t want %t", address, got, want)
+		}
+	}
+}
+
+func TestCancelPreservesNewerRequest(t *testing.T) {
+	home := t.TempDir()
+	newer := Config{ID: "newer", Enabled: true, Backend: "embedded", Name: "new-node"}
+	if err := configure(home, newer, ""); err != nil {
+		t.Fatal(err)
+	}
+	r := New(home)
+	r.cancelled(Config{ID: "older", Enabled: true, Backend: "embedded"})
+	var got Config
+	if err := read(home, "config", &got); err != nil || got != newer {
+		t.Fatal("obsolete cancellation replaced newer request")
+	}
+	if r.status.ID != "" {
+		t.Fatal("obsolete cancellation published status")
+	}
+}

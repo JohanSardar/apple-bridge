@@ -457,6 +457,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 		}
 		return runRelayAuth(ctx, s, level)
 	}
+	if strings.HasPrefix(s.ID, "RMT-") || strings.HasPrefix(s.ID, "CONN-") {
+		return runRemoteFlow(ctx, s, level)
+	}
 	if s.Feature == "web.remote" {
 		return runRemote(ctx, s, level)
 	}

@@ -8,34 +8,25 @@ import (
 	"net"
 	"strings"
 	"tailscale.com/client/local"
-	"tailscale.com/ipn"
-	"time"
 )
 
 func (r *Remote) serve(ctx context.Context, cfg Config) {
-	status := Status{ID: cfg.ID, State: "starting", Backend: cfg.Backend}
+	status := Status{ID: cfg.ID, State: "starting", Backend: cfg.Backend, TLSTermination: "on this Mac"}
 	fail := func(err error) {
 		if ctx.Err() == nil {
 			status.State = "error"
-			status.LastError = err.Error()
+			status.LastError = "Remote setup failed"
 			r.publish(status)
 		}
 	}
 	client := &local.Client{}
-	probe, cancel := context.WithTimeout(ctx, 2*time.Second)
-	system, err := systemStatus(probe, client)
-	cancel()
 	if cfg.Backend == "" {
-		if err == nil && system != nil {
-			cfg.Backend = "system"
-		} else {
-			cfg.Backend = "embedded"
-		}
+		cfg.Backend = "embedded"
 	}
 	status.Backend = cfg.Backend
 	r.publish(status)
 	if cfg.Backend == "system" {
-		if err = cleanupSystem(r.home, client); err != nil {
+		if err := cleanupSystem(r.home, client); err != nil {
 			fail(err)
 			return
 		}
@@ -65,12 +56,20 @@ func (r *Remote) serve(ctx context.Context, cfg Config) {
 		if entry.Port != 443 {
 			status.URL += fmt.Sprintf(":%d", entry.Port)
 		}
-		status.State = "on"
-		r.publish(status)
-		r.serveListener(ctx, listener, proxyPath, fail)
+		r.ready(ctx, &status, listener, proxyPath, fail)
 		return
 	}
-	node, err := embeddedNode(r.home, cfg.Name, func(format string, args ...any) { r.message(cfg.ID, fmt.Sprintf(format, args...)) })
+	factory := r.options.Node
+	if factory == nil {
+		factory = func(home, name string) (EmbeddedNode, error) {
+			node, err := embeddedNode(home, name, func(string, ...any) {})
+			if err != nil {
+				return nil, err
+			}
+			return embeddedServer{node}, nil
+		}
+	}
+	node, err := factory(r.home, cfg.Name)
 	if err != nil {
 		fail(err)
 		return
@@ -85,36 +84,18 @@ func (r *Remote) serve(ctx context.Context, cfg Config) {
 		case <-closed:
 		}
 	}()
-	st, err := node.Up(ctx)
+	clientEmbedded, err := node.LocalClient()
 	if err != nil {
 		fail(err)
 		return
 	}
-	for {
-		if st.Self != nil {
-			err = ipn.CheckFunnelAccess(443, st.Self)
-		} else {
-			err = fmt.Errorf("Tailscale node has no identity")
-		}
-		if err == nil {
-			break
-		}
-		lc, clientErr := node.LocalClient()
-		if clientErr != nil {
-			fail(clientErr)
-			return
-		}
-		r.message(cfg.ID, enablement(ctx, lc, err))
-		select {
-		case <-ctx.Done():
-			return
-		case <-time.After(time.Second):
-		}
-		st, err = lc.StatusWithoutPeers(ctx)
-		if err != nil {
-			fail(err)
-			return
-		}
+	st, err := r.waitForFunnel(ctx, clientEmbedded, &status)
+	if err != nil {
+		fail(err)
+		return
+	}
+	if ctx.Err() != nil {
+		return
 	}
 	listener, err := node.ListenFunnel("tcp", ":443")
 	if err != nil {
@@ -123,7 +104,5 @@ func (r *Remote) serve(ctx context.Context, cfg Config) {
 	}
 	defer listener.Close()
 	status.URL = "https://" + strings.TrimSuffix(st.Self.DNSName, ".")
-	status.State = "on"
-	r.publish(status)
-	r.serveListener(ctx, listener, "", fail)
+	r.ready(ctx, &status, listener, "", fail)
 }

@@ -510,7 +510,7 @@ features:
         reason: "Same send restriction as the real level. One read-only Air gateway to Ubuntu replica attempt (2026-10-23) did not capture its three expected existing synthetic attachments within 45 seconds; the cause is undetermined (the targets may have been moved by the final tagged cleanup). No current replica variant downloads or cold-arrival latency are certified."
     notes: Sim, cap, yield, posters and native export-safety levels pass. Real and replica cold-arrival runs are limited by the own-handle send restriction above. The final Messages tagged cleanup (design/MILESTONE-GATES.md) covers the earlier W1 file bubbles in the own-handle chat; nothing was sent for this feature.
   - id: web.remote
-    title: Reach from anywhere through system or embedded Tailscale Funnel
+    title: Reach from anywhere through embedded Tailscale Funnel
     requirements: [R-WEB-REACH, R-SECURE]
     milestone: W1
     modules: [remote, web, frontdoor, runtime]
@@ -518,12 +518,33 @@ features:
     status: limited
     scenarios:
       - {id: WEB-REMOTE-FUNNEL, levels: [real]}
+      - {id: RMT-ONECOMMAND-FLOW, levels: [sim]}
+      - {id: RMT-STATUS-OFF, levels: [real]}
+      - {id: RMT-TS-EMBEDDED, levels: [real]}
+      - {id: CONN-CLAUDE-CODE, levels: [real]}
+      - {id: CONN-CLAUDE-AI, levels: [real]}
+      - {id: CONN-CHATGPT, levels: [real]}
       - {id: WEB-LOCAL-SAFARI, levels: [web]}
     limits:
+      - scenario: RMT-STATUS-OFF
+        level: real
+        reason: "Public Ubuntu off check requires an authorized embedded node; unattended login and changes to existing system Serve are forbidden."
+      - scenario: RMT-TS-EMBEDDED
+        level: real
+        reason: "Johan must approve Tailscale login for a new embedded node."
+      - scenario: CONN-CLAUDE-CODE
+        level: real
+        reason: "Johan must authorize embedded login and add the Claude Code connector."
+      - scenario: CONN-CLAUDE-AI
+        level: real
+        reason: "Johan must authorize embedded login and add the claude.ai connector."
+      - scenario: CONN-CHATGPT
+        level: real
+        reason: "Johan must authorize embedded login and add the ChatGPT connector."
       - scenario: WEB-REMOTE-FUNNEL
         level: real
         reason: "Embedded (tsnet) mode only: per SPEC it prints a Tailscale login URL and waits for authorization, which means approving a new device on Johan's tailnet through his Tailscale login. The automation never signs in or approves devices for him. System mode passes this scenario; embedded startup and configuration are covered without network."
-    notes: System Funnel passes the public Ubuntu path with a valid certificate, REST and MCP SSE, spoofed-forwarding rejection and Serve-config preservation (real evidence 2026-10-21). WEB-LOCAL-SAFARI passes. Real embedded-mode authorization is limited as stated.
+    notes: RMT-ONECOMMAND-FLOW sim covers ephemeral approval-link delivery, token-free status and logs, redacted client failures, and cancellation before Funnel approval. System Funnel passes the public Ubuntu path with a valid certificate, REST and MCP SSE, spoofed-forwarding rejection and Serve-config preservation (real evidence 2026-10-21). WEB-LOCAL-SAFARI passes. Real embedded-mode authorization is limited as stated.
   - id: web.agents
     title: Agent tokens with read, approve-first and full levels; MCP OAuth for connectors
     requirements: [R-WEB-SECURE, R-AGENT]
