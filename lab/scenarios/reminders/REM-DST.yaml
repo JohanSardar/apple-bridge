@@ -1,0 +1,7 @@
+id: REM-DST
+feature: reminders.read
+levels: [sim]
+given: [{world: {replicas: 1}}]
+when: [{reminders_recurring: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

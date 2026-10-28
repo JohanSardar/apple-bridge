@@ -1,0 +1,115 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[12.46 112.53 153.55] cpu_idle=43% cpus=8 other_heavy=2"
+  },
+  "run_id": "date_01M61TCHT0983TV81QEGTCNEG3",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "REM-DST",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "4f77d9f7892fe2d1a98db2d82dd335e7bd151665",
+  "at": "2026-10-28T17:54:34.944722Z",
+  "assertions": [
+    {
+      "name": "world_start",
+      "passed": true
+    },
+    {
+      "name": "reminder_list",
+      "passed": true
+    },
+    {
+      "name": "spring_timed_fixture",
+      "passed": true
+    },
+    {
+      "name": "spring_timed_readback",
+      "passed": true
+    },
+    {
+      "name": "fall_timed_fixture",
+      "passed": true
+    },
+    {
+      "name": "fall_timed_readback",
+      "passed": true
+    },
+    {
+      "name": "spring_floating_fixture",
+      "passed": true
+    },
+    {
+      "name": "spring_floating_readback",
+      "passed": true
+    },
+    {
+      "name": "fall_floating_fixture",
+      "passed": true
+    },
+    {
+      "name": "fall_floating_readback",
+      "passed": true
+    },
+    {
+      "name": "spring_daily_fixture",
+      "passed": true
+    },
+    {
+      "name": "spring_daily_readback",
+      "passed": true
+    },
+    {
+      "name": "fall_daily_fixture",
+      "passed": true
+    },
+    {
+      "name": "fall_daily_readback",
+      "passed": true
+    },
+    {
+      "name": "spring_allday_daily_fixture",
+      "passed": true
+    },
+    {
+      "name": "spring_allday_daily_readback",
+      "passed": true
+    },
+    {
+      "name": "fall_allday_daily_fixture",
+      "passed": true
+    },
+    {
+      "name": "fall_allday_daily_readback",
+      "passed": true
+    },
+    {
+      "name": "utc_daily_fixture",
+      "passed": true
+    },
+    {
+      "name": "utc_daily_readback",
+      "passed": true
+    },
+    {
+      "name": "month_end_fixture",
+      "passed": true
+    },
+    {
+      "name": "month_end_readback",
+      "passed": true
+    },
+    {
+      "name": "replica_converged",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

@@ -680,7 +680,7 @@ func expandCalendar(base contracts.Observation, scope string) ([]contracts.Obser
 	}
 	until, _ := time.Parse(time.RFC3339Nano, rule.Until)
 	result := []contracts.Observation{}
-	for i := 0; i < count; i++ {
+	for i := 0; len(result) < count && i < count*12; i++ {
 		years, months, days := 0, 0, 0
 		switch rule.Frequency {
 		case "daily":
@@ -695,6 +695,9 @@ func expandCalendar(base contracts.Observation, scope string) ([]contracts.Obser
 			return nil, contracts.ErrInvalid
 		}
 		occurrence := a.AddDate(years, months, days)
+		if (rule.Frequency == "monthly" || rule.Frequency == "yearly") && occurrence.Day() != a.Day() {
+			continue
+		}
 		finish := b.AddDate(years, months, days)
 		if !until.IsZero() && occurrence.After(until) {
 			break

@@ -15,3 +15,7 @@ Each source registers its title, agent availability, read/write grants and optio
 Both OAuth metadata documents advertise every registered source grant, including system and special grants. AUTH-SCOPES-METADATA compares both documents and the protected-resource MCP alias against the complete grant table, including the lab-only source. Consent filters the catalog to requested scopes and groups them under source names. Agent setup uses the same grouped catalog through the authenticated grants endpoint. New sources require no edits to either picker. CORE-SOURCE-GRANTS registers a lab-only source, checks browser consent and agent rendering, CLI validation and record visibility with and without its read/write grants.
 
 Reminders list rename and delete require expected_version and native readback with captured list evidence. REM-SECTIONS is limited: EventKit exposes no section API, and the existing supported store projection explicitly marks section order and membership decoders unverified. Section moves cannot yet be proven through that path.
+
+## Calendar and Reminders date fixtures
+
+CAL-DST and REM-DST qualify sim capture and replica convergence for spring-forward and fall-back timed values, floating date-only values, and absolute/relative reminder alarms. CAL-DST also expands daily zoned and UTC series across DST and skips nonexistent month-end recurrence dates without consuming the occurrence count. These fixtures adapt the pinned iMCP date-only/local-time distinctions; they do not qualify native EventKit behavior.

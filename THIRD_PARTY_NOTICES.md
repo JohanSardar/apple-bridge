@@ -40,6 +40,8 @@ Sim video/audio use these fixed codec fixtures rather than transcoding inputs.
 
 [iMCP](https://github.com/loopwork/iMCP) at commit `1f3798de359cc9e5a83b551c4390b017fb33979d` is the reference for the source ports tracked in [the port map](research/imcp-port-map.md). Research references alone do not mean a package is bundled. The existing copied ThumbHash encoder is attributed above; iMCP dependencies remain subject to their own notices when copied.
 
+The Calendar/Reminders sim date fixtures in `lab/scenarios/date_fixtures.go` adapt the date-only, local-time and zoned-time cases from iMCP’s `App/Extensions/Foundation+Extensions.swift` and Calendar/Reminders services at the pinned commit above. DST and month-end expectations are Bridge regression fixtures.
+
 MIT License
 
 Copyright 2025 Mattt (https://mat.tt)
