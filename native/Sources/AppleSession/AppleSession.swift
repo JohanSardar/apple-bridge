@@ -479,7 +479,8 @@ public actor AppleSession: ObservationSink {
             result["capture_checkpoint"] = .string(checkpoint)
             return .object(result)
         }
-        if operation.hasPrefix("files.") {
+        if operation.hasPrefix("files."), let files = additionalSources["files"] as? FilesSource {
+            try await files.reconcile(into: self)
             var result = evidence.object
             result["fingerprint"] = fingerprint
             return .object(result)

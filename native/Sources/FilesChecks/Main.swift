@@ -32,6 +32,8 @@ struct Checks {
             let evidence = try await run(op, ["parent": .string(parent), "name": .string("a.txt"), "content_base64": .string(data.base64EncodedString()), "digest": .string(digest)])
             guard evidence["digest"].string == digest, try Data(contentsOf: folder.appendingPathComponent("a.txt")) == data else { throw SourceFailure.corrupt }
         }
+        let sink = CommandSink()
+        try await source.reconcile(into: sink)
         let link = folder.appendingPathComponent("link")
         try fm.createSymbolicLink(at: link, withDestinationURL: fm.temporaryDirectory)
         for path in ["../escape", parent + "/link/escape"] {
@@ -44,6 +46,9 @@ struct Checks {
         let target = folder.appendingPathComponent("target")
         try fm.createDirectory(at: target, withIntermediateDirectories: true)
         _ = try await run("files.move", ["path": .string(parent + "/b.txt"), "parent": .string(parent + "/target"), "name": .string("c.txt")])
+        try await source.reconcile(into: sink)
+        let captured = await sink.rows
+        guard captured.contains(where: { $0["kind"].string == "absent" && $0["native_key"].string == folder.appendingPathComponent("a.txt").path }), captured.contains(where: { $0["kind"].string == "upsert" && $0["native_key"].string == target.appendingPathComponent("c.txt").path }) else { throw SourceFailure.corrupt }
         let file = target.appendingPathComponent("c.txt")
         guard fm.fileExists(atPath: file.path), !fm.fileExists(atPath: folder.appendingPathComponent("b.txt").path) else { throw SourceFailure.corrupt }
         _ = try await run("files.set_tags", ["path": .string(parent + "/target/c.txt"), "tags": .array([.string("Bridge Test")])])
@@ -138,4 +143,10 @@ struct Checks {
 struct IdleSink: ObservationSink {
     func sourceState(source: String, state: String, coverage: JSON, capabilities: [String], reason: String) async throws {}
     func emit(source: String, generation: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) async throws {}
+}
+
+actor CommandSink: ObservationSink {
+    var rows: [JSON] = []
+    func sourceState(source: String, state: String, coverage: JSON, capabilities: [String], reason: String) async throws {}
+    func emit(source: String, generation: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) async throws { rows += observations }
 }

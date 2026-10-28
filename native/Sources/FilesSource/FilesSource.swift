@@ -7,6 +7,7 @@ public actor FilesSource: Source {
     private let writer: BlobWriter
     private var blobs: [String: URL] = [:]
     private var scanGuard = FileScanGuard()
+    private var reconciling = false
     private let generation = UUID().uuidString
     public init(home: URL = FileManager.default.homeDirectoryForCurrentUser, roots: [URL] = []) throws {
         let defaultRoot = home.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs/Bridge Test")
@@ -42,20 +43,26 @@ public actor FilesSource: Source {
         if failed { complete = false }
         return (rows, complete)
     }
+    public func reconcile(into sink: any ObservationSink) async throws {
+        while reconciling { try await Task.sleep(for: .milliseconds(25)) }
+        reconciling = true
+        defer { reconciling = false }
+        for root in roots {
+            let started = timestamp()
+            let (scanned, complete) = try snapshot(root)
+            var rows = scanned
+            var nextGuard = scanGuard
+            let absent = nextGuard.finish(root: root.path, keys: Set(rows.map { $0["native_key"].string }), complete: complete)
+            rows += absent.map { .object(["kind": .string("absent"), "collection": .string("files.item"), "native_key": .string($0), "observed_at": .string(timestamp()), "revalidated": .bool(true)]) }
+            try await sink.emit(source: name, generation: generation, observations: rows, scanID: UUID().uuidString, scanStartedAt: started, scope: [], completionEvidence: "", blobHandles: [:], live: false)
+            scanGuard = nextGuard
+        }
+    }
     public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {
         let watcher = DatabaseWatcher(path: roots[0].path, coalescing: .milliseconds(250))
         defer { watcher.close() }
         repeat {
-            for root in roots {
-                let started = timestamp()
-                let (scanned, complete) = try snapshot(root)
-                var rows = scanned
-                var nextGuard = scanGuard
-                let absent = nextGuard.finish(root: root.path, keys: Set(rows.map { $0["native_key"].string }), complete: complete)
-                rows += absent.map { .object(["kind": .string("absent"), "collection": .string("files.item"), "native_key": .string($0), "observed_at": .string(timestamp()), "revalidated": .bool(true)]) }
-                try await sink.emit(source: name, generation: generation, observations: rows, scanID: UUID().uuidString, scanStartedAt: started, scope: [], completionEvidence: "", blobHandles: [:], live: false)
-                scanGuard = nextGuard
-            }
+            try await reconcile(into: sink)
             var iterator = watcher.changes.makeAsyncIterator()
             guard await iterator.next() != nil else { return }
         } while !Task.isCancelled
