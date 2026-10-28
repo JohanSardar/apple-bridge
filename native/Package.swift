@@ -2,6 +2,7 @@
 import PackageDescription
 
 let sourceTargets: [Target] = [
+    .target(name: "FocusSource", dependencies: ["SourceSupport"]),
     .target(name: "PhotosSource", dependencies: ["SourceSupport"]),
     .target(name: "MacSource", dependencies: ["SourceSupport"]),
     .target(name: "MailSource", dependencies: ["SourceSupport"]),

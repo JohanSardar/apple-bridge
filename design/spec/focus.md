@@ -1,0 +1,11 @@
+# Focus (T28, partial)
+
+The native FocusSource captures the singleton focus.status with focused, name and authorization. focused is null unless INFocusStatusCenter authorization is authorized and the platform supplies a value. This preserves the distinction between unknown and off. The Helper never requests authorization. Capture polls every 30 seconds and emits only changes; idle CPU qualification remains pending. Names remain null until the pack readback contract is verified. The source registry supplies focus:read and focus:write grants, but no write operation is advertised.
+
+internal/focuspack provides a bounded AB Focus runner inspection seam requiring an explicit runner; its default cannot execute the real CLI. Inspection success proves no Focus effect. Set accepts a mode and optional until contract but always returns ErrUnqualified before invoking a runner. There is no public focus.set operation until native identifiers, parameters and independent focus.status readback have been qualified. No Set Focus action identifier was verified from a native workflow in this run; none is guessed. No AB Focus source or artifact is supplied.
+
+FOC-SIM tests the status shape, synthetic runner bounds and refusal to dispatch an unqualified set. FOC-SET-REAL reports limited without invoking Shortcuts or changing Focus. Real status, idle CPU and G12 phone synchronization remain pending.
+
+Leader actions needed: verify a native Set Focus workflow identifier and parameters without executing it, then author packaging/shortcuts/ab-focus.json using tools/shortcuts. The required future signed import path is .build/shortcuts/AB Focus.shortcut and exact shortcut name is AB Focus. This file does not exist yet; do not import a placeholder. After qualification and import, test off, Do Not Disturb, named Focus and optional until with status readback and guaranteed restoration. Setting DND syncs to Johan's iPhone. Focus authorization for the Helper is currently not_determined; any grant is a leader action, never requested automatically.
+
+A supplemental gateway capture probe timed out during world startup before sending any Focus fixture; end-to-end status capture is not claimed by FOC-SIM.
