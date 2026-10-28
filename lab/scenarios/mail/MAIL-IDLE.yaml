@@ -1,0 +1,3 @@
+id: MAIL-IDLE
+feature: mail.capture
+levels: [sim]

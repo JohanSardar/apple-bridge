@@ -1124,3 +1124,20 @@ features:
         level: real
         reason: Whole-Helper idle CPU was 56.61 percent over 300 seconds after narrowing CoreAudio subscriptions. A trace sample had only 2 Mac captures versus 954 Messages and 148 Notes captures; per-source CPU is unmeasured.
     notes: Night Shift omitted; SSID requires Location authorization. VPN uses interface heuristics.
+  - id: mail.capture
+    title: Mail Envelope Index capture foundation
+    requirements: [R-RW]
+    milestone: M0
+    modules: [native/Sources/MailSource, internal/contracts]
+    depends_on: []
+    status: limited
+    scenarios:
+      - {id: MAIL-CAPTURE, levels: [sim]}
+      - {id: MAIL-LIVE, levels: [sim]}
+      - {id: MAIL-NO-FALSE-DELETE, levels: [sim]}
+      - {id: MAIL-IDLE, levels: [sim]}
+    limits:
+      - {scenario: MAIL-CAPTURE, level: sim, reason: Partial native message reader only; account and mailbox records, recipients, attachment hydration, flags, body state and gateway FTS proof remain unimplemented.}
+      - {scenario: MAIL-LIVE, level: sim, reason: Insert and read/move fixture checks only; flag changes and p95 gateway delivery remain unimplemented.}
+      - {scenario: MAIL-NO-FALSE-DELETE, level: sim, reason: Native generation and bounded scan checks only; gateway alias reconciliation remains unverified.}
+      - {scenario: MAIL-IDLE, level: sim, reason: Five-minute idle Helper CPU proof remains unimplemented; scenario fails explicitly.}

@@ -10,10 +10,10 @@ import (
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 )
 
-const searchVersion = "4"
+const searchVersion = "5"
 
 func searchTextSQL(payload string) string {
-	fields := []string{"text", "title", "notes", "plain_text", "given_name", "middle_name", "family_name", "nickname", "organization", "job_title", "filename", "balloon.link.title", "balloon.app.caption"}
+	fields := []string{"subject", "from", "to", "snippet", "text", "title", "notes", "plain_text", "given_name", "middle_name", "family_name", "nickname", "organization", "job_title", "filename", "balloon.link.title", "balloon.app.caption"}
 	parts := make([]string, len(fields))
 	for i, field := range fields {
 		parts[i] = fmt.Sprintf("coalesce(json_extract(%s,'$.data.%s'),'')", payload, field)
