@@ -21,6 +21,8 @@ type session struct {
 	next    time.Time
 }
 type Server struct {
+	ctWarnings  map[string]string
+	DNS         DNSProvider
 	IdleTimeout time.Duration
 	Store       *Store
 	mu          sync.Mutex
@@ -28,7 +30,7 @@ type Server struct {
 }
 
 func New(store *Store) *Server {
-	return &Server{IdleTimeout: 2 * time.Minute, Store: store, sessions: map[string]*session{}}
+	return &Server{IdleTimeout: 2 * time.Minute, Store: store, ctWarnings: map[string]string{}, sessions: map[string]*session{}}
 }
 func (s *Server) Attach(host, credential string, tunnel Tunnel) (func(), error) {
 	s.mu.Lock()
@@ -114,6 +116,7 @@ func (s *Server) forward(ctx context.Context, c net.Conn) {
 		return
 	}
 	c.SetReadDeadline(time.Time{})
+	host = s.Store.canonical(host)
 	s.mu.Lock()
 	v := s.sessions[host]
 	d, ok := s.Store.Device(host)

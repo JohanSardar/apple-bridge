@@ -1,0 +1,4 @@
+id: RELAY-OWN-DOMAIN
+feature: remote.relay
+levels: [sim]
+when: [{relay_service: {}}]

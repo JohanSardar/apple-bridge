@@ -14,6 +14,7 @@ import (
 )
 
 type Config struct {
+	Domain  string `json:"domain,omitempty"`
 	ID      string `json:"id"`
 	Enabled bool   `json:"enabled"`
 	Backend string `json:"backend,omitempty"`
@@ -21,6 +22,7 @@ type Config struct {
 }
 
 type Status struct {
+	CTWarning         string    `json:"ct_warning,omitempty"`
 	ID                string    `json:"id"`
 	State             string    `json:"state"`
 	Backend           string    `json:"backend"`
@@ -74,6 +76,17 @@ func Command(ctx context.Context, home, action, via, name string, out io.Writer)
 }
 
 func CommandWithOpener(ctx context.Context, home, action, via, name string, out io.Writer, opener func(context.Context, string) error) error {
+	return command(ctx, home, action, via, name, "", out, opener)
+}
+
+func CommandDomain(ctx context.Context, home, action, via, name, domain string, out io.Writer) error {
+	return command(ctx, home, action, via, name, domain, out, openLink)
+}
+
+func command(ctx context.Context, home, action, via, name, domain string, out io.Writer, opener func(context.Context, string) error) error {
+	if domain != "" && via != "relay" {
+		return contracts.ErrInvalid
+	}
 	if via == "tailscale-app" {
 		via = "system"
 	}
@@ -94,7 +107,7 @@ func CommandWithOpener(ctx context.Context, home, action, via, name string, out 
 	if via == "" && action == "on" {
 		via = "embedded"
 	}
-	cfg := Config{ID: contracts.NewID("remote"), Enabled: action == "on", Backend: via, Name: name}
+	cfg := Config{ID: contracts.NewID("remote"), Enabled: action == "on", Backend: via, Name: name, Domain: domain}
 	if !cfg.Enabled && cfg.Backend == "" {
 		var previous Status
 		if read(home, "status", &previous) == nil {
