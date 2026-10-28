@@ -1,0 +1,39 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[7.87 18.67 73.28] cpu_idle=39% cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M61V1DY31C36NZWH4F7MXG41",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "me_identifier_digest": "89c400e94576b76ec13a273f7ffc76e5149ed0ea6337397190fc245b38844101",
+    "me_match": true
+  },
+  "scenario": "CON-ME",
+  "level": "real",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-28T18:05:59.107938Z",
+  "assertions": [
+    {
+      "name": "world_start",
+      "passed": true
+    },
+    {
+      "name": "independent_me_card_available",
+      "passed": true
+    },
+    {
+      "name": "me_card_matches_truth",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

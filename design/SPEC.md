@@ -403,6 +403,8 @@ protocol Source: Sendable {
 
 ## 9. Sources at full depth
 
+Contacts Me-card and notes entitlement contract: [spec/contacts.md](spec/contacts.md).
+
 Permission status and explicit requests: [permissions](spec/permissions.md).
 
 Transient Helper queries and the query-with-effect rule: [query contract](spec/query.md).

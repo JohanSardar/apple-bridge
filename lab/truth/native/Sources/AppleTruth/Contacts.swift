@@ -8,6 +8,11 @@ extension AppleTruth {
     static func contacts(_ verb: String, _ request: [String: Any]) throws -> [String: Any] {
         guard CNContactStore.authorizationStatus(for: .contacts) == .authorized else { return ["status": "unverified", "reason": "contacts_access_required"] }
         let store = CNContactStore()
+        if verb == "observe", request["me_only"] as? Bool == true {
+            let me = try store.unifiedMeContactWithKeys(toFetch: [CNContactIdentifierKey as NSString])
+            let digest = SHA256.hash(data: Data(me.identifier.utf8)).map { String(format: "%02x", $0) }.joined()
+            return ["status": "verified", "me_identifier_digest": digest]
+        }
         let keys = [CNContactIdentifierKey, CNContactGivenNameKey, CNContactMiddleNameKey, CNContactFamilyNameKey, CNContactPreviousFamilyNameKey, CNContactNamePrefixKey, CNContactNameSuffixKey, CNContactNicknameKey, CNContactPhoneticGivenNameKey, CNContactPhoneticMiddleNameKey, CNContactPhoneticFamilyNameKey, CNContactPhoneticOrganizationNameKey, CNContactOrganizationNameKey, CNContactJobTitleKey, CNContactDepartmentNameKey, CNContactTypeKey, CNContactPhoneNumbersKey, CNContactEmailAddressesKey, CNContactPostalAddressesKey, CNContactUrlAddressesKey, CNContactBirthdayKey, CNContactNonGregorianBirthdayKey, CNContactDatesKey, CNContactSocialProfilesKey, CNContactInstantMessageAddressesKey, CNContactRelationsKey, CNContactImageDataKey, CNContactThumbnailImageDataKey, CNContactImageDataAvailableKey]
         func read() throws -> [CNContact] {
             let fetch = CNContactFetchRequest(keysToFetch: keys.map { $0 as NSString })
