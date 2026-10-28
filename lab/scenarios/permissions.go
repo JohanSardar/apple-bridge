@@ -8,6 +8,7 @@ import (
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	bridgeruntime "github.com/JohanSardar/apple-bridge/internal/runtime"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -18,6 +19,19 @@ func runPermissionStatus(ctx context.Context, s Scenario, level string) (e Evide
 	e = Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, At: time.Now().UTC()}
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
 	app := os.Getenv("AB_PERMISSION_HELPER_APP")
+	if app == "" {
+		directory, err := os.MkdirTemp("/tmp/ablab", "permission-helper-")
+		if err != nil {
+			add("signed_helper_build", false)
+			return e
+		}
+		defer os.RemoveAll(directory)
+		app = filepath.Join(directory, "AppleBridgeHelper.app")
+		if err := exec.CommandContext(ctx, "packaging/dev/build-helper.sh", app).Run(); err != nil {
+			add("signed_helper_build", false)
+			return e
+		}
+	}
 	fingerprint := func() (string, bool) {
 		var values []string
 		for _, file := range []string{filepath.Join(os.Getenv("HOME"), "Library/Application Support/com.apple.TCC/TCC.db"), "/Library/Application Support/com.apple.TCC/TCC.db"} {
