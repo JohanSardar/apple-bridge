@@ -1135,8 +1135,15 @@ features:
       - {id: MAIL-CAPTURE, levels: [sim]}
       - {id: MAIL-LIVE, levels: [sim]}
       - {id: MAIL-NO-FALSE-DELETE, levels: [sim]}
-      - {id: MAIL-IDLE, levels: [sim]}
+      - {id: MAIL-IDLE, levels: [sim, real]}
+      - {id: MAIL-READ-REAL, levels: [real]}
+      - {id: MAIL-REPLICA, levels: [replica]}
+      - {id: MAIL-AGENT, levels: [agent]}
     limits:
+      - {scenario: MAIL-REPLICA, level: replica, reason: "Synthetic metadata records and subject FTS pass on Ubuntu; real Mail equivalence awaits the missing Envelope Index, and attachments retain the source limitations."}
+      - {scenario: MAIL-AGENT, level: agent, reason: "Ubuntu Codex OAuth token is revoked (HTTP 401 token_revoked); Johan must sign in again before MCP-only agent qualification."}
+      - {scenario: MAIL-READ-REAL, level: real, reason: "V10 MailData directory is empty on this Mac; real Envelope Index required for counts and 25 random digest qualification."}
+      - {scenario: MAIL-IDLE, level: real, reason: "Blocked by missing real Mail store and pre-existing Helper idle CPU issue tracked by T53; no idle pass claimed."}
       - {scenario: MAIL-CAPTURE, level: sim, reason: "Account, mailbox and bounded message fixture capture with subject FTS; recipients, attachment metadata/hydration, flags and body state remain unimplemented. Native build and MAIL-CAPTURE remained queued without results; gateway qualification pending."}
       - {scenario: MAIL-LIVE, level: sim, reason: Insert and read/move fixture checks only; flag changes and p95 gateway delivery remain unimplemented.}
       - {scenario: MAIL-NO-FALSE-DELETE, level: sim, reason: Native generation and bounded scan checks only; gateway alias reconciliation remains unverified.}

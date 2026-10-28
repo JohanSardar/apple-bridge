@@ -1,0 +1,27 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[21.28 23.92 17.44] cpu_idle=15% cpus=8 other_heavy=2"
+  },
+  "run_id": "run_01M61YRNCSCH75J6P8TQ0JVYSX",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "MAIL-IDLE",
+  "level": "real",
+  "passed": false,
+  "git_sha": "",
+  "at": "2026-10-28T19:11:06.137774Z",
+  "assertions": [
+    {
+      "name": "mail_idle_qualification_pending_T53_and_real_mail_store",
+      "passed": false
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}
