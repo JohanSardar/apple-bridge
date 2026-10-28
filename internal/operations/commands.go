@@ -241,6 +241,9 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 	if strings.HasPrefix(c.Op, "photos.") || strings.HasPrefix(c.Op, "mail.") {
 		action.Args = c.Args
 	}
+	if strings.HasPrefix(c.Op, "files.") {
+		action.Args = json.RawMessage(c.Args)
+	}
 	if c.Op == "shortcuts.run" {
 		var args contracts.ShortcutRunArgs
 		if json.Unmarshal(c.Args, &args) != nil {
@@ -495,7 +498,11 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 		to = "indeterminate"
 		f.Disposition = "indeterminate"
 	}
-	if r.Command.Op != "shortcuts.run" && (to == "observed" || to == "delivered" || to == "delivery_failed") {
+	if strings.HasPrefix(r.Command.Op, "files.") && to == "observed" && !contracts.FileCompletionEvidence(r.Command, f.Evidence, r.RequestHash) {
+		to = "indeterminate"
+		f.Disposition = "indeterminate"
+	}
+	if r.Command.Op != "shortcuts.run" && !strings.HasPrefix(r.Command.Op, "files.") && (to == "observed" || to == "delivered" || to == "delivery_failed") {
 		var evidence struct {
 			NativeKey         string `json:"native_key"`
 			Fingerprint       string `json:"fingerprint"`

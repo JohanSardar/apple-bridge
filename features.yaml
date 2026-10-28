@@ -1288,3 +1288,18 @@ features:
       - scenario: FOC-SET-REAL
         level: real
         reason: Verified Set Focus action and parameters plus AB Focus import required; no real mutation attempted. DND syncs to Johan's iPhone.
+  - id: files.commands
+    title: Opt-in file commands with readback
+    requirements: [R-API, R-SCOPE]
+    milestone: G9
+    modules: [native/Sources/FilesSource, internal/contracts, internal/operations]
+    depends_on: [files.capture]
+    status: limited
+    scenarios:
+      - {id: FILE-COMMANDS, levels: [sim]}
+      - {id: FILE-CRUD-REAL, levels: [real]}
+      - {id: FILE-REPLICA, levels: [replica]}
+    limits:
+      - {scenario: FILE-REPLICA, level: replica, reason: Ubuntu gateway journey remains unimplemented; scenario fails explicitly.}
+      - {scenario: FILE-COMMANDS, level: sim, reason: Native isolated filesystem proof; simapple gateway and cloud state transitions remain unverified. Content is inline base64 capped at one MiB; upload blob references remain unsupported.}
+      - {scenario: FILE-CRUD-REAL, level: real, reason: Pending native CRUD qualification.}

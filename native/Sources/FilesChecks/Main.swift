@@ -1,11 +1,70 @@
 import Foundation
 import Darwin
+import CryptoKit
 import FilesSource
 import SourceSupport
 
 @main
 struct Checks {
+    static func commands() async throws {
+        let fm = FileManager.default
+        let simulated = CommandLine.arguments.contains("FILE-COMMANDS")
+        let home = simulated ? fm.temporaryDirectory.appendingPathComponent(UUID().uuidString) : fm.homeDirectoryForCurrentUser
+        if simulated { try fm.createDirectory(at: home, withIntermediateDirectories: true) }
+        defer { if simulated { try? fm.removeItem(at: home) } }
+        let source = try FilesSource(home: home)
+        let root = home.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs/Bridge Test")
+        let folder = root.appendingPathComponent("[ab-test " + UUID().uuidString + "]")
+        try fm.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: folder) }
+        let parent = folder.lastPathComponent
+        func run(_ op: String, _ extra: [String: JSON]) async throws -> JSON {
+            var args = extra
+            args["root"] = .string(root.path)
+            let prepared = try await source.prepare(.object(["action": .object(["op": .string(op), "args": .object(args)])]))
+            let evidence = try await source.dispatch(prepared)
+            guard evidence["observed"].bool else { throw SourceFailure.corrupt }
+            return evidence
+        }
+        for (op, text) in [("files.create", "first"), ("files.write", "second")] {
+            let data = Data(text.utf8)
+            let digest = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+            let evidence = try await run(op, ["parent": .string(parent), "name": .string("a.txt"), "content_base64": .string(data.base64EncodedString()), "digest": .string(digest)])
+            guard evidence["digest"].string == digest, try Data(contentsOf: folder.appendingPathComponent("a.txt")) == data else { throw SourceFailure.corrupt }
+        }
+        let link = folder.appendingPathComponent("link")
+        try fm.createSymbolicLink(at: link, withDestinationURL: fm.temporaryDirectory)
+        for path in ["../escape", parent + "/link/escape"] {
+            do {
+                _ = try await run("files.trash", ["path": .string(path)])
+                throw SourceFailure.corrupt
+            } catch SourceFailure.invalid {}
+        }
+        _ = try await run("files.rename", ["path": .string(parent + "/a.txt"), "parent": .string(parent), "name": .string("b.txt")])
+        let target = folder.appendingPathComponent("target")
+        try fm.createDirectory(at: target, withIntermediateDirectories: true)
+        _ = try await run("files.move", ["path": .string(parent + "/b.txt"), "parent": .string(parent + "/target"), "name": .string("c.txt")])
+        let file = target.appendingPathComponent("c.txt")
+        guard fm.fileExists(atPath: file.path), !fm.fileExists(atPath: folder.appendingPathComponent("b.txt").path) else { throw SourceFailure.corrupt }
+        _ = try await run("files.set_tags", ["path": .string(parent + "/target/c.txt"), "tags": .array([.string("Bridge Test")])])
+        guard try file.resourceValues(forKeys: [.tagNamesKey]).tagNames == ["Bridge Test"] else { throw SourceFailure.corrupt }
+        if simulated {
+            for op in ["files.download", "files.evict"] {
+                do {
+                    _ = try await run(op, ["path": .string(parent + "/target/c.txt")])
+                    throw SourceFailure.corrupt
+                } catch SourceFailure.unsupported {}
+            }
+        }
+        let trash = try await run("files.trash", ["path": .string(parent + "/target/c.txt")])
+        let trashURL = URL(fileURLWithPath: trash["trash_path"].string)
+        guard try Data(contentsOf: trashURL) == Data("second".utf8) else { throw SourceFailure.corrupt }
+        try fm.moveItem(at: trashURL, to: file)
+        guard fm.fileExists(atPath: file.path) else { throw SourceFailure.corrupt }
+    }
     static func main() async throws {
+        if CommandLine.arguments.contains("FILE-COMMANDS") || CommandLine.arguments.contains("FILE-CRUD-REAL") { try await commands(); return }
+        if CommandLine.arguments.contains("FILE-REPLICA") { throw SourceFailure.capabilityUnproven }
         let home = FileManager.default.homeDirectoryForCurrentUser
         let root = home.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs/Bridge Test")
         let source = try FilesSource()

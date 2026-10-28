@@ -373,7 +373,7 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.Feature == "clock.pack" {
 		return runClockPack(ctx, s, level)
 	}
-	if s.Feature == "files.capture" {
+	if s.Feature == "files.capture" || s.Feature == "files.commands" {
 		return runFiles(ctx, s, level)
 	}
 	if s.Feature == "photos.capture" || s.Feature == "photos.commands" {

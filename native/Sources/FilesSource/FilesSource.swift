@@ -3,7 +3,7 @@ import SourceSupport
 
 public actor FilesSource: Source {
     public nonisolated let name = "files"
-    private let roots: [URL]
+    let roots: [URL]
     private let writer: BlobWriter
     private var blobs: [String: URL] = [:]
     private var scanGuard = FileScanGuard()
@@ -18,7 +18,7 @@ public actor FilesSource: Source {
         writer = try BlobWriter(directory: home.appendingPathComponent("Library/Caches/AppleBridge/files-blobs"))
     }
     public func open() async -> SourceReadiness {
-        SourceReadiness(state: "ready", coverage: .object(["roots": .number(Double(roots.count)), "max_items": .number(10000), "max_depth": .number(16)]), capabilities: ["files.search", "files.read"])
+        SourceReadiness(state: "ready", coverage: .object(["roots": .number(Double(roots.count)), "max_items": .number(10000), "max_depth": .number(16)]), capabilities: ["files.search", "files.read"] + Self.commands)
     }
     public func snapshot(_ root: URL) throws -> ([JSON], Bool) {
         guard roots.contains(root.standardizedFileURL.resolvingSymlinksInPath()) else { throw SourceFailure.invalid }
@@ -127,7 +127,5 @@ public actor FilesSource: Source {
         let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
         return .object(["t": .string("BlobChunk"), "handle": .string(handle), "offset": .number(Double(offset)), "bytes": .string(bytes.base64EncodedString()), "digest": .string(digest), "eof": .bool(offset + Int64(bytes.count) == Int64(size))])
     }
-    public func prepare(_ command: JSON) async throws -> Prepared { throw SourceFailure.unsupported }
-    public func dispatch(_ prepared: Prepared) async throws -> JSON { throw SourceFailure.unsupported }
     public func resolve(_ command: String, evidence: JSON) async -> JSON { .null }
 }
