@@ -403,6 +403,8 @@ protocol Source: Sendable {
 
 ## 9. Sources at full depth
 
+Photos capture and query coverage: [Photos](spec/photos.md).
+
 Contacts Me-card and notes entitlement contract: [spec/contacts.md](spec/contacts.md).
 
 Mail capture foundation and local body queries: [Mail](spec/mail.md).

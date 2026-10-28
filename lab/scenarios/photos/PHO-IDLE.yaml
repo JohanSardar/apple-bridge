@@ -1,0 +1,3 @@
+id: PHO-IDLE
+feature: photos.capture
+levels: [sim, real]

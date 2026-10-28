@@ -1,0 +1,46 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[28.21 27.46 25.53] cpu_idle=25% cpus=8 other_heavy=3"
+  },
+  "status": "limited",
+  "run_id": "run_01M627BAG6E1D9BWTBHWKJYZY3",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "PHO-IDLE",
+  "level": "real",
+  "passed": false,
+  "git_sha": "",
+  "at": "2026-10-28T21:41:06.182423Z",
+  "assertions": [
+    {
+      "name": "descriptor_photos.search",
+      "passed": true
+    },
+    {
+      "name": "descriptor_photos.original",
+      "passed": true
+    },
+    {
+      "name": "descriptor_photos.thumbnail",
+      "passed": true
+    },
+    {
+      "name": "source_grants",
+      "passed": true
+    },
+    {
+      "name": "whole_helper_idle",
+      "passed": false,
+      "status": "limited",
+      "detail": "Photos grant missing; whole-Helper CPU qualification blocked by T53"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

@@ -100,6 +100,10 @@ func (s *querySession) receive(f contracts.IPCFrame) bool {
 		case "helper.version":
 			out.ResultJSON = json.RawMessage(`{"version":"sim","protocol":"ipc/1"}`)
 		default:
+			if photos, handled := s.fake.photosQuery(f); handled {
+				out = photos
+				break
+			}
 			if files, handled := s.fake.filesQuery(f); handled {
 				out = files
 				break
