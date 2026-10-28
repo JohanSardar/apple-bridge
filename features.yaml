@@ -1107,3 +1107,23 @@ features:
       - scenario: CLK-TIMER-REAL
         level: real
         reason: Leader import and independent running timer readback required; start action alone cannot establish running state.
+
+  - id: mac.capture
+    title: Mac system state capture
+    requirements: [R-API, R-SCOPE]
+    milestone: G6
+    modules: [native/Sources/MacSource]
+    depends_on: []
+    status: limited
+    scenarios:
+      - {id: MAC-CAPTURE, levels: [sim]}
+      - {id: MAC-IDLE, levels: [sim, real]}
+      - {id: MAC-POWER-REAL, levels: [real]}
+    limits:
+      - scenario: MAC-IDLE
+        level: real
+        reason: Five-minute Helper CPU measurement remains unverified; sim capture does not establish idle CPU.
+      - scenario: MAC-POWER-REAL
+        level: real
+        reason: Independent pmset comparison has not yet passed.
+    notes: Night Shift omitted; SSID requires Location authorization. VPN uses interface heuristics.
