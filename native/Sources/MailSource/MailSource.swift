@@ -19,13 +19,29 @@ public actor MailSource: Source {
         let reader = try SQLiteSnapshot(path: path, generationSQL: "SELECT 'mail-v10'")
         let scan = try CompleteScan.read(reader: reader, sql: "SELECT CAST(m.ROWID AS TEXT) AS native_key, m.mailbox, b.url, coalesce(s.subject,'') AS subject, coalesce(a.address,'') AS sender, m.date_received, m.read, coalesce(m.message_id,'') AS message_id FROM messages m LEFT JOIN mailboxes b ON b.ROWID=m.mailbox LEFT JOIN subjects s ON s.ROWID=m.subject LEFT JOIN addresses a ON a.ROWID=m.sender ORDER BY m.ROWID", keyColumn: "native_key", scope: "mail.message", previousScope: "mail.message", previousGeneration: generation, previousKeys: keys, maxRows: maxRows, timeout: 5)
         var observations: [JSON] = []
+        let mailboxes = try reader.query("SELECT CAST(b.ROWID AS TEXT) AS native_key,b.url,COUNT(m.ROWID) AS message_count,SUM(CASE WHEN m.read=0 THEN 1 ELSE 0 END) AS unread_count FROM mailboxes b LEFT JOIN messages m ON m.mailbox=b.ROWID GROUP BY b.ROWID ORDER BY b.ROWID")
+        guard mailboxes.complete else { throw SourceFailure.unavailable }
+        var accounts = Set<String>()
+        for row in mailboxes.rows {
+            guard let raw = row["url"]?.text, let url = URL(string: raw), url.host != nil else { throw SourceFailure.corrupt }
+            let account = Self.account(raw)
+            func append(_ collection: String, _ key: String, _ data: JSON) {
+                observations.append(.object(["kind": .string("upsert"), "collection": .string(collection), "native_key": .string(key), "data": data, "observed_at": .string(timestamp())]))
+            }
+            if accounts.insert(account).inserted {
+                append("mail.account", account, .object(["name": .string(account), "kind": .string((url.scheme ?? "unknown").uppercased()), "addresses": .array([.string(account)])]))
+            }
+            let name = url.lastPathComponent
+            let role = ["inbox", "sent", "drafts", "trash", "archive", "junk"].contains(name.lowercased()) ? name.lowercased() : "other"
+            append("mail.mailbox", "mailbox/" + (row["native_key"]?.text ?? ""), .object(["account_id": .string(account), "name": .string(name), "path": .string(url.path), "role": .string(role), "unread_count": .number(Self.numeric(row["unread_count"])), "message_count": .number(Self.numeric(row["message_count"]))]))
+        }
         for row in scan.rows {
             guard row["url"]?.text != nil else { throw SourceFailure.corrupt }
             let key = row["native_key"]?.text ?? ""
             let alias = row["message_id"]?.text ?? ""
-            let data: JSON = .object(["subject": .string(row["subject"]?.text ?? ""), "from": .string(row["sender"]?.text ?? ""), "received_at": .string(timestamp(Date(timeIntervalSince1970: Self.numeric(row["date_received"])))), "read": .bool(Self.numeric(row["read"]) != 0), "message_id": .string(alias), "mailbox_ids": .array([.string(String(Int(Self.numeric(row["mailbox"]))))]), "account_id": .string(Self.account(row["url"]?.text ?? "")), "to": .null, "cc": .null, "sent_at": .null, "flagged": .null, "flag_color": .null, "has_attachments": .null, "size": .null, "snippet": .null, "body_state": .null])
+            let data: JSON = .object(["subject": .string(row["subject"]?.text ?? ""), "from": .string(row["sender"]?.text ?? ""), "received_at": .string(timestamp(Date(timeIntervalSince1970: Self.numeric(row["date_received"])))), "read": .bool(Self.numeric(row["read"]) != 0), "message_id": .string(alias), "mailbox_ids": .array([.string("mailbox/" + String(Int(Self.numeric(row["mailbox"]))))]), "account_id": .string(Self.account(row["url"]?.text ?? "")), "to": .null, "cc": .null, "sent_at": .null, "flagged": .null, "flag_color": .null, "has_attachments": .null, "size": .null, "snippet": .null, "body_state": .null])
             var observation: [String: JSON] = ["kind": .string("upsert"), "collection": .string("mail.message"), "native_key": .string(key), "data": data, "observed_at": .string(timestamp())]
-            if !alias.isEmpty { observation["scoped_alias"] = .string("mail/" + data["account_id"].string + "/" + alias) }
+            if alias.hasPrefix("<"), alias.hasSuffix(">"), alias.contains("@") { observation["scoped_alias"] = .string("mail/" + data["account_id"].string + "/" + alias) }
             observations.append(.object(observation))
         }
         if scan.complete {
@@ -51,7 +67,7 @@ public actor MailSource: Source {
             let (generation, observations, complete) = try snapshot()
             let unstamped = observations.map { value -> JSON in var object = value.object; object.removeValue(forKey: "observed_at"); return .object(object) }
             if unstamped != previous {
-                try await sink.emitCheckpoint(source: name, generation: generation, checkpoint: UUID().uuidString, observations: observations, scanID: UUID().uuidString, scanStartedAt: started, scope: ["mail.message"], completionEvidence: complete ? "complete" : "partial", blobHandles: [:], live: !previous.isEmpty)
+                try await sink.emitCheckpoint(source: name, generation: generation, checkpoint: UUID().uuidString, observations: observations, scanID: UUID().uuidString, scanStartedAt: started, scope: ["mail.account", "mail.mailbox", "mail.message"], completionEvidence: complete ? "complete" : "partial", blobHandles: [:], live: !previous.isEmpty)
                 previous = unstamped
             }
         }
