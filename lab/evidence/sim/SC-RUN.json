@@ -1,0 +1,124 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[4.8 4.65 5.09] cpu_idle=68% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M61PMAFN8ZV3NXCNSTVBTBZG",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "long_runner_elapsed_ms": 16039
+  },
+  "scenario": "SC-RUN",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-28T16:48:55.28504Z",
+  "assertions": [
+    {
+      "name": "fixture_directory",
+      "passed": true
+    },
+    {
+      "name": "fake_cli",
+      "passed": true
+    },
+    {
+      "name": "native_shortcuts_build",
+      "passed": true
+    },
+    {
+      "name": "native_shortcuts_output",
+      "passed": true
+    },
+    {
+      "name": "native_source_fixture",
+      "passed": true
+    },
+    {
+      "name": "public_command_registered",
+      "passed": true
+    },
+    {
+      "name": "public_command_validated",
+      "passed": true
+    },
+    {
+      "name": "public_gateway_start",
+      "passed": true
+    },
+    {
+      "name": "public_helper_ready",
+      "passed": true
+    },
+    {
+      "name": "public_runner_completion",
+      "passed": true
+    },
+    {
+      "name": "public_runner_output",
+      "passed": true
+    },
+    {
+      "name": "long_runner_admitted",
+      "passed": true
+    },
+    {
+      "name": "gateway_waits_beyond_15_seconds",
+      "passed": true
+    },
+    {
+      "name": "input_output_bytes",
+      "passed": true
+    },
+    {
+      "name": "input_output_bytes",
+      "passed": true
+    },
+    {
+      "name": "input_output_bytes",
+      "passed": true
+    },
+    {
+      "name": "binary_output",
+      "passed": true
+    },
+    {
+      "name": "nonzero_exit_preserved",
+      "passed": true
+    },
+    {
+      "name": "timeout_bounded",
+      "passed": true
+    },
+    {
+      "name": "timeout_process_reaped",
+      "passed": true
+    },
+    {
+      "name": "timeout_descendant_killed",
+      "passed": true
+    },
+    {
+      "name": "flood_bounded_while_running",
+      "passed": true
+    },
+    {
+      "name": "stdout-flood_bounded_while_running",
+      "passed": true
+    },
+    {
+      "name": "option_injection_rejected",
+      "passed": true
+    },
+    {
+      "name": "oversized_input_rejected",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

@@ -237,7 +237,8 @@ func (s *Store) persistCommand(ctx context.Context, t CommandTransition, partsUp
 	r.History = append(old.History, event)
 	cursor.Sequence++
 	r.Cursor = cursor
-	if (r.State == contracts.CommandObserved || r.State == contracts.CommandDelivered) && (r.CommitSeq == 0 || r.CommitSeq >= cursor.Sequence) {
+	runnerCompletion := r.Command.Op == "shortcuts.run" && r.Source == contracts.Shortcuts && r.State == contracts.CommandObserved && r.CommitSeq == 0 && contracts.ShortcutCompletionEvidence(r.Evidence, r.RequestHash)
+	if !runnerCompletion && (r.State == contracts.CommandObserved || r.State == contracts.CommandDelivered) && (r.CommitSeq == 0 || r.CommitSeq >= cursor.Sequence) {
 		return r, contracts.ErrCorrupt
 	}
 	b, err = json.Marshal(r)

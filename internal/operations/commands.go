@@ -238,6 +238,13 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 	}
 	defer release()
 	action := contracts.NativeAction{Op: c.Op, Args: a, Origin: c.Origin}
+	if c.Op == "shortcuts.run" {
+		var args contracts.ShortcutRunArgs
+		if json.Unmarshal(c.Args, &args) != nil {
+			return g.transition(g.Context, r, "rejected", "rejected_before_dispatch", nil, contracts.ErrInvalid)
+		}
+		action.Args = args
+	}
 	collection := "reminders.reminder"
 	containerCollection, containerField := "reminders.list", "list_id"
 	if r.Source == contracts.Calendar {
@@ -415,7 +422,20 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 	if err != nil {
 		return r, err
 	}
-	outcomeCtx, stop := context.WithTimeout(g.Context, 15*time.Second)
+	outcomeTimeout := 15 * time.Second
+	if c.Op == "shortcuts.run" {
+		var args contracts.ShortcutRunArgs
+		if json.Unmarshal(c.Args, &args) == nil {
+			timeoutMS := args.TimeoutMS
+			if timeoutMS == 0 {
+				timeoutMS = 30000
+			}
+			if timeoutMS > 0 && timeoutMS <= 300000 {
+				outcomeTimeout = time.Duration(timeoutMS)*time.Millisecond + 5*time.Second
+			}
+		}
+	}
+	outcomeCtx, stop := context.WithTimeout(g.Context, outcomeTimeout)
 	defer stop()
 	outcome, err := g.Peer.Exchange(outcomeCtx, contracts.IPCFrame{T: "Dispatch", Origin: c.Origin, CommandID: c.ID, Ticket: prepared.Ticket})
 	if err != nil {
@@ -456,7 +476,11 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 		to = "rejected"
 		f.Disposition = "rejected_before_dispatch"
 	}
-	if to == "observed" || to == "delivered" || to == "delivery_failed" {
+	if r.Command.Op == "shortcuts.run" && to == "observed" && !contracts.ShortcutCompletionEvidence(f.Evidence, r.RequestHash) {
+		to = "indeterminate"
+		f.Disposition = "indeterminate"
+	}
+	if r.Command.Op != "shortcuts.run" && (to == "observed" || to == "delivered" || to == "delivery_failed") {
 		var evidence struct {
 			NativeKey         string `json:"native_key"`
 			Fingerprint       string `json:"fingerprint"`

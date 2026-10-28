@@ -28,3 +28,29 @@ This intentionally small schema carries native parameters rather than maintainin
 ## Verification boundary
 
 CORE-SHORTCUT-SIGN at sim compiles twice and compares bytes/digests, then independently parses the WFWorkflow plist with macOS `plutil`. At real it additionally signs the no-op source, checks AEA1 framing, and re-signs that signed file with the system CLI to prove Apple accepts the archive. Evidence records pass/fail, digests and signing mode only. No personal library content is read. There are no new runtime Sources or grants. Signed files are build artifacts, excluded under `.build/`.
+
+## Runner adapter (T26, partial)
+
+`internal/shortcut` invokes the CLI directly without shell expansion. Inventory uses `list --show-identifiers`, optionally `--folders` or `--folder-name`; malformed or duplicate identifiers reject the entire result. CLI names cannot establish input capabilities, so none are inferred. The native integration below registers capture and text dispatch.
+
+Runs accept input bytes (text, URL text or file content) and return output bytes, process exit status and timeout status. Private temporary directories are removed after every result. Input and output are capped at 16 MiB. The default timeout is 30 seconds, bounded to five minutes; cancellation kills the CLI process group and reaps the CLI process. It does not promise to cancel downstream work that Shortcuts may already have handed to an app. Process success proves only runner completion, never arbitrary shortcut business effects. The adapter intentionally discards process stdout/stderr to avoid retaining personal diagnostics.
+
+`bridge shortcuts install-pack [-pack directory]` validates all three signed AEA files before opening them for user review. It never clicks Add Shortcut. The required files are `ab-echo.shortcut`, `ab-clock.shortcut` and `ab-focus.shortcut`; only the `AB Echo` source is supplied in this partial change. Missing Clock/Focus files cause the installer to reject before opening anything. Coverage publishes the bundled protocol version; imported pack version qualification remains pending.
+
+SC-CAPTURE sim tests inventory adapter changes and native capture, not replication. SC-RUN sim tests byte input/output, binary output, exit status, timeout, invalid shortcut names and input size. Complete pack sources, Clock, Focus, actions discovery and file transforms remain outstanding. No real shortcut has been run. The leader can import the signed Echo artifact for subsequent real qualification; that import alone does not complete T26.
+
+## Native capture and text dispatch continuation
+
+The Helper registers `ShortcutsSource`, polls inventory every 30 seconds, and emits complete replacement checkpoints only after all folder inventories succeed. Failed scans never assert absence. Shortcut input capability remains null because the CLI cannot establish it. `shortcuts:read` and `shortcuts:write` join the grant registry. Coverage carries `pack_version: "1"` through the gateway; this is the bundled protocol version, not proof of an imported pack version.
+
+`shortcuts.run` is registered as a command and follows the normal admission, approval, ticket and dispatch guard path. Its current input is shortcut name, UTF-8 input (16 KiB maximum) and timeout_ms (default 30 seconds, maximum five minutes). Native dispatch uses private temporary files and direct process arguments, starts the CLI in a dedicated process group, kills the whole group at its deadline or task cancellation, and reaps the CLI, and returns exit_status and output_base64 (32 KiB maximum output, keeping command evidence within IPC frame limits). A nonzero exit remains indeterminate because downstream effects may have occurred. Successful evidence establishes runner completion only. Its observed command has no capture commit sequence or observed record IDs; the ledger permits this result-only outcome specifically for shortcuts.run. File blob grants and blob output integration remain unimplemented, so T26 is still partial.
+
+SC-CAPTURE and SC-RUN additionally compile and exercise the native actor with the fake CLI. SC-RUN also submits through the public REST gateway against SimApple. These checks do not prove capture replication or real pack behavior. The idle qualification remains pending. No Clock or Focus identifiers have been inferred, and no placeholder pack workflows claim working operations.
+
+## Review safety fixes
+
+The Go adapter bounds stdout as it streams and monitors CLI output-file growth every 5 ms, killing the process group when either exceeds 16 MiB. Native output monitoring retains its 32 KiB run-result bound. These bounds cover CLI descendants in the group; effects already handed to independent applications remain outside runner cancellation.
+
+The gateway waits for the configured shortcuts execution timeout (default 30 seconds, maximum five minutes) plus five seconds for completion transport. Admission expiry still fences dispatch. Resolve accepts retained successful runner-completion evidence tied to the prepared request without requiring an Apple object capture.
+
+SC-RUN uses only synthetic executables: a forking timeout fixture checks descendant termination in Go and Swift; continuous file/stdout writers prove termination before their execution deadline; a native 16-second success proves retained Resolve evidence, and a separate 16-second SimApple success proves the public gateway waits beyond 15 seconds. Absolute times are not scaled.

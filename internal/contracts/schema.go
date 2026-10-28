@@ -149,6 +149,17 @@ func OperationSchema(d OperationDescriptor) map[string]any {
 		fields["limit"].(map[string]any)["maximum"] = 200
 		return s
 	}
+	if d.Kind == CommandOp && d.Source == Shortcuts {
+		args := JSONSchema(ShortcutRunArgs{})
+		fields := args["properties"].(map[string]any)
+		fields["shortcut"].(map[string]any)["minLength"] = 1
+		fields["shortcut"].(map[string]any)["maxLength"] = 1024
+		fields["input"].(map[string]any)["maxLength"] = 16 << 10
+		fields["timeout_ms"].(map[string]any)["minimum"] = 0
+		fields["timeout_ms"].(map[string]any)["maximum"] = 300000
+		s["properties"].(map[string]any)["args"] = args
+		return s
+	}
 	if d.Kind == CommandOp && strings.HasPrefix(d.Name, "notes.") {
 		return noteSchema(d, s)
 	}

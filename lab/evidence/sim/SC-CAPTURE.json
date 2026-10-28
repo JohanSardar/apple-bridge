@@ -1,0 +1,63 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[5.35 5.46 6.46] cpu_idle=64% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M61NG07TWE08MXWZH4EVV0VX",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "SC-CAPTURE",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-28T16:29:05.146983Z",
+  "assertions": [
+    {
+      "name": "fixture_directory",
+      "passed": true
+    },
+    {
+      "name": "fake_cli",
+      "passed": true
+    },
+    {
+      "name": "native_shortcuts_build",
+      "passed": true
+    },
+    {
+      "name": "native_shortcuts_output",
+      "passed": true
+    },
+    {
+      "name": "native_source_fixture",
+      "passed": true
+    },
+    {
+      "name": "initial_inventory",
+      "passed": true
+    },
+    {
+      "name": "change_fixture",
+      "passed": true
+    },
+    {
+      "name": "changed_inventory",
+      "passed": true
+    },
+    {
+      "name": "malformed_inventory_rejected",
+      "passed": true
+    },
+    {
+      "name": "duplicate_identifiers_rejected",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

@@ -364,6 +364,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.Feature == "core.permissions" {
 		return runPermissionStatus(ctx, s, level)
 	}
+	if s.Feature == "shortcuts.runner" {
+		return runShortcutsRunner(ctx, s, level)
+	}
 	if s.Feature == "core.queries" {
 		return runQueries(ctx, s, level)
 	}

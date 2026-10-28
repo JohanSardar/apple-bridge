@@ -19,6 +19,7 @@ import (
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/internal/remote"
 	bridgeruntime "github.com/JohanSardar/apple-bridge/internal/runtime"
+	"github.com/JohanSardar/apple-bridge/internal/shortcut"
 	"github.com/JohanSardar/apple-bridge/internal/state"
 	"github.com/JohanSardar/apple-bridge/internal/trust"
 )
@@ -39,6 +40,20 @@ func run(ctx context.Context, args []string) error {
 		}
 		_, err := bridgeruntime.Permissions(ctx, app, args[2])
 		return err
+	}
+	if args[0] == "shortcuts" {
+		if len(args) < 2 || args[1] != "install-pack" {
+			return contracts.ErrInvalid
+		}
+		set := flag.NewFlagSet("install-pack", flag.ContinueOnError)
+		directory := set.String("pack", ".build/shortcuts", "signed helper pack directory")
+		if err := set.Parse(args[2:]); err != nil {
+			return err
+		}
+		if set.NArg() != 0 {
+			return contracts.ErrInvalid
+		}
+		return shortcut.OpenPack(ctx, *directory)
 	}
 	verb := args[0]
 	args = args[1:]
