@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "name": "[ab-test noop] Apple Bridge Signing Test",
+  "actions": [
+    {"key": "nothing", "identifier": "is.workflow.actions.nothing", "parameters": {}}
+  ]
+}

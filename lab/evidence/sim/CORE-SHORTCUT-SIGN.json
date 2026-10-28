@@ -1,0 +1,86 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[7.37 10.75 12.8] cpu_idle=43% cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M61F2VGBJQHTECZCECE8DRE4",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "unsigned_sha256": "855970e74b2213941b9d4975e1798f8d07994a5823ab438ac78d83286bd4b09b"
+  },
+  "scenario": "CORE-SHORTCUT-SIGN",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "a31c7b4c814bdbef06ddb45d4cb9a357878c76e2",
+  "at": "2026-10-28T14:37:02.859684Z",
+  "assertions": [
+    {
+      "name": "temporary_build_directory",
+      "passed": true
+    },
+    {
+      "name": "tool_build",
+      "passed": true
+    },
+    {
+      "name": "first_compile",
+      "passed": true
+    },
+    {
+      "name": "second_compile",
+      "passed": true
+    },
+    {
+      "name": "unsigned_plist_exists",
+      "passed": true
+    },
+    {
+      "name": "deterministic_plist",
+      "passed": true
+    },
+    {
+      "name": "valid_noop_workflow_plist",
+      "passed": true
+    },
+    {
+      "name": "reference_fixture_written",
+      "passed": true
+    },
+    {
+      "name": "native_parameters_and_references_compile",
+      "passed": true
+    },
+    {
+      "name": "independent_plist_reference_readback",
+      "passed": true
+    },
+    {
+      "name": "invalid_source_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_source_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_source_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_source_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_source_rejected",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": [
+    "air"
+  ]
+}
