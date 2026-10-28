@@ -13,6 +13,10 @@ import (
 func runRecordings(ctx context.Context, s Scenario, level string) Evidence {
 	sha, _ := exec.Command("git", "rev-parse", "HEAD").Output()
 	e := Evidence{GitSHA: strings.TrimSpace(string(sha)), RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, At: time.Now().UTC(), Hosts: []string{"air"}}
+	if level != "sim" {
+		e.Assertions = []Assertion{{Name: "real_store_qualification_unavailable", Passed: false}}
+		return e
+	}
 	if s.ID == "VMEMO-LATE-ASSETS" {
 		e.Assertions = []Assertion{{Name: "late_assets_not_implemented", Passed: false}}
 		return e
