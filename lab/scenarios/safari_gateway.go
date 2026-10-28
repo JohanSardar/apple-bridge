@@ -19,13 +19,22 @@ func safariGateway(ctx context.Context, e Evidence, observations []contracts.Obs
 	}
 	grants, known := contracts.GrantsForSource(contracts.Safari)
 	add("read_and_write_grants_registered", known && len(grants.Grants) == 2 && grants.Grants[0] == "safari:read" && grants.Grants[1] == "safari:write")
-	ctx = world.WithOptions(ctx, world.Options{Scope: "safari:read,system:read"})
-	w, err := world.New(ctx, "sim", 1, 0)
-	add("gateway_and_replica", err == nil)
+	w, err := world.New(ctx, "sim", 0, 0)
+	add("gateway_world", err == nil)
 	if err != nil {
 		return e
 	}
 	defer w.Close()
+	token, err := w.ScopedToken(w.Gateway, "safari:read,system:read")
+	add("safari_read_scope", err == nil)
+	if err != nil {
+		return e
+	}
+	w.Gateway.Token = token
+	add("safari_replica_scope", w.AddReplicaScope("safari:read,system:read") == nil)
+	if !e.Passed {
+		return e
+	}
 	add("simulated_native_capture", w.ControlAction("/safari", observations) == nil)
 	matches := func(endpoint world.Endpoint) bool {
 		rows, err := w.Records(endpoint)

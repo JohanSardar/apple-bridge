@@ -32,13 +32,14 @@ struct Main {
               bookmarks.contains(where: { $0["collection"].string == "safari.bookmark" && $0["data"]["folder_path"].string == "Favorites" }),
               bookmarks.contains(where: { $0["collection"].string == "safari.reading_list" && !$0["data"]["read"].bool }),
               bookmarks.contains(where: { $0["collection"].string == "safari.reading_list" && $0["data"]["read"].bool && parseTimestamp($0["data"]["added"].string) == Date(timeIntervalSince1970: 1767225600) }),
-              cloud.count == 1, cloud[0]["data"]["device"].string == "Synthetic" else { throw SourceFailure.corrupt }
+              cloud.count == 2, cloud.contains(where: { $0["data"]["device"].string == "Synthetic" }),
+              cloud.contains(where: { $0["data"]["device"].string == "unknown-device" }) else { throw SourceFailure.corrupt }
         if CommandLine.arguments.last == "SAF-IDLE" {
             let sink = CaptureSink()
             let capture = Task { try await source.capture(.null, into: sink) }
             defer { capture.cancel() }
             try await Task.sleep(for: .seconds(2))
-            guard await sink.upserts == 5, await sink.failures == 0 else { throw SourceFailure.unavailable }
+            guard await sink.upserts == 6, await sink.failures == 0 else { throw SourceFailure.unavailable }
             let started = ProcessInfo.processInfo.systemUptime
             let before = clock()
             try await Task.sleep(for: .seconds(300))
@@ -54,10 +55,10 @@ struct Main {
         let captureSink = CaptureSink()
         let captureTask = Task { try await source.capture(.null, into: captureSink) }
         for _ in 0..<100 {
-            if await captureSink.upserts >= 5 { break }
+            if await captureSink.upserts >= 6 { break }
             try await Task.sleep(for: .milliseconds(50))
         }
-        guard await captureSink.upserts >= 5 else { throw SourceFailure.unavailable }
+        guard await captureSink.upserts >= 6 else { throw SourceFailure.unavailable }
         let bookmarksPath = URL(fileURLWithPath: CommandLine.arguments[1]).appendingPathComponent("Bookmarks.plist")
         try PropertyListSerialization.data(fromPropertyList: ["Children": [[String: String]]()], format: .binary, options: 0).write(to: bookmarksPath, options: .atomic)
         for _ in 0..<100 {
@@ -76,7 +77,7 @@ struct Main {
         let watchStarted = Date()
         let event = Task { for await _ in watcher.changes { return true }; return false }
         var db: OpaquePointer?
-        guard sqlite3_open(URL(fileURLWithPath: CommandLine.arguments[1]).appendingPathComponent("History.db").path, &db) == SQLITE_OK else { throw SourceFailure.unavailable }
+        try openFixtureDatabase(URL(fileURLWithPath: CommandLine.arguments[1]).appendingPathComponent("History.db").path, &db)
         guard sqlite3_exec(db, "PRAGMA journal_mode=WAL; UPDATE history_visits SET title='Changed' WHERE id=2", nil, nil, nil) == SQLITE_OK else { throw SourceFailure.unavailable }
         guard await event.value, Date().timeIntervalSince(watchStarted) < 5 else { throw SourceFailure.unavailable }
         let (_, changed) = try await source.history()
@@ -93,7 +94,7 @@ struct Main {
         let historyPath = URL(fileURLWithPath: CommandLine.arguments[1]).appendingPathComponent("History.db")
         let replacement = historyPath.appendingPathExtension("replacement")
         try FileManager.default.copyItem(at: historyPath, to: replacement)
-        guard sqlite3_open(replacement.path, &db) == SQLITE_OK else { throw SourceFailure.unavailable }
+        try openFixtureDatabase(replacement.path, &db)
         guard sqlite3_exec(db, "UPDATE history_items SET url='https://example.com/rebuilt' WHERE id=1", nil, nil, nil) == SQLITE_OK else { throw SourceFailure.unavailable }
         sqlite3_close(db)
         try FileManager.default.removeItem(at: historyPath)
@@ -104,7 +105,7 @@ struct Main {
             if await captureSink.absences == 4 { break }
             try await Task.sleep(for: .milliseconds(50))
         }
-        guard await captureSink.absences == 4 else { throw SourceFailure.corrupt }
+        guard await captureSink.absences == 4, await captureSink.replacementExcludedAbsence else { throw SourceFailure.corrupt }
         captureTask.cancel()
         _ = try? await captureTask.value
         try Data("invalid".utf8).write(to: URL(fileURLWithPath: CommandLine.arguments[1]).appendingPathComponent("Bookmarks.plist"))
@@ -112,7 +113,7 @@ struct Main {
         let cacheText = String(data: try Data(contentsOf: cacheURL), encoding: .utf8) ?? ""
         guard !["https://", "Latest", "Favorites", "Synthetic"].contains(where: { cacheText.contains($0) }),
               (try FileManager.default.attributesOfItem(atPath: cacheURL.path)[.posixPermissions] as? NSNumber)?.intValue == 0o600 else { throw SourceFailure.corrupt }
-        guard sqlite3_open(historyPath.path, &db) == SQLITE_OK else { throw SourceFailure.unavailable }
+        try openFixtureDatabase(historyPath.path, &db)
         guard sqlite3_exec(db, "DELETE FROM history_visits; DELETE FROM history_items", nil, nil, nil) == SQLITE_OK else { throw SourceFailure.unavailable }
         sqlite3_close(db)
         let resumed = SafariSource(directory: URL(fileURLWithPath: CommandLine.arguments[1]), cacheURL: cacheURL)
@@ -136,14 +137,24 @@ actor CaptureSink: ObservationSink {
     var failures = 0
     var generation = ""
     var changedHistory = false
+    var replacementExcludedAbsence = false
     func emitCheckpoint(source: String, generation: String, checkpoint: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) async throws {
         guard completionEvidence == "complete", !scanStartedAt.isEmpty, !scope.isEmpty else { throw SourceFailure.corrupt }
         guard self.generation.isEmpty || self.generation == generation else { throw SourceFailure.corrupt }
         self.generation = generation
         if observations.contains(where: { $0["collection"].string == "safari.history" && $0["data"]["title"].string == "Changed" }) { changedHistory = true }
+        if observations.contains(where: { $0["collection"].string == "safari.history" && $0["data"]["url"].string == "https://example.com/rebuilt" }) {
+            replacementExcludedAbsence = !observations.contains(where: { $0["kind"].string == "absent" })
+        }
         upserts += observations.filter { $0["kind"].string == "upsert" }.count
         absences += observations.filter { $0["kind"].string == "absent" && $0["revalidated"].bool }.count
     }
     func emit(source: String, generation: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) async throws { throw SourceFailure.unsupported }
     func sourceState(source: String, state: String, coverage: JSON, capabilities: [String], reason: String) async throws { failures += 1 }
+}
+
+private func openFixtureDatabase(_ path: String, _ database: inout OpaquePointer?) throws {
+    guard sqlite3_open(path, &database) == SQLITE_OK else { throw SourceFailure.unavailable }
+    var enabled: Int32 = 1
+    guard sqlite3_file_control(database, "main", SQLITE_FCNTL_PERSIST_WAL, &enabled) == SQLITE_OK else { throw SourceFailure.unavailable }
 }

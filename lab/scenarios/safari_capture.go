@@ -31,16 +31,24 @@ func runSafariCapture(ctx context.Context, s Scenario, level string) Evidence {
 	}
 	defer os.RemoveAll(dir)
 	fixture := exec.CommandContext(ctx, "python3", "-c", `
-import sqlite3,plistlib,sys,time,datetime
+import sqlite3,plistlib,sys,time,datetime,ctypes
 p=sys.argv[1]
 c=sqlite3.connect(p+'/History.db');c.executescript('PRAGMA journal_mode=WAL; CREATE TABLE history_items(id INTEGER PRIMARY KEY,url TEXT,visit_count INTEGER); CREATE TABLE history_visits(id INTEGER PRIMARY KEY,history_item INTEGER,visit_time REAL,title TEXT);')
 n=time.time()-978307200
 c.execute('INSERT INTO history_items VALUES(1,?,2)',('https://example.com/',));c.execute('INSERT INTO history_items VALUES(2,?,1)',('https://example.com/old',))
 c.executemany('INSERT INTO history_visits VALUES(?,?,?,?)',[(1,1,n-50,'First'),(2,1,n,'Latest'),(3,2,n-100*86400,'Old')]);c.commit();c.close()
-c=sqlite3.connect(p+'/CloudTabs.db');c.executescript("PRAGMA journal_mode=WAL; CREATE TABLE cloud_tab_devices(device_uuid TEXT,device_name TEXT); CREATE TABLE cloud_tabs(tab_uuid TEXT,device_uuid TEXT,title TEXT,url TEXT); INSERT INTO cloud_tab_devices VALUES('d','Synthetic'); INSERT INTO cloud_tabs VALUES('t','d','Synthetic','https://example.com/');");c.close()
+c=sqlite3.connect(p+'/CloudTabs.db');c.executescript("PRAGMA journal_mode=WAL; CREATE TABLE cloud_tab_devices(device_uuid TEXT,device_name TEXT); CREATE TABLE cloud_tabs(tab_uuid TEXT,device_uuid TEXT,title TEXT,url TEXT); INSERT INTO cloud_tab_devices VALUES('d','Synthetic'); INSERT INTO cloud_tabs VALUES('t','d','Synthetic','https://example.com/'); INSERT INTO cloud_tabs VALUES('orphan','unknown-device','Synthetic','https://example.com/');");c.close()
 def leaf(key):return dict(WebBookmarkType='WebBookmarkTypeLeaf',WebBookmarkUUID=key,URLString='https://example.com/',URIDictionary={'title':'Synthetic'})
 a=leaf('a');b=leaf('b');c=leaf('c');c['ReadingList']={'DateAdded':datetime.datetime(2026,1,1),'DateLastViewed':datetime.datetime(2026,1,2)}
 with open(p+'/Bookmarks.plist','wb') as f:plistlib.dump(dict(Children=[dict(WebBookmarkType='WebBookmarkTypeList',Title='Favorites',Children=[a]),dict(WebBookmarkType='WebBookmarkTypeList',Title='com.apple.ReadingList',Children=[b,c]),dict(WebBookmarkType='WebBookmarkTypeList',Title='Empty')]),f)
+l=ctypes.CDLL('/usr/lib/libsqlite3.dylib')
+for name in ['History.db','CloudTabs.db']:
+ db=ctypes.c_void_p()
+ assert l.sqlite3_open((p+'/'+name).encode(),ctypes.byref(db))==0
+ assert l.sqlite3_exec(db,b'SELECT COUNT(*) FROM sqlite_schema',None,None,None)==0
+ enabled=ctypes.c_int(1)
+ assert l.sqlite3_file_control(db,b'main',10,ctypes.byref(enabled))==0
+ assert l.sqlite3_close(db)==0
 `, dir)
 	_, err = fixture.CombinedOutput()
 	add("fake_databases", err == nil)
@@ -92,7 +100,7 @@ with open(p+'/Bookmarks.plist','wb') as f:plistlib.dump(dict(Children=[dict(WebB
 		return e
 	}
 	var observations []contracts.Observation
-	add("native_capture_fields_and_corruption_guard", err == nil && json.Unmarshal(output, &observations) == nil && len(observations) == 5)
+	add("native_capture_fields_and_corruption_guard", err == nil && json.Unmarshal(output, &observations) == nil && len(observations) == 6)
 	if !e.Passed {
 		return e
 	}

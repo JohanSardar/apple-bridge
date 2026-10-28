@@ -66,7 +66,7 @@ public actor SafariSource: Source {
     public func cloudTabs() throws -> (String, [JSON]) {
         let reader = try SQLiteSnapshot(path: directory.appendingPathComponent("CloudTabs.db").path, generationSQL: "SELECT 'safari-cloud-1'")
         try reader.requireSchema(["cloud_tabs": ["tab_uuid", "device_uuid", "title", "url"], "cloud_tab_devices": ["device_uuid", "device_name"]])
-        let scan = try CompleteScan.read(reader: reader, sql: "SELECT t.tab_uuid AS key,t.title,t.url,d.device_name AS device FROM cloud_tabs t JOIN cloud_tab_devices d ON t.device_uuid=d.device_uuid ORDER BY t.tab_uuid", keyColumn: "key", scope: "safari.cloud_tab", previousScope: "", previousGeneration: "", previousKeys: [], maxRows: 100_000, timeout: 5)
+        let scan = try CompleteScan.read(reader: reader, sql: "SELECT t.tab_uuid AS key,t.title,t.url,COALESCE(d.device_name,t.device_uuid) AS device FROM cloud_tabs t LEFT JOIN cloud_tab_devices d ON t.device_uuid=d.device_uuid ORDER BY t.tab_uuid", keyColumn: "key", scope: "safari.cloud_tab", previousScope: "", previousGeneration: "", previousKeys: [], maxRows: 100_000, timeout: 5)
         guard scan.complete else { throw SourceFailure.unavailable }
         return (reader.generation, scan.rows.map { row in observation("safari.cloud_tab", row["key"]!.text!, ["device": .string(row["device"]?.text ?? ""), "title": .string(row["title"]?.text ?? ""), "url": .string(row["url"]?.text ?? "")]) })
     }
