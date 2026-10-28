@@ -1,0 +1,7 @@
+id: AUTH-SCOPES-METADATA
+feature: core.trust
+levels: [sim]
+given: [{world: {}}]
+when: [{robustness: {case: auth-scopes-metadata}}]
+then: []
+cleanup: [{world: {}}]
