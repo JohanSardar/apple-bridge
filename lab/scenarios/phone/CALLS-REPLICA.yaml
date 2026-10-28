@@ -1,0 +1,7 @@
+id: CALLS-REPLICA
+feature: phone.read
+levels: [replica]
+given: [{world: {replicas: 1}}]
+when: [{phone: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

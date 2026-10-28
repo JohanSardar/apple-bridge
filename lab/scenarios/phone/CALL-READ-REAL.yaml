@@ -1,0 +1,7 @@
+id: CALL-READ-REAL
+feature: phone.read
+levels: [real]
+given: [{world: {replicas: 1}}]
+when: [{phone: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

@@ -1,0 +1,29 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[9.65 16.28 19.8] cpu_idle=27% cpus=8 other_heavy=2"
+  },
+  "run_id": "run_01M626VCWA7G8RSSG1XAMTJMW6",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "CALL-IDLE",
+  "level": "real",
+  "passed": false,
+  "git_sha": "2406ae0a3777d2be3c7173655cd0dd7d0198d227",
+  "at": "2026-10-28T21:32:24.330866Z",
+  "assertions": [
+    {
+      "name": "world_started",
+      "passed": false
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": [
+    "air"
+  ]
+}

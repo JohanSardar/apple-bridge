@@ -1,0 +1,29 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[15.73 21.38 23.2] cpu_idle=31% cpus=8 other_heavy=3"
+  },
+  "run_id": "run_01M627K7TM8QN71Z8JZSWVW7P0",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "CALL-IDLE",
+  "level": "sim",
+  "passed": false,
+  "git_sha": "d36ec609bbf43e9698fce014df38a34ac48b2a7b",
+  "at": "2026-10-28T21:45:25.592473Z",
+  "assertions": [
+    {
+      "name": "calls_native_fixture_build",
+      "passed": false
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": [
+    "air"
+  ]
+}
