@@ -1177,5 +1177,4 @@ features:
       - {id: MAIL-BODY, levels: [sim]}
       - {id: MAIL-BODY-REAL, levels: [real]}
     limits:
-      - {scenario: MAIL-BODY, level: sim, reason: "Native fixture qualification pending build availability."}
       - {scenario: MAIL-BODY-REAL, level: real, reason: "No real Envelope Index on the Air; downloaded and offloaded body Truth qualification unavailable."}
