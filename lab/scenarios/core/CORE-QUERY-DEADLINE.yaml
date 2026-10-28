@@ -1,0 +1,7 @@
+id: CORE-QUERY-DEADLINE
+feature: core.queries
+levels: [sim]
+given:
+  - world: {replicas: 1}
+when:
+  - queries: {}

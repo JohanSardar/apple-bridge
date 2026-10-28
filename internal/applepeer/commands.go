@@ -2,7 +2,9 @@ package applepeer
 
 import (
 	"context"
+	"errors"
 	"sync"
+	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 )
@@ -50,6 +52,9 @@ func (c *Commands) receive(s *commandSession, f contracts.IPCFrame) {
 	if c.session != s {
 		return
 	}
+	if f.ID != "" {
+		f.CommandID = f.ID
+	}
 	if ch := s.waiting[f.CommandID]; ch != nil {
 		select {
 		case ch <- f:
@@ -59,11 +64,18 @@ func (c *Commands) receive(s *commandSession, f contracts.IPCFrame) {
 }
 func (c *Commands) Available() bool { c.mu.Lock(); defer c.mu.Unlock(); return c.session != nil }
 func (c *Commands) Exchange(ctx context.Context, f contracts.IPCFrame) (contracts.IPCFrame, error) {
+	if f.ID != "" {
+		f.CommandID = f.ID
+	}
 	c.mu.Lock()
 	s := c.session
 	if s == nil {
 		c.mu.Unlock()
 		return contracts.IPCFrame{}, contracts.ErrUnavailable
+	}
+	if len(s.waiting) >= 64 {
+		c.mu.Unlock()
+		return contracts.IPCFrame{}, contracts.ErrCapacity
 	}
 	if s.waiting[f.CommandID] != nil {
 		c.mu.Unlock()
@@ -76,7 +88,23 @@ func (c *Commands) Exchange(ctx context.Context, f contracts.IPCFrame) (contract
 	}
 	c.mu.Unlock()
 	defer func() { c.mu.Lock(); delete(s.waiting, f.CommandID); c.mu.Unlock() }()
-	if _, err := s.wire.Send(f); err != nil {
+	var sendErr error
+	if f.T == "Query" {
+		_, sendErr = s.wire.SendContext(ctx, f)
+	} else {
+		_, sendErr = s.wire.Send(f)
+	}
+	if sendErr != nil {
+		if f.T == "Query" {
+			s.wire.Conn.Close()
+			c.detach(s)
+			if ctx.Err() != nil {
+				return contracts.IPCFrame{}, ctx.Err()
+			}
+			if errors.Is(sendErr, context.DeadlineExceeded) {
+				return contracts.IPCFrame{}, sendErr
+			}
+		}
 		return contracts.IPCFrame{}, contracts.ErrUnavailable
 	}
 	select {
@@ -85,6 +113,15 @@ func (c *Commands) Exchange(ctx context.Context, f contracts.IPCFrame) (contract
 	case <-s.done:
 		return contracts.IPCFrame{}, contracts.ErrUnavailable
 	case <-ctx.Done():
+		if f.T == "Query" {
+			cancelctx, stop := context.WithTimeout(context.Background(), 50*time.Millisecond)
+			_, err := s.wire.SendContext(cancelctx, contracts.IPCFrame{T: "QueryCancel", ID: f.ID})
+			stop()
+			if err != nil {
+				s.wire.Conn.Close()
+				c.detach(s)
+			}
+		}
 		return contracts.IPCFrame{}, ctx.Err()
 	}
 }

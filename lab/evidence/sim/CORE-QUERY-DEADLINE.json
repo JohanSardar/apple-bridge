@@ -1,0 +1,57 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[19.6 14.66 14.46] cpu_idle=49% cpus=8 other_heavy=2"
+  },
+  "run_id": "run_01M61EE6200YGX3W1CC4QDJMM9",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "CORE-QUERY-DEADLINE",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "93a671bbde60b3dc61d0ae26307c4a65250758f9",
+  "at": "2026-10-28T14:25:45.536553Z",
+  "assertions": [
+    {
+      "name": "world_started",
+      "passed": true
+    },
+    {
+      "name": "deadline_bounded",
+      "passed": true
+    },
+    {
+      "name": "rest_helper_work_started",
+      "passed": true
+    },
+    {
+      "name": "rest_client_cancelled",
+      "passed": true
+    },
+    {
+      "name": "rest_helper_work_stopped",
+      "passed": true
+    },
+    {
+      "name": "mcp_helper_work_started",
+      "passed": true
+    },
+    {
+      "name": "mcp_client_cancelled",
+      "passed": true
+    },
+    {
+      "name": "mcp_helper_work_stopped",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

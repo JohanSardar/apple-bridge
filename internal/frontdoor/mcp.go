@@ -23,6 +23,12 @@ func mcpHandler(deps Deps, descriptors []contracts.OperationDescriptor) http.Han
 			if !ok {
 				return nil, contracts.ErrUnauthorized
 			}
+			if requestctx, ok := ctx.Value(mcpRequestContextKey{}).(context.Context); ok && d.Kind == contracts.QueryOp {
+				bounded, cancel := context.WithCancel(ctx)
+				stop := context.AfterFunc(requestctx, cancel)
+				defer func() { stop(); cancel() }()
+				ctx = bounded
+			}
 			output, milliseconds, err := invokeTimed(ctx, deps, p, d, req.Params.Arguments)
 			if err != nil {
 				typed := contracts.ErrUnavailable
@@ -67,7 +73,7 @@ func mcpHandler(deps Deps, descriptors []contracts.OperationDescriptor) http.Han
 				return
 			}
 		}
-		handler.ServeHTTP(w, r)
+		handler.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), mcpRequestContextKey{}, r.Context())))
 	})
 }
 func openAPI(descriptors []contracts.OperationDescriptor) any {
@@ -82,3 +88,5 @@ func openAPI(descriptors []contracts.OperationDescriptor) any {
 	}
 	return map[string]any{"openapi": "3.1.0", "info": map[string]string{"title": "Bridge", "version": "1"}, "paths": paths}
 }
+
+type mcpRequestContextKey struct{}

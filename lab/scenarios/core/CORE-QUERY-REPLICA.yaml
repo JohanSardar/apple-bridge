@@ -1,0 +1,7 @@
+id: CORE-QUERY-REPLICA
+feature: core.queries
+levels: [replica]
+given:
+  - world: {replicas: 1}
+when:
+  - queries: {}

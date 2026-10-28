@@ -13,12 +13,14 @@ import (
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/blobs"
+	"github.com/JohanSardar/apple-bridge/internal/state"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/internal/trust"
 )
 
 type RemoteGateway struct {
+	State          *state.Store
 	Uploads        *blobs.Store
 	UploadExchange func(context.Context, string, json.RawMessage) (contracts.CommandResponse, error)
 	UploadBytes    func(context.Context, string, string, int64, []byte) (contracts.CommandResponse, error)
@@ -31,9 +33,12 @@ type RemoteGateway struct {
 	Wait      func(context.Context, contracts.Cursor) error
 }
 type forwarded struct {
-	Method  string                 `json:"method"`
-	Command contracts.Command      `json:"command"`
-	Query   contracts.CommandQuery `json:"query"`
+	BlobDigest  string                 `json:"blob_digest,omitempty"`
+	BlobOffset  int64                  `json:"blob_offset,omitempty"`
+	Method      string                 `json:"method"`
+	Command     contracts.Command      `json:"command"`
+	Query       contracts.CommandQuery `json:"query"`
+	NativeQuery *contracts.Query       `json:"native_query,omitempty"`
 }
 
 func forwardingHash(f forwarded) (string, error) {
@@ -56,6 +61,12 @@ func (g *RemoteGateway) call(ctx context.Context, p trust.Principal, f forwarded
 		return err
 	}
 	id := f.Query.ID
+	if f.Method == "query" || f.Method == "query_blob" {
+		if f.NativeQuery == nil {
+			return contracts.ErrInvalid
+		}
+		id = f.NativeQuery.ID
+	}
 	if f.Method == "submit" {
 		id = f.Command.ID
 	}
@@ -93,13 +104,13 @@ func (g *RemoteGateway) call(ctx context.Context, p trust.Principal, f forwarded
 	req.Header.Set("X-Apple-Bridge-Delegation", header)
 	transport := &http.Transport{TLSClientConfig: g.Authority.ClientTLS(e.Fingerprint), DialContext: (&net.Dialer{Timeout: 500 * time.Millisecond}).DialContext, TLSHandshakeTimeout: time.Second}
 	defer transport.CloseIdleConnections()
-	client := &http.Client{Transport: transport, Timeout: 20 * time.Second}
+	client := &http.Client{Transport: transport, Timeout: contracts.ForwardTimeout(b)}
 	resp, err := client.Do(req)
 	if err != nil {
 		return contracts.ErrUnavailable
 	}
 	defer resp.Body.Close()
-	raw, err := io.ReadAll(io.LimitReader(resp.Body, 1024*1024))
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, contracts.MaxQueryFrame))
 	if err != nil {
 		return contracts.ErrUnavailable
 	}
@@ -172,11 +183,17 @@ func (g *LocalGateway) Forward(ctx context.Context, cert *x509.Certificate, head
 	var f forwarded
 	var result any
 	err := contracts.DecodeInput(raw, &f)
+	if err == nil && (f.Method == "query" || f.Method == "query_blob") && f.NativeQuery == nil {
+		err = contracts.ErrInvalid
+	}
 	if err == nil {
 		var hash string
 		hash, err = forwardingHash(f)
 		if err == nil {
 			id := f.Query.ID
+			if f.Method == "query" || f.Method == "query_blob" {
+				id = f.NativeQuery.ID
+			}
 			if f.Method == "submit" {
 				id = f.Command.ID
 			}
@@ -184,6 +201,10 @@ func (g *LocalGateway) Forward(ctx context.Context, cert *x509.Certificate, head
 			p, err = g.Authority.VerifyDelegation(cert, header, id, hash)
 			if err == nil {
 				switch f.Method {
+				case "query_blob":
+					result, err = g.queryBlobChunk(ctx, p, f)
+				case "query":
+					result, err = g.Query(ctx, p, *f.NativeQuery)
 				case "submit":
 					result, err = g.Submit(ctx, p, f.Command)
 				case "status":
@@ -214,7 +235,11 @@ func (g *LocalGateway) Forward(ctx context.Context, cert *x509.Certificate, head
 		}
 		return response, nil
 	}
-	response.Result, err = json.Marshal(result)
+	if f.Method == "query" {
+		response.Result, err = contracts.MarshalQueryJSON(result)
+	} else {
+		response.Result, err = json.Marshal(result)
+	}
 	return response, err
 }
 

@@ -23,6 +23,8 @@ type CommandTarget interface {
 	List(context.Context, trust.Principal, contracts.CommandQuery) ([]contracts.CommandRecord, error)
 }
 type LocalGateway struct {
+	QueryAudit    func(QueryAudit)
+	queryRates    map[string]queryWindow
 	uploadMu      sync.Mutex
 	uploadPending map[string]uploadBinding
 

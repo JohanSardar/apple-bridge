@@ -1,0 +1,7 @@
+id: CORE-QUERY-ROUNDTRIP
+feature: core.queries
+levels: [sim]
+given:
+  - world: {replicas: 1}
+when:
+  - queries: {}

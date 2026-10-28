@@ -1,0 +1,5 @@
+id: CORE-QUERY-HELPER
+feature: core.queries
+levels: [real]
+when:
+  - queries: {}

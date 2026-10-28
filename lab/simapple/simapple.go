@@ -474,6 +474,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	go func() { <-ctx.Done(); conn.Close() }()
+	queries := newQuerySession(ctx, f, wire)
 	received := make(chan contracts.IPCFrame, 8)
 	go func() {
 		defer cancel()
@@ -481,6 +482,9 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 			reply, _, err := wire.Receive()
 			if err != nil {
 				return
+			}
+			if queries.receive(reply) {
+				continue
 			}
 			select {
 			case received <- reply:

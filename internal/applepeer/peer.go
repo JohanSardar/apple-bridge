@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"net"
 	"os"
 	"path/filepath"
@@ -29,16 +30,47 @@ type Config struct {
 
 type Wire struct {
 	Conn        *net.UnixConn
-	write       sync.Mutex
+	writeOnce   sync.Once
+	writeSlot   chan struct{}
 	blobMu      sync.Mutex
 	blobPending map[string]chan contracts.IPCFrame
 }
 
 func (w *Wire) Send(frame contracts.IPCFrame) (int, error) {
-	w.write.Lock()
-	defer w.write.Unlock()
-	w.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
-	return contracts.WriteFrame(w.Conn, frame)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	return w.SendContext(ctx, frame)
+}
+func (w *Wire) SendContext(ctx context.Context, frame contracts.IPCFrame) (int, error) {
+	w.writeOnce.Do(func() { w.writeSlot = make(chan struct{}, 1) })
+	select {
+	case w.writeSlot <- struct{}{}:
+	case <-ctx.Done():
+		return 0, ctx.Err()
+	}
+	defer func() { <-w.writeSlot }()
+	if err := ctx.Err(); err != nil {
+		return 0, err
+	}
+	deadline, ok := ctx.Deadline()
+	if !ok {
+		deadline = time.Now().Add(10 * time.Second)
+	}
+	w.Conn.SetWriteDeadline(deadline)
+	stopped := make(chan struct{})
+	stop := context.AfterFunc(ctx, func() { w.Conn.SetWriteDeadline(time.Now()); close(stopped) })
+	n, err := contracts.WriteFrame(w.Conn, frame)
+	if !stop() {
+		<-stopped
+	}
+	if ctx.Err() != nil {
+		return n, ctx.Err()
+	}
+	var timeout net.Error
+	if ok && errors.As(err, &timeout) && timeout.Timeout() && !time.Now().Before(deadline) {
+		return n, context.DeadlineExceeded
+	}
+	return n, err
 }
 func (w *Wire) Receive() (contracts.IPCFrame, int, error) {
 	var f contracts.IPCFrame
@@ -239,6 +271,10 @@ func Serve(ctx context.Context, cfg Config) error {
 					break
 				}
 				switch f.T {
+				case "QueryResult", "QueryError":
+					if cfg.Commands != nil {
+						cfg.Commands.receive(commands, f)
+					}
 				case "Capture", "SourceState", "Prepared", "Rejected", "Outcome":
 					if !queue.enqueue(f, n) {
 						return

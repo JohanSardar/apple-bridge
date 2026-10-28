@@ -51,6 +51,7 @@ public actor AppleSession: ObservationSink {
     private var additionalSources: [String: any Source] = [:]
     private var blobReader: (@Sendable (String, Int64, Int) async throws -> JSON)?
     private var captureTasks: [Task<Void, Never>] = []
+    private var queryTasks: [String: Task<Void, Never>] = [:]
     private var frameTasks: [UUID: Task<Void, Never>] = [:]
     private let trace: CaptureTrace
     private let sources: SessionSources.Builtins
@@ -145,6 +146,7 @@ public actor AppleSession: ObservationSink {
         captureTasks = []
         for task in frameTasks.values { task.cancel() }
         frameTasks = [:]
+        for task in queryTasks.values { task.cancel() }; queryTasks = [:]
         for pending in live + bulk { pending.completion.resume(throwing: SourceFailure.unavailable) }
         for flight in flights.values { flight.pending.completion.resume(throwing: SourceFailure.unavailable) }
         live = []; bulk = []; flights = [:]; tickets = [:]; preparing = nil
@@ -223,6 +225,19 @@ public actor AppleSession: ObservationSink {
             }
             frameTasks.removeValue(forKey: id)
         }
+    }
+
+    private func query(_ frame: JSON) async {
+        guard !Task.isCancelled else { return }
+        let id = frame["id"]
+        guard frame["op"].string == "helper.version" else {
+            try? wire?.send(.object(["t": .string("QueryError"), "id": id, "code": .string("unsupported")]))
+            return
+        }
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "development"
+        let result = JSON.object(["version": .string(version), "helper_build": .string("m1-session"), "protocol": .string("ipc/1")])
+        guard !Task.isCancelled else { return }
+        try? wire?.send(.object(["t": .string("QueryResult"), "id": id, "result_json": result, "blobs": .array([])]))
     }
 
     private func readBlob(_ frame: JSON) async {
@@ -384,6 +399,14 @@ public actor AppleSession: ObservationSink {
             flight.pending.completion.resume()
             try await drain()
         case "Reset": throw SourceFailure.conflict
+        case "Query":
+            let id = frame["id"].string
+            guard !id.isEmpty, queryTasks[id] == nil else {
+                try? wire?.send(.object(["t": .string("QueryError"), "id": frame["id"], "code": .string("conflict")]))
+                return
+            }
+            queryTasks[id] = Task { await query(frame); queryTasks.removeValue(forKey: id) }
+        case "QueryCancel": queryTasks[frame["id"].string]?.cancel()
         case "Prepare": launchFrame(frame)
         case "Dispatch": launchFrame(frame)
         case "Resolve": launchFrame(frame)

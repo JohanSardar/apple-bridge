@@ -10,7 +10,14 @@ func SystemDescriptors() []OperationDescriptor {
 		{Name: "commands.status", Version: 1, Kind: ReadOp, Input: CommandQuery{}, Output: CommandRecord{}, Description: "Look up an issued command by its original ID; resolve only gathers stronger evidence"},
 		{Name: "commands.list", Version: 1, Kind: ReadOp, Input: CommandQuery{}, Output: []CommandRecord{}, Description: "List commands issued by this principal within source scope"},
 	}
+	for _, name := range append([]string{"helper.version"}, labQueryNames()...) {
+		scope := Grant("system:read")
+		if name != "helper.version" {
+			scope = "reminders:read"
+		}
+		descriptors = append(descriptors, OperationDescriptor{Name: name, Version: 1, Kind: QueryOp, Source: System, Scope: scope, Input: Query{}, Output: QueryResult{}, Description: "Read transient Helper state without world effects"})
+	}
 	return descriptors
 }
 
-func init() { registerDescriptors(SystemDescriptors, 15, 16, 17, 18, 19, 20, 21) }
+func init() { registerDescriptors(SystemDescriptors, 15, 16, 17, 18, 19, 20, 21, 62, 63, 64, 65) }

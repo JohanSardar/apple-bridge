@@ -1,0 +1,95 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[16.23 17.29 15.76] cpu_idle=76% cpus=8 other_heavy=1; ubuntu: load=[1.42 1.56 1.38] cpu_idle=87% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M61EKHMTTFD8GBGSJ3EZ1XAR",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "CORE-QUERY-REPLICA",
+  "level": "replica",
+  "passed": true,
+  "git_sha": "93a671bbde60b3dc61d0ae26307c4a65250758f9",
+  "at": "2026-10-28T14:28:41.242281Z",
+  "assertions": [
+    {
+      "name": "world_started",
+      "passed": true
+    },
+    {
+      "name": "ten_query_results",
+      "passed": true
+    },
+    {
+      "name": "echo_equal",
+      "passed": true
+    },
+    {
+      "name": "latency_budget",
+      "passed": true
+    },
+    {
+      "name": "replica_work_exceeds_twenty_seconds",
+      "passed": true
+    },
+    {
+      "name": "query_feed_world_started",
+      "passed": true
+    },
+    {
+      "name": "feed_work_exceeds_twenty_seconds",
+      "passed": true
+    },
+    {
+      "name": "replica_deadline_bounded",
+      "passed": true
+    },
+    {
+      "name": "helper_work_started",
+      "passed": true
+    },
+    {
+      "name": "client_cancelled",
+      "passed": true
+    },
+    {
+      "name": "helper_work_stopped",
+      "passed": true
+    },
+    {
+      "name": "offline_unavailable",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "feed_long_query": {
+      "samples": 1,
+      "p50_ms": 25028.993291,
+      "p95_ms": 25028.993291,
+      "max_ms": 25028.993291,
+      "timeouts": 0
+    },
+    "long_query": {
+      "samples": 1,
+      "p50_ms": 25184.470417,
+      "p95_ms": 25184.470417,
+      "max_ms": 25184.470417,
+      "timeouts": 0
+    },
+    "query": {
+      "samples": 10,
+      "p50_ms": 67.596792,
+      "p95_ms": 131.030791,
+      "max_ms": 131.030791,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}
