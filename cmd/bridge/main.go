@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"flag"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"runtime"
 	"strings"
 	"syscall"
+	"tailscale.com/util/qrcodes"
 	"time"
 
 	"encoding/json"
@@ -59,7 +61,8 @@ func run(ctx context.Context, args []string) error {
 	noSelfTestUI := set.Bool("no-ui", false, "defer Messages UI steps and retain cleanup obligations")
 	forceSelfTest := set.Bool("force", false, "rerun the Messages self-test on this OS build")
 	via := set.String("via", "", "remote backend: embedded (default) or tailscale-app")
-	domain := set.String("domain", "", "custom relay hostname")
+	domain := set.String("domain", "", "custom public hostname for relay")
+	publicEnroll := set.Bool("public", false, "enroll a passkey at the active public origin")
 	snippets := set.Bool("snippets", false, "print remote connection snippets")
 	remoteToken := set.Bool("remote", false, "allow this token through Remote")
 	home := set.String("home", defaultHome(), "private state directory")
@@ -164,6 +167,17 @@ func run(ctx context.Context, args []string) error {
 	case "web":
 		switch webAction {
 		case "enroll":
+			if *publicEnroll {
+				var output bytes.Buffer
+				if err := remote.Command(ctx, *home, "status", "", "", &output); err != nil {
+					return err
+				}
+				var status remote.Status
+				if json.Unmarshal(output.Bytes(), &status) != nil || status.State != "on" || !strings.HasPrefix(status.URL, "https://") {
+					return fmt.Errorf("public Remote must be on before enrollment")
+				}
+				*webHost = status.URL
+			}
 			origin, err := url.Parse(*webHost)
 			if err != nil || origin.Host == "" || origin.Path != "" || origin.RawQuery != "" || origin.Fragment != "" || origin.User != nil || origin.Scheme != "https" && !(origin.Scheme == "http" && origin.Hostname() == "localhost") {
 				return contracts.ErrInvalid
@@ -172,7 +186,12 @@ func run(ctx context.Context, args []string) error {
 			if err != nil {
 				return err
 			}
-			fmt.Println(strings.TrimSuffix(*webHost, "/") + "/enroll#" + token)
+			enrollmentURL := strings.TrimSuffix(*webHost, "/") + "/enroll#" + token
+			fmt.Println(enrollmentURL)
+			if *publicEnroll {
+				_, err = qrcodes.Fprintln(os.Stdout, qrcodes.FormatSmall, enrollmentURL)
+				return err
+			}
 			return nil
 		case "lock":
 			return authority.LockWeb()

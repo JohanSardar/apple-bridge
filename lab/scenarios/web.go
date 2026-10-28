@@ -99,6 +99,9 @@ func runWeb(ctx context.Context, s Scenario) Evidence {
 }
 
 func runWebProjects(ctx context.Context, s Scenario, projects []string) Evidence {
+	if s.ID == "AUTH-PUBLIC-ENROLL" {
+		return runPublicEnroll(ctx, s)
+	}
 	sha, _ := exec.Command("git", "rev-parse", "HEAD").Output()
 	e := Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: "web", GitSHA: strings.TrimSpace(string(sha)), At: time.Now().UTC(), Hosts: []string{"air"}, Metrics: map[string]any{}, Assertions: []Assertion{}, Latency: map[string]Latency{}}
 	fail := func(name string, err error) Evidence {
