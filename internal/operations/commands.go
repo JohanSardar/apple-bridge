@@ -238,6 +238,11 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 	}
 	defer release()
 	action := contracts.NativeAction{Op: c.Op, Args: a, Origin: c.Origin}
+	if strings.HasPrefix(c.Op, "music.") {
+		var args contracts.MusicCommandArgs
+		json.Unmarshal(c.Args, &args)
+		action.Args = args
+	}
 	if strings.HasPrefix(c.Op, "photos.") || strings.HasPrefix(c.Op, "mail.") {
 		action.Args = c.Args
 	}
@@ -495,7 +500,11 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 		to = "indeterminate"
 		f.Disposition = "indeterminate"
 	}
-	if r.Command.Op != "shortcuts.run" && (to == "observed" || to == "delivered" || to == "delivery_failed") {
+	if strings.HasPrefix(r.Command.Op, "music.") && to == "observed" && !contracts.MusicCompletionEvidence(f.Evidence, r.RequestHash) {
+		to = "indeterminate"
+		f.Disposition = "indeterminate"
+	}
+	if r.Command.Op != "shortcuts.run" && !strings.HasPrefix(r.Command.Op, "music.") && (to == "observed" || to == "delivered" || to == "delivery_failed") {
 		var evidence struct {
 			NativeKey         string `json:"native_key"`
 			Fingerprint       string `json:"fingerprint"`

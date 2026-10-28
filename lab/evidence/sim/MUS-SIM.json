@@ -1,17 +1,17 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[12.97 24.43 24.64] cpu_idle=51% cpus=8 other_heavy=2"
+    "summary": "air: load=[11.04 14.88 21.67] cpu_idle=49% cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M6283V1DF5HAYR2SBVMQQMKZ",
+  "run_id": "run_01M62A0TJDD6EGKPTBW02ZJGKC",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "MUS-SIM",
   "level": "sim",
   "passed": true,
-  "git_sha": "",
-  "at": "2026-10-28T21:54:29.549751Z",
+  "git_sha": "6848ec300bf8849d3d8c0a5f44e917bfae17e1cb",
+  "at": "2026-10-28T22:27:47.917501Z",
   "assertions": [
     {
       "name": "world_started",
@@ -55,6 +55,54 @@
     },
     {
       "name": "invalid_rejected",
+      "passed": true
+    },
+    {
+      "name": "command_set_volume",
+      "passed": true
+    },
+    {
+      "name": "readback_set_volume",
+      "passed": true
+    },
+    {
+      "name": "command_play_item",
+      "passed": true
+    },
+    {
+      "name": "readback_play_item",
+      "passed": true
+    },
+    {
+      "name": "command_pause",
+      "passed": true
+    },
+    {
+      "name": "readback_pause",
+      "passed": true
+    },
+    {
+      "name": "command_play",
+      "passed": true
+    },
+    {
+      "name": "readback_play",
+      "passed": true
+    },
+    {
+      "name": "command_next",
+      "passed": true
+    },
+    {
+      "name": "readback_next",
+      "passed": true
+    },
+    {
+      "name": "command_previous",
+      "passed": true
+    },
+    {
+      "name": "readback_previous",
       "passed": true
     },
     {
