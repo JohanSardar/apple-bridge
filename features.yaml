@@ -1257,3 +1257,34 @@ features:
       - {scenario: CALL-IDLE, level: sim, reason: "Fresh compiled CallsChecks passed five-minute CPU under 2% and unchanged-checkpoint guards. The redundant full-scenario rebuild waited 38 minutes for the shared Swift lock and was cancelled; earlier full-scenario evidence passed."}
       - {scenario: CALL-READ-REAL, level: real, reason: "Earlier native-source truth check matched 117 digests. Fresh continuation attempt exhausted its build window in the shared signed Helper cache; timed-out build descendants retained output pipes and required cleanup. Fresh full-Helper read qualification remains blocked by the harness."}
       - {scenario: CALL-IDLE, level: real, reason: "Whole Helper averaged 48.29% CPU over five idle minutes on a quiet host, above 2%; sampling showed active Messages reconciliation. Phone fixture idle CPU and unchanged-checkpoint checks pass. Whole-Helper real idle qualification remains unproven; the fresh continuation attempt also exceeded its 45-minute Helper build window before world startup."}
+
+  - id: focus.pack
+    title: Focus status and pack qualification
+    requirements: [R-RW]
+    milestone: G5
+    modules: [internal/focuspack, native/Sources/FocusSource]
+    depends_on: [shortcuts.runner]
+    status: limited
+    notes: Read-only INFocusStatusCenter capture preserves unknown status without authorization; no authorization request. Set Focus identifiers and parameters remain unverified, so no mutation capability or importable pack is advertised.
+    scenarios:
+      - {id: FOC-SIM, levels: [sim]}
+      - {id: FOC-SET-REAL, levels: [real]}
+      - {id: FOC-IDLE, levels: [real]}
+      - {id: FOC-STATUS-REAL, levels: [real]}
+      - {id: FOC-PHONE-SYNC, levels: [real]}
+    limits:
+      - scenario: FOC-SIM
+        level: sim
+        reason: Status shape and fake runner qualification; complete Focus set and end-to-end capture simulation pending.
+      - scenario: FOC-STATUS-REAL
+        level: real
+        reason: Helper Focus authorization is not_determined; no authorization request is made.
+      - scenario: FOC-PHONE-SYNC
+        level: real
+        reason: G12 phone access and qualified real Focus set/readback required.
+      - scenario: FOC-IDLE
+        level: real
+        reason: Five-minute Helper CPU qualification remains pending; no idle CPU measurement claimed.
+      - scenario: FOC-SET-REAL
+        level: real
+        reason: Verified Set Focus action and parameters plus AB Focus import required; no real mutation attempted. DND syncs to Johan's iPhone.

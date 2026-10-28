@@ -367,6 +367,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.Feature == "core.permissions" {
 		return runPermissionStatus(ctx, s, level)
 	}
+	if s.Feature == "focus.pack" {
+		return runFocusPack(ctx, s, level)
+	}
 	if s.Feature == "clock.pack" {
 		return runClockPack(ctx, s, level)
 	}

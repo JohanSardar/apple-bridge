@@ -403,6 +403,8 @@ protocol Source: Sendable {
 
 ## 9. Sources at full depth
 
+Focus status and pack qualification: [spec/focus.md](spec/focus.md).
+
 Photos capture, query and command coverage: [Photos](spec/photos.md).
 
 Contacts Me-card and notes entitlement contract: [spec/contacts.md](spec/contacts.md).
