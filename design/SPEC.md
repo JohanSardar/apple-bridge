@@ -405,6 +405,7 @@ protocol Source: Sendable {
 
 Relay service and enrollment: [G2-1 / G2-2](spec/relay.md).
 OAuth client metadata: [fetch and lab contract](spec/oauth.md).
+Source registration: [append-friendly registries](spec/sources.md).
 
 Every source publishes `system.source` with state, coverage, freshness and capabilities, and exposes capabilities individually gated on OS build and proven behaviour. A capability is advertised only after its real-level scenario passed on this OS build (recorded in `features.yaml`); otherwise operations return `ErrUnsupported` with reason `capability_unproven`.
 

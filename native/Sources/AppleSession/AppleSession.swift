@@ -53,13 +53,12 @@ public actor AppleSession: ObservationSink {
     private var captureTasks: [Task<Void, Never>] = []
     private var frameTasks: [UUID: Task<Void, Never>] = [:]
     private let trace: CaptureTrace
-    private let agenda: AgendaGate
-    private let usage: UsageSource
-    private let contacts: ContactsSource
-    private let source: RemindersSource
+    private let sources: SessionSources.Builtins
+    private var contacts: ContactsSource { sources.contacts }
+    private var source: RemindersSource { sources.reminders }
+    private var remindersStore: RemindersStoreEnrichment { sources.remindersStore }
+    private var calendar: CalendarSource { sources.calendar }
     private var remindersRefreshHistogram = StoreRefreshHistogram()
-    private let remindersStore: RemindersStoreEnrichment
- private let calendar: CalendarSource
     private let guardLog: DispatchGuard
     private let socket: String
     private let secretFile: String
@@ -73,13 +72,7 @@ public actor AppleSession: ObservationSink {
         self.home = home; self.labEnabled = commandsEnabled
         let trace = CaptureTrace(url: commandsEnabled ? home.appendingPathComponent("capture-trace.jsonl") : nil)
         self.trace = trace
-        usage = UsageSource()
-        contacts = try ContactsSource(home: home, commandsEnabled: true, trace: trace)
-        let agenda = AgendaGate(trace: trace)
-        self.agenda = agenda
-        source = try RemindersSource(gate: agenda, home: home, commandsEnabled: true)
-        remindersStore = RemindersStoreEnrichment(trace: commandsEnabled ? trace : nil)
- calendar = try CalendarSource(gate: agenda, home: home, commandsEnabled: true, profilingEnabled: commandsEnabled)
+        sources = try SessionSources.Builtins(home: home, labEnabled: commandsEnabled, trace: trace)
         guardLog = try DispatchGuard(home: home)
         let pidFile = home.appendingPathComponent("helper.pid")
         try Data(String(getpid()).utf8).write(to: pidFile, options: .atomic)
@@ -93,8 +86,7 @@ public actor AppleSession: ObservationSink {
     }
 
     public func run() async throws {
-        additionalSources["contacts"] = contacts
-        additionalSources["usage"] = usage
+        for (name, source) in sources.additional { additionalSources[name] = source }
         var backoff = 100
         while !Task.isCancelled && kill(gatewayPID, 0) == 0 {
             do {

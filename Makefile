@@ -17,6 +17,7 @@ native:
 	packaging/dev/heavy.sh packaging/dev/build-native.sh
 
 lint:
+	python3 packaging/dev/test_source_registrations.py
 	cd web && pnpm lint
 	gofmt -l $$(find . -name '*.go' -not -path './.worktrees/*' -not -path '*/node_modules/*' -not -path './.build/*') | grep -v '^$$' && exit 1 || true
 	go vet ./...

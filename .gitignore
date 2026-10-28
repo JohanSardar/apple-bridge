@@ -27,3 +27,5 @@ web/playwright-report/
 **/remote/*.pem
 **/remote/tailscaled.*
 **/tailscaled.state
+
+native/Sources/AppleSession/GeneratedSourceRegistrations.swift

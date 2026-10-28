@@ -131,3 +131,20 @@ func (f *fakeApple) noteCommand(wire *applepeer.Wire, frame contracts.IPCFrame, 
 	}
 	return reject(contracts.ErrUnsupported)
 }
+
+func (f *fakeApple) routeNotesCommand(wire *applepeer.Wire, frame contracts.IPCFrame, fence uint64, emit func(contracts.Capture, uint64) error, checkpoint func(contracts.Source) string) (bool, error) {
+	if frame.Action != nil && strings.HasPrefix(frame.Action.Op, "notes.") {
+		return true, f.noteCommand(wire, frame, fence, emit, func() string { return checkpoint(contracts.Notes) })
+	}
+	if frame.T == "Dispatch" {
+		f.mu.Lock()
+		t, ok := f.tickets[frame.Ticket]
+		f.mu.Unlock()
+		if ok && strings.HasPrefix(t.Action.Op, "notes.") {
+			return true, f.noteCommand(wire, frame, fence, emit, func() string { return checkpoint(contracts.Notes) })
+		}
+	}
+	return false, nil
+}
+
+func init() { sourceCommands = append(sourceCommands, (*fakeApple).routeNotesCommand) }

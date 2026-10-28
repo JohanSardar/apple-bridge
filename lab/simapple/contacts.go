@@ -427,3 +427,20 @@ func contactCoverage() contracts.Coverage {
 	}
 	return coverage
 }
+
+func init() {
+	sourceCommands = append(sourceCommands, (*fakeApple).routeContactsCommand)
+	sourceRoutes = append(sourceRoutes, (*fakeApple).contactsControl)
+}
+
+func (f *fakeApple) routeContactsCommand(wire *applepeer.Wire, frame contracts.IPCFrame, fence uint64, emit func(contracts.Capture, uint64) error, checkpoint func(contracts.Source) string) (bool, error) {
+	if f.isContactCommand(frame) {
+		return true, f.contactCommand(wire, frame, fence, func(capture contracts.Capture) error {
+			f.mu.Lock()
+			revision := f.durable.Revision[contracts.Contacts]
+			f.mu.Unlock()
+			return emit(capture, revision)
+		}, checkpoint)
+	}
+	return false, nil
+}

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/JohanSardar/apple-bridge/internal/applepeer"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 )
 
@@ -288,4 +289,16 @@ func (f *fakeApple) messageStateFrame(ctx context.Context, frame contracts.IPCFr
 	case <-ctx.Done():
 		return ctx.Err()
 	}
+}
+
+func init() {
+	sourceCommands = append(sourceCommands, (*fakeApple).routeMessagesCommand)
+	sourceRoutes = append(sourceRoutes, (*fakeApple).messageRoutes)
+}
+
+func (f *fakeApple) routeMessagesCommand(wire *applepeer.Wire, frame contracts.IPCFrame, fence uint64, emit func(contracts.Capture, uint64) error, checkpoint func(contracts.Source) string) (bool, error) {
+	if f.isMessageCommand(frame) {
+		return true, f.messageCommand(wire, frame, fence, emit, func() string { return checkpoint(contracts.Messages) })
+	}
+	return false, nil
 }

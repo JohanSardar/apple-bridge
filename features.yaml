@@ -35,8 +35,10 @@ requirements:
   R-WEB-SECURE: Passkey device sessions, public-computer mode, revocation, origin and CSP protection, rate limits, agent levels with owner approval
 
 features:
+  # Append each new source as a contiguous block of feature entries here; readers consume the flat list.
   - id: core.harness
     title: bridge-lab World, SimApplePeer, SimTruth, scenario runner, evidence, feature graph
+    notes: Append-friendly registries preserve the frozen descriptor order, generate native imports and calls from per-source declarations, and reject shared bootstrap registrations.
     requirements: [R-FULL, R-LIVE]
     milestone: M0
     modules: [lab]

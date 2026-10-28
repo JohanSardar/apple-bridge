@@ -194,11 +194,12 @@ func Run(ctx context.Context, cfg Config) error {
 		return err
 	}
 	mux := http.NewServeMux()
+	for _, register := range sourceRoutes {
+		register(fake, mux)
+	}
 	fake.commandControl(mux)
 	fake.blobRoutes(mux)
 	fake.datasetRoutes(mux)
-	fake.remindersControl(mux)
-	fake.messageRoutes(mux)
 	mux.HandleFunc("GET /stats", func(w http.ResponseWriter, r *http.Request) {
 		fake.mu.Lock()
 		defer fake.mu.Unlock()
@@ -209,9 +210,6 @@ func Run(ctx context.Context, cfg Config) error {
 		}
 		json.NewEncoder(w).Encode(map[string]any{"blob_digests": digests, "scans": fake.durable.Scans, "revision": fake.durable.Revision, "committed": fake.durable.Committed})
 	})
-	fake.calendarControl(mux)
-	fake.contactsControl(mux)
-	fake.usageControl(mux)
 	mux.HandleFunc("GET /inspect", func(w http.ResponseWriter, r *http.Request) { json.NewEncoder(w).Encode(fake.inspect()) })
 	mux.HandleFunc("POST /source-state", func(w http.ResponseWriter, r *http.Request) {
 		var frame contracts.IPCFrame

@@ -172,8 +172,3 @@ func MessagesTargetCollection(op string) string {
 	}
 	return "messages.message"
 }
-func init() {
-	for _, op := range append(append([]string{}, MessagesOperations...), "messages.keep_audio") {
-		Operations = append(Operations, OperationDescriptor{Name: op, Version: 1, Kind: CommandOp, Source: Messages, Scope: "messages:write", Capability: op, Input: Command{}, Output: CommandRecord{}, Description: "Messages command with evidence; unproven native routes reject before dispatch"})
-	}
-}
