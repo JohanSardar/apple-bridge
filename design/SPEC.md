@@ -498,6 +498,8 @@ Every UI action records a before/after screenshot path in evidence (stored in th
 
 ### 9.5 Notes
 
+Notes extras: [source spec](spec/notes.md).
+
 - Read: consistent copy of `NoteStore.sqlite` (+WAL) via SQLite backup API from a read-only connection, every change event (FSEvents on the group container, debounce 100 ms) and every 5 min. Decode `ZICNOTEDATA.ZDATA` (gzip + protobuf) with `Decoders.NotesProto` to plain text and a minimal HTML; tables/checklists/attachments listed. Locked notes: `content_status=locked`, title only. Schema probed; unknown → `undecoded` with raw digest.
 - Write: AppleScript (`make new note at folder … with properties {body: html}`, `set body of note id …`, `delete note id …`, `make new folder`). Only plain-text create/replace/append are supported; notes containing tables, checklists, drawings or attachments reject updates with `ErrUnsupported(reason: rich_content)` before dispatch (D6). Evidence: re-read note via AppleScript id + next capture.
 - Identity: Core Data `ZIDENTIFIER` UUID; AppleScript id `x-coredata://…/ICNote/p<pk>` stored as alias.

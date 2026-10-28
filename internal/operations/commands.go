@@ -507,7 +507,7 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 		}
 		if r.Source == contracts.Notes {
 			collection = "notes.note"
-			if r.Command.Op == "notes.create_folder" {
+			if r.Command.Op == "notes.create_folder" || r.Command.Op == "notes.rename_folder" {
 				collection = "notes.folder"
 			}
 		}

@@ -79,7 +79,10 @@ func (f *fakeApple) noteCommand(wire *applepeer.Wire, frame contracts.IPCFrame, 
 		} else {
 			key = contracts.NewID("note")
 		}
-		if t.Action.Op == "notes.create_folder" {
+		if t.Action.Op == "notes.rename_folder" {
+			collection = "notes.folder"
+			data["title"] = *a.Title
+		} else if t.Action.Op == "notes.create_folder" {
 			collection = "notes.folder"
 			data = map[string]any{"title": *a.Title, "account": "sim"}
 		} else if t.Action.Op == "notes.create" {
@@ -88,6 +91,8 @@ func (f *fakeApple) noteCommand(wire *applepeer.Wire, frame contracts.IPCFrame, 
 				text = *a.PlainText
 			}
 			data = map[string]any{"folder_id": map[string]any{"$ref": map[string]string{"collection": "notes.folder", "native_key": t.Action.FolderKey}}, "title": *a.Title, "plain_text": *a.Title + "\n" + text, "locked": false, "editable": "plain", "content_status": "complete", "attachments": []any{}, "created_at": time.Now().UTC().Format(time.RFC3339Nano), "modified_at": time.Now().UTC().Format(time.RFC3339Nano)}
+		} else if t.Action.Op == "notes.move" {
+			data["folder_id"] = map[string]any{"$ref": map[string]string{"collection": "notes.folder", "native_key": t.Action.FolderKey}}
 		} else if t.Action.Op == "notes.update" {
 			text := *a.PlainText
 			if a.Mode == "append" {

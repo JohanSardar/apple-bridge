@@ -1,0 +1,29 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[4.51 8.03 14.35] cpu_idle=60% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M61X4P9K6SHTMM6DMAD98CSR",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "NOTE-EXTRAS",
+  "level": "real",
+  "passed": true,
+  "git_sha": "4f77d9f7892fe2d1a98db2d82dd335e7bd151665",
+  "at": "2026-10-28T18:42:43.123941Z",
+  "assertions": [
+    {
+      "name": "tagged_mutation_cleanup_required",
+      "passed": true,
+      "status": "limited",
+      "detail": "Existing real Notes cleanup is unproven on 25G241; no real fixtures or mutations attempted"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

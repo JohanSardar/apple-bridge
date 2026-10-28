@@ -440,6 +440,19 @@ features:
       - {id: NOTE-IMPORT, levels: [sim, real]}
       - {id: NOTE-EXTERNAL, levels: [sim, real, replica]}
       - {id: NOTE-DECODE, levels: [sim]}
+  - id: notes.extras
+    title: Notes checklist, folder, tag, pin and move extras
+    requirements: [R-RW, R-NOTES]
+    milestone: M3
+    modules: [native/NotesSource, operations]
+    depends_on: [notes.read]
+    status: limited
+    scenarios:
+      - {id: NOTE-EXTRAS, levels: [sim, real]}
+    limits:
+      - scenario: NOTE-EXTRAS
+        level: real
+        reason: "No verified real cleanup route on 25G241; no mutations attempted. Native move and rename require per-build NoteStore evidence and remain unadvertised; sim covers both. Folder deletion requires separate proof. Notes.sdef has no native checklist, hashtag or pin setters; existing decoder reads remain available."
   - id: notes.write
     title: Notes plain-text create, update, delete, folders; rich edits reject
     requirements: [R-RW, R-NOTES]

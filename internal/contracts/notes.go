@@ -28,6 +28,14 @@ func ValidateNoteCommand(c Command) (NoteArgs, error) {
 		if a.ID == "" || c.ExpectedVersion == 0 || a.FolderID != "" || a.Title != nil || a.PlainText == nil || (a.Mode != "" && a.Mode != "replace" && a.Mode != "append") {
 			return a, ErrInvalid
 		}
+	case "notes.rename_folder":
+		if a.ID == "" || c.ExpectedVersion == 0 || a.FolderID != "" || a.Title == nil || !strings.HasPrefix(*a.Title, "Bridge Test [ab-test") || a.PlainText != nil || a.Mode != "" {
+			return a, ErrInvalid
+		}
+	case "notes.move":
+		if a.ID == "" || c.ExpectedVersion == 0 || a.FolderID == "" || a.Title != nil || a.PlainText != nil || a.Mode != "" {
+			return a, ErrInvalid
+		}
 	case "notes.delete":
 		if a.ID == "" || c.ExpectedVersion == 0 || a.FolderID != "" || a.Title != nil || a.PlainText != nil || a.Mode != "" {
 			return a, ErrInvalid
