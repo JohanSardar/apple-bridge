@@ -1,0 +1,33 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[9.63 6.69 6.44] cpu_idle=59% cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M61HZNXYFC39FAKB59SYBZSM",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "CORE-SOURCE-SUPPORT",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "c0c8f80e5d0786ade713c43a05047afafa8a2335",
+  "at": "2026-10-28T15:27:44.574721Z",
+  "assertions": [
+    {
+      "name": "native_support_checks_build",
+      "passed": true
+    },
+    {
+      "name": "generation_wal_complete_scan_blob_checks",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

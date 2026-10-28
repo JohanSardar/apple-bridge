@@ -102,6 +102,15 @@ features:
       - {id: CORE-RESTORE-EPOCH, levels: [sim]}
       - {id: CORE-RESTORE-OLD-SCHEMA, levels: [sim]}
       - {id: CORE-DISK-FULL, levels: [sim]}
+  - id: core.source-support
+    title: Shared native source capture helpers
+    requirements: [R-NO-FALSE-DELETE, R-RESILIENT, R-ATTACH]
+    milestone: M0
+    modules: [native/SourceSupport]
+    depends_on: []
+    status: done
+    scenarios:
+      - {id: CORE-SOURCE-SUPPORT, levels: [sim]}
   - id: core.trust
     title: Pairing, tokens, one visibility policy, delegated identity, localhost defense, credential stores
     requirements: [R-SCOPE, R-SECURE]
