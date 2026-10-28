@@ -217,7 +217,7 @@ func (c CLI) Run(ctx context.Context, input Input) (Result, error) {
 
 func OpenPack(ctx context.Context, directory string) error {
 	paths := []string{}
-	for _, name := range []string{"ab-echo", "ab-clock", "ab-focus"} {
+	for _, name := range []string{"AB Echo", "AB Clock", "AB Focus"} {
 		path, err := filepath.Abs(filepath.Join(directory, name+".shortcut"))
 		if err != nil {
 			return err

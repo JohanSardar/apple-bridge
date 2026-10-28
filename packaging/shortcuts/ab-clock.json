@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "name": "AB Clock",
+  "actions": [
+    {
+      "key": "alarms",
+      "identifier": "com.apple.mobiletimer-framework.MobileTimerIntents.MTGetAlarmsIntent",
+      "parameters": {
+        "AppIntentDescriptor": {
+          "ActionRequiresAppInstallation": true,
+          "AppIntentIdentifier": "AlarmEntity",
+          "BundleIdentifier": "com.apple.clock",
+          "Name": "Clock",
+          "TeamIdentifier": "0000000000"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,83 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[37.68 180.82 181.77] cpu_idle=51% cpus=8 other_heavy=2"
+  },
+  "run_id": "run_01M61T7T4RWZWXNFPW9AR8E2KD",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "CLK-SIM",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-28T17:51:59.641598Z",
+  "assertions": [
+    {
+      "name": "fake_pack_runner",
+      "passed": true
+    },
+    {
+      "name": "bounded_named_pack",
+      "passed": true
+    },
+    {
+      "name": "completion_never_establishes_alarm_capture",
+      "passed": true
+    },
+    {
+      "name": "timeout_rejected",
+      "passed": true
+    },
+    {
+      "name": "nonzero_exit_rejected",
+      "passed": true
+    },
+    {
+      "name": "oversize_output_rejected",
+      "passed": true
+    },
+    {
+      "name": "runner_error_retained",
+      "passed": true
+    },
+    {
+      "name": "temporary_build",
+      "passed": true
+    },
+    {
+      "name": "repo_source_compiles",
+      "passed": true
+    },
+    {
+      "name": "unsigned_artifact",
+      "passed": true
+    },
+    {
+      "name": "unqualified_operation_not_advertised",
+      "passed": true
+    },
+    {
+      "name": "unqualified_operation_not_advertised",
+      "passed": true
+    },
+    {
+      "name": "unqualified_operation_not_advertised",
+      "passed": true
+    },
+    {
+      "name": "unqualified_operation_not_advertised",
+      "passed": true
+    },
+    {
+      "name": "unqualified_operation_not_advertised",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

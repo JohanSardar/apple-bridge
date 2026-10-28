@@ -111,7 +111,7 @@ func runShortcutSign(ctx context.Context, s Scenario, level string) Evidence {
 	if len(manifest) == 1 {
 		e.Metrics["signing_mode"] = manifest[0].Mode
 	}
-	signed := filepath.Join(signedDir, "noop.shortcut")
+	signed := filepath.Join(signedDir, "[ab-test noop] Apple Bridge Signing Test.shortcut")
 	archive, err := os.ReadFile(signed)
 	add("signed_aea_archive", err == nil && len(archive) > 4 && string(archive[:4]) == "AEA1")
 	if err != nil || len(manifest) != 1 {

@@ -1079,3 +1079,25 @@ features:
       - scenario: SC-RUN
         level: sim
         reason: Native and Go subprocess adapters plus command validation; public gateway submission is exercised in sim; file blobs and real pack qualification remain unverified.
+  - id: clock.pack
+    title: Clock helper pack qualification
+    requirements: [R-RW]
+    milestone: M0
+    modules: [internal/clockpack, packaging/shortcuts/ab-clock.json]
+    depends_on: [shortcuts.runner]
+    status: limited
+    notes: Verified native Clock identifiers and a bounded inspection seam; structured alarm capture, mutation readback, timer confirmation and city query remain unqualified and are not advertised.
+    scenarios:
+      - {id: CLK-SIM, levels: [sim]}
+      - {id: CLK-ALARM-REAL, levels: [real]}
+      - {id: CLK-TIMER-REAL, levels: [real]}
+    limits:
+      - scenario: CLK-SIM
+        level: sim
+        reason: Fake pack runner verifies bounds and refusal to infer effects; full alarm CRUD and timer simulation remain unimplemented.
+      - scenario: CLK-ALARM-REAL
+        level: real
+        reason: Leader import of AB Clock and qualification of structured alarm serialization and readback required; synthetic workflow cleanup run has unverified native effects.
+      - scenario: CLK-TIMER-REAL
+        level: real
+        reason: Leader import and independent running timer readback required; start action alone cannot establish running state.
