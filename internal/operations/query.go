@@ -108,6 +108,26 @@ func (g *LocalGateway) Query(ctx context.Context, p trust.Principal, q contracts
 			}
 		}
 	}()
+	if q.Op == "mail.body" {
+		var args struct {
+			MessageID string `json:"message_id"`
+		}
+		if contracts.DecodeInput(q.Args, &args) != nil || args.MessageID == "" {
+			return out, contracts.ErrInvalid
+		}
+		records, readErr := g.State.Read(ctx, p.Visibility(), contracts.ReadQuery{Collection: "mail.message", ID: args.MessageID})
+		if readErr != nil || len(records.Records) != 1 {
+			return out, contracts.ErrNotFound
+		}
+		native, nativeErr := g.State.NativeKey(ctx, "mail.message", args.MessageID)
+		if nativeErr != nil {
+			return out, nativeErr
+		}
+		q.Args, err = json.Marshal(map[string]string{"message_id": native})
+		if err != nil {
+			return out, err
+		}
+	}
 	frame, err := g.Peer.Exchange(ctx, contracts.IPCFrame{T: "Query", ID: q.ID, Op: q.Op, Args: q.Args, DeadlineMS: q.DeadlineMS})
 	if errors.Is(err, context.DeadlineExceeded) {
 		return out, contracts.ErrDeadline

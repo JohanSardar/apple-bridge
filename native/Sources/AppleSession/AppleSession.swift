@@ -1,5 +1,6 @@
 import FilesSource
 import Foundation
+import CryptoKit
 import Darwin
 import SourceSupport
 import AgendaGate
@@ -57,6 +58,7 @@ public actor AppleSession: ObservationSink {
         guard wire == nil, queryHandlers[name] == nil else { throw SourceFailure.conflict }
         queryHandlers[name] = handler
     }
+    private var queryBodies: [String: (Data, Date)] = [:]
     private var queryTasks: [String: Task<Void, Never>] = [:]
     private var frameTasks: [UUID: Task<Void, Never>] = [:]
     private let trace: CaptureTrace
@@ -153,6 +155,7 @@ public actor AppleSession: ObservationSink {
         for task in frameTasks.values { task.cancel() }
         frameTasks = [:]
         for task in queryTasks.values { task.cancel() }; queryTasks = [:]
+        queryBodies = [:]
         for pending in live + bulk { pending.completion.resume(throwing: SourceFailure.unavailable) }
         for flight in flights.values { flight.pending.completion.resume(throwing: SourceFailure.unavailable) }
         live = []; bulk = []; flights = [:]; tickets = [:]; preparing = nil
@@ -241,7 +244,17 @@ public actor AppleSession: ObservationSink {
                 let result = try await handler(frame["args"])
                 guard !Task.isCancelled else { return }
                 let encoded = try JSONEncoder().encode(result)
-                guard encoded.count <= 1 << 20 else { throw SourceFailure.invalid }
+                guard encoded.count <= 64 << 20 else { throw SourceFailure.invalid }
+                if encoded.count > 1 << 20 {
+                    guard frame["op"].string == "mail.body" else { throw SourceFailure.invalid }
+                    queryBodies = queryBodies.filter { $0.value.1 > Date() }
+                    guard queryBodies.values.reduce(0, { $0 + $1.0.count }) + encoded.count <= 64 << 20 else { throw SourceFailure.unavailable }
+                    let digest = SHA256.hash(data: encoded).map { String(format: "%02x", $0) }.joined()
+                    let handle = "query-body:" + UUID().uuidString
+                    queryBodies[handle] = (encoded, Date().addingTimeInterval(60))
+                    try? wire?.send(.object(["t": .string("QueryResult"), "id": id, "result_json": .object(["body_blob": .string(digest)]), "blobs": .array([.object(["digest": .string(digest), "size": .number(Double(encoded.count)), "handle": .string(handle)])])]))
+                    return
+                }
                 let blobs: [JSON] = frame["op"].string == "files.read" ? [.object(["digest": result["digest"], "size": result["size"], "handle": .string("files-blob:" + result["digest"].string)])] : []
                 try? wire?.send(.object(["t": .string("QueryResult"), "id": id, "result_json": result, "blobs": .array(blobs)]))
             } catch {
@@ -271,7 +284,16 @@ public actor AppleSession: ObservationSink {
         do {
             guard !frame["handle"].string.isEmpty, frame["offset"].number >= 0, frame["offset"].number < Double(Int64.max), frame["length"].number > 0, frame["length"].number <= 131072, frame["length"].number.rounded(.down) == frame["length"].number, frame["offset"].number.rounded(.down) == frame["offset"].number else { throw SourceFailure.invalid }
             let response: JSON
-            if frame["handle"].string.hasPrefix("notes-blob:") {
+            if frame["handle"].string.hasPrefix("query-body:") {
+                guard let (data, expires) = queryBodies[frame["handle"].string], expires > Date() else { throw SourceFailure.unavailable }
+                let offset = Int(frame["offset"].number)
+                guard offset <= data.count else { throw SourceFailure.invalid }
+                let end = min(data.count, offset + Int(frame["length"].number))
+                let digest = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+                response = .object(["t": .string("BlobChunk"), "handle": frame["handle"], "offset": .number(Double(offset)), "bytes": .string(data.subdata(in: offset..<end).base64EncodedString()), "digest": .string(digest), "eof": .bool(end == data.count)])
+                if end == data.count { queryBodies.removeValue(forKey: frame["handle"].string) }
+            }
+            else if frame["handle"].string.hasPrefix("notes-blob:") {
                 guard let notes = additionalSources["notes"] as? NotesSource else { throw SourceFailure.unavailable }
                 response = try await notes.readBlob(frame["handle"].string, offset: Int(frame["offset"].number), length: Int(frame["length"].number))
             }

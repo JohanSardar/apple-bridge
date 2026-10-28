@@ -27,7 +27,9 @@ struct MailChecks {
         try require(captured.filter { $0["collection"].string == "mail.mailbox" }.count == 3)
         try require(records.allSatisfy { $0["data"]["subject"].string == "synthetic subject" && $0["data"]["from"].string == "sender@example.com" && !$0["scoped_alias"].string.isEmpty })
         let scenario = CommandLine.arguments.last ?? ""
-        if scenario == "MAIL-NO-FALSE-DELETE" {
+        if scenario == "MAIL-BODY" {
+            try await checkMailBodies(directory)
+        } else if scenario == "MAIL-NO-FALSE-DELETE" {
             let (_, partial, done) = try await source.snapshot(maxRows: 10)
             try require(!done && partial.filter { $0["collection"].string == "mail.message" }.count == 10 && !partial.contains { $0["kind"].string == "absent" })
             try FileManager.default.moveItem(atPath: path, toPath: path + ".old")

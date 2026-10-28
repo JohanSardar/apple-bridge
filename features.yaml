@@ -1166,3 +1166,16 @@ features:
       - {scenario: FILE-IDLE, level: sim, reason: Full Helper CPU qualification pending.}
       - {scenario: FILE-IDLE, level: real, reason: Standalone source measured below 2% over five minutes; host busy and full Helper CPU remains unqualified.}
       - {scenario: FILE-OFFLOAD-REAL, level: real, reason: Single real run failed the native eviction capability guard; hydration remains unverified.}
+  - id: mail.body
+    title: Read local Mail bodies
+    requirements: [R-RW]
+    milestone: M0
+    modules: [native/Sources/MailSource, internal/contracts]
+    depends_on: [mail.capture]
+    status: limited
+    scenarios:
+      - {id: MAIL-BODY, levels: [sim]}
+      - {id: MAIL-BODY-REAL, levels: [real]}
+    limits:
+      - {scenario: MAIL-BODY, level: sim, reason: "Native fixture qualification pending build availability."}
+      - {scenario: MAIL-BODY-REAL, level: real, reason: "No real Envelope Index on the Air; downloaded and offloaded body Truth qualification unavailable."}

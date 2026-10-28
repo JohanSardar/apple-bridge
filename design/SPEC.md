@@ -405,7 +405,7 @@ protocol Source: Sendable {
 
 Contacts Me-card and notes entitlement contract: [spec/contacts.md](spec/contacts.md).
 
-Mail capture foundation and outstanding T16 scope: [Mail](spec/mail.md).
+Mail capture foundation and local body queries: [Mail](spec/mail.md).
 
 Files source details: [files](spec/files.md).
 

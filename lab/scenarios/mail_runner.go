@@ -15,6 +15,12 @@ import (
 
 func runMail(ctx context.Context, s Scenario, level string) Evidence {
 	e := Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, At: time.Now().UTC(), Passed: true}
+	if s.ID == "MAIL-BODY-REAL" {
+		_, err := os.Stat(filepath.Join(os.Getenv("HOME"), "Library/Mail/V10/MailData/Envelope Index"))
+		e.Assertions = append(e.Assertions, Assertion{Name: "real_mail_store_available", Passed: err == nil})
+		e.Passed = false
+		return e
+	}
 	if s.ID == "MAIL-READ-REAL" {
 		return runMailRead(ctx, s, level)
 	}
@@ -44,13 +50,16 @@ func runMail(ctx context.Context, s Scenario, level string) Evidence {
 	if err != nil {
 		os.Stderr.Write(output)
 	}
-	if err == nil && s.ID == "MAIL-CAPTURE" {
+	if err == nil && (s.ID == "MAIL-CAPTURE" || s.ID == "MAIL-BODY") {
 		var fixture struct {
 			Observations []contracts.Observation `json:"observations"`
 		}
 		err = json.Unmarshal(output, &fixture)
 		if err == nil {
 			err = mailCaptureWorld(ctx, fixture.Observations)
+			if err == nil && s.ID == "MAIL-BODY" {
+				err = mailBodyWorld(ctx, fixture.Observations)
+			}
 		}
 		e.Assertions = append(e.Assertions, Assertion{Name: "mail_gateway_capture_and_subject_fts", Passed: err == nil})
 		e.Passed = err == nil
@@ -79,5 +88,35 @@ func mailCaptureWorld(ctx context.Context, observations []contracts.Observation)
 		var found contracts.ReadResult
 		_, err = world.Request(ctx, w.Gateway, "/v1/op/records.query", contracts.ReadQuery{Text: "synthetic", Limit: 1000}, &found)
 		return err == nil && len(found.Records) == 1000
+	})
+}
+
+func mailBodyWorld(ctx context.Context, observations []contracts.Observation) error {
+	w, err := world.New(ctx, "sim", 1, 0, world.BlobOptions{Scope: "mail:read,system:read"})
+	if err != nil {
+		return err
+	}
+	defer w.Close()
+	if err = w.ControlAction("/dataset", map[string]any{"records": observations}); err != nil {
+		return err
+	}
+	return w.Await(10*time.Second, func() bool {
+		records, readErr := w.Records(w.Gateway)
+		if readErr != nil {
+			return false
+		}
+		for _, r := range records {
+			if r.Collection != "mail.message" {
+				continue
+			}
+			var result contracts.QueryResult
+			_, err := world.Request(ctx, w.Gateway, "/v1/op/mail.body", contracts.Query{Args: json.RawMessage(`{"message_id":"` + r.ID + `"}`)}, &result)
+			var body struct {
+				State string `json:"state"`
+				Text  string `json:"plain_text"`
+			}
+			return err == nil && json.Unmarshal(result.ResultJSON, &body) == nil && body.State == "downloaded" && body.Text == "Hello fixture"
+		}
+		return false
 	})
 }
