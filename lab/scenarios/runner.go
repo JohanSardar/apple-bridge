@@ -370,6 +370,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.Feature == "clock.pack" {
 		return runClockPack(ctx, s, level)
 	}
+	if s.Feature == "files.capture" {
+		return runFiles(ctx, s, level)
+	}
 	if s.Feature == "shortcuts.runner" {
 		return runShortcutsRunner(ctx, s, level)
 	}

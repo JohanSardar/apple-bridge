@@ -1141,3 +1141,20 @@ features:
       - {scenario: MAIL-LIVE, level: sim, reason: Insert and read/move fixture checks only; flag changes and p95 gateway delivery remain unimplemented.}
       - {scenario: MAIL-NO-FALSE-DELETE, level: sim, reason: Native generation and bounded scan checks only; gateway alias reconciliation remains unverified.}
       - {scenario: MAIL-IDLE, level: sim, reason: Five-minute idle Helper CPU proof remains unimplemented; scenario fails explicitly.}
+
+  - id: files.capture
+    title: Opt-in files metadata and queries
+    requirements: [R-API, R-SCOPE]
+    milestone: G9
+    modules: [native/Sources/FilesSource]
+    depends_on: [core.queries]
+    status: limited
+    scenarios:
+      - {id: FILE-CAPTURE, levels: [sim]}
+      - {id: FILE-IDLE, levels: [sim]}
+      - {id: FILE-SEARCH-REAL, levels: [real]}
+      - {id: FILE-OFFLOAD-REAL, levels: [real]}
+    limits:
+      - {scenario: FILE-IDLE, level: sim, reason: Five-minute real Helper CPU qualification pending.}
+      - {scenario: FILE-SEARCH-REAL, level: real, reason: Real Spotlight indexing qualification pending.}
+      - {scenario: FILE-OFFLOAD-REAL, level: real, reason: Real iCloud eviction and hydration qualification pending.}
