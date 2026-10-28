@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -593,8 +594,8 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 			evidence.Metrics["helper_restart_blob_backlog_before_stop"] = before.Replica.Blobs.Backlog
 			evidence.Metrics["helper_restart_blob_entries_before_stop"] = len(before.Replica.Blobs.Entries)
 		}
-		scans, err := w.HelperScans()
-		evidence.Metrics["helper_restart_scans_before"] = scans
+		scans, err := w.HelperSourceScans()
+		evidence.Metrics["helper_restart_source_scans_before"] = scans
 		if err != nil {
 			return fail("helper_scan_count")
 		}
@@ -622,9 +623,14 @@ func runRobust(ctx context.Context, s Scenario, level string, options map[string
 		if w.ControlAction("/flush", struct{}{}) != nil {
 			return fail("helper_restart_checkpoint_drained")
 		}
-		after, err := w.HelperScans()
-		evidence.Metrics["helper_restart_scans_after"] = after
-		add("helper_checkpoint_resume_without_rescan", err == nil && after == scans)
+		after, err := w.HelperSourceScans()
+		evidence.Metrics["helper_restart_source_scans_after"] = after
+		add("calendar_restart_revalidates_window", err == nil && after[string(contracts.Calendar)] == scans[string(contracts.Calendar)]+1)
+		resumed := maps.Clone(after)
+		if resumed != nil {
+			resumed[string(contracts.Calendar)]--
+		}
+		add("helper_checkpoint_resume_without_rescan", err == nil && maps.Equal(resumed, scans))
 		truth, inspectErr := w.Inspect()
 		attachments := 0
 		for _, observation := range truth {

@@ -2,7 +2,9 @@ package scenarios
 
 import (
 	"context"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"time"
@@ -29,7 +31,14 @@ func runRichMessages(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "MSG-READ-RICH-FIELDS" {
 		command := exec.CommandContext(ctx, "packaging/dev/check-messages-capture.sh", "--rich")
 		add("native_rich_capture_and_live_mutation", command.Run() == nil)
-		add("independent_truth_synthetic_field_counts", exec.CommandContext(ctx, "packaging/dev/check-messages-truth.sh").Run() == nil)
+		output, err := exec.CommandContext(ctx, "packaging/dev/check-messages-truth.sh").CombinedOutput()
+		add("independent_truth_synthetic_field_counts", err == nil)
+		if err != nil {
+			directory := filepath.Join("lab", "evidence", "private")
+			os.MkdirAll(directory, 0700)
+			os.WriteFile(filepath.Join(directory, e.RunID+"-messages-truth.log"), output, 0600)
+			e.Assertions[len(e.Assertions)-1].Detail = "native Truth fixture check: " + err.Error()
+		}
 	}
 	w, err := world.New(ctx, "sim", 0, 0, world.BlobOptions{Scope: "messages:read,contacts:read,system:read"})
 	if err != nil {

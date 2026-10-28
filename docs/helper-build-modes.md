@@ -25,3 +25,11 @@ Give `build-helper.sh` and `build-truth.sh` a new destination for every World. D
 The signed-app cache includes the normalized compilation condition in its source key. Default mode and explicit `1` share a key; `0` uses a distinct key. Compiler outputs and native-output pointers are separated by mode so a build cannot stage the opposite mode's binary. Lab consumers read `native-output-1`; release packaging reads `native-output-0`. Builds remove the obsolete `native-output` pointer. The existing cache signature, source and bundle-digest checks remain required.
 
 `HELPER-RELEASE-COMMANDS` builds both signed modes, verifies their cache attestations and signatures, checks product command recognition, rejects lab commands in release mode, executes a safe wire fixture in lab mode, checks that dedicated lab types are absent from release symbols and builds the release package with caller LAB mode selected to verify the packaging override.
+
+## Native checks at sim level
+
+`make sim` builds the lab native targets before running scenarios. Simulation includes synthetic native media and usage decoder checks, so a Go build alone does not prepare the suite. Before running one of these scenarios directly through `bridge-lab`, run `make native` through `packaging/dev/heavy.sh`. Native output pointers belong to the current worktree and build mode.
+
+Run isolated timing checks through the sensitive heavy lane, including scenarios whose names do not contain `perf`: `APPLE_BRIDGE_HEAVY_NO_SIM_LANE=1 packaging/dev/heavy.sh go run ./cmd/bridge-lab run <scenario.yaml> --level sim`. Preserve the host conditions with the result; a failed timing budget under contention requires a quiet rerun with the same threshold.
+
+The recovery check keeps durable scan counts per source: Calendar revalidates its window on reconnect, while checkpoint-resumable sources must perform zero additional scans. Raw Truth comparisons omit the gateway-owned Notes `content_version`; gateway-to-replica comparisons retain the complete record, and `NOTE-LIST` checks that captured notes have valid content versions.

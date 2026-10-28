@@ -1,0 +1,654 @@
+{
+  "ticket": "T00",
+  "baseline_git_sha": "d20fd34f8946c67b43e81a0d5f5a19c8f1567197",
+  "rebased_on": "02f24309d16b1bf39fe1f9a97255fd98ba86d702",
+  "thresholds_changed": false,
+  "isolated_command": "APPLE_BRIDGE_HEAVY_NO_SIM_LANE=1 packaging/dev/heavy.sh go run ./cmd/bridge-lab run <scenario.yaml> --level sim",
+  "functional_notes_lane": "heavy.sh automatic sim lane",
+  "scenarios": [
+    {
+      "scenario": "CORE-BENCH",
+      "classification": "b",
+      "reason": "Scope the FTS candidate set by visible sources before materializing identities. The full regression exposed the request failure even though the first quiet isolated run passed.",
+      "baseline_failed_assertions": [
+        "automatic_sync_guarantees"
+      ],
+      "baseline_host_conditions": {
+        "quiet": false,
+        "summary": "air: load=[27.12 20.2 13.95] cpu_idle=41% cpus=8 other_heavy=1"
+      },
+      "initial_isolated_rerun": {
+        "passed": true,
+        "at": "2026-10-28T07:31:17.109729Z",
+        "host_conditions": {
+          "quiet": true,
+          "summary": "air: load=[4.2 4.41 5.05] cpu_idle=76% cpus=8 other_heavy=0"
+        },
+        "failed_assertions": [],
+        "latency": {
+          "effect_done\u2192gateway_visible": {
+            "samples": 1,
+            "p50_ms": 15.911791,
+            "p95_ms": 15.911791,
+            "max_ms": 15.911791,
+            "timeouts": 0
+          },
+          "effect_done\u2192replica_visible:replica0": {
+            "samples": 1,
+            "p50_ms": 25.025083,
+            "p95_ms": 25.025083,
+            "max_ms": 25.025083,
+            "timeouts": 0
+          },
+          "fts5_query_gateway": {
+            "samples": 100,
+            "p50_ms": 4.609875,
+            "p95_ms": 6.6935,
+            "max_ms": 114.669209,
+            "timeouts": 0
+          }
+        }
+      },
+      "final_evidence": "lab/evidence/sim/CORE-BENCH.json",
+      "final_passed": true,
+      "final_host_conditions": {
+        "quiet": true,
+        "summary": "air: load=[3.66 3.95 5.03] cpu_idle=79% cpus=8 other_heavy=0"
+      },
+      "final_latency": {
+        "effect_done\u2192gateway_visible": {
+          "samples": 1,
+          "p50_ms": 41.464,
+          "p95_ms": 41.464,
+          "max_ms": 41.464,
+          "timeouts": 0
+        },
+        "effect_done\u2192replica_visible:replica0": {
+          "samples": 1,
+          "p50_ms": 53.287625,
+          "p95_ms": 53.287625,
+          "max_ms": 53.287625,
+          "timeouts": 0
+        },
+        "fts5_query_gateway": {
+          "samples": 100,
+          "p50_ms": 3.551625,
+          "p95_ms": 5.036958,
+          "max_ms": 129.998458,
+          "timeouts": 0
+        }
+      },
+      "final_metrics": {
+        "automatic_scoped_search_0_ms": 2171.254208,
+        "automatic_scoped_search_1_ms": 3021.734667,
+        "capture_observer_resets": 0,
+        "capture_readiness": "committed_capture_barrier",
+        "completion_timeout_ms": 300000,
+        "contended_run": false,
+        "effect_done_to_gateway_capture_ms": 167913.486625,
+        "fixture_and_capture_ms": 169872.048625,
+        "fts5_query_cache": "repeated_query_after_integrity_verification",
+        "gateway_rss_end_sample_bytes": 84312064,
+        "gateway_wal_end_sample_bytes": 7646752,
+        "messages": 200000,
+        "messages_target": 200000,
+        "recovery_final_drain_ms": 36.19775,
+        "replica_readiness": "durable_cursor_then_integrity_count",
+        "replica_rss_end_sample_bytes": 18415616,
+        "replica_wal_end_sample_bytes": 7448992
+      }
+    },
+    {
+      "scenario": "CORE-HELPER-RESTART",
+      "classification": "b",
+      "reason": "Require exactly one Calendar reconnect revalidation and zero additional scans for every checkpoint-resumable source.",
+      "baseline_failed_assertions": [
+        "helper_checkpoint_resume_without_rescan"
+      ],
+      "baseline_host_conditions": {
+        "quiet": false,
+        "summary": "air: load=[15.81 18.3 17.8] cpu_idle=41% cpus=8 other_heavy=2"
+      },
+      "initial_isolated_rerun": {
+        "passed": false,
+        "at": "2026-10-28T07:41:07.093871Z",
+        "host_conditions": {
+          "quiet": false,
+          "summary": "air: load=[10.38 7.64 6.49] cpu_idle=33% cpus=8 other_heavy=1"
+        },
+        "failed_assertions": [
+          {
+            "name": "helper_checkpoint_resume_without_rescan",
+            "passed": false
+          }
+        ]
+      },
+      "final_evidence": "lab/evidence/sim/CORE-HELPER-RESTART.json",
+      "final_passed": true,
+      "final_metrics": {
+        "automatic_scoped_search_0_ms": 0.492209,
+        "automatic_scoped_search_1_ms": 0.504625,
+        "capture_observer_resets": 0,
+        "helper_restart_blob_backlog_before_stop": 0,
+        "helper_restart_blob_entries_before_stop": 1,
+        "helper_restart_source_scans_after": {
+          "calendar": 2,
+          "contacts": 1,
+          "messages": 1,
+          "notes": 1,
+          "reminders": 1,
+          "usage": 1
+        },
+        "helper_restart_source_scans_before": {
+          "calendar": 1,
+          "contacts": 1,
+          "messages": 1,
+          "notes": 1,
+          "reminders": 1,
+          "usage": 1
+        },
+        "recovery_final_drain_ms": 26.409459
+      }
+    },
+    {
+      "scenario": "CORE-READMODEL-UPDATE-PERF",
+      "classification": "a",
+      "reason": "The non-quiet full-run seed timed out; fresh quiet isolated seed and transaction budgets pass unchanged.",
+      "baseline_failed_assertions": [
+        "huge_demo_seed_within_dataset_120_second_budget"
+      ],
+      "baseline_host_conditions": {
+        "quiet": false,
+        "summary": "air: load=[14.77 17.02 17.34] cpu_idle=27% cpus=8 other_heavy=2"
+      },
+      "initial_isolated_rerun": {
+        "passed": true,
+        "at": "2026-10-28T07:55:15.925801Z",
+        "host_conditions": {
+          "quiet": false,
+          "summary": "air: load=[7.63 6.2 6.06] cpu_idle=71% cpus=8 other_heavy=1"
+        },
+        "failed_assertions": [],
+        "latency": {
+          "capture_100_commit": {
+            "samples": 5,
+            "p50_ms": 49.089917,
+            "p95_ms": 56.070917,
+            "max_ms": 56.070917,
+            "timeouts": 0
+          },
+          "huge_demo_seed_commit": {
+            "samples": 1,
+            "p50_ms": 69957.31425,
+            "p95_ms": 69957.31425,
+            "max_ms": 69957.31425,
+            "timeouts": 0
+          }
+        }
+      },
+      "final_evidence": "lab/evidence/sim/CORE-READMODEL-UPDATE-PERF.json",
+      "final_passed": true,
+      "final_host_conditions": {
+        "quiet": true,
+        "summary": "air: load=[4.16 5.1 5.93] cpu_idle=77% cpus=8 other_heavy=0"
+      },
+      "final_latency": {
+        "capture_100_commit": {
+          "samples": 5,
+          "p50_ms": 54.533834,
+          "p95_ms": 61.07875,
+          "max_ms": 61.07875,
+          "timeouts": 0
+        },
+        "huge_demo_seed_commit": {
+          "samples": 1,
+          "p50_ms": 48762.550625,
+          "p95_ms": 48762.550625,
+          "max_ms": 48762.550625,
+          "timeouts": 0
+        }
+      }
+    },
+    {
+      "scenario": "MSG-MEDIA-CLEANUP",
+      "classification": "c",
+      "reason": "Existing development identity and signed-helper build verified. Original build diagnostic was discarded and the failure did not reproduce; retain the existing signing identity.",
+      "baseline_failed_assertions": [
+        "signed_helper_build"
+      ],
+      "baseline_host_conditions": {
+        "quiet": false,
+        "summary": "air: load=[5.79 7.29 10.95] cpu_idle=55% cpus=8 other_heavy=2"
+      },
+      "initial_isolated_rerun": {
+        "passed": true,
+        "at": "2026-10-28T07:57:21.387732Z",
+        "host_conditions": {
+          "quiet": false,
+          "summary": "air: load=[5.37 5.76 5.9] cpu_idle=45% cpus=8 other_heavy=1"
+        },
+        "failed_assertions": []
+      },
+      "final_evidence": "lab/evidence/sim/MSG-MEDIA-CLEANUP.json",
+      "final_passed": true
+    },
+    {
+      "scenario": "NATIVE-MEDIA-EXPORT-SAFETY",
+      "classification": "c",
+      "reason": "Build MediaChecks before sim scenarios.",
+      "baseline_failed_assertions": [
+        "export-safety",
+        "export-overlap"
+      ],
+      "baseline_host_conditions": {
+        "quiet": true,
+        "summary": "air: load=[4.21 5.59 7.99] cpu_idle=76% cpus=8 other_heavy=0"
+      },
+      "initial_isolated_rerun": {
+        "passed": false,
+        "at": "2026-10-28T07:58:04.235155Z",
+        "host_conditions": {
+          "quiet": false,
+          "summary": "air: load=[5.78 5.88 5.94] cpu_idle=30% cpus=8 other_heavy=1"
+        },
+        "failed_assertions": [
+          {
+            "name": "export-safety",
+            "passed": false,
+            "detail": "synthetic native export check: exec: \"MediaChecks\": executable file not found in $PATH"
+          },
+          {
+            "name": "export-overlap",
+            "passed": false,
+            "detail": "synthetic native export check: exec: \"MediaChecks\": executable file not found in $PATH"
+          }
+        ]
+      },
+      "final_evidence": "lab/evidence/sim/NATIVE-MEDIA-EXPORT-SAFETY.json",
+      "final_passed": true
+    },
+    {
+      "scenario": "NATIVE-MEDIA-POSTERS",
+      "classification": "c",
+      "reason": "Build MediaChecks before sim scenarios.",
+      "baseline_failed_assertions": [
+        "native_poster_resolution_sharpness_cache_and_live_still"
+      ],
+      "baseline_host_conditions": {
+        "quiet": true,
+        "summary": "air: load=[4.21 5.59 7.99] cpu_idle=74% cpus=8 other_heavy=0"
+      },
+      "initial_isolated_rerun": {
+        "passed": false,
+        "at": "2026-10-28T07:59:53.895351Z",
+        "host_conditions": {
+          "quiet": false,
+          "summary": "air: load=[7.18 6.36 6.12] cpu_idle=55% cpus=8 other_heavy=1"
+        },
+        "failed_assertions": [
+          {
+            "name": "native_poster_resolution_sharpness_cache_and_live_still",
+            "passed": false,
+            "detail": "synthetic native poster check: exec: \"MediaChecks\": executable file not found in $PATH"
+          }
+        ]
+      },
+      "final_evidence": "lab/evidence/sim/NATIVE-MEDIA-POSTERS.json",
+      "final_passed": true
+    },
+    {
+      "scenario": "NOTE-LIST",
+      "classification": "b",
+      "reason": "Exclude gateway-owned content_version from raw Truth comparison; preserve complete replica equality and verify valid content versions.",
+      "baseline_failed_assertions": [
+        "replica_converged"
+      ],
+      "baseline_host_conditions": {
+        "quiet": false,
+        "summary": "air: load=[6.73 6.51 8.67] cpu_idle=62% cpus=8 other_heavy=1"
+      },
+      "initial_isolated_rerun": {
+        "passed": false,
+        "at": "2026-10-28T08:29:51.598629Z",
+        "host_conditions": {
+          "quiet": false,
+          "summary": "air: load=[4.43 5.12 6.28] cpu_idle=61% cpus=8 other_heavy=1"
+        },
+        "failed_assertions": [
+          {
+            "name": "replica_converged",
+            "passed": false,
+            "detail": "truth_mismatch counts=8/8 hashes=8d72a1fbb60883df3ddf59bd8bb3a137a9d42e941370493a419d8796ee1aebe9/1d7cee259ca4a55daad17e0359481cda8181e5913b70fde212d9a85129f60389"
+          }
+        ]
+      },
+      "final_evidence": "lab/evidence/sim/NOTE-LIST.json",
+      "final_passed": true
+    },
+    {
+      "scenario": "USE-SEGB-DECODE",
+      "classification": "c",
+      "reason": "Build UsageChecks before sim scenarios.",
+      "baseline_failed_assertions": [
+        "scrubbed_segb_and_day_math"
+      ],
+      "baseline_host_conditions": {
+        "quiet": true,
+        "summary": "air: load=[4.21 5.59 7.99] cpu_idle=72% cpus=8 other_heavy=0"
+      },
+      "initial_isolated_rerun": {
+        "passed": false,
+        "at": "2026-10-28T08:29:43.629854Z",
+        "host_conditions": {
+          "quiet": true,
+          "summary": "air: load=[4.49 5.16 6.31] cpu_idle=70% cpus=8 other_heavy=0"
+        },
+        "failed_assertions": [
+          {
+            "name": "native_decoder_built",
+            "passed": false
+          }
+        ]
+      },
+      "final_evidence": "lab/evidence/sim/USE-SEGB-DECODE.json",
+      "final_passed": true
+    },
+    {
+      "scenario": "WEB-RM-REMINDERS-ITEMS",
+      "classification": "a",
+      "reason": "Quiet isolated gateway p95 passes the unchanged 10-ms budget; distinguish gateway timing from roundtrip timing.",
+      "baseline_failed_assertions": [
+        "mcp_1000_items_gateway_p95_under_10ms"
+      ],
+      "baseline_host_conditions": {
+        "quiet": true,
+        "summary": "air: load=[6.84 6.41 7.91] cpu_idle=72% cpus=8 other_heavy=0"
+      },
+      "initial_isolated_rerun": {
+        "passed": true,
+        "at": "2026-10-28T08:34:28.351721Z",
+        "host_conditions": {
+          "quiet": true,
+          "summary": "air: load=[5.74 5.58 6.12] cpu_idle=69% cpus=8 other_heavy=0"
+        },
+        "failed_assertions": [],
+        "latency": {
+          "1000_reminders_items_mcp": {
+            "samples": 100,
+            "p50_ms": 24.940292,
+            "p95_ms": 27.880292,
+            "max_ms": 30.606417,
+            "timeouts": 0
+          },
+          "1000_reminders_items_mcp_gateway": {
+            "samples": 100,
+            "p50_ms": 6.983833,
+            "p95_ms": 7.92325,
+            "max_ms": 9.2315,
+            "timeouts": 0
+          },
+          "1000_reminders_items_rest": {
+            "samples": 100,
+            "p50_ms": 9.49825,
+            "p95_ms": 10.302125,
+            "max_ms": 11.90975,
+            "timeouts": 0
+          },
+          "1000_reminders_items_rest_gateway": {
+            "samples": 100,
+            "p50_ms": 5.700125,
+            "p95_ms": 6.543916,
+            "max_ms": 7.809333,
+            "timeouts": 0
+          }
+        }
+      },
+      "final_evidence": "lab/evidence/sim/WEB-RM-REMINDERS-ITEMS.json",
+      "final_passed": true,
+      "final_host_conditions": {
+        "quiet": true,
+        "summary": "air: load=[5.88 6.83 8.09] cpu_idle=73% cpus=8 other_heavy=0"
+      },
+      "final_latency": {
+        "1000_reminders_items_mcp": {
+          "samples": 100,
+          "p50_ms": 26.370791,
+          "p95_ms": 31.803917,
+          "max_ms": 33.759291,
+          "timeouts": 0
+        },
+        "1000_reminders_items_mcp_gateway": {
+          "samples": 100,
+          "p50_ms": 7.504208,
+          "p95_ms": 9.200209,
+          "max_ms": 9.711208,
+          "timeouts": 0
+        },
+        "1000_reminders_items_rest": {
+          "samples": 100,
+          "p50_ms": 9.656916,
+          "p95_ms": 11.195625,
+          "max_ms": 12.03175,
+          "timeouts": 0
+        },
+        "1000_reminders_items_rest_gateway": {
+          "samples": 100,
+          "p50_ms": 5.954,
+          "p95_ms": 7.153042,
+          "max_ms": 7.40775,
+          "timeouts": 0
+        }
+      }
+    },
+    {
+      "scenario": "WEB-RM-THREAD",
+      "classification": "a",
+      "reason": "Controlled isolated and full-run timing passes unchanged budgets. Preserve initial quiet-start failure and measurement-time host probes.",
+      "baseline_failed_assertions": [
+        "mcp_thread_p95_budget"
+      ],
+      "baseline_host_conditions": {
+        "quiet": true,
+        "summary": "air: load=[4.37 5.6 7.39] cpu_idle=73% cpus=8 other_heavy=0"
+      },
+      "initial_isolated_rerun": {
+        "passed": false,
+        "at": "2026-10-28T08:34:45.980514Z",
+        "host_conditions": {
+          "quiet": true,
+          "summary": "air: load=[5.61 5.56 6.1] cpu_idle=75% cpus=8 other_heavy=0"
+        },
+        "failed_assertions": [
+          {
+            "name": "rest_thread_p95_budget",
+            "passed": false
+          },
+          {
+            "name": "mcp_thread_p95_budget",
+            "passed": false
+          }
+        ],
+        "latency": {
+          "mcp_thread": {
+            "samples": 100,
+            "p50_ms": 7.153958,
+            "p95_ms": 13.298625,
+            "max_ms": 31.577,
+            "timeouts": 0
+          },
+          "rest_thread": {
+            "samples": 100,
+            "p50_ms": 4.404,
+            "p95_ms": 27.076667,
+            "max_ms": 53.518875,
+            "timeouts": 0
+          }
+        }
+      },
+      "final_evidence": "lab/evidence/sim/WEB-RM-THREAD.json",
+      "final_passed": true,
+      "final_host_conditions": {
+        "quiet": true,
+        "summary": "air: load=[8.31 7.88 8.29] cpu_idle=71% cpus=8 other_heavy=0"
+      },
+      "final_latency": {
+        "mcp_thread": {
+          "samples": 100,
+          "p50_ms": 3.108125,
+          "p95_ms": 3.881625,
+          "max_ms": 12.606042,
+          "timeouts": 0
+        },
+        "rest_thread": {
+          "samples": 100,
+          "p50_ms": 2.196625,
+          "p95_ms": 3.221667,
+          "max_ms": 252.789667,
+          "timeouts": 0
+        }
+      }
+    }
+  ],
+  "full_regression_before_scoped_fts_fix": {
+    "command": "APPLE_BRIDGE_HEAVY_NO_SIM_LANE=1 packaging/dev/heavy.sh make sim",
+    "total": 227,
+    "passed": 224,
+    "exit_code": 2,
+    "failures": {
+      "CORE-BENCH": {
+        "passed": false,
+        "at": "2026-10-28T09:50:26.610167Z",
+        "host_conditions": {
+          "quiet": true,
+          "summary": "air: load=[10.33 9.43 11.74] cpu_idle=75% cpus=8 other_heavy=0"
+        },
+        "failed_assertions": [
+          {
+            "name": "automatic_sync_guarantees",
+            "passed": false
+          }
+        ]
+      },
+      "CORE-READMODEL-UPDATE-PERF": {
+        "passed": false,
+        "at": "2026-10-28T10:01:10.873458Z",
+        "host_conditions": {
+          "quiet": false,
+          "summary": "air: load=[11.45 9.28 10.05] cpu_idle=38% cpus=8 other_heavy=1"
+        },
+        "failed_assertions": [
+          {
+            "name": "huge_demo_seed_within_dataset_120_second_budget",
+            "passed": false
+          }
+        ],
+        "latency": {
+          "huge_demo_seed_commit": {
+            "samples": 1,
+            "p50_ms": 120002.780709,
+            "p95_ms": 120002.780709,
+            "max_ms": 120002.780709,
+            "timeouts": 0
+          }
+        }
+      },
+      "MSG-READ-RICH-FIELDS": {
+        "passed": false,
+        "at": "2026-10-28T10:15:07.53855Z",
+        "host_conditions": {
+          "quiet": true,
+          "summary": "air: load=[11.14 10.52 9.98] cpu_idle=43% cpus=8 other_heavy=0"
+        },
+        "failed_assertions": [
+          {
+            "name": "independent_truth_synthetic_field_counts",
+            "passed": false
+          }
+        ]
+      }
+    }
+  },
+  "post_fts_core_verification": {
+    "isolated_CORE_BENCH_passed": true,
+    "remaining_core_groups": [
+      {
+        "scenarios_run": 36,
+        "passed": true,
+        "scope": "core-part-1"
+      },
+      {
+        "scenarios_run": 37,
+        "passed": true,
+        "scope": "core-part-2"
+      }
+    ],
+    "total_core_scenarios_passed": 74
+  },
+  "controlled_thread_measurement": {
+    "latency": {
+      "mcp_thread": {
+        "samples": 100,
+        "p50_ms": 2.171709,
+        "p95_ms": 3.767417,
+        "max_ms": 21.06425,
+        "timeouts": 0
+      },
+      "rest_thread": {
+        "samples": 100,
+        "p50_ms": 1.307958,
+        "p95_ms": 3.165833,
+        "max_ms": 169.054208,
+        "timeouts": 0
+      }
+    },
+    "host_samples": {
+      "mcp_sampling_host_after": {
+        "quiet": true,
+        "cpu_idle_percent": 85,
+        "other_active_heavy_slots": 0
+      },
+      "mcp_sampling_host_before": {
+        "quiet": true,
+        "cpu_idle_percent": 85,
+        "other_active_heavy_slots": 0
+      },
+      "rest_sampling_host_after": {
+        "quiet": true,
+        "cpu_idle_percent": 86,
+        "other_active_heavy_slots": 0
+      },
+      "rest_sampling_host_before": {
+        "quiet": true,
+        "cpu_idle_percent": 84,
+        "other_active_heavy_slots": 0
+      }
+    }
+  },
+  "additional_regression_rerun": {
+    "scenario": "MSG-READ-RICH-FIELDS",
+    "result": {
+      "passed": true,
+      "at": "2026-10-28T11:14:52.965645Z",
+      "host_conditions": {
+        "quiet": true,
+        "summary": "air: load=[4.05 4.9 5.79] cpu_idle=68% cpus=8 other_heavy=0"
+      },
+      "failed_assertions": []
+    },
+    "decision": "Independent native Truth check passed on quiet isolated rerun; preserve private failure output on future failures."
+  },
+  "validation": {
+    "make_native": "passed",
+    "lint_build_web_unit_after_fts_fix": "passed",
+    "go_test_p2_after_fts_fix": "passed",
+    "latest_rebase_gates": "passed: make lint; make features; go build -p 2 ./...; go test -p 2 ./...; web pnpm test:unit"
+  },
+  "limited_sim_items": [],
+  "grants_needed": [],
+  "decisions": [
+    "Keep all dataset sizes, sample counts, timeouts and numeric thresholds unchanged.",
+    "Use per-source scan counts so Calendar revalidation is verified alongside checkpoint resumption.",
+    "Retain complete gateway-to-replica equality for Notes; raw Apple Truth cannot supply the gateway-owned content version.",
+    "Keep the existing development signing identity; the original media-cleanup build failure did not reproduce."
+  ]
+}

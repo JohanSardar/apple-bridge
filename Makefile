@@ -27,7 +27,7 @@ features:
 	cd web && pnpm exec node --test dev/scenarios.test.mjs && pnpm exec node dev/scenarios.mjs
 	go run ./tools/featuregraph -html design/features.html
 
-sim:
+sim: native
 	go run ./cmd/bridge-lab run lab/scenarios --level sim
 
 real:

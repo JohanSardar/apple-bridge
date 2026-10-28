@@ -1,36 +1,36 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[13.15 19.6 30.27] cpu_idle=21% cpus=8 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[4.16 5.1 5.93] cpu_idle=77% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5HQSKP8WNBZB5G8CDTB91XM",
+  "run_id": "run_01M613EKRP54GMBEH9FTHZ21M3",
   "metrics": {
     "capture_observer_resets": 0,
-    "fixture_sha256": "be3df96d71551dc78a282ea368e0b7fe7a31f61069e5598eda5f73dde281ec4c",
+    "fixture_sha256": "8300343676a9c2400e903e4ff1131c464812f520a105747ef15be6dc7055d494",
     "persisted_messages": 104900,
     "readmodels_after": {
-      "activity_by_chat": "701534f5edeff9194506d79d72d097127d1994d9e804e25a4ed7e89d86373a0e",
-      "attachment_by_message": "329d2bf81fc83aada0589d7d5a41f491ea2b5bbc64f0f9a89e23f4a8bb5b5261",
-      "chat_summary": "1c481def25333975880945dfe26c230a83903098c93505c9ace873fcd7025ede",
-      "msg_by_chat": "1e21bb5e9cd71bf09a51dcb36d35cd748948fa234f3352bfc7704eed70829e2d",
-      "reaction_by_message": "255e1bd68879d4691d2a1f3ef3d5b7bc0871ddd8e32c3e5de1b5580cc1977340"
+      "activity_by_chat": "afa2d0b8c7e44bab14fa69d532453b6db2865eb1f4793581f901231e20102cfe",
+      "attachment_by_message": "29b3f9ba960e44b73852d7db91dc65a67aff3a83c44e9f6d5aebd5e22fe9ea95",
+      "chat_summary": "3e29bb241581b524df01384528768c0ebac5add0e3910caa791a967f2f299b77",
+      "msg_by_chat": "6feeef0e2b64385e14de5d6cc12ab0f3e3ee17e8c1acdd7e429a2bc94baacf7a",
+      "reaction_by_message": "e2d33ba3999822354698ff95d03037414f651b46d7b57b7e73fba3e37bdfdef3"
     },
     "readmodels_before": {
-      "activity_by_chat": "701534f5edeff9194506d79d72d097127d1994d9e804e25a4ed7e89d86373a0e",
-      "attachment_by_message": "329d2bf81fc83aada0589d7d5a41f491ea2b5bbc64f0f9a89e23f4a8bb5b5261",
-      "chat_summary": "1c481def25333975880945dfe26c230a83903098c93505c9ace873fcd7025ede",
-      "msg_by_chat": "bf462c128fe28ea5861ab05711037a0fc226a18f9a3e80d446922223685b44ee",
-      "reaction_by_message": "255e1bd68879d4691d2a1f3ef3d5b7bc0871ddd8e32c3e5de1b5580cc1977340"
+      "activity_by_chat": "afa2d0b8c7e44bab14fa69d532453b6db2865eb1f4793581f901231e20102cfe",
+      "attachment_by_message": "29b3f9ba960e44b73852d7db91dc65a67aff3a83c44e9f6d5aebd5e22fe9ea95",
+      "chat_summary": "3e29bb241581b524df01384528768c0ebac5add0e3910caa791a967f2f299b77",
+      "msg_by_chat": "c7845ac26c1c97e71cf23691f12374f69a8810e87fbda58f565c8e1903780ab2",
+      "reaction_by_message": "e2d33ba3999822354698ff95d03037414f651b46d7b57b7e73fba3e37bdfdef3"
     }
   },
   "scenario": "CORE-READMODEL-UPDATE-PERF",
   "level": "sim",
   "passed": true,
-  "git_sha": "c90f32452cd566e9e7876cbe8c1de31730a11b72",
-  "at": "2026-10-22T12:01:26.217468Z",
+  "git_sha": "9ebe48cd080c55b8c40a8ea10ee086dd3c981fdf",
+  "at": "2026-10-28T11:13:45.238021Z",
   "assertions": [
     {
-      "name": "clone_closed_fixture",
+      "name": "huge_demo_seed_within_dataset_120_second_budget",
       "passed": true
     },
     {
@@ -70,6 +70,10 @@
       "passed": true
     },
     {
+      "name": "reaction_rows_and_payloads_match_canonical",
+      "passed": true
+    },
+    {
       "name": "attachment_rows_and_payloads_match_canonical",
       "passed": true
     },
@@ -86,18 +90,6 @@
       "passed": true
     },
     {
-      "name": "reaction_rows_and_payloads_match_canonical",
-      "passed": true
-    },
-    {
-      "name": "identical_cloned_canonical_fixture",
-      "passed": true
-    },
-    {
-      "name": "all_five_readmodel_tables_byte_equal_to_baseline",
-      "passed": true
-    },
-    {
       "name": "credential_backend_override_restored",
       "passed": true
     }
@@ -105,9 +97,16 @@
   "latency": {
     "capture_100_commit": {
       "samples": 5,
-      "p50_ms": 293.4205,
-      "p95_ms": 371.00575,
-      "max_ms": 371.00575,
+      "p50_ms": 54.533834,
+      "p95_ms": 61.07875,
+      "max_ms": 61.07875,
+      "timeouts": 0
+    },
+    "huge_demo_seed_commit": {
+      "samples": 1,
+      "p50_ms": 48762.550625,
+      "p95_ms": 48762.550625,
+      "max_ms": 48762.550625,
       "timeouts": 0
     }
   },
@@ -118,7 +117,6 @@
     "budget": "1000 ms p95 transaction guard derived from R-LIVE; not end-to-end certification",
     "capture": "five captures of 100 existing messages",
     "dataset": "synthetic huge demo",
-    "seed": "APFS clone of closed synthetic fixture; seed timing measured separately",
     "transport": "State capture transaction API"
   }
 }

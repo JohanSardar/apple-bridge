@@ -1,19 +1,20 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[6.89 5.08 5.25] cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[5.88 6.83 8.09] cpu_idle=73% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5G6PX55645W9W2P2WRSXR14",
+  "run_id": "run_01M610MMQ5FVPHKAZM7VEW1S3J",
   "metrics": {
-    "mcp_1000_items_response_bytes": 872545,
+    "capture_observer_resets": 0,
+    "mcp_1000_items_response_bytes": 872544,
     "mcp_text_bytes": 412188,
     "rest_1000_items_response_bytes": 412189
   },
   "scenario": "WEB-RM-REMINDERS-ITEMS",
   "level": "sim",
   "passed": true,
-  "git_sha": "3907c1d45ea6f74919509314881afda7f639afe4",
-  "at": "2026-10-21T21:43:37.38163Z",
+  "git_sha": "9ebe48cd080c55b8c40a8ea10ee086dd3c981fdf",
+  "at": "2026-10-28T10:24:37.093867Z",
   "assertions": [
     {
       "name": "world_start",
@@ -324,15 +325,15 @@
       "passed": true
     },
     {
+      "name": "nested_fixture_cycle-b",
+      "passed": true
+    },
+    {
       "name": "nested_fixture_grandchild",
       "passed": true
     },
     {
       "name": "nested_fixture_cycle-a",
-      "passed": true
-    },
-    {
-      "name": "nested_fixture_cycle-b",
       "passed": true
     },
     {
@@ -503,30 +504,30 @@
   "latency": {
     "1000_reminders_items_mcp": {
       "samples": 100,
-      "p50_ms": 15.823875,
-      "p95_ms": 16.986708,
-      "max_ms": 32.984042,
+      "p50_ms": 26.370791,
+      "p95_ms": 31.803917,
+      "max_ms": 33.759291,
       "timeouts": 0
     },
     "1000_reminders_items_mcp_gateway": {
       "samples": 100,
-      "p50_ms": 4.602083,
-      "p95_ms": 5.117334,
-      "max_ms": 20.375167,
+      "p50_ms": 7.504208,
+      "p95_ms": 9.200209,
+      "max_ms": 9.711208,
       "timeouts": 0
     },
     "1000_reminders_items_rest": {
       "samples": 100,
-      "p50_ms": 7.537167,
-      "p95_ms": 8.334667,
-      "max_ms": 8.663417,
+      "p50_ms": 9.656916,
+      "p95_ms": 11.195625,
+      "max_ms": 12.03175,
       "timeouts": 0
     },
     "1000_reminders_items_rest_gateway": {
       "samples": 100,
-      "p50_ms": 4.713833,
-      "p95_ms": 5.158083,
-      "max_ms": 5.204667,
+      "p50_ms": 5.954,
+      "p95_ms": 7.153042,
+      "max_ms": 7.40775,
       "timeouts": 0
     }
   },

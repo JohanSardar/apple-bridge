@@ -104,6 +104,11 @@ func recordMultiset(records []contracts.Record, full bool) map[string]int {
 		}
 		var data any
 		decodeData(r.Data, &data)
+		if !full && r.Collection == "notes.note" {
+			if fields, ok := data.(map[string]any); ok {
+				delete(fields, "content_version")
+			}
+		}
 		r.Data, _ = json.Marshal(data)
 		var value any = r
 		if !full {

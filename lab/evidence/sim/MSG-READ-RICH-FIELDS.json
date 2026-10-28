@@ -1,10 +1,11 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[9.36 11.34 11.19] cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[4.05 4.9 5.79] cpu_idle=68% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5EQVC5R1WCTJFBMX83HS0AP",
+  "run_id": "run_01M613GNX55XCYNQ0QKTZGZQCE",
   "metrics": {
+    "capture_observer_resets": 0,
     "mcp_filter_deleted": 1,
     "mcp_filter_known": 1,
     "mcp_filter_spam": 1,
@@ -21,8 +22,8 @@
   "scenario": "MSG-READ-RICH-FIELDS",
   "level": "sim",
   "passed": true,
-  "git_sha": "64dcd17305e94582cc0b2ffd54fb7f8e52520e3f",
-  "at": "2026-10-21T08:04:40.760761Z",
+  "git_sha": "9ebe48cd080c55b8c40a8ea10ee086dd3c981fdf",
+  "at": "2026-10-28T11:14:52.965645Z",
   "assertions": [
     {
       "name": "native_rich_capture_and_live_mutation",

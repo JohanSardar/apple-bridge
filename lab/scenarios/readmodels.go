@@ -240,6 +240,9 @@ func runReadModels(ctx context.Context, s Scenario, level string) Evidence {
 		}
 		durations := []float64{}
 		ok := true
+		if s.ID == "WEB-RM-THREAD" {
+			e.Metrics[protocol+"_sampling_host_before"] = world.SampleHost(ctx, false)
+		}
 		for i := 0; i < 100; i++ {
 			if s.ID == "WEB-RM-CHATS" {
 				time.Sleep(10 * time.Millisecond)
@@ -259,6 +262,9 @@ func runReadModels(ctx context.Context, s Scenario, level string) Evidence {
 		name := protocol + "_" + strings.ToLower(strings.TrimPrefix(s.ID, "WEB-RM-"))
 		latency := stats(durations, 0)
 		e.Latency[name] = latency
+		if s.ID == "WEB-RM-THREAD" {
+			e.Metrics[protocol+"_sampling_host_after"] = world.SampleHost(ctx, false)
+		}
 		e.Metrics[protocol+"_rate_limited_samples"] = rateLimited
 		budget := 15.0
 		if s.ID == "WEB-RM-THREAD" {

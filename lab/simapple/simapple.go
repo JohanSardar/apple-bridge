@@ -166,11 +166,15 @@ func Run(ctx context.Context, cfg Config) error {
 			fake.durable.Committed = progress.Committed
 			fake.durable.Checkpoints = progress.Checkpoints
 			fake.durable.Scans = progress.Scans
+			fake.durable.SourceScans = progress.SourceScans
 			fake.durable.InProgress = progress.InProgress
 		}
 	}
 	if fake.durable.InProgress == nil {
 		fake.durable.InProgress = map[contracts.Source]bool{}
+	}
+	if fake.durable.SourceScans == nil {
+		fake.durable.SourceScans = map[string]int{}
 	}
 	fake.generation = fake.durable.Generation
 	fake.contactSequence = fake.durable.ContactSequence
@@ -208,7 +212,7 @@ func Run(ctx context.Context, cfg Config) error {
 			sum := sha256.Sum256(data)
 			digests[digest] = hex.EncodeToString(sum[:])
 		}
-		json.NewEncoder(w).Encode(map[string]any{"blob_digests": digests, "scans": fake.durable.Scans, "revision": fake.durable.Revision, "committed": fake.durable.Committed})
+		json.NewEncoder(w).Encode(map[string]any{"blob_digests": digests, "scans": fake.durable.Scans, "source_scans": fake.durable.SourceScans, "revision": fake.durable.Revision, "committed": fake.durable.Committed})
 	})
 	mux.HandleFunc("GET /inspect", func(w http.ResponseWriter, r *http.Request) { json.NewEncoder(w).Encode(fake.inspect()) })
 	mux.HandleFunc("POST /source-state", func(w http.ResponseWriter, r *http.Request) {
@@ -757,6 +761,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 		scan := source == contracts.Calendar && !f.calendarDenied || (source == contracts.Messages && open.Checkpoints[source].RefreshBlobs) || f.durable.InProgress[source] || checkpoints[source] == "" || checkpoints[source] != f.durable.Checkpoints[source] || emitRevision != f.durable.Committed[source]
 		if scan {
 			f.durable.Scans++
+			f.durable.SourceScans[string(source)]++
 			f.progressLocked()
 		}
 		f.mu.Unlock()

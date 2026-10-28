@@ -1,10 +1,11 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[25.48 28.34 29.46] cpu_idle=49% cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[4.44 6.34 8.17] cpu_idle=59% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5H4VXYWQZ26NED5RQG393WJ",
+  "run_id": "run_01M610FJN31GN9XAQN13V6DR8W",
   "metrics": {
+    "capture_observer_resets": 0,
     "poster": {
       "cache_upgrade_preserved_video_and_thumbhash": true,
       "edge_contrast": 0.6372549019607843,
@@ -20,8 +21,8 @@
   "scenario": "NATIVE-MEDIA-POSTERS",
   "level": "sim",
   "passed": true,
-  "git_sha": "7d2b8a6405d448023e308e877beeff923c85ce7e",
-  "at": "2026-10-22T06:30:39.325452Z",
+  "git_sha": "9ebe48cd080c55b8c40a8ea10ee086dd3c981fdf",
+  "at": "2026-10-28T10:21:51.139407Z",
   "assertions": [
     {
       "name": "native_poster_resolution_sharpness_cache_and_live_still",
