@@ -1144,7 +1144,7 @@ features:
 
   - id: files.capture
     title: Opt-in files metadata and queries
-    notes: Native and local gates are being qualified; public gateway coverage and full Helper idle qualification remain unverified.
+    notes: Native build, local gate and focused sim checks pass; public gateway coverage and full Helper idle qualification remain unverified.
     requirements: [R-API, R-SCOPE]
     milestone: G9
     modules: [native/Sources/FilesSource]
