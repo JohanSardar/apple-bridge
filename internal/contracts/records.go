@@ -76,11 +76,12 @@ type ReadQuery struct {
 }
 
 type ReadResult struct {
-	Aliases []Alias        `json:"aliases,omitempty"`
-	Replica *ReplicaStatus `json:"replica,omitempty"`
-	Records []Record       `json:"records"`
-	Cursor  Cursor         `json:"cursor"`
-	Next    string         `json:"next,omitempty"`
+	Permissions map[string]string `json:"permissions,omitempty"`
+	Aliases     []Alias           `json:"aliases,omitempty"`
+	Replica     *ReplicaStatus    `json:"replica,omitempty"`
+	Records     []Record          `json:"records"`
+	Cursor      Cursor            `json:"cursor"`
+	Next        string            `json:"next,omitempty"`
 }
 
 func NewID(prefix string) string {

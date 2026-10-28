@@ -1,0 +1,83 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[11.25 7.18 6.99] cpu_idle=75% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M61NK3EJGS8PXR7KWJK4TR10",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "CORE-PERMISSION-STATUS",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-28T16:30:46.738211Z",
+  "assertions": [
+    {
+      "name": "helper_report",
+      "passed": true
+    },
+    {
+      "name": "automation_music",
+      "passed": true
+    },
+    {
+      "name": "bluetooth",
+      "passed": true
+    },
+    {
+      "name": "camera",
+      "passed": true
+    },
+    {
+      "name": "microphone",
+      "passed": true
+    },
+    {
+      "name": "notifications",
+      "passed": true
+    },
+    {
+      "name": "photos",
+      "passed": true
+    },
+    {
+      "name": "screen_recording",
+      "passed": true
+    },
+    {
+      "name": "unknown_rejected",
+      "passed": true
+    },
+    {
+      "name": "automation_mail",
+      "passed": true
+    },
+    {
+      "name": "automation_safari",
+      "passed": true
+    },
+    {
+      "name": "automation_shortcuts_events",
+      "passed": true
+    },
+    {
+      "name": "focus",
+      "passed": true
+    },
+    {
+      "name": "location",
+      "passed": true
+    },
+    {
+      "name": "speech_recognition",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

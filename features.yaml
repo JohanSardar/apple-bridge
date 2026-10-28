@@ -35,6 +35,16 @@ requirements:
   R-WEB-SECURE: Passkey device sessions, public-computer mode, revocation, origin and CSP protection, rate limits, agent levels with owner approval
 
 features:
+  - id: core.permissions
+    title: Explicit Helper permission requests and non-prompting status
+    requirements: [R-PKG]
+    milestone: G0
+    modules: [native/Sources/AppleSession, internal/runtime, internal/operations]
+    depends_on: []
+    status: done
+    notes: Screen Recording preflight failure and unavailable Automation targets return unknown; real status reads verify unchanged TCC, zero native request API calls and no new on-screen dialog owner windows; sim checks each native dispatch adapter and unknown-name rejection.
+    scenarios:
+      - {id: CORE-PERMISSION-STATUS, levels: [sim, real]}
   - id: core.shortcuts
     title: Deterministic workflow compilation and macOS shortcut signing
     requirements: [R-PKG]
