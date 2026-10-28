@@ -22,7 +22,7 @@ public final class VoiceMemosSource: Source {
     public func scan(into sink: any ObservationSink, live: Bool, maxRows: Int = 100000) async throws {
         let started = timestamp()
         let reader = try reader()
-        let scan = try CompleteScan.read(reader: reader, sql: "SELECT COALESCE(NULLIF(ZUNIQUEID,''),CAST(Z_PK AS TEXT)) AS id,CAST(ZFOLDER AS TEXT) AS folder_id,* FROM ZCLOUDRECORDING", keyColumn: "id", scope: "voice_memos.recording", previousScope: "voice_memos.recording", previousGeneration: generation, previousKeys: Set(committed.keys), maxRows: maxRows, timeout: 5)
+        let scan = try CompleteScan.read(reader: reader, sql: "SELECT COALESCE(NULLIF(ZUNIQUEID,''),CAST(Z_PK AS TEXT)) AS id,CAST(ZFOLDER AS TEXT) AS folder_id,ZUNIQUEID,ZCUSTOMLABEL,ZDATE,ZDURATION,ZEVICTIONDATE,ZFOLDER FROM ZCLOUDRECORDING", keyColumn: "id", scope: "voice_memos.recording", previousScope: "voice_memos.recording", previousGeneration: generation, previousKeys: Set(committed.keys), maxRows: maxRows, timeout: 5)
         guard scan.complete else { throw SourceFailure.unavailable }
         var current: [String: JSON] = [:]
         for row in scan.rows {

@@ -1,7 +1,7 @@
 id: VM-CAPTURE
 feature: recordings.read
 levels: [sim]
-given: [{world: {replicas: 0}}]
-when: [{recordings: {}}]
+given: [{world: {replicas: 1}}]
+when: [{phone: {}}]
 then: [{converge: {}}]
 cleanup: [{world: {}}]

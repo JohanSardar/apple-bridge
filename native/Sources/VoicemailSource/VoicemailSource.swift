@@ -22,7 +22,7 @@ public final class VoicemailSource: Source {
     public func scan(into sink: any ObservationSink, live: Bool, maxRows: Int = 100000) async throws {
         let started = timestamp()
         let reader = try reader()
-        let scan = try CompleteScan.read(reader: reader, sql: "SELECT COALESCE(NULLIF(ZRECORDUUID,''),CAST(Z_PK AS TEXT)) AS id,* FROM ZSTOREDMESSAGE", keyColumn: "id", scope: "voicemail.message", previousScope: "voicemail.message", previousGeneration: generation, previousKeys: Set(committed.keys), maxRows: maxRows, timeout: 5)
+        let scan = try CompleteScan.read(reader: reader, sql: "SELECT COALESCE(NULLIF(ZRECORDUUID,''),CAST(Z_PK AS TEXT)) AS id,ZRECORDUUID,ZFROM,ZDATECREATED,ZDURATION,ZISREAD,ZMAILBOXTYPE,ZPROVIDER,ZMESSAGETYPE FROM ZSTOREDMESSAGE", keyColumn: "id", scope: "voicemail.message", previousScope: "voicemail.message", previousGeneration: generation, previousKeys: Set(committed.keys), maxRows: maxRows, timeout: 5)
         guard scan.complete else { throw SourceFailure.unavailable }
         var current: [String: JSON] = [:]
         for row in scan.rows {
