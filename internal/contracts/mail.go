@@ -4,9 +4,6 @@ const Mail Source = "mail"
 
 func init() {
 	RegisterSource(Mail, "Mail", true)
-	registerDescriptors(func() []OperationDescriptor {
-		return []OperationDescriptor{{Name: "mail.body", Version: 1, Kind: QueryOp, Source: Mail, Scope: "mail:read", Input: Query{}, Output: QueryResult{}, Description: "Read local Mail body"}}
-	}, 80)
 	for collection, prefix := range map[string]string{"mail.account": "mac", "mail.mailbox": "mbx", "mail.message": "mml", "mail.attachment": "mat"} {
 		Collections[collection] = prefix
 	}

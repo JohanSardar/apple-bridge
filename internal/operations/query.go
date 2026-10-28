@@ -109,6 +109,9 @@ func (g *LocalGateway) Query(ctx context.Context, p trust.Principal, q contracts
 		}
 	}()
 	if q.Op == "mail.body" {
+		if g.State == nil {
+			return out, contracts.ErrUnavailable
+		}
 		var args struct {
 			MessageID string `json:"message_id"`
 		}

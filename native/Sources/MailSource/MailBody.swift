@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 import SourceSupport
 
 public enum MailBody {
@@ -23,17 +24,28 @@ public enum MailBody {
         guard let file = found else { return result("offloaded", "", "") }
         let resolved = file.resolvingSymlinksInPath()
         guard resolved.path.hasPrefix(root.resolvingSymlinksInPath().path + "/") else { throw SourceFailure.invalid }
+        var metadata = stat()
+        guard Darwin.lstat(resolved.path, &metadata) == 0 else { throw SourceFailure.unavailable }
+        if metadata.st_flags & UInt32(SF_DATALESS) != 0 { return result("offloaded", "", "") }
         let values = try file.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey])
         guard values.isRegularFile == true, let size = values.fileSize, size <= 32 << 20 else { throw SourceFailure.unavailable }
-        let data = try Data(contentsOf: resolved)
+        let handle = try FileHandle(forReadingFrom: resolved)
+        defer { try? handle.close() }
+        let data = try handle.read(upToCount: (32 << 20) + 1) ?? Data()
+        guard data.count <= 32 << 20 else { throw SourceFailure.unavailable }
         guard let newline = data.firstIndex(of: 10), newline < 20, let length = Int(String(decoding: data[..<newline], as: UTF8.self)), length >= 0, length <= 32 << 20 else { throw SourceFailure.corrupt }
         let start = newline + 1
         let available = min(length, data.count - start)
-        let body = String(decoding: data[start..<(start + available)], as: UTF8.self)
+        guard let body = String(data: data.subdata(in: start..<(start + available)), encoding: .isoLatin1) else { throw SourceFailure.corrupt }
         var partial = file.lastPathComponent.contains(".partial.") || available < length
         let decoded = try mime(body, depth: 0, partial: &partial)
         if decoded.0.isEmpty && decoded.1.isEmpty { partial = true }
-        return result(partial ? "partial" : "downloaded", decoded.0, decoded.1)
+        var plain = decoded.0
+        if plain.isEmpty && !decoded.1.isEmpty {
+            let raw = decoded.1.replacingOccurrences(of: "<pre>", with: "").replacingOccurrences(of: "</pre>", with: "").replacingOccurrences(of: "&lt;", with: "<").replacingOccurrences(of: "&gt;", with: ">").replacingOccurrences(of: "&quot;", with: "\"").replacingOccurrences(of: "&#39;", with: "'").replacingOccurrences(of: "&amp;", with: "&")
+            plain = raw.replacingOccurrences(of: "(?is)<(script|style)\\b[^>]*>.*?</\\1\\s*>", with: "", options: .regularExpression).replacingOccurrences(of: "<[^>]*>", with: "", options: .regularExpression)
+        }
+        return result(partial ? "partial" : "downloaded", plain, decoded.1)
     }
     private static func result(_ state: String, _ text: String, _ html: String) -> JSON {
         .object(["state": .string(state), "plain_text": .string(text), "html": .string(html)])
@@ -69,7 +81,7 @@ public enum MailBody {
             return (text, html)
         }
         guard type.hasPrefix("text/plain") || type.hasPrefix("text/html") else { return ("", "") }
-        var bytes = Data(payload.utf8)
+        guard var bytes = payload.data(using: .isoLatin1) else { throw SourceFailure.corrupt }
         let encoding = headers["content-transfer-encoding", default: ""].lowercased()
         if encoding == "base64" {
             guard let decoded = Data(base64Encoded: payload.filter { !$0.isWhitespace }) else { partial = true; return ("", "") }

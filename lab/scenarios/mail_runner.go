@@ -18,6 +18,10 @@ func runMail(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "MAIL-BODY-REAL" {
 		_, err := os.Stat(filepath.Join(os.Getenv("HOME"), "Library/Mail/V10/MailData/Envelope Index"))
 		e.Assertions = append(e.Assertions, Assertion{Name: "real_mail_store_available", Passed: err == nil})
+		if os.IsNotExist(err) {
+			e.Status = "limited"
+			e.Conditions = map[string]string{"reason": "No V10 Envelope Index on this Mac; real body Truth qualification unavailable"}
+		}
 		e.Passed = false
 		return e
 	}
