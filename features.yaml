@@ -979,15 +979,46 @@ features:
     modules: [relay]
     depends_on: []
     status: limited
-    notes: G2-1/G2-2 server and T13 stream interface; listener-exit cancellation, configurable stream inactivity limits, strict unknown-SNI closure without tunnel admission, and kill-switch drain checks pass sim. Network tunnel transport belongs to T13.
+    notes: Device-signed outbound smux TLS tunnel, reconnect and health pings; Mac ACME DNS-01, custom-domain checks, CT warnings and VM service deployment. Live readiness is limited by missing NS delegation, trusted control TLS and VM OAuth scopes.
     scenarios:
       - {id: RELAY-PASSTHROUGH, levels: [sim]}
       - {id: RELAY-ENROLL, levels: [sim]}
       - {id: RELAY-LIMITS, levels: [sim]}
+      - {id: RELAY-STREAMS, levels: [sim]}
+      - {id: RELAY-ACME, levels: [sim]}
+      - {id: RELAY-OWN-DOMAIN, levels: [sim]}
+      - {id: RELAY-REAL, levels: [real]}
+      - {id: CONN-RELAY-CLAUDE, levels: [real]}
     limits:
+      - {scenario: RELAY-REAL, level: real, reason: NS delegation absent; control certificate is bootstrap self-signed; VM service account lacks DNS OAuth scopes and needs DNS IAM verification.}
+      - {scenario: CONN-RELAY-CLAUDE, level: real, reason: Same public DNS and trusted TLS blockers as RELAY-REAL; connector setup requires Johan.}
       - scenario: RELAY-PASSTHROUGH
         level: sim
         reason: Locally generated fixture CA replaces unavailable Pebble; ciphertext observed at relay buffers, without an independent process heap/log scan.
+
+  - id: remote.public-enroll
+    title: Enroll a public-host passkey with a terminal QR
+    requirements: [R-SECURE, R-WEB-REACH]
+    milestone: W1
+    modules: [remote, web, trust]
+    depends_on: [web.remote]
+    status: done
+    scenarios:
+      - {id: AUTH-PUBLIC-ENROLL, levels: [web]}
+    notes: Public URL requires Remote on; QR uses the existing Tailscale QR utility. Chromium virtual authenticators verify public RP enrollment and localhost exclusion.
+  - id: remote.private
+    title: Private userspace Tailscale access through localhost
+    requirements: [R-SECURE, R-WEB-REACH]
+    milestone: W1
+    modules: [remote, web]
+    depends_on: [web.remote]
+    status: limited
+    scenarios:
+      - {id: RMT-PRIVATE-CONNECT, levels: [sim, replica]}
+    limits:
+      - {scenario: RMT-PRIVATE-CONNECT, level: replica, reason: Ubuntu reachable but a new userspace node requires interactive Tailscale login; no real login authorized tonight.}
+    notes: Five-minute single-use invitations, ephemeral in-memory connecting identities, private approval IPC and shared web/API/feed dispatch pass sim regression coverage; localhost origin retained; hosted connectors unsupported.
+
   - id: vision.queries
     title: Transient Vision OCR and PDF extraction
     requirements: [R-API, R-SCOPE]

@@ -1,0 +1,4 @@
+id: RMT-PRIVATE-CONNECT
+feature: remote.private
+levels: [sim, replica]
+when: [{relay_service: {}}]

@@ -68,24 +68,28 @@ func (r *Remote) handler(proxyPath string) http.Handler {
 				req.RemoteAddr = source
 			}
 		}
-		if req.URL.Path == streamCheckPath {
-			streamCheck(w, req)
-			return
-		}
-		if req.URL.Path == "/v1/feed" && r.feed != nil {
-			r.feed.ServeHTTP(w, req)
-			return
-		}
-		if req.URL.Path == "/v1/feed" || strings.HasPrefix(req.URL.Path, "/v1/feed/") {
-			http.NotFound(w, req)
-			return
-		}
-		if strings.HasPrefix(req.URL.Path, "/v1/") || req.URL.Path == "/mcp" || strings.HasPrefix(req.URL.Path, "/mcp/") {
-			r.api.ServeHTTP(w, req)
-			return
-		}
-		r.web.ServeHTTP(w, req)
+		r.dispatch(w, req, r.web, r.api)
 	})
+}
+
+func (r *Remote) dispatch(w http.ResponseWriter, req *http.Request, web, api http.Handler) {
+	if req.URL.Path == streamCheckPath {
+		streamCheck(w, req)
+		return
+	}
+	if req.URL.Path == "/v1/feed" && r.feed != nil {
+		r.feed.ServeHTTP(w, req)
+		return
+	}
+	if req.URL.Path == "/v1/feed" || strings.HasPrefix(req.URL.Path, "/v1/feed/") {
+		http.NotFound(w, req)
+		return
+	}
+	if strings.HasPrefix(req.URL.Path, "/v1/") || req.URL.Path == "/mcp" || strings.HasPrefix(req.URL.Path, "/mcp/") {
+		api.ServeHTTP(w, req)
+		return
+	}
+	web.ServeHTTP(w, req)
 }
 
 func (r *Remote) serveListener(ctx context.Context, listener net.Listener, proxyPath string, fail func(error)) {

@@ -101,7 +101,7 @@ func command(ctx context.Context, home, action, via, name, domain string, out io
 		}
 		return json.NewEncoder(out).Encode(status)
 	}
-	if action != "on" && action != "off" || via != "" && via != "system" && via != "embedded" && via != "relay" {
+	if action != "on" && action != "off" || via != "" && via != "system" && via != "embedded" && via != "relay" && via != "private" {
 		return contracts.ErrInvalid
 	}
 	if via == "" && action == "on" {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/http"
 	"time"
 
 	"tailscale.com/ipn"
@@ -22,10 +23,19 @@ type EmbeddedNode interface {
 	Close() error
 }
 
+type PrivateNode interface {
+	LocalClient() (LocalClient, error)
+	Listen(string, string) (net.Listener, error)
+	Close() error
+}
 type Options struct {
-	Node    func(string, string) (EmbeddedNode, error)
-	Probe   func(context.Context, string) (time.Time, error)
-	Recheck time.Duration
+	PrivateAPI  http.Handler
+	PrivateWeb  http.Handler
+	PrivateNode func(string, string) (PrivateNode, error)
+	Now         func() time.Time
+	Node        func(string, string) (EmbeddedNode, error)
+	Probe       func(context.Context, string) (time.Time, error)
+	Recheck     time.Duration
 }
 
 func NewWithOptions(home string, options Options) *Remote {

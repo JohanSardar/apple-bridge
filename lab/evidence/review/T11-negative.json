@@ -1,0 +1,16 @@
+{
+  "scenario": "RMT-PRIVATE-CONNECT",
+  "level": "sim",
+  "at": "2026-10-28T15:16:28.095088Z",
+  "mode": "guards temporarily removed; expected failure",
+  "failed_assertions": [
+    "approval_tokens_absent_from_status_and_logs",
+    "invitation_reuse_rejected",
+    "private_mcp_tools_list",
+    "private_feed_dispatch",
+    "private_transport_retains_authentication",
+    "connect_has_no_persisted_identity",
+    "approval_tokens_absent_from_status_and_logs",
+    "expired_invitation_rejected"
+  ]
+}
