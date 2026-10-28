@@ -1144,7 +1144,7 @@ features:
 
   - id: files.capture
     title: Opt-in files metadata and queries
-    notes: Final native build, public gateway qualification and local gate remain unverified; real scenarios timed out waiting for the native build lock on a host with load above 200.
+    notes: Native and local gates are being qualified; public gateway coverage and full Helper idle qualification remain unverified.
     requirements: [R-API, R-SCOPE]
     milestone: G9
     modules: [native/Sources/FilesSource]
@@ -1152,10 +1152,11 @@ features:
     status: limited
     scenarios:
       - {id: FILE-CAPTURE, levels: [sim]}
-      - {id: FILE-IDLE, levels: [sim]}
+      - {id: FILE-IDLE, levels: [sim, real]}
       - {id: FILE-SEARCH-REAL, levels: [real]}
       - {id: FILE-OFFLOAD-REAL, levels: [real]}
     limits:
-      - {scenario: FILE-IDLE, level: sim, reason: Five-minute real Helper CPU qualification pending.}
+      - {scenario: FILE-IDLE, level: sim, reason: Full Helper CPU qualification pending.}
+      - {scenario: FILE-IDLE, level: real, reason: Five-minute source CPU qualification pending.}
       - {scenario: FILE-SEARCH-REAL, level: real, reason: Real Spotlight indexing qualification pending.}
       - {scenario: FILE-OFFLOAD-REAL, level: real, reason: Real iCloud eviction and hydration qualification pending.}

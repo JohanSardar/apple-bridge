@@ -50,9 +50,18 @@ func runFiles(ctx context.Context, s Scenario, level string) Evidence {
 			return e
 		}
 	}
-	check := exec.CommandContext(ctx, filepath.Join(strings.TrimSpace(string(directory)), "FilesChecks"), s.ID)
+	args := []string{s.ID}
+	if s.ID == "FILE-IDLE" && level == "real" {
+		args = append(args, "--real-idle")
+	}
+	check := exec.CommandContext(ctx, filepath.Join(strings.TrimSpace(string(directory)), "FilesChecks"), args...)
 	out, err := check.CombinedOutput()
 	add("native_files_checks", err == nil)
+	for _, line := range strings.Split(string(out), "\n") {
+		if strings.HasPrefix(line, "idle_cpu_percent=") {
+			e.Metrics["idle_cpu_percent"] = strings.TrimPrefix(line, "idle_cpu_percent=")
+		}
+	}
 	if err != nil {
 		os.Stderr.Write(out)
 	}

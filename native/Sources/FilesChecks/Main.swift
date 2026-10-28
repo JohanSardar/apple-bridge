@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 import FilesSource
 import SourceSupport
 
@@ -57,9 +58,25 @@ struct Checks {
             guard scanGuard.finish(root: root.path, keys: [], complete: false).isEmpty,
                   scanGuard.finish(root: root.path, keys: [], complete: true) == ["one"] else { throw SourceFailure.corrupt }
         }
+        if CommandLine.arguments.contains("--real-idle") {
+            let capture = Task { try await source.capture(.null, into: IdleSink()) }
+            defer { capture.cancel() }
+            let start = clock_gettime_nsec_np(CLOCK_PROCESS_CPUTIME_ID)
+            let wall = Date()
+            try await Task.sleep(for: .seconds(300))
+            let cpu = Double(clock_gettime_nsec_np(CLOCK_PROCESS_CPUTIME_ID) - start) / 1e9
+            let percent = cpu / Date().timeIntervalSince(wall) * 100
+            print("idle_cpu_percent=\(percent)")
+            guard percent < 2 else { throw SourceFailure.capabilityUnproven }
+        }
         try FileManager.default.removeItem(at: file)
         let (after, _) = try await source.snapshot(root)
         guard !after.contains(where: { $0["native_key"].string == file.path }) else { throw SourceFailure.corrupt }
 
     }
+}
+
+struct IdleSink: ObservationSink {
+    func sourceState(source: String, state: String, coverage: JSON, capabilities: [String], reason: String) async throws {}
+    func emit(source: String, generation: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) async throws {}
 }
