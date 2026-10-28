@@ -1,4 +1,5 @@
 import FilesSource
+import PhotosSource
 import Foundation
 import CryptoKit
 import Darwin
@@ -255,7 +256,8 @@ public actor AppleSession: ObservationSink {
                     try? wire?.send(.object(["t": .string("QueryResult"), "id": id, "result_json": .object(["body_blob": .string(digest)]), "blobs": .array([.object(["digest": .string(digest), "size": .number(Double(encoded.count)), "handle": .string(handle)])])]))
                     return
                 }
-                let blobs: [JSON] = frame["op"].string == "files.read" ? [.object(["digest": result["digest"], "size": result["size"], "handle": .string("files-blob:" + result["digest"].string)])] : []
+                let photoBlob = frame["op"].string == "photos.original" || frame["op"].string == "photos.thumbnail"
+                let blobs: [JSON] = photoBlob ? [.object(["digest": result["digest"], "size": result["size"], "handle": result["handle"]])] : frame["op"].string == "files.read" ? [.object(["digest": result["digest"], "size": result["size"], "handle": .string("files-blob:" + result["digest"].string)])] : []
                 try? wire?.send(.object(["t": .string("QueryResult"), "id": id, "result_json": result, "blobs": .array(blobs)]))
             } catch {
                 let code = error is CancellationError ? "deadline" : (error as? SourceFailure == .invalid ? "invalid" : "unavailable")
@@ -279,7 +281,7 @@ public actor AppleSession: ObservationSink {
         guard let connection = wire else { return }
         let started = CaptureTrace.now()
         var prepared: UInt64 = 0
-        let source = frame["handle"].string.hasPrefix("files-blob:") ? "files" : frame["handle"].string.hasPrefix("notes-blob:") ? "notes" : (frame["handle"].string.hasPrefix("contacts-image:") ? "contacts" : (frame["handle"].string.hasPrefix("calendar-attachment:") ? "calendar" : "messages"))
+        let source = frame["handle"].string.hasPrefix("photos-blob:") ? "photos" : frame["handle"].string.hasPrefix("files-blob:") ? "files" : frame["handle"].string.hasPrefix("notes-blob:") ? "notes" : (frame["handle"].string.hasPrefix("contacts-image:") ? "contacts" : (frame["handle"].string.hasPrefix("calendar-attachment:") ? "calendar" : "messages"))
         defer { trace.record("helper_blob_read", fields: ["source": .string(source), "started_ns": .integer(started), "prepared_ns": .integer(prepared), "finished_ns": .integer(CaptureTrace.now())]) }
         do {
             guard !frame["handle"].string.isEmpty, frame["offset"].number >= 0, frame["offset"].number < Double(Int64.max), frame["length"].number > 0, frame["length"].number <= 131072, frame["length"].number.rounded(.down) == frame["length"].number, frame["offset"].number.rounded(.down) == frame["offset"].number else { throw SourceFailure.invalid }
@@ -299,6 +301,10 @@ public actor AppleSession: ObservationSink {
             }
             else if frame["handle"].string.hasPrefix("contacts-image:") { response = try await contacts.readBlob(frame["handle"].string, offset: Int(frame["offset"].number), length: Int(frame["length"].number)) }
             else if frame["handle"].string.hasPrefix("calendar-attachment:") { response = try await calendar.readBlob(frame["handle"].string, offset: Int(frame["offset"].number), length: Int(frame["length"].number)) }
+            else if frame["handle"].string.hasPrefix("photos-blob:") {
+                guard let photos = additionalSources["photos"] as? PhotosSource else { throw SourceFailure.unavailable }
+                response = try await photos.readBlob(frame["handle"].string, offset: Int64(frame["offset"].number), length: Int(frame["length"].number))
+            }
             else if frame["handle"].string.hasPrefix("files-blob:") {
                 guard let files = additionalSources["files"] as? FilesSource else { throw SourceFailure.unavailable }
                 response = try await files.readBlob(frame["handle"].string, offset: Int64(frame["offset"].number), length: Int(frame["length"].number))

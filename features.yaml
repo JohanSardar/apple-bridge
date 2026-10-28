@@ -1178,3 +1178,20 @@ features:
       - {id: MAIL-BODY-REAL, levels: [real]}
     limits:
       - {scenario: MAIL-BODY-REAL, level: real, reason: "No real Envelope Index on the Air; downloaded and offloaded body Truth qualification unavailable."}
+  - id: photos.capture
+    title: Photos metadata capture and filtered search
+    requirements: [R-API, R-SCOPE]
+    milestone: G10
+    modules: [native/Sources/PhotosSource, internal/contracts]
+    depends_on: [core.queries]
+    status: limited
+    scenarios:
+      - {id: PHO-CAPTURE, levels: [sim]}
+      - {id: PHO-IDLE, levels: [sim, real]}
+      - {id: PHO-READ-REAL, levels: [real]}
+    limits:
+      - {scenario: PHO-READ-REAL, level: real, reason: "Photos readWrite authorization is not_determined; prompt forbidden"}
+      - {scenario: PHO-IDLE, level: real, reason: "Photos grant missing; whole-Helper CPU qualification blocked by T53"}
+      - {scenario: PHO-CAPTURE, level: sim, reason: "Native fixture capture, search and query blobs; gateway and change reconciliation qualification pending. Real original/thumbnail hydration qualification pending (native fake blobs exercised). OCR indexing unimplemented and disabled; public PhotoKit exposes no person/keyword or byte size/cloud state."}
+      - {scenario: PHO-IDLE, level: sim, reason: "Five-minute standalone fake-library CPU and unchanged-checkpoint suppression; whole-Helper CPU qualification pending T53."}
+    notes: "PHO-READ-REAL limited: Helper Photos readWrite authorization is not_determined; prompt forbidden. Photos readWrite grant needed for dev.applebridge.helper."

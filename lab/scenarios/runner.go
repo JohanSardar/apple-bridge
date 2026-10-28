@@ -373,6 +373,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.Feature == "files.capture" {
 		return runFiles(ctx, s, level)
 	}
+	if s.Feature == "photos.capture" {
+		return runPhotos(ctx, s, level)
+	}
 	if s.Feature == "shortcuts.runner" {
 		return runShortcutsRunner(ctx, s, level)
 	}
@@ -1137,6 +1140,9 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		ran++
 		fmt.Fprintln(os.Stderr, "running", s.ID, level)
 		duration := 3 * time.Minute
+		if s.Feature == "photos.capture" {
+			duration = 30 * time.Minute
+		}
 		if s.ID == "RELAY-STREAMS" {
 			duration = 12 * time.Minute
 		}
