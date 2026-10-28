@@ -1,18 +1,81 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[9.91 8.66 9.28] cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[8.31 7.88 8.29] cpu_idle=71% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5ED8RDKXMJQ29X90NG0DPDP",
+  "run_id": "run_01M610T1TJS7A7EAVG94Q57TQM",
   "metrics": {
+    "capture_observer_resets": 0,
     "chats": 500,
+    "mcp_rate_limited_samples": 0,
+    "mcp_sampling_host_after": {
+      "at": "2026-10-28T10:29:36.327273Z",
+      "cpu_count": 8,
+      "load_average": [
+        7.46,
+        7.87,
+        8.23
+      ],
+      "cpu_idle_percent": 69,
+      "free_memory_bytes": 61063168,
+      "active_heavy_slots": 1,
+      "other_active_heavy_slots": 0,
+      "heavy_queue_length": 13,
+      "quiet": true
+    },
+    "mcp_sampling_host_before": {
+      "at": "2026-10-28T10:29:34.901656Z",
+      "cpu_count": 8,
+      "load_average": [
+        7.85,
+        7.96,
+        8.26
+      ],
+      "cpu_idle_percent": 73,
+      "free_memory_bytes": 70418432,
+      "active_heavy_slots": 1,
+      "other_active_heavy_slots": 0,
+      "heavy_queue_length": 13,
+      "quiet": true
+    },
+    "rest_rate_limited_samples": 0,
+    "rest_sampling_host_after": {
+      "at": "2026-10-28T10:29:33.802367Z",
+      "cpu_count": 8,
+      "load_average": [
+        7.85,
+        7.96,
+        8.26
+      ],
+      "cpu_idle_percent": 71,
+      "free_memory_bytes": 68730880,
+      "active_heavy_slots": 1,
+      "other_active_heavy_slots": 0,
+      "heavy_queue_length": 13,
+      "quiet": true
+    },
+    "rest_sampling_host_before": {
+      "at": "2026-10-28T10:29:32.170764Z",
+      "cpu_count": 8,
+      "load_average": [
+        7.85,
+        7.96,
+        8.26
+      ],
+      "cpu_idle_percent": 59,
+      "free_memory_bytes": 56803328,
+      "active_heavy_slots": 1,
+      "other_active_heavy_slots": 0,
+      "heavy_queue_length": 13,
+      "quiet": true
+    },
     "seed_messages": 170000
   },
   "scenario": "WEB-RM-THREAD",
   "level": "sim",
   "passed": true,
-  "git_sha": "776c8d9f3c2c8940c4ad6fdf4b1f056cf1a6bea3",
-  "at": "2026-10-21T04:59:44.94723Z",
+  "git_sha": "9ebe48cd080c55b8c40a8ea10ee086dd3c981fdf",
+  "at": "2026-10-28T10:27:34.35458Z",
   "assertions": [
     {
       "name": "synthetic_sim_seed_committed",
@@ -314,16 +377,16 @@
   "latency": {
     "mcp_thread": {
       "samples": 100,
-      "p50_ms": 2.814541,
-      "p95_ms": 3.76425,
-      "max_ms": 19.008292,
+      "p50_ms": 3.108125,
+      "p95_ms": 3.881625,
+      "max_ms": 12.606042,
       "timeouts": 0
     },
     "rest_thread": {
       "samples": 100,
-      "p50_ms": 1.611833,
-      "p95_ms": 2.783792,
-      "max_ms": 35.399083,
+      "p50_ms": 2.196625,
+      "p95_ms": 3.221667,
+      "max_ms": 252.789667,
       "timeouts": 0
     }
   },

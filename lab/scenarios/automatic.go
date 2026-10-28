@@ -2,6 +2,7 @@ package scenarios
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -53,8 +54,13 @@ func automaticHealthyChecks(ctx context.Context, w *world.World, evidence *Evide
 		}
 		evidence.Metrics["automatic_probe_stage"] = fmt.Sprintf("search_%d", i)
 		result = contracts.ReadResult{}
+		searchStarted := time.Now()
 		status, err = world.Request(ctx, endpoint, "/v1/op/search", contracts.ReadQuery{Text: "ab"}, &result)
+		evidence.Metrics[fmt.Sprintf("automatic_scoped_search_%d_ms", i)] = float64(time.Since(searchStarted)) / float64(time.Millisecond)
 		if (err != nil && status != 404 && status != 422) || (err == nil && len(result.Records) != 0) {
+			add(fmt.Sprintf("automatic_scope_search_%d", i), false)
+			var timeout interface{ Timeout() bool }
+			evidence.Assertions[len(evidence.Assertions)-1].Detail = fmt.Sprintf("http_status=%d timeout=%t context_cancelled=%t records=%d", status, errors.As(err, &timeout) && timeout.Timeout(), ctx.Err() != nil, len(result.Records))
 			return false
 		}
 		add(fmt.Sprintf("automatic_scope_query_search_records_%d", i), true)

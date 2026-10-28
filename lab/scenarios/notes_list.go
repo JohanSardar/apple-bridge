@@ -76,10 +76,26 @@ func runNotesList(ctx context.Context, s Scenario, level string) (e Evidence) {
 	}
 	add("captured", err == nil && w.FlushCaptures(10*time.Second) == nil)
 	add("replica_converged", w.Await(10*time.Second, func() bool { return convergence(w) }) == nil)
+	if !e.Assertions[len(e.Assertions)-1].Passed {
+		e.Assertions[len(e.Assertions)-1].Detail = convergenceFailure(w)
+	}
 	aliases, _ := gatewayAliases(w)
 	child := aliases[aliasKey(contracts.Notes, "notes.folder", "notes-child")]
 	deleted := aliases[aliasKey(contracts.Notes, "notes.folder", "notes-deleted")]
 	for index, endpoint := range append([]world.Endpoint{w.Gateway}, w.Replicas...) {
+		records, err := w.Records(endpoint)
+		validVersions, noteCount := err == nil, 0
+		for _, record := range records {
+			if record.Collection != "notes.note" {
+				continue
+			}
+			noteCount++
+			var content struct {
+				Version uint64 `json:"content_version"`
+			}
+			validVersions = validVersions && json.Unmarshal(record.Data, &content) == nil && content.Version > 0 && content.Version <= record.Version
+		}
+		add(fmt.Sprintf("content_versions_%d", index), validVersions && noteCount == 4)
 		for _, protocol := range []string{"rest", "mcp"} {
 			client := scripted.Client{Endpoint: endpoint, Protocol: protocol}
 			prefix := fmt.Sprintf("%s_%d_", protocol, index)

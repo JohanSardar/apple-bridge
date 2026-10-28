@@ -1,17 +1,18 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[4.07 4.08 4.36] cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[4.44 6.34 8.17] cpu_idle=60% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5GB2J95PN56N22F36FAC1W8",
+  "run_id": "run_01M610FEMNMS6YXXQKMB6NEP02",
   "metrics": {
+    "capture_observer_resets": 0,
     "synthetic_only": true
   },
   "scenario": "NATIVE-MEDIA-EXPORT-SAFETY",
   "level": "sim",
   "passed": true,
-  "git_sha": "a71ec3767c2443a4c239dee0872a9dbad71a1916",
-  "at": "2026-10-21T22:59:53.765783Z",
+  "git_sha": "9ebe48cd080c55b8c40a8ea10ee086dd3c981fdf",
+  "at": "2026-10-28T10:21:47.029419Z",
   "assertions": [
     {
       "name": "export-safety",

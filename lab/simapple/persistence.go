@@ -26,6 +26,7 @@ type durableApple struct {
 	Revision                 map[contracts.Source]uint64      `json:"revision"`
 	Committed                map[contracts.Source]uint64      `json:"committed"`
 	Checkpoints              map[contracts.Source]string      `json:"checkpoints"`
+	SourceScans              map[string]int                   `json:"source_scans"`
 	Scans                    int                              `json:"scans"`
 }
 
@@ -75,7 +76,7 @@ func (f *fakeApple) changedLocked(source contracts.Source) error {
 }
 
 func (f *fakeApple) progressLocked() error {
-	progress := durableApple{InProgress: f.durable.InProgress, Generation: f.durable.Generation, Committed: f.durable.Committed, Checkpoints: f.durable.Checkpoints, Scans: f.durable.Scans}
+	progress := durableApple{InProgress: f.durable.InProgress, Generation: f.durable.Generation, Committed: f.durable.Committed, Checkpoints: f.durable.Checkpoints, Scans: f.durable.Scans, SourceScans: f.durable.SourceScans}
 	data, err := json.Marshal(progress)
 	if err != nil {
 		return err

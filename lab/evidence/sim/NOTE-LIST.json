@@ -1,18 +1,17 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[3.12 3.78 4.4] cpu_idle=80% cpus=8 other_heavy=0"
+    "summary": "air: load=[5.49 8.05 9.09] cpu_idle=56% cpus=8 other_heavy=0"
   },
-  "run_id": "notes-list_01M5JQMX5YHRQCDK85NZ0ADSZS",
+  "run_id": "notes-list_01M610AC00MYCZY9FZCVKWM3JV",
   "metrics": {
-    "capture_observer_resets": 0,
-    "summary_only": true
+    "capture_observer_resets": 0
   },
   "scenario": "NOTE-LIST",
   "level": "sim",
   "passed": true,
   "git_sha": "",
-  "at": "2026-10-22T21:18:06.526872Z",
+  "at": "2026-10-28T10:19:00.480796Z",
   "assertions": [
     {
       "name": "world",
@@ -24,6 +23,10 @@
     },
     {
       "name": "replica_converged",
+      "passed": true
+    },
+    {
+      "name": "content_versions_0",
       "passed": true
     },
     {
@@ -120,6 +123,10 @@
     },
     {
       "name": "mcp_0_notes_scope",
+      "passed": true
+    },
+    {
+      "name": "content_versions_1",
       "passed": true
     },
     {

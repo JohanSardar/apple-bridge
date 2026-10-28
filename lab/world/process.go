@@ -142,17 +142,17 @@ func (w *World) RestartHelper() error {
 	}
 	return w.Await(10*time.Second, func() bool { _, err := w.Inspect(); return err == nil })
 }
-func (w *World) HelperScans() (int, error) {
+func (w *World) HelperSourceScans() (map[string]int, error) {
 	resp, err := w.Control.Get("http://sim/stats")
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 	defer resp.Body.Close()
 	var stats struct {
-		Scans int `json:"scans"`
+		SourceScans map[string]int `json:"source_scans"`
 	}
 	err = json.NewDecoder(resp.Body).Decode(&stats)
-	return stats.Scans, err
+	return stats.SourceScans, err
 }
 
 func (w *World) HelperBlobsIntact() bool {
