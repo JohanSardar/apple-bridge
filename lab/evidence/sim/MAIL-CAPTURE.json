@@ -1,0 +1,35 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[7.41 7.35 9.41] cpu_idle=35% cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M61Y5RJN6BT768BSBCF9MG1N",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "MAIL-CAPTURE",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-28T19:00:46.806256Z",
+  "assertions": [
+    {
+      "name": "native_mail_build",
+      "passed": true
+    },
+    {
+      "name": "native_mail_fixture",
+      "passed": true
+    },
+    {
+      "name": "mail_gateway_capture_and_subject_fts",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}
