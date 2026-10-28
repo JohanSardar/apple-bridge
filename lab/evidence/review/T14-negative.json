@@ -1,0 +1,13 @@
+{
+  "scenario": "RELAY-OWN-DOMAIN",
+  "level": "sim",
+  "at": "2026-10-28T15:16:23.534463Z",
+  "mode": "guards temporarily removed; expected failure",
+  "failed_assertions": [
+    "domain_endpoint_requires_records",
+    "domain_registration_replay_rejected",
+    "ct_checks_assigned_and_custom_names",
+    "assigned_name_unexpected_certificate_warns",
+    "ct_aggregates_name_warnings"
+  ]
+}

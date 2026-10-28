@@ -1,0 +1,30 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[7.78 5.6 6.45] cpu_idle=68% cpus=8 other_heavy=1; ubuntu: load=[1.41 1.43 1.29] cpu_idle=92% cpus=8 other_heavy=0"
+  },
+  "status": "limited",
+  "run_id": "",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "RMT-PRIVATE-CONNECT",
+  "level": "replica",
+  "passed": false,
+  "git_sha": "",
+  "at": "2026-10-28T15:18:35.444092Z",
+  "assertions": [
+    {
+      "name": "private_tailnet_login",
+      "passed": false,
+      "status": "limited",
+      "detail": "Real userspace Tailscale authorization requires interactive login; sim covers private protocol without touching Tailscale"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

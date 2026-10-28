@@ -8,6 +8,11 @@ import (
 
 func (s *Server) Handler(admin string) http.Handler {
 	mux := http.NewServeMux()
+	mux.HandleFunc("POST /certificate", s.certificate)
+	mux.HandleFunc("GET /ct", s.ct)
+	mux.HandleFunc("POST /dns", s.dns)
+	mux.HandleFunc("POST /domain", s.domain)
+	mux.HandleFunc("GET /tunnel", s.tunnel)
 	mux.HandleFunc("GET /challenge", func(w http.ResponseWriter, r *http.Request) {
 		nonce, err := s.Store.Challenge()
 		if err != nil {

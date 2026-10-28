@@ -1,0 +1,4 @@
+id: RELAY-ACME
+feature: remote.relay
+levels: [sim]
+when: [{relay_service: {}}]

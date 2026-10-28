@@ -367,6 +367,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "CORE-SHORTCUT-SIGN" {
 		return runShortcutSign(ctx, s, level)
 	}
+	if s.ID == "RMT-PRIVATE-CONNECT" {
+		return runPrivateConnect(ctx, s, level)
+	}
 	if s.Feature == "remote.relay" {
 		return runRelayService(ctx, s, level)
 	}
@@ -1106,6 +1109,9 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		ran++
 		fmt.Fprintln(os.Stderr, "running", s.ID, level)
 		duration := 3 * time.Minute
+		if s.ID == "RELAY-STREAMS" {
+			duration = 12 * time.Minute
+		}
 		if s.ID == "NOTE-EXTERNAL" && level != "sim" {
 			duration = 5 * time.Minute
 		}

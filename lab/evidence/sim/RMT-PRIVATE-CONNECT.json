@@ -1,0 +1,68 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[5.94 5.06 6.35] cpu_idle=71% cpus=8 other_heavy=1"
+  },
+  "run_id": "private-protocol",
+  "network_path": "production private handler and connect proxy through isolated node transport",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "RMT-PRIVATE-CONNECT",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-28T15:17:38.977129Z",
+  "assertions": [
+    {
+      "name": "approval_tokens_absent_from_status_and_logs",
+      "passed": true
+    },
+    {
+      "name": "private_on",
+      "passed": true
+    },
+    {
+      "name": "invitation_reuse_rejected",
+      "passed": true
+    },
+    {
+      "name": "private_mcp_tools_list",
+      "passed": true
+    },
+    {
+      "name": "private_feed_dispatch",
+      "passed": true
+    },
+    {
+      "name": "private_transport_retains_authentication",
+      "passed": true
+    },
+    {
+      "name": "connect_has_no_persisted_identity",
+      "passed": true
+    },
+    {
+      "name": "approval_tokens_absent_from_status_and_logs",
+      "passed": true
+    },
+    {
+      "name": "approval_tokens_absent_from_status_and_logs",
+      "passed": true
+    },
+    {
+      "name": "private_on",
+      "passed": true
+    },
+    {
+      "name": "expired_invitation_rejected",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

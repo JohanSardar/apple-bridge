@@ -1,0 +1,54 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[6.11 5.08 6.36] cpu_idle=66% cpus=8 other_heavy=1"
+  },
+  "run_id": "relay-streams",
+  "network_path": "loopback TLS origins through raw relay tunnel interface",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "RELAY-STREAMS",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "489fa272dcfa447fa25825cbbfa87ee06292b6fd",
+  "at": "2026-10-28T15:17:33.090309Z",
+  "assertions": [
+    {
+      "name": "two_distinct_device_enrollments",
+      "passed": true
+    },
+    {
+      "name": "sse_survives_idle_budget",
+      "passed": true
+    },
+    {
+      "name": "websocket_duplex",
+      "passed": true
+    },
+    {
+      "name": "mcp_streamable_http_session",
+      "passed": true
+    },
+    {
+      "name": "relay_listener_restart_reconnect_under_5s",
+      "passed": true
+    },
+    {
+      "name": "mcp_session_resumes_after_relay_restart",
+      "passed": true
+    },
+    {
+      "name": "signed_proof_single_use",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": [
+    "air"
+  ]
+}

@@ -23,14 +23,16 @@ type Limits struct {
 	MonthlyBytes   int64 `json:"monthly_bytes"`
 }
 type Device struct {
-	PublicKey      string `json:"public_key"`
-	Hostname       string `json:"hostname"`
-	CredentialHash string `json:"credential_hash"`
-	Revoked        bool   `json:"revoked"`
-	Disabled       bool   `json:"disabled"`
-	Limits         Limits `json:"limits"`
-	Month          string `json:"month"`
-	Bytes          int64  `json:"bytes"`
+	Certificates   []string `json:"certificates,omitempty"`
+	Domain         string   `json:"domain,omitempty"`
+	PublicKey      string   `json:"public_key"`
+	Hostname       string   `json:"hostname"`
+	CredentialHash string   `json:"credential_hash"`
+	Revoked        bool     `json:"revoked"`
+	Disabled       bool     `json:"disabled"`
+	Limits         Limits   `json:"limits"`
+	Month          string   `json:"month"`
+	Bytes          int64    `json:"bytes"`
 }
 type Enrollment struct {
 	PublicKey string `json:"public_key"`

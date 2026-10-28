@@ -1,0 +1,90 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[6.11 5.08 6.36] cpu_idle=52% cpus=8 other_heavy=1"
+  },
+  "run_id": "relay-own-domain",
+  "network_path": "loopback TLS origins through raw relay tunnel interface",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "RELAY-OWN-DOMAIN",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "489fa272dcfa447fa25825cbbfa87ee06292b6fd",
+  "at": "2026-10-28T15:17:30.152449Z",
+  "assertions": [
+    {
+      "name": "two_distinct_device_enrollments",
+      "passed": true
+    },
+    {
+      "name": "exact_missing_cnames",
+      "passed": true
+    },
+    {
+      "name": "domain_endpoint_requires_records",
+      "passed": true
+    },
+    {
+      "name": "unauthorized_domain_claim_rejected",
+      "passed": true
+    },
+    {
+      "name": "own_domain_records_ready",
+      "passed": true
+    },
+    {
+      "name": "signed_domain_registration",
+      "passed": true
+    },
+    {
+      "name": "domain_registration_replay_rejected",
+      "passed": true
+    },
+    {
+      "name": "alias_tunnel_attached",
+      "passed": true
+    },
+    {
+      "name": "custom_sni_routes_through_relay",
+      "passed": true
+    },
+    {
+      "name": "ct_checks_assigned_and_custom_names",
+      "passed": true
+    },
+    {
+      "name": "assigned_name_unexpected_certificate_warns",
+      "passed": true
+    },
+    {
+      "name": "ct_aggregates_name_warnings",
+      "passed": true
+    },
+    {
+      "name": "pebble_certificate_hostname",
+      "passed": true
+    },
+    {
+      "name": "renewal_inside_30_days",
+      "passed": true
+    },
+    {
+      "name": "private_key_only_under_bridge_home",
+      "passed": true
+    },
+    {
+      "name": "dns_challenge_cleaned_up",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": [
+    "air"
+  ]
+}
