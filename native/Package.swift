@@ -4,6 +4,7 @@ import PackageDescription
 let sourceTargets: [Target] = [
     .target(name: "MacSource", dependencies: ["SourceSupport"]),
     .target(name: "MailSource", dependencies: ["SourceSupport"]),
+    .target(name: "FilesSource", dependencies: ["SourceSupport"]),
     .target(name: "VisionSource", dependencies: ["SourceSupport"]),
     .target(name: "PDFSource", dependencies: ["SourceSupport"]),
     .target(name: "ShortcutsSource", dependencies: ["SourceSupport"]),
@@ -22,6 +23,7 @@ let package = Package(
     targets: sourceTargets + [
         .target(name: "SourceSupport"),
         .executableTarget(name: "MailChecks", dependencies: ["MailSource", "SourceSupport"]),
+        .executableTarget(name: "FilesChecks", dependencies: ["FilesSource", "SourceSupport"]),
         .executableTarget(name: "SourceSupportChecks", dependencies: ["SourceSupport"]),
         .executableTarget(name: "ShortcutsChecks", dependencies: ["ShortcutsSource", "SourceSupport"]),
         .target(name: "ContactsHistory", publicHeadersPath: "include"),

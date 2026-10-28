@@ -91,6 +91,10 @@ func (s *querySession) receive(f contracts.IPCFrame) bool {
 		case "helper.version":
 			out.ResultJSON = json.RawMessage(`{"version":"sim","protocol":"ipc/1"}`)
 		default:
+			if files, handled := s.fake.filesQuery(f); handled {
+				out = files
+				break
+			}
 			if code, result, handled := simulatePDFQuery(f.Op, f.Args); handled {
 				out.ResultJSON = result
 				if code != "" {

@@ -13,6 +13,6 @@ public struct CompleteScan: Sendable {
         }
         let complete = try result.complete && reader.isCurrent()
         let comparable = complete && !scope.isEmpty && scope == previousScope && reader.generation == previousGeneration
-        return CompleteScan(rows: result.rows, complete: complete, absentKeys: comparable ? previousKeys.subtracting(keys) : [])
+        return CompleteScan(rows: result.rows, complete: complete, absentKeys: absence(previous: previousKeys, current: keys, complete: comparable))
     }
 }

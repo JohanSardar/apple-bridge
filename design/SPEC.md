@@ -407,6 +407,8 @@ Contacts Me-card and notes entitlement contract: [spec/contacts.md](spec/contact
 
 Mail capture foundation and outstanding T16 scope: [Mail](spec/mail.md).
 
+Files source details: [files](spec/files.md).
+
 Permission status and explicit requests: [permissions](spec/permissions.md).
 
 Mac capture: [contract](spec/mac.md).
