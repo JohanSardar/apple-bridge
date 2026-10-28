@@ -61,6 +61,7 @@ func run(ctx context.Context, args []string) error {
 	noSelfTestUI := set.Bool("no-ui", false, "defer Messages UI steps and retain cleanup obligations")
 	forceSelfTest := set.Bool("force", false, "rerun the Messages self-test on this OS build")
 	via := set.String("via", "", "remote backend: embedded (default) or tailscale-app")
+	privateRemote := set.Bool("private", false, "use private userspace Tailscale access")
 	domain := set.String("domain", "", "custom public hostname for relay")
 	publicEnroll := set.Bool("public", false, "enroll a passkey at the active public origin")
 	snippets := set.Bool("snippets", false, "print remote connection snippets")
@@ -91,7 +92,7 @@ func run(ctx context.Context, args []string) error {
 		code = args[0]
 		args = args[1:]
 	}
-	if (verb == "join" || verb == "restore" || verb == "backup" || verb == "revoke" || verb == "scope") && len(args) > 0 && len(args[0]) > 0 && args[0][0] != '-' {
+	if (verb == "connect" || verb == "join" || verb == "restore" || verb == "backup" || verb == "revoke" || verb == "scope") && len(args) > 0 && len(args[0]) > 0 && args[0][0] != '-' {
 		code = args[0]
 		args = args[1:]
 	}
@@ -112,7 +113,16 @@ func run(ctx context.Context, args []string) error {
 		}
 		return err
 	}
+	if verb == "connect" {
+		return remote.Connect(ctx, *home, code, os.Stdout)
+	}
 	if verb == "remote" {
+		if *privateRemote {
+			if *via != "" || *domain != "" {
+				return contracts.ErrInvalid
+			}
+			*via = "private"
+		}
 		if *snippets {
 			if webAction != "status" {
 				return contracts.ErrInvalid

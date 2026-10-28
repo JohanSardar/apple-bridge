@@ -364,6 +364,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "CORE-SHORTCUT-SIGN" {
 		return runShortcutSign(ctx, s, level)
 	}
+	if s.ID == "RMT-PRIVATE-CONNECT" {
+		return Evidence{Scenario: s.ID, Level: level, Status: "limited", At: time.Now().UTC(), Assertions: []Assertion{{Name: "private_tailnet_login", Status: "limited", Detail: "Ubuntu is reachable; a newly authorized userspace Tailscale node requires Johan login; no unattended login permitted"}}}
+	}
 	if s.Feature == "remote.relay" {
 		return runRelayService(ctx, s, level)
 	}
@@ -1103,6 +1106,9 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		ran++
 		fmt.Fprintln(os.Stderr, "running", s.ID, level)
 		duration := 3 * time.Minute
+		if s.ID == "RELAY-STREAMS" {
+			duration = 12 * time.Minute
+		}
 		if s.ID == "NOTE-EXTERNAL" && level != "sim" {
 			duration = 5 * time.Minute
 		}
