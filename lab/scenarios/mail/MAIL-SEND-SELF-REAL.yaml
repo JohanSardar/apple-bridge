@@ -1,0 +1,3 @@
+id: MAIL-SEND-SELF-REAL
+feature: mail.commands
+levels: [real]

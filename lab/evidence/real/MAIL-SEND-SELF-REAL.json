@@ -1,0 +1,27 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[43.15 22.53 17.98] cpu_idle=30% cpus=8 other_heavy=3"
+  },
+  "status": "limited",
+  "run_id": "run_01M62B6BPMP06PQ9RN1X2XK1JP",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "MAIL-SEND-SELF-REAL",
+  "level": "real",
+  "passed": false,
+  "git_sha": "",
+  "at": "2026-10-28T22:48:17.877344Z",
+  "assertions": [
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null,
+  "conditions": {
+    "reason": "grant: Automation dev.applebridge.helper → com.apple.mail; no configured Mail account"
+  }
+}
