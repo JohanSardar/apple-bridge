@@ -3,6 +3,7 @@ package scenarios
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/lab/scripted"
 	"github.com/JohanSardar/apple-bridge/lab/world"
@@ -33,6 +34,7 @@ func runMac(ctx context.Context, s Scenario, level string) (e Evidence) {
 	}
 	add("world_started", err == nil)
 	if err != nil {
+		fmt.Fprintln(os.Stderr, "mac world startup:", err)
 		return
 	}
 	defer w.Close()
@@ -98,6 +100,7 @@ func runMac(ctx context.Context, s Scenario, level string) (e Evidence) {
 		case <-timer.C:
 		}
 		after := cpu()
+		e.Metrics = map[string]any{"helper_cpu_percent": 100 * (after - before) / time.Since(started).Seconds(), "idle_seconds": time.Since(started).Seconds()}
 		add("helper_cpu_under_two_percent", before >= 0 && after >= before && (after-before)/time.Since(started).Seconds() < 0.02)
 		return
 	}

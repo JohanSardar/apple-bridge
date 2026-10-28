@@ -37,12 +37,12 @@ public final class MacSource: Source {
         }
         return .object(value)
     }
-    private func audio() -> [(String, JSON)] {
+    private func audio() throws -> [(String, JSON)] {
         var address = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyDevices, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
         var size: UInt32 = 0
-        guard AudioObjectGetPropertyDataSize(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &size) == noErr else { return [] }
+        guard AudioObjectGetPropertyDataSize(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &size) == noErr else { throw SourceFailure.unavailable }
         var devices = [AudioDeviceID](repeating: 0, count: Int(size) / MemoryLayout<AudioDeviceID>.size)
-        guard AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &size, &devices) == noErr else { return [] }
+        guard AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &size, &devices) == noErr else { throw SourceFailure.unavailable }
         func defaultDevice(_ selector: AudioObjectPropertySelector) -> AudioDeviceID {
             var a = AudioObjectPropertyAddress(mSelector: selector, mScope: kAudioObjectPropertyScopeGlobal, mElement: 0)
             var device: AudioDeviceID = 0; var count = UInt32(MemoryLayout.size(ofValue: device))
@@ -52,13 +52,13 @@ public final class MacSource: Source {
         let input = defaultDevice(kAudioHardwarePropertyDefaultInputDevice), output = defaultDevice(kAudioHardwarePropertyDefaultOutputDevice)
         return devices.map { device in
             var a = AudioObjectPropertyAddress(mSelector: kAudioObjectPropertyName, mScope: kAudioObjectPropertyScopeGlobal, mElement: 0)
-            var title: CFString = "" as CFString; var count = UInt32(MemoryLayout<CFString>.size)
+            var title: Unmanaged<CFString>?; var count = UInt32(MemoryLayout<Unmanaged<CFString>?>.size)
             _ = AudioObjectGetPropertyData(device, &a, 0, nil, &count, &title)
             func streams(_ scope: AudioObjectPropertyScope) -> Bool {
                 var a = AudioObjectPropertyAddress(mSelector: kAudioDevicePropertyStreams, mScope: scope, mElement: 0); var count: UInt32 = 0
                 return AudioObjectGetPropertyDataSize(device, &a, 0, nil, &count) == noErr && count > 0
             }
-            var value: [String: JSON] = ["name": .string(title as String), "input": .bool(streams(kAudioDevicePropertyScopeInput)), "output": .bool(streams(kAudioDevicePropertyScopeOutput)), "default": .bool(device == input || device == output)]
+            var value: [String: JSON] = ["name": .string(title?.takeRetainedValue() as String? ?? "Unknown device"), "input": .bool(streams(kAudioDevicePropertyScopeInput)), "output": .bool(streams(kAudioDevicePropertyScopeOutput)), "default": .bool(device == input || device == output)]
             let scope = streams(kAudioDevicePropertyScopeOutput) ? kAudioDevicePropertyScopeOutput : kAudioDevicePropertyScopeInput
             a = AudioObjectPropertyAddress(mSelector: kAudioDevicePropertyVolumeScalar, mScope: scope, mElement: 0)
             var volume: Float32 = 0; count = 4
@@ -70,7 +70,7 @@ public final class MacSource: Source {
     }
     private func scan(_ sink: any ObservationSink, live: Bool) async throws {
         var current: [String: JSON] = [:]
-        for (key, value) in audio() { current["mac.audio_device/" + key] = value }
+        for (key, value) in try audio() { current["mac.audio_device/" + key] = value }
         current["mac.power/system"] = power()
         current["mac.display/system"] = .object(["appearance": .string(UserDefaults.standard.string(forKey: "AppleInterfaceStyle") == "Dark" ? "dark" : "light"), "displays": .array(NSScreen.screens.map { .object(["name": .string($0.localizedName), "width": .number($0.frame.width), "height": .number($0.frame.height)]) })])
         var network: [String: JSON] = ["connected": .bool(path?.status == .satisfied), "vpn": .bool(path?.availableInterfaces.contains(where: { $0.name.hasPrefix("utun") || $0.name.hasPrefix("ppp") }) ?? false)]
@@ -100,7 +100,14 @@ public final class MacSource: Source {
     }
     public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {
         if !resume["generation"].string.isEmpty { generation = resume["generation"].string }
+        let initialDevices = Set(try audio().compactMap { UInt32($0.0) } + [AudioObjectID(kAudioObjectSystemObject)])
         let (changes, continuation) = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
+        let wifi = CWWiFiClient.shared()
+        let wifiEvents = MacWiFiChanges(continuation)
+        wifi.delegate = wifiEvents
+        try? wifi.startMonitoringEvent(with: .powerDidChange)
+        try? wifi.startMonitoringEvent(with: .ssidDidChange)
+        try? wifi.startMonitoringEvent(with: .linkDidChange)
         let monitor = NWPathMonitor()
         monitor.pathUpdateHandler = { path in Task { @MainActor in self.path = path; continuation.yield(()) } }
         monitor.start(queue: DispatchQueue(label: "mac.network"))
@@ -119,9 +126,11 @@ public final class MacSource: Source {
         if let power { CFRunLoopAddSource(CFRunLoopGetMain(), power, .commonModes) }
         var address = AudioObjectPropertyAddress(mSelector: kAudioObjectPropertySelectorWildcard, mScope: kAudioObjectPropertyScopeWildcard, mElement: kAudioObjectPropertyElementWildcard)
         let listener: AudioObjectPropertyListenerBlock = { _, _ in continuation.yield(()) }
-        var devices = Set(audio().compactMap { UInt32($0.0) } + [AudioObjectID(kAudioObjectSystemObject)])
+        var devices = initialDevices
         for device in devices { AudioObjectAddPropertyListenerBlock(device, &address, .main, listener) }
         defer {
+            try? wifi.stopMonitoringAllEvents(); wifi.delegate = nil
+            withExtendedLifetime(wifiEvents) {}
             monitor.cancel(); tokens.forEach { center.removeObserver($0) }; NotificationCenter.default.removeObserver(display); NotificationCenter.default.removeObserver(lowPower); DistributedNotificationCenter.default().removeObserver(appearance)
             if let power { CFRunLoopRemoveSource(CFRunLoopGetMain(), power, .commonModes) }
             for device in devices { AudioObjectRemovePropertyListenerBlock(device, &address, .main, listener) }
@@ -131,7 +140,7 @@ public final class MacSource: Source {
         try await scan(sink, live: false)
         for await _ in changes {
             try Task.checkCancellation()
-            let current = Set(audio().compactMap { UInt32($0.0) } + [AudioObjectID(kAudioObjectSystemObject)])
+            let current = Set(try audio().compactMap { UInt32($0.0) } + [AudioObjectID(kAudioObjectSystemObject)])
             for device in devices.subtracting(current) { AudioObjectRemovePropertyListenerBlock(device, &address, .main, listener) }
             for device in current.subtracting(devices) { AudioObjectAddPropertyListenerBlock(device, &address, .main, listener) }
             devices = current
@@ -147,4 +156,12 @@ private final class MacChange: @unchecked Sendable {
     let continuation: AsyncStream<Void>.Continuation
     init(_ continuation: AsyncStream<Void>.Continuation) { self.continuation = continuation }
     func signal() { continuation.yield(()) }
+}
+
+private final class MacWiFiChanges: NSObject, CWEventDelegate, @unchecked Sendable {
+    let continuation: AsyncStream<Void>.Continuation
+    init(_ continuation: AsyncStream<Void>.Continuation) { self.continuation = continuation }
+    func powerStateDidChangeForWiFiInterface(withName interfaceName: String) { continuation.yield(()) }
+    func ssidDidChangeForWiFiInterface(withName interfaceName: String) { continuation.yield(()) }
+    func linkDidChangeForWiFiInterface(withName interfaceName: String) { continuation.yield(()) }
 }
