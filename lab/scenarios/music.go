@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
+	"github.com/JohanSardar/apple-bridge/internal/state"
 	"github.com/JohanSardar/apple-bridge/lab/scripted"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 	"os/exec"
@@ -22,6 +23,11 @@ func runMusicCatalog(ctx context.Context, s Scenario, level string) (e Evidence)
 			e.Passed = e.Passed && a.Passed
 		}
 	}()
+	if s.ID == "MUS-IDLE" {
+		e.Status = "limited"
+		e.Assertions = append(e.Assertions, Assertion{Name: "whole_helper_idle_cpu", Status: "limited", Detail: "Five-minute whole-Helper CPU qualification blocked by T53 baseline Messages reconcile CPU"})
+		return
+	}
 	var w *world.World
 	var err error
 	if level == "real" {
@@ -52,7 +58,7 @@ func runMusicCatalog(ctx context.Context, s Scenario, level string) (e Evidence)
 		}
 	}
 	var out contracts.QueryResult
-	if s.ID == "MUS-CONTROL-REAL" {
+	if s.ID == "MUS-CONTROL-REAL" || s.ID == "MUS-PLAYLIST-REAL" {
 		err = client.Call(ctx, "music.now_playing", contracts.Query{Args: json.RawMessage(`{}`)}, &out)
 		e.Status = "limited"
 		reason := "Control fixture qualification pending; Recently Played changes require prior-state restoration"
@@ -66,52 +72,120 @@ func runMusicCatalog(ctx context.Context, s Scenario, level string) (e Evidence)
 	add("catalog_query", err == nil)
 	var result struct {
 		Items []struct {
-			ID string `json:"catalog_id"`
+			ID     string `json:"catalog_id"`
+			Name   string `json:"name"`
+			Artist string `json:"artist"`
 		} `json:"items"`
 	}
 	decode := json.Unmarshal(out.ResultJSON, &result)
 	add("catalog_id", decode == nil && len(result.Items) > 0 && result.Items[0].ID != "")
+	if level == "real" {
+		matched := false
+		for _, item := range result.Items {
+			matched = matched || (item.ID != "" && strings.Contains(strings.ToLower(item.Name), "here comes the sun") && strings.Contains(strings.ToLower(item.Artist), "beatles"))
+		}
+		add("well_known_song_catalog_id", matched)
+	}
 	for _, args := range []string{`{"term":""}`, `{"term":"test","limit":101}`, `{"term":"test","url":"https://example.com"}`, `{"term":"test","entity":"playlist"}`, `{"term":"test","limit":0}`, `{"term":"test","limit":null}`, `{"term":"test","limit":1.5}`} {
 		err = client.Call(ctx, "music.search_catalog", contracts.Query{Args: json.RawMessage(args)}, &out)
 		var problem *contracts.Error
 		add("invalid_rejected", errors.As(err, &problem) && problem.Code == "invalid")
 	}
+	for _, ms := range []int{-1, 60001} {
+		err = client.Call(ctx, "music.search_catalog", contracts.Query{Args: json.RawMessage(`{"term":"fixture"}`), DeadlineMS: ms}, &out)
+		var problem *contracts.Error
+		add("query_deadline_bounds", errors.As(err, &problem) && problem.Code == "invalid")
+	}
+
 	if level == "sim" {
+		var itemID, playlistID string
 		for _, op := range []string{"set_volume", "play_item", "pause", "play", "next", "previous"} {
 			args := json.RawMessage(`{}`)
 			if op == "set_volume" {
 				args = json.RawMessage(`{"volume":0}`)
 			}
 			if op == "play_item" {
-				args = json.RawMessage(`{"id":"ABCDEF0123456789"}`)
+				args, _ = json.Marshal(map[string]string{"id": itemID})
 			}
 			var command contracts.CommandRecord
-			commandID := contracts.NewCommandID()
-			err = client.Call(ctx, "music."+op, contracts.Command{ID: commandID, Args: args, WaitMS: 15000}, &command)
+			err = client.Call(ctx, "music."+op, contracts.Command{ID: contracts.NewCommandID(), Args: args, WaitMS: 15000}, &command)
 			add("command_"+op, err == nil && command.State == "observed")
-			if err != nil || command.State != "observed" {
-				code := ""
-				var problem *contracts.Error
-				if errors.As(err, &problem) {
-					code = problem.Code
+			add("command_native_identity_private_"+op, !strings.Contains(string(command.Evidence), "ABCDEF0123456789"))
+			if op == "set_volume" {
+				for _, target := range []struct {
+					Collection, Prefix string
+					ID                 *string
+				}{{"music.library_item", "mli_", &itemID}, {"music.playlist", "mpl_", &playlistID}} {
+					var captured contracts.ReadResult
+					err = client.Call(ctx, "records.query", contracts.ReadQuery{Collection: target.Collection, Limit: 10}, &captured)
+					valid := err == nil && len(captured.Records) == 1
+					if valid {
+						*target.ID = captured.Records[0].ID
+						valid = strings.HasPrefix(*target.ID, target.Prefix) && !strings.Contains(string(captured.Records[0].Data), "persistent_id")
+					}
+					add("bridge_identity_"+target.Collection, valid)
 				}
-				var stored contracts.CommandRecord
-				lookup := client.Call(ctx, "commands.status", contracts.CommandQuery{ID: commandID}, &stored)
-				lookupCode := ""
-				if errors.As(lookup, &problem) {
-					lookupCode = problem.Code
-				}
-				e.Assertions[len(e.Assertions)-1].Detail = "state=" + string(command.State) + " code=" + code + " stored=" + string(stored.State) + " lookup=" + lookupCode
 			}
-
 			err = client.Call(ctx, "music.now_playing", contracts.Query{Args: json.RawMessage(`{}`)}, &out)
 			var player struct {
 				State  string `json:"state"`
 				Volume *int   `json:"volume"`
 			}
 			decode = json.Unmarshal(out.ResultJSON, &player)
-			add("readback_"+op, err == nil && decode == nil && player.Volume != nil && *player.Volume == 0 && player.State != "")
+			var fields map[string]json.RawMessage
+			json.Unmarshal(out.ResultJSON, &fields)
+			add("readback_"+op, err == nil && decode == nil && player.Volume != nil && *player.Volume == 0 && player.State != "" && fields["id"] == nil)
 		}
+		for _, op := range []string{"favorite", "add_to_playlist"} {
+			args, _ := json.Marshal(map[string]any{"id": itemID, "favorite": true})
+			targetID, collection := itemID, "music.library_item"
+			if op == "add_to_playlist" {
+				args, _ = json.Marshal(map[string]string{"id": itemID, "playlist_id": playlistID})
+				targetID, collection = playlistID, "music.playlist"
+			}
+			count := 1
+			if op == "add_to_playlist" {
+				count = 2
+			}
+			for i := 0; i < count; i++ {
+				var command contracts.CommandRecord
+				err = client.Call(ctx, "music."+op, contracts.Command{ID: contracts.NewCommandID(), Args: args, WaitMS: 15000}, &command)
+				add("library_command_"+op, err == nil && command.State == "observed" && command.CommitSeq > 0 && len(command.ObservedRecordIDs) == 1 && command.ObservedRecordIDs[0] == targetID)
+				add("library_native_identity_private_"+op, !strings.Contains(string(command.Evidence), "ABCDEF0123456789") && !strings.Contains(string(command.Evidence), "DEF0123456789ABC"))
+			}
+			var captured contracts.ReadResult
+			err = client.Call(ctx, "records.query", contracts.ReadQuery{Collection: collection, Limit: 10}, &captured)
+			valid := err == nil && len(captured.Records) == 1
+			if valid {
+				var data struct {
+					Favorite bool  `json:"favorite"`
+					Count    int   `json:"count"`
+					Items    []any `json:"items"`
+				}
+				valid = json.Unmarshal(captured.Records[0].Data, &data) == nil && !strings.Contains(string(captured.Records[0].Data), "native_key")
+				if op == "favorite" {
+					valid = valid && data.Favorite
+				} else {
+					valid = valid && data.Count == 2 && len(data.Items) == 2
+				}
+			}
+			add("captured_readback_"+op, valid)
+		}
+		for op, args := range map[string]map[string]any{"set_volume": {"volume": 101}, "play_item": {"id": "ABCDEF0123456789"}, "favorite": {"id": itemID, "favorite": "yes"}, "add_to_playlist": {"id": itemID, "playlist_id": "DEF0123456789ABC"}, "pause": {"unexpected": true}} {
+			raw, _ := json.Marshal(args)
+			var command contracts.CommandRecord
+			err = client.Call(ctx, "music."+op, contracts.Command{ID: contracts.NewCommandID(), Args: raw, WaitMS: 15000}, &command)
+			var problem *contracts.Error
+			add("invalid_command_"+op, errors.As(err, &problem) && problem.Code == "invalid")
+		}
+		store, inspectErr := state.InspectHome(w.Gateway.Home)
+		shapeOK := false
+		if inspectErr == nil {
+			shape, shapeErr := store.ShapeViolations(ctx)
+			shapeOK = shapeErr == nil && shape["music.library_item"] == 0 && shape["music.playlist"] == 0
+			store.Close()
+		}
+		add("doctor_music_shapes", shapeOK)
 		for _, entity := range []string{"song", "album", "musicArtist"} {
 			args, _ := json.Marshal(map[string]any{"term": "fixture", "entity": entity, "limit": 1})
 			err = client.Call(ctx, "music.search_catalog", contracts.Query{Args: args}, &out)
@@ -125,5 +199,6 @@ func runMusicCatalog(ctx context.Context, s Scenario, level string) (e Evidence)
 			add("entity_"+entity, err == nil && decode == nil && len(typed.Items) == 1 && typed.Items[0].Kind == entity && typed.Items[0].ID != "")
 		}
 	}
+
 	return
 }

@@ -239,8 +239,10 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 	defer release()
 	action := contracts.NativeAction{Op: c.Op, Args: a, Origin: c.Origin}
 	if strings.HasPrefix(c.Op, "music.") {
-		var args contracts.MusicCommandArgs
-		json.Unmarshal(c.Args, &args)
+		args, problem := g.musicArgs(runctx, p, c)
+		if problem != nil {
+			return g.transition(g.Context, r, "rejected", "rejected_before_dispatch", nil, problem)
+		}
 		action.Args = args
 	}
 	if strings.HasPrefix(c.Op, "photos.") || strings.HasPrefix(c.Op, "mail.") {
@@ -427,6 +429,9 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 		return r, contracts.ErrCorrupt
 	}
 	evidence, _ := json.Marshal(prepared)
+	if r.Source == "music" {
+		evidence, _ = json.Marshal(map[string]string{"fingerprint": hash})
+	}
 	r, err = g.transition(g.Context, r, "prepared", "", evidence, nil)
 	if err != nil {
 		return r, err
@@ -500,11 +505,11 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 		to = "indeterminate"
 		f.Disposition = "indeterminate"
 	}
-	if strings.HasPrefix(r.Command.Op, "music.") && to == "observed" && !contracts.MusicCompletionEvidence(f.Evidence, r.RequestHash) {
+	if contracts.MusicPlayerOperation(r.Command.Op) && to == "observed" && !contracts.MusicCompletionEvidence(f.Evidence, r.RequestHash) {
 		to = "indeterminate"
 		f.Disposition = "indeterminate"
 	}
-	if r.Command.Op != "shortcuts.run" && !strings.HasPrefix(r.Command.Op, "music.") && (to == "observed" || to == "delivered" || to == "delivery_failed") {
+	if r.Command.Op != "shortcuts.run" && !contracts.MusicPlayerOperation(r.Command.Op) && (to == "observed" || to == "delivered" || to == "delivery_failed") {
 		var evidence struct {
 			NativeKey         string `json:"native_key"`
 			Fingerprint       string `json:"fingerprint"`
@@ -514,6 +519,13 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 			CandidateCount    int    `json:"candidate_count"`
 		}
 		collection := "reminders.reminder"
+		if r.Source == "music" {
+			collection = "music.library_item"
+			if r.Command.Op == "music.add_to_playlist" {
+				collection = "music.playlist"
+			}
+		}
+
 		if r.Source == "photos" {
 			collection = "photos.asset"
 			if r.Command.Op == "photos.create_album" {
@@ -576,6 +588,9 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 				}
 			}
 		}
+	}
+	if r.Source == "music" {
+		f.Evidence = musicPublicEvidence(f.Evidence)
 	}
 	if g.messageParts(ctx, &r, &f) {
 		if r.CommitSeq < prior.CommitSeq {

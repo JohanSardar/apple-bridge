@@ -237,7 +237,7 @@ func (s *Store) persistCommand(ctx context.Context, t CommandTransition, partsUp
 	r.History = append(old.History, event)
 	cursor.Sequence++
 	r.Cursor = cursor
-	runnerCompletion := (r.Command.Op == "shortcuts.run" && r.Source == contracts.Shortcuts && contracts.ShortcutCompletionEvidence(r.Evidence, r.RequestHash) || r.Source == "music" && contracts.MusicCompletionEvidence(r.Evidence, r.RequestHash)) && r.State == contracts.CommandObserved && r.CommitSeq == 0
+	runnerCompletion := (r.Command.Op == "shortcuts.run" && r.Source == contracts.Shortcuts && contracts.ShortcutCompletionEvidence(r.Evidence, r.RequestHash) || r.Source == "music" && contracts.MusicPlayerOperation(r.Command.Op) && contracts.MusicCompletionEvidence(r.Evidence, r.RequestHash)) && r.State == contracts.CommandObserved && r.CommitSeq == 0
 	if !runnerCompletion && (r.State == contracts.CommandObserved || r.State == contracts.CommandDelivered) && (r.CommitSeq == 0 || r.CommitSeq >= cursor.Sequence) {
 		return r, contracts.ErrCorrupt
 	}

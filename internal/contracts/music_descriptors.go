@@ -7,21 +7,27 @@ import (
 
 func init() {
 	RegisterSource("music", "Music", true)
+	Collections["music.playlist"] = "mpl"
+	Collections["music.library_item"] = "mli"
+	messagesShape["music.playlist"] = map[string]fieldShape{"name": requiredField(shapeString), "items": requiredField(shapeArray), "count": requiredField(shapeNumber)}
+	messagesShape["music.library_item"] = map[string]fieldShape{"name": requiredField(shapeString), "artist": requiredField(shapeString), "album": requiredField(shapeString), "favorite": requiredField(shapeBool)}
 	registerDescriptors(func() []OperationDescriptor {
 		out := []OperationDescriptor{
 			{Name: "music.search_catalog", Version: 1, Kind: QueryOp, Source: "music", Scope: "music:read", Input: Query{}, Output: QueryResult{}, Description: "Search the public iTunes catalog; bounded transient metadata"},
 			{Name: "music.now_playing", Version: 1, Kind: QueryOp, Source: "music", Scope: "music:read", Input: Query{}, Output: QueryResult{}, Description: "Read the authorized Music player state"},
 		}
-		for _, op := range []string{"play", "pause", "next", "previous", "set_volume", "play_item"} {
+		for _, op := range []string{"play", "pause", "next", "previous", "set_volume", "play_item", "add_to_playlist", "favorite"} {
 			out = append(out, OperationDescriptor{Name: "music." + op, Version: 1, Kind: CommandOp, Source: "music", Scope: "music:write", Capability: "music." + op, Input: Command{}, Output: CommandRecord{}, Description: "Control Music with player state readback"})
 		}
 		return out
-	}, 90, 91, 92, 93, 94, 95, 96, 97)
+	}, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99)
 }
 
 type MusicCommandArgs struct {
-	Volume *int   `json:"volume,omitempty"`
-	ID     string `json:"id,omitempty"`
+	PlaylistID string `json:"playlist_id,omitempty"`
+	Favorite   *bool  `json:"favorite,omitempty"`
+	Volume     *int   `json:"volume,omitempty"`
+	ID         string `json:"id,omitempty"`
 }
 
 func ValidateMusicCommand(c Command) error {
@@ -40,8 +46,16 @@ func ValidateMusicCommand(c Command) error {
 		if len(fields) != 1 || a.Volume == nil || *a.Volume < 0 || *a.Volume > 100 {
 			return ErrInvalid
 		}
+	case "music.favorite":
+		if len(fields) != 2 || a.Favorite == nil || !musicRecordID(a.ID, "mli") {
+			return ErrInvalid
+		}
+	case "music.add_to_playlist":
+		if len(fields) != 2 || !musicRecordID(a.PlaylistID, "mpl") || !musicRecordID(a.ID, "mli") {
+			return ErrInvalid
+		}
 	case "music.play_item":
-		if len(fields) != 1 || len(a.ID) != 16 || strings.Trim(a.ID, "0123456789ABCDEFabcdef") != "" {
+		if len(fields) != 1 || !musicRecordID(a.ID, "mli") {
 			return ErrInvalid
 		}
 	default:
@@ -59,4 +73,15 @@ func MusicCompletionEvidence(raw json.RawMessage, hash string) bool {
 		} `json:"player"`
 	}
 	return json.Unmarshal(raw, &e) == nil && hash != "" && e.Fingerprint == hash && e.Verified && e.Player.Volume != nil && *e.Player.Volume >= 0 && *e.Player.Volume <= 100 && (e.Player.State == "playing" || e.Player.State == "paused" || e.Player.State == "stopped")
+}
+
+func musicRecordID(id, prefix string) bool {
+	return strings.HasPrefix(id, prefix+"_") && ValidCommandID(id)
+}
+func MusicPlayerOperation(op string) bool {
+	switch op {
+	case "music.play", "music.pause", "music.next", "music.previous", "music.set_volume", "music.play_item":
+		return true
+	}
+	return false
 }

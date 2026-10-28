@@ -107,7 +107,9 @@ func (s *querySession) receive(f contracts.IPCFrame) bool {
 					out.Code = "invalid"
 				} else {
 					s.fake.mu.Lock()
-					out.ResultJSON, _ = json.Marshal(s.fake.music.player())
+					player := s.fake.music.player()
+					delete(player, "id")
+					out.ResultJSON, _ = json.Marshal(player)
 					s.fake.mu.Unlock()
 				}
 				break

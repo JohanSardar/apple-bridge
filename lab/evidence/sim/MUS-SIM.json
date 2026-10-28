@@ -1,17 +1,17 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[11.04 14.88 21.67] cpu_idle=49% cpus=8 other_heavy=1"
+    "summary": "air: load=[9.23 7.93 10.3] cpu_idle=41% cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M62A0TJDD6EGKPTBW02ZJGKC",
+  "run_id": "run_01M62CRY7AH0F6531H2KSFSRJ5",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "MUS-SIM",
   "level": "sim",
   "passed": true,
-  "git_sha": "6848ec300bf8849d3d8c0a5f44e917bfae17e1cb",
-  "at": "2026-10-28T22:27:47.917501Z",
+  "git_sha": "b2ffe757374e53192662ff0c1b55080e75ba06ed",
+  "at": "2026-10-28T23:15:55.242763Z",
   "assertions": [
     {
       "name": "world_started",
@@ -58,7 +58,27 @@
       "passed": true
     },
     {
+      "name": "query_deadline_bounds",
+      "passed": true
+    },
+    {
+      "name": "query_deadline_bounds",
+      "passed": true
+    },
+    {
       "name": "command_set_volume",
+      "passed": true
+    },
+    {
+      "name": "command_native_identity_private_set_volume",
+      "passed": true
+    },
+    {
+      "name": "bridge_identity_music.library_item",
+      "passed": true
+    },
+    {
+      "name": "bridge_identity_music.playlist",
       "passed": true
     },
     {
@@ -70,11 +90,19 @@
       "passed": true
     },
     {
+      "name": "command_native_identity_private_play_item",
+      "passed": true
+    },
+    {
       "name": "readback_play_item",
       "passed": true
     },
     {
       "name": "command_pause",
+      "passed": true
+    },
+    {
+      "name": "command_native_identity_private_pause",
       "passed": true
     },
     {
@@ -86,11 +114,19 @@
       "passed": true
     },
     {
+      "name": "command_native_identity_private_play",
+      "passed": true
+    },
+    {
       "name": "readback_play",
       "passed": true
     },
     {
       "name": "command_next",
+      "passed": true
+    },
+    {
+      "name": "command_native_identity_private_next",
       "passed": true
     },
     {
@@ -102,7 +138,67 @@
       "passed": true
     },
     {
+      "name": "command_native_identity_private_previous",
+      "passed": true
+    },
+    {
       "name": "readback_previous",
+      "passed": true
+    },
+    {
+      "name": "library_command_favorite",
+      "passed": true
+    },
+    {
+      "name": "library_native_identity_private_favorite",
+      "passed": true
+    },
+    {
+      "name": "captured_readback_favorite",
+      "passed": true
+    },
+    {
+      "name": "library_command_add_to_playlist",
+      "passed": true
+    },
+    {
+      "name": "library_native_identity_private_add_to_playlist",
+      "passed": true
+    },
+    {
+      "name": "library_command_add_to_playlist",
+      "passed": true
+    },
+    {
+      "name": "library_native_identity_private_add_to_playlist",
+      "passed": true
+    },
+    {
+      "name": "captured_readback_add_to_playlist",
+      "passed": true
+    },
+    {
+      "name": "invalid_command_set_volume",
+      "passed": true
+    },
+    {
+      "name": "invalid_command_play_item",
+      "passed": true
+    },
+    {
+      "name": "invalid_command_favorite",
+      "passed": true
+    },
+    {
+      "name": "invalid_command_add_to_playlist",
+      "passed": true
+    },
+    {
+      "name": "invalid_command_pause",
+      "passed": true
+    },
+    {
+      "name": "doctor_music_shapes",
       "passed": true
     },
     {

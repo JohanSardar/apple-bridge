@@ -1289,7 +1289,7 @@ features:
         level: real
         reason: Verified Set Focus action and parameters plus AB Focus import required; no real mutation attempted. DND syncs to Johan's iPhone.
   - id: music.catalog
-    title: Music catalog and player controls
+    title: Music catalog, player controls and library
     requirements: [R-API, R-SCOPE]
     milestone: G7
     modules: [native/Sources/MusicSource, internal/contracts]
@@ -1299,7 +1299,12 @@ features:
       - {id: MUS-SIM, levels: [sim]}
       - {id: MUS-CATALOG-REAL, levels: [real]}
       - {id: MUS-CONTROL-REAL, levels: [real]}
+      - {id: MUS-PLAYLIST-REAL, levels: [real]}
+      - {id: MUS-IDLE, levels: [sim, real]}
     limits:
-      - {scenario: MUS-CATALOG-REAL, level: real, reason: Qualification pending native build.}
+      - {scenario: MUS-CATALOG-REAL, level: real, reason: "Real query qualification queued behind shared heavy lane; fresh native Helper build passed."}
       - {scenario: MUS-CONTROL-REAL, level: real, reason: "Automation: dev.applebridge.helper → com.apple.Music missing; no consent requested. Recently Played changes during qualification."}
-    notes: "Control native qualification and library capture pending; Automation dev.applebridge.helper → com.apple.Music missing. Public API has no playlist search. Whole Helper idle qualification blocked by T53."
+      - {scenario: MUS-PLAYLIST-REAL, level: real, reason: "Automation: dev.applebridge.helper → com.apple.Music missing; no consent requested."}
+      - {scenario: MUS-IDLE, level: sim, reason: "Whole Helper idle qualification blocked by T53."}
+      - {scenario: MUS-IDLE, level: real, reason: "Whole Helper idle qualification blocked by T53."}
+    notes: "Native Music qualification pending; library capture bounded to 500 tracks / 50 playlists / 1000 memberships; Automation dev.applebridge.helper → com.apple.Music missing. Public API has no playlist search. Whole Helper idle qualification blocked by T53."
