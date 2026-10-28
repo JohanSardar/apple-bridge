@@ -557,6 +557,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if strings.HasPrefix(s.ID, "USE-") {
 		return runUsage(ctx, s, level)
 	}
+	if s.ID == "REM-DST" {
+		return runDateFixtures(ctx, s, level)
+	}
 	if strings.HasPrefix(s.ID, "CAL-") {
 		return runCalendarScenario(ctx, s, level)
 	}

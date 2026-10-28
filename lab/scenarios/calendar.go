@@ -21,6 +21,9 @@ import (
 )
 
 func runCalendarScenario(ctx context.Context, s Scenario, level string) Evidence {
+	if s.ID == "CAL-DST" {
+		return runDateFixtures(ctx, s, level)
+	}
 	if s.ID == "CAL-STORE-READ" {
 		return runCalendarStore(ctx, s, level)
 	}

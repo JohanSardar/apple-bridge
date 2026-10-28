@@ -1,120 +1,115 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[3.81 5.98 10.28] cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[9.84 88.02 140.5] cpu_idle=64% cpus=8 other_heavy=2"
   },
-  "run_id": "cal_01M58D1QXFVP727CCXD9W7XHF3",
-  "network_path": "loopback",
+  "run_id": "date_01M61TEYKWA60N097N499MD06E",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
   "scenario": "CAL-DST",
   "level": "sim",
   "passed": true,
-  "git_sha": "4f263fdf17b0f98019c10581b7d742880bb9b6af",
-  "at": "2026-10-18T21:00:28.464001Z",
+  "git_sha": "4f77d9f7892fe2d1a98db2d82dd335e7bd151665",
+  "at": "2026-10-28T17:55:53.596767Z",
   "assertions": [
     {
-      "name": "calendar_visible",
+      "name": "world_start",
       "passed": true
     },
     {
-      "name": "initial_occurrences_visible",
+      "name": "calendar",
       "passed": true
     },
     {
-      "name": "agenda_returns_occurrences",
+      "name": "spring_timed_fixture",
       "passed": true
     },
     {
-      "name": "dst_zone_and_elapsed_time",
+      "name": "spring_timed_readback",
       "passed": true
     },
     {
-      "name": "independent_simtruth_convergence",
+      "name": "fall_timed_fixture",
       "passed": true
     },
     {
-      "name": "replica_convergence",
+      "name": "fall_timed_readback",
       "passed": true
     },
     {
-      "name": "contiguous_feed_0",
+      "name": "spring_floating_fixture",
       "passed": true
     },
     {
-      "name": "no_false_deletion_0",
+      "name": "spring_floating_readback",
       "passed": true
     },
     {
-      "name": "contiguous_feed_1",
+      "name": "fall_floating_fixture",
       "passed": true
     },
     {
-      "name": "no_false_deletion_1",
+      "name": "fall_floating_readback",
       "passed": true
     },
     {
-      "name": "latency_effect_done→gateway_visible",
+      "name": "spring_daily_fixture",
       "passed": true
     },
     {
-      "name": "latency_effect_done→replica_visible:replica0",
+      "name": "spring_daily_readback",
       "passed": true
     },
     {
-      "name": "no_scope_leak_query",
+      "name": "fall_daily_fixture",
       "passed": true
     },
     {
-      "name": "no_scope_leak_mcp_agenda",
+      "name": "fall_daily_readback",
       "passed": true
     },
     {
-      "name": "no_scope_leak_query",
+      "name": "spring_allday_daily_fixture",
       "passed": true
     },
     {
-      "name": "no_scope_leak_mcp_agenda",
+      "name": "spring_allday_daily_readback",
       "passed": true
     },
     {
-      "name": "replica_records_versions_and_cursor_consistent",
-      "passed": true,
-      "status": "pass",
-      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+      "name": "fall_allday_daily_fixture",
+      "passed": true
     },
     {
-      "name": "replica_application_exactly_once",
-      "passed": false,
-      "status": "unverified",
-      "detail": "kill-during-apply check did not run"
+      "name": "fall_allday_daily_readback",
+      "passed": true
+    },
+    {
+      "name": "utc_daily_fixture",
+      "passed": true
+    },
+    {
+      "name": "utc_daily_readback",
+      "passed": true
+    },
+    {
+      "name": "month_end_fixture",
+      "passed": true
+    },
+    {
+      "name": "month_end_readback",
+      "passed": true
+    },
+    {
+      "name": "replica_converged",
+      "passed": true
     },
     {
       "name": "credential_backend_override_restored",
       "passed": true
     }
   ],
-  "latency": {
-    "effect_done→gateway_visible": {
-      "samples": 1,
-      "p50_ms": 2.831,
-      "p95_ms": 2.831,
-      "max_ms": 2.831,
-      "timeouts": 0
-    },
-    "effect_done→replica_visible:replica0": {
-      "samples": 1,
-      "p50_ms": 6.281,
-      "p95_ms": 6.281,
-      "max_ms": 6.281,
-      "timeouts": 0
-    }
-  },
-  "hosts": [
-    "air"
-  ],
-  "conditions": {
-    "clock": "native CLOCK_UPTIME_RAW for real fixtures; simulated native UTC effect timestamp before enqueue",
-    "heavy_slots_in_use": "1",
-    "load_average": "3.81 5.98 10.28",
-    "metadata_endpoint": "Apple effect commit to gateway/local SSE on each replica"
-  }
+  "latency": null,
+  "hosts": null
 }

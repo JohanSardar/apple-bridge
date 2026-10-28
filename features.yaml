@@ -316,6 +316,7 @@ features:
     status: done
     scenarios:
       - {id: REM-CREATE-EXTERNAL, levels: [sim, real, replica]}
+      - {id: REM-DST, levels: [sim]}
       - {id: REM-RECURRING, levels: [sim]}
       - {id: REM-PERMISSION-LOSS, levels: [sim]}
   - id: reminders.write

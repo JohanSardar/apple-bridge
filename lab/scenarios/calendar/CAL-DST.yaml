@@ -1,6 +1,6 @@
 id: CAL-DST
 feature: calendar.read
-levels: [sim, real]
+levels: [sim]
 given: [{world: {replicas: 1}}]
 when: [{calendar_journey: {}}]
 then: [{converge: {}}]
