@@ -1157,5 +1157,5 @@ features:
       - {id: FILE-OFFLOAD-REAL, levels: [real]}
     limits:
       - {scenario: FILE-IDLE, level: sim, reason: Full Helper CPU qualification pending.}
-      - {scenario: FILE-IDLE, level: real, reason: Five-minute source CPU qualification pending.}
+      - {scenario: FILE-IDLE, level: real, reason: Standalone source measured below 2% over five minutes; host busy and full Helper CPU remains unqualified.}
       - {scenario: FILE-OFFLOAD-REAL, level: real, reason: Single real run failed the native eviction capability guard; hydration remains unverified.}

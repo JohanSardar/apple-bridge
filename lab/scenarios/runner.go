@@ -1188,6 +1188,9 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		if strings.HasPrefix(s.ID, "MAC-") && level == "real" {
 			duration = 20 * time.Minute
 		}
+		if s.ID == "FILE-IDLE" && level == "real" {
+			duration = 7 * time.Minute
+		}
 		bounded, cancel := context.WithTimeout(ctx, duration)
 		secretBefore, secretWasSet := os.LookupEnv("APPLE_BRIDGE_SECRET_STORE")
 		e := Run(bounded, s, level)
