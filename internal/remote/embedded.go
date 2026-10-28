@@ -39,3 +39,10 @@ func clientConnection(ctx context.Context, conn net.Conn) context.Context {
 	}
 	return ctx
 }
+
+type embeddedServer struct{ *tsnet.Server }
+
+func (s embeddedServer) LocalClient() (LocalClient, error) { return s.Server.LocalClient() }
+func (s embeddedServer) ListenFunnel(network, address string) (net.Listener, error) {
+	return s.Server.ListenFunnel(network, address)
+}

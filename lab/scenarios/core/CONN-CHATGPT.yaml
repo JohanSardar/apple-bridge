@@ -1,0 +1,7 @@
+id: CONN-CHATGPT
+feature: web.remote
+levels: [real]
+given: []
+when: []
+then: []
+cleanup: []

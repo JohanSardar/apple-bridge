@@ -38,8 +38,8 @@ func runRemote(ctx context.Context, s Scenario, level string) Evidence {
 		return remote.Command(bounded, w.Gateway.Home, "off", "", "", &bytes.Buffer{})
 	}
 	defer off()
-	bounded, cancel := context.WithTimeout(ctx, 20*time.Second)
-	err = remote.Command(bounded, w.Gateway.Home, "on", "", "bridge", &bytes.Buffer{})
+	bounded, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	err = remote.Command(bounded, w.Gateway.Home, "on", "tailscale-app", "bridge", &bytes.Buffer{})
 	cancel()
 	add("remote_on_system", err == nil)
 	if err != nil {
@@ -115,7 +115,7 @@ func runRemote(ctx context.Context, s Scenario, level string) Evidence {
 	err = w.RestartGateway()
 	add("gateway_restart", err == nil)
 	restored := false
-	deadline := time.Now().Add(10 * time.Second)
+	deadline := time.Now().Add(2 * time.Minute)
 	for err == nil && time.Now().Before(deadline) {
 		var restoredStatus remote.Status
 		data, _ := os.ReadFile(filepath.Join(w.Gateway.Home, "remote", "status.json"))

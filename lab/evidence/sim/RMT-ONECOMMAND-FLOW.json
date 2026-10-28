@@ -1,0 +1,112 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[3.68 5.44 6.59] cpu_idle=84% cpus=8 other_heavy=0"
+  },
+  "run_id": "remote-flow",
+  "network_path": "isolated fake LocalClient and TCP listener; no tailscaled or login",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "RMT-ONECOMMAND-FLOW",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "c511b846dbe231eef74f37d52a3756caa93428dc",
+  "at": "2026-10-28T09:03:29.53275Z",
+  "assertions": [
+    {
+      "name": "probe_rejects_discovery",
+      "passed": true
+    },
+    {
+      "name": "probe_rejects_challenge",
+      "passed": true
+    },
+    {
+      "name": "probe_rejects_web",
+      "passed": true
+    },
+    {
+      "name": "probe_rejects_stream",
+      "passed": true
+    },
+    {
+      "name": "private_home",
+      "passed": true
+    },
+    {
+      "name": "isolated_listener",
+      "passed": true
+    },
+    {
+      "name": "url_not_printed_before_probe",
+      "passed": true
+    },
+    {
+      "name": "on_completed",
+      "passed": true
+    },
+    {
+      "name": "embedded_default_and_ready",
+      "passed": true
+    },
+    {
+      "name": "approval_links_from_fake",
+      "passed": true
+    },
+    {
+      "name": "states_walk",
+      "passed": true
+    },
+    {
+      "name": "funnel_rechecked",
+      "passed": true
+    },
+    {
+      "name": "url_and_mcp_printed",
+      "passed": true
+    },
+    {
+      "name": "status_fields",
+      "passed": true
+    },
+    {
+      "name": "snippets",
+      "passed": true
+    },
+    {
+      "name": "active_stream_before_off",
+      "passed": true
+    },
+    {
+      "name": "off_within_one_second",
+      "passed": true
+    },
+    {
+      "name": "off_closes_active_stream",
+      "passed": true
+    },
+    {
+      "name": "serving_stopped",
+      "passed": true
+    },
+    {
+      "name": "off_status",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "remote_off": {
+      "samples": 1,
+      "p50_ms": 101.717458,
+      "p95_ms": 101.717458,
+      "max_ms": 101.717458,
+      "timeouts": 0
+    }
+  },
+  "hosts": null
+}

@@ -58,7 +58,8 @@ func run(ctx context.Context, args []string) error {
 	set := flag.NewFlagSet(verb, flag.ContinueOnError)
 	noSelfTestUI := set.Bool("no-ui", false, "defer Messages UI steps and retain cleanup obligations")
 	forceSelfTest := set.Bool("force", false, "rerun the Messages self-test on this OS build")
-	via := set.String("via", "", "remote backend: system or embedded")
+	via := set.String("via", "", "remote backend: embedded (default) or tailscale-app")
+	snippets := set.Bool("snippets", false, "print remote connection snippets")
 	remoteToken := set.Bool("remote", false, "allow this token through Remote")
 	home := set.String("home", defaultHome(), "private state directory")
 	webHost := set.String("host", "http://localhost:7780", "web serving origin")
@@ -108,6 +109,12 @@ func run(ctx context.Context, args []string) error {
 		return err
 	}
 	if verb == "remote" {
+		if *snippets {
+			if webAction != "status" {
+				return contracts.ErrInvalid
+			}
+			return remote.Snippets(*home, os.Stdout)
+		}
 		return remote.Command(ctx, *home, webAction, *via, *name, os.Stdout)
 	}
 	if verb == "install-credentials" {

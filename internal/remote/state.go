@@ -21,12 +21,15 @@ type Config struct {
 }
 
 type Status struct {
-	ID        string `json:"id"`
-	State     string `json:"state"`
-	Backend   string `json:"backend"`
-	URL       string `json:"url"`
-	LastError string `json:"last_error"`
-	Message   string `json:"message,omitempty"`
+	ID                string    `json:"id"`
+	State             string    `json:"state"`
+	Backend           string    `json:"backend"`
+	URL               string    `json:"url"`
+	LastError         string    `json:"last_error"`
+	Message           string    `json:"message,omitempty"`
+	PendingLink       string    `json:"pending_link"`
+	TLSTermination    string    `json:"tls_termination"`
+	CertificateExpiry time.Time `json:"certificate_expiry"`
 }
 
 func read(home, name string, value any) error {
@@ -67,10 +70,19 @@ func write(home, name string, value any) error {
 }
 
 func Command(ctx context.Context, home, action, via, name string, out io.Writer) error {
+	return CommandWithOpener(ctx, home, action, via, name, out, openLink)
+}
+
+func CommandWithOpener(ctx context.Context, home, action, via, name string, out io.Writer, opener func(context.Context, string) error) error {
+	if via == "tailscale-app" {
+		via = "system"
+	}
 	if action == "status" {
 		var status Status
 		if err := read(home, "status", &status); errors.Is(err, os.ErrNotExist) {
 			status.State = "off"
+			status.Backend = "embedded"
+			status.TLSTermination = "on this Mac"
 		} else if err != nil {
 			return err
 		}
@@ -79,6 +91,9 @@ func Command(ctx context.Context, home, action, via, name string, out io.Writer)
 	if action != "on" && action != "off" || via != "" && via != "system" && via != "embedded" {
 		return contracts.ErrInvalid
 	}
+	if via == "" && action == "on" {
+		via = "embedded"
+	}
 	cfg := Config{ID: contracts.NewID("remote"), Enabled: action == "on", Backend: via, Name: name}
 	if !cfg.Enabled && cfg.Backend == "" {
 		var previous Status
@@ -86,15 +101,47 @@ func Command(ctx context.Context, home, action, via, name string, out io.Writer)
 			cfg.Backend = previous.Backend
 		}
 	}
+	if cfg.Backend == "" {
+		cfg.Backend = "embedded"
+	}
 	if cfg.Name == "" {
 		cfg.Name = "bridge"
 	}
-	if err := write(home, "config", cfg); err != nil {
+	listener, err := controlListener(home, cfg.ID)
+	if err != nil {
+		return err
+	}
+	defer listener.Close()
+	links := make(chan string)
+	finished := make(chan struct{})
+	defer close(finished)
+	go func() {
+		conn, err := listener.Accept()
+		if err != nil {
+			return
+		}
+		defer conn.Close()
+		go func() { <-finished; conn.Close() }()
+		decoder := json.NewDecoder(conn)
+		for {
+			var link string
+			if decoder.Decode(&link) != nil {
+				return
+			}
+			select {
+			case links <- link:
+			case <-finished:
+				return
+			}
+		}
+	}()
+	if err := configure(home, cfg, ""); err != nil {
 		return err
 	}
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
 	notice := ""
+	opened := map[string]bool{}
 	for {
 		var status Status
 		if read(home, "status", &status) == nil && status.ID == cfg.ID {
@@ -105,6 +152,7 @@ func Command(ctx context.Context, home, action, via, name string, out io.Writer)
 			if status.State == "on" || status.State == "off" {
 				if status.URL != "" {
 					fmt.Fprintln(out, status.URL)
+					fmt.Fprintln(out, status.URL+"/mcp")
 				} else {
 					fmt.Fprintln(out, status.State)
 				}
@@ -114,8 +162,21 @@ func Command(ctx context.Context, home, action, via, name string, out io.Writer)
 				return fmt.Errorf("remote: %s", status.LastError)
 			}
 		}
+		var current Config
+		if read(home, "config", &current) == nil && current.ID != cfg.ID {
+			return fmt.Errorf("remote request superseded")
+		}
 		select {
+		case link := <-links:
+			if !opened[link] {
+				fmt.Fprintln(out, link)
+				if opener(ctx, link) != nil {
+					fmt.Fprintln(out, "Open the link above in your browser")
+				}
+				opened[link] = true
+			}
 		case <-ctx.Done():
+			configure(home, Config{ID: cfg.ID, Backend: cfg.Backend, Name: cfg.Name}, cfg.ID)
 			return ctx.Err()
 		case <-ticker.C:
 		}

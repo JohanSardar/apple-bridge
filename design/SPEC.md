@@ -406,6 +406,7 @@ protocol Source: Sendable {
 Relay service and enrollment: [G2-1 / G2-2](spec/relay.md).
 OAuth client metadata: [fetch and lab contract](spec/oauth.md).
 Source registration: [append-friendly registries](spec/sources.md).
+Remote onboarding and public readiness: [G1-3 / G1-4 / G1-6](spec/remote.md).
 
 Every source publishes `system.source` with state, coverage, freshness and capabilities, and exposes capabilities individually gated on OS build and proven behaviour. A capability is advertised only after its real-level scenario passed on this OS build (recorded in `features.yaml`); otherwise operations return `ErrUnsupported` with reason `capability_unproven`.
 
@@ -1113,11 +1114,11 @@ Budgets: the shared REST/MCP read-model handler for 1,000-item `reminders.items`
 ### 23.5 Remote
 
 **Commands:**
-- `bridge remote on [--name <host>] [--via system|embedded]` asks the running Runtime to enable Remote. Automatic selection uses a running, logged-in system Tailscale; absent that, an embedded tsnet node. A system node missing HTTPS/Funnel reports the enablement URL instead of changing unrelated configuration. `--via` overrides selection; embedded hostname defaults to `bridge`.
+- `bridge remote on [--name <host>] [--via tailscale-app|embedded]` asks the running Runtime to enable Remote. Embedded tsnet is the default; `tailscale-app` (or the compatible `system` spelling) explicitly selects the system app. A system node missing HTTPS/Funnel reports the enablement URL instead of changing unrelated configuration. `--via` overrides selection; embedded hostname defaults to `bridge`.
 - System mode uses the LocalAPI client and ETag/If-Match read-modify-write, preserving existing handlers and unknown config fields. It allocates the first unoccupied allowed port among 443, 8443, 10000, including foreground/service reservations. The mapping proxies only to a dedicated loopback listener, separate from the local API, with a private 256-bit capability path known to that mapping. Direct loopback requests without it are refused. An ownership record is persisted before installation; restart removes a stale owned mapping before reinstalling. Off removes only the unchanged owned mapping, preserving concurrent unrelated edits.
-- Embedded mode stores state in `<home>/remote/`, mode 0700, prints the Tailscale login URL and waits for authorization. Missing HTTPS or Funnel prints its enablement URL and rechecks until enabled. It then uses `ListenFunnel("tcp", ":443")`.
-- The enabled state and selected backend persist across Runtime restarts. The public URL is stable and includes a nondefault port in system mode. The CLI prints the URL only; terminal QR encoding is omitted to avoid a new dependency.
-- `bridge remote off` closes public serving, including upgraded replica feed connections, within 1 s. `bridge remote status` prints state, backend, URL and the last error. Commands communicate with Runtime through private atomic state files under `<home>/remote/`; Runtime must be running for on/off to complete.
+- Embedded mode stores state in `<home>/remote/`, mode 0700, prints the Tailscale login URL and waits for authorization. Missing HTTPS or Funnel prints and opens its QueryFeature enablement URL and rechecks every 5 s until enabled. Login links are printed and opened by the waiting CLI. It then uses `ListenFunnel("tcp", ":443")`.
+- The enabled state and selected backend persist across Runtime restarts. The public URL is stable and includes a nondefault port in system mode. Before printing the public URL and MCP URL, Remote probes public DNS and HTTPS through the public Funnel relay: OAuth discovery 200, MCP 401 with WWW-Authenticate, app 200 and a 60 s synthetic SSE stream. See [remote flow](spec/remote.md).
+- `bridge remote off` closes public serving, including upgraded replica feed connections, within 1 s. `bridge remote status` prints state, backend, URL, pending link, TLS termination (on this Mac), certificate expiry and the last error; `--snippets` prints connection examples. Commands communicate with Runtime through private atomic state files under `<home>/remote/`; Runtime must be running for on/off to complete.
 - Allowed on replicas, off by default. Tailnet devices reach the same hostname without Funnel.
 
 **Public routing:**

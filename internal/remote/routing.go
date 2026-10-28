@@ -68,6 +68,10 @@ func (r *Remote) handler(proxyPath string) http.Handler {
 				req.RemoteAddr = source
 			}
 		}
+		if req.URL.Path == streamCheckPath {
+			streamCheck(w, req)
+			return
+		}
 		if req.URL.Path == "/v1/feed" && r.feed != nil {
 			r.feed.ServeHTTP(w, req)
 			return

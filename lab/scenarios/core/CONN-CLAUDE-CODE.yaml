@@ -1,0 +1,7 @@
+id: CONN-CLAUDE-CODE
+feature: web.remote
+levels: [real]
+given: []
+when: []
+then: []
+cleanup: []

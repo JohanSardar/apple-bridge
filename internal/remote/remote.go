@@ -1,18 +1,22 @@
 package remote
 
 import (
+	"net"
 	"net/http"
 	"strings"
 	"sync"
 )
 
 type Remote struct {
-	home   string
-	mu     sync.RWMutex
-	status Status
-	web    http.Handler
-	api    http.Handler
-	feed   http.Handler
+	options   Options
+	control   net.Conn
+	controlID string
+	home      string
+	mu        sync.RWMutex
+	status    Status
+	web       http.Handler
+	api       http.Handler
+	feed      http.Handler
 }
 
 func New(home string) *Remote { return &Remote{home: home} }
@@ -27,14 +31,4 @@ func (r *Remote) publish(status Status) {
 	defer r.mu.Unlock()
 	r.status = status
 	write(r.home, "status", status)
-}
-
-func (r *Remote) message(id, message string) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if r.status.ID != id {
-		return
-	}
-	r.status.Message = message
-	write(r.home, "status", r.status)
 }
