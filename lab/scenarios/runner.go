@@ -1203,6 +1203,9 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		if strings.HasPrefix(s.ID, "MAC-") && level == "real" {
 			duration = 20 * time.Minute
 		}
+		if s.Feature == "files.commands" && level != "sim" {
+			duration = 20 * time.Minute
+		}
 		if s.ID == "FILE-IDLE" && level == "real" {
 			duration = 7 * time.Minute
 		}

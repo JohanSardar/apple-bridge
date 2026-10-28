@@ -1300,6 +1300,5 @@ features:
       - {id: FILE-CRUD-REAL, levels: [real]}
       - {id: FILE-REPLICA, levels: [replica]}
     limits:
-      - {scenario: FILE-REPLICA, level: replica, reason: Ubuntu gateway journey remains unimplemented; scenario fails explicitly.}
-      - {scenario: FILE-COMMANDS, level: sim, reason: Native isolated filesystem proof; simapple gateway and cloud state transitions remain unverified. Content is inline base64 capped at one MiB; upload blob references remain unsupported.}
-      - {scenario: FILE-CRUD-REAL, level: real, reason: Pending native CRUD qualification.}
+      - {scenario: FILE-COMMANDS, level: sim, reason: Content is inline base64 capped at 128 KiB; upload blob references remain unsupported.}
+      - {scenario: FILE-CRUD-REAL, level: real, reason: CRUD filesystem Truth passes; real cloud download and eviction qualification remains outstanding.}

@@ -54,7 +54,7 @@ public actor FilesSource: Source {
             var nextGuard = scanGuard
             let absent = nextGuard.finish(root: root.path, keys: Set(rows.map { $0["native_key"].string }), complete: complete)
             rows += absent.map { .object(["kind": .string("absent"), "collection": .string("files.item"), "native_key": .string($0), "observed_at": .string(timestamp()), "revalidated": .bool(true)]) }
-            try await sink.emit(source: name, generation: generation, observations: rows, scanID: UUID().uuidString, scanStartedAt: started, scope: [], completionEvidence: "", blobHandles: [:], live: false)
+            try await sink.emit(source: name, generation: generation, observations: rows, scanID: UUID().uuidString, scanStartedAt: started, scope: ["files.item"], completionEvidence: complete ? "complete" : "", blobHandles: [:], live: false)
             scanGuard = nextGuard
         }
     }

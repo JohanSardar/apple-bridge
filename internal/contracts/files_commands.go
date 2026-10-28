@@ -54,7 +54,7 @@ func ValidateFileCommand(c Command) error {
 	if c.Op == "files.create" || c.Op == "files.write" {
 		data, err := base64.StdEncoding.DecodeString(a.Content)
 		digest := sha256.Sum256(data)
-		if err != nil || len(data) > 1<<20 || hex.EncodeToString(digest[:]) != a.Digest {
+		if err != nil || len(data) > 128<<10 || hex.EncodeToString(digest[:]) != a.Digest {
 			return ErrInvalid
 		}
 	}
@@ -101,4 +101,44 @@ func FileCompletionEvidence(c Command, raw json.RawMessage, hash string) bool {
 		return slices.Equal(e.Tags, a.Tags)
 	}
 	return true
+}
+
+func fileCommandSchema(d OperationDescriptor, schema map[string]any) map[string]any {
+	properties := schema["properties"].(map[string]any)
+	args := JSONSchema(FileArgs{})
+	fields := args["properties"].(map[string]any)
+	allowed := []string{"root", "path"}
+	required := []string{"root", "path"}
+	switch d.Name {
+	case "files.create", "files.write":
+		allowed = []string{"root", "parent", "name", "content_base64", "digest"}
+		required = []string{"root", "name", "content_base64", "digest"}
+	case "files.move", "files.rename":
+		allowed = []string{"root", "path", "parent", "name"}
+		required = []string{"root", "path", "name"}
+	case "files.set_tags":
+		allowed = append(allowed, "tags")
+		required = append(required, "tags")
+	}
+	for key := range fields {
+		if !slices.Contains(allowed, key) {
+			delete(fields, key)
+		}
+	}
+	if value, ok := fields["digest"].(map[string]any); ok {
+		value["pattern"] = "^[0-9a-f]{64}$"
+	}
+	if value, ok := fields["content_base64"].(map[string]any); ok {
+		value["maxLength"] = 174764
+	}
+	if value, ok := fields["tags"].(map[string]any); ok {
+		value["maxItems"] = 64
+	}
+	args["required"] = required
+	properties["args"] = args
+	delete(properties, "expected_version")
+	schema["required"] = []string{"args"}
+	properties["wait_ms"].(map[string]any)["minimum"] = 0
+	properties["wait_ms"].(map[string]any)["maximum"] = 15000
+	return schema
 }

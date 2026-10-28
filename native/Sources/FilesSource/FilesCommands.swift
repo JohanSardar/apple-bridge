@@ -37,7 +37,7 @@ extension FilesSource {
         if op == "files.create" || op == "files.write" || op == "files.move" || op == "files.rename" { _ = try destination(args) }
         if op != "files.create" && op != "files.write" { _ = try confined(args, "path") }
         if op == "files.create" || op == "files.write" {
-            guard let data = Data(base64Encoded: args["content_base64"].string), data.count <= 1 << 20,
+            guard let data = Data(base64Encoded: args["content_base64"].string), data.count <= 128 << 10,
                   SHA256.hash(data: data).map({ String(format: "%02x", $0) }).joined() == args["digest"].string else { throw SourceFailure.invalid }
         }
         let bytes = try JSONEncoder().encode(action)
@@ -67,7 +67,7 @@ extension FilesSource {
                 var trashed: NSURL?
                 try fm.trashItem(at: url, resultingItemURL: &trashed)
                 guard let result = trashed as URL?, fm.fileExists(atPath: result.path), !fm.fileExists(atPath: url.path), result.pathComponents.contains(".Trash") || result.pathComponents.contains(".Trashes") else { throw SourceFailure.corrupt }
-                return .object(["observed": .bool(true), "trashed": .bool(true), "trash_path": .string(result.path)])
+                return .object(["observed": .bool(true), "trashed": .bool(true), "native_key": .string(url.path), "trash_path": .string(result.path)])
             case "files.set_tags":
                 let tags = args["tags"].array.map { $0.string }
                 var values = URLResourceValues()
@@ -91,7 +91,7 @@ extension FilesSource {
             default: throw SourceFailure.unsupported
             }
         }
-        var result: [String: JSON] = ["observed": .bool(true), "path": .string(url.path)]
+        var result: [String: JSON] = ["observed": .bool(true), "path": .string(url.path), "native_key": .string(url.path)]
         if op == "files.create" || op == "files.write" {
             result["digest"] = .string(SHA256.hash(data: try Data(contentsOf: url)).map { String(format: "%02x", $0) }.joined())
         }

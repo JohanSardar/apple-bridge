@@ -1,6 +1,7 @@
 package contracts
 
 func init() {
+	Collections["files.item"] = "fil"
 	registerDescriptors(FileCommandDescriptors, 70, 71, 72, 73, 74, 75, 76, 77)
 	RegisterSource("files", "Files", true)
 	registerDescriptors(func() []OperationDescriptor {

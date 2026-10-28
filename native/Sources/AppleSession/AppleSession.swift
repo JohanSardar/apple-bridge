@@ -481,7 +481,9 @@ public actor AppleSession: ObservationSink {
         }
         if operation.hasPrefix("files."), let files = additionalSources["files"] as? FilesSource {
             try await files.reconcile(into: self)
+            guard let checkpoint = observedCheckpoints["files.item/" + evidence["native_key"].string] else { throw SourceFailure.unavailable }
             var result = evidence.object
+            result["capture_checkpoint"] = .string(checkpoint)
             result["fingerprint"] = fingerprint
             return .object(result)
         }

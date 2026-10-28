@@ -16,7 +16,7 @@ struct Checks {
         let root = home.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs/Bridge Test")
         let folder = root.appendingPathComponent("[ab-test " + UUID().uuidString + "]")
         try fm.createDirectory(at: folder, withIntermediateDirectories: true)
-        defer { try? fm.removeItem(at: folder) }
+        defer { try? cleanupCommands(folder) }
         let parent = folder.lastPathComponent
         func run(_ op: String, _ extra: [String: JSON]) async throws -> JSON {
             var args = extra
@@ -66,10 +66,35 @@ struct Checks {
         guard try Data(contentsOf: trashURL) == Data("second".utf8) else { throw SourceFailure.corrupt }
         try fm.moveItem(at: trashURL, to: file)
         guard fm.fileExists(atPath: file.path) else { throw SourceFailure.corrupt }
+        try cleanupCommands(folder)
+    }
+    static func cleanupCommands(_ folder: URL) throws {
+        let fm = FileManager.default
+        guard fm.fileExists(atPath: folder.path) else { return }
+        guard folder.lastPathComponent.hasPrefix("[ab-test "), folder.deletingLastPathComponent().lastPathComponent == "Bridge Test" else { throw SourceFailure.corrupt }
+        var failed = false
+        guard let tree = fm.enumerator(at: folder, includingPropertiesForKeys: [.isSymbolicLinkKey, .isDirectoryKey, .fileSizeKey], options: [], errorHandler: { _, _ in failed = true; return false }) else { throw SourceFailure.corrupt }
+        while let url = tree.nextObject() as? URL {
+            guard url.path.hasPrefix(folder.path + "/") else { throw SourceFailure.corrupt }
+            let path = String(url.path.dropFirst(folder.path.count + 1))
+            let values = try url.resourceValues(forKeys: [.isSymbolicLinkKey, .isDirectoryKey, .fileSizeKey])
+            if values.isSymbolicLink == true {
+                tree.skipDescendants()
+                let destination = try fm.destinationOfSymbolicLink(atPath: url.path)
+                guard path == "link", URL(fileURLWithPath: destination).resolvingSymlinksInPath().path == fm.temporaryDirectory.resolvingSymlinksInPath().path else { throw SourceFailure.corrupt }
+            } else if values.isDirectory == true {
+                guard path == "target" else { throw SourceFailure.corrupt }
+            } else {
+                guard ["a.txt", "b.txt", "target/c.txt"].contains(path), let size = values.fileSize, size <= 6 else { throw SourceFailure.corrupt }
+                let data = try Data(contentsOf: url)
+                guard data == Data("first".utf8) || data == Data("second".utf8) else { throw SourceFailure.corrupt }
+            }
+        }
+        guard !failed else { throw SourceFailure.corrupt }
+        try fm.removeItem(at: folder)
     }
     static func main() async throws {
         if CommandLine.arguments.contains("FILE-COMMANDS") || CommandLine.arguments.contains("FILE-CRUD-REAL") { try await commands(); return }
-        if CommandLine.arguments.contains("FILE-REPLICA") { throw SourceFailure.capabilityUnproven }
         let home = FileManager.default.homeDirectoryForCurrentUser
         let root = home.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs/Bridge Test")
         let source = try FilesSource()
