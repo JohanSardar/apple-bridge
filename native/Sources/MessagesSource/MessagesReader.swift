@@ -112,13 +112,31 @@ final class MessagesReader {
         return "m.ROWID AS row_position,m.*,\(chat) AS capture_chat_guid,\(sender) AS capture_sender_key,\(messageDeletionDate) AS capture_deleted_date,\(attachments) AS capture_attachment_signature,\(member) AS capture_member_key"
     }
     func messageRows(after: Int64, through: Int64, limit: Int = 128) throws -> [SQLiteRow] {
-        try query("SELECT \(messageProjection) FROM message m WHERE m.ROWID>? AND m.ROWID<=? ORDER BY m.ROWID LIMIT ?", [String(after), String(through), String(limit)])
+        try projectedRows("SELECT ROWID AS row_position FROM message WHERE ROWID>? AND ROWID<=? ORDER BY ROWID LIMIT ?", [String(after), String(through), String(limit)])
     }
     func recoverableGUIDs() throws -> Set<String> {
         guard has("chat_recoverable_message_join", "message_id") else { return [] }
         return Set(try query("SELECT DISTINCT m.guid FROM message m JOIN chat_recoverable_message_join r ON r.message_id=m.ROWID").map { $0["guid"] })
     }
-    func recent() throws -> [SQLiteRow] { try query("SELECT \(messageProjection) FROM message m ORDER BY m.ROWID DESC LIMIT 2000") }
+    private func projectedRows(_ selection: String, _ bindings: [String], descending: Bool = false) throws -> [SQLiteRow] {
+        let joins = ["chat_message_join", "chat_recoverable_message_join", "message_attachment_join"].filter { columns[$0]?.contains("message_id") == true }
+        let tables = ["capture_batch AS MATERIALIZED (\(selection))"] + joins.map {
+            "\($0) AS MATERIALIZED (SELECT * FROM main.\($0) WHERE message_id IN (SELECT row_position FROM capture_batch))"
+        }
+        let order = descending ? "DESC" : "ASC"
+        return try query("WITH " + tables.joined(separator: ",") + " SELECT \(messageProjection) FROM message m WHERE m.ROWID IN (SELECT row_position FROM capture_batch) ORDER BY m.ROWID \(order)", bindings)
+    }
+    func recent() throws -> [SQLiteRow] { try projectedRows("SELECT ROWID AS row_position FROM message ORDER BY ROWID DESC LIMIT 2000", [], descending: true) }
+    func messages(_ guids: [String]) throws -> [SQLiteRow] {
+        guard !guids.isEmpty else { return [] }
+        let placeholders = Array(repeating: "?", count: guids.count).joined(separator: ",")
+        return try projectedRows("SELECT ROWID AS row_position FROM message WHERE guid IN (\(placeholders))", guids)
+    }
+    func existingMessages(_ guids: [String]) throws -> Set<String> {
+        guard !guids.isEmpty else { return [] }
+        let placeholders = Array(repeating: "?", count: guids.count).joined(separator: ",")
+        return Set(try query("SELECT guid FROM message WHERE guid IN (\(placeholders))", guids).map { $0["guid"] })
+    }
     func message(_ guid: String) throws -> SQLiteRow? { try query("SELECT \(messageProjection) FROM message m WHERE m.guid=?", [guid]).first }
     func reference(_ collection: String, _ guid: String) -> [String: Any] { ["$ref": ["collection": "messages." + collection, "native_key": guid]] }
     func date(_ row: SQLiteRow, _ column: String) -> Date? {

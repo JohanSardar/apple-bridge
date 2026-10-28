@@ -418,6 +418,7 @@ Shared helpers for new sources: [SourceSupport](spec/source-support.md).
 Relay service and enrollment: [G2-1 / G2-2](spec/relay.md).
 OAuth client metadata: [fetch and lab contract](spec/oauth.md).
 Source registration: [append-friendly registries](spec/sources.md).
+Messages reconciliation: [incremental capture and audit bounds](spec/messages.md).
 Shortcut provisioning: [signed builds and source format](spec/shortcuts.md). Clock: [pack qualification and limits](spec/clock.md).
 Remote onboarding and public readiness: [G1-3 / G1-4 / G1-6](spec/remote.md).
 
@@ -425,11 +426,11 @@ Every source publishes `system.source` with state, coverage, freshness and capab
 
 ### 9.1 Messages
 
-**Read path.** `~/Library/Messages/chat.db` opened `SQLITE_OPEN_READONLY` with WAL (needs FDA). Schema probed at open (column list hashed into the generation); missing columns become explicit coverage gaps, never crashes. Watch `chat.db`, `chat.db-wal`, `chat.db-shm` and the directory with a `DispatchSource`/FSEvents watcher, re-armed after file replacement (inode change), debounce 25 ms, plus a 2 s polling fallback when no events arrive while the WAL size changes, plus a complete reconciliation every 15 min and after wake.
+**Read path.** `~/Library/Messages/chat.db` opened `SQLITE_OPEN_READONLY` with WAL (needs FDA). Schema probed at open (column list hashed into the generation); missing columns become explicit coverage gaps, never crashes. Watch `chat.db`, `chat.db-wal` and the directory with a `DispatchSource` watcher, re-armed after file replacement (inode change), coalesced in bounded 100 ms windows, plus a 2 s polling fallback. Wake and the 15 min timer request reconciliation; an unchanged connection-local SQLite data version and maximum ROWID skip history work. Reopened connections invalidate that version checkpoint. Complete scans use batches of 128 with bounded join materialization and no per-row reload.
 
 **Change algorithm (F8).**
 1. Inserts: `message.ROWID > lastRowID` (scan position, database-local).
-2. Mutations: rows whose mutable columns changed: `date_delivered, date_read, is_delivered, is_read, date_edited, date_retracted, message_summary_info, error, is_finished, item_type, attributedBody length` — detected by a bounded rescan of the most recent N=2,000 messages plus any message referenced by new rows (`associated_message_guid`, `reply_to_guid`, `thread_originator_guid`) on every change event, plus the periodic complete reconciliation which hashes every row.
+2. Mutations: rows whose mutable columns changed: `date_delivered, date_read, is_delivered, is_read, date_edited, date_retracted, message_summary_info, error, is_finished, item_type, attributedBody length` — detected by a bounded rescan of the most recent N=2,000 messages plus any message referenced by new rows (`associated_message_guid`, `reply_to_guid`, `thread_originator_guid`) on every change event, plus complete reconciliation after database changes, which hashes rows in bounded batches and suppresses unchanged observations.
 3. Recoverable joins are followed on every change (including restoration outside the recent-row window); attachment linkage and Genmoji metadata are included in each message fingerprint. Chats, handles, chat membership (`chat_handle_join`), attachments (`message_attachment_join`, `attachment.transfer_state`): full-table hash diff on change (tables are small) and on reconciliation.
 4. Deletions: a message/chat missing from a **complete** reconciliation scan of a chat is published absent; `deleted_messages`/`sync_deleted_*` tables are used as corroborating evidence.
 5. Database replacement (inode or schema hash change) starts a new generation with a full rescan.
@@ -499,6 +500,8 @@ Every UI action records a before/after screenshot path in evidence (stored in th
 - Identity: Core Data `ZIDENTIFIER` UUID; AppleScript id `x-coredata://…/ICNote/p<pk>` stored as alias.
 
 ### 9.6 Usage (Screen Time, read-only)
+
+Input fingerprint contract: [usage](spec/usage.md).
 
 - Read `~/Library/Biome/streams/restricted/App.InFocus/local` and `…/remote/<device-uuid>/` SEGB files (FDA). Device names/platforms from `~/Library/Biome/sync/sync.db` `DevicePeer`.
 - Decoder (`Decoders.SEGB` + `InFocus`): per record field 3 = starting flag, field 4 = Mac-epoch double, field 6 = bundle id (see `probe/infocus_usage.py`). Pair start/stop into sessions; cap a session at 4 h; a new start closes the previous session.

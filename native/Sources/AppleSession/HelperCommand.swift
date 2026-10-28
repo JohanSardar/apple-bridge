@@ -86,7 +86,7 @@ public enum HelperCommand {
                 try? await peer.run()
                 finished = true
             }
-            while !finished { RunLoop.current.run(until: Date().addingTimeInterval(0.05)) }
+            while !finished { RunLoop.current.run(until: Date().addingTimeInterval(1)) }
             return
         }
         guard let command = arguments.first, ["selftest", "status", "onboard", "authorize-reminders"].contains(command) else { throw HelperCommandFailure.unknownCommand }
