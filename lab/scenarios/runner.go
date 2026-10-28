@@ -560,6 +560,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "WEB-AGENT-LEVELS" {
 		return runAgentAccess(ctx, s, level, runAgentLevels)
 	}
+	if s.Feature == "phone.read" {
+		return runPhone(ctx, s, level)
+	}
 	if s.Feature == "web.frontdoor" || s.Feature == "web.agents" {
 		return runWebServer(ctx, s, level)
 	}
@@ -1142,6 +1145,9 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		duration := 3 * time.Minute
 		if s.Feature == "photos.capture" || s.Feature == "photos.commands" {
 			duration = 30 * time.Minute
+		}
+		if s.Feature == "phone.read" {
+			duration = 45 * time.Minute
 		}
 		if s.ID == "RELAY-STREAMS" {
 			duration = 12 * time.Minute

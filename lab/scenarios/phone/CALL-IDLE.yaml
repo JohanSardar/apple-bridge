@@ -1,0 +1,7 @@
+id: CALL-IDLE
+feature: phone.read
+levels: [sim, real]
+given: [{world: {replicas: 1}}]
+when: [{phone: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

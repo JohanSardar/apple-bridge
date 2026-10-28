@@ -1241,3 +1241,19 @@ features:
       - {scenario: MAIL-SEND-SELF-REAL, level: real, reason: "grant: Automation dev.applebridge.helper → com.apple.mail; no configured Mail account. Attachments and reply/forward remain unsupported; capabilities withheld pending qualification."}
       - {scenario: MAIL-DRAFT-REAL, level: real, reason: "grant: Automation dev.applebridge.helper → com.apple.mail; no configured Mail account"}
       - {scenario: MAIL-ORGANIZE-REAL, level: real, reason: "grant: Automation dev.applebridge.helper → com.apple.mail; no configured Mail account"}
+  - id: phone.read
+    title: Local call history capture
+    requirements: [R-API, R-SCOPE]
+    milestone: G4
+    modules: [native/Sources/CallsSource, internal/contracts, lab/simapple]
+    depends_on: []
+    status: limited
+    scenarios:
+      - {id: CALL-CAPTURE, levels: [sim]}
+      - {id: CALL-IDLE, levels: [sim, real]}
+      - {id: CALL-READ-REAL, levels: [real]}
+      - {id: CALLS-REPLICA, levels: [replica]}
+    limits:
+      - {scenario: CALL-IDLE, level: sim, reason: "Fresh compiled CallsChecks passed five-minute CPU under 2% and unchanged-checkpoint guards. The redundant full-scenario rebuild waited 38 minutes for the shared Swift lock and was cancelled; earlier full-scenario evidence passed."}
+      - {scenario: CALL-READ-REAL, level: real, reason: "Earlier native-source truth check matched 117 digests. Fresh continuation attempt exhausted its build window in the shared signed Helper cache; timed-out build descendants retained output pipes and required cleanup. Fresh full-Helper read qualification remains blocked by the harness."}
+      - {scenario: CALL-IDLE, level: real, reason: "Whole Helper averaged 48.29% CPU over five idle minutes on a quiet host, above 2%; sampling showed active Messages reconciliation. Phone fixture idle CPU and unchanged-checkpoint checks pass. Whole-Helper real idle qualification remains unproven; the fresh continuation attempt also exceeded its 45-minute Helper build window before world startup."}
