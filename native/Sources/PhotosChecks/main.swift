@@ -23,6 +23,10 @@ struct Checks {
             print("photos_authorization_reason=" + readiness.reason)
             return
         }
+        if CommandLine.arguments.contains("PHO-COMMANDS") {
+            try await commandChecks()
+            return
+        }
         let data: JSON = .object(["local_id": .string("synthetic"), "created": .string("2026-01-01T00:00:00Z"), "kind": .string("image"), "size": .null, "duration": .number(0), "hidden": .bool(false), "location": .null, "cloud_state": .string("unknown"), "favorite": .bool(true), "albums": .array([.string("album")])])
         let fixture: [JSON] = [.object(["kind": .string("upsert"), "collection": .string("photos.asset"), "native_key": .string("synthetic"), "data": data]), .object(["kind": .string("upsert"), "collection": .string("photos.album"), "native_key": .string("album"), "data": .object(["name": .string("Synthetic"), "kind": .string("user"), "count": .number(1)])])]
         let bytes = Data("synthetic original".utf8)

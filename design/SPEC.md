@@ -403,7 +403,7 @@ protocol Source: Sendable {
 
 ## 9. Sources at full depth
 
-Photos capture and query coverage: [Photos](spec/photos.md).
+Photos capture, query and command coverage: [Photos](spec/photos.md).
 
 Contacts Me-card and notes entitlement contract: [spec/contacts.md](spec/contacts.md).
 

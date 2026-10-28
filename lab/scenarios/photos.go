@@ -2,6 +2,7 @@ package scenarios
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -20,6 +21,28 @@ func runPhotos(ctx context.Context, s Scenario, level string) Evidence {
 	for _, name := range []string{"photos.search", "photos.original", "photos.thumbnail"} {
 		descriptor, found := contracts.Descriptor(name)
 		add("descriptor_"+name, found && descriptor.Kind == contracts.QueryOp && descriptor.Scope == "photos:read")
+	}
+	if s.ID == "PHO-COMMANDS" {
+		for _, name := range []string{"photos.import", "photos.create_album", "photos.add_to_album", "photos.remove_from_album", "photos.set_favorite", "photos.delete"} {
+			d, found := contracts.Descriptor(name)
+			add("descriptor_"+name, found && d.Kind == contracts.CommandOp && d.Scope == "photos:write" && d.Capability == name)
+			schema := contracts.OperationSchema(d)
+			encoded, err := json.Marshal(schema)
+			add("schema_"+name, err == nil && len(encoded) > 0)
+		}
+		for _, test := range []struct {
+			op, args string
+			valid    bool
+		}{
+			{"photos.create_album", `{"name":"Bridge Test"}`, true},
+			{"photos.set_favorite", `{"asset":"synthetic","favorite":false}`, true},
+			{"photos.set_favorite", `{"asset":"synthetic","favorite":"true"}`, false},
+			{"photos.import", `{"data":"YQ==","digest":"bad","kind":"image"}`, false},
+			{"photos.delete", `{"asset":"synthetic","force":true}`, false},
+		} {
+			_, err := contracts.ValidateCommand(contracts.Command{ID: "photos-check", Op: test.op, Args: json.RawMessage(test.args)})
+			add("validation_"+test.op, (err == nil) == test.valid)
+		}
 	}
 	group, registered := contracts.GrantsForSource("photos")
 	add("source_grants", registered && len(group.Grants) == 2 && contracts.KnownGrant("photos:write"))
@@ -63,6 +86,9 @@ func runPhotos(ctx context.Context, s Scenario, level string) Evidence {
 		}
 	}
 	args := []string{s.ID}
+	if level == "real" {
+		args = []string{"PHO-READ-REAL"}
+	}
 
 	check := exec.CommandContext(ctx, filepath.Join(strings.TrimSpace(string(directory)), "PhotosChecks"), args...)
 	out, err := check.CombinedOutput()
@@ -72,7 +98,7 @@ func runPhotos(ctx context.Context, s Scenario, level string) Evidence {
 			e.Metrics["idle_cpu_percent"] = strings.TrimPrefix(line, "idle_cpu_percent=")
 		}
 	}
-	if s.ID == "PHO-READ-REAL" {
+	if s.ID == "PHO-READ-REAL" || s.ID == "PHO-IMPORT-REAL" || s.ID == "PHO-ORIGINAL-REAL" {
 		reason := "PhotoKit count and spot-digest qualification pending"
 		for _, line := range strings.Split(string(out), "\n") {
 			if strings.HasPrefix(line, "photos_authorization_reason=") && strings.TrimPrefix(line, "photos_authorization_reason=") != "" {

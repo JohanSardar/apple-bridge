@@ -160,6 +160,34 @@ func OperationSchema(d OperationDescriptor) map[string]any {
 		s["properties"].(map[string]any)["args"] = args
 		return s
 	}
+	if d.Kind == CommandOp && d.Source == "photos" {
+		args := JSONSchema(PhotoCommandArgs{})
+		fields := args["properties"].(map[string]any)
+		required := []string{"asset"}
+		allowed := " asset "
+		switch d.Name {
+		case "photos.import":
+			required = []string{"data", "digest", "kind"}
+			allowed = " data digest kind album "
+		case "photos.create_album":
+			required = []string{"name"}
+			allowed = " name "
+		case "photos.set_favorite":
+			required = []string{"asset", "favorite"}
+			allowed = " asset favorite "
+		case "photos.add_to_album", "photos.remove_from_album":
+			required = []string{"asset", "album"}
+			allowed = " asset album "
+		}
+		for key := range fields {
+			if !strings.Contains(allowed, " "+key+" ") {
+				delete(fields, key)
+			}
+		}
+		args["required"] = required
+		s["properties"].(map[string]any)["args"] = args
+		return s
+	}
 	if d.Kind == CommandOp && strings.HasPrefix(d.Name, "notes.") {
 		return noteSchema(d, s)
 	}

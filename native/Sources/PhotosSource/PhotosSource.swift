@@ -5,9 +5,9 @@ import SourceSupport
 
 public actor PhotosSource: Source {
     public nonisolated let name = "photos"
-    private var fixture: [JSON]?
-    private let generation = UUID().uuidString
-    private let fixtureBlobs: [String: Data]
+    var fixture: [JSON]?
+    let generation = UUID().uuidString
+    var fixtureBlobs: [String: Data]
     private var blobs: [String: (Data, Date, String, String)] = [:]
     private var activeBlobRequests = 0
     public init(fixture: [JSON]? = nil, fixtureBlobs: [String: Data] = [:]) { self.fixture = fixture; self.fixtureBlobs = fixtureBlobs }
@@ -19,7 +19,7 @@ public actor PhotosSource: Source {
     public func open() async -> SourceReadiness {
         let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
         if fixture != nil || status == .authorized || status == .limited {
-            return SourceReadiness(state: "ready", coverage: Self.coverage, capabilities: ["photos.search", "photos.original", "photos.thumbnail"])
+            return SourceReadiness(state: "ready", coverage: Self.coverage, capabilities: ["photos.search", "photos.original", "photos.thumbnail"] + Self.commands)
         }
         return SourceReadiness(state: "permission_missing", coverage: Self.coverage, reason: status == .notDetermined ? "Photos readWrite authorization is not_determined; prompt forbidden" : "Photos readWrite authorization denied or restricted")
     }
@@ -57,7 +57,7 @@ public actor PhotosSource: Source {
         }
         return rows
     }
-    private func row(_ collection: String, _ key: String, _ data: JSON) -> JSON {
+    func row(_ collection: String, _ key: String, _ data: JSON) -> JSON {
         .object(["kind": .string("upsert"), "collection": .string(collection), "native_key": .string(key), "scoped_alias": .string(name + "/" + collection + "/" + key), "data": data])
     }
     public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {
@@ -146,7 +146,6 @@ public actor PhotosSource: Source {
         let digest = entry.2
         return .object(["handle": .string(handle), "offset": .number(Double(offset)), "data": .string(data.base64EncodedString()), "digest": .string(digest), "eof": .bool(end == entry.0.count)])
     }
-    public func prepare(_ command: JSON) async throws -> Prepared { throw SourceFailure.unsupported }
-    public func dispatch(_ prepared: Prepared) async throws -> JSON { throw SourceFailure.unsupported }
+    var importedAssets: Set<String> = []
     public func resolve(_ command: String, evidence: JSON) async -> JSON { .null }
 }

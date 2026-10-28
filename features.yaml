@@ -1208,3 +1208,19 @@ features:
       - {scenario: PHO-CAPTURE, level: sim, reason: "Native fixture capture, search and query blobs; gateway and change reconciliation qualification pending. Real original/thumbnail hydration qualification pending (native fake blobs exercised). OCR indexing unimplemented and disabled; public PhotoKit exposes no person/keyword or byte size/cloud state."}
       - {scenario: PHO-IDLE, level: sim, reason: "Five-minute standalone fake-library CPU and unchanged-checkpoint suppression; whole-Helper CPU qualification pending T53."}
     notes: "PHO-READ-REAL limited: Helper Photos readWrite authorization is not_determined; prompt forbidden. Photos readWrite grant needed for dev.applebridge.helper."
+
+  - id: photos.commands
+    title: Photos import and library commands
+    requirements: [R-API, R-SCOPE]
+    milestone: G10
+    modules: [native/Sources/PhotosSource, internal/contracts, internal/operations]
+    depends_on: [photos.capture]
+    status: limited
+    scenarios:
+      - {id: PHO-COMMANDS, levels: [sim]}
+      - {id: PHO-IMPORT-REAL, levels: [real]}
+      - {id: PHO-ORIGINAL-REAL, levels: [real]}
+    limits:
+      - {scenario: PHO-IMPORT-REAL, level: real, reason: "Photos readWrite authorization is not_determined; prompt forbidden"}
+      - {scenario: PHO-ORIGINAL-REAL, level: real, reason: "Photos readWrite authorization is not_determined; prompt forbidden"}
+    notes: "Grant needed: Photos readWrite for dev.applebridge.helper. Deleted imports remain in Recently Deleted for 30 days."
