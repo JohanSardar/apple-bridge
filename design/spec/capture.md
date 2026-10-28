@@ -1,0 +1,9 @@
+# Capture and print
+
+T36 provider slice implements native prepare, dispatch and resolve behind an injectable CaptureProvider. It covers capture.screenshot, capture.camera_photo, capture.record_audio, mac.screen_record and print.document. Audio requests are bounded to 60 seconds and screen recordings to 30 seconds. Authorization is checked at preparation and again immediately before dispatch. System authorization uses status/preflight APIs and never requests access.
+
+Providers return a private file in the artifact directory. Completion requires a nonempty regular file up to 128 MiB, digest, screenshot dimensions and duration within half a second of the request for timed capture. Resolve reopens and hashes the artifact; missing or changed files cannot establish completion. Evidence contains metadata only. Files remain local and are not replicated.
+
+CAP-SIM injects providers for all five operations, tests duration limits, revoked permission between prepare and dispatch, corrupt empty output, and PDF output using PDFKit without UI. Fake media bytes prove the lifecycle seam only, not codec correctness. The system provider supports ScreenCaptureKit display/window PNG capture AVAudioRecorder bounded audio recording and PDF input to PDF output. Camera and screen video capture implementations, gateway descriptors and blob delivery, source registration, doctor qualification and idle qualification remain follow-up work; this slice does not advertise these commands to clients.
+
+Real capture is limited: Helper Screen Recording, Camera and Microphone grants are not determined/unknown. Exact grants required are macOS Screen Recording for AppleBridgeHelper, Camera for AppleBridgeHelper and Microphone for AppleBridgeHelper. No real permission-dependent tests run. Named printers require a separate accepted-job proof.
