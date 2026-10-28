@@ -1,0 +1,5 @@
+id: AUTH-PUBLIC-ENROLL
+feature: remote.public-enroll
+levels: [web]
+web: {browsers: [chromium], themes: [light], layouts: [desktop], server: gateway}
+when: [{web: {}}]

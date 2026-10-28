@@ -1,0 +1,42 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[4.29 5.13 7.47] cpu_idle=85% cpus=8 other_heavy=0"
+  },
+  "run_id": "public-enroll",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "matrix": [
+      "chromium-light-desktop"
+    ],
+    "reports": [
+      null
+    ],
+    "setups": [
+      {
+        "fixture_setup_ms": null,
+        "fixture_snapshot": null,
+        "project": "chromium-light-desktop"
+      }
+    ]
+  },
+  "scenario": "AUTH-PUBLIC-ENROLL",
+  "level": "web",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-28T15:09:00.574038Z",
+  "assertions": [
+    {
+      "name": "chromium-light-desktop:public_origin_passkey_virtual_authenticator",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": [
+    "air"
+  ]
+}
