@@ -50,3 +50,7 @@ func (f *fakeApple) remindersControl(mux *http.ServeMux) {
 		json.NewEncoder(w).Encode(map[string]bool{"effect_done": true})
 	})
 }
+
+func init() {
+	sourceRoutes = append(sourceRoutes, (*fakeApple).remindersControl)
+}

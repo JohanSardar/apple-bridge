@@ -34,7 +34,7 @@ func main() {
 	if len(os.Args) > 1 {
 		root = os.Args[1]
 	}
-	var findings []finding
+	findings := lintSourceRegistries(root)
 	_ = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return nil
@@ -95,6 +95,7 @@ func lintGo(rel, path string) []finding {
 			importing = false
 		}
 	}
+	out = append(out, lintDescriptorFile(filepath.ToSlash(rel), src)...)
 	return append(out, lintStateWrites(rel, src)...)
 }
 

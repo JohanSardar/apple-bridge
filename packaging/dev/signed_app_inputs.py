@@ -25,13 +25,15 @@ def digest_bundle(app):
 
 def source_key(root):
     digest = hashlib.sha256()
-    wanted = {"Info.plist", "Truth-Info.plist", "Helper.entitlements", "sign.sh", "sign-gui.py", "build-helper.sh", "build-truth.sh", "build-native.sh", "build-native.py", "sdkroot.sh", "signed-app-cache.py", "signed_app_inputs.py"}
+    wanted = {"Info.plist", "Truth-Info.plist", "Helper.entitlements", "sign.sh", "sign-gui.py", "build-helper.sh", "build-truth.sh", "build-native.sh", "build-native.py", "generate-source-registrations.py", "sdkroot.sh", "signed-app-cache.py", "signed_app_inputs.py"}
     for base in [root / "native", root / "lab/truth/native", root / "packaging/dev"]:
         paths = []
         for directory, children, files in os.walk(base):
             children[:] = [name for name in children if name not in {".build", "node_modules", ".git", "__pycache__"}]
             paths.extend(Path(directory) / name for name in files)
         for path in sorted(paths):
+            if path == root / "native/Sources/AppleSession/GeneratedSourceRegistrations.swift":
+                continue
             if base.name == "dev" and path.name not in wanted:
                 continue
             if base.name != "dev" and path.suffix not in {".swift", ".m", ".mm", ".c", ".h", ".modulemap"}:

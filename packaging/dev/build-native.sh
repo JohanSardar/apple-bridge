@@ -13,6 +13,7 @@ until mkdir "$lock" 2>/dev/null; do
 done
 echo $$ > "$lock/pid"
 trap 'rm -rf "$lock"' EXIT
+python3 "$root/packaging/dev/generate-source-registrations.py" "$package"
 if [[ -x "$HOME/.swiftly/bin/swift" ]] && "$HOME/.swiftly/bin/swift" package --version >/dev/null 2>&1; then
     target_args=(-j 2)
     build="$package/.build"

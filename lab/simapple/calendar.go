@@ -761,3 +761,15 @@ func (f *fakeApple) calendarScope(key string) string {
 	account, _ := calendarData(f.records[key])["account"].(string)
 	return account + "/" + key + "/"
 }
+
+func init() {
+	sourceCommands = append(sourceCommands, (*fakeApple).routeCalendarCommand)
+	sourceRoutes = append(sourceRoutes, (*fakeApple).calendarControl)
+}
+
+func (f *fakeApple) routeCalendarCommand(wire *applepeer.Wire, frame contracts.IPCFrame, fence uint64, emit func(contracts.Capture, uint64) error, checkpoint func(contracts.Source) string) (bool, error) {
+	if f.isCalendarFrame(frame) {
+		return true, f.calendarCommand(wire, frame, fence, emit, checkpoint)
+	}
+	return false, nil
+}
