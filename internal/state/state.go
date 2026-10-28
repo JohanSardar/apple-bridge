@@ -436,25 +436,27 @@ func (s *Store) Read(ctx context.Context, v trust.Visibility, q contracts.ReadQu
 		return result, err
 	}
 	sources := []string{}
-	afterCollection, afterID, _ := strings.Cut(q.After, "/")
-	args := []any{q.Collection, q.Collection, q.ID, q.ID, q.IncludeDeleted, afterCollection, afterID}
+	sourceArgs := []any{}
 	for source, allowed := range v {
 		if allowed {
 			sources = append(sources, "?")
-			args = append(args, string(source))
+			sourceArgs = append(sourceArgs, string(source))
 		}
 	}
 	if len(sources) == 0 {
 		sources = append(sources, "?")
-		args = append(args, "")
+		sourceArgs = append(sourceArgs, "")
 	}
+	afterCollection, afterID, _ := strings.Cut(q.After, "/")
+	args := append([]any{q.Collection, q.Collection, q.ID, q.ID, q.IncludeDeleted, afterCollection, afterID}, sourceArgs...)
 	query := "SELECT payload FROM records WHERE (?='' OR collection=?) AND (?='' OR id=?) AND (deleted=0 OR ?) AND (collection,id)>(?,?) AND source IN (" + strings.Join(sources, ",") + ")"
 	if q.Text != "" {
 		if err = requireSearchReady(ctx, tx); err != nil {
 			return result, err
 		}
-		query += " AND (collection,id) IN (SELECT collection,id FROM records_fts WHERE records_fts MATCH ?)"
+		query += " AND (collection,id) IN (SELECT collection,id FROM records_fts WHERE records_fts MATCH ? AND source IN (" + strings.Join(sources, ",") + "))"
 		args = append(args, searchTerms(q.Text))
+		args = append(args, sourceArgs...)
 	}
 	query += " ORDER BY collection,id"
 	rows, err := tx.QueryContext(ctx, query, args...)

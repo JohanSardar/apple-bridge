@@ -22,5 +22,10 @@ Ordinary reads and captures remain available. Closing the store cancels and join
 the worker; reopening resumes an interrupted rebuild using the same mapping.
 A new empty store starts with version 3 immediately.
 
+Text queries apply source visibility inside the FTS candidate query as well as
+the outer records query. A metadata-only principal therefore avoids building a
+temporary identity set containing every matching hidden message. Per-record
+visibility checks, including command ownership, remain enforced after lookup.
+
 SQLite documents [persistent INTEGER PRIMARY KEY values](https://sqlite.org/rowidtable.html)
 and [FTS5 integer row identities](https://sqlite.org/fts5.html).
