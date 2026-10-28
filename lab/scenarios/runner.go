@@ -358,6 +358,9 @@ func convergence(w *world.World) bool {
 }
 
 func runScenario(ctx context.Context, s Scenario, level string) Evidence {
+	if s.Feature == "core.queries" {
+		return runQueries(ctx, s, level)
+	}
 	if s.Feature == "remote.relay" {
 		return runRelayService(ctx, s, level)
 	}
@@ -1133,7 +1136,7 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		if s.Feature == "messages.read" && level != "sim" {
 			duration = 20 * time.Minute
 		}
-		if s.ID == "HELPER-SIGNED-APP-CACHE" || s.ID == "HELPER-RELEASE-COMMANDS" {
+		if s.ID == "CORE-QUERY-HELPER" || s.ID == "HELPER-SIGNED-APP-CACHE" || s.ID == "HELPER-RELEASE-COMMANDS" {
 			duration = 10 * time.Minute
 		}
 		if s.ID == "HELPER-SESSION-SOAK" {

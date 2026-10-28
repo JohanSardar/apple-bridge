@@ -16,6 +16,8 @@ func (e *Error) Is(target error) bool {
 }
 
 var (
+	ErrDeadline      = &Error{Code: "deadline", Message: "query deadline exceeded"}
+	ErrForbidden     = &Error{Code: "forbidden", Message: "query grant rejected"}
 	ErrUnsupported   = &Error{Code: "unsupported", Message: "operation unsupported"}
 	ErrUnauthorized  = &Error{Code: "unauthorized", Message: "credential or scope rejected"}
 	ErrUnavailable   = &Error{Code: "unavailable", Message: "peer unavailable", Retryable: true}

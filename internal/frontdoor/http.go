@@ -41,6 +41,8 @@ func respond(w http.ResponseWriter, result any, err error) {
 		}
 		status := 400
 		switch typed.Code {
+		case "forbidden":
+			status = 403
 		case "unauthorized":
 			status = 401
 		case "not_found":
@@ -119,6 +121,12 @@ func Handler(deps Deps, descriptors []contracts.OperationDescriptor) http.Handle
 		if deps.Blobs == nil {
 			respond(w, nil, contracts.ErrUnavailable)
 			return
+		}
+		if strings.HasPrefix(r.URL.Query().Get("record"), "qry_") {
+			if err := deps.Operations.EnsureQueryBlob(r.Context(), p, r.URL.Query().Get("record"), r.PathValue("digest")); err != nil {
+				respond(w, nil, err)
+				return
+			}
 		}
 		f, err := deps.Blobs.OpenAuthorized(r.Context(), grant, r.PathValue("digest"))
 		if err != nil {

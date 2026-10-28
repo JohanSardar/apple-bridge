@@ -1,0 +1,7 @@
+id: CORE-QUERY-BLOB
+feature: core.queries
+levels: [sim, replica]
+given:
+  - world: {replicas: 1}
+when:
+  - queries: {}

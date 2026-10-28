@@ -176,7 +176,11 @@ func Start(ctx context.Context, cfg Config) error {
 		}
 		defer audit.Close()
 		var auditMu sync.Mutex
-		gateway := &operations.LocalGateway{Uploads: blobStore, State: store, Authority: authority, Peer: commands, Context: ctx, Audit: func(record contracts.CommandRecord) {
+		gateway := &operations.LocalGateway{QueryAudit: func(record operations.QueryAudit) {
+			auditMu.Lock()
+			defer auditMu.Unlock()
+			json.NewEncoder(audit).Encode(record)
+		}, Uploads: blobStore, State: store, Authority: authority, Peer: commands, Context: ctx, Audit: func(record contracts.CommandRecord) {
 			auditMu.Lock()
 			defer auditMu.Unlock()
 			json.NewEncoder(audit).Encode(map[string]any{"command_id": record.Command.ID, "operation": record.Command.Op, "request_hash": record.RequestHash, "argument_bytes": len(record.Command.Args), "state": record.State, "at": time.Now().UTC()})
@@ -296,7 +300,7 @@ func Start(ctx context.Context, cfg Config) error {
 			}
 		}}
 		service.LocalStatus = client.Status
-		service.Target = &operations.RemoteGateway{Uploads: blobStore, UploadExchange: client.UploadControl, UploadBytes: client.UploadChunk, Authority: authority, Exchange: client.Exchange, Connected: func() bool { return client.Status().State == "connected" }, Wait: client.Wait}
+		service.Target = &operations.RemoteGateway{State: store, Uploads: blobStore, UploadExchange: client.UploadControl, UploadBytes: client.UploadChunk, Authority: authority, Exchange: client.Exchange, Connected: func() bool { return client.Status().State == "connected" }, Wait: client.Wait}
 		enrollment, err := authority.Enrollment()
 		if err != nil || enrollment == nil {
 			return contracts.ErrUnauthorized

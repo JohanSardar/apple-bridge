@@ -3,6 +3,7 @@ package operations
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
@@ -85,6 +86,9 @@ func (s *Service) BlobGrant(ctx context.Context, p trust.Principal, id string) (
 			resultErr = err
 		}
 	}()
+	if strings.HasPrefix(id, "qry_") {
+		return s.State.QueryBlobGrant(ctx, p, id)
+	}
 	return s.State.RecordGrant(ctx, p.Visibility(), id)
 }
 

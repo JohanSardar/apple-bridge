@@ -301,7 +301,7 @@ type OperationDescriptor struct {
 }
 ```
 
-`Kind` is `read` (served locally on any machine) or `command` (routed to CommandTarget). The table in `internal/contracts/operations.go` is the single list; Frontdoor generates REST routes, MCP tools and OpenAPI from it. Input/Output are Go types; JSON Schema for MCP/OpenAPI is derived by reflection plus explicit enums/descriptions in struct tags.
+`Kind` is `read` (served locally on any machine), `query` (transient Helper reads routed through the gateway), or `command` (routed to CommandTarget). Per-source descriptor files register through `internal/contracts/operations.go`; Frontdoor generates REST routes, MCP tools and OpenAPI from it. Input/Output are Go types; JSON Schema for MCP/OpenAPI is derived by reflection plus explicit enums/descriptions in struct tags.
 
 **Read operations** (all sources): `messages.handles` (batched handle names, initials, contact and avatar references; §23.12), `records.get`, `records.query` (collection + typed filters + order + cursor pagination), `search` (FTS over text fields within scope), `messages.thread` (chat history page with reactions/attachments inlined), `calendar.agenda` (time range), `reminders.open` (incomplete by list/due), `contacts.lookup` (legacy name/exact handle; additive `q` searches partial names, normalized phones and emails in deterministic name/ID order, default and maximum 25 for `q`, with positive `limit` capped at 25), `usage.summary` (device/day/app ranges), `sources.status`, `commands.status`, `commands.list`, `replica.status`, `blobs.get` (REST only streams bytes; MCP returns metadata and a local file path on the same machine).
 
@@ -402,6 +402,8 @@ protocol Source: Sendable {
 ---
 
 ## 9. Sources at full depth
+
+Transient Helper queries and the query-with-effect rule: [query contract](spec/query.md).
 
 Relay service and enrollment: [G2-1 / G2-2](spec/relay.md).
 OAuth client metadata: [fetch and lab contract](spec/oauth.md).

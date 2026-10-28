@@ -8,6 +8,7 @@ import (
 )
 
 const MaxFrame = 256 * 1024
+const MaxQueryFrame = MaxQueryJSON + (64 << 10)
 const ByteCredit = 4 * 1024 * 1024
 const IPCProtocol = "ipc/1"
 const FeedProtocol = "feed/1"
@@ -44,6 +45,13 @@ type Checkpoint struct {
 }
 
 type IPCFrame struct {
+	ID            string          `json:"id,omitempty"`
+	Op            string          `json:"op,omitempty"`
+	Args          json.RawMessage `json:"args,omitempty"`
+	DeadlineMS    int             `json:"deadline_ms,omitempty"`
+	ResultJSON    json.RawMessage `json:"result_json,omitempty"`
+	Blobs         []QueryBlob     `json:"blobs,omitempty"`
+	Code          string          `json:"code,omitempty"`
 	Origin        string          `json:"origin,omitempty"`
 	Handle        string          `json:"handle,omitempty"`
 	Offset        int64           `json:"offset,omitempty"`
@@ -152,18 +160,23 @@ type BlobChunk struct {
 }
 
 func EncodeFrame(v any) ([]byte, error) {
-	b, err := json.Marshal(v)
+	b, err := MarshalQueryJSON(v)
 	if err != nil {
 		return nil, err
-	}
-	if len(b) > MaxFrame {
-		return nil, ErrCapacity
 	}
 	var head struct {
 		T string `json:"t"`
 	}
-	if json.Unmarshal(b, &head) != nil || head.T == "" {
+	valid := json.Unmarshal(b, &head) == nil && head.T != ""
+
+	if len(b) > MaxQueryFrame {
+		return nil, ErrCapacity
+	}
+	if !valid {
 		return nil, ErrInvalid
+	}
+	if len(b) > MaxFrame && head.T != "QueryResult" {
+		return nil, ErrCapacity
 	}
 	out := make([]byte, 4+len(b))
 	binary.BigEndian.PutUint32(out, uint32(len(b)))
@@ -196,7 +209,7 @@ func ReadFrame(r io.Reader, v any) (int, error) {
 		return 0, err
 	}
 	n := binary.BigEndian.Uint32(head[:])
-	if n == 0 || n > MaxFrame {
+	if n == 0 || n > MaxQueryFrame {
 		return 4, ErrCapacity
 	}
 	b := make([]byte, n)
@@ -208,6 +221,9 @@ func ReadFrame(r io.Reader, v any) (int, error) {
 	}
 	if json.Unmarshal(b, &kind) != nil || kind.T == "" {
 		return int(n) + 4, ErrInvalid
+	}
+	if n > MaxFrame && kind.T != "QueryResult" {
+		return int(n) + 4, ErrCapacity
 	}
 	return int(n) + 4, json.Unmarshal(b, v)
 }

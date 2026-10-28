@@ -1,0 +1,45 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[20.27 18.06 15.99] cpu_idle=72% cpus=8 other_heavy=2; ubuntu: load=[0.95 1.48 1.36] cpu_idle=95% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M61EJZQM3C9B1PZNTKJMZYVC",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "CORE-QUERY-BLOB",
+  "level": "replica",
+  "passed": true,
+  "git_sha": "93a671bbde60b3dc61d0ae26307c4a65250758f9",
+  "at": "2026-10-28T14:28:22.90067Z",
+  "assertions": [
+    {
+      "name": "world_started",
+      "passed": true
+    },
+    {
+      "name": "blob_result",
+      "passed": true
+    },
+    {
+      "name": "digest_matches",
+      "passed": true
+    },
+    {
+      "name": "range_read",
+      "passed": true
+    },
+    {
+      "name": "blob_scope",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

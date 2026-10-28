@@ -127,6 +127,20 @@ features:
       - {id: CORE-CMD-OFFLINE, levels: [sim, replica]}
       - {id: CORE-CMD-CONFLICT, levels: [sim, replica]}
       - {id: CORE-CMD-READ-YOUR-WRITE, levels: [sim, replica]}
+  - id: core.queries
+    title: Cancellable Helper queries through REST MCP and replicas
+    requirements: [R-API, R-SCOPE]
+    milestone: M0
+    modules: [applepeer, operations, contracts]
+    depends_on: [core.commands]
+    status: done
+    scenarios:
+      - {id: CORE-QUERY-ROUNDTRIP, levels: [sim]}
+      - {id: CORE-QUERY-DEADLINE, levels: [sim]}
+      - {id: CORE-QUERY-BLOB, levels: [sim, replica]}
+      - {id: CORE-QUERY-SCOPE, levels: [sim]}
+      - {id: CORE-QUERY-REPLICA, levels: [replica]}
+      - {id: CORE-QUERY-HELPER, levels: [real]}
   - id: core.frontdoor
     title: REST and MCP from handwritten operation descriptors, OpenAPI, SSE
     requirements: [R-API]

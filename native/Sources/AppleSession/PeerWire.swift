@@ -88,9 +88,9 @@ final class PeerWire: @unchecked Sendable {
     func receive() throws -> JSON {
         let header = try read(4)
         let length = header.reduce(0) { ($0 << 8) | Int($1) }
-        guard length > 0, length <= 256 * 1024 else { throw SourceFailure.invalid }
+        guard length > 0, length <= (1024 * 1024 + 64 * 1024) else { throw SourceFailure.invalid }
         let result = try JSONDecoder().decode(JSON.self, from: read(length))
-        guard !result["t"].string.isEmpty else { throw SourceFailure.invalid }
+        guard !result["t"].string.isEmpty, length <= 256 * 1024 || result["t"].string == "QueryResult" else { throw SourceFailure.invalid }
         return result
     }
 
@@ -134,7 +134,8 @@ final class PeerWire: @unchecked Sendable {
 
     static func encode(_ value: JSON) throws -> Data {
         let data = try JSONEncoder().encode(value)
-        guard !value["t"].string.isEmpty, data.count <= 256 * 1024 else { throw SourceFailure.invalid }
+        guard !value["t"].string.isEmpty, data.count <= (1024 * 1024 + 64 * 1024) else { throw SourceFailure.invalid }
+        guard data.count <= 256 * 1024 || value["t"].string == "QueryResult" else { throw SourceFailure.invalid }
         let size = UInt32(data.count).bigEndian
         var bytes = withUnsafeBytes(of: size) { Data($0) }
         bytes.append(data)

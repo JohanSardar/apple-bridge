@@ -1,0 +1,61 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[20.67 14.97 14.57] cpu_idle=48% cpus=8 other_heavy=2"
+  },
+  "run_id": "run_01M61EE95YKYGPVDEKCCMNWH6R",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "CORE-QUERY-ROUNDTRIP",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "93a671bbde60b3dc61d0ae26307c4a65250758f9",
+  "at": "2026-10-28T14:25:48.734957Z",
+  "assertions": [
+    {
+      "name": "world_started",
+      "passed": true
+    },
+    {
+      "name": "ten_query_results",
+      "passed": true
+    },
+    {
+      "name": "echo_equal",
+      "passed": true
+    },
+    {
+      "name": "latency_budget",
+      "passed": true
+    },
+    {
+      "name": "mcp_parity",
+      "passed": true
+    },
+    {
+      "name": "audit_names_and_sizes_only",
+      "passed": true
+    },
+    {
+      "name": "invalid_rejected",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {
+    "query": {
+      "samples": 10,
+      "p50_ms": 14.256708,
+      "p95_ms": 35.25175,
+      "max_ms": 35.25175,
+      "timeouts": 0
+    }
+  },
+  "hosts": [
+    "air"
+  ]
+}

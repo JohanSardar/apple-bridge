@@ -17,6 +17,9 @@ type schemaBuilder struct {
 func JSONSchema(value any) map[string]any {
 	builder := schemaBuilder{active: map[reflect.Type]bool{}, referenced: map[reflect.Type]bool{}, definitions: map[string]any{}}
 	schema := builder.build(reflect.TypeOf(value))
+	if _, ok := value.(QueryResult); ok {
+		schema["properties"].(map[string]any)["result_json"] = map[string]any{}
+	}
 	if len(builder.definitions) > 0 {
 		schema["$defs"] = builder.definitions
 		schema["$id"] = "urn:apple-bridge:schema:" + reflect.TypeOf(value).String()
@@ -100,6 +103,24 @@ func (builder *schemaBuilder) build(t reflect.Type) map[string]any {
 }
 func OperationSchema(d OperationDescriptor) map[string]any {
 	s := JSONSchema(d.Input)
+	if d.Kind == QueryOp {
+		props := s["properties"].(map[string]any)
+		props["args"] = map[string]any{}
+		props["id"] = map[string]any{"type": "string", "pattern": "^qry_[A-Za-z0-9._:-]+$", "maxLength": 128}
+		props["deadline_ms"] = map[string]any{"type": "integer", "minimum": 0, "maximum": 60000}
+		props["op"] = map[string]any{"type": "string", "enum": []string{d.Name}}
+		if d.Name == "helper.version" {
+			props["args"] = map[string]any{"type": "object", "additionalProperties": false}
+		}
+		if d.Name == "test.sleep" || d.Name == "test.blob" {
+			field, max := "ms", 60000
+			if d.Name == "test.blob" {
+				field, max = "size", 64<<20
+			}
+			props["args"] = map[string]any{"type": "object", "required": []string{field}, "additionalProperties": false, "properties": map[string]any{field: map[string]any{"type": "integer", "minimum": 0, "maximum": max}}}
+		}
+		return s
+	}
 	if _, ok := d.Input.(ReadQuery); ok {
 		collections := []string{""}
 		for collection := range Collections {

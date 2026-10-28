@@ -38,7 +38,9 @@ func (c *Client) UploadControl(ctx context.Context, delegation string, raw json.
 }
 func (c *Client) exchangeJSON(ctx context.Context, f contracts.FeedFrame) (contracts.CommandResponse, error) {
 	f.ID = contracts.NewID("request")
-	return c.exchange(ctx, f.ID, func(bounded context.Context, session *commandSession) error {
+	bounded, cancel := context.WithTimeout(ctx, contracts.ForwardTimeout(f.Request))
+	defer cancel()
+	return c.exchange(bounded, f.ID, func(bounded context.Context, session *commandSession) error {
 		_, err := send(bounded, session.conn, f)
 		return err
 	})
@@ -60,7 +62,11 @@ func (c *Client) exchange(ctx context.Context, id string, write func(context.Con
 	session.pending[id] = response
 	session.mu.Unlock()
 	defer func() { session.mu.Lock(); delete(session.pending, id); session.mu.Unlock() }()
-	bounded, cancel := context.WithTimeout(ctx, 20*time.Second)
+	timeout := 20 * time.Second
+	if deadline, ok := ctx.Deadline(); ok {
+		timeout = time.Until(deadline)
+	}
+	bounded, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	if writer := session.ctx.Value(writerKey{}); writer != nil {
 		bounded = context.WithValue(bounded, writerKey{}, writer)
@@ -72,6 +78,9 @@ func (c *Client) exchange(ctx context.Context, id string, write func(context.Con
 	case result := <-response:
 		return result, nil
 	case <-bounded.Done():
+		cancelctx, stop := context.WithTimeout(session.ctx, 100*time.Millisecond)
+		defer stop()
+		_, _ = send(cancelctx, session.conn, contracts.FeedFrame{T: "CommandCancel", ID: id})
 		return empty, contracts.ErrUnavailable
 	case <-session.ctx.Done():
 		return empty, contracts.ErrUnavailable

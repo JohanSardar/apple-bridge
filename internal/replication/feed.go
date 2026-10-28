@@ -40,21 +40,27 @@ func read(ctx context.Context, conn *websocket.Conn) (contracts.FeedFrame, int, 
 	if err != nil {
 		return f, 0, err
 	}
-	if kind != websocket.MessageText || len(b) > contracts.MaxFrame {
+	if kind != websocket.MessageText || len(b) > contracts.MaxQueryFrame {
 		return f, len(b), contracts.ErrInvalid
 	}
 	err = json.Unmarshal(b, &f)
-	if err == nil && f.T == "" {
+	if err == nil && (f.T == "" || len(b) > contracts.MaxFrame && f.T != "CommandResponse") {
 		err = contracts.ErrInvalid
 	}
 	return f, len(b), err
 }
 func send(ctx context.Context, conn *websocket.Conn, f contracts.FeedFrame) (int, error) {
-	b, err := json.Marshal(f)
+	var b []byte
+	var err error
+	if f.T == "CommandResponse" {
+		b, err = contracts.MarshalQueryJSON(f)
+	} else {
+		b, err = json.Marshal(f)
+	}
 	if err != nil {
 		return 0, err
 	}
-	if len(b) > contracts.MaxFrame {
+	if len(b) > contracts.MaxQueryFrame || len(b) > contracts.MaxFrame && f.T != "CommandResponse" {
 		return 0, contracts.ErrCapacity
 	}
 	bounded, cancel := context.WithTimeout(ctx, 10*time.Second)
@@ -119,14 +125,15 @@ func (s *Server) serve(ctx context.Context, conn *websocket.Conn, p trust.Princi
 			s.UploadClosed(sessionID)
 		}
 	}()
-	conn.SetReadLimit(contracts.BlobChunkSize + 64)
+	conn.SetReadLimit(contracts.MaxQueryFrame)
 	wants := make(chan contracts.FeedFrame, 8)
 	go s.serveBlobs(ctx, conn, p, wants)
 	commandSlots := make(chan struct{}, 16)
-	forward := func(f contracts.FeedFrame) {
-		defer func() { <-commandSlots }()
-		bounded, stop := context.WithTimeout(ctx, 20*time.Second)
-		defer stop()
+	var requestMu sync.Mutex
+	requests := map[string]context.CancelFunc{}
+	forward := func(f contracts.FeedFrame, bounded context.Context, stop context.CancelFunc) {
+		defer func() { <-commandSlots; stop(); requestMu.Lock(); delete(requests, f.ID); requestMu.Unlock() }()
+
 		var response contracts.CommandResponse
 		var err error
 		if f.T == "UploadControl" {
@@ -178,13 +185,28 @@ func (s *Server) serve(ctx context.Context, conn *websocket.Conn, p trust.Princi
 				if negotiatedDelegation == "" || !s.deliverDelegation(p.ID, conn, f) {
 					return
 				}
+			case "CommandCancel":
+				requestMu.Lock()
+				if stop := requests[f.ID]; stop != nil {
+					stop()
+				}
+				requestMu.Unlock()
 			case "CommandRequest", "UploadControl":
 				if f.ID == "" || len(f.Request) == 0 || f.T == "CommandRequest" && s.Command == nil || f.T == "UploadControl" && s.UploadControl == nil {
 					return
 				}
 				select {
 				case commandSlots <- struct{}{}:
-					go forward(f)
+					bounded, stop := context.WithTimeout(ctx, contracts.ForwardTimeout(f.Request))
+					requestMu.Lock()
+					if requests[f.ID] != nil {
+						requestMu.Unlock()
+						stop()
+						return
+					}
+					requests[f.ID] = stop
+					requestMu.Unlock()
+					go forward(f, bounded, stop)
 				default:
 					return
 				}
@@ -421,7 +443,7 @@ func (c *Client) consume(ctx context.Context, conn *websocket.Conn, e trust.Enro
 	}
 	defer c.Store.DiscardCapture(context.WithoutCancel(ctx))
 	defer conn.CloseNow()
-	conn.SetReadLimit(contracts.BlobChunkSize + 64)
+	conn.SetReadLimit(contracts.MaxQueryFrame)
 	ctx, stop := context.WithCancel(ctx)
 	defer stop()
 	ctx = priorityWriter(ctx, conn)
@@ -488,12 +510,15 @@ func (c *Client) consume(ctx context.Context, conn *websocket.Conn, e trust.Enro
 			}
 			continue
 		}
-		if kind != websocket.MessageText || len(raw) > contracts.MaxFrame {
+		if kind != websocket.MessageText || len(raw) > contracts.MaxQueryFrame {
 			return contracts.ErrInvalid
 		}
 		var f contracts.FeedFrame
 		if err = json.Unmarshal(raw, &f); err != nil {
 			return err
+		}
+		if len(raw) > contracts.MaxFrame && f.T != "CommandResponse" {
+			return contracts.ErrCapacity
 		}
 		if f.T == "ClockPong" {
 			if sample, ok := clock.complete(f, received); ok {

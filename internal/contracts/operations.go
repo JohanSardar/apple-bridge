@@ -5,6 +5,7 @@ import "sort"
 type Grant string
 type OpKind string
 
+const QueryOp OpKind = "query"
 const ReadOp OpKind = "read"
 const CommandOp OpKind = "command"
 

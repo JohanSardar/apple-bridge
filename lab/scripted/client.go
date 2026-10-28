@@ -39,7 +39,11 @@ func (c Client) Call(ctx context.Context, name string, input, output any) error 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json, text/event-stream")
 	req.Header.Set("MCP-Protocol-Version", "2025-06-18")
-	client := &http.Client{Timeout: 20 * time.Second}
+	timeout := 20 * time.Second
+	if q, ok := input.(contracts.Query); ok && q.DeadlineMS > 0 && q.DeadlineMS <= 60000 {
+		timeout = time.Duration(q.DeadlineMS)*time.Millisecond + time.Second
+	}
+	client := &http.Client{Timeout: timeout}
 	resp, err := client.Do(req)
 	if err != nil {
 		return err

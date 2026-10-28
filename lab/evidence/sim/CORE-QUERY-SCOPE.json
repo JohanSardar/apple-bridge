@@ -1,0 +1,61 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[20.94 15.12 14.63] cpu_idle=50% cpus=8 other_heavy=2"
+  },
+  "run_id": "run_01M61EECRFC283PY62DE8EC3BX",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "CORE-QUERY-SCOPE",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "93a671bbde60b3dc61d0ae26307c4a65250758f9",
+  "at": "2026-10-28T14:25:52.3999Z",
+  "assertions": [
+    {
+      "name": "world_started",
+      "passed": true
+    },
+    {
+      "name": "scoped_token",
+      "passed": true
+    },
+    {
+      "name": "missing_grant_rejected",
+      "passed": true
+    },
+    {
+      "name": "read_allowed",
+      "passed": true
+    },
+    {
+      "name": "agent_authority",
+      "passed": true
+    },
+    {
+      "name": "read_agent_created",
+      "passed": true
+    },
+    {
+      "name": "read_agent_allowed",
+      "passed": true
+    },
+    {
+      "name": "approve_agent_created",
+      "passed": true
+    },
+    {
+      "name": "effect_requires_approval",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

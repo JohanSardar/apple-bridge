@@ -23,6 +23,20 @@ func (s *Service) Invoke(ctx context.Context, p trust.Principal, name string, in
 		current.Grants = trust.EffectiveGrants(current.Grants, p.Grants)
 		p = current
 	}
+	if d.Kind == contracts.QueryOp {
+		var q contracts.Query
+		if contracts.DecodeInput(input, &q) != nil || q.Op != "" && q.Op != name {
+			return nil, contracts.ErrInvalid
+		}
+		q.Op = name
+		target, ok := s.Target.(interface {
+			Query(context.Context, trust.Principal, contracts.Query) (contracts.QueryResult, error)
+		})
+		if !ok {
+			return nil, contracts.ErrUnavailable
+		}
+		return target.Query(ctx, p, q)
+	}
 	if d.Kind != contracts.CommandOp && name != "records.get" && name != "records.query" && name != "search" && name != "sources.status" && name != "replica.status" {
 		defer func() {
 			if err := s.recordAgentRead(context.WithoutCancel(ctx), p, name); err != nil && resultErr == nil {
