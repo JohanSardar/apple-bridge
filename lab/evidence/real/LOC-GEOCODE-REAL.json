@@ -1,0 +1,63 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[5.51 5.3 6.65] cpu_idle=65% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M62HCT29WBBTAFEXGNWXF9P4",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "place_count": 1,
+    "public_point_error_m": 20.5855933626332
+  },
+  "scenario": "LOC-GEOCODE-REAL",
+  "level": "real",
+  "passed": true,
+  "git_sha": "57a4e3fd75f12eaeb4329f530f53e152c24b7f53",
+  "at": "2026-10-29T00:36:40.649152Z",
+  "assertions": [
+    {
+      "name": "world_started",
+      "passed": true
+    },
+    {
+      "name": "scopes_granted",
+      "passed": true
+    },
+    {
+      "name": "helper_ready",
+      "passed": true
+    },
+    {
+      "name": "unknown_fields_rejected",
+      "passed": true
+    },
+    {
+      "name": "query_completed",
+      "passed": true
+    },
+    {
+      "name": "public_places_present",
+      "passed": true
+    },
+    {
+      "name": "known_public_coordinate",
+      "passed": true
+    },
+    {
+      "name": "formatted_address_present",
+      "passed": true
+    },
+    {
+      "name": "reverse_round_trip",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

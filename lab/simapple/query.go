@@ -100,6 +100,15 @@ func (s *querySession) receive(f contracts.IPCFrame) bool {
 		case "helper.version":
 			out.ResultJSON = json.RawMessage(`{"version":"sim","protocol":"ipc/1"}`)
 		default:
+			if code, result, blobs, handled := s.fake.mapsQuery(f.Op, f.Args); handled {
+				out.Blobs = blobs
+				out.ResultJSON = result
+				if code != "" {
+					out.T = "QueryError"
+					out.Code = code
+				}
+				break
+			}
 			if files, handled := s.fake.filesQuery(f); handled {
 				out = files
 				break
