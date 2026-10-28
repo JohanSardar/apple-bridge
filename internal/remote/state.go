@@ -88,7 +88,7 @@ func CommandWithOpener(ctx context.Context, home, action, via, name string, out 
 		}
 		return json.NewEncoder(out).Encode(status)
 	}
-	if action != "on" && action != "off" || via != "" && via != "system" && via != "embedded" {
+	if action != "on" && action != "off" || via != "" && via != "system" && via != "embedded" && via != "relay" {
 		return contracts.ErrInvalid
 	}
 	if via == "" && action == "on" {

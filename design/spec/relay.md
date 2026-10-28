@@ -13,3 +13,8 @@ State is an atomically replaced, fsynced mode-0600 JSON file containing public k
 T13 integrates through `relay.Server.Attach(hostname, credential, Tunnel)`, where `Tunnel.Open(context.Context)` returns one independent bidirectional raw byte stream. Open must respect cancellation, and Close must unblock I/O. Attach verifies the current credential; replacement, rotation, revocation, policy changes and shutdown cancel active streams. The device-side transport must be authenticated and encrypted. T12's lab adapter uses local TCP connections to two independent TLS origins. The standalone command has no network tunnel registration endpoint until T13 supplies the authenticated multiplexed control transport. No multiplexer or new dependency is included.
 
 The sim scenarios verify two origins with individually trusted synthetic certificates, unknown SNI, ciphertext-only relay boundary buffers, key possession, stable assignment after restart, credential rotation/revocation, owner isolation, connection and byte limits, persistent quota and the kill switch. The fixture CA is generated locally rather than issued by Pebble (not installed). Buffer observation proves the relay boundary contains ciphertext; it is not an independent process heap/log scan. These two acceptance limitations remain recorded in features.yaml. Public deployment, DNS and certificate issuance belong to T13 and later tickets; no macOS grants are needed.
+
+
+## Outbound tunnel (T13)
+
+Device-key-signed one-time proofs authenticate a single outbound TLS WebSocket carrying MIT smux v2 streams. Public TLS ends in bridge. Health frames and bounded reconnect backoff restore new streams after transport failure; the Remote listener owns all session cleanup.

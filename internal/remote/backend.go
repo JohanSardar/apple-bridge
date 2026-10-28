@@ -19,6 +19,10 @@ func (r *Remote) serve(ctx context.Context, cfg Config) {
 			r.publish(status)
 		}
 	}
+	if cfg.Backend == "relay" {
+		r.serveRelay(ctx, cfg, &status, fail)
+		return
+	}
 	client := &local.Client{}
 	if cfg.Backend == "" {
 		cfg.Backend = "embedded"

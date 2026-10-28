@@ -220,6 +220,8 @@ func runRelayService(ctx context.Context, s Scenario, level string) Evidence {
 		return e
 	}
 	switch s.ID {
+	case "RELAY-STREAMS":
+		relayStreams(ctx, lab, key1, a, add)
 	case "RELAY-ENROLL":
 		lab.close()
 		store, err = relay.Open(path, "relay.test", limits)
