@@ -1,0 +1,7 @@
+id: CON-NOTE
+feature: contacts.read
+levels: [real]
+given: [{world: {replicas: 1}}]
+when: [{contacts: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

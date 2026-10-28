@@ -32,7 +32,7 @@ public final class ContactsSource: Source {
     private let baselineURL: URL
     private static let groupOperations = ["contacts.create_group", "contacts.rename_group", "contacts.delete_group", "contacts.add_member", "contacts.remove_member"]
     private static let operations = ["contacts.create", "contacts.update", "contacts.delete"]
-    public nonisolated static let coverage: JSON = .object(["fields": .string("partial"), "missing": .array([.string("note: unavailable without restricted entitlement"), .string("writability: conservatively limited to default container"), .string("contact_poster: unavailable through public Contacts API on this SDK")])])
+    public nonisolated static let coverage: JSON = .object(["fields": .string("partial"), "missing": .array([.string("note: CNContactNoteKey requires com.apple.developer.contacts.notes; Helper lacks this restricted entitlement"), .string("writability: conservatively limited to default container"), .string("contact_poster: unavailable through public Contacts API on this SDK")])])
     private static let scalarKeys = ["given_name": CNContactGivenNameKey, "middle_name": CNContactMiddleNameKey, "family_name": CNContactFamilyNameKey, "previous_family_name": CNContactPreviousFamilyNameKey, "nickname": CNContactNicknameKey, "name_prefix": CNContactNamePrefixKey, "name_suffix": CNContactNameSuffixKey, "phonetic_given_name": CNContactPhoneticGivenNameKey, "phonetic_middle_name": CNContactPhoneticMiddleNameKey, "phonetic_family_name": CNContactPhoneticFamilyNameKey, "phonetic_organization": CNContactPhoneticOrganizationNameKey, "organization": CNContactOrganizationNameKey, "job_title": CNContactJobTitleKey, "department": CNContactDepartmentNameKey]
     private static var keys: [any CNKeyDescriptor] {
         (Array(scalarKeys.values) + [CNContactIdentifierKey, CNContactTypeKey, CNContactPhoneNumbersKey, CNContactEmailAddressesKey, CNContactPostalAddressesKey, CNContactUrlAddressesKey, CNContactBirthdayKey, CNContactNonGregorianBirthdayKey, CNContactDatesKey, CNContactSocialProfilesKey, CNContactInstantMessageAddressesKey, CNContactRelationsKey, CNContactImageDataKey, CNContactThumbnailImageDataKey, CNContactImageDataAvailableKey]).map { $0 as NSString }
@@ -174,13 +174,14 @@ public final class ContactsSource: Source {
         }
         let next = batch.token
         let drop = batch.droppedEverything
-        let fullScan = force || drop || token == nil || batch.requiresFullScan
+        let nextMeIdentifier = try? store.unifiedMeContactWithKeys(toFetch: [CNContactIdentifierKey as NSString]).identifier
+        let fullScan = force || drop || token == nil || batch.requiresFullScan || nextMeIdentifier != meIdentifier
         trace.record("contacts_history_fetched", fields: metadata.merging(["changed_groups": .number(Double(batch.changedGroupIdentifiers.count)), "full_scan": .bool(fullScan), "token_changed": .bool(next != token), "forced": .bool(force), "dropped_everything": .bool(drop), "initial_token": .bool(token == nil), "full_scan_event_kinds": .array(batch.fullScanEventKinds.map(JSON.string))]) { _, new in new })
         guard fullScan || next != token else { completed = true; return }
         let activity = ForegroundActivity.shared.begin()
         defer { ForegroundActivity.shared.end(activity) }
         if drop { generation = UUID().uuidString }
-        meIdentifier = try? store.unifiedMeContactWithKeys(toFetch: [CNContactIdentifierKey as NSString]).identifier
+        meIdentifier = nextMeIdentifier
         var current: [String: JSON] = fullScan ? [:] : committed
         if fullScan {
         var containers: [String: Set<String>] = [:]

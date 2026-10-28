@@ -569,6 +569,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "CON-RELAY" {
 		return runRelayWorld(ctx, s, level, true)
 	}
+	if s.ID == "CON-ME" || s.ID == "CON-NOTE" {
+		return runContactsIdentity(ctx, s, level)
+	}
 	if strings.HasPrefix(s.ID, "CON-") {
 		return runContacts(ctx, s, level)
 	}

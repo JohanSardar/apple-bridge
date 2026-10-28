@@ -387,10 +387,15 @@ features:
     depends_on: [helper.session]
     status: limited
     limits:
+      - scenario: CON-NOTE
+        level: real
+        reason: "CNContactNoteKey read/write requires com.apple.developer.contacts.notes; the signed Helper lacks this restricted entitlement"
       - scenario: CON-RELAY
         level: replica
         reason: "2026-10-23 isolated public CON-RELAY rerun converged and delivered all 20 live contact changes to Ubuntu, but gateway/replica p95 was 1453.922/1481.835 ms against the 1000 ms budget. TCC activity surged after the quiet precheck, so public R-LIVE is not certified. Tagged cleanup passed; the immediate Serve byte check failed, while a later canonical configuration read matched the baseline."
     scenarios:
+      - {id: CON-ME, levels: [real]}
+      - {id: CON-NOTE, levels: [real]}
       - {id: CON-IMPORT, levels: [sim, real]}
       - {id: CON-SEARCH, levels: [sim]}
       - {id: CON-EXTERNAL, levels: [sim, real, replica]}
