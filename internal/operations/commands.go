@@ -238,6 +238,9 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 	}
 	defer release()
 	action := contracts.NativeAction{Op: c.Op, Args: a, Origin: c.Origin}
+	if strings.HasPrefix(c.Op, "photos.") {
+		action.Args = c.Args
+	}
 	if c.Op == "shortcuts.run" {
 		var args contracts.ShortcutRunArgs
 		if json.Unmarshal(c.Args, &args) != nil {
@@ -246,6 +249,12 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 		action.Args = args
 	}
 	collection := "reminders.reminder"
+	if strings.HasPrefix(c.Op, "photos.") {
+		collection = "photos.asset"
+		if c.Op == "photos.create_album" {
+			collection = "photos.album"
+		}
+	}
 	if c.Op == "reminders.rename_list" || c.Op == "reminders.delete_list" {
 		collection = "reminders.list"
 	}
@@ -493,6 +502,12 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 			CandidateCount    int    `json:"candidate_count"`
 		}
 		collection := "reminders.reminder"
+		if r.Source == "photos" {
+			collection = "photos.asset"
+			if r.Command.Op == "photos.create_album" {
+				collection = "photos.album"
+			}
+		}
 		if r.Source == contracts.Contacts {
 			collection = "contacts.contact"
 			if contracts.ContactGroupOperation(r.Command.Op) {
