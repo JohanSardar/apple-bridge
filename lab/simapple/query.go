@@ -91,6 +91,22 @@ func (s *querySession) receive(f contracts.IPCFrame) bool {
 		case "helper.version":
 			out.ResultJSON = json.RawMessage(`{"version":"sim","protocol":"ipc/1"}`)
 		default:
+			if code, result, handled := simulatePDFQuery(f.Op, f.Args); handled {
+				out.ResultJSON = result
+				if code != "" {
+					out.T = "QueryError"
+					out.Code = code
+				}
+				break
+			}
+			if code, result, handled := simulateVisionQuery(f.Op, f.Args); handled {
+				out.ResultJSON = result
+				if code != "" {
+					out.T = "QueryError"
+					out.Code = code
+				}
+				break
+			}
 			out.T = "QueryError"
 			out.Code = "unsupported"
 		}

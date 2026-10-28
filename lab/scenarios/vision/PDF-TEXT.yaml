@@ -1,0 +1,5 @@
+id: PDF-TEXT
+feature: vision.queries
+levels: [sim, real]
+when:
+  - queries: {}

@@ -358,6 +358,9 @@ func convergence(w *world.World) bool {
 }
 
 func runScenario(ctx context.Context, s Scenario, level string) Evidence {
+	if s.Feature == "vision.queries" {
+		return runVisionQueries(ctx, s, level)
+	}
 	if s.Feature == "core.queries" {
 		return runQueries(ctx, s, level)
 	}
