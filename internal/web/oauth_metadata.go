@@ -8,7 +8,13 @@ import (
 )
 
 func oauthScopes() []string {
-	return contracts.AgentScopes()
+	scopes := []string{}
+	for _, group := range contracts.GrantGroups(false) {
+		for _, grant := range group.Grants {
+			scopes = append(scopes, string(grant))
+		}
+	}
+	return scopes
 }
 func (s *server) oauthRoutes(mux *http.ServeMux) {
 	s.oauthAuthorizationRoutes(mux)
