@@ -88,6 +88,15 @@ func (s *querySession) receive(f contracts.IPCFrame) bool {
 			s.fake.mu.Unlock()
 			out.ResultJSON = json.RawMessage(`{}`)
 			out.Blobs = []contracts.QueryBlob{{Digest: digest, Size: int64(len(data)), Handle: digest}}
+		case "mail.body":
+			var bodyArgs struct {
+				MessageID string `json:"message_id"`
+			}
+			if contracts.DecodeInput(f.Args, &bodyArgs) != nil || bodyArgs.MessageID == "" {
+				out.T, out.Code = "QueryError", "invalid"
+			} else {
+				out.ResultJSON = json.RawMessage(`{"state":"downloaded","plain_text":"Hello fixture","html":""}`)
+			}
 		case "helper.version":
 			out.ResultJSON = json.RawMessage(`{"version":"sim","protocol":"ipc/1"}`)
 		default:

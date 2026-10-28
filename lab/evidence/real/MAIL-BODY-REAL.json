@@ -1,0 +1,31 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[10.08 11.67 21.56] cpu_idle=35% cpus=8 other_heavy=3"
+  },
+  "status": "limited",
+  "run_id": "run_01M624QQZ6EPGR3H76ZFFCQQNY",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "MAIL-BODY-REAL",
+  "level": "real",
+  "passed": false,
+  "git_sha": "",
+  "at": "2026-10-28T20:55:27.462045Z",
+  "assertions": [
+    {
+      "name": "real_mail_store_available",
+      "passed": false
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null,
+  "conditions": {
+    "reason": "No V10 Envelope Index on this Mac; real body Truth qualification unavailable"
+  }
+}
