@@ -361,6 +361,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.Feature == "core.queries" {
 		return runQueries(ctx, s, level)
 	}
+	if s.ID == "CORE-SHORTCUT-SIGN" {
+		return runShortcutSign(ctx, s, level)
+	}
 	if s.Feature == "remote.relay" {
 		return runRelayService(ctx, s, level)
 	}
@@ -1076,7 +1079,7 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 	}
 	packagingOnly := true
 	for _, scenario := range scenarios {
-		packagingOnly = packagingOnly && scenario.Feature == "packaging.app"
+		packagingOnly = packagingOnly && (scenario.Feature == "packaging.app" || scenario.Feature == "core.shortcuts")
 	}
 	if !packagingOnly {
 		if err = world.Build(ctx, level); err != nil {
