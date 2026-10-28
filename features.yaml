@@ -1055,3 +1055,21 @@ features:
       - scenario: PDF-TEXT
         level: real
         reason: pdf.annotate command and its artifact readback evidence are not implemented; extraction and search only.
+  - id: shortcuts.runner
+    title: Bounded Shortcuts CLI runner
+    requirements: [R-RW]
+    milestone: M0
+    modules: [internal/shortcut, packaging/shortcuts]
+    depends_on: [core.shortcuts]
+    status: limited
+    notes: CLI adapter and signed Echo source only; native capture, command registration, Clock, Focus and file transforms remain unimplemented. Pack import requires leader action.
+    scenarios:
+      - {id: SC-CAPTURE, levels: [sim]}
+      - {id: SC-RUN, levels: [sim]}
+    limits:
+      - scenario: SC-CAPTURE
+        level: sim
+        reason: Exercises CLI inventory adapter changes; persistent source capture is not yet integrated.
+      - scenario: SC-RUN
+        level: sim
+        reason: Exercises subprocess adapter; public shortcuts.run command is not yet integrated.

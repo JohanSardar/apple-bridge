@@ -28,3 +28,13 @@ This intentionally small schema carries native parameters rather than maintainin
 ## Verification boundary
 
 CORE-SHORTCUT-SIGN at sim compiles twice and compares bytes/digests, then independently parses the WFWorkflow plist with macOS `plutil`. At real it additionally signs the no-op source, checks AEA1 framing, and re-signs that signed file with the system CLI to prove Apple accepts the archive. Evidence records pass/fail, digests and signing mode only. No personal library content is read. There are no new runtime Sources or grants. Signed files are build artifacts, excluded under `.build/`.
+
+## Runner adapter (T26, partial)
+
+`internal/shortcut` invokes the CLI directly without shell expansion. Inventory uses `list --show-identifiers`, optionally `--folders` or `--folder-name`; malformed or duplicate identifiers reject the entire result. CLI names cannot establish input capabilities, so none are inferred. This adapter is not yet registered as a captured Source or public command.
+
+Runs accept input bytes (text, URL text or file content) and return output bytes, process exit status and timeout status. Private temporary directories are removed after every result. Input and output are capped at 16 MiB. The default timeout is 30 seconds, bounded to five minutes; cancellation kills and reaps the CLI process. It does not promise to cancel downstream work that Shortcuts may already have handed to an app. Process success proves only runner completion, never arbitrary shortcut business effects. The adapter intentionally discards process stdout/stderr to avoid retaining personal diagnostics.
+
+`bridge shortcuts install-pack [-pack directory]` validates all three signed AEA files before opening them for user review. It never clicks Add Shortcut. The required files are `ab-echo.shortcut`, `ab-clock.shortcut` and `ab-focus.shortcut`; only the `AB Echo` source is supplied in this partial change. Missing Clock/Focus files cause the installer to reject before opening anything. `PackVersion` is reserved for later coverage reporting and is not yet exposed in `sources.status`.
+
+SC-CAPTURE sim tests inventory adapter changes, not replication. SC-RUN sim tests byte input/output, binary output, exit status, timeout, invalid shortcut names and input size. Native capture/command wiring, complete pack sources, Clock, Focus, actions discovery and file transforms remain outstanding. No real shortcut has been run. The leader can import the signed Echo artifact for subsequent real qualification; that import alone does not complete T26.

@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "name": "AB Echo",
+  "actions": [
+    {"key": "echo", "identifier": "is.workflow.actions.gettext", "parameters": {"WFTextActionText": {"$input": true}}}
+  ]
+}

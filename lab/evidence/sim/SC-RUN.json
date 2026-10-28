@@ -1,0 +1,67 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[35.28 19.3 15.02] cpu_idle=52% cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M61FEFPYGZG3CVBH7DRVEQ6K",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "SC-RUN",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-28T14:43:24.004874Z",
+  "assertions": [
+    {
+      "name": "fixture_directory",
+      "passed": true
+    },
+    {
+      "name": "fake_cli",
+      "passed": true
+    },
+    {
+      "name": "input_output_bytes",
+      "passed": true
+    },
+    {
+      "name": "input_output_bytes",
+      "passed": true
+    },
+    {
+      "name": "input_output_bytes",
+      "passed": true
+    },
+    {
+      "name": "binary_output",
+      "passed": true
+    },
+    {
+      "name": "nonzero_exit_preserved",
+      "passed": true
+    },
+    {
+      "name": "timeout_bounded",
+      "passed": true
+    },
+    {
+      "name": "timeout_process_reaped",
+      "passed": true
+    },
+    {
+      "name": "option_injection_rejected",
+      "passed": true
+    },
+    {
+      "name": "oversized_input_rejected",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}
