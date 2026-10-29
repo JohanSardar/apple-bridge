@@ -11,6 +11,21 @@ enum HelperLabCommand {
     @MainActor
     static func run(_ arguments: [String]) throws -> Bool {
         switch arguments.first {
+        case "photos-real-checks":
+            let reportURL = try report(arguments)
+            guard arguments.count > 1 else { throw ProbeFailure.invalidArguments }
+            var finished = false
+            var failure: (any Error)?
+            Task { @MainActor in
+                do {
+                    let result = try await PhotosRealProof.run(arguments[1])
+                    try JSONEncoder().encode(result).write(to: reportURL, options: .atomic)
+                } catch { failure = error }
+                finished = true
+            }
+            while !finished { RunLoop.current.run(until: Date().addingTimeInterval(0.05)) }
+            if let failure { throw failure }
+            return true
         case "media-cleanup-checks":
             guard let index = arguments.firstIndex(of: "--fixtures"), index + 1 < arguments.count else { throw ProbeFailure.invalidArguments }
             let fixture = try JSONDecoder().decode(JSON.self, from: Data(contentsOf: URL(fileURLWithPath: arguments[index + 1])))

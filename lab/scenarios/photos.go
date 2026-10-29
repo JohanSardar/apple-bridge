@@ -46,11 +46,8 @@ func runPhotos(ctx context.Context, s Scenario, level string) Evidence {
 	}
 	group, registered := contracts.GrantsForSource("photos")
 	add("source_grants", registered && len(group.Grants) == 2 && contracts.KnownGrant("photos:write"))
-	if level == "real" && s.ID == "PHO-IDLE" {
-		e.Passed = false
-		e.Status = "limited"
-		e.Assertions = append(e.Assertions, Assertion{Name: "whole_helper_idle", Status: "limited", Detail: "Photos grant missing; whole-Helper CPU qualification blocked by T53"})
-		return e
+	if level == "real" {
+		return runPhotosReal(ctx, s, e)
 	}
 	directory, err := os.ReadFile("native/.build/native-output-1")
 	binary := filepath.Join(strings.TrimSpace(string(directory)), "PhotosChecks")
@@ -86,9 +83,6 @@ func runPhotos(ctx context.Context, s Scenario, level string) Evidence {
 		}
 	}
 	args := []string{s.ID}
-	if level == "real" {
-		args = []string{"PHO-READ-REAL"}
-	}
 
 	check := exec.CommandContext(ctx, filepath.Join(strings.TrimSpace(string(directory)), "PhotosChecks"), args...)
 	out, err := check.CombinedOutput()
@@ -97,17 +91,6 @@ func runPhotos(ctx context.Context, s Scenario, level string) Evidence {
 		if strings.HasPrefix(line, "idle_cpu_percent=") {
 			e.Metrics["idle_cpu_percent"] = strings.TrimPrefix(line, "idle_cpu_percent=")
 		}
-	}
-	if s.ID == "PHO-READ-REAL" || s.ID == "PHO-IMPORT-REAL" || s.ID == "PHO-ORIGINAL-REAL" {
-		reason := "PhotoKit count and spot-digest qualification pending"
-		for _, line := range strings.Split(string(out), "\n") {
-			if strings.HasPrefix(line, "photos_authorization_reason=") && strings.TrimPrefix(line, "photos_authorization_reason=") != "" {
-				reason = strings.TrimPrefix(line, "photos_authorization_reason=")
-			}
-		}
-		e.Passed = false
-		e.Status = "limited"
-		e.Assertions = append(e.Assertions, Assertion{Name: "photos_readwrite_authorization", Status: "limited", Detail: reason})
 	}
 	if err != nil {
 		os.Stderr.Write(out)
