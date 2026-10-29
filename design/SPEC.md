@@ -428,6 +428,8 @@ Audio query slice: [inputs, bounds and remaining work](spec/audio.md).
 Location and Maps query slice: [native queries and limits](spec/maps.md).
 
 Vision and PDF query slice: [inputs, bounds and remaining work](spec/vision.md).
+
+Capture and print provider slice: [capture](spec/capture.md).
 Shared helpers for new sources: [SourceSupport](spec/source-support.md).
 
 Relay service and enrollment: [G2-1 / G2-2](spec/relay.md).

@@ -1449,3 +1449,17 @@ features:
       - scenario: SAF-IDLE
         level: real
         reason: Fresh signed Helper and Truth setup exhausted the 60-minute native build budget before measurement; no five-minute CPU result was collected. Whole-Helper idle qualification also depends on the Messages idle issue tracked by T53.
+  - id: capture.commands
+    title: Capture and PDF print provider lifecycle
+    requirements: [R-API, R-SCOPE]
+    milestone: G8
+    modules: [native/Sources/CaptureSource]
+    depends_on: [core.queries]
+    status: limited
+    scenarios:
+      - {id: CAP-SIM, levels: [sim]}
+    limits:
+      - scenario: CAP-SIM
+        level: sim
+        reason: Native injectable prepare/dispatch/resolve and PDF output slice only; gateway command descriptors, blob delivery and native source registration remain unimplemented.
+    notes: Capture providers fail closed without prompting. Real screenshot and screen recording require Screen Recording for the Helper; camera requires Camera and audio requires Microphone. ScreenCaptureKit screenshot and AVAudioRecorder audio providers are implemented but unqualified for real use; camera and screen video providers and named printer submission remain unimplemented. PDF output copies a validated PDF without UI. Evidence contains only digest, size, duration and dimensions.
