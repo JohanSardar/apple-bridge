@@ -278,7 +278,7 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 		}
 		action.Args = args
 	}
-	if contracts.CollectionSource(c.Op) == "mac" {
+	if contracts.CollectionSource(c.Op) == "mac" && !contracts.CaptureOperation(c.Op) {
 		var args contracts.MacArgs
 		if json.Unmarshal(c.Args, &args) != nil {
 			return r, contracts.ErrInvalid
@@ -312,6 +312,30 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 		var args contracts.ShortcutRunArgs
 		if json.Unmarshal(c.Args, &args) != nil {
 			return g.transition(g.Context, r, "rejected", "rejected_before_dispatch", nil, contracts.ErrInvalid)
+		}
+		action.Args = args
+	}
+	if contracts.CaptureOperation(c.Op) {
+		var args contracts.CaptureArgs
+		json.Unmarshal(c.Args, &args)
+		if args.Blob != "" {
+			grant, grantErr := g.State.QueryBlobGrant(g.Context, p, args.BlobID)
+			if grantErr != nil {
+				return g.transition(g.Context, r, "rejected", "rejected_before_dispatch", nil, contracts.ErrForbidden)
+			}
+			file, openErr := g.Uploads.OpenAuthorized(g.Context, grant, args.Blob)
+			if openErr != nil {
+				return g.transition(g.Context, r, "rejected", "rejected_before_dispatch", nil, contracts.ErrUnavailable)
+			}
+			named, ok := file.(interface{ Name() string })
+			if !ok {
+				file.Close()
+				return g.transition(g.Context, r, "rejected", "rejected_before_dispatch", nil, contracts.ErrUnavailable)
+			}
+			args.File = named.Name()
+			file.Close()
+			args.Blob = ""
+			args.BlobID = ""
 		}
 		action.Args = args
 	}
@@ -511,6 +535,9 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 		return r, err
 	}
 	outcomeTimeout := 15 * time.Second
+	if contracts.CaptureOperation(c.Op) {
+		outcomeTimeout = 75 * time.Second
+	}
 	if c.Op == "shortcuts.run" {
 		var args contracts.ShortcutRunArgs
 		if json.Unmarshal(c.Args, &args) == nil {
@@ -564,6 +591,12 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 		to = "rejected"
 		f.Disposition = "rejected_before_dispatch"
 	}
+	if contracts.CaptureOperation(r.Command.Op) && to == "observed" {
+		if !contracts.CaptureEvidence(f.Evidence, r.RequestHash) || g.saveCaptureBlob(r, &f) != nil {
+			to = "indeterminate"
+			f.Disposition = "indeterminate"
+		}
+	}
 	if r.Command.Op == "shortcuts.run" && to == "observed" && !contracts.ShortcutCompletionEvidence(f.Evidence, r.RequestHash) {
 		to = "indeterminate"
 		f.Disposition = "indeterminate"
@@ -572,7 +605,7 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 		to = "indeterminate"
 		f.Disposition = "indeterminate"
 	}
-	if (r.Source == "mac" || r.Source == contracts.Safari) && to == "observed" && !contracts.MacCompletionEvidence(f.Evidence, r.RequestHash) {
+	if (r.Source == "mac" || r.Source == contracts.Safari) && !contracts.CaptureOperation(r.Command.Op) && to == "observed" && !contracts.MacCompletionEvidence(f.Evidence, r.RequestHash) {
 		to = "indeterminate"
 		f.Disposition = "indeterminate"
 	}
@@ -588,7 +621,7 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 		to = "indeterminate"
 		f.Disposition = "indeterminate"
 	}
-	if r.Command.Op != "maps.open" && r.Source != "mac" && r.Source != contracts.Safari && r.Command.Op != "shortcuts.run" && !contracts.MusicPlayerOperation(r.Command.Op) && !contracts.PlaybackOperation(r.Command.Op) && (to == "observed" || to == "delivered" || to == "delivery_failed") {
+	if !contracts.CaptureOperation(r.Command.Op) && r.Command.Op != "maps.open" && r.Source != "mac" && r.Source != contracts.Safari && r.Command.Op != "shortcuts.run" && !contracts.MusicPlayerOperation(r.Command.Op) && !contracts.PlaybackOperation(r.Command.Op) && (to == "observed" || to == "delivered" || to == "delivery_failed") {
 		var evidence struct {
 			NativeKey         string `json:"native_key"`
 			Fingerprint       string `json:"fingerprint"`

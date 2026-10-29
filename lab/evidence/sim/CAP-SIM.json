@@ -1,9 +1,9 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[25.46 34.9 37.79] cpu_idle=25% cpus=8 other_heavy=0"
+    "summary": "air: load=[13.92 18.75 25.91] cpu_idle=39% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M637BY602YR7GDPM3A1JG2DG",
+  "run_id": "run_01M63851XXS9DQ9RG3CGJ4C11E",
   "metrics": {
     "capture_observer_resets": 0
   },
@@ -11,18 +11,102 @@
   "level": "sim",
   "passed": true,
   "git_sha": "",
-  "at": "2026-10-29T07:00:40.768489Z",
+  "at": "2026-10-29T07:14:23.80548Z",
   "assertions": [
-    {
-      "name": "native_build",
-      "passed": true
-    },
     {
       "name": "native_output",
       "passed": true
     },
     {
       "name": "provider_lifecycle_and_artifact_verification",
+      "passed": true
+    },
+    {
+      "name": "public_gateway_start",
+      "passed": true
+    },
+    {
+      "name": "public_helper_ready",
+      "passed": true
+    },
+    {
+      "name": "rest_capture.screenshot_observed",
+      "passed": true
+    },
+    {
+      "name": "rest_capture.screenshot_blob_download",
+      "passed": true
+    },
+    {
+      "name": "rest_capture.camera_photo_observed",
+      "passed": true
+    },
+    {
+      "name": "rest_capture.camera_photo_blob_download",
+      "passed": true
+    },
+    {
+      "name": "rest_capture.record_audio_observed",
+      "passed": true
+    },
+    {
+      "name": "rest_capture.record_audio_blob_download",
+      "passed": true
+    },
+    {
+      "name": "rest_mac.screen_record_observed",
+      "passed": true
+    },
+    {
+      "name": "rest_mac.screen_record_blob_download",
+      "passed": true
+    },
+    {
+      "name": "rest_print.document_observed",
+      "passed": true
+    },
+    {
+      "name": "rest_print.document_blob_download",
+      "passed": true
+    },
+    {
+      "name": "mcp_capture.screenshot_observed",
+      "passed": true
+    },
+    {
+      "name": "mcp_capture.screenshot_blob_download",
+      "passed": true
+    },
+    {
+      "name": "mcp_capture.camera_photo_observed",
+      "passed": true
+    },
+    {
+      "name": "mcp_capture.camera_photo_blob_download",
+      "passed": true
+    },
+    {
+      "name": "mcp_capture.record_audio_observed",
+      "passed": true
+    },
+    {
+      "name": "mcp_capture.record_audio_blob_download",
+      "passed": true
+    },
+    {
+      "name": "mcp_mac.screen_record_observed",
+      "passed": true
+    },
+    {
+      "name": "mcp_mac.screen_record_blob_download",
+      "passed": true
+    },
+    {
+      "name": "mcp_print.document_observed",
+      "passed": true
+    },
+    {
+      "name": "mcp_print.document_blob_download",
       "passed": true
     },
     {

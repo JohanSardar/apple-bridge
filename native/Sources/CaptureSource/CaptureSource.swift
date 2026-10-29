@@ -1,3 +1,5 @@
+import AppKit
+import SpeechSource
 import Foundation
 import CryptoKit
 import CoreGraphics
@@ -32,11 +34,13 @@ public actor CaptureSource: Source {
     public init(directory: URL, provider: any CaptureProvider = SystemCaptureProvider()) {
         self.directory = directory; self.provider = provider
     }
+    let playback = SpeechPlayback(name: "capture")
     public func open() async -> SourceReadiness {
-        SourceReadiness(state: "ready", coverage: .object(["fields": .string("partial")]), capabilities: Self.operations)
+        SourceReadiness(state: "ready", coverage: .object(["fields": .string("partial")]), capabilities: Self.operations + ["capture.play_sound"])
     }
     public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {}
     public func prepare(_ command: JSON) async throws -> Prepared {
+        if command["action"]["op"].string == "capture.play_sound" { return try await playback.prepare(command) }
         let action = command["action"]
         let op = action["op"].string
         let args = action["args"]
@@ -54,13 +58,14 @@ public actor CaptureSource: Source {
             guard seconds >= 1, seconds <= (op == "mac.screen_record" ? 30 : 60), seconds.isFinite else { throw SourceFailure.invalid }
         default:
             allowed = ["file", "printer"]
-            guard !args["file"].string.isEmpty, args["printer"].string == "PDF" else { throw SourceFailure.unsupported }
+            guard !args["file"].string.isEmpty, !args["printer"].string.isEmpty else { throw SourceFailure.unsupported }
         }
         guard Set(args.object.keys).isSubset(of: allowed) else { throw SourceFailure.invalid }
         guard await provider.authorized(op) else { throw SourceFailure.permissionMissing }
         return Prepared(nativeState: .null, fingerprint: command["request_hash"].string, action: action)
     }
     public func dispatch(_ prepared: Prepared) async throws -> JSON {
+        if prepared.action["op"].string == "capture.play_sound" { return try await playback.dispatch(prepared) }
         _ = try await prepare(.object(["action": prepared.action]))
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         let artifact = try await provider.produce(prepared.action["op"].string, args: prepared.action["args"], directory: directory)
@@ -79,9 +84,18 @@ public actor CaptureSource: Source {
         let bytes = try Data(contentsOf: artifact.url)
         guard bytes.count == size else { throw SourceFailure.corrupt }
         let digest = SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined()
-        return .object(["digest": .string(digest), "size": .number(Double(size)), "duration": .number(artifact.duration), "width": .number(Double(artifact.width)), "height": .number(Double(artifact.height)), "observed": .bool(true)])
+        return .object(["handle": .string("capture-artifact:" + digest), "digest": .string(digest), "size": .number(Double(size)), "duration": .number(artifact.duration), "width": .number(Double(artifact.width)), "height": .number(Double(artifact.height)), "observed": .bool(true)])
+    }
+    public func readBlob(_ handle: String, offset: Int, length: Int) throws -> JSON {
+        let digest = String(handle.dropFirst("capture-artifact:".count))
+        guard handle.hasPrefix("capture-artifact:"), let artifact = artifacts[digest], offset >= 0, length > 0, length <= 131072 else { throw SourceFailure.invalid }
+        let data = try Data(contentsOf: artifact.url)
+        guard offset <= data.count else { throw SourceFailure.invalid }
+        let end = min(data.count, offset + length)
+        return .object(["t": .string("BlobChunk"), "handle": .string(handle), "offset": .number(Double(offset)), "digest": .string(digest), "bytes": .string(data.subdata(in: offset..<end).base64EncodedString()), "eof": .bool(end == data.count)])
     }
     public func resolve(_ command: String, evidence: JSON) async -> JSON {
+        if evidence["prepared"]["action"]["op"].string == "capture.play_sound" { return await playback.resolve(command, evidence: evidence) }
         guard let artifact = artifacts[evidence["digest"].string], let verified = try? verify(artifact, action: evidence["prepared"]["action"]), verified["digest"] == evidence["digest"], verified["size"] == evidence["size"] else { return .null }
         return verified
     }
@@ -139,6 +153,18 @@ public struct SystemCaptureProvider: CaptureProvider {
         guard operation == "print.document" else { throw SourceFailure.unsupported }
         let input = URL(fileURLWithPath: args["file"].string)
         guard let document = PDFDocument(url: input), document.pageCount > 0, let bytes = document.dataRepresentation() else { throw SourceFailure.invalid }
+        if args["printer"].string != "PDF" {
+            let name = args["printer"].string
+            guard NSPrinter.printerNames.contains(name) else { throw SourceFailure.unavailable }
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/lp")
+            process.arguments = ["-d", name, "--", args["file"].string]
+            process.standardOutput = FileHandle.nullDevice
+            process.standardError = FileHandle.nullDevice
+            try process.run()
+            process.waitUntilExit()
+            guard process.terminationStatus == 0 else { throw SourceFailure.unavailable }
+        }
         let output = directory.appendingPathComponent(UUID().uuidString + ".pdf")
         try bytes.write(to: output, options: [.atomic])
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: output.path)

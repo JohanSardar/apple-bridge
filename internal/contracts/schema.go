@@ -160,6 +160,37 @@ func OperationSchema(d OperationDescriptor) map[string]any {
 	if d.Kind == CommandOp && d.Source == "files" {
 		return fileCommandSchema(d, s)
 	}
+	if d.Kind == CommandOp && CaptureOperation(d.Name) {
+		args := JSONSchema(CaptureArgs{})
+		fields := args["properties"].(map[string]any)
+		allowed := map[string]bool{}
+		switch d.Name {
+		case "capture.screenshot":
+			allowed["display"] = true
+			allowed["window"] = true
+		case "capture.record_audio", "mac.screen_record":
+			allowed["seconds"] = true
+			args["required"] = []string{"seconds"}
+			fields["seconds"].(map[string]any)["minimum"] = 1
+			limit := 60
+			if d.Name == "mac.screen_record" {
+				limit = 30
+			}
+			fields["seconds"].(map[string]any)["maximum"] = limit
+		case "print.document":
+			for _, key := range []string{"file", "blob", "blob_id", "printer"} {
+				allowed[key] = true
+			}
+			args["required"] = []string{"printer"}
+		}
+		for key := range fields {
+			if !allowed[key] {
+				delete(fields, key)
+			}
+		}
+		s["properties"].(map[string]any)["args"] = args
+		return s
+	}
 	if d.Kind == CommandOp && d.Source == "mac" {
 		return macSchema(d, s)
 	}

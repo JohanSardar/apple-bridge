@@ -508,7 +508,12 @@ public actor AppleSession: ObservationSink {
         }
     }
 
+    private func captureRoute(_ operation: String) -> String {
+        if ["mac.screen_record", "print.document"].contains(operation) { return "capture" }
+        return operation.components(separatedBy: ".").first ?? ""
+    }
     private func observedEvidence(_ evidence: JSON, fingerprint: JSON, operation: String) async throws -> JSON {
+        if ["capture.screenshot", "capture.camera_photo", "capture.record_audio", "mac.screen_record", "print.document"].contains(operation) { return evidence }
         if operation == "pdf.annotate", let pdf = additionalSources["pdf"] as? PDFSource {
             try await pdf.captureCommand(evidence, into: self)
             guard let checkpoint = observedCheckpoints["pdf.artifact/" + evidence["native_key"].string] else { throw SourceFailure.unavailable }
@@ -598,11 +603,11 @@ public actor AppleSession: ObservationSink {
             if ["indeterminate", "locally_observed"].contains(outcome["disposition"].string) {
 let operation=outcome["evidence"]["prepared"]["action"]["op"].string
                 let saved=outcome["evidence"]
- let selected=additionalSources[saved["prepared"]["action"]["op"].string.components(separatedBy:".").first ?? ""] ?? source
+ let selected=additionalSources[captureRoute(saved["prepared"]["action"]["op"].string)] ?? source
  let evidence = operation.hasPrefix("contacts.") ? await contacts.resolve(id,evidence:saved) : operation.hasPrefix("calendar.") ? await calendar.resolve(id,evidence:saved) : await selected.resolve(id, evidence: saved)
                 if evidence["observed"].bool {
                     let committed: JSON
-                    if ["maps.open", "shortcuts.run", "speech.say", "capture.play_sound"].contains(operation) { committed = evidence }
+                    if ["maps.open", "shortcuts.run", "speech.say", "capture.play_sound", "capture.screenshot", "capture.camera_photo", "capture.record_audio", "mac.screen_record", "print.document"].contains(operation) { committed = evidence }
                     else { committed = try await observedEvidence(evidence, fingerprint: outcome["evidence"]["prepared"]["request_hash"], operation: operation) }
                     outcome = .object(["t": .string("Outcome"), "command_id": .string(id), "disposition": evidence["disposition"].string.isEmpty ? .string("locally_observed") : evidence["disposition"], "evidence": committed])
                     try await guardLog.append(outcome)
@@ -678,7 +683,7 @@ let operation=outcome["evidence"]["prepared"]["action"]["op"].string
             guard !commandActive, tickets.isEmpty, preparing == nil else { throw SourceFailure.conflict }
             preparing = nonce
             guard !(await guardLog.contains(frame["command_id"].string)) else { throw SourceFailure.conflict }
-            let selected = additionalSources[frame["action"]["op"].string.components(separatedBy: ".").first ?? ""] ?? source
+            let selected = additionalSources[captureRoute(frame["action"]["op"].string)] ?? source
  var nativeFrame = frame.object
             if frame["action"]["op"].string.hasPrefix("reminders.") { nativeFrame["expected_state"] = RemindersStoreProjection.baseData(frame["expected_state"]) }
  let prepared = frame["action"]["op"].string.hasPrefix("contacts.") ? try await contacts.prepare(frame) : frame["action"]["op"].string.hasPrefix("calendar.") ? try await calendar.prepare(frame) : try await selected.prepare(.object(nativeFrame))
@@ -707,7 +712,7 @@ let operation=outcome["evidence"]["prepared"]["action"]["op"].string
         var started = false
         do {
             guard frame["origin"] == ticket.command["origin"], frame["command_id"] == id, frame["owner_fence"].unsigned == fence, ticket.fence == fence, ContinuousClock.now < ticket.expiry else { throw SourceFailure.expired }
-            let selected=additionalSources[ticket.prepared.action["op"].string.components(separatedBy: ".").first ?? ""] ?? source
+            let selected=additionalSources[captureRoute(ticket.prepared.action["op"].string)] ?? source
  if ticket.prepared.action["op"].string.hasPrefix("notes."), let notes=additionalSources["notes"] as? NotesSource { try await notes.validate(ticket.prepared) } else if ticket.prepared.action["op"].string.hasPrefix("contacts.") {try await contacts.validate(ticket.prepared)} else if ticket.prepared.action["op"].string.hasPrefix("calendar.") {try await calendar.validate(ticket.prepared)} else if selected.name == "reminders" { try await source.validate(ticket.prepared) } else if let messages=selected as? Messages {try await messages.validate(ticket.prepared)}
             try Task.checkCancellation()
             guard ticket.fence == fence, ContinuousClock.now < ticket.expiry, wire != nil else { throw SourceFailure.expired }

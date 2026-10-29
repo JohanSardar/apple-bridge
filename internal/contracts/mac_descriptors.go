@@ -205,6 +205,14 @@ func macSchema(d OperationDescriptor, schema map[string]any) map[string]any {
 	return schema
 }
 
+func init() {
+	registerDescriptors(func() []OperationDescriptor {
+		return []OperationDescriptor{
+			{Name: "mac.screen_record", Version: 1, Kind: CommandOp, Source: "mac", Scope: "mac:write", Capability: "mac.screen_record", Input: Command{}, Output: CommandRecord{}, Description: "Record up to 30 seconds of screen video as a blob"},
+		}
+	})
+}
+
 func MacPowerAction(op string) bool {
 	return op == "mac.lock_screen" || op == "mac.sleep_display" || op == "mac.restart" || op == "mac.shutdown"
 }
