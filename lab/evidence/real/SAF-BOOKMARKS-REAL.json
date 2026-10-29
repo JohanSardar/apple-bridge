@@ -1,0 +1,45 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[8.44 12.92 18.73] cpu_idle=44% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M628FV26H3EECG2HJP7RS8MW",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "count": "36",
+    "digest": "fe9acbe00ea3850c6d0f7837fa9b10ef3dab884c2f0f577fade77fe4d324fd3c"
+  },
+  "scenario": "SAF-BOOKMARKS-REAL",
+  "level": "real",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-28T22:01:02.793144Z",
+  "assertions": [
+    {
+      "name": "fixture_directory",
+      "passed": true
+    },
+    {
+      "name": "fake_databases",
+      "passed": true
+    },
+    {
+      "name": "native_build",
+      "passed": true
+    },
+    {
+      "name": "native_output",
+      "passed": true
+    },
+    {
+      "name": "independent_truth_counts_and_bookmark_digest",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

@@ -1,0 +1,5 @@
+id: AI-LOCAL
+feature: audio.queries
+levels: [real]
+when:
+  - queries: {}

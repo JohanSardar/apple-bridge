@@ -1,0 +1,71 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[5.46 5.29 6.65] cpu_idle=67% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M62HCNDWXFMCXYD0T0MJ7E1P",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "place_count": 1,
+    "public_point_error_m": 0
+  },
+  "scenario": "LOC-SIM",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "57a4e3fd75f12eaeb4329f530f53e152c24b7f53",
+  "at": "2026-10-29T00:36:35.900785Z",
+  "assertions": [
+    {
+      "name": "world_started",
+      "passed": true
+    },
+    {
+      "name": "scopes_granted",
+      "passed": true
+    },
+    {
+      "name": "authorized_fixture_current_schema",
+      "passed": true
+    },
+    {
+      "name": "authorized_fixture_current_is_fresh",
+      "passed": true
+    },
+    {
+      "name": "current_unknown_fields_rejected",
+      "passed": true
+    },
+    {
+      "name": "unknown_fields_rejected",
+      "passed": true
+    },
+    {
+      "name": "query_completed",
+      "passed": true
+    },
+    {
+      "name": "public_places_present",
+      "passed": true
+    },
+    {
+      "name": "known_public_coordinate",
+      "passed": true
+    },
+    {
+      "name": "formatted_address_present",
+      "passed": true
+    },
+    {
+      "name": "reverse_round_trip",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

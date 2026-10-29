@@ -2,6 +2,7 @@ package scenarios
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"os/exec"
@@ -56,6 +57,53 @@ func runClockPack(ctx context.Context, s Scenario, level string) Evidence {
 	fixture.err = context.Canceled
 	_, err = pack.Inspect(ctx)
 	add("runner_error_retained", errors.Is(err, context.Canceled))
+	alarm := clockpack.Alarm{ID: "synthetic-alarm", Label: "[ab-test] clock", Time: "03:17", RepeatDays: []int{}, Enabled: true}
+	for _, operation := range []string{"alarms", "create_alarm", "toggle_alarm", "delete_alarm", "start_timer", "world_time"} {
+		request := clockpack.Request{Operation: operation}
+		readback := clockpack.Readback{Version: 1, Operation: operation, Alarms: []clockpack.Alarm{alarm}}
+		switch operation {
+		case "create_alarm", "toggle_alarm", "delete_alarm":
+			if operation == "toggle_alarm" {
+				alarm.Enabled = false
+				readback.Alarms = []clockpack.Alarm{alarm}
+			}
+			request.Alarm = &alarm
+			if operation == "delete_alarm" {
+				readback.Alarms = []clockpack.Alarm{}
+			}
+		case "start_timer":
+			request.Duration, request.Label = 90, "[ab-test] timer"
+			readback.Duration, readback.Label, readback.TimerRunning = 90, request.Label, true
+		case "world_time":
+			request.City, readback.City, readback.LocalTime = "Chicago", "Chicago", "2026-10-28T03:17:00-05:00"
+		}
+		fixture.err = nil
+		fixture.result.Data, _ = json.Marshal(readback)
+		_, err = pack.Exchange(ctx, request)
+		add("structured_"+operation, err == nil)
+		var sent clockpack.Request
+		add("request_"+operation, json.Unmarshal(fixture.input.Data, &sent) == nil && sent.Operation == operation)
+		_, err = (clockpack.Pack{}).Exchange(ctx, request)
+		add("unqualified_live_"+operation, errors.Is(err, clockpack.ErrUnqualified))
+		if operation == "start_timer" {
+			readback.TimerRunning = false
+			fixture.result.Data, _ = json.Marshal(readback)
+			_, err = pack.Exchange(ctx, request)
+			add("timer_requires_running_confirmation", errors.Is(err, clockpack.ErrUnqualified))
+		}
+		if operation == "delete_alarm" {
+			readback.Alarms = []clockpack.Alarm{alarm}
+			fixture.result.Data, _ = json.Marshal(readback)
+			_, err = pack.Exchange(ctx, request)
+			add("delete_requires_absent_alarm", errors.Is(err, clockpack.ErrUnqualified))
+		}
+		fixture.result.Data = []byte(`{"version":1,"operation":"wrong"}`)
+		_, err = pack.Exchange(ctx, request)
+		add("mismatched_"+operation, errors.Is(err, clockpack.ErrUnqualified))
+	}
+	alarm.Label = "personal"
+	_, err = pack.Exchange(ctx, clockpack.Request{Operation: "delete_alarm", Alarm: &alarm})
+	add("untagged_alarm_rejected", err != nil)
 	dir, err := os.MkdirTemp("", "ab-clock-build-")
 	add("temporary_build", err == nil)
 	if err != nil {

@@ -1,0 +1,5 @@
+id: MUS-CONTROL-REAL
+feature: music.catalog
+levels: [real]
+when:
+  - queries: {}

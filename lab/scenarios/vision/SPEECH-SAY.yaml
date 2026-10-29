@@ -1,0 +1,5 @@
+id: SPEECH-SAY
+feature: audio.queries
+levels: [real]
+when:
+  - queries: {}

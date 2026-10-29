@@ -1,0 +1,5 @@
+id: MAP-DIRECTIONS-REAL
+feature: maps.queries
+levels: [real]
+when:
+  - queries: {}

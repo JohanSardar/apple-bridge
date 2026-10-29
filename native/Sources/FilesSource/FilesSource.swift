@@ -1,12 +1,16 @@
 import Foundation
+import ImageIO
+import CoreGraphics
+import PDFKit
 import SourceSupport
 
 public actor FilesSource: Source {
     public nonisolated let name = "files"
-    private let roots: [URL]
+    let roots: [URL]
     private let writer: BlobWriter
     private var blobs: [String: URL] = [:]
     private var scanGuard = FileScanGuard()
+    private var reconciling = false
     private let generation = UUID().uuidString
     public init(home: URL = FileManager.default.homeDirectoryForCurrentUser, roots: [URL] = []) throws {
         let defaultRoot = home.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs/Bridge Test")
@@ -18,7 +22,7 @@ public actor FilesSource: Source {
         writer = try BlobWriter(directory: home.appendingPathComponent("Library/Caches/AppleBridge/files-blobs"))
     }
     public func open() async -> SourceReadiness {
-        SourceReadiness(state: "ready", coverage: .object(["roots": .number(Double(roots.count)), "max_items": .number(10000), "max_depth": .number(16)]), capabilities: ["files.search", "files.read"])
+        SourceReadiness(state: "ready", coverage: .object(["roots": .number(Double(roots.count)), "max_items": .number(10000), "max_depth": .number(16)]), capabilities: ["files.search", "files.read", "files.transform"] + Self.commands)
     }
     public func snapshot(_ root: URL) throws -> ([JSON], Bool) {
         guard roots.contains(root.standardizedFileURL.resolvingSymlinksInPath()) else { throw SourceFailure.invalid }
@@ -42,20 +46,26 @@ public actor FilesSource: Source {
         if failed { complete = false }
         return (rows, complete)
     }
+    public func reconcile(into sink: any ObservationSink) async throws {
+        while reconciling { try await Task.sleep(for: .milliseconds(25)) }
+        reconciling = true
+        defer { reconciling = false }
+        for root in roots {
+            let started = timestamp()
+            let (scanned, complete) = try snapshot(root)
+            var rows = scanned
+            var nextGuard = scanGuard
+            let absent = nextGuard.finish(root: root.path, keys: Set(rows.map { $0["native_key"].string }), complete: complete)
+            rows += absent.map { .object(["kind": .string("absent"), "collection": .string("files.item"), "native_key": .string($0), "observed_at": .string(timestamp()), "revalidated": .bool(true)]) }
+            try await sink.emit(source: name, generation: generation, observations: rows, scanID: UUID().uuidString, scanStartedAt: started, scope: ["files.item"], completionEvidence: complete ? "complete" : "", blobHandles: [:], live: false)
+            scanGuard = nextGuard
+        }
+    }
     public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {
         let watcher = DatabaseWatcher(path: roots[0].path, coalescing: .milliseconds(250))
         defer { watcher.close() }
         repeat {
-            for root in roots {
-                let started = timestamp()
-                let (scanned, complete) = try snapshot(root)
-                var rows = scanned
-                var nextGuard = scanGuard
-                let absent = nextGuard.finish(root: root.path, keys: Set(rows.map { $0["native_key"].string }), complete: complete)
-                rows += absent.map { .object(["kind": .string("absent"), "collection": .string("files.item"), "native_key": .string($0), "observed_at": .string(timestamp()), "revalidated": .bool(true)]) }
-                try await sink.emit(source: name, generation: generation, observations: rows, scanID: UUID().uuidString, scanStartedAt: started, scope: [], completionEvidence: "", blobHandles: [:], live: false)
-                scanGuard = nextGuard
-            }
+            try await reconcile(into: sink)
             var iterator = watcher.changes.makeAsyncIterator()
             guard await iterator.next() != nil else { return }
         } while !Task.isCancelled
@@ -127,7 +137,66 @@ public actor FilesSource: Source {
         let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
         return .object(["t": .string("BlobChunk"), "handle": .string(handle), "offset": .number(Double(offset)), "bytes": .string(bytes.base64EncodedString()), "digest": .string(digest), "eof": .bool(offset + Int64(bytes.count) == Int64(size))])
     }
-    public func prepare(_ command: JSON) async throws -> Prepared { throw SourceFailure.unsupported }
-    public func dispatch(_ prepared: Prepared) async throws -> JSON { throw SourceFailure.unsupported }
+    public func transform(_ args: JSON) throws -> JSON {
+        let inputs = args["inputs"].array
+        guard !inputs.isEmpty, inputs.count <= 100 else { throw SourceFailure.invalid }
+        let data = try inputs.map { input -> Data in
+            guard let url = blobs[input.string], (try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0) <= 64 * 1024 * 1024 else { throw SourceFailure.invalid }
+            return try Data(contentsOf: url)
+        }
+        var outputs: [Data] = []
+        let operation = args["operation"].string
+        let format = args["format"].string
+        var type = "application/pdf"
+        if operation == "convert" || operation == "resize" {
+            let types = ["png": "public.png", "jpeg": "public.jpeg", "tiff": "public.tiff"]
+            guard data.count == 1, let uti = types[format], let source = CGImageSourceCreateWithData(data[0] as CFData, nil), let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else { throw SourceFailure.invalid }
+            var result = image
+            if operation == "resize" {
+                let w = args["width"].number, h = args["height"].number
+                guard w >= 1, h >= 1, w <= 8192, h <= 8192, w.rounded() == w, h.rounded() == h else { throw SourceFailure.invalid }
+                guard let context = CGContext(data: nil, width: Int(w), height: Int(h), bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { throw SourceFailure.unavailable }
+                context.interpolationQuality = .high
+                context.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
+                guard let resized = context.makeImage() else { throw SourceFailure.unavailable }
+                result = resized
+            }
+            let bytes = NSMutableData()
+            guard let destination = CGImageDestinationCreateWithData(bytes, uti as CFString, 1, nil) else { throw SourceFailure.unavailable }
+            CGImageDestinationAddImage(destination, result, nil)
+            guard CGImageDestinationFinalize(destination), let check = CGImageSourceCreateWithData(bytes, nil), CGImageSourceGetType(check) as String? == uti else { throw SourceFailure.corrupt }
+            outputs = [bytes as Data]
+            type = "image/" + format
+        } else if operation == "combine" || operation == "split" {
+            let documents = try data.map { bytes -> PDFDocument in
+                guard let document = PDFDocument(data: bytes), !document.isLocked, document.pageCount > 0, document.pageCount <= 1000 else { throw SourceFailure.invalid }
+                return document
+            }
+            guard operation != "split" || documents.count == 1 else { throw SourceFailure.invalid }
+            let combined = PDFDocument()
+            for document in documents {
+                for index in 0..<document.pageCount {
+                    guard let page = document.page(at: index)?.copy() as? PDFPage else { throw SourceFailure.corrupt }
+                    if operation == "split" {
+                        let single = PDFDocument()
+                        single.insert(page, at: 0)
+                        guard let bytes = single.dataRepresentation() else { throw SourceFailure.corrupt }
+                        outputs.append(bytes)
+                    } else { combined.insert(page, at: combined.pageCount) }
+                }
+            }
+            if operation == "combine" {
+                guard let bytes = combined.dataRepresentation() else { throw SourceFailure.corrupt }
+                outputs = [bytes]
+            }
+            guard outputs.allSatisfy({ PDFDocument(data: $0)?.pageCount ?? 0 > 0 }) else { throw SourceFailure.corrupt }
+        } else { throw SourceFailure.invalid }
+        let references = try outputs.map { bytes -> JSON in
+            let blob = try writer.stage(bytes)
+            blobs[blob.digest] = blob.file
+            return .object(["digest": .string(blob.digest), "size": .number(Double(blob.size)), "handle": .string("files-blob:" + blob.digest), "media_type": .string(type)])
+        }
+        return .object(["outputs": .array(references)])
+    }
     public func resolve(_ command: String, evidence: JSON) async -> JSON { .null }
 }

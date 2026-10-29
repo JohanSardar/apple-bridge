@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "name": "AB Pack v1",
+  "actions": [
+    {
+      "key": "version",
+      "identifier": "is.workflow.actions.gettext",
+      "parameters": {
+        "WFTextActionText": "Apple Bridge pack version 1"
+      }
+    }
+  ]
+}

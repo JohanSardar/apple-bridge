@@ -1,0 +1,71 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[8.57 8.95 9.05] cpu_idle=68% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M62M0B2S73JTADJSC2EH51AR",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "MAC-APPS-REAL",
+  "level": "real",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-29T01:22:17.817865Z",
+  "assertions": [
+    {
+      "name": "world_started",
+      "passed": true
+    },
+    {
+      "name": "scope_granted",
+      "passed": true
+    },
+    {
+      "name": "helper_ready",
+      "passed": true
+    },
+    {
+      "name": "calculator_not_running",
+      "passed": true
+    },
+    {
+      "name": "frontmost_app_saved",
+      "passed": true
+    },
+    {
+      "name": "calculator_launched",
+      "passed": true
+    },
+    {
+      "name": "original_app_activated_between",
+      "passed": true
+    },
+    {
+      "name": "calculator_activated",
+      "passed": true
+    },
+    {
+      "name": "calculator_frontmost_truth",
+      "passed": true
+    },
+    {
+      "name": "calculator_cleanup",
+      "passed": true
+    },
+    {
+      "name": "calculator_restore_truth",
+      "passed": true
+    },
+    {
+      "name": "frontmost_app_restored",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

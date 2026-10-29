@@ -1,0 +1,5 @@
+id: LOC-CURRENT-REAL
+feature: maps.queries
+levels: [real]
+when:
+  - queries: {}

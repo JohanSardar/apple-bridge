@@ -109,7 +109,7 @@ func OperationSchema(d OperationDescriptor) map[string]any {
 		props["id"] = map[string]any{"type": "string", "pattern": "^qry_[A-Za-z0-9._:-]+$", "maxLength": 128}
 		props["deadline_ms"] = map[string]any{"type": "integer", "minimum": 0, "maximum": 60000}
 		props["op"] = map[string]any{"type": "string", "enum": []string{d.Name}}
-		if d.Name == "helper.version" {
+		if d.Name == "helper.version" || d.Name == "mac.clipboard_read" {
 			props["args"] = map[string]any{"type": "object", "additionalProperties": false}
 		}
 		if d.Name == "test.sleep" || d.Name == "test.blob" {
@@ -148,6 +148,12 @@ func OperationSchema(d OperationDescriptor) map[string]any {
 		fields["limit"].(map[string]any)["minimum"] = 0
 		fields["limit"].(map[string]any)["maximum"] = 200
 		return s
+	}
+	if d.Kind == CommandOp && d.Source == "files" {
+		return fileCommandSchema(d, s)
+	}
+	if d.Kind == CommandOp && d.Source == "mac" {
+		return macSchema(d, s)
 	}
 	if d.Kind == CommandOp && d.Source == Shortcuts {
 		args := JSONSchema(ShortcutRunArgs{})

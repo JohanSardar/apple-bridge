@@ -1,0 +1,5 @@
+id: LOC-IDLE
+feature: maps.queries
+levels: [real]
+when:
+  - queries: {}

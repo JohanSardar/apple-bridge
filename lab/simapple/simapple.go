@@ -40,6 +40,9 @@ type captureRequest struct {
 	Close       bool
 }
 type fakeApple struct {
+	music musicPlayer
+
+	clipboard                    string
 	commandOrigins               map[string]map[string]string
 	contactPermissionMissing     bool
 	contactSequence              uint64
@@ -446,7 +449,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 	f.mu.Unlock()
 	credit := open.ByteCredit
 	coverage := contracts.Coverage{Fields: "complete", Missing: []string{"recurring reminders: next incomplete instance only"}}
-	if _, err = wire.Send(contracts.IPCFrame{T: "Ready", Protocol: contracts.IPCProtocol, Capabilities: map[contracts.Source][]string{contracts.Phone: {}, contracts.Mail: {}, contracts.Shortcuts: {"shortcuts.run"}, contracts.Usage: {}, contracts.Notes: {"notes.create", "notes.update", "notes.delete", "notes.create_folder", "notes.move", "notes.rename_folder"}, contracts.Calendar: {"calendar.create_event", "calendar.update_event", "calendar.delete_event", "calendar.create_calendar"}, contracts.Contacts: {"contacts.create", "contacts.update", "contacts.delete", "contacts.create_group", "contacts.rename_group", "contacts.delete_group", "contacts.add_member", "contacts.remove_member"}, contracts.Messages: messageCapabilities(), contracts.Reminders: {"reminders.create", "reminders.update", "reminders.complete", "reminders.uncomplete", "reminders.delete", "reminders.create_list", "reminders.rename_list", "reminders.delete_list"}}, Coverage: map[contracts.Source]contracts.Coverage{contracts.Phone: {Fields: "complete", Missing: []string{}}, contracts.Mail: {Fields: "partial", Missing: []string{"body and attachment hydration"}}, contracts.Shortcuts: {Fields: "partial", PackVersion: "1"}, contracts.Usage: {Fields: "estimated", Missing: []string{"settings_parity: unproven"}}, contracts.Notes: {Fields: "complete", Missing: []string{}}, contracts.Calendar: {Fields: "complete", Missing: []string{}}, contracts.Contacts: contactCoverage(), contracts.Reminders: coverage, contracts.Messages: messageCoverage()}, HelperBuild: "sim/1", OSBuild: "sim"}); err != nil {
+	if _, err = wire.Send(contracts.IPCFrame{T: "Ready", Protocol: contracts.IPCProtocol, Capabilities: map[contracts.Source][]string{contracts.Safari: {}, "maps": {"maps.open"}, "mac": {"mac.set_volume", "mac.set_mute", "mac.set_output_device", "mac.set_appearance", "mac.launch_app", "mac.activate_app", "mac.quit_app", "mac.keep_awake", "mac.clipboard_write", "mac.clipboard_read"}, "speech": {"speech.say"}, "capture": {"capture.play_sound"}, "files": fileCapabilities(), contracts.Phone: {}, contracts.Mail: {}, contracts.Shortcuts: {"shortcuts.run"}, contracts.Usage: {}, contracts.Notes: {"notes.create", "notes.update", "notes.delete", "notes.create_folder", "notes.move", "notes.rename_folder"}, contracts.Calendar: {"calendar.create_event", "calendar.update_event", "calendar.delete_event", "calendar.create_calendar"}, contracts.Contacts: {"contacts.create", "contacts.update", "contacts.delete", "contacts.create_group", "contacts.rename_group", "contacts.delete_group", "contacts.add_member", "contacts.remove_member"}, contracts.Messages: messageCapabilities(), contracts.Reminders: {"reminders.create", "reminders.update", "reminders.complete", "reminders.uncomplete", "reminders.delete", "reminders.create_list", "reminders.rename_list", "reminders.delete_list"}, "music": {"music.play", "music.pause", "music.next", "music.previous", "music.set_volume", "music.play_item", "music.favorite", "music.add_to_playlist"}}, Coverage: map[contracts.Source]contracts.Coverage{contracts.Safari: {Fields: "complete"}, "speech": {Fields: "complete"}, "capture": {Fields: "complete"}, "files": {Fields: "complete", Missing: []string{}}, contracts.Phone: {Fields: "complete", Missing: []string{}}, contracts.Mail: {Fields: "partial", Missing: []string{"body and attachment hydration"}}, contracts.Shortcuts: {Fields: "partial", PackVersion: "1"}, contracts.Usage: {Fields: "estimated", Missing: []string{"settings_parity: unproven"}}, contracts.Notes: {Fields: "complete", Missing: []string{}}, contracts.Calendar: {Fields: "complete", Missing: []string{}}, contracts.Contacts: contactCoverage(), contracts.Reminders: coverage, contracts.Messages: messageCoverage(), "music": {Fields: "partial", Missing: []string{}}}, HelperBuild: "sim/1", OSBuild: "sim"}); err != nil {
 		return err
 	}
 	f.mu.Lock()
@@ -750,7 +753,7 @@ func (f *fakeApple) session(ctx context.Context, conn *net.UnixConn, secret []by
 		emitRevision = revision
 		return emit(capture, false)
 	}
-	for _, source := range []contracts.Source{contracts.Reminders, contracts.Messages, contracts.Contacts, contracts.Calendar, contracts.Notes, contracts.Usage, contracts.Mail, contracts.Phone} {
+	for _, source := range []contracts.Source{contracts.Reminders, contracts.Messages, contracts.Contacts, contracts.Calendar, contracts.Notes, contracts.Usage, contracts.Mail, contracts.Phone, "files", "music"} {
 		f.mu.Lock()
 		missingContacts := f.contactPermissionMissing
 		f.mu.Unlock()

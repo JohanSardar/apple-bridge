@@ -1,0 +1,5 @@
+id: MAC-APPEARANCE-REAL
+feature: mac.commands
+levels: [real]
+when:
+  - mac: {}

@@ -1,0 +1,127 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[7.58 5.43 9.36] cpu_idle=57% cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M62PBERR6JN7EHZ8MK1RCYBD",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "MAC-COMMANDS",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-29T02:03:19.192406Z",
+  "assertions": [
+    {
+      "name": "world_started",
+      "passed": true
+    },
+    {
+      "name": "scope_granted",
+      "passed": true
+    },
+    {
+      "name": "helper_ready",
+      "passed": true
+    },
+    {
+      "name": "mac.set_volume_argument_schema",
+      "passed": true
+    },
+    {
+      "name": "mac.set_mute_argument_schema",
+      "passed": true
+    },
+    {
+      "name": "mac.set_output_device_argument_schema",
+      "passed": true
+    },
+    {
+      "name": "mac.set_appearance_argument_schema",
+      "passed": true
+    },
+    {
+      "name": "mac.launch_app_argument_schema",
+      "passed": true
+    },
+    {
+      "name": "mac.activate_app_argument_schema",
+      "passed": true
+    },
+    {
+      "name": "mac.quit_app_argument_schema",
+      "passed": true
+    },
+    {
+      "name": "mac.keep_awake_argument_schema",
+      "passed": true
+    },
+    {
+      "name": "mac.clipboard_write_argument_schema",
+      "passed": true
+    },
+    {
+      "name": "mac.clipboard_read_empty_schema",
+      "passed": true
+    },
+    {
+      "name": "mac.set_volume_readback",
+      "passed": true
+    },
+    {
+      "name": "mac.set_mute_readback",
+      "passed": true
+    },
+    {
+      "name": "mac.set_output_device_readback",
+      "passed": true
+    },
+    {
+      "name": "mac.set_appearance_readback",
+      "passed": true
+    },
+    {
+      "name": "mac.launch_app_readback",
+      "passed": true
+    },
+    {
+      "name": "mac.activate_app_readback",
+      "passed": true
+    },
+    {
+      "name": "mac.quit_app_readback",
+      "passed": true
+    },
+    {
+      "name": "mac.keep_awake_readback",
+      "passed": true
+    },
+    {
+      "name": "mac.keep_awake_readback",
+      "passed": true
+    },
+    {
+      "name": "clipboard_write_readback",
+      "passed": true
+    },
+    {
+      "name": "clipboard_command_redacted",
+      "passed": true
+    },
+    {
+      "name": "clipboard_read_matches",
+      "passed": true
+    },
+    {
+      "name": "clipboard_absent_from_durable_files",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

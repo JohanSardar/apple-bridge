@@ -86,7 +86,7 @@ func (g *LocalGateway) Submit(ctx context.Context, p trust.Principal, c contract
 		if p.IsAgent() {
 			r := result
 			if r.Command.ID == "" {
-				r = contracts.CommandRecord{Command: c, Principal: p.ID, State: "rejected"}
+				r = contracts.CommandRecord{Command: contracts.RedactMacCommand(c), Principal: p.ID, State: "rejected"}
 			}
 			if r.Cursor.Sequence == 0 {
 				if err := g.recordAgentCommand(r); err != nil && resultErr == nil {
@@ -117,6 +117,9 @@ func (g *LocalGateway) Submit(ctx context.Context, p trust.Principal, c contract
 	}
 	if err = g.authorize(p, c.Op); err != nil {
 		return empty, err
+	}
+	if c.Op == "mac.clipboard_write" && p.IsAgent() && p.Level == trust.AgentApprove {
+		return empty, contracts.ErrUnsupported
 	}
 	hash, err := contracts.CommandHash(c)
 	if err != nil {
@@ -175,13 +178,13 @@ func (g *LocalGateway) Submit(ctx context.Context, p trust.Principal, c contract
 		}
 	}()
 	if p.IsAgent() && p.Level == trust.AgentApprove {
-		r := contracts.CommandRecord{UploadReferences: refs, Command: c, Principal: p.ID, Source: contracts.CollectionSource(c.Op), RequestHash: hash, State: contracts.CommandAwaitingApproval, Disposition: contracts.DispositionAwaitingApproval, AdmissionEra: era, CreatedAt: now, ExpiresAt: now.Add(24 * time.Hour)}
+		r := contracts.CommandRecord{UploadReferences: refs, Command: contracts.RedactMacCommand(c), Principal: p.ID, Source: contracts.CollectionSource(c.Op), RequestHash: hash, State: contracts.CommandAwaitingApproval, Disposition: contracts.DispositionAwaitingApproval, AdmissionEra: era, CreatedAt: now, ExpiresAt: now.Add(24 * time.Hour)}
 		return g.State.TransitionCommand(ctx, state.CommandTransition{Record: r})
 	}
 	if !g.Peer.Available() {
 		return empty, contracts.ErrUnavailable
 	}
-	r := contracts.CommandRecord{UploadReferences: refs, Command: c, Principal: p.ID, Source: contracts.CollectionSource(c.Op), RequestHash: hash, State: "admitted", AdmissionEra: era, CreatedAt: now, ExpiresAt: expiry}
+	r := contracts.CommandRecord{UploadReferences: refs, Command: contracts.RedactMacCommand(c), Principal: p.ID, Source: contracts.CollectionSource(c.Op), RequestHash: hash, State: "admitted", AdmissionEra: era, CreatedAt: now, ExpiresAt: expiry}
 	r, err = g.State.TransitionCommand(ctx, state.CommandTransition{Record: r})
 	if err != nil {
 		return r, err
@@ -232,14 +235,50 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 	if object == "" {
 		object = "lists"
 	}
+	if strings.HasPrefix(c.Op, "files.") {
+		object = "files"
+	}
 	release, err := g.lock(runctx, "object:"+object)
 	if err != nil {
 		return g.transition(g.Context, r, "expired", "expired", nil, nil)
 	}
 	defer release()
 	action := contracts.NativeAction{Op: c.Op, Args: a, Origin: c.Origin}
+	if strings.HasPrefix(c.Op, "music.") {
+		args, problem := g.musicArgs(runctx, p, c)
+		if problem != nil {
+			return g.transition(g.Context, r, "rejected", "rejected_before_dispatch", nil, problem)
+		}
+		action.Args = args
+	}
 	if strings.HasPrefix(c.Op, "photos.") || strings.HasPrefix(c.Op, "mail.") {
 		action.Args = c.Args
+	}
+	if contracts.PlaybackOperation(c.Op) {
+		var args contracts.PlaybackArgs
+		if json.Unmarshal(c.Args, &args) != nil {
+			return g.transition(g.Context, r, "rejected", "rejected_before_dispatch", nil, contracts.ErrInvalid)
+		}
+		action.Args = args
+	}
+	if strings.HasPrefix(c.Op, "files.") {
+		var args contracts.FileArgs
+		if json.Unmarshal(c.Args, &args) != nil {
+			return g.transition(g.Context, r, "rejected", "rejected_before_dispatch", nil, contracts.ErrInvalid)
+		}
+		action.Args = args
+	}
+	if contracts.CollectionSource(c.Op) == "mac" {
+		var args contracts.MacArgs
+		if json.Unmarshal(c.Args, &args) != nil {
+			return r, contracts.ErrInvalid
+		}
+		action.Args = args
+	}
+	if c.Op == "maps.open" {
+		var args contracts.MapsOpenArgs
+		json.Unmarshal(c.Args, &args)
+		action.Args = args
 	}
 	if c.Op == "shortcuts.run" {
 		var args contracts.ShortcutRunArgs
@@ -408,7 +447,7 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 	}
 	if prepared.T == "Rejected" {
 		problem := prepared.Error
-		if r.Source != contracts.Messages {
+		if r.Source != contracts.Messages && r.Source != "files" {
 			problem = g.nativeConflict(runctx, p, a.ID, action.NativeKey, collection, prepared)
 		}
 		if problem == nil {
@@ -422,6 +461,9 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 		return r, contracts.ErrCorrupt
 	}
 	evidence, _ := json.Marshal(prepared)
+	if r.Source == "music" {
+		evidence, _ = json.Marshal(map[string]string{"fingerprint": hash})
+	}
 	r, err = g.transition(g.Context, r, "prepared", "", evidence, nil)
 	if err != nil {
 		return r, err
@@ -495,7 +537,27 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 		to = "indeterminate"
 		f.Disposition = "indeterminate"
 	}
-	if r.Command.Op != "shortcuts.run" && (to == "observed" || to == "delivered" || to == "delivery_failed") {
+	if r.Command.Op == "maps.open" && to == "observed" && !contracts.MapsOpenEvidence(f.Evidence, r.RequestHash) {
+		to = "indeterminate"
+		f.Disposition = "indeterminate"
+	}
+	if r.Source == "mac" && to == "observed" && !contracts.MacCompletionEvidence(f.Evidence, r.RequestHash) {
+		to = "indeterminate"
+		f.Disposition = "indeterminate"
+	}
+	if contracts.PlaybackOperation(r.Command.Op) && (to == "observed" || to == "delivered" || to == "delivery_failed") && (to != "observed" || !contracts.PlaybackEvidence(f.Evidence, r.RequestHash)) {
+		to = "indeterminate"
+		f.Disposition = "indeterminate"
+	}
+	if strings.HasPrefix(r.Command.Op, "files.") && to == "observed" && !contracts.FileCompletionEvidence(r.Command, f.Evidence, r.RequestHash) {
+		to = "indeterminate"
+		f.Disposition = "indeterminate"
+	}
+	if contracts.MusicPlayerOperation(r.Command.Op) && to == "observed" && !contracts.MusicCompletionEvidence(f.Evidence, r.RequestHash) {
+		to = "indeterminate"
+		f.Disposition = "indeterminate"
+	}
+	if r.Command.Op != "maps.open" && r.Source != "mac" && r.Command.Op != "shortcuts.run" && !contracts.MusicPlayerOperation(r.Command.Op) && !contracts.PlaybackOperation(r.Command.Op) && (to == "observed" || to == "delivered" || to == "delivery_failed") {
 		var evidence struct {
 			NativeKey         string `json:"native_key"`
 			Fingerprint       string `json:"fingerprint"`
@@ -505,11 +567,21 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 			CandidateCount    int    `json:"candidate_count"`
 		}
 		collection := "reminders.reminder"
+		if r.Source == "music" {
+			collection = "music.library_item"
+			if r.Command.Op == "music.add_to_playlist" {
+				collection = "music.playlist"
+			}
+		}
+
 		if r.Source == "photos" {
 			collection = "photos.asset"
 			if r.Command.Op == "photos.create_album" {
 				collection = "photos.album"
 			}
+		}
+		if r.Source == "files" {
+			collection = "files.item"
 		}
 		if r.Source == contracts.Contacts {
 			collection = "contacts.contact"
@@ -567,6 +639,9 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 				}
 			}
 		}
+	}
+	if r.Source == "music" {
+		f.Evidence = musicPublicEvidence(f.Evidence)
 	}
 	if g.messageParts(ctx, &r, &f) {
 		if r.CommitSeq < prior.CommitSeq {

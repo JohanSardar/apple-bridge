@@ -1,0 +1,10 @@
+{
+  "name": "AB Weather",
+  "status": "limited",
+  "verified_actions": [],
+  "required_actions": ["Get Current Weather", "Get Weather Forecast"],
+  "queries": ["weather.current", "weather.hourly", "weather.daily"],
+  "unavailable_queries": ["weather.minute", "weather.alerts"],
+  "reason": "Weather action identifiers, parameters and structured attribution output have no verified local export. No executable workflow is supplied or advertised.",
+  "qualification": "Verify identifiers and parameters from an exported workflow, retain provider attribution in output, build and sign AB Weather using tools/shortcuts, then qualify before registering public queries. No WeatherKit key. No import or Shortcuts UI interaction performed."
+}

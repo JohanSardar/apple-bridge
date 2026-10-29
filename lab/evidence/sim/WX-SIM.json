@@ -1,0 +1,128 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[12.18 19.61 15.98] cpu_idle=54% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M631JQEAMD2NYWSGHCAFTTS5",
+  "metrics": {
+    "assertion_count": 26,
+    "capture_observer_resets": 0
+  },
+  "scenario": "WX-SIM",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-29T05:19:31.786567Z",
+  "assertions": [
+    {
+      "name": "weather.current_fake_pack",
+      "passed": true
+    },
+    {
+      "name": "weather.current_bounded_request",
+      "passed": true
+    },
+    {
+      "name": "weather.current_real_disabled",
+      "passed": true
+    },
+    {
+      "name": "weather.hourly_fake_pack",
+      "passed": true
+    },
+    {
+      "name": "weather.hourly_bounded_request",
+      "passed": true
+    },
+    {
+      "name": "weather.hourly_real_disabled",
+      "passed": true
+    },
+    {
+      "name": "weather.daily_fake_pack",
+      "passed": true
+    },
+    {
+      "name": "weather.daily_bounded_request",
+      "passed": true
+    },
+    {
+      "name": "weather.daily_real_disabled",
+      "passed": true
+    },
+    {
+      "name": "weather.current_unadvertised",
+      "passed": true
+    },
+    {
+      "name": "weather.hourly_unadvertised",
+      "passed": true
+    },
+    {
+      "name": "weather.daily_unadvertised",
+      "passed": true
+    },
+    {
+      "name": "weather.minute_unadvertised",
+      "passed": true
+    },
+    {
+      "name": "weather.alerts_unadvertised",
+      "passed": true
+    },
+    {
+      "name": "weather.minute_never_dispatched",
+      "passed": true
+    },
+    {
+      "name": "weather.alerts_never_dispatched",
+      "passed": true
+    },
+    {
+      "name": "unknown_never_dispatched",
+      "passed": true
+    },
+    {
+      "name": "invalid_schema_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_schema_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_schema_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_schema_rejected",
+      "passed": true
+    },
+    {
+      "name": "oversize_rejected",
+      "passed": true
+    },
+    {
+      "name": "timeout_retained",
+      "passed": true
+    },
+    {
+      "name": "failed_exit_rejected",
+      "passed": true
+    },
+    {
+      "name": "runner_error_retained",
+      "passed": true
+    },
+    {
+      "name": "invalid_location_never_dispatched",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

@@ -1,0 +1,5 @@
+id: MAP-SEARCH-REAL
+feature: maps.queries
+levels: [real]
+when:
+  - queries: {}

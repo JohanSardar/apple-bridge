@@ -1,0 +1,36 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[5.78 9.67 14.34] cpu_idle=46% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M6302QW6HAESYQT29SVBY06K",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "elapsed_ms": 20005,
+    "exit_status": -1,
+    "output_bytes": 0,
+    "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "timed_out": true
+  },
+  "scenario": "SC-RUN-REAL",
+  "level": "real",
+  "passed": false,
+  "git_sha": "",
+  "at": "2026-10-29T04:53:19.366092Z",
+  "assertions": [
+    {
+      "name": "bounded_runner_completed",
+      "passed": false
+    },
+    {
+      "name": "echo_output_matches",
+      "passed": false
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

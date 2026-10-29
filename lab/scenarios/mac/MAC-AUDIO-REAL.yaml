@@ -1,0 +1,5 @@
+id: MAC-AUDIO-REAL
+feature: mac.commands
+levels: [real]
+when:
+  - mac: {}

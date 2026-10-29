@@ -2,6 +2,8 @@ package scenarios
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"os"
@@ -19,10 +21,27 @@ import (
 )
 
 func runShortcutsRunner(ctx context.Context, s Scenario, level string) Evidence {
+	if s.ID == "SC-IDLE" {
+		return runShortcutsIdleReal(ctx, s, level)
+	}
 	e := Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, At: time.Now().UTC(), Passed: true, Metrics: map[string]any{}}
 	add := func(name string, passed bool) {
 		e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: passed})
 		e.Passed = e.Passed && passed
+	}
+	if s.ID == "SC-RUN-REAL" {
+		input := []byte("[ab-test synthetic echo]")
+		started := time.Now()
+		result, err := (shortcut.CLI{}).Run(ctx, shortcut.Input{Shortcut: "AB Echo", Data: input, Timeout: 20 * time.Second})
+		digest := sha256.Sum256(result.Data)
+		e.Metrics["elapsed_ms"] = time.Since(started).Milliseconds()
+		e.Metrics["timed_out"] = result.TimedOut
+		e.Metrics["exit_status"] = result.ExitStatus
+		e.Metrics["output_bytes"] = len(result.Data)
+		e.Metrics["output_sha256"] = hex.EncodeToString(digest[:])
+		add("bounded_runner_completed", err == nil && result.ExitStatus == 0 && !result.TimedOut)
+		add("echo_output_matches", string(result.Data) == string(input))
+		return e
 	}
 	dir, err := os.MkdirTemp("", "ab-shortcuts-fixture-")
 	add("fixture_directory", err == nil)
@@ -33,6 +52,13 @@ func runShortcutsRunner(ctx context.Context, s Scenario, level string) Evidence 
 	executable := filepath.Join(dir, "shortcuts")
 	script := `#!/bin/sh
 if [ "$1" = list ]; then
+ if [ -f "$(dirname "$0")/pack" ]; then
+  echo 'AB Echo (00000000-0000-0000-0000-000000000001)'
+  echo 'AB Clock (00000000-0000-0000-0000-000000000002)'
+  echo 'AB Focus (00000000-0000-0000-0000-000000000003)'
+  echo 'AB Pack v1 (00000000-0000-0000-0000-000000000004)'
+  exit 0
+ fi
  if [ -f "$(dirname "$0")/changed" ]; then
   echo 'Changed (00000000-0000-0000-0000-000000000002)'
  else
@@ -105,9 +131,14 @@ esac
 	}
 	descriptor, registered := contracts.Descriptor("shortcuts.run")
 	add("public_command_registered", registered && descriptor.Kind == contracts.CommandOp && descriptor.Scope == "shortcuts:write")
-	args, _ := json.Marshal(contracts.ShortcutRunArgs{Shortcut: "AB Echo", Input: "synthetic", TimeoutMS: 1000})
+	args, _ := json.Marshal(contracts.ShortcutRunArgs{Shortcut: "AB Echo", InputBase64: "c3ludGhldGlj", TimeoutMS: 1000})
 	_, validationErr := contracts.ValidateCommand(contracts.Command{ID: "cmd_synthetic", Op: "shortcuts.run", Args: args})
 	add("public_command_validated", validationErr == nil)
+	for _, input := range []contracts.ShortcutRunArgs{{Shortcut: "AB Echo", InputBase64: "!"}, {Shortcut: "AB Echo", Input: "text", InputBase64: "YQ=="}, {Shortcut: "AB Echo", InputBase64: strings.Repeat("YWFh", 6000)}} {
+		raw, _ := json.Marshal(input)
+		_, err := contracts.ValidateCommand(contracts.Command{ID: "cmd_synthetic", Op: "shortcuts.run", Args: raw})
+		add("invalid_blob_rejected", err != nil)
+	}
 	publicContext := world.WithOptions(ctx, world.Options{Scope: "calendar:read,reminders:read,shortcuts:read,shortcuts:write,system:read"})
 	w, worldErr := world.New(publicContext, level, 0, 0)
 	add("public_gateway_start", worldErr == nil)
@@ -130,9 +161,12 @@ esac
 		}
 		var result struct {
 			Output string `json:"output_base64"`
+			Digest string `json:"output_sha256"`
+			Bytes  int    `json:"output_bytes"`
 		}
 		json.Unmarshal(command.Evidence, &result)
 		add("public_runner_output", result.Output == "c3ludGhldGlj")
+		add("public_runner_digest", result.Bytes == 9 && result.Digest == "b3cc0475bb78a5026098858e9889acf666d31062d513d303314eca31d36e72f2")
 		slowArgs, _ := json.Marshal(contracts.ShortcutRunArgs{Shortcut: "[ab-test slow runner]", Input: "synthetic", TimeoutMS: 20000})
 		slowID := contracts.NewCommandID()
 		started := time.Now()
@@ -201,4 +235,67 @@ func shortcutsChecksFresh(path string) bool {
 		}
 	}
 	return true
+}
+
+func runShortcutsIdleReal(ctx context.Context, s Scenario, level string) Evidence {
+	e := Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, At: time.Now().UTC(), Hosts: []string{"air"}, Metrics: map[string]any{}}
+	w, err := world.NewReal(ctx, level, 0, world.BlobOptions{Scope: "shortcuts:read,system:read"})
+	if err != nil {
+		e.Assertions = []Assertion{{Name: "world_started", Passed: false}}
+		return e
+	}
+	defer w.Close()
+	if w.Await(60*time.Second, func() bool {
+		var rows contracts.ReadResult
+		return (scripted.Client{Endpoint: w.Gateway}).Call(ctx, "records.query", contracts.ReadQuery{Collection: "shortcuts.shortcut", Limit: 1}, &rows) == nil && len(rows.Records) > 0
+	}) != nil {
+		e.Assertions = []Assertion{{Name: "shortcuts_capture_ready", Passed: false}}
+		return e
+	}
+	warmup := time.NewTimer(30 * time.Second)
+	defer warmup.Stop()
+	select {
+	case <-ctx.Done():
+		return e
+	case <-warmup.C:
+	}
+	pid, err := os.ReadFile(filepath.Join(w.Gateway.Home, "helper", "helper.pid"))
+	cpu := func() (float64, error) {
+		raw, err := exec.CommandContext(ctx, "ps", "-p", strings.TrimSpace(string(pid)), "-o", "time=").Output()
+		if err != nil {
+			return 0, err
+		}
+		parts := strings.Split(strings.TrimSpace(string(raw)), ":")
+		var value float64
+		for _, p := range parts {
+			n, err := strconv.ParseFloat(p, 64)
+			if err != nil {
+				return 0, err
+			}
+			value = value*60 + n
+		}
+		return value, nil
+	}
+	if err != nil {
+		e.Assertions = []Assertion{{Name: "helper_pid", Passed: false}}
+		return e
+	}
+	before, err := cpu()
+	if err != nil {
+		return e
+	}
+	start := time.Now()
+	timer := time.NewTimer(5 * time.Minute)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return e
+	case <-timer.C:
+	}
+	after, err := cpu()
+	percent := (after - before) / time.Since(start).Seconds() * 100
+	e.Metrics["helper_cpu_percent"] = percent
+	e.Passed = err == nil && percent >= 0 && percent < 2
+	e.Assertions = []Assertion{{Name: "five_minute_helper_cpu_under_two_percent", Passed: e.Passed}}
+	return e
 }

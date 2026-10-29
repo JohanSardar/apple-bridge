@@ -1,4 +1,5 @@
 import Foundation
+import Carbon
 import AppKit
 import CoreAudio
 import CoreWLAN
@@ -11,12 +12,16 @@ import SourceSupport
 @MainActor
 public final class MacSource: Source {
     public nonisolated let name = "mac"
+    private var assertion: IOPMAssertionID = 0
+    private var expiry: Task<Void, Never>?
     private var generation = UUID().uuidString
     private var path: NWPath?
     private var committed: [String: JSON] = [:]
     public init() {}
     public func open() async -> SourceReadiness {
-        SourceReadiness(state: "ready", coverage: .object(["fields": .string("partial"), "missing": .array([.string("Night Shift has no supported public API"), .string("SSID requires Location authorization")])]))
+        var missing: [JSON] = [.string("Night Shift has no supported public API"), .string("SSID requires Location authorization")]
+        if NSPasteboard.general.accessBehavior != .alwaysAllow { missing.append(.string("Clipboard requires Always Allow in Paste from Other Apps")) }
+        return SourceReadiness(state: "ready", coverage: .object(["fields": .string("partial"), "missing": .array(missing)]), capabilities: ["mac.set_volume", "mac.set_mute", "mac.set_output_device", "mac.set_appearance", "mac.launch_app", "mac.activate_app", "mac.quit_app", "mac.keep_awake", "mac.clipboard_write", "mac.clipboard_read"])
     }
     private func power() -> JSON {
         var value: [String: JSON] = ["source": .string("unknown"), "charging": .bool(false), "low_power_mode": .bool(ProcessInfo.processInfo.isLowPowerModeEnabled), "keep_awake_held": .bool(false)]
@@ -158,9 +163,111 @@ public final class MacSource: Source {
             try await scan(sink, live: true)
         }
     }
-    public func prepare(_ command: JSON) async throws -> Prepared { throw SourceFailure.unsupported }
-    public func dispatch(_ prepared: Prepared) async throws -> JSON { throw SourceFailure.unsupported }
+    private func script(_ text: String) throws -> String {
+        var error: NSDictionary?
+        guard let script = NSAppleScript(source: text) else { throw SourceFailure.invalid }
+        let result = script.executeAndReturnError(&error)
+        guard error == nil else { throw SourceFailure.unavailable }
+        return result.stringValue ?? ""
+    }
+    public func prepare(_ command: JSON) async throws -> Prepared {
+        let action = command["action"]
+        guard (await open()).capabilities.contains(action["op"].string) else { throw SourceFailure.unsupported }
+        if action["op"].string == "mac.clipboard_write", NSPasteboard.general.accessBehavior != .alwaysAllow { throw SourceFailure.permissionMissing }
+        return Prepared(nativeState: .null, fingerprint: command["request_hash"].string, action: action)
+    }
+    public func dispatch(_ prepared: Prepared) async throws -> JSON {
+        let args = prepared.action["args"]
+        var readback: JSON = .null
+        switch prepared.action["op"].string {
+        case "mac.clipboard_write":
+            let board = NSPasteboard.general
+            guard board.accessBehavior == .alwaysAllow else { throw SourceFailure.permissionMissing }
+            let text = args["text"].string
+            guard text.utf8.count <= 65536 else { throw SourceFailure.invalid }
+            let item = NSPasteboardItem()
+            guard item.setString(text, forType: .string), item.setData(Data(), forType: NSPasteboard.PasteboardType("org.nspasteboard.TransientType")), item.setData(Data(), forType: NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType")) else { throw SourceFailure.unavailable }
+            board.clearContents()
+            guard board.writeObjects([item]), board.string(forType: .string) == text else { throw SourceFailure.conflict }
+            readback = .bool(true)
+        case "mac.set_volume":
+            let volume = args["volume"].number
+            guard volume >= 0, volume <= 100 else { throw SourceFailure.invalid }
+            _ = try script("set volume output volume " + String(Int(volume)))
+            let result = try script("output volume of (get volume settings)")
+            guard let actual = Double(result), abs(actual - volume) <= 1 else { throw SourceFailure.conflict }
+            readback = .number(actual)
+        case "mac.set_mute":
+            let muted = args["muted"].bool
+            _ = try script("set volume output muted " + (muted ? "true" : "false"))
+            let result = try script("output muted of (get volume settings)")
+            guard (result == "true") == muted else { throw SourceFailure.conflict }
+            readback = .bool(muted)
+        case "mac.set_output_device":
+            guard var device = UInt32(args["device"].string), try audio().contains(where: { $0.0 == String(device) && $0.1["output"].bool }) else { throw SourceFailure.invalid }
+            var address = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyDefaultOutputDevice, mScope: kAudioObjectPropertyScopeGlobal, mElement: 0)
+            guard AudioObjectSetPropertyData(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, 4, &device) == noErr else { throw SourceFailure.unavailable }
+            var actual: UInt32 = 0; var count: UInt32 = 4
+            guard AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &count, &actual) == noErr, actual == device else { throw SourceFailure.conflict }
+            readback = .string(String(actual))
+        case "mac.set_appearance":
+            if NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.systemevents").isEmpty {
+                guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.systemevents") else { throw SourceFailure.unavailable }
+                let configuration = NSWorkspace.OpenConfiguration()
+                configuration.activates = false
+                _ = try await NSWorkspace.shared.openApplication(at: url, configuration: configuration)
+            }
+            let target = NSAppleEventDescriptor(bundleIdentifier: "com.apple.systemevents")
+            guard AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false) == noErr else { throw SourceFailure.permissionMissing }
+            let value = args["appearance"].string
+            guard value == "dark" || value == "light" else { throw SourceFailure.invalid }
+            _ = try script("tell application \"System Events\" to tell appearance preferences to set dark mode to " + (value == "dark" ? "true" : "false"))
+            let actual = try script("tell application \"System Events\" to tell appearance preferences to get dark mode")
+            guard (actual == "true") == (value == "dark") else { throw SourceFailure.conflict }
+            readback = .string(value)
+        case "mac.launch_app", "mac.activate_app", "mac.quit_app":
+            let bundle = args["bundle_id"].string
+            guard !bundle.isEmpty else { throw SourceFailure.invalid }
+            let op = prepared.action["op"].string
+            if op == "mac.launch_app" {
+                guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundle) else { throw SourceFailure.invalid }
+                _ = try await NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
+            } else {
+                guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: bundle).first else { throw SourceFailure.conflict }
+                if op == "mac.quit_app" { guard app.terminate() else { throw SourceFailure.unavailable } }
+                else { guard app.activate() else { throw SourceFailure.unavailable } }
+            }
+            for _ in 0..<50 {
+                let apps = NSRunningApplication.runningApplications(withBundleIdentifier: bundle)
+                let matches = op == "mac.quit_app" ? apps.isEmpty : op == "mac.activate_app" ? apps.contains(where: { $0.isActive }) : !apps.isEmpty
+                if matches { readback = .object(["bundle_id": .string(bundle), "running": .bool(!apps.isEmpty)]); break }
+                try await Task.sleep(for: .milliseconds(100))
+            }
+            guard readback != .null else { throw SourceFailure.conflict }
+        case "mac.keep_awake":
+            expiry?.cancel(); expiry = nil
+            if assertion != 0 { IOPMAssertionRelease(assertion); assertion = 0 }
+            if args["on"].bool {
+                guard IOPMAssertionCreateWithName(kIOPMAssertionTypePreventUserIdleSystemSleep as CFString, IOPMAssertionLevel(kIOPMAssertionLevelOn), "Apple Bridge keep awake" as CFString, &assertion) == kIOReturnSuccess else { throw SourceFailure.unavailable }
+                let duration = args["duration"].number
+                if duration > 0 {
+                    guard duration <= 86400 else { IOPMAssertionRelease(assertion); assertion = 0; throw SourceFailure.invalid }
+                    let held = assertion
+                    expiry = Task { [weak self] in
+                        do { try await Task.sleep(for: .seconds(duration)) } catch { return }
+                        guard !Task.isCancelled, let self, self.assertion == held else { return }
+                        if self.assertion != 0 { IOPMAssertionRelease(self.assertion); self.assertion = 0 }
+                    }
+                }
+            }
+            if assertion != 0 { guard IOPMAssertionCopyProperties(assertion) != nil else { throw SourceFailure.conflict } }
+            readback = .bool(assertion != 0)
+        default: throw SourceFailure.unsupported
+        }
+        return .object(["disposition": .string("locally_observed"), "observed": .bool(true), "fingerprint": .string(prepared.fingerprint), "readback": readback])
+    }
     public func resolve(_ command: String, evidence: JSON) async -> JSON { .null }
+
 }
 
 private final class MacChange: @unchecked Sendable {

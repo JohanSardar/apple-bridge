@@ -1,0 +1,54 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[4.28 4.73 7.24] cpu_idle=62% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M62GZQHW7KFQW6RP034WTKVE",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "place_count": 25
+  },
+  "scenario": "MAP-SEARCH-REAL",
+  "level": "real",
+  "passed": true,
+  "git_sha": "57a4e3fd75f12eaeb4329f530f53e152c24b7f53",
+  "at": "2026-10-29T00:29:32.092224Z",
+  "assertions": [
+    {
+      "name": "world_started",
+      "passed": true
+    },
+    {
+      "name": "scopes_granted",
+      "passed": true
+    },
+    {
+      "name": "helper_ready",
+      "passed": true
+    },
+    {
+      "name": "unknown_fields_rejected",
+      "passed": true
+    },
+    {
+      "name": "query_completed",
+      "passed": true
+    },
+    {
+      "name": "public_places_present",
+      "passed": true
+    },
+    {
+      "name": "places_within_radius",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
