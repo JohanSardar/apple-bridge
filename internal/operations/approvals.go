@@ -76,7 +76,7 @@ func (g *LocalGateway) DecideApproval(ctx context.Context, owner trust.Principal
 	if err = g.authorize(p, r.Command.Op); err != nil {
 		return g.transition(ctx, r, contracts.CommandRejected, contracts.DispositionRejectedBeforeDispatch, nil, contracts.ErrUnauthorized)
 	}
-	if !g.Peer.Available() {
+	if r.Source != contracts.IPhone && !g.Peer.Available() {
 		return r, contracts.ErrUnavailable
 	}
 	era, err := g.State.AdmissionEra(ctx)

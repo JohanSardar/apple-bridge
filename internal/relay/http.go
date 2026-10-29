@@ -8,6 +8,7 @@ import (
 
 func (s *Server) Handler(admin string) http.Handler {
 	mux := http.NewServeMux()
+	mux.HandleFunc("POST /iphone/push", s.iphonePush)
 	mux.HandleFunc("POST /certificate", s.certificate)
 	mux.HandleFunc("GET /ct", s.ct)
 	mux.HandleFunc("POST /dns", s.dns)

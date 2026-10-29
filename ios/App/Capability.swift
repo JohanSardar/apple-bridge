@@ -1,10 +1,13 @@
 import SwiftUI
 
+typealias IPhoneCommandHandler = @MainActor (Data) async throws -> Data
+
 struct Capability: Identifiable {
     let id: String
     let title: String
     var permission: String = "Not requested"
     var available: Bool = false
+    var handlers: [String: IPhoneCommandHandler] = [:]
 }
 
 struct CapabilityScreen: View {

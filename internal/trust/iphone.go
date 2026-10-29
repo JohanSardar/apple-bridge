@@ -27,6 +27,11 @@ func IPhonePairMessage(id string, signing, encryption []byte) []byte {
 
 func (a *Authority) PairIPhone(req IPhonePairRequest) (contracts.IPhoneDevice, error) {
 	var result contracts.IPhoneDevice
+	key, ok := a.Certificate.PrivateKey.(ed25519.PrivateKey)
+	if !ok {
+		return result, contracts.ErrUnavailable
+	}
+	result.GatewayKey = key.Public().(ed25519.PublicKey)
 	if len(req.SigningKey) != ed25519.PublicKeySize || len(req.EncryptionKey) != 32 {
 		return result, contracts.ErrInvalid
 	}
@@ -116,7 +121,7 @@ func (a *Authority) IPhoneHandler() http.Handler {
 				http.Error(w, "unauthorized", 401)
 				return
 			}
-			json.NewEncoder(w).Encode(contracts.IPhoneDevice{ID: p.ID})
+			json.NewEncoder(w).Encode(contracts.IPhoneDevice{ID: p.ID, GatewayKey: a.IPhoneGatewayKey()})
 			return
 		}
 		http.NotFound(w, r)
@@ -138,4 +143,39 @@ func (a *Authority) PairIPhoneCode(address string, remote bool, ttl time.Duratio
 	}
 	code.Remote = remote
 	return encodePairCode(code)
+}
+
+func (a *Authority) IPhoneGatewayKey() []byte {
+	key, ok := a.Certificate.PrivateKey.(ed25519.PrivateKey)
+	if !ok {
+		return nil
+	}
+	return key.Public().(ed25519.PublicKey)
+}
+func (a *Authority) SignIPhone(data []byte) ([]byte, error) {
+	key, ok := a.Certificate.PrivateKey.(ed25519.PrivateKey)
+	if !ok {
+		return nil, contracts.ErrUnavailable
+	}
+	return ed25519.Sign(key, data), nil
+}
+
+func (a *Authority) SetIPhonePushToken(id, token string) error {
+	if len(token) < 32 || len(token) > 512 {
+		return contracts.ErrInvalid
+	}
+	for _, c := range token {
+		if !(c >= '0' && c <= '9' || c >= 'a' && c <= 'f') {
+			return contracts.ErrInvalid
+		}
+	}
+	return a.update(func(d *credentials) error {
+		for i, p := range d.Principals {
+			if p.ID == id && p.Kind == "iphone" {
+				d.Principals[i].IPhonePushToken = token
+				return nil
+			}
+		}
+		return contracts.ErrUnauthorized
+	})
 }

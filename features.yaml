@@ -1450,3 +1450,15 @@ features:
       - {id: APP-PAIR-REAL, levels: [real]}
     limits:
       - {scenario: APP-PAIR-REAL, level: real, reason: 'limited: needs Allow tap for Local Network and camera QR permission'}
+  - id: iphone.delivery
+    title: Encrypted iPhone push commands and signed results
+    requirements: [R-SECURE, R-SAFE-CMD, R-API]
+    milestone: G13
+    modules: [internal/iphone, internal/relay, ios/Delivery, lab/simapple]
+    depends_on: [iphone.pairing]
+    status: limited
+    scenarios:
+      - {id: APP-CMD-SIM, levels: [sim]}
+      - {id: APP-CMD-REAL, levels: [real]}
+    limits:
+      - {scenario: APP-CMD-REAL, level: real, reason: 'limited: needs Allow tap to complete phone pairing; locked-phone APNs round trip and latency unmeasured'}

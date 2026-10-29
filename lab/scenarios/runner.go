@@ -358,6 +358,9 @@ func convergence(w *world.World) bool {
 }
 
 func runScenario(ctx context.Context, s Scenario, level string) Evidence {
+	if s.ID == "APP-CMD-SIM" {
+		return runIPhoneCommand(ctx, s, level)
+	}
 	if s.ID == "APP-PAIR-SIM" {
 		return runIPhonePair(ctx, s, level)
 	}

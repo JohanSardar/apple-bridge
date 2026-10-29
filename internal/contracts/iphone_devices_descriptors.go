@@ -7,5 +7,6 @@ func init() {
 }
 
 type IPhoneDevice struct {
-	ID string `json:"id"`
+	ID         string `json:"id"`
+	GatewayKey []byte `json:"gateway_key,omitempty"`
 }

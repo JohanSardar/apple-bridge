@@ -81,6 +81,7 @@ struct PairingClient {
         let response = try await request(address: code.address.trimmingCharacters(in: CharacterSet(charactersIn: "/")), fingerprint: code.fingerprint, remote: code.remote ?? false, path: "/v1/iphone/pair", body: body)
         let result = try JSONDecoder().decode(PairedDevice.self, from: response)
         identity.deviceID = result.id
+        identity.gatewayKey = result.gateway_key
         identity.address = code.address.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         identity.fingerprint = code.fingerprint
         identity.remote = code.remote ?? false
@@ -98,4 +99,4 @@ struct PairingClient {
     }
 }
 
-struct PairedDevice: Decodable { let id: String }
+struct PairedDevice: Decodable { let id: String; let gateway_key: Data? }

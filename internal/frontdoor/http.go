@@ -14,12 +14,14 @@ import (
 
 	"github.com/JohanSardar/apple-bridge/internal/blobs"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
+	"github.com/JohanSardar/apple-bridge/internal/iphone"
 	"github.com/JohanSardar/apple-bridge/internal/operations"
 	"github.com/JohanSardar/apple-bridge/internal/trust"
 )
 
 type Deps struct {
-	Blobs *blobs.Store
+	IPhone *iphone.Delivery
+	Blobs  *blobs.Store
 
 	Operations *operations.Service
 	Authority  *trust.Authority
@@ -222,7 +224,11 @@ func Handler(deps Deps, descriptors []contracts.OperationDescriptor) http.Handle
 				respond(w, nil, contracts.ErrUnauthorized)
 				return
 			}
-			deps.Authority.IPhoneHandler().ServeHTTP(w, r)
+			if deps.IPhone != nil && r.URL.Path != "/v1/iphone/pair" && r.URL.Path != "/v1/iphone/status" {
+				deps.IPhone.Handler().ServeHTTP(w, r)
+			} else {
+				deps.Authority.IPhoneHandler().ServeHTTP(w, r)
+			}
 			return
 		}
 		if r.URL.Path == "/v1/health" {

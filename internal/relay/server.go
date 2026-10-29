@@ -2,6 +2,7 @@ package relay
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net"
 	"net/http"
@@ -22,6 +23,8 @@ type session struct {
 	next    time.Time
 }
 type Server struct {
+	IPhonePush  func(context.Context, string, json.RawMessage, time.Time) error
+	pushRates   map[string]pushWindow
 	CTClient    *http.Client
 	Resolver    *net.Resolver
 	ControlHost string
