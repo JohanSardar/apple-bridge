@@ -228,7 +228,7 @@ features:
       - {id: HELPER-RELEASE-COMMANDS, levels: [real]}
   - id: messages.read
     title: Messages history, live capture, decoding, receipts, attachments
-    notes: Reconciliation consumes wake requests before short-circuiting, skips unchanged database versions and maximum ROWID, and batches row and absence lookups; file hints debounce for 100 ms. Media scheduling shares a one-second power and thermal cache. Repeated capture failures back off to thirty seconds; explicit permission errors retain one-second recovery. The native session run limit is one second, avoiding 20 idle timer wakes per second.
+    notes: Reconciliation consumes wake requests before short-circuiting, skips unchanged database versions and maximum ROWID, and batches row and absence lookups; file hints debounce for 100 ms. Media scheduling shares a one-second power and thermal cache. Repeated capture failures back off to thirty seconds; explicit permission errors also back off to thirty seconds. The native session run limit is one second, avoiding 20 idle timer wakes per second.
     requirements: [R-FULL, R-LIVE, R-MSG-DEPTH, R-ATTACH, R-NO-FALSE-DELETE]
     milestone: M1
     modules: [native/MessagesSource, native/Decoders]

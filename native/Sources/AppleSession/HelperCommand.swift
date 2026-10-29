@@ -72,12 +72,11 @@ public enum HelperCommand {
             guard let gatewayPID = Int32(try option("--gateway-pid")), gatewayPID > 1 else { throw ProbeFailure.invalidArguments }
             let activity = ProcessInfo.processInfo.beginActivity(options: .idleSystemSleepDisabled, reason: "Apple Bridge gateway session")
             defer { ProcessInfo.processInfo.endActivity(activity) }
-            let timers = CaptureTrace(url: arguments.contains("--lab-commands") ? home.appendingPathComponent("session-timers.jsonl") : nil)
-            let lifetime = DispatchSource.makeTimerSource(queue: .global())
-            lifetime.schedule(deadline: .now() + 1, repeating: 1)
-            lifetime.setEventHandler { @Sendable in timers.record("lifetime_timer"); if kill(gatewayPID, 0) != 0 { exit(0) } }
+            let lifetime = DispatchSource.makeProcessSource(identifier: gatewayPID, eventMask: .exit, queue: .global())
+            lifetime.setEventHandler { @Sendable in exit(0) }
             lifetime.resume()
             defer { lifetime.cancel() }
+            if kill(gatewayPID, 0) != 0 { return }
             let peer = try AppleSession(socket: socket, secretFile: secretFile, home: home, gatewayPID: gatewayPID, commandsEnabled: arguments.contains("--lab-commands"))
             var finished = false
             Task { @MainActor in

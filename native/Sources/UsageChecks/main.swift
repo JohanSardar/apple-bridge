@@ -5,7 +5,7 @@ import SourceSupport
 
 @main
 struct UsageChecks {
-    static func main() throws {
+    static func main() async throws {
         let root = URL(fileURLWithPath: CommandLine.arguments[1])
         let a = InFocus.decode(try Data(contentsOf: root.appendingPathComponent("synthetic.segb")))
         let b = InFocus.decode(try Data(contentsOf: root.appendingPathComponent("malformed.segb")))
@@ -35,8 +35,16 @@ struct UsageChecks {
         try Data([1]).write(to: local.appendingPathComponent("1"))
         try Data([1]).write(to: biome.appendingPathComponent("sync/sync.db"))
         guard let idle = UsageInputs(biome, power: 0, zone: zone), UsageInputs(biome, power: 0, zone: zone, previous: idle) == idle else { throw SourceFailure.corrupt }
+        let watcher = UsageWatcher(root: biome)
+        let changed = Task {
+            for await _ in watcher.changes { return true }
+            return false
+        }
+        let timeout = Task { try await Task.sleep(for: .seconds(3)); changed.cancel() }
         let segment = try FileHandle(forWritingTo: local.appendingPathComponent("1"))
         try segment.seekToEnd(); try segment.write(contentsOf: Data([2])); try segment.close()
+        guard await changed.value else { throw SourceFailure.unavailable }
+        timeout.cancel()
         guard let appended = UsageInputs(biome, power: 0, zone: zone, previous: idle), appended != idle else { throw SourceFailure.corrupt }
         try FileManager.default.createDirectory(at: remote, withIntermediateDirectories: true)
         try Data([1]).write(to: remote.appendingPathComponent("1"))

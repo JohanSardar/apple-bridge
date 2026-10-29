@@ -14,6 +14,7 @@ public final class UsageSource: Source {
     private var generation = UUID().uuidString
     private var power: [InFocusEvent] = []
     private var scanned: UsageInputs?
+    private var pollDelay = Duration.milliseconds(500)
     public init(root: URL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Biome")) { self.root = root }
     public func open() async -> SourceReadiness {
         let ready = FileManager.default.isReadableFile(atPath: root.appendingPathComponent("streams/restricted/App.InFocus/local").path)
@@ -84,11 +85,8 @@ public final class UsageSource: Source {
     public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {
         if !resume["generation"].string.isEmpty { generation = resume["generation"].string }
         let (changes, continuation) = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
-        let descriptor = Darwin.open(root.appendingPathComponent("streams/restricted/App.InFocus").path, O_EVTONLY)
-        guard descriptor >= 0 else { throw SourceFailure.permissionMissing }
-        let watcher = DispatchSource.makeFileSystemObjectSource(fileDescriptor: descriptor, eventMask: [.write, .extend, .rename, .delete], queue: .global())
-        watcher.setEventHandler { @Sendable in continuation.yield(()) }
-        watcher.setCancelHandler { @Sendable in Darwin.close(descriptor) }; watcher.resume()
+        let watcher = UsageWatcher(root: root)
+        let watching = Task { for await _ in watcher.changes { continuation.yield(()) } }
         let center = NSWorkspace.shared.notificationCenter
         let observers = [NSWorkspace.willSleepNotification, NSWorkspace.screensDidSleepNotification].map { notification in
             center.addObserver(forName: notification, object: nil, queue: .main) { _ in
@@ -97,14 +95,18 @@ public final class UsageSource: Source {
         }
         let polling = Task {
             while !Task.isCancelled {
-                do { try await Task.sleep(for: .milliseconds(500)); continuation.yield(()) } catch { return }
+                do { try await Task.sleep(for: self.pollDelay); continuation.yield(()) } catch { return }
             }
         }
-        defer { polling.cancel(); watcher.cancel(); observers.forEach { center.removeObserver($0) }; continuation.finish() }
+        defer { polling.cancel(); watching.cancel(); observers.forEach { center.removeObserver($0) }; continuation.finish() }
         try await scan(sink, live: false)
         for await _ in changes {
             try Task.checkCancellation()
-            if let inputs = UsageInputs(root, power: power.count, previous: scanned), inputs == scanned { continue }
+            if let inputs = UsageInputs(root, power: power.count, previous: scanned), inputs == scanned {
+                pollDelay = min(.seconds(30), pollDelay * 2)
+                continue
+            }
+            pollDelay = .milliseconds(500)
             try await scan(sink, live: true)
         }
     }

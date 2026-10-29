@@ -53,10 +53,12 @@ public final class AgendaGate {
                 Task(priority: .high) { @AgendaActor in self?.changed(delivered) }
             }
             var previous = [EKEventStore.authorizationStatus(for: .reminder), EKEventStore.authorizationStatus(for: .event)]
+            var delay = Duration.seconds(1)
             while !Task.isCancelled {
-                do { try await Task.sleep(for: .seconds(1)) } catch { return }
+                do { try await Task.sleep(for: delay) } catch { return }
                 let current = [EKEventStore.authorizationStatus(for: .reminder), EKEventStore.authorizationStatus(for: .event)]
-                if current != previous { previous = current; self.reconcile() }
+                if current != previous { previous = current; delay = .seconds(1); self.reconcile() }
+                else { delay = min(.seconds(30), delay * 2) }
             }
         }
 

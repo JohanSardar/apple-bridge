@@ -7,3 +7,5 @@ One source checkpoint generation resumes across sessions; per-database generatio
 Lab fixtures use synthetic SQLite databases and plists. Evidence contains counts, digests, booleans and CPU measurements only. Real Truth checks require independent read access to Safari files. SAF-IDLE measures five minutes of source process CPU in sim and the signed Helper process CPU in real.
 
 CloudTabs table and column mapping matches the [mac_apt CloudTabs reader](https://github.com/ydkhatri/mac_apt/blob/master/plugins/safari.py#L243). This host has no CloudTabs.db, so real cloud-tab qualification remains unavailable.
+
+Automation status is cached for at most 30 seconds during idle tab and readiness polling. Prepare and dispatch always refresh the non-prompting permission check. The five-second tab capture cadence and 30-second database fallback remain unchanged.

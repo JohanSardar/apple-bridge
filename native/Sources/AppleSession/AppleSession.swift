@@ -141,10 +141,13 @@ public actor AppleSession: ObservationSink {
  captureTasks.append(Task {await self.captureAdditional(calendar)})
                 for source in additionalSources.values { captureTasks.append(Task { await self.captureAdditional(source) }) }
                 let watchdog = Task {
+                    var delay = Duration.seconds(1)
                     while !Task.isCancelled {
-                        do { try await Task.sleep(for: .seconds(1)) } catch { return }
+                        do { try await Task.sleep(for: delay) } catch { return }
                         if kill(self.gatewayPID, 0) != 0 { connected.close(); return }
+                        let previous = self.permissionStates
                         try? await self.publishReadiness()
+                        delay = previous == self.permissionStates ? min(.seconds(30), delay * 2) : .seconds(1)
                     }
                 }
                 defer { watchdog.cancel() }
@@ -230,8 +233,8 @@ public actor AppleSession: ObservationSink {
         while !Task.isCancelled && wire != nil {
             let started = ContinuousClock.now
             var delay = Duration.seconds(1)
+            let readiness = await source.open()
             do {
-                let readiness = await source.open()
                 try await sourceState(source: source.name, state: readiness.state, coverage: readiness.coverage, capabilities: readiness.capabilities, reason: readiness.reason)
                 try await source.capture(captureResume(source.name), into: self)
                 retry = CaptureRetry()
@@ -239,7 +242,6 @@ public actor AppleSession: ObservationSink {
                 if Task.isCancelled || wire == nil { return }
                 let permissionMissing: Bool
                 if case SourceFailure.permissionMissing = error { permissionMissing = true } else { permissionMissing = false }
-                let readiness = await source.open()
                 delay = retry.delay(after: started.duration(to: .now), permissionMissing: permissionMissing)
                 trace.record("capture_retry", fields: ["source": .string(source.name), "delay_seconds": .number(Double(delay.components.seconds))])
                 try? await sourceState(source: source.name, state: permissionMissing ? "permission_missing" : "degraded", coverage: readiness.coverage, capabilities: [], reason: permissionMissing ? "permission_required" : "capture_failed")
