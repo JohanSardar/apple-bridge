@@ -1,17 +1,17 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[29.27 20.51 20.99] cpu_idle=0% cpus=10 other_heavy=0"
+    "summary": "air: load=[47.13 69.45 67.28] cpu_idle=4% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M64WXD64EMDWGXHNW97KC69A",
+  "run_id": "run_01M64YX8QFY59NXS2RPVAPHXNN",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "MUS-SIM",
   "level": "sim",
   "passed": true,
-  "git_sha": "a52fa6cf82cc95195f3ebe04f47377f4f8416f6c",
-  "at": "2026-10-29T22:36:27.716631Z",
+  "git_sha": "77824ec345377b80bb538a2cba20b6dacf66e169",
+  "at": "2026-10-29T23:11:20.304772Z",
   "assertions": [
     {
       "name": "world_started",

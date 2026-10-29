@@ -1,18 +1,18 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[10.6 8.82 8.25] cpu_idle=55% cpus=8 other_heavy=0"
+    "summary": "air: load=[5.2 6.75 14.46] cpu_idle=58% cpus=8 other_heavy=0"
   },
   "status": "limited",
-  "run_id": "run_01M647GGRFTZYN41AQDTFABQS7",
+  "run_id": "run_01M64YXEMBXYZZ04PQA7XAS9DM",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "MUS-PLAYLIST-REAL",
   "level": "real",
   "passed": false,
-  "git_sha": "c3ac9963efa1272847ce1ef053a43f9c53d3fc2a",
-  "at": "2026-10-29T16:22:25.29601Z",
+  "git_sha": "77824ec345377b80bb538a2cba20b6dacf66e169",
+  "at": "2026-10-29T23:11:26.353457Z",
   "assertions": [
     {
       "name": "world_started",
@@ -27,10 +27,18 @@
       "passed": true
     },
     {
+      "name": "signed_helper_music_proof",
+      "passed": true
+    },
+    {
+      "name": "music_proof_read",
+      "passed": true
+    },
+    {
       "name": "music_control_real",
       "passed": false,
       "status": "limited",
-      "detail": "Automation: dev.applebridge.helper → com.apple.Music missing; consent not requested"
+      "detail": "needs Music Automation grant (T79); consent not requested"
     },
     {
       "name": "credential_backend_override_restored",
