@@ -1,0 +1,93 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[17.02 11.74 12.07] cpu_idle=27% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M639QBNT48C7A93AYYM37685",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "CALL-DIAL",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "9ca9e6053f8b99c2a444a5bb965de0701c43a03b",
+  "at": "2026-10-29T07:41:52.188427Z",
+  "assertions": [
+    {
+      "name": "calls_native_fixture_build",
+      "passed": true
+    },
+    {
+      "name": "fake_dialer_observed_and_indeterminate",
+      "passed": true
+    },
+    {
+      "name": "gateway_started",
+      "passed": true
+    },
+    {
+      "name": "helper_ready",
+      "passed": true
+    },
+    {
+      "name": "outgoing_record_observed",
+      "passed": true
+    },
+    {
+      "name": "fake_no_record_armed",
+      "passed": true
+    },
+    {
+      "name": "missing_record_indeterminate",
+      "passed": true
+    },
+    {
+      "name": "fake_dialer_reset",
+      "passed": true
+    },
+    {
+      "name": "same_id_stays_indeterminate",
+      "passed": true
+    },
+    {
+      "name": "no_retry_effect",
+      "passed": true
+    },
+    {
+      "name": "agent_authority",
+      "passed": true
+    },
+    {
+      "name": "dial_agent_created",
+      "passed": true
+    },
+    {
+      "name": "read_agent_denied",
+      "passed": true
+    },
+    {
+      "name": "dial_agent_created",
+      "passed": true
+    },
+    {
+      "name": "dial_requires_owner_approval",
+      "passed": true
+    },
+    {
+      "name": "dial_agent_created",
+      "passed": true
+    },
+    {
+      "name": "dial_requires_owner_approval",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": [
+    "air"
+  ]
+}

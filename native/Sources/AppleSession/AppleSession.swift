@@ -1,4 +1,5 @@
 import PDFSource
+import CallsSource
 import FilesSource
 import PhotosSource
 import Foundation
@@ -536,6 +537,14 @@ public actor AppleSession: ObservationSink {
         if operation == "music.favorite" || operation == "music.add_to_playlist" {
             let collection = operation == "music.favorite" ? "music.library_item" : "music.playlist"
             guard let checkpoint = observedCheckpoints[collection + "/" + evidence["native_key"].string] else { throw SourceFailure.unavailable }
+            var result = evidence.object
+            result["fingerprint"] = fingerprint
+            result["capture_checkpoint"] = .string(checkpoint)
+            return .object(result)
+        }
+        if operation == "phone.dial", let calls = additionalSources["phone"] as? CallsSource {
+            try await calls.scan(into: self, live: true)
+            guard let checkpoint = observedCheckpoints["phone.call/" + evidence["native_key"].string] else { throw SourceFailure.unavailable }
             var result = evidence.object
             result["fingerprint"] = fingerprint
             result["capture_checkpoint"] = .string(checkpoint)

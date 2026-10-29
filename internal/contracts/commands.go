@@ -170,6 +170,9 @@ func ValidateCommand(c Command) (ReminderArgs, error) {
 	if c.Op == "maps.open" {
 		return ReminderArgs{}, ValidateMapsOpen(c)
 	}
+	if c.Op == "phone.dial" {
+		return ReminderArgs{}, ValidatePhoneDial(c)
+	}
 	if c.Op == "shortcuts.run" {
 		return ReminderArgs{}, ValidateShortcutRun(c)
 	}

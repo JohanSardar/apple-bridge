@@ -1,0 +1,7 @@
+id: CALL-DIAL-REAL
+feature: phone.dial
+levels: [real]
+given: [{world: {}}]
+when: [{phone: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]
