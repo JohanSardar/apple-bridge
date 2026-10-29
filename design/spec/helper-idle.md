@@ -23,3 +23,7 @@ Production timers and polling in `native/Sources` were inspected. Short sleeps i
 | Photos / Shortcuts / Focus | Existing 30-second capture and change suppression retained. |
 | Music | Existing 60-second library comparison retained; one-second publishing wait runs only during active publication. |
 | Session / Helper | Wire credit and frame waits remain event-driven; reconnect backoff only runs while disconnected. The one-second main run-loop limit remains for session completion; gateway lifetime uses a process-exit event. |
+
+## Real qualification
+
+The signed Helper measured 2.063240% CPU-time over 300.014 idle seconds (6.190 CPU seconds), after 507.504 seconds of capture settling. The preceding #394 measurement was 2.51992% over 300.010 seconds. Lint, features, Go build/tests, native build, SourceSupport and Usage notification checks, and all ten required sims passed. Evidence retains aggregate metrics and the signed binary digest.
