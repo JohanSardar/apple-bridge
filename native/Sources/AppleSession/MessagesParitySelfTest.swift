@@ -29,11 +29,17 @@ actor MessagesParitySelfTest {
         var cleanup = "not_needed"
         var lateEffectPossible = false
         var prerequisiteReason: String?
+        var beforeIDs: [String] = []
+        var afterIDs: [String] = []
+        var writesSubmitted = 0
+        func activeIDs(_ database: MessagesDatabase) throws -> [String] {
+            try database.rows("SELECT DISTINCT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID WHERE NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=j.chat_id AND r.message_id=m.ROWID) ORDER BY m.guid").compactMap { $0["guid"] }
+        }
         func blocked(_ reason: String) {
             steps = MessagesParity.operations.map { .object(["operation": .string($0), "proven": .bool(false), "reason": .string(reason)]) }
         }
         func save() throws -> JSON {
-            let result = JSON.object(["os_build": .string(ProcessInfo.processInfo.operatingSystemVersionString), "run_id": .string(run), "state": .string("limited"), "cleanup_state": .string(cleanup), "steps": .array(steps)])
+            let result = JSON.object(["os_build": .string(ProcessInfo.processInfo.operatingSystemVersionString), "run_id": .string(run), "state": .string("limited"), "cleanup_state": .string(cleanup), "writes_submitted": .number(Double(writesSubmitted)), "before_count": .number(Double(beforeIDs.count)), "after_count": .number(Double(afterIDs.count)), "baseline_preserved": .bool(beforeIDs == afterIDs), "steps": .array(steps)])
             try JSONEncoder().encode(result).write(to: MessagesParity.reportURL, options: .atomic)
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: MessagesParity.reportURL.path)
             return result
@@ -54,6 +60,7 @@ actor MessagesParitySelfTest {
         do { database = try MessagesDatabase(); handles = try MessagesProbes.discoverSelfHandles().handles }
         catch { blocked("messages_database_or_self_handle_unavailable"); return try save() }
         guard let handle = try MessagesSelfTestIsolation.unused(handles, database: database).first else { blocked("isolated_test_chat_unavailable"); return try save() }
+        beforeIDs = try activeIDs(database)
         let baseline = Int64(try database.rows("SELECT COALESCE(MAX(ROWID),0) AS maximum FROM chat").first?["maximum"] ?? "0") ?? 0
         let baselineMessage = Int64(try database.rows("SELECT COALESCE(MAX(ROWID),0) AS maximum FROM message").first?["maximum"] ?? "0") ?? 0
         let ledgerHome = PrivateReport.directory.appendingPathComponent("messages-command-cleanup", isDirectory: true)
@@ -80,6 +87,7 @@ actor MessagesParitySelfTest {
             try await guardLog.append(.object(["t": .string("Started"), "command_id": .string(id), "prepared": .object(["action": prepared.action, "native_state": prepared.nativeState])]))
             guard expiry > Date() else { throw SourceFailure.expired }
             lateEffectPossible = true
+            writesSubmitted += 1
             let result = try await commands.dispatch(prepared)
             lateEffectPossible = !result["observed"].bool
             try await guardLog.append(.object(["t": .string("Outcome"), "command_id": .string(id), "evidence": result]))
@@ -104,7 +112,8 @@ actor MessagesParitySelfTest {
             try PrivateReport.write(registration, to: ledger)
             let data = try await MessagesCleanup.run(["--tag", tag, "--owned-only", "--skip-draft"])
             let result = try JSONDecoder().decode(JSON.self, from: data)
-            cleanup = result["passed"].bool ? (lateEffectPossible ? "pending_reconciliation" : "verified_clean") : "pending_native_cleanup"
+            afterIDs = try activeIDs(database)
+            cleanup = result["passed"].bool && beforeIDs == afterIDs ? (lateEffectPossible ? "pending_reconciliation" : "verified_clean") : "pending_native_cleanup"
         } catch { cleanup = "pending_native_cleanup" }
         registration["late_effect_possible"] = lateEffectPossible
         registration["cleanup_state"] = cleanup
