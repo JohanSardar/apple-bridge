@@ -16,6 +16,6 @@
     "weather.alerts"
   ],
   "reason": "No verified Weather Shortcuts workflow is available. Current, hourly and daily queries use the permitted native WeatherKit fallback in the signed Mac Helper.",
-  "qualification": "WX-SIM qualifies the injected runner. WX-REAL exercises public WeatherKit queries and checks units, attribution, counts and plausible ranges without storing coordinates. Real reads need an Apple-signed Helper with com.apple.developer.weatherkit and a matching WeatherKit-enabled provisioning profile. When the services development profile is installed, the dev Helper embeds it and uses its matching application identifier, WeatherKit entitlement and Apple signing certificate.",
+  "qualification": "WX-SIM qualifies the injected runner. WX-REAL exercises public WeatherKit queries and checks units, attribution, counts and plausible ranges without storing coordinates. Real reads need an Apple-signed Helper with com.apple.developer.weatherkit and a matching WeatherKit-enabled provisioning profile. When the services development profile is installed, the dev Helper embeds it and uses its matching application identifier, WeatherKit entitlement and Apple signing certificate. WX-REAL reached the live request with verified signing, but WeatherKit returned WeatherDaemon.WDSJWTAuthenticatorServiceListener.Errors code=2; real qualification remains limited.",
   "native_fallback": "native/Sources/WeatherSource/WeatherQueries.swift"
 }

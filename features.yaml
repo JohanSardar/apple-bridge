@@ -1258,12 +1258,12 @@ features:
     modules: [internal/weatherpack, native/Sources/WeatherSource]
     depends_on: [helper.session]
     status: limited
-    notes: Current, hourly and daily public queries use the permitted signed Helper WeatherKit fallback with Celsius units and Apple attribution. Injected pack runner remains the sim seam. Minute rain and alerts remain unavailable. Real qualification needs WeatherKit signing.
+    notes: Current, hourly and daily public queries use the permitted signed Helper WeatherKit fallback with Celsius units and Apple attribution. Injected pack runner remains the sim seam. Minute rain and alerts remain unavailable. The Apple-signed Helper now embeds the WeatherKit-enabled services profile; WX-REAL still fails its first live current-conditions request.
     scenarios:
       - {id: WX-SIM, levels: [sim]}
       - {id: WX-REAL, levels: [real]}
     limits:
-      - {"scenario": "WX-REAL", "level": "real", "reason": "needs WeatherKit-enabled provisioning profile and Apple-signed Mac Helper; existing dev identity and services profile lack the WeatherKit grant"}
+      - {"scenario": "WX-REAL", "level": "real", "reason": "WeatherKit refuses live reads: WeatherDaemon.WDSJWTAuthenticatorServiceListener.Errors code=2 (The operation couldn’t be completed. (WeatherDaemon.WDSJWTAuthenticatorServiceListener.Errors error 2.)); Apple-signed Helper and WeatherKit-enabled services profile verified"}
   - id: mac.commands
     title: Mac system commands
     requirements: [R-API, R-SCOPE]
