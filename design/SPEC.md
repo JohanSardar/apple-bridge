@@ -416,6 +416,7 @@ Contacts Me-card and notes entitlement contract: [spec/contacts.md](spec/contact
 Mail capture foundation and local body queries: [Mail](spec/mail.md).
 
 Files source details: [files](spec/files.md).
+Safari capture: [design/spec/safari.md](spec/safari.md).
 
 Permission status and explicit requests: [permissions](spec/permissions.md).
 
