@@ -1,18 +1,22 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[16.4 35.19 45.57] cpu_idle=44% cpus=10 other_heavy=0"
+    "summary": "air: load=[6.82 9.36 22.92] cpu_idle=75% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M64ZWQ4HSXP68FXPKHAPT6HD",
+  "run_id": "run_01M650MAQVA92PBVYVPDCF1RR9",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "MSG-AUDIO-MESSAGE",
   "level": "sim",
   "passed": true,
-  "git_sha": "f6d3c214c07848c33e9e7da1539e2ab4af76c06f",
-  "at": "2026-10-29T23:28:30.865106Z",
+  "git_sha": "cd736b6bdf6f556b3e7a7dd514fbc4f7d2d45c78",
+  "at": "2026-10-29T23:41:24.60366Z",
   "assertions": [
+    {
+      "name": "native_readback_checks_build",
+      "passed": true
+    },
     {
       "name": "native_readback_checks",
       "passed": true
