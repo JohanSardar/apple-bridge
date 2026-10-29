@@ -1,17 +1,17 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[4.74 14.43 14.49] cpu_idle=47% cpus=8 other_heavy=1"
+    "summary": "air: load=[19.83 24.16 26.7] cpu_idle=27% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M62VM6DWACD0GSJR4MGG21W7",
+  "run_id": "run_01M636EJYRJ2H87JZNX9F6EHJR",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "VMEMO-CAPTURE",
   "level": "sim",
   "passed": true,
-  "git_sha": "f17e7914ddb8a19841688ea8f93c75a179bd95cf",
-  "at": "2026-10-29T03:35:28.444088Z",
+  "git_sha": "8961325c647295557d13fc787ac93a1135baabab",
+  "at": "2026-10-29T06:44:39.000626Z",
   "assertions": [
     {
       "name": "recordings_native_fixture_build",

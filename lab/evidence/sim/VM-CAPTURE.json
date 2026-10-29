@@ -1,17 +1,17 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[4.46 14.54 14.53] cpu_idle=41% cpus=8 other_heavy=1"
+    "summary": "air: load=[19.9 24.24 26.74] cpu_idle=24% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M62VM35BB996QXYRAN2WPQRW",
+  "run_id": "run_01M636EGSSTZTM98533ZSKM5BK",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "VM-CAPTURE",
   "level": "sim",
   "passed": true,
-  "git_sha": "f17e7914ddb8a19841688ea8f93c75a179bd95cf",
-  "at": "2026-10-29T03:35:25.099064Z",
+  "git_sha": "8961325c647295557d13fc787ac93a1135baabab",
+  "at": "2026-10-29T06:44:36.794562Z",
   "assertions": [
     {
       "name": "recordings_native_fixture_build",
