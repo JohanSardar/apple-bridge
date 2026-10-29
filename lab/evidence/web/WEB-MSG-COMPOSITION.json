@@ -1,21 +1,33 @@
 {
   "scenario": "WEB-MSG-COMPOSITION",
   "level": "web",
-  "git_sha": "614794562717e2e2ffde5a0392d7e149f2a01dab",
-  "at": "2026-10-29T22:47:42.286522Z",
+  "git_sha": "2f263823cc9ea6d12081cffd761539783d2acf6e",
+  "at": "2026-10-29T23:20:19.644374Z",
   "passed": true,
   "metrics": {
-    "matrix_count": 1,
-    "completed_matrix_count": 1,
-    "passed_matrix_count": 1,
+    "matrix_count": 4,
+    "completed_matrix_count": 4,
+    "passed_matrix_count": 4,
     "failed_matrix_count": 0,
     "incomplete_matrix_count": 0,
-    "passed_test_count": 3,
+    "passed_test_count": 12,
     "failed_test_count": 0,
     "skipped_test_count": 0,
-    "report_sha256": "c01fb640cfc2d61b08ff904dae49db77967eb3a91c6b97d1a0bc0f60bda0e3a3"
+    "report_sha256": "ea6c41fb38cdd144018117d41288d41899b4f4bed88f8104b6a6be3066e98a56"
   },
   "assertions": [
+    {
+      "name": "webkit-light-phone",
+      "passed": true
+    },
+    {
+      "name": "webkit-light-desktop",
+      "passed": true
+    },
+    {
+      "name": "chromium-light-phone",
+      "passed": true
+    },
     {
       "name": "chromium-light-desktop",
       "passed": true
