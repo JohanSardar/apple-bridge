@@ -28,6 +28,11 @@ struct CapabilityScreen: View {
                     Button("Allow Location") { LocationCapability.adapter.requestPermission() }
                     Text("Enable Always and Precise Location for geofences and significant changes.")
                 }
+                if capability.id == "healthread" {
+                    LabeledContent("Health", value: HealthReadController.shared.status)
+                    Button("Allow Health read access") { Task { await HealthReadController.shared.enable() } }
+                    Button("Capture Health updates") { Task { await HealthReadController.shared.resume() } }
+                }
                 LabeledContent("Permission", value: capability.permission)
                 LabeledContent("Last activity", value: "None")
                 if capability.id == "journal" { JournalSuggestionPicker() }
@@ -39,6 +44,12 @@ struct CapabilityScreen: View {
         }
         .navigationTitle(capability.title)
         .onChange(of: enabled) { _, value in
+            if capability.id == "healthread" {
+                Task {
+                    if value { await HealthReadController.shared.enable() }
+                    else { await HealthReadController.shared.disable() }
+                }
+            }
             if capability.id == "location" {
                 if value { LocationCapability.resume() }
                 else {

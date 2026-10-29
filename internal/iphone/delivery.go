@@ -177,8 +177,12 @@ func (d *Delivery) Complete(ctx context.Context, p trust.Principal, request trus
 
 func (d *Delivery) Handler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		limit := int64(32768)
+		if r.URL.Path == "/v1/iphone/health" {
+			limit = 16 << 20
+		}
 		var request trust.IPhoneRequest
-		if r.Method != "POST" || json.NewDecoder(http.MaxBytesReader(w, r.Body, 32768)).Decode(&request) != nil {
+		if r.Method != "POST" || json.NewDecoder(http.MaxBytesReader(w, r.Body, limit)).Decode(&request) != nil {
 			http.Error(w, "invalid", 400)
 			return
 		}
@@ -203,6 +207,14 @@ func (d *Delivery) Handler() http.Handler {
 				result = map[string]bool{"registered": err == nil}
 				d.Wake()
 			}
+		case "/v1/iphone/health":
+			var batch contracts.HealthBatch
+			if contracts.DecodeInput(request.Payload, &batch) != nil {
+				err = contracts.ErrInvalid
+			} else {
+				err = d.State.IngestHealth(r.Context(), p.ID, batch)
+			}
+			result = map[string]bool{"accepted": err == nil}
 		case "/v1/iphone/pending":
 			result, err = d.packets(r.Context(), p, true)
 		case "/v1/iphone/result":

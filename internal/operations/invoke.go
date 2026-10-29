@@ -45,6 +45,12 @@ func (s *Service) Invoke(ctx context.Context, p trust.Principal, name string, in
 		}()
 	}
 	switch name {
+	case "health.summary":
+		var q contracts.HealthSummaryQuery
+		if contracts.DecodeInput(input, &q) != nil {
+			return nil, contracts.ErrInvalid
+		}
+		return s.State.HealthSummary(ctx, p.Visibility(), q)
 	case "iphone.devices":
 		if err := s.Authority.Authorize(p, "iphone:read"); err != nil {
 			return nil, err

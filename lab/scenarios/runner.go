@@ -382,6 +382,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "APP-PAIR-SIM" {
 		return runIPhonePair(ctx, s, level)
 	}
+	if s.ID == "APP-HEALTH-SIM" || s.ID == "APP-HEALTH-REAL" {
+		return runIPhoneHealth(ctx, s, level)
+	}
 	if level == "real" && slices.Contains([]string{"MSG-AUDIO-MESSAGE", "MSG-FORMATTING-SEND", "MSG-SEND-EFFECT", "MSG-SEND-LATER", "WEB-MSG-REAL-READ"}, s.ID) {
 		return Evidence{Scenario: s.ID, Level: level, At: time.Now().UTC(), Status: "limited", Assertions: []Assertion{{Name: "real_acceptance_implemented", Passed: false, Detail: "Acceptance harness is not implemented; no native effects dispatched"}}}
 	}
@@ -1189,7 +1192,7 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 	}
 	packagingOnly := true
 	for _, scenario := range scenarios {
-		packagingOnly = packagingOnly && (scenario.Feature == "iphone.location" || scenario.Feature == "packaging.app" || scenario.Feature == "core.shortcuts" || scenario.Feature == "core.permissions" || scenario.Feature == "usage.action_probe" || scenario.Feature == "helper.siri_intents")
+		packagingOnly = packagingOnly && (scenario.Feature == "iphone.location" || scenario.Feature == "iphone.health" || scenario.Feature == "packaging.app" || scenario.Feature == "core.shortcuts" || scenario.Feature == "core.permissions" || scenario.Feature == "usage.action_probe" || scenario.Feature == "helper.siri_intents")
 	}
 	if !packagingOnly {
 		if err = world.Build(ctx, level); err != nil {

@@ -48,7 +48,7 @@ struct BridgeSettings: View {
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active {
                     LocationCapability.resume()
-                    Task { await PushDelivery.shared.drain() }
+                    Task { await PushDelivery.shared.drain(); await HealthReadController.shared.resume() }
                 }
             }
             .task {
@@ -57,6 +57,7 @@ struct BridgeSettings: View {
                     await pairing.pair(ProcessInfo.processInfo.arguments[index + 1])
                 }
                 await PushDelivery.shared.drain()
+                await HealthReadController.shared.resume()
             }
         }
     }
