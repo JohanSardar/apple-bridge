@@ -388,6 +388,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "APP-PAIR-SIM" {
 		return runIPhonePair(ctx, s, level)
 	}
+	if s.ID == "APP-HEALTH-WRITE-SIM" || s.ID == "APP-HEALTH-WRITE-REAL" {
+		return runIPhoneHealthWrite(ctx, s, level)
+	}
 	if s.ID == "APP-HEALTH-SIM" || s.ID == "APP-HEALTH-REAL" {
 		return runIPhoneHealth(ctx, s, level)
 	}

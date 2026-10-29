@@ -99,6 +99,12 @@ func proveIPhoneCapabilityDelivery(ctx context.Context, dir string, payload []by
 	}
 	for index, op := range ops {
 		args := map[string]any{"device_id": phone.ID}
+		if op == "iphone.health.log" {
+			args["kind"] = "water"
+			args["value"] = 250
+			args["start"] = "2026-10-29T12:00:00Z"
+			args["tag"] = "[ab-test]"
+		}
 		if op == "iphone.motion.history" {
 			args["days"] = 7
 		}

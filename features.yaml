@@ -1457,6 +1457,18 @@ features:
       - {id: APP-HEALTH-REAL, levels: [real]}
     limits:
       - {scenario: APP-HEALTH-REAL, level: real, reason: 'limited: needs Allow tap'}
+  - id: iphone.health.write
+    title: Log water, weight, mindful minutes and workouts
+    requirements: [R-API, R-SECURE]
+    milestone: G13
+    modules: [ios/Capabilities/HealthWrite, internal/contracts]
+    depends_on: [iphone.health]
+    status: limited
+    scenarios:
+      - {id: APP-HEALTH-WRITE-SIM, levels: [sim]}
+      - {id: APP-HEALTH-WRITE-REAL, levels: [real]}
+    limits:
+      - {scenario: APP-HEALTH-WRITE-REAL, level: real, reason: 'limited: needs Allow tap'}
   - id: iphone.build
     title: Signed iPhone build and USB install
     requirements: [R-PKG]
