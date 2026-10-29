@@ -1,19 +1,19 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[4.32 4.78 5.84] cpu_idle=66% cpus=8 other_heavy=0"
+    "summary": "air: load=[5.26 5.71 6.57] cpu_idle=53% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M62HT2W6A9V6SMHW423TKAK5",
+  "run_id": "run_01M64891BMH2S19KQA4GF31JHZ",
   "metrics": {
     "capture_observer_resets": 0,
-    "idle_cpu_percent": 30.49119001021899,
-    "idle_seconds": 300.021087958
+    "idle_cpu_percent": 41.35966393262527,
+    "idle_seconds": 300.026615792
   },
   "scenario": "LOC-IDLE",
   "level": "real",
   "passed": false,
-  "git_sha": "34cdab0f06a44aa63e57c56b0504e26ddc9d9c22",
-  "at": "2026-10-29T00:43:55.65482Z",
+  "git_sha": "c3ac9963efa1272847ce1ef053a43f9c53d3fc2a",
+  "at": "2026-10-29T16:35:48.724661Z",
   "assertions": [
     {
       "name": "world_started",

@@ -1,20 +1,26 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[26.7 16.44 18.23] cpu_idle=48% cpus=8 other_heavy=0"
+    "summary": "air: load=[5.31 6.61 6.81] cpu_idle=54% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M62AK3RZWDH6V9CYYNQPJ7MD",
+  "run_id": "run_01M649EJJ7NFKW3DD31636X4QM",
   "metrics": {
-    "capture_observer_resets": 0
+    "capture_observer_resets": 0,
+    "helper_cpu_percent": 50.76566864732443,
+    "idle_seconds": 300.084713542
   },
   "scenario": "SAF-IDLE",
   "level": "real",
   "passed": false,
   "git_sha": "",
-  "at": "2026-10-28T22:37:47.167352Z",
+  "at": "2026-10-29T16:56:18.759649Z",
   "assertions": [
     {
       "name": "signed_helper_world",
+      "passed": true
+    },
+    {
+      "name": "helper_cpu_under_two_percent_for_five_minutes",
       "passed": false
     },
     {
