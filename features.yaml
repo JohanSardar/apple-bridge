@@ -1582,3 +1582,14 @@ features:
       - {id: APP-WALLET-SIM, levels: [sim]}
     limits:
       - {scenario: APP-WALLET-SIM, level: sim, reason: 'limited: needs Apple approval for FinanceKit, critical alerts, location push and fall detection; location push also needs provisioned extension/App Group, fall detection needs Watch companion, live phone qualification needs system consent'}
+  - id: iphone.intents
+    title: Siri, Shortcuts and Action button for iPhone commands
+    requirements: [R-API]
+    milestone: G13
+    modules: [ios/Capabilities, lab/iphoneintents]
+    depends_on: [iphone.delivery]
+    status: limited
+    scenarios:
+      - {id: APP-INTENTS-REAL, levels: [real]}
+    limits:
+      - {scenario: APP-INTENTS-REAL, level: real, reason: 'limited: needs Allow tap to save or import a Shortcuts workflow'}
