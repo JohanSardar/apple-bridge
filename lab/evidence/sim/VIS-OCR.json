@@ -1,17 +1,17 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[11.34 14.32 14.28] cpu_idle=31% cpus=8 other_heavy=1"
+    "summary": "air: load=[9.42 8.42 9.32] cpu_idle=53% cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M62WX2DVZND735TP4QBC0RB8",
+  "run_id": "run_01M633KHS238RYEH7Q4ZE9HCFX",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "VIS-OCR",
   "level": "sim",
   "passed": true,
-  "git_sha": "578cec29ccdff208971e3cf1444d6055915ebe3b",
-  "at": "2026-10-29T03:57:47.835873Z",
+  "git_sha": "4f44ec9bc51ce32333e258a0f82d87e1437f2094",
+  "at": "2026-10-29T05:54:55.906193Z",
   "assertions": [
     {
       "name": "world_started",
@@ -19,6 +19,10 @@
     },
     {
       "name": "query_scopes_granted",
+      "passed": true
+    },
+    {
+      "name": "helper_ready",
       "passed": true
     },
     {

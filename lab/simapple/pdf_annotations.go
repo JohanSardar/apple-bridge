@@ -34,7 +34,7 @@ func simulatedAnnotatedPDF(annotations []contracts.PDFAnnotation) []byte {
 	}
 	content := "BT /F1 12 Tf 20 100 Td (Bridge fixture) Tj ET\n"
 	objects[3] = fmt.Sprintf("<< /Length %d >>\nstream\n%sendstream", len(content), content)
-	objects[2] = "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R /Annots [" + refs + "] >>"
+	objects[2] = "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 600 800] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R /Annots [" + refs + "] >>"
 	var out bytes.Buffer
 	out.WriteString("%PDF-1.4\n")
 	offsets := []int{0}
@@ -103,7 +103,7 @@ func (f *fakeApple) pdfCommand(wire *applepeer.Wire, frame contracts.IPCFrame, f
 		return true, err
 	}
 	for _, a := range args.Annotations {
-		if a.Page != 1 || a.X+a.Width > 612 || a.Y+a.Height > 792 {
+		if a.Page != 1 || a.X+a.Width > 600 || a.Y+a.Height > 800 {
 			f.mu.Unlock()
 			_, err = wire.Send(contracts.IPCFrame{T: "Outcome", CommandID: frame.CommandID, Disposition: "failed_no_effect"})
 			return true, err

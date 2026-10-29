@@ -37,7 +37,7 @@ public actor PDFSource: Source {
         let input = try queryDocument(args)
         let digest = SHA256.hash(data: input).map { String(format: "%02x", $0) }.joined()
         guard digest == prepared.nativeState["digest"].string else { throw SourceFailure.conflict }
-        let document = try document(args, data: input)
+        let document = try self.document(args, data: input)
         for item in args["annotations"].array {
             try Task.checkCancellation()
             let number = item["page"].number
@@ -52,7 +52,7 @@ public actor PDFSource: Source {
         }
         guard let bytes = document.dataRepresentation(), bytes.count <= 16 << 20, let output = PDFDocument(data: bytes) else { throw SourceFailure.corrupt }
         for item in args["annotations"].array {
-            guard let page = output.page(at: Int(item["page"].number) - 1), page.annotations.contains(where: { $0.contents == item["text"].string && $0.type == (item["type"].string == "note" ? "Text" : "Highlight") }) else { throw SourceFailure.corrupt }
+            guard let page = output.page(at: Int(item["page"].number) - 1), page.annotations.contains(where: { ($0.contents ?? "") == item["text"].string && $0.type == (item["type"].string == "note" ? "Text" : "Highlight") }) else { throw SourceFailure.corrupt }
         }
         let blob = try writer.stage(bytes)
         let key = UUID().uuidString

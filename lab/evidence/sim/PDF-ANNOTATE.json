@@ -1,9 +1,9 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[20.13 37.07 30.92] cpu_idle=49% cpus=8 other_heavy=1"
+    "summary": "air: load=[8.5 8.27 9.24] cpu_idle=53% cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M62YFHMDFKV6HA0BH0NNXJ7E",
+  "run_id": "run_01M633M5YZ82JG4YM4GKG8BS0C",
   "metrics": {
     "capture_observer_resets": 0,
     "observed_record_count": 1
@@ -11,8 +11,8 @@
   "scenario": "PDF-ANNOTATE",
   "level": "sim",
   "passed": true,
-  "git_sha": "d34dfd6034811b5297593e6f8110a52d2c2d0ee3",
-  "at": "2026-10-29T04:25:21.806834Z",
+  "git_sha": "4f44ec9bc51ce32333e258a0f82d87e1437f2094",
+  "at": "2026-10-29T05:55:16.575887Z",
   "assertions": [
     {
       "name": "world_started",
@@ -56,6 +56,10 @@
     },
     {
       "name": "artifact_blob_input_preserves_document_text",
+      "passed": true
+    },
+    {
+      "name": "annotation_page_geometry_preserved",
       "passed": true
     },
     {

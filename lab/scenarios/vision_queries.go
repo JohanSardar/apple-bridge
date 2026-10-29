@@ -8,7 +8,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
+	"github.com/JohanSardar/apple-bridge/internal/runtime"
 	"github.com/JohanSardar/apple-bridge/lab/scripted"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 	"io"
@@ -17,6 +19,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -40,6 +43,7 @@ func runVisionQueries(ctx context.Context, s Scenario, level string) (e Evidence
 	}
 	add("world_started", err == nil)
 	if err != nil {
+		fmt.Fprintln(os.Stderr, "vision world startup:", err)
 		return
 	}
 	defer w.Close()
@@ -59,6 +63,51 @@ func runVisionQueries(ctx context.Context, s Scenario, level string) (e Evidence
 		if readyErr != nil {
 			return
 		}
+	}
+	if level == "real" {
+		readinessErr := w.Await(15*time.Second, func() bool {
+			report, problem := runtime.Doctor(ctx, w.Gateway.Home)
+			return problem == nil && report.DocumentChecks["vision"] == "ready" && report.DocumentChecks["pdf"] == "ready"
+		})
+		add("doctor_document_sources_ready", readinessErr == nil)
+		if readinessErr != nil {
+			return
+		}
+	}
+	if s.ID == "VIS-IDLE" {
+		pid, problem := os.ReadFile(filepath.Join(w.Gateway.Home, "helper", "helper.pid"))
+		add("helper_pid_available", problem == nil)
+		if problem != nil {
+			return
+		}
+		cpu := func() float64 {
+			output, problem := exec.CommandContext(ctx, "ps", "-o", "time=", "-p", strings.TrimSpace(string(pid))).Output()
+			parts := strings.Split(strings.TrimSpace(string(output)), ":")
+			if problem != nil || len(parts) != 2 {
+				return -1
+			}
+			minutes, first := strconv.ParseFloat(parts[0], 64)
+			seconds, second := strconv.ParseFloat(parts[1], 64)
+			if first != nil || second != nil {
+				return -1
+			}
+			return minutes*60 + seconds
+		}
+		before := cpu()
+		started := time.Now()
+		timer := time.NewTimer(5 * time.Minute)
+		defer timer.Stop()
+		select {
+		case <-ctx.Done():
+			add("idle_completed", false)
+			return
+		case <-timer.C:
+		}
+		after := cpu()
+		elapsed := time.Since(started).Seconds()
+		e.Metrics = map[string]any{"helper_cpu_percent": 100 * (after - before) / elapsed, "idle_seconds": elapsed}
+		add("helper_cpu_under_two_percent", before >= 0 && after >= before && (after-before)/elapsed < 0.02)
+		return
 	}
 	if s.ID == "PDF-ANNOTATE" {
 		data, readErr := os.ReadFile(filepath.Join("lab", "fixtures", "vision", "fixture.pdf"))
@@ -124,6 +173,7 @@ func runVisionQueries(ctx context.Context, s Scenario, level string) (e Evidence
 		}
 		contentErr := json.Unmarshal(extracted.ResultJSON, &content)
 		add("artifact_blob_input_preserves_document_text", blobErr == nil && contentErr == nil && len(content.Pages) == 1 && strings.TrimSpace(content.Pages[0].Text) == "Bridge fixture")
+		add("annotation_page_geometry_preserved", bytes.Contains(output, []byte("/MediaBox [0 0 600 800]")))
 		add("output_contains_note_and_highlight", bytes.Contains(output, []byte("/Subtype /Text")) && bytes.Contains(output, []byte("/Subtype /Highlight")) && bytes.Contains(output, []byte("/Contents ([ab-test synthetic])")))
 		return
 	}

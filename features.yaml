@@ -1064,8 +1064,8 @@ features:
     notes: Five-minute single-use invitations, ephemeral in-memory connecting identities, private approval IPC and shared web/API/feed dispatch pass sim regression coverage; localhost origin retained; hosted connectors unsupported.
 
   - id: vision.queries
-    title: Transient Vision OCR and PDF extraction
-    requirements: [R-API, R-SCOPE]
+    title: Vision OCR and PDF document operations
+    requirements: [R-API, R-SCOPE, R-RW]
     milestone: G8
     modules: [native/Sources/VisionSource, native/Sources/PDFSource]
     depends_on: [core.queries]
@@ -1074,13 +1074,13 @@ features:
       - {id: VIS-OCR, levels: [sim, real]}
       - {id: PDF-TEXT, levels: [sim, real]}
       - {id: PDF-ANNOTATE, levels: [sim]}
+      - {id: VIS-IDLE, levels: [real]}
     limits:
-      - scenario: VIS-OCR
+      - scenario: VIS-IDLE
         level: real
-        reason: Doctor readiness and five-minute idle CPU proof remain unimplemented; query-lease blobs and explicitly opted-in local files are accepted.
-      - scenario: PDF-TEXT
-        level: real
-        reason: Native annotation build and real query qualification pending.
+        reason: Helper CPU measured 58.02 percent over 300.02 seconds on a quiet host, exceeding the 2 percent budget; consistent with the pre-existing Messages.reconcile blocker in overnight decision 37.
+    notes: Blob and explicit file inputs, PDF annotation artifact readback, doctor readiness and native framework queries pass; total Helper idle CPU remains limited.
+
   - id: shortcuts.runner
     title: Bounded Shortcuts CLI runner
     requirements: [R-RW]
