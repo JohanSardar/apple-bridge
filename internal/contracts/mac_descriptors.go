@@ -7,19 +7,22 @@ import (
 )
 
 type MacArgs struct {
-	Title      string   `json:"title,omitempty"`
-	Body       string   `json:"body,omitempty"`
-	ActionURL  string   `json:"action_url,omitempty"`
-	Pane       string   `json:"pane,omitempty"`
-	ImageBlob  string   `json:"image_blob,omitempty"`
-	Text       *string  `json:"text,omitempty"`
-	Volume     *float64 `json:"volume,omitempty"`
-	Muted      *bool    `json:"muted,omitempty"`
-	Device     string   `json:"device,omitempty"`
-	Appearance string   `json:"appearance,omitempty"`
-	BundleID   string   `json:"bundle_id,omitempty"`
-	On         *bool    `json:"on,omitempty"`
-	Duration   float64  `json:"duration,omitempty"`
+	DocumentBlob string   `json:"document_blob,omitempty"`
+	Format       string   `json:"format,omitempty"`
+	App          string   `json:"app,omitempty"`
+	Title        string   `json:"title,omitempty"`
+	Body         string   `json:"body,omitempty"`
+	ActionURL    string   `json:"action_url,omitempty"`
+	Pane         string   `json:"pane,omitempty"`
+	ImageBlob    string   `json:"image_blob,omitempty"`
+	Text         *string  `json:"text,omitempty"`
+	Volume       *float64 `json:"volume,omitempty"`
+	Muted        *bool    `json:"muted,omitempty"`
+	Device       string   `json:"device,omitempty"`
+	Appearance   string   `json:"appearance,omitempty"`
+	BundleID     string   `json:"bundle_id,omitempty"`
+	On           *bool    `json:"on,omitempty"`
+	Duration     float64  `json:"duration,omitempty"`
 }
 
 func ValidateMacCommand(c Command) error {
@@ -51,6 +54,15 @@ func ValidateMacCommand(c Command) error {
 		return ErrInvalid
 	}
 	switch c.Op {
+	case "mac.airplay_select":
+		if a.Device == "" {
+			return ErrInvalid
+		}
+	case "mac.iwork_export":
+		b, err := base64.StdEncoding.DecodeString(a.DocumentBlob)
+		if err != nil || len(b) == 0 || len(b) > 8*1024*1024 || (a.Format != "pdf" && a.Format != "text") || (a.App != "pages" && a.App != "numbers" && a.App != "keynote") {
+			return ErrInvalid
+		}
 	case "mac.lock_screen", "mac.sleep_display", "mac.restart", "mac.shutdown":
 	case "mac.open_settings":
 		if !MacSettingsPane(a.Pane) {
@@ -115,15 +127,26 @@ func MacCompletionEvidence(raw json.RawMessage, hash string) bool {
 
 func MacDescriptors() []OperationDescriptor {
 	var out []OperationDescriptor
+
 	for _, name := range []string{"mac.set_volume", "mac.set_mute", "mac.set_output_device", "mac.set_appearance", "mac.launch_app", "mac.activate_app", "mac.quit_app", "mac.keep_awake", "mac.clipboard_write", "mac.notify", "mac.open_settings", "mac.set_wallpaper", "mac.lock_screen", "mac.sleep_display", "mac.restart", "mac.shutdown"} {
 		out = append(out, OperationDescriptor{Name: name, Version: 1, Kind: CommandOp, Source: "mac", Scope: "mac:write", Capability: name, Input: Command{}, Output: CommandRecord{}, Description: "Change Mac state with native readback"})
 	}
 	out = append(out, OperationDescriptor{Name: "mac.clipboard_read", Version: 1, Kind: QueryOp, Source: "mac", Scope: "mac:read", Capability: "mac.clipboard_read", Input: Query{}, Output: QueryResult{}, Description: "Read transient clipboard text without capturing contents"})
 	out = append(out, OperationDescriptor{Name: "mac.network_check", Version: 1, Kind: QueryOp, Source: "mac", Scope: "mac:read", Capability: "mac.network_check", Input: Query{}, Output: QueryResult{}, Description: "Check default network reachability, DNS and interface counters"})
+	for _, name := range []string{"mac.bluetooth_devices", "mac.airplay_routes", "mac.time_machine_status", "mac.recognize_song"} {
+		out = append(out, OperationDescriptor{Name: name, Version: 1, Kind: QueryOp, Source: "mac", Scope: "mac:read", Capability: name, Input: Query{}, Output: QueryResult{}, Description: "Read Mac extras; native availability is explicit"})
+	}
+	for _, name := range []string{"mac.airplay_select", "mac.iwork_export"} {
+		out = append(out, OperationDescriptor{Name: name, Version: 1, Kind: CommandOp, Source: "mac", Scope: "mac:write", Capability: name, Input: Command{}, Output: CommandRecord{}, Description: "Mac extras action with native readback"})
+	}
+
 	return out
 }
 
 func init() {
+	Collections["mac.bluetooth_device"] = "mbt"
+	messagesShape["mac.bluetooth_device"] = map[string]fieldShape{"name": requiredField(shapeString), "connected": requiredField(shapeBool), "battery_percent": optionalField(shapeNumber)}
+
 	RegisterSource("mac", "Mac", true)
 	registerDescriptors(MacDescriptors, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105)
 	for collection, prefix := range map[string]string{"mac.audio_device": "mad", "mac.display": "mdp", "mac.power": "mpw", "mac.network": "mnw", "mac.app": "map"} {
@@ -144,6 +167,28 @@ func RedactMacCommand(c Command) Command {
 }
 
 func macSchema(d OperationDescriptor, schema map[string]any) map[string]any {
+	if d.Name == "mac.airplay_select" || d.Name == "mac.iwork_export" {
+		args := JSONSchema(MacArgs{})
+		fields := args["properties"].(map[string]any)
+		required := []string{"device"}
+		if d.Name == "mac.iwork_export" {
+			required = []string{"document_blob", "format", "app"}
+		}
+		for k := range fields {
+			keep := false
+			for _, name := range required {
+				keep = keep || k == name
+			}
+			if !keep {
+				delete(fields, k)
+			}
+		}
+		args["required"] = required
+		schema["properties"].(map[string]any)["args"] = args
+		schema["required"] = []string{"args"}
+		return schema
+	}
+
 	if d.Name == "mac.notify" || d.Name == "mac.open_settings" || d.Name == "mac.set_wallpaper" || MacPowerAction(d.Name) {
 		args := JSONSchema(MacArgs{})
 		fields := args["properties"].(map[string]any)

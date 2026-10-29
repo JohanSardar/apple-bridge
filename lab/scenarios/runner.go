@@ -600,6 +600,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.Feature == "web.frontdoor" || s.Feature == "web.agents" {
 		return runWebServer(ctx, s, level)
 	}
+	if s.Feature == "mac.extras" {
+		return runMacExtras(ctx, s, level)
+	}
 	if strings.HasPrefix(s.ID, "MAC-") {
 		return runMac(ctx, s, level)
 	}
