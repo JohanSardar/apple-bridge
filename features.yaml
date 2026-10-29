@@ -1303,3 +1303,31 @@ features:
       - scenario: SC-ACTIONS
         level: real
         reason: Real count qualification was not run because the shared heavy lane remained occupied beyond the ticket budget; metadata formats and coverage vary by app.
+
+  - id: usage.action_probe
+    title: Screen Time Shortcuts action comparison
+    requirements: [R-USAGE]
+    milestone: M4
+    modules: [lab/scenarios]
+    depends_on: [usage.read]
+    status: limited
+    limits:
+      - scenario: USE-ACTION-PROBE
+        level: real
+        reason: "Dedicated AB Screen Time pack absent; setup at packaging/shortcuts/screen-time-probe.md. Retain Biome; no owner shortcuts run."
+    scenarios:
+      - {id: USE-ACTION-PROBE, levels: [real]}
+
+  - id: helper.siri_intents
+    title: Read-only Apple Bridge status App Intent
+    requirements: [R-PKG]
+    milestone: M5
+    modules: [native/AppleBridgeHelper]
+    depends_on: [helper.session]
+    status: limited
+    limits:
+      - scenario: SIRI-INTENTS
+        level: real
+        reason: "Helper compiles and bundles; extracted App Intents metadata is absent. Requires Xcode metadata extraction/packaging, then Johan to verify Shortcuts discovery and execution."
+    scenarios:
+      - {id: SIRI-INTENTS, levels: [real]}

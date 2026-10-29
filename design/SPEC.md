@@ -509,6 +509,8 @@ Notes extras: [source spec](spec/notes.md).
 
 ### 9.6 Usage (Screen Time, read-only)
 
+Action qualification: [usage probe](spec/usage.md).
+
 - Read `~/Library/Biome/streams/restricted/App.InFocus/local` and `…/remote/<device-uuid>/` SEGB files (FDA). Device names/platforms from `~/Library/Biome/sync/sync.db` `DevicePeer`.
 - Decoder (`Decoders.SEGB` + `InFocus`): per record field 3 = starting flag, field 4 = Mac-epoch double, field 6 = bundle id (see `probe/infocus_usage.py`). Pair start/stop into sessions; cap a session at 4 h; a new start closes the previous session.
 - **Lock/sleep clipping (Mac devices):** clip sessions with lock/display evidence where it exists: the local Mac uses `log`-independent sources in this order: Biome `Device.Display`/`ScreenLock`-family streams if present on this build; otherwise `loginwindow`/`com.apple.ScreenSaver.Engine` focus events (lock screen = focus moves to `loginwindow` or screen saver), and sleep/wake from `pmset -g log`-equivalent IOKit power events recorded by the Helper going forward. Clipped seconds are published separately (`clipped_seconds`). The exact streams available on 25G241 are probed in M4 before coverage is advertised.
