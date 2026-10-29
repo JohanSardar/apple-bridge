@@ -32,6 +32,7 @@ actor MessagesParitySelfTest {
         var beforeIDs: [String] = []
         var afterIDs: [String] = []
         var writesSubmitted = 0
+        var baselineCaptured = false
         func activeIDs(_ database: MessagesDatabase) throws -> [String] {
             try database.rows("SELECT DISTINCT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID WHERE NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=j.chat_id AND r.message_id=m.ROWID) ORDER BY m.guid").compactMap { $0["guid"] }
         }
@@ -39,7 +40,7 @@ actor MessagesParitySelfTest {
             steps = MessagesParity.operations.map { .object(["operation": .string($0), "proven": .bool(false), "reason": .string(reason)]) }
         }
         func save() throws -> JSON {
-            let result = JSON.object(["os_build": .string(ProcessInfo.processInfo.operatingSystemVersionString), "run_id": .string(run), "state": .string("limited"), "cleanup_state": .string(cleanup), "writes_submitted": .number(Double(writesSubmitted)), "before_count": .number(Double(beforeIDs.count)), "after_count": .number(Double(afterIDs.count)), "baseline_preserved": .bool(beforeIDs == afterIDs), "steps": .array(steps)])
+            let result = JSON.object(["os_build": .string(ProcessInfo.processInfo.operatingSystemVersionString), "run_id": .string(run), "state": .string("limited"), "cleanup_state": .string(cleanup), "writes_submitted": .number(Double(writesSubmitted)), "before_count": .number(Double(beforeIDs.count)), "after_count": .number(Double(afterIDs.count)), "baseline_captured": .bool(baselineCaptured), "baseline_preserved": .bool(beforeIDs == afterIDs), "steps": .array(steps)])
             try JSONEncoder().encode(result).write(to: MessagesParity.reportURL, options: .atomic)
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: MessagesParity.reportURL.path)
             return result
@@ -61,6 +62,7 @@ actor MessagesParitySelfTest {
         catch { blocked("messages_database_or_self_handle_unavailable"); return try save() }
         guard let handle = try MessagesSelfTestIsolation.unused(handles, database: database).first else { blocked("isolated_test_chat_unavailable"); return try save() }
         beforeIDs = try activeIDs(database)
+        baselineCaptured = true
         let baseline = Int64(try database.rows("SELECT COALESCE(MAX(ROWID),0) AS maximum FROM chat").first?["maximum"] ?? "0") ?? 0
         let baselineMessage = Int64(try database.rows("SELECT COALESCE(MAX(ROWID),0) AS maximum FROM message").first?["maximum"] ?? "0") ?? 0
         let ledgerHome = PrivateReport.directory.appendingPathComponent("messages-command-cleanup", isDirectory: true)

@@ -146,13 +146,14 @@ func runMessagesParityProof(ctx context.Context, s Scenario, e Evidence) Evidenc
 	}
 	data, _ := bridgeruntime.MessagesParitySelfTest(ctx, app, true, true)
 	var report struct {
-		OSBuild   string `json:"os_build"`
-		Cleanup   string `json:"cleanup_state"`
-		Writes    int    `json:"writes_submitted"`
-		Before    int    `json:"before_count"`
-		After     int    `json:"after_count"`
-		Preserved bool   `json:"baseline_preserved"`
-		Steps     []struct {
+		OSBuild          string `json:"os_build"`
+		Cleanup          string `json:"cleanup_state"`
+		Writes           int    `json:"writes_submitted"`
+		Before           int    `json:"before_count"`
+		After            int    `json:"after_count"`
+		Preserved        bool   `json:"baseline_preserved"`
+		BaselineCaptured bool   `json:"baseline_captured"`
+		Steps            []struct {
 			Operation string `json:"operation"`
 			Proven    bool   `json:"proven"`
 			Reason    string `json:"reason"`
@@ -163,7 +164,12 @@ func runMessagesParityProof(ctx context.Context, s Scenario, e Evidence) Evidenc
 		return e
 	}
 	want := map[string][]string{"MSG-PINS": {"messages.pin"}, "MSG-MUTE": {"messages.mute"}, "MSG-READ-RECEIPTS": {"messages.set_read_receipts"}, "MSG-RECENTLY-DELETED": {"messages.recover_chat", "messages.delete_chat_permanently"}}[s.ID]
-	e.Metrics = map[string]any{"writes_submitted": report.Writes, "before_count": report.Before, "after_count": report.After, "baseline_preserved": report.Preserved, "cleanup_verified": report.Cleanup == "verified_clean" || report.Cleanup == "not_needed"}
+	e.Metrics = map[string]any{"writes_submitted": report.Writes, "baseline_captured": report.BaselineCaptured, "cleanup_verified": report.Cleanup == "verified_clean" || report.Cleanup == "not_needed"}
+	if report.BaselineCaptured {
+		e.Metrics["before_count"] = report.Before
+		e.Metrics["after_count"] = report.After
+		e.Metrics["baseline_preserved"] = report.Preserved
+	}
 	e.Passed = report.Cleanup == "verified_clean" && report.Preserved
 	e.Assertions = append(e.Assertions, Assertion{Name: "run_only_cleanup", Passed: report.Cleanup == "verified_clean" || report.Cleanup == "not_needed"})
 	for _, op := range want {
