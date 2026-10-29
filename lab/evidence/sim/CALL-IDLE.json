@@ -1,21 +1,25 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[15.73 21.38 23.2] cpu_idle=31% cpus=8 other_heavy=3"
+    "summary": "air: load=[13.77 7.84 7.85] cpu_idle=25% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M627K7TM8QN71Z8JZSWVW7P0",
+  "run_id": "run_01M646GVV9MDJNN5X0ZA0079KR",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "CALL-IDLE",
   "level": "sim",
-  "passed": false,
-  "git_sha": "d36ec609bbf43e9698fce014df38a34ac48b2a7b",
-  "at": "2026-10-28T21:45:25.592473Z",
+  "passed": true,
+  "git_sha": "2d911b7bd41ad214298cda87ee7e6c551dd390b1",
+  "at": "2026-10-29T16:05:08.073401Z",
   "assertions": [
     {
       "name": "calls_native_fixture_build",
-      "passed": false
+      "passed": true
+    },
+    {
+      "name": "five_minute_source_cpu_under_two_percent_and_no_idle_checkpoints",
+      "passed": true
     },
     {
       "name": "credential_backend_override_restored",

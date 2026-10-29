@@ -160,7 +160,7 @@ func runMessagesCommands(ctx context.Context, s Scenario, level string) Evidence
 		_, problem = submit(wrong)
 		add("resend_successful_target_rejected", successful.ID != "" && problem != nil && count(wrong, 0))
 
-	case "MSG-SEND-VARIANTS":
+	case "MSG-SEND-VARIANTS", "MSG-SEND-LATER", "MSG-SEND-EFFECT", "MSG-FORMATTING-SEND", "MSG-MENTION-SEND", "MSG-AUDIO-MESSAGE":
 		var sources contracts.ReadResult
 		add("source_status", client.Call(ctx, "sources.status", struct{}{}, &sources) == nil)
 		coverage := map[string]contracts.OperationCapability{}
@@ -192,7 +192,11 @@ func runMessagesCommands(ctx context.Context, s Scenario, level string) Evidence
 			{"kind": "mention", "handle_id": "handle-self", "utf16_location": 0, "utf16_length": 1},
 			{"kind": "audio"},
 		}
+		selected := map[string]string{"MSG-SEND-LATER": "schedule", "MSG-SEND-EFFECT": "effect", "MSG-FORMATTING-SEND": "formatting", "MSG-MENTION-SEND": "mention", "MSG-AUDIO-MESSAGE": "audio"}[s.ID]
 		for _, variant := range variants {
+			if selected != "" && variant["kind"] != selected {
+				continue
+			}
 			args := map[string]any{"chat_id": chat.ID, "text": text, "variant": variant}
 			if variant["kind"] == "audio" {
 				args["text"] = ""

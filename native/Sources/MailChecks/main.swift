@@ -10,6 +10,24 @@ func execute(_ path: String, _ sql: String) throws {
     defer { sqlite3_close(db) }
     guard sqlite3_exec(db, sql, nil, nil, nil) == SQLITE_OK else { throw SourceFailure.corrupt }
 }
+actor IdleSink: ObservationSink {
+    var checkpoints = 0
+    var messages = 0
+    var failures = 0
+    var firstRead = false
+    var lastLive = false
+    func sourceState(source: String, state: String, coverage: JSON, capabilities: [String], reason: String) async throws {}
+    func emit(source: String, generation: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) async throws {}
+    func emitCheckpoint(source: String, generation: String, checkpoint: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) async throws {
+        guard completionEvidence == "complete" else { throw SourceFailure.corrupt }
+        lastLive = live
+        firstRead = observations.first { $0["collection"].string == "mail.message" && $0["native_key"].string == "1" }?["data"]["read"].bool ?? false
+        checkpoints += 1
+        messages = observations.filter { $0["collection"].string == "mail.message" && $0["kind"].string == "upsert" }.count
+    }
+    func failed() { failures += 1 }
+}
+
 @main
 struct MailChecks {
     static func main() async throws {
@@ -50,7 +68,40 @@ struct MailChecks {
             try require(done && updated.count == 1007 && updated[6]["data"]["read"].bool && updated[6]["data"]["mailbox_ids"].array == [.string("mailbox/2")])
             try require(ProcessInfo.processInfo.systemUptime - started < 1)
         } else if scenario == "MAIL-IDLE" {
-            throw SourceFailure.capabilityUnproven
+            let sink = IdleSink()
+            let capture = Task {
+                do { try await source.capture(.null, into: sink) }
+                catch is CancellationError {}
+                catch { await sink.failed() }
+            }
+            defer { capture.cancel() }
+            let deadline = ContinuousClock.now.advanced(by: .seconds(10))
+            while await sink.checkpoints == 0 && ContinuousClock.now < deadline {
+                try await Task.sleep(for: .milliseconds(10))
+            }
+            try require(await sink.checkpoints == 1)
+            try require(await sink.messages == 1000)
+            try require(await sink.failures == 0)
+            try require(await !sink.firstRead)
+            try require(await !sink.lastLive)
+            try await Task.sleep(for: .seconds(35))
+            try require(await sink.checkpoints == 1)
+            try require(await sink.failures == 0)
+            try execute(path, "UPDATE messages SET read=1 WHERE ROWID=1")
+            let changed = ContinuousClock.now.advanced(by: .seconds(10))
+            while await sink.checkpoints == 1 && ContinuousClock.now < changed {
+                try await Task.sleep(for: .milliseconds(10))
+            }
+            try require(await sink.checkpoints == 2)
+            try require(await sink.messages == 1000)
+            try require(await sink.failures == 0)
+            try require(await sink.firstRead)
+            try require(await sink.lastLive)
+            try await Task.sleep(for: .seconds(2))
+            try require(await sink.checkpoints == 2)
+            try require(await sink.failures == 0)
+            capture.cancel()
+            await capture.value
         }
         let encoded = try JSONEncoder().encode(JSON.object(["observations": .array(captured)]))
         print(String(decoding: encoded, as: UTF8.self))
