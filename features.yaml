@@ -1087,7 +1087,7 @@ features:
     modules: [internal/shortcut, packaging/shortcuts, native/Sources/ShortcutsSource]
     depends_on: [core.shortcuts]
     status: limited
-    notes: Native inventory and text runner integrated; Clock, Focus, action discovery and file transforms remain unimplemented. Pack import and real qualification require leader action.
+    notes: Native inventory and text runner integrated; Clock, Focus and file transforms remain unimplemented; action discovery has a separate feature. Pack import and real qualification require leader action.
     scenarios:
       - {id: SC-CAPTURE, levels: [sim]}
       - {id: SC-RUN, levels: [sim]}
@@ -1288,3 +1288,18 @@ features:
       - scenario: FOC-SET-REAL
         level: real
         reason: Verified Set Focus action and parameters plus AB Focus import required; no real mutation attempted. DND syncs to Johan's iPhone.
+
+  - id: shortcuts.actions
+    title: Bounded installed App Intents discovery
+    requirements: [R-RW]
+    milestone: M0
+    modules: [native/Sources/ShortcutsSource, lab/simapple]
+    depends_on: [shortcuts.runner]
+    status: limited
+    notes: Read-only metadata discovery; no stable executable schema promised. File transform command remains pending.
+    scenarios:
+      - {id: SC-ACTIONS, levels: [sim, real]}
+    limits:
+      - scenario: SC-ACTIONS
+        level: real
+        reason: Real count qualification was not run because the shared heavy lane remained occupied beyond the ticket budget; metadata formats and coverage vary by app.

@@ -54,3 +54,11 @@ The Go adapter bounds stdout as it streams and monitors CLI output-file growth e
 The gateway waits for the configured shortcuts execution timeout (default 30 seconds, maximum five minutes) plus five seconds for completion transport. Admission expiry still fences dispatch. Resolve accepts retained successful runner-completion evidence tied to the prepared request without requiring an Apple object capture.
 
 SC-RUN uses only synthetic executables: a forking timeout fixture checks descendant termination in Go and Swift; continuous file/stdout writers prove termination before their execution deadline; a native 16-second success proves retained Resolve evidence, and a separate 16-second SimApple success proves the public gateway waits beyond 15 seconds. Absolute times are not scaled.
+
+## App Intents discovery (T29 slice)
+
+`shortcuts.actions` is a read-only query under `shortcuts:read`, taking an empty argument object. It reads installed application metadata under /Applications, /System/Applications and the current user's Applications directory, including extension bundles. It never launches applications or invokes an action. Results contain bundle identifier, action identifier and title, plus completeness and `schema_guaranteed: false`. Metadata is an undocumented, version-dependent inventory; missing metadata does not prove an app has no actions.
+
+Traversal skips symlinks and hidden entries, caps depth at 12, visits at 50,000, time at ten seconds, each metadata file at 4 MiB, total metadata at 32 MiB, rows at 2,000 and serialized output conservatively below 900 KB. Malformed metadata and traversal failures mark the result incomplete. Hidden and assistant-only actions are excluded. SC-ACTIONS sim generates a synthetic bundle, tests malformed metadata and symlink exclusion, and exercises the public query against SimApple. Real reads only installed metadata and retains pass/fail evidence without action names or app identifiers.
+
+`files.transform` command integration and FILES-TRANSFORM remain pending in this partial T29 slice; no transform capability is advertised.
