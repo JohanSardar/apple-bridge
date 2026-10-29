@@ -2,9 +2,20 @@
   "name": "AB Weather",
   "status": "limited",
   "verified_actions": [],
-  "required_actions": ["Get Current Weather", "Get Weather Forecast"],
-  "queries": ["weather.current", "weather.hourly", "weather.daily"],
-  "unavailable_queries": ["weather.minute", "weather.alerts"],
-  "reason": "Weather action identifiers, parameters and structured attribution output have no verified local export. No executable workflow is supplied or advertised.",
-  "qualification": "Verify identifiers and parameters from an exported workflow, retain provider attribution in output, build and sign AB Weather using tools/shortcuts, then qualify before registering public queries. No WeatherKit key. No import or Shortcuts UI interaction performed."
+  "required_actions": [
+    "Get Current Weather",
+    "Get Weather Forecast"
+  ],
+  "queries": [
+    "weather.current",
+    "weather.hourly",
+    "weather.daily"
+  ],
+  "unavailable_queries": [
+    "weather.minute",
+    "weather.alerts"
+  ],
+  "reason": "No verified Weather Shortcuts workflow is available. Current, hourly and daily queries use the permitted native WeatherKit fallback in the signed Mac Helper.",
+  "qualification": "WX-SIM qualifies the injected runner. WX-REAL exercises public WeatherKit queries and checks units, attribution, counts and plausible ranges without storing coordinates. Real reads need an Apple-signed Helper with com.apple.developer.weatherkit and a matching WeatherKit-enabled provisioning profile. The existing self-signed dev Helper and services profile do not provide that grant.",
+  "native_fallback": "native/Sources/WeatherSource/WeatherQueries.swift"
 }

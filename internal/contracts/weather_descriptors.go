@@ -1,9 +1,12 @@
-//go:build lab
-
 package contracts
 
 func init() {
+	RegisterSource("weather", "Weather", true)
 	registerDescriptors(func() []OperationDescriptor {
-		return []OperationDescriptor{{Name: "weather.current", Version: 1, Kind: QueryOp, Source: "system", Scope: "system:read", Input: Query{}, Output: QueryResult{}, Description: "Lab-only synthetic weather at latitude and longitude; never live weather"}}
+		var descriptors []OperationDescriptor
+		for _, name := range []string{"weather.current", "weather.hourly", "weather.daily"} {
+			descriptors = append(descriptors, OperationDescriptor{Name: name, Version: 1, Kind: QueryOp, Source: "weather", Scope: "weather:read", Input: Query{}, Output: QueryResult{}, Description: "Transient WeatherKit conditions or forecast with Celsius units and Apple attribution"})
+		}
+		return descriptors
 	})
 }
