@@ -6,10 +6,10 @@
   "passed": false,
   "metrics": {
     "matrix_count": 12,
-    "completed_matrix_count": 10,
+    "completed_matrix_count": 9,
     "passed_matrix_count": 1,
-    "failed_matrix_count": 9,
-    "incomplete_matrix_count": 2,
+    "failed_matrix_count": 8,
+    "incomplete_matrix_count": 3,
     "passed_test_count": 1,
     "failed_test_count": 8,
     "skipped_test_count": 0,
@@ -50,10 +50,6 @@
     },
     {
       "name": "firefox-light-phone",
-      "passed": false
-    },
-    {
-      "name": "firefox-light-desktop",
       "passed": false
     }
   ]
