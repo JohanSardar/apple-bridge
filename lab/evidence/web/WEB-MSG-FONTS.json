@@ -1,85 +1,24 @@
 {
-  "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[10.16 13.2 19.34] cpu_idle=36% cpus=8 other_heavy=1"
-  },
-  "run_id": "run_01M5HVYBP3XZMYMKQ6NV93PCZF",
-  "metrics": {
-    "browser_budget_ms": 180000,
-    "capture_observer_resets": 0,
-    "demo_messages": 5000,
-    "demo_startup_ms": 10967,
-    "fixture_setup_ms": 10967,
-    "matrix": [
-      "webkit-light-phone",
-      "webkit-light-desktop",
-      "chromium-light-phone",
-      "chromium-light-desktop"
-    ],
-    "report": "lab/evidence/private/web/reports/WEB-MSG-FONTS-webkit-light-phone-playwright.json",
-    "reports": [
-      "lab/evidence/private/web/reports/WEB-MSG-FONTS-webkit-light-phone-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-FONTS-webkit-light-desktop-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-FONTS-chromium-light-phone-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-FONTS-chromium-light-desktop-playwright.json"
-    ],
-    "server": "gateway",
-    "setups": [
-      {
-        "fixture_setup_ms": 10967,
-        "fixture_snapshot": null,
-        "project": "webkit-light-phone"
-      },
-      {
-        "fixture_setup_ms": 7200,
-        "fixture_snapshot": null,
-        "project": "webkit-light-desktop"
-      },
-      {
-        "fixture_setup_ms": 6866,
-        "fixture_snapshot": null,
-        "project": "chromium-light-phone"
-      },
-      {
-        "fixture_setup_ms": 7958,
-        "fixture_snapshot": null,
-        "project": "chromium-light-desktop"
-      }
-    ]
-  },
   "scenario": "WEB-MSG-FONTS",
   "level": "web",
+  "git_sha": "614794562717e2e2ffde5a0392d7e149f2a01dab",
+  "at": "2026-10-29T22:54:39.410287Z",
   "passed": true,
-  "git_sha": "6a3539494d913919d619eee606dd411fb9599bc0",
-  "at": "2026-10-22T13:13:56.163975Z",
+  "metrics": {
+    "matrix_count": 1,
+    "completed_matrix_count": 1,
+    "passed_matrix_count": 1,
+    "failed_matrix_count": 0,
+    "incomplete_matrix_count": 0,
+    "passed_test_count": 2,
+    "failed_test_count": 0,
+    "skipped_test_count": 0,
+    "report_sha256": "e75d0eeea72643c4e6df4418fceec0e5855b9b49ac83e81c8b299c65795cd973"
+  },
   "assertions": [
     {
-      "name": "webkit-light-phone:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/transcript-fonts.spec.ts:3:1 › WEB-MSG-FONTS Apple transcript uses native glyph fallback without downloading Inter (3.1s)\n\n  1 passed (5.3s)\n"
-    },
-    {
-      "name": "webkit-light-desktop:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/transcript-fonts.spec.ts:3:1 › WEB-MSG-FONTS Apple transcript uses native glyph fallback without downloading Inter (2.8s)\n\n  1 passed (5.0s)\n"
-    },
-    {
-      "name": "chromium-light-phone:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/transcript-fonts.spec.ts:3:1 › WEB-MSG-FONTS Apple transcript uses native glyph fallback without downloading Inter (1.3s)\n\n  1 passed (2.9s)\n"
-    },
-    {
-      "name": "chromium-light-desktop:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/transcript-fonts.spec.ts:3:1 › WEB-MSG-FONTS Apple transcript uses native glyph fallback without downloading Inter (1.6s)\n\n  1 passed (2.9s)\n"
-    },
-    {
-      "name": "credential_backend_override_restored",
+      "name": "chromium-light-desktop",
       "passed": true
     }
-  ],
-  "latency": {},
-  "hosts": [
-    "air"
   ]
 }

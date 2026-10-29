@@ -1,85 +1,36 @@
 {
-  "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[22.39 42.31 30.34] cpu_idle=33% cpus=8 other_heavy=2"
-  },
-  "run_id": "run_01M5HWYGSTKPHT0S8TZW8V76J6",
-  "metrics": {
-    "browser_budget_ms": 180000,
-    "capture_observer_resets": 0,
-    "demo_messages": 5000,
-    "demo_startup_ms": 12330,
-    "fixture_setup_ms": 12330,
-    "matrix": [
-      "webkit-light-phone",
-      "webkit-light-desktop",
-      "chromium-light-phone",
-      "chromium-light-desktop"
-    ],
-    "report": "lab/evidence/private/web/reports/WEB-MSG-COMPOSITION-webkit-light-phone-playwright.json",
-    "reports": [
-      "lab/evidence/private/web/reports/WEB-MSG-COMPOSITION-webkit-light-phone-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-COMPOSITION-webkit-light-desktop-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-COMPOSITION-chromium-light-phone-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-COMPOSITION-chromium-light-desktop-playwright.json"
-    ],
-    "server": "gateway",
-    "setups": [
-      {
-        "fixture_setup_ms": 12330,
-        "fixture_snapshot": null,
-        "project": "webkit-light-phone"
-      },
-      {
-        "fixture_setup_ms": 8353,
-        "fixture_snapshot": null,
-        "project": "webkit-light-desktop"
-      },
-      {
-        "fixture_setup_ms": 6831,
-        "fixture_snapshot": null,
-        "project": "chromium-light-phone"
-      },
-      {
-        "fixture_setup_ms": 9110,
-        "fixture_snapshot": null,
-        "project": "chromium-light-desktop"
-      }
-    ]
-  },
   "scenario": "WEB-MSG-COMPOSITION",
   "level": "web",
+  "git_sha": "2f263823cc9ea6d12081cffd761539783d2acf6e",
+  "at": "2026-10-29T23:20:19.644374Z",
   "passed": true,
-  "git_sha": "225da28c77e528a578ab06fcccea1da33cd014c7",
-  "at": "2026-10-22T13:31:29.979Z",
+  "metrics": {
+    "matrix_count": 4,
+    "completed_matrix_count": 4,
+    "passed_matrix_count": 4,
+    "failed_matrix_count": 0,
+    "incomplete_matrix_count": 0,
+    "passed_test_count": 12,
+    "failed_test_count": 0,
+    "skipped_test_count": 0,
+    "report_sha256": "ea6c41fb38cdd144018117d41288d41899b4f4bed88f8104b6a6be3066e98a56"
+  },
   "assertions": [
     {
-      "name": "webkit-light-phone:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 3 tests using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/transcript-composition.spec.ts:7:1 › WEB-MSG-COMPOSITION a same-sender image run uses exact owning cells and opens the clicked source (5.7s)\n  ✓  2 [webkit-light-phone] › tests/transcript-composition.spec.ts:21:1 › WEB-MSG-COMPOSITION a non-leading image deep link preserves its actual selection and usable source (1.4s)\n  ✓  3 [webkit-light-phone] › tests/transcript-layout.spec.ts:126:1 › WEB-MSG-COMPOSITION layout math groups only compatible image runs and retains actual members (101ms)\n\n  3 passed (13.9s)\n"
+      "name": "webkit-light-phone",
+      "passed": true
     },
     {
-      "name": "webkit-light-desktop:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 3 tests using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/transcript-composition.spec.ts:7:1 › WEB-MSG-COMPOSITION a same-sender image run uses exact owning cells and opens the clicked source (6.1s)\n  ✓  2 [webkit-light-desktop] › tests/transcript-composition.spec.ts:21:1 › WEB-MSG-COMPOSITION a non-leading image deep link preserves its actual selection and usable source (3.0s)\n  ✓  3 [webkit-light-desktop] › tests/transcript-layout.spec.ts:126:1 › WEB-MSG-COMPOSITION layout math groups only compatible image runs and retains actual members (165ms)\n\n  3 passed (12.3s)\n"
+      "name": "webkit-light-desktop",
+      "passed": true
     },
     {
-      "name": "chromium-light-phone:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 3 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/transcript-composition.spec.ts:7:1 › WEB-MSG-COMPOSITION a same-sender image run uses exact owning cells and opens the clicked source (5.1s)\n  ✓  2 [chromium-light-phone] › tests/transcript-composition.spec.ts:21:1 › WEB-MSG-COMPOSITION a non-leading image deep link preserves its actual selection and usable source (1.0s)\n  ✓  3 [chromium-light-phone] › tests/transcript-layout.spec.ts:126:1 › WEB-MSG-COMPOSITION layout math groups only compatible image runs and retains actual members (55ms)\n\n  3 passed (8.8s)\n"
+      "name": "chromium-light-phone",
+      "passed": true
     },
     {
-      "name": "chromium-light-desktop:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 3 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/transcript-composition.spec.ts:7:1 › WEB-MSG-COMPOSITION a same-sender image run uses exact owning cells and opens the clicked source (5.8s)\n  ✓  2 [chromium-light-desktop] › tests/transcript-composition.spec.ts:21:1 › WEB-MSG-COMPOSITION a non-leading image deep link preserves its actual selection and usable source (2.2s)\n  ✓  3 [chromium-light-desktop] › tests/transcript-layout.spec.ts:126:1 › WEB-MSG-COMPOSITION layout math groups only compatible image runs and retains actual members (93ms)\n\n  3 passed (12.4s)\n"
-    },
-    {
-      "name": "credential_backend_override_restored",
+      "name": "chromium-light-desktop",
       "passed": true
     }
-  ],
-  "latency": {},
-  "hosts": [
-    "air"
   ]
 }

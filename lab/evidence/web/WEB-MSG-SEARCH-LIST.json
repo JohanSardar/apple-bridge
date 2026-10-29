@@ -1,161 +1,24 @@
 {
-  "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[7.25 6.83 6.37] cpu_idle=78% cpus=8 other_heavy=0"
-  },
-  "run_id": "run_01M5J0MH72435ZPZKPYN7QRR11",
-  "metrics": {
-    "browser_budget_ms": 180000,
-    "capture_observer_resets": 0,
-    "demo_messages": 5000,
-    "demo_startup_ms": 5912,
-    "fixture_setup_ms": 5912,
-    "fixture_snapshot": {
-      "disk_bytes": 30687232,
-      "entry_bytes": 30695040,
-      "cache_bytes": 0,
-      "blob_payloads": 59,
-      "key": "1ee03ac13adfe00f6a8c62d4adb611a03b727123223b789da078c388556b74e6",
-      "cache_hit": false,
-      "build_ms": 5855,
-      "copy_ms": 618,
-      "records": 6865,
-      "fresh_digest": "806c48623eaf39af2996d5e0b2a10130548ac552fd77e4d75e18c5e756c80736",
-      "copy_digest": "806c48623eaf39af2996d5e0b2a10130548ac552fd77e4d75e18c5e756c80736",
-      "verified": true,
-      "copy_method": "clonefile"
-    },
-    "matrix": [
-      "webkit-light-phone",
-      "webkit-light-desktop",
-      "chromium-light-phone",
-      "chromium-light-desktop"
-    ],
-    "report": "lab/evidence/private/web/reports/WEB-MSG-SEARCH-LIST-webkit-light-phone-playwright.json",
-    "reports": [
-      "lab/evidence/private/web/reports/WEB-MSG-SEARCH-LIST-webkit-light-phone-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-SEARCH-LIST-webkit-light-desktop-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-SEARCH-LIST-chromium-light-phone-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-SEARCH-LIST-chromium-light-desktop-playwright.json"
-    ],
-    "server": "gateway",
-    "setups": [
-      {
-        "fixture_setup_ms": 5912,
-        "fixture_snapshot": {
-          "disk_bytes": 30687232,
-          "entry_bytes": 30695040,
-          "cache_bytes": 0,
-          "blob_payloads": 59,
-          "key": "1ee03ac13adfe00f6a8c62d4adb611a03b727123223b789da078c388556b74e6",
-          "cache_hit": false,
-          "build_ms": 5855,
-          "copy_ms": 618,
-          "records": 6865,
-          "fresh_digest": "806c48623eaf39af2996d5e0b2a10130548ac552fd77e4d75e18c5e756c80736",
-          "copy_digest": "806c48623eaf39af2996d5e0b2a10130548ac552fd77e4d75e18c5e756c80736",
-          "verified": true,
-          "copy_method": "clonefile"
-        },
-        "project": "webkit-light-phone"
-      },
-      {
-        "fixture_setup_ms": 6346,
-        "fixture_snapshot": {
-          "disk_bytes": 30724096,
-          "entry_bytes": 30731904,
-          "cache_bytes": 0,
-          "blob_payloads": 59,
-          "key": "1ee03ac13adfe00f6a8c62d4adb611a03b727123223b789da078c388556b74e6",
-          "cache_hit": false,
-          "build_ms": 6286,
-          "copy_ms": 663,
-          "records": 6865,
-          "fresh_digest": "c05521aba02af6511aefda7552e5329045c3c850f5f5bb16173a597564ef34b2",
-          "copy_digest": "c05521aba02af6511aefda7552e5329045c3c850f5f5bb16173a597564ef34b2",
-          "verified": true,
-          "copy_method": "clonefile"
-        },
-        "project": "webkit-light-desktop"
-      },
-      {
-        "fixture_setup_ms": 11020,
-        "fixture_snapshot": {
-          "disk_bytes": 30662656,
-          "entry_bytes": 30670464,
-          "cache_bytes": 0,
-          "blob_payloads": 59,
-          "key": "1ee03ac13adfe00f6a8c62d4adb611a03b727123223b789da078c388556b74e6",
-          "cache_hit": false,
-          "build_ms": 10927,
-          "copy_ms": 1034,
-          "records": 6865,
-          "fresh_digest": "ddfba26df28dfb12af4951b88532c2c7a5886add3da45d944dec605a2ca4d853",
-          "copy_digest": "ddfba26df28dfb12af4951b88532c2c7a5886add3da45d944dec605a2ca4d853",
-          "verified": true,
-          "copy_method": "clonefile"
-        },
-        "project": "chromium-light-phone"
-      },
-      {
-        "fixture_setup_ms": 9202,
-        "fixture_snapshot": {
-          "disk_bytes": 30691328,
-          "entry_bytes": 30699136,
-          "cache_bytes": 0,
-          "blob_payloads": 59,
-          "key": "1ee03ac13adfe00f6a8c62d4adb611a03b727123223b789da078c388556b74e6",
-          "cache_hit": false,
-          "build_ms": 9113,
-          "copy_ms": 740,
-          "records": 6865,
-          "fresh_digest": "cbd537a9af8fe448ddcda4261551ea013f0674578949f2fec7022282eeadcd01",
-          "copy_digest": "cbd537a9af8fe448ddcda4261551ea013f0674578949f2fec7022282eeadcd01",
-          "verified": true,
-          "copy_method": "clonefile"
-        },
-        "project": "chromium-light-desktop"
-      }
-    ],
-    "template_cold_setup_ms": {
-      "generate": 98,
-      "list": 1357,
-      "seed": 2766
-    }
-  },
   "scenario": "WEB-MSG-SEARCH-LIST",
   "level": "web",
+  "git_sha": "614794562717e2e2ffde5a0392d7e149f2a01dab",
+  "at": "2026-10-29T22:45:13.532008Z",
   "passed": true,
-  "git_sha": "448155dab96415e80926775cc1981e8461651d84",
-  "at": "2026-10-22T14:35:57.026315Z",
+  "metrics": {
+    "matrix_count": 1,
+    "completed_matrix_count": 1,
+    "passed_matrix_count": 1,
+    "failed_matrix_count": 0,
+    "incomplete_matrix_count": 0,
+    "passed_test_count": 2,
+    "failed_test_count": 0,
+    "skipped_test_count": 0,
+    "report_sha256": "ca90acd9e1b923fe50781a4623a824ce3907717e386848d729ac18b2f0791535"
+  },
   "assertions": [
     {
-      "name": "webkit-light-phone:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/list-search.spec.ts:5:1 › WEB-MSG-SEARCH-LIST inline title and all participant matches require no search request (1.2s)\n  ✓  2 [webkit-light-phone] › tests/list-search.spec.ts:12:1 › WEB-MSG-SEARCH-LIST pinned matches, search shortcut and IME-safe full-results hook (692ms)\n\n  2 passed (4.5s)\n"
-    },
-    {
-      "name": "webkit-light-desktop:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/list-search.spec.ts:5:1 › WEB-MSG-SEARCH-LIST inline title and all participant matches require no search request (1.7s)\n  ✓  2 [webkit-light-desktop] › tests/list-search.spec.ts:12:1 › WEB-MSG-SEARCH-LIST pinned matches, search shortcut and IME-safe full-results hook (2.0s)\n\n  2 passed (8.3s)\n"
-    },
-    {
-      "name": "chromium-light-phone:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/list-search.spec.ts:5:1 › WEB-MSG-SEARCH-LIST inline title and all participant matches require no search request (1.3s)\n  ✓  2 [chromium-light-phone] › tests/list-search.spec.ts:12:1 › WEB-MSG-SEARCH-LIST pinned matches, search shortcut and IME-safe full-results hook (758ms)\n\n  2 passed (6.2s)\n"
-    },
-    {
-      "name": "chromium-light-desktop:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/list-search.spec.ts:5:1 › WEB-MSG-SEARCH-LIST inline title and all participant matches require no search request (1.3s)\n  ✓  2 [chromium-light-desktop] › tests/list-search.spec.ts:12:1 › WEB-MSG-SEARCH-LIST pinned matches, search shortcut and IME-safe full-results hook (1.2s)\n\n  2 passed (6.6s)\n"
-    },
-    {
-      "name": "credential_backend_override_restored",
+      "name": "chromium-light-desktop",
       "passed": true
     }
-  ],
-  "latency": {},
-  "hosts": [
-    "air"
   ]
 }

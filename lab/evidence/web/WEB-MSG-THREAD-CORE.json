@@ -1,60 +1,24 @@
 {
-  "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[40.93 38.35 48.7] cpu_idle=36% cpus=8 other_heavy=0"
-  },
-  "run_id": "run_01M5H38VSGKP9Z24Z6DK3XV1KZ",
-  "metrics": {
-    "demo_messages": 5000,
-    "demo_startup_ms": 24921,
-    "matrix": [
-      "webkit-light-phone",
-      "webkit-light-desktop",
-      "chromium-light-phone",
-      "chromium-light-desktop"
-    ],
-    "report": "lab/evidence/private/web/reports/WEB-MSG-THREAD-CORE-webkit-light-phone-playwright.json",
-    "reports": [
-      "lab/evidence/private/web/reports/WEB-MSG-THREAD-CORE-webkit-light-phone-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-THREAD-CORE-webkit-light-desktop-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-THREAD-CORE-chromium-light-phone-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-THREAD-CORE-chromium-light-desktop-playwright.json"
-    ],
-    "server": "gateway"
-  },
   "scenario": "WEB-MSG-THREAD-CORE",
   "level": "web",
+  "git_sha": "614794562717e2e2ffde5a0392d7e149f2a01dab",
+  "at": "2026-10-29T22:46:22.384741Z",
   "passed": true,
-  "git_sha": "f71addca38a8991808dd6c324122b817c9662946",
-  "at": "2026-10-22T06:02:45.938021Z",
+  "metrics": {
+    "matrix_count": 1,
+    "completed_matrix_count": 1,
+    "passed_matrix_count": 1,
+    "failed_matrix_count": 0,
+    "incomplete_matrix_count": 0,
+    "passed_test_count": 8,
+    "failed_test_count": 0,
+    "skipped_test_count": 0,
+    "report_sha256": "54e66e12b6f478ba2dc043b3a7e92da5eda65261eb6095e582f976b4dda88b18"
+  },
   "assertions": [
     {
-      "name": "webkit-light-phone:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 6 tests using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/transcript-core.spec.ts:21:1 › WEB-MSG-THREAD-CORE transcript joins runs, preserves geometry and renders service colors (26.8s)\n  ✓  2 [webkit-light-phone] › tests/transcript-core.spec.ts:54:1 › WEB-MSG-THREAD-CORE transcript detects links and limits a mention to its UTF-16 range (8.2s)\n  ✓  3 [webkit-light-phone] › tests/transcript-core.spec.ts:60:1 › WEB-MSG-THREAD-CORE transcript shows edit, unsent, failure and group-event lines (5.8s)\n  ✓  4 [webkit-light-phone] › tests/transcript-core.spec.ts:69:1 › WEB-MSG-THREAD-CORE transcript opens at unread and bounds its paged window (5.1s)\n  ✓  5 [webkit-light-phone] › tests/transcript-core.spec.ts:82:1 › WEB-MSG-THREAD-CORE transcript keeps a visible bubble fixed when paging forward (5.3s)\n  ✓  6 [webkit-light-phone] › tests/transcript-layout.spec.ts:105:1 › WEB-MSG-THREAD-CORE layout math gives exactly the final bubble a tail for every same-sender run regardless of ID ties (3.6s)\n\n  6 passed (1.0m)\n"
-    },
-    {
-      "name": "webkit-light-desktop:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 6 tests using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/transcript-core.spec.ts:21:1 › WEB-MSG-THREAD-CORE transcript joins runs, preserves geometry and renders service colors (17.9s)\n  ✓  2 [webkit-light-desktop] › tests/transcript-core.spec.ts:54:1 › WEB-MSG-THREAD-CORE transcript detects links and limits a mention to its UTF-16 range (7.9s)\n  ✓  3 [webkit-light-desktop] › tests/transcript-core.spec.ts:60:1 › WEB-MSG-THREAD-CORE transcript shows edit, unsent, failure and group-event lines (7.1s)\n  ✓  4 [webkit-light-desktop] › tests/transcript-core.spec.ts:69:1 › WEB-MSG-THREAD-CORE transcript opens at unread and bounds its paged window (4.3s)\n  ✓  5 [webkit-light-desktop] › tests/transcript-core.spec.ts:82:1 › WEB-MSG-THREAD-CORE transcript keeps a visible bubble fixed when paging forward (5.6s)\n  ✓  6 [webkit-light-desktop] › tests/transcript-layout.spec.ts:105:1 › WEB-MSG-THREAD-CORE layout math gives exactly the final bubble a tail for every same-sender run regardless of ID ties (1.9s)\n\n  6 passed (49.5s)\n"
-    },
-    {
-      "name": "chromium-light-phone:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 6 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/transcript-core.spec.ts:21:1 › WEB-MSG-THREAD-CORE transcript joins runs, preserves geometry and renders service colors (19.5s)\n  ✓  2 [chromium-light-phone] › tests/transcript-core.spec.ts:54:1 › WEB-MSG-THREAD-CORE transcript detects links and limits a mention to its UTF-16 range (6.2s)\n  ✓  3 [chromium-light-phone] › tests/transcript-core.spec.ts:60:1 › WEB-MSG-THREAD-CORE transcript shows edit, unsent, failure and group-event lines (3.1s)\n  ✓  4 [chromium-light-phone] › tests/transcript-core.spec.ts:69:1 › WEB-MSG-THREAD-CORE transcript opens at unread and bounds its paged window (2.5s)\n  ✓  5 [chromium-light-phone] › tests/transcript-core.spec.ts:82:1 › WEB-MSG-THREAD-CORE transcript keeps a visible bubble fixed when paging forward (4.7s)\n  ✓  6 [chromium-light-phone] › tests/transcript-layout.spec.ts:105:1 › WEB-MSG-THREAD-CORE layout math gives exactly the final bubble a tail for every same-sender run regardless of ID ties (3.6s)\n\n  6 passed (47.1s)\n"
-    },
-    {
-      "name": "chromium-light-desktop:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 6 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/transcript-core.spec.ts:21:1 › WEB-MSG-THREAD-CORE transcript joins runs, preserves geometry and renders service colors (15.6s)\n  ✓  2 [chromium-light-desktop] › tests/transcript-core.spec.ts:54:1 › WEB-MSG-THREAD-CORE transcript detects links and limits a mention to its UTF-16 range (5.6s)\n  ✓  3 [chromium-light-desktop] › tests/transcript-core.spec.ts:60:1 › WEB-MSG-THREAD-CORE transcript shows edit, unsent, failure and group-event lines (3.4s)\n  ✓  4 [chromium-light-desktop] › tests/transcript-core.spec.ts:69:1 › WEB-MSG-THREAD-CORE transcript opens at unread and bounds its paged window (2.6s)\n  ✓  5 [chromium-light-desktop] › tests/transcript-core.spec.ts:82:1 › WEB-MSG-THREAD-CORE transcript keeps a visible bubble fixed when paging forward (4.2s)\n  ✓  6 [chromium-light-desktop] › tests/transcript-layout.spec.ts:105:1 › WEB-MSG-THREAD-CORE layout math gives exactly the final bubble a tail for every same-sender run regardless of ID ties (2.6s)\n\n  6 passed (37.7s)\n"
-    },
-    {
-      "name": "credential_backend_override_restored",
+      "name": "chromium-light-desktop",
       "passed": true
     }
-  ],
-  "latency": {},
-  "hosts": [
-    "air"
   ]
 }

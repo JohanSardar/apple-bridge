@@ -1,109 +1,24 @@
 {
-  "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[7.87 7.08 6.5] cpu_idle=56% cpus=8 other_heavy=1"
-  },
-  "run_id": "run_01M5J0PWMJN9184MGMJ7EN9MEX",
-  "metrics": {
-    "browser_budget_ms": 180000,
-    "capture_observer_resets": 0,
-    "demo_messages": 5000,
-    "demo_startup_ms": 9929,
-    "fixture_setup_ms": 9929,
-    "fixture_snapshot": {
-      "disk_bytes": 30674944,
-      "entry_bytes": 30682752,
-      "cache_bytes": 0,
-      "blob_payloads": 59,
-      "key": "1ee03ac13adfe00f6a8c62d4adb611a03b727123223b789da078c388556b74e6",
-      "cache_hit": false,
-      "build_ms": 9805,
-      "copy_ms": 1044,
-      "records": 6865,
-      "fresh_digest": "ea6b9a7ad60653a61a4f6113c403ad17b819549b30e2c5842c0a1224a9873536",
-      "copy_digest": "ea6b9a7ad60653a61a4f6113c403ad17b819549b30e2c5842c0a1224a9873536",
-      "verified": true,
-      "copy_method": "clonefile"
-    },
-    "matrix": [
-      "webkit-light-desktop",
-      "chromium-light-desktop"
-    ],
-    "report": "lab/evidence/private/web/reports/WEB-MSG-SIDEBAR-webkit-light-desktop-playwright.json",
-    "reports": [
-      "lab/evidence/private/web/reports/WEB-MSG-SIDEBAR-webkit-light-desktop-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-SIDEBAR-chromium-light-desktop-playwright.json"
-    ],
-    "server": "gateway",
-    "setups": [
-      {
-        "fixture_setup_ms": 9929,
-        "fixture_snapshot": {
-          "disk_bytes": 30674944,
-          "entry_bytes": 30682752,
-          "cache_bytes": 0,
-          "blob_payloads": 59,
-          "key": "1ee03ac13adfe00f6a8c62d4adb611a03b727123223b789da078c388556b74e6",
-          "cache_hit": false,
-          "build_ms": 9805,
-          "copy_ms": 1044,
-          "records": 6865,
-          "fresh_digest": "ea6b9a7ad60653a61a4f6113c403ad17b819549b30e2c5842c0a1224a9873536",
-          "copy_digest": "ea6b9a7ad60653a61a4f6113c403ad17b819549b30e2c5842c0a1224a9873536",
-          "verified": true,
-          "copy_method": "clonefile"
-        },
-        "project": "webkit-light-desktop"
-      },
-      {
-        "fixture_setup_ms": 6764,
-        "fixture_snapshot": {
-          "disk_bytes": 30674944,
-          "entry_bytes": 30682752,
-          "cache_bytes": 0,
-          "blob_payloads": 59,
-          "key": "1ee03ac13adfe00f6a8c62d4adb611a03b727123223b789da078c388556b74e6",
-          "cache_hit": false,
-          "build_ms": 6693,
-          "copy_ms": 641,
-          "records": 6865,
-          "fresh_digest": "4149651dc32e4d6990b4e2e706f5c7d379db1db82c31abb8cc3affd570a9a05a",
-          "copy_digest": "4149651dc32e4d6990b4e2e706f5c7d379db1db82c31abb8cc3affd570a9a05a",
-          "verified": true,
-          "copy_method": "clonefile"
-        },
-        "project": "chromium-light-desktop"
-      }
-    ],
-    "template_cold_setup_ms": {
-      "generate": 179,
-      "list": 2249,
-      "seed": 4533
-    }
-  },
   "scenario": "WEB-MSG-SIDEBAR",
   "level": "web",
+  "git_sha": "614794562717e2e2ffde5a0392d7e149f2a01dab",
+  "at": "2026-10-29T22:45:47.32225Z",
   "passed": true,
-  "git_sha": "448155dab96415e80926775cc1981e8461651d84",
-  "at": "2026-10-22T14:37:14.258939Z",
+  "metrics": {
+    "matrix_count": 1,
+    "completed_matrix_count": 1,
+    "passed_matrix_count": 1,
+    "failed_matrix_count": 0,
+    "incomplete_matrix_count": 0,
+    "passed_test_count": 1,
+    "failed_test_count": 0,
+    "skipped_test_count": 0,
+    "report_sha256": "c1c2f63cf7626a20666cba13f4736475b33f00f08f7cba68223feba45d16bc52"
+  },
   "assertions": [
     {
-      "name": "webkit-light-desktop:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/list-sidebar.spec.ts:4:1 › WEB-MSG-SIDEBAR bounded resize persists only for trusted sessions (4.4s)\n\n  1 passed (6.9s)\n"
-    },
-    {
-      "name": "chromium-light-desktop:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/list-sidebar.spec.ts:4:1 › WEB-MSG-SIDEBAR bounded resize persists only for trusted sessions (1.2s)\n\n  1 passed (2.0s)\n"
-    },
-    {
-      "name": "credential_backend_override_restored",
+      "name": "chromium-light-desktop",
       "passed": true
     }
-  ],
-  "latency": {},
-  "hosts": [
-    "air"
   ]
 }

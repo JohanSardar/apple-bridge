@@ -1,85 +1,24 @@
 {
-  "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[6.81 6.25 6.13] cpu_idle=67% cpus=8 other_heavy=1"
-  },
-  "run_id": "run_01M5J1JGT965KAV7PD35Z95DMM",
-  "metrics": {
-    "browser_budget_ms": 180000,
-    "capture_observer_resets": 0,
-    "demo_messages": 5000,
-    "demo_startup_ms": 7196,
-    "fixture_setup_ms": 7196,
-    "matrix": [
-      "webkit-light-phone",
-      "webkit-light-desktop",
-      "chromium-light-phone",
-      "chromium-light-desktop"
-    ],
-    "report": "lab/evidence/private/web/reports/WEB-MSG-INTERACTION-MOTION-webkit-light-phone-playwright.json",
-    "reports": [
-      "lab/evidence/private/web/reports/WEB-MSG-INTERACTION-MOTION-webkit-light-phone-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-INTERACTION-MOTION-webkit-light-desktop-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-INTERACTION-MOTION-chromium-light-phone-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-INTERACTION-MOTION-chromium-light-desktop-playwright.json"
-    ],
-    "server": "gateway",
-    "setups": [
-      {
-        "fixture_setup_ms": 7196,
-        "fixture_snapshot": null,
-        "project": "webkit-light-phone"
-      },
-      {
-        "fixture_setup_ms": 10508,
-        "fixture_snapshot": null,
-        "project": "webkit-light-desktop"
-      },
-      {
-        "fixture_setup_ms": 12175,
-        "fixture_snapshot": null,
-        "project": "chromium-light-phone"
-      },
-      {
-        "fixture_setup_ms": 8169,
-        "fixture_snapshot": null,
-        "project": "chromium-light-desktop"
-      }
-    ]
-  },
   "scenario": "WEB-MSG-INTERACTION-MOTION",
   "level": "web",
+  "git_sha": "614794562717e2e2ffde5a0392d7e149f2a01dab",
+  "at": "2026-10-29T22:53:10.754142Z",
   "passed": true,
-  "git_sha": "3a3897ab7dd6477ad3ea0e2d47cef01150ed0911",
-  "at": "2026-10-22T14:52:19.657273Z",
+  "metrics": {
+    "matrix_count": 1,
+    "completed_matrix_count": 1,
+    "passed_matrix_count": 1,
+    "failed_matrix_count": 0,
+    "incomplete_matrix_count": 0,
+    "passed_test_count": 5,
+    "failed_test_count": 0,
+    "skipped_test_count": 0,
+    "report_sha256": "461039d7c568e952c364e1fb0108d3a6525f48a40567431e4955ce5cfcee95e0"
+  },
   "assertions": [
     {
-      "name": "webkit-light-phone:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 5 tests using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/transcript-interaction-motion.spec.ts:15:1 › WEB-MSG-INTERACTION-MOTION live reaction badges pop and removing the final reaction closes its reader (9.3s)\n  ✓  2 [webkit-light-phone] › tests/transcript-interaction-motion.spec.ts:19:1 › WEB-MSG-INTERACTION-MOTION edit history springs open and returns to natural geometry (4.5s)\n  ✓  3 [webkit-light-phone] › tests/transcript-interaction-motion.spec.ts:22:1 › WEB-MSG-INTERACTION-MOTION deep-link pulse, staggered replies and the new pill respect the bounded window (6.0s)\n  ✓  4 [webkit-light-phone] › tests/transcript-interaction-motion.spec.ts:26:1 › WEB-MSG-INTERACTION-MOTION Reduce Motion requests150ms fades for history, pulse, pill and replies without staggering (6.2s)\n  ✓  5 [webkit-light-phone] › tests/transcript-interaction-motion.spec.ts:30:1 › WEB-MSG-INTERACTION-MOTION Reduce Motion fades new reactions without a scale (4.9s)\n\n  5 passed (34.0s)\n"
-    },
-    {
-      "name": "webkit-light-desktop:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 5 tests using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/transcript-interaction-motion.spec.ts:15:1 › WEB-MSG-INTERACTION-MOTION live reaction badges pop and removing the final reaction closes its reader (7.6s)\n  ✓  2 [webkit-light-desktop] › tests/transcript-interaction-motion.spec.ts:19:1 › WEB-MSG-INTERACTION-MOTION edit history springs open and returns to natural geometry (4.1s)\n  ✓  3 [webkit-light-desktop] › tests/transcript-interaction-motion.spec.ts:22:1 › WEB-MSG-INTERACTION-MOTION deep-link pulse, staggered replies and the new pill respect the bounded window (5.6s)\n  ✓  4 [webkit-light-desktop] › tests/transcript-interaction-motion.spec.ts:26:1 › WEB-MSG-INTERACTION-MOTION Reduce Motion requests150ms fades for history, pulse, pill and replies without staggering (6.1s)\n  ✓  5 [webkit-light-desktop] › tests/transcript-interaction-motion.spec.ts:30:1 › WEB-MSG-INTERACTION-MOTION Reduce Motion fades new reactions without a scale (3.8s)\n\n  5 passed (31.0s)\n"
-    },
-    {
-      "name": "chromium-light-phone:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 5 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/transcript-interaction-motion.spec.ts:15:1 › WEB-MSG-INTERACTION-MOTION live reaction badges pop and removing the final reaction closes its reader (6.9s)\n  ✓  2 [chromium-light-phone] › tests/transcript-interaction-motion.spec.ts:19:1 › WEB-MSG-INTERACTION-MOTION edit history springs open and returns to natural geometry (3.9s)\n  ✓  3 [chromium-light-phone] › tests/transcript-interaction-motion.spec.ts:22:1 › WEB-MSG-INTERACTION-MOTION deep-link pulse, staggered replies and the new pill respect the bounded window (4.8s)\n  ✓  4 [chromium-light-phone] › tests/transcript-interaction-motion.spec.ts:26:1 › WEB-MSG-INTERACTION-MOTION Reduce Motion requests150ms fades for history, pulse, pill and replies without staggering (2.7s)\n  ✓  5 [chromium-light-phone] › tests/transcript-interaction-motion.spec.ts:30:1 › WEB-MSG-INTERACTION-MOTION Reduce Motion fades new reactions without a scale (2.2s)\n\n  5 passed (23.7s)\n"
-    },
-    {
-      "name": "chromium-light-desktop:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 5 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/transcript-interaction-motion.spec.ts:15:1 › WEB-MSG-INTERACTION-MOTION live reaction badges pop and removing the final reaction closes its reader (7.1s)\n  ✓  2 [chromium-light-desktop] › tests/transcript-interaction-motion.spec.ts:19:1 › WEB-MSG-INTERACTION-MOTION edit history springs open and returns to natural geometry (3.9s)\n  ✓  3 [chromium-light-desktop] › tests/transcript-interaction-motion.spec.ts:22:1 › WEB-MSG-INTERACTION-MOTION deep-link pulse, staggered replies and the new pill respect the bounded window (5.0s)\n  ✓  4 [chromium-light-desktop] › tests/transcript-interaction-motion.spec.ts:26:1 › WEB-MSG-INTERACTION-MOTION Reduce Motion requests150ms fades for history, pulse, pill and replies without staggering (3.8s)\n  ✓  5 [chromium-light-desktop] › tests/transcript-interaction-motion.spec.ts:30:1 › WEB-MSG-INTERACTION-MOTION Reduce Motion fades new reactions without a scale (2.1s)\n\n  5 passed (23.9s)\n"
-    },
-    {
-      "name": "credential_backend_override_restored",
+      "name": "chromium-light-desktop",
       "passed": true
     }
-  ],
-  "latency": {},
-  "hosts": [
-    "air"
   ]
 }

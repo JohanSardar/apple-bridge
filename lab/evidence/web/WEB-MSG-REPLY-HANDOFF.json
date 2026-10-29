@@ -1,85 +1,24 @@
 {
-  "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[5.29 5.13 5.81] cpu_idle=59% cpus=8 other_heavy=1"
-  },
-  "run_id": "run_01M5J07CR6SWA0Q2J0PPVQ0X7H",
-  "metrics": {
-    "browser_budget_ms": 180000,
-    "capture_observer_resets": 0,
-    "demo_messages": 5000,
-    "demo_startup_ms": 4208,
-    "fixture_setup_ms": 4208,
-    "matrix": [
-      "webkit-light-phone",
-      "webkit-light-desktop",
-      "chromium-light-phone",
-      "chromium-light-desktop"
-    ],
-    "report": "lab/evidence/private/web/reports/WEB-MSG-REPLY-HANDOFF-webkit-light-phone-playwright.json",
-    "reports": [
-      "lab/evidence/private/web/reports/WEB-MSG-REPLY-HANDOFF-webkit-light-phone-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-REPLY-HANDOFF-webkit-light-desktop-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-REPLY-HANDOFF-chromium-light-phone-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-REPLY-HANDOFF-chromium-light-desktop-playwright.json"
-    ],
-    "server": "gateway",
-    "setups": [
-      {
-        "fixture_setup_ms": 4208,
-        "fixture_snapshot": null,
-        "project": "webkit-light-phone"
-      },
-      {
-        "fixture_setup_ms": 3519,
-        "fixture_snapshot": null,
-        "project": "webkit-light-desktop"
-      },
-      {
-        "fixture_setup_ms": 6374,
-        "fixture_snapshot": null,
-        "project": "chromium-light-phone"
-      },
-      {
-        "fixture_setup_ms": 3527,
-        "fixture_snapshot": null,
-        "project": "chromium-light-desktop"
-      }
-    ]
-  },
   "scenario": "WEB-MSG-REPLY-HANDOFF",
   "level": "web",
+  "git_sha": "614794562717e2e2ffde5a0392d7e149f2a01dab",
+  "at": "2026-10-29T22:49:35.7214Z",
   "passed": true,
-  "git_sha": "654d2b7a3de890721a7695cbbaa607bb62b48684",
-  "at": "2026-10-22T14:28:46.471013Z",
+  "metrics": {
+    "matrix_count": 1,
+    "completed_matrix_count": 1,
+    "passed_matrix_count": 1,
+    "failed_matrix_count": 0,
+    "incomplete_matrix_count": 0,
+    "passed_test_count": 1,
+    "failed_test_count": 0,
+    "skipped_test_count": 0,
+    "report_sha256": "f56c200d1268fb22a9b824ef27a964b05d98268ba80a07e9f8b37b8d8b782265"
+  },
   "assertions": [
     {
-      "name": "webkit-light-phone:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/transcript-reply-handoff.spec.ts:5:1 › WEB-MSG-REPLY-HANDOFF a parent reply target closes the reader without stealing Composer focus (1.5s)\n\n  1 passed (3.1s)\n"
-    },
-    {
-      "name": "webkit-light-desktop:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/transcript-reply-handoff.spec.ts:5:1 › WEB-MSG-REPLY-HANDOFF a parent reply target closes the reader without stealing Composer focus (659ms)\n\n  1 passed (1.5s)\n"
-    },
-    {
-      "name": "chromium-light-phone:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/transcript-reply-handoff.spec.ts:5:1 › WEB-MSG-REPLY-HANDOFF a parent reply target closes the reader without stealing Composer focus (400ms)\n\n  1 passed (1.1s)\n"
-    },
-    {
-      "name": "chromium-light-desktop:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 1 test using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/transcript-reply-handoff.spec.ts:5:1 › WEB-MSG-REPLY-HANDOFF a parent reply target closes the reader without stealing Composer focus (399ms)\n\n  1 passed (1.1s)\n"
-    },
-    {
-      "name": "credential_backend_override_restored",
+      "name": "chromium-light-desktop",
       "passed": true
     }
-  ],
-  "latency": {},
-  "hosts": [
-    "air"
   ]
 }
