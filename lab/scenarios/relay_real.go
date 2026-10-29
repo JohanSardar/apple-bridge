@@ -56,6 +56,27 @@ func runRelayReal(ctx context.Context, s Scenario, e Evidence) Evidence {
 	if err != nil {
 		return e
 	}
+	if s.ID == "CONN-CLAUDE-CODE" {
+		token, err := exec.CommandContext(ctx, "bin/bridge", "token", "create", "--remote", "--scope", "admin", "--home", w.Gateway.Home).Output()
+		add("remote_token", err == nil)
+		if err != nil {
+			return e
+		}
+		config, _ := json.Marshal(map[string]any{"mcpServers": map[string]any{"apple-bridge-relay-test": map[string]any{"type": "http", "url": status.URL + "/mcp", "headers": map[string]string{"Authorization": "Bearer " + strings.TrimSpace(string(token))}}}})
+		err = os.WriteFile(filepath.Join(w.Dir, ".mcp.json"), config, 0600)
+		add("isolated_claude_configuration", err == nil)
+		if err != nil {
+			return e
+		}
+		callCtx, callCancel := context.WithTimeout(ctx, 90*time.Second)
+		defer callCancel()
+		call := exec.CommandContext(callCtx, "claude", "-p", "Call mcp__apple-bridge-relay-test__records_query exactly once with limit 1. Do not use any other tool. Report only success or failure.", "--mcp-config", filepath.Join(w.Dir, ".mcp.json"), "--strict-mcp-config", "--allowedTools", "mcp__apple-bridge-relay-test__records_query", "--output-format", "stream-json", "--verbose", "--max-turns", "3")
+		call.Dir = w.Dir
+		output, err := call.Output()
+		add("claude_code_real_tool_call", err == nil && bytes.Contains(output, []byte(`"name":"mcp__apple-bridge-relay-test__records_query"`)) && bytes.Contains(output, []byte(`"type":"tool_result"`)) && !bytes.Contains(output, []byte(`"is_error":true`)))
+
+		return e
+	}
 	ip := remotePublicChecks(ctx, status, u, add)
 	if ip == "" {
 		return e
@@ -98,6 +119,7 @@ func runRelayReal(ctx context.Context, s Scenario, e Evidence) Evidence {
 	for name, ok := range result.Checks {
 		add(name, ok)
 	}
+
 	if s.ID == "CONN-RELAY-CLAUDE" {
 
 		config, _ := json.Marshal(map[string]any{"mcpServers": map[string]any{"apple-bridge-relay-test": map[string]any{"type": "http", "url": status.URL + "/mcp", "headers": map[string]string{"Authorization": "Bearer " + strings.TrimSpace(string(token))}}}})
@@ -124,6 +146,7 @@ func runRelayReal(ctx context.Context, s Scenario, e Evidence) Evidence {
 		}
 
 	}
+
 	client := &http.Client{Timeout: 90 * time.Second}
 	_, err = remote.ProbeHTTP(ctx, client, status.URL, 60*time.Second)
 	add("trusted_public_oauth_mcp_and_60s_sse", err == nil)

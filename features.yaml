@@ -580,9 +580,8 @@ features:
     limits:
       - {"scenario": "RMT-STATUS-OFF", "level": "real", "reason": "Requires an authorized public embedded node and Ubuntu curl; unattended login and system Serve changes are forbidden"}
       - {"scenario": "RMT-TS-EMBEDDED", "level": "real", "reason": "Requires an authorized public embedded node and Ubuntu curl; unattended login and system Serve changes are forbidden"}
-      - {"scenario": "CONN-CLAUDE-CODE", "level": "real", "reason": "Requires an authorized public embedded node and Ubuntu curl; unattended login and system Serve changes are forbidden"}
-      - {"scenario": "CONN-CLAUDE-AI", "level": "real", "reason": "Requires an authorized public embedded node and Ubuntu curl; unattended login and system Serve changes are forbidden"}
-      - {"scenario": "CONN-CHATGPT", "level": "real", "reason": "Requires an authorized public embedded node and Ubuntu curl; unattended login and system Serve changes are forbidden"}
+      - {"scenario": "CONN-CLAUDE-AI", "level": "real", "reason": "needs connector login"}
+      - {"scenario": "CONN-CHATGPT", "level": "real", "reason": "needs connector login"}
   - id: web.agents
     title: Agent tokens with read, approve-first and full levels; MCP OAuth for connectors
     requirements: [R-WEB-SECURE, R-AGENT]

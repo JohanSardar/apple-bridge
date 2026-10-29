@@ -1,31 +1,30 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[9.77 8.75 8.24] cpu_idle=51% cpus=8 other_heavy=0"
+    "summary": "air: load=[168.21 80.05 43.94] cpu_idle=50% cpus=8 other_heavy=0"
   },
   "status": "limited",
-  "run_id": "remote-flow",
-  "network_path": "isolated fake LocalClient and TCP listener; no tailscaled or login",
+  "run_id": "",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "CONN-CHATGPT",
   "level": "real",
   "passed": false,
-  "git_sha": "c3ac9963efa1272847ce1ef053a43f9c53d3fc2a",
-  "at": "2026-10-29T16:22:48.127878Z",
+  "git_sha": "",
+  "at": "2026-10-29T21:34:07.989725Z",
   "assertions": [
     {
-      "name": "external_status_off",
+      "name": "connector_login",
       "passed": false,
       "status": "limited",
-      "detail": "Requires an authorized public embedded node and Ubuntu curl; unattended login and system Serve changes are forbidden"
+      "detail": "needs connector login"
     },
     {
       "name": "credential_backend_override_restored",
       "passed": true
     }
   ],
-  "latency": {},
+  "latency": null,
   "hosts": null
 }

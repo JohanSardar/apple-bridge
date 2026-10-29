@@ -525,6 +525,12 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 		}
 		return runRelayAuth(ctx, s, level)
 	}
+	if s.ID == "CONN-CLAUDE-CODE" && level == "real" {
+		return runRelayService(ctx, s, level)
+	}
+	if s.ID == "CONN-CHATGPT" || s.ID == "CONN-CLAUDE-AI" {
+		return Evidence{Scenario: s.ID, Level: level, Status: "limited", At: time.Now().UTC(), Assertions: []Assertion{{Name: "connector_login", Status: "limited", Detail: "needs connector login"}}}
+	}
 	if strings.HasPrefix(s.ID, "RMT-") || strings.HasPrefix(s.ID, "CONN-") {
 		return runRemoteFlow(ctx, s, level)
 	}
@@ -1186,7 +1192,7 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		if s.ID == "RELAY-STREAMS" {
 			duration = 12 * time.Minute
 		}
-		if s.ID == "RELAY-REAL" || s.ID == "CONN-RELAY-CLAUDE" {
+		if s.ID == "RELAY-REAL" || s.ID == "CONN-RELAY-CLAUDE" || s.ID == "CONN-CLAUDE-CODE" {
 			duration = 10 * time.Minute
 		}
 		if s.ID == "CALL-IDLE" && level == "sim" {
