@@ -1,7 +1,7 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[42.62 37.17 50.12] cpu_idle=0% cpus=10 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[11.06 18.44 34.21] cpu_idle=54% cpus=10 other_heavy=0"
   },
   "run_id": "",
   "metrics": {
@@ -11,7 +11,7 @@
   "level": "sim",
   "passed": true,
   "git_sha": "",
-  "at": "2026-10-29T23:18:39.156664Z",
+  "at": "2026-10-29T23:34:01.698285Z",
   "assertions": [
     {
       "name": "isolated_home",
@@ -116,7 +116,7 @@
     {
       "name": "digest",
       "passed": true,
-      "detail": "12fc0c6249eabacd0f788d05bdfe6012999cf79cc71725a57f8fda8e1ebf040c"
+      "detail": "bcdefa179663a20d0dd061c58e927cd22df2a4a17764e67380b7c1c884a211fa"
     },
     {
       "name": "credential_backend_override_restored",
