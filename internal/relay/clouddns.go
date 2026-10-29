@@ -6,8 +6,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"sync"
 
@@ -68,7 +70,7 @@ func (d *CloudDNS) TXT(ctx context.Context, name, value string) error {
 	if len(value) > 128 || strings.Trim(value, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_") != "" {
 		return ErrDenied
 	}
-	if !strings.HasPrefix(name, "_acme-challenge.") || !strings.HasSuffix(name, "."+d.Suffix) || !validHost(name[len("_acme-challenge."):]) {
+	if !strings.HasPrefix(name, "_acme-challenge.") || !(strings.HasSuffix(name, "."+d.Suffix) || name == "_acme-challenge."+d.Suffix) || !validHost(name[len("_acme-challenge."):]) {
 		return ErrDenied
 	}
 	d.mu.Lock()
@@ -104,6 +106,15 @@ func (d *CloudDNS) TXT(ctx context.Context, name, value string) error {
 	if len(change) == 0 {
 		return nil
 	}
+	if value != "" {
+		record, err := d.hostRecord(ctx, base, strings.TrimPrefix(name, "_acme-challenge."))
+		if err != nil {
+			return err
+		}
+		if record != nil {
+			change["additions"] = append(change["additions"].([]dnsRecord), *record)
+		}
+	}
 	raw, _ := json.Marshal(change)
 	req, err = http.NewRequestWithContext(ctx, "POST", base+"/changes", bytes.NewReader(raw))
 	if err != nil {
@@ -118,5 +129,57 @@ func (d *CloudDNS) TXT(ctx context.Context, name, value string) error {
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("Cloud DNS change refused (%d); VM service account requires roles/dns.admin", resp.StatusCode)
 	}
+
+	if value != "" {
+		for _, address := range []string{"1.1.1.1:53", "8.8.8.8:53"} {
+			resolver := &net.Resolver{PreferGo: true, Dial: func(ctx context.Context, network, _ string) (net.Conn, error) {
+				return (&net.Dialer{}).DialContext(ctx, "udp", address)
+			}}
+			for {
+				values, err := resolver.LookupTXT(ctx, name)
+				if err == nil && slices.Contains(values, value) {
+					break
+				}
+				select {
+				case <-ctx.Done():
+					return fmt.Errorf("Cloud DNS TXT propagation: %w", ctx.Err())
+				case <-time.After(2 * time.Second):
+				}
+			}
+		}
+	}
 	return nil
+}
+
+func (d *CloudDNS) hostRecord(ctx context.Context, base, host string) (*dnsRecord, error) {
+	for i, name := range []string{host, "*." + d.Suffix + "."} {
+		req, err := http.NewRequestWithContext(ctx, "GET", base+"/rrsets?name="+url.QueryEscape(name)+"&type=A", nil)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := d.Client.Do(req)
+		if err != nil {
+			return nil, err
+		}
+		var result struct {
+			Records []dnsRecord `json:"rrsets"`
+		}
+		err = json.NewDecoder(io.LimitReader(resp.Body, 65536)).Decode(&result)
+		resp.Body.Close()
+		if resp.StatusCode != 200 {
+			return nil, fmt.Errorf("Cloud DNS address read refused (%d)", resp.StatusCode)
+		}
+		if err != nil {
+			return nil, err
+		}
+		if len(result.Records) > 0 {
+			if i == 0 {
+				return nil, nil
+			}
+			record := result.Records[0]
+			record.Name = host
+			return &record, nil
+		}
+	}
+	return nil, fmt.Errorf("Cloud DNS requires an existing host or wildcard A record")
 }

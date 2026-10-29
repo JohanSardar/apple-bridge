@@ -1183,6 +1183,12 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		ran++
 		fmt.Fprintln(os.Stderr, "running", s.ID, level)
 		duration := 3 * time.Minute
+		if s.ID == "RELAY-STREAMS" {
+			duration = 12 * time.Minute
+		}
+		if s.ID == "RELAY-REAL" || s.ID == "CONN-RELAY-CLAUDE" {
+			duration = 10 * time.Minute
+		}
 		if s.ID == "CALL-IDLE" && level == "sim" {
 			duration = 20 * time.Minute
 		}

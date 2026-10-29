@@ -193,8 +193,11 @@ func runRelayService(ctx context.Context, s Scenario, level string) Evidence {
 	e := Evidence{Scenario: s.ID, Level: level, At: time.Now().UTC(), GitSHA: strings.TrimSpace(string(sha)), RunID: "relay-" + strings.ToLower(strings.TrimPrefix(s.ID, "RELAY-")), Hosts: []string{"air"}, NetworkPath: "loopback TLS origins through raw relay tunnel interface"}
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
 	if level == "real" {
-		e.Status = "limited"
-		e.Assertions = append(e.Assertions, Assertion{Name: "public_relay_readiness", Status: "limited", Detail: "NS delegation absent; trusted control TLS and VM DNS scopes/IAM require operator setup"})
+		e = runRelayReal(ctx, s, e)
+		e.Passed = len(e.Assertions) > 0
+		for _, assertion := range e.Assertions {
+			e.Passed = e.Passed && assertion.Passed
+		}
 		return e
 	}
 	dir, err := os.MkdirTemp("", "ab-relay-lab-")

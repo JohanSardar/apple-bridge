@@ -186,6 +186,20 @@ func relayPebble(ctx context.Context, lab *relayLab, key ed25519.PrivateKey, cre
 	value := dns.values["_acme-challenge."+credential.Hostname+"."]
 	dns.mu.Unlock()
 	add("dns_challenge_cleaned_up", value == "")
+	if !custom {
+		control, e := remote.ControlTLSConfig(bounded, filepath.Join(dir, "control"), host, dns, options)
+		add("control_dns01_certificate_issued", e == nil)
+		if e != nil {
+			return e
+		}
+		certificate, e := control.GetCertificate(nil)
+		add("control_certificate_available", e == nil && certificate != nil)
+		if e == nil && certificate != nil {
+			leaf, e := x509.ParseCertificate(certificate.Certificate[0])
+			add("control_certificate_hostname", e == nil && leaf.VerifyHostname(host) == nil)
+		}
+	}
+
 	return nil
 }
 

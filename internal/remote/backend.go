@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net"
+	"os"
 	"strings"
 	"tailscale.com/client/local"
 )
@@ -14,6 +15,7 @@ func (r *Remote) serve(ctx context.Context, cfg Config) {
 	status := Status{ID: cfg.ID, State: "starting", Backend: cfg.Backend, TLSTermination: "on this Mac"}
 	fail := func(err error) {
 		if ctx.Err() == nil {
+			fmt.Fprintln(os.Stderr, "remote setup failed:", err)
 			status.State = "error"
 			status.LastError = "Remote setup failed"
 			r.publish(status)

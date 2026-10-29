@@ -8,10 +8,12 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/relay"
+	"github.com/JohanSardar/apple-bridge/internal/remote"
 )
 
 func main() {
@@ -21,6 +23,7 @@ func main() {
 	}
 }
 func run() error {
+	controlACME := flag.Bool("control-acme", false, "issue and renew trusted control TLS using Cloud DNS")
 	addr := flag.String("addr", ":443", "TLS passthrough address")
 	controlHost := flag.String("control-host", "", "route control TLS by SNI on the public port")
 	control := flag.String("control-addr", "127.0.0.1:8443", "enrollment API address")
@@ -42,7 +45,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	if *cert == "" || *key == "" {
+	if !*controlACME && (*cert == "" || *key == "") {
 		return fmt.Errorf("control-cert and control-key required")
 	}
 	server := relay.New(store)
@@ -62,7 +65,14 @@ func run() error {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 	go server.MonitorCT(ctx)
-	api := &http.Server{Addr: *control, Handler: server.Handler(os.Getenv("APPLE_BRIDGE_RELAY_ADMIN")), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 10 * time.Second, IdleTimeout: 30 * time.Second, MaxHeaderBytes: 8192}
+	api := &http.Server{Addr: *control, Handler: server.Handler(os.Getenv("APPLE_BRIDGE_RELAY_ADMIN")), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 6 * time.Minute, IdleTimeout: 30 * time.Second, MaxHeaderBytes: 8192}
+	if *controlACME {
+		api.TLSConfig, err = remote.ControlTLSConfig(ctx, filepath.Join(filepath.Dir(*state), "control-tls"), *controlHost, server.DNS, remote.CertificateOptions{})
+		if err != nil {
+			return err
+		}
+		*cert, *key = "", ""
+	}
 	result := make(chan error, 2)
 	if *controlHost != "" {
 		controlListener := relay.NewControlListener(ctx)

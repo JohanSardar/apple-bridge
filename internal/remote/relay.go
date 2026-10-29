@@ -74,7 +74,7 @@ func relayEnroll(ctx context.Context, home, endpoint, zone string) (relayIdentit
 func (r *Remote) serveRelay(ctx context.Context, cfg Config, status *Status, fail func(error)) {
 	endpoint := os.Getenv("APPLE_BRIDGE_RELAY_URL")
 	if endpoint == "" {
-		endpoint = "https://control.ab.lexaai.tech"
+		endpoint = "https://ab.lexaai.tech"
 	}
 	if !strings.HasPrefix(endpoint, "https://") {
 		fail(fmt.Errorf("relay control requires HTTPS"))
