@@ -7,6 +7,7 @@ public actor SafariSource: Source {
     private let tabs = SafariTabs()
     private let directory: URL
     private let cacheURL: URL?
+    private var historyExpiry = Date.distantPast
     private var generation = UUID().uuidString
     public init(directory: URL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Safari"), cacheURL: URL? = nil) { self.directory = directory; self.cacheURL = cacheURL }
     public func open() async -> SourceReadiness {
@@ -26,6 +27,11 @@ public actor SafariSource: Source {
         try reader.requireSchema(["history_items": ["id", "url", "visit_count"], "history_visits": ["id", "history_item", "visit_time", "title"]])
         let scan = try CompleteScan.read(reader: reader, sql: "SELECT CAST(i.id AS TEXT) AS key, i.url, COUNT(v.id) AS visit_count, MAX(v.visit_time) AS last_visit, (SELECT title FROM history_visits WHERE history_item=i.id ORDER BY visit_time DESC,id DESC LIMIT 1) AS title FROM history_items i JOIN history_visits v ON v.history_item=i.id WHERE v.visit_time >= ? GROUP BY i.id ORDER BY i.id", values: [String(now.timeIntervalSinceReferenceDate - days * 86400)], keyColumn: "key", scope: "safari.history", previousScope: "", previousGeneration: "", previousKeys: [], maxRows: maxRows, timeout: 15)
         guard scan.complete else { throw SourceFailure.unavailable }
+        let expiry = try reader.query("SELECT MIN(visit_time) AS oldest FROM history_visits WHERE visit_time >= ?", values: [String(now.timeIntervalSinceReferenceDate - days * 86400)])
+        guard expiry.complete else { throw SourceFailure.unavailable }
+        historyExpiry = expiry.rows.first?["oldest"].flatMap { value in
+            switch value { case .integer, .real: return Date(timeIntervalSinceReferenceDate: number(value) + days * 86400 + 0.001); default: return nil }
+        } ?? .distantFuture
         return (reader.generation, scan.rows.map { row in
             observation("safari.history", SHA256.hash(data: Data((row["url"]?.text ?? "").utf8)).map { String(format: "%02x", $0) }.joined(), ["url": .string(row["url"]?.text ?? ""), "title": .string(row["title"]?.text ?? ""), "last_visit": .string(timestamp(Date(timeIntervalSinceReferenceDate: number(row["last_visit"])))), "visit_count": .number(number(row["visit_count"]))])
         })
@@ -101,7 +107,6 @@ public actor SafariSource: Source {
         let tasks = watchers.map { watcher in Task { for await _ in watcher.changes { events.continuation.yield(()) } } }
         defer { watchers.forEach { $0.close() }; tasks.forEach { $0.cancel() }; events.continuation.finish() }
         var inputs: [String: String] = [:]
-        var scannedAt: [String: Double] = [:]
         var previous: [String: String] = [:]
         var previousRows = cached?.rows ?? [:]
         var generations = cached?.scans.mapValues { $0.generation } ?? [:]
@@ -110,10 +115,7 @@ public actor SafariSource: Source {
             try Task.checkCancellation()
             for kind in ["history", "bookmarks", "cloud"] {
                 let input = safariInputs(directory, kind: kind)
-                let uptime = ProcessInfo.processInfo.systemUptime
-                if inputs[kind] == input, uptime - (scannedAt[kind] ?? 0) < 30 { continue }
-                inputs[kind] = input
-                scannedAt[kind] = uptime
+                if inputs[kind] == input, kind != "history" || Date() < historyExpiry { continue }
                 let started = timestamp()
                 do {
                     let generation: String
@@ -146,8 +148,9 @@ public actor SafariSource: Source {
                         previousRows[kind] = rows + carried
                         generations[kind] = generation
                         try SafariCaptureCache.save(generation: self.generation, databaseGenerations: generations, rows: previousRows, to: cacheURL)
-                        if !carried.isEmpty { inputs.removeValue(forKey: kind); events.continuation.yield(()) }
+                        if !carried.isEmpty { events.continuation.yield(()) }
                     }
+                    if previous[kind] == generation + digest { inputs[kind] = input }
                 } catch is CancellationError { throw CancellationError() }
                 catch { try await sink.sourceState(source: name, state: "degraded", coverage: .object(["fields": .string("partial")]), capabilities: [], reason: "Safari capture unavailable: " + kind) }
             }

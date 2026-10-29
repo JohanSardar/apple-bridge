@@ -52,7 +52,7 @@ public final class UsageSource: Source {
     }
     private func scan(_ sink: any ObservationSink, live: Bool) async throws {
         let started = timestamp()
-        let inputs = UsageInputs(root, power: power.count)
+        let inputs = UsageInputs(root, power: power.count, previous: scanned)
         let base = root.appendingPathComponent("streams/restricted/App.InFocus")
         var current: [String: JSON] = [:]
         let peers = try peers()
@@ -104,7 +104,7 @@ public final class UsageSource: Source {
         try await scan(sink, live: false)
         for await _ in changes {
             try Task.checkCancellation()
-            if let inputs = UsageInputs(root, power: power.count), inputs == scanned { continue }
+            if let inputs = UsageInputs(root, power: power.count, previous: scanned), inputs == scanned { continue }
             try await scan(sink, live: true)
         }
     }

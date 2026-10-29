@@ -1,9 +1,9 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[13.92 18.75 25.91] cpu_idle=29% cpus=8 other_heavy=0"
+    "summary": "air: load=[90.29 101.81 83.19] cpu_idle=22% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M6384ZDDRAR9B9H73VZ0MSPN",
+  "run_id": "run_01M64352FNEC0SR7DAD2S8NXJR",
   "metrics": {
     "capture_observer_resets": 0
   },
@@ -11,7 +11,7 @@
   "level": "sim",
   "passed": true,
   "git_sha": "",
-  "at": "2026-10-29T07:14:21.229689Z",
+  "at": "2026-10-29T15:06:15.925574Z",
   "assertions": [
     {
       "name": "native_output",

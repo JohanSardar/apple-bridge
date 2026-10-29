@@ -34,15 +34,22 @@ struct UsageChecks {
         try FileManager.default.createDirectory(at: biome.appendingPathComponent("sync"), withIntermediateDirectories: true)
         try Data([1]).write(to: local.appendingPathComponent("1"))
         try Data([1]).write(to: biome.appendingPathComponent("sync/sync.db"))
-        guard let idle = UsageInputs(biome, power: 0, zone: zone), UsageInputs(biome, power: 0, zone: zone) == idle else { throw SourceFailure.corrupt }
+        guard let idle = UsageInputs(biome, power: 0, zone: zone), UsageInputs(biome, power: 0, zone: zone, previous: idle) == idle else { throw SourceFailure.corrupt }
         let segment = try FileHandle(forWritingTo: local.appendingPathComponent("1"))
         try segment.seekToEnd(); try segment.write(contentsOf: Data([2])); try segment.close()
-        guard let appended = UsageInputs(biome, power: 0, zone: zone), appended != idle else { throw SourceFailure.corrupt }
+        guard let appended = UsageInputs(biome, power: 0, zone: zone, previous: idle), appended != idle else { throw SourceFailure.corrupt }
         try FileManager.default.createDirectory(at: remote, withIntermediateDirectories: true)
         try Data([1]).write(to: remote.appendingPathComponent("1"))
-        guard let synced = UsageInputs(biome, power: 0, zone: zone), synced != appended, UsageInputs(biome, power: 1, zone: zone) != synced, UsageInputs(biome, power: 0, zone: TimeZone(identifier: "Europe/Paris")!) != synced else { throw SourceFailure.corrupt }
+        guard let synced = UsageInputs(biome, power: 0, zone: zone, previous: appended), synced != appended, UsageInputs(biome, power: 1, zone: zone, previous: synced) != synced, UsageInputs(biome, power: 0, zone: TimeZone(identifier: "Europe/Paris")!, previous: synced) != synced else { throw SourceFailure.corrupt }
         try Data([2]).write(to: biome.appendingPathComponent("sync/sync.db"))
-        guard let renamed = UsageInputs(biome, power: 0, zone: zone), renamed != synced, UsageInputs(biome.appendingPathComponent("absent"), power: 0, zone: zone) == nil else { throw SourceFailure.corrupt }
+        guard let renamed = UsageInputs(biome, power: 0, zone: zone, previous: synced), renamed != synced, UsageInputs(biome.appendingPathComponent("absent"), power: 0, zone: zone, previous: synced) == nil else { throw SourceFailure.corrupt }
+        try FileManager.default.removeItem(at: remote)
+        guard let removed = UsageInputs(biome, power: 0, zone: zone, previous: renamed), removed != renamed else { throw SourceFailure.corrupt }
+        let wal = biome.appendingPathComponent("sync/sync.db-wal")
+        try Data([1]).write(to: wal)
+        guard let createdWAL = UsageInputs(biome, power: 0, zone: zone, previous: removed), createdWAL != removed else { throw SourceFailure.corrupt }
+        try FileManager.default.removeItem(at: wal)
+        guard UsageInputs(biome, power: 0, zone: zone, previous: createdWAL) != createdWAL else { throw SourceFailure.corrupt }
         print("usage decoder, day math and scan inputs: pass")
     }
 }
