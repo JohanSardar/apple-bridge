@@ -20,6 +20,9 @@ manifest = output / "package-manifest"
 stamps = {}
 
 
+def relocatable(text):
+    return str(text).replace(str(package), "@package")
+
 def digest(parts):
     value = hashlib.sha256()
     for part in parts:
@@ -104,7 +107,7 @@ def build(name):
         closure.update(objects[item])
     for dependency in dependencies:
         collect(dependency)
-    key = digest(flags + [stamps[d] for d in dependencies] + [Path(f).read_bytes() for f in files] + [f for f in files])
+    key = digest([relocatable(x) for x in flags] + [stamps[d] for d in dependencies] + [Path(f).read_bytes() for f in files] + [relocatable(f) for f in files])
     stamps[name] = key
     if "regular" in target["type"]:
         obj = output / (name + ".o")
