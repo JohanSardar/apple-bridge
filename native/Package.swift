@@ -4,6 +4,10 @@ import PackageDescription
 let sourceTargets: [Target] = [
     .target(name: "FocusSource", dependencies: ["SourceSupport"]),
     .target(name: "PhotosSource", dependencies: ["SourceSupport"]),
+    .target(name: "CaptureSource", dependencies: ["SourceSupport", "SpeechSource"]),
+    .target(name: "SpeechSource", dependencies: ["SourceSupport"]),
+    .target(name: "AISource", dependencies: ["SourceSupport"]),
+    .target(name: "AudioSource", dependencies: ["SourceSupport"]),
     .target(name: "MacSource", dependencies: ["SourceSupport"]),
     .target(name: "MailSource", dependencies: ["SourceSupport"]),
     .target(name: "FilesSource", dependencies: ["SourceSupport"]),

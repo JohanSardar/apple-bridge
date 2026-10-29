@@ -1,0 +1,74 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[13.13 10.69 11.15] cpu_idle=44% cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M630YGR1N9H7A8TT36G3TG7S",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "word_overlap_ratio": 1
+  },
+  "scenario": "AUD-SIM",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-29T05:08:29.56903Z",
+  "assertions": [
+    {
+      "name": "world_started",
+      "passed": true
+    },
+    {
+      "name": "scopes_granted",
+      "passed": true
+    },
+    {
+      "name": "helper_ready",
+      "passed": true
+    },
+    {
+      "name": "playback_finished_callback",
+      "passed": true
+    },
+    {
+      "name": "playback_finished_callback",
+      "passed": true
+    },
+    {
+      "name": "missing_callback_is_indeterminate",
+      "passed": true
+    },
+    {
+      "name": "sim_model_availability_explicit",
+      "passed": true
+    },
+    {
+      "name": "sim_model_availability_explicit",
+      "passed": true
+    },
+    {
+      "name": "synthesis_completed",
+      "passed": true
+    },
+    {
+      "name": "wav_blob_readback_digest",
+      "passed": true
+    },
+    {
+      "name": "on_device_transcript_or_authorization_limit",
+      "passed": true
+    },
+    {
+      "name": "empty_text_rejected",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
