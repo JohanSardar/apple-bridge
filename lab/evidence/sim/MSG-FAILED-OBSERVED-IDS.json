@@ -1,14 +1,17 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[6.78 10.02 11.33] cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[7.89 8.82 11.27] cpu_idle=54% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5F00D81GS6FG7NNYE76G5NY",
+  "run_id": "run_01M639KN8WVHGT40JX1BNDY97V",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
   "scenario": "MSG-FAILED-OBSERVED-IDS",
   "level": "sim",
   "passed": true,
-  "git_sha": "d250345613bb53d4ed6ee79478a34804fdd9ec82",
-  "at": "2026-10-21T10:27:14.306524Z",
+  "git_sha": "00bec53fae5775c9416a570a8816be56de74f747",
+  "at": "2026-10-29T07:39:50.940171Z",
   "assertions": [
     {
       "name": "seed_self_chat",
@@ -150,30 +153,30 @@
   "latency": {
     "gateway_delivery-failed_submit_to_failure": {
       "samples": 1,
-      "p50_ms": 55.059292,
-      "p95_ms": 55.059292,
-      "max_ms": 55.059292,
+      "p50_ms": 216.0525,
+      "p95_ms": 216.0525,
+      "max_ms": 216.0525,
       "timeouts": 0
     },
     "gateway_ghost-send_submit_to_failure": {
       "samples": 1,
-      "p50_ms": 45.45175,
-      "p95_ms": 45.45175,
-      "max_ms": 45.45175,
+      "p50_ms": 178.643958,
+      "p95_ms": 178.643958,
+      "max_ms": 178.643958,
       "timeouts": 0
     },
     "replica_delivery-failed_submit_to_failure": {
       "samples": 1,
-      "p50_ms": 49.368709,
-      "p95_ms": 49.368709,
-      "max_ms": 49.368709,
+      "p50_ms": 196.45425,
+      "p95_ms": 196.45425,
+      "max_ms": 196.45425,
       "timeouts": 0
     },
     "replica_ghost-send_submit_to_failure": {
       "samples": 1,
-      "p50_ms": 56.578792,
-      "p95_ms": 56.578792,
-      "max_ms": 56.578792,
+      "p50_ms": 166.367584,
+      "p95_ms": 166.367584,
+      "max_ms": 166.367584,
       "timeouts": 0
     }
   },

@@ -1,0 +1,57 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[10.65 9.48 11.35] cpu_idle=26% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M639NGJVG2S8PHV13ER0PF7G",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "MSG-PINS",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-29T07:40:51.675501Z",
+  "assertions": [
+    {
+      "name": "seed",
+      "passed": true
+    },
+    {
+      "name": "capture",
+      "passed": true
+    },
+    {
+      "name": "pin_observed",
+      "passed": true
+    },
+    {
+      "name": "pin_exactly_once",
+      "passed": true
+    },
+    {
+      "name": "pinned",
+      "passed": true
+    },
+    {
+      "name": "pin_observed",
+      "passed": true
+    },
+    {
+      "name": "pin_exactly_once",
+      "passed": true
+    },
+    {
+      "name": "unpinned",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": [
+    "air"
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[10.88 9.51 11.37] cpu_idle=32% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M639N826SQBHHBZ75BZANY9Z",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "MSG-MUTE",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-29T07:40:42.951003Z",
+  "assertions": [
+    {
+      "name": "seed",
+      "passed": true
+    },
+    {
+      "name": "capture",
+      "passed": true
+    },
+    {
+      "name": "mute_observed",
+      "passed": true
+    },
+    {
+      "name": "mute_exactly_once",
+      "passed": true
+    },
+    {
+      "name": "muted_without_false_expiry",
+      "passed": true
+    },
+    {
+      "name": "known_mute_read_model",
+      "passed": true
+    },
+    {
+      "name": "mute_observed",
+      "passed": true
+    },
+    {
+      "name": "mute_exactly_once",
+      "passed": true
+    },
+    {
+      "name": "unmuted",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": [
+    "air"
+  ]
+}
