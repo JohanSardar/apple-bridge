@@ -17,8 +17,23 @@ targets:
     type: application
     platform: iOS
     sources: [App, Capabilities, Pairing, Delivery]
+    dependencies:
+      - target: AlarmActivity
+        embed: true
     settings:
       base:
         INFOPLIST_FILE: App/Info.plist
         CODE_SIGN_ENTITLEMENTS: App/AppleBridge.entitlements
-        PROVISIONING_PROFILE_SPECIFIER: AB iOS Dev
+        APPLE_BRIDGE_APP_PROFILE: AB iOS Dev
+        PROVISIONING_PROFILE_SPECIFIER: $(APPLE_BRIDGE_APP_PROFILE)
+  AlarmActivity:
+    type: app-extension
+    platform: iOS
+    sources: [AlarmActivity, Capabilities/Alarms/AlarmMetadata.swift]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.johansardar.applebridge.ios.alarms
+        INFOPLIST_FILE: AlarmActivity/Info.plist
+        PROVISIONING_PROFILE_SPECIFIER: $(ALARM_ACTIVITY_PROFILE)
+        APPLICATION_EXTENSION_API_ONLY: YES
+        SKIP_INSTALL: YES

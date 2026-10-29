@@ -1,0 +1,33 @@
+{
+  "status": "limited",
+  "run_id": "",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "APP-ALARM-REAL",
+  "level": "real",
+  "passed": false,
+  "git_sha": "",
+  "at": "2026-10-29T22:51:13.631222Z",
+  "assertions": [
+    {
+      "name": "alarmkit_permission",
+      "passed": false,
+      "detail": "limited: needs Allow tap"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    },
+    {
+      "name": "signed_build_with_alarm_activity",
+      "passed": true
+    },
+    {
+      "name": "phone_install",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}
