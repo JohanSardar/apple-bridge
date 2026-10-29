@@ -10,3 +10,13 @@
 .effect-ink-shimmer::after{will-change:transform,opacity;animation:ink-shimmer 2300ms ease-in-out}
 @keyframes ink-shimmer{0%,100%{transform:translate3d(0,0,0);opacity:.2}30%{transform:translate3d(3px,-2px,0);opacity:.85}70%{transform:translate3d(-2px,2px,0);opacity:.4}}
 @media(prefers-reduced-motion:reduce){.effect-ink-shimmer::after{will-change:transform,opacity;animation:none}}
+
+.effects-fixture{padding:24px;max-width:660px;margin:auto;transform:translateZ(0)}
+.effects-fixture-title{font-size:22px;margin:0 0 24px}
+.effects-fixture-slot{position:relative;width:min(280px,calc(100vw - 48px));height:76px;border-radius:18px}
+.effects-fixture-target{position:absolute;inset:0;display:grid;place-items:center;background:var(--blue);color:white;border-radius:inherit}
+.effects-fixture-buttons{display:flex;flex-wrap:wrap;gap:8px}
+.effects-fixture-replay{margin:12px 0}
+.effects-fixture-formatted,.effects-fixture-text{font-size:17px;line-height:22px}
+.effects-fixture-text-slot{height:32px}
+.effects-fixture-text{display:inline-block}

@@ -1,7 +1,8 @@
-import { expect } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
-import { test } from './list-session';
+import { prepareListSession } from './list-session';
 import { control } from './session';
+test.beforeEach(async({context,request})=>{await prepareListSession(context,request);});
 test('WEB-MSG-DETAILS read-only group members and responsive inspector',async({page,request},info)=>{
     const frames:any[]=[];page.on('websocket',socket=>socket.on('framesent',frame=>{try{frames.push(JSON.parse(String(frame.payload)));}catch{}}));
     await control(request,'/capability-unproven');await page.goto('/messages');const href=await page.locator('.conversation-row').filter({hasText:'Weekend Crew'}).getAttribute('href');await page.goto(href!);await page.getByRole('button',{name:'Details',exact:true}).click();
