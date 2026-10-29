@@ -42,7 +42,8 @@ extension MusicPlayer {
         set mute to true
         set shuffle enabled to false
         set p to first playlist whose persistent ID is "\(playlist)"
-        set t to first track of p whose persistent ID is "\(before["track"].string)"
+        set t to track \(Int(before["index"].number)) of p
+        if persistent ID of t is not "\(before["track"].string)" then error "context changed"
         play t
         pause
         set player position to \(before["position"].number)
