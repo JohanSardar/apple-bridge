@@ -1,0 +1,3 @@
+id: APP-LOC-SIM
+feature: iphone.location
+levels: [sim]

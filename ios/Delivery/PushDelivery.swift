@@ -167,6 +167,7 @@ final class PushDelivery {
 
 final class BridgeAppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        LocationCapability.resume()
         PushDelivery.shared.status = "Registering"
         application.registerForRemoteNotifications()
         return true

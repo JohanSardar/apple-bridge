@@ -46,9 +46,13 @@ struct BridgeSettings: View {
             }
             .navigationTitle("Apple Bridge")
             .onChange(of: scenePhase) { _, phase in
-                if phase == .active { Task { await PushDelivery.shared.drain() } }
+                if phase == .active {
+                    LocationCapability.resume()
+                    Task { await PushDelivery.shared.drain() }
+                }
             }
             .task {
+                LocationCapability.resume()
                 if let index = ProcessInfo.processInfo.arguments.firstIndex(of: "--pair-code"), ProcessInfo.processInfo.arguments.count > index + 1 {
                     await pairing.pair(ProcessInfo.processInfo.arguments[index + 1])
                 }
