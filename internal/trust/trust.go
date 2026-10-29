@@ -57,21 +57,23 @@ func AllVisibility() Visibility {
 }
 
 type Principal struct {
-	Remote      bool              `json:"remote,omitempty"`
-	Name        string            `json:"name,omitempty"`
-	Level       AgentLevel        `json:"level,omitempty"`
-	CreatedAt   time.Time         `json:"created_at,omitempty"`
-	RevokedAt   *time.Time        `json:"revoked_at,omitempty"`
-	LastUsed    *time.Time        `json:"last_used,omitempty"`
-	ExpiresAt   time.Time         `json:"expires_at,omitempty"`
-	Resource    string            `json:"resource,omitempty"`
-	Dial        string            `json:"dial,omitempty"`
-	ID          string            `json:"id"`
-	Kind        string            `json:"kind"`
-	Grants      []contracts.Grant `json:"grants"`
-	Fingerprint string            `json:"fingerprint,omitempty"`
-	TokenHash   string            `json:"token_hash,omitempty"`
-	Revision    uint64            `json:"revision"`
+	IPhoneSigningKey    []byte            `json:"iphone_signing_key,omitempty"`
+	IPhoneEncryptionKey []byte            `json:"iphone_encryption_key,omitempty"`
+	Remote              bool              `json:"remote,omitempty"`
+	Name                string            `json:"name,omitempty"`
+	Level               AgentLevel        `json:"level,omitempty"`
+	CreatedAt           time.Time         `json:"created_at,omitempty"`
+	RevokedAt           *time.Time        `json:"revoked_at,omitempty"`
+	LastUsed            *time.Time        `json:"last_used,omitempty"`
+	ExpiresAt           time.Time         `json:"expires_at,omitempty"`
+	Resource            string            `json:"resource,omitempty"`
+	Dial                string            `json:"dial,omitempty"`
+	ID                  string            `json:"id"`
+	Kind                string            `json:"kind"`
+	Grants              []contracts.Grant `json:"grants"`
+	Fingerprint         string            `json:"fingerprint,omitempty"`
+	TokenHash           string            `json:"token_hash,omitempty"`
+	Revision            uint64            `json:"revision"`
 }
 
 func (p Principal) Visibility() Visibility {
@@ -121,6 +123,7 @@ func Subset(grants, ceiling []contracts.Grant) bool {
 }
 
 type PairCode struct {
+	Purpose     string    `json:"purpose,omitempty"`
 	Remote      bool      `json:"remote,omitempty"`
 	Dial        string    `json:"dial,omitempty"`
 	ID          string    `json:"id"`
@@ -131,6 +134,7 @@ type PairCode struct {
 }
 
 type pairing struct {
+	Purpose   string            `json:"purpose,omitempty"`
 	Dial      string            `json:"dial,omitempty"`
 	Result    *Principal        `json:"result,omitempty"`
 	Complete  bool              `json:"complete,omitempty"`
@@ -421,6 +425,9 @@ func (a *Authority) PairTTL(address string, grants []contracts.Grant, ttl time.D
 	return a.PairDial(address, "", grants, ttl)
 }
 func (a *Authority) PairDial(address, dial string, grants []contracts.Grant, ttl time.Duration) (string, error) {
+	return a.pairPurpose(address, dial, grants, ttl, "")
+}
+func (a *Authority) pairPurpose(address, dial string, grants []contracts.Grant, ttl time.Duration, purpose string) (string, error) {
 	if dial != "" {
 		host, port, err := net.SplitHostPort(dial)
 		if err != nil || host == "" || port == "" {
@@ -434,10 +441,10 @@ func (a *Authority) PairDial(address, dial string, grants []contracts.Grant, ttl
 	if _, err := rand.Read(secret); err != nil {
 		return "", err
 	}
-	code := PairCode{Dial: dial, ID: contracts.NewID(""), Address: address, Fingerprint: a.Fingerprint, Secret: secret, ExpiresAt: time.Now().Add(ttl)}
+	code := PairCode{Purpose: purpose, Dial: dial, ID: contracts.NewID(""), Address: address, Fingerprint: a.Fingerprint, Secret: secret, ExpiresAt: time.Now().Add(ttl)}
 	key := sha256.Sum256(secret)
 	err := a.update(func(d *credentials) error {
-		d.Pairings[code.ID] = pairing{Dial: dial, Key: key[:], ExpiresAt: code.ExpiresAt, Grants: grants}
+		d.Pairings[code.ID] = pairing{Purpose: purpose, Dial: dial, Key: key[:], ExpiresAt: code.ExpiresAt, Grants: grants}
 		return nil
 	})
 	if err != nil {
@@ -558,7 +565,7 @@ func (a *Authority) acceptPair(req JoinRequest, cert *x509.Certificate, resume b
 	var p Principal
 	err := a.update(func(d *credentials) error {
 		pair, ok := d.Pairings[req.ID]
-		if !ok || (pair.Used && !resume) || (!pair.Used && pair.Attempts >= 5) || time.Now().After(pair.ExpiresAt) {
+		if !ok || pair.Purpose != "" || (pair.Used && !resume) || (!pair.Used && pair.Attempts >= 5) || time.Now().After(pair.ExpiresAt) {
 			return contracts.ErrUnauthorized
 		}
 		if !pair.Used {

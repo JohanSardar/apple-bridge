@@ -11,7 +11,7 @@ import (
 	"github.com/JohanSardar/apple-bridge/internal/trust"
 )
 
-func remotePairCode(ctx context.Context, authority *trust.Authority, home, peer, dial string, grants []contracts.Grant, ttl time.Duration) (string, error) {
+func remotePairCode(ctx context.Context, authority *trust.Authority, home, peer, dial string, grants []contracts.Grant, ttl time.Duration, iphone bool) (string, error) {
 	if peer != "" || dial != "" {
 		return "", contracts.ErrInvalid
 	}
@@ -25,6 +25,9 @@ func remotePairCode(ctx context.Context, authority *trust.Authority, home, peer,
 	}
 	if status.State != "on" || status.URL == "" {
 		return "", contracts.ErrUnavailable
+	}
+	if iphone {
+		return authority.PairIPhoneCode(status.URL, true, ttl)
 	}
 	return authority.PairRemote(status.URL, grants, ttl)
 }

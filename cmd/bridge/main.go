@@ -99,6 +99,7 @@ func run(ctx context.Context, args []string) error {
 	role := set.String("role", "gateway", "gateway or replica")
 	listen := set.String("listen", "", "replica listen address")
 	dialReplica := set.String("dial-replica", "", "gateway dials replica address")
+	iphonePair := set.Bool("iphone", false, "print an iPhone pairing QR through Remote")
 	viaRemote := set.Bool("via-remote", false, "pair through the public Remote URL")
 	peer := set.String("peer-addr", "", "gateway peer listen address")
 	api := set.String("api-addr", "", "loopback API address")
@@ -281,6 +282,9 @@ func run(ctx context.Context, args []string) error {
 		}
 		return authority.ChangeScope(code, grants)
 	case "pair":
+		if *iphonePair && !*viaRemote {
+			return fmt.Errorf("iPhone pairing requires --via-remote for HTTPS delivery")
+		}
 		cfg, err := bridgeruntime.LoadConfig(*home)
 		if err != nil {
 			return err
@@ -298,7 +302,7 @@ func run(ctx context.Context, args []string) error {
 		}
 		var code string
 		if *viaRemote {
-			code, err = remotePairCode(ctx, authority, *home, *peer, *dialReplica, grants, *pairTTL)
+			code, err = remotePairCode(ctx, authority, *home, *peer, *dialReplica, grants, *pairTTL, *iphonePair)
 		} else {
 			code, err = authority.PairDial(address, *dialReplica, grants, *pairTTL)
 		}
@@ -306,6 +310,10 @@ func run(ctx context.Context, args []string) error {
 			return err
 		}
 		fmt.Println(code)
+		if *iphonePair {
+			_, err = qrcodes.Fprintln(os.Stdout, qrcodes.FormatSmall, code)
+			return err
+		}
 	case "join":
 		if code == "" && set.NArg() > 0 {
 			code = set.Arg(0)
