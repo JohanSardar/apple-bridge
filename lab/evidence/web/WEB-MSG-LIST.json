@@ -1,161 +1,68 @@
 {
-  "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[4.74 5.48 5.95] cpu_idle=59% cpus=8 other_heavy=1"
-  },
-  "run_id": "run_01M5J17PG4VG5GSCSZ82AH01QW",
-  "metrics": {
-    "browser_budget_ms": 180000,
-    "capture_observer_resets": 0,
-    "demo_messages": 5000,
-    "demo_startup_ms": 8424,
-    "fixture_setup_ms": 8424,
-    "fixture_snapshot": {
-      "disk_bytes": 30625792,
-      "entry_bytes": 30633600,
-      "cache_bytes": 0,
-      "blob_payloads": 59,
-      "key": "9a0f76b38de6c1ba6cf2ab9daa4155666e2a81af5d128f4257ce33238c24db14",
-      "cache_hit": false,
-      "build_ms": 8366,
-      "copy_ms": 712,
-      "records": 6865,
-      "fresh_digest": "2aae0e5d233ad6c2cba573e50132ba0898383538178c7ac2af2f221b230245f1",
-      "copy_digest": "2aae0e5d233ad6c2cba573e50132ba0898383538178c7ac2af2f221b230245f1",
-      "verified": true,
-      "copy_method": "clonefile"
-    },
-    "matrix": [
-      "webkit-light-phone",
-      "webkit-light-desktop",
-      "chromium-light-phone",
-      "chromium-light-desktop"
-    ],
-    "report": "lab/evidence/private/web/reports/WEB-MSG-LIST-webkit-light-phone-playwright.json",
-    "reports": [
-      "lab/evidence/private/web/reports/WEB-MSG-LIST-webkit-light-phone-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-LIST-webkit-light-desktop-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-LIST-chromium-light-phone-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-LIST-chromium-light-desktop-playwright.json"
-    ],
-    "server": "gateway",
-    "setups": [
-      {
-        "fixture_setup_ms": 8424,
-        "fixture_snapshot": {
-          "disk_bytes": 30625792,
-          "entry_bytes": 30633600,
-          "cache_bytes": 0,
-          "blob_payloads": 59,
-          "key": "9a0f76b38de6c1ba6cf2ab9daa4155666e2a81af5d128f4257ce33238c24db14",
-          "cache_hit": false,
-          "build_ms": 8366,
-          "copy_ms": 712,
-          "records": 6865,
-          "fresh_digest": "2aae0e5d233ad6c2cba573e50132ba0898383538178c7ac2af2f221b230245f1",
-          "copy_digest": "2aae0e5d233ad6c2cba573e50132ba0898383538178c7ac2af2f221b230245f1",
-          "verified": true,
-          "copy_method": "clonefile"
-        },
-        "project": "webkit-light-phone"
-      },
-      {
-        "fixture_setup_ms": 13572,
-        "fixture_snapshot": {
-          "disk_bytes": 30646272,
-          "entry_bytes": 30654080,
-          "cache_bytes": 0,
-          "blob_payloads": 59,
-          "key": "9a0f76b38de6c1ba6cf2ab9daa4155666e2a81af5d128f4257ce33238c24db14",
-          "cache_hit": false,
-          "build_ms": 13416,
-          "copy_ms": 1144,
-          "records": 6865,
-          "fresh_digest": "e45d65f8eb284b926ebf727ee6cf78df38d6dd53fd51b4591a71107f916036e0",
-          "copy_digest": "e45d65f8eb284b926ebf727ee6cf78df38d6dd53fd51b4591a71107f916036e0",
-          "verified": true,
-          "copy_method": "clonefile"
-        },
-        "project": "webkit-light-desktop"
-      },
-      {
-        "fixture_setup_ms": 9411,
-        "fixture_snapshot": {
-          "disk_bytes": 30724096,
-          "entry_bytes": 30731904,
-          "cache_bytes": 0,
-          "blob_payloads": 59,
-          "key": "9a0f76b38de6c1ba6cf2ab9daa4155666e2a81af5d128f4257ce33238c24db14",
-          "cache_hit": false,
-          "build_ms": 9334,
-          "copy_ms": 1209,
-          "records": 6865,
-          "fresh_digest": "6e147b6ebfdc632ac7ce4bad1557531c2ef75734a44e30ce3aa87a9174612596",
-          "copy_digest": "6e147b6ebfdc632ac7ce4bad1557531c2ef75734a44e30ce3aa87a9174612596",
-          "verified": true,
-          "copy_method": "clonefile"
-        },
-        "project": "chromium-light-phone"
-      },
-      {
-        "fixture_setup_ms": 11893,
-        "fixture_snapshot": {
-          "disk_bytes": 30650368,
-          "entry_bytes": 30658176,
-          "cache_bytes": 0,
-          "blob_payloads": 59,
-          "key": "9a0f76b38de6c1ba6cf2ab9daa4155666e2a81af5d128f4257ce33238c24db14",
-          "cache_hit": false,
-          "build_ms": 11811,
-          "copy_ms": 956,
-          "records": 6865,
-          "fresh_digest": "056fdac949061502a09e23418873144b5bc495dbfc938a8e4e895651e585229e",
-          "copy_digest": "056fdac949061502a09e23418873144b5bc495dbfc938a8e4e895651e585229e",
-          "verified": true,
-          "copy_method": "clonefile"
-        },
-        "project": "chromium-light-desktop"
-      }
-    ],
-    "template_cold_setup_ms": {
-      "generate": 125,
-      "list": 2135,
-      "seed": 3870
-    }
-  },
   "scenario": "WEB-MSG-LIST",
   "level": "web",
+  "git_sha": "51351a777348ceeee60a45b644f6df4f14eda771",
+  "at": "2026-10-29T21:51:56.668645Z",
   "passed": true,
-  "git_sha": "342215c03f3db4d5164e50855a5fcfd9f4a4ab6d",
-  "at": "2026-10-22T14:46:25.028871Z",
+  "metrics": {
+    "matrix_count": 12,
+    "completed_matrix_count": 12,
+    "passed_matrix_count": 12,
+    "failed_matrix_count": 0,
+    "incomplete_matrix_count": 0,
+    "passed_test_count": 276,
+    "failed_test_count": 0,
+    "skipped_test_count": 0,
+    "report_sha256": "31533de8167ab763af783f7a72d233bb7fbf780fa8f20cc430721f1c9be4c50b"
+  },
   "assertions": [
     {
-      "name": "webkit-light-phone:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 23 tests using 1 worker\n\n  ✓   1 [webkit-light-phone] › tests/list-format.spec.ts:3:153 › WEB-MSG-LIST unit monogram Conversation 011 (5ms)\n  ✓   2 [webkit-light-phone] › tests/list-format.spec.ts:3:153 › WEB-MSG-LIST unit monogram +1 (555) 010-0000 (0ms)\n  ✓   3 [webkit-light-phone] › tests/list-format.spec.ts:3:153 › WEB-MSG-LIST unit monogram a@b.com (0ms)\n  ✓   4 [webkit-light-phone] › tests/list-format.spec.ts:3:153 › WEB-MSG-LIST unit monogram Maya Chen (0ms)\n  ✓   5 [webkit-light-phone] › tests/list-format.spec.ts:3:153 › WEB-MSG-LIST unit monogram Émile Zola (1ms)\n  ✓   6 [webkit-light-phone] › tests/list-format.spec.ts:3:153 › WEB-MSG-LIST unit monogram Madonna (0ms)\n  ✓   7 [webkit-light-phone] › tests/list-format.spec.ts:4:1 › WEB-MSG-LIST unit structured monogram names take precedence (0ms)\n  ✓   8 [webkit-light-phone] › tests/list-format.spec.ts:5:100 › WEB-MSG-LIST unit explicit mute null (0ms)\n  ✓   9 [webkit-light-phone] › tests/list-format.spec.ts:5:100 › WEB-MSG-LIST unit explicit mute undefined (0ms)\n  ✓  10 [webkit-light-phone] › tests/list-format.spec.ts:5:100 › WEB-MSG-LIST unit explicit mute false (0ms)\n  ✓  11 [webkit-light-phone] › tests/list-format.spec.ts:5:100 › WEB-MSG-LIST unit explicit mute true (0ms)\n  ✓  12 [webkit-light-phone] › tests/list-format.spec.ts:5:100 › WEB-MSG-LIST unit explicit mute 1 (0ms)\n  ✓  13 [webkit-light-phone] › tests/list-format.spec.ts:6:47 › WEB-MSG-LIST unit locale hour cycle en-US (45ms)\n  ✓  14 [webkit-light-phone] › tests/list-format.spec.ts:6:47 › WEB-MSG-LIST unit locale hour cycle en-GB (2ms)\n  ✓  15 [webkit-light-phone] › tests/list-format.spec.ts:6:47 › WEB-MSG-LIST unit locale hour cycle de-DE (2ms)\n  ✓  16 [webkit-light-phone] › tests/list-format.spec.ts:7:1 › WEB-MSG-LIST unit unnamed groups use given names (0ms)\n  ✓  17 [webkit-light-phone] › tests/list-format.spec.ts:8:1 › WEB-MSG-LIST unit removed heart wording (0ms)\n  ✓  18 [webkit-light-phone] › tests/list-format.spec.ts:9:1 › WEB-MSG-LIST unit removed like wording (0ms)\n  ✓  19 [webkit-light-phone] › tests/list-reference.spec.ts:4:1 › WEB-MSG-LIST demo reference screenshots (1.7s)\n  ✓  20 [webkit-light-phone] › tests/list.spec.ts:8:1 › WEB-MSG-LIST row anatomy, avatars and wording (1.0s)\n  ✓  21 [webkit-light-phone] › tests/list.spec.ts:28:1 › WEB-MSG-LIST relative dates, selection and window focus (1.6s)\n  ✓  22 [webkit-light-phone] › tests/list.spec.ts:127:1 › WEB-MSG-LIST unread title, favicon and app badge survive Settings and clear on sign-out (1.8s)\n  ✓  23 [webkit-light-phone] › tests/list.spec.ts:134:1 › WEB-MSG-LIST glass chrome keeps the last conversation reachable (1.2s)\n\n  23 passed (19.3s)\n"
+      "name": "webkit-light-phone",
+      "passed": true
     },
     {
-      "name": "webkit-light-desktop:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 23 tests using 1 worker\n\n  ✓   1 [webkit-light-desktop] › tests/list-format.spec.ts:3:153 › WEB-MSG-LIST unit monogram Conversation 011 (4ms)\n  ✓   2 [webkit-light-desktop] › tests/list-format.spec.ts:3:153 › WEB-MSG-LIST unit monogram +1 (555) 010-0000 (0ms)\n  ✓   3 [webkit-light-desktop] › tests/list-format.spec.ts:3:153 › WEB-MSG-LIST unit monogram a@b.com (0ms)\n  ✓   4 [webkit-light-desktop] › tests/list-format.spec.ts:3:153 › WEB-MSG-LIST unit monogram Maya Chen (0ms)\n  ✓   5 [webkit-light-desktop] › tests/list-format.spec.ts:3:153 › WEB-MSG-LIST unit monogram Émile Zola (1ms)\n  ✓   6 [webkit-light-desktop] › tests/list-format.spec.ts:3:153 › WEB-MSG-LIST unit monogram Madonna (0ms)\n  ✓   7 [webkit-light-desktop] › tests/list-format.spec.ts:4:1 › WEB-MSG-LIST unit structured monogram names take precedence (0ms)\n  ✓   8 [webkit-light-desktop] › tests/list-format.spec.ts:5:100 › WEB-MSG-LIST unit explicit mute null (0ms)\n  ✓   9 [webkit-light-desktop] › tests/list-format.spec.ts:5:100 › WEB-MSG-LIST unit explicit mute undefined (0ms)\n  ✓  10 [webkit-light-desktop] › tests/list-format.spec.ts:5:100 › WEB-MSG-LIST unit explicit mute false (0ms)\n  ✓  11 [webkit-light-desktop] › tests/list-format.spec.ts:5:100 › WEB-MSG-LIST unit explicit mute true (0ms)\n  ✓  12 [webkit-light-desktop] › tests/list-format.spec.ts:5:100 › WEB-MSG-LIST unit explicit mute 1 (0ms)\n  ✓  13 [webkit-light-desktop] › tests/list-format.spec.ts:6:47 › WEB-MSG-LIST unit locale hour cycle en-US (21ms)\n  ✓  14 [webkit-light-desktop] › tests/list-format.spec.ts:6:47 › WEB-MSG-LIST unit locale hour cycle en-GB (1ms)\n  ✓  15 [webkit-light-desktop] › tests/list-format.spec.ts:6:47 › WEB-MSG-LIST unit locale hour cycle de-DE (1ms)\n  ✓  16 [webkit-light-desktop] › tests/list-format.spec.ts:7:1 › WEB-MSG-LIST unit unnamed groups use given names (0ms)\n  ✓  17 [webkit-light-desktop] › tests/list-format.spec.ts:8:1 › WEB-MSG-LIST unit removed heart wording (0ms)\n  ✓  18 [webkit-light-desktop] › tests/list-format.spec.ts:9:1 › WEB-MSG-LIST unit removed like wording (0ms)\n  ✓  19 [webkit-light-desktop] › tests/list-reference.spec.ts:4:1 › WEB-MSG-LIST demo reference screenshots (1.2s)\n  ✓  20 [webkit-light-desktop] › tests/list.spec.ts:8:1 › WEB-MSG-LIST row anatomy, avatars and wording (774ms)\n  ✓  21 [webkit-light-desktop] › tests/list.spec.ts:28:1 › WEB-MSG-LIST relative dates, selection and window focus (1.2s)\n  ✓  22 [webkit-light-desktop] › tests/list.spec.ts:127:1 › WEB-MSG-LIST unread title, favicon and app badge survive Settings and clear on sign-out (1.1s)\n  ✓  23 [webkit-light-desktop] › tests/list.spec.ts:134:1 › WEB-MSG-LIST glass chrome keeps the last conversation reachable (596ms)\n\n  23 passed (11.8s)\n"
+      "name": "webkit-light-desktop",
+      "passed": true
     },
     {
-      "name": "chromium-light-phone:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 23 tests using 1 worker\n\n  ✓   1 [chromium-light-phone] › tests/list-format.spec.ts:3:153 › WEB-MSG-LIST unit monogram Conversation 011 (5ms)\n  ✓   2 [chromium-light-phone] › tests/list-format.spec.ts:3:153 › WEB-MSG-LIST unit monogram +1 (555) 010-0000 (1ms)\n  ✓   3 [chromium-light-phone] › tests/list-format.spec.ts:3:153 › WEB-MSG-LIST unit monogram a@b.com (0ms)\n  ✓   4 [chromium-light-phone] › tests/list-format.spec.ts:3:153 › WEB-MSG-LIST unit monogram Maya Chen (0ms)\n  ✓   5 [chromium-light-phone] › tests/list-format.spec.ts:3:153 › WEB-MSG-LIST unit monogram Émile Zola (0ms)\n  ✓   6 [chromium-light-phone] › tests/list-format.spec.ts:3:153 › WEB-MSG-LIST unit monogram Madonna (0ms)\n  ✓   7 [chromium-light-phone] › tests/list-format.spec.ts:4:1 › WEB-MSG-LIST unit structured monogram names take precedence (1ms)\n  ✓   8 [chromium-light-phone] › tests/list-format.spec.ts:5:100 › WEB-MSG-LIST unit explicit mute null (0ms)\n  ✓   9 [chromium-light-phone] › tests/list-format.spec.ts:5:100 › WEB-MSG-LIST unit explicit mute undefined (0ms)\n  ✓  10 [chromium-light-phone] › tests/list-format.spec.ts:5:100 › WEB-MSG-LIST unit explicit mute false (0ms)\n  ✓  11 [chromium-light-phone] › tests/list-format.spec.ts:5:100 › WEB-MSG-LIST unit explicit mute true (0ms)\n  ✓  12 [chromium-light-phone] › tests/list-format.spec.ts:5:100 › WEB-MSG-LIST unit explicit mute 1 (0ms)\n  ✓  13 [chromium-light-phone] › tests/list-format.spec.ts:6:47 › WEB-MSG-LIST unit locale hour cycle en-US (25ms)\n  ✓  14 [chromium-light-phone] › tests/list-format.spec.ts:6:47 › WEB-MSG-LIST unit locale hour cycle en-GB (2ms)\n  ✓  15 [chromium-light-phone] › tests/list-format.spec.ts:6:47 › WEB-MSG-LIST unit locale hour cycle de-DE (2ms)\n  ✓  16 [chromium-light-phone] › tests/list-format.spec.ts:7:1 › WEB-MSG-LIST unit unnamed groups use given names (1ms)\n  ✓  17 [chromium-light-phone] › tests/list-format.spec.ts:8:1 › WEB-MSG-LIST unit removed heart wording (0ms)\n  ✓  18 [chromium-light-phone] › tests/list-format.spec.ts:9:1 › WEB-MSG-LIST unit removed like wording (0ms)\n  ✓  19 [chromium-light-phone] › tests/list-reference.spec.ts:4:1 › WEB-MSG-LIST demo reference screenshots (1.0s)\n  ✓  20 [chromium-light-phone] › tests/list.spec.ts:8:1 › WEB-MSG-LIST row anatomy, avatars and wording (765ms)\n  ✓  21 [chromium-light-phone] › tests/list.spec.ts:28:1 › WEB-MSG-LIST relative dates, selection and window focus (1.4s)\n  ✓  22 [chromium-light-phone] › tests/list.spec.ts:127:1 › WEB-MSG-LIST unread title, favicon and app badge survive Settings and clear on sign-out (1.0s)\n  ✓  23 [chromium-light-phone] › tests/list.spec.ts:134:1 › WEB-MSG-LIST glass chrome keeps the last conversation reachable (808ms)\n\n  23 passed (15.8s)\n"
+      "name": "webkit-dark-phone",
+      "passed": true
     },
     {
-      "name": "chromium-light-desktop:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 23 tests using 1 worker\n\n  ✓   1 [chromium-light-desktop] › tests/list-format.spec.ts:3:153 › WEB-MSG-LIST unit monogram Conversation 011 (4ms)\n  ✓   2 [chromium-light-desktop] › tests/list-format.spec.ts:3:153 › WEB-MSG-LIST unit monogram +1 (555) 010-0000 (0ms)\n  ✓   3 [chromium-light-desktop] › tests/list-format.spec.ts:3:153 › WEB-MSG-LIST unit monogram a@b.com (0ms)\n  ✓   4 [chromium-light-desktop] › tests/list-format.spec.ts:3:153 › WEB-MSG-LIST unit monogram Maya Chen (0ms)\n  ✓   5 [chromium-light-desktop] › tests/list-format.spec.ts:3:153 › WEB-MSG-LIST unit monogram Émile Zola (0ms)\n  ✓   6 [chromium-light-desktop] › tests/list-format.spec.ts:3:153 › WEB-MSG-LIST unit monogram Madonna (0ms)\n  ✓   7 [chromium-light-desktop] › tests/list-format.spec.ts:4:1 › WEB-MSG-LIST unit structured monogram names take precedence (0ms)\n  ✓   8 [chromium-light-desktop] › tests/list-format.spec.ts:5:100 › WEB-MSG-LIST unit explicit mute null (0ms)\n  ✓   9 [chromium-light-desktop] › tests/list-format.spec.ts:5:100 › WEB-MSG-LIST unit explicit mute undefined (0ms)\n  ✓  10 [chromium-light-desktop] › tests/list-format.spec.ts:5:100 › WEB-MSG-LIST unit explicit mute false (0ms)\n  ✓  11 [chromium-light-desktop] › tests/list-format.spec.ts:5:100 › WEB-MSG-LIST unit explicit mute true (0ms)\n  ✓  12 [chromium-light-desktop] › tests/list-format.spec.ts:5:100 › WEB-MSG-LIST unit explicit mute 1 (0ms)\n  ✓  13 [chromium-light-desktop] › tests/list-format.spec.ts:6:47 › WEB-MSG-LIST unit locale hour cycle en-US (34ms)\n  ✓  14 [chromium-light-desktop] › tests/list-format.spec.ts:6:47 › WEB-MSG-LIST unit locale hour cycle en-GB (1ms)\n  ✓  15 [chromium-light-desktop] › tests/list-format.spec.ts:6:47 › WEB-MSG-LIST unit locale hour cycle de-DE (3ms)\n  ✓  16 [chromium-light-desktop] › tests/list-format.spec.ts:7:1 › WEB-MSG-LIST unit unnamed groups use given names (0ms)\n  ✓  17 [chromium-light-desktop] › tests/list-format.spec.ts:8:1 › WEB-MSG-LIST unit removed heart wording (0ms)\n  ✓  18 [chromium-light-desktop] › tests/list-format.spec.ts:9:1 › WEB-MSG-LIST unit removed like wording (0ms)\n  ✓  19 [chromium-light-desktop] › tests/list-reference.spec.ts:4:1 › WEB-MSG-LIST demo reference screenshots (1.0s)\n  ✓  20 [chromium-light-desktop] › tests/list.spec.ts:8:1 › WEB-MSG-LIST row anatomy, avatars and wording (644ms)\n  ✓  21 [chromium-light-desktop] › tests/list.spec.ts:28:1 › WEB-MSG-LIST relative dates, selection and window focus (1.6s)\n  ✓  22 [chromium-light-desktop] › tests/list.spec.ts:127:1 › WEB-MSG-LIST unread title, favicon and app badge survive Settings and clear on sign-out (1.1s)\n  ✓  23 [chromium-light-desktop] › tests/list.spec.ts:134:1 › WEB-MSG-LIST glass chrome keeps the last conversation reachable (624ms)\n\n  23 passed (14.2s)\n"
+      "name": "webkit-dark-desktop",
+      "passed": true
     },
     {
-      "name": "credential_backend_override_restored",
+      "name": "chromium-light-phone",
+      "passed": true
+    },
+    {
+      "name": "chromium-light-desktop",
+      "passed": true
+    },
+    {
+      "name": "chromium-dark-phone",
+      "passed": true
+    },
+    {
+      "name": "chromium-dark-desktop",
+      "passed": true
+    },
+    {
+      "name": "firefox-light-phone",
+      "passed": true
+    },
+    {
+      "name": "firefox-light-desktop",
+      "passed": true
+    },
+    {
+      "name": "firefox-dark-phone",
+      "passed": true
+    },
+    {
+      "name": "firefox-dark-desktop",
       "passed": true
     }
-  ],
-  "latency": {},
-  "hosts": [
-    "air"
   ]
 }

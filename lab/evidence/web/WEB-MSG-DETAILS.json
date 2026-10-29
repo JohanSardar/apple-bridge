@@ -1,161 +1,32 @@
 {
-  "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[11.08 8.68 9.57] cpu_idle=72% cpus=8 other_heavy=1"
-  },
-  "run_id": "run_01M5J4E1ZC9F6PNHFX6D8AQJSM",
-  "metrics": {
-    "browser_budget_ms": 180000,
-    "capture_observer_resets": 0,
-    "demo_messages": 5000,
-    "demo_startup_ms": 15961,
-    "fixture_setup_ms": 15961,
-    "fixture_snapshot": {
-      "disk_bytes": 30552064,
-      "entry_bytes": 30559872,
-      "cache_bytes": 61292032,
-      "blob_payloads": 59,
-      "key": "ced2b39db46f4beb31014a5f0ca2dac6807909b3a36ad0b8a042a65616675caa",
-      "cache_hit": false,
-      "build_ms": 15663,
-      "copy_ms": 1207,
-      "records": 6865,
-      "fresh_digest": "eab5aec27d48186ecd0751f17676219480aaf0465834af4b81859ab9ca052f23",
-      "copy_digest": "eab5aec27d48186ecd0751f17676219480aaf0465834af4b81859ab9ca052f23",
-      "verified": true,
-      "copy_method": "clonefile"
-    },
-    "matrix": [
-      "webkit-light-phone",
-      "webkit-light-desktop",
-      "chromium-light-phone",
-      "chromium-light-desktop"
-    ],
-    "report": "lab/evidence/private/web/reports/WEB-MSG-DETAILS-webkit-light-phone-playwright.json",
-    "reports": [
-      "lab/evidence/private/web/reports/WEB-MSG-DETAILS-webkit-light-phone-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-DETAILS-webkit-light-desktop-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-DETAILS-chromium-light-phone-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-DETAILS-chromium-light-desktop-playwright.json"
-    ],
-    "server": "gateway",
-    "setups": [
-      {
-        "fixture_setup_ms": 15961,
-        "fixture_snapshot": {
-          "disk_bytes": 30552064,
-          "entry_bytes": 30559872,
-          "cache_bytes": 61292032,
-          "blob_payloads": 59,
-          "key": "ced2b39db46f4beb31014a5f0ca2dac6807909b3a36ad0b8a042a65616675caa",
-          "cache_hit": false,
-          "build_ms": 15663,
-          "copy_ms": 1207,
-          "records": 6865,
-          "fresh_digest": "eab5aec27d48186ecd0751f17676219480aaf0465834af4b81859ab9ca052f23",
-          "copy_digest": "eab5aec27d48186ecd0751f17676219480aaf0465834af4b81859ab9ca052f23",
-          "verified": true,
-          "copy_method": "clonefile"
-        },
-        "project": "webkit-light-phone"
-      },
-      {
-        "fixture_setup_ms": 1188,
-        "fixture_snapshot": {
-          "disk_bytes": 30552064,
-          "entry_bytes": 30559872,
-          "cache_bytes": 61292032,
-          "blob_payloads": 59,
-          "key": "ced2b39db46f4beb31014a5f0ca2dac6807909b3a36ad0b8a042a65616675caa",
-          "cache_hit": true,
-          "build_ms": 0,
-          "copy_ms": 1092,
-          "records": 6865,
-          "fresh_digest": "eab5aec27d48186ecd0751f17676219480aaf0465834af4b81859ab9ca052f23",
-          "copy_digest": "eab5aec27d48186ecd0751f17676219480aaf0465834af4b81859ab9ca052f23",
-          "verified": true,
-          "copy_method": "clonefile"
-        },
-        "project": "webkit-light-desktop"
-      },
-      {
-        "fixture_setup_ms": 1287,
-        "fixture_snapshot": {
-          "disk_bytes": 30552064,
-          "entry_bytes": 30559872,
-          "cache_bytes": 61292032,
-          "blob_payloads": 59,
-          "key": "ced2b39db46f4beb31014a5f0ca2dac6807909b3a36ad0b8a042a65616675caa",
-          "cache_hit": true,
-          "build_ms": 0,
-          "copy_ms": 1208,
-          "records": 6865,
-          "fresh_digest": "eab5aec27d48186ecd0751f17676219480aaf0465834af4b81859ab9ca052f23",
-          "copy_digest": "eab5aec27d48186ecd0751f17676219480aaf0465834af4b81859ab9ca052f23",
-          "verified": true,
-          "copy_method": "clonefile"
-        },
-        "project": "chromium-light-phone"
-      },
-      {
-        "fixture_setup_ms": 1422,
-        "fixture_snapshot": {
-          "disk_bytes": 30552064,
-          "entry_bytes": 30559872,
-          "cache_bytes": 61292032,
-          "blob_payloads": 59,
-          "key": "ced2b39db46f4beb31014a5f0ca2dac6807909b3a36ad0b8a042a65616675caa",
-          "cache_hit": true,
-          "build_ms": 0,
-          "copy_ms": 1320,
-          "records": 6865,
-          "fresh_digest": "eab5aec27d48186ecd0751f17676219480aaf0465834af4b81859ab9ca052f23",
-          "copy_digest": "eab5aec27d48186ecd0751f17676219480aaf0465834af4b81859ab9ca052f23",
-          "verified": true,
-          "copy_method": "clonefile"
-        },
-        "project": "chromium-light-desktop"
-      }
-    ],
-    "template_cold_setup_ms": {
-      "generate": 177,
-      "list": 4223,
-      "seed": 7411
-    }
-  },
   "scenario": "WEB-MSG-DETAILS",
   "level": "web",
-  "passed": true,
-  "git_sha": "78f5bd7c57b25a6b2080c5df648f11b29b0b69f5",
-  "at": "2026-10-22T15:42:19.120388Z",
+  "git_sha": "51351a777348ceeee60a45b644f6df4f14eda771",
+  "at": "2026-10-29T22:24:27.955061Z",
+  "passed": false,
+  "metrics": {
+    "matrix_count": 12,
+    "completed_matrix_count": 3,
+    "passed_matrix_count": 3,
+    "failed_matrix_count": 0,
+    "incomplete_matrix_count": 9,
+    "passed_test_count": 21,
+    "failed_test_count": 0,
+    "skipped_test_count": 0,
+    "report_sha256": "f0d395a070e191c11f443f97fd3d6d832387bc5ee74dd2459b3dceeba22141c5"
+  },
   "assertions": [
     {
-      "name": "webkit-light-phone:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 4 tests using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/details.spec.ts:5:1 › WEB-MSG-DETAILS read-only group members and responsive inspector (4.9s)\n  ✓  2 [webkit-light-phone] › tests/details.spec.ts:16:1 › WEB-MSG-DETAILS viewer-device links and direct phone route (3.6s)\n  ✓  3 [webkit-light-phone] › tests/details.spec.ts:21:1 › WEB-MSG-DETAILS collections page, open media, link, download and jump (5.7s)\n  ✓  4 [webkit-light-phone] › tests/details.spec.ts:29:1 › WEB-MSG-DETAILS pending collection pages retain rows and can retry (14.4s)\n\n  4 passed (47.1s)\n"
+      "name": "webkit-light-phone",
+      "passed": true
     },
     {
-      "name": "webkit-light-desktop:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 4 tests using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/details.spec.ts:5:1 › WEB-MSG-DETAILS read-only group members and responsive inspector (6.4s)\n  ✓  2 [webkit-light-desktop] › tests/details.spec.ts:16:1 › WEB-MSG-DETAILS viewer-device links and direct phone route (2.7s)\n  ✓  3 [webkit-light-desktop] › tests/details.spec.ts:21:1 › WEB-MSG-DETAILS collections page, open media, link, download and jump (7.5s)\n  ✓  4 [webkit-light-desktop] › tests/details.spec.ts:29:1 › WEB-MSG-DETAILS pending collection pages retain rows and can retry (15.9s)\n\n  4 passed (55.2s)\n"
+      "name": "webkit-light-desktop",
+      "passed": true
     },
     {
-      "name": "chromium-light-phone:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 4 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/details.spec.ts:5:1 › WEB-MSG-DETAILS read-only group members and responsive inspector (3.8s)\n  ✓  2 [chromium-light-phone] › tests/details.spec.ts:16:1 › WEB-MSG-DETAILS viewer-device links and direct phone route (3.4s)\n  ✓  3 [chromium-light-phone] › tests/details.spec.ts:21:1 › WEB-MSG-DETAILS collections page, open media, link, download and jump (6.9s)\n  ✓  4 [chromium-light-phone] › tests/details.spec.ts:29:1 › WEB-MSG-DETAILS pending collection pages retain rows and can retry (15.3s)\n\n  4 passed (45.9s)\n"
-    },
-    {
-      "name": "chromium-light-desktop:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 4 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/details.spec.ts:5:1 › WEB-MSG-DETAILS read-only group members and responsive inspector (5.2s)\n  ✓  2 [chromium-light-desktop] › tests/details.spec.ts:16:1 › WEB-MSG-DETAILS viewer-device links and direct phone route (2.4s)\n  ✓  3 [chromium-light-desktop] › tests/details.spec.ts:21:1 › WEB-MSG-DETAILS collections page, open media, link, download and jump (4.6s)\n  ✓  4 [chromium-light-desktop] › tests/details.spec.ts:29:1 › WEB-MSG-DETAILS pending collection pages retain rows and can retry (14.2s)\n\n  4 passed (46.5s)\n"
-    },
-    {
-      "name": "credential_backend_override_restored",
+      "name": "webkit-dark-phone",
       "passed": true
     }
-  ],
-  "latency": {},
-  "hosts": [
-    "air"
   ]
 }
