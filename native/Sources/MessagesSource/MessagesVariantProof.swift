@@ -63,7 +63,7 @@ public enum MessagesVariantProof {
             outcome = try await commands.dispatch(prepared)
             lateEffectPossible = lateEffectPossible || outcome["disposition"].string == "indeterminate"
             reason = outcome["reason"].string
-        } catch { reason = String(describing: error) }
+        } catch { reason = (error as? SendVariantFailure)?.rawValue ?? (error as? MessagesUIFailure)?.rawValue ?? (error is SourceFailure ? String(describing: error) : "native_variant_probe_failed") }
         try await Task.sleep(for: .seconds(1))
         var ownershipCaptured = false
         do { try capture(); ownershipCaptured = true } catch { reason = "created_ids_capture_failed" }

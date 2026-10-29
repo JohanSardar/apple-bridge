@@ -19,7 +19,7 @@ enum HelperLabCommand {
             var result: JSON?
             Task { @MainActor in
                 do { result = try await MessagesVariantProof.run(arguments[1]) }
-                catch { result = .object(["passed": .bool(false), "limited": .bool(true), "reason": .string(String(describing: error))]) }
+                catch { result = .object(["passed": .bool(false), "limited": .bool(true), "reason": .string("native_variant_probe_unavailable")]) }
             }
             while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.01)) }
             try JSONEncoder().encode(result!).write(to: reportURL, options: .atomic)
