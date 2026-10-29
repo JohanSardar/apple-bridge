@@ -706,8 +706,6 @@ features:
     limits:
       - {scenario: WEB-MSG-MEDIA, level: web, reason: "T72: Firefox dark desktop ultrawide playback remains pending instead of decoded; 11/12 matrix cells pass"}
       - {scenario: WEB-MSG-VIEWER, level: web, reason: "T72: WebKit light phone transcript stays busy; remaining matrix stopped after reproducing failure"}
-      - {scenario: WEB-MSG-EFFECTS, level: web, reason: "T72: Firefox Spotlight canvas does not paint within six seconds"}
-      - {scenario: WEB-MSG-DETAILS, level: web, reason: "T72: matrix incomplete at the 45-minute checkpoint"}
       - {"scenario": "WEB-MSG-SEARCH", "level": "web", "reason": "web qualification remains missing"}
       - {"scenario": "WEB-PERF-SEARCH", "level": "web", "reason": "web qualification remains missing"}
       - {"scenario": "WEB-MSG-READ-THROTTLE", "level": "web", "reason": "web qualification remains missing"}
