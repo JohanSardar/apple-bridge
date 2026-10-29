@@ -151,6 +151,9 @@ func (d *Delivery) Complete(ctx context.Context, p trust.Principal, request trus
 	if r.Source != contracts.IPhone || targetOf(r) != p.ID || r.RequestHash != result.Hash {
 		return r, contracts.ErrUnauthorized
 	}
+	if contracts.IPhoneLocationCommand(r.Command.Op) && (result.State == contracts.CommandObserved || string(result.Data) != "null") && contracts.ValidateIPhoneLocationSummary(result.Data) != nil {
+		return r, contracts.ErrInvalid
+	}
 	if r.State != contracts.CommandDispatched && r.State != contracts.CommandIndeterminate {
 		return r, nil
 	}
@@ -186,6 +189,9 @@ func (d *Delivery) Handler() http.Handler {
 		}
 		var result any
 		switch r.URL.Path {
+		case "/v1/iphone/location-records":
+			err = d.LocationRecords(r.Context(), p, request.Payload)
+			result = map[string]bool{"accepted": err == nil}
 		case "/v1/iphone/push-token":
 			var token struct {
 				Token string `json:"token"`

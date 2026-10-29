@@ -31,7 +31,9 @@
 	<key>NFCReaderUsageDescription</key>
 	<string>Read NFC tags for your automations.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Access your current Wi-Fi network for home automations.</string>
+	<string>Read your precise location on request and access your current Wi-Fi network for home automations.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Record arrivals, departures and significant location changes for your enabled location capability.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Scan your Apple Bridge gateway pairing code.</string>
 	<key>NSLocalNetworkUsageDescription</key>

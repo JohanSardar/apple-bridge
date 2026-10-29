@@ -373,6 +373,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.Feature == "iphone.screentime" {
 		return runIPhoneScreenTime(ctx, s, level)
 	}
+	if s.ID == "APP-LOC-SIM" || s.ID == "APP-LOC-REAL" {
+		return runIPhoneLocation(ctx, s, level)
+	}
 	if s.ID == "APP-CMD-SIM" {
 		return runIPhoneCommand(ctx, s, level)
 	}
@@ -1186,7 +1189,7 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 	}
 	packagingOnly := true
 	for _, scenario := range scenarios {
-		packagingOnly = packagingOnly && (scenario.Feature == "packaging.app" || scenario.Feature == "core.shortcuts" || scenario.Feature == "core.permissions" || scenario.Feature == "usage.action_probe" || scenario.Feature == "helper.siri_intents")
+		packagingOnly = packagingOnly && (scenario.Feature == "iphone.location" || scenario.Feature == "packaging.app" || scenario.Feature == "core.shortcuts" || scenario.Feature == "core.permissions" || scenario.Feature == "usage.action_probe" || scenario.Feature == "helper.siri_intents")
 	}
 	if !packagingOnly {
 		if err = world.Build(ctx, level); err != nil {

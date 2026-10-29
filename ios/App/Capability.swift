@@ -24,6 +24,10 @@ struct CapabilityScreen: View {
             Section {
                 Toggle("Enabled", isOn: $enabled)
                     .disabled(!capability.available)
+                if capability.id == "location" {
+                    Button("Allow Location") { LocationCapability.adapter.requestPermission() }
+                    Text("Enable Always and Precise Location for geofences and significant changes.")
+                }
                 LabeledContent("Permission", value: capability.permission)
                 LabeledContent("Last activity", value: "None")
                 if capability.id == "journal" { JournalSuggestionPicker() }
@@ -34,5 +38,16 @@ struct CapabilityScreen: View {
             }
         }
         .navigationTitle(capability.title)
+        .onChange(of: enabled) { _, value in
+            if capability.id == "location" {
+                if value { LocationCapability.resume() }
+                else {
+                    if let store = try? LocationCapability.load() {
+                        for fence in store.snapshot.fences { LocationCapability.adapter.remove(fence.name) }
+                    }
+                    try? LocationCapability.adapter.significant(false)
+                }
+            }
+        }
     }
 }
