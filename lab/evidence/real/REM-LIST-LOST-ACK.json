@@ -1,17 +1,17 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[34.92 56.64 77.34] cpu_idle=35% cpus=8 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[52.35 37.42 45.09] cpu_idle=50% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M64VJW8XSP0TY62HS7584ZPR",
+  "run_id": "run_01M64WK19GJ4VHR6N9NYQAWVC7",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "REM-LIST-LOST-ACK",
   "level": "real",
-  "passed": false,
+  "passed": true,
   "git_sha": "3f7bdf0d33b652a4fabce3ddd385ebb43d997342",
-  "at": "2026-10-29T22:13:14.141636Z",
+  "at": "2026-10-29T22:30:47.856663Z",
   "assertions": [
     {
       "name": "reminders_ready",
@@ -34,8 +34,12 @@
       "passed": true
     },
     {
+      "name": "private_helper_paused_for_integrity",
+      "passed": true
+    },
+    {
       "name": "replica_convergence",
-      "passed": false
+      "passed": true
     },
     {
       "name": "no_scope_leak",

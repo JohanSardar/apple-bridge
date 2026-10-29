@@ -826,6 +826,8 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 	if s.ID == "CORE-LIVE-LATENCY" {
 		_, _, stableReadErr := w.RecordsAt(w.Replicas[0])
 		e.Metrics["final_active_read_changed_during_pagination"] = stableReadErr != nil && stableReadErr.Error() == "snapshot changed during pagination"
+	}
+	if s.ID == "CORE-LIVE-LATENCY" || s.ID == "REM-LIST-LOST-ACK" {
 		pidBytes, pidErr := os.ReadFile(filepath.Join(w.Gateway.Home, "helper", "helper.pid"))
 		pid := strings.TrimSpace(string(pidBytes))
 		numericPID, parseErr := strconv.Atoi(pid)
