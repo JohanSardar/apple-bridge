@@ -1,24 +1,30 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[9.31 8.67 8.22] cpu_idle=54% cpus=8 other_heavy=0"
+    "summary": "air: load=[18.3 11.06 12.21] cpu_idle=44% cpus=8 other_heavy=0"
   },
   "status": "environment-limited",
-  "run_id": "run_01M647H914YFPDC1VG3DKKRJ4Q",
+  "run_id": "run_01M64ZHYB0KA23SWDXQXJXT7WA",
   "metrics": {
-    "capture_observer_resets": 0
+    "baseline_captured": false,
+    "capture_observer_resets": 0,
+    "cleanup_verified": true,
+    "writes_submitted": 0
   },
   "scenario": "MSG-PINS",
   "level": "real",
   "passed": false,
   "git_sha": "",
-  "at": "2026-10-29T16:22:50.148208Z",
+  "at": "2026-10-29T23:22:37.79249Z",
   "assertions": [
     {
-      "name": "signed_parity_helper",
+      "name": "run_only_cleanup",
+      "passed": true
+    },
+    {
+      "name": "messages.pin",
       "passed": false,
-      "status": "unverified",
-      "detail": "Set APPLE_BRIDGE_PARITY_HELPER_APP to an immutable signed Helper built from the current source"
+      "detail": "accessibility_permission_missing"
     },
     {
       "name": "credential_backend_override_restored",
