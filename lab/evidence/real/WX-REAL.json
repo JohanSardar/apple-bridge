@@ -1,10 +1,10 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[10.08 7.57 7.75] cpu_idle=27% cpus=8 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[33.89 39.7 50.55] cpu_idle=66% cpus=8 other_heavy=0"
   },
   "status": "limited",
-  "run_id": "run_01M646J079QA63NXCS4BKN2YK0",
+  "run_id": "run_01M64WA15AA8D9NYGG50PQMYG1",
   "metrics": {
     "capture_observer_resets": 0
   },
@@ -12,8 +12,28 @@
   "level": "real",
   "passed": false,
   "git_sha": "",
-  "at": "2026-10-29T16:05:45.321185Z",
+  "at": "2026-10-29T22:25:52.810442Z",
   "assertions": [
+    {
+      "name": "world_started",
+      "passed": true
+    },
+    {
+      "name": "scopes_granted",
+      "passed": true
+    },
+    {
+      "name": "helper_ready",
+      "passed": true
+    },
+    {
+      "name": "native_invalid_coordinate_rejected",
+      "passed": true
+    },
+    {
+      "name": "helper_signing_readable",
+      "passed": true
+    },
     {
       "name": "credential_backend_override_restored",
       "passed": true
@@ -22,6 +42,6 @@
   "latency": null,
   "hosts": null,
   "conditions": {
-    "reason": "real qualification batched at end; Weather action identifiers and signed AB Weather pack output remain unverified"
+    "reason": "needs WeatherKit-enabled provisioning profile and Apple-signed Mac Helper"
   }
 }
