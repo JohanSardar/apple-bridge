@@ -66,6 +66,15 @@ func ProbeHTTP(ctx context.Context, client *http.Client, origin string, duration
 			req.Header.Set("Accept", "text/event-stream")
 		}
 		response, err := client.Do(req)
+		if check.path == "/.well-known/oauth-authorization-server" {
+			for err != nil && bounded.Err() == nil {
+				select {
+				case <-bounded.Done():
+				case <-time.After(100 * time.Millisecond):
+				}
+				response, err = client.Do(req)
+			}
+		}
 		if err != nil {
 			cancel()
 			return expiry, err

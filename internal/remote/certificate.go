@@ -48,6 +48,7 @@ type certificateManager struct {
 	home        string
 	identity    relayIdentity
 	host        string
+	controlDNS  relay.DNSProvider
 }
 
 func (m *certificateManager) get(*tls.ClientHelloInfo) (*tls.Certificate, error) {
@@ -213,6 +214,9 @@ func loadCertificateKey(path string) (*ecdsa.PrivateKey, error) {
 	return key, err
 }
 func (m *certificateManager) publishTXT(ctx context.Context, value string) error {
+	if m.controlDNS != nil {
+		return m.controlDNS.TXT(ctx, "_acme-challenge."+m.host, value)
+	}
 	p, err := relay.NewProof(ctx, m.client(), m.identity.Endpoint, m.identity.Key, m.identity.Credential, "dns:"+value)
 	if err != nil {
 		return err
@@ -243,6 +247,9 @@ func relayClientRequest(ctx context.Context, client *http.Client, url string, va
 }
 
 func (m *certificateManager) reportCertificate(ctx context.Context, fingerprint string) error {
+	if m.controlDNS != nil {
+		return nil
+	}
 	p, err := relay.NewProof(ctx, m.client(), m.identity.Endpoint, m.identity.Key, m.identity.Credential, "certificate:"+fingerprint)
 	if err != nil {
 		return err
@@ -253,4 +260,38 @@ func (m *certificateManager) reportCertificate(ctx context.Context, fingerprint 
 func certificateFingerprint(der []byte) string {
 	sum := sha256.Sum256(der)
 	return hex.EncodeToString(sum[:])
+}
+
+func ControlTLSConfig(ctx context.Context, home, host string, dns relay.DNSProvider, options CertificateOptions) (*tls.Config, error) {
+	if dns == nil || host == "" {
+		return nil, fmt.Errorf("control ACME requires hostname and DNS provider")
+	}
+	if err := os.MkdirAll(filepath.Join(home, "remote"), 0700); err != nil {
+		return nil, err
+	}
+	manager := &certificateManager{home: home, host: host, controlDNS: dns, options: options}
+	bounded, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	err := manager.ensure(bounded)
+	cancel()
+	if err != nil {
+		return nil, err
+	}
+	go func() {
+		ticker := time.NewTicker(12 * time.Hour)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+			}
+			bounded, cancel := context.WithTimeout(ctx, 5*time.Minute)
+			err := manager.ensure(bounded)
+			cancel()
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "control certificate renewal failed:", err)
+			}
+		}
+	}()
+	return &tls.Config{MinVersion: tls.VersionTLS12, GetCertificate: manager.get}, nil
 }
