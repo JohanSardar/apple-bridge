@@ -1,11 +1,63 @@
 import Foundation
 import Darwin
+import CoreGraphics
+import ImageIO
+import PDFKit
 import FilesSource
 import SourceSupport
 
 @main
 struct Checks {
+    static func transforms() async throws {
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent("ab-test-" + UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: home) }
+        let source = try FilesSource(home: home)
+        let root = home.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs/Bridge Test")
+        guard let context = CGContext(data: nil, width: 16, height: 12, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue), let image = context.makeImage() else { throw SourceFailure.corrupt }
+        let png = NSMutableData()
+        guard let destination = CGImageDestinationCreateWithData(png, "public.png" as CFString, 1, nil) else { throw SourceFailure.corrupt }
+        CGImageDestinationAddImage(destination, image, nil)
+        guard CGImageDestinationFinalize(destination) else { throw SourceFailure.corrupt }
+        func stage(_ data: Data, _ name: String) async throws -> String {
+            try data.write(to: root.appendingPathComponent(name))
+            return try await source.read(.object(["root": .string(root.path), "path": .string(name)]))["digest"].string
+        }
+        func run(_ args: JSON) async throws -> [JSON] {
+            let prepared = try await source.prepare(.object(["action": .object(["op": .string("files.transform"), "args": args])]))
+            return try await source.dispatch(prepared)["outputs"].array
+        }
+        func bytes(_ blob: JSON) async throws -> Data {
+            let chunk = try await source.readBlob(blob["handle"].string, offset: 0, length: 131072)
+            guard let data = Data(base64Encoded: chunk["bytes"].string), data.count == Int(blob["size"].number) else { throw SourceFailure.corrupt }
+            return data
+        }
+        let input = try await stage(png as Data, "image.png")
+        for operation in ["convert", "resize"] {
+            let outputs = try await run(.object(["operation": .string(operation), "inputs": .array([.string(input)]), "format": .string("jpeg"), "width": .number(8), "height": .number(6)]))
+            guard outputs.count == 1, outputs[0]["media_type"].string == "image/jpeg", let decoded = CGImageSourceCreateWithData(try await bytes(outputs[0]) as CFData, nil), CGImageSourceGetType(decoded) as String? == "public.jpeg", let result = CGImageSourceCreateImageAtIndex(decoded, 0, nil), result.width == (operation == "resize" ? 8 : 16), result.height == (operation == "resize" ? 6 : 12) else { throw SourceFailure.corrupt }
+        }
+        let pdf = PDFDocument()
+        guard let page = PDFPage(image: NSImage(cgImage: image, size: .zero)) else { throw SourceFailure.corrupt }
+        pdf.insert(page, at: 0)
+        let digest = try await stage(pdf.dataRepresentation()!, "one.pdf")
+        let combined = try await run(.object(["operation": .string("combine"), "inputs": .array([.string(digest), .string(digest)])]))
+        guard combined.count == 1, PDFDocument(data: try await bytes(combined[0]))?.pageCount == 2 else { throw SourceFailure.corrupt }
+        let split = try await run(.object(["operation": .string("split"), "inputs": .array([combined[0]["digest"]])]))
+        guard split.count == 2 else { throw SourceFailure.corrupt }
+        for blob in split {
+            guard blob["media_type"].string == "application/pdf", PDFDocument(data: try await bytes(blob))?.pageCount == 1 else { throw SourceFailure.corrupt }
+        }
+        do {
+            _ = try await run(.object(["operation": .string("combine"), "inputs": .array([.string(input)])]))
+            throw SourceFailure.corrupt
+        } catch SourceFailure.invalid {}
+        print("transforms=4 passed=true")
+    }
     static func main() async throws {
+        if CommandLine.arguments.last == "FILES-TRANSFORM" {
+            try await transforms()
+            return
+        }
         let home = FileManager.default.homeDirectoryForCurrentUser
         let root = home.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs/Bridge Test")
         let source = try FilesSource()
