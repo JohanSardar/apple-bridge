@@ -558,7 +558,7 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "MSG-PINS" || s.ID == "MSG-MUTE" || s.ID == "MSG-READ-RECEIPTS" || s.ID == "MSG-RECENTLY-DELETED" {
 		return runMessagesParity(ctx, s, level)
 	}
-	if s.ID == "MSG-SEND-VARIANTS" || s.ID == "MSG-SELFTEST" || s.ID == "MSG-RESEND" || s.ID == "MSG-READSTATE-REAL" || s.ID == "MSG-DELETE-REAL" || s.ID == "MSG-COMMAND-OBSERVED-IDS" || s.ID == "MSG-FAILED-OBSERVED-IDS" || s.ID == "MSG-COMMAND-PARTS" {
+	if s.ID == "MSG-SEND-LATER" || s.ID == "MSG-SEND-EFFECT" || s.ID == "MSG-FORMATTING-SEND" || s.ID == "MSG-MENTION-SEND" || s.ID == "MSG-AUDIO-MESSAGE" || s.ID == "MSG-SEND-VARIANTS" || s.ID == "MSG-SELFTEST" || s.ID == "MSG-RESEND" || s.ID == "MSG-READSTATE-REAL" || s.ID == "MSG-DELETE-REAL" || s.ID == "MSG-COMMAND-OBSERVED-IDS" || s.ID == "MSG-FAILED-OBSERVED-IDS" || s.ID == "MSG-COMMAND-PARTS" {
 		return runMessagesCommands(ctx, s, level)
 	}
 	if s.ID == "MSG-MEDIA-CLEANUP" {
@@ -1180,6 +1180,9 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		ran++
 		fmt.Fprintln(os.Stderr, "running", s.ID, level)
 		duration := 3 * time.Minute
+		if s.ID == "CALL-IDLE" && level == "sim" {
+			duration = 20 * time.Minute
+		}
 		if s.Feature == "vision.queries" && level == "real" {
 			duration = 20 * time.Minute
 		}

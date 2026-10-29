@@ -831,12 +831,8 @@ features:
     status: todo
     # Native variants without per-build proof stay hidden. Browser PARITY-UI
     # passed its 12-project cohort; native status is independent of that pass.
-    # Status stays todo (checker rule: every listed scenario needs a file):
-    # the W4-HELPER-B per-variant scenarios (MSG-SEND-LATER, MSG-SEND-EFFECT,
-    # MSG-FORMATTING-SEND, MSG-MENTION-SEND, MSG-AUDIO-MESSAGE) were never
-    # authored, and HELPER-A sim evidence is not committed. All W4 units are
-    # merged; the per-build selftest needs an unused own handle, returned
-    # indeterminate on 25G241, and no native parity variant is enabled.
+    # Per-variant sim checks prove fail-closed rejection without plain fallback.
+    # Native variants remain hidden until per-build real qualification.
     scenarios:
       - {id: MSG-PINS, levels: [sim, real]}
       - {id: MSG-MUTE, levels: [sim, real]}
@@ -851,6 +847,10 @@ features:
       - {id: MSG-RECENTLY-DELETED, levels: [sim, real]}
       - {id: WEB-MSG-PARITY-UI, levels: [web]}
     limits:
+      - {scenario: MSG-SEND-LATER, level: real, reason: "real qualification batched at end; per-build native variant remains unproven"}
+      - {scenario: MSG-SEND-EFFECT, level: real, reason: "real qualification batched at end; per-build native variant remains unproven"}
+      - {scenario: MSG-FORMATTING-SEND, level: real, reason: "real qualification batched at end; per-build native variant remains unproven"}
+      - {scenario: MSG-AUDIO-MESSAGE, level: real, reason: "real qualification batched at end; per-build native variant remains unproven"}
       - scenario: MSG-PINS
         level: real
         reason: "No truly unused own-handle alias exists on this Air. The personal self-chat fallback is refused, so this native variant was not rerun; the per-build parity ledger keeps it hidden."
@@ -1172,7 +1172,7 @@ features:
       - {scenario: MAIL-CAPTURE, level: sim, reason: "Account, mailbox and bounded message fixture capture with subject FTS; recipients, attachment metadata/hydration, flags and body state remain unimplemented. Native build and MAIL-CAPTURE remained queued without results; gateway qualification pending."}
       - {scenario: MAIL-LIVE, level: sim, reason: Insert and read/move fixture checks only; flag changes and p95 gateway delivery remain unimplemented.}
       - {scenario: MAIL-NO-FALSE-DELETE, level: sim, reason: Native generation and bounded scan checks only; gateway alias reconciliation remains unverified.}
-      - {scenario: MAIL-IDLE, level: sim, reason: Five-minute idle Helper CPU proof remains unimplemented; scenario fails explicitly.}
+    notes: "MAIL-IDLE sim proves bounded fixture checkpoint suppression and resumed capture after a write; five-minute Helper CPU remains a real-level qualification."
 
   - id: files.capture
     title: Opt-in files metadata and queries

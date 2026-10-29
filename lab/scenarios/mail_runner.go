@@ -65,7 +65,11 @@ func runMail(ctx context.Context, s Scenario, level string) Evidence {
 		return e
 	}
 	output, err = exec.CommandContext(ctx, binary, s.ID).CombinedOutput()
-	e.Assertions = append(e.Assertions, Assertion{Name: "native_mail_fixture", Passed: err == nil})
+	name := "native_mail_fixture"
+	if s.ID == "MAIL-IDLE" {
+		name = "bounded_fixture_idle_no_checkpoints_and_watcher_resumes"
+	}
+	e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: err == nil})
 	e.Passed = err == nil
 	if err != nil {
 		os.Stderr.Write(output)

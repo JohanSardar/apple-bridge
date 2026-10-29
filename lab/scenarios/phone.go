@@ -51,7 +51,11 @@ func runPhoneScenario(ctx context.Context, s Scenario, level string) Evidence {
 	cmd.Env = append(os.Environ(), "APPLE_BRIDGE_NATIVE_TARGET=CallsChecks")
 	var err error
 	if s.ID != "CALL-DIAL" || !callsDialChecksFresh() {
-		err = cmd.Run()
+		var output []byte
+		output, err = cmd.CombinedOutput()
+		if err != nil {
+			os.Stderr.Write(output)
+		}
 	}
 	e.Assertions = []Assertion{{Name: "calls_native_fixture_build", Passed: err == nil}}
 	if err == nil {
