@@ -492,6 +492,14 @@ public actor AppleSession: ObservationSink {
             guard evidence["finished_callback"].bool, evidence["prepared"]["request_hash"] == fingerprint else { throw SourceFailure.unavailable }
             return evidence
         }
+        if operation == "music.favorite" || operation == "music.add_to_playlist" {
+            let collection = operation == "music.favorite" ? "music.library_item" : "music.playlist"
+            guard let checkpoint = observedCheckpoints[collection + "/" + evidence["native_key"].string] else { throw SourceFailure.unavailable }
+            var result = evidence.object
+            result["fingerprint"] = fingerprint
+            result["capture_checkpoint"] = .string(checkpoint)
+            return .object(result)
+        }
         if operation.hasPrefix("photos."), let photos = additionalSources["photos"] as? PhotosSource {
             try await photos.captureCommand(evidence, into: self)
             let collection = operation == "photos.create_album" ? "photos.album" : "photos.asset"
@@ -499,6 +507,14 @@ public actor AppleSession: ObservationSink {
             var result = evidence.object
             result["fingerprint"] = fingerprint
             result["capture_checkpoint"] = .string(checkpoint)
+            return .object(result)
+        }
+        if operation.hasPrefix("files."), let files = additionalSources["files"] as? FilesSource {
+            try await files.reconcile(into: self)
+            guard let checkpoint = observedCheckpoints["files.item/" + evidence["native_key"].string] else { throw SourceFailure.unavailable }
+            var result = evidence.object
+            result["capture_checkpoint"] = .string(checkpoint)
+            result["fingerprint"] = fingerprint
             return .object(result)
         }
         if operation.hasPrefix("notes."), let notes=additionalSources["notes"] as? NotesSource {

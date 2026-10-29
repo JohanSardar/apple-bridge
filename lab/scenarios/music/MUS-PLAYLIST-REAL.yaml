@@ -1,0 +1,5 @@
+id: MUS-PLAYLIST-REAL
+feature: music.catalog
+levels: [real]
+when:
+  - queries: {}

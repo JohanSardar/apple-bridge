@@ -364,6 +364,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.Feature == "audio.queries" {
 		return runAudioQueries(ctx, s, level)
 	}
+	if s.Feature == "music.catalog" {
+		return runMusicCatalog(ctx, s, level)
+	}
 	if s.Feature == "vision.queries" {
 		return runVisionQueries(ctx, s, level)
 	}
@@ -379,7 +382,7 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.Feature == "clock.pack" {
 		return runClockPack(ctx, s, level)
 	}
-	if s.Feature == "files.capture" || s.Feature == "files.transform" {
+	if s.Feature == "files.capture" || s.Feature == "files.commands" || s.Feature == "files.transform" {
 		return runFiles(ctx, s, level)
 	}
 	if s.Feature == "photos.capture" || s.Feature == "photos.commands" {
@@ -1215,7 +1218,7 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		if s.ID == "SC-ACTIONS" {
 			duration = 30 * time.Minute
 		}
-		if s.ID == "SC-IDLE" && level == "real" {
+		if s.Feature == "files.commands" && level != "sim" || s.ID == "SC-IDLE" && level == "real" {
 			duration = 20 * time.Minute
 		}
 		if s.ID == "FILE-IDLE" && level == "real" {
