@@ -1,0 +1,129 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[8.71 8.82 8.31] cpu_idle=35% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M646X5RZ2XQQS7RAFHMRHXEV",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "MSG-SEND-LATER",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "2d911b7bd41ad214298cda87ee7e6c551dd390b1",
+  "at": "2026-10-29T16:11:51.455838Z",
+  "assertions": [
+    {
+      "name": "seed_self_chat",
+      "passed": true
+    },
+    {
+      "name": "fixture_captured",
+      "passed": true
+    },
+    {
+      "name": "source_status",
+      "passed": true
+    },
+    {
+      "name": "not_advertised_messages.send_later",
+      "passed": true
+    },
+    {
+      "name": "not_advertised_messages.send_effect",
+      "passed": true
+    },
+    {
+      "name": "not_advertised_messages.send_formatted",
+      "passed": true
+    },
+    {
+      "name": "not_advertised_messages.send_mention",
+      "passed": true
+    },
+    {
+      "name": "not_advertised_messages.send_audio",
+      "passed": true
+    },
+    {
+      "name": "not_advertised_messages.keep_audio",
+      "passed": true
+    },
+    {
+      "name": "limited_reason_messages.send_later",
+      "passed": true
+    },
+    {
+      "name": "limited_reason_messages.send_effect",
+      "passed": true
+    },
+    {
+      "name": "limited_reason_messages.send_formatted",
+      "passed": true
+    },
+    {
+      "name": "limited_reason_messages.send_mention",
+      "passed": true
+    },
+    {
+      "name": "limited_reason_messages.send_audio",
+      "passed": true
+    },
+    {
+      "name": "limited_reason_messages.keep_audio",
+      "passed": true
+    },
+    {
+      "name": "unproven_schedule_no_plain_fallback",
+      "passed": true
+    },
+    {
+      "name": "invalid_variant_0_no_effect",
+      "passed": true
+    },
+    {
+      "name": "invalid_variant_1_no_effect",
+      "passed": true
+    },
+    {
+      "name": "invalid_variant_2_no_effect",
+      "passed": true
+    },
+    {
+      "name": "invalid_variant_3_no_effect",
+      "passed": true
+    },
+    {
+      "name": "invalid_variant_4_no_effect",
+      "passed": true
+    },
+    {
+      "name": "invalid_variant_5_no_effect",
+      "passed": true
+    },
+    {
+      "name": "invalid_variant_6_no_effect",
+      "passed": true
+    },
+    {
+      "name": "plain_send_unchanged",
+      "passed": true
+    },
+    {
+      "name": "keep_unproven_no_effect",
+      "passed": true
+    },
+    {
+      "name": "truth_and_replica_convergence",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

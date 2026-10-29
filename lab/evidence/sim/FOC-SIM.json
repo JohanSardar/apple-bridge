@@ -1,0 +1,75 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[7.98 8.66 8.26] cpu_idle=38% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M646XFHXGJPDZCZTJ58YGGZ4",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "FOC-SIM",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-29T16:12:01.469157Z",
+  "assertions": [
+    {
+      "name": "unknown_status_has_shape",
+      "passed": true
+    },
+    {
+      "name": "invalid_focused_rejected",
+      "passed": true
+    },
+    {
+      "name": "unqualified_mutation_not_advertised",
+      "passed": true
+    },
+    {
+      "name": "unqualified_real_runner_disabled",
+      "passed": true
+    },
+    {
+      "name": "fake_pack_runner",
+      "passed": true
+    },
+    {
+      "name": "bounded_named_pack",
+      "passed": true
+    },
+    {
+      "name": "unqualified_set_never_dispatches",
+      "passed": true
+    },
+    {
+      "name": "unqualified_set_never_dispatches",
+      "passed": true
+    },
+    {
+      "name": "unqualified_set_never_dispatches",
+      "passed": true
+    },
+    {
+      "name": "timeout_rejected",
+      "passed": true
+    },
+    {
+      "name": "nonzero_exit_rejected",
+      "passed": true
+    },
+    {
+      "name": "oversize_output_rejected",
+      "passed": true
+    },
+    {
+      "name": "runner_error_retained",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}
