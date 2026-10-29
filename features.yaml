@@ -1223,10 +1223,10 @@ features:
       - {id: MUS-CONTROL-REAL, levels: [real]}
       - {id: MUS-PLAYLIST-REAL, levels: [real]}
       - {id: MUS-IDLE, levels: [sim, real]}
-    notes: "Native Music qualification pending; library capture bounded to 500 tracks / 50 playlists / 1000 memberships; Automation dev.applebridge.helper → com.apple.Music missing. Public API has no playlist search. Whole Helper idle measured 2.063240% CPU-time over 300.014 idle seconds after 507.504 seconds of settling."
+    notes: "Tagged silent-track fixtures and exact playback restore implemented; real qualification requires a nonprompting Music Automation grant and restorable unshuffled playlist context. Library capture bounded to 500 tracks / 50 playlists / 1000 memberships; Automation dev.applebridge.helper → com.apple.Music missing. Public API has no playlist search. Whole Helper idle measured 2.063240% CPU-time over 300.014 idle seconds after 507.504 seconds of settling."
     limits:
-      - {"scenario": "MUS-CONTROL-REAL", "level": "real", "reason": "Automation: dev.applebridge.helper → com.apple.Music missing; consent not requested"}
-      - {"scenario": "MUS-PLAYLIST-REAL", "level": "real", "reason": "Automation: dev.applebridge.helper → com.apple.Music missing; consent not requested"}
+      - {"scenario": "MUS-CONTROL-REAL", "level": "real", "reason": "needs Music Automation grant (T79); consent not requested"}
+      - {"scenario": "MUS-PLAYLIST-REAL", "level": "real", "reason": "needs Music Automation grant (T79); consent not requested"}
       - {"scenario": "MUS-IDLE", "level": "real", "reason": "Budget-limited: interrupted during the single serial attempt; fresh failure evidence saved. No passing idle CPU measurement established."}
   - id: files.transform
     title: Native image and PDF blob transforms

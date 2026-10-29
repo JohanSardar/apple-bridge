@@ -7,6 +7,7 @@ import RemindersStore
 import SourceSupport
 import NotesSource
 import SafariSource
+import MusicSource
 
 enum HelperLabCommand {
     @MainActor
@@ -41,6 +42,17 @@ enum HelperLabCommand {
             }
             while !finished { RunLoop.current.run(until: Date().addingTimeInterval(0.05)) }
             if let failure { throw failure }
+            return true
+        case "music-qualification":
+            let reportURL = try report(arguments)
+            var result: Result<JSON, any Error>?
+            Task { @MainActor in
+                do { result = .success(try await MusicPlayer().qualifyPlayback(playlistOnly: arguments.contains("--playlist"))) }
+                catch { result = .failure(error) }
+            }
+            while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.005)) }
+            try JSONEncoder().encode(try result!.get()).write(to: reportURL, options: .atomic)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportURL.path)
             return true
         case "media-cleanup-checks":
             guard let index = arguments.firstIndex(of: "--fixtures"), index + 1 < arguments.count else { throw ProbeFailure.invalidArguments }

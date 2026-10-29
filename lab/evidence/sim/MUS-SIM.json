@@ -1,17 +1,17 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[9.23 7.93 10.3] cpu_idle=41% cpus=8 other_heavy=1"
+    "summary": "air: load=[47.13 69.45 67.28] cpu_idle=4% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M62CRY7AH0F6531H2KSFSRJ5",
+  "run_id": "run_01M64YX8QFY59NXS2RPVAPHXNN",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "MUS-SIM",
   "level": "sim",
   "passed": true,
-  "git_sha": "b2ffe757374e53192662ff0c1b55080e75ba06ed",
-  "at": "2026-10-28T23:15:55.242763Z",
+  "git_sha": "77824ec345377b80bb538a2cba20b6dacf66e169",
+  "at": "2026-10-29T23:11:20.304772Z",
   "assertions": [
     {
       "name": "world_started",
@@ -178,14 +178,6 @@
       "passed": true
     },
     {
-      "name": "invalid_command_set_volume",
-      "passed": true
-    },
-    {
-      "name": "invalid_command_play_item",
-      "passed": true
-    },
-    {
       "name": "invalid_command_favorite",
       "passed": true
     },
@@ -195,6 +187,14 @@
     },
     {
       "name": "invalid_command_pause",
+      "passed": true
+    },
+    {
+      "name": "invalid_command_set_volume",
+      "passed": true
+    },
+    {
+      "name": "invalid_command_play_item",
       "passed": true
     },
     {
