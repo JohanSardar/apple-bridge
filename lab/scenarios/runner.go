@@ -379,6 +379,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.Feature == "photos.capture" || s.Feature == "photos.commands" {
 		return runPhotos(ctx, s, level)
 	}
+	if s.Feature == "shortcuts.actions" {
+		return runActions(ctx, s, level)
+	}
 	if s.Feature == "shortcuts.runner" {
 		return runShortcutsRunner(ctx, s, level)
 	}
@@ -1202,6 +1205,9 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		}
 		if strings.HasPrefix(s.ID, "MAC-") && level == "real" {
 			duration = 20 * time.Minute
+		}
+		if s.ID == "SC-ACTIONS" {
+			duration = 30 * time.Minute
 		}
 		if s.ID == "FILE-IDLE" && level == "real" {
 			duration = 7 * time.Minute

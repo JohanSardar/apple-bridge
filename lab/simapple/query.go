@@ -63,6 +63,14 @@ func (s *querySession) receive(f contracts.IPCFrame) bool {
 			return
 		}
 		switch f.Op {
+		case "shortcuts.actions":
+			var fields map[string]json.RawMessage
+			if json.Unmarshal(f.Args, &fields) != nil || fields == nil || len(fields) != 0 {
+				out.T = "QueryError"
+				out.Code = "invalid"
+			} else {
+				out.ResultJSON = json.RawMessage(`{"items":[{"app":"com.example.synthetic","identifier":"Export","title":"Export"}],"complete":true,"schema_guaranteed":false}`)
+			}
 		case "test.echo":
 		case "test.sleep":
 			select {

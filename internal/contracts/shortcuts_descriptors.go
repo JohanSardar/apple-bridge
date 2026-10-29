@@ -23,7 +23,10 @@ func ValidateShortcutRun(c Command) error {
 func init() {
 	RegisterSource(Shortcuts, "Shortcuts", true)
 	registerDescriptors(func() []OperationDescriptor {
-		return []OperationDescriptor{{Name: "shortcuts.run", Version: 1, Kind: CommandOp, Source: Shortcuts, Scope: "shortcuts:write", Capability: "shortcuts.run", Input: Command{}, Output: CommandRecord{}, Description: "Run a shortcut with text input; evidence establishes CLI completion only"}}
+		return []OperationDescriptor{
+			{Name: "shortcuts.run", Version: 1, Kind: CommandOp, Source: Shortcuts, Scope: "shortcuts:write", Capability: "shortcuts.run", Input: Command{}, Output: CommandRecord{}, Description: "Run a shortcut with text input; evidence establishes CLI completion only"},
+			{Name: "shortcuts.actions", Version: 1, Kind: QueryOp, Source: Shortcuts, Scope: "shortcuts:read", Input: Query{}, Output: QueryResult{}, Description: "Read bounded installed App Intents metadata; no executable schema guarantee"},
+		}
 	}, 66)
 	messagesShape["shortcuts.folder"] = map[string]fieldShape{"name": requiredField(shapeString), "identifier": requiredField(shapeString)}
 	messagesShape["shortcuts.shortcut"] = map[string]fieldShape{"name": requiredField(shapeString), "identifier": requiredField(shapeString), "folder_id": nullableField(shapeString), "accepts_input": nullableField(shapeBool)}

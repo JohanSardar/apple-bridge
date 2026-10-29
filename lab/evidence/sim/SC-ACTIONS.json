@@ -1,0 +1,51 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[5.21 8.29 16.7] cpu_idle=50% cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M62FM191C9H0P0WY6RKA9H3N",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "SC-ACTIONS",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-29T00:05:40.257798Z",
+  "assertions": [
+    {
+      "name": "query_registered",
+      "passed": true
+    },
+    {
+      "name": "public_gateway",
+      "passed": true
+    },
+    {
+      "name": "helper_ready",
+      "passed": true
+    },
+    {
+      "name": "public_actions",
+      "passed": true
+    },
+    {
+      "name": "caller_paths_rejected",
+      "passed": true
+    },
+    {
+      "name": "native_output",
+      "passed": true
+    },
+    {
+      "name": "bounded_metadata_discovery",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

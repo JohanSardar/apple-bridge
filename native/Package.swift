@@ -30,6 +30,7 @@ let package = Package(
         .executableTarget(name: "FilesChecks", dependencies: ["FilesSource", "SourceSupport"]),
         .executableTarget(name: "CallsChecks", dependencies: ["CallsSource", "SourceSupport"]),
         .executableTarget(name: "SourceSupportChecks", dependencies: ["SourceSupport"]),
+        .executableTarget(name: "ActionsChecks", dependencies: ["ShortcutsSource", "SourceSupport"]),
         .executableTarget(name: "ShortcutsChecks", dependencies: ["ShortcutsSource", "SourceSupport"]),
         .target(name: "ContactsHistory", publicHeadersPath: "include"),
         .target(name: "Decoders"),
