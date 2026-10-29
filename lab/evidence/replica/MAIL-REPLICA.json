@@ -1,0 +1,35 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[39.98 39.73 26.2] cpu_idle=39% cpus=8 other_heavy=2; ubuntu: load=[0.76 0.7 0.77] cpu_idle=97% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M61YYR3MFGNRXF8X7X7SKD1A",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "MAIL-REPLICA",
+  "level": "replica",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-28T19:14:25.524931Z",
+  "assertions": [
+    {
+      "name": "ubuntu_replica_started",
+      "passed": true
+    },
+    {
+      "name": "metadata_only_fixture",
+      "passed": true
+    },
+    {
+      "name": "ubuntu_records_and_subject_fts_equal",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

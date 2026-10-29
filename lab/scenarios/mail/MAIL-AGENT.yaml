@@ -1,0 +1,3 @@
+id: MAIL-AGENT
+feature: mail.capture
+levels: [agent]

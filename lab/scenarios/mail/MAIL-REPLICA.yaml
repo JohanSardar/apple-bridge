@@ -1,0 +1,3 @@
+id: MAIL-REPLICA
+feature: mail.capture
+levels: [replica]

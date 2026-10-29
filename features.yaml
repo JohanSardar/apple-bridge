@@ -442,6 +442,19 @@ features:
       - {id: NOTE-IMPORT, levels: [sim, real]}
       - {id: NOTE-EXTERNAL, levels: [sim, real, replica]}
       - {id: NOTE-DECODE, levels: [sim]}
+  - id: notes.extras
+    title: Notes checklist, folder, tag, pin and move extras
+    requirements: [R-RW, R-NOTES]
+    milestone: M3
+    modules: [native/NotesSource, operations]
+    depends_on: [notes.read]
+    status: limited
+    scenarios:
+      - {id: NOTE-EXTRAS, levels: [sim, real]}
+    limits:
+      - scenario: NOTE-EXTRAS
+        level: real
+        reason: "No verified real cleanup route on 25G241; no mutations attempted. Native move and rename require per-build NoteStore evidence and remain unadvertised; sim covers both. Folder deletion requires separate proof. Notes.sdef has no native checklist, hashtag or pin setters; existing decoder reads remain available."
   - id: notes.write
     title: Notes plain-text create, update, delete, folders; rich edits reject
     requirements: [R-RW, R-NOTES]
@@ -1054,8 +1067,8 @@ features:
     notes: Five-minute single-use invitations, ephemeral in-memory connecting identities, private approval IPC and shared web/API/feed dispatch pass sim regression coverage; localhost origin retained; hosted connectors unsupported.
 
   - id: vision.queries
-    title: Transient Vision OCR and PDF extraction
-    requirements: [R-API, R-SCOPE]
+    title: Vision OCR and PDF document operations
+    requirements: [R-API, R-SCOPE, R-RW]
     milestone: G8
     modules: [native/Sources/VisionSource, native/Sources/PDFSource]
     depends_on: [core.queries]
@@ -1063,13 +1076,14 @@ features:
     scenarios:
       - {id: VIS-OCR, levels: [sim, real]}
       - {id: PDF-TEXT, levels: [sim, real]}
+      - {id: PDF-ANNOTATE, levels: [sim]}
+      - {id: VIS-IDLE, levels: [real]}
     limits:
-      - scenario: VIS-OCR
+      - scenario: VIS-IDLE
         level: real
-        reason: Digest-backed blob inputs, doctor readiness and five-minute idle CPU proof are not implemented; inline and local-file queries only.
-      - scenario: PDF-TEXT
-        level: real
-        reason: pdf.annotate command and its artifact readback evidence are not implemented; extraction and search only.
+        reason: Helper CPU measured 58.02 percent over 300.02 seconds on a quiet host, exceeding the 2 percent budget; consistent with the pre-existing Messages.reconcile blocker in overnight decision 37.
+    notes: Blob and explicit file inputs, PDF annotation artifact readback, doctor readiness and native framework queries pass; total Helper idle CPU remains limited.
+
   - id: shortcuts.runner
     title: Bounded Shortcuts CLI runner
     requirements: [R-RW]
@@ -1077,17 +1091,25 @@ features:
     modules: [internal/shortcut, packaging/shortcuts, native/Sources/ShortcutsSource]
     depends_on: [core.shortcuts]
     status: limited
-    notes: Native inventory and text runner integrated; Clock, Focus, action discovery and file transforms remain unimplemented. Pack import and real qualification require leader action.
+    notes: Native inventory and text runner integrated; installed pack version requires unique AB Pack v1, AB Echo, AB Clock and AB Focus inventory entries. Inline file/blob inputs and digest outputs are bounded; larger uploaded blobs, Clock, Focus, real pack and idle qualification remain limited.
     scenarios:
       - {id: SC-CAPTURE, levels: [sim]}
       - {id: SC-RUN, levels: [sim]}
+      - {id: SC-RUN-REAL, levels: [real]}
+      - {id: SC-IDLE, levels: [real]}
     limits:
       - scenario: SC-CAPTURE
         level: sim
         reason: Native fixture checks and CLI inventory changes; gateway replication and idle qualification remain unverified.
       - scenario: SC-RUN
         level: sim
-        reason: Native and Go subprocess adapters plus command validation; public gateway submission is exercised in sim; file blobs and real pack qualification remain unverified.
+        reason: Native and Go subprocess adapters plus command validation; public gateway submission exercises bounded inline blobs and digest output in sim; uploaded blobs and real pack qualification remain unverified.
+      - scenario: SC-RUN-REAL
+        level: real
+        reason: Installed AB Echo timed out at 20005 ms with zero output; corrected signed token-string source requires leader re-import.
+      - scenario: SC-IDLE
+        level: real
+        reason: Decision 37 blocks source idle qualification on the shared Messages reconcile CPU issue; T53 is investigating.
   - id: clock.pack
     title: Clock helper pack qualification
     requirements: [R-RW]
@@ -1103,13 +1125,13 @@ features:
     limits:
       - scenario: CLK-SIM
         level: sim
-        reason: Fake pack runner verifies bounds and refusal to infer effects; full alarm CRUD and timer simulation remain unimplemented.
+        reason: Injected runner verifies structured alarm CRUD readback, timer confirmation and world time; native pack parameter wiring remains unqualified.
       - scenario: CLK-ALARM-REAL
         level: real
-        reason: Leader import of AB Clock and qualification of structured alarm serialization and readback required; synthetic workflow cleanup run has unverified native effects.
+        reason: real qualification batched at end; leader import and structured alarm serialization and readback qualification required.
       - scenario: CLK-TIMER-REAL
         level: real
-        reason: Leader import and independent running timer readback required; start action alone cannot establish running state.
+        reason: real qualification batched at end; leader import and independent running timer readback required.
 
   - id: mac.capture
     title: Mac system state capture
@@ -1138,9 +1160,413 @@ features:
       - {id: MAIL-CAPTURE, levels: [sim]}
       - {id: MAIL-LIVE, levels: [sim]}
       - {id: MAIL-NO-FALSE-DELETE, levels: [sim]}
-      - {id: MAIL-IDLE, levels: [sim]}
+      - {id: MAIL-IDLE, levels: [sim, real]}
+      - {id: MAIL-READ-REAL, levels: [real]}
+      - {id: MAIL-REPLICA, levels: [replica]}
+      - {id: MAIL-AGENT, levels: [agent]}
     limits:
+      - {scenario: MAIL-REPLICA, level: replica, reason: "Synthetic metadata records and subject FTS pass on Ubuntu; real Mail equivalence awaits the missing Envelope Index, and attachments retain the source limitations."}
+      - {scenario: MAIL-AGENT, level: agent, reason: "Ubuntu Codex OAuth token is revoked (HTTP 401 token_revoked); Johan must sign in again before MCP-only agent qualification."}
+      - {scenario: MAIL-READ-REAL, level: real, reason: "V10 MailData directory is empty on this Mac; real Envelope Index required for counts and 25 random digest qualification."}
+      - {scenario: MAIL-IDLE, level: real, reason: "Blocked by missing real Mail store and pre-existing Helper idle CPU issue tracked by T53; no idle pass claimed."}
       - {scenario: MAIL-CAPTURE, level: sim, reason: "Account, mailbox and bounded message fixture capture with subject FTS; recipients, attachment metadata/hydration, flags and body state remain unimplemented. Native build and MAIL-CAPTURE remained queued without results; gateway qualification pending."}
       - {scenario: MAIL-LIVE, level: sim, reason: Insert and read/move fixture checks only; flag changes and p95 gateway delivery remain unimplemented.}
       - {scenario: MAIL-NO-FALSE-DELETE, level: sim, reason: Native generation and bounded scan checks only; gateway alias reconciliation remains unverified.}
       - {scenario: MAIL-IDLE, level: sim, reason: Five-minute idle Helper CPU proof remains unimplemented; scenario fails explicitly.}
+
+  - id: files.capture
+    title: Opt-in files metadata and queries
+    notes: Native build, local gate and focused sim checks pass; public gateway coverage and full Helper idle qualification remain unverified.
+    requirements: [R-API, R-SCOPE]
+    milestone: G9
+    modules: [native/Sources/FilesSource]
+    depends_on: [core.queries]
+    status: limited
+    scenarios:
+      - {id: FILE-CAPTURE, levels: [sim]}
+      - {id: FILE-IDLE, levels: [sim, real]}
+      - {id: FILE-SEARCH-REAL, levels: [real]}
+      - {id: FILE-OFFLOAD-REAL, levels: [real]}
+    limits:
+      - {scenario: FILE-IDLE, level: sim, reason: Full Helper CPU qualification pending.}
+      - {scenario: FILE-IDLE, level: real, reason: Standalone source measured below 2% over five minutes; host busy and full Helper CPU remains unqualified.}
+      - {scenario: FILE-OFFLOAD-REAL, level: real, reason: Single real run failed the native eviction capability guard; hydration remains unverified.}
+  - id: mail.body
+    title: Read local Mail bodies
+    requirements: [R-RW]
+    milestone: M0
+    modules: [native/Sources/MailSource, internal/contracts]
+    depends_on: [mail.capture]
+    status: limited
+    scenarios:
+      - {id: MAIL-BODY, levels: [sim]}
+      - {id: MAIL-BODY-REAL, levels: [real]}
+    limits:
+      - {scenario: MAIL-BODY-REAL, level: real, reason: "No real Envelope Index on the Air; downloaded and offloaded body Truth qualification unavailable."}
+  - id: photos.capture
+    title: Photos metadata capture and filtered search
+    requirements: [R-API, R-SCOPE]
+    milestone: G10
+    modules: [native/Sources/PhotosSource, internal/contracts]
+    depends_on: [core.queries]
+    status: limited
+    scenarios:
+      - {id: PHO-CAPTURE, levels: [sim]}
+      - {id: PHO-IDLE, levels: [sim, real]}
+      - {id: PHO-READ-REAL, levels: [real]}
+    limits:
+      - {scenario: PHO-READ-REAL, level: real, reason: "Photos readWrite authorization is not_determined; prompt forbidden"}
+      - {scenario: PHO-IDLE, level: real, reason: "Photos grant missing; whole-Helper CPU qualification blocked by T53"}
+      - {scenario: PHO-CAPTURE, level: sim, reason: "Native fixture capture, search and query blobs; gateway and change reconciliation qualification pending. Real original/thumbnail hydration qualification pending (native fake blobs exercised). OCR indexing unimplemented and disabled; public PhotoKit exposes no person/keyword or byte size/cloud state."}
+      - {scenario: PHO-IDLE, level: sim, reason: "Five-minute standalone fake-library CPU and unchanged-checkpoint suppression; whole-Helper CPU qualification pending T53."}
+    notes: "PHO-READ-REAL limited: Helper Photos readWrite authorization is not_determined; prompt forbidden. Photos readWrite grant needed for dev.applebridge.helper."
+
+  - id: photos.commands
+    title: Photos import and library commands
+    requirements: [R-API, R-SCOPE]
+    milestone: G10
+    modules: [native/Sources/PhotosSource, internal/contracts, internal/operations]
+    depends_on: [photos.capture]
+    status: limited
+    scenarios:
+      - {id: PHO-COMMANDS, levels: [sim]}
+      - {id: PHO-IMPORT-REAL, levels: [real]}
+      - {id: PHO-ORIGINAL-REAL, levels: [real]}
+    limits:
+      - {scenario: PHO-IMPORT-REAL, level: real, reason: "Photos readWrite authorization is not_determined; prompt forbidden"}
+      - {scenario: PHO-ORIGINAL-REAL, level: real, reason: "Photos readWrite authorization is not_determined; prompt forbidden"}
+    notes: "Grant needed: Photos readWrite for dev.applebridge.helper. Deleted imports remain in Recently Deleted for 30 days."
+
+  - id: mail.commands
+    title: Mail commands with readback
+    requirements: [R-RW]
+    milestone: M0
+    modules: [native/Sources/MailSource, internal/contracts, internal/operations]
+    depends_on: [mail.capture]
+    status: limited
+    scenarios:
+      - {id: MAIL-COMMANDS, levels: [sim]}
+      - {id: MAIL-SEND-SELF-REAL, levels: [real]}
+      - {id: MAIL-DRAFT-REAL, levels: [real]}
+      - {id: MAIL-ORGANIZE-REAL, levels: [real]}
+    limits:
+      - {scenario: MAIL-SEND-SELF-REAL, level: real, reason: "grant: Automation dev.applebridge.helper → com.apple.mail; no configured Mail account. Attachments and reply/forward remain unsupported; capabilities withheld pending qualification."}
+      - {scenario: MAIL-DRAFT-REAL, level: real, reason: "grant: Automation dev.applebridge.helper → com.apple.mail; no configured Mail account"}
+      - {scenario: MAIL-ORGANIZE-REAL, level: real, reason: "grant: Automation dev.applebridge.helper → com.apple.mail; no configured Mail account"}
+  - id: phone.read
+    title: Local call history capture
+    requirements: [R-API, R-SCOPE]
+    milestone: G4
+    modules: [native/Sources/CallsSource, internal/contracts, lab/simapple]
+    depends_on: []
+    status: limited
+    scenarios:
+      - {id: CALL-CAPTURE, levels: [sim]}
+      - {id: CALL-IDLE, levels: [sim, real]}
+      - {id: CALL-READ-REAL, levels: [real]}
+      - {id: CALLS-REPLICA, levels: [replica]}
+    limits:
+      - {scenario: CALL-IDLE, level: sim, reason: "Fresh compiled CallsChecks passed five-minute CPU under 2% and unchanged-checkpoint guards. The redundant full-scenario rebuild waited 38 minutes for the shared Swift lock and was cancelled; earlier full-scenario evidence passed."}
+      - {scenario: CALL-READ-REAL, level: real, reason: "Earlier native-source truth check matched 117 digests. Fresh continuation attempt exhausted its build window in the shared signed Helper cache; timed-out build descendants retained output pipes and required cleanup. Fresh full-Helper read qualification remains blocked by the harness."}
+      - {scenario: CALL-IDLE, level: real, reason: "Whole Helper averaged 48.29% CPU over five idle minutes on a quiet host, above 2%; sampling showed active Messages reconciliation. Phone fixture idle CPU and unchanged-checkpoint checks pass. Whole-Helper real idle qualification remains unproven; the fresh continuation attempt also exceeded its 45-minute Helper build window before world startup."}
+
+  - id: focus.pack
+    title: Focus status and pack qualification
+    requirements: [R-RW]
+    milestone: G5
+    modules: [internal/focuspack, native/Sources/FocusSource]
+    depends_on: [shortcuts.runner]
+    status: limited
+    notes: Read-only INFocusStatusCenter capture preserves unknown status without authorization; no authorization request. Set Focus identifiers and parameters remain unverified, so no mutation capability or importable pack is advertised.
+    scenarios:
+      - {id: FOC-SIM, levels: [sim]}
+      - {id: FOC-SET-REAL, levels: [real]}
+      - {id: FOC-IDLE, levels: [real]}
+      - {id: FOC-STATUS-REAL, levels: [real]}
+      - {id: FOC-PHONE-SYNC, levels: [real]}
+    limits:
+      - scenario: FOC-SIM
+        level: sim
+        reason: Status shape and fake runner qualification; complete Focus set and end-to-end capture simulation pending.
+      - scenario: FOC-STATUS-REAL
+        level: real
+        reason: Helper Focus authorization is not_determined; no authorization request is made.
+      - scenario: FOC-PHONE-SYNC
+        level: real
+        reason: G12 phone access and qualified real Focus set/readback required.
+      - scenario: FOC-IDLE
+        level: real
+        reason: Five-minute Helper CPU qualification remains pending; no idle CPU measurement claimed.
+      - scenario: FOC-SET-REAL
+        level: real
+        reason: Verified Set Focus action and parameters plus AB Focus import required; no real mutation attempted. DND syncs to Johan's iPhone.
+  - id: recordings.read
+    title: Voice Memos and voicemail metadata
+    requirements: [R-API, R-SCOPE]
+    milestone: G4
+    modules: [native/Sources/VoiceMemosSource, native/Sources/VoicemailSource, internal/contracts]
+    depends_on: []
+    status: limited
+    scenarios:
+      - {id: VMEMO-CAPTURE, levels: [sim]}
+      - {id: VM-CAPTURE, levels: [sim]}
+      - {id: VMEMO-LATE-ASSETS, levels: [sim]}
+    limits:
+      - {scenario: VMEMO-LATE-ASSETS, level: sim, reason: "late transcript/audio reconciliation not implemented; tracked as T21b"}
+    notes: "VMEMO-READ-REAL and VM-READ-REAL: no data on this Mac. VMEMO-NEW-REAL needs Johan to record a memo. Real idle qualification blocked by existing Helper Messages CPU issue T53."
+
+  - id: shortcuts.actions
+    title: Bounded installed App Intents discovery
+    requirements: [R-RW]
+    milestone: M0
+    modules: [native/Sources/ShortcutsSource, lab/simapple]
+    depends_on: [shortcuts.runner]
+    status: limited
+    notes: Read-only metadata discovery; no stable executable schema promised. File transform command remains pending.
+    scenarios:
+      - {id: SC-ACTIONS, levels: [sim, real]}
+    limits:
+      - scenario: SC-ACTIONS
+        level: real
+        reason: Real count qualification was not run because the shared heavy lane remained occupied beyond the ticket budget; metadata formats and coverage vary by app.
+  - id: files.commands
+    title: Opt-in file commands with readback
+    requirements: [R-API, R-SCOPE]
+    milestone: G9
+    modules: [native/Sources/FilesSource, internal/contracts, internal/operations]
+    depends_on: [files.capture]
+    status: limited
+    scenarios:
+      - {id: FILE-COMMANDS, levels: [sim]}
+      - {id: FILE-CRUD-REAL, levels: [real]}
+      - {id: FILE-REPLICA, levels: [replica]}
+    limits:
+      - {scenario: FILE-COMMANDS, level: sim, reason: Content is inline base64 capped at 128 KiB; upload blob references remain unsupported.}
+      - {scenario: FILE-CRUD-REAL, level: real, reason: CRUD filesystem Truth passes; real cloud download and eviction qualification remains outstanding.}
+  - id: music.catalog
+    title: Music catalog, player controls and library
+    requirements: [R-API, R-SCOPE]
+    milestone: G7
+    modules: [native/Sources/MusicSource, internal/contracts]
+    depends_on: [core.queries]
+    status: limited
+    scenarios:
+      - {id: MUS-SIM, levels: [sim]}
+      - {id: MUS-CATALOG-REAL, levels: [real]}
+      - {id: MUS-CONTROL-REAL, levels: [real]}
+      - {id: MUS-PLAYLIST-REAL, levels: [real]}
+      - {id: MUS-IDLE, levels: [sim, real]}
+    limits:
+      - {scenario: MUS-CATALOG-REAL, level: real, reason: "Real query qualification queued behind shared heavy lane; fresh native Helper build passed."}
+      - {scenario: MUS-CONTROL-REAL, level: real, reason: "Automation: dev.applebridge.helper → com.apple.Music missing; no consent requested. Recently Played changes during qualification."}
+      - {scenario: MUS-PLAYLIST-REAL, level: real, reason: "Automation: dev.applebridge.helper → com.apple.Music missing; no consent requested."}
+      - {scenario: MUS-IDLE, level: sim, reason: "Whole Helper idle qualification blocked by T53."}
+      - {scenario: MUS-IDLE, level: real, reason: "Whole Helper idle qualification blocked by T53."}
+    notes: "Native Music qualification pending; library capture bounded to 500 tracks / 50 playlists / 1000 memberships; Automation dev.applebridge.helper → com.apple.Music missing. Public API has no playlist search. Whole Helper idle qualification blocked by T53."
+
+  - id: files.transform
+    title: Native image and PDF blob transforms
+    requirements: [R-API, R-SCOPE]
+    milestone: G9
+    modules: [native/Sources/FilesSource]
+    depends_on: [files.capture]
+    status: limited
+    scenarios:
+      - {id: FILES-TRANSFORM, levels: [sim]}
+    limits:
+      - {scenario: FILES-TRANSFORM, level: sim, reason: Generated native fixtures; real qualification batched at end.}
+  - id: audio.queries
+    title: On-device audio and language queries
+    requirements: [R-API, R-SCOPE]
+    milestone: G8
+    modules: [native/Sources/AudioSource, native/Sources/SpeechSource, native/Sources/AISource]
+    depends_on: [core.queries]
+    status: limited
+    scenarios:
+      - {id: AUD-SIM, levels: [sim]}
+      - {id: SPEECH-SAY, levels: [real]}
+      - {id: AI-LOCAL, levels: [real]}
+      - {id: AUD-TRANSCRIBE, levels: [real]}
+    limits:
+      - {scenario: SPEECH-SAY, level: real, reason: real qualification batched at end}
+      - {scenario: AUD-TRANSCRIBE, level: real, reason: real qualification batched at end}
+      - {scenario: AI-LOCAL, level: real, reason: real qualification batched at end}
+  - id: weather.pack
+    title: Weather via AB Weather pack
+    requirements: [R-RW]
+    milestone: G7
+    modules: [internal/weatherpack]
+    depends_on: [shortcuts.runner]
+    status: limited
+    notes: Current, hourly and daily fake pack seam preserves attribution and bounds requests and output. Weather action identifiers and signed pack output are unverified; queries remain unadvertised and no importable artifact is supplied. No WeatherKit key used. Minute and alerts are unavailable through Shortcuts.
+    scenarios:
+      - {id: WX-SIM, levels: [sim]}
+      - {id: WX-REAL, levels: [real]}
+    limits:
+      - {scenario: WX-REAL, level: real, reason: "real qualification batched at end; Weather action identifiers and signed AB Weather pack remain unverified. weather.minute and weather.alerts are not exposed by Shortcuts."}
+  - id: mac.commands
+    title: Mac system commands
+    requirements: [R-API, R-SCOPE]
+    milestone: G6
+    modules: [native/Sources/MacSource, internal/contracts]
+    depends_on: [mac.capture]
+    status: limited
+    scenarios:
+      - {id: MAC-COMMANDS, levels: [sim]}
+      - {id: MAC-AUDIO-REAL, levels: [real]}
+      - {id: MAC-APPEARANCE-REAL, levels: [real]}
+      - {id: MAC-APPS-REAL, levels: [real]}
+      - {id: MAC-KEEPAWAKE-REAL, levels: [real]}
+      - {id: MAC-CLIPBOARD-REAL, levels: [real]}
+      - {id: MAC-REPLICA, levels: [replica]}
+    limits:
+      - {scenario: MAC-CLIPBOARD-REAL, level: real, reason: Clipboard supports transient text up to 64 KiB; image payloads and approval-required agent writes remain unsupported.}
+    notes: Audio, appearance, app lifecycle and IOPM assertions use native readback. Clipboard text uses transient reads and redacted writes; image payloads and approval-required writes are unavailable. MAC-LOCK remains unavailable and is never exercised.
+
+  - id: mac.actions
+    title: Mac notifications settings wallpaper power and network
+    requirements: [R-API, R-SCOPE]
+    milestone: G6
+    modules: [native/Sources/MacSource, internal/contracts]
+    depends_on: [mac.capture]
+    status: limited
+    scenarios:
+      - {id: MAC-ACTIONS, levels: [sim]}
+      - {id: MAC-NOTIFY-REAL, levels: [real]}
+    limits:
+      - {scenario: MAC-NOTIFY-REAL, level: real, reason: "real qualification batched at end"}
+    notes: Power actions require approve agent admission and are disabled natively. Wallpaper accepts a bounded base64 image blob. Network ICMP ping is limited; reachability DNS and interface byte counters are available.
+  - id: maps.queries
+    title: Native Location and Maps transient queries
+    requirements: [R-API, R-SCOPE]
+    milestone: G7
+    modules: [native/Sources/MapsSource]
+    depends_on: [core.queries]
+    status: limited
+    scenarios:
+      - {id: QUERY-AGENT, levels: [agent]}
+      - {id: LOC-IDLE, levels: [real]}
+      - {id: MAP-IDLE, levels: [real]}
+      - {id: LOC-CURRENT-REAL, levels: [real]}
+      - {id: LOC-SIM, levels: [sim]}
+      - {id: MAP-SIM, levels: [sim]}
+      - {id: LOC-GEOCODE-REAL, levels: [real]}
+      - {id: MAP-SEARCH-REAL, levels: [real]}
+      - {id: MAP-DIRECTIONS-REAL, levels: [real]}
+      - {id: MAP-SNAPSHOT-REAL, levels: [real]}
+    notes: Transit route geometry is unsupported by MKDirections (ETA is supported); real maps.open remains unverified. Whole-Helper idle qualification is blocked by T53.
+    limits:
+      - {scenario: QUERY-AGENT, level: agent, reason: "Decision 39: Ubuntu Codex OAuth token is revoked (HTTP 401 token_revoked); agent runner not executed. Reauthentication required for MCP-only qualification."}
+      - scenario: LOC-CURRENT-REAL
+        level: real
+        reason: Helper Location authorization is not_determined; never trigger a permission prompt. Requires Location Services permission for AppleBridgeHelper.
+      - scenario: LOC-IDLE
+        level: real
+        reason: Whole-Helper CPU measured 30.49 percent over 300.02 seconds; Helper remained responsive. Limited by T53, the pre-existing Messages.reconcile idle issue reproduced on main at 54.6 percent; no idle pass claimed.
+      - scenario: MAP-IDLE
+        level: real
+        reason: Whole-Helper CPU measured 38.39 percent over 300.02 seconds; Helper remained responsive. Limited by T53, the pre-existing Messages.reconcile idle issue reproduced on main at 54.6 percent; no idle pass claimed.
+  - id: safari.capture
+    title: Read-only Safari database capture
+    requirements: [R-FULL, R-NO-FALSE-DELETE, R-LIVE]
+    milestone: G11
+    modules: [native/Sources/SafariSource, internal/contracts, lab/simapple]
+    depends_on: []
+    status: limited
+    notes: Real history and bookmark Truth counts and digests match. CloudTabs.db is absent on this host; cloud schema coverage uses synthetic databases.
+    scenarios:
+      - {id: SAF-CAPTURE, levels: [sim]}
+      - {id: SAF-IDLE, levels: [sim, real]}
+      - {id: SAF-HISTORY-REAL, levels: [real]}
+      - {id: SAF-BOOKMARKS-REAL, levels: [real]}
+    limits:
+      - scenario: SAF-IDLE
+        level: real
+        reason: Fresh signed Helper and Truth setup exhausted the 60-minute native build budget before measurement; no five-minute CPU result was collected. Whole-Helper idle qualification also depends on the Messages idle issue tracked by T53.
+  - id: safari.commands
+    title: Safari tabs commands and guarded public page text
+    requirements: [R-FULL, R-LIVE]
+    milestone: G11
+    modules: [native/Sources/SafariSource, internal/contracts, internal/operations, internal/publichttp, lab/simapple]
+    depends_on: [safari.capture]
+    status: limited
+    notes: Public page text has no Safari cookies; logged-in pages are limited. safari.close_tab is limited. Safari exposes no stable tab identity; closing could hit a user tab
+    scenarios:
+      - {id: SAF-COMMANDS, levels: [sim]}
+      - {id: SAF-TABS-REAL, levels: [real]}
+      - {id: SAF-READINGLIST-REAL, levels: [real]}
+    limits:
+      - scenario: SAF-COMMANDS
+        level: sim
+        reason: Safari exposes no stable tab identity; closing could hit a user tab
+      - scenario: SAF-TABS-REAL
+        level: real
+        reason: real qualification batched at end; Automation dev.applebridge.helper → com.apple.Safari
+      - scenario: SAF-READINGLIST-REAL
+        level: real
+        reason: real qualification batched at end; Automation dev.applebridge.helper → com.apple.Safari
+  - id: capture.commands
+    title: Capture and PDF print provider lifecycle
+    requirements: [R-API, R-SCOPE]
+    milestone: G8
+    modules: [native/Sources/CaptureSource]
+    depends_on: [core.queries]
+    status: limited
+    scenarios:
+      - {id: CAP-SIM, levels: [sim]}
+    limits:
+      - scenario: CAP-SIM
+        level: sim
+        reason: Real qualification batched at end; Screen Recording, Camera and Microphone grants are missing.
+    notes: Capture providers fail closed without prompting. Real screenshot and screen recording require Screen Recording for the Helper; camera requires Camera and audio requires Microphone. ScreenCaptureKit screenshot and AVAudioRecorder audio providers are implemented but unqualified for real use; camera and screen video providers remain unimplemented. Named printers submit through the system print spooler. PDF output copies a validated PDF without UI. Evidence contains only digest, size, duration and dimensions.
+
+
+
+  - id: usage.action_probe
+    title: Screen Time Shortcuts action comparison
+    requirements: [R-USAGE]
+    milestone: M4
+    modules: [lab/scenarios]
+    depends_on: [usage.read]
+    status: limited
+    limits:
+      - scenario: USE-ACTION-PROBE
+        level: real
+        reason: "Dedicated AB Screen Time pack absent; setup at packaging/shortcuts/screen-time-probe.md. Retain Biome; no owner shortcuts run."
+    scenarios:
+      - {id: USE-ACTION-PROBE, levels: [real]}
+
+  - id: helper.siri_intents
+    title: Read-only Apple Bridge status App Intent
+    requirements: [R-PKG]
+    milestone: M5
+    modules: [native/AppleBridgeHelper]
+    depends_on: [helper.session]
+    status: limited
+    limits:
+      - scenario: SIRI-INTENTS
+        level: real
+        reason: "Helper compiles and bundles; extracted App Intents metadata is absent. Requires Xcode metadata extraction/packaging, then Johan to verify Shortcuts discovery and execution."
+    scenarios:
+      - {id: SIRI-INTENTS, levels: [real]}
+
+  - id: mac.extras
+    title: Mac Bluetooth AirPlay iWork Time Machine and song recognition
+    requirements: [R-API, R-SCOPE]
+    milestone: G16
+    modules: [native/Sources/MacSource, internal/contracts, lab/simapple]
+    depends_on: [mac.capture]
+    status: limited
+    scenarios:
+      - {id: MAC-EXTRAS-SIM, levels: [sim]}
+      - {id: TM-STATUS, levels: [real]}
+      - {id: IWORK-REAL, levels: [real]}
+      - {id: SHAZAM-REAL, levels: [real]}
+      - {id: BT-REAL, levels: [real]}
+      - {id: AIRPLAY-REAL, levels: [real]}
+    limits:
+      - {scenario: TM-STATUS, level: real, reason: "real qualification batched at end"}
+      - {scenario: IWORK-REAL, level: real, reason: "real qualification batched at end; native export limited to avoid Automation prompts"}
+      - {scenario: SHAZAM-REAL, level: real, reason: "real qualification batched at end; ShazamKit entitlement and fixture qualification required"}
+      - {scenario: BT-REAL, level: real, reason: "real qualification batched at end; native discovery limited to avoid permission prompts"}
+      - {scenario: AIRPLAY-REAL, level: real, reason: "real qualification batched at end; native route changes disabled"}

@@ -1,0 +1,111 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[9.89 12.56 19.29] cpu_idle=41% cpus=8 other_heavy=2"
+  },
+  "run_id": "run_01M62A6SYTMMRJH43GRCQNK1JS",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "PHO-COMMANDS",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-28T22:31:03.899941Z",
+  "assertions": [
+    {
+      "name": "descriptor_photos.search",
+      "passed": true
+    },
+    {
+      "name": "descriptor_photos.original",
+      "passed": true
+    },
+    {
+      "name": "descriptor_photos.thumbnail",
+      "passed": true
+    },
+    {
+      "name": "descriptor_photos.import",
+      "passed": true
+    },
+    {
+      "name": "schema_photos.import",
+      "passed": true
+    },
+    {
+      "name": "descriptor_photos.create_album",
+      "passed": true
+    },
+    {
+      "name": "schema_photos.create_album",
+      "passed": true
+    },
+    {
+      "name": "descriptor_photos.add_to_album",
+      "passed": true
+    },
+    {
+      "name": "schema_photos.add_to_album",
+      "passed": true
+    },
+    {
+      "name": "descriptor_photos.remove_from_album",
+      "passed": true
+    },
+    {
+      "name": "schema_photos.remove_from_album",
+      "passed": true
+    },
+    {
+      "name": "descriptor_photos.set_favorite",
+      "passed": true
+    },
+    {
+      "name": "schema_photos.set_favorite",
+      "passed": true
+    },
+    {
+      "name": "descriptor_photos.delete",
+      "passed": true
+    },
+    {
+      "name": "schema_photos.delete",
+      "passed": true
+    },
+    {
+      "name": "validation_photos.create_album",
+      "passed": true
+    },
+    {
+      "name": "validation_photos.set_favorite",
+      "passed": true
+    },
+    {
+      "name": "validation_photos.set_favorite",
+      "passed": true
+    },
+    {
+      "name": "validation_photos.import",
+      "passed": true
+    },
+    {
+      "name": "validation_photos.delete",
+      "passed": true
+    },
+    {
+      "name": "source_grants",
+      "passed": true
+    },
+    {
+      "name": "native_photos_checks",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

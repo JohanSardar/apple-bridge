@@ -8,7 +8,9 @@ func NotesDescriptors() []OperationDescriptor {
 		{Name: "notes.delete", Version: 1, Kind: CommandOp, Source: Notes, Scope: "notes:write", Capability: "notes.delete", Input: Command{}, Output: CommandRecord{}, Description: "Delete a note with expected_version"},
 		{Name: "notes.create_folder", Version: 1, Kind: CommandOp, Source: Notes, Scope: "notes:write", Capability: "notes.create_folder", Input: Command{}, Output: CommandRecord{}, Description: "Create a Notes folder"},
 	}
+	descriptors = append(descriptors, OperationDescriptor{Name: "notes.move", Version: 1, Kind: CommandOp, Source: Notes, Scope: "notes:write", Capability: "notes.move", Input: Command{}, Output: CommandRecord{}, Description: "Move a note to a writable folder with expected_version"})
+	descriptors = append(descriptors, OperationDescriptor{Name: "notes.rename_folder", Version: 1, Kind: CommandOp, Source: Notes, Scope: "notes:write", Capability: "notes.rename_folder", Input: Command{}, Output: CommandRecord{}, Description: "Rename a tagged Bridge Test folder with expected_version"})
 	return descriptors
 }
 
-func init() { registerDescriptors(NotesDescriptors, 6, 37, 38, 39, 40) }
+func init() { registerDescriptors(NotesDescriptors, 6, 37, 38, 39, 40, 71, 72) }

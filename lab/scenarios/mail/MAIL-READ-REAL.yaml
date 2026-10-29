@@ -1,0 +1,3 @@
+id: MAIL-READ-REAL
+feature: mail.capture
+levels: [real]

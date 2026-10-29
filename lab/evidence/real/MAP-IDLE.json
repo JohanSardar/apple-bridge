@@ -1,0 +1,55 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[3.43 4.37 5.15] cpu_idle=64% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M62JCN2HM248DVRGFF9KZ6V0",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "idle_cpu_percent": 38.393873501747116,
+    "idle_seconds": 300.021825083
+  },
+  "scenario": "MAP-IDLE",
+  "level": "real",
+  "passed": false,
+  "git_sha": "34cdab0f06a44aa63e57c56b0504e26ddc9d9c22",
+  "at": "2026-10-29T00:54:04.113895Z",
+  "assertions": [
+    {
+      "name": "world_started",
+      "passed": true
+    },
+    {
+      "name": "scopes_granted",
+      "passed": true
+    },
+    {
+      "name": "helper_ready",
+      "passed": true
+    },
+    {
+      "name": "private_helper_pid",
+      "passed": true
+    },
+    {
+      "name": "helper_reached_idle",
+      "passed": false
+    },
+    {
+      "name": "five_minute_idle_cpu_under_2_percent",
+      "passed": false
+    },
+    {
+      "name": "idle_helper_responsive",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

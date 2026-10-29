@@ -358,8 +358,20 @@ func convergence(w *world.World) bool {
 }
 
 func runScenario(ctx context.Context, s Scenario, level string) Evidence {
-	if s.Feature == "mail.capture" {
+	if s.Feature == "maps.queries" {
+		return runMapsQueries(ctx, s, level)
+	}
+	if s.Feature == "mail.commands" || s.Feature == "mail.capture" || s.Feature == "mail.body" {
 		return runMail(ctx, s, level)
+	}
+	if s.Feature == "audio.queries" {
+		return runAudioQueries(ctx, s, level)
+	}
+	if s.Feature == "music.catalog" {
+		return runMusicCatalog(ctx, s, level)
+	}
+	if s.Feature == "capture.commands" {
+		return runCapture(ctx, s, level)
 	}
 	if s.Feature == "vision.queries" {
 		return runVisionQueries(ctx, s, level)
@@ -367,8 +379,26 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.Feature == "core.permissions" {
 		return runPermissionStatus(ctx, s, level)
 	}
+	if s.Feature == "weather.pack" {
+		return runWeatherPack(ctx, s, level)
+	}
+	if s.Feature == "helper.siri_intents" {
+		return runSiriIntents(ctx, s, level)
+	}
+	if s.Feature == "focus.pack" {
+		return runFocusPack(ctx, s, level)
+	}
 	if s.Feature == "clock.pack" {
 		return runClockPack(ctx, s, level)
+	}
+	if s.Feature == "files.capture" || s.Feature == "files.commands" || s.Feature == "files.transform" {
+		return runFiles(ctx, s, level)
+	}
+	if s.Feature == "photos.capture" || s.Feature == "photos.commands" {
+		return runPhotos(ctx, s, level)
+	}
+	if s.Feature == "shortcuts.actions" {
+		return runActions(ctx, s, level)
 	}
 	if s.Feature == "shortcuts.runner" {
 		return runShortcutsRunner(ctx, s, level)
@@ -394,6 +424,13 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "HELPER-RELEASE-COMMANDS" {
 		return runHelperReleaseCommands(ctx, s, level)
 	}
+	if s.ID == "SAF-COMMANDS" || s.ID == "SAF-TABS-REAL" || s.ID == "SAF-READINGLIST-REAL" {
+		return runSafariCommands(ctx, s, level)
+	}
+	if s.ID == "SAF-CAPTURE" || s.ID == "SAF-IDLE" || s.ID == "SAF-HISTORY-REAL" || s.ID == "SAF-BOOKMARKS-REAL" {
+		return runSafariCapture(ctx, s, level)
+	}
+
 	if s.ID == "CORE-SOURCE-SUPPORT" {
 		return runSourceSupport(ctx, s, level)
 	}
@@ -554,8 +591,17 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "WEB-AGENT-LEVELS" {
 		return runAgentAccess(ctx, s, level, runAgentLevels)
 	}
+	if s.Feature == "recordings.read" {
+		return runRecordings(ctx, s, level)
+	}
+	if s.Feature == "phone.read" {
+		return runPhone(ctx, s, level)
+	}
 	if s.Feature == "web.frontdoor" || s.Feature == "web.agents" {
 		return runWebServer(ctx, s, level)
+	}
+	if s.Feature == "mac.extras" {
+		return runMacExtras(ctx, s, level)
 	}
 	if strings.HasPrefix(s.ID, "MAC-") {
 		return runMac(ctx, s, level)
@@ -1110,7 +1156,7 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 	}
 	packagingOnly := true
 	for _, scenario := range scenarios {
-		packagingOnly = packagingOnly && (scenario.Feature == "packaging.app" || scenario.Feature == "core.shortcuts" || scenario.Feature == "core.permissions")
+		packagingOnly = packagingOnly && (scenario.Feature == "packaging.app" || scenario.Feature == "core.shortcuts" || scenario.Feature == "core.permissions" || scenario.Feature == "usage.action_probe" || scenario.Feature == "helper.siri_intents")
 	}
 	if !packagingOnly {
 		if err = world.Build(ctx, level); err != nil {
@@ -1134,6 +1180,21 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		ran++
 		fmt.Fprintln(os.Stderr, "running", s.ID, level)
 		duration := 3 * time.Minute
+		if s.Feature == "vision.queries" && level == "real" {
+			duration = 20 * time.Minute
+		}
+		if s.Feature == "photos.capture" || s.Feature == "photos.commands" {
+			duration = 30 * time.Minute
+		}
+		if s.Feature == "phone.read" || s.Feature == "recordings.read" {
+			duration = 45 * time.Minute
+		}
+		if s.Feature == "maps.queries" && level == "real" {
+			duration = 20 * time.Minute
+		}
+		if s.Feature == "safari.capture" {
+			duration = 60 * time.Minute
+		}
 		if s.ID == "RELAY-STREAMS" {
 			duration = 12 * time.Minute
 		}
@@ -1187,6 +1248,18 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		}
 		if level == "sim" && slices.Contains([]string{"MSG-DECODE", "MSG-DECODE-BALLOON", "MSG-DECODE-FORMATTING", "MSG-READ-RICH-FIELDS", "MSG-DELETE-VISIBILITY", "MSG-WATCHER-REARM", "MSG-MEDIA-CLEANUP"}, s.ID) {
 			duration = 45 * time.Minute
+		}
+		if s.ID == "SC-ACTIONS" || s.ID == "SIRI-INTENTS" {
+			duration = 30 * time.Minute
+		}
+		if s.Feature == "files.commands" && level != "sim" || s.ID == "SC-IDLE" && level == "real" {
+			duration = 20 * time.Minute
+		}
+		if s.ID == "FILE-IDLE" && level == "real" {
+			duration = 7 * time.Minute
+		}
+		if s.ID == "CAP-SIM" {
+			duration = 20 * time.Minute
 		}
 		bounded, cancel := context.WithTimeout(ctx, duration)
 		secretBefore, secretWasSet := os.LookupEnv("APPLE_BRIDGE_SECRET_STORE")

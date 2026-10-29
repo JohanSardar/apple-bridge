@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -16,7 +17,30 @@ sdk = os.environ.get("APPLE_BRIDGE_SDK", "/Library/Developer/CommandLineTools/SD
 compiler = os.environ.get("APPLE_BRIDGE_SWIFTC", "swiftc")
 manifest_api = Path(subprocess.check_output(["xcrun", "--find", "swiftc"], text=True).strip()).resolve().parent.parent / "lib/swift/pm/ManifestAPI"
 manifest = output / "package-manifest"
-subprocess.run([compiler, "-sdk", sdk, str(package / "Package.swift"), "-I", str(manifest_api), "-L", str(manifest_api), "-lPackageDescription", "-package-description-version", "6.3.0", "-o", str(manifest)], check=True)
+stamps = {}
+
+
+def digest(parts):
+    value = hashlib.sha256()
+    for part in parts:
+        value.update(part if isinstance(part, bytes) else str(part).encode())
+        value.update(b"\0")
+    return value.hexdigest()
+
+
+def current(name, key, outputs):
+    stamp = output / (name + ".stamp")
+    return stamp.exists() and stamp.read_text() == key and all(Path(o).exists() for o in outputs)
+
+
+def record(name, key):
+    (output / (name + ".stamp")).write_text(key)
+
+
+manifest_key = digest([compiler, sdk, manifest_api, (package / "Package.swift").read_bytes()])
+if not current("package-manifest", manifest_key, [manifest]):
+    subprocess.run([compiler, "-sdk", sdk, str(package / "Package.swift"), "-I", str(manifest_api), "-L", str(manifest_api), "-lPackageDescription", "-package-description-version", "6.3.0", "-o", str(manifest)], check=True)
+    record("package-manifest", manifest_key)
 environment = dict(os.environ, DYLD_LIBRARY_PATH=str(manifest_api))
 metadata = json.loads(subprocess.check_output([str(manifest), "-fileno", "1"], env=environment, text=True))
 if metadata["errors"] or metadata["package"]["dependencies"]:
@@ -58,8 +82,14 @@ def build(name):
             closure.update(objects[dependency])
         for source in objc:
             obj = output / (name + "-" + source.stem + ".o")
-            subprocess.run(["xcrun", "clang", "-isysroot", sdk, "-target", platform.machine() + "-apple-macosx26.0", "-fobjc-arc", "-fmodules", "-O", "-Wall", "-Werror", "-I", str(headers), "-c", str(source), "-o", str(obj)], check=True)
+            key = digest([sdk, source.read_bytes()] + [h.read_bytes() for h in sorted(headers.rglob("*.h"))])
+            stamps[name] = digest([stamps.get(name, ""), key])
             closure.add(str(obj))
+            if current(name + "-" + source.stem, key, [obj]):
+                continue
+            record(name + "-" + source.stem, "")
+            subprocess.run(["xcrun", "clang", "-isysroot", sdk, "-target", platform.machine() + "-apple-macosx26.0", "-fobjc-arc", "-fmodules", "-O", "-Wall", "-Werror", "-I", str(headers), "-c", str(source), "-o", str(obj)], check=True)
+            record(name + "-" + source.stem, key)
         objects[name] = closure
         visiting.remove(name)
         built.add(name)
@@ -74,12 +104,20 @@ def build(name):
         closure.update(objects[item])
     for dependency in dependencies:
         collect(dependency)
+    key = digest(flags + [stamps[d] for d in dependencies] + [Path(f).read_bytes() for f in files] + [f for f in files])
+    stamps[name] = key
     if "regular" in target["type"]:
         obj = output / (name + ".o")
-        subprocess.run(flags + ["-emit-module", "-emit-object", "-whole-module-optimization", "-emit-module-path", str(output / (name + ".swiftmodule"))] + files + ["-o", str(obj)], check=True)
         closure.add(str(obj))
+        if not current(name, key, [obj, output / (name + ".swiftmodule")]):
+            record(name, "")
+            subprocess.run(flags + ["-emit-module", "-emit-object", "-whole-module-optimization", "-emit-module-path", str(output / (name + ".swiftmodule"))] + files + ["-o", str(obj)], check=True)
+            record(name, key)
     elif "executable" in target["type"]:
-        subprocess.run(flags + files + sorted(closure) + ["-o", str(output / name)], check=True)
+        if not current(name, key, [output / name]):
+            record(name, "")
+            subprocess.run(flags + files + sorted(closure) + ["-o", str(output / name)], check=True)
+            record(name, key)
     else:
         raise SystemExit("Unsupported target type: " + name)
     objects[name] = closure

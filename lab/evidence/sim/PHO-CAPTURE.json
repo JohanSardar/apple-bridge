@@ -1,0 +1,43 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[15.27 23.72 24.27] cpu_idle=31% cpus=8 other_heavy=3"
+  },
+  "run_id": "run_01M627DEV2M7EM7QHJBQE7PXC3",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "PHO-CAPTURE",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-28T21:42:16.162949Z",
+  "assertions": [
+    {
+      "name": "descriptor_photos.search",
+      "passed": true
+    },
+    {
+      "name": "descriptor_photos.original",
+      "passed": true
+    },
+    {
+      "name": "descriptor_photos.thumbnail",
+      "passed": true
+    },
+    {
+      "name": "source_grants",
+      "passed": true
+    },
+    {
+      "name": "native_photos_checks",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

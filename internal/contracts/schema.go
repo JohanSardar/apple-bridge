@@ -103,13 +103,21 @@ func (builder *schemaBuilder) build(t reflect.Type) map[string]any {
 }
 func OperationSchema(d OperationDescriptor) map[string]any {
 	s := JSONSchema(d.Input)
+	if d.Source == Safari && (d.Kind == QueryOp || d.Kind == CommandOp) {
+		key := "url"
+		if d.Name == "safari.page_text" {
+			key = "tab"
+		}
+		s["properties"].(map[string]any)["args"] = map[string]any{"type": "object", "additionalProperties": false, "required": []string{key}, "properties": map[string]any{key: map[string]any{"type": "string", "minLength": 1, "maxLength": 2048}}}
+		return s
+	}
 	if d.Kind == QueryOp {
 		props := s["properties"].(map[string]any)
 		props["args"] = map[string]any{}
 		props["id"] = map[string]any{"type": "string", "pattern": "^qry_[A-Za-z0-9._:-]+$", "maxLength": 128}
 		props["deadline_ms"] = map[string]any{"type": "integer", "minimum": 0, "maximum": 60000}
 		props["op"] = map[string]any{"type": "string", "enum": []string{d.Name}}
-		if d.Name == "helper.version" {
+		if (MacExtrasQuery(d.Name) && d.Name != "mac.recognize_song") || d.Name == "helper.version" || d.Name == "mac.clipboard_read" || d.Name == "mac.network_check" {
 			props["args"] = map[string]any{"type": "object", "additionalProperties": false}
 		}
 		if d.Name == "test.sleep" || d.Name == "test.blob" {
@@ -149,6 +157,43 @@ func OperationSchema(d OperationDescriptor) map[string]any {
 		fields["limit"].(map[string]any)["maximum"] = 200
 		return s
 	}
+	if d.Kind == CommandOp && d.Source == "files" {
+		return fileCommandSchema(d, s)
+	}
+	if d.Kind == CommandOp && CaptureOperation(d.Name) {
+		args := JSONSchema(CaptureArgs{})
+		fields := args["properties"].(map[string]any)
+		allowed := map[string]bool{}
+		switch d.Name {
+		case "capture.screenshot":
+			allowed["display"] = true
+			allowed["window"] = true
+		case "capture.record_audio", "mac.screen_record":
+			allowed["seconds"] = true
+			args["required"] = []string{"seconds"}
+			fields["seconds"].(map[string]any)["minimum"] = 1
+			limit := 60
+			if d.Name == "mac.screen_record" {
+				limit = 30
+			}
+			fields["seconds"].(map[string]any)["maximum"] = limit
+		case "print.document":
+			for _, key := range []string{"file", "blob", "blob_id", "printer"} {
+				allowed[key] = true
+			}
+			args["required"] = []string{"printer"}
+		}
+		for key := range fields {
+			if !allowed[key] {
+				delete(fields, key)
+			}
+		}
+		s["properties"].(map[string]any)["args"] = args
+		return s
+	}
+	if d.Kind == CommandOp && d.Source == "mac" {
+		return macSchema(d, s)
+	}
 	if d.Kind == CommandOp && d.Source == Shortcuts {
 		args := JSONSchema(ShortcutRunArgs{})
 		fields := args["properties"].(map[string]any)
@@ -157,6 +202,34 @@ func OperationSchema(d OperationDescriptor) map[string]any {
 		fields["input"].(map[string]any)["maxLength"] = 16 << 10
 		fields["timeout_ms"].(map[string]any)["minimum"] = 0
 		fields["timeout_ms"].(map[string]any)["maximum"] = 300000
+		s["properties"].(map[string]any)["args"] = args
+		return s
+	}
+	if d.Kind == CommandOp && d.Source == "photos" {
+		args := JSONSchema(PhotoCommandArgs{})
+		fields := args["properties"].(map[string]any)
+		required := []string{"asset"}
+		allowed := " asset "
+		switch d.Name {
+		case "photos.import":
+			required = []string{"data", "digest", "kind"}
+			allowed = " data digest kind album "
+		case "photos.create_album":
+			required = []string{"name"}
+			allowed = " name "
+		case "photos.set_favorite":
+			required = []string{"asset", "favorite"}
+			allowed = " asset favorite "
+		case "photos.add_to_album", "photos.remove_from_album":
+			required = []string{"asset", "album"}
+			allowed = " asset album "
+		}
+		for key := range fields {
+			if !strings.Contains(allowed, " "+key+" ") {
+				delete(fields, key)
+			}
+		}
+		args["required"] = required
 		s["properties"].(map[string]any)["args"] = args
 		return s
 	}

@@ -403,16 +403,33 @@ protocol Source: Sendable {
 
 ## 9. Sources at full depth
 
+Focus status and pack qualification: [spec/focus.md](spec/focus.md).
+
+Music catalog query: [Music](spec/music.md).
+
+Music catalog, player controls and library capture: [Music](spec/music.md).
+
+Photos capture, query and command coverage: [Photos](spec/photos.md).
+
 Contacts Me-card and notes entitlement contract: [spec/contacts.md](spec/contacts.md).
 
-Mail capture foundation and outstanding T16 scope: [Mail](spec/mail.md).
+Mail capture foundation and local body queries: [Mail](spec/mail.md).
+
+Files source details: [files](spec/files.md).
+Safari capture: [design/spec/safari.md](spec/safari.md).
 
 Permission status and explicit requests: [permissions](spec/permissions.md).
 
 Mac capture: [contract](spec/mac.md).
+Phone call capture: [source contract](spec/phone.md).
 
 Transient Helper queries and the query-with-effect rule: [query contract](spec/query.md).
+Audio query slice: [inputs, bounds and remaining work](spec/audio.md).
+Location and Maps query slice: [native queries and limits](spec/maps.md).
+
 Vision and PDF query slice: [inputs, bounds and remaining work](spec/vision.md).
+
+Capture and print provider slice: [capture](spec/capture.md).
 Shared helpers for new sources: [SourceSupport](spec/source-support.md).
 
 Relay service and enrollment: [G2-1 / G2-2](spec/relay.md).
@@ -420,6 +437,7 @@ OAuth client metadata: [fetch and lab contract](spec/oauth.md).
 Source registration: [append-friendly registries](spec/sources.md).
 Messages reconciliation: [incremental capture and audit bounds](spec/messages.md).
 Shortcut provisioning: [signed builds and source format](spec/shortcuts.md). Clock: [pack qualification and limits](spec/clock.md).
+Shortcut provisioning and read-only App Intents discovery: [signed builds, source format and bounded metadata inventory](spec/shortcuts.md). Clock: [pack qualification and limits](spec/clock.md).
 Remote onboarding and public readiness: [G1-3 / G1-4 / G1-6](spec/remote.md).
 
 Every source publishes `system.source` with state, coverage, freshness and capabilities, and exposes capabilities individually gated on OS build and proven behaviour. A capability is advertised only after its real-level scenario passed on this OS build (recorded in `features.yaml`); otherwise operations return `ErrUnsupported` with reason `capability_unproven`.
@@ -495,6 +513,8 @@ Every UI action records a before/after screenshot path in evidence (stored in th
 
 ### 9.5 Notes
 
+Notes extras: [source spec](spec/notes.md).
+
 - Read: consistent copy of `NoteStore.sqlite` (+WAL) via SQLite backup API from a read-only connection, every change event (FSEvents on the group container, debounce 100 ms) and every 5 min. Decode `ZICNOTEDATA.ZDATA` (gzip + protobuf) with `Decoders.NotesProto` to plain text and a minimal HTML; tables/checklists/attachments listed. Locked notes: `content_status=locked`, title only. Schema probed; unknown → `undecoded` with raw digest.
 - Write: AppleScript (`make new note at folder … with properties {body: html}`, `set body of note id …`, `delete note id …`, `make new folder`). Only plain-text create/replace/append are supported; notes containing tables, checklists, drawings or attachments reject updates with `ErrUnsupported(reason: rich_content)` before dispatch (D6). Evidence: re-read note via AppleScript id + next capture.
 - Identity: Core Data `ZIDENTIFIER` UUID; AppleScript id `x-coredata://…/ICNote/p<pk>` stored as alias.
@@ -502,6 +522,7 @@ Every UI action records a before/after screenshot path in evidence (stored in th
 ### 9.6 Usage (Screen Time, read-only)
 
 Input fingerprint contract: [usage](spec/usage.md).
+Action qualification: [usage probe](spec/usage.md).
 
 - Read `~/Library/Biome/streams/restricted/App.InFocus/local` and `…/remote/<device-uuid>/` SEGB files (FDA). Device names/platforms from `~/Library/Biome/sync/sync.db` `DevicePeer`.
 - Decoder (`Decoders.SEGB` + `InFocus`): per record field 3 = starting flag, field 4 = Mac-epoch double, field 6 = bundle id (see `probe/infocus_usage.py`). Pair start/stop into sessions; cap a session at 4 h; a new start closes the previous session.
@@ -1537,3 +1558,5 @@ Notes rich records retain `plain_text`, escaped fallback `html`, structured `blo
 W8-PARITY is limited on macOS 26.7.1 (25G241): the tagged simple-rich HTML replacement did not preserve expected text/block structure, and public HTML checkbox import did not create native checklist identities. Neither rich edits nor checklist toggles are exposed. `NOTE-EDIT-PARITY` records the per-OS result with tagged-note cleanup; app acceptance remains a separate milestone gate.
 
 The shell's app switcher enables each app when its R step passes. Scenario families: `WEB-REM-*`, `WEB-CAL-*`, `WEB-CON-*`, `WEB-NOTE-*` (web level, 12 projects), plus `REM-STORE-*`, `CAL-STORE-*` and `NOTE-DECODE-FULL` (sim and real).
+
+Voice Memos and voicemail metadata capture: [recordings](spec/recordings.md).

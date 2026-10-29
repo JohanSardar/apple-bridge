@@ -1,0 +1,7 @@
+id: VMEMO-CAPTURE
+feature: recordings.read
+levels: [sim]
+given: [{world: {replicas: 1}}]
+when: [{phone: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

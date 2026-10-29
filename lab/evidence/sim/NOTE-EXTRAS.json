@@ -1,0 +1,55 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[11.78 17.18 21.13] cpu_idle=40% cpus=8 other_heavy=2"
+  },
+  "run_id": "run_01M627R9TK6M2JJXEAJ22NZDPJ",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "NOTE-EXTRAS",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "043c9727a4adadf7255c0a0d6aa95971b3a986cc",
+  "at": "2026-10-28T21:48:11.475393Z",
+  "assertions": [
+    {
+      "name": "tagged_fixture_visible",
+      "passed": true
+    },
+    {
+      "name": "pin_tag_checklist_read",
+      "passed": true
+    },
+    {
+      "name": "rename_observed",
+      "passed": true
+    },
+    {
+      "name": "rename_readback",
+      "passed": true
+    },
+    {
+      "name": "move_observed",
+      "passed": true
+    },
+    {
+      "name": "move_readback",
+      "passed": true
+    },
+    {
+      "name": "stale_move_rejected",
+      "passed": true
+    },
+    {
+      "name": "untagged_rename_rejected",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

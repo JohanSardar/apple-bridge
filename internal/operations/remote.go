@@ -157,6 +157,9 @@ func (g *RemoteGateway) Submit(ctx context.Context, p trust.Principal, c contrac
 			err = nil
 		}
 	}
+	if err == nil {
+		err = g.retainCaptureGrant(ctx, p, r)
+	}
 	return r, g.waitResult(ctx, r, lookupOnly, err)
 }
 func (g *RemoteGateway) waitResult(ctx context.Context, r contracts.CommandRecord, lookupOnly bool, err error) error {
@@ -171,6 +174,9 @@ func (g *RemoteGateway) Status(ctx context.Context, p trust.Principal, q contrac
 	var r contracts.CommandRecord
 	lookupOnly := false
 	err := g.call(ctx, p, forwarded{Method: "status", Query: q}, &r, &lookupOnly)
+	if err == nil {
+		err = g.retainCaptureGrant(ctx, p, r)
+	}
 	return r, g.waitResult(ctx, r, lookupOnly, err)
 }
 func (g *RemoteGateway) List(ctx context.Context, p trust.Principal, q contracts.CommandQuery) ([]contracts.CommandRecord, error) {

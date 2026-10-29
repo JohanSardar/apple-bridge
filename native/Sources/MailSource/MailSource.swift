@@ -74,7 +74,7 @@ public actor MailSource: Source {
         try await publish()
         for await _ in watcher.changes { try Task.checkCancellation(); try await publish() }
     }
-    public func prepare(_ command: JSON) async throws -> Prepared { throw SourceFailure.unsupported }
-    public func dispatch(_ prepared: Prepared) async throws -> JSON { throw SourceFailure.unsupported }
+    public func prepare(_ command: JSON) async throws -> Prepared { return try MailCommands().prepare(command) }
+    public func dispatch(_ prepared: Prepared) async throws -> JSON { try await MailCommands().dispatch(prepared) }
     public func resolve(_ command: String, evidence: JSON) async -> JSON { .null }
 }

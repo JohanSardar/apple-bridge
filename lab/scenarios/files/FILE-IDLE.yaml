@@ -1,0 +1,3 @@
+id: FILE-IDLE
+feature: files.capture
+levels: [sim, real]

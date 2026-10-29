@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/internal/trust"
+	"strings"
 	"time"
 )
 
@@ -15,7 +16,11 @@ func (g *LocalGateway) executeNote(r contracts.CommandRecord, p trust.Principal,
 	}
 	ctx, cancel := context.WithDeadline(g.Context, deadline)
 	defer cancel()
-	release, err := g.lock(ctx, "object:notes:"+a.ID+":"+a.FolderID)
+	objectKey := a.ID
+	if objectKey == "" {
+		objectKey = ":" + a.FolderID
+	}
+	release, err := g.lock(ctx, "object:notes:"+objectKey)
 	if err != nil {
 		return g.transition(g.Context, r, "expired", "expired", nil, nil)
 	}
@@ -25,13 +30,23 @@ func (g *LocalGateway) executeNote(r contracts.CommandRecord, p trust.Principal,
 	}
 	action := contracts.NativeAction{Op: c.Op, NoteArgs: &a, Origin: c.Origin}
 	var expected json.RawMessage
+	collection := "notes.note"
+	if c.Op == "notes.rename_folder" {
+		collection = "notes.folder"
+	}
+	if c.Op == "notes.rename_folder" {
+		if problem := g.writableNoteFolder(ctx, p, a.ID); problem != nil {
+			return reject(problem)
+		}
+	}
 	if a.ID != "" {
-		result, err := g.State.Read(ctx, p.Visibility(), contracts.ReadQuery{Collection: "notes.note", ID: a.ID})
+		result, err := g.State.Read(ctx, p.Visibility(), contracts.ReadQuery{Collection: collection, ID: a.ID})
 		if err != nil || len(result.Records) != 1 {
 			return reject(contracts.ErrNotFound)
 		}
 		current := result.Records[0]
 		var data struct {
+			Title           string `json:"title"`
 			Editable        string `json:"editable"`
 			ContentVersion  uint64 `json:"content_version"`
 			FolderID        string `json:"folder_id"`
@@ -40,6 +55,9 @@ func (g *LocalGateway) executeNote(r contracts.CommandRecord, p trust.Principal,
 		}
 		if json.Unmarshal(current.Data, &data) != nil {
 			return reject(contracts.ErrCorrupt)
+		}
+		if c.Op == "notes.rename_folder" && !strings.HasPrefix(data.Title, "Bridge Test [ab-test") {
+			return reject(contracts.ErrUnsupported)
 		}
 		contentVersion := data.ContentVersion
 		if contentVersion == 0 || contentVersion > current.Version {
@@ -60,7 +78,7 @@ func (g *LocalGateway) executeNote(r contracts.CommandRecord, p trust.Principal,
 			}
 		}
 		expected = current.Data
-		action.NativeKey, err = g.State.NativeKey(ctx, "notes.note", a.ID)
+		action.NativeKey, err = g.State.NativeKey(ctx, collection, a.ID)
 		if err != nil {
 			return reject(contracts.ErrNotFound)
 		}

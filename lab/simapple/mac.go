@@ -9,6 +9,19 @@ import (
 )
 
 func (f *fakeApple) macControl(mux *http.ServeMux) {
+	mux.HandleFunc("POST /mac-notifications", func(w http.ResponseWriter, r *http.Request) {
+		var args struct {
+			Permission string `json:"permission"`
+		}
+		if json.NewDecoder(r.Body).Decode(&args) != nil {
+			http.Error(w, "invalid", 400)
+			return
+		}
+		f.mu.Lock()
+		f.notificationPermission = args.Permission
+		f.mu.Unlock()
+		json.NewEncoder(w).Encode(map[string]bool{"effect_done": true})
+	})
 	mux.HandleFunc("POST /mac", func(w http.ResponseWriter, r *http.Request) {
 		var batch struct {
 			Collection string          `json:"collection"`

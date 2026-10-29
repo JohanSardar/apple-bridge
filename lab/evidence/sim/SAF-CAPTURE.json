@@ -1,0 +1,95 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[17.03 19.76 26.51] cpu_idle=33% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M63844BT46RSKGJ47H3YMYSW",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "SAF-CAPTURE",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-29T07:13:53.530336Z",
+  "assertions": [
+    {
+      "name": "fixture_directory",
+      "passed": true
+    },
+    {
+      "name": "fake_databases",
+      "passed": true
+    },
+    {
+      "name": "native_build",
+      "passed": true
+    },
+    {
+      "name": "native_output",
+      "passed": true
+    },
+    {
+      "name": "native_capture_fields_and_corruption_guard",
+      "passed": true
+    },
+    {
+      "name": "registered_shape_safari.history",
+      "passed": true
+    },
+    {
+      "name": "registered_shape_safari.bookmark",
+      "passed": true
+    },
+    {
+      "name": "registered_shape_safari.reading_list",
+      "passed": true
+    },
+    {
+      "name": "registered_shape_safari.reading_list",
+      "passed": true
+    },
+    {
+      "name": "registered_shape_safari.cloud_tab",
+      "passed": true
+    },
+    {
+      "name": "registered_shape_safari.cloud_tab",
+      "passed": true
+    },
+    {
+      "name": "read_and_write_grants_registered",
+      "passed": true
+    },
+    {
+      "name": "gateway_world",
+      "passed": true
+    },
+    {
+      "name": "safari_read_scope",
+      "passed": true
+    },
+    {
+      "name": "safari_replica_scope",
+      "passed": true
+    },
+    {
+      "name": "simulated_native_capture",
+      "passed": true
+    },
+    {
+      "name": "gateway_fields_match_native_fixture",
+      "passed": true
+    },
+    {
+      "name": "replica_fields_match_native_fixture",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

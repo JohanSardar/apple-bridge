@@ -1,0 +1,50 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[9.89 12.56 19.29] cpu_idle=41% cpus=8 other_heavy=2"
+  },
+  "status": "limited",
+  "run_id": "run_01M62A6SYWTZ6EM8JFDWV4QREV",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "PHO-IMPORT-REAL",
+  "level": "real",
+  "passed": false,
+  "git_sha": "",
+  "at": "2026-10-28T22:31:03.90186Z",
+  "assertions": [
+    {
+      "name": "descriptor_photos.search",
+      "passed": true
+    },
+    {
+      "name": "descriptor_photos.original",
+      "passed": true
+    },
+    {
+      "name": "descriptor_photos.thumbnail",
+      "passed": true
+    },
+    {
+      "name": "source_grants",
+      "passed": true
+    },
+    {
+      "name": "native_photos_checks",
+      "passed": true
+    },
+    {
+      "name": "photos_readwrite_authorization",
+      "passed": false,
+      "status": "limited",
+      "detail": "Photos readWrite authorization is not_determined; prompt forbidden"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

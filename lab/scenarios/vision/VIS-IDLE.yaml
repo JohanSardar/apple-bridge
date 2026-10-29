@@ -1,0 +1,5 @@
+id: VIS-IDLE
+feature: vision.queries
+levels: [real]
+when:
+  - queries: {}

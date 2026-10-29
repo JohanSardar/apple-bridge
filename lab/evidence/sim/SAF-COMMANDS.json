@@ -1,0 +1,127 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[13.92 18.75 25.91] cpu_idle=29% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M6384ZDDRAR9B9H73VZ0MSPN",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "SAF-COMMANDS",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-29T07:14:21.229689Z",
+  "assertions": [
+    {
+      "name": "native_output",
+      "passed": true
+    },
+    {
+      "name": "native_fake_commands",
+      "passed": true
+    },
+    {
+      "name": "world_started",
+      "passed": true
+    },
+    {
+      "name": "scope_granted",
+      "passed": true
+    },
+    {
+      "name": "helper_ready",
+      "passed": true
+    },
+    {
+      "name": "safari.open_url",
+      "passed": true
+    },
+    {
+      "name": "opened_tab_captured",
+      "passed": true
+    },
+    {
+      "name": "owned_tab_close_rejected",
+      "passed": true
+    },
+    {
+      "name": "foreign_tab_rejected",
+      "passed": true
+    },
+    {
+      "name": "same_url_replacement_submitted",
+      "passed": true
+    },
+    {
+      "name": "same_url_replacement_captured",
+      "passed": true
+    },
+    {
+      "name": "same_url_replacement_close_rejected",
+      "passed": true
+    },
+    {
+      "name": "safari.add_reading_list",
+      "passed": true
+    },
+    {
+      "name": "tab_capture_submitted",
+      "passed": true
+    },
+    {
+      "name": "tab_captured",
+      "passed": true
+    },
+    {
+      "name": "gateway_page_text_private_rejected",
+      "passed": true
+    },
+    {
+      "name": "private_ip_rejected",
+      "passed": true
+    },
+    {
+      "name": "private_ip_rejected",
+      "passed": true
+    },
+    {
+      "name": "private_ip_rejected",
+      "passed": true
+    },
+    {
+      "name": "private_ip_rejected",
+      "passed": true
+    },
+    {
+      "name": "private_ip_rejected",
+      "passed": true
+    },
+    {
+      "name": "private_ip_rejected",
+      "passed": true
+    },
+    {
+      "name": "rebinding_rejected_before_dial",
+      "passed": true
+    },
+    {
+      "name": "public_text_extracted",
+      "passed": true
+    },
+    {
+      "name": "redirect_loopback_rejected",
+      "passed": true
+    },
+    {
+      "name": "size_cap",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

@@ -1,4 +1,8 @@
+import PDFSource
+import FilesSource
+import PhotosSource
 import Foundation
+import CryptoKit
 import Darwin
 import SourceSupport
 import AgendaGate
@@ -51,11 +55,25 @@ public actor AppleSession: ObservationSink {
     private var additionalSources: [String: any Source] = [:]
     private var blobReader: (@Sendable (String, Int64, Int) async throws -> JSON)?
     private var captureTasks: [Task<Void, Never>] = []
-    private var queryHandlers: [String: @Sendable (JSON) async throws -> JSON] = [:]
+    private var queryAudio: [String: (Data, Date)] = [:]
+    private var queryHandlers: [String: @Sendable (JSON) async throws -> QueryOutput] = [:]
+    private struct RegisteredBlobReader: Sendable {
+        let source: String
+        let read: @Sendable (String, Int, Int) async throws -> JSON
+    }
+    private var registeredBlobReaders: [String: RegisteredBlobReader] = [:]
     public func registerQuery(_ name: String, handler: @escaping @Sendable (JSON) async throws -> JSON) throws {
+        try registerQueryOutput(name) { args in QueryOutput(result: try await handler(args)) }
+    }
+    public func registerQueryOutput(_ name: String, handler: @escaping @Sendable (JSON) async throws -> QueryOutput) throws {
         guard wire == nil, queryHandlers[name] == nil else { throw SourceFailure.conflict }
         queryHandlers[name] = handler
     }
+    public func registerBlobReader(_ prefix: String, source: String, reader: @escaping @Sendable (String, Int, Int) async throws -> JSON) throws {
+        guard wire == nil, !prefix.isEmpty, !source.isEmpty, !registeredBlobReaders.keys.contains(where: { $0.hasPrefix(prefix) || prefix.hasPrefix($0) }) else { throw SourceFailure.conflict }
+        registeredBlobReaders[prefix] = RegisteredBlobReader(source: source, read: reader)
+    }
+    private var queryBodies: [String: (Data, Date)] = [:]
     private var queryTasks: [String: Task<Void, Never>] = [:]
     private var frameTasks: [UUID: Task<Void, Never>] = [:]
     private let trace: CaptureTrace
@@ -152,6 +170,7 @@ public actor AppleSession: ObservationSink {
         for task in frameTasks.values { task.cancel() }
         frameTasks = [:]
         for task in queryTasks.values { task.cancel() }; queryTasks = [:]
+        queryBodies = [:]
         for pending in live + bulk { pending.completion.resume(throwing: SourceFailure.unavailable) }
         for flight in flights.values { flight.pending.completion.resume(throwing: SourceFailure.unavailable) }
         live = []; bulk = []; flights = [:]; tickets = [:]; preparing = nil
@@ -243,13 +262,37 @@ public actor AppleSession: ObservationSink {
         let id = frame["id"]
         if let handler = queryHandlers[frame["op"].string] {
             do {
-                let result = try await handler(frame["args"])
+                let output = try await handler(frame["args"])
+                var result = output.result
+                var blobs: [JSON] = output.blobs.map(\.wireReference)
+                if frame["op"].string == "speech.synthesize", let data = Data(base64Encoded: result["data_base64"].string), !data.isEmpty {
+                    queryAudio = queryAudio.filter { Date().timeIntervalSince($0.value.1) < 60 }
+                    guard queryAudio.count < 8 else { throw SourceFailure.unavailable }
+                    let digest = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+                    let handle = "query-audio:" + UUID().uuidString
+                    queryAudio[handle] = (data, Date())
+                    result = .object(["media_type": .string("audio/wav")])
+                    blobs = [.object(["digest": .string(digest), "size": .number(Double(data.count)), "handle": .string(handle)])]
+                }
                 guard !Task.isCancelled else { return }
                 let encoded = try JSONEncoder().encode(result)
-                guard encoded.count <= 1 << 20 else { throw SourceFailure.invalid }
-                try? wire?.send(.object(["t": .string("QueryResult"), "id": id, "result_json": result, "blobs": .array([])]))
+                guard encoded.count <= 64 << 20 else { throw SourceFailure.invalid }
+                if encoded.count > 1 << 20 {
+                    guard frame["op"].string == "mail.body" else { throw SourceFailure.invalid }
+                    queryBodies = queryBodies.filter { $0.value.1 > Date() }
+                    guard queryBodies.values.reduce(0, { $0 + $1.0.count }) + encoded.count <= 64 << 20 else { throw SourceFailure.unavailable }
+                    let digest = SHA256.hash(data: encoded).map { String(format: "%02x", $0) }.joined()
+                    let handle = "query-body:" + UUID().uuidString
+                    queryBodies[handle] = (encoded, Date().addingTimeInterval(60))
+                    try? wire?.send(.object(["t": .string("QueryResult"), "id": id, "result_json": .object(["body_blob": .string(digest)]), "blobs": .array([.object(["digest": .string(digest), "size": .number(Double(encoded.count)), "handle": .string(handle)])])]))
+                    return
+                }
+                guard output.blobs.count <= 16, output.blobs.allSatisfy({ $0.size <= 64 << 20 && !$0.handle.isEmpty }) else { throw SourceFailure.invalid }
+                let photoBlob = frame["op"].string == "photos.original" || frame["op"].string == "photos.thumbnail"
+                blobs = photoBlob ? [.object(["digest": result["digest"], "size": result["size"], "handle": result["handle"]])] : frame["op"].string == "files.read" ? [.object(["digest": result["digest"], "size": result["size"], "handle": .string("files-blob:" + result["digest"].string)])] : blobs
+                try? wire?.send(.object(["t": .string("QueryResult"), "id": id, "result_json": result, "blobs": .array(blobs)]))
             } catch {
-                let code = error is CancellationError ? "deadline" : (error as? SourceFailure == .invalid ? "invalid" : "unavailable")
+                let code = error is CancellationError ? "deadline" : (error as? SourceFailure == .invalid ? "invalid" : (error as? SourceFailure == .unsupported ? "unsupported" : "unavailable"))
                 try? wire?.send(.object(["t": .string("QueryError"), "id": id, "code": .string(code)]))
             }
             return
@@ -270,17 +313,47 @@ public actor AppleSession: ObservationSink {
         guard let connection = wire else { return }
         let started = CaptureTrace.now()
         var prepared: UInt64 = 0
-        let source = frame["handle"].string.hasPrefix("notes-blob:") ? "notes" : (frame["handle"].string.hasPrefix("contacts-image:") ? "contacts" : (frame["handle"].string.hasPrefix("calendar-attachment:") ? "calendar" : "messages"))
+        let registered = registeredBlobReaders.first(where: { frame["handle"].string.hasPrefix($0.key) })?.value
+        let source = registered?.source ?? (frame["handle"].string.hasPrefix("pdf:") ? "pdf" : frame["handle"].string.hasPrefix("photos-blob:") ? "photos" : frame["handle"].string.hasPrefix("files-blob:") ? "files" : frame["handle"].string.hasPrefix("notes-blob:") ? "notes" : (frame["handle"].string.hasPrefix("contacts-image:") ? "contacts" : (frame["handle"].string.hasPrefix("calendar-attachment:") ? "calendar" : "messages")))
         defer { trace.record("helper_blob_read", fields: ["source": .string(source), "started_ns": .integer(started), "prepared_ns": .integer(prepared), "finished_ns": .integer(CaptureTrace.now())]) }
         do {
             guard !frame["handle"].string.isEmpty, frame["offset"].number >= 0, frame["offset"].number < Double(Int64.max), frame["length"].number > 0, frame["length"].number <= 131072, frame["length"].number.rounded(.down) == frame["length"].number, frame["offset"].number.rounded(.down) == frame["offset"].number else { throw SourceFailure.invalid }
             let response: JSON
-            if frame["handle"].string.hasPrefix("notes-blob:") {
+            if let registered { response = try await registered.read(frame["handle"].string, Int(frame["offset"].number), Int(frame["length"].number)) }
+            else if frame["handle"].string.hasPrefix("query-body:") {
+                guard let (data, expires) = queryBodies[frame["handle"].string], expires > Date() else { throw SourceFailure.unavailable }
+                let offset = Int(frame["offset"].number)
+                guard offset <= data.count else { throw SourceFailure.invalid }
+                let end = min(data.count, offset + Int(frame["length"].number))
+                let digest = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+                response = .object(["t": .string("BlobChunk"), "handle": frame["handle"], "offset": .number(Double(offset)), "bytes": .string(data.subdata(in: offset..<end).base64EncodedString()), "digest": .string(digest), "eof": .bool(end == data.count)])
+                if end == data.count { queryBodies.removeValue(forKey: frame["handle"].string) }
+            } else if frame["handle"].string.hasPrefix("query-audio:") {
+                guard let cached = queryAudio[frame["handle"].string], Date().timeIntervalSince(cached.1) < 60 else { throw SourceFailure.unavailable }
+                let offset = Int(frame["offset"].number)
+                guard offset <= cached.0.count else { throw SourceFailure.invalid }
+                let end = min(cached.0.count, offset + Int(frame["length"].number))
+                let digest = SHA256.hash(data: cached.0).map { String(format: "%02x", $0) }.joined()
+                response = .object(["t": .string("BlobChunk"), "handle": frame["handle"], "offset": frame["offset"], "bytes": .string(cached.0.subdata(in: offset..<end).base64EncodedString()), "digest": .string(digest), "eof": .bool(end == cached.0.count)])
+            }
+            else if frame["handle"].string.hasPrefix("notes-blob:") {
                 guard let notes = additionalSources["notes"] as? NotesSource else { throw SourceFailure.unavailable }
                 response = try await notes.readBlob(frame["handle"].string, offset: Int(frame["offset"].number), length: Int(frame["length"].number))
             }
             else if frame["handle"].string.hasPrefix("contacts-image:") { response = try await contacts.readBlob(frame["handle"].string, offset: Int(frame["offset"].number), length: Int(frame["length"].number)) }
             else if frame["handle"].string.hasPrefix("calendar-attachment:") { response = try await calendar.readBlob(frame["handle"].string, offset: Int(frame["offset"].number), length: Int(frame["length"].number)) }
+            else if frame["handle"].string.hasPrefix("photos-blob:") {
+                guard let photos = additionalSources["photos"] as? PhotosSource else { throw SourceFailure.unavailable }
+                response = try await photos.readBlob(frame["handle"].string, offset: Int64(frame["offset"].number), length: Int(frame["length"].number))
+            }
+            else if frame["handle"].string.hasPrefix("pdf:") {
+                guard let pdf = additionalSources["pdf"] as? PDFSource else { throw SourceFailure.unavailable }
+                response = try await pdf.readBlob(frame["handle"].string, offset: Int64(frame["offset"].number), length: Int(frame["length"].number))
+            }
+            else if frame["handle"].string.hasPrefix("files-blob:") {
+                guard let files = additionalSources["files"] as? FilesSource else { throw SourceFailure.unavailable }
+                response = try await files.readBlob(frame["handle"].string, offset: Int64(frame["offset"].number), length: Int(frame["length"].number))
+            }
             else if let blobReader { response = try await blobReader(frame["handle"].string, Int64(frame["offset"].number), Int(frame["length"].number)) }
             else { throw SourceFailure.unavailable }
             guard wire === connection, !Task.isCancelled else { return }
@@ -441,7 +514,50 @@ public actor AppleSession: ObservationSink {
         }
     }
 
+    private func captureRoute(_ operation: String) -> String {
+        if ["mac.screen_record", "print.document"].contains(operation) { return "capture" }
+        return operation.components(separatedBy: ".").first ?? ""
+    }
     private func observedEvidence(_ evidence: JSON, fingerprint: JSON, operation: String) async throws -> JSON {
+        if ["capture.screenshot", "capture.camera_photo", "capture.record_audio", "mac.screen_record", "print.document"].contains(operation) { return evidence }
+        if operation == "pdf.annotate", let pdf = additionalSources["pdf"] as? PDFSource {
+            try await pdf.captureCommand(evidence, into: self)
+            guard let checkpoint = observedCheckpoints["pdf.artifact/" + evidence["native_key"].string] else { throw SourceFailure.unavailable }
+            var result = evidence.object
+            result["fingerprint"] = fingerprint
+            result["capture_checkpoint"] = .string(checkpoint)
+            return .object(result)
+        }
+        if ["speech.say", "capture.play_sound"].contains(operation) {
+            guard evidence["finished_callback"].bool, evidence["prepared"]["request_hash"] == fingerprint else { throw SourceFailure.unavailable }
+            return evidence
+        }
+        if operation == "music.favorite" || operation == "music.add_to_playlist" {
+            let collection = operation == "music.favorite" ? "music.library_item" : "music.playlist"
+            guard let checkpoint = observedCheckpoints[collection + "/" + evidence["native_key"].string] else { throw SourceFailure.unavailable }
+            var result = evidence.object
+            result["fingerprint"] = fingerprint
+            result["capture_checkpoint"] = .string(checkpoint)
+            return .object(result)
+        }
+        if operation.hasPrefix("photos."), let photos = additionalSources["photos"] as? PhotosSource {
+            try await photos.captureCommand(evidence, into: self)
+            let collection = operation == "photos.create_album" ? "photos.album" : "photos.asset"
+            guard let checkpoint = observedCheckpoints[collection + "/" + evidence["native_key"].string] else { throw SourceFailure.unavailable }
+            var result = evidence.object
+            result["fingerprint"] = fingerprint
+            result["capture_checkpoint"] = .string(checkpoint)
+            return .object(result)
+        }
+        if operation.hasPrefix("files."), let files = additionalSources["files"] as? FilesSource {
+            try await files.reconcile(into: self)
+            guard let checkpoint = observedCheckpoints["files.item/" + evidence["native_key"].string] else { throw SourceFailure.unavailable }
+            var result = evidence.object
+            result["capture_checkpoint"] = .string(checkpoint)
+            result["fingerprint"] = fingerprint
+            return .object(result)
+        }
+        if operation.hasPrefix("mac.") { guard evidence["observed"].bool, evidence["fingerprint"] == fingerprint, evidence["readback"] != .null else { throw SourceFailure.unavailable }; return evidence }
         if operation.hasPrefix("notes."), let notes=additionalSources["notes"] as? NotesSource {
             try await notes.reconcile(into:self)
             let key=evidence["native_key"].string
@@ -493,11 +609,11 @@ public actor AppleSession: ObservationSink {
             if ["indeterminate", "locally_observed"].contains(outcome["disposition"].string) {
 let operation=outcome["evidence"]["prepared"]["action"]["op"].string
                 let saved=outcome["evidence"]
- let selected=additionalSources[saved["prepared"]["action"]["op"].string.components(separatedBy:".").first ?? ""] ?? source
+ let selected=additionalSources[captureRoute(saved["prepared"]["action"]["op"].string)] ?? source
  let evidence = operation.hasPrefix("contacts.") ? await contacts.resolve(id,evidence:saved) : operation.hasPrefix("calendar.") ? await calendar.resolve(id,evidence:saved) : await selected.resolve(id, evidence: saved)
                 if evidence["observed"].bool {
                     let committed: JSON
-                    if operation == "shortcuts.run" { committed = evidence }
+                    if ["maps.open", "shortcuts.run", "speech.say", "capture.play_sound", "capture.screenshot", "capture.camera_photo", "capture.record_audio", "mac.screen_record", "print.document"].contains(operation) { committed = evidence }
                     else { committed = try await observedEvidence(evidence, fingerprint: outcome["evidence"]["prepared"]["request_hash"], operation: operation) }
                     outcome = .object(["t": .string("Outcome"), "command_id": .string(id), "disposition": evidence["disposition"].string.isEmpty ? .string("locally_observed") : evidence["disposition"], "evidence": committed])
                     try await guardLog.append(outcome)
@@ -573,7 +689,7 @@ let operation=outcome["evidence"]["prepared"]["action"]["op"].string
             guard !commandActive, tickets.isEmpty, preparing == nil else { throw SourceFailure.conflict }
             preparing = nonce
             guard !(await guardLog.contains(frame["command_id"].string)) else { throw SourceFailure.conflict }
-            let selected = additionalSources[frame["action"]["op"].string.components(separatedBy: ".").first ?? ""] ?? source
+            let selected = additionalSources[captureRoute(frame["action"]["op"].string)] ?? source
  var nativeFrame = frame.object
             if frame["action"]["op"].string.hasPrefix("reminders.") { nativeFrame["expected_state"] = RemindersStoreProjection.baseData(frame["expected_state"]) }
  let prepared = frame["action"]["op"].string.hasPrefix("contacts.") ? try await contacts.prepare(frame) : frame["action"]["op"].string.hasPrefix("calendar.") ? try await calendar.prepare(frame) : try await selected.prepare(.object(nativeFrame))
@@ -582,6 +698,13 @@ let operation=outcome["evidence"]["prepared"]["action"]["op"].string
             tickets[ticket] = Ticket(command: frame, prepared: prepared, expiry: ContinuousClock.now.advanced(by: .milliseconds(Int64(min(30, expires.timeIntervalSinceNow) * 1000))), fence: owner)
             try wire?.send(.object(["t": .string("Prepared"), "command_id": frame["command_id"], "ticket": .string(ticket), "native_state": prepared.nativeState, "route": prepared.nativeState["route"].string.isEmpty ? .string("eventkit") : prepared.nativeState["route"], "fingerprint": frame["request_hash"], "candidate_ids": prepared.nativeState["candidate_ids"].array.isEmpty ? .array([]) : prepared.nativeState["candidate_ids"]]))
         } catch { if wire === connection && !Task.isCancelled { await rejectCommand(frame, error: error) } }
+    }
+
+    private func durableAction(_ action: JSON) -> JSON {
+        guard action["op"].string == "mac.clipboard_write" else { return action }
+        var safe = action.object
+        safe["args"] = .object([:])
+        return .object(safe)
     }
 
     private func dispatch(_ frame: JSON) async {
@@ -595,11 +718,11 @@ let operation=outcome["evidence"]["prepared"]["action"]["op"].string
         var started = false
         do {
             guard frame["origin"] == ticket.command["origin"], frame["command_id"] == id, frame["owner_fence"].unsigned == fence, ticket.fence == fence, ContinuousClock.now < ticket.expiry else { throw SourceFailure.expired }
-            let selected=additionalSources[ticket.prepared.action["op"].string.components(separatedBy: ".").first ?? ""] ?? source
+            let selected=additionalSources[captureRoute(ticket.prepared.action["op"].string)] ?? source
  if ticket.prepared.action["op"].string.hasPrefix("notes."), let notes=additionalSources["notes"] as? NotesSource { try await notes.validate(ticket.prepared) } else if ticket.prepared.action["op"].string.hasPrefix("contacts.") {try await contacts.validate(ticket.prepared)} else if ticket.prepared.action["op"].string.hasPrefix("calendar.") {try await calendar.validate(ticket.prepared)} else if selected.name == "reminders" { try await source.validate(ticket.prepared) } else if let messages=selected as? Messages {try await messages.validate(ticket.prepared)}
             try Task.checkCancellation()
             guard ticket.fence == fence, ContinuousClock.now < ticket.expiry, wire != nil else { throw SourceFailure.expired }
-            try await guardLog.append(.object(["t": .string("DispatchStarted"), "command_id": id, "ticket": frame["ticket"], "started_at": .string(timestamp()), "prepared": .object(["action": ticket.prepared.action, "native_state": ticket.prepared.nativeState, "fingerprint": .string(ticket.prepared.fingerprint), "request_hash": ticket.command["request_hash"]])]))
+            try await guardLog.append(.object(["t": .string("DispatchStarted"), "command_id": id, "ticket": frame["ticket"], "started_at": .string(timestamp()), "prepared": .object(["action": durableAction(ticket.prepared.action), "native_state": ticket.prepared.nativeState, "fingerprint": .string(ticket.prepared.fingerprint), "request_hash": ticket.command["request_hash"]])]))
             started = true
             try await pause("dispatch")
             try Task.checkCancellation()
@@ -607,7 +730,7 @@ let operation=outcome["evidence"]["prepared"]["action"]["op"].string
             let refetched = ticket.prepared.action["op"].string.hasPrefix("contacts.") ? try await contacts.dispatch(ticket.prepared) : ticket.prepared.action["op"].string.hasPrefix("calendar.") ? try await calendar.dispatch(ticket.prepared) : try await selected.dispatch(ticket.prepared)
             try await pause("outcome")
             var retained = refetched.object
-            retained["prepared"] = .object(["action": ticket.prepared.action, "native_state": ticket.prepared.nativeState, "request_hash": ticket.command["request_hash"]])
+            retained["prepared"] = .object(["action": durableAction(ticket.prepared.action), "native_state": ticket.prepared.nativeState, "request_hash": ticket.command["request_hash"]])
             let evidence = refetched["observed"].bool ? try await observedEvidence(.object(retained), fingerprint: ticket.command["request_hash"], operation:ticket.prepared.action["op"].string) : .object(retained)
             let outcome = JSON.object(["t": .string("Outcome"), "command_id": id, "disposition": refetched["disposition"].string.isEmpty ? .string("locally_observed") : refetched["disposition"], "evidence": evidence])
             try await guardLog.append(outcome)
@@ -619,7 +742,7 @@ let operation=outcome["evidence"]["prepared"]["action"]["op"].string
         } catch {
             if started {
                 let nativeCode = (error as? SourceFailure).map { String(describing: $0) } ?? (error as? MessagesUIFailure)?.rawValue ?? "native_error"
-                let outcome = JSON.object(["t": .string("Outcome"), "command_id": id, "disposition": .string("indeterminate"), "evidence": .object(["reason": .string("dispatch_evidence_unavailable"), "native_error_code": .string(nativeCode), "prepared": .object(["action": ticket.prepared.action, "native_state": ticket.prepared.nativeState, "request_hash": ticket.command["request_hash"]])])])
+                let outcome = JSON.object(["t": .string("Outcome"), "command_id": id, "disposition": .string("indeterminate"), "evidence": .object(["reason": .string("dispatch_evidence_unavailable"), "native_error_code": .string(nativeCode), "prepared": .object(["action": durableAction(ticket.prepared.action), "native_state": ticket.prepared.nativeState, "request_hash": ticket.command["request_hash"]])])])
                 try? await guardLog.append(outcome); try? wire?.send(outcome)
             } else { await rejectCommand(ticket.command, error: error) }
         }

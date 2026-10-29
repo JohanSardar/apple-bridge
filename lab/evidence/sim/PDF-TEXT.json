@@ -1,17 +1,17 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[4.66 5.26 7.59] cpu_idle=84% cpus=8 other_heavy=1"
+    "summary": "air: load=[13.68 18.53 25.75] cpu_idle=39% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M61GWPV4DCJGK4Q5DKGYGP5B",
+  "run_id": "run_01M63858TJ1HFVDB6NYH6KAG5T",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "PDF-TEXT",
   "level": "sim",
   "passed": true,
-  "git_sha": "b7c13422e830a0b2af6c761bd2f1a370920b36d5",
-  "at": "2026-10-28T15:08:38.628146Z",
+  "git_sha": "b95d1ff6d1ab6b78216388496e52c78aa0e3fbfe",
+  "at": "2026-10-29T07:14:30.866146Z",
   "assertions": [
     {
       "name": "world_started",
@@ -19,6 +19,10 @@
     },
     {
       "name": "query_scopes_granted",
+      "passed": true
+    },
+    {
+      "name": "helper_ready",
       "passed": true
     },
     {
@@ -35,6 +39,14 @@
     },
     {
       "name": "fixture_content_matched",
+      "passed": true
+    },
+    {
+      "name": "file_requires_opt_in",
+      "passed": true
+    },
+    {
+      "name": "unowned_blob_rejected",
       "passed": true
     },
     {

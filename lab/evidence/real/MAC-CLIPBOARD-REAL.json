@@ -1,0 +1,75 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[51.08 27.93 20.29] cpu_idle=25% cpus=8 other_heavy=2"
+  },
+  "run_id": "run_01M62MN8Z0VFN22ASY3Y3BWG7M",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "MAC-CLIPBOARD-REAL",
+  "level": "real",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-29T01:33:43.780719Z",
+  "assertions": [
+    {
+      "name": "world_started",
+      "passed": true
+    },
+    {
+      "name": "scope_granted",
+      "passed": true
+    },
+    {
+      "name": "helper_ready",
+      "passed": true
+    },
+    {
+      "name": "clipboard_permission_status_ready",
+      "passed": true
+    },
+    {
+      "name": "clipboard_helper_access_granted",
+      "passed": true
+    },
+    {
+      "name": "clipboard_snapshot_saved",
+      "passed": true
+    },
+    {
+      "name": "clipboard_write_readback",
+      "passed": true
+    },
+    {
+      "name": "clipboard_command_redacted",
+      "passed": true
+    },
+    {
+      "name": "clipboard_read_matches",
+      "passed": true
+    },
+    {
+      "name": "clipboard_manager_markers_present",
+      "passed": true
+    },
+    {
+      "name": "clipboard_absent_from_durable_files",
+      "passed": true
+    },
+    {
+      "name": "clipboard_restored",
+      "passed": true
+    },
+    {
+      "name": "clipboard_restore_truth",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

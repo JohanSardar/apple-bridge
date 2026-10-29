@@ -1,0 +1,7 @@
+id: NOTE-EXTRAS
+feature: notes.extras
+levels: [sim, real]
+given: [{world: {}}]
+when: [{notes: {}}]
+then: [{converge: {}}]
+cleanup: [{world: {}}]

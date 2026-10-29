@@ -1,0 +1,33 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[18.16 26.33 23.66] cpu_idle=36% cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M626KZBA6QF6QNX68DK8QMMC",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "CALL-CAPTURE",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "349eb6b9308f01e5682cfcc159c9d4e733a47f8c",
+  "at": "2026-10-28T21:28:21.101733Z",
+  "assertions": [
+    {
+      "name": "calls_native_fixture_build",
+      "passed": true
+    },
+    {
+      "name": "wal_insert_reconcile_delete_partial_scan",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": [
+    "air"
+  ]
+}

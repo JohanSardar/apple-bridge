@@ -1,0 +1,27 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[22.97 24.45 17.18] cpu_idle=21% cpus=8 other_heavy=2"
+  },
+  "run_id": "run_01M61YPZWS8J076M7F5C6WEY4E",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "MAIL-READ-REAL",
+  "level": "real",
+  "passed": false,
+  "git_sha": "",
+  "at": "2026-10-28T19:10:11.35327Z",
+  "assertions": [
+    {
+      "name": "mail_truth_read_only_available",
+      "passed": false
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

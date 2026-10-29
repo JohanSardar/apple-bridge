@@ -83,7 +83,7 @@ func Handler(deps Deps, descriptors []contracts.OperationDescriptor) http.Handle
 		})
 	}
 	mux.HandleFunc("POST /v1/op/{operation}", func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasPrefix(r.PathValue("operation"), "usage.") {
+		if strings.HasPrefix(r.PathValue("operation"), "usage.") || r.PathValue("operation") == "safari.close_tab" {
 			respond(w, nil, contracts.ErrUnsupported)
 			return
 		}

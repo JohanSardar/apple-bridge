@@ -140,6 +140,36 @@ func ValidCommandID(id string) bool {
 }
 
 func ValidateCommand(c Command) (ReminderArgs, error) {
+	if strings.HasPrefix(c.Op, "mail.") {
+		return ValidateMailCommand(c)
+	}
+	if strings.HasPrefix(c.Op, "music.") {
+		return ReminderArgs{}, ValidateMusicCommand(c)
+	}
+	if strings.HasPrefix(c.Op, "photos.") {
+		return ReminderArgs{}, ValidatePhotoCommand(c)
+	}
+	if PlaybackOperation(c.Op) {
+		return ReminderArgs{}, ValidatePlayback(c)
+	}
+	if strings.HasPrefix(c.Op, "files.") {
+		return ReminderArgs{}, ValidateFileCommand(c)
+	}
+	if CaptureOperation(c.Op) {
+		return ReminderArgs{}, ValidateCapture(c)
+	}
+	if strings.HasPrefix(c.Op, "safari.") {
+		return ReminderArgs{}, ValidateSafariCommand(c)
+	}
+	if strings.HasPrefix(c.Op, "mac.") {
+		return ReminderArgs{}, ValidateMacCommand(c)
+	}
+	if c.Op == "pdf.annotate" {
+		return ReminderArgs{}, ValidatePDFAnnotate(c)
+	}
+	if c.Op == "maps.open" {
+		return ReminderArgs{}, ValidateMapsOpen(c)
+	}
 	if c.Op == "shortcuts.run" {
 		return ReminderArgs{}, ValidateShortcutRun(c)
 	}

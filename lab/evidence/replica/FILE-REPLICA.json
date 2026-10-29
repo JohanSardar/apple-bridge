@@ -1,0 +1,86 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[13.5 17.93 17] cpu_idle=30% cpus=8 other_heavy=2; ubuntu: load=[1.31 1.3 1.2] cpu_idle=89% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M62BCC0RQSYYEK5CFTPNZ2SX",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "FILE-REPLICA",
+  "level": "replica",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-28T22:51:34.808825Z",
+  "assertions": [
+    {
+      "name": "home",
+      "passed": true
+    },
+    {
+      "name": "fixture_directory",
+      "passed": true
+    },
+    {
+      "name": "fixture_write",
+      "passed": true
+    },
+    {
+      "name": "ubuntu_replica_started",
+      "passed": true
+    },
+    {
+      "name": "ubuntu_search",
+      "passed": true
+    },
+    {
+      "name": "ubuntu_read_blob_reference",
+      "passed": true
+    },
+    {
+      "name": "blob_request",
+      "passed": true
+    },
+    {
+      "name": "ubuntu_blob_http",
+      "passed": true
+    },
+    {
+      "name": "ubuntu_blob_digest",
+      "passed": true
+    },
+    {
+      "name": "ubuntu_create_observed",
+      "passed": true
+    },
+    {
+      "name": "filesystem_truth_digest",
+      "passed": true
+    },
+    {
+      "name": "cleanup_canary_created",
+      "passed": true
+    },
+    {
+      "name": "unowned_fixture_preserved",
+      "passed": true
+    },
+    {
+      "name": "cleanup_canary_removed",
+      "passed": true
+    },
+    {
+      "name": "owned_fixture_cleanup",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": [
+    "air",
+    "ubuntu"
+  ]
+}

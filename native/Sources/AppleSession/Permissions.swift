@@ -2,6 +2,7 @@ import Foundation
 import AppKit
 import EventKit
 import Contacts
+import Photos
 @preconcurrency import ApplicationServices
 import Carbon
 import MessagesSource
@@ -12,7 +13,7 @@ public enum PermissionState: String {
 
 public final class PermissionReport: @unchecked Sendable {
     private let lock = NSLock()
-    private var values: [String: String] = Dictionary(uniqueKeysWithValues: ["full_disk_access", "automation_messages", "automation_system_events", "automation_reminders", "accessibility", "contacts", "calendar", "reminders"].map { ($0, "unknown") })
+    private var values: [String: String] = Dictionary(uniqueKeysWithValues: ["clipboard", "full_disk_access", "automation_messages", "automation_system_events", "automation_reminders", "accessibility", "contacts", "calendar", "reminders", "photos"].map { ($0, "unknown") })
 
     public func note(_ name: String, _ value: String) {
         lock.lock()
@@ -42,6 +43,8 @@ public final class PermissionSession {
     public init() {}
 
     public func refresh() {
+        let clipboard = NSPasteboard.general.accessBehavior
+        report.set("clipboard", clipboard == .alwaysAllow ? .granted : clipboard == .alwaysDeny ? .denied : clipboard == .default || clipboard == .ask ? .notDetermined : .unknown)
         do {
             let file = try FileHandle(forReadingFrom: FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Messages/chat.db"))
             try file.close()
@@ -51,6 +54,8 @@ public final class PermissionSession {
             report.set("full_disk_access", failure.code == NSFileReadNoPermissionError || (failure.userInfo[NSUnderlyingErrorKey] as? NSError)?.code == 1 || (failure.userInfo[NSUnderlyingErrorKey] as? NSError)?.code == 13 ? .denied : .unknown)
         }
         report.set("accessibility", AXIsProcessTrusted() ? .granted : .denied)
+        let photoState = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+        report.set("photos", photoState == .authorized || photoState == .limited ? .granted : photoState == .notDetermined ? .notDetermined : .denied)
         let contactState = CNContactStore.authorizationStatus(for: .contacts)
         report.set("contacts", contactState == .authorized ? .granted : contactState == .notDetermined ? .notDetermined : contactState == .denied || contactState == .restricted ? .denied : .unknown)
         for (name, type) in [("calendar", EKEntityType.event), ("reminders", EKEntityType.reminder)] {
@@ -89,6 +94,9 @@ public final class PermissionSession {
         NSApplication.shared.activate()
         refresh()
         let states = report.snapshot()
+        if states["clipboard"] != PermissionState.granted.rawValue {
+            _ = NSPasteboard.general.string(forType: .string)
+        }
         if states["calendar"] != PermissionState.granted.rawValue {
             do {
                 let granted = try await events.requestFullAccessToEvents()

@@ -1,0 +1,225 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[9.23 7.93 10.3] cpu_idle=41% cpus=8 other_heavy=1"
+  },
+  "run_id": "run_01M62CRY7AH0F6531H2KSFSRJ5",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "MUS-SIM",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "b2ffe757374e53192662ff0c1b55080e75ba06ed",
+  "at": "2026-10-28T23:15:55.242763Z",
+  "assertions": [
+    {
+      "name": "world_started",
+      "passed": true
+    },
+    {
+      "name": "scopes",
+      "passed": true
+    },
+    {
+      "name": "catalog_query",
+      "passed": true
+    },
+    {
+      "name": "catalog_id",
+      "passed": true
+    },
+    {
+      "name": "invalid_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_rejected",
+      "passed": true
+    },
+    {
+      "name": "query_deadline_bounds",
+      "passed": true
+    },
+    {
+      "name": "query_deadline_bounds",
+      "passed": true
+    },
+    {
+      "name": "command_set_volume",
+      "passed": true
+    },
+    {
+      "name": "command_native_identity_private_set_volume",
+      "passed": true
+    },
+    {
+      "name": "bridge_identity_music.library_item",
+      "passed": true
+    },
+    {
+      "name": "bridge_identity_music.playlist",
+      "passed": true
+    },
+    {
+      "name": "readback_set_volume",
+      "passed": true
+    },
+    {
+      "name": "command_play_item",
+      "passed": true
+    },
+    {
+      "name": "command_native_identity_private_play_item",
+      "passed": true
+    },
+    {
+      "name": "readback_play_item",
+      "passed": true
+    },
+    {
+      "name": "command_pause",
+      "passed": true
+    },
+    {
+      "name": "command_native_identity_private_pause",
+      "passed": true
+    },
+    {
+      "name": "readback_pause",
+      "passed": true
+    },
+    {
+      "name": "command_play",
+      "passed": true
+    },
+    {
+      "name": "command_native_identity_private_play",
+      "passed": true
+    },
+    {
+      "name": "readback_play",
+      "passed": true
+    },
+    {
+      "name": "command_next",
+      "passed": true
+    },
+    {
+      "name": "command_native_identity_private_next",
+      "passed": true
+    },
+    {
+      "name": "readback_next",
+      "passed": true
+    },
+    {
+      "name": "command_previous",
+      "passed": true
+    },
+    {
+      "name": "command_native_identity_private_previous",
+      "passed": true
+    },
+    {
+      "name": "readback_previous",
+      "passed": true
+    },
+    {
+      "name": "library_command_favorite",
+      "passed": true
+    },
+    {
+      "name": "library_native_identity_private_favorite",
+      "passed": true
+    },
+    {
+      "name": "captured_readback_favorite",
+      "passed": true
+    },
+    {
+      "name": "library_command_add_to_playlist",
+      "passed": true
+    },
+    {
+      "name": "library_native_identity_private_add_to_playlist",
+      "passed": true
+    },
+    {
+      "name": "library_command_add_to_playlist",
+      "passed": true
+    },
+    {
+      "name": "library_native_identity_private_add_to_playlist",
+      "passed": true
+    },
+    {
+      "name": "captured_readback_add_to_playlist",
+      "passed": true
+    },
+    {
+      "name": "invalid_command_set_volume",
+      "passed": true
+    },
+    {
+      "name": "invalid_command_play_item",
+      "passed": true
+    },
+    {
+      "name": "invalid_command_favorite",
+      "passed": true
+    },
+    {
+      "name": "invalid_command_add_to_playlist",
+      "passed": true
+    },
+    {
+      "name": "invalid_command_pause",
+      "passed": true
+    },
+    {
+      "name": "doctor_music_shapes",
+      "passed": true
+    },
+    {
+      "name": "entity_song",
+      "passed": true
+    },
+    {
+      "name": "entity_album",
+      "passed": true
+    },
+    {
+      "name": "entity_musicArtist",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}
