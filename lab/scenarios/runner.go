@@ -382,6 +382,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.Feature == "weather.pack" {
 		return runWeatherPack(ctx, s, level)
 	}
+	if s.Feature == "helper.siri_intents" {
+		return runSiriIntents(ctx, s, level)
+	}
 	if s.Feature == "focus.pack" {
 		return runFocusPack(ctx, s, level)
 	}
@@ -1144,7 +1147,7 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 	}
 	packagingOnly := true
 	for _, scenario := range scenarios {
-		packagingOnly = packagingOnly && (scenario.Feature == "packaging.app" || scenario.Feature == "core.shortcuts" || scenario.Feature == "core.permissions")
+		packagingOnly = packagingOnly && (scenario.Feature == "packaging.app" || scenario.Feature == "core.shortcuts" || scenario.Feature == "core.permissions" || scenario.Feature == "usage.action_probe" || scenario.Feature == "helper.siri_intents")
 	}
 	if !packagingOnly {
 		if err = world.Build(ctx, level); err != nil {
@@ -1231,7 +1234,7 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		if strings.HasPrefix(s.ID, "MAC-") && level == "real" {
 			duration = 20 * time.Minute
 		}
-		if s.ID == "SC-ACTIONS" {
+		if s.ID == "SC-ACTIONS" || s.ID == "SIRI-INTENTS" {
 			duration = 30 * time.Minute
 		}
 		if s.Feature == "files.commands" && level != "sim" || s.ID == "SC-IDLE" && level == "real" {

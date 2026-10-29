@@ -1,0 +1,7 @@
+id: USE-ACTION-PROBE
+feature: usage.action_probe
+levels: [real]
+given: []
+when: [{usage: {}}]
+then: []
+cleanup: []
