@@ -1,0 +1,65 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[6.32 5.15 7.35] cpu_idle=64% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M62H05RJCW23Q2SYHM5859G5",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "marker_pixels": 44,
+    "png_height": 512,
+    "png_width": 512,
+    "snapshot_count": 17
+  },
+  "scenario": "MAP-SNAPSHOT-REAL",
+  "level": "real",
+  "passed": true,
+  "git_sha": "57a4e3fd75f12eaeb4329f530f53e152c24b7f53",
+  "at": "2026-10-29T00:29:46.642756Z",
+  "assertions": [
+    {
+      "name": "world_started",
+      "passed": true
+    },
+    {
+      "name": "scopes_granted",
+      "passed": true
+    },
+    {
+      "name": "helper_ready",
+      "passed": true
+    },
+    {
+      "name": "oversized_snapshot_rejected",
+      "passed": true
+    },
+    {
+      "name": "snapshot_blob",
+      "passed": true
+    },
+    {
+      "name": "blob_read",
+      "passed": true
+    },
+    {
+      "name": "png_dimensions",
+      "passed": true
+    },
+    {
+      "name": "northern_marker_appears_north",
+      "passed": true
+    },
+    {
+      "name": "completed_snapshots_release_helper_bytes",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

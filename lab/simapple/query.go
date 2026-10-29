@@ -130,6 +130,16 @@ func (s *querySession) receive(f contracts.IPCFrame) bool {
 				break
 			}
 			if code, result, handled := simulateMusicQuery(f.Op, f.Args); handled {
+				if code != "" {
+					out.T = "QueryError"
+					out.Code = code
+				} else {
+					out.ResultJSON = result
+				}
+				break
+			}
+			if code, result, blobs, handled := s.fake.mapsQuery(f.Op, f.Args); handled {
+				out.Blobs = blobs
 				out.ResultJSON = result
 				if code != "" {
 					out.T = "QueryError"
