@@ -131,6 +131,18 @@ func (g *LocalGateway) Query(ctx context.Context, p trust.Principal, q contracts
 			return out, err
 		}
 	}
+	if q.Op == "vision.ocr" || q.Op == "pdf.text" || q.Op == "pdf.search" {
+		q.Args, err = g.documentInput(ctx, p, q.Args)
+		if err != nil {
+			return out, err
+		}
+		var cleanup func()
+		q.Args, cleanup, err = g.stageDocumentInput(ctx, q.Args)
+		if err != nil {
+			return out, err
+		}
+		defer cleanup()
+	}
 	frame, err := g.Peer.Exchange(ctx, contracts.IPCFrame{T: "Query", ID: q.ID, Op: q.Op, Args: q.Args, DeadlineMS: q.DeadlineMS})
 	if errors.Is(err, context.DeadlineExceeded) {
 		return out, contracts.ErrDeadline

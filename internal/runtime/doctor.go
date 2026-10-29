@@ -21,7 +21,8 @@ type CredentialStoreReport struct {
 }
 
 type DoctorReport struct {
-	Credentials CredentialStoreReport `json:"credentials"`
+	DocumentChecks map[string]string     `json:"document_checks"`
+	Credentials    CredentialStoreReport `json:"credentials"`
 	state.Integrity
 	Warnings           []string          `json:"warnings,omitempty"`
 	ClockOffsetMS      *int64            `json:"clock_offset_ms,omitempty"`
@@ -65,6 +66,33 @@ func Doctor(ctx context.Context, home string) (DoctorReport, error) {
 		return DoctorReport{}, err
 	}
 	report := DoctorReport{Credentials: credentials, Integrity: integrity, Shape: shape, PrivateModes: true, Encryption: "unverified", ClockSkew: "unverified", Versions: map[string]string{"runtime": goruntime.Version(), "ipc": contracts.IPCProtocol, "feed": contracts.FeedProtocol}}
+	report.DocumentChecks = map[string]string{"vision": "unavailable", "pdf": "unavailable"}
+	statuses, statusErr := store.SourceStatuses(ctx, trust.AllVisibility())
+	if statusErr != nil {
+		return report, statusErr
+	}
+	for _, record := range statuses.Records {
+		var status struct {
+			Source   string `json:"source"`
+			State    string `json:"state"`
+			Coverage struct {
+				Fields string `json:"fields"`
+			} `json:"coverage"`
+		}
+		if json.Unmarshal(record.Data, &status) == nil {
+			if _, known := report.DocumentChecks[status.Source]; known {
+				report.DocumentChecks[status.Source] = status.State
+				if status.State == "ready" && status.Coverage.Fields != "complete" {
+					report.DocumentChecks[status.Source] = "unavailable"
+				}
+			}
+		}
+	}
+	for _, source := range []string{"vision", "pdf"} {
+		if report.DocumentChecks[source] != "ready" {
+			report.Warnings = append(report.Warnings, source+" document source is not ready; start the current Helper and check sources.status")
+		}
+	}
 	err = filepath.WalkDir(home, func(path string, entry os.DirEntry, err error) error {
 		if err != nil {
 			return err

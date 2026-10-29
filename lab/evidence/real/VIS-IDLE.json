@@ -1,0 +1,51 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[12.01 12.96 11.4] cpu_idle=40% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M632YKHVSZBE5416HYKAC02M",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "helper_cpu_percent": 58.01641837246299,
+    "idle_seconds": 300.018520417
+  },
+  "scenario": "VIS-IDLE",
+  "level": "real",
+  "passed": false,
+  "git_sha": "4356f82c25bf175e80b03cdf41ec415f83615e20",
+  "at": "2026-10-29T05:43:29.595899Z",
+  "assertions": [
+    {
+      "name": "world_started",
+      "passed": true
+    },
+    {
+      "name": "query_scopes_granted",
+      "passed": true
+    },
+    {
+      "name": "helper_ready",
+      "passed": true
+    },
+    {
+      "name": "doctor_document_sources_ready",
+      "passed": true
+    },
+    {
+      "name": "helper_pid_available",
+      "passed": true
+    },
+    {
+      "name": "helper_cpu_under_two_percent",
+      "passed": false
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

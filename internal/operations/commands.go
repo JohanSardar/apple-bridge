@@ -278,6 +278,24 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 		}
 		action.Args = args
 	}
+	if c.Op == "pdf.annotate" {
+		var resolved json.RawMessage
+		resolved, err = g.documentInput(runctx, p, c.Args)
+		if err != nil {
+			return g.transition(g.Context, r, "rejected", "rejected_before_dispatch", nil, contracts.ErrInvalid)
+		}
+		var cleanup func()
+		resolved, cleanup, err = g.stageDocumentInput(runctx, resolved)
+		if err != nil {
+			return g.transition(g.Context, r, "rejected", "rejected_before_dispatch", nil, contracts.ErrInvalid)
+		}
+		defer cleanup()
+		var args contracts.PDFAnnotateArgs
+		if json.Unmarshal(resolved, &args) != nil {
+			return g.transition(g.Context, r, "rejected", "rejected_before_dispatch", nil, contracts.ErrInvalid)
+		}
+		action.Args = args
+	}
 	if c.Op == "maps.open" {
 		var args contracts.MapsOpenArgs
 		json.Unmarshal(c.Args, &args)
@@ -291,6 +309,9 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 		action.Args = args
 	}
 	collection := "reminders.reminder"
+	if c.Op == "pdf.annotate" {
+		collection = "pdf.artifact"
+	}
 	if strings.HasPrefix(c.Op, "mail.") {
 		collection = "mail.message"
 	}
@@ -570,6 +591,9 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 			CandidateCount    int    `json:"candidate_count"`
 		}
 		collection := "reminders.reminder"
+		if r.Source == "pdf" {
+			collection = "pdf.artifact"
+		}
 		if r.Source == "music" {
 			collection = "music.library_item"
 			if r.Command.Op == "music.add_to_playlist" {

@@ -188,7 +188,7 @@ func (s *querySession) receive(f contracts.IPCFrame) bool {
 				}
 				break
 			}
-			if code, result, handled := simulatePDFQuery(f.Op, f.Args); handled {
+			if code, result, handled := s.fake.simulatePDFQuery(f.Op, f.Args); handled {
 				out.ResultJSON = result
 				if code != "" {
 					out.T = "QueryError"
