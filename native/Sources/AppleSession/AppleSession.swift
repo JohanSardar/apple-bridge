@@ -53,6 +53,7 @@ public actor AppleSession: ObservationSink {
     private var preparing: UUID?
     private var commandActive = false
     private var additionalSources: [String: any Source] = [:]
+    private var prefixedBlobReaders: [String: @Sendable (String, Int64, Int) async throws -> JSON] = [:]
     private var blobReader: (@Sendable (String, Int64, Int) async throws -> JSON)?
     private var captureTasks: [Task<Void, Never>] = []
     private var queryAudio: [String: (Data, Date)] = [:]
@@ -103,10 +104,13 @@ public actor AppleSession: ObservationSink {
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: pidFile.path)
     }
 
-    public func register(_ source: any Source, readBlob: (@Sendable (String, Int64, Int) async throws -> JSON)? = nil) throws {
+    public func register(_ source: any Source, blobPrefix: String? = nil, readBlob: (@Sendable (String, Int64, Int) async throws -> JSON)? = nil) throws {
         guard wire == nil, source.name != "reminders", additionalSources[source.name] == nil else { throw SourceFailure.conflict }
         additionalSources[source.name] = source
-        if let readBlob { blobReader = readBlob }
+        if let readBlob {
+            if let blobPrefix { prefixedBlobReaders[blobPrefix] = readBlob }
+            else { blobReader = readBlob }
+        }
     }
 
     public func run() async throws {
@@ -347,6 +351,9 @@ public actor AppleSession: ObservationSink {
             else if frame["handle"].string.hasPrefix("files-blob:") {
                 guard let files = additionalSources["files"] as? FilesSource else { throw SourceFailure.unavailable }
                 response = try await files.readBlob(frame["handle"].string, offset: Int64(frame["offset"].number), length: Int(frame["length"].number))
+            }
+            else if let prefix = prefixedBlobReaders.keys.sorted().first(where: { frame["handle"].string.hasPrefix($0) }), let reader = prefixedBlobReaders[prefix] {
+                response = try await reader(frame["handle"].string, Int64(frame["offset"].number), Int(frame["length"].number))
             }
             else if let blobReader { response = try await blobReader(frame["handle"].string, Int64(frame["offset"].number), Int(frame["length"].number)) }
             else { throw SourceFailure.unavailable }

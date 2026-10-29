@@ -15,7 +15,7 @@ func (f *fakeApple) recordingsControl(mux *http.ServeMux) {
 			Key        string          `json:"key"`
 			Data       json.RawMessage `json:"data"`
 		}
-		if json.NewDecoder(r.Body).Decode(&request) != nil || request.Key == "" || (request.Collection != "voice_memos.recording" && request.Collection != "voicemail.message") || len(contracts.CheckShape(request.Collection, request.Data)) != 0 {
+		if json.NewDecoder(r.Body).Decode(&request) != nil || request.Key == "" || (request.Collection != "voice_memos.folder" && request.Collection != "voice_memos.recording" && request.Collection != "voicemail.message") || len(contracts.CheckShape(request.Collection, request.Data)) != 0 {
 			http.Error(w, "invalid", 400)
 			return
 		}

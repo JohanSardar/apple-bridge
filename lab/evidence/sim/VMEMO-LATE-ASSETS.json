@@ -1,0 +1,33 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[10.43 9.4 11.63] cpu_idle=43% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M639J0B8X6G7SRTW9ZV0GCZN",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "VMEMO-LATE-ASSETS",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "eb2b30bf9e1a7f503df76b35f1247e567e7d80f0",
+  "at": "2026-10-29T07:38:56.744653Z",
+  "assertions": [
+    {
+      "name": "recordings_native_fixture_build",
+      "passed": true
+    },
+    {
+      "name": "folders_late_transcript_audio_blob_same_record",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": [
+    "air"
+  ]
+}

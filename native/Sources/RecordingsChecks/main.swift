@@ -13,8 +13,8 @@ actor Sink: ObservationSink {
     func emitCheckpoint(source: String, generation: String, checkpoint: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) async throws {
         emissions += 1
         for row in observations {
-            if row["kind"].string == "absent" { rows.removeValue(forKey: row["native_key"].string) }
-            else { rows[row["native_key"].string] = row["data"] }
+            if row["kind"].string == "absent" { rows.removeValue(forKey: row["collection"].string == "voice_memos.folder" ? "folder/" + row["native_key"].string : row["native_key"].string) }
+            else { rows[row["collection"].string == "voice_memos.folder" ? "folder/" + row["native_key"].string : row["native_key"].string] = row["data"] }
         }
     }
     func matches(_ duration: Double) -> Bool { rows["fixture"]?["duration"].number == duration }
@@ -24,7 +24,10 @@ actor Sink: ObservationSink {
         if memo { return row["title"].string == "Synthetic" && row["date"].string == date && row["folder"].string == "1" && !row["recently_deleted"].bool }
         return row["sender"].string == "Synthetic" && row["date"].string == date && !row["read"].bool && row["mailbox"].string == "inbox" && row["type"].string == "carrierVoicemail"
     }
-    func count() -> Int { rows.count }
+    func count() -> Int { rows.keys.filter { !$0.hasPrefix("folder/") }.count }
+    func late() -> Bool { rows["fixture"]?["transcript"].array.count == 1 && rows["fixture"]?["audio_state"].string == "present" && rows["folder/1"]?["count"].number == 1 }
+    func reference() -> JSON { rows["fixture"]?["audio"] ?? .null }
+
 }
 
 @main
@@ -64,7 +67,43 @@ struct Checks {
             throw SourceFailure.invalid
         } catch SourceFailure.unavailable {}
         try require(await sink.count() == 1)
+        if memo, CommandLine.arguments.contains("VMEMO-LATE-ASSETS"), let recording = source as? VoiceMemosSource {
+            task.cancel()
+            try execute("ALTER TABLE ZCLOUDRECORDING ADD COLUMN ZPATH TEXT; UPDATE ZCLOUDRECORDING SET ZPATH='fixture.m4a'; CREATE TABLE ZFOLDER(Z_PK INTEGER PRIMARY KEY,ZENCRYPTEDNAME TEXT); INSERT INTO ZFOLDER VALUES(1,'Synthetic')")
+            try await recording.scan(into: sink, live: true)
+            let lateTask = Task { try await recording.capture(.null, into: sink) }
+            defer { lateTask.cancel() }
+            try await Task.sleep(for: .milliseconds(100))
+            let audio = root.appendingPathComponent("fixture.m4a")
+            func atom(_ kind: String, _ payload: Data) -> Data {
+                var size = UInt32(payload.count + 8).bigEndian
+                return withUnsafeBytes(of: &size) { Data($0) } + Data(kind.utf8) + payload
+            }
+            try atom("mdat", Data(repeating: 0, count: 256)).write(to: audio)
+            let audioDeadline = ContinuousClock.now
+            while await sink.reference()["state"].string != "present" && audioDeadline.duration(to: .now) < .seconds(3) { try await Task.sleep(for: .milliseconds(10)) }
+            let first = await sink.reference()
+            try require(first["state"].string == "present")
+            let payload = Data(#"{"attributedString":{"runs":["Synthetic",0],"attributeTable":[{"timeRange":[0,1.5]}]}}"#.utf8)
+            let data = atom("mdat", Data(repeating: 0, count: 256)) + atom("moov", atom("trak", atom("udta", atom("tsrp", payload))))
+            try data.write(to: audio)
+            let transcriptDeadline = ContinuousClock.now
+            while !(await sink.late()) && transcriptDeadline.duration(to: .now) < .seconds(3) { try await Task.sleep(for: .milliseconds(10)) }
+            try require(await sink.late())
+            lateTask.cancel()
+            _ = try? await lateTask.value
+            try require(await sink.count() == 1)
+            let reference = await sink.reference()
+            let chunk = try recording.readBlob("voice-memo-blob:" + reference["digest"].string, offset: 0, length: 131072)
+            try require(Data(base64Encoded: chunk["bytes"].string) == data && chunk["eof"].bool)
+            try await recording.scan(into: sink, live: true)
+            try require(await sink.count() == 1)
+            try execute("UPDATE ZCLOUDRECORDING SET ZPATH='../escape.m4a'")
+            try await recording.scan(into: sink, live: true)
+            try require(await sink.reference() == .null)
+        }
         try execute("DELETE FROM " + table)
+        if memo && CommandLine.arguments.contains("VMEMO-LATE-ASSETS"), let recording = source as? VoiceMemosSource { try await recording.scan(into: sink, live: true) }
         let deleted = ContinuousClock.now
         while await sink.count() != 0 && deleted.duration(to: .now) < .seconds(1) { try await Task.sleep(for: .milliseconds(10)) }
         try require(await sink.count() == 0)
