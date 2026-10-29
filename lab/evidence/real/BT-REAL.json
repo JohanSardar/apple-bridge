@@ -1,0 +1,27 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[10.62 7.76 7.82] cpu_idle=23% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M646JB9GMZBXX22QPM0A416K",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "BT-REAL",
+  "level": "real",
+  "passed": false,
+  "git_sha": "",
+  "at": "2026-10-29T16:05:56.656491Z",
+  "assertions": [
+    {
+      "name": "real_qualification_batched_at_end",
+      "passed": false
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

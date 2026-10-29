@@ -1,0 +1,45 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[8.03 8 7.94] cpu_idle=35% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M647F5YCGKDQH171KAJF6NZK",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "SPEECH-SAY",
+  "level": "real",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-29T16:21:41.452525Z",
+  "assertions": [
+    {
+      "name": "world_started",
+      "passed": true
+    },
+    {
+      "name": "scopes_granted",
+      "passed": true
+    },
+    {
+      "name": "helper_ready",
+      "passed": true
+    },
+    {
+      "name": "playback_finished_callback",
+      "passed": true
+    },
+    {
+      "name": "playback_finished_callback",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

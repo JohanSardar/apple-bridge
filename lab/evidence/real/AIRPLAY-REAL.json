@@ -1,0 +1,27 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[10.57 7.8 7.83] cpu_idle=23% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M646JDZKDQZGFZ40F3WJSWJD",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "AIRPLAY-REAL",
+  "level": "real",
+  "passed": false,
+  "git_sha": "",
+  "at": "2026-10-29T16:05:59.411628Z",
+  "assertions": [
+    {
+      "name": "real_qualification_batched_at_end",
+      "passed": false
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

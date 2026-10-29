@@ -1,7 +1,7 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[4.4 5.17 6.33] cpu_idle=70% cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[7.34 8.47 8.2] cpu_idle=34% cpus=8 other_heavy=0"
   },
   "status": "limited",
   "run_id": "remote-flow",
@@ -12,8 +12,8 @@
   "scenario": "RMT-STATUS-OFF",
   "level": "real",
   "passed": false,
-  "git_sha": "07e73ea8aee6b88b36a7362325f051eeec568153",
-  "at": "2026-10-28T08:29:26.356546Z",
+  "git_sha": "c3ac9963efa1272847ce1ef053a43f9c53d3fc2a",
+  "at": "2026-10-29T16:12:22.93232Z",
   "assertions": [
     {
       "name": "external_status_off",

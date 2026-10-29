@@ -1,12 +1,12 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[5.78 9.67 14.34] cpu_idle=46% cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[7.55 8.49 8.21] cpu_idle=27% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M6302QW6HAESYQT29SVBY06K",
+  "run_id": "run_01M646Y9EDQPZKRX968C39Z23X",
   "metrics": {
     "capture_observer_resets": 0,
-    "elapsed_ms": 20005,
+    "elapsed_ms": 20019,
     "exit_status": -1,
     "output_bytes": 0,
     "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -16,7 +16,7 @@
   "level": "real",
   "passed": false,
   "git_sha": "",
-  "at": "2026-10-29T04:53:19.366092Z",
+  "at": "2026-10-29T16:12:27.981511Z",
   "assertions": [
     {
       "name": "bounded_runner_completed",

@@ -1,0 +1,30 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[6.14 7.8 7.93] cpu_idle=49% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M647MA9P1NK0MNF55MEJ4KC2",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "helper_cpu_percent": 49.79141477319484
+  },
+  "scenario": "SC-IDLE",
+  "level": "real",
+  "passed": false,
+  "git_sha": "",
+  "at": "2026-10-29T16:24:29.751005Z",
+  "assertions": [
+    {
+      "name": "five_minute_helper_cpu_under_two_percent",
+      "passed": false
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": [
+    "air"
+  ]
+}

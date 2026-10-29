@@ -1,0 +1,27 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[10.91 7.64 7.78] cpu_idle=36% cpus=8 other_heavy=0"
+  },
+  "status": "limited",
+  "run_id": "run_01M646HR0147F458YYK2G2KA8Y",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "FOC-SET-REAL",
+  "level": "real",
+  "passed": false,
+  "git_sha": "",
+  "at": "2026-10-29T16:05:36.897587Z",
+  "assertions": [
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null,
+  "conditions": {
+    "reason": "Set Focus identifiers and parameters are not verified; no AB Focus artifact is supplied or imported. Real set/readback/restore pending; DND syncs to Johan’s iPhone. No real effects dispatched."
+  }
+}

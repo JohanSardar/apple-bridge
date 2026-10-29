@@ -1,9 +1,9 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[22.97 24.45 17.18] cpu_idle=21% cpus=8 other_heavy=2"
+    "quiet": true,
+    "summary": "air: load=[7.55 8.53 8.22] cpu_idle=43% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M61YPZWS8J076M7F5C6WEY4E",
+  "run_id": "run_01M646XZV0R0AB0K8Q6NJQYP1Z",
   "metrics": {
     "capture_observer_resets": 0
   },
@@ -11,7 +11,7 @@
   "level": "real",
   "passed": false,
   "git_sha": "",
-  "at": "2026-10-28T19:10:11.35327Z",
+  "at": "2026-10-29T16:12:18.144389Z",
   "assertions": [
     {
       "name": "mail_truth_read_only_available",

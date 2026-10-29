@@ -84,7 +84,7 @@ struct AppleTruth {
         let tag = request["tag"] as? String ?? ""
         let title = request["title"] as? String ?? ""
         if verb == "fixture" {
-            guard (listName == "Bridge Test" || listName == "Bridge Test " + tag), tag.hasPrefix("[ab-test "), tag.hasSuffix("]"), tag.count > 11, !tag.contains("\n") else { throw TruthFailure.invalid }
+            guard (listName == "Bridge Test" || listName == "Bridge Test " + tag || (action == "cleanup_list" && request["list_id"] is String && listName == "Bridge Test " + tag + " renamed")), tag.hasPrefix("[ab-test "), tag.hasSuffix("]"), tag.count > 11, !tag.contains("\n") else { throw TruthFailure.invalid }
         } else if verb != "observe" { throw TruthFailure.invalid }
         let allLists = verb == "observe" && (request["all_lists"] as? Bool ?? false)
         var createdList = false

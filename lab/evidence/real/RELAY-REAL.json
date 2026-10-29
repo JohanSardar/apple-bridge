@@ -1,0 +1,33 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[10.57 7.8 7.83] cpu_idle=29% cpus=8 other_heavy=0"
+  },
+  "status": "limited",
+  "run_id": "relay-real",
+  "network_path": "loopback TLS origins through raw relay tunnel interface",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "RELAY-REAL",
+  "level": "real",
+  "passed": false,
+  "git_sha": "c3ac9963efa1272847ce1ef053a43f9c53d3fc2a",
+  "at": "2026-10-29T16:06:02.205746Z",
+  "assertions": [
+    {
+      "name": "public_relay_readiness",
+      "passed": false,
+      "status": "limited",
+      "detail": "NS delegation absent; trusted control TLS and VM DNS scopes/IAM require operator setup"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": [
+    "air"
+  ]
+}
