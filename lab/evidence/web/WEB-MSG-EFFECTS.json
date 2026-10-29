@@ -1,19 +1,22 @@
 {
   "scenario": "WEB-MSG-EFFECTS",
   "level": "web",
-  "git_sha": "51351a777348ceeee60a45b644f6df4f14eda771",
-  "at": "2026-10-29T22:20:24.82122Z",
-  "passed": false,
+  "git_sha": "e7b29bd3a8b3dcd35c592d1277b39680a6596f9e",
+  "at": "2026-10-29T23:29:24.890144Z",
+  "passed": true,
   "metrics": {
     "matrix_count": 12,
     "completed_matrix_count": 12,
-    "passed_matrix_count": 8,
-    "failed_matrix_count": 4,
+    "passed_matrix_count": 12,
+    "failed_matrix_count": 0,
     "incomplete_matrix_count": 0,
-    "passed_test_count": 105,
-    "failed_test_count": 4,
-    "skipped_test_count": 35,
-    "report_sha256": "9f8d4d879e9de19889c457a123e13cc693e1ad0094817a726dd8c350c8d46089"
+    "passed_test_count": 144,
+    "failed_test_count": 0,
+    "skipped_test_count": 0,
+    "report_sha256": "c3f80827f30c05d887a8f44108d7bdfc94bfec9c06be1f3e6a5bf41acc51c960",
+    "initial_incomplete_matrix_count": 1,
+    "retried_matrix_count": 1,
+    "initial_report_sha256": "688bf7b80dfeec5f00d7a67adc1c9be23ce362d3cc91750322da416b5a8cfd24"
   },
   "assertions": [
     {
@@ -50,19 +53,19 @@
     },
     {
       "name": "firefox-light-phone",
-      "passed": false
+      "passed": true
     },
     {
       "name": "firefox-light-desktop",
-      "passed": false
+      "passed": true
     },
     {
       "name": "firefox-dark-phone",
-      "passed": false
+      "passed": true
     },
     {
       "name": "firefox-dark-desktop",
-      "passed": false
+      "passed": true
     }
   ]
 }
