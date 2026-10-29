@@ -1,0 +1,3 @@
+id: APP-DEVICE-SIM
+feature: iphone.device.context
+levels: [sim]

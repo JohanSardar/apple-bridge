@@ -1499,3 +1499,15 @@ features:
       - {id: APP-EXTRAS-SIM, levels: [sim]}
     limits:
       - {scenario: APP-EXTRAS-SIM, level: sim, reason: 'Phone services limited: needs Journaling Suggestions and EnergyKit capabilities, authorized energy venue, and on-phone suggestion selection; WeatherKit provisioned, live service unmeasured; UI inspection needs free simulator'}
+  - id: iphone.device.context
+    title: iPhone battery, charging, Wi-Fi, name, Focus filter and NFC
+    requirements: [R-API]
+    milestone: G13
+    modules: [ios/Capabilities/DeviceContext, internal/contracts]
+    depends_on: [iphone.delivery]
+    status: limited
+    scenarios:
+      - {id: APP-DEVICE-SIM, levels: [sim]}
+      - {id: APP-DEVICE-REAL, levels: [real]}
+    limits:
+      - {scenario: APP-DEVICE-REAL, level: real, reason: 'limited: needs Allow tap; Wi-Fi location authorization and foreground NFC tag presentation required'}

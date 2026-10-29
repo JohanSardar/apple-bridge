@@ -28,6 +28,10 @@
 	<true/>
 	<key>NSAlarmKitUsageDescription</key>
 	<string>Schedule alarms and timers requested through Apple Bridge.</string>
+	<key>NFCReaderUsageDescription</key>
+	<string>Read NFC tags for your automations.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Access your current Wi-Fi network for home automations.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Scan your Apple Bridge gateway pairing code.</string>
 	<key>NSLocalNetworkUsageDescription</key>

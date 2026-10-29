@@ -43,16 +43,20 @@ func runIPhoneCapability(ctx context.Context, s Scenario, level string, sources 
 	output, err := exec.CommandContext(ctx, binary, payloadFile).Output()
 	e.Passed = err == nil && string(output) == "PASS 8\n"
 	e.Assertions = append(e.Assertions, Assertion{Name: "fake_adapter_functional", Passed: e.Passed})
-	if s.ID == "APP-MOTION-SIM" && e.Passed {
+	if e.Passed {
+		ops := []string{"iphone.motion.history", "iphone.motion.activity"}
+		if s.ID == "APP-DEVICE-SIM" {
+			ops = []string{"iphone.device.status", "iphone.nfc.read"}
+		}
 		payload, readErr := os.ReadFile(payloadFile)
-		ok := readErr == nil && len(payload) <= 20000 && proveIPhoneCapabilityDelivery(ctx, dir, payload)
-		e.Assertions = append(e.Assertions, Assertion{Name: "bounded_history_upload_then_next_command", Passed: ok})
+		ok := readErr == nil && len(payload) <= 20000 && proveIPhoneCapabilityDelivery(ctx, dir, payload, ops)
+		e.Assertions = append(e.Assertions, Assertion{Name: "signed_result_upload_then_next_command", Passed: ok})
 		e.Passed = e.Passed && ok
 	}
 	return e
 }
 
-func proveIPhoneCapabilityDelivery(ctx context.Context, dir string, payload []byte) bool {
+func proveIPhoneCapabilityDelivery(ctx context.Context, dir string, payload []byte, ops []string) bool {
 	authority, err := trust.Open(filepath.Join(dir, "trust"))
 	if err != nil {
 		return false
@@ -93,13 +97,13 @@ func proveIPhoneCapabilityDelivery(ctx context.Context, dir string, payload []by
 	if err != nil {
 		return false
 	}
-	for index, op := range []string{"iphone.motion.history", "iphone.motion.activity"} {
+	for index, op := range ops {
 		args := map[string]any{"device_id": phone.ID}
-		if index == 0 {
+		if op == "iphone.motion.history" {
 			args["days"] = 7
 		}
 		raw, _ := json.Marshal(args)
-		id := []string{"cmd_motion_history", "cmd_motion_next"}[index]
+		id := []string{"cmd_capability_first", "cmd_capability_next"}[index]
 		admitted, err := gateway.Submit(ctx, principal, contracts.Command{ID: id, Op: op, Args: raw})
 		if err != nil || admitted.State != contracts.CommandAdmitted {
 			return false
@@ -125,6 +129,9 @@ func proveIPhoneCapabilityDelivery(ctx context.Context, dir string, payload []by
 		resultData := json.RawMessage(payload)
 		if index == 1 {
 			resultData = json.RawMessage(`{"activity":"walking","confidence":"high"}`)
+			if op == "iphone.nfc.read" {
+				resultData = json.RawMessage(`[{"format":1,"type":"VA==","identifier":"","payload":"AmVuYQ=="}]`)
+			}
 		}
 		result, _ := json.Marshal(iphone.Result{ID: id, Hash: job.Hash, State: contracts.CommandObserved, Data: resultData})
 		response, err = phone.Request(server.Client(), server.URL, "/v1/iphone/result", result)
