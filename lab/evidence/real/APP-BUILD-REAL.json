@@ -1,0 +1,9 @@
+{
+  "passed": true,
+  "assertions": {
+    "signed_build": true,
+    "signature_verified": true,
+    "usb_install": true
+  },
+  "ipa_sha256": "f52273c9286427513e911057d3b7c741f8f07a09e11a4fa7f968989c69ec6500"
+}

@@ -29,3 +29,5 @@ web/playwright-report/
 **/tailscaled.state
 
 native/Sources/AppleSession/GeneratedSourceRegistrations.swift
+
+/ios/*.xcodeproj/
