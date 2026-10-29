@@ -17,15 +17,15 @@ func runRecordings(ctx context.Context, s Scenario, level string) Evidence {
 		e.Assertions = []Assertion{{Name: "real_store_qualification_unavailable", Passed: false}}
 		return e
 	}
-	if s.ID == "VMEMO-LATE-ASSETS" {
-		e.Assertions = []Assertion{{Name: "late_assets_not_implemented", Passed: false}}
-		return e
-	}
 	binary, err := recordingsChecks(ctx)
 	e.Assertions = []Assertion{{Name: "recordings_native_fixture_build", Passed: err == nil}}
 	if err == nil {
-		err = exec.CommandContext(ctx, binary).Run()
-		e.Assertions = append(e.Assertions, Assertion{Name: "metadata_wal_insert_update_delete", Passed: err == nil})
+		err = exec.CommandContext(ctx, binary, s.ID).Run()
+		name := "metadata_wal_insert_update_delete"
+		if s.ID == "VMEMO-LATE-ASSETS" {
+			name = "folders_late_transcript_audio_blob_same_record"
+		}
+		e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: err == nil})
 	}
 
 	e.Passed = err == nil
