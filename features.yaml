@@ -1511,3 +1511,15 @@ features:
       - {id: APP-DEVICE-REAL, levels: [real]}
     limits:
       - {scenario: APP-DEVICE-REAL, level: real, reason: 'limited: needs Allow tap; Wi-Fi location authorization and foreground NFC tag presentation required'}
+  - id: iphone.screentime
+    title: Bridge-owned Screen Time shields, downtime and usage report
+    requirements: [R-SAFE-CMD, R-API]
+    milestone: G13
+    modules: [ios/Capabilities/ScreenTime, ios/ScreenTimeShared, ios/Extensions, internal/contracts]
+    depends_on: [iphone.delivery]
+    status: limited
+    scenarios:
+      - {id: APP-SCREENTIME-SIM, levels: [sim]}
+      - {id: APP-SCREENTIME-REAL, levels: [real]}
+    limits:
+      - {scenario: APP-SCREENTIME-REAL, level: real, reason: 'limited: needs Allow tap'}
