@@ -43,7 +43,7 @@ func runMail(ctx context.Context, s Scenario, level string) Evidence {
 		return runMailReplica(ctx, s, level)
 	}
 	binary := ""
-	if s.ID == "MAIL-BODY" || s.ID == "MAIL-COMMANDS" {
+	if s.ID == "MAIL-BODY" || s.ID == "MAIL-COMMANDS" || s.ID == "MAIL-IDLE" {
 		binary = cachedMailChecks()
 	}
 	var output []byte

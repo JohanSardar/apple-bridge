@@ -1180,6 +1180,9 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		ran++
 		fmt.Fprintln(os.Stderr, "running", s.ID, level)
 		duration := 3 * time.Minute
+		if s.ID == "MAIL-IDLE" {
+			duration = 10 * time.Minute
+		}
 		if s.Feature == "vision.queries" && level == "real" {
 			duration = 20 * time.Minute
 		}

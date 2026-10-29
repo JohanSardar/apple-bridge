@@ -120,6 +120,9 @@ func OperationSchema(d OperationDescriptor) map[string]any {
 		if (MacExtrasQuery(d.Name) && d.Name != "mac.recognize_song") || d.Name == "helper.version" || d.Name == "mac.clipboard_read" || d.Name == "mac.network_check" {
 			props["args"] = map[string]any{"type": "object", "additionalProperties": false}
 		}
+		if d.Name == "mac.recognize_song" {
+			props["args"] = map[string]any{"type": "object", "additionalProperties": false, "required": []string{"audio_blob"}, "properties": map[string]any{"audio_blob": map[string]any{"type": "string", "minLength": 4, "maxLength": 11184812, "pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$"}}}
+		}
 		if d.Name == "test.sleep" || d.Name == "test.blob" {
 			field, max := "ms", 60000
 			if d.Name == "test.blob" {
