@@ -6,14 +6,18 @@ import SourceSupport
 public actor SafariTabs {
     private let execute: (@Sendable (String) throws -> NSAppleEventDescriptor)?
     public init(execute: (@Sendable (String) throws -> NSAppleEventDescriptor)? = nil) { self.execute = execute }
-    public func permitted() -> Bool {
+    private var permission: (Bool, ContinuousClock.Instant)?
+    public func permitted(fresh: Bool = false) -> Bool {
         if execute != nil { return true }
+        if !fresh, let permission, permission.1.duration(to: .now) < .seconds(30) { return permission.0 }
         let target = NSAppleEventDescriptor(bundleIdentifier: "com.apple.Safari")
-        return AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false) == noErr
+        let allowed = AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false) == noErr
+        permission = (allowed, .now)
+        return allowed
     }
     private func script(_ body: String) throws -> NSAppleEventDescriptor {
         if let execute { return try execute(body) }
-        guard permitted() else { throw SourceFailure.permissionMissing }
+        guard permitted(), permitted(fresh: true) else { throw SourceFailure.permissionMissing }
         var error: NSDictionary?
         guard let script = NSAppleScript(source: "with timeout of 5 seconds\ntell application id \"com.apple.Safari\"\n" + body + "\nend tell\nend timeout") else { throw SourceFailure.invalid }
         let result = script.executeAndReturnError(&error)
@@ -41,13 +45,14 @@ public actor SafariTabs {
         let op = action["op"].string
         let args = action["args"]
         guard ["safari.open_url", "safari.add_reading_list"].contains(op) else { throw SourceFailure.unsupported }
-        guard permitted() else { throw SourceFailure.permissionMissing }
+        guard permitted(fresh: true) else { throw SourceFailure.permissionMissing }
         guard args.object.count == 1,
               args["url"].string.utf8.count <= 2048, let url = URL(string: args["url"].string), ["http", "https"].contains(url.scheme), url.host != nil, url.user == nil else { throw SourceFailure.invalid }
         _ = try quote(args["url"].string)
         return Prepared(nativeState: .null, fingerprint: command["request_hash"].string, action: action)
     }
     public func dispatch(_ prepared: Prepared) throws -> JSON {
+        guard permitted(fresh: true) else { throw SourceFailure.permissionMissing }
         let args = prepared.action["args"]
         let readback: JSON
         switch prepared.action["op"].string {

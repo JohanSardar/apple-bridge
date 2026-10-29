@@ -1,19 +1,19 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[83.86 100.28 82.76] cpu_idle=19% cpus=8 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[9.94 7.07 11.46] cpu_idle=56% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M643556YDCAB0HKYWXX44WYQ",
+  "run_id": "run_01M645E6S8EJGZS4CC74K4KRSW",
   "metrics": {
     "capture_observer_resets": 0,
     "idle_seconds": 300,
-    "source_cpu_percent": 0.012424819859438108
+    "source_cpu_percent": 0.009964599429636447
   },
   "scenario": "SAF-IDLE",
   "level": "sim",
   "passed": true,
   "git_sha": "",
-  "at": "2026-10-29T15:06:18.718323Z",
+  "at": "2026-10-29T15:46:12.392375Z",
   "assertions": [
     {
       "name": "fixture_directory",

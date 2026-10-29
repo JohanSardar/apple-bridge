@@ -6,8 +6,9 @@ public actor LocationStatus: Source {
     public nonisolated let name = "location"
     public init() {}
     public func open() async -> SourceReadiness { await Self.readiness() }
+    @MainActor private static let manager = CLLocationManager()
     @MainActor private static func readiness() -> SourceReadiness {
-        let status = CLLocationManager().authorizationStatus
+        let status = manager.authorizationStatus
         let reason: String
         switch status {
         case .notDetermined: reason = "not_determined"

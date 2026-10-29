@@ -228,7 +228,7 @@ features:
       - {id: HELPER-RELEASE-COMMANDS, levels: [real]}
   - id: messages.read
     title: Messages history, live capture, decoding, receipts, attachments
-    notes: Reconciliation consumes wake requests before short-circuiting, skips unchanged database versions and maximum ROWID, and batches row and absence lookups; file hints debounce for 100 ms. Media scheduling shares a one-second power and thermal cache. Repeated capture failures back off to thirty seconds; explicit permission errors retain one-second recovery. The native session run limit is one second, avoiding 20 idle timer wakes per second.
+    notes: Reconciliation consumes wake requests before short-circuiting, skips unchanged database versions and maximum ROWID, and batches row and absence lookups; file hints debounce for 100 ms. Media scheduling shares a one-second power and thermal cache. Repeated capture failures back off to thirty seconds; explicit permission errors also back off to thirty seconds. The native session run limit is one second, avoiding 20 idle timer wakes per second.
     requirements: [R-FULL, R-LIVE, R-MSG-DEPTH, R-ATTACH, R-NO-FALSE-DELETE]
     milestone: M1
     modules: [native/MessagesSource, native/Decoders]
@@ -1358,8 +1358,8 @@ features:
       - {scenario: MUS-CATALOG-REAL, level: real, reason: "Real query qualification queued behind shared heavy lane; fresh native Helper build passed."}
       - {scenario: MUS-CONTROL-REAL, level: real, reason: "Automation: dev.applebridge.helper → com.apple.Music missing; no consent requested. Recently Played changes during qualification."}
       - {scenario: MUS-PLAYLIST-REAL, level: real, reason: "Automation: dev.applebridge.helper → com.apple.Music missing; no consent requested."}
-      - {scenario: MUS-IDLE, level: real, reason: "Real signed Helper measured 2.51992% CPU-time over 300.010 idle seconds; exceeds 2% budget."}
-    notes: "Native Music qualification pending; library capture bounded to 500 tracks / 50 playlists / 1000 memberships; Automation dev.applebridge.helper → com.apple.Music missing. Public API has no playlist search. Whole Helper idle remains above 2%: measured 2.51992% over 300.010 idle seconds."
+      - {scenario: MUS-IDLE, level: real, reason: "Real signed Helper measured 2.063240% CPU-time over 300.014 idle seconds; exceeds 2% budget."}
+    notes: "Native Music qualification pending; library capture bounded to 500 tracks / 50 playlists / 1000 memberships; Automation dev.applebridge.helper → com.apple.Music missing. Public API has no playlist search. Whole Helper idle measured 2.063240% CPU-time over 300.014 idle seconds after 507.504 seconds of settling."
 
   - id: files.transform
     title: Native image and PDF blob transforms
