@@ -1,0 +1,8 @@
+{
+  "passed": true,
+  "assertions": {
+    "signed_build": true,
+    "usb_install": true,
+    "phone_launch": true
+  }
+}
