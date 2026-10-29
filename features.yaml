@@ -642,14 +642,9 @@ features:
     modules: [webui, web, operations, native/MessagesSource, lab/demo]
     depends_on: [web.frontdoor, web.demo, web.media]
     status: limited
-    # 2026-10-23 gate: 62/64 Messages web manifests have complete 12-project
-    # passes. WEB-MSG-REPLY and WEB-MSG-EFFECTS remain red. Quiet list,
-    # open-chat/media input and cold-open frame budgets are measured and not met; unchanged
-    # thresholds and exact results are in design/MILESTONE-GATES.md.
-    # Status stays todo (checker rule: every listed scenario needs a file):
-    # WEB-MSG-REAL-READ (SPEC §23.13 real read-only render check) was never
-    # authored. All W2 implementation units are merged; WEB-MSG-EFFECTS
-    # Firefox phone and the perf budgets above are open defects, not limits.
+    # T72 2026-10-29 partial qualification: seven WEB-MSG scenarios pass all 12 cells.
+    # Media, viewer and effects reproduce failures; details is incomplete.
+    # The 45-minute checkpoint stopped the initial pass before the remaining scenarios.
     scenarios:
       - {id: MSG-DECODE-BALLOON, levels: [sim, real]}
       - {id: MSG-DECODE-FORMATTING, levels: [sim, real]}
@@ -707,6 +702,10 @@ features:
       - {id: WEB-MSG-LIVE, levels: [web]}
       - {id: WEB-MSG-REAL-READ, levels: [real]}
     limits:
+      - {scenario: WEB-MSG-MEDIA, level: web, reason: "T72: Firefox dark desktop ultrawide playback remains pending instead of decoded; 11/12 matrix cells pass"}
+      - {scenario: WEB-MSG-VIEWER, level: web, reason: "T72: WebKit light phone transcript stays busy; remaining matrix stopped after reproducing failure"}
+      - {scenario: WEB-MSG-EFFECTS, level: web, reason: "T72: Firefox Spotlight canvas does not paint within six seconds"}
+      - {scenario: WEB-MSG-DETAILS, level: web, reason: "T72: matrix incomplete at the 45-minute checkpoint"}
       - {"scenario": "WEB-MSG-SEARCH", "level": "web", "reason": "web qualification remains missing"}
       - {"scenario": "WEB-PERF-SEARCH", "level": "web", "reason": "web qualification remains missing"}
       - {"scenario": "WEB-MSG-READ-THROTTLE", "level": "web", "reason": "web qualification remains missing"}

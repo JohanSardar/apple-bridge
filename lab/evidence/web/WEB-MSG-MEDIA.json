@@ -1,60 +1,68 @@
 {
-  "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[22.09 25.68 35.83] cpu_idle=38% cpus=8 other_heavy=2"
-  },
-  "run_id": "run_01M5H3XMEWB5F0HSF8ZT93QSJ4",
-  "metrics": {
-    "demo_messages": 5000,
-    "demo_startup_ms": 23021,
-    "matrix": [
-      "webkit-light-phone",
-      "webkit-light-desktop",
-      "chromium-light-phone",
-      "chromium-light-desktop"
-    ],
-    "report": "lab/evidence/private/web/reports/WEB-MSG-MEDIA-webkit-light-phone-playwright.json",
-    "reports": [
-      "lab/evidence/private/web/reports/WEB-MSG-MEDIA-webkit-light-phone-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-MEDIA-webkit-light-desktop-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-MEDIA-chromium-light-phone-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-MEDIA-chromium-light-desktop-playwright.json"
-    ],
-    "server": "gateway"
-  },
   "scenario": "WEB-MSG-MEDIA",
   "level": "web",
-  "passed": true,
-  "git_sha": "7d2b8a6405d448023e308e877beeff923c85ce7e",
-  "at": "2026-10-22T06:14:06.557912Z",
+  "git_sha": "51351a777348ceeee60a45b644f6df4f14eda771",
+  "at": "2026-10-29T21:59:46.407125Z",
+  "passed": false,
+  "metrics": {
+    "matrix_count": 12,
+    "completed_matrix_count": 12,
+    "passed_matrix_count": 11,
+    "failed_matrix_count": 1,
+    "incomplete_matrix_count": 0,
+    "passed_test_count": 191,
+    "failed_test_count": 1,
+    "skipped_test_count": 0,
+    "report_sha256": "41d9b3a564e4c9b56c574ef7796f1ee7a112ba3d99437a490d6764b7154d73fe"
+  },
   "assertions": [
     {
-      "name": "webkit-light-phone:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 16 tests using 1 worker\n\n  ✓   1 [webkit-light-phone] › tests/media-poster.spec.ts:5:1 › WEB-MSG-MEDIA-POSTER a retina panorama keeps source geometry and uses immutable derivative identity (7.6s)\n  ✓   2 [webkit-light-phone] › tests/media-poster.spec.ts:26:1 › WEB-MSG-MEDIA-POSTER a Live Photo uses its high resolution key still without moving the reserved bubble (6.3s)\n  ✓   3 [webkit-light-phone] › tests/media-transcript.spec.ts:10:1 › WEB-MSG-MEDIA-TRANSCRIPT source videos dispatch into the real reserved transcript slot (2.6s)\n  ✓   4 [webkit-light-phone] › tests/media-transcript.spec.ts:29:1 › WEB-MSG-MEDIA-TRANSCRIPT native portrait, landscape and Live playback preserve composed bounds (41.6s)\n  ✓   5 [webkit-light-phone] › tests/media-transcript.spec.ts:34:1 › WEB-MSG-MEDIA-ULTRAWIDE the minimum-sized native panorama preserves composed playback bounds (6.6s)\n  ✓   6 [webkit-light-phone] › tests/media.spec.ts:6:1 › WEB-MSG-MEDIA image geometry is reserved before bytes and decoded thumb images crossfade without shift (2.0s)\n  ✓   7 [webkit-light-phone] › tests/media.spec.ts:39:1 › WEB-MSG-MEDIA a pending variant keeps its slot and retries without downloading the original (2.5s)\n  ✓   8 [webkit-light-phone] › tests/media.spec.ts:56:1 › WEB-MSG-MEDIA alpha images and placeholders float without a backing tile or rounded clip (2.2s)\n  ✓   9 [webkit-light-phone] › tests/media.spec.ts:68:1 › WEB-MSG-MEDIA-MOTION video and Live Photo reserve geometry, request interoperable variants and play only on intent (10.0s)\n  ✓  10 [webkit-light-phone] › tests/media.spec.ts:85:1 › WEB-MSG-MEDIA-MOTION pointer hold cancels cleanly and Reduce Motion prevents hover playback (5.5s)\n  ✓  11 [webkit-light-phone] › tests/media.spec.ts:91:1 › WEB-MSG-MEDIA-MOTION Live Photo hover respects pointer capability and ends when the pointer leaves (2.7s)\n  ✓  12 [webkit-light-phone] › tests/media.spec.ts:97:1 › WEB-MSG-MEDIA-CHROME glass play controls, Live badge and first-frame crossfade preserve bubble bounds (8.5s)\n  ✓  13 [webkit-light-phone] › tests/media.spec.ts:136:1 › WEB-MSG-MEDIA-CHROME loadeddata is the decoded-frame fallback and Reduce Motion uses a short fade (1.9s)\n  ✓  14 [webkit-light-phone] › tests/stack.spec.ts:8:1 › WEB-MSG-MEDIA-STACK fixed bounds survive decode, phone swiping and desktop grid opening into the exact cell (4.6s)\n  ✓  15 [webkit-light-phone] › tests/stack.spec.ts:34:1 › WEB-MSG-MEDIA-STACK Reduce Motion and keyboard navigation settle without changing reserved geometry (2.6s)\n  ✓  16 [webkit-light-phone] › tests/transcript-video-cover.spec.ts:20:1 › WEB-MSG-MEDIA-MOTION real transcript covers an ultrawide poster and playing frame without distortion (5.8s)\n\n  16 passed (2.0m)\n"
-    },
-    {
-      "name": "webkit-light-desktop:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 16 tests using 1 worker\n\n  ✓   1 [webkit-light-desktop] › tests/media-poster.spec.ts:5:1 › WEB-MSG-MEDIA-POSTER a retina panorama keeps source geometry and uses immutable derivative identity (8.2s)\n  ✓   2 [webkit-light-desktop] › tests/media-poster.spec.ts:26:1 › WEB-MSG-MEDIA-POSTER a Live Photo uses its high resolution key still without moving the reserved bubble (5.2s)\n  ✓   3 [webkit-light-desktop] › tests/media-transcript.spec.ts:10:1 › WEB-MSG-MEDIA-TRANSCRIPT source videos dispatch into the real reserved transcript slot (2.6s)\n  ✓   4 [webkit-light-desktop] › tests/media-transcript.spec.ts:29:1 › WEB-MSG-MEDIA-TRANSCRIPT native portrait, landscape and Live playback preserve composed bounds (33.6s)\n  ✓   5 [webkit-light-desktop] › tests/media-transcript.spec.ts:34:1 › WEB-MSG-MEDIA-ULTRAWIDE the minimum-sized native panorama preserves composed playback bounds (5.4s)\n  ✓   6 [webkit-light-desktop] › tests/media.spec.ts:6:1 › WEB-MSG-MEDIA image geometry is reserved before bytes and decoded thumb images crossfade without shift (2.0s)\n  ✓   7 [webkit-light-desktop] › tests/media.spec.ts:39:1 › WEB-MSG-MEDIA a pending variant keeps its slot and retries without downloading the original (2.4s)\n  ✓   8 [webkit-light-desktop] › tests/media.spec.ts:56:1 › WEB-MSG-MEDIA alpha images and placeholders float without a backing tile or rounded clip (2.4s)\n  ✓   9 [webkit-light-desktop] › tests/media.spec.ts:68:1 › WEB-MSG-MEDIA-MOTION video and Live Photo reserve geometry, request interoperable variants and play only on intent (7.9s)\n  ✓  10 [webkit-light-desktop] › tests/media.spec.ts:85:1 › WEB-MSG-MEDIA-MOTION pointer hold cancels cleanly and Reduce Motion prevents hover playback (3.4s)\n  ✓  11 [webkit-light-desktop] › tests/media.spec.ts:91:1 › WEB-MSG-MEDIA-MOTION Live Photo hover respects pointer capability and ends when the pointer leaves (2.2s)\n  ✓  12 [webkit-light-desktop] › tests/media.spec.ts:97:1 › WEB-MSG-MEDIA-CHROME glass play controls, Live badge and first-frame crossfade preserve bubble bounds (7.8s)\n  ✓  13 [webkit-light-desktop] › tests/media.spec.ts:136:1 › WEB-MSG-MEDIA-CHROME loadeddata is the decoded-frame fallback and Reduce Motion uses a short fade (2.6s)\n  ✓  14 [webkit-light-desktop] › tests/stack.spec.ts:8:1 › WEB-MSG-MEDIA-STACK fixed bounds survive decode, phone swiping and desktop grid opening into the exact cell (3.6s)\n  ✓  15 [webkit-light-desktop] › tests/stack.spec.ts:34:1 › WEB-MSG-MEDIA-STACK Reduce Motion and keyboard navigation settle without changing reserved geometry (2.2s)\n  ✓  16 [webkit-light-desktop] › tests/transcript-video-cover.spec.ts:20:1 › WEB-MSG-MEDIA-MOTION real transcript covers an ultrawide poster and playing frame without distortion (5.0s)\n\n  16 passed (1.7m)\n"
-    },
-    {
-      "name": "chromium-light-phone:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 16 tests using 1 worker\n\n  ✓   1 [chromium-light-phone] › tests/media-poster.spec.ts:5:1 › WEB-MSG-MEDIA-POSTER a retina panorama keeps source geometry and uses immutable derivative identity (3.8s)\n  ✓   2 [chromium-light-phone] › tests/media-poster.spec.ts:26:1 › WEB-MSG-MEDIA-POSTER a Live Photo uses its high resolution key still without moving the reserved bubble (3.4s)\n  ✓   3 [chromium-light-phone] › tests/media-transcript.spec.ts:10:1 › WEB-MSG-MEDIA-TRANSCRIPT source videos dispatch into the real reserved transcript slot (2.1s)\n  ✓   4 [chromium-light-phone] › tests/media-transcript.spec.ts:29:1 › WEB-MSG-MEDIA-TRANSCRIPT native portrait, landscape and Live playback preserve composed bounds (20.3s)\n  ✓   5 [chromium-light-phone] › tests/media-transcript.spec.ts:34:1 › WEB-MSG-MEDIA-ULTRAWIDE the minimum-sized native panorama preserves composed playback bounds (3.6s)\n  ✓   6 [chromium-light-phone] › tests/media.spec.ts:6:1 › WEB-MSG-MEDIA image geometry is reserved before bytes and decoded thumb images crossfade without shift (2.0s)\n  ✓   7 [chromium-light-phone] › tests/media.spec.ts:39:1 › WEB-MSG-MEDIA a pending variant keeps its slot and retries without downloading the original (1.5s)\n  ✓   8 [chromium-light-phone] › tests/media.spec.ts:56:1 › WEB-MSG-MEDIA alpha images and placeholders float without a backing tile or rounded clip (1.6s)\n  ✓   9 [chromium-light-phone] › tests/media.spec.ts:68:1 › WEB-MSG-MEDIA-MOTION video and Live Photo reserve geometry, request interoperable variants and play only on intent (8.5s)\n  ✓  10 [chromium-light-phone] › tests/media.spec.ts:85:1 › WEB-MSG-MEDIA-MOTION pointer hold cancels cleanly and Reduce Motion prevents hover playback (2.8s)\n  ✓  11 [chromium-light-phone] › tests/media.spec.ts:91:1 › WEB-MSG-MEDIA-MOTION Live Photo hover respects pointer capability and ends when the pointer leaves (2.4s)\n  ✓  12 [chromium-light-phone] › tests/media.spec.ts:97:1 › WEB-MSG-MEDIA-CHROME glass play controls, Live badge and first-frame crossfade preserve bubble bounds (5.4s)\n  ✓  13 [chromium-light-phone] › tests/media.spec.ts:136:1 › WEB-MSG-MEDIA-CHROME loadeddata is the decoded-frame fallback and Reduce Motion uses a short fade (1.9s)\n  ✓  14 [chromium-light-phone] › tests/stack.spec.ts:8:1 › WEB-MSG-MEDIA-STACK fixed bounds survive decode, phone swiping and desktop grid opening into the exact cell (4.3s)\n  ✓  15 [chromium-light-phone] › tests/stack.spec.ts:34:1 › WEB-MSG-MEDIA-STACK Reduce Motion and keyboard navigation settle without changing reserved geometry (1.9s)\n  ✓  16 [chromium-light-phone] › tests/transcript-video-cover.spec.ts:20:1 › WEB-MSG-MEDIA-MOTION real transcript covers an ultrawide poster and playing frame without distortion (4.4s)\n\n  16 passed (1.2m)\n"
-    },
-    {
-      "name": "chromium-light-desktop:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 16 tests using 1 worker\n\n  ✓   1 [chromium-light-desktop] › tests/media-poster.spec.ts:5:1 › WEB-MSG-MEDIA-POSTER a retina panorama keeps source geometry and uses immutable derivative identity (3.3s)\n  ✓   2 [chromium-light-desktop] › tests/media-poster.spec.ts:26:1 › WEB-MSG-MEDIA-POSTER a Live Photo uses its high resolution key still without moving the reserved bubble (4.7s)\n  ✓   3 [chromium-light-desktop] › tests/media-transcript.spec.ts:10:1 › WEB-MSG-MEDIA-TRANSCRIPT source videos dispatch into the real reserved transcript slot (2.0s)\n  ✓   4 [chromium-light-desktop] › tests/media-transcript.spec.ts:29:1 › WEB-MSG-MEDIA-TRANSCRIPT native portrait, landscape and Live playback preserve composed bounds (27.7s)\n  ✓   5 [chromium-light-desktop] › tests/media-transcript.spec.ts:34:1 › WEB-MSG-MEDIA-ULTRAWIDE the minimum-sized native panorama preserves composed playback bounds (5.6s)\n  ✓   6 [chromium-light-desktop] › tests/media.spec.ts:6:1 › WEB-MSG-MEDIA image geometry is reserved before bytes and decoded thumb images crossfade without shift (2.5s)\n  ✓   7 [chromium-light-desktop] › tests/media.spec.ts:39:1 › WEB-MSG-MEDIA a pending variant keeps its slot and retries without downloading the original (2.6s)\n  ✓   8 [chromium-light-desktop] › tests/media.spec.ts:56:1 › WEB-MSG-MEDIA alpha images and placeholders float without a backing tile or rounded clip (2.3s)\n  ✓   9 [chromium-light-desktop] › tests/media.spec.ts:68:1 › WEB-MSG-MEDIA-MOTION video and Live Photo reserve geometry, request interoperable variants and play only on intent (8.0s)\n  ✓  10 [chromium-light-desktop] › tests/media.spec.ts:85:1 › WEB-MSG-MEDIA-MOTION pointer hold cancels cleanly and Reduce Motion prevents hover playback (2.9s)\n  ✓  11 [chromium-light-desktop] › tests/media.spec.ts:91:1 › WEB-MSG-MEDIA-MOTION Live Photo hover respects pointer capability and ends when the pointer leaves (2.2s)\n  ✓  12 [chromium-light-desktop] › tests/media.spec.ts:97:1 › WEB-MSG-MEDIA-CHROME glass play controls, Live badge and first-frame crossfade preserve bubble bounds (5.9s)\n  ✓  13 [chromium-light-desktop] › tests/media.spec.ts:136:1 › WEB-MSG-MEDIA-CHROME loadeddata is the decoded-frame fallback and Reduce Motion uses a short fade (2.4s)\n  ✓  14 [chromium-light-desktop] › tests/stack.spec.ts:8:1 › WEB-MSG-MEDIA-STACK fixed bounds survive decode, phone swiping and desktop grid opening into the exact cell (3.2s)\n  ✓  15 [chromium-light-desktop] › tests/stack.spec.ts:34:1 › WEB-MSG-MEDIA-STACK Reduce Motion and keyboard navigation settle without changing reserved geometry (1.2s)\n  ✓  16 [chromium-light-desktop] › tests/transcript-video-cover.spec.ts:20:1 › WEB-MSG-MEDIA-MOTION real transcript covers an ultrawide poster and playing frame without distortion (5.7s)\n\n  16 passed (1.4m)\n"
-    },
-    {
-      "name": "credential_backend_override_restored",
+      "name": "webkit-light-phone",
       "passed": true
+    },
+    {
+      "name": "webkit-light-desktop",
+      "passed": true
+    },
+    {
+      "name": "webkit-dark-phone",
+      "passed": true
+    },
+    {
+      "name": "webkit-dark-desktop",
+      "passed": true
+    },
+    {
+      "name": "chromium-light-phone",
+      "passed": true
+    },
+    {
+      "name": "chromium-light-desktop",
+      "passed": true
+    },
+    {
+      "name": "chromium-dark-phone",
+      "passed": true
+    },
+    {
+      "name": "chromium-dark-desktop",
+      "passed": true
+    },
+    {
+      "name": "firefox-light-phone",
+      "passed": true
+    },
+    {
+      "name": "firefox-light-desktop",
+      "passed": true
+    },
+    {
+      "name": "firefox-dark-phone",
+      "passed": true
+    },
+    {
+      "name": "firefox-dark-desktop",
+      "passed": false
     }
-  ],
-  "latency": {},
-  "hosts": [
-    "air"
   ]
 }
