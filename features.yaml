@@ -1358,8 +1358,6 @@ features:
       - {scenario: MUS-CATALOG-REAL, level: real, reason: "Real query qualification queued behind shared heavy lane; fresh native Helper build passed."}
       - {scenario: MUS-CONTROL-REAL, level: real, reason: "Automation: dev.applebridge.helper → com.apple.Music missing; no consent requested. Recently Played changes during qualification."}
       - {scenario: MUS-PLAYLIST-REAL, level: real, reason: "Automation: dev.applebridge.helper → com.apple.Music missing; no consent requested."}
-      - {scenario: MUS-IDLE, level: sim, reason: "Whole Helper idle qualification blocked by T53."}
-      - {scenario: MUS-IDLE, level: real, reason: "Whole Helper idle qualification blocked by T53."}
     notes: "Native Music qualification pending; library capture bounded to 500 tracks / 50 playlists / 1000 memberships; Automation dev.applebridge.helper → com.apple.Music missing. Public API has no playlist search. Whole Helper idle qualification blocked by T53."
 
   - id: files.transform

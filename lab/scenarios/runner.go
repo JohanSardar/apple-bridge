@@ -1243,7 +1243,7 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		if level == "web" && s.Web != nil {
 			duration = time.Duration(max(1, len(s.Web.Browsers)*len(s.Web.Themes)*len(s.Web.Layouts))) * webRunBudget(s)
 		}
-		if strings.HasPrefix(s.ID, "MAC-") && level == "real" {
+		if (strings.HasPrefix(s.ID, "MAC-") || s.ID == "MUS-IDLE") && level == "real" {
 			duration = 45 * time.Minute
 		}
 		if level == "sim" && slices.Contains([]string{"MSG-DECODE", "MSG-DECODE-BALLOON", "MSG-DECODE-FORMATTING", "MSG-READ-RICH-FIELDS", "MSG-DELETE-VISIBILITY", "MSG-WATCHER-REARM", "MSG-MEDIA-CLEANUP"}, s.ID) {
