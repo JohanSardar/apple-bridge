@@ -1555,3 +1555,5 @@ Notes rich records retain `plain_text`, escaped fallback `html`, structured `blo
 W8-PARITY is limited on macOS 26.7.1 (25G241): the tagged simple-rich HTML replacement did not preserve expected text/block structure, and public HTML checkbox import did not create native checklist identities. Neither rich edits nor checklist toggles are exposed. `NOTE-EDIT-PARITY` records the per-OS result with tagged-note cleanup; app acceptance remains a separate milestone gate.
 
 The shell's app switcher enables each app when its R step passes. Scenario families: `WEB-REM-*`, `WEB-CAL-*`, `WEB-CON-*`, `WEB-NOTE-*` (web level, 12 projects), plus `REM-STORE-*`, `CAL-STORE-*` and `NOTE-DECODE-FULL` (sim and real).
+
+Voice Memos and voicemail metadata capture: [recordings](spec/recordings.md).
