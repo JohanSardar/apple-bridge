@@ -1,0 +1,119 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[29.36 28.72 32.08] cpu_idle=30% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M635KMRGD63KD8V33YJWE8KN",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "SAF-COMMANDS",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-29T06:29:56.113365Z",
+  "assertions": [
+    {
+      "name": "native_output",
+      "passed": true
+    },
+    {
+      "name": "native_fake_commands",
+      "passed": true
+    },
+    {
+      "name": "world_started",
+      "passed": true
+    },
+    {
+      "name": "scope_granted",
+      "passed": true
+    },
+    {
+      "name": "helper_ready",
+      "passed": true
+    },
+    {
+      "name": "safari.open_url",
+      "passed": true
+    },
+    {
+      "name": "opened_tab_captured",
+      "passed": true
+    },
+    {
+      "name": "safari.close_tab",
+      "passed": true
+    },
+    {
+      "name": "closed_tab_removed",
+      "passed": true
+    },
+    {
+      "name": "foreign_tab_rejected",
+      "passed": true
+    },
+    {
+      "name": "safari.add_reading_list",
+      "passed": true
+    },
+    {
+      "name": "tab_capture_submitted",
+      "passed": true
+    },
+    {
+      "name": "tab_captured",
+      "passed": true
+    },
+    {
+      "name": "gateway_page_text_private_rejected",
+      "passed": true
+    },
+    {
+      "name": "private_ip_rejected",
+      "passed": true
+    },
+    {
+      "name": "private_ip_rejected",
+      "passed": true
+    },
+    {
+      "name": "private_ip_rejected",
+      "passed": true
+    },
+    {
+      "name": "private_ip_rejected",
+      "passed": true
+    },
+    {
+      "name": "private_ip_rejected",
+      "passed": true
+    },
+    {
+      "name": "private_ip_rejected",
+      "passed": true
+    },
+    {
+      "name": "rebinding_rejected_before_dial",
+      "passed": true
+    },
+    {
+      "name": "public_text_extracted",
+      "passed": true
+    },
+    {
+      "name": "redirect_loopback_rejected",
+      "passed": true
+    },
+    {
+      "name": "size_cap",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

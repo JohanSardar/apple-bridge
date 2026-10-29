@@ -108,6 +108,9 @@ func (g *LocalGateway) Query(ctx context.Context, p trust.Principal, q contracts
 			}
 		}
 	}()
+	if q.Op == "safari.page_text" {
+		return g.safariPage(ctx, p, q)
+	}
 	if q.Op == "mail.body" {
 		if g.State == nil {
 			return out, contracts.ErrUnavailable
