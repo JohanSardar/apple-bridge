@@ -1388,7 +1388,7 @@ features:
     scenarios:
       - {id: SIRI-INTENTS, levels: [real]}
     limits:
-      - {"scenario": "SIRI-INTENTS", "level": "real", "reason": "App Intents metadata missing from Helper bundle; full Xcode metadata toolchain required. Johan must verify Apple Bridge status appears in Shortcuts and runs."}
+      - {"scenario": "SIRI-INTENTS", "level": "real", "reason": "Metadata generated with Xcode and bundled; needs Shortcuts listing and status execution verification. Shortcuts CLI lists saved shortcuts, not App Intent actions."}
   - id: mac.extras
     title: Mac Bluetooth AirPlay iWork Time Machine and song recognition
     requirements: [R-API, R-SCOPE]

@@ -25,8 +25,8 @@ def digest_bundle(app):
 
 def source_key(root):
     digest = hashlib.sha256()
-    wanted = {"Info.plist", "Truth-Info.plist", "Helper.entitlements", "sign.sh", "sign-gui.py", "build-helper.sh", "build-truth.sh", "build-native.sh", "build-native.py", "generate-source-registrations.py", "sdkroot.sh", "signed-app-cache.py", "signed_app_inputs.py"}
-    for base in [root / "native", root / "lab/truth/native", root / "packaging/dev"]:
+    wanted = {"Info.plist", "Truth-Info.plist", "Helper.entitlements", "sign.sh", "sign-gui.py", "build-helper.sh", "build-truth.sh", "build-native.sh", "build-native.py", "generate-source-registrations.py", "sdkroot.sh", "signed-app-cache.py", "signed_app_inputs.py", "app-intents.py"}
+    for base in [root / "native", root / "lab/truth/native", root / "packaging/dev", root / "packaging/app-intents"]:
         paths = []
         for directory, children, files in os.walk(base):
             children[:] = [name for name in children if name not in {".build", "node_modules", ".git", "__pycache__"}]
@@ -36,7 +36,7 @@ def source_key(root):
                 continue
             if base.name == "dev" and path.name not in wanted:
                 continue
-            if base.name != "dev" and path.suffix not in {".swift", ".m", ".mm", ".c", ".h", ".modulemap"}:
+            if base.name not in {"dev", "app-intents"} and path.suffix not in {".swift", ".m", ".mm", ".c", ".h", ".modulemap"}:
                 continue
             digest.update(str(path.relative_to(root)).encode() + b"\0" + path.read_bytes() + b"\0")
     lab = (os.environ.get("APPLE_BRIDGE_NATIVE_LAB") or "1")
