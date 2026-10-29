@@ -742,8 +742,8 @@ features:
       - {id: MSG-DELETE-REAL, levels: [real]}
       - {id: MSG-RESEND, levels: [sim, real]}
       - {id: WEB-MSG-COMPOSER, levels: [web]}
-      - {id: WEB-MSG-SEND, levels: [web, real]}
-      - {id: WEB-MSG-ATTACH-SEND, levels: [web, real]}
+      - {id: WEB-MSG-SEND, levels: [web]}
+      - {id: WEB-MSG-ATTACH-SEND, levels: [web]}
       - {id: WEB-UPLOAD-REPLICA, levels: [sim]}
       - {id: WEB-UPLOAD-REPLICA-CHECKPOINT, levels: [sim]}
       - {id: WEB-UPLOAD-CONTROL-PRODUCTION, levels: [sim]}
@@ -761,10 +761,10 @@ features:
       - {id: WEB-UPLOAD-LIMITS, levels: [sim]}
       - {id: WEB-UPLOAD-LEASE, levels: [sim]}
       - {id: WEB-UPLOAD-NATIVE-STAGING, levels: [sim, real]}
-      - {id: WEB-MSG-REACT, levels: [web, real]}
-      - {id: WEB-MSG-REPLY, levels: [web, real]}
-      - {id: WEB-MSG-EDIT, levels: [web, real]}
-      - {id: WEB-MSG-UNSEND, levels: [web, real]}
+      - {id: WEB-MSG-REACT, levels: [web]}
+      - {id: WEB-MSG-REPLY, levels: [web]}
+      - {id: WEB-MSG-EDIT, levels: [web]}
+      - {id: WEB-MSG-UNSEND, levels: [web]}
       - {id: WEB-MSG-MANAGE, levels: [web]}
       - {id: WEB-MSG-CHAT-ACTIONS, levels: [web]}
       - {id: WEB-MSG-NEW, levels: [web]}
@@ -777,14 +777,8 @@ features:
       - {"scenario": "MSG-DELETE-REAL", "level": "real", "reason": "skipped: requires unlocked Mac with Messages UI available and an unused own self-chat handle; no safe UI cleanup demonstrated at lock screen"}
       - {"scenario": "MSG-RESEND", "level": "real", "reason": "skipped: requires a uniquely identified failed self-chat test message via APPLE_BRIDGE_RESEND_RUN; existing self-chat residue must remain untouched"}
       - {"scenario": "WEB-MSG-SEND", "level": "web", "reason": "web qualification remains missing"}
-      - {"scenario": "WEB-MSG-SEND", "level": "real", "reason": "Code gap: YAML does not support real (runner rejected requested level)"}
       - {"scenario": "WEB-MSG-ATTACH-SEND", "level": "web", "reason": "web qualification remains missing"}
-      - {"scenario": "WEB-MSG-ATTACH-SEND", "level": "real", "reason": "Code gap: YAML does not support real (runner rejected requested level)"}
       - {"scenario": "WEB-UPLOAD-NATIVE-STAGING", "level": "real", "reason": "skipped: historical run failed tagged media cleanup; unlock Mac and prove per-run Messages cleanup before new self-chat attachments; existing residue untouched"}
-      - {"scenario": "WEB-MSG-REACT", "level": "real", "reason": "Code gap: YAML does not support real (runner rejected requested level)"}
-      - {"scenario": "WEB-MSG-REPLY", "level": "real", "reason": "Code gap: YAML does not support real (runner rejected requested level)"}
-      - {"scenario": "WEB-MSG-EDIT", "level": "real", "reason": "Code gap: YAML does not support real (runner rejected requested level)"}
-      - {"scenario": "WEB-MSG-UNSEND", "level": "real", "reason": "Code gap: YAML does not support real (runner rejected requested level)"}
       - {"scenario": "WEB-MSG-MANAGE", "level": "web", "reason": "web qualification remains missing"}
       - {"scenario": "WEB-MSG-CHAT-ACTIONS", "level": "web", "reason": "web qualification remains missing"}
       - {"scenario": "WEB-MSG-FAIL-RESEND", "level": "web", "reason": "web qualification remains missing"}
@@ -922,18 +916,15 @@ features:
     milestone: W7
     modules: [webui, native/ContactsSource, operations]
     depends_on: [web.frontdoor, contacts.write]
-    status: limited
+    status: done
     scenarios:
       - {id: WEB-CON-LIST, levels: [sim]}
       - {id: CON-GROUPS, levels: [sim]}
       - {id: WEB-CON-READ, levels: [web]}
-      - {id: WEB-CON-WRITE, levels: [web, real]}
-      - {id: WEB-CON-PARITY, levels: [web, real]}
+      - {id: WEB-CON-WRITE, levels: [web]}
+      - {id: WEB-CON-PARITY, levels: [web]}
     notes: >-
       Core milestone green: browser 60/60 passes without skips or flakes; #249 repairs source-response geometry, #251 contains avatars, shares card/list photos and tightens phone spacing. #257 removes fixture surfaces from the shell; post-#281 exclusive audit passes shell 58291, Contacts route 14939 and all cacheable assets 611382 bytes. Native external changes pass 20/20 per endpoint: gateway/replica p95 795.7/807.8 ms. Native CRUD after #248 is leader-reported separately. Groups/posters stay hidden; photo-command fidelity and combined native/browser write acceptance remain limited. Replica exactly-once attribution remains unverified despite convergence. Raw reports and screenshots stay private.
-    limits:
-      - {"scenario": "WEB-CON-WRITE", "level": "real", "reason": "Code gap: YAML does not support real (runner rejected requested level)"}
-      - {"scenario": "WEB-CON-PARITY", "level": "real", "reason": "Code gap: YAML does not support real (runner rejected requested level)"}
   - id: web.notes
     title: Notes web app (read, write, parity)
     requirements: [R-WEB-UI, R-WEB-FAST, R-RW]
@@ -947,14 +938,12 @@ features:
       - {id: NOTE-DECODE-FULL, levels: [sim, real]}
       - {id: NOTE-EDIT-PARITY, levels: [real]}
       - {id: WEB-NOTE-READ, levels: [web]}
-      - {id: WEB-NOTE-WRITE, levels: [web, real]}
-      - {id: WEB-NOTE-PARITY, levels: [web, real]}
+      - {id: WEB-NOTE-WRITE, levels: [web]}
+      - {id: WEB-NOTE-PARITY, levels: [web]}
     notes: >-
       Browser milestone 228/228 passes without skips or flakes; READ includes 4.5:1 highlight/link contrast across all five colors and both appearances. Core milestone green with explicit limits: #283 establishes leader-reported real DECODE-FULL 5/5 and REST/MCP CRUD sim 34/34. The pre-fix real append conflicted; replace/MCP were not reached, and tagged cleanup failed. Further real Notes writes are stopped and limited pending a verified cleanup route; no local On My Mac account exists. Leader-accepted #274 passes 20 real first-record saves, p95 gateway/Ubuntu replica 476.3/870.2 ms; full content 1430/1420 ms is separate. Rich/checklist mutations stay hidden; combined native/browser journeys, worker-enabled external-body integration, burst/crash and app-specific UI timing remain limited.
     limits:
       - {"scenario": "NOTE-EDIT-PARITY", "level": "real", "reason": "skipped: NotesParityProbe executes Apple Events without a non-prompting authorization preflight; cleanup qualification is unproven"}
-      - {"scenario": "WEB-NOTE-WRITE", "level": "real", "reason": "Code gap: YAML does not support real (runner rejected requested level)"}
-      - {"scenario": "WEB-NOTE-PARITY", "level": "real", "reason": "Code gap: YAML does not support real (runner rejected requested level)"}
   - id: remote.relay
     title: SNI passthrough relay, stable device enrollment and persistent budgets
     requirements: [R-SECURE, R-WEB-REACH]
