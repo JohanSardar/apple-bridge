@@ -2,6 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <key>ABApproved_wallet</key><false/>
+    <key>ABApproved_criticalAlerts</key><false/>
+    <key>ABApproved_locationPush</key><false/>
+    <key>ABApproved_fallDetection</key><false/>
+    <key>ABLocationPushAppGroup</key><string></string>
+    <key>NSFinancialDataUsageDescription</key><string>Share only financial accounts and transactions you authorize with your paired gateway.</string>
 	<key>ABJournalGranted</key>
 	<false/>
 	<key>ABEnergyGranted</key>
@@ -35,7 +41,7 @@
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Read your precise location on request and access your current Wi-Fi network for home automations.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Record arrivals, departures and significant location changes for your enabled location capability.</string>
+	<string>Record enabled location events and refresh location for owner-requested location pushes while sharing is enabled.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Scan your Apple Bridge gateway pairing code.</string>
 	<key>NSLocalNetworkUsageDescription</key>

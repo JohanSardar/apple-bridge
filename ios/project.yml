@@ -61,3 +61,16 @@ targets:
         CODE_SIGN_ENTITLEMENTS: Extensions/ScreenTimeReport/ScreenTimeReport.entitlements
         PROVISIONING_PROFILE_SPECIFIER: $(AB_SCREENTIME_REPORT_PROFILE_NAME)
         SKIP_INSTALL: YES
+  AppleBridgeLocationPush:
+    type: app-extension
+    platform: iOS
+    sources:
+      - Extensions/LocationPush
+      - Capabilities/AppleApproval/LocationPushState.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.johansardar.applebridge.ios.locationpush
+        INFOPLIST_FILE: Extensions/LocationPush/Info.plist
+        PROVISIONING_PROFILE_SPECIFIER: AB iOS Location Push Dev
+        APPLICATION_EXTENSION_API_ONLY: YES
+        SKIP_INSTALL: YES
