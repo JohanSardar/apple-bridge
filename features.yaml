@@ -1404,3 +1404,31 @@ features:
     limits:
       - {scenario: MAC-CLIPBOARD-REAL, level: real, reason: Clipboard supports transient text up to 64 KiB; image payloads and approval-required agent writes remain unsupported.}
     notes: Audio, appearance, app lifecycle and IOPM assertions use native readback. Clipboard text uses transient reads and redacted writes; image payloads and approval-required writes are unavailable. MAC-LOCK remains unavailable and is never exercised.
+  - id: maps.queries
+    title: Native Location and Maps transient queries
+    requirements: [R-API, R-SCOPE]
+    milestone: G7
+    modules: [native/Sources/MapsSource]
+    depends_on: [core.queries]
+    status: limited
+    scenarios:
+      - {id: LOC-IDLE, levels: [real]}
+      - {id: MAP-IDLE, levels: [real]}
+      - {id: LOC-CURRENT-REAL, levels: [real]}
+      - {id: LOC-SIM, levels: [sim]}
+      - {id: MAP-SIM, levels: [sim]}
+      - {id: LOC-GEOCODE-REAL, levels: [real]}
+      - {id: MAP-SEARCH-REAL, levels: [real]}
+      - {id: MAP-DIRECTIONS-REAL, levels: [real]}
+      - {id: MAP-SNAPSHOT-REAL, levels: [real]}
+    notes: Transit route geometry is unsupported by MKDirections (ETA is supported); real maps.open remains unverified. Whole-Helper idle qualification is blocked by T53.
+    limits:
+      - scenario: LOC-CURRENT-REAL
+        level: real
+        reason: Helper Location authorization is not_determined; never trigger a permission prompt. Requires Location Services permission for AppleBridgeHelper.
+      - scenario: LOC-IDLE
+        level: real
+        reason: Whole-Helper CPU measured 30.49 percent over 300.02 seconds; Helper remained responsive. Limited by T53, the pre-existing Messages.reconcile idle issue reproduced on main at 54.6 percent; no idle pass claimed.
+      - scenario: MAP-IDLE
+        level: real
+        reason: Whole-Helper CPU measured 38.39 percent over 300.02 seconds; Helper remained responsive. Limited by T53, the pre-existing Messages.reconcile idle issue reproduced on main at 54.6 percent; no idle pass claimed.

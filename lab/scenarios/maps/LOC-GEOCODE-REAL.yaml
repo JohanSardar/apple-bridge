@@ -1,0 +1,5 @@
+id: LOC-GEOCODE-REAL
+feature: maps.queries
+levels: [real]
+when:
+  - queries: {}

@@ -358,6 +358,9 @@ func convergence(w *world.World) bool {
 }
 
 func runScenario(ctx context.Context, s Scenario, level string) Evidence {
+	if s.Feature == "maps.queries" {
+		return runMapsQueries(ctx, s, level)
+	}
 	if s.Feature == "mail.commands" || s.Feature == "mail.capture" || s.Feature == "mail.body" {
 		return runMail(ctx, s, level)
 	}
@@ -1163,6 +1166,9 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		}
 		if s.Feature == "phone.read" {
 			duration = 45 * time.Minute
+		}
+		if s.Feature == "maps.queries" && level == "real" {
+			duration = 20 * time.Minute
 		}
 		if s.ID == "RELAY-STREAMS" {
 			duration = 12 * time.Minute

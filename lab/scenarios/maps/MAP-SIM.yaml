@@ -1,0 +1,5 @@
+id: MAP-SIM
+feature: maps.queries
+levels: [sim]
+when:
+  - queries: {}
