@@ -43,6 +43,7 @@ if sys.argv[2]:
 agent = {"Label": "dev.applebridge.gateway", "BundleProgram": "Contents/MacOS/bridge", "ProgramArguments": arguments, "RunAtLoad": True, "KeepAlive": True, "ThrottleInterval": 2, "LimitLoadToSessionType": "Aqua", "ProcessType": "Background"}
 (app / "Contents/Library/LaunchAgents/dev.applebridge.gateway.plist").write_bytes(plistlib.dumps(agent))
 CONFIG
+python3 "$root/packaging/dev/app-intents.py" "$app"
 "$root/packaging/dev/sign.sh" "$app" "$identity"
 ditto "$app" "$destination"
 codesign --verify --deep --strict "$destination"
