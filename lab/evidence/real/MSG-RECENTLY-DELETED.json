@@ -1,24 +1,35 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[9.05 8.62 8.2] cpu_idle=54% cpus=8 other_heavy=0"
+    "summary": "air: load=[22.68 12.09 12.57] cpu_idle=43% cpus=8 other_heavy=0"
   },
   "status": "environment-limited",
-  "run_id": "run_01M647HF33BDB8S7FNQNB3BAPA",
+  "run_id": "run_01M64ZJ54HGP6B7J6P64Q3KSRY",
   "metrics": {
-    "capture_observer_resets": 0
+    "baseline_captured": false,
+    "capture_observer_resets": 0,
+    "cleanup_verified": true,
+    "writes_submitted": 0
   },
   "scenario": "MSG-RECENTLY-DELETED",
   "level": "real",
   "passed": false,
   "git_sha": "",
-  "at": "2026-10-29T16:22:56.355705Z",
+  "at": "2026-10-29T23:22:44.753453Z",
   "assertions": [
     {
-      "name": "signed_parity_helper",
+      "name": "run_only_cleanup",
+      "passed": true
+    },
+    {
+      "name": "messages.recover_chat",
       "passed": false,
-      "status": "unverified",
-      "detail": "Set APPLE_BRIDGE_PARITY_HELPER_APP to an immutable signed Helper built from the current source"
+      "detail": "accessibility_permission_missing"
+    },
+    {
+      "name": "messages.delete_chat_permanently",
+      "passed": false,
+      "detail": "accessibility_permission_missing"
     },
     {
       "name": "credential_backend_override_restored",

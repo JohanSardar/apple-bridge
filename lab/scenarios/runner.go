@@ -1261,6 +1261,9 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		if s.Feature == "web.readmodels" || s.Feature == "web.messages.read" {
 			duration = 15 * time.Minute
 		}
+		if level == "real" && slices.Contains([]string{"MSG-PINS", "MSG-MUTE", "MSG-READ-RECEIPTS", "MSG-RECENTLY-DELETED"}, s.ID) {
+			duration = 8 * time.Minute
+		}
 		if level == "real" && (s.Feature == "messages.actions" || s.Feature == "messages.groups" || s.Feature == "web.media") {
 			duration = 8 * time.Minute
 		}

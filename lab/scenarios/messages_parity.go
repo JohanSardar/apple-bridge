@@ -8,6 +8,8 @@ import (
 	"github.com/JohanSardar/apple-bridge/lab/scripted"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"time"
 )
 
@@ -130,15 +132,28 @@ func runMessagesParity(ctx context.Context, s Scenario, level string) Evidence {
 func runMessagesParityProof(ctx context.Context, s Scenario, e Evidence) Evidence {
 	app := os.Getenv("APPLE_BRIDGE_PARITY_HELPER_APP")
 	if app == "" {
-		e.Status = "environment-limited"
-		e.Assertions = []Assertion{{Name: "signed_parity_helper", Status: "unverified", Detail: "Set APPLE_BRIDGE_PARITY_HELPER_APP to an immutable signed Helper built from the current source"}}
-		return e
+		home, err := os.MkdirTemp("", "ab-messages-parity-")
+		if err != nil {
+			e.Assertions = []Assertion{{Name: "helper_directory", Passed: false}}
+			return e
+		}
+		defer os.RemoveAll(home)
+		app = filepath.Join(home, "AppleBridgeHelper.app")
+		if err := exec.CommandContext(ctx, "packaging/dev/build-helper.sh", app).Run(); err != nil {
+			e.Assertions = []Assertion{{Name: "signed_parity_helper", Passed: false}}
+			return e
+		}
 	}
-	data, _ := bridgeruntime.MessagesParitySelfTest(ctx, app, false, true)
+	data, _ := bridgeruntime.MessagesParitySelfTest(ctx, app, true, true)
 	var report struct {
-		OSBuild string `json:"os_build"`
-		Cleanup string `json:"cleanup_state"`
-		Steps   []struct {
+		OSBuild          string `json:"os_build"`
+		Cleanup          string `json:"cleanup_state"`
+		Writes           int    `json:"writes_submitted"`
+		Before           int    `json:"before_count"`
+		After            int    `json:"after_count"`
+		Preserved        bool   `json:"baseline_preserved"`
+		BaselineCaptured bool   `json:"baseline_captured"`
+		Steps            []struct {
 			Operation string `json:"operation"`
 			Proven    bool   `json:"proven"`
 			Reason    string `json:"reason"`
@@ -149,8 +164,14 @@ func runMessagesParityProof(ctx context.Context, s Scenario, e Evidence) Evidenc
 		return e
 	}
 	want := map[string][]string{"MSG-PINS": {"messages.pin"}, "MSG-MUTE": {"messages.mute"}, "MSG-READ-RECEIPTS": {"messages.set_read_receipts"}, "MSG-RECENTLY-DELETED": {"messages.recover_chat", "messages.delete_chat_permanently"}}[s.ID]
-	e.Metrics = map[string]any{"os_build": report.OSBuild, "cleanup_state": report.Cleanup}
-	e.Passed = true
+	e.Metrics = map[string]any{"writes_submitted": report.Writes, "baseline_captured": report.BaselineCaptured, "cleanup_verified": report.Cleanup == "verified_clean" || report.Cleanup == "not_needed"}
+	if report.BaselineCaptured {
+		e.Metrics["before_count"] = report.Before
+		e.Metrics["after_count"] = report.After
+		e.Metrics["baseline_preserved"] = report.Preserved
+	}
+	e.Passed = report.Cleanup == "verified_clean" && report.Preserved
+	e.Assertions = append(e.Assertions, Assertion{Name: "run_only_cleanup", Passed: report.Cleanup == "verified_clean" || report.Cleanup == "not_needed"})
 	for _, op := range want {
 		found := false
 		for _, step := range report.Steps {
