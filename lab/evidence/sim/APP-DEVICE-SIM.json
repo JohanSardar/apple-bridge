@@ -1,0 +1,35 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[72.78 79.97 69.86] cpu_idle=0% cpus=10 other_heavy=0"
+  },
+  "run_id": "",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "APP-DEVICE-SIM",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-29T23:09:02.470444Z",
+  "assertions": [
+    {
+      "name": "swift_adapter_build",
+      "passed": true
+    },
+    {
+      "name": "fake_adapter_functional",
+      "passed": true
+    },
+    {
+      "name": "signed_result_upload_then_next_command",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

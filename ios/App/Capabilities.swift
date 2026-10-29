@@ -10,6 +10,7 @@ enum Capabilities {
         HealthReadCapability.descriptor,
         HealthWriteCapability.descriptor,
         MotionCapability.descriptor,
+        DeviceContextCapability.descriptor,
         ScreenTimeCapability.descriptor,
         SiriCapability.descriptor,
         WidgetsCapability.descriptor,
