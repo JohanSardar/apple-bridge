@@ -20,6 +20,9 @@ enum Capabilities {
         ExtrasCapability.descriptors[1],
         ExtrasCapability.descriptors[2],
         HomeCapability.descriptor,
-        AppleApprovalCapability.descriptor,
+        AppleApprovalCapability.descriptors[0],
+        AppleApprovalCapability.descriptors[1],
+        AppleApprovalCapability.descriptors[2],
+        AppleApprovalCapability.descriptors[3],
     ]
 }

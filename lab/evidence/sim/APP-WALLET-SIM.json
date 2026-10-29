@@ -1,0 +1,63 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[7.54 21.02 36.64] cpu_idle=60% cpus=10 other_heavy=0"
+  },
+  "run_id": "",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "APP-WALLET-SIM",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-29T23:32:38.548194Z",
+  "assertions": [
+    {
+      "name": "temporary_binary",
+      "passed": true
+    },
+    {
+      "name": "swift_adapter_build",
+      "passed": true
+    },
+    {
+      "name": "swift_flags_and_fake_adapters",
+      "passed": true
+    },
+    {
+      "name": "iphone.wallet.account_gateway_admission",
+      "passed": true
+    },
+    {
+      "name": "iphone.wallet.transaction_gateway_admission",
+      "passed": true
+    },
+    {
+      "name": "iphone.critical.alert_gateway_admission",
+      "passed": true
+    },
+    {
+      "name": "iphone.location.push_gateway_admission",
+      "passed": true
+    },
+    {
+      "name": "iphone.fall.detection_gateway_admission",
+      "passed": true
+    },
+    {
+      "name": "wallet_limit_rejected",
+      "passed": true
+    },
+    {
+      "name": "empty_critical_alert_rejected",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

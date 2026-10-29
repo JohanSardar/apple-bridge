@@ -36,6 +36,9 @@ struct CapabilityScreen: View {
                 LabeledContent("Permission", value: capability.permission)
                 LabeledContent("Last activity", value: "None")
                 if capability.id == "journal" { JournalSuggestionPicker() }
+                if let feature = ApprovalFeature(rawValue: capability.id) {
+                    ApprovalAuthorizationView(feature: feature)
+                }
             } footer: {
                 if !capability.available {
                     Text(capability.permission)
@@ -58,6 +61,14 @@ struct CapabilityScreen: View {
                     }
                     try? LocationCapability.adapter.significant(false)
                 }
+            }
+            if capability.id == "locationPush" {
+                LocationPushState.setEnabled(value && AppleApprovalCapability.approved(.locationPush))
+            }
+        }
+        .task {
+            if capability.id == "locationPush" {
+                LocationPushState.setEnabled(enabled && AppleApprovalCapability.approved(.locationPush))
             }
         }
     }

@@ -361,6 +361,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "APP-DEVICE-SIM" || s.ID == "APP-DEVICE-REAL" {
 		return runIPhoneCapability(ctx, s, level, "ios/Capabilities/DeviceContext/DeviceModel.swift", "lab/ios/DeviceProof.swift")
 	}
+	if s.ID == "APP-WALLET-SIM" {
+		return runIPhoneApproval(ctx, s, level)
+	}
 	if s.ID == "APP-MOTION-SIM" || s.ID == "APP-MOTION-REAL" {
 		return runIPhoneCapability(ctx, s, level, "ios/Capabilities/Motion/MotionModel.swift", "lab/ios/MotionProof.swift")
 	}

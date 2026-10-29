@@ -1545,3 +1545,14 @@ features:
       - {id: APP-LOC-REAL, levels: [real]}
     limits:
       - {scenario: APP-LOC-REAL, level: real, reason: 'limited: needs Allow tap for Always and Precise Location'}
+  - id: iphone.appleapproval
+    title: Apple approval gated FinanceKit, critical alerts, location push and fall detection
+    requirements: [R-API, R-SCOPE, R-SAFE-CMD]
+    milestone: G13
+    modules: [ios/Capabilities/AppleApproval, ios/Extensions/LocationPush, internal/contracts]
+    depends_on: [iphone.delivery]
+    status: limited
+    scenarios:
+      - {id: APP-WALLET-SIM, levels: [sim]}
+    limits:
+      - {scenario: APP-WALLET-SIM, level: sim, reason: 'limited: needs Apple approval for FinanceKit, critical alerts, location push and fall detection; location push also needs provisioned extension/App Group, fall detection needs Watch companion, live phone qualification needs system consent'}
