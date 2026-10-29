@@ -49,6 +49,9 @@ func runFocusPack(ctx context.Context, s Scenario, level string) Evidence {
 		e.Conditions = map[string]string{"reason": "Existing idle and phone qualification pending"}
 		return e
 	}
+	if level == "real" {
+		return runFocusReal(ctx, s, e)
+	}
 	if level == "sim" {
 		fixture := &focusPackFixture{}
 		pack := focuspack.Pack{Runner: fixture, ReadStatus: func(context.Context) (focuspack.Status, error) {

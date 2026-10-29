@@ -13,34 +13,6 @@ final class Fixture {
 struct Checks {
     @MainActor
     static func main() async throws {
-        if CommandLine.arguments.last == "status" {
- guard FocusSource.status()["authorization"].string == "authorized", FocusSource.status()["focused"] != .null else { print("limited: needs Focus status grant"); return }
- print("passed"); return
- }
- if CommandLine.arguments.last == "real" {
-            let before = FocusSource.status()
-            guard before["authorization"].string == "authorized", before["focused"] == .bool(false) else {
-                print("limited: needs Focus status grant or an initially inactive Focus")
-                return
-            }
-            let source = FocusSource()
-            let until = ISO8601DateFormatter().string(from: Date().addingTimeInterval(60))
-            let on = try await source.prepare(command(on: true, until: until))
-            let off = try await source.prepare(command(on: false))
-            var restored = false
-            do {
-                let result = try await source.dispatch(on)
-                guard result["readback"]["focused"] == .bool(true) else { throw SourceFailure.corrupt }
-                let resultOff = try await source.restoreInactive(off)
-                restored = resultOff["readback"]["focused"] == before["focused"]
-                guard restored else { throw SourceFailure.corrupt }
-            } catch {
-                if !restored { _ = try await source.restoreInactive(off) }
-                throw error
-            }
-            print("passed")
-            return
-        }
         let fixture = Fixture()
         let source = FocusSource(status: { .object(["focused": .bool(fixture.focused), "name": .null, "authorization": .string(fixture.authorized ? "authorized" : "not_determined")]) }, runner: { args in
             fixture.calls += 1
