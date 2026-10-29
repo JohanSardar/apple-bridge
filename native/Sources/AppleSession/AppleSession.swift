@@ -470,6 +470,14 @@ public actor AppleSession: ObservationSink {
     }
 
     private func observedEvidence(_ evidence: JSON, fingerprint: JSON, operation: String) async throws -> JSON {
+        if operation == "music.favorite" || operation == "music.add_to_playlist" {
+            let collection = operation == "music.favorite" ? "music.library_item" : "music.playlist"
+            guard let checkpoint = observedCheckpoints[collection + "/" + evidence["native_key"].string] else { throw SourceFailure.unavailable }
+            var result = evidence.object
+            result["fingerprint"] = fingerprint
+            result["capture_checkpoint"] = .string(checkpoint)
+            return .object(result)
+        }
         if operation.hasPrefix("photos."), let photos = additionalSources["photos"] as? PhotosSource {
             try await photos.captureCommand(evidence, into: self)
             let collection = operation == "photos.create_album" ? "photos.album" : "photos.asset"

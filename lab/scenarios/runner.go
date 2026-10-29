@@ -361,6 +361,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.Feature == "mail.commands" || s.Feature == "mail.capture" || s.Feature == "mail.body" {
 		return runMail(ctx, s, level)
 	}
+	if s.Feature == "music.catalog" {
+		return runMusicCatalog(ctx, s, level)
+	}
 	if s.Feature == "vision.queries" {
 		return runVisionQueries(ctx, s, level)
 	}

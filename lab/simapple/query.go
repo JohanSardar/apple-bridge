@@ -108,6 +108,28 @@ func (s *querySession) receive(f contracts.IPCFrame) bool {
 		case "helper.version":
 			out.ResultJSON = json.RawMessage(`{"version":"sim","protocol":"ipc/1"}`)
 		default:
+			if f.Op == "music.now_playing" {
+				var fields map[string]json.RawMessage
+				if contracts.DecodeInput(f.Args, &fields) != nil || len(fields) != 0 {
+					out.T = "QueryError"
+					out.Code = "invalid"
+				} else {
+					s.fake.mu.Lock()
+					player := s.fake.music.player()
+					delete(player, "id")
+					out.ResultJSON, _ = json.Marshal(player)
+					s.fake.mu.Unlock()
+				}
+				break
+			}
+			if code, result, handled := simulateMusicQuery(f.Op, f.Args); handled {
+				out.ResultJSON = result
+				if code != "" {
+					out.T = "QueryError"
+					out.Code = code
+				}
+				break
+			}
 			if photos, handled := s.fake.photosQuery(f); handled {
 				out = photos
 				break

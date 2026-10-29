@@ -405,6 +405,10 @@ protocol Source: Sendable {
 
 Focus status and pack qualification: [spec/focus.md](spec/focus.md).
 
+Music catalog query: [Music](spec/music.md).
+
+Music catalog, player controls and library capture: [Music](spec/music.md).
+
 Photos capture, query and command coverage: [Photos](spec/photos.md).
 
 Contacts Me-card and notes entitlement contract: [spec/contacts.md](spec/contacts.md).
