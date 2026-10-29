@@ -68,6 +68,13 @@ public final class FocusSource: Source {
     }
     public func dispatch(_ prepared: Prepared) async throws -> JSON {
         guard readStatus()["authorization"].string == "authorized", readStatus()["focused"] != .null else { throw SourceFailure.permissionMissing }
+        return try await execute(prepared)
+    }
+    public func restoreInactive(_ prepared: Prepared) async throws -> JSON {
+        guard prepared.action["op"].string == "focus.set", prepared.action["args"]["mode"].string == "Do Not Disturb", prepared.action["args"]["on"] == .bool(false), prepared.action["args"]["until"].string.isEmpty else { throw SourceFailure.invalid }
+        return try await execute(prepared)
+    }
+    private func execute(_ prepared: Prepared) async throws -> JSON {
         let args = prepared.action["args"]
         if !args["until"].string.isEmpty {
             guard let until = Self.expiry(args["until"].string), until > Date() else { throw SourceFailure.invalid }

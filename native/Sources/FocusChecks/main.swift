@@ -31,11 +31,11 @@ struct Checks {
             do {
                 let result = try await source.dispatch(on)
                 guard result["readback"]["focused"] == .bool(true) else { throw SourceFailure.corrupt }
-                let resultOff = try await source.dispatch(off)
+                let resultOff = try await source.restoreInactive(off)
                 restored = resultOff["readback"]["focused"] == before["focused"]
                 guard restored else { throw SourceFailure.corrupt }
             } catch {
-                if !restored { _ = try await source.dispatch(off) }
+                if !restored { _ = try await source.restoreInactive(off) }
                 throw error
             }
             print("passed")
@@ -52,11 +52,24 @@ struct Checks {
         let result = try await source.dispatch(on)
         guard result["observed"].bool, result["readback"]["focused"] == .bool(true), fixture.calls == 1 else { throw SourceFailure.corrupt }
         let off = try await source.prepare(command(on: prior))
-        _ = try await source.dispatch(off)
+        _ = try await source.restoreInactive(off)
         guard fixture.focused == prior, fixture.calls == 2 else { throw SourceFailure.corrupt }
         let unchanged = FocusSource(status: { .object(["focused": .bool(false), "authorization": .string("authorized"), "name": .null]) }, runner: { _ in .object(["exit_status": .number(0), "timed_out": .bool(false)]) })
         let unconfirmed = try await unchanged.prepare(command(on: true))
         do { _ = try await unchanged.dispatch(unconfirmed); throw SourceFailure.corrupt } catch SourceFailure.unavailable {}
+        let lost = Fixture()
+        let cleanup = FocusSource(status: { .object(["focused": lost.authorized ? .bool(lost.focused) : .null, "authorization": .string(lost.authorized ? "authorized" : "not_determined"), "name": .null]) }, runner: { args in
+            lost.calls += 1
+            lost.focused = args["on"].bool
+            lost.authorized = false
+            return .object(["exit_status": .number(0), "timed_out": .bool(false)])
+        })
+        let cleanupOff = try await cleanup.prepare(command(on: false))
+        let cleanupOn = try await cleanup.prepare(command(on: true))
+        do { _ = try await cleanup.dispatch(cleanupOn); throw SourceFailure.corrupt } catch SourceFailure.unavailable {}
+        guard lost.focused, lost.calls == 1 else { throw SourceFailure.corrupt }
+        do { _ = try await cleanup.restoreInactive(cleanupOff); throw SourceFailure.corrupt } catch SourceFailure.unavailable {}
+        guard !lost.focused, lost.calls == 2 else { throw SourceFailure.corrupt }
         fixture.authorized = false
         do { _ = try await source.prepare(command(on: true)); throw SourceFailure.corrupt } catch SourceFailure.permissionMissing {}
         guard fixture.calls == 2 else { throw SourceFailure.corrupt }
