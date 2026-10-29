@@ -92,7 +92,7 @@ func runWeatherReal(ctx context.Context, s Scenario, level string) Evidence {
 		e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: passed})
 		e.Passed = e.Passed && passed
 	}
-	w, err := world.NewReal(ctx, level, 0)
+	w, err := world.NewRealWithSetup(ctx, level, 0, world.NativeSetup{FilesystemTruth: true})
 	add("world_started", err == nil)
 	if err != nil {
 		return e
