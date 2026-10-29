@@ -1,15 +1,15 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[5.35 7.24 12.83] cpu_idle=61% cpus=8 other_heavy=0"
+    "summary": "air: load=[21.41 20.81 13.65] cpu_idle=60% cpus=8 other_heavy=0"
   },
   "status": "limited",
-  "run_id": "run_01M64Z5J71C71725753ZTK2VVA",
+  "run_id": "run_01M650ZAYSQ8GFC19KYGFQF3ZW",
   "metrics": {
     "capture_observer_resets": 0,
     "cleanup_counts": {
-      "after_count": 160293,
-      "before_count": 160293,
+      "after_count": 160294,
+      "before_count": 160294,
       "created_count": 0,
       "passed": true
     },
@@ -18,8 +18,8 @@
   "scenario": "MSG-SEND-EFFECT",
   "level": "real",
   "passed": false,
-  "git_sha": "b0eb5769bb0fb74f4d5bcddaf4ca070a031fd627",
-  "at": "2026-10-29T23:15:52.161536Z",
+  "git_sha": "cd736b6bdf6f556b3e7a7dd514fbc4f7d2d45c78",
+  "at": "2026-10-29T23:47:25.27303Z",
   "assertions": [
     {
       "name": "cleanup_baseline_restored",

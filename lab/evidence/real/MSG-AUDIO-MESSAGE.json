@@ -1,10 +1,10 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[13.47 9.27 14.9] cpu_idle=64% cpus=8 other_heavy=0"
+    "summary": "air: load=[5.83 4.91 6.55] cpu_idle=68% cpus=8 other_heavy=0"
   },
   "status": "limited",
-  "run_id": "run_01M64YZDA9QMP5PPVNXWWNPK0C",
+  "run_id": "run_01M650NFB0868WXWWTBWPDTJQS",
   "metrics": {
     "capture_observer_resets": 0,
     "writes_submitted": 0
@@ -12,8 +12,8 @@
   "scenario": "MSG-AUDIO-MESSAGE",
   "level": "real",
   "passed": false,
-  "git_sha": "b0eb5769bb0fb74f4d5bcddaf4ca070a031fd627",
-  "at": "2026-10-29T23:12:30.537367Z",
+  "git_sha": "cd736b6bdf6f556b3e7a7dd514fbc4f7d2d45c78",
+  "at": "2026-10-29T23:42:02.080271Z",
   "assertions": [
     {
       "name": "credential_backend_override_restored",
