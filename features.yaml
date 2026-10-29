@@ -332,8 +332,7 @@ features:
       - {id: REM-READONLY-LIST, levels: [sim]}
       - {id: REM-OPERATION-SHAPES, levels: [sim]}
       - {id: REM-NATIVE-LIST-RACE, levels: [sim]}
-    limits:
-      - {"scenario": "REM-LIST-MANAGE", "level": "real", "reason": "Code bug: delete_owned_list failed after rename. AppleTruth cleanup guard rejected renamed lists; fixed the one-line guard and verified this run-created list removed (lab/evidence/real-qualification-cleanup.json). Scenario was not retried."}
+    notes: "Tagged list create, rename and delete verified at sim and real; AppleTruth confirms the renamed list is absent after deletion."
   - id: calendar.read
     title: Calendar window capture, identity, recurrence, time zones, window slide
     requirements: [R-FULL, R-LIVE, R-CAL, R-NO-FALSE-DELETE]
