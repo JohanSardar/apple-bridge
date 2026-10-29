@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"reflect"
 	"runtime"
 	"strings"
 	"testing"
@@ -81,5 +82,31 @@ func TestForwardQueryDeadline(t *testing.T) {
 		if got := ForwardTimeout(json.RawMessage(test.raw)); got != test.want {
 			t.Fatalf("deadline %s: got %s want %s", test.raw, got, test.want)
 		}
+	}
+}
+
+func TestContactPrepareRawArgumentsRoundTrip(t *testing.T) {
+	args := json.RawMessage(`{"given_name":"[ab-test wire]","phones":[{"label":"mobile","value":"+15555550123"}]}`)
+	command := Command{ID: NewCommandID(), Op: "contacts.create", Args: args}
+	validated, err := ValidateCommand(command)
+	if err != nil {
+		t.Fatal(err)
+	}
+	frame := IPCFrame{T: "Prepare", CommandID: command.ID, Principal: "device:test", RequestHash: "digest", Action: &NativeAction{Op: command.Op, Args: validated.Contact}, ExpiresAt: time.Now().Add(time.Minute)}
+	encoded, err := EncodeFrame(frame)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var decoded IPCFrame
+	if _, err = ReadFrame(bytes.NewReader(encoded), &decoded); err != nil {
+		t.Fatal(err)
+	}
+	actual, err := json.Marshal(decoded.Action.Args)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var want, got any
+	if json.Unmarshal(args, &want) != nil || json.Unmarshal(actual, &got) != nil || !reflect.DeepEqual(got, want) {
+		t.Fatal("native arguments changed")
 	}
 }

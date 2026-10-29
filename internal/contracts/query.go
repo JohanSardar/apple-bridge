@@ -70,6 +70,12 @@ func queryJSONBudget(v reflect.Value, budget *int, depth int) error {
 	if !v.IsValid() {
 		return spend(4)
 	}
+	if v.Kind() == reflect.Interface {
+		if v.IsNil() {
+			return spend(4)
+		}
+		return queryJSONBudget(v.Elem(), budget, depth+1)
+	}
 	if v.Type() == reflect.TypeFor[json.RawMessage]() {
 		if v.Len() == 0 {
 			return spend(4)
@@ -92,7 +98,7 @@ func queryJSONBudget(v reflect.Value, budget *int, depth int) error {
 		}
 	}
 	switch v.Kind() {
-	case reflect.Interface, reflect.Pointer:
+	case reflect.Pointer:
 		if v.IsNil() {
 			return spend(4)
 		}

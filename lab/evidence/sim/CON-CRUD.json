@@ -1,9 +1,9 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[6.8 16.2 21.83] cpu_idle=66% cpus=8 other_heavy=1"
+    "summary": "air: load=[82.17 125.17 125.19] cpu_idle=38% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5HXCMKJWG3VGJM2SBBRQZRT",
+  "run_id": "run_01M641Q466YWT6EPKW82ZND2PD",
   "network_path": "loopback",
   "metrics": {
     "capture_observer_resets": 0,
@@ -21,8 +21,8 @@
   "scenario": "CON-CRUD",
   "level": "sim",
   "passed": true,
-  "git_sha": "eff927d0f34f5cf264a9edbfbeb9be9fbe98f535",
-  "at": "2026-10-22T13:39:12.626274Z",
+  "git_sha": "e8c247751b47f5a3b28b33de5c212168b9074cad",
+  "at": "2026-10-29T14:41:10.346474Z",
   "assertions": [
     {
       "name": "unified_contacts_imported",
