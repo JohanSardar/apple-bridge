@@ -1,9 +1,9 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[26.76 35.92 38.22] cpu_idle=24% cpus=8 other_heavy=0"
+    "summary": "air: load=[14.99 22.49 30.47] cpu_idle=24% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M637B49KH0PMR16J5JE3TXK9",
+  "run_id": "run_01M637TDT437PK16WJNAF40AZP",
   "metrics": {
     "capture_observer_resets": 0
   },
@@ -11,7 +11,7 @@
   "level": "sim",
   "passed": true,
   "git_sha": "",
-  "at": "2026-10-29T07:00:14.259224Z",
+  "at": "2026-10-29T07:08:35.524323Z",
   "assertions": [
     {
       "name": "fixture_directory",

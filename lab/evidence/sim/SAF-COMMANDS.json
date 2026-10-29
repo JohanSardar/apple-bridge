@@ -1,9 +1,9 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[29.36 28.72 32.08] cpu_idle=30% cpus=8 other_heavy=0"
+    "summary": "air: load=[14.32 21.97 30.15] cpu_idle=29% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M635KMRGD63KD8V33YJWE8KN",
+  "run_id": "run_01M637TXK27HW45CJJHJWHVEQJ",
   "metrics": {
     "capture_observer_resets": 0
   },
@@ -11,7 +11,7 @@
   "level": "sim",
   "passed": true,
   "git_sha": "",
-  "at": "2026-10-29T06:29:56.113365Z",
+  "at": "2026-10-29T07:08:51.682307Z",
   "assertions": [
     {
       "name": "native_output",
@@ -42,15 +42,23 @@
       "passed": true
     },
     {
-      "name": "safari.close_tab",
-      "passed": true
-    },
-    {
-      "name": "closed_tab_removed",
+      "name": "owned_tab_close_rejected",
       "passed": true
     },
     {
       "name": "foreign_tab_rejected",
+      "passed": true
+    },
+    {
+      "name": "same_url_replacement_submitted",
+      "passed": true
+    },
+    {
+      "name": "same_url_replacement_captured",
+      "passed": true
+    },
+    {
+      "name": "same_url_replacement_close_rejected",
       "passed": true
     },
     {
