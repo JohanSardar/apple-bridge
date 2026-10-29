@@ -66,13 +66,7 @@ func runMusicCatalog(ctx context.Context, s Scenario, level string) (e Evidence)
 	}
 	var out contracts.QueryResult
 	if s.ID == "MUS-CONTROL-REAL" || s.ID == "MUS-PLAYLIST-REAL" {
-		err = client.Call(ctx, "music.now_playing", contracts.Query{Args: json.RawMessage(`{}`)}, &out)
-		e.Status = "limited"
-		reason := "Control fixture qualification pending; Recently Played changes require prior-state restoration"
-		if err != nil {
-			reason = "Automation: dev.applebridge.helper → com.apple.Music missing; consent not requested"
-		}
-		e.Assertions = append(e.Assertions, Assertion{Name: "music_control_real", Status: "limited", Detail: reason})
+		runMusicPlaybackProof(ctx, w, s, &e)
 		return
 	}
 	err = client.Call(ctx, "music.search_catalog", contracts.Query{Args: json.RawMessage(`{"term":"Here Comes the Sun Beatles","entity":"song","limit":5}`), DeadlineMS: 20000}, &out)
