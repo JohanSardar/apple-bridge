@@ -3,15 +3,16 @@
   "run_id": "",
   "metrics": {
     "capture_observer_resets": 0,
-    "commands": 9,
-    "compiled_intents": 9,
-    "compiled_siri_shortcuts": 9
+    "commands": 12,
+    "compiled_intents": 12,
+    "compiled_siri_shortcuts": 10,
+    "dispatch_assertions": 4
   },
   "scenario": "APP-INTENTS-REAL",
   "level": "real",
   "passed": false,
   "git_sha": "",
-  "at": "2026-10-29T23:00:48.761086Z",
+  "at": "2026-10-29T23:11:14.885864Z",
   "assertions": [
     {
       "name": "shortcuts_run",
@@ -24,6 +25,10 @@
     },
     {
       "name": "signed_intent_compile",
+      "passed": true
+    },
+    {
+      "name": "local_dispatch",
       "passed": true
     },
     {
