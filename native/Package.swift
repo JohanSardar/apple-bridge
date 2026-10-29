@@ -3,7 +3,7 @@ import PackageDescription
 
 let sourceTargets: [Target] = [
     .target(name: "WeatherSource", dependencies: ["SourceSupport"]),
-    .target(name: "FocusSource", dependencies: ["SourceSupport"]),
+    .target(name: "FocusSource", dependencies: ["SourceSupport", "ShortcutsSource"]),
     .target(name: "MusicSource", dependencies: ["SourceSupport"]),
     .target(name: "PhotosSource", dependencies: ["SourceSupport"]),
     .target(name: "CaptureSource", dependencies: ["SourceSupport", "SpeechSource"]),
@@ -35,6 +35,7 @@ let package = Package(
     products: [.executable(name: "AppleBridgeHelper", targets: ["AppleBridgeHelper"])],
     targets: sourceTargets + [
         .target(name: "SourceSupport"),
+        .executableTarget(name: "FocusChecks", dependencies: ["FocusSource", "SourceSupport"]),
         .executableTarget(name: "CaptureChecks", dependencies: ["CaptureSource", "SourceSupport"]),
         .executableTarget(name: "PhotosChecks", dependencies: ["PhotosSource", "SourceSupport"]),
         .executableTarget(name: "MailChecks", dependencies: ["MailSource", "SourceSupport"]),

@@ -1,0 +1,13 @@
+Verified on macOS 26.5.2, 2026-10-29, without action execution.
+WorkflowKit WFActionRegistry createActionWithIdentifier:serializedParameters:,
+WFActionDefinition objectForKey: and WFParameterDefinition objectForKey:.
+Identifier: is.workflow.actions.dnd.set
+Name: Set Focus
+ActionClass: WFToggleDoNotDisturbAction
+Operation: WFEnumerationParameter, default Turn, values Turn / Toggle
+Enabled: WFSwitchParameter, default false
+AssertionType: WFEnumerationParameter, default Turned Off, values Turned Off / Time / I Leave / Event Ends
+Time: WFDateFieldParameter, required for enabled Time assertions
+FocusModes: WFFocusModesPickerParameter, default nil
+The native action editor defaults the omitted FocusModes to Do Not Disturb.
+Named Focus serialization is not qualified. No named Focus write is advertised.

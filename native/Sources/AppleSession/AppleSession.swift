@@ -575,6 +575,7 @@ public actor AppleSession: ObservationSink {
             result["fingerprint"] = fingerprint
             return .object(result)
         }
+        if operation == "focus.set" { guard evidence["observed"].bool, evidence["fingerprint"] == fingerprint, evidence["readback"]["authorization"].string == "authorized" else { throw SourceFailure.unavailable }; return evidence }
         if operation.hasPrefix("mac.") { guard evidence["observed"].bool, evidence["fingerprint"] == fingerprint, evidence["readback"] != .null else { throw SourceFailure.unavailable }; return evidence }
         if operation.hasPrefix("notes."), let notes=additionalSources["notes"] as? NotesSource {
             try await notes.reconcile(into:self)

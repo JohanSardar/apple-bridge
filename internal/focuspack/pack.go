@@ -2,6 +2,7 @@ package focuspack
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"time"
 
@@ -10,34 +11,67 @@ import (
 
 const Name = "AB Focus"
 
-var ErrUnqualified = errors.New("Focus pack actions and structured readback are not qualified")
+var ErrUnqualified = errors.New("Focus status readback is unavailable or mismatched")
 
 type Runner interface {
 	Run(context.Context, shortcut.Input) (shortcut.Result, error)
 }
-
-type Pack struct{ Runner Runner }
-
-func (p Pack) Inspect(ctx context.Context) ([]byte, error) {
-	runner := p.Runner
-	if runner == nil {
-		return nil, ErrUnqualified
-	}
-	result, err := runner.Run(ctx, shortcut.Input{Shortcut: Name, Timeout: 15 * time.Second})
-	if err != nil {
-		return nil, err
-	}
-	if result.TimedOut || result.ExitStatus != 0 || len(result.Data) > 32<<10 {
-		return nil, ErrUnqualified
-	}
-	return result.Data, nil
+type Status struct {
+	Focused       *bool   `json:"focused"`
+	Name          *string `json:"name"`
+	Authorization string  `json:"authorization"`
 }
-
+type Pack struct {
+	Runner     Runner
+	ReadStatus func(context.Context) (Status, error)
+}
 type SetArgs struct {
 	Mode  string `json:"mode"`
-	Until string `json:"until,omitempty"`
+	On    bool   `json:"on"`
+	Until string `json:"until"`
 }
 
 func (p Pack) Set(ctx context.Context, args SetArgs) error {
+	if p.Runner == nil || p.ReadStatus == nil || args.Mode != "Do Not Disturb" {
+		return ErrUnqualified
+	}
+	if args.Until != "" {
+		until, err := time.Parse(time.RFC3339, args.Until)
+		if err != nil || !args.On || !until.After(time.Now()) {
+			return ErrUnqualified
+		}
+	}
+	before, err := p.ReadStatus(ctx)
+	if err != nil {
+		return err
+	}
+	if before.Authorization != "authorized" || before.Focused == nil {
+		return ErrUnqualified
+	}
+	data, err := json.Marshal(args)
+	if err != nil {
+		return err
+	}
+	result, err := p.Runner.Run(ctx, shortcut.Input{Shortcut: Name, Data: data, Timeout: 15 * time.Second})
+	if err != nil {
+		return err
+	}
+	if result.TimedOut || result.ExitStatus != 0 {
+		return ErrUnqualified
+	}
+	for i := 0; i < 20; i++ {
+		status, err := p.ReadStatus(ctx)
+		if err != nil {
+			return err
+		}
+		if status.Authorization == "authorized" && status.Focused != nil && *status.Focused == args.On {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(200 * time.Millisecond):
+		}
+	}
 	return ErrUnqualified
 }
