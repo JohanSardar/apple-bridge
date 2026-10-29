@@ -1,6 +1,7 @@
 import Foundation
 import Darwin
 import CoreGraphics
+import ApplicationServices
 import MessagesSource
 import Decoders
 import SourceSupport
@@ -33,7 +34,7 @@ actor MessagesSelfTest {
         guard flock(descriptor, LOCK_EX | LOCK_NB) == 0 else { throw SourceFailure.conflict }
         if !force, let data = try? Data(contentsOf: reportURL), let old = try? JSONDecoder().decode(JSON.self, from: data), old["os_build"].string == build { return old }
         let session = CGSessionCopyCurrentDictionary() as? [String: Any]
-        let uiAllowed = includeUI && session?["CGSSessionScreenIsLocked"] as? Bool != true
+        let uiAllowed = includeUI && AXIsProcessTrusted() && session?["CGSSessionScreenIsLocked"] as? Bool != true
         let run = "selftest_" + UUID().uuidString.replacingOccurrences(of: "-", with: "")
         let tag = "[ab-test " + run + "]"
         let guardLog = try DispatchGuard(home: home)
@@ -65,7 +66,7 @@ actor MessagesSelfTest {
             return result
         }
         _ = try save("running")
-        func execute(_ name: String, _ operation: String, args: [String: JSON], native: String = "") async -> JSON {
+        func execute(_ name: String, _ operation: String, args: [String: JSON], native: String = "", isolation: isolated (any Actor)? = #isolation) async -> JSON {
             let id = UUID().uuidString
             let started = ContinuousClock.now
             let expiry = Date().addingTimeInterval(30)
@@ -84,6 +85,13 @@ actor MessagesSelfTest {
                 guard expiry > Date(), ContinuousClock.now < deadline else { throw SourceFailure.expired }
                 dispatched = true
                 result = try await commands.dispatch(prepared)
+                var created = Set(registration["created_message_ids"] as? [String] ?? [])
+                for evidence in [result] + result["parts"].array where !evidence["native_key"].string.isEmpty { created.insert(evidence["native_key"].string) }
+                let echoes = try database.rows("SELECT guid FROM message WHERE ROWID>? AND (instr(text,?)>0 OR instr(attributedBody,CAST(? AS BLOB))>0)", bindings: [baseline, tag, tag])
+                let files = try database.rows("SELECT DISTINCT m.guid FROM message m JOIN message_attachment_join j ON j.message_id=m.ROWID JOIN attachment a ON a.ROWID=j.attachment_id WHERE m.ROWID>? AND (a.filename=? OR a.filename LIKE ?)", bindings: [baseline, filename, "%/" + filename])
+                for row in echoes + files { if let guid = row["guid"] { created.insert(guid) } }
+                registration["created_message_ids"] = created.sorted()
+                try PrivateReport.write(registration, to: ledger)
                 lateEffectPossible = lateEffectPossible || result["disposition"].string == "indeterminate"
                 try await guardLog.append(.object(["t": .string("Outcome"), "command_id": .string(id), "disposition": result["disposition"], "evidence": result]))
                 if !result["observed"].bool || !["locally_observed", "delivered"].contains(result["disposition"].string) {
@@ -170,7 +178,7 @@ actor MessagesSelfTest {
         }
         do {
             guard uiAllowed else { throw SourceFailure.unavailable }
-            let cleanup = try await MessagesCleanup.run(["--tag", tag])
+            let cleanup = try await MessagesCleanup.run(["--tag", tag, "--owned-only"])
             let result = try JSONDecoder().decode(JSON.self, from: cleanup)
             steps.append(.object(["name": .string("cleanup"), "proven": result["passed"], "reason": result["failure"]]))
             registration["cleanup_state"] = result["passed"].bool ? (lateEffectPossible ? "pending_reconciliation" : "verified_clean") : "pending_native_cleanup"

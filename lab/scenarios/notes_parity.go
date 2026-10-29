@@ -26,6 +26,18 @@ func runNotesParity(ctx context.Context, s Scenario, level string) (e Evidence) 
 		add("real_account_required", false)
 		return
 	}
+	before, problem := cleanupSnapshot(ctx, "notes")
+	if problem != nil {
+		e.Status = "limited"
+		e.Assertions = append(e.Assertions, Assertion{Name: "cleanup_baseline", Status: "limited", Detail: "needs Notes Full Disk Access"})
+		return
+	}
+	owned, problem := newRunCleanup(e.RunID, before)
+	if problem != nil {
+		add("cleanup_baseline", false)
+		return
+	}
+	defer func() { finishCleanupAudit(context.Background(), owned, "notes", &e) }()
 	root, err := os.MkdirTemp("", "ab-test-notes-parity-")
 	if err != nil {
 		add("fixture_directory", false)

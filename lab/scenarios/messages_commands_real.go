@@ -47,14 +47,20 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 	err := exec.CommandContext(probeCtx, "open", "-n", "-W", "-g", "-a", w.HelperApp, "--args", "probe", "self-handles", "--report", report).Run()
 	cancel()
 	var own struct {
-		Handles []string `json:"handles"`
-		State   string   `json:"state"`
+		Handles              []string `json:"handles"`
+		State                string   `json:"state"`
+		CleanupAccessibility bool     `json:"cleanup_accessibility"`
 	}
 	data, readErr := os.ReadFile(report)
 	json.Unmarshal(data, &own)
 	if err != nil || readErr != nil || len(own.Handles) == 0 {
 		e.Status = "environment-limited"
 		e.Assertions = append(e.Assertions, Assertion{Name: "self_handles_discovery", Status: "unverified", Detail: "Per-run signed Helper self-handles probe did not return handles; no send attempted"})
+		return e
+	}
+	if (s.ID == "WEB-MEDIA-VARIANTS" || s.ID == "WEB-UPLOAD-NATIVE-STAGING") && !own.CleanupAccessibility {
+		e.Status = "limited"
+		e.Assertions = append(e.Assertions, Assertion{Name: "cleanup_accessibility", Status: "limited", Detail: "needs Messages Accessibility grant"})
 		return e
 	}
 	if strings.HasPrefix(s.ID, "MSG-GROUP-") || s.ID == "MSG-SEND-RCS-GROUP" {
@@ -210,6 +216,17 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 		args["files"] = []contracts.MessageFile{file}
 		nativeUploadClient = owner
 	}
+	beforeCleanup, cleanupProblem := cleanupSnapshot(ctx, "messages")
+	if cleanupProblem != nil {
+		add("cleanup_baseline", false)
+		return e
+	}
+	ownedCleanup, cleanupProblem := newRunCleanup(e.RunID, beforeCleanup)
+	if cleanupProblem != nil {
+		add("cleanup_baseline", false)
+		return e
+	}
+	defer func() { finishCleanupAudit(context.Background(), ownedCleanup, "messages", &result) }()
 	var maximum int64
 	native.QueryRowContext(ctx, "SELECT COALESCE(MAX(ROWID),0) FROM message").Scan(&maximum)
 	raw, _ := json.Marshal(args)
@@ -246,8 +263,17 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 		return e
 	}
 	add("cleanup_registered_before_submit", true)
+	creationCtx, stopCreationCapture := context.WithCancel(ctx)
+	capturedCreations := captureMessageCreations(creationCtx, native, maximum, e.RunID, cleanupPath+".creations.json")
+	defer stopCreationCapture()
 	defer func() {
-		ok, metrics := cleanupNativeMessageRun(w, e.RunID, false)
+		cleanup["created_message_ids"] = capturedCreations()
+		if saveCleanup() != nil {
+			result.Assertions = append(result.Assertions, Assertion{Name: "created_ids_persisted", Passed: false})
+			return
+		}
+
+		ok, metrics := cleanupNativeMessageRun(w, e.RunID, false, s.ID == "WEB-MEDIA-VARIANTS" || s.ID == "WEB-UPLOAD-NATIVE-STAGING")
 		if s.ID == "MSG-INTERACTIVE-GATE" && !ok {
 			result.Status = "environment-limited"
 		}

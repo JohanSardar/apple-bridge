@@ -12,7 +12,19 @@ import (
 	"github.com/JohanSardar/apple-bridge/lab/world"
 )
 
-func runNativeMessagesSelfTest(ctx context.Context, e Evidence) Evidence {
+func runNativeMessagesSelfTest(ctx context.Context, e Evidence) (result Evidence) {
+	before, problem := cleanupSnapshot(ctx, "messages")
+	if problem != nil {
+		e.Status = "limited"
+		e.Assertions = append(e.Assertions, Assertion{Name: "cleanup_baseline", Status: "limited", Detail: "needs Messages Full Disk Access"})
+		return e
+	}
+	owned, problem := newRunCleanup(e.RunID, before)
+	if problem != nil {
+		return e
+	}
+	defer func() { finishCleanupAudit(context.Background(), owned, "messages", &result) }()
+
 	w, err := world.NewReal(ctx, "real", 0, world.BlobOptions{Scope: "messages:read,messages:write,system:read"})
 	if err != nil {
 		e.Assertions = append(e.Assertions, Assertion{Name: "real_world", Passed: false})

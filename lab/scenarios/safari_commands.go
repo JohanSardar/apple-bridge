@@ -102,11 +102,61 @@ func runSafariCommands(ctx context.Context, s Scenario, level string) (e Evidenc
 		add(op, err == nil && r.State == contracts.CommandObserved && contracts.SafariCompletionEvidence(r.Evidence, r.RequestHash))
 		return r
 	}
+	var cleanup *runCleanup
+	var observeCleanup func() ([]cleanupItem, error)
+	if level == "real" {
+		observeCleanup = func() ([]cleanupItem, error) {
+			return safariCleanupItems(context.Background(), w, e.RunID, "snapshot", cleanupItem{})
+		}
+		before, problem := observeCleanup()
+		if problem != nil {
+			e.Status = "limited"
+			e.Passed = false
+			e.Assertions = append(e.Assertions, Assertion{Name: "owned_cleanup_grants", Status: "limited", Detail: "needs Safari Automation and Accessibility grants"})
+			return
+		}
+		cleanup, err = newRunCleanup(e.RunID, before)
+		if cleanup != nil {
+			cleanup.settle = 30 * time.Second
+		}
+		add("cleanup_baseline", err == nil)
+		if err != nil {
+			return
+		}
+		defer func() {
+			proof, problem := cleanup.finish(observeCleanup, func(item cleanupItem) error {
+				_, err := safariCleanupItems(context.Background(), w, e.RunID, "remove", item)
+				return err
+			})
+			e.Metrics = map[string]any{"cleanup": proof}
+			add("owned_cleanup_counts_match", problem == nil)
+		}()
+	}
+	ownedCommand := func(op string) contracts.CommandRecord {
+		value := command(op, map[string]string{"url": "https://example.com/?ab-test=" + e.RunID})
+		if cleanup != nil {
+			rows, problem := observeCleanup()
+			add("created_identity_readback", problem == nil)
+			if problem == nil {
+				captured := false
+				for _, item := range rows {
+					if item.Tag == cleanup.tag {
+						if _, exists := cleanup.created[item.ID]; !exists {
+							problem = cleanup.capture(item)
+							captured = captured || problem == nil
+						}
+					}
+				}
+				add("created_identity_captured", captured)
+			}
+		}
+		return value
+	}
 	if s.ID == "SAF-READINGLIST-REAL" {
-		command("safari.add_reading_list", map[string]string{"url": "https://example.com/?ab=" + contracts.NewID("safari")})
+		ownedCommand("safari.add_reading_list")
 		return
 	}
-	opened := command("safari.open_url", map[string]string{"url": "https://example.com/?ab=" + contracts.NewID("safari")})
+	opened := ownedCommand("safari.open_url")
 	var evidence struct {
 		Readback struct {
 			Tab string `json:"tab"`
@@ -159,7 +209,7 @@ func runSafariCommands(ctx context.Context, s Scenario, level string) (e Evidenc
 		add("same_url_replacement_captured", err == nil)
 		rejectClose("same_url_replacement_close_rejected", evidence.Readback.Tab)
 	}
-	command("safari.add_reading_list", map[string]string{"url": "https://example.com/?ab=synthetic"})
+	ownedCommand("safari.add_reading_list")
 
 	if level == "sim" {
 		row := contracts.Observation{Kind: "upsert", Collection: "safari.tab", NativeKey: "synthetic", Data: json.RawMessage(`{"window":1,"index":1,"title":"Synthetic","url":"http://127.0.0.1/","active":true}`)}

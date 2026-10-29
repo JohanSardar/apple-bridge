@@ -1,17 +1,18 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[55.89 29.47 17.83] cpus=8 other_heavy=0"
+    "summary": "air: load=[28.5 19.61 13.9] cpu_idle=0% cpus=10 other_heavy=0"
   },
-  "run_id": "upload_01M5G0SSCNN30QA8VEAY3SRG0Q",
+  "run_id": "upload_01M64V7Z6SRZDQA6WSHG7AZAZ2",
   "metrics": {
+    "capture_observer_resets": 0,
     "native_command_state": "observed"
   },
   "scenario": "WEB-UPLOAD-NATIVE-STAGING",
   "level": "sim",
   "passed": true,
-  "git_sha": "2c022b553baf06d5a8906c7bcabc88988653949e",
-  "at": "2026-10-21T20:00:20.373458Z",
+  "git_sha": "829d8e0d8e773aa71b721594e4413fe1c8af849a",
+  "at": "2026-10-29T22:07:16.697758Z",
   "assertions": [
     {
       "name": "gateway_upload_world",

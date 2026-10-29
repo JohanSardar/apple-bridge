@@ -6,6 +6,7 @@ import MessagesSource
 import RemindersStore
 import SourceSupport
 import NotesSource
+import SafariSource
 
 enum HelperLabCommand {
     @MainActor
@@ -147,6 +148,18 @@ enum HelperLabCommand {
             while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.005)) }
             try JSONEncoder().encode(try result!.get()).write(to: reportURL, options: .atomic)
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: reportURL.path)
+            return true
+        case "safari-run-cleanup":
+            let reportURL = try report(arguments)
+            guard let index = arguments.firstIndex(of: "--request"), index + 1 < arguments.count else { throw ProbeFailure.invalidArguments }
+            let request = try JSONDecoder().decode(JSON.self, from: Data(contentsOf: URL(fileURLWithPath: arguments[index + 1])))
+            var result: JSON?
+            Task { @MainActor in
+                do { result = try await SafariCleanup.run(request) }
+                catch { result = .object(["limited": .bool(error as? SourceFailure == .permissionMissing), "passed": .bool(false)]) }
+            }
+            while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.01)) }
+            try JSONEncoder().encode(result!).write(to: reportURL, options: .atomic)
             return true
         case "notes-parity-probe":
             let reportURL = try report(arguments)

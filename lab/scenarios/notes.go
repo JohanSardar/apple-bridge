@@ -78,6 +78,20 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 		add("gzip_protobuf_scrubbed_fixtures", err == nil)
 		return
 	}
+	if level == "real" && s.ID == "NOTE-CRUD" {
+		before, problem := cleanupSnapshot(ctx, "notes")
+		if problem != nil {
+			e.Status = "limited"
+			e.Assertions = append(e.Assertions, Assertion{Name: "cleanup_baseline", Status: "limited", Detail: "needs Notes Full Disk Access"})
+			return
+		}
+		audit, problem := newRunCleanup(e.RunID, before)
+		if problem != nil {
+			add("cleanup_baseline", false)
+			return
+		}
+		defer func() { finishCleanupAudit(context.Background(), audit, "notes", &e) }()
+	}
 	ctx = world.WithOptions(ctx, world.Options{GatewayDials: level == "replica", Scope: "notes:read,notes:write,reminders:read,system:read"})
 	var w *world.World
 	var err error
@@ -260,7 +274,8 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 		return
 	}
 
-	tag := "[ab-test " + contracts.NewID("notes") + "]"
+	cleanupRun := contracts.NewID("notes")
+	tag := "[ab-test " + cleanupRun + "]"
 	title := tag + " note"
 	endpoint := w.Gateway
 	if level == "replica" {
@@ -285,12 +300,88 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 		}
 		return contracts.Record{}, false
 	}
+	var owned *runCleanup
+	ownedFolders := map[string]string{}
+	observeCleanup := func() ([]cleanupItem, error) {
+		response, err := w.RecoverTruth("observe", map[string]any{"source": "notes", "tag": "", "active_only": true})
+		if err != nil {
+			return nil, err
+		}
+		rows, ok := response["records"].([]any)
+		if !ok || response["status"] != "verified" {
+			return nil, fmt.Errorf("notes cleanup truth unavailable")
+		}
+		items := make([]cleanupItem, 0, len(rows))
+		for _, raw := range rows {
+			row, ok := raw.(map[string]any)
+			if !ok {
+				return nil, fmt.Errorf("invalid notes cleanup identity")
+			}
+			id, _ := row["id"].(string)
+			folder, _ := row["folder_id"].(string)
+			title, _ := row["title"].(string)
+			itemTag := ""
+			if strings.HasPrefix(title, tag) {
+				itemTag = tag
+			}
+			items = append(items, cleanupItem{ID: id, Container: folder, Tag: itemTag})
+		}
+		return items, nil
+	}
+	if level != "sim" && s.ID == "NOTE-CRUD" {
+		before, problem := observeCleanup()
+		if problem != nil {
+			e.Status = "limited"
+			e.Assertions = append(e.Assertions, Assertion{Name: "cleanup_baseline", Status: "limited", Detail: "needs Notes Automation grant for AppleTruth"})
+			return
+		}
+		owned, err = newRunCleanup(cleanupRun, before)
+		if err != nil {
+			add("cleanup_baseline", false)
+			return
+		}
+		owned.settle = 30 * time.Second
+		owned.containers = ownedFolders
+		owned.path = filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "AppleBridgeDev", "run-cleanup", cleanupRun+".json")
+		if owned.persist() != nil {
+			add("cleanup_ledger", false)
+			return
+		}
+		defer func() {
+			proof, problem := owned.finish(observeCleanup, func(item cleanupItem) error {
+				_, err := w.RecoverTruth("fixture", map[string]any{"source": "notes", "tag": tag, "action": "cleanup_owned", "id": item.ID, "folder_id": item.Container})
+				return err
+			})
+			if e.Metrics == nil {
+				e.Metrics = map[string]any{}
+			}
+			e.Metrics["cleanup"] = proof
+			for id, title := range ownedFolders {
+				_, folderErr := w.RecoverTruth("fixture", map[string]any{"source": "notes", "tag": tag, "action": "cleanup_created_folder", "created_by_run": true, "folder_id": id, "title": title})
+				add("run_created_folder_cleaned", folderErr == nil)
+			}
+			add("owned_cleanup_counts_match", problem == nil)
+		}()
+	}
 	fixture := func(action string, extra map[string]any) (map[string]any, error) {
 		extra["source"] = "notes"
 		extra["tag"] = tag
 		extra["action"] = action
 		if level != "sim" {
-			return w.Truth("fixture", extra)
+			if owned != nil {
+				extra["folder_title"] = "Bridge Test " + tag
+			}
+			result, problem := w.Truth("fixture", extra)
+			if problem == nil && owned != nil && action == "create" {
+				id, _ := result["id"].(string)
+				folder, _ := result["folder_id"].(string)
+				problem = owned.capture(cleanupItem{ID: id, Tag: tag, Container: folder})
+				if result["folder_created"] == true {
+					ownedFolders[folder] = "Bridge Test " + tag
+					problem = owned.persist()
+				}
+			}
+			return result, problem
 		}
 		if action == "create" {
 			text := title + "\nsynthetic body\n"
@@ -304,12 +395,12 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 		}
 		return nil, nil
 	}
-	if level != "sim" {
+	if level != "sim" && owned == nil {
 		defer func() {
 			_, err := w.RecoverTruth("fixture", map[string]any{"source": "notes", "tag": tag, "action": "cleanup"})
 			add("tagged_notes_cleaned", err == nil)
 		}()
-	} else {
+	} else if level == "sim" {
 		err = w.ControlAction("/external-change", map[string]any{"key": "note-folder", "collection": "notes.folder", "data": map[string]any{"title": "Bridge Test", "account": "sim"}})
 		if err != nil {
 			add("folder_fixture", false)
@@ -433,6 +524,19 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 			if err != nil || folderCommand.State != "observed" {
 				return
 			}
+			if owned != nil {
+				identity, problem := w.Truth("fixture", map[string]any{"source": "notes", "tag": tag, "action": "folder_identity", "title": folderTitle})
+				id, _ := identity["id"].(string)
+				add("created_folder_identity_captured", problem == nil && id != "")
+				if problem != nil || id == "" {
+					return
+				}
+				ownedFolders[id] = folderTitle
+				if owned.persist() != nil {
+					add("cleanup_ledger", false)
+					return
+				}
+			}
 			var createdFolder string
 			err = w.Await(5*time.Second, func() bool {
 				rows, _ := w.Records(endpoint)
@@ -449,7 +553,7 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 				return
 			}
 			data.FolderID = createdFolder
-			if level != "sim" {
+			if level != "sim" && owned == nil {
 				var folderEvidence struct {
 					NativeKey string `json:"native_key"`
 				}
@@ -466,6 +570,31 @@ func runNotes(ctx context.Context, s Scenario, level string) (e Evidence) {
 			add(protocol+"_create_observed", err == nil && command.State == "observed")
 			if err != nil || command.State != "observed" {
 				return
+			}
+			if owned != nil {
+				var createdEvidence struct {
+					NativeKey string `json:"native_key"`
+				}
+				json.Unmarshal(command.Evidence, &createdEvidence)
+				rows, problem := w.Truth("observe", map[string]any{"source": "notes", "tag": tag})
+				if problem != nil {
+					add("created_identity_captured", false)
+					return
+				}
+				captured := false
+				for _, raw := range rows["records"].([]any) {
+					row := raw.(map[string]any)
+					if row["title"] == newTitle {
+						id, _ := row["id"].(string)
+						folder, _ := row["folder_id"].(string)
+						captured = owned.capture(cleanupItem{ID: id, Tag: tag, Container: folder}) == nil
+						ownedFolders[folder] = folderTitle
+					}
+				}
+				add("created_identity_captured", captured)
+				if !captured {
+					return
+				}
 			}
 			var created contracts.Record
 			err = w.Await(10*time.Second, func() bool { var ok bool; created, ok = find("notes.note", newTitle); return ok })
