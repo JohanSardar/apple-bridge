@@ -7,15 +7,22 @@ import (
 )
 
 type ShortcutRunArgs struct {
-	Shortcut  string `json:"shortcut"`
-	Input     string `json:"input,omitempty"`
-	TimeoutMS int    `json:"timeout_ms,omitempty"`
+	Shortcut    string `json:"shortcut"`
+	Input       string `json:"input,omitempty"`
+	InputBase64 string `json:"input_base64,omitempty"`
+	TimeoutMS   int    `json:"timeout_ms,omitempty"`
 }
 
 func ValidateShortcutRun(c Command) error {
 	var a ShortcutRunArgs
 	if !ValidCommandID(c.ID) || c.WaitMS < 0 || c.WaitMS > 15000 || DecodeInput(c.Args, &a) != nil || strings.TrimSpace(a.Shortcut) == "" || len(a.Shortcut) > 1024 || strings.HasPrefix(a.Shortcut, "-") || len(a.Input) > 16<<10 || a.TimeoutMS < 0 || a.TimeoutMS > 300000 {
 		return ErrInvalid
+	}
+	if a.InputBase64 != "" {
+		data, err := base64.StdEncoding.DecodeString(a.InputBase64)
+		if err != nil || len(data) > 16<<10 || a.Input != "" {
+			return ErrInvalid
+		}
 	}
 	return nil
 }

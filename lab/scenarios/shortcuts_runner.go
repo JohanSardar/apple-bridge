@@ -112,9 +112,14 @@ esac
 	}
 	descriptor, registered := contracts.Descriptor("shortcuts.run")
 	add("public_command_registered", registered && descriptor.Kind == contracts.CommandOp && descriptor.Scope == "shortcuts:write")
-	args, _ := json.Marshal(contracts.ShortcutRunArgs{Shortcut: "AB Echo", Input: "synthetic", TimeoutMS: 1000})
+	args, _ := json.Marshal(contracts.ShortcutRunArgs{Shortcut: "AB Echo", InputBase64: "c3ludGhldGlj", TimeoutMS: 1000})
 	_, validationErr := contracts.ValidateCommand(contracts.Command{ID: "cmd_synthetic", Op: "shortcuts.run", Args: args})
 	add("public_command_validated", validationErr == nil)
+	for _, input := range []contracts.ShortcutRunArgs{{Shortcut: "AB Echo", InputBase64: "!"}, {Shortcut: "AB Echo", Input: "text", InputBase64: "YQ=="}, {Shortcut: "AB Echo", InputBase64: strings.Repeat("YWFh", 6000)}} {
+		raw, _ := json.Marshal(input)
+		_, err := contracts.ValidateCommand(contracts.Command{ID: "cmd_synthetic", Op: "shortcuts.run", Args: raw})
+		add("invalid_blob_rejected", err != nil)
+	}
 	publicContext := world.WithOptions(ctx, world.Options{Scope: "calendar:read,reminders:read,shortcuts:read,shortcuts:write,system:read"})
 	w, worldErr := world.New(publicContext, level, 0, 0)
 	add("public_gateway_start", worldErr == nil)
@@ -137,9 +142,12 @@ esac
 		}
 		var result struct {
 			Output string `json:"output_base64"`
+			Digest string `json:"output_sha256"`
+			Bytes  int    `json:"output_bytes"`
 		}
 		json.Unmarshal(command.Evidence, &result)
 		add("public_runner_output", result.Output == "c3ludGhldGlj")
+		add("public_runner_digest", result.Bytes == 9 && result.Digest == "b3cc0475bb78a5026098858e9889acf666d31062d513d303314eca31d36e72f2")
 		slowArgs, _ := json.Marshal(contracts.ShortcutRunArgs{Shortcut: "[ab-test slow runner]", Input: "synthetic", TimeoutMS: 20000})
 		slowID := contracts.NewCommandID()
 		started := time.Now()

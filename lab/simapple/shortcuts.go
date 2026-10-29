@@ -1,7 +1,9 @@
 package simapple
 
 import (
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"time"
 
@@ -49,7 +51,12 @@ func (f *fakeApple) shortcutCommand(wire *applepeer.Wire, frame contracts.IPCFra
 			}
 		}
 	}
-	evidence, _ := json.Marshal(map[string]any{"exit_status": 0, "output_base64": base64.StdEncoding.EncodeToString([]byte(args.Input)), "effect_scope": "runner completion only", "prepared": map[string]any{"request_hash": t.Hash}})
+	data := []byte(args.Input)
+	if args.InputBase64 != "" {
+		data, _ = base64.StdEncoding.DecodeString(args.InputBase64)
+	}
+	digest := sha256.Sum256(data)
+	evidence, _ := json.Marshal(map[string]any{"output_sha256": hex.EncodeToString(digest[:]), "output_bytes": len(data), "exit_status": 0, "output_base64": base64.StdEncoding.EncodeToString(data), "effect_scope": "runner completion only", "prepared": map[string]any{"request_hash": t.Hash}})
 	outcome := contracts.IPCFrame{T: "Outcome", CommandID: frame.CommandID, Disposition: "locally_observed", Evidence: evidence}
 	if err := f.guard(guardEntry{CommandID: frame.CommandID, Ticket: frame.Ticket, Outcome: &outcome}); err != nil {
 		return true, err

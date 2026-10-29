@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 import SourceSupport
 import Darwin
 
@@ -175,14 +176,17 @@ public actor ShortcutsSource: Source {
         let action = command["action"]
         let args = action["args"]
         guard action["op"].string == "shortcuts.run", !args["shortcut"].string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, args["shortcut"].string.utf8.count <= 1024, !args["shortcut"].string.hasPrefix("-"), args["timeout_ms"].number >= 0, args["timeout_ms"].number <= 300000, args["input"].string.utf8.count <= 16 * 1024 else { throw SourceFailure.invalid }
+        if !args["input_base64"].string.isEmpty {
+            guard args["input"].string.isEmpty, let data = Data(base64Encoded: args["input_base64"].string), data.count <= 16 * 1024 else { throw SourceFailure.invalid }
+        }
         return Prepared(nativeState: .object(["route": .string("shortcuts_cli")]), fingerprint: command["request_hash"].string, action: action)
     }
     public func dispatch(_ prepared: Prepared) async throws -> JSON {
         let args = prepared.action["args"]
         let timeout = args["timeout_ms"].number == 0 ? 30 : args["timeout_ms"].number / 1000
-        let input = args["input"].string.data(using: .utf8)
+        let input = args["input_base64"].string.isEmpty ? args["input"].string.data(using: .utf8) : Data(base64Encoded: args["input_base64"].string)
         let (data, status, timedOut) = try await invoke(["run", args["shortcut"].string], timeout: timeout, input: input, running: true)
-        return .object(["disposition": .string(status == 0 ? "locally_observed" : "indeterminate"), "exit_status": .number(Double(status)), "timed_out": .bool(timedOut), "output_base64": .string(data.base64EncodedString()), "effect_scope": .string("runner completion only")])
+        return .object(["disposition": .string(status == 0 ? "locally_observed" : "indeterminate"), "exit_status": .number(Double(status)), "timed_out": .bool(timedOut), "output_base64": .string(data.base64EncodedString()), "output_bytes": .number(Double(data.count)), "output_sha256": .string(SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()), "effect_scope": .string("runner completion only")])
     }
     public func resolve(_ command: String, evidence: JSON) async -> JSON {
         guard evidence["effect_scope"].string == "runner completion only",

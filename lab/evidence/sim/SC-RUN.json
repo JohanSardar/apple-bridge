@@ -1,18 +1,18 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[4.8 4.65 5.09] cpu_idle=68% cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[9.17 25.42 27.3] cpu_idle=38% cpus=8 other_heavy=1"
   },
-  "run_id": "run_01M61PMAFN8ZV3NXCNSTVBTBZG",
+  "run_id": "run_01M62YMT35RHHQCJCFSJ80FDTF",
   "metrics": {
     "capture_observer_resets": 0,
-    "long_runner_elapsed_ms": 16039
+    "long_runner_elapsed_ms": 16066
   },
   "scenario": "SC-RUN",
   "level": "sim",
   "passed": true,
   "git_sha": "",
-  "at": "2026-10-28T16:48:55.28504Z",
+  "at": "2026-10-29T04:28:14.310673Z",
   "assertions": [
     {
       "name": "fixture_directory",
@@ -20,10 +20,6 @@
     },
     {
       "name": "fake_cli",
-      "passed": true
-    },
-    {
-      "name": "native_shortcuts_build",
       "passed": true
     },
     {
@@ -43,6 +39,18 @@
       "passed": true
     },
     {
+      "name": "invalid_blob_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_blob_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_blob_rejected",
+      "passed": true
+    },
+    {
       "name": "public_gateway_start",
       "passed": true
     },
@@ -56,6 +64,10 @@
     },
     {
       "name": "public_runner_output",
+      "passed": true
+    },
+    {
+      "name": "public_runner_digest",
       "passed": true
     },
     {

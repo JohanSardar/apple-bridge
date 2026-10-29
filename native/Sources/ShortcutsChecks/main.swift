@@ -38,6 +38,9 @@ struct Checks {
             }
             throw SourceFailure.unavailable
         }
+        let blob = try await source.prepare(.object(["request_hash": .string("synthetic"), "action": .object(["op": .string("shortcuts.run"), "args": .object(["shortcut": .string("echo"), "input_base64": .string("AAH/")])])]))
+        let blobResult = try await source.dispatch(blob)
+        guard blobResult["output_base64"].string == "AAH/", blobResult["output_bytes"].number == 3, blobResult["output_sha256"].string.count == 64 else { throw SourceFailure.corrupt }
         let flood = try await source.prepare(.object(["request_hash": .string("synthetic"), "action": .object(["op": .string("shortcuts.run"), "args": .object(["shortcut": .string("flood"), "timeout_ms": .number(10000)])])]))
         let started = Date()
         do {
