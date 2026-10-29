@@ -1,0 +1,5 @@
+id: PDF-ANNOTATE
+feature: vision.queries
+levels: [sim]
+when:
+  - queries: {}

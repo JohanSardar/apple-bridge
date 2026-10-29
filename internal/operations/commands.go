@@ -118,6 +118,9 @@ func (g *LocalGateway) Submit(ctx context.Context, p trust.Principal, c contract
 	if err = g.authorize(p, c.Op); err != nil {
 		return empty, err
 	}
+	if contracts.MacPowerAction(c.Op) && (!p.IsAgent() || p.Level != trust.AgentApprove) {
+		return empty, contracts.ErrForbidden
+	}
 	if c.Op == "mac.clipboard_write" && p.IsAgent() && p.Level == trust.AgentApprove {
 		return empty, contracts.ErrUnsupported
 	}
@@ -268,10 +271,35 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 		}
 		action.Args = args
 	}
+	if strings.HasPrefix(c.Op, "safari.") {
+		var args contracts.SafariArgs
+		if json.Unmarshal(c.Args, &args) != nil {
+			return r, contracts.ErrInvalid
+		}
+		action.Args = args
+	}
 	if contracts.CollectionSource(c.Op) == "mac" && !contracts.CaptureOperation(c.Op) {
 		var args contracts.MacArgs
 		if json.Unmarshal(c.Args, &args) != nil {
 			return r, contracts.ErrInvalid
+		}
+		action.Args = args
+	}
+	if c.Op == "pdf.annotate" {
+		var resolved json.RawMessage
+		resolved, err = g.documentInput(runctx, p, c.Args)
+		if err != nil {
+			return g.transition(g.Context, r, "rejected", "rejected_before_dispatch", nil, contracts.ErrInvalid)
+		}
+		var cleanup func()
+		resolved, cleanup, err = g.stageDocumentInput(runctx, resolved)
+		if err != nil {
+			return g.transition(g.Context, r, "rejected", "rejected_before_dispatch", nil, contracts.ErrInvalid)
+		}
+		defer cleanup()
+		var args contracts.PDFAnnotateArgs
+		if json.Unmarshal(resolved, &args) != nil {
+			return g.transition(g.Context, r, "rejected", "rejected_before_dispatch", nil, contracts.ErrInvalid)
 		}
 		action.Args = args
 	}
@@ -312,6 +340,9 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 		action.Args = args
 	}
 	collection := "reminders.reminder"
+	if c.Op == "pdf.annotate" {
+		collection = "pdf.artifact"
+	}
 	if strings.HasPrefix(c.Op, "mail.") {
 		collection = "mail.message"
 	}
@@ -574,7 +605,7 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 		to = "indeterminate"
 		f.Disposition = "indeterminate"
 	}
-	if r.Source == "mac" && !contracts.CaptureOperation(r.Command.Op) && to == "observed" && !contracts.MacCompletionEvidence(f.Evidence, r.RequestHash) {
+	if (r.Source == "mac" || r.Source == contracts.Safari) && !contracts.CaptureOperation(r.Command.Op) && to == "observed" && !contracts.MacCompletionEvidence(f.Evidence, r.RequestHash) {
 		to = "indeterminate"
 		f.Disposition = "indeterminate"
 	}
@@ -590,7 +621,7 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 		to = "indeterminate"
 		f.Disposition = "indeterminate"
 	}
-	if !contracts.CaptureOperation(r.Command.Op) && r.Command.Op != "maps.open" && r.Source != "mac" && r.Command.Op != "shortcuts.run" && !contracts.MusicPlayerOperation(r.Command.Op) && !contracts.PlaybackOperation(r.Command.Op) && (to == "observed" || to == "delivered" || to == "delivery_failed") {
+	if !contracts.CaptureOperation(r.Command.Op) && r.Command.Op != "maps.open" && r.Source != "mac" && r.Source != contracts.Safari && r.Command.Op != "shortcuts.run" && !contracts.MusicPlayerOperation(r.Command.Op) && !contracts.PlaybackOperation(r.Command.Op) && (to == "observed" || to == "delivered" || to == "delivery_failed") {
 		var evidence struct {
 			NativeKey         string `json:"native_key"`
 			Fingerprint       string `json:"fingerprint"`
@@ -600,6 +631,9 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 			CandidateCount    int    `json:"candidate_count"`
 		}
 		collection := "reminders.reminder"
+		if r.Source == "pdf" {
+			collection = "pdf.artifact"
+		}
 		if r.Source == "music" {
 			collection = "music.library_item"
 			if r.Command.Op == "music.add_to_playlist" {

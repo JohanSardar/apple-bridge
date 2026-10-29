@@ -55,6 +55,10 @@ func runMac(ctx context.Context, s Scenario, level string) (e Evidence) {
 	if err != nil {
 		return
 	}
+	if s.ID == "MAC-ACTIONS" {
+		macActions(ctx, client, w, add)
+		return
+	}
 	if s.ID != "MAC-COMMANDS" && s.ID != "MAC-CAPTURE" && s.ID != "MAC-IDLE" && s.ID != "MAC-POWER-REAL" {
 		if s.ID == "MAC-CLIPBOARD-REAL" {
 			macClipboardCommands(ctx, client, w, true, add)

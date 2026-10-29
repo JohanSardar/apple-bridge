@@ -1,3 +1,4 @@
+import PDFSource
 import FilesSource
 import PhotosSource
 import Foundation
@@ -307,7 +308,7 @@ public actor AppleSession: ObservationSink {
         let started = CaptureTrace.now()
         var prepared: UInt64 = 0
         let registered = registeredBlobReaders.first(where: { frame["handle"].string.hasPrefix($0.key) })?.value
-        let source = registered?.source ?? (frame["handle"].string.hasPrefix("photos-blob:") ? "photos" : frame["handle"].string.hasPrefix("files-blob:") ? "files" : frame["handle"].string.hasPrefix("notes-blob:") ? "notes" : (frame["handle"].string.hasPrefix("contacts-image:") ? "contacts" : (frame["handle"].string.hasPrefix("calendar-attachment:") ? "calendar" : "messages")))
+        let source = registered?.source ?? (frame["handle"].string.hasPrefix("pdf:") ? "pdf" : frame["handle"].string.hasPrefix("photos-blob:") ? "photos" : frame["handle"].string.hasPrefix("files-blob:") ? "files" : frame["handle"].string.hasPrefix("notes-blob:") ? "notes" : (frame["handle"].string.hasPrefix("contacts-image:") ? "contacts" : (frame["handle"].string.hasPrefix("calendar-attachment:") ? "calendar" : "messages")))
         defer { trace.record("helper_blob_read", fields: ["source": .string(source), "started_ns": .integer(started), "prepared_ns": .integer(prepared), "finished_ns": .integer(CaptureTrace.now())]) }
         do {
             guard !frame["handle"].string.isEmpty, frame["offset"].number >= 0, frame["offset"].number < Double(Int64.max), frame["length"].number > 0, frame["length"].number <= 131072, frame["length"].number.rounded(.down) == frame["length"].number, frame["offset"].number.rounded(.down) == frame["offset"].number else { throw SourceFailure.invalid }
@@ -338,6 +339,10 @@ public actor AppleSession: ObservationSink {
             else if frame["handle"].string.hasPrefix("photos-blob:") {
                 guard let photos = additionalSources["photos"] as? PhotosSource else { throw SourceFailure.unavailable }
                 response = try await photos.readBlob(frame["handle"].string, offset: Int64(frame["offset"].number), length: Int(frame["length"].number))
+            }
+            else if frame["handle"].string.hasPrefix("pdf:") {
+                guard let pdf = additionalSources["pdf"] as? PDFSource else { throw SourceFailure.unavailable }
+                response = try await pdf.readBlob(frame["handle"].string, offset: Int64(frame["offset"].number), length: Int(frame["length"].number))
             }
             else if frame["handle"].string.hasPrefix("files-blob:") {
                 guard let files = additionalSources["files"] as? FilesSource else { throw SourceFailure.unavailable }
@@ -509,6 +514,14 @@ public actor AppleSession: ObservationSink {
     }
     private func observedEvidence(_ evidence: JSON, fingerprint: JSON, operation: String) async throws -> JSON {
         if ["capture.screenshot", "capture.camera_photo", "capture.record_audio", "mac.screen_record", "print.document"].contains(operation) { return evidence }
+        if operation == "pdf.annotate", let pdf = additionalSources["pdf"] as? PDFSource {
+            try await pdf.captureCommand(evidence, into: self)
+            guard let checkpoint = observedCheckpoints["pdf.artifact/" + evidence["native_key"].string] else { throw SourceFailure.unavailable }
+            var result = evidence.object
+            result["fingerprint"] = fingerprint
+            result["capture_checkpoint"] = .string(checkpoint)
+            return .object(result)
+        }
         if ["speech.say", "capture.play_sound"].contains(operation) {
             guard evidence["finished_callback"].bool, evidence["prepared"]["request_hash"] == fingerprint else { throw SourceFailure.unavailable }
             return evidence

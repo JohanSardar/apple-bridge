@@ -1,0 +1,78 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[13.89 21.76 30.03] cpu_idle=37% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M637TZMWE20QGCWQQFBN37QE",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "observed_record_count": 1
+  },
+  "scenario": "PDF-ANNOTATE",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "a8bed282bc18e912a2644f1dae5d0ee10b507e44",
+  "at": "2026-10-29T07:08:53.788086Z",
+  "assertions": [
+    {
+      "name": "world_started",
+      "passed": true
+    },
+    {
+      "name": "query_scopes_granted",
+      "passed": true
+    },
+    {
+      "name": "helper_ready",
+      "passed": true
+    },
+    {
+      "name": "fixture_read",
+      "passed": true
+    },
+    {
+      "name": "annotation_scopes",
+      "passed": true
+    },
+    {
+      "name": "empty_annotations_rejected",
+      "passed": true
+    },
+    {
+      "name": "annotation_observed",
+      "passed": true
+    },
+    {
+      "name": "artifact_metadata",
+      "passed": true
+    },
+    {
+      "name": "annotation_count",
+      "passed": true
+    },
+    {
+      "name": "new_pdf_blob_digest",
+      "passed": true
+    },
+    {
+      "name": "artifact_blob_input_preserves_document_text",
+      "passed": true
+    },
+    {
+      "name": "annotation_page_geometry_preserved",
+      "passed": true
+    },
+    {
+      "name": "output_contains_note_and_highlight",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

@@ -158,8 +158,14 @@ func ValidateCommand(c Command) (ReminderArgs, error) {
 	if CaptureOperation(c.Op) {
 		return ReminderArgs{}, ValidateCapture(c)
 	}
+	if strings.HasPrefix(c.Op, "safari.") {
+		return ReminderArgs{}, ValidateSafariCommand(c)
+	}
 	if strings.HasPrefix(c.Op, "mac.") {
 		return ReminderArgs{}, ValidateMacCommand(c)
+	}
+	if c.Op == "pdf.annotate" {
+		return ReminderArgs{}, ValidatePDFAnnotate(c)
 	}
 	if c.Op == "maps.open" {
 		return ReminderArgs{}, ValidateMapsOpen(c)

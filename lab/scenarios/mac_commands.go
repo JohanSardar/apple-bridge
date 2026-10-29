@@ -141,6 +141,9 @@ func macCommandSchemas(add func(string, bool)) {
 			continue
 		}
 		key := expected[descriptor.Name]
+		if key == "" {
+			continue
+		}
 		field, exists := fields[key].(map[string]any)
 		required, _ := args["required"].([]string)
 		top, _ := schema["required"].([]string)

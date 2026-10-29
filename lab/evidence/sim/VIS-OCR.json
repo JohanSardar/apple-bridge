@@ -1,17 +1,17 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[4.66 5.26 7.59] cpu_idle=89% cpus=8 other_heavy=1"
+    "summary": "air: load=[22.09 28.98 34.44] cpu_idle=28% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M61GWQ18VFS53JCEV1BRECAF",
+  "run_id": "run_01M637M03T3745H19BWMMHGNKT",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "VIS-OCR",
   "level": "sim",
   "passed": true,
-  "git_sha": "b7c13422e830a0b2af6c761bd2f1a370920b36d5",
-  "at": "2026-10-28T15:08:38.824177Z",
+  "git_sha": "836f714c27f9124155b066c84a1e9a924e7538cd",
+  "at": "2026-10-29T07:05:04.890543Z",
   "assertions": [
     {
       "name": "world_started",
@@ -19,6 +19,10 @@
     },
     {
       "name": "query_scopes_granted",
+      "passed": true
+    },
+    {
+      "name": "helper_ready",
       "passed": true
     },
     {
@@ -38,23 +42,11 @@
       "passed": true
     },
     {
-      "name": "file_input_matches_inline",
+      "name": "file_requires_opt_in",
       "passed": true
     },
     {
-      "name": "ocr_shape",
-      "passed": true
-    },
-    {
-      "name": "generated_fixture_read",
-      "passed": true
-    },
-    {
-      "name": "fixture_query_completed",
-      "passed": true
-    },
-    {
-      "name": "fixture_content_matched",
+      "name": "unowned_blob_rejected",
       "passed": true
     },
     {
@@ -75,6 +67,42 @@
     },
     {
       "name": "fixture_content_matched",
+      "passed": true
+    },
+    {
+      "name": "file_requires_opt_in",
+      "passed": true
+    },
+    {
+      "name": "unowned_blob_rejected",
+      "passed": true
+    },
+    {
+      "name": "file_input_matches_inline",
+      "passed": true
+    },
+    {
+      "name": "ocr_shape",
+      "passed": true
+    },
+    {
+      "name": "generated_fixture_read",
+      "passed": true
+    },
+    {
+      "name": "fixture_query_completed",
+      "passed": true
+    },
+    {
+      "name": "fixture_content_matched",
+      "passed": true
+    },
+    {
+      "name": "file_requires_opt_in",
+      "passed": true
+    },
+    {
+      "name": "unowned_blob_rejected",
       "passed": true
     },
     {

@@ -3,10 +3,10 @@ package web
 import (
 	"context"
 	"encoding/json"
+	"github.com/JohanSardar/apple-bridge/internal/publichttp"
 	"io"
 	"net"
 	"net/http"
-	"net/netip"
 	"net/url"
 	"slices"
 	"strconv"
@@ -42,37 +42,9 @@ func metadataURL(raw string) (*url.URL, error) {
 	}
 	return u, nil
 }
-func publicMetadataIP(ip net.IP) bool {
-	a, ok := netip.AddrFromSlice(ip)
-	if !ok {
-		return false
-	}
-	a = a.Unmap()
-	if !a.IsGlobalUnicast() || a.IsPrivate() || a.IsLoopback() || a.IsLinkLocalUnicast() {
-		return false
-	}
-	for _, prefix := range []string{"0.0.0.0/8", "100.64.0.0/10", "192.0.2.0/24", "198.51.100.0/24", "203.0.113.0/24", "240.0.0.0/4", "2001::/32", "192.0.0.0/24", "198.18.0.0/15", "2001:db8::/32", "64:ff9b::/96", "64:ff9b:1::/48", "2002::/16"} {
-		if netip.MustParsePrefix(prefix).Contains(a) {
-			return false
-		}
-	}
-	return true
-}
+func publicMetadataIP(ip net.IP) bool { return publichttp.PublicIP(ip) }
 func (f *ClientMetadataFetcher) addresses(ctx context.Context, host string) ([]net.IPAddr, error) {
-	resolve := f.Resolve
-	if resolve == nil {
-		resolve = net.DefaultResolver.LookupIPAddr
-	}
-	ips, err := resolve(ctx, host)
-	if err != nil || len(ips) == 0 {
-		return nil, contracts.ErrInvalid
-	}
-	for _, ip := range ips {
-		if !publicMetadataIP(ip.IP) {
-			return nil, contracts.ErrInvalid
-		}
-	}
-	return ips, nil
+	return (&publichttp.Guard{Resolve: f.Resolve}).Addresses(ctx, host)
 }
 func (f *ClientMetadataFetcher) Fetch(ctx context.Context, id, redirect string) (trust.OAuthClient, error) {
 	empty := trust.OAuthClient{}
@@ -96,23 +68,9 @@ func (f *ClientMetadataFetcher) Fetch(ctx context.Context, id, redirect string) 
 	}
 	transport := f.Transport
 	if transport == nil {
-		t := &http.Transport{DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
-			host, port, err := net.SplitHostPort(address)
-			if err != nil {
-				return nil, err
-			}
-			ips, err := f.addresses(ctx, host)
-			if err != nil {
-				return nil, err
-			}
-			dial := f.DialContext
-			if dial == nil {
-				dial = (&net.Dialer{}).DialContext
-			}
-			return dial(ctx, network, net.JoinHostPort(ips[0].IP.String(), port))
-		}}
-		defer t.CloseIdleConnections()
-		transport = t
+		client, close := (&publichttp.Guard{Resolve: f.Resolve, DialContext: f.DialContext}).Client()
+		defer close()
+		transport = client.Transport
 	}
 	client := &http.Client{Transport: transport, Timeout: 3 * time.Second, CheckRedirect: func(r *http.Request, via []*http.Request) error {
 		if len(via) >= 5 {

@@ -103,13 +103,21 @@ func (builder *schemaBuilder) build(t reflect.Type) map[string]any {
 }
 func OperationSchema(d OperationDescriptor) map[string]any {
 	s := JSONSchema(d.Input)
+	if d.Source == Safari && (d.Kind == QueryOp || d.Kind == CommandOp) {
+		key := "url"
+		if d.Name == "safari.page_text" {
+			key = "tab"
+		}
+		s["properties"].(map[string]any)["args"] = map[string]any{"type": "object", "additionalProperties": false, "required": []string{key}, "properties": map[string]any{key: map[string]any{"type": "string", "minLength": 1, "maxLength": 2048}}}
+		return s
+	}
 	if d.Kind == QueryOp {
 		props := s["properties"].(map[string]any)
 		props["args"] = map[string]any{}
 		props["id"] = map[string]any{"type": "string", "pattern": "^qry_[A-Za-z0-9._:-]+$", "maxLength": 128}
 		props["deadline_ms"] = map[string]any{"type": "integer", "minimum": 0, "maximum": 60000}
 		props["op"] = map[string]any{"type": "string", "enum": []string{d.Name}}
-		if d.Name == "helper.version" || d.Name == "mac.clipboard_read" {
+		if d.Name == "helper.version" || d.Name == "mac.clipboard_read" || d.Name == "mac.network_check" {
 			props["args"] = map[string]any{"type": "object", "additionalProperties": false}
 		}
 		if d.Name == "test.sleep" || d.Name == "test.blob" {

@@ -1,4 +1,5 @@
 import Foundation
+import UserNotifications
 import Carbon
 import AppKit
 import CoreAudio
@@ -21,7 +22,7 @@ public final class MacSource: Source {
     public func open() async -> SourceReadiness {
         var missing: [JSON] = [.string("Night Shift has no supported public API"), .string("SSID requires Location authorization")]
         if NSPasteboard.general.accessBehavior != .alwaysAllow { missing.append(.string("Clipboard requires Always Allow in Paste from Other Apps")) }
-        return SourceReadiness(state: "ready", coverage: .object(["fields": .string("partial"), "missing": .array(missing)]), capabilities: ["mac.set_volume", "mac.set_mute", "mac.set_output_device", "mac.set_appearance", "mac.launch_app", "mac.activate_app", "mac.quit_app", "mac.keep_awake", "mac.clipboard_write", "mac.clipboard_read"])
+        return SourceReadiness(state: "ready", coverage: .object(["fields": .string("partial"), "missing": .array(missing)]), capabilities: ["mac.set_volume", "mac.set_mute", "mac.set_output_device", "mac.set_appearance", "mac.launch_app", "mac.activate_app", "mac.quit_app", "mac.keep_awake", "mac.clipboard_write", "mac.clipboard_read", "mac.notify", "mac.open_settings", "mac.set_wallpaper", "mac.network_check"])
     }
     private func power() -> JSON {
         var value: [String: JSON] = ["source": .string("unknown"), "charging": .bool(false), "low_power_mode": .bool(ProcessInfo.processInfo.isLowPowerModeEnabled), "keep_awake_held": .bool(false)]
@@ -180,6 +181,50 @@ public final class MacSource: Source {
         let args = prepared.action["args"]
         var readback: JSON = .null
         switch prepared.action["op"].string {
+        case "mac.lock_screen", "mac.sleep_display", "mac.restart", "mac.shutdown":
+            throw SourceFailure.unsupported
+        case "mac.notify":
+            let center = UNUserNotificationCenter.current()
+            let settings = await center.notificationSettings()
+            guard settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional else { throw SourceFailure.permissionMissing }
+            let content = UNMutableNotificationContent()
+            content.title = args["title"].string
+            content.body = args["body"].string
+            guard !content.title.isEmpty, content.title.utf8.count <= 256, content.body.utf8.count <= 4096 else { throw SourceFailure.invalid }
+            if !args["action_url"].string.isEmpty {
+                guard let url = URL(string: args["action_url"].string), ["https", "http"].contains(url.scheme ?? ""), url.host != nil else { throw SourceFailure.invalid }
+                content.userInfo = ["action_url": url.absoluteString]
+            }
+            let identifier = "apple-bridge-" + UUID().uuidString
+            try await center.add(UNNotificationRequest(identifier: identifier, content: content, trigger: nil))
+            var delivered = false
+            for _ in 0..<20 {
+                delivered = await center.deliveredNotifications().contains { $0.request.identifier == identifier }
+                if delivered { break }
+                try await Task.sleep(for: .milliseconds(100))
+            }
+            guard delivered else { throw SourceFailure.unavailable }
+            readback = .object(["delivered": .bool(true), "identifier": .string(identifier)])
+        case "mac.open_settings":
+            let panes = ["general": "com.apple.systempreferences.GeneralSettings", "notifications": "com.apple.Notifications-Settings.extension", "network": "com.apple.Network-Settings.extension", "displays": "com.apple.Displays-Settings.extension", "wallpaper": "com.apple.Wallpaper-Settings.extension", "privacy": "com.apple.settings.PrivacySecurity.extension"]
+            guard let pane = panes[args["pane"].string], let url = URL(string: "x-apple.systempreferences:" + pane), NSWorkspace.shared.open(url) else { throw SourceFailure.invalid }
+            var active = false
+            for _ in 0..<30 {
+                active = NSWorkspace.shared.frontmostApplication?.bundleIdentifier == "com.apple.systempreferences"
+                if active { break }
+                try await Task.sleep(for: .milliseconds(100))
+            }
+            guard active else { throw SourceFailure.unavailable }
+            readback = .object(["frontmost": .bool(true), "pane": args["pane"]])
+        case "mac.set_wallpaper":
+            guard let bytes = Data(base64Encoded: args["image_blob"].string), !bytes.isEmpty, bytes.count <= 8 * 1024 * 1024, let bitmap = NSBitmapImageRep(data: bytes), let png = bitmap.representation(using: .png, properties: [:]), !NSScreen.screens.isEmpty else { throw SourceFailure.invalid }
+            let directory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("AppleBridge/wallpapers")
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            let url = directory.appendingPathComponent(UUID().uuidString + ".png")
+            try png.write(to: url, options: .atomic)
+            for screen in NSScreen.screens { try NSWorkspace.shared.setDesktopImageURL(url, for: screen, options: [:]) }
+            guard NSScreen.screens.allSatisfy({ NSWorkspace.shared.desktopImageURL(for: $0) == url }) else { throw SourceFailure.conflict }
+            readback = .object(["matches": .bool(true)])
         case "mac.clipboard_write":
             let board = NSPasteboard.general
             guard board.accessBehavior == .alwaysAllow else { throw SourceFailure.permissionMissing }

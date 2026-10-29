@@ -1,0 +1,3 @@
+id: QUERY-AGENT
+feature: maps.queries
+levels: [agent]
