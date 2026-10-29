@@ -10,4 +10,4 @@ FOC-SIM proves pack compilation, injected set/readback/restore, bounded executio
 
 Real qualification needs a Focus status grant and AB Focus import. The real probe runs inside a signed AppleBridgeHelper.app so it uses the Helper grant; it never requests authorization. Idle CPU and phone synchronization qualifications remain separate.
 
-Air qualification on 2026-10-29: FOC-SET-REAL and FOC-STATUS-REAL built and ran the native probe under the global lock. Both reported limited because the probe lacks a Focus status grant. No write or permission request was dispatched; the original Focus state was untouched. AB Focus import and live toggle/readback remain unqualified.
+Air qualification on 2026-10-29: FOC-SET-REAL and FOC-STATUS-REAL built and ran the native probe under the global lock. Both reported limited because the signed Helper lacks a Focus status grant. No write or permission request was dispatched; the original Focus state was untouched. AB Focus import and live toggle/readback remain unqualified.
