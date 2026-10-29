@@ -91,7 +91,14 @@ func runVisionQueries(ctx context.Context, s Scenario, level string) (e Evidence
 		}
 		add("fixture_content_matched", contentErr == nil && content.Text == texts[i])
 		path, pathErr := filepath.Abs(filepath.Join("lab", "fixtures", "vision", file))
-		fileArgs, _ := json.Marshal(map[string]string{"file": path})
+		fileArgs, _ := json.Marshal(map[string]any{"file": path, "allow_file": true})
+		var denied contracts.QueryResult
+		deniedArgs, _ := json.Marshal(map[string]string{"file": path})
+		deniedErr := client.Call(ctx, op, contracts.Query{Args: deniedArgs, DeadlineMS: 10000}, &denied)
+		add("file_requires_opt_in", errors.As(deniedErr, &problem) && problem.Code == "invalid")
+		blobArgs, _ := json.Marshal(map[string]any{"blob": map[string]string{"query_id": "qry_missing", "digest": strings.Repeat("0", 64)}})
+		blobErr := client.Call(ctx, op, contracts.Query{Args: blobArgs, DeadlineMS: 10000}, &denied)
+		add("unowned_blob_rejected", errors.As(blobErr, &problem) && problem.Code == "forbidden")
 		var fileOut contracts.QueryResult
 		fileErr := client.Call(ctx, op, contracts.Query{Args: fileArgs, DeadlineMS: 30000}, &fileOut)
 		var inlineValue, fileValue any
