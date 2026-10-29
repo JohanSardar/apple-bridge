@@ -17,6 +17,9 @@ import (
 func runMessagesCommands(ctx context.Context, s Scenario, level string) Evidence {
 	sha, _ := exec.Command("git", "rev-parse", "HEAD").Output()
 	e := Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, GitSHA: strings.TrimSpace(string(sha)), At: time.Now().UTC(), Assertions: []Assertion{}, Latency: map[string]Latency{}, Hosts: []string{"air"}}
+	if level == "real" && messageSendVariant(s.ID) != "" {
+		return runMessagesVariantReal(ctx, s, e)
+	}
 	if s.ID == "MSG-SELFTEST" {
 		return runNativeMessagesSelfTest(ctx, e)
 	}
@@ -35,6 +38,9 @@ func runMessagesCommands(ctx context.Context, s Scenario, level string) Evidence
 		return runNativeMessagesCommands(ctx, s, level, e)
 	}
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
+	if kind := messageSendVariant(s.ID); kind != "" {
+		runMessagesVariantReadback(ctx, kind, add)
+	}
 	w, err := world.New(ctx, level, 1, 0, world.BlobOptions{Scope: "messages:read,messages:write,system:read"})
 	if err != nil {
 		add("world_start", false)

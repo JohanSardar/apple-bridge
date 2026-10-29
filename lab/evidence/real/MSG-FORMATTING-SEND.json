@@ -1,29 +1,40 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[7.53 7.55 7.81] cpu_idle=21% cpus=8 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[35.15 24.91 16.76] cpu_idle=44% cpus=8 other_heavy=0"
   },
   "status": "limited",
-  "run_id": "",
+  "run_id": "run_01M65166EMS8BTTA3DQE4M8R93",
   "metrics": {
-    "capture_observer_resets": 0
+    "capture_observer_resets": 0,
+    "cleanup_counts": {
+      "after_count": 160294,
+      "before_count": 160294,
+      "created_count": 0,
+      "passed": true
+    },
+    "writes_submitted": 0
   },
   "scenario": "MSG-FORMATTING-SEND",
   "level": "real",
   "passed": false,
-  "git_sha": "",
-  "at": "2026-10-29T16:18:08.33156Z",
+  "git_sha": "cd736b6bdf6f556b3e7a7dd514fbc4f7d2d45c78",
+  "at": "2026-10-29T23:51:10.036808Z",
   "assertions": [
     {
-      "name": "real_acceptance_implemented",
-      "passed": false,
-      "detail": "Real acceptance harness is not implemented; no native effects dispatched"
+      "name": "cleanup_baseline_restored",
+      "passed": true
     },
     {
       "name": "credential_backend_override_restored",
       "passed": true
     }
   ],
-  "latency": null,
-  "hosts": null
+  "latency": {},
+  "hosts": [
+    "air"
+  ],
+  "conditions": {
+    "reason": "needs Messages Accessibility grant"
+  }
 }

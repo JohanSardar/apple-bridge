@@ -24,15 +24,45 @@ public enum MessagesSendVariants {
         return data
     }
     static func proven(_ operation: String, route: JSON? = nil, args: JSON? = nil) -> Bool {
-        proof()["steps"].array.contains { step in
+        guard ["messages.send_effect", "messages.send_formatted"].contains(operation) else { return false }
+        return proof()["steps"].array.contains { step in
             guard step["operation"].string==operation,step["proven"].bool,route == nil || step["route"].string==routeKey(route!) else { return false }
             guard let args else { return true }
             if operation=="messages.send_effect" { return args["variant"]["effect"]==step["variant"]["effect"] }
-            if operation=="messages.send_formatted" {
-                let styles=Set(step["variant"]["formatting"].array.flatMap { $0["styles"].array.map(\.string) }),effects=Set(step["variant"]["formatting"].array.map { $0["effect"].string })
-                return args["variant"]["formatting"].array.allSatisfy { Set($0["styles"].array.map(\.string)).isSubset(of:styles) && ($0["effect"].string.isEmpty || effects.contains($0["effect"].string)) }
-            }
+            if operation=="messages.send_formatted" { return args["variant"]["formatting"] == step["variant"]["formatting"] }
             return false
+        }
+    }
+    static func invalidateProof(_ kind: String) throws {
+        let operation = kind == "effect" ? "messages.send_effect" : "messages.send_formatted"
+        let current = proof()
+        guard current != .null else { return }
+        var fields = current.object
+        fields["steps"] = .array(current["steps"].array.filter { $0["operation"].string != operation })
+        try JSONEncoder().encode(JSON.object(fields)).write(to: proofURL, options: .atomic)
+    }
+    static func recordProof(_ prepared: Prepared) throws {
+        let args = prepared.action["messages"]
+        guard let operation = operation(args), ["messages.send_effect", "messages.send_formatted"].contains(operation) else { throw SourceFailure.invalid }
+        var steps = proof()["steps"].array.filter { $0["operation"].string != operation || $0["route"].string != routeKey(prepared.nativeState["destination"]) }
+        steps.append(.object(["operation": .string(operation), "route": .string(routeKey(prepared.nativeState["destination"])), "variant": args["variant"], "proven": .bool(true)]))
+        let report = JSON.object(["os_build": .string(osBuild), "version": .number(1), "complete": .bool(true), "steps": .array(steps)])
+        try JSONEncoder().encode(report).write(to: proofURL, options: .atomic)
+        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: proofURL.path)
+    }
+    public static func matches(_ args: JSON, data: JSON) -> Bool {
+        guard data["is_from_me"].bool, data["error_code"].number == 0, data["text"] == args["text"], !args["text"].string.isEmpty else { return false }
+        switch args["variant"]["kind"].string {
+        case "effect":
+            let value = data["effect"].string.lowercased().replacingOccurrences(of: "invisibleink", with: "invisible-ink")
+            let expected = args["variant"]["effect"].string
+            return !expected.isEmpty && (value == expected || value.split(separator: ".").last.map(String.init) == expected)
+        case "formatting":
+            let entries = args["variant"]["formatting"].array
+            return !entries.isEmpty && entries.allSatisfy { expected in data["formatting"].array.contains { actual in
+                actual["utf16_location"] == expected["utf16_location"] && actual["utf16_length"] == expected["utf16_length"] && Set(expected["styles"].array.map(\.string)).isSubset(of: Set(actual["styles"].array.map(\.string))) && (expected["effect"].string.isEmpty || actual["effect"] == expected["effect"])
+            } }
+        default: return false
         }
     }
     static func capabilities() -> [String] {
@@ -91,6 +121,10 @@ public enum MessagesSendVariants {
         let args=prepared.action["messages"],reader=try MessagesReader(path:path),route=prepared.nativeState["destination"]
         try validate(args)
         guard let operation=operation(args) else { throw SendVariantFailure.invalidVariant }
+        guard ["messages.send_effect", "messages.send_formatted"].contains(operation) else { throw SourceFailure.capabilityUnproven }
+        let own = Set(try MessagesProbes.discoverSelfHandles().handles.map(MessagesProbes.normalize))
+        let peers = try reader.query("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", [route["chat"].string])
+        guard peers.count == 1, peers.allSatisfy({ own.contains(MessagesProbes.normalize($0["id"])) }) else { throw SourceFailure.invalid }
         let chat=route["chat"].string
         guard !chat.isEmpty,let target=try reader.query("SELECT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE c.guid=? ORDER BY m.ROWID DESC LIMIT 1",[chat]).first?["guid"] else { throw SourceFailure.capabilityUnproven }
         let maximum=try reader.maximum()
@@ -110,11 +144,7 @@ public enum MessagesSendVariants {
                 if data["error_code"].number != 0 {
                     return .object(["source":.string("messages"),"collection":.string("messages.message"),"native_key":.string(key),"observed":.bool(true),"disposition":.string("delivery_failed"),"reason":.string("native_delivery_failed"),"parts":.array([.object(["index":.number(0),"kind":.string("text"),"native_key":.string(key),"observed":.bool(true),"disposition":.string("delivery_failed")])])])
                 }
-                var matched=false
-                if operation=="messages.send_effect" { matched=data["effect"].string.lowercased().replacingOccurrences(of:"invisibleink",with:"invisible-ink").hasSuffix(args["variant"]["effect"].string) }
-                if operation=="messages.send_formatted" {
-                    matched=args["variant"]["formatting"].array.allSatisfy { expected in data["formatting"].array.contains { actual in actual["utf16_location"]==expected["utf16_location"] && actual["utf16_length"]==expected["utf16_length"] && Set(expected["styles"].array.map(\.string)).isSubset(of:Set(actual["styles"].array.map(\.string))) && (expected["effect"].string.isEmpty || actual["effect"]==expected["effect"]) } }
-                }
+                let matched = matches(args, data: data)
                 if matched { return .object(["source":.string("messages"),"collection":.string("messages.message"),"native_key":.string(key),"observed":.bool(true),"disposition":.string("locally_observed"),"parts":.array([.object(["index":.number(0),"kind":.string("text"),"native_key":.string(key),"observed":.bool(true),"disposition":.string("locally_observed")])])]) }
             }
             try await Task.sleep(for:.milliseconds(100))

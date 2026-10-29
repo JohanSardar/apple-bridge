@@ -400,7 +400,7 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "APP-HEALTH-SIM" || s.ID == "APP-HEALTH-REAL" {
 		return runIPhoneHealth(ctx, s, level)
 	}
-	if level == "real" && slices.Contains([]string{"MSG-AUDIO-MESSAGE", "MSG-FORMATTING-SEND", "MSG-SEND-EFFECT", "MSG-SEND-LATER", "WEB-MSG-REAL-READ"}, s.ID) {
+	if level == "real" && slices.Contains([]string{"WEB-MSG-REAL-READ"}, s.ID) {
 		return Evidence{Scenario: s.ID, Level: level, At: time.Now().UTC(), Status: "limited", Assertions: []Assertion{{Name: "real_acceptance_implemented", Passed: false, Detail: "Acceptance harness is not implemented; no native effects dispatched"}}}
 	}
 	if s.Feature == "maps.queries" {

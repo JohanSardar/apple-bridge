@@ -1,29 +1,30 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[8.59 7.78 7.89] cpu_idle=25% cpus=8 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[23.61 21.35 13.97] cpu_idle=48% cpus=8 other_heavy=0"
   },
   "status": "limited",
-  "run_id": "",
+  "run_id": "run_01M650ZVZ600JM58HWTR9SRM05",
   "metrics": {
-    "capture_observer_resets": 0
+    "capture_observer_resets": 0,
+    "writes_submitted": 0
   },
   "scenario": "MSG-SEND-LATER",
   "level": "real",
   "passed": false,
-  "git_sha": "",
-  "at": "2026-10-29T16:18:14.787195Z",
+  "git_sha": "cd736b6bdf6f556b3e7a7dd514fbc4f7d2d45c78",
+  "at": "2026-10-29T23:47:42.694974Z",
   "assertions": [
-    {
-      "name": "real_acceptance_implemented",
-      "passed": false,
-      "detail": "Real acceptance harness is not implemented; no native effects dispatched"
-    },
     {
       "name": "credential_backend_override_restored",
       "passed": true
     }
   ],
-  "latency": null,
-  "hosts": null
+  "latency": {},
+  "hosts": [
+    "air"
+  ],
+  "conditions": {
+    "reason": "needs verified Send Later date controls and cancellation cleanup"
+  }
 }

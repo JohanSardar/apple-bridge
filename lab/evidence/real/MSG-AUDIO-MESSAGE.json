@@ -1,29 +1,30 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[6.96 7.44 7.77] cpu_idle=23% cpus=8 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[5.83 4.91 6.55] cpu_idle=68% cpus=8 other_heavy=0"
   },
   "status": "limited",
-  "run_id": "",
+  "run_id": "run_01M650NFB0868WXWWTBWPDTJQS",
   "metrics": {
-    "capture_observer_resets": 0
+    "capture_observer_resets": 0,
+    "writes_submitted": 0
   },
   "scenario": "MSG-AUDIO-MESSAGE",
   "level": "real",
   "passed": false,
-  "git_sha": "",
-  "at": "2026-10-29T16:18:02.530662Z",
+  "git_sha": "cd736b6bdf6f556b3e7a7dd514fbc4f7d2d45c78",
+  "at": "2026-10-29T23:42:02.080271Z",
   "assertions": [
-    {
-      "name": "real_acceptance_implemented",
-      "passed": false,
-      "detail": "Real acceptance harness is not implemented; no native effects dispatched"
-    },
     {
       "name": "credential_backend_override_restored",
       "passed": true
     }
   ],
-  "latency": null,
-  "hosts": null
+  "latency": {},
+  "hosts": [
+    "air"
+  ],
+  "conditions": {
+    "reason": "needs native media cleanup qualification; audio remains fail-closed"
+  }
 }

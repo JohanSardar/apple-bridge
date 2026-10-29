@@ -1,18 +1,30 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[9.5 8.96 8.34] cpu_idle=42% cpus=8 other_heavy=0"
+    "summary": "air: load=[6.82 9.36 22.92] cpu_idle=75% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M646WFM3ETVD3286WAAMM9W5",
+  "run_id": "run_01M650MAQVA92PBVYVPDCF1RR9",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "MSG-AUDIO-MESSAGE",
   "level": "sim",
   "passed": true,
-  "git_sha": "2d911b7bd41ad214298cda87ee7e6c551dd390b1",
-  "at": "2026-10-29T16:11:28.771196Z",
+  "git_sha": "cd736b6bdf6f556b3e7a7dd514fbc4f7d2d45c78",
+  "at": "2026-10-29T23:41:24.60366Z",
   "assertions": [
+    {
+      "name": "native_readback_checks_build",
+      "passed": true
+    },
+    {
+      "name": "native_readback_checks",
+      "passed": true
+    },
+    {
+      "name": "unqualified_variant_rejected",
+      "passed": true
+    },
     {
       "name": "seed_self_chat",
       "passed": true

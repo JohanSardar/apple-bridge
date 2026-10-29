@@ -1,18 +1,46 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[9.22 8.91 8.33] cpu_idle=31% cpus=8 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[6.83 9.32 22.82] cpu_idle=62% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M646WQ5V37QK735SPKZMDCE6",
+  "run_id": "run_01M650MG9BZR34BVDAZSFFMJ54",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "MSG-FORMATTING-SEND",
   "level": "sim",
   "passed": true,
-  "git_sha": "2d911b7bd41ad214298cda87ee7e6c551dd390b1",
-  "at": "2026-10-29T16:11:36.50774Z",
+  "git_sha": "cd736b6bdf6f556b3e7a7dd514fbc4f7d2d45c78",
+  "at": "2026-10-29T23:41:30.283586Z",
   "assertions": [
+    {
+      "name": "native_readback_checks_build",
+      "passed": true
+    },
+    {
+      "name": "native_readback_checks",
+      "passed": true
+    },
+    {
+      "name": "plain_send_rejected",
+      "passed": true
+    },
+    {
+      "name": "text_mismatch_rejected",
+      "passed": true
+    },
+    {
+      "name": "is_from_me_mismatch_rejected",
+      "passed": true
+    },
+    {
+      "name": "matching_sent_attributes",
+      "passed": true
+    },
+    {
+      "name": "error_code_mismatch_rejected",
+      "passed": true
+    },
     {
       "name": "seed_self_chat",
       "passed": true

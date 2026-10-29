@@ -13,6 +13,17 @@ enum HelperLabCommand {
     @MainActor
     static func run(_ arguments: [String]) throws -> Bool {
         switch arguments.first {
+        case "messages-variant-proof":
+            let reportURL = try report(arguments)
+            guard arguments.count > 1 else { throw ProbeFailure.invalidArguments }
+            var result: JSON?
+            Task { @MainActor in
+                do { result = try await MessagesVariantProof.run(arguments[1]) }
+                catch { result = .object(["passed": .bool(false), "limited": .bool(true), "reason": .string("native_variant_probe_unavailable")]) }
+            }
+            while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.01)) }
+            try JSONEncoder().encode(result!).write(to: reportURL, options: .atomic)
+            return true
         case "focus-real-checks":
             let reportURL = try report(arguments)
             guard arguments.count > 1 else { throw ProbeFailure.invalidArguments }

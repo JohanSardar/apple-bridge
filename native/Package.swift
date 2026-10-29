@@ -57,6 +57,7 @@ let package = Package(
         .executableTarget(name: "UsageChecks", dependencies: ["Decoders", "UsageSource", "SourceSupport"]),
         .executableTarget(name: "NotesDecoderChecks", dependencies: ["Decoders", "NotesSource", "SourceSupport"]),
         .executableTarget(name: "DecoderChecks", dependencies: ["Decoders"]),
+        .executableTarget(name: "MessagesVariantChecks", dependencies: ["MessagesSource", "SourceSupport"]),
         .executableTarget(name: "MessagesCaptureChecks", dependencies: ["MessagesSource", "SourceSupport", "MediaDerivatives"]),
         .executableTarget(name: "MessagesBench", dependencies: ["MessagesSource", "SourceSupport"]),
         .target(name: "AppleSession", dependencies: sourceTargets.map { .target(name: $0.name) } + ["RemindersStore", "AgendaGate", "SourceSupport"]),
