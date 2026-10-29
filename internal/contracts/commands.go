@@ -176,6 +176,9 @@ func ValidateCommand(c Command) (ReminderArgs, error) {
 	if c.Op == "phone.dial" {
 		return ReminderArgs{}, ValidatePhoneDial(c)
 	}
+	if c.Op == "focus.set" {
+		return ReminderArgs{}, ValidateFocusSet(c)
+	}
 	if c.Op == "shortcuts.run" {
 		return ReminderArgs{}, ValidateShortcutRun(c)
 	}

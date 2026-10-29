@@ -190,7 +190,7 @@ func (g *LocalGateway) Submit(ctx context.Context, p trust.Principal, c contract
 			releaseUploads()
 		}
 	}()
-	if p.IsAgent() && (p.Level == trust.AgentApprove || c.Op == "phone.dial") {
+	if p.IsAgent() && (p.Level == trust.AgentApprove || c.Op == "phone.dial" || c.Op == "focus.set") {
 		r := contracts.CommandRecord{UploadReferences: refs, Command: contracts.RedactMacCommand(c), Principal: p.ID, Source: contracts.CollectionSource(c.Op), RequestHash: hash, State: contracts.CommandAwaitingApproval, Disposition: contracts.DispositionAwaitingApproval, AdmissionEra: era, CreatedAt: now, ExpiresAt: now.Add(24 * time.Hour)}
 		return g.State.TransitionCommand(ctx, state.CommandTransition{Record: r})
 	}
@@ -557,6 +557,9 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 		return r, err
 	}
 	outcomeTimeout := 15 * time.Second
+	if c.Op == "focus.set" {
+		outcomeTimeout = 25 * time.Second
+	}
 	if contracts.CaptureOperation(c.Op) {
 		outcomeTimeout = 75 * time.Second
 	}
@@ -619,6 +622,10 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 			f.Disposition = "indeterminate"
 		}
 	}
+	if r.Command.Op == "focus.set" && to == "observed" && !contracts.FocusSetEvidence(f.Evidence, r.RequestHash, r.Command.Args) {
+		to = "indeterminate"
+		f.Disposition = "indeterminate"
+	}
 	if r.Command.Op == "shortcuts.run" && to == "observed" && !contracts.ShortcutCompletionEvidence(f.Evidence, r.RequestHash) {
 		to = "indeterminate"
 		f.Disposition = "indeterminate"
@@ -643,7 +650,7 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 		to = "indeterminate"
 		f.Disposition = "indeterminate"
 	}
-	if !contracts.CaptureOperation(r.Command.Op) && r.Command.Op != "maps.open" && r.Source != "mac" && r.Source != contracts.Safari && r.Command.Op != "shortcuts.run" && !contracts.MusicPlayerOperation(r.Command.Op) && !contracts.PlaybackOperation(r.Command.Op) && (to == "observed" || to == "delivered" || to == "delivery_failed") {
+	if !contracts.CaptureOperation(r.Command.Op) && r.Command.Op != "maps.open" && r.Source != "mac" && r.Source != contracts.Safari && r.Command.Op != "shortcuts.run" && r.Command.Op != "focus.set" && !contracts.MusicPlayerOperation(r.Command.Op) && !contracts.PlaybackOperation(r.Command.Op) && (to == "observed" || to == "delivered" || to == "delivery_failed") {
 		var evidence struct {
 			NativeKey         string `json:"native_key"`
 			Fingerprint       string `json:"fingerprint"`

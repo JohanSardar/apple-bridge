@@ -1,0 +1,96 @@
+{
+  "version": 1,
+  "name": "AB Focus",
+  "actions": [
+    {
+      "key": "request",
+      "identifier": "is.workflow.actions.detect.dictionary",
+      "parameters": {
+        "WFInput": {
+          "$input": true
+        }
+      }
+    },
+    {
+      "key": "on",
+      "identifier": "is.workflow.actions.getvalueforkey",
+      "parameters": {
+        "WFInput": {
+          "$output": "request"
+        },
+        "WFDictionaryKey": "on",
+        "WFGetDictionaryValueType": "Value"
+      }
+    },
+    {
+      "key": "until",
+      "identifier": "is.workflow.actions.getvalueforkey",
+      "parameters": {
+        "WFInput": {
+          "$output": "request"
+        },
+        "WFDictionaryKey": "until",
+        "WFGetDictionaryValueType": "Value"
+      }
+    },
+    {
+      "key": "has_until",
+      "identifier": "is.workflow.actions.conditional",
+      "parameters": {
+        "WFInput": {
+          "$output": "until"
+        },
+        "WFCondition": 100,
+        "WFControlFlowMode": 0,
+        "GroupingIdentifier": {
+          "$group": "expiry"
+        }
+      }
+    },
+    {
+      "key": "timed",
+      "identifier": "is.workflow.actions.dnd.set",
+      "parameters": {
+        "Operation": "Turn",
+        "Enabled": {
+          "$output": "on"
+        },
+        "AssertionType": "Time",
+        "Time": {
+          "$output": "until"
+        }
+      }
+    },
+    {
+      "key": "otherwise",
+      "identifier": "is.workflow.actions.conditional",
+      "parameters": {
+        "WFControlFlowMode": 1,
+        "GroupingIdentifier": {
+          "$group": "expiry"
+        }
+      }
+    },
+    {
+      "key": "indefinite",
+      "identifier": "is.workflow.actions.dnd.set",
+      "parameters": {
+        "Operation": "Turn",
+        "Enabled": {
+          "$output": "on"
+        },
+        "AssertionType": "Turned Off"
+      }
+    },
+    {
+      "key": "end",
+      "identifier": "is.workflow.actions.conditional",
+      "parameters": {
+        "WFControlFlowMode": 2,
+        "GroupingIdentifier": {
+          "$group": "expiry"
+        }
+      }
+    }
+  ]
+}
