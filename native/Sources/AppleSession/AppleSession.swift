@@ -1,3 +1,4 @@
+import PDFSource
 import FilesSource
 import PhotosSource
 import Foundation
@@ -488,6 +489,14 @@ public actor AppleSession: ObservationSink {
     }
 
     private func observedEvidence(_ evidence: JSON, fingerprint: JSON, operation: String) async throws -> JSON {
+        if operation == "pdf.annotate", let pdf = additionalSources["pdf"] as? PDFSource {
+            try await pdf.captureCommand(evidence, into: self)
+            guard let checkpoint = observedCheckpoints["pdf.artifact/" + evidence["native_key"].string] else { throw SourceFailure.unavailable }
+            var result = evidence.object
+            result["fingerprint"] = fingerprint
+            result["capture_checkpoint"] = .string(checkpoint)
+            return .object(result)
+        }
         if ["speech.say", "capture.play_sound"].contains(operation) {
             guard evidence["finished_callback"].bool, evidence["prepared"]["request_hash"] == fingerprint else { throw SourceFailure.unavailable }
             return evidence

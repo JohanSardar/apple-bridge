@@ -13,7 +13,7 @@ import (
 	"strings"
 )
 
-func simulatePDFQuery(op string, raw json.RawMessage) (string, json.RawMessage, bool) {
+func (f *fakeApple) simulatePDFQuery(op string, raw json.RawMessage) (string, json.RawMessage, bool) {
 	if op != "pdf.text" && op != "pdf.search" {
 		return "", nil, false
 	}
@@ -45,8 +45,23 @@ func simulatePDFQuery(op string, raw json.RawMessage) (string, json.RawMessage, 
 		return "invalid", nil, true
 	}
 	sum := sha256.Sum256(data)
-	if hex.EncodeToString(sum[:]) != "f71a9207e47bd6526a9a5a346541df4eb84de43649bcb11fce1ba7aa971b07cc" {
-		return "unavailable", nil, true
+	digest := hex.EncodeToString(sum[:])
+	if digest != "f71a9207e47bd6526a9a5a346541df4eb84de43649bcb11fce1ba7aa971b07cc" {
+		known := false
+		f.mu.Lock()
+		for _, record := range f.records {
+			if record.Collection == "pdf.artifact" {
+				for _, ref := range contracts.BlobReferences(record.Data) {
+					if ref.Digest == digest {
+						known = true
+					}
+				}
+			}
+		}
+		f.mu.Unlock()
+		if !known {
+			return "unavailable", nil, true
+		}
 	}
 	if op == "pdf.text" {
 		return "", json.RawMessage(`{"pages":[{"page":1,"text":"Bridge fixture"}],"page_count":1}`), true

@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"os"
 	"testing"
 
 	"github.com/JohanSardar/apple-bridge/internal/blobs"
@@ -51,5 +52,48 @@ func TestDocumentBlobLease(t *testing.T) {
 		if _, err = gateway.documentInput(ctx, principal, raw); !errors.Is(err, contracts.ErrForbidden) {
 			t.Fatalf("lease boundary: %v", err)
 		}
+	}
+}
+
+func TestDocumentInputFrameAndCleanup(t *testing.T) {
+	ctx := context.Background()
+	uploads, err := blobs.Open(t.TempDir(), blobs.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer uploads.Close()
+	gateway := LocalGateway{Uploads: uploads}
+	data := bytes.Repeat([]byte("synthetic"), 40000)
+	raw, _ := json.Marshal(map[string]string{"data_base64": base64.StdEncoding.EncodeToString(data)})
+	args, cleanup, err := gateway.stageDocumentInput(ctx, raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+	frame, err := contracts.EncodeFrame(contracts.IPCFrame{T: "Query", ID: "qry_fixture", Op: "pdf.text", Args: args, DeadlineMS: 1000})
+	if err != nil || len(frame) > contracts.MaxFrame {
+		t.Fatalf("document did not fit IPC: %v", err)
+	}
+	var staged struct {
+		File string `json:"file"`
+	}
+	if json.Unmarshal(args, &staged) != nil || staged.File == "" {
+		t.Fatal("no private input")
+	}
+	info, err := os.Stat(staged.File)
+	if err != nil || info.Mode().Perm() != 0600 {
+		t.Fatal("input permissions")
+	}
+	read, err := os.ReadFile(staged.File)
+	if err != nil || !bytes.Equal(read, data) {
+		t.Fatal("input bytes changed")
+	}
+	cleanup()
+	if _, err = os.Stat(staged.File); !os.IsNotExist(err) {
+		t.Fatal("input retained after cleanup")
+	}
+	mixed, _ := json.Marshal(map[string]any{"data_base64": base64.StdEncoding.EncodeToString(data), "file": "/fixture", "allow_file": true})
+	if _, err = gateway.documentInput(ctx, trust.Principal{}, mixed); !errors.Is(err, contracts.ErrInvalid) {
+		t.Fatal("mixed document inputs accepted")
 	}
 }

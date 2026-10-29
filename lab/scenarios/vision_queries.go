@@ -1,13 +1,18 @@
 package scenarios
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/lab/scripted"
 	"github.com/JohanSardar/apple-bridge/lab/world"
+	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -45,7 +50,7 @@ func runVisionQueries(ctx context.Context, s Scenario, level string) (e Evidence
 		return
 	}
 	client := scripted.Client{Endpoint: endpoint}
-	if level == "real" {
+	{
 		readyErr := w.Await(15*time.Second, func() bool {
 			var version contracts.QueryResult
 			return client.Call(ctx, "helper.version", contracts.Query{Args: json.RawMessage(`{}`), DeadlineMS: 1000}, &version) == nil
@@ -54,6 +59,73 @@ func runVisionQueries(ctx context.Context, s Scenario, level string) (e Evidence
 		if readyErr != nil {
 			return
 		}
+	}
+	if s.ID == "PDF-ANNOTATE" {
+		data, readErr := os.ReadFile(filepath.Join("lab", "fixtures", "vision", "fixture.pdf"))
+		add("fixture_read", readErr == nil)
+		args, _ := json.Marshal(map[string]any{"data_base64": base64.StdEncoding.EncodeToString(data), "annotations": []any{map[string]any{"page": 1, "type": "note", "text": "[ab-test synthetic]", "x": 10, "y": 10, "width": 20, "height": 20}, map[string]any{"page": 1, "type": "highlight", "text": "", "x": 40, "y": 40, "width": 50, "height": 15}}})
+		endpoint.Token, err = w.ScopedToken(endpoint, "pdf:read,pdf:write")
+		add("annotation_scopes", err == nil)
+		client.Endpoint = endpoint
+		badArgs, _ := json.Marshal(map[string]any{"data_base64": base64.StdEncoding.EncodeToString(data), "annotations": []any{}})
+		var rejected contracts.CommandRecord
+		badErr := client.Call(ctx, "pdf.annotate", contracts.Command{ID: contracts.NewCommandID(), Args: badArgs, WaitMS: 15000}, &rejected)
+		var invalid *contracts.Error
+		add("empty_annotations_rejected", errors.As(badErr, &invalid) && invalid.Code == "invalid")
+		var result contracts.CommandRecord
+		commandID := contracts.NewCommandID()
+		err = client.Call(ctx, "pdf.annotate", contracts.Command{ID: commandID, Args: args, WaitMS: 15000}, &result)
+		e.Metrics = map[string]any{"observed_record_count": len(result.ObservedRecordIDs)}
+		var annotationProblem *contracts.Error
+		if errors.As(err, &annotationProblem) {
+			e.Metrics["annotation_error_code"] = annotationProblem.Code
+		}
+		if result.Error != nil {
+			e.Metrics["command_error_code"] = result.Error.Code
+		}
+		add("annotation_observed", err == nil && result.State == "observed" && len(result.ObservedRecordIDs) == 1)
+		if err != nil || len(result.ObservedRecordIDs) != 1 {
+			return
+		}
+		var records contracts.ReadResult
+		err = client.Call(ctx, "records.query", contracts.ReadQuery{Collection: "pdf.artifact", ID: result.ObservedRecordIDs[0]}, &records)
+		add("artifact_metadata", err == nil && len(records.Records) == 1)
+		if err != nil || len(records.Records) != 1 {
+			return
+		}
+		var metadata struct {
+			Blob  contracts.BlobReference `json:"blob"`
+			Count int                     `json:"annotation_count"`
+		}
+		err = json.Unmarshal(records.Records[0].Data, &metadata)
+		add("annotation_count", err == nil && metadata.Count == 2)
+		var output []byte
+		err = w.Await(10*time.Second, func() bool {
+			req, _ := http.NewRequestWithContext(ctx, "GET", endpoint.URL+"/v1/blobs/"+metadata.Blob.Digest+"?record="+result.ObservedRecordIDs[0], nil)
+			req.Host = endpoint.Host
+			req.Header.Set("Authorization", "Bearer "+endpoint.Token)
+			response, problem := http.DefaultClient.Do(req)
+			if problem != nil {
+				return false
+			}
+			defer response.Body.Close()
+			output, problem = io.ReadAll(io.LimitReader(response.Body, 16<<20))
+			return problem == nil && response.StatusCode == 200
+		})
+		sum := sha256.Sum256(output)
+		add("new_pdf_blob_digest", err == nil && hex.EncodeToString(sum[:]) == metadata.Blob.Digest && !bytes.Equal(output, data))
+		blobArgs, _ := json.Marshal(map[string]any{"blob": map[string]string{"collection": "pdf.artifact", "record_id": result.ObservedRecordIDs[0], "digest": metadata.Blob.Digest}})
+		var extracted contracts.QueryResult
+		blobErr := client.Call(ctx, "pdf.text", contracts.Query{Args: blobArgs, DeadlineMS: 10000}, &extracted)
+		var content struct {
+			Pages []struct {
+				Text string `json:"text"`
+			} `json:"pages"`
+		}
+		contentErr := json.Unmarshal(extracted.ResultJSON, &content)
+		add("artifact_blob_input_preserves_document_text", blobErr == nil && contentErr == nil && len(content.Pages) == 1 && strings.TrimSpace(content.Pages[0].Text) == "Bridge fixture")
+		add("output_contains_note_and_highlight", bytes.Contains(output, []byte("/Subtype /Text")) && bytes.Contains(output, []byte("/Subtype /Highlight")) && bytes.Contains(output, []byte("/Contents ([ab-test synthetic])")))
+		return
 	}
 	op := "vision.ocr"
 	if s.ID == "PDF-TEXT" {

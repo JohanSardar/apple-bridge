@@ -1073,13 +1073,14 @@ features:
     scenarios:
       - {id: VIS-OCR, levels: [sim, real]}
       - {id: PDF-TEXT, levels: [sim, real]}
+      - {id: PDF-ANNOTATE, levels: [sim]}
     limits:
       - scenario: VIS-OCR
         level: real
         reason: Doctor readiness and five-minute idle CPU proof remain unimplemented; query-lease blobs and explicitly opted-in local files are accepted.
       - scenario: PDF-TEXT
         level: real
-        reason: pdf.annotate command and its artifact readback evidence are not implemented; extraction and search only.
+        reason: Native annotation build and real query qualification pending.
   - id: shortcuts.runner
     title: Bounded Shortcuts CLI runner
     requirements: [R-RW]

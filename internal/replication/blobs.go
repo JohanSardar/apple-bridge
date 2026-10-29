@@ -8,6 +8,7 @@ import (
 	"github.com/coder/websocket"
 	"io"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -157,7 +158,10 @@ func (c *Client) followBlobs(ctx context.Context, conn *websocket.Conn, events <
 				continue
 			}
 			list := []contracts.BlobReference{}
-			for _, refs := range refs {
+			for owner, refs := range refs {
+				if prefix := contracts.Collections["pdf.artifact"]; prefix != "" && strings.HasPrefix(owner, "record:"+prefix+"_") {
+					continue
+				}
 				list = append(list, refs...)
 			}
 			sort.Slice(list, func(i, j int) bool {

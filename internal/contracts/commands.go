@@ -158,6 +158,9 @@ func ValidateCommand(c Command) (ReminderArgs, error) {
 	if strings.HasPrefix(c.Op, "mac.") {
 		return ReminderArgs{}, ValidateMacCommand(c)
 	}
+	if c.Op == "pdf.annotate" {
+		return ReminderArgs{}, ValidatePDFAnnotate(c)
+	}
 	if c.Op == "shortcuts.run" {
 		return ReminderArgs{}, ValidateShortcutRun(c)
 	}
