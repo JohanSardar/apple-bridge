@@ -33,6 +33,7 @@ extension FilesSource {
 
     public func prepare(_ command: JSON) async throws -> Prepared {
         let action = command["action"], args = action["args"], op = action["op"].string
+        if op == "files.transform" { return Prepared(nativeState: .object(["route": .string("native")]), fingerprint: command["request_hash"].string, action: action) }
         guard Self.commands.contains(op) else { throw SourceFailure.unsupported }
         if op == "files.create" || op == "files.write" || op == "files.move" || op == "files.rename" { _ = try destination(args) }
         if op != "files.create" && op != "files.write" { _ = try confined(args, "path") }
@@ -45,6 +46,7 @@ extension FilesSource {
     }
 
     public func dispatch(_ prepared: Prepared) async throws -> JSON {
+        if prepared.action["op"].string == "files.transform" { return try transform(prepared.action["args"]) }
         _ = try await prepare(.object(["action": prepared.action]))
         let args = prepared.action["args"], op = prepared.action["op"].string
         let fm = FileManager.default

@@ -62,3 +62,9 @@ SC-RUN uses only synthetic executables: a forking timeout fixture checks descend
 Traversal skips symlinks and hidden entries, caps depth at 12, visits at 50,000, time at ten seconds, each metadata file at 4 MiB, total metadata at 32 MiB, rows at 2,000 and serialized output conservatively below 900 KB. Malformed metadata and traversal failures mark the result incomplete. Hidden and assistant-only actions are excluded. SC-ACTIONS sim generates a synthetic bundle, tests malformed metadata and symlink exclusion, and exercises the public query against SimApple. Real reads only installed metadata and retains pass/fail evidence without action names or app identifiers.
 
 `files.transform` command integration and FILES-TRANSFORM remain pending in this partial T29 slice; no transform capability is advertised.
+
+Installed pack qualification uses a unique `AB Pack v1` inventory marker and exactly one each of AB Echo, AB Clock and AB Focus from bounded `shortcuts list --show-identifiers`. Missing, duplicate or unavailable inventory omits `pack_version`; the bundled version alone never establishes installation. This marker establishes inventory presence, not workflow integrity. Import the marker alongside the signed pack.
+
+`shortcuts.run` accepts mutually exclusive UTF-8 `input` or inline file/blob bytes in `input_base64`, capped at 16 KiB decoded. Output remains base64 encoded, capped at 32 KiB, with `output_bytes` and SHA-256 evidence. No caller filesystem path is accepted. Large uploaded blobs remain unsupported.
+
+AB Echo uses a WFTextTokenString with an ExtensionInput attachment in its text field. The corrected signed workflow requires re-import as `AB Echo`; SC-RUN-REAL invokes only that exact installed name once with a 20-second timeout and retains counts, digests and status. SC-IDLE samples Helper CPU for five idle minutes after capture readiness; qualification is limited by decision 37 until T53 resolves the shared Messages reconcile CPU issue.
