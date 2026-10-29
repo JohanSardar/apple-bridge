@@ -1441,6 +1441,7 @@ features:
     depends_on: [core.queries]
     status: limited
     scenarios:
+      - {id: QUERY-AGENT, levels: [agent]}
       - {id: LOC-IDLE, levels: [real]}
       - {id: MAP-IDLE, levels: [real]}
       - {id: LOC-CURRENT-REAL, levels: [real]}
@@ -1452,6 +1453,7 @@ features:
       - {id: MAP-SNAPSHOT-REAL, levels: [real]}
     notes: Transit route geometry is unsupported by MKDirections (ETA is supported); real maps.open remains unverified. Whole-Helper idle qualification is blocked by T53.
     limits:
+      - {scenario: QUERY-AGENT, level: agent, reason: "Decision 39: Ubuntu Codex OAuth token is revoked (HTTP 401 token_revoked); agent runner not executed. Reauthentication required for MCP-only qualification."}
       - scenario: LOC-CURRENT-REAL
         level: real
         reason: Helper Location authorization is not_determined; never trigger a permission prompt. Requires Location Services permission for AppleBridgeHelper.
