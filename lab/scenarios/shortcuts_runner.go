@@ -2,6 +2,8 @@ package scenarios
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"os"
@@ -19,10 +21,27 @@ import (
 )
 
 func runShortcutsRunner(ctx context.Context, s Scenario, level string) Evidence {
+	if s.ID == "SC-IDLE" {
+		return runShortcutsIdleReal(ctx, s, level)
+	}
 	e := Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, At: time.Now().UTC(), Passed: true, Metrics: map[string]any{}}
 	add := func(name string, passed bool) {
 		e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: passed})
 		e.Passed = e.Passed && passed
+	}
+	if s.ID == "SC-RUN-REAL" {
+		input := []byte("[ab-test synthetic echo]")
+		started := time.Now()
+		result, err := (shortcut.CLI{}).Run(ctx, shortcut.Input{Shortcut: "AB Echo", Data: input, Timeout: 20 * time.Second})
+		digest := sha256.Sum256(result.Data)
+		e.Metrics["elapsed_ms"] = time.Since(started).Milliseconds()
+		e.Metrics["timed_out"] = result.TimedOut
+		e.Metrics["exit_status"] = result.ExitStatus
+		e.Metrics["output_bytes"] = len(result.Data)
+		e.Metrics["output_sha256"] = hex.EncodeToString(digest[:])
+		add("bounded_runner_completed", err == nil && result.ExitStatus == 0 && !result.TimedOut)
+		add("echo_output_matches", string(result.Data) == string(input))
+		return e
 	}
 	dir, err := os.MkdirTemp("", "ab-shortcuts-fixture-")
 	add("fixture_directory", err == nil)
@@ -216,4 +235,67 @@ func shortcutsChecksFresh(path string) bool {
 		}
 	}
 	return true
+}
+
+func runShortcutsIdleReal(ctx context.Context, s Scenario, level string) Evidence {
+	e := Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, At: time.Now().UTC(), Hosts: []string{"air"}, Metrics: map[string]any{}}
+	w, err := world.NewReal(ctx, level, 0, world.BlobOptions{Scope: "shortcuts:read,system:read"})
+	if err != nil {
+		e.Assertions = []Assertion{{Name: "world_started", Passed: false}}
+		return e
+	}
+	defer w.Close()
+	if w.Await(60*time.Second, func() bool {
+		var rows contracts.ReadResult
+		return (scripted.Client{Endpoint: w.Gateway}).Call(ctx, "records.query", contracts.ReadQuery{Collection: "shortcuts.shortcut", Limit: 1}, &rows) == nil && len(rows.Records) > 0
+	}) != nil {
+		e.Assertions = []Assertion{{Name: "shortcuts_capture_ready", Passed: false}}
+		return e
+	}
+	warmup := time.NewTimer(30 * time.Second)
+	defer warmup.Stop()
+	select {
+	case <-ctx.Done():
+		return e
+	case <-warmup.C:
+	}
+	pid, err := os.ReadFile(filepath.Join(w.Gateway.Home, "helper", "helper.pid"))
+	cpu := func() (float64, error) {
+		raw, err := exec.CommandContext(ctx, "ps", "-p", strings.TrimSpace(string(pid)), "-o", "time=").Output()
+		if err != nil {
+			return 0, err
+		}
+		parts := strings.Split(strings.TrimSpace(string(raw)), ":")
+		var value float64
+		for _, p := range parts {
+			n, err := strconv.ParseFloat(p, 64)
+			if err != nil {
+				return 0, err
+			}
+			value = value*60 + n
+		}
+		return value, nil
+	}
+	if err != nil {
+		e.Assertions = []Assertion{{Name: "helper_pid", Passed: false}}
+		return e
+	}
+	before, err := cpu()
+	if err != nil {
+		return e
+	}
+	start := time.Now()
+	timer := time.NewTimer(5 * time.Minute)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return e
+	case <-timer.C:
+	}
+	after, err := cpu()
+	percent := (after - before) / time.Since(start).Seconds() * 100
+	e.Metrics["helper_cpu_percent"] = percent
+	e.Passed = err == nil && percent >= 0 && percent < 2
+	e.Assertions = []Assertion{{Name: "five_minute_helper_cpu_under_two_percent", Passed: e.Passed}}
+	return e
 }
