@@ -1386,3 +1386,21 @@ features:
       - {id: WX-REAL, levels: [real]}
     limits:
       - {scenario: WX-REAL, level: real, reason: "real qualification batched at end; Weather action identifiers and signed AB Weather pack remain unverified. weather.minute and weather.alerts are not exposed by Shortcuts."}
+  - id: mac.commands
+    title: Mac system commands
+    requirements: [R-API, R-SCOPE]
+    milestone: G6
+    modules: [native/Sources/MacSource, internal/contracts]
+    depends_on: [mac.capture]
+    status: limited
+    scenarios:
+      - {id: MAC-COMMANDS, levels: [sim]}
+      - {id: MAC-AUDIO-REAL, levels: [real]}
+      - {id: MAC-APPEARANCE-REAL, levels: [real]}
+      - {id: MAC-APPS-REAL, levels: [real]}
+      - {id: MAC-KEEPAWAKE-REAL, levels: [real]}
+      - {id: MAC-CLIPBOARD-REAL, levels: [real]}
+      - {id: MAC-REPLICA, levels: [replica]}
+    limits:
+      - {scenario: MAC-CLIPBOARD-REAL, level: real, reason: Clipboard supports transient text up to 64 KiB; image payloads and approval-required agent writes remain unsupported.}
+    notes: Audio, appearance, app lifecycle and IOPM assertions use native readback. Clipboard text uses transient reads and redacted writes; image payloads and approval-required writes are unavailable. MAC-LOCK remains unavailable and is never exercised.

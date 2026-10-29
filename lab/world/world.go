@@ -54,10 +54,11 @@ type BlobOptions struct {
 	Slow    bool
 }
 type NativeSetup struct {
-	FilesystemTruth bool
-	HoldBackfill    bool
-	BeforeStart     func(*World) error
-	Cleanup         func(*World) error
+	IndependentTruth bool
+	FilesystemTruth  bool
+	HoldBackfill     bool
+	BeforeStart      func(*World) error
+	Cleanup          func(*World) error
 }
 
 type World struct {
@@ -346,6 +347,9 @@ func newEnvironment(ctx context.Context, level string, replicas, seed int, nativ
 			w.TruthApp = ""
 		}
 		for _, build := range builds {
+			if setup.IndependentTruth && build.script == "build-truth.sh" {
+				continue
+			}
 			if _, err = commandOutput(ctx, filepath.Join(root, "packaging", "dev", build.script), build.app); err != nil {
 				return nil, err
 			}

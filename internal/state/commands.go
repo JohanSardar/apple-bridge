@@ -239,7 +239,8 @@ func (s *Store) persistCommand(ctx context.Context, t CommandTransition, partsUp
 	r.Cursor = cursor
 	runnerCompletion := (r.Command.Op == "shortcuts.run" && r.Source == contracts.Shortcuts && contracts.ShortcutCompletionEvidence(r.Evidence, r.RequestHash) || r.Source == "music" && contracts.MusicPlayerOperation(r.Command.Op) && contracts.MusicCompletionEvidence(r.Evidence, r.RequestHash)) && r.State == contracts.CommandObserved && r.CommitSeq == 0
 	playbackCompletion := contracts.PlaybackOperation(r.Command.Op) && r.Source == contracts.CollectionSource(r.Command.Op) && r.State == contracts.CommandObserved && r.CommitSeq == 0 && contracts.PlaybackEvidence(r.Evidence, r.RequestHash)
-	if !runnerCompletion && !playbackCompletion && (r.State == contracts.CommandObserved || r.State == contracts.CommandDelivered) && (r.CommitSeq == 0 || r.CommitSeq >= cursor.Sequence) {
+	macCompletion := r.Source == "mac" && r.State == contracts.CommandObserved && contracts.MacCompletionEvidence(r.Evidence, r.RequestHash)
+	if !macCompletion && !runnerCompletion && !playbackCompletion && (r.State == contracts.CommandObserved || r.State == contracts.CommandDelivered) && (r.CommitSeq == 0 || r.CommitSeq >= cursor.Sequence) {
 		return r, contracts.ErrCorrupt
 	}
 	b, err = json.Marshal(r)

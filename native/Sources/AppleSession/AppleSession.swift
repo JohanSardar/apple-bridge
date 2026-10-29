@@ -517,6 +517,7 @@ public actor AppleSession: ObservationSink {
             result["fingerprint"] = fingerprint
             return .object(result)
         }
+        if operation.hasPrefix("mac.") { guard evidence["observed"].bool, evidence["fingerprint"] == fingerprint, evidence["readback"] != .null else { throw SourceFailure.unavailable }; return evidence }
         if operation.hasPrefix("notes."), let notes=additionalSources["notes"] as? NotesSource {
             try await notes.reconcile(into:self)
             let key=evidence["native_key"].string
@@ -659,6 +660,13 @@ let operation=outcome["evidence"]["prepared"]["action"]["op"].string
         } catch { if wire === connection && !Task.isCancelled { await rejectCommand(frame, error: error) } }
     }
 
+    private func durableAction(_ action: JSON) -> JSON {
+        guard action["op"].string == "mac.clipboard_write" else { return action }
+        var safe = action.object
+        safe["args"] = .object([:])
+        return .object(safe)
+    }
+
     private func dispatch(_ frame: JSON) async {
         let activity = ForegroundActivity.shared.begin()
         defer { ForegroundActivity.shared.end(activity) }
@@ -674,7 +682,7 @@ let operation=outcome["evidence"]["prepared"]["action"]["op"].string
  if ticket.prepared.action["op"].string.hasPrefix("notes."), let notes=additionalSources["notes"] as? NotesSource { try await notes.validate(ticket.prepared) } else if ticket.prepared.action["op"].string.hasPrefix("contacts.") {try await contacts.validate(ticket.prepared)} else if ticket.prepared.action["op"].string.hasPrefix("calendar.") {try await calendar.validate(ticket.prepared)} else if selected.name == "reminders" { try await source.validate(ticket.prepared) } else if let messages=selected as? Messages {try await messages.validate(ticket.prepared)}
             try Task.checkCancellation()
             guard ticket.fence == fence, ContinuousClock.now < ticket.expiry, wire != nil else { throw SourceFailure.expired }
-            try await guardLog.append(.object(["t": .string("DispatchStarted"), "command_id": id, "ticket": frame["ticket"], "started_at": .string(timestamp()), "prepared": .object(["action": ticket.prepared.action, "native_state": ticket.prepared.nativeState, "fingerprint": .string(ticket.prepared.fingerprint), "request_hash": ticket.command["request_hash"]])]))
+            try await guardLog.append(.object(["t": .string("DispatchStarted"), "command_id": id, "ticket": frame["ticket"], "started_at": .string(timestamp()), "prepared": .object(["action": durableAction(ticket.prepared.action), "native_state": ticket.prepared.nativeState, "fingerprint": .string(ticket.prepared.fingerprint), "request_hash": ticket.command["request_hash"]])]))
             started = true
             try await pause("dispatch")
             try Task.checkCancellation()
@@ -682,7 +690,7 @@ let operation=outcome["evidence"]["prepared"]["action"]["op"].string
             let refetched = ticket.prepared.action["op"].string.hasPrefix("contacts.") ? try await contacts.dispatch(ticket.prepared) : ticket.prepared.action["op"].string.hasPrefix("calendar.") ? try await calendar.dispatch(ticket.prepared) : try await selected.dispatch(ticket.prepared)
             try await pause("outcome")
             var retained = refetched.object
-            retained["prepared"] = .object(["action": ticket.prepared.action, "native_state": ticket.prepared.nativeState, "request_hash": ticket.command["request_hash"]])
+            retained["prepared"] = .object(["action": durableAction(ticket.prepared.action), "native_state": ticket.prepared.nativeState, "request_hash": ticket.command["request_hash"]])
             let evidence = refetched["observed"].bool ? try await observedEvidence(.object(retained), fingerprint: ticket.command["request_hash"], operation:ticket.prepared.action["op"].string) : .object(retained)
             let outcome = JSON.object(["t": .string("Outcome"), "command_id": id, "disposition": refetched["disposition"].string.isEmpty ? .string("locally_observed") : refetched["disposition"], "evidence": evidence])
             try await guardLog.append(outcome)
@@ -694,7 +702,7 @@ let operation=outcome["evidence"]["prepared"]["action"]["op"].string
         } catch {
             if started {
                 let nativeCode = (error as? SourceFailure).map { String(describing: $0) } ?? (error as? MessagesUIFailure)?.rawValue ?? "native_error"
-                let outcome = JSON.object(["t": .string("Outcome"), "command_id": id, "disposition": .string("indeterminate"), "evidence": .object(["reason": .string("dispatch_evidence_unavailable"), "native_error_code": .string(nativeCode), "prepared": .object(["action": ticket.prepared.action, "native_state": ticket.prepared.nativeState, "request_hash": ticket.command["request_hash"]])])])
+                let outcome = JSON.object(["t": .string("Outcome"), "command_id": id, "disposition": .string("indeterminate"), "evidence": .object(["reason": .string("dispatch_evidence_unavailable"), "native_error_code": .string(nativeCode), "prepared": .object(["action": durableAction(ticket.prepared.action), "native_state": ticket.prepared.nativeState, "request_hash": ticket.command["request_hash"]])])])
                 try? await guardLog.append(outcome); try? wire?.send(outcome)
             } else { await rejectCommand(ticket.command, error: error) }
         }
