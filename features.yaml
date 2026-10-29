@@ -1339,3 +1339,16 @@ features:
       - {scenario: SPEECH-SAY, level: real, reason: real qualification batched at end}
       - {scenario: AUD-TRANSCRIBE, level: real, reason: real qualification batched at end}
       - {scenario: AI-LOCAL, level: real, reason: real qualification batched at end}
+  - id: weather.pack
+    title: Weather via AB Weather pack
+    requirements: [R-RW]
+    milestone: G7
+    modules: [internal/weatherpack]
+    depends_on: [shortcuts.runner]
+    status: limited
+    notes: Current, hourly and daily fake pack seam preserves attribution and bounds requests and output. Weather action identifiers and signed pack output are unverified; queries remain unadvertised and no importable artifact is supplied. No WeatherKit key used. Minute and alerts are unavailable through Shortcuts.
+    scenarios:
+      - {id: WX-SIM, levels: [sim]}
+      - {id: WX-REAL, levels: [real]}
+    limits:
+      - {scenario: WX-REAL, level: real, reason: "real qualification batched at end; Weather action identifiers and signed AB Weather pack remain unverified. weather.minute and weather.alerts are not exposed by Shortcuts."}

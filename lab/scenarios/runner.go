@@ -370,6 +370,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.Feature == "core.permissions" {
 		return runPermissionStatus(ctx, s, level)
 	}
+	if s.Feature == "weather.pack" {
+		return runWeatherPack(ctx, s, level)
+	}
 	if s.Feature == "focus.pack" {
 		return runFocusPack(ctx, s, level)
 	}
