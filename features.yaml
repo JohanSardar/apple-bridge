@@ -1303,3 +1303,17 @@ features:
       - scenario: SC-ACTIONS
         level: real
         reason: Real count qualification was not run because the shared heavy lane remained occupied beyond the ticket budget; metadata formats and coverage vary by app.
+  - id: files.commands
+    title: Opt-in file commands with readback
+    requirements: [R-API, R-SCOPE]
+    milestone: G9
+    modules: [native/Sources/FilesSource, internal/contracts, internal/operations]
+    depends_on: [files.capture]
+    status: limited
+    scenarios:
+      - {id: FILE-COMMANDS, levels: [sim]}
+      - {id: FILE-CRUD-REAL, levels: [real]}
+      - {id: FILE-REPLICA, levels: [replica]}
+    limits:
+      - {scenario: FILE-COMMANDS, level: sim, reason: Content is inline base64 capped at 128 KiB; upload blob references remain unsupported.}
+      - {scenario: FILE-CRUD-REAL, level: real, reason: CRUD filesystem Truth passes; real cloud download and eviction qualification remains outstanding.}

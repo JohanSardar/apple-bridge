@@ -232,6 +232,9 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 	if object == "" {
 		object = "lists"
 	}
+	if strings.HasPrefix(c.Op, "files.") {
+		object = "files"
+	}
 	release, err := g.lock(runctx, "object:"+object)
 	if err != nil {
 		return g.transition(g.Context, r, "expired", "expired", nil, nil)
@@ -240,6 +243,13 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 	action := contracts.NativeAction{Op: c.Op, Args: a, Origin: c.Origin}
 	if strings.HasPrefix(c.Op, "photos.") || strings.HasPrefix(c.Op, "mail.") {
 		action.Args = c.Args
+	}
+	if strings.HasPrefix(c.Op, "files.") {
+		var args contracts.FileArgs
+		if json.Unmarshal(c.Args, &args) != nil {
+			return g.transition(g.Context, r, "rejected", "rejected_before_dispatch", nil, contracts.ErrInvalid)
+		}
+		action.Args = args
 	}
 	if c.Op == "shortcuts.run" {
 		var args contracts.ShortcutRunArgs
@@ -408,7 +418,7 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 	}
 	if prepared.T == "Rejected" {
 		problem := prepared.Error
-		if r.Source != contracts.Messages {
+		if r.Source != contracts.Messages && r.Source != "files" {
 			problem = g.nativeConflict(runctx, p, a.ID, action.NativeKey, collection, prepared)
 		}
 		if problem == nil {
@@ -495,6 +505,10 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 		to = "indeterminate"
 		f.Disposition = "indeterminate"
 	}
+	if strings.HasPrefix(r.Command.Op, "files.") && to == "observed" && !contracts.FileCompletionEvidence(r.Command, f.Evidence, r.RequestHash) {
+		to = "indeterminate"
+		f.Disposition = "indeterminate"
+	}
 	if r.Command.Op != "shortcuts.run" && (to == "observed" || to == "delivered" || to == "delivery_failed") {
 		var evidence struct {
 			NativeKey         string `json:"native_key"`
@@ -510,6 +524,9 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 			if r.Command.Op == "photos.create_album" {
 				collection = "photos.album"
 			}
+		}
+		if r.Source == "files" {
+			collection = "files.item"
 		}
 		if r.Source == contracts.Contacts {
 			collection = "contacts.contact"

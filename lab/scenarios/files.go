@@ -12,6 +12,12 @@ import (
 )
 
 func runFiles(ctx context.Context, s Scenario, level string) Evidence {
+	if s.ID == "FILE-COMMANDS" {
+		return runFileCommands(ctx, s)
+	}
+	if s.ID == "FILE-REPLICA" {
+		return runFilesReplica(ctx, s)
+	}
 	e := Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, At: time.Now().UTC(), Passed: true, Metrics: map[string]any{}}
 	add := func(name string, ok bool) {
 		e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok})

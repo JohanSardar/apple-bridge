@@ -149,6 +149,9 @@ func OperationSchema(d OperationDescriptor) map[string]any {
 		fields["limit"].(map[string]any)["maximum"] = 200
 		return s
 	}
+	if d.Kind == CommandOp && d.Source == "files" {
+		return fileCommandSchema(d, s)
+	}
 	if d.Kind == CommandOp && d.Source == Shortcuts {
 		args := JSONSchema(ShortcutRunArgs{})
 		fields := args["properties"].(map[string]any)
