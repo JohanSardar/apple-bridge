@@ -1,0 +1,29 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[7.54 8.62 14.95] cpu_idle=13% cpus=10 other_heavy=0"
+  },
+  "status": "limited",
+  "run_id": "",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "APP-HEALTH-WRITE-REAL",
+  "level": "real",
+  "passed": false,
+  "git_sha": "",
+  "at": "2026-10-29T23:54:11.568385Z",
+  "assertions": [
+    {
+      "name": "health_write_permission",
+      "passed": false,
+      "detail": "limited: needs Allow tap"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

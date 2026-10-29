@@ -28,6 +28,11 @@ struct CapabilityScreen: View {
                     Button("Allow Location") { LocationCapability.adapter.requestPermission() }
                     Text("Enable Always and Precise Location for geofences and significant changes.")
                 }
+                if capability.id == "healthwrite" {
+                    LabeledContent("Health", value: HealthWriteController.shared.status)
+                    Button("Allow Health write access") { Task { await HealthWriteController.shared.authorize() } }
+                    Button("Test tagged Health write and cleanup") { Task { await HealthWriteController.shared.prove() } }
+                }
                 if capability.id == "healthread" {
                     LabeledContent("Health", value: HealthReadController.shared.status)
                     Button("Allow Health read access") { Task { await HealthReadController.shared.enable() } }

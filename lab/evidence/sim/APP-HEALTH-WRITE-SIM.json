@@ -1,0 +1,39 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[7.07 8.55 14.96] cpu_idle=20% cpus=10 other_heavy=0"
+  },
+  "run_id": "",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "APP-HEALTH-WRITE-SIM",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-29T23:54:07.447142Z",
+  "assertions": [
+    {
+      "name": "swift_write_build",
+      "passed": true
+    },
+    {
+      "name": "four_tagged_samples_written_read_deleted",
+      "passed": true
+    },
+    {
+      "name": "gateway_admission",
+      "passed": true
+    },
+    {
+      "name": "signed_health_command_roundtrip",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

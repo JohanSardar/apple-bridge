@@ -26,6 +26,8 @@
 	<string>0.1</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Log water, weight, mindful minutes and workouts you request.</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Capture your selected Health samples and summaries for your paired Apple Bridge gateway.</string>
 	<key>LSRequiresIPhoneOS</key>
