@@ -19,6 +19,17 @@ import (
 )
 
 func runWebFixtureSnapshot(ctx context.Context, s Scenario, level string) Evidence {
+	for _, name := range []string{"APPLE_BRIDGE_MIN_FREE_KB", "APPLE_BRIDGE_TRIM_HEADROOM_KB"} {
+		value, present := os.LookupEnv(name)
+		defer func() {
+			if present {
+				os.Setenv(name, value)
+			} else {
+				os.Unsetenv(name)
+			}
+		}()
+		os.Setenv(name, "0")
+	}
 	sha, _ := exec.Command("git", "rev-parse", "HEAD").Output()
 	e := Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, GitSHA: strings.TrimSpace(string(sha)), At: time.Now().UTC(), Hosts: []string{"air"}, Metrics: map[string]any{}, Latency: map[string]Latency{}, Assertions: []Assertion{}}
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }

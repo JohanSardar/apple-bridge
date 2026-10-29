@@ -91,13 +91,14 @@ func run(ctx context.Context, args []string) error {
 		socket := set.String("socket", "", "ApplePeer socket")
 		secret := set.String("secret-file", "", "installation secret file")
 		control := set.String("control", "", "control Unix socket")
+		legacySources := set.Bool("legacy-sources", false, "simulate the legacy helper source catalog")
 		if err := set.Parse(args[1:]); err != nil {
 			return err
 		}
 		if *socket == "" || *secret == "" || *control == "" {
 			return fmt.Errorf("simapple paths required")
 		}
-		return simapple.Run(ctx, simapple.Config{Socket: *socket, SecretFile: *secret, Control: *control})
+		return simapple.Run(ctx, simapple.Config{Socket: *socket, SecretFile: *secret, Control: *control, LegacySources: *legacySources})
 	case "run":
 		level := "sim"
 		asJSON := false

@@ -312,7 +312,7 @@ func runSearchUpdatePerf(ctx context.Context, scenario Scenario, level string) E
 	e.Latency["migration_until_search_ready"] = stats([]float64{float64(time.Since(started)) / float64(time.Millisecond)}, 0)
 	var version string
 	err = database.QueryRowContext(ctx, "SELECT value FROM meta WHERE key='fts_version'").Scan(&version)
-	add("fts_version_four", problem == nil && err == nil && version == "4")
+	add("fts_version_five", problem == nil && err == nil && version == "5")
 	after, err = snapshot()
 	add("fixed_search_sets_equal_after_rebuild", err == nil && reflect.DeepEqual(before, after))
 	var stableID int64

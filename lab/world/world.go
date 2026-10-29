@@ -424,7 +424,11 @@ func newEnvironment(ctx context.Context, level string, replicas, seed int, nativ
 	w.Gateway = Endpoint{URL: "http://" + cfg.APIAddress, Host: cfg.APIAddress, Token: token, Home: gatewayHome}
 	if !native {
 		control := filepath.Join(w.Dir, "sim.sock")
-		if _, err = w.start("simapple", false, w.Dir, w.lab, "simapple", "--socket", cfg.Socket, "--secret-file", filepath.Join(gatewayHome, "apple-secret"), "--control", control); err != nil {
+		simArgs := []string{"simapple", "--socket", cfg.Socket, "--secret-file", filepath.Join(gatewayHome, "apple-secret"), "--control", control}
+		if legacy, _ := ctx.Value(legacyHelperKey{}).(bool); legacy {
+			simArgs = append(simArgs, "--legacy-sources")
+		}
+		if _, err = w.start("simapple", false, w.Dir, w.lab, simArgs...); err != nil {
 			return nil, err
 		}
 		transport := &http.Transport{DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {

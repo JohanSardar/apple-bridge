@@ -14,7 +14,7 @@ import (
 )
 
 func rmSearchMigration(ctx context.Context, w *world.World) (map[string]any, error) {
-	metrics := map[string]any{"from": "3", "to": "4"}
+	metrics := map[string]any{"from": "3", "to": "5"}
 	if w.Level != "sim" || w.Native {
 		return metrics, fmt.Errorf("synthetic world required")
 	}
@@ -88,7 +88,7 @@ func rmSearchMigration(ctx context.Context, w *world.World) (map[string]any, err
 	var version string
 	err = database.QueryRowContext(ctx, "SELECT value FROM meta WHERE key='fts_version'").Scan(&version)
 	metrics["schema_version"] = version
-	if err == nil && version != "4" {
+	if err == nil && version != "5" {
 		err = fmt.Errorf("current search schema unavailable")
 	}
 	return metrics, err
