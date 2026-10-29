@@ -1,9 +1,9 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[13.38 12.76 10.2] cpu_idle=21% cpus=10 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[17.45 16.58 20.83] cpu_idle=47% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M64TWYHAKRFP7PCHJXHP8R41",
+  "run_id": "run_01M64WM0WHR6A0BZ1T376QYEW8",
   "metrics": {
     "assertion_count": 26,
     "capture_observer_resets": 0
@@ -12,7 +12,7 @@
   "level": "sim",
   "passed": true,
   "git_sha": "",
-  "at": "2026-10-29T22:01:15.56263Z",
+  "at": "2026-10-29T22:31:20.209888Z",
   "assertions": [
     {
       "name": "weather.current_fake_pack",
