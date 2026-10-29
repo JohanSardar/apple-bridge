@@ -1404,3 +1404,17 @@ features:
     limits:
       - {scenario: MAC-CLIPBOARD-REAL, level: real, reason: Clipboard supports transient text up to 64 KiB; image payloads and approval-required agent writes remain unsupported.}
     notes: Audio, appearance, app lifecycle and IOPM assertions use native readback. Clipboard text uses transient reads and redacted writes; image payloads and approval-required writes are unavailable. MAC-LOCK remains unavailable and is never exercised.
+
+  - id: mac.actions
+    title: Mac notifications settings wallpaper power and network
+    requirements: [R-API, R-SCOPE]
+    milestone: G6
+    modules: [native/Sources/MacSource, internal/contracts]
+    depends_on: [mac.capture]
+    status: limited
+    scenarios:
+      - {id: MAC-ACTIONS, levels: [sim]}
+      - {id: MAC-NOTIFY-REAL, levels: [real]}
+    limits:
+      - {scenario: MAC-NOTIFY-REAL, level: real, reason: "real qualification batched at end"}
+    notes: Power actions require approve agent admission and are disabled natively. Wallpaper accepts a bounded base64 image blob. Network ICMP ping is limited; reachability DNS and interface byte counters are available.
