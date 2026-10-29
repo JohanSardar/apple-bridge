@@ -34,7 +34,24 @@ func runClockPack(ctx context.Context, s Scenario, level string) Evidence {
 	if level != "sim" {
 		e.Status = "limited"
 		e.Passed = false
-		e.Conditions = map[string]string{"reason": "Leader must import AB Clock; structured alarm fields and timer running confirmation are unqualified. No real effects dispatched."}
+		entries, err := (shortcut.CLI{}).Inventory(ctx, false, "")
+		if err != nil {
+			e.Conditions = map[string]string{"reason": "needs Shortcuts inventory access"}
+			return e
+		}
+		installed := false
+		for _, entry := range entries {
+			installed = installed || entry.Name == clockpack.Name
+		}
+		e.Metrics["pack_installed"] = installed
+		reason := "needs import click"
+		if installed {
+			reason = "needs structured alarm field readback qualification"
+			if s.ID == "CLK-TIMER-REAL" {
+				reason = "needs timer running confirmation; macOS Start Timer action exists"
+			}
+		}
+		e.Conditions = map[string]string{"reason": reason}
 		return e
 	}
 	fixture := &clockPackFixture{result: shortcut.Result{ExitStatus: 0, Data: []byte("synthetic")}}
