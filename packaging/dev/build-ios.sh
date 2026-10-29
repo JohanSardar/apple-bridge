@@ -39,7 +39,7 @@ for name, shared in [("profile", True), ("ScreenTimeMonitor-profile", True), ("S
         sys.exit(name + ": provision the Screen Time App Group and regenerate the profile")
 PYPROFILE
 xcodegen generate --spec "$ROOT/ios/project.yml" --project "$ROOT/ios" >/dev/null
-xcodebuild -quiet -project "$ROOT/ios/AppleBridge.xcodeproj" -scheme AppleBridge -configuration Debug -sdk iphoneos -destination generic/platform=iOS -derivedDataPath "$OUTPUT/DerivedData" "ALARM_ACTIVITY_PROFILE=$ALARM_NAME" build
+xcodebuild -quiet -project "$ROOT/ios/AppleBridge.xcodeproj" -scheme AppleBridge -configuration Debug -sdk iphoneos -destination generic/platform=iOS -derivedDataPath "$OUTPUT/DerivedData" "APPLE_BRIDGE_APP_PROFILE=$NAME" "ALARM_ACTIVITY_PROFILE=$ALARM_NAME" build
 APP="$OUTPUT/DerivedData/Build/Products/Debug-iphoneos/AppleBridge.app"
 codesign --verify --deep --strict "$APP"
 mkdir -p "$OUTPUT/staging/Payload"

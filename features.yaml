@@ -1522,4 +1522,4 @@ features:
       - {id: APP-SCREENTIME-SIM, levels: [sim]}
       - {id: APP-SCREENTIME-REAL, levels: [real]}
     limits:
-      - {scenario: APP-SCREENTIME-REAL, level: real, reason: 'limited: needs extension Family Controls and shared App Group provisioning in developer portal, then Allow tap'}
+      - {scenario: APP-SCREENTIME-REAL, level: real, reason: 'limited: needs Allow tap'}
