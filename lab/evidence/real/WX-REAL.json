@@ -1,0 +1,27 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[10.08 7.57 7.75] cpu_idle=27% cpus=8 other_heavy=0"
+  },
+  "status": "limited",
+  "run_id": "run_01M646J079QA63NXCS4BKN2YK0",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "WX-REAL",
+  "level": "real",
+  "passed": false,
+  "git_sha": "",
+  "at": "2026-10-29T16:05:45.321185Z",
+  "assertions": [
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null,
+  "conditions": {
+    "reason": "real qualification batched at end; Weather action identifiers and signed AB Weather pack output remain unverified"
+  }
+}

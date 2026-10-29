@@ -1,0 +1,27 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[10.62 7.76 7.82] cpu_idle=25% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M646J8JE2B4KTHMTFFED3DS8",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "SHAZAM-REAL",
+  "level": "real",
+  "passed": false,
+  "git_sha": "",
+  "at": "2026-10-29T16:05:53.870494Z",
+  "assertions": [
+    {
+      "name": "real_qualification_batched_at_end",
+      "passed": false
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

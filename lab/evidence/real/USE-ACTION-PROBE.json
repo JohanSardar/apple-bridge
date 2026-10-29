@@ -1,10 +1,10 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[15.6 17.23 16.28] cpu_idle=56% cpus=8 other_heavy=2"
+    "summary": "air: load=[7.55 8.49 8.21] cpu_idle=30% cpus=8 other_heavy=0"
   },
   "status": "limited",
-  "run_id": "run_01M62W02JQGMAJE9M0GKVWE57D",
+  "run_id": "run_01M646Y62Y6RPDCNKCFDZDY9H4",
   "metrics": {
     "biome_local_entry_count": 2,
     "biome_remote_entry_count": 3,
@@ -15,8 +15,8 @@
   "scenario": "USE-ACTION-PROBE",
   "level": "real",
   "passed": false,
-  "git_sha": "578cec29ccdff208971e3cf1444d6055915ebe3b",
-  "at": "2026-10-29T03:41:57.719973Z",
+  "git_sha": "c3ac9963efa1272847ce1ef053a43f9c53d3fc2a",
+  "at": "2026-10-29T16:12:24.542243Z",
   "assertions": [
     {
       "name": "inventory_available",

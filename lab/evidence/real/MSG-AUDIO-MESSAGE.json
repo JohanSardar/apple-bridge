@@ -1,0 +1,29 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[6.96 7.44 7.77] cpu_idle=23% cpus=8 other_heavy=0"
+  },
+  "status": "limited",
+  "run_id": "",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "MSG-AUDIO-MESSAGE",
+  "level": "real",
+  "passed": false,
+  "git_sha": "",
+  "at": "2026-10-29T16:18:02.530662Z",
+  "assertions": [
+    {
+      "name": "real_acceptance_implemented",
+      "passed": false,
+      "detail": "Real acceptance harness is not implemented; no native effects dispatched"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

@@ -1,10 +1,10 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[16.62 12.69 14.07] cpu_idle=29% cpus=8 other_heavy=2"
+    "summary": "air: load=[6.71 8.08 8.03] cpu_idle=34% cpus=8 other_heavy=0"
   },
   "status": "limited",
-  "run_id": "run_01M62W9VS4CWWR3Y9NGFXMKBW0",
+  "run_id": "run_01M647KA3ABWSCFTWTWF2YSYN2",
   "metrics": {
     "capture_observer_resets": 0
   },
@@ -12,7 +12,7 @@
   "level": "real",
   "passed": false,
   "git_sha": "",
-  "at": "2026-10-29T03:47:18.436513Z",
+  "at": "2026-10-29T16:23:56.778954Z",
   "assertions": [
     {
       "name": "helper_compiles_and_bundles",

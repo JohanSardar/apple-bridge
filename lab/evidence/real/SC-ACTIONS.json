@@ -1,0 +1,44 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[10.11 7.79 7.83] cpu_idle=26% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M646JQ2DHVYJ3T7KX449672Z",
+  "metrics": {
+    "action_count": 199,
+    "capture_observer_resets": 0
+  },
+  "scenario": "SC-ACTIONS",
+  "level": "real",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-29T16:06:08.717668Z",
+  "assertions": [
+    {
+      "name": "query_registered",
+      "passed": true
+    },
+    {
+      "name": "native_build",
+      "passed": true
+    },
+    {
+      "name": "native_output",
+      "passed": true
+    },
+    {
+      "name": "bounded_metadata_discovery",
+      "passed": true
+    },
+    {
+      "name": "installed_action_count",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

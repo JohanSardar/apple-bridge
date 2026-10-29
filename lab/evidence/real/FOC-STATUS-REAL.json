@@ -1,0 +1,27 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[10.44 7.59 7.76] cpu_idle=31% cpus=8 other_heavy=0"
+  },
+  "status": "limited",
+  "run_id": "run_01M646HTKTK28R6HN2MQ5WB27T",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "FOC-STATUS-REAL",
+  "level": "real",
+  "passed": false,
+  "git_sha": "",
+  "at": "2026-10-29T16:05:39.578231Z",
+  "assertions": [
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null,
+  "conditions": {
+    "reason": "Helper Focus authorization is not_determined; no authorization request is made."
+  }
+}

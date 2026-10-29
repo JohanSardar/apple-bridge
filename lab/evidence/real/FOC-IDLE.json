@@ -1,0 +1,27 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[6.24 7.85 7.95] cpu_idle=54% cpus=8 other_heavy=0"
+  },
+  "status": "limited",
+  "run_id": "run_01M647M8BSV7FWKZNK542WB948",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "FOC-IDLE",
+  "level": "real",
+  "passed": false,
+  "git_sha": "",
+  "at": "2026-10-29T16:24:27.769076Z",
+  "assertions": [
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null,
+  "conditions": {
+    "reason": "Five-minute Helper CPU qualification remains pending; no idle CPU measurement claimed."
+  }
+}

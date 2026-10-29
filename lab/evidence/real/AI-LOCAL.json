@@ -1,0 +1,41 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[10.6 8.82 8.25] cpu_idle=55% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M647GGQGPHT3SQJ0BF4R82YS",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "AI-LOCAL",
+  "level": "real",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-29T16:22:25.264059Z",
+  "assertions": [
+    {
+      "name": "world_started",
+      "passed": true
+    },
+    {
+      "name": "scopes_granted",
+      "passed": true
+    },
+    {
+      "name": "helper_ready",
+      "passed": true
+    },
+    {
+      "name": "fixed_schema_or_explicit_unavailability",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

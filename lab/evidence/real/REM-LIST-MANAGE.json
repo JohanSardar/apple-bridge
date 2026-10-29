@@ -1,21 +1,50 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[8.16 6.84 6.87] cpu_idle=73% cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[8.03 8 7.94] cpu_idle=28% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M61NM4TYKKJB0HFDN0EWGD1B",
+  "run_id": "run_01M647F7X145V41AZ63DBSJHEF",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "REM-LIST-MANAGE",
   "level": "real",
   "passed": false,
-  "git_sha": "ac85a625c1f94e92d338556412cf7b71ffc83020",
-  "at": "2026-10-28T16:31:20.926837Z",
+  "git_sha": "c3ac9963efa1272847ce1ef053a43f9c53d3fc2a",
+  "at": "2026-10-29T16:21:43.457993Z",
   "assertions": [
     {
-      "name": "world_start",
+      "name": "reminders_ready",
+      "passed": true
+    },
+    {
+      "name": "stale_rename_rejected",
+      "passed": true
+    },
+    {
+      "name": "rename_readback",
+      "passed": true
+    },
+    {
+      "name": "truth_renamed_list",
+      "passed": true
+    },
+    {
+      "name": "stale_delete_rejected",
+      "passed": true
+    },
+    {
+      "name": "delete_owned_list",
       "passed": false
+    },
+    {
+      "name": "owned_list_cleanup",
+      "passed": false
+    },
+    {
+      "name": "appletruth_failure",
+      "passed": false,
+      "detail": "invalid"
     },
     {
       "name": "credential_backend_override_restored",
