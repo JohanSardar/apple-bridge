@@ -1,0 +1,41 @@
+{
+  "run_id": "run_732250b234554ae9b8547db459a69013",
+  "scenario": "MUS-IDLE",
+  "level": "real",
+  "passed": false,
+  "git_sha": "3fe286f956a74d8c02ba721dcd0c1edb70402ac4",
+  "at": "2026-10-29T15:16:22.473797+00:00",
+  "assertions": [
+    {
+      "name": "signed_helper_world",
+      "passed": true
+    },
+    {
+      "name": "helper_signature_valid",
+      "passed": true
+    },
+    {
+      "name": "messages_capture_and_media_settled",
+      "passed": true
+    },
+    {
+      "name": "whole_helper_idle_cpu",
+      "passed": false
+    }
+  ],
+  "metrics": {
+    "helper_cpu_percent": 2.51992,
+    "idle_seconds": 300.01,
+    "warmup_seconds": 1129.427,
+    "cpu_before_seconds": 373.65,
+    "cpu_after_seconds": 381.21,
+    "helper_sha256": "381af94cc55093abaa055fdf0a446e1c420e8ee2a12a954dc76f1908cb935932",
+    "profile_stack_counts": {
+      "CaptureTrace.record": 3,
+      "LocationStatus.readiness": 2,
+      "SafariTabs.permitted": 1,
+      "SafariSource.history": 0,
+      "UsageInputs.init": 0
+    }
+  }
+}

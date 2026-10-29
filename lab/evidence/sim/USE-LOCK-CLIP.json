@@ -1,9 +1,9 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[6.83 18.49 56.03] cpu_idle=49% cpus=8 other_heavy=0"
+    "summary": "air: load=[4.89 39.69 59.58] cpu_idle=51% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M642JE84JEM3DN7XNC98EBFE",
+  "run_id": "run_01M643EH1W4P10TNMSFB8SQZMM",
   "metrics": {
     "app_days": 1,
     "capture_observer_resets": 0,
@@ -12,8 +12,8 @@
   "scenario": "USE-LOCK-CLIP",
   "level": "sim",
   "passed": true,
-  "git_sha": "3fe286f956a74d8c02ba721dcd0c1edb70402ac4",
-  "at": "2026-10-29T14:56:05.380287Z",
+  "git_sha": "00814ff310c5e761210ee1cb2b84ebb160da37a3",
+  "at": "2026-10-29T15:11:25.756228Z",
   "assertions": [
     {
       "name": "mac_lock_clipped",

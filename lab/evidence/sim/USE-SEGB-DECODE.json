@@ -1,17 +1,17 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[6.39 18.01 55.42] cpu_idle=27% cpus=8 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[5.11 38.59 58.96] cpu_idle=52% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M642JPM5V8XT9QN3Q3FGZ8V0",
+  "run_id": "run_01M643EQ7CXEJX5N578TSWCJB7",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "USE-SEGB-DECODE",
   "level": "sim",
   "passed": true,
-  "git_sha": "3fe286f956a74d8c02ba721dcd0c1edb70402ac4",
-  "at": "2026-10-29T14:56:13.957596Z",
+  "git_sha": "00814ff310c5e761210ee1cb2b84ebb160da37a3",
+  "at": "2026-10-29T15:11:32.076181Z",
   "assertions": [
     {
       "name": "scrubbed_segb_and_day_math",
