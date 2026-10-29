@@ -364,6 +364,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "APP-WALLET-SIM" {
 		return runIPhoneApproval(ctx, s, level)
 	}
+	if s.ID == "APP-INTENTS-REAL" {
+		return Evidence{Scenario: s.ID, Level: level, At: time.Now().UTC(), Status: "limited", Assertions: []Assertion{{Name: "shortcuts_run", Detail: "limited: needs Allow tap to save or import a Shortcuts workflow"}}}
+	}
 	if s.ID == "APP-MOTION-SIM" || s.ID == "APP-MOTION-REAL" {
 		return runIPhoneCapability(ctx, s, level, "ios/Capabilities/Motion/MotionModel.swift", "lab/ios/MotionProof.swift")
 	}
