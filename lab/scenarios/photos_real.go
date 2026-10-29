@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+
+	"github.com/JohanSardar/apple-bridge/lab/world"
 )
 
 func runPhotosReal(ctx context.Context, s Scenario, e Evidence) Evidence {
@@ -58,11 +60,11 @@ func runPhotosReal(ctx context.Context, s Scenario, e Evidence) Evidence {
 	for _, name := range []string{"read_passed", "import_passed", "original_passed", "cleanup_passed"} {
 		add(name, result[name] == true)
 	}
-	if s.ID == "PHO-IDLE" {
-		add("idle_passed", result["idle_passed"] == true)
-	}
 	for _, name := range []string{"asset_count", "original_digest"} {
 		e.Metrics[name] = result[name]
+	}
+	if s.ID == "PHO-IDLE" && e.Passed {
+		return wholeHelperIdleReal(world.WithOptions(ctx, world.Options{Scope: "photos:read,system:read"}), e)
 	}
 	return e
 }
