@@ -1,7 +1,7 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[79.44 80.54 70.4] cpu_idle=0% cpus=10 other_heavy=0"
+    "summary": "air: load=[25.96 53.04 60.98] cpu_idle=15% cpus=10 other_heavy=0"
   },
   "run_id": "",
   "metrics": {
@@ -11,7 +11,7 @@
   "level": "sim",
   "passed": true,
   "git_sha": "",
-  "at": "2026-10-29T23:09:35.516249Z",
+  "at": "2026-10-29T23:13:22.21606Z",
   "assertions": [
     {
       "name": "isolated_fixture",

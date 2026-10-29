@@ -1,7 +1,7 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[56.82 74.18 68.72] cpu_idle=0% cpus=10 other_heavy=0"
+    "summary": "air: load=[22.99 49.26 59.28] cpu_idle=3% cpus=10 other_heavy=0"
   },
   "status": "limited",
   "run_id": "",
@@ -13,7 +13,7 @@
   "level": "real",
   "passed": false,
   "git_sha": "",
-  "at": "2026-10-29T23:10:35.779852Z",
+  "at": "2026-10-29T23:13:54.910098Z",
   "assertions": [
     {
       "name": "authorization",
