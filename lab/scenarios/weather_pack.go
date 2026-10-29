@@ -113,19 +113,28 @@ func runWeatherReal(ctx context.Context, s Scenario, level string) Evidence {
 	if err != nil {
 		return e
 	}
+	var invalid contracts.QueryResult
+	err = client.Call(ctx, "weather.current", contracts.Query{Args: json.RawMessage(`{"latitude":91,"longitude":0}`), DeadlineMS: 1000}, &invalid)
+	add("native_invalid_coordinate_rejected", errors.Is(err, contracts.ErrInvalid))
+	if !errors.Is(err, contracts.ErrInvalid) {
+		return e
+	}
+	signed, signingErr := exec.CommandContext(ctx, "/usr/bin/codesign", "--display", "--entitlements", ":-", w.HelperApp).Output()
+	add("helper_signing_readable", signingErr == nil)
+	if signingErr != nil {
+		return e
+	}
+	if !bytes.Contains(signed, []byte("com.apple.developer.weatherkit")) {
+		e.Status = "limited"
+		e.Passed = false
+		e.Conditions = map[string]string{"reason": "needs WeatherKit-enabled provisioning profile and Apple-signed Mac Helper"}
+		return e
+	}
 	for _, query := range []string{"weather.current", "weather.hourly", "weather.daily"} {
 		var out contracts.QueryResult
 		err = client.Call(ctx, query, contracts.Query{Args: json.RawMessage(`{"latitude":40,"longitude":-90}`), DeadlineMS: 15000}, &out)
 		if err != nil {
-			signed, signingErr := exec.CommandContext(ctx, "/usr/bin/codesign", "--display", "--entitlements", ":-", w.HelperApp).Output()
-			var queryErr *contracts.Error
-			if errors.As(err, &queryErr) && queryErr.Code == "unavailable" && signingErr == nil && !bytes.Contains(signed, []byte("com.apple.developer.weatherkit")) {
-				e.Status = "limited"
-				e.Passed = false
-				e.Conditions = map[string]string{"reason": "needs WeatherKit-enabled provisioning profile and Apple-signed Mac Helper"}
-			} else {
-				add(query+"_completed", false)
-			}
+			add(query+"_completed", false)
 			return e
 		}
 		fixture := &weatherPackFixture{result: shortcut.Result{Data: out.ResultJSON}}
