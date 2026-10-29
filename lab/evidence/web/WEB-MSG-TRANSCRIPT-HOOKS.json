@@ -1,61 +1,24 @@
 {
-  "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[122.32 115.08 112.53] cpu_idle=50% cpus=8 other_heavy=1"
-  },
-  "run_id": "run_01M5HE2RAM59CH34R2TRJ2336M",
-  "metrics": {
-    "capture_observer_resets": 0,
-    "demo_messages": 5000,
-    "demo_startup_ms": 39722,
-    "matrix": [
-      "webkit-light-phone",
-      "webkit-light-desktop",
-      "chromium-light-phone",
-      "chromium-light-desktop"
-    ],
-    "report": "lab/evidence/private/web/reports/WEB-MSG-TRANSCRIPT-HOOKS-webkit-light-phone-playwright.json",
-    "reports": [
-      "lab/evidence/private/web/reports/WEB-MSG-TRANSCRIPT-HOOKS-webkit-light-phone-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-TRANSCRIPT-HOOKS-webkit-light-desktop-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-TRANSCRIPT-HOOKS-chromium-light-phone-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-TRANSCRIPT-HOOKS-chromium-light-desktop-playwright.json"
-    ],
-    "server": "gateway"
-  },
   "scenario": "WEB-MSG-TRANSCRIPT-HOOKS",
   "level": "web",
+  "git_sha": "614794562717e2e2ffde5a0392d7e149f2a01dab",
+  "at": "2026-10-29T22:47:56.752739Z",
   "passed": true,
-  "git_sha": "e42342c3d9246fd3241793ec804a186d3c469ad2",
-  "at": "2026-10-22T09:11:40.117435Z",
+  "metrics": {
+    "matrix_count": 1,
+    "completed_matrix_count": 1,
+    "passed_matrix_count": 1,
+    "failed_matrix_count": 0,
+    "incomplete_matrix_count": 0,
+    "passed_test_count": 9,
+    "failed_test_count": 0,
+    "skipped_test_count": 0,
+    "report_sha256": "185c6a68b3e3ab0e2e64a59161d59e8c0e0c66986793a4ff80d8bfb946086947"
+  },
   "assertions": [
     {
-      "name": "webkit-light-phone:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 9 tests using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/transcript-hooks.spec.ts:8:1 › WEB-MSG-TRANSCRIPT-HOOKS WEB-MSG-HOOKS-BASELINE computed typography survives detaching its prepared source (7.8s)\n  ✓  2 [webkit-light-phone] › tests/transcript-hooks.spec.ts:14:1 › WEB-MSG-TRANSCRIPT-HOOKS WEB-MSG-HOOKS-BASELINE coherent thread readiness waits for its chat metadata (3.2s)\n  ✓  3 [webkit-light-phone] › tests/transcript-hooks.spec.ts:21:1 › WEB-MSG-TRANSCRIPT-HOOKS WEB-MSG-HOOKS-SWAP a first-frame text echo swaps its exact record without changing element or geometry (6.6s)\n  ✓  4 [webkit-light-phone] › tests/transcript-hooks.spec.ts:53:1 › WEB-MSG-TRANSCRIPT-HOOKS WEB-MSG-HOOKS-REMAINING a native image forwards its exact attachment and reserved rectangle (8.0s)\n  ✓  5 [webkit-light-phone] › tests/transcript-hooks.spec.ts:58:1 › WEB-MSG-TRANSCRIPT-HOOKS WEB-MSG-HOOKS-REMAINING the bounded ambiguity notice sits above the dock and reconciles by reads (8.5s)\n  ✓  6 [webkit-light-phone] › tests/transcript-hooks.spec.ts:71:145 › WEB-MSG-TRANSCRIPT-HOOKS WEB-MSG-HOOKS-REMAINING failed text retains reserved geometry and honest controls (3.7s)\n  ✓  7 [webkit-light-phone] › tests/transcript-hooks.spec.ts:71:145 › WEB-MSG-TRANSCRIPT-HOOKS WEB-MSG-HOOKS-REMAINING indeterminate text retains reserved geometry and honest controls (3.4s)\n  ✓  8 [webkit-light-phone] › tests/transcript-hooks.spec.ts:83:1 › WEB-MSG-TRANSCRIPT-HOOKS WEB-MSG-HOOKS-REMAINING native outgoing without an echo renders in the first frame after window observation (2.7s)\n  ✓  9 [webkit-light-phone] › tests/transcript-hooks.spec.ts:90:1 › WEB-MSG-TRANSCRIPT-HOOKS WEB-MSG-HOOKS-REMAINING Copy forwards only the bubble exact numeric part index (2.7s)\n\n  9 passed (54.2s)\n"
-    },
-    {
-      "name": "webkit-light-desktop:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 9 tests using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/transcript-hooks.spec.ts:8:1 › WEB-MSG-TRANSCRIPT-HOOKS WEB-MSG-HOOKS-BASELINE computed typography survives detaching its prepared source (5.6s)\n  ✓  2 [webkit-light-desktop] › tests/transcript-hooks.spec.ts:14:1 › WEB-MSG-TRANSCRIPT-HOOKS WEB-MSG-HOOKS-BASELINE coherent thread readiness waits for its chat metadata (2.6s)\n  ✓  3 [webkit-light-desktop] › tests/transcript-hooks.spec.ts:21:1 › WEB-MSG-TRANSCRIPT-HOOKS WEB-MSG-HOOKS-SWAP a first-frame text echo swaps its exact record without changing element or geometry (7.5s)\n  ✓  4 [webkit-light-desktop] › tests/transcript-hooks.spec.ts:53:1 › WEB-MSG-TRANSCRIPT-HOOKS WEB-MSG-HOOKS-REMAINING a native image forwards its exact attachment and reserved rectangle (4.2s)\n  ✓  5 [webkit-light-desktop] › tests/transcript-hooks.spec.ts:58:1 › WEB-MSG-TRANSCRIPT-HOOKS WEB-MSG-HOOKS-REMAINING the bounded ambiguity notice sits above the dock and reconciles by reads (10.7s)\n  ✓  6 [webkit-light-desktop] › tests/transcript-hooks.spec.ts:71:145 › WEB-MSG-TRANSCRIPT-HOOKS WEB-MSG-HOOKS-REMAINING failed text retains reserved geometry and honest controls (9.6s)\n  ✓  7 [webkit-light-desktop] › tests/transcript-hooks.spec.ts:71:145 › WEB-MSG-TRANSCRIPT-HOOKS WEB-MSG-HOOKS-REMAINING indeterminate text retains reserved geometry and honest controls (24.4s)\n  ✓  8 [webkit-light-desktop] › tests/transcript-hooks.spec.ts:83:1 › WEB-MSG-TRANSCRIPT-HOOKS WEB-MSG-HOOKS-REMAINING native outgoing without an echo renders in the first frame after window observation (12.3s)\n  ✓  9 [webkit-light-desktop] › tests/transcript-hooks.spec.ts:90:1 › WEB-MSG-TRANSCRIPT-HOOKS WEB-MSG-HOOKS-REMAINING Copy forwards only the bubble exact numeric part index (5.4s)\n\n  9 passed (1.5m)\n"
-    },
-    {
-      "name": "chromium-light-phone:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 9 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/transcript-hooks.spec.ts:8:1 › WEB-MSG-TRANSCRIPT-HOOKS WEB-MSG-HOOKS-BASELINE computed typography survives detaching its prepared source (3.0s)\n  ✓  2 [chromium-light-phone] › tests/transcript-hooks.spec.ts:14:1 › WEB-MSG-TRANSCRIPT-HOOKS WEB-MSG-HOOKS-BASELINE coherent thread readiness waits for its chat metadata (5.7s)\n  ✓  3 [chromium-light-phone] › tests/transcript-hooks.spec.ts:21:1 › WEB-MSG-TRANSCRIPT-HOOKS WEB-MSG-HOOKS-SWAP a first-frame text echo swaps its exact record without changing element or geometry (4.9s)\n  ✓  4 [chromium-light-phone] › tests/transcript-hooks.spec.ts:53:1 › WEB-MSG-TRANSCRIPT-HOOKS WEB-MSG-HOOKS-REMAINING a native image forwards its exact attachment and reserved rectangle (2.4s)\n  ✓  5 [chromium-light-phone] › tests/transcript-hooks.spec.ts:58:1 › WEB-MSG-TRANSCRIPT-HOOKS WEB-MSG-HOOKS-REMAINING the bounded ambiguity notice sits above the dock and reconciles by reads (7.6s)\n  ✓  6 [chromium-light-phone] › tests/transcript-hooks.spec.ts:71:145 › WEB-MSG-TRANSCRIPT-HOOKS WEB-MSG-HOOKS-REMAINING failed text retains reserved geometry and honest controls (3.8s)\n  ✓  7 [chromium-light-phone] › tests/transcript-hooks.spec.ts:71:145 › WEB-MSG-TRANSCRIPT-HOOKS WEB-MSG-HOOKS-REMAINING indeterminate text retains reserved geometry and honest controls (2.7s)\n  ✓  8 [chromium-light-phone] › tests/transcript-hooks.spec.ts:83:1 › WEB-MSG-TRANSCRIPT-HOOKS WEB-MSG-HOOKS-REMAINING native outgoing without an echo renders in the first frame after window observation (2.2s)\n  ✓  9 [chromium-light-phone] › tests/transcript-hooks.spec.ts:90:1 › WEB-MSG-TRANSCRIPT-HOOKS WEB-MSG-HOOKS-REMAINING Copy forwards only the bubble exact numeric part index (1.8s)\n\n  9 passed (47.7s)\n"
-    },
-    {
-      "name": "chromium-light-desktop:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 9 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/transcript-hooks.spec.ts:8:1 › WEB-MSG-TRANSCRIPT-HOOKS WEB-MSG-HOOKS-BASELINE computed typography survives detaching its prepared source (5.2s)\n  ✓  2 [chromium-light-desktop] › tests/transcript-hooks.spec.ts:14:1 › WEB-MSG-TRANSCRIPT-HOOKS WEB-MSG-HOOKS-BASELINE coherent thread readiness waits for its chat metadata (1.4s)\n  ✓  3 [chromium-light-desktop] › tests/transcript-hooks.spec.ts:21:1 › WEB-MSG-TRANSCRIPT-HOOKS WEB-MSG-HOOKS-SWAP a first-frame text echo swaps its exact record without changing element or geometry (7.0s)\n  ✓  4 [chromium-light-desktop] › tests/transcript-hooks.spec.ts:53:1 › WEB-MSG-TRANSCRIPT-HOOKS WEB-MSG-HOOKS-REMAINING a native image forwards its exact attachment and reserved rectangle (1.9s)\n  ✓  5 [chromium-light-desktop] › tests/transcript-hooks.spec.ts:58:1 › WEB-MSG-TRANSCRIPT-HOOKS WEB-MSG-HOOKS-REMAINING the bounded ambiguity notice sits above the dock and reconciles by reads (7.1s)\n  ✓  6 [chromium-light-desktop] › tests/transcript-hooks.spec.ts:71:145 › WEB-MSG-TRANSCRIPT-HOOKS WEB-MSG-HOOKS-REMAINING failed text retains reserved geometry and honest controls (2.8s)\n  ✓  7 [chromium-light-desktop] › tests/transcript-hooks.spec.ts:71:145 › WEB-MSG-TRANSCRIPT-HOOKS WEB-MSG-HOOKS-REMAINING indeterminate text retains reserved geometry and honest controls (5.8s)\n  ✓  8 [chromium-light-desktop] › tests/transcript-hooks.spec.ts:83:1 › WEB-MSG-TRANSCRIPT-HOOKS WEB-MSG-HOOKS-REMAINING native outgoing without an echo renders in the first frame after window observation (2.2s)\n  ✓  9 [chromium-light-desktop] › tests/transcript-hooks.spec.ts:90:1 › WEB-MSG-TRANSCRIPT-HOOKS WEB-MSG-HOOKS-REMAINING Copy forwards only the bubble exact numeric part index (1.4s)\n\n  9 passed (44.4s)\n"
-    },
-    {
-      "name": "credential_backend_override_restored",
+      "name": "chromium-light-desktop",
       "passed": true
     }
-  ],
-  "latency": {},
-  "hosts": [
-    "air"
   ]
 }

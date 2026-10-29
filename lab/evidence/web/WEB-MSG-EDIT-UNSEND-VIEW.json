@@ -1,0 +1,24 @@
+{
+  "scenario": "WEB-MSG-EDIT-UNSEND-VIEW",
+  "level": "web",
+  "git_sha": "614794562717e2e2ffde5a0392d7e149f2a01dab",
+  "at": "2026-10-29T22:50:38.808077Z",
+  "passed": true,
+  "metrics": {
+    "matrix_count": 1,
+    "completed_matrix_count": 1,
+    "passed_matrix_count": 1,
+    "failed_matrix_count": 0,
+    "incomplete_matrix_count": 0,
+    "passed_test_count": 2,
+    "failed_test_count": 0,
+    "skipped_test_count": 0,
+    "report_sha256": "fc90ff1b413115eaf7a67e05324c57e278b17363f3f08a1d036f83fedd89fee6"
+  },
+  "assertions": [
+    {
+      "name": "chromium-light-desktop",
+      "passed": true
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "scenario": "WEB-MSG-READ-THROTTLE",
+  "level": "web",
+  "git_sha": "614794562717e2e2ffde5a0392d7e149f2a01dab",
+  "at": "2026-10-29T22:47:27.878265Z",
+  "passed": true,
+  "metrics": {
+    "matrix_count": 1,
+    "completed_matrix_count": 1,
+    "passed_matrix_count": 1,
+    "failed_matrix_count": 0,
+    "incomplete_matrix_count": 0,
+    "passed_test_count": 1,
+    "failed_test_count": 0,
+    "skipped_test_count": 0,
+    "report_sha256": "8902f69db79dfbfd6059f5ce5f3414d0b571efecc484114d688c5833bd17a503"
+  },
+  "assertions": [
+    {
+      "name": "chromium-light-desktop",
+      "passed": true
+    }
+  ]
+}

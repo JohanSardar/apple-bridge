@@ -1,161 +1,24 @@
 {
-  "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[5.44 4.84 5.55] cpu_idle=63% cpus=8 other_heavy=1"
-  },
-  "run_id": "run_01M5J0CJNENA736RGVG3W7V5EK",
-  "metrics": {
-    "browser_budget_ms": 180000,
-    "capture_observer_resets": 0,
-    "demo_messages": 5000,
-    "demo_startup_ms": 19728,
-    "fixture_setup_ms": 19728,
-    "fixture_snapshot": {
-      "disk_bytes": 30654464,
-      "entry_bytes": 30662272,
-      "cache_bytes": 0,
-      "blob_payloads": 59,
-      "key": "1ee03ac13adfe00f6a8c62d4adb611a03b727123223b789da078c388556b74e6",
-      "cache_hit": false,
-      "build_ms": 19616,
-      "copy_ms": 1022,
-      "records": 6865,
-      "fresh_digest": "6ff98565a99007bd29662c4a7ae9b523818def0eb66343ad828894e1232932cd",
-      "copy_digest": "6ff98565a99007bd29662c4a7ae9b523818def0eb66343ad828894e1232932cd",
-      "verified": true,
-      "copy_method": "clonefile"
-    },
-    "matrix": [
-      "webkit-light-phone",
-      "webkit-light-desktop",
-      "chromium-light-phone",
-      "chromium-light-desktop"
-    ],
-    "report": "lab/evidence/private/web/reports/WEB-MSG-FILTERS-webkit-light-phone-playwright.json",
-    "reports": [
-      "lab/evidence/private/web/reports/WEB-MSG-FILTERS-webkit-light-phone-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-FILTERS-webkit-light-desktop-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-FILTERS-chromium-light-phone-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-FILTERS-chromium-light-desktop-playwright.json"
-    ],
-    "server": "gateway",
-    "setups": [
-      {
-        "fixture_setup_ms": 19728,
-        "fixture_snapshot": {
-          "disk_bytes": 30654464,
-          "entry_bytes": 30662272,
-          "cache_bytes": 0,
-          "blob_payloads": 59,
-          "key": "1ee03ac13adfe00f6a8c62d4adb611a03b727123223b789da078c388556b74e6",
-          "cache_hit": false,
-          "build_ms": 19616,
-          "copy_ms": 1022,
-          "records": 6865,
-          "fresh_digest": "6ff98565a99007bd29662c4a7ae9b523818def0eb66343ad828894e1232932cd",
-          "copy_digest": "6ff98565a99007bd29662c4a7ae9b523818def0eb66343ad828894e1232932cd",
-          "verified": true,
-          "copy_method": "clonefile"
-        },
-        "project": "webkit-light-phone"
-      },
-      {
-        "fixture_setup_ms": 6659,
-        "fixture_snapshot": {
-          "disk_bytes": 30691328,
-          "entry_bytes": 30699136,
-          "cache_bytes": 0,
-          "blob_payloads": 59,
-          "key": "1ee03ac13adfe00f6a8c62d4adb611a03b727123223b789da078c388556b74e6",
-          "cache_hit": false,
-          "build_ms": 6586,
-          "copy_ms": 646,
-          "records": 6865,
-          "fresh_digest": "cdaadcd9d2c24367adba4f4ca56ff6553fad427b12bd99187bf289a045dd4aed",
-          "copy_digest": "cdaadcd9d2c24367adba4f4ca56ff6553fad427b12bd99187bf289a045dd4aed",
-          "verified": true,
-          "copy_method": "clonefile"
-        },
-        "project": "webkit-light-desktop"
-      },
-      {
-        "fixture_setup_ms": 6346,
-        "fixture_snapshot": {
-          "disk_bytes": 30711808,
-          "entry_bytes": 30719616,
-          "cache_bytes": 0,
-          "blob_payloads": 59,
-          "key": "1ee03ac13adfe00f6a8c62d4adb611a03b727123223b789da078c388556b74e6",
-          "cache_hit": false,
-          "build_ms": 6285,
-          "copy_ms": 647,
-          "records": 6865,
-          "fresh_digest": "3350d0cd1903edf137d660db4cf91c49b1b2e47159042e95b680c22eb22983d9",
-          "copy_digest": "3350d0cd1903edf137d660db4cf91c49b1b2e47159042e95b680c22eb22983d9",
-          "verified": true,
-          "copy_method": "clonefile"
-        },
-        "project": "chromium-light-phone"
-      },
-      {
-        "fixture_setup_ms": 8630,
-        "fixture_snapshot": {
-          "disk_bytes": 30670848,
-          "entry_bytes": 30678656,
-          "cache_bytes": 0,
-          "blob_payloads": 59,
-          "key": "1ee03ac13adfe00f6a8c62d4adb611a03b727123223b789da078c388556b74e6",
-          "cache_hit": false,
-          "build_ms": 8559,
-          "copy_ms": 651,
-          "records": 6865,
-          "fresh_digest": "773ca82bbf4a1002732eae828ff362c722ad44321345c818d8b9d8e1244cf29d",
-          "copy_digest": "773ca82bbf4a1002732eae828ff362c722ad44321345c818d8b9d8e1244cf29d",
-          "verified": true,
-          "copy_method": "clonefile"
-        },
-        "project": "chromium-light-desktop"
-      }
-    ],
-    "template_cold_setup_ms": {
-      "generate": 292,
-      "list": 5650,
-      "seed": 10102
-    }
-  },
   "scenario": "WEB-MSG-FILTERS",
   "level": "web",
+  "git_sha": "614794562717e2e2ffde5a0392d7e149f2a01dab",
+  "at": "2026-10-29T22:37:26.103643Z",
   "passed": true,
-  "git_sha": "448155dab96415e80926775cc1981e8461651d84",
-  "at": "2026-10-22T14:31:36.366573Z",
+  "metrics": {
+    "matrix_count": 1,
+    "completed_matrix_count": 1,
+    "passed_matrix_count": 1,
+    "failed_matrix_count": 0,
+    "incomplete_matrix_count": 0,
+    "passed_test_count": 5,
+    "failed_test_count": 0,
+    "skipped_test_count": 0,
+    "report_sha256": "9aca8adac0a46c3b946ece72025ab6474684e75f49a0d19a75b86759505beb04"
+  },
   "assertions": [
     {
-      "name": "webkit-light-phone:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 4 tests using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/list-filter-oracle.spec.ts:6:1 › WEB-MSG-FILTERS-ORACLE stable transport equals server filters with fourth linked participant and hidden Contacts (14.7s)\n  ✓  2 [webkit-light-phone] › tests/list-filters.spec.ts:7:1 › WEB-MSG-FILTERS six filters keep stable server views (3.9s)\n  ✓  3 [webkit-light-phone] › tests/list-filters.spec.ts:20:1 › WEB-MSG-FILTERS every filter has its own empty state (3.8s)\n  ✓  4 [webkit-light-phone] › tests/list-filters.spec.ts:26:1 › WEB-MSG-FILTERS menu supports keyboard dismissal and outside clicks (928ms)\n\n  4 passed (39.8s)\n"
-    },
-    {
-      "name": "webkit-light-desktop:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 4 tests using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/list-filter-oracle.spec.ts:6:1 › WEB-MSG-FILTERS-ORACLE stable transport equals server filters with fourth linked participant and hidden Contacts (4.2s)\n  ✓  2 [webkit-light-desktop] › tests/list-filters.spec.ts:7:1 › WEB-MSG-FILTERS six filters keep stable server views (1.3s)\n  ✓  3 [webkit-light-desktop] › tests/list-filters.spec.ts:20:1 › WEB-MSG-FILTERS every filter has its own empty state (2.0s)\n  ✓  4 [webkit-light-desktop] › tests/list-filters.spec.ts:26:1 › WEB-MSG-FILTERS menu supports keyboard dismissal and outside clicks (892ms)\n\n  4 passed (15.4s)\n"
-    },
-    {
-      "name": "chromium-light-phone:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 4 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/list-filter-oracle.spec.ts:6:1 › WEB-MSG-FILTERS-ORACLE stable transport equals server filters with fourth linked participant and hidden Contacts (3.8s)\n  ✓  2 [chromium-light-phone] › tests/list-filters.spec.ts:7:1 › WEB-MSG-FILTERS six filters keep stable server views (1.1s)\n  ✓  3 [chromium-light-phone] › tests/list-filters.spec.ts:20:1 › WEB-MSG-FILTERS every filter has its own empty state (2.1s)\n  ✓  4 [chromium-light-phone] › tests/list-filters.spec.ts:26:1 › WEB-MSG-FILTERS menu supports keyboard dismissal and outside clicks (724ms)\n\n  4 passed (15.5s)\n"
-    },
-    {
-      "name": "chromium-light-desktop:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 4 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/list-filter-oracle.spec.ts:6:1 › WEB-MSG-FILTERS-ORACLE stable transport equals server filters with fourth linked participant and hidden Contacts (3.0s)\n  ✓  2 [chromium-light-desktop] › tests/list-filters.spec.ts:7:1 › WEB-MSG-FILTERS six filters keep stable server views (1.1s)\n  ✓  3 [chromium-light-desktop] › tests/list-filters.spec.ts:20:1 › WEB-MSG-FILTERS every filter has its own empty state (1.9s)\n  ✓  4 [chromium-light-desktop] › tests/list-filters.spec.ts:26:1 › WEB-MSG-FILTERS menu supports keyboard dismissal and outside clicks (670ms)\n\n  4 passed (12.7s)\n"
-    },
-    {
-      "name": "credential_backend_override_restored",
+      "name": "chromium-light-desktop",
       "passed": true
     }
-  ],
-  "latency": {},
-  "hosts": [
-    "air"
   ]
 }
