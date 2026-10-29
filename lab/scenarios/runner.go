@@ -370,6 +370,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.Feature == "music.catalog" {
 		return runMusicCatalog(ctx, s, level)
 	}
+	if s.Feature == "capture.commands" {
+		return runCapture(ctx, s, level)
+	}
 	if s.Feature == "vision.queries" {
 		return runVisionQueries(ctx, s, level)
 	}
@@ -1236,6 +1239,9 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		}
 		if s.ID == "FILE-IDLE" && level == "real" {
 			duration = 7 * time.Minute
+		}
+		if s.ID == "CAP-SIM" {
+			duration = 20 * time.Minute
 		}
 		bounded, cancel := context.WithTimeout(ctx, duration)
 		secretBefore, secretWasSet := os.LookupEnv("APPLE_BRIDGE_SECRET_STORE")
