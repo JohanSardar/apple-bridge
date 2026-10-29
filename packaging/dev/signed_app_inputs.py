@@ -39,6 +39,9 @@ def source_key(root):
             if base.name not in {"dev", "app-intents"} and path.suffix not in {".swift", ".m", ".mm", ".c", ".h", ".modulemap"}:
                 continue
             digest.update(str(path.relative_to(root)).encode() + b"\0" + path.read_bytes() + b"\0")
+    profile = Path.home() / ".config/apple-bridge/signing/services-dev.provisionprofile"
+    if profile.exists():
+        digest.update(profile.read_bytes())
     lab = (os.environ.get("APPLE_BRIDGE_NATIVE_LAB") or "1")
     require(lab in {"0", "1"}, "APPLE_BRIDGE_NATIVE_LAB must be 0 or 1")
     compiler = os.environ.get("APPLE_BRIDGE_SWIFTC", "swiftc")
