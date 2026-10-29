@@ -1300,7 +1300,5 @@ features:
       - {id: VM-CAPTURE, levels: [sim]}
       - {id: VMEMO-LATE-ASSETS, levels: [sim]}
     limits:
-      - {scenario: VMEMO-CAPTURE, level: sim, reason: "Earlier metadata fixture passed; final bounded projection change awaits native build lock qualification"}
-      - {scenario: VM-CAPTURE, level: sim, reason: "Earlier metadata fixture passed; final bounded projection change awaits native build lock qualification"}
       - {scenario: VMEMO-LATE-ASSETS, level: sim, reason: "Metadata slice only; timed transcript decoding, folders and on-demand audio hydration remain unimplemented"}
     notes: "VMEMO-READ-REAL and VM-READ-REAL: no data on this Mac. VMEMO-NEW-REAL needs Johan to record a memo. Real idle qualification blocked by existing Helper Messages CPU issue T53."
