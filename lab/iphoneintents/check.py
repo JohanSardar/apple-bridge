@@ -18,4 +18,8 @@ metadata = json.loads((pathlib.Path(sys.argv[1]) / "Metadata.appintents/extract.
 actions = metadata["actions"]
 assert all(name in actions for name in intents.values()), "Compiled intent missing"
 assert len(intents) == len(set(intents.values())), "Intent identifiers must be unique"
-print(f"intent_compile_check: pass commands={len(commands)} intents={len(intents)}")
+shortcuts = {item["actionIdentifier"] for item in metadata["autoShortcuts"]}
+provider = (root / "ios/Capabilities/Siri/CommandIntent.swift").read_text()
+registered = set(re.findall(r'AppShortcut\(intent: (\w+)\(', provider))
+assert shortcuts == registered, "Compiled Siri shortcut missing"
+print(f"intent_compile_check: pass commands={len(commands)} intents={len(intents)} shortcuts={len(shortcuts)}")
