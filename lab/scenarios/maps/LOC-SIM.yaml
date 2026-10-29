@@ -1,0 +1,5 @@
+id: LOC-SIM
+feature: maps.queries
+levels: [sim]
+when:
+  - queries: {}

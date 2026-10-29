@@ -9,6 +9,7 @@ let sourceTargets: [Target] = [
     .target(name: "SpeechSource", dependencies: ["SourceSupport"]),
     .target(name: "AISource", dependencies: ["SourceSupport"]),
     .target(name: "AudioSource", dependencies: ["SourceSupport"]),
+    .target(name: "MapsSource", dependencies: ["SourceSupport"]),
     .target(name: "MacSource", dependencies: ["SourceSupport"]),
     .target(name: "MailSource", dependencies: ["SourceSupport"]),
     .target(name: "FilesSource", dependencies: ["SourceSupport"]),

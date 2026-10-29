@@ -424,6 +424,7 @@ Phone call capture: [source contract](spec/phone.md).
 
 Transient Helper queries and the query-with-effect rule: [query contract](spec/query.md).
 Audio query slice: [inputs, bounds and remaining work](spec/audio.md).
+Location and Maps query slice: [native queries and limits](spec/maps.md).
 
 Vision and PDF query slice: [inputs, bounds and remaining work](spec/vision.md).
 Shared helpers for new sources: [SourceSupport](spec/source-support.md).
