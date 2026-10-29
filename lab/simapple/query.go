@@ -72,6 +72,13 @@ func (s *querySession) receive(f contracts.IPCFrame) bool {
 			} else {
 				out.ResultJSON = json.RawMessage(`{"items":[{"app":"com.example.synthetic","identifier":"Export","title":"Export"}],"complete":true,"schema_guaranteed":false}`)
 			}
+		case "weather.current":
+			result, weatherErr := syntheticWeather(ctx, f.Args)
+			out.ResultJSON = result
+			if weatherErr != nil {
+				out.T = "QueryError"
+				out.Code = "invalid"
+			}
 		case "test.echo":
 		case "test.sleep":
 			select {

@@ -124,6 +124,9 @@ func run(ctx context.Context, args []string) error {
 			return fmt.Errorf("scenario paths required")
 		}
 		if level == "agent" {
+			if len(paths) == 1 && filepath.Base(paths[0]) == "QUERY-AGENT.yaml" {
+				return agent.Query(ctx, asJSON)
+			}
 			if len(paths) == 1 && filepath.Base(paths[0]) == "MAIL-AGENT.yaml" {
 				return agent.Mail(ctx, asJSON)
 			}
