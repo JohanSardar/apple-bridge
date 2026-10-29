@@ -1,5 +1,6 @@
 import Foundation
 
+@MainActor
 enum Capabilities {
     static let all: [Capability] = [
         AlarmsCapability.descriptor,

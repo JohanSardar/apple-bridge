@@ -18,6 +18,8 @@
 	<string>1</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSMotionUsageDescription</key>
+	<string>Read activity, steps and floors for your motion automations.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Scan your Apple Bridge gateway pairing code.</string>
 	<key>NSLocalNetworkUsageDescription</key>
