@@ -1,9 +1,9 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[12.18 19.61 15.98] cpu_idle=54% cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[13.38 12.76 10.2] cpu_idle=21% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M631JQEAMD2NYWSGHCAFTTS5",
+  "run_id": "run_01M64TWYHAKRFP7PCHJXHP8R41",
   "metrics": {
     "assertion_count": 26,
     "capture_observer_resets": 0
@@ -12,7 +12,7 @@
   "level": "sim",
   "passed": true,
   "git_sha": "",
-  "at": "2026-10-29T05:19:31.786567Z",
+  "at": "2026-10-29T22:01:15.56263Z",
   "assertions": [
     {
       "name": "weather.current_fake_pack",
@@ -51,23 +51,23 @@
       "passed": true
     },
     {
-      "name": "weather.current_unadvertised",
+      "name": "weather.current_registration",
       "passed": true
     },
     {
-      "name": "weather.hourly_unadvertised",
+      "name": "weather.hourly_registration",
       "passed": true
     },
     {
-      "name": "weather.daily_unadvertised",
+      "name": "weather.daily_registration",
       "passed": true
     },
     {
-      "name": "weather.minute_unadvertised",
+      "name": "weather.minute_registration",
       "passed": true
     },
     {
-      "name": "weather.alerts_unadvertised",
+      "name": "weather.alerts_registration",
       "passed": true
     },
     {

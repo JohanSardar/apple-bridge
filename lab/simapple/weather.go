@@ -11,7 +11,7 @@ import (
 type weatherFixture struct{}
 
 func (weatherFixture) Run(context.Context, shortcut.Input) (shortcut.Result, error) {
-	return shortcut.Result{Data: []byte(`{"query":"weather.current","attribution":{"provider":"synthetic"},"samples":[{"time":"2030-01-01T00:00:00Z","temperature_celsius":12,"condition":"cloudy"}]}`)}, nil
+	return shortcut.Result{Data: []byte(`{"query":"weather.current","temperature_unit":"celsius","attribution":{"provider":"synthetic"},"samples":[{"time":"2030-01-01T00:00:00Z","temperature_celsius":12,"condition":"cloudy"}]}`)}, nil
 }
 
 func syntheticWeather(ctx context.Context, raw json.RawMessage) (json.RawMessage, error) {

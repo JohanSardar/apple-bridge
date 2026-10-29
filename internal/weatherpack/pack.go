@@ -32,9 +32,10 @@ type Sample struct {
 	Condition   string    `json:"condition"`
 }
 type Result struct {
-	Query       string          `json:"query"`
-	Attribution json.RawMessage `json:"attribution"`
-	Samples     []Sample        `json:"samples"`
+	Query           string          `json:"query"`
+	TemperatureUnit string          `json:"temperature_unit"`
+	Attribution     json.RawMessage `json:"attribution"`
+	Samples         []Sample        `json:"samples"`
 }
 
 func (p Pack) Query(ctx context.Context, request Request) (Result, error) {
@@ -68,7 +69,7 @@ func (p Pack) Query(ctx context.Context, request Request) (Result, error) {
 		return empty, ErrInvalid
 	}
 	var result Result
-	if json.Unmarshal(output.Data, &result) != nil || result.Query != request.Query || len(result.Samples) == 0 || len(result.Samples) > 240 {
+	if json.Unmarshal(output.Data, &result) != nil || result.Query != request.Query || result.TemperatureUnit != "celsius" || len(result.Samples) == 0 || len(result.Samples) > 240 {
 		return empty, ErrInvalid
 	}
 	attribution := strings.TrimSpace(string(result.Attribution))
