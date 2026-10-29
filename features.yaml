@@ -1169,9 +1169,9 @@ features:
       - {id: FOC-STATUS-REAL, levels: [real]}
       - {id: FOC-PHONE-SYNC, levels: [real]}
     limits:
-      - {"scenario": "FOC-SET-REAL", "level": "real", "reason": "needs Focus status grant; Air probe stopped before dispatch; AB Focus import remains unqualified"}
+      - {"scenario": "FOC-SET-REAL", "level": "real", "reason": "needs Focus status grant for AppleBridgeHelper; signed Air probe stopped before dispatch; AB Focus import remains unqualified"}
       - {"scenario": "FOC-IDLE", "level": "real", "reason": "Five-minute Helper CPU qualification remains pending; no idle CPU measurement claimed."}
-      - {"scenario": "FOC-STATUS-REAL", "level": "real", "reason": "needs Focus status grant; Air read-only native probe confirmed the missing grant without requesting authorization"}
+      - {"scenario": "FOC-STATUS-REAL", "level": "real", "reason": "needs Focus status grant for AppleBridgeHelper; signed Air probe confirmed the missing grant without requesting authorization"}
       - {"scenario": "FOC-PHONE-SYNC", "level": "real", "reason": "Johan must have the paired iPhone available and qualify Focus sync after a safe AB Focus set/readback/restore implementation"}
   - id: recordings.read
     title: Voice Memos assets and voicemail metadata
