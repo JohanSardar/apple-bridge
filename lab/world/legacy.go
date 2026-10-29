@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 )
 
+type legacyHelperKey struct{}
+
 const LegacyRevision = "f0cea78"
 
 func BuildLegacy(ctx context.Context) error {
@@ -54,5 +56,5 @@ func NewLegacy(ctx context.Context, level string, replicas, seed int) (*World, e
 	if err != nil {
 		return nil, err
 	}
-	return newWorld(ctx, level, replicas, seed, filepath.Join(root, "bin", "bridge-feed1"))
+	return newWorld(context.WithValue(ctx, legacyHelperKey{}, true), level, replicas, seed, filepath.Join(root, "bin", "bridge-feed1"))
 }
