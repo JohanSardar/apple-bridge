@@ -1,0 +1,67 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[130.44 86.87 66.83] cpu_idle=50% cpus=8 other_heavy=0"
+  },
+  "run_id": "notes-parity_01M64X6HSYJJ6AQT74BA036PM4",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "checklist": {
+      "reason": "public_html_did_not_create_native_checklists",
+      "identities_preserved": false,
+      "state": "limited",
+      "before_count": 0,
+      "after_count": 0
+    },
+    "cleanup_counts": {
+      "after_count": 120,
+      "before_count": 120,
+      "created_count": 0,
+      "passed": true
+    },
+    "mutation_calls": 4,
+    "os": "Version 26.7.1 (Build 25G241)",
+    "simple_rich": {
+      "reason": "production_command_proof_required",
+      "effect_observed": true,
+      "unknown_attributes": [],
+      "structure_preserved": true,
+      "state": "candidate"
+    }
+  },
+  "scenario": "NOTE-EDIT-PARITY",
+  "level": "real",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-29T22:41:27.358761Z",
+  "assertions": [
+    {
+      "name": "tagged_notes_cleaned_up",
+      "passed": true
+    },
+    {
+      "name": "simple_rich_capability",
+      "passed": true,
+      "status": "limited",
+      "detail": "production_command_proof_required"
+    },
+    {
+      "name": "checklist_capability",
+      "passed": true,
+      "status": "limited",
+      "detail": "public_html_did_not_create_native_checklists"
+    },
+    {
+      "name": "cleanup_baseline_restored",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": [
+    "air"
+  ]
+}

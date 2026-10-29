@@ -1,0 +1,23 @@
+{
+  "before_count": 160293,
+  "after_count": 160293,
+  "expected_count": 160287,
+  "baseline_restored": false,
+  "foreign_deleted_count": 0,
+  "runs": [
+    {
+      "passed": false,
+      "initial_tagged_self_messages": 6,
+      "deleted": 0,
+      "remaining_tagged_self_messages": 6,
+      "failure": "validate:targetUnavailable"
+    },
+    {
+      "passed": true,
+      "initial_tagged_self_messages": 0,
+      "deleted": 0,
+      "remaining_tagged_self_messages": 0,
+      "failure": ""
+    }
+  ]
+}

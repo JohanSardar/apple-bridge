@@ -1,172 +1,38 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[10.43 8.86 8.42] cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[18.68 42.31 68.43] cpu_idle=48% cpus=8 other_heavy=0"
   },
-  "status": "environment-limited",
-  "run_id": "run_01M5EF6YD5VE37NBC4Y9FT3811",
+  "run_id": "run_01M64VQ5D4JD9YJM7F0B0PYQYZ",
   "metrics": {
-    "os_build": "Version 26.7.1 (Build 25G241)",
-    "remaining_file_messages": 1,
-    "remaining_text_messages": 1,
-    "selftest_run_id": "selftest_464E45DD36FE42AFAB62410183FD8600",
-    "selftest_state": "limited",
-    "ui_deferred": true
+    "capture_observer_resets": 0,
+    "cleanup_counts": {
+      "after_count": 160287,
+      "before_count": 160287,
+      "created_count": 0,
+      "passed": true
+    }
   },
   "scenario": "MSG-SELFTEST",
   "level": "real",
   "passed": false,
-  "git_sha": "f2c80b527083ede66eab33ad847381b1d3dc4af8",
-  "at": "2026-10-21T05:33:42.693358Z",
+  "git_sha": "184acc98e1f5b503d718f76dd303429d6e7ddb77",
+  "at": "2026-10-29T22:15:34.564521Z",
   "assertions": [
     {
-      "name": "selftest_report",
+      "name": "real_world",
+      "passed": false
+    },
+    {
+      "name": "cleanup_baseline_restored",
       "passed": true
-    },
-    {
-      "name": "send_text",
-      "passed": true
-    },
-    {
-      "name": "send_file",
-      "passed": true
-    },
-    {
-      "name": "reply",
-      "passed": false,
-      "detail": "ui_deferred_until_unlock"
-    },
-    {
-      "name": "love_add",
-      "passed": false,
-      "detail": "ui_deferred_until_unlock"
-    },
-    {
-      "name": "love_remove",
-      "passed": false,
-      "detail": "ui_deferred_until_unlock"
-    },
-    {
-      "name": "emoji_add",
-      "passed": false,
-      "detail": "ui_deferred_until_unlock"
-    },
-    {
-      "name": "emoji_remove",
-      "passed": false,
-      "detail": "ui_deferred_until_unlock"
-    },
-    {
-      "name": "edit",
-      "passed": false,
-      "detail": "ui_deferred_until_unlock"
-    },
-    {
-      "name": "unsend",
-      "passed": false,
-      "detail": "ui_deferred_until_unlock"
-    },
-    {
-      "name": "mark_read",
-      "passed": false,
-      "detail": "ui_deferred_until_unlock"
-    },
-    {
-      "name": "mark_unread",
-      "passed": false,
-      "detail": "ui_deferred_until_unlock"
-    },
-    {
-      "name": "delete_message",
-      "passed": false,
-      "detail": "ui_deferred_until_unlock"
-    },
-    {
-      "name": "cleanup",
-      "passed": false,
-      "detail": "ui_deferred_until_unlock"
-    },
-    {
-      "name": "required_send_text",
-      "passed": true
-    },
-    {
-      "name": "required_send_file",
-      "passed": true
-    },
-    {
-      "name": "required_reply",
-      "passed": false
-    },
-    {
-      "name": "required_love_add",
-      "passed": false
-    },
-    {
-      "name": "required_love_remove",
-      "passed": false
-    },
-    {
-      "name": "required_emoji_add",
-      "passed": false
-    },
-    {
-      "name": "required_emoji_remove",
-      "passed": false
-    },
-    {
-      "name": "required_edit",
-      "passed": false
-    },
-    {
-      "name": "required_unsend",
-      "passed": false
-    },
-    {
-      "name": "required_mark_read",
-      "passed": false
-    },
-    {
-      "name": "required_mark_unread",
-      "passed": false
-    },
-    {
-      "name": "required_delete_message",
-      "passed": false
-    },
-    {
-      "name": "required_cleanup",
-      "passed": false
-    },
-    {
-      "name": "independent_file_cleanup",
-      "passed": false
-    },
-    {
-      "name": "independent_tagged_cleanup",
-      "passed": false
     },
     {
       "name": "credential_backend_override_restored",
       "passed": true
     }
   ],
-  "latency": {
-    "send_file": {
-      "samples": 1,
-      "p50_ms": 793.098875,
-      "p95_ms": 793.098875,
-      "max_ms": 793.098875,
-      "timeouts": 0
-    },
-    "send_text": {
-      "samples": 1,
-      "p50_ms": 763.835208,
-      "p95_ms": 763.835208,
-      "max_ms": 763.835208,
-      "timeouts": 0
-    }
-  },
+  "latency": {},
   "hosts": [
     "air"
   ]
