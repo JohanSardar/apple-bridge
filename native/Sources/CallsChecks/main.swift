@@ -36,7 +36,39 @@ struct Checks {
         defer { sqlite3_close(db) }
         func execute(_ sql: String) throws { try require(sqlite3_exec(db, sql, nil, nil, nil) == SQLITE_OK) }
         try execute("PRAGMA journal_mode=WAL; PRAGMA wal_autocheckpoint=0; CREATE TABLE Z_METADATA(Z_VERSION INTEGER PRIMARY KEY,Z_UUID TEXT,Z_PLIST BLOB); INSERT INTO Z_METADATA VALUES(1,'synthetic',NULL); CREATE TABLE ZCALLRECORD(Z_PK INTEGER PRIMARY KEY,ZADDRESS TEXT,ZNAME TEXT,ZDATE REAL,ZDURATION REAL,ZORIGINATED INTEGER,ZANSWERED INTEGER,ZSERVICE_PROVIDER TEXT,ZCALLTYPE INTEGER);")
-        let source = CallsSource(path: path), sink = Sink()
+        if CommandLine.arguments.contains("--dial") {
+            let number = "+15555550122"
+            func prepared(_ source: CallsSource) async throws -> Prepared {
+                try await source.prepare(.object(["request_hash": .string("fixture"), "action": .object(["op": .string("phone.dial"), "args": .object(["number": .string(number)])])]))
+            }
+            let observed = CallsSource(path: path, observationWindow: 0.3, dialer: { url in
+                guard url.absoluteString == "tel:+15555550122" else { throw SourceFailure.invalid }
+                var connection: OpaquePointer?
+                guard sqlite3_open(path, &connection) == SQLITE_OK else { throw SourceFailure.unavailable }
+                defer { sqlite3_close(connection) }
+                let sql = "INSERT INTO ZCALLRECORD VALUES(99,'+15555550122','Fixture',\(Date().timeIntervalSinceReferenceDate),0,1,0,'com.apple.telephony',1)"
+                guard sqlite3_exec(connection, sql, nil, nil, nil) == SQLITE_OK else { throw SourceFailure.unavailable }
+                return true
+            })
+            let outcome = try await observed.dispatch(prepared(observed))
+            try require(outcome["observed"].bool && outcome["native_key"].string == "99")
+            let missing = CallsSource(path: path, observationWindow: 0.2, dialer: { _ in
+                var connection: OpaquePointer?
+                guard sqlite3_open(path, &connection) == SQLITE_OK else { throw SourceFailure.unavailable }
+                defer { sqlite3_close(connection) }
+                let now = Date().timeIntervalSinceReferenceDate
+                let sql = "INSERT INTO ZCALLRECORD VALUES(100,'+15555550122','Fixture',\(now),0,0,0,'com.apple.telephony',1); INSERT INTO ZCALLRECORD VALUES(101,'+15555550999','Fixture',\(now),0,1,0,'com.apple.telephony',1); INSERT INTO ZCALLRECORD VALUES(102,'+15555550122','Fixture',\(now - 60),0,1,0,'com.apple.telephony',1);"
+                guard sqlite3_exec(connection, sql, nil, nil, nil) == SQLITE_OK else { throw SourceFailure.unavailable }
+                return true
+            })
+            let unknown = try await missing.dispatch(prepared(missing))
+            try require(unknown["disposition"].string == "indeterminate")
+            let resolved = await missing.resolve("fixture", evidence: unknown)
+            try require(resolved == .null)
+            print("dial observed and indeterminate passed")
+            return
+        }
+        let source = CallsSource(path: path, dialer: { _ in throw SourceFailure.invalid }), sink = Sink()
         let task = Task { try await source.capture(.null, into: sink) }
         defer { task.cancel() }
         try await Task.sleep(for: .milliseconds(100))

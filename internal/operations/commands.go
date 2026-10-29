@@ -180,7 +180,7 @@ func (g *LocalGateway) Submit(ctx context.Context, p trust.Principal, c contract
 			releaseUploads()
 		}
 	}()
-	if p.IsAgent() && p.Level == trust.AgentApprove {
+	if p.IsAgent() && (p.Level == trust.AgentApprove || c.Op == "phone.dial") {
 		r := contracts.CommandRecord{UploadReferences: refs, Command: contracts.RedactMacCommand(c), Principal: p.ID, Source: contracts.CollectionSource(c.Op), RequestHash: hash, State: contracts.CommandAwaitingApproval, Disposition: contracts.DispositionAwaitingApproval, AdmissionEra: era, CreatedAt: now, ExpiresAt: now.Add(24 * time.Hour)}
 		return g.State.TransitionCommand(ctx, state.CommandTransition{Record: r})
 	}
@@ -247,6 +247,11 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 	}
 	defer release()
 	action := contracts.NativeAction{Op: c.Op, Args: a, Origin: c.Origin}
+	if c.Op == "phone.dial" {
+		var args contracts.PhoneDialArgs
+		json.Unmarshal(c.Args, &args)
+		action.Args = args
+	}
 	if strings.HasPrefix(c.Op, "music.") {
 		args, problem := g.musicArgs(runctx, p, c)
 		if problem != nil {
@@ -633,6 +638,9 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 		collection := "reminders.reminder"
 		if r.Source == "pdf" {
 			collection = "pdf.artifact"
+		}
+		if r.Source == contracts.Phone {
+			collection = "phone.call"
 		}
 		if r.Source == "music" {
 			collection = "music.library_item"

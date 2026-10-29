@@ -594,7 +594,7 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.Feature == "recordings.read" {
 		return runRecordings(ctx, s, level)
 	}
-	if s.Feature == "phone.read" {
+	if s.Feature == "phone.read" || s.Feature == "phone.dial" {
 		return runPhone(ctx, s, level)
 	}
 	if s.Feature == "web.frontdoor" || s.Feature == "web.agents" {
@@ -1186,7 +1186,7 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		if s.Feature == "photos.capture" || s.Feature == "photos.commands" {
 			duration = 30 * time.Minute
 		}
-		if s.Feature == "phone.read" || s.Feature == "recordings.read" {
+		if s.Feature == "phone.read" || s.Feature == "phone.dial" || s.Feature == "recordings.read" {
 			duration = 45 * time.Minute
 		}
 		if s.Feature == "maps.queries" && level == "real" {

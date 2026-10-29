@@ -1565,3 +1565,15 @@ features:
       - {scenario: SHAZAM-REAL, level: real, reason: "real qualification batched at end; ShazamKit entitlement and fixture qualification required"}
       - {scenario: BT-REAL, level: real, reason: "real qualification batched at end; native discovery limited to avoid permission prompts"}
       - {scenario: AIRPLAY-REAL, level: real, reason: "real qualification batched at end; native route changes disabled"}
+  - id: phone.dial
+    title: Continuity dialing with Mac confirmation
+    requirements: [R-API, R-SCOPE]
+    milestone: G4
+    modules: [native/Sources/CallsSource, internal/contracts, internal/operations]
+    depends_on: [phone.read]
+    status: limited
+    scenarios:
+      - {id: CALL-DIAL, levels: [sim]}
+      - {id: CALL-DIAL-REAL, levels: [real]}
+    limits:
+      - {scenario: CALL-DIAL-REAL, level: real, reason: "rings Johan's phone; needs him present; real qualification batched at end"}

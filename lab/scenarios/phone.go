@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
+	"github.com/JohanSardar/apple-bridge/internal/trust"
 	"github.com/JohanSardar/apple-bridge/lab/scripted"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 	"os"
@@ -35,18 +36,31 @@ func runPhoneScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "CALLS-REPLICA" {
 		return runCallsReplica(ctx, s, level)
 	}
-	if s.ID != "CALL-CAPTURE" && !(s.ID == "CALL-IDLE" && level == "sim") {
+	if s.ID != "CALL-DIAL" && s.ID != "CALL-CAPTURE" && !(s.ID == "CALL-IDLE" && level == "sim") {
 		e.Assertions = []Assertion{{Name: "native_level_acceptance_not_implemented", Passed: false}}
 		return e
 	}
+	if s.ID == "CALL-DIAL" {
+		d, ok := contracts.Descriptor("phone.dial")
+		if !ok || d.Scope != "phone:write" {
+			e.Assertions = []Assertion{{Name: "dial_registered", Passed: false}}
+			return e
+		}
+	}
 	cmd := exec.CommandContext(ctx, "packaging/dev/build-native.sh")
 	cmd.Env = append(os.Environ(), "APPLE_BRIDGE_NATIVE_TARGET=CallsChecks")
-	err := cmd.Run()
+	var err error
+	if s.ID != "CALL-DIAL" || !callsDialChecksFresh() {
+		err = cmd.Run()
+	}
 	e.Assertions = []Assertion{{Name: "calls_native_fixture_build", Passed: err == nil}}
 	if err == nil {
 		directory, readErr := os.ReadFile("native/.build/native-output-1")
 		if readErr == nil {
 			args := []string{}
+			if s.ID == "CALL-DIAL" {
+				args = append(args, "--dial")
+			}
 			if s.ID == "CALL-IDLE" {
 				args = append(args, "--idle")
 			}
@@ -55,12 +69,18 @@ func runPhoneScenario(ctx context.Context, s Scenario, level string) Evidence {
 			err = readErr
 		}
 		name := "wal_insert_reconcile_delete_partial_scan"
+		if s.ID == "CALL-DIAL" {
+			name = "fake_dialer_observed_and_indeterminate"
+		}
 		if s.ID == "CALL-IDLE" {
 			name = "five_minute_source_cpu_under_two_percent_and_no_idle_checkpoints"
 		}
 		e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: err == nil})
 	}
 	e.Passed = err == nil
+	if s.ID == "CALL-DIAL" && e.Passed {
+		return runDialGateway(ctx, s, level, e)
+	}
 	return e
 }
 
@@ -222,4 +242,91 @@ func runCallsIdleReal(ctx context.Context, s Scenario, level string) Evidence {
 	e.Passed = err == nil && percent >= 0 && percent < 2
 	e.Assertions = []Assertion{{Name: "five_minute_helper_cpu_under_two_percent", Passed: e.Passed}}
 	return e
+}
+
+func runDialGateway(ctx context.Context, s Scenario, level string, e Evidence) Evidence {
+	add := func(name string, ok bool) {
+		e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok})
+		e.Passed = e.Passed && ok
+	}
+	w, err := world.New(world.WithOptions(ctx, world.Options{Scope: "calendar:read,reminders:read,phone:read,phone:write,system:read"}), level, 0, 0)
+	add("gateway_started", err == nil)
+	if err != nil {
+		return e
+	}
+	defer w.Close()
+	client := scripted.Client{Endpoint: w.Gateway, Protocol: "rest"}
+	add("helper_ready", w.Await(10*time.Second, func() bool {
+		var r contracts.QueryResult
+		return client.Call(ctx, "helper.version", contracts.Query{Args: json.RawMessage(`{}`)}, &r) == nil
+	}) == nil)
+	args := json.RawMessage(`{"number":"+15555550122"}`)
+	command := contracts.Command{ID: contracts.NewCommandID(), Args: args, WaitMS: 15000}
+	var record contracts.CommandRecord
+	err = client.Call(ctx, "phone.dial", command, &record)
+	add("outgoing_record_observed", err == nil && record.State == "observed" && record.CommitSeq > 0)
+	add("fake_no_record_armed", w.ControlAction("/fault", map[string]any{"name": "dial-no-record"}) == nil)
+	command.ID = contracts.NewCommandID()
+	err = client.Call(ctx, "phone.dial", command, &record)
+	add("missing_record_indeterminate", err == nil && record.State == "indeterminate")
+	var rows contracts.ReadResult
+	_ = client.Call(ctx, "records.query", contracts.ReadQuery{Collection: "phone.call", Limit: 100}, &rows)
+	count := len(rows.Records)
+	add("fake_dialer_reset", w.ControlAction("/fault", map[string]any{"name": ""}) == nil)
+	err = client.Call(ctx, "phone.dial", command, &record)
+	add("same_id_stays_indeterminate", err == nil && record.State == "indeterminate")
+	_ = client.Call(ctx, "records.query", contracts.ReadQuery{Collection: "phone.call", Limit: 100}, &rows)
+	add("no_retry_effect", len(rows.Records) == count && count == 1)
+	authority, authErr := trust.Open(w.Gateway.Home)
+	add("agent_authority", authErr == nil)
+	if authErr == nil {
+		for _, level := range []trust.AgentLevel{trust.AgentRead, trust.AgentApprove, trust.AgentFull} {
+			_, token, createErr := authority.CreateAgent("Bridge Test dial", level, []contracts.Grant{"phone:write"})
+			add("dial_agent_created", createErr == nil)
+			endpoint := w.Gateway
+			endpoint.Token = token
+			agentClient := scripted.Client{Endpoint: endpoint, Protocol: "rest"}
+			command.ID = contracts.NewCommandID()
+			callErr := agentClient.Call(ctx, "phone.dial", command, &record)
+			if level == trust.AgentRead {
+				add("read_agent_denied", callErr != nil)
+			} else {
+				add("dial_requires_owner_approval", callErr == nil && record.State == contracts.CommandAwaitingApproval)
+			}
+		}
+	}
+
+	return e
+}
+
+func callsDialChecksFresh() bool {
+	raw, err := os.ReadFile("native/.build/native-output-1")
+	if err != nil {
+		return false
+	}
+	root, err := filepath.Abs("native/.build")
+	directory := strings.TrimSpace(string(raw))
+	if err != nil || !strings.HasPrefix(directory, root+string(os.PathSeparator)) {
+		return false
+	}
+	binary, err := os.Stat(filepath.Join(directory, "CallsChecks"))
+	if err != nil {
+		return false
+	}
+	for _, path := range []string{"native/Package.swift", "native/Sources/CallsChecks", "native/Sources/CallsSource", "native/Sources/SourceSupport"} {
+		fresh := true
+		err := filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if !info.IsDir() && info.ModTime().After(binary.ModTime()) {
+				fresh = false
+			}
+			return nil
+		})
+		if err != nil || !fresh {
+			return false
+		}
+	}
+	return true
 }
