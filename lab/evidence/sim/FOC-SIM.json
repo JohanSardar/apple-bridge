@@ -1,9 +1,9 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[7.98 8.66 8.26] cpu_idle=38% cpus=8 other_heavy=0"
+    "summary": "air: load=[30.66 50.54 43.94] cpu_idle=5% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M646XFHXGJPDZCZTJ58YGGZ4",
+  "run_id": "run_01M64XKSW2JCA0PXPQNXWVXX7B",
   "metrics": {
     "capture_observer_resets": 0
   },
@@ -11,58 +11,78 @@
   "level": "sim",
   "passed": true,
   "git_sha": "",
-  "at": "2026-10-29T16:12:01.469157Z",
+  "at": "2026-10-29T22:48:41.602984Z",
   "assertions": [
     {
-      "name": "unknown_status_has_shape",
+      "name": "set_readback",
       "passed": true
     },
     {
-      "name": "invalid_focused_rejected",
+      "name": "bounded_pack",
       "passed": true
     },
     {
-      "name": "unqualified_mutation_not_advertised",
+      "name": "restore_readback",
       "passed": true
     },
     {
-      "name": "unqualified_real_runner_disabled",
+      "name": "timeout_not_success",
       "passed": true
     },
     {
-      "name": "fake_pack_runner",
+      "name": "unknown_status_never_dispatches",
       "passed": true
     },
     {
-      "name": "bounded_named_pack",
+      "name": "set_contract",
       "passed": true
     },
     {
-      "name": "unqualified_set_never_dispatches",
+      "name": "explicit_state_required",
       "passed": true
     },
     {
-      "name": "unqualified_set_never_dispatches",
+      "name": "gateway",
       "passed": true
     },
     {
-      "name": "unqualified_set_never_dispatches",
+      "name": "authority",
       "passed": true
     },
     {
-      "name": "timeout_rejected",
+      "name": "agent",
       "passed": true
     },
     {
-      "name": "nonzero_exit_rejected",
+      "name": "agent_requires_approval",
       "passed": true
     },
     {
-      "name": "oversize_output_rejected",
+      "name": "agent",
       "passed": true
     },
     {
-      "name": "runner_error_retained",
+      "name": "agent_requires_approval",
+      "passed": true
+    },
+    {
+      "name": "build_directory",
+      "passed": true
+    },
+    {
+      "name": "pack_compiles",
+      "passed": true
+    },
+    {
+      "name": "native_build",
+      "passed": true
+    },
+    {
+      "name": "native_output",
+      "passed": true
+    },
+    {
+      "name": "native_set_readback_restore",
       "passed": true
     },
     {

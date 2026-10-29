@@ -1155,13 +1155,13 @@ features:
     limits:
       - {"scenario": "CALL-IDLE", "level": "real", "reason": "Failed assertions: five_minute_helper_cpu_under_two_percent"}
   - id: focus.pack
-    title: Focus status and pack qualification
+    title: Focus status and approved DND writes
     requirements: [R-RW]
     milestone: G5
     modules: [internal/focuspack, native/Sources/FocusSource]
     depends_on: [shortcuts.runner]
     status: limited
-    notes: Read-only INFocusStatusCenter capture preserves unknown status without authorization; no authorization request. Set Focus identifiers and parameters remain unverified, so no mutation capability or importable pack is advertised.
+    notes: focus.set runs AB Focus for Do Not Disturb on/off and optional RFC3339 expiry, with independent authorized status readback and approval for every agent. Named Focus identity remains unavailable. Tests require an inactive prior state and restore it after dispatch, including failures.
     scenarios:
       - {id: FOC-SIM, levels: [sim]}
       - {id: FOC-SET-REAL, levels: [real]}
@@ -1169,9 +1169,9 @@ features:
       - {id: FOC-STATUS-REAL, levels: [real]}
       - {id: FOC-PHONE-SYNC, levels: [real]}
     limits:
-      - {"scenario": "FOC-SET-REAL", "level": "real", "reason": "AB Focus pack is not supplied: verify Set Focus identifiers/parameters and provide/import packaging/shortcuts/AB Focus.shortcut; then qualify set/readback/restore (syncs to iPhone)"}
+      - {"scenario": "FOC-SET-REAL", "level": "real", "reason": "needs Focus status grant for AppleBridgeHelper; signed Air probe stopped before dispatch; AB Focus import remains unqualified"}
       - {"scenario": "FOC-IDLE", "level": "real", "reason": "Five-minute Helper CPU qualification remains pending; no idle CPU measurement claimed."}
-      - {"scenario": "FOC-STATUS-REAL", "level": "real", "reason": "System Settings > Privacy & Security > Focus: authorize AppleBridgeHelper.app (dev.applebridge.helper); real runner currently hard-codes limited and needs a status probe"}
+      - {"scenario": "FOC-STATUS-REAL", "level": "real", "reason": "needs Focus status grant for AppleBridgeHelper; signed Air probe confirmed the missing grant without requesting authorization"}
       - {"scenario": "FOC-PHONE-SYNC", "level": "real", "reason": "Johan must have the paired iPhone available and qualify Focus sync after a safe AB Focus set/readback/restore implementation"}
   - id: recordings.read
     title: Voice Memos assets and voicemail metadata
