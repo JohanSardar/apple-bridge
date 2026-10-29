@@ -118,6 +118,9 @@ func (g *LocalGateway) Submit(ctx context.Context, p trust.Principal, c contract
 	if err = g.authorize(p, c.Op); err != nil {
 		return empty, err
 	}
+	if contracts.MacPowerAction(c.Op) && (!p.IsAgent() || p.Level != trust.AgentApprove) {
+		return empty, contracts.ErrForbidden
+	}
 	if c.Op == "mac.clipboard_write" && p.IsAgent() && p.Level == trust.AgentApprove {
 		return empty, contracts.ErrUnsupported
 	}

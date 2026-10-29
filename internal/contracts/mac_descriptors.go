@@ -1,8 +1,17 @@
 package contracts
 
-import "encoding/json"
+import (
+	"encoding/base64"
+	"encoding/json"
+	"net/url"
+)
 
 type MacArgs struct {
+	Title      string   `json:"title,omitempty"`
+	Body       string   `json:"body,omitempty"`
+	ActionURL  string   `json:"action_url,omitempty"`
+	Pane       string   `json:"pane,omitempty"`
+	ImageBlob  string   `json:"image_blob,omitempty"`
 	Text       *string  `json:"text,omitempty"`
 	Volume     *float64 `json:"volume,omitempty"`
 	Muted      *bool    `json:"muted,omitempty"`
@@ -18,10 +27,50 @@ func ValidateMacCommand(c Command) error {
 	if !ValidCommandID(c.ID) || c.WaitMS < 0 || c.WaitMS > 15000 || DecodeInput(c.Args, &a) != nil {
 		return ErrInvalid
 	}
+	if MacPowerAction(c.Op) || c.Op == "mac.notify" || c.Op == "mac.open_settings" || c.Op == "mac.set_wallpaper" {
+		var fields map[string]json.RawMessage
+		if json.Unmarshal(c.Args, &fields) != nil || fields == nil {
+			return ErrInvalid
+		}
+		allowed := map[string]bool{}
+		switch c.Op {
+		case "mac.notify":
+			allowed = map[string]bool{"title": true, "body": true, "action_url": true}
+		case "mac.open_settings":
+			allowed["pane"] = true
+		case "mac.set_wallpaper":
+			allowed["image_blob"] = true
+		}
+		for key := range fields {
+			if !allowed[key] {
+				return ErrInvalid
+			}
+		}
+	}
 	if c.Op != "mac.clipboard_write" && a.Text != nil {
 		return ErrInvalid
 	}
 	switch c.Op {
+	case "mac.lock_screen", "mac.sleep_display", "mac.restart", "mac.shutdown":
+	case "mac.open_settings":
+		if !MacSettingsPane(a.Pane) {
+			return ErrInvalid
+		}
+	case "mac.notify":
+		if a.Title == "" || len(a.Title) > 256 || len(a.Body) > 4096 {
+			return ErrInvalid
+		}
+		if a.ActionURL != "" {
+			u, e := url.Parse(a.ActionURL)
+			if e != nil || u.Host == "" || (u.Scheme != "https" && u.Scheme != "http") {
+				return ErrInvalid
+			}
+		}
+	case "mac.set_wallpaper":
+		b, e := base64.StdEncoding.DecodeString(a.ImageBlob)
+		if e != nil || len(b) == 0 || len(b) > 8*1024*1024 {
+			return ErrInvalid
+		}
 	case "mac.clipboard_write":
 		if a.Text == nil || len(*a.Text) > 65536 {
 			return ErrInvalid
@@ -66,10 +115,11 @@ func MacCompletionEvidence(raw json.RawMessage, hash string) bool {
 
 func MacDescriptors() []OperationDescriptor {
 	var out []OperationDescriptor
-	for _, name := range []string{"mac.set_volume", "mac.set_mute", "mac.set_output_device", "mac.set_appearance", "mac.launch_app", "mac.activate_app", "mac.quit_app", "mac.keep_awake", "mac.clipboard_write"} {
+	for _, name := range []string{"mac.set_volume", "mac.set_mute", "mac.set_output_device", "mac.set_appearance", "mac.launch_app", "mac.activate_app", "mac.quit_app", "mac.keep_awake", "mac.clipboard_write", "mac.notify", "mac.open_settings", "mac.set_wallpaper", "mac.lock_screen", "mac.sleep_display", "mac.restart", "mac.shutdown"} {
 		out = append(out, OperationDescriptor{Name: name, Version: 1, Kind: CommandOp, Source: "mac", Scope: "mac:write", Capability: name, Input: Command{}, Output: CommandRecord{}, Description: "Change Mac state with native readback"})
 	}
 	out = append(out, OperationDescriptor{Name: "mac.clipboard_read", Version: 1, Kind: QueryOp, Source: "mac", Scope: "mac:read", Capability: "mac.clipboard_read", Input: Query{}, Output: QueryResult{}, Description: "Read transient clipboard text without capturing contents"})
+	out = append(out, OperationDescriptor{Name: "mac.network_check", Version: 1, Kind: QueryOp, Source: "mac", Scope: "mac:read", Capability: "mac.network_check", Input: Query{}, Output: QueryResult{}, Description: "Check default network reachability, DNS and interface counters"})
 	return out
 }
 
@@ -94,6 +144,32 @@ func RedactMacCommand(c Command) Command {
 }
 
 func macSchema(d OperationDescriptor, schema map[string]any) map[string]any {
+	if d.Name == "mac.notify" || d.Name == "mac.open_settings" || d.Name == "mac.set_wallpaper" || MacPowerAction(d.Name) {
+		args := JSONSchema(MacArgs{})
+		fields := args["properties"].(map[string]any)
+		required := []string{}
+		allowed := map[string]bool{}
+		switch d.Name {
+		case "mac.notify":
+			allowed = map[string]bool{"title": true, "body": true, "action_url": true}
+			required = []string{"title", "body"}
+		case "mac.open_settings":
+			allowed["pane"] = true
+			required = []string{"pane"}
+		case "mac.set_wallpaper":
+			allowed["image_blob"] = true
+			required = []string{"image_blob"}
+		}
+		for k := range fields {
+			if !allowed[k] {
+				delete(fields, k)
+			}
+		}
+		args["required"] = required
+		schema["properties"].(map[string]any)["args"] = args
+		schema["required"] = []string{"args"}
+		return schema
+	}
 	args := JSONSchema(MacArgs{})
 	fields := args["properties"].(map[string]any)
 	key := map[string]string{"mac.set_volume": "volume", "mac.set_mute": "muted", "mac.set_output_device": "device", "mac.set_appearance": "appearance", "mac.launch_app": "bundle_id", "mac.activate_app": "bundle_id", "mac.quit_app": "bundle_id", "mac.keep_awake": "on", "mac.clipboard_write": "text"}[d.Name]
@@ -127,4 +203,15 @@ func macSchema(d OperationDescriptor, schema map[string]any) map[string]any {
 	properties["wait_ms"].(map[string]any)["maximum"] = 15000
 	schema["required"] = []string{"args"}
 	return schema
+}
+
+func MacPowerAction(op string) bool {
+	return op == "mac.lock_screen" || op == "mac.sleep_display" || op == "mac.restart" || op == "mac.shutdown"
+}
+func MacSettingsPane(p string) bool {
+	switch p {
+	case "general", "notifications", "network", "displays", "wallpaper", "privacy":
+		return true
+	}
+	return false
 }
