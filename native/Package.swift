@@ -2,6 +2,7 @@
 import PackageDescription
 
 let sourceTargets: [Target] = [
+    .target(name: "WeatherSource", dependencies: ["SourceSupport"]),
     .target(name: "FocusSource", dependencies: ["SourceSupport"]),
     .target(name: "MusicSource", dependencies: ["SourceSupport"]),
     .target(name: "PhotosSource", dependencies: ["SourceSupport"]),

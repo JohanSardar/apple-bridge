@@ -1,14 +1,18 @@
 package scenarios
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"os/exec"
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/internal/shortcut"
 	"github.com/JohanSardar/apple-bridge/internal/weatherpack"
+	"github.com/JohanSardar/apple-bridge/lab/scripted"
+	"github.com/JohanSardar/apple-bridge/lab/world"
 )
 
 type weatherPackFixture struct {
@@ -33,16 +37,13 @@ func runWeatherPack(ctx context.Context, s Scenario, level string) Evidence {
 		e.Passed = e.Passed && passed
 	}
 	if level != "sim" {
-		e.Status = "limited"
-		e.Passed = false
-		e.Conditions = map[string]string{"reason": "real qualification batched at end; Weather action identifiers and signed AB Weather pack output remain unverified"}
-		return e
+		return runWeatherReal(ctx, s, level)
 	}
 	fixture := &weatherPackFixture{}
 	pack := weatherpack.Pack{Runner: fixture}
 	for _, query := range []string{"weather.current", "weather.hourly", "weather.daily"} {
 		attribution := json.RawMessage(`{"provider":"synthetic","url":"https://example.invalid/weather"}`)
-		raw, _ := json.Marshal(weatherpack.Result{Query: query, Attribution: attribution, Samples: []weatherpack.Sample{{Time: time.Date(2030, 1, 1, 0, 0, 0, 0, time.UTC), Temperature: 12, Condition: "synthetic"}}})
+		raw, _ := json.Marshal(weatherpack.Result{Query: query, TemperatureUnit: "celsius", Attribution: attribution, Samples: []weatherpack.Sample{{Time: time.Date(2030, 1, 1, 0, 0, 0, 0, time.UTC), Temperature: 12, Condition: "synthetic"}}})
 		fixture.result = shortcut.Result{ExitStatus: 0, Data: raw}
 		result, err := pack.Query(ctx, weatherpack.Request{Query: query, Latitude: 40, Longitude: -90})
 		add(query+"_fake_pack", err == nil && len(result.Samples) == 1 && string(result.Attribution) == string(attribution))
@@ -53,7 +54,7 @@ func runWeatherPack(ctx context.Context, s Scenario, level string) Evidence {
 	}
 	for _, query := range []string{"weather.current", "weather.hourly", "weather.daily", "weather.minute", "weather.alerts"} {
 		_, registered := contracts.Descriptor(query)
-		add(query+"_unadvertised", !registered)
+		add(query+"_registration", registered == (query == "weather.current" || query == "weather.hourly" || query == "weather.daily"))
 	}
 	for _, query := range []string{"weather.minute", "weather.alerts", "unknown"} {
 		before := fixture.calls
@@ -82,5 +83,81 @@ func runWeatherPack(ctx context.Context, s Scenario, level string) Evidence {
 	_, err = pack.Query(ctx, weatherpack.Request{Query: "weather.current", Latitude: 91})
 	add("invalid_location_never_dispatched", errors.Is(err, weatherpack.ErrInvalid) && before == fixture.calls)
 	e.Metrics["assertion_count"] = len(e.Assertions)
+	return e
+}
+
+func runWeatherReal(ctx context.Context, s Scenario, level string) Evidence {
+	e := Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, At: time.Now().UTC(), Passed: true, Metrics: map[string]any{}}
+	add := func(name string, passed bool) {
+		e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: passed})
+		e.Passed = e.Passed && passed
+	}
+	w, err := world.NewRealWithSetup(ctx, level, 0, world.NativeSetup{FilesystemTruth: true})
+	add("world_started", err == nil)
+	if err != nil {
+		return e
+	}
+	defer w.Close()
+	endpoint := w.Gateway
+	endpoint.Token, err = w.ScopedToken(endpoint, "weather:read,system:read")
+	add("scopes_granted", err == nil)
+	if err != nil {
+		return e
+	}
+	client := scripted.Client{Endpoint: endpoint}
+	err = w.Await(20*time.Second, func() bool {
+		var out contracts.QueryResult
+		return client.Call(ctx, "helper.version", contracts.Query{Args: json.RawMessage(`{}`), DeadlineMS: 1000}, &out) == nil
+	})
+	add("helper_ready", err == nil)
+	if err != nil {
+		return e
+	}
+	var invalid contracts.QueryResult
+	err = client.Call(ctx, "weather.current", contracts.Query{Args: json.RawMessage(`{"latitude":91,"longitude":0}`), DeadlineMS: 1000}, &invalid)
+	add("native_invalid_coordinate_rejected", errors.Is(err, contracts.ErrInvalid))
+	if !errors.Is(err, contracts.ErrInvalid) {
+		return e
+	}
+	signed, signingErr := exec.CommandContext(ctx, "/usr/bin/codesign", "--display", "--entitlements", ":-", w.HelperApp).Output()
+	add("helper_signing_readable", signingErr == nil)
+	if signingErr != nil {
+		return e
+	}
+	if !bytes.Contains(signed, []byte("com.apple.developer.weatherkit")) {
+		e.Status = "limited"
+		e.Passed = false
+		e.Conditions = map[string]string{"reason": "needs WeatherKit-enabled provisioning profile and Apple-signed Mac Helper"}
+		return e
+	}
+	for _, query := range []string{"weather.current", "weather.hourly", "weather.daily"} {
+		var out contracts.QueryResult
+		err = client.Call(ctx, query, contracts.Query{Args: json.RawMessage(`{"latitude":40,"longitude":-90}`), DeadlineMS: 15000}, &out)
+		if err != nil {
+			add(query+"_completed", false)
+			return e
+		}
+		fixture := &weatherPackFixture{result: shortcut.Result{Data: out.ResultJSON}}
+		result, decodeErr := (weatherpack.Pack{Runner: fixture}).Query(ctx, weatherpack.Request{Query: query, Latitude: 40, Longitude: -90})
+		add(query+"_structured_units_attribution", decodeErr == nil)
+		if decodeErr != nil {
+			return e
+		}
+		valid := len(result.Samples) > 0
+		if query == "weather.hourly" {
+			valid = len(result.Samples) >= 24
+		}
+		if query == "weather.daily" {
+			valid = len(result.Samples) >= 5
+		}
+		for i, sample := range result.Samples {
+			valid = valid && sample.Temperature >= -100 && sample.Temperature <= 65 && sample.Time.After(time.Now().Add(-24*time.Hour)) && sample.Time.Before(time.Now().Add(11*24*time.Hour))
+			if i > 0 {
+				valid = valid && sample.Time.After(result.Samples[i-1].Time)
+			}
+		}
+		add(query+"_plausible_forecast", valid)
+		e.Metrics[query+"_sample_count"] = len(result.Samples)
+	}
 	return e
 }

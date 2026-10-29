@@ -1251,18 +1251,18 @@ features:
       - {id: AI-LOCAL, levels: [real]}
       - {id: AUD-TRANSCRIBE, levels: [real]}
   - id: weather.pack
-    title: Weather via AB Weather pack
+    title: Weather via native WeatherKit fallback
     requirements: [R-RW]
     milestone: G7
-    modules: [internal/weatherpack]
-    depends_on: [shortcuts.runner]
+    modules: [internal/weatherpack, native/Sources/WeatherSource]
+    depends_on: [helper.session]
     status: limited
-    notes: Current, hourly and daily fake pack seam preserves attribution and bounds requests and output. Weather action identifiers and signed pack output are unverified; queries remain unadvertised and no importable artifact is supplied. No WeatherKit key used. Minute and alerts are unavailable through Shortcuts.
+    notes: Current, hourly and daily public queries use the permitted signed Helper WeatherKit fallback with Celsius units and Apple attribution. Injected pack runner remains the sim seam. Minute rain and alerts remain unavailable. Real qualification needs WeatherKit signing.
     scenarios:
       - {id: WX-SIM, levels: [sim]}
       - {id: WX-REAL, levels: [real]}
     limits:
-      - {"scenario": "WX-REAL", "level": "real", "reason": "AB Weather pack is not supplied: verify action identifiers, create/sign/import packaging/shortcuts/AB Weather.shortcut; real runner and structured weather readback are disabled"}
+      - {"scenario": "WX-REAL", "level": "real", "reason": "needs WeatherKit-enabled provisioning profile and Apple-signed Mac Helper; existing dev identity and services profile lack the WeatherKit grant"}
   - id: mac.commands
     title: Mac system commands
     requirements: [R-API, R-SCOPE]
