@@ -416,6 +416,7 @@ Contacts Me-card and notes entitlement contract: [spec/contacts.md](spec/contact
 Mail capture foundation and local body queries: [Mail](spec/mail.md).
 
 Files source details: [files](spec/files.md).
+Safari capture: [design/spec/safari.md](spec/safari.md).
 
 Permission status and explicit requests: [permissions](spec/permissions.md).
 
@@ -427,6 +428,8 @@ Audio query slice: [inputs, bounds and remaining work](spec/audio.md).
 Location and Maps query slice: [native queries and limits](spec/maps.md).
 
 Vision and PDF query slice: [inputs, bounds and remaining work](spec/vision.md).
+
+Capture and print provider slice: [capture](spec/capture.md).
 Shared helpers for new sources: [SourceSupport](spec/source-support.md).
 
 Relay service and enrollment: [G2-1 / G2-2](spec/relay.md).
@@ -515,6 +518,8 @@ Notes extras: [source spec](spec/notes.md).
 - Identity: Core Data `ZIDENTIFIER` UUID; AppleScript id `x-coredata://…/ICNote/p<pk>` stored as alias.
 
 ### 9.6 Usage (Screen Time, read-only)
+
+Action qualification: [usage probe](spec/usage.md).
 
 - Read `~/Library/Biome/streams/restricted/App.InFocus/local` and `…/remote/<device-uuid>/` SEGB files (FDA). Device names/platforms from `~/Library/Biome/sync/sync.db` `DevicePeer`.
 - Decoder (`Decoders.SEGB` + `InFocus`): per record field 3 = starting flag, field 4 = Mac-epoch double, field 6 = bundle id (see `probe/infocus_usage.py`). Pair start/stop into sessions; cap a session at 4 h; a new start closes the previous session.
@@ -1550,3 +1555,5 @@ Notes rich records retain `plain_text`, escaped fallback `html`, structured `blo
 W8-PARITY is limited on macOS 26.7.1 (25G241): the tagged simple-rich HTML replacement did not preserve expected text/block structure, and public HTML checkbox import did not create native checklist identities. Neither rich edits nor checklist toggles are exposed. `NOTE-EDIT-PARITY` records the per-OS result with tagged-note cleanup; app acceptance remains a separate milestone gate.
 
 The shell's app switcher enables each app when its R step passes. Scenario families: `WEB-REM-*`, `WEB-CAL-*`, `WEB-CON-*`, `WEB-NOTE-*` (web level, 12 projects), plus `REM-STORE-*`, `CAL-STORE-*` and `NOTE-DECODE-FULL` (sim and real).
+
+Voice Memos and voicemail metadata capture: [recordings](spec/recordings.md).

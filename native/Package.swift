@@ -14,6 +14,8 @@ let sourceTargets: [Target] = [
     .target(name: "MailSource", dependencies: ["SourceSupport"]),
     .target(name: "FilesSource", dependencies: ["SourceSupport"]),
     .target(name: "CallsSource", dependencies: ["SourceSupport"]),
+    .target(name: "VoiceMemosSource", dependencies: ["SourceSupport"]),
+    .target(name: "VoicemailSource", dependencies: ["SourceSupport"]),
     .target(name: "VisionSource", dependencies: ["SourceSupport"]),
     .target(name: "PDFSource", dependencies: ["SourceSupport"]),
     .target(name: "ShortcutsSource", dependencies: ["SourceSupport"]),
@@ -23,6 +25,7 @@ let sourceTargets: [Target] = [
     .target(name: "RemindersSource", dependencies: ["AgendaGate", "SourceSupport", "RemindersStore"]),
     .target(name: "NotesSource", dependencies: ["SourceSupport", "Decoders", "MediaDerivatives"]),
     .target(name: "MessagesSource", dependencies: ["SourceSupport", "Decoders", "MediaDerivatives"]),
+    .target(name: "SafariSource", dependencies: ["SourceSupport"]),
 ]
 
 let package = Package(
@@ -31,10 +34,13 @@ let package = Package(
     products: [.executable(name: "AppleBridgeHelper", targets: ["AppleBridgeHelper"])],
     targets: sourceTargets + [
         .target(name: "SourceSupport"),
+        .executableTarget(name: "CaptureChecks", dependencies: ["CaptureSource", "SourceSupport"]),
         .executableTarget(name: "PhotosChecks", dependencies: ["PhotosSource", "SourceSupport"]),
         .executableTarget(name: "MailChecks", dependencies: ["MailSource", "SourceSupport"]),
         .executableTarget(name: "FilesChecks", dependencies: ["FilesSource", "SourceSupport"]),
+        .executableTarget(name: "RecordingsChecks", dependencies: ["VoiceMemosSource", "VoicemailSource", "SourceSupport"]),
         .executableTarget(name: "CallsChecks", dependencies: ["CallsSource", "SourceSupport"]),
+        .executableTarget(name: "SafariChecks", dependencies: ["SafariSource", "SourceSupport"]),
         .executableTarget(name: "SourceSupportChecks", dependencies: ["SourceSupport"]),
         .executableTarget(name: "ActionsChecks", dependencies: ["ShortcutsSource", "SourceSupport"]),
         .executableTarget(name: "ShortcutsChecks", dependencies: ["ShortcutsSource", "SourceSupport"]),

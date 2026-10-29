@@ -54,7 +54,7 @@ func queryContext(ctx context.Context, q *contracts.Query) (context.Context, con
 	if len(q.ID) <= 4 || !contracts.ValidCommandID(q.ID) || !strings.HasPrefix(q.ID, "qry_") || len(q.ID) > 128 || q.DeadlineMS < 0 || q.DeadlineMS > 60000 || !json.Valid(q.Args) {
 		return ctx, func() {}, contracts.ErrInvalid
 	}
-	if q.Op == "helper.version" || q.Op == "mac.clipboard_read" {
+	if q.Op == "helper.version" || q.Op == "mac.clipboard_read" || q.Op == "mac.network_check" {
 		var args struct{}
 		if !bytes.HasPrefix(bytes.TrimSpace(q.Args), []byte("{")) || contracts.DecodeInput(q.Args, &args) != nil {
 			return ctx, func() {}, contracts.ErrInvalid
@@ -130,6 +130,18 @@ func (g *LocalGateway) Query(ctx context.Context, p trust.Principal, q contracts
 		if err != nil {
 			return out, err
 		}
+	}
+	if q.Op == "vision.ocr" || q.Op == "pdf.text" || q.Op == "pdf.search" {
+		q.Args, err = g.documentInput(ctx, p, q.Args)
+		if err != nil {
+			return out, err
+		}
+		var cleanup func()
+		q.Args, cleanup, err = g.stageDocumentInput(ctx, q.Args)
+		if err != nil {
+			return out, err
+		}
+		defer cleanup()
 	}
 	frame, err := g.Peer.Exchange(ctx, contracts.IPCFrame{T: "Query", ID: q.ID, Op: q.Op, Args: q.Args, DeadlineMS: q.DeadlineMS})
 	if errors.Is(err, context.DeadlineExceeded) {

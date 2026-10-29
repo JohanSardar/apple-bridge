@@ -1,0 +1,35 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[16.62 12.69 14.07] cpu_idle=29% cpus=8 other_heavy=2"
+  },
+  "status": "limited",
+  "run_id": "run_01M62W9VS4CWWR3Y9NGFXMKBW0",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "SIRI-INTENTS",
+  "level": "real",
+  "passed": false,
+  "git_sha": "",
+  "at": "2026-10-29T03:47:18.436513Z",
+  "assertions": [
+    {
+      "name": "helper_compiles_and_bundles",
+      "passed": true
+    },
+    {
+      "name": "status_intent_metadata_emitted",
+      "passed": false
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null,
+  "conditions": {
+    "reason": "App Intents metadata missing from Helper bundle; full Xcode metadata toolchain required. Johan must verify Apple Bridge status appears in Shortcuts and runs."
+  }
+}

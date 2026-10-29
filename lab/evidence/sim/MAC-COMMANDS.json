@@ -1,9 +1,9 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[7.58 5.43 9.36] cpu_idle=57% cpus=8 other_heavy=1"
+    "summary": "air: load=[28.33 36.98 38.65] cpu_idle=25% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M62PBERR6JN7EHZ8MK1RCYBD",
+  "run_id": "run_01M637AEGG3GATGPVZ7J7FKWPP",
   "metrics": {
     "capture_observer_resets": 0
   },
@@ -11,7 +11,7 @@
   "level": "sim",
   "passed": true,
   "git_sha": "",
-  "at": "2026-10-29T02:03:19.192406Z",
+  "at": "2026-10-29T06:59:51.952925Z",
   "assertions": [
     {
       "name": "world_started",
@@ -63,6 +63,10 @@
     },
     {
       "name": "mac.clipboard_read_empty_schema",
+      "passed": true
+    },
+    {
+      "name": "mac.network_check_empty_schema",
       "passed": true
     },
     {

@@ -1,0 +1,33 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[27.87 36.29 38.36] cpu_idle=25% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M637B2KS11CD261FB1HBH1XN",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "VMEMO-CAPTURE",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "10ed30993022ffbfbdd067cd9a158b4682b70714",
+  "at": "2026-10-29T07:00:12.537663Z",
+  "assertions": [
+    {
+      "name": "recordings_native_fixture_build",
+      "passed": true
+    },
+    {
+      "name": "metadata_wal_insert_update_delete",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": [
+    "air"
+  ]
+}

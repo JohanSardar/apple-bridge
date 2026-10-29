@@ -16,6 +16,10 @@ func (f *fakeApple) macCommand(wire *applepeer.Wire, frame contracts.IPCFrame, f
 		if frame.Action == nil || !strings.HasPrefix(frame.Action.Op, "mac.") {
 			return false, nil
 		}
+		if frame.Action.Op == "mac.notify" && f.notificationPermission != "" && f.notificationPermission != "authorized" {
+			_, err := wire.Send(contracts.IPCFrame{T: "Rejected", CommandID: frame.CommandID, Disposition: "rejected_before_dispatch", Error: contracts.ErrForbidden})
+			return true, err
+		}
 		id := contracts.NewID("ticket")
 		f.tickets[id] = ticket{CommandID: frame.CommandID, Action: *frame.Action, Hash: frame.RequestHash, Fence: fence, Expires: time.Now().Add(30 * time.Second)}
 		_, err := wire.Send(contracts.IPCFrame{T: "Prepared", CommandID: frame.CommandID, Ticket: id, Route: "mac_readback", Fingerprint: frame.RequestHash})
@@ -43,6 +47,14 @@ func (f *fakeApple) macCommand(wire *applepeer.Wire, frame contracts.IPCFrame, f
 	}
 	var readback any
 	switch t.Action.Op {
+	case "mac.notify":
+		readback = map[string]any{"delivered": true}
+	case "mac.open_settings":
+		readback = map[string]any{"pane": args.Pane, "frontmost": true}
+	case "mac.set_wallpaper":
+		readback = map[string]any{"matches": true}
+	case "mac.lock_screen", "mac.sleep_display", "mac.restart", "mac.shutdown":
+		readback = map[string]any{"dispatched": true}
 	case "mac.clipboard_write":
 		if args.Text == nil {
 			return true, contracts.ErrInvalid

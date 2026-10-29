@@ -1,0 +1,127 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[26.71 36.81 38.6] cpu_idle=31% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M637A8GF2GP1FFRGYA1FWGVZ",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "MAC-ACTIONS",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-29T06:59:45.809002Z",
+  "assertions": [
+    {
+      "name": "world_started",
+      "passed": true
+    },
+    {
+      "name": "scope_granted",
+      "passed": true
+    },
+    {
+      "name": "helper_ready",
+      "passed": true
+    },
+    {
+      "name": "mac.notify",
+      "passed": true
+    },
+    {
+      "name": "mac.open_settings",
+      "passed": true
+    },
+    {
+      "name": "mac.set_wallpaper",
+      "passed": true
+    },
+    {
+      "name": "notification_permission_fixture",
+      "passed": true
+    },
+    {
+      "name": "notify_not_determined_rejected",
+      "passed": true
+    },
+    {
+      "name": "notification_permission_fixture",
+      "passed": true
+    },
+    {
+      "name": "notify_denied_rejected",
+      "passed": true
+    },
+    {
+      "name": "mac.lock_screen_requires_approve",
+      "passed": true
+    },
+    {
+      "name": "mac.sleep_display_requires_approve",
+      "passed": true
+    },
+    {
+      "name": "mac.restart_requires_approve",
+      "passed": true
+    },
+    {
+      "name": "mac.shutdown_requires_approve",
+      "passed": true
+    },
+    {
+      "name": "approval_authority",
+      "passed": true
+    },
+    {
+      "name": "power_agent_created",
+      "passed": true
+    },
+    {
+      "name": "mac.lock_screen_full_agent_denied",
+      "passed": true
+    },
+    {
+      "name": "mac.sleep_display_full_agent_denied",
+      "passed": true
+    },
+    {
+      "name": "mac.restart_full_agent_denied",
+      "passed": true
+    },
+    {
+      "name": "mac.shutdown_full_agent_denied",
+      "passed": true
+    },
+    {
+      "name": "power_agent_created",
+      "passed": true
+    },
+    {
+      "name": "mac.lock_screen_awaiting_approval",
+      "passed": true
+    },
+    {
+      "name": "mac.sleep_display_awaiting_approval",
+      "passed": true
+    },
+    {
+      "name": "mac.restart_awaiting_approval",
+      "passed": true
+    },
+    {
+      "name": "mac.shutdown_awaiting_approval",
+      "passed": true
+    },
+    {
+      "name": "network_query",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}
