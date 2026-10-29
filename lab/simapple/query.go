@@ -106,6 +106,10 @@ func (s *querySession) receive(f contracts.IPCFrame) bool {
 			} else {
 				out.ResultJSON = json.RawMessage(`{"state":"downloaded","plain_text":"Hello fixture","html":""}`)
 			}
+		case "mac.clipboard_read":
+			s.fake.mu.Lock()
+			out.ResultJSON, _ = json.Marshal(map[string]any{"text": s.fake.clipboard})
+			s.fake.mu.Unlock()
 		case "helper.version":
 			out.ResultJSON = json.RawMessage(`{"version":"sim","protocol":"ipc/1"}`)
 		default:

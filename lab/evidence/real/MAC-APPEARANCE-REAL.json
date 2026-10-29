@@ -1,0 +1,51 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[4.14 6.18 8.05] cpu_idle=77% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M62KX2SGF78VM0HX0SES5MX8",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "MAC-APPEARANCE-REAL",
+  "level": "real",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-29T01:20:31.024566Z",
+  "assertions": [
+    {
+      "name": "world_started",
+      "passed": true
+    },
+    {
+      "name": "scope_granted",
+      "passed": true
+    },
+    {
+      "name": "helper_ready",
+      "passed": true
+    },
+    {
+      "name": "appearance_command_readback",
+      "passed": true
+    },
+    {
+      "name": "appearance_truth",
+      "passed": true
+    },
+    {
+      "name": "appearance_restored",
+      "passed": true
+    },
+    {
+      "name": "restore_truth",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

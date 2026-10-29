@@ -13,7 +13,7 @@ public enum PermissionState: String {
 
 public final class PermissionReport: @unchecked Sendable {
     private let lock = NSLock()
-    private var values: [String: String] = Dictionary(uniqueKeysWithValues: ["full_disk_access", "automation_messages", "automation_system_events", "automation_reminders", "accessibility", "contacts", "calendar", "reminders", "photos"].map { ($0, "unknown") })
+    private var values: [String: String] = Dictionary(uniqueKeysWithValues: ["clipboard", "full_disk_access", "automation_messages", "automation_system_events", "automation_reminders", "accessibility", "contacts", "calendar", "reminders", "photos"].map { ($0, "unknown") })
 
     public func note(_ name: String, _ value: String) {
         lock.lock()
@@ -43,6 +43,8 @@ public final class PermissionSession {
     public init() {}
 
     public func refresh() {
+        let clipboard = NSPasteboard.general.accessBehavior
+        report.set("clipboard", clipboard == .alwaysAllow ? .granted : clipboard == .alwaysDeny ? .denied : clipboard == .default || clipboard == .ask ? .notDetermined : .unknown)
         do {
             let file = try FileHandle(forReadingFrom: FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Messages/chat.db"))
             try file.close()
@@ -92,6 +94,9 @@ public final class PermissionSession {
         NSApplication.shared.activate()
         refresh()
         let states = report.snapshot()
+        if states["clipboard"] != PermissionState.granted.rawValue {
+            _ = NSPasteboard.general.string(forType: .string)
+        }
         if states["calendar"] != PermissionState.granted.rawValue {
             do {
                 let granted = try await events.requestFullAccessToEvents()

@@ -1,0 +1,5 @@
+id: MAC-CLIPBOARD-REAL
+feature: mac.commands
+levels: [real]
+when:
+  - mac: {}
