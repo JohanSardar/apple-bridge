@@ -1,0 +1,5 @@
+id: MUS-IDLE
+feature: music.catalog
+levels: [sim, real]
+when:
+  - queries: {}

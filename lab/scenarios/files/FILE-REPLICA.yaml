@@ -1,0 +1,3 @@
+id: FILE-REPLICA
+feature: files.commands
+levels: [replica]
