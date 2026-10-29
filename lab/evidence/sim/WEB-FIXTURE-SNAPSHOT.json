@@ -1,27 +1,27 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[98.99 120.97 114.26] cpu_idle=50% cpus=8 other_heavy=0"
+    "summary": "air: load=[11.24 14.14 29.81] cpu_idle=41% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5HDVZQ5PTRH07EANWN2FTZC",
+  "run_id": "run_01M6447D47Y44D59348MF3K3E3",
   "metrics": {
     "capture_observer_resets": 0,
     "chunked_seed": {
-      "chunked": "1a3e17164ecb74d576953dd9fcbc03b8bd722de658131bb561e2eb69f6e82648",
-      "single": "1a3e17164ecb74d576953dd9fcbc03b8bd722de658131bb561e2eb69f6e82648"
+      "chunked": "f5fe877bb0d5e15193d4456a0205426a53813a2bcd03843d8ec034a6278a9045",
+      "single": "f5fe877bb0d5e15193d4456a0205426a53813a2bcd03843d8ec034a6278a9045"
     },
     "different_gateway": {
-      "disk_bytes": 421888,
-      "entry_bytes": 423040,
-      "cache_bytes": 854528,
+      "disk_bytes": 475136,
+      "entry_bytes": 476288,
+      "cache_bytes": 961024,
       "blob_payloads": 1,
-      "key": "5ea13b42e118f261766d2708739d58ac5146e817ca85d71307bd75a832e6b090",
+      "key": "fa116c5a8c725be712398e11cb3f23fd643f293e236f56dba1ca07747298251f",
       "cache_hit": false,
-      "build_ms": 2846,
-      "copy_ms": 250,
-      "records": 9,
-      "fresh_digest": "37299e70fb900645188328e3367957d096dbddcfca2293a7973793e32d8b5cfd",
-      "copy_digest": "37299e70fb900645188328e3367957d096dbddcfca2293a7973793e32d8b5cfd",
+      "build_ms": 3787,
+      "copy_ms": 1023,
+      "records": 17,
+      "fresh_digest": "1a7a9ffa60f8370f096b213fe8c03b6aa67ec75f2229518854ca2efaa783c9f3",
+      "copy_digest": "1a7a9ffa60f8370f096b213fe8c03b6aa67ec75f2229518854ca2efaa783c9f3",
       "verified": true,
       "copy_method": "clonefile"
     },
@@ -33,53 +33,53 @@
         "three_keys_keep_two_most_recently_used_per_kind": true,
         "total_cache_byte_cap_evicts_across_fixture_kinds": true
       },
-      "disk_bytes": 430080,
-      "cache_bytes": 431360,
-      "limit_bytes": 846080
+      "disk_bytes": 483328,
+      "cache_bytes": 484608,
+      "limit_bytes": 952576
     },
     "first": {
-      "disk_bytes": 413696,
-      "entry_bytes": 414848,
-      "cache_bytes": 419072,
+      "disk_bytes": 479232,
+      "entry_bytes": 480384,
+      "cache_bytes": 484608,
       "blob_payloads": 1,
-      "key": "7e4397166cb72139dd80ff36b8d0514b2b4754c82c99cc65084631d79d4274c4",
+      "key": "6456dbdfd510c5ff0ff0df9c78cae9d9b2f73b96f1b1e28b78e2d9ce3248cebd",
       "cache_hit": false,
-      "build_ms": 2526,
-      "copy_ms": 353,
-      "records": 9,
-      "fresh_digest": "937809d60d74340bcc484a7a053d823a40d0067f140aaac7fb12c93582fa8d22",
-      "copy_digest": "937809d60d74340bcc484a7a053d823a40d0067f140aaac7fb12c93582fa8d22",
+      "build_ms": 2350,
+      "copy_ms": 1033,
+      "records": 17,
+      "fresh_digest": "b09ce62aebb49dbcf89ca4336c023babcc0e32115206179f96df5c3d90fdb276",
+      "copy_digest": "b09ce62aebb49dbcf89ca4336c023babcc0e32115206179f96df5c3d90fdb276",
       "verified": true,
       "copy_method": "clonefile"
     },
     "generator_calls": 10,
     "second": {
-      "disk_bytes": 413696,
-      "entry_bytes": 414848,
-      "cache_bytes": 419072,
+      "disk_bytes": 479232,
+      "entry_bytes": 480384,
+      "cache_bytes": 484608,
       "blob_payloads": 1,
-      "key": "7e4397166cb72139dd80ff36b8d0514b2b4754c82c99cc65084631d79d4274c4",
+      "key": "6456dbdfd510c5ff0ff0df9c78cae9d9b2f73b96f1b1e28b78e2d9ce3248cebd",
       "cache_hit": true,
       "build_ms": 0,
-      "copy_ms": 711,
-      "records": 9,
-      "fresh_digest": "937809d60d74340bcc484a7a053d823a40d0067f140aaac7fb12c93582fa8d22",
-      "copy_digest": "937809d60d74340bcc484a7a053d823a40d0067f140aaac7fb12c93582fa8d22",
+      "copy_ms": 397,
+      "records": 17,
+      "fresh_digest": "b09ce62aebb49dbcf89ca4336c023babcc0e32115206179f96df5c3d90fdb276",
+      "copy_digest": "b09ce62aebb49dbcf89ca4336c023babcc0e32115206179f96df5c3d90fdb276",
       "verified": true,
       "copy_method": "clonefile"
     },
     "third": {
-      "disk_bytes": 421888,
-      "entry_bytes": 423040,
-      "cache_bytes": 846336,
+      "disk_bytes": 475136,
+      "entry_bytes": 476288,
+      "cache_bytes": 965120,
       "blob_payloads": 1,
-      "key": "f6ca47688125f27e3420798f6ed3e9bc6e7d09a345acd26bcbf67b893a6be978",
+      "key": "307eb7ad1ee555c4bd138f70f52e0c78092727959f61c08650494f6970e979c9",
       "cache_hit": false,
-      "build_ms": 1866,
-      "copy_ms": 484,
-      "records": 9,
-      "fresh_digest": "427ebc6626907eda64c3a2fb7493f1ea58b1da464e8e114e253354d2876e22cb",
-      "copy_digest": "427ebc6626907eda64c3a2fb7493f1ea58b1da464e8e114e253354d2876e22cb",
+      "build_ms": 1672,
+      "copy_ms": 1045,
+      "records": 17,
+      "fresh_digest": "5557915c88243d607d2982fc6ae46e3e0aee7114810a884e1c9f0422c83bae41",
+      "copy_digest": "5557915c88243d607d2982fc6ae46e3e0aee7114810a884e1c9f0422c83bae41",
       "verified": true,
       "copy_method": "clonefile"
     }
@@ -87,8 +87,8 @@
   "scenario": "WEB-FIXTURE-SNAPSHOT",
   "level": "sim",
   "passed": true,
-  "git_sha": "b4624c9513abafcba17c603466051977fa226a15",
-  "at": "2026-10-22T09:07:58.309607Z",
+  "git_sha": "75678d17995beb801296e49257ce1ac099442a26",
+  "at": "2026-10-29T15:25:00.935839Z",
   "assertions": [
     {
       "name": "first_world_prepared",
@@ -143,10 +143,6 @@
       "passed": true
     },
     {
-      "name": "low_free_space_override_prevents_retention",
-      "passed": true
-    },
-    {
       "name": "stale_staging_reaped_fresh_staging_preserved",
       "passed": true
     },
@@ -160,6 +156,10 @@
     },
     {
       "name": "total_cache_byte_cap_evicts_across_fixture_kinds",
+      "passed": true
+    },
+    {
+      "name": "low_free_space_override_prevents_retention",
       "passed": true
     },
     {

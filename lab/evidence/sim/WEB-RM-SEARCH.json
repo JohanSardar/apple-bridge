@@ -1,9 +1,9 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[13.94 8.24 7.98] cpu_idle=85% cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[9.53 13.25 28.67] cpu_idle=33% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5MZBGNM05AR9VD82J6BWN6Q",
+  "run_id": "run_01M6448PJ0AMWBB3E89M3KBPFE",
   "metrics": {
     "capture_observer_resets": 0,
     "fts_migration": {
@@ -12,8 +12,8 @@
       "message_count": 54,
       "message_ids_preserved": true,
       "rebuilt_filename_matches": 22,
-      "schema_version": "4",
-      "to": "4"
+      "schema_version": "5",
+      "to": "5"
     },
     "messages": 55,
     "pages": 3
@@ -21,8 +21,8 @@
   "scenario": "WEB-RM-SEARCH",
   "level": "sim",
   "passed": true,
-  "git_sha": "49666226a72fbfc9a304deef1967bffb1a662706",
-  "at": "2026-10-23T18:11:16.276312Z",
+  "git_sha": "75678d17995beb801296e49257ce1ac099442a26",
+  "at": "2026-10-29T15:25:43.360318Z",
   "assertions": [
     {
       "name": "search_contact_fixture",
