@@ -42,17 +42,19 @@ func safariGateway(ctx context.Context, e Evidence, observations []contracts.Obs
 			return false
 		}
 		found := 0
+		matched := make([]bool, len(observations))
 		for _, row := range rows {
-			if row.Source != contracts.Safari || row.Deleted {
+			if row.Source != contracts.Safari || contracts.CollectionSource(row.Collection) != contracts.Safari || row.Deleted {
 				continue
 			}
 			match := false
-			for _, observation := range observations {
-				if row.Collection != observation.Collection {
+			for i, observation := range observations {
+				if matched[i] || row.Collection != observation.Collection {
 					continue
 				}
 				var actual, want any
 				if json.Unmarshal(row.Data, &actual) == nil && json.Unmarshal(observation.Data, &want) == nil && reflect.DeepEqual(actual, want) {
+					matched[i] = true
 					match = true
 					break
 				}

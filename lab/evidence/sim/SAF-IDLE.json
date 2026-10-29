@@ -1,0 +1,45 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[7.09 5.84 6.72] cpu_idle=78% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M62HFF3QG6NYZ37E3SASGX7N",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "idle_seconds": 300,
+    "source_cpu_percent": 0.023469540832551337
+  },
+  "scenario": "SAF-IDLE",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-29T00:38:07.736646Z",
+  "assertions": [
+    {
+      "name": "fixture_directory",
+      "passed": true
+    },
+    {
+      "name": "fake_databases",
+      "passed": true
+    },
+    {
+      "name": "native_build",
+      "passed": true
+    },
+    {
+      "name": "native_output",
+      "passed": true
+    },
+    {
+      "name": "source_cpu_under_two_percent_for_five_minutes",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

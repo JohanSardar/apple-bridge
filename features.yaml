@@ -1184,9 +1184,14 @@ features:
     milestone: G11
     modules: [native/Sources/SafariSource, internal/contracts, lab/simapple]
     depends_on: []
-    status: in_progress
+    status: limited
+    notes: Real history and bookmark Truth counts and digests match. CloudTabs.db is absent on this host; cloud schema coverage uses synthetic databases.
     scenarios:
       - {id: SAF-CAPTURE, levels: [sim]}
       - {id: SAF-IDLE, levels: [sim, real]}
       - {id: SAF-HISTORY-REAL, levels: [real]}
       - {id: SAF-BOOKMARKS-REAL, levels: [real]}
+    limits:
+      - scenario: SAF-IDLE
+        level: real
+        reason: Fresh signed Helper and Truth setup exhausted the 60-minute native build budget before measurement; no five-minute CPU result was collected. Whole-Helper idle qualification also depends on the Messages idle issue tracked by T53.
