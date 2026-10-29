@@ -70,6 +70,13 @@ func runIPhoneCommand(ctx context.Context, s Scenario, level string) Evidence {
 	add("principal", err == nil)
 	args, _ := json.Marshal(contracts.IPhoneTarget{DeviceID: phone.ID})
 	command := contracts.Command{ID: "cmd_iphone_roundtrip", Op: "iphone.ping", Args: args, WaitMS: 1000}
+	if s.ID == "APP-NOTIFY-SIM" {
+		command.Op = "iphone.notify"
+		command.Args, _ = json.Marshal(contracts.IPhoneNotifyArgs{DeviceID: phone.ID, Title: "[ab-test] Notification", Body: "Bridge Test", Buttons: []contracts.IPhoneNotificationButton{{ID: "approve", Title: "Approve"}, {ID: "deny", Title: "Deny"}}, Thread: "ab-test", TimeSensitive: true})
+		invalid := command
+		invalid.Args = json.RawMessage(`{"device_id":"iphone:test","title":"test","body":"test","buttons":[{"id":"same","title":"A"},{"id":"same","title":"B"}]}`)
+		add("duplicate_button_rejected", contracts.ValidateIPhoneCommand(invalid) != nil)
+	}
 	admitted, err := gateway.Submit(ctx, principal, command)
 	add("offline_admitted_without_helper", err == nil && admitted.State == contracts.CommandAdmitted)
 	store.Close()
@@ -151,6 +158,10 @@ func runIPhoneCommand(ctx context.Context, s Scenario, level string) Evidence {
 	add("tampered_ciphertext_rejected", err != nil)
 	var job iphone.Job
 	add("command_payload", json.Unmarshal(plain, &job) == nil && job.Command.ID == command.ID && job.Hash == queued.RequestHash)
+	if s.ID == "APP-NOTIFY-SIM" {
+		var notification contracts.IPhoneNotifyArgs
+		add("notification_fields_preserved", json.Unmarshal(job.Command.Args, &notification) == nil && notification.Title == "[ab-test] Notification" && notification.Body == "Bridge Test" && notification.Thread == "ab-test" && notification.TimeSensitive && len(notification.Buttons) == 2)
+	}
 	result := iphone.Result{ID: command.ID, Hash: "wrong", State: contracts.CommandObserved, Data: json.RawMessage(`{"pong":true}`)}
 	raw, _ = json.Marshal(result)
 	response, err = phone.Request(server.Client(), server.URL, "/v1/iphone/result", raw)
@@ -159,6 +170,9 @@ func runIPhoneCommand(ctx context.Context, s Scenario, level string) Evidence {
 		response.Body.Close()
 	}
 	result.Hash = job.Hash
+	if s.ID == "APP-NOTIFY-SIM" {
+		result.Data = json.RawMessage(`{"action_id":"approve"}`)
+	}
 	raw, _ = json.Marshal(result)
 	response, err = phone.Request(server.Client(), server.URL, "/v1/iphone/result", raw)
 	add("signed_result", err == nil && response.StatusCode == 200)
@@ -167,6 +181,13 @@ func runIPhoneCommand(ctx context.Context, s Scenario, level string) Evidence {
 	}
 	observed, err := store.Command(ctx, command.ID)
 	add("ledger_observed", err == nil && observed.State == contracts.CommandObserved && len(observed.Evidence) > 0)
+	if s.ID == "APP-NOTIFY-SIM" {
+		var receipt struct {
+			Payload []byte `json:"payload"`
+		}
+		var action iphone.Result
+		add("button_result_returned", json.Unmarshal(observed.Evidence, &receipt) == nil && json.Unmarshal(receipt.Payload, &action) == nil && string(action.Data) == `{"action_id":"approve"}` && contracts.IPhoneCompletionEvidence(observed.Evidence, command, observed.RequestHash))
+	}
 	response, err = phone.Request(server.Client(), server.URL, "/v1/iphone/result", raw)
 	add("duplicate_result_idempotent", err == nil && response.StatusCode == 200)
 	if response != nil {

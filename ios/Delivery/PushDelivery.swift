@@ -2,6 +2,7 @@ import CryptoKit
 import Foundation
 import SwiftUI
 import UIKit
+import UserNotifications
 
 struct CommandPacket: Decodable {
     let ephemeral_key: Data
@@ -57,6 +58,7 @@ struct Execution: Codable {
     let expires: Int64
     var result: PhoneResult?
     var uploaded: Bool?
+    var awaitingAction: Bool?
 }
 
 @MainActor
@@ -67,6 +69,7 @@ final class PushDelivery {
     var status = "Not registered"
     var wakeCount = 0
     private var running = false
+    private var drainAgain = false
 
     private var cacheURL: URL {
         get throws {
@@ -103,9 +106,15 @@ final class PushDelivery {
     }
 
     func drain() async {
-        guard !running else { return }
+        guard !running else { drainAgain = true; return }
         running = true
-        defer { running = false }
+        defer {
+            running = false
+            if drainAgain {
+                drainAgain = false
+                Task { await drain() }
+            }
+        }
         do {
             var identity = try DeviceIdentity.load()
             guard identity.deviceID != nil else { status = "Pairing required"; return }
@@ -120,6 +129,14 @@ final class PushDelivery {
                 cache = try JSONDecoder().decode([String: Execution].self, from: Data(contentsOf: cacheURL))
             }
             cache = cache.filter { $0.value.uploaded != true || $0.value.expires + 86400 > Int64(Date().timeIntervalSince1970) }
+            for result in try NotificationsCapability.responses() {
+                guard cache[result.command_id]?.hash == result.request_hash else { continue }
+                cache[result.command_id]?.result = result
+                cache[result.command_id]?.uploaded = false
+                cache[result.command_id]?.awaitingAction = false
+                try save(cache)
+                try NotificationsCapability.removeResponse(result.command_id)
+            }
             for (id, execution) in cache where execution.uploaded != true {
                 if let result = execution.result {
                     _ = try await PairingClient.signedRequest(identity: identity, path: "/v1/iphone/result", payload: JSONEncoder().encode(result))
@@ -136,13 +153,18 @@ final class PushDelivery {
                 var result: PhoneResult
                 if let prior = cache[id] {
                     guard prior.hash == job.request_hash else { throw IdentityError.requestFailed }
+                    if prior.awaitingAction == true { continue }
                     result = prior.result ?? PhoneResult(command_id: id, request_hash: job.request_hash, state: "indeterminate", data: .null)
                 } else {
                     cache[id] = Execution(hash: job.request_hash, expires: job.expires)
                     try save(cache)
-                    if let handler = CommandHandlers.all[job.command.op] {
+                    if let handler = CommandHandlers.handler(for: job.command.op) {
                         do {
-                            let output = try await handler(JSONEncoder().encode(job.command.args))
+                            guard let output = try await handler(job) else {
+                                cache[id]?.awaitingAction = true
+                                try save(cache)
+                                continue
+                            }
                             result = PhoneResult(command_id: id, request_hash: job.request_hash, state: "observed", data: try JSONDecoder().decode(JSONValue.self, from: output))
                         } catch {
                             result = PhoneResult(command_id: id, request_hash: job.request_hash, state: "indeterminate", data: .null)
@@ -165,13 +187,30 @@ final class PushDelivery {
     }
 }
 
-final class BridgeAppDelegate: NSObject, UIApplicationDelegate {
+final class BridgeAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         LocationCapability.resume()
+        UNUserNotificationCenter.current().delegate = self
         PushDelivery.shared.status = "Registering"
         application.registerForRemoteNotifications()
         Task { await HealthReadController.shared.resume() }
         return true
+    }
+
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner, .sound, .list])
+    }
+
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
+        let info = response.notification.request.content.userInfo
+        guard let id = info["command_id"] as? String, let hash = info["request_hash"] as? String, let buttons = info["buttons"] as? [String] else { return }
+        let action = response.actionIdentifier
+        do {
+            try await NotificationsCapability.record(id: id, hash: hash, buttons: buttons, action: action)
+            await PushDelivery.shared.drain()
+        } catch {
+            await MainActor.run { PushDelivery.shared.status = "Action delivery pending" }
+        }
     }
 
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {

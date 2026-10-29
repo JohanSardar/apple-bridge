@@ -1,6 +1,7 @@
 import SwiftUI
 
 typealias IPhoneCommandHandler = @MainActor (Data) async throws -> Data
+typealias IPhoneDeferredCommandHandler = @MainActor (PhoneJob) async throws -> Data?
 
 struct Capability: Identifiable {
     let id: String
@@ -8,6 +9,7 @@ struct Capability: Identifiable {
     var permission: String = "Not requested"
     var available: Bool = false
     var handlers: [String: IPhoneCommandHandler] = [:]
+    var deferredHandlers: [String: IPhoneDeferredCommandHandler] = [:]
 }
 
 struct CapabilityScreen: View {
@@ -24,6 +26,11 @@ struct CapabilityScreen: View {
             Section {
                 Toggle("Enabled", isOn: $enabled)
                     .disabled(!capability.available)
+                    .onChange(of: enabled) { _, value in
+                        if value && capability.id == "notifications" {
+                            Task { try? await NotificationsCapability.requestPermission() }
+                        }
+                    }
                 if capability.id == "location" {
                     Button("Allow Location") { LocationCapability.adapter.requestPermission() }
                     Text("Enable Always and Precise Location for geofences and significant changes.")
