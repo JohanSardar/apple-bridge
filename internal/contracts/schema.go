@@ -103,6 +103,14 @@ func (builder *schemaBuilder) build(t reflect.Type) map[string]any {
 }
 func OperationSchema(d OperationDescriptor) map[string]any {
 	s := JSONSchema(d.Input)
+	if d.Source == Safari && (d.Kind == QueryOp || d.Kind == CommandOp) {
+		key := "url"
+		if d.Name == "safari.page_text" {
+			key = "tab"
+		}
+		s["properties"].(map[string]any)["args"] = map[string]any{"type": "object", "additionalProperties": false, "required": []string{key}, "properties": map[string]any{key: map[string]any{"type": "string", "minLength": 1, "maxLength": 2048}}}
+		return s
+	}
 	if d.Kind == QueryOp {
 		props := s["properties"].(map[string]any)
 		props["args"] = map[string]any{}

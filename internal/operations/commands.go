@@ -271,6 +271,13 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 		}
 		action.Args = args
 	}
+	if strings.HasPrefix(c.Op, "safari.") {
+		var args contracts.SafariArgs
+		if json.Unmarshal(c.Args, &args) != nil {
+			return r, contracts.ErrInvalid
+		}
+		action.Args = args
+	}
 	if contracts.CollectionSource(c.Op) == "mac" {
 		var args contracts.MacArgs
 		if json.Unmarshal(c.Args, &args) != nil {
@@ -565,7 +572,7 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 		to = "indeterminate"
 		f.Disposition = "indeterminate"
 	}
-	if r.Source == "mac" && to == "observed" && !contracts.MacCompletionEvidence(f.Evidence, r.RequestHash) {
+	if (r.Source == "mac" || r.Source == contracts.Safari) && to == "observed" && !contracts.MacCompletionEvidence(f.Evidence, r.RequestHash) {
 		to = "indeterminate"
 		f.Disposition = "indeterminate"
 	}
@@ -581,7 +588,7 @@ func (g *LocalGateway) outcome(ctx context.Context, r contracts.CommandRecord, f
 		to = "indeterminate"
 		f.Disposition = "indeterminate"
 	}
-	if r.Command.Op != "maps.open" && r.Source != "mac" && r.Command.Op != "shortcuts.run" && !contracts.MusicPlayerOperation(r.Command.Op) && !contracts.PlaybackOperation(r.Command.Op) && (to == "observed" || to == "delivered" || to == "delivery_failed") {
+	if r.Command.Op != "maps.open" && r.Source != "mac" && r.Source != contracts.Safari && r.Command.Op != "shortcuts.run" && !contracts.MusicPlayerOperation(r.Command.Op) && !contracts.PlaybackOperation(r.Command.Op) && (to == "observed" || to == "delivered" || to == "delivery_failed") {
 		var evidence struct {
 			NativeKey         string `json:"native_key"`
 			Fingerprint       string `json:"fingerprint"`

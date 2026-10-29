@@ -424,6 +424,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "HELPER-RELEASE-COMMANDS" {
 		return runHelperReleaseCommands(ctx, s, level)
 	}
+	if s.ID == "SAF-COMMANDS" || s.ID == "SAF-TABS-REAL" || s.ID == "SAF-READINGLIST-REAL" {
+		return runSafariCommands(ctx, s, level)
+	}
 	if s.ID == "SAF-CAPTURE" || s.ID == "SAF-IDLE" || s.ID == "SAF-HISTORY-REAL" || s.ID == "SAF-BOOKMARKS-REAL" {
 		return runSafariCapture(ctx, s, level)
 	}

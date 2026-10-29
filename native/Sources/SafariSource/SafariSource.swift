@@ -4,6 +4,7 @@ import CryptoKit
 
 public actor SafariSource: Source {
     public nonisolated let name = "safari"
+    private let tabs = SafariTabs()
     private let directory: URL
     private let cacheURL: URL?
     private var generation = UUID().uuidString
@@ -12,8 +13,10 @@ public actor SafariSource: Source {
         guard FileManager.default.fileExists(atPath: directory.path) else {
             return SourceReadiness(state: "unavailable", coverage: .object(["fields": .string("partial")]), reason: "Safari data directory unavailable")
         }
+        let permitted = await tabs.permitted()
+        let missing: [JSON] = [.string("CloudTabs schema availability varies")] + (permitted ? [] : [.string("Automation dev.applebridge.helper → com.apple.Safari")])
         let readable = ["History.db", "Bookmarks.plist", "CloudTabs.db"].contains { FileManager.default.isReadableFile(atPath: directory.appendingPathComponent($0).path) }
-        return SourceReadiness(state: readable ? "ready" : "permission_missing", coverage: .object(["fields": .string("partial"), "missing": .array([.string("CloudTabs schema availability varies")])]), reason: readable ? "" : "Full Disk Access required")
+        return SourceReadiness(state: readable ? "ready" : "permission_missing", coverage: .object(["fields": .string("partial"), "missing": .array(missing)]), capabilities: permitted ? ["safari.open_url", "safari.add_reading_list"] : [], reason: readable ? (permitted ? "" : "Automation dev.applebridge.helper → com.apple.Safari") : "Full Disk Access required")
     }
     private func observation(_ collection: String, _ key: String, _ data: [String: JSON]) -> JSON {
         .object(["kind": .string("upsert"), "collection": .string(collection), "native_key": .string(key), "scoped_alias": .string(name + "/" + collection + "/" + key), "observed_at": .string(timestamp()), "data": .object(data)])
@@ -71,6 +74,25 @@ public actor SafariSource: Source {
         return (reader.generation, scan.rows.map { row in observation("safari.cloud_tab", row["key"]!.text!, ["device": .string(row["device"]?.text ?? ""), "title": .string(row["title"]?.text ?? ""), "url": .string(row["url"]?.text ?? "")]) })
     }
     public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {
+        let tabTask = Task {
+            let tabCache = cacheURL?.appendingPathExtension("tabs")
+            var previous: [JSON] = tabCache.flatMap { try? Data(contentsOf: $0) }.flatMap { try? JSONDecoder().decode([JSON].self, from: $0) } ?? []
+            while !Task.isCancelled {
+                do {
+                    let rows = try await tabs.tabs()
+                    let material = rows.map { row -> JSON in var o = row.object; o.removeValue(forKey: "observed_at"); return .object(o) }
+                    if material != previous {
+                        let keys = Set(rows.map { $0["native_key"].string })
+                        let absent = previous.filter { !keys.contains($0["native_key"].string) }.map { row in JSON.object(["kind": .string("absent"), "collection": .string("safari.tab"), "native_key": row["native_key"], "observed_at": .string(timestamp()), "revalidated": .bool(true)]) }
+                        try await sink.emitCheckpoint(source: name, generation: generation, checkpoint: UUID().uuidString, observations: rows + absent, scanID: UUID().uuidString, scanStartedAt: timestamp(), scope: ["safari.tab"], completionEvidence: "complete", blobHandles: [:], live: true)
+                        if let tabCache { try JSONEncoder().encode(material).write(to: tabCache, options: .atomic) }
+                        previous = material
+                    }
+                } catch {}
+                try await Task.sleep(for: .seconds(5))
+            }
+        }
+        defer { tabTask.cancel() }
         let cached = try SafariCaptureCache.load(cacheURL)
         if !resume["generation"].string.isEmpty { generation = resume["generation"].string }
         else if let cached { generation = cached.generation }
@@ -131,7 +153,18 @@ public actor SafariSource: Source {
             }
         }
     }
-    public func prepare(_ command: JSON) async throws -> Prepared { throw SourceFailure.unsupported }
-    public func dispatch(_ prepared: Prepared) async throws -> JSON { throw SourceFailure.unsupported }
+    public func prepare(_ command: JSON) async throws -> Prepared { try await tabs.prepare(command) }
+    public func dispatch(_ prepared: Prepared) async throws -> JSON {
+        let evidence = try await tabs.dispatch(prepared)
+        if prepared.action["op"].string == "safari.add_reading_list" {
+            let url = prepared.action["args"]["url"].string
+            for _ in 0..<30 {
+                if let rows = try? bookmarks(), rows.contains(where: { $0["collection"].string == "safari.reading_list" && $0["data"]["url"].string == url }) { return evidence }
+                try await Task.sleep(for: .milliseconds(100))
+            }
+            throw SourceFailure.conflict
+        }
+        return evidence
+    }
     public func resolve(_ command: String, evidence: JSON) async -> JSON { .null }
 }

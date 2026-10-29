@@ -1480,6 +1480,28 @@ features:
       - scenario: SAF-IDLE
         level: real
         reason: Fresh signed Helper and Truth setup exhausted the 60-minute native build budget before measurement; no five-minute CPU result was collected. Whole-Helper idle qualification also depends on the Messages idle issue tracked by T53.
+  - id: safari.commands
+    title: Safari tabs commands and guarded public page text
+    requirements: [R-FULL, R-LIVE]
+    milestone: G11
+    modules: [native/Sources/SafariSource, internal/contracts, internal/operations, internal/publichttp, lab/simapple]
+    depends_on: [safari.capture]
+    status: limited
+    notes: Public page text has no Safari cookies; logged-in pages are limited. safari.close_tab is limited. Safari exposes no stable tab identity; closing could hit a user tab
+    scenarios:
+      - {id: SAF-COMMANDS, levels: [sim]}
+      - {id: SAF-TABS-REAL, levels: [real]}
+      - {id: SAF-READINGLIST-REAL, levels: [real]}
+    limits:
+      - scenario: SAF-COMMANDS
+        level: sim
+        reason: Safari exposes no stable tab identity; closing could hit a user tab
+      - scenario: SAF-TABS-REAL
+        level: real
+        reason: real qualification batched at end; Automation dev.applebridge.helper → com.apple.Safari
+      - scenario: SAF-READINGLIST-REAL
+        level: real
+        reason: real qualification batched at end; Automation dev.applebridge.helper → com.apple.Safari
   - id: capture.commands
     title: Capture and PDF print provider lifecycle
     requirements: [R-API, R-SCOPE]
