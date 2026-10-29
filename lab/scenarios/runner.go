@@ -1209,6 +1209,9 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		if s.ID == "SC-ACTIONS" {
 			duration = 30 * time.Minute
 		}
+		if s.ID == "SC-IDLE" && level == "real" {
+			duration = 20 * time.Minute
+		}
 		if s.ID == "FILE-IDLE" && level == "real" {
 			duration = 7 * time.Minute
 		}

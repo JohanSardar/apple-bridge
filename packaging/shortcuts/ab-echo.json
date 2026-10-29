@@ -2,6 +2,22 @@
   "version": 1,
   "name": "AB Echo",
   "actions": [
-    {"key": "echo", "identifier": "is.workflow.actions.gettext", "parameters": {"WFTextActionText": {"$input": true}}}
+    {
+      "key": "echo",
+      "identifier": "is.workflow.actions.gettext",
+      "parameters": {
+        "WFTextActionText": {
+          "WFSerializationType": "WFTextTokenString",
+          "Value": {
+            "string": "￼",
+            "attachmentsByRange": {
+              "{0, 1}": {
+                "Type": "ExtensionInput"
+              }
+            }
+          }
+        }
+      }
+    }
   ]
 }
