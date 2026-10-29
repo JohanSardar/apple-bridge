@@ -1064,8 +1064,8 @@ features:
     notes: Five-minute single-use invitations, ephemeral in-memory connecting identities, private approval IPC and shared web/API/feed dispatch pass sim regression coverage; localhost origin retained; hosted connectors unsupported.
 
   - id: vision.queries
-    title: Transient Vision OCR and PDF extraction
-    requirements: [R-API, R-SCOPE]
+    title: Vision OCR and PDF document operations
+    requirements: [R-API, R-SCOPE, R-RW]
     milestone: G8
     modules: [native/Sources/VisionSource, native/Sources/PDFSource]
     depends_on: [core.queries]
@@ -1073,13 +1073,14 @@ features:
     scenarios:
       - {id: VIS-OCR, levels: [sim, real]}
       - {id: PDF-TEXT, levels: [sim, real]}
+      - {id: PDF-ANNOTATE, levels: [sim]}
+      - {id: VIS-IDLE, levels: [real]}
     limits:
-      - scenario: VIS-OCR
+      - scenario: VIS-IDLE
         level: real
-        reason: Digest-backed blob inputs, doctor readiness and five-minute idle CPU proof are not implemented; inline and local-file queries only.
-      - scenario: PDF-TEXT
-        level: real
-        reason: pdf.annotate command and its artifact readback evidence are not implemented; extraction and search only.
+        reason: Helper CPU measured 58.02 percent over 300.02 seconds on a quiet host, exceeding the 2 percent budget; consistent with the pre-existing Messages.reconcile blocker in overnight decision 37.
+    notes: Blob and explicit file inputs, PDF annotation artifact readback, doctor readiness and native framework queries pass; total Helper idle CPU remains limited.
+
   - id: shortcuts.runner
     title: Bounded Shortcuts CLI runner
     requirements: [R-RW]
@@ -1296,6 +1297,20 @@ features:
       - scenario: FOC-SET-REAL
         level: real
         reason: Verified Set Focus action and parameters plus AB Focus import required; no real mutation attempted. DND syncs to Johan's iPhone.
+  - id: recordings.read
+    title: Voice Memos and voicemail metadata
+    requirements: [R-API, R-SCOPE]
+    milestone: G4
+    modules: [native/Sources/VoiceMemosSource, native/Sources/VoicemailSource, internal/contracts]
+    depends_on: []
+    status: limited
+    scenarios:
+      - {id: VMEMO-CAPTURE, levels: [sim]}
+      - {id: VM-CAPTURE, levels: [sim]}
+      - {id: VMEMO-LATE-ASSETS, levels: [sim]}
+    limits:
+      - {scenario: VMEMO-LATE-ASSETS, level: sim, reason: "late transcript/audio reconciliation not implemented; tracked as T21b"}
+    notes: "VMEMO-READ-REAL and VM-READ-REAL: no data on this Mac. VMEMO-NEW-REAL needs Johan to record a memo. Real idle qualification blocked by existing Helper Messages CPU issue T53."
 
   - id: shortcuts.actions
     title: Bounded installed App Intents discovery
@@ -1404,6 +1419,20 @@ features:
     limits:
       - {scenario: MAC-CLIPBOARD-REAL, level: real, reason: Clipboard supports transient text up to 64 KiB; image payloads and approval-required agent writes remain unsupported.}
     notes: Audio, appearance, app lifecycle and IOPM assertions use native readback. Clipboard text uses transient reads and redacted writes; image payloads and approval-required writes are unavailable. MAC-LOCK remains unavailable and is never exercised.
+
+  - id: mac.actions
+    title: Mac notifications settings wallpaper power and network
+    requirements: [R-API, R-SCOPE]
+    milestone: G6
+    modules: [native/Sources/MacSource, internal/contracts]
+    depends_on: [mac.capture]
+    status: limited
+    scenarios:
+      - {id: MAC-ACTIONS, levels: [sim]}
+      - {id: MAC-NOTIFY-REAL, levels: [real]}
+    limits:
+      - {scenario: MAC-NOTIFY-REAL, level: real, reason: "real qualification batched at end"}
+    notes: Power actions require approve agent admission and are disabled natively. Wallpaper accepts a bounded base64 image blob. Network ICMP ping is limited; reachability DNS and interface byte counters are available.
   - id: maps.queries
     title: Native Location and Maps transient queries
     requirements: [R-API, R-SCOPE]
@@ -1412,6 +1441,7 @@ features:
     depends_on: [core.queries]
     status: limited
     scenarios:
+      - {id: QUERY-AGENT, levels: [agent]}
       - {id: LOC-IDLE, levels: [real]}
       - {id: MAP-IDLE, levels: [real]}
       - {id: LOC-CURRENT-REAL, levels: [real]}
@@ -1423,6 +1453,7 @@ features:
       - {id: MAP-SNAPSHOT-REAL, levels: [real]}
     notes: Transit route geometry is unsupported by MKDirections (ETA is supported); real maps.open remains unverified. Whole-Helper idle qualification is blocked by T53.
     limits:
+      - {scenario: QUERY-AGENT, level: agent, reason: "Decision 39: Ubuntu Codex OAuth token is revoked (HTTP 401 token_revoked); agent runner not executed. Reauthentication required for MCP-only qualification."}
       - scenario: LOC-CURRENT-REAL
         level: real
         reason: Helper Location authorization is not_determined; never trigger a permission prompt. Requires Location Services permission for AppleBridgeHelper.
@@ -1471,3 +1502,46 @@ features:
       - scenario: SAF-READINGLIST-REAL
         level: real
         reason: real qualification batched at end; Automation dev.applebridge.helper → com.apple.Safari
+  - id: capture.commands
+    title: Capture and PDF print provider lifecycle
+    requirements: [R-API, R-SCOPE]
+    milestone: G8
+    modules: [native/Sources/CaptureSource]
+    depends_on: [core.queries]
+    status: limited
+    scenarios:
+      - {id: CAP-SIM, levels: [sim]}
+    limits:
+      - scenario: CAP-SIM
+        level: sim
+        reason: Native injectable prepare/dispatch/resolve and PDF output slice only; gateway command descriptors, blob delivery and native source registration remain unimplemented.
+    notes: Capture providers fail closed without prompting. Real screenshot and screen recording require Screen Recording for the Helper; camera requires Camera and audio requires Microphone. ScreenCaptureKit screenshot and AVAudioRecorder audio providers are implemented but unqualified for real use; camera and screen video providers and named printer submission remain unimplemented. PDF output copies a validated PDF without UI. Evidence contains only digest, size, duration and dimensions.
+
+
+  - id: usage.action_probe
+    title: Screen Time Shortcuts action comparison
+    requirements: [R-USAGE]
+    milestone: M4
+    modules: [lab/scenarios]
+    depends_on: [usage.read]
+    status: limited
+    limits:
+      - scenario: USE-ACTION-PROBE
+        level: real
+        reason: "Dedicated AB Screen Time pack absent; setup at packaging/shortcuts/screen-time-probe.md. Retain Biome; no owner shortcuts run."
+    scenarios:
+      - {id: USE-ACTION-PROBE, levels: [real]}
+
+  - id: helper.siri_intents
+    title: Read-only Apple Bridge status App Intent
+    requirements: [R-PKG]
+    milestone: M5
+    modules: [native/AppleBridgeHelper]
+    depends_on: [helper.session]
+    status: limited
+    limits:
+      - scenario: SIRI-INTENTS
+        level: real
+        reason: "Helper compiles and bundles; extracted App Intents metadata is absent. Requires Xcode metadata extraction/packaging, then Johan to verify Shortcuts discovery and execution."
+    scenarios:
+      - {id: SIRI-INTENTS, levels: [real]}

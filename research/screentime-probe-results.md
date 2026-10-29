@@ -18,3 +18,19 @@ Known gaps to fix:
 - Mac totals are inflated when the screen is locked or the display is asleep. The app stays "in focus" (Air: Chrome 13 h; Pro: `loginwindow` = lock screen). Clip sessions using the display/lock Biome streams.
 - iPhone data reaches the Mac in batches. At 21:41 the newest iPhone event was 01:29, about 20 h behind, so this is not real time.
 - Not yet compared with the totals in the Screen Time settings screen.
+
+## T52 action comparison — 2026-10-28, real inventory probe
+
+Decision: **reject replacement for now; retain Biome**. Action output availability and parity are unqualified, rather than established as unavailable on macOS.
+
+| Coverage / count | Biome App.InFocus | Get App & Website Data |
+|---|---|---|
+| Local filesystem coverage | 2 immediate local entries observed | Unmeasured |
+| Remote filesystem coverage | 3 immediate remote entries observed | Unmeasured |
+| App/day and device rows | Existing source decodes app focus and clips lock/sleep; not recounted by this inventory probe | Unmeasured |
+| Website coverage | No website usage source | Unmeasured |
+| Dedicated imported probe | No shortcut required | `AB Screen Time` absent among 14 installed shortcuts |
+
+`USE-ACTION-PROBE` inspected shortcut names in memory and counted only immediate filesystem entries. Entry counts are not event, device, app or usage counts. No shortcut was executed and no durations, app names, website names or device identifiers were retained. The earlier Biome decoding evidence above remains the baseline; this run does not establish data freshness or numeric parity.
+
+**Limited:** a dedicated qualified pack is missing. Setup path: [`packaging/shortcuts/screen-time-probe.md`](../packaging/shortcuts/screen-time-probe.md); intended owner export: `packaging/shortcuts/AB Screen Time.shortcut` (not present). Johan must create/import and approve this dedicated pack before a bounded output probe can compare matching date windows, app/device/website row counts and output field coverage. An installed shortcut name alone never authorizes execution.
