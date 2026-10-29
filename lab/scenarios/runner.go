@@ -382,6 +382,12 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "APP-LOC-SIM" || s.ID == "APP-LOC-REAL" {
 		return runIPhoneLocation(ctx, s, level)
 	}
+	if s.ID == "APP-NOTIFY-REAL" {
+		return Evidence{Scenario: s.ID, Level: level, At: time.Now().UTC(), Status: "limited", Assertions: []Assertion{{Name: "notification_permission", Status: "limited", Detail: "limited: needs Allow tap"}}}
+	}
+	if s.ID == "APP-NOTIFY-SIM" {
+		return runIPhoneCommand(ctx, s, level)
+	}
 	if s.ID == "APP-CMD-SIM" {
 		return runIPhoneCommand(ctx, s, level)
 	}

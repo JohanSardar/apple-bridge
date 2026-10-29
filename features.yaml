@@ -1500,6 +1500,19 @@ features:
       - {id: APP-CMD-REAL, levels: [real]}
     limits:
       - {scenario: APP-CMD-REAL, level: real, reason: 'limited: needs Allow tap to complete phone pairing; locked-phone APNs round trip and latency unmeasured'}
+  - id: iphone.notifications
+    title: iPhone notifications and interactive button results
+    requirements: [R-SECURE, R-SAFE-CMD, R-API]
+    milestone: G13
+    modules: [ios/Capabilities/Notifications, ios/Delivery, internal/contracts, lab/scenarios]
+    depends_on: [iphone.delivery]
+    status: limited
+    scenarios:
+      - {id: APP-NOTIFY-SIM, levels: [sim]}
+      - {id: APP-NOTIFY-REAL, levels: [real]}
+    limits:
+      - {scenario: APP-NOTIFY-REAL, level: real, reason: 'limited: needs Allow tap'}
+      - {scenario: APP-NOTIFY-SIM, level: sim, reason: 'Gateway simulation passes; native UI proof limited: shared simulator DEVICE_IN_USE after 60-second retry'}
   - id: iphone.motion
     title: iPhone activity, pedometer, floors and seven-day history
     requirements: [R-API]
