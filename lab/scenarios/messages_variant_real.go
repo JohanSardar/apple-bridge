@@ -79,20 +79,21 @@ func runMessagesVariantReal(ctx context.Context, s Scenario, e Evidence) (result
 }
 
 func runMessagesVariantReadback(ctx context.Context, kind string, add func(string, bool)) {
-	build := exec.CommandContext(ctx, "packaging/dev/build-native.sh")
-	build.Env = append(os.Environ(), "APPLE_BRIDGE_NATIVE_TARGET=MessagesVariantChecks")
-	output, err := build.CombinedOutput()
-	add("native_readback_checks_build", err == nil)
-	if err != nil {
-		os.Stderr.Write(output)
-		return
+	directory, _ := os.ReadFile("native/.build/native-output-1")
+	binary := filepath.Join(strings.TrimSpace(string(directory)), "MessagesVariantChecks")
+	if !messagesVariantChecksFresh(binary) {
+		build := exec.CommandContext(ctx, "packaging/dev/build-native.sh")
+		build.Env = append(os.Environ(), "APPLE_BRIDGE_NATIVE_TARGET=MessagesVariantChecks")
+		output, err := build.CombinedOutput()
+		add("native_readback_checks_build", err == nil)
+		if err != nil {
+			os.Stderr.Write(output)
+			return
+		}
+		directory, _ = os.ReadFile("native/.build/native-output-1")
+		binary = filepath.Join(strings.TrimSpace(string(directory)), "MessagesVariantChecks")
 	}
-	directory, err := os.ReadFile("native/.build/native-output-1")
-	if err != nil {
-		add("native_readback_checks", false)
-		return
-	}
-	output, err = exec.CommandContext(ctx, filepath.Join(strings.TrimSpace(string(directory)), "MessagesVariantChecks"), kind).Output()
+	output, err := exec.CommandContext(ctx, binary, kind).Output()
 	var checks map[string]bool
 	ok := err == nil && json.Unmarshal(output, &checks) == nil && len(checks) > 0
 	add("native_readback_checks", ok)
@@ -101,4 +102,25 @@ func runMessagesVariantReadback(ctx context.Context, kind string, add func(strin
 			add(name, passed)
 		}
 	}
+}
+
+func messagesVariantChecksFresh(binary string) bool {
+	info, err := os.Stat(binary)
+	if err != nil {
+		return false
+	}
+	for _, root := range []string{"native/Package.swift", "native/Sources/MessagesVariantChecks", "native/Sources/MessagesSource", "native/Sources/SourceSupport", "native/Sources/Decoders", "packaging/dev/build-native.sh", "packaging/dev/build-native.py"} {
+		if filepath.Walk(root, func(_ string, entry os.FileInfo, problem error) error {
+			if problem != nil {
+				return problem
+			}
+			if entry.ModTime().After(info.ModTime()) {
+				return os.ErrInvalid
+			}
+			return nil
+		}) != nil {
+			return false
+		}
+	}
+	return true
 }

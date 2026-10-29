@@ -38,6 +38,9 @@ func runMessagesCommands(ctx context.Context, s Scenario, level string) Evidence
 		return runNativeMessagesCommands(ctx, s, level, e)
 	}
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
+	if kind := messageSendVariant(s.ID); kind != "" {
+		runMessagesVariantReadback(ctx, kind, add)
+	}
 	w, err := world.New(ctx, level, 1, 0, world.BlobOptions{Scope: "messages:read,messages:write,system:read"})
 	if err != nil {
 		add("world_start", false)
@@ -164,9 +167,6 @@ func runMessagesCommands(ctx context.Context, s Scenario, level string) Evidence
 		add("resend_successful_target_rejected", successful.ID != "" && problem != nil && count(wrong, 0))
 
 	case "MSG-SEND-VARIANTS", "MSG-SEND-LATER", "MSG-SEND-EFFECT", "MSG-FORMATTING-SEND", "MSG-MENTION-SEND", "MSG-AUDIO-MESSAGE":
-		if kind := messageSendVariant(s.ID); kind != "" {
-			runMessagesVariantReadback(ctx, kind, add)
-		}
 		var sources contracts.ReadResult
 		add("source_status", client.Call(ctx, "sources.status", struct{}{}, &sources) == nil)
 		coverage := map[string]contracts.OperationCapability{}
