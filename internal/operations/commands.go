@@ -294,6 +294,7 @@ func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c c
 		if json.Unmarshal(resolved, &args) != nil {
 			return g.transition(g.Context, r, "rejected", "rejected_before_dispatch", nil, contracts.ErrInvalid)
 		}
+		action.Args = args
 	}
 	if c.Op == "maps.open" {
 		var args contracts.MapsOpenArgs
