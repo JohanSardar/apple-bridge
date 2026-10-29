@@ -17,6 +17,9 @@ import (
 func runMessagesCommands(ctx context.Context, s Scenario, level string) Evidence {
 	sha, _ := exec.Command("git", "rev-parse", "HEAD").Output()
 	e := Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, GitSHA: strings.TrimSpace(string(sha)), At: time.Now().UTC(), Assertions: []Assertion{}, Latency: map[string]Latency{}, Hosts: []string{"air"}}
+	if level == "real" && messageSendVariant(s.ID) != "" {
+		return runMessagesVariantReal(ctx, s, e)
+	}
 	if s.ID == "MSG-SELFTEST" {
 		return runNativeMessagesSelfTest(ctx, e)
 	}
@@ -161,6 +164,9 @@ func runMessagesCommands(ctx context.Context, s Scenario, level string) Evidence
 		add("resend_successful_target_rejected", successful.ID != "" && problem != nil && count(wrong, 0))
 
 	case "MSG-SEND-VARIANTS", "MSG-SEND-LATER", "MSG-SEND-EFFECT", "MSG-FORMATTING-SEND", "MSG-MENTION-SEND", "MSG-AUDIO-MESSAGE":
+		if kind := messageSendVariant(s.ID); kind != "" {
+			runMessagesVariantReadback(ctx, kind, add)
+		}
 		var sources contracts.ReadResult
 		add("source_status", client.Call(ctx, "sources.status", struct{}{}, &sources) == nil)
 		coverage := map[string]contracts.OperationCapability{}
