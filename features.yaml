@@ -962,7 +962,7 @@ features:
     modules: [relay]
     depends_on: []
     status: limited
-    notes: Device-signed outbound smux TLS tunnel, reconnect and health pings; Mac ACME DNS-01, custom-domain checks, CT warnings and VM service deployment. Live readiness is limited by missing NS delegation, trusted control TLS and VM OAuth scopes.
+    notes: Device-signed outbound smux TLS tunnel, reconnect and health pings; Mac ACME DNS-01, custom-domain checks, CT warnings and VM service deployment. Public apex control TLS and the live Mac health endpoint are reachable through ab-relay. ACME control renewal, public TXT propagation, explicit device addressing and startup retries are implemented. Ubuntu REST/MCP checks and the isolated Claude Code HTTP connector pass; CT aggregator completeness remains limited.
     scenarios:
       - {id: RELAY-PASSTHROUGH, levels: [sim]}
       - {id: RELAY-ENROLL, levels: [sim]}
@@ -973,8 +973,8 @@ features:
       - {id: RELAY-REAL, levels: [real]}
       - {id: CONN-RELAY-CLAUDE, levels: [real]}
     limits:
-      - {"scenario": "RELAY-REAL", "level": "real", "reason": "NS delegation absent; trusted control TLS and VM DNS scopes/IAM require operator setup"}
-      - {"scenario": "CONN-RELAY-CLAUDE", "level": "real", "reason": "NS delegation absent; trusted control TLS and VM DNS scopes/IAM require operator setup"}
+      - {"scenario": "RELAY-REAL", "level": "real", "reason": "Public relay DNS/TLS and Ubuntu REST/MCP qualified; crt.sh indexing/completeness is not qualified"}
+      - {"scenario": "CONN-RELAY-CLAUDE", "level": "real", "reason": "Bearer-authenticated Claude HTTP connector qualification does not establish interactive OAuth consent"}
   - id: remote.public-enroll
     title: Enroll a public-host passkey with a terminal QR
     requirements: [R-SECURE, R-WEB-REACH]

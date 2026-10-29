@@ -1,7 +1,7 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[5.67 5.08 6.18] cpu_idle=65% cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[12.29 10.52 7.39] cpu_idle=68% cpus=8 other_heavy=0"
   },
   "run_id": "relay-acme",
   "network_path": "loopback TLS origins through raw relay tunnel interface",
@@ -11,8 +11,8 @@
   "scenario": "RELAY-ACME",
   "level": "sim",
   "passed": true,
-  "git_sha": "89ee2a64d1dfb0137bbfd937513f20680aea4b30",
-  "at": "2026-10-28T15:56:30.52258Z",
+  "git_sha": "b8c3330ec3d1cd0a70e23fff7931618d8281a805",
+  "at": "2026-10-29T18:22:44.36265Z",
   "assertions": [
     {
       "name": "two_distinct_device_enrollments",
@@ -48,6 +48,18 @@
     },
     {
       "name": "dns_challenge_cleaned_up",
+      "passed": true
+    },
+    {
+      "name": "control_dns01_certificate_issued",
+      "passed": true
+    },
+    {
+      "name": "control_certificate_available",
+      "passed": true
+    },
+    {
+      "name": "control_certificate_hostname",
       "passed": true
     },
     {

@@ -1,25 +1,210 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[10.21 7.77 7.82] cpu_idle=23% cpus=8 other_heavy=0"
+    "summary": "air: load=[497.06 414.72 272.79] cpu_idle=17% cpus=8 other_heavy=0"
   },
-  "status": "limited",
-  "run_id": "relay-conn-relay-claude",
-  "network_path": "loopback TLS origins through raw relay tunnel interface",
+  "run_id": "relay-real_01M64FY03DA1C53SG2V2F4DJAT",
+  "network_path": "Ubuntu public HTTPS through ab-relay ciphertext tunnel to isolated Mac gateway",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "CONN-RELAY-CLAUDE",
   "level": "real",
-  "passed": false,
-  "git_sha": "c3ac9963efa1272847ce1ef053a43f9c53d3fc2a",
-  "at": "2026-10-29T16:06:05.403314Z",
+  "passed": true,
+  "git_sha": "da323911b31ae9382075339965b67dec7aa41f20",
+  "at": "2026-10-29T18:49:35.596173Z",
   "assertions": [
     {
-      "name": "public_relay_readiness",
-      "passed": false,
-      "status": "limited",
-      "detail": "NS delegation absent; trusted control TLS and VM DNS scopes/IAM require operator setup"
+      "name": "isolated_mac_gateway",
+      "passed": true
+    },
+    {
+      "name": "relay_enrollment_dns01_public_tls_and_60s_sse",
+      "passed": true
+    },
+    {
+      "name": "relay_backend_on",
+      "passed": true
+    },
+    {
+      "name": "ubuntu_public_dns",
+      "passed": true
+    },
+    {
+      "name": "ubuntu_curl_public_tls/",
+      "passed": true
+    },
+    {
+      "name": "ubuntu_curl_public_tls/v1/health",
+      "passed": true
+    },
+    {
+      "name": "external_probe_build",
+      "passed": true
+    },
+    {
+      "name": "external_probe_directory",
+      "passed": true
+    },
+    {
+      "name": "external_probe_copy",
+      "passed": true
+    },
+    {
+      "name": "remote_token",
+      "passed": true
+    },
+    {
+      "name": "external_probe_completed",
+      "passed": true
+    },
+    {
+      "name": "external_probe_results",
+      "passed": true
+    },
+    {
+      "name": "mcp_tools_list",
+      "passed": true
+    },
+    {
+      "name": "read_02",
+      "passed": true
+    },
+    {
+      "name": "read_15",
+      "passed": true
+    },
+    {
+      "name": "remote_token_rest",
+      "passed": true
+    },
+    {
+      "name": "public_passkey_origin_rpid",
+      "passed": true
+    },
+    {
+      "name": "read_01",
+      "passed": true
+    },
+    {
+      "name": "read_03",
+      "passed": true
+    },
+    {
+      "name": "read_05",
+      "passed": true
+    },
+    {
+      "name": "read_17",
+      "passed": true
+    },
+    {
+      "name": "read_16",
+      "passed": true
+    },
+    {
+      "name": "origin_rejected",
+      "passed": true
+    },
+    {
+      "name": "read_11",
+      "passed": true
+    },
+    {
+      "name": "read_06",
+      "passed": true
+    },
+    {
+      "name": "read_10",
+      "passed": true
+    },
+    {
+      "name": "read_12",
+      "passed": true
+    },
+    {
+      "name": "read_19",
+      "passed": true
+    },
+    {
+      "name": "read_14",
+      "passed": true
+    },
+    {
+      "name": "mcp_read_tool",
+      "passed": true
+    },
+    {
+      "name": "mcp_sse_response",
+      "passed": true
+    },
+    {
+      "name": "public_health",
+      "passed": true
+    },
+    {
+      "name": "read_00",
+      "passed": true
+    },
+    {
+      "name": "read_04",
+      "passed": true
+    },
+    {
+      "name": "read_07",
+      "passed": true
+    },
+    {
+      "name": "feed_requires_replica_handshake",
+      "passed": true
+    },
+    {
+      "name": "forwarded_headers_ignored",
+      "passed": true
+    },
+    {
+      "name": "html_valid_certificate",
+      "passed": true
+    },
+    {
+      "name": "read_08",
+      "passed": true
+    },
+    {
+      "name": "local_token_rejected",
+      "passed": true
+    },
+    {
+      "name": "mcp_initialize",
+      "passed": true
+    },
+    {
+      "name": "read_09",
+      "passed": true
+    },
+    {
+      "name": "read_13",
+      "passed": true
+    },
+    {
+      "name": "read_18",
+      "passed": true
+    },
+    {
+      "name": "isolated_claude_configuration",
+      "passed": true
+    },
+    {
+      "name": "isolated_claude_registration",
+      "passed": true
+    },
+    {
+      "name": "claude_code_http_connector_connected",
+      "passed": true
+    },
+    {
+      "name": "trusted_public_oauth_mcp_and_60s_sse",
+      "passed": true
     },
     {
       "name": "credential_backend_override_restored",
@@ -28,6 +213,8 @@
   ],
   "latency": null,
   "hosts": [
-    "air"
+    "air",
+    "ubuntu",
+    "ab-relay"
   ]
 }
