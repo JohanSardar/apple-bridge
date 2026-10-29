@@ -59,10 +59,13 @@ public struct MessagesMediaCleanupProof: Sendable {
         return false
     }
 
-    public static func targetIndex(_ candidates: [JSON], names: Set<String>, outgoing: Bool) -> Int? {
+    public static func targetIndex(_ candidates: [JSON], names: Set<String>, outgoing: Bool, allowSelfEcho: Bool = false) -> Int? {
         let targets = candidates.enumerated().filter { _, candidate in
             candidate["outgoing"] == .bool(outgoing) && candidate["values"].array.contains { Self.matches($0.string, names: names) }
         }
-        return targets.count == 1 ? targets.first?.offset : nil
+        if targets.count == 1 { return targets.first?.offset }
+        guard targets.isEmpty, allowSelfEcho else { return nil }
+        let echoes = candidates.enumerated().filter { _, candidate in candidate["values"].array.contains { Self.matches($0.string, names: names) } }
+        return echoes.count == 1 ? echoes.first?.offset : nil
     }
 }

@@ -42,7 +42,7 @@ enum HelperLabCommand {
                 value["values"] = .array(candidate["values"].array + [candidate["description"]])
                 return .object(value)
             }
-            let target = MessagesMediaCleanupProof.targetIndex(candidates, names: names, outgoing: row["is_from_me"].bool)
+            let target = MessagesMediaCleanupProof.targetIndex(candidates, names: names, outgoing: row["is_from_me"].bool, allowSelfEcho: fixture["allow_self_echo"].bool)
             let result = JSON.object(["authorized": .bool(authorized), "target_verified": .bool(authorized && target != nil)])
             print(String(decoding: try JSONEncoder().encode(result), as: UTF8.self))
             return true

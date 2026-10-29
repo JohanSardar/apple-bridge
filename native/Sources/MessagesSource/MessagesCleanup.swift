@@ -114,6 +114,7 @@ public enum MessagesCleanup {
                 var fields = item.2
                 if let names = mediaByMessage[row["guid"]], peers.allSatisfy({ own.contains(MessagesProbes.normalize($0["id"])) }) {
                     fields["cleanup_media_names"] = names
+                    fields["cleanup_self_echo"] = ownedOnly
                     let target = try JSONDecoder().decode(JSON.self, from: JSONSerialization.data(withJSONObject: fields))
                     result.append((row["guid"], target))
                     continue
