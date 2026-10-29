@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "assertions": {
+    "simulator_build": true,
+    "launch": true,
+    "capability_navigation": true,
+    "disabled_switch": true,
+    "permission_visible": true,
+    "activity_visible": true,
+    "diagnostics_navigation": true
+  },
+  "capability_count": 15
+}

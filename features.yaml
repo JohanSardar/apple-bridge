@@ -1430,3 +1430,13 @@ features:
     status: done
     scenarios:
       - {id: APP-BUILD-REAL, levels: [real]}
+  - id: iphone.shell
+    title: iPhone capability settings and diagnostics
+    requirements: [R-PKG]
+    milestone: G13
+    modules: [ios/App, ios/Capabilities]
+    depends_on: [iphone.build]
+    status: done
+    scenarios:
+      - {id: APP-SHELL-SIM, levels: [sim]}
+      - {id: APP-SHELL-REAL, levels: [real]}
