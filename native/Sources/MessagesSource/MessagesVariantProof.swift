@@ -21,8 +21,9 @@ public enum MessagesVariantProof {
         let path = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Messages/chat.db").path
         let reader = try MessagesReader(path: path)
         let own = Set(try MessagesProbes.discoverSelfHandles().handles.map(MessagesProbes.normalize))
-        let chats = try reader.query("SELECT c.guid,h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.service_name='iMessage' AND (SELECT COUNT(*) FROM chat_handle_join x WHERE x.chat_id=c.ROWID)=1 ORDER BY c.ROWID DESC")
-        guard let chat = chats.first(where: { own.contains(MessagesProbes.normalize($0["id"])) })?["guid"] else { return limited("needs existing self-chat") }
+        let chats = try reader.query("SELECT c.guid,c.ROWID AS chat_row_id,h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.service_name='iMessage' AND (SELECT COUNT(*) FROM chat_handle_join x WHERE x.chat_id=c.ROWID)=1 ORDER BY c.ROWID DESC")
+        guard let selectedChat = chats.first(where: { own.contains(MessagesProbes.normalize($0["id"])) }) else { return limited("needs existing self-chat") }
+        let chat = selectedChat["guid"]
         let run = "variant_" + UUID().uuidString.replacingOccurrences(of: "-", with: "")
         let tag = "[ab-test " + run + "]"
         let baseline = try reader.maximum()
@@ -64,17 +65,20 @@ public enum MessagesVariantProof {
             reason = outcome["reason"].string
         } catch { reason = String(describing: error) }
         try await Task.sleep(for: .seconds(1))
-        do { try capture() } catch { reason = "created_ids_capture_failed" }
-        let cleaned = try await MessagesCleanup.run(["--tag", tag, "--owned-only"])
+        var ownershipCaptured = false
+        do { try capture(); ownershipCaptured = true } catch { reason = "created_ids_capture_failed" }
+        let cleaned = try await MessagesCleanup.run(["--tag", tag, "--owned-only", "--only-chat-id", selectedChat["chat_row_id"]])
         let cleanup = try JSONDecoder().decode(JSON.self, from: cleaned)
-        let passed = cleanup["passed"].bool && outcome["observed"].bool && outcome["disposition"].string == "locally_observed"
+        let remaining = try reader.query("SELECT DISTINCT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID WHERE m.ROWID>? AND (instr(m.text,?)>0 OR instr(m.attributedBody,CAST(? AS BLOB))>0) AND NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=j.chat_id)", [String(baseline), tag, tag])
+        let cleanupPassed = ownershipCaptured && cleanup["passed"].bool && remaining.isEmpty
+        let passed = cleanupPassed && outcome["observed"].bool && outcome["disposition"].string == "locally_observed"
         registration["late_effect_possible"] = lateEffectPossible
-        registration["cleanup_state"] = cleanup["passed"].bool ? (lateEffectPossible ? "pending_reconciliation" : "verified_clean") : "pending_native_cleanup"
+        registration["cleanup_state"] = cleanupPassed ? (lateEffectPossible ? "pending_reconciliation" : "verified_clean") : "pending_native_cleanup"
         try PrivateReport.write(registration, to: ledger)
         if passed, let prepared = preparedVariant {
             try MessagesSendVariants.recordProof(prepared)
         }
-        return .object(["passed": .bool(passed), "limited": .bool(!passed && cleanup["passed"].bool), "reason": .string(reason.isEmpty ? "needs native sent-attribute qualification" : reason), "cleanup_passed": cleanup["passed"], "writes_submitted": .number(Double(writes))])
+        return .object(["passed": .bool(passed), "limited": .bool(!passed && cleanupPassed), "reason": .string(reason.isEmpty ? "needs native sent-attribute qualification" : reason), "cleanup_passed": .bool(cleanupPassed), "writes_submitted": .number(Double(writes))])
     }
     static func limited(_ reason: String) -> JSON {
         .object(["passed": .bool(false), "limited": .bool(true), "reason": .string(reason), "writes_submitted": .number(0)])

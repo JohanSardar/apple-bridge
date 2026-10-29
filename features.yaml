@@ -837,8 +837,8 @@ features:
       - {"scenario": "MSG-READ-RECEIPTS", "level": "real", "reason": "limited: needs Accessibility grant for the current signed Helper on the Air. Real preflight submitted zero writes; Automation remains unchecked behind Accessibility. Fresh text-only unused-self-handle fixtures, continuous T63 owned-ID cleanup and baseline preservation are enforced. Pin, receipt and Recently Deleted native qualification remains fail-closed."}
       - {"scenario": "WEB-MSG-SEND-VARIANTS", "level": "web", "reason": "web qualification remains missing"}
       - {"scenario": "MSG-SEND-LATER", "level": "real", "reason": "needs verified Send Later date controls and cancellation cleanup; fail-closed"}
-      - {"scenario": "MSG-SEND-EFFECT", "level": "real", "reason": "needs native sent-attribute qualification through the signed Helper and run-owned T63 cleanup"}
-      - {"scenario": "MSG-FORMATTING-SEND", "level": "real", "reason": "needs native sent-attribute qualification through the signed Helper and run-owned T63 cleanup"}
+      - {"scenario": "MSG-SEND-EFFECT", "level": "real", "reason": "needs Messages Accessibility grant; signed Helper preflight submitted zero writes and preserved the native baseline"}
+      - {"scenario": "MSG-FORMATTING-SEND", "level": "real", "reason": "needs Messages Accessibility grant; signed Helper preflight submitted zero writes and preserved the native baseline"}
       - {"scenario": "MSG-MENTION-SEND", "level": "real", "reason": "needs self-chat mention suggestion identity and attribute qualification; fail-closed"}
       - {"scenario": "MSG-AUDIO-MESSAGE", "level": "real", "reason": "needs native media cleanup qualification; audio remains fail-closed"}
       - {"scenario": "MSG-RECENTLY-DELETED", "level": "real", "reason": "limited: needs Accessibility grant for the current signed Helper on the Air. Real preflight submitted zero writes; Automation remains unchecked behind Accessibility. Fresh text-only unused-self-handle fixtures, continuous T63 owned-ID cleanup and baseline preservation are enforced. Pin, receipt and Recently Deleted native qualification remains fail-closed."}
