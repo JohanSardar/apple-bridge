@@ -69,6 +69,20 @@ actor MessagesParitySelfTest {
         var registration: [String: Any] = ["scenario": "MSG-PARITY-SELFTEST", "run_id": run, "baseline_max_row_id": baselineMessage, "baseline_max_chat_row_id": baseline, "cleanup_state": "pending_native_cleanup"]
         try PrivateReport.write(registration, to: ledger)
         cleanup = "pending_native_cleanup"
+        let creations = URL(fileURLWithPath: ledger.path + ".creations.json")
+        @Sendable func captureCreatedIDs() throws -> [String] {
+            let reader = try MessagesDatabase()
+            let ids = try reader.rows("SELECT guid FROM message WHERE ROWID>? AND (instr(text,?)>0 OR instr(attributedBody,CAST(? AS BLOB))>0)", bindings: [String(baselineMessage), tag, tag]).compactMap { $0["guid"] }
+            try PrivateReport.write(["run_id": run, "ids": ids], to: creations)
+            return ids
+        }
+        let capture = Task.detached {
+            while !Task.isCancelled {
+                _ = try? captureCreatedIDs()
+                do { try await Task.sleep(for: .milliseconds(100)) } catch { break }
+            }
+        }
+        defer { capture.cancel() }
         let commands = MessagesCommands(path: nil, labCommands: true)
         let guardLog = try DispatchGuard(home: home)
         let id = UUID().uuidString
@@ -89,13 +103,24 @@ actor MessagesParitySelfTest {
             lateEffectPossible = true
             writesSubmitted += 1
             let result = try await commands.dispatch(prepared)
-            lateEffectPossible = !result["observed"].bool
             try await guardLog.append(.object(["t": .string("Outcome"), "command_id": .string(id), "evidence": result]))
             guard result["observed"].bool, !result["native_key"].string.isEmpty else {
                 prerequisiteReason = "isolated_fixture_send_" + (result["disposition"].string.isEmpty ? "unobserved" : result["disposition"].string)
                 throw SourceFailure.capabilityUnproven
             }
             let guid = result["native_key"].string
+            let echoDeadline = ContinuousClock.now.advanced(by: .seconds(10))
+            var echoObserved = false
+            repeat {
+                echoObserved = !(try database.rows("SELECT guid FROM message WHERE ROWID>? AND is_from_me=0 AND (instr(text,?)>0 OR instr(attributedBody,CAST(? AS BLOB))>0)", bindings: [String(baselineMessage), tag, tag])).isEmpty
+                if echoObserved { break }
+                try await Task.sleep(for: .milliseconds(100))
+            } while ContinuousClock.now < echoDeadline
+            guard echoObserved else {
+                prerequisiteReason = "isolated_fixture_echo_unobserved"
+                throw SourceFailure.capabilityUnproven
+            }
+            lateEffectPossible = false
             let chats = try database.rows("SELECT c.guid,c.service_name,c.ROWID AS position FROM chat c JOIN chat_message_join j ON j.chat_id=c.ROWID JOIN message m ON m.ROWID=j.message_id WHERE m.guid=?", bindings: [guid])
             guard chats.count == 1, let chat = chats.first?["guid"], let position = Int64(chats.first?["position"] ?? ""), position > baseline else { throw SourceFailure.conflict }
             let members = try database.rows("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", bindings: [chat])
@@ -107,13 +132,18 @@ actor MessagesParitySelfTest {
             steps = try await MessagesParity.probe(target)
         } catch { blocked(prerequisiteReason ?? "isolated_fixture_" + MessagesParity.failureReason(error)) }
         do {
-            let created = try database.rows("SELECT guid FROM message WHERE ROWID>? AND (instr(text,?)>0 OR instr(attributedBody,CAST(? AS BLOB))>0)", bindings: [String(baselineMessage), tag, tag]).compactMap { $0["guid"] }
-            registration["created_message_ids"] = created
-            try PrivateReport.write(registration, to: ledger)
-            let data = try await MessagesCleanup.run(["--tag", tag, "--owned-only", "--skip-draft"])
-            let result = try JSONDecoder().decode(JSON.self, from: data)
-            afterIDs = try activeIDs(database)
-            cleanup = result["passed"].bool && beforeIDs == afterIDs ? (lateEffectPossible ? "pending_reconciliation" : "verified_clean") : "pending_native_cleanup"
+            var cleaned = false
+            for _ in 0..<3 {
+                registration["created_message_ids"] = try captureCreatedIDs()
+                try PrivateReport.write(registration, to: ledger)
+                let data = try await MessagesCleanup.run(["--tag", tag, "--owned-only", "--skip-draft"])
+                let result = try JSONDecoder().decode(JSON.self, from: data)
+                try await Task.sleep(for: .milliseconds(500))
+                _ = try captureCreatedIDs()
+                afterIDs = try activeIDs(database)
+                cleaned = result["passed"].bool && beforeIDs == afterIDs
+            }
+            cleanup = cleaned ? (lateEffectPossible ? "pending_reconciliation" : "verified_clean") : "pending_native_cleanup"
         } catch { cleanup = "pending_native_cleanup" }
         registration["late_effect_possible"] = lateEffectPossible
         registration["cleanup_state"] = cleanup
