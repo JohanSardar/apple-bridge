@@ -1,0 +1,90 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[58.72 60.04 44.6] cpu_idle=25% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M636Z5X4KSDDJ6SQJRKTPKBA",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "place_count": 1
+  },
+  "scenario": "MAP-SIM",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "279e7174d5b04b401e3f03d2456d30aabe137888",
+  "at": "2026-10-29T06:53:42.69298Z",
+  "assertions": [
+    {
+      "name": "world_started",
+      "passed": true
+    },
+    {
+      "name": "scopes_granted",
+      "passed": true
+    },
+    {
+      "name": "snapshot_schema",
+      "passed": true
+    },
+    {
+      "name": "maps_open_observed",
+      "passed": true
+    },
+    {
+      "name": "maps_route_open_observed",
+      "passed": true
+    },
+    {
+      "name": "incomplete_route_rejected",
+      "passed": true
+    },
+    {
+      "name": "transport_mode_driving",
+      "passed": true
+    },
+    {
+      "name": "transport_mode_walking",
+      "passed": true
+    },
+    {
+      "name": "transport_mode_transit",
+      "passed": true
+    },
+    {
+      "name": "transport_mode_cycling",
+      "passed": true
+    },
+    {
+      "name": "eta_completed",
+      "passed": true
+    },
+    {
+      "name": "nearby_completed",
+      "passed": true
+    },
+    {
+      "name": "unknown_fields_rejected",
+      "passed": true
+    },
+    {
+      "name": "query_completed",
+      "passed": true
+    },
+    {
+      "name": "public_places_present",
+      "passed": true
+    },
+    {
+      "name": "places_within_radius",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ]
+}

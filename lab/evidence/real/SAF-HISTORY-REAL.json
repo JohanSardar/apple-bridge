@@ -1,0 +1,44 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[5.47 8.01 14.19] cpu_idle=62% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M61X593D0FJTTGPJ1XXHPDFP",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "count": "966"
+  },
+  "scenario": "SAF-HISTORY-REAL",
+  "level": "real",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-28T18:43:02.38137Z",
+  "assertions": [
+    {
+      "name": "fixture_directory",
+      "passed": true
+    },
+    {
+      "name": "fake_databases",
+      "passed": true
+    },
+    {
+      "name": "native_build",
+      "passed": true
+    },
+    {
+      "name": "native_output",
+      "passed": true
+    },
+    {
+      "name": "independent_truth_counts_and_bookmark_digest",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

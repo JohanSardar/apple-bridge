@@ -56,10 +56,22 @@ public actor AppleSession: ObservationSink {
     private var blobReader: (@Sendable (String, Int64, Int) async throws -> JSON)?
     private var captureTasks: [Task<Void, Never>] = []
     private var queryAudio: [String: (Data, Date)] = [:]
-    private var queryHandlers: [String: @Sendable (JSON) async throws -> JSON] = [:]
+    private var queryHandlers: [String: @Sendable (JSON) async throws -> QueryOutput] = [:]
+    private struct RegisteredBlobReader: Sendable {
+        let source: String
+        let read: @Sendable (String, Int, Int) async throws -> JSON
+    }
+    private var registeredBlobReaders: [String: RegisteredBlobReader] = [:]
     public func registerQuery(_ name: String, handler: @escaping @Sendable (JSON) async throws -> JSON) throws {
+        try registerQueryOutput(name) { args in QueryOutput(result: try await handler(args)) }
+    }
+    public func registerQueryOutput(_ name: String, handler: @escaping @Sendable (JSON) async throws -> QueryOutput) throws {
         guard wire == nil, queryHandlers[name] == nil else { throw SourceFailure.conflict }
         queryHandlers[name] = handler
+    }
+    public func registerBlobReader(_ prefix: String, source: String, reader: @escaping @Sendable (String, Int, Int) async throws -> JSON) throws {
+        guard wire == nil, !prefix.isEmpty, !source.isEmpty, !registeredBlobReaders.keys.contains(where: { $0.hasPrefix(prefix) || prefix.hasPrefix($0) }) else { throw SourceFailure.conflict }
+        registeredBlobReaders[prefix] = RegisteredBlobReader(source: source, read: reader)
     }
     private var queryBodies: [String: (Data, Date)] = [:]
     private var queryTasks: [String: Task<Void, Never>] = [:]
@@ -244,8 +256,9 @@ public actor AppleSession: ObservationSink {
         let id = frame["id"]
         if let handler = queryHandlers[frame["op"].string] {
             do {
-                var result = try await handler(frame["args"])
-                var blobs: [JSON] = []
+                let output = try await handler(frame["args"])
+                var result = output.result
+                var blobs: [JSON] = output.blobs.map(\.wireReference)
                 if frame["op"].string == "speech.synthesize", let data = Data(base64Encoded: result["data_base64"].string), !data.isEmpty {
                     queryAudio = queryAudio.filter { Date().timeIntervalSince($0.value.1) < 60 }
                     guard queryAudio.count < 8 else { throw SourceFailure.unavailable }
@@ -268,11 +281,12 @@ public actor AppleSession: ObservationSink {
                     try? wire?.send(.object(["t": .string("QueryResult"), "id": id, "result_json": .object(["body_blob": .string(digest)]), "blobs": .array([.object(["digest": .string(digest), "size": .number(Double(encoded.count)), "handle": .string(handle)])])]))
                     return
                 }
+                guard output.blobs.count <= 16, output.blobs.allSatisfy({ $0.size <= 64 << 20 && !$0.handle.isEmpty }) else { throw SourceFailure.invalid }
                 let photoBlob = frame["op"].string == "photos.original" || frame["op"].string == "photos.thumbnail"
                 blobs = photoBlob ? [.object(["digest": result["digest"], "size": result["size"], "handle": result["handle"]])] : frame["op"].string == "files.read" ? [.object(["digest": result["digest"], "size": result["size"], "handle": .string("files-blob:" + result["digest"].string)])] : blobs
                 try? wire?.send(.object(["t": .string("QueryResult"), "id": id, "result_json": result, "blobs": .array(blobs)]))
             } catch {
-                let code = error is CancellationError ? "deadline" : (error as? SourceFailure == .invalid ? "invalid" : "unavailable")
+                let code = error is CancellationError ? "deadline" : (error as? SourceFailure == .invalid ? "invalid" : (error as? SourceFailure == .unsupported ? "unsupported" : "unavailable"))
                 try? wire?.send(.object(["t": .string("QueryError"), "id": id, "code": .string(code)]))
             }
             return
@@ -293,12 +307,14 @@ public actor AppleSession: ObservationSink {
         guard let connection = wire else { return }
         let started = CaptureTrace.now()
         var prepared: UInt64 = 0
-        let source = frame["handle"].string.hasPrefix("pdf:") ? "pdf" : frame["handle"].string.hasPrefix("photos-blob:") ? "photos" : frame["handle"].string.hasPrefix("files-blob:") ? "files" : frame["handle"].string.hasPrefix("notes-blob:") ? "notes" : (frame["handle"].string.hasPrefix("contacts-image:") ? "contacts" : (frame["handle"].string.hasPrefix("calendar-attachment:") ? "calendar" : "messages"))
+        let registered = registeredBlobReaders.first(where: { frame["handle"].string.hasPrefix($0.key) })?.value
+        let source = registered?.source ?? (frame["handle"].string.hasPrefix("pdf:") ? "pdf" : frame["handle"].string.hasPrefix("photos-blob:") ? "photos" : frame["handle"].string.hasPrefix("files-blob:") ? "files" : frame["handle"].string.hasPrefix("notes-blob:") ? "notes" : (frame["handle"].string.hasPrefix("contacts-image:") ? "contacts" : (frame["handle"].string.hasPrefix("calendar-attachment:") ? "calendar" : "messages")))
         defer { trace.record("helper_blob_read", fields: ["source": .string(source), "started_ns": .integer(started), "prepared_ns": .integer(prepared), "finished_ns": .integer(CaptureTrace.now())]) }
         do {
             guard !frame["handle"].string.isEmpty, frame["offset"].number >= 0, frame["offset"].number < Double(Int64.max), frame["length"].number > 0, frame["length"].number <= 131072, frame["length"].number.rounded(.down) == frame["length"].number, frame["offset"].number.rounded(.down) == frame["offset"].number else { throw SourceFailure.invalid }
             let response: JSON
-            if frame["handle"].string.hasPrefix("query-body:") {
+            if let registered { response = try await registered.read(frame["handle"].string, Int(frame["offset"].number), Int(frame["length"].number)) }
+            else if frame["handle"].string.hasPrefix("query-body:") {
                 guard let (data, expires) = queryBodies[frame["handle"].string], expires > Date() else { throw SourceFailure.unavailable }
                 let offset = Int(frame["offset"].number)
                 guard offset <= data.count else { throw SourceFailure.invalid }
@@ -586,7 +602,7 @@ let operation=outcome["evidence"]["prepared"]["action"]["op"].string
  let evidence = operation.hasPrefix("contacts.") ? await contacts.resolve(id,evidence:saved) : operation.hasPrefix("calendar.") ? await calendar.resolve(id,evidence:saved) : await selected.resolve(id, evidence: saved)
                 if evidence["observed"].bool {
                     let committed: JSON
-                    if ["shortcuts.run", "speech.say", "capture.play_sound"].contains(operation) { committed = evidence }
+                    if ["maps.open", "shortcuts.run", "speech.say", "capture.play_sound"].contains(operation) { committed = evidence }
                     else { committed = try await observedEvidence(evidence, fingerprint: outcome["evidence"]["prepared"]["request_hash"], operation: operation) }
                     outcome = .object(["t": .string("Outcome"), "command_id": .string(id), "disposition": evidence["disposition"].string.isEmpty ? .string("locally_observed") : evidence["disposition"], "evidence": committed])
                     try await guardLog.append(outcome)

@@ -54,7 +54,7 @@ func queryContext(ctx context.Context, q *contracts.Query) (context.Context, con
 	if len(q.ID) <= 4 || !contracts.ValidCommandID(q.ID) || !strings.HasPrefix(q.ID, "qry_") || len(q.ID) > 128 || q.DeadlineMS < 0 || q.DeadlineMS > 60000 || !json.Valid(q.Args) {
 		return ctx, func() {}, contracts.ErrInvalid
 	}
-	if q.Op == "helper.version" || q.Op == "mac.clipboard_read" {
+	if q.Op == "helper.version" || q.Op == "mac.clipboard_read" || q.Op == "mac.network_check" {
 		var args struct{}
 		if !bytes.HasPrefix(bytes.TrimSpace(q.Args), []byte("{")) || contracts.DecodeInput(q.Args, &args) != nil {
 			return ctx, func() {}, contracts.ErrInvalid

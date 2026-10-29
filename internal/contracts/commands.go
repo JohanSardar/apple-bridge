@@ -161,6 +161,9 @@ func ValidateCommand(c Command) (ReminderArgs, error) {
 	if c.Op == "pdf.annotate" {
 		return ReminderArgs{}, ValidatePDFAnnotate(c)
 	}
+	if c.Op == "maps.open" {
+		return ReminderArgs{}, ValidateMapsOpen(c)
+	}
 	if c.Op == "shortcuts.run" {
 		return ReminderArgs{}, ValidateShortcutRun(c)
 	}

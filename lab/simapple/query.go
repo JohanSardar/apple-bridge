@@ -106,6 +106,8 @@ func (s *querySession) receive(f contracts.IPCFrame) bool {
 			} else {
 				out.ResultJSON = json.RawMessage(`{"state":"downloaded","plain_text":"Hello fixture","html":""}`)
 			}
+		case "mac.network_check":
+			out.ResultJSON = json.RawMessage(`{"connected":true,"dns":true,"ping":"limited: ICMP unavailable","interfaces":[{"name":"en0","received_bytes":123,"sent_bytes":456}]}`)
 		case "mac.clipboard_read":
 			s.fake.mu.Lock()
 			out.ResultJSON, _ = json.Marshal(map[string]any{"text": s.fake.clipboard})
@@ -128,6 +130,16 @@ func (s *querySession) receive(f contracts.IPCFrame) bool {
 				break
 			}
 			if code, result, handled := simulateMusicQuery(f.Op, f.Args); handled {
+				if code != "" {
+					out.T = "QueryError"
+					out.Code = code
+				} else {
+					out.ResultJSON = result
+				}
+				break
+			}
+			if code, result, blobs, handled := s.fake.mapsQuery(f.Op, f.Args); handled {
+				out.Blobs = blobs
 				out.ResultJSON = result
 				if code != "" {
 					out.T = "QueryError"
