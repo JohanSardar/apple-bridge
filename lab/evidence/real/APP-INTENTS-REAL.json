@@ -3,8 +3,8 @@
   "run_id": "",
   "metrics": {
     "capture_observer_resets": 0,
-    "commands": 18,
-    "compiled_intents": 18,
+    "commands": 23,
+    "compiled_intents": 23,
     "compiled_siri_shortcuts": 10,
     "dispatch_assertions": 4
   },
