@@ -263,7 +263,7 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 			}
 			lastCommand = result
 			if result["disposition"] != "locally_observed" {
-				return fmt.Errorf("command did not produce observed evidence")
+				return fmt.Errorf("command did not produce observed evidence: state=%v disposition=%v error=%v", result["state"], result["disposition"], result["error"])
 			}
 			return nil
 		}
@@ -500,7 +500,8 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 				add("truth_renamed_list", err == nil && truth["list_exists"] == true)
 			}
 			add("stale_delete_rejected", submit("reminders.delete_list", map[string]any{"id": owned.ID}, owned.Version+1) != nil)
-			if submit("reminders.delete_list", map[string]any{"id": owned.ID}, owned.Version) != nil {
+			if err := submit("reminders.delete_list", map[string]any{"id": owned.ID}, owned.Version); err != nil {
+				fmt.Fprintln(os.Stderr, "delete_owned_list:", err)
 				return failed("delete_owned_list")
 			}
 			add("delete_readback", w.Await(3*time.Second, func() bool { _, ok := find(w.Gateway, "reminders.list", renamed); return !ok }) == nil)
@@ -825,6 +826,8 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 	if s.ID == "CORE-LIVE-LATENCY" {
 		_, _, stableReadErr := w.RecordsAt(w.Replicas[0])
 		e.Metrics["final_active_read_changed_during_pagination"] = stableReadErr != nil && stableReadErr.Error() == "snapshot changed during pagination"
+	}
+	if s.ID == "CORE-LIVE-LATENCY" || s.ID == "REM-LIST-LOST-ACK" {
 		pidBytes, pidErr := os.ReadFile(filepath.Join(w.Gateway.Home, "helper", "helper.pid"))
 		pid := strings.TrimSpace(string(pidBytes))
 		numericPID, parseErr := strconv.Atoi(pid)

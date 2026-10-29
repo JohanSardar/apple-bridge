@@ -607,7 +607,7 @@ public actor AppleSession: ObservationSink {
  if evidence["absent"].bool {try await calendar.confirmAbsence(evidence["native_key"].string,into:self)}
  }else{
  try await source.reconcile(into: self)
- if evidence["absent"].bool { try await source.confirmAbsence(evidence["native_key"].string, into: self) }
+ if evidence["absent"].bool { try await source.confirmAbsence(evidence["native_key"].string, list: operation == "reminders.delete_list", into: self) }
  }
         try Task.checkCancellation()
         let key = evidence["native_key"].string
