@@ -60,6 +60,11 @@ func queryContext(ctx context.Context, q *contracts.Query) (context.Context, con
 			return ctx, func() {}, contracts.ErrInvalid
 		}
 	}
+	if contracts.MacExtrasQuery(q.Op) {
+		if err := contracts.ValidateMacExtrasQuery(*q); err != nil {
+			return ctx, func() {}, err
+		}
+	}
 	if q.DeadlineMS == 0 {
 		q.DeadlineMS = 1000
 	}

@@ -1546,3 +1546,24 @@ features:
         reason: "Helper compiles and bundles; extracted App Intents metadata is absent. Requires Xcode metadata extraction/packaging, then Johan to verify Shortcuts discovery and execution."
     scenarios:
       - {id: SIRI-INTENTS, levels: [real]}
+
+  - id: mac.extras
+    title: Mac Bluetooth AirPlay iWork Time Machine and song recognition
+    requirements: [R-API, R-SCOPE]
+    milestone: G16
+    modules: [native/Sources/MacSource, internal/contracts, lab/simapple]
+    depends_on: [mac.capture]
+    status: limited
+    scenarios:
+      - {id: MAC-EXTRAS-SIM, levels: [sim]}
+      - {id: TM-STATUS, levels: [real]}
+      - {id: IWORK-REAL, levels: [real]}
+      - {id: SHAZAM-REAL, levels: [real]}
+      - {id: BT-REAL, levels: [real]}
+      - {id: AIRPLAY-REAL, levels: [real]}
+    limits:
+      - {scenario: TM-STATUS, level: real, reason: "real qualification batched at end"}
+      - {scenario: IWORK-REAL, level: real, reason: "real qualification batched at end; native export limited to avoid Automation prompts"}
+      - {scenario: SHAZAM-REAL, level: real, reason: "real qualification batched at end; ShazamKit entitlement and fixture qualification required"}
+      - {scenario: BT-REAL, level: real, reason: "real qualification batched at end; native discovery limited to avoid permission prompts"}
+      - {scenario: AIRPLAY-REAL, level: real, reason: "real qualification batched at end; native route changes disabled"}

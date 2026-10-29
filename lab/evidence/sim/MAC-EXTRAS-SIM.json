@@ -1,0 +1,103 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[9.9 8.98 15.38] cpu_idle=53% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M638W0QJH90SAPQRFY8QF3KV",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "MAC-EXTRAS-SIM",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-29T07:26:56.242223Z",
+  "assertions": [
+    {
+      "name": "world_started",
+      "passed": true
+    },
+    {
+      "name": "scope_granted",
+      "passed": true
+    },
+    {
+      "name": "helper_ready",
+      "passed": true
+    },
+    {
+      "name": "bluetooth_capture_injected",
+      "passed": true
+    },
+    {
+      "name": "bluetooth_capture_visible",
+      "passed": true
+    },
+    {
+      "name": "mac.bluetooth_devices_fixture",
+      "passed": true
+    },
+    {
+      "name": "mac.airplay_routes_fixture",
+      "passed": true
+    },
+    {
+      "name": "mac.time_machine_status_fixture",
+      "passed": true
+    },
+    {
+      "name": "mac.recognize_song_fixture",
+      "passed": true
+    },
+    {
+      "name": "mac.airplay_select_readback",
+      "passed": true
+    },
+    {
+      "name": "mac.iwork_export_readback",
+      "passed": true
+    },
+    {
+      "name": "pages_pdf_export",
+      "passed": true
+    },
+    {
+      "name": "pages_text_export",
+      "passed": true
+    },
+    {
+      "name": "numbers_pdf_export",
+      "passed": true
+    },
+    {
+      "name": "numbers_text_export",
+      "passed": true
+    },
+    {
+      "name": "keynote_pdf_export",
+      "passed": true
+    },
+    {
+      "name": "keynote_text_export",
+      "passed": true
+    },
+    {
+      "name": "mac.airplay_select_invalid_rejected",
+      "passed": true
+    },
+    {
+      "name": "mac.iwork_export_invalid_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_audio_rejected",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

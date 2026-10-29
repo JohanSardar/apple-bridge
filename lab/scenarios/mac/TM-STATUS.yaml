@@ -1,0 +1,5 @@
+id: TM-STATUS
+feature: mac.extras
+levels: [real]
+when:
+  - mac: {}

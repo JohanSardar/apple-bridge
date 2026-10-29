@@ -113,6 +113,24 @@ func (s *querySession) receive(f contracts.IPCFrame) bool {
 			} else {
 				out.ResultJSON = json.RawMessage(`{"state":"downloaded","plain_text":"Hello fixture","html":""}`)
 			}
+		case "mac.bluetooth_devices":
+			out.ResultJSON = json.RawMessage(`{"devices":[{"name":"Bridge Test Headphones","connected":true,"battery_percent":75}]}`)
+		case "mac.airplay_routes":
+			s.fake.mu.Lock()
+			out.ResultJSON, _ = json.Marshal(map[string]any{"routes": []any{map[string]any{"device": "bridge-test-airplay", "name": "Bridge Test Speaker", "selected": s.fake.airplayDevice == "bridge-test-airplay"}}})
+			s.fake.mu.Unlock()
+		case "mac.time_machine_status":
+			out.ResultJSON = json.RawMessage(`{"running":false,"phase":"idle"}`)
+		case "mac.recognize_song":
+			var args struct {
+				AudioBlob string `json:"audio_blob"`
+			}
+			if contracts.DecodeInput(f.Args, &args) != nil || args.AudioBlob != "YnJpZGdlLWxhYi1hdWRpbw==" {
+				out.T = "QueryError"
+				out.Code = "invalid"
+			} else {
+				out.ResultJSON = json.RawMessage(`{"recognized":true,"title":"Bridge Test Song","artist":"Bridge Test Artist"}`)
+			}
 		case "mac.network_check":
 			out.ResultJSON = json.RawMessage(`{"connected":true,"dns":true,"ping":"limited: ICMP unavailable","interfaces":[{"name":"en0","received_bytes":123,"sent_bytes":456}]}`)
 		case "mac.clipboard_read":
