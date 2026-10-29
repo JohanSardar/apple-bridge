@@ -1,17 +1,17 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[16.13 11.51 9.48] cpu_idle=66% cpus=8 other_heavy=1"
+    "summary": "air: load=[12.71 12.71 10.59] cpu_idle=8% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M61MHRMJYRQ4PGMBXQ029SDV",
+  "run_id": "run_01M64V1EKZW8BAFWF402MNVXWK",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "REM-LIST-MANAGE",
   "level": "sim",
   "passed": true,
-  "git_sha": "41b438a2a449dd82d7e06384fbe3cf2911023352",
-  "at": "2026-10-28T16:12:34.323902Z",
+  "git_sha": "3f7bdf0d33b652a4fabce3ddd385ebb43d997342",
+  "at": "2026-10-29T22:03:43.103855Z",
   "assertions": [
     {
       "name": "reminders_ready",
