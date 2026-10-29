@@ -23,6 +23,7 @@ let sourceTargets: [Target] = [
     .target(name: "RemindersSource", dependencies: ["AgendaGate", "SourceSupport", "RemindersStore"]),
     .target(name: "NotesSource", dependencies: ["SourceSupport", "Decoders", "MediaDerivatives"]),
     .target(name: "MessagesSource", dependencies: ["SourceSupport", "Decoders", "MediaDerivatives"]),
+    .target(name: "SafariSource", dependencies: ["SourceSupport"]),
 ]
 
 let package = Package(
@@ -35,6 +36,7 @@ let package = Package(
         .executableTarget(name: "MailChecks", dependencies: ["MailSource", "SourceSupport"]),
         .executableTarget(name: "FilesChecks", dependencies: ["FilesSource", "SourceSupport"]),
         .executableTarget(name: "CallsChecks", dependencies: ["CallsSource", "SourceSupport"]),
+        .executableTarget(name: "SafariChecks", dependencies: ["SafariSource", "SourceSupport"]),
         .executableTarget(name: "SourceSupportChecks", dependencies: ["SourceSupport"]),
         .executableTarget(name: "ActionsChecks", dependencies: ["ShortcutsSource", "SourceSupport"]),
         .executableTarget(name: "ShortcutsChecks", dependencies: ["ShortcutsSource", "SourceSupport"]),
