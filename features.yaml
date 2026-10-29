@@ -1464,3 +1464,15 @@ features:
       - {id: APP-CMD-REAL, levels: [real]}
     limits:
       - {scenario: APP-CMD-REAL, level: real, reason: 'limited: needs Allow tap to complete phone pairing; locked-phone APNs round trip and latency unmeasured'}
+  - id: iphone.motion
+    title: iPhone activity, pedometer, floors and seven-day history
+    requirements: [R-API]
+    milestone: G13
+    modules: [ios/Capabilities/Motion, internal/contracts]
+    depends_on: [iphone.delivery]
+    status: limited
+    scenarios:
+      - {id: APP-MOTION-SIM, levels: [sim]}
+      - {id: APP-MOTION-REAL, levels: [real]}
+    limits:
+      - {scenario: APP-MOTION-REAL, level: real, reason: 'limited: needs Allow tap'}
