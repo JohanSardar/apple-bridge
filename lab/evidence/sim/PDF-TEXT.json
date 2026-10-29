@@ -1,17 +1,17 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[8.63 8.29 9.25] cpu_idle=53% cpus=8 other_heavy=1"
+    "summary": "air: load=[25.32 34.56 37.63] cpu_idle=30% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M633M0KTSCNCW7CR6T7K8KPX",
+  "run_id": "run_01M637C6STQEBP59F9MXV8PK4C",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "PDF-TEXT",
   "level": "sim",
   "passed": true,
-  "git_sha": "4f44ec9bc51ce32333e258a0f82d87e1437f2094",
-  "at": "2026-10-29T05:55:11.098953Z",
+  "git_sha": "10ed30993022ffbfbdd067cd9a158b4682b70714",
+  "at": "2026-10-29T07:00:49.594597Z",
   "assertions": [
     {
       "name": "world_started",
