@@ -3,8 +3,8 @@
   "run_id": "",
   "metrics": {
     "capture_observer_resets": 0,
-    "commands": 12,
-    "compiled_intents": 12,
+    "commands": 14,
+    "compiled_intents": 14,
     "compiled_siri_shortcuts": 10,
     "dispatch_assertions": 4
   },
@@ -12,7 +12,7 @@
   "level": "real",
   "passed": false,
   "git_sha": "",
-  "at": "2026-10-29T23:11:14.885864Z",
+  "at": "2026-10-29T23:23:27.16321Z",
   "assertions": [
     {
       "name": "shortcuts_run",
