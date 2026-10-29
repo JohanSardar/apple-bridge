@@ -361,6 +361,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "APP-MOTION-SIM" || s.ID == "APP-MOTION-REAL" {
 		return runIPhoneCapability(ctx, s, level, "ios/Capabilities/Motion/MotionModel.swift", "lab/ios/MotionProof.swift")
 	}
+	if s.Feature == "iphone.alarms" {
+		return runIPhoneAlarm(ctx, s, level)
+	}
 	if s.ID == "APP-CMD-SIM" {
 		return runIPhoneCommand(ctx, s, level)
 	}

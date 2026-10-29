@@ -1,0 +1,27 @@
+{
+  "run_id": "",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "APP-ALARM-SIM",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-29T22:52:53.121325Z",
+  "assertions": [
+    {
+      "name": "swift_handler_build",
+      "passed": true
+    },
+    {
+      "name": "alarm_timer_lifecycle_and_permission",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

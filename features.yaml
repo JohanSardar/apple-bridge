@@ -1476,3 +1476,15 @@ features:
       - {id: APP-MOTION-REAL, levels: [real]}
     limits:
       - {scenario: APP-MOTION-REAL, level: real, reason: 'limited: needs Allow tap'}
+  - id: iphone.alarms
+    title: iPhone AlarmKit alarms and timers
+    requirements: [R-SAFE-CMD, R-API]
+    milestone: G13
+    modules: [ios/Capabilities/Alarms, internal/contracts]
+    depends_on: [iphone.delivery]
+    status: limited
+    scenarios:
+      - {id: APP-ALARM-SIM, levels: [sim]}
+      - {id: APP-ALARM-REAL, levels: [real]}
+    limits:
+      - {scenario: APP-ALARM-REAL, level: real, reason: 'limited: needs Allow tap'}
