@@ -1,6 +1,7 @@
 package scenarios
 
 import (
+	"context"
 	"testing"
 	"time"
 )
@@ -57,5 +58,16 @@ func TestRunCleanupWaitsForNativeReadback(t *testing.T) {
 	}, func(cleanupItem) error { return nil })
 	if err != nil || proof["passed"] != true {
 		t.Fatal(proof, err)
+	}
+}
+
+func TestUnqualifiedAttachmentCleanupDoesNotStartWorld(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	for _, id := range []string{"WEB-MEDIA-VARIANTS", "WEB-UPLOAD-NATIVE-STAGING"} {
+		e := runNativeMessagesCommands(ctx, Scenario{ID: id}, "real", Evidence{})
+		if e.Status != "limited" || e.Metrics["writes_submitted"] != 0 || len(e.Assertions) != 1 || e.Assertions[0].Name != "owned_attachment_cleanup_qualified" {
+			t.Fatal(id, e)
+		}
 	}
 }

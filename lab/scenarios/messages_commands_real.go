@@ -21,6 +21,12 @@ import (
 )
 
 func runNativeMessagesCommands(ctx context.Context, s Scenario, level string, e Evidence) Evidence {
+	if s.ID == "WEB-MEDIA-VARIANTS" || s.ID == "WEB-UPLOAD-NATIVE-STAGING" {
+		e.Status = "limited"
+		e.Metrics = map[string]any{"writes_submitted": 0}
+		e.Assertions = append(e.Assertions, Assertion{Name: "owned_attachment_cleanup_qualified", Status: "limited", Detail: "needs native attachment cleanup qualification; the captured-ID media target remains unavailable; no send attempted"})
+		return e
+	}
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
 	replicas := 0
 	if level == "replica" || s.ID == "WEB-MEDIA-VARIANTS" {

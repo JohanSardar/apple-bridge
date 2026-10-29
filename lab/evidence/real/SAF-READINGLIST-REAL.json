@@ -1,0 +1,42 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[12.81 20.37 49.28] cpu_idle=68% cpus=8 other_heavy=0"
+  },
+  "status": "limited",
+  "run_id": "run_01M64W16H8ABVRVDJ38ZA6R39G",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "SAF-READINGLIST-REAL",
+  "level": "real",
+  "passed": false,
+  "git_sha": "",
+  "at": "2026-10-29T22:21:03.400688Z",
+  "assertions": [
+    {
+      "name": "world_started",
+      "passed": true
+    },
+    {
+      "name": "scope_granted",
+      "passed": true
+    },
+    {
+      "name": "helper_ready",
+      "passed": true
+    },
+    {
+      "name": "owned_cleanup_grants",
+      "passed": false,
+      "status": "limited",
+      "detail": "needs Safari Automation and Accessibility grants"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}
