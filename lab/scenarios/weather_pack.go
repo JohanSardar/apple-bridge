@@ -1,9 +1,11 @@
 package scenarios
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"os/exec"
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
@@ -115,9 +117,15 @@ func runWeatherReal(ctx context.Context, s Scenario, level string) Evidence {
 		var out contracts.QueryResult
 		err = client.Call(ctx, query, contracts.Query{Args: json.RawMessage(`{"latitude":40,"longitude":-90}`), DeadlineMS: 15000}, &out)
 		if err != nil {
-			e.Status = "limited"
-			e.Passed = false
-			e.Conditions = map[string]string{"reason": "needs WeatherKit-enabled provisioning profile and Apple-signed Mac Helper"}
+			signed, signingErr := exec.CommandContext(ctx, "/usr/bin/codesign", "--display", "--entitlements", ":-", w.HelperApp).Output()
+			var queryErr *contracts.Error
+			if errors.As(err, &queryErr) && queryErr.Code == "unavailable" && signingErr == nil && !bytes.Contains(signed, []byte("com.apple.developer.weatherkit")) {
+				e.Status = "limited"
+				e.Passed = false
+				e.Conditions = map[string]string{"reason": "needs WeatherKit-enabled provisioning profile and Apple-signed Mac Helper"}
+			} else {
+				add(query+"_completed", false)
+			}
 			return e
 		}
 		fixture := &weatherPackFixture{result: shortcut.Result{Data: out.ResultJSON}}
