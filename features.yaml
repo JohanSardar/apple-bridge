@@ -1432,3 +1432,12 @@ features:
       - {id: CALL-DIAL-REAL, levels: [real]}
     limits:
       - {"scenario": "CALL-DIAL-REAL", "level": "real", "reason": "skipped: prohibited call placement"}
+  - id: iphone.build
+    title: Signed iPhone build and USB install
+    requirements: [R-PKG]
+    milestone: G13
+    modules: [ios, packaging/dev/build-ios.sh, packaging/dev/install-ios.sh]
+    depends_on: []
+    status: done
+    scenarios:
+      - {id: APP-BUILD-REAL, levels: [real]}

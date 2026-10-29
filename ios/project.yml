@@ -1,0 +1,24 @@
+name: AppleBridge
+options:
+  bundleIdPrefix: com.johansardar.applebridge
+  deploymentTarget:
+    iOS: '26.0'
+settings:
+  base:
+    SWIFT_VERSION: '6.0'
+    DEVELOPMENT_TEAM: AX3C2B78YD
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: Apple Development
+    PRODUCT_BUNDLE_IDENTIFIER: com.johansardar.applebridge.ios
+    TARGETED_DEVICE_FAMILY: '1'
+    GENERATE_INFOPLIST_FILE: NO
+targets:
+  AppleBridge:
+    type: application
+    platform: iOS
+    sources: [App]
+    settings:
+      base:
+        INFOPLIST_FILE: App/Info.plist
+        CODE_SIGN_ENTITLEMENTS: App/AppleBridge.entitlements
+        PROVISIONING_PROFILE_SPECIFIER: AB iOS Dev
