@@ -16,7 +16,7 @@ targets:
   AppleBridge:
     type: application
     platform: iOS
-    sources: [App, Capabilities]
+    sources: [App, Capabilities, Pairing]
     settings:
       base:
         INFOPLIST_FILE: App/Info.plist

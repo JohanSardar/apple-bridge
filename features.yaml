@@ -1439,3 +1439,15 @@ features:
     scenarios:
       - {id: APP-SHELL-SIM, levels: [sim]}
       - {id: APP-SHELL-REAL, levels: [real]}
+  - id: iphone.pairing
+    title: iPhone device keys and one-time gateway pairing
+    requirements: [R-SECURE, R-API]
+    milestone: G13
+    modules: [ios/Pairing, internal/trust, internal/contracts, internal/operations, lab/simapple]
+    depends_on: [iphone.shell]
+    status: limited
+    scenarios:
+      - {id: APP-PAIR-SIM, levels: [sim]}
+      - {id: APP-PAIR-REAL, levels: [real]}
+    limits:
+      - {scenario: APP-PAIR-REAL, level: real, reason: 'limited: needs Allow tap for Local Network and camera QR permission'}

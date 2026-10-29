@@ -217,6 +217,14 @@ func Handler(deps Deps, descriptors []contracts.OperationDescriptor) http.Handle
 			respond(w, nil, contracts.ErrUnauthorized)
 			return
 		}
+		if strings.HasPrefix(r.URL.Path, "/v1/iphone/") && deps.Authority != nil {
+			if !public && r.TLS == nil {
+				respond(w, nil, contracts.ErrUnauthorized)
+				return
+			}
+			deps.Authority.IPhoneHandler().ServeHTTP(w, r)
+			return
+		}
 		if r.URL.Path == "/v1/health" {
 			mux.ServeHTTP(w, r)
 			return

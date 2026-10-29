@@ -45,6 +45,11 @@ func (s *Service) Invoke(ctx context.Context, p trust.Principal, name string, in
 		}()
 	}
 	switch name {
+	case "iphone.devices":
+		if err := s.Authority.Authorize(p, "iphone:read"); err != nil {
+			return nil, err
+		}
+		return s.Authority.IPhones()
 	case "notes.list":
 		var query contracts.NotesListQuery
 		if contracts.DecodeInput(input, &query) != nil {

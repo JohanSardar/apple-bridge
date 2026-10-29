@@ -113,7 +113,7 @@ func lintDescriptorFile(rel string, src []byte) []finding {
 				continue
 			}
 			source, ok := pair.Value.(*ast.Ident)
-			if ok && filepath.Base(rel) != strings.ToLower(source.Name)+"_descriptors.go" {
+			if ok && filepath.Base(rel) != strings.ToLower(source.Name)+"_descriptors.go" && !(strings.HasPrefix(filepath.Base(rel), strings.ToLower(source.Name)+"_") && strings.HasSuffix(rel, "_descriptors.go")) {
 				out = append(out, finding{rel, 1, "source descriptors must live in <source>_descriptors.go"})
 			}
 		}

@@ -18,6 +18,10 @@
 	<string>1</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Scan your Apple Bridge gateway pairing code.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Connect to your Apple Bridge gateway on the local network.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

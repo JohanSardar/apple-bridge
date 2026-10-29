@@ -1,0 +1,10 @@
+{
+  "passed": false,
+  "assertions": {
+    "signed_build": true,
+    "usb_install": true,
+    "phone_launch": true,
+    "local_network_allow_needed": true,
+    "pair_completed": false
+  }
+}

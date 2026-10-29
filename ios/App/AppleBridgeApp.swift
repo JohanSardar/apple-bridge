@@ -10,11 +10,13 @@ struct AppleBridgeApp: App {
 }
 
 struct BridgeSettings: View {
+    @State private var pairing = PairingState()
     var body: some View {
         NavigationStack {
             List {
                 Section("Gateway") {
-                    LabeledContent("Pairing", value: "Not paired")
+                    NavigationLink("Pairing") { PairingScreen(state: pairing) }
+                    Text(pairing.status)
                 }
                 Section("Capabilities") {
                     ForEach(Capabilities.all) { capability in
@@ -37,6 +39,11 @@ struct BridgeSettings: View {
                 }
             }
             .navigationTitle("Apple Bridge")
+            .task {
+                if let index = ProcessInfo.processInfo.arguments.firstIndex(of: "--pair-code"), ProcessInfo.processInfo.arguments.count > index + 1 {
+                    await pairing.pair(ProcessInfo.processInfo.arguments[index + 1])
+                }
+            }
         }
     }
 }

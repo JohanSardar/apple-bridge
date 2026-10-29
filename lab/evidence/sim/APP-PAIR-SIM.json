@@ -1,0 +1,65 @@
+{
+  "passed": true,
+  "assertions": [
+    {
+      "name": "temporary_home",
+      "passed": true
+    },
+    {
+      "name": "authority",
+      "passed": true
+    },
+    {
+      "name": "one_time_code",
+      "passed": true
+    },
+    {
+      "name": "device_keys",
+      "passed": true
+    },
+    {
+      "name": "http_pair",
+      "passed": true
+    },
+    {
+      "name": "replay_rejected",
+      "passed": true
+    },
+    {
+      "name": "signed_status",
+      "passed": true
+    },
+    {
+      "name": "revoke",
+      "passed": true
+    },
+    {
+      "name": "revoked_key_rejected",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    },
+    {
+      "name": "cross_protocol_replica_enrollment_rejected",
+      "passed": true
+    },
+    {
+      "name": "swift_app_phone_purpose_paired_to_air",
+      "passed": true
+    },
+    {
+      "name": "swift_app_signed_status",
+      "passed": true
+    },
+    {
+      "name": "gateway_cli_revoke",
+      "passed": true
+    },
+    {
+      "name": "swift_app_revoked_status_rejected",
+      "passed": true
+    }
+  ]
+}
