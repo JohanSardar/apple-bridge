@@ -1,0 +1,30 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[5.46 7.3 12.88] cpu_idle=63% cpus=8 other_heavy=0"
+  },
+  "status": "limited",
+  "run_id": "run_01M64Z5FR2GPC4998D32ZYBF10",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "writes_submitted": 0
+  },
+  "scenario": "MSG-MENTION-SEND",
+  "level": "real",
+  "passed": false,
+  "git_sha": "b0eb5769bb0fb74f4d5bcddaf4ca070a031fd627",
+  "at": "2026-10-29T23:15:49.634887Z",
+  "assertions": [
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
+  ],
+  "conditions": {
+    "reason": "needs self-chat mention suggestion identity and attribute qualification"
+  }
+}
