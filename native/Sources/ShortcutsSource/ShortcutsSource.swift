@@ -54,7 +54,7 @@ private final class Invocation: @unchecked Sendable {
 
 public actor ShortcutsSource: Source {
     public nonisolated let name = "shortcuts"
-    public static let coverage: JSON = .object(["fields": .string("partial"), "missing": .array([.string("accepts input unavailable from CLI"), .string("pack import and version qualification pending"), .string("file blob input/output not qualified")]), "pack_version": .string("1")])
+    public static let coverage: JSON = .object(["fields": .string("partial"), "missing": .array([.string("accepts input unavailable from CLI"), .string("installed pack version unverified"), .string("file blob input/output not qualified")])])
     private let executable: URL
     private var generation = UUID().uuidString
     public init(executable: URL = URL(fileURLWithPath: "/usr/bin/shortcuts")) { self.executable = executable }
@@ -120,7 +120,19 @@ public actor ShortcutsSource: Source {
         }
     }
     public func open() async -> SourceReadiness {
-        SourceReadiness(state: "ready", coverage: Self.coverage, capabilities: ["shortcuts.run"])
+        var coverage = Self.coverage.object
+        do {
+            let entries = try await inventory([])
+            let names = entries.map { $0.0 }
+            let required = ["AB Echo", "AB Clock", "AB Focus", "AB Pack v1"]
+            if required.allSatisfy({ name in names.filter { $0 == name }.count == 1 }) {
+                coverage["pack_version"] = .string("1")
+                coverage["missing"] = .array([.string("accepts input unavailable from CLI"), .string("file blob input/output not qualified")])
+            }
+        } catch {
+            coverage["missing"] = .array([.string("installed inventory unavailable"), .string("installed pack version unverified")])
+        }
+        return SourceReadiness(state: "ready", coverage: .object(coverage), capabilities: ["shortcuts.run"])
     }
     public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {
         if !resume["generation"].string.isEmpty { generation = resume["generation"].string }

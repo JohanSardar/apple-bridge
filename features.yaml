@@ -1087,7 +1087,7 @@ features:
     modules: [internal/shortcut, packaging/shortcuts, native/Sources/ShortcutsSource]
     depends_on: [core.shortcuts]
     status: limited
-    notes: Native inventory and text runner integrated; Clock, Focus and file transforms remain unimplemented; action discovery has a separate feature. Pack import and real qualification require leader action.
+    notes: Native inventory and text runner integrated; installed pack version requires unique AB Pack v1, AB Echo, AB Clock and AB Focus inventory entries. Clock, Focus, file blobs, real pack and idle qualification remain limited.
     scenarios:
       - {id: SC-CAPTURE, levels: [sim]}
       - {id: SC-RUN, levels: [sim]}

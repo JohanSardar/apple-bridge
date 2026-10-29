@@ -33,6 +33,13 @@ func runShortcutsRunner(ctx context.Context, s Scenario, level string) Evidence 
 	executable := filepath.Join(dir, "shortcuts")
 	script := `#!/bin/sh
 if [ "$1" = list ]; then
+ if [ -f "$(dirname "$0")/pack" ]; then
+  echo 'AB Echo (00000000-0000-0000-0000-000000000001)'
+  echo 'AB Clock (00000000-0000-0000-0000-000000000002)'
+  echo 'AB Focus (00000000-0000-0000-0000-000000000003)'
+  echo 'AB Pack v1 (00000000-0000-0000-0000-000000000004)'
+  exit 0
+ fi
  if [ -f "$(dirname "$0")/changed" ]; then
   echo 'Changed (00000000-0000-0000-0000-000000000002)'
  else

@@ -18,6 +18,13 @@ struct Checks {
     static func main() async throws {
         let source = ShortcutsSource(executable: URL(fileURLWithPath: CommandLine.arguments[1]))
         if CommandLine.arguments[2] == "SC-CAPTURE" {
+            let readiness = await source.open()
+            guard readiness.coverage["pack_version"].string.isEmpty else { throw SourceFailure.corrupt }
+            let marker = URL(fileURLWithPath: CommandLine.arguments[1]).deletingLastPathComponent().appendingPathComponent("pack")
+            try Data().write(to: marker)
+            let installed = await source.open()
+            guard installed.coverage["pack_version"].string == "1" else { throw SourceFailure.corrupt }
+            try FileManager.default.removeItem(at: marker)
             let sink = Sink()
             let task = Task { try await source.capture(.null, into: sink) }
             defer { task.cancel() }
