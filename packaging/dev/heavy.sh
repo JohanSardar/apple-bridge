@@ -20,6 +20,13 @@ sensitive() {
   esac
   return 1
 }
+# Jobs whose results depend on a quiet host. Compile jobs stay serialized but never wait for CPU headroom.
+timing_sensitive() {
+  case " $* " in
+    *--exclusive*|*real*|*agent*|*quiet*|*atency*|*ATENCY*|*perf*|*Perf*|*PERF*) return 0 ;;
+  esac
+  return 1
+}
 # The light lane is for quick checks. Native builds and other sensitive jobs would block it for minutes, so they use the
 # normal lane instead.
 too_heavy_for_light() {
@@ -221,7 +228,7 @@ while true; do
         printf '%s\n' "$record" > "$lock/cmd"
         held="$held $lock"
         if [ -z "$exclusive" ] || [ "$(count)" -eq "$slots" ]; then
-          if [ -z "$light" ] && sensitive "$record"; then wait_sim_idle; wait_normal_alone; [ -n "$exclusive" ] && hold_light; wait_thrash sensitive; elif [ -z "$light" ]; then wait_thrash heavy; fi
+          if [ -z "$light" ] && sensitive "$record"; then wait_sim_idle; wait_normal_alone; [ -n "$exclusive" ] && hold_light; if timing_sensitive "$record"; then wait_thrash sensitive; else wait_thrash heavy; fi; elif [ -z "$light" ]; then wait_thrash heavy; fi
           label=$i
           [ -n "$exclusive" ] && label=all
           run "$label" "$@"
