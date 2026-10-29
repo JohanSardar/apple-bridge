@@ -370,6 +370,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "APP-EXTRAS-SIM" {
 		return runIPhoneExtras(ctx, s, level)
 	}
+	if s.Feature == "iphone.screentime" {
+		return runIPhoneScreenTime(ctx, s, level)
+	}
 	if s.ID == "APP-CMD-SIM" {
 		return runIPhoneCommand(ctx, s, level)
 	}

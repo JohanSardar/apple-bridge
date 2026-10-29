@@ -16,10 +16,12 @@ targets:
   AppleBridge:
     type: application
     platform: iOS
-    sources: [App, Capabilities, Pairing, Delivery]
+    sources: [App, Capabilities, Pairing, Delivery, ScreenTimeShared]
     dependencies:
       - target: AlarmActivity
         embed: true
+      - target: ScreenTimeMonitor
+      - target: ScreenTimeReport
     settings:
       base:
         INFOPLIST_FILE: App/Info.plist
@@ -36,4 +38,26 @@ targets:
         INFOPLIST_FILE: AlarmActivity/Info.plist
         PROVISIONING_PROFILE_SPECIFIER: $(ALARM_ACTIVITY_PROFILE)
         APPLICATION_EXTENSION_API_ONLY: YES
+        SKIP_INSTALL: YES
+  ScreenTimeMonitor:
+    type: app-extension
+    platform: iOS
+    sources: [Extensions/ScreenTimeMonitor, ScreenTimeShared]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.johansardar.applebridge.ios.screentimemonitor
+        INFOPLIST_FILE: Extensions/ScreenTimeMonitor/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Extensions/ScreenTimeMonitor/ScreenTimeMonitor.entitlements
+        PROVISIONING_PROFILE_SPECIFIER: $(AB_SCREENTIME_MONITOR_PROFILE_NAME)
+        SKIP_INSTALL: YES
+  ScreenTimeReport:
+    type: app-extension
+    platform: iOS
+    sources: [Extensions/ScreenTimeReport]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.johansardar.applebridge.ios.screentimereport
+        INFOPLIST_FILE: Extensions/ScreenTimeReport/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Extensions/ScreenTimeReport/ScreenTimeReport.entitlements
+        PROVISIONING_PROFILE_SPECIFIER: $(AB_SCREENTIME_REPORT_PROFILE_NAME)
         SKIP_INSTALL: YES

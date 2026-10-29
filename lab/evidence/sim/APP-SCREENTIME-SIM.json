@@ -1,0 +1,55 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[72.38 60.84 41.09] cpu_idle=0% cpus=10 other_heavy=0"
+  },
+  "run_id": "",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "APP-SCREENTIME-SIM",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-29T22:42:58.511563Z",
+  "assertions": [
+    {
+      "name": "isolated_fixture",
+      "passed": true
+    },
+    {
+      "name": "swift_policy_compiled",
+      "passed": true
+    },
+    {
+      "name": "fake_managed_settings_shield_unshield_downtime_isolation",
+      "passed": true
+    },
+    {
+      "name": "gateway_shield",
+      "passed": true
+    },
+    {
+      "name": "gateway_unshield",
+      "passed": true
+    },
+    {
+      "name": "gateway_cancel",
+      "passed": true
+    },
+    {
+      "name": "gateway_schedule",
+      "passed": true
+    },
+    {
+      "name": "invalid_schedule_rejected",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

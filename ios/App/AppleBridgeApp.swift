@@ -23,7 +23,11 @@ struct BridgeSettings: View {
                 Section("Capabilities") {
                     ForEach(Capabilities.all) { capability in
                         NavigationLink {
-                            CapabilityScreen(capability: capability)
+                            if capability.id == "screentime" {
+                                ScreenTimeScreen()
+                            } else {
+                                CapabilityScreen(capability: capability)
+                            }
                         } label: {
                             VStack(alignment: .leading) {
                                 Text(capability.title)
