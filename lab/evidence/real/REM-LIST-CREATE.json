@@ -1,10 +1,17 @@
 {
-  "run_id": "run_01M54AJX34AVWJ1T7PBP9F0KF6",
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[35.21 58.29 78.41] cpu_idle=38% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M64VJ8D4NS3C1QBJPCYAZVHC",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
   "scenario": "REM-LIST-CREATE",
   "level": "real",
   "passed": true,
-  "git_sha": "26827bb9cf7bf21a9b427aedb8eaa85c9cdc916e",
-  "at": "2026-10-17T07:00:27.36477Z",
+  "git_sha": "3f7bdf0d33b652a4fabce3ddd385ebb43d997342",
+  "at": "2026-10-29T22:12:53.79668Z",
   "assertions": [
     {
       "name": "reminders_ready",
@@ -36,6 +43,10 @@
     },
     {
       "name": "created_list_recovery_cleanup",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
       "passed": true
     }
   ],
