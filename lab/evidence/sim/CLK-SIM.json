@@ -1,9 +1,9 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[37.68 180.82 181.77] cpu_idle=51% cpus=8 other_heavy=2"
+    "summary": "air: load=[14.2 12.36 9.54] cpu_idle=8% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M61T7T4RWZWXNFPW9AR8E2KD",
+  "run_id": "run_01M64TQPAP46EWEA615M5E53XN",
   "metrics": {
     "capture_observer_resets": 0
   },
@@ -11,7 +11,7 @@
   "level": "sim",
   "passed": true,
   "git_sha": "",
-  "at": "2026-10-28T17:51:59.641598Z",
+  "at": "2026-10-29T21:58:23.318749Z",
   "assertions": [
     {
       "name": "fake_pack_runner",
@@ -39,6 +39,114 @@
     },
     {
       "name": "runner_error_retained",
+      "passed": true
+    },
+    {
+      "name": "structured_alarms",
+      "passed": true
+    },
+    {
+      "name": "request_alarms",
+      "passed": true
+    },
+    {
+      "name": "unqualified_live_alarms",
+      "passed": true
+    },
+    {
+      "name": "mismatched_alarms",
+      "passed": true
+    },
+    {
+      "name": "structured_create_alarm",
+      "passed": true
+    },
+    {
+      "name": "request_create_alarm",
+      "passed": true
+    },
+    {
+      "name": "unqualified_live_create_alarm",
+      "passed": true
+    },
+    {
+      "name": "mismatched_create_alarm",
+      "passed": true
+    },
+    {
+      "name": "structured_toggle_alarm",
+      "passed": true
+    },
+    {
+      "name": "request_toggle_alarm",
+      "passed": true
+    },
+    {
+      "name": "unqualified_live_toggle_alarm",
+      "passed": true
+    },
+    {
+      "name": "mismatched_toggle_alarm",
+      "passed": true
+    },
+    {
+      "name": "structured_delete_alarm",
+      "passed": true
+    },
+    {
+      "name": "request_delete_alarm",
+      "passed": true
+    },
+    {
+      "name": "unqualified_live_delete_alarm",
+      "passed": true
+    },
+    {
+      "name": "delete_requires_absent_alarm",
+      "passed": true
+    },
+    {
+      "name": "mismatched_delete_alarm",
+      "passed": true
+    },
+    {
+      "name": "structured_start_timer",
+      "passed": true
+    },
+    {
+      "name": "request_start_timer",
+      "passed": true
+    },
+    {
+      "name": "unqualified_live_start_timer",
+      "passed": true
+    },
+    {
+      "name": "timer_requires_running_confirmation",
+      "passed": true
+    },
+    {
+      "name": "mismatched_start_timer",
+      "passed": true
+    },
+    {
+      "name": "structured_world_time",
+      "passed": true
+    },
+    {
+      "name": "request_world_time",
+      "passed": true
+    },
+    {
+      "name": "unqualified_live_world_time",
+      "passed": true
+    },
+    {
+      "name": "mismatched_world_time",
+      "passed": true
+    },
+    {
+      "name": "untagged_alarm_rejected",
       "passed": true
     },
     {

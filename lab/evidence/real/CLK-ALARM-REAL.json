@@ -1,18 +1,19 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[12.59 7.77 7.83] cpu_idle=40% cpus=8 other_heavy=0"
+    "summary": "air: load=[34.83 62.04 99.42] cpu_idle=59% cpus=8 other_heavy=0"
   },
   "status": "limited",
-  "run_id": "run_01M646H900ZJD4K2JZJ1TRA3GS",
+  "run_id": "run_01M64TX5F9YN0J5F3D7970V1D5",
   "metrics": {
-    "capture_observer_resets": 0
+    "capture_observer_resets": 0,
+    "pack_installed": false
   },
   "scenario": "CLK-ALARM-REAL",
   "level": "real",
   "passed": false,
   "git_sha": "",
-  "at": "2026-10-29T16:05:21.536111Z",
+  "at": "2026-10-29T22:01:22.665882Z",
   "assertions": [
     {
       "name": "credential_backend_override_restored",
@@ -22,6 +23,6 @@
   "latency": null,
   "hosts": null,
   "conditions": {
-    "reason": "Leader must import AB Clock; structured alarm fields and timer running confirmation are unqualified. No real effects dispatched."
+    "reason": "needs import click"
   }
 }
