@@ -38,7 +38,16 @@ func TestDescriptorRegistrationOrderAndAppend(t *testing.T) {
 	}
 	descriptorRegistry = append(descriptorRegistry, descriptorRegistration{source: func() []OperationDescriptor { return []OperationDescriptor{{Name: "aaa.new"}} }})
 	got = collectDescriptors()
-	if !reflect.DeepEqual(got[:len(Operations)], Operations) || got[len(Operations)].Name != "aaa.new" {
-		t.Fatal("new source did not append")
+	if len(got) != len(Operations)+1 {
+		t.Fatal("new source did not add exactly one descriptor")
+	}
+	var existing []OperationDescriptor
+	for _, descriptor := range got {
+		if descriptor.Name != "aaa.new" {
+			existing = append(existing, descriptor)
+		}
+	}
+	if !reflect.DeepEqual(existing, Operations) {
+		t.Fatal("new source changed existing descriptors or was not registered")
 	}
 }
