@@ -1,9 +1,9 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[27.2 36.45 38.44] cpu_idle=29% cpus=8 other_heavy=0"
+    "summary": "air: load=[22.45 29.16 34.54] cpu_idle=28% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M637ANYNQ0D1ZHS04GWXXBPC",
+  "run_id": "run_01M637KTAG6G9RWZ17XG6VB0ZH",
   "metrics": {
     "capture_observer_resets": 0,
     "place_count": 1
@@ -11,8 +11,8 @@
   "scenario": "MAP-SIM",
   "level": "sim",
   "passed": true,
-  "git_sha": "10ed30993022ffbfbdd067cd9a158b4682b70714",
-  "at": "2026-10-29T06:59:59.573055Z",
+  "git_sha": "836f714c27f9124155b066c84a1e9a924e7538cd",
+  "at": "2026-10-29T07:04:58.960077Z",
   "assertions": [
     {
       "name": "world_started",
