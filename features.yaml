@@ -1488,3 +1488,14 @@ features:
       - {id: APP-ALARM-REAL, levels: [real]}
     limits:
       - {scenario: APP-ALARM-REAL, level: real, reason: 'limited: needs Allow tap'}
+  - id: iphone.extras
+    title: iPhone WeatherKit, Journal suggestions and EnergyKit hints
+    requirements: [R-API, R-SCOPE]
+    milestone: G13
+    modules: [ios/Capabilities/Extras, internal/contracts, lab/scenarios]
+    depends_on: [iphone.delivery]
+    status: limited
+    scenarios:
+      - {id: APP-EXTRAS-SIM, levels: [sim]}
+    limits:
+      - {scenario: APP-EXTRAS-SIM, level: sim, reason: 'Phone services limited: needs Journaling Suggestions and EnergyKit capabilities, authorized energy venue, and on-phone suggestion selection; WeatherKit provisioned, live service unmeasured; UI inspection needs free simulator'}

@@ -26,9 +26,10 @@ struct CapabilityScreen: View {
                     .disabled(!capability.available)
                 LabeledContent("Permission", value: capability.permission)
                 LabeledContent("Last activity", value: "None")
+                if capability.id == "journal" { JournalSuggestionPicker() }
             } footer: {
                 if !capability.available {
-                    Text("This capability is awaiting its implementation.")
+                    Text(capability.permission)
                 }
             }
         }

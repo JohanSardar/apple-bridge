@@ -15,7 +15,9 @@ enum Capabilities {
         WidgetsCapability.descriptor,
         CaptureCapability.descriptor,
         ContextCapability.descriptor,
-        ExtrasCapability.descriptor,
+        ExtrasCapability.descriptors[0],
+        ExtrasCapability.descriptors[1],
+        ExtrasCapability.descriptors[2],
         HomeCapability.descriptor,
         AppleApprovalCapability.descriptor,
     ]
