@@ -1,18 +1,17 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[31.84 25.84 18.71] cpu_idle=43% cpus=8 other_heavy=1"
+    "summary": "air: load=[31.4 68.44 98.74] cpu_idle=27% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5K4T7AGSFGZXRF2MYJKV4TN",
+  "run_id": "run_01M64218DG10X9X7EXADE99TJ0",
   "metrics": {
-    "capture_observer_resets": 0,
-    "summary_only": true
+    "capture_observer_resets": 0
   },
   "scenario": "CON-GROUPS",
   "level": "sim",
   "passed": true,
   "git_sha": "",
-  "at": "2026-10-23T01:08:12.240822Z",
+  "at": "2026-10-29T14:46:42.353439Z",
   "assertions": [
     {
       "name": "world_start",

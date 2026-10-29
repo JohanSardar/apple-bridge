@@ -1,14 +1,28 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[3.48 5.69 10.03] cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[29.21 66.15 97.4] cpu_idle=31% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M58D2NH040X914VBRF004T04",
+  "run_id": "run_01M6421RVC6157805JNE85HXK9",
+  "network_path": "loopback",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "contacts_effect_uptimes_ns": [],
+    "contacts_scan_counts": {
+      "bulk_capture_peak_in_flight": 0,
+      "contacts_scan_abandoned": 0,
+      "group_events_causing_full_contact_scan": 0,
+      "incremental_group_identifiers": 0,
+      "unchanged_history_publications": 0,
+      "unchanged_history_scans": 0
+    },
+    "contacts_stage_scope": "all scans recorded before World teardown"
+  },
   "scenario": "CON-RESOLVE-RESTART",
   "level": "sim",
   "passed": true,
-  "git_sha": "4f263fdf17b0f98019c10581b7d742880bb9b6af",
-  "at": "2026-10-18T21:00:58.784811Z",
+  "git_sha": "3061a670a241a1aed1a2f0ba10838eea65a43f71",
+  "at": "2026-10-29T14:46:59.180406Z",
   "assertions": [
     {
       "name": "unified_contacts_imported",
@@ -54,7 +68,7 @@
       "name": "replica_records_versions_and_cursor_consistent",
       "passed": true,
       "status": "pass",
-      "detail": "public records query, including versions and tombstones, matched at stable full cursors"
+      "detail": "public records query, including versions and tombstones, matched at one full cursor at or beyond the starting watermark"
     },
     {
       "name": "replica_application_exactly_once",
