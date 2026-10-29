@@ -208,12 +208,18 @@ public final class RemindersSource: Source {
         try await scan(into: sink, live: true)
     }
 
-    public func confirmAbsence(_ key: String, into sink: any ObservationSink) async throws {
+    public func confirmAbsence(_ key: String, list: Bool = false, into sink: any ObservationSink) async throws {
         try refreshGeneration()
         let started = timestamp()
-        guard !key.isEmpty, try await gate.reminders().allSatisfy({ $0.calendarItemIdentifier != key }), gate.store.calendarItem(withIdentifier: key) == nil, gate.authorized(.reminder) else { throw SourceFailure.conflict }
-        let absent: JSON = .object(["kind": .string("absent"), "collection": .string("reminders.reminder"), "native_key": .string(key), "revalidated": .bool(true), "observed_at": .string(timestamp())])
-        try await sink.emit(source: name, generation: generation, observations: [absent], scanID: UUID().uuidString, scanStartedAt: started, scope: ["reminders.reminder"], completionEvidence: "complete", blobHandles: [:], live: true)
+        guard !key.isEmpty, gate.authorized(.reminder) else { throw SourceFailure.conflict }
+        let collection = list ? "reminders.list" : "reminders.reminder"
+        if list {
+            guard !gate.store.calendars(for: .reminder).contains(where: { $0.calendarIdentifier == key }) else { throw SourceFailure.conflict }
+        } else {
+            guard try await gate.reminders().allSatisfy({ $0.calendarItemIdentifier != key }), gate.store.calendarItem(withIdentifier: key) == nil else { throw SourceFailure.conflict }
+        }
+        let absent: JSON = .object(["kind": .string("absent"), "collection": .string(collection), "native_key": .string(key), "revalidated": .bool(true), "observed_at": .string(timestamp())])
+        try await sink.emit(source: name, generation: generation, observations: [absent], scanID: UUID().uuidString, scanStartedAt: started, scope: [collection], completionEvidence: "complete", blobHandles: [:], live: true)
     }
 
     public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {
@@ -343,8 +349,8 @@ public final class RemindersSource: Source {
             guard let list = gate.store.calendar(withIdentifier: nativeKey), list.allowsContentModifications else { throw SourceFailure.unsupported }
             guard listData(list) == prepared.nativeState else { throw SourceFailure.conflict }
             if operation == "reminders.delete_list" { try gate.store.removeCalendar(list, commit: true) }
-            else { list.title = action["args"]["title"].string; try gate.store.saveCalendar(list, commit: true) }
-            let observed = gate.store.calendar(withIdentifier: nativeKey)
+            else { list.title = action["args"]["title"].string; try gate.store.saveCalendar(list, commit: true); nativeKey = list.calendarIdentifier }
+            let observed = gate.store.calendars(for: .reminder).first { $0.calendarIdentifier == nativeKey }
             if operation == "reminders.delete_list" { guard observed == nil else { throw SourceFailure.unavailable } }
             else { guard observed?.title == list.title else { throw SourceFailure.unavailable } }
         } else if operation == "reminders.create_list" {
