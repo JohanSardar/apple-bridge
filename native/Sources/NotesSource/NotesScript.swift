@@ -1,4 +1,5 @@
 import Foundation
+import Carbon
 import SourceSupport
 
 @MainActor
@@ -7,6 +8,8 @@ public enum NotesScript {
         "\"" + value.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"").replacingOccurrences(of: "\r", with: "\\r").replacingOccurrences(of: "\n", with: "\\n") + "\""
     }
     public static func run(_ body: String) throws -> String {
+        let target = NSAppleEventDescriptor(bundleIdentifier: "com.apple.Notes")
+        guard AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false) == noErr else { throw SourceFailure.permissionMissing }
         var error: NSDictionary?
         guard let script = NSAppleScript(source: "with timeout of 5 seconds\ntell application id \"com.apple.Notes\"\n" + body + "\nend tell\nend timeout") else { throw SourceFailure.invalid }
         let result = script.executeAndReturnError(&error)

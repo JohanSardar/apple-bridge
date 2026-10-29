@@ -460,7 +460,7 @@ features:
       - {id: NOTE-CRUD, levels: [sim, real, replica]}
       - {id: NOTE-RICH-REJECT, levels: [sim, real]}
     limits:
-      - {"scenario": "NOTE-CRUD", "level": "real", "reason": "skipped: historical tagged cleanup failed; safe cleanup must be proved before new mutations"}
+      - {"scenario": "NOTE-CRUD", "level": "real", "reason": "limited: real append changes native editability and the existing plain-text replace guard rejects the next write; T63 captured-ID cleanup passes with active notes 112 before/after and native objects 120 before/after. No retained residue was selected."}
   - id: usage.read
     title: Screen Time estimates from Biome App.InFocus with lock/sleep clipping
     notes: Input fingerprinting reuses immutable metadata key sets without changing its fields or polling cadence.
@@ -560,7 +560,7 @@ features:
       - {id: NATIVE-MEDIA-POSTERS, levels: [sim]}
     notes: Sim, cap, yield, posters and native export-safety levels pass. Real and replica cold-arrival runs are limited by the own-handle send restriction above. The final Messages tagged cleanup (design/MILESTONE-GATES.md) covers the earlier W1 file bubbles in the own-handle chat; nothing was sent for this feature.
     limits:
-      - {"scenario": "WEB-MEDIA-VARIANTS", "level": "real", "reason": "skipped: historical run failed tagged media cleanup; unlock Mac and prove per-run Messages cleanup before new self-chat attachments; existing residue untouched"}
+      - {"scenario": "WEB-MEDIA-VARIANTS", "level": "real", "reason": "limited: needs native attachment cleanup qualification. Scoped recovery could not locate six media rows created by this T63 run; zero foreign rows were deleted. Further real attachment sends are blocked before world creation. This is not a missing-grant limit."}
       - {"scenario": "WEB-MEDIA-VARIANTS", "level": "replica", "reason": "Same send restriction as the real level. One read-only Air gateway to Ubuntu replica attempt (2026-10-23) did not capture its three expected existing synthetic attachments within 45 seconds; the cause is undetermined (the targets may have been moved by the final tagged cleanup). No current replica variant downloads or cold-arrival latency are certified."}
   - id: web.remote
     title: Reach from anywhere through embedded Tailscale Funnel
@@ -772,13 +772,13 @@ features:
       - {id: WEB-MSG-OPTIMISTIC, levels: [web]}
       - {id: WEB-MSG-PARTS, levels: [web]}
     limits:
-      - {"scenario": "MSG-SELFTEST", "level": "real", "reason": "skipped: historical selftest leaves text/file residue when UI cleanup is deferred; existing residue untouched"}
+      - {"scenario": "MSG-SELFTEST", "level": "real", "reason": "limited: initial real Helper world startup failed during the changed-module build; no selftest effects were submitted and the independent baseline stayed at 160287 active message/chat identities."}
       - {"scenario": "MSG-READSTATE-REAL", "level": "real", "reason": "skipped: requires unlocked Mac with Messages UI available and an unused own self-chat handle; no safe UI cleanup demonstrated at lock screen"}
       - {"scenario": "MSG-DELETE-REAL", "level": "real", "reason": "skipped: requires unlocked Mac with Messages UI available and an unused own self-chat handle; no safe UI cleanup demonstrated at lock screen"}
       - {"scenario": "MSG-RESEND", "level": "real", "reason": "skipped: requires a uniquely identified failed self-chat test message via APPLE_BRIDGE_RESEND_RUN; existing self-chat residue must remain untouched"}
       - {"scenario": "WEB-MSG-SEND", "level": "web", "reason": "web qualification remains missing"}
       - {"scenario": "WEB-MSG-ATTACH-SEND", "level": "web", "reason": "web qualification remains missing"}
-      - {"scenario": "WEB-UPLOAD-NATIVE-STAGING", "level": "real", "reason": "skipped: historical run failed tagged media cleanup; unlock Mac and prove per-run Messages cleanup before new self-chat attachments; existing residue untouched"}
+      - {"scenario": "WEB-UPLOAD-NATIVE-STAGING", "level": "real", "reason": "limited: native send remained indeterminate. T63 recovered this run's three text/file rows with zero foreign deletions. Further attachment sends are blocked pending native cleanup qualification; this is not a missing-grant limit."}
       - {"scenario": "WEB-MSG-MANAGE", "level": "web", "reason": "web qualification remains missing"}
       - {"scenario": "WEB-MSG-CHAT-ACTIONS", "level": "web", "reason": "web qualification remains missing"}
       - {"scenario": "WEB-MSG-FAIL-RESEND", "level": "web", "reason": "web qualification remains missing"}
@@ -943,7 +943,7 @@ features:
     notes: >-
       Browser milestone 228/228 passes without skips or flakes; READ includes 4.5:1 highlight/link contrast across all five colors and both appearances. Core milestone green with explicit limits: #283 establishes leader-reported real DECODE-FULL 5/5 and REST/MCP CRUD sim 34/34. The pre-fix real append conflicted; replace/MCP were not reached, and tagged cleanup failed. Further real Notes writes are stopped and limited pending a verified cleanup route; no local On My Mac account exists. Leader-accepted #274 passes 20 real first-record saves, p95 gateway/Ubuntu replica 476.3/870.2 ms; full content 1430/1420 ms is separate. Rich/checklist mutations stay hidden; combined native/browser journeys, worker-enabled external-body integration, burst/crash and app-specific UI timing remain limited.
     limits:
-      - {"scenario": "NOTE-EDIT-PARITY", "level": "real", "reason": "skipped: NotesParityProbe executes Apple Events without a non-prompting authorization preflight; cleanup qualification is unproven"}
+      - {"scenario": "NOTE-EDIT-PARITY", "level": "real", "reason": "limited: public Notes HTML does not create native checklist identities and rich editing still needs production-command qualification. The real parity probe and T63 cleanup baseline check pass (120 native objects before/after)."}
   - id: remote.relay
     title: SNI passthrough relay, stable device enrollment and persistent budgets
     requirements: [R-SECURE, R-WEB-REACH]
@@ -1348,8 +1348,8 @@ features:
       - {id: SAF-TABS-REAL, levels: [real]}
       - {id: SAF-READINGLIST-REAL, levels: [real]}
     limits:
-      - {"scenario": "SAF-TABS-REAL", "level": "real", "reason": "skipped: runner creates a tab and Reading List entries without cleanup; Safari close_tab is deliberately rejected; after cleanup is implemented, System Settings > Privacy & Security > Automation > AppleBridgeHelper > Safari must be enabled"}
-      - {"scenario": "SAF-READINGLIST-REAL", "level": "real", "reason": "skipped: runner creates a Reading List entry without cleanup; after cleanup is implemented, System Settings > Privacy & Security > Automation > AppleBridgeHelper > Safari must be enabled"}
+      - {"scenario": "SAF-TABS-REAL", "level": "real", "reason": "limited: needs Safari Automation for dev.applebridge.helper; non-prompting cleanup preflight stopped before fixtures were created."}
+      - {"scenario": "SAF-READINGLIST-REAL", "level": "real", "reason": "limited: needs Safari Automation for dev.applebridge.helper; non-prompting cleanup preflight stopped before fixtures were created."}
   - id: capture.commands
     title: Capture and PDF print provider lifecycle
     requirements: [R-API, R-SCOPE]

@@ -46,23 +46,26 @@ public struct MessagesMediaCleanupProof: Sendable {
         let decoded = value.removingPercentEncoding ?? value
         if names.contains(decoded) { return true }
         let fields = decoded.components(separatedBy: ", ")
-        if fields.count >= 3, names.contains(fields[1]) { return true }
+        if fields.count >= 3, fields.dropFirst().contains(where: names.contains) { return true }
         if let url = URL(string: value), url.isFileURL { return names.contains(url.lastPathComponent) }
         return decoded.hasPrefix("/") && names.contains(URL(fileURLWithPath: decoded).lastPathComponent)
     }
 
     public static func direction(_ description: String, names: Set<String>) -> Bool? {
         let fields = description.components(separatedBy: ", ")
-        guard fields.count >= 3, !fields[0].isEmpty, names.contains(fields[1]) else { return nil }
+        guard fields.count >= 3, !fields[0].isEmpty, fields.dropFirst().contains(where: names.contains) else { return nil }
         if ["Your iMessage", "Your SMS", "Your RCS"].contains(fields[0]) { return true }
         guard !fields[0].hasPrefix("Your ") else { return nil }
         return false
     }
 
-    public static func targetIndex(_ candidates: [JSON], names: Set<String>, outgoing: Bool) -> Int? {
+    public static func targetIndex(_ candidates: [JSON], names: Set<String>, outgoing: Bool, allowSelfEcho: Bool = false) -> Int? {
         let targets = candidates.enumerated().filter { _, candidate in
             candidate["outgoing"] == .bool(outgoing) && candidate["values"].array.contains { Self.matches($0.string, names: names) }
         }
-        return targets.count == 1 ? targets.first?.offset : nil
+        if targets.count == 1 { return targets.first?.offset }
+        guard targets.isEmpty, allowSelfEcho else { return nil }
+        let echoes = candidates.enumerated().filter { _, candidate in candidate["values"].array.contains { Self.matches($0.string, names: names) } }
+        return echoes.count == 1 ? echoes.first?.offset : nil
     }
 }

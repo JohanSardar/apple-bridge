@@ -1,11 +1,14 @@
 #if LAB
 import Foundation
+import Carbon
 import SourceSupport
 
 @MainActor
 public enum NotesParityProbe {
     private struct AppleEventFailure: Error { let code: Int }
     private static func script(_ body: String) throws -> String {
+        let target = NSAppleEventDescriptor(bundleIdentifier: "com.apple.Notes")
+        guard AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false) == noErr else { throw SourceFailure.permissionMissing }
         var error: NSDictionary?
         guard let source = NSAppleScript(source: "with timeout of 5 seconds\ntell application id \"com.apple.Notes\"\n" + body + "\nend tell\nend timeout") else { throw SourceFailure.invalid }
         let result = source.executeAndReturnError(&error)
@@ -16,6 +19,7 @@ public enum NotesParityProbe {
         let tag = "[ab-test notes-parity-" + UUID().uuidString + "]"
         let store = NotesStore(path: FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Group Containers/group.com.apple.notes/NoteStore.sqlite").path)
         var folderID = "", folderCreated = false, effects = 0
+        var createdIDs: Set<String> = []
         var proofs: [String: JSON] = [:]
         @MainActor func snapshot(_ id: String) async throws -> JSON {
             for _ in 0..<50 {
@@ -28,6 +32,7 @@ public enum NotesParityProbe {
             let title = tag + " " + name
             let content = "<div>" + title + "</div>" + html
             let id = try script("return id of (make new note at folder id " + NotesScript.quote(folderID) + " with properties {body:" + NotesScript.quote(content) + "})")
+            createdIDs.insert(id)
             effects += 1
             return id
         }
@@ -49,7 +54,7 @@ public enum NotesParityProbe {
             effects += 1
         }
         do {
-            let result = try script("set matches to every folder whose name is \"Bridge Test\"\nset made to false\nif (count matches) is 0 then\nset target to make new folder with properties {name:\"Bridge Test\"}\nset made to true\nelse\nset target to item 1 of matches\nend if\nreturn (id of target) & linefeed & (made as string)")
+            let result = try script("set target to make new folder with properties {name:" + NotesScript.quote("Bridge Test " + tag) + "}\nreturn (id of target) & linefeed & \"true\"")
             let parts = result.components(separatedBy: "\n")
             guard parts.count == 2, !parts[0].isEmpty else { throw SourceFailure.unavailable }
             folderID = parts[0]; folderCreated = parts[1] == "true"
@@ -94,7 +99,7 @@ public enum NotesParityProbe {
             let current = try store.read()
             let folder = current.observations.first { $0["scoped_alias"].string == folderID }
             let key = folder?["native_key"].string ?? ""
-            let notes = current.observations.filter { $0["collection"].string == "notes.note" && $0["data"]["title"].string.hasPrefix(tag) && $0["data"]["folder_id"]["$ref"]["native_key"].string == key }
+            let notes = current.observations.filter { createdIDs.contains($0["scoped_alias"].string) && $0["collection"].string == "notes.note" && $0["data"]["title"].string.hasPrefix(tag) && $0["data"]["folder_id"]["$ref"]["native_key"].string == key }
             for note in notes {
                 let id = note["scoped_alias"].string
                 let name = try script("return name of note id " + NotesScript.quote(id))
@@ -106,6 +111,10 @@ public enum NotesParityProbe {
                 if !remaining { break }
                 if attempt == 49 { cleanup = false }
                 try await Task.sleep(for: .milliseconds(100))
+            }
+            if folderCreated {
+                guard try script("return count of notes of folder id " + NotesScript.quote(folderID)) == "0" else { throw SourceFailure.conflict }
+                _ = try script("delete folder id " + NotesScript.quote(folderID))
             }
         } catch { cleanup = false }
         return .object(["state": .string(cleanup ? "verified" : "limited"), "os": .string(ProcessInfo.processInfo.operatingSystemVersionString), "proofs": .object(proofs), "mutation_calls": .number(Double(effects)), "cleanup": .string(cleanup ? "complete" : "unverified"), "test_container_created": .bool(folderCreated), "tag": .string(tag)])

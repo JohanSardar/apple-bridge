@@ -12,13 +12,18 @@ import (
 	"github.com/JohanSardar/apple-bridge/lab/world"
 )
 
-func cleanupNativeMessageRun(w *world.World, runID string, groupDraft bool) (bool, map[string]any) {
+func cleanupNativeMessageRun(w *world.World, runID string, groupDraft bool, ownedOnly ...bool) (bool, map[string]any) {
 	ctx, cancel := context.WithTimeout(context.Background(), 150*time.Second)
 	defer cancel()
 	report := filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "AppleBridgeDev", "messages-cleanup-"+runID+".json")
 	defer os.Remove(report)
 	tag := "[ab-test " + runID + "]"
-	args := []string{"-n", "-W", "-a", w.HelperApp, "--args", "probe", "cleanup-tagged-self", "--tag", tag, "--approved-contacts", "--report", report}
+	args := []string{"-n", "-W", "-a", w.HelperApp, "--args", "probe", "cleanup-tagged-self", "--tag", tag, "--report", report}
+	if len(ownedOnly) > 0 && ownedOnly[0] {
+		args = append(args, "--owned-only")
+	} else {
+		args = append(args, "--approved-contacts")
+	}
 	if groupDraft {
 		args = append(args, "--group-draft")
 	}

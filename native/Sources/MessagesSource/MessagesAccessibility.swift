@@ -69,7 +69,7 @@ enum MessagesAccessibility {
                 let direction = MessagesMediaCleanupProof.direction(description, names: Set(mediaNames)).map(JSON.bool) ?? .null
                 candidates.append(.object(["outgoing": direction, "values": nested > 0 ? .array(values) : .array([])]))
             }
-            guard budget > 0, let index = MessagesMediaCleanupProof.targetIndex(candidates, names: Set(mediaNames), outgoing: outgoing) else { throw MessagesUIFailure.targetUnavailable }
+            guard budget > 0, let index = MessagesMediaCleanupProof.targetIndex(candidates, names: Set(mediaNames), outgoing: outgoing, allowSelfEcho: prepared.nativeState["target"]["cleanup_self_echo"].bool) else { throw MessagesUIFailure.targetUnavailable }
             return bubbles[index]
         }
         let targets = matching(root, budget: &budget) { element in

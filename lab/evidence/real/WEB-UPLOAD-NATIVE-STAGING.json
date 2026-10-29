@@ -1,49 +1,48 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[7.12 17.86 15.54] cpus=8 other_heavy=0"
+    "summary": "air: load=[84.95 43.51 53.3] cpu_idle=43% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5G10TFC4E75EVA2QT5GGK6P",
+  "status": "environment-limited",
+  "run_id": "run_01M64W68T161MS78K5JK5MEEBM",
   "metrics": {
-    "attachment_transfer_state_after_cleanup": 5,
-    "attachment_transfer_state_at_handoff_cleanup": 5,
-    "attachment_transfer_wait_ms": 1.91625,
+    "apple_event_errors": [
+      0,
+      0
+    ],
+    "capture_observer_resets": 0,
     "cleanup": {
       "all_dates": true,
       "appletruth_active_remaining": 1,
       "appletruth_verified": true,
       "appletruth_visible_remaining": 1,
-      "approved_contacts_included": true,
+      "approved_contacts_included": false,
       "deleted": 0,
       "drafts_cleared": 0,
       "failure": "native_deletion_not_observed",
       "initial_tagged_self_messages": 2,
-      "only_tagged_self_messages": false,
+      "only_tagged_self_messages": true,
       "passed": false,
       "remaining_tagged_self_messages": 2,
       "tag_filtered": true
     },
-    "command_state": "observed",
-    "disposition": "locally_observed",
-    "initial_command_state": "observed",
+    "cleanup_counts": {
+      "after_count": 160296,
+      "before_count": 160293,
+      "created_count": 0,
+      "passed": false
+    },
+    "command_state": "indeterminate",
+    "disposition": "indeterminate",
+    "initial_command_state": "indeterminate",
     "parts_requested": 2,
-    "send_commands": 1,
-    "cleanup_state": "deferred_to_unlock",
-    "cleanup_reason": "Messages deletion requires the unlocked UI; transfer safety is verified; no cleanup retry or additional send.",
-    "cleanup_manifest": {
-      "registered": true,
-      "owner_only": true,
-      "outgoing_text": 1,
-      "outgoing_file": 1,
-      "incoming_echo": 1,
-      "native_ids_private": true
-    }
+    "send_commands": 1
   },
   "scenario": "WEB-UPLOAD-NATIVE-STAGING",
   "level": "real",
   "passed": false,
-  "git_sha": "2c022b553baf06d5a8906c7bcabc88988653949e",
-  "at": "2026-10-21T20:04:10.860197Z",
+  "git_sha": "184acc98e1f5b503d718f76dd303429d6e7ddb77",
+  "at": "2026-10-29T22:23:49.569712Z",
   "assertions": [
     {
       "name": "self_chat_captured",
@@ -63,63 +62,19 @@
     },
     {
       "name": "native_send_observed_with_fingerprint_checkpoint",
-      "passed": true
-    },
-    {
-      "name": "two_native_part_outcomes",
-      "passed": true
-    },
-    {
-      "name": "truth_native_part_once",
-      "passed": true
-    },
-    {
-      "name": "truth_native_part_once",
-      "passed": true
-    },
-    {
-      "name": "handoff_removed_before_transfer_check",
-      "passed": true
-    },
-    {
-      "name": "native_transfer_finished_after_handoff_cleanup",
-      "passed": true
-    },
-    {
-      "name": "native_attachment_is_in_messages_store",
-      "passed": true
-    },
-    {
-      "name": "native_attachment_bytes_exact_after_handoff_cleanup",
-      "passed": true
-    },
-    {
-      "name": "exactly_one_native_attachment",
-      "passed": true
-    },
-    {
-      "name": "native_attachment_effect_exactly_one",
-      "passed": true
-    },
-    {
-      "name": "native_tagged_text_effect_exactly_one",
-      "passed": true
-    },
-    {
-      "name": "verified_upload_reference_persisted",
-      "passed": true
+      "passed": false
     },
     {
       "name": "tagged_messages_cleanup",
-      "passed": false,
-      "status": "deferred_to_unlock",
-      "detail": "Tagged native rows recorded in the existing private unlock-cleanup manifest; Messages UI deletion unavailable at the lock screen."
+      "passed": false
     },
     {
       "name": "tagged_media_cleanup_readonly_truth",
-      "passed": false,
-      "status": "deferred_to_unlock",
-      "detail": "Tagged native rows recorded in the existing private unlock-cleanup manifest; Messages UI deletion unavailable at the lock screen."
+      "passed": false
+    },
+    {
+      "name": "cleanup_baseline_restored",
+      "passed": false
     },
     {
       "name": "credential_backend_override_restored",
@@ -129,6 +84,5 @@
   "latency": {},
   "hosts": [
     "air"
-  ],
-  "status": "environment-limited"
+  ]
 }

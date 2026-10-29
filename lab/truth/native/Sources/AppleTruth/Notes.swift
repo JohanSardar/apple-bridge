@@ -1,17 +1,20 @@
 import Foundation
 import Darwin
 import OSAKit
+import Carbon
 
 extension AppleTruth {
     @MainActor
     static func notes(_ verb: String, _ request: [String: Any]) throws -> [String: Any] {
         guard verb == "fixture" || verb == "observe", let language = OSALanguage(forName: "JavaScript") else { throw NotesTruthFailure.invalid }
+        let target = NSAppleEventDescriptor(bundleIdentifier: "com.apple.Notes")
+        guard AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false) == noErr else { throw TruthFailure.permissionMissing }
         let tag = request["tag"] as? String ?? ""
         if verb == "fixture" {
             guard tag.hasPrefix("[ab-test "), tag.hasSuffix("]"), !tag.contains("\n"), tag.count > 11 else { throw NotesTruthFailure.invalid }
         }
         let cleanup = verb == "fixture" && ["cleanup", "delete", "cleanup_created_folder"].contains(request["action"] as? String ?? "")
-        let storeTargets = cleanup ? try notesDeletionTargets(tag: tag, folderKey: request["action"] as? String == "cleanup_created_folder" ? request["native_key"] as? String : nil) : []
+        let storeTargets = cleanup && request["folder_id"] == nil ? try notesDeletionTargets(tag: tag, folderKey: request["action"] as? String == "cleanup_created_folder" ? request["native_key"] as? String : nil) : []
         var input = request
         input["verb"] = verb
         let encoded = try JSONSerialization.data(withJSONObject: input, options: [.sortedKeys])
@@ -35,15 +38,28 @@ extension AppleTruth {
             const selected = tag ? taggedNotes() : app.notes();
             return {status:'verified', records:selected.map(n => {
                 const protectedNote = n.passwordProtected();
-                return {id:n.id(), title:n.name(), plain_text:protectedNote ? '' : n.plaintext(), locked:protectedNote};
+                return {id:n.id(), folder_id:n.container().id(), title:n.name(), plain_text:protectedNote ? '' : n.plaintext(), locked:protectedNote};
             })};
         }
+        if (action === 'folder_identity') {
+            require(request.title.startsWith('Bridge Test ' + tag));
+            const folders = app.folders.whose({name:request.title})();
+            require(folders.length === 1);
+            return {status:'verified',id:folders[0].id()};
+        }
+        if (action === 'cleanup_owned') {
+            require(request.id && request.folder_id);
+            const note = app.notes.byId(request.id);
+            require(note.name().startsWith(tag) && note.container().id() === request.folder_id && fixtureFolder(note.container()));
+            app.delete(note.container().notes.byId(request.id));
+            return {status:'verified'};
+        }
         if (action === 'cleanup_created_folder') {
-            require(request.created_by_run === true && request.native_key && request.title.startsWith('Bridge Test ' + tag + ' '));
+            require(request.created_by_run === true && (request.native_key || request.folder_id) && (request.title === 'Bridge Test ' + tag || request.title.startsWith('Bridge Test ' + tag + ' ')));
             const folders = app.folders.whose({name:request.title})();
             require(folders.length === 1);
             const folder = folders[0];
-            require(folder.folders().length === 0 && folder.notes().every(n => n.name().startsWith(tag)));
+            require((!request.folder_id || folder.id() === request.folder_id) && folder.folders().length === 0 && (request.folder_id ? folder.notes().length === 0 : folder.notes().every(n => n.name().startsWith(tag))));
             const parent = folder.container();
             const folderID = folder.id();
             app.delete(parent.folders.byId(folderID));
@@ -70,10 +86,12 @@ extension AppleTruth {
             return {status:'verified'};
         }
         require(action === 'create' && request.title.startsWith(tag));
-        let folders = app.folders.whose({name:'Bridge Test'})();
+        const folderName = request.folder_title || 'Bridge Test';
+        require(folderName === 'Bridge Test' || folderName === 'Bridge Test ' + tag);
+        let folders = app.folders.whose({name:folderName})();
         let created = false;
         if (folders.length === 0) {
-            const folder = app.Folder({name:'Bridge Test'});
+            const folder = app.Folder({name:folderName});
             app.folders.push(folder);
             folders = [folder];
             created = true;
@@ -89,10 +107,16 @@ extension AppleTruth {
         let result = OSAScript(source: source, language: language).executeAndReturnError(&error)
         if let error { throw NSError(domain: "NotesJavaScript", code: error[OSAScriptErrorNumber] as? Int ?? 0, userInfo: [NSLocalizedDescriptionKey: error[OSAScriptErrorMessage] as? String ?? "automation_failed"]) }
         guard let text = result?.stringValue, let bytes = text.data(using: .utf8), var response = try JSONSerialization.jsonObject(with: bytes) as? [String: Any] else { throw NotesTruthFailure.invalid }
+        if verb == "observe", request["active_only"] as? Bool == true, let records = response["records"] as? [[String: Any]] {
+            response["records"] = try records.filter { record in
+                guard let id = record["id"] as? String else { throw NotesTruthFailure.invalid }
+                return try !notesDeletionVerified([id])
+            }
+        }
         if cleanup {
             let ids = Array(Set(storeTargets + (response.removeValue(forKey: "deleted_ids") as? [String] ?? [])))
             var verified = false
-            for _ in 0..<100 {
+            for _ in 0..<600 {
                 if try notesDeletionVerified(ids) { verified = true; break }
                 Thread.sleep(forTimeInterval: 0.05)
             }

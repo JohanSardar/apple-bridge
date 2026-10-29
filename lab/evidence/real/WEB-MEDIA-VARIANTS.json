@@ -1,25 +1,32 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[7.57 6.23 5.43] cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[11.61 19.86 48.76] cpu_idle=54% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5E0Z216CY3PB1AZEM62XQA5",
+  "run_id": "run_01M64W1J58T7DV22HT4QNM1XET",
   "metrics": {
     "browser_playback": "Cross-engine playback is owned by the later UI unit",
+    "capture_observer_resets": 0,
     "cleanup": {
       "all_dates": true,
       "appletruth_active_remaining": 0,
       "appletruth_verified": true,
       "appletruth_visible_remaining": 0,
-      "approved_contacts_included": true,
+      "approved_contacts_included": false,
       "deleted": 2,
       "drafts_cleared": 0,
-      "failure": "",
-      "initial_tagged_self_messages": 2,
-      "only_tagged_self_messages": false,
-      "passed": true,
-      "remaining_tagged_self_messages": 0,
+      "failure": "validate:targetUnavailable",
+      "initial_tagged_self_messages": 8,
+      "only_tagged_self_messages": true,
+      "passed": false,
+      "remaining_tagged_self_messages": 6,
       "tag_filtered": true
+    },
+    "cleanup_counts": {
+      "after_count": 160293,
+      "before_count": 160287,
+      "created_count": 0,
+      "passed": false
     },
     "command_state": "observed",
     "disposition": "locally_observed",
@@ -30,8 +37,8 @@
   "scenario": "WEB-MEDIA-VARIANTS",
   "level": "real",
   "passed": false,
-  "git_sha": "fd6c92e13b02f1ae6a6e91dff0e1d3b660afe9a4",
-  "at": "2026-10-21T01:24:44.198854Z",
+  "git_sha": "184acc98e1f5b503d718f76dd303429d6e7ddb77",
+  "at": "2026-10-29T22:21:15.304437Z",
   "assertions": [
     {
       "name": "self_chat_captured",
@@ -58,11 +65,167 @@
       "passed": false
     },
     {
-      "name": "tagged_messages_cleanup",
+      "name": "audio_native_appearance_measured",
       "passed": true
     },
     {
+      "name": "audio_original_preserved",
+      "passed": true
+    },
+    {
+      "name": "audio_duration_and_64_bounded_peaks",
+      "passed": true
+    },
+    {
+      "name": "private_handles_removed",
+      "passed": true
+    },
+    {
+      "name": "audio_authorized_blob_1",
+      "passed": true
+    },
+    {
+      "name": "variant_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "audio_avfoundation_truth",
+      "passed": true
+    },
+    {
+      "name": "audio_aac_truth",
+      "passed": true
+    },
+    {
+      "name": "image_native_appearance_measured",
+      "passed": true
+    },
+    {
+      "name": "image_original_preserved",
+      "passed": true
+    },
+    {
+      "name": "live_photo_identifier_pair",
+      "passed": true
+    },
+    {
+      "name": "image_dimensions_and_thumbhash",
+      "passed": true
+    },
+    {
+      "name": "private_handles_removed",
+      "passed": true
+    },
+    {
+      "name": "live_authorized_blob_1",
+      "passed": true
+    },
+    {
+      "name": "variant_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "live_avfoundation_truth",
+      "passed": true
+    },
+    {
+      "name": "mp4_h264_1080p_faststart",
+      "passed": true
+    },
+    {
+      "name": "private_handles_removed",
+      "passed": true
+    },
+    {
+      "name": "poster_authorized_blob_1",
+      "passed": true
+    },
+    {
+      "name": "variant_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "poster_browser_image",
+      "passed": true
+    },
+    {
+      "name": "poster_dimensions_bounded",
+      "passed": true
+    },
+    {
+      "name": "poster_avfoundation_truth",
+      "passed": true
+    },
+    {
+      "name": "imageio_jpeg_png_truth",
+      "passed": true
+    },
+    {
+      "name": "private_handles_removed",
+      "passed": true
+    },
+    {
+      "name": "thumb_authorized_blob_1",
+      "passed": true
+    },
+    {
+      "name": "variant_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "thumb_browser_image",
+      "passed": true
+    },
+    {
+      "name": "thumb_dimensions_bounded",
+      "passed": true
+    },
+    {
+      "name": "thumb_avfoundation_truth",
+      "passed": true
+    },
+    {
+      "name": "imageio_jpeg_png_truth",
+      "passed": true
+    },
+    {
+      "name": "private_handles_removed",
+      "passed": true
+    },
+    {
+      "name": "display_authorized_blob_1",
+      "passed": true
+    },
+    {
+      "name": "variant_digest_verified",
+      "passed": true
+    },
+    {
+      "name": "display_browser_image",
+      "passed": true
+    },
+    {
+      "name": "display_dimensions_bounded",
+      "passed": true
+    },
+    {
+      "name": "display_avfoundation_truth",
+      "passed": true
+    },
+    {
+      "name": "imageio_jpeg_png_truth",
+      "passed": true
+    },
+    {
+      "name": "tagged_messages_cleanup",
+      "passed": false
+    },
+    {
       "name": "tagged_media_cleanup_readonly_truth",
+      "passed": false
+    },
+    {
+      "name": "cleanup_baseline_restored",
       "passed": false
     },
     {
@@ -70,9 +233,23 @@
       "passed": true
     }
   ],
-  "latency": {},
+  "latency": {
+    "audio_appearance_to_variants_1": {
+      "samples": 1,
+      "p50_ms": 47583.658125,
+      "p95_ms": 47583.658125,
+      "max_ms": 47583.658125,
+      "timeouts": 0
+    },
+    "image_appearance_to_variants_1": {
+      "samples": 1,
+      "p50_ms": 47746.362542,
+      "p95_ms": 47746.362542,
+      "max_ms": 47746.362542,
+      "timeouts": 0
+    }
+  },
   "hosts": [
-    "air",
-    "ubuntu"
+    "air"
   ]
 }

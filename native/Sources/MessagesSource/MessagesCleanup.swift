@@ -44,6 +44,9 @@ public enum MessagesCleanup {
         }
         let own = Set(try MessagesProbes.discoverSelfHandles().handles)
         let reader = try MessagesReader(path: FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Messages/chat.db").path)
+        var ownedIDs: Set<String> = []
+        var ownedBaseline: Int64?
+        let ownedOnly = arguments.contains("--owned-only")
         var mediaProof: MessagesMediaCleanupProof?
         var interactiveText = ""
         var interactiveBaseline: Int64 = 0
@@ -52,13 +55,27 @@ public enum MessagesCleanup {
             let ledger = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/AppleBridgeDev/messages-command-cleanup/" + run + ".json")
             if let bytes = try? Data(contentsOf: ledger), let registration = try? JSONDecoder().decode(JSON.self, from: bytes) {
                 mediaProof = try? MessagesMediaCleanupProof(registration: registration, tag: tag)
+                if registration["run_id"].string == run {
+                    ownedBaseline = Int64(registration["baseline_max_row_id"].number)
+                    ownedIDs = Set(registration["created_message_ids"].array.map { $0.string }.filter { !$0.isEmpty })
+                    for name in ["native_key", "incoming_echo_native_key"] where !registration[name].string.isEmpty { ownedIDs.insert(registration[name].string) }
+                    for part in registration["native_parts"].array where !part["native_key"].string.isEmpty { ownedIDs.insert(part["native_key"].string) }
+                }
             }
             if let bytes = try? Data(contentsOf: ledger), let registration = try? JSONDecoder().decode(JSON.self, from: bytes), registration["scenario"].string == "MSG-INTERACTIVE-GATE", registration["run_id"].string == run, registration["interactive_text"].string == "Apple Bridge interactive self-check " + run {
                 interactiveText = registration["interactive_text"].string
                 interactiveBaseline = Int64(registration["baseline_max_row_id"].number)
             }
         }
+        guard !ownedOnly || (!tag.isEmpty && ownedBaseline != nil && approved.isEmpty) else { throw ProbeFailure.invalidArguments }
         func candidates() throws -> [(String, JSON)] {
+            if ownedOnly {
+                let run = String(tag.dropFirst(9).dropLast())
+                let path = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/AppleBridgeDev/messages-command-cleanup/" + run + ".json.creations.json")
+                if let bytes = try? Data(contentsOf: path), let report = try? JSONDecoder().decode(JSON.self, from: bytes), report["run_id"].string == run {
+                    ownedIDs.formUnion(report["ids"].array.map { $0.string }.filter { !$0.isEmpty })
+                }
+            }
             var rows = try reader.query("SELECT DISTINCT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID WHERE NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=j.chat_id AND r.message_id=m.ROWID) AND (instr(m.text,'[ab-test ')>0 OR instr(m.attributedBody,CAST('[ab-test ' AS BLOB))>0) ORDER BY m.ROWID DESC", [])
             var mediaByMessage: [String: [String]] = [:]
             if !interactiveText.isEmpty, interactiveBaseline > 0 {
@@ -80,14 +97,24 @@ public enum MessagesCleanup {
             }
             var result: [(String, JSON)] = []
             for key in rows {
+                if ownedOnly {
+                    guard ownedIDs.contains(key["guid"]), let baseline = ownedBaseline,
+                          let position = try reader.query("SELECT ROWID AS position FROM message WHERE guid=?", [key["guid"]]).first,
+                          position.integer("position") > baseline else { continue }
+                }
                 if let scopedGUID, key["guid"] != scopedGUID { continue }
                 if let scopedChat, try reader.query("SELECT 1 FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID WHERE m.guid=? AND j.chat_id=? AND NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=j.chat_id AND r.message_id=m.ROWID)", [key["guid"], String(scopedChat)]).isEmpty { continue }
                 guard let row = try reader.message(key["guid"]), let item = try reader.messageObservations(row).first, item.0 == "messages.message" else { continue }
                 let peers = try reader.query("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", [row["capture_chat_guid"]])
-                guard !peers.isEmpty, peers.allSatisfy({ own.union(approved).contains(MessagesProbes.normalize($0["id"])) }) else { continue }
+                guard !peers.isEmpty, peers.allSatisfy({ (ownedOnly ? own : own.union(approved)).contains(MessagesProbes.normalize($0["id"])) }) else { continue }
+                if ownedOnly {
+                    let allPeers = try reader.query("SELECT DISTINCT h.id FROM message m JOIN chat_message_join cm ON cm.message_id=m.ROWID JOIN chat_handle_join j ON j.chat_id=cm.chat_id JOIN handle h ON h.ROWID=j.handle_id WHERE m.guid=?", [key["guid"]])
+                    guard !allPeers.isEmpty, allPeers.allSatisfy({ own.contains(MessagesProbes.normalize($0["id"])) }) else { continue }
+                }
                 var fields = item.2
                 if let names = mediaByMessage[row["guid"]], peers.allSatisfy({ own.contains(MessagesProbes.normalize($0["id"])) }) {
                     fields["cleanup_media_names"] = names
+                    fields["cleanup_self_echo"] = ownedOnly
                     let target = try JSONDecoder().decode(JSON.self, from: JSONSerialization.data(withJSONObject: fields))
                     result.append((row["guid"], target))
                     continue
@@ -116,14 +143,14 @@ public enum MessagesCleanup {
             let prepared = Prepared(nativeState: .object(["target": target, "cleanup_authorized": .bool(true)]), fingerprint: "authorized-tagged-self-cleanup", action: .object(["op": .string("messages.delete_message"), "native_key": .string(guid)]))
             var phase = "open"
             do {
-                try await MessagesAccessibility.openMessage(guid, settle: 0.25, resetEditor: scopedChat == nil)
+                try await MessagesAccessibility.openMessage(guid, settle: ownedOnly ? 1 : 0.25, resetEditor: scopedChat == nil)
                 if scopedChat == nil, try await MessagesAccessibility.acknowledgeDeletedInfo() { try await MessagesAccessibility.openMessage(guid, settle: 0.25) }
                 phase = "validate"
                 try await MessagesAccessibility.validate(prepared)
                 phase = "delete"
                 _ = try await MessagesAccessibility.perform(prepared)
             } catch { failure = phase + ":" + String(describing: error); break }
-            let deadline = ContinuousClock.now.advanced(by: .seconds(2))
+            let deadline = ContinuousClock.now.advanced(by: .seconds(ownedOnly ? 10 : 2))
             var after = remaining.count
             repeat {
                 after = try candidates().count

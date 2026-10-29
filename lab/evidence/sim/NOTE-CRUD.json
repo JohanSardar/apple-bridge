@@ -1,14 +1,17 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[3.09 3.95 6.79] cpus=8 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[28.27 19.26 13.71] cpu_idle=0% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M58DP41ZMGKQVV0TTJQ99TM4",
+  "run_id": "run_01M64V7MXSNWWQH5D9AVG04TXV",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
   "scenario": "NOTE-CRUD",
   "level": "sim",
   "passed": true,
-  "git_sha": "47549176312caf86b1d55e35f1e4c13562ed17f7",
-  "at": "2026-10-18T21:11:36.255485Z",
+  "git_sha": "829d8e0d8e773aa71b721594e4413fe1c8af849a",
+  "at": "2026-10-29T22:07:06.169787Z",
   "assertions": [
     {
       "name": "external_note_imported",
@@ -27,6 +30,10 @@
       "passed": true
     },
     {
+      "name": "rest_hydration_advances_revision",
+      "passed": true
+    },
+    {
       "name": "rest_append_observed",
       "passed": true
     },
@@ -40,6 +47,14 @@
     },
     {
       "name": "rest_append_content",
+      "passed": true
+    },
+    {
+      "name": "rest_content_change_rejects_stale_version",
+      "passed": true
+    },
+    {
+      "name": "rest_stale_version_no_effect",
       "passed": true
     },
     {
@@ -80,6 +95,10 @@
       "passed": true
     },
     {
+      "name": "mcp_hydration_advances_revision",
+      "passed": true
+    },
+    {
       "name": "mcp_append_observed",
       "passed": true
     },
@@ -93,6 +112,14 @@
     },
     {
       "name": "mcp_append_content",
+      "passed": true
+    },
+    {
+      "name": "mcp_content_change_rejects_stale_version",
+      "passed": true
+    },
+    {
+      "name": "mcp_stale_version_no_effect",
       "passed": true
     },
     {
