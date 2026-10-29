@@ -70,6 +70,13 @@ func runWeb(ctx context.Context, s Scenario) Evidence {
 		}
 	}
 
+	if requested := os.Getenv("AB_WEB_PROJECTS"); requested != "" {
+		projects = slices.DeleteFunc(projects, func(project string) bool { return !slices.Contains(strings.Split(requested, ","), project) })
+		if len(projects) == 0 {
+			return Evidence{Scenario: s.ID, Level: "web", Assertions: []Assertion{{Name: "web_project_filter", Detail: "AB_WEB_PROJECTS matches no scenario projects"}}}
+		}
+	}
+
 	if s.Web == nil || s.Web.Server != "gateway" {
 		return runWebProjects(ctx, s, projects)
 	}

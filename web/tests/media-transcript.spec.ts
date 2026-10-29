@@ -1,11 +1,13 @@
 import {test,expect,type Page,type TestInfo} from '@playwright/test';
 import {control} from './session';
-import {mediaSession} from './media-session';
+import {mediaSession,mediaTranscriptReady} from './media-session';
 const native=(index:number)=>'demo-message-00-'+String(index).padStart(6,'0');
 async function jump(page:Page,ids:Record<string,string>,index:number){
- await page.goto('/messages/'+encodeURIComponent(ids['message-chat'])+'/'+encodeURIComponent(ids[native(index)]));
+ const path='/messages/'+encodeURIComponent(ids['message-chat'])+'/'+encodeURIComponent(ids[native(index)]);
+ if(new URL(page.url()).pathname.startsWith('/messages/'+encodeURIComponent(ids['message-chat'])+'/'))await page.evaluate(path=>{history.pushState({},'',path);dispatchEvent(new PopStateEvent('popstate'));},path);else await page.goto(path);
+ await expect(page.locator('.messages-transcript')).toHaveAttribute('data-window-anchor',ids[native(index)],{timeout:15000});await expect(page.locator('.messages-transcript')).toHaveAttribute('aria-busy','false');
  const row=page.locator('[data-message="'+ids[native(index)]+'"]');await expect(row).toBeVisible();
- await expect.poll(()=>page.locator('.transcript').evaluate(element=>getComputedStyle(element).transform)).toBe('none');return row;
+ await expect.poll(()=>page.locator('.transcript').evaluate(element=>getComputedStyle(element).transform)).toBe('none');await mediaTranscriptReady(row);return row;
 }
 test('WEB-MSG-MEDIA TRANSCRIPT source videos dispatch into the real reserved transcript slot',async({page,request})=>{
  await mediaSession(page.context(),request);const ids=await control(request,'/demo-fixtures');await page.clock.setFixedTime(new Date('2026-10-20T16:00:00Z'));
@@ -13,7 +15,7 @@ test('WEB-MSG-MEDIA TRANSCRIPT source videos dispatch into the real reserved tra
  await expect(bubble.locator('.media-motion .media-image')).toHaveAttribute('data-media-state','ready');const bounds=await bubble.boundingBox();expect(bounds!.width).toBeGreaterThanOrEqual(120);expect(bounds!.height).toBeGreaterThanOrEqual(120);
 });
 async function playbackPlates(page:Page,ids:Record<string,string>,info:TestInfo,cases:readonly (readonly [number,string,string])[],evidenceName='composed-media-geometry'){
- const plates=info.project.name.startsWith('webkit-')||info.project.name==='chromium-light-desktop',proofs=[];
+ const plates=process.env.AB_WEB_PLATES==='1'&&(info.project.name.startsWith('webkit-')||info.project.name==='chromium-light-desktop'),proofs=[];
  for(const [index,kind,direction] of cases){
   await page.mouse.move(0,0);const row=await jump(page,ids,index),bubble=row.locator('.media-motion');await expect(bubble).toBeVisible();if(direction==='sent')await expect(row).toHaveClass(/outgoing/u);else await expect(row).not.toHaveClass(/outgoing/u);
   if(index<129||index>130){await expect(row.locator('.bubble')).toHaveCount(2);await expect(row.locator('.bubble').first()).toContainText('synthetic studio.');}
