@@ -228,6 +228,7 @@ features:
       - {id: HELPER-RELEASE-COMMANDS, levels: [real]}
   - id: messages.read
     title: Messages history, live capture, decoding, receipts, attachments
+    notes: Reconciliation consumes wake requests before short-circuiting, skips unchanged database versions and maximum ROWID, and batches row and absence lookups; file hints debounce for 100 ms. Media scheduling shares a one-second power and thermal cache. Repeated capture failures back off to thirty seconds; explicit permission errors retain one-second recovery. The native session run limit is one second, avoiding 20 idle timer wakes per second.
     requirements: [R-FULL, R-LIVE, R-MSG-DEPTH, R-ATTACH, R-NO-FALSE-DELETE]
     milestone: M1
     modules: [native/MessagesSource, native/Decoders]
@@ -407,6 +408,7 @@ features:
       - {id: CON-HANDLE-LINK, levels: [sim]}
       - {id: CON-RECIPIENT-LOOKUP, levels: [sim]}
     notes: >-
+      Thirty-second recovery polls skip history enumeration when the committed token and Me identity are unchanged; notifications retain 50 ms coalescing and commands reconcile immediately.
       Direct external Contacts R-LIVE passes on candidate 165ea123 based on main b99d876b: 20 native changes, gateway p95 454.953 ms and Ubuntu replica p95 507.510 ms over the LAN SSH tunnel, below the unchanged 1000 ms budget. Media backfill is enabled, bulk capture peak is one, and the fresh signed Helper is crash-free. The isolated 2026-10-23 public CON-RELAY rerun proves scope, subscription and live-feed delivery with 20/20 replica samples; the earlier 0/20 observation is superseded. Gateway/replica p95 was 1453.922/1481.835 ms against the unchanged 1000 ms budget, with a TCC activity surge during the run after a quiet precheck. Tagged contact cleanup passed. The immediate Serve byte comparison failed, but a later canonical configuration read matched the saved baseline.
 
   - id: contacts.write
@@ -476,6 +478,7 @@ features:
 
   - id: usage.read
     title: Screen Time estimates from Biome App.InFocus with lock/sleep clipping
+    notes: Input fingerprinting reuses immutable metadata key sets without changing its fields or polling cadence.
     requirements: [R-USAGE, R-FULL]
     milestone: M4
     modules: [native/UsageSource, native/Decoders]

@@ -31,6 +31,8 @@ public actor Messages: Source {
     private var reconciliationID: UUID?
     private var reconcileAgain = false
     private var lastRowID: Int64 = 0
+    private var reconciledVersion: Int64?
+    private var reconciledMaximum: Int64 = 0
     private var lastLiveVersion: Int64?
     private var lastComplete = Date.distantPast
     private var blobDigests: [String: (Int64, Date, String)] = [:]
@@ -122,6 +124,7 @@ public actor Messages: Source {
             lastLiveVersion = nil
             lastComplete = .distantPast
         }
+        reconciledVersion = nil
         reader = fresh
         lastLiveVersion = nil
         return changed
@@ -291,17 +294,21 @@ public actor Messages: Source {
     private func drainMedia(_ sink: any ObservationSink) async {
         var lastPaused: Bool?
         while !Task.isCancelled {
+            guard pendingMedia.values.contains(where: { (mediaRetry[$0.key] ?? .distantPast) < Date() }) else {
+                do { try await Task.sleep(for: .milliseconds(100)) } catch { return }
+                continue
+            }
             do { try await ForegroundActivity.shared.waitUntilIdle(for: .milliseconds(250)) } catch { return }
             if Task.isCancelled { return }
+            let paused = mediaPressurePaused
             let labPaused = mediaLabPaused
-            let systemPaused = MediaDerivatives.paused
-            let paused = labPaused || systemPaused
+            let systemPaused = mediaPressure
             if paused != lastPaused {
                 workTrace.record(paused ? "media_paused" : "media_resumed", fields: ["lab_paused": .bool(labPaused), "system_paused": .bool(systemPaused), "thermal": .number(Double(ProcessInfo.processInfo.thermalState.rawValue))])
                 lastPaused = paused
             }
             guard !paused, let job = pendingMedia.values.filter({ (mediaRetry[$0.key] ?? .distantPast) < Date() }).sorted(by: { a, b in a.live == b.live ? a.position > b.position : a.live }).first else {
-                do { try await Task.sleep(for: .milliseconds(50)) } catch { return }
+                do { try await Task.sleep(for: .milliseconds(100)) } catch { return }
                 continue
             }
             let previous = mediaAttempts[job.key]
@@ -395,7 +402,7 @@ public actor Messages: Source {
                 return x.0 == y.0 ? x.1 > y.1 : x.0
             }.first
             guard let key = next, let url = pendingBlobs[key] else {
-                do { try await Task.sleep(for: .milliseconds(50)) } catch { return }
+                do { try await Task.sleep(for: .milliseconds(100)) } catch { return }
                 continue
             }
             pendingBlobs.removeValue(forKey: key)
@@ -536,8 +543,10 @@ public actor Messages: Source {
         try await emit(changes, sink: sink, live: true, observedAt: smallAt)
         referenced.formUnion(try await captureInserts(sink))
         while true {
-            for guid in referenced.sorted() {
-                if let row = try reader.message(guid) { try await emitMessages([row], sink: sink, live: true) }
+            let keys = referenced.sorted()
+            for offset in stride(from: 0, to: keys.count, by: 128) {
+                let rows = try reader.messages(Array(keys[offset..<min(offset + 128, keys.count)]))
+                try await emitMessages(rows, sink: sink, live: true)
             }
             let position = lastRowID
             referenced = try await captureInserts(sink)
@@ -548,6 +557,14 @@ public actor Messages: Source {
     private func reconcile(_ sink: any ObservationSink) async throws {
         guard let reader else { throw SourceFailure.unavailable }
         let currentGeneration = generation
+        let version = try reader.dataVersion()
+        let maximum = try reader.maximum()
+        if reconciledVersion == version && reconciledMaximum == maximum {
+            lastComplete = Date()
+            workTrace.record("messages_reconcile_unchanged")
+            return
+        }
+        workTrace.record("messages_reconcile_started")
         failedBlobs.removeAll()
         let scanID = UUID().uuidString
         let snapshot = firstSmallSnapshot
@@ -558,7 +575,6 @@ public actor Messages: Source {
         let small = try snapshot?.0 ?? reader.smallObservations()
         for (collection, key, _) in small { seen.insert(collection + "/" + key) }
         try await emit(small, sink: sink, live: false, scanID: scanID, started: started, observedAt: started)
-        let maximum = try reader.maximum()
         var cursor: Int64 = 0
         while cursor < maximum {
             try Task.checkCancellation()
@@ -567,15 +583,13 @@ public actor Messages: Source {
             let observedAt = observationTime()
             let rows = try active.messageRows(after: cursor, through: maximum)
             guard !rows.isEmpty else { break }
-            var freshRows: [SQLiteRow] = []
-            for position in rows {
-                guard let fresh = try active.message(position["guid"]) else { continue }
-                let reaction = MessageReaction.decode(type: Int(fresh.integer("associated_message_type")), target: fresh["associated_message_guid"], emoji: fresh.values["associated_message_emoji"])
-                seen.insert((reaction == nil ? "messages.message/" : "messages.reaction/") + fresh["guid"])
-                freshRows.append(fresh)
+            for row in rows {
+                let reaction = MessageReaction.decode(type: Int(row.integer("associated_message_type")), target: row["associated_message_guid"], emoji: row.values["associated_message_emoji"])
+                seen.insert((reaction == nil ? "messages.message/" : "messages.reaction/") + row["guid"])
             }
-            try await emitMessages(freshRows, sink: sink, live: false, scanID: scanID, started: started, observedAt: observedAt)
+            try await emitMessages(rows, sink: sink, live: false, scanID: scanID, started: started, observedAt: observedAt)
             cursor = rows.last!.integer("row_position")
+            await Task.yield()
         }
         guard generation == currentGeneration, let active = self.reader, try active.isCurrent() else { throw SourceFailure.corrupt }
         let finalAt = observationTime()
@@ -584,12 +598,18 @@ public actor Messages: Source {
         try await emit(finalSmall, sink: sink, live: false, observedAt: finalAt)
         var absent: [JSON] = []
         var absentKeys: [String] = []
-        for key in prior where !seen.contains(key) {
+        let missing = prior.subtracting(seen)
+        let messageKeys = missing.filter { $0.hasPrefix("messages.message/") || $0.hasPrefix("messages.reaction/") }.map { String($0.split(separator: "/", maxSplits: 1)[1]) }
+        var retained: Set<String> = []
+        for offset in stride(from: 0, to: messageKeys.count, by: 128) {
+            retained.formUnion(try active.existingMessages(Array(messageKeys[offset..<min(offset + 128, messageKeys.count)])))
+        }
+        for key in missing {
             guard let slash = key.firstIndex(of: "/") else { continue }
             let collection = String(key[..<slash])
             let nativeKey = String(key[key.index(after: slash)...])
             if collection == "messages.message" || collection == "messages.reaction" {
-                if try active.message(nativeKey) != nil { continue }
+                if retained.contains(nativeKey) { continue }
             } else {
                 let table = collection == "messages.chat" ? "chat" : collection == "messages.handle" ? "handle" : "attachment"
                 let required = table == "handle" ? ["id", "service"] : ["guid"]
@@ -602,6 +622,11 @@ public actor Messages: Source {
         try baseline?.update(absent: absentKeys)
         for key in absentKeys { hashes.removeValue(forKey: key) }
         candidates.removeAll()
+        if self.reader === reader {
+            reconciledVersion = version
+            reconciledMaximum = maximum
+        }
+        workTrace.record("messages_reconcile_completed")
         lastComplete = Date()
     }
     private func reportReadFailure(_ error: any Error, _ sink: any ObservationSink) async throws {
@@ -640,6 +665,7 @@ public actor Messages: Source {
         smallNativeHashes.removeAll()
         firstSmallSnapshot = nil
         lastComplete = .distantPast
+        reconciledVersion = nil
         lastLiveVersion = nil
         let watcher = MessagesWatcher(path: path, diagnostics: diagnostics, eventsEnabled: watcherEventsEnabled)
         var blobs = Task { await self.drainBlobs(sink) }
@@ -664,6 +690,7 @@ public actor Messages: Source {
                         blobs = Task { await self.drainBlobs(sink) }
                         first = true
                     }
+                    let requested = watcher.consumeReconciliation()
                     if first {
                         lastRowID = try reader?.maximum() ?? 0
                         lastLiveVersion = nil
@@ -673,10 +700,17 @@ public actor Messages: Source {
                         _ = try smallChanges(initial, at: initialAt)
                         firstSmallSnapshot = (initial, initialAt)
                         beginReconciliation(sink, watcher: watcher)
-                    } else if wake || watcher.consumeReconciliation() || (reconciliationTask == nil && Date().timeIntervalSince(lastComplete) >= 900) {
+                    } else if wake || requested || (reconciliationTask == nil && Date().timeIntervalSince(lastComplete) >= 900) {
+                        workTrace.record("messages_reconcile_requested", fields: ["wake": .bool(wake), "requested": .bool(requested), "active": .bool(reconciliationTask != nil)])
                         beginReconciliation(sink, watcher: watcher)
                     }
                     try await live(sink)
+                    if let diagnostics {
+                        let readyMedia = pendingMedia.keys.contains { (mediaRetry[$0] ?? .distantPast) < Date() }
+                        let idle = reconciliationTask == nil && lastComplete != .distantPast && pendingBlobs.isEmpty && activeBlob == nil && !readyMedia && activeMedia == nil
+                        let data = try JSONSerialization.data(withJSONObject: ["idle": idle])
+                        try data.write(to: diagnostics.deletingLastPathComponent().appendingPathComponent("messages-idle.json"), options: .atomic)
+                    }
                 } catch is CancellationError { throw CancellationError() }
                 catch {
                     try await reportReadFailure(error, sink)

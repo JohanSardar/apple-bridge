@@ -30,7 +30,7 @@ final class MessagesWatcher: @unchecked Sendable {
         queue.sync { rearm() }
         let timer = DispatchSource.makeTimerSource(queue: queue)
         timer.schedule(deadline: .now() + 2, repeating: 2)
-        timer.setEventHandler { [weak self] in self?.polls += 1; self?.rearm(); self?.report(); self?.signal(false) }
+        timer.setEventHandler { [weak self] in self?.polls += 1; self?.rearm(); self?.signal(false) }
         timer.resume()
         self.timer = timer
         continuation.yield(false)
@@ -60,8 +60,8 @@ final class MessagesWatcher: @unchecked Sendable {
         }
     }
     private func rearm() {
-        guard eventsEnabled else { return }
-        let paths = [path, path + "-wal", path + "-shm", URL(fileURLWithPath: path).deletingLastPathComponent().path]
+        guard eventsEnabled else { report(); return }
+        let paths = [path, path + "-wal", URL(fileURLWithPath: path).deletingLastPathComponent().path]
         for file in paths {
             let identity = ((try? FileManager.default.attributesOfItem(atPath: file)[.systemFileNumber]) as? NSNumber)?.uint64Value
             if sources[file]?.0 == identity { continue }
@@ -75,11 +75,15 @@ final class MessagesWatcher: @unchecked Sendable {
             source.setEventHandler { [weak self] in
                 guard let self else { return }
                 events += 1
-                rearm()
-                pending?.cancel()
-                let work = DispatchWorkItem { [weak self] in self?.signal(false) }
+                guard pending == nil else { return }
+                let work = DispatchWorkItem { [weak self] in
+                    guard let self else { return }
+                    pending = nil
+                    rearm()
+                    signal(false)
+                }
                 pending = work
-                queue.asyncAfter(deadline: .now() + .milliseconds(25), execute: work)
+                queue.asyncAfter(deadline: .now() + .milliseconds(100), execute: work)
             }
             sources[file] = (identity, source)
             source.resume()

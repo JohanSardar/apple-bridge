@@ -1,14 +1,17 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[10.78 14.98 10.16] cpus=8 other_heavy=1"
+    "summary": "air: load=[10.85 8.78 13.83] cpu_idle=30% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5E1A0J1Y8YHMQG6ENNCVKT1",
+  "run_id": "run_01M6392BEQAMDCFXW9YZX32HDP",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
   "scenario": "MSG-DB-REPLACED",
   "level": "sim",
   "passed": true,
-  "git_sha": "ee3cc74aca69aa26cbb097c2a7cdb46751941d88",
-  "at": "2026-10-21T01:30:43.138009Z",
+  "git_sha": "25767535ee953ff549360bd1106ae68a6d004077",
+  "at": "2026-10-29T07:30:23.831379Z",
   "assertions": [
     {
       "name": "seed",

@@ -12,6 +12,15 @@ struct Checks {
         throw SourceFailure.invalid
     }
     static func main() async throws {
+        var retry = CaptureRetry()
+        try require(retry.delay(after: .zero, permissionMissing: false) == .seconds(2))
+        try require(retry.delay(after: .zero, permissionMissing: false) == .seconds(4))
+        for _ in 0..<10 { _ = retry.delay(after: .zero, permissionMissing: false) }
+        try require(retry.delay(after: .zero, permissionMissing: false) == .seconds(30))
+        try require(retry.delay(after: .zero, permissionMissing: true) == .seconds(1))
+        try require(retry.delay(after: .zero, permissionMissing: false) == .seconds(2))
+        try require(retry.delay(after: .seconds(30), permissionMissing: false) == .seconds(1))
+        try require(retry.delay(after: .zero, permissionMissing: false) == .seconds(2))
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: root) }

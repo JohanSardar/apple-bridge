@@ -1,14 +1,17 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[5.49 7.69 7.56] cpus=8 other_heavy=0"
+    "summary": "air: load=[8.55 8.28 13.78] cpu_idle=65% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5G46QJZJBHBJRSQS0JSDHDE",
+  "run_id": "run_01M6391S5KQQ0FY2Y1BPZRC3FF",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
   "scenario": "MSG-COMMAND-PARTS",
   "level": "sim",
   "passed": true,
-  "git_sha": "3728fc71e4cf92d36e6dc81581232d6e07f029c8",
-  "at": "2026-10-21T20:59:50.239371Z",
+  "git_sha": "25767535ee953ff549360bd1106ae68a6d004077",
+  "at": "2026-10-29T07:30:05.10735Z",
   "assertions": [
     {
       "name": "seed_self_chat",
@@ -1090,16 +1093,16 @@
   "latency": {
     "single_text_delayed_capture_no_action_ms": {
       "samples": 1,
-      "p50_ms": 385.624416,
-      "p95_ms": 385.624416,
-      "max_ms": 385.624416,
+      "p50_ms": 418.852666,
+      "p95_ms": 418.852666,
+      "max_ms": 418.852666,
       "timeouts": 0
     },
     "single_text_delayed_capture_resolve_ms": {
       "samples": 1,
-      "p50_ms": 371.413958,
-      "p95_ms": 371.413958,
-      "max_ms": 371.413958,
+      "p50_ms": 586.361042,
+      "p95_ms": 586.361042,
+      "max_ms": 586.361042,
       "timeouts": 0
     }
   },

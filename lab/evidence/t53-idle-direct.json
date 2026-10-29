@@ -1,0 +1,26 @@
+{
+  "settled": 1,
+  "warmup_seconds": 811.3,
+  "idle_seconds": 300.02,
+  "samples": 30,
+  "ps_mean_cpu_percent": 1.5933333333333333,
+  "cpu_percent": 3.8397972821655317,
+  "passed": 0,
+  "before_cpu_percent": 29.01,
+  "reconcile_started": 1,
+  "reconcile_completed": 1,
+  "sim_scenarios_passed": 39,
+  "gate_lint": 1,
+  "gate_features": 1,
+  "gate_go_build": 1,
+  "gate_go_test": 1,
+  "gate_native_build": 1,
+  "signed_helper_sha256": "95dcd643c0b1e62df93800affd81dfd217c3b83b1549701408773db9927f9fb9",
+  "code_head": "00bec53fae5775c9416a570a8816be56de74f747",
+  "hot_symbols": [
+    "SafariSource.history(now:days:maxRows:)",
+    "UsageInputs.init(_:power:zone:)"
+  ],
+  "messages_reconcile_in_idle_profile": 0,
+  "method": "30 ps %cpu samples at 10-second intervals; cumulative ps time delta over the same 300-second window"
+}

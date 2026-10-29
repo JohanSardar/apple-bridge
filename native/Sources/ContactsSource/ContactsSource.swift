@@ -150,7 +150,7 @@ public final class ContactsSource: Source {
             return true
         }
     }
-    private func scan(into sink: any ObservationSink, live: Bool, force: Bool = false, notificationAt: UInt64 = 0) async throws {
+    private func scan(into sink: any ObservationSink, live: Bool, force: Bool = false, notificationAt: UInt64 = 0, poll: Bool = false) async throws {
         let scanID = UUID().uuidString
         let metadata: [String: JSON] = ["scan_id": .string(scanID), "notification_ns": .integer(notificationAt)]
         trace.record("contacts_scan_requested", fields: metadata)
@@ -163,6 +163,11 @@ public final class ContactsSource: Source {
         }
         let started = timestamp()
         trace.record("contacts_scan_started", fields: metadata)
+        if poll && !force && authorized, let token, store.currentHistoryToken == token,
+           (try? store.unifiedMeContactWithKeys(toFetch: [CNContactIdentifierKey as NSString]).identifier) == meIdentifier {
+            completed = true
+            return
+        }
         let batch: AppleBridgeContactsHistoryBatch
         do { batch = try history(token) }
         catch {
@@ -274,7 +279,7 @@ public final class ContactsSource: Source {
         let observer = NotificationCenter.default.addObserver(forName: .CNContactStoreDidChange, object: nil, queue: nil) { @Sendable [trace] _ in let delivered = CaptureTrace.now(); trace.record("contacts_notified", fields: ["delivered_ns": .integer(delivered)]); continuation.yield(delivered) }
         let polling = Task { @ContactsActor in
             while !Task.isCancelled {
-                do { try await Task.sleep(for: .seconds(2)); continuation.yield(0) } catch { return }
+                do { try await Task.sleep(for: .seconds(30)); continuation.yield(0) } catch { return }
             }
         }
         defer { polling.cancel(); NotificationCenter.default.removeObserver(observer); continuation.finish() }
@@ -282,7 +287,7 @@ public final class ContactsSource: Source {
         for await notified in changes {
             try Task.checkCancellation()
             try await Task.sleep(for: .milliseconds(50))
-            try await scan(into: sink, live: true, notificationAt: notified)
+            try await scan(into: sink, live: true, notificationAt: notified, poll: notified == 0)
         }
     }
 

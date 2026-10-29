@@ -1,14 +1,17 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[7.45 12.1 13.89] cpus=8 other_heavy=1"
+    "summary": "air: load=[8.51 8.27 13.81] cpu_idle=33% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5EYY0N3SR45QZG5JGYJNNMV",
+  "run_id": "run_01M6391K9X6FKYJ71VG18TGAPK",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
   "scenario": "MSG-COMMAND-OBSERVED-IDS",
   "level": "sim",
   "passed": true,
-  "git_sha": "ddc23dc5fcacc9d272ef8e37a18e371b0dbe1533",
-  "at": "2026-10-21T10:08:27.301071Z",
+  "git_sha": "25767535ee953ff549360bd1106ae68a6d004077",
+  "at": "2026-10-29T07:29:59.101221Z",
   "assertions": [
     {
       "name": "seed_self_chat",
@@ -262,44 +265,44 @@
   "latency": {
     "gateway_edit_command_to_readable_record": {
       "samples": 1,
-      "p50_ms": 154.979667,
-      "p95_ms": 154.979667,
-      "max_ms": 154.979667,
+      "p50_ms": 125.539916,
+      "p95_ms": 125.539916,
+      "max_ms": 125.539916,
       "timeouts": 0
     },
     "gateway_reply_command_to_readable_record": {
       "samples": 1,
-      "p50_ms": 118.485125,
-      "p95_ms": 118.485125,
-      "max_ms": 118.485125,
+      "p50_ms": 95.369292,
+      "p95_ms": 95.369292,
+      "max_ms": 95.369292,
       "timeouts": 0
     },
     "gateway_send_command_to_readable_record": {
       "samples": 1,
-      "p50_ms": 206.696792,
-      "p95_ms": 206.696792,
-      "max_ms": 206.696792,
+      "p50_ms": 119.697,
+      "p95_ms": 119.697,
+      "max_ms": 119.697,
       "timeouts": 0
     },
     "replica_edit_command_to_readable_record": {
       "samples": 1,
-      "p50_ms": 185.373416,
-      "p95_ms": 185.373416,
-      "max_ms": 185.373416,
+      "p50_ms": 273.4835,
+      "p95_ms": 273.4835,
+      "max_ms": 273.4835,
       "timeouts": 0
     },
     "replica_reply_command_to_readable_record": {
       "samples": 1,
-      "p50_ms": 168.574667,
-      "p95_ms": 168.574667,
-      "max_ms": 168.574667,
+      "p50_ms": 238.05175,
+      "p95_ms": 238.05175,
+      "max_ms": 238.05175,
       "timeouts": 0
     },
     "replica_send_command_to_readable_record": {
       "samples": 1,
-      "p50_ms": 230.22975,
-      "p95_ms": 230.22975,
-      "max_ms": 230.22975,
+      "p50_ms": 96.112416,
+      "p95_ms": 96.112416,
+      "max_ms": 96.112416,
       "timeouts": 0
     }
   },

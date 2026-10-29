@@ -1,0 +1,81 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[12.27 11.23 11.87] cpu_idle=46% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M639RKF5M9VCY5J5ZQD56F20",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "MSG-RECENTLY-DELETED",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-29T07:42:32.933196Z",
+  "assertions": [
+    {
+      "name": "seed",
+      "passed": true
+    },
+    {
+      "name": "capture",
+      "passed": true
+    },
+    {
+      "name": "other_fixture",
+      "passed": true
+    },
+    {
+      "name": "other_captured",
+      "passed": true
+    },
+    {
+      "name": "delete_fixture",
+      "passed": true
+    },
+    {
+      "name": "deleted_capture",
+      "passed": true
+    },
+    {
+      "name": "recover_chat_observed",
+      "passed": true
+    },
+    {
+      "name": "recover_chat_exactly_once",
+      "passed": true
+    },
+    {
+      "name": "recovered",
+      "passed": true
+    },
+    {
+      "name": "delete_chat_permanently_observed",
+      "passed": true
+    },
+    {
+      "name": "delete_chat_permanently_exactly_once",
+      "passed": true
+    },
+    {
+      "name": "purge_identity",
+      "passed": true
+    },
+    {
+      "name": "purged",
+      "passed": true
+    },
+    {
+      "name": "other_conversation_preserved",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": [
+    "air"
+  ]
+}

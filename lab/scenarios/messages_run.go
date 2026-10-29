@@ -273,7 +273,7 @@ func runMessages(ctx context.Context, s Scenario, level string) Evidence {
 		add("replica_contains_both_receipts", found)
 	case "MSG-DECODE":
 		output, decoderErr := exec.CommandContext(ctx, "bash", "packaging/dev/check-decoders.sh").CombinedOutput()
-		add("decoder_fixture_checks", decoderErr == nil && strings.TrimSpace(string(output)) == "all decoder checks passed")
+		add("decoder_fixture_checks", decoderErr == nil && strings.TrimSpace(string(output)) == "all decoder checks passed\nall SourceSupport checks passed")
 		add("malformed_observed", action("malformed", "message-000001", 0) && await())
 		records, _ := w.Records(w.Replicas[0])
 		found := false

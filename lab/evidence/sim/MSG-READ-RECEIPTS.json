@@ -1,0 +1,69 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[10.63 9.52 11.34] cpu_idle=26% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M639NRHDS42GKJ4TYSHYFDA7",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "MSG-READ-RECEIPTS",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-29T07:40:59.821511Z",
+  "assertions": [
+    {
+      "name": "seed",
+      "passed": true
+    },
+    {
+      "name": "capture",
+      "passed": true
+    },
+    {
+      "name": "set_read_receipts_observed",
+      "passed": true
+    },
+    {
+      "name": "set_read_receipts_exactly_once",
+      "passed": true
+    },
+    {
+      "name": "on",
+      "passed": true
+    },
+    {
+      "name": "set_read_receipts_observed",
+      "passed": true
+    },
+    {
+      "name": "set_read_receipts_exactly_once",
+      "passed": true
+    },
+    {
+      "name": "off",
+      "passed": true
+    },
+    {
+      "name": "set_read_receipts_observed",
+      "passed": true
+    },
+    {
+      "name": "set_read_receipts_exactly_once",
+      "passed": true
+    },
+    {
+      "name": "default",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": [
+    "air"
+  ]
+}

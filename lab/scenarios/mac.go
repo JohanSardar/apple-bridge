@@ -119,6 +119,19 @@ func runMac(ctx context.Context, s Scenario, level string) (e Evidence) {
 			add("source_matches_pmset", strings.Contains(string(bytes), "AC Power") == strings.Contains(power.Source, "AC"))
 			return
 		}
+		warmup := time.Now()
+		err = w.Await(30*time.Minute, func() bool {
+			data, problem := os.ReadFile(filepath.Join(w.Gateway.Home, "helper", "messages-idle.json"))
+			var state struct {
+				Idle bool `json:"idle"`
+			}
+			return problem == nil && json.Unmarshal(data, &state) == nil && state.Idle
+		})
+		add("messages_capture_and_media_settled", err == nil)
+		if err != nil {
+			return
+		}
+		warmupSeconds := time.Since(warmup).Seconds()
 		pid, err := os.ReadFile(filepath.Join(w.Gateway.Home, "helper", "helper.pid"))
 		add("helper_pid", err == nil)
 		if err != nil {
@@ -148,8 +161,18 @@ func runMac(ctx context.Context, s Scenario, level string) (e Evidence) {
 		case <-timer.C:
 		}
 		after := cpu()
-		e.Metrics = map[string]any{"helper_cpu_percent": 100 * (after - before) / time.Since(started).Seconds(), "idle_seconds": time.Since(started).Seconds()}
-		add("helper_cpu_under_two_percent", before >= 0 && after >= before && (after-before)/time.Since(started).Seconds() < 0.02)
+		seconds := time.Since(started).Seconds()
+		percent := 100 * (after - before) / seconds
+		passed := before >= 0 && after >= before && percent < 2
+		e.Metrics = map[string]any{"helper_cpu_percent": percent, "idle_seconds": seconds, "warmup_seconds": warmupSeconds}
+		add("helper_cpu_under_two_percent", passed)
+		if !passed && before >= 0 && after >= before {
+			if profile, problem := os.CreateTemp("", "apple-bridge-helper-idle-"+e.RunID+"-*.sample"); problem == nil {
+				name := profile.Name()
+				profile.Close()
+				_ = exec.CommandContext(ctx, "sample", strings.TrimSpace(string(pid)), "5", "10", "-file", name).Run()
+			}
+		}
 		return
 	}
 

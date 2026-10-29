@@ -226,19 +226,25 @@ public actor AppleSession: ObservationSink {
     }
 
     private func captureAdditional(_ source: any Source) async {
+        var retry = CaptureRetry()
         while !Task.isCancelled && wire != nil {
+            let started = ContinuousClock.now
+            var delay = Duration.seconds(1)
             do {
                 let readiness = await source.open()
                 try await sourceState(source: source.name, state: readiness.state, coverage: readiness.coverage, capabilities: readiness.capabilities, reason: readiness.reason)
                 try await source.capture(captureResume(source.name), into: self)
+                retry = CaptureRetry()
             } catch {
                 if Task.isCancelled || wire == nil { return }
                 let permissionMissing: Bool
                 if case SourceFailure.permissionMissing = error { permissionMissing = true } else { permissionMissing = false }
                 let readiness = await source.open()
+                delay = retry.delay(after: started.duration(to: .now), permissionMissing: permissionMissing)
+                trace.record("capture_retry", fields: ["source": .string(source.name), "delay_seconds": .number(Double(delay.components.seconds))])
                 try? await sourceState(source: source.name, state: permissionMissing ? "permission_missing" : "degraded", coverage: readiness.coverage, capabilities: [], reason: permissionMissing ? "permission_required" : "capture_failed")
             }
-            do { try await Task.sleep(for: .seconds(1)) } catch { return }
+            do { try await Task.sleep(for: delay) } catch { return }
         }
     }
 

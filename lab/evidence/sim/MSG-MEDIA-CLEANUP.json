@@ -1,17 +1,17 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[13.8 10.91 10.1] cpu_idle=36% cpus=8 other_heavy=1"
+    "summary": "air: load=[10.75 9.44 11.37] cpu_idle=33% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M6102EZBVV4NP46KEHH45V1V",
+  "run_id": "run_01M639MYRMZJBAMEDV94F5WWGZ",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "MSG-MEDIA-CLEANUP",
   "level": "sim",
   "passed": true,
-  "git_sha": "9ebe48cd080c55b8c40a8ea10ee086dd3c981fdf",
-  "at": "2026-10-28T10:14:41.387642Z",
+  "git_sha": "00bec53fae5775c9416a570a8816be56de74f747",
+  "at": "2026-10-29T07:40:33.428879Z",
   "assertions": [
     {
       "name": "attachment_only_target",
@@ -77,100 +77,100 @@
   "latency": {
     "ambiguous_ui_target_denied": {
       "samples": 1,
-      "p50_ms": 379.217209,
-      "p95_ms": 379.217209,
-      "max_ms": 379.217209,
+      "p50_ms": 420.924542,
+      "p95_ms": 420.924542,
+      "max_ms": 420.924542,
       "timeouts": 0
     },
     "attachment_only_target": {
       "samples": 1,
-      "p50_ms": 1724.414292,
-      "p95_ms": 1724.414292,
-      "max_ms": 1724.414292,
+      "p50_ms": 1575.050166,
+      "p95_ms": 1575.050166,
+      "max_ms": 1575.050166,
       "timeouts": 0
     },
     "baseline_data_denied": {
       "samples": 1,
-      "p50_ms": 337.257792,
-      "p95_ms": 337.257792,
-      "max_ms": 337.257792,
+      "p50_ms": 328.977292,
+      "p95_ms": 328.977292,
+      "max_ms": 328.977292,
       "timeouts": 0
     },
     "empty_database_baseline_is_valid": {
       "samples": 1,
-      "p50_ms": 360.072833,
-      "p95_ms": 360.072833,
-      "max_ms": 360.072833,
+      "p50_ms": 356.664333,
+      "p95_ms": 356.664333,
+      "max_ms": 356.664333,
       "timeouts": 0
     },
     "incoming_echo_is_separate_target": {
       "samples": 1,
-      "p50_ms": 471.942,
-      "p95_ms": 471.942,
-      "max_ms": 471.942,
+      "p50_ms": 366.140167,
+      "p95_ms": 366.140167,
+      "max_ms": 366.140167,
       "timeouts": 0
     },
     "mixed_attachment_bubble_denied": {
       "samples": 1,
-      "p50_ms": 340.320791,
-      "p95_ms": 340.320791,
-      "max_ms": 340.320791,
+      "p50_ms": 465.486833,
+      "p95_ms": 465.486833,
+      "max_ms": 465.486833,
       "timeouts": 0
     },
     "native_file_description_ambiguous_denied": {
       "samples": 1,
-      "p50_ms": 342.200334,
-      "p95_ms": 342.200334,
-      "max_ms": 342.200334,
+      "p50_ms": 525.356458,
+      "p95_ms": 525.356458,
+      "max_ms": 525.356458,
       "timeouts": 0
     },
     "native_file_description_incoming": {
       "samples": 1,
-      "p50_ms": 357.026084,
-      "p95_ms": 357.026084,
-      "max_ms": 357.026084,
+      "p50_ms": 421.974375,
+      "p95_ms": 421.974375,
+      "max_ms": 421.974375,
       "timeouts": 0
     },
     "native_file_description_outgoing": {
       "samples": 1,
-      "p50_ms": 443.960458,
-      "p95_ms": 443.960458,
-      "max_ms": 443.960458,
+      "p50_ms": 344.809458,
+      "p95_ms": 344.809458,
+      "max_ms": 344.809458,
       "timeouts": 0
     },
     "native_file_description_substring_denied": {
       "samples": 1,
-      "p50_ms": 329.34125,
-      "p95_ms": 329.34125,
-      "max_ms": 329.34125,
+      "p50_ms": 518.994167,
+      "p95_ms": 518.994167,
+      "max_ms": 518.994167,
       "timeouts": 0
     },
     "other_chat_denied": {
       "samples": 1,
-      "p50_ms": 358.112792,
-      "p95_ms": 358.112792,
-      "max_ms": 358.112792,
+      "p50_ms": 350.225958,
+      "p95_ms": 350.225958,
+      "max_ms": 350.225958,
       "timeouts": 0
     },
     "other_registered_file_is_not_the_target": {
       "samples": 1,
-      "p50_ms": 307.349208,
-      "p95_ms": 307.349208,
-      "max_ms": 307.349208,
+      "p50_ms": 488.293208,
+      "p95_ms": 488.293208,
+      "max_ms": 488.293208,
       "timeouts": 0
     },
     "similar_filename_denied": {
       "samples": 1,
-      "p50_ms": 327.26975,
-      "p95_ms": 327.26975,
-      "max_ms": 327.26975,
+      "p50_ms": 431.807542,
+      "p95_ms": 431.807542,
+      "max_ms": 431.807542,
       "timeouts": 0
     },
     "unregistered_attachment_denied": {
       "samples": 1,
-      "p50_ms": 335.164334,
-      "p95_ms": 335.164334,
-      "max_ms": 335.164334,
+      "p50_ms": 543.732458,
+      "p95_ms": 543.732458,
+      "max_ms": 543.732458,
       "timeouts": 0
     }
   },

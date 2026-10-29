@@ -1,4 +1,5 @@
 import Foundation
+import AppKit
 import SQLite3
 import MessagesSource
 import SourceSupport
@@ -20,6 +21,7 @@ actor CaptureSink: ObservationSink {
     private var records: [String: JSON] = [:]
     private var generations: Set<String> = []
     private var complete = false
+    private var completions = 0
     private var failed = false
     private let hookPath: String?
     private var referenceStage = 0
@@ -31,7 +33,7 @@ actor CaptureSink: ObservationSink {
         generations.insert(generation)
         if observations.contains(where: { $0["kind"].string == "absent" && ["retained-message", "retained-chat"].contains($0["native_key"].string) }) { failed = true }
         for item in observations where item["kind"].string == "upsert" { records[item["native_key"].string] = item["data"] }
-        if completionEvidence == "complete" { complete = true }
+        if completionEvidence == "complete" { complete = true; completions += 1 }
         if live, let hookPath {
             if referenceStage == 0 && observations.contains(where: { $0["collection"].string == "messages.chat" && $0["data"]["display_name"].string == "changed" }) {
                 referenceStage = 1
@@ -47,6 +49,7 @@ actor CaptureSink: ObservationSink {
     func recoverable(_ key: String) -> Bool { !failed && records[key]?["deleted_at"] != nil && records[key]?["deleted_at"] != .null }
     func record(_ key: String) -> JSON { records[key] ?? .null }
     func contains(_ key: String) -> Bool { records[key] != nil && !failed }
+    func completionCount() -> Int { completions }
     func completed() -> Bool { complete && !failed }
     func referencesFresh() -> Bool { records["synthetic-000000"]?["text"].string == "newer" && records["synthetic-000001"]?["text"].string == "newest" && !failed }
     func replaced() -> Bool { generations.count > 1 && !failed }
@@ -109,6 +112,12 @@ struct MessagesCaptureChecks {
             let sink = CaptureSink()
             let task = Task { try await source.capture(.null, into: sink) }
             try require(await wait { let complete = await sink.completed(); let contains = await sink.contains("synthetic-initial"); return complete && contains }, "partial schema capture")
+            if events {
+                let count = await sink.completionCount()
+                NSWorkspace.shared.notificationCenter.post(name: NSWorkspace.didWakeNotification, object: nil)
+                try await Task.sleep(for: .seconds(5))
+                try require(await sink.completionCount() == count, "unchanged watcher polls do not reconcile")
+            }
             do {
                 let database = try SyntheticDatabase(path)
                 try database.execute("PRAGMA journal_mode=WAL; INSERT INTO message VALUES('synthetic-wal','synthetic');")
@@ -159,6 +168,18 @@ struct MessagesCaptureChecks {
         try require(await wait(20) { await referenceSink.completed() }, "referenced row initial capture")
         try database.execute("UPDATE chat SET display_name='changed';")
         try require(await wait(5) { await referenceSink.referencesFresh() }, "every insert drain processes references until quiescent")
+        let beforeAudit = await referenceSink.completionCount()
+        try database.execute("UPDATE message SET text='audited-old-change' WHERE guid='synthetic-000000';")
+        NSWorkspace.shared.notificationCenter.post(name: NSWorkspace.didWakeNotification, object: nil)
+        try require(await wait(5) {
+            let changed = await referenceSink.record("synthetic-000000")["text"].string == "audited-old-change"
+            let completed = await referenceSink.completionCount() > beforeAudit
+            return changed && completed
+        }, "changed database audits rows outside recent window")
+        let audited = await referenceSink.completionCount()
+        NSWorkspace.shared.notificationCenter.post(name: NSWorkspace.didWakeNotification, object: nil)
+        try await Task.sleep(for: .seconds(3))
+        try require(await referenceSink.completionCount() == audited, "repeated wake skips unchanged audited database")
         referenceTask.cancel()
         _ = try? await referenceTask.value
         let visibilityPath = root.appendingPathComponent("visibility.db").path

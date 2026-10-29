@@ -1,10 +1,11 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[9.96 11.55 11.26] cpus=8 other_heavy=1"
+    "summary": "air: load=[4.44 6.56 11.35] cpu_idle=16% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5EQTZARQXFZS9W5ZRDVYK7C",
+  "run_id": "run_01M639BWE4ASXAM7T5FZFNYFGX",
   "metrics": {
+    "capture_observer_resets": 0,
     "mcp_filter_deleted": 1,
     "mcp_filter_known": 1,
     "mcp_filter_spam": 1,
@@ -21,8 +22,8 @@
   "scenario": "MSG-DECODE-FORMATTING",
   "level": "sim",
   "passed": true,
-  "git_sha": "64dcd17305e94582cc0b2ffd54fb7f8e52520e3f",
-  "at": "2026-10-21T08:04:27.608852Z",
+  "git_sha": "00bec53fae5775c9416a570a8816be56de74f747",
+  "at": "2026-10-29T07:35:36.132932Z",
   "assertions": [
     {
       "name": "scrubbed_native_decoder_fixtures",
