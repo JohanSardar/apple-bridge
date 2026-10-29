@@ -1113,13 +1113,13 @@ features:
     limits:
       - scenario: CLK-SIM
         level: sim
-        reason: Fake pack runner verifies bounds and refusal to infer effects; full alarm CRUD and timer simulation remain unimplemented.
+        reason: Injected runner verifies structured alarm CRUD readback, timer confirmation and world time; native pack parameter wiring remains unqualified.
       - scenario: CLK-ALARM-REAL
         level: real
-        reason: Leader import of AB Clock and qualification of structured alarm serialization and readback required; synthetic workflow cleanup run has unverified native effects.
+        reason: real qualification batched at end; leader import and structured alarm serialization and readback qualification required.
       - scenario: CLK-TIMER-REAL
         level: real
-        reason: Leader import and independent running timer readback required; start action alone cannot establish running state.
+        reason: real qualification batched at end; leader import and independent running timer readback required.
 
   - id: mac.capture
     title: Mac system state capture
