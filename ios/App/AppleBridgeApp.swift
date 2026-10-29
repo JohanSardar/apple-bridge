@@ -2,6 +2,7 @@ import SwiftUI
 
 @main
 struct AppleBridgeApp: App {
+    @UIApplicationDelegateAdaptor(BridgeAppDelegate.self) private var delegate
     var body: some Scene {
         WindowGroup {
             BridgeSettings()
@@ -10,6 +11,7 @@ struct AppleBridgeApp: App {
 }
 
 struct BridgeSettings: View {
+    @Environment(\.scenePhase) private var scenePhase
     @State private var pairing = PairingState()
     var body: some View {
         NavigationStack {
@@ -34,27 +36,35 @@ struct BridgeSettings: View {
                 }
                 Section {
                     NavigationLink("Diagnostics") {
-                        DiagnosticsScreen()
+                        DiagnosticsScreen(pairing: pairing)
                     }
                 }
             }
             .navigationTitle("Apple Bridge")
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active { Task { await PushDelivery.shared.drain() } }
+            }
             .task {
                 if let index = ProcessInfo.processInfo.arguments.firstIndex(of: "--pair-code"), ProcessInfo.processInfo.arguments.count > index + 1 {
                     await pairing.pair(ProcessInfo.processInfo.arguments[index + 1])
                 }
+                await PushDelivery.shared.drain()
             }
         }
     }
 }
 
 struct DiagnosticsScreen: View {
+    @Bindable var pairing: PairingState
     var body: some View {
         Form {
             LabeledContent("Version", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown")
-            LabeledContent("Gateway", value: "Not connected")
+            LabeledContent("Gateway", value: pairing.status)
             LabeledContent("Capabilities", value: String(Capabilities.all.count))
-            LabeledContent("Last command", value: "None")
+            LabeledContent("Last command", value: PushDelivery.shared.lastResult)
+            LabeledContent("Push delivery", value: PushDelivery.shared.status)
+            LabeledContent("Push wakes", value: String(PushDelivery.shared.wakeCount))
+            Button("Check pending commands") { Task { await PushDelivery.shared.drain() } }
         }
         .navigationTitle("Diagnostics")
     }

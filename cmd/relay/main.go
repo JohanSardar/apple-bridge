@@ -37,6 +37,8 @@ func run() error {
 	dnsProject := flag.String("dns-project", "", "Google Cloud DNS project")
 	dnsZone := flag.String("dns-zone", "", "Google Cloud DNS managed zone")
 	idle := flag.Duration("idle-timeout", 2*time.Minute, "maximum inactivity across both stream directions")
+	apnsKey := flag.String("apns-key", "", "private APNs signing key path")
+	apnsSandbox := flag.Bool("apns-sandbox", true, "use sandbox APNs for development profiles")
 	flag.Parse()
 	if *idle <= 0 {
 		return fmt.Errorf("idle-timeout must be positive")
@@ -49,6 +51,13 @@ func run() error {
 		return fmt.Errorf("control-cert and control-key required")
 	}
 	server := relay.New(store)
+	if *apnsKey != "" {
+		provider, err := relay.LoadAPNs(*apnsKey, "L2854KRF5Z", "AX3C2B78YD", *apnsSandbox)
+		if err != nil {
+			return err
+		}
+		server.IPhonePush = provider.Send
+	}
 	if *dnsProject != "" {
 		server.DNS, err = relay.NewCloudDNS(context.Background(), *dnsProject, *dnsZone, *zone)
 		if err != nil {

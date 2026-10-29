@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -9,6 +10,8 @@ import (
 	"crypto/x509/pkix"
 	"encoding/json"
 	"flag"
+	"github.com/JohanSardar/apple-bridge/internal/iphone"
+	"github.com/JohanSardar/apple-bridge/internal/state"
 	"math/big"
 	"net/http"
 	"net/url"
@@ -43,7 +46,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	a.Certificate = tls.Certificate{Certificate: [][]byte{der}, PrivateKey: key}
+	certificate := tls.Certificate{Certificate: [][]byte{der}, PrivateKey: key}
 	a.Fingerprint = trust.Fingerprint(der)
 	code, err := a.PairIPhoneCode(*address, false, 10*time.Minute)
 	if err != nil {
@@ -56,8 +59,30 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	mux := frontdoor.Handler(frontdoor.Deps{Authority: a, Operations: &operations.Service{Authority: a}, PublicHost: func() string { return endpoint.Host }}, contracts.Operations)
-	server := &http.Server{Addr: *listen, Handler: mux, TLSConfig: &tls.Config{MinVersion: tls.VersionTLS13, Certificates: []tls.Certificate{a.Certificate}}, ReadHeaderTimeout: 10 * time.Second}
+	store, err := state.Open(filepath.Join(*home, "state"))
+	if err != nil {
+		panic(err)
+	}
+	defer store.Close()
+	if err = store.InitCommands(context.Background()); err != nil {
+		panic(err)
+	}
+	delivery := iphone.NewDelivery(store, a)
+	gateway := &operations.LocalGateway{State: store, Authority: a, Context: context.Background(), IPhone: delivery}
+	delivery.Authorize = gateway.ReauthorizeIPhone
+	if err = gateway.Recover(context.Background()); err != nil {
+		panic(err)
+	}
+	go delivery.Run(context.Background())
+	token, err := a.CreateAPIToken([]contracts.Grant{"iphone:write", "iphone:read"}, true)
+	if err != nil {
+		panic(err)
+	}
+	if err = os.WriteFile(filepath.Join(*home, "api-token"), []byte(token), 0600); err != nil {
+		panic(err)
+	}
+	mux := frontdoor.Handler(frontdoor.Deps{IPhone: delivery, Authority: a, Operations: &operations.Service{State: store, Target: gateway, Authority: a}, PublicHost: func() string { return endpoint.Host }}, contracts.Operations)
+	server := &http.Server{Addr: *listen, Handler: mux, TLSConfig: &tls.Config{MinVersion: tls.VersionTLS13, Certificates: []tls.Certificate{certificate}}, ReadHeaderTimeout: 10 * time.Second}
 	json.NewEncoder(os.Stdout).Encode(map[string]bool{"ready": true})
 	if err = server.ListenAndServeTLS("", ""); err != nil {
 		panic(err)

@@ -13,6 +13,7 @@ import (
 
 	"github.com/JohanSardar/apple-bridge/internal/applepeer"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
+	"github.com/JohanSardar/apple-bridge/internal/iphone"
 	"github.com/JohanSardar/apple-bridge/internal/state"
 	"github.com/JohanSardar/apple-bridge/internal/trust"
 )
@@ -23,6 +24,7 @@ type CommandTarget interface {
 	List(context.Context, trust.Principal, contracts.CommandQuery) ([]contracts.CommandRecord, error)
 }
 type LocalGateway struct {
+	IPhone        *iphone.Delivery
 	QueryAudit    func(QueryAudit)
 	queryRates    map[string]queryWindow
 	uploadMu      sync.Mutex
@@ -118,6 +120,14 @@ func (g *LocalGateway) Submit(ctx context.Context, p trust.Principal, c contract
 	if err = g.authorize(p, c.Op); err != nil {
 		return empty, err
 	}
+	if contracts.CollectionSource(c.Op) == contracts.IPhone {
+		var target contracts.IPhoneTarget
+		json.Unmarshal(c.Args, &target)
+		phone, err := g.Authority.Principal(target.DeviceID)
+		if err != nil || phone.Kind != "iphone" {
+			return empty, contracts.ErrNotFound
+		}
+	}
 	if contracts.MacPowerAction(c.Op) && (!p.IsAgent() || p.Level != trust.AgentApprove) {
 		return empty, contracts.ErrForbidden
 	}
@@ -184,7 +194,7 @@ func (g *LocalGateway) Submit(ctx context.Context, p trust.Principal, c contract
 		r := contracts.CommandRecord{UploadReferences: refs, Command: contracts.RedactMacCommand(c), Principal: p.ID, Source: contracts.CollectionSource(c.Op), RequestHash: hash, State: contracts.CommandAwaitingApproval, Disposition: contracts.DispositionAwaitingApproval, AdmissionEra: era, CreatedAt: now, ExpiresAt: now.Add(24 * time.Hour)}
 		return g.State.TransitionCommand(ctx, state.CommandTransition{Record: r})
 	}
-	if !g.Peer.Available() {
+	if contracts.CollectionSource(c.Op) != contracts.IPhone && !g.Peer.Available() {
 		return empty, contracts.ErrUnavailable
 	}
 	r := contracts.CommandRecord{UploadReferences: refs, Command: contracts.RedactMacCommand(c), Principal: p.ID, Source: contracts.CollectionSource(c.Op), RequestHash: hash, State: "admitted", AdmissionEra: era, CreatedAt: now, ExpiresAt: expiry}
@@ -222,6 +232,13 @@ type commandResult struct {
 }
 
 func (g *LocalGateway) execute(r contracts.CommandRecord, p trust.Principal, c contracts.Command, a contracts.ReminderArgs, expiry, deadline time.Time, hash string) (contracts.CommandRecord, error) {
+	if r.Source == contracts.IPhone {
+		if g.IPhone == nil {
+			return g.transition(g.Context, r, contracts.CommandRejected, contracts.DispositionRejectedBeforeDispatch, nil, contracts.ErrUnavailable)
+		}
+		g.IPhone.Wake()
+		return r, nil
+	}
 	if strings.HasPrefix(c.Op, "notes.") {
 		return g.executeNote(r, p, c, expiry, deadline, hash)
 	}
@@ -778,6 +795,9 @@ func (g *LocalGateway) Status(ctx context.Context, p trust.Principal, q contract
 			return r, nil
 		}
 	}
+	if r.Source == contracts.IPhone {
+		return r, nil
+	}
 	if q.Resolve && (r.State == "indeterminate" || resolvableMessageParts(r)) {
 		release, err := g.lock(ctx, "command:"+q.ID)
 		if err != nil {
@@ -823,6 +843,9 @@ func (g *LocalGateway) Recover(ctx context.Context) error {
 		return err
 	}
 	for _, r := range rows {
+		if r.Source == contracts.IPhone {
+			continue
+		}
 		switch r.State {
 		case "awaiting_approval":
 			_, err = g.expireApproval(ctx, r)

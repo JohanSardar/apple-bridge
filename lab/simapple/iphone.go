@@ -17,6 +17,7 @@ import (
 type IPhone struct {
 	Signing    ed25519.PrivateKey
 	Encryption *ecdh.PrivateKey
+	Gateway    []byte
 	ID         string
 }
 
@@ -50,11 +51,13 @@ func (p *IPhone) Pair(client *http.Client, address, raw string) (int, error) {
 	}
 	defer response.Body.Close()
 	var result struct {
-		ID string `json:"id"`
+		ID      string `json:"id"`
+		Gateway []byte `json:"gateway_key"`
 	}
 	if response.StatusCode == 200 {
 		err = json.NewDecoder(response.Body).Decode(&result)
 		p.ID = result.ID
+		p.Gateway = result.Gateway
 	}
 	return response.StatusCode, err
 }

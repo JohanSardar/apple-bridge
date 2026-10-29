@@ -1,0 +1,9 @@
+{
+  "passed": false,
+  "assertions": {
+    "signed_build": true,
+    "usb_install": true,
+    "phone_pairing_requires_allow": true,
+    "locked_phone_roundtrip": false
+  }
+}

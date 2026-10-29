@@ -140,6 +140,9 @@ func ValidCommandID(id string) bool {
 }
 
 func ValidateCommand(c Command) (ReminderArgs, error) {
+	if strings.HasPrefix(c.Op, "iphone.") {
+		return ReminderArgs{}, ValidateIPhoneCommand(c)
+	}
 	if strings.HasPrefix(c.Op, "mail.") {
 		return ValidateMailCommand(c)
 	}

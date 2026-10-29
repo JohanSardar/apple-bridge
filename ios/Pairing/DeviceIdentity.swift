@@ -9,6 +9,8 @@ struct DeviceIdentity: Codable {
     var address: String?
     var fingerprint: String?
     var remote: Bool?
+    var gatewayKey: Data?
+    var pushToken: String?
 
     static func load() throws -> DeviceIdentity {
         var result: CFTypeRef?

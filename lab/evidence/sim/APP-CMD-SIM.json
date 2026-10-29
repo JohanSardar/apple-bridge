@@ -1,0 +1,181 @@
+{
+  "passed": true,
+  "assertions": [
+    {
+      "name": "isolated_home",
+      "passed": true
+    },
+    {
+      "name": "authority",
+      "passed": true
+    },
+    {
+      "name": "state",
+      "passed": true
+    },
+    {
+      "name": "ledger",
+      "passed": true
+    },
+    {
+      "name": "pair_code",
+      "passed": true
+    },
+    {
+      "name": "phone",
+      "passed": true
+    },
+    {
+      "name": "paired",
+      "passed": true
+    },
+    {
+      "name": "command_token",
+      "passed": true
+    },
+    {
+      "name": "principal",
+      "passed": true
+    },
+    {
+      "name": "offline_admitted_without_helper",
+      "passed": true
+    },
+    {
+      "name": "restart_state",
+      "passed": true
+    },
+    {
+      "name": "restart_ledger",
+      "passed": true
+    },
+    {
+      "name": "recover_preserves_queue",
+      "passed": true
+    },
+    {
+      "name": "durable_offline_queue",
+      "passed": true
+    },
+    {
+      "name": "relay_store",
+      "passed": true
+    },
+    {
+      "name": "relay_enrollment",
+      "passed": true
+    },
+    {
+      "name": "signed_push_registration",
+      "passed": true
+    },
+    {
+      "name": "encrypted_relay_push",
+      "passed": true
+    },
+    {
+      "name": "gateway_signature_and_decryption",
+      "passed": true
+    },
+    {
+      "name": "tampered_ciphertext_rejected",
+      "passed": true
+    },
+    {
+      "name": "command_payload",
+      "passed": true
+    },
+    {
+      "name": "wrong_result_hash_rejected",
+      "passed": true
+    },
+    {
+      "name": "signed_result",
+      "passed": true
+    },
+    {
+      "name": "ledger_observed",
+      "passed": true
+    },
+    {
+      "name": "duplicate_result_idempotent",
+      "passed": true
+    },
+    {
+      "name": "command_retry_not_redispatched",
+      "passed": true
+    },
+    {
+      "name": "expired_offline_fixture",
+      "passed": true
+    },
+    {
+      "name": "pending_after_completion",
+      "passed": true
+    },
+    {
+      "name": "offline_expiry",
+      "passed": true
+    },
+    {
+      "name": "read_agent",
+      "passed": true
+    },
+    {
+      "name": "read_agent_principal",
+      "passed": true
+    },
+    {
+      "name": "read_agent_cannot_dispatch",
+      "passed": true
+    },
+    {
+      "name": "approve_agent",
+      "passed": true
+    },
+    {
+      "name": "approve_agent_principal",
+      "passed": true
+    },
+    {
+      "name": "iphone_requires_owner_approval",
+      "passed": true
+    },
+    {
+      "name": "owner_device",
+      "passed": true
+    },
+    {
+      "name": "owner_authenticated",
+      "passed": true
+    },
+    {
+      "name": "iphone_owner_approval_without_helper",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    },
+    {
+      "name": "swift_app_decrypts_air_gateway_job",
+      "passed": true
+    },
+    {
+      "name": "swift_signed_result_in_gateway_ledger",
+      "passed": true
+    },
+    {
+      "name": "apns_jwt_and_background_headers",
+      "passed": true
+    },
+    {
+      "name": "configured_apns_key_parsed",
+      "passed": true
+    },
+    {
+      "name": "unacknowledged_receipts_retained_after_expiry",
+      "passed": true
+    }
+  ]
+}

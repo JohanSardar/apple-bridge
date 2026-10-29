@@ -21,6 +21,7 @@ import (
 	"github.com/JohanSardar/apple-bridge/internal/blobs"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/internal/frontdoor"
+	"github.com/JohanSardar/apple-bridge/internal/iphone"
 	"github.com/JohanSardar/apple-bridge/internal/operations"
 	"github.com/JohanSardar/apple-bridge/internal/remote"
 	"github.com/JohanSardar/apple-bridge/internal/replication"
@@ -138,6 +139,7 @@ func Start(ctx context.Context, cfg Config) error {
 		return err
 	}
 	var relayFeed http.Handler
+	var iphoneDelivery *iphone.Delivery
 	service := &operations.Service{State: store, Authority: authority}
 	if cfg.HelperApp != "" {
 		service.PermissionStatus = func(ctx context.Context) (map[string]string, error) { return Permissions(ctx, cfg.HelperApp, "") }
@@ -213,6 +215,11 @@ func Start(ctx context.Context, cfg Config) error {
 		}()
 		feed := &replication.Server{Store: store, Authority: authority, Blobs: blobStore, Command: gateway.Forward, UploadControl: gateway.UploadControl, UploadChunk: gateway.UploadChunk, UploadClosed: gateway.UploadClosed}
 		gateway.Reauthorize = feed.Reauthorize
+		iphoneDelivery = iphone.NewDelivery(store, authority)
+		iphoneDelivery.Authorize = gateway.ReauthorizeIPhone
+		iphoneDelivery.Push = remote.IPhonePush(cfg.Home)
+		gateway.IPhone = iphoneDelivery
+		go iphoneDelivery.Run(ctx)
 		relayFeed = feed.RelayHandler()
 		service.LocalStatus = func() contracts.ReplicaStatus {
 			return contracts.ReplicaStatus{Role: "gateway", State: "ready", Cursor: store.Head(), GatewayHead: store.Head().Sequence, Blobs: blobStore.Progress(), DialReplicas: feed.DialStatus()}
@@ -332,12 +339,12 @@ func Start(ctx context.Context, cfg Config) error {
 		}
 	}
 	go service.MaintainAgentAccess(ctx)
-	apiHandler := frontdoor.Handler(frontdoor.Deps{Operations: service, Authority: authority, Address: cfg.APIAddress, Blobs: blobStore}, contracts.Operations)
+	apiHandler := frontdoor.Handler(frontdoor.Deps{IPhone: iphoneDelivery, Operations: service, Authority: authority, Address: cfg.APIAddress, Blobs: blobStore}, contracts.Operations)
 	privateWeb := bridgeweb.Handler(bridgeweb.Deps{Operations: service, Authority: authority, Address: "127.0.0.1:7780", Blobs: blobStore, FrameWritten: func(cursor contracts.Cursor, at time.Time) { webFrameWritten(cfg.Home, cursor, at) }})
-	privateAPI := frontdoor.Handler(frontdoor.Deps{Operations: service, Authority: authority, Address: "127.0.0.1:7780", Blobs: blobStore}, contracts.Operations)
+	privateAPI := frontdoor.Handler(frontdoor.Deps{IPhone: iphoneDelivery, Operations: service, Authority: authority, Address: "127.0.0.1:7780", Blobs: blobStore}, contracts.Operations)
 	public := remote.NewWithOptions(cfg.Home, remote.Options{PrivateWeb: privateWeb, PrivateAPI: privateAPI})
 	webHandler := bridgeweb.Handler(bridgeweb.Deps{PublicHost: public.Host, Operations: service, Authority: authority, Address: cfg.APIAddress, Blobs: blobStore, FrameWritten: func(cursor contracts.Cursor, at time.Time) { webFrameWritten(cfg.Home, cursor, at) }})
-	publicAPI := frontdoor.Handler(frontdoor.Deps{Operations: service, Authority: authority, Address: cfg.APIAddress, PublicHost: public.Host, Blobs: blobStore}, contracts.Operations)
+	publicAPI := frontdoor.Handler(frontdoor.Deps{IPhone: iphoneDelivery, Operations: service, Authority: authority, Address: cfg.APIAddress, PublicHost: public.Host, Blobs: blobStore}, contracts.Operations)
 	remoteCtx, stopRemote := context.WithCancel(ctx)
 	remoteDone := make(chan struct{})
 	go func() { defer close(remoteDone); public.Run(remoteCtx, webHandler, publicAPI, relayFeed) }()
