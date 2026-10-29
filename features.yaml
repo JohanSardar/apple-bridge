@@ -1419,6 +1419,18 @@ features:
       - {id: CALL-DIAL-REAL, levels: [real]}
     limits:
       - {"scenario": "CALL-DIAL-REAL", "level": "real", "reason": "skipped: prohibited call placement"}
+  - id: iphone.health
+    title: Incremental HealthKit samples and day or week summaries
+    requirements: [R-API, R-SECURE]
+    milestone: G13
+    modules: [ios/Capabilities/HealthRead, internal/contracts, internal/state, internal/iphone]
+    depends_on: [iphone.delivery]
+    status: limited
+    scenarios:
+      - {id: APP-HEALTH-SIM, levels: [sim]}
+      - {id: APP-HEALTH-REAL, levels: [real]}
+    limits:
+      - {scenario: APP-HEALTH-REAL, level: real, reason: 'limited: needs Allow tap'}
   - id: iphone.build
     title: Signed iPhone build and USB install
     requirements: [R-PKG]

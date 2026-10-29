@@ -1,0 +1,128 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[42.62 37.17 50.12] cpu_idle=0% cpus=10 other_heavy=0"
+  },
+  "run_id": "",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "APP-HEALTH-SIM",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-29T23:18:39.156664Z",
+  "assertions": [
+    {
+      "name": "isolated_home",
+      "passed": true
+    },
+    {
+      "name": "swift_capture_build",
+      "passed": true
+    },
+    {
+      "name": "anchored_retry_restart_deletion",
+      "passed": true
+    },
+    {
+      "name": "state",
+      "passed": true
+    },
+    {
+      "name": "authority",
+      "passed": true
+    },
+    {
+      "name": "pair_code",
+      "passed": true
+    },
+    {
+      "name": "phone",
+      "passed": true
+    },
+    {
+      "name": "paired",
+      "passed": true
+    },
+    {
+      "name": "signed_capture",
+      "passed": true
+    },
+    {
+      "name": "retry_deduplicated",
+      "passed": true
+    },
+    {
+      "name": "altered_retry_rejected",
+      "passed": true
+    },
+    {
+      "name": "sequence_gap_rejected",
+      "passed": true
+    },
+    {
+      "name": "sample_record",
+      "passed": true
+    },
+    {
+      "name": "summary_scope_denied",
+      "passed": true
+    },
+    {
+      "name": "day_summary",
+      "passed": true
+    },
+    {
+      "name": "week_summary",
+      "passed": true
+    },
+    {
+      "name": "sleep_stage_capture",
+      "passed": true
+    },
+    {
+      "name": "sleep_stage_clipped_to_day",
+      "passed": true
+    },
+    {
+      "name": "sleep_deletion",
+      "passed": true
+    },
+    {
+      "name": "signed_deletion",
+      "passed": true
+    },
+    {
+      "name": "deletion_record",
+      "passed": true
+    },
+    {
+      "name": "deleted_excluded",
+      "passed": true
+    },
+    {
+      "name": "workouts_capture",
+      "passed": true
+    },
+    {
+      "name": "day_unitless_workouts_accumulate",
+      "passed": true
+    },
+    {
+      "name": "week_unitless_workouts_accumulate",
+      "passed": true
+    },
+    {
+      "name": "digest",
+      "passed": true,
+      "detail": "12fc0c6249eabacd0f788d05bdfe6012999cf79cc71725a57f8fda8e1ebf040c"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

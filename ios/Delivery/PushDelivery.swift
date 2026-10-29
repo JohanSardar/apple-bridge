@@ -170,6 +170,7 @@ final class BridgeAppDelegate: NSObject, UIApplicationDelegate {
         LocationCapability.resume()
         PushDelivery.shared.status = "Registering"
         application.registerForRemoteNotifications()
+        Task { await HealthReadController.shared.resume() }
         return true
     }
 
