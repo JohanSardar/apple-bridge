@@ -136,6 +136,12 @@ func macCommandSchemas(add func(string, bool)) {
 		schema := contracts.OperationSchema(descriptor)
 		args := schema["properties"].(map[string]any)["args"].(map[string]any)
 		fields, _ := args["properties"].(map[string]any)
+		if descriptor.Name == "mac.recognize_song" {
+			field, exists := fields["audio_blob"].(map[string]any)
+			required, _ := args["required"].([]string)
+			add(descriptor.Name+"_argument_schema", exists && len(fields) == 1 && field["type"] == "string" && field["minLength"] == 4 && field["maxLength"] == 11184812 && field["pattern"] != nil && len(required) == 1 && required[0] == "audio_blob" && args["additionalProperties"] == false)
+			continue
+		}
 		if descriptor.Kind == contracts.QueryOp {
 			add(descriptor.Name+"_empty_schema", len(fields) == 0 && args["additionalProperties"] == false)
 			continue
