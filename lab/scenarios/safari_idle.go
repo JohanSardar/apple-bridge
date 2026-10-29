@@ -10,7 +10,10 @@ import (
 )
 
 func safariIdleReal(ctx context.Context, e Evidence) Evidence {
-	ctx = world.WithOptions(ctx, world.Options{Scope: "safari:read,system:read"})
+	return wholeHelperIdleReal(world.WithOptions(ctx, world.Options{Scope: "safari:read,system:read"}), e)
+}
+
+func wholeHelperIdleReal(ctx context.Context, e Evidence) Evidence {
 	w, err := world.NewReal(ctx, "real", 0)
 	e.Assertions = append(e.Assertions, Assertion{Name: "signed_helper_world", Passed: err == nil})
 	if err != nil {

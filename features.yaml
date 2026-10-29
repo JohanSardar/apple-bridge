@@ -1104,10 +1104,10 @@ features:
       - {id: PHO-CAPTURE, levels: [sim]}
       - {id: PHO-IDLE, levels: [sim, real]}
       - {id: PHO-READ-REAL, levels: [real]}
-    notes: "PHO-READ-REAL limited: Helper Photos readWrite authorization is not_determined; prompt forbidden. Photos readWrite grant needed for dev.applebridge.helper."
+    notes: "Photos real scenarios now probe inside the signed Helper identity and use a synthetic Bridge Test album when authorized. Real qualification is limited: needs Photos grant (Full Access for dev.applebridge.helper). No prompt is requested."
     limits:
-      - {"scenario": "PHO-IDLE", "level": "real", "reason": "Photos grant missing; whole-Helper CPU qualification blocked by T53"}
-      - {"scenario": "PHO-READ-REAL", "level": "real", "reason": "Photos readWrite authorization is not_determined; prompt forbidden"}
+      - {"scenario": "PHO-IDLE", "level": "real", "reason": "needs Photos grant"}
+      - {"scenario": "PHO-READ-REAL", "level": "real", "reason": "needs Photos grant"}
   - id: photos.commands
     title: Photos import and library commands
     requirements: [R-API, R-SCOPE]
@@ -1119,10 +1119,10 @@ features:
       - {id: PHO-COMMANDS, levels: [sim]}
       - {id: PHO-IMPORT-REAL, levels: [real]}
       - {id: PHO-ORIGINAL-REAL, levels: [real]}
-    notes: "Grant needed: Photos readWrite for dev.applebridge.helper. Deleted imports remain in Recently Deleted for 30 days."
+    notes: "Signed Helper qualification imports a synthetic PNG into a unique Bridge Test album, checks readback and original digests, and cleans up. Real runs limited: needs Photos grant (Full Access). Deleted synthetic imports remain in Recently Deleted for 30 days."
     limits:
-      - {"scenario": "PHO-IMPORT-REAL", "level": "real", "reason": "Photos readWrite authorization is not_determined; prompt forbidden"}
-      - {"scenario": "PHO-ORIGINAL-REAL", "level": "real", "reason": "Photos readWrite authorization is not_determined; prompt forbidden"}
+      - {"scenario": "PHO-IMPORT-REAL", "level": "real", "reason": "needs Photos grant"}
+      - {"scenario": "PHO-ORIGINAL-REAL", "level": "real", "reason": "needs Photos grant"}
   - id: mail.commands
     title: Mail commands with readback
     requirements: [R-RW]

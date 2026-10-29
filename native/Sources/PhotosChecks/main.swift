@@ -18,11 +18,6 @@ actor Sink: ObservationSink {
 @main
 struct Checks {
     static func main() async throws {
-        if CommandLine.arguments.contains("PHO-READ-REAL") {
-            let readiness = await PhotosSource().open()
-            print("photos_authorization_reason=" + readiness.reason)
-            return
-        }
         if CommandLine.arguments.contains("PHO-COMMANDS") {
             try await commandChecks()
             return
