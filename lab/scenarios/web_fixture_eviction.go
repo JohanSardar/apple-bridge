@@ -87,11 +87,13 @@ func snapshotEvictionProof(ctx context.Context, directory string, prepare func(*
 	}
 	result.Assertions["three_keys_keep_two_most_recently_used_per_kind"] = count == 2 && firstErr == nil && os.IsNotExist(secondErr)
 	limit := third.EntryBytes * 2
+	var capKeys []string
 	for i := 0; i < 3; i++ {
 		metrics, err := inspect(fmt.Sprintf("cap-%d", i), fmt.Sprintf("kind-%d", i), limit)
 		if err != nil {
 			return result, err
 		}
+		capKeys = append(capKeys, metrics.Key)
 		result.CacheBytes = metrics.CacheBytes
 	}
 	entries, err = os.ReadDir(directory)
@@ -117,7 +119,13 @@ func snapshotEvictionProof(ctx context.Context, directory string, prepare func(*
 		result.DiskBytes += kib * 1024
 	}
 	result.LimitBytes = limit
-	result.Assertions["total_cache_byte_cap_evicts_across_fixture_kinds"] = result.CacheBytes > 0 && result.CacheBytes <= limit && result.DiskBytes > 0 && result.DiskBytes <= limit
+	retained := 0
+	for _, key := range capKeys {
+		if _, err := os.Stat(filepath.Join(directory, key)); err == nil {
+			retained++
+		}
+	}
+	result.Assertions["total_cache_byte_cap_evicts_across_fixture_kinds"] = retained < len(capKeys) && result.CacheBytes <= limit && result.DiskBytes <= limit
 
 	for _, name := range []string{"APPLE_BRIDGE_FIXTURE_FREE_KB", "APPLE_BRIDGE_MIN_FREE_KB", "APPLE_BRIDGE_TRIM_HEADROOM_KB"} {
 		value, present := os.LookupEnv(name)

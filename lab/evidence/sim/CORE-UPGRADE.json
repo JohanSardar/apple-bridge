@@ -1,18 +1,21 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[4.37 6.68 7.55] cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[11.52 14.24 29.93] cpu_idle=40% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5E2PQER54NA8Y1072R6TX31",
+  "run_id": "run_01M64479DHW9WJ2ZVY7PY4RV1M",
   "network_path": "loopback",
   "metrics": {
-    "recovery_final_drain_ms": 17.464958
+    "automatic_scoped_search_0_ms": 7.720667,
+    "automatic_scoped_search_1_ms": 1.602708,
+    "capture_observer_resets": 0,
+    "recovery_final_drain_ms": 13.910084
   },
   "scenario": "CORE-UPGRADE",
   "level": "sim",
   "passed": true,
-  "git_sha": "4142c29bd4613a3195abc5738a25048c825acca2",
-  "at": "2026-10-21T01:55:08.376255Z",
+  "git_sha": "75678d17995beb801296e49257ce1ac099442a26",
+  "at": "2026-10-29T15:24:57.13745Z",
   "assertions": [
     {
       "name": "feed_network_loopback",
@@ -83,6 +86,10 @@
       "passed": true
     },
     {
+      "name": "no_oversized_capture_observer_resets",
+      "passed": true
+    },
+    {
       "name": "credential_backend_override_restored",
       "passed": true
     }
@@ -90,16 +97,16 @@
   "latency": {
     "effect_done→gateway_visible": {
       "samples": 1,
-      "p50_ms": 4.450875,
-      "p95_ms": 4.450875,
-      "max_ms": 4.450875,
+      "p50_ms": 7.883958,
+      "p95_ms": 7.883958,
+      "max_ms": 7.883958,
       "timeouts": 0
     },
     "effect_done→replica_visible:replica0": {
       "samples": 1,
-      "p50_ms": 9.7165,
-      "p95_ms": 9.7165,
-      "max_ms": 9.7165,
+      "p50_ms": 12.57525,
+      "p95_ms": 12.57525,
+      "max_ms": 12.57525,
       "timeouts": 0
     }
   },

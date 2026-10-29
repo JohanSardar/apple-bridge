@@ -48,95 +48,88 @@ func (f *fakeApple) datasetRoutes(mux *http.ServeMux) {
 		for digest, blob := range input.Blobs {
 			f.blobs[digest] = blob
 		}
-		captures := map[contracts.Source]contracts.Capture{}
+		f.mu.Unlock()
 		capturedAt := time.Now().UTC()
 		variants := map[datasetMediaKey]datasetMedia{}
-		for _, o := range input.Records {
-			source := contracts.CollectionSource(o.Collection)
-			if source == contracts.Reminders {
-				o.ObservedAt = capturedAt
-			}
-			if source == contracts.Contacts {
-				o.ScopedAlias = "contacts/" + o.Collection + "/" + o.NativeKey
-				f.contactSequence++
-			} else {
-				o.ScopedAlias = datasetAlias(o)
-			}
-			if source == contracts.Messages {
-				var fields map[string]any
-				if json.Unmarshal(o.Data, &fields) == nil && fields != nil {
-					f.observationFacts(o.Collection, fields)
+		for _, source := range []contracts.Source{contracts.Contacts, contracts.Messages, contracts.Reminders, contracts.Calendar, contracts.Mail, "files"} {
+			f.mu.Lock()
+			capture := contracts.Capture{Source: source}
+			for _, o := range input.Records {
+				if contracts.CollectionSource(o.Collection) != source {
+					continue
+				}
+				if source == contracts.Reminders {
+					o.ObservedAt = capturedAt
+				}
+				if source == contracts.Contacts {
+					o.ScopedAlias = "contacts/" + o.Collection + "/" + o.NativeKey
+					f.contactSequence++
+				} else {
+					o.ScopedAlias = datasetAlias(o)
+				}
+				if source == contracts.Messages {
+					var fields map[string]any
+					if json.Unmarshal(o.Data, &fields) == nil && fields != nil {
+						f.observationFacts(o.Collection, fields)
+						o.Data, _ = json.Marshal(fields)
+					}
+				}
+				if o.Collection == "messages.attachment" {
+					var data struct {
+						Filename string `json:"filename"`
+						Blob     struct {
+							Digest string `json:"digest"`
+						} `json:"blob"`
+					}
+					json.Unmarshal(o.Data, &data)
+					var fields map[string]any
+					json.Unmarshal(o.Data, &fields)
+					movie, live := pairs[o.NativeKey]
+					key := datasetMediaKey{digest: data.Blob.Digest, extension: strings.ToLower(filepath.Ext(data.Filename)), live: live}
+					if live {
+						key.movie = sha256.Sum256(movie.data)
+					}
+					variant, exists := variants[key]
+					if !exists {
+						derivatives, media := f.mediaVariants(data.Filename, f.blobs[data.Blob.Digest])
+						if live {
+							clips, _ := f.mediaVariants(movie.filename, movie.data)
+							derivatives["live"], media["live"] = clips["video"], true
+							if poster := f.livePoster(f.blobs[data.Blob.Digest]); poster != nil {
+								derivatives["poster"] = poster
+							}
+						}
+						variant = datasetMedia{derivatives, media}
+						variants[key] = variant
+					}
+					derivatives, media := variant.derivatives, variant.media
+					fields["derivatives"], fields["media"] = derivatives, media
 					o.Data, _ = json.Marshal(fields)
 				}
+				f.records[o.NativeKey] = o
+				capture.Observations = append(capture.Observations, o)
 			}
-			if o.Collection == "messages.attachment" {
-				var data struct {
-					Filename string `json:"filename"`
-					Blob     struct {
-						Digest string `json:"digest"`
-					} `json:"blob"`
-				}
-				json.Unmarshal(o.Data, &data)
-				var fields map[string]any
-				json.Unmarshal(o.Data, &fields)
-				movie, live := pairs[o.NativeKey]
-				key := datasetMediaKey{digest: data.Blob.Digest, extension: strings.ToLower(filepath.Ext(data.Filename)), live: live}
-				if live {
-					key.movie = sha256.Sum256(movie.data)
-				}
-				variant, exists := variants[key]
-				if !exists {
-					derivatives, media := f.mediaVariants(data.Filename, f.blobs[data.Blob.Digest])
-					if live {
-						clips, _ := f.mediaVariants(movie.filename, movie.data)
-						derivatives["live"], media["live"] = clips["video"], true
-						if poster := f.livePoster(f.blobs[data.Blob.Digest]); poster != nil {
-							derivatives["poster"] = poster
-						}
-					}
-					variant = datasetMedia{derivatives, media}
-					variants[key] = variant
-				}
-				derivatives, media := variant.derivatives, variant.media
-				fields["derivatives"], fields["media"] = derivatives, media
-				o.Data, _ = json.Marshal(fields)
-			}
-			f.records[o.NativeKey] = o
-			capture := captures[source]
-			capture.Source = source
-			capture.Observations = append(capture.Observations, o)
-			captures[source] = capture
-		}
-		var persistErr error
-		for _, source := range []contracts.Source{contracts.Contacts, contracts.Messages, contracts.Reminders, contracts.Calendar, contracts.Mail, "files"} {
-			if _, exists := captures[source]; exists && persistErr == nil {
-				persistErr = f.changedLocked(source)
-			}
-		}
-		revisions := map[contracts.Source]uint64{}
-		handles := map[string]string{}
-		for source := range captures {
-			revisions[source] = f.durable.Revision[source]
-		}
-		for digest := range f.blobs {
-			handles[digest] = digest
-		}
-		f.mu.Unlock()
-		if persistErr != nil {
-			http.Error(w, "persist", 500)
-			return
-		}
-		for _, source := range []contracts.Source{contracts.Contacts, contracts.Messages, contracts.Reminders, contracts.Calendar, contracts.Mail, "files"} {
-			capture, exists := captures[source]
-			if !exists {
+			if len(capture.Observations) == 0 {
+				f.mu.Unlock()
 				continue
+			}
+			persistErr := f.changedLocked(source)
+			revision := f.durable.Revision[source]
+			handles := map[string]string{}
+			for digest := range f.blobs {
+				handles[digest] = digest
+			}
+			f.mu.Unlock()
+			if persistErr != nil {
+				http.Error(w, "persist", 500)
+				return
 			}
 			capture.BlobHandles = handles
 			if source == contracts.Contacts {
 				capture.Generation = f.contactGeneration()
 				capture.Checkpoint = f.contactToken()
 			}
-			if err := f.enqueue(r.Context(), capture, true, revisions[source]); err != nil {
+			if err := f.enqueue(r.Context(), capture, true, revision); err != nil {
 				http.Error(w, "capture", 503)
 				return
 			}
