@@ -1277,8 +1277,6 @@ features:
       - {id: MAC-KEEPAWAKE-REAL, levels: [real]}
       - {id: MAC-CLIPBOARD-REAL, levels: [real]}
       - {id: MAC-REPLICA, levels: [replica]}
-    limits:
-      - {scenario: MAC-CLIPBOARD-REAL, level: real, reason: Clipboard supports transient text up to 64 KiB; image payloads and approval-required agent writes remain unsupported.}
     notes: Audio, appearance, app lifecycle and IOPM assertions use native readback. Clipboard text uses transient reads and redacted writes; image payloads and approval-required writes are unavailable. MAC-LOCK remains unavailable and is never exercised.
 
   - id: mac.actions
@@ -1293,7 +1291,7 @@ features:
       - {id: MAC-NOTIFY-REAL, levels: [real]}
     notes: Power actions require approve agent admission and are disabled natively. Wallpaper accepts a bounded base64 image blob. Network ICMP ping is limited; reachability DNS and interface byte counters are available.
     limits:
-      - {"scenario": "MAC-NOTIFY-REAL", "level": "real", "reason": "Code gap: macRealCommands has no MAC-NOTIFY-REAL handler (mac_real_scenario_supported fails); after implementing tagged notification cleanup, System Settings > Notifications > AppleBridgeHelper must allow notifications."}
+      - {"scenario": "MAC-NOTIFY-REAL", "level": "real", "reason": "AppleBridgeHelper notification authorization is not granted; notification_authorized fails; no authorization requested."}
   - id: maps.queries
     title: Native Location and Maps transient queries
     requirements: [R-API, R-SCOPE]
@@ -1402,11 +1400,9 @@ features:
       - {id: BT-REAL, levels: [real]}
       - {id: AIRPLAY-REAL, levels: [real]}
     limits:
-      - {"scenario": "TM-STATUS", "level": "real", "reason": "Failed assertions: real_qualification_batched_at_end"}
-      - {"scenario": "IWORK-REAL", "level": "real", "reason": "Failed assertions: real_qualification_batched_at_end"}
-      - {"scenario": "SHAZAM-REAL", "level": "real", "reason": "Failed assertions: real_qualification_batched_at_end"}
-      - {"scenario": "BT-REAL", "level": "real", "reason": "Failed assertions: real_qualification_batched_at_end"}
-      - {"scenario": "AIRPLAY-REAL", "level": "real", "reason": "Failed assertions: real_qualification_batched_at_end"}
+      - {"scenario": "IWORK-REAL", "level": "real", "reason": "Native mac.iwork_export is unsupported; export command observation and tagged content readback fail."}
+      - {"scenario": "SHAZAM-REAL", "level": "real", "reason": "Native song recognition remains a limited placeholder requiring ShazamKit entitlement and fixture qualification."}
+      - {"scenario": "AIRPLAY-REAL", "level": "real", "reason": "No AirPlay output route is available on the qualification host; route selection remains unqualified."}
   - id: phone.dial
     title: Continuity dialing with Mac confirmation
     requirements: [R-API, R-SCOPE]
