@@ -34,6 +34,13 @@ test('WEB-MSG-PARITY-UI trusted pin, mute and receipt settings use the captured 
     await expect(details.getByRole('button', { name: 'Unpin Conversation' })).toBeEnabled();
     await details.getByRole('switch', { name: 'Hide Alerts', exact: true }).click();
     await expect(details.getByRole('switch')).toHaveAttribute('aria-checked', 'true');
+    const pinned = page.locator('[data-pin="' + ids['list-chat-000'] + '"]');
+    await expect(pinned.getByLabel('Notifications silenced')).toBeVisible();
+    await expect(pinned).toHaveAccessibleDescription('Notifications silenced');
+    await pinned.locator('.pin-title').evaluate(element => { element.textContent = '[ab-test] A very long pinned conversation name that must truncate'; });
+    expect(await pinned.locator('.pin-title').evaluate(element => element.scrollWidth > element.clientWidth)).toBe(true);
+    expect(await pinned.locator('.pin-muted').evaluate(element => { const icon = element.getBoundingClientRect(), caption = element.parentElement!.getBoundingClientRect(); return icon.left >= caption.left && icon.right <= caption.right; })).toBe(true);
+    await page.screenshot({ path: '../lab/evidence/private/web/t74-pinned.png' });
     const receipts = details.getByRole('checkbox', { name: /Send Read Receipts/ });
     await expect(receipts).toHaveAttribute('aria-checked', 'mixed');
     await receipts.click();
@@ -75,6 +82,8 @@ test('WEB-MSG-PARITY-UI Recently Deleted recovery and confirmed purge preserve u
         await page.getByRole('menuitemradio', { name: 'Recently Deleted', exact: true }).click();
     };
     await page.goto('/messages'); await deleted();
+    await expect(page.getByRole('heading', { name: 'Recently Deleted', exact: true })).toBeVisible();
+    await page.screenshot({ path: '../lab/evidence/private/web/t74-deleted.png' });
     let actions = await menu(page, ids['parity-deleted']);
     await actions.getByRole('button', { name: 'Recover Conversation', exact: true }).click();
     await expect(page.locator('[data-chat="' + ids['parity-deleted'] + '"]')).toHaveCount(0);

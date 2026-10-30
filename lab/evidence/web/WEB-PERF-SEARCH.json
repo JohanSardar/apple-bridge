@@ -1,0 +1,19 @@
+{
+  "scenario": "WEB-PERF-SEARCH",
+  "level": "web",
+  "git_sha": "5989a67d0e021c8d737039ab231325a841d66020",
+  "passed": true,
+  "metrics": {
+    "passed_test_count": 1,
+    "failed_test_count": 0,
+    "skipped_test_count": 0,
+    "flaky_test_count": 0,
+    "report_sha256": "af8f13237cc7afad989b660cb55b3e89d9304518fbac092e6d24576223b9b6d0"
+  },
+  "assertions": [
+    {
+      "name": "chromium-light-desktop",
+      "passed": true
+    }
+  ]
+}

@@ -1,0 +1,223 @@
+{
+  "scenario": "T74",
+  "level": "web",
+  "git_sha": "5989a67d0e021c8d737039ab231325a841d66020",
+  "passed": false,
+  "metrics": {
+    "matrix_count": 1,
+    "passed_scenario_count": 10,
+    "failed_scenario_count": 6
+  },
+  "assertions": [
+    {
+      "name": "WEB-MSG-PARITY-UI:chromium-light-desktop",
+      "passed": true
+    },
+    {
+      "name": "WEB-MSG-MANAGE:chromium-light-desktop",
+      "passed": false
+    },
+    {
+      "name": "WEB-MSG-DETAILS:chromium-light-desktop",
+      "passed": true
+    },
+    {
+      "name": "WEB-MSG-AUDIO:chromium-light-desktop",
+      "passed": true
+    },
+    {
+      "name": "WEB-MSG-EFFECTS-TRANSCRIPT:chromium-light-desktop",
+      "passed": true
+    },
+    {
+      "name": "WEB-MSG-THREAD-CORE:chromium-light-desktop",
+      "passed": false
+    },
+    {
+      "name": "WEB-MSG-LIVE:chromium-light-desktop",
+      "passed": false
+    },
+    {
+      "name": "WEB-MSG-SEARCH:chromium-light-desktop",
+      "passed": true
+    },
+    {
+      "name": "WEB-MSG-A11Y:chromium-light-desktop",
+      "passed": true
+    },
+    {
+      "name": "WEB-MSG-READ-THROTTLE:chromium-light-desktop",
+      "passed": true
+    },
+    {
+      "name": "WEB-MSG-SEND-VARIANTS:chromium-light-desktop",
+      "passed": true
+    },
+    {
+      "name": "WEB-MSG-PERF:chromium-light-desktop",
+      "passed": false
+    },
+    {
+      "name": "WEB-MSG-PERF-FRAME:chromium-light-desktop",
+      "passed": true
+    },
+    {
+      "name": "WEB-MSG-PERF-INPUT:chromium-light-desktop",
+      "passed": false
+    },
+    {
+      "name": "WEB-PERF-LIST:chromium-light-desktop",
+      "passed": false
+    },
+    {
+      "name": "WEB-PERF-SEARCH:chromium-light-desktop",
+      "passed": true
+    }
+  ],
+  "results": [
+    {
+      "scenario": "WEB-MSG-PARITY-UI",
+      "passed": true,
+      "passed_test_count": 5,
+      "failed_test_count": 0,
+      "skipped_test_count": 0,
+      "flaky_test_count": 0,
+      "report_sha256": "840ac63078dfdfc1f9930d1583b7f4f84b6cc324c57b978edc193cef2004a482"
+    },
+    {
+      "scenario": "WEB-MSG-MANAGE",
+      "passed": false,
+      "passed_test_count": 1,
+      "failed_test_count": 1,
+      "skipped_test_count": 24,
+      "flaky_test_count": 0,
+      "report_sha256": "6638e97705f134dde5ed577d8e62926c05a0f177c00e8aca3a3302078e5067ea"
+    },
+    {
+      "scenario": "WEB-MSG-DETAILS",
+      "passed": true,
+      "passed_test_count": 7,
+      "failed_test_count": 0,
+      "skipped_test_count": 0,
+      "flaky_test_count": 0,
+      "report_sha256": "58ad06c2bb475e1f9bdd74633df60ee599bf6ef7a30ab38591fdccc3a685cf07"
+    },
+    {
+      "scenario": "WEB-MSG-AUDIO",
+      "passed": true,
+      "passed_test_count": 3,
+      "failed_test_count": 0,
+      "skipped_test_count": 0,
+      "flaky_test_count": 0,
+      "report_sha256": "00d38c8439e34c5110a591f9fef3ca93749c0a1802d7e4edcbf181833718177f"
+    },
+    {
+      "scenario": "WEB-MSG-EFFECTS-TRANSCRIPT",
+      "passed": true,
+      "passed_test_count": 6,
+      "failed_test_count": 0,
+      "skipped_test_count": 0,
+      "flaky_test_count": 0,
+      "report_sha256": "8ec3a9306ed19ee0f07b95f98881ac8c63e8241c601a40669169ca9e50890ea0"
+    },
+    {
+      "scenario": "WEB-MSG-THREAD-CORE",
+      "passed": false,
+      "passed_test_count": 5,
+      "failed_test_count": 1,
+      "skipped_test_count": 2,
+      "flaky_test_count": 0,
+      "report_sha256": "6108aa97f14bb4402294dab701c04f1d8602ce81666f36a076610cff0bd07afa"
+    },
+    {
+      "scenario": "WEB-MSG-LIVE",
+      "passed": false,
+      "passed_test_count": 0,
+      "failed_test_count": 1,
+      "skipped_test_count": 2,
+      "flaky_test_count": 0,
+      "report_sha256": "b1ef4e224d62dee45b1b3b9c1c633944388cf21dc7751f2336c3671cd6fb12b2"
+    },
+    {
+      "scenario": "WEB-MSG-SEARCH",
+      "passed": true,
+      "passed_test_count": 5,
+      "failed_test_count": 0,
+      "skipped_test_count": 0,
+      "flaky_test_count": 0,
+      "report_sha256": "063c8081f84947ce880ccb93fc245d72be880ba14646f987c26c8efab9f1a8e9"
+    },
+    {
+      "scenario": "WEB-MSG-A11Y",
+      "passed": true,
+      "passed_test_count": 3,
+      "failed_test_count": 0,
+      "skipped_test_count": 0,
+      "flaky_test_count": 0,
+      "report_sha256": "ff00652c79adb0546f1fcc5694d88894da61a483c9ae21600b77f7ed42b7e456"
+    },
+    {
+      "scenario": "WEB-MSG-READ-THROTTLE",
+      "passed": true,
+      "passed_test_count": 1,
+      "failed_test_count": 0,
+      "skipped_test_count": 0,
+      "flaky_test_count": 0,
+      "report_sha256": "f07ec5ee26e77597297a50b615ca08ba3c92550a6e25ee79cf92f4a307253f5c"
+    },
+    {
+      "scenario": "WEB-MSG-SEND-VARIANTS",
+      "passed": true,
+      "passed_test_count": 1,
+      "failed_test_count": 0,
+      "skipped_test_count": 0,
+      "flaky_test_count": 0,
+      "report_sha256": "0026b4a1de1cce59badc37be5cc6da8f92c62b34a8dd326e3389a022a04da065"
+    },
+    {
+      "scenario": "WEB-MSG-PERF",
+      "passed": false,
+      "passed_test_count": 1,
+      "failed_test_count": 1,
+      "skipped_test_count": 3,
+      "flaky_test_count": 0,
+      "report_sha256": "da37bd29904061a0baef61b2fd1b05a27677ceb307557fcd973cb9fe7505dfc3"
+    },
+    {
+      "scenario": "WEB-MSG-PERF-FRAME",
+      "passed": true,
+      "passed_test_count": 1,
+      "failed_test_count": 0,
+      "skipped_test_count": 0,
+      "flaky_test_count": 0,
+      "report_sha256": "f9c495bee3f5463f0d7a6e592ab1f234a8fe2f819843cfe45218e1b508177386"
+    },
+    {
+      "scenario": "WEB-MSG-PERF-INPUT",
+      "passed": false,
+      "passed_test_count": 0,
+      "failed_test_count": 1,
+      "skipped_test_count": 3,
+      "flaky_test_count": 0,
+      "report_sha256": "9e4f4f800f47f58a2b6f5e405ff3fc18e572624ca357703b776a97cc5fef71ac"
+    },
+    {
+      "scenario": "WEB-PERF-LIST",
+      "passed": false,
+      "passed_test_count": 0,
+      "failed_test_count": 1,
+      "skipped_test_count": 0,
+      "flaky_test_count": 0,
+      "report_sha256": "512be07c2aaf83f5e5a63c6ebdda4ac3f6318604ba1265a380a599b6c557f954"
+    },
+    {
+      "scenario": "WEB-PERF-SEARCH",
+      "passed": true,
+      "passed_test_count": 1,
+      "failed_test_count": 0,
+      "skipped_test_count": 0,
+      "flaky_test_count": 0,
+      "report_sha256": "af8f13237cc7afad989b660cb55b3e89d9304518fbac092e6d24576223b9b6d0"
+    }
+  ]
+}

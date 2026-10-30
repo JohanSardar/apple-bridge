@@ -1,0 +1,19 @@
+{
+  "scenario": "WEB-MSG-MANAGE",
+  "level": "web",
+  "git_sha": "5989a67d0e021c8d737039ab231325a841d66020",
+  "passed": false,
+  "metrics": {
+    "passed_test_count": 1,
+    "failed_test_count": 1,
+    "skipped_test_count": 24,
+    "flaky_test_count": 0,
+    "report_sha256": "6638e97705f134dde5ed577d8e62926c05a0f177c00e8aca3a3302078e5067ea"
+  },
+  "assertions": [
+    {
+      "name": "chromium-light-desktop",
+      "passed": false
+    }
+  ]
+}

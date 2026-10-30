@@ -702,16 +702,20 @@ features:
       - {id: WEB-PERF-LIST, levels: [web]}
       - {id: WEB-MSG-LIVE, levels: [web]}
       - {id: WEB-MSG-REAL-READ, levels: [real]}
+    notes: T74 preserves the existing full-matrix qualification and records a Chromium light-desktop integration rerun after T73. Frame and search budgets pass; unread/prefetch readiness, live arrival/receive-history isolation and remaining input/list qualification stay limited.
     limits:
-      - {"scenario": "WEB-PERF-SEARCH", "level": "web", "reason": "web qualification remains missing"}
-      - {"scenario": "WEB-PERF-LIST", "level": "web", "reason": "Measured, not met, in a quiet exclusive Chromium light-desktop 104,900-message fixture: filter frame p95/max 10.489/15.777 ms versus 4/8 ms; own-input p95 22.374 ms versus 8 ms (22 samples). Later search/live/reorder/warm phases were not reached. Thresholds are unchanged."}
+      - {"scenario": "WEB-MSG-LIVE", "level": "web", "reason": "T74 latest Chromium light desktop fails synthetic arrival visibility before completing latency samples; prior integration also failed receive-history isolation. Full qualification remains open."}
+      - {"scenario": "WEB-MSG-PERF", "level": "web", "reason": "T74 frame check passes, but open-chat readiness retains aria-busy=true with 100 rows before input timing can qualify; budgets are unchanged"}
+      - {"scenario": "WEB-MSG-PERF-INPUT", "level": "web", "reason": "T74 open-chat readiness blocks the input measurement; remaining action checks are unrun and budgets are unchanged"}
+      - {"scenario": "WEB-PERF-SEARCH", "level": "web", "reason": "T74 Chromium light desktop passes; remaining declared matrix combinations are unqualified"}
+      - {"scenario": "WEB-PERF-LIST", "level": "web", "reason": "Measured, not met, in a quiet exclusive Chromium light-desktop 104,900-message fixture: filter frame p95/max 10.489/15.777 ms versus 4/8 ms; own-input p95 22.374 ms versus 8 ms (22 samples). Later search/live/reorder/warm phases were not reached. T74 latest integration also fails the list-size readiness check before timing. Thresholds are unchanged."}
       - {"scenario": "WEB-MSG-REAL-READ", "level": "real", "reason": "Real acceptance harness is not implemented; no native effects dispatched"}
       - {"scenario": "WEB-MSG-FILTERS", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
       - {"scenario": "WEB-MSG-FILTERS-MENU", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
       - {"scenario": "WEB-MSG-SEARCH", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
       - {"scenario": "WEB-MSG-SEARCH-LIST", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
       - {"scenario": "WEB-MSG-SIDEBAR", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
-      - {"scenario": "WEB-MSG-THREAD-CORE", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
+      - {"scenario": "WEB-MSG-THREAD-CORE", "level": "web", "reason": "T74 integration: delayed-prefetch test retains aria-busy=true with 100 populated rows; five tests pass, one fails and two remain unrun in Chromium light desktop"}
       - {"scenario": "WEB-MSG-TRANSCRIPT-HOOKS", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
       - {"scenario": "WEB-MSG-TEXT-SIZING", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
       - {"scenario": "WEB-MSG-REACTIONS", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
@@ -788,7 +792,7 @@ features:
       - {"scenario": "MSG-DELETE-REAL", "level": "real", "reason": "skipped: requires unlocked Mac with Messages UI available and an unused own self-chat handle; no safe UI cleanup demonstrated at lock screen"}
       - {"scenario": "MSG-RESEND", "level": "real", "reason": "skipped: requires a uniquely identified failed self-chat test message via APPLE_BRIDGE_RESEND_RUN; existing self-chat residue must remain untouched"}
       - {"scenario": "WEB-UPLOAD-NATIVE-STAGING", "level": "real", "reason": "limited: native send remained indeterminate. T63 recovered this run's three text/file rows with zero foreign deletions. Further attachment sends are blocked pending native cleanup qualification; this is not a missing-grant limit."}
-      - {"scenario": "WEB-MSG-MANAGE", "level": "web", "reason": "web qualification remains missing"}
+      - {"scenario": "WEB-MSG-MANAGE", "level": "web", "reason": "T74 post-T73 Chromium light desktop had 25 passes and one layout skip; latest integration run times out opening the Forward composer, with one pass and 24 unrun tests. Management remains unstable."}
   - id: web.messages.parity
     title: Messages parity (pins, mute, read receipts, Send Later, effects, formatting, mentions, audio messages, Recently Deleted, groups)
     requirements: [R-WEB-UI, R-MSG-DEPTH]
@@ -813,7 +817,7 @@ features:
       - {id: MSG-AUDIO-MESSAGE, levels: [sim, real]}
       - {id: MSG-RECENTLY-DELETED, levels: [sim, real]}
       - {id: WEB-MSG-PARITY-UI, levels: [web]}
-    notes: Group management (W4-GROUPS) completes the existing messages.groups feature and its scenarios instead of duplicating them.
+    notes: Group management (W4-GROUPS) completes the existing messages.groups feature and its scenarios instead of duplicating them. T74 adds long-name-safe pinned mute indicators with accessible descriptions, a visible Recently Deleted heading and trailing swipe-width settlement. Five parity checks pass after T73 integration; native send variants retain their per-build qualification gates.
     limits:
       - {"scenario": "MSG-PINS", "level": "real", "reason": "limited: needs Accessibility grant for the current signed Helper on the Air. Real preflight submitted zero writes; Automation remains unchecked behind Accessibility. Fresh text-only unused-self-handle fixtures, continuous T63 owned-ID cleanup and baseline preservation are enforced. Pin, receipt and Recently Deleted native qualification remains fail-closed."}
       - {"scenario": "MSG-MUTE", "level": "real", "reason": "limited: needs Accessibility grant for the current signed Helper on the Air. Real preflight submitted zero writes; Automation remains unchecked behind Accessibility. Fresh text-only unused-self-handle fixtures, continuous T63 owned-ID cleanup and baseline preservation are enforced. Pin, receipt and Recently Deleted native qualification remains fail-closed."}
