@@ -1641,3 +1641,17 @@ features:
     limits:
       - {scenario: APP-LIVE-REAL, level: real, reason: 'limited: needs Allow tap'}
     notes: Gateway pushes ActivityKit start, update and end using signed device token registration. APNs acceptance is dispatch only; no phone observation is claimed. Widgets show the last reported delivery status with its age.
+
+
+  - id: iphone.capture
+    title: Face ID gated photo and microphone capture
+    requirements: [R-SECURE, R-SAFE-CMD, R-API]
+    milestone: G13
+    modules: [ios/Capabilities/Capture, internal/iphone]
+    depends_on: [iphone.approvals]
+    status: limited
+    scenarios:
+      - {id: APP-CAPTURE-SIM, levels: [sim]}
+      - {id: APP-CAPTURE-REAL, levels: [real]}
+    limits:
+      - {scenario: APP-CAPTURE-REAL, level: real, reason: 'limited: needs Allow tap for camera and microphone'}

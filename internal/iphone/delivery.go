@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/JohanSardar/apple-bridge/internal/blobs"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/internal/state"
 	"github.com/JohanSardar/apple-bridge/internal/trust"
@@ -17,6 +18,7 @@ import (
 type Push func(context.Context, string, Packet, time.Time) error
 
 type Delivery struct {
+	Blobs     *blobs.Store
 	State     *state.Store
 	Authority *trust.Authority
 	Push      Push
@@ -238,6 +240,9 @@ func (d *Delivery) Complete(ctx context.Context, p trust.Principal, request trus
 func (d *Delivery) Handler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		limit := int64(32768)
+		if r.URL.Path == "/v1/iphone/capture" {
+			limit = 24 << 20
+		}
 		if r.URL.Path == "/v1/iphone/health" {
 			limit = 16 << 20
 		}
@@ -253,6 +258,8 @@ func (d *Delivery) Handler() http.Handler {
 		}
 		var result any
 		switch r.URL.Path {
+		case "/v1/iphone/capture":
+			result, err = d.Capture(r.Context(), p, request.Payload)
 		case "/v1/iphone/location-records":
 			err = d.LocationRecords(r.Context(), p, request.Payload)
 			result = map[string]bool{"accepted": err == nil}
