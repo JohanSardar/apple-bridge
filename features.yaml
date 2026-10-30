@@ -733,7 +733,6 @@ features:
       - {"scenario": "WEB-MSG-PERF", "level": "web", "reason": "T72 continuation: Chromium light-desktop open-chat action remains aria-busy=true with 100 populated rows; input budgets and remaining tests are not reached; full matrix deferred within the 60-minute budget"}
       - {"scenario": "WEB-MSG-PERF-FRAME", "level": "web", "reason": "T72 continuation: full 12-cell matrix completed, 10 passed; Chromium dark phone and Firefox light phone exceed the unchanged frame budget"}
       - {"scenario": "WEB-MSG-PERF-INPUT", "level": "web", "reason": "T72 continuation: Chromium light-desktop open-chat action remains aria-busy=true with 100 populated rows; input budgets and remaining tests are not reached; full matrix deferred within the 60-minute budget"}
-      - {"scenario": "WEB-MSG-LIVE", "level": "web", "reason": "T72 continuation: initial 12-cell matrix failed receive-motion checks; after the parallel motion fix, Chromium light-desktop still records no receiving row within six seconds; motion code remains untouched here"}
   - id: web.messages.write
     title: Messages web app writing (interactive gate, self-test, composer, actions, uploads)
     requirements: [R-WEB-UI, R-RW, R-MSG-DEPTH, R-SAFE-CMD]
