@@ -24,3 +24,19 @@ All 16 requested YAML scenarios were invoked with `go run ./cmd/bridge-lab run <
 | APP-CAPTURE-REAL | Limited: handler immediately returns; no camera/microphone request, Face ID, capture or cleanup exercised. |
 
 No permission prompt was triggered, so there was no pending prompt to wait three minutes for. These are missing request/observation implementations rather than evidence that Johan declined permission. Implementing real pairing, delivery and permission qualification is larger than a small test-agent fix. Feature limits remain for all unqualified behavior; the build feature already had no limit to remove.
+
+## Sensor harness follow-up
+
+The eight sensor scenarios now launch the installed app with `--real-qualification`, hold a persistent `lockf -k` phone lock, and copy back a final result bound to a fresh run UUID. The host removes its prior local copy before polling again; stale and non-final results cannot qualify a run. Results export checks, counts and digests only. See `lab/iphone-real/README.md` for invocation and scope.
+
+The signed app build and signature verification passed. The host regressions prove that all eight routes fail closed without a configured device, and that stale UUIDs, non-final results and an existing copy destination cannot produce a false pass. These host checks do not qualify phone behavior.
+
+The first coordinated phone batch did not establish a passing scenario. Health read, Health write, Motion and Screen Time did not return final results before their deadlines. Location returned a failure before a fix. Capture returned a failure before recording byte counts or digests. An earlier device-context run observed battery and Focus state, but no Wi-Fi information; NFC was explicitly skipped because it requires a physical tag. The initial alarm timeout was affected by the copy-polling defect and is inconclusive; its corrected rerun returned error code 1 without a confirmed alarm lifecycle.
+
+Permission instructions were printed for Health read, Health read/write, Motion & Fitness, Alarms, Location/Wi-Fi, Screen Time, Location Always/Precise, and Face ID/camera/microphone. Printing an instruction does not prove a system dialog appeared or that Johan tapped it. No tap has been confirmed by these results. No tagged Health write or alarm lifecycle has yet been confirmed, so cleanup is unqualified rather than claimed successful. Capture retains no media on disk. Feature limits remain in place.
+
+Screen Time currently exercises authorization, a separate tagged shield store and monitor registration/removal. Monitor callback and usage report observations remain explicit failed acceptance checks. Location's probe covers a foreground precise fix and its own tagged geofence registration/removal; it does not qualify background movement. Capture's probe covers fresh Face ID, actual photo/audio bytes and in-memory discard; it does not qualify a signed gateway upload.
+
+Redacted results are in `lab/evidence/real-sensor-qualification-2026-10-30.json`. The final combined build was installed with the exact qualification-source digest recorded in that evidence. Its focused Device run again observed battery and Focus, returned no Wi-Fi information, and recorded the NFC physical-tag skip. The corrected alarm rerun returned a failure. An unsuccessful or unavailable interaction remains limited.
+
+The final refreshed Health read rerun also timed out without a final result. All eight sensor scenarios remain limited after these runs. No permission tap was confirmed. The phone lock was released after the last run; no further sensor run or installation remains active.

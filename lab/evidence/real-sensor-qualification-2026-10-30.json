@@ -1,0 +1,91 @@
+{
+  "APP-ALARM-REAL": {
+    "checks": {
+      "operation_completed": false,
+      "passed": false
+    },
+    "counts": {
+      "error_code": 1
+    },
+    "digests": {}
+  },
+  "APP-CAPTURE-REAL": {
+    "checks": {
+      "operation_completed": false,
+      "passed": false
+    },
+    "counts": {
+      "error_code": 0
+    },
+    "digests": {}
+  },
+  "APP-DEVICE-REAL": {
+    "checks": {
+      "battery_observed": true,
+      "focus_observed": true,
+      "passed": false,
+      "wifi_observed": false
+    },
+    "counts": {
+      "device_name_present": 1,
+      "nfc_physical_tag_skipped": 1
+    },
+    "digests": {}
+  },
+  "APP-HEALTH-REAL": {
+    "checks": {
+      "passed": false,
+      "result_before_deadline": false
+    },
+    "counts": {},
+    "digests": {}
+  },
+  "APP-HEALTH-WRITE-REAL": {
+    "checks": {
+      "passed": false,
+      "result_before_deadline": false
+    },
+    "counts": {},
+    "digests": {}
+  },
+  "APP-LOC-REAL": {
+    "checks": {
+      "operation_completed": false,
+      "passed": false
+    },
+    "counts": {
+      "error_code": 0
+    },
+    "digests": {}
+  },
+  "APP-MOTION-REAL": {
+    "checks": {
+      "passed": false,
+      "result_before_deadline": false
+    },
+    "counts": {},
+    "digests": {}
+  },
+  "APP-SCREENTIME-REAL": {
+    "checks": {
+      "passed": false,
+      "result_before_deadline": false
+    },
+    "counts": {},
+    "digests": {}
+  },
+  "host_verification": {
+    "checks": {
+      "missing_device_fails_closed": true,
+      "nonce_final_polling_redaction": true,
+      "signed_ios_build": true
+    },
+    "counts": {
+      "polling_regressions": 1,
+      "real_routes_checked": 8
+    },
+    "digests": {
+      "qualification_source_sha256": "2c3c3ce6fd0b735944db7e9fcdd441e5f2bd83f4108e0e4e991d88296e18c44b"
+    }
+  }
+}
