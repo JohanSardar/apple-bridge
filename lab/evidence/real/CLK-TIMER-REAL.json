@@ -1,28 +1,11 @@
 {
-  "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[2.48 2.06 2.11] cpu_idle=82% cpus=8 other_heavy=0"
-  },
-  "status": "limited",
-  "run_id": "run_01M65HSZ9P6D5HSER3DN5D0FZ7",
-  "metrics": {
-    "capture_observer_resets": 0,
-    "pack_installed": true
-  },
   "scenario": "CLK-TIMER-REAL",
   "level": "real",
   "passed": false,
-  "git_sha": "",
-  "at": "2026-10-30T04:41:35.286356Z",
   "assertions": [
     {
       "name": "credential_backend_override_restored",
       "passed": true
     }
-  ],
-  "latency": null,
-  "hosts": null,
-  "conditions": {
-    "reason": "AB Clock did not return structured timer running, duration and label confirmation; macOS Start Timer action exists"
-  }
+  ]
 }
