@@ -12,24 +12,18 @@ public enum SafariCleanup {
         let run = request["run_id"].string
         guard run.range(of: #"^[A-Za-z0-9_-]+$"#, options: .regularExpression) != nil else { throw SourceFailure.invalid }
         let tabs = SafariTabs()
-        guard await tabs.permitted(fresh: true), AXIsProcessTrusted() else { throw SourceFailure.permissionMissing }
+        guard await tabs.permitted(fresh: true) else { throw SourceFailure.permissionMissing }
         let tag = "[ab-test " + run + "]"
         let url = "https://example.com/?ab-test=" + run
-        func reading() throws -> [JSON] {
-            let path = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Safari/Bookmarks.plist")
-            let root = try PropertyListSerialization.propertyList(from: Data(contentsOf: path), format: nil)
-            func walk(_ node: Any, _ reading: Bool) throws -> [JSON] {
-                guard let node = node as? [String: Any] else { throw SourceFailure.corrupt }
-                if let children = node["Children"] as? [Any] {
-                    return try children.flatMap { try walk($0, reading || node["Title"] as? String == "com.apple.ReadingList") }
-                }
-                guard reading, let id = node["WebBookmarkUUID"] as? String, let value = node["URLString"] as? String else { return [] }
-                return [.object(["ID": .string("reading:" + id), "Tag": .string(value == url ? tag : ""), "Container": .string("reading:" + SHA256.hash(data: Data(value.utf8)).map { String(format: "%02x", $0) }.joined())])]
+        func reading() async throws -> [JSON] {
+            let rows = try await SafariSource().bookmarks()
+            return rows.filter { $0["collection"].string == "safari.reading_list" }.map { row in
+                let value = row["data"]["url"].string
+                return .object(["ID": .string("reading:" + row["native_key"].string), "Tag": .string(value == url ? tag : ""), "Container": .string("reading:" + SHA256.hash(data: Data(value.utf8)).map { String(format: "%02x", $0) }.joined())])
             }
-            return try walk(root, false)
         }
         let currentTabs = try await tabs.tabs()
-        var items = try reading()
+        var items = try await reading()
         items += currentTabs.map { row in
             let value = row["data"]["url"].string
             return .object(["ID": .string("tab:" + row["native_key"].string), "Tag": .string(value == url ? tag : ""), "Container": .string("tab:" + SHA256.hash(data: Data(value.utf8)).map { String(format: "%02x", $0) }.joined())])
@@ -46,6 +40,10 @@ public enum SafariCleanup {
             guard error == nil else { throw SourceFailure.unavailable }
         } else {
             guard AXIsProcessTrusted(), let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.Safari").first else { throw SourceFailure.permissionMissing }
+            let frontmost = NSWorkspace.shared.frontmostApplication
+            guard app.activate() else { throw SourceFailure.unavailable }
+            defer { if let frontmost, frontmost.processIdentifier != app.processIdentifier { _ = frontmost.activate() } }
+            try await Task.sleep(for: .milliseconds(200))
             let root = AXUIElementCreateApplication(app.processIdentifier)
             func attribute(_ element: AXUIElement, _ name: String) -> CFTypeRef? {
                 var result: CFTypeRef?
@@ -94,9 +92,9 @@ public enum SafariCleanup {
                 visited += 1
                 guard depth < 30, visited < 10000 else { return [] }
                 let role = attribute(element, kAXRoleAttribute) as? String ?? ""
-                var result = role == "AXRow" && rowURLs(element, 0) == [url] ? [element] : []
-                for child in attribute(element, kAXChildrenAttribute) as? [AXUIElement] ?? [] { result += matching(child, depth + 1) }
-                return result
+                let descendants = (attribute(element, kAXChildrenAttribute) as? [AXUIElement] ?? []).flatMap { matching($0, depth + 1) }
+                if !descendants.isEmpty { return descendants }
+                return role == "AXRow" && rowURLs(element, 0) == [url] ? [element] : []
             }
             let rows = matching(root, 0)
             guard rows.count == 1, AXUIElementPerformAction(rows[0], kAXShowMenuAction as CFString) == .success else { throw SourceFailure.capabilityUnproven }

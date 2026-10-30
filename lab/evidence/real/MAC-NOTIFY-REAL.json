@@ -1,17 +1,17 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[6.2 7.6 7.88] cpu_idle=42% cpus=8 other_heavy=0"
+    "summary": "air: load=[4.78 3.52 2.91] cpu_idle=79% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M6472DDG9JRYSH8S928BJE5E",
+  "run_id": "run_01M67HPYJRXZ9PYJV3FJ07RV07",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "MAC-NOTIFY-REAL",
   "level": "real",
-  "passed": false,
+  "passed": true,
   "git_sha": "",
-  "at": "2026-10-29T16:14:43.120533Z",
+  "at": "2026-10-30T23:18:25.112055Z",
   "assertions": [
     {
       "name": "world_started",
@@ -26,8 +26,28 @@
       "passed": true
     },
     {
-      "name": "mac_real_scenario_supported",
-      "passed": false
+      "name": "signed_helper_notification_probe",
+      "passed": true
+    },
+    {
+      "name": "notification_report",
+      "passed": true
+    },
+    {
+      "name": "delivered_content_matches",
+      "passed": true
+    },
+    {
+      "name": "existing_notifications_preserved",
+      "passed": true
+    },
+    {
+      "name": "notification_observed",
+      "passed": true
+    },
+    {
+      "name": "owned_notification_removed",
+      "passed": true
     },
     {
       "name": "credential_backend_override_restored",

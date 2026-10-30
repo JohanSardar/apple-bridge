@@ -5,8 +5,18 @@ import SourceSupport
 actor MailFake {
     var calls: [String] = []
     let evidence: String
-    init(_ evidence: String) { self.evidence = evidence }
-    func run(_ body: String) -> String { calls.append(body); if calls.count == 1 && body.hasPrefix("return") { return "0" }; return (body.hasPrefix("return") || body.contains("return (")) ? evidence : "" }
+    let lag: Int
+    var readbacks = 0
+    init(_ evidence: String, lag: Int = 0) { self.evidence = evidence; self.lag = lag }
+    func run(_ body: String) -> String {
+        calls.append(body)
+        if calls.count == 1 && body.hasPrefix("return") { return "0" }
+        if body.hasPrefix("return") || body.contains("return (") {
+            readbacks += 1
+            return readbacks <= lag ? "" : evidence
+        }
+        return ""
+    }
     func scripts() -> [String] { calls }
 }
 func checkMailCommands() async throws {
@@ -21,7 +31,7 @@ func checkMailCommands() async throws {
             if !observed { try require(result["disposition"].string == "indeterminate") }
             let scripts = await fake.scripts()
             let creates = ["mail.create_draft", "mail.send"].contains(op)
-            try require(scripts.count == (creates ? 3 : 2))
+            try require(scripts.count == (creates ? 2 : 1) + (observed ? 1 : 40))
             let effect = scripts[creates ? 1 : 0]
             let expected = ["mail.create_draft": "save m", "mail.send": "send m", "mail.move": "move m to mailbox", "mail.delete": "move m to trash mailbox", "mail.mark_read": "set read status of m to true", "mail.set_flag": "set flagged status of m to true"]
             try require(effect.contains(expected[op]!))
@@ -29,5 +39,13 @@ func checkMailCommands() async throws {
             if creates { try require(scripts.last!.contains(op == "mail.send" ? "sent mailbox" : "drafts mailbox")) }
         }
     }
+    let delayed = MailFake("true", lag: 2)
+    let commands = MailCommands(script: { await delayed.run($0) })
+    let prepared = try commands.prepare(.object(["action": .object(["op": .string("mail.set_flag"), "native_key": .string("123"), "args": .object(["flagged": .bool(true)])])]))
+    try require(try await commands.dispatch(prepared)["observed"].bool)
+    try require(await delayed.scripts().count == 4)
+    #if LAB
+    try await checkMailQualification()
+    #endif
     try require(MailCommands.quote("\"\n\\") == "\"\\\"\\n\\\\\"")
 }

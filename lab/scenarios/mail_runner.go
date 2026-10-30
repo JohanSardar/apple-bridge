@@ -16,10 +16,7 @@ import (
 func runMail(ctx context.Context, s Scenario, level string) Evidence {
 	e := Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, At: time.Now().UTC(), Passed: true}
 	if s.Feature == "mail.commands" && level == "real" {
-		e.Passed = false
-		e.Status = "limited"
-		e.Conditions = map[string]string{"reason": "needs Automation grant AppleBridgeHelper → Mail"}
-		return e
+		return runMailCommandsReal(ctx, s, level)
 	}
 	if s.ID == "MAIL-BODY-REAL" {
 		return runMailBodyReal(ctx, s, level)

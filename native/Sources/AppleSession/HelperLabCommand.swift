@@ -8,6 +8,8 @@ import SourceSupport
 import NotesSource
 import SafariSource
 import MusicSource
+import MailSource
+import FocusSource
 
 enum HelperLabCommand {
     @MainActor
@@ -31,7 +33,7 @@ enum HelperLabCommand {
             var failure: (any Error)?
             Task { @MainActor in
                 do {
-                    let result = try await FocusRealProof.run(arguments[1])
+                    let result = try await FocusQualification.run(arguments[1])
                     try JSONEncoder().encode(result).write(to: reportURL, options: .atomic)
                 } catch { failure = error }
                 finished = true
@@ -53,6 +55,24 @@ enum HelperLabCommand {
             }
             while !finished { RunLoop.current.run(until: Date().addingTimeInterval(0.05)) }
             if let failure { throw failure }
+            return true
+        case "mac-notify-proof":
+            let reportURL = try report(arguments)
+            var result: JSON?
+            Task { @MainActor in result = await MacNotifyProof.run() }
+            while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.01)) }
+            try JSONEncoder().encode(result!).write(to: reportURL, options: .atomic)
+            return true
+        case "mail-real-checks":
+            let reportURL = try report(arguments)
+            guard arguments.count > 2 else { throw ProbeFailure.invalidArguments }
+            var result: JSON?
+            Task { @MainActor in
+                do { result = try await MailQualification().run(scenario: arguments[1], tag: arguments[2]) }
+                catch { result = .object(["fixture_and_commands": .bool(false)]) }
+            }
+            while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.01)) }
+            try JSONEncoder().encode(result!).write(to: reportURL, options: .atomic)
             return true
         case "music-qualification":
             let reportURL = try report(arguments)

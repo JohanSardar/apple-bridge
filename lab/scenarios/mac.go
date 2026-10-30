@@ -60,7 +60,9 @@ func runMac(ctx context.Context, s Scenario, level string) (e Evidence) {
 		return
 	}
 	if s.ID != "MAC-COMMANDS" && s.ID != "MAC-CAPTURE" && s.ID != "MAC-IDLE" && s.ID != "MAC-POWER-REAL" {
-		if s.ID == "MAC-CLIPBOARD-REAL" {
+		if s.ID == "MAC-NOTIFY-REAL" {
+			macNotifyReal(ctx, w, add)
+		} else if s.ID == "MAC-CLIPBOARD-REAL" {
 			macClipboardCommands(ctx, client, w, true, add)
 		} else {
 			macRealCommands(ctx, s, client, add)

@@ -51,7 +51,7 @@ public actor SafariTabs {
         _ = try quote(args["url"].string)
         return Prepared(nativeState: .null, fingerprint: command["request_hash"].string, action: action)
     }
-    public func dispatch(_ prepared: Prepared) throws -> JSON {
+    public func dispatch(_ prepared: Prepared) async throws -> JSON {
         guard permitted(fresh: true) else { throw SourceFailure.permissionMissing }
         let args = prepared.action["args"]
         let readback: JSON
@@ -61,7 +61,13 @@ public actor SafariTabs {
             let result = try script("set w to make new document with properties {URL:" + (try quote(url)) + "}\nreturn id of front window")
             let window = result.int32Value
             let key = "\(window):1"
-            guard let row = try tabs().first(where: { $0["native_key"].string == key && $0["data"]["url"].string == url }) else { throw SourceFailure.conflict }
+            var matched: JSON?
+            for _ in 0..<50 {
+                matched = try tabs().first(where: { $0["native_key"].string == key && $0["data"]["url"].string == url })
+                if matched != nil { break }
+                try await Task.sleep(for: .milliseconds(100))
+            }
+            guard let row = matched else { throw SourceFailure.conflict }
             readback = .object(["tab": .string(key), "url": row["data"]["url"]])
         case "safari.add_reading_list":
             let url = args["url"].string

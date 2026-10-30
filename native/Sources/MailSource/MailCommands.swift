@@ -43,7 +43,7 @@ public struct MailCommands: Sendable {
                 for address in args[field].array { body += "tell m to make new " + kind + " recipient at end of " + kind + " recipients with properties {address:" + q(address.string) + "}\n" }
             }
             body += op == "mail.send" ? "send m\n" : "save m\n"
-            readback = "return count of (messages of " + (op == "mail.send" ? "sent mailbox" : "drafts mailbox") + " whose subject is " + q(args["subject"].string) + " and content is " + q(args["body"].string) + ")"
+            readback = "return count of (messages of " + (op == "mail.send" ? "sent mailbox" : "drafts mailbox") + " whose subject is " + q(args["subject"].string) + " and content starts with " + q(args["body"].string) + ")"
         } else {
             let key = action["native_key"].string
             guard UInt64(key) != nil else { throw SourceFailure.invalid }
@@ -68,7 +68,10 @@ public struct MailCommands: Sendable {
             guard try await script(readback) == "0" else { throw SourceFailure.conflict }
         }
         _ = try await script(body)
-        guard let evidence = try? await script(readback), evidence == "1" || evidence == "true" else { return .object(["observed": .bool(false), "disposition": .string("indeterminate")]) }
-        return .object(["observed": .bool(true)])
+        for _ in 0..<40 {
+            if let evidence = try? await script(readback), evidence == "1" || evidence == "true" { return .object(["observed": .bool(true)]) }
+            try await Task.sleep(for: .milliseconds(200))
+        }
+        return .object(["observed": .bool(false), "disposition": .string("indeterminate")])
     }
 }

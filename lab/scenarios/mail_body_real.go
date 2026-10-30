@@ -12,8 +12,8 @@ import (
 	"github.com/JohanSardar/apple-bridge/lab/world"
 )
 
-func runMailBodyReal(ctx context.Context, s Scenario, level string) Evidence {
-	e := Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, At: time.Now().UTC(), Metrics: map[string]any{}}
+func runMailBodyReal(ctx context.Context, s Scenario, level string) (e Evidence) {
+	e = Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: level, At: time.Now().UTC(), Metrics: map[string]any{}}
 	check := func(name string, ok bool) bool {
 		e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok})
 		return ok
@@ -34,16 +34,32 @@ func runMailBodyReal(ctx context.Context, s Scenario, level string) Evidence {
 		return e
 	}
 	e.Metrics["eligible_sample_count"] = len(truth.Samples)
-	if len(truth.Samples) == 0 {
-		e.Status = "limited"
-		e.Conditions = map[string]string{"reason": "needs locally downloaded plain-text [ab-test] self-sent mail; creating it needs Automation grant AppleBridgeHelper → Mail"}
-		return e
-	}
 	w, err := world.NewRealWithSetup(ctx, level, 0, world.NativeSetup{FilesystemTruth: true, DevelopmentIdentity: true}, world.BlobOptions{Scope: "mail:read,system:read"})
 	if !check("mail_native_world", err == nil) {
 		return e
 	}
 	defer w.Close()
+	if len(truth.Samples) == 0 {
+		tag := "[ab-test] " + e.RunID
+		defer func() {
+			cleanup, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			proof, err := mailRealProof(cleanup, w, "MAIL-CLEANUP", tag)
+			e.Passed = check("owned_fixture_cleanup", err == nil && proof["cleanup_passed"]) && e.Passed
+		}()
+		proof, problem := mailRealProof(ctx, w, "MAIL-BODY-FIXTURE", tag)
+		if !check("self_sent_fixture_created", problem == nil && proof["sent_to_self"] && proof["self_mail_received"]) {
+			return e
+		}
+		err = w.Await(60*time.Second, func() bool {
+			output, err := exec.CommandContext(ctx, "python3", "lab/truth/mail_body.py").Output()
+			return err == nil && json.Unmarshal(output, &truth) == nil && len(truth.Samples) > 0
+		})
+		if !check("plain_text_fixture_downloaded", err == nil) {
+			return e
+		}
+		e.Metrics["eligible_sample_count"] = len(truth.Samples)
+	}
 	sample := truth.Samples[0]
 	digest := func(value string) string { return fmt.Sprintf("%x", sha256.Sum256([]byte(value))) }
 	err = w.Await(60*time.Second, func() bool {

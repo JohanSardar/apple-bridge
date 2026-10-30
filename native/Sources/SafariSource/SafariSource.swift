@@ -4,12 +4,12 @@ import CryptoKit
 
 public actor SafariSource: Source {
     public nonisolated let name = "safari"
-    private let tabs = SafariTabs()
+    private let tabs: SafariTabs
     private let directory: URL
     private let cacheURL: URL?
     private var historyExpiry = Date.distantPast
     private var generation = UUID().uuidString
-    public init(directory: URL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Safari"), cacheURL: URL? = nil) { self.directory = directory; self.cacheURL = cacheURL }
+    public init(directory: URL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Safari"), cacheURL: URL? = nil, tabs: SafariTabs = SafariTabs()) { self.directory = directory; self.cacheURL = cacheURL; self.tabs = tabs }
     public func open() async -> SourceReadiness {
         guard FileManager.default.fileExists(atPath: directory.path) else {
             return SourceReadiness(state: "unavailable", coverage: .object(["fields": .string("partial")]), reason: "Safari data directory unavailable")
@@ -161,7 +161,7 @@ public actor SafariSource: Source {
         let evidence = try await tabs.dispatch(prepared)
         if prepared.action["op"].string == "safari.add_reading_list" {
             let url = prepared.action["args"]["url"].string
-            for _ in 0..<30 {
+            for _ in 0..<100 {
                 if let rows = try? bookmarks(), rows.contains(where: { $0["collection"].string == "safari.reading_list" && $0["data"]["url"].string == url }) { return evidence }
                 try await Task.sleep(for: .milliseconds(100))
             }

@@ -18,7 +18,7 @@ func safariCleanupItems(ctx context.Context, w *world.World, run, action string,
 	defer cancel()
 	id := contracts.NewID("safari-cleanup")
 	input := filepath.Join(w.Dir, id+"-request.json")
-	output := filepath.Join(w.Dir, id+"-report.json")
+	output := filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "AppleBridgeDev", id+"-report.json")
 	defer os.Remove(input)
 	defer os.Remove(output)
 	data, err := json.Marshal(map[string]any{"run_id": run, "action": action, "item": item})

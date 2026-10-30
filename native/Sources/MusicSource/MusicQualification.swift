@@ -37,63 +37,58 @@ extension MusicPlayer {
 
     private func qualificationRestore(_ before: JSON) throws {
         let playlist = before["playlist"].string
-        guard playlist.count == 16, playlist.allSatisfy({ $0.isASCII && $0.isHexDigit }), ["songs", "albums", "groupings"].contains(before["shuffle_mode"].string), ["off", "one", "all"].contains(before["repeat"].string) else { throw SourceFailure.invalid }
+        guard ["songs", "albums", "groupings"].contains(before["shuffle_mode"].string), ["off", "one", "all"].contains(before["repeat"].string) else { throw SourceFailure.invalid }
+        var context = "stop"
+        if !playlist.isEmpty {
+            guard playlist.count == 16, playlist.allSatisfy({ $0.isASCII && $0.isHexDigit }), before["track"].string.count == 16, before["track"].string.allSatisfy({ $0.isASCII && $0.isHexDigit }), before["index"].number > 0 else { throw SourceFailure.invalid }
+            context = """
+            set p to first playlist whose persistent ID is "\(playlist)"
+            set t to track \(Int(before["index"].number)) of p
+            if persistent ID of t is not "\(before["track"].string)" then error "context changed"
+            play t
+            pause
+            set player position to \(before["position"].number)
+            \(before["state"].string == "stopped" ? "stop" : "")
+            """
+        }
         _ = try script("""
         set mute to true
         set shuffle enabled to false
-        set p to first playlist whose persistent ID is "\(playlist)"
-        set t to track \(Int(before["index"].number)) of p
-        if persistent ID of t is not "\(before["track"].string)" then error "context changed"
-        play t
-        pause
-        set player position to \(before["position"].number)
+        \(context)
         set shuffle mode to \(before["shuffle_mode"].string)
+        set shuffle enabled to \(before["shuffle"].bool ? "true" : "false")
         set song repeat to \(before["repeat"].string)
         set sound volume to \(Int(before["volume"].number))
         set mute to \(before["mute"].bool ? "true" : "false")
-        \(before["state"].string == "stopped" ? "stop" : "")
         """)
-    }
-
-    private func qualificationWave() -> Data {
-        let length: UInt32 = 44100 * 2 * 30
-        var data = Data()
-        func word(_ value: UInt16) { var encoded = value.littleEndian; withUnsafeBytes(of: &encoded) { data.append(contentsOf: $0) } }
-        func integer(_ value: UInt32) { var encoded = value.littleEndian; withUnsafeBytes(of: &encoded) { data.append(contentsOf: $0) } }
-        data.append(Data("RIFF".utf8)); integer(length + 36); data.append(Data("WAVEfmt ".utf8)); integer(16); word(1); word(1); integer(44100); integer(88200); word(2); word(16); data.append(Data("data".utf8)); integer(length); data.append(Data(repeating: 0, count: Int(length)))
-        return data
     }
 
     public func qualifyPlayback(playlistOnly: Bool) async throws -> JSON {
         let readiness = await open()
         guard readiness.state == "ready" else { return .object(["status": .string("limited"), "reason": .string(readiness.state == "permission_missing" ? "needs Music Automation grant (T79); consent not requested" : "needs Music running; no fixture changes made")]) }
         let before = try qualificationSnapshot()
-        guard ["playing", "paused", "stopped"].contains(before["state"].string), !before["track"].string.isEmpty, !before["playlist"].string.isEmpty, before["index"].number > 0, !before["shuffle"].bool else {
+        guard ["playing", "paused", "stopped"].contains(before["state"].string), (before["state"].string == "stopped" || (!before["track"].string.isEmpty && !before["playlist"].string.isEmpty && before["index"].number > 0)) else {
             if before["state"].string == "playing" { _ = try script("play") }
-            return .object(["status": .string("limited"), "reason": .string("needs restorable unshuffled playlist playback context; no fixture changes made")])
+            return .object(["status": .string("limited"), "reason": .string("needs identifiable active playback context; no fixture changes made")])
         }
-        let tag = "[ab-test " + UUID().uuidString + "]"
-        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(tag, isDirectory: true)
+        let tag = "[ab-test] " + UUID().uuidString
         var checks: [String: JSON] = [:]
         var after = JSON.null
         var ownsFixtures = false
         do {
-            _ = try script("if (count user playlists whose name starts with \"\(tag)\") is not 0 or (count tracks of library playlist 1 whose name starts with \"\(tag)\") is not 0 then error \"collision\"")
+            _ = try script("if (count user playlists whose name starts with \"\(tag)\") is not 0 then error \"collision\"")
             ownsFixtures = true
-            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
-            for index in 1...2 { try qualificationWave().write(to: folder.appendingPathComponent(tag + " \(index).wav"), options: .atomic) }
-            func literal(_ value: String) -> String { "\"" + value.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"") + "\"" }
             let fixture = try script("""
+            if (count tracks of library playlist 1) is 0 then error "library track required"
+            set t to first track of library playlist 1
             set p to make new user playlist with properties {name:"\(tag) source"}
-            set a to add POSIX file \(literal(folder.appendingPathComponent(tag + " 1.wav").path)) to p
-            set b to add POSIX file \(literal(folder.appendingPathComponent(tag + " 2.wav").path)) to p
-            set name of item 1 of a to "\(tag) 1"
-            set name of item 1 of b to "\(tag) 2"
+            duplicate t to p
+            duplicate t to p
             set destination to make new user playlist with properties {name:"\(tag) destination"}
-            return {persistent ID of item 1 of a, persistent ID of destination, count tracks of p}
+            return {persistent ID of t, persistent ID of destination, count tracks of p}
             """)
             guard fixture.numberOfItems == 3, let track = fixture.atIndex(1)?.stringValue, let playlist = fixture.atIndex(2)?.stringValue else { throw SourceFailure.corrupt }
-            checks["synthetic_tracks_created"] = .bool(fixture.atIndex(3)?.int32Value == 2)
+            checks["library_playlist_fixture_created"] = .bool(fixture.atIndex(3)?.int32Value == 2)
             sink = MusicQualificationSink()
             defer { sink = nil }
             if !playlistOnly {
@@ -113,27 +108,10 @@ extension MusicPlayer {
         do {
             guard ownsFixtures else { throw SourceFailure.conflict }
             let cleanup = try script("""
-            set paths to {}
-            repeat with t in (every track of library playlist 1 whose name starts with "\(tag)")
-                set end of paths to POSIX path of (location of t)
-            end repeat
             delete (every user playlist whose name starts with "\(tag)")
-            delete (every track of library playlist 1 whose name starts with "\(tag)")
-            return {(count user playlists whose name starts with "\(tag)"), (count tracks of library playlist 1 whose name starts with "\(tag)"), paths}
+            return count user playlists whose name starts with "\(tag)"
             """)
-            checks["tagged_fixture_deleted"] = .bool(cleanup.numberOfItems == 3 && cleanup.atIndex(1)?.int32Value == 0 && cleanup.atIndex(2)?.int32Value == 0)
-            guard let paths = cleanup.atIndex(3) else { throw SourceFailure.corrupt }
-            var mediaDeleted = true
-            for index in 0..<paths.numberOfItems {
-                let file = URL(fileURLWithPath: paths.atIndex(index + 1)?.stringValue ?? "")
-                guard file.lastPathComponent.hasPrefix(tag), file.pathExtension.lowercased() == "wav" else { mediaDeleted = false; continue }
-                if FileManager.default.fileExists(atPath: file.path) {
-                    guard try Data(contentsOf: file) == qualificationWave() else { mediaDeleted = false; continue }
-                    try FileManager.default.removeItem(at: file)
-                }
-                mediaDeleted = mediaDeleted && !FileManager.default.fileExists(atPath: file.path)
-            }
-            checks["synthetic_media_deleted"] = .bool(mediaDeleted)
+            checks["tagged_fixture_deleted"] = .bool(cleanup.int32Value == 0)
         } catch { checks["tagged_fixture_deleted"] = .bool(false) }
         do {
             try qualificationRestore(before)
@@ -145,7 +123,6 @@ extension MusicPlayer {
         } catch { checks["restore_applied"] = .bool(false); checks["exact_playback_restore"] = .bool(false) }
         if before["state"].string == "playing" { _ = try script("play") }
         checks["playback_state_restored"] = .bool((try nowPlaying())["state"] == before["state"])
-        try? FileManager.default.removeItem(at: folder)
         let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
         func digest(_ value: JSON) throws -> JSON { .string(SHA256.hash(data: try encoder.encode(value)).map { String(format: "%02x", $0) }.joined()) }
         var normalized = after.object; normalized["state"] = before["state"]
