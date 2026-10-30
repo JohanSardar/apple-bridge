@@ -1434,7 +1434,7 @@ features:
       - {id: APP-HEALTH-SIM, levels: [sim]}
       - {id: APP-HEALTH-REAL, levels: [real]}
     limits:
-      - {scenario: APP-HEALTH-REAL, level: real, reason: 'limited: needs Allow tap'}
+      - {scenario: APP-HEALTH-REAL, level: real, reason: 'limited: real-device request and observation harness missing; needs Allow tap'}
   - id: iphone.health.write
     title: Log water, weight, mindful minutes and workouts
     requirements: [R-API, R-SECURE]
@@ -1446,7 +1446,7 @@ features:
       - {id: APP-HEALTH-WRITE-SIM, levels: [sim]}
       - {id: APP-HEALTH-WRITE-REAL, levels: [real]}
     limits:
-      - {scenario: APP-HEALTH-WRITE-REAL, level: real, reason: 'limited: needs Allow tap'}
+      - {scenario: APP-HEALTH-WRITE-REAL, level: real, reason: 'limited: real-device request and observation harness missing; needs Allow tap'}
   - id: iphone.build
     title: Signed iPhone build and USB install
     requirements: [R-PKG]
@@ -1462,10 +1462,12 @@ features:
     milestone: G13
     modules: [ios/App, ios/Capabilities]
     depends_on: [iphone.build]
-    status: done
+    status: limited
     scenarios:
       - {id: APP-SHELL-SIM, levels: [sim]}
       - {id: APP-SHELL-REAL, levels: [real]}
+    limits:
+      - {scenario: APP-SHELL-REAL, level: real, reason: 'App launched over USB; settings and diagnostics UI observation harness missing'}
   - id: iphone.pairing
     title: iPhone device keys and one-time gateway pairing
     requirements: [R-SECURE, R-API]
@@ -1477,7 +1479,7 @@ features:
       - {id: APP-PAIR-SIM, levels: [sim]}
       - {id: APP-PAIR-REAL, levels: [real]}
     limits:
-      - {scenario: APP-PAIR-REAL, level: real, reason: 'limited: needs Allow tap for Local Network and camera QR permission'}
+      - {scenario: APP-PAIR-REAL, level: real, reason: 'limited: real-device request and observation harness missing; needs Allow tap for Local Network and camera QR permission'}
   - id: iphone.delivery
     title: Encrypted iPhone push commands and signed results
     requirements: [R-SECURE, R-SAFE-CMD, R-API]
@@ -1489,7 +1491,7 @@ features:
       - {id: APP-CMD-SIM, levels: [sim]}
       - {id: APP-CMD-REAL, levels: [real]}
     limits:
-      - {scenario: APP-CMD-REAL, level: real, reason: 'limited: needs Allow tap to complete phone pairing; locked-phone APNs round trip and latency unmeasured'}
+      - {scenario: APP-CMD-REAL, level: real, reason: 'limited: real-device request and observation harness missing; needs Allow tap to complete phone pairing; locked-phone APNs round trip and latency unmeasured'}
   - id: iphone.notifications
     title: iPhone notifications and interactive button results
     requirements: [R-SECURE, R-SAFE-CMD, R-API]
@@ -1501,7 +1503,7 @@ features:
       - {id: APP-NOTIFY-SIM, levels: [sim]}
       - {id: APP-NOTIFY-REAL, levels: [real]}
     limits:
-      - {scenario: APP-NOTIFY-REAL, level: real, reason: 'limited: needs Allow tap'}
+      - {scenario: APP-NOTIFY-REAL, level: real, reason: 'limited: real-device request and observation harness missing; needs Allow tap'}
       - {scenario: APP-NOTIFY-SIM, level: sim, reason: 'Gateway simulation passes; native UI proof limited: shared simulator DEVICE_IN_USE after 60-second retry'}
   - id: iphone.motion
     title: iPhone activity, pedometer, floors and seven-day history
@@ -1514,7 +1516,7 @@ features:
       - {id: APP-MOTION-SIM, levels: [sim]}
       - {id: APP-MOTION-REAL, levels: [real]}
     limits:
-      - {scenario: APP-MOTION-REAL, level: real, reason: 'limited: needs Allow tap'}
+      - {scenario: APP-MOTION-REAL, level: real, reason: 'limited: real-device request and observation harness missing; needs Allow tap'}
   - id: iphone.alarms
     title: iPhone AlarmKit alarms and timers
     requirements: [R-SAFE-CMD, R-API]
@@ -1526,7 +1528,7 @@ features:
       - {id: APP-ALARM-SIM, levels: [sim]}
       - {id: APP-ALARM-REAL, levels: [real]}
     limits:
-      - {scenario: APP-ALARM-REAL, level: real, reason: 'limited: needs Allow tap'}
+      - {scenario: APP-ALARM-REAL, level: real, reason: 'limited: real-device request and observation harness missing; needs Allow tap'}
   - id: iphone.extras
     title: iPhone WeatherKit, Journal suggestions and EnergyKit hints
     requirements: [R-API, R-SCOPE]
@@ -1549,7 +1551,7 @@ features:
       - {id: APP-DEVICE-SIM, levels: [sim]}
       - {id: APP-DEVICE-REAL, levels: [real]}
     limits:
-      - {scenario: APP-DEVICE-REAL, level: real, reason: 'limited: needs Allow tap; Wi-Fi location authorization and foreground NFC tag presentation required'}
+      - {scenario: APP-DEVICE-REAL, level: real, reason: 'limited: real-device request and observation harness missing; needs Allow tap; Wi-Fi location authorization and foreground NFC tag presentation required'}
   - id: iphone.screentime
     title: Bridge-owned Screen Time shields, downtime and usage report
     requirements: [R-SAFE-CMD, R-API]
@@ -1561,7 +1563,7 @@ features:
       - {id: APP-SCREENTIME-SIM, levels: [sim]}
       - {id: APP-SCREENTIME-REAL, levels: [real]}
     limits:
-      - {scenario: APP-SCREENTIME-REAL, level: real, reason: 'limited: needs Allow tap'}
+      - {scenario: APP-SCREENTIME-REAL, level: real, reason: 'limited: real-device request and observation harness missing; needs Allow tap'}
   - id: iphone.location
     title: iPhone precise location and named geofence event records
     requirements: [R-API, R-SAFE-CMD]
@@ -1573,7 +1575,7 @@ features:
       - {id: APP-LOC-SIM, levels: [sim]}
       - {id: APP-LOC-REAL, levels: [real]}
     limits:
-      - {scenario: APP-LOC-REAL, level: real, reason: 'limited: needs Allow tap for Always and Precise Location'}
+      - {scenario: APP-LOC-REAL, level: real, reason: 'limited: real-device request and observation harness missing; needs Allow tap for Always and Precise Location'}
   - id: iphone.appleapproval
     title: Apple approval gated FinanceKit, critical alerts, location push and fall detection
     requirements: [R-API, R-SCOPE, R-SAFE-CMD]
@@ -1595,7 +1597,7 @@ features:
     scenarios:
       - {id: APP-INTENTS-REAL, levels: [real]}
     limits:
-      - {scenario: APP-INTENTS-REAL, level: real, reason: 'limited: needs Allow tap to save or import a Shortcuts workflow'}
+      - {scenario: APP-INTENTS-REAL, level: real, reason: 'limited: real-device request and observation harness missing; needs Allow tap to save or import a Shortcuts workflow'}
 
   - id: iphone.approvals
     title: Face ID command approvals
@@ -1608,7 +1610,7 @@ features:
       - {id: APP-APPROVE-SIM, levels: [sim]}
       - {id: APP-APPROVE-REAL, levels: [real]}
     limits:
-      - {scenario: APP-APPROVE-REAL, level: real, reason: 'limited: needs Allow tap'}
+      - {scenario: APP-APPROVE-REAL, level: real, reason: 'limited: real-device request and observation harness missing; needs Allow tap'}
   - id: iphone.widgets
     title: Agent task Live Activities and bridge status widgets
     requirements: [R-API]
@@ -1620,7 +1622,7 @@ features:
       - {id: APP-LIVE-SIM, levels: [sim]}
       - {id: APP-LIVE-REAL, levels: [real]}
     limits:
-      - {scenario: APP-LIVE-REAL, level: real, reason: 'limited: needs Allow tap'}
+      - {scenario: APP-LIVE-REAL, level: real, reason: 'limited: real-device request and observation harness missing; needs Allow tap'}
     notes: Gateway pushes ActivityKit start, update and end using signed device token registration. APNs acceptance is dispatch only; no phone observation is claimed. Widgets show the last reported delivery status with its age.
 
 
@@ -1635,4 +1637,4 @@ features:
       - {id: APP-CAPTURE-SIM, levels: [sim]}
       - {id: APP-CAPTURE-REAL, levels: [real]}
     limits:
-      - {scenario: APP-CAPTURE-REAL, level: real, reason: 'limited: needs Allow tap for camera and microphone'}
+      - {scenario: APP-CAPTURE-REAL, level: real, reason: 'limited: real-device request and observation harness missing; needs Allow tap for camera and microphone'}

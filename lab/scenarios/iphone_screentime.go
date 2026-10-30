@@ -16,7 +16,7 @@ func runIPhoneScreenTime(ctx context.Context, s Scenario, level string) Evidence
 	if level == "real" {
 		e.Passed = false
 		e.Status = "limited"
-		e.Assertions = []Assertion{{Name: "authorization", Passed: false, Detail: "limited: needs Allow tap"}}
+		e.Assertions = []Assertion{{Name: "authorization", Passed: false, Detail: "limited: real-device permission request and observation harness missing; needs Allow tap"}}
 		return e
 	}
 	add := func(name string, ok bool) {

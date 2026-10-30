@@ -27,7 +27,7 @@ func runIPhoneLive(ctx context.Context, s Scenario, level string) Evidence {
 	e := Evidence{Scenario: s.ID, Level: level, At: time.Now().UTC()}
 	if level == "real" {
 		e.Status = "limited"
-		e.Assertions = []Assertion{{Name: "phone_live_widgets", Status: "limited", Detail: "limited: needs Allow tap"}}
+		e.Assertions = []Assertion{{Name: "phone_live_widgets", Status: "limited", Detail: "limited: real-device permission request and observation harness missing; needs Allow tap"}}
 		return e
 	}
 	check := func(name string, passed bool) bool {

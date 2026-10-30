@@ -12,7 +12,7 @@ func runIPhoneAlarm(ctx context.Context, s Scenario, level string) Evidence {
 	e := Evidence{Scenario: s.ID, Level: level, At: time.Now().UTC()}
 	if level == "real" {
 		e.Status = "limited"
-		e.Assertions = []Assertion{{Name: "alarmkit_permission", Detail: "limited: needs Allow tap"}}
+		e.Assertions = []Assertion{{Name: "alarmkit_permission", Detail: "limited: real-device permission request and observation harness missing; needs Allow tap"}}
 		return e
 	}
 	dir, err := os.MkdirTemp("", "ab-test-alarms-")
