@@ -18,18 +18,11 @@ func runMail(ctx context.Context, s Scenario, level string) Evidence {
 	if s.Feature == "mail.commands" && level == "real" {
 		e.Passed = false
 		e.Status = "limited"
-		e.Conditions = map[string]string{"reason": "grant: Automation dev.applebridge.helper → com.apple.mail; no configured Mail account"}
+		e.Conditions = map[string]string{"reason": "needs Automation grant AppleBridgeHelper → Mail"}
 		return e
 	}
 	if s.ID == "MAIL-BODY-REAL" {
-		_, err := os.Stat(filepath.Join(os.Getenv("HOME"), "Library/Mail/V10/MailData/Envelope Index"))
-		e.Assertions = append(e.Assertions, Assertion{Name: "real_mail_store_available", Passed: err == nil})
-		if os.IsNotExist(err) {
-			e.Status = "limited"
-			e.Conditions = map[string]string{"reason": "No V10 Envelope Index on this Mac; real body Truth qualification unavailable"}
-		}
-		e.Passed = false
-		return e
+		return runMailBodyReal(ctx, s, level)
 	}
 	if s.ID == "MAIL-READ-REAL" {
 		return runMailRead(ctx, s, level)

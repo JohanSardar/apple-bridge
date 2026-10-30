@@ -56,6 +56,15 @@ func runMailRead(ctx context.Context, s Scenario, level string) Evidence {
 		matched = 0
 		actual := map[string]bool{}
 		for _, r := range records {
+			if r.Collection == "system.source" {
+				var source struct {
+					Source string `json:"source"`
+					State  string `json:"state"`
+				}
+				if json.Unmarshal(r.Data, &source) == nil && source.Source == "mail" {
+					e.Metrics["mail_source_ready"] = source.State == "ready"
+				}
+			}
 			if r.Collection != "mail.message" {
 				continue
 			}
