@@ -1,0 +1,24 @@
+{
+  "scenario": "WEB-MSG-ATTACH-SEND",
+  "level": "web",
+  "git_sha": "bf9fdadc11c74344ceaa2308492de5d4b10df5e7",
+  "at": "2026-10-30T00:10:23.763135Z",
+  "passed": true,
+  "metrics": {
+    "matrix_count": 1,
+    "completed_matrix_count": 1,
+    "passed_matrix_count": 1,
+    "failed_matrix_count": 0,
+    "incomplete_matrix_count": 0,
+    "passed_test_count": 9,
+    "failed_test_count": 0,
+    "skipped_test_count": 0,
+    "report_sha256": "96c9535366c74ae35a772c5b1191589390f27bc5284fd880ac7bdc4f5dc50ebe"
+  },
+  "assertions": [
+    {
+      "name": "chromium-light-desktop",
+      "passed": true
+    }
+  ]
+}

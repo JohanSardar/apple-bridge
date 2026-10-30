@@ -721,7 +721,6 @@ features:
       - {"scenario": "WEB-MSG-REPLIES", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
       - {"scenario": "WEB-MSG-REPLY-HANDOFF", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
       - {"scenario": "WEB-MSG-POINTER", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
-      - {"scenario": "WEB-MSG-EDIT-UNSEND-VIEW", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
       - {"scenario": "WEB-MSG-GROUP-EVENTS", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
       - {"scenario": "WEB-MSG-INTERACTION-MOTION", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
       - {"scenario": "WEB-MSG-FONTS", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
@@ -796,12 +795,8 @@ features:
       - {"scenario": "MSG-READSTATE-REAL", "level": "real", "reason": "skipped: requires unlocked Mac with Messages UI available and an unused own self-chat handle; no safe UI cleanup demonstrated at lock screen"}
       - {"scenario": "MSG-DELETE-REAL", "level": "real", "reason": "skipped: requires unlocked Mac with Messages UI available and an unused own self-chat handle; no safe UI cleanup demonstrated at lock screen"}
       - {"scenario": "MSG-RESEND", "level": "real", "reason": "skipped: requires a uniquely identified failed self-chat test message via APPLE_BRIDGE_RESEND_RUN; existing self-chat residue must remain untouched"}
-      - {"scenario": "WEB-MSG-SEND", "level": "web", "reason": "web qualification remains missing"}
-      - {"scenario": "WEB-MSG-ATTACH-SEND", "level": "web", "reason": "web qualification remains missing"}
       - {"scenario": "WEB-UPLOAD-NATIVE-STAGING", "level": "real", "reason": "limited: native send remained indeterminate. T63 recovered this run's three text/file rows with zero foreign deletions. Further attachment sends are blocked pending native cleanup qualification; this is not a missing-grant limit."}
       - {"scenario": "WEB-MSG-MANAGE", "level": "web", "reason": "web qualification remains missing"}
-      - {"scenario": "WEB-MSG-CHAT-ACTIONS", "level": "web", "reason": "web qualification remains missing"}
-      - {"scenario": "WEB-MSG-FAIL-RESEND", "level": "web", "reason": "web qualification remains missing"}
   - id: web.messages.parity
     title: Messages parity (pins, mute, read receipts, Send Later, effects, formatting, mentions, audio messages, Recently Deleted, groups)
     requirements: [R-WEB-UI, R-MSG-DEPTH]
@@ -831,7 +826,6 @@ features:
       - {"scenario": "MSG-PINS", "level": "real", "reason": "limited: needs Accessibility grant for the current signed Helper on the Air. Real preflight submitted zero writes; Automation remains unchecked behind Accessibility. Fresh text-only unused-self-handle fixtures, continuous T63 owned-ID cleanup and baseline preservation are enforced. Pin, receipt and Recently Deleted native qualification remains fail-closed."}
       - {"scenario": "MSG-MUTE", "level": "real", "reason": "limited: needs Accessibility grant for the current signed Helper on the Air. Real preflight submitted zero writes; Automation remains unchecked behind Accessibility. Fresh text-only unused-self-handle fixtures, continuous T63 owned-ID cleanup and baseline preservation are enforced. Pin, receipt and Recently Deleted native qualification remains fail-closed."}
       - {"scenario": "MSG-READ-RECEIPTS", "level": "real", "reason": "limited: needs Accessibility grant for the current signed Helper on the Air. Real preflight submitted zero writes; Automation remains unchecked behind Accessibility. Fresh text-only unused-self-handle fixtures, continuous T63 owned-ID cleanup and baseline preservation are enforced. Pin, receipt and Recently Deleted native qualification remains fail-closed."}
-      - {"scenario": "WEB-MSG-SEND-VARIANTS", "level": "web", "reason": "web qualification remains missing"}
       - {"scenario": "MSG-SEND-LATER", "level": "real", "reason": "needs verified Send Later date controls and cancellation cleanup; fail-closed"}
       - {"scenario": "MSG-SEND-EFFECT", "level": "real", "reason": "needs Messages Accessibility grant; signed Helper preflight submitted zero writes and preserved the native baseline"}
       - {"scenario": "MSG-FORMATTING-SEND", "level": "real", "reason": "needs Messages Accessibility grant; signed Helper preflight submitted zero writes and preserved the native baseline"}
