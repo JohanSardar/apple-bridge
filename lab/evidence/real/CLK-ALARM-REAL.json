@@ -1,10 +1,10 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[6.12 4.36 6.59] cpu_idle=77% cpus=8 other_heavy=0"
+    "summary": "air: load=[2.56 2.06 2.11] cpu_idle=83% cpus=8 other_heavy=0"
   },
   "status": "limited",
-  "run_id": "run_01M65BAK05Y7XKJRQ72H7NYZED",
+  "run_id": "run_01M65HSRWYFAJXE5BN1BZ40K33",
   "metrics": {
     "capture_observer_resets": 0,
     "pack_installed": true
@@ -13,7 +13,7 @@
   "level": "real",
   "passed": false,
   "git_sha": "",
-  "at": "2026-10-30T02:48:19.718283Z",
+  "at": "2026-10-30T04:41:28.734274Z",
   "assertions": [
     {
       "name": "credential_backend_override_restored",

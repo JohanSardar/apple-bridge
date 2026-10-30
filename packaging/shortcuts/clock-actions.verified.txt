@@ -80,6 +80,7 @@
       "No timer label property or timer entity",
       "No running/paused state readback; positive remaining time does not distinguish paused from running"
     ],
-    "qualification": "limited: cannot prove timer_running and label; do not echo the request as readback"
+    "qualification": "limited: Start Timer signs, but Get Current Timer does not sign on this Air; no running-state or label readback is exposed. The distributable pack omits the rejected read action and never echoes request fields as confirmation.",
+    "signing_probe": "shortcuts sign --mode anyone rejects GetCurrentTimerDetailsIntent with omitted mode, duration and remainingTime: This shortcut can\u2019t be shared because it contains unsupported features. All other pack action identifiers signed individually."
   }
 }

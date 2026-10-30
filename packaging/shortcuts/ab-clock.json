@@ -456,32 +456,6 @@
       }
     },
     {
-      "key": "timer_duration",
-      "identifier": "com.apple.clock.GetCurrentTimerDetailsIntent",
-      "parameters": {
-        "AppIntentDescriptor": {
-          "AppIntentIdentifier": "GetCurrentTimerDetailsIntent",
-          "BundleIdentifier": "com.apple.clock",
-          "Name": "Clock",
-          "TeamIdentifier": "0000000000"
-        },
-        "mode": "duration"
-      }
-    },
-    {
-      "key": "timer_remaining",
-      "identifier": "com.apple.clock.GetCurrentTimerDetailsIntent",
-      "parameters": {
-        "AppIntentDescriptor": {
-          "AppIntentIdentifier": "GetCurrentTimerDetailsIntent",
-          "BundleIdentifier": "com.apple.clock",
-          "Name": "Clock",
-          "TeamIdentifier": "0000000000"
-        },
-        "mode": "remainingTime"
-      }
-    },
-    {
       "key": "timer_end",
       "identifier": "is.workflow.actions.conditional",
       "parameters": {

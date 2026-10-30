@@ -1039,7 +1039,7 @@ features:
       - {id: CLK-TIMER-REAL, levels: [real]}
     limits:
       - {"scenario": "CLK-ALARM-REAL", "level": "real", "reason": "limited: needs replacement AB Clock import and real alarm field qualification"}
-      - {"scenario": "CLK-TIMER-REAL", "level": "real", "reason": "limited: Clock exposes timer duration/remaining time but no running state or label readback"}
+      - {"scenario": "CLK-TIMER-REAL", "level": "real", "reason": "limited: Air signer rejects Get Current Timer; Start Timer has no running state or label confirmation"}
   - id: mac.capture
     title: Mac system state capture
     requirements: [R-API, R-SCOPE]

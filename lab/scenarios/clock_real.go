@@ -45,7 +45,7 @@ func runClockReal(ctx context.Context, s Scenario, initial Evidence, pack clockp
 		return limited("AB Clock did not return versioned structured alarm fields (id, time, label, repeat_days, enabled); mutations not attempted")
 	}
 	e.Metrics["alarms_before"] = len(before.Alarms)
-	alarm := clockpack.Alarm{ID: e.RunID, Label: "[ab-test] " + e.RunID, Time: time.Now().Add(12 * time.Hour).Format("15:04"), RepeatDays: []int{}, Enabled: true}
+	alarm := clockpack.Alarm{ID: e.RunID, Label: "[ab-test] " + e.RunID, Time: time.Now().Add(12 * time.Hour).Format("15:04"), RepeatDays: []int{1, 3}, Enabled: true}
 	request := clockpack.Request{Alarm: &alarm}
 	cleanup := func() {
 		cleanupCtx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
