@@ -1071,7 +1071,7 @@ features:
       - {id: MAIL-AGENT, levels: [agent]}
     notes: "MAIL-IDLE sim proves bounded fixture checkpoint suppression and resumed capture after a write; five-minute Helper CPU remains a real-level qualification."
     limits:
-      - {"scenario": "MAIL-IDLE", "level": "real", "reason": "Failed assertions: mail_idle_qualification_pending_T53_and_real_mail_store"}
+      - {"scenario": "MAIL-IDLE", "level": "real", "reason": "needs five-minute whole-Helper idle CPU qualification after Mail sync settles (T53)"}
       - {"scenario": "MAIL-READ-REAL", "level": "real", "reason": "Failed assertions: mail_truth_read_only_available"}
       - {"scenario": "MAIL-AGENT", "level": "agent", "reason": "Ubuntu Codex OAuth token is revoked (HTTP 401 token_revoked); Johan must sign in again before MCP-only agent qualification."}
   - id: files.capture
@@ -1100,7 +1100,7 @@ features:
       - {id: MAIL-BODY, levels: [sim]}
       - {id: MAIL-BODY-REAL, levels: [real]}
     limits:
-      - {"scenario": "MAIL-BODY-REAL", "level": "real", "reason": "No V10 Envelope Index on this Mac; real body Truth qualification unavailable"}
+      - {"scenario": "MAIL-BODY-REAL", "level": "real", "reason": "needs locally downloaded plain-text [ab-test] self-sent mail; creating it needs Automation grant AppleBridgeHelper → Mail"}
   - id: photos.capture
     title: Photos metadata capture and filtered search
     requirements: [R-API, R-SCOPE]
@@ -1144,9 +1144,9 @@ features:
       - {id: MAIL-DRAFT-REAL, levels: [real]}
       - {id: MAIL-ORGANIZE-REAL, levels: [real]}
     limits:
-      - {"scenario": "MAIL-SEND-SELF-REAL", "level": "real", "reason": "grant: Automation dev.applebridge.helper → com.apple.mail; no configured Mail account"}
-      - {"scenario": "MAIL-DRAFT-REAL", "level": "real", "reason": "grant: Automation dev.applebridge.helper → com.apple.mail; no configured Mail account"}
-      - {"scenario": "MAIL-ORGANIZE-REAL", "level": "real", "reason": "grant: Automation dev.applebridge.helper → com.apple.mail; no configured Mail account"}
+      - {"scenario": "MAIL-SEND-SELF-REAL", "level": "real", "reason": "needs Automation grant AppleBridgeHelper → Mail"}
+      - {"scenario": "MAIL-DRAFT-REAL", "level": "real", "reason": "needs Automation grant AppleBridgeHelper → Mail"}
+      - {"scenario": "MAIL-ORGANIZE-REAL", "level": "real", "reason": "needs Automation grant AppleBridgeHelper → Mail"}
   - id: phone.read
     title: Local call history capture
     requirements: [R-API, R-SCOPE]

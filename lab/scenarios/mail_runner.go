@@ -28,7 +28,8 @@ func runMail(ctx context.Context, s Scenario, level string) Evidence {
 		return runMailRead(ctx, s, level)
 	}
 	if s.ID == "MAIL-IDLE" && level == "real" {
-		e.Assertions = append(e.Assertions, Assertion{Name: "mail_idle_qualification_pending_T53_and_real_mail_store", Passed: false})
+		e.Status = "limited"
+		e.Conditions = map[string]string{"reason": "needs five-minute whole-Helper idle CPU qualification after Mail sync settles (T53)"}
 		e.Passed = false
 		return e
 	}

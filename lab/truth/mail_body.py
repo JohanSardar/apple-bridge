@@ -1,5 +1,6 @@
 import email.policy
 import email.parser
+import email.utils
 import hashlib
 import json
 import pathlib
@@ -21,6 +22,10 @@ for key, subject, sender, received in rows:
         continue
     message = email.parser.BytesParser(policy=email.policy.default).parsebytes(raw)
     if message.is_multipart() or message.get_content_type() != 'text/plain':
+        continue
+    senders = {address.lower() for _, address in email.utils.getaddresses(message.get_all('From', [])) if address}
+    recipients = {address.lower() for _, address in email.utils.getaddresses(message.get_all('To', [])) if address}
+    if not senders or not senders.issubset(recipients) or sender.lower() not in senders:
         continue
     text = message.get_content().replace('\r\n', '\n')
     samples.append({'subject_digest': hashlib.sha256(subject.encode()).hexdigest(), 'sender_digest': hashlib.sha256(sender.encode()).hexdigest(), 'received': received, 'body_digest': hashlib.sha256(text.encode()).hexdigest()})
