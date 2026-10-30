@@ -1,66 +1,62 @@
 {
-  "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[37.75 59.17 78.83] cpu_idle=40% cpus=8 other_heavy=0"
-  },
-  "status": "limited",
-  "run_id": "run_01M64VJ26HKWT65X5AP461YEP3",
+  "host_conditions": null,
+  "run_id": "run_01M67A5RZ10V1CRTHWKPERFTZX",
   "metrics": {
-    "capture_observer_resets": 0
+    "asset_count": null,
+    "helper_cpu_percent": 3.7264675490839627,
+    "idle_seconds": 300.01603,
+    "original_digest": null,
+    "shared_window": "2026-10-30T21:19:37.873194Z"
   },
   "scenario": "PHO-IDLE",
   "level": "real",
   "passed": false,
-  "git_sha": "",
-  "at": "2026-10-29T22:12:47.441942Z",
+  "git_sha": "2383f996c3e31709c365a7d3431ea405b52ffedf",
+  "at": "2026-10-30T21:06:42.273329Z",
   "assertions": [
     {
-      "name": "descriptor_photos.search",
-      "passed": true
-    },
-    {
-      "name": "descriptor_photos.original",
-      "passed": true
-    },
-    {
-      "name": "descriptor_photos.thumbnail",
-      "passed": true
-    },
-    {
-      "name": "source_grants",
-      "passed": true
-    },
-    {
-      "name": "helper_directory",
-      "passed": true
-    },
-    {
-      "name": "signed_helper_build",
-      "passed": true
-    },
-    {
-      "name": "signed_helper_probe",
+      "name": "helper_ready",
       "passed": true
     },
     {
       "name": "helper_report",
+      "passed": false
+    },
+    {
+      "name": "grant_passed",
+      "passed": false
+    },
+    {
+      "name": "read_passed",
+      "passed": false
+    },
+    {
+      "name": "import_passed",
+      "passed": false
+    },
+    {
+      "name": "original_passed",
+      "passed": false
+    },
+    {
+      "name": "cleanup_passed",
+      "passed": false
+    },
+    {
+      "name": "messages_capture_and_media_settled",
       "passed": true
     },
     {
-      "name": "grant_probe",
-      "passed": true
+      "name": "helper_reached_idle",
+      "passed": false
     },
     {
-      "name": "photos_readwrite_authorization",
-      "passed": false,
-      "status": "limited",
-      "detail": "needs Photos grant"
-    },
-    {
-      "name": "credential_backend_override_restored",
-      "passed": true
+      "name": "shared_five_minute_helper_cpu_under_two_percent",
+      "passed": false
     }
   ],
   "latency": null,
-  "hosts": null
+  "hosts": [
+    "air"
+  ]
 }

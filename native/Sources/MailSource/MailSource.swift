@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 import SourceSupport
 
 public actor MailSource: Source {
@@ -59,10 +60,20 @@ public actor MailSource: Source {
         switch value { case .integer(let n): return Double(n); case .real(let n): return n; default: return 0 }
     }
     public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {
-        let watcher = DatabaseWatcher(path: path)
+        let watcher = DatabaseWatcher(path: path, coalescing: .seconds(1), pollInterval: .seconds(300))
         defer { watcher.close() }
         var previous: [JSON] = []
+        var publishedStamp: [String]?
+        func stamp() -> [String] {
+            [path, path + "-wal"].map { file in
+                var value = stat()
+                guard stat(file, &value) == 0 else { return "missing" }
+                return "\(value.st_dev):\(value.st_ino):\(value.st_size):\(value.st_mtimespec.tv_sec):\(value.st_mtimespec.tv_nsec):\(value.st_ctimespec.tv_sec):\(value.st_ctimespec.tv_nsec)"
+            }
+        }
         func publish() async throws {
+            let currentStamp = stamp()
+            if currentStamp == publishedStamp { return }
             let started = timestamp()
             let (generation, observations, complete) = try snapshot()
             let unstamped = observations.map { value -> JSON in var object = value.object; object.removeValue(forKey: "observed_at"); return .object(object) }
@@ -70,6 +81,7 @@ public actor MailSource: Source {
                 try await sink.emitCheckpoint(source: name, generation: generation, checkpoint: UUID().uuidString, observations: observations, scanID: UUID().uuidString, scanStartedAt: started, scope: ["mail.account", "mail.mailbox", "mail.message"], completionEvidence: complete ? "complete" : "partial", blobHandles: [:], live: !previous.isEmpty)
                 previous = unstamped
             }
+            if stamp() == currentStamp { publishedStamp = currentStamp }
         }
         try await publish()
         for await _ in watcher.changes { try Task.checkCancellation(); try await publish() }
