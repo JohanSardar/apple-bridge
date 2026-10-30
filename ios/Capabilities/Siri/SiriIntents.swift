@@ -6,7 +6,11 @@ struct PingIntent: AppIntent {
     static let openAppWhenRun = false
 
     func perform() async throws -> some IntentResult & ReturnsValue<String> {
-        .result(value: try await CommandIntent.run("iphone.ping"))
+        let value = try await CommandIntent.run("iphone.ping")
+        #if DEBUG
+        await ShellDeliveryQualification.shared.recordIntent(value)
+        #endif
+        return .result(value: value)
     }
 }
 

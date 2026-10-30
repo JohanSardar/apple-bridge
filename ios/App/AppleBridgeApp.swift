@@ -5,7 +5,12 @@ struct AppleBridgeApp: App {
     @UIApplicationDelegateAdaptor(BridgeAppDelegate.self) private var delegate
     var body: some Scene {
         WindowGroup {
+            #if DEBUG
+            if ShellDeliveryQualification.active { ShellDeliveryQualificationScreen() }
+            else { BridgeSettings() }
+            #else
             BridgeSettings()
+            #endif
         }
     }
 }

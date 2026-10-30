@@ -193,12 +193,21 @@ final class PushDelivery {
 
 final class BridgeAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
-        LocationCapability.resume()
-        WidgetsCapability.resume()
+        #if DEBUG
+        try? ShellDeliveryQualification.restoreBackup()
+        ShellDeliveryQualification.launchStatus = BridgeStatus.load()
+        let qualifying = ShellDeliveryQualification.active
+        #else
+        let qualifying = false
+        #endif
+        if !qualifying {
+            LocationCapability.resume()
+            WidgetsCapability.resume()
+            Task { await HealthReadController.shared.resume() }
+        }
         UNUserNotificationCenter.current().delegate = self
         PushDelivery.shared.status = "Registering"
         application.registerForRemoteNotifications()
-        Task { await HealthReadController.shared.resume() }
         return true
     }
 

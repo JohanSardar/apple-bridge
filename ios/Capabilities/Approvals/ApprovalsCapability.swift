@@ -47,6 +47,12 @@ enum ApprovalsCapability {
         }
         let context = LAContext()
         guard try await context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: "Confirm \(action) for this Apple Bridge command") else { return }
+        #if DEBUG
+        if ShellDeliveryQualification.active, ShellDeliveryQualification.shared.request?.command == id {
+            ShellDeliveryQualification.shared.receipt?.checks["face_id_succeeded"] = true
+            try ShellDeliveryQualification.shared.save()
+        }
+        #endif
         guard enabled, expires > Int64(Date().timeIntervalSince1970) else { return }
         if job.command.op.hasPrefix("iphone.capture.") {
             try NotificationsCapability.recordResult(PhoneResult(command_id: id, request_hash: hash, state: "rejected", data: .null))
