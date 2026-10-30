@@ -16,8 +16,10 @@ targets:
   AppleBridge:
     type: application
     platform: iOS
-    sources: [App, Capabilities, Pairing, Delivery, ScreenTimeShared]
+    sources: [App, Capabilities, Pairing, Delivery, ScreenTimeShared, WidgetShared]
     dependencies:
+      - target: BridgeWidgets
+        embed: true
       - target: AlarmActivity
         embed: true
       - target: ScreenTimeMonitor
@@ -72,5 +74,18 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.johansardar.applebridge.ios.locationpush
         INFOPLIST_FILE: Extensions/LocationPush/Info.plist
         PROVISIONING_PROFILE_SPECIFIER: AB iOS Location Push Dev
+        APPLICATION_EXTENSION_API_ONLY: YES
+        SKIP_INSTALL: YES
+
+  BridgeWidgets:
+    type: app-extension
+    platform: iOS
+    sources: [BridgeWidgets, WidgetShared]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.johansardar.applebridge.ios.widgets
+        INFOPLIST_FILE: BridgeWidgets/Info.plist
+        CODE_SIGN_ENTITLEMENTS: BridgeWidgets/BridgeWidgets.entitlements
+        PROVISIONING_PROFILE_SPECIFIER: $(AB_WIDGETS_PROFILE_NAME)
         APPLICATION_EXTENSION_API_ONLY: YES
         SKIP_INSTALL: YES

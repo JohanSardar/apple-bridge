@@ -7,6 +7,7 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/json"
 	"io"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
@@ -14,9 +15,10 @@ import (
 )
 
 type Packet struct {
-	EphemeralKey []byte `json:"ephemeral_key"`
-	Box          []byte `json:"box"`
-	Signature    []byte `json:"signature"`
+	LiveActivity json.RawMessage `json:"live_activity,omitempty"`
+	EphemeralKey []byte          `json:"ephemeral_key"`
+	Box          []byte          `json:"box"`
+	Signature    []byte          `json:"signature"`
 }
 
 func PacketMessage(p Packet) []byte {

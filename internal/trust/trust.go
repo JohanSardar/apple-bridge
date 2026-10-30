@@ -57,6 +57,7 @@ func AllVisibility() Visibility {
 }
 
 type Principal struct {
+	IPhoneLiveTokens    map[string]string `json:"iphone_live_tokens,omitempty"`
 	IPhonePushToken     string            `json:"iphone_push_token,omitempty"`
 	IPhoneSigningKey    []byte            `json:"iphone_signing_key,omitempty"`
 	IPhoneEncryptionKey []byte            `json:"iphone_encryption_key,omitempty"`

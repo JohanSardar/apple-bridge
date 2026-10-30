@@ -1628,3 +1628,16 @@ features:
       - {id: APP-APPROVE-REAL, levels: [real]}
     limits:
       - {scenario: APP-APPROVE-REAL, level: real, reason: 'limited: needs Allow tap'}
+  - id: iphone.widgets
+    title: Agent task Live Activities and bridge status widgets
+    requirements: [R-API]
+    milestone: G13
+    modules: [ios/Capabilities/Widgets, ios/BridgeWidgets, ios/WidgetShared, internal/iphone, internal/relay]
+    depends_on: [iphone.delivery]
+    status: limited
+    scenarios:
+      - {id: APP-LIVE-SIM, levels: [sim]}
+      - {id: APP-LIVE-REAL, levels: [real]}
+    limits:
+      - {scenario: APP-LIVE-REAL, level: real, reason: 'limited: needs Allow tap'}
+    notes: Gateway pushes ActivityKit start, update and end using signed device token registration. APNs acceptance is dispatch only; no phone observation is claimed. Widgets show the last reported delivery status with its age.

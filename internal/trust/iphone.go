@@ -179,3 +179,44 @@ func (a *Authority) SetIPhonePushToken(id, token string) error {
 		return contracts.ErrUnauthorized
 	})
 }
+
+func (a *Authority) SetIPhoneLiveToken(id, task, token string) error {
+	if task == "" && token == "" {
+		return a.update(func(d *credentials) error {
+			for i, p := range d.Principals {
+				if p.ID == id && p.Kind == "iphone" {
+					d.Principals[i].IPhoneLiveTokens = nil
+					return nil
+				}
+			}
+			return contracts.ErrUnauthorized
+		})
+	}
+	if len(task) == 0 || len(task) > 128 || (token != "" && (len(token) < 32 || len(token) > 512)) {
+		return contracts.ErrInvalid
+	}
+	for _, c := range token {
+		if !(c >= '0' && c <= '9' || c >= 'a' && c <= 'f') {
+			return contracts.ErrInvalid
+		}
+	}
+	return a.update(func(d *credentials) error {
+		for i, p := range d.Principals {
+			if p.ID == id && p.Kind == "iphone" {
+				if token == "" {
+					delete(d.Principals[i].IPhoneLiveTokens, task)
+					return nil
+				}
+				if d.Principals[i].IPhoneLiveTokens == nil {
+					d.Principals[i].IPhoneLiveTokens = map[string]string{}
+				}
+				if len(d.Principals[i].IPhoneLiveTokens) >= 128 && d.Principals[i].IPhoneLiveTokens[task] == "" {
+					return contracts.ErrInvalid
+				}
+				d.Principals[i].IPhoneLiveTokens[task] = token
+				return nil
+			}
+		}
+		return contracts.ErrUnauthorized
+	})
+}

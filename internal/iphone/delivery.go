@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"sort"
 	"sync"
 	"time"
 
@@ -69,6 +70,25 @@ func (d *Delivery) packets(ctx context.Context, p trust.Principal, dispatch bool
 	if err != nil {
 		return nil, err
 	}
+	liveRows := []contracts.CommandRecord{}
+	for _, row := range rows {
+		if IsLiveCommand(row.Command.Op) {
+			liveRows = append(liveRows, row)
+		}
+	}
+	sort.Slice(liveRows, func(i, j int) bool {
+		if liveRows[i].CreatedAt.Equal(liveRows[j].CreatedAt) {
+			return liveRows[i].Command.ID < liveRows[j].Command.ID
+		}
+		return liveRows[i].CreatedAt.Before(liveRows[j].CreatedAt)
+	})
+	nextLive := 0
+	for i := range rows {
+		if IsLiveCommand(rows[i].Command.Op) {
+			rows[i] = liveRows[nextLive]
+			nextLive++
+		}
+	}
 	packets := []Packet{}
 	for _, r := range rows {
 		if r.State == contracts.CommandAwaitingApproval && time.Now().Before(r.ExpiresAt) {
@@ -118,6 +138,35 @@ func (d *Delivery) packets(ctx context.Context, p trust.Principal, dispatch bool
 			continue
 		}
 		if !dispatch {
+			continue
+		}
+		if IsLiveCommand(r.Command.Op) {
+			if r.State == contracts.CommandDispatched || d.Push == nil {
+				continue
+			}
+			token, aps, liveErr := LivePayload(p, r.Command, time.Now())
+			if liveErr != nil {
+				continue
+			}
+			if r.State == contracts.CommandAdmitted {
+				r, err = d.transition(ctx, r, contracts.CommandPrepared, "", nil)
+				if err != nil {
+					return nil, err
+				}
+			}
+			r, err = d.transition(ctx, r, contracts.CommandDispatched, "", nil)
+			if err != nil {
+				return nil, err
+			}
+			plain, _ := json.Marshal(Job{Command: r.Command, Hash: r.RequestHash, Expires: r.ExpiresAt.Unix()})
+			packet, sealErr := Seal(p.IPhoneEncryptionKey, p.ID, plain, d.Authority.SignIPhone)
+			if sealErr != nil {
+				return nil, sealErr
+			}
+			packet.LiveActivity = aps
+			bounded, cancel := context.WithTimeout(ctx, 10*time.Second)
+			d.Push(bounded, token, packet, time.Now().Add(time.Minute))
+			cancel()
 			continue
 		}
 		if r.State == contracts.CommandAdmitted {
@@ -207,6 +256,21 @@ func (d *Delivery) Handler() http.Handler {
 		case "/v1/iphone/location-records":
 			err = d.LocationRecords(r.Context(), p, request.Payload)
 			result = map[string]bool{"accepted": err == nil}
+		case "/v1/iphone/live-disable":
+			err = d.Authority.SetIPhoneLiveToken(p.ID, "", "")
+			result = map[string]bool{"disabled": err == nil}
+		case "/v1/iphone/live-token":
+			var token struct {
+				Task  string `json:"task_id"`
+				Token string `json:"token"`
+			}
+			if contracts.DecodeInput(request.Payload, &token) != nil {
+				err = contracts.ErrInvalid
+			} else {
+				err = d.Authority.SetIPhoneLiveToken(p.ID, token.Task, token.Token)
+				d.Wake()
+			}
+			result = map[string]bool{"registered": err == nil}
 		case "/v1/iphone/push-token":
 			var token struct {
 				Token string `json:"token"`

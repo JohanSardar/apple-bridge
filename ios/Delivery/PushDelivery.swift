@@ -66,7 +66,7 @@ struct Execution: Codable {
 final class PushDelivery {
     static let shared = PushDelivery()
     var lastResult = "None"
-    var status = "Not registered"
+    var status = "Not registered" { didSet { WidgetsCapability.status(status) } }
     var wakeCount = 0
     private var running = false
     private var drainAgain = false
@@ -194,6 +194,7 @@ final class PushDelivery {
 final class BridgeAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         LocationCapability.resume()
+        WidgetsCapability.resume()
         UNUserNotificationCenter.current().delegate = self
         PushDelivery.shared.status = "Registering"
         application.registerForRemoteNotifications()
