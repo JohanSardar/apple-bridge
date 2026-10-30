@@ -1617,3 +1617,16 @@ features:
       - {id: APP-INTENTS-REAL, levels: [real]}
     limits:
       - {scenario: APP-INTENTS-REAL, level: real, reason: 'limited: needs Allow tap to save or import a Shortcuts workflow'}
+
+  - id: iphone.approvals
+    title: Face ID command approvals
+    requirements: [R-SECURE, R-SAFE-CMD, R-API]
+    milestone: G13
+    modules: [ios/Capabilities/Approvals, internal/iphone, internal/operations]
+    depends_on: [iphone.notifications]
+    status: limited
+    scenarios:
+      - {id: APP-APPROVE-SIM, levels: [sim]}
+      - {id: APP-APPROVE-REAL, levels: [real]}
+    limits:
+      - {scenario: APP-APPROVE-REAL, level: real, reason: 'limited: needs Allow tap'}

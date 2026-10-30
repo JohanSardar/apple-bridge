@@ -27,7 +27,7 @@ struct CapabilityScreen: View {
                 Toggle("Enabled", isOn: $enabled)
                     .disabled(!capability.available)
                     .onChange(of: enabled) { _, value in
-                        if value && capability.id == "notifications" {
+                        if value && (capability.id == "notifications" || capability.id == "approvals") {
                             Task { try? await NotificationsCapability.requestPermission() }
                         }
                     }

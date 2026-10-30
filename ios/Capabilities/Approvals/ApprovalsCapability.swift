@@ -1,5 +1,84 @@
 import Foundation
+import LocalAuthentication
+import UserNotifications
+import SwiftUI
 
+@MainActor
 enum ApprovalsCapability {
-    static let descriptor = Capability(id: "approvals", title: "Face ID approvals")
+    static let descriptor = Capability(id: "approvals", title: "Face ID approvals", permission: "Notifications and Face ID", available: true)
+
+    static var enabled: Bool { UserDefaults.standard.bool(forKey: "capability.approvals.enabled") }
+
+    static func stored(_ id: String) -> PhoneJob? {
+        guard let data = UserDefaults.standard.data(forKey: "approval." + id) else { return nil }
+        return try? JSONDecoder().decode(PhoneJob.self, from: data)
+    }
+
+    static func deliver(_ job: PhoneJob) async throws {
+        guard enabled else { return }
+        if let previous = stored(job.command.command_id), previous.request_hash == job.request_hash { return }
+        let center = UNUserNotificationCenter.current()
+        let actions = [UNNotificationAction(identifier: "approve", title: "Approve", options: [.foreground]), UNNotificationAction(identifier: "reject", title: "Reject", options: [.foreground, .destructive])]
+        var categories = await center.notificationCategories()
+        categories.insert(UNNotificationCategory(identifier: "bridge.approval", actions: actions, intentIdentifiers: []))
+        center.setNotificationCategories(categories)
+        let content = UNMutableNotificationContent()
+        content.title = "Apple Bridge approval"
+        if case .string(let op) = job.command.args["body"] { content.body = op }
+        content.categoryIdentifier = "bridge.approval"
+        content.sound = .default
+        content.userInfo = ["command_id": job.command.command_id, "request_hash": job.request_hash, "approval": true, "expires": job.expires]
+        try await center.add(UNNotificationRequest(identifier: "approval." + job.command.command_id, content: content, trigger: nil))
+        UserDefaults.standard.set(try JSONEncoder().encode(job), forKey: "approval." + job.command.command_id)
+    }
+
+    static func present(id: String, hash: String, action: String, expires: Int64) throws {
+        guard enabled, expires > Int64(Date().timeIntervalSince1970), let job = stored(id), job.request_hash == hash else { return }
+        ApprovalReview.shared.job = job
+    }
+
+    static func decide(id: String, hash: String, action: String, expires: Int64) async throws {
+        guard enabled, let job = stored(id), job.request_hash == hash, ["approve", "reject"].contains(action), expires > Int64(Date().timeIntervalSince1970) else { return }
+        let context = LAContext()
+        guard try await context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: "Confirm \(action) for this Apple Bridge command") else { return }
+        guard enabled, expires > Int64(Date().timeIntervalSince1970) else { return }
+        let payload = try JSONSerialization.data(withJSONObject: ["command_id": id, "request_hash": hash, "approve": action == "approve"])
+        _ = try await PairingClient.signedRequest(identity: DeviceIdentity.load(), path: "/v1/iphone/approval", payload: payload)
+        UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: ["approval." + id])
+    }
+}
+
+@MainActor
+@Observable
+final class ApprovalReview {
+    static let shared = ApprovalReview()
+    var job: PhoneJob?
+}
+
+struct ApprovalReviewScreen: View {
+    let job: PhoneJob
+    @State private var busy = false
+    @State private var status = ""
+    var body: some View {
+        NavigationStack {
+            Form {
+                if case .string(let summary) = job.command.args["body"] {
+                    Text(summary).textSelection(.enabled).privacySensitive()
+                }
+                Text(status)
+                ForEach(["approve", "reject"], id: \.self) { action in
+                    Button(action.capitalized, role: action == "reject" ? .destructive : nil) {
+                        busy = true
+                        Task {
+                            do {
+                                try await ApprovalsCapability.decide(id: job.command.command_id, hash: job.request_hash, action: action, expires: job.expires)
+                                ApprovalReview.shared.job = nil
+                            } catch { status = "Decision pending. Try again." }
+                            busy = false
+                        }
+                    }.disabled(busy || !ApprovalsCapability.enabled)
+                }
+            }.navigationTitle("Review command")
+        }
+    }
 }

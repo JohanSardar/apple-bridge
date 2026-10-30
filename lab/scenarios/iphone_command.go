@@ -50,6 +50,7 @@ func runIPhoneCommand(ctx context.Context, s Scenario, level string) Evidence {
 	delivery := iphone.NewDelivery(store, a)
 	gateway := &operations.LocalGateway{State: store, Authority: a, Context: ctx, IPhone: delivery}
 	delivery.Authorize = gateway.ReauthorizeIPhone
+	delivery.Decide = gateway.DecidePhoneApproval
 	mux := http.NewServeMux()
 	mux.Handle("/v1/iphone/pair", a.IPhoneHandler())
 	mux.Handle("/v1/iphone/", delivery.Handler())
@@ -224,6 +225,47 @@ func runIPhoneCommand(ctx context.Context, s Scenario, level string) Evidence {
 	command.ID = "cmd_iphone_approval"
 	pending, err := gateway.Submit(ctx, approver, command)
 	add("iphone_requires_owner_approval", err == nil && pending.State == contracts.CommandAwaitingApproval)
+	if s.ID == "APP-APPROVE-SIM" {
+		response, err = phone.Request(server.Client(), server.URL, "/v1/iphone/pending", nil)
+		var packets []iphone.Packet
+		if err == nil {
+			json.NewDecoder(response.Body).Decode(&packets)
+			response.Body.Close()
+		}
+		found := false
+		for _, packet := range packets {
+			plain, openErr := iphone.Open(phone.Encryption, phone.ID, packet, phone.Gateway)
+			var approval iphone.Job
+			if openErr == nil && json.Unmarshal(plain, &approval) == nil && approval.Command.Op == "bridge.approval" && approval.Hash == pending.RequestHash {
+				var args map[string]string
+				found = json.Unmarshal(approval.Command.Args, &args) == nil && strings.Contains(args["body"], approver.ID) && strings.Contains(args["body"], string(command.Args))
+			}
+		}
+		add("encrypted_approval_notification", found)
+		decide := func(hash string, approve bool) int {
+			payload, _ := json.Marshal(map[string]any{"command_id": command.ID, "request_hash": hash, "approve": approve})
+			response, requestErr := phone.Request(server.Client(), server.URL, "/v1/iphone/approval", payload)
+			if requestErr != nil {
+				return 0
+			}
+			defer response.Body.Close()
+			return response.StatusCode
+		}
+		add("wrong_approval_hash_rejected", decide("wrong", false) == 400)
+		add("signed_phone_rejection", decide(pending.RequestHash, false) == 200)
+		rejected, _ := store.Command(ctx, command.ID)
+		add("ledger_rejected_by_owner", rejected.State == contracts.CommandRejectedByOwner)
+		add("decision_replay_idempotent", decide(pending.RequestHash, true) == 200)
+		rejected, _ = store.Command(ctx, command.ID)
+		add("replay_cannot_reverse_rejection", rejected.State == contracts.CommandRejectedByOwner)
+		command.ID = "cmd_phone_approve"
+		pending, err = gateway.Submit(ctx, approver, command)
+		add("second_approval_pending", err == nil && pending.State == contracts.CommandAwaitingApproval)
+		add("signed_phone_approval", decide(pending.RequestHash, true) == 200)
+		approved, _ := store.Command(ctx, command.ID)
+		add("ledger_admitted_by_phone", approved.State == contracts.CommandAdmitted)
+		return e
+	}
 	ownerToken, _, err := a.CreateDeviceSession("trusted")
 	add("owner_device", err == nil)
 	owner, _, err := a.AuthenticateDevice(ownerToken)

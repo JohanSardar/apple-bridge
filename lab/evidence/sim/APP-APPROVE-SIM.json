@@ -1,0 +1,187 @@
+{
+  "scenario": "APP-APPROVE-SIM",
+  "level": "sim",
+  "passed": true,
+  "assertions": [
+    {
+      "name": "isolated_home",
+      "passed": true
+    },
+    {
+      "name": "authority",
+      "passed": true
+    },
+    {
+      "name": "state",
+      "passed": true
+    },
+    {
+      "name": "ledger",
+      "passed": true
+    },
+    {
+      "name": "pair_code",
+      "passed": true
+    },
+    {
+      "name": "phone",
+      "passed": true
+    },
+    {
+      "name": "paired",
+      "passed": true
+    },
+    {
+      "name": "command_token",
+      "passed": true
+    },
+    {
+      "name": "principal",
+      "passed": true
+    },
+    {
+      "name": "offline_admitted_without_helper",
+      "passed": true
+    },
+    {
+      "name": "restart_state",
+      "passed": true
+    },
+    {
+      "name": "restart_ledger",
+      "passed": true
+    },
+    {
+      "name": "recover_preserves_queue",
+      "passed": true
+    },
+    {
+      "name": "durable_offline_queue",
+      "passed": true
+    },
+    {
+      "name": "relay_store",
+      "passed": true
+    },
+    {
+      "name": "relay_enrollment",
+      "passed": true
+    },
+    {
+      "name": "signed_push_registration",
+      "passed": true
+    },
+    {
+      "name": "encrypted_relay_push",
+      "passed": true
+    },
+    {
+      "name": "gateway_signature_and_decryption",
+      "passed": true
+    },
+    {
+      "name": "tampered_ciphertext_rejected",
+      "passed": true
+    },
+    {
+      "name": "command_payload",
+      "passed": true
+    },
+    {
+      "name": "wrong_result_hash_rejected",
+      "passed": true
+    },
+    {
+      "name": "signed_result",
+      "passed": true
+    },
+    {
+      "name": "ledger_observed",
+      "passed": true
+    },
+    {
+      "name": "duplicate_result_idempotent",
+      "passed": true
+    },
+    {
+      "name": "command_retry_not_redispatched",
+      "passed": true
+    },
+    {
+      "name": "expired_offline_fixture",
+      "passed": true
+    },
+    {
+      "name": "pending_after_completion",
+      "passed": true
+    },
+    {
+      "name": "offline_expiry",
+      "passed": true
+    },
+    {
+      "name": "read_agent",
+      "passed": true
+    },
+    {
+      "name": "read_agent_principal",
+      "passed": true
+    },
+    {
+      "name": "read_agent_cannot_dispatch",
+      "passed": true
+    },
+    {
+      "name": "approve_agent",
+      "passed": true
+    },
+    {
+      "name": "approve_agent_principal",
+      "passed": true
+    },
+    {
+      "name": "iphone_requires_owner_approval",
+      "passed": true
+    },
+    {
+      "name": "encrypted_approval_notification",
+      "passed": true
+    },
+    {
+      "name": "wrong_approval_hash_rejected",
+      "passed": true
+    },
+    {
+      "name": "signed_phone_rejection",
+      "passed": true
+    },
+    {
+      "name": "ledger_rejected_by_owner",
+      "passed": true
+    },
+    {
+      "name": "decision_replay_idempotent",
+      "passed": true
+    },
+    {
+      "name": "replay_cannot_reverse_rejection",
+      "passed": true
+    },
+    {
+      "name": "second_approval_pending",
+      "passed": true
+    },
+    {
+      "name": "signed_phone_approval",
+      "passed": true
+    },
+    {
+      "name": "ledger_admitted_by_phone",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ]
+}

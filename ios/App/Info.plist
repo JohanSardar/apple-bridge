@@ -58,5 +58,7 @@
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Authenticate approval or rejection of agent commands.</string>
 </dict>
 </plist>

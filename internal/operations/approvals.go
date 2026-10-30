@@ -39,6 +39,17 @@ func (g *LocalGateway) DecideApproval(ctx context.Context, owner trust.Principal
 	if owner.Kind != "device" || g.Authority.Authorize(owner, "admin") != nil {
 		return contracts.CommandRecord{}, contracts.ErrUnauthorized
 	}
+	return g.decideApproval(ctx, id, approve, "")
+}
+
+func (g *LocalGateway) DecidePhoneApproval(ctx context.Context, id, hash string, approve bool) (contracts.CommandRecord, error) {
+	if hash == "" {
+		return contracts.CommandRecord{}, contracts.ErrInvalid
+	}
+	return g.decideApproval(ctx, id, approve, hash)
+}
+
+func (g *LocalGateway) decideApproval(ctx context.Context, id string, approve bool, hash string) (contracts.CommandRecord, error) {
 	unlock, err := g.lock(ctx, "command:"+id)
 	if err != nil {
 		return contracts.CommandRecord{}, err
@@ -47,6 +58,9 @@ func (g *LocalGateway) DecideApproval(ctx context.Context, owner trust.Principal
 	r, err := g.State.Command(ctx, id)
 	if err != nil {
 		return r, err
+	}
+	if hash != "" && hash != r.RequestHash {
+		return r, contracts.ErrUnauthorized
 	}
 	if r.State != contracts.CommandAwaitingApproval {
 		return r, nil

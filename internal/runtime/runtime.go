@@ -217,6 +217,7 @@ func Start(ctx context.Context, cfg Config) error {
 		gateway.Reauthorize = feed.Reauthorize
 		iphoneDelivery = iphone.NewDelivery(store, authority)
 		iphoneDelivery.Authorize = gateway.ReauthorizeIPhone
+		iphoneDelivery.Decide = gateway.DecidePhoneApproval
 		iphoneDelivery.Push = remote.IPhonePush(cfg.Home)
 		gateway.IPhone = iphoneDelivery
 		go iphoneDelivery.Run(ctx)
