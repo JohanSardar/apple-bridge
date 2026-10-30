@@ -24,17 +24,18 @@ public enum MessagesSendVariants {
         return data
     }
     static func proven(_ operation: String, route: JSON? = nil, args: JSON? = nil) -> Bool {
-        guard ["messages.send_effect", "messages.send_formatted"].contains(operation) else { return false }
+        guard ["messages.send_effect", "messages.send_formatted", "messages.send_later", "messages.send_mention", "messages.send_audio"].contains(operation) else { return false }
         return proof()["steps"].array.contains { step in
             guard step["operation"].string==operation,step["proven"].bool,route == nil || step["route"].string==routeKey(route!) else { return false }
             guard let args else { return true }
             if operation=="messages.send_effect" { return args["variant"]["effect"]==step["variant"]["effect"] }
             if operation=="messages.send_formatted" { return args["variant"]["formatting"] == step["variant"]["formatting"] }
-            return false
+            if operation == "messages.send_later" { return args["variant"]["kind"].string == "schedule" }
+            return args["variant"] == step["variant"]
         }
     }
     static func invalidateProof(_ kind: String) throws {
-        let operation = kind == "effect" ? "messages.send_effect" : "messages.send_formatted"
+        guard let operation = self.operation(.object(["variant": .object(["kind": .string(kind)])])) else { throw SourceFailure.invalid }
         let current = proof()
         guard current != .null else { return }
         var fields = current.object
@@ -43,7 +44,7 @@ public enum MessagesSendVariants {
     }
     static func recordProof(_ prepared: Prepared) throws {
         let args = prepared.action["messages"]
-        guard let operation = operation(args), ["messages.send_effect", "messages.send_formatted"].contains(operation) else { throw SourceFailure.invalid }
+        guard let operation = operation(args), ["messages.send_effect", "messages.send_formatted", "messages.send_later", "messages.send_mention", "messages.send_audio"].contains(operation) else { throw SourceFailure.invalid }
         var steps = proof()["steps"].array.filter { $0["operation"].string != operation || $0["route"].string != routeKey(prepared.nativeState["destination"]) }
         steps.append(.object(["operation": .string(operation), "route": .string(routeKey(prepared.nativeState["destination"])), "variant": args["variant"], "proven": .bool(true)]))
         let report = JSON.object(["os_build": .string(osBuild), "version": .number(1), "complete": .bool(true), "steps": .array(steps)])
@@ -51,8 +52,23 @@ public enum MessagesSendVariants {
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: proofURL.path)
     }
     public static func matches(_ args: JSON, data: JSON) -> Bool {
-        guard data["is_from_me"].bool, data["error_code"].number == 0, data["text"] == args["text"], !args["text"].string.isEmpty else { return false }
+        guard data["is_from_me"].bool, data["error_code"].number == 0 else { return false }
+        if args["variant"]["kind"].string == "audio" { return args["text"].string.isEmpty && args["files"].array.count == 1 && data["audio"]["is_audio_message"].bool }
+        guard !args["text"].string.isEmpty else { return false }
+        if args["variant"]["kind"].string != "mention", data["text"] != args["text"] { return false }
         switch args["variant"]["kind"].string {
+        case "schedule":
+            guard let expected = parseTimestamp(args["variant"]["scheduled_for"].string), let actual = parseTimestamp(data["schedule"]["scheduled_for"].string) else { return false }
+            return !data["schedule"]["state"].string.isEmpty && abs(actual.timeIntervalSince(expected)) < 1
+        case "mention":
+            let variant = args["variant"]
+            let expected = MessagesProbes.normalize(variant["handle_id"].string)
+            guard !expected.isEmpty, let range = try? range(variant, text: args["text"].string) else { return false }
+            let text = args["text"].string as NSString
+            let prefix = text.substring(to: range.location), suffix = text.substring(from: range.location + range.length)
+            return data["text"].string.hasPrefix(prefix) && data["text"].string.hasSuffix(suffix) && data["parts"].array.contains { part in
+                MessagesProbes.normalize(part["mention"].string) == expected && part["utf16_location"].number == Double(range.location) && part["utf16_length"].number > 0
+            }
         case "effect":
             let value = data["effect"].string.lowercased().replacingOccurrences(of: "invisibleink", with: "invisible-ink")
             let expected = args["variant"]["effect"].string
@@ -121,10 +137,27 @@ public enum MessagesSendVariants {
         let args=prepared.action["messages"],reader=try MessagesReader(path:path),route=prepared.nativeState["destination"]
         try validate(args)
         guard let operation=operation(args) else { throw SendVariantFailure.invalidVariant }
-        guard ["messages.send_effect", "messages.send_formatted"].contains(operation) else { throw SourceFailure.capabilityUnproven }
+        guard ["messages.send_effect", "messages.send_formatted", "messages.send_later", "messages.send_mention", "messages.send_audio"].contains(operation) else { throw SourceFailure.capabilityUnproven }
         let own = Set(try MessagesProbes.discoverSelfHandles().handles.map(MessagesProbes.normalize))
         let peers = try reader.query("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", [route["chat"].string])
         guard peers.count == 1, peers.allSatisfy({ own.contains(MessagesProbes.normalize($0["id"])) }) else { throw SourceFailure.invalid }
+        if operation == "messages.send_audio" {
+            var action = prepared.action.object
+            var plain = args.object
+            plain.removeValue(forKey: "variant")
+            action["messages"] = .object(plain)
+            let sender = MessagesCommands(path: path, labCommands: true)
+            let sent = try await sender.dispatch(Prepared(nativeState: prepared.nativeState, fingerprint: prepared.fingerprint, action: .object(action)))
+            if let row = try reader.message(sent["native_key"].string), let captured = try reader.messageObservations(row).first {
+                let data = try JSONDecoder().decode(JSON.self, from: JSONSerialization.data(withJSONObject: captured.2))
+                if matches(args, data: data) { return sent }
+            }
+            var result = sent.object
+            result["observed"] = .bool(false)
+            result["disposition"] = .string("indeterminate")
+            result["reason"] = .string("audioMessageFlagUnverified")
+            return .object(result)
+        }
         let chat=route["chat"].string
         guard !chat.isEmpty,let target=try reader.query("SELECT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE c.guid=? ORDER BY m.ROWID DESC LIMIT 1",[chat]).first?["guid"] else { throw SourceFailure.capabilityUnproven }
         let maximum=try reader.maximum()
@@ -136,8 +169,12 @@ public enum MessagesSendVariants {
             return .object(["source":.string("messages"),"observed":.bool(false),"disposition":.string(failure == .sendReceiptUnknown ? "indeterminate":"failed_no_effect"),"reason":.string(failure.rawValue)])
         }
         let deadline=ContinuousClock.now.advanced(by:.seconds(10))
+        let candidateText: String
+        if args["variant"]["kind"].string == "mention", let range = try? range(args["variant"], text: args["text"].string) {
+            candidateText = (args["text"].string as NSString).substring(to: range.location)
+        } else { candidateText = args["text"].string }
         repeat {
-            let candidates=try reader.query("SELECT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE m.ROWID>? AND c.guid=? AND m.is_from_me=1 AND (m.text=? OR instr(m.attributedBody,CAST(? AS BLOB))>0)",[String(maximum),chat,args["text"].string,args["text"].string])
+            let candidates=try reader.query("SELECT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE m.ROWID>? AND c.guid=? AND m.is_from_me=1 AND (m.text=? OR instr(m.attributedBody,CAST(? AS BLOB))>0)",[String(maximum),chat,candidateText,candidateText])
             if candidates.count>1 { break }
             if let key=candidates.first?["guid"],let row=try reader.message(key),let captured=try reader.messageObservations(row).first {
                 let data=try JSONDecoder().decode(JSON.self,from:JSONSerialization.data(withJSONObject:captured.2))

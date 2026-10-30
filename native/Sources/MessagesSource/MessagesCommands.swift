@@ -231,8 +231,8 @@ public actor MessagesCommands {
         let rows = try reader.query("SELECT m.guid,m.date FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE c.guid=? AND NOT EXISTS (SELECT 1 FROM chat_recoverable_message_join r WHERE r.message_id=m.ROWID AND r.chat_id=c.ROWID) ORDER BY m.ROWID DESC", [chat])
         guard let last = rows.first, let row = try reader.message(last["guid"]), let item = try reader.messageObservations(row).first else { throw SourceFailure.capabilityUnproven }
         let target = try JSONDecoder().decode(JSON.self, from: JSONSerialization.data(withJSONObject: item.2))
-        if !interactive {
-            guard tagged(target["text"].string) else { throw SourceFailure.invalid }
+        if !interactive { guard tagged(target["text"].string) else { throw SourceFailure.invalid } }
+        if !interactive, action["op"].string == "messages.delete_chat" {
             for item in rows {
                 guard let message = try reader.message(item["guid"]), let data = try reader.messageObservations(message).first, let text = data.2["text"] as? String, tagged(text) else { throw SourceFailure.unsupported }
             }
@@ -253,6 +253,7 @@ public actor MessagesCommands {
         }
         guard labCommands || proofs().contains(routeProof(route, kind: action["op"].string)), await MessagesAccessibility.available else { throw SourceFailure.capabilityUnproven }
         let prepared = Prepared(nativeState: .object(["interactive": .bool(interactive), "conversation_members": .array(rows.map { .string($0["guid"]) }), "conversation_target": .bool(true), "target": target, "destination": route, "route": .string("accessibility"), "last_read_timestamp": .string(conversation["last_read_message_timestamp"]), "latest_message_date": .string(String(latestConversationDate(rows))), "candidate_ids": .array([.string(chat)])]), fingerprint: command["request_hash"].string, action: action)
+        await MessagesUISession.activate()
         try await MessagesAccessibility.validate(prepared)
         return prepared
     }

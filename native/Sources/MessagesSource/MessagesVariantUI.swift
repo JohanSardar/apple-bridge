@@ -46,14 +46,7 @@ enum MessagesVariantUI {
         try press(try unique(find(application,role:kAXMenuItemRole,name:title),failure:.formatMenuUnavailable))
     }
     static func send(_ args: JSON, target: String, targetData: JSON = .null, expiresAt: Date = Date().addingTimeInterval(30)) throws {
-        if NSRunningApplication.runningApplications(withBundleIdentifier:"com.apple.systemevents").isEmpty {
-            guard let url=NSWorkspace.shared.urlForApplication(withBundleIdentifier:"com.apple.systemevents") else { throw SendVariantFailure.automationDenied }
-            let configuration=NSWorkspace.OpenConfiguration();configuration.activates=false
-            NSWorkspace.shared.openApplication(at:url,configuration:configuration,completionHandler:nil)
-            let deadline=Date().addingTimeInterval(2)
-            while NSRunningApplication.runningApplications(withBundleIdentifier:"com.apple.systemevents").isEmpty,Date()<deadline { RunLoop.current.run(until:Date().addingTimeInterval(0.05)) }
-        }
-        for bundle in ["com.apple.MobileSMS","com.apple.systemevents"] {
+        for bundle in ["com.apple.MobileSMS"] {
             let target=NSAppleEventDescriptor(bundleIdentifier:bundle)
             guard AEDeterminePermissionToAutomateTarget(target.aeDesc,AEEventClass(kAECoreSuite),AEEventID(kAEGetData),false)==noErr else { throw SendVariantFailure.automationDenied }
         }
@@ -80,14 +73,29 @@ enum MessagesVariantUI {
             let buttons=find(application,role:kAXButtonRole).filter { ["Apps","Add","Show Apps"].contains(value($0,kAXDescriptionAttribute)) || ["AppsButton","AppDrawerButton"].contains(value($0,kAXIdentifierAttribute)) }
             try press(try unique(buttons,failure:.scheduleDateControlsUnverified))
             try press(try unique(find(application,name:"Send Later"),failure:.scheduleDateControlsUnverified))
-            guard !find(application,role:"AXDateField").isEmpty else { throw SendVariantFailure.scheduleDateControlsMissing }
-            throw SendVariantFailure.scheduleDateControlsUnverified
+            guard let date = parseTimestamp(variant["scheduled_for"].string) else { throw SendVariantFailure.invalidVariant }
+            let fields = find(application, role: "AXDateField")
+            guard !fields.isEmpty else { throw SendVariantFailure.scheduleDateControlsMissing }
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.dateFormat = "MM/dd/yyyy h:mm a"
+            let formatted = formatter.string(from: date)
+            for field in fields {
+                guard AXUIElementSetAttributeValue(field, kAXValueAttribute as CFString, date as NSDate) == .success || AXUIElementSetAttributeValue(field, kAXValueAttribute as CFString, formatted as CFString) == .success else { throw SendVariantFailure.scheduleDateControlsUnverified }
+            }
+            try session.press(MessagesUISession.enter)
         }
         if kind=="mention" {
-            let own=try MessagesProbes.discoverSelfHandles().handles
-            let suggestions=own.flatMap { find(application,name:$0) }
-            guard !suggestions.isEmpty else { throw SendVariantFailure.mentionSuggestionMissing }
-            throw SendVariantFailure.mentionSuggestionIdentityUnverified
+            let own = Set(try MessagesProbes.discoverSelfHandles().handles.map(MessagesProbes.normalize))
+            let expected = MessagesProbes.normalize(variant["handle_id"].string)
+            guard own.contains(expected) else { throw SendVariantFailure.mentionSuggestionIdentityUnverified }
+            let suggestions = find(application, role: kAXButtonRole).filter { element in
+                [kAXTitleAttribute, kAXDescriptionAttribute, kAXValueAttribute, kAXHelpAttribute].contains { attribute in
+                    let raw = value(element, attribute)
+                    return MessagesProbes.normalize(raw) == expected || raw.components(separatedBy: CharacterSet(charactersIn: " ,\n<>" )).contains { MessagesProbes.normalize($0) == expected }
+                }
+            }
+            try press(try unique(suggestions, failure: .mentionSuggestionMissing))
         }
         let labels=["bold":"Bold","italic":"Italic","underline":"Underline","strikethrough":"Strikethrough"]
         if kind=="formatting" {
@@ -104,13 +112,13 @@ enum MessagesVariantUI {
             try press(try unique(find(application,name:"Message Effects"),failure:.effectPickerUnavailable))
             let label=variant["effect"].string=="invisible-ink" ? "Invisible Ink":variant["effect"].string.capitalized
             try press(try unique(find(application,name:label),failure:.effectPickerUnavailable))
-        } else { throw SendVariantFailure.invalidVariant }
-        guard (try? session.fence()) != nil,value(editor,kAXValueAttribute)==args["text"].string else { throw SendVariantFailure.draftChanged }
+        } else if !["schedule", "mention"].contains(kind) { throw SendVariantFailure.invalidVariant }
+        guard (try? session.fence()) != nil, kind == "mention" || value(editor,kAXValueAttribute)==args["text"].string else { throw SendVariantFailure.draftChanged }
         try MessagesAccessibility.validate(Prepared(nativeState:.object(["target":targetData]),fingerprint:"",action:.object(["op":.string("messages.send"),"native_key":.string(target)])))
         try session.focus(editor,failure:SendVariantFailure.composerUnavailable)
         guard Date()<expiresAt else { throw SourceFailure.expired }
         try session.fence()
         sendStarted=true
-        guard session.driver.systemEvents(MessagesUIScript.keys([MessagesUISession.enter]))==0 else { throw SendVariantFailure.sendReceiptUnknown }
+        guard session.driver.keys([MessagesUISession.enter], command: false)==0 else { throw SendVariantFailure.sendReceiptUnknown }
     }
 }

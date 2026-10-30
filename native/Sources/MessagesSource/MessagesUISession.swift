@@ -8,6 +8,15 @@ public protocol MessagesUIDriver: Sendable {
     func messagesProcess() -> pid_t?
     func activateMessages()
     func systemEvents(_ script: String) -> Int
+    func keys(_ codes: [Int], command: Bool) -> Int
+    func click(_ point: CGPoint, control: Bool, dismissFirst: Bool) -> Int
+    func replace(_ text: String) -> Int
+}
+
+public extension MessagesUIDriver {
+    func keys(_ codes: [Int], command: Bool) -> Int { systemEvents(MessagesUIScript.keys(codes, command: command)) }
+    func click(_ point: CGPoint, control: Bool, dismissFirst: Bool) -> Int { systemEvents(control ? MessagesUIScript.controlClick(point, dismissFirst: dismissFirst) : MessagesUIScript.click(point)) }
+    func replace(_ text: String) -> Int { systemEvents(MessagesUIScript.replaceText(text)) }
 }
 
 public struct LiveMessagesUIDriver: MessagesUIDriver {
@@ -15,7 +24,42 @@ public struct LiveMessagesUIDriver: MessagesUIDriver {
     public func frontmostProcess() -> pid_t? { NSWorkspace.shared.frontmostApplication?.processIdentifier }
     public func messagesProcess() -> pid_t? { MessagesNavigation.application?.processIdentifier }
     public func activateMessages() { _ = MessagesNavigation.application?.activate() }
-    public func systemEvents(_ script: String) -> Int { MessagesAppleScript.execute(script) }
+    public func systemEvents(_ script: String) -> Int { -1 }
+    public func keys(_ codes: [Int], command: Bool) -> Int {
+        guard frontmostProcess() == messagesProcess(), messagesProcess() != nil else { return -1 }
+        for code in codes {
+            guard let value = CGKeyCode(exactly: code), let down = CGEvent(keyboardEventSource: nil, virtualKey: value, keyDown: true), let up = CGEvent(keyboardEventSource: nil, virtualKey: value, keyDown: false) else { return -1 }
+            down.flags = command ? .maskCommand : []
+            up.flags = command ? .maskCommand : []
+            down.post(tap: .cghidEventTap); up.post(tap: .cghidEventTap)
+        }
+        return 0
+    }
+    public func click(_ point: CGPoint, control: Bool, dismissFirst: Bool) -> Int {
+        guard frontmostProcess() == messagesProcess(), messagesProcess() != nil else { return -1 }
+        if dismissFirst, keys([MessagesUISession.escape], command: false) != 0 { return -1 }
+        guard let down = CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: point, mouseButton: .left), let up = CGEvent(mouseEventSource: nil, mouseType: .leftMouseUp, mouseCursorPosition: point, mouseButton: .left) else { return -1 }
+        down.flags = control ? .maskControl : []
+        up.flags = []
+        down.post(tap: .cghidEventTap); up.post(tap: .cghidEventTap)
+        return 0
+    }
+    public func replace(_ text: String) -> Int {
+        guard keys([0], command: true) == 0 else { return -1 }
+        RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        guard keys([51], command: false) == 0 else { return -1 }
+        for character in text {
+            guard frontmostProcess() == messagesProcess(), let down = CGEvent(keyboardEventSource: nil, virtualKey: 0, keyDown: true), let up = CGEvent(keyboardEventSource: nil, virtualKey: 0, keyDown: false) else { return -1 }
+            let units = Array(String(character).utf16)
+            units.withUnsafeBufferPointer { buffer in
+                down.keyboardSetUnicodeString(stringLength: buffer.count, unicodeString: buffer.baseAddress!)
+                up.keyboardSetUnicodeString(stringLength: buffer.count, unicodeString: buffer.baseAddress!)
+            }
+            down.flags = []; up.flags = []
+            down.post(tap: .cghidEventTap); up.post(tap: .cghidEventTap)
+        }
+        return 0
+    }
 }
 
 public enum MessagesUIScript {
@@ -30,8 +74,8 @@ public enum MessagesUIScript {
 
 @UIActor
 public struct MessagesUISession {
-    public static let enter = 36
-    public static let escape = 53
+    public nonisolated static let enter = 36
+    public nonisolated static let escape = 53
     public let pid: pid_t
     public let root: AXUIElement
     let driver: any MessagesUIDriver
@@ -54,9 +98,9 @@ public struct MessagesUISession {
         try fence()
         guard driver.systemEvents(script) == 0 else { throw SourceFailure.conflict }
     }
-    public func click(at point: CGPoint) throws { try run(MessagesUIScript.click(point)) }
-    public func controlClick(at point: CGPoint, dismissFirst: Bool = true) throws { try run(MessagesUIScript.controlClick(point, dismissFirst: dismissFirst)) }
-    public func press(_ code: Int, command: Bool = false) throws { try run(MessagesUIScript.keys([code], command: command)) }
+    public func click(at point: CGPoint) throws { try fence(); guard driver.click(point, control: false, dismissFirst: false) == 0 else { throw SourceFailure.conflict } }
+    public func controlClick(at point: CGPoint, dismissFirst: Bool = true) throws { try fence(); guard driver.click(point, control: true, dismissFirst: dismissFirst) == 0 else { throw SourceFailure.conflict } }
+    public func press(_ code: Int, command: Bool = false) throws { try fence(); guard driver.keys([code], command: command) == 0 else { throw SourceFailure.conflict } }
     public func focused(_ element: AXUIElement) -> Bool {
         var focused: CFTypeRef?
         guard AXUIElementCopyAttributeValue(root, kAXFocusedUIElementAttribute as CFString, &focused) == .success, let focused else { return false }
@@ -68,7 +112,8 @@ public struct MessagesUISession {
     }
     public func type(_ text: String, into element: AXUIElement, value: (AXUIElement) -> String) throws {
         try focus(element, failure: MessagesUIFailure.composerUnavailable)
-        try run(MessagesUIScript.replaceText(text))
+        try fence()
+        guard driver.replace(text) == 0 else { throw SourceFailure.conflict }
         let deadline = Date().addingTimeInterval(3)
         repeat {
             if value(element) == text { return }
@@ -78,7 +123,8 @@ public struct MessagesUISession {
     }
     public func clear(_ element: AXUIElement, value: (AXUIElement) -> String) throws -> Bool {
         try focus(element, failure: MessagesUIFailure.composerUnavailable)
-        try run(MessagesUIScript.clearText())
+        try press(0, command: true)
+        try press(51)
         let deadline = Date().addingTimeInterval(3)
         repeat {
             if value(element).isEmpty { return true }

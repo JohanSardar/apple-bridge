@@ -82,6 +82,7 @@ struct RemindersStoreChecks {
         }
         let observations = try await StoreEnrichmentChecks.run(path: path, execute: fixture.execute)
         if CommandLine.arguments.contains("--blob-checks"), !(try await StoreOrderingChecks.run(path: path, execute: fixture.execute)) { exit(1) }
+        if CommandLine.arguments.contains("--section-checks") { try await StoreSectionChecks.run(path: path, execute: fixture.execute) }
         if let index = CommandLine.arguments.firstIndex(of: "--report"), index + 1 < CommandLine.arguments.count {
             try JSONEncoder().encode(JSON.object(["observations": .array(observations)])).write(to: URL(fileURLWithPath: CommandLine.arguments[index + 1]), options: .atomic)
         }

@@ -13,7 +13,7 @@ public struct MessagesMediaCleanupProof: Sendable {
         case .integer, .number: break
         default: throw SourceFailure.invalid
         }
-        guard ["WEB-MEDIA-VARIANTS", "MSG-SELFTEST", "WEB-UPLOAD-NATIVE-STAGING"].contains(registration["scenario"].string), registration["run_id"].string == run,
+        guard ["WEB-MEDIA-VARIANTS", "MSG-SELFTEST", "WEB-UPLOAD-NATIVE-STAGING", "MSG-AUDIO-MESSAGE"].contains(registration["scenario"].string), registration["run_id"].string == run,
               let baseline = Int64(exactly: registration["baseline_max_row_id"].number), baseline >= 0 else { throw SourceFailure.invalid }
         let files = registration["media_attachment_names"].array
         guard !files.isEmpty else { throw SourceFailure.invalid }
@@ -41,6 +41,23 @@ public struct MessagesMediaCleanupProof: Sendable {
         Set(attachments.flatMap { Array(displayNames[URL(fileURLWithPath: $0).lastPathComponent] ?? []) }).sorted()
     }
 
+    public static func check(_ fixture: JSON) throws -> JSON {
+        let proof = try MessagesMediaCleanupProof(registration: fixture["registration"], tag: fixture["tag"].string)
+        let row = fixture["row"]
+        guard let rowID = Int64(exactly: row["row_id"].number) else { throw SourceFailure.invalid }
+        let authorized = proof.authorizes(rowID: rowID, attachments: row["attachments"].array.map(\.string), peers: row["peers"].array.map(\.string), own: Set(fixture["own"].array.map { MessagesProbes.normalize($0.string) }))
+        let names = Set(proof.targetNames(row["attachments"].array.map(\.string)))
+        let candidates = fixture["candidates"].array.map { candidate -> JSON in
+            guard !candidate["description"].string.isEmpty else { return candidate }
+            var value = candidate.object
+            value["outgoing"] = MessagesMediaCleanupProof.direction(candidate["description"].string, names: names).map(JSON.bool) ?? .null
+            value["values"] = .array(candidate["values"].array + [candidate["description"]])
+            return .object(value)
+        }
+        let target = MessagesMediaCleanupProof.targetIndex(candidates, names: names, outgoing: row["is_from_me"].bool, allowSelfEcho: fixture["allow_self_echo"].bool)
+        return JSON.object(["authorized": .bool(authorized), "target_verified": .bool(authorized && target != nil)])
+    }
+
     public static func matches(_ value: String, names: Set<String>) -> Bool {
         guard !value.isEmpty else { return false }
         let decoded = value.removingPercentEncoding ?? value
@@ -59,13 +76,13 @@ public struct MessagesMediaCleanupProof: Sendable {
         return false
     }
 
-    public static func targetIndex(_ candidates: [JSON], names: Set<String>, outgoing: Bool, allowSelfEcho: Bool = false) -> Int? {
+    public static func targetIndex(_ candidates: [JSON], names: Set<String>, outgoing: Bool, allowSelfEcho: Bool = false, equivalentOwned: Bool = false) -> Int? {
         let targets = candidates.enumerated().filter { _, candidate in
             candidate["outgoing"] == .bool(outgoing) && candidate["values"].array.contains { Self.matches($0.string, names: names) }
         }
         if targets.count == 1 { return targets.first?.offset }
         guard targets.isEmpty, allowSelfEcho else { return nil }
         let echoes = candidates.enumerated().filter { _, candidate in candidate["values"].array.contains { Self.matches($0.string, names: names) } }
-        return echoes.count == 1 ? echoes.first?.offset : nil
+        return echoes.count == 1 || equivalentOwned ? echoes.first?.offset : nil
     }
 }
