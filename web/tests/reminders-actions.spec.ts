@@ -1,11 +1,13 @@
 import { test, expect, type BrowserContext } from '@playwright/test';
 import { control } from './session';
+import { observeApp, recordApp } from './app-performance';
 let cookies: Parameters<BrowserContext['addCookies']>[0] = [];
 test.beforeAll(async ({ request }) => { cookies = [(await control(request, '/session')).cookie]; });
 test.beforeEach(async ({ request, context }) => { await context.addCookies(cookies); await control(request, '/reminders-reset'); });
-test('WEB-REM-ACTIONS range selection, hierarchy guard and confirmed bulk move', async ({ page, context, request }) => {
+test('WEB-REM-ACTIONS range selection, hierarchy guard and confirmed bulk move', async ({ page, context, request }, info) => {
     const commands: any[] = [];
     page.on('websocket', socket => socket.on('framesent', event => { const frame = JSON.parse(String(event.payload)); if (frame.t === 'cmd') commands.push(frame); }));
+    await observeApp(page, '.reminders-app');
     await page.goto('/reminders');
     await page.getByRole('button', { name: 'Travel', exact: true }).click();
     await page.getByRole('button', { name: 'Select Reminders', exact: true }).click();
@@ -42,6 +44,7 @@ test('WEB-REM-ACTIONS range selection, hierarchy guard and confirmed bulk move',
     await page.getByRole('button', { name: 'Select Reminders', exact: true }).click();
     await page.getByRole('button', { name: 'Select All', exact: true }).click();
     await expect(page.getByText('6 selected', { exact: true })).toBeVisible();
+    await recordApp(page, 'WEB-REM-ACTIONS', info.project.name);
 });
 test('WEB-REM-ACTIONS completed clearing is explicit and columns preserve section order', async ({ page, context, request }) => {
     const commands: any[] = [];
@@ -138,24 +141,27 @@ test('WEB-REM-ACTIONS unproven repeat language remains literal instead of becomi
     await page.getByRole('button', { name: 'Cancel', exact: true }).click();
 });
 
-test('WEB-REM-ACTIONS trusted touch reveals actions without issuing a write', async ({ page, context, request, browserName }, testInfo) => {
-    test.skip(browserName !== 'chromium' || !testInfo.project.name.endsWith('phone'), 'Trusted touch protocol proof runs at the phone milestone');
+test('WEB-REM-ACTIONS trusted phone taps open details and cancel deletion without issuing a write', async ({ page }, testInfo) => {
+    test.skip(!testInfo.project.name.endsWith('phone'), 'Phone input applies to phone layouts');
     const commands: unknown[] = [];
     page.on('websocket', socket => socket.on('framesent', event => { const frame = JSON.parse(String(event.payload)); if (frame.t === 'cmd') commands.push(frame); }));
     await page.goto('/reminders');
-    await page.getByRole('button', { name: 'Travel', exact: true }).click();
+    await page.getByRole('button', { name: 'Travel', exact: true }).tap();
     await expect(page.locator('.reminders-content')).toHaveCSS('transform', 'none');
     const row = page.locator('.reminder-row').filter({ has: page.locator('.reminder-title').filter({ hasText: 'Plan a weekend trip' }) });
-    const box = await row.locator('.reminder-copy').boundingBox();
-    expect(box).not.toBeNull();
-    const touch = await context.newCDPSession(page), y = box!.y + 10, x = box!.x + box!.width - 16;
-    await touch.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
-    for (const delta of [20, 40, 80, 140]) await touch.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x - delta, y }] });
-    await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-    const actions = page.getByRole('dialog', { name: 'Reminder Actions', exact: true });
-    await expect(actions).toBeVisible();
+    await page.evaluate(() => {
+        (window as any).__trustedTouches = 0;
+        document.addEventListener('pointerdown', event => { if (event.isTrusted && event.pointerType === 'touch') (window as any).__trustedTouches++; });
+    });
+    await row.getByRole('button', { name: 'Details for Plan a weekend trip', exact: true }).tap();
+    const dialog = page.getByRole('dialog', { name: 'Reminder details', exact: true });
+    await expect(dialog).toBeVisible();
     expect(commands).toHaveLength(0);
-    await actions.getByRole('button', { name: 'Delete Reminder', exact: true }).click();
-    await page.getByRole('dialog', { name: 'Delete Reminder', exact: true }).getByRole('button', { name: 'Cancel', exact: true }).click();
+    await dialog.getByRole('button', { name: 'Delete Reminder', exact: true }).tap();
+    await page.getByRole('dialog', { name: 'Delete Reminder', exact: true }).getByRole('button', { name: 'Cancel', exact: true }).tap();
+    await expect(page.getByRole('dialog', { name: 'Delete Reminder', exact: true })).toHaveCount(0);
+    await expect(dialog).toBeVisible();
+    expect(await page.evaluate(() => (window as any).__trustedTouches)).toBe(3);
     expect(commands).toHaveLength(0);
+    await expect(row).toBeVisible();
 });

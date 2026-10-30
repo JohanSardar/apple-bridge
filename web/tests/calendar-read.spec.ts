@@ -1,9 +1,11 @@
 import { test, expect } from '@playwright/test';
 import { bootstrap } from './session';
+import { observeApp, recordApp, recordWarm } from './app-performance';
 
 test.use({ timezoneId: 'America/Los_Angeles' });
 
 test('WEB-CAL-READ all views, civil dates, inspector, filters, search and history', async ({ page, context, request }, info) => {
+  await observeApp(page, '.calendar-app');
   await bootstrap(context, request);
   await page.goto('/calendar/month/2026-10-20');
   await expect(page.getByRole('main', { name: 'Calendar', exact: true })).toBeVisible();
@@ -22,9 +24,25 @@ test('WEB-CAL-READ all views, civil dates, inspector, filters, search and histor
   await expect(inspector).toContainText('10 minutes before');
   await expect(inspector.getByRole('link', { name: 'Get directions' })).toHaveAttribute('href', /maps\.apple\.com/);
   await expect(inspector.getByText('Travel time', { exact: true })).toHaveCount(0);
+  await recordApp(page, 'WEB-CAL-READ', info.project.name);
   const eventPath = new URL(page.url()).pathname;
+  let releaseLive = false;
+  const pending: (() => void)[] = [];
+  await page.routeWebSocket('**/web/v1/live', socket => {
+    const server = socket.connectToServer();
+    socket.onMessage(raw => server.send(raw));
+    server.onMessage(raw => { if (releaseLive) socket.send(raw); else pending.push(() => socket.send(raw)); });
+  });
   await page.reload();
   await expect(inspector).toContainText('Project check-in');
+  await expect(inspector).toBeVisible();
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await expect.poll(() => page.evaluate(() => (window as any).__appPerformance.warmContentAt ?? 0)).toBeGreaterThan(0);
+  const warmContentPass = await page.evaluate(() => (window as any).__appPerformance.warmContentAt < 1000);
+  await recordWarm('WEB-CAL-READ', info.project.name, warmContentPass);
+  expect(warmContentPass).toBe(true);
+  releaseLive = true;
+  for (const deliver of pending.splice(0)) deliver();
   await expect(page).toHaveURL(new RegExp(eventPath));
   await page.getByRole('button', { name: 'Close event details' }).click();
   await page.goto('/calendar/day/2026-10-20');
