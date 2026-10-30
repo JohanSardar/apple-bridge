@@ -25,8 +25,7 @@ func runNotesExtras(ctx context.Context, s Scenario, level string) (e Evidence) 
 		}
 	}()
 	if level != "sim" {
-		e.Assertions = append(e.Assertions, Assertion{Name: "tagged_mutation_cleanup_required", Passed: true, Status: "limited", Detail: "Existing real Notes cleanup is unproven on 25G241; no real fixtures or mutations attempted"})
-		return
+		return runNotesExtrasReal(ctx, s, level)
 	}
 	ctx = world.WithOptions(ctx, world.Options{Scope: "notes:read,notes:write,reminders:read,system:read"})
 	w, err := world.New(ctx, level, 0, 0)

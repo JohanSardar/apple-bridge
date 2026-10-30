@@ -22,8 +22,17 @@ func runNotesParity(ctx context.Context, s Scenario, level string) (e Evidence) 
 			e.Passed = e.Passed && assertion.Passed
 		}
 	}()
-	if level != "real" {
-		add("real_account_required", false)
+	for _, id := range []string{"NOTE-CRUD", "NOTE-RICH-REJECT"} {
+		result := runNotes(ctx, Scenario{ID: id}, level)
+		for _, assertion := range result.Assertions {
+			assertion.Name = id + "/" + assertion.Name
+			e.Assertions = append(e.Assertions, assertion)
+		}
+		if !result.Passed {
+			return
+		}
+	}
+	if level == "sim" {
 		return
 	}
 	before, problem := cleanupSnapshot(ctx, "notes")
