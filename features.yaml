@@ -1144,7 +1144,6 @@ features:
     limits:
       - {"scenario": "FOC-SET-REAL", "level": "real", "reason": "needs Focus status grant for AppleBridgeHelper; signed Air probe stopped before dispatch; AB Focus import remains unqualified"}
       - {"scenario": "FOC-IDLE", "level": "real", "reason": "Five-minute Helper CPU qualification remains pending; no idle CPU measurement claimed."}
-      - {"scenario": "FOC-STATUS-REAL", "level": "real", "reason": "needs Focus status grant for AppleBridgeHelper; signed Air probe confirmed the missing grant without requesting authorization"}
       - {"scenario": "FOC-PHONE-SYNC", "level": "real", "reason": "Johan must have the paired iPhone available and qualify Focus sync after a safe AB Focus set/readback/restore implementation"}
   - id: recordings.read
     title: Voice Memos assets and voicemail metadata
@@ -1258,13 +1257,11 @@ features:
     milestone: G6
     modules: [native/Sources/MacSource, internal/contracts]
     depends_on: [mac.capture]
-    status: limited
+    status: done
     scenarios:
       - {id: MAC-ACTIONS, levels: [sim]}
       - {id: MAC-NOTIFY-REAL, levels: [real]}
     notes: Power actions require approve agent admission and are disabled natively. Wallpaper accepts a bounded base64 image blob. Network ICMP ping is limited; reachability DNS and interface byte counters are available.
-    limits:
-      - {"scenario": "MAC-NOTIFY-REAL", "level": "real", "reason": "AppleBridgeHelper notification authorization is not granted; notification_authorized fails; no authorization requested."}
   - id: maps.queries
     title: Native Location and Maps transient queries
     requirements: [R-API, R-SCOPE]
