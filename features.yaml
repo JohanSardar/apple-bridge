@@ -1028,7 +1028,7 @@ features:
     modules: [internal/clockpack, packaging/shortcuts/ab-clock.json]
     depends_on: [shortcuts.runner]
     status: limited
-    notes: AB Clock is installed on the Air and both real runners invoke the live pack. The replacement signed pack fixes Clock time-token and conditional-subject serialization and defaults no-input runs to structured alarm listing; it awaits leader import and live qualification. Alarm mutations are safely skipped until baseline readback qualifies. Start Timer exists on macOS; timer confirmation and city query remain unqualified and are not advertised.
+    notes: AB Clock is installed on the Air and both real runners invoke the live pack. The replacement signed pack fixes Clock time-token and conditional-subject serialization, explicitly coerces all equality subjects to text so literal and variable operands remain valid, and defaults no-input runs to structured alarm listing; it awaits leader import and live qualification. Alarm mutations are safely skipped until baseline readback qualifies. Start Timer exists on macOS; timer confirmation and city query remain unqualified and are not advertised.
     scenarios:
       - {id: CLK-SIM, levels: [sim]}
       - {id: CLK-ALARM-REAL, levels: [real]}

@@ -49,7 +49,17 @@ func stableID(name string) string {
 func resolve(value any, name string, outputs map[string]string) (any, error) {
 	switch v := value.(type) {
 	case map[string]any:
-		if len(v) == 1 || len(v) == 2 && (v["$property"] != nil || v["$text"] == true) || len(v) == 3 && v["$property"] != nil && v["$text"] == true {
+		referenceFields := 1
+		if v["$property"] != nil {
+			referenceFields++
+		}
+		if v["$text"] == true {
+			referenceFields++
+		}
+		if v["$coerce"] != nil {
+			referenceFields++
+		}
+		if len(v) == referenceFields {
 			if key, ok := v["$output"].(string); ok {
 				id, exists := outputs[key]
 				if !exists {
@@ -58,6 +68,10 @@ func resolve(value any, name string, outputs map[string]string) (any, error) {
 				value := map[string]any{"Type": "ActionOutput", "OutputUUID": id, "OutputName": key}
 				if property, ok := v["$property"].(string); ok && property != "" {
 					value["Aggrandizements"] = []any{map[string]any{"Type": "WFPropertyVariableAggrandizement", "PropertyName": property, "PropertyUserInfo": property}}
+				}
+				if coercion, ok := v["$coerce"].(string); ok && coercion != "" {
+					aggrandizements, _ := value["Aggrandizements"].([]any)
+					value["Aggrandizements"] = append(aggrandizements, map[string]any{"Type": "WFCoercionVariableAggrandizement", "CoercionItemClass": coercion})
 				}
 				if v["$text"] == true {
 					return map[string]any{"Value": map[string]any{"string": "\ufffc", "attachmentsByRange": map[string]any{"{0, 1}": value}}, "WFSerializationType": "WFTextTokenString"}, nil
