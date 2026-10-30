@@ -59,6 +59,9 @@ struct CapabilityScreen: View {
         }
         .navigationTitle(capability.title)
         .onChange(of: enabled) { _, value in
+            if capability.id == "widgets" {
+                if value { WidgetsCapability.resume() } else { WidgetsCapability.disable() }
+            }
             if capability.id == "healthread" {
                 Task {
                     if value { await HealthReadController.shared.enable() }

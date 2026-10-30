@@ -41,6 +41,7 @@
 	<key>keychain-access-groups</key>
 	<array>
 		<string>$(AppIdentifierPrefix)$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+		<string>$(AppIdentifierPrefix)com.johansardar.applebridge.ios.widgetstatus</string>
 	</array>
 </dict>
 </plist>

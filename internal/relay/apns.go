@@ -72,6 +72,17 @@ func (a *APNs) Send(ctx context.Context, device string, packet json.RawMessage, 
 	if err != nil || len(body) > 4096 {
 		return ErrDenied
 	}
+	live := false
+	var envelope struct {
+		Live json.RawMessage `json:"live_activity"`
+	}
+	if json.Unmarshal(packet, &envelope) == nil && len(envelope.Live) > 0 {
+		body, err = json.Marshal(map[string]any{"aps": envelope.Live})
+		if err != nil || len(body) > 4096 {
+			return ErrDenied
+		}
+		live = true
+	}
 	endpoint := a.Endpoint
 	if endpoint == "" {
 		endpoint = "https://api.push.apple.com"
@@ -91,6 +102,11 @@ func (a *APNs) Send(ctx context.Context, device string, packet json.RawMessage, 
 	request.Header.Set("apns-topic", "com.johansardar.applebridge.ios")
 	request.Header.Set("apns-push-type", "background")
 	request.Header.Set("apns-priority", "5")
+	if live {
+		request.Header.Set("apns-topic", "com.johansardar.applebridge.ios.push-type.liveactivity")
+		request.Header.Set("apns-push-type", "liveactivity")
+		request.Header.Set("apns-priority", "10")
+	}
 	request.Header.Set("apns-expiration", strconv.FormatInt(expires.Unix(), 10))
 	response, err := a.Client.Do(request)
 	if err != nil {

@@ -1,0 +1,51 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[30.73 28.95 23.48] cpu_idle=15% cpus=10 other_heavy=0"
+  },
+  "run_id": "",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "APP-LIVE-SIM",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-30T00:23:03.590114Z",
+  "assertions": [
+    {
+      "name": "pair",
+      "passed": true
+    },
+    {
+      "name": "signed_start_and_task_token_registration",
+      "passed": true
+    },
+    {
+      "name": "start_admitted",
+      "passed": true
+    },
+    {
+      "name": "update_admitted",
+      "passed": true
+    },
+    {
+      "name": "end_admitted",
+      "passed": true
+    },
+    {
+      "name": "three_apns_lifecycle_events_without_duplicate_start",
+      "passed": true
+    },
+    {
+      "name": "disable_revokes_live_tokens",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

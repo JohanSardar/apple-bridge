@@ -15,7 +15,7 @@ ALARM_UUID=$(/usr/libexec/PlistBuddy -c 'Print UUID' "$OUTPUT/alarm-profile.plis
 ALARM_NAME=$(/usr/libexec/PlistBuddy -c 'Print Name' "$OUTPUT/alarm-profile.plist")
 cp "$ALARM_PROFILE" "$HOME/Library/MobileDevice/Provisioning Profiles/$ALARM_UUID.mobileprovision"
 export AB_IOS_PROFILE_NAME="$NAME"
-for EXTENSION in ScreenTimeMonitor ScreenTimeReport; do
+for EXTENSION in ScreenTimeMonitor ScreenTimeReport BridgeWidgets; do
   EXTENSION_PROFILE="$HOME/.config/apple-bridge/ios/$EXTENSION.mobileprovision"
   security cms -D -i "$EXTENSION_PROFILE" > "$OUTPUT/$EXTENSION-profile.plist"
   EXTENSION_UUID=$(/usr/libexec/PlistBuddy -c 'Print UUID' "$OUTPUT/$EXTENSION-profile.plist")
@@ -23,6 +23,8 @@ for EXTENSION in ScreenTimeMonitor ScreenTimeReport; do
   cp "$EXTENSION_PROFILE" "$HOME/Library/MobileDevice/Provisioning Profiles/$EXTENSION_UUID.mobileprovision"
   if [ "$EXTENSION" = ScreenTimeMonitor ]; then
     export AB_SCREENTIME_MONITOR_PROFILE_NAME="$EXTENSION_NAME"
+  elif [ "$EXTENSION" = BridgeWidgets ]; then
+    export AB_WIDGETS_PROFILE_NAME="$EXTENSION_NAME"
   else
     export AB_SCREENTIME_REPORT_PROFILE_NAME="$EXTENSION_NAME"
   fi
@@ -39,7 +41,7 @@ for name, shared in [("profile", True), ("ScreenTimeMonitor-profile", True), ("S
         sys.exit(name + ": provision the Screen Time App Group and regenerate the profile")
 PYPROFILE
 xcodegen generate --spec "$ROOT/ios/project.yml" --project "$ROOT/ios" >/dev/null
-xcodebuild -quiet -project "$ROOT/ios/AppleBridge.xcodeproj" -scheme AppleBridge -configuration Debug -sdk iphoneos -destination generic/platform=iOS -derivedDataPath "$OUTPUT/DerivedData" "APPLE_BRIDGE_APP_PROFILE=$NAME" "ALARM_ACTIVITY_PROFILE=$ALARM_NAME" build
+lockf -t 3600 /tmp/ab-xcode.lock xcodebuild -quiet -project "$ROOT/ios/AppleBridge.xcodeproj" -scheme AppleBridge -configuration Debug -sdk iphoneos -destination generic/platform=iOS -derivedDataPath "$OUTPUT/DerivedData" "APPLE_BRIDGE_APP_PROFILE=$NAME" "ALARM_ACTIVITY_PROFILE=$ALARM_NAME" build
 APP="$OUTPUT/DerivedData/Build/Products/Debug-iphoneos/AppleBridge.app"
 codesign --verify --deep --strict "$APP"
 mkdir -p "$OUTPUT/staging/Payload"

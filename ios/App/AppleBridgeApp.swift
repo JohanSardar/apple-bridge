@@ -52,11 +52,13 @@ struct BridgeSettings: View {
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active {
                     LocationCapability.resume()
+                    WidgetsCapability.resume()
                     Task { await PushDelivery.shared.drain(); await HealthReadController.shared.resume() }
                 }
             }
             .task {
                 LocationCapability.resume()
+                WidgetsCapability.resume()
                 if let index = ProcessInfo.processInfo.arguments.firstIndex(of: "--pair-code"), ProcessInfo.processInfo.arguments.count > index + 1 {
                     await pairing.pair(ProcessInfo.processInfo.arguments[index + 1])
                 }

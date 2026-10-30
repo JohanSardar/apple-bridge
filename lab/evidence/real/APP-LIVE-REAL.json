@@ -1,0 +1,30 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[22.58 25.78 21.19] cpu_idle=7% cpus=10 other_heavy=0"
+  },
+  "status": "limited",
+  "run_id": "",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "APP-LIVE-REAL",
+  "level": "real",
+  "passed": false,
+  "git_sha": "",
+  "at": "2026-10-30T00:19:34.100913Z",
+  "assertions": [
+    {
+      "name": "phone_live_widgets",
+      "passed": false,
+      "status": "limited",
+      "detail": "limited: needs Allow tap"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

@@ -2,6 +2,7 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+<key>ABWidgetKeychainGroup</key><string>$(AppIdentifierPrefix)com.johansardar.applebridge.ios.widgetstatus</string>
     <key>ABApproved_wallet</key><false/>
     <key>ABApproved_criticalAlerts</key><false/>
     <key>ABApproved_locationPush</key><false/>
