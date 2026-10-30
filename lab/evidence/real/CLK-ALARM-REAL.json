@@ -1,19 +1,19 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[34.83 62.04 99.42] cpu_idle=59% cpus=8 other_heavy=0"
+    "summary": "air: load=[6.12 4.36 6.59] cpu_idle=77% cpus=8 other_heavy=0"
   },
   "status": "limited",
-  "run_id": "run_01M64TX5F9YN0J5F3D7970V1D5",
+  "run_id": "run_01M65BAK05Y7XKJRQ72H7NYZED",
   "metrics": {
     "capture_observer_resets": 0,
-    "pack_installed": false
+    "pack_installed": true
   },
   "scenario": "CLK-ALARM-REAL",
   "level": "real",
   "passed": false,
   "git_sha": "",
-  "at": "2026-10-29T22:01:22.665882Z",
+  "at": "2026-10-30T02:48:19.718283Z",
   "assertions": [
     {
       "name": "credential_backend_override_restored",
@@ -23,6 +23,6 @@
   "latency": null,
   "hosts": null,
   "conditions": {
-    "reason": "needs import click"
+    "reason": "AB Clock did not return versioned structured alarm fields (id, time, label, repeat_days, enabled); mutations not attempted"
   }
 }

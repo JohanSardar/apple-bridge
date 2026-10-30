@@ -1,19 +1,19 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[32.44 61.09 98.87] cpu_idle=56% cpus=8 other_heavy=0"
+    "summary": "air: load=[5.71 4.36 6.55] cpu_idle=76% cpus=8 other_heavy=0"
   },
   "status": "limited",
-  "run_id": "run_01M64TXA54N9HF1VM4MVFPYEKQ",
+  "run_id": "run_01M65BB1TZMCWBEMVWBBV34PWX",
   "metrics": {
     "capture_observer_resets": 0,
-    "pack_installed": false
+    "pack_installed": true
   },
   "scenario": "CLK-TIMER-REAL",
   "level": "real",
   "passed": false,
   "git_sha": "",
-  "at": "2026-10-29T22:01:27.460083Z",
+  "at": "2026-10-30T02:48:34.911049Z",
   "assertions": [
     {
       "name": "credential_backend_override_restored",
@@ -23,6 +23,6 @@
   "latency": null,
   "hosts": null,
   "conditions": {
-    "reason": "needs import click"
+    "reason": "AB Clock did not return structured timer running, duration and label confirmation; macOS Start Timer action exists"
   }
 }
