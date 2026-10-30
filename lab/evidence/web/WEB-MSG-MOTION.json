@@ -1,24 +1,36 @@
 {
   "scenario": "WEB-MSG-MOTION",
   "level": "web",
-  "git_sha": "614794562717e2e2ffde5a0392d7e149f2a01dab",
-  "at": "2026-10-29T22:52:00.138026Z",
-  "passed": false,
+  "git_sha": "ee9a88598eb81dcbd79d350e30243d6133d1bc25",
+  "at": "2026-10-30T00:09:51.935494Z",
+  "passed": true,
   "metrics": {
-    "matrix_count": 1,
-    "completed_matrix_count": 1,
-    "passed_matrix_count": 0,
-    "failed_matrix_count": 1,
+    "matrix_count": 4,
+    "completed_matrix_count": 4,
+    "passed_matrix_count": 4,
+    "failed_matrix_count": 0,
     "incomplete_matrix_count": 0,
-    "passed_test_count": 1,
-    "failed_test_count": 1,
+    "passed_test_count": 8,
+    "failed_test_count": 0,
     "skipped_test_count": 0,
-    "report_sha256": "3bde3daf7c89ad2d4043bf4205d32aef69bf7dc8f0ed34f512f25a44efa02746"
+    "report_sha256": "b7709a61c376cbf5118ff3bba490c6ba6f569aa328d11a46415345da198a278c"
   },
   "assertions": [
     {
+      "name": "webkit-light-phone",
+      "passed": true
+    },
+    {
+      "name": "webkit-light-desktop",
+      "passed": true
+    },
+    {
+      "name": "chromium-light-phone",
+      "passed": true
+    },
+    {
       "name": "chromium-light-desktop",
-      "passed": false
+      "passed": true
     }
   ]
 }

@@ -715,7 +715,6 @@ features:
       - {"scenario": "WEB-MSG-SEARCH-LIST", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
       - {"scenario": "WEB-MSG-SIDEBAR", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
       - {"scenario": "WEB-MSG-THREAD-CORE", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
-      - {"scenario": "WEB-MSG-READ-THROTTLE", "level": "web", "reason": "T72 continuation: full matrix stopped with failures; Chromium light phone pressure did not obtain HTTP 429 within six seconds, so recovery was not exercised; deterministic pressure setup exceeds the remaining allowance; unfinished cells remain unqualified"}
       - {"scenario": "WEB-MSG-TRANSCRIPT-HOOKS", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
       - {"scenario": "WEB-MSG-TEXT-SIZING", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
       - {"scenario": "WEB-MSG-REACTIONS", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
@@ -724,7 +723,6 @@ features:
       - {"scenario": "WEB-MSG-POINTER", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
       - {"scenario": "WEB-MSG-EDIT-UNSEND-VIEW", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
       - {"scenario": "WEB-MSG-GROUP-EVENTS", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
-      - {"scenario": "WEB-MSG-MOTION", "level": "web", "reason": "T72 continuation: reduced-motion incoming message enters the thread window but its row is not visible after the viewport returns to the unread position; repeated on Chromium light desktop; deeper scroll/window fix exceeds the 20-minute allowance"}
       - {"scenario": "WEB-MSG-INTERACTION-MOTION", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
       - {"scenario": "WEB-MSG-FONTS", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
       - {"scenario": "WEB-MSG-RICH-PARTS", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
