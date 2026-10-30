@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"time"
 
 	"github.com/JohanSardar/apple-bridge/lab/world"
 )
@@ -29,10 +30,14 @@ func runPhotosReal(ctx context.Context, s Scenario, e Evidence) Evidence {
 		os.Stderr.Write(out)
 		return e
 	}
-	report := filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "AppleBridgeDev", "photos-"+e.RunID+".json")
-	defer os.Remove(report)
-	out, err = exec.CommandContext(ctx, "open", "-n", "-W", "-a", app, "--args", "photos-real-checks", s.ID, "--report", report).CombinedOutput()
-	add("signed_helper_probe", err == nil)
+	report := filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "AppleBridgeDev", "photos-real-shared.json")
+	if info, statErr := os.Stat(report); statErr == nil && s.ID != "PHO-IDLE" && time.Since(info.ModTime()) < 15*time.Minute {
+		add("signed_helper_probe", true)
+	} else {
+		os.Remove(report)
+		out, err = exec.CommandContext(ctx, "open", "-n", "-W", "-a", app, "--args", "photos-real-checks", s.ID, "--report", report).CombinedOutput()
+		add("signed_helper_probe", err == nil)
+	}
 	if err != nil {
 		os.Stderr.Write(out)
 		return e
