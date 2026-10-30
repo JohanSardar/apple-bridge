@@ -358,6 +358,9 @@ func convergence(w *world.World) bool {
 }
 
 func runScenario(ctx context.Context, s Scenario, level string) Evidence {
+	if level == "real" && isIPhoneSensorReal(s.ID) {
+		return runIPhoneSensorReal(ctx, s)
+	}
 	if level == "real" && slices.Contains([]string{"APP-SHELL-REAL", "APP-BUILD-REAL", "APP-PAIR-REAL", "APP-CMD-REAL"}, s.ID) {
 		return Evidence{Scenario: s.ID, Level: level, At: time.Now().UTC(), Status: "limited", Assertions: []Assertion{{Name: "real_device_acceptance", Detail: "Real iPhone acceptance harness is not implemented; generic replica proof cannot qualify the phone"}}}
 	}
@@ -1219,7 +1222,7 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 	}
 	packagingOnly := true
 	for _, scenario := range scenarios {
-		packagingOnly = packagingOnly && (scenario.Feature == "iphone.location" || scenario.Feature == "iphone.health" || scenario.Feature == "packaging.app" || scenario.Feature == "core.shortcuts" || scenario.Feature == "core.permissions" || scenario.Feature == "usage.action_probe" || scenario.Feature == "helper.siri_intents")
+		packagingOnly = packagingOnly && (level == "real" && isIPhoneSensorReal(scenario.ID) || scenario.Feature == "iphone.location" || scenario.Feature == "iphone.health" || scenario.Feature == "packaging.app" || scenario.Feature == "core.shortcuts" || scenario.Feature == "core.permissions" || scenario.Feature == "usage.action_probe" || scenario.Feature == "helper.siri_intents")
 	}
 	if !packagingOnly {
 		if err = world.Build(ctx, level); err != nil {
@@ -1243,6 +1246,9 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		ran++
 		fmt.Fprintln(os.Stderr, "running", s.ID, level)
 		duration := 3 * time.Minute
+		if level == "real" && isIPhoneSensorReal(s.ID) {
+			duration = 68 * time.Minute
+		}
 		if s.ID == "RELAY-STREAMS" {
 			duration = 12 * time.Minute
 		}

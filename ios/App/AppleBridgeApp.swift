@@ -57,6 +57,7 @@ struct BridgeSettings: View {
                 }
             }
             .task {
+                if await RealQualification.runIfRequested() { return }
                 LocationCapability.resume()
                 WidgetsCapability.resume()
                 if let index = ProcessInfo.processInfo.arguments.firstIndex(of: "--pair-code"), ProcessInfo.processInfo.arguments.count > index + 1 {
