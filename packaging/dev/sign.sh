@@ -8,7 +8,7 @@ if [[ ${APPLE_BRIDGE_SIGNING_GUI:-} != 1 ]]; then
 fi
 profile="$HOME/.config/apple-bridge/signing/services-dev.provisionprofile"
 bundle_id=$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$1/Contents/Info.plist")
-if [[ $# == 1 && $bundle_id == dev.applebridge.helper && -f $profile ]]; then
+if [[ $# == 1 && $bundle_id == dev.applebridge.helper && -f $profile && ${APPLE_BRIDGE_SIGNING_IDENTITY:-services} != development ]]; then
     entitlements=$(mktemp)
     trap 'rm -f "$entitlements"' EXIT
     identity=$(python3 - "$profile" "$1" "$root/packaging/dev/Helper.entitlements" "$entitlements" <<'PYPROFILE'

@@ -23,7 +23,7 @@ with tempfile.TemporaryDirectory(prefix="apple-bridge-sign-") as directory:
     job.write_bytes(plistlib.dumps({
         "Label": label,
         "ProgramArguments": arguments,
-        "EnvironmentVariables": {"APPLE_BRIDGE_SIGNING_GUI": "1"},
+        "EnvironmentVariables": {"APPLE_BRIDGE_SIGNING_GUI": "1", "APPLE_BRIDGE_SIGNING_IDENTITY": os.environ.get("APPLE_BRIDGE_SIGNING_IDENTITY", "services")},
         "LimitLoadToSessionType": "Aqua",
         "ProcessType": "Interactive",
         "RunAtLoad": True,

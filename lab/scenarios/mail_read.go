@@ -38,7 +38,7 @@ func runMailRead(ctx context.Context, s Scenario, level string) Evidence {
 	if !check("mail_truth_25_random_samples", err == nil && len(truth.Samples) == 25) {
 		return e
 	}
-	w, err := world.NewRealWithSetup(ctx, "real", 0, world.NativeSetup{FilesystemTruth: true}, world.BlobOptions{Scope: "mail:read,system:read"})
+	w, err := world.NewRealWithSetup(ctx, "real", 0, world.NativeSetup{FilesystemTruth: true, DevelopmentIdentity: true}, world.BlobOptions{Scope: "mail:read,system:read"})
 	if !check("mail_native_world", err == nil) {
 		return e
 	}

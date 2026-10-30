@@ -39,7 +39,7 @@ func runMailBodyReal(ctx context.Context, s Scenario, level string) Evidence {
 		e.Conditions = map[string]string{"reason": "needs locally downloaded plain-text [ab-test] self-sent mail; creating it needs Automation grant AppleBridgeHelper → Mail"}
 		return e
 	}
-	w, err := world.NewRealWithSetup(ctx, level, 0, world.NativeSetup{FilesystemTruth: true}, world.BlobOptions{Scope: "mail:read,system:read"})
+	w, err := world.NewRealWithSetup(ctx, level, 0, world.NativeSetup{FilesystemTruth: true, DevelopmentIdentity: true}, world.BlobOptions{Scope: "mail:read,system:read"})
 	if !check("mail_native_world", err == nil) {
 		return e
 	}
