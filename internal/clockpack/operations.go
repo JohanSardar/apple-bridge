@@ -90,6 +90,20 @@ func (p Pack) Exchange(ctx context.Context, request Request) (Readback, error) {
 	if json.Unmarshal(result.Data, &out) != nil || out.Version != 1 || out.Operation != request.Operation {
 		return Readback{}, ErrUnqualified
 	}
+	var fields struct {
+		Alarms []map[string]json.RawMessage `json:"alarms"`
+	}
+	if json.Unmarshal(result.Data, &fields) != nil {
+		return Readback{}, ErrUnqualified
+	}
+	for _, alarm := range fields.Alarms {
+		for _, field := range []string{"id", "label", "time", "repeat_days", "enabled"} {
+			value, ok := alarm[field]
+			if !ok || string(value) == "null" {
+				return Readback{}, ErrUnqualified
+			}
+		}
+	}
 	ids := map[string]bool{}
 	for _, a := range out.Alarms {
 		if !validAlarm(a) || ids[a.ID] {
