@@ -1,34 +1,23 @@
 {
-  "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[5.26 5.71 6.57] cpu_idle=53% cpus=8 other_heavy=0"
-  },
-  "run_id": "run_01M64891BMH2S19KQA4GF31JHZ",
+  "host_conditions": null,
+  "run_id": "run_01M67A5RXCNQ86FS7B2HDJSAH8",
   "metrics": {
-    "capture_observer_resets": 0,
-    "idle_cpu_percent": 41.35966393262527,
-    "idle_seconds": 300.026615792
+    "helper_cpu_percent": 3.7264675490839627,
+    "idle_seconds": 300.01603,
+    "shared_window": "2026-10-30T21:19:37.873194Z"
   },
   "scenario": "LOC-IDLE",
   "level": "real",
   "passed": false,
-  "git_sha": "c3ac9963efa1272847ce1ef053a43f9c53d3fc2a",
-  "at": "2026-10-29T16:35:48.724661Z",
+  "git_sha": "2383f996c3e31709c365a7d3431ea405b52ffedf",
+  "at": "2026-10-30T21:06:42.220261Z",
   "assertions": [
-    {
-      "name": "world_started",
-      "passed": true
-    },
-    {
-      "name": "scopes_granted",
-      "passed": true
-    },
     {
       "name": "helper_ready",
       "passed": true
     },
     {
-      "name": "private_helper_pid",
+      "name": "messages_capture_and_media_settled",
       "passed": true
     },
     {
@@ -36,19 +25,11 @@
       "passed": false
     },
     {
-      "name": "five_minute_idle_cpu_under_2_percent",
+      "name": "shared_five_minute_helper_cpu_under_two_percent",
       "passed": false
-    },
-    {
-      "name": "idle_helper_responsive",
-      "passed": true
-    },
-    {
-      "name": "credential_backend_override_restored",
-      "passed": true
     }
   ],
-  "latency": {},
+  "latency": null,
   "hosts": [
     "air"
   ]
