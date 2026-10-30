@@ -193,7 +193,7 @@ func runCallsIdleReal(ctx context.Context, s Scenario, level string) Evidence {
 		return e
 	}
 	defer w.Close()
-	if !awaitIdleCapture(w) {
+	if !awaitIdleCapture(ctx, w, &e) {
 		e.Assertions = []Assertion{{Name: "messages_capture_and_media_settled", Passed: false}}
 		return e
 	}

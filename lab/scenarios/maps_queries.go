@@ -62,7 +62,7 @@ func runMapsQueries(ctx context.Context, s Scenario, level string) (e Evidence) 
 		}
 	}
 	if s.ID == "LOC-IDLE" || s.ID == "MAP-IDLE" {
-		if s.ID == "MAP-IDLE" && !awaitIdleCapture(w) {
+		if s.ID == "MAP-IDLE" && !awaitIdleCapture(ctx, w, &e) {
 			add("messages_capture_and_media_settled", false)
 			return
 		}
