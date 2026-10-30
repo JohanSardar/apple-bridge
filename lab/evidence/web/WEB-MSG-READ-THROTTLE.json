@@ -1,24 +1,24 @@
 {
   "scenario": "WEB-MSG-READ-THROTTLE",
   "level": "web",
-  "git_sha": "614794562717e2e2ffde5a0392d7e149f2a01dab",
-  "at": "2026-10-29T23:11:47.016281Z",
-  "passed": false,
+  "git_sha": "ee9a88598eb81dcbd79d350e30243d6133d1bc25",
+  "at": "2026-10-30T00:11:14.78481Z",
+  "passed": true,
   "metrics": {
     "matrix_count": 12,
-    "completed_matrix_count": 9,
-    "passed_matrix_count": 1,
-    "failed_matrix_count": 8,
-    "incomplete_matrix_count": 3,
-    "passed_test_count": 1,
-    "failed_test_count": 8,
+    "completed_matrix_count": 12,
+    "passed_matrix_count": 12,
+    "failed_matrix_count": 0,
+    "incomplete_matrix_count": 0,
+    "passed_test_count": 12,
+    "failed_test_count": 0,
     "skipped_test_count": 0,
-    "report_sha256": "29335bc235943e51e73014a8f4fcaabbd0bb104121a035cc29f0806eee0cae1a"
+    "report_sha256": "7ce4d26093414ba11dd67051750304d084198c23faf04894bf6bff74fdc19ae8"
   },
   "assertions": [
     {
       "name": "chromium-light-phone",
-      "passed": false
+      "passed": true
     },
     {
       "name": "chromium-light-desktop",
@@ -26,31 +26,43 @@
     },
     {
       "name": "chromium-dark-phone",
-      "passed": false
+      "passed": true
     },
     {
       "name": "chromium-dark-desktop",
-      "passed": false
+      "passed": true
     },
     {
       "name": "webkit-light-phone",
-      "passed": false
+      "passed": true
     },
     {
       "name": "webkit-light-desktop",
-      "passed": false
+      "passed": true
     },
     {
       "name": "webkit-dark-phone",
-      "passed": false
+      "passed": true
     },
     {
       "name": "webkit-dark-desktop",
-      "passed": false
+      "passed": true
     },
     {
       "name": "firefox-light-phone",
-      "passed": false
+      "passed": true
+    },
+    {
+      "name": "firefox-light-desktop",
+      "passed": true
+    },
+    {
+      "name": "firefox-dark-phone",
+      "passed": true
+    },
+    {
+      "name": "firefox-dark-desktop",
+      "passed": true
     }
   ]
 }
