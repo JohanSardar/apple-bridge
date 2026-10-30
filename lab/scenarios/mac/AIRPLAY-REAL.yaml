@@ -1,5 +1,0 @@
-id: AIRPLAY-REAL
-feature: mac.extras
-levels: [real]
-when:
-  - mac: {}
