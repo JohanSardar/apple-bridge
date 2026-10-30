@@ -49,7 +49,7 @@ test('WEB-MSG-A11Y STRUCTURE named controls, active descendants and keyboard tra
     const snapshot=await transcript.ariaSnapshot();expect(snapshot).toContain('listbox "Messages transcript"');expect(snapshot).toContain('option');
     await transcript.focus();await page.keyboard.press('ArrowDown');await expect(transcript).toBeFocused();
     const active=await transcript.getAttribute('aria-activedescendant');expect(active).toBeTruthy();await expect(page.locator('[id="'+active+'"]')).toHaveAttribute('role','option');await expect(page.locator('[id="'+active+'"]')).toHaveAttribute('aria-selected','true');
-    await composer.focus();await composer.fill('[ab-test canonical] accessible draft');await page.keyboard.press('Tab');await expect(page.getByRole('button',{name:'Send message',exact:true})).toBeFocused();await page.keyboard.press('Shift+Tab');await expect(composer).toBeFocused();
+    await composer.fill('[ab-test canonical] accessible draft');const send=page.getByRole('button',{name:'Send message',exact:true});await expect(send).toBeEnabled();await composer.focus();await page.keyboard.press('Tab');await expect(send).toBeFocused();await page.keyboard.press('Shift+Tab');await expect(composer).toBeFocused();
     expect(await composer.ariaSnapshot()).toContain('textbox "Message"');
 });
 

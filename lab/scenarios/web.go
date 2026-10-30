@@ -218,7 +218,26 @@ func runWebProjects(ctx context.Context, s Scenario, projects []string) Evidence
 		suffix = projects[0]
 	}
 	report, _ := filepath.Abs(filepath.Join("lab/evidence/private/web/reports", s.ID+"-"+suffix+"-playwright.json"))
-	test := exec.CommandContext(ctx, "pnpm", "exec", "playwright", "test", "--workers=1", "-g", "\\b"+regexp.QuoteMeta(s.ID)+"(?![\\w-])")
+	pattern := regexp.MustCompile(`\b` + regexp.QuoteMeta(s.ID) + `(?:[^\w-]|$)`)
+	files, err := filepath.Glob("web/tests/*.spec.ts")
+	if err != nil {
+		return fail("web_specs", err)
+	}
+	args := []string{"exec", "playwright", "test"}
+	for _, file := range files {
+		content, err := os.ReadFile(file)
+		if err != nil {
+			return fail("web_specs", err)
+		}
+		if pattern.Match(content) {
+			args = append(args, filepath.Base(file))
+		}
+	}
+	if len(args) == 3 {
+		return fail("web_specs", fmt.Errorf("no spec contains %s", s.ID))
+	}
+	args = append(args, "--workers=1", "-g", "\\b"+regexp.QuoteMeta(s.ID)+"(?![\\w-])")
+	test := exec.CommandContext(ctx, "pnpm", args...)
 	test.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	test.Cancel = func() error { return syscall.Kill(-test.Process.Pid, syscall.SIGKILL) }
 	test.WaitDelay = 5 * time.Second
