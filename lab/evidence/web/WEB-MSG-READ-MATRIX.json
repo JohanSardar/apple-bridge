@@ -1,0 +1,321 @@
+{
+  "passed": false,
+  "source_sha256": "1c213a90f77725fc9813178b8ec945624dca472c84657a30e1093dc98acd35d0",
+  "tests_sha256": "4f798bfbf47ebab7302e30d2ccc540494a2cfbf6eaaca048f1a8631b3fc364e4",
+  "counts": {
+    "scenarios": 25,
+    "projects_per_scenario": 12
+  },
+  "scenarios": [
+    {
+      "scenario": "WEB-PERF-SEARCH",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 12,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "985a147fc5b5a34ecae89f85ca09992aa9ea0e0a446a4189eae12b56b2848b62"
+    },
+    {
+      "scenario": "WEB-MSG-FILTERS",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 60,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "2dcc76549a58d5d88d9fc8221571919263b9dde6f4487a9e8d51fbcd8b97c836"
+    },
+    {
+      "scenario": "WEB-MSG-FILTERS-MENU",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 12,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "c1f56cf2cad387aefb52ff67de9a8349338cb4033a33a3a73ccb038a6f23f65c"
+    },
+    {
+      "scenario": "WEB-MSG-SEARCH",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 60,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "593e972c44c7e64e9d90d4c836830876926540a057fbe2000ff165f264637689"
+    },
+    {
+      "scenario": "WEB-MSG-SEARCH-LIST",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 24,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "9d5381dd07743815cbaf7f0eddc1f6462ac2e2c0c5489280fb14f8e03cffad61"
+    },
+    {
+      "scenario": "WEB-MSG-SIDEBAR",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 12,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "0afa248e88749ddc6abfb50d2cf2bbbabcb3325ce61b2f34fab13015d9ad7633"
+    },
+    {
+      "scenario": "WEB-MSG-TRANSCRIPT-HOOKS",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 108,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "083eb5b62892cd57bc300d646f24e82f7af41869ece2ff0ece49650188c8b911"
+    },
+    {
+      "scenario": "WEB-MSG-TEXT-SIZING",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 48,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "a680f3656b0024aae3d5e47d5aab78a13b9f26cb3613f205b33ebea933137abd"
+    },
+    {
+      "scenario": "WEB-MSG-REACTIONS",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 36,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "a7b4227e4c19e497e05372f898b5d3d1fa9e07088656e8ae75585cc5fd450d61"
+    },
+    {
+      "scenario": "WEB-MSG-REPLIES",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 24,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "eb37285ba4ab36d3f9f911a5f8b873350ae34bca428f5d3482e0acce70530df7"
+    },
+    {
+      "scenario": "WEB-MSG-REPLY-HANDOFF",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 12,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "b86c9c3b03d9dbcacf5a355551c08af57b2a798348f685f785784505a20ec2fd"
+    },
+    {
+      "scenario": "WEB-MSG-POINTER",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 24,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "d557e4e6c5efb5579d5c20a56f11ff44a2d7c86857307850048dd42b98a42a7f"
+    },
+    {
+      "scenario": "WEB-MSG-GROUP-EVENTS",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 12,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "9e9de8c5c3d48202707fddbef13553ee60c5eb0332bbb8b6d62aa0bf26b8a50f"
+    },
+    {
+      "scenario": "WEB-MSG-INTERACTION-MOTION",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 60,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "4a4235f7a0475c99201d221199a455f962917338b420bcd3b4f07846b2b71021"
+    },
+    {
+      "scenario": "WEB-MSG-FONTS",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 24,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "2f251f894e3bbc4f8de439715eb23426d9430b4e07b4c9fab928eaa65ee54646"
+    },
+    {
+      "scenario": "WEB-MSG-RICH-PARTS",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 60,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "a9e330dac88fe1a561c7f23ff9dcd226278f1869d3c311e3c4028090a95913b0"
+    },
+    {
+      "scenario": "WEB-MSG-CARD-SURFACES",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 36,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "95440bcdf75bb9ffbca368a98b13ed64927c6d0341fd9776234bcb3d90f027d8"
+    },
+    {
+      "scenario": "WEB-MSG-STICKERS-GENMOJI",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 84,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "46bf1a876e6e92fb18555f75e4d969632db47031b85d22d5683a89c10de4c11e"
+    },
+    {
+      "scenario": "WEB-MSG-AUDIO",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 36,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "7f21d625b7154b818394236d350d29c4e39edeacf7965f8dc3d12d15ffeb636f"
+    },
+    {
+      "scenario": "WEB-MSG-FILES",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 36,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "2e534c3f865a6148bd1d7a03a63079278b711d2403b16c39385803b1901a4a22"
+    },
+    {
+      "scenario": "WEB-MSG-THREAD-CORE",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 108,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "6da38bca58b04e519b2b8ee1eeb60d9fe48e6df16c1c9e2fe98805cfce353bb2"
+    },
+    {
+      "scenario": "WEB-MSG-LIVE",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 36,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "ed766ddadfb027fb044d391f4e2aa572caa6d59bc9f1658f683425c861cb732a"
+    },
+    {
+      "scenario": "WEB-MSG-PERF",
+      "passed": false,
+      "counts": {
+        "projects": 12,
+        "passed": 47,
+        "failed": 13,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "04c58f8dc362c371db983cc127726dfbccea36dd6d459aae07ad9f490742152e"
+    },
+    {
+      "scenario": "WEB-MSG-PERF-INPUT",
+      "passed": false,
+      "counts": {
+        "projects": 12,
+        "passed": 39,
+        "failed": 9,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "7e52c5717907d5f44231f0b8221a2c756a12fbc06a433678351fbc6856585199"
+    },
+    {
+      "scenario": "WEB-MSG-PERF-FRAME",
+      "passed": false,
+      "counts": {
+        "projects": 12,
+        "passed": 8,
+        "failed": 4,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "a171823a99519f7f6eb68bbb827272bee309e3052a32eee0d67e1e7e031032d4"
+    }
+  ],
+  "checks": {
+    "typescript": true,
+    "comments": true,
+    "scenario_discovery": true,
+    "unit": {
+      "passed": 25,
+      "failed": 0,
+      "skipped": 0
+    }
+  }
+}

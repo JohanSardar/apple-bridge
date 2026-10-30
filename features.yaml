@@ -642,8 +642,6 @@ features:
     modules: [webui, web, operations, native/MessagesSource, lab/demo]
     depends_on: [web.frontdoor, web.demo, web.media]
     status: limited
-    # T72 initial qualification: seven read scenarios passed their full matrices.
-    # T72 continuation: 24/33 screened, 23 single-cell passes, 1 new full-matrix passes.
     scenarios:
       - {id: MSG-DECODE-BALLOON, levels: [sim, real]}
       - {id: MSG-DECODE-FORMATTING, levels: [sim, real]}
@@ -700,35 +698,12 @@ features:
       - {id: WEB-PERF-LIST, levels: [web]}
       - {id: WEB-MSG-LIVE, levels: [web]}
       - {id: WEB-MSG-REAL-READ, levels: [real]}
-    notes: T74 fixes the one-page painted/prefetch readiness handoff and retries short session throttling once. WEB-PERF-LIST passes its declared Chromium light-desktop matrix, including filters, search, live reorder and warm cache. FRAME passes its full declared 12-project matrix. INPUT/PERF qualification remains limited with measured per-project evidence; existing LIVE and other scenario limits are preserved.
+    notes: Twenty-two read scenarios pass all 12 browser/theme/layout projects, including LIVE, THREAD-CORE and SEARCH. Counts and report digests are in WEB-MSG-READ-MATRIX.json. Performance qualification retains explicit limits.
     limits:
-      - {"scenario": "WEB-MSG-LIVE", "level": "web", "reason": "T74 latest Chromium light desktop fails synthetic arrival visibility before completing latency samples; prior integration also failed receive-history isolation. Full qualification remains open."}
-      - {"scenario": "WEB-MSG-PERF", "level": "web", "reason": "T74 integrated declared 12-project PERF matrix: 2 projects passed completely; 29 tests passed, 10 failed and 21 were unrun after first-failure stops. All 12 100k-message fling checks passed (frame p95/max up to 4/7 ms), and all 12 open-chat checks completed 24 actions. Open-chat input p95 ranged 4.297-12 ms; Chromium desktop media input p95 was 9.315/8.908 ms and Firefox dark-desktop media p95 was 14 ms. Firefox light/dark-phone push-pop frame maxima were 11/15 ms. Budgets remain input p95 8 ms and frame p95/max 4/8 ms. Per-project counts and timings are in T74-WEB-MSG-PERF-matrix.json."}
-      - {"scenario": "WEB-MSG-PERF-INPUT", "level": "web", "reason": "T74 earlier standalone declared 12-project INPUT matrix: 2 projects passed completely; 15 tests passed, 10 failed and 23 were unrun after first-failure stops. Open-chat input p95 measured 3.934-12 ms in 11 projects; WebKit light desktop stalled once at 100 rows (focused diagnostic later completed 24 actions). Chromium light phone frame max was 12.335 ms; desktop media p95 was 8.762/8.667 ms; WebKit dark-phone send p95 was 9 ms. Budgets remain input p95 8 ms and phone frame p95/max 4/8 ms. Numeric per-project evidence is in T74-WEB-MSG-PERF-INPUT-matrix.json. The later integrated PERF matrix completed the same 24-action open-chat test in all 12 projects without readiness stalls."}
-      - {"scenario": "WEB-PERF-SEARCH", "level": "web", "reason": "T74 Chromium light desktop passes; remaining declared matrix combinations are unqualified"}
       - {"scenario": "WEB-MSG-REAL-READ", "level": "real", "reason": "Real acceptance harness is not implemented; no native effects dispatched"}
-      - {"scenario": "WEB-MSG-FILTERS", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
-      - {"scenario": "WEB-MSG-FILTERS-MENU", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
-      - {"scenario": "WEB-MSG-SEARCH", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
-      - {"scenario": "WEB-MSG-SEARCH-LIST", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
-      - {"scenario": "WEB-MSG-SIDEBAR", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
-      - {"scenario": "WEB-MSG-THREAD-CORE", "level": "web", "reason": "T74 integration: delayed-prefetch test retains aria-busy=true with 100 populated rows; five tests pass, one fails and two remain unrun in Chromium light desktop"}
-      - {"scenario": "WEB-MSG-TRANSCRIPT-HOOKS", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
-      - {"scenario": "WEB-MSG-TEXT-SIZING", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
-      - {"scenario": "WEB-MSG-REACTIONS", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
-      - {"scenario": "WEB-MSG-REPLIES", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
-      - {"scenario": "WEB-MSG-REPLY-HANDOFF", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
-      - {"scenario": "WEB-MSG-POINTER", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
-      - {"scenario": "WEB-MSG-GROUP-EVENTS", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
-      - {"scenario": "WEB-MSG-INTERACTION-MOTION", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
-      - {"scenario": "WEB-MSG-FONTS", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
-      - {"scenario": "WEB-MSG-RICH-PARTS", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
-      - {"scenario": "WEB-MSG-CARD-SURFACES", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
-      - {"scenario": "WEB-MSG-STICKERS-GENMOJI", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
-      - {"scenario": "WEB-MSG-AUDIO", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
-      - {"scenario": "WEB-MSG-FILES", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
-      - {"scenario": "WEB-MSG-PERF", "level": "web", "reason": "T74 integrated declared 12-project PERF matrix: 2 projects passed completely; 29 tests passed, 10 failed and 21 were unrun after first-failure stops. All 12 100k-message fling checks passed (frame p95/max up to 4/7 ms), and all 12 open-chat checks completed 24 actions. Open-chat input p95 ranged 4.297-12 ms; Chromium desktop media input p95 was 9.315/8.908 ms and Firefox dark-desktop media p95 was 14 ms. Firefox light/dark-phone push-pop frame maxima were 11/15 ms. Budgets remain input p95 8 ms and frame p95/max 4/8 ms. Per-project counts and timings are in T74-WEB-MSG-PERF-matrix.json."}
-      - {"scenario": "WEB-MSG-PERF-INPUT", "level": "web", "reason": "T74 earlier standalone declared 12-project INPUT matrix: 2 projects passed completely; 15 tests passed, 10 failed and 23 were unrun after first-failure stops. Open-chat input p95 measured 3.934-12 ms in 11 projects; WebKit light desktop stalled once at 100 rows (focused diagnostic later completed 24 actions). Chromium light phone frame max was 12.335 ms; desktop media p95 was 8.762/8.667 ms; WebKit dark-phone send p95 was 9 ms. Budgets remain input p95 8 ms and phone frame p95/max 4/8 ms. Numeric per-project evidence is in T74-WEB-MSG-PERF-INPUT-matrix.json. The later integrated PERF matrix completed the same 24-action open-chat test in all 12 projects without readiness stalls."}
+      - {"scenario": "WEB-MSG-PERF", "level": "web", "reason": "Declared 12-project matrix: 47 tests passed, 13 failed, 0 skipped and 0 unrun. Input or frame budgets remain unqualified; counts and report digests are in WEB-MSG-READ-MATRIX.json."}
+      - {"scenario": "WEB-MSG-PERF-INPUT", "level": "web", "reason": "Declared 12-project matrix: 39 tests passed, 9 failed, 0 skipped and 0 unrun. Input or frame budgets remain unqualified; counts and report digests are in WEB-MSG-READ-MATRIX.json."}
+      - {"scenario": "WEB-MSG-PERF-FRAME", "level": "web", "reason": "Declared 12-project matrix: 8 tests passed, 4 failed, 0 skipped and 0 unrun. Input or frame budgets remain unqualified; counts and report digests are in WEB-MSG-READ-MATRIX.json."}
   - id: web.messages.write
     title: Messages web app writing (interactive gate, self-test, composer, actions, uploads)
     requirements: [R-WEB-UI, R-RW, R-MSG-DEPTH, R-SAFE-CMD]

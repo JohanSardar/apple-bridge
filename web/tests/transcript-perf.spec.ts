@@ -4,6 +4,7 @@ import {prepareSession,control} from './session';
 import {transcriptInputs,transcriptObservers} from './transcript-performance';
 import {installProbe,startTrace,stopTrace,stats} from './list-performance';
 test.use({trace:'off'});
+test.setTimeout(90000);
 test.beforeEach(async({page})=>{await transcriptObservers(page);});
 test.afterEach(async({page},info)=>{
     if(info.status==='passed')return;

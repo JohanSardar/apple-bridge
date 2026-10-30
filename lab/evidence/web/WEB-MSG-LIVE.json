@@ -1,68 +1,29 @@
 {
   "scenario": "WEB-MSG-LIVE",
   "level": "web",
-  "git_sha": "fe51cc086869ad4a86dc079cf9faecd1ac1f40c7",
-  "at": "2026-10-30T00:54:47.294557Z",
   "passed": true,
-  "metrics": {
-    "matrix_count": 12,
-    "completed_matrix_count": 12,
-    "passed_matrix_count": 12,
-    "failed_matrix_count": 0,
-    "incomplete_matrix_count": 0,
-    "passed_test_count": 36,
-    "failed_test_count": 0,
-    "skipped_test_count": 0,
-    "report_sha256": "5780c47503fbcc91cfed9ba02528c7a0ba9f6539a18d9212108d8ead7caeea14"
+  "source_sha256": "1c213a90f77725fc9813178b8ec945624dca472c84657a30e1093dc98acd35d0",
+  "tests_sha256": "4f798bfbf47ebab7302e30d2ccc540494a2cfbf6eaaca048f1a8631b3fc364e4",
+  "manifest_sha256": "a9070cdba21ed870465bf6e6b9b751482501e055bf3d91fd7104c56664009b28",
+  "counts": {
+    "projects": 12,
+    "passed": 36,
+    "failed": 0,
+    "skipped": 0,
+    "unrun": 0
   },
-  "assertions": [
-    {
-      "name": "webkit-light-phone",
-      "passed": true
-    },
-    {
-      "name": "webkit-light-desktop",
-      "passed": true
-    },
-    {
-      "name": "webkit-dark-phone",
-      "passed": true
-    },
-    {
-      "name": "webkit-dark-desktop",
-      "passed": true
-    },
-    {
-      "name": "chromium-light-phone",
-      "passed": true
-    },
-    {
-      "name": "chromium-light-desktop",
-      "passed": true
-    },
-    {
-      "name": "chromium-dark-phone",
-      "passed": true
-    },
-    {
-      "name": "chromium-dark-desktop",
-      "passed": true
-    },
-    {
-      "name": "firefox-light-phone",
-      "passed": true
-    },
-    {
-      "name": "firefox-light-desktop",
-      "passed": true
-    },
-    {
-      "name": "firefox-dark-phone",
-      "passed": true
-    },
-    {
-      "name": "firefox-dark-desktop",
-      "passed": true
-    }
+  "matrix": [
+    {"project":"webkit-light-phone","passed":true,"counts":{"passed":3,"failed":0,"skipped":0,"unrun":0},"report_sha256":"958575a9dfae321116e27db3d29a9cde53783cc14862ac7c937f8be0b7f0ab14"},
+    {"project":"webkit-light-desktop","passed":true,"counts":{"passed":3,"failed":0,"skipped":0,"unrun":0},"report_sha256":"a38718c9193074f94ca466403a6251c26e10559633063fed9818a375a5849fcd"},
+    {"project":"webkit-dark-phone","passed":true,"counts":{"passed":3,"failed":0,"skipped":0,"unrun":0},"report_sha256":"8e95c71dd84da87c316c30d901031575f7a76ecfcbdf4cdce2e8f6a234d0d3e8"},
+    {"project":"webkit-dark-desktop","passed":true,"counts":{"passed":3,"failed":0,"skipped":0,"unrun":0},"report_sha256":"fcc8a85d0580499700b0cf2f3fa2e082777f61d79c3b2f2e8e8558dc231d71f9"},
+    {"project":"chromium-light-phone","passed":true,"counts":{"passed":3,"failed":0,"skipped":0,"unrun":0},"report_sha256":"47421621456b9485981c4506ab7b1775bfbf7ce7391e94a0e1f209c801d3c225"},
+    {"project":"chromium-light-desktop","passed":true,"counts":{"passed":3,"failed":0,"skipped":0,"unrun":0},"report_sha256":"9f7fa50ac0f17e5f5e45fc729088a0d60c3dbb57394f2e5a3901bbd35a86f192"},
+    {"project":"chromium-dark-phone","passed":true,"counts":{"passed":3,"failed":0,"skipped":0,"unrun":0},"report_sha256":"140fde59669ad0ef0f71cd9df9280941797c6ccef3eb29df92f3f154fc3190ac"},
+    {"project":"chromium-dark-desktop","passed":true,"counts":{"passed":3,"failed":0,"skipped":0,"unrun":0},"report_sha256":"5ecaee3bdaa3cb1fc90b2c92d78bea2194f54bcfdf980799b9e453799f544bed"},
+    {"project":"firefox-light-phone","passed":true,"counts":{"passed":3,"failed":0,"skipped":0,"unrun":0},"report_sha256":"51a4be28b4d91902ff3320a35fe9f298ffc52d64a35661ea80d1bfba21a65821"},
+    {"project":"firefox-light-desktop","passed":true,"counts":{"passed":3,"failed":0,"skipped":0,"unrun":0},"report_sha256":"d9a1e17e0b747d737a9c354005c4b241c37eee02cf86f97d3b97dcec82885107"},
+    {"project":"firefox-dark-phone","passed":true,"counts":{"passed":3,"failed":0,"skipped":0,"unrun":0},"report_sha256":"7cb6e9e2262cdc153d23b014fb60bde4b9ddd9bab40e5f5f0bfa37b327048610"},
+    {"project":"firefox-dark-desktop","passed":true,"counts":{"passed":3,"failed":0,"skipped":0,"unrun":0},"report_sha256":"267a0eeb9eacd8671db7925f15ba9934c5dcdfaec29b1cc170717620f2bd10cd"}
   ]
 }

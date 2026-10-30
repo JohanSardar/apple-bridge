@@ -142,3 +142,19 @@ test('WEB-MSG-THREAD-CORE first resize keeps the requested key after prefetch pr
     await page.evaluate(()=>(window as any).__releaseTranscriptResize());
     const selected=page.locator('[data-message="'+target+'"]');await expect(selected).toBeInViewport();await expect(selected.locator('..')).toHaveAttribute('aria-selected','true');
 });
+
+test('WEB-MSG-THREAD-CORE scrolling back to the bottom follows delayed prefetched rows',async({page,request})=>{
+    if(initialSession)await page.context().addCookies(initialSession);else await prepareSession(page);const ids:Fixtures=await control(request,'/demo-fixtures'),held:(()=>void)[]=[];let holding=true;
+    await page.routeWebSocket('**/web/v1/live',socket=>{
+        const server=socket.connectToServer(),prefetch=new Set<string>();
+        socket.onMessage(data=>{const frame=JSON.parse(String(data));if(frame.t==='sub'&&frame.view==='thread'&&(frame.args.before||frame.args.after))prefetch.add(frame.id);server.send(data);});
+        server.onMessage(data=>{const frame=JSON.parse(String(data));if(holding&&prefetch.has(frame.sub)){held.push(()=>socket.send(data));return;}socket.send(data);});
+    });
+    await page.goto('/messages/'+encodeURIComponent(ids['demo-chat-01']));
+    const transcript=page.locator('.messages-transcript'),viewport=page.getByRole('listbox',{name:'Messages transcript'});
+    await expect.poll(()=>held.length).toBeGreaterThan(0);await expect(transcript).toHaveAttribute('aria-busy','false');
+    await viewport.evaluate(async element=>{element.scrollTop-=100;await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));element.scrollTop=element.scrollHeight;await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));});
+    holding=false;held.splice(0).forEach(release=>release());
+    await expect.poll(async()=>Number(await transcript.getAttribute('data-window-size'))).toBeGreaterThan(100);
+    await expect.poll(()=>viewport.evaluate(element=>element.scrollHeight-element.scrollTop-element.clientHeight)).toBeLessThanOrEqual(1);
+});

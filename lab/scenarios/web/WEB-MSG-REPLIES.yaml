@@ -1,4 +1,4 @@
 id: WEB-MSG-REPLIES
 feature: web.messages.read
 levels: [web]
-web: {browsers: [webkit, chromium], themes: [light], layouts: [phone, desktop], server: gateway}
+web: {browsers: [webkit, chromium, firefox], themes: [light, dark], layouts: [phone, desktop], server: gateway}

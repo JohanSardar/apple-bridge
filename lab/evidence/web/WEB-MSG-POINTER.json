@@ -1,24 +1,29 @@
 {
   "scenario": "WEB-MSG-POINTER",
   "level": "web",
-  "git_sha": "614794562717e2e2ffde5a0392d7e149f2a01dab",
-  "at": "2026-10-29T22:49:55.622824Z",
   "passed": true,
-  "metrics": {
-    "matrix_count": 1,
-    "completed_matrix_count": 1,
-    "passed_matrix_count": 1,
-    "failed_matrix_count": 0,
-    "incomplete_matrix_count": 0,
-    "passed_test_count": 2,
-    "failed_test_count": 0,
-    "skipped_test_count": 0,
-    "report_sha256": "9f5fd72d0a545803c781a3ec0e417f0fb4eabeb8b4e0974f873cef871214ed13"
+  "source_sha256": "1c213a90f77725fc9813178b8ec945624dca472c84657a30e1093dc98acd35d0",
+  "tests_sha256": "4f798bfbf47ebab7302e30d2ccc540494a2cfbf6eaaca048f1a8631b3fc364e4",
+  "manifest_sha256": "7d147ee09fdfe268140f7dcdec2b3432db88fda8ddfd8ff8c688a5bd23e4bf33",
+  "counts": {
+    "projects": 12,
+    "passed": 24,
+    "failed": 0,
+    "skipped": 0,
+    "unrun": 0
   },
-  "assertions": [
-    {
-      "name": "chromium-light-desktop",
-      "passed": true
-    }
+  "matrix": [
+    {"project":"webkit-light-phone","passed":true,"counts":{"passed":2,"failed":0,"skipped":0,"unrun":0},"report_sha256":"b589de2a68d38300dfab93508af80d30de87642367eafa7e97f6758d1bf5bb85"},
+    {"project":"webkit-light-desktop","passed":true,"counts":{"passed":2,"failed":0,"skipped":0,"unrun":0},"report_sha256":"ec4471018e87ba342080cb02671dcd2b2bf1cd45697e2959b98e0cbe5004bff1"},
+    {"project":"webkit-dark-phone","passed":true,"counts":{"passed":2,"failed":0,"skipped":0,"unrun":0},"report_sha256":"7d96f260f9725632ec8ee205986abd6be7a02fc40c3f0ed3be953c25d88ad5a1"},
+    {"project":"webkit-dark-desktop","passed":true,"counts":{"passed":2,"failed":0,"skipped":0,"unrun":0},"report_sha256":"f579833aa84b6fde36e0fd46a555a28998aa898038f3d0389f806eb98885ffd0"},
+    {"project":"chromium-light-phone","passed":true,"counts":{"passed":2,"failed":0,"skipped":0,"unrun":0},"report_sha256":"e6dc9247bd33fd8b25451e34ac36f2ec014e66d4a3d5747aedbb86c0ef5ce332"},
+    {"project":"chromium-light-desktop","passed":true,"counts":{"passed":2,"failed":0,"skipped":0,"unrun":0},"report_sha256":"54390685098d128cf153261b6b652708087726eb0563df719dba89da86f99ea4"},
+    {"project":"chromium-dark-phone","passed":true,"counts":{"passed":2,"failed":0,"skipped":0,"unrun":0},"report_sha256":"f548fdd7386506cf41fa0e26535b098822a3090a9fc050f5202143744797aea2"},
+    {"project":"chromium-dark-desktop","passed":true,"counts":{"passed":2,"failed":0,"skipped":0,"unrun":0},"report_sha256":"6d0552b72a71ae538b18c45b3eaa10c3a03df09b9d0fc4637eea9e039e94dc47"},
+    {"project":"firefox-light-phone","passed":true,"counts":{"passed":2,"failed":0,"skipped":0,"unrun":0},"report_sha256":"70a259d8c55e507ac41055d4caa9718c24934647d145b37e50989a0373260fd9"},
+    {"project":"firefox-light-desktop","passed":true,"counts":{"passed":2,"failed":0,"skipped":0,"unrun":0},"report_sha256":"d4e7f6e84f9562ade33c4c7ff1788bfd135ee5d895631b897d19808df1f3c1d8"},
+    {"project":"firefox-dark-phone","passed":true,"counts":{"passed":2,"failed":0,"skipped":0,"unrun":0},"report_sha256":"4371f9da670690fcfcdd41771853ebc5a5242a23d7ee514cf67ca48b36eb6df6"},
+    {"project":"firefox-dark-desktop","passed":true,"counts":{"passed":2,"failed":0,"skipped":0,"unrun":0},"report_sha256":"09ef7c958e2aa39ebd50b0e5de9554af77f57ec90a6535057ad04c4471964017"}
   ]
 }
