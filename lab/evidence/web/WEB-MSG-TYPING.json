@@ -1,0 +1,24 @@
+{
+  "scenario": "WEB-MSG-TYPING",
+  "level": "web",
+  "git_sha": "9139efa33c670472e274691343ad0e143631733d",
+  "at": "2026-10-30T00:37:11.985103Z",
+  "passed": true,
+  "metrics": {
+    "matrix_count": 1,
+    "completed_matrix_count": 1,
+    "passed_matrix_count": 1,
+    "failed_matrix_count": 0,
+    "incomplete_matrix_count": 0,
+    "passed_test_count": 1,
+    "failed_test_count": 0,
+    "skipped_test_count": 0,
+    "report_sha256": "91d6018cd159f7a8653887ae0b14a263f2f3d7954389dd475f69f88dae15c169"
+  },
+  "assertions": [
+    {
+      "name": "chromium-light-desktop",
+      "passed": true
+    }
+  ]
+}

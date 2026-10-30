@@ -61,6 +61,9 @@ func runWeb(ctx context.Context, s Scenario) Evidence {
 	if err := validateWeb(s); err != nil {
 		return runWebProjects(ctx, s, nil)
 	}
+	if !uploadControlLabEnabled() && (s.ID == "WEB-MSG-ATTACH-SEND" || s.ID == "WEB-MSG-FAIL-RESEND") {
+		return runUploadTagged(ctx, s, "web", true)
+	}
 	projects := []string{}
 	for _, browser := range s.Web.Browsers {
 		for _, theme := range s.Web.Themes {
