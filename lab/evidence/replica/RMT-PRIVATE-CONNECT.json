@@ -1,10 +1,11 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[7.78 5.6 6.45] cpu_idle=68% cpus=8 other_heavy=1; ubuntu: load=[1.41 1.43 1.29] cpu_idle=92% cpus=8 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[9.64 5.18 4.7] cpu_idle=69% cpus=8 other_heavy=0; ubuntu: load=[4.86 6.99 9.02] cpu_idle=79% cpus=8 other_heavy=0"
   },
   "status": "limited",
-  "run_id": "",
+  "run_id": "private-live",
+  "network_path": "system tailnet TCP transport to live private embedded node",
   "metrics": {
     "capture_observer_resets": 0
   },
@@ -12,13 +13,37 @@
   "level": "replica",
   "passed": false,
   "git_sha": "",
-  "at": "2026-10-28T15:18:35.444092Z",
+  "at": "2026-10-30T03:06:04.447635Z",
   "assertions": [
     {
-      "name": "private_tailnet_login",
+      "name": "live_home_available",
+      "passed": true
+    },
+    {
+      "name": "fresh_invitation_off",
+      "passed": true
+    },
+    {
+      "name": "private_on",
+      "passed": true
+    },
+    {
+      "name": "status_on_private",
+      "passed": true
+    },
+    {
+      "name": "private_invitation_valid",
+      "passed": true
+    },
+    {
+      "name": "tailnet_tcp_grant",
       "passed": false,
       "status": "limited",
-      "detail": "Real userspace Tailscale authorization requires interactive login; sim covers private protocol without touching Tailscale"
+      "detail": "limited: needs tailnet grant tcp:7780 to bridge node"
+    },
+    {
+      "name": "private_on_restored",
+      "passed": true
     },
     {
       "name": "credential_backend_override_restored",
