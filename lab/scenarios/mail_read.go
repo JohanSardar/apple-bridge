@@ -38,19 +38,22 @@ func runMailRead(ctx context.Context, s Scenario, level string) Evidence {
 	if !check("mail_truth_25_random_samples", err == nil && len(truth.Samples) == 25) {
 		return e
 	}
-	w, err := world.NewReal(ctx, "real", 0, world.BlobOptions{Scope: "mail:read,system:read"})
+	w, err := world.NewRealWithSetup(ctx, "real", 0, world.NativeSetup{FilesystemTruth: true}, world.BlobOptions{Scope: "mail:read,system:read"})
 	if !check("mail_native_world", err == nil) {
 		return e
 	}
 	defer w.Close()
 	endpoint := w.Gateway
 	var digests []string
+	var counts map[string]int
+	var matched int
 	err = w.Await(60*time.Second, func() bool {
 		records, readErr := w.Records(endpoint)
 		if readErr != nil {
 			return false
 		}
-		counts := map[string]int{}
+		counts = map[string]int{}
+		matched = 0
 		actual := map[string]bool{}
 		for _, r := range records {
 			if r.Collection != "mail.message" {
@@ -98,11 +101,15 @@ func runMailRead(ctx context.Context, s Scenario, level string) Evidence {
 			if !ok {
 				return false
 			}
+			matched++
 			digests = append(digests, sample.Digest)
 		}
 		return true
 	})
 	e.Passed = check("mail_mailbox_counts_and_sample_digests_equal", err == nil)
+	e.Metrics["truth_counts"] = truth.Counts
+	e.Metrics["captured_counts"] = counts
+	e.Metrics["sample_matches"] = matched
 	if e.Passed {
 		e.Metrics["counts"] = truth.Counts
 		e.Metrics["digests"] = digests
