@@ -1219,7 +1219,13 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		packagingOnly = packagingOnly && (scenario.Feature == "iphone.location" || scenario.Feature == "iphone.health" || scenario.Feature == "packaging.app" || scenario.Feature == "core.shortcuts" || scenario.Feature == "core.permissions" || scenario.Feature == "usage.action_probe" || scenario.Feature == "helper.siri_intents")
 	}
 	if !packagingOnly {
-		if err = world.Build(ctx, level); err != nil {
+		buildLevel := level
+		for _, scenario := range scenarios {
+			if scenario.ID == "CON-RELAY" && level == "real" {
+				buildLevel = "replica"
+			}
+		}
+		if err = world.Build(ctx, buildLevel); err != nil {
 			return err
 		}
 	}
