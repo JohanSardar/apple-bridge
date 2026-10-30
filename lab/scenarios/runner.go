@@ -358,6 +358,9 @@ func convergence(w *world.World) bool {
 }
 
 func runScenario(ctx context.Context, s Scenario, level string) Evidence {
+	if level == "real" && slices.Contains([]string{"APP-SHELL-REAL", "APP-BUILD-REAL", "APP-PAIR-REAL", "APP-CMD-REAL"}, s.ID) {
+		return Evidence{Scenario: s.ID, Level: level, At: time.Now().UTC(), Status: "limited", Assertions: []Assertion{{Name: "real_device_acceptance", Detail: "Real iPhone acceptance harness is not implemented; generic replica proof cannot qualify the phone"}}}
+	}
 	if s.ID == "APP-DEVICE-SIM" || s.ID == "APP-DEVICE-REAL" {
 		return runIPhoneCapability(ctx, s, level, "ios/Capabilities/DeviceContext/DeviceModel.swift", "lab/ios/DeviceProof.swift")
 	}
@@ -365,7 +368,7 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 		return runIPhoneApproval(ctx, s, level)
 	}
 	if s.ID == "APP-INTENTS-REAL" {
-		return Evidence{Scenario: s.ID, Level: level, At: time.Now().UTC(), Status: "limited", Assertions: []Assertion{{Name: "shortcuts_run", Detail: "limited: needs Allow tap to save or import a Shortcuts workflow"}}}
+		return Evidence{Scenario: s.ID, Level: level, At: time.Now().UTC(), Status: "limited", Assertions: []Assertion{{Name: "shortcuts_run", Detail: "limited: real-device permission request and observation harness missing; needs Allow tap to save or import a Shortcuts workflow"}}}
 	}
 	if s.ID == "APP-MOTION-SIM" || s.ID == "APP-MOTION-REAL" {
 		return runIPhoneCapability(ctx, s, level, "ios/Capabilities/Motion/MotionModel.swift", "lab/ios/MotionProof.swift")
@@ -386,7 +389,7 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 		return runIPhoneLive(ctx, s, level)
 	}
 	if s.ID == "APP-NOTIFY-REAL" || s.ID == "APP-APPROVE-REAL" {
-		return Evidence{Scenario: s.ID, Level: level, At: time.Now().UTC(), Status: "limited", Assertions: []Assertion{{Name: "notification_permission", Status: "limited", Detail: "limited: needs Allow tap"}}}
+		return Evidence{Scenario: s.ID, Level: level, At: time.Now().UTC(), Status: "limited", Assertions: []Assertion{{Name: "notification_permission", Status: "limited", Detail: "limited: real-device permission request and observation harness missing; needs Allow tap"}}}
 	}
 	if s.Feature == "iphone.capture" {
 		return runIPhoneCapture(ctx, s, level)

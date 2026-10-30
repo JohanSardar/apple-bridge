@@ -1,30 +1,17 @@
 {
-  "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[21.4 16.94 18.76] cpu_idle=0% cpus=10 other_heavy=0"
-  },
   "status": "limited",
-  "run_id": "",
-  "metrics": {
-    "capture_observer_resets": 0
-  },
   "scenario": "APP-CAPTURE-REAL",
   "level": "real",
   "passed": false,
   "git_sha": "",
-  "at": "2026-10-30T00:32:29.605578Z",
   "assertions": [
     {
       "name": "camera_microphone_permission",
-      "passed": false,
-      "status": "limited",
-      "detail": "limited: needs Allow tap"
+      "passed": false
     },
     {
       "name": "credential_backend_override_restored",
       "passed": true
     }
-  ],
-  "latency": null,
-  "hosts": null
+  ]
 }

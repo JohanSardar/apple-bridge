@@ -1,46 +1,17 @@
 {
-  "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[22.99 49.26 59.28] cpu_idle=3% cpus=10 other_heavy=0"
-  },
   "status": "limited",
-  "run_id": "",
-  "metrics": {
-    "capture_observer_resets": 0,
-    "signed_ipa_sha256": "995b2791742535f0931a2585896d17cfa8dfd361686834c48a05011aba7dc9fc"
-  },
   "scenario": "APP-SCREENTIME-REAL",
   "level": "real",
   "passed": false,
   "git_sha": "",
-  "at": "2026-10-29T23:13:54.910098Z",
   "assertions": [
     {
       "name": "authorization",
-      "passed": false,
-      "detail": "limited: needs Allow tap"
+      "passed": false
     },
     {
       "name": "credential_backend_override_restored",
       "passed": true
-    },
-    {
-      "name": "signed_device_build",
-      "passed": true
-    },
-    {
-      "name": "deep_strict_signature_verification",
-      "passed": true
-    },
-    {
-      "name": "air_phone_lock_install",
-      "passed": true
-    },
-    {
-      "name": "installed_bundle_present",
-      "passed": true
     }
-  ],
-  "latency": null,
-  "hosts": null
+  ]
 }

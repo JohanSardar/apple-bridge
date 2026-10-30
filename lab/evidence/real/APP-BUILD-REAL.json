@@ -1,9 +1,30 @@
 {
+  "scenario": "APP-BUILD-REAL",
+  "level": "real",
   "passed": true,
-  "assertions": {
-    "signed_build": true,
-    "signature_verified": true,
-    "usb_install": true
-  },
-  "ipa_sha256": "f52273c9286427513e911057d3b7c741f8f07a09e11a4fa7f968989c69ec6500"
+  "git_sha": "",
+  "assertions": [
+    {
+      "name": "signed_device_build",
+      "passed": true
+    },
+    {
+      "name": "codesign_verification",
+      "passed": true
+    },
+    {
+      "name": "usb_install",
+      "passed": true
+    },
+    {
+      "name": "device_launch",
+      "passed": true
+    }
+  ],
+  "metrics": {
+    "build_count": 1,
+    "install_count": 1,
+    "launch_count": 1,
+    "ipa_sha256": "7c268963f3a334ea70ff8ad89cf71e83b1e569ed7fd6fd409b60a03c867462a4"
+  }
 }

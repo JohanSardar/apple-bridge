@@ -1,41 +1,17 @@
 {
   "status": "limited",
-  "run_id": "",
-  "metrics": {
-    "capture_observer_resets": 0,
-    "commands": 28,
-    "compiled_intents": 28,
-    "compiled_siri_shortcuts": 10,
-    "dispatch_assertions": 4
-  },
   "scenario": "APP-INTENTS-REAL",
   "level": "real",
   "passed": false,
   "git_sha": "",
-  "at": "2026-10-29T23:30:12.277984Z",
   "assertions": [
     {
       "name": "shortcuts_run",
-      "passed": false,
-      "detail": "limited: needs Allow tap to save or import a Shortcuts workflow"
+      "passed": false
     },
     {
       "name": "credential_backend_override_restored",
       "passed": true
-    },
-    {
-      "name": "signed_intent_compile",
-      "passed": true
-    },
-    {
-      "name": "local_dispatch",
-      "passed": true
-    },
-    {
-      "name": "phone_install",
-      "passed": true
     }
-  ],
-  "latency": null,
-  "hosts": null
+  ]
 }

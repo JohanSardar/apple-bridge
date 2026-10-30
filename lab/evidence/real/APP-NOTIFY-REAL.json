@@ -1,14 +1,13 @@
 {
+  "status": "limited",
   "scenario": "APP-NOTIFY-REAL",
   "level": "real",
   "passed": false,
-  "status": "limited",
+  "git_sha": "",
   "assertions": [
     {
       "name": "notification_permission",
-      "passed": false,
-      "status": "limited",
-      "detail": "limited: needs Allow tap"
+      "passed": false
     },
     {
       "name": "credential_backend_override_restored",

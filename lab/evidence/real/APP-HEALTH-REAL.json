@@ -1,29 +1,17 @@
 {
-  "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[10.58 18.21 34.04] cpu_idle=56% cpus=10 other_heavy=0"
-  },
   "status": "limited",
-  "run_id": "",
-  "metrics": {
-    "capture_observer_resets": 0
-  },
   "scenario": "APP-HEALTH-REAL",
   "level": "real",
   "passed": false,
   "git_sha": "",
-  "at": "2026-10-29T23:34:04.998676Z",
   "assertions": [
     {
       "name": "health_permission",
-      "passed": false,
-      "detail": "limited: needs Allow tap"
+      "passed": false
     },
     {
       "name": "credential_backend_override_restored",
       "passed": true
     }
-  ],
-  "latency": null,
-  "hosts": null
+  ]
 }

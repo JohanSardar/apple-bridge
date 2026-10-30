@@ -1,29 +1,17 @@
 {
-  "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[28.76 49.82 43.72] cpu_idle=4% cpus=10 other_heavy=0"
-  },
   "status": "limited",
-  "run_id": "",
-  "metrics": {
-    "capture_observer_resets": 0
-  },
   "scenario": "APP-DEVICE-REAL",
   "level": "real",
   "passed": false,
   "git_sha": "",
-  "at": "2026-10-29T22:48:47.367158Z",
   "assertions": [
     {
       "name": "permission",
-      "passed": false,
-      "detail": "limited: needs Allow tap"
+      "passed": false
     },
     {
       "name": "credential_backend_override_restored",
       "passed": true
     }
-  ],
-  "latency": null,
-  "hosts": null
+  ]
 }

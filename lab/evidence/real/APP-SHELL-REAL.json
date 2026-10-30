@@ -1,8 +1,17 @@
 {
-  "passed": true,
-  "assertions": {
-    "signed_build": true,
-    "usb_install": true,
-    "phone_launch": true
-  }
+  "status": "limited",
+  "scenario": "APP-SHELL-REAL",
+  "level": "real",
+  "passed": false,
+  "git_sha": "",
+  "assertions": [
+    {
+      "name": "real_device_acceptance",
+      "passed": false
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ]
 }
