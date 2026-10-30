@@ -1,0 +1,68 @@
+{
+  "scenario": "WEB-MSG-LIVE",
+  "level": "web",
+  "git_sha": "f4ff3b4d9c2c8b39396a0304363952bae95b5806",
+  "at": "2026-10-30T00:12:13.61109Z",
+  "passed": false,
+  "metrics": {
+    "matrix_count": 12,
+    "completed_matrix_count": 12,
+    "passed_matrix_count": 0,
+    "failed_matrix_count": 12,
+    "incomplete_matrix_count": 0,
+    "passed_test_count": 4,
+    "failed_test_count": 12,
+    "skipped_test_count": 20,
+    "report_sha256": "ab6a56fb346e3b1ac4305e06d335c8a3b3ce5a2381c41e5d42fda5dad9c047d1"
+  },
+  "assertions": [
+    {
+      "name": "webkit-light-phone",
+      "passed": false
+    },
+    {
+      "name": "webkit-light-desktop",
+      "passed": false
+    },
+    {
+      "name": "webkit-dark-phone",
+      "passed": false
+    },
+    {
+      "name": "webkit-dark-desktop",
+      "passed": false
+    },
+    {
+      "name": "chromium-light-phone",
+      "passed": false
+    },
+    {
+      "name": "chromium-light-desktop",
+      "passed": false
+    },
+    {
+      "name": "chromium-dark-phone",
+      "passed": false
+    },
+    {
+      "name": "chromium-dark-desktop",
+      "passed": false
+    },
+    {
+      "name": "firefox-light-phone",
+      "passed": false
+    },
+    {
+      "name": "firefox-light-desktop",
+      "passed": false
+    },
+    {
+      "name": "firefox-dark-phone",
+      "passed": false
+    },
+    {
+      "name": "firefox-dark-desktop",
+      "passed": false
+    }
+  ]
+}
