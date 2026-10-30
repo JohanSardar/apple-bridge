@@ -77,6 +77,13 @@ enum NotificationsCapability {
         UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: [id])
     }
 
+    static func recordResult(_ result: PhoneResult) throws {
+        var values = try responses()
+        guard !values.contains(where: { $0.command_id == result.command_id }) else { return }
+        values.append(result)
+        try save(values)
+    }
+
     static func removeResponse(_ id: String) throws {
         try save(responses().filter { $0.command_id != id })
     }

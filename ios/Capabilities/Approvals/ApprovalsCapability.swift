@@ -16,7 +16,7 @@ enum ApprovalsCapability {
 
     static func deliver(_ job: PhoneJob) async throws {
         guard enabled else { return }
-        if let previous = stored(job.command.command_id), previous.request_hash == job.request_hash { return }
+        if let previous = stored(job.command.command_id), previous.request_hash == job.request_hash, previous.command.op == job.command.op { return }
         let center = UNUserNotificationCenter.current()
         let actions = [UNNotificationAction(identifier: "approve", title: "Approve", options: [.foreground]), UNNotificationAction(identifier: "reject", title: "Reject", options: [.foreground, .destructive])]
         var categories = await center.notificationCategories()
@@ -25,6 +25,7 @@ enum ApprovalsCapability {
         let content = UNMutableNotificationContent()
         content.title = "Apple Bridge approval"
         if case .string(let op) = job.command.args["body"] { content.body = op }
+        else { content.body = job.command.op }
         content.categoryIdentifier = "bridge.approval"
         content.sound = .default
         content.userInfo = ["command_id": job.command.command_id, "request_hash": job.request_hash, "approval": true, "expires": job.expires]
@@ -39,9 +40,21 @@ enum ApprovalsCapability {
 
     static func decide(id: String, hash: String, action: String, expires: Int64) async throws {
         guard enabled, let job = stored(id), job.request_hash == hash, ["approve", "reject"].contains(action), expires > Int64(Date().timeIntervalSince1970) else { return }
+        if job.command.op.hasPrefix("iphone.capture."), action == "approve" {
+            try await CaptureCapability.decide(job)
+            UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: ["approval." + id])
+            return
+        }
         let context = LAContext()
         guard try await context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: "Confirm \(action) for this Apple Bridge command") else { return }
         guard enabled, expires > Int64(Date().timeIntervalSince1970) else { return }
+        if job.command.op.hasPrefix("iphone.capture.") {
+            try NotificationsCapability.recordResult(PhoneResult(command_id: id, request_hash: hash, state: "rejected", data: .null))
+            UserDefaults.standard.removeObject(forKey: "approval." + id)
+            UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: ["approval." + id])
+            await PushDelivery.shared.drain()
+            return
+        }
         let payload = try JSONSerialization.data(withJSONObject: ["command_id": id, "request_hash": hash, "approve": action == "approve"])
         _ = try await PairingClient.signedRequest(identity: DeviceIdentity.load(), path: "/v1/iphone/approval", payload: payload)
         UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: ["approval." + id])
@@ -64,6 +77,10 @@ struct ApprovalReviewScreen: View {
             Form {
                 if case .string(let summary) = job.command.args["body"] {
                     Text(summary).textSelection(.enabled).privacySensitive()
+                }
+                if job.command.op.hasPrefix("iphone.capture.") {
+                    Text(job.command.op == "iphone.capture.photo" ? "Capture one photo and upload it to your gateway." : "Record audio and upload it to your gateway.")
+                    if case .number(let seconds) = job.command.args["seconds"] { Text("Duration: \(Int(seconds)) seconds") }
                 }
                 Text(status)
                 ForEach(["approve", "reject"], id: \.self) { action in

@@ -10,6 +10,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/json"
 	"flag"
+	"github.com/JohanSardar/apple-bridge/internal/blobs"
 	"github.com/JohanSardar/apple-bridge/internal/iphone"
 	"github.com/JohanSardar/apple-bridge/internal/state"
 	"math/big"
@@ -67,7 +68,12 @@ func main() {
 	if err = store.InitCommands(context.Background()); err != nil {
 		panic(err)
 	}
+	blobStore, err := blobs.Open(*home, blobs.Config{})
+	if err != nil {
+		panic(err)
+	}
 	delivery := iphone.NewDelivery(store, a)
+	delivery.Blobs = blobStore
 	gateway := &operations.LocalGateway{State: store, Authority: a, Context: context.Background(), IPhone: delivery}
 	delivery.Authorize = gateway.ReauthorizeIPhone
 	delivery.Decide = gateway.DecidePhoneApproval

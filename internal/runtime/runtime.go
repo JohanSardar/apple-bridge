@@ -216,6 +216,7 @@ func Start(ctx context.Context, cfg Config) error {
 		feed := &replication.Server{Store: store, Authority: authority, Blobs: blobStore, Command: gateway.Forward, UploadControl: gateway.UploadControl, UploadChunk: gateway.UploadChunk, UploadClosed: gateway.UploadClosed}
 		gateway.Reauthorize = feed.Reauthorize
 		iphoneDelivery = iphone.NewDelivery(store, authority)
+		iphoneDelivery.Blobs = blobStore
 		iphoneDelivery.Authorize = gateway.ReauthorizeIPhone
 		iphoneDelivery.Decide = gateway.DecidePhoneApproval
 		iphoneDelivery.Push = remote.IPhonePush(cfg.Home)

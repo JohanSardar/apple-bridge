@@ -388,6 +388,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "APP-NOTIFY-REAL" || s.ID == "APP-APPROVE-REAL" {
 		return Evidence{Scenario: s.ID, Level: level, At: time.Now().UTC(), Status: "limited", Assertions: []Assertion{{Name: "notification_permission", Status: "limited", Detail: "limited: needs Allow tap"}}}
 	}
+	if s.Feature == "iphone.capture" {
+		return runIPhoneCapture(ctx, s, level)
+	}
 	if s.ID == "APP-APPROVE-SIM" {
 		return runIPhoneCommand(ctx, s, level)
 	}

@@ -46,7 +46,7 @@
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Record enabled location events and refresh location for owner-requested location pushes while sharing is enabled.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Scan your Apple Bridge gateway pairing code.</string>
+	<string>Scan your gateway pairing code, or capture a photo after Face ID approval and upload it to your gateway.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Connect to your Apple Bridge gateway on the local network.</string>
 	<key>UIBackgroundModes</key>
@@ -61,5 +61,6 @@
 	</array>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Authenticate approval or rejection of agent commands.</string>
+<key>NSMicrophoneUsageDescription</key><string>Record audio only after your Face ID approval and upload it to your gateway.</string>
 </dict>
 </plist>
