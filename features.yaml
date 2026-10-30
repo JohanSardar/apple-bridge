@@ -1160,7 +1160,7 @@ features:
       - {id: CALL-READ-REAL, levels: [real]}
       - {id: CALLS-REPLICA, levels: [replica]}
     limits:
-      - {"scenario": "CALL-IDLE", "level": "real", "reason": "Failed assertions: five_minute_helper_cpu_under_two_percent"}
+      - {"scenario": "CALL-IDLE", "level": "real", "reason": "Helper measured 42.526450% CPU-time during the locked five-minute window after the scenario's fixed 30-second warmup; initial Messages reconciliation was still active."}
   - id: focus.pack
     title: Focus status and approved DND writes
     requirements: [R-RW]
