@@ -358,7 +358,10 @@ func convergence(w *world.World) bool {
 }
 
 func runScenario(ctx context.Context, s Scenario, level string) Evidence {
-	if level == "real" && slices.Contains([]string{"APP-SHELL-REAL", "APP-BUILD-REAL", "APP-PAIR-REAL", "APP-CMD-REAL"}, s.ID) {
+	if isIPhoneRealScenario(s.ID, level) {
+		return runIPhoneReal(ctx, s, level)
+	}
+	if level == "real" && s.ID == "APP-BUILD-REAL" {
 		return Evidence{Scenario: s.ID, Level: level, At: time.Now().UTC(), Status: "limited", Assertions: []Assertion{{Name: "real_device_acceptance", Detail: "Real iPhone acceptance harness is not implemented; generic replica proof cannot qualify the phone"}}}
 	}
 	if s.ID == "APP-DEVICE-SIM" || s.ID == "APP-DEVICE-REAL" {
@@ -367,9 +370,7 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "APP-WALLET-SIM" {
 		return runIPhoneApproval(ctx, s, level)
 	}
-	if s.ID == "APP-INTENTS-REAL" {
-		return Evidence{Scenario: s.ID, Level: level, At: time.Now().UTC(), Status: "limited", Assertions: []Assertion{{Name: "shortcuts_run", Detail: "limited: real-device permission request and observation harness missing; needs Allow tap to save or import a Shortcuts workflow"}}}
-	}
+
 	if s.ID == "APP-MOTION-SIM" || s.ID == "APP-MOTION-REAL" {
 		return runIPhoneCapability(ctx, s, level, "ios/Capabilities/Motion/MotionModel.swift", "lab/ios/MotionProof.swift")
 	}
@@ -388,9 +389,7 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 	if s.ID == "APP-LIVE-SIM" || s.ID == "APP-LIVE-REAL" {
 		return runIPhoneLive(ctx, s, level)
 	}
-	if s.ID == "APP-NOTIFY-REAL" || s.ID == "APP-APPROVE-REAL" {
-		return Evidence{Scenario: s.ID, Level: level, At: time.Now().UTC(), Status: "limited", Assertions: []Assertion{{Name: "notification_permission", Status: "limited", Detail: "limited: real-device permission request and observation harness missing; needs Allow tap"}}}
-	}
+
 	if s.Feature == "iphone.capture" {
 		return runIPhoneCapture(ctx, s, level)
 	}
@@ -1219,7 +1218,7 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 	}
 	packagingOnly := true
 	for _, scenario := range scenarios {
-		packagingOnly = packagingOnly && (scenario.Feature == "iphone.location" || scenario.Feature == "iphone.health" || scenario.Feature == "packaging.app" || scenario.Feature == "core.shortcuts" || scenario.Feature == "core.permissions" || scenario.Feature == "usage.action_probe" || scenario.Feature == "helper.siri_intents")
+		packagingOnly = packagingOnly && (isIPhoneRealScenario(scenario.ID, level) || scenario.Feature == "iphone.location" || scenario.Feature == "iphone.health" || scenario.Feature == "packaging.app" || scenario.Feature == "core.shortcuts" || scenario.Feature == "core.permissions" || scenario.Feature == "usage.action_probe" || scenario.Feature == "helper.siri_intents")
 	}
 	if !packagingOnly {
 		if err = world.Build(ctx, level); err != nil {
@@ -1243,6 +1242,9 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		ran++
 		fmt.Fprintln(os.Stderr, "running", s.ID, level)
 		duration := 3 * time.Minute
+		if isIPhoneRealScenario(s.ID, level) {
+			duration = 70 * time.Minute
+		}
 		if s.ID == "RELAY-STREAMS" {
 			duration = 12 * time.Minute
 		}

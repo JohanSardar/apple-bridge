@@ -1,17 +1,98 @@
 {
-  "status": "limited",
-  "scenario": "APP-CMD-REAL",
-  "level": "real",
-  "passed": false,
-  "git_sha": "",
   "assertions": [
     {
-      "name": "real_device_acceptance",
-      "passed": false
+      "name": "fresh_completed_phone_receipt",
+      "passed": true
+    },
+    {
+      "name": "state_restored",
+      "passed": true
+    },
+    {
+      "name": "resources_cleaned",
+      "passed": true
+    },
+    {
+      "name": "ready",
+      "passed": true
+    },
+    {
+      "name": "signed_result_uploaded",
+      "passed": true
+    },
+    {
+      "name": "apns_wake",
+      "passed": true
+    },
+    {
+      "name": "identity_restored",
+      "passed": true
+    },
+    {
+      "name": "apns_wake",
+      "passed": true
+    },
+    {
+      "name": "ready",
+      "passed": true
+    },
+    {
+      "name": "state_restored",
+      "passed": true
+    },
+    {
+      "name": "identity_restored",
+      "passed": true
+    },
+    {
+      "name": "signed_result_uploaded",
+      "passed": true
+    },
+    {
+      "name": "signed_pair_status",
+      "passed": true
+    },
+    {
+      "name": "resources_cleaned",
+      "passed": true
+    },
+    {
+      "name": "signed_pair_status",
+      "passed": true
+    },
+    {
+      "name": "identity_restored",
+      "passed": true
+    },
+    {
+      "name": "gateway_observed_signed_result",
+      "passed": true
+    },
+    {
+      "name": "phone_pong_observed",
+      "passed": true
+    },
+    {
+      "name": "apns_accepted",
+      "passed": true
+    },
+    {
+      "name": "restoration_receipt",
+      "passed": true
     },
     {
       "name": "credential_backend_override_restored",
       "passed": true
     }
-  ]
+  ],
+  "level": "real",
+  "metrics": {
+    "apns_accepted_count": 1,
+    "apns_failure_count": 0,
+    "apns_wakes": 1,
+    "capture_observer_resets": 0,
+    "phase": 2
+  },
+  "passed": true,
+  "scenario": "APP-CMD-REAL"
 }

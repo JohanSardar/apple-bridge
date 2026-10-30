@@ -1,17 +1,63 @@
 {
-  "status": "limited",
-  "scenario": "APP-PAIR-REAL",
-  "level": "real",
-  "passed": false,
-  "git_sha": "",
   "assertions": [
     {
-      "name": "real_device_acceptance",
-      "passed": false
+      "name": "fresh_completed_phone_receipt",
+      "passed": true
+    },
+    {
+      "name": "state_restored",
+      "passed": true
+    },
+    {
+      "name": "resources_cleaned",
+      "passed": true
+    },
+    {
+      "name": "signed_pair_status",
+      "passed": true
+    },
+    {
+      "name": "identity_restored",
+      "passed": true
+    },
+    {
+      "name": "identity_restored",
+      "passed": true
+    },
+    {
+      "name": "resources_cleaned",
+      "passed": true
+    },
+    {
+      "name": "signed_pair_status",
+      "passed": true
+    },
+    {
+      "name": "state_restored",
+      "passed": true
+    },
+    {
+      "name": "signed_pair_status",
+      "passed": true
+    },
+    {
+      "name": "identity_restored",
+      "passed": true
+    },
+    {
+      "name": "restoration_receipt",
+      "passed": true
     },
     {
       "name": "credential_backend_override_restored",
       "passed": true
     }
-  ]
+  ],
+  "level": "real",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "phase": 1
+  },
+  "passed": true,
+  "scenario": "APP-PAIR-REAL"
 }

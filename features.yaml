@@ -910,7 +910,7 @@ features:
         reason: "Signed Helper calendar-parity-probe on macOS 26.7.1 (25G241) returned Calendar Apple Events consent pending (-1744), AX cannotComplete (-25204) and zero accessible windows. Exact-event navigation is blocked for invitation Accept/Maybe/Decline, travel time and attachment add/remove; no fixture or effect was attempted and no consent was requested. A subsequent opt-in normal-consent invocation timed out after 60 seconds; the one non-prompting retry after open -g timed out after 30 seconds with no report. No new permission or AX code was returned, and the blocked stage is unverified. Both probe processes were stopped; the already-running Calendar was left open. All controls remain hidden."
     scenarios:
       - {id: WEB-CAL-PARITY, levels: [web]}
-    notes: The web-only WEB-CAL-PARITY gate passes 60/60 focused browser cases: verified read-only store parity and absence of unsupported mutation controls. Native capability limits remain at the real level. On macOS 26.7.1 (25G241), the signed Helper real probe measured Calendar automation consent pending (-1744) and AX cannotComplete (-25204). Accept/Maybe/Decline have no proven Calendar.app Accessibility target and response verification; travel-time writes have no proven Accessibility edit and positive unit mapping; attachment add/remove have no proven Accessibility target and effect verification. These operations are not registered or advertised and their inspector controls remain hidden. EventKit writes do not accept parity fields. Verified zero travel time and locally present attachment originals remain read-only; unsupported coverage, unverified positive durations and unavailable bytes stay hidden. The opt-in consent attempt (60 seconds) and one non-prompting retry (30 seconds) returned no report after normal background launch; no new return codes, consent decision or effects are claimed. Native effects on tagged Bridge Test fixtures must be proven on the current OS build before a control is enabled; milestone acceptance does not substitute for capability proof.
+    notes: "The web-only WEB-CAL-PARITY gate passes 60/60 focused browser cases: verified read-only store parity and absence of unsupported mutation controls. Native capability limits remain at the real level. On macOS 26.7.1 (25G241), the signed Helper real probe measured Calendar automation consent pending (-1744) and AX cannotComplete (-25204). Accept/Maybe/Decline have no proven Calendar.app Accessibility target and response verification; travel-time writes have no proven Accessibility edit and positive unit mapping; attachment add/remove have no proven Accessibility target and effect verification. These operations are not registered or advertised and their inspector controls remain hidden. EventKit writes do not accept parity fields. Verified zero travel time and locally present attachment originals remain read-only; unsupported coverage, unverified positive durations and unavailable bytes stay hidden. The opt-in consent attempt (60 seconds) and one non-prompting retry (30 seconds) returned no report after normal background launch; no new return codes, consent decision or effects are claimed. Native effects on tagged Bridge Test fixtures must be proven on the current OS build before a control is enabled; milestone acceptance does not substitute for capability proof."
 
   - id: web.contacts
     title: Contacts web app (read, write, parity)
@@ -1464,31 +1464,27 @@ features:
       - {id: APP-SHELL-SIM, levels: [sim]}
       - {id: APP-SHELL-REAL, levels: [real]}
     limits:
-      - {scenario: APP-SHELL-REAL, level: real, reason: 'App launched over USB; settings and diagnostics UI observation harness missing'}
+      - {scenario: APP-SHELL-REAL, level: real, reason: 'Phone probe completed with 21 registered capabilities but capability-field and Diagnostics observation confirmations did not arrive within three minutes'}
   - id: iphone.pairing
     title: iPhone device keys and one-time gateway pairing
     requirements: [R-SECURE, R-API]
     milestone: G13
     modules: [ios/Pairing, internal/trust, internal/contracts, internal/operations, lab/simapple]
     depends_on: [iphone.shell]
-    status: limited
+    status: done
     scenarios:
       - {id: APP-PAIR-SIM, levels: [sim]}
       - {id: APP-PAIR-REAL, levels: [real]}
-    limits:
-      - {scenario: APP-PAIR-REAL, level: real, reason: 'limited: real-device request and observation harness missing; needs Allow tap for Local Network and camera QR permission'}
   - id: iphone.delivery
     title: Encrypted iPhone push commands and signed results
     requirements: [R-SECURE, R-SAFE-CMD, R-API]
     milestone: G13
     modules: [internal/iphone, internal/relay, ios/Delivery, lab/simapple]
     depends_on: [iphone.pairing]
-    status: limited
+    status: done
     scenarios:
       - {id: APP-CMD-SIM, levels: [sim]}
       - {id: APP-CMD-REAL, levels: [real]}
-    limits:
-      - {scenario: APP-CMD-REAL, level: real, reason: 'limited: real-device request and observation harness missing; needs Allow tap to complete phone pairing; locked-phone APNs round trip and latency unmeasured'}
   - id: iphone.notifications
     title: iPhone notifications and interactive button results
     requirements: [R-SECURE, R-SAFE-CMD, R-API]
@@ -1500,7 +1496,7 @@ features:
       - {id: APP-NOTIFY-SIM, levels: [sim]}
       - {id: APP-NOTIFY-REAL, levels: [real]}
     limits:
-      - {scenario: APP-NOTIFY-REAL, level: real, reason: 'limited: real-device request and observation harness missing; needs Allow tap'}
+      - {scenario: APP-NOTIFY-REAL, level: real, reason: 'Notification authorization was requested on the phone but no Allow response arrived within three minutes; delivery and button interaction remain unproved'}
       - {scenario: APP-NOTIFY-SIM, level: sim, reason: 'Gateway simulation passes; native UI proof limited: shared simulator DEVICE_IN_USE after 60-second retry'}
   - id: iphone.motion
     title: iPhone activity, pedometer, floors and seven-day history
@@ -1594,7 +1590,7 @@ features:
     scenarios:
       - {id: APP-INTENTS-REAL, levels: [real]}
     limits:
-      - {scenario: APP-INTENTS-REAL, level: real, reason: 'limited: real-device request and observation harness missing; needs Allow tap to save or import a Shortcuts workflow'}
+      - {scenario: APP-INTENTS-REAL, level: real, reason: 'No saved Ping iPhone invocation, pong or workflow-deletion confirmation arrived during the two three-minute phone phases'}
 
   - id: iphone.approvals
     title: Face ID command approvals
@@ -1607,7 +1603,7 @@ features:
       - {id: APP-APPROVE-SIM, levels: [sim]}
       - {id: APP-APPROVE-REAL, levels: [real]}
     limits:
-      - {scenario: APP-APPROVE-REAL, level: real, reason: 'limited: real-device request and observation harness missing; needs Allow tap'}
+      - {scenario: APP-APPROVE-REAL, level: real, reason: 'Notification authorization request reached the phone but no Allow response arrived within three minutes; Face ID approval was not reached'}
   - id: iphone.widgets
     title: Agent task Live Activities and bridge status widgets
     requirements: [R-API]
@@ -1619,7 +1615,7 @@ features:
       - {id: APP-LIVE-SIM, levels: [sim]}
       - {id: APP-LIVE-REAL, levels: [real]}
     limits:
-      - {scenario: APP-LIVE-REAL, level: real, reason: 'limited: real-device request and observation harness missing; needs Allow tap'}
+      - {scenario: APP-LIVE-REAL, level: real, reason: 'Native ActivityKit start/update/end and shared widget status passed; no Lock Screen or widget observation confirmation arrived within three minutes'}
     notes: Gateway pushes ActivityKit start, update and end using signed device token registration. APNs acceptance is dispatch only; no phone observation is claimed. Widgets show the last reported delivery status with its age.
 
 
