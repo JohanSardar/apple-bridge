@@ -57,7 +57,13 @@ func runMac(ctx context.Context, s Scenario, level string) (e Evidence) {
 	}
 	if s.ID == "MAC-NOTIFY-REAL" && level == "real" {
 		probe, cancel := context.WithTimeout(ctx, 15*time.Second)
-		report := filepath.Join(w.Dir, "notification-permissions.json")
+		home, homeErr := os.UserHomeDir()
+		add("notification_report_home_available", homeErr == nil)
+		if homeErr != nil {
+			return
+		}
+		report := filepath.Join(home, "Library", "Application Support", "AppleBridgeDev", "[ab-test] notification-"+e.RunID+".json")
+		defer os.Remove(report)
 		permissionErr := exec.CommandContext(probe, filepath.Join(w.HelperApp, "Contents", "MacOS", "AppleBridgeHelper"), "permission-status", "--report", report).Run()
 		cancel()
 		data, readErr := os.ReadFile(report)

@@ -64,6 +64,12 @@ func runFiles(ctx context.Context, s Scenario, level string) Evidence {
 	out, err := check.CombinedOutput()
 	add("native_files_checks", err == nil)
 	for _, line := range strings.Split(string(out), "\n") {
+		if strings.HasPrefix(line, "offload_") {
+			parts := strings.SplitN(line, "=", 2)
+			if len(parts) == 2 && (parts[1] == "true" || parts[1] == "false") {
+				add(parts[0], parts[1] == "true")
+			}
+		}
 		if strings.HasPrefix(line, "idle_cpu_percent=") {
 			e.Metrics["idle_cpu_percent"] = strings.TrimPrefix(line, "idle_cpu_percent=")
 		}

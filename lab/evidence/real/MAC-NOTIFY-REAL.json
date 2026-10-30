@@ -1,9 +1,10 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[6.2 7.6 7.88] cpu_idle=42% cpus=8 other_heavy=0"
+    "summary": "air: load=[55.77 32.31 16.32] cpu_idle=72% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M6472DDG9JRYSH8S928BJE5E",
+  "status": "limited",
+  "run_id": "run_01M67BG98PN43M65RJ53KYNDXY",
   "metrics": {
     "capture_observer_resets": 0
   },
@@ -11,7 +12,7 @@
   "level": "real",
   "passed": false,
   "git_sha": "",
-  "at": "2026-10-29T16:14:43.120533Z",
+  "at": "2026-10-30T21:29:55.222882Z",
   "assertions": [
     {
       "name": "world_started",
@@ -26,7 +27,11 @@
       "passed": true
     },
     {
-      "name": "mac_real_scenario_supported",
+      "name": "notification_permission_status_read",
+      "passed": false
+    },
+    {
+      "name": "notification_authorized",
       "passed": false
     },
     {
@@ -35,5 +40,8 @@
     }
   ],
   "latency": null,
-  "hosts": null
+  "hosts": null,
+  "conditions": {
+    "reason": "Helper notification authorization is unavailable or not granted; no authorization requested"
+  }
 }

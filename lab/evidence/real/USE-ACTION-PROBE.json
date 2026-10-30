@@ -1,22 +1,22 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[7.55 8.49 8.21] cpu_idle=30% cpus=8 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[8.28 6.37 5.35] cpu_idle=61% cpus=8 other_heavy=0"
   },
   "status": "limited",
-  "run_id": "run_01M646Y62Y6RPDCNKCFDZDY9H4",
+  "run_id": "run_01M679NZZ6D3VD1K45TCKJ5V84",
   "metrics": {
     "biome_local_entry_count": 2,
     "biome_remote_entry_count": 3,
     "capture_observer_resets": 0,
-    "installed_shortcut_count": 14,
+    "installed_shortcut_count": 17,
     "probe_pack_installed": false
   },
   "scenario": "USE-ACTION-PROBE",
   "level": "real",
   "passed": false,
-  "git_sha": "c3ac9963efa1272847ce1ef053a43f9c53d3fc2a",
-  "at": "2026-10-29T16:12:24.542243Z",
+  "git_sha": "78b288697a19c39fa8f92011b8e7c5a48faf2fed",
+  "at": "2026-10-30T20:58:05.164737Z",
   "assertions": [
     {
       "name": "inventory_available",

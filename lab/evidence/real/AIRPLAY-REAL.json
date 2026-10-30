@@ -1,20 +1,46 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[10.57 7.8 7.83] cpu_idle=23% cpus=8 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[21.19 26.71 15.39] cpu_idle=58% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M646JDZKDQZGFZ40F3WJSWJD",
+  "status": "limited",
+  "run_id": "run_01M67BJ9B91GWATNXPMA6MQKE1",
   "metrics": {
-    "capture_observer_resets": 0
+    "capture_observer_resets": 0,
+    "route_count": 0
   },
   "scenario": "AIRPLAY-REAL",
   "level": "real",
   "passed": false,
   "git_sha": "",
-  "at": "2026-10-29T16:05:59.411628Z",
+  "at": "2026-10-30T21:31:00.841106Z",
   "assertions": [
     {
-      "name": "real_qualification_batched_at_end",
+      "name": "world_started",
+      "passed": true
+    },
+    {
+      "name": "scope_granted",
+      "passed": true
+    },
+    {
+      "name": "helper_ready",
+      "passed": true
+    },
+    {
+      "name": "native_query_completed",
+      "passed": true
+    },
+    {
+      "name": "native_operation_available",
+      "passed": true
+    },
+    {
+      "name": "routes_returned",
+      "passed": true
+    },
+    {
+      "name": "airplay_route_available",
       "passed": false
     },
     {
@@ -23,5 +49,8 @@
     }
   ],
   "latency": null,
-  "hosts": null
+  "hosts": null,
+  "conditions": {
+    "reason": "No AirPlay output route is available on the qualification host; selection remains unqualified"
+  }
 }

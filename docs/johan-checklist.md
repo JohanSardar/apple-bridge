@@ -55,10 +55,10 @@ Generated from every `level: real` limit in `features.yaml` for T99. Grants are 
 
 ## Shortcuts import or owner verification
 
-- **CLK-ALARM-REAL** — limited: needs import click Use Shortcuts to import/verify AB Clock.
-- **CLK-TIMER-REAL** — limited: needs import click Use Shortcuts to import/verify AB Clock.
+- **CLK-ALARM-REAL** — AB Clock is installed but did not return versioned structured alarm fields; alarm mutations were skipped.
+- **CLK-TIMER-REAL** — AB Clock is installed but did not confirm timer running state, duration and label.
 - **USE-ACTION-PROBE** — Screen Time action output unmeasured; pack setup: packaging/shortcuts/screen-time-probe.md. No shortcuts executed; retain Biome pending owner-qualified pack. Verify the owner-qualified workflow/action in Shortcuts; no import was attempted.
-- **SIRI-INTENTS** — Metadata generated with Xcode and bundled; needs Shortcuts listing and status execution verification. Shortcuts CLI lists saved shortcuts, not App Intent actions. Verify the owner-qualified workflow/action in Shortcuts; no import was attempted.
+- **SIRI-INTENTS** — Helper build and bundled App Intent metadata passed; status intent execution in Shortcuts remains unqualified.
 
 ## Account or interactive sign-in
 
@@ -98,26 +98,22 @@ Generated from every `level: real` limit in `features.yaml` for T99. Grants are 
 - **NOTE-EDIT-PARITY** — limited: public Notes HTML does not create native checklist identities and rich editing still needs production-command qualification. The real parity probe and T63 cleanup baseline check pass (120 native objects before/after).
 - **RELAY-REAL** — Public relay DNS/TLS and Ubuntu REST/MCP qualified; crt.sh indexing/completeness is not qualified
 - **VIS-IDLE** — Failed assertions: helper_cpu_under_two_percent
-- **SC-RUN-REAL** — Failed assertions: bounded_runner_completed, echo_output_matches
+- **SC-RUN-REAL** — AB Echo timed out after 20 seconds with zero output bytes on the locked real rerun.
 - **SC-IDLE** — Failed assertions: five_minute_helper_cpu_under_two_percent
 - **MAC-IDLE** — Whole Helper measured 2.016546% CPU-time over 300.018 idle seconds after 790.151 seconds of settling under the global real-run lock; still above 2%.
 - **MAIL-IDLE** — Failed assertions: mail_idle_qualification_pending_T53_and_real_mail_store
 - **MAIL-READ-REAL** — Failed assertions: mail_truth_read_only_available
-- **FILE-OFFLOAD-REAL** — Provide a dedicated iCloud-backed [ab-test] file that supports eviction/offload; current temporary fixture could not establish capabilityUnproven. No personal files were used.
+- **FILE-OFFLOAD-REAL** — Dedicated tagged iCloud Drive fixture failed brctl eviction or offload readback with capabilityUnproven; fixture cleanup runs on failure.
 - **MAIL-BODY-REAL** — No V10 Envelope Index on this Mac; real body Truth qualification unavailable
 - **FOC-IDLE** — Five-minute Helper CPU qualification remains pending; no idle CPU measurement claimed.
 - **FOC-PHONE-SYNC** — Johan must have the paired iPhone available and qualify Focus sync after a safe AB Focus set/readback/restore implementation
-- **FILE-CRUD-REAL** — CRUD filesystem Truth passes; real cloud download and eviction qualification remains outstanding.
-- **MAC-CLIPBOARD-REAL** — Clipboard supports transient text up to 64 KiB; image payloads and approval-required agent writes remain unsupported.
 - **MAC-NOTIFY-REAL** — Code gap: macRealCommands has no MAC-NOTIFY-REAL handler (mac_real_scenario_supported fails); after implementing tagged notification cleanup, System Settings > Notifications > AppleBridgeHelper must allow notifications. After the handler/cleanup is implemented: System Settings > Notifications > AppleBridgeHelper > Allow notifications.
 - **LOC-IDLE** — Failed assertions: helper_reached_idle, five_minute_idle_cpu_under_2_percent
-- **LOC-CURRENT-REAL** — Failed assertions: fresh_mac_fix
+- **LOC-CURRENT-REAL** — Helper Location authorization is not granted; locked real query did not return a fresh Mac fix.
 - **SAF-IDLE** — Failed assertions: helper_cpu_under_two_percent_for_five_minutes
-- **TM-STATUS** — Failed assertions: real_qualification_batched_at_end
-- **IWORK-REAL** — Failed assertions: real_qualification_batched_at_end
-- **SHAZAM-REAL** — Failed assertions: real_qualification_batched_at_end
-- **BT-REAL** — Failed assertions: real_qualification_batched_at_end
-- **AIRPLAY-REAL** — Failed assertions: real_qualification_batched_at_end
+- **IWORK-REAL** — Native iWork export is unsupported; Pages, Numbers and Keynote are not installed on the qualification host.
+- **SHAZAM-REAL** — Native Shazam recognition requires ShazamKit entitlement and a qualified audio fixture.
+- **AIRPLAY-REAL** — CoreAudio route enumeration passed; native AirPlay selection remains unsupported.
 - **CALL-DIAL-REAL** — skipped: prohibited call placement
 
 ## Additional capability prerequisites without a real scenario entry

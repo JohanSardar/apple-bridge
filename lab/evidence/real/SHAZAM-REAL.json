@@ -1,9 +1,10 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[10.62 7.76 7.82] cpu_idle=25% cpus=8 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[13.16 6.3 5.22] cpu_idle=72% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M646J8JE2B4KTHMTFFED3DS8",
+  "status": "limited",
+  "run_id": "run_01M679JXTHZW1N4M6S6NYEW0KX",
   "metrics": {
     "capture_observer_resets": 0
   },
@@ -11,10 +12,26 @@
   "level": "real",
   "passed": false,
   "git_sha": "",
-  "at": "2026-10-29T16:05:53.870494Z",
+  "at": "2026-10-30T20:56:24.657171Z",
   "assertions": [
     {
-      "name": "real_qualification_batched_at_end",
+      "name": "world_started",
+      "passed": true
+    },
+    {
+      "name": "scope_granted",
+      "passed": true
+    },
+    {
+      "name": "helper_ready",
+      "passed": true
+    },
+    {
+      "name": "native_query_completed",
+      "passed": true
+    },
+    {
+      "name": "native_operation_available",
       "passed": false
     },
     {
@@ -23,5 +40,8 @@
     }
   ],
   "latency": null,
-  "hosts": null
+  "hosts": null,
+  "conditions": {
+    "reason": "ShazamKit entitlement and fixture qualification required"
+  }
 }

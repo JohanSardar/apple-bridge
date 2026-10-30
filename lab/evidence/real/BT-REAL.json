@@ -1,21 +1,41 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[10.62 7.76 7.82] cpu_idle=23% cpus=8 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[14.05 10.35 7.29] cpu_idle=81% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M646JB9GMZBXX22QPM0A416K",
+  "run_id": "run_01M67A02JJ82955D79C325QHVV",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "BT-REAL",
   "level": "real",
-  "passed": false,
+  "passed": true,
   "git_sha": "",
-  "at": "2026-10-29T16:05:56.656491Z",
+  "at": "2026-10-30T21:03:35.506396Z",
   "assertions": [
     {
-      "name": "real_qualification_batched_at_end",
-      "passed": false
+      "name": "world_started",
+      "passed": true
+    },
+    {
+      "name": "scope_granted",
+      "passed": true
+    },
+    {
+      "name": "helper_ready",
+      "passed": true
+    },
+    {
+      "name": "native_query_completed",
+      "passed": true
+    },
+    {
+      "name": "native_operation_available",
+      "passed": true
+    },
+    {
+      "name": "devices_returned",
+      "passed": true
     },
     {
       "name": "credential_backend_override_restored",

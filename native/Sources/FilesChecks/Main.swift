@@ -159,13 +159,19 @@ struct Checks {
         let (rows, complete) = try await source.snapshot(root)
         guard complete, rows.contains(where: { $0["native_key"].string == file.path }) else { throw SourceFailure.corrupt }
         let args: JSON = .object(["root": .string(root.path), "path": .string(folder.lastPathComponent + "/" + file.lastPathComponent)])
-        let result = try await source.read(args)
+        let scenario = CommandLine.arguments.last ?? ""
+        let result: JSON
+        do {
+            result = try await source.read(args)
+        } catch {
+            if scenario == "FILE-OFFLOAD-REAL" { print("offload_initial_read_passed=false") }
+            throw error
+        }
         guard result["size"].number == Double(token.utf8.count), result["digest"].string.count == 64 else { throw SourceFailure.corrupt }
         do {
             _ = try await source.read(.object(["root": .string(root.path), "path": .string("../outside")]))
             throw SourceFailure.corrupt
         } catch SourceFailure.invalid {}
-        let scenario = CommandLine.arguments.last ?? ""
         if scenario == "FILE-SEARCH-REAL" {
             let deadline = Date().addingTimeInterval(30)
             var found = false
@@ -217,8 +223,20 @@ struct Checks {
                 }
                 try await Task.sleep(for: .milliseconds(100))
             }
-            let reread = try await source.read(args)
-            guard reread == result else { throw SourceFailure.corrupt }
+            print("offload_eviction_readback_passed=true")
+            let reread: JSON
+            do {
+                reread = try await source.read(args)
+            } catch {
+                print("offload_download_readback_passed=false")
+                throw error
+            }
+            guard reread == result else {
+                print("offload_digest_readback_passed=false")
+                throw SourceFailure.corrupt
+            }
+            print("offload_download_readback_passed=true")
+            print("offload_digest_readback_passed=true")
         } else if scenario == "FILE-IDLE" {
             let guardValue = FileScanGuard()
             var scanGuard = guardValue

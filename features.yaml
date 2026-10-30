@@ -1019,7 +1019,7 @@ features:
       - {id: SC-RUN-REAL, levels: [real]}
       - {id: SC-IDLE, levels: [real]}
     limits:
-      - {"scenario": "SC-RUN-REAL", "level": "real", "reason": "Failed assertions: bounded_runner_completed, echo_output_matches"}
+      - {"scenario": "SC-RUN-REAL", "level": "real", "reason": "AB Echo timed out after 20 seconds with zero output bytes on the locked real rerun."}
       - {"scenario": "SC-IDLE", "level": "real", "reason": "Failed assertions: five_minute_helper_cpu_under_two_percent"}
   - id: clock.pack
     title: Clock helper pack qualification
@@ -1034,8 +1034,8 @@ features:
       - {id: CLK-ALARM-REAL, levels: [real]}
       - {id: CLK-TIMER-REAL, levels: [real]}
     limits:
-      - {"scenario": "CLK-ALARM-REAL", "level": "real", "reason": "limited: needs replacement AB Clock import and real alarm field qualification"}
-      - {"scenario": "CLK-TIMER-REAL", "level": "real", "reason": "limited: Air signer rejects Get Current Timer; Start Timer has no running state or label confirmation"}
+      - {"scenario": "CLK-ALARM-REAL", "level": "real", "reason": "AB Clock is installed but did not return versioned structured alarm fields; alarm mutations were skipped."}
+      - {"scenario": "CLK-TIMER-REAL", "level": "real", "reason": "AB Clock is installed but did not confirm timer running state, duration and label."}
   - id: mac.capture
     title: Mac system state capture
     requirements: [R-API, R-SCOPE]
@@ -1083,7 +1083,7 @@ features:
       - {id: FILE-SEARCH-REAL, levels: [real]}
       - {id: FILE-OFFLOAD-REAL, levels: [real]}
     limits:
-      - {"scenario": "FILE-OFFLOAD-REAL", "level": "real", "reason": "Provide a dedicated iCloud-backed [ab-test] file that supports eviction/offload; current temporary fixture could not establish capabilityUnproven. No personal files were used."}
+      - {"scenario": "FILE-OFFLOAD-REAL", "level": "real", "reason": "Dedicated tagged iCloud Drive fixture failed brctl eviction or offload readback with capabilityUnproven; fixture cleanup runs on failure."}
   - id: mail.body
     title: Read local Mail bodies
     requirements: [R-RW]
@@ -1211,7 +1211,6 @@ features:
       - {id: FILE-REPLICA, levels: [replica]}
     limits:
       - {scenario: FILE-COMMANDS, level: sim, reason: Content is inline base64 capped at 128 KiB; upload blob references remain unsupported.}
-      - {scenario: FILE-CRUD-REAL, level: real, reason: CRUD filesystem Truth passes; real cloud download and eviction qualification remains outstanding.}
   - id: music.catalog
     title: Music catalog, player controls and library
     requirements: [R-API, R-SCOPE]
@@ -1236,11 +1235,10 @@ features:
     milestone: G9
     modules: [native/Sources/FilesSource]
     depends_on: [files.capture]
-    status: limited
+    status: done
     scenarios:
       - {id: FILES-TRANSFORM, levels: [sim, real]}
-    limits:
-      - {scenario: FILES-TRANSFORM, level: sim, reason: Generated native fixtures; real qualification batched at end.}
+    limits: []
   - id: audio.queries
     title: On-device audio and language queries
     requirements: [R-API, R-SCOPE]
@@ -1281,8 +1279,7 @@ features:
       - {id: MAC-KEEPAWAKE-REAL, levels: [real]}
       - {id: MAC-CLIPBOARD-REAL, levels: [real]}
       - {id: MAC-REPLICA, levels: [replica]}
-    limits:
-      - {scenario: MAC-CLIPBOARD-REAL, level: real, reason: Clipboard supports transient text up to 64 KiB; image payloads and approval-required agent writes remain unsupported.}
+    limits: []
     notes: Audio, appearance, app lifecycle and IOPM assertions use native readback. Clipboard text uses transient reads and redacted writes; image payloads and approval-required writes are unavailable. MAC-LOCK remains unavailable and is never exercised.
 
   - id: mac.actions
@@ -1321,7 +1318,7 @@ features:
       - {"scenario": "QUERY-AGENT", "level": "agent", "reason": "Decision 39: Ubuntu Codex OAuth token is revoked (HTTP 401 token_revoked); agent runner not executed. Reauthentication required for MCP-only qualification."}
       - {"scenario": "LOC-IDLE", "level": "real", "reason": "Failed assertions: helper_reached_idle, five_minute_idle_cpu_under_2_percent"}
       - {"scenario": "MAP-IDLE", "level": "real", "reason": "limited: T99 locked Air rerun: needs Full Disk Access for the current signed AppleBridgeHelper on the Air; non-prompting status=denied; capture cannot settle, so no CPU measurement was taken"}
-      - {"scenario": "LOC-CURRENT-REAL", "level": "real", "reason": "Failed assertions: fresh_mac_fix"}
+      - {"scenario": "LOC-CURRENT-REAL", "level": "real", "reason": "Helper Location authorization is not granted; locked real query did not return a fresh Mac fix."}
   - id: safari.capture
     title: Read-only Safari database capture
     requirements: [R-FULL, R-NO-FALSE-DELETE, R-LIVE]
@@ -1390,7 +1387,7 @@ features:
     scenarios:
       - {id: SIRI-INTENTS, levels: [real]}
     limits:
-      - {"scenario": "SIRI-INTENTS", "level": "real", "reason": "Metadata generated with Xcode and bundled; needs Shortcuts listing and status execution verification. Shortcuts CLI lists saved shortcuts, not App Intent actions."}
+      - {"scenario": "SIRI-INTENTS", "level": "real", "reason": "Helper build and bundled App Intent metadata passed; status intent execution in Shortcuts remains unqualified."}
   - id: mac.extras
     title: Mac Bluetooth AirPlay iWork Time Machine and song recognition
     requirements: [R-API, R-SCOPE]
@@ -1406,11 +1403,9 @@ features:
       - {id: BT-REAL, levels: [real]}
       - {id: AIRPLAY-REAL, levels: [real]}
     limits:
-      - {"scenario": "TM-STATUS", "level": "real", "reason": "Failed assertions: real_qualification_batched_at_end"}
-      - {"scenario": "IWORK-REAL", "level": "real", "reason": "Failed assertions: real_qualification_batched_at_end"}
-      - {"scenario": "SHAZAM-REAL", "level": "real", "reason": "Failed assertions: real_qualification_batched_at_end"}
-      - {"scenario": "BT-REAL", "level": "real", "reason": "Failed assertions: real_qualification_batched_at_end"}
-      - {"scenario": "AIRPLAY-REAL", "level": "real", "reason": "Failed assertions: real_qualification_batched_at_end"}
+      - {"scenario": "IWORK-REAL", "level": "real", "reason": "Native iWork export is unsupported; Pages, Numbers and Keynote are not installed on the qualification host."}
+      - {"scenario": "SHAZAM-REAL", "level": "real", "reason": "Native Shazam recognition requires ShazamKit entitlement and a qualified audio fixture."}
+      - {"scenario": "AIRPLAY-REAL", "level": "real", "reason": "CoreAudio route enumeration passed; native AirPlay selection remains unsupported."}
   - id: phone.dial
     title: Continuity dialing with Mac confirmation
     requirements: [R-API, R-SCOPE]

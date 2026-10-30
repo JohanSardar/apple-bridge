@@ -1,20 +1,38 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[10.15 7.62 7.77] cpu_idle=23% cpus=8 other_heavy=0"
+    "summary": "air: load=[9.04 5.08 4.78] cpu_idle=21% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M646J5KHRCE18AQ30SKSA234",
+  "status": "limited",
+  "run_id": "run_01M679J908S6QFT157ZTMSFYMT",
   "metrics": {
-    "capture_observer_resets": 0
+    "capture_observer_resets": 0,
+    "installed_iwork_app_count": 0
   },
   "scenario": "IWORK-REAL",
   "level": "real",
   "passed": false,
   "git_sha": "",
-  "at": "2026-10-29T16:05:50.833031Z",
+  "at": "2026-10-30T20:56:03.33654Z",
   "assertions": [
     {
-      "name": "real_qualification_batched_at_end",
+      "name": "world_started",
+      "passed": true
+    },
+    {
+      "name": "scope_granted",
+      "passed": true
+    },
+    {
+      "name": "helper_ready",
+      "passed": true
+    },
+    {
+      "name": "iwork_export_observed",
+      "passed": false
+    },
+    {
+      "name": "exported_tagged_content",
       "passed": false
     },
     {
@@ -23,5 +41,8 @@
     }
   ],
   "latency": null,
-  "hosts": null
+  "hosts": null,
+  "conditions": {
+    "reason": "Native iWork export is unsupported; no iWork applications installed on qualification host"
+  }
 }

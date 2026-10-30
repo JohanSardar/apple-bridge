@@ -79,7 +79,12 @@ public actor FilesSource: Source {
         if values.isUbiquitousItem == true {
             try FileManager.default.startDownloadingUbiquitousItem(at: url)
             let deadline = Date().addingTimeInterval(50)
-            while try url.resourceValues(forKeys: [.ubiquitousItemDownloadingStatusKey]).ubiquitousItemDownloadingStatus == .notDownloaded {
+            func downloaded() throws -> Bool {
+                var refreshed = URL(fileURLWithPath: url.path)
+                refreshed.removeAllCachedResourceValues()
+                return try refreshed.resourceValues(forKeys: [.ubiquitousItemDownloadingStatusKey]).ubiquitousItemDownloadingStatus != .notDownloaded
+            }
+            while try !downloaded() {
                 guard Date() < deadline else { throw SourceFailure.unavailable }
                 try await Task.sleep(for: .milliseconds(100))
             }

@@ -1,21 +1,41 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[10.15 7.62 7.77] cpu_idle=31% cpus=8 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[13.16 6.3 5.22] cpu_idle=73% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M646J301T0KYFTH7TJGMTAS2",
+  "run_id": "run_01M679K1098M2T63EY2V7YKAGZ",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "TM-STATUS",
   "level": "real",
-  "passed": false,
+  "passed": true,
   "git_sha": "",
-  "at": "2026-10-29T16:05:48.161492Z",
+  "at": "2026-10-30T20:56:27.91301Z",
   "assertions": [
     {
-      "name": "real_qualification_batched_at_end",
-      "passed": false
+      "name": "world_started",
+      "passed": true
+    },
+    {
+      "name": "scope_granted",
+      "passed": true
+    },
+    {
+      "name": "helper_ready",
+      "passed": true
+    },
+    {
+      "name": "native_query_completed",
+      "passed": true
+    },
+    {
+      "name": "native_operation_available",
+      "passed": true
+    },
+    {
+      "name": "tmutil_status_truth",
+      "passed": true
     },
     {
       "name": "credential_backend_override_restored",
