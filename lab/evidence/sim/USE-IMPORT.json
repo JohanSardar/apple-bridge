@@ -1,9 +1,9 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[3.98 5.07 9.19] cpu_idle=56% cpus=8 other_heavy=0"
+    "summary": "air: load=[3.16 5.72 6.67] cpu_idle=89% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M645QH3R8AXA74E4RD5WVBD6",
+  "run_id": "run_01M67ER3HD0GJA5NPEQM9QF01D",
   "metrics": {
     "app_days": 2,
     "capture_observer_resets": 0,
@@ -12,8 +12,8 @@
   "scenario": "USE-IMPORT",
   "level": "sim",
   "passed": true,
-  "git_sha": "1072adab174a7e89586b0dbb52b1a34150794f09",
-  "at": "2026-10-29T15:51:17.880368Z",
+  "git_sha": "3bd923a1af4751bbdf11f7c731c75e8fcbb7a183",
+  "at": "2026-10-30T22:26:37.229623Z",
   "assertions": [
     {
       "name": "mac_lock_clipped",

@@ -1,18 +1,18 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[13.29 12.58 10.01] cpu_idle=34% cpus=10 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[4.95 5.6 6.63] cpu_idle=59% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M64TVJ1E3BHJ6HAA8V97MN6H",
+  "run_id": "run_01M67E49D3QQKE27CX55FES5KM",
   "metrics": {
     "capture_observer_resets": 0,
-    "idle_cpu_percent": "0.0038180460036667616"
+    "idle_cpu_percent": "0.002653045438419697"
   },
   "scenario": "PHO-IDLE",
   "level": "sim",
   "passed": true,
   "git_sha": "",
-  "at": "2026-10-29T22:00:29.998767Z",
+  "at": "2026-10-30T22:15:47.87575Z",
   "assertions": [
     {
       "name": "descriptor_photos.search",

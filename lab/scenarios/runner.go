@@ -1233,6 +1233,15 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 			break
 		}
 	}
+	if level == "real" {
+		allIdle := true
+		for _, s := range scenarios {
+			allIdle = allIdle && idleScenario(s.ID)
+		}
+		if allIdle {
+			return idleSuite(ctx, scenarios, asJSON)
+		}
+	}
 	failed := false
 	ran := 0
 	for _, s := range scenarios {
