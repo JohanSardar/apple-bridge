@@ -2,7 +2,16 @@ package scenarios
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"github.com/JohanSardar/apple-bridge/internal/iphone"
+	"github.com/JohanSardar/apple-bridge/internal/trust"
+	"github.com/JohanSardar/apple-bridge/lab/simapple"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestIPhoneRealRequiresSelectedPhysicalDevice(t *testing.T) {
@@ -32,5 +41,55 @@ func TestIPhoneRealCannotWriteMacKeychain(t *testing.T) {
 	evidence := runIPhoneReal(context.Background(), Scenario{ID: "APP-PAIR-REAL"}, "real")
 	if evidence.Passed || evidence.Assertions[0].Name != "isolated_file_secret_store" {
 		t.Fatal("phone fixture allowed implicit Mac keychain storage")
+	}
+}
+
+func TestRealPhoneGatewayServesSignedStatus(t *testing.T) {
+	t.Setenv("APPLE_BRIDGE_SECRET_STORE", "file")
+	authority, err := trust.Open(filepath.Join(t.TempDir(), "trust"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewTLSServer(realPhoneHandler(authority, iphone.NewDelivery(nil, authority)))
+	defer server.Close()
+	code, err := authority.PairIPhoneCode(server.URL, false, time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	phone, err := simapple.NewIPhone()
+	if err != nil {
+		t.Fatal(err)
+	}
+	status, err := phone.Pair(server.Client(), server.URL, code)
+	if err != nil || status != 200 {
+		t.Fatalf("pair: %d %v", status, err)
+	}
+	response, err := phone.Request(server.Client(), server.URL, "/v1/iphone/status", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != 200 {
+		t.Fatalf("signed status: %d", response.StatusCode)
+	}
+}
+
+func TestRealPhoneReceiptRefreshesAfterNonFinalCopy(t *testing.T) {
+	destination := filepath.Join(t.TempDir(), "result.json")
+	if err := os.WriteFile(destination, []byte(`{"run":"stale","done":true}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	for _, done := range []bool{false, true} {
+		copy := func(args ...string) error {
+			if _, err := os.Stat(destination); !os.IsNotExist(err) {
+				return fmt.Errorf("devicectl will skip an existing destination")
+			}
+			raw, _ := json.Marshal(phoneReceipt{Run: "fresh", Done: done})
+			return os.WriteFile(destination, raw, 0600)
+		}
+		receipt, err := copyRealPhoneReceipt(copy, "phone", "bundle", "source", destination)
+		if err != nil || receipt.Run != "fresh" || receipt.Done != done {
+			t.Fatalf("fresh receipt: %+v %v", receipt, err)
+		}
 	}
 }

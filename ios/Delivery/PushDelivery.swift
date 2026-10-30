@@ -66,7 +66,14 @@ struct Execution: Codable {
 final class PushDelivery {
     static let shared = PushDelivery()
     var lastResult = "None"
-    var status = "Not registered" { didSet { WidgetsCapability.status(status) } }
+    var status = "Not registered" {
+        didSet {
+            #if DEBUG
+            if ShellDeliveryQualification.active { return }
+            #endif
+            WidgetsCapability.status(status)
+        }
+    }
     var wakeCount = 0
     private var running = false
     private var drainAgain = false
@@ -194,20 +201,27 @@ final class PushDelivery {
 final class BridgeAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         #if DEBUG
-        try? ShellDeliveryQualification.restoreBackup()
-        ShellDeliveryQualification.launchStatus = BridgeStatus.load()
         let qualifying = ShellDeliveryQualification.active
         #else
         let qualifying = false
         #endif
         if !qualifying {
-            LocationCapability.resume()
-            WidgetsCapability.resume()
-            Task { await HealthReadController.shared.resume() }
+            Task {
+                #if DEBUG
+                try? await ShellDeliveryQualification.restoreBackup()
+                #endif
+                LocationCapability.resume()
+                WidgetsCapability.resume()
+                await HealthReadController.shared.resume()
+            }
         }
         UNUserNotificationCenter.current().delegate = self
         PushDelivery.shared.status = "Registering"
+        #if DEBUG
+        if !ProcessInfo.processInfo.arguments.contains("--ab-real-restore") { application.registerForRemoteNotifications() }
+        #else
         application.registerForRemoteNotifications()
+        #endif
         return true
     }
 

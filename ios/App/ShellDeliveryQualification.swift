@@ -19,6 +19,8 @@ struct ShellDeliveryBackup: Codable {
     let switches: [String: Bool]
     let absent: [String]
     let status: BridgeStatus
+    let run: String?
+    let command: String?
 }
 
 struct RealReceipt: Codable {
@@ -33,7 +35,6 @@ struct RealReceipt: Codable {
 @Observable
 final class ShellDeliveryQualification {
     static let shared = ShellDeliveryQualification()
-    static var launchStatus: BridgeStatus?
     static var active: Bool { ProcessInfo.processInfo.arguments.contains("--ab-real") || ProcessInfo.processInfo.arguments.contains("--ab-real-restore") }
     var receipt: RealReceipt?
     var request: RealRequest?
@@ -45,15 +46,51 @@ final class ShellDeliveryQualification {
 
     static var directory: URL { FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0] }
 
-    static func restoreBackup() throws {
+    static func statusDigest(_ status: BridgeStatus) throws -> String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        return SHA256.hash(data: try encoder.encode(status)).map { String(format: "%02x", $0) }.joined()
+    }
+
+    static func restoreBackup() async throws {
         let url = directory.appendingPathComponent("ab-real-backup.json")
         guard FileManager.default.fileExists(atPath: url.path) else { return }
         let backup = try JSONDecoder().decode(ShellDeliveryBackup.self, from: Data(contentsOf: url))
+        if let run = backup.run {
+            for activity in Activity<AgentTaskAttributes>.activities where activity.attributes.taskID == run {
+                await activity.end(nil, dismissalPolicy: .immediate)
+            }
+            guard !Activity<AgentTaskAttributes>.activities.contains(where: { $0.attributes.taskID == run && $0.activityState == .active }) else { throw IdentityError.requestFailed }
+        }
+        if let id = backup.command {
+            let center = UNUserNotificationCenter.current()
+            let ids = [id, "approval." + id]
+            center.removeDeliveredNotifications(withIdentifiers: ids)
+            center.removePendingNotificationRequests(withIdentifiers: ids)
+            UserDefaults.standard.removeObject(forKey: "approval." + id)
+            if ApprovalReview.shared.job?.command.command_id == id { ApprovalReview.shared.job = nil }
+            try NotificationsCapability.removeResponse(id)
+            let cacheURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("command-receipts.json")
+            if FileManager.default.fileExists(atPath: cacheURL.path) {
+                var cache = try JSONDecoder().decode([String: Execution].self, from: Data(contentsOf: cacheURL))
+                cache.removeValue(forKey: id)
+                try JSONEncoder().encode(cache).write(to: cacheURL, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+            }
+            let delivered = await center.deliveredNotifications()
+            let pending = await center.pendingNotificationRequests()
+            guard !delivered.contains(where: { ids.contains($0.request.identifier) }), !pending.contains(where: { ids.contains($0.identifier) }) else { throw IdentityError.requestFailed }
+        }
         try backup.identity.save()
         for (key, value) in backup.switches { UserDefaults.standard.set(value, forKey: key) }
         for key in backup.absent { UserDefaults.standard.removeObject(forKey: key) }
         backup.status.save()
         WidgetCenter.shared.reloadTimelines(ofKind: "BridgeStatus")
+        let digest = try statusDigest(backup.status)
+        guard try statusDigest(BridgeStatus.load()) == digest else { throw IdentityError.requestFailed }
+        if let run = backup.run {
+            let restored = RealReceipt(run: run, done: true, checks: ["state_restored": true, "resources_cleaned": true], digests: ["widget": digest])
+            try JSONEncoder().encode(restored).write(to: directory.appendingPathComponent("ab-real-restored.json"), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+        }
         try FileManager.default.removeItem(at: url)
     }
 
@@ -76,32 +113,36 @@ final class ShellDeliveryQualification {
 
     func run() async {
         guard request == nil else { return }
-        let originalStatus = Self.launchStatus ?? BridgeStatus.load()
-        var original: DeviceIdentity?
         var preferences: [String: Any] = [:]
         var activity: Activity<AgentTaskAttributes>?
         let keys = ["notifications", "approvals", "widgets"].map { "capability.\($0).enabled" }
-        for key in keys { preferences[key] = UserDefaults.standard.object(forKey: key) ?? NSNull() }
         do {
-            try Self.restoreBackup()
+            try await Self.restoreBackup()
+            for key in keys { preferences[key] = UserDefaults.standard.object(forKey: key) ?? NSNull() }
             let arguments = ProcessInfo.processInfo.arguments
             if let index = arguments.firstIndex(of: "--ab-real-restore"), arguments.count > index + 1 {
                 try? FileManager.default.removeItem(at: Self.directory.appendingPathComponent("ab-real-request.json"))
-                let restored = RealReceipt(run: arguments[index + 1], done: true, checks: ["state_restored": true])
-                try JSONEncoder().encode(restored).write(to: Self.directory.appendingPathComponent("ab-real-restored.json"), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+                let restoredURL = Self.directory.appendingPathComponent("ab-real-restored.json")
+                let restored = try JSONDecoder().decode(RealReceipt.self, from: Data(contentsOf: restoredURL))
+                guard restored.run == arguments[index + 1], restored.checks["state_restored"] == true, restored.checks["resources_cleaned"] == true, restored.digests["widget"] == (try Self.statusDigest(BridgeStatus.load())) else { throw IdentityError.requestFailed }
+                try JSONEncoder().encode(restored).write(to: Self.directory.appendingPathComponent("ab-real-acknowledged.json"), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+                instruction = "[ab-test] State and tagged resources restored."
                 return
             }
-            let identity = try DeviceIdentity.load()
-            let backup = ShellDeliveryBackup(identity: identity, switches: preferences.compactMapValues { $0 as? Bool }, absent: preferences.filter { $0.value is NSNull }.map(\.key), status: originalStatus)
-            try JSONEncoder().encode(backup).write(to: Self.directory.appendingPathComponent("ab-real-backup.json"), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
             let input = Self.directory.appendingPathComponent("ab-real-request.json")
             let request = try JSONDecoder().decode(RealRequest.self, from: Data(contentsOf: input))
-            try FileManager.default.removeItem(at: input)
             self.request = request
+            let identity = try DeviceIdentity.load()
+            let backup = ShellDeliveryBackup(identity: identity, switches: preferences.compactMapValues { $0 as? Bool }, absent: preferences.filter { $0.value is NSNull }.map(\.key), status: BridgeStatus.load(), run: request.run, command: request.command)
+            var backupURL = Self.directory.appendingPathComponent("ab-real-backup.json")
+            try JSONEncoder().encode(backup).write(to: backupURL, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+            var values = URLResourceValues()
+            values.isExcludedFromBackup = true
+            try backupURL.setResourceValues(values)
+            try FileManager.default.removeItem(at: input)
             receipt = RealReceipt(run: request.run)
             try save()
             if let code = request.code {
-                original = try DeviceIdentity.load()
                 let identity = try await PairingClient.pair(code)
                 let status = try await PairingClient.signedRequest(identity: identity, path: "/v1/iphone/status")
                 receipt?.checks["signed_pair_status"] = try JSONDecoder().decode(PairedDevice.self, from: status).id == identity.deviceID
@@ -183,32 +224,16 @@ final class ShellDeliveryQualification {
             receipt?.digests["error"] = SHA256.hash(data: Data(String(describing: error).utf8)).map { String(format: "%02x", $0) }.joined()
         }
         if let activity, activity.activityState == .active { await activity.end(nil, dismissalPolicy: .immediate) }
-        if let request {
-            if let id = request.command {
-                let center = UNUserNotificationCenter.current()
-                center.removeDeliveredNotifications(withIdentifiers: [id, "approval." + id])
-                center.removePendingNotificationRequests(withIdentifiers: [id, "approval." + id])
-                UserDefaults.standard.removeObject(forKey: "approval." + id)
-                try? NotificationsCapability.removeResponse(id)
-                let url = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("command-receipts.json")
-                if let data = try? Data(contentsOf: url), var cache = try? JSONDecoder().decode([String: Execution].self, from: data) {
-                    cache.removeValue(forKey: id)
-                    try? JSONEncoder().encode(cache).write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
-                }
-            }
+        do {
+            try await Self.restoreBackup()
+            receipt?.checks["state_restored"] = true
+            receipt?.checks["resources_cleaned"] = true
+            if request?.code != nil { receipt?.checks["identity_restored"] = true }
+        } catch {
+            receipt?.checks["state_restored"] = false
+            receipt?.checks["resources_cleaned"] = false
+            if request?.code != nil { receipt?.checks["identity_restored"] = false }
         }
-        for (key, value) in preferences {
-            if value is NSNull { UserDefaults.standard.removeObject(forKey: key) }
-            else { UserDefaults.standard.set(value, forKey: key) }
-        }
-        if let original {
-            do { try original.save(); receipt?.checks["identity_restored"] = true }
-            catch { receipt?.checks["identity_restored"] = false }
-        }
-        do { try Self.restoreBackup(); receipt?.checks["state_restored"] = true }
-        catch { receipt?.checks["state_restored"] = false }
-        originalStatus.save()
-        WidgetCenter.shared.reloadTimelines(ofKind: "BridgeStatus")
         receipt?.done = true
         try? save()
         instruction = "[ab-test] Qualification finished."
@@ -218,6 +243,7 @@ final class ShellDeliveryQualification {
 struct ShellDeliveryQualificationScreen: View {
     @Bindable var proof = ShellDeliveryQualification.shared
     @State private var pairing = PairingState()
+    @Bindable private var approval = ApprovalReview.shared
     var body: some View {
         NavigationStack {
             List {
@@ -232,7 +258,11 @@ struct ShellDeliveryQualificationScreen: View {
                 }
                 Button("Confirm observations") { proof.confirmed = true }
             }.navigationTitle("[ab-test] Real qualification")
-        }.task { await proof.run() }
+        }
+        .sheet(isPresented: Binding(get: { approval.job != nil }, set: { if !$0 { approval.job = nil } })) {
+            if let job = approval.job { ApprovalReviewScreen(job: job) }
+        }
+        .task { await proof.run() }
     }
 }
 #endif

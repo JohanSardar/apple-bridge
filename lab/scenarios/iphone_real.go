@@ -109,9 +109,7 @@ func runIPhoneReal(ctx context.Context, s Scenario, level string) (e Evidence) {
 		gateway = &operations.LocalGateway{State: store, Authority: authority, Context: ctx, IPhone: delivery}
 		delivery.Authorize = gateway.ReauthorizeIPhone
 		delivery.Decide = gateway.DecidePhoneApproval
-		mux := http.NewServeMux()
-		mux.Handle("/v1/iphone/pair", authority.IPhoneHandler())
-		mux.Handle("/v1/iphone/", delivery.Handler())
+		mux := realPhoneHandler(authority, delivery)
 		server := httptest.NewUnstartedServer(mux)
 		listener, listenErr := net.Listen("tcp4", "0.0.0.0:0")
 		if listenErr != nil {
@@ -176,13 +174,10 @@ func runIPhoneReal(ctx context.Context, s Scenario, level string) (e Evidence) {
 		if devctl("device", "process", "launch", "--device", device, "--terminate-existing", bundle, "--ab-real-restore", run) == nil {
 			for attempt := 0; attempt < 10; attempt++ {
 				dest := filepath.Join(dir, "restored.json")
-				if devctl("device", "copy", "from", "--device", device, "--source", "Documents/ab-real-restored.json", "--destination", dest, "--domain-type", "appDataContainer", "--domain-identifier", bundle) == nil {
-					raw, _ := os.ReadFile(dest)
-					var value phoneReceipt
-					if json.Unmarshal(raw, &value) == nil && value.Run == run && value.Done && value.Checks["state_restored"] {
-						restored = true
-						break
-					}
+				value, copyErr := copyRealPhoneReceipt(devctl, device, bundle, "Documents/ab-real-acknowledged.json", dest)
+				if copyErr == nil && value.Run == run && value.Done && value.Checks["state_restored"] && value.Checks["resources_cleaned"] {
+					restored = true
+					break
 				}
 				time.Sleep(time.Second)
 			}
@@ -207,10 +202,9 @@ func runIPhoneReal(ctx context.Context, s Scenario, level string) (e Evidence) {
 			return fail("run_context", ctx.Err())
 		}
 		dest := filepath.Join(dir, "receipt.json")
-		if devctl("device", "copy", "from", "--device", device, "--source", "Documents/ab-real-result.json", "--destination", dest, "--domain-type", "appDataContainer", "--domain-identifier", bundle) == nil {
-			raw, readErr := os.ReadFile(dest)
-			var current phoneReceipt
-			if readErr == nil && json.Unmarshal(raw, &current) == nil && current.Run == run {
+		current, copyErr := copyRealPhoneReceipt(devctl, device, bundle, "Documents/ab-real-result.json", dest)
+		if copyErr == nil {
+			if current.Run == run {
 				receipt = current
 				if current.Counts["phase"] != phase {
 					phase = current.Counts["phase"]
@@ -270,6 +264,7 @@ func runIPhoneReal(ctx context.Context, s Scenario, level string) (e Evidence) {
 	}
 	check("fresh_completed_phone_receipt", receipt.Run == run && receipt.Done)
 	check("state_restored", receipt.Checks["state_restored"])
+	check("resources_cleaned", receipt.Checks["resources_cleaned"])
 	for _, name := range phoneRequirements(s.ID) {
 		check(name, receipt.Checks[name])
 	}
@@ -353,4 +348,28 @@ func phoneRequirements(s string) []string {
 		return []string{"saved_shortcut_invoked", "shortcut_pong", "shortcut_cleaned_up"}
 	}
 	return []string{"unsupported_scenario"}
+}
+
+func realPhoneHandler(authority *trust.Authority, delivery *iphone.Delivery) http.Handler {
+	mux := http.NewServeMux()
+	mux.Handle("/v1/iphone/pair", authority.IPhoneHandler())
+	mux.Handle("/v1/iphone/status", authority.IPhoneHandler())
+	mux.Handle("/v1/iphone/", delivery.Handler())
+	return mux
+}
+
+func copyRealPhoneReceipt(copy func(...string) error, device, bundle, source, destination string) (phoneReceipt, error) {
+	var receipt phoneReceipt
+	if err := os.Remove(destination); err != nil && !os.IsNotExist(err) {
+		return receipt, err
+	}
+	if err := copy("device", "copy", "from", "--device", device, "--source", source, "--destination", destination, "--domain-type", "appDataContainer", "--domain-identifier", bundle); err != nil {
+		return receipt, err
+	}
+	raw, err := os.ReadFile(destination)
+	if err != nil {
+		return receipt, err
+	}
+	err = json.Unmarshal(raw, &receipt)
+	return receipt, err
 }
