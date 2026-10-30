@@ -134,7 +134,6 @@ enum RealQualification {
                     adapter.remove(name)
                     checks["geofence_removed"] = true
                 }
-                checks["background_event_observed"] = false
             case "APP-CAPTURE-REAL":
                 let previous = UserDefaults.standard.object(forKey: "capability.capture.enabled")
                 UserDefaults.standard.set(true, forKey: "capability.capture.enabled")
@@ -151,7 +150,6 @@ enum RealQualification {
                     }
                     checks[kind + "_captured_and_discarded"] = true
                 }
-                checks["signed_upload_observed"] = false
             default:
                 checks["supported_scenario"] = false
             }
