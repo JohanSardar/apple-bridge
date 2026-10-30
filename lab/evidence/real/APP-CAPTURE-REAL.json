@@ -1,7 +1,7 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[33.06 29.37 23.59] cpu_idle=20% cpus=10 other_heavy=0"
+    "summary": "air: load=[21.4 16.94 18.76] cpu_idle=0% cpus=10 other_heavy=0"
   },
   "status": "limited",
   "run_id": "",
@@ -12,7 +12,7 @@
   "level": "real",
   "passed": false,
   "git_sha": "",
-  "at": "2026-10-30T00:22:58.929888Z",
+  "at": "2026-10-30T00:32:29.605578Z",
   "assertions": [
     {
       "name": "camera_microphone_permission",
