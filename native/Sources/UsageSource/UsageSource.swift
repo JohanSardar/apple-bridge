@@ -14,7 +14,6 @@ public final class UsageSource: Source {
     private var generation = UUID().uuidString
     private var power: [InFocusEvent] = []
     private var scanned: UsageInputs?
-    private var pollDelay = Duration.milliseconds(500)
     public init(root: URL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Biome")) { self.root = root }
     public func open() async -> SourceReadiness {
         let ready = FileManager.default.isReadableFile(atPath: root.appendingPathComponent("streams/restricted/App.InFocus/local").path)
@@ -95,7 +94,7 @@ public final class UsageSource: Source {
         }
         let polling = Task {
             while !Task.isCancelled {
-                do { try await Task.sleep(for: self.pollDelay); continuation.yield(()) } catch { return }
+                do { try await Task.sleep(for: .seconds(30)); continuation.yield(()) } catch { return }
             }
         }
         defer { polling.cancel(); watching.cancel(); observers.forEach { center.removeObserver($0) }; continuation.finish() }
@@ -103,10 +102,8 @@ public final class UsageSource: Source {
         for await _ in changes {
             try Task.checkCancellation()
             if let inputs = UsageInputs(root, power: power.count, previous: scanned), inputs == scanned {
-                pollDelay = min(.seconds(30), pollDelay * 2)
                 continue
             }
-            pollDelay = .milliseconds(500)
             try await scan(sink, live: true)
         }
     }
