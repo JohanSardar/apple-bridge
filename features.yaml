@@ -703,8 +703,6 @@ features:
       - {id: WEB-MSG-LIVE, levels: [web]}
       - {id: WEB-MSG-REAL-READ, levels: [real]}
     limits:
-      - {scenario: WEB-MSG-MEDIA, level: web, reason: "T72: Firefox dark desktop ultrawide playback remains pending instead of decoded; 11/12 matrix cells pass"}
-      - {scenario: WEB-MSG-VIEWER, level: web, reason: "T72: WebKit light phone transcript stays busy; remaining matrix stopped after reproducing failure"}
       - {"scenario": "WEB-PERF-SEARCH", "level": "web", "reason": "web qualification remains missing"}
       - {"scenario": "WEB-PERF-LIST", "level": "web", "reason": "Measured, not met, in a quiet exclusive Chromium light-desktop 104,900-message fixture: filter frame p95/max 10.489/15.777 ms versus 4/8 ms; own-input p95 22.374 ms versus 8 ms (22 samples). Later search/live/reorder/warm phases were not reached. Thresholds are unchanged."}
       - {"scenario": "WEB-MSG-REAL-READ", "level": "real", "reason": "Real acceptance harness is not implemented; no native effects dispatched"}

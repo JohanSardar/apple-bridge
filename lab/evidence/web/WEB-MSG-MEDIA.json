@@ -1,19 +1,20 @@
 {
   "scenario": "WEB-MSG-MEDIA",
   "level": "web",
-  "git_sha": "51351a777348ceeee60a45b644f6df4f14eda771",
-  "at": "2026-10-29T21:59:46.407125Z",
-  "passed": false,
+  "git_sha": "900f4466",
+  "at": "2026-10-29T23:32:29.443067Z",
+  "passed": true,
   "metrics": {
     "matrix_count": 12,
     "completed_matrix_count": 12,
-    "passed_matrix_count": 11,
-    "failed_matrix_count": 1,
+    "passed_matrix_count": 12,
+    "failed_matrix_count": 0,
     "incomplete_matrix_count": 0,
-    "passed_test_count": 191,
-    "failed_test_count": 1,
+    "passed_test_count": 192,
+    "failed_test_count": 0,
     "skipped_test_count": 0,
-    "report_sha256": "41d9b3a564e4c9b56c574ef7796f1ee7a112ba3d99437a490d6764b7154d73fe"
+    "browser_duration_ms": 810190,
+    "report_sha256": "5fb19e8ad9f48f1bebb7f89994e2777be5a7a666068ed9e15d48734ee609668a"
   },
   "assertions": [
     {
@@ -62,7 +63,7 @@
     },
     {
       "name": "firefox-dark-desktop",
-      "passed": false
+      "passed": true
     }
   ]
 }

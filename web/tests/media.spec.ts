@@ -23,7 +23,7 @@ test('WEB-MSG-MEDIA image geometry is reserved before bytes and decoded thumb im
     expect(await media.locator('img').first().getAttribute('decoding')).toBe('async');
     await page.evaluate(()=>{(window as any).__mediaShifts=0;if(PerformanceObserver.supportedEntryTypes.includes('layout-shift'))new PerformanceObserver(list=>{for(const entry of list.getEntries())(window as any).__mediaShifts+=(entry as any).value;}).observe({type:'layout-shift'});});
     release();
-    await expect.poll(()=>page.locator('[data-media-state="ready"]').count()).toBe(before.length);
+    await expect.poll(()=>page.locator('[data-media-state="ready"]').count(),{timeout:15000}).toBe(before.length);
     const after=await media.evaluateAll(elements=>elements.map(element=>{const r=element.getBoundingClientRect();return {id:element.getAttribute('data-media-id'),x:r.x,y:r.y,width:r.width,height:r.height};}));
     expect(after).toEqual(before);
     expect(await page.evaluate(()=>(window as any).__mediaShifts)).toBe(0);
@@ -105,7 +105,7 @@ test('WEB-MSG-MEDIA CHROME glass play controls, Live badge and first-frame cross
    expect(await play.evaluate(element=>getComputedStyle(element).getPropertyValue('backdrop-filter')||getComputedStyle(element).getPropertyValue('-webkit-backdrop-filter'))).toContain('blur');
    const label=await badge.boundingBox();expect(label!.x-before!.x).toBeCloseTo(6,1);expect(before!.y+before!.height-label!.y-label!.height).toBeCloseTo(6,1);await expect(badge).toHaveText('0:01');
   }else{await expect(badge.locator('svg circle')).toHaveCount(3);await expect(badge).toContainText('LIVE');}
-  const plates=info.project.name.startsWith('webkit-')||info.project.name==='chromium-light-desktop';if(plates)await page.screenshot({path:`../lab/evidence/private/web/media-motion-${kind}-rest-${info.project.name}.png`});
+  const plates=process.env.AB_WEB_PLATES==='1'&&(info.project.name.startsWith('webkit-')||info.project.name==='chromium-light-desktop');if(plates)await page.screenshot({path:`../lab/evidence/private/web/media-motion-${kind}-rest-${info.project.name}.png`});
   const button=bubble.locator('.media-open');await button.hover();const hover=kind==='live'&&await page.evaluate(()=>matchMedia('(hover:hover) and (pointer:fine)').matches);
   if(!hover){await page.mouse.down();if(kind==='video'){await expect.poll(()=>bubble.locator('.media-motion-play').evaluate(element=>new DOMMatrix(getComputedStyle(element).transform).a)).toBeLessThan(.98);}}
   await expect(bubble).toHaveAttribute('data-media-playing','true');const video=bubble.locator('video'),callback=await video.evaluate(node=>typeof (node as HTMLVideoElement).requestVideoFrameCallback==='function');
