@@ -55,9 +55,10 @@ func (n privateConnectNode) Dial(ctx context.Context, _, _ string) (net.Conn, er
 }
 
 func runPrivateConnect(ctx context.Context, s Scenario, level string) Evidence {
-	if level == "replica" {
-		return Evidence{Scenario: s.ID, Level: level, Status: "limited", At: time.Now().UTC(), Assertions: []Assertion{{Name: "private_tailnet_login", Status: "limited", Detail: "Real userspace Tailscale authorization requires interactive login; sim covers private protocol without touching Tailscale"}}}
+	if level == "replica" || level == "real" {
+		return runRemotePrivateReal(ctx, s, level)
 	}
+
 	e := Evidence{Scenario: s.ID, Level: level, At: time.Now().UTC(), RunID: "private-protocol", NetworkPath: "production private handler and connect proxy through isolated node transport"}
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
 	home, err := os.MkdirTemp("", "ab-private-")
