@@ -1,18 +1,18 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[5.2 6.75 14.46] cpu_idle=58% cpus=8 other_heavy=0"
+    "summary": "air: load=[3.66 6.2 7.55] cpu_idle=85% cpus=8 other_heavy=0"
   },
   "status": "limited",
-  "run_id": "run_01M64YXEMBXYZZ04PQA7XAS9DM",
+  "run_id": "run_01M6777N3P2NC7MKSR1BC5PNA8",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "MUS-PLAYLIST-REAL",
   "level": "real",
   "passed": false,
-  "git_sha": "77824ec345377b80bb538a2cba20b6dacf66e169",
-  "at": "2026-10-29T23:11:26.353457Z",
+  "git_sha": "7794d0f6b2771fd61d6bd8763d8ea5f9b64c2939",
+  "at": "2026-10-30T20:15:18.134915Z",
   "assertions": [
     {
       "name": "world_started",
@@ -38,7 +38,7 @@
       "name": "music_control_real",
       "passed": false,
       "status": "limited",
-      "detail": "needs Music Automation grant (T79); consent not requested"
+      "detail": "needs restorable unshuffled playlist playback context; no fixture changes made"
     },
     {
       "name": "credential_backend_override_restored",

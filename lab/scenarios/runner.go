@@ -358,6 +358,9 @@ func convergence(w *world.World) bool {
 }
 
 func runScenario(ctx context.Context, s Scenario, level string) Evidence {
+	if level == "real" && slices.Contains([]string{"WEB-REM-PARITY", "WEB-CAL-PARITY", "CAP-SIM"}, s.ID) {
+		return runQualificationPreflight(ctx, s)
+	}
 	if level == "real" && slices.Contains([]string{"APP-SHELL-REAL", "APP-BUILD-REAL", "APP-PAIR-REAL", "APP-CMD-REAL"}, s.ID) {
 		return Evidence{Scenario: s.ID, Level: level, At: time.Now().UTC(), Status: "limited", Assertions: []Assertion{{Name: "real_device_acceptance", Detail: "Real iPhone acceptance harness is not implemented; generic replica proof cannot qualify the phone"}}}
 	}
@@ -1291,8 +1294,8 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		if level == "real" && (s.ID == "CORE-LIVE-LATENCY" || s.ID == "REM-CRUD" || s.ID == "WEB-REM-WRITE") {
 			duration = 8 * time.Minute
 		}
-		if (s.Feature == "web.relay" || s.ID == "CON-RELAY") && level == "replica" {
-			duration = 5 * time.Minute
+		if (s.Feature == "web.relay" || s.ID == "CON-RELAY") && (level == "replica" || level == "real") {
+			duration = 8 * time.Minute
 		}
 		if s.ID == "WEB-RELAY-REPLICA" {
 			duration = 10 * time.Minute
@@ -1300,7 +1303,7 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		if s.Feature == "web.readmodels" || s.Feature == "web.messages.read" {
 			duration = 15 * time.Minute
 		}
-		if level == "real" && slices.Contains([]string{"MSG-PINS", "MSG-MUTE", "MSG-READ-RECEIPTS", "MSG-RECENTLY-DELETED"}, s.ID) {
+		if level == "real" && slices.Contains([]string{"MSG-PINS", "MSG-MUTE", "MSG-READ-RECEIPTS", "MSG-RECENTLY-DELETED", "MSG-FORMATTING-SEND", "MSG-SEND-EFFECT"}, s.ID) {
 			duration = 8 * time.Minute
 		}
 		if level == "real" && (s.Feature == "messages.actions" || s.Feature == "messages.groups" || s.Feature == "web.media") {

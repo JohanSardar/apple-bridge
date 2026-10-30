@@ -1,10 +1,10 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[18.3 11.06 12.21] cpu_idle=44% cpus=8 other_heavy=0"
+    "summary": "air: load=[3.95 6.81 7.85] cpu_idle=64% cpus=8 other_heavy=0"
   },
   "status": "environment-limited",
-  "run_id": "run_01M64ZHYB0KA23SWDXQXJXT7WA",
+  "run_id": "run_01M6775V23H15BW6ZRQ9BYJHHJ",
   "metrics": {
     "baseline_captured": false,
     "capture_observer_resets": 0,
@@ -15,7 +15,7 @@
   "level": "real",
   "passed": false,
   "git_sha": "",
-  "at": "2026-10-29T23:22:37.79249Z",
+  "at": "2026-10-30T20:14:18.691582Z",
   "assertions": [
     {
       "name": "run_only_cleanup",
@@ -24,7 +24,7 @@
     {
       "name": "messages.pin",
       "passed": false,
-      "detail": "accessibility_permission_missing"
+      "detail": "automation_permission_missing"
     },
     {
       "name": "credential_backend_override_restored",

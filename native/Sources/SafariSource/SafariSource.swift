@@ -161,7 +161,7 @@ public actor SafariSource: Source {
         let evidence = try await tabs.dispatch(prepared)
         if prepared.action["op"].string == "safari.add_reading_list" {
             let url = prepared.action["args"]["url"].string
-            for _ in 0..<30 {
+            for _ in 0..<100 {
                 if let rows = try? bookmarks(), rows.contains(where: { $0["collection"].string == "safari.reading_list" && $0["data"]["url"].string == url }) { return evidence }
                 try await Task.sleep(for: .milliseconds(100))
             }

@@ -24,6 +24,14 @@ enum HelperLabCommand {
             while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.01)) }
             try JSONEncoder().encode(result!).write(to: reportURL, options: .atomic)
             return true
+        case "qualification-preflight":
+            let reportURL = try report(arguments)
+            guard arguments.count > 1 else { throw ProbeFailure.invalidArguments }
+            var result: JSON?
+            Task { @MainActor in result = await QualificationPreflight.run(arguments[1]) }
+            while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.01)) }
+            try JSONEncoder().encode(result!).write(to: reportURL, options: .atomic)
+            return true
         case "focus-real-checks":
             let reportURL = try report(arguments)
             guard arguments.count > 1 else { throw ProbeFailure.invalidArguments }
@@ -33,7 +41,10 @@ enum HelperLabCommand {
                 do {
                     let result = try await FocusRealProof.run(arguments[1])
                     try JSONEncoder().encode(result).write(to: reportURL, options: .atomic)
-                } catch { failure = error }
+                } catch {
+                    try? PrivateReport.write(["probe_passed": false, "failure": String(describing: error)], to: reportURL)
+                    failure = error
+                }
                 finished = true
             }
             while !finished { RunLoop.current.run(until: Date().addingTimeInterval(0.05)) }
@@ -48,7 +59,10 @@ enum HelperLabCommand {
                 do {
                     let result = try await PhotosRealProof.run(arguments[1])
                     try JSONEncoder().encode(result).write(to: reportURL, options: .atomic)
-                } catch { failure = error }
+                } catch {
+                    try? PrivateReport.write(["probe_passed": false, "failure": String(describing: error)], to: reportURL)
+                    failure = error
+                }
                 finished = true
             }
             while !finished { RunLoop.current.run(until: Date().addingTimeInterval(0.05)) }

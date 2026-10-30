@@ -1,19 +1,37 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[3.83 2.89 3.06] cpu_idle=78% cpus=8 other_heavy=0"
+    "summary": "air: load=[7.47 5.02 4.98] cpu_idle=85% cpus=8 other_heavy=0"
   },
   "status": "limited",
-  "run_id": "run_01M65EEFTD7QRWV4H0RYYJ76QC",
+  "run_id": "run_01M67BBBDWJCC7CQQSGM4B78W0",
   "metrics": {
-    "capture_observer_resets": 0
+    "automation_code": 0,
+    "capture_observer_resets": 0,
+    "grant_passed": true
   },
   "scenario": "MAIL-ORGANIZE-REAL",
   "level": "real",
   "passed": false,
   "git_sha": "",
-  "at": "2026-10-30T03:42:53.261483Z",
+  "at": "2026-10-30T21:27:13.596791Z",
   "assertions": [
+    {
+      "name": "private_directory",
+      "passed": true
+    },
+    {
+      "name": "signed_helper_build",
+      "passed": true
+    },
+    {
+      "name": "signed_helper_probe",
+      "passed": true
+    },
+    {
+      "name": "helper_report",
+      "passed": true
+    },
     {
       "name": "credential_backend_override_restored",
       "passed": true
@@ -22,6 +40,6 @@
   "latency": null,
   "hosts": null,
   "conditions": {
-    "reason": "needs Automation grant AppleBridgeHelper → Mail"
+    "reason": "native effects and owned cleanup are not qualified"
   }
 }

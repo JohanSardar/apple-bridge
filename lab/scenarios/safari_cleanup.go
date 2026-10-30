@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
@@ -18,7 +19,7 @@ func safariCleanupItems(ctx context.Context, w *world.World, run, action string,
 	defer cancel()
 	id := contracts.NewID("safari-cleanup")
 	input := filepath.Join(w.Dir, id+"-request.json")
-	output := filepath.Join(w.Dir, id+"-report.json")
+	output := filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "AppleBridgeDev", id+"-report.json")
 	defer os.Remove(input)
 	defer os.Remove(output)
 	data, err := json.Marshal(map[string]any{"run_id": run, "action": action, "item": item})
@@ -44,4 +45,41 @@ func safariCleanupItems(ctx context.Context, w *world.World, run, action string,
 		return nil, fmt.Errorf("Safari owned cleanup unavailable")
 	}
 	return report.Items, nil
+}
+
+func recoverSafariRuns(ctx context.Context, w *world.World, runs string) (int, error) {
+	count := 0
+	for _, run := range strings.Split(runs, ",") {
+		if run == "" {
+			continue
+		}
+		before, err := safariCleanupItems(ctx, w, run, "snapshot", cleanupItem{})
+		if err != nil {
+			return count, err
+		}
+		preserved := map[string]cleanupItem{}
+		for _, item := range before {
+			if item.Tag != "[ab-test "+run+"]" {
+				preserved[item.ID] = item
+				continue
+			}
+			if _, err = safariCleanupItems(ctx, w, run, "remove", item); err != nil {
+				return count, err
+			}
+			count++
+		}
+		after, err := safariCleanupItems(ctx, w, run, "snapshot", cleanupItem{})
+		if err != nil {
+			return count, err
+		}
+		if len(after) != len(preserved) {
+			return count, fmt.Errorf("recovery count mismatch")
+		}
+		for _, item := range after {
+			if preserved[item.ID] != item {
+				return count, fmt.Errorf("recovery identity mismatch")
+			}
+		}
+	}
+	return count, nil
 }

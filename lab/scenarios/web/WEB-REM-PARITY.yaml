@@ -1,6 +1,6 @@
 id: WEB-REM-PARITY
 feature: web.reminders
-levels: [web]
+levels: [web, real]
 web:
   browsers: [webkit, chromium, firefox]
   themes: [light, dark]

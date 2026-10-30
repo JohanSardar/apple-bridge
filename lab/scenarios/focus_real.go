@@ -95,6 +95,14 @@ func runFocusReal(ctx context.Context, s Scenario, e Evidence) Evidence {
 		err = json.Unmarshal(raw, &result)
 	}
 	add("set_restore_report", err == nil)
+	var failure struct {
+		Failure string `json:"failure"`
+	}
+	if json.Unmarshal(raw, &failure) == nil && failure.Failure != "" {
+		e.Assertions = append(e.Assertions, Assertion{Name: "native_set_restore_completed", Passed: false, Detail: failure.Failure})
+		e.Passed = false
+		return e
+	}
 	if err != nil {
 		return e
 	}

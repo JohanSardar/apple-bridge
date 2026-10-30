@@ -1,15 +1,15 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[21.41 20.81 13.65] cpu_idle=60% cpus=8 other_heavy=0"
+    "summary": "air: load=[3.79 6.69 7.8] cpu_idle=73% cpus=8 other_heavy=0"
   },
   "status": "limited",
-  "run_id": "run_01M650ZAYSQ8GFC19KYGFQF3ZW",
+  "run_id": "run_01M67762GT3M2M3K5VFDZ3A1VE",
   "metrics": {
     "capture_observer_resets": 0,
     "cleanup_counts": {
-      "after_count": 160294,
-      "before_count": 160294,
+      "after_count": 160322,
+      "before_count": 160322,
       "created_count": 0,
       "passed": true
     },
@@ -18,8 +18,8 @@
   "scenario": "MSG-SEND-EFFECT",
   "level": "real",
   "passed": false,
-  "git_sha": "cd736b6bdf6f556b3e7a7dd514fbc4f7d2d45c78",
-  "at": "2026-10-29T23:47:25.27303Z",
+  "git_sha": "7794d0f6b2771fd61d6bd8763d8ea5f9b64c2939",
+  "at": "2026-10-30T20:14:26.330057Z",
   "assertions": [
     {
       "name": "cleanup_baseline_restored",
@@ -35,6 +35,6 @@
     "air"
   ],
   "conditions": {
-    "reason": "needs Messages Accessibility grant"
+    "reason": "needs Messages and System Events Automation grants"
   }
 }

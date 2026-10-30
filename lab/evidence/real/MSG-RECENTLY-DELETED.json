@@ -1,10 +1,10 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[22.68 12.09 12.57] cpu_idle=43% cpus=8 other_heavy=0"
+    "summary": "air: load=[3.95 6.77 7.83] cpu_idle=69% cpus=8 other_heavy=0"
   },
   "status": "environment-limited",
-  "run_id": "run_01M64ZJ54HGP6B7J6P64Q3KSRY",
+  "run_id": "run_01M677602SDZXP1D63PX27NWBC",
   "metrics": {
     "baseline_captured": false,
     "capture_observer_resets": 0,
@@ -15,7 +15,7 @@
   "level": "real",
   "passed": false,
   "git_sha": "",
-  "at": "2026-10-29T23:22:44.753453Z",
+  "at": "2026-10-30T20:14:23.83344Z",
   "assertions": [
     {
       "name": "run_only_cleanup",
@@ -24,12 +24,12 @@
     {
       "name": "messages.recover_chat",
       "passed": false,
-      "detail": "accessibility_permission_missing"
+      "detail": "automation_permission_missing"
     },
     {
       "name": "messages.delete_chat_permanently",
       "passed": false,
-      "detail": "accessibility_permission_missing"
+      "detail": "automation_permission_missing"
     },
     {
       "name": "credential_backend_override_restored",

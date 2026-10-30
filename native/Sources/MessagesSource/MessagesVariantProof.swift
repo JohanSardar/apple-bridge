@@ -15,6 +15,7 @@ public enum MessagesVariantProof {
         let session = CGSessionCopyCurrentDictionary() as? [String: Any]
         guard session?["CGSSessionScreenIsLocked"] as? Bool != true else { return limited("needs unlocked Mac") }
         for bundle in ["com.apple.MobileSMS", "com.apple.systemevents"] {
+            try await ProbeApplications.open(bundle)
             let target = NSAppleEventDescriptor(bundleIdentifier: bundle)
             guard AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false) == noErr else { return limited("needs Messages and System Events Automation grants") }
         }

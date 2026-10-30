@@ -1,18 +1,17 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[55.93 74.3 63.96] cpu_idle=59% cpus=8 other_heavy=0"
+    "summary": "air: load=[4.06 6.04 7.44] cpu_idle=79% cpus=8 other_heavy=0"
   },
-  "status": "limited",
-  "run_id": "run_01M64X99362FN8T0HT10PVRNEW",
+  "run_id": "run_01M6778P62VVTXTT9BSXFQ6C3P",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "FOC-STATUS-REAL",
   "level": "real",
-  "passed": false,
+  "passed": true,
   "git_sha": "",
-  "at": "2026-10-29T22:42:56.742974Z",
+  "at": "2026-10-30T20:15:52.002326Z",
   "assertions": [
     {
       "name": "helper_directory",
@@ -35,13 +34,14 @@
       "passed": true
     },
     {
+      "name": "status_readback",
+      "passed": true
+    },
+    {
       "name": "credential_backend_override_restored",
       "passed": true
     }
   ],
   "latency": null,
-  "hosts": null,
-  "conditions": {
-    "reason": "needs Focus status grant for AppleBridgeHelper"
-  }
+  "hosts": null
 }

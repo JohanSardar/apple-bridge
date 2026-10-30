@@ -1,18 +1,22 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[12.81 20.37 49.28] cpu_idle=68% cpus=8 other_heavy=0"
+    "summary": "air: load=[6.81 5.14 5.03] cpu_idle=84% cpus=8 other_heavy=0"
   },
-  "status": "limited",
-  "run_id": "run_01M64W16H8ABVRVDJ38ZA6R39G",
+  "run_id": "run_01M67BCMF5YDW6TJ5GRPQ0A7CB",
   "metrics": {
-    "capture_observer_resets": 0
+    "capture_observer_resets": 0,
+    "cleanup": {
+      "before_count": 35,
+      "created_count": 1,
+      "passed": false
+    }
   },
   "scenario": "SAF-READINGLIST-REAL",
   "level": "real",
   "passed": false,
   "git_sha": "",
-  "at": "2026-10-29T22:21:03.400688Z",
+  "at": "2026-10-30T21:27:55.62145Z",
   "assertions": [
     {
       "name": "world_started",
@@ -27,10 +31,24 @@
       "passed": true
     },
     {
-      "name": "owned_cleanup_grants",
-      "passed": false,
-      "status": "limited",
-      "detail": "needs Safari Automation and Accessibility grants"
+      "name": "cleanup_baseline",
+      "passed": true
+    },
+    {
+      "name": "safari.add_reading_list",
+      "passed": false
+    },
+    {
+      "name": "created_identity_readback",
+      "passed": true
+    },
+    {
+      "name": "created_identity_captured",
+      "passed": true
+    },
+    {
+      "name": "owned_cleanup_counts_match",
+      "passed": false
     },
     {
       "name": "credential_backend_override_restored",

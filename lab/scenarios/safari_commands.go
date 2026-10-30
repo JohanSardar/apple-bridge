@@ -100,7 +100,25 @@ func runSafariCommands(ctx context.Context, s Scenario, level string) (e Evidenc
 		var r contracts.CommandRecord
 		err := client.Call(ctx, op, contracts.Command{ID: contracts.NewCommandID(), Args: raw, WaitMS: 15000}, &r)
 		add(op, err == nil && r.State == contracts.CommandObserved && contracts.SafariCompletionEvidence(r.Evidence, r.RequestHash))
+		if !e.Assertions[len(e.Assertions)-1].Passed {
+			detail := string(r.State)
+			if r.Error != nil {
+				detail += ":" + string(r.Error.Code)
+			}
+			e.Assertions[len(e.Assertions)-1].Detail = detail
+		}
 		return r
+	}
+	if level == "real" && os.Getenv("APPLE_BRIDGE_SAFARI_RECOVER_RUNS") != "" {
+		count, problem := recoverSafariRuns(ctx, w, os.Getenv("APPLE_BRIDGE_SAFARI_RECOVER_RUNS"))
+		add("prior_run_owned_cleanup", problem == nil)
+		if e.Metrics == nil {
+			e.Metrics = map[string]any{}
+		}
+		e.Metrics["recovered_fixture_count"] = count
+		if problem != nil {
+			return
+		}
 	}
 	var cleanup *runCleanup
 	var observeCleanup func() ([]cleanupItem, error)

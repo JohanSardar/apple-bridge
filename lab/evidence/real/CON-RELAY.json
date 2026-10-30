@@ -1,15 +1,52 @@
 {
-  "passed": false,
-  "counts": {
-    "live_samples": 0,
-    "command_samples": 0
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[3.75 3.58 4.56] cpu_idle=64% cpus=8 other_heavy=0"
   },
-  "checks": {
-    "serve_config_read": true,
-    "isolated_gateway_started": false,
-    "expected_signing_keychain_available": false,
-    "configured_sdk_available": false,
-    "contacts_created": false,
-    "limits_certified": false
-  }
+  "run_id": "relay_01M67B7E2VFEABN2F4JYAY95TT",
+  "network_path": "public Funnel; pinned public DNS through CONNECT egress; no peer or SSH tunnel",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "CON-RELAY",
+  "level": "real",
+  "passed": false,
+  "git_sha": "7794d0f6b2771fd61d6bd8763d8ea5f9b64c2939",
+  "at": "2026-10-30T21:25:05.244365Z",
+  "assertions": [
+    {
+      "name": "serve_config_before",
+      "passed": true
+    },
+    {
+      "name": "isolated_gateway",
+      "passed": true
+    },
+    {
+      "name": "signed_native_helper_contacts_capture_ready",
+      "passed": true
+    },
+    {
+      "name": "remote_on_system",
+      "passed": false,
+      "detail": "private remote-on-error.log"
+    },
+    {
+      "name": "remote_off",
+      "passed": true
+    },
+    {
+      "name": "serve_config_byte_identical_after_off",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": {},
+  "hosts": [
+    "air",
+    "ubuntu"
+  ]
 }

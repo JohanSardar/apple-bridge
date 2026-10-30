@@ -1,10 +1,9 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[37.52 60.3 79.58] cpu_idle=41% cpus=8 other_heavy=0"
+    "summary": "air: load=[6.91 5.05 4.99] cpu_idle=70% cpus=8 other_heavy=0"
   },
-  "status": "limited",
-  "run_id": "run_01M64VHKRPR47XFEMH6FWBMTJ1",
+  "run_id": "run_01M67BC0JTZZHH9FARXFQ3AQBH",
   "metrics": {
     "capture_observer_resets": 0
   },
@@ -12,7 +11,7 @@
   "level": "real",
   "passed": false,
   "git_sha": "",
-  "at": "2026-10-29T22:12:32.662399Z",
+  "at": "2026-10-30T21:27:35.259612Z",
   "assertions": [
     {
       "name": "descriptor_photos.search",
@@ -47,14 +46,9 @@
       "passed": true
     },
     {
-      "name": "grant_probe",
-      "passed": true
-    },
-    {
-      "name": "photos_readwrite_authorization",
+      "name": "native_probe_completed",
       "passed": false,
-      "status": "limited",
-      "detail": "needs Photos grant"
+      "detail": "unavailable"
     },
     {
       "name": "credential_backend_override_restored",

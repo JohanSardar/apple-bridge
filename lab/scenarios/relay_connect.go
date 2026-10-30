@@ -94,7 +94,7 @@ func runRelayWorld(ctx context.Context, s Scenario, level string, native bool) (
 			return
 		}
 	}
-	bounded, cancel := context.WithTimeout(ctx, 20*time.Second)
+	bounded, cancel := context.WithTimeout(ctx, 150*time.Second)
 	remoteOutput := &bytes.Buffer{}
 	err = remote.Command(bounded, w.Gateway.Home, "on", "system", "bridge", remoteOutput)
 	cancel()

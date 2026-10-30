@@ -98,7 +98,33 @@ public enum SafariCleanup {
                 for child in attribute(element, kAXChildrenAttribute) as? [AXUIElement] ?? [] { result += matching(child, depth + 1) }
                 return result
             }
-            let rows = matching(root, 0)
+            var rows = matching(root, 0)
+            var searchField: AXUIElement?
+            var priorSearch = ""
+            defer { if let searchField { _ = AXUIElementSetAttributeValue(searchField, kAXValueAttribute as CFString, priorSearch as CFString) } }
+            if rows.isEmpty {
+                func searchFields(_ element: AXUIElement, _ depth: Int) -> [AXUIElement] {
+                    guard depth < 30 else { return [] }
+                    var result = (attribute(element, kAXIdentifierAttribute) as? String) == "ReadingListSearchField" ? [element] : []
+                    for child in attribute(element, kAXChildrenAttribute) as? [AXUIElement] ?? [] { result += searchFields(child, depth + 1) }
+                    return result
+                }
+                let fields = searchFields(root, 0)
+                guard fields.count == 1, items.filter({ $0["ID"].string.hasPrefix("reading:") && $0["Tag"].string == tag }).count == 1 else { throw SourceFailure.capabilityUnproven }
+                searchField = fields[0]
+                priorSearch = attribute(fields[0], kAXValueAttribute) as? String ?? ""
+                guard AXUIElementSetAttributeValue(fields[0], kAXValueAttribute as CFString, url as CFString) == .success else { throw SourceFailure.capabilityUnproven }
+                try await Task.sleep(for: .milliseconds(300))
+                guard attribute(fields[0], kAXValueAttribute) as? String == url else { throw SourceFailure.capabilityUnproven }
+                func visibleRows(_ element: AXUIElement, _ depth: Int) -> [AXUIElement] {
+                    guard depth < 30 else { return [] }
+                    let role = attribute(element, kAXRoleAttribute) as? String ?? ""
+                    var result = role == "AXRow" && !(attribute(element, kAXChildrenAttribute) as? [AXUIElement] ?? []).isEmpty ? [element] : []
+                    for child in attribute(element, kAXChildrenAttribute) as? [AXUIElement] ?? [] { result += visibleRows(child, depth + 1) }
+                    return result
+                }
+                rows = visibleRows(root, 0)
+            }
             guard rows.count == 1, AXUIElementPerformAction(rows[0], kAXShowMenuAction as CFString) == .success else { throw SourceFailure.capabilityUnproven }
             try await Task.sleep(for: .milliseconds(200))
             func removeMenu(_ element: AXUIElement, _ depth: Int) -> [AXUIElement] {

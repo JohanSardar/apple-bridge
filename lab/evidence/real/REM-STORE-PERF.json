@@ -1,102 +1,103 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[14.39 14.93 15.39] cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[6.46 5.02 4.98] cpu_idle=80% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5G1FMEMJC68RYZYF43R1ZP9",
+  "run_id": "run_01M67BCA3BP8JCG4C4550X0KQN",
   "metrics": {
+    "capture_observer_resets": 0,
     "profile": {
       "cold": {
-        "query_ms": 24.99217912554741,
-        "backup_ms": 0,
+        "decode_ms": 11.114613618701696,
         "close_ms": 0,
-        "decode_ms": 9.543320629745722,
-        "total_ms": 34.9417079705745,
-        "connection_open_ms": 0.4062082152813673
+        "total_ms": 40.99537478759885,
+        "connection_open_ms": 0.36124978214502335,
+        "backup_ms": 0,
+        "query_ms": 29.51951138675213
       },
       "iterations": 200,
       "mode": "persistent_typed",
-      "profile_total_ms": 5076.7543751280755,
+      "profile_total_ms": 7575.088999699801,
       "responsiveness": {
-        "cold_full_elapsed_ms": 713.2708332501352,
         "main_queue_delay": {
-          "p95_ms": 0.014500226825475693,
-          "max_ms": 0.036166515201330185,
-          "under_16_ms": true,
-          "samples": 370
-        }
+          "p95_ms": 0.013958197087049484,
+          "samples": 409,
+          "max_ms": 0.05904166027903557,
+          "under_16_ms": true
+        },
+        "cold_full_elapsed_ms": 780.7981250807643
       },
       "warm_full": {
-        "decode": {
-          "p95_ms": 6.059299688786268,
-          "max_ms": 6.524208700284362,
-          "p50_ms": 5.018833093345165,
-          "samples": 200
+        "backup": {
+          "p95_ms": 0,
+          "samples": 200,
+          "max_ms": 0,
+          "p50_ms": 0
         },
         "query": {
-          "p95_ms": 23.836928652599454,
-          "max_ms": 27.766255661845207,
-          "p50_ms": 19.177994690835476,
-          "samples": 200
+          "p95_ms": 29.524216428399086,
+          "samples": 200,
+          "max_ms": 40.560740511864424,
+          "p50_ms": 28.25835347175598
+        },
+        "total": {
+          "p95_ms": 38.61512569710612,
+          "samples": 200,
+          "max_ms": 49.24812447279692,
+          "p50_ms": 37.213916424661875
+        },
+        "decode": {
+          "p95_ms": 9.36884619295597,
+          "samples": 200,
+          "max_ms": 9.871056769043207,
+          "p50_ms": 9.224974550306797
         },
         "connection_open": {
           "p95_ms": 0,
+          "samples": 200,
           "max_ms": 0,
-          "p50_ms": 0,
-          "samples": 200
-        },
-        "backup": {
-          "p95_ms": 0,
-          "max_ms": 0,
-          "p50_ms": 0,
-          "samples": 200
-        },
-        "total": {
-          "p95_ms": 29.432791750878096,
-          "max_ms": 34.05870799906552,
-          "p50_ms": 24.278625147417188,
-          "samples": 200
+          "p50_ms": 0
         }
       },
       "warm_incremental_unchanged": {
+        "backup": {
+          "p95_ms": 0,
+          "samples": 200,
+          "max_ms": 0,
+          "p50_ms": 0
+        },
         "query": {
-          "p95_ms": 0.028667272999882698,
-          "max_ms": 0.04412536509335041,
-          "p50_ms": 0.026666559278964996,
-          "samples": 200
+          "p95_ms": 0.03591831773519516,
+          "samples": 200,
+          "max_ms": 0.05399761721491814,
+          "p50_ms": 0.03362400457262993
+        },
+        "total": {
+          "p95_ms": 0.2616248093545437,
+          "samples": 200,
+          "max_ms": 0.30195852741599083,
+          "p50_ms": 0.24562515318393707
+        },
+        "decode": {
+          "p95_ms": 0.22720685228705406,
+          "samples": 200,
+          "max_ms": 0.2558743581175804,
+          "p50_ms": 0.21187681704759598
         },
         "connection_open": {
           "p95_ms": 0,
+          "samples": 200,
           "max_ms": 0,
-          "p50_ms": 0,
-          "samples": 200
-        },
-        "backup": {
-          "p95_ms": 0,
-          "max_ms": 0,
-          "p50_ms": 0,
-          "samples": 200
-        },
-        "decode": {
-          "p95_ms": 0.17899996601045132,
-          "max_ms": 0.399791169911623,
-          "p50_ms": 0.17000059597194195,
-          "samples": 200
-        },
-        "total": {
-          "p95_ms": 0.206333352252841,
-          "max_ms": 0.4274998791515827,
-          "p50_ms": 0.1967914868146181,
-          "samples": 200
+          "p50_ms": 0
         }
       }
     }
   },
   "scenario": "REM-STORE-PERF",
   "level": "real",
-  "passed": true,
-  "git_sha": "e1d36f710a94267e77e670be40845fb127b1f3f9",
-  "at": "2026-10-21T20:12:16.212795Z",
+  "passed": false,
+  "git_sha": "7794d0f6b2771fd61d6bd8763d8ea5f9b64c2939",
+  "at": "2026-10-30T21:27:45.003222Z",
   "assertions": [
     {
       "name": "private_profile_directory",
@@ -127,6 +128,10 @@
       "passed": true
     },
     {
+      "name": "changed_history_measured",
+      "passed": false
+    },
+    {
       "name": "cold_full_read_main_queue_blocking_under_16_ms",
       "passed": true
     },
@@ -138,16 +143,16 @@
   "latency": {
     "warm_full": {
       "samples": 200,
-      "p50_ms": 24.278625147417188,
-      "p95_ms": 29.432791750878096,
-      "max_ms": 34.05870799906552,
+      "p50_ms": 37.213916424661875,
+      "p95_ms": 38.61512569710612,
+      "max_ms": 49.24812447279692,
       "timeouts": 0
     },
     "warm_incremental_unchanged": {
       "samples": 200,
-      "p50_ms": 0.1967914868146181,
-      "p95_ms": 0.206333352252841,
-      "max_ms": 0.4274998791515827,
+      "p50_ms": 0.24562515318393707,
+      "p95_ms": 0.2616248093545437,
+      "max_ms": 0.30195852741599083,
       "timeouts": 0
     }
   },

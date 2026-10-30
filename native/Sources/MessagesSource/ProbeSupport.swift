@@ -4,6 +4,18 @@ import SQLite3
 import AppKit
 import ApplicationServices
 
+@MainActor
+public enum ProbeApplications {
+    public static func open(_ bundle: String) async throws {
+        guard NSRunningApplication.runningApplications(withBundleIdentifier: bundle).isEmpty else { return }
+        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundle) else { throw ProbeFailure.unavailable }
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.activates = false
+        configuration.addsToRecentItems = false
+        _ = try await NSWorkspace.shared.openApplication(at: url, configuration: configuration)
+    }
+}
+
 public enum ProbeFailure: Error {
     case invalidArguments, unavailable, unsafeReport, noSelfHandle
 }

@@ -82,7 +82,7 @@ func runRemindersStorePerf(ctx context.Context, s Scenario, level string) Eviden
 		add(mode+"_200_samples_within_budget", components["total"].Samples == 200 && components["total"].P95 < budget)
 	}
 	add("full_and_incremental_measured", e.Latency["warm_full"].Samples == 200 && e.Latency["warm_incremental_unchanged"].Samples == 200)
-	if level == "sim" {
+	if level == "sim" || level == "real" {
 		complete := true
 		for _, mode := range []string{"warm_incremental_changed_1", "warm_incremental_changed_10", "warm_incremental_changed_100", "warm_incremental_changed_1000"} {
 			complete = complete && e.Latency[mode].Samples == 200
