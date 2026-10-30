@@ -1,5 +1,6 @@
 import {test,expect} from '@playwright/test';
 import {mkdir,writeFile} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
 import {bootstrap,control} from './session';
 
 test('WEB-MSG-SEND LIFECYCLE an actual Composer click paints in its first frame, acknowledges and delivers once',async({page,context,request})=>{
@@ -61,7 +62,7 @@ test('WEB-MSG-LIVE LATENCY twenty synthetic inbound messages paint with receive 
         new MutationObserver(()=>{if(!armed)return;for(const row of document.querySelectorAll<HTMLElement>('.message-row:not(.outgoing)[data-message]')){const id=row.dataset.message!;if(seen.has(id))continue;if(!row.querySelector('[data-motion="receive"]'))continue;seen.add(id);requestAnimationFrame(()=>{const box=row.getBoundingClientRect(),viewport=row.closest('.virtual-viewport')!.getBoundingClientRect();state.__arrivals.push({id,at:performance.timeOrigin+performance.now(),visible:box.bottom>viewport.top&&box.top<viewport.bottom});});}}).observe(document,{subtree:true,childList:true,attributes:true,attributeFilter:['data-motion']});
     });
     await page.goto('/messages/'+encodeURIComponent(ids['message-chat']));await expect(page.locator('.messages-transcript')).toHaveAttribute('aria-busy','false');
-    const viewport=page.getByRole('listbox',{name:'Messages transcript'});await viewport.focus();await page.keyboard.press('Meta+ArrowDown');await expect(page.locator('.transcript')).toHaveCSS('transform','none');await page.evaluate(async()=>{await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));(window as any).__armArrivals();});
+    const viewport=page.getByRole('listbox',{name:'Messages transcript'});await viewport.focus();await page.keyboard.press('Meta+ArrowDown');await expect(page.locator('.messages-transcript')).toHaveAttribute('data-window-anchor','latest');await expect(page.locator('.messages-transcript')).toHaveAttribute('aria-busy','false');await expect(page.locator('.transcript')).toHaveCSS('transform','none');await page.evaluate(async()=>{await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));(window as any).__armArrivals();});
     const samples:number[]=[];
     for(let index=0;index<20;index++){
         const result=await control(request,'/incoming');await expect.poll(()=>page.evaluate(()=>(window as any).__arrivals.length)).toBe(index+1);
@@ -69,6 +70,6 @@ test('WEB-MSG-LIVE LATENCY twenty synthetic inbound messages paint with receive 
         await expect(page.locator('[data-message="'+arrival.id+'"] .bubble-slot').first()).toHaveCSS('transform','none');
     }
     const sorted=[...samples].sort((a,b)=>a-b),metrics={samples:20,p95_ms:sorted[18],max_ms:sorted[19],endpoint:'sim capture start to next animation frame containing visible receiving transcript row'};
-    await mkdir('../lab/evidence/web/metrics',{recursive:true});await writeFile(`../lab/evidence/web/metrics/WEB-MSG-LIVE-${info.project.name}.json`,JSON.stringify(metrics,null,2)+'\n');
+    await mkdir('../lab/evidence/web/metrics',{recursive:true});await writeFile(`../lab/evidence/web/metrics/WEB-MSG-LIVE-${info.project.name}.json`,JSON.stringify({digest:createHash('sha256').update(JSON.stringify(metrics)).digest('hex'),counts:{samples:metrics.samples},latency_budget_pass:metrics.p95_ms<=500},null,2)+'\n');
     expect(Math.min(...samples)).toBeGreaterThanOrEqual(0);expect(metrics.p95_ms).toBeLessThanOrEqual(500);
 });

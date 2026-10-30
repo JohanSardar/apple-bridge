@@ -27,7 +27,7 @@ test('WEB-MSG-REPLIES viewer hides only the active focused-thread source',async(
     await context.addCookies(cookies);
     await page.goto('/messages/'+encodeURIComponent(fixture.chat)+'/'+encodeURIComponent(fixture.mediaRoot));
     const main=page.locator('.messages-transcript').first(),root=main.locator('[data-message="'+fixture.mediaRoot+'"]');
-    await expect(main).toHaveAttribute('aria-busy','false');await root.getByRole('button',{name:'1 Reply',exact:true}).click();
+    await expect(main).toHaveAttribute('aria-busy','false');await expect(page.locator('.transcript')).toHaveCSS('transform','none');await root.getByRole('button',{name:'1 Reply',exact:true}).click();
     const overlay=page.getByRole('dialog',{name:'Replies',exact:true}),source=overlay.locator('[data-message="'+fixture.mediaRoot+'"] .bubble[data-media-origin]'),background=main.locator('[data-message="'+fixture.mediaRoot+'"] .bubble[data-media-origin]');
     await expect(overlay).toBeVisible();await expect(source).toBeInViewport();await expect(source.locator('img')).toBeVisible();
     await expect.poll(()=>source.locator('img').evaluate((element:HTMLImageElement)=>element.complete&&element.naturalWidth>0)).toBe(true);

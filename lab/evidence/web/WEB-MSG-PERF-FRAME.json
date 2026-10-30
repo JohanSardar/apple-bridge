@@ -1,327 +1,358 @@
 {
-  "host_conditions": {
-    "quiet": true
-  },
-  "run_id": "run_01M657WRQP29H1XRJY2T4XS8X8",
-  "metrics": {
-    "browser_budget_ms": 180000,
-    "capture_observer_resets": 0,
-    "demo_messages": 104900,
-    "demo_startup_ms": 44831,
-    "fixture_setup_ms": 44831,
-    "fixture_snapshot": {
-      "disk_bytes": 609431552,
-      "entry_bytes": 609439232,
-      "cache_bytes": 1220033792,
-      "blob_payloads": 58,
-      "key": "96e92ba04e34c5a2893e27c701a23db36d3e957055528a8ce14fcf78df504e7e",
-      "cache_hit": false,
-      "build_ms": 44639,
-      "copy_ms": 2940,
-      "records": 105329,
-      "fresh_digest": "1c9d3961324ceafebd985448e5dbe355f76086851b5ce987519ff38897bbe678",
-      "copy_digest": "1c9d3961324ceafebd985448e5dbe355f76086851b5ce987519ff38897bbe678",
-      "verified": true
-    },
-    "matrix": [
-      "chromium-light-phone",
-      "chromium-light-desktop",
-      "chromium-dark-phone",
-      "chromium-dark-desktop",
-      "webkit-light-phone",
-      "webkit-light-desktop",
-      "webkit-dark-phone",
-      "webkit-dark-desktop",
-      "firefox-light-phone",
-      "firefox-light-desktop",
-      "firefox-dark-phone",
-      "firefox-dark-desktop"
-    ],
-    "setups": [
-      {
-        "fixture_setup_ms": 44831,
-        "fixture_snapshot": {
-          "disk_bytes": 609431552,
-          "entry_bytes": 609439232,
-          "cache_bytes": 1220033792,
-          "blob_payloads": 58,
-          "key": "96e92ba04e34c5a2893e27c701a23db36d3e957055528a8ce14fcf78df504e7e",
-          "cache_hit": false,
-          "build_ms": 44639,
-          "copy_ms": 2940,
-          "records": 105329,
-          "fresh_digest": "1c9d3961324ceafebd985448e5dbe355f76086851b5ce987519ff38897bbe678",
-          "copy_digest": "1c9d3961324ceafebd985448e5dbe355f76086851b5ce987519ff38897bbe678",
-          "verified": true
-        },
-        "project": "chromium-light-phone"
-      },
-      {
-        "fixture_setup_ms": 905,
-        "fixture_snapshot": {
-          "disk_bytes": 609431552,
-          "entry_bytes": 609439232,
-          "cache_bytes": 1220033792,
-          "blob_payloads": 58,
-          "key": "96e92ba04e34c5a2893e27c701a23db36d3e957055528a8ce14fcf78df504e7e",
-          "cache_hit": true,
-          "build_ms": 0,
-          "copy_ms": 884,
-          "records": 105329,
-          "fresh_digest": "1c9d3961324ceafebd985448e5dbe355f76086851b5ce987519ff38897bbe678",
-          "copy_digest": "1c9d3961324ceafebd985448e5dbe355f76086851b5ce987519ff38897bbe678",
-          "verified": true
-        },
-        "project": "chromium-light-desktop"
-      },
-      {
-        "fixture_setup_ms": 911,
-        "fixture_snapshot": {
-          "disk_bytes": 609431552,
-          "entry_bytes": 609439232,
-          "cache_bytes": 1220033792,
-          "blob_payloads": 58,
-          "key": "96e92ba04e34c5a2893e27c701a23db36d3e957055528a8ce14fcf78df504e7e",
-          "cache_hit": true,
-          "build_ms": 0,
-          "copy_ms": 890,
-          "records": 105329,
-          "fresh_digest": "1c9d3961324ceafebd985448e5dbe355f76086851b5ce987519ff38897bbe678",
-          "copy_digest": "1c9d3961324ceafebd985448e5dbe355f76086851b5ce987519ff38897bbe678",
-          "verified": true
-        },
-        "project": "chromium-dark-phone"
-      },
-      {
-        "fixture_setup_ms": 949,
-        "fixture_snapshot": {
-          "disk_bytes": 609431552,
-          "entry_bytes": 609439232,
-          "cache_bytes": 1220033792,
-          "blob_payloads": 58,
-          "key": "96e92ba04e34c5a2893e27c701a23db36d3e957055528a8ce14fcf78df504e7e",
-          "cache_hit": true,
-          "build_ms": 0,
-          "copy_ms": 927,
-          "records": 105329,
-          "fresh_digest": "1c9d3961324ceafebd985448e5dbe355f76086851b5ce987519ff38897bbe678",
-          "copy_digest": "1c9d3961324ceafebd985448e5dbe355f76086851b5ce987519ff38897bbe678",
-          "verified": true
-        },
-        "project": "chromium-dark-desktop"
-      },
-      {
-        "fixture_setup_ms": 1023,
-        "fixture_snapshot": {
-          "disk_bytes": 609431552,
-          "entry_bytes": 609439232,
-          "cache_bytes": 1220033792,
-          "blob_payloads": 58,
-          "key": "96e92ba04e34c5a2893e27c701a23db36d3e957055528a8ce14fcf78df504e7e",
-          "cache_hit": true,
-          "build_ms": 0,
-          "copy_ms": 1001,
-          "records": 105329,
-          "fresh_digest": "1c9d3961324ceafebd985448e5dbe355f76086851b5ce987519ff38897bbe678",
-          "copy_digest": "1c9d3961324ceafebd985448e5dbe355f76086851b5ce987519ff38897bbe678",
-          "verified": true
-        },
-        "project": "webkit-light-phone"
-      },
-      {
-        "fixture_setup_ms": 1029,
-        "fixture_snapshot": {
-          "disk_bytes": 609431552,
-          "entry_bytes": 609439232,
-          "cache_bytes": 1220033792,
-          "blob_payloads": 58,
-          "key": "96e92ba04e34c5a2893e27c701a23db36d3e957055528a8ce14fcf78df504e7e",
-          "cache_hit": true,
-          "build_ms": 0,
-          "copy_ms": 1008,
-          "records": 105329,
-          "fresh_digest": "1c9d3961324ceafebd985448e5dbe355f76086851b5ce987519ff38897bbe678",
-          "copy_digest": "1c9d3961324ceafebd985448e5dbe355f76086851b5ce987519ff38897bbe678",
-          "verified": true
-        },
-        "project": "webkit-light-desktop"
-      },
-      {
-        "fixture_setup_ms": 959,
-        "fixture_snapshot": {
-          "disk_bytes": 609431552,
-          "entry_bytes": 609439232,
-          "cache_bytes": 1220033792,
-          "blob_payloads": 58,
-          "key": "96e92ba04e34c5a2893e27c701a23db36d3e957055528a8ce14fcf78df504e7e",
-          "cache_hit": true,
-          "build_ms": 0,
-          "copy_ms": 938,
-          "records": 105329,
-          "fresh_digest": "1c9d3961324ceafebd985448e5dbe355f76086851b5ce987519ff38897bbe678",
-          "copy_digest": "1c9d3961324ceafebd985448e5dbe355f76086851b5ce987519ff38897bbe678",
-          "verified": true
-        },
-        "project": "webkit-dark-phone"
-      },
-      {
-        "fixture_setup_ms": 922,
-        "fixture_snapshot": {
-          "disk_bytes": 609431552,
-          "entry_bytes": 609439232,
-          "cache_bytes": 1220033792,
-          "blob_payloads": 58,
-          "key": "96e92ba04e34c5a2893e27c701a23db36d3e957055528a8ce14fcf78df504e7e",
-          "cache_hit": true,
-          "build_ms": 0,
-          "copy_ms": 900,
-          "records": 105329,
-          "fresh_digest": "1c9d3961324ceafebd985448e5dbe355f76086851b5ce987519ff38897bbe678",
-          "copy_digest": "1c9d3961324ceafebd985448e5dbe355f76086851b5ce987519ff38897bbe678",
-          "verified": true
-        },
-        "project": "webkit-dark-desktop"
-      },
-      {
-        "fixture_setup_ms": 924,
-        "fixture_snapshot": {
-          "disk_bytes": 609431552,
-          "entry_bytes": 609439232,
-          "cache_bytes": 1220033792,
-          "blob_payloads": 58,
-          "key": "96e92ba04e34c5a2893e27c701a23db36d3e957055528a8ce14fcf78df504e7e",
-          "cache_hit": true,
-          "build_ms": 0,
-          "copy_ms": 903,
-          "records": 105329,
-          "fresh_digest": "1c9d3961324ceafebd985448e5dbe355f76086851b5ce987519ff38897bbe678",
-          "copy_digest": "1c9d3961324ceafebd985448e5dbe355f76086851b5ce987519ff38897bbe678",
-          "verified": true
-        },
-        "project": "firefox-light-phone"
-      },
-      {
-        "fixture_setup_ms": 1012,
-        "fixture_snapshot": {
-          "disk_bytes": 609431552,
-          "entry_bytes": 609439232,
-          "cache_bytes": 1220033792,
-          "blob_payloads": 58,
-          "key": "96e92ba04e34c5a2893e27c701a23db36d3e957055528a8ce14fcf78df504e7e",
-          "cache_hit": true,
-          "build_ms": 0,
-          "copy_ms": 992,
-          "records": 105329,
-          "fresh_digest": "1c9d3961324ceafebd985448e5dbe355f76086851b5ce987519ff38897bbe678",
-          "copy_digest": "1c9d3961324ceafebd985448e5dbe355f76086851b5ce987519ff38897bbe678",
-          "verified": true
-        },
-        "project": "firefox-light-desktop"
-      },
-      {
-        "fixture_setup_ms": 884,
-        "fixture_snapshot": {
-          "disk_bytes": 609431552,
-          "entry_bytes": 609439232,
-          "cache_bytes": 1220033792,
-          "blob_payloads": 58,
-          "key": "96e92ba04e34c5a2893e27c701a23db36d3e957055528a8ce14fcf78df504e7e",
-          "cache_hit": true,
-          "build_ms": 0,
-          "copy_ms": 862,
-          "records": 105329,
-          "fresh_digest": "1c9d3961324ceafebd985448e5dbe355f76086851b5ce987519ff38897bbe678",
-          "copy_digest": "1c9d3961324ceafebd985448e5dbe355f76086851b5ce987519ff38897bbe678",
-          "verified": true
-        },
-        "project": "firefox-dark-phone"
-      },
-      {
-        "fixture_setup_ms": 931,
-        "fixture_snapshot": {
-          "disk_bytes": 609431552,
-          "entry_bytes": 609439232,
-          "cache_bytes": 1220033792,
-          "blob_payloads": 58,
-          "key": "96e92ba04e34c5a2893e27c701a23db36d3e957055528a8ce14fcf78df504e7e",
-          "cache_hit": true,
-          "build_ms": 0,
-          "copy_ms": 909,
-          "records": 105329,
-          "fresh_digest": "1c9d3961324ceafebd985448e5dbe355f76086851b5ce987519ff38897bbe678",
-          "copy_digest": "1c9d3961324ceafebd985448e5dbe355f76086851b5ce987519ff38897bbe678",
-          "verified": true
-        },
-        "project": "firefox-dark-desktop"
-      }
-    ],
-    "template_cold_setup_ms": {
-      "generate": 454,
-      "list": 0,
-      "seed": 38691
-    }
-  },
   "scenario": "WEB-MSG-PERF-FRAME",
   "level": "web",
   "passed": true,
-  "git_sha": "004664624d485a03400c327e3c49cedaa5637822",
-  "at": "2026-10-30T01:48:21.110544Z",
-  "assertions": [
-    {
-      "name": "chromium-light-phone:playwright_matrix",
-      "passed": true
+  "source_sha256": "1c213a90f77725fc9813178b8ec945624dca472c84657a30e1093dc98acd35d0",
+  "tests_sha256": "9f3d583a5de5e14a67704af3c4401f77797867006c148269d518ca317812cca1",
+  "manifest_sha256": "477ea5f2c2a1f0191f596c154e5c39ea8341247814ba7b4f21f40e3a51e8dc46",
+  "counts": {
+    "projects": 12,
+    "passed": 12,
+    "failed": 0,
+    "skipped": 0,
+    "unrun": 0
+  },
+  "previous_run": {
+    "passed": true,
+    "source_sha256": "1c213a90f77725fc9813178b8ec945624dca472c84657a30e1093dc98acd35d0",
+    "tests_sha256": "4f798bfbf47ebab7302e30d2ccc540494a2cfbf6eaaca048f1a8631b3fc364e4",
+    "counts": {
+      "projects": 12,
+      "passed": 12,
+      "failed": 0,
+      "skipped": 0,
+      "unrun": 0
     },
-    {
-      "name": "chromium-light-desktop:playwright_matrix",
-      "passed": true
+    "matrix": [
+      {
+        "project": "webkit-light-phone",
+        "passed": true,
+        "counts": {
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "unrun": 0
+        },
+        "report_sha256": "3964b6cb523a0ea51784f4bf2a2fa3ed61a4153ef262d29b4f858f802dd3c6b8"
+      },
+      {
+        "project": "webkit-light-desktop",
+        "passed": true,
+        "counts": {
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "unrun": 0
+        },
+        "report_sha256": "afccdf6c009f6034e3610f372b55b26076c3c9da9d2a577d483adb6821530114"
+      },
+      {
+        "project": "webkit-dark-phone",
+        "passed": true,
+        "counts": {
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "unrun": 0
+        },
+        "report_sha256": "8bf7daf5b74bbe47f166fb72e7fd55192c8f5091ccbf0324c81ca1e2a496f6f1"
+      },
+      {
+        "project": "webkit-dark-desktop",
+        "passed": true,
+        "counts": {
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "unrun": 0
+        },
+        "report_sha256": "ee5c4ecb7bfd39ac6bb25780729977dbeaa2ad1c77bdd05221807a712c2e863e"
+      },
+      {
+        "project": "chromium-light-phone",
+        "passed": true,
+        "counts": {
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "unrun": 0
+        },
+        "report_sha256": "ebf21c05174b961337f61939c49ffdeb59b5f536e4a1db79583d66100c501e17"
+      },
+      {
+        "project": "chromium-light-desktop",
+        "passed": true,
+        "counts": {
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "unrun": 0
+        },
+        "report_sha256": "3cda6472968d174061f9fa311947c092713af86d15d05fe447e59d2f8146db7d"
+      },
+      {
+        "project": "chromium-dark-phone",
+        "passed": true,
+        "counts": {
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "unrun": 0
+        },
+        "report_sha256": "26f2b4d5177aa98faf4e2223d15e1c5ddc80c523cfca92bfed6f85be060f668c"
+      },
+      {
+        "project": "chromium-dark-desktop",
+        "passed": true,
+        "counts": {
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "unrun": 0
+        },
+        "report_sha256": "ca25b8d8f0d2bd8b9931f1eac995f6aa0fd594823f575505430db89dab183e63"
+      },
+      {
+        "project": "firefox-light-phone",
+        "passed": true,
+        "counts": {
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "unrun": 0
+        },
+        "report_sha256": "a8d00f721873d0cbf8705d5cfad0cc6aee8ea27860f6fc032a1b77dae79645f6"
+      },
+      {
+        "project": "firefox-light-desktop",
+        "passed": true,
+        "counts": {
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "unrun": 0
+        },
+        "report_sha256": "8f17f7d09f09c62b1f70ae2504da32ee4912e8e48408d7dbca5cd58792c42913"
+      },
+      {
+        "project": "firefox-dark-phone",
+        "passed": true,
+        "counts": {
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "unrun": 0
+        },
+        "report_sha256": "eb7600c9f33f4a3a03bfb99d67e947b9cf99134241c28f4d791f41a03f2e7e8b"
+      },
+      {
+        "project": "firefox-dark-desktop",
+        "passed": true,
+        "counts": {
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "unrun": 0
+        },
+        "report_sha256": "ee10dfc571f3cdf89a04933271b08b0bba4be8b03a84e2e5f70899eab1e87aa4"
+      }
+    ]
+  },
+  "previous_parallel_run": {
+    "passed": false,
+    "source_sha256": "1c213a90f77725fc9813178b8ec945624dca472c84657a30e1093dc98acd35d0",
+    "tests_sha256": "4864ebe0a272a8479be1d33300903451886a553a28d9171b0e1351cd18333d04",
+    "counts": {
+      "projects": 12,
+      "passed": 8,
+      "failed": 4,
+      "skipped": 0,
+      "unrun": 0
     },
-    {
-      "name": "chromium-dark-phone:playwright_matrix",
-      "passed": true
-    },
-    {
-      "name": "chromium-dark-desktop:playwright_matrix",
-      "passed": true
-    },
-    {
-      "name": "webkit-light-phone:playwright_matrix",
-      "passed": true
-    },
-    {
-      "name": "webkit-light-desktop:playwright_matrix",
-      "passed": true
-    },
-    {
-      "name": "webkit-dark-phone:playwright_matrix",
-      "passed": true
-    },
-    {
-      "name": "webkit-dark-desktop:playwright_matrix",
-      "passed": true
-    },
-    {
-      "name": "firefox-light-phone:playwright_matrix",
-      "passed": true
-    },
-    {
-      "name": "firefox-light-desktop:playwright_matrix",
-      "passed": true
-    },
-    {
-      "name": "firefox-dark-phone:playwright_matrix",
-      "passed": true
-    },
-    {
-      "name": "firefox-dark-desktop:playwright_matrix",
-      "passed": true
-    },
-    {
-      "name": "credential_backend_override_restored",
-      "passed": true
-    }
+    "matrix": [
+      {
+        "project": "webkit-light-phone",
+        "passed": true,
+        "counts": {
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "unrun": 0
+        },
+        "report_sha256": "b46d52b8cdd155c12cf0dc6b003dba82fdc0d48fb91ab0063e3236ca9325a66c"
+      },
+      {
+        "project": "webkit-light-desktop",
+        "passed": true,
+        "counts": {
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "unrun": 0
+        },
+        "report_sha256": "b1cc6074571a87d63aa09cafc3975767d3a1f3c6b0be58a9df2f82ab8fdaa74b"
+      },
+      {
+        "project": "webkit-dark-phone",
+        "passed": true,
+        "counts": {
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "unrun": 0
+        },
+        "report_sha256": "c9698f08af102564913e9e92acf497f30c1ff4bf35e29c6e94bc7beb60ca52fe"
+      },
+      {
+        "project": "webkit-dark-desktop",
+        "passed": false,
+        "counts": {
+          "passed": 0,
+          "failed": 1,
+          "skipped": 0,
+          "unrun": 0
+        },
+        "report_sha256": "86d68bc96cde7cfd111936cc62a8bd9b1aae79c6e69e5b71955a1060773cb134"
+      },
+      {
+        "project": "chromium-light-phone",
+        "passed": true,
+        "counts": {
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "unrun": 0
+        },
+        "report_sha256": "8fa21a06ec6e9b4963baae830f2bccbc61fb03a386df0244186848b961c0e204"
+      },
+      {
+        "project": "chromium-light-desktop",
+        "passed": true,
+        "counts": {
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "unrun": 0
+        },
+        "report_sha256": "f8cb17f9ed15e14b288c1d4106b1bdb3312ff800b8db0c42bac57a43ed005ecd"
+      },
+      {
+        "project": "chromium-dark-phone",
+        "passed": true,
+        "counts": {
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "unrun": 0
+        },
+        "report_sha256": "f27aa29d7bfc92270951c3127ea45f1d7174417a114779a7850218ccd1627c6a"
+      },
+      {
+        "project": "chromium-dark-desktop",
+        "passed": true,
+        "counts": {
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "unrun": 0
+        },
+        "report_sha256": "d898823065ff618f973c34ad95f725e42157fbad0e389d9414f4e7bb076d231c"
+      },
+      {
+        "project": "firefox-light-phone",
+        "passed": false,
+        "counts": {
+          "passed": 0,
+          "failed": 1,
+          "skipped": 0,
+          "unrun": 0
+        },
+        "report_sha256": "18bf2721560aa48c083a70c0acc6d13dafa74dbd3db7f5607c9a3ee70e94ba0a"
+      },
+      {
+        "project": "firefox-light-desktop",
+        "passed": false,
+        "counts": {
+          "passed": 0,
+          "failed": 1,
+          "skipped": 0,
+          "unrun": 0
+        },
+        "report_sha256": "6bb202f52d494652310a338b05b3ba2923d91a34542645e80a6229d2f6bbcd90"
+      },
+      {
+        "project": "firefox-dark-phone",
+        "passed": false,
+        "counts": {
+          "passed": 0,
+          "failed": 1,
+          "skipped": 0,
+          "unrun": 0
+        },
+        "report_sha256": "8d7b7d067d81e264bed15a646ab65332387233aa6c010f8ca5e8bce4270b408c"
+      },
+      {
+        "project": "firefox-dark-desktop",
+        "passed": true,
+        "counts": {
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "unrun": 0
+        },
+        "report_sha256": "21bb936603d7c8eba99542233a78ff70d4f6e9a8ce5176a8886a53aef67531b4"
+      }
+    ]
+  },
+  "complete_own_input_budget_proven": false,
+  "complete_frame_budget_proven": false,
+  "app_paint_budget_proven": false,
+  "proxy_counts": {
+    "input_passed": 0,
+    "input_failed": 0,
+    "frame_passed": 8,
+    "frame_failed": 4
+  },
+  "matrix": [
+    {"project":"webkit-light-phone","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"2acf4568d334f6c3ab72ebbdffb785e18784081672421f0cb7f761a434533f64","counts":{"passed":1,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"webkit-light-desktop","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"2b04da4d105107f512a2244205798c8756658a0c73f6c8809c9eaa45ee7d059a","counts":{"passed":1,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"webkit-dark-phone","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"fbf680413f3db792b38a860f6e9dbe029ab58fef0cfd68e5f1ccd616f25f8d42","counts":{"passed":1,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"webkit-dark-desktop","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"83eec4ad78fddd7d787e4ee68fbab29de75da505739073019a1238a6a7adbf3d","counts":{"passed":1,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"chromium-light-phone","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"922543a2d5d3ad37b341127e2b667b9068a08f7ca06194661dc2af060e40628f","counts":{"passed":1,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"chromium-light-desktop","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"4dd7508932aeb220c03aae77e514393a2d5a4173b31ed79890573b0ade18bb9c","counts":{"passed":1,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"chromium-dark-phone","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"e6dba68b2f7e68cf0cf557ef9ddd5e87e8d35d2cd9ba85155d55f65be74b2c17","counts":{"passed":1,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"chromium-dark-desktop","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"1201788e2a0bd8250756a51b17f417153f2a8040629937c9f0da0d221853e44f","counts":{"passed":1,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"firefox-light-phone","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"55cfce170cab35ca343d8a7cc814096264c67ae36a8d2ee6ed6a7a5612759ef2","counts":{"passed":1,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"firefox-light-desktop","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"ac04a1767149c9d6c50b96532d3f2a1fe0b1bfefe90018a833a4a3a250c72443","counts":{"passed":1,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"firefox-dark-phone","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"3838cb0d04b1d9873308d3de8e379c15ada05b55d7b2a0f5cff3b3de27f8651a","counts":{"passed":1,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"firefox-dark-desktop","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"f8fdeb9503c56aa737369a7f5fe8113e5d8e8de8a86da91b5974350f9664a975","counts":{"passed":1,"failed":0,"skipped":0,"unrun":0}}]}
   ],
-  "latency": {},
-  "hosts": [
-    "pro"
+  "previous_session_run": [
+    {"project":"webkit-light-phone","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"report_sha256":"9dc16314f09cffeda4d3dbf714624419396792cdad551d60674584f41f4a5f53"},
+    {"project":"webkit-light-desktop","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"report_sha256":"c32fbdc41eb41a95bb1621b6d9f15af9b7ea7b0f2aa4fa3a55c41c0d2bdc94dd"},
+    {"project":"webkit-dark-phone","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"report_sha256":"9bd1c6a63e01f8d7fe3949972a3030b130b884b9832dce20a8ac6821ce3b6311"},
+    {"project":"webkit-dark-desktop","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"report_sha256":"7c4f24fd8f56c0baf64cee61990445f52008426b96a7aa1c7c1503b94f8257eb"},
+    {"project":"chromium-light-phone","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"report_sha256":"3da5acb2205fbc87d589006c8b447d2ad3c9a523078d72af33ff18d7186e69d3"},
+    {"project":"chromium-light-desktop","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"report_sha256":"b738298305600758c351fd293821214d8bf0a4808a5aef2a1d0e4d14f9089727"},
+    {"project":"chromium-dark-phone","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"report_sha256":"92536d5a775071ca74e664c439ede8976a6142a6911175163fe0b8a7519da159"},
+    {"project":"chromium-dark-desktop","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"report_sha256":"607bdb075ddd1fe0c0bb0d18780c116a1a1570cfebf76b11788ca0def606d8e6"},
+    {"project":"firefox-light-phone","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"report_sha256":"69f7d3f8abb47de0b9405d6c601a05bb7b0df80a29e9d17fa6b1f0c390a22e70"},
+    {"project":"firefox-light-desktop","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"report_sha256":"a348193f7ed79468a4c3b9ebd97f760b2fd2de92bded9c3164b1f51cc4af041d"},
+    {"project":"firefox-dark-phone","passed":false,"counts":{"passed":0,"failed":1,"skipped":0,"unrun":0},"report_sha256":"7317ad958d247ae6aac15745754db0f54bb9f657314c3dec28161805674e0ee8"},
+    {"project":"firefox-dark-desktop","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"report_sha256":"111fe93cd40e1b81e236a34d5ec4cb071dff0d0e10484526deb0157e49282f10"}
+  ],
+  "previous_coverage_run": [
+    {"project":"webkit-light-phone","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"report_sha256":"2acf4568d334f6c3ab72ebbdffb785e18784081672421f0cb7f761a434533f64"},
+    {"project":"webkit-light-desktop","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"report_sha256":"2b04da4d105107f512a2244205798c8756658a0c73f6c8809c9eaa45ee7d059a"},
+    {"project":"webkit-dark-phone","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"report_sha256":"fbf680413f3db792b38a860f6e9dbe029ab58fef0cfd68e5f1ccd616f25f8d42"},
+    {"project":"webkit-dark-desktop","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"report_sha256":"83eec4ad78fddd7d787e4ee68fbab29de75da505739073019a1238a6a7adbf3d"},
+    {"project":"chromium-light-phone","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"report_sha256":"922543a2d5d3ad37b341127e2b667b9068a08f7ca06194661dc2af060e40628f"},
+    {"project":"chromium-light-desktop","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"report_sha256":"4dd7508932aeb220c03aae77e514393a2d5a4173b31ed79890573b0ade18bb9c"},
+    {"project":"chromium-dark-phone","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"report_sha256":"e6dba68b2f7e68cf0cf557ef9ddd5e87e8d35d2cd9ba85155d55f65be74b2c17"},
+    {"project":"chromium-dark-desktop","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"report_sha256":"1201788e2a0bd8250756a51b17f417153f2a8040629937c9f0da0d221853e44f"},
+    {"project":"firefox-light-phone","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"report_sha256":"55cfce170cab35ca343d8a7cc814096264c67ae36a8d2ee6ed6a7a5612759ef2"},
+    {"project":"firefox-light-desktop","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"report_sha256":"ac04a1767149c9d6c50b96532d3f2a1fe0b1bfefe90018a833a4a3a250c72443"},
+    {"project":"firefox-dark-phone","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"report_sha256":"3838cb0d04b1d9873308d3de8e379c15ada05b55d7b2a0f5cff3b3de27f8651a"},
+    {"project":"firefox-dark-desktop","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"report_sha256":"f8fdeb9503c56aa737369a7f5fe8113e5d8e8de8a86da91b5974350f9664a975"}
   ]
 }

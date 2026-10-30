@@ -1,0 +1,17 @@
+{
+  "digest": "1b282e381818021ff6578105c2347287db3a1dc6f1ac789086270971fc1332b5",
+  "counts": {
+    "actions": 24,
+    "frames": 1312,
+    "event_timing_samples": 23,
+    "long_tasks": 0
+  },
+  "sampling_covered": true,
+  "observed_input_proxy_budget_pass": true,
+  "complete_own_input_budget_proven": false,
+  "complete_frame_budget_proven": false,
+  "app_paint_budget_proven": false,
+  "native_layout_observed": false,
+  "frame_budget_applies": false,
+  "frame_budget_pass": true
+}

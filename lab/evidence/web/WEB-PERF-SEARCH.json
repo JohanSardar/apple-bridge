@@ -1,19 +1,29 @@
 {
   "scenario": "WEB-PERF-SEARCH",
   "level": "web",
-  "git_sha": "5989a67d0e021c8d737039ab231325a841d66020",
   "passed": true,
-  "metrics": {
-    "passed_test_count": 1,
-    "failed_test_count": 0,
-    "skipped_test_count": 0,
-    "flaky_test_count": 0,
-    "report_sha256": "af8f13237cc7afad989b660cb55b3e89d9304518fbac092e6d24576223b9b6d0"
+  "source_sha256": "1c213a90f77725fc9813178b8ec945624dca472c84657a30e1093dc98acd35d0",
+  "tests_sha256": "4f798bfbf47ebab7302e30d2ccc540494a2cfbf6eaaca048f1a8631b3fc364e4",
+  "manifest_sha256": "c86ecfb6ca2271bbdcd6cc68446aea16afadba01491b54cdff7cf95cf2d0a68a",
+  "counts": {
+    "projects": 12,
+    "passed": 12,
+    "failed": 0,
+    "skipped": 0,
+    "unrun": 0
   },
-  "assertions": [
-    {
-      "name": "chromium-light-desktop",
-      "passed": true
-    }
+  "matrix": [
+    {"project":"webkit-light-phone","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"f4e9486593b176bd6e728ed1cdceebea752b727db216c7f3f46002fa2e220157","counts":{"passed":1,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"webkit-light-desktop","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"8e5338c2ec7ece10c627cf721605e3593d30d60d751c05f03b46316d24559583","counts":{"passed":1,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"webkit-dark-phone","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"8a9279ece9d01fc4463d220b047e3bec16f89916766dd766078196e3a03bc68a","counts":{"passed":1,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"webkit-dark-desktop","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"870a2f35d6675ebfcf46538e3683714dbadbdfba8333b073727170284c07c7e1","counts":{"passed":1,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"chromium-light-phone","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"b9cbbb0bf7783ebc3c34450816277ff4ba61bc94f9202d5d4ec354dbf28ee565","counts":{"passed":1,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"chromium-light-desktop","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"fc38bd7dfb028a479c4c6a64fe1904018ec0664919fc9ccc661950b25c2ecb51","counts":{"passed":1,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"chromium-dark-phone","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"fdf97d95abfbe6f2a3ec0f80da51c217a8a1c34088d4279d75d8923ae4fc7e17","counts":{"passed":1,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"chromium-dark-desktop","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"e7da561832933e1caa6d8838019330a3510536f54b65f6df901fc9a31e435171","counts":{"passed":1,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"firefox-light-phone","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"7af5e5fd8deb998331909a76eeabd66933c276332f57c23a991438d9b7deeb13","counts":{"passed":1,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"firefox-light-desktop","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"e27a2632a8dd634142bde54e744192d5342f6d8d01c8973776c7c5f3325d44e8","counts":{"passed":1,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"firefox-dark-phone","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"b858e2e54ea77f4ef193a30fbae5e269035ad2bb0495954664ae2dd49b1025df","counts":{"passed":1,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"firefox-dark-desktop","passed":true,"counts":{"passed":1,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"e7042a99c850a55bb4e55cd9bcf13b8fe9238df6c88e6051d942c8875a1ef4d4","counts":{"passed":1,"failed":0,"skipped":0,"unrun":0}}]}
   ]
 }

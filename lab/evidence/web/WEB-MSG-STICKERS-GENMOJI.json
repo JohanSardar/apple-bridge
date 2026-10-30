@@ -1,24 +1,29 @@
 {
   "scenario": "WEB-MSG-STICKERS-GENMOJI",
   "level": "web",
-  "git_sha": "614794562717e2e2ffde5a0392d7e149f2a01dab",
-  "at": "2026-10-29T23:09:04.882921Z",
   "passed": true,
-  "metrics": {
-    "matrix_count": 1,
-    "completed_matrix_count": 1,
-    "passed_matrix_count": 1,
-    "failed_matrix_count": 0,
-    "incomplete_matrix_count": 0,
-    "passed_test_count": 7,
-    "failed_test_count": 0,
-    "skipped_test_count": 0,
-    "report_sha256": "093213e1c8fb23e8654f82fda02df99948daeb48aa654e7342a3465e5dacbfb2"
+  "source_sha256": "1c213a90f77725fc9813178b8ec945624dca472c84657a30e1093dc98acd35d0",
+  "tests_sha256": "4f798bfbf47ebab7302e30d2ccc540494a2cfbf6eaaca048f1a8631b3fc364e4",
+  "manifest_sha256": "8aa259ab33634a27f3b7179fc2ea5d06cb9c96c4d6e5516c46ed0b3dcdd1fda8",
+  "counts": {
+    "projects": 12,
+    "passed": 84,
+    "failed": 0,
+    "skipped": 0,
+    "unrun": 0
   },
-  "assertions": [
-    {
-      "name": "chromium-light-desktop",
-      "passed": true
-    }
+  "matrix": [
+    {"project":"webkit-light-phone","passed":true,"counts":{"passed":7,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"7b02c28f2e7d5714febaf362adc72628a27c7d798d41975de72942d171062ebf","counts":{"passed":7,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"webkit-light-desktop","passed":true,"counts":{"passed":7,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"c197799ef6a86bf82f9d714b6aa68c3af312aa3e9dbe515661b6af4b4e0ae07c","counts":{"passed":7,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"webkit-dark-phone","passed":true,"counts":{"passed":7,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"fb63526e6d479377a3aaf6d163881a3b989efafcd7cdc4a53735a962d1776222","counts":{"passed":7,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"webkit-dark-desktop","passed":true,"counts":{"passed":7,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"2d7e78075b327db20e85ae1f3bed443e64d1ad2b668f9f6d9a217284aa62631f","counts":{"passed":7,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"chromium-light-phone","passed":true,"counts":{"passed":7,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"c61405cec64a81f52dce928a68a7eda0d8ec9b1433196d88fc9be9d60c48d4d4","counts":{"passed":7,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"chromium-light-desktop","passed":true,"counts":{"passed":7,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"eb85afc126eebd88f0769a4da05f74e5d690c9f10095dbe46fc63a2b6f0da52d","counts":{"passed":7,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"chromium-dark-phone","passed":true,"counts":{"passed":7,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"ee2398a99dd5786de299f01821877967c7fc2c7b5a8f392ea0a4c8de46358c23","counts":{"passed":7,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"chromium-dark-desktop","passed":true,"counts":{"passed":7,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"7a3e214900eaf12e53c64031dde17f63cfe3b181bd34c826558a9c3cc8ad5133","counts":{"passed":7,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"firefox-light-phone","passed":true,"counts":{"passed":7,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"b33eaf329f5f9eb7c0bf5ddf632013eb58708fb0a22ead38e8e017bfafd81233","counts":{"passed":7,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"firefox-light-desktop","passed":true,"counts":{"passed":7,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"c4a4a5698c97d1dec97e5bf7de2d917253a511c0a3728a8bd7e11ad2cefd8dc0","counts":{"passed":7,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"firefox-dark-phone","passed":true,"counts":{"passed":7,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"044b241ad02ac3729cfeccca37af68052c2c70ea139eebad969d66e0c35e6fe3","counts":{"passed":7,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"firefox-dark-desktop","passed":true,"counts":{"passed":7,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"9b9050e987281e44d3b329aea38bd20c2a3cd765575ee9bc113d47da2d70c524","counts":{"passed":7,"failed":0,"skipped":0,"unrun":0}}]}
   ]
 }

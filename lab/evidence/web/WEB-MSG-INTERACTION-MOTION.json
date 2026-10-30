@@ -1,24 +1,29 @@
 {
   "scenario": "WEB-MSG-INTERACTION-MOTION",
   "level": "web",
-  "git_sha": "614794562717e2e2ffde5a0392d7e149f2a01dab",
-  "at": "2026-10-29T22:53:10.754142Z",
   "passed": true,
-  "metrics": {
-    "matrix_count": 1,
-    "completed_matrix_count": 1,
-    "passed_matrix_count": 1,
-    "failed_matrix_count": 0,
-    "incomplete_matrix_count": 0,
-    "passed_test_count": 5,
-    "failed_test_count": 0,
-    "skipped_test_count": 0,
-    "report_sha256": "461039d7c568e952c364e1fb0108d3a6525f48a40567431e4955ce5cfcee95e0"
+  "source_sha256": "1c213a90f77725fc9813178b8ec945624dca472c84657a30e1093dc98acd35d0",
+  "tests_sha256": "4f798bfbf47ebab7302e30d2ccc540494a2cfbf6eaaca048f1a8631b3fc364e4",
+  "manifest_sha256": "3e4e402194a4489718c21cc292f17e07b08950c909d06b22974be7ab2d47510c",
+  "counts": {
+    "projects": 12,
+    "passed": 60,
+    "failed": 0,
+    "skipped": 0,
+    "unrun": 0
   },
-  "assertions": [
-    {
-      "name": "chromium-light-desktop",
-      "passed": true
-    }
+  "matrix": [
+    {"project":"webkit-light-phone","passed":true,"counts":{"passed":5,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"0cea8588d4a8af4109c11249baf32d34cfc5a8255cfb32bb11875541471d55e5","counts":{"passed":5,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"webkit-light-desktop","passed":true,"counts":{"passed":5,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"db1aa4b9c814c9b752c1b8a9fa07d6d8c00b22aa0e78952def76a3f0854d44ae","counts":{"passed":5,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"webkit-dark-phone","passed":true,"counts":{"passed":5,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"c97d7ab141cd1b10716bcd7a7d9bcce758a903529d2a0f177c5ca96b77b3a93c","counts":{"passed":5,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"webkit-dark-desktop","passed":true,"counts":{"passed":5,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"2d0677231fb3cfc29512eda77e756c156d5eda1d0eeae347272d05ea038217a6","counts":{"passed":5,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"chromium-light-phone","passed":true,"counts":{"passed":5,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"48008c42d1e82c0c8f91eddd4bb31a9eb0e5b366c6267acbb270b41e04d6694f","counts":{"passed":5,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"chromium-light-desktop","passed":true,"counts":{"passed":5,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"ab6b6fd3f1958ceccb7c14b504214962d4d66d9f983371dfb2320ba96e05e745","counts":{"passed":5,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"chromium-dark-phone","passed":true,"counts":{"passed":5,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"9541ad2b7c2bc73da4bbeb16d5ce38391760746fe089fa6de91c36f62e4ebfd8","counts":{"passed":5,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"chromium-dark-desktop","passed":true,"counts":{"passed":5,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"2349fe3f35a54402b58b3f7efb8c9b699347096fcf0ddbdf40962ce040189fed","counts":{"passed":5,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"firefox-light-phone","passed":true,"counts":{"passed":5,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"761735fd044e271e86b53b11031fd40937ee32079e3df7e94c1c450c744fb4f1","counts":{"passed":5,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"firefox-light-desktop","passed":true,"counts":{"passed":5,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"fa8f2beda9e6a17a332fd45ae485bae2db32c50f3387770a55a638fa96d9816d","counts":{"passed":5,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"firefox-dark-phone","passed":true,"counts":{"passed":5,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"173ac28547b269cab34c3baa78712faa38ecf136bca307b4bcafb83787b797c7","counts":{"passed":5,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"firefox-dark-desktop","passed":true,"counts":{"passed":5,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"e95a8485d171c873bb380a1fb9d1684814828136dc5cb228974d862db9893ffa","counts":{"passed":5,"failed":0,"skipped":0,"unrun":0}}]}
   ]
 }

@@ -1,0 +1,14 @@
+{
+  "digest": "4aea681f999f17b4e02614aa70a1545060763c92e1f82f2868fd3668da72ea30",
+  "counts": {
+    "population": 100000,
+    "frames": 181,
+    "window_size": 500,
+    "rendered": 25,
+    "long_tasks": 0
+  },
+  "frame_budget_pass": true,
+  "complete_frame_budget_proven": false,
+  "app_paint_budget_proven": false,
+  "native_layout_observed": false
+}

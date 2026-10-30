@@ -1,0 +1,326 @@
+{
+  "passed": true,
+  "source_sha256": "1c213a90f77725fc9813178b8ec945624dca472c84657a30e1093dc98acd35d0",
+  "tests_sha256": "9f3d583a5de5e14a67704af3c4401f77797867006c148269d518ca317812cca1",
+  "inherited_tests_sha256": "4f798bfbf47ebab7302e30d2ccc540494a2cfbf6eaaca048f1a8631b3fc364e4",
+  "counts": {
+    "scenarios": 25,
+    "projects_per_scenario": 12,
+    "inherited_report_digests_verified": 264
+  },
+  "scenarios": [
+    {
+      "scenario": "WEB-PERF-SEARCH",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 12,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "fc15e6ab499881fc646d24ea9ee1b2d5620d4a4588bd55996012bd49cc9f5b9c"
+    },
+    {
+      "scenario": "WEB-MSG-FILTERS",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 60,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "42660d5959019c4ea73e84ed75be8a7c9b604105b82a058cb703bb5dd1f924c2"
+    },
+    {
+      "scenario": "WEB-MSG-FILTERS-MENU",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 12,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "a3f56cde8a9da67d439512b3500983eb8f03fafc6e06d07c9f8e0b1d28d8c099"
+    },
+    {
+      "scenario": "WEB-MSG-SEARCH",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 60,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "e721c61c7dcb04c7f634fb5fe8c9387887b6cad0cf9620af1319bf104a195d22"
+    },
+    {
+      "scenario": "WEB-MSG-SEARCH-LIST",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 24,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "3cd21f49161518166e995ebb913f62225a743f5896bc5ae08d813ea68d788727"
+    },
+    {
+      "scenario": "WEB-MSG-SIDEBAR",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 12,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "2e3ba7597cc8087637da19b9d6978318a5b8bf055c1743176405d143dde3ebf8"
+    },
+    {
+      "scenario": "WEB-MSG-TRANSCRIPT-HOOKS",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 108,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "8f1700a3fbbebcab9fdc0b17c3ccd13e1180b6bdc0252ee12f4e1439942a6f98"
+    },
+    {
+      "scenario": "WEB-MSG-TEXT-SIZING",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 48,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "81b50da6b174d124a343b9c0c5e7ec3abe963d114a749733b1505821d15c2a27"
+    },
+    {
+      "scenario": "WEB-MSG-REACTIONS",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 36,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "f74d94ef0cc2a29955b6494dbc6860671cbc2c70ae65fb90afb69b186018a22c"
+    },
+    {
+      "scenario": "WEB-MSG-REPLIES",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 24,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "313e14bf61baf1550cb73ada519dd58f26646d45a282fb164b1439bc77c3601f"
+    },
+    {
+      "scenario": "WEB-MSG-REPLY-HANDOFF",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 12,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "ba8b75f8bf01ca1386ab2fb62533980bf18afc9833706066f6b117726e1d53c5"
+    },
+    {
+      "scenario": "WEB-MSG-POINTER",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 24,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "6b96e8cc11cdee9d54504d0320e1bb4ef53a588645e489878a0acf729b964bb5"
+    },
+    {
+      "scenario": "WEB-MSG-GROUP-EVENTS",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 12,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "cdfc95f83153fe9a5984d18134b5d89fe30983d916982af302970072fe15cf1a"
+    },
+    {
+      "scenario": "WEB-MSG-INTERACTION-MOTION",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 60,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "7dd518a70ce7ab213bb0b0f797f336a9f6c9afc00411eed9d3905ceea7b2fa5b"
+    },
+    {
+      "scenario": "WEB-MSG-FONTS",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 24,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "033757369d22dedf19c7fb6f3f21c0f8be88d3dae5c98f8211eb7cbc09ceedba"
+    },
+    {
+      "scenario": "WEB-MSG-RICH-PARTS",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 60,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "1a86d587d9e0c825a417fd22a19f769f3f60bb56ae5c8801ca9696413603d6bb"
+    },
+    {
+      "scenario": "WEB-MSG-CARD-SURFACES",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 36,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "768250fffe92a4a5d853c7a176b106bce670cda3d9ddd46eb65276b4b54b850e"
+    },
+    {
+      "scenario": "WEB-MSG-STICKERS-GENMOJI",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 84,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "1479c861d6a8c6f8d6c5b6f282767d4c3f6e0779ff8c0783184912d7c6d798d1"
+    },
+    {
+      "scenario": "WEB-MSG-AUDIO",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 36,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "1d24a744dcd8276e9522436ce3e95a8ee21d6d8e85e4bc015b63fd4673c8a255"
+    },
+    {
+      "scenario": "WEB-MSG-FILES",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 36,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "85e64b1c8d574f2a881ada06778143037bcd49e5f69fd960a9b795a44d9b17a6"
+    },
+    {
+      "scenario": "WEB-MSG-THREAD-CORE",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 108,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "15d1b12dfab93117a96c5da7e34dd9524884652b857e22e3a9515cb38bf1c647"
+    },
+    {
+      "scenario": "WEB-MSG-LIVE",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 36,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "a085e4ec0fcb92d7227bc252d5bae5b76e1aea781c21c2952902486c19612332"
+    },
+    {
+      "scenario": "WEB-MSG-PERF",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 60,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "371bdb32395f00486bddc17f41fd14f0fc374a47fec5618ba1bb6a5173b28407"
+    },
+    {
+      "scenario": "WEB-MSG-PERF-INPUT",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 48,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "eecf08551fd52e5aed21c9137a1f22fe084a1424f663a31b707b4a8ee29d3374"
+    },
+    {
+      "scenario": "WEB-MSG-PERF-FRAME",
+      "passed": true,
+      "counts": {
+        "projects": 12,
+        "passed": 12,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "evidence_sha256": "02c8ea1389e21653e0f7ba7fda746dcff0875e1f71ebe26ca4c413a9c61d5256"
+    }
+  ],
+  "complete_own_input_budget_proven": false,
+  "complete_frame_budget_proven": false,
+  "app_paint_budget_proven": false,
+  "checks": {
+    "typescript": true,
+    "comments": true,
+    "scenario_discovery": true,
+    "unit": {
+      "passed": 25,
+      "failed": 0,
+      "skipped": 0
+    }
+  }
+}

@@ -1,24 +1,29 @@
 {
   "scenario": "WEB-MSG-FILES",
   "level": "web",
-  "git_sha": "2f263823cc9ea6d12081cffd761539783d2acf6e",
-  "at": "2026-10-29T23:18:58.485167Z",
   "passed": true,
-  "metrics": {
-    "matrix_count": 1,
-    "completed_matrix_count": 1,
-    "passed_matrix_count": 1,
-    "failed_matrix_count": 0,
-    "incomplete_matrix_count": 0,
-    "passed_test_count": 3,
-    "failed_test_count": 0,
-    "skipped_test_count": 0,
-    "report_sha256": "b417d99d1f5beeca4422e6341a1cbddd9e7933287d366da404f573e8f9ac23aa"
+  "source_sha256": "1c213a90f77725fc9813178b8ec945624dca472c84657a30e1093dc98acd35d0",
+  "tests_sha256": "4f798bfbf47ebab7302e30d2ccc540494a2cfbf6eaaca048f1a8631b3fc364e4",
+  "manifest_sha256": "1dd52b9e6f02c26e1ea23fc0655bd3c75a4301fb198dc032f9951cce3b6269c8",
+  "counts": {
+    "projects": 12,
+    "passed": 36,
+    "failed": 0,
+    "skipped": 0,
+    "unrun": 0
   },
-  "assertions": [
-    {
-      "name": "chromium-light-desktop",
-      "passed": true
-    }
+  "matrix": [
+    {"project":"webkit-light-phone","passed":true,"counts":{"passed":3,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"d9a37e32de48e873a3961f159cea2cb298289ddec111f42dd92fbd8a31cf63ad","counts":{"passed":3,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"webkit-light-desktop","passed":true,"counts":{"passed":3,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"8eaab875f93916e44da25fe087af662349658b6eb308ae96f53ab06a8658cf18","counts":{"passed":3,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"webkit-dark-phone","passed":true,"counts":{"passed":3,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"3eb4c9f9918a2fa9fc69bc2e4489240ced5a3534039fdfd069b30df840a7ae8d","counts":{"passed":3,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"webkit-dark-desktop","passed":true,"counts":{"passed":3,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"d81e3d334614bef154f1447a2aa9b0f071cdc1236947b585ca890e13b7b61bc1","counts":{"passed":3,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"chromium-light-phone","passed":true,"counts":{"passed":3,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"794f7ccc5e5733e087d580a9318253a52fd388104dcd92c177b3531ec26982cd","counts":{"passed":3,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"chromium-light-desktop","passed":true,"counts":{"passed":3,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"670baa400c7b95dd06b1f1cdaa05ba9f5294ce84c0f8ef821772eed64ad1d376","counts":{"passed":3,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"chromium-dark-phone","passed":true,"counts":{"passed":3,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"a18ddfb70db9c8c473f4f36ece98650d7cd52ed6d30a4a97d7f319300e12925e","counts":{"passed":3,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"chromium-dark-desktop","passed":true,"counts":{"passed":3,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"248c51f1e6f038c66f454f6f5de11909e7c936f8dd91ecb4ecd482e1b9b4c83d","counts":{"passed":3,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"firefox-light-phone","passed":true,"counts":{"passed":3,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"245fac4fad56238bf1986d9180a2c2cb6a82087b7fcb1a35602366b8dff0ba22","counts":{"passed":3,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"firefox-light-desktop","passed":true,"counts":{"passed":3,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"83b2c3a598bb1316dcb86cde3fae303d16cbe66db4aeaa5b1f60d6940bbbefc8","counts":{"passed":3,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"firefox-dark-phone","passed":true,"counts":{"passed":3,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"4779e72eedf7155bd9a8b7f367e5751d39bff8ce3fecf9e0e8c8350b1f8888dc","counts":{"passed":3,"failed":0,"skipped":0,"unrun":0}}]},
+    {"project":"firefox-dark-desktop","passed":true,"counts":{"passed":3,"failed":0,"skipped":0,"unrun":0},"reports":[{"report_sha256":"51a195c209002ea0b5297290cfd535f29aed01e9e3bd06ed8538a62cd370ed2f","counts":{"passed":3,"failed":0,"skipped":0,"unrun":0}}]}
   ]
 }
