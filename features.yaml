@@ -1053,7 +1053,7 @@ features:
       - {id: MAC-POWER-REAL, levels: [real]}
     notes: Night Shift omitted; SSID requires Location authorization. VPN uses interface heuristics.
     limits:
-      - {"scenario": "MAC-IDLE", "level": "real", "reason": "Budget-limited: interrupted during the single serial attempt; fresh failure evidence saved. No passing idle CPU measurement established."}
+      - {"scenario": "MAC-IDLE", "level": "real", "reason": "Whole Helper measured 2.016546% CPU-time over 300.018 idle seconds after 790.151 seconds of settling under the global real-run lock; still above 2%."}
   - id: mail.capture
     title: Mail Envelope Index capture foundation
     requirements: [R-RW]
@@ -1160,7 +1160,7 @@ features:
       - {id: CALL-READ-REAL, levels: [real]}
       - {id: CALLS-REPLICA, levels: [replica]}
     limits:
-      - {"scenario": "CALL-IDLE", "level": "real", "reason": "Failed assertions: five_minute_helper_cpu_under_two_percent"}
+      - {"scenario": "CALL-IDLE", "level": "real", "reason": "Helper measured 42.526450% CPU-time during the locked five-minute window after the scenario's fixed 30-second warmup; initial Messages reconciliation was still active."}
   - id: focus.pack
     title: Focus status and approved DND writes
     requirements: [R-RW]
@@ -1230,11 +1230,11 @@ features:
       - {id: MUS-CONTROL-REAL, levels: [real]}
       - {id: MUS-PLAYLIST-REAL, levels: [real]}
       - {id: MUS-IDLE, levels: [sim, real]}
-    notes: "Tagged silent-track fixtures and exact playback restore implemented; real qualification requires a nonprompting Music Automation grant and restorable unshuffled playlist context. Library capture bounded to 500 tracks / 50 playlists / 1000 memberships; Automation dev.applebridge.helper → com.apple.Music missing. Public API has no playlist search. Whole Helper idle measured 2.063240% CPU-time over 300.014 idle seconds after 507.504 seconds of settling."
+    notes: "Tagged silent-track fixtures and exact playback restore implemented; real qualification requires a nonprompting Music Automation grant and restorable unshuffled playlist context. Library capture bounded to 500 tracks / 50 playlists / 1000 memberships; Automation dev.applebridge.helper → com.apple.Music missing. Public API has no playlist search. Prior whole Helper idle measured 2.063240% CPU-time over 300.014 idle seconds. T71 MAC-IDLE measured 2.016546% over 300.018 idle seconds under the global real-run lock; MUS-IDLE itself remains unqualified."
     limits:
       - {"scenario": "MUS-CONTROL-REAL", "level": "real", "reason": "needs Music Automation grant (T79); consent not requested"}
       - {"scenario": "MUS-PLAYLIST-REAL", "level": "real", "reason": "needs Music Automation grant (T79); consent not requested"}
-      - {"scenario": "MUS-IDLE", "level": "real", "reason": "Budget-limited: interrupted during the single serial attempt; fresh failure evidence saved. No passing idle CPU measurement established."}
+      - {"scenario": "MUS-IDLE", "level": "real", "reason": "Budget-limited: real rerun interrupted during initial Messages reconciliation before its five-minute idle window; complete qualification remains required."}
   - id: files.transform
     title: Native image and PDF blob transforms
     requirements: [R-API, R-SCOPE]
@@ -1325,7 +1325,7 @@ features:
     limits:
       - {"scenario": "QUERY-AGENT", "level": "agent", "reason": "Decision 39: Ubuntu Codex OAuth token is revoked (HTTP 401 token_revoked); agent runner not executed. Reauthentication required for MCP-only qualification."}
       - {"scenario": "LOC-IDLE", "level": "real", "reason": "Failed assertions: helper_reached_idle, five_minute_idle_cpu_under_2_percent"}
-      - {"scenario": "MAP-IDLE", "level": "real", "reason": "Failed assertions: helper_reached_idle, five_minute_idle_cpu_under_2_percent"}
+      - {"scenario": "MAP-IDLE", "level": "real", "reason": "Helper did not settle within the five-minute warmup; locked 300-second sample measured 34.287588% CPU-time while initial capture was active."}
       - {"scenario": "LOC-CURRENT-REAL", "level": "real", "reason": "Failed assertions: fresh_mac_fix"}
   - id: safari.capture
     title: Read-only Safari database capture

@@ -9,7 +9,7 @@ public actor SafariTabs {
     private var permission: (Bool, ContinuousClock.Instant)?
     public func permitted(fresh: Bool = false) -> Bool {
         if execute != nil { return true }
-        if !fresh, let permission, permission.1.duration(to: .now) < .seconds(30) { return permission.0 }
+        if !fresh, let permission, permission.1.duration(to: .now) < .seconds(300) { return permission.0 }
         let target = NSAppleEventDescriptor(bundleIdentifier: "com.apple.Safari")
         let allowed = AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false) == noErr
         permission = (allowed, .now)

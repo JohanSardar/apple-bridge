@@ -1,17 +1,20 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[4.87 5.75 6.24] cpu_idle=69% cpus=8 other_heavy=0"
+    "summary": "air: load=[12.19 16.63 12.95] cpu_idle=58% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M64A2Z7PD31RWWQ3DJE601BE",
+  "run_id": "run_01M652HHP0636B3ET2DB9TJ7VC",
   "metrics": {
-    "capture_observer_resets": 0
+    "capture_observer_resets": 0,
+    "helper_cpu_percent": 2.0165456128756185,
+    "idle_seconds": 300.018009083,
+    "warmup_seconds": 790.150889209
   },
   "scenario": "MAC-IDLE",
   "level": "real",
   "passed": false,
   "git_sha": "",
-  "at": "2026-10-29T17:07:27.094943Z",
+  "at": "2026-10-30T00:14:50.560666Z",
   "assertions": [
     {
       "name": "world_started",
@@ -31,6 +34,14 @@
     },
     {
       "name": "messages_capture_and_media_settled",
+      "passed": true
+    },
+    {
+      "name": "helper_pid",
+      "passed": true
+    },
+    {
+      "name": "helper_cpu_under_two_percent",
       "passed": false
     },
     {

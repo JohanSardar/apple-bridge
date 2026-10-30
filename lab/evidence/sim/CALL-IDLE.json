@@ -1,17 +1,17 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[13.77 7.84 7.85] cpu_idle=25% cpus=8 other_heavy=0"
+    "summary": "air: load=[7.7 9.73 11.29] cpu_idle=14% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M646GVV9MDJNN5X0ZA0079KR",
+  "run_id": "run_01M65245MF54FWRREYZG4B9PSH",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "CALL-IDLE",
   "level": "sim",
   "passed": true,
-  "git_sha": "2d911b7bd41ad214298cda87ee7e6c551dd390b1",
-  "at": "2026-10-29T16:05:08.073401Z",
+  "git_sha": "fa276edd56329a5b24c6c6ae2e70e2b98fc59ba0",
+  "at": "2026-10-30T00:07:32.239272Z",
   "assertions": [
     {
       "name": "calls_native_fixture_build",

@@ -1,18 +1,18 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[4.77 5.99 7.03] cpu_idle=45% cpus=8 other_heavy=0"
+    "summary": "air: load=[4.89 6.35 11.11] cpu_idle=60% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M647YQFEBP7YP6VHTGFRYEZJ",
+  "run_id": "run_01M653NNDT7MRPTCK85BKMRS1B",
   "metrics": {
     "capture_observer_resets": 0,
-    "helper_cpu_percent": 50.53124604184808
+    "helper_cpu_percent": 42.52645003370603
   },
   "scenario": "CALL-IDLE",
   "level": "real",
   "passed": false,
-  "git_sha": "c3ac9963efa1272847ce1ef053a43f9c53d3fc2a",
-  "at": "2026-10-29T16:30:10.926054Z",
+  "git_sha": "ee0112c904d55bed69301aff8ae481f1a8050b90",
+  "at": "2026-10-30T00:34:34.042893Z",
   "assertions": [
     {
       "name": "five_minute_helper_cpu_under_two_percent",
