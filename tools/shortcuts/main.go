@@ -49,7 +49,7 @@ func stableID(name string) string {
 func resolve(value any, name string, outputs map[string]string) (any, error) {
 	switch v := value.(type) {
 	case map[string]any:
-		if len(v) == 1 || len(v) == 2 && v["$property"] != nil {
+		if len(v) == 1 || len(v) == 2 && (v["$property"] != nil || v["$text"] == true) || len(v) == 3 && v["$property"] != nil && v["$text"] == true {
 			if key, ok := v["$output"].(string); ok {
 				id, exists := outputs[key]
 				if !exists {
@@ -58,6 +58,9 @@ func resolve(value any, name string, outputs map[string]string) (any, error) {
 				value := map[string]any{"Type": "ActionOutput", "OutputUUID": id, "OutputName": key}
 				if property, ok := v["$property"].(string); ok && property != "" {
 					value["Aggrandizements"] = []any{map[string]any{"Type": "WFPropertyVariableAggrandizement", "PropertyName": property, "PropertyUserInfo": property}}
+				}
+				if v["$text"] == true {
+					return map[string]any{"Value": map[string]any{"string": "\ufffc", "attachmentsByRange": map[string]any{"{0, 1}": value}}, "WFSerializationType": "WFTextTokenString"}, nil
 				}
 				return map[string]any{"Value": value, "WFSerializationType": "WFTextTokenAttachment"}, nil
 			}

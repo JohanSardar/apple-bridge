@@ -1,9 +1,9 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[4.11 5.13 4.69] cpu_idle=84% cpus=10 other_heavy=0"
+    "summary": "air: load=[2.5 2.5 2.98] cpu_idle=83% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M65HZ0NV7H9HQ8Q4564X71X0",
+  "run_id": "run_01M65M4D29E9VQ347P01ZF012N",
   "metrics": {
     "capture_observer_resets": 0
   },
@@ -11,7 +11,7 @@
   "level": "sim",
   "passed": true,
   "git_sha": "",
-  "at": "2026-10-30T04:44:20.539561Z",
+  "at": "2026-10-30T05:22:14.217922Z",
   "assertions": [
     {
       "name": "fake_pack_runner",

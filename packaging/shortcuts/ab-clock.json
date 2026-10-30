@@ -3,11 +3,66 @@
   "name": "AB Clock",
   "actions": [
     {
-      "key": "request",
+      "key": "input_if",
+      "identifier": "is.workflow.actions.conditional",
+      "parameters": {
+        "WFInput": {
+          "Type": "Variable",
+          "Variable": {
+            "$input": true
+          }
+        },
+        "WFCondition": 100,
+        "WFControlFlowMode": 0,
+        "GroupingIdentifier": {
+          "$group": "input"
+        }
+      }
+    },
+    {
+      "key": "provided_request",
       "identifier": "is.workflow.actions.detect.dictionary",
       "parameters": {
         "WFInput": {
           "$input": true
+        }
+      }
+    },
+    {
+      "key": "input_else",
+      "identifier": "is.workflow.actions.conditional",
+      "parameters": {
+        "WFControlFlowMode": 1,
+        "GroupingIdentifier": {
+          "$group": "input"
+        }
+      }
+    },
+    {
+      "key": "default_request",
+      "identifier": "is.workflow.actions.dictionary",
+      "parameters": {
+        "WFItems": {
+          "Value": {
+            "WFDictionaryFieldValueItems": [
+              {
+                "WFItemType": 0,
+                "WFKey": "operation",
+                "WFValue": "alarms"
+              }
+            ]
+          },
+          "WFSerializationType": "WFDictionaryFieldValue"
+        }
+      }
+    },
+    {
+      "key": "request",
+      "identifier": "is.workflow.actions.conditional",
+      "parameters": {
+        "WFControlFlowMode": 2,
+        "GroupingIdentifier": {
+          "$group": "input"
         }
       }
     },
@@ -31,6 +86,23 @@
         },
         "WFDictionaryKey": "alarm",
         "WFGetDictionaryValueType": "Value"
+      }
+    },
+    {
+      "key": "alarm_if",
+      "identifier": "is.workflow.actions.conditional",
+      "parameters": {
+        "WFInput": {
+          "Type": "Variable",
+          "Variable": {
+            "$output": "alarm"
+          }
+        },
+        "WFCondition": 100,
+        "WFControlFlowMode": 0,
+        "GroupingIdentifier": {
+          "$group": "alarm"
+        }
       }
     },
     {
@@ -93,7 +165,10 @@
       "identifier": "is.workflow.actions.conditional",
       "parameters": {
         "WFInput": {
-          "$output": "operation"
+          "Type": "Variable",
+          "Variable": {
+            "$output": "operation"
+          }
         },
         "WFCondition": 4,
         "WFConditionalActionString": "create_alarm",
@@ -172,7 +247,8 @@
           "$output": "day_names"
         },
         "WFDictionaryKey": {
-          "$output": "create_days"
+          "$output": "create_days",
+          "$text": true
         },
         "WFGetDictionaryValueType": "Value"
       }
@@ -198,7 +274,8 @@
           "TeamIdentifier": "0000000000"
         },
         "dateComponents": {
-          "$output": "requested_time"
+          "$output": "requested_time",
+          "$text": true
         },
         "name": {
           "$output": "requested_label"
@@ -269,12 +346,16 @@
       "identifier": "is.workflow.actions.conditional",
       "parameters": {
         "WFInput": {
-          "$output": "target",
-          "$property": "url"
+          "Type": "Variable",
+          "Variable": {
+            "$output": "target",
+            "$property": "url"
+          }
         },
         "WFCondition": 4,
         "WFConditionalActionString": {
-          "$output": "requested_id"
+          "$output": "requested_id",
+          "$text": true
         },
         "WFControlFlowMode": 0,
         "GroupingIdentifier": {
@@ -287,12 +368,16 @@
       "identifier": "is.workflow.actions.conditional",
       "parameters": {
         "WFInput": {
-          "$output": "target",
-          "$property": "label"
+          "Type": "Variable",
+          "Variable": {
+            "$output": "target",
+            "$property": "label"
+          }
         },
         "WFCondition": 4,
         "WFConditionalActionString": {
-          "$output": "requested_label"
+          "$output": "requested_label",
+          "$text": true
         },
         "WFControlFlowMode": 0,
         "GroupingIdentifier": {
@@ -305,7 +390,10 @@
       "identifier": "is.workflow.actions.conditional",
       "parameters": {
         "WFInput": {
-          "$output": "operation"
+          "Type": "Variable",
+          "Variable": {
+            "$output": "operation"
+          }
         },
         "WFCondition": 4,
         "WFConditionalActionString": "toggle_alarm",
@@ -349,7 +437,10 @@
       "identifier": "is.workflow.actions.conditional",
       "parameters": {
         "WFInput": {
-          "$output": "operation"
+          "Type": "Variable",
+          "Variable": {
+            "$output": "operation"
+          }
         },
         "WFCondition": 4,
         "WFConditionalActionString": "delete_alarm",
@@ -415,11 +506,24 @@
       }
     },
     {
+      "key": "alarm_end",
+      "identifier": "is.workflow.actions.conditional",
+      "parameters": {
+        "WFControlFlowMode": 2,
+        "GroupingIdentifier": {
+          "$group": "alarm"
+        }
+      }
+    },
+    {
       "key": "timer_if",
       "identifier": "is.workflow.actions.conditional",
       "parameters": {
         "WFInput": {
-          "$output": "operation"
+          "Type": "Variable",
+          "Variable": {
+            "$output": "operation"
+          }
         },
         "WFCondition": 4,
         "WFConditionalActionString": "start_timer",
@@ -608,7 +712,8 @@
           "$output": "day_numbers"
         },
         "WFDictionaryKey": {
-          "$output": "read_day"
+          "$output": "read_day",
+          "$text": true
         },
         "WFGetDictionaryValueType": "Value"
       }
@@ -735,7 +840,8 @@
       "identifier": "is.workflow.actions.gettext",
       "parameters": {
         "WFTextActionText": {
-          "$output": "readback"
+          "$output": "readback",
+          "$text": true
         }
       }
     }
