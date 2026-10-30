@@ -65,6 +65,9 @@ func runClockPack(ctx context.Context, s Scenario, level string) Evidence {
 				readback.Alarms = []clockpack.Alarm{alarm}
 			}
 			request.Alarm = &alarm
+			if operation == "create_alarm" {
+				readback.Alarms[0].ID = "clock-assigned-id"
+			}
 			if operation == "delete_alarm" {
 				readback.Alarms = []clockpack.Alarm{}
 			}

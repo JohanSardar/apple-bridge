@@ -1,5 +1,5 @@
 {
-  "provenance": "macOS Shortcuts action library; synthetic workflow 8FBF89BF-BE03-4391-AE2A-2E81C85E8B9D, inspected 2026-10-28; exported before any execution. Parameters and business readback remain unqualified.",
+  "provenance": "Air macOS 26.7.1 (25G241), inspected read-only 2026-10-29: Shortcuts.sqlite AB Clock actions, ToolKit Tools/Parameters, MobileTimerSupport.framework/Resources/Metadata.appintents/extract.actionsdata. Availability and parameter names verified; execution of the replacement pack awaits leader import.",
   "actions": [
     {
       "identifier": "com.apple.mobiletimer-framework.MobileTimerIntents.MTToggleAlarmIntent",
@@ -47,5 +47,40 @@
         "TeamIdentifier": "0000000000"
       }
     }
-  ]
+  ],
+  "alarm_properties": [
+    "label",
+    "url",
+    "hours",
+    "minutes",
+    "enabled",
+    "repeats",
+    "repeatDays",
+    "snooze",
+    "dateComponents"
+  ],
+  "alarm_repeat_day_identifiers": [
+    "sunday",
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday"
+  ],
+  "timer_readback": {
+    "identifier": "com.apple.clock.GetCurrentTimerDetailsIntent",
+    "modes": [
+      "duration",
+      "remainingTime"
+    ],
+    "output": "duration measurement",
+    "limitations": [
+      "No timer label parameter on Start Timer",
+      "No timer label property or timer entity",
+      "No running/paused state readback; positive remaining time does not distinguish paused from running"
+    ],
+    "qualification": "limited: Start Timer signs, but Get Current Timer does not sign on this Air; no running-state or label readback is exposed. The distributable pack omits the rejected read action and never echoes request fields as confirmation.",
+    "signing_probe": "shortcuts sign --mode anyone rejects GetCurrentTimerDetailsIntent with omitted mode, duration and remainingTime: This shortcut can\u2019t be shared because it contains unsupported features. All other pack action identifiers signed individually."
+  }
 }

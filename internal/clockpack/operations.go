@@ -122,11 +122,18 @@ func (p Pack) Exchange(ctx context.Context, request Request) (Readback, error) {
 		}
 		found := false
 		for _, a := range out.Alarms {
-			if a.ID != request.Alarm.ID {
+			if request.Operation == "create_alarm" && a.Label != request.Alarm.Label || request.Operation != "create_alarm" && a.ID != request.Alarm.ID {
 				continue
 			}
+			if found {
+				return Readback{}, ErrUnqualified
+			}
 			found = true
-			expected, _ := json.Marshal(request.Alarm)
+			expectedAlarm := *request.Alarm
+			if request.Operation == "create_alarm" {
+				expectedAlarm.ID = a.ID
+			}
+			expected, _ := json.Marshal(expectedAlarm)
 			actual, _ := json.Marshal(a)
 			if string(expected) != string(actual) {
 				return Readback{}, ErrUnqualified
