@@ -28,15 +28,12 @@ public actor PhotosSource: Source {
         if let fixture { return fixture }
         var rows: [JSON] = []
         var memberships: [String: [JSON]] = [:]
-        var membershipCount = 0
         for type in [PHAssetCollectionType.album, .smartAlbum] {
             let albums = PHAssetCollection.fetchAssetCollections(with: type, subtype: .any, options: nil)
             for index in 0..<albums.count {
                 try Task.checkCancellation()
                 let album = albums.object(at: index)
                 let assets = PHAsset.fetchAssets(in: album, options: nil)
-                membershipCount += assets.count
-                guard albums.count <= 10000, assets.count <= 10000, membershipCount <= 100000 else { throw SourceFailure.unavailable }
                 for i in 0..<assets.count { memberships[assets.object(at: i).localIdentifier, default: []].append(.string(album.localIdentifier)) }
                 let kind = type == .smartAlbum ? "smart" : album.assetCollectionSubtype == .albumCloudShared ? "shared" : "user"
                 rows.append(row("photos.album", album.localIdentifier, .object(["name": .string(album.localizedTitle ?? ""), "kind": .string(kind), "count": .number(Double(assets.count))])))
@@ -44,9 +41,7 @@ public actor PhotosSource: Source {
         }
         let options = PHFetchOptions()
         options.includeHiddenAssets = true
-        options.fetchLimit = 10001
         let assets = PHAsset.fetchAssets(with: options)
-        guard assets.count <= 10000 else { throw SourceFailure.unavailable }
         for index in 0..<assets.count {
             try Task.checkCancellation()
             let asset = assets.object(at: index)
