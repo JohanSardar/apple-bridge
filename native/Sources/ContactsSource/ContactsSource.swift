@@ -209,12 +209,16 @@ public final class ContactsSource: Source {
         }
         } else {
             for key in batch.changedContactIdentifiers {
-                if try isAbsent(key) { current.removeValue(forKey: "contacts.contact/" + key) }
-                else {
-                    let contact = try fresh(key)
-                    trace.record("contacts_contact_fetched", fields: metadata)
-                    current["contacts.contact/" + key] = observation("contacts.contact", key, try data(contact))
+                let contact: CNContact
+                do { contact = try fresh(key) }
+                catch let error as NSError {
+                    guard authorized else { throw SourceFailure.permissionMissing }
+                    guard error.domain == CNErrorDomain && error.code == CNError.Code.recordDoesNotExist.rawValue else { throw error }
+                    current.removeValue(forKey: "contacts.contact/" + key)
+                    continue
                 }
+                trace.record("contacts_contact_fetched", fields: metadata)
+                current["contacts.contact/" + key] = observation("contacts.contact", key, try data(contact))
             }
             if !batch.changedGroupIdentifiers.isEmpty {
                 let changedGroups = try store.groups(matching: CNGroup.predicateForGroups(withIdentifiers: batch.changedGroupIdentifiers))
