@@ -38,7 +38,7 @@ export function createThreadWindow(live:LiveClient,chat:string,initialAnchor='un
         }
         const before=prefetch(main,'before',2),after=prefetch(main,'after',2);
         createEffect(()=>{
-            const center={data:main.data(),cursor:main.cursor()},older=before(),newer=after();
+            const center={data:main.data(),cursor:main.cursor()},older=before(),newer=after(),warmed=warm();
             if(!center.data.items||!older.ready||!newer.ready)return;
             cancelAnimationFrame(frame);
             frame=requestAnimationFrame(()=>{
@@ -63,7 +63,7 @@ export function createThreadWindow(live:LiveClient,chat:string,initialAnchor='un
             const items=next.length===previous.items.length&&next.every((item,index)=>item===previous.items[index])?previous.items:next;
             const first=older.pages.at(-1)?.data??center.data,last=newer.pages.at(-1)?.data??center.data;
             publishedAnchor=value;retained=new Map(next.map(item=>[item.id,versions.get(item.id)!]));
-            batch(()=>{setWindow({cursor:coherent?head:undefined,anchor:value,items,before:first.before,after:last.after,older:Number(first.older??0),newer:Number(last.newer??0),unread:center.data.unread_anchor});setLoading(false);setPrefetching(!warm());});
+            batch(()=>{setWindow({cursor:coherent?head:undefined,anchor:value,items,before:first.before,after:last.after,older:Number(first.older??0),newer:Number(last.newer??0),unread:center.data.unread_anchor});setLoading(false);setPrefetching(!warmed);});
             });
         });
     });

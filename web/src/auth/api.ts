@@ -1,10 +1,10 @@
 export class APIError extends Error {
-    constructor(readonly status: number) { super('Request failed'); }
+    constructor(readonly status: number, readonly retryAfter?: number) { super('Request failed'); }
 }
 export async function api<T>(path: string, body?: unknown, method = body === undefined ? 'GET' : 'POST'): Promise<T> {
     const response = await fetch('/web/v1/' + path, { method, credentials: 'same-origin', signal: AbortSignal.timeout(10000), headers: body === undefined ? undefined : { 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body), cache: 'no-store' });
     if (!response.ok)
-        throw new APIError(response.status);
+        throw new APIError(response.status, response.headers.has('Retry-After') ? Number(response.headers.get('Retry-After')) : undefined);
     if (response.status === 204)
         return undefined as T;
     return response.json() as Promise<T>;

@@ -109,7 +109,7 @@ export default function Transcript(props:TranscriptProps){
     const layoutContext=createMemo(()=>JSON.stringify([Boolean(record()),captured().anchor,captured().newer===0,record()?.data.style,chatService(record()),participants().length]));
     createEffect(()=>{
         layoutContext();
-        const state=untrack(captured),items=displayed(),pending=local(),data=untrack(record)?.data,map=handleMap(),loading=thread.loading(),size=width(),viewport=viewportHeight(),scale=appearance.textSize(),open=expanded(),reduced=reduceMotion();
+        const state=untrack(captured),items=displayed(),pending=local(),data=untrack(record)?.data,map=handleMap(),loading=thread.loading(),prefetching=thread.prefetching(),size=width(),viewport=viewportHeight(),scale=appearance.textSize(),open=expanded(),reduced=reduceMotion();
         const immediate=pending!==previousLocal&&Boolean(pending.length||previousLocal.length),added=pending.some(item=>!previousLocal.some(previous=>previous.id===item.id));
         if(added){setFollowLatest(true);setPendingJump('latest');untrack(thread.latest);}
         fontRevision();
@@ -140,7 +140,7 @@ export default function Transcript(props:TranscriptProps){
             const publish=()=>{
                 const finishPublish=beginWork('transcript-publish');
                 previousLocal=pending;
-                batch(()=>{setInitialPrefetch(value=>value&&untrack(thread.prefetching));setMeasurementKey(descriptor+':'+untrack(fontRevision)+':'+size+':'+viewport);setRows({scope:state.anchor,items:next});setReady(true);});
+                batch(()=>{setInitialPrefetch(value=>value&&prefetching);setMeasurementKey(descriptor+':'+untrack(fontRevision)+':'+size+':'+viewport);setRows({scope:state.anchor,items:next});setReady(true);});
                 if(!next.length)thread.presented();
                 if(added)queueMicrotask(()=>list()?.scrollToIndex(rows().items.length-1,'end'));
                 finishPublish();
