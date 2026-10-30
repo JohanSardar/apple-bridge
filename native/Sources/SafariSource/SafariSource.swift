@@ -83,19 +83,21 @@ public actor SafariSource: Source {
         let tabTask = Task {
             let tabCache = cacheURL?.appendingPathExtension("tabs")
             var previous: [JSON] = tabCache.flatMap { try? Data(contentsOf: $0) }.flatMap { try? JSONDecoder().decode([JSON].self, from: $0) } ?? []
+            var interval = 5.0
             while !Task.isCancelled {
                 do {
                     let rows = try await tabs.tabs()
                     let material = rows.map { row -> JSON in var o = row.object; o.removeValue(forKey: "observed_at"); return .object(o) }
                     if material != previous {
+                        interval = 5
                         let keys = Set(rows.map { $0["native_key"].string })
                         let absent = previous.filter { !keys.contains($0["native_key"].string) }.map { row in JSON.object(["kind": .string("absent"), "collection": .string("safari.tab"), "native_key": row["native_key"], "observed_at": .string(timestamp()), "revalidated": .bool(true)]) }
                         try await sink.emitCheckpoint(source: name, generation: generation, checkpoint: UUID().uuidString, observations: rows + absent, scanID: UUID().uuidString, scanStartedAt: timestamp(), scope: ["safari.tab"], completionEvidence: "complete", blobHandles: [:], live: true)
                         if let tabCache { try JSONEncoder().encode(material).write(to: tabCache, options: .atomic) }
                         previous = material
-                    }
-                } catch {}
-                try await Task.sleep(for: .seconds(5))
+                    } else { interval = min(interval * 2, 60) }
+                } catch { interval = min(interval * 2, 60) }
+                try await Task.sleep(for: .seconds(interval))
             }
         }
         defer { tabTask.cancel() }
