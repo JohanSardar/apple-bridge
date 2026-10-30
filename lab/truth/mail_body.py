@@ -5,6 +5,7 @@ import hashlib
 import json
 import pathlib
 import sqlite3
+import stat
 
 root = pathlib.Path.home() / 'Library/Mail/V10'
 connection = sqlite3.connect((root / 'MailData/Envelope Index').as_uri() + '?mode=ro', uri=True)
@@ -14,6 +15,9 @@ samples = []
 for key, subject, sender, received in rows:
     files = list(root.rglob(str(key) + '.emlx'))
     if len(files) != 1:
+        continue
+    metadata = files[0].lstat()
+    if not stat.S_ISREG(metadata.st_mode) or metadata.st_flags & stat.SF_DATALESS or metadata.st_size > 32 << 20:
         continue
     with files[0].open('rb') as stream:
         length = int(stream.readline())

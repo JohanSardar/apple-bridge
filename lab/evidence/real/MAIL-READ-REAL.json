@@ -1,21 +1,89 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[7.55 8.53 8.22] cpu_idle=43% cpus=8 other_heavy=0"
+    "summary": "air: load=[3.41 2.74 3.02] cpu_idle=83% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M646XZV0R0AB0K8Q6NJQYP1Z",
+  "run_id": "run_01M65ED41669ADSRMP95Q5JY4R",
   "metrics": {
-    "capture_observer_resets": 0
+    "capture_observer_resets": 0,
+    "captured_counts": {
+      "1": 355,
+      "3": 1,
+      "4": 2,
+      "5": 5,
+      "7": 2
+    },
+    "counts": {
+      "1": 355,
+      "2": 0,
+      "3": 1,
+      "4": 2,
+      "5": 5,
+      "6": 0,
+      "7": 2,
+      "8": 0
+    },
+    "digests": [
+      "c65f1ad57b443a4bcafd33f0716ab5f5ae01d2fb354fa95274406e3b09a14969",
+      "97d2a648a10325fb4b3e27eda14defd48a9f8aeaf77205a541bcae8311ad11b9",
+      "d524270fc4336e18fdabeee0d1b947c0aea786af04017105c6e84048cb11bd88",
+      "48b5c3e3543e3d77d6c37019083d8cb1bdd6dbc8480a14857e964ebba538ff21",
+      "14292bead0209a84df21dc736ba1f81ddbf79e1bb49bfa3037244defb60956d5",
+      "020cd0d6ab6f3d208de302938156dcc308b8e31c198a8399c7f83334fe273eaa",
+      "4f06fde4c991f26522e0162ed6ea2f94f4417dc3429600e5863820abff20c35e",
+      "e7459087ba0524c80e54a5243031fe3b307115f14dcea636b02ee205c31e40b1",
+      "715579c4809eaec552f3af4acf3cb22feaff89749543529b3e98cf71301d6217",
+      "e78021ebb2dc041ac0438054ea4ce80497aab1f0105cd660a5b6e8b7526f552c",
+      "8f0a8997c166a6d9c3ac849c7cfd2a383c7cc4f903dc1f654171998e347a7ffa",
+      "3ac2e298c36c8f42fd65c6ec4deec9b28529be860b2b4852297c9f0fd0340892",
+      "ba10a73ca0adeddce42de0991f9526d1d043ea515611a98acc59e5592aee60c7",
+      "759da57b08866a2ee5a7ff4437dc1a5ab9390c6d1e68a084dd380cbd3cfd9418",
+      "e4f598744fc33ac11866506c7835405a4566f6179c458e7303074d89013bf8b4",
+      "2a2581a3bfcc83599d8e2506bb64e0d5e364e7aea08d9850c7b2801158cd4065",
+      "ad4323fa78ce3bf9af210aba4fd991f5336b1517b9c91ce4aeaf864d5070692a",
+      "575b31d27ac13775623a1dd97a605484682521fe567183e181b177c3a26e0bf6",
+      "96eed2bd0aa111a3490bbb12476ba17eaf2384f89ce4c1439b05a5cfeb97ec64",
+      "cf0a9f72d1c7467b05e5c4080baa0ee9daa966a12becd7f1afd5e5e0be7935e7",
+      "b3c9110d61c19eaa12a152bd568c4b3452c6cf91ea0efcc1d0ca819a1ba54504",
+      "0813e5fe09d6280766d55e0dec95a259d4740055882dea3a494e8fbe7d28a261",
+      "f163580444f8c3700d465390a87bec946496c7ed83630630409fd90b72ab782f",
+      "2d0409f6e1779fdeb672d99c592b075f6902062a748871647148811c5a783ca7",
+      "b2848920591317d8315b3d7d088a10e783b2e261a672ba6f27617729545f23c4"
+    ],
+    "mail_source_ready": true,
+    "sample_matches": 25,
+    "truth_counts": {
+      "1": 355,
+      "2": 0,
+      "3": 1,
+      "4": 2,
+      "5": 5,
+      "6": 0,
+      "7": 2,
+      "8": 0
+    }
   },
   "scenario": "MAIL-READ-REAL",
   "level": "real",
-  "passed": false,
+  "passed": true,
   "git_sha": "",
-  "at": "2026-10-29T16:12:18.144389Z",
+  "at": "2026-10-30T03:42:08.422863Z",
   "assertions": [
     {
       "name": "mail_truth_read_only_available",
-      "passed": false
+      "passed": true
+    },
+    {
+      "name": "mail_truth_25_random_samples",
+      "passed": true
+    },
+    {
+      "name": "mail_native_world",
+      "passed": true
+    },
+    {
+      "name": "mail_mailbox_counts_and_sample_digests_equal",
+      "passed": true
     },
     {
       "name": "credential_backend_override_restored",
