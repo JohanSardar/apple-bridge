@@ -578,10 +578,8 @@ features:
       - {id: CONN-CLAUDE-AI, levels: [real]}
       - {id: CONN-CHATGPT, levels: [real]}
       - {id: WEB-LOCAL-SAFARI, levels: [web]}
-    notes: RMT-ONECOMMAND-FLOW sim covers ephemeral approval-link delivery, token-free status and logs, redacted client failures, and cancellation before Funnel approval. System Funnel passes the public Ubuntu path with a valid certificate, REST and MCP SSE, spoofed-forwarding rejection and Serve-config preservation (real evidence 2026-10-21). WEB-LOCAL-SAFARI passes. T76 live private embedded runners validate on/private status and invitation shape through the Air system tailnet path; remote off and private restoration pass. TCP acceptance is limited by the tailnet grant stated below.
+    notes: RMT-ONECOMMAND-FLOW sim covers ephemeral approval-link delivery, token-free status and logs, redacted client failures, and cancellation before Funnel approval. System Funnel passes the public Ubuntu path with a valid certificate, REST and MCP SSE, spoofed-forwarding rejection and Serve-config preservation (real evidence 2026-10-21). WEB-LOCAL-SAFARI passes. T76 live private embedded runners validate on/private status and invitation shape through the Air system tailnet path; remote off and private restoration pass. With the tailnet grant tcp:7780 to the bridge node in place, invitation redemption and the session-gated bridge challenge pass for real (2026-10-30).
     limits:
-      - {"scenario": "RMT-STATUS-OFF", "level": "real", "reason": "limited: needs tailnet grant tcp:7780 to bridge node"}
-      - {"scenario": "RMT-TS-EMBEDDED", "level": "real", "reason": "limited: needs tailnet grant tcp:7780 to bridge node"}
       - {"scenario": "CONN-CLAUDE-AI", "level": "real", "reason": "needs connector login"}
       - {"scenario": "CONN-CHATGPT", "level": "real", "reason": "needs connector login"}
   - id: web.agents
@@ -987,12 +985,10 @@ features:
     milestone: W1
     modules: [remote, web]
     depends_on: [web.remote]
-    status: limited
+    status: done
     scenarios:
       - {id: RMT-PRIVATE-CONNECT, levels: [sim, replica]}
-    limits:
-      - {scenario: RMT-PRIVATE-CONNECT, level: replica, reason: "limited: needs tailnet grant tcp:7780 to bridge node"}
-    notes: Five-minute single-use invitations, ephemeral in-memory connecting identities, private approval IPC and shared web/API/feed dispatch pass sim regression coverage; localhost origin retained; hosted connectors unsupported. T76 replica uses the Air system tailnet path against the live private node without a new client login; private status and restoration pass, TCP acceptance awaits the tailnet grant.
+    notes: Five-minute single-use invitations, ephemeral in-memory connecting identities, private approval IPC and shared web/API/feed dispatch pass sim regression coverage; localhost origin retained; hosted connectors unsupported. T76 replica uses the Air system tailnet path against the live private node without a new client login; private status, invitation redemption, session gating and restoration pass with the tailnet grant (2026-10-30).
 
   - id: vision.queries
     title: Vision OCR and PDF document operations

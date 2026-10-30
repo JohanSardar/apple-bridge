@@ -1,9 +1,8 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[6.52 3.37 4.1] cpu_idle=85% cpus=8 other_heavy=0"
+    "summary": "air: load=[4.67 2.91 2.41] cpu_idle=75% cpus=8 other_heavy=0"
   },
-  "status": "limited",
   "run_id": "private-live",
   "network_path": "system tailnet TCP transport to live private embedded node",
   "metrics": {
@@ -11,9 +10,9 @@
   },
   "scenario": "RMT-TS-EMBEDDED",
   "level": "real",
-  "passed": false,
+  "passed": true,
   "git_sha": "",
-  "at": "2026-10-30T03:04:20.773136Z",
+  "at": "2026-10-30T05:40:09.265248Z",
   "assertions": [
     {
       "name": "live_home_available",
@@ -36,10 +35,16 @@
       "passed": true
     },
     {
-      "name": "tailnet_tcp_grant",
-      "passed": false,
-      "status": "limited",
-      "detail": "limited: needs tailnet grant tcp:7780 to bridge node"
+      "name": "session_required",
+      "passed": true
+    },
+    {
+      "name": "invitation_redeemed",
+      "passed": true
+    },
+    {
+      "name": "session_reaches_bridge_challenge",
+      "passed": true
     },
     {
       "name": "private_on_restored",
