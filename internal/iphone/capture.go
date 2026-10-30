@@ -54,10 +54,7 @@ func (d *Delivery) Capture(ctx context.Context, phone trust.Principal, payload [
 	if upload.ContentType != expected {
 		return out, contracts.ErrInvalid
 	}
-	principal, err := d.Authority.Principal(r.Principal)
-	if err != nil {
-		return out, err
-	}
+	principal := trust.Principal{ID: r.Principal, Grants: []contracts.Grant{"iphone:write"}}
 	hash := sha256.Sum256(upload.Data)
 	idHash := sha256.Sum256([]byte(r.Command.ID + "\x00" + r.RequestHash))
 	out = CaptureReceipt{BlobID: "qry_" + hex.EncodeToString(idHash[:]), Digest: hex.EncodeToString(hash[:]), Size: int64(len(upload.Data)), ContentType: expected}

@@ -96,6 +96,10 @@ func runIPhoneCapture(ctx context.Context, s Scenario, level string) Evidence {
 		data, _ := io.ReadAll(response.Body)
 		return response.StatusCode, data
 	}
+	for _, seconds := range []int{0, 11} {
+		args, _ := json.Marshal(map[string]any{"device_id": phone.ID, "seconds": seconds})
+		add("audio_duration_bound_rejected", contracts.ValidateIPhoneCommand(contracts.Command{ID: "cmd_capture_bounds", Op: "iphone.capture.audio", Args: args}) != nil)
+	}
 	for _, kind := range []string{"photo", "audio"} {
 		args, _ := json.Marshal(contracts.IPhoneTarget{DeviceID: phone.ID})
 		command := contracts.Command{ID: "cmd_capture_" + kind, Op: "iphone.capture." + kind, Args: args}
@@ -137,5 +141,40 @@ func runIPhoneCapture(ctx context.Context, s Scenario, level string) Evidence {
 		observed, err := store.Command(ctx, command.ID)
 		add(kind+"_ledger_observed", err == nil && observed.State == contracts.CommandObserved)
 	}
+	delegated := trust.Principal{ID: "replica:test/agent:capture", Kind: "delegated", Level: trust.AgentFull, Grants: []contracts.Grant{"iphone:write"}}
+	_, err = a.Principal(delegated.ID)
+	add("delegated_principal_has_no_local_credential", err != nil)
+	args, _ := json.Marshal(contracts.IPhoneTarget{DeviceID: phone.ID})
+	command := contracts.Command{ID: "cmd_capture_delegated", Op: "iphone.capture.photo", Args: args}
+	hash, err := contracts.CommandHash(command)
+	add("delegated_command_hash", err == nil)
+	era, err := store.AdmissionEra(ctx)
+	add("delegated_admission_era", err == nil)
+	record := contracts.CommandRecord{AdmissionEra: era, Command: command, Principal: delegated.ID, Source: contracts.IPhone, RequestHash: hash, State: contracts.CommandAdmitted, CreatedAt: time.Now(), ExpiresAt: time.Now().Add(time.Minute)}
+	record, err = store.TransitionCommand(ctx, state.CommandTransition{Record: record})
+	add("delegated_admitted_fixture", err == nil)
+	for _, next := range []contracts.CommandState{contracts.CommandPrepared, contracts.CommandDispatched} {
+		previous := record.State
+		record.State = next
+		record, err = store.TransitionCommand(ctx, state.CommandTransition{From: previous, Record: record})
+		add("delegated_"+string(next)+"_fixture", err == nil)
+	}
+	authorized := false
+	delivery.Authorize = func(_ context.Context, r contracts.CommandRecord) error {
+		authorized = r.Principal == delegated.ID && r.RequestHash == hash
+		if !authorized {
+			return contracts.ErrUnauthorized
+		}
+		return nil
+	}
+	upload := iphone.CaptureUpload{ID: command.ID, Hash: hash, ContentType: "image/jpeg", Data: []byte("[ab-test] delegated")}
+	status, raw := request("/v1/iphone/capture", upload)
+	var receipt iphone.CaptureReceipt
+	add("delegated_reauthorized_upload", authorized && status == 200 && json.Unmarshal(raw, &receipt) == nil)
+	grant, err := store.QueryBlobGrant(ctx, delegated, receipt.BlobID)
+	add("delegated_caller_blob_grant", err == nil && grant.AllowsBlob(receipt.Digest))
+	delivery.Authorize = func(context.Context, contracts.CommandRecord) error { return contracts.ErrUnauthorized }
+	status, _ = request("/v1/iphone/capture", upload)
+	add("delegated_revoked_upload_rejected", status == 400)
 	return e
 }

@@ -2,7 +2,7 @@ package contracts
 
 type IPhoneCaptureAudioArgs struct {
 	DeviceID string `json:"device_id"`
-	Seconds  int    `json:"seconds,omitempty"`
+	Seconds  *int   `json:"seconds,omitempty"`
 }
 
 func IPhoneCaptureCommand(op string) bool {
@@ -15,7 +15,7 @@ func init() {
 	})
 	RegisterIPhoneCommand("iphone.capture.audio", func(raw []byte) error {
 		var args IPhoneCaptureAudioArgs
-		if DecodeInput(raw, &args) != nil || args.Seconds < 0 || args.Seconds > 10 {
+		if DecodeInput(raw, &args) != nil || args.Seconds != nil && (*args.Seconds < 1 || *args.Seconds > 10) {
 			return ErrInvalid
 		}
 		return nil
