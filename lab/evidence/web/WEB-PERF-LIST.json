@@ -1,0 +1,26 @@
+{
+  "scenario": "WEB-PERF-LIST",
+  "level": "web",
+  "passed": false,
+  "git_sha": "bf9fdadc11c74344ceaa2308492de5d4b10df5e7",
+  "metrics": {
+    "matrix": [
+      "chromium-light-desktop"
+    ],
+    "passed_tests": 0,
+    "failed_tests": 1,
+    "skipped_tests": 0,
+    "flaky_tests": 0,
+    "raw_sha256": "31630d56ad0e40ed04116d556b283bb1925c09f5f97592ca87427977088713e1"
+  },
+  "assertions": [
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": false
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "scenario": "WEB-MSG-MANAGE",
+  "level": "web",
+  "passed": false,
+  "git_sha": "bf9fdadc11c74344ceaa2308492de5d4b10df5e7",
+  "metrics": {
+    "matrix": [
+      "chromium-light-desktop"
+    ],
+    "passed_tests": 17,
+    "failed_tests": 1,
+    "skipped_tests": 8,
+    "flaky_tests": 0,
+    "raw_sha256": "54b38d4a4468b13e9c0379517b077e6a329b58dfa67d417afcdce31df5426b21"
+  },
+  "assertions": [
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": false
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ]
+}

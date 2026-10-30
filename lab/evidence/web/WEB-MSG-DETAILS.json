@@ -1,70 +1,25 @@
 {
   "scenario": "WEB-MSG-DETAILS",
   "level": "web",
-  "git_sha": "e7b29bd3a8b3dcd35c592d1277b39680a6596f9e",
-  "at": "2026-10-29T23:29:24.913468Z",
   "passed": true,
+  "git_sha": "bf9fdadc11c74344ceaa2308492de5d4b10df5e7",
   "metrics": {
-    "matrix_count": 12,
-    "completed_matrix_count": 12,
-    "passed_matrix_count": 12,
-    "failed_matrix_count": 0,
-    "incomplete_matrix_count": 0,
-    "passed_test_count": 84,
-    "failed_test_count": 0,
-    "skipped_test_count": 0,
-    "report_sha256": "c5b50b70096813369087a19e536a689c1cfb5d44155f43455d34c77cf83c81e1",
-    "initial_failed_matrix_count": 1,
-    "retried_matrix_count": 1,
-    "initial_report_sha256": "e23aa104be95794d7a08a74ee761dab6ea6fb7d8defbfb42050be397d80d4f5d"
+    "matrix": [
+      "chromium-light-desktop"
+    ],
+    "passed_tests": 7,
+    "failed_tests": 0,
+    "skipped_tests": 0,
+    "flaky_tests": 0,
+    "raw_sha256": "4c391d37816d887e454e8143d07328b3392ebd35fc000e9a1ddd978caa750bf4"
   },
   "assertions": [
     {
-      "name": "webkit-light-phone",
+      "name": "chromium-light-desktop:playwright_matrix",
       "passed": true
     },
     {
-      "name": "webkit-light-desktop",
-      "passed": true
-    },
-    {
-      "name": "webkit-dark-phone",
-      "passed": true
-    },
-    {
-      "name": "webkit-dark-desktop",
-      "passed": true
-    },
-    {
-      "name": "chromium-light-phone",
-      "passed": true
-    },
-    {
-      "name": "chromium-light-desktop",
-      "passed": true
-    },
-    {
-      "name": "chromium-dark-phone",
-      "passed": true
-    },
-    {
-      "name": "chromium-dark-desktop",
-      "passed": true
-    },
-    {
-      "name": "firefox-light-phone",
-      "passed": true
-    },
-    {
-      "name": "firefox-light-desktop",
-      "passed": true
-    },
-    {
-      "name": "firefox-dark-phone",
-      "passed": true
-    },
-    {
-      "name": "firefox-dark-desktop",
+      "name": "credential_backend_override_restored",
       "passed": true
     }
   ]

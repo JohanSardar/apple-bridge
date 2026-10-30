@@ -106,6 +106,8 @@ export function SwipeChatRow(props: {
     let root!: HTMLDivElement, origin: { id: number; x: number; y: number; width: number } | undefined, suppress = false;
     const [offset, setOffset] = createSignal(0);
     let trailing: HTMLDivElement | undefined;
+    const settle = () => { if (!origin && offset() < 0 && trailing?.isConnected) setOffset(-trailing.scrollWidth); };
+    const resize = new ResizeObserver(settle);
     const finish = (event: PointerEvent, cancelled = false) => {
         if (!origin || event.pointerId !== origin.id) return;
         const dx = offset(), width = origin.width;
@@ -117,9 +119,12 @@ export function SwipeChatRow(props: {
             else if (props.chat.unread_count > 0) props.actions.markRead(event, props.chat.chat.id);
             else props.actions.markUnread(event, props.chat.chat.id);
             setOffset(0);
-        } else setOffset(Math.abs(dx) > 45 ? (dx < 0 ? -(trailing?.scrollWidth || 88) : 88) : 0);
+        } else {
+            setOffset(Math.abs(dx) > 45 ? (dx < 0 ? -(trailing?.scrollWidth || 88) : 88) : 0);
+            queueMicrotask(settle);
+        }
     };
-    onCleanup(() => { origin = undefined; });
+    onCleanup(() => { origin = undefined; resize.disconnect(); });
     return <div ref={root} class="chat-swipe-row" onDragStart={event => event.preventDefault()}
         onContextMenu={event => { event.preventDefault(); props.surface.open(props.chat, event.currentTarget); }}
         onKeyDown={event => {
@@ -155,7 +160,7 @@ export function SwipeChatRow(props: {
                         setOffset(0);
                     }}>{props.chat.unread_count > 0 ? s.readAction : s.unread}</button>
             }>
-                <div class="chat-swipe-trailing" ref={trailing}>
+                <div class="chat-swipe-trailing" ref={element => { trailing = element; resize.disconnect(); resize.observe(element); }}>
                     {props.extraTrailing?.(props.chat, root, () => setOffset(0))}
                     <button class="destructive" disabled={!props.actions.can('delete_chat', props.chat.chat.id)}
                         onClick={() => { props.surface.open(props.chat, root, true); setOffset(0); }}>{s.deleteAction}</button>
