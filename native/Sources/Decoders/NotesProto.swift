@@ -148,7 +148,7 @@ public enum NotesProto {
             return block.type != "paragraph" && !(index == 0 && block.type == "title")
         } || !attachments.isEmpty
         let roundTrip = flat.allSatisfy { block in
-            guard ["paragraph", "title", "heading", "monostyled"].contains(block.type), block.blockquote != true, block.level == nil || block.type == "heading" else { return false }
+            guard ["paragraph", "title", "heading", "monostyled"].contains(block.type), block.blockquote != true, (block.level ?? 0) == 0 || block.type == "heading" else { return false }
             return block.runs.allSatisfy { run in
                 guard run.highlight == nil, run.font == nil, run.font_size == nil, run.color == nil, run.superscript == nil, !run.text.contains("\u{0}"), !run.text.contains("\u{2028}") else { return false }
                 guard let link = run.link else { return true }
