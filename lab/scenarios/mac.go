@@ -55,6 +55,23 @@ func runMac(ctx context.Context, s Scenario, level string) (e Evidence) {
 	if err != nil {
 		return
 	}
+	if s.ID == "MAC-NOTIFY-REAL" && level == "real" {
+		probe, cancel := context.WithTimeout(ctx, 15*time.Second)
+		report := filepath.Join(w.Dir, "notification-permissions.json")
+		permissionErr := exec.CommandContext(probe, filepath.Join(w.HelperApp, "Contents", "MacOS", "AppleBridgeHelper"), "permission-status", "--report", report).Run()
+		cancel()
+		data, readErr := os.ReadFile(report)
+		var permissions map[string]string
+		decodeErr := json.Unmarshal(data, &permissions)
+		add("notification_permission_status_read", permissionErr == nil && readErr == nil && decodeErr == nil)
+		authorized := permissions["notifications"] == "authorized"
+		add("notification_authorized", authorized)
+		if permissionErr != nil || readErr != nil || decodeErr != nil || !authorized {
+			e.Status = "limited"
+			e.Conditions = map[string]string{"reason": "Helper notification authorization is unavailable or not granted; no authorization requested"}
+			return
+		}
+	}
 	if s.ID == "MAC-ACTIONS" {
 		macActions(ctx, client, w, add)
 		return

@@ -153,12 +153,12 @@ struct Checks {
         let folder = root.appendingPathComponent("[ab-test " + UUID().uuidString + "]")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: folder) }
-        let file = folder.appendingPathComponent("synthetic.txt")
+        let file = folder.appendingPathComponent("[ab-test] synthetic.txt")
         let token = "abtest" + UUID().uuidString.replacingOccurrences(of: "-", with: "")
         try Data(token.utf8).write(to: file)
         let (rows, complete) = try await source.snapshot(root)
         guard complete, rows.contains(where: { $0["native_key"].string == file.path }) else { throw SourceFailure.corrupt }
-        let args: JSON = .object(["root": .string(root.path), "path": .string(folder.lastPathComponent + "/synthetic.txt")])
+        let args: JSON = .object(["root": .string(root.path), "path": .string(folder.lastPathComponent + "/" + file.lastPathComponent)])
         let result = try await source.read(args)
         guard result["size"].number == Double(token.utf8.count), result["digest"].string.count == 64 else { throw SourceFailure.corrupt }
         do {
@@ -177,6 +177,27 @@ struct Checks {
             } while Date() < deadline
             guard found else { throw SourceFailure.capabilityUnproven }
         } else if scenario == "FILE-OFFLOAD-REAL" {
+            func cloudValues() throws -> URLResourceValues {
+                var refreshed = URL(fileURLWithPath: file.path)
+                refreshed.removeAllCachedResourceValues()
+                return try refreshed.resourceValues(forKeys: [.isUbiquitousItemKey, .ubiquitousItemIsUploadedKey, .ubiquitousItemDownloadingStatusKey])
+            }
+            let backingDeadline = Date().addingTimeInterval(30)
+            while try cloudValues().isUbiquitousItem != true {
+                guard Date() < backingDeadline else {
+                    print("offload_fixture_icloud_backed=false")
+                    throw SourceFailure.capabilityUnproven
+                }
+                try await Task.sleep(for: .milliseconds(500))
+            }
+            let uploadDeadline = Date().addingTimeInterval(60)
+            while try cloudValues().ubiquitousItemIsUploaded != true {
+                guard Date() < uploadDeadline else {
+                    print("offload_fixture_uploaded=false")
+                    throw SourceFailure.capabilityUnproven
+                }
+                try await Task.sleep(for: .milliseconds(500))
+            }
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/usr/bin/brctl")
             process.arguments = ["evict", file.path]
@@ -184,10 +205,16 @@ struct Checks {
             process.standardError = FileHandle.nullDevice
             try process.run()
             process.waitUntilExit()
-            guard process.terminationStatus == 0 else { throw SourceFailure.capabilityUnproven }
+            guard process.terminationStatus == 0 else {
+                print("offload_evict_command_passed=false")
+                throw SourceFailure.capabilityUnproven
+            }
             let evictionDeadline = Date().addingTimeInterval(15)
-            while try file.resourceValues(forKeys: [.ubiquitousItemDownloadingStatusKey]).ubiquitousItemDownloadingStatus != .notDownloaded {
-                guard Date() < evictionDeadline else { throw SourceFailure.capabilityUnproven }
+            while try cloudValues().ubiquitousItemDownloadingStatus != .notDownloaded {
+                guard Date() < evictionDeadline else {
+                    print("offload_fixture_evicted=false")
+                    throw SourceFailure.capabilityUnproven
+                }
                 try await Task.sleep(for: .milliseconds(100))
             }
             let reread = try await source.read(args)

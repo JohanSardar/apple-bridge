@@ -3,8 +3,11 @@ package scenarios
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/lab/scripted"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -30,6 +33,30 @@ func macRealCommands(ctx context.Context, s Scenario, client scripted.Client, ad
 		return strings.TrimSpace(string(b)), err
 	}
 	switch s.ID {
+	case "MAC-NOTIFY-REAL":
+		raw, _ := json.Marshal(map[string]any{"title": "[ab-test] notification", "body": "[ab-test] qualification"})
+		var out contracts.CommandRecord
+		err := client.Call(ctx, "mac.notify", contracts.Command{ID: contracts.NewCommandID(), Args: raw, WaitMS: 15000}, &out)
+		var evidence struct {
+			Readback struct {
+				Delivered bool `json:"delivered"`
+				Cleaned   bool `json:"cleaned"`
+			} `json:"readback"`
+		}
+		var problem *contracts.Error
+		if errors.As(err, &problem) {
+			fmt.Fprintln(os.Stderr, "notification admission error code:", problem.Code)
+		}
+		if out.Error != nil {
+			fmt.Fprintln(os.Stderr, "notification error code:", out.Error.Code)
+		}
+		decode := json.Unmarshal(out.Evidence, &evidence)
+		fmt.Fprintln(os.Stderr, "notification command state:", out.State)
+		add("notification_command_observed", out.State == contracts.CommandObserved)
+		add("notification_delivery_readback", decode == nil && evidence.Readback.Delivered)
+		add("notification_cleanup_readback", decode == nil && evidence.Readback.Cleaned)
+		add("notification_delivered_and_cleaned", err == nil && decode == nil && out.State == contracts.CommandObserved && contracts.MacCompletionEvidence(out.Evidence, out.RequestHash) && evidence.Readback.Delivered && evidence.Readback.Cleaned)
+
 	case "MAC-AUDIO-REAL", "MAC-REPLICA":
 		muted, muteErr := script("output muted of (get volume settings)")
 		add("original_mute_saved", muteErr == nil)

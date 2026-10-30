@@ -1238,7 +1238,7 @@ features:
     depends_on: [files.capture]
     status: limited
     scenarios:
-      - {id: FILES-TRANSFORM, levels: [sim]}
+      - {id: FILES-TRANSFORM, levels: [sim, real]}
     limits:
       - {scenario: FILES-TRANSFORM, level: sim, reason: Generated native fixtures; real qualification batched at end.}
   - id: audio.queries

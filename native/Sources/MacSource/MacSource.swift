@@ -199,6 +199,12 @@ public final class MacSource: Source {
             }
             let identifier = "apple-bridge-" + UUID().uuidString
             try await center.add(UNNotificationRequest(identifier: identifier, content: content, trigger: nil))
+            defer {
+                if content.title.hasPrefix("[ab-test]") {
+                    center.removePendingNotificationRequests(withIdentifiers: [identifier])
+                    center.removeDeliveredNotifications(withIdentifiers: [identifier])
+                }
+            }
             var delivered = false
             for _ in 0..<20 {
                 delivered = await center.deliveredNotifications().contains { $0.request.identifier == identifier }
@@ -206,7 +212,15 @@ public final class MacSource: Source {
                 try await Task.sleep(for: .milliseconds(100))
             }
             guard delivered else { throw SourceFailure.unavailable }
+            if content.title.hasPrefix("[ab-test]") {
+                center.removePendingNotificationRequests(withIdentifiers: [identifier])
+                center.removeDeliveredNotifications(withIdentifiers: [identifier])
+                let remaining = await center.deliveredNotifications().contains { $0.request.identifier == identifier }
+                guard !remaining else { throw SourceFailure.unavailable }
+                readback = .object(["delivered": .bool(true), "cleaned": .bool(true)])
+            } else {
             readback = .object(["delivered": .bool(true), "identifier": .string(identifier)])
+            }
         case "mac.open_settings":
             let panes = ["general": "com.apple.systempreferences.GeneralSettings", "notifications": "com.apple.Notifications-Settings.extension", "network": "com.apple.Network-Settings.extension", "displays": "com.apple.Displays-Settings.extension", "wallpaper": "com.apple.Wallpaper-Settings.extension", "privacy": "com.apple.settings.PrivacySecurity.extension"]
             guard let pane = panes[args["pane"].string], let url = URL(string: "x-apple.systempreferences:" + pane), NSWorkspace.shared.open(url) else { throw SourceFailure.invalid }
