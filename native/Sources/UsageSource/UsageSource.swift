@@ -94,13 +94,14 @@ public final class UsageSource: Source {
         }
         let polling = Task {
             while !Task.isCancelled {
-                do { try await Task.sleep(for: .seconds(30)); continuation.yield(()) } catch { return }
+                do { try await Task.sleep(for: .seconds(300)); continuation.yield(()) } catch { return }
             }
         }
         defer { polling.cancel(); watching.cancel(); observers.forEach { center.removeObserver($0) }; continuation.finish() }
         try await scan(sink, live: false)
         for await _ in changes {
             try Task.checkCancellation()
+            try await Task.sleep(for: .seconds(1))
             if let inputs = UsageInputs(root, power: power.count, previous: scanned), inputs == scanned {
                 continue
             }
