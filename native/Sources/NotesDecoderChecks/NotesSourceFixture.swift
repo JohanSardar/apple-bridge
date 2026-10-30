@@ -70,7 +70,7 @@ enum NotesSourceFixture {
         try FileManager.default.createDirectory(at: media.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         let original = Data("[ab-test] exact Notes attachment bytes 🧪".utf8)
         try original.write(to: media)
-        for (pk, name) in [(3, "native-plain"), (4, "native-rich"), (5, "split-title"), (6, "title-attachment")] {
+        for (pk, name) in [(3, "native-plain"), (4, "native-rich"), (5, "split-title"), (6, "title-attachment"), (7, "native-indent-0"), (8, "native-indent-1")] {
             try sql("INSERT INTO ZICNOTEDATA(Z_PK,ZDATA) VALUES(\(pk),?)", blob: Data(contentsOf: fixtures.appendingPathComponent(name + ".gz")))
             try sql("INSERT INTO ZICCLOUDSYNCINGOBJECT(Z_PK,Z_ENT,ZIDENTIFIER,ZTITLE1,ZFOLDER,ZNOTEDATA) VALUES(\(40 + pk),2,'\(name)','[ab-test] Synthetic',12,\(pk))")
         }
@@ -91,13 +91,15 @@ enum NotesSourceFixture {
         let plain = await sink.record("native-plain"), rich = await sink.record("native-rich")
         guard plain["data"]["editable"].string == "plain", plain["data"]["content_status"].string == "complete",
               rich["data"]["editable"].string == "none" else { throw Invalid.projection }
-        for candidate in [plain, rich] {
+        let zeroIndent = await sink.record("native-indent-0"), indented = await sink.record("native-indent-1")
+        guard zeroIndent["data"]["editable"].string == "plain", indented["data"]["editable"].string == "none" else { throw Invalid.projection }
+        for candidate in [plain, zeroIndent, rich, indented] {
             let action = JSON.object(["op": .string("notes.update"), "native_key": candidate["native_key"], "mode": .string("append"), "plain_text": .string("[ab-test] append")])
             do {
                 _ = try await source.prepare(.object(["action": action, "expected_state": candidate["data"]]))
-                guard candidate == plain else { throw Invalid.boundary }
+                guard candidate == plain || candidate == zeroIndent else { throw Invalid.boundary }
             } catch SourceFailure.unsupported {
-                guard candidate == rich else { throw Invalid.boundary }
+                guard candidate == rich || candidate == indented else { throw Invalid.boundary }
             }
         }
         let bodyRef = large["data"]["body_blob"]

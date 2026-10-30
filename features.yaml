@@ -430,7 +430,7 @@ features:
     limits:
       - scenario: NOTE-EXTRAS
         level: real
-        reason: "No verified real cleanup route on 25G241; no mutations attempted. Native move and rename require per-build NoteStore evidence and remain unadvertised; sim covers both. Folder deletion requires separate proof. Notes.sdef has no native checklist, hashtag or pin setters; existing decoder reads remain available."
+        reason: "Tagged production rename/move with captured-ID cleanup is implemented; real qualification pending on the Air. Folder deletion requires separate proof. Notes.sdef has no native checklist, hashtag or pin setters; existing decoder reads remain available."
   - id: notes.write
     title: Notes plain-text create, update, delete, folders; rich edits reject
     requirements: [R-RW, R-NOTES]
@@ -442,7 +442,7 @@ features:
       - {id: NOTE-CRUD, levels: [sim, real, replica]}
       - {id: NOTE-RICH-REJECT, levels: [sim, real]}
     limits:
-      - {"scenario": "NOTE-CRUD", "level": "real", "reason": "limited: real append changes native editability and the existing plain-text replace guard rejects the next write; T63 captured-ID cleanup passes with active notes 112 before/after and native objects 120 before/after. No retained residue was selected."}
+      - {"scenario": "NOTE-CRUD", "level": "real", "reason": "Zero-indent native paragraph metadata now remains plain-editable; append then replace and captured-ID cleanup need real qualification on the Air."}
   - id: usage.read
     title: Screen Time estimates from Biome App.InFocus with lock/sleep clipping
     notes: Input fingerprinting reuses immutable metadata key sets without changing its fields or polling cadence.
@@ -887,14 +887,14 @@ features:
       - {id: NOTE-LIST, levels: [sim]}
       - {id: NOTE-LIST-LIVE, levels: [web]}
       - {id: NOTE-DECODE-FULL, levels: [sim, real]}
-      - {id: NOTE-EDIT-PARITY, levels: [real]}
+      - {id: NOTE-EDIT-PARITY, levels: [sim, real]}
       - {id: WEB-NOTE-READ, levels: [web]}
       - {id: WEB-NOTE-WRITE, levels: [web]}
       - {id: WEB-NOTE-PARITY, levels: [web]}
     notes: >-
       Browser milestone 228/228 passes without skips or flakes; READ includes 4.5:1 highlight/link contrast across all five colors and both appearances. Core milestone green with explicit limits: #283 establishes leader-reported real DECODE-FULL 5/5 and REST/MCP CRUD sim 34/34. The pre-fix real append conflicted; replace/MCP were not reached, and tagged cleanup failed. Further real Notes writes are stopped and limited pending a verified cleanup route; no local On My Mac account exists. Leader-accepted #274 passes 20 real first-record saves, p95 gateway/Ubuntu replica 476.3/870.2 ms; full content 1430/1420 ms is separate. Rich/checklist mutations stay hidden; combined native/browser journeys, worker-enabled external-body integration, burst/crash and app-specific UI timing remain limited.
     limits:
-      - {"scenario": "NOTE-EDIT-PARITY", "level": "real", "reason": "limited: public Notes HTML does not create native checklist identities and rich editing still needs production-command qualification. The real parity probe and T63 cleanup baseline check pass (120 native objects before/after)."}
+      - {"scenario": "NOTE-EDIT-PARITY", "level": "real", "reason": "Production CRUD and rich-write rejection precede the native parity probe; real qualification pending on the Air. Public Notes HTML does not create native checklist identities; rich editing remains unsupported."}
   - id: remote.relay
     title: SNI passthrough relay, stable device enrollment and persistent budgets
     requirements: [R-SECURE, R-WEB-REACH]
