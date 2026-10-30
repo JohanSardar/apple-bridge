@@ -1,0 +1,15 @@
+{
+  "passed": false,
+  "counts": {
+    "live_samples": 0,
+    "command_samples": 0
+  },
+  "checks": {
+    "serve_config_read": true,
+    "isolated_gateway_started": false,
+    "expected_signing_keychain_available": false,
+    "configured_sdk_available": false,
+    "contacts_created": false,
+    "limits_certified": false
+  }
+}
