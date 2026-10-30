@@ -23,8 +23,7 @@ func runMacExtras(ctx context.Context, s Scenario, level string) (e Evidence) {
 		}
 	}()
 	if level != "sim" {
-		add("real_qualification_batched_at_end", false)
-		return
+		return runMacExtrasReal(ctx, s, level)
 	}
 	ctx = world.WithOptions(ctx, world.Options{Scope: "mac:read,mac:write,system:read"})
 	w, err := world.New(ctx, level, 1, 0, world.BlobOptions{Scope: "mac:read,mac:write,reminders:read,system:read"})
