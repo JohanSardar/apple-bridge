@@ -1,19 +1,42 @@
 {
+  "host_conditions": {
+    "quiet": true
+  },
+  "run_id": "run_01M657RKE93HY71QB68Y06P6BG",
+  "metrics": {
+    "browser_budget_ms": 180000,
+    "capture_observer_resets": 0,
+    "demo_messages": 5000,
+    "demo_startup_ms": 4018,
+    "fixture_setup_ms": 4018,
+    "matrix": [
+      "chromium-light-desktop"
+    ],
+    "setups": [
+      {
+        "fixture_setup_ms": 4018,
+        "fixture_snapshot": null,
+        "project": "chromium-light-desktop"
+      }
+    ]
+  },
   "scenario": "WEB-MSG-MANAGE",
   "level": "web",
-  "git_sha": "5989a67d0e021c8d737039ab231325a841d66020",
-  "passed": false,
-  "metrics": {
-    "passed_test_count": 1,
-    "failed_test_count": 1,
-    "skipped_test_count": 24,
-    "flaky_test_count": 0,
-    "report_sha256": "6638e97705f134dde5ed577d8e62926c05a0f177c00e8aca3a3302078e5067ea"
-  },
+  "passed": true,
+  "git_sha": "004664624d485a03400c327e3c49cedaa5637822",
+  "at": "2026-10-30T01:46:04.617577Z",
   "assertions": [
     {
-      "name": "chromium-light-desktop",
-      "passed": false
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
     }
+  ],
+  "latency": {},
+  "hosts": [
+    "pro"
   ]
 }

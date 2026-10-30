@@ -1,0 +1,583 @@
+{
+  "scenario": "WEB-MSG-PERF-INPUT",
+  "passed": false,
+  "projects": {
+    "chromium-light-phone": {
+      "tests": {
+        "passed": 0,
+        "failed": 1,
+        "skipped": 0,
+        "unrun": 3
+      },
+      "metrics": {
+        "open-chat": {
+          "frame_work": {
+            "samples": 1642,
+            "p50_ms": 0.161,
+            "p95_ms": 1.979,
+            "max_ms": 12.335
+          },
+          "input_responsiveness": {
+            "samples": 24,
+            "p50_ms": 3.5149999999999997,
+            "p95_ms": 6.3310000059604645,
+            "max_ms": 11.611
+          },
+          "frame_budget_applies": true,
+          "sampling_covered": true,
+          "long_tasks": [],
+          "input_passed": true,
+          "frame_passed": false
+        }
+      }
+    },
+    "chromium-light-desktop": {
+      "tests": {
+        "passed": 3,
+        "failed": 1,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "metrics": {
+        "open-media": {
+          "frame_work": {
+            "samples": 1271,
+            "p50_ms": 0.279,
+            "p95_ms": 1.48,
+            "max_ms": 9.286
+          },
+          "input_responsiveness": {
+            "samples": 24,
+            "p50_ms": 7.054999994039536,
+            "p95_ms": 8.761999982118606,
+            "max_ms": 10.121999994039536
+          },
+          "frame_budget_applies": false,
+          "sampling_covered": true,
+          "long_tasks": [],
+          "input_passed": false,
+          "frame_passed": false
+        },
+        "react": {
+          "frame_work": {
+            "samples": 1115,
+            "p50_ms": 0.197,
+            "p95_ms": 2.456,
+            "max_ms": 8.912
+          },
+          "input_responsiveness": {
+            "samples": 24,
+            "p50_ms": 3.0650000059604645,
+            "p95_ms": 5.793,
+            "max_ms": 5.973999982118607
+          },
+          "frame_budget_applies": false,
+          "sampling_covered": true,
+          "long_tasks": [],
+          "input_passed": true,
+          "frame_passed": false
+        },
+        "open-chat": {
+          "frame_work": {
+            "samples": 362,
+            "p50_ms": 0.66,
+            "p95_ms": 2.821,
+            "max_ms": 11.43
+          },
+          "input_responsiveness": {
+            "samples": 24,
+            "p50_ms": 3.5830000059604643,
+            "p95_ms": 5.554000005960464,
+            "max_ms": 7.0489999999999995
+          },
+          "frame_budget_applies": false,
+          "sampling_covered": true,
+          "long_tasks": [],
+          "input_passed": true,
+          "frame_passed": false
+        },
+        "send": {
+          "frame_work": {
+            "samples": 973,
+            "p50_ms": 0.14,
+            "p95_ms": 2.62,
+            "max_ms": 6.571
+          },
+          "input_responsiveness": {
+            "samples": 24,
+            "p50_ms": 3.5539999940395357,
+            "p95_ms": 5.520999999999999,
+            "max_ms": 8.133000011920927
+          },
+          "frame_budget_applies": false,
+          "sampling_covered": true,
+          "long_tasks": [],
+          "input_passed": true,
+          "frame_passed": true
+        }
+      }
+    },
+    "chromium-dark-phone": {
+      "tests": {
+        "passed": 4,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "metrics": {
+        "react": {
+          "frame_work": {
+            "samples": 1042,
+            "p50_ms": 0.196,
+            "p95_ms": 2.402,
+            "max_ms": 4.676
+          },
+          "input_responsiveness": {
+            "samples": 24,
+            "p50_ms": 4.177999988079071,
+            "p95_ms": 6.231999976158142,
+            "max_ms": 9.783000005960464
+          },
+          "frame_budget_applies": false,
+          "sampling_covered": true,
+          "long_tasks": [],
+          "input_passed": true,
+          "frame_passed": true
+        },
+        "open-media": {
+          "frame_work": {
+            "samples": 1312,
+            "p50_ms": 0.282,
+            "p95_ms": 1.343,
+            "max_ms": 8.769
+          },
+          "input_responsiveness": {
+            "samples": 24,
+            "p50_ms": 4.583,
+            "p95_ms": 6.419000005960465,
+            "max_ms": 6.962
+          },
+          "frame_budget_applies": false,
+          "sampling_covered": true,
+          "long_tasks": [],
+          "input_passed": true,
+          "frame_passed": false
+        },
+        "send": {
+          "frame_work": {
+            "samples": 1152,
+            "p50_ms": 0.112,
+            "p95_ms": 2.148,
+            "max_ms": 5.697
+          },
+          "input_responsiveness": {
+            "samples": 24,
+            "p50_ms": 3.411999994039536,
+            "p95_ms": 6.355999988079071,
+            "max_ms": 6.5970000059604645
+          },
+          "frame_budget_applies": false,
+          "sampling_covered": true,
+          "long_tasks": [
+            59
+          ],
+          "input_passed": true,
+          "frame_passed": false
+        },
+        "open-chat": {
+          "frame_work": {
+            "samples": 1646,
+            "p50_ms": 0.149,
+            "p95_ms": 2.028,
+            "max_ms": 6.3
+          },
+          "input_responsiveness": {
+            "samples": 24,
+            "p50_ms": 3.9559999880790713,
+            "p95_ms": 4.96,
+            "max_ms": 5.069999994039535
+          },
+          "frame_budget_applies": true,
+          "sampling_covered": true,
+          "long_tasks": [],
+          "input_passed": true,
+          "frame_passed": true
+        }
+      }
+    },
+    "chromium-dark-desktop": {
+      "tests": {
+        "passed": 3,
+        "failed": 1,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "metrics": {
+        "react": {
+          "frame_work": {
+            "samples": 1086,
+            "p50_ms": 0.192,
+            "p95_ms": 2.205,
+            "max_ms": 4.944
+          },
+          "input_responsiveness": {
+            "samples": 24,
+            "p50_ms": 3.1110000178813935,
+            "p95_ms": 4.718999999999999,
+            "max_ms": 5.664
+          },
+          "frame_budget_applies": false,
+          "sampling_covered": true,
+          "long_tasks": [],
+          "input_passed": true,
+          "frame_passed": true
+        },
+        "open-chat": {
+          "frame_work": {
+            "samples": 351,
+            "p50_ms": 0.534,
+            "p95_ms": 2.181,
+            "max_ms": 7.041
+          },
+          "input_responsiveness": {
+            "samples": 24,
+            "p50_ms": 2.742,
+            "p95_ms": 3.934,
+            "max_ms": 4.579000000000001
+          },
+          "frame_budget_applies": false,
+          "sampling_covered": true,
+          "long_tasks": [],
+          "input_passed": true,
+          "frame_passed": true
+        },
+        "send": {
+          "frame_work": {
+            "samples": 970,
+            "p50_ms": 0.122,
+            "p95_ms": 2.518,
+            "max_ms": 6.733
+          },
+          "input_responsiveness": {
+            "samples": 24,
+            "p50_ms": 3.455999994039536,
+            "p95_ms": 4.108000017881394,
+            "max_ms": 8.06500001192093
+          },
+          "frame_budget_applies": false,
+          "sampling_covered": true,
+          "long_tasks": [],
+          "input_passed": true,
+          "frame_passed": true
+        },
+        "open-media": {
+          "frame_work": {
+            "samples": 1290,
+            "p50_ms": 0.228,
+            "p95_ms": 1.334,
+            "max_ms": 9.22
+          },
+          "input_responsiveness": {
+            "samples": 24,
+            "p50_ms": 5.529999994039535,
+            "p95_ms": 8.66700001192093,
+            "max_ms": 8.693
+          },
+          "frame_budget_applies": false,
+          "sampling_covered": true,
+          "long_tasks": [],
+          "input_passed": false,
+          "frame_passed": false
+        }
+      }
+    },
+    "webkit-light-phone": {
+      "tests": {
+        "passed": 0,
+        "failed": 1,
+        "skipped": 0,
+        "unrun": 3
+      },
+      "metrics": {
+        "open-chat": {
+          "frame_work": {
+            "samples": 1681,
+            "p50_ms": 0,
+            "p95_ms": 1,
+            "max_ms": 5
+          },
+          "input_responsiveness": {
+            "samples": 24,
+            "p50_ms": 5,
+            "p95_ms": 9,
+            "max_ms": 11
+          },
+          "frame_budget_applies": true,
+          "sampling_covered": true,
+          "long_tasks": [],
+          "input_passed": false,
+          "frame_passed": true
+        }
+      }
+    },
+    "webkit-light-desktop": {
+      "tests": {
+        "passed": 0,
+        "failed": 1,
+        "skipped": 0,
+        "unrun": 3
+      },
+      "metrics": {}
+    },
+    "webkit-dark-phone": {
+      "tests": {
+        "passed": 1,
+        "failed": 1,
+        "skipped": 0,
+        "unrun": 2
+      },
+      "metrics": {
+        "send": {
+          "frame_work": {
+            "samples": 963,
+            "p50_ms": 0,
+            "p95_ms": 1,
+            "max_ms": 3
+          },
+          "input_responsiveness": {
+            "samples": 24,
+            "p50_ms": 5,
+            "p95_ms": 9,
+            "max_ms": 10
+          },
+          "frame_budget_applies": false,
+          "sampling_covered": true,
+          "long_tasks": [],
+          "input_passed": false,
+          "frame_passed": true
+        },
+        "open-chat": {
+          "frame_work": {
+            "samples": 1681,
+            "p50_ms": 0,
+            "p95_ms": 1,
+            "max_ms": 5
+          },
+          "input_responsiveness": {
+            "samples": 24,
+            "p50_ms": 5,
+            "p95_ms": 8,
+            "max_ms": 8
+          },
+          "frame_budget_applies": true,
+          "sampling_covered": true,
+          "long_tasks": [],
+          "input_passed": true,
+          "frame_passed": true
+        }
+      }
+    },
+    "webkit-dark-desktop": {
+      "tests": {
+        "passed": 0,
+        "failed": 1,
+        "skipped": 0,
+        "unrun": 3
+      },
+      "metrics": {
+        "open-chat": {
+          "frame_work": {
+            "samples": 365,
+            "p50_ms": 1,
+            "p95_ms": 3,
+            "max_ms": 7
+          },
+          "input_responsiveness": {
+            "samples": 24,
+            "p50_ms": 5,
+            "p95_ms": 9,
+            "max_ms": 13
+          },
+          "frame_budget_applies": false,
+          "sampling_covered": true,
+          "long_tasks": [],
+          "input_passed": false,
+          "frame_passed": true
+        }
+      }
+    },
+    "firefox-light-phone": {
+      "tests": {
+        "passed": 0,
+        "failed": 1,
+        "skipped": 0,
+        "unrun": 3
+      },
+      "metrics": {
+        "open-chat": {
+          "frame_work": {
+            "samples": 2784,
+            "p50_ms": 1,
+            "p95_ms": 2,
+            "max_ms": 12
+          },
+          "input_responsiveness": {
+            "samples": 24,
+            "p50_ms": 4,
+            "p95_ms": 7,
+            "max_ms": 8
+          },
+          "frame_budget_applies": true,
+          "sampling_covered": true,
+          "long_tasks": [],
+          "input_passed": true,
+          "frame_passed": false
+        }
+      }
+    },
+    "firefox-light-desktop": {
+      "tests": {
+        "passed": 0,
+        "failed": 1,
+        "skipped": 0,
+        "unrun": 3
+      },
+      "metrics": {
+        "open-chat": {
+          "frame_work": {
+            "samples": 382,
+            "p50_ms": 1,
+            "p95_ms": 4,
+            "max_ms": 12
+          },
+          "input_responsiveness": {
+            "samples": 24,
+            "p50_ms": 6,
+            "p95_ms": 11,
+            "max_ms": 15
+          },
+          "frame_budget_applies": false,
+          "sampling_covered": true,
+          "long_tasks": [],
+          "input_passed": false,
+          "frame_passed": false
+        }
+      }
+    },
+    "firefox-dark-phone": {
+      "tests": {
+        "passed": 4,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "metrics": {
+        "send": {
+          "frame_work": {
+            "samples": 1988,
+            "p50_ms": 0,
+            "p95_ms": 1,
+            "max_ms": 5
+          },
+          "input_responsiveness": {
+            "samples": 24,
+            "p50_ms": 3,
+            "p95_ms": 7,
+            "max_ms": 7
+          },
+          "frame_budget_applies": false,
+          "sampling_covered": true,
+          "long_tasks": [],
+          "input_passed": true,
+          "frame_passed": true
+        },
+        "react": {
+          "frame_work": {
+            "samples": 2058,
+            "p50_ms": 0,
+            "p95_ms": 1,
+            "max_ms": 5
+          },
+          "input_responsiveness": {
+            "samples": 24,
+            "p50_ms": 3,
+            "p95_ms": 6,
+            "max_ms": 6
+          },
+          "frame_budget_applies": false,
+          "sampling_covered": true,
+          "long_tasks": [],
+          "input_passed": true,
+          "frame_passed": true
+        },
+        "open-media": {
+          "frame_work": {
+            "samples": 2412,
+            "p50_ms": 0,
+            "p95_ms": 1,
+            "max_ms": 23
+          },
+          "input_responsiveness": {
+            "samples": 24,
+            "p50_ms": 6,
+            "p95_ms": 8,
+            "max_ms": 10
+          },
+          "frame_budget_applies": false,
+          "sampling_covered": true,
+          "long_tasks": [],
+          "input_passed": true,
+          "frame_passed": false
+        },
+        "open-chat": {
+          "frame_work": {
+            "samples": 2719,
+            "p50_ms": 1,
+            "p95_ms": 2,
+            "max_ms": 8
+          },
+          "input_responsiveness": {
+            "samples": 24,
+            "p50_ms": 4,
+            "p95_ms": 6,
+            "max_ms": 9
+          },
+          "frame_budget_applies": true,
+          "sampling_covered": true,
+          "long_tasks": [],
+          "input_passed": true,
+          "frame_passed": true
+        }
+      }
+    },
+    "firefox-dark-desktop": {
+      "tests": {
+        "passed": 0,
+        "failed": 1,
+        "skipped": 0,
+        "unrun": 3
+      },
+      "metrics": {
+        "open-chat": {
+          "frame_work": {
+            "samples": 347,
+            "p50_ms": 1,
+            "p95_ms": 3,
+            "max_ms": 12
+          },
+          "input_responsiveness": {
+            "samples": 24,
+            "p50_ms": 5,
+            "p95_ms": 12,
+            "max_ms": 14
+          },
+          "frame_budget_applies": false,
+          "sampling_covered": true,
+          "long_tasks": [],
+          "input_passed": false,
+          "frame_passed": false
+        }
+      }
+    }
+  }
+}

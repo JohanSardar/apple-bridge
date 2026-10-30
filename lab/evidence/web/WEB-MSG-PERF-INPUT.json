@@ -1,24 +1,327 @@
 {
+  "host_conditions": {
+    "quiet": true
+  },
+  "run_id": "run_01M6564NQK69TQJ2PDPD6Z3XXJ",
+  "metrics": {
+    "browser_budget_ms": 180000,
+    "capture_observer_resets": 0,
+    "demo_messages": 104900,
+    "demo_startup_ms": 50710,
+    "fixture_setup_ms": 50710,
+    "fixture_snapshot": {
+      "disk_bytes": 609320960,
+      "entry_bytes": 609328640,
+      "cache_bytes": 1218813184,
+      "blob_payloads": 58,
+      "key": "169b7ca238999938492dd2c0f0fb6e33bdda515e1722c7e1d0e2f48282453504",
+      "cache_hit": false,
+      "build_ms": 50585,
+      "copy_ms": 3438,
+      "records": 105329,
+      "fresh_digest": "c22ca73bb089ccf756b1cb2d16cb12b861adbdd9fd5456b5d4d261771d97e289",
+      "copy_digest": "c22ca73bb089ccf756b1cb2d16cb12b861adbdd9fd5456b5d4d261771d97e289",
+      "verified": true
+    },
+    "matrix": [
+      "chromium-light-phone",
+      "chromium-light-desktop",
+      "chromium-dark-phone",
+      "chromium-dark-desktop",
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "webkit-dark-phone",
+      "webkit-dark-desktop",
+      "firefox-light-phone",
+      "firefox-light-desktop",
+      "firefox-dark-phone",
+      "firefox-dark-desktop"
+    ],
+    "setups": [
+      {
+        "fixture_setup_ms": 50710,
+        "fixture_snapshot": {
+          "disk_bytes": 609320960,
+          "entry_bytes": 609328640,
+          "cache_bytes": 1218813184,
+          "blob_payloads": 58,
+          "key": "169b7ca238999938492dd2c0f0fb6e33bdda515e1722c7e1d0e2f48282453504",
+          "cache_hit": false,
+          "build_ms": 50585,
+          "copy_ms": 3438,
+          "records": 105329,
+          "fresh_digest": "c22ca73bb089ccf756b1cb2d16cb12b861adbdd9fd5456b5d4d261771d97e289",
+          "copy_digest": "c22ca73bb089ccf756b1cb2d16cb12b861adbdd9fd5456b5d4d261771d97e289",
+          "verified": true
+        },
+        "project": "chromium-light-phone"
+      },
+      {
+        "fixture_setup_ms": 1776,
+        "fixture_snapshot": {
+          "disk_bytes": 609320960,
+          "entry_bytes": 609328640,
+          "cache_bytes": 1218813184,
+          "blob_payloads": 58,
+          "key": "169b7ca238999938492dd2c0f0fb6e33bdda515e1722c7e1d0e2f48282453504",
+          "cache_hit": true,
+          "build_ms": 0,
+          "copy_ms": 1714,
+          "records": 105329,
+          "fresh_digest": "c22ca73bb089ccf756b1cb2d16cb12b861adbdd9fd5456b5d4d261771d97e289",
+          "copy_digest": "c22ca73bb089ccf756b1cb2d16cb12b861adbdd9fd5456b5d4d261771d97e289",
+          "verified": true
+        },
+        "project": "chromium-light-desktop"
+      },
+      {
+        "fixture_setup_ms": 1066,
+        "fixture_snapshot": {
+          "disk_bytes": 609320960,
+          "entry_bytes": 609328640,
+          "cache_bytes": 1218813184,
+          "blob_payloads": 58,
+          "key": "169b7ca238999938492dd2c0f0fb6e33bdda515e1722c7e1d0e2f48282453504",
+          "cache_hit": true,
+          "build_ms": 0,
+          "copy_ms": 1041,
+          "records": 105329,
+          "fresh_digest": "c22ca73bb089ccf756b1cb2d16cb12b861adbdd9fd5456b5d4d261771d97e289",
+          "copy_digest": "c22ca73bb089ccf756b1cb2d16cb12b861adbdd9fd5456b5d4d261771d97e289",
+          "verified": true
+        },
+        "project": "chromium-dark-phone"
+      },
+      {
+        "fixture_setup_ms": 953,
+        "fixture_snapshot": {
+          "disk_bytes": 609320960,
+          "entry_bytes": 609328640,
+          "cache_bytes": 1218813184,
+          "blob_payloads": 58,
+          "key": "169b7ca238999938492dd2c0f0fb6e33bdda515e1722c7e1d0e2f48282453504",
+          "cache_hit": true,
+          "build_ms": 0,
+          "copy_ms": 928,
+          "records": 105329,
+          "fresh_digest": "c22ca73bb089ccf756b1cb2d16cb12b861adbdd9fd5456b5d4d261771d97e289",
+          "copy_digest": "c22ca73bb089ccf756b1cb2d16cb12b861adbdd9fd5456b5d4d261771d97e289",
+          "verified": true
+        },
+        "project": "chromium-dark-desktop"
+      },
+      {
+        "fixture_setup_ms": 1115,
+        "fixture_snapshot": {
+          "disk_bytes": 609320960,
+          "entry_bytes": 609328640,
+          "cache_bytes": 1218813184,
+          "blob_payloads": 58,
+          "key": "169b7ca238999938492dd2c0f0fb6e33bdda515e1722c7e1d0e2f48282453504",
+          "cache_hit": true,
+          "build_ms": 0,
+          "copy_ms": 1092,
+          "records": 105329,
+          "fresh_digest": "c22ca73bb089ccf756b1cb2d16cb12b861adbdd9fd5456b5d4d261771d97e289",
+          "copy_digest": "c22ca73bb089ccf756b1cb2d16cb12b861adbdd9fd5456b5d4d261771d97e289",
+          "verified": true
+        },
+        "project": "webkit-light-phone"
+      },
+      {
+        "fixture_setup_ms": 914,
+        "fixture_snapshot": {
+          "disk_bytes": 609320960,
+          "entry_bytes": 609328640,
+          "cache_bytes": 1218813184,
+          "blob_payloads": 58,
+          "key": "169b7ca238999938492dd2c0f0fb6e33bdda515e1722c7e1d0e2f48282453504",
+          "cache_hit": true,
+          "build_ms": 0,
+          "copy_ms": 891,
+          "records": 105329,
+          "fresh_digest": "c22ca73bb089ccf756b1cb2d16cb12b861adbdd9fd5456b5d4d261771d97e289",
+          "copy_digest": "c22ca73bb089ccf756b1cb2d16cb12b861adbdd9fd5456b5d4d261771d97e289",
+          "verified": true
+        },
+        "project": "webkit-light-desktop"
+      },
+      {
+        "fixture_setup_ms": 1014,
+        "fixture_snapshot": {
+          "disk_bytes": 609320960,
+          "entry_bytes": 609328640,
+          "cache_bytes": 1218813184,
+          "blob_payloads": 58,
+          "key": "169b7ca238999938492dd2c0f0fb6e33bdda515e1722c7e1d0e2f48282453504",
+          "cache_hit": true,
+          "build_ms": 0,
+          "copy_ms": 991,
+          "records": 105329,
+          "fresh_digest": "c22ca73bb089ccf756b1cb2d16cb12b861adbdd9fd5456b5d4d261771d97e289",
+          "copy_digest": "c22ca73bb089ccf756b1cb2d16cb12b861adbdd9fd5456b5d4d261771d97e289",
+          "verified": true
+        },
+        "project": "webkit-dark-phone"
+      },
+      {
+        "fixture_setup_ms": 927,
+        "fixture_snapshot": {
+          "disk_bytes": 609320960,
+          "entry_bytes": 609328640,
+          "cache_bytes": 1218813184,
+          "blob_payloads": 58,
+          "key": "169b7ca238999938492dd2c0f0fb6e33bdda515e1722c7e1d0e2f48282453504",
+          "cache_hit": true,
+          "build_ms": 0,
+          "copy_ms": 901,
+          "records": 105329,
+          "fresh_digest": "c22ca73bb089ccf756b1cb2d16cb12b861adbdd9fd5456b5d4d261771d97e289",
+          "copy_digest": "c22ca73bb089ccf756b1cb2d16cb12b861adbdd9fd5456b5d4d261771d97e289",
+          "verified": true
+        },
+        "project": "webkit-dark-desktop"
+      },
+      {
+        "fixture_setup_ms": 917,
+        "fixture_snapshot": {
+          "disk_bytes": 609320960,
+          "entry_bytes": 609328640,
+          "cache_bytes": 1218813184,
+          "blob_payloads": 58,
+          "key": "169b7ca238999938492dd2c0f0fb6e33bdda515e1722c7e1d0e2f48282453504",
+          "cache_hit": true,
+          "build_ms": 0,
+          "copy_ms": 894,
+          "records": 105329,
+          "fresh_digest": "c22ca73bb089ccf756b1cb2d16cb12b861adbdd9fd5456b5d4d261771d97e289",
+          "copy_digest": "c22ca73bb089ccf756b1cb2d16cb12b861adbdd9fd5456b5d4d261771d97e289",
+          "verified": true
+        },
+        "project": "firefox-light-phone"
+      },
+      {
+        "fixture_setup_ms": 906,
+        "fixture_snapshot": {
+          "disk_bytes": 609320960,
+          "entry_bytes": 609328640,
+          "cache_bytes": 1218813184,
+          "blob_payloads": 58,
+          "key": "169b7ca238999938492dd2c0f0fb6e33bdda515e1722c7e1d0e2f48282453504",
+          "cache_hit": true,
+          "build_ms": 0,
+          "copy_ms": 882,
+          "records": 105329,
+          "fresh_digest": "c22ca73bb089ccf756b1cb2d16cb12b861adbdd9fd5456b5d4d261771d97e289",
+          "copy_digest": "c22ca73bb089ccf756b1cb2d16cb12b861adbdd9fd5456b5d4d261771d97e289",
+          "verified": true
+        },
+        "project": "firefox-light-desktop"
+      },
+      {
+        "fixture_setup_ms": 1194,
+        "fixture_snapshot": {
+          "disk_bytes": 609320960,
+          "entry_bytes": 609328640,
+          "cache_bytes": 1218813184,
+          "blob_payloads": 58,
+          "key": "169b7ca238999938492dd2c0f0fb6e33bdda515e1722c7e1d0e2f48282453504",
+          "cache_hit": true,
+          "build_ms": 0,
+          "copy_ms": 1171,
+          "records": 105329,
+          "fresh_digest": "c22ca73bb089ccf756b1cb2d16cb12b861adbdd9fd5456b5d4d261771d97e289",
+          "copy_digest": "c22ca73bb089ccf756b1cb2d16cb12b861adbdd9fd5456b5d4d261771d97e289",
+          "verified": true
+        },
+        "project": "firefox-dark-phone"
+      },
+      {
+        "fixture_setup_ms": 1055,
+        "fixture_snapshot": {
+          "disk_bytes": 609320960,
+          "entry_bytes": 609328640,
+          "cache_bytes": 1218813184,
+          "blob_payloads": 58,
+          "key": "169b7ca238999938492dd2c0f0fb6e33bdda515e1722c7e1d0e2f48282453504",
+          "cache_hit": true,
+          "build_ms": 0,
+          "copy_ms": 1032,
+          "records": 105329,
+          "fresh_digest": "c22ca73bb089ccf756b1cb2d16cb12b861adbdd9fd5456b5d4d261771d97e289",
+          "copy_digest": "c22ca73bb089ccf756b1cb2d16cb12b861adbdd9fd5456b5d4d261771d97e289",
+          "verified": true
+        },
+        "project": "firefox-dark-desktop"
+      }
+    ],
+    "template_cold_setup_ms": {
+      "generate": 417,
+      "list": 0,
+      "seed": 43706
+    }
+  },
   "scenario": "WEB-MSG-PERF-INPUT",
   "level": "web",
-  "git_sha": "dc372e7ee1b2ffae95c1c265c50aadbaa0872bf8",
-  "at": "2026-10-30T00:40:49.831656Z",
   "passed": false,
-  "metrics": {
-    "matrix_count": 1,
-    "completed_matrix_count": 1,
-    "passed_matrix_count": 0,
-    "failed_matrix_count": 1,
-    "incomplete_matrix_count": 0,
-    "passed_test_count": 0,
-    "failed_test_count": 1,
-    "skipped_test_count": 3,
-    "report_sha256": "534b5c52d002813f753708ac57a2cfca4ffb99226adf4063f8a64e7ac09829de"
-  },
+  "git_sha": "576b0b0910d803127160b250f9be5785634003ef",
+  "at": "2026-10-30T01:17:43.027592Z",
   "assertions": [
     {
-      "name": "chromium-light-desktop",
+      "name": "chromium-light-phone:playwright_matrix",
       "passed": false
+    },
+    {
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": false
+    },
+    {
+      "name": "chromium-dark-phone:playwright_matrix",
+      "passed": true
+    },
+    {
+      "name": "chromium-dark-desktop:playwright_matrix",
+      "passed": false
+    },
+    {
+      "name": "webkit-light-phone:playwright_matrix",
+      "passed": false
+    },
+    {
+      "name": "webkit-light-desktop:playwright_matrix",
+      "passed": false
+    },
+    {
+      "name": "webkit-dark-phone:playwright_matrix",
+      "passed": false
+    },
+    {
+      "name": "webkit-dark-desktop:playwright_matrix",
+      "passed": false
+    },
+    {
+      "name": "firefox-light-phone:playwright_matrix",
+      "passed": false
+    },
+    {
+      "name": "firefox-light-desktop:playwright_matrix",
+      "passed": false
+    },
+    {
+      "name": "firefox-dark-phone:playwright_matrix",
+      "passed": true
+    },
+    {
+      "name": "firefox-dark-desktop:playwright_matrix",
+      "passed": false
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
     }
+  ],
+  "latency": {},
+  "hosts": [
+    "pro"
   ]
 }

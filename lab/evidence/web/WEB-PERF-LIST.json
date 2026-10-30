@@ -1,19 +1,74 @@
 {
+  "host_conditions": {
+    "quiet": true
+  },
+  "run_id": "run_01M656SCBGBR08KNTY48CMC4KJ",
+  "metrics": {
+    "browser_budget_ms": 180000,
+    "capture_observer_resets": 0,
+    "demo_messages": 104900,
+    "demo_startup_ms": 1621,
+    "fixture_setup_ms": 1621,
+    "fixture_snapshot": {
+      "disk_bytes": 612823040,
+      "entry_bytes": 612830848,
+      "cache_bytes": 1222167936,
+      "blob_payloads": 59,
+      "key": "b68ad7a5cf65ecaa8d729f5903f0759fe8beb5b679e84adebb38c41c569867ad",
+      "cache_hit": true,
+      "build_ms": 0,
+      "copy_ms": 1586,
+      "records": 106960,
+      "fresh_digest": "10e73049370b974693e4b578989eabcef7ec3f148a3579a5baff0ef4330a5518",
+      "copy_digest": "10e73049370b974693e4b578989eabcef7ec3f148a3579a5baff0ef4330a5518",
+      "verified": true
+    },
+    "matrix": [
+      "chromium-light-desktop"
+    ],
+    "setups": [
+      {
+        "fixture_setup_ms": 1621,
+        "fixture_snapshot": {
+          "disk_bytes": 612823040,
+          "entry_bytes": 612830848,
+          "cache_bytes": 1222167936,
+          "blob_payloads": 59,
+          "key": "b68ad7a5cf65ecaa8d729f5903f0759fe8beb5b679e84adebb38c41c569867ad",
+          "cache_hit": true,
+          "build_ms": 0,
+          "copy_ms": 1586,
+          "records": 106960,
+          "fresh_digest": "10e73049370b974693e4b578989eabcef7ec3f148a3579a5baff0ef4330a5518",
+          "copy_digest": "10e73049370b974693e4b578989eabcef7ec3f148a3579a5baff0ef4330a5518",
+          "verified": true
+        },
+        "project": "chromium-light-desktop"
+      }
+    ],
+    "template_cold_setup_ms": {
+      "generate": 433,
+      "list": 14186,
+      "seed": 37286
+    }
+  },
   "scenario": "WEB-PERF-LIST",
   "level": "web",
-  "git_sha": "5989a67d0e021c8d737039ab231325a841d66020",
-  "passed": false,
-  "metrics": {
-    "passed_test_count": 0,
-    "failed_test_count": 1,
-    "skipped_test_count": 0,
-    "flaky_test_count": 0,
-    "report_sha256": "512be07c2aaf83f5e5a63c6ebdda4ac3f6318604ba1265a380a599b6c557f954"
-  },
+  "passed": true,
+  "git_sha": "c9e531afd951c83fe7c9231fcbe404cbf4058904",
+  "at": "2026-10-30T01:29:01.552352Z",
   "assertions": [
     {
-      "name": "chromium-light-desktop",
-      "passed": false
+      "name": "chromium-light-desktop:playwright_matrix",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
     }
+  ],
+  "latency": {},
+  "hosts": [
+    "pro"
   ]
 }

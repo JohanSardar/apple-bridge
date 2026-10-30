@@ -1,0 +1,15 @@
+{
+  "scenario": "WEB-MSG-MANAGE",
+  "passed": true,
+  "projects": {
+    "chromium-light-desktop": {
+      "tests": {
+        "passed": 26,
+        "failed": 0,
+        "skipped": 1,
+        "unrun": 0
+      },
+      "metrics": {}
+    }
+  }
+}

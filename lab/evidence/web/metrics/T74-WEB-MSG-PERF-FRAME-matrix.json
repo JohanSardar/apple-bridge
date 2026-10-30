@@ -1,0 +1,282 @@
+{
+  "scenario": "WEB-MSG-PERF-FRAME",
+  "passed": true,
+  "projects": {
+    "chromium-light-phone": {
+      "tests": {
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "metrics": {
+        "fling": {
+          "frame_work": {
+            "samples": 181,
+            "p50_ms": 1.782,
+            "p95_ms": 2.889,
+            "max_ms": 3.409
+          },
+          "population": 100000,
+          "window_size": 477,
+          "rendered": 24,
+          "long_tasks": [],
+          "frame_passed": true
+        }
+      }
+    },
+    "chromium-light-desktop": {
+      "tests": {
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "metrics": {
+        "fling": {
+          "frame_work": {
+            "samples": 181,
+            "p50_ms": 0.845,
+            "p95_ms": 1.814,
+            "max_ms": 3.153
+          },
+          "population": 100000,
+          "window_size": 500,
+          "rendered": 34,
+          "long_tasks": [],
+          "frame_passed": true
+        }
+      }
+    },
+    "chromium-dark-phone": {
+      "tests": {
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "metrics": {
+        "fling": {
+          "frame_work": {
+            "samples": 181,
+            "p50_ms": 0.811,
+            "p95_ms": 2.524,
+            "max_ms": 3.369
+          },
+          "population": 100000,
+          "window_size": 477,
+          "rendered": 24,
+          "long_tasks": [],
+          "frame_passed": true
+        }
+      }
+    },
+    "chromium-dark-desktop": {
+      "tests": {
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "metrics": {
+        "fling": {
+          "frame_work": {
+            "samples": 181,
+            "p50_ms": 0.854,
+            "p95_ms": 1.482,
+            "max_ms": 2.59
+          },
+          "population": 100000,
+          "window_size": 500,
+          "rendered": 33,
+          "long_tasks": [],
+          "frame_passed": true
+        }
+      }
+    },
+    "webkit-light-phone": {
+      "tests": {
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "metrics": {
+        "fling": {
+          "frame_work": {
+            "samples": 181,
+            "p50_ms": 1,
+            "p95_ms": 3,
+            "max_ms": 3
+          },
+          "population": 100000,
+          "window_size": 477,
+          "rendered": 24,
+          "long_tasks": [],
+          "frame_passed": true
+        }
+      }
+    },
+    "webkit-light-desktop": {
+      "tests": {
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "metrics": {
+        "fling": {
+          "frame_work": {
+            "samples": 181,
+            "p50_ms": 1,
+            "p95_ms": 3,
+            "max_ms": 5
+          },
+          "population": 100000,
+          "window_size": 500,
+          "rendered": 33,
+          "long_tasks": [],
+          "frame_passed": true
+        }
+      }
+    },
+    "webkit-dark-phone": {
+      "tests": {
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "metrics": {
+        "fling": {
+          "frame_work": {
+            "samples": 181,
+            "p50_ms": 1,
+            "p95_ms": 3,
+            "max_ms": 4
+          },
+          "population": 100000,
+          "window_size": 477,
+          "rendered": 23,
+          "long_tasks": [],
+          "frame_passed": true
+        }
+      }
+    },
+    "webkit-dark-desktop": {
+      "tests": {
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "metrics": {
+        "fling": {
+          "frame_work": {
+            "samples": 181,
+            "p50_ms": 1,
+            "p95_ms": 3,
+            "max_ms": 3
+          },
+          "population": 100000,
+          "window_size": 500,
+          "rendered": 33,
+          "long_tasks": [],
+          "frame_passed": true
+        }
+      }
+    },
+    "firefox-light-phone": {
+      "tests": {
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "metrics": {
+        "fling": {
+          "frame_work": {
+            "samples": 181,
+            "p50_ms": 1,
+            "p95_ms": 2,
+            "max_ms": 5
+          },
+          "population": 100000,
+          "window_size": 500,
+          "rendered": 23,
+          "long_tasks": [],
+          "frame_passed": true
+        }
+      }
+    },
+    "firefox-light-desktop": {
+      "tests": {
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "metrics": {
+        "fling": {
+          "frame_work": {
+            "samples": 181,
+            "p50_ms": 1,
+            "p95_ms": 3,
+            "max_ms": 6
+          },
+          "population": 100000,
+          "window_size": 500,
+          "rendered": 33,
+          "long_tasks": [],
+          "frame_passed": true
+        }
+      }
+    },
+    "firefox-dark-phone": {
+      "tests": {
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "metrics": {
+        "fling": {
+          "frame_work": {
+            "samples": 181,
+            "p50_ms": 2,
+            "p95_ms": 3,
+            "max_ms": 6
+          },
+          "population": 100000,
+          "window_size": 500,
+          "rendered": 23,
+          "long_tasks": [],
+          "frame_passed": true
+        }
+      }
+    },
+    "firefox-dark-desktop": {
+      "tests": {
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "metrics": {
+        "fling": {
+          "frame_work": {
+            "samples": 181,
+            "p50_ms": 2,
+            "p95_ms": 3,
+            "max_ms": 6
+          },
+          "population": 100000,
+          "window_size": 500,
+          "rendered": 34,
+          "long_tasks": [],
+          "frame_passed": true
+        }
+      }
+    }
+  }
+}
