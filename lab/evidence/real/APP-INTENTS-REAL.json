@@ -1,17 +1,60 @@
 {
-  "status": "limited",
-  "scenario": "APP-INTENTS-REAL",
-  "level": "real",
-  "passed": false,
-  "git_sha": "",
   "assertions": [
     {
-      "name": "shortcuts_run",
+      "name": "fresh_completed_phone_receipt",
+      "passed": true
+    },
+    {
+      "name": "state_restored",
+      "passed": true
+    },
+    {
+      "name": "resources_cleaned",
+      "passed": true
+    },
+    {
+      "name": "saved_shortcut_invoked",
       "passed": false
+    },
+    {
+      "name": "shortcut_pong",
+      "passed": false
+    },
+    {
+      "name": "shortcut_cleaned_up",
+      "passed": false
+    },
+    {
+      "name": "state_restored",
+      "passed": true
+    },
+    {
+      "name": "resources_cleaned",
+      "passed": true
+    },
+    {
+      "name": "shortcut_cleaned_up",
+      "passed": false
+    },
+    {
+      "name": "saved_shortcut_invoked",
+      "passed": false
+    },
+    {
+      "name": "restoration_receipt",
+      "passed": true
     },
     {
       "name": "credential_backend_override_restored",
       "passed": true
     }
-  ]
+  ],
+  "level": "real",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "intent_invocations": 0,
+    "phase": 2
+  },
+  "passed": false,
+  "scenario": "APP-INTENTS-REAL"
 }

@@ -1,17 +1,87 @@
 {
-  "status": "limited",
-  "scenario": "APP-LIVE-REAL",
-  "level": "real",
-  "passed": false,
-  "git_sha": "",
   "assertions": [
     {
-      "name": "phone_live_widgets",
+      "name": "fresh_completed_phone_receipt",
+      "passed": true
+    },
+    {
+      "name": "state_restored",
+      "passed": true
+    },
+    {
+      "name": "resources_cleaned",
+      "passed": true
+    },
+    {
+      "name": "activities_authorized",
+      "passed": true
+    },
+    {
+      "name": "activity_started",
+      "passed": true
+    },
+    {
+      "name": "activity_updated",
+      "passed": true
+    },
+    {
+      "name": "widget_shared_status",
+      "passed": true
+    },
+    {
+      "name": "live_and_widget_observed",
       "passed": false
+    },
+    {
+      "name": "activity_ended",
+      "passed": true
+    },
+    {
+      "name": "activity_ended",
+      "passed": true
+    },
+    {
+      "name": "resources_cleaned",
+      "passed": true
+    },
+    {
+      "name": "live_and_widget_observed",
+      "passed": false
+    },
+    {
+      "name": "widget_shared_status",
+      "passed": true
+    },
+    {
+      "name": "activities_authorized",
+      "passed": true
+    },
+    {
+      "name": "activity_updated",
+      "passed": true
+    },
+    {
+      "name": "activity_started",
+      "passed": true
+    },
+    {
+      "name": "state_restored",
+      "passed": true
+    },
+    {
+      "name": "restoration_receipt",
+      "passed": true
     },
     {
       "name": "credential_backend_override_restored",
       "passed": true
     }
-  ]
+  ],
+  "level": "real",
+  "metrics": {
+    "capture_observer_resets": 0,
+    "phase": 1
+  },
+  "passed": false,
+  "scenario": "APP-LIVE-REAL"
 }

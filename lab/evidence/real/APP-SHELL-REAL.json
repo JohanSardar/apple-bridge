@@ -1,17 +1,56 @@
 {
-  "status": "limited",
-  "scenario": "APP-SHELL-REAL",
-  "level": "real",
-  "passed": false,
-  "git_sha": "",
   "assertions": [
     {
-      "name": "real_device_acceptance",
+      "name": "fresh_completed_phone_receipt",
+      "passed": true
+    },
+    {
+      "name": "state_restored",
+      "passed": true
+    },
+    {
+      "name": "resources_cleaned",
+      "passed": true
+    },
+    {
+      "name": "capability_fields_observed",
       "passed": false
+    },
+    {
+      "name": "diagnostics_observed",
+      "passed": false
+    },
+    {
+      "name": "resources_cleaned",
+      "passed": true
+    },
+    {
+      "name": "capability_fields_observed",
+      "passed": false
+    },
+    {
+      "name": "state_restored",
+      "passed": true
+    },
+    {
+      "name": "diagnostics_observed",
+      "passed": false
+    },
+    {
+      "name": "restoration_receipt",
+      "passed": true
     },
     {
       "name": "credential_backend_override_restored",
       "passed": true
     }
-  ]
+  ],
+  "level": "real",
+  "metrics": {
+    "capabilities": 21,
+    "capture_observer_resets": 0,
+    "phase": 1
+  },
+  "passed": false,
+  "scenario": "APP-SHELL-REAL"
 }
