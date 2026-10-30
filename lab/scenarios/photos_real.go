@@ -43,6 +43,13 @@ func runPhotosReal(ctx context.Context, s Scenario, e Evidence) Evidence {
 		err = json.Unmarshal(data, &result)
 	}
 	add("helper_report", err == nil)
+	if failure, ok := result["failure"].(string); ok {
+		e.Metrics["library_asset_count"] = result["library_asset_count"]
+		e.Metrics["cleanup_passed"] = result["cleanup_passed"]
+		e.Passed = false
+		e.Assertions = append(e.Assertions, Assertion{Name: "native_probe_completed", Passed: false, Detail: failure})
+		return e
+	}
 	if err != nil {
 		return e
 	}

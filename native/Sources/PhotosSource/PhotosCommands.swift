@@ -79,8 +79,13 @@ extension PhotosSource {
         } else {
             key = try changeLibrary(op, args)
         }
-        let rows = try await snapshot()
-        let observed = rows.first { $0["native_key"].string == key }
+        var observed: JSON?
+        for attempt in 0..<40 {
+            let rows = try await snapshot()
+            observed = rows.first { $0["native_key"].string == key }
+            if op == "photos.delete" ? observed == nil : observed != nil { break }
+            if attempt < 39 { try await Task.sleep(for: .milliseconds(150)) }
+        }
         guard op == "photos.delete" ? observed == nil : observed != nil else { throw SourceFailure.unavailable }
         if op == "photos.create_album", observed?["data"]["name"] != args["name"] { throw SourceFailure.unavailable }
         if op == "photos.import", !args["album"].string.isEmpty, observed?["data"]["albums"].array.contains(args["album"]) != true { throw SourceFailure.unavailable }
