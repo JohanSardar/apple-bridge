@@ -1266,7 +1266,7 @@ features:
     milestone: G6
     modules: [native/Sources/MacSource, internal/contracts]
     depends_on: [mac.capture]
-    status: limited
+    status: done
     scenarios:
       - {id: MAC-COMMANDS, levels: [sim]}
       - {id: MAC-AUDIO-REAL, levels: [real]}
