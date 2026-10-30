@@ -1,0 +1,18 @@
+{
+  "status": "limited",
+  "scenario": "APP-APPROVE-REAL",
+  "level": "real",
+  "passed": false,
+  "assertions": [
+    {
+      "name": "notification_permission",
+      "passed": false,
+      "status": "limited",
+      "detail": "limited: needs Allow tap"
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ]
+}

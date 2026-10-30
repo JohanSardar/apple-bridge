@@ -40,7 +40,7 @@ enum JSONValue: Codable {
     }
 }
 
-struct PhoneJob: Decodable {
+struct PhoneJob: Codable {
     let command: PhoneCommand
     let request_hash: String
     let expires: Int64
@@ -150,6 +150,10 @@ final class PushDelivery {
                 let job = try open(packet, identity: identity)
                 guard job.expires > Int64(Date().timeIntervalSince1970), case .string(let target) = job.command.args["device_id"], target == identity.deviceID else { continue }
                 let id = job.command.command_id
+                if job.command.op == "bridge.approval" {
+                    try await ApprovalsCapability.deliver(job)
+                    continue
+                }
                 var result: PhoneResult
                 if let prior = cache[id] {
                     guard prior.hash == job.request_hash else { throw IdentityError.requestFailed }
@@ -203,6 +207,14 @@ final class BridgeAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificati
 
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
         let info = response.notification.request.content.userInfo
+        if info["approval"] as? Bool == true, let id = info["command_id"] as? String, let hash = info["request_hash"] as? String, let expires = info["expires"] as? Int64 {
+            do {
+                try await ApprovalsCapability.present(id: id, hash: hash, action: response.actionIdentifier, expires: expires)
+            } catch {
+                await MainActor.run { PushDelivery.shared.status = "Approval pending" }
+            }
+            return
+        }
         guard let id = info["command_id"] as? String, let hash = info["request_hash"] as? String, let buttons = info["buttons"] as? [String] else { return }
         let action = response.actionIdentifier
         do {

@@ -192,7 +192,11 @@ func (g *LocalGateway) Submit(ctx context.Context, p trust.Principal, c contract
 	}()
 	if p.IsAgent() && (p.Level == trust.AgentApprove || c.Op == "phone.dial" || c.Op == "focus.set") {
 		r := contracts.CommandRecord{UploadReferences: refs, Command: contracts.RedactMacCommand(c), Principal: p.ID, Source: contracts.CollectionSource(c.Op), RequestHash: hash, State: contracts.CommandAwaitingApproval, Disposition: contracts.DispositionAwaitingApproval, AdmissionEra: era, CreatedAt: now, ExpiresAt: now.Add(24 * time.Hour)}
-		return g.State.TransitionCommand(ctx, state.CommandTransition{Record: r})
+		record, err := g.State.TransitionCommand(ctx, state.CommandTransition{Record: r})
+		if err == nil && g.IPhone != nil {
+			g.IPhone.Wake()
+		}
+		return record, err
 	}
 	if contracts.CollectionSource(c.Op) != contracts.IPhone && !g.Peer.Available() {
 		return empty, contracts.ErrUnavailable

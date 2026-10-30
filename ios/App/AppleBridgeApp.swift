@@ -13,6 +13,7 @@ struct AppleBridgeApp: App {
 struct BridgeSettings: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var pairing = PairingState()
+    @Bindable private var approval = ApprovalReview.shared
     var body: some View {
         NavigationStack {
             List {
@@ -45,6 +46,9 @@ struct BridgeSettings: View {
                 }
             }
             .navigationTitle("Apple Bridge")
+            .sheet(isPresented: Binding(get: { approval.job != nil }, set: { if !$0 { approval.job = nil } })) {
+                if let job = approval.job { ApprovalReviewScreen(job: job) }
+            }
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active {
                     LocationCapability.resume()

@@ -70,6 +70,7 @@ func main() {
 	delivery := iphone.NewDelivery(store, a)
 	gateway := &operations.LocalGateway{State: store, Authority: a, Context: context.Background(), IPhone: delivery}
 	delivery.Authorize = gateway.ReauthorizeIPhone
+	delivery.Decide = gateway.DecidePhoneApproval
 	if err = gateway.Recover(context.Background()); err != nil {
 		panic(err)
 	}

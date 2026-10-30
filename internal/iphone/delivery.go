@@ -20,6 +20,7 @@ type Delivery struct {
 	Authority *trust.Authority
 	Push      Push
 	Authorize func(context.Context, contracts.CommandRecord) error
+	Decide    func(context.Context, string, string, bool) (contracts.CommandRecord, error)
 	mu        sync.Mutex
 	wake      chan struct{}
 }
@@ -70,6 +71,16 @@ func (d *Delivery) packets(ctx context.Context, p trust.Principal, dispatch bool
 	}
 	packets := []Packet{}
 	for _, r := range rows {
+		if r.State == contracts.CommandAwaitingApproval && time.Now().Before(r.ExpiresAt) {
+			args, _ := json.Marshal(map[string]string{"device_id": p.ID, "title": "Apple Bridge approval", "body": r.Command.Op + "\nAgent: " + r.Principal + "\n" + string(r.Command.Args)})
+			plain, _ := json.Marshal(Job{Command: contracts.Command{ID: r.Command.ID, Op: "bridge.approval", Args: args}, Hash: r.RequestHash, Expires: r.ExpiresAt.Unix()})
+			packet, sealErr := Seal(p.IPhoneEncryptionKey, p.ID, plain, d.Authority.SignIPhone)
+			if sealErr != nil {
+				return nil, sealErr
+			}
+			packets = append(packets, packet)
+			continue
+		}
 		if r.Source != contracts.IPhone || targetOf(r) != p.ID {
 			continue
 		}
@@ -217,6 +228,18 @@ func (d *Delivery) Handler() http.Handler {
 			result = map[string]bool{"accepted": err == nil}
 		case "/v1/iphone/pending":
 			result, err = d.packets(r.Context(), p, true)
+		case "/v1/iphone/approval":
+			var decision struct {
+				ID      string `json:"command_id"`
+				Hash    string `json:"request_hash"`
+				Approve *bool  `json:"approve"`
+			}
+			if contracts.DecodeInput(request.Payload, &decision) != nil || decision.Approve == nil || d.Decide == nil {
+				err = contracts.ErrInvalid
+			} else {
+				_, err = d.Decide(r.Context(), decision.ID, decision.Hash, *decision.Approve)
+			}
+			result = map[string]bool{"accepted": err == nil}
 		case "/v1/iphone/result":
 			_, err = d.Complete(r.Context(), p, request)
 			result = map[string]bool{"accepted": err == nil}
