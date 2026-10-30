@@ -1065,7 +1065,6 @@ features:
     notes: "MAIL-IDLE sim proves bounded fixture checkpoint suppression and resumed capture after a write; five-minute Helper CPU remains a real-level qualification."
     limits:
       - {"scenario": "MAIL-IDLE", "level": "real", "reason": "needs five-minute whole-Helper idle CPU qualification after Mail sync settles (T53)"}
-      - {"scenario": "MAIL-AGENT", "level": "agent", "reason": "Ubuntu Codex OAuth token is revoked (HTTP 401 token_revoked); Johan must sign in again before MCP-only agent qualification."}
   - id: files.capture
     title: Opt-in files metadata and queries
     notes: Native build, local gate and focused sim checks pass; public gateway coverage and full Helper idle qualification remain unverified.

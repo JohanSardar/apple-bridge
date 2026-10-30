@@ -1,12 +1,11 @@
 {
-  "at": "2026-10-28T19:25:28.231255Z",
-  "exit_code": 1,
-  "forbidden_calls": 1,
-  "git_sha": "5f68009701a888766a4eb066b7c8485661177d15",
+  "at": "2026-10-30T21:43:46.011625Z",
+  "exit_code": 0,
+  "forbidden_calls": 0,
+  "git_sha": "9d0f6f3e95a86f195b5ba5a4506febc4000fb449",
   "level": "agent",
-  "mcp_calls": 0,
-  "mcp_only": false,
-  "passed": false,
-  "scenario": "MAIL-AGENT",
-  "failure": "agent_oauth_token_revoked"
+  "mcp_calls": 1,
+  "mcp_only": true,
+  "passed": true,
+  "scenario": "MAIL-AGENT"
 }
