@@ -1260,6 +1260,9 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		}
 		if s.Feature == "maps.queries" && level == "real" {
 			duration = 20 * time.Minute
+			if s.ID == "MAP-IDLE" {
+				duration = 35 * time.Minute
+			}
 		}
 		if s.Feature == "safari.capture" {
 			duration = 60 * time.Minute

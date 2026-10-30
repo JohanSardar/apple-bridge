@@ -193,19 +193,16 @@ func runCallsIdleReal(ctx context.Context, s Scenario, level string) Evidence {
 		return e
 	}
 	defer w.Close()
+	if !awaitIdleCapture(ctx, w, &e) {
+		e.Assertions = append(e.Assertions, Assertion{Name: "messages_capture_and_media_settled", Passed: false})
+		return e
+	}
 	if w.Await(60*time.Second, func() bool {
 		var rows contracts.ReadResult
 		return (scripted.Client{Endpoint: w.Gateway}).Call(ctx, "records.query", contracts.ReadQuery{Collection: "phone.call", Limit: 1}, &rows) == nil && len(rows.Records) > 0
 	}) != nil {
 		e.Assertions = []Assertion{{Name: "phone_capture_ready", Passed: false}}
 		return e
-	}
-	warmup := time.NewTimer(30 * time.Second)
-	defer warmup.Stop()
-	select {
-	case <-ctx.Done():
-		return e
-	case <-warmup.C:
 	}
 	pid, err := os.ReadFile(filepath.Join(w.Gateway.Home, "helper", "helper.pid"))
 	cpu := func() (float64, error) {

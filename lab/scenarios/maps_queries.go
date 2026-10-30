@@ -62,6 +62,10 @@ func runMapsQueries(ctx context.Context, s Scenario, level string) (e Evidence) 
 		}
 	}
 	if s.ID == "LOC-IDLE" || s.ID == "MAP-IDLE" {
+		if s.ID == "MAP-IDLE" && !awaitIdleCapture(ctx, w, &e) {
+			add("messages_capture_and_media_settled", false)
+			return
+		}
 		output, pidErr := exec.CommandContext(ctx, "pgrep", "-f", regexp.QuoteMeta(filepath.Join(w.HelperApp, "Contents", "MacOS", "AppleBridgeHelper"))).Output()
 		ids := strings.Fields(string(output))
 		add("private_helper_pid", pidErr == nil && len(ids) == 1)

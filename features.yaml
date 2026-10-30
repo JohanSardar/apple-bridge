@@ -1163,7 +1163,7 @@ features:
       - {id: CALL-READ-REAL, levels: [real]}
       - {id: CALLS-REPLICA, levels: [replica]}
     limits:
-      - {"scenario": "CALL-IDLE", "level": "real", "reason": "Helper measured 42.526450% CPU-time during the locked five-minute window after the scenario's fixed 30-second warmup; initial Messages reconciliation was still active."}
+      - {"scenario": "CALL-IDLE", "level": "real", "reason": "limited: T99 locked Air rerun: needs Full Disk Access for the current signed AppleBridgeHelper on the Air; non-prompting status=denied; capture cannot settle, so no CPU measurement was taken"}
   - id: focus.pack
     title: Focus status and approved DND writes
     requirements: [R-RW]
@@ -1233,11 +1233,11 @@ features:
       - {id: MUS-CONTROL-REAL, levels: [real]}
       - {id: MUS-PLAYLIST-REAL, levels: [real]}
       - {id: MUS-IDLE, levels: [sim, real]}
-    notes: "Tagged silent-track fixtures and exact playback restore implemented; real qualification requires a nonprompting Music Automation grant and restorable unshuffled playlist context. Library capture bounded to 500 tracks / 50 playlists / 1000 memberships; Automation dev.applebridge.helper → com.apple.Music missing. Public API has no playlist search. Prior whole Helper idle measured 2.063240% CPU-time over 300.014 idle seconds. T71 MAC-IDLE measured 2.016546% over 300.018 idle seconds under the global real-run lock; MUS-IDLE itself remains unqualified."
+    notes: "Tagged silent-track fixtures and exact playback restore implemented; real qualification requires a nonprompting Music Automation grant and restorable unshuffled playlist context. Library capture bounded to 500 tracks / 50 playlists / 1000 memberships; Automation dev.applebridge.helper → com.apple.Music missing. Public API has no playlist search. Prior whole Helper idle measured 2.063240% CPU-time over 300.014 idle seconds. T71 MAC-IDLE measured 2.016546% over 300.018 idle seconds under the global real-run lock; T99 MUS-IDLE remains unqualified: the current signed Helper reports Full Disk Access denied; no idle CPU sample was taken."
     limits:
       - {"scenario": "MUS-CONTROL-REAL", "level": "real", "reason": "needs Music Automation grant (T79); consent not requested"}
       - {"scenario": "MUS-PLAYLIST-REAL", "level": "real", "reason": "needs Music Automation grant (T79); consent not requested"}
-      - {"scenario": "MUS-IDLE", "level": "real", "reason": "Budget-limited: real rerun interrupted during initial Messages reconciliation before its five-minute idle window; complete qualification remains required."}
+      - {"scenario": "MUS-IDLE", "level": "real", "reason": "limited: T99 locked Air rerun: needs Full Disk Access for the current signed AppleBridgeHelper on the Air; non-prompting status=denied; capture cannot settle, so no CPU measurement was taken"}
   - id: files.transform
     title: Native image and PDF blob transforms
     requirements: [R-API, R-SCOPE]
@@ -1268,12 +1268,12 @@ features:
     modules: [internal/weatherpack, native/Sources/WeatherSource]
     depends_on: [helper.session]
     status: limited
-    notes: Current, hourly and daily public queries use the permitted signed Helper WeatherKit fallback with Celsius units and Apple attribution. Injected pack runner remains the sim seam. Minute rain and alerts remain unavailable. The Apple-signed Helper now embeds the WeatherKit-enabled services profile; WX-REAL still fails its first live current-conditions request.
+    notes: Current, hourly and daily public queries use the permitted signed Helper WeatherKit fallback with Celsius units and Apple attribution. Injected pack runner remains the sim seam. Minute rain and alerts remain unavailable. The Apple-signed Helper now embeds the WeatherKit-enabled services profile; T99 WX-REAL still fails its first live current-conditions request under the real-run lock; activation is unconfirmed.
     scenarios:
       - {id: WX-SIM, levels: [sim]}
       - {id: WX-REAL, levels: [real]}
     limits:
-      - {"scenario": "WX-REAL", "level": "real", "reason": "WeatherKit refuses live reads: WeatherDaemon.WDSJWTAuthenticatorServiceListener.Errors code=2 (The operation couldn’t be completed. (WeatherDaemon.WDSJWTAuthenticatorServiceListener.Errors error 2.)); Apple-signed Helper and WeatherKit-enabled services profile verified"}
+      - {"scenario": "WX-REAL", "level": "real", "reason": "limited: T99 locked Air rerun still fails weather.current_completed after Helper readiness, coordinate validation and signing checks pass. WeatherKit activation is not confirmed; the scenario does not retain the response error, so the earlier daemon error is not asserted for this run."}
   - id: mac.commands
     title: Mac system commands
     requirements: [R-API, R-SCOPE]
@@ -1328,7 +1328,7 @@ features:
     limits:
       - {"scenario": "QUERY-AGENT", "level": "agent", "reason": "Decision 39: Ubuntu Codex OAuth token is revoked (HTTP 401 token_revoked); agent runner not executed. Reauthentication required for MCP-only qualification."}
       - {"scenario": "LOC-IDLE", "level": "real", "reason": "Failed assertions: helper_reached_idle, five_minute_idle_cpu_under_2_percent"}
-      - {"scenario": "MAP-IDLE", "level": "real", "reason": "Helper did not settle within the five-minute warmup; locked 300-second sample measured 34.287588% CPU-time while initial capture was active."}
+      - {"scenario": "MAP-IDLE", "level": "real", "reason": "limited: T99 locked Air rerun: needs Full Disk Access for the current signed AppleBridgeHelper on the Air; non-prompting status=denied; capture cannot settle, so no CPU measurement was taken"}
       - {"scenario": "LOC-CURRENT-REAL", "level": "real", "reason": "Failed assertions: fresh_mac_fix"}
   - id: safari.capture
     title: Read-only Safari database capture

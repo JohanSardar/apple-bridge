@@ -1,19 +1,18 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[5.3 5.69 9.22] cpu_idle=55% cpus=8 other_heavy=0"
+    "summary": "air: load=[24.29 19.49 12.24] cpu_idle=58% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M65402S47KYMAN25R6J8TJCQ",
+  "status": "limited",
+  "run_id": "run_01M6567Z659K0DZT8RXGYENA1P",
   "metrics": {
-    "capture_observer_resets": 0,
-    "idle_cpu_percent": 34.287587768195046,
-    "idle_seconds": 300.021105875
+    "capture_observer_resets": 0
   },
   "scenario": "MAP-IDLE",
   "level": "real",
   "passed": false,
-  "git_sha": "ee0112c904d55bed69301aff8ae481f1a8050b90",
-  "at": "2026-10-30T00:40:15.396783Z",
+  "git_sha": "798ac3e983f0e3568f9599e3af1246e0b115ca2c",
+  "at": "2026-10-30T01:19:31.01328Z",
   "assertions": [
     {
       "name": "world_started",
@@ -28,20 +27,12 @@
       "passed": true
     },
     {
-      "name": "private_helper_pid",
-      "passed": true
-    },
-    {
-      "name": "helper_reached_idle",
+      "name": "full_disk_access_granted",
       "passed": false
     },
     {
-      "name": "five_minute_idle_cpu_under_2_percent",
+      "name": "messages_capture_and_media_settled",
       "passed": false
-    },
-    {
-      "name": "idle_helper_responsive",
-      "passed": true
     },
     {
       "name": "credential_backend_override_restored",
@@ -51,5 +42,8 @@
   "latency": {},
   "hosts": [
     "air"
-  ]
+  ],
+  "conditions": {
+    "reason": "needs Full Disk Access for the current signed AppleBridgeHelper on the Air; non-prompting status=denied; capture cannot settle, so no CPU measurement was taken"
+  }
 }

@@ -120,15 +120,9 @@ func runMac(ctx context.Context, s Scenario, level string) (e Evidence) {
 			return
 		}
 		warmup := time.Now()
-		err = w.Await(25*time.Minute, func() bool {
-			data, problem := os.ReadFile(filepath.Join(w.Gateway.Home, "helper", "messages-idle.json"))
-			var state struct {
-				Idle bool `json:"idle"`
-			}
-			return problem == nil && json.Unmarshal(data, &state) == nil && state.Idle
-		})
-		add("messages_capture_and_media_settled", err == nil)
-		if err != nil {
+		settled := awaitIdleCapture(ctx, w, &e)
+		add("messages_capture_and_media_settled", settled)
+		if !settled {
 			return
 		}
 		warmupSeconds := time.Since(warmup).Seconds()

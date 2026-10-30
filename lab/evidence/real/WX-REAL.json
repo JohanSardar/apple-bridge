@@ -1,9 +1,9 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[26.01 62.47 60.25] cpu_idle=57% cpus=8 other_heavy=0"
+    "summary": "air: load=[4.6 3.68 4.54] cpu_idle=72% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M64XB22JJ94YJ6MBY76Y7BDY",
+  "run_id": "run_01M655NHZKNMETTWXPQSVAJQ5B",
   "metrics": {
     "capture_observer_resets": 0
   },
@@ -11,7 +11,7 @@
   "level": "real",
   "passed": false,
   "git_sha": "",
-  "at": "2026-10-29T22:43:55.090197Z",
+  "at": "2026-10-30T01:09:27.667624Z",
   "assertions": [
     {
       "name": "world_started",
@@ -43,9 +43,5 @@
     }
   ],
   "latency": null,
-  "hosts": null,
-  "status": "limited",
-  "conditions": {
-    "reason": "WeatherKit refuses live reads: WeatherDaemon.WDSJWTAuthenticatorServiceListener.Errors code=2 (The operation couldn\u2019t be completed. (WeatherDaemon.WDSJWTAuthenticatorServiceListener.Errors error 2.)); Apple-signed Helper and WeatherKit-enabled services profile verified"
-  }
+  "hosts": null
 }
