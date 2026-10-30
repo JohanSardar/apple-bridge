@@ -36,7 +36,7 @@ func runFocusReal(ctx context.Context, s Scenario, e Evidence) Evidence {
 		return e
 	}
 	raw, err := os.ReadFile(report)
-	var result map[string]bool
+	var result map[string]any
 	if err == nil {
 		err = json.Unmarshal(raw, &result)
 	}
@@ -44,7 +44,7 @@ func runFocusReal(ctx context.Context, s Scenario, e Evidence) Evidence {
 	if err != nil {
 		return e
 	}
-	granted, known := result["grant_passed"]
+	granted, known := result["grant_passed"].(bool)
 	add("grant_probe", known)
 	if !known {
 		return e
@@ -56,7 +56,7 @@ func runFocusReal(ctx context.Context, s Scenario, e Evidence) Evidence {
 		return e
 	}
 	if s.ID == "FOC-STATUS-REAL" {
-		add("status_readback", result["status_passed"])
+		add("status_readback", result["status_passed"] == true)
 		return e
 	}
 	entries, err := (shortcut.CLI{}).Inventory(ctx, false, "")
@@ -98,13 +98,21 @@ func runFocusReal(ctx context.Context, s Scenario, e Evidence) Evidence {
 	if err != nil {
 		return e
 	}
-	if !result["inactive_passed"] {
+	if result["inactive_passed"] != true {
 		e.Status = "limited"
 		e.Passed = false
 		e.Conditions = map[string]string{"reason": "needs initially inactive Focus to preserve the prior mode and expiry"}
 		return e
 	}
-	add("set_readback", result["set_passed"])
-	add("restore_readback", result["restore_passed"])
+	add("set_readback", result["set_passed"] == true)
+	add("restore_readback", result["restore_passed"] == true)
+	for _, stage := range []string{"prepare_error", "set_error", "restore_error"} {
+		if detail, ok := result[stage].(string); ok {
+			if e.Conditions == nil {
+				e.Conditions = map[string]string{}
+			}
+			e.Conditions[stage] = detail
+		}
+	}
 	return e
 }

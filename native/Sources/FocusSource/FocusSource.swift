@@ -81,7 +81,7 @@ public final class FocusSource: Source {
         }
         let result = try await run(args)
         guard result["exit_status"] == .number(0), !result["timed_out"].bool else { throw SourceFailure.unavailable }
-        for _ in 0..<20 {
+        for _ in 0..<50 {
             let status = readStatus()
             if status["authorization"].string == "authorized", status["focused"] == args["on"] {
                 return .object(["disposition": .string("locally_observed"), "observed": .bool(true), "fingerprint": .string(prepared.fingerprint), "readback": status])

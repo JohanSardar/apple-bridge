@@ -10,13 +10,14 @@ public final class MusicPlayer: Source {
     var sink: (any ObservationSink)?
     var generation = UUID().uuidString
     var publishing = false
-    public init() {}
+    private let execute: (@MainActor (String) throws -> NSAppleEventDescriptor)?
+    public init(execute: (@MainActor (String) throws -> NSAppleEventDescriptor)? = nil) { self.execute = execute }
     private func automationStatus() -> OSStatus {
         let target = NSAppleEventDescriptor(bundleIdentifier: "com.apple.Music")
         return AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false)
     }
     public func open() async -> SourceReadiness {
-        let status = automationStatus()
+        let status = execute == nil ? automationStatus() : noErr
         return SourceReadiness(state: status == noErr ? "ready" : status == -600 ? "degraded" : "permission_missing", coverage: .object(["fields": .string("partial"), "missing": .array([.string("Library capture bounded to 500 tracks, 50 playlists and 1000 memberships")])]), capabilities: status == noErr ? operations : [], reason: status == noErr ? "" : status == -600 ? "Music is not running" : "Automation: dev.applebridge.helper → com.apple.Music")
     }
     public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {
@@ -31,6 +32,7 @@ public final class MusicPlayer: Source {
         }
     }
     func script(_ body: String) throws -> NSAppleEventDescriptor {
+        if let execute { return try execute(body) }
         let status = automationStatus()
         guard status == noErr else { if status == -600 { throw SourceFailure.unavailable }; throw SourceFailure.permissionMissing }
         var error: NSDictionary?
@@ -77,7 +79,11 @@ public final class MusicPlayer: Source {
         _ = try action(command["action"])
         if ["music.favorite", "music.add_to_playlist"].contains(command["action"]["op"].string) { _ = try library() }
         let before = try nowPlaying()
-        return Prepared(nativeState: .object(["id": before["id"], "state": before["state"], "volume": before["volume"]]), fingerprint: command["request_hash"].string, action: command["action"])
+        var state: [String: JSON] = ["id": before["id"], "state": before["state"], "volume": before["volume"]]
+        if ["music.next", "music.previous"].contains(command["action"]["op"].string) {
+            state["index"] = .number(Double(try script("return index of current track").int32Value))
+        }
+        return Prepared(nativeState: .object(state), fingerprint: command["request_hash"].string, action: command["action"])
     }
     public func dispatch(_ prepared: Prepared) async throws -> JSON {
         guard !publishing else { throw SourceFailure.conflict }
@@ -92,7 +98,12 @@ public final class MusicPlayer: Source {
             else { libraryVerified = rows.contains { $0["collection"].string == "music.playlist" && $0["native_key"] == args["playlist_id"] && $0["data"]["items"].array.contains { $0["$ref"]["native_key"] == args["id"] } } }
             try await publishLibrary(rows)
         }
-        let verified = libraryVerified ?? (op == "music.play" ? after["state"].string == "playing" : op == "music.pause" ? after["state"].string != "playing" : op == "music.set_volume" ? after["volume"] == prepared.action["args"]["volume"] : op == "music.play_item" ? after["id"] == prepared.action["args"]["id"] : after["id"] != prepared.nativeState["id"])
+        var advanced = after["id"] != prepared.nativeState["id"]
+        if ["music.next", "music.previous"].contains(op), prepared.nativeState["index"].number > 0 {
+            let index = Double(try script("return index of current track").int32Value)
+            advanced = advanced || index != prepared.nativeState["index"].number
+        }
+        let verified = libraryVerified ?? (op == "music.play" ? after["state"].string == "playing" : op == "music.pause" ? after["state"].string != "playing" : op == "music.set_volume" ? after["volume"] == prepared.action["args"]["volume"] : op == "music.play_item" ? after["id"] == prepared.action["args"]["id"] : advanced)
         var result: [String: JSON] = ["disposition": .string(verified ? "locally_observed" : "indeterminate"), "verified": .bool(verified), "fingerprint": .string(prepared.fingerprint), "player": .object(["state": after["state"], "volume": after["volume"]])]
         if libraryVerified != nil {
             result["observed"] = .bool(verified)

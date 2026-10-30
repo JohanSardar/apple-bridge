@@ -42,6 +42,18 @@ struct Checks {
         guard lost.focused, lost.calls == 1 else { throw SourceFailure.corrupt }
         do { _ = try await cleanup.restoreInactive(cleanupOff); throw SourceFailure.corrupt } catch SourceFailure.unavailable {}
         guard !lost.focused, lost.calls == 2 else { throw SourceFailure.corrupt }
+        #if LAB
+        let proofFixture = Fixture()
+        let proofStatus: @MainActor () -> JSON = { .object(["focused": .bool(proofFixture.focused), "authorization": .string("authorized")]) }
+        let proofSource = FocusSource(status: proofStatus, runner: { args in
+            proofFixture.calls += 1
+            if args["on"].bool { proofFixture.focused = true; throw SourceFailure.unavailable }
+            proofFixture.focused = false
+            return .object(["exit_status": .number(0), "timed_out": .bool(false)])
+        })
+        let failedProof = try await FocusQualification.run("FOC-SET-REAL", source: proofSource, status: proofStatus)
+        guard failedProof["set_passed"] == .bool(false), failedProof["restore_passed"] == .bool(true), proofFixture.calls == 2, !proofFixture.focused else { throw SourceFailure.corrupt }
+        #endif
         fixture.authorized = false
         do { _ = try await source.prepare(command(on: true)); throw SourceFailure.corrupt } catch SourceFailure.permissionMissing {}
         guard fixture.calls == 2 else { throw SourceFailure.corrupt }

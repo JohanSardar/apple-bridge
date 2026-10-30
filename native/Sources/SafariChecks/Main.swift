@@ -15,7 +15,7 @@ struct Main {
             func command(_ op: String, _ args: [String: JSON]) -> JSON { .object(["request_hash": .string("synthetic"), "action": .object(["op": .string(op), "args": .object(args)])]) }
             let prepared = try await tabs.prepare(command("safari.open_url", ["url": .string("https://example.com/?ab=synthetic")]))
             let opened = try await tabs.dispatch(prepared)
-            guard opened["observed"].bool, opened["readback"]["tab"].string == "42:1", try await tabs.tabs().count == 1 else { throw SourceFailure.corrupt }
+            guard opened["observed"].bool, opened["readback"]["tab"].string == "42:1", fake.tabReads >= 2, try await tabs.tabs().count == 1 else { throw SourceFailure.corrupt }
             func rejectedClose(_ key: String) async throws {
                 let calls = fake.calls
                 do { _ = try await tabs.prepare(command("safari.close_tab", ["tab": .string(key)])); throw SourceFailure.corrupt } catch SourceFailure.unsupported {}
@@ -30,6 +30,20 @@ struct Main {
             guard try await tabs.tabs().count == 1 else { throw SourceFailure.corrupt }
             let reading = try await tabs.prepare(command("safari.add_reading_list", ["url": .string("https://example.com/?ab=synthetic")]))
             _ = try await tabs.dispatch(reading)
+            let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            defer { try? FileManager.default.removeItem(at: directory) }
+            let plist = directory.appendingPathComponent("Bookmarks.plist")
+            let root: [String: Any] = ["Children": [["WebBookmarkType": "WebBookmarkTypeList", "Title": "com.apple.ReadingList", "Children": [["WebBookmarkType": "WebBookmarkTypeLeaf", "WebBookmarkUUID": "owned", "URLString": "https://example.com/?ab=synthetic", "ReadingList": [:]]]]]]
+            let bytes = try PropertyListSerialization.data(fromPropertyList: root, format: .binary, options: 0)
+            let write = Task.detached {
+                try await Task.sleep(for: .milliseconds(3200))
+                try bytes.write(to: plist, options: .atomic)
+            }
+            let source = SafariSource(directory: directory, tabs: tabs)
+            let readingProof = try await source.dispatch(reading)
+            try await write.value
+            guard readingProof["observed"].bool, try await source.bookmarks().count == 1 else { throw SourceFailure.corrupt }
             print("Safari command checks passed")
             return
         }
@@ -188,6 +202,7 @@ private final class FakeSafari: @unchecked Sendable {
     private var opened = false
     private var title = "Synthetic"
     var calls = 0
+    var tabReads = 0
     func replaceWithUserTab() { opened = false; opened = true; title = "User replacement" }
     func run(_ body: String) throws -> NSAppleEventDescriptor {
         calls += 1
@@ -195,11 +210,12 @@ private final class FakeSafari: @unchecked Sendable {
         if body.contains("close tab 1") { guard opened else { throw SourceFailure.conflict }; opened = false; return NSAppleEventDescriptor(boolean: true) }
         let result = NSAppleEventDescriptor.list()
         if body.contains("set rows"), opened {
+            tabReads += 1
             let row = NSAppleEventDescriptor.list()
             row.insert(NSAppleEventDescriptor(int32: 42), at: 1)
             row.insert(NSAppleEventDescriptor(int32: 1), at: 2)
             row.insert(NSAppleEventDescriptor(string: title), at: 3)
-            row.insert(NSAppleEventDescriptor(string: "https://example.com/?ab=synthetic"), at: 4)
+            row.insert(NSAppleEventDescriptor(string: tabReads == 1 ? "about:blank" : "https://example.com/?ab=synthetic"), at: 4)
             row.insert(NSAppleEventDescriptor(boolean: true), at: 5)
             result.insert(row, at: 1)
         }
