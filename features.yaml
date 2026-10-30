@@ -1053,7 +1053,7 @@ features:
       - {id: MAC-POWER-REAL, levels: [real]}
     notes: Night Shift omitted; SSID requires Location authorization. VPN uses interface heuristics.
     limits:
-      - {"scenario": "MAC-IDLE", "level": "real", "reason": "Budget-limited: interrupted during the single serial attempt; fresh failure evidence saved. No passing idle CPU measurement established."}
+      - {"scenario": "MAC-IDLE", "level": "real", "reason": "Whole Helper measured 2.016546% CPU-time over 300.018 idle seconds after 790.151 seconds of settling under the global real-run lock; still above 2%."}
   - id: mail.capture
     title: Mail Envelope Index capture foundation
     requirements: [R-RW]
