@@ -86,7 +86,7 @@ export default function Transcript(props:TranscriptProps){
         if(arrivalReady&&state.anchor===arrivalAnchor&&epoch===arrivalEpoch&&state.newer===0&&!document.hidden){
             for(const item of state.items)if(!arrivalKnown.has(item.id)&&!item.data.command_id&&Date.parse(item.data.sent_at)>=arrivalTime)arrivals.set(item.id,now);
         }
-        arrivalReady=Boolean(state.cursor)||arrivalReady&&state.anchor===arrivalAnchor&&epoch===arrivalEpoch;
+        arrivalReady=state.newer===0&&(Boolean(state.cursor)||arrivalReady&&state.anchor===arrivalAnchor&&epoch===arrivalEpoch);
         arrivalKnown=new Set(state.items.map(item=>item.id));for(const id of arrivals.keys())if(!arrivalKnown.has(id))arrivals.delete(id);arrivalAnchor=state.anchor;arrivalEpoch=epoch;
         arrivalTime=Math.max(...state.items.map(item=>Date.parse(item.data.sent_at)),-Infinity);
     }
