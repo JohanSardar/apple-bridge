@@ -200,12 +200,9 @@ func runCallsIdleReal(ctx context.Context, s Scenario, level string) Evidence {
 		e.Assertions = []Assertion{{Name: "phone_capture_ready", Passed: false}}
 		return e
 	}
-	warmup := time.NewTimer(30 * time.Second)
-	defer warmup.Stop()
-	select {
-	case <-ctx.Done():
+	if !awaitIdleCapture(w) {
+		e.Assertions = []Assertion{{Name: "messages_capture_and_media_settled", Passed: false}}
 		return e
-	case <-warmup.C:
 	}
 	pid, err := os.ReadFile(filepath.Join(w.Gateway.Home, "helper", "helper.pid"))
 	cpu := func() (float64, error) {

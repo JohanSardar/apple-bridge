@@ -2,8 +2,10 @@ package scenarios
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -29,8 +31,9 @@ func wholeHelperIdleReal(ctx context.Context, e Evidence) Evidence {
 			return false
 		}
 	}
-	if !wait(30 * time.Second) {
+	if !awaitIdleCapture(w) {
 		e.Passed = false
+		e.Assertions = append(e.Assertions, Assertion{Name: "messages_capture_and_media_settled", Passed: false})
 		return e
 	}
 	sample := func() (int, float64, bool) {
@@ -76,4 +79,14 @@ func wholeHelperIdleReal(ctx context.Context, e Evidence) Evidence {
 	}
 	e.Assertions = append(e.Assertions, Assertion{Name: "helper_cpu_under_two_percent_for_five_minutes", Passed: passed})
 	return e
+}
+
+func awaitIdleCapture(w *world.World) bool {
+	return w.Await(25*time.Minute, func() bool {
+		data, err := os.ReadFile(filepath.Join(w.Gateway.Home, "helper", "messages-idle.json"))
+		var state struct {
+			Idle bool `json:"idle"`
+		}
+		return err == nil && json.Unmarshal(data, &state) == nil && state.Idle
+	}) == nil
 }
