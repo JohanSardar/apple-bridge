@@ -1,22 +1,7 @@
 {
-  "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[7.55 8.49 8.21] cpu_idle=30% cpus=8 other_heavy=0"
-  },
-  "status": "limited",
-  "run_id": "run_01M646Y62Y6RPDCNKCFDZDY9H4",
-  "metrics": {
-    "biome_local_entry_count": 2,
-    "biome_remote_entry_count": 3,
-    "capture_observer_resets": 0,
-    "installed_shortcut_count": 14,
-    "probe_pack_installed": false
-  },
   "scenario": "USE-ACTION-PROBE",
   "level": "real",
   "passed": false,
-  "git_sha": "c3ac9963efa1272847ce1ef053a43f9c53d3fc2a",
-  "at": "2026-10-29T16:12:24.542243Z",
   "assertions": [
     {
       "name": "inventory_available",
@@ -30,12 +15,5 @@
       "name": "credential_backend_override_restored",
       "passed": true
     }
-  ],
-  "latency": {},
-  "hosts": [
-    "air"
-  ],
-  "conditions": {
-    "reason": "Screen Time action output unmeasured; pack setup: packaging/shortcuts/screen-time-probe.md. No shortcuts executed; retain Biome pending owner-qualified pack."
-  }
+  ]
 }

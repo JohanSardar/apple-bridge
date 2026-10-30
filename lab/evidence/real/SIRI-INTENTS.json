@@ -1,18 +1,7 @@
 {
-  "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[275.6 138.65 70.87] cpu_idle=46% cpus=8 other_heavy=0"
-  },
-  "status": "limited",
-  "run_id": "run_01M64SENM5C4GHEERW8AX2X7J7",
-  "metrics": {
-    "capture_observer_resets": 0
-  },
   "scenario": "SIRI-INTENTS",
   "level": "real",
   "passed": false,
-  "git_sha": "",
-  "at": "2026-10-29T21:35:59.109206Z",
   "assertions": [
     {
       "name": "helper_compiles_and_bundles",
@@ -26,10 +15,5 @@
       "name": "credential_backend_override_restored",
       "passed": true
     }
-  ],
-  "latency": null,
-  "hosts": null,
-  "conditions": {
-    "reason": "Johan must verify Apple Bridge status appears in Shortcuts and runs."
-  }
+  ]
 }

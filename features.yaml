@@ -1031,8 +1031,8 @@ features:
       - {id: CLK-ALARM-REAL, levels: [real]}
       - {id: CLK-TIMER-REAL, levels: [real]}
     limits:
-      - {"scenario": "CLK-ALARM-REAL", "level": "real", "reason": "limited: needs replacement AB Clock import and real alarm field qualification"}
-      - {"scenario": "CLK-TIMER-REAL", "level": "real", "reason": "limited: Air signer rejects Get Current Timer; Start Timer has no running state or label confirmation"}
+      - {"scenario": "CLK-ALARM-REAL", "level": "real", "reason": "Imported AB Clock did not return versioned structured alarm fields; mutations were not attempted."}
+      - {"scenario": "CLK-TIMER-REAL", "level": "real", "reason": "Imported AB Clock did not return structured timer running, duration and label confirmation."}
   - id: mac.capture
     title: Mac system state capture
     requirements: [R-API, R-SCOPE]
@@ -1232,11 +1232,9 @@ features:
     milestone: G9
     modules: [native/Sources/FilesSource]
     depends_on: [files.capture]
-    status: limited
+    status: done
     scenarios:
-      - {id: FILES-TRANSFORM, levels: [sim]}
-    limits:
-      - {scenario: FILES-TRANSFORM, level: sim, reason: Generated native fixtures; real qualification batched at end.}
+      - {id: FILES-TRANSFORM, levels: [sim, real]}
   - id: audio.queries
     title: On-device audio and language queries
     requirements: [R-API, R-SCOPE]
@@ -1315,7 +1313,6 @@ features:
       - {"scenario": "QUERY-AGENT", "level": "agent", "reason": "Decision 39: Ubuntu Codex OAuth token is revoked (HTTP 401 token_revoked); agent runner not executed. Reauthentication required for MCP-only qualification."}
       - {"scenario": "LOC-IDLE", "level": "real", "reason": "Failed assertions: helper_reached_idle, five_minute_idle_cpu_under_2_percent"}
       - {"scenario": "MAP-IDLE", "level": "real", "reason": "limited: T99 locked Air rerun: needs Full Disk Access for the current signed AppleBridgeHelper on the Air; non-prompting status=denied; capture cannot settle, so no CPU measurement was taken"}
-      - {"scenario": "LOC-CURRENT-REAL", "level": "real", "reason": "Failed assertions: fresh_mac_fix"}
   - id: safari.capture
     title: Read-only Safari database capture
     requirements: [R-FULL, R-NO-FALSE-DELETE, R-LIVE]
