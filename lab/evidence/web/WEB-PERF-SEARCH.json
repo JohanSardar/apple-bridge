@@ -1,25 +1,18 @@
 {
   "scenario": "WEB-PERF-SEARCH",
   "level": "web",
+  "git_sha": "5989a67d0e021c8d737039ab231325a841d66020",
   "passed": true,
-  "git_sha": "bf9fdadc11c74344ceaa2308492de5d4b10df5e7",
   "metrics": {
-    "matrix": [
-      "chromium-light-desktop"
-    ],
-    "passed_tests": 1,
-    "failed_tests": 0,
-    "skipped_tests": 0,
-    "flaky_tests": 0,
-    "raw_sha256": "170732c932502a85ed43ed1f7882ab63b5c1ae0fa52c0c146ed8d1e364e07895"
+    "passed_test_count": 1,
+    "failed_test_count": 0,
+    "skipped_test_count": 0,
+    "flaky_test_count": 0,
+    "report_sha256": "af8f13237cc7afad989b660cb55b3e89d9304518fbac092e6d24576223b9b6d0"
   },
   "assertions": [
     {
-      "name": "chromium-light-desktop:playwright_matrix",
-      "passed": true
-    },
-    {
-      "name": "credential_backend_override_restored",
+      "name": "chromium-light-desktop",
       "passed": true
     }
   ]

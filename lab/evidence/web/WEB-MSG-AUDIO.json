@@ -1,25 +1,23 @@
 {
   "scenario": "WEB-MSG-AUDIO",
   "level": "web",
+  "git_sha": "614794562717e2e2ffde5a0392d7e149f2a01dab",
+  "at": "2026-10-29T23:10:06.794064Z",
   "passed": true,
-  "git_sha": "bf9fdadc11c74344ceaa2308492de5d4b10df5e7",
   "metrics": {
-    "matrix": [
-      "chromium-light-desktop"
-    ],
-    "passed_tests": 3,
-    "failed_tests": 0,
-    "skipped_tests": 0,
-    "flaky_tests": 0,
-    "raw_sha256": "6ec36d7e91cda06fe75d62d3cf27b9ded8f4838011373153d788b385f8b8399f"
+    "matrix_count": 1,
+    "completed_matrix_count": 1,
+    "passed_matrix_count": 1,
+    "failed_matrix_count": 0,
+    "incomplete_matrix_count": 0,
+    "passed_test_count": 3,
+    "failed_test_count": 0,
+    "skipped_test_count": 0,
+    "report_sha256": "609a7be09f22ff38821bb331fabb6abcd20d3f2081ab0574c63d4d254e856a8e"
   },
   "assertions": [
     {
-      "name": "chromium-light-desktop:playwright_matrix",
-      "passed": true
-    },
-    {
-      "name": "credential_backend_override_restored",
+      "name": "chromium-light-desktop",
       "passed": true
     }
   ]

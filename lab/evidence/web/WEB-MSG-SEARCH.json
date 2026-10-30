@@ -1,25 +1,23 @@
 {
   "scenario": "WEB-MSG-SEARCH",
   "level": "web",
+  "git_sha": "614794562717e2e2ffde5a0392d7e149f2a01dab",
+  "at": "2026-10-29T22:43:06.763968Z",
   "passed": true,
-  "git_sha": "bf9fdadc11c74344ceaa2308492de5d4b10df5e7",
   "metrics": {
-    "matrix": [
-      "chromium-light-desktop"
-    ],
-    "passed_tests": 5,
-    "failed_tests": 0,
-    "skipped_tests": 0,
-    "flaky_tests": 0,
-    "raw_sha256": "954ea6ac887756673b279330ccfb4c3e0884d5bcfbffa84f5228179ef51c9122"
+    "matrix_count": 1,
+    "completed_matrix_count": 1,
+    "passed_matrix_count": 1,
+    "failed_matrix_count": 0,
+    "incomplete_matrix_count": 0,
+    "passed_test_count": 5,
+    "failed_test_count": 0,
+    "skipped_test_count": 0,
+    "report_sha256": "41b43dcd6f1aff0dd385f369e32de44ec8b7094b1c03dca99cd4b198ac9304da"
   },
   "assertions": [
     {
-      "name": "chromium-light-desktop:playwright_matrix",
-      "passed": true
-    },
-    {
-      "name": "credential_backend_override_restored",
+      "name": "chromium-light-desktop",
       "passed": true
     }
   ]

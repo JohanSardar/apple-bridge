@@ -1,26 +1,85 @@
 {
-  "scenario": "WEB-MSG-EFFECTS-TRANSCRIPT",
-  "level": "web",
-  "passed": false,
-  "git_sha": "bf9fdadc11c74344ceaa2308492de5d4b10df5e7",
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[13.9 11 12.06] cpu_idle=77% cpus=8 other_heavy=0"
+  },
+  "run_id": "run_01M5J345F4Y3AQ5MX0B2CBKMYF",
   "metrics": {
+    "browser_budget_ms": 180000,
+    "capture_observer_resets": 0,
+    "demo_messages": 5000,
+    "demo_startup_ms": 4556,
+    "fixture_setup_ms": 4556,
     "matrix": [
+      "webkit-light-phone",
+      "webkit-light-desktop",
+      "chromium-light-phone",
       "chromium-light-desktop"
     ],
-    "passed_tests": 4,
-    "failed_tests": 1,
-    "skipped_tests": 1,
-    "flaky_tests": 0,
-    "raw_sha256": "2bf6642ea3dfa2caea7f8c2a0e0fe2268fa2945c92563092a25dabc2a7de1901"
+    "report": "lab/evidence/private/web/reports/WEB-MSG-EFFECTS-TRANSCRIPT-webkit-light-phone-playwright.json",
+    "reports": [
+      "lab/evidence/private/web/reports/WEB-MSG-EFFECTS-TRANSCRIPT-webkit-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-EFFECTS-TRANSCRIPT-webkit-light-desktop-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-EFFECTS-TRANSCRIPT-chromium-light-phone-playwright.json",
+      "lab/evidence/private/web/reports/WEB-MSG-EFFECTS-TRANSCRIPT-chromium-light-desktop-playwright.json"
+    ],
+    "server": "gateway",
+    "setups": [
+      {
+        "fixture_setup_ms": 4556,
+        "fixture_snapshot": null,
+        "project": "webkit-light-phone"
+      },
+      {
+        "fixture_setup_ms": 6059,
+        "fixture_snapshot": null,
+        "project": "webkit-light-desktop"
+      },
+      {
+        "fixture_setup_ms": 5962,
+        "fixture_snapshot": null,
+        "project": "chromium-light-phone"
+      },
+      {
+        "fixture_setup_ms": 9702,
+        "fixture_snapshot": null,
+        "project": "chromium-light-desktop"
+      }
+    ]
   },
+  "scenario": "WEB-MSG-EFFECTS-TRANSCRIPT",
+  "level": "web",
+  "passed": true,
+  "git_sha": "f9c68ed195742cd63079cf72c737056c384742b7",
+  "at": "2026-10-22T15:19:26.436448Z",
   "assertions": [
     {
+      "name": "webkit-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 6 tests using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/transcript-effects.spec.ts:10:1 › WEB-MSG-EFFECTS-TRANSCRIPT historical Invisible Ink conceals content and reveals without changing the bubble reservation (2.2s)\n  ✓  2 [webkit-light-phone] › tests/transcript-effects.spec.ts:13:1 › WEB-MSG-EFFECTS-TRANSCRIPT historical formatting retains text-effect segments without replaying motion (12.4s)\n  ✓  3 [webkit-light-phone] › tests/transcript-effects.spec.ts:16:1 › WEB-MSG-EFFECTS-TRANSCRIPT live bubble and text effects use separate targets from receive motion (2.3s)\n  ✓  4 [webkit-light-phone] › tests/transcript-effects.spec.ts:19:1 › WEB-MSG-EFFECTS-TRANSCRIPT live screen effects load on arrival and can be skipped (2.5s)\n  ✓  5 [webkit-light-phone] › tests/transcript-effects.spec.ts:22:1 › WEB-MSG-EFFECTS-TRANSCRIPT Reduce Motion reserves a22px static label and never loads the canvas (2.2s)\n  ✓  6 [webkit-light-phone] › tests/transcript-effects.spec.ts:26:1 › WEB-MSG-EFFECTS-TRANSCRIPT layout math reserves exactly22px for known and unknown Reduce Motion wording (85ms)\n\n  6 passed (24.2s)\n"
+    },
+    {
+      "name": "webkit-light-desktop:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 6 tests using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/transcript-effects.spec.ts:10:1 › WEB-MSG-EFFECTS-TRANSCRIPT historical Invisible Ink conceals content and reveals without changing the bubble reservation (3.6s)\n  ✓  2 [webkit-light-desktop] › tests/transcript-effects.spec.ts:13:1 › WEB-MSG-EFFECTS-TRANSCRIPT historical formatting retains text-effect segments without replaying motion (10.9s)\n  ✓  3 [webkit-light-desktop] › tests/transcript-effects.spec.ts:16:1 › WEB-MSG-EFFECTS-TRANSCRIPT live bubble and text effects use separate targets from receive motion (3.0s)\n  ✓  4 [webkit-light-desktop] › tests/transcript-effects.spec.ts:19:1 › WEB-MSG-EFFECTS-TRANSCRIPT live screen effects load on arrival and can be skipped (2.6s)\n  ✓  5 [webkit-light-desktop] › tests/transcript-effects.spec.ts:22:1 › WEB-MSG-EFFECTS-TRANSCRIPT Reduce Motion reserves a22px static label and never loads the canvas (2.7s)\n  ✓  6 [webkit-light-desktop] › tests/transcript-effects.spec.ts:26:1 › WEB-MSG-EFFECTS-TRANSCRIPT layout math reserves exactly22px for known and unknown Reduce Motion wording (67ms)\n\n  6 passed (25.2s)\n"
+    },
+    {
+      "name": "chromium-light-phone:playwright_matrix",
+      "passed": true,
+      "detail": "\nRunning 6 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/transcript-effects.spec.ts:10:1 › WEB-MSG-EFFECTS-TRANSCRIPT historical Invisible Ink conceals content and reveals without changing the bubble reservation (1.8s)\n  ✓  2 [chromium-light-phone] › tests/transcript-effects.spec.ts:13:1 › WEB-MSG-EFFECTS-TRANSCRIPT historical formatting retains text-effect segments without replaying motion (13.2s)\n  ✓  3 [chromium-light-phone] › tests/transcript-effects.spec.ts:16:1 › WEB-MSG-EFFECTS-TRANSCRIPT live bubble and text effects use separate targets from receive motion (3.9s)\n  ✓  4 [chromium-light-phone] › tests/transcript-effects.spec.ts:19:1 › WEB-MSG-EFFECTS-TRANSCRIPT live screen effects load on arrival and can be skipped (3.8s)\n  ✓  5 [chromium-light-phone] › tests/transcript-effects.spec.ts:22:1 › WEB-MSG-EFFECTS-TRANSCRIPT Reduce Motion reserves a22px static label and never loads the canvas (4.7s)\n  ✓  6 [chromium-light-phone] › tests/transcript-effects.spec.ts:26:1 › WEB-MSG-EFFECTS-TRANSCRIPT layout math reserves exactly22px for known and unknown Reduce Motion wording (103ms)\n\n  6 passed (29.5s)\n"
+    },
+    {
       "name": "chromium-light-desktop:playwright_matrix",
-      "passed": false
+      "passed": true,
+      "detail": "\nRunning 6 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/transcript-effects.spec.ts:10:1 › WEB-MSG-EFFECTS-TRANSCRIPT historical Invisible Ink conceals content and reveals without changing the bubble reservation (1.8s)\n  ✓  2 [chromium-light-desktop] › tests/transcript-effects.spec.ts:13:1 › WEB-MSG-EFFECTS-TRANSCRIPT historical formatting retains text-effect segments without replaying motion (11.0s)\n  ✓  3 [chromium-light-desktop] › tests/transcript-effects.spec.ts:16:1 › WEB-MSG-EFFECTS-TRANSCRIPT live bubble and text effects use separate targets from receive motion (2.4s)\n  ✓  4 [chromium-light-desktop] › tests/transcript-effects.spec.ts:19:1 › WEB-MSG-EFFECTS-TRANSCRIPT live screen effects load on arrival and can be skipped (2.5s)\n  ✓  5 [chromium-light-desktop] › tests/transcript-effects.spec.ts:22:1 › WEB-MSG-EFFECTS-TRANSCRIPT Reduce Motion reserves a22px static label and never loads the canvas (2.4s)\n  ✓  6 [chromium-light-desktop] › tests/transcript-effects.spec.ts:26:1 › WEB-MSG-EFFECTS-TRANSCRIPT layout math reserves exactly22px for known and unknown Reduce Motion wording (46ms)\n\n  6 passed (22.4s)\n"
     },
     {
       "name": "credential_backend_override_restored",
       "passed": true
     }
+  ],
+  "latency": {},
+  "hosts": [
+    "air"
   ]
 }
