@@ -1,10 +1,10 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[3.41 2.79 3.02] cpu_idle=77% cpus=8 other_heavy=0"
+    "summary": "air: load=[2.33 2.75 2.94] cpu_idle=81% cpus=8 other_heavy=0"
   },
   "status": "limited",
-  "run_id": "run_01M65EE71VMT6GM13ZQ0FT79F0",
+  "run_id": "run_01M65EWQJ2EF1VBMNAGW9J8TE7",
   "metrics": {
     "capture_observer_resets": 0,
     "eligible_sample_count": 0
@@ -13,7 +13,7 @@
   "level": "real",
   "passed": false,
   "git_sha": "",
-  "at": "2026-10-30T03:42:44.283917Z",
+  "at": "2026-10-30T03:50:39.938099Z",
   "assertions": [
     {
       "name": "real_mail_store_available",
