@@ -1,107 +1,108 @@
 {
-  "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[7.03 4.91 4.61] cpu_idle=48% cpus=8 other_heavy=2"
-  },
-  "run_id": "run_01M5JP27YB5BPBJMPXWQZ9SWX5",
-  "metrics": {
-    "browser_budget_ms": 180000,
-    "capture_observer_resets": 0,
-    "matrix": [
-      "webkit-light-phone",
-      "webkit-light-desktop",
-      "webkit-dark-phone",
-      "webkit-dark-desktop",
-      "chromium-light-phone",
-      "chromium-light-desktop",
-      "chromium-dark-phone",
-      "chromium-dark-desktop",
-      "firefox-light-phone",
-      "firefox-light-desktop",
-      "firefox-dark-phone",
-      "firefox-dark-desktop"
-    ],
-    "server": "gateway",
-    "qualification_limits": {
-      "not_applicable": 12,
-      "unproven_touch": 4,
-      "executed_pass": 68,
-      "configured": 84
-    }
-  },
-  "scenario": "WEB-REM-ACTIONS",
-  "level": "web",
+  "source_digest": "3dcb6cb769bd54cc1db975c49e6f99c8abe7df32e2069a829edde57bebd3597c",
   "passed": true,
-  "git_sha": "3fd9aee29e414bf91bde26c4c98d7e437f4daecd",
-  "at": "2026-10-22T20:50:26.379687Z",
-  "assertions": [
-    {
-      "name": "webkit-light-phone:playwright_matrix",
+  "configured_cases": 84,
+  "passed_cases": 72,
+  "not_applicable_cases": 12,
+  "failed_cases": 0,
+  "flaky_cases": 0,
+  "projects": {
+    "webkit-light-phone": {
+      "digest": "58dddd6923ecb761df9e5da92b79fbf6787c4ea74cdf2ea998001efb26d3f49b",
       "passed": true,
-      "detail": "2 skipped, 5 passed"
+      "passed_cases": 6,
+      "not_applicable_cases": 1,
+      "failed_cases": 0,
+      "flaky_cases": 0
     },
-    {
-      "name": "webkit-light-desktop:playwright_matrix",
+    "webkit-light-desktop": {
+      "digest": "ac0eb2804b576c5685be58af32a56e85db8c8088f5899e54dfaa96cda1628e5a",
       "passed": true,
-      "detail": "1 skipped, 6 passed"
+      "passed_cases": 6,
+      "not_applicable_cases": 1,
+      "failed_cases": 0,
+      "flaky_cases": 0
     },
-    {
-      "name": "webkit-dark-phone:playwright_matrix",
+    "webkit-dark-phone": {
+      "digest": "af6ec3ba00877c8554f1e94d6269c41b9b8a10c4567b6e1fcd95a1aeb6cd550c",
       "passed": true,
-      "detail": "2 skipped, 5 passed"
+      "passed_cases": 6,
+      "not_applicable_cases": 1,
+      "failed_cases": 0,
+      "flaky_cases": 0
     },
-    {
-      "name": "webkit-dark-desktop:playwright_matrix",
+    "webkit-dark-desktop": {
+      "digest": "f429da75c6cafaca67a64267a7bb30e726bdb3b83c1a9d5e77f54f75ecc12edc",
       "passed": true,
-      "detail": "1 skipped, 6 passed"
+      "passed_cases": 6,
+      "not_applicable_cases": 1,
+      "failed_cases": 0,
+      "flaky_cases": 0
     },
-    {
-      "name": "chromium-light-phone:playwright_matrix",
+    "chromium-light-phone": {
+      "digest": "216e98ddbc8c984a12a8fded24fa8c42b7a08f0d5d95c84d139d664da1e4f40d",
       "passed": true,
-      "detail": "1 skipped, 6 passed"
+      "passed_cases": 6,
+      "not_applicable_cases": 1,
+      "failed_cases": 0,
+      "flaky_cases": 0
     },
-    {
-      "name": "chromium-light-desktop:playwright_matrix",
+    "chromium-light-desktop": {
+      "digest": "7e726b29f5c5e1ff5a74a11fc287f1889237b753d56dedca52adf5ab36f985ab",
       "passed": true,
-      "detail": "1 skipped, 6 passed"
+      "passed_cases": 6,
+      "not_applicable_cases": 1,
+      "failed_cases": 0,
+      "flaky_cases": 0
     },
-    {
-      "name": "chromium-dark-phone:playwright_matrix",
+    "chromium-dark-phone": {
+      "digest": "1a6b0e9878943fb16b121a7e686ea4e3d5cf1bbee80a5c7e07ee7941dcb637a9",
       "passed": true,
-      "detail": "1 skipped, 6 passed"
+      "passed_cases": 6,
+      "not_applicable_cases": 1,
+      "failed_cases": 0,
+      "flaky_cases": 0
     },
-    {
-      "name": "chromium-dark-desktop:playwright_matrix",
+    "chromium-dark-desktop": {
+      "digest": "11b4324feca361f9dd303e6b907553edf144ba6bc7e04c5612ddb1523d2a1ea6",
       "passed": true,
-      "detail": "1 skipped, 6 passed"
+      "passed_cases": 6,
+      "not_applicable_cases": 1,
+      "failed_cases": 0,
+      "flaky_cases": 0
     },
-    {
-      "name": "firefox-light-phone:playwright_matrix",
+    "firefox-light-phone": {
+      "digest": "e31ee756784a2d33c98d3cbd6562fd03baf8c2fc3373ba0ab04f6933d99ede6b",
       "passed": true,
-      "detail": "2 skipped, 5 passed"
+      "passed_cases": 6,
+      "not_applicable_cases": 1,
+      "failed_cases": 0,
+      "flaky_cases": 0
     },
-    {
-      "name": "firefox-light-desktop:playwright_matrix",
+    "firefox-light-desktop": {
+      "digest": "72596d1a65db327e2d367004619fa1fe53af19c8690f6892e391fbfac57b5240",
       "passed": true,
-      "detail": "1 skipped, 6 passed"
+      "passed_cases": 6,
+      "not_applicable_cases": 1,
+      "failed_cases": 0,
+      "flaky_cases": 0
     },
-    {
-      "name": "firefox-dark-phone:playwright_matrix",
+    "firefox-dark-phone": {
+      "digest": "729355f7ca6ff55c3b1582c5189b8b6ba0e5485515133d4567603e8d90b0fb1c",
       "passed": true,
-      "detail": "2 skipped, 5 passed"
+      "passed_cases": 6,
+      "not_applicable_cases": 1,
+      "failed_cases": 0,
+      "flaky_cases": 0
     },
-    {
-      "name": "firefox-dark-desktop:playwright_matrix",
+    "firefox-dark-desktop": {
+      "digest": "17af1653f67a1462f50f7bfdb469dbea72c97091d54708f04cb1526e327e3791",
       "passed": true,
-      "detail": "1 skipped, 6 passed"
-    },
-    {
-      "name": "credential_backend_override_restored",
-      "passed": true
+      "passed_cases": 6,
+      "not_applicable_cases": 1,
+      "failed_cases": 0,
+      "flaky_cases": 0
     }
-  ],
-  "latency": {},
-  "hosts": [
-    "air"
-  ]
+  },
+  "trusted_phone_touch_passes": 6
 }

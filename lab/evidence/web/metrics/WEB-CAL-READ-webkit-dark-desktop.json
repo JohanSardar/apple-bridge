@@ -1,0 +1,17 @@
+{
+  "digest": "92371e896745767ef9f026c2be338dcdbcb57d3c9563374436bde407d5a48203",
+  "trusted_inputs": 2,
+  "event_timing_supported": true,
+  "event_timing_samples": 9,
+  "observed_event_processing_budget_pass": true,
+  "event_presentation_over_8ms": 9,
+  "long_tasks_supported": false,
+  "long_tasks": 0,
+  "document_paint_samples": 1,
+  "app_paint_budget_proven": false,
+  "app_layout_budget_proven": false,
+  "own_input_budget_proven": false,
+  "warm_content_samples": 1,
+  "warm_content_budget_pass": true,
+  "cached_content_without_live_pass": true
+}

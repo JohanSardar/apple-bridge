@@ -1,0 +1,14 @@
+{
+  "digest": "d430e45e93f6ade4f3233ea88c297da0c994dab854b6079a938bca12514b0365",
+  "trusted_inputs": 15,
+  "event_timing_supported": true,
+  "event_timing_samples": 82,
+  "observed_event_processing_budget_pass": true,
+  "event_presentation_over_8ms": 82,
+  "long_tasks_supported": false,
+  "long_tasks": 0,
+  "document_paint_samples": 1,
+  "app_paint_budget_proven": false,
+  "app_layout_budget_proven": false,
+  "own_input_budget_proven": false
+}

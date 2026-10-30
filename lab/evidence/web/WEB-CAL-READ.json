@@ -1,102 +1,108 @@
 {
-  "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[3.02 3.39 4.73] cpu_idle=91% cpus=8 other_heavy=1"
-  },
-  "run_id": "run_01M5JN830N49WZC4V1A30PMV0W",
-  "metrics": {
-    "browser_budget_ms": 180000,
-    "capture_observer_resets": 0,
-    "matrix": [
-      "webkit-light-phone",
-      "webkit-light-desktop",
-      "webkit-dark-phone",
-      "webkit-dark-desktop",
-      "chromium-light-phone",
-      "chromium-light-desktop",
-      "chromium-dark-phone",
-      "chromium-dark-desktop",
-      "firefox-light-phone",
-      "firefox-light-desktop",
-      "firefox-dark-phone",
-      "firefox-dark-desktop"
-    ],
-    "server": "gateway",
-    "summary_only": true
-  },
-  "scenario": "WEB-CAL-READ",
-  "level": "web",
+  "source_digest": "3dcb6cb769bd54cc1db975c49e6f99c8abe7df32e2069a829edde57bebd3597c",
   "passed": true,
-  "git_sha": "3fd9aee29e414bf91bde26c4c98d7e437f4daecd",
-  "at": "2026-10-22T20:36:09.365084Z",
-  "assertions": [
-    {
-      "name": "webkit-light-phone:playwright_matrix",
+  "configured_cases": 12,
+  "passed_cases": 12,
+  "not_applicable_cases": 0,
+  "failed_cases": 0,
+  "flaky_cases": 0,
+  "projects": {
+    "webkit-light-phone": {
+      "digest": "a5a51e41511e61c7bcb9142163ee2b69a2050140c279a36c1a9563e84c58ed47",
       "passed": true,
-      "detail": "1 passed"
+      "passed_cases": 1,
+      "not_applicable_cases": 0,
+      "failed_cases": 0,
+      "flaky_cases": 0
     },
-    {
-      "name": "webkit-light-desktop:playwright_matrix",
+    "webkit-light-desktop": {
+      "digest": "3be2020df5adb05d5089cc8042db960cffe9d9d671bcc07be56d4ff7017e07f6",
       "passed": true,
-      "detail": "1 passed"
+      "passed_cases": 1,
+      "not_applicable_cases": 0,
+      "failed_cases": 0,
+      "flaky_cases": 0
     },
-    {
-      "name": "webkit-dark-phone:playwright_matrix",
+    "webkit-dark-phone": {
+      "digest": "8b19f51d8bb8eb855c04557cf594ef521fb69c8e3bcea013c80cd850af92ddff",
       "passed": true,
-      "detail": "1 passed"
+      "passed_cases": 1,
+      "not_applicable_cases": 0,
+      "failed_cases": 0,
+      "flaky_cases": 0
     },
-    {
-      "name": "webkit-dark-desktop:playwright_matrix",
+    "webkit-dark-desktop": {
+      "digest": "c543325270f5c6263fa8fa304f3636d8a5d7560fa00b533d4feabe41b6202ac5",
       "passed": true,
-      "detail": "1 passed"
+      "passed_cases": 1,
+      "not_applicable_cases": 0,
+      "failed_cases": 0,
+      "flaky_cases": 0
     },
-    {
-      "name": "chromium-light-phone:playwright_matrix",
+    "chromium-light-phone": {
+      "digest": "6eac4f2d1ebf913875723200024141d8359618401cded1512aecf692827a48ca",
       "passed": true,
-      "detail": "1 passed"
+      "passed_cases": 1,
+      "not_applicable_cases": 0,
+      "failed_cases": 0,
+      "flaky_cases": 0
     },
-    {
-      "name": "chromium-light-desktop:playwright_matrix",
+    "chromium-light-desktop": {
+      "digest": "81403bd47ba146bfb717b46ddf37afb4562b3519241a1ef02323ff0170d0c559",
       "passed": true,
-      "detail": "1 passed"
+      "passed_cases": 1,
+      "not_applicable_cases": 0,
+      "failed_cases": 0,
+      "flaky_cases": 0
     },
-    {
-      "name": "chromium-dark-phone:playwright_matrix",
+    "chromium-dark-phone": {
+      "digest": "524008cd0d69a8fc01020ebf7f63532dbcd797d17e7bef00a3f2a26be3697630",
       "passed": true,
-      "detail": "1 passed"
+      "passed_cases": 1,
+      "not_applicable_cases": 0,
+      "failed_cases": 0,
+      "flaky_cases": 0
     },
-    {
-      "name": "chromium-dark-desktop:playwright_matrix",
+    "chromium-dark-desktop": {
+      "digest": "1e9e65b53de501506eb800c67a8d3ad20f2e45346e138c5a65b3e88d28bcb2b4",
       "passed": true,
-      "detail": "1 passed"
+      "passed_cases": 1,
+      "not_applicable_cases": 0,
+      "failed_cases": 0,
+      "flaky_cases": 0
     },
-    {
-      "name": "firefox-light-phone:playwright_matrix",
+    "firefox-light-phone": {
+      "digest": "8fa0dda29d9222bc6ebc7a4ca11b010273d9ef7cb7613902ac85444233b90c0e",
       "passed": true,
-      "detail": "1 passed"
+      "passed_cases": 1,
+      "not_applicable_cases": 0,
+      "failed_cases": 0,
+      "flaky_cases": 0
     },
-    {
-      "name": "firefox-light-desktop:playwright_matrix",
+    "firefox-light-desktop": {
+      "digest": "30f2b6503b7687495335d797c6647fcd80b1670857c60db459a21c485c52d878",
       "passed": true,
-      "detail": "1 passed"
+      "passed_cases": 1,
+      "not_applicable_cases": 0,
+      "failed_cases": 0,
+      "flaky_cases": 0
     },
-    {
-      "name": "firefox-dark-phone:playwright_matrix",
+    "firefox-dark-phone": {
+      "digest": "f9d2f6712f3b4bf1a203995411fc6c36f192b6fbd4504cc841c1cc3903eacd23",
       "passed": true,
-      "detail": "1 passed"
+      "passed_cases": 1,
+      "not_applicable_cases": 0,
+      "failed_cases": 0,
+      "flaky_cases": 0
     },
-    {
-      "name": "firefox-dark-desktop:playwright_matrix",
+    "firefox-dark-desktop": {
+      "digest": "b713d16128fd47a448d268e6c421d099be36caee5c5ba062e85d8be2dc5adb6f",
       "passed": true,
-      "detail": "1 passed"
-    },
-    {
-      "name": "credential_backend_override_restored",
-      "passed": true
+      "passed_cases": 1,
+      "not_applicable_cases": 0,
+      "failed_cases": 0,
+      "flaky_cases": 0
     }
-  ],
-  "latency": {},
-  "hosts": [
-    "air"
-  ]
+  },
+  "warm_content_passes": 12
 }
