@@ -1395,11 +1395,9 @@ features:
       - {id: IWORK-REAL, levels: [real]}
       - {id: SHAZAM-REAL, levels: [real]}
       - {id: BT-REAL, levels: [real]}
-      - {id: AIRPLAY-REAL, levels: [real]}
     limits:
       - {"scenario": "IWORK-REAL", "level": "real", "reason": "Native mac.iwork_export is unsupported; export command observation and tagged content readback fail."}
       - {"scenario": "SHAZAM-REAL", "level": "real", "reason": "Native song recognition remains a limited placeholder requiring ShazamKit entitlement and fixture qualification."}
-      - {"scenario": "AIRPLAY-REAL", "level": "real", "reason": "No AirPlay output route is available on the qualification host; route selection remains unqualified."}
   - id: phone.dial
     title: Continuity dialing with Mac confirmation
     requirements: [R-API, R-SCOPE]
