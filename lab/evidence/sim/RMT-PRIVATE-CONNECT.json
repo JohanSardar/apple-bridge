@@ -1,7 +1,7 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[5.94 5.06 6.35] cpu_idle=71% cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[3.62 3 3.04] cpu_idle=90% cpus=10 other_heavy=0"
   },
   "run_id": "private-protocol",
   "network_path": "production private handler and connect proxy through isolated node transport",
@@ -12,7 +12,7 @@
   "level": "sim",
   "passed": true,
   "git_sha": "",
-  "at": "2026-10-28T15:17:38.977129Z",
+  "at": "2026-10-30T02:55:04.637955Z",
   "assertions": [
     {
       "name": "approval_tokens_absent_from_status_and_logs",

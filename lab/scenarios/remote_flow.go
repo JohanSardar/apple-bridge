@@ -79,9 +79,7 @@ func runRemoteFlow(ctx context.Context, s Scenario, level string) Evidence {
 		e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: passed})
 	}
 	if level == "real" {
-		e.Status = "limited"
-		e.Assertions = append(e.Assertions, Assertion{Name: "external_status_off", Status: "limited", Detail: "Requires an authorized public embedded node and Ubuntu curl; unattended login and system Serve changes are forbidden"})
-		return e
+		return runRemotePrivateReal(ctx, s, level)
 	}
 	remoteProbeRejections(ctx, add)
 	remoteCancelFlow(ctx, add)
