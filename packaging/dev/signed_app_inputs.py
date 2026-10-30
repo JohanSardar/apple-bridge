@@ -58,7 +58,7 @@ def source_key(root):
             path = selected / name
             if path.exists():
                 digest.update(str(path).encode() + b"\0" + path.read_bytes() + b"\0")
-    for name in ["APPLE_BRIDGE_SWIFTC", "APPLE_BRIDGE_SDK", "SDKROOT", "DEVELOPER_DIR", "TOOLCHAINS", "APPLE_BRIDGE_SIGNING_GUI", "APPLE_BRIDGE_KEEP_SDKROOT", "APPLE_BRIDGE_NATIVE_TARGET", "SWIFT_EXEC", "CC", "CXX", "CFLAGS", "CXXFLAGS", "SWIFTFLAGS"]:
+    for name in ["APPLE_BRIDGE_SWIFTC", "APPLE_BRIDGE_SDK", "SDKROOT", "DEVELOPER_DIR", "TOOLCHAINS", "APPLE_BRIDGE_SIGNING_GUI", "APPLE_BRIDGE_SIGNING_IDENTITY", "APPLE_BRIDGE_KEEP_SDKROOT", "APPLE_BRIDGE_NATIVE_TARGET", "SWIFT_EXEC", "CC", "CXX", "CFLAGS", "CXXFLAGS", "SWIFTFLAGS"]:
         toolchain[name] = os.environ.get(name, "")
     toolchain["native_lab_condition"] = lab
     certificate = run("security", "find-certificate", "-c", "Apple Bridge Dev Signing", "-Z", str(Path.home() / "Library/Keychains/apple-bridge-dev.keychain-db"))

@@ -1,22 +1,27 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[7.59 8.55 8.22] cpu_idle=41% cpus=8 other_heavy=0"
+    "summary": "air: load=[2.33 2.75 2.94] cpu_idle=81% cpus=8 other_heavy=0"
   },
   "status": "limited",
-  "run_id": "run_01M646XRZZDT18JGPTX8KDNSEB",
+  "run_id": "run_01M65EWQJ2EF1VBMNAGW9J8TE7",
   "metrics": {
-    "capture_observer_resets": 0
+    "capture_observer_resets": 0,
+    "eligible_sample_count": 0
   },
   "scenario": "MAIL-BODY-REAL",
   "level": "real",
   "passed": false,
   "git_sha": "",
-  "at": "2026-10-29T16:12:11.135174Z",
+  "at": "2026-10-30T03:50:39.938099Z",
   "assertions": [
     {
       "name": "real_mail_store_available",
-      "passed": false
+      "passed": true
+    },
+    {
+      "name": "mail_body_truth_decoded",
+      "passed": true
     },
     {
       "name": "credential_backend_override_restored",
@@ -26,6 +31,6 @@
   "latency": null,
   "hosts": null,
   "conditions": {
-    "reason": "No V10 Envelope Index on this Mac; real body Truth qualification unavailable"
+    "reason": "needs locally downloaded plain-text [ab-test] self-sent mail; creating it needs Automation grant AppleBridgeHelper → Mail"
   }
 }
