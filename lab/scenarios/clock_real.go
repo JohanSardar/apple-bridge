@@ -50,6 +50,17 @@ func runClockReal(ctx context.Context, s Scenario, initial Evidence, pack clockp
 	cleanup := func() {
 		cleanupCtx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 		defer cancel()
+		observed, readErr := pack.Exchange(cleanupCtx, clockpack.Request{Operation: "alarms"})
+		if readErr != nil {
+			add("cleanup_inventory", false)
+			return
+		}
+		for _, candidate := range observed.Alarms {
+			if candidate.Label == alarm.Label {
+				alarm = candidate
+				break
+			}
+		}
 		request.Operation = "delete_alarm"
 		_, deleteErr := pack.Exchange(cleanupCtx, request)
 		after, readErr := pack.Exchange(cleanupCtx, clockpack.Request{Operation: "alarms"})
@@ -61,10 +72,15 @@ func runClockReal(ctx context.Context, s Scenario, initial Evidence, pack clockp
 	}
 	defer cleanup()
 	request.Operation = "create_alarm"
-	_, err = pack.Exchange(ctx, request)
+	created, err := pack.Exchange(ctx, request)
 	add("create_alarm_fields", err == nil)
 	if err != nil {
 		return e
+	}
+	for _, candidate := range created.Alarms {
+		if candidate.Label == alarm.Label {
+			alarm.ID = candidate.ID
+		}
 	}
 	readback, err := pack.Exchange(ctx, clockpack.Request{Operation: "alarms"})
 	add("created_alarm_list_fields", err == nil && clockAlarmMatches(readback.Alarms, alarm))

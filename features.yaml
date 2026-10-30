@@ -1038,8 +1038,8 @@ features:
       - {id: CLK-ALARM-REAL, levels: [real]}
       - {id: CLK-TIMER-REAL, levels: [real]}
     limits:
-      - {"scenario": "CLK-ALARM-REAL", "level": "real", "reason": "limited: AB Clock lacks versioned structured alarm field readback; mutations not attempted"}
-      - {"scenario": "CLK-TIMER-REAL", "level": "real", "reason": "limited: AB Clock lacks timer running, duration and label confirmation; macOS Start Timer exists"}
+      - {"scenario": "CLK-ALARM-REAL", "level": "real", "reason": "limited: needs replacement AB Clock import and real alarm field qualification"}
+      - {"scenario": "CLK-TIMER-REAL", "level": "real", "reason": "limited: Clock exposes timer duration/remaining time but no running state or label readback"}
   - id: mac.capture
     title: Mac system state capture
     requirements: [R-API, R-SCOPE]

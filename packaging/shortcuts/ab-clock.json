@@ -3,15 +3,765 @@
   "name": "AB Clock",
   "actions": [
     {
+      "key": "request",
+      "identifier": "is.workflow.actions.detect.dictionary",
+      "parameters": {
+        "WFInput": {
+          "$input": true
+        }
+      }
+    },
+    {
+      "key": "operation",
+      "identifier": "is.workflow.actions.getvalueforkey",
+      "parameters": {
+        "WFInput": {
+          "$output": "request"
+        },
+        "WFDictionaryKey": "operation",
+        "WFGetDictionaryValueType": "Value"
+      }
+    },
+    {
+      "key": "alarm",
+      "identifier": "is.workflow.actions.getvalueforkey",
+      "parameters": {
+        "WFInput": {
+          "$output": "request"
+        },
+        "WFDictionaryKey": "alarm",
+        "WFGetDictionaryValueType": "Value"
+      }
+    },
+    {
+      "key": "requested_id",
+      "identifier": "is.workflow.actions.getvalueforkey",
+      "parameters": {
+        "WFInput": {
+          "$output": "alarm"
+        },
+        "WFDictionaryKey": "id",
+        "WFGetDictionaryValueType": "Value"
+      }
+    },
+    {
+      "key": "requested_label",
+      "identifier": "is.workflow.actions.getvalueforkey",
+      "parameters": {
+        "WFInput": {
+          "$output": "alarm"
+        },
+        "WFDictionaryKey": "label",
+        "WFGetDictionaryValueType": "Value"
+      }
+    },
+    {
+      "key": "requested_time",
+      "identifier": "is.workflow.actions.getvalueforkey",
+      "parameters": {
+        "WFInput": {
+          "$output": "alarm"
+        },
+        "WFDictionaryKey": "time",
+        "WFGetDictionaryValueType": "Value"
+      }
+    },
+    {
+      "key": "requested_repeat_days",
+      "identifier": "is.workflow.actions.getvalueforkey",
+      "parameters": {
+        "WFInput": {
+          "$output": "alarm"
+        },
+        "WFDictionaryKey": "repeat_days",
+        "WFGetDictionaryValueType": "Value"
+      }
+    },
+    {
+      "key": "requested_enabled",
+      "identifier": "is.workflow.actions.getvalueforkey",
+      "parameters": {
+        "WFInput": {
+          "$output": "alarm"
+        },
+        "WFDictionaryKey": "enabled",
+        "WFGetDictionaryValueType": "Value"
+      }
+    },
+    {
+      "key": "create_if",
+      "identifier": "is.workflow.actions.conditional",
+      "parameters": {
+        "WFInput": {
+          "$output": "operation"
+        },
+        "WFCondition": 4,
+        "WFConditionalActionString": "create_alarm",
+        "WFControlFlowMode": 0,
+        "GroupingIdentifier": {
+          "$group": "create"
+        }
+      }
+    },
+    {
+      "key": "day_names",
+      "identifier": "is.workflow.actions.dictionary",
+      "parameters": {
+        "WFItems": {
+          "Value": {
+            "WFDictionaryFieldValueItems": [
+              {
+                "WFItemType": 0,
+                "WFKey": "0",
+                "WFValue": "sunday"
+              },
+              {
+                "WFItemType": 0,
+                "WFKey": "1",
+                "WFValue": "monday"
+              },
+              {
+                "WFItemType": 0,
+                "WFKey": "2",
+                "WFValue": "tuesday"
+              },
+              {
+                "WFItemType": 0,
+                "WFKey": "3",
+                "WFValue": "wednesday"
+              },
+              {
+                "WFItemType": 0,
+                "WFKey": "4",
+                "WFValue": "thursday"
+              },
+              {
+                "WFItemType": 0,
+                "WFKey": "5",
+                "WFValue": "friday"
+              },
+              {
+                "WFItemType": 0,
+                "WFKey": "6",
+                "WFValue": "saturday"
+              }
+            ]
+          },
+          "WFSerializationType": "WFDictionaryFieldValue"
+        }
+      }
+    },
+    {
+      "key": "create_days",
+      "identifier": "is.workflow.actions.repeat.each",
+      "parameters": {
+        "WFInput": {
+          "$output": "requested_repeat_days"
+        },
+        "WFControlFlowMode": 0,
+        "GroupingIdentifier": {
+          "$group": "create_days"
+        }
+      }
+    },
+    {
+      "key": "create_day",
+      "identifier": "is.workflow.actions.getvalueforkey",
+      "parameters": {
+        "WFInput": {
+          "$output": "day_names"
+        },
+        "WFDictionaryKey": {
+          "$output": "create_days"
+        },
+        "WFGetDictionaryValueType": "Value"
+      }
+    },
+    {
+      "key": "created_days",
+      "identifier": "is.workflow.actions.repeat.each",
+      "parameters": {
+        "WFControlFlowMode": 2,
+        "GroupingIdentifier": {
+          "$group": "create_days"
+        }
+      }
+    },
+    {
+      "key": "create",
+      "identifier": "com.apple.mobiletimer-framework.MobileTimerIntents.MTCreateAlarmIntent",
+      "parameters": {
+        "AppIntentDescriptor": {
+          "AppIntentIdentifier": "CreateAlarmIntent",
+          "BundleIdentifier": "com.apple.clock",
+          "Name": "Clock",
+          "TeamIdentifier": "0000000000"
+        },
+        "dateComponents": {
+          "$output": "requested_time"
+        },
+        "name": {
+          "$output": "requested_label"
+        },
+        "repeats": {
+          "$output": "created_days"
+        },
+        "allowsSnooze": true
+      }
+    },
+    {
+      "key": "created_state",
+      "identifier": "com.apple.mobiletimer-framework.MobileTimerIntents.MTToggleAlarmIntent",
+      "parameters": {
+        "AppIntentDescriptor": {
+          "AppIntentIdentifier": "ToggleAlarmIntent",
+          "BundleIdentifier": "com.apple.clock",
+          "Name": "Clock",
+          "TeamIdentifier": "0000000000"
+        },
+        "operation": "turn",
+        "state": {
+          "$output": "requested_enabled"
+        },
+        "alarm": {
+          "$output": "create"
+        }
+      }
+    },
+    {
+      "key": "create_end",
+      "identifier": "is.workflow.actions.conditional",
+      "parameters": {
+        "WFControlFlowMode": 2,
+        "GroupingIdentifier": {
+          "$group": "create"
+        }
+      }
+    },
+    {
+      "key": "targets",
+      "identifier": "com.apple.mobiletimer-framework.MobileTimerIntents.MTGetAlarmsIntent",
+      "parameters": {
+        "AppIntentDescriptor": {
+          "AppIntentIdentifier": "AlarmEntity",
+          "BundleIdentifier": "com.apple.clock",
+          "Name": "Clock",
+          "TeamIdentifier": "0000000000",
+          "ActionRequiresAppInstallation": true
+        }
+      }
+    },
+    {
+      "key": "target",
+      "identifier": "is.workflow.actions.repeat.each",
+      "parameters": {
+        "WFInput": {
+          "$output": "targets"
+        },
+        "WFControlFlowMode": 0,
+        "GroupingIdentifier": {
+          "$group": "targets"
+        }
+      }
+    },
+    {
+      "key": "same_id",
+      "identifier": "is.workflow.actions.conditional",
+      "parameters": {
+        "WFInput": {
+          "$output": "target",
+          "$property": "url"
+        },
+        "WFCondition": 4,
+        "WFConditionalActionString": {
+          "$output": "requested_id"
+        },
+        "WFControlFlowMode": 0,
+        "GroupingIdentifier": {
+          "$group": "same_id"
+        }
+      }
+    },
+    {
+      "key": "same_label",
+      "identifier": "is.workflow.actions.conditional",
+      "parameters": {
+        "WFInput": {
+          "$output": "target",
+          "$property": "label"
+        },
+        "WFCondition": 4,
+        "WFConditionalActionString": {
+          "$output": "requested_label"
+        },
+        "WFControlFlowMode": 0,
+        "GroupingIdentifier": {
+          "$group": "same_label"
+        }
+      }
+    },
+    {
+      "key": "toggle_if",
+      "identifier": "is.workflow.actions.conditional",
+      "parameters": {
+        "WFInput": {
+          "$output": "operation"
+        },
+        "WFCondition": 4,
+        "WFConditionalActionString": "toggle_alarm",
+        "WFControlFlowMode": 0,
+        "GroupingIdentifier": {
+          "$group": "toggle"
+        }
+      }
+    },
+    {
+      "key": "toggle",
+      "identifier": "com.apple.mobiletimer-framework.MobileTimerIntents.MTToggleAlarmIntent",
+      "parameters": {
+        "AppIntentDescriptor": {
+          "AppIntentIdentifier": "ToggleAlarmIntent",
+          "BundleIdentifier": "com.apple.clock",
+          "Name": "Clock",
+          "TeamIdentifier": "0000000000"
+        },
+        "operation": "turn",
+        "state": {
+          "$output": "requested_enabled"
+        },
+        "alarm": {
+          "$output": "target"
+        }
+      }
+    },
+    {
+      "key": "toggle_end",
+      "identifier": "is.workflow.actions.conditional",
+      "parameters": {
+        "WFControlFlowMode": 2,
+        "GroupingIdentifier": {
+          "$group": "toggle"
+        }
+      }
+    },
+    {
+      "key": "delete_if",
+      "identifier": "is.workflow.actions.conditional",
+      "parameters": {
+        "WFInput": {
+          "$output": "operation"
+        },
+        "WFCondition": 4,
+        "WFConditionalActionString": "delete_alarm",
+        "WFControlFlowMode": 0,
+        "GroupingIdentifier": {
+          "$group": "delete"
+        }
+      }
+    },
+    {
+      "key": "delete",
+      "identifier": "com.apple.clock.DeleteAlarmIntent",
+      "parameters": {
+        "AppIntentDescriptor": {
+          "AppIntentIdentifier": "DeleteAlarmIntent",
+          "BundleIdentifier": "com.apple.clock",
+          "Name": "Clock",
+          "TeamIdentifier": "0000000000"
+        },
+        "entities": {
+          "$output": "target"
+        }
+      }
+    },
+    {
+      "key": "delete_end",
+      "identifier": "is.workflow.actions.conditional",
+      "parameters": {
+        "WFControlFlowMode": 2,
+        "GroupingIdentifier": {
+          "$group": "delete"
+        }
+      }
+    },
+    {
+      "key": "same_label_end",
+      "identifier": "is.workflow.actions.conditional",
+      "parameters": {
+        "WFControlFlowMode": 2,
+        "GroupingIdentifier": {
+          "$group": "same_label"
+        }
+      }
+    },
+    {
+      "key": "same_id_end",
+      "identifier": "is.workflow.actions.conditional",
+      "parameters": {
+        "WFControlFlowMode": 2,
+        "GroupingIdentifier": {
+          "$group": "same_id"
+        }
+      }
+    },
+    {
+      "key": "targets_end",
+      "identifier": "is.workflow.actions.repeat.each",
+      "parameters": {
+        "WFControlFlowMode": 2,
+        "GroupingIdentifier": {
+          "$group": "targets"
+        }
+      }
+    },
+    {
+      "key": "timer_if",
+      "identifier": "is.workflow.actions.conditional",
+      "parameters": {
+        "WFInput": {
+          "$output": "operation"
+        },
+        "WFCondition": 4,
+        "WFConditionalActionString": "start_timer",
+        "WFControlFlowMode": 0,
+        "GroupingIdentifier": {
+          "$group": "timer"
+        }
+      }
+    },
+    {
+      "key": "duration",
+      "identifier": "is.workflow.actions.getvalueforkey",
+      "parameters": {
+        "WFInput": {
+          "$output": "request"
+        },
+        "WFDictionaryKey": "duration",
+        "WFGetDictionaryValueType": "Value"
+      }
+    },
+    {
+      "key": "timer",
+      "identifier": "is.workflow.actions.timer.start",
+      "parameters": {
+        "WFDuration": {
+          "Value": {
+            "Magnitude": {
+              "$output": "duration"
+            },
+            "Unit": "sec"
+          },
+          "WFSerializationType": "WFQuantityFieldValue"
+        }
+      }
+    },
+    {
+      "key": "timer_duration",
+      "identifier": "com.apple.clock.GetCurrentTimerDetailsIntent",
+      "parameters": {
+        "AppIntentDescriptor": {
+          "AppIntentIdentifier": "GetCurrentTimerDetailsIntent",
+          "BundleIdentifier": "com.apple.clock",
+          "Name": "Clock",
+          "TeamIdentifier": "0000000000"
+        },
+        "mode": "duration"
+      }
+    },
+    {
+      "key": "timer_remaining",
+      "identifier": "com.apple.clock.GetCurrentTimerDetailsIntent",
+      "parameters": {
+        "AppIntentDescriptor": {
+          "AppIntentIdentifier": "GetCurrentTimerDetailsIntent",
+          "BundleIdentifier": "com.apple.clock",
+          "Name": "Clock",
+          "TeamIdentifier": "0000000000"
+        },
+        "mode": "remainingTime"
+      }
+    },
+    {
+      "key": "timer_end",
+      "identifier": "is.workflow.actions.conditional",
+      "parameters": {
+        "WFControlFlowMode": 2,
+        "GroupingIdentifier": {
+          "$group": "timer"
+        }
+      }
+    },
+    {
       "key": "alarms",
       "identifier": "com.apple.mobiletimer-framework.MobileTimerIntents.MTGetAlarmsIntent",
       "parameters": {
         "AppIntentDescriptor": {
-          "ActionRequiresAppInstallation": true,
           "AppIntentIdentifier": "AlarmEntity",
           "BundleIdentifier": "com.apple.clock",
           "Name": "Clock",
-          "TeamIdentifier": "0000000000"
+          "TeamIdentifier": "0000000000",
+          "ActionRequiresAppInstallation": true
+        }
+      }
+    },
+    {
+      "key": "alarm_item",
+      "identifier": "is.workflow.actions.repeat.each",
+      "parameters": {
+        "WFInput": {
+          "$output": "alarms"
+        },
+        "WFControlFlowMode": 0,
+        "GroupingIdentifier": {
+          "$group": "alarms"
+        }
+      }
+    },
+    {
+      "key": "alarm_time",
+      "identifier": "is.workflow.actions.format.date",
+      "parameters": {
+        "WFDate": {
+          "$output": "alarm_item",
+          "$property": "dateComponents"
+        },
+        "WFDateFormatStyle": "Custom",
+        "WFDateFormat": "HH:mm"
+      }
+    },
+    {
+      "key": "day_numbers",
+      "identifier": "is.workflow.actions.dictionary",
+      "parameters": {
+        "WFItems": {
+          "Value": {
+            "WFDictionaryFieldValueItems": [
+              {
+                "WFItemType": 3,
+                "WFKey": "Sunday",
+                "WFValue": {
+                  "Value": {
+                    "string": "0"
+                  },
+                  "WFSerializationType": "WFTextTokenString"
+                }
+              },
+              {
+                "WFItemType": 3,
+                "WFKey": "Monday",
+                "WFValue": {
+                  "Value": {
+                    "string": "1"
+                  },
+                  "WFSerializationType": "WFTextTokenString"
+                }
+              },
+              {
+                "WFItemType": 3,
+                "WFKey": "Tuesday",
+                "WFValue": {
+                  "Value": {
+                    "string": "2"
+                  },
+                  "WFSerializationType": "WFTextTokenString"
+                }
+              },
+              {
+                "WFItemType": 3,
+                "WFKey": "Wednesday",
+                "WFValue": {
+                  "Value": {
+                    "string": "3"
+                  },
+                  "WFSerializationType": "WFTextTokenString"
+                }
+              },
+              {
+                "WFItemType": 3,
+                "WFKey": "Thursday",
+                "WFValue": {
+                  "Value": {
+                    "string": "4"
+                  },
+                  "WFSerializationType": "WFTextTokenString"
+                }
+              },
+              {
+                "WFItemType": 3,
+                "WFKey": "Friday",
+                "WFValue": {
+                  "Value": {
+                    "string": "5"
+                  },
+                  "WFSerializationType": "WFTextTokenString"
+                }
+              },
+              {
+                "WFItemType": 3,
+                "WFKey": "Saturday",
+                "WFValue": {
+                  "Value": {
+                    "string": "6"
+                  },
+                  "WFSerializationType": "WFTextTokenString"
+                }
+              }
+            ]
+          },
+          "WFSerializationType": "WFDictionaryFieldValue"
+        }
+      }
+    },
+    {
+      "key": "read_day",
+      "identifier": "is.workflow.actions.repeat.each",
+      "parameters": {
+        "WFInput": {
+          "$output": "alarm_item",
+          "$property": "repeatDays"
+        },
+        "WFControlFlowMode": 0,
+        "GroupingIdentifier": {
+          "$group": "read_days"
+        }
+      }
+    },
+    {
+      "key": "day_number",
+      "identifier": "is.workflow.actions.getvalueforkey",
+      "parameters": {
+        "WFInput": {
+          "$output": "day_numbers"
+        },
+        "WFDictionaryKey": {
+          "$output": "read_day"
+        },
+        "WFGetDictionaryValueType": "Value"
+      }
+    },
+    {
+      "key": "read_days_end",
+      "identifier": "is.workflow.actions.repeat.each",
+      "parameters": {
+        "WFControlFlowMode": 2,
+        "GroupingIdentifier": {
+          "$group": "read_days"
+        }
+      }
+    },
+    {
+      "key": "alarm_json",
+      "identifier": "is.workflow.actions.dictionary",
+      "parameters": {
+        "WFItems": {
+          "Value": {
+            "WFDictionaryFieldValueItems": [
+              {
+                "WFItemType": 0,
+                "WFKey": "id",
+                "WFValue": {
+                  "$output": "alarm_item",
+                  "$property": "url"
+                }
+              },
+              {
+                "WFItemType": 0,
+                "WFKey": "label",
+                "WFValue": {
+                  "$output": "alarm_item",
+                  "$property": "label"
+                }
+              },
+              {
+                "WFItemType": 0,
+                "WFKey": "time",
+                "WFValue": {
+                  "$output": "alarm_time"
+                }
+              },
+              {
+                "WFItemType": 2,
+                "WFKey": "repeat_days",
+                "WFValue": {
+                  "Value": {
+                    "$output": "read_days_end"
+                  },
+                  "WFSerializationType": "WFArraySubstitutableParameterState"
+                }
+              },
+              {
+                "WFItemType": 4,
+                "WFKey": "enabled",
+                "WFValue": {
+                  "Value": {
+                    "$output": "alarm_item",
+                    "$property": "enabled"
+                  },
+                  "WFSerializationType": "WFNumberSubstitutableState"
+                }
+              }
+            ]
+          },
+          "WFSerializationType": "WFDictionaryFieldValue"
+        }
+      }
+    },
+    {
+      "key": "alarm_rows",
+      "identifier": "is.workflow.actions.repeat.each",
+      "parameters": {
+        "WFControlFlowMode": 2,
+        "GroupingIdentifier": {
+          "$group": "alarms"
+        }
+      }
+    },
+    {
+      "key": "readback",
+      "identifier": "is.workflow.actions.dictionary",
+      "parameters": {
+        "WFItems": {
+          "Value": {
+            "WFDictionaryFieldValueItems": [
+              {
+                "WFItemType": 3,
+                "WFKey": "version",
+                "WFValue": {
+                  "Value": {
+                    "string": "1"
+                  },
+                  "WFSerializationType": "WFTextTokenString"
+                }
+              },
+              {
+                "WFItemType": 0,
+                "WFKey": "operation",
+                "WFValue": {
+                  "$output": "operation"
+                }
+              },
+              {
+                "WFItemType": 2,
+                "WFKey": "alarms",
+                "WFValue": {
+                  "Value": {
+                    "$output": "alarm_rows"
+                  },
+                  "WFSerializationType": "WFArraySubstitutableParameterState"
+                }
+              }
+            ]
+          },
+          "WFSerializationType": "WFDictionaryFieldValue"
+        }
+      }
+    },
+    {
+      "key": "json",
+      "identifier": "is.workflow.actions.gettext",
+      "parameters": {
+        "WFTextActionText": {
+          "$output": "readback"
         }
       }
     }

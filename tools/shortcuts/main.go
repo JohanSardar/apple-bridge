@@ -49,13 +49,17 @@ func stableID(name string) string {
 func resolve(value any, name string, outputs map[string]string) (any, error) {
 	switch v := value.(type) {
 	case map[string]any:
-		if len(v) == 1 {
+		if len(v) == 1 || len(v) == 2 && v["$property"] != nil {
 			if key, ok := v["$output"].(string); ok {
 				id, exists := outputs[key]
 				if !exists {
 					return nil, fmt.Errorf("unknown or forward output %q", key)
 				}
-				return map[string]any{"Value": map[string]any{"Type": "ActionOutput", "OutputUUID": id, "OutputName": key}, "WFSerializationType": "WFTextTokenAttachment"}, nil
+				value := map[string]any{"Type": "ActionOutput", "OutputUUID": id, "OutputName": key}
+				if property, ok := v["$property"].(string); ok && property != "" {
+					value["Aggrandizements"] = []any{map[string]any{"Type": "WFPropertyVariableAggrandizement", "PropertyName": property, "PropertyUserInfo": property}}
+				}
+				return map[string]any{"Value": value, "WFSerializationType": "WFTextTokenAttachment"}, nil
 			}
 			if group, ok := v["$group"].(string); ok && group != "" {
 				return stableID(name + "/group/" + group), nil
