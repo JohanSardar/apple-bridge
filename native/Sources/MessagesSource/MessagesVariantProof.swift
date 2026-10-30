@@ -7,9 +7,6 @@ import SourceSupport
 public enum MessagesVariantProof {
     public static func run(_ kind: String) async throws -> JSON {
         guard ["audio", "formatting", "mention", "effect", "schedule"].contains(kind) else { throw SourceFailure.invalid }
-        if kind == "audio" { return limited("needs native media cleanup qualification") }
-        if kind == "schedule" { return limited("needs verified Send Later date controls and cancellation cleanup") }
-        if kind == "mention" { return limited("needs self-chat mention suggestion identity and attribute qualification") }
         try MessagesSendVariants.invalidateProof(kind)
         guard AXIsProcessTrusted() else { return limited("needs Messages Accessibility grant") }
         let session = CGSessionCopyCurrentDictionary() as? [String: Any]
@@ -55,7 +52,18 @@ public enum MessagesVariantProof {
             try capture()
             guard initial["observed"].bool else { throw SourceFailure.capabilityUnproven }
             let text = tag + " variant"
-            let variant: JSON = kind == "effect" ? .object(["kind": .string(kind), "effect": .string("loud")]) : .object(["kind": .string(kind), "formatting": .array([.object(["utf16_location": .number(Double(tag.utf16.count + 1)), "utf16_length": .number(7), "styles": .array([.string("bold")])])])])
+            var variant: JSON = kind == "effect" ? .object(["kind": .string(kind), "effect": .string("loud")]) : .object(["kind": .string(kind), "formatting": .array([.object(["utf16_location": .number(Double(tag.utf16.count + 1)), "utf16_length": .number(7), "styles": .array([.string("bold")])])])])
+            if kind == "schedule" { variant = .object(["kind": .string(kind), "scheduled_for": .string(timestamp(Date().addingTimeInterval(600)))]) }
+            if kind == "audio" { variant = .object(["kind": .string(kind)]) }
+            if kind == "mention" { variant = .object(["kind": .string(kind), "handle_id": .string(selectedChat["id"]), "utf16_location": .number(0), "utf16_length": .number(Double(tag.utf16.count))]) }
+            if ["audio", "schedule", "mention"].contains(kind) {
+                guard let target = initial["native_key"].string.isEmpty ? nil : initial["native_key"].string,
+                      let row = try reader.message(target), let observation = try reader.messageObservations(row).first else { throw SourceFailure.unavailable }
+                let targetData = try JSONDecoder().decode(JSON.self, from: JSONSerialization.data(withJSONObject: observation.2))
+                let probeVariant = variant
+                try await MessagesVariantUI.send(.object(["text": .string(kind == "audio" ? "" : text), "variant": probeVariant]), target: target, targetData: targetData, expiresAt: Date().addingTimeInterval(30))
+                throw SourceFailure.capabilityUnproven
+            }
             let prepared = try await prepare(text, variant: variant)
             preparedVariant = prepared
             try await commands.validate(prepared)

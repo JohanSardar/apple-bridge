@@ -61,12 +61,12 @@ func TestRunCleanupWaitsForNativeReadback(t *testing.T) {
 	}
 }
 
-func TestUnqualifiedAttachmentCleanupDoesNotStartWorld(t *testing.T) {
+func TestCancelledAttachmentRunDoesNotSubmitWrites(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	for _, id := range []string{"WEB-MEDIA-VARIANTS", "WEB-UPLOAD-NATIVE-STAGING"} {
 		e := runNativeMessagesCommands(ctx, Scenario{ID: id}, "real", Evidence{})
-		if e.Status != "limited" || e.Metrics["writes_submitted"] != 0 || len(e.Assertions) != 1 || e.Assertions[0].Name != "owned_attachment_cleanup_qualified" {
+		if len(e.Assertions) != 1 || e.Assertions[0].Name != "real_world_start" || e.Assertions[0].Passed {
 			t.Fatal(id, e)
 		}
 	}

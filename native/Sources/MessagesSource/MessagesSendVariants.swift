@@ -34,7 +34,7 @@ public enum MessagesSendVariants {
         }
     }
     static func invalidateProof(_ kind: String) throws {
-        let operation = kind == "effect" ? "messages.send_effect" : "messages.send_formatted"
+        guard let operation = ["effect": "messages.send_effect", "formatting": "messages.send_formatted", "audio": "messages.send_audio", "schedule": "messages.send_later", "mention": "messages.send_mention"][kind] else { throw SourceFailure.invalid }
         let current = proof()
         guard current != .null else { return }
         var fields = current.object

@@ -199,6 +199,20 @@ enum HelperLabCommand {
             while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.01)) }
             try JSONEncoder().encode(result!).write(to: reportURL, options: .atomic)
             return true
+        case "reminders-sections-probe":
+            let reportURL = try report(arguments)
+            var result: JSON?
+            Task { @MainActor in result = await RemindersSectionsProbe.run() }
+            while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.01)) }
+            try JSONEncoder().encode(result!).write(to: reportURL, options: .atomic)
+            return true
+        case "notes-extras-probe":
+            let reportURL = try report(arguments)
+            var result: JSON?
+            Task { @MainActor in result = await NotesExtrasProbe.run() }
+            while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.01)) }
+            try JSONEncoder().encode(result!).write(to: reportURL, options: .atomic)
+            return true
         case "notes-parity-probe":
             let reportURL = try report(arguments)
             var result: JSON?

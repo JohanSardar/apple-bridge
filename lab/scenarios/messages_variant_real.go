@@ -15,17 +15,6 @@ func messageSendVariant(id string) string {
 
 func runMessagesVariantReal(ctx context.Context, s Scenario, e Evidence) (result Evidence) {
 	result = e
-	reason := map[string]string{
-		"audio":    "needs native media cleanup qualification; audio remains fail-closed",
-		"schedule": "needs verified Send Later date controls and cancellation cleanup",
-		"mention":  "needs self-chat mention suggestion identity and attribute qualification",
-	}[messageSendVariant(s.ID)]
-	if reason != "" {
-		result.Status = "limited"
-		result.Metrics = map[string]any{"writes_submitted": 0}
-		result.Conditions = map[string]string{"reason": reason}
-		return
-	}
 	before, err := cleanupSnapshot(ctx, "messages")
 	if err != nil {
 		result.Status = "limited"

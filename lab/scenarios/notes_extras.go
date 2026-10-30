@@ -24,9 +24,8 @@ func runNotesExtras(ctx context.Context, s Scenario, level string) (e Evidence) 
 			e.Passed = e.Passed && a.Passed
 		}
 	}()
-	if level != "sim" {
-		e.Assertions = append(e.Assertions, Assertion{Name: "tagged_mutation_cleanup_required", Passed: true, Status: "limited", Detail: "Existing real Notes cleanup is unproven on 25G241; no real fixtures or mutations attempted"})
-		return
+	if level == "real" {
+		return runNotesExtrasReal(ctx, s, e)
 	}
 	ctx = world.WithOptions(ctx, world.Options{Scope: "notes:read,notes:write,reminders:read,system:read"})
 	w, err := world.New(ctx, level, 0, 0)
@@ -116,4 +115,29 @@ func runNotesExtras(ctx context.Context, s Scenario, level string) (e Evidence) 
 	rejectedErr := client.Call(ctx, "notes.rename_folder", contracts.Command{ID: contracts.NewCommandID(), Args: untaggedArgs, ExpectedVersion: currentFolder.Version, WaitMS: 15000}, &rejected)
 	add("untagged_rename_rejected", errors.Is(rejectedErr, contracts.ErrInvalid) || rejected.Error != nil && rejected.Error.Code == "invalid")
 	return
+}
+
+func runNotesExtrasReal(ctx context.Context, s Scenario, e Evidence) Evidence {
+	w, err := world.NewReal(ctx, "real", 0, world.BlobOptions{Scope: "notes:read,notes:write,system:read"})
+	if err != nil {
+		e.Assertions = append(e.Assertions, Assertion{Name: "real_world", Passed: false})
+		return e
+	}
+	defer w.Close()
+	report := os.Getenv("HOME") + "/Library/Application Support/AppleBridgeDev/notes-extras-" + e.RunID + ".json"
+	defer os.Remove(report)
+	err = exec.CommandContext(ctx, "open", "-n", "-W", "-g", "-a", w.HelperApp, "--args", "notes-extras-probe", "--report", report).Run()
+	data, readErr := os.ReadFile(report)
+	var proof struct {
+		Reason     string          `json:"reason"`
+		Assertions map[string]bool `json:"assertions"`
+		Passed     bool            `json:"passed"`
+	}
+	e.Assertions = append(e.Assertions, Assertion{Name: "real_probe_report", Passed: err == nil && readErr == nil && json.Unmarshal(data, &proof) == nil})
+	for name, passed := range proof.Assertions {
+		e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: passed})
+	}
+	e.Assertions = append(e.Assertions, Assertion{Name: "real_extras_effects", Passed: proof.Passed, Detail: proof.Reason})
+	e.Passed = proof.Passed && err == nil && readErr == nil
+	return e
 }

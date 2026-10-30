@@ -458,8 +458,38 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 			add("post_cleanup_forwarded_delete", nativeForwardedDelete(ctx, w, &e, commandTargets[cleanupTitle], "post_cleanup_forwarded_delete"))
 			add("post_cleanup_native_blob_stage", nativeBlobStage(w, &e, "post_cleanup_native_blob_stage"))
 		case "REM-SECTIONS":
-			e.Status = "limited"
-			e.Assertions = append(e.Assertions, Assertion{Name: "section_membership_supported_path", Status: "limited", Detail: "EventKit has no sections API; existing store reader marks section order and membership decoders unverified"})
+			if level == "sim" {
+				proof := exec.CommandContext(ctx, "packaging/dev/build-native.sh", "native")
+				proof.Env = append(os.Environ(), "APPLE_BRIDGE_NATIVE_TARGET=RemindersStoreChecks")
+				output, err := proof.CombinedOutput()
+				if err != nil {
+					fmt.Fprintln(os.Stderr, string(output))
+				}
+				add("sections_store_checks_build", err == nil)
+				directory, readErr := os.ReadFile("native/.build/native-output-1")
+				if err == nil && readErr == nil {
+					output, err = exec.CommandContext(ctx, filepath.Join(strings.TrimSpace(string(directory)), "RemindersStoreChecks")).CombinedOutput()
+					if err != nil {
+						fmt.Fprintln(os.Stderr, string(output))
+					}
+					add("sections_store_checks", err == nil)
+				}
+			} else {
+				report := filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "AppleBridgeDev", "sections-"+e.RunID+".json")
+				defer os.Remove(report)
+				err := exec.CommandContext(ctx, "open", "-n", "-W", "-g", "-a", w.HelperApp, "--args", "reminders-sections-probe", "--report", report).Run()
+				data, readErr := os.ReadFile(report)
+				var proof struct {
+					Reason     string          `json:"reason"`
+					Assertions map[string]bool `json:"assertions"`
+					Passed     bool            `json:"passed"`
+				}
+				add("sections_report", err == nil && readErr == nil && json.Unmarshal(data, &proof) == nil)
+				for name, passed := range proof.Assertions {
+					add(name, passed)
+				}
+				e.Assertions = append(e.Assertions, Assertion{Name: "sections_functional_proof", Passed: proof.Passed, Detail: proof.Reason})
+			}
 		case "REM-LIST-MANAGE":
 			name := "Bridge Test " + tag
 			if submit("reminders.create_list", map[string]any{"title": name}, 0) != nil {
@@ -870,7 +900,7 @@ func runNativeProtocol(ctx context.Context, s Scenario, level, protocol string) 
 	}
 	e.Passed = true
 	for _, assertion := range e.Assertions {
-		if !assertion.Passed && !(s.ID == "REM-SECTIONS" && assertion.Status == "limited") {
+		if !assertion.Passed {
 			e.Passed = false
 		}
 	}

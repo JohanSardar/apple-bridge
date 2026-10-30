@@ -85,6 +85,12 @@ struct RemindersStoreChecks {
         if let index = CommandLine.arguments.firstIndex(of: "--report"), index + 1 < CommandLine.arguments.count {
             try JSONEncoder().encode(JSON.object(["observations": .array(observations)])).write(to: URL(fileURLWithPath: CommandLine.arguments[index + 1]), options: .atomic)
         }
+        let sectionID = UUID()
+        let itemID = UUID()
+        let sectionOrder = try JSONEncoder().encode([sectionID.uuidString])
+        let sectionMembers = try JSONEncoder().encode([itemID.uuidString: sectionID.uuidString])
+        precondition(StoreSections.decode(order: sectionOrder, membership: sectionMembers)?.membership[itemID] == sectionID)
+        precondition(StoreSections.decode(order: Data("[\"invalid\"]".utf8), membership: sectionMembers) == nil)
         print("RemindersStore: synthetic schema, arbitrary entity IDs, WAL backup, isolation, deleted and pending exclusion passed")
     }
 }

@@ -134,6 +134,24 @@ enum MessagesAccessibility {
         } while Date() < deadline
         throw MessagesUIFailure.menuUnavailable
     }
+    private static func confirmDeletion(_ session: MessagesUISession) throws {
+        let deadline = Date().addingTimeInterval(3)
+        repeat {
+            var budget = 4000
+            let sheets = matching(session.root, budget: &budget) { value($0, kAXRoleAttribute) == kAXSheetRole || value($0, kAXRoleAttribute) == "AXDialog" }
+            let buttons = sheets.flatMap { sheet -> [AXUIElement] in
+                var nested = 300
+                return matching(sheet, budget: &nested) { value($0, kAXRoleAttribute) == kAXButtonRole && value($0, kAXTitleAttribute) == "Delete" }
+            }
+            if buttons.count == 1 {
+                try session.fence()
+                guard AXUIElementPerformAction(buttons[0], kAXPressAction as CFString) == .success else { throw SourceFailure.conflict }
+                return
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+        } while Date() < deadline
+        throw MessagesUIFailure.menuUnavailable
+    }
     private static func edit(_ session: MessagesUISession, text: String, previous: String) throws {
         let deadline = Date().addingTimeInterval(3)
         repeat {
@@ -340,7 +358,7 @@ enum MessagesAccessibility {
             try session.press(MessagesUISession.enter)
         case .react: break
         case .deleteMessage, .deleteChat:
-            try press(session, title: "Delete")
+            try confirmDeletion(session)
             RunLoop.current.run(until: Date().addingTimeInterval(0.25))
             _ = try acknowledgeDeletedInfo()
         case .renameGroup: try replace(session, text: args["name"].string); try session.press(MessagesUISession.enter)

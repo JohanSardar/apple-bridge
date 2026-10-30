@@ -86,7 +86,7 @@ func runNotesParity(ctx context.Context, s Scenario, level string) (e Evidence) 
 			Reason string `json:"reason"`
 		}
 		err := json.Unmarshal(result.Proofs[name], &proof)
-		e.Assertions = append(e.Assertions, Assertion{Name: name + "_capability", Passed: err == nil && (proof.State == "candidate" || proof.State == "limited"), Status: "limited", Detail: proof.Reason})
+		e.Assertions = append(e.Assertions, Assertion{Name: name + "_capability", Passed: err == nil && proof.State == "candidate", Status: "limited", Detail: proof.Reason})
 		e.Metrics[name] = json.RawMessage(result.Proofs[name])
 	}
 	return
