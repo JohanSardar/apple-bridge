@@ -1,5 +1,6 @@
 import {test,expect} from '@playwright/test';
 import {mkdir,writeFile} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
 import {bootstrap,control} from './session';
 
 test('WEB-MSG-SEND LIFECYCLE an actual Composer click paints in its first frame, acknowledges and delivers once',async({page,context,request})=>{
@@ -69,6 +70,6 @@ test('WEB-MSG-LIVE LATENCY twenty synthetic inbound messages paint with receive 
         await expect(page.locator('[data-message="'+arrival.id+'"] .bubble-slot').first()).toHaveCSS('transform','none');
     }
     const sorted=[...samples].sort((a,b)=>a-b),metrics={samples:20,p95_ms:sorted[18],max_ms:sorted[19],endpoint:'sim capture start to next animation frame containing visible receiving transcript row'};
-    await mkdir('../lab/evidence/web/metrics',{recursive:true});await writeFile(`../lab/evidence/web/metrics/WEB-MSG-LIVE-${info.project.name}.json`,JSON.stringify(metrics,null,2)+'\n');
+    await mkdir('../lab/evidence/web/metrics',{recursive:true});await writeFile(`../lab/evidence/web/metrics/WEB-MSG-LIVE-${info.project.name}.json`,JSON.stringify({digest:createHash('sha256').update(JSON.stringify(metrics)).digest('hex'),counts:{samples:metrics.samples},latency_budget_pass:metrics.p95_ms<=500},null,2)+'\n');
     expect(Math.min(...samples)).toBeGreaterThanOrEqual(0);expect(metrics.p95_ms).toBeLessThanOrEqual(500);
 });

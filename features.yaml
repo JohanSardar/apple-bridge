@@ -698,12 +698,12 @@ features:
       - {id: WEB-PERF-LIST, levels: [web]}
       - {id: WEB-MSG-LIVE, levels: [web]}
       - {id: WEB-MSG-REAL-READ, levels: [real]}
-    notes: Twenty-two read scenarios pass all 12 browser/theme/layout projects, including LIVE, THREAD-CORE and SEARCH. Counts and report digests are in WEB-MSG-READ-MATRIX.json. Performance qualification retains explicit limits.
+    notes: The 12-project browser/theme/layout matrices qualify LIVE, THREAD-CORE, SEARCH and the formerly incomplete read matrices. Performance evidence separates observed script/style/layout proxies from complete input and paint budgets. Counts, digests and pass/fail are in WEB-MSG-READ-MATRIX.json.
     limits:
       - {"scenario": "WEB-MSG-REAL-READ", "level": "real", "reason": "Real acceptance harness is not implemented; no native effects dispatched"}
-      - {"scenario": "WEB-MSG-PERF", "level": "web", "reason": "Declared 12-project matrix: 47 tests passed, 13 failed, 0 skipped and 0 unrun. Input or frame budgets remain unqualified; counts and report digests are in WEB-MSG-READ-MATRIX.json."}
-      - {"scenario": "WEB-MSG-PERF-INPUT", "level": "web", "reason": "Declared 12-project matrix: 39 tests passed, 9 failed, 0 skipped and 0 unrun. Input or frame budgets remain unqualified; counts and report digests are in WEB-MSG-READ-MATRIX.json."}
-      - {"scenario": "WEB-MSG-PERF-FRAME", "level": "web", "reason": "Declared 12-project matrix: 8 tests passed, 4 failed, 0 skipped and 0 unrun. Input or frame budgets remain unqualified; counts and report digests are in WEB-MSG-READ-MATRIX.json."}
+      - {"scenario": "WEB-MSG-PERF", "level": "web", "reason": "Complete own-input and app-update paint budgets remain unproven: Event Timing has a 16 ms reporting floor, Long Tasks has a 50 ms floor, and document Paint Timing cannot attribute app-update paint. The 8 ms input and 4/8 ms frame targets are below those API floors. Chromium tracing and in-page script/style/layout probes are partial proxies; their pass/fail results do not prove complete input or paint cost. Counts and digests are in WEB-MSG-READ-MATRIX.json."}
+      - {"scenario": "WEB-MSG-PERF-INPUT", "level": "web", "reason": "Complete own-input and app-update paint budgets remain unproven: Event Timing has a 16 ms reporting floor, Long Tasks has a 50 ms floor, and document Paint Timing cannot attribute app-update paint. The 8 ms input and 4/8 ms frame targets are below those API floors. Chromium tracing and in-page script/style/layout probes are partial proxies; their pass/fail results do not prove complete input or paint cost. Counts and digests are in WEB-MSG-READ-MATRIX.json."}
+      - {"scenario": "WEB-MSG-PERF-FRAME", "level": "web", "reason": "Complete own-input and app-update paint budgets remain unproven: Event Timing has a 16 ms reporting floor, Long Tasks has a 50 ms floor, and document Paint Timing cannot attribute app-update paint. The 8 ms input and 4/8 ms frame targets are below those API floors. Chromium tracing and in-page script/style/layout probes are partial proxies; their pass/fail results do not prove complete input or paint cost. Counts and digests are in WEB-MSG-READ-MATRIX.json."}
   - id: web.messages.write
     title: Messages web app writing (interactive gate, self-test, composer, actions, uploads)
     requirements: [R-WEB-UI, R-RW, R-MSG-DEPTH, R-SAFE-CMD]

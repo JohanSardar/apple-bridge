@@ -1,0 +1,7 @@
+{
+  "digest": "9770e6cb5bcd2f939d5b4b9a4786214fed60c8636e83625b288081de310abf94",
+  "counts": {
+    "samples": 20
+  },
+  "latency_budget_pass": true
+}
