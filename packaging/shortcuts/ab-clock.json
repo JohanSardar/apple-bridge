@@ -167,7 +167,8 @@
         "WFInput": {
           "Type": "Variable",
           "Variable": {
-            "$output": "operation"
+            "$output": "operation",
+            "$coerce": "WFStringContentItem"
           }
         },
         "WFCondition": 4,
@@ -349,7 +350,8 @@
           "Type": "Variable",
           "Variable": {
             "$output": "target",
-            "$property": "url"
+            "$property": "url",
+            "$coerce": "WFStringContentItem"
           }
         },
         "WFCondition": 4,
@@ -371,7 +373,8 @@
           "Type": "Variable",
           "Variable": {
             "$output": "target",
-            "$property": "label"
+            "$property": "label",
+            "$coerce": "WFStringContentItem"
           }
         },
         "WFCondition": 4,
@@ -392,7 +395,8 @@
         "WFInput": {
           "Type": "Variable",
           "Variable": {
-            "$output": "operation"
+            "$output": "operation",
+            "$coerce": "WFStringContentItem"
           }
         },
         "WFCondition": 4,
@@ -439,7 +443,8 @@
         "WFInput": {
           "Type": "Variable",
           "Variable": {
-            "$output": "operation"
+            "$output": "operation",
+            "$coerce": "WFStringContentItem"
           }
         },
         "WFCondition": 4,
@@ -522,7 +527,8 @@
         "WFInput": {
           "Type": "Variable",
           "Variable": {
-            "$output": "operation"
+            "$output": "operation",
+            "$coerce": "WFStringContentItem"
           }
         },
         "WFCondition": 4,

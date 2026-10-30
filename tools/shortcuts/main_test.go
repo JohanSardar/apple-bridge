@@ -30,3 +30,22 @@ func TestTextOutputReference(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestConditionalStringCoercion(t *testing.T) {
+	output, err := resolve(map[string]any{"$output": "target", "$property": "url", "$coerce": "WFStringContentItem"}, "Clock", map[string]string{"target": "target-uuid"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	variable := output.(map[string]any)["Value"].(map[string]any)
+	if variable["OutputUUID"] != "target-uuid" {
+		t.Fatal("coercion lost its output binding")
+	}
+	aggrandizements := variable["Aggrandizements"].([]any)
+	if len(aggrandizements) != 2 || aggrandizements[0].(map[string]any)["PropertyName"] != "url" {
+		t.Fatal("coercion lost its property binding")
+	}
+	coercion := aggrandizements[1].(map[string]any)
+	if coercion["Type"] != "WFCoercionVariableAggrandizement" || coercion["CoercionItemClass"] != "WFStringContentItem" {
+		t.Fatal("conditional subject must explicitly coerce to text")
+	}
+}

@@ -1,0 +1,9 @@
+{
+  "passed": true,
+  "subjects": 8,
+  "operators": 8,
+  "literal_operands": 4,
+  "variable_operands": 2,
+  "failed": 0,
+  "unsigned_sha256": "8bb09ac1ecbe794b05cf0bb6b4363df14265459b76727c0d67e74afe26c42684"
+}
