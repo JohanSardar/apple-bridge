@@ -1,0 +1,71 @@
+{
+  "scenario": "WEB-PERF-LIST",
+  "passed": true,
+  "projects": {
+    "chromium-light-desktop": {
+      "metrics": {
+        "list": {
+          "frame_work": {
+            "samples": 120,
+            "p50_ms": 0.989,
+            "p95_ms": 1.111,
+            "max_ms": 1.363
+          },
+          "input_responsiveness_ms": {
+            "samples": 20,
+            "p50_ms": 1.668999988079071,
+            "p95_ms": 2.4849999940395353,
+            "max_ms": 3.6340000059604645
+          },
+          "warm_load": {
+            "samples": 3,
+            "p50_ms": 67.40000000596046,
+            "p95_ms": 69.09999999403954,
+            "max_ms": 69.09999999403954
+          },
+          "long_tasks": []
+        },
+        "filters": {
+          "frame_work": {
+            "samples": 121,
+            "p50_ms": 0.68,
+            "p95_ms": 2.935,
+            "max_ms": 3.142
+          },
+          "input_responsiveness_ms": {
+            "samples": 20,
+            "p50_ms": 3.2989999821186067,
+            "p95_ms": 3.8679999821186066,
+            "max_ms": 3.952000011920929
+          },
+          "long_tasks": []
+        },
+        "search": {
+          "frame_work": {
+            "samples": 129,
+            "p50_ms": 0.269,
+            "p95_ms": 3.086,
+            "max_ms": 4.237
+          },
+          "input_responsiveness_ms": {
+            "samples": 26,
+            "p50_ms": 2.0189999940395356,
+            "p95_ms": 4.947999988079071,
+            "max_ms": 4.973999994039536
+          },
+          "long_tasks": []
+        },
+        "live": {
+          "frame_work": {
+            "samples": 120,
+            "p50_ms": 0.156,
+            "p95_ms": 0.294,
+            "max_ms": 3.443
+          },
+          "input_responsiveness_ms": null,
+          "long_tasks": []
+        }
+      }
+    }
+  }
+}

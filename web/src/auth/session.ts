@@ -63,9 +63,17 @@ export async function establishSession(value: unknown) {
     setError(false);
     pwaSetup=configurePWA(current).catch(() => { });
 }
+async function readSession() {
+    try { return await api('session'); }
+    catch (error) {
+        if (!(error instanceof APIError) || error.status !== 429 || error.retryAfter === undefined || !Number.isFinite(error.retryAfter) || error.retryAfter < 0 || error.retryAfter > 2) throw error;
+        await new Promise(resolve => setTimeout(resolve, error.retryAfter! * 1000));
+        return api('session');
+    }
+}
 export async function loadSession() {
     try {
-        await establishSession(await api('session'));
+        await establishSession(await readSession());
     }
     catch (error) {
         if (error instanceof APIError && error.status === 401) {

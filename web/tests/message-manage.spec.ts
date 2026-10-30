@@ -29,10 +29,7 @@ async function fixture(page:Page,context:BrowserContext,holdProof=false,mutate?:
             if(mutate){const visit=(value:any)=>{if(!value||typeof value!=='object')return;if(value.data&&typeof value.data==='object'&&(value.collection==='messages.message'||value.collection==='messages.chat'))mutate(value);for(const child of Object.values(value))if(child&&typeof child==='object')Array.isArray(child)?child.forEach(visit):visit(child);};visit(frame);socket.send(JSON.stringify(frame));}else socket.send(data);
         });
     });
-    const sessionResponse=page.waitForResponse(response=>new URL(response.url()).pathname==='/web/v1/session');
     await page.goto('/__fixtures/message-actions?chat='+encodeURIComponent(chat));
-    const sessionRead=await sessionResponse;
-    if(sessionRead.status()===429){const seconds=Number(sessionRead.headers()['retry-after']);expect(seconds).toBeGreaterThan(0);expect(seconds).toBeLessThanOrEqual(2);test.info().annotations.push({type:'fixture',description:'Honored session429 Retry-After through the actual Try again button'});await page.waitForTimeout(seconds*1000);const retried=page.waitForResponse(response=>new URL(response.url()).pathname==='/web/v1/session');await page.getByRole('button',{name:'Try again',exact:true}).click();expect((await retried).ok()).toBe(true);}
 
     await page.getByRole('button',{name:'Create self fixture message',exact:true}).click();
     const id = page.getByLabel('Created fixture message');
@@ -99,4 +96,11 @@ test('WEB-MSG-MANAGE missing native attachment identity never falls back to file
 });
 test('WEB-MSG-MANAGE Forward attachment stages the exact captured original and waits for a recipient and Send',async({page,context,request})=>{
     const f=await fixture(page,context),ids=await control(request,'/demo-fixtures'),id=ids['demo-message-00-000040'];await page.goto('/messages/'+encodeURIComponent(chat)+'/'+encodeURIComponent(id));const row=page.locator('[data-message="'+id+'"]');await expect(row.locator('[data-file-mime="application/pdf"]')).toBeVisible();await row.locator('.bubble[data-part="0"]').click({button:'right'});await page.getByRole('dialog',{name:'Message actions',exact:true}).getByRole('button',{name:'Forward',exact:true}).click();await expect(page).toHaveURL(/\/messages\/new$/u);await expect(page.locator('.upload-files [data-upload-state="ready"]')).toHaveCount(1);await expect(page.locator('.upload-files')).toContainText('demo-field-notes.pdf');await expect(page.getByRole('textbox',{name:'Message',exact:true})).toHaveValue('');await expect(page.getByRole('button',{name:'Send message',exact:true})).toBeDisabled();expect(f.commands.filter(command=>command.op==='messages.send')).toHaveLength(1);
+});
+
+test('WEB-MSG-MANAGE a rate-limited session honors Retry-After before opening the new composer',async({page,context})=>{
+    await context.addCookies(cookies);let attempts=0,limitedAt=0,retriedAt=0;
+    await page.route('**/web/v1/session',async route=>{attempts++;if(attempts===1){limitedAt=Date.now();await route.fulfill({status:429,headers:{'Retry-After':'1'},contentType:'application/json',body:'{}'});}else{retriedAt=Date.now();await route.continue();}});
+    await page.goto('/messages/new');await page.getByRole('textbox',{name:'Message',exact:true}).fill('[ab-test actions] new draft');
+    expect(attempts).toBe(2);expect(retriedAt-limitedAt).toBeGreaterThanOrEqual(1000);
 });
