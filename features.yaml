@@ -1032,14 +1032,14 @@ features:
     modules: [internal/clockpack, packaging/shortcuts/ab-clock.json]
     depends_on: [shortcuts.runner]
     status: limited
-    notes: AB Clock built and signed; opening the signed pack on the Air still requires an import click. Start Timer exists in the macOS action inventory. Structured alarm capture, mutation readback, timer confirmation and city query remain unqualified and are not advertised.
+    notes: AB Clock is installed on the Air and both real runners invoke the live pack. Its current list-only output does not provide the versioned structured alarm fields or timer running confirmation. Alarm mutations are safely skipped until baseline readback qualifies. Start Timer exists on macOS; timer confirmation and city query remain unqualified and are not advertised.
     scenarios:
       - {id: CLK-SIM, levels: [sim]}
       - {id: CLK-ALARM-REAL, levels: [real]}
       - {id: CLK-TIMER-REAL, levels: [real]}
     limits:
-      - {"scenario": "CLK-ALARM-REAL", "level": "real", "reason": "limited: needs import click"}
-      - {"scenario": "CLK-TIMER-REAL", "level": "real", "reason": "limited: needs import click"}
+      - {"scenario": "CLK-ALARM-REAL", "level": "real", "reason": "limited: AB Clock lacks versioned structured alarm field readback; mutations not attempted"}
+      - {"scenario": "CLK-TIMER-REAL", "level": "real", "reason": "limited: AB Clock lacks timer running, duration and label confirmation; macOS Start Timer exists"}
   - id: mac.capture
     title: Mac system state capture
     requirements: [R-API, R-SCOPE]
