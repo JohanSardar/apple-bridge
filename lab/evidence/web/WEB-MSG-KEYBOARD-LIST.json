@@ -1,161 +1,68 @@
 {
-  "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[6.6 5.99 6.04] cpu_idle=81% cpus=8 other_heavy=0"
-  },
-  "run_id": "run_01M5J1EZFJEG38ESBCG4D154RM",
-  "metrics": {
-    "browser_budget_ms": 180000,
-    "capture_observer_resets": 0,
-    "demo_messages": 5000,
-    "demo_startup_ms": 7614,
-    "fixture_setup_ms": 7614,
-    "fixture_snapshot": {
-      "disk_bytes": 30638080,
-      "entry_bytes": 30645888,
-      "cache_bytes": 0,
-      "blob_payloads": 59,
-      "key": "9a0f76b38de6c1ba6cf2ab9daa4155666e2a81af5d128f4257ce33238c24db14",
-      "cache_hit": false,
-      "build_ms": 7560,
-      "copy_ms": 782,
-      "records": 6865,
-      "fresh_digest": "65692052849b854781895c693dc430c1b7fe442beb1e566ea93e35988f824e6c",
-      "copy_digest": "65692052849b854781895c693dc430c1b7fe442beb1e566ea93e35988f824e6c",
-      "verified": true,
-      "copy_method": "clonefile"
-    },
-    "matrix": [
-      "webkit-light-phone",
-      "webkit-light-desktop",
-      "chromium-light-phone",
-      "chromium-light-desktop"
-    ],
-    "report": "lab/evidence/private/web/reports/WEB-MSG-KEYBOARD-LIST-webkit-light-phone-playwright.json",
-    "reports": [
-      "lab/evidence/private/web/reports/WEB-MSG-KEYBOARD-LIST-webkit-light-phone-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-KEYBOARD-LIST-webkit-light-desktop-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-KEYBOARD-LIST-chromium-light-phone-playwright.json",
-      "lab/evidence/private/web/reports/WEB-MSG-KEYBOARD-LIST-chromium-light-desktop-playwright.json"
-    ],
-    "server": "gateway",
-    "setups": [
-      {
-        "fixture_setup_ms": 7614,
-        "fixture_snapshot": {
-          "disk_bytes": 30638080,
-          "entry_bytes": 30645888,
-          "cache_bytes": 0,
-          "blob_payloads": 59,
-          "key": "9a0f76b38de6c1ba6cf2ab9daa4155666e2a81af5d128f4257ce33238c24db14",
-          "cache_hit": false,
-          "build_ms": 7560,
-          "copy_ms": 782,
-          "records": 6865,
-          "fresh_digest": "65692052849b854781895c693dc430c1b7fe442beb1e566ea93e35988f824e6c",
-          "copy_digest": "65692052849b854781895c693dc430c1b7fe442beb1e566ea93e35988f824e6c",
-          "verified": true,
-          "copy_method": "clonefile"
-        },
-        "project": "webkit-light-phone"
-      },
-      {
-        "fixture_setup_ms": 9980,
-        "fixture_snapshot": {
-          "disk_bytes": 30621696,
-          "entry_bytes": 30629504,
-          "cache_bytes": 0,
-          "blob_payloads": 59,
-          "key": "9a0f76b38de6c1ba6cf2ab9daa4155666e2a81af5d128f4257ce33238c24db14",
-          "cache_hit": false,
-          "build_ms": 9881,
-          "copy_ms": 919,
-          "records": 6865,
-          "fresh_digest": "39954f7be727be254939ef015b534c286f72b4675177f458f09b1b0ec85b7f4c",
-          "copy_digest": "39954f7be727be254939ef015b534c286f72b4675177f458f09b1b0ec85b7f4c",
-          "verified": true,
-          "copy_method": "clonefile"
-        },
-        "project": "webkit-light-desktop"
-      },
-      {
-        "fixture_setup_ms": 9055,
-        "fixture_snapshot": {
-          "disk_bytes": 30576640,
-          "entry_bytes": 30584448,
-          "cache_bytes": 0,
-          "blob_payloads": 59,
-          "key": "9a0f76b38de6c1ba6cf2ab9daa4155666e2a81af5d128f4257ce33238c24db14",
-          "cache_hit": false,
-          "build_ms": 8961,
-          "copy_ms": 785,
-          "records": 6865,
-          "fresh_digest": "76def5c44a9bffbc9d37bf25eae7ff3fb767f296894cb071ab59ac783e342f11",
-          "copy_digest": "76def5c44a9bffbc9d37bf25eae7ff3fb767f296894cb071ab59ac783e342f11",
-          "verified": true,
-          "copy_method": "clonefile"
-        },
-        "project": "chromium-light-phone"
-      },
-      {
-        "fixture_setup_ms": 8943,
-        "fixture_snapshot": {
-          "disk_bytes": 30683136,
-          "entry_bytes": 30690944,
-          "cache_bytes": 0,
-          "blob_payloads": 59,
-          "key": "9a0f76b38de6c1ba6cf2ab9daa4155666e2a81af5d128f4257ce33238c24db14",
-          "cache_hit": false,
-          "build_ms": 8811,
-          "copy_ms": 1418,
-          "records": 6865,
-          "fresh_digest": "34bc8beb716b090632c330fd8d2c4a4af9f17866c865d44fbb0873436cdb2ab0",
-          "copy_digest": "34bc8beb716b090632c330fd8d2c4a4af9f17866c865d44fbb0873436cdb2ab0",
-          "verified": true,
-          "copy_method": "clonefile"
-        },
-        "project": "chromium-light-desktop"
-      }
-    ],
-    "template_cold_setup_ms": {
-      "generate": 95,
-      "list": 2122,
-      "seed": 3440
-    }
-  },
   "scenario": "WEB-MSG-KEYBOARD-LIST",
   "level": "web",
+  "git_sha": "f4ff3b4d9c2c8b39396a0304363952bae95b5806",
+  "at": "2026-10-30T00:09:27.762718Z",
   "passed": true,
-  "git_sha": "342215c03f3db4d5164e50855a5fcfd9f4a4ab6d",
-  "at": "2026-10-22T14:50:23.602465Z",
+  "metrics": {
+    "matrix_count": 12,
+    "completed_matrix_count": 12,
+    "passed_matrix_count": 12,
+    "failed_matrix_count": 0,
+    "incomplete_matrix_count": 0,
+    "passed_test_count": 18,
+    "failed_test_count": 0,
+    "skipped_test_count": 6,
+    "report_sha256": "d0ffe3eefb1b20e141208dac498f0e604414a1719f45566ecc93af4cb550421e"
+  },
   "assertions": [
     {
-      "name": "webkit-light-phone:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [webkit-light-phone] › tests/list.spec.ts:90:1 › WEB-MSG-KEYBOARD-LIST optional pins, preview bubbles and numbered shortcuts (2.1s)\n  -  2 [webkit-light-phone] › tests/list.spec.ts:102:1 › WEB-MSG-KEYBOARD-LIST arrows, chat cycling and New Message\n\n  1 skipped\n  1 passed (8.1s)\n"
+      "name": "webkit-light-phone",
+      "passed": true
     },
     {
-      "name": "webkit-light-desktop:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [webkit-light-desktop] › tests/list.spec.ts:90:1 › WEB-MSG-KEYBOARD-LIST optional pins, preview bubbles and numbered shortcuts (2.2s)\n  ✓  2 [webkit-light-desktop] › tests/list.spec.ts:102:1 › WEB-MSG-KEYBOARD-LIST arrows, chat cycling and New Message (1.3s)\n\n  2 passed (8.5s)\n"
+      "name": "webkit-light-desktop",
+      "passed": true
     },
     {
-      "name": "chromium-light-phone:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [chromium-light-phone] › tests/list.spec.ts:90:1 › WEB-MSG-KEYBOARD-LIST optional pins, preview bubbles and numbered shortcuts (1.4s)\n  -  2 [chromium-light-phone] › tests/list.spec.ts:102:1 › WEB-MSG-KEYBOARD-LIST arrows, chat cycling and New Message\n\n  1 skipped\n  1 passed (6.7s)\n"
+      "name": "webkit-dark-phone",
+      "passed": true
     },
     {
-      "name": "chromium-light-desktop:playwright_matrix",
-      "passed": true,
-      "detail": "\nRunning 2 tests using 1 worker\n\n  ✓  1 [chromium-light-desktop] › tests/list.spec.ts:90:1 › WEB-MSG-KEYBOARD-LIST optional pins, preview bubbles and numbered shortcuts (1.0s)\n  ✓  2 [chromium-light-desktop] › tests/list.spec.ts:102:1 › WEB-MSG-KEYBOARD-LIST arrows, chat cycling and New Message (867ms)\n\n  2 passed (5.6s)\n"
+      "name": "webkit-dark-desktop",
+      "passed": true
     },
     {
-      "name": "credential_backend_override_restored",
+      "name": "chromium-light-phone",
+      "passed": true
+    },
+    {
+      "name": "chromium-light-desktop",
+      "passed": true
+    },
+    {
+      "name": "chromium-dark-phone",
+      "passed": true
+    },
+    {
+      "name": "chromium-dark-desktop",
+      "passed": true
+    },
+    {
+      "name": "firefox-light-phone",
+      "passed": true
+    },
+    {
+      "name": "firefox-light-desktop",
+      "passed": true
+    },
+    {
+      "name": "firefox-dark-phone",
+      "passed": true
+    },
+    {
+      "name": "firefox-dark-desktop",
       "passed": true
     }
-  ],
-  "latency": {},
-  "hosts": [
-    "air"
   ]
 }

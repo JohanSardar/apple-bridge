@@ -1,0 +1,24 @@
+{
+  "scenario": "WEB-MSG-LIVE",
+  "level": "web",
+  "git_sha": "dc372e7ee1b2ffae95c1c265c50aadbaa0872bf8",
+  "at": "2026-10-30T00:31:56.095106Z",
+  "passed": false,
+  "metrics": {
+    "matrix_count": 1,
+    "completed_matrix_count": 1,
+    "passed_matrix_count": 0,
+    "failed_matrix_count": 1,
+    "incomplete_matrix_count": 0,
+    "passed_test_count": 0,
+    "failed_test_count": 1,
+    "skipped_test_count": 2,
+    "report_sha256": "b3b6039d19eaaeea1ae55ef9a3b853e3fdcbbd9622b0aadd74490ce1064ce84e"
+  },
+  "assertions": [
+    {
+      "name": "chromium-light-desktop",
+      "passed": false
+    }
+  ]
+}

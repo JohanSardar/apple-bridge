@@ -706,9 +706,6 @@ features:
       - {"scenario": "WEB-PERF-SEARCH", "level": "web", "reason": "web qualification remains missing"}
       - {"scenario": "WEB-PERF-LIST", "level": "web", "reason": "Measured, not met, in a quiet exclusive Chromium light-desktop 104,900-message fixture: filter frame p95/max 10.489/15.777 ms versus 4/8 ms; own-input p95 22.374 ms versus 8 ms (22 samples). Later search/live/reorder/warm phases were not reached. Thresholds are unchanged."}
       - {"scenario": "WEB-MSG-REAL-READ", "level": "real", "reason": "Real acceptance harness is not implemented; no native effects dispatched"}
-      - {"scenario": "WEB-MSG-A11Y", "level": "web", "reason": "T72 continuation: not run before the BRIEF-V3 checkpoint; engineering qualification remains outstanding"}
-      - {"scenario": "WEB-MSG-A11Y", "level": "web", "reason": "T72 continuation: not run before the BRIEF-V3 checkpoint; engineering qualification remains outstanding"}
-      - {"scenario": "WEB-MSG-A11Y", "level": "web", "reason": "T72 continuation: not run before the BRIEF-V3 checkpoint; engineering qualification remains outstanding"}
       - {"scenario": "WEB-MSG-FILTERS", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
       - {"scenario": "WEB-MSG-FILTERS-MENU", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
       - {"scenario": "WEB-MSG-SEARCH", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
@@ -729,15 +726,10 @@ features:
       - {"scenario": "WEB-MSG-STICKERS-GENMOJI", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
       - {"scenario": "WEB-MSG-AUDIO", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
       - {"scenario": "WEB-MSG-FILES", "level": "web", "reason": "T72 continuation: Chromium light desktop passed; the declared full matrix remains unqualified at the BRIEF-V3 checkpoint"}
-      - {"scenario": "WEB-MSG-PLACEHOLDERS", "level": "web", "reason": "T72 continuation: not run before the BRIEF-V3 checkpoint; engineering qualification remains outstanding"}
-      - {"scenario": "WEB-MSG-PENDING", "level": "web", "reason": "T72 continuation: not run before the BRIEF-V3 checkpoint; engineering qualification remains outstanding"}
-      - {"scenario": "WEB-MSG-KEYBOARD", "level": "web", "reason": "T72 continuation: not run before the BRIEF-V3 checkpoint; engineering qualification remains outstanding"}
-      - {"scenario": "WEB-MSG-KEYBOARD-LIST", "level": "web", "reason": "T72 continuation: not run before the BRIEF-V3 checkpoint; engineering qualification remains outstanding"}
-      - {"scenario": "WEB-MSG-A11Y", "level": "web", "reason": "T72 continuation: not run before the BRIEF-V3 checkpoint; engineering qualification remains outstanding"}
-      - {"scenario": "WEB-MSG-PERF", "level": "web", "reason": "T72 continuation: not run before the BRIEF-V3 checkpoint; engineering qualification remains outstanding"}
-      - {"scenario": "WEB-MSG-PERF-FRAME", "level": "web", "reason": "T72 continuation: not run before the BRIEF-V3 checkpoint; engineering qualification remains outstanding"}
-      - {"scenario": "WEB-MSG-PERF-INPUT", "level": "web", "reason": "T72 continuation: not run before the BRIEF-V3 checkpoint; engineering qualification remains outstanding"}
-      - {"scenario": "WEB-MSG-LIVE", "level": "web", "reason": "T72 continuation: not run before the BRIEF-V3 checkpoint; engineering qualification remains outstanding"}
+      - {"scenario": "WEB-MSG-PERF", "level": "web", "reason": "T72 continuation: Chromium light-desktop open-chat action remains aria-busy=true with 100 populated rows; input budgets and remaining tests are not reached; full matrix deferred within the 60-minute budget"}
+      - {"scenario": "WEB-MSG-PERF-FRAME", "level": "web", "reason": "T72 continuation: full 12-cell matrix completed, 10 passed; Chromium dark phone and Firefox light phone exceed the unchanged frame budget"}
+      - {"scenario": "WEB-MSG-PERF-INPUT", "level": "web", "reason": "T72 continuation: Chromium light-desktop open-chat action remains aria-busy=true with 100 populated rows; input budgets and remaining tests are not reached; full matrix deferred within the 60-minute budget"}
+      - {"scenario": "WEB-MSG-LIVE", "level": "web", "reason": "T72 continuation: initial 12-cell matrix failed receive-motion checks; after the parallel motion fix, Chromium light-desktop still records no receiving row within six seconds; motion code remains untouched here"}
   - id: web.messages.write
     title: Messages web app writing (interactive gate, self-test, composer, actions, uploads)
     requirements: [R-WEB-UI, R-RW, R-MSG-DEPTH, R-SAFE-CMD]
