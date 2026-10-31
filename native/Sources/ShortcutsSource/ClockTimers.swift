@@ -143,6 +143,12 @@ private struct ClockTimerUI {
     }
 
     func create(label: String, duration: Int) throws {
+        var started = false
+        defer {
+            if !started, find(root, role: kAXSheetRole).count == 1, NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier {
+                for down in [true, false] { CGEvent(keyboardEventSource: nil, virtualKey: 53, keyDown: down)?.postToPid(app.processIdentifier) }
+            }
+        }
         let add = find(root, role: kAXMenuButtonRole).filter { name($0) == "Add" || name($0) == "Add a timer" }
         if add.count == 1 {
             try press(add)
@@ -158,6 +164,7 @@ private struct ClockTimerUI {
         let fields = find(scope, role: kAXTextFieldRole).filter { attribute($0, kAXPlaceholderValueAttribute) as? String == "Timer" }
         guard fields.count == 1, AXUIElementSetAttributeValue(fields[0], kAXValueAttribute as CFString, label as CFString) == .success else { throw ClockTimerFailure() }
         try press(find(scope, identifier: "PauseResumeButton").filter { name($0) == "Start" })
+        started = true
     }
 
     func remove(label: String) throws {

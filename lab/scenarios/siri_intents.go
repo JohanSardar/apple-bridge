@@ -31,6 +31,7 @@ func validBridgeStatus(data []byte) bool {
 func runSiriIntents(ctx context.Context, s Scenario, level string) Evidence {
 	var cli shortcutProbeCLI = shortcut.CLI{}
 	qualified := false
+	var stopHost func()
 	metadata, metadataErr := os.ReadFile("packaging/app-intents/Metadata.appintents/extract.actionsdata")
 	source, sourceErr := os.ReadFile("native/Sources/AppleBridgeHelper/BridgeStatusIntent.swift")
 	digest, digestErr := os.ReadFile("packaging/app-intents/source.sha256")
@@ -43,7 +44,7 @@ func runSiriIntents(ctx context.Context, s Scenario, level string) Evidence {
 	emitted := parsed && metadataErr == nil && sourceErr == nil && digestErr == nil && strings.TrimSpace(string(digest)) == fmt.Sprintf("%x", sha256.Sum256(source))
 	if level == "sim" {
 		cli = &shortcutProbeSimulation{entries: []shortcut.Entry{{Name: "AB Bridge Status"}}, result: shortcut.Result{Data: []byte("Apple Bridge background service is not registered.")}}
-		qualified = emitted
+		qualified = emitted && rejectsMetadataOnlyHelper(ctx)
 	} else {
 		artifact, err := os.ReadFile("packaging/shortcuts/AB Bridge Status.shortcut")
 		qualified = emitted && err == nil && len(artifact) >= 4 && string(artifact[:4]) == "AEA1"
@@ -53,12 +54,35 @@ func runSiriIntents(ctx context.Context, s Scenario, level string) Evidence {
 				return Evidence{Scenario: s.ID, Level: level, Assertions: []Assertion{{Name: "current_helper_intent_host_ready", Passed: false}}}
 			}
 			defer stop()
+			stopHost = stop
 		}
 	}
 	e := runShortcutProbe(ctx, s, level, "AB Bridge Status", cli, qualified, validBridgeStatus)
 	e.Assertions = append(e.Assertions, Assertion{Name: "status_intent_metadata_matches_source", Passed: emitted})
 	e.Passed = e.Passed && emitted
+	if level == "real" && e.Passed && stopHost != nil {
+		stopHost()
+		result, err := cli.Run(ctx, shortcut.Input{Shortcut: "AB Bridge Status", Timeout: 5 * time.Minute})
+		cold := err == nil && result.ExitStatus == 0 && !result.TimedOut && validBridgeStatus(result.Data)
+		e.Assertions = append(e.Assertions, Assertion{Name: "status_intent_cold_launch_returns", Passed: cold})
+		e.Passed = e.Passed && cold
+	}
 	return e
+}
+
+func rejectsMetadataOnlyHelper(ctx context.Context) bool {
+	directory, err := os.MkdirTemp("", "ab-intent-symbol-fixture-")
+	if err != nil {
+		return false
+	}
+	defer os.RemoveAll(directory)
+	if os.WriteFile(filepath.Join(directory, "nm"), []byte("#!/bin/sh\nprintf 'synthetic_unrelated_symbol\\n'\n"), 0700) != nil {
+		return false
+	}
+	command := exec.CommandContext(ctx, "python3", "packaging/dev/app-intents.py", filepath.Join(directory, "AppleBridgeHelper.app"))
+	command.Env = append(os.Environ(), "PATH="+directory+string(os.PathListSeparator)+os.Getenv("PATH"))
+	output, err := command.CombinedOutput()
+	return err != nil && strings.Contains(string(output), "missing an App Intent implementation")
 }
 
 func startBridgeIntentHost(ctx context.Context) (string, func(), error) {
@@ -101,9 +125,18 @@ func startBridgeIntentHost(ctx context.Context) (string, func(), error) {
 	done := make(chan error, 1)
 	go func() { done <- process.Wait() }()
 	var pid int
+	stopped := false
 	stop := func() {
+		if stopped {
+			return
+		}
+		stopped = true
 		if pid > 1 {
 			syscall.Kill(pid, syscall.SIGTERM)
+			deadline := time.Now().Add(2 * time.Second)
+			for time.Now().Before(deadline) && syscall.Kill(pid, 0) == nil {
+				time.Sleep(25 * time.Millisecond)
+			}
 		}
 		process.Process.Kill()
 		os.RemoveAll(directory)

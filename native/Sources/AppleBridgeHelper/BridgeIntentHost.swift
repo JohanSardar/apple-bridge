@@ -13,14 +13,16 @@ enum BridgeIntentHost {
         try? Data(String(getpid()).utf8).write(to: report, options: .atomic)
         let watcher = Task { @MainActor in
             let deadline = Date().addingTimeInterval(300)
+            var previous = ""
             while let text = shortcutDialog(), Date() < deadline {
-                publish(text)
+                if text != previous { publish(text); previous = text }
                 try? await Task.sleep(for: .seconds(1))
             }
             try? Data().write(to: report.appendingPathExtension("ready"), options: .atomic)
-            var previous = ""
             while !Task.isCancelled {
-                if let text = shortcutDialog(), text != previous { publish(text); previous = text }
+                if let text = shortcutDialog() {
+                    if text != previous { publish(text); previous = text }
+                } else { previous = "" }
                 try? await Task.sleep(for: .seconds(1))
             }
         }
