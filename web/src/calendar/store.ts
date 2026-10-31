@@ -1,3 +1,4 @@
+import { dateLabel } from './date-label';
 import { createEffect, createSignal, onCleanup, type Accessor } from 'solid-js';
 import { auth } from '../auth/session';
 import type { BridgeRecord, Cursor, ViewData, ViewName } from '../data/types';
@@ -53,5 +54,5 @@ export function color(value: unknown) {
 export function safeURL(value: unknown) {
     try { const url = new URL(text(value)); return ['http:', 'https:'].includes(url.protocol) ? url.href : undefined; } catch { return; }
 }
-export const dateLabel = (date: Date, options: Intl.DateTimeFormatOptions = { dateStyle: 'long' }) => new Intl.DateTimeFormat(undefined, options).format(date);
+export { dateLabel };
 export const timeLabel = (date: Date) => dateLabel(date, { hour: 'numeric', minute: '2-digit' });

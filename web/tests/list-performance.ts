@@ -27,6 +27,10 @@ export async function startTrace(page:Page):Promise<CDPSession|undefined> {
     return session;
 }
 export async function stopTrace(session:CDPSession|undefined,phase:'scroll'|'input'|'action'='scroll',nativeFrames=false) {
+    const raw=await finishTrace(session,nativeFrames);
+    return raw===undefined?undefined:traceWork(raw,phase,nativeFrames);
+}
+export async function finishTrace(session:CDPSession|undefined,nativeFrames=false) {
     if(!session)return undefined;
     if(nativeFrames)await session.send('Runtime.evaluate',{expression:'new Promise(requestAnimationFrame)',awaitPromise:true});
     const ready=new Promise<string>(resolve=>session.once('Tracing.tracingComplete',event=>resolve(event.stream)));
@@ -34,7 +38,7 @@ export async function stopTrace(session:CDPSession|undefined,phase:'scroll'|'inp
     const handle=await ready;let raw='';
     while(true){const part=await session.send('IO.read',{handle});raw+=part.data;if(part.eof)break;}
     await session.send('IO.close',{handle});await session.detach();
-    return traceWork(raw,phase,nativeFrames);
+    return raw;
 }
 export function traceWork(raw:string,phase:'scroll'|'input'|'action'='scroll',nativeFrames=false) {
     const events=(JSON.parse(raw) as {traceEvents:TraceEvent[]}).traceEvents;
