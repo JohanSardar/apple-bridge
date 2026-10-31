@@ -6,10 +6,12 @@ actor MailFake {
     var calls: [String] = []
     let evidence: String
     let lag: Int
+    let identity: String
     var readbacks = 0
-    init(_ evidence: String, lag: Int = 0) { self.evidence = evidence; self.lag = lag }
+    init(_ evidence: String, lag: Int = 0, identity: String = "123") { self.evidence = evidence; self.lag = lag; self.identity = identity }
     func run(_ body: String) -> String {
         calls.append(body)
+        if body.hasPrefix("set matched to") { return identity }
         if calls.count == 1 && body.hasPrefix("return") { return "0" }
         if body.hasPrefix("return") || body.contains("return (") {
             readbacks += 1
@@ -18,6 +20,33 @@ actor MailFake {
         return ""
     }
     func scripts() -> [String] { calls }
+}
+private actor MailCommandSink: ObservationSink {
+    var messages: [JSON] = []
+    func sourceState(source: String, state: String, coverage: JSON, capabilities: [String], reason: String) async throws {}
+    func emit(source: String, generation: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) async throws { throw SourceFailure.corrupt }
+    func emitCheckpoint(source: String, generation: String, checkpoint: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) async throws {
+        try require(source == "mail" && !generation.isEmpty && !checkpoint.isEmpty && observations.count == 1 && scope.isEmpty && completionEvidence.isEmpty && live)
+        messages = observations
+    }
+}
+func checkMailCommandCapture(_ path: String) async throws {
+    let fake = MailFake("true")
+    let source = MailSource(path: path, script: { await fake.run($0) })
+    try require(Set(await source.open().capabilities) == Set(MailCommands.operations))
+    _ = try await source.snapshot()
+    let prepared = try await source.prepare(.object(["action": .object(["op": .string("mail.set_flag"), "native_key": .string("123"), "args": .object(["flagged": .bool(true)])])]))
+    let proof = try await source.dispatch(prepared)
+    try require(proof["observed"].bool && proof["native_key"].string == "123")
+    try execute(path, "DELETE FROM messages WHERE ROWID=124")
+    let sink = MailCommandSink()
+    try await source.captureCommand(proof, into: sink)
+    try require(await sink.messages.first?["native_key"].string == "123")
+    let (_, after, complete) = try await source.snapshot()
+    try require(complete && after.contains { $0["kind"].string == "absent" && $0["native_key"].string == "124" })
+    let denied = MailSource(path: path, script: { _ in throw MailCommandFailure.permission })
+    let failure = try await denied.dispatch(prepared)
+    try require(!failure["observed"].bool && failure["disposition"].string == "indeterminate" && failure["reason"].string == MailCommandFailure.permission.localizedDescription)
 }
 func checkMailCommands() async throws {
     try require(MailCommandFailure.appleEvent(-1712) == .timeout)
@@ -31,10 +60,11 @@ func checkMailCommands() async throws {
             let prepared = try commands.prepare(.object(["action": action]))
             let result = try await commands.dispatch(prepared)
             try require(result["observed"].bool == observed)
-            if !observed { try require(result["disposition"].string == "indeterminate") }
+            if observed { try require(result["native_key"].string == "123" && result["fingerprint"].string == prepared.fingerprint) }
+            if !observed { try require(result["disposition"].string == "indeterminate" && result["reason"].string == MailCommandFailure.unconfirmed.localizedDescription) }
             let scripts = await fake.scripts()
             let creates = ["mail.create_draft", "mail.send"].contains(op)
-            try require(scripts.count == (creates ? 2 : 1) + (observed ? 1 : 40))
+            try require(scripts.count == (creates ? 2 : 1) + (observed ? (creates ? 2 : 1) : 40))
             let effect = scripts[creates ? 1 : 0]
             let expected = ["mail.create_draft": "save m", "mail.send": "send m", "mail.move": "move m to mailbox", "mail.delete": "move m to trash mailbox", "mail.mark_read": "set read status of m to true", "mail.set_flag": "set flagged status of m to true"]
             try require(effect.contains(expected[op]!))
@@ -53,6 +83,12 @@ func checkMailCommands() async throws {
     })
     do { _ = try await broken.dispatch(prepared); throw SourceFailure.corrupt }
     catch MailCommandFailure.timeout {}
+    let unidentified = MailFake("1", identity: "")
+    let sender = MailCommands(script: { await unidentified.run($0) })
+    let send = try sender.prepare(.object(["action": .object(["op": .string("mail.send"), "args": .object(["to": .array([.string("self@example.invalid")]), "subject": .string("[ab-test] identity"), "body": .string("synthetic")])])]))
+    do { _ = try await sender.dispatch(send); throw SourceFailure.corrupt }
+    catch MailCommandFailure.unconfirmed {}
+    try require(await unidentified.scripts().filter { $0.contains("send m") }.count == 1)
     #if LAB
     try await checkMailQualification()
     #endif

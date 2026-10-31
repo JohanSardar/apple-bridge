@@ -2,6 +2,7 @@ import PDFSource
 import CallsSource
 import FilesSource
 import PhotosSource
+import MailSource
 import Foundation
 import CryptoKit
 import Darwin
@@ -529,6 +530,16 @@ public actor AppleSession: ObservationSink {
         return operation.components(separatedBy: ".").first ?? ""
     }
     private func observedEvidence(_ evidence: JSON, fingerprint: JSON, operation: String) async throws -> JSON {
+        if operation.hasPrefix("mail."), let mail = additionalSources["mail"] as? MailSource {
+            do { try await mail.captureCommand(evidence, into: self) }
+            catch is CancellationError { throw CancellationError() }
+            catch { throw MailCommandFailure.unconfirmed }
+            guard let checkpoint = observedCheckpoints["mail.message/" + evidence["native_key"].string] else { throw MailCommandFailure.unconfirmed }
+            var result = evidence.object
+            result["fingerprint"] = fingerprint
+            result["capture_checkpoint"] = .string(checkpoint)
+            return .object(result)
+        }
         if ["capture.screenshot", "capture.camera_photo", "capture.record_audio", "mac.screen_record", "print.document"].contains(operation) { return evidence }
         if operation == "pdf.annotate", let pdf = additionalSources["pdf"] as? PDFSource {
             try await pdf.captureCommand(evidence, into: self)
@@ -761,7 +772,8 @@ let operation=outcome["evidence"]["prepared"]["action"]["op"].string
         } catch {
             if started {
                 let nativeCode = (error as? SourceFailure).map { String(describing: $0) } ?? (error as? MessagesUIFailure)?.rawValue ?? "native_error"
-                let outcome = JSON.object(["t": .string("Outcome"), "command_id": id, "disposition": .string("indeterminate"), "evidence": .object(["reason": .string("dispatch_evidence_unavailable"), "native_error_code": .string(nativeCode), "prepared": .object(["action": durableAction(ticket.prepared.action), "native_state": ticket.prepared.nativeState, "request_hash": ticket.command["request_hash"]])])])
+                let reason = (error as? MailCommandFailure)?.localizedDescription ?? "dispatch_evidence_unavailable"
+                let outcome = JSON.object(["t": .string("Outcome"), "command_id": id, "disposition": .string("indeterminate"), "evidence": .object(["reason": .string(reason), "native_error_code": .string(nativeCode), "prepared": .object(["action": durableAction(ticket.prepared.action), "native_state": ticket.prepared.nativeState, "request_hash": ticket.command["request_hash"]])])])
                 try? await guardLog.append(outcome); try? wire?.send(outcome)
             } else { await rejectCommand(ticket.command, error: error) }
         }

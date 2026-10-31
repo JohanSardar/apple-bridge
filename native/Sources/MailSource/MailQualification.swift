@@ -56,7 +56,8 @@ public struct MailQualification: Sendable {
             })
             func apply(_ op: String, _ args: [String: JSON], key: String = "") async throws -> Bool {
                 let prepared = try commands.prepare(.object(["action": .object(["op": .string(op), "args": .object(args), "native_key": .string(key)])]))
-                return try await commands.dispatch(prepared)["observed"].bool
+                guard try await commands.dispatch(prepared)["observed"].bool else { throw MailCommandFailure.unconfirmed }
+                return true
             }
             let draft = scenario == "MAIL-DRAFT-REAL"
             let args: [String: JSON] = ["to": .array([.string(own)]), "subject": .string(tag), "body": .string("Apple Bridge plain text fixture " + tag)]

@@ -1267,7 +1267,7 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		if s.ID == "QUERY-AGENT" {
 			duration = 5 * time.Minute
 		}
-		if level == "real" && (s.ID == "CONN-CLAUDE-AI" || s.ID == "CONN-CHATGPT" || s.ID == "SEC-REMOTE-ACCESS") {
+		if level == "real" && (s.ID == "CONN-CLAUDE-AI" || s.ID == "CONN-CHATGPT" || s.ID == "SEC-REMOTE-ACCESS" || s.Feature == "mail.commands" || s.ID == "MAIL-BODY-REAL") {
 			duration = 6 * time.Minute
 		}
 		if isIPhoneRealScenario(s.ID, level) || level == "real" && isIPhoneSensorReal(s.ID) {

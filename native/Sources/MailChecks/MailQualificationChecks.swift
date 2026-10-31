@@ -10,6 +10,7 @@ private actor QualificationMailFake {
     init(fail: Bool = false) { self.fail = fail }
     func run(_ body: String) throws -> String {
         calls.append(body)
+        if body.hasPrefix("set matched to") { return "123" }
         if body.contains("set remaining to 0") { created = false; return "true" }
         if body.contains("extract address from sender") { return "self@example.invalid" }
         if body.contains("set found to") { return created ? "123" : "" }
