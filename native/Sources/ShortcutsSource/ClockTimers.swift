@@ -104,7 +104,7 @@ private struct ClockTimerUI {
 
     private func find(_ element: AXUIElement, role: String? = nil, identifier: String? = nil) -> [AXUIElement] {
         var budget = 2000
-        func visit(_ item: AXUIElement, depth: Int) -> [AXUIElement] {
+        @MainActor func visit(_ item: AXUIElement, depth: Int) -> [AXUIElement] {
             guard depth < 20, budget > 0 else { return [] }
             budget -= 1
             var result: [AXUIElement] = []
