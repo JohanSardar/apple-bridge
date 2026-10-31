@@ -37,7 +37,7 @@ enum CalendarParityProof {
         location.radius = 100
         event.structuredLocation = location
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("ab-test-calendar-" + UUID().uuidString)
-        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         defer { try? FileManager.default.removeItem(at: root) }
         var stage = "fixture"
         do {
@@ -102,10 +102,10 @@ enum CalendarParityProof {
                     try await ui.menu("Edit", ["Attach File…", "Add Attachment…", "Attach File..."])
                 } else { try ui.press("Add Attachment…", role: kAXButtonRole) }
                 try await Task.sleep(for: .milliseconds(200))
-                try ui.key(5, flags: [.maskCommand, .maskShift])
+                try ui.post(5, flags: [.maskCommand, .maskShift])
                 try await Task.sleep(for: .milliseconds(200))
-                try ui.setFocused(file.path)
-                try ui.key(36)
+                try ui.setFocused(file.path, requireInspector: false)
+                try ui.post(36, flags: [])
                 try await Task.sleep(for: .milliseconds(200))
                 try ui.dialogPress("Open")
                 try await ui.commit()
@@ -190,10 +190,15 @@ enum CalendarParityProof {
             let ui = CalendarFixtureUI(app: app, title: title + " event")
             if ui.find("Cancel", role: kAXButtonRole).count == 1 { try? ui.press("Cancel", role: kAXButtonRole) }
         }
-        store.reset()
-        if let owned = store.calendar(withIdentifier: calendarID), owned.title == title { try store.removeCalendar(owned, commit: true) }
-        store.reset()
-        checks["owned_calendar_cleanup"] = .bool(store.calendar(withIdentifier: calendarID) == nil)
+        do {
+            store.reset()
+            if let owned = store.calendar(withIdentifier: calendarID), owned.title == title { try store.removeCalendar(owned, commit: true) }
+            store.reset()
+            checks["owned_calendar_cleanup"] = .bool(store.calendar(withIdentifier: calendarID) == nil)
+        } catch {
+            checks["owned_calendar_cleanup"] = .bool(false)
+            reasons["cleanup"] = .string("Calendar could not remove this run's test calendar. Retry cleanup before running another check.")
+        }
         return report(checks, reasons, controls)
     }
 
@@ -255,9 +260,14 @@ final class CalendarFixtureUI {
         try setFocused(title, requireInspector: false)
         try post(36, flags: [])
         try await Task.sleep(for: .seconds(1))
-        let matches = find(title)
-        guard !matches.isEmpty else { throw SourceFailure.unavailable }
-        let result = matches.first { value($0, kAXRoleAttribute) != kAXTextFieldRole } ?? matches[0]
+        var results: [AXUIElement] = []
+        for _ in 0..<40 {
+            results = find(title).filter { value($0, kAXRoleAttribute) != kAXTextFieldRole }
+            if !results.isEmpty { break }
+            try await Task.sleep(for: .milliseconds(250))
+        }
+        guard let result = results.first else { throw SourceFailure.unavailable }
+        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier else { throw SourceFailure.conflict }
         var position: CFTypeRef?, size: CFTypeRef?
         guard AXUIElementCopyAttributeValue(result, kAXPositionAttribute as CFString, &position) == .success,
               AXUIElementCopyAttributeValue(result, kAXSizeAttribute as CFString, &size) == .success,
@@ -318,8 +328,9 @@ final class CalendarFixtureUI {
 
     func findRole(_ role: String) -> [AXUIElement] {
         var budget = 3000
+        let deadline = ContinuousClock.now.advanced(by: .seconds(2))
         func walk(_ element: AXUIElement) -> [AXUIElement] {
-            guard budget > 0 else { return [] }; budget -= 1
+            guard budget > 0, ContinuousClock.now < deadline else { return [] }; budget -= 1
             var children: CFTypeRef?
             AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &children)
             let descendants = (children as? [AXUIElement] ?? []).flatMap(walk)
@@ -349,6 +360,7 @@ final class CalendarFixtureUI {
     }
 
     func post(_ code: CGKeyCode, flags: CGEventFlags) throws {
+        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier else { throw SourceFailure.conflict }
         guard let down = CGEvent(keyboardEventSource: nil, virtualKey: code, keyDown: true), let up = CGEvent(keyboardEventSource: nil, virtualKey: code, keyDown: false) else { throw SourceFailure.unavailable }
         down.flags = flags; up.flags = flags
         down.post(tap: .cghidEventTap); up.post(tap: .cghidEventTap)
