@@ -15,6 +15,16 @@ enum HelperLabCommand {
     @MainActor
     static func run(_ arguments: [String]) throws -> Bool {
         switch arguments.first {
+        case "reminders-sections-proof":
+            let reportURL = try report(arguments)
+            var result: Result<JSON, any Error>?
+            Task { @MainActor in
+                do { result = .success(try await RemindersSectionsProof.run()) }
+                catch { result = .failure(error) }
+            }
+            while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.01)) }
+            try JSONEncoder().encode(result!.get()).write(to: reportURL, options: .atomic)
+            return true
         case "messages-variant-proof":
             let reportURL = try report(arguments)
             guard arguments.count > 1 else { throw ProbeFailure.invalidArguments }
