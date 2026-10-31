@@ -16,6 +16,11 @@ struct MessagesVariantChecks {
         checks["stale_build_rejected"] = !MessagesSendVariants.validProof(proof, osBuild: "synthetic-os", helperDigest: "other-helper")
         checks["stale_os_rejected"] = !MessagesSendVariants.validProof(proof, osBuild: "other-os", helperDigest: "synthetic-helper")
         checks["missing_build_rejected"] = !MessagesSendVariants.validProof(proof, osBuild: "synthetic-os", helperDigest: "")
+        checks["exact_recipient_email"] = MessagesParityFixture.recipientMatches("Self <SELF@example.com>", handle: "self@example.com")
+        checks["other_recipient_email_rejected"] = !MessagesParityFixture.recipientMatches("other-self@example.com", handle: "self@example.com")
+        checks["additional_recipient_email_rejected"] = !MessagesParityFixture.recipientMatches("self@example.com, other@example.com", handle: "self@example.com")
+        checks["exact_recipient_phone"] = MessagesParityFixture.recipientMatches("Self (+1 202-555-0123)", handle: "+12025550123")
+        checks["phone_substring_rejected"] = !MessagesParityFixture.recipientMatches("+1 202-555-0123", handle: "2025550123")
         let pins = try PropertyListSerialization.data(fromPropertyList: ["pD": ["pP": ["synthetic-a", "synthetic-b"]]], format: .binary, options: 0)
         checks["native_pin_order"] = try MessagesPins.identifiers(pins) == ["synthetic-a", "synthetic-b"]
         checks["valid_pin_indices"] = try [-1, 0, 8].allSatisfy { try MessagesPins.requestedIndex(.number(Double($0))) == $0 }
