@@ -3,19 +3,86 @@ import AppKit
 import ApplicationServices
 import SourceSupport
 
+public enum MessagesUIInput: Sendable, Equatable {
+    case click(CGPoint), controlClick(CGPoint, dismissFirst: Bool), keys([Int], command: Bool), replaceText(String), clearText
+    var script: String {
+        switch self {
+        case .click(let point): MessagesUIScript.click(point)
+        case .controlClick(let point, let dismiss): MessagesUIScript.controlClick(point, dismissFirst: dismiss)
+        case .keys(let codes, let command): MessagesUIScript.keys(codes, command: command)
+        case .replaceText(let text): MessagesUIScript.replaceText(text)
+        case .clearText: MessagesUIScript.clearText()
+        }
+    }
+}
+
 public protocol MessagesUIDriver: Sendable {
     func frontmostProcess() -> pid_t?
     func messagesProcess() -> pid_t?
     func activateMessages()
     func systemEvents(_ script: String) -> Int
+    func input(_ input: MessagesUIInput) -> Int
+}
+
+extension MessagesUIDriver {
+    public func input(_ input: MessagesUIInput) -> Int { systemEvents(input.script) }
 }
 
 public struct LiveMessagesUIDriver: MessagesUIDriver {
     public init() {}
     public func frontmostProcess() -> pid_t? { NSWorkspace.shared.frontmostApplication?.processIdentifier }
     public func messagesProcess() -> pid_t? { MessagesNavigation.application?.processIdentifier }
-    public func activateMessages() { _ = MessagesNavigation.application?.activate() }
+    public func activateMessages() {
+        if let application = MessagesNavigation.application { _ = application.activate() }
+        else if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.MobileSMS") {
+            NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration(), completionHandler: nil)
+        }
+    }
     public func systemEvents(_ script: String) -> Int { MessagesAppleScript.execute(script) }
+    public func input(_ input: MessagesUIInput) -> Int {
+        guard AXIsProcessTrusted(), let pid = messagesProcess(), frontmostProcess() == pid,
+              let source = CGEventSource(stateID: .privateState) else { return -1 }
+        func key(_ code: Int, command: Bool = false, text: String? = nil) -> Bool {
+            guard frontmostProcess() == pid, let key = CGKeyCode(exactly: code),
+                  let down = CGEvent(keyboardEventSource: source, virtualKey: key, keyDown: true),
+                  let up = CGEvent(keyboardEventSource: source, virtualKey: key, keyDown: false) else { return false }
+            down.flags = command ? .maskCommand : []
+            up.flags = command ? .maskCommand : []
+            if let text {
+                let units = Array(text.utf16)
+                units.withUnsafeBufferPointer { buffer in
+                    if let address = buffer.baseAddress {
+                        down.keyboardSetUnicodeString(stringLength: units.count, unicodeString: address)
+                        up.keyboardSetUnicodeString(stringLength: units.count, unicodeString: address)
+                    }
+                }
+            }
+            down.postToPid(pid)
+            up.postToPid(pid)
+            Thread.sleep(forTimeInterval: 0.03)
+            return true
+        }
+        func click(_ point: CGPoint, control: Bool) -> Bool {
+            guard frontmostProcess() == pid,
+                  let down = CGEvent(mouseEventSource: source, mouseType: .leftMouseDown, mouseCursorPosition: point, mouseButton: .left),
+                  let up = CGEvent(mouseEventSource: source, mouseType: .leftMouseUp, mouseCursorPosition: point, mouseButton: .left) else { return false }
+            down.flags = control ? .maskControl : []
+            up.flags = control ? .maskControl : []
+            down.postToPid(pid)
+            up.postToPid(pid)
+            Thread.sleep(forTimeInterval: 0.05)
+            return true
+        }
+        let passed: Bool
+        switch input {
+        case .click(let point): passed = click(point, control: false)
+        case .controlClick(let point, let dismiss): passed = (!dismiss || key(MessagesUISession.escape)) && click(point, control: true)
+        case .keys(let codes, let command): passed = codes.allSatisfy { key($0, command: command) }
+        case .replaceText(let text): passed = key(0, command: true) && text.allSatisfy { key(0, text: String($0)) }
+        case .clearText: passed = key(0, command: true) && key(51)
+        }
+        return passed ? 0 : -1
+    }
 }
 
 public enum MessagesUIScript {
@@ -30,8 +97,8 @@ public enum MessagesUIScript {
 
 @UIActor
 public struct MessagesUISession {
-    public static let enter = 36
-    public static let escape = 53
+    public nonisolated static let enter = 36
+    public nonisolated static let escape = 53
     public let pid: pid_t
     public let root: AXUIElement
     let driver: any MessagesUIDriver
@@ -48,15 +115,21 @@ public struct MessagesUISession {
     public static func activate(_ driver: any MessagesUIDriver = LiveMessagesUIDriver(), settle: TimeInterval = 0.2) {
         driver.activateMessages()
         RunLoop.current.run(until: Date().addingTimeInterval(settle))
+        let deadline = Date().addingTimeInterval(3)
+        while driver.messagesProcess() == nil, Date() < deadline { RunLoop.current.run(until: Date().addingTimeInterval(0.05)) }
     }
     public func fence() throws { guard driver.frontmostProcess() == pid else { throw SourceFailure.conflict } }
     public func run(_ script: String) throws {
         try fence()
         guard driver.systemEvents(script) == 0 else { throw SourceFailure.conflict }
     }
-    public func click(at point: CGPoint) throws { try run(MessagesUIScript.click(point)) }
-    public func controlClick(at point: CGPoint, dismissFirst: Bool = true) throws { try run(MessagesUIScript.controlClick(point, dismissFirst: dismissFirst)) }
-    public func press(_ code: Int, command: Bool = false) throws { try run(MessagesUIScript.keys([code], command: command)) }
+    private func input(_ input: MessagesUIInput) throws {
+        try fence()
+        guard driver.input(input) == 0 else { throw SourceFailure.conflict }
+    }
+    public func click(at point: CGPoint) throws { try input(.click(point)) }
+    public func controlClick(at point: CGPoint, dismissFirst: Bool = true) throws { try input(.controlClick(point, dismissFirst: dismissFirst)) }
+    public func press(_ code: Int, command: Bool = false) throws { try input(.keys([code], command: command)) }
     public func focused(_ element: AXUIElement) -> Bool {
         var focused: CFTypeRef?
         guard AXUIElementCopyAttributeValue(root, kAXFocusedUIElementAttribute as CFString, &focused) == .success, let focused else { return false }
@@ -68,7 +141,7 @@ public struct MessagesUISession {
     }
     public func type(_ text: String, into element: AXUIElement, value: (AXUIElement) -> String) throws {
         try focus(element, failure: MessagesUIFailure.composerUnavailable)
-        try run(MessagesUIScript.replaceText(text))
+        try input(.replaceText(text))
         let deadline = Date().addingTimeInterval(3)
         repeat {
             if value(element) == text { return }
@@ -78,7 +151,7 @@ public struct MessagesUISession {
     }
     public func clear(_ element: AXUIElement, value: (AXUIElement) -> String) throws -> Bool {
         try focus(element, failure: MessagesUIFailure.composerUnavailable)
-        try run(MessagesUIScript.clearText())
+        try input(.clearText)
         let deadline = Date().addingTimeInterval(3)
         repeat {
             if value(element).isEmpty { return true }

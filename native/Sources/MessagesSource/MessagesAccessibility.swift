@@ -279,10 +279,9 @@ enum MessagesAccessibility {
         let session = try uiSession(), root = session.root
         var budget = 4000
         let recipients = matching(root, budget: &budget) { value($0, kAXRoleAttribute) == kAXPopUpButtonRole }
-        let descriptions = recipients.map { value($0, kAXDescriptionAttribute) }.joined(separator: ",").lowercased()
-        guard handles.allSatisfy({ handle in
-            if handle.contains("@") { return descriptions.contains(handle.lowercased()) }
-            return descriptions.filter(\.isNumber).contains(handle.filter(\.isNumber))
+        let descriptions = recipients.map { value($0, kAXDescriptionAttribute) }
+        guard budget > 0, recipients.count == handles.count, Set(handles).count == handles.count, handles.allSatisfy({ handle in
+            descriptions.filter { MessagesParityFixture.recipientMatches($0, handle: handle) }.count == 1
         }) else { throw MessagesUIFailure.recipientMismatch }
         budget = 4000
         let fields = matching(root, budget: &budget) { value($0, kAXIdentifierAttribute) == "messageBodyField" }
@@ -291,6 +290,12 @@ enum MessagesAccessibility {
         let placeholder = value(fields[0], kAXPlaceholderValueAttribute)
         guard placeholder.contains(args["service"].string) else { throw MessagesUIFailure.wrongService }
         try session.type(args["text"].string, into: fields[0], value: textValue)
+        budget = 4000
+        let finalRecipients = matching(root, budget: &budget) { value($0, kAXRoleAttribute) == kAXPopUpButtonRole }
+        let finalDescriptions = finalRecipients.map { value($0, kAXDescriptionAttribute) }
+        guard budget > 0, finalRecipients.count == handles.count, handles.allSatisfy({ handle in
+            finalDescriptions.filter { MessagesParityFixture.recipientMatches($0, handle: handle) }.count == 1
+        }), session.focused(fields[0]), textValue(fields[0]) == args["text"].string else { throw MessagesUIFailure.recipientMismatch }
         try session.press(MessagesUISession.enter)
     }
     static func perform(_ prepared: Prepared) throws -> JSON {

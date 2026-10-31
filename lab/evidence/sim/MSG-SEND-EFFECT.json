@@ -1,24 +1,44 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[6.69 9.25 22.72] cpu_idle=70% cpus=10 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[15.04 22.45 24.15] cpu_idle=28% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M650MNY94TAFXR5C7JTTTZQB",
+  "run_id": "run_01M69ZN0VQ8M8Y7Z33VG3TRB91",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "MSG-SEND-EFFECT",
   "level": "sim",
   "passed": true,
-  "git_sha": "cd736b6bdf6f556b3e7a7dd514fbc4f7d2d45c78",
-  "at": "2026-10-29T23:41:36.073015Z",
+  "git_sha": "6a645dcd12d8f9503e57b5fdb3b5816eeb7f3fe9",
+  "at": "2026-10-31T22:00:30.83945Z",
   "assertions": [
     {
-      "name": "native_readback_checks_build",
+      "name": "native_readback_checks",
       "passed": true
     },
     {
-      "name": "native_readback_checks",
+      "name": "outgoing_is_not_echo",
+      "passed": true
+    },
+    {
+      "name": "valid_pin_indices",
+      "passed": true
+    },
+    {
+      "name": "plain_echo_rejected",
+      "passed": true
+    },
+    {
+      "name": "phone_substring_rejected",
+      "passed": true
+    },
+    {
+      "name": "accessibility_input_without_automation",
+      "passed": true
+    },
+    {
+      "name": "stale_os_rejected",
       "passed": true
     },
     {
@@ -26,11 +46,55 @@
       "passed": true
     },
     {
+      "name": "plain_send_rejected",
+      "passed": true
+    },
+    {
+      "name": "additional_recipient_email_rejected",
+      "passed": true
+    },
+    {
+      "name": "accessibility_input_interference_refused",
+      "passed": true
+    },
+    {
+      "name": "native_pin_order",
+      "passed": true
+    },
+    {
+      "name": "other_recipient_email_rejected",
+      "passed": true
+    },
+    {
       "name": "matching_sent_attributes",
       "passed": true
     },
     {
-      "name": "plain_send_rejected",
+      "name": "exact_recipient_phone",
+      "passed": true
+    },
+    {
+      "name": "is_from_me_mismatch_rejected",
+      "passed": true
+    },
+    {
+      "name": "current_build_qualified",
+      "passed": true
+    },
+    {
+      "name": "exact_recipient_email",
+      "passed": true
+    },
+    {
+      "name": "invalid_pin_index_rejected",
+      "passed": true
+    },
+    {
+      "name": "missing_build_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_pin_state_rejected",
       "passed": true
     },
     {
@@ -38,7 +102,11 @@
       "passed": true
     },
     {
-      "name": "is_from_me_mismatch_rejected",
+      "name": "matching_echo_attributes",
+      "passed": true
+    },
+    {
+      "name": "stale_build_rejected",
       "passed": true
     },
     {

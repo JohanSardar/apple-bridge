@@ -72,6 +72,7 @@ struct MessagesCaptureChecks {
         return false
     }
     static func main() async throws {
+        if CommandLine.arguments.contains("--pins") { try await PinsCaptureChecks.run(); return }
         if CommandLine.arguments.contains("--selftest-isolation") { try SelfTestIsolationChecks.run(); return }
         if CommandLine.arguments.contains("--rich") { try await RichCaptureChecks.run(); return }
         if CommandLine.arguments.contains("--ui-session") { try await UISessionChecks.run(); return }

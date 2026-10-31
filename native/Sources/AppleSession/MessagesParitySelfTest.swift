@@ -33,6 +33,7 @@ actor MessagesParitySelfTest {
         var afterIDs: [String] = []
         var writesSubmitted = 0
         var baselineCaptured = false
+        var beforePins: [String]?
         func activeIDs(_ database: MessagesDatabase) throws -> [String] {
             try database.rows("SELECT DISTINCT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID WHERE NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=j.chat_id AND r.message_id=m.ROWID) ORDER BY m.guid").compactMap { $0["guid"] }
         }
@@ -40,11 +41,13 @@ actor MessagesParitySelfTest {
             steps = MessagesParity.operations.map { .object(["operation": .string($0), "proven": .bool(false), "reason": .string(reason)]) }
         }
         func save() throws -> JSON {
-            let result = JSON.object(["os_build": .string(ProcessInfo.processInfo.operatingSystemVersionString), "run_id": .string(run), "state": .string("limited"), "cleanup_state": .string(cleanup), "writes_submitted": .number(Double(writesSubmitted)), "before_count": .number(Double(beforeIDs.count)), "after_count": .number(Double(afterIDs.count)), "baseline_captured": .bool(baselineCaptured), "baseline_preserved": .bool(beforeIDs == afterIDs), "steps": .array(steps)])
+            let proven = baselineCaptured && cleanup == "verified_clean" && beforeIDs == afterIDs && steps.count == MessagesParity.operations.count && steps.allSatisfy { $0["proven"].bool }
+            let result = JSON.object(["os_build": .string(ProcessInfo.processInfo.operatingSystemVersionString), "helper_digest": .string(MessagesParity.buildDigest), "at": .string(timestamp()), "run_id": .string(run), "state": .string(proven ? "proven" : "limited"), "cleanup_state": .string(cleanup), "writes_submitted": .number(Double(writesSubmitted)), "before_count": .number(Double(beforeIDs.count)), "after_count": .number(Double(afterIDs.count)), "baseline_captured": .bool(baselineCaptured), "baseline_preserved": .bool(beforeIDs == afterIDs), "steps": .array(steps)])
             try JSONEncoder().encode(result).write(to: MessagesParity.reportURL, options: .atomic)
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: MessagesParity.reportURL.path)
             return result
         }
+        let cached = MessagesParity.report()
         blocked("selftest_in_progress")
         _ = try save()
         steps = []
@@ -52,9 +55,12 @@ actor MessagesParitySelfTest {
         guard includeUI else { blocked("ui_disabled_by_caller"); return try save() }
         guard session?["CGSSessionScreenIsLocked"] as? Bool != true else { blocked("screen_locked"); return try save() }
         guard AXIsProcessTrusted() else { blocked("accessibility_permission_missing"); return try save() }
-        for bundle in ["com.apple.MobileSMS", "com.apple.systemevents"] {
-            let target = NSAppleEventDescriptor(bundleIdentifier: bundle)
-            guard AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false) == noErr else { blocked("automation_permission_missing"); return try save() }
+        await MessagesUISession.activate()
+        if !force, cached["cleanup_state"].string == "verified_clean", cached["baseline_captured"].bool, cached["baseline_preserved"].bool,
+           let at = parseTimestamp(cached["at"].string), Date().timeIntervalSince(at) >= 0, Date().timeIntervalSince(at) < 300 {
+            try JSONEncoder().encode(cached).write(to: MessagesParity.reportURL, options: .atomic)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: MessagesParity.reportURL.path)
+            return cached
         }
         let database: MessagesDatabase
         let handles: [String]
@@ -62,6 +68,7 @@ actor MessagesParitySelfTest {
         catch { blocked("messages_database_or_self_handle_unavailable"); return try save() }
         guard let handle = try MessagesSelfTestIsolation.unused(handles, database: database).first else { blocked("isolated_test_chat_unavailable"); return try save() }
         beforeIDs = try activeIDs(database)
+        beforePins = try? MessagesPins.read()
         baselineCaptured = true
         let baseline = Int64(try database.rows("SELECT COALESCE(MAX(ROWID),0) AS maximum FROM chat").first?["maximum"] ?? "0") ?? 0
         let baselineMessage = Int64(try database.rows("SELECT COALESCE(MAX(ROWID),0) AS maximum FROM message").first?["maximum"] ?? "0") ?? 0
@@ -85,27 +92,12 @@ actor MessagesParitySelfTest {
             }
         }
         defer { capture.cancel() }
-        let commands = MessagesCommands(path: nil, labCommands: true)
-        let guardLog = try DispatchGuard(home: home)
-        let id = UUID().uuidString
         let text = tag + " isolated parity proof"
-        let expiry = Date().addingTimeInterval(30)
-        let send: [String: JSON] = ["handles": .array([.string(handle)]), "service": .string("iMessage"), "text": .string(text)]
-        var action: [String: JSON] = ["op": .string("messages.send")]
-        action["messages"] = .object(send)
-        let frame = JSON.object(["command_id": .string(id), "principal": .string("selftest"), "request_hash": .string(UUID().uuidString), "expires_at": .string(timestamp(expiry)), "action": .object(action)])
         do {
-            let prepared = try await commands.prepare(frame)
-            try await commands.validate(prepared)
-            guard expiry > Date() else { throw SourceFailure.expired }
-            guard prepared.nativeState["destination"]["kind"].string == "imessage_buddy",
-                  try MessagesSelfTestIsolation.unused([handle], database: database) == [handle] else { throw SourceFailure.conflict }
-            try await guardLog.append(.object(["t": .string("Started"), "command_id": .string(id), "prepared": .object(["action": prepared.action, "native_state": prepared.nativeState])]))
-            guard expiry > Date() else { throw SourceFailure.expired }
+            guard try MessagesSelfTestIsolation.unused([handle], database: database) == [handle] else { throw SourceFailure.conflict }
             lateEffectPossible = true
             writesSubmitted += 1
-            let result = try await commands.dispatch(prepared)
-            try await guardLog.append(.object(["t": .string("Outcome"), "command_id": .string(id), "evidence": result]))
+            let result = try await MessagesParityFixture.send(text: text, handle: handle)
             guard result["observed"].bool, !result["native_key"].string.isEmpty else {
                 prerequisiteReason = "isolated_fixture_send_" + (result["disposition"].string.isEmpty ? "unobserved" : result["disposition"].string)
                 throw SourceFailure.capabilityUnproven
@@ -138,12 +130,13 @@ actor MessagesParitySelfTest {
             for _ in 0..<3 {
                 registration["created_message_ids"] = try captureCreatedIDs()
                 try PrivateReport.write(registration, to: ledger)
-                let data = try await MessagesCleanup.run(["--tag", tag, "--owned-only", "--skip-draft"])
+                let data = try await MessagesCleanup.run(["--tag", tag, "--owned-only"])
                 let result = try JSONDecoder().decode(JSON.self, from: data)
                 try await Task.sleep(for: .milliseconds(500))
                 _ = try captureCreatedIDs()
                 afterIDs = try activeIDs(database)
-                cleaned = result["passed"].bool && beforeIDs == afterIDs
+                let togglesRestored = steps.filter { $0["restored"] != .null }.allSatisfy { $0["restored"].bool }
+                cleaned = result["passed"].bool && beforeIDs == afterIDs && (try? MessagesPins.read()) == beforePins && togglesRestored
             }
             cleanup = cleaned ? (lateEffectPossible ? "pending_reconciliation" : "verified_clean") : "pending_native_cleanup"
         } catch { cleanup = "pending_native_cleanup" }

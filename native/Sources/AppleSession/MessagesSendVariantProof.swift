@@ -30,7 +30,7 @@ public enum MessagesSendVariantProof {
         var steps:[JSON]=[],lateEffectPossible=false
         let locked=(CGSessionCopyCurrentDictionary() as? [String:Any])?["CGSSessionScreenIsLocked"] as? Bool == true
         func save(complete: Bool = false) throws -> JSON {
-            let result=JSON.object(["version":.number(1),"complete":.bool(complete),"os_build":.string(build),"run_id":.string(run),"steps":.array(steps),"state":.string(steps.allSatisfy { $0["proven"].bool } ? "proven":"limited")])
+            let result=JSON.object(["version":.number(1),"complete":.bool(complete),"os_build":.string(build),"helper_digest":.string(MessagesParity.buildDigest),"run_id":.string(run),"steps":.array(steps),"state":.string(steps.allSatisfy { $0["proven"].bool } ? "proven":"limited")])
             try JSONEncoder().encode(result).write(to:MessagesSendVariants.proofURL,options:.atomic)
             try FileManager.default.setAttributes([.posixPermissions:0o600],ofItemAtPath:MessagesSendVariants.proofURL.path)
             return result

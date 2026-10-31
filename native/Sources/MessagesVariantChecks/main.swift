@@ -4,15 +4,43 @@ import SourceSupport
 
 @main
 struct MessagesVariantChecks {
-    static func main() throws {
+    static func main() async throws {
         let kind = CommandLine.arguments.dropFirst().first ?? ""
         let range = JSON.object(["utf16_location": .number(0), "utf16_length": .number(4), "styles": .array([.string("bold")])])
         let variant: JSON = kind == "effect" ? .object(["kind": .string(kind), "effect": .string("loud")]) : .object(["kind": .string(kind), "formatting": .array([range])])
         let args = JSON.object(["text": .string("test"), "variant": variant])
         let data: [String: JSON] = ["text": .string("test"), "is_from_me": .bool(true), "error_code": .number(0), "effect": .string("com.apple.messages.effect.loud"), "formatting": .array([range])]
-        var checks = [String: Bool]()
+        var checks = try await AccessibilityInputChecks.run()
+        let proof = JSON.object(["os_build": .string("synthetic-os"), "version": .number(1), "complete": .bool(true), "helper_digest": .string("synthetic-helper")])
+        checks["current_build_qualified"] = MessagesSendVariants.validProof(proof, osBuild: "synthetic-os", helperDigest: "synthetic-helper")
+        checks["stale_build_rejected"] = !MessagesSendVariants.validProof(proof, osBuild: "synthetic-os", helperDigest: "other-helper")
+        checks["stale_os_rejected"] = !MessagesSendVariants.validProof(proof, osBuild: "other-os", helperDigest: "synthetic-helper")
+        checks["missing_build_rejected"] = !MessagesSendVariants.validProof(proof, osBuild: "synthetic-os", helperDigest: "")
+        checks["exact_recipient_email"] = MessagesParityFixture.recipientMatches("Self <SELF@example.com>", handle: "self@example.com")
+        checks["other_recipient_email_rejected"] = !MessagesParityFixture.recipientMatches("other-self@example.com", handle: "self@example.com")
+        checks["additional_recipient_email_rejected"] = !MessagesParityFixture.recipientMatches("self@example.com, other@example.com", handle: "self@example.com")
+        checks["exact_recipient_phone"] = MessagesParityFixture.recipientMatches("Self (+1 202-555-0123)", handle: "+12025550123")
+        checks["phone_substring_rejected"] = !MessagesParityFixture.recipientMatches("+1 202-555-0123", handle: "2025550123")
+        let pins = try PropertyListSerialization.data(fromPropertyList: ["pD": ["pP": ["synthetic-a", "synthetic-b"]]], format: .binary, options: 0)
+        checks["native_pin_order"] = try MessagesPins.identifiers(pins) == ["synthetic-a", "synthetic-b"]
+        checks["valid_pin_indices"] = try [-1, 0, 8].allSatisfy { try MessagesPins.requestedIndex(.number(Double($0))) == $0 }
+        for value: JSON in [.null, .string("0"), .bool(false), .number(0.5), .number(-2), .number(9)] {
+            do { _ = try MessagesPins.requestedIndex(value); checks["invalid_pin_index_rejected"] = false }
+            catch { if checks["invalid_pin_index_rejected"] == nil { checks["invalid_pin_index_rejected"] = true } }
+        }
+        for value: [String: Any] in [["pD": ["pP": ["same", "same"]]], ["pD": ["pP": [""]]], ["pD": ["pP": [1]]], [:]] {
+            let invalid = try PropertyListSerialization.data(fromPropertyList: value, format: .binary, options: 0)
+            do { _ = try MessagesPins.identifiers(invalid); checks["invalid_pin_state_rejected"] = false }
+            catch { if checks["invalid_pin_state_rejected"] == nil { checks["invalid_pin_state_rejected"] = true } }
+        }
         if ["formatting", "effect"].contains(kind) {
             checks["matching_sent_attributes"] = MessagesSendVariants.matches(args, data: .object(data))
+            var echo = data
+            echo["is_from_me"] = .bool(false)
+            checks["matching_echo_attributes"] = MessagesSendVariants.matchesEcho(args, data: .object(echo))
+            echo[kind == "effect" ? "effect" : "formatting"] = kind == "effect" ? .string("notloud") : .array([])
+            checks["plain_echo_rejected"] = !MessagesSendVariants.matchesEcho(args, data: .object(echo))
+            checks["outgoing_is_not_echo"] = !MessagesSendVariants.matchesEcho(args, data: .object(data))
             var wrong = data
             wrong[kind == "effect" ? "effect" : "formatting"] = kind == "effect" ? .string("notloud") : .array([])
             checks["plain_send_rejected"] = !MessagesSendVariants.matches(args, data: .object(wrong))

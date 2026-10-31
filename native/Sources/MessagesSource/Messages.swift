@@ -7,6 +7,7 @@ import SourceSupport
 public actor Messages: Source {
     public nonisolated let name = "messages"
     private let path: String
+    private let pinsURL: URL?
     private let diagnostics: URL?
     private let workTrace: CaptureTrace
     private let mediaPauseURL: URL?
@@ -34,6 +35,7 @@ public actor Messages: Source {
     private var reconciledVersion: Int64?
     private var reconciledMaximum: Int64 = 0
     private var lastLiveVersion: Int64?
+    private var lastLivePins: [String]?
     private var lastComplete = Date.distantPast
     private var blobDigests: [String: (Int64, Date, String)] = [:]
     private var pendingBlobs: [String: URL] = [:]
@@ -58,7 +60,8 @@ public actor Messages: Source {
     private var mediaPressureChecked = ContinuousClock.now
     private var mediaPressure = false
     private var variantURLs: [String: URL] = [:]
-    public init(path: String? = nil, diagnostics: URL? = nil, watcherEventsEnabled: Bool = true, labCommands: Bool = false) {
+    public init(path: String? = nil, diagnostics: URL? = nil, watcherEventsEnabled: Bool = true, labCommands: Bool = false, pinsURL: URL? = nil) {
+        self.pinsURL = pinsURL
  commands = MessagesCommands(path:path, labCommands:labCommands, agentPolicy: diagnostics?.deletingLastPathComponent().appendingPathComponent("agent-message-policy.json"))
         self.watcherEventsEnabled = watcherEventsEnabled
         self.diagnostics = diagnostics
@@ -90,7 +93,10 @@ public actor Messages: Source {
             "message_attachment_join": ["message_id", "attachment_id"],
             "chat_recoverable_message_join": ["chat_id", "message_id", "delete_date"]
         ]
-        let missing = (MessagesParity.muteProfile() == .null ? ["messages.chat.muted"] : []) + ["messages.chat.muted_until", "messages.chat.pinned_index", "messages.message.audio.transcription", "messages.message.audio.kept", "messages.message.recoverable_until", "messages.chat.recoverable_until"] + expected.keys.sorted().flatMap { table in expected[table]!.filter { reader?.columns[table]?.contains($0) != true }.map { table + "." + $0 } }
+        var missing = ["messages.chat.muted_until", "messages.message.audio.transcription", "messages.message.audio.kept", "messages.message.recoverable_until", "messages.chat.recoverable_until"]
+        if MessagesParity.muteProfile() == .null { missing.append("messages.chat.muted") }
+        if (try? MessagesPins.read(at: pinsURL)) == nil { missing.append("messages.chat.pinned_index") }
+        missing += expected.keys.sorted().flatMap { table in expected[table]!.filter { reader?.columns[table]?.contains($0) != true }.map { table + "." + $0 } }
         return .object(["fields": .string(missing.isEmpty ? "complete" : "partial"), "missing": .array(missing.map(JSON.string))])
     }
     @discardableResult private func reopen() throws -> Bool {
@@ -101,7 +107,7 @@ public actor Messages: Source {
             blobDigests = try saved.blobs()
         }
         if let reader, try reader.isCurrent() { return false }
-        let fresh = try MessagesReader(path: path)
+        let fresh = try MessagesReader(path: path, pinsURL: pinsURL)
         let changed = generation != fresh.generation
         if changed {
             generation = fresh.generation
@@ -524,7 +530,15 @@ public actor Messages: Source {
     private func live(_ sink: any ObservationSink, force: Bool = false) async throws {
         guard let reader else { throw SourceFailure.unavailable }
         let version = try reader.dataVersion()
-        if !force && lastLiveVersion == version { return }
+        let pins = try? MessagesPins.read(at: pinsURL)
+        if !force && lastLiveVersion == version {
+            if lastLivePins != pins {
+                let at = observationTime()
+                try await emit(try smallChanges(reader.smallObservations(), at: at), sink: sink, live: true, observedAt: at)
+                lastLivePins = pins
+            }
+            return
+        }
         var referenced = try await captureInserts(sink)
         let recoverable = try reader.recoverableGUIDs()
         referenced.formUnion(recoverable.union(recoverableGUIDs))
@@ -553,6 +567,7 @@ public actor Messages: Source {
             if referenced.isEmpty && position == lastRowID { break }
         }
         lastLiveVersion = version
+        lastLivePins = pins
     }
     private func reconcile(_ sink: any ObservationSink) async throws {
         guard let reader else { throw SourceFailure.unavailable }
