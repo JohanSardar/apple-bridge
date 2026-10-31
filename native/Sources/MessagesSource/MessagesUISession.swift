@@ -97,6 +97,11 @@ public enum MessagesUIScript {
 
 @UIActor
 public struct MessagesUISession {
+    public nonisolated static func canReplaceDraft(_ previous: String, with text: String) -> Bool {
+        if previous.isEmpty { return true }
+        guard let range = text.range(of: #"^\[ab-test [A-Za-z0-9_-]+\]"#, options: .regularExpression) else { return false }
+        return previous.hasPrefix(String(text[range]))
+    }
     public nonisolated static let enter = 36
     public nonisolated static let escape = 53
     public let pid: pid_t

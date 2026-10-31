@@ -65,7 +65,11 @@ func runMessagesVariantReal(ctx context.Context, s Scenario, e Evidence) (result
 	result.Passed = proof.Passed
 	if proof.Limited {
 		result.Status = "limited"
-		result.Conditions = map[string]string{"reason": proof.Reason}
+		reason := proof.Reason
+		if reason == "draftPresent" {
+			reason = "Your self-chat already has a draft. Send or discard it in Messages, then try again; the existing draft was left unchanged."
+		}
+		result.Conditions = map[string]string{"reason": reason}
 	} else {
 		result.Assertions = append(result.Assertions, Assertion{Name: "sent_variant_attributes_readback", Passed: proof.Passed})
 	}

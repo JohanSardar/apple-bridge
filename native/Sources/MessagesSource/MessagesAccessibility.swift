@@ -186,7 +186,7 @@ enum MessagesAccessibility {
             }
             if let editor {
                 let previous = textValue(editor)
-                guard previous.isEmpty || previous.contains("[ab-test ") else { throw MessagesUIFailure.draftPresent }
+                guard MessagesUISession.canReplaceDraft(previous, with: text) else { throw MessagesUIFailure.draftPresent }
                 try session.type(text, into: editor, value: textValue)
                 return
             }
@@ -211,14 +211,15 @@ enum MessagesAccessibility {
         RunLoop.current.run(until: Date().addingTimeInterval(0.2))
         return true
     }
-    private static func resetTaggedEditor() throws -> Bool {
+    private static func resetTaggedEditor(_ tag: String) throws -> Bool {
         let session = try uiSession(), root = session.root
         var budget = 2000
         let cancel = matching(root, budget: &budget) { value($0, kAXDescriptionAttribute) == "Cancel edit" }
         guard cancel.count == 1 else { return false }
+        guard tag.range(of: #"^\[ab-test [A-Za-z0-9_-]+\]$"#, options: .regularExpression) != nil else { throw MessagesUIFailure.draftPresent }
         budget = 2000
-        let fields = matching(root, budget: &budget) { value($0, kAXRoleAttribute) == kAXTextFieldRole && value($0, kAXIdentifierAttribute) != "messageBodyField" && textValue($0).range(of: #"\[ab-test [A-Za-z0-9_-]+\]"#, options: .regularExpression) != nil }
-        guard !fields.isEmpty else { return false }
+        let fields = matching(root, budget: &budget) { value($0, kAXRoleAttribute) == kAXTextFieldRole && value($0, kAXIdentifierAttribute) != "messageBodyField" && textValue($0).hasPrefix(tag) }
+        guard !fields.isEmpty else { throw MessagesUIFailure.draftPresent }
         guard AXUIElementPerformAction(cancel[0], kAXPressAction as CFString) == .success else {
             try? PrivateReport.write(["stage": "cancel_tagged_editor"], to: PrivateReport.validate(PrivateReport.directory.appendingPathComponent("messages-prepare-diagnostic.json").path))
             throw SourceFailure.conflict
@@ -227,7 +228,7 @@ enum MessagesAccessibility {
         RunLoop.current.run(until: Date().addingTimeInterval(0.35))
         return true
     }
-    static func openMessage(_ guid: String, settle: TimeInterval = 3, resetEditor: Bool = true) throws {
+    static func openMessage(_ guid: String, settle: TimeInterval = 3, resetEditor: Bool = true, ownedTag: String = "") throws {
         var components = URLComponents()
         components.scheme = "imessage"
         components.path = "open"
@@ -235,7 +236,7 @@ enum MessagesAccessibility {
         guard let url = components.url else { throw MessagesUIFailure.navigationUnavailable }
         MessagesUISession.activate()
         if resetEditor {
-            _ = try resetTaggedEditor()
+            _ = try resetTaggedEditor(ownedTag)
         } else {
             let root = try uiSession().root
             var budget = 2000
@@ -278,7 +279,7 @@ enum MessagesAccessibility {
         components.queryItems = [URLQueryItem(name: "addresses", value: handles.joined(separator: ","))]
         guard let url = components.url else { throw MessagesUIFailure.navigationUnavailable }
         MessagesUISession.activate()
-        _ = try resetTaggedEditor()
+        _ = try resetTaggedEditor("")
         try MessagesNavigation.open(url)
         RunLoop.current.run(until: Date().addingTimeInterval(3))
         let session = try uiSession(), root = session.root

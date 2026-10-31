@@ -1,17 +1,17 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[18.64 26.53 27.12] cpu_idle=66% cpus=10 other_heavy=0"
+    "summary": "air: load=[8.14 10.27 16.99] cpu_idle=71% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M6A0BJD207T298KP0FZ3XJR1",
+  "run_id": "run_01M6A0ZPF6A76608ZS30FFXXPS",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "MSG-AUDIO-MESSAGE",
   "level": "sim",
   "passed": true,
-  "git_sha": "e90c3955047d1f43e99ff4c0065a14c08405b993",
-  "at": "2026-10-31T22:12:49.698271Z",
+  "git_sha": "763f0c79b45514e59f066480d95252f553a61394",
+  "at": "2026-10-31T22:23:49.222284Z",
   "assertions": [
     {
       "name": "native_readback_checks_build",
@@ -22,7 +22,11 @@
       "passed": true
     },
     {
-      "name": "incoming_audio_rejected",
+      "name": "earlier_residue_refused",
+      "passed": true
+    },
+    {
+      "name": "earlier_draft_preserved",
       "passed": true
     },
     {
@@ -30,15 +34,11 @@
       "passed": true
     },
     {
-      "name": "late_tagged_echo_owned",
+      "name": "incoming_audio_rejected",
       "passed": true
     },
     {
-      "name": "earlier_residue_refused",
-      "passed": true
-    },
-    {
-      "name": "other_run_echo_refused",
+      "name": "new_echo_alone_is_not_deletion",
       "passed": true
     },
     {
@@ -46,11 +46,23 @@
       "passed": true
     },
     {
+      "name": "current_draft_replace_allowed",
+      "passed": true
+    },
+    {
       "name": "ordinary_attachment_rejected",
       "passed": true
     },
     {
-      "name": "new_echo_alone_is_not_deletion",
+      "name": "personal_draft_preserved",
+      "passed": true
+    },
+    {
+      "name": "late_tagged_echo_owned",
+      "passed": true
+    },
+    {
+      "name": "other_run_echo_refused",
       "passed": true
     },
     {

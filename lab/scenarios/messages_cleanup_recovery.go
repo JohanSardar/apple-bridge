@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/JohanSardar/apple-bridge/lab/world"
 )
 
 func runMessagesCleanupRecovery(ctx context.Context, e Evidence) (result Evidence) {
@@ -79,13 +81,42 @@ func runMessagesCleanupRecovery(ctx context.Context, e Evidence) (result Evidenc
 		add("recovery_baseline", false)
 		return
 	}
-	defer func() { finishCleanupAudit(context.Background(), audit, "messages", &result) }()
+	cleaned := false
+	defer func() {
+		finishCleanupAudit(context.Background(), audit, "messages", &result)
+		if cleaned && result.Assertions[len(result.Assertions)-1].Passed {
+			var registration map[string]any
+			original, err := os.ReadFile(ledger)
+			saved := false
+			if err == nil && json.Unmarshal(original, &registration) == nil {
+				registration["cleanup_state"] = "verified_clean"
+				updated, err := json.Marshal(registration)
+				if err == nil {
+					saved = os.WriteFile(ledger, updated, 0600) == nil
+				}
+			}
+			add("recovery_ledger_saved", saved)
+		}
+	}()
 	cache, err := os.UserCacheDir()
 	if err != nil {
 		add("recovery_signed_helper", false)
 		return
 	}
 	app := filepath.Join(cache, "AppleBridgeDev", "signed-apps", key, "AppleBridgeHelper.app")
+	if _, err := os.Stat(app); os.IsNotExist(err) {
+		dir, err := os.MkdirTemp("", "ab-message-recovery-")
+		if err != nil {
+			add("recovery_signed_helper", false)
+			return
+		}
+		defer os.RemoveAll(dir)
+		app = filepath.Join(dir, "AppleBridgeHelper.app")
+		if world.BuildHelper(ctx, app) != nil {
+			add("recovery_signed_helper", false)
+			return
+		}
+	}
 	if exec.CommandContext(ctx, "codesign", "--verify", "--strict", app).Run() != nil {
 		add("recovery_signed_helper", false)
 		return
@@ -101,7 +132,8 @@ func runMessagesCleanupRecovery(ctx context.Context, e Evidence) (result Evidenc
 		Failure   string `json:"failure"`
 	}
 	valid := err == nil && readErr == nil && json.Unmarshal(data, &proof) == nil
-	add("owned_messages_cleanup", valid && proof.Passed && proof.Remaining == 0)
+	cleaned = valid && proof.Passed && proof.Remaining == 0
+	add("owned_messages_cleanup", cleaned)
 	result.Metrics["deleted_owned_messages"] = proof.Deleted
 	result.Metrics["remaining_owned_messages"] = proof.Remaining
 	result.Conditions = map[string]string{"reason": "The CAF attachment did not have the native audio-message flag. This recovery sends no new messages and removes only the explicitly selected run's rows."}
