@@ -37,8 +37,12 @@ func runRemindersSections(ctx context.Context, level string, e Evidence) Evidenc
 			add("native_sections_binary", false)
 			return e
 		}
-		output, err = exec.CommandContext(ctx, filepath.Join(strings.TrimSpace(string(directory)), "RemindersStoreChecks"), "--section-checks").CombinedOutput()
-		add("store_section_order_membership_and_invalidation", err == nil && strings.Contains(string(output), "section checks passed"))
+		flag, marker := "--section-checks", "section checks passed"
+		if e.Scenario == "WEB-REM-PARITY" {
+			flag, marker = "--parity-checks", "parity checks passed"
+		}
+		output, err = exec.CommandContext(ctx, filepath.Join(strings.TrimSpace(string(directory)), "RemindersStoreChecks"), flag).CombinedOutput()
+		add("store_effects_and_invalidation", err == nil && strings.Contains(string(output), marker))
 	} else {
 		report = filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "AppleBridgeDev", "sections-"+e.RunID+".json")
 		defer os.Remove(report)

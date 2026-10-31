@@ -86,6 +86,13 @@ public actor RemindersStoreEnrichment {
                     if !changedParents.isEmpty {
                         changedReminders.formUnion(snapshot.reminders.values.filter { $0.parent.map(changedParents.contains) == true }.map { $0.identity.key })
                     }
+                    if !result.objectKeys.isEmpty || !result.labelKeys.isEmpty {
+                        for key in result.objectKeys.union(Set(snapshot.objects.values.filter { $0.hashtagLabel.map(result.labelKeys.contains) == true }.map { $0.identity.key })) {
+                            for object in [previous.objects[key], snapshot.objects[key]].compactMap({ $0 }) {
+                                changedReminders.formUnion([object.reminder, object.reminder1, object.reminder2, object.reminder3, object.reminder4, object.reminder5].compactMap { $0 })
+                            }
+                        }
+                    }
                     for key in changedReminders {
                         let old = RemindersStoreProjection.reminderIdentifier(previous.reminders[key]).map { "reminders.reminder/" + $0 }
                         let native = RemindersStoreProjection.reminderIdentifier(snapshot.reminders[key]).map { "reminders.reminder/" + $0 }

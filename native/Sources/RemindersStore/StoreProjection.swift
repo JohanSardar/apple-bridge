@@ -53,6 +53,10 @@ public enum RemindersStoreProjection {
             fields["section_id"] = sections.membership[id].map { .string($0.uuidString) } ?? .null
             coverage["section_id"] = RemindersStoreSnapshot.coverage("complete")
         }
+        if let tags = StoreTags.names(for: row.identity.key, snapshot: snapshot) {
+            fields["tags"] = .array(tags.map(JSON.string))
+            coverage["tags"] = RemindersStoreSnapshot.coverage("complete")
+        }
         if row.flagged == nil, columns.contains("ZFLAGGED") { coverage["flagged"] = RemindersStoreSnapshot.coverage("unavailable") }
         if let key = row.parent, key != 0, parent == nil { coverage["parent_id"] = RemindersStoreSnapshot.coverage("partial", reason: "parent_identity_unavailable") }
         fields["store_coverage"] = .object(coverage)

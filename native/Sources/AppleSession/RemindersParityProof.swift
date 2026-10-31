@@ -73,9 +73,9 @@ enum RemindersParityProof {
             stage = "subtasks"
             try script("show (first reminder of fixtureList whose name is \"" + second.title + "\")\nactivate")
             try await Task.sleep(for: .milliseconds(400))
-            try await ui.menu("Edit", "Indent Reminders")
+            try await ui.menu("Edit", ["Indent Reminder", "Indent Reminders"])
             checks["indent_readback"] = .bool(try await observe { _, _, parent, child in child.parent == parent.identity.key })
-            try await ui.menu("Edit", "Outdent Reminders")
+            try await ui.menu("Edit", ["Outdent Reminder", "Outdent Reminders"])
             checks["outdent_readback"] = .bool(try await observe { _, _, _, child in child.parent == nil || child.parent == 0 })
         } catch {
             reasons[stage] = .string("The " + stage + " action could not be verified on the test list: " + String(describing: error))
@@ -126,10 +126,12 @@ final class RemindersFixtureUI {
         guard matches.count == 1, AXUIElementPerformAction(matches[0], kAXPressAction as CFString) == .success else { throw SourceFailure.unsupported }
     }
 
-    func menu(_ menu: String, _ item: String) async throws {
+    func menu(_ menu: String, _ items: [String]) async throws {
         try press(menu, role: kAXMenuBarItemRole)
         try await Task.sleep(for: .milliseconds(100))
-        try press(item, role: kAXMenuItemRole)
+        let available = items.filter { find($0, role: kAXMenuItemRole).count == 1 }
+        guard available.count == 1 else { throw SourceFailure.unsupported }
+        try press(available[0], role: kAXMenuItemRole)
         try await Task.sleep(for: .milliseconds(300))
     }
 }
