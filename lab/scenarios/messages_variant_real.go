@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/JohanSardar/apple-bridge/lab/world"
 )
 
 func messageSendVariant(id string) string {
@@ -33,11 +35,8 @@ func runMessagesVariantReal(ctx context.Context, s Scenario, e Evidence) (result
 	}
 	defer os.RemoveAll(dir)
 	app := filepath.Join(dir, "AppleBridgeHelper.app")
-	build := exec.CommandContext(ctx, "packaging/dev/build-helper.sh", app)
-	build.WaitDelay = 2 * time.Second
-	output, err := build.CombinedOutput()
-	if err != nil {
-		os.Stderr.Write(output)
+	if err = world.BuildHelper(ctx, app); err != nil {
+		os.Stderr.WriteString(err.Error() + "\n")
 		result.Assertions = append(result.Assertions, Assertion{Name: "signed_helper_build", Passed: false})
 		return
 	}

@@ -1,28 +1,24 @@
 {
   "host_conditions": {
-    "quiet": true,
-    "summary": "air: load=[7.3 10.14 12.01] cpu_idle=72% cpus=10 other_heavy=0"
+    "quiet": false,
+    "summary": "air: load=[46.72 44.82 29.67] cpu_idle=0% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M69Y7RW8GY0B4WF63DA9PVPJ",
+  "run_id": "run_01M69Z8JFV314YAZD6A8EF05A8",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "MSG-MENTION-SEND",
   "level": "sim",
   "passed": true,
-  "git_sha": "b77a8c5294f7133764624d639a51f5e87e80d69b",
-  "at": "2026-10-31T21:35:48.104016Z",
+  "git_sha": "ee34d002923471565769b132e6343077477f71be",
+  "at": "2026-10-31T21:53:42.907137Z",
   "assertions": [
-    {
-      "name": "native_readback_checks_build",
-      "passed": true
-    },
     {
       "name": "native_readback_checks",
       "passed": true
     },
     {
-      "name": "plain_send_rejected",
+      "name": "extra_mention_text_rejected",
       "passed": true
     },
     {
@@ -30,7 +26,7 @@
       "passed": true
     },
     {
-      "name": "extra_mention_text_rejected",
+      "name": "plain_send_rejected",
       "passed": true
     },
     {

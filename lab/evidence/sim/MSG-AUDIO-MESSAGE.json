@@ -1,32 +1,28 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[10.64 11.1 12.49] cpu_idle=15% cpus=10 other_heavy=0"
+    "summary": "air: load=[44.74 44.44 29.62] cpu_idle=0% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M69Y5AW5BGAVGBDMDV354M3R",
+  "run_id": "run_01M69Z8Q5SM0DFE480SZQ3ZCBB",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "MSG-AUDIO-MESSAGE",
   "level": "sim",
   "passed": true,
-  "git_sha": "b77a8c5294f7133764624d639a51f5e87e80d69b",
-  "at": "2026-10-31T21:34:28.229537Z",
+  "git_sha": "ee34d002923471565769b132e6343077477f71be",
+  "at": "2026-10-31T21:53:47.705267Z",
   "assertions": [
-    {
-      "name": "native_readback_checks_build",
-      "passed": true
-    },
     {
       "name": "native_readback_checks",
       "passed": true
     },
     {
-      "name": "incoming_audio_rejected",
+      "name": "ordinary_attachment_rejected",
       "passed": true
     },
     {
-      "name": "ordinary_attachment_rejected",
+      "name": "incoming_audio_rejected",
       "passed": true
     },
     {
