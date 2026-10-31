@@ -14,12 +14,18 @@ public enum MessagesParityFixture {
         }
         return description.filter(\.isNumber) == expected.filter(\.isNumber)
     }
-    public static func send(text: String, handle: String) async throws -> JSON {
+    public static func send(text: String, handle: String, existingChat: String = "") async throws -> JSON {
         guard text.range(of: #"^\[ab-test [A-Za-z0-9_-]+\] .+"#, options: .regularExpression) != nil,
               text.utf16.count <= 512, try MessagesProbes.discoverSelfHandles().handles.contains(handle) else { throw SourceFailure.invalid }
         let reader = try MessagesReader(path: FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Messages/chat.db").path)
         let baseline = try reader.maximum()
-        guard try MessagesSelfTestIsolation.unused([handle], database: MessagesDatabase()) == [handle] else { throw SourceFailure.conflict }
+        if existingChat.isEmpty {
+            guard try MessagesSelfTestIsolation.unused([handle], database: MessagesDatabase()) == [handle] else { throw SourceFailure.conflict }
+        } else {
+            let peers = try reader.query("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", [existingChat]).map { $0["id"] }
+            guard MessagesSelfTestIsolation.isSelfChat(peers, own: [handle]),
+                  MessagesSelfTestIsolation.isSelfChat([handle], own: try MessagesSelfTestIsolation.accountHandles(database: MessagesDatabase())) else { throw SourceFailure.conflict }
+        }
         try await MessagesAccessibility.createGroup(.object(["handles": .array([.string(handle)]), "service": .string("iMessage"), "text": .string(text)]))
         let deadline = ContinuousClock.now.advanced(by: .seconds(10))
         repeat {
@@ -27,7 +33,7 @@ public enum MessagesParityFixture {
             guard rows.count <= 1 else { break }
             if let row = rows.first {
                 let peers = try reader.query("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", [row["chat_key"]])
-                guard row.integer("error") == 0, row["service_name"] == "iMessage", peers.count == 1,
+                guard (existingChat.isEmpty || row["chat_key"] == existingChat), row.integer("error") == 0, row["service_name"] == "iMessage", peers.count == 1,
                       MessagesProbes.normalize(peers[0]["id"]) == handle else { break }
                 let echoes = try reader.query("SELECT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE m.ROWID>? AND m.is_from_me=0 AND c.guid=? AND (m.text=? OR instr(m.attributedBody,CAST(? AS BLOB))>0)", [String(baseline), row["chat_key"], text, text])
                 if echoes.count == 1 {

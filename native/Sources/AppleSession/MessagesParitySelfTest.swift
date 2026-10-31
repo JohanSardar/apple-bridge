@@ -63,10 +63,14 @@ actor MessagesParitySelfTest {
             return cached
         }
         let database: MessagesDatabase
-        let handles: [String]
-        do { database = try MessagesDatabase(); handles = try MessagesProbes.discoverSelfHandles().handles }
+        let selected: (handle: String, chat: String)?
+        do { database = try MessagesDatabase(); selected = try MessagesSelfTestIsolation.target(database: database) }
         catch { blocked("messages_database_or_self_handle_unavailable"); return try save() }
-        guard let handle = try MessagesSelfTestIsolation.unused(handles, database: database).first else { blocked("isolated_test_chat_unavailable"); return try save() }
+        guard let selected else { blocked("verified_self_chat_unavailable"); return try save() }
+        let handle = selected.handle
+        let existingBaseline: MessagesSelfTestBaseline?
+        do { existingBaseline = selected.chat.isEmpty ? nil : try await MessagesSelfTestBaseline.capture(selected.chat) }
+        catch { blocked("self_chat_baseline_" + MessagesParity.failureReason(error)); return try save() }
         beforeIDs = try activeIDs(database)
         beforePins = try? MessagesPins.read()
         baselineCaptured = true
@@ -94,10 +98,10 @@ actor MessagesParitySelfTest {
         defer { capture.cancel() }
         let text = tag + " isolated parity proof"
         do {
-            guard try MessagesSelfTestIsolation.unused([handle], database: database) == [handle] else { throw SourceFailure.conflict }
+            guard try !selected.chat.isEmpty || MessagesSelfTestIsolation.unused([handle], database: database) == [handle] else { throw SourceFailure.conflict }
             lateEffectPossible = true
             writesSubmitted += 1
-            let result = try await MessagesParityFixture.send(text: text, handle: handle)
+            let result = try await MessagesParityFixture.send(text: text, handle: handle, existingChat: selected.chat)
             guard result["observed"].bool, !result["native_key"].string.isEmpty else {
                 prerequisiteReason = "isolated_fixture_send_" + (result["disposition"].string.isEmpty ? "unobserved" : result["disposition"].string)
                 throw SourceFailure.capabilityUnproven
@@ -116,11 +120,12 @@ actor MessagesParitySelfTest {
             }
             lateEffectPossible = false
             let chats = try database.rows("SELECT c.guid,c.service_name,c.ROWID AS position FROM chat c JOIN chat_message_join j ON j.chat_id=c.ROWID JOIN message m ON m.ROWID=j.message_id WHERE m.guid=?", bindings: [guid])
-            guard chats.count == 1, let chat = chats.first?["guid"], let position = Int64(chats.first?["position"] ?? ""), position > baseline else { throw SourceFailure.conflict }
+            guard chats.count == 1, let chat = chats.first?["guid"], let position = Int64(chats.first?["position"] ?? ""), (selected.chat.isEmpty ? position > baseline : chat == selected.chat) else { throw SourceFailure.conflict }
             let members = try database.rows("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", bindings: [chat])
             guard members.count == 1, members.allSatisfy({ MessagesProbes.normalize($0["id"] ?? "") == handle }) else { throw SourceFailure.conflict }
             registration["created_chat_key"] = chat
-            registration["created_by_run"] = true
+            registration["created_by_run"] = selected.chat.isEmpty
+            registration["existing_self_chat"] = !selected.chat.isEmpty
             try PrivateReport.write(registration, to: ledger)
             let target = Prepared(nativeState: .object(["service": .string(chats.first?["service_name"] ?? ""), "conversation_target": .bool(true), "message_guid": .string(guid), "target": .object(["text": .string(text), "is_from_me": .bool(true)])]), fingerprint: UUID().uuidString, action: .object(["native_key": .string(chat)]))
             steps = try await MessagesParity.probe(target)
@@ -135,8 +140,9 @@ actor MessagesParitySelfTest {
                 try await Task.sleep(for: .milliseconds(500))
                 _ = try captureCreatedIDs()
                 afterIDs = try activeIDs(database)
+                let baselineRestored = try await existingBaseline?.restoreAndVerify() ?? true
                 let togglesRestored = steps.filter { $0["restored"] != .null }.allSatisfy { $0["restored"].bool }
-                cleaned = result["passed"].bool && beforeIDs == afterIDs && (try? MessagesPins.read()) == beforePins && togglesRestored
+                cleaned = baselineRestored && result["passed"].bool && beforeIDs == afterIDs && (try? MessagesPins.read()) == beforePins && togglesRestored
             }
             cleanup = cleaned ? (lateEffectPossible ? "pending_reconciliation" : "verified_clean") : "pending_native_cleanup"
         } catch { cleanup = "pending_native_cleanup" }

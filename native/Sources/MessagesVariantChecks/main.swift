@@ -21,6 +21,18 @@ struct MessagesVariantChecks {
         checks["additional_recipient_email_rejected"] = !MessagesParityFixture.recipientMatches("self@example.com, other@example.com", handle: "self@example.com")
         checks["exact_recipient_phone"] = MessagesParityFixture.recipientMatches("Self (+1 202-555-0123)", handle: "+12025550123")
         checks["phone_substring_rejected"] = !MessagesParityFixture.recipientMatches("+1 202-555-0123", handle: "2025550123")
+        checks["existing_self_chat_accepted"] = MessagesSelfTestIsolation.isSelfChat(["iMessage:E:SELF%40example.com"], own: ["self@example.com"])
+        checks["other_chat_rejected"] = !MessagesSelfTestIsolation.isSelfChat(["other@example.com"], own: ["self@example.com"])
+        checks["group_with_self_rejected"] = !MessagesSelfTestIsolation.isSelfChat(["self@example.com", "other@example.com"], own: ["self@example.com"])
+        checks["empty_chat_rejected"] = !MessagesSelfTestIsolation.isSelfChat([], own: ["self@example.com"])
+        checks["phone_suffix_is_not_self"] = !MessagesSelfTestIsolation.isSelfChat(["2025550123"], own: ["+12025550123"])
+        checks["exact_phone_is_self"] = MessagesSelfTestIsolation.isSelfChat(["tel:+1 (202) 555-0123"], own: ["+12025550123"])
+        checks["run_message_owned"] = MessagesSelfTestIsolation.ownsMessage(rowID: 101, text: "[ab-test synthetic] new", tag: "[ab-test synthetic]", baseline: 100)
+        checks["baseline_message_protected"] = !MessagesSelfTestIsolation.ownsMessage(rowID: 100, text: "[ab-test synthetic] old", tag: "[ab-test synthetic]", baseline: 100)
+        checks["other_run_protected"] = !MessagesSelfTestIsolation.ownsMessage(rowID: 101, text: "[ab-test other] new", tag: "[ab-test synthetic]", baseline: 100)
+        checks["untagged_message_protected"] = !MessagesSelfTestIsolation.ownsMessage(rowID: 101, text: "new", tag: "[ab-test synthetic]", baseline: 100)
+        checks["quoted_tag_protected"] = !MessagesSelfTestIsolation.ownsMessage(rowID: 101, text: "quoted [ab-test synthetic] new", tag: "[ab-test synthetic]", baseline: 100)
+        checks["invalid_tag_rejected"] = !MessagesSelfTestIsolation.ownsMessage(rowID: 101, text: " new", tag: "", baseline: 100)
         let pins = try PropertyListSerialization.data(fromPropertyList: ["pD": ["pP": ["synthetic-a", "synthetic-b"]]], format: .binary, options: 0)
         checks["native_pin_order"] = try MessagesPins.identifiers(pins) == ["synthetic-a", "synthetic-b"]
         checks["valid_pin_indices"] = try [-1, 0, 8].allSatisfy { try MessagesPins.requestedIndex(.number(Double($0))) == $0 }

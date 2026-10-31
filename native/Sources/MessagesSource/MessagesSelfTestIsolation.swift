@@ -33,6 +33,41 @@ public enum MessagesSelfTestIsolation {
         }
     }
 
+    public static func isSelfChat(_ participants: [String], own: [String]) -> Bool {
+        guard participants.count == 1, let peer = identity(participants[0]) else { return false }
+        return own.compactMap(identity).contains { $0.email == peer.email && $0.value == peer.value }
+    }
+
+    public static func ownsMessage(rowID: Int64, text: String, tag: String, baseline: Int64) -> Bool {
+        tag.range(of: #"^\[ab-test [A-Za-z0-9_-]+\]$"#, options: .regularExpression) != nil && rowID > baseline && text.hasPrefix(tag + " ")
+    }
+
+    public static func accountHandles(database: MessagesDatabase) throws -> [String] {
+        let columns = Set(try database.rows("PRAGMA table_info(message)").compactMap { $0["name"] })
+        var handles: Set<String> = []
+        for column in ["destination_caller_id", "account_login"] where columns.contains(column) {
+            for row in try database.rows("SELECT DISTINCT \(column) AS handle FROM message WHERE is_from_me=1 AND \(column) IS NOT NULL") {
+                if let raw = row["handle"], identity(raw) != nil { handles.insert(MessagesProbes.normalize(raw)) }
+            }
+        }
+        return handles.sorted()
+    }
+
+    public static func target(database: MessagesDatabase) throws -> (handle: String, chat: String)? {
+        let own = try accountHandles(database: database)
+        if let handle = try unused(own, database: database).first { return (handle, "") }
+        let pins = try MessagesPins.read()
+        let chats = try database.rows("SELECT c.guid,c.chat_identifier FROM chat c WHERE c.service_name='iMessage' AND EXISTS(SELECT 1 FROM chat_message_join j WHERE j.chat_id=c.ROWID) ORDER BY c.ROWID DESC")
+        for chat in chats {
+            guard let guid = chat["guid"], let identifier = chat["chat_identifier"], !pins.contains(identifier) || pins.last == identifier else { continue }
+            let peers = try database.rows("SELECT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id WHERE c.guid=?", bindings: [guid]).compactMap { $0["id"] }
+            guard isSelfChat(peers, own: own), let peer = peers.first,
+                  let handle = own.first(where: { isSelfChat([peer], own: [$0]) }) else { continue }
+            return (handle, guid)
+        }
+        return nil
+    }
+
     public static func unused(_ own: [String], database: MessagesDatabase) throws -> [String] {
         let participants = try database.rows("SELECT DISTINCT h.id FROM chat c JOIN chat_handle_join j ON j.chat_id=c.ROWID JOIN handle h ON h.ROWID=j.handle_id").compactMap { $0["id"] }
         return unused(own, participants: participants)
