@@ -11,7 +11,7 @@ private actor QualificationMailFake {
     func run(_ body: String) throws -> String {
         calls.append(body)
         if body.hasPrefix("set matched to"), !body.contains("return count of matched") { return "123" }
-        if body.contains("set remaining to 0") { created = false; return "true" }
+        if body.contains("set remaining to 0") { created = false; return "0|0" }
         if body.contains("extract address from sender") { return "self@example.invalid" }
         if body.contains("set found to") { return created ? "123" : "" }
         if body.hasPrefix("return count") || body.contains("return count of matched") { return created ? "1" : "0" }
@@ -53,7 +53,7 @@ func checkMailQualification() async throws {
         try require(scripts.contains { $0.contains("set remaining to 0") } == (scenario != "MAIL-BODY-FIXTURE"))
         if scenario == "MAIL-BODY-FIXTURE" { try require(scripts.contains { $0.contains("set default message format to priorFormat") }) }
         if scenario != "MAIL-BODY-FIXTURE" {
-            try require(scripts.contains { $0.contains("repeat 2 times") && $0.contains("by -1") && $0.contains("close m saving no") })
+            try require(scripts.contains { $0.contains("repeat 2 times") && $0.contains("by -1") && $0.contains("then delete m") && $0.contains("set deleted status of m to true") })
         }
         if scenario == "MAIL-ORGANIZE-REAL" { try require(scripts.contains { $0.contains("set flagged status of m to false") }) }
     }
@@ -65,6 +65,11 @@ func checkMailQualification() async throws {
     let cleanupFailure = MailQualification(script: { _ in throw MailCommandFailure.permission })
     let cleanup = try await cleanupFailure.run(scenario: "MAIL-CLEANUP", tag: "[ab-test] failed")
     try require(cleanup["cleanup_passed"] == .bool(false) && cleanup["cleanup_error"].string == MailCommandFailure.permission.localizedDescription)
+    for (raw, mailbox, outgoing) in [("1|0", false, true), ("0|1", true, false)] {
+        let partial = MailQualification(script: { _ in raw })
+        let proof = try await partial.run(scenario: "MAIL-CLEANUP", tag: "[ab-test] remaining")
+        try require(!proof["cleanup_passed"].bool && proof["cleanup_mailbox_clear"].bool == mailbox && proof["cleanup_outgoing_clear"].bool == outgoing)
+    }
     let count = await failed.scripts().count
     do { _ = try await runner.run(scenario: "MAIL-CLEANUP", tag: "foreign"); throw SourceFailure.corrupt } catch SourceFailure.invalid {}
     try require(await failed.scripts().count == count)

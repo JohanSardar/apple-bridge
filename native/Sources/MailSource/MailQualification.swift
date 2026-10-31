@@ -10,6 +10,11 @@ public struct MailQualification: Sendable {
     }
     private let script: MailCommands.Script
     public init(script: @escaping MailCommands.Script = MailCommands.run) { self.script = script }
+    private func cleanupResult(_ raw: String) throws -> [String: JSON] {
+        let counts = raw.split(separator: "|", omittingEmptySubsequences: false)
+        guard counts.count == 2, let mailbox = Int(counts[0]), let outgoing = Int(counts[1]), mailbox >= 0, outgoing >= 0 else { throw MailCommandFailure.unconfirmed }
+        return ["cleanup_passed": .bool(mailbox == 0 && outgoing == 0), "cleanup_mailbox_clear": .bool(mailbox == 0), "cleanup_outgoing_clear": .bool(outgoing == 0)]
+    }
     public func run(scenario: String, tag: String) async throws -> JSON {
         guard tag.range(of: #"^\[ab-test\] [A-Za-z0-9_-]+$"#, options: .regularExpression) != nil,
               ["MAIL-SEND-SELF-REAL", "MAIL-DRAFT-REAL", "MAIL-ORGANIZE-REAL", "MAIL-BODY-FIXTURE", "MAIL-CLEANUP"].contains(scenario) else { throw SourceFailure.invalid }
@@ -19,13 +24,15 @@ public struct MailQualification: Sendable {
             repeat with a in accounts
                 repeat with b in mailboxes of a
                     set owned to (every message of b whose subject is \(q(tag)))
-                    if (count owned) is greater than 0 then delete owned
+                    repeat with m in owned
+                        set deleted status of m to true
+                    end repeat
                 end repeat
             end repeat
         end repeat
         repeat with i from (count outgoing messages) to 1 by -1
             set m to outgoing message i
-            if subject of m is \(q(tag)) then close m saving no
+            if subject of m is \(q(tag)) then delete m
         end repeat
         set remaining to 0
         repeat with a in accounts
@@ -33,11 +40,11 @@ public struct MailQualification: Sendable {
                 set remaining to remaining + (count (messages of b whose subject is \(q(tag)) and deleted status is false))
             end repeat
         end repeat
-        set remaining to remaining + (count (outgoing messages whose subject is \(q(tag))))
-        return (remaining is 0) as string
+        set remainingOutgoing to count (outgoing messages whose subject is \(q(tag)))
+        return (remaining as string) & "|" & (remainingOutgoing as string)
         """
         if scenario == "MAIL-CLEANUP" {
-            do { return .object(["cleanup_passed": .bool(try await script(cleanup) == "true")]) }
+            do { return .object(try cleanupResult(try await script(cleanup))) }
             catch {
                 var result: [String: JSON] = ["cleanup_passed": .bool(false), "cleanup_error": .string(MailCommands.failureMessage(error))]
                 if let failure = error as? MailCommandFailure, case .script(let code) = failure { result["cleanup_error_number"] = .number(Double(code)) }
@@ -49,7 +56,7 @@ public struct MailQualification: Sendable {
             let own = try await script("""
             set m to make new outgoing message with properties {subject:\(q(tag)), visible:false}
             set own to extract address from sender of m
-            close m saving no
+            delete m
             return own
             """)
             guard own.contains("@"), !own.contains("\n") else { throw SourceFailure.unavailable }
@@ -98,7 +105,7 @@ public struct MailQualification: Sendable {
             if let failure = error as? MailCommandFailure, case .script(let code) = failure { checks["command_error_number"] = .number(Double(code)) }
         }
         if scenario != "MAIL-BODY-FIXTURE" {
-            do { checks["cleanup_passed"] = .bool(try await script(cleanup) == "true") }
+            do { checks.merge(try cleanupResult(try await script(cleanup))) { _, value in value } }
             catch {
                 checks["cleanup_passed"] = .bool(false)
                 checks["cleanup_error"] = .string(MailCommands.failureMessage(error))
