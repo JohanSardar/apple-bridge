@@ -34,6 +34,28 @@ func nativeMessagesCleanupGate(id string, e Evidence, accessibility, unlocked bo
 	return e, false
 }
 
+func nativeMessagesExistingChatGate(ctx context.Context, db *sql.DB, id, chat string, e Evidence) (Evidence, bool) {
+	switch id {
+	case "MSG-DELETE-REAL", "WEB-MEDIA-VARIANTS", "WEB-UPLOAD-NATIVE-STAGING":
+	default:
+		return e, true
+	}
+	var unread int
+	err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE c.guid=? AND m.is_from_me=0 AND m.is_read=0 AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=c.ROWID AND r.message_id=m.ROWID)`, chat).Scan(&unread)
+	if err == nil && unread == 0 {
+		return e, true
+	}
+	e.Passed = false
+	e.Status = "environment-limited"
+	e.Metrics = map[string]any{"writes_submitted": 0}
+	reason := "The self-chat read state could not be verified. Keep Messages available and rerun this check; no send was attempted."
+	if err == nil {
+		reason = "The self-chat contains unread existing messages. Cleanup cannot open it without changing their read state. Read those messages in Messages before rerunning this check; no send was attempted."
+	}
+	e.Conditions = map[string]string{"reason": reason}
+	return e, false
+}
+
 func runNativeMessagesCommands(ctx context.Context, s Scenario, level string, e Evidence) Evidence {
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
 	replicas := 0
@@ -123,6 +145,11 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 	}
 	if rawChat == "" && s.ID != "MSG-READSTATE-REAL" {
 		add("existing_self_chat_truth", false)
+		return e
+	}
+	var existingChatReady bool
+	e, existingChatReady = nativeMessagesExistingChatGate(ctx, native, s.ID, rawChat, e)
+	if !existingChatReady {
 		return e
 	}
 	stateDB, err := sql.Open("sqlite", "file:"+filepath.Join(w.Gateway.Home, "state.db")+"?mode=ro")
