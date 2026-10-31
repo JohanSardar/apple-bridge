@@ -1,5 +1,5 @@
 id: CAP-SIM
 feature: capture.commands
-levels: [sim]
+levels: [sim, real]
 when:
   - queries: {}

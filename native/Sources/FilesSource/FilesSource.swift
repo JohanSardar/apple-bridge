@@ -73,13 +73,16 @@ public actor FilesSource: Source {
     public func read(_ args: JSON) async throws -> JSON {
         let root = URL(fileURLWithPath: args["root"].string).standardizedFileURL.resolvingSymlinksInPath()
         guard roots.contains(root), !args["path"].string.isEmpty else { throw SourceFailure.invalid }
-        let url = root.appendingPathComponent(args["path"].string).standardizedFileURL.resolvingSymlinksInPath()
+        var url = root.appendingPathComponent(args["path"].string).standardizedFileURL.resolvingSymlinksInPath()
         guard url.path.hasPrefix(root.path + "/") else { throw SourceFailure.invalid }
         let values = try url.resourceValues(forKeys: [.isUbiquitousItemKey])
         if values.isUbiquitousItem == true {
             try FileManager.default.startDownloadingUbiquitousItem(at: url)
             let deadline = Date().addingTimeInterval(50)
-            while try url.resourceValues(forKeys: [.ubiquitousItemDownloadingStatusKey]).ubiquitousItemDownloadingStatus == .notDownloaded {
+            while true {
+                url.removeAllCachedResourceValues()
+                guard let status = try url.resourceValues(forKeys: [.ubiquitousItemDownloadingStatusKey]).ubiquitousItemDownloadingStatus else { throw SourceFailure.unavailable }
+                if status != .notDownloaded { break }
                 guard Date() < deadline else { throw SourceFailure.unavailable }
                 try await Task.sleep(for: .milliseconds(100))
             }

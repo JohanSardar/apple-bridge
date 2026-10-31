@@ -4,14 +4,15 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
+	"strings"
 )
 
-func fakeIWorkExport(format string) string {
-	text := "bridge-lab export"
+func fakeIWorkExport(format, text string) string {
 	if format == "text" {
 		return base64.StdEncoding.EncodeToString([]byte(text))
 	}
-	stream := "BT /F1 12 Tf 36 100 Td (" + text + ") Tj ET\n"
+	escaped := strings.NewReplacer("\\", "\\\\", "(", "\\(", ")", "\\)").Replace(text)
+	stream := "BT /F1 12 Tf 36 100 Td (" + escaped + ") Tj ET\n"
 	objects := []string{
 		"<< /Type /Catalog /Pages 2 0 R >>",
 		"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",

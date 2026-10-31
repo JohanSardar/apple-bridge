@@ -49,7 +49,13 @@ func runCapture(ctx context.Context, s Scenario, level string) Evidence {
 		os.Stderr.Write(out)
 	}
 	publicContext := world.WithOptions(ctx, world.Options{Scope: "calendar:read,reminders:read,system:read,capture:write,mac:write,print:write"})
-	w, worldErr := world.New(publicContext, level, 0, 0)
+	var w *world.World
+	var worldErr error
+	if level == "real" {
+		w, worldErr = world.NewRealWithSetup(publicContext, level, 0, world.NativeSetup{IndependentTruth: true})
+	} else {
+		w, worldErr = world.New(publicContext, level, 0, 0)
+	}
 	add("public_gateway_start", worldErr == nil)
 	if worldErr != nil {
 		return e
@@ -69,7 +75,9 @@ func runCapture(ctx context.Context, s Scenario, level string) Evidence {
 				args = json.RawMessage(`{"seconds":2}`)
 			}
 			if op == "print.document" {
-				args = json.RawMessage(`{"file":"fixture.pdf","printer":"PDF"}`)
+				file, pathErr := filepath.Abs("lab/fixtures/vision/fixture.pdf")
+				add("print_fixture_path", pathErr == nil)
+				args, _ = json.Marshal(map[string]string{"file": file, "printer": "PDF"})
 			}
 			var command contracts.CommandRecord
 			err := client.Call(ctx, op, contracts.Command{ID: contracts.NewCommandID(), Args: args, WaitMS: 15000}, &command)

@@ -9,6 +9,16 @@ import SourceSupport
 
 @main
 struct Checks {
+    static func awaitCloud(_ file: URL) async throws {
+        var file = file
+        let deadline = Date().addingTimeInterval(50)
+        while true {
+            file.removeAllCachedResourceValues()
+            if try file.resourceValues(forKeys: [.isUbiquitousItemKey]).isUbiquitousItem == true { return }
+            guard Date() < deadline else { throw SourceFailure.capabilityUnproven }
+            try await Task.sleep(for: .milliseconds(200))
+        }
+    }
     static func commands() async throws {
         let fm = FileManager.default
         let simulated = CommandLine.arguments.contains("FILE-COMMANDS")
@@ -16,7 +26,7 @@ struct Checks {
         if simulated { try fm.createDirectory(at: home, withIntermediateDirectories: true) }
         defer { if simulated { try? fm.removeItem(at: home) } }
         let source = try FilesSource(home: home)
-        let root = home.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs/Bridge Test")
+        let root = home.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs/Bridge Test").resolvingSymlinksInPath()
         let folder = root.appendingPathComponent("[ab-test " + UUID().uuidString + "]")
         try fm.createDirectory(at: folder, withIntermediateDirectories: true)
         defer { try? cleanupCommands(folder) }
@@ -27,6 +37,7 @@ struct Checks {
             let prepared = try await source.prepare(.object(["action": .object(["op": .string(op), "args": .object(args)])]))
             let evidence = try await source.dispatch(prepared)
             guard evidence["observed"].bool else { throw SourceFailure.corrupt }
+            print("operation=\(op) passed=true")
             return evidence
         }
         for (op, text) in [("files.create", "first"), ("files.write", "second")] {
@@ -51,11 +62,21 @@ struct Checks {
         _ = try await run("files.move", ["path": .string(parent + "/b.txt"), "parent": .string(parent + "/target"), "name": .string("c.txt")])
         try await source.reconcile(into: sink)
         let captured = await sink.rows
-        guard captured.contains(where: { $0["kind"].string == "absent" && $0["native_key"].string == folder.appendingPathComponent("a.txt").path }), captured.contains(where: { $0["kind"].string == "upsert" && $0["native_key"].string == target.appendingPathComponent("c.txt").path }) else { throw SourceFailure.corrupt }
+        guard captured.contains(where: { $0["kind"].string == "absent" && $0["native_key"].string.hasSuffix("/" + parent + "/a.txt") }), captured.contains(where: { $0["kind"].string == "upsert" && $0["native_key"].string.hasSuffix("/" + parent + "/target/c.txt") }) else { throw SourceFailure.corrupt }
         let file = target.appendingPathComponent("c.txt")
         guard fm.fileExists(atPath: file.path), !fm.fileExists(atPath: folder.appendingPathComponent("b.txt").path) else { throw SourceFailure.corrupt }
         _ = try await run("files.set_tags", ["path": .string(parent + "/target/c.txt"), "tags": .array([.string("Bridge Test")])])
         guard try file.resourceValues(forKeys: [.tagNamesKey]).tagNames == ["Bridge Test"] else { throw SourceFailure.corrupt }
+        if !simulated {
+            try await awaitCloud(file)
+            _ = try await run("files.evict", ["path": .string(parent + "/target/c.txt")])
+            var cloudFile = file
+            cloudFile.removeAllCachedResourceValues()
+            guard try cloudFile.resourceValues(forKeys: [.ubiquitousItemDownloadingStatusKey]).ubiquitousItemDownloadingStatus == .notDownloaded else { throw SourceFailure.corrupt }
+            _ = try await run("files.download", ["path": .string(parent + "/target/c.txt")])
+            guard try Data(contentsOf: file) == Data("second".utf8) else { throw SourceFailure.corrupt }
+            print("cloud_evict_download_readback passed=true")
+        }
         if simulated {
             for op in ["files.download", "files.evict"] {
                 do {
@@ -100,7 +121,7 @@ struct Checks {
         let home = FileManager.default.temporaryDirectory.appendingPathComponent("ab-test-" + UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: home) }
         let source = try FilesSource(home: home)
-        let root = home.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs/Bridge Test")
+        let root = home.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs/Bridge Test").resolvingSymlinksInPath()
         guard let context = CGContext(data: nil, width: 16, height: 12, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue), let image = context.makeImage() else { throw SourceFailure.corrupt }
         let png = NSMutableData()
         guard let destination = CGImageDestinationCreateWithData(png, "public.png" as CFString, 1, nil) else { throw SourceFailure.corrupt }
@@ -148,7 +169,7 @@ struct Checks {
             return
         }
         let home = FileManager.default.homeDirectoryForCurrentUser
-        let root = home.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs/Bridge Test")
+        let root = home.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs/Bridge Test").resolvingSymlinksInPath()
         let source = try FilesSource()
         let folder = root.appendingPathComponent("[ab-test " + UUID().uuidString + "]")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -177,19 +198,10 @@ struct Checks {
             } while Date() < deadline
             guard found else { throw SourceFailure.capabilityUnproven }
         } else if scenario == "FILE-OFFLOAD-REAL" {
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/brctl")
-            process.arguments = ["evict", file.path]
-            process.standardOutput = FileHandle.nullDevice
-            process.standardError = FileHandle.nullDevice
-            try process.run()
-            process.waitUntilExit()
-            guard process.terminationStatus == 0 else { throw SourceFailure.capabilityUnproven }
-            let evictionDeadline = Date().addingTimeInterval(15)
-            while try file.resourceValues(forKeys: [.ubiquitousItemDownloadingStatusKey]).ubiquitousItemDownloadingStatus != .notDownloaded {
-                guard Date() < evictionDeadline else { throw SourceFailure.capabilityUnproven }
-                try await Task.sleep(for: .milliseconds(100))
-            }
+            try await awaitCloud(file)
+            let prepared = try await source.prepare(.object(["action": .object(["op": .string("files.evict"), "args": args])]))
+            let evicted = try await source.dispatch(prepared)
+            guard evicted["downloaded"] == .bool(false) else { throw SourceFailure.corrupt }
             let reread = try await source.read(args)
             guard reread == result else { throw SourceFailure.corrupt }
         } else if scenario == "FILE-IDLE" {

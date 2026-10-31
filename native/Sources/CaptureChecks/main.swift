@@ -14,6 +14,7 @@ actor Fake: CaptureProvider {
     func deny() { allowed = false }
     func breakOutput() { broken = true }
     func count() -> Int { calls }
+    func outputExists() -> Bool { last.map { FileManager.default.fileExists(atPath: $0.path) } ?? false }
     func authorized(_ operation: String) async -> Bool { allowed }
     func produce(_ operation: String, args: JSON, directory: URL) async throws -> CaptureArtifact {
         calls += 1
@@ -60,12 +61,14 @@ actor Fake: CaptureProvider {
         let other = CaptureSource(directory: directory, provider: broken)
         let ticket = try await other.prepare(.object(["action": action]))
         do { _ = try await other.dispatch(ticket); throw SourceFailure.invalid } catch SourceFailure.corrupt {}
+        guard !(await broken.outputExists()) else { throw SourceFailure.corrupt }
         let mistimed = Fake()
         await mistimed.changeDuration()
         let timed = CaptureSource(directory: directory, provider: mistimed)
         let timedAction: JSON = .object(["op": .string("capture.record_audio"), "args": .object(["seconds": .number(2)])])
         let timedTicket = try await timed.prepare(.object(["action": timedAction]))
         do { _ = try await timed.dispatch(timedTicket); throw SourceFailure.invalid } catch SourceFailure.corrupt {}
+        guard !(await mistimed.outputExists()) else { throw SourceFailure.corrupt }
         let pdf = PDFDocument()
         let page = PDFPage()
         pdf.insert(page, at: 0)

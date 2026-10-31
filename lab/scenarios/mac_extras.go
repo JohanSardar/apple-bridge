@@ -22,7 +22,7 @@ func runMacExtras(ctx context.Context, s Scenario, level string) (e Evidence) {
 			e.Passed = e.Passed && a.Passed
 		}
 	}()
-	if level != "sim" {
+	if level != "sim" || s.ID == "IWORK-REAL" {
 		return runMacExtrasReal(ctx, s, level)
 	}
 	ctx = world.WithOptions(ctx, world.Options{Scope: "mac:read,mac:write,system:read"})
@@ -78,7 +78,7 @@ func runMacExtras(ctx context.Context, s Scenario, level string) (e Evidence) {
 		op, args, field string
 		expected        any
 	}{
-		{"mac.iwork_export", `{"app":"pages","format":"text","document_blob":"YnJpZGdlLWxhYg=="}`, "data_base64", "YnJpZGdlLWxhYiBleHBvcnQ="},
+		{"mac.iwork_export", `{"app":"pages","format":"text","document_blob":"YnJpZGdlLWxhYg=="}`, "data_base64", "YnJpZGdlLWxhYg=="},
 	} {
 		var out contracts.CommandRecord
 		err = client.Call(ctx, test.op, contracts.Command{ID: contracts.NewCommandID(), Args: json.RawMessage(test.args), WaitMS: 15000}, &out)
@@ -100,9 +100,9 @@ func runMacExtras(ctx context.Context, s Scenario, level string) (e Evidence) {
 			}
 			decode := json.Unmarshal(out.Evidence, &evidence)
 			data, blobErr := base64.StdEncoding.DecodeString(evidence.Readback.Data)
-			valid := bytes.Equal(data, []byte("bridge-lab export"))
+			valid := bytes.Equal(data, []byte("bridge-lab"))
 			if format == "pdf" {
-				valid = bytes.HasPrefix(data, []byte("%PDF-1.4")) && bytes.Contains(data, []byte("bridge-lab export")) && bytes.HasSuffix(data, []byte("%%EOF\n"))
+				valid = bytes.HasPrefix(data, []byte("%PDF-1.4")) && bytes.Contains(data, []byte("bridge-lab")) && bytes.HasSuffix(data, []byte("%%EOF\n"))
 			}
 			add(app+"_"+format+"_export", err == nil && decode == nil && blobErr == nil && out.State == contracts.CommandObserved && valid)
 		}

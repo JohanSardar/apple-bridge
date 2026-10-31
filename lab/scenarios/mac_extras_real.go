@@ -24,8 +24,26 @@ func runMacExtrasReal(ctx context.Context, s Scenario, level string) (e Evidence
 			e.Passed = e.Passed && a.Passed
 		}
 	}()
+	if s.ID == "IWORK-REAL" && level == "real" {
+		if _, statErr := os.Stat("/Applications/Pages.app"); statErr != nil {
+			home, _ := os.UserHomeDir()
+			if _, userErr := os.Stat(home + "/Applications/Pages.app"); userErr != nil {
+				add("pages_installed", false)
+				e.Status = "limited"
+				e.Conditions = map[string]string{"reason": "Pages is not installed on the qualification host; install Pages before running IWORK-REAL"}
+				return
+			}
+		}
+		add("pages_installed", true)
+	}
 	ctx = world.WithOptions(ctx, world.Options{Scope: "mac:read,mac:write,system:read"})
-	w, err := world.NewRealWithSetup(ctx, level, 1, world.NativeSetup{IndependentTruth: true})
+	var w *world.World
+	var err error
+	if level == "sim" {
+		w, err = world.New(ctx, level, 0, 0, world.BlobOptions{Scope: "mac:read,mac:write,reminders:read,system:read"})
+	} else {
+		w, err = world.NewRealWithSetup(ctx, level, 1, world.NativeSetup{IndependentTruth: true})
+	}
 	add("world_started", err == nil)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "mac extras world startup:", err)
@@ -68,9 +86,9 @@ func runMacExtrasReal(ctx context.Context, s Scenario, level string) (e Evidence
 		add("exported_tagged_content", decode == nil && blobErr == nil && strings.TrimSpace(string(data)) == "[ab-test]")
 		if err != nil || out.State != contracts.CommandObserved {
 			e.Status = "limited"
-			e.Conditions = map[string]string{"reason": "Native iWork export is unsupported"}
+			e.Conditions = map[string]string{"reason": "Pages export could not complete; install Pages and grant Helper Automation access to Pages"}
 			if installed == 0 {
-				e.Conditions["reason"] = "Native iWork export is unsupported; no iWork applications installed on qualification host"
+				e.Conditions["reason"] = "Pages is not installed on the qualification host; install Pages before running IWORK-REAL"
 			}
 		}
 		return

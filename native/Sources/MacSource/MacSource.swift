@@ -184,8 +184,8 @@ public final class MacSource: Source {
         case "mac.lock_screen", "mac.sleep_display", "mac.restart", "mac.shutdown":
             throw SourceFailure.unsupported
         case "mac.iwork_export":
- throw SourceFailure.unsupported
- case "mac.notify":
+            readback = try exportIWork(args)
+        case "mac.notify":
             let center = UNUserNotificationCenter.current()
             let settings = await center.notificationSettings()
             guard settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional else { throw SourceFailure.permissionMissing }

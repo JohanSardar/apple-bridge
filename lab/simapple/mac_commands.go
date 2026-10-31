@@ -1,6 +1,7 @@
 package simapple
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"strings"
 	"time"
@@ -48,7 +49,8 @@ func (f *fakeApple) macCommand(wire *applepeer.Wire, frame contracts.IPCFrame, f
 	var readback any
 	switch t.Action.Op {
 	case "mac.iwork_export":
-		readback = map[string]any{"app": args.App, "format": args.Format, "data_base64": fakeIWorkExport(args.Format)}
+		document, _ := base64.StdEncoding.DecodeString(args.DocumentBlob)
+		readback = map[string]any{"app": args.App, "format": args.Format, "data_base64": fakeIWorkExport(args.Format, string(document))}
 	case "mac.notify":
 		readback = map[string]any{"delivered": true}
 	case "mac.open_settings":
