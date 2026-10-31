@@ -26,13 +26,13 @@ func TestMessagesWritePreflightPreservesExistingUnreadMessages(t *testing.T) {
 		}
 	}
 	ctx := context.Background()
-	for _, id := range []string{"MSG-DELETE-REAL", "WEB-MEDIA-VARIANTS", "WEB-UPLOAD-NATIVE-STAGING"} {
+	for _, id := range []string{"MSG-READSTATE-REAL", "MSG-DELETE-REAL", "WEB-MEDIA-VARIANTS", "WEB-UPLOAD-NATIVE-STAGING"} {
 		e, allowed := nativeMessagesExistingChatGate(ctx, db, id, "self", Evidence{Passed: true})
 		if allowed || e.Passed || e.Metrics["writes_submitted"] != 0 || e.Conditions["reason"] == "" {
 			t.Fatal(id, e, allowed)
 		}
 	}
-	for _, id := range []string{"WEB-MSG-REAL-READ", "MSG-READSTATE-REAL"} {
+	for _, id := range []string{"WEB-MSG-REAL-READ"} {
 		if _, allowed := nativeMessagesExistingChatGate(ctx, db, id, "self", Evidence{}); !allowed {
 			t.Fatal("non-mutating or fresh-conversation check refused", id)
 		}

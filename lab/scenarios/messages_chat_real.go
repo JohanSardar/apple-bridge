@@ -2,7 +2,9 @@ package scenarios
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"time"
 
@@ -10,6 +12,34 @@ import (
 	"github.com/JohanSardar/apple-bridge/lab/scripted"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 )
+
+func nativeMessagesChatDigest(ctx context.Context, native *sql.DB, chat string, maximum int64) (string, error) {
+	rows, err := native.QueryContext(ctx, `SELECT m.*,j.chat_id,r.delete_date FROM message m JOIN (SELECT chat_id,message_id FROM chat_message_join UNION SELECT chat_id,message_id FROM chat_recoverable_message_join) j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id LEFT JOIN chat_recoverable_message_join r ON r.chat_id=j.chat_id AND r.message_id=m.ROWID WHERE c.guid=? AND m.ROWID<=? ORDER BY m.ROWID,j.chat_id`, chat, maximum)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+	columns, err := rows.Columns()
+	if err != nil {
+		return "", err
+	}
+	hash := sha256.New()
+	encoder := json.NewEncoder(hash)
+	for rows.Next() {
+		values := make([]any, len(columns))
+		targets := make([]any, len(columns))
+		for i := range values {
+			targets[i] = &values[i]
+		}
+		if err := rows.Scan(targets...); err != nil {
+			return "", err
+		}
+		if err := encoder.Encode(values); err != nil {
+			return "", err
+		}
+	}
+	return hex.EncodeToString(hash.Sum(nil)), rows.Err()
+}
 
 func isolatedReadStateFixture(ctx context.Context, native *sql.DB, guid, text string, baselineChat int64) bool {
 	var chats, foreign int

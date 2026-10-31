@@ -1,28 +1,24 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[5.05 6.6 7.51] cpu_idle=71% cpus=10 other_heavy=0"
+    "summary": "air: load=[8.41 7.76 7.6] cpu_idle=51% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M6A5MWMJZA0M1HRRQ9F94BXE",
+  "run_id": "run_01M6A60Y2M51CD84D75KD9P90V",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "MSG-MENTION-SEND",
   "level": "sim",
   "passed": true,
-  "git_sha": "ebdbecb82f90be8cf4c1eb20d40dbc5a6ebf3706",
-  "at": "2026-10-31T23:45:17.970539Z",
+  "git_sha": "a48e6294c1c1dd366d81c1ecd399e39a3d5ad32e",
+  "at": "2026-10-31T23:51:52.660913Z",
   "assertions": [
     {
       "name": "native_readback_checks",
       "passed": true
     },
     {
-      "name": "exact_recipient_phone",
-      "passed": true
-    },
-    {
-      "name": "valid_pin_indices",
+      "name": "missing_build_rejected",
       "passed": true
     },
     {
@@ -30,19 +26,59 @@
       "passed": true
     },
     {
+      "name": "empty_deleted_selection_rejected",
+      "passed": true
+    },
+    {
+      "name": "existing_deleted_selection_rejected",
+      "passed": true
+    },
+    {
+      "name": "accessibility_input_interference_refused",
+      "passed": true
+    },
+    {
+      "name": "existing_self_chat_accepted",
+      "passed": true
+    },
+    {
+      "name": "duplicate_deleted_selection_rejected",
+      "passed": true
+    },
+    {
+      "name": "exact_phone_is_self",
+      "passed": true
+    },
+    {
+      "name": "group_with_self_rejected",
+      "passed": true
+    },
+    {
+      "name": "quoted_tag_protected",
+      "passed": true
+    },
+    {
+      "name": "accessibility_input_without_automation",
+      "passed": true
+    },
+    {
       "name": "native_pin_order",
       "passed": true
     },
     {
-      "name": "current_build_qualified",
+      "name": "stale_os_rejected",
       "passed": true
     },
     {
-      "name": "exact_recipient_email",
+      "name": "other_run_protected",
       "passed": true
     },
     {
-      "name": "phone_substring_rejected",
+      "name": "invalid_pin_index_rejected",
+      "passed": true
+    },
+    {
+      "name": "valid_pin_indices",
       "passed": true
     },
     {
@@ -50,7 +86,47 @@
       "passed": true
     },
     {
-      "name": "stale_os_rejected",
+      "name": "phone_substring_rejected",
+      "passed": true
+    },
+    {
+      "name": "run_message_owned",
+      "passed": true
+    },
+    {
+      "name": "exact_recipient_email",
+      "passed": true
+    },
+    {
+      "name": "untagged_message_protected",
+      "passed": true
+    },
+    {
+      "name": "other_mention_rejected",
+      "passed": true
+    },
+    {
+      "name": "additional_recipient_email_rejected",
+      "passed": true
+    },
+    {
+      "name": "other_recipient_email_rejected",
+      "passed": true
+    },
+    {
+      "name": "other_chat_rejected",
+      "passed": true
+    },
+    {
+      "name": "empty_chat_rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid_tag_rejected",
+      "passed": true
+    },
+    {
+      "name": "owned_deleted_selection_allowed",
       "passed": true
     },
     {
@@ -62,19 +138,7 @@
       "passed": true
     },
     {
-      "name": "accessibility_input_without_automation",
-      "passed": true
-    },
-    {
-      "name": "accessibility_input_interference_refused",
-      "passed": true
-    },
-    {
-      "name": "other_recipient_email_rejected",
-      "passed": true
-    },
-    {
-      "name": "other_mention_rejected",
+      "name": "current_build_qualified",
       "passed": true
     },
     {
@@ -82,15 +146,19 @@
       "passed": true
     },
     {
-      "name": "additional_recipient_email_rejected",
+      "name": "incomplete_deleted_selection_rejected",
       "passed": true
     },
     {
-      "name": "invalid_pin_index_rejected",
+      "name": "baseline_message_protected",
       "passed": true
     },
     {
-      "name": "missing_build_rejected",
+      "name": "exact_recipient_phone",
+      "passed": true
+    },
+    {
+      "name": "phone_suffix_is_not_self",
       "passed": true
     },
     {

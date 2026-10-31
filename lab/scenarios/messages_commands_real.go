@@ -36,7 +36,7 @@ func nativeMessagesCleanupGate(id string, e Evidence, accessibility, unlocked bo
 
 func nativeMessagesExistingChatGate(ctx context.Context, db *sql.DB, id, chat string, e Evidence) (Evidence, bool) {
 	switch id {
-	case "MSG-DELETE-REAL", "WEB-MEDIA-VARIANTS", "WEB-UPLOAD-NATIVE-STAGING":
+	case "MSG-READSTATE-REAL", "MSG-DELETE-REAL", "WEB-MEDIA-VARIANTS", "WEB-UPLOAD-NATIVE-STAGING":
 	default:
 		return e, true
 	}
@@ -101,12 +101,6 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 	if !cleanupReady {
 		return e
 	}
-	if s.ID == "MSG-READSTATE-REAL" && len(own.UnusedHandles) == 0 {
-		e.Status = "environment-limited"
-		e.Metrics = map[string]any{"writes_submitted": 0}
-		e.Conditions = map[string]string{"reason": "No unused self address is available for an isolated read-state check. Add a self address in Messages before running this check; existing conversations were left unchanged."}
-		return e
-	}
 	if strings.HasPrefix(s.ID, "MSG-GROUP-") || s.ID == "MSG-SEND-RCS-GROUP" {
 		return runNativeMessagesGroup(ctx, s, e, w, own.Handles)
 	}
@@ -143,9 +137,13 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 		}
 		rows.Close()
 	}
-	if rawChat == "" && s.ID != "MSG-READSTATE-REAL" {
+	readStateFresh := s.ID == "MSG-READSTATE-REAL" && len(own.UnusedHandles) > 0
+	if rawChat == "" && !readStateFresh {
 		add("existing_self_chat_truth", false)
 		return e
+	}
+	if readStateFresh {
+		rawChat = ""
 	}
 	var existingChatReady bool
 	e, existingChatReady = nativeMessagesExistingChatGate(ctx, native, s.ID, rawChat, e)
@@ -159,10 +157,10 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 	}
 	defer stateDB.Close()
 	var chatID string
-	add("self_chat_captured", s.ID == "MSG-READSTATE-REAL" || w.Await(30*time.Second, func() bool {
+	add("self_chat_captured", readStateFresh || w.Await(30*time.Second, func() bool {
 		return stateDB.QueryRowContext(ctx, "SELECT record_id FROM aliases WHERE collection='messages.chat' AND native_key=? LIMIT 1", rawChat).Scan(&chatID) == nil
 	}) == nil)
-	if chatID == "" && s.ID != "MSG-READSTATE-REAL" {
+	if chatID == "" && !readStateFresh {
 		return e
 	}
 	if s.ID == "WEB-MSG-REAL-READ" {
@@ -174,7 +172,7 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 		text = "Apple Bridge interactive self-check " + e.RunID
 	}
 	args := map[string]any{"chat_id": chatID, "text": text}
-	if s.ID == "MSG-READSTATE-REAL" {
+	if readStateFresh {
 		args = map[string]any{"handles": []string{own.UnusedHandles[0]}, "service": "iMessage", "text": text}
 		rawChat = ""
 	}
@@ -241,7 +239,23 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 	}
 	defer func() { finishCleanupAudit(context.Background(), ownedCleanup, "messages", &result) }()
 	var maximum int64
-	native.QueryRowContext(ctx, "SELECT COALESCE(MAX(ROWID),0) FROM message").Scan(&maximum)
+	if err := native.QueryRowContext(ctx, "SELECT COALESCE(MAX(ROWID),0) FROM message").Scan(&maximum); err != nil {
+		add("message_baseline", false)
+		return e
+	}
+	if s.ID == "MSG-READSTATE-REAL" && !readStateFresh {
+		baselineDigest, problem := nativeMessagesChatDigest(ctx, native, rawChat, maximum)
+		if problem != nil {
+			add("existing_read_state_baseline", false)
+			return e
+		}
+		defer func() {
+			digest, problem := nativeMessagesChatDigest(context.Background(), native, rawChat, maximum)
+			preserved := problem == nil && digest == baselineDigest
+			result.Assertions = append(result.Assertions, Assertion{Name: "existing_read_state_preserved", Passed: preserved})
+			result.Passed = result.Passed && preserved
+		}()
+	}
 	var maximumChat int64
 	if err := native.QueryRowContext(ctx, "SELECT COALESCE(MAX(ROWID),0) FROM chat").Scan(&maximumChat); err != nil {
 		add("chat_baseline", false)
@@ -471,7 +485,7 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 		return e
 	}
 	if s.ID != "MSG-SEND-SELF-TEXT" && s.ID != "MSG-SEND-FILES" && s.ID != "MSG-INTERACTIVE-GATE" && s.ID != "MSG-RESEND" {
-		if s.ID == "MSG-READSTATE-REAL" && !isolatedReadStateFixture(ctx, native, evidence.NativeKey, text, maximumChat) {
+		if readStateFresh && !isolatedReadStateFixture(ctx, native, evidence.NativeKey, text, maximumChat) {
 			add("isolated_read_state_fixture", false)
 			return e
 		}
