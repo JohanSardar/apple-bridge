@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/JohanSardar/apple-bridge/internal/contracts"
 )
 
 func TestOwnerGateOriginsAndCookies(t *testing.T) {
@@ -97,6 +99,27 @@ func TestOAuthRedirectAndPKCEDowngrade(t *testing.T) {
 		handler.ServeHTTP(response, req)
 		if response.Code != 400 || response.Header().Get("Location") != "" {
 			t.Fatalf("invalid authorization accepted for %s", test.key)
+		}
+	}
+}
+
+func TestOwnerGateDoesNotAcceptAgentOrForwardingHeaders(t *testing.T) {
+	approvals, _, _ := connectorFixture(t)
+	_, agentToken, err := approvals.Authority.CreateAgent("[ab-test]", "read", []contracts.Grant{"messages:read"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := Handler(Deps{Authority: approvals.Authority, PublicHost: func() string { return "bridge.example" }})
+	for _, host := range []string{"bridge.example", "attacker.example"} {
+		req := httptest.NewRequest("GET", "https://"+host+"/web/v1/agents", nil)
+		req.Header.Set("Authorization", "Bearer "+agentToken)
+		req.Header.Set("X-Forwarded-Host", "bridge.example")
+		req.Header.Set("X-Forwarded-Proto", "https")
+		req.AddCookie(&http.Cookie{Name: SessionCookie, Value: agentToken})
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, req)
+		if response.Code != 401 && response.Code != 403 {
+			t.Fatal("agent or forwarding headers bypassed owner gate")
 		}
 	}
 }

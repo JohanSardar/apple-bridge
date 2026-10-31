@@ -109,3 +109,41 @@ func TestOAuthExchangeRejectsExpiredPrincipal(t *testing.T) {
 		t.Fatal("expired agent minted tokens")
 	}
 }
+
+func TestActiveOwnerCanEnrollAndEnrollmentTokensAreSingleUse(t *testing.T) {
+	a := securityAuthority(t)
+	token, _, err := a.CreateDeviceSession("trusted")
+	if err != nil {
+		t.Fatal(err)
+	}
+	p, _, err := a.AuthenticateDevice(token)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = a.SavePasskey(Passkey{ID: "[ab-test] owner", RPID: "example.com"}, "", &p); err != nil {
+		t.Fatal("active owner could not enroll")
+	}
+	enroll, err := a.CreateWebEnroll()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = a.SavePasskey(Passkey{ID: "[ab-test] initial", RPID: "example.com"}, enroll, nil); err != nil {
+		t.Fatal("enrollment failed")
+	}
+	if a.SavePasskey(Passkey{ID: "[ab-test] replay", RPID: "example.com"}, enroll, nil) == nil {
+		t.Fatal("enrollment replay accepted")
+	}
+	expired, err := a.CreateWebEnroll()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = a.update(func(d *credentials) error {
+		d.WebEnroll[Fingerprint([]byte(expired))] = time.Now().Add(-time.Second)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if a.SavePasskey(Passkey{ID: "[ab-test] expired", RPID: "example.com"}, expired, nil) == nil {
+		t.Fatal("expired enrollment accepted")
+	}
+}

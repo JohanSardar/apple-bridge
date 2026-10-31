@@ -17,7 +17,7 @@ import (
 	"github.com/JohanSardar/apple-bridge/lab/world"
 )
 
-func securityOAuth(ctx context.Context, w *world.World, a *trust.Authority, origin string, add func(string, bool)) {
+func securityOAuth(ctx context.Context, w *world.World, a *trust.Authority, origin string, e *Evidence, add func(string, bool)) {
 	client, err := a.RegisterOAuth(trust.OAuthClient{Name: "[ab-test] security", RedirectURIs: []string{"https://connector.example/callback"}})
 	add("security_oauth_client", err == nil)
 	if err != nil {
@@ -71,6 +71,16 @@ func securityOAuth(ctx context.Context, w *world.World, a *trust.Authority, orig
 	wrongScope, _, _ := agentRequest(ctx, origin, tokens.AccessToken, "POST", "/v1/op/iphone.devices", map[string]any{})
 	add("wrong_scope_refused", wrongScope == 401 || wrongScope == 403)
 	add("garbage_token_refused", request("[ab-test] invalid", "messages.chat") == 401)
+	var relayIdentity struct {
+		Credential struct {
+			Credential string `json:"credential"`
+		} `json:"credential"`
+	}
+	relayData, relayErr := os.ReadFile(filepath.Join(w.Gateway.Home, "remote", "relay.json"))
+	if !os.IsNotExist(relayErr) {
+		decoded := json.Unmarshal(relayData, &relayIdentity)
+		add("relay_credential_cannot_authenticate_as_connector", relayErr == nil && decoded == nil && relayIdentity.Credential.Credential != "" && request(relayIdentity.Credential.Credential, "messages.chat") == 401)
+	}
 	expired := editAgentCredentials(w.Gateway.Home, func(data map[string]any) {
 		for _, v := range data["oauth_access"].([]any) {
 			if v.(map[string]any)["hash"] == trust.Fingerprint([]byte(tokens.AccessToken)) {
@@ -105,7 +115,10 @@ func securityOAuth(ctx context.Context, w *world.World, a *trust.Authority, orig
 	add("connector_works_before_revocation", status == 200 && request(tokens.AccessToken, "messages.chat") == 200)
 	start := time.Now()
 	err = a.Revoke(agent.ID)
-	add("revocation_stops_public_token_within_seconds", err == nil && request(tokens.AccessToken, "messages.chat") == 401 && time.Since(start) < 3*time.Second)
+	revokedStatus := request(tokens.AccessToken, "messages.chat")
+	elapsed := time.Since(start)
+	e.Metrics["revocation_ms"] = elapsed.Milliseconds()
+	add("revocation_stops_public_token_within_seconds", err == nil && revokedStatus == 401 && elapsed < 3*time.Second)
 	refresh.Set("refresh_token", tokens.RefreshToken)
 	status, _, _ = agentRequest(ctx, origin, "", "POST", "/oauth/token", refresh)
 	add("revoked_refresh_refused", status == 400)

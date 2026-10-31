@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
@@ -17,7 +19,8 @@ import (
 )
 
 func runRemoteSecurity(ctx context.Context, s Scenario, level string) Evidence {
-	e := Evidence{Scenario: s.ID, Level: level, At: time.Now().UTC(), RunID: contracts.NewID("security"), NetworkPath: "isolated Mac gateway adversarial HTTP and trust checks", Metrics: map[string]any{}}
+	sha, _ := exec.CommandContext(ctx, "git", "rev-parse", "HEAD").Output()
+	e := Evidence{GitSHA: strings.TrimSpace(string(sha)), Scenario: s.ID, Level: level, At: time.Now().UTC(), RunID: contracts.NewID("security"), NetworkPath: "isolated Mac gateway adversarial HTTP and trust checks", Metrics: map[string]any{}}
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
 	finish := func() Evidence {
 		e.Passed = len(e.Assertions) > 0
@@ -66,8 +69,8 @@ func runRemoteSecurity(ctx context.Context, s Scenario, level string) Evidence {
 		add("public_https_origin", readErr == nil && status.State == "on" && status.Backend == "relay")
 		origin = status.URL
 	}
-	securityEndpointSweep(ctx, origin, level == "real", add)
-	securityOAuth(ctx, w, a, origin, add)
+	e.Metrics["protected_endpoint_count"] = securityEndpointSweep(ctx, origin, level == "real", add)
+	securityOAuth(ctx, w, a, origin, &e, add)
 	token, _, err := a.CreateDeviceSession("trusted")
 	add("owner_session", err == nil)
 	cookie := bridgeweb.LocalSessionCookie
@@ -99,7 +102,7 @@ func runRemoteSecurity(ctx context.Context, s Scenario, level string) Evidence {
 	return finish()
 }
 
-func securityEndpointSweep(ctx context.Context, origin string, public bool, add func(string, bool)) {
+func securityEndpointSweep(ctx context.Context, origin string, public bool, add func(string, bool)) int {
 	paths := []struct{ method, path string }{
 		{"GET", "/mcp"}, {"POST", "/mcp"}, {"GET", "/mcp/unknown"},
 		{"GET", "/v1/openapi.json"}, {"GET", "/v1/records/messages.chat/test"},
@@ -129,4 +132,5 @@ func securityEndpointSweep(ctx context.Context, origin string, public bool, add 
 		status, _, _ := agentRequest(ctx, origin, "", "GET", path, nil)
 		add("public_bootstrap_"+path, status == 200)
 	}
+	return len(paths)
 }
