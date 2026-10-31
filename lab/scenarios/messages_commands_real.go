@@ -20,6 +20,16 @@ import (
 	"time"
 )
 
+func nativeMessagesCleanupGate(id string, e Evidence, accessibility bool) (Evidence, bool) {
+	if id == "WEB-MSG-REAL-READ" || accessibility {
+		return e, true
+	}
+	e.Status = "environment-limited"
+	e.Metrics = map[string]any{"writes_submitted": 0}
+	e.Assertions = append(e.Assertions, Assertion{Name: "cleanup_accessibility", Status: "unverified", Detail: "Messages cleanup needs Accessibility access. Enable it for AppleBridgeHelper in System Settings before running this write check; no send was attempted."})
+	return e, false
+}
+
 func runNativeMessagesCommands(ctx context.Context, s Scenario, level string, e Evidence) Evidence {
 	add := func(name string, ok bool) { e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok}) }
 	replicas := 0
@@ -58,9 +68,9 @@ func runNativeMessagesCommandsInWorld(ctx context.Context, s Scenario, level str
 		e.Assertions = append(e.Assertions, Assertion{Name: "self_handles_discovery", Status: "unverified", Detail: "Per-run signed Helper self-handles probe did not return handles; no send attempted"})
 		return e
 	}
-	if (s.ID == "WEB-MEDIA-VARIANTS" || s.ID == "WEB-UPLOAD-NATIVE-STAGING") && !own.CleanupAccessibility {
-		e.Status = "limited"
-		e.Assertions = append(e.Assertions, Assertion{Name: "cleanup_accessibility", Status: "limited", Detail: "needs Messages Accessibility grant"})
+	var cleanupReady bool
+	e, cleanupReady = nativeMessagesCleanupGate(s.ID, e, own.CleanupAccessibility)
+	if !cleanupReady {
 		return e
 	}
 	if strings.HasPrefix(s.ID, "MSG-GROUP-") || s.ID == "MSG-SEND-RCS-GROUP" {
