@@ -39,13 +39,25 @@ func runPhotosReal(ctx context.Context, s Scenario, e Evidence) Evidence {
 		return e
 	}
 	identity := fmt.Sprintf("%x", sha256.Sum256(binary))
+	recoveryPath := os.Getenv("AB_PHOTOS_CLEANUP_MANIFEST")
+	recoveryDigest := os.Getenv("AB_PHOTOS_CLEANUP_DIGEST")
+	if recoveryPath == "" && recoveryDigest == "" {
+		if requestDigest, readErr := os.ReadFile(report + ".cleanup.sha256"); readErr == nil {
+			recoveryPath = report + ".cleanup.json"
+			recoveryDigest = string(requestDigest)
+		}
+	}
 	cachedIdentity, _ := os.ReadFile(report + ".sha256")
 	cached, _ := os.ReadFile(report)
-	if info, statErr := os.Stat(report); statErr == nil && s.ID != "PHO-IDLE" && time.Since(info.ModTime()) < 15*time.Minute && string(cachedIdentity) == identity && photosReportPassed(cached) {
+	if info, statErr := os.Stat(report); statErr == nil && recoveryPath == "" && recoveryDigest == "" && s.ID != "PHO-IDLE" && time.Since(info.ModTime()) < 15*time.Minute && string(cachedIdentity) == identity && photosReportPassed(cached) {
 		add("signed_helper_probe", true)
 	} else {
 		os.Remove(report)
-		out, err = exec.CommandContext(ctx, "open", "-n", "-W", "-a", app, "--args", "photos-real-checks", s.ID, "--report", report).CombinedOutput()
+		args := []string{"-n", "-W", "-a", app, "--args", "photos-real-checks", s.ID, "--report", report}
+		if recoveryPath != "" || recoveryDigest != "" {
+			args = append(args, "--cleanup-manifest", recoveryPath, "--cleanup-digest", recoveryDigest)
+		}
+		out, err = exec.CommandContext(ctx, "open", args...).CombinedOutput()
 		add("signed_helper_probe", err == nil)
 		if err == nil {
 			_ = os.WriteFile(report+".sha256", []byte(identity), 0600)
@@ -85,8 +97,12 @@ func runPhotosReal(ctx context.Context, s Scenario, e Evidence) Evidence {
 	for _, name := range []string{"read_passed", "import_passed", "original_passed", "cleanup_passed"} {
 		add(name, result[name] == true)
 	}
-	for _, name := range []string{"asset_count", "original_digest", "library_asset_count"} {
+	for _, name := range []string{"asset_count", "original_digest", "library_asset_count", "recovered_test_asset_count"} {
 		e.Metrics[name] = result[name]
+	}
+	if e.Passed && recoveryPath == report+".cleanup.json" {
+		_ = os.Remove(report + ".cleanup.sha256")
+		_ = os.Remove(recoveryPath)
 	}
 	if s.ID == "PHO-IDLE" && e.Passed {
 		return wholeHelperIdleReal(world.WithOptions(ctx, world.Options{Scope: "photos:read,system:read"}), e)

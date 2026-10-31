@@ -61,7 +61,9 @@ enum HelperLabCommand {
             var failure: (any Error)?
             Task { @MainActor in
                 do {
-                    let result = try await PhotosRealProof.run(arguments[1])
+                    let recoveryPath = arguments.firstIndex(of: "--cleanup-manifest").flatMap { $0 + 1 < arguments.count ? arguments[$0 + 1] : nil }
+                    let recoveryDigest = arguments.firstIndex(of: "--cleanup-digest").flatMap { $0 + 1 < arguments.count ? arguments[$0 + 1] : nil }
+                    let result = try await PhotosRealProof.run(arguments[1], recoveryPath: recoveryPath, recoveryDigest: recoveryDigest)
                     try JSONEncoder().encode(result).write(to: reportURL, options: .atomic)
                 } catch { failure = error }
                 finished = true
