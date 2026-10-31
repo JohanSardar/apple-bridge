@@ -3,6 +3,11 @@ import Foundation
 import SourceSupport
 
 public struct MailQualification: Sendable {
+    public static func deadline(after interval: TimeInterval, action: @escaping @Sendable () -> Void) -> DispatchWorkItem {
+        let deadline = DispatchWorkItem(block: action)
+        DispatchQueue.global().asyncAfter(deadline: .now() + interval, execute: deadline)
+        return deadline
+    }
     private let script: MailCommands.Script
     public init(script: @escaping MailCommands.Script = MailCommands.run) { self.script = script }
     public func run(scenario: String, tag: String) async throws -> JSON {

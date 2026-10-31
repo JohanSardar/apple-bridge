@@ -26,6 +26,15 @@ private actor QualificationMailFake {
 }
 
 func checkMailQualification() async throws {
+    let fired = DispatchSemaphore(value: 0)
+    await MainActor.run { _ = MailQualification.deadline(after: 0.01) { _ = fired.signal() } }
+    try require(fired.wait(timeout: .now() + 2) == .success)
+    let cancelled = DispatchSemaphore(value: 0)
+    await MainActor.run {
+        let deadline = MailQualification.deadline(after: 0.01) { _ = cancelled.signal() }
+        deadline.cancel()
+    }
+    try require(cancelled.wait(timeout: .now() + 0.05) == .timedOut)
     for scenario in ["MAIL-SEND-SELF-REAL", "MAIL-DRAFT-REAL", "MAIL-ORGANIZE-REAL", "MAIL-BODY-FIXTURE"] {
         let fake = QualificationMailFake()
         let proof = try await MailQualification(script: { try await fake.run($0) }).run(scenario: scenario, tag: "[ab-test] fixture")
