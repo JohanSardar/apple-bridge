@@ -1,93 +1,131 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[14.39 14.93 15.39] cpus=8 other_heavy=1"
+    "quiet": true,
+    "summary": "air: load=[4.1 4.52 5.85] cpu_idle=84% cpus=8 other_heavy=0"
   },
-  "run_id": "run_01M5G1FMEMJC68RYZYF43R1ZP9",
+  "run_id": "run_01M6A2V7Z1WM5WABJ8V3067TXY",
   "metrics": {
+    "capture_observer_resets": 0,
     "profile": {
+      "change_sized_history_proven": true,
       "cold": {
-        "query_ms": 24.99217912554741,
         "backup_ms": 0,
         "close_ms": 0,
-        "decode_ms": 9.543320629745722,
-        "total_ms": 34.9417079705745,
-        "connection_open_ms": 0.4062082152813673
+        "decode_ms": 17.441012430936098,
+        "query_ms": 21.11023711040616,
+        "total_ms": 39.159541483968496,
+        "connection_open_ms": 0.6082919426262379
       },
+      "fixture_reminders": 1000,
       "iterations": 200,
       "mode": "persistent_typed",
-      "profile_total_ms": 5076.7543751280755,
+      "private_native_copy": true,
+      "profile_total_ms": 9032.435458153486,
       "responsiveness": {
-        "cold_full_elapsed_ms": 713.2708332501352,
         "main_queue_delay": {
-          "p95_ms": 0.014500226825475693,
-          "max_ms": 0.036166515201330185,
+          "samples": 129,
           "under_16_ms": true,
-          "samples": 370
-        }
+          "p95_ms": 0.025166664272546768,
+          "max_ms": 0.06095832213759422
+        },
+        "cold_full_elapsed_ms": 217.65425009652972
       },
+      "source_reminders": 404,
+      "source_stores": 4,
       "warm_full": {
-        "decode": {
-          "p95_ms": 6.059299688786268,
-          "max_ms": 6.524208700284362,
-          "p50_ms": 5.018833093345165,
-          "samples": 200
-        },
-        "query": {
-          "p95_ms": 23.836928652599454,
-          "max_ms": 27.766255661845207,
-          "p50_ms": 19.177994690835476,
-          "samples": 200
-        },
-        "connection_open": {
-          "p95_ms": 0,
-          "max_ms": 0,
-          "p50_ms": 0,
-          "samples": 200
+        "total": {
+          "samples": 200,
+          "p50_ms": 23.435374721884727,
+          "p95_ms": 33.38137501850724,
+          "max_ms": 62.61304160580039
         },
         "backup": {
-          "p95_ms": 0,
-          "max_ms": 0,
+          "samples": 200,
           "p50_ms": 0,
-          "samples": 200
+          "p95_ms": 0,
+          "max_ms": 0
         },
+        "query": {
+          "samples": 200,
+          "p50_ms": 13.943849131464958,
+          "p95_ms": 19.775483291596174,
+          "max_ms": 49.67858223244548
+        },
+        "connection_open": {
+          "samples": 200,
+          "p50_ms": 0,
+          "p95_ms": 0,
+          "max_ms": 0
+        },
+        "decode": {
+          "samples": 200,
+          "p50_ms": 9.630609303712845,
+          "p95_ms": 13.102608732879162,
+          "max_ms": 14.679308980703354
+        }
+      },
+      "warm_incremental_changed_1": {
         "total": {
-          "p95_ms": 29.432791750878096,
-          "max_ms": 34.05870799906552,
-          "p50_ms": 24.278625147417188,
-          "samples": 200
+          "p50_ms": 0.4809992387890816,
+          "samples": 200,
+          "p95_ms": 0.5787494592368603,
+          "max_ms": 0.8765412494540215
+        }
+      },
+      "warm_incremental_changed_10": {
+        "total": {
+          "p50_ms": 0.5255830474197865,
+          "samples": 200,
+          "p95_ms": 0.6067086942493916,
+          "max_ms": 0.7312921807169914
+        }
+      },
+      "warm_incremental_changed_100": {
+        "total": {
+          "p50_ms": 0.9650415740907192,
+          "samples": 200,
+          "p95_ms": 1.0554171167314053,
+          "max_ms": 1.1504581198096275
+        }
+      },
+      "warm_incremental_changed_1000": {
+        "total": {
+          "samples": 200,
+          "p50_ms": 6.163541693240404,
+          "p95_ms": 6.7861247807741165,
+          "max_ms": 8.049166295677423
         }
       },
       "warm_incremental_unchanged": {
-        "query": {
-          "p95_ms": 0.028667272999882698,
-          "max_ms": 0.04412536509335041,
-          "p50_ms": 0.026666559278964996,
-          "samples": 200
-        },
-        "connection_open": {
-          "p95_ms": 0,
-          "max_ms": 0,
-          "p50_ms": 0,
-          "samples": 200
+        "total": {
+          "p50_ms": 0.2527921460568905,
+          "samples": 200,
+          "p95_ms": 0.2987915650010109,
+          "max_ms": 0.36074966192245483
         },
         "backup": {
-          "p95_ms": 0,
-          "max_ms": 0,
           "p50_ms": 0,
-          "samples": 200
+          "samples": 200,
+          "p95_ms": 0,
+          "max_ms": 0
+        },
+        "connection_open": {
+          "p50_ms": 0,
+          "samples": 200,
+          "p95_ms": 0,
+          "max_ms": 0
+        },
+        "query": {
+          "p50_ms": 0.034042634069919586,
+          "samples": 200,
+          "p95_ms": 0.03808317705988884,
+          "max_ms": 0.0565825030207634
         },
         "decode": {
-          "p95_ms": 0.17899996601045132,
-          "max_ms": 0.399791169911623,
-          "p50_ms": 0.17000059597194195,
-          "samples": 200
-        },
-        "total": {
-          "p95_ms": 0.206333352252841,
-          "max_ms": 0.4274998791515827,
-          "p50_ms": 0.1967914868146181,
-          "samples": 200
+          "p50_ms": 0.21845800802111626,
+          "samples": 200,
+          "p95_ms": 0.26066694408655167,
+          "max_ms": 0.3147907555103302
         }
       }
     }
@@ -95,8 +133,8 @@
   "scenario": "REM-STORE-PERF",
   "level": "real",
   "passed": true,
-  "git_sha": "e1d36f710a94267e77e670be40845fb127b1f3f9",
-  "at": "2026-10-21T20:12:16.212795Z",
+  "git_sha": "c030f7aec562dc53496c354fe124e97d70cc1a2d",
+  "at": "2026-10-31T22:56:20.449521Z",
   "assertions": [
     {
       "name": "private_profile_directory",
@@ -123,7 +161,31 @@
       "passed": true
     },
     {
+      "name": "warm_incremental_changed_1_200_samples_within_budget",
+      "passed": true
+    },
+    {
+      "name": "warm_incremental_changed_10_200_samples_within_budget",
+      "passed": true
+    },
+    {
+      "name": "warm_incremental_changed_100_200_samples_within_budget",
+      "passed": true
+    },
+    {
+      "name": "warm_incremental_changed_1000_200_samples_within_budget",
+      "passed": true
+    },
+    {
       "name": "full_and_incremental_measured",
+      "passed": true
+    },
+    {
+      "name": "changed_history_measured",
+      "passed": true
+    },
+    {
+      "name": "changed_reads_use_private_native_copy",
       "passed": true
     },
     {
@@ -138,16 +200,44 @@
   "latency": {
     "warm_full": {
       "samples": 200,
-      "p50_ms": 24.278625147417188,
-      "p95_ms": 29.432791750878096,
-      "max_ms": 34.05870799906552,
+      "p50_ms": 23.435374721884727,
+      "p95_ms": 33.38137501850724,
+      "max_ms": 62.61304160580039,
+      "timeouts": 0
+    },
+    "warm_incremental_changed_1": {
+      "samples": 200,
+      "p50_ms": 0.4809992387890816,
+      "p95_ms": 0.5787494592368603,
+      "max_ms": 0.8765412494540215,
+      "timeouts": 0
+    },
+    "warm_incremental_changed_10": {
+      "samples": 200,
+      "p50_ms": 0.5255830474197865,
+      "p95_ms": 0.6067086942493916,
+      "max_ms": 0.7312921807169914,
+      "timeouts": 0
+    },
+    "warm_incremental_changed_100": {
+      "samples": 200,
+      "p50_ms": 0.9650415740907192,
+      "p95_ms": 1.0554171167314053,
+      "max_ms": 1.1504581198096275,
+      "timeouts": 0
+    },
+    "warm_incremental_changed_1000": {
+      "samples": 200,
+      "p50_ms": 6.163541693240404,
+      "p95_ms": 6.7861247807741165,
+      "max_ms": 8.049166295677423,
       "timeouts": 0
     },
     "warm_incremental_unchanged": {
       "samples": 200,
-      "p50_ms": 0.1967914868146181,
-      "p95_ms": 0.206333352252841,
-      "max_ms": 0.4274998791515827,
+      "p50_ms": 0.2527921460568905,
+      "p95_ms": 0.2987915650010109,
+      "max_ms": 0.36074966192245483,
       "timeouts": 0
     }
   },

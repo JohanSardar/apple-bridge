@@ -819,9 +819,6 @@ features:
       - scenario: WEB-REM-ACTIONS
         level: web
         reason: "Trusted phone taps cover details, delete confirmation and cancellation in all three engines, with trusted touch pointer assertions and zero writes. App-specific paint/layout and complete own-input costs remain unproven: Event Timing has a 16 ms reporting floor, Long Tasks has a 50 ms floor, and Paint Timing reports document paints rather than app-update paint or layout cost. Counts and digests are in the focused WEB-REM-ACTIONS evidence; no swipe-gesture proof is claimed by the tap route."
-      - scenario: REM-STORE-PERF
-        level: real
-        reason: "Native warm-full and unchanged modes pass; changed-set modes require native fixtures and remain unproven. Synthetic changed 1/10/100/1000 modes pass."
       - scenario: WEB-REM-PARITY
         level: real
         reason: "Flag: native effect proof could not run because all three Air runner slots remained occupied. Controls stay hidden until real readback and cleanup pass."
