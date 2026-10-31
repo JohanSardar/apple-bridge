@@ -35,17 +35,18 @@ enum RemindersParityProof {
         do {
             try store.save(first, commit: true)
             try store.save(second, commit: true)
+            let firstID = first.calendarItemIdentifier, secondID = second.calendarItemIdentifier
             let sessions = try RemindersStore.paths().map { try RemindersStoreSession(path: $0) }
             var entityNames: [Int64: String] = [:]
-            func observe(_ predicate: (TypedStoreSnapshot, StoreListRow, StoreReminderRow, StoreReminderRow) -> Bool) async throws -> Bool {
+            @MainActor func observe(_ predicate: (TypedStoreSnapshot, StoreListRow, StoreReminderRow, StoreReminderRow) -> Bool) async throws -> Bool {
                 for _ in 0..<60 {
                     for session in sessions {
                         let read = try await session.read()
                         let snapshot = read.snapshot
                         entityNames = read.entities
                         if let row = snapshot.lists.values.first(where: { $0.identity.uuid?.uuidString == listID || $0.identity.textIdentifier == listID }),
-                           let parent = snapshot.reminders.values.first(where: { $0.calendarItemIdentifier == first.calendarItemIdentifier }),
-                           let child = snapshot.reminders.values.first(where: { $0.calendarItemIdentifier == second.calendarItemIdentifier }), predicate(snapshot, row, parent, child) { return true }
+                           let parent = snapshot.reminders.values.first(where: { $0.calendarItemIdentifier == firstID }),
+                           let child = snapshot.reminders.values.first(where: { $0.calendarItemIdentifier == secondID }), predicate(snapshot, row, parent, child) { return true }
                     }
                     try await Task.sleep(for: .milliseconds(100))
                 }
