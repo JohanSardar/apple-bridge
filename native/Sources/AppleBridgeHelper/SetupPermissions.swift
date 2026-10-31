@@ -15,7 +15,7 @@ final class SetupPermissions {
         let clipboard = NSPasteboard.general.accessBehavior
         result["clipboard"] = clipboard == .alwaysAllow ? "granted" : clipboard == .alwaysDeny ? "denied" : "not_determined"
         let contact = CNContactStore.authorizationStatus(for: .contacts)
-        result["contacts"] = contact == .authorized ? "granted" : contact == .limited ? "limited" : contact == .notDetermined ? "not_determined" : "denied"
+        result["contacts"] = contact == .authorized ? "granted" : contact == .notDetermined ? "not_determined" : "denied"
         for (name, type) in [("calendar", EKEntityType.event), ("reminders", EKEntityType.reminder)] {
             let state = EKEventStore.authorizationStatus(for: type)
             result[name] = state == .fullAccess ? "granted" : state == .notDetermined ? "not_determined" : "denied"

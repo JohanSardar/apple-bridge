@@ -7,7 +7,7 @@ struct SetupPermission: Identifiable, Sendable {
     let pane: String
     var bundle: String? = nil
     var settingsURL: URL { URL(string: "x-apple.systempreferences:" + pane)! }
-    var fix: String { "Other enabled features still work. Open Settings, allow Apple Bridge for \(title), then return here. You can also skip for now." }
+    var fix: String { "Other enabled features still work. Open Settings, allow Apple Bridge for \(title), then return here. If needed, quit and reopen Apple Bridge. You can skip for now." }
 
     static let all: [Self] = [
         .init(id: "full_disk_access", title: "Full Disk Access", why: "Read Messages, Notes and local files.", pane: "com.apple.preference.security?Privacy_AllFiles"),

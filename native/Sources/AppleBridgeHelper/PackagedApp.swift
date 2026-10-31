@@ -5,7 +5,6 @@ import SwiftUI
 
 @MainActor
 final class PackagedApp: NSObject, NSApplicationDelegate {
-    let permissions = PermissionSession()
     let service = SMAppService.agent(plistName: "dev.applebridge.gateway.plist")
     var window: NSWindow?
     var setup: SetupModel?
@@ -142,7 +141,9 @@ final class PackagedApp: NSObject, NSApplicationDelegate {
         window.isReleasedWhenClosed = false
         let home = setupHome ?? gatewayHome()
         let model = SetupModel(home: home, testing: snapshotDirectory != nil)
-        model.install = { [weak self] in try self?.install() }
+        model.install = { [weak self] in try self?.service.register() }
+        model.syncStatus = { [weak self] in self?.service.status == .enabled }
+        DistributedNotificationCenter.default().addObserver(self, selector: #selector(reopenSetup), name: Notification.Name("dev.applebridge.setup.\(getpid())"), object: nil)
         window.contentView = NSHostingView(rootView: SetupView(model: model))
         window.minSize = NSSize(width: 860, height: 740)
         self.window = window

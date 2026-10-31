@@ -1,0 +1,59 @@
+{
+  "host_conditions": {
+    "quiet": true,
+    "summary": "air: load=[11.9 11.35 12.6] cpu_idle=52% cpus=10 other_heavy=0"
+  },
+  "run_id": "setup_01M69Y4Z1T0SGFFEGRGTWXCXXX",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "Q1-SETUP",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-31T21:34:16.122298Z",
+  "assertions": [
+    {
+      "name": "setup_sim_checks",
+      "passed": true
+    },
+    {
+      "name": "catalog",
+      "passed": true
+    },
+    {
+      "name": "fresh",
+      "passed": true
+    },
+    {
+      "name": "complete",
+      "passed": true
+    },
+    {
+      "name": "all-skipped",
+      "passed": true
+    },
+    {
+      "name": "persist",
+      "passed": true
+    },
+    {
+      "name": "reopen",
+      "passed": true
+    },
+    {
+      "name": "unknown",
+      "passed": true
+    },
+    {
+      "name": "limited",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

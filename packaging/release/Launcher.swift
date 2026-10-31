@@ -65,10 +65,10 @@ final class ReleaseApplication: NSObject, NSApplicationDelegate, SPUUpdaterDeleg
         alert.runModal()
     }
     @objc func setup() {
-        if let onboarding, onboarding.isRunning { NSRunningApplication(processIdentifier: onboarding.processIdentifier)?.activate(); return }
+        if let onboarding, onboarding.isRunning { DistributedNotificationCenter.default().postNotificationName(Notification.Name("dev.applebridge.setup.\(onboarding.processIdentifier)"), object: nil, userInfo: nil, deliverImmediately: true); NSRunningApplication(processIdentifier: onboarding.processIdentifier)?.activate(); return }
         let process = Process()
         process.executableURL = Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/AppleBridgeHelper")
-        do { try process.run(); onboarding = process } catch { showError(error) }
+        do { try process.run(); onboarding = process; window?.orderOut(nil) } catch { showError(error) }
     }
     @objc func checkUpdates() { updater?.checkForUpdates(nil) }
     @objc func toggleLogin() {

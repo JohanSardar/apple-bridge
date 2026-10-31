@@ -10,10 +10,12 @@ final class SetupModel: ObservableObject {
     @Published var qr: NSImage?
     @Published var busy: Set<String> = []
     @Published var remoteReady = false
+    @Published var syncEnabled = false
     @Published var connectorURL = ""
     let home: URL
     let permissions = SetupPermissions()
     var install: (() throws -> Void)?
+    var syncStatus: (() -> Bool)?
     var refreshTask: Task<Void, Never>?
     var pairingExpiry: Date?
     let testing: Bool
@@ -51,6 +53,7 @@ final class SetupModel: ObservableObject {
     }
     func refresh() async {
         statuses = await permissions.status()
+        syncEnabled = syncStatus?() ?? false
         if let expiry = pairingExpiry, expiry < Date() { qr = nil; message = "Pairing code expired. Click Show Pairing QR to try again, or continue without a phone."; pairingExpiry = nil }
         guard !testing else { return }
         struct Remote: Decodable { let state: String; let url: String }
@@ -109,9 +112,18 @@ final class SetupModel: ObservableObject {
         } catch { return nil }
     }
     func enableSync() {
-        guard !testing else { return }
-        do { try install?(); message = "Background sync is on." }
-        catch { message = "Sync could not start. Move Apple Bridge to Applications, then allow it in System Settings > General > Login Items & Extensions. You can continue and try again later." }
+        guard !testing, busy.insert("sync").inserted else { return }
+        let path = home.path
+        Task { @MainActor in
+            defer { busy.remove("sync") }
+            let data = await Task.detached { Self.command(["install-credentials"], home: path) }.value
+            do {
+                guard data != nil else { throw CocoaError(.fileWriteUnknown) }
+                try install?()
+                syncEnabled = syncStatus?() ?? false
+                message = syncEnabled ? "Background sync is on." : "Allow Apple Bridge in System Settings > General > Login Items & Extensions, then try again. You can continue for now."
+            } catch { message = "Sync could not start. Move Apple Bridge to Applications, then allow it in System Settings > General > Login Items & Extensions. You can continue and try again later." }
+        }
     }
     func enableRemote() {
         guard !testing, busy.insert("remote").inserted else { return }
@@ -190,7 +202,8 @@ struct SetupView: View {
             Text("Your Apple apps, ready for your AI.").font(.title2)
             Text("Choose what to share, pair your iPhone, and connect your AI. You can skip anything and return later.")
             Text("Keep Apple Bridge in Applications. Enable background sync to keep your data up to date after you close this window.")
-            Button("Enable Background Sync") { model.enableSync() }
+            Text(model.syncEnabled ? "✓ Background sync is on" : "Background sync is not enabled yet.")
+            Button(model.busy.contains("sync") ? "Starting…" : "Enable Background Sync") { model.enableSync() }.disabled(model.busy.contains("sync"))
         case 1:
             Text("Allow only what you want to use. Status refreshes automatically. Open Settings never requests access; Request Access may show a system prompt.")
             ForEach(SetupPermission.all) { permission in
@@ -232,6 +245,7 @@ struct SetupView: View {
             if !model.connectorURL.isEmpty { Text(model.connectorURL).font(.caption).textSelection(.enabled) }
         default:
             Text("You're ready to use what you enabled.").font(.title2)
+            Text(model.syncEnabled ? "✓ Background sync is on" : "Background sync is off — return to Welcome to enable it.")
             Text("\(SetupPermission.all.filter { model.state.label($0.id, status: model.statuses[$0.id]) == "Allowed" }.count) permissions allowed · \(model.state.skipped.count) skipped")
             Text(model.state.phone ? "✓ iPhone paired" : "iPhone not paired — Mac features still work.")
             ForEach(["Claude.ai", "ChatGPT"], id: \.self) { provider in
