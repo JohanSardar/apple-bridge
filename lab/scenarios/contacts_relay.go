@@ -4,11 +4,33 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/JohanSardar/apple-bridge/internal/contracts"
 	"github.com/JohanSardar/apple-bridge/lab/world"
 )
+
+func contactsRelayLookupChecks(ctx context.Context, s Scenario) Evidence {
+	sha, _ := exec.Command("git", "rev-parse", "HEAD").Output()
+	e := Evidence{RunID: contracts.NewID("run"), Scenario: s.ID, Level: "sim", GitSHA: strings.TrimSpace(string(sha)), At: time.Now().UTC()}
+	cmd := exec.CommandContext(ctx, "packaging/dev/build-native.sh")
+	cmd.Env = append(os.Environ(), "APPLE_BRIDGE_NATIVE_TARGET=ContactsLookupChecks")
+	_, err := cmd.CombinedOutput()
+	e.Assertions = append(e.Assertions, Assertion{Name: "contacts_lookup_checks_build", Passed: err == nil})
+	if err == nil {
+		directory, readErr := os.ReadFile("native/.build/native-output-1")
+		if readErr == nil {
+			output, runErr := exec.CommandContext(ctx, filepath.Join(strings.TrimSpace(string(directory)), "ContactsLookupChecks")).CombinedOutput()
+			e.Passed = runErr == nil && strings.TrimSpace(string(output)) == "single-fetch Contacts lookup and error handling: pass"
+		}
+	}
+	e.Assertions = append(e.Assertions, Assertion{Name: "single_fetch_missing_permission_and_transient_errors", Passed: e.Passed})
+	return e
+}
 
 func relayContactsChecks(ctx context.Context, w *world.World, e *Evidence, add func(string, bool)) {
 	tag := "[ab-test " + e.RunID + "]"

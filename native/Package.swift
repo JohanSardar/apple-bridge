@@ -44,6 +44,7 @@ let package = Package(
         .executableTarget(name: "RecordingsChecks", dependencies: ["VoiceMemosSource", "VoicemailSource", "SourceSupport"]),
         .executableTarget(name: "CallsChecks", dependencies: ["CallsSource", "SourceSupport"]),
         .executableTarget(name: "SafariChecks", dependencies: ["SafariSource", "SourceSupport"]),
+        .executableTarget(name: "ContactsLookupChecks", dependencies: ["ContactsSource", "SourceSupport"]),
         .executableTarget(name: "SourceSupportChecks", dependencies: ["SourceSupport"]),
         .executableTarget(name: "ActionsChecks", dependencies: ["ShortcutsSource", "SourceSupport"]),
         .executableTarget(name: "ShortcutsChecks", dependencies: ["ShortcutsSource", "SourceSupport"]),

@@ -142,13 +142,19 @@ public final class ContactsSource: Source {
             throw error
         }
     }
-    private func isAbsent(_ key: String) throws -> Bool {
-        do { _ = try fresh(key); return false }
+    public nonisolated static func existingContact(fetch: () throws -> CNContact, authorized: () -> Bool) throws -> CNContact? {
+        do { return try fetch() }
         catch let error as NSError {
-            guard authorized else { throw SourceFailure.permissionMissing }
+            guard authorized() else { throw SourceFailure.permissionMissing }
             guard error.domain == CNErrorDomain && error.code == CNError.Code.recordDoesNotExist.rawValue else { throw error }
-            return true
+            return nil
         }
+    }
+    private func existingContact(_ key: String) throws -> CNContact? {
+        try Self.existingContact(fetch: { try fresh(key) }, authorized: { authorized })
+    }
+    private func isAbsent(_ key: String) throws -> Bool {
+        try existingContact(key) == nil
     }
     private func scan(into sink: any ObservationSink, live: Bool, force: Bool = false, notificationAt: UInt64 = 0, poll: Bool = false) async throws {
         let scanID = UUID().uuidString
@@ -209,12 +215,10 @@ public final class ContactsSource: Source {
         }
         } else {
             for key in batch.changedContactIdentifiers {
-                if try isAbsent(key) { current.removeValue(forKey: "contacts.contact/" + key) }
-                else {
-                    let contact = try fresh(key)
+                if let contact = try existingContact(key) {
                     trace.record("contacts_contact_fetched", fields: metadata)
                     current["contacts.contact/" + key] = observation("contacts.contact", key, try data(contact))
-                }
+                } else { current.removeValue(forKey: "contacts.contact/" + key) }
             }
             if !batch.changedGroupIdentifiers.isEmpty {
                 let changedGroups = try store.groups(matching: CNGroup.predicateForGroups(withIdentifiers: batch.changedGroupIdentifiers))

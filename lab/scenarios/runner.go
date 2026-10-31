@@ -702,6 +702,9 @@ func runScenario(ctx context.Context, s Scenario, level string) Evidence {
 		return runNotes(ctx, s, level)
 	}
 	if s.ID == "CON-RELAY" {
+		if level == "sim" {
+			return contactsRelayLookupChecks(ctx, s)
+		}
 		return runRelayWorld(ctx, s, level, true)
 	}
 	if s.ID == "CON-ME" || s.ID == "CON-NOTE" {
