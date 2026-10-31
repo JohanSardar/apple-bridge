@@ -69,7 +69,7 @@ func runMailCommandsReal(ctx context.Context, s Scenario, level string) (e Evide
 		e.Assertions = append(e.Assertions, Assertion{Name: name, Passed: ok})
 		e.Passed = e.Passed && ok
 	}
-	w, err := world.NewRealWithSetup(ctx, level, 0, world.NativeSetup{FilesystemTruth: true, DevelopmentIdentity: true}, world.BlobOptions{Scope: "mail:read,mail:write,system:read"})
+	w, err := world.NewRealWithSetup(ctx, level, 0, world.NativeSetup{FilesystemTruth: true}, world.BlobOptions{Scope: "mail:read,mail:write,system:read"})
 	add("mail_native_world", err == nil)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
