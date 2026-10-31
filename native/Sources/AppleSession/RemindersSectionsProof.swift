@@ -3,6 +3,7 @@ import Foundation
 import AppKit
 import ApplicationServices
 import EventKit
+import Carbon
 import RemindersStore
 import MessagesSource
 import SourceSupport
@@ -30,6 +31,7 @@ enum RemindersSectionsProof {
         }
         var checks: [String: JSON] = [:]
         var failure = ""
+        var stage = "fixture"
         do {
             let item = EKReminder(eventStore: store)
             item.calendar = list
@@ -110,6 +112,17 @@ enum RemindersSectionsProof {
                 CGEvent(mouseEventSource: nil, mouseType: .leftMouseUp, mouseCursorPosition: end, mouseButton: .left)?.post(tap: .cghidEventTap)
                 try await Task.sleep(for: .milliseconds(500))
             }
+            stage = "select_test_list"
+            let target = NSAppleEventDescriptor(bundleIdentifier: "com.apple.reminders")
+            if AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false) == noErr {
+                var error: NSDictionary?
+                _ = NSAppleScript(source: "with timeout of 5 seconds\ntell application \"Reminders\"\nset matches to every list whose name is \"" + title + "\"\nif (count matches) is not 1 then error number -2700\nshow item 1 of matches\nactivate\nend tell\nend timeout")?.executeAndReturnError(&error)
+                guard error == nil else { throw SourceFailure.unavailable }
+            }
+            for _ in 0..<30 {
+                if find(title).count == 1 { break }
+                try await Task.sleep(for: .milliseconds(100))
+            }
             var listElement = try unique(title)
             for _ in 0..<12 {
                 if value(listElement, kAXRoleAttribute) == kAXRowRole { break }
@@ -126,6 +139,7 @@ enum RemindersSectionsProof {
             ownedSelection = listElement
             try fence()
             let names = [title + " first", title + " second"]
+            stage = "create_sections"
             for name in names {
                 try press(try unique("File", role: kAXMenuBarItemRole))
                 try press(try unique("New Section", role: kAXMenuItemRole))
@@ -156,12 +170,15 @@ enum RemindersSectionsProof {
                 } while ContinuousClock.now < deadline
                 return false
             }
+            stage = "section_order_readback"
             checks["section_order_readback"] = .bool(try await observed(false, member: false))
+            stage = "move_item_to_section"
             try await drag(try unique(item.title), to: unique(names[1]))
             checks["section_membership_readback"] = .bool(try await observed(false, member: true))
+            stage = "reorder_sections"
             try await drag(try unique(names[1]), to: unique(names[0]))
             checks["section_move_readback"] = .bool(try await observed(true, member: true))
-        } catch { failure = String(describing: error) }
+        } catch { failure = "The test stopped at " + stage + ": " + String(describing: error) }
         store.reset()
         if let owned = store.calendar(withIdentifier: identifier), owned.title == title {
             try store.removeCalendar(owned, commit: true)
