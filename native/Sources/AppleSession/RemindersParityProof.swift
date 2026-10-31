@@ -67,7 +67,8 @@ enum RemindersParityProof {
                 let result = command.executeAndReturnError(&error)
                 if let error {
                     diagnostics[stage + "_script_error"] = .number((error[NSAppleScript.errorNumber] as? NSNumber)?.doubleValue ?? 0)
-                    if (error[NSAppleScript.errorNumber] as? NSNumber)?.intValue != -1712 { throw SourceFailure.unavailable }
+                    if let range = error[NSAppleScript.errorRange] as? NSValue { diagnostics[stage + "_script_error_offset"] = .number(Double(range.rangeValue.location)) }
+                    throw SourceFailure.unavailable
                 }
                 return result
             }
@@ -85,12 +86,12 @@ enum RemindersParityProof {
             checks["fixture_visible"] = .bool(visible)
             guard visible else { throw SourceFailure.unavailable }
             stage = "flag"
-            try script("set fixtureItems to every reminder of fixtureList whose name is \"" + first.title + "\"\nif (count fixtureItems) is not 1 then error number -2701\nset flagged of item 1 of fixtureItems to true")
+            try script("set fixtureItems to every reminder of fixtureList whose name is \"" + first.title + "\"\nif (count fixtureItems) is not 1 then error number -2701\nignoring application responses\nset flagged of item 1 of fixtureItems to true\nend ignoring")
             checks["flag_readback"] = .bool(try await observe { _, _, parent, _ in parent.flagged == true })
-            try script("set fixtureItems to every reminder of fixtureList whose name is \"" + first.title + "\"\nif (count fixtureItems) is not 1 then error number -2701\nset flagged of item 1 of fixtureItems to false")
+            try script("set fixtureItems to every reminder of fixtureList whose name is \"" + first.title + "\"\nif (count fixtureItems) is not 1 then error number -2701\nignoring application responses\nset flagged of item 1 of fixtureItems to false\nend ignoring")
             checks["flag_clear_readback"] = .bool(try await observe { _, _, parent, _ in parent.flagged == false })
             stage = "list_icon"
-            try script("set emblem of fixtureList to \"star\"")
+            try script("ignoring application responses\nset emblem of fixtureList to \"star\"\nend ignoring")
             checks["list_icon_readback"] = .bool(try await observe { _, row, _, _ in row.emblem == "star" })
             stage = "navigation"
             try script("show fixtureList\nactivate")
