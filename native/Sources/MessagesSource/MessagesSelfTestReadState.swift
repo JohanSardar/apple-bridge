@@ -13,7 +13,8 @@ public struct MessagesSelfTestReadState: Sendable, Codable {
     }
 
     public func matches(_ current: MessagesSelfTestReadState) -> Bool {
-        unreadCount == current.unreadCount && (unreadIDs == current.unreadIDs || unreadCount > 0)
+        if !unreadIDs.isEmpty && unreadIDs == current.unreadIDs { return true }
+        return unreadCount == current.unreadCount && (unreadIDs == current.unreadIDs || unreadCount > 0)
     }
 
     static func savedURL(_ chat: String) -> URL {
