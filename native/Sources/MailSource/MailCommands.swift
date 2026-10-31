@@ -1,10 +1,18 @@
 import Foundation
 import CryptoKit
 import Carbon
+import AppKit
 import SourceSupport
 
 public enum MailCommandFailure: Error, LocalizedError, Sendable {
     case permission, timeout, rejected
+    public static func appleEvent(_ code: Int) -> Self {
+        switch code {
+        case -1712: .timeout
+        case -1743, -1744: .permission
+        default: .rejected
+        }
+    }
     public var errorDescription: String? {
         switch self {
         case .permission: "Mail automation is not allowed. Enable Mail for Apple Bridge in System Settings > Privacy & Security > Automation."
@@ -19,19 +27,21 @@ public struct MailCommands: Sendable {
     private let script: Script
     public static let operations = ["mail.create_draft", "mail.send", "mail.move", "mail.set_flag", "mail.mark_read", "mail.delete"]
     public init(script: @escaping Script = MailCommands.run) { self.script = script }
-    @MainActor public static func run(_ body: String) throws -> String {
+    @MainActor public static func run(_ body: String) async throws -> String {
+        if NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.mail").isEmpty {
+            guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.mail") else { throw MailCommandFailure.rejected }
+            let configuration = NSWorkspace.OpenConfiguration()
+            configuration.activates = false
+            do { _ = try await NSWorkspace.shared.openApplication(at: url, configuration: configuration) }
+            catch { throw MailCommandFailure.rejected }
+        }
         let target = NSAppleEventDescriptor(bundleIdentifier: "com.apple.mail")
-        guard AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false) == noErr else { throw MailCommandFailure.permission }
+        let permission = AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false)
+        guard permission == noErr else { throw MailCommandFailure.appleEvent(Int(permission)) }
         var error: NSDictionary?
         guard let script = NSAppleScript(source: "with timeout of 10 seconds\ntell application id \"com.apple.mail\"\n" + body + "\nend tell\nend timeout") else { throw SourceFailure.invalid }
         let result = script.executeAndReturnError(&error)
-        if let error {
-            switch error["NSAppleScriptErrorNumber"] as? Int {
-            case -1712: throw MailCommandFailure.timeout
-            case -1743: throw MailCommandFailure.permission
-            default: throw MailCommandFailure.rejected
-            }
-        }
+        if let error { throw MailCommandFailure.appleEvent(error["NSAppleScriptErrorNumber"] as? Int ?? 0) }
         return result.stringValue ?? ""
     }
     public static func failureMessage(_ error: any Error) -> String {
