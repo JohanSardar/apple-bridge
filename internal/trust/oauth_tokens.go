@@ -94,7 +94,7 @@ func (a *Authority) ExchangeOAuth(grant, client, code, redirect, verifier, resou
 			return contracts.ErrUnauthorized
 		}
 		for i, p := range d.Principals {
-			if p.ID != principal || p.Kind != "agent" || p.RevokedAt != nil {
+			if p.ID != principal || p.Kind != "agent" || !principalActive(p) {
 				continue
 			}
 			if scope != "" && scope != strings.Join(grantStrings(p.Grants), " ") {

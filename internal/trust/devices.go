@@ -77,8 +77,10 @@ func (a *Authority) SavePasskey(key Passkey, enroll string, principal *Principal
 		} else {
 			found := false
 			for _, p := range d.Principals {
-				if p.ID == principal.ID && p.Kind == "device" {
-					found = true
+				if p.ID == principal.ID && p.Kind == "device" && principalActive(p) {
+					for _, session := range d.Devices {
+						found = found || session.DeviceID == p.ID && validDevice(session, time.Now())
+					}
 				}
 			}
 			if !found {

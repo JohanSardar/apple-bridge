@@ -601,14 +601,17 @@ features:
     milestone: W1
     modules: [trust, operations, web, frontdoor]
     depends_on: [web.frontdoor, web.remote]
-    status: done
+    status: limited
     scenarios:
+      - {id: SEC-REMOTE-ACCESS, levels: [sim, real]}
       - {id: WEB-AGENT-CREDENTIALS, levels: [sim]}
       - {id: WEB-AGENT-ACTIVITY, levels: [sim]}
       - {id: WEB-AGENT-LEVELS, levels: [sim]}
       - {id: WEB-AGENT-OAUTH, levels: [sim, web]}
       - {id: WEB-AGENT-OAUTH-CIMD, levels: [sim, web]}
     notes: Agent credentials and levels, durable gateway approvals, redacted 90-day activity, public-client OAuth and grouped settings/consent screens pass sim and browser coverage. CIMD rejects malformed redirects and client URLs, oversized metadata, private redirects and DNS rebinding before connections. Replica agent delegation is covered by web.relay.
+    limits:
+      - {scenario: SEC-REMOTE-ACCESS, level: real, reason: "Air security check could not start: the shared connector app lock was held by an unrelated queued Q2 relay job for 39 minutes. S1 waited 14 minutes, then cancelled its own queued request without interrupting other tickets. Public endpoint denial and revocation timing remain unproved; the complete adversarial sim and local race checks pass."}
   - id: web.demo
     title: Synthetic demo world serving the web app (bridge-lab demo)
     requirements: [R-WEB-UI]

@@ -410,7 +410,7 @@ func (a *Authority) AuthenticateCertificate(cert *x509.Certificate) (Principal, 
 	err = func() error {
 		hash := Fingerprint(cert.Raw)
 		for _, candidate := range d.Principals {
-			if candidate.Kind == "replica" && candidate.Fingerprint == hash {
+			if candidate.Kind == "replica" && candidate.Fingerprint == hash && principalActive(candidate) {
 				p = candidate
 				return nil
 			}

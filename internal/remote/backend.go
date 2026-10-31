@@ -13,11 +13,11 @@ import (
 
 func (r *Remote) serve(ctx context.Context, cfg Config) {
 	status := Status{ID: cfg.ID, State: "starting", Backend: cfg.Backend, TLSTermination: "on this Mac"}
-	fail := func(err error) {
+	fail := func(_ error) {
 		if ctx.Err() == nil {
-			fmt.Fprintln(os.Stderr, "remote setup failed:", err)
+			fmt.Fprintln(os.Stderr, "remote setup failed; turn Remote off and try again")
 			status.State = "error"
-			status.LastError = "Remote setup failed"
+			status.LastError = "Remote setup failed. Turn Remote off and try again."
 			r.publish(status)
 		}
 	}
