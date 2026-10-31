@@ -32,6 +32,7 @@ enum CalendarParityProof {
         let event = EKEvent(eventStore: store)
         event.calendar = calendar; event.title = title + " event"
         event.startDate = Date().addingTimeInterval(86400); event.endDate = event.startDate.addingTimeInterval(3600)
+        let eventStart = event.startDate!, eventEnd = event.endDate!
         let location = EKStructuredLocation(title: "[ab-test] location")
         location.geoLocation = CLLocation(latitude: 41.88, longitude: -87.63)
         location.radius = 100
@@ -44,7 +45,6 @@ enum CalendarParityProof {
             try store.save(event, span: .thisEvent, commit: true)
             let identifier = event.calendarItemIdentifier, external = event.calendarItemExternalIdentifier ?? ""
             let eventTitle = event.title ?? ""
-            let eventStart = event.startDate!, eventEnd = event.endDate!
             let database = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Group Containers/group.com.apple.calendar/Calendar.sqlitedb")
             func row() throws -> [String: JSON]? {
                 try CalendarStoreSnapshot.read(path: database.path).event(identifier: identifier, external: external, calendar: calendarID, detached: false)
@@ -192,9 +192,15 @@ enum CalendarParityProof {
         }
         do {
             store.reset()
+            let query = store.predicateForEvents(withStart: eventStart.addingTimeInterval(-1), end: eventEnd.addingTimeInterval(1), calendars: nil)
+            let ownedTitles = [title + " event", title + " invitation"]
+            for ownedEvent in store.events(matching: query) where ownedTitles.contains(ownedEvent.title ?? "") {
+                try store.remove(ownedEvent, span: .thisEvent, commit: true)
+            }
             if let owned = store.calendar(withIdentifier: calendarID), owned.title == title { try store.removeCalendar(owned, commit: true) }
             store.reset()
             checks["owned_calendar_cleanup"] = .bool(store.calendar(withIdentifier: calendarID) == nil)
+            checks["owned_events_cleanup"] = .bool(!store.events(matching: query).contains { ownedTitles.contains($0.title ?? "") })
         } catch {
             checks["owned_calendar_cleanup"] = .bool(false)
             reasons["cleanup"] = .string("Calendar could not remove this run's test calendar. Retry cleanup before running another check.")

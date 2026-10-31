@@ -31,8 +31,9 @@ enum CalendarParityChecks {
         var nativeData = nativeObservation["data"]!.object
         nativeData["structured_location"] = native
         nativeObservation["data"] = .object(nativeData)
+        try execute("INSERT INTO Location VALUES(1,'[ab-test] store location','[ab-test] address',41880000,-87630000,100); UPDATE CalendarItem SET location_id=1 WHERE ROWID=1")
         let projected = await reader.enrich(["event": .object(nativeObservation)], lookups: [:], force: true)
-        guard projected["event"]?["data"]["structured_location"] == native, projected["event"]?["data"]["store_coverage"]["structured_location"]["status"] == .string("complete") else { throw SourceFailure.invalid }
+        guard projected["event"]?["data"]["structured_location"]["latitude"] == .number(41.88), projected["event"]?["data"]["structured_location"]["longitude"] == .number(-87.63), projected["event"]?["data"]["structured_location"]["address"] == .string("[ab-test] address"), projected["event"]?["data"]["store_coverage"]["structured_location"]["status"] == .string("complete") else { throw SourceFailure.invalid }
         let unavailable = CalendarStoreEnrichment(root: root.appendingPathComponent("missing"))
         let fallback = await unavailable.enrich(["event": .object(nativeObservation)], lookups: [:], force: true)
         guard fallback["event"]?["data"]["structured_location"] == native else { throw SourceFailure.invalid }
