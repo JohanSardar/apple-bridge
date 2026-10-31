@@ -49,13 +49,6 @@ enum CalendarParityProof {
             func row() throws -> [String: JSON]? {
                 try CalendarStoreSnapshot.read(path: database.path).event(identifier: identifier, external: external, calendar: calendarID, detached: false)
             }
-            @MainActor func observed(_ predicate: ([String: JSON]) -> Bool) async throws -> Bool {
-                for _ in 0..<60 {
-                    if let current = try row(), predicate(current) { return true }
-                    try await Task.sleep(for: .milliseconds(100))
-                }
-                return false
-            }
             stage = "show_owned_event"
             store.reset()
             let saved = store.calendarItem(withIdentifier: identifier) as? EKEvent
@@ -83,10 +76,11 @@ enum CalendarParityProof {
                 try ui.pressAny(["15 minutes", "15 Minutes"], role: kAXMenuItemRole)
                 try ui.key(48)
                 try await ui.commit()
-                checks["travel_time_readback"] = .bool(try await observed { current in
-                    let value = current["travel_time"] ?? .null
-                    return value == .number(900) || value == .number(15)
-                })
+                try await ui.openOwnedEvent()
+                try await ui.revealTravel()
+                try ui.fence()
+                checks["travel_time_readback"] = .bool(["15 minutes", "15 Minutes"].contains { ui.find($0, role: kAXPopUpButtonRole).count == 1 })
+                try await ui.commit()
             } catch {
                 reasons["travel_time"] = .string("Calendar could not change travel time on the test event. Keep Calendar open and retry this check.")
             }
