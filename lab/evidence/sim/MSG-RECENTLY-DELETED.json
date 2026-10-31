@@ -1,17 +1,17 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[45.39 44.53 29.48] cpu_idle=0% cpus=10 other_heavy=0"
+    "summary": "air: load=[15.74 22.71 24.25] cpu_idle=10% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M69Z8F9HEES1XPWYMKN1R5G5",
+  "run_id": "run_01M69ZMX3G0RYSK5BGBDAWK5XM",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "MSG-RECENTLY-DELETED",
   "level": "sim",
   "passed": true,
-  "git_sha": "bd7d670a738a84d1eca9d30edaeea32315329b62",
-  "at": "2026-10-31T21:53:39.633741Z",
+  "git_sha": "6a645dcd12d8f9503e57b5fdb3b5816eeb7f3fe9",
+  "at": "2026-10-31T22:00:26.992911Z",
   "assertions": [
     {
       "name": "seed",

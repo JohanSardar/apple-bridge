@@ -1,44 +1,20 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[46.72 44.82 29.67] cpu_idle=0% cpus=10 other_heavy=0"
+    "summary": "air: load=[15.04 22.45 24.15] cpu_idle=28% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M69Z8KCD07P8409HDVJS4943",
+  "run_id": "run_01M69ZN0VQ8M8Y7Z33VG3TRB91",
   "metrics": {
     "capture_observer_resets": 0
   },
   "scenario": "MSG-SEND-EFFECT",
   "level": "sim",
   "passed": true,
-  "git_sha": "bd7d670a738a84d1eca9d30edaeea32315329b62",
-  "at": "2026-10-31T21:53:43.821525Z",
+  "git_sha": "6a645dcd12d8f9503e57b5fdb3b5816eeb7f3fe9",
+  "at": "2026-10-31T22:00:30.83945Z",
   "assertions": [
     {
-      "name": "native_readback_checks_build",
-      "passed": true
-    },
-    {
       "name": "native_readback_checks",
-      "passed": true
-    },
-    {
-      "name": "is_from_me_mismatch_rejected",
-      "passed": true
-    },
-    {
-      "name": "valid_pin_indices",
-      "passed": true
-    },
-    {
-      "name": "stale_os_rejected",
-      "passed": true
-    },
-    {
-      "name": "exact_recipient_phone",
-      "passed": true
-    },
-    {
-      "name": "invalid_pin_state_rejected",
       "passed": true
     },
     {
@@ -46,19 +22,7 @@
       "passed": true
     },
     {
-      "name": "other_recipient_email_rejected",
-      "passed": true
-    },
-    {
-      "name": "phone_substring_rejected",
-      "passed": true
-    },
-    {
-      "name": "exact_recipient_email",
-      "passed": true
-    },
-    {
-      "name": "native_pin_order",
+      "name": "valid_pin_indices",
       "passed": true
     },
     {
@@ -66,11 +30,7 @@
       "passed": true
     },
     {
-      "name": "additional_recipient_email_rejected",
-      "passed": true
-    },
-    {
-      "name": "current_build_qualified",
+      "name": "phone_substring_rejected",
       "passed": true
     },
     {
@@ -78,7 +38,55 @@
       "passed": true
     },
     {
-      "name": "stale_build_rejected",
+      "name": "stale_os_rejected",
+      "passed": true
+    },
+    {
+      "name": "text_mismatch_rejected",
+      "passed": true
+    },
+    {
+      "name": "plain_send_rejected",
+      "passed": true
+    },
+    {
+      "name": "additional_recipient_email_rejected",
+      "passed": true
+    },
+    {
+      "name": "accessibility_input_interference_refused",
+      "passed": true
+    },
+    {
+      "name": "native_pin_order",
+      "passed": true
+    },
+    {
+      "name": "other_recipient_email_rejected",
+      "passed": true
+    },
+    {
+      "name": "matching_sent_attributes",
+      "passed": true
+    },
+    {
+      "name": "exact_recipient_phone",
+      "passed": true
+    },
+    {
+      "name": "is_from_me_mismatch_rejected",
+      "passed": true
+    },
+    {
+      "name": "current_build_qualified",
+      "passed": true
+    },
+    {
+      "name": "exact_recipient_email",
+      "passed": true
+    },
+    {
+      "name": "invalid_pin_index_rejected",
       "passed": true
     },
     {
@@ -86,7 +94,7 @@
       "passed": true
     },
     {
-      "name": "text_mismatch_rejected",
+      "name": "invalid_pin_state_rejected",
       "passed": true
     },
     {
@@ -98,19 +106,7 @@
       "passed": true
     },
     {
-      "name": "plain_send_rejected",
-      "passed": true
-    },
-    {
-      "name": "accessibility_input_interference_refused",
-      "passed": true
-    },
-    {
-      "name": "invalid_pin_index_rejected",
-      "passed": true
-    },
-    {
-      "name": "matching_sent_attributes",
+      "name": "stale_build_rejected",
       "passed": true
     },
     {

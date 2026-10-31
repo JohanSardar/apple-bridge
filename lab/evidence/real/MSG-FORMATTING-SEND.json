@@ -1,15 +1,15 @@
 {
   "host_conditions": {
     "quiet": true,
-    "summary": "air: load=[35.15 24.91 16.76] cpu_idle=44% cpus=8 other_heavy=0"
+    "summary": "air: load=[4.95 6.34 9.95] cpu_idle=70% cpus=8 other_heavy=0"
   },
   "status": "limited",
-  "run_id": "run_01M65166EMS8BTTA3DQE4M8R93",
+  "run_id": "run_01M6A0NSS64ZRGWAQ156WHB9EP",
   "metrics": {
     "capture_observer_resets": 0,
     "cleanup_counts": {
-      "after_count": 160294,
-      "before_count": 160294,
+      "after_count": 160352,
+      "before_count": 160352,
       "created_count": 0,
       "passed": true
     },
@@ -18,8 +18,8 @@
   "scenario": "MSG-FORMATTING-SEND",
   "level": "real",
   "passed": false,
-  "git_sha": "cd736b6bdf6f556b3e7a7dd514fbc4f7d2d45c78",
-  "at": "2026-10-29T23:51:10.036808Z",
+  "git_sha": "6a645dcd12d8f9503e57b5fdb3b5816eeb7f3fe9",
+  "at": "2026-10-31T22:18:24.934786Z",
   "assertions": [
     {
       "name": "cleanup_baseline_restored",
@@ -35,6 +35,6 @@
     "air"
   ],
   "conditions": {
-    "reason": "needs Messages Accessibility grant"
+    "reason": "No unused self address is available for an isolated test conversation. Add a self address in Messages before running this check."
   }
 }
