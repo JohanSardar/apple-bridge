@@ -32,6 +32,19 @@ enum StoreParityChecks {
         execute("UPDATE ZREMCDBASELIST SET ZBADGEEMBLEM='flag',Z_OPT=Z_OPT+1 WHERE Z_PK=1")
         let changed = try await session.read().snapshot
         precondition(changed.reminders[10]?.flagged == true && changed.reminders[11]?.parent == 10 && changed.lists[1]?.emblem == "flag")
+        let parentID = "11111111-2222-3333-4444-555555555555"
+        execute("UPDATE ZREMCDREMINDER SET ZDACALENDARITEMUNIQUEIDENTIFIER='\(parentID)',Z_OPT=Z_OPT+1 WHERE Z_PK=10")
+        let parityObservations: [JSON] = [
+            .object(["kind": .string("upsert"), "collection": .string("reminders.reminder"), "native_key": .string(parentID), "data": .object([:])]),
+            .object(["kind": .string("upsert"), "collection": .string("reminders.list"), "native_key": .string("list"), "data": .object([:])])
+        ]
+        let flagged = await enrichment.refresh(parityObservations, generation: "parity")
+        precondition(flagged.first { $0["collection"].string == "reminders.reminder" }?["data"]["flagged"] == .bool(true))
+        execute("UPDATE ZREMCDREMINDER SET ZFLAGGED=0,Z_OPT=Z_OPT+1 WHERE Z_PK=10")
+        execute("UPDATE ZREMCDBASELIST SET ZBADGEEMBLEM='star',Z_OPT=Z_OPT+1 WHERE Z_PK=1")
+        let cleared = await enrichment.refresh([], generation: "parity")
+        precondition(cleared.first { $0["native_key"].string == parentID }?["data"]["flagged"] == .bool(false))
+        precondition(cleared.first { $0["collection"].string == "reminders.list" }?["data"]["badge_emblem"] == .string("star"))
         execute("UPDATE ZREMCDREMINDER SET ZPARENTREMINDER=NULL,Z_OPT=Z_OPT+1 WHERE Z_PK=11")
         let outdented = try await session.read().snapshot
         precondition(outdented.reminders[11]?.parent == nil)

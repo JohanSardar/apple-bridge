@@ -12,6 +12,7 @@ enum RemindersParityProof {
     static func run() async throws -> JSON {
         var checks: [String: JSON] = [:]
         var reasons: [String: JSON] = [:]
+        var diagnostics: [String: JSON] = [:]
         let target = NSAppleEventDescriptor(bundleIdentifier: "com.apple.reminders")
         let permission = AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false)
         checks["automation_granted"] = .bool(permission == noErr)
@@ -58,16 +59,35 @@ enum RemindersParityProof {
                 }
                 return false
             }
-            func script(_ body: String) throws {
+            @discardableResult
+            func script(_ body: String) throws -> NSAppleEventDescriptor {
                 var error: NSDictionary?
                 let source = "with timeout of 5 seconds\ntell application \"Reminders\"\nset matches to every list whose name is \"" + title + "\"\nif (count matches) is not 1 then error number -2700\nset fixtureList to item 1 of matches\n" + body + "\nend tell\nend timeout"
-                _ = NSAppleScript(source: source)?.executeAndReturnError(&error)
-                guard error == nil else { throw SourceFailure.unavailable }
+                guard let command = NSAppleScript(source: source) else { throw SourceFailure.invalid }
+                let result = command.executeAndReturnError(&error)
+                if let error {
+                    diagnostics[stage + "_script_error"] = .number((error[NSAppleScript.errorNumber] as? NSNumber)?.doubleValue ?? 0)
+                    throw SourceFailure.unavailable
+                }
+                return result
             }
+            stage = "fixture_visibility"
+            var visible = false
+            let visibilityDeadline = ContinuousClock.now.advanced(by: .seconds(10))
+            repeat {
+                if let result = try? script("return count (every reminder of fixtureList)"), result.int32Value == 2 {
+                    visible = true
+                    diagnostics.removeValue(forKey: stage + "_script_error")
+                    break
+                }
+                try await Task.sleep(for: .milliseconds(100))
+            } while ContinuousClock.now < visibilityDeadline
+            checks["fixture_visible"] = .bool(visible)
+            guard visible else { throw SourceFailure.unavailable }
             stage = "flag"
-            try script("set flagged of every reminder of fixtureList whose name is \"" + first.title + "\" to true")
+            try script("set fixtureItems to every reminder of fixtureList whose name is \"" + first.title + "\"\nif (count fixtureItems) is not 1 then error number -2701\nset flagged of item 1 of fixtureItems to true")
             checks["flag_readback"] = .bool(try await observe { _, _, parent, _ in parent.flagged == true })
-            try script("set flagged of every reminder of fixtureList whose name is \"" + first.title + "\" to false")
+            try script("set fixtureItems to every reminder of fixtureList whose name is \"" + first.title + "\"\nif (count fixtureItems) is not 1 then error number -2701\nset flagged of item 1 of fixtureItems to false")
             checks["flag_clear_readback"] = .bool(try await observe { _, _, parent, _ in parent.flagged == false })
             stage = "list_icon"
             try script("set emblem of fixtureList to \"star\"")
@@ -200,7 +220,7 @@ enum RemindersParityProof {
         store.reset()
         checks["owned_list_cleanup"] = .bool(store.calendar(withIdentifier: listID) == nil)
         let required = ["flag_readback", "flag_clear_readback", "list_icon_readback", "indent_readback", "outdent_readback", "tags_readback", "reorder_readback", "image_readback", "smart_list_readback", "owned_list_cleanup"]
-        return .object(["passed": .bool(required.allSatisfy { checks[$0]?.bool == true } && (!smartAttempted || checks["owned_smart_list_cleanup"]?.bool == true)), "checks": .object(checks.filter { !$0.key.hasPrefix("control_") }), "controls": .object(checks.filter { $0.key.hasPrefix("control_") }), "reasons": .object(reasons)])
+        return .object(["passed": .bool(required.allSatisfy { checks[$0]?.bool == true } && (!smartAttempted || checks["owned_smart_list_cleanup"]?.bool == true)), "checks": .object(checks.filter { !$0.key.hasPrefix("control_") }), "controls": .object(checks.filter { $0.key.hasPrefix("control_") }), "diagnostics": .object(diagnostics), "reasons": .object(reasons)])
     }
 }
 

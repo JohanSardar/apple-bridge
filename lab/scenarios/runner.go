@@ -1267,6 +1267,9 @@ func Suite(ctx context.Context, paths []string, level string, asJSON bool) error
 		if s.ID == "QUERY-AGENT" {
 			duration = 5 * time.Minute
 		}
+		if s.ID == "REM-SECTIONS" || s.ID == "WEB-REM-PARITY" {
+			duration = 6 * time.Minute
+		}
 		if level == "real" && (s.ID == "CONN-CLAUDE-AI" || s.ID == "CONN-CHATGPT" || s.ID == "SEC-REMOTE-ACCESS") {
 			duration = 6 * time.Minute
 		}

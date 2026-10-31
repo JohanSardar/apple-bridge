@@ -50,16 +50,23 @@ func runRemindersSections(ctx context.Context, level string, e Evidence) Evidenc
 		err = exec.CommandContext(ctx, "open", "-n", "-W", "-g", "-a", filepath.Join(dir, "AppleBridgeHelper.app"), "--args", remindersProofCommand(e.Scenario), "--report", report).Run()
 		data, problem := os.ReadFile(report)
 		var proof struct {
-			Passed   bool              `json:"passed"`
-			Checks   map[string]bool   `json:"checks"`
-			Reason   string            `json:"reason"`
-			Reasons  map[string]string `json:"reasons"`
-			Controls map[string]bool   `json:"controls"`
+			Passed      bool               `json:"passed"`
+			Checks      map[string]bool    `json:"checks"`
+			Reason      string             `json:"reason"`
+			Reasons     map[string]string  `json:"reasons"`
+			Controls    map[string]bool    `json:"controls"`
+			Diagnostics map[string]float64 `json:"diagnostics"`
 		}
 		valid := err == nil && problem == nil && json.Unmarshal(data, &proof) == nil
 		add("native_sections_report", valid)
 		if len(proof.Controls) > 0 {
 			e.Metrics = map[string]any{"controls": proof.Controls}
+		}
+		if len(proof.Diagnostics) > 0 {
+			if e.Metrics == nil {
+				e.Metrics = map[string]any{}
+			}
+			e.Metrics["diagnostics"] = proof.Diagnostics
 		}
 		names := make([]string, 0, len(proof.Checks))
 		for name := range proof.Checks {
