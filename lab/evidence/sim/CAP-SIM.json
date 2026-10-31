@@ -1,9 +1,9 @@
 {
   "host_conditions": {
     "quiet": false,
-    "summary": "air: load=[13.92 18.75 25.91] cpu_idle=39% cpus=8 other_heavy=0"
+    "summary": "air: load=[20.79 20.95 15.61] cpu_idle=1% cpus=10 other_heavy=0"
   },
-  "run_id": "run_01M63851XXS9DQ9RG3CGJ4C11E",
+  "run_id": "run_01M69X30GCB5CK8BD2AH1XDA41",
   "metrics": {
     "capture_observer_resets": 0
   },
@@ -11,7 +11,7 @@
   "level": "sim",
   "passed": true,
   "git_sha": "",
-  "at": "2026-10-29T07:14:23.80548Z",
+  "at": "2026-10-31T21:15:43.500469Z",
   "assertions": [
     {
       "name": "native_output",
@@ -62,6 +62,10 @@
       "passed": true
     },
     {
+      "name": "print_fixture_path",
+      "passed": true
+    },
+    {
       "name": "rest_print.document_observed",
       "passed": true
     },
@@ -99,6 +103,10 @@
     },
     {
       "name": "mcp_mac.screen_record_blob_download",
+      "passed": true
+    },
+    {
+      "name": "print_fixture_path",
       "passed": true
     },
     {

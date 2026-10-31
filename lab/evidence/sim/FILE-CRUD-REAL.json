@@ -1,0 +1,151 @@
+{
+  "host_conditions": {
+    "quiet": false,
+    "summary": "air: load=[21.04 21 15.59] cpu_idle=6% cpus=10 other_heavy=0"
+  },
+  "run_id": "run_01M69X2V9G7NSTBSCYF4Y8N076",
+  "metrics": {
+    "capture_observer_resets": 0
+  },
+  "scenario": "FILE-CRUD-REAL",
+  "level": "sim",
+  "passed": true,
+  "git_sha": "",
+  "at": "2026-10-31T21:15:38.160142Z",
+  "assertions": [
+    {
+      "name": "gateway_start",
+      "passed": true
+    },
+    {
+      "name": "directory_fixture",
+      "passed": true
+    },
+    {
+      "name": "helper_ready",
+      "passed": true
+    },
+    {
+      "name": "files.create",
+      "passed": true
+    },
+    {
+      "name": "files.write",
+      "passed": true
+    },
+    {
+      "name": "created_item_search",
+      "passed": true
+    },
+    {
+      "name": "content_digest_readback",
+      "passed": true
+    },
+    {
+      "name": "files.rename",
+      "passed": true
+    },
+    {
+      "name": "files.move",
+      "passed": true
+    },
+    {
+      "name": "files.set_tags",
+      "passed": true
+    },
+    {
+      "name": "files.evict",
+      "passed": true
+    },
+    {
+      "name": "files.download",
+      "passed": true
+    },
+    {
+      "name": "captured_metadata_readback",
+      "passed": true
+    },
+    {
+      "name": "escape_rejected",
+      "passed": true
+    },
+    {
+      "name": "escape_rejected",
+      "passed": true
+    },
+    {
+      "name": "files.trash",
+      "passed": true
+    },
+    {
+      "name": "mcp_gateway_start",
+      "passed": true
+    },
+    {
+      "name": "mcp_directory_fixture",
+      "passed": true
+    },
+    {
+      "name": "mcp_helper_ready",
+      "passed": true
+    },
+    {
+      "name": "mcp_files.create",
+      "passed": true
+    },
+    {
+      "name": "mcp_files.write",
+      "passed": true
+    },
+    {
+      "name": "mcp_created_item_search",
+      "passed": true
+    },
+    {
+      "name": "mcp_content_digest_readback",
+      "passed": true
+    },
+    {
+      "name": "mcp_files.rename",
+      "passed": true
+    },
+    {
+      "name": "mcp_files.move",
+      "passed": true
+    },
+    {
+      "name": "mcp_files.set_tags",
+      "passed": true
+    },
+    {
+      "name": "mcp_files.evict",
+      "passed": true
+    },
+    {
+      "name": "mcp_files.download",
+      "passed": true
+    },
+    {
+      "name": "mcp_captured_metadata_readback",
+      "passed": true
+    },
+    {
+      "name": "mcp_escape_rejected",
+      "passed": true
+    },
+    {
+      "name": "mcp_escape_rejected",
+      "passed": true
+    },
+    {
+      "name": "mcp_files.trash",
+      "passed": true
+    },
+    {
+      "name": "credential_backend_override_restored",
+      "passed": true
+    }
+  ],
+  "latency": null,
+  "hosts": null
+}

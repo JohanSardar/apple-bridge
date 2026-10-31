@@ -1065,7 +1065,7 @@ features:
       - {id: FILE-CAPTURE, levels: [sim]}
       - {id: FILE-IDLE, levels: [sim, real]}
       - {id: FILE-SEARCH-REAL, levels: [real]}
-      - {id: FILE-OFFLOAD-REAL, levels: [real]}
+      - {id: FILE-OFFLOAD-REAL, levels: [sim, real]}
     limits:
       - {"scenario": "FILE-OFFLOAD-REAL", "level": "real", "reason": "Provide a dedicated iCloud-backed [ab-test] file that supports eviction/offload; current temporary fixture could not establish capabilityUnproven. No personal files were used."}
   - id: mail.body
@@ -1190,7 +1190,7 @@ features:
     status: limited
     scenarios:
       - {id: FILE-COMMANDS, levels: [sim]}
-      - {id: FILE-CRUD-REAL, levels: [real]}
+      - {id: FILE-CRUD-REAL, levels: [sim, real]}
       - {id: FILE-REPLICA, levels: [replica]}
     limits:
       - {scenario: FILE-CRUD-REAL, level: real, reason: CRUD filesystem Truth passes; real cloud download and eviction qualification remains outstanding.}
@@ -1333,12 +1333,12 @@ features:
     depends_on: [core.queries]
     status: limited
     scenarios:
-      - {id: CAP-SIM, levels: [sim]}
+      - {id: CAP-SIM, levels: [sim, real]}
     limits:
       - scenario: CAP-SIM
-        level: sim
-        reason: Real qualification batched at end; Screen Recording, Camera and Microphone grants are missing.
-    notes: Capture providers fail closed without prompting. Real screenshot and screen recording require Screen Recording for the Helper; camera requires Camera and audio requires Microphone. ScreenCaptureKit screenshot and AVAudioRecorder audio providers are implemented but unqualified for real use; camera and screen video providers remain unimplemented. Named printers submit through the system print spooler. PDF output copies a validated PDF without UI. Evidence contains only digest, size, duration and dimensions.
+        level: real
+        reason: Native capture qualification requires Screen Recording for the Helper; Camera and Microphone are granted.
+    notes: Capture providers fail closed without prompting. Real screenshot and screen recording require Screen Recording for the Helper; camera requires Camera and audio requires Microphone. ScreenCaptureKit screenshot and screen video, AVFoundation camera, and AVAudioRecorder audio providers are implemented. Named printers submit through the system print spooler. PDF output copies a validated PDF without UI. Evidence contains only digest, size, duration and dimensions.
 
 
 
@@ -1374,11 +1374,11 @@ features:
     scenarios:
       - {id: MAC-EXTRAS-SIM, levels: [sim]}
       - {id: TM-STATUS, levels: [real]}
-      - {id: IWORK-REAL, levels: [real]}
+      - {id: IWORK-REAL, levels: [sim, real]}
       - {id: SHAZAM-REAL, levels: [real], status: dropped, reason: "Dropped because song recognition needs the ShazamKit entitlement."}
       - {id: BT-REAL, levels: [real]}
     limits:
-      - {"scenario": "IWORK-REAL", "level": "real", "reason": "Native mac.iwork_export is unsupported; export command observation and tagged content readback fail."}
+      - {"scenario": "IWORK-REAL", "level": "real", "reason": "Pages is not installed on the Air; install Pages and grant Helper Automation access before real export qualification."}
   - id: phone.dial
     title: Continuity dialing with Mac confirmation
     requirements: [R-API, R-SCOPE]
