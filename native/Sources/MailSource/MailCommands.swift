@@ -16,14 +16,31 @@ public enum MailCommandFailure: Error, LocalizedError, Sendable {
     public var errorDescription: String? {
         switch self {
         case .permission: "Mail automation is not allowed. Enable Mail for Apple Bridge in System Settings > Privacy & Security > Automation."
-        case .timeout: "Mail did not answer the command in time. Open Mail, let account sync finish, and try again."
+        case .timeout: "Mail automation did not respond in time. Restart Mail and try again. If it still does not respond, sign out of macOS and sign in again."
         case .rejected: "Mail could not complete the command. Open Mail, check the account and mailbox, and try again."
         case .unconfirmed: "Mail could not confirm the message after the command. Check Sent or Drafts before trying again."
         }
     }
 }
 
+private final class MailPermissionReply: @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<Void, any Error>?
+    init(_ continuation: CheckedContinuation<Void, any Error>) { self.continuation = continuation }
+    var pending: Bool { lock.withLock { continuation != nil } }
+    func finish(_ failure: MailCommandFailure?) {
+        let reply = lock.withLock {
+            let reply = continuation
+            continuation = nil
+            return reply
+        }
+        if let failure { reply?.resume(throwing: failure) }
+        else { reply?.resume() }
+    }
+}
+
 public struct MailCommands: Sendable {
+    private static let permissionQueue = DispatchQueue(label: "apple-bridge.mail-automation-permission")
     public typealias Script = @Sendable (String) async throws -> String
     private let script: Script
     public static let operations = ["mail.create_draft", "mail.send", "mail.move", "mail.set_flag", "mail.mark_read", "mail.delete"]
@@ -36,14 +53,28 @@ public struct MailCommands: Sendable {
             do { _ = try await NSWorkspace.shared.openApplication(at: url, configuration: configuration) }
             catch { throw MailCommandFailure.rejected }
         }
-        let target = NSAppleEventDescriptor(bundleIdentifier: "com.apple.mail")
-        let permission = AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false)
-        guard permission == noErr else { throw MailCommandFailure.appleEvent(Int(permission)) }
+        try await requireAutomationPermission {
+            let target = NSAppleEventDescriptor(bundleIdentifier: "com.apple.mail")
+            return AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false)
+        }
         var error: NSDictionary?
         guard let script = NSAppleScript(source: "with timeout of 10 seconds\ntell application id \"com.apple.mail\"\n" + body + "\nend tell\nend timeout") else { throw SourceFailure.invalid }
         let result = script.executeAndReturnError(&error)
         if let error { throw MailCommandFailure.appleEvent(error["NSAppleScriptErrorNumber"] as? Int ?? 0) }
         return result.stringValue ?? ""
+    }
+    public static func requireAutomationPermission(after interval: TimeInterval = 10, check: @escaping @Sendable () -> Int32) async throws {
+        try await withCheckedThrowingContinuation { continuation in
+            let reply = MailPermissionReply(continuation)
+            permissionQueue.async {
+                guard reply.pending else { return }
+                let status = check()
+                reply.finish(status == noErr ? nil : MailCommandFailure.appleEvent(Int(status)))
+            }
+            DispatchQueue.global().asyncAfter(deadline: .now() + interval) {
+                reply.finish(.timeout)
+            }
+        }
     }
     public static func failureMessage(_ error: any Error) -> String {
         if let failure = error as? MailCommandFailure { return failure.localizedDescription }
