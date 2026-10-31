@@ -48,6 +48,12 @@ extension PhotosSource {
         let args = prepared.action["args"]
         var key = args["asset"].string
         if fixture != nil {
+            #if LAB
+            if fixtureObservationDelay > 0 {
+                pendingFixtureObservation = (fixture!, fixtureObservationDelay)
+                fixtureObservationDelay = 0
+            }
+            #endif
             if op == "photos.create_album" {
                 key = UUID().uuidString
                 fixture!.append(row("photos.album", key, .object(["name": args["name"], "kind": .string("user"), "count": .number(0)])))
@@ -86,7 +92,15 @@ extension PhotosSource {
         for attempt in 0..<40 {
             let rows = try await snapshot()
             observed = rows.first { $0["native_key"].string == key }
-            if op == "photos.delete" ? observed == nil : observed != nil { break }
+            let matches: Bool
+            switch op {
+            case "photos.delete": matches = observed == nil
+            case "photos.create_album": matches = observed?["data"]["name"] == args["name"]
+            case "photos.import": matches = observed != nil && (args["album"].string.isEmpty || observed?["data"]["albums"].array.contains(args["album"]) == true)
+            case "photos.set_favorite": matches = observed?["data"]["favorite"] == args["favorite"]
+            default: matches = observed != nil && observed?["data"]["albums"].array.contains(args["album"]) == (op == "photos.add_to_album")
+            }
+            if matches { break }
             if attempt < 39 { try await Task.sleep(for: .milliseconds(150)) }
         }
         guard op == "photos.delete" ? observed == nil : observed != nil else { throw SourceFailure.unavailable }

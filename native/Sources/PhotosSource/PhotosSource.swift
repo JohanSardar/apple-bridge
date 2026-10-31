@@ -6,6 +6,11 @@ import SourceSupport
 public actor PhotosSource: Source {
     public nonisolated let name = "photos"
     var fixture: [JSON]?
+    #if LAB
+    var fixtureObservationDelay = 0
+    var pendingFixtureObservation: (rows: [JSON], remaining: Int)?
+    public func delayNextFixtureObservationForProof(_ reads: Int) { fixtureObservationDelay = max(0, reads) }
+    #endif
     let generation = UUID().uuidString
     var fixtureBlobs: [String: Data]
     private var blobs: [String: (Data, Date, String, String)] = [:]
@@ -25,6 +30,15 @@ public actor PhotosSource: Source {
     }
     public func snapshot() async throws -> [JSON] {
         guard await open().state == "ready" else { throw SourceFailure.permissionMissing }
+        #if LAB
+        if let pending = pendingFixtureObservation {
+            if pending.remaining > 0 {
+                pendingFixtureObservation = (pending.rows, pending.remaining - 1)
+                return pending.rows
+            }
+            pendingFixtureObservation = nil
+        }
+        #endif
         if let fixture { return fixture }
         var rows: [JSON] = []
         var memberships: [String: [JSON]] = [:]
