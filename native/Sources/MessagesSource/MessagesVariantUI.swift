@@ -46,14 +46,7 @@ enum MessagesVariantUI {
         try press(try unique(find(application,role:kAXMenuItemRole,name:title),failure:.formatMenuUnavailable))
     }
     static func send(_ args: JSON, target: String, targetData: JSON = .null, expiresAt: Date = Date().addingTimeInterval(30)) throws {
-        if NSRunningApplication.runningApplications(withBundleIdentifier:"com.apple.systemevents").isEmpty {
-            guard let url=NSWorkspace.shared.urlForApplication(withBundleIdentifier:"com.apple.systemevents") else { throw SendVariantFailure.automationDenied }
-            let configuration=NSWorkspace.OpenConfiguration();configuration.activates=false
-            NSWorkspace.shared.openApplication(at:url,configuration:configuration,completionHandler:nil)
-            let deadline=Date().addingTimeInterval(2)
-            while NSRunningApplication.runningApplications(withBundleIdentifier:"com.apple.systemevents").isEmpty,Date()<deadline { RunLoop.current.run(until:Date().addingTimeInterval(0.05)) }
-        }
-        for bundle in ["com.apple.MobileSMS","com.apple.systemevents"] {
+        for bundle in ["com.apple.MobileSMS"] {
             let target=NSAppleEventDescriptor(bundleIdentifier:bundle)
             guard AEDeterminePermissionToAutomateTarget(target.aeDesc,AEEventClass(kAECoreSuite),AEEventID(kAEGetData),false)==noErr else { throw SendVariantFailure.automationDenied }
         }
@@ -111,6 +104,6 @@ enum MessagesVariantUI {
         guard Date()<expiresAt else { throw SourceFailure.expired }
         try session.fence()
         sendStarted=true
-        guard session.driver.systemEvents(MessagesUIScript.keys([MessagesUISession.enter]))==0 else { throw SendVariantFailure.sendReceiptUnknown }
+        guard session.driver.input(.keys([MessagesUISession.enter], command: false))==0 else { throw SendVariantFailure.sendReceiptUnknown }
     }
 }

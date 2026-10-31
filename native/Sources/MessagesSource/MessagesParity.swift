@@ -23,7 +23,7 @@ public enum MessagesParity {
         let steps = ledger["steps"].array
         return operations.map { operation in
             let step = steps.first { $0["operation"].string == operation }
-            return .object(["operation": .string(operation), "proven": .bool(operation == "messages.mute" && step?["proven"].bool == true && ledger["cleanup_state"].string == "verified_clean" && ["iMessage", "SMS", "RCS"].contains(step?["service"].string ?? "")), "reason": .string(step?["reason"].string ?? "parity_selftest_required")])
+            return .object(["operation": .string(operation), "proven": .bool(["messages.pin", "messages.mute", "messages.set_read_receipts"].contains(operation) && step?["proven"].bool == true && ledger["cleanup_state"].string == "verified_clean" && ledger["baseline_preserved"].bool && ["iMessage", "SMS", "RCS"].contains(step?["service"].string ?? "")), "reason": .string(step?["reason"].string ?? "parity_selftest_required")])
         }
     }
     static func properties(_ chat: String) throws -> [String: Any] {
@@ -46,6 +46,60 @@ public enum MessagesParity {
     }
     @UIActor
     static func dismiss(_ session: MessagesUISession) throws { try session.press(MessagesUISession.escape) }
+    @UIActor
+    static func conversationMenu(_ prepared: Prepared) throws -> (MessagesUISession, [AXUIElement]) {
+        try MessagesAccessibility.openMessage(prepared.nativeState["message_guid"].string, settle: 0.5)
+        let session = try MessagesAccessibility.uiSession()
+        var state = prepared.nativeState.object
+        state["conversation_target"] = .bool(false)
+        try MessagesAccessibility.validate(Prepared(nativeState: .object(state), fingerprint: prepared.fingerprint, action: prepared.action))
+        let menus = MessagesVariantUI.find(session.root, role: kAXMenuBarItemRole, name: "Conversation")
+        guard menus.count == 1 else { throw MessagesUIFailure.menuUnavailable }
+        try session.fence()
+        try MessagesVariantUI.press(menus[0])
+        return (session, MessagesVariantUI.find(menus[0], role: kAXMenuItemRole))
+    }
+    @UIActor
+    static func pin(_ prepared: Prepared, value: Bool) throws {
+        let (session, items) = try conversationMenu(prepared)
+        let desired = value ? ["Pin", "Pin Conversation"] : ["Unpin", "Unpin Conversation"]
+        let opposite = value ? ["Unpin", "Unpin Conversation"] : ["Pin", "Pin Conversation"]
+        let targets = items.filter { desired.contains(MessagesAccessibility.value($0, kAXTitleAttribute)) }
+        if targets.isEmpty, items.filter({ opposite.contains(MessagesAccessibility.value($0, kAXTitleAttribute)) }).count == 1 { try dismiss(session); return }
+        guard targets.count == 1 else { try? dismiss(session); throw MessagesUIFailure.menuUnavailable }
+        try session.fence()
+        try MessagesVariantUI.press(targets[0])
+    }
+    @UIActor
+    static func provePin(_ prepared: Prepared) -> JSON {
+        var changed = false
+        var before: [String] = []
+        do {
+            before = try MessagesPins.read()
+            let chat = prepared.action["native_key"].string
+            let path = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Messages/chat.db").path
+            guard let row = try MessagesReader(path: path).query("SELECT chat_identifier FROM chat WHERE guid=?", [chat]).first,
+                  !row["chat_identifier"].isEmpty, !before.contains(row["chat_identifier"]), before.count < 9 else { throw SourceFailure.capabilityUnproven }
+            changed = true
+            try pin(prepared, value: true)
+            let deadline = Date().addingTimeInterval(5)
+            var after = try MessagesPins.read()
+            while !after.contains(row["chat_identifier"]), Date() < deadline {
+                RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+                after = try MessagesPins.read()
+            }
+            guard after.filter({ $0 != row["chat_identifier"] }) == before, after.contains(row["chat_identifier"]) else { throw SourceFailure.conflict }
+            try pin(prepared, value: false)
+            let restoreDeadline = Date().addingTimeInterval(5)
+            while try MessagesPins.read() != before, Date() < restoreDeadline { RunLoop.current.run(until: Date().addingTimeInterval(0.1)) }
+            guard try MessagesPins.read() == before else { throw SourceFailure.conflict }
+            changed = false
+            return .object(["operation": .string("messages.pin"), "proven": .bool(true), "reason": .string("native_pin_order_roundtrip"), "service": prepared.nativeState["service"]])
+        } catch {
+            if changed { try? pin(prepared, value: false) }
+            return .object(["operation": .string("messages.pin"), "proven": .bool(false), "reason": .string("pin_roundtrip_" + failureReason(error))])
+        }
+    }
     @UIActor
     static func mute(_ prepared: Prepared, value: Bool) throws {
         let (session, titles) = try menu(prepared)
@@ -103,19 +157,9 @@ public enum MessagesParity {
             let titles = Set(items.map { MessagesAccessibility.value($0, kAXTitleAttribute) })
             guard budget > 0 else { throw SourceFailure.conflict }
             try dismiss(session)
-            var steps: [JSON] = []
-            for (operation, labels, reason) in [
-                ("messages.pin", ["Pin", "Unpin"], "pinned_order_capture_unproven"),
-                ("messages.mute", ["Hide Alerts", "Show Alerts"], "mute_capture_mapping_unproven")
-            ] {
-                let count = labels.filter { titles.contains($0) }.count
-                if operation == "messages.mute" { steps.append(proveMute(prepared, titles: titles)) }
-                else { steps.append(.object(["operation": .string(operation), "proven": .bool(false), "reason": .string(count == 1 ? reason : "conversation_menu_target_unavailable"), "control_found": .bool(count == 1)])) }
-            }
-            steps.append(.object(["operation": .string("messages.set_read_receipts"), "proven": .bool(false), "reason": .string("receipt_details_target_unproven")]))
-            for operation in ["messages.recover_chat", "messages.delete_chat_permanently"] {
-                steps.append(.object(["operation": .string(operation), "proven": .bool(false), "reason": .string("recently_deleted_exact_target_unproven")]))
-            }
+            var steps = [provePin(prepared), proveMute(prepared, titles: titles)]
+            steps.append(proveReceipts(prepared))
+            steps += proveDeleted(prepared)
             return steps
         } catch let error as MessagesUIFailure { return limited(error.rawValue) }
         catch { return limited(failureReason(error)) }
@@ -139,8 +183,15 @@ extension MessagesParity {
         return profile["missing_is_unmuted"].bool && values[profile["property"].string] == nil ? ["muted": false] : [:]
     }
     static func prepare(_ command: JSON, path: String) async throws -> Prepared {
-        guard command["action"]["op"].string == "messages.mute", muteProfile() != .null else { throw SourceFailure.capabilityUnproven }
-        guard case .bool = command["action"]["messages"]["muted"] else { throw SourceFailure.invalid }
+        let operation = command["action"]["op"].string
+        guard coverage().contains(where: { $0["operation"].string == operation && $0["proven"].bool }) else { throw SourceFailure.capabilityUnproven }
+        let args = command["action"]["messages"]
+        switch operation {
+        case "messages.mute": guard case .bool = args["muted"] else { throw SourceFailure.invalid }
+        case "messages.pin": _ = try MessagesPins.requestedIndex(args["pinned_index"])
+        case "messages.set_read_receipts": guard ["on", "off"].contains(args["read_receipts"].string) else { throw SourceFailure.unsupported }
+        default: throw SourceFailure.capabilityUnproven
+        }
         let interactive = try CommandOrigin(command) == .interactive
         let reader = try MessagesReader(path: path)
         let chat = command["action"]["native_key"].string
@@ -159,30 +210,57 @@ extension MessagesParity {
                 guard let item = try reader.message(member["guid"]), let decoded = try reader.messageObservations(item).first, (decoded.2["text"] as? String)?.contains(tag) == true else { throw SourceFailure.invalid }
             }
         }
-        guard let current = capturedFields(conversation.blobs["properties"], service: conversation["service_name"])["muted"] as? Bool else { throw SourceFailure.capabilityUnproven }
-        let state = JSON.object(["conversation_target": .bool(true), "target": target, "message_guid": .string(guid), "members": .array(messages.map { .string($0["guid"]) }), "before_muted": .bool(current), "properties_digest": .string(BodyDigest.hash(conversation.blobs["properties"] ?? Data()))])
+        var fields: [String: JSON] = ["conversation_target": .bool(operation == "messages.mute"), "target": target, "message_guid": .string(guid), "members": .array(messages.map { .string($0["guid"]) }), "properties_digest": .string(BodyDigest.hash(conversation.blobs["properties"] ?? Data())), "service": .string(conversation["service_name"])]
+        if operation == "messages.mute" {
+            guard capturedFields(conversation.blobs["properties"], service: conversation["service_name"])["muted"] is Bool else { throw SourceFailure.capabilityUnproven }
+        }
+        if operation == "messages.pin" {
+            let pins = try MessagesPins.read(), identifier = conversation["chat_identifier"]
+            let index = Int(args["pinned_index"].number)
+            guard index == -1 || pins.firstIndex(of: identifier) == index || (!pins.contains(identifier) && index == pins.count && pins.count < 9) else { throw SourceFailure.unsupported }
+            fields["pins"] = .array(pins.map(JSON.string))
+            fields["chat_identifier"] = .string(identifier)
+        }
+        let state = JSON.object(fields)
         let prepared = Prepared(nativeState: state, fingerprint: command["request_hash"].string, action: command["action"])
         try await MessagesAccessibility.openMessage(guid)
         try await MessagesAccessibility.validate(prepared)
         return prepared
     }
     static func dispatch(_ prepared: Prepared, path: String) async throws -> JSON {
-        guard prepared.action["op"].string == "messages.mute", muteProfile() != .null else { throw SourceFailure.capabilityUnproven }
+        let operation = prepared.action["op"].string
+        guard coverage().contains(where: { $0["operation"].string == operation && $0["proven"].bool }) else { throw SourceFailure.capabilityUnproven }
         let reader = try MessagesReader(path: path), chat = prepared.action["native_key"].string
-        guard let row = try reader.query("SELECT properties,service_name FROM chat WHERE guid=?", [chat]).first, row["service_name"] == muteProfile()["service"].string, BodyDigest.hash(row.blobs["properties"] ?? Data()) == prepared.nativeState["properties_digest"].string else { throw SourceFailure.conflict }
+        guard let row = try reader.query("SELECT properties,service_name FROM chat WHERE guid=?", [chat]).first, row["service_name"] == prepared.nativeState["service"].string, BodyDigest.hash(row.blobs["properties"] ?? Data()) == prepared.nativeState["properties_digest"].string else { throw SourceFailure.conflict }
         let messages = try reader.query("SELECT m.guid FROM message m JOIN chat_message_join j ON j.message_id=m.ROWID JOIN chat c ON c.ROWID=j.chat_id WHERE c.guid=? AND NOT EXISTS(SELECT 1 FROM chat_recoverable_message_join r WHERE r.chat_id=c.ROWID AND r.message_id=m.ROWID) ORDER BY m.ROWID DESC", [chat])
         guard JSON.array(messages.map { .string($0["guid"]) }) == prepared.nativeState["members"] else { throw SourceFailure.conflict }
-        let value = prepared.action["messages"]["muted"].bool
-        try await mute(prepared, value: value)
+        let args = prepared.action["messages"]
+        switch operation {
+        case "messages.mute": try await mute(prepared, value: args["muted"].bool)
+        case "messages.pin":
+            guard JSON.array(try MessagesPins.read().map(JSON.string)) == prepared.nativeState["pins"] else { throw SourceFailure.conflict }
+            try await pin(prepared, value: args["pinned_index"].number >= 0)
+        case "messages.set_read_receipts": try await receipts(prepared, value: args["read_receipts"].string == "on")
+        default: throw SourceFailure.capabilityUnproven
+        }
         let deadline = ContinuousClock.now.advanced(by: .seconds(5))
         repeat {
             let row = try reader.query("SELECT properties,service_name FROM chat WHERE guid=?", [chat]).first
-            if capturedFields(row?.blobs["properties"], service: row?["service_name"] ?? "")["muted"] as? Bool == value {
+            let observed: Bool
+            switch operation {
+            case "messages.mute": observed = capturedFields(row?.blobs["properties"], service: row?["service_name"] ?? "")["muted"] as? Bool == args["muted"].bool
+            case "messages.pin":
+                let pins = try MessagesPins.read(), index = pins.firstIndex(of: prepared.nativeState["chat_identifier"].string)
+                observed = args["pinned_index"].number < 0 ? index == nil : index == Int(args["pinned_index"].number)
+            case "messages.set_read_receipts": observed = MessageRich.chatProperties(row?.blobs["properties"])["read_receipts"] as? String == args["read_receipts"].string
+            default: observed = false
+            }
+            if observed {
                 return .object(["source": .string("messages"), "collection": .string("messages.chat"), "native_key": .string(chat), "observed": .bool(true), "disposition": .string("locally_observed")])
             }
             try await Task.sleep(for: .milliseconds(50))
         } while ContinuousClock.now < deadline
-        return .object(["source": .string("messages"), "observed": .bool(false), "disposition": .string("indeterminate"), "reason": .string("mute_capture_not_observed")])
+        return .object(["source": .string("messages"), "observed": .bool(false), "disposition": .string("indeterminate"), "reason": .string("conversation_setting_not_observed")])
     }
 }
 

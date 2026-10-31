@@ -262,6 +262,7 @@ final class MessagesReader {
     }
     func smallObservations() throws -> [(String, String, [String: Any])] {
         let muteProfile = MessagesParity.muteProfile()
+        let pins = try? MessagesPins.read()
         var result: [(String, String, [String: Any])] = []
         for row in try has("handle", "id", "service") ? query("SELECT ROWID AS row_position,* FROM handle") : [] {
             result.append(("messages.handle", row["service"] + ":" + row["id"], ["address": row["id"], "service": row["service"]]))
@@ -276,6 +277,7 @@ final class MessagesReader {
             data["is_spam"] = row.integer("is_filtered") == 2
             for (key, value) in MessageRich.chatProperties(row.blobs["properties"]) { data[key] = value }
             for (key, value) in MessagesParity.capturedFields(row.blobs["properties"], service: row["service_name"], profile: muteProfile) { data[key] = value }
+            if let pins, let index = MessagesPins.index(row["chat_identifier"], in: pins) { data["pinned_index"] = index }
             if let photo = data["group_photo_attachment_id"] as? String { data["group_photo_attachment_id"] = reference("attachment", photo) }
             result.append(("messages.chat", row["guid"], data))
         }

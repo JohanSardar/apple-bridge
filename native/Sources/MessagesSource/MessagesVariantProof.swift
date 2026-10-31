@@ -14,9 +14,10 @@ public enum MessagesVariantProof {
         guard AXIsProcessTrusted() else { return limited("needs Messages Accessibility grant") }
         let session = CGSessionCopyCurrentDictionary() as? [String: Any]
         guard session?["CGSSessionScreenIsLocked"] as? Bool != true else { return limited("needs unlocked Mac") }
-        for bundle in ["com.apple.MobileSMS", "com.apple.systemevents"] {
+        await MessagesUISession.activate()
+        for bundle in ["com.apple.MobileSMS"] {
             let target = NSAppleEventDescriptor(bundleIdentifier: bundle)
-            guard AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false) == noErr else { return limited("needs Messages and System Events Automation grants") }
+            guard AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false) == noErr else { return limited("Allow the Helper to automate Messages in System Settings, then retry.") }
         }
         let path = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Messages/chat.db").path
         let reader = try MessagesReader(path: path)

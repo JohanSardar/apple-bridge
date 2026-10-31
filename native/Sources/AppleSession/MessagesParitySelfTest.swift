@@ -52,7 +52,8 @@ actor MessagesParitySelfTest {
         guard includeUI else { blocked("ui_disabled_by_caller"); return try save() }
         guard session?["CGSSessionScreenIsLocked"] as? Bool != true else { blocked("screen_locked"); return try save() }
         guard AXIsProcessTrusted() else { blocked("accessibility_permission_missing"); return try save() }
-        for bundle in ["com.apple.MobileSMS", "com.apple.systemevents"] {
+        await MessagesUISession.activate()
+        for bundle in ["com.apple.MobileSMS"] {
             let target = NSAppleEventDescriptor(bundleIdentifier: bundle)
             guard AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false) == noErr else { blocked("automation_permission_missing"); return try save() }
         }
