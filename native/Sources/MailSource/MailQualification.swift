@@ -15,13 +15,17 @@ public struct MailQualification: Sendable {
               ["MAIL-SEND-SELF-REAL", "MAIL-DRAFT-REAL", "MAIL-ORGANIZE-REAL", "MAIL-BODY-FIXTURE", "MAIL-CLEANUP"].contains(scenario) else { throw SourceFailure.invalid }
         let q = MailCommands.quote
         let cleanup = """
-        repeat with a in accounts
-            repeat with b in mailboxes of a
-                delete (every message of b whose subject is \(q(tag)))
+        repeat 2 times
+            repeat with a in accounts
+                repeat with b in mailboxes of a
+                    set owned to (every message of b whose subject is \(q(tag)))
+                    if (count owned) is greater than 0 then delete owned
+                end repeat
             end repeat
         end repeat
-        repeat with m in outgoing messages
-            if subject of m is \(q(tag)) then delete m
+        repeat with i from (count outgoing messages) to 1 by -1
+            set m to outgoing message i
+            if subject of m is \(q(tag)) then close m saving no
         end repeat
         set remaining to 0
         repeat with a in accounts
@@ -34,14 +38,18 @@ public struct MailQualification: Sendable {
         """
         if scenario == "MAIL-CLEANUP" {
             do { return .object(["cleanup_passed": .bool(try await script(cleanup) == "true")]) }
-            catch { return .object(["cleanup_passed": .bool(false), "cleanup_error": .string(MailCommands.failureMessage(error))]) }
+            catch {
+                var result: [String: JSON] = ["cleanup_passed": .bool(false), "cleanup_error": .string(MailCommands.failureMessage(error))]
+                if let failure = error as? MailCommandFailure, case .script(let code) = failure { result["cleanup_error_number"] = .number(Double(code)) }
+                return .object(result)
+            }
         }
         var checks: [String: JSON] = [:]
         do {
             let own = try await script("""
             set m to make new outgoing message with properties {subject:\(q(tag)), visible:false}
             set own to extract address from sender of m
-            delete m
+            close m saving no
             return own
             """)
             guard own.contains("@"), !own.contains("\n") else { throw SourceFailure.unavailable }
@@ -87,12 +95,14 @@ public struct MailQualification: Sendable {
         } catch {
             checks["fixture_and_commands"] = .bool(false)
             checks["command_error"] = .string(MailCommands.failureMessage(error))
+            if let failure = error as? MailCommandFailure, case .script(let code) = failure { checks["command_error_number"] = .number(Double(code)) }
         }
         if scenario != "MAIL-BODY-FIXTURE" {
             do { checks["cleanup_passed"] = .bool(try await script(cleanup) == "true") }
             catch {
                 checks["cleanup_passed"] = .bool(false)
                 checks["cleanup_error"] = .string(MailCommands.failureMessage(error))
+                if let failure = error as? MailCommandFailure, case .script(let code) = failure { checks["cleanup_error_number"] = .number(Double(code)) }
             }
         }
         return .object(checks)

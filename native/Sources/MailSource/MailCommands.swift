@@ -4,20 +4,21 @@ import Carbon
 import AppKit
 import SourceSupport
 
-public enum MailCommandFailure: Error, LocalizedError, Sendable {
+public enum MailCommandFailure: Error, LocalizedError, Sendable, Equatable {
     case permission, timeout, rejected, unconfirmed
+    case script(Int)
     public static func appleEvent(_ code: Int) -> Self {
         switch code {
         case -1712: .timeout
         case -1743, -1744: .permission
-        default: .rejected
+        default: .script(code)
         }
     }
     public var errorDescription: String? {
         switch self {
         case .permission: "Mail automation is not allowed. Enable Mail for Apple Bridge in System Settings > Privacy & Security > Automation."
         case .timeout: "Mail automation did not respond in time. Restart Mail and try again. If it still does not respond, sign out of macOS and sign in again."
-        case .rejected: "Mail could not complete the command. Open Mail, check the account and mailbox, and try again."
+        case .rejected, .script: "Mail could not complete the command. Open Mail, check the account and mailbox, and try again."
         case .unconfirmed: "Mail could not confirm the message after the command. Check Sent or Drafts before trying again."
         }
     }
@@ -113,9 +114,10 @@ public struct MailCommands: Sendable {
                 for address in args[field].array { body += "tell m to make new " + kind + " recipient at end of " + kind + " recipients with properties {address:" + q(address.string) + "}\n" }
             }
             body += op == "mail.send" ? "send m\n" : "save m\n"
-            let selection = "messages of " + (op == "mail.send" ? "sent mailbox" : "drafts mailbox") + " whose subject is " + q(args["subject"].string) + " and content starts with " + q(args["body"].string)
-            readback = "return count of (" + selection + ")"
-            identity = "set matched to (" + selection + ")\nif (count matched) is not 1 then return \"\"\nreturn (id of item 1 of matched) as string"
+            let selection = "messages of " + (op == "mail.send" ? "sent mailbox" : "drafts mailbox") + " whose subject is " + q(args["subject"].string)
+            let matches = "set matched to {}\nrepeat with candidate in (" + selection + ")\nif ((content of candidate) as string) starts with " + q(args["body"].string) + " then set end of matched to contents of candidate\nend repeat\n"
+            readback = matches + "return count of matched"
+            identity = matches + "if (count matched) is not 1 then return \"\"\nreturn (id of item 1 of matched) as string"
         } else {
             let key = action["native_key"].string
             guard UInt64(key) != nil else { throw SourceFailure.invalid }

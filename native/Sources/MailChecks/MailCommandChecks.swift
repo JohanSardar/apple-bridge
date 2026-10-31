@@ -11,9 +11,9 @@ actor MailFake {
     init(_ evidence: String, lag: Int = 0, identity: String = "123") { self.evidence = evidence; self.lag = lag; self.identity = identity }
     func run(_ body: String) -> String {
         calls.append(body)
-        if body.hasPrefix("set matched to") { return identity }
-        if calls.count == 1 && body.hasPrefix("return") { return "0" }
-        if body.hasPrefix("return") || body.contains("return (") {
+        if body.hasPrefix("set matched to"), !body.contains("return count of matched") { return identity }
+        if calls.count == 1 && (body.hasPrefix("return") || body.contains("return count of matched")) { return "0" }
+        if body.hasPrefix("return") || body.contains("return (") || body.contains("return count of matched") {
             readbacks += 1
             return readbacks <= lag ? "" : evidence
         }
@@ -86,7 +86,7 @@ func checkMailCommands() async throws {
     catch is CancellationError {}
     try require(MailCommandFailure.appleEvent(-1712) == .timeout)
     try require(MailCommandFailure.appleEvent(-1743) == .permission && MailCommandFailure.appleEvent(-1744) == .permission)
-    try require(MailCommandFailure.appleEvent(-600) == .rejected)
+    try require(MailCommandFailure.appleEvent(-600) == .script(-600))
     for op in MailCommands.operations {
         for observed in [true, false] {
             let fake = MailFake(observed ? "1" : "")
@@ -104,7 +104,11 @@ func checkMailCommands() async throws {
             let expected = ["mail.create_draft": "save m", "mail.send": "send m", "mail.move": "move m to mailbox", "mail.delete": "move m to trash mailbox", "mail.mark_read": "set read status of m to true", "mail.set_flag": "set flagged status of m to true"]
             try require(effect.contains(expected[op]!))
             try require(scripts.last!.contains("return"))
-            if creates { try require(scripts.last!.contains(op == "mail.send" ? "sent mailbox" : "drafts mailbox")) }
+            if creates {
+                try require(scripts.last!.contains(op == "mail.send" ? "sent mailbox" : "drafts mailbox"))
+                try require(scripts.last!.contains("((content of candidate) as string) starts with"))
+                try require(!scripts.last!.contains("and content starts with"))
+            }
         }
     }
     let delayed = MailFake("true", lag: 2)

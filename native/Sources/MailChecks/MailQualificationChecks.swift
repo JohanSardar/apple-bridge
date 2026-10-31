@@ -10,11 +10,11 @@ private actor QualificationMailFake {
     init(fail: Bool = false) { self.fail = fail }
     func run(_ body: String) throws -> String {
         calls.append(body)
-        if body.hasPrefix("set matched to") { return "123" }
+        if body.hasPrefix("set matched to"), !body.contains("return count of matched") { return "123" }
         if body.contains("set remaining to 0") { created = false; return "true" }
         if body.contains("extract address from sender") { return "self@example.invalid" }
         if body.contains("set found to") { return created ? "123" : "" }
-        if body.hasPrefix("return count") { return created ? "1" : "0" }
+        if body.hasPrefix("return count") || body.contains("return count of matched") { return created ? "1" : "0" }
         if body.contains("make new outgoing message") {
             if fail { throw MailCommandFailure.timeout }
             created = true
@@ -52,6 +52,9 @@ func checkMailQualification() async throws {
         let scripts = await fake.scripts()
         try require(scripts.contains { $0.contains("set remaining to 0") } == (scenario != "MAIL-BODY-FIXTURE"))
         if scenario == "MAIL-BODY-FIXTURE" { try require(scripts.contains { $0.contains("set default message format to priorFormat") }) }
+        if scenario != "MAIL-BODY-FIXTURE" {
+            try require(scripts.contains { $0.contains("repeat 2 times") && $0.contains("by -1") && $0.contains("close m saving no") })
+        }
         if scenario == "MAIL-ORGANIZE-REAL" { try require(scripts.contains { $0.contains("set flagged status of m to false") }) }
     }
     let failed = QualificationMailFake(fail: true)
