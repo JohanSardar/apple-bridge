@@ -1055,19 +1055,17 @@ features:
       - {"scenario": "MAIL-IDLE", "level": "real", "reason": "needs five-minute whole-Helper idle CPU qualification after Mail sync settles (T53)"}
   - id: files.capture
     title: Opt-in files metadata and queries
-    notes: Native build, local gate and focused sim checks pass; public gateway coverage and full Helper idle qualification remain unverified.
+    notes: Dedicated tagged iCloud fixtures prove eviction, automatic download on read, and content digest readback; fixtures are deleted after qualification.
     requirements: [R-API, R-SCOPE]
     milestone: G9
     modules: [native/Sources/FilesSource]
     depends_on: [core.queries]
-    status: limited
+    status: done
     scenarios:
       - {id: FILE-CAPTURE, levels: [sim]}
       - {id: FILE-IDLE, levels: [sim, real]}
       - {id: FILE-SEARCH-REAL, levels: [real]}
       - {id: FILE-OFFLOAD-REAL, levels: [sim, real]}
-    limits:
-      - {"scenario": "FILE-OFFLOAD-REAL", "level": "real", "reason": "Provide a dedicated iCloud-backed [ab-test] file that supports eviction/offload; current temporary fixture could not establish capabilityUnproven. No personal files were used."}
   - id: mail.body
     title: Read local Mail bodies
     requirements: [R-RW]
@@ -1187,13 +1185,11 @@ features:
     milestone: G9
     modules: [native/Sources/FilesSource, internal/contracts, internal/operations]
     depends_on: [files.capture]
-    status: limited
+    status: done
     scenarios:
       - {id: FILE-COMMANDS, levels: [sim]}
       - {id: FILE-CRUD-REAL, levels: [sim, real]}
       - {id: FILE-REPLICA, levels: [replica]}
-    limits:
-      - {scenario: FILE-CRUD-REAL, level: real, reason: CRUD filesystem Truth passes; real cloud download and eviction qualification remains outstanding.}
   - id: music.catalog
     title: Music catalog, player controls and library
     requirements: [R-API, R-SCOPE]
