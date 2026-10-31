@@ -26,6 +26,13 @@ func securityOAuth(ctx context.Context, w *world.World, a *trust.Authority, orig
 	verifier := strings.Repeat("a", 43)
 	challenge := sha256.Sum256([]byte(verifier))
 	resource := origin + "/mcp"
+	query := url.Values{"client_id": {client.ID}, "response_type": {"code"}, "redirect_uri": {client.RedirectURIs[0]}, "resource": {resource}, "code_challenge": {base64.RawURLEncoding.EncodeToString(challenge[:])}, "code_challenge_method": {"S256"}}
+	for _, bad := range []struct{ key, value string }{{"code_challenge_method", "plain"}, {"code_challenge_method", ""}, {"redirect_uri", "https://attacker.example/callback"}, {"redirect_uri", "//attacker.example"}, {"redirect_uri", "javascript:alert(1)"}} {
+		values := cloneValues(query)
+		values.Set(bad.key, bad.value)
+		status, _, header := agentRequest(ctx, origin, "", "GET", "/oauth/authorize?"+values.Encode(), nil)
+		add("pkce_downgrade_and_open_redirect_refused", status == 400 && header.Get("Location") == "")
+	}
 	request := func(token, collection string) int {
 		status, _, _ := agentRequest(ctx, origin, token, "POST", "/v1/op/records.query", map[string]any{"collection": collection, "limit": 1})
 		return status

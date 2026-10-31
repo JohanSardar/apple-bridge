@@ -30,6 +30,8 @@ func runRemoteSecurity(ctx context.Context, s Scenario, level string) Evidence {
 		approval := runConnectorApproval(ctx, s, "sim")
 		e.Assertions = append(e.Assertions, approval.Assertions...)
 		securityRelayProofs(add)
+		securityPublicHealth(add)
+		securityRemoteFailure(ctx, add)
 	}
 	w, err := world.New(ctx, "sim", 0, 1, world.BlobOptions{Scope: "admin"})
 	add("isolated_gateway", err == nil)
@@ -101,10 +103,10 @@ func securityEndpointSweep(ctx context.Context, origin string, public bool, add 
 	paths := []struct{ method, path string }{
 		{"GET", "/mcp"}, {"POST", "/mcp"}, {"GET", "/mcp/unknown"},
 		{"GET", "/v1/openapi.json"}, {"GET", "/v1/records/messages.chat/test"},
-		{"GET", "/v1/changes"}, {"GET", "/v1/snapshot"}, {"POST", "/v1/commands"},
+		{"GET", "/v1/changes"}, {"GET", "/v1/blobs/unknown"}, {"POST", "/v1/blobs"}, {"GET", "/v1/unknown"}, {"GET", "/v1/snapshot"}, {"POST", "/v1/commands"},
 		{"GET", "/web/v1/session"}, {"GET", "/web/v1/agents"}, {"GET", "/web/v1/devices"},
 		{"GET", "/web/v1/passkeys"}, {"GET", "/web/v1/activity"}, {"GET", "/web/v1/approvals"},
-		{"GET", "/web/v1/sources"}, {"GET", "/web/v1/blob/unknown"}, {"GET", "/web/v1/upload/unknown"},
+		{"GET", "/web/v1/sources"}, {"GET", "/web/v1/live"}, {"POST", "/web/v1/handles"}, {"POST", "/web/v1/lookup"}, {"POST", "/web/v1/upload"}, {"GET", "/web/v1/blob/unknown"}, {"GET", "/web/v1/upload/unknown"},
 		{"POST", "/oauth/authorize"}, {"POST", "/web/v1/approvals/test"},
 	}
 	if public {

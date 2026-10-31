@@ -1,9 +1,9 @@
 {
   "host_conditions": {
-    "quiet": false,
-    "summary": "air: load=[10.5 11.07 12.47] cpu_idle=33% cpus=10 other_heavy=0"
+    "quiet": true,
+    "summary": "air: load=[6.88 9.3 11.54] cpu_idle=79% cpus=10 other_heavy=0"
   },
-  "run_id": "security_01M69Y5K4W0YPCM0GEEY9C9ESC",
+  "run_id": "security_01M69YA0DQCXDAR088TBFBETAZ",
   "network_path": "isolated Mac gateway adversarial HTTP and trust checks",
   "metrics": {
     "capture_observer_resets": 0
@@ -12,7 +12,7 @@
   "level": "sim",
   "passed": true,
   "git_sha": "",
-  "at": "2026-10-31T21:34:36.700625Z",
+  "at": "2026-10-31T21:37:01.367081Z",
   "assertions": [
     {
       "name": "isolated_gateway",
@@ -167,6 +167,14 @@
       "passed": true
     },
     {
+      "name": "public_health_requires_authentication",
+      "passed": true
+    },
+    {
+      "name": "remote_setup_failure_redacts_credential_urls_in_logs",
+      "passed": true
+    },
+    {
       "name": "isolated_gateway",
       "passed": true
     },
@@ -192,6 +200,26 @@
     },
     {
       "name": "security_oauth_client",
+      "passed": true
+    },
+    {
+      "name": "pkce_downgrade_and_open_redirect_refused",
+      "passed": true
+    },
+    {
+      "name": "pkce_downgrade_and_open_redirect_refused",
+      "passed": true
+    },
+    {
+      "name": "pkce_downgrade_and_open_redirect_refused",
+      "passed": true
+    },
+    {
+      "name": "pkce_downgrade_and_open_redirect_refused",
+      "passed": true
+    },
+    {
+      "name": "pkce_downgrade_and_open_redirect_refused",
       "passed": true
     },
     {
